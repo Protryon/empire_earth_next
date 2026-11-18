@@ -13,6 +13,8 @@ pub mod app;
 pub mod astar;
 /// The crate ee_combat before the restructure.
 pub mod combat;
+/// The computer player and its economy: the AI Thread's port, lane B.
+pub mod cp;
 /// The crate ee_formations before the restructure.
 pub mod formations;
 /// The crate ee_netmsg before the restructure.

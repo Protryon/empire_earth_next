@@ -23,6 +23,16 @@ enum class EeWonLobbyCtlType : uint32_t {
   Component = 8,
   /// `EELobbyColorButton` (round 5)
   ColorButton = 9,
+  /// `TextArea` (round 13)
+  TextArea = 10,
+  /// `TreeArea`
+  TreeArea = 11,
+  /// `ListArea`
+  ListArea = 12,
+  /// `ScreenContainer`
+  ScreenContainer = 13,
+  /// `ServerListCtrl`
+  ServerListCtrl = 14,
 };
 
 /// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
@@ -38,6 +48,33 @@ enum class EeWonLobbyCtlKind : uint32_t {
   GameOptions = 5,
   /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
   PlayerOptions = 6,
+  /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
+  ServerList = 7,
+  /// ChatCtrl (a chat panel; round 13, chatctl.rs)
+  Chat = 8,
+  /// RoomCtrl (the room tree; round 13, netctl.rs from here)
+  Room = 9,
+  /// FriendsListCtrl
+  Friends = 10,
+  /// UserListCtrl (the room's users)
+  Users = 11,
+  /// QuickPlayCtrl (a `Dialog`)
+  QuickPlay = 12,
+  /// LoginCtrl (a `Dialog`)
+  Login = 13,
+  CreateAccount = 14,
+  UpdateAccount = 15,
+  LostPassword = 16,
+  LostUserName = 17,
+  LoginHelp = 18,
+  LoginStatus = 19,
+  InitFailed = 20,
+  /// MOTDCtrl
+  Motd = 21,
+  LoginScreen = 22,
+  DirectConnect = 23,
+  /// RoomLabelCtrl
+  RoomLabel = 24,
 };
 
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
@@ -284,6 +321,429 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ColorGetColor,
   /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
   LabelSetPercent,
+  /// `ee_won_model_get(model of (LobbyModelObject*)a, b)` (answered by modelobj.rs in the game).
+  MGet = 1000,
+  /// `ee_won_model_set(model of a, b, c)`.
+  MSet,
+  /// `ee_won_model_call(model of a, b, c)` (`b` an `EeWonModelCall`).
+  MCall,
+  /// `ServerDetailsItem::CreateItem()` with a reference added (the original's local `SmartPtr`).
+  RowNew = 1010,
+  /// `((ServerDetailsItem*)a)->mGame.get()`.
+  RowGame,
+  /// `((ServerDetailsItem*)a)->mGame = (LobbyGame*)b`.
+  RowSetGame,
+  /// `a->mIPAddrStr = a->mGame->GetAddress().GetHostAndPortString(true)`.
+  RowSetAddrText,
+  /// `((ServerDetailsItem*)a)->mIPAddrStr` (a text).
+  RowAddrText,
+  /// A list row's field `b` (`EeWonLobbyCtlItemField`).
+  ItemGet,
+  /// A list row's field `b` set to `c`.
+  ItemSet,
+  /// `((ServerDetailsItem*)a)->GetDetailsHeightHook((MultiListArea*)b)`.
+  RowDetailsHeight,
+  /// `((ServerDetailsItem*)a)->PaintDetailsHook(*(Graphics*)b, (MultiListArea*)c)`.
+  RowPaintDetails,
+  /// `((Component*)a)->GetDefaultFont()`.
+  DefaultFont = 1030,
+  /// `((Component*)a)->GetDefaultFontMod(b, c)`.
+  DefaultFontMod,
+  /// `((Component*)a)->GetFontMod((Font*)b, c, 0)`.
+  FontMod,
+  /// `((ListArea*)a)->mFont.get()`.
+  ListFont,
+  /// `((Font*)a)->GetHeight()`.
+  FontHeight,
+  /// `gLobbyResources[a].mImage->mHeight` (`LOBBY_IMAGE(...)->mHeight`).
+  ResImageHeight,
+  /// `((MultiListArea*)a)->GetColumnWidth(b)`.
+  ColumnWidth,
+  /// `((ListArea*)a)->EnsureVisible((ListItem*)b)`.
+  ListEnsureVisible,
+  /// `((ListArea*)a)->GetItemPos((ListItem*)b)`.
+  ListItemPos,
+  /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+  ListSetSel,
+  /// `((ListArea*)a)->GetVertOffset()`.
+  ListVertOffset,
+  /// `((ListArea*)a)->SetVertOffset(b)`.
+  ListSetVertOffset,
+  /// `((ListArea*)a)->GetViewHeight()`.
+  ListViewHeight,
+  /// `((ListArea*)a)->GetItemPosAtYPos(b)`.
+  ListItemAtY,
+  /// `((ListArea*)a)->GetPaintWidth()`.
+  ListPaintWidth,
+  /// `((MultiListArea*)a)->GetColumnPaintContext()`.
+  ListPaintColumn,
+  /// `((MultiListArea*)a)->GetSortColumn()`.
+  ListSortColumn,
+  /// `((MultiListArea*)a)->GetSortColumnPrev()`.
+  ListSortColumnPrev,
+  /// `((ListArea*)a)->DeliverEvent(new PingGameEvent((LobbyGame*)b, true), true)`.
+  ListDeliverPing,
+  /// `((ListArea*)a)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `((ListArea*)a)->GetTextColor()`.
+  ListTextColor,
+  /// `((ListArea*)a)->ListFlagSet(b)` (0 or 1).
+  ListFlagSet,
+  /// `((Graphics*)a)->GetStandardColor(b)`.
+  GfxStandardColor = 1060,
+  /// `((ListArea*)b)->GetSelColor().GetForegroundColor(*(Graphics*)a, c)`.
+  GfxSelFore,
+  /// `((ListArea*)b)->GetSelColor().GetBackgroundColor(*(Graphics*)a)`.
+  GfxSelBack,
+  /// `((Graphics*)a)->SetColor(b)`.
+  GfxSetColor,
+  /// `((Graphics*)a)->SetFont((Font*)b)`.
+  GfxSetFont,
+  /// `((Graphics*)a)->SetSysColor(b)`.
+  GfxSetSysColor,
+  /// `((Graphics*)a)->FillRect(b's point, c's size)`.
+  GfxFillRect,
+  /// `((Graphics*)a)->Translate(b, c)`.
+  GfxTranslate,
+  /// `((Graphics*)a)->DrawImage(gLobbyResources[b].mImage.get(), c's point)`.
+  GfxDrawResImage,
+  /// `((Graphics*)a)->DrawString(GUIString(b), c's point)`.
+  GfxDrawText,
+  /// `((Graphics*)a)->DrawString(gLobbyResources[b].mString, c's point)`.
+  GfxDrawResText,
+  /// `((Graphics*)a)->mFont->GetStringWidth(GUIString(b))`.
+  GfxTextWidth,
+  /// `DrawLobbyPing((Graphics*)a, b, c, 0, 0)`.
+  GfxDrawPing,
+  /// `((Graphics*)a)->DrawLine(b's point, c's point)`.
+  GfxDrawLine,
+  /// `((Graphics*)a)->DrawImage((Image*)b, c's point)`.
+  GfxDrawImage,
+  /// `new GUIStringData(b bytes at (const char*)a)` with a reference (a temporary `GUIString`; `Release` ends it).
+  TextNew = 1080,
+  /// `GUIString(a).CompareNoCase(GUIString(b))`.
+  TextCompareNoCase,
+  /// `GUIString(a).findNoCase(GUIString(b), 0)`.
+  TextFindNoCase,
+  /// `GUIString(a).findNoCase(gLobbyResources[b].mString, 0)`.
+  TextFindRes,
+  /// `GUIString(a).length()`.
+  TextLen,
+  /// `GUIString(a)[b]` (a unit).
+  TextAt,
+  /// `std::string s = GUIString(a)`: its bytes copied to `(char*)b` (at most `c`), its length returned.
+  TextBytes,
+  /// `GUIString(a) == GUIString(b)` (0 or 1).
+  TextEquals,
+  /// `((LobbyGame*)a)->GetAddress().StringCompare(((LobbyGame*)b)->GetAddress())`.
+  GameCompareAddress,
+  /// `((ComboBox*)a)->mEdit->GetText()` (a text).
+  ComboEditText = 1100,
+  /// `LobbyGetNumPingsToDo()`.
+  PingsToDo,
+  /// `LobbyKillPings(1)`.
+  KillPings,
+  /// `this->DeliverEvent(new GameActionEvent(7, (LobbyGame*)a), false)`.
+  DeliverGameAction,
+  /// `this->DeliverEvent(new JoinGameEvent((LobbyGame*)a), false)`.
+  DeliverJoinGame,
+  /// `((GameChangedEvent*)a)->mGame.get()`.
+  EventGame,
+  /// `((SyncGameListEvent*)a)->mGames.get()`.
+  EventGames,
+  /// `((ListItemClickedEvent*)a)->mX`.
+  EventX,
+  /// `((ListItemClickedEvent*)a)->mY`.
+  EventY,
+  /// The event's `mItem.get()` (`ComboSelChangedEvent`, `ListItemClickedEvent`, `TreeItemOpenedEvent`).
+  EventItem,
+  /// `((ComboSelChangedEvent*)a)->mActiveSel` (0 or 1).
+  EventActiveSel,
+  /// `sprintf(n, "%d", b); ((Label*)a)->SetText(LobbyFormatString(ListPingSummary, n), true)`.
+  LabelSetPingSummary,
+  /// `sprintf` of `b` and `c`; `((Label*)a)->SetText(LobbyFormatString2(ListSummary, b's, c's), true)`.
+  LabelSetListSummary,
+  /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+  ButtonSetRes,
+  /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+  LabelSetRes,
+  /// `this->RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `this->mTimerFlags &= ~2`.
+  ClearTimerFlag,
+  /// `this->Container::TimerEvent(a)` (0 or 1).
+  BaseTimer,
+  /// `((ComboBox*)a)->InsertItem(new TextListItem(NoFilter, (Font*)b), -1)`.
+  ComboInsertNoFilter,
+  /// `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)`.
+  ComboInsertFilterRow,
+  /// `LobbyGetFilterValues(GUIString(b))`'s values, each `((ComboBox*)a)->AddString(value, -1)`.
+  ComboAddFilterValues,
+  /// `((ComboBox*)a)->mListArea->GetItem(b)`.
+  ComboItem,
+  /// `((ComboBox*)a)->mListArea->GetNumItems()`.
+  ComboCount,
+  /// `((ComboBox*)a)->mListArea->GetItemPos((ListItem*)b)`.
+  ComboItemPos,
+  /// `((TextListItem*)a)->mText == GUIString(b)` (0 or 1).
+  TextItemIs,
+  /// `((ComboBox*)a)->UpdateItem((ListItem*)b)`.
+  ComboUpdateItem,
+  /// `((ComboBox*)a)->SetText(GUIString(b), true)`.
+  ComboSetText,
+  /// `((ComboBox*)a)->AddString(GUIString(b), -1)`.
+  ComboAddString,
+  /// `((ComboBox*)a)->DeleteItem(b)`.
+  ComboDeleteItem,
+  /// `((ComboBox*)a)->mEdit->SelectRange(-1, 0)`.
+  ComboSelectEnd,
+  /// `((FilterListItem*)a)->mIsAdd` (0 or 1).
+  FilterIsAdd,
+  /// `((FilterListItem*)a)->mSelPos`.
+  FilterSelPos,
+  /// `((FilterListItem*)a)->mFilterText` (a text).
+  FilterText,
+  /// `((FilterListItem*)a)->mColumnName` (a text).
+  FilterColumn,
+  /// The empty filter: `a->mText = AddRemove; a->mIsAdd = true; a->mFilterText = GUIString(""); a->mSelPos = 0`.
+  FilterClear,
+  /// `a->mSelPos = b & 0xffffffff; a->mIsAdd = b >> 32; a->mFilterText = GUIString(c)`, then the label (Add or
+  /// Remove, the text, the closing quote and parenthesis).
+  FilterSet,
+  /// `LobbyAddFilterValue(GUIString(a), GUIString(b))`.
+  AddFilterValue,
+  /// `LobbyRemoveFilterValue(GUIString(a), GUIString(b))`.
+  RemoveFilterValue,
+  /// An EE game column's handler (`EeWonEeGlueCall` `a`; `b`, `c` its arguments; a filter's text a text).
+  EeColumn,
+  /// The event `a`'s member `b` (`EeWonLobbyCtlEvField`).
+  EvGet = 1200,
+  /// The event `a`'s `mHandled` (the member `b`) set.
+  EvSetHandled,
+  /// `new ChatLink(*(const EeWonLobbyCtlLink*)a)` (the constructor of its kind) with a reference added.
+  ChatLinkNew,
+  /// The link `a`'s member `b` (`EeWonLobbyCtlLinkField`).
+  LinkGet,
+  /// The link `a`'s member `b` set to `c`.
+  LinkSet,
+  /// `LobbyAppendFormattedText` over `*(const EeWonLobbyCtlFormat*)a`.
+  ChatAddFormatted,
+  /// `gLobbyResources[a].mString` (a text, the resource's own).
+  ResText,
+  /// `((TextArea*)a)->mFont.get()`.
+  TextAreaFont,
+  /// `((TextArea*)a)->mLinkFont.get()`.
+  TextAreaLinkFont,
+  /// `((TextArea*)a)->AddSegment(GUIString(b), c, true)`.
+  TextAreaAddSegment,
+  /// `((TextArea*)a)->LineBreak(b)`.
+  TextAreaLineBreak,
+  /// `((TextArea*)a)->Reset(b != 0)`.
+  TextAreaReset,
+  /// `((InputBox*)a)->GetText()` (a text).
+  InputText,
+  /// `((InputBox*)a)->AddInputHistory(GUIString(b), true)`.
+  InputAddHistory,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->SetText(GUIString(b), c != 0)`.
+  InputSetText,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `((Component*)a)->RequestFocus()`.
+  RequestFocus,
+  /// `((Component*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `this->IsRootVisible()` (0 or 1).
+  IsRootVisible,
+  /// `LobbyGetCurrentServer()`.
+  CurrentServer,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  /// `LobbyGetRoomChatParser(a)`.
+  RoomChatParser,
+  /// `((ChatCommandParser*)a)->` GetPrefix (`b` 0), GetError (1), GetCommand (2).
+  ParserNumber,
+  /// `((ChatCommandParser*)a)->` GetTargetName (`b` 0), GetText (1): held.
+  ParserText,
+  /// `((ChatCommandParser*)a)->HandleInput(GUIString(b))` (0 or 1).
+  ParserHandleInput,
+  /// `((ChatCommandParser*)a)->GetHelp(b)`: held.
+  ParserHelp,
+  /// `((ChatCommandParser*)a)->GetClients()`.
+  ParserClients,
+  /// The prefix, `GetCommandString(b)`, ` "`, the name `c` (0: `GetTargetName()`), `" `: held.
+  ParserCommandText,
+  /// `LobbyFormatString(gLobbyResources[a].mString, ((ChatCommandParser*)b)->GetTargetName())`: held.
+  FormatTarget,
+  /// The held text `a` with `GUIString(b)` appended: held (`a`'s reference given back).
+  TextAppend,
+  /// The held text `a` with `c` bytes at `b` appended: held.
+  TextAppendBytes,
+  /// `GUIString(a).find(GUIString(b), 0)`.
+  TextFind,
+  /// `LobbyGetIgnoredNameCount()`.
+  IgnoredCount,
+  /// `LobbyGetIgnoredNameAt(a)`: held.
+  IgnoredAt,
+  /// `this->Fn2F5380(a, b)` (FireEvent).
+  FireEvent,
+  /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+  DeliverFriendAction,
+  /// `this->DeliverEvent(new JoinFriendsRoomEvent((LobbyFriend*)a), false)`.
+  DeliverJoinFriendsRoom,
+  /// `this->DeliverEvent(new JumpToRoomEvent(link->mText, link->mGroupId, link->mAddress), false)` of the link `a`.
+  DeliverJumpToRoom,
+  /// `this->DeliverEvent(new AcceptClientEvent((LobbyClient*)a, b != 0), false)`.
+  DeliverAcceptClient,
+  /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
+  AddrValid,
+  /// `((ListArea*)a)->InsertItem((ListItem*)b, -1)` (the virtual).
+  ListInsert2 = 1300,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, -1)`.
+  TreeInsertChild,
+  /// `((TreeArea*)a)->InsertTreeItem(NULL, (ListItem*)b, c)`.
+  TreeInsertServer,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, 0)`.
+  TreeInsertLoading,
+  /// `((TreeItem*)a)->GetWrappedItem()`.
+  TreeWrapped,
+  /// `((TreeItem*)a)->GetNumChildren()`.
+  TreeChildCount,
+  /// `((TreeItem*)a)->GetChild(b)`.
+  TreeChild,
+  /// `((TreeItem*)a)->GetParentItem()`.
+  TreeParent,
+  /// `((TreeItem*)a)->GetIndex()`.
+  TreeIndex,
+  /// `((TreeItem*)a)->IsOpen()` (0 or 1).
+  TreeIsOpen,
+  /// `((TreeArea*)a)->OpenItem((TreeItem*)b, c != 0)`.
+  TreeOpen,
+  /// `((TreeArea*)a)->RemoveAllItems((TreeItem*)b)`.
+  TreeRemoveAll,
+  /// `((TreeArea*)a)->RemoveTreeItem((TreeItem*)b)`.
+  TreeRemove,
+  /// `((TreeArea*)a)->ClearTree(b != 0)`.
+  TreeClear,
+  /// `((TreeItem*)a)->ContainsPoint(b's point)` (0 or 1).
+  TreeContainsPoint,
+  /// `new RoomListItem((LobbyServer*)a, b != 0)` (a server's row, its loading placeholder).
+  RoomItemServer,
+  /// `new RoomListItem((LobbyGroup*)a, (LobbyServer*)b)` (a room's row).
+  RoomItemGroup,
+  /// `((RoomListItem*)a)->UpdateText((LobbyServer*)b, (LobbyGroup*)c)`.
+  RoomItemUpdate,
+  /// `((RoomListItem*)a)->mAddress.GetValue()` (a borrowed `const EeWonIpAddr*`).
+  RoomItemAddr,
+  /// `((RoomListItem*)a)->mGroupId`.
+  RoomItemGroupId,
+  /// `IPAddr` `a == b` (six bytes; 0 or 1; answered by ipobj.rs in the game).
+  AddrEquals,
+  /// A copy of the address `a` (an `EeWonIpAddr` the Rust frees with `AddrFree`; ipobj.rs in the game).
+  AddrClone,
+  /// The copy `a` freed.
+  AddrFree,
+  /// `this->DeliverEvent(new JoinRoomEvent(row->mAddress, row->mGroupId), false)` of the room row `a`.
+  DeliverJoinRoom,
+  /// `this->DeliverEvent(new CreateRoomEvent(the address a, NULL: IPAddr()), false)`.
+  DeliverCreateRoom,
+  /// `this->DeliverEvent(new QueryServerGroupsEvent(the address a), false)`.
+  DeliverQueryGroups,
+  /// `LobbyGetServerList()`.
+  ServerListGet,
+  /// `LobbyGetChatGroup()`.
+  ChatGroup,
+  /// `new FriendsListItem` (no reference).
+  FriendRowNew,
+  /// `new UserListItem` (no reference).
+  UserRowNew,
+  /// `((FriendsListItem*)a)->mFriend.get()`.
+  ItemFriend,
+  /// `((FriendsListItem*)a)->mFriend = (LobbyFriend*)b`.
+  ItemSetFriend,
+  /// `((UserListItem*)a)->mClient.get()`.
+  ItemUserClient,
+  /// `((UserListItem*)a)->mClient = (LobbyClient*)b`.
+  ItemSetUserClient,
+  /// `((TextListItem*)a)->mText = GUIString(b)`.
+  ItemSetText,
+  /// `((TextListItem*)a)->mImage = gLobbyResources[b].mImage` (-1: NULL).
+  ItemSetImageRes,
+  /// `((TextListItem*)a)->mFont = (Font*)b`.
+  ItemSetFont,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// `LobbyGetCurrentUser()`.
+  CurrentUser,
+  /// `((Label*)a)->SetText(LobbyFormatString(UserWelcome, ((LobbyUserInfo*)b)->mUserName), true)`.
+  LabelSetUserWelcome,
+  /// `this->DeliverEvent(new QuickPlayEvent(a), false)`.
+  DeliverQuickPlay,
+  /// `this->Dialog::HandleComponentEvent(a)`.
+  DialogBaseEvent,
+  /// `LobbyGetUserCount()`.
+  UserCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetUserNameAt(b), -1)`.
+  ComboAddUserName,
+  /// `LobbyGetUserLastUseAt(a)`.
+  UserLastUseAt,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mPublic` (0 or 1).
+  ConfigIsPublic,
+  /// `LobbyGetUserPassword(GUIString(a))`: held.
+  UserPassword,
+  /// `LobbyAddUser(GUIString(a), GUIString(b), true)`.
+  AddUser,
+  /// `((ComboBox*)a)->SetText(GUIString(b), c != 0)`.
+  ComboSetTextFlag,
+  /// `this->DeliverEvent(new LoginEvent(((InputBox*)a)->GetText(), ((Button*)b)->IsChecked(),
+  /// ((ComboBox*)c)->mEdit->GetText()), false)`.
+  DeliverLogin,
+  /// `GUIString(a).mData->ToInt(0)`.
+  TextToInt,
+  /// The create-account event of the controls `(const intptr_t*)a` (user, password, e-mail, day, month, year,
+  /// newsletter) delivered.
+  DeliverCreateAccount,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((InputBox*)a)->SetText(GUIString(new GUIStringData(((AuthContext*)b)->GetName())), true)`.
+  InputSetAuthName,
+  /// `GUIString(new GUIStringData(((AuthContext*)a)->GetPassword()))`: held.
+  AuthPassword,
+  /// `this->DeliverEvent(new UpdateAccountEvent(((InputBox*)a)->GetText(), ((InputBox*)b)->GetText(),
+  /// ((Button*)c)->IsChecked()), false)`.
+  DeliverUpdateAccount,
+  /// `this->DeliverEvent(new GetLostPasswordEvent(((ComboBox*)a)->mEdit->GetText()), false)`.
+  DeliverLostPassword,
+  /// `this->DeliverEvent(new GetLostUserNameEvent(((InputBox*)a)->GetText()), false)`.
+  DeliverLostUserName,
+  /// `((BrowserComponent*)a)->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"), false, 0, -1)`.
+  BrowserGoLoginHelp,
+  /// `((Label*)a)->SetText(GUIString(b), true)`.
+  LabelSetData,
+  /// `((Container*)a)->EnableLayoutInstructions(b, c != 0)`.
+  EnableLayout,
+  /// `((Container*)a)->Relayout()`.
+  Relayout,
+  /// `((RustServerOp*)a)->GetNum(EE_WON_HTTPDOC_TYPE) == HTTPDocType_MOTD` (0 or 1).
+  HttpDocIsMotd,
+  /// `((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, b ? Game : Sys)`: copied to `(char*)c` (1024 bytes at
+  /// most), its length returned.
+  HttpDocPath,
+  /// `((BrowserComponent*)a)->ShowFiles(the paths at (const EeWonLobbyCtlFiles*)b, true)`.
+  BrowserShowFiles,
+  /// `((ScreenContainer*)a)->ShowScreen((Component*)b, c != 0)`.
+  ScreenShow,
+  /// `((ServerListCtrl*)a)->GetSelGame()`.
+  ListSelGame,
+  /// `this->DeliverEvent(new ChangeDirectConnectEvent(a, (LobbyGame*)b), false)`.
+  DeliverDirectConnect,
+  /// `((Label*)a)->SetText(LobbyFormatString3(GUIString(b), the texts at (const intptr_t*)c), true)`.
+  LabelSetFormat3,
 };
 
 /// The inward calls.
@@ -298,8 +758,20 @@ enum class EeWonLobbyCtlCall : uint32_t {
   ResetBrowser,
   /// a member: `a` < 48 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl and
   /// EELobbyPlayerOptionsCtrl: active), 102 the last ready state, 103 the browser's reset flag, 104
-  /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag.
+  /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag; 110.. ServerListCtrl's (the game type, the filter
+  /// flag, the filter time, the column count, the rows, the columns).
   Field,
+  /// ServerListCtrl::TimerEvent(`a`) (0 or 1; round 13).
+  Timer,
+  /// A row's virtual (`EeWonLobbyCtlRowCall` `a`, the row `b`, `c` its three arguments `const intptr_t[3]`).
+  Row,
+  /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
+  Cfg,
+  /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind;
+  /// RoomLabelCtrl: 0 the prefix, 1 the room kind, 2 the user count shown, 3 the server shown).
+  SetField,
+  /// LoginScreen's page `a` shown (0 the message of the day, 1 create account, 2 lost password, 3 lost user name).
+  Page,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -338,6 +810,68 @@ enum class EeWonLobbyCtlEvent : uint32_t {
   SyncPlayer,
   /// 100064: a colour button's colour changed (round 5)
   ColorChanged,
+  /// `ComponentEvent_InputTextChanged` (round 13)
+  InputTextChanged,
+  /// `ComponentEvent_InputReturn`
+  InputReturn,
+  /// `LobbyEvent_GameChanged` (a `GameChangedEvent`)
+  GameChanged,
+  /// `LobbyEvent_SyncGameList` (a `SyncGameListEvent`)
+  SyncGameList,
+  /// 100034: the filter values changed
+  FiltersChanged,
+  /// 100059: every game to filter again
+  RefilterAll,
+  /// 100058: the shown games to filter again
+  RefilterShown,
+  /// `ComponentEvent_TextLinkActivated` (a `TextLinkActivatedEvent`)
+  TextLinkActivated,
+  /// `LobbyEvent_Alert`
+  Alert,
+  /// `LobbyEvent_AnnounceFriend`
+  AnnounceFriend,
+  /// `LobbyEvent_AnnounceClientLocation`
+  AnnounceClientLocation,
+  /// `LobbyEvent_ClientModerated`
+  ClientModerated,
+  /// `LobbyEvent_ChatCommandError`
+  ChatCommandError,
+  /// `LobbyEvent_GroupInvitation`
+  GroupInvitation,
+  /// `LobbyEvent_GroupJoinAttempt`
+  GroupJoinAttempt,
+  /// `LobbyEvent_JoinedRoom`
+  JoinedRoom,
+  /// `LobbyEvent_LeftRoom`
+  LeftRoom,
+  /// `LobbyEvent_PlayerTeamChanged`
+  PlayerTeamChanged,
+  /// `LobbyEvent_RecvChat`
+  RecvChat,
+  /// `LobbyEvent_SetChatInput`
+  SetChatInput,
+  /// `ComponentEvent_TreeItemOpened` (a `TreeItemOpenedEvent`)
+  TreeItemOpened,
+  /// `LobbyEvent_GroupChanged`
+  GroupChanged,
+  /// `LobbyEvent_ServerChanged`
+  ServerChanged,
+  /// 100053: the room list to fill again
+  SetRoomList,
+  /// `LobbyEvent_FriendChanged`
+  FriendChanged,
+  /// 100056: the friends to show again
+  RefreshFriends,
+  /// `LobbyEvent_LoginInitStatus`
+  LoginInitStatus,
+  /// `LobbyEvent_SetLoginFields`
+  SetLoginFields,
+  /// 100052: the saved user names to list again
+  FillUserNames,
+  /// `LobbyEvent_QueryAccountResult`
+  QueryAccountResult,
+  /// `LobbyEvent_GotHTTPDocument`
+  GotHttpDocument,
 };
 
 /// The texts the controls set (the lobby's resource strings).
@@ -397,6 +931,113 @@ enum class EeWonLobbyCtlPref : uint32_t {
   FilterDirtyWords,
   AnonymousToFriends,
   ConnectionSpeed,
+};
+
+/// A list row's field (`ItemGet` / `ItemSet`; round 13).
+enum class EeWonLobbyCtlItemField : uint32_t {
+  /// `ListItem::mHeight`
+  Height = 0,
+  /// `ListItem::mTop`
+  Top,
+  /// `ListItem::mWidth`
+  Width,
+  /// `ListItem::mSelected` (0 or 1)
+  Selected,
+  /// `ListItem::mSelectable` (0 or 1)
+  Selectable,
+  /// `ServerDetailsItem::mIconId`
+  IconId,
+  /// `ServerDetailsItem::mSummaryHeight` (a byte)
+  SummaryHeight,
+  /// `TextListItem::mColor`
+  Color,
+  /// `FriendsListItem::mSeparator` (0 or 1)
+  FriendSeparator,
+  /// `FriendsListItem::mSortGroup` (a signed byte)
+  FriendSortGroup,
+  /// `UserListItem::mSortKey` (a signed byte)
+  UserSortKey,
+  /// `UserListItem::mShowSeparator` (0 or 1)
+  UserShowSeparator,
+};
+
+/// An event's member (`EvGet`; round 13), by its class: AnnounceClientLocation, AnnounceFriend,
+/// TextLinkActivated (the link as a `ChatLink`, NULL another), PlayerTeamChanged, RecvChat, JoinedRoom, LeftRoom,
+/// ChatCommandError, Alert, SetChatInput, GroupInvitation, GroupJoinAttempt, ClientModerated. A text is its
+/// `GUIStringData*`, a flag 0 or 1.
+enum class EeWonLobbyCtlEvField : uint32_t {
+  AclHandled = 0,
+  AclRoomId,
+  AclClient,
+  AclRoom,
+  AclServer,
+  AfLocation,
+  AfFriend,
+  AfHandled,
+  TlaLink,
+  PtcClient,
+  RcSender,
+  RcTarget,
+  RcRoomSpec,
+  RcText,
+  RcIsTeam,
+  RcIsWhisper,
+  RcIsWarning,
+  RcIsEmote,
+  JrRoomSpec,
+  JrClientId,
+  JrGroupName,
+  JrServerName,
+  JrClients,
+  LrRoomSpec,
+  LrFlag,
+  LrForced,
+  CceText,
+  AlKind,
+  AlValue,
+  AlSeverity,
+  AlText,
+  SciHandled,
+  SciRoomSpec,
+  SciCommand,
+  SciText,
+  GiKind,
+  GiClient,
+  GiGameName,
+  GiGameId,
+  GiComment,
+  GiFlag,
+  GiInvite,
+  GjaKind,
+  GjaClient,
+  GjaComment,
+  CmRoomSpec,
+  CmClient,
+  CmFlag,
+  CmKind,
+  CmDuration,
+  CmRoomName,
+  CmComment,
+  /// GroupChangedEvent
+  GcGroup,
+  GcServer,
+  /// ServerChangedEvent
+  ScServer,
+  /// FriendChangedEvent
+  FcFriend,
+  /// LoginInitStatusEvent
+  LisStatus,
+  LisDescription,
+  LisAllowIgnore,
+  LisKind,
+  /// SetLoginFieldsEvent
+  SlfUserName,
+  SlfPassword,
+  /// QueryAccountResultEvent
+  QarEmail,
+  QarNewsletter,
+  /// GotHTTPDocumentEvent's `mOp`
+  GhdOp,
 };
 
 /// One control's Rust half.

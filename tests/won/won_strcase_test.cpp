@@ -2,7 +2,7 @@
 // run with the C runtime in the "C" LC_CTYPE, as the game sets it: decision D6) against the port's functions, which
 // are ee_won's strcase module, over every byte and every 16-bit unit (and, where wchar_t is 32 bits, a sample past
 // them), and over every pair of short texts drawn from a mixed alphabet (ASCII letters of both cases, digits, a
-// space, UTF-8 sequences, Latin-1 and astral units). Links StringUtil.cpp. Prints one line per failed check; the exit
+// space, UTF-8 sequences, Latin-1 and astral units). StringUtil.cpp is deleted: the forwards are WONStringCompare.h's. Prints one line per failed check; the exit
 // code is the number of failed checks.
 #include <locale.h>
 #include <stdio.h>
@@ -13,17 +13,27 @@
 #include <vector>
 #include "rust/all.h"
 
+#include "ee/wonapi/WONStringCompare.h" // the forwards the game keeps (StringUtil.cpp is deleted)
+
+// the case maps no game unit calls any more, over the same Rust (strcase.rs) the forwards call
 namespace WONAPI {
-std::string StringToUpperCase(const std::string& theStr);
-std::string StringToLowerCase(const std::string& text);
-std::wstring WStringToUpperCase(const std::wstring& text);
-std::wstring WStringToLowerCase(const std::wstring& theStr);
-void StringToUpperCaseInPlace(std::string& text);
-void StringToLowerCaseInPlace(std::string& theStr);
-void WStringToUpperCaseInPlace(std::wstring& theStr);
-void WStringToLowerCaseInPlace(std::wstring& theStr);
-int StringCompareNoCase(const std::string& first, const std::string& second);
-int WStringCompareNoCase(const std::wstring& first, const std::wstring& second);
+static std::string StringToUpperCase(std::string s) { StringToUpperCaseInPlace(s); return s; }
+static void StringToLowerCaseInPlace(std::string& s)
+{ if (!s.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&s[0]), s.length(), false); }
+static std::string StringToLowerCase(std::string s) { StringToLowerCaseInPlace(s); return s; }
+static void WCase(std::wstring& s, bool inUpper)
+{
+    if (s.empty()) return;
+#if WCHAR_MAX > 0xffff
+    ee_won_case_units32(reinterpret_cast<uint32_t*>(&s[0]), s.length(), inUpper);
+#else
+    ee_won_case_units16(reinterpret_cast<uint16_t*>(&s[0]), s.length(), inUpper);
+#endif
+}
+static void WStringToUpperCaseInPlace(std::wstring& s) { WCase(s, true); }
+static void WStringToLowerCaseInPlace(std::wstring& s) { WCase(s, false); }
+static std::wstring WStringToUpperCase(std::wstring s) { WCase(s, true); return s; }
+static std::wstring WStringToLowerCase(std::wstring s) { WCase(s, false); return s; }
 }
 
 static int sFailures;

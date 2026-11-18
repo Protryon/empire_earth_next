@@ -85,6 +85,10 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::TextFree: delete T(a); return 0;
     case O::TextLength: return T(a)->length();
+    case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
+        if (b != 0)
+            for (unsigned i = 0; i < TX(a).mData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)TX(a).mData->mText[i];
+        return TX(a).mData->mLength;
     case O::ListFree: // (kind 1, the data objects, is Rust's)
         if (b == 2) delete reinterpret_cast<DirEntityList*>(a);
         else delete reinterpret_cast<LobbyClientIterator*>(a);
@@ -217,52 +221,25 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
             return 0;
         }
         case 3: RC(a)->SetCloseCompletion(new LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L)); return 0;
-        case 4: RC(a)->SubscribeDataObject(0xffff, L->mGameDataType, false, new ::RoutingOpCompletion(21, L)); return 0;
+        case 4: // SubscribeDataObject(0xffff, L->mGameDataType, false, new RoutingOpCompletion(21, L))
+            RoutingRequestValues().N(1).N(0xffff).S(L->mGameDataType).N(false)
+                .Run(RC(a), EE_WON_RTQ_READ_DATA, new ::RoutingOpCompletion(21, L));
+            return 0;
         case 5: return RC(a)->IsConnected();
-        case 6: RC(a)->AbortServerShutdown(NULL); return 0;
-        case 7: RC(a)->BecomeModerator(c != 0, NULL); return 0;
-        case 8: RC(a)->LeaveGroup((unsigned short)c, NULL); return 0;
-        case 9: RC(a)->CancelJoinGroup((unsigned short)c, true, NULL); return 0;
-        case 10: RC(a)->ReplaceDataObject((unsigned short)c, L->mGameDataType, gEmptyWideString, NULL); return 0;
         }
         return 0;
-    case O::ConnSendData: RC(a)->SendData(reinterpret_cast<const ByteBuffer*>(b), 0, (unsigned short)c, NULL); return 0;
+    case O::ConnSendData: // SendData(b, 0, c, NULL)
+        RoutingRequestValues().D(reinterpret_cast<const ByteBuffer*>(b)).N(0).L(std::list<unsigned short>(1, (unsigned short)c))
+            .Run(RC(a), EE_WON_RTQ_DATA, NULL);
+        return 0;
     case O::ConnAdvertise: {
         WriteBuffer aBuffer(0, true);
         GM(b)->WriteSummary(aBuffer);
-        RC(a)->CreateDataObject(true, (unsigned short)c, L->mGameDataType, gEmptyWideString,
-                                aBuffer.ToByteBuffer(true).get(), NULL);
+        // CreateDataObject(true, c, L->mGameDataType, gEmptyWideString, the summary, NULL)
+        RoutingRequestValues().N(true).N((unsigned short)c).S(L->mGameDataType).W(gEmptyWideString)
+            .D(aBuffer.ToByteBuffer(true).get()).Run(RC(a), EE_WON_RTQ_CREATE_DATA, NULL);
         return 0;
     }
-    case O::ConnSetClientFlags:
-        RC(a)->SetClientFlags((unsigned long)b, (unsigned long)c, (unsigned long)d, (unsigned long)e, NULL);
-        return 0;
-    case O::ConnSetGroupFlags:
-        RC(a)->SetGroupFlags((unsigned short)b, (unsigned long)c, (unsigned long)d, 0, 0, NULL);
-        return 0;
-    case O::ConnBan:
-        RC(a)->BanClient((unsigned short)b, (b >> 16) != 0, (unsigned long)c, TX(d), (unsigned short)e, NULL);
-        return 0;
-    case O::ConnMute:
-        RC(a)->MuteClient((unsigned short)b, (b >> 16) != 0, (unsigned long)c, TX(d), (unsigned short)e, NULL);
-        return 0;
-    case O::ConnBanByWonId:
-        RC(a)->BanClientByWONId((unsigned short)b, false, 0, std::wstring(gEmptyWideString), (unsigned long)c, NULL);
-        return 0;
-    case O::ConnMuteByWonId:
-        RC(a)->MuteClientByWONId((unsigned short)b, false, 0, std::wstring(gEmptyWideString), (unsigned long)c, NULL);
-        return 0;
-    case O::ConnAccept: RC(a)->AcceptClient((unsigned short)b, (unsigned short)c, d != 0, gEmptyWideString, NULL); return 0;
-    case O::ConnInvite: RC(a)->InviteClient((unsigned short)b, (unsigned short)c, d != 0, TX(e), NULL); return 0;
-    case O::ConnSendChat: RC(a)->SendChat(TX(b), (unsigned long)c, (unsigned short)d, NULL); return 0;
-    case O::ConnSendChatTo: {
-        const uint16_t* anIds = reinterpret_cast<const uint16_t*>(e);
-        std::list<unsigned short> aRecipients(anIds, anIds + d);
-        RC(a)->SendChatTo(TX(b), (unsigned short)c, aRecipients, NULL);
-        return 0;
-    }
-    case O::ConnAlert: RC(a)->SendServerAlert(TX(b), NULL); return 0;
-    case O::ConnStartShutdown: RC(a)->StartServerShutdown(TX(b), (unsigned long)c, NULL); return 0;
     case O::ConnectOpNew: {
         ServerConnectionConnectOp* anOp = new ServerConnectionConnectOp(RC(a), S(b)->GetAddress());
         anOp->AddRef();

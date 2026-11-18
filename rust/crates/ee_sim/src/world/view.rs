@@ -160,6 +160,10 @@ impl<'t, T> Record<'t, T> {
     fn at(object: usize, offset: u64) -> Self {
         Record { p: (object + offset as usize) as *const T, _t: PhantomData }
     }
+    /// The record at `object + offset` (the sibling views': tech_view.rs).
+    pub(crate) fn at_offset(object: usize, offset: u64) -> Self {
+        Self::at(object, offset)
+    }
     /// The record's address (for [`world_field!`](crate::world_field)).
     pub fn ptr(&self) -> *const T {
         self.p

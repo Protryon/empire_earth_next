@@ -84,6 +84,8 @@ extern "C" {
     #[link_name = "lua_error"]
     fn lua_error_(L: *mut lua_State) -> c_int;
     pub fn lua_next(L: *mut lua_State, idx: c_int) -> c_int;
+    pub fn lua_gettable(L: *mut lua_State, idx: c_int) -> c_int;
+    pub fn lua_settable(L: *mut lua_State, idx: c_int);
 
     pub fn luaL_getmetafield(L: *mut lua_State, obj: c_int, e: *const c_char) -> c_int;
     pub fn luaL_tolstring(L: *mut lua_State, idx: c_int, len: *mut usize) -> *const c_char;

@@ -110,8 +110,8 @@ LobbyServer* LobbyGetCurrentServer()
 }
 
 namespace WONAPI {
-// Declared as in the SDK's StringUtil.h; defined in StringUtil.cpp
-const std::string& GetEmptyStr();
+// the SDK's GetEmptyStr (StringUtil.cpp): a shared empty string
+static const std::string& GetEmptyStr() { static const std::string anEmpty; return anEmpty; }
 // Returns the product id the lobby stamps on its game listings, or 0 without a lobby
 unsigned short GetLobbyProductId()
 {

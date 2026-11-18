@@ -229,9 +229,11 @@ def rust_libs(target):
     lib = str(rust_build.ensure(target.name))
     if target.os == "windows":
         return [lib]
+    # the sound device (cpal): ALSA on Linux (libasound2-dev to build), Core Audio on macOS
     if target.os == "linux":
-        return [lib, "-lpthread", "-ldl", "-lm"]
-    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
+        return [lib, "-lasound", "-lpthread", "-ldl", "-lm"]
+    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation",
+            "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit", "-liconv"]
 
 
 def platform_sources(target):
@@ -383,8 +385,7 @@ WON_TESTS = {
     "won_crypto_test": [],  # (the crypto classes are header-only since net round 28)
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
-    "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
-                     WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
+    "won_ops_test": [WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
     # the async machinery's events (golden: rust/crates/ee_won_net/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won_net/src/golden_sockobj.txt, recorded over the C++ classes)
@@ -416,7 +417,7 @@ WON_TESTS = {
     "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
-    "won_persist_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_persist_test": [],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
@@ -622,6 +623,14 @@ WON_TESTS = {
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
     # rust/crates/ee_won_lobby/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
+    # ServerListCtrl and its rows as lobbyctl.rs kind ServerList (srvlistctl.rs): the original statements over a
+    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won_lobby/src/golden_srvlist.txt)
+    "won_srvlist_test": [],
+    # ChatCtrl as lobbyctl.rs kind Chat (chatctl.rs), the same way (golden: rust/crates/ee_won_lobby/src/golden_chatctl.txt)
+    "won_chatctl_test": [],
+    # the other Internet controls as lobbyctl.rs kinds (netctl.rs), the same way (golden:
+    # rust/crates/ee_won_lobby/src/golden_netctl.txt)
+    "won_netctl_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
     # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)
@@ -641,35 +650,34 @@ WON_TESTS = {
     "won_logics_test": [],
     # RoutingLogic as a Rust object (golden: rust/crates/ee_won_lobby/src/golden_routelogic.txt)
     "won_routelogic_test": [],
+    # RoutingLogic's connection requests (routelogic.rs conn_request) against the RoutingLogic.cpp cases and
+    # RoutingConnection helpers they replaced (golden: rust/crates/ee_won_lobby/src/golden_routeconn.txt)
+    "won_routeconn_req_test": [],
     # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
     # rust/crates/ee_won_lobby/src/golden_modelobj.txt)
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
     # ee_won's imgdec.rs now, R6 WON round 41)
-    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")]],
     # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
     # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won_gui/src/golden_jpeg.txt)
     "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                      WON_SRC / "WONCommon" / "StringUtil.cpp",
                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
-    "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
-    "won_parse_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_parse_test": [],
     # FileReader / FileWriter (golden: rust/crates/ee_won_net/src/golden_file.txt)
     "won_file_test": [],
     # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won_net/src/golden_config.txt)
-    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
-                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")]],
     # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won_net/src/golden_authlogin.txt)
     "won_auth_test": [],
     # the directory server's entity replies (golden: rust/crates/ee_won_net/src/golden_dir.txt)
-    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
-                     WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
@@ -690,11 +698,11 @@ WON_TESTS = {
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
     # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
     # (golden: rust/crates/ee_won_net/src/golden_http.txt)
-    "won_http_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_http_test": [],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
     # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
-    "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_misc_test": [],
     # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won_net/src/golden_fwop.txt)
     "won_fwop_test": [],
@@ -711,7 +719,7 @@ WON_TESTS = {
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won_net/src/golden_reqdir.txt)
-    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
+    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                         ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
@@ -720,16 +728,15 @@ WON_TESTS = {
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
     # verop.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_verop.txt)
-    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
-                       WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won_net/src/golden_hostop.txt)
-    "won_hostop_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_hostop_test": [],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won_net/src/golden_titlecfg.txt)
-    "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_titlecfg_test": [],
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
     # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won_net/src/golden_peerauth.txt)
@@ -743,10 +750,10 @@ WON_TESTS = {
     "won_peerop_test": "won_peerobj_test",
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
     # over the same stand-ins (golden: rust/crates/ee_won_net/src/golden_authflow.txt)
-    "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_authctx_test": [],
     # HTTPEngine (HTTPSession, HTTPConnection), the original's statements against ee_won's httpengine objects over the
     # same stand-ins (golden: rust/crates/ee_won_net/src/golden_httpengine.txt)
-    "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_httpengine_test": [],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
     # original's statements against tests/won/won_miscops_glue.h over ee_won's miscops module
     # (golden: rust/crates/ee_won_net/src/golden_miscops.txt)
@@ -754,7 +761,7 @@ WON_TESTS = {
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
     # files), the original's statements over the real FileReader / FileWriter against won_cachemap_glue.h over ee_won's
     # cachemap module
-    "won_cachemap_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_cachemap_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won_net/src/golden_path.txt)
     "won_path_test": [],
     # RegKey on config.yaml (golden: rust/crates/ee_won_net/src/golden_regkey.txt)
@@ -764,8 +771,7 @@ WON_TESTS = {
     "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp",
-                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)
@@ -776,12 +782,11 @@ WON_TESTS = {
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
-                                                             "ConfigToken.cpp")],
-                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
+                                                             "ConfigToken.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
-WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
+WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"]]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
 # rust/crates/ee_won_net/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
 # is header-only since net round 26)
@@ -792,7 +797,6 @@ WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONServer" / "ServerOp.cpp",
-                                  WON_SRC / "WONCommon" / "StringUtil.cpp",
                                   WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp"]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
@@ -841,8 +845,7 @@ WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
 # container, timer and thread shims; won_ops_test's units
 WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
-                                    *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
-                                    WON_SRC / "WONCommon" / "StringUtil.cpp"]
+                                    *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp"))]
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
@@ -1028,7 +1031,7 @@ def ninja_exe():
 
 
 # SDL subsystems the game uses: video (window, events, keyboard/mouse, clipboard, text input/IME), the message box.
-# Audio stays on miniaudio, so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
+# Audio is the Rust library's (cpal), so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
 # (Linux), Cocoa/Metal (macOS) and Win32 come with video.
 SDL_OPTIONS = ["-DSDL_STATIC=ON", "-DSDL_SHARED=OFF", "-DSDL_TEST_LIBRARY=OFF", "-DSDL_TESTS=OFF",
                "-DSDL_EXAMPLES=OFF", "-DSDL_INSTALL=ON", "-DSDL_AUDIO=OFF", "-DSDL_CAMERA=OFF", "-DSDL_HAPTIC=OFF",
@@ -1230,13 +1233,11 @@ def cmd_census(a):
         jobs = [j for j in jobs if a.only in str(j[1])]
     # the include path of the Windows build (verify.include_paths) minus the MSVC/SDK directories, with the compat
     # headers first; the platform layer's POSIX implementation replaces src/Platform/Win32 (compiled as units here)
-    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    inc = [COMPAT, ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
         inc.append(font_arrays(t))
-    inc.append(general_midi_array(t))   # and the built-in general MIDI set
     have = {pathlib.Path(j[1]).resolve() for j in jobs}
     for s in platform_sources(t):
         if pathlib.Path(s).resolve() not in have:
@@ -1439,25 +1440,6 @@ def macos_icns(out_file):
         subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(out_file)], check=True)
 
 
-def general_midi_array(t):
-    """<out>/gen/SEGeneralMIDIArray.h: the built-in general MIDI set as a C array, for compilers without #embed (as
-    font_arrays) -> the directory"""
-    gen = t.out / "gen"
-    header = gen / "SEGeneralMIDIArray.h"
-    source = ROOT / "src" / "Low-Level Engine" / "Sound Engine" / "EE.sf2"
-    if header.exists() and header.stat().st_mtime > source.stat().st_mtime:
-        return gen
-    gen.mkdir(parents=True, exist_ok=True)
-    data = source.read_bytes()
-    lines = ["/* GENERATED by tools/xbuild.py from EE.sf2 (src/Low-Level Engine/Sound Engine/SEGeneralMIDI.c) */",
-             "static const unsigned char kGeneralMIDI[] = {"]
-    for k in range(0, len(data), 32):
-        lines.append(",".join(str(b) for b in data[k:k + 32]) + ",")
-    lines.append("};")
-    header.write_text("\n".join(lines) + "\n")
-    return gen
-
-
 def game_dialect_flags(t, cxx_game):
     """The game's C++ units keep the Microsoft dialect of the Windows build (with the lenience clang-cl's Microsoft
     mode has, MS_DIALECT_LENIENCE); C, the vendored libraries and the platform layer are standard code. Optimised
@@ -1534,9 +1516,8 @@ def cmd_game(a):
             jobs.append(("platform", s, ""))
     # the window icon's pixels (the generated gen/PlatIconData.h) handed to the Rust window layer at start-up
     jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatWindowIcon.c", ""))
-    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
-           sdl_prefix(t) / "include", font_arrays(t), general_midi_array(t)]
+    inc = [COMPAT, ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
+           sdl_prefix(t) / "include", font_arrays(t)]
     icon_header(t)   # gen/PlatIconData.h, beside the font arrays
     opt = ["-O1"] if not a.debug else ["-O0"]
     san = [f"-fsanitize={a.sanitize}", "-fno-omit-frame-pointer"] if a.sanitize else []
@@ -1571,10 +1552,12 @@ def cmd_game(a):
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
     # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
     libs = [wlib, *sdl_libs(t)]
+    # (and the sound device, cpal: ALSA, Core Audio)
     if t.os == "linux":
-        libs += ["-ldl", "-lm", "-lpthread"]
+        libs += ["-lasound", "-ldl", "-lm", "-lpthread"]
     else:
-        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation",
+                 "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit"]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
     # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the
