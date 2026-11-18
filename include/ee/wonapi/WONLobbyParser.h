@@ -10,7 +10,6 @@ namespace WONAPI {
 
 
 
-std::string WStringToString(const std::wstring&); // StringUtil.cpp
 // Real non-polymorphic scanner used by the original command/configuration parsers.
 // Character accessors 0x2a48c0/0x2a4910 and EOF 0x2a4940 prove this representation. Every scan is ee_won's parser
 // (ffi_parse.rs) over the text, its unit size and the cursor; the class is header-only since net round 27.

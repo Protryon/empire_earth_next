@@ -198,8 +198,5 @@ public:
 extern SmartPtr<WONLobbyPrv> gLobbyData;     // 0x96630c (an intrusive SmartPtr)
 // LobbyConfig::mDefaultFileName is 0x966310; declared in WONLobbyGUI.h.
 extern bool gLobbyUseLocalIP;                // 0x96634d; a config key writes it, nothing reads it
-void StringToUpperCaseInPlace(std::string&); // 0x6a69a0 (StringUtil.cpp)
-std::string WStringToString(const std::wstring&); // 0x6a6280 (StringUtil.cpp)
-std::wstring StringToWString(const std::string& inString);
 }
 #endif

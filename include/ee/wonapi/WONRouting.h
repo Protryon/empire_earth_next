@@ -52,7 +52,6 @@ namespace WONAPI {
 
 typedef long WONStatus;
 enum AsyncRunMode { OP_MODE_ASYNC=1, OP_MODE_BLOCK=2 }; //32-bit enum (WON SDK)
-void StringToUpperCaseInPlace(std::string&); //2a69a0
 typedef long RoutingOpType;
 enum AuthType { AUTH_TYPE_NONE=0, AUTH_TYPE_SESSION=1, AUTH_TYPE_PERSISTENT=2, AUTH_TYPE_PERSISTENT_NOCRYPT=3 };
 
