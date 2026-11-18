@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/units.h"
 
 /// id -> text, len: the string resource
 constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
@@ -132,6 +133,54 @@ struct EeAppCheatIo {
 /// The host: `(ctx, op, io)`.
 using EeAppCheatFn = void(*)(void*, int32_t, EeAppCheatIo*);
 
+/// The world's part (see `StatsWorld`).
+struct EeAppStatsWorld {
+  long current;
+  bool is_scenario;
+  long end_time;
+  long base[5];
+  long level[5];
+};
+
+/// A player of the world (`mPlayers[slot]`).
+struct EeAppStatsPlayer {
+  unsigned long id;
+  bool human;
+  /// a computer named as the resource's "Computer"
+  bool default_name;
+  bool observer;
+  bool disconnected;
+  unsigned long result;
+  /// `mSavedGroups.mStats`
+  EeUnitsPlayerStats *stats;
+};
+
+/// The C++ calls: the physics random draw, `mSavedGroups.Set`, `mResourceCaps` read and written.
+struct EeAppStatsHost {
+  void *ctx;
+  float (*random)(void*, float, float);
+  void (*set)(void*, uint32_t, long, long);
+  long (*cap)(void*, uint32_t, uint32_t);
+  void (*set_cap)(void*, uint32_t, uint32_t, long);
+};
+
+/// A record in the history's order.
+struct EeAppStatsRecord {
+  uint32_t slot;
+  unsigned long score;
+  unsigned long economy_score;
+  unsigned long epoch_score;
+  unsigned long military_score;
+  unsigned long tech_score;
+  /// the name's suffix number (" #n"); 0 none
+  long suffix;
+  bool is_local;
+  bool is_human;
+  /// the record's play time (series 0x18) set after its copy
+  bool has_play_time;
+  long play_time;
+};
+
 /// The storm's plain members (names and order the C++ class's).
 struct EeAppStormFields {
   /// = 1; clamped to [0, 2]
@@ -198,6 +247,20 @@ void ee_app_cheats_apply(const EeAppCheats *p,
                          long code,
                          long player,
                          long parameter);
+
+/// `EEWorld::RecordStatistics`' decisions over the world's players: the records in their order into `out` (at most
+/// `cap`) -> their count; `current_index` the local record's (-1: kept), `is_scenario` the history's flag after.
+///
+/// # Safety
+/// `world`, `players` (`count` of them, each with a live statistics object), `host` and the out values are valid.
+size_t ee_app_record_statistics(const EeAppStatsWorld *world,
+                                const EeAppStatsPlayer *players,
+                                size_t count,
+                                const EeAppStatsHost *host,
+                                EeAppStatsRecord *out,
+                                size_t cap,
+                                long *current_index,
+                                bool *is_scenario);
 
 /// `EEEMStorm(kind)`'s plain members.
 ///

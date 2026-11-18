@@ -438,3 +438,5 @@ mod goal_op_tables {
 pub mod app;
 /// The crate ee_screens before the restructure.
 pub mod screens;
+// EE-SIM's driver (TEST ONLY): the headless simulation's options, menus, run, samples and report
+pub mod sim_driver;
