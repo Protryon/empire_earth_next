@@ -641,13 +641,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT:
         ioArgs->f[0] = theComplex->DistanceSquaredToUnit(ObjectOf<EEUnit>(inB));
         return 0;
-    case EE_UNITS_GOAL_HOST_UNDETECTABLE: {
-            EEUnit* theTarget = ObjectOf<EEUnit>(inB);
-            return theTarget->mComplexUnit->mIsCloakable && theTarget->mComplexUnit->GetIsCloaked()
-                && theTarget->mPlayer != theComplex->mPlayer
-                && theComplex->mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] != 0
-                && theTarget->mUnitClass->mCloakRadius == 0;
-        }
 
     // the explore goal's
     case EE_UNITS_GOAL_HOST_PLAYER_HUMAN:
@@ -665,9 +658,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[3] = theBounds.mRight;
             return 1;
         }
-    case EE_UNITS_GOAL_HOST_LINE_OF_SIGHT:
-        ioArgs->f[0] = theComplex->GetLineOfSight();
-        return 0;
     case EE_UNITS_GOAL_HOST_RING_TILES: {
             std::vector<U2DPoint<long> > theTiles;
             EEGetSquareRingTiles((long)ioArgs->i[0], (long)ioArgs->i[1], (long)ioArgs->i[2], theTiles);
@@ -793,8 +783,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             TilesOut(ioArgs, theTiles, 3);
             return theResult;
         }
-    case EE_UNITS_GOAL_HOST_SAME_PLAYER:
-        return theComplex->mPlayer == ObjectOf<EEComplexUnit>(inB)->mPlayer;
     case EE_UNITS_GOAL_HOST_FIRE_CARGO:
         theComplex->mUnitClass->FireShot(theComplex);
         return 0;
@@ -817,27 +805,13 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return 0;
         }
 
-    // the load goals' (the unit and class reads give zeros for no unit)
-    case EE_UNITS_GOAL_HOST_LOAD_CLASS:
-        if (theComplex != NULL) {
-            EEUnitClass* theClass = theComplex->mUnitClass;
-            int64_t theFields[7] = {theClass->mGarrisonCapacity, theClass->mTransportCapacity, theClass->mWeight,
-                                    theClass->mGarrisonTechnology, theClass->mUnitType, theClass->mCanGarrison,
-                                    theClass->mTileSize};
-            memcpy(ioArgs->i, theFields, sizeof(theFields));
-            ioArgs->f[0] = theClass->mLoadRange;
-            ioArgs->f[1] = theClass->mInnerCollisionSphere;
-        }
-        return 0;
+    // the load goals' (the unit and class reads give zeros for no unit; the class's are Rust's views)
     case EE_UNITS_GOAL_HOST_LOAD_UNIT:
         if (theComplex != NULL) {
             int64_t theFields[6] = {theComplex->mGarrisonCount, theComplex->mCargoRoom, theComplex->mHitPoints,
                                     theComplex->mIsDisabled, theComplex->mWaypoints.empty(), theComplex->mAnimation};
             memcpy(ioArgs->i, theFields, sizeof(theFields));
         }
-        return 0;
-    case EE_UNITS_GOAL_HOST_UNIT_LOCATION:
-        PointOut(ioArgs, GE3DPoint(theComplex->mPhysicalModel.GetLocation()));
         return 0;
     case EE_UNITS_GOAL_HOST_LINE_BLOCKED: {
             EEUnit* theBlocker;
@@ -925,72 +899,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_GENERATE:
         ioArgs->f[0] = gPhysics->mRandom.Generate();
         return 0;
-    case EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS:
-        return theComplex->mStats->mCanFireOverWalls;
     // the build/repair goal's
-    case EE_UNITS_GOAL_HOST_BUILD_UNIT: {
-            EeUnitsBuildUnit* theFields = static_cast<EeUnitsBuildUnit*>(ioArgs->sink);
-            EEUnitClass* theClass = theUnit->mUnitClass;
-            EEPlayer* thePlayer = theUnit->mPlayer;
-            EEComplexUnit* theOwn = EEUnitCast<EEComplexUnit>(theUnit);
-            theFields->complex = Handle(theUnit->mComplexUnit);
-            theFields->unit_class = Handle(theClass);
-            theFields->player = Handle(thePlayer);
-            theFields->unit_type = theClass->mUnitType;
-            theFields->tile_size = theClass->mTileSize;
-            theFields->category = theClass->mCategory;
-            theFields->table_technology =
-                gUnitClassTable[theClass->mUnitType] ? gUnitClassTable[theClass->mUnitType]->mTechnology : 100000;
-            theFields->tile_x = theUnit->mTileX;
-            theFields->tile_y = theUnit->mTileY;
-            if (inB != 0)   // RepairPointers: the unit's other pointers are still saved ids
-                return 0;
-            EEComplexUnit* theFirst = theUnit->mComplexUnit;
-            if (theFirst != NULL)
-                while (theFirst->mPreviousPart != NULL)
-                    theFirst = theFirst->mPreviousPart;
-            theFields->first = Handle(theFirst);
-            theFields->hit_points = theUnit->mHitPoints;
-            theFields->max_hit_points = theUnit->mStats->mMaxHitPoints;
-            theFields->repair_rate = theUnit->mStats->mRepairRate;
-            theFields->work_rate = theUnit->mStats->mWorkRate;
-            theFields->build_time_scale = theUnit->mStats->mBuildTimeScale;
-            theFields->tile_node = theUnit->mTileNode != NULL;
-            theFields->tile = theUnit->mTile != NULL;
-            theFields->valid = theUnit->mIsValid;
-            theFields->foundation = theUnit->IsFoundation();
-            theFields->wall = theClass->mIsWall;
-            theFields->tower = theClass->mIsTower;
-            theFields->drop_site = theClass->IsDropSite();
-            theFields->land_building = theClass->IsLandBuilding();
-            theFields->animation = theOwn != NULL ? (int32_t)theOwn->mAnimation : 0;
-            if (thePlayer != NULL) {
-                theFields->instant_build = thePlayer->mInstantBuild;
-                theFields->human = thePlayer->IsHuman();
-                theFields->computer = thePlayer->mComputerPlayer != NULL;
-            }
-            if (theOwn != NULL) {
-                theFields->next = Handle(theOwn->mNextPart);
-                theFields->builders = theOwn->mNumBuilders;
-                theFields->command = theOwn->mCommand ? (int32_t)theOwn->mCommand->mType : 0;
-                theFields->line_of_sight = theOwn->GetLineOfSight();
-                const GETransformation& theLocation = theOwn->mPhysicalModel.GetLocation();
-                theFields->location[0] = theLocation.GetX();
-                theFields->location[1] = theLocation.GetY();
-                theFields->location[2] = theLocation.GetZ();
-                theFields->built = theOwn->mIsBuilt;
-                theFields->paid_for = theOwn->mIsPaidFor;
-                theFields->shift_queued_build = theOwn->mHasShiftQueuedBuild;
-                theFields->disabled = theOwn->mIsDisabled;
-            }
-            theFields->resource_type = theUnit->mResourceType;
-            theFields->resource_amount = theUnit->mResourceAmount;
-            theFields->carry_amount = theUnit->mStats->mCarryAmount;
-            theFields->family = theClass->mFamily;
-            theFields->is_tree = theClass->mIsTree;
-            theFields->moving = theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mStats->mMaxVelocity > 0.0f;
-            return 0;
-        }
+    // (EE_UNITS_GOAL_HOST_BUILD_UNIT's reads are Rust's views: rust_goal.rs build_unit_fields)
     case EE_UNITS_GOAL_HOST_TECH_NODE:
         return Handle(ObjectOf<EEPlayer>(inA)->GetTechTree()->Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_NODE_INFO: {
@@ -1002,10 +912,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             }
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_PLAYER_ID:
-        return inA != 0 ? (int64_t)ObjectOf<EEPlayer>(inA)->mPlayerID : 0;
-    case EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE:
-        return inA != 0 ? (int64_t)ObjectOf<EEUnitClass>(inA)->mUnitType : 0;
     case EE_UNITS_GOAL_HOST_BUILDERS_ADD:
         EEUnitCast<EEComplexUnit>(theUnit)->mNumBuilders += (long)ioArgs->i[0];
         return 0;
@@ -1129,13 +1035,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return theUnit->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
     case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR:
         return theComplex->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), theComplex, (unsigned long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_FRIENDLY: {
-            EEPlayer* thePlayer = ObjectOf<EEPlayer>(inA);
-            EEComplexUnit* theNew = ObjectOf<EEComplexUnit>(inB);
-            return theNew->mPlayer == thePlayer || thePlayer->mEnemies[theNew->mPlayer->mPlayerID] == 0;
-        }
-    case EE_UNITS_GOAL_HOST_IN_CINEMATIC:
-        return ::gWorld.mInCinematic;
     case EE_UNITS_GOAL_HOST_SET_PAID:
         theComplex->mIsPaidFor = true;
         return 0;
@@ -1350,8 +1249,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 UMFloatToLong(theComplex->GetLineOfSight() * 5.0f), theFish->GetResourceType(), &theRejected, true));
         }
     // the location goal's
-    case EE_UNITS_GOAL_HOST_UNIT_CATEGORY:
-        return theComplex->mUnitClass->mCategory;
     case EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION:
         memcpy(ioArgs->sink, &theComplex->mPhysicalModel.GetLocation(), sizeof(GETransformation));
         return 0;

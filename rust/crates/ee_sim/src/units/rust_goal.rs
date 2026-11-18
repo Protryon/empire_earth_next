@@ -8,6 +8,9 @@
 //! Units, groups and goals are C++ objects held by handle (their addresses; an `EEComplexUnit` is its `EEUnit` at
 //! the same address). Text (the debug texts, the out-of-synch dump) is appended through the host as UTF-8.
 
+// `c_long` and `c_ulong` are 32 bits on Windows and 64 elsewhere: the views' casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use std::ffi::c_void;
 
 use crate::units::build::{BuildHost, GOAL_BUILD_REPAIR};
@@ -555,6 +558,107 @@ fn read_unit<R>(unit: u64, f: impl FnOnce(&crate::world::UnitView) -> R) -> R {
     f(&view)
 }
 
+/// `kTechNone`; `kUnitTypeMechZeusPrototype`, `kUnitTypeFarm`, `kUnitTypeDock`, `kUnitTypeNavyYard`
+const TECH_NONE: i32 = 100_000;
+const UNIT_TYPE_MECH_ZEUS_PROTOTYPE: u64 = 0xc2;
+const UNIT_TYPE_FARM: u64 = 0x2a;
+const UNIT_TYPE_DOCK: u64 = 0x24;
+const UNIT_TYPE_NAVY_YARD: u64 = 0x41;
+
+/// `EEUnitClass::IsDropSite()`
+pub(crate) fn class_drop_site(c: &crate::world::view::ClassView) -> bool {
+    let t = c.unit_type();
+    let resource: std::os::raw::c_long = crate::world_field!(c.fields(), mResourceType);
+    t == UNIT_TYPE_MECH_ZEUS_PROTOTYPE
+        || c.land_building()
+            && t != UNIT_TYPE_FARM
+            && t != UNIT_TYPE_DOCK
+            && t != UNIT_TYPE_NAVY_YARD
+            && resource > 0
+            && resource < 7
+}
+
+/// The build/repair and gather goals' reads of a unit (`EE_UNITS_GOAL_HOST_BUILD_UNIT`, once a C++ record fill) over
+/// the views; `basic`: RepairPointers' (the unit's other pointers are still saved ids: the class, player and tile
+/// only). The second value: the unit has a player, whose `IsHuman()` the caller asks the host.
+fn build_unit_fields(u: &crate::world::UnitView, basic: bool) -> (EeUnitsBuildUnit, bool) {
+    use crate::world_field;
+    let mut f = EeUnitsBuildUnit::default();
+    let class = u.class();
+    let player = u.player();
+    f.complex = u.complex_unit_handle();
+    f.unit_class = class.map_or(0, |c| c.handle());
+    f.player = player.map_or(0, |p| p.handle());
+    if let Some(c) = class {
+        f.unit_type = c.unit_type() as i32;
+        f.tile_size = c.tile_size() as i32;
+        f.category = c.category() as i32;
+        // SAFETY: the read's token is the caller's (read_unit)
+        let token = unsafe { crate::world::WorldRead::begin() };
+        f.table_technology = crate::world::view::ClassView::by_index(&token, c.unit_type() as usize)
+            .map_or(TECH_NONE, |t| t.technology() as i32);
+    }
+    let (x, y) = u.tile_xy();
+    f.tile_x = x as i32;
+    f.tile_y = y as i32;
+    if basic {
+        return (f, false);
+    }
+    let mut first = u.complex_unit();
+    while let Some(p) = first.and_then(|v| v.previous_part()) {
+        first = Some(p);
+    }
+    f.first = first.map_or(0, |v| v.handle());
+    f.hit_points = u.hit_points() as i32;
+    let stats = u.stats().map(|s| s.fields());
+    if let Some(s) = stats {
+        f.max_hit_points = world_field!(s, mMaxHitPoints) as i32;
+        f.repair_rate = world_field!(s, mRepairRate) as i32;
+        f.work_rate = world_field!(s, mWorkRate) as i32;
+        f.build_time_scale = world_field!(s, mBuildTimeScale);
+        f.carry_amount = world_field!(s, mCarryAmount) as i32;
+    }
+    f.tile_node = u.has_tile_node();
+    f.tile = u.tile().is_some();
+    f.valid = u.valid();
+    if let Some(c) = class {
+        f.wall = c.wall();
+        f.tower = world_field!(c.fields(), mIsTower);
+        f.drop_site = class_drop_site(&c);
+        f.land_building = c.land_building();
+        f.family = c.family() as i32;
+        f.is_tree = c.tree();
+    }
+    if let Some(p) = player {
+        f.instant_build = world_field!(p.fields(), mInstantBuild);
+        f.computer = p.has_computer_player();
+    }
+    if u.is_complex() {
+        let c = u.complex();
+        f.foundation = world_field!(c, mIsFoundation);
+        f.animation = world_field!(c, mAnimation) as i32;
+        f.next = u.next_part_handle();
+        f.builders = world_field!(c, mNumBuilders) as i32;
+        f.command = u.command_type() as i32;
+        // `GetLineOfSight()`: the stats' line of sight and the unit's own
+        f.line_of_sight = unit_line_of_sight(u);
+        f.location = u.location();
+        f.built = u.is_built();
+        f.paid_for = world_field!(c, mIsPaidFor);
+        f.shift_queued_build = world_field!(c, mHasShiftQueuedBuild);
+        f.disabled = world_field!(c, mIsDisabled);
+    }
+    f.resource_type = u.resource_type() as i32;
+    f.resource_amount = u.resource_amount() as i32;
+    f.moving = u.complex_unit().and_then(|c| c.stats()).is_some_and(|s| world_field!(s.fields(), mMaxVelocity) > 0.0);
+    (f, player.is_some())
+}
+
+/// `EEComplexUnit::GetLineOfSight()`: the stats' line of sight and the unit's own.
+fn unit_line_of_sight(u: &crate::world::UnitView) -> f32 {
+    u.stats().map_or(0.0, |s| crate::world_field!(s.fields(), mLineOfSight)) + u.sight()
+}
+
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
@@ -775,7 +879,19 @@ impl CalamityHost for OpHost<'_> {
         read_unit(unit, |u| u.hit_points() as i32)
     }
     fn undetectable(&mut self, unit: u64, target: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_UNDETECTABLE, unit, target) != 0
+        // the target cloaked, an enemy's, and not a cloak detector itself
+        read_unit(unit, |u| {
+            // SAFETY: the host's handles are live units
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let Some(v) = (unsafe { crate::world::UnitView::of(&t, target) }) else { return false };
+            let Some(c) = v.complex_unit() else { return false };
+            let (Some(mine), Some(theirs)) = (u.player(), v.player()) else { return false };
+            c.cloakable()
+                && c.cloaked()
+                && theirs.handle() != mine.handle()
+                && mine.enemy(theirs.id() as usize) != 0
+                && v.class().is_some_and(|k| crate::world_field!(k.fields(), mCloakRadius) == 0)
+        })
     }
     fn complex_unit(&mut self, unit: u64) -> u64 {
         read_unit(unit, |u| u.complex_unit_handle())
@@ -803,7 +919,7 @@ impl ExploreHost for OpHost<'_> {
         Some([io.i[0] as i32, io.i[1] as i32, io.i[2] as i32, io.i[3] as i32])
     }
     fn line_of_sight(&mut self, unit: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_LINE_OF_SIGHT, unit, 0, &[])[0]
+        read_unit(unit, unit_line_of_sight)
     }
     fn ring_tiles(&mut self, x: i32, y: i32, ring: i32) -> Vec<(i32, i32)> {
         let mut tiles: Vec<(i32, i32)> = Vec::new();
@@ -964,7 +1080,7 @@ impl crate::units::world::GatheringHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
     }
     fn can_fire_over_walls(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS, unit, 0) != 0
+        read_unit(unit, |u| u.stats().is_some_and(|s| crate::world_field!(s.fields(), mCanFireOverWalls)))
     }
 }
 
@@ -1020,7 +1136,7 @@ impl UnloadHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
     }
     fn same_player(&mut self, unit: u64, other: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
+        read_unit(unit, |u| u.player().map(|p| p.handle()) == read_unit(other, |o| o.player().map(|p| p.handle())))
     }
     fn hit_points(&mut self, unit: u64) -> i32 {
         read_unit(unit, |u| u.hit_points() as i32)
@@ -1044,18 +1160,36 @@ impl UnloadHost for OpHost<'_> {
 
 impl LoadHost for OpHost<'_> {
     fn load_class(&mut self, unit: u64) -> LoadClass {
-        let mut io = EeUnitsGoalIo::default();
-        self.call(EE_UNITS_GOAL_HOST_LOAD_CLASS, unit, 0, &mut io);
-        LoadClass {
-            garrison_capacity: io.i[0] as i32,
-            transport_capacity: io.i[1] as i32,
-            weight: io.i[2] as i32,
-            garrison_technology: io.i[3] as i32,
-            unit_type: io.i[4],
-            can_garrison: io.i[5] != 0,
-            tile_size: io.i[6] as i32,
-            load_range: io.f[0],
-            inner_sphere: io.f[1],
+        // (zeros for no unit)
+        let class = (unit != 0).then(|| read_unit(unit, |u| u.class().map(|c| c.handle()))).flatten();
+        // SAFETY: a goal body runs inside the C++ call that holds the world; a unit's class is live
+        let t = unsafe { crate::world::WorldRead::begin() };
+        match class.and_then(|h| unsafe { crate::world::view::ClassView::of(&t, h) }) {
+            Some(c) => {
+                let f = c.fields();
+                LoadClass {
+                    garrison_capacity: crate::world_field!(f, mGarrisonCapacity) as i32,
+                    transport_capacity: crate::world_field!(f, mTransportCapacity) as i32,
+                    weight: crate::world_field!(f, mWeight) as i32,
+                    garrison_technology: crate::world_field!(f, mGarrisonTechnology) as i32,
+                    unit_type: c.unit_type() as i64,
+                    can_garrison: crate::world_field!(f, mCanGarrison),
+                    tile_size: c.tile_size() as i32,
+                    load_range: crate::world_field!(f, mLoadRange),
+                    inner_sphere: crate::world_field!(f, mInnerCollisionSphere),
+                }
+            }
+            None => LoadClass {
+                garrison_capacity: 0,
+                transport_capacity: 0,
+                weight: 0,
+                garrison_technology: 0,
+                unit_type: 0,
+                can_garrison: false,
+                tile_size: 0,
+                load_range: 0.0,
+                inner_sphere: 0.0,
+            },
         }
     }
     fn load_unit(&mut self, unit: u64) -> LoadUnit {
@@ -1071,7 +1205,7 @@ impl LoadHost for OpHost<'_> {
         }
     }
     fn unit_location(&mut self, unit: u64) -> [f32; 3] {
-        self.op_point(EE_UNITS_GOAL_HOST_UNIT_LOCATION, unit, 0, &[])
+        read_unit(unit, |u| u.location())
     }
     fn line_blocked(&mut self, from: (i32, i32), to: (i32, i32)) -> bool {
         let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
@@ -1152,10 +1286,10 @@ impl LoadHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
     }
     fn fires_over_walls(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS, unit, 0) != 0
+        read_unit(unit, |u| u.stats().is_some_and(|s| crate::world_field!(s.fields(), mCanFireOverWalls)))
     }
     fn same_player(&mut self, unit: u64, other: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
+        read_unit(unit, |u| u.player().map(|p| p.handle()) == read_unit(other, |o| o.player().map(|p| p.handle())))
     }
     fn hit_points(&mut self, unit: u64) -> i32 {
         read_unit(unit, |u| u.hit_points() as i32)
@@ -1175,20 +1309,21 @@ impl LoadHost for OpHost<'_> {
 
 impl BuildHost for OpHost<'_> {
     fn build_unit(&mut self, unit: u64) -> EeUnitsBuildUnit {
-        let mut fields = EeUnitsBuildUnit::default();
-        if unit != 0 {
-            let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
-            self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 0, &mut io);
+        if unit == 0 {
+            return EeUnitsBuildUnit::default();
+        }
+        let (mut fields, human) = read_unit(unit, |u| build_unit_fields(u, false));
+        // `IsHuman()` (a virtual) is the host's
+        if human {
+            fields.human = self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0;
         }
         fields
     }
     fn build_unit_basic(&mut self, unit: u64) -> EeUnitsBuildUnit {
-        let mut fields = EeUnitsBuildUnit::default();
-        if unit != 0 {
-            let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
-            self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 1, &mut io);
+        if unit == 0 {
+            return EeUnitsBuildUnit::default();
         }
-        fields
+        read_unit(unit, |u| build_unit_fields(u, true)).0
     }
     fn tech_node(&mut self, player: u64, technology: i32) -> u64 {
         self.op_ints(EE_UNITS_GOAL_HOST_TECH_NODE, player, 0, &[i64::from(technology)]) as u64
@@ -1199,10 +1334,17 @@ impl BuildHost for OpHost<'_> {
         (io.i[0] as i32, io.i[1] as i32, io.i[2] as i32)
     }
     fn player_id(&mut self, player: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_PLAYER_ID, player, 0) as i32
+        if player == 0 {
+            return 0;
+        }
+        // SAFETY: a goal body runs inside the C++ call that holds the world; the handle is a live player
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::PlayerView::of(&t, player) }.map_or(0, |p| p.id() as i32)
     }
     fn class_type(&mut self, class: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE, class, 0) as i32
+        // SAFETY: as above; the handle is 0 or a live class
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::view::ClassView::of(&t, class) }.map_or(0, |c| c.unit_type() as i32)
     }
     fn builders_add(&mut self, unit: u64, delta: i32) {
         self.op_ints(EE_UNITS_GOAL_HOST_BUILDERS_ADD, unit, 0, &[i64::from(delta)]);
@@ -1305,10 +1447,19 @@ impl BuildHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR, unit, outer, &[i64::from(amount)]) != 0
     }
     fn friendly(&mut self, player: u64, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_FRIENDLY, player, unit) != 0
+        // the unit is the player's, or the player is not at war with its owner
+        read_unit(unit, |u| {
+            let owner = u.player().expect("a unit's player");
+            // SAFETY: the host's player handle is live
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let p = unsafe { crate::world::PlayerView::of(&t, player) }.expect("a player");
+            owner.handle() == p.handle() || p.enemy(owner.id() as usize) == 0
+        })
     }
     fn in_cinematic(&mut self) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_IN_CINEMATIC, 0, 0) != 0
+        // SAFETY: as above
+        let t = unsafe { crate::world::WorldRead::begin() };
+        crate::world::WorldView::global(&t).is_some_and(|w| w.in_cinematic())
     }
     fn set_paid(&mut self, outer: u64) {
         self.op(EE_UNITS_GOAL_HOST_SET_PAID, outer, 0);
@@ -1345,7 +1496,7 @@ impl BuildHost for OpHost<'_> {
 
 impl crate::units::location::LocationHost for OpHost<'_> {
     fn unit_category(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_CATEGORY, unit, 0)
+        read_unit(unit, |u| u.class().map_or(0, |c| c.category() as i64))
     }
     fn unit_transformation(&mut self, unit: u64) -> ee_base::math::types::GeTransformation {
         let mut t = ee_base::math::types::GeTransformation::default();

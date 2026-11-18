@@ -20,12 +20,12 @@
 use std::marker::PhantomData;
 use std::os::raw::{c_long, c_ulong};
 
+use crate::units::physics_save::EeUnitsPhysicsSaved;
 use crate::world::layout::{layout, EeWorldLayout};
 use crate::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::unit_class_fields::EeUnitsUnitClassFields;
-use crate::units::physics_save::EeUnitsPhysicsSaved;
 use crate::world::unit_fields::{bool_byte, EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
 // `RTSUnit::mObjectKind`'s values: an `EEUnit`, an `EEComplexUnit` (0: an `RTSUnit`).
@@ -498,6 +498,10 @@ impl<'t> UnitView<'t> {
         unsafe { pointer(self.object, self.l().complex_previous_part) as u64 }
     }
     /// `mNextPart`'s handle (0: none)
+    /// `mPreviousPart`
+    pub fn previous_part(&self) -> Option<UnitView<'t>> {
+        self.other(self.previous_part_handle() as usize)
+    }
     pub fn next_part_handle(&self) -> u64 {
         self.need_complex();
         // SAFETY: as above
