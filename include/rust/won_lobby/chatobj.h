@@ -103,6 +103,54 @@ bool ee_won_chatparser_handle_input(EeWonChatParser *p,
                                     uint32_t wchar_size,
                                     int32_t *target);
 
+/// `SetClientList(list, room_flags)`.
+///
+/// # Safety
+/// `p` is live; `list` a live `LobbyClientList` shell or NULL.
+void ee_won_chatparser_set_client_list(EeWonChatParser *p, void *list, int32_t room_flags);
+
+/// The held client list (`which` 0) or target (1), no reference added.
+///
+/// # Safety
+/// `p` is live.
+void *ee_won_chatparser_object(const EeWonChatParser *p, int32_t which);
+
+/// `FindClient(name, matched)`: the client (no reference added) or NULL; `*matched` the kind when not NULL.
+///
+/// # Safety
+/// `p` is live; `name` holds `count` `wchar_t`s; `matched` NULL or writable.
+void *ee_won_chatparser_find_client(const EeWonChatParser *p,
+                                    const void *name,
+                                    size_t count,
+                                    int32_t *matched);
+
+/// `HandleInput(text)` over the held list (the target set).
+///
+/// # Safety
+/// `p` is live; `text` holds `count` `wchar_t`s.
+bool ee_won_chatparser_handle_input_list(EeWonChatParser *p, const void *text, size_t count);
+
+/// `AddCommands(names, id)`.
+///
+/// # Safety
+/// `p` is live; `names` holds `count` `wchar_t`s.
+void ee_won_chatparser_add_commands(EeWonChatParser *p,
+                                    const void *names,
+                                    size_t count,
+                                    int32_t id);
+
+/// `InitCommands()`.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_chatparser_init_commands(EeWonChatParser *p);
+
+/// `GetHelp(client_id)`'s text (`count` gets its units), valid until the parser's next call.
+///
+/// # Safety
+/// `p` is live, `count` writable.
+const uint32_t *ee_won_chatparser_help(EeWonChatParser *p, uint16_t client_id, size_t *count);
+
 /// InitCommands' `i`th call: the names' resource row (-1: none), the command in `*command`; -2 past the end.
 ///
 /// # Safety

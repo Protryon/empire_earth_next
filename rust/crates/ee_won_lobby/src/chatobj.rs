@@ -1,11 +1,14 @@
 //! The lobby's chat command parser as a Rust object (round 17): `ChatCommandParser`'s command tables (the names by
 //! `WStringLessNoCase`, each id's display name), its settings (the prefix, the name-match threshold, colon emotes,
 //! the room flags, the reply target) and what a parse leaves (the error, the command, the target's name, the text,
-//! the duration, the invitation), with `HandleInput` / `ParseCommand` applying chat.rs's parse to them. The C++ class
-//! keeps the room's client list and the target client (references to C++ objects): it hands the clients' names in
-//! and sets the target from the position the parse returns. The behaviour is `golden_chat.txt` (its `state` lines
-//! recorded over the C++ class before the move).
+//! the duration, the invitation), with `HandleInput` / `ParseCommand` applying chat.rs's parse to them. Since R6
+//! WONLobby round 17 the whole class: the room's client list and the target client (model shells, one reference
+//! each, released target first as the members were), the clients' names read from the model, `InitCommands` over the
+//! resource strings, `AddCommands`' list read, `FindClient` and `GetHelp`; the C++ class is inline forwards
+//! (WONLobbyParser.h). The behaviour is `golden_chat.txt` (its `state` lines recorded over the C++ class before the
+//! first move) and `won_chatparser_test` (ChatCommandParser.cpp's statements as they were, on model shells).
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
@@ -58,6 +61,12 @@ pub struct EeWonChatParser {
     prefix: i32,
     room_flags: u32,
     input: Vec<u32>,
+    /// `mClients`: the room's client list (a `LobbyClientList` shell, one reference; 0 none)
+    clients: Cell<isize>,
+    /// `mTarget`: the target client (a `LobbyClient` shell, one reference; 0 none)
+    target: Cell<isize>,
+    /// the last text a call returned (`GetHelp`)
+    out: Vec<u32>,
 }
 
 impl Default for EeWonChatParser {
@@ -84,6 +93,9 @@ impl EeWonChatParser {
             prefix: i32::from(b'/'),
             room_flags: 0,
             input: Vec::new(),
+            clients: Cell::new(0),
+            target: Cell::new(0),
+            out: Vec::new(),
         }
     }
 
@@ -252,7 +264,9 @@ pub extern "C" fn ee_won_chatparser_new() -> *mut EeWonChatParser {
 pub unsafe extern "C" fn ee_won_chatparser_free(p: *mut EeWonChatParser) {
     if !p.is_null() {
         // SAFETY: the caller's object
-        drop(unsafe { Box::from_raw(p) });
+        let x = unsafe { Box::from_raw(p) };
+        x.release_members();
+        drop(x);
     }
 }
 /// A number.
@@ -360,6 +374,246 @@ pub unsafe extern "C" fn ee_won_chatparser_handle_input(
     // SAFETY: writable
     unsafe { *target = at.map_or(-1, |i| i as i32) };
     ok
+}
+
+// ---- the client list, the target, the commands' names and the help (R6 WONLobby round 17: ChatCommandParser.cpp's
+// statements)
+
+use crate::modelobj::{self, EeWonModelCall as MC, EeWonModelField as MF};
+use ee_won_gui::guistrobj::{data_units, EE_WON_GSTR_WCHAR};
+
+unsafe extern "C" fn token_sink(ctx: *mut c_void, u: *const u32, n: usize) {
+    // SAFETY: the parser's `n` units, into the token being read
+    let t = unsafe { &mut *(ctx as *mut Vec<u32>) };
+    if n != 0 {
+        t.extend_from_slice(unsafe { std::slice::from_raw_parts(u, n) });
+    }
+}
+
+impl EeWonChatParser {
+    /// The room's clients and their names, in the list's order (`ChatClients`: `ClientAt(i)->GetName()`).
+    fn clients(&self) -> (Vec<isize>, Vec<Vec<u32>>) {
+        let list = self.clients.get();
+        if list == 0 {
+            return (Vec::new(), Vec::new());
+        }
+        let n = modelobj::call(list, MC::ListCount, 0, 0, 0).max(0) as usize;
+        let mut shells = Vec::with_capacity(n);
+        let mut names = Vec::with_capacity(n);
+        for i in 0..n {
+            let c = modelobj::call(list, MC::ListAt, i as isize, 0, 0);
+            shells.push(c);
+            // SAFETY: a client's name is a live GUIStringData
+            names.push(unsafe { data_units(modelobj::get(c, MF::ClientName) as *const c_void) });
+        }
+        (shells, names)
+    }
+
+    /// `SetClientList`: the list held (`mClients = clients`), then the room flags.
+    pub fn set_client_list(&mut self, list: isize, room_flags: i32) {
+        modelobj::assign(&self.clients, list);
+        self.room_flags = room_flags as u32;
+    }
+
+    /// The held client list (`which` 0) or target client, no reference added.
+    pub fn object(&self, which: i32) -> isize {
+        if which == 0 {
+            self.clients.get()
+        } else {
+            self.target.get()
+        }
+    }
+
+    /// `FindClient`: by full name, else a unique prefix; the client (0 none) and the match kind.
+    pub fn find_client(&self, name: &[u32]) -> (isize, i32) {
+        let (shells, names) = self.clients();
+        let (matched, found) = chat::find_client(name, &names, &CrtChat);
+        (found.map_or(0, |i| shells[i]), matched)
+    }
+
+    /// `HandleInput` over the held list: the target cleared, the parse, the target the parse chose held.
+    pub fn handle_input_list(&mut self, text: &[u32]) -> bool {
+        modelobj::assign(&self.target, 0);
+        let (shells, names) = self.clients();
+        let has = self.clients.get() != 0;
+        let (ok, at) = self.handle_input(text, &names, has);
+        if let Some(i) = at {
+            modelobj::assign(&self.target, shells[i]);
+        }
+        ok
+    }
+
+    /// `AddCommands`: the names (read as `StringParser::ReadValue(std::list<std::wstring>&)` from the text to its
+    /// first NUL), each added; no names, the command's built-in short name.
+    pub fn add_commands(&mut self, names: &[u32], id: i32) {
+        if names.is_empty() {
+            let short: Vec<u32> = chat::command_name(id).to_bytes().iter().map(|&b| u32::from(b)).collect();
+            self.add_command(&short, id);
+            return;
+        }
+        let mut text: Vec<u32> = names.iter().copied().take_while(|&u| u != 0).collect();
+        text.push(0);
+        let at = text.as_ptr() as *const c_void;
+        let mut tokens: Vec<Vec<u32>> = Vec::new();
+        let mut pos = 0i32;
+        loop {
+            let mut token = Vec::new();
+            // SAFETY: a NUL-terminated text of 4-byte units, the cursor inside it
+            unsafe {
+                ee_won_net::ffi_parse::ee_won_parser_read_wstring(
+                    at,
+                    4,
+                    &mut pos,
+                    false,
+                    token_sink,
+                    &mut token as *mut Vec<u32> as *mut c_void,
+                )
+            };
+            tokens.push(token);
+            // SAFETY: as above
+            if !unsafe { ee_won_net::ffi_parse::ee_won_parser_check_next_char(at, 4, &mut pos, i32::from(b',')) } {
+                break;
+            }
+        }
+        for t in &tokens {
+            self.add_command(t, id);
+        }
+    }
+
+    /// `InitCommands`: every command's localized names (its resource string; none for the two shutdown commands).
+    pub fn init_commands(&mut self) {
+        for &(row, command) in INIT_COMMANDS.iter() {
+            let names = if row >= 0 { crate::resource::text(row as usize) } else { Vec::new() };
+            self.add_commands(&names, command);
+        }
+    }
+
+    /// `GetHelp(client_id)`: the header, then each help line the client is shown, each with a line break.
+    pub fn help(&mut self, client_id: u16) -> &[u32] {
+        let (mut admin, mut moderator, mut room_captain, mut game_captain) = (false, false, false, false);
+        let list = self.clients.get();
+        if list != 0 {
+            let c = modelobj::call(list, MC::ListFind, client_id as isize, 0, 0);
+            if c != 0 {
+                moderator = modelobj::call(c, MC::ClientModerator, 0, 0, 0) != 0;
+                let room = ((self.room_flags >> 1) & 1) as isize;
+                room_captain = modelobj::call(c, MC::ClientIsCaptain, room, 0, 0) != 0;
+                game_captain = modelobj::call(c, MC::ClientIsCaptain, 1, 0, 0) != 0;
+                admin = modelobj::call(c, MC::ClientAdmin, 0, 0, 0) != 0;
+            }
+        }
+        let line_break: Vec<u32> = "<n>".bytes().map(u32::from).collect();
+        let mut out = crate::resource::text(R::ChatCommandLogic_HelpHeader_String as usize);
+        out.extend_from_slice(&line_break);
+        for c in chat::help_commands(self.room_flags, moderator, room_captain, game_captain, admin) {
+            out.extend(crate::resource::text(ee_won_chat_help_row(c) as usize));
+            out.extend_from_slice(&line_break);
+        }
+        self.out = out;
+        &self.out
+    }
+
+    /// The destructor's member releases: the target, then the client list (reverse member order).
+    fn release_members(&self) {
+        modelobj::assign(&self.target, 0);
+        modelobj::assign(&self.clients, 0);
+    }
+}
+
+/// The units of a `wchar_t` text (`count` of them).
+unsafe fn wide_text(text: *const c_void, count: usize) -> Vec<u32> {
+    // SAFETY: the caller's contract
+    unsafe { units_of(text, count, EE_WON_GSTR_WCHAR as u32) }
+}
+
+/// `SetClientList(list, room_flags)`.
+///
+/// # Safety
+/// `p` is live; `list` a live `LobbyClientList` shell or NULL.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_set_client_list(
+    p: *mut EeWonChatParser,
+    list: *mut c_void,
+    room_flags: i32,
+) {
+    obj_mut!(p).set_client_list(list as isize, room_flags)
+}
+/// The held client list (`which` 0) or target (1), no reference added.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_object(p: *const EeWonChatParser, which: i32) -> *mut c_void {
+    obj!(p).object(which) as *mut c_void
+}
+/// `FindClient(name, matched)`: the client (no reference added) or NULL; `*matched` the kind when not NULL.
+///
+/// # Safety
+/// `p` is live; `name` holds `count` `wchar_t`s; `matched` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_find_client(
+    p: *const EeWonChatParser,
+    name: *const c_void,
+    count: usize,
+    matched: *mut i32,
+) -> *mut c_void {
+    let n = unsafe { wide_text(name, count) };
+    let (c, m) = obj!(p).find_client(&n);
+    if !matched.is_null() {
+        // SAFETY: writable
+        unsafe { *matched = m };
+    }
+    c as *mut c_void
+}
+/// `HandleInput(text)` over the held list (the target set).
+///
+/// # Safety
+/// `p` is live; `text` holds `count` `wchar_t`s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_handle_input_list(
+    p: *mut EeWonChatParser,
+    text: *const c_void,
+    count: usize,
+) -> bool {
+    let t = unsafe { wide_text(text, count) };
+    obj_mut!(p).handle_input_list(&t)
+}
+/// `AddCommands(names, id)`.
+///
+/// # Safety
+/// `p` is live; `names` holds `count` `wchar_t`s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_add_commands(
+    p: *mut EeWonChatParser,
+    names: *const c_void,
+    count: usize,
+    id: i32,
+) {
+    let n = unsafe { wide_text(names, count) };
+    obj_mut!(p).add_commands(&n, id)
+}
+/// `InitCommands()`.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_init_commands(p: *mut EeWonChatParser) {
+    obj_mut!(p).init_commands()
+}
+/// `GetHelp(client_id)`'s text (`count` gets its units), valid until the parser's next call.
+///
+/// # Safety
+/// `p` is live, `count` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_help(
+    p: *mut EeWonChatParser,
+    client_id: u16,
+    count: *mut usize,
+) -> *const u32 {
+    let s = obj_mut!(p).help(client_id);
+    // SAFETY: writable
+    unsafe { *count = s.len() };
+    s.as_ptr()
 }
 
 // ---- InitCommands' and GetHelp's tables (R6 WONLobby round 15: ChatCommandParser.cpp's 24 AddCommands calls and its
@@ -478,6 +732,55 @@ mod tests {
         p.set_number(EeWonChatParserNumber::AllowColonEmote, 1);
         assert_eq!(p.handle_input(&w(":wave"), &[], true), (true, None));
         assert_eq!((p.number(EeWonChatParserNumber::Command), p.text(EeWonChatParserText::Text)), (3, &w("wave")[..]));
+    }
+
+    /// `AddCommands` (round 17): the list read as StringParser reads it (quotes, trailing spaces cut, the text to its
+    /// first NUL); no names, the built-in short name; with no list held no client is found, no target set, and the
+    /// help (the resources unbound) is the line breaks alone.
+    #[test]
+    fn add_commands_and_no_list() {
+        let mut p = EeWonChatParser::new();
+        p.add_commands(&w("a, \"b c\" ,d\u{0}e"), 40);
+        assert_eq!(p.lookup(&w("A")), Some(40));
+        assert_eq!(p.lookup(&w("b c")), Some(40));
+        assert_eq!(p.lookup(&w("d")), Some(40));
+        assert_eq!(p.lookup(&w("e")), None);
+        assert_eq!(p.command_string(40), &w("a")[..]);
+        p.add_commands(&[], chat::EMOTE);
+        assert_eq!(p.lookup(&w("em")), Some(chat::EMOTE));
+        assert_eq!(p.find_client(&w("x")), (0, 0));
+        assert!(!p.handle_input_list(&w("hi")));
+        assert_eq!(p.number(EeWonChatParserNumber::Error), 6);
+        assert_eq!(p.object(1), 0);
+        let n = chat::help_commands(0, false, false, false, false).len();
+        assert_eq!(p.help(1), &w(&"<n>".repeat(n + 1))[..]);
+    }
+
+    /// A text read in place from a block laid out as a C++ `GUIStringData`.
+    #[test]
+    fn data_units_in_place() {
+        use ee_won_gui::guistrobj::{data_units, ee_won_gstr, EeWonGstrOp, EeWonGuiStrBuf, EE_WON_GSTR_WCHAR};
+        #[repr(C)]
+        struct Data {
+            vt: usize,
+            rc: usize,
+            buf: EeWonGuiStrBuf,
+        }
+        let mut d = Data { vt: 0, rc: 0, buf: EeWonGuiStrBuf::new() };
+        let t: Vec<u32> = w("Bob");
+        let ws = EE_WON_GSTR_WCHAR as u32;
+        let units: Vec<u8> = if ws == 2 {
+            t.iter().flat_map(|&u| (u as u16).to_ne_bytes()).collect()
+        } else {
+            t.iter().flat_map(|&u| u.to_ne_bytes()).collect()
+        };
+        unsafe {
+            ee_won_gstr(EeWonGstrOp::AssignUnits, &mut d.buf, units.as_ptr() as *const c_void, 3, 0, 0, ws);
+            assert_eq!(data_units(&d as *const Data as *const c_void), t);
+            assert!(data_units(std::ptr::null()).is_empty());
+            ee_won_gstr(EeWonGstrOp::Free, &mut d.buf, std::ptr::null(), 0, 0, 0, ws);
+        }
+        assert_eq!((d.vt, d.rc), (0, 0));
     }
 
     /// The tables as ChatCommandParser.cpp had them: every command but none and broadcast named once, in its order.
