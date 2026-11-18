@@ -31060,3 +31060,21 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   (calamity 3/4, next 2/4 at 915/276 as rust has it); the editor gate `sim_editor: PASS (14448 lines)`; gates.sh
   through slot.py: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13749` units [4, 43, 43] alive
   [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2685 joiner=2691`, `GATES PASS`.
+- **Then origin/rust 48c8472f0 (LLE rest round 2), merged on top.** Its dead-member deletions conflicted in the files
+  this branch rewrote (the continent manager and its area kinds, the path manager, the function objects). Each
+  conflict hunk keeps this branch's side, with rust's deletions applied where the member is still dead here
+  (`EEAIChokePoint::GetAreaSerialsAt`, `EEAIContinent::HasNeighbor`, the manager's `GetPathAreaByID`, `GetForest`,
+  `GetForestsAt`, `EEAIRectangleArea::GetBaseRandomPoint`, whose body the clean part of the merge deleted, and
+  `GetScenarioAreaID`); `GetInfluenceCost` and `EEHasPathToTarget` go as rust has it. Lesson: `git checkout
+  --ours FILE` takes the whole file and drops the other side's clean hunks too (it lost rust's deletions in
+  `EEAIContinent.h` and `EEAIContinentManager.h` here, and `--theirs` lost this branch's accessor edits in two .cpp
+  files, which the compiler caught). Resolve the hunks only: `git checkout -m FILE` recreates the conflict, then
+  keep one side of each `<<<<<<< ours` hunk. This merge also brings rust-lle-rest2's `tools/eemodel/storegate.py`,
+  so the converter hash is the shared tree's again (d8c64c3598c0216f).
+- **Gates on the final merge.** Both builds 0/0 (EE-AOC 630 inputs, EE-SIM 631) and the test profile 0/0; the Rust
+  gate PASS (4,569 tests); the oracle seeds 2-7 identical to the new ref; the twelve capture profiles at seeds 2-3
+  PASS (oracle 212, late 214, space 210, calamity 222 digests with PMRQ and CNTQ gated; app 24, effects 6, groups 2,
+  missile 22, placement 4, scenario 43, transport 185, units 175); saveload 18/18; the matrix `saveload expect: PASS`
+  (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
+  `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
+  `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
