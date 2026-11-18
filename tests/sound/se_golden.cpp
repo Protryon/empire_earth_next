@@ -3,7 +3,7 @@
 // sequences of public calls over fakes at the engine's own seams, the same in both builds:
 //   - the Thread System at its C ABI (ee_ts_*): sections, events, threads (a thread never starts: the scavenger's
 //     procedure is run by the driver with a scripted wait result list);
-//   - the mixer plug-in: a fake module table (PIMModule's out-of-line members) whose SPIM entry points print each
+//   - the mixer plug-in: a fake module walk (the ee_soundcpp_* plug-in calls) whose SPIM entry points print each
 //     call and answer from the driver's state (busy channels, playback times, failures);
 //   - dmusic (Dm*): fake loader, segments and performance; the loader resolves through the conductor's resolver,
 //     which reads real files from the music folder;
@@ -26,7 +26,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/PIMModule.h"
 #include "lle/SEMixer.h"
 #include "lle/SESample.h"
 #include "lle/SESMInstanceNode.h"
@@ -412,7 +411,10 @@ static int gModuleIndex;
 static bool FakeIsValid() { T("isvalid"); return gModuleValid[gModuleIndex]; }
 
 #define E(n, f) { n, (void*)&f }
-static const PIMEntry sEntries[] = {
+static const struct {
+    const char* mName;
+    void* mProc;
+} sEntries[] = {
     E("SPIMActivateMixer", FakeActivateMixer), E("SPIMCreateChannels", FakeCreateChannels),
     E("SPIMDeactivateMixer", FakeDeactivateMixer), E("SPIMDeleteWaveData", FakeDeleteWaveData),
     E("SPIMDestroyChannels", FakeDestroyChannels), E("SPIMDuplicateSample", FakeDuplicateSample),
@@ -431,42 +433,38 @@ static const PIMEntry sEntries[] = {
     E("SPIMSetVolume", FakeSetVolume), E("SPIMStopAllChannels", FakeStopAllChannels),
     E("SPIMStopChannel", FakeStopChannel), E("SPIMGetOutputRate", FakeGetOutputRate),
     E("SPIMSetMusicSource", FakeSetMusicSource), E("SPIMSetMovieSource", FakeSetMovieSource),
-    {NULL, NULL},
 };
-static const PIMPlugin sPlugin = {"FakeMixer", sEntries};
 
-// PIMModule's out-of-line members over a scripted module list
-FSFileSpec PIMModule::sDirectory;
-unsigned long PIMModule::sType;
-unsigned long PIMModule::sNext;
+// The plug-in walk the Rust mixers make (the mixer plug-in's ee_soundcpp_* in the game, Mixer.cpp) over a scripted
+// module list; the trace is the one the PIMModule fake printed before the registry went (LLE round 8)
 static int gModuleCount;
-PIMModule::PIMModule(const PIMPlugin* inPlugin, const UString& (*inGetName)(), unsigned long (*inGetType)(),
-                     bool (*inIsValid)())
-{
-    this->mPlugin = inPlugin;
-    this->mGetName = inGetName;
-    this->mGetType = inGetType;
-    this->mIsValid = inIsValid;
-}
-PIMModule::~PIMModule() { T("unload"); }
-long PIMModule::GetModule(bool inFirst, PIMModule*& outModule)
+static unsigned long gNextModule;
+static int32_t FakeModule(void* inStart, bool inFirst)
 {
     if (inFirst)
-        PIMModule::sNext = 0;
-    T("module%lu/%d", PIMModule::sNext, gModuleCount);
-    if ((int)PIMModule::sNext >= gModuleCount)
+        gNextModule = 0;
+    T("module%lu/%d", gNextModule, gModuleCount);
+    if ((int)gNextModule >= gModuleCount)
         return kErrorNotFound;
-    gModuleIndex = (int)PIMModule::sNext++;
-    outModule = new PIMModule(&sPlugin, FakeGetName, FakeGetType, FakeIsValid);
+    gModuleIndex = (int)gNextModule++;
+    static_cast<SEMixerStart*>(inStart)->mModule = (void*)sEntries;
     return kErrorOK;
 }
-void* PIMModule::FindEntry(const PIMPlugin* inPlugin, const char* inName)
+const UString& SEMixerPlugInName() { return FakeGetName(); }
+bool SEMixerPlugInIsValid() { return FakeIsValid(); }
+extern "C" {
+int32_t ee_soundcpp_first_module(void* inStart) { return FakeModule(inStart, true); }
+int32_t ee_soundcpp_next_module(void* inStart) { return FakeModule(inStart, false); }
+bool ee_soundcpp_module_is_valid(void* inModule) { return FakeIsValid(); }
+void ee_soundcpp_module_unload(void* inModule) { T("unload"); }
+void* ee_soundcpp_module_entry(void* inModule, const char* inName)
 {
-    for (const PIMEntry* theEntry = inPlugin->mEntries; theEntry->mName; theEntry++)
-        if (strcmp(theEntry->mName, inName) == 0)
-            return theEntry->mProc;
+    for (const auto& theEntry : sEntries)
+        if (strcmp(theEntry.mName, inName) == 0)
+            return theEntry.mProc;
     T("noentry:%s", inName);
     return NULL;
+}
 }
 
 // ---- dmusic

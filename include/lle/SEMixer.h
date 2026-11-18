@@ -7,7 +7,6 @@
 #define LLE_SEMIXER_H
 
 #include "lle/SEConductor.h"
-#include "lle/PIMModule.h"
 
 struct IDirectSound;
 class FSFileSpec;
@@ -19,7 +18,7 @@ long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   //
 struct SEMixerStart {
     const FSFileSpec* mDirectory;
     GEWindow* mWindow;
-    PIMModule* mModule;                     // the module being walked
+    void* mModule;                          // the plug-in being walked (Mixer.cpp's entry table)
 };
 
 class LLE_API SEMixer {
@@ -49,5 +48,8 @@ extern "C" void SPIMSetMasterVolume(float inVolume);
 extern "C" void SPIMSetMuted(bool inMuted);
 extern "C" void SPIMSetOutputDevice(const char* inName);
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);
+// the mixer plug-in's name and validity test (PIMGetName, PIMIsValid; Mixer.cpp)
+const UString& SEMixerPlugInName();
+bool SEMixerPlugInIsValid();
 
 #endif

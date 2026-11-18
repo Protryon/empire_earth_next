@@ -407,9 +407,3 @@ pub extern "C" fn SPIMProcessMessage() -> bool {
 pub extern "C" fn SPIMSetLatency(_milliseconds: c_ulong) -> c_long {
     0
 }
-
-/// `PIMGetType`: ' snd'.
-#[no_mangle]
-pub extern "C" fn ee_mixer_pim_type() -> c_ulong {
-    0x20736e64
-}

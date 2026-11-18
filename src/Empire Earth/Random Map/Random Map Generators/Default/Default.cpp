@@ -17,7 +17,6 @@
 #include "ee/EERandomMapIDs.h"
 
 static UString gName("Default");
-static unsigned long gType = 'rmap';
 
 // BuildPlayerOrder's order (the C++ globals of the former Unit12): the Rust generator gets and returns it, and
 // SetRandomMapValues resets it for each script read
@@ -423,19 +422,10 @@ static long RunStep(EERandomMap* ioMap, int32_t inStep)
     return 0;
 }
 
-static const UString* PIMGetName()
+// The generator's name, which a .rmv script's UseMapGenerator names (the plug-in's PIMGetName)
+const UString& EERMPIMGetName()
 {
-    return &gName;
-}
-
-static unsigned long PIMGetType()
-{
-    return gType;
-}
-
-static bool PIMIsValid()
-{
-    return true;
+    return gName;
 }
 
 extern "C" long EERMPIMCreateFlatMap(EERandomMap* ioMap)
@@ -593,25 +583,3 @@ extern "C" long EERMPIMSetRandomMapValues(EERandomMap* ioMap, const UString& inS
 {
     return SetRandomMapValues(ioMap, inScriptName);
 }
-
-#include "lle/PIMModule.h"
-
-// The plug-in's entry points (its DLL's export table before; registered in PIMModule.cpp)
-static const PIMEntry sEntries[] = {
-    PIM_ENTRY(PIMGetName),
-    PIM_ENTRY(PIMGetType),
-    PIM_ENTRY(PIMIsValid),
-    PIM_ENTRY(EERMPIMCreateFlatMap),
-    PIM_ENTRY(EERMPIMCreateHeightMap),
-    PIM_ENTRY(EERMPIMCreateNeutralLandWaterMap),
-    PIM_ENTRY(EERMPIMCreatePlayerLandWaterMap),
-    PIM_ENTRY(EERMPIMCreateTrees),
-    PIM_ENTRY(EERMPIMFilterHeightMap),
-    PIM_ENTRY(EERMPIMGenerateNeutralPositions),
-    PIM_ENTRY(EERMPIMGeneratePlayerPositions),
-    PIM_ENTRY(EERMPIMGenerateResources),
-    PIM_ENTRY(EERMPIMGenerateShallows),
-    PIM_ENTRY(EERMPIMSetRandomMapValues),
-    { NULL, NULL },
-};
-extern const PIMPlugin gPIMPluginDefaultRandomMap = { "Default.dll", sEntries };

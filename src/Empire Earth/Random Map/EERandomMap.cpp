@@ -55,7 +55,6 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/GE3DLine.h"
 #include "lle/GEPhysicalModel.h"
-#include "lle/PIMModule.h"
 #include "lle/U2DPoint.h"
 #include "lle/U2DFractal.h"
 #include "lle/UResourceFile.h"
@@ -81,7 +80,6 @@ inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
     return EETerrainTable::sCliffTable[inIndex];
 }
 
-FSFileSpec EERandomMap::sGeneratorDirectory;
 std::vector<EERMGenerator> EERandomMap::sRandomMapGenerators;
 
 // gSpaceTerrain: the terrain named "Space" (0x5655f0; provisional name)
@@ -325,33 +323,33 @@ long EERandomMap::Generate()
         this->mData.mTerrainBandOffset = this->mData.mRandomIntegers.Generate(0, this->mData.mNumTerrainBands);
     }
     gUsingCarbon = (this->mData.mMapCharacteristics & kRMMapMarsMap) == kRMMapMarsMap;
-    theResult = this->mGeneratePlayerPositions(&this->mData);
+    theResult = EERMPIMGeneratePlayerPositions(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.1f);
-    theResult = this->mGenerateNeutralPositions(&this->mData);
+    theResult = EERMPIMGenerateNeutralPositions(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.14f);
-    theResult = this->mCreatePlayerLandWaterMap(&this->mData);
+    theResult = EERMPIMCreatePlayerLandWaterMap(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.18f);
-    theResult = this->mCreateNeutralLandWaterMap(&this->mData);
+    theResult = EERMPIMCreateNeutralLandWaterMap(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.22f);
     this->mData.mWaterPoints.clear();
     this->RunGamePass(ee_rmap_game_water_points);
-    theResult = this->mCreateFlatMap(&this->mData);
+    theResult = EERMPIMCreateFlatMap(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.26f);
-    theResult = this->mCreateHeightMap(&this->mData);
+    theResult = EERMPIMCreateHeightMap(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.3f);
-    theResult = this->mGenerateShallows(&this->mData);
+    theResult = EERMPIMGenerateShallows(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.34f);
@@ -369,11 +367,11 @@ long EERandomMap::Generate()
     ESDebugOut("EERandomMap::PaintTiles Processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
     this->mMap->UpdateCliffs(0, this->mMap->mSize, 0, this->mMap->mSize);
     this->RunGamePass(ee_rmap_game_mark_features);
-    theResult = this->mGenerateResources(&this->mData);
+    theResult = EERMPIMGenerateResources(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.4f + 0.02f);
-    theResult = this->mCreateTrees(&this->mData);
+    theResult = EERMPIMCreateTrees(&this->mData);
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.46f);
@@ -393,22 +391,10 @@ bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
     return ee_rmap_game_players_connected(&theView.mState, &theHost);
 }
 
-// Creates a random map for a generator PIM, the game options and the players, binding the generator's entry points
-EERandomMap::EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
+// Creates a random map for the game options and the players (the generator is the Default one, linked in)
+EERandomMap::EERandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
     : mGamePlayers(inPlayers), mOptions(inOptions)
 {
-    this->mModule = inModule;
-    this->mCreateFlatMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateFlatMap");
-    this->mCreateHeightMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateHeightMap");
-    this->mCreateNeutralLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateNeutralLandWaterMap");
-    this->mCreatePlayerLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreatePlayerLandWaterMap");
-    this->mCreateTrees = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateTrees");
-    this->mFilterHeightMapPIM = (EERMPIMFunction)inModule->GetEntry("EERMPIMFilterHeightMap");
-    this->mGenerateNeutralPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateNeutralPositions");
-    this->mGeneratePlayerPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGeneratePlayerPositions");
-    this->mGenerateResources = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateResources");
-    this->mGenerateShallows = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateShallows");
-    this->mSetRandomMapValues = (EERMPIMSetValuesFunction)inModule->GetEntry("EERMPIMSetRandomMapValues");
 }
 
 // Destroys the random map (members only)
@@ -540,17 +526,16 @@ long EERandomMap::FilterHeightMap()
 {
     long theResult = 0;
     if (this->mData.mFilterHeightMap)
-        theResult = this->mFilterHeightMapPIM(&this->mData);
+        theResult = EERMPIMFilterHeightMap(&this->mData);
     return theResult;
 }
 
-// Finds the named generator's PIM and generates the map, retrying with a new seed (11 tries at most) until the players
-// are connected; returns the PIM search status
+// Finds the named generator and generates the map, retrying with a new seed (11 tries at most) until the players
+// are connected; kErrorNoMoreFiles when its script names a generator other than the linked one (Default)
 long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>& inPlayers, unsigned long inPlayer,
                                   const UWideString& inGenerator, unsigned long inSeed, EEMap* inMap,
                                   GE3DPoint& outLocation)
 {
-    PIMModule* theModule;
     unsigned long theAttempts = 0;
     long theWidth;
     long theHeight;
@@ -563,26 +548,20 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
         theGeneratorIndex++;
     }
     ESVERIFY_AT(theGeneratorIndex < EERandomMap::sRandomMapGenerators.size(), 1340);
-    long theResult = PIMModule::GetFirstModule(EERandomMap::sGeneratorDirectory, 'rmap', theModule);
-    while (theResult == 0) {
-        EERMGenerator& theGenerator = EERandomMap::sRandomMapGenerators.begin()[theGeneratorIndex];
-        if (PlatStrICmp(theGenerator.mModuleName, theModule->GetName()) == 0) {
-            bool theConnected;
-            do {
-                EERandomMap* theMap = new EERandomMap(theModule, inOptions, &inPlayers);
-                theMap->CreateRandomMap(inPlayer, theGeneratorIndex, inSeed, inMap, outLocation);
-                theConnected = EERMArePlayersConnected(theMap->mData, inMap);
-                inSeed = theMap->mData.mRandomIntegers.Generate(0, 2000000);
-                theAttempts++;
-                delete theMap;
-            } while (!theConnected && theAttempts <= 10);
-            ESDebugOut("!Playable random map created after %ld attempts.\n", theAttempts);
-            theModule->Unload();
-            break;
-        }
-        theResult = PIMModule::GetNextModule(theModule);
-    }
-    return theResult;
+    EERMGenerator& theGenerator = EERandomMap::sRandomMapGenerators.begin()[theGeneratorIndex];
+    if (PlatStrICmp(theGenerator.mModuleName, EERMPIMGetName()) != 0)
+        return kErrorNoMoreFiles;
+    bool theConnected;
+    do {
+        EERandomMap* theMap = new EERandomMap(inOptions, &inPlayers);
+        theMap->CreateRandomMap(inPlayer, theGeneratorIndex, inSeed, inMap, outLocation);
+        theConnected = EERMArePlayersConnected(theMap->mData, inMap);
+        inSeed = theMap->mData.mRandomIntegers.Generate(0, 2000000);
+        theAttempts++;
+        delete theMap;
+    } while (!theConnected && theAttempts <= 10);
+    ESDebugOut("!Playable random map created after %ld attempts.\n", theAttempts);
+    return kErrorOK;
 }
 
 // Returns the number of random-map generators
@@ -629,7 +608,7 @@ long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
     return theResult;
 }
 
-// Lists the random-map generators: each .rmv script naming an installed rmap PIM, with its string-table display name,
+// Lists the random-map generators: each .rmv script naming the linked generator (Default), with its string-table display name,
 // sorted; asserts that both exist
 long EERandomMap::Initialize(const FSFileSpec& inDirectory)
 {
@@ -637,16 +616,9 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     FSFileSpec theDirectory;
     FSFileSpec theFile;
     EERMGenerator theGenerator;
-    PIMModule* theModule;
     EERandomMap::sRandomMapGenerators.clear();
-    EERandomMap::sGeneratorDirectory = inDirectory;
-    for (long theResult = PIMModule::GetFirstModule(inDirectory, 'rmap', theModule); theResult == 0;
-         theResult = PIMModule::GetNextModule(theModule)) {
-        theValidPlugIns.push_back(theModule->GetName());
-        ESDebugOut("EERandomMap::Initialize: %s random map generator detected.\n", (const char*)theModule->GetName());
-        theModule->Unload();
-    }
-    ESVERIFY_AT(theValidPlugIns.size() > 0, 1571);
+    theValidPlugIns.push_back(EERMPIMGetName());
+    ESDebugOut("EERandomMap::Initialize: %s random map generator detected.\n", (const char*)EERMPIMGetName());
 
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(gStartupDirectory + "Data\\Random Map Scripts\\");
@@ -818,7 +790,7 @@ long EERandomMap::SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long i
     this->mMap = inMap;
     this->InitializeValues(inSeed);
     theScript = EERandomMap::sRandomMapGenerators[inGenerator].mName;
-    long theResult = this->mSetRandomMapValues(&this->mData, theScript);
+    long theResult = EERMPIMSetRandomMapValues(&this->mData, theScript);
     if (theResult == 0) {
         this->CreateGrids();
         this->CreateValidMap();

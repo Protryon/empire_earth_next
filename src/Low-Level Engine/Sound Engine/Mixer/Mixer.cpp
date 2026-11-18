@@ -45,10 +45,6 @@ extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned lo
 }
 extern "C" long SPIMDeactivateMixer();
 
-static const UString* PIMGetName()
-{
-    return &gMixerName;
-}
 // Opens the playback device (stereo float at the device's own rate: the chosen output, else the system's default,
 // else the null device, which always opens) and creates the channels
 extern "C" long SPIMActivateMixer()
@@ -137,46 +133,73 @@ extern "C" long SPIMLoadWaveData(FSFileSpec* inSpec, SESample* ioSample)
     return kSPIMOK;
 }
 
-#include "lle/PIMModule.h"
+#include "lle/SEMixer.h"
 
-// The plug-in's entry points (registered in PIMModule.cpp)
-static const PIMEntry sEntries[] = {
-    PIM_ENTRY(PIMGetName),
-    {"PIMGetType", reinterpret_cast<void*>(&ee_mixer_pim_type)},
-    PIM_ENTRY(PIMIsValid),
-    PIM_ENTRY(SPIMActivateMixer),
-    PIM_ENTRY(SPIMCreateChannels),
-    PIM_ENTRY(SPIMDeactivateMixer),
-    PIM_ENTRY(SPIMDeleteWaveData),
-    PIM_ENTRY(SPIMDestroyChannels),
-    PIM_ENTRY(SPIMDuplicateSample),
-    PIM_ENTRY(SPIMGetCPUUsage),
-    PIM_ENTRY(SPIMGetChannelCount),
-    PIM_ENTRY(SPIMGetDirectSoundInterface),
-    PIM_ENTRY(SPIMGetHighestTimerDelay),
-    PIM_ENTRY(SPIMGetMaximumChannelCount),
-    PIM_ENTRY(SPIMGetOutputRate),
-    PIM_ENTRY(SPIMGetSampleOffset),
-    PIM_ENTRY(SPIMGetSamplePlayBackTime),
-    PIM_ENTRY(SPIMGetVolume),
-    PIM_ENTRY(SPIMInitializeMixer),
-    PIM_ENTRY(SPIMIsChannelBusyPlaying),
-    PIM_ENTRY(SPIMLoadWaveData),
-    PIM_ENTRY(SPIMMixAhead),
-    PIM_ENTRY(SPIMPlayChannel),
-    PIM_ENTRY(SPIMProcessMessage),
-    PIM_ENTRY(SPIMSetChannelSample),
-    PIM_ENTRY(SPIMSetLatency),
-    PIM_ENTRY(SPIMSetMovieSource),
-    PIM_ENTRY(SPIMSetMusicSource),
-    PIM_ENTRY(SPIMSetSampleLooping),
-    PIM_ENTRY(SPIMSetSampleOffset),
-    PIM_ENTRY(SPIMSetSamplePan),
-    PIM_ENTRY(SPIMSetSamplePitch),
-    PIM_ENTRY(SPIMSetSampleVolume),
-    PIM_ENTRY(SPIMSetVolume),
-    PIM_ENTRY(SPIMStopAllChannels),
-    PIM_ENTRY(SPIMStopChannel),
-    { NULL, NULL },
+// The plug-in's entry points, by name (the engine's plug-in registry before: every plug-in is linked in now, and the
+// mixer is the one sound plug-in). The Rust mixer (rust/crates/ee_audio/src/sound mixerobj.rs) looks its SPIM entries
+// up here and walks the plug-ins through the ee_soundcpp_* calls below: one module, this one.
+#define SPIM_ENTRY(f) { #f, reinterpret_cast<void*>(&f) }
+static const struct {
+    const char* mName;
+    void* mProc;
+} sEntries[] = {
+    SPIM_ENTRY(SPIMActivateMixer),
+    SPIM_ENTRY(SPIMCreateChannels),
+    SPIM_ENTRY(SPIMDeactivateMixer),
+    SPIM_ENTRY(SPIMDeleteWaveData),
+    SPIM_ENTRY(SPIMDestroyChannels),
+    SPIM_ENTRY(SPIMDuplicateSample),
+    SPIM_ENTRY(SPIMGetCPUUsage),
+    SPIM_ENTRY(SPIMGetChannelCount),
+    SPIM_ENTRY(SPIMGetDirectSoundInterface),
+    SPIM_ENTRY(SPIMGetHighestTimerDelay),
+    SPIM_ENTRY(SPIMGetMaximumChannelCount),
+    SPIM_ENTRY(SPIMGetOutputRate),
+    SPIM_ENTRY(SPIMGetSampleOffset),
+    SPIM_ENTRY(SPIMGetSamplePlayBackTime),
+    SPIM_ENTRY(SPIMGetVolume),
+    SPIM_ENTRY(SPIMInitializeMixer),
+    SPIM_ENTRY(SPIMIsChannelBusyPlaying),
+    SPIM_ENTRY(SPIMLoadWaveData),
+    SPIM_ENTRY(SPIMMixAhead),
+    SPIM_ENTRY(SPIMPlayChannel),
+    SPIM_ENTRY(SPIMProcessMessage),
+    SPIM_ENTRY(SPIMSetChannelSample),
+    SPIM_ENTRY(SPIMSetLatency),
+    SPIM_ENTRY(SPIMSetMovieSource),
+    SPIM_ENTRY(SPIMSetMusicSource),
+    SPIM_ENTRY(SPIMSetSampleLooping),
+    SPIM_ENTRY(SPIMSetSampleOffset),
+    SPIM_ENTRY(SPIMSetSamplePan),
+    SPIM_ENTRY(SPIMSetSamplePitch),
+    SPIM_ENTRY(SPIMSetSampleVolume),
+    SPIM_ENTRY(SPIMSetVolume),
+    SPIM_ENTRY(SPIMStopAllChannels),
+    SPIM_ENTRY(SPIMStopChannel),
 };
-extern const PIMPlugin gPIMPluginMixer = { "Mixer", sEntries };
+
+const UString& SEMixerPlugInName() { return gMixerName; }
+bool SEMixerPlugInIsValid() { return PIMIsValid(); }
+
+extern "C" {
+void* ee_soundcpp_module_entry(void* inModule, const char* inName)
+{
+    for (const auto& theEntry : sEntries)
+        if (strcmp(theEntry.mName, inName) == 0)
+            return theEntry.mProc;
+    return NULL;
+}
+bool ee_soundcpp_module_is_valid(void* inModule) { return PIMIsValid(); }
+void ee_soundcpp_module_unload(void* inModule) {}
+// the first (and only) sound plug-in: this one, its module the entry table
+int32_t ee_soundcpp_first_module(void* inStart)
+{
+    static_cast<SEMixerStart*>(inStart)->mModule = (void*)sEntries;
+    return kErrorOK;
+}
+int32_t ee_soundcpp_next_module(void* inStart)
+{
+    static_cast<SEMixerStart*>(inStart)->mModule = NULL;
+    return kErrorNoMoreFiles;
+}
+}

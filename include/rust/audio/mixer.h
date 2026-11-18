@@ -174,9 +174,6 @@ bool SPIMProcessMessage();
 /// `SPIMSetLatency`: the device's own.
 long SPIMSetLatency(unsigned long _milliseconds);
 
-/// `PIMGetType`: ' snd'.
-unsigned long ee_mixer_pim_type();
-
 }  // extern "C"
 
 #endif  // EE_RUST_AUDIO_MIXER_H

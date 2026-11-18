@@ -89,7 +89,8 @@ extern "C" {
     pub fn ee_soundcpp_module_entry(module: *mut c_void, name: *const c_char) -> *mut c_void;
     pub fn ee_soundcpp_module_is_valid(module: *mut c_void) -> bool;
     pub fn ee_soundcpp_module_unload(module: *mut c_void);
-    /// `PIMModule::GetFirstModule(directory, ' snd', start->mModule)` / `GetNextModule(start->mModule)`.
+    /// The plug-in walk (`PIMModule::GetFirstModule(directory, ' snd', ...)` / `GetNextModule` in the original):
+    /// the mixer plug-in, the one linked sound plug-in (Mixer.cpp).
     pub fn ee_soundcpp_first_module(start: *mut c_void) -> i32;
     pub fn ee_soundcpp_next_module(start: *mut c_void) -> i32;
 }
