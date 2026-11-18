@@ -107,8 +107,6 @@ pub const EE_AI_NEXT_HOST_EPOCH_END: i32 = 38;
 pub const EE_AI_NEXT_HOST_EXPERIMENT: i32 = 39;
 /// the complex unit `a`'s `mLastAttacker` (0: none)
 pub const EE_AI_NEXT_HOST_LAST_ATTACKER: i32 = 40;
-/// `EECPTraceStats(player, a)`
-pub const EE_AI_NEXT_HOST_TRACE_STATS: i32 = 41;
 /// `EECPNextGetState(player)` (made when missing)
 pub const EE_AI_NEXT_HOST_STATE: i32 = 43;
 /// the player slot `a`'s computer player when it is active with a per-unit and a next state (0: none)
@@ -144,6 +142,18 @@ pub const EE_AI_NEXT_HOST_IS_HUMAN: i32 = 55;
 pub const EE_AI_NEXT_HOST_SWITCH: i32 = 56;
 /// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
 pub const EE_AI_NEXT_HOST_FORMAT_F2: i32 = 57;
+/// the complex unit `a`'s `DistanceSquaredToUnit(b)` (the float's bits)
+pub const EE_AI_NEXT_HOST_DISTANCE2: i32 = 58;
+/// the player `a`'s `mComputerPlayer` (0: none)
+pub const EE_AI_NEXT_HOST_COMPUTER: i32 = 59;
+/// the dump's AREAS line (the continent manager's areas, its serial counter and its lists' sizes) appended to `out`:
+/// the one read of the continent manager's `mAreas` (Lane C re-points it)
+pub const EE_AI_NEXT_HOST_AREAS: i32 = 60;
+/// the player's `mIsStarted`
+pub const EE_AI_NEXT_HOST_STARTED: i32 = 61;
+/// the sim hash's parts into `out` (five i64): the tick, the units counted, the sum of their `GetChecksum(3)`, the
+/// shared random seed, the inputs processed
+pub const EE_AI_NEXT_HOST_SIM_HASH: i32 = 62;
 
 extern "C" {
     fn ee_ai_next_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64;
@@ -2343,7 +2353,7 @@ pub unsafe extern "C" fn ee_ai_next_update(me: *mut c_void, time: c_ulong) {
     }
     drop(t);
     strategy_step(me, p, id, &view);
-    host(EE_AI_NEXT_HOST_TRACE_STATS, me, time as i64, 0, 0);
+    trace::stats(me, time);
     scope_end(saved);
 }
 
@@ -2632,3 +2642,8 @@ pub unsafe extern "C" fn ee_ai_next_drop_ready(
 // the reflexes (EECPReflexes.cpp before)
 #[path = "next_reflex.rs"]
 mod reflex;
+
+// the stats lines, the losses' counters, the profile, the sim hash, the out-of-synch checksum and its dump
+// (EECPTrace.cpp before)
+#[path = "next_trace.rs"]
+mod trace;

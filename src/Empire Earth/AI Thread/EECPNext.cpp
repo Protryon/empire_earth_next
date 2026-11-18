@@ -54,6 +54,7 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EEGameLog.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EESaveGameFiles.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -475,9 +476,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return EECPExperiment(me, (const char*)(uintptr_t)a) ? 1 : 0;
     case EE_AI_NEXT_HOST_LAST_ATTACKER:
         return (int64_t)EECPNextHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
-    case EE_AI_NEXT_HOST_TRACE_STATS:
-        EECPTraceStats(me, (unsigned long)a);
-        return 0;
     case EE_AI_NEXT_HOST_STATE:
         return (int64_t)(uintptr_t)EECPNextGetState(me);
     case EE_AI_NEXT_HOST_MICRO_PLAYER: {
@@ -541,6 +539,49 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
     case EE_AI_NEXT_HOST_SWITCH:
         return (a == 0 ? EECPMilitiaOn(me) : EECPMilitiaTowersOn(me)) ? 1 : 0;
+    case EE_AI_NEXT_HOST_DISTANCE2: {
+        float theDistance = ((EEComplexUnit*)(uintptr_t)a)->DistanceSquaredToUnit((EEUnit*)(uintptr_t)b);
+        uint32_t theBits;
+        memcpy(&theBits, &theDistance, sizeof(theBits));
+        return (int64_t)theBits;
+    }
+    case EE_AI_NEXT_HOST_COMPUTER:
+        return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mComputerPlayer;
+    case EE_AI_NEXT_HOST_AREAS: {
+        // the continent manager's areas (serial/kind), its serial counter and its lists' sizes (EE-SIM's dumps)
+        char theLine[256];
+        snprintf(theLine, sizeof(theLine),
+                 "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
+                 EEContinentRegionsDigest(), (unsigned long)gContinentManager.mLastSerial, gContinentManager.mContinents.size(),
+                 gContinentManager.mHills.size(), gContinentManager.mPathAreas.size(), gContinentManager.mPathSectors.size(),
+                 gContinentManager.mPathSubSectors.size(), gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(),
+                 gContinentManager.mAreas.size());
+        ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
+        for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
+             theIt != gContinentManager.mAreas.end(); ++theIt) {
+            snprintf(theLine, sizeof(theLine), " %lu/%ld", (unsigned long)theIt->first,
+                     theIt->second != NULL ? (long)theIt->second->GetAreaType() : -1L);
+            ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
+        }
+        ee_ai_next_append(outRecord, (const uint8_t*)"\n", 1);
+        return 0;
+    }
+    case EE_AI_NEXT_HOST_STARTED:
+        return me->mIsStarted ? 1 : 0;
+    case EE_AI_NEXT_HOST_SIM_HASH: {
+        unsigned long theUnits = 0;
+        unsigned long theCount = 0;
+        for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+            theUnits += static_cast<EEUnit*>(theUnit)->GetChecksum(3);   // hit points, tiles, positions, commands
+            theCount++;
+        }
+        out[0] = (int64_t)(unsigned long)gPhysics->mCurrentTick;
+        out[1] = (int64_t)theCount;
+        out[2] = (int64_t)theUnits;
+        out[3] = (int64_t)(unsigned long)gPhysics->mRandom.GetSeed();
+        out[4] = (int64_t)gPhysics->mInputMessagesProcessed;
+        return 0;
+    }
     case EE_AI_NEXT_HOST_FORMAT_F2: {
         double theValue;
         memcpy(&theValue, &a, sizeof(theValue));

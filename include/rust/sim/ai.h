@@ -122,9 +122,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_EXPERIMENT = 39;
 /// the complex unit `a`'s `mLastAttacker` (0: none)
 constexpr static const int32_t EE_AI_NEXT_HOST_LAST_ATTACKER = 40;
 
-/// `EECPTraceStats(player, a)`
-constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_STATS = 41;
-
 /// `EECPNextGetState(player)` (made when missing)
 constexpr static const int32_t EE_AI_NEXT_HOST_STATE = 43;
 
@@ -175,6 +172,23 @@ constexpr static const int32_t EE_AI_NEXT_HOST_SWITCH = 56;
 
 /// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
 constexpr static const int32_t EE_AI_NEXT_HOST_FORMAT_F2 = 57;
+
+/// the complex unit `a`'s `DistanceSquaredToUnit(b)` (the float's bits)
+constexpr static const int32_t EE_AI_NEXT_HOST_DISTANCE2 = 58;
+
+/// the player `a`'s `mComputerPlayer` (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_COMPUTER = 59;
+
+/// the dump's AREAS line (the continent manager's areas, its serial counter and its lists' sizes) appended to `out`:
+/// the one read of the continent manager's `mAreas` (Lane C re-points it)
+constexpr static const int32_t EE_AI_NEXT_HOST_AREAS = 60;
+
+/// the player's `mIsStarted`
+constexpr static const int32_t EE_AI_NEXT_HOST_STARTED = 61;
+
+/// the sim hash's parts into `out` (five i64): the tick, the units counted, the sum of their `GetChecksum(3)`, the
+/// shared random seed, the inputs processed
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_HASH = 62;
 
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
@@ -1475,6 +1489,51 @@ void ee_ai_next_naval_flee(void *me,
 /// # Safety
 /// `me` is a live computer player.
 void ee_ai_next_flee_raids(void *me);
+
+/// `EECPTraceIncome`: a resource amount the player got (EEComputerPlayer::AddResource), for the next income line.
+void ee_ai_trace_income(unsigned long player,
+                        long resource,
+                        long amount);
+
+/// `EECPTraceSpend`'s count (TEST ONLY, EE_AI_EXP spending; the caller tests the trace and the experiment).
+///
+/// # Safety
+/// `cost` holds five values.
+void ee_ai_trace_spend(unsigned long player,
+                       long kind,
+                       const long *cost);
+
+/// `EECPTraceUnitLost`: a unit leaving the player (not swapped), by kind, for the next stats line.
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit (or 0).
+void ee_ai_trace_unit_lost(void *me, uint64_t unit);
+
+/// `EECPTraceStats` for the C++.
+///
+/// # Safety
+/// `me` is a live computer player.
+void ee_ai_trace_stats(void *me, unsigned long time);
+
+/// `EECPTraceProfile`: the AI's real time per player: every 60 game s the sum and the largest single update.
+void ee_ai_trace_profile(unsigned long player,
+                         unsigned long time,
+                         int64_t microseconds);
+
+/// `EECPOutOfSynchChecksum`: the computer players' share of the out-of-synch checksum (every player's resources;
+/// per computer player its pop cap, its town tile and its danger zones), in `unsigned long`.
+unsigned long ee_ai_out_of_synch_checksum();
+
+/// `EECPOutOfSynchDump` (TEST ONLY, EE-SIM's state dumps): the parts of the checksum per player and the computer
+/// players' own state, one line each, appended to `out` (a C++ `std::string`).
+///
+/// # Safety
+/// `out` is a live `std::string`.
+void ee_ai_out_of_synch_dump(void *out);
+
+/// `EECPTraceHash` (with the trace): every 10 game s, the parts of the out-of-synch checksum, as a compared trace
+/// line ("EE-AI <ms> p0 sim hash ...").
+void ee_ai_trace_hash(unsigned long time);
 
 /// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
 /// in the rules (-1: unknown), `out` writes a line to the game's debug output.
