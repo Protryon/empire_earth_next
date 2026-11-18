@@ -130,6 +130,9 @@ pub struct EeGeFontBitmap {
     bitmap: usize,
     /// `mFirstCharacter`.
     first_character: c_ulong,
+    /// Made by the C++ (`ee_ge_fb_new`, LLE rest round 2): its glyph textures are `GETexture`s, whose stage and
+    /// reference count it reaches directly (`texobj::tex_direct`); over a recorded world (the replays) the host.
+    direct: bool,
 }
 
 /// A cell before its glyph is rendered.
@@ -156,7 +159,22 @@ impl EeGeFontBitmap {
     /// `p` is live; the operation's arguments are as `EeGeFbOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeFbOp, obj: usize, a: isize, b: isize) -> isize {
         // SAFETY: the caller's contract (host and owner are copied out before the call)
-        let (host, owner) = unsafe { (fb(p).host, fb(p).owner) };
+        let (host, owner, direct) = unsafe { (fb(p).host, fb(p).owner, fb(p).direct) };
+        if direct {
+            use crate::ge::manobj::EeGeManOp;
+            match op {
+                // SAFETY: the texture is a live GETexture; SetStage...((unsigned long)b, -1) as the host's
+                EeGeFbOp::TexStage => {
+                    return unsafe { crate::ge::texobj::tex_direct(EeGeManOp::TexSetStage, obj, a, b) }.unwrap_or(0)
+                }
+                EeGeFbOp::TexReference => {
+                    // SAFETY: a live GETexture
+                    unsafe { crate::ge::cppobj::reference(obj) };
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the host's contract
         unsafe { host(owner as *mut c_void, op, obj as *mut c_void, a, b) }
     }
@@ -178,7 +196,30 @@ impl EeGeFontBitmap {
     /// # Safety
     /// `host` serves `owner` from now on; the pointers are live C++ objects.
     pub unsafe fn create(host: EeGeFbHostFn, owner: usize, raster: usize, font: usize, screen: c_ulong) -> *mut Self {
-        let p = Box::into_raw(Box::new(Self { host, owner, characters: Vec::new(), bitmap: 0, first_character: 0 }));
+        // SAFETY: the caller's contract
+        unsafe { Self::create_with(host, owner, raster, font, screen, false) }
+    }
+
+    /// `create`, `direct` for a font bitmap the C++ made (its textures are `GETexture`s).
+    ///
+    /// # Safety
+    /// As `create`.
+    pub unsafe fn create_with(
+        host: EeGeFbHostFn,
+        owner: usize,
+        raster: usize,
+        font: usize,
+        screen: c_ulong,
+        direct: bool,
+    ) -> *mut Self {
+        let p = Box::into_raw(Box::new(Self {
+            host,
+            owner,
+            characters: Vec::new(),
+            bitmap: 0,
+            first_character: 0,
+            direct,
+        }));
         // SAFETY: `p` is live; every host call is a statement of its own
         unsafe {
             let text = Self::op(p, EeGeFbOp::TextNew, font, 0, 0) as usize;
@@ -399,7 +440,7 @@ pub unsafe extern "C" fn ee_ge_fb_new(
     screen: c_ulong,
 ) -> *mut EeGeFontBitmap {
     // SAFETY: the function's contract
-    unsafe { EeGeFontBitmap::create(host, owner as usize, raster as usize, font as usize, screen) }
+    unsafe { EeGeFontBitmap::create_with(host, owner as usize, raster as usize, font as usize, screen, true) }
 }
 
 /// `~GEFontBitmap`.
