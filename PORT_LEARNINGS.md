@@ -30241,3 +30241,67 @@ origin/rust had nothing new at the end of the round (no merge).
   into lane A's hooks and the units' goals). On the tree merged with origin/rust 4929244f3: both builds and the test
   profile 0/0, the Rust gate PASS (4,523 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3 PASS with
   PLCE and CPEV, saveload 18/18, the matrix `saveload expect: PASS`, scenario_check 27/27.
+## R5b.1, round 4: the continent manager's data in Rust: its record and tables, every area kind's members, the sectors and sub sectors as records; the saved block, CNTR, the queries, RepairPathArea and the link walks over them (ee_sim::astar cm.rs, area_kinds.rs, sector_rec.rs, cm_io.rs, cm_query.rs, cm_repair.rs, cm_links.rs, cm_build.rs; branch rust-ai-path2, 2026-11-18)
+
+- **What moved, in the order round 3 named.** (1) `EEAIContinentManager`'s members are one record, `EeAStarCmRecord`
+  (cm.rs): the counters, the sector grid (`EEAIPathSectorRegionInformation`, class and unit deleted), the four tile
+  grids (Rust boxes, the record's pointers kept for the C++ inlines), and behind it the tables: the serial table
+  (was `mAreas`, a sorted vector with `std::map`'s insert), the eight kinds' objects by id (the C++ addresses), the
+  pending sector tiles, the shore lists, the free ids. The scalars stay at fixed addresses (Empire Earth.cpp's
+  `gMapWidth`, `gContinentManagerClearing` and the others alias them). (2) The other kinds' members as records like
+  the continent's (area_kinds.rs: path area with its sorted sector ids, choke point with its area serials, forest,
+  hill, rectangle area), (3) the path sectors and sub sectors (sector_rec.rs: a sector's sub sectors by id, its
+  continents, its sorted path area ids; a sub sector's links as a multimap, its neighbours), and the continents'
+  neighbours in their record. (6, before 4: the record walk the save needs is the queries' too) The saved block in
+  Rust (cm_io.rs): `WriteRegions` and `ReadRegions` byte for byte (0.263), `EEWriteAreaBytes`/`EEReadAreaBytes`,
+  `EEContinentRegionsDigest`, the CNTR record (`EEAIContinentFill`) and CNTQ's digest, `FindContinent` and
+  `FindPathSubSector`. (4) The queries (cm_query.rs) and (5) `RemoveForestTile`, `RepairPathArea` and
+  `GetAdjacentAreaID` (cm_repair.rs); then the link walks' `LinkSubSectors` and `RemoveSubSectors` (cm_links.rs),
+  `CreateContinentGrid`'s store, `UpdateTileValues` and `EEAIRectangleArea::UpdateContinents` (cm_build.rs).
+- **How Rust reaches the C++ objects.** The tables hold the objects' addresses; each record is a private base of its
+  class, and the C++ registers once where each sits (`EeAStarCmLayout`: offsets measured on objects made in the
+  manager's ctor, with a check that every kind's `EEAIArea` is its first base). What only the C++ can answer is one
+  host (`EeAStarCmHostFn`, EEAIContinentSave.cpp): `EEAIArea::Contains`, `Create` and `RemoveTile` (their hull tests
+  and rebuilds write the HULL records: a Rust test of its own would drop those records, so the geometry stays the
+  C++ method over the Rust hull), a tile's kind, wall, terrain, wood and AI value, `EEGetRandomInt`, the town or herd
+  an area is (the players' lists), the region size global, making and deleting the objects a load or a repair makes.
+- **The orders kept.** `U2DPoint<long>::operator<` is the lower y first, then the larger x: the shore list's binary
+  search used x-then-y in the first build and the oracle parted at 1630 s of seed 2 (the second time this lane met
+  that order: pm_record.rs). The serial table keeps `std::map`'s insert (a present serial keeps its area); the sector
+  map and the link multimap likewise (a link goes after the equal keys); `std::find` from the front; every walk the
+  C++ made from the last element down; each `GetAdjacentAreaID` reads the tile and its eight neighbours again (their
+  `Contains` calls are captured). `EEContinentRegionsDigest` is an `unsigned long` FNV-1a (32 bits on Windows, 64 on
+  LP64), as the C++'s was.
+- **Lesson.** Capture records written inside geometry (HULL, AREA) pin where the geometry runs: a query can move to
+  Rust whole only if its geometry calls still go through the capturing C++ method. A host per question keeps the
+  records and the order without a Rust capture writer.
+- **Lesson.** cbindgen emits `template<typename T = void> struct Option` for an `Option<fn>` parameter, which the
+  per-module header splitter refuses ("cannot name the header item"): take a plain `fn` type.
+- **Edits outside the lane's files**: the callers' member reads became accessors (EECPNextUnits.cpp host ops 80-94's
+  forests, hills, continents and adjacency; EECPTrace.cpp's area dump through `GetAreas()`; EEPlayer.cpp's serials
+  through `NewSerial()`; EEHerd.cpp, EETown, EEPathManager.cpp, EEEMStorm.cpp, EEComplexUnit.cpp, EEGroup.cpp,
+  EEUGRust.cpp, EECombatGoals.cpp, EEFOFindNewTargetNearOldTarget.cpp, EECPPlacement.cpp, EECPNextView.cpp,
+  EEPWorldHelper.cpp, Empire Earth.cpp's aliases). The towns and herds (lane B) keep their interface: `AddArea`,
+  `RemoveArea`, `GetArea` and `SetSerial` as before.
+- **Net C++** (without the generated headers): the record and tables c4039c4c9 -36 (715+/751-; the region
+  information class deleted), the kinds' records 16dd490c1 -72, the sectors' and sub sectors' records 6149b4461 +2
+  (375+/373-: the callers' accessors), the state as bytes 19202b306 -1,085 (179+/1,264-: EEAIContinentSave.cpp's
+  writer and reader, the CNTR fill), the queries and RepairPathArea e89793782 -441, the link walks and build steps
+  8de11d3a6 -164. Round: -1,796 (rust-ai-path1's -1,556 not counted). Rust: cm.rs, area_kinds.rs, sector_rec.rs,
+  cm_io.rs, cm_query.rs, cm_repair.rs, cm_links.rs, cm_build.rs (+ 19 unit tests: the serial table as a map, the
+  pending tiles, the id stacks, the grids and lookups, the shore order, the kinds' lists, the sector map and the link
+  multimap, the encodings, a sparse set's round trip, a damaged block refused, the empty-map steps).
+- **Gates** (on the tree merged with origin/rust ec39733e7): both builds 0/0, the test profile 0/0; the Rust gate
+  PASS (4,554 tests; ee_base's COM thread test failed once under load and passed alone and in the rerun); the oracle
+  seeds 2-7 identical (and seeds 2-3 after each code commit); all twelve capture profiles at seeds 2-3 PASS (oracle
+  212, late 214, space 210, calamity 222, app 24, effects 6, groups 2, missile 22, placement 4, scenario 43,
+  transport 185, units 175 digests: CNTR, CNTQ, HULL, AREA, PMRQ among them, every one from the C++); the plain
+  saveload (seeds 2-7 at 600/1350/2100 s) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) `saveload expect: PASS` (38 saves identical); `sim_editor: PASS`;
+  `gates.sh` through its slot: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap` (units [4, 43, 43],
+  alive_computers [2, 3], classic_lua twice), `RESULT PASS lan-game`, `GATES PASS`.
+- **Behaviour:** none intended. Two debug messages of a load are counts now (the saved serials of no known owner,
+  the saved sub sectors no sector held), and a saved pending sector with no tiles is kept as an empty entry, as the
+  original `mSectorTiles[key] = tiles` did.
+- **Not done this round:** the objects' lifetimes (the classes still own their records), the build passes and
+  `Rebuild` (they run the C++ machines), `CanGetTo` (the unit store), the path machines' goal state.
