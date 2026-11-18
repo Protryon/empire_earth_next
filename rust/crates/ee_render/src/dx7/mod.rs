@@ -5,6 +5,7 @@
 //! (each module's tests say how).
 
 pub mod api;
+pub mod digest2d;
 pub mod draw;
 pub mod draw2d;
 pub mod draw_model;

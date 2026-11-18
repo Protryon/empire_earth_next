@@ -34,7 +34,9 @@ use crate::ge::smallobj::{
     ee_ge_text_alignment, ee_ge_text_color, ee_ge_text_font, ee_ge_text_location, ee_ge_text_string,
     ee_ge_text_transparent, EeGeFont, EeGeFontValue, EeGeMat, EeGeMatField, EeGeText,
 };
-use crate::ge::texobj_tex::{ee_ge_tex_corner, ee_ge_tex_frame_uv_size, EeGeTexture};
+use crate::ge::texobj_tex::{ee_ge_tex_corner, ee_ge_tex_frame_uv_size, ee_ge_tex_get, EeGeTexVal, EeGeTexture};
+use crate::dx7::digest2d;
+use core::fmt::Write as _;
 use crate::ge::tmobj::{
     ee_ge_tm_edge_points, ee_ge_tm_edge_vertices, ee_ge_tm_get, ee_ge_tm_get_f, ee_ge_tm_is_valid, ee_ge_tm_material,
     ee_ge_tm_material_map, ee_ge_tm_point, ee_ge_tm_point_visibility, ee_ge_tm_render_vertices, ee_ge_tm_vertex_color,
@@ -360,7 +362,30 @@ impl TerrainHost for Host {
 
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_bitmap(rast: *mut EeDx7Rasterizer, screen: c_ulong, bitmap: Handle) -> c_long {
-    draw2d::draw_bitmap(&mut unsafe { Host::new(rast, screen) }, bitmap)
+    let mut h = unsafe { Host::new(rast, screen) };
+    let r = draw2d::draw_bitmap(&mut h, bitmap);
+    if digest2d::enabled() {
+        let texture = h.bitmap_texture(bitmap);
+        let mut s = format!("bmp s{screen} r{r}");
+        unsafe { digest2d::vertices(&mut s, h.bitmap_vertices(bitmap), 4) };
+        digest2d::texture(&mut s, digest_texture(&mut h, texture));
+        digest2d::command(&s);
+    }
+    r
+}
+
+/// The digest's view of a texture's frame (none for null).
+fn digest_texture(h: &mut Host, texture: Handle) -> Option<(f32, [f32; 2], isize, isize)> {
+    if texture.is_null() {
+        return None;
+    }
+    let (size, corner) = h.texture_frame(texture);
+    // SAFETY: a live texture
+    let (frame, count) = unsafe {
+        let t: *mut EeGeTexture = cppobj::counted(texture as usize);
+        (ee_ge_tex_get(t, EeGeTexVal::Frame), ee_ge_tex_get(t, EeGeTexVal::FrameCount))
+    };
+    Some((size, corner, frame, count))
 }
 
 #[no_mangle]
@@ -370,7 +395,18 @@ pub unsafe extern "C" fn ee_dx7r_draw_lines(
     lines: Handle,
     count: c_ulong,
 ) -> c_long {
-    draw2d::draw_lines(&mut unsafe { Host::new(rast, screen) }, lines, count as u32)
+    let mut h = unsafe { Host::new(rast, screen) };
+    let r = draw2d::draw_lines(&mut h, lines, count as u32);
+    if digest2d::enabled() {
+        let texture = h.line_texture(lines);
+        let mut s = format!("lines s{screen} r{r} n{count}");
+        for i in 0..count as u32 {
+            unsafe { digest2d::vertices(&mut s, h.line_vertices(lines, i), 2) };
+        }
+        digest2d::texture(&mut s, digest_texture(&mut h, texture));
+        digest2d::command(&s);
+    }
+    r
 }
 
 #[no_mangle]
@@ -380,12 +416,30 @@ pub unsafe extern "C" fn ee_dx7r_draw_points(
     points: Handle,
     count: c_ulong,
 ) -> c_long {
-    draw2d::draw_points(&mut unsafe { Host::new(rast, screen) }, points, count as u32)
+    let mut h = unsafe { Host::new(rast, screen) };
+    let r = draw2d::draw_points(&mut h, points, count as u32);
+    if digest2d::enabled() {
+        let texture = h.point_texture(points);
+        let mut s = format!("points s{screen} r{r} n{count}");
+        for i in 0..count as u32 {
+            unsafe { digest2d::vertices(&mut s, h.point_vertices(points, i), 1) };
+        }
+        digest2d::texture(&mut s, digest_texture(&mut h, texture));
+        digest2d::command(&s);
+    }
+    r
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_rhombus(rast: *mut EeDx7Rasterizer, screen: c_ulong, rhombus: Handle) -> c_long {
-    draw2d::draw_rhombus(&mut unsafe { Host::new(rast, screen) }, rhombus)
+    let mut h = unsafe { Host::new(rast, screen) };
+    let r = draw2d::draw_rhombus(&mut h, rhombus);
+    if digest2d::enabled() {
+        let mut s = format!("rhombus s{screen} r{r}");
+        unsafe { digest2d::vertices(&mut s, h.rhombus_vertices(rhombus), 4) };
+        digest2d::command(&s);
+    }
+    r
 }
 
 /// `Draw(GEPolygonArray&, ...)`: `vertex_type` 1 is coloured.
@@ -816,6 +870,23 @@ pub unsafe extern "C" fn ee_dx7r_text_bounds(text: Handle, clip: *const TextRect
     let info = unsafe { text_info(text) };
     let bounds = draw2d::text_bounds(&mut TextPlat { target: core::ptr::null() }, &info, unsafe { clip.as_ref() });
     unsafe { *out = bounds };
+    if digest2d::enabled() {
+        // SAFETY: the text's bytes (`length` of them) are live for the call
+        let bytes = unsafe { core::slice::from_raw_parts(info.text as *const u8, info.length as usize) };
+        let mut s = format!("text {:?} a{} t{} sh{}", String::from_utf8_lossy(bytes), info.alignment, info.transparent as u8, info.shadow_font as u8);
+        digest2d::floats(&mut s, &[info.x, info.y]);
+        digest2d::floats(&mut s, &info.foreground);
+        digest2d::floats(&mut s, &info.background);
+        let font = unsafe { ee_ge_text_font(cppobj::plain(text as usize)) };
+        let font: *mut EeGeFont = unsafe { cppobj::counted(font as usize) };
+        let _ = unsafe { write!(s, " font{} st{}", ee_ge_font_value(font, EeGeFontValue::Size), ee_ge_font_value(font, EeGeFontValue::Style)) };
+        match unsafe { clip.as_ref() } {
+            Some(c) => { let _ = write!(s, " clip {} {} {} {}", c.left, c.top, c.right, c.bottom); }
+            None => s.push_str(" clip -"),
+        }
+        let _ = write!(s, " -> {} {} {} {}", bounds.left, bounds.top, bounds.right, bounds.bottom);
+        digest2d::command(&s);
+    }
 }
 
 /// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback) of a `GEText*`. `target` is the `PlatFontTarget*`. Returns false when the
