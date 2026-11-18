@@ -30729,3 +30729,18 @@ commit now has the same cache key in every worktree.
   oracle equal to the ref (two runs; the ref recorded again). Re-read in two equal runs: oracle (322 lines: the 320
   above plus PLCE and CPEV in seed 2; seed 3's did not move), late, space, calamity and placement (unchanged: the
   last plays boom against ageofai). Saveload 18/18, the Rust gate (4,523 tests), both builds 0/0, gates.sh PASS.
+
+- **Then origin/rust bf7759fb** (LLE rest 1, the UI thread 1, WONLobby 15, AI lane A round 3; branch rust-mainmerge4b,
+  2026-11-18). Lane A had moved EECPNextArmy.cpp, EECPReflexes.cpp and the trace into Rust and deleted them, so main's
+  25a29f1de (EECPNewGame) conflicted there and in EECPTrace.cpp. Ported, the C++ files kept deleted: EECPNewGame
+  (EECPTrace.cpp, still called by EEWorld::StartGame before CreatePlayers) calls `ee_ai_new_game` (next_trace.rs),
+  which clears the trace's per-player counters and the next sim hash time (main's `sNextHash`, now a file static on
+  both sides), the loss incidents (next_game.rs `new_game_losses`: LOSSES emptied, `with_losses` makes the 64 defaults
+  again, the same as main's per-player clear of hits, incidents, incident id and loss time) and the militia and
+  naval-flight cool-downs (next_reflex.rs `new_game`). EECPNextArmyNewGame and EECPReflexesNewGame left
+  ee/EECPTrace.h. Two unit tests. Main's other AI Thread edits were only these three files. The oracle ref recorded
+  by the main merge was copied to the main checkout's build/rust_oracle/ref (the old one kept as ref-pre-main4).
+  Gates on the merged tree: both builds and the test profile 0/0; the Rust gate PASS (4,552 tests); the oracle
+  identical on seeds 2-7 (single games: the reset only changes a second game in one process, EE-SIM --games); the
+  twelve capture profiles at seeds 2-3 PASS against the goldens as recorded; saveload 18/18; the matrix `--expect`
+  PASS; the editor (14,448) and civilization builder (4,062) gates PASS; scenario_check 27/27; gates.sh GATES PASS.
