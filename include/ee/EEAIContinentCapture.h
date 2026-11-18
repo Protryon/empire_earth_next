@@ -13,9 +13,12 @@ enum {
     kContinentCaptureBuild = 0x42544e43,    // "CNTB": after BuildRegions
     kContinentCaptureRebuild = 0x52544e43,  // "CNTR": after Rebuild
     kContinentCaptureNextTo = 0x4e544e43,   // "CNTN": every GetTilesNextTo (x, y, id, result, the tiles)
+    kContinentCaptureQuery = 0x51544e43,    // "CNTQ": the manager's queries and changes (EEAIContinentManager.cpp)
 };
 
 // One record of gContinentManager's state under inTag; nothing unless the capture is on
 void EEAIContinentCapture(unsigned long inTag);
+// The FNV-1a 64 of the bytes a CNTR record of the state now would hold (CNTQ's changes)
+unsigned long long EEAIContinentDigest();
 
 #endif

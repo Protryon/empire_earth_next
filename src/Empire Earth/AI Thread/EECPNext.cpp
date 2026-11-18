@@ -459,13 +459,13 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return 1;
     }
     case EE_AI_NEXT_HOST_FORESTS:
-        return (int64_t)gContinentManager.mForests.size();
+        return (int64_t)gContinentManager.GetForests().size();
     case EE_AI_NEXT_HOST_FOREST: {
-        EEAIForest* theForest = gContinentManager.mForests[(unsigned short)a];
+        EEAIForest* theForest = gContinentManager.GetForests()[(unsigned short)a];
         return theForest != NULL ? (int64_t)theForest->GetID() : -1;
     }
     case EE_AI_NEXT_HOST_FOREST_POINT: {
-        EEAIForest* theForest = gContinentManager.mForests[(unsigned short)a];
+        EEAIForest* theForest = gContinentManager.GetForests()[(unsigned short)a];
         U2DPoint<long> theFrom((long)b, (long)c);
         U2DPoint<long> thePoint = out[2] != 0 ? theForest->GetClosestHullPoint(theFrom) : theForest->GetClosestPoint(theFrom);
         out[0] = thePoint.mX;
@@ -562,15 +562,16 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         char theLine[256];
         snprintf(theLine, sizeof(theLine),
                  "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
-                 EEContinentRegionsDigest(), (unsigned long)gContinentManager.mLastSerial, gContinentManager.mContinents.size(),
-                 gContinentManager.mHills.size(), gContinentManager.mPathAreas.size(), gContinentManager.mPathSectors.size(),
-                 gContinentManager.mPathSubSectors.size(), gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(),
-                 gContinentManager.mAreas.size());
+                 EEContinentRegionsDigest(), (unsigned long)gContinentManager.GetLastSerial(), gContinentManager.GetContinents().size(),
+                 gContinentManager.GetHills().size(), gContinentManager.GetPathAreas().size(), gContinentManager.GetPathSectors().size(),
+                 gContinentManager.GetPathSubSectors().size(), gContinentManager.GetChokePoints().size(), gContinentManager.GetForests().size(),
+                 gContinentManager.GetAreas().size());
         ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
-        for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
-             theIt != gContinentManager.mAreas.end(); ++theIt) {
-            snprintf(theLine, sizeof(theLine), " %lu/%ld", (unsigned long)theIt->first,
-                     theIt->second != NULL ? (long)theIt->second->GetAreaType() : -1L);
+        EEAIListView<EeAStarCmArea> theAreas = gContinentManager.GetAreas();
+        for (const EeAStarCmArea* theIt = theAreas.begin(); theIt != theAreas.end(); ++theIt) {
+            EEAIArea* theArea = (EEAIArea*)(uintptr_t)theIt->area;
+            snprintf(theLine, sizeof(theLine), " %lu/%ld", (unsigned long)theIt->serial,
+                     theArea != NULL ? (long)theArea->GetAreaType() : -1L);
             ee_ai_next_append(outRecord, (const uint8_t*)theLine, strlen(theLine));
         }
         ee_ai_next_append(outRecord, (const uint8_t*)"\n", 1);

@@ -3,60 +3,52 @@
 // EEAIArea serial of what EEAIContinentManager's lookup returns. Requires ee/EEAIArea.h, lle/U2DRectangle.h.
 #ifndef EE_EEAIRECTANGLEAREA_H
 #define EE_EEAIRECTANGLEAREA_H
+#include "rust/sim/astar.h"
 
-class EEAIRectangleArea : public EEAIArea {
+// Port: the members are the Rust record EeAStarRectRecord (ee_sim::astar area_kinds.rs), the private base: +0x68 the
+// rectangle, +0x78 the scenario area, +0x7c/+0x80/+0x84 the tiles by continent category (EECPCombatManager 0x47306c
+// walks the rectangle when its count is positive, unless +0x88 is the continent asked for), +0x88 the continent,
+// +0x8a its mRectangleAreas index (0x1f3a0)
+class EEAIRectangleArea : public EEAIArea, private EeAStarRectRecord {
 public:
-    // (EEAIRectangleArea.cpp 0x2c79f..0x2cc87): ctor 0x2c79f (init list, then the vptr), ??_G 0x2cc65
-    // (own vptr, then ~EEAIArea: a user-declared empty dtor)
-    EEAIRectangleArea();
+    // (EEAIRectangleArea.cpp 0x2c79f..0x2cc87): ctor 0x2c79f, ??_G 0x2cc65 (a user-declared empty dtor)
+    EEAIRectangleArea() : EeAStarRectRecord() {}
     virtual ~EEAIRectangleArea() {}
     // +0x20 0x2c939: EEAIArea's random point; when its tile is off the map, a random one of the tiles on the map
     virtual U2DPoint<long> GetRandomPoint();
-    // 0x2c7df: counts the rectangle's tiles per continent kind (+0x7c/+0x80/+0x84); mW88 = the highest continent id
-    // seen; returns it (provisional name)
+    // 0x2c7df: counts the rectangle's tiles per continent category; the continent with most of them (provisional name)
     unsigned short UpdateContinents();
-
-    // EECPCombatManager 0x47306c walks mRect's tiles (x mLeft..mRight, y mTop..mBottom) when the count for
-    // its argument (+0x7c / +0x80 / +0x84) is positive, unless mW88 is the continent asked for. (provisional names)
-    // New (port): the members behind accessors (R5b.1 blocker (b))
-    const U2DRectangle<long>& GetRect() const { return this->mRect; }
-    void SetRect(const U2DRectangle<long>& inRect) { this->mRect = inRect; }
-    void SetScenarioAreaID(long inID) { this->mScenarioAreaID = inID; }
-    long GetNumLandTiles() const { return this->mNumLandTiles; }
-    long GetNumWaterTiles() const { return this->mNumWaterTiles; }
-    long GetNumSpaceTiles() const { return this->mNumSpaceTiles; }
-    void SetNumLandTiles(long inCount) { this->mNumLandTiles = inCount; }
-    void SetNumWaterTiles(long inCount) { this->mNumWaterTiles = inCount; }
-    void SetNumSpaceTiles(long inCount) { this->mNumSpaceTiles = inCount; }
-    unsigned short GetContinentID() const { return this->mContinentID; }
-    unsigned short GetID() const { return this->mID; }
-    void SetID(unsigned short inID) { this->mID = inID; }
+    EeAStarRectRecord* Record() { return this; }
+    const EeAStarRectRecord* Record() const { return this; }
+    const U2DRectangle<long>& GetRect() const { return reinterpret_cast<const U2DRectangle<long>&>(this->rect); }
+    void SetRect(const U2DRectangle<long>& inRect) { reinterpret_cast<U2DRectangle<long>&>(this->rect) = inRect; }
+    void SetScenarioAreaID(long inID) { this->scenario_area_id = inID; }
+    long GetNumLandTiles() const { return this->num_land_tiles; }
+    long GetNumWaterTiles() const { return this->num_water_tiles; }
+    long GetNumSpaceTiles() const { return this->num_space_tiles; }
+    void SetNumLandTiles(long inCount) { this->num_land_tiles = inCount; }
+    void SetNumWaterTiles(long inCount) { this->num_water_tiles = inCount; }
+    void SetNumSpaceTiles(long inCount) { this->num_space_tiles = inCount; }
+    unsigned short GetContinentID() const { return this->continent_id; }
+    unsigned short GetID() const { return this->id; }
+    void SetID(unsigned short inID) { this->id = inID; }
     // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
     template <class W> void WriteFields(W& ioWriter) const
     {
-        ioWriter.Rect(this->mRect);
-        ioWriter.I32(this->mScenarioAreaID);
-        ioWriter.I32(this->mNumLandTiles);
-        ioWriter.I32(this->mNumWaterTiles);
-        ioWriter.I32(this->mNumSpaceTiles);
-        ioWriter.U16(this->mContinentID);
-        ioWriter.U16(this->mID);
+        ioWriter.Rect(this->GetRect());
+        ioWriter.I32(this->scenario_area_id);
+        ioWriter.I32(this->num_land_tiles);
+        ioWriter.I32(this->num_water_tiles);
+        ioWriter.I32(this->num_space_tiles);
+        ioWriter.U16(this->continent_id);
+        ioWriter.U16(this->id);
     }
     template <class R> bool ReadFields(R& ioReader)
     {
-        return ioReader.Rect(this->mRect) && ioReader.I32(this->mScenarioAreaID) && ioReader.I32(this->mNumLandTiles)
-            && ioReader.I32(this->mNumWaterTiles) && ioReader.I32(this->mNumSpaceTiles) && ioReader.U16(this->mContinentID)
-            && ioReader.U16(this->mID);
+        return ioReader.Rect(reinterpret_cast<U2DRectangle<long>&>(this->rect)) && ioReader.I32(this->scenario_area_id)
+            && ioReader.I32(this->num_land_tiles) && ioReader.I32(this->num_water_tiles) && ioReader.I32(this->num_space_tiles)
+            && ioReader.U16(this->continent_id) && ioReader.U16(this->id);
     }
-
-private:
-    U2DRectangle<long> mRect;               // +0x68
-    long mScenarioAreaID;                   // +0x78 (not read there)
-    long mNumLandTiles;                     // +0x7c
-    long mNumWaterTiles;                    // +0x80
-    long mNumSpaceTiles;                    // +0x84
-    unsigned short mContinentID;            // +0x88 a continent id (EEAIContinent::mID)
-    unsigned short mID;                     // +0x8a EEAIContinentManager::mRectangleAreas index (0x1f3a0)
 };
 
 #endif

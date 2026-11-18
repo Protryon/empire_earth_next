@@ -3,26 +3,24 @@
 // EEAIArea serial of what EEAIContinentManager's lookup returns. Requires ee/EEAIArea.h.
 #ifndef EE_EEAIHILL_H
 #define EE_EEAIHILL_H
+#include "rust/sim/astar.h"
 
-class EEAIHill : public EEAIArea {
+// Port: the members are the Rust record EeAStarHillRecord (ee_sim::astar area_kinds.rs), the private base: +0x68
+// its continent (the hill goal's +0x56), +0x6a its id (EEAIContinent::AddHillID 0x26e13 reads it)
+class EEAIHill : public EEAIArea, private EeAStarHillRecord {
 public:
     // inline (EEAIAStarHillGoal::CreateHill 0x16d04 expands it: EEAIArea(), +0x68/+0x6a = 0, the vptr)
-    EEAIHill() : mContinentID(0), mID(0) {}
-    // inline, user-declared empty (??_G 0x1706b stores the own vptr, then ~EEAIArea)
+    EEAIHill() : EeAStarHillRecord() {}
     virtual ~EEAIHill() {}
-
-    // New (port): the members behind accessors (R5b.1 blocker (b))
-    unsigned short GetContinentID() const { return this->mContinentID; }
-    void SetContinentID(unsigned short inID) { this->mContinentID = inID; }
-    unsigned short GetID() const { return this->mID; }
-    void SetID(unsigned short inID) { this->mID = inID; }
+    EeAStarHillRecord* Record() { return this; }
+    const EeAStarHillRecord* Record() const { return this; }
+    unsigned short GetContinentID() const { return this->continent_id; }
+    void SetContinentID(unsigned short inID) { this->continent_id = inID; }
+    unsigned short GetID() const { return this->id; }
+    void SetID(unsigned short inID) { this->id = inID; }
     // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
-    template <class W> void WriteFields(W& ioWriter) const { ioWriter.U16(this->mContinentID); ioWriter.U16(this->mID); }
-    template <class R> bool ReadFields(R& ioReader) { return ioReader.U16(this->mContinentID) && ioReader.U16(this->mID); }
-
-private:
-    unsigned short mContinentID;            // +0x68 (the hill goal's +0x56: every tile's continent)
-    unsigned short mID;                     // +0x6a (EEAIContinent::AddHillID 0x26e13 reads it)
+    template <class W> void WriteFields(W& ioWriter) const { ioWriter.U16(this->continent_id); ioWriter.U16(this->id); }
+    template <class R> bool ReadFields(R& ioReader) { return ioReader.U16(this->continent_id) && ioReader.U16(this->id); }
 };
 
 #endif

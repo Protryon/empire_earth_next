@@ -132,16 +132,8 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
 // Returns the continent's path area containing a point, or NULL
 EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
-    EEAIPathArea* theResult = NULL;
-    EEAIListView<unsigned short> theIDs = this->GetPathAreaIDs();
-    for (long i = theIDs.size() - 1; i >= 0; i--) {
-        EEAIPathArea* theArea = gContinentManager.GetPathArea(theIDs[i]);
-        if (theArea && theArea->Contains(inPoint)) {
-            theResult = theArea;
-            break;
-        }
-    }
-    return theResult;
+    return (EEAIPathArea*)(uintptr_t)ee_astar_cm_object_path_area_at(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this, false,
+                                                                     inPoint.mX, inPoint.mY);   // Rust: cm_query.rs
 }
 
 // Appends the continent's shore tiles next to area inID (all of them for id 0)
