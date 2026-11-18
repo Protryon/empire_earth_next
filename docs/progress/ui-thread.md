@@ -82,7 +82,7 @@ hot keys' snapshot (checked only by the shadow's per-frame exercise), the cargo 
 
 ## Commits (round 1)
 
-07cab23f2 (the views and the direct path: -224), 098daedc0 (the record messages: -85), dda53fa2f (the main form's
+07cab23f2 (the views and the direct path: -224), 06c020000 (the record messages: -85), dda53fa2f (the main form's
 record, the UI thread's manager calls: -65), 8c79e834b (the main group's record: -30): **net C++ -404**.
 
 ## Left

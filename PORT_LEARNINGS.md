@@ -30098,7 +30098,7 @@ that is a field, or a call that is the toolkit's same inward call).
 | Commit | What | C++ (src, include/ee) |
 |---|---|---|
 | 07cab23f2 | `hud_views.rs`: the main panel group's, icon bar's, portrait's, improvement and command buttons' and main form's plain world reads and toolkit calls in their FFI adapters; whole fills: `EEStatusBoxView`, the hot keys' unit snapshot, the diplomacy form's player, the read view's airport question; `ee_sim::world` `GroupView`, the stats' class and button | +48 -272, net -224 |
-| 098daedc0 | `hud_sends.rs`: 39 record messages (the screens' hot keys, chat type, rally, kill, attack, speed, behaviour, diplomacy, tribute, resign; the icon bar's four, the portrait's two, the command buttons' twelve, the mouse modes' three) built by `ee_screenscpp_ga_record` and sent by one `ee_screenscpp_send_local` | +6 -91, net -85 |
+| 06c020000 | `hud_sends.rs`: 39 record messages (the screens' hot keys, chat type, rally, kill, attack, speed, behaviour, diplomacy, tribute, resign; the icon bar's four, the portrait's two, the command buttons' twelve, the mouse modes' three) built by `ee_screenscpp_ga_record` and sent by one `ee_screenscpp_send_local` | +6 -91, net -85 |
 | dda53fa2f | `main_form_fields.rs`: `EEUIFMainGame`'s 23 plain members a Rust record the class derives from (the field ops, the modes' setters, the clock); the UI thread's manager calls (the forms' stack and lookups, the copy lock) and its world reads on the views | +12 -77, net -65 |
 | 8c79e834b | `EEUIFMGMainGroup`'s 8 plain members a Rust record (`EeScreensMainGroupFields`; its field ops) | +8 -38, net -30 |
 
