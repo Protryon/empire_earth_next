@@ -470,7 +470,7 @@ void Statistics(EESimCaptureRecord& ioRecord, EEPlayerStatistics& inStatistics)
 }   // namespace
 
 // WSTA (the app profile's end, after EEMap's sight sweep): EEWorld::RecordStatistics, the end-of-game scores (EEWorld::Clear
-// runs it when a game is left: no capture game reaches it). One record: the history's fields, every record (scores,
+// runs it when a game is left: no capture game reaches it). One record: the history's fields (but the start time, a wall clock), every record (scores,
 // colour, name and suffix, slot, result, end time, team, resources, flags, statistics), then every player's resources
 // and statistics after it (the top-ups of the computers' gathered totals) and the physics random seed (its draws)
 void EEAppCaptureStatisticsSweep()
@@ -480,7 +480,7 @@ void EEAppCaptureStatisticsSweep()
     gWorld.RecordStatistics();
     EEStatisticsHistory& h = gWorld.mStatistics;
     EESimCaptureRecord r(EECaptureTag("WSTA"));
-    r.I32((int)h.mStartTime);
+    // (not mStartTime: the wall clock at the game's start)
     r.I32((int)h.mCurrentRecordIndex);
     r.I32((int)h.mEndTime);
     r.I32((int)h.mTileCount);
