@@ -1,6 +1,6 @@
 // The lobby dialogs', popups' and controls' strings as resource rows (R6 WONLobby round 17: lobbydlg.rs, lobbypopup.rs
 // and lobbyctl.rs string_row, which the game's objects send instead of the string): the original switches
-// (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString, copied unchanged but for the EE
+// (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString and CtlImage, copied unchanged but for the EE
 // game's two strings, stand-ins here) against the rows, for every value from -5 to 60: the row's slot must be the
 // string the switch returned, and a value with no row must be one the switch answered with an empty string (or, for
 // the dialogs, the EE game's two, which stay strings).   exit code: the number of mismatches
@@ -18,6 +18,7 @@
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/lobbypopup.h"
 #include "rust/won_lobby/lobbyctl.h"
+#include "rust/won_lobby/rows.h"
 
 using namespace WONAPI;
 
@@ -26,6 +27,24 @@ wchar_t gEmptyWideString[2];
 static GUIString sEeAbort, sEeLeave;
 
 namespace Orig {
+static const SmartPtr<Image>& CtlImage(intptr_t inImage)
+{
+    typedef EeWonLobbyCtlImage I;
+    switch ((I)inImage) {
+    case I::Ignored: return LOBBY_IMAGE(UserListCtrl_Ignored_Image);
+    case I::Blocked: return LOBBY_IMAGE(UserListCtrl_Blocked_Image);
+    case I::Muted: return LOBBY_IMAGE(UserListCtrl_Muted_Image);
+    case I::Away: return LOBBY_IMAGE(UserListCtrl_Away_Image);
+    case I::Admin: return LOBBY_IMAGE(UserListCtrl_Admin_Image);
+    case I::Moderator: return LOBBY_IMAGE(UserListCtrl_Moderator_Image);
+    case I::Captain: return LOBBY_IMAGE(UserListCtrl_Captain_Image);
+    case I::Firewall: return LOBBY_IMAGE(LobbyGlobal_Firewall_Image);
+    case I::Searching: return LOBBY_IMAGE(LobbyGlobal_Searching_Image);
+    case I::Normal: break;
+    }
+    return LOBBY_IMAGE(UserListCtrl_Normal_Image);
+}
+
 static const GUIString& AdminString(intptr_t inString)
 {
     static GUIString sEmpty;
@@ -114,6 +133,11 @@ int main()
         Check("popup", v, ee_won_lobbypopup_string_row(v), p, p == &gEmptyGUIString);
         const GUIString* c = &Orig::CtlString(v);
         Check("control", v, ee_won_lobbyctl_string_row(v), c, c == &gEmptyGUIString);
+        sChecks++;
+        if (&Orig::CtlImage(v) != &gLobbyResources[ee_won_lobby_rows_icon_row(v)].mImage) {
+            sBad++;
+            printf("FAIL image %d\n", v);
+        }
     }
     printf("won_restext_test: %d checks, %d mismatches\n", sChecks, sBad);
     return sBad;

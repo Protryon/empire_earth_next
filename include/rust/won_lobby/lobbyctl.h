@@ -778,6 +778,9 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ListOwnerCtl,
   /// `((LobbyGame*)a)->GetAddress().GetHostAndPortString(true)` (held).
   GameAddrText,
+  /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
+  /// picture as its resource row in the game, rows.rs icon_res).
+  IconSetRes,
 };
 
 /// The inward calls.

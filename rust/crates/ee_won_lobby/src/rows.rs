@@ -500,7 +500,7 @@ fn client_is(client: isize, test: isize) -> bool {
 }
 
 /// The player list's icon images (LobbyCtrlHost.cpp's `CtlImage`).
-fn icon_res(icon: isize) -> R {
+pub(crate) fn icon_res(icon: isize) -> R {
     match icon {
         i if i == Icon::Ignored as isize => R::UserListCtrl_Ignored_Image,
         i if i == Icon::Blocked as isize => R::UserListCtrl_Blocked_Image,
@@ -511,6 +511,7 @@ fn icon_res(icon: isize) -> R {
         i if i == Icon::Captain as isize => R::UserListCtrl_Captain_Image,
         i if i == Icon::Firewall as isize => R::LobbyGlobal_Firewall_Image,
         i if i == Icon::Searching as isize => R::LobbyGlobal_Searching_Image,
+        // Icon::Normal and any other value
         _ => R::UserListCtrl_Normal_Image,
     }
 }
@@ -789,6 +790,12 @@ pub(crate) fn ctl_op(op: LOp, a: isize, b: isize, c: isize) -> Option<isize> {
         }
         _ => return None,
     })
+}
+
+/// `icon_res` for the drivers: the picture's resource row.
+#[no_mangle]
+pub extern "C" fn ee_won_lobby_rows_icon_row(icon: isize) -> i32 {
+    icon_res(icon) as i32
 }
 
 /// The controls' row ops from C++ and the drivers (`ctl_op`; `INTPTR_MIN` when the op is not a row op or its row

@@ -1099,6 +1099,9 @@ pub enum EeWonLobbyCtlOp {
     ListOwnerCtl,
     /// `((LobbyGame*)a)->GetAddress().GetHostAndPortString(true)` (held).
     GameAddrText,
+    /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
+    /// picture as its resource row in the game, rows.rs icon_res).
+    IconSetRes,
 }
 
 /// The resource row of a control string (LobbyCtrlHost.cpp's `CtlString` as it was).
@@ -1124,6 +1127,14 @@ fn game_string_op(op: EeWonLobbyCtlOp) -> Option<EeWonLobbyCtlOp> {
     match op {
         EeWonLobbyCtlOp::ButtonSetText => Some(EeWonLobbyCtlOp::ButtonSetRes),
         EeWonLobbyCtlOp::LabelSetText => Some(EeWonLobbyCtlOp::LabelSetRes),
+        _ => None,
+    }
+}
+
+/// The op that sends a picture op's picture as its resource row in the game.
+fn game_image_op(op: EeWonLobbyCtlOp) -> Option<EeWonLobbyCtlOp> {
+    match op {
+        EeWonLobbyCtlOp::IconSetImage => Some(EeWonLobbyCtlOp::IconSetRes),
         _ => None,
     }
 }
@@ -1576,6 +1587,9 @@ impl EeWonLobbyCtl {
             }
             if let (Some(res), Some(row)) = (game_string_op(op), string_row(b)) {
                 return self.host_op(res, a, row as isize, c);
+            }
+            if let Some(res) = game_image_op(op) {
+                return self.host_op(res, a, crate::rows::icon_res(b) as isize, c);
             }
         }
         self.host_op(op, a, b, c)

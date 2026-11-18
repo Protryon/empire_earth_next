@@ -166,24 +166,6 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     return NULL;
 }
 
-static const SmartPtr<Image>& CtlImage(intptr_t inImage)
-{
-    typedef EeWonLobbyCtlImage I;
-    switch ((I)inImage) {
-    case I::Ignored: return LOBBY_IMAGE(UserListCtrl_Ignored_Image);
-    case I::Blocked: return LOBBY_IMAGE(UserListCtrl_Blocked_Image);
-    case I::Muted: return LOBBY_IMAGE(UserListCtrl_Muted_Image);
-    case I::Away: return LOBBY_IMAGE(UserListCtrl_Away_Image);
-    case I::Admin: return LOBBY_IMAGE(UserListCtrl_Admin_Image);
-    case I::Moderator: return LOBBY_IMAGE(UserListCtrl_Moderator_Image);
-    case I::Captain: return LOBBY_IMAGE(UserListCtrl_Captain_Image);
-    case I::Firewall: return LOBBY_IMAGE(LobbyGlobal_Firewall_Image);
-    case I::Searching: return LOBBY_IMAGE(LobbyGlobal_Searching_Image);
-    case I::Normal: break;
-    }
-    return LOBBY_IMAGE(UserListCtrl_Normal_Image);
-}
-
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
@@ -296,7 +278,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;
     case Op::BehindFirewall: return LobbyIsBehindFirewall() ? 1 : 0;
-    case Op::IconSetImage: reinterpret_cast<ImageComponent*>(a)->SetImage(CtlImage(b).get()); return 0;
+    // IconSetImage: its picture comes as a resource row (rows.rs icon_res)
+    case Op::IconSetRes: reinterpret_cast<ImageComponent*>(a)->SetImage(gLobbyResources[b].mImage.get()); return 0;
     case Op::PublicAddressValid: return LobbyGetPublicAddress().IsValid() ? 1 : 0;
     case Op::LabelSetPublicAddress: aLabel->SetText(LobbyGetPublicAddress().GetHostString(true), true); return 0;
     // EELobbyGameOptionsCtrl
