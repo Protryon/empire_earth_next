@@ -367,31 +367,7 @@ void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
 // Tells whether a unit can be pushed aside: alive and not a building, aircraft, projectile or fixed object
 bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
 {
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    if (inUnit->GetHitPoints() <= 0)
-        return false;
-    switch (theClass->GetCategory()) {
-    case kUnitCategoryResource:
-        if (theClass->mMaxVelocity == 0.0f)
-            return false;
-        break;
-    case kUnitCategoryAmbient:
-    case kUnitCategoryBuilding:
-    case kUnitCategoryAirplane:
-    case kUnitCategoryProjectile:
-    case kUnitCategorySubmergedNaval:
-    case kUnitCategoryBomb:
-    case kUnitCategoryMissile:
-    case kUnitCategoryBuilding19:
-    case kUnitCategoryTorpedo:
-    case kUnitCategoryMiningBuilding:
-    case kUnitCategoryGate:
-    case kUnitCategoryFortress:
-    case kUnitCategoryBuildingPriest:
-    case kUnitCategoryPlanetSpaceship:
-        return false;
-    }
-    return true;
+    return ee_units_uu_is_unit_movable(UUHandle(static_cast<EEUnit*>(inUnit))) != 0;   // ee_units uu_reads.rs
 }
 
 // Finds a free spot for a unit on a tile, stepping in from a neighbour; false when every step collides
@@ -442,14 +418,7 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
 // Tells whether two techs count as the same research (0x432 and 0x5ab are twins)
 bool EEIsSameResearch(long inFirst, long inSecond)
 {
-    bool theResult = inFirst == inSecond;
-    if (theResult)
-        return theResult;
-    switch (inFirst) {
-    case 0x432: theResult = inSecond == 0x5ab; break;
-    case 0x5ab: theResult = inSecond == 0x432; break;
-    }
-    return theResult;
+    return ee_units_uu_is_same_research(inFirst, inSecond) != 0;
 }
 
 // Picks a free spot next to a container among candidate tiles that the unit can stand on and reach
@@ -1004,18 +973,6 @@ static EeCombatSearchIn EESearchInput(EEComplexUnit* inUnit, long inX, long inY,
 // (0x250806, EEUUGetUnitsInArea, the units of an area's unit regions that a screen passes: ee_combat's units_in_area,
 // called from EEFindNewTarget below)
 
-// the circle screen of 0x24bf01 (ctor 0x24bfd3 out of line right after its first user; operator() 0x250d37 an inline
-// COMDAT for EEGetUnitsInRectangle 0x250b99) (provisional names; moved here from ee/EEUnitUtilities.h)
-struct EEUUCircleScreen {
-    EEUUCircleScreen(const GE3DPoint& inCenter, float inRadius);
-    bool operator()(EEComplexUnit* inUnit) const
-    {
-        return GE2DPoint(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY())
-                   .DistanceToSquared(this->mCenter) <= this->mRadiusSquared;
-    }
-    GE2DPoint mCenter;                      // +0x00
-    float mRadiusSquared;                   // +0x08
-};
 
 // Returns the best target for a unit around a tile, scored by a target search
 // The best target for inUnit around (inX, inY) (the tile search 0x24fcd1, or 0x2503d7 from its position for a
@@ -1502,9 +1459,7 @@ void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCala
 // Returns the squared ground distance between two units
 float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 {
-    GE2DPoint theFirst(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY());
-    GE2DPoint theSecond(inOther->mPhysicalModel.GetLocation().GetX(), inOther->mPhysicalModel.GetLocation().GetY());
-    return theFirst.DistanceToSquared(theSecond);
+    return ee_units_uu_distance_squared(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inOther)));
 }
 
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
@@ -1720,39 +1675,23 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
     return EECombatWorld(EE_COMBAT_WORLD_CONTACT_RANGE, inUnit, inTarget, NULL, &theBits, &theBits) != 0;
 }
 
-// the targetable tests' record (ee_combat leaves.rs: targetable, can_target_class); a NULL class is never targetable
-static bool EETargetable(EEUnit* inAttacker, EEUnitClass* inClass, bool inCanTarget)
-{
-    if (inClass == NULL)
-        return false;
-    EeCombatTargetableIn in = {inAttacker != NULL, 0, 0, 0, (int32_t)inClass->mCategory, (uint32_t)inClass->mUnitType,
-                               (uint32_t)inClass->mFamily, inClass->CanBeAttacked()};
-    if (inAttacker != NULL) {
-        in.ammo_type = (int32_t)inAttacker->mUnitClass->mAmmoType;
-        in.land_building = inAttacker->mUnitClass->IsLandBuilding();
-        in.computer = inAttacker->mPlayer != NULL && inAttacker->mPlayer->mComputerPlayer != NULL;
-    }
-    return ee_combat_targetable(&in, inCanTarget);
-}
 
 // Tells whether a unit may target a class (walls only by siege units or computer players)
 bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass)
 {
-    return EETargetable(inUnit, inClass, true);
+    return ee_units_uu_targetable(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inClass), 1) != 0;
 }
 
 // Tells whether a class can be targeted at all (by an attacker's ammunition when given)
 bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
 {
-    return EETargetable(inAttacker, inClass, false);
+    return ee_units_uu_targetable(UUHandle(inAttacker), UUHandle(inClass), 0) != 0;
 }
 
 // Tells whether a unit is a cloaked enemy of a player
 bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer)
 {
-    return inUnit->mTileNode != NULL
-        && (inUnit->mComplexUnit->mIsCloakable ? inUnit->mComplexUnit->mIsCloaked : false)
-        && inPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[inPlayer->GetPlayerID()] != 0;
+    return ee_units_uu_cloaked_enemy(UUHandle(inUnit), UUHandle(inPlayer)) != 0;
 }
 
 // Tells whether a player sees any tile of a unit's footprint
@@ -1846,15 +1785,7 @@ long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
 // Returns the id of a player's leading unit, -1 when none
 unsigned long EEGetLeadUnitID(EEPlayer* inPlayer)
 {
-    RTSUnit* theUnit = NULL;
-    unsigned long theResult = (unsigned long)-1;
-    if (inPlayer->mSelectedGroup->GetNumUnits() != 0)
-        theUnit = inPlayer->mSelectedGroup->GetUnit(0);
-    if (inPlayer->mSelectedViewedUnit != NULL)
-        theUnit = inPlayer->mSelectedViewedUnit;
-    if (theUnit != NULL)
-        theResult = theUnit->mUnitID;
-    return theResult;
+    return (unsigned long)ee_units_uu_lead_unit_id(UUHandle(inPlayer));
 }
 
 // Collects the ring of tiles at a distance around a tile
@@ -1880,18 +1811,7 @@ float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX
 // Returns a point 90% of a unit's range from a target towards the unit
 void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoint)
 {
-    EEUUNote theNote(63); theNote.U(inUnit).P(*inTarget);   // TEST ONLY (UUTL)
-    GE3DPoint thePosition;
-    GEVector theOffset;
-    inUnit->mPhysicalModel.GetLocation().GetPosition(thePosition);
-    GEVector theDirection(thePosition.GetX() - inTarget->GetX(), thePosition.GetY() - inTarget->GetY(),
-                          thePosition.GetZ() - inTarget->GetZ());
-    theDirection.Normalize();
-    theDirection.Scale(inUnit->mStats->mRange * 0.9f, theOffset);
-    outPoint->SetX(inTarget->GetX() + theOffset.GetX());
-    outPoint->SetY(inTarget->GetY() + theOffset.GetY());
-    outPoint->SetZ(inTarget->GetZ() + theOffset.GetZ());
-    theNote.P(*outPoint);   // TEST ONLY (UUTL)
+    ee_units_uu_aim_point(UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&inTarget->mX, (float(*)[3])&outPoint->mX);
 }
 
 // Returns where a unit casts its calamity from: 90% of the calamity's range from the target
@@ -2018,22 +1938,9 @@ bool RTSMap::IsEdgeTile(const EETileLocation& inTile)
 // Collects the units within a radius of a point; their number
 long EEGetUnitsNear(const GE3DPoint& inCenter, float inRadius, std::vector<EEUnit*>& outUnits)
 {
-    EEUUCircleScreen theScreen(inCenter, inRadius);
-    U2DRectangle<long> theArea;
-    outUnits.clear();
-    theArea.mTop = UMFloor(inCenter.GetY() - inRadius);
-    theArea.mLeft = UMFloor(inCenter.GetX() - inRadius);
-    theArea.mBottom = UMCeil(inCenter.GetY() + inRadius);
-    theArea.mRight = UMCeil(inCenter.GetX() + inRadius);
-    return EEGetUnitsInRectangle(theArea, outUnits, theScreen, true);
+    return ee_units_uu_units_near((const float(*)[3])&inCenter.mX, inRadius, &outUnits);   // ee_units uu_reads.rs
 }
 
-// Creates a circle screen for a centre and radius
-EEUUCircleScreen::EEUUCircleScreen(const GE3DPoint& inCenter, float inRadius)
-{
-    this->mCenter = inCenter.Get2DPoint();
-    this->mRadiusSquared = inRadius * inRadius;
-}
 
 // Collects the units on the tiles of a screen rectangle; their number
 long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>& outUnits)
@@ -2047,27 +1954,7 @@ long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>&
 // near a tile's middle)
 long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>& outUnits)
 {
-    U2DRectangle<long> theArea;
-    EEAnyUnit theFilter;
-    long theY = UMFloor(inCenter.GetY());
-    long theX = UMFloor(inCenter.GetX());
-    float theFractionX = inCenter.GetX() - (float)theX;
-    float theFractionY = inCenter.GetY() - theY;
-    long theRadius = UMFloatToLong(inRadius);
-    long theFar;
-    outUnits.clear();
-    if (theFractionX <= 0.25f || theFractionX >= 0.75f || theFractionY <= 0.25f || theFractionY >= 0.75f)
-        theFar = theRadius - 1;
-    else
-        theFar = theRadius;
-    if (theRadius >= 0) {
-        theArea.mTop = theY - theRadius;
-        theArea.mBottom = theY + theFar;
-        theArea.mRight = theX + theFar;
-        theArea.mLeft = theX - theRadius;
-        return EEGetUnitsInRectangle(theArea, outUnits, theFilter, true);
-    }
-    return 0;
+    return ee_units_uu_units_in_radius(inCenter.mX, inCenter.mY, inRadius, &outUnits);   // ee_units uu_reads.rs
 }
 
 // Returns the living unit of a type on a tile, or NULL
@@ -2132,27 +2019,7 @@ void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoord
 // Returns a resource's column (iron 3, gold 2, stone 1, else as listed), -1 for none
 long EEGetResourceIndex(EEUnit* inResource)
 {
-    long theResult = -1;
-    switch (inResource->mResourceType) {
-    case kResourceIron:
-        theResult = 3;
-        break;
-    case kResourceGold:
-        theResult = 2;
-        break;
-    case kResourceStone:
-        theResult = 1;
-        break;
-    case kResourceWood:
-        return 0;
-    case kResourceFood:
-        if (inResource->mTileNode == NULL)
-            theResult = 5;
-        else
-            theResult = inResource->mUnitClass->IsLandBuilding() ? 6 : 4;
-        break;
-    }
-    return theResult;
+    return ee_units_uu_resource_index(UUHandle(inResource));
 }
 
 // Picks the wall piece (straight, corner or slope) for every tile of a wall line from its neighbours and the
@@ -2750,21 +2617,6 @@ void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)
 // ---- the unit utilities' world (ee_units uu.rs over uu_host.rs): units, classes, players, tiles, maps and continents
 // cross as their objects' addresses (a unit as its EEUnit*), the vectors as the C++ objects ----
 
-extern "C" uint64_t ee_units_uu_host_map() { return UUHandle(::gWorld.mMap); }
-extern "C" uint64_t ee_units_uu_host_map_tile(uint64_t inMap, int32_t inX, int32_t inY)
-{
-    return inMap != 0 ? UUHandle(((EEMap*)(uintptr_t)inMap)->GetTile((long)inX, (long)inY)) : 0;
-}
-extern "C" int32_t ee_units_uu_host_tile_terrain(uint64_t inTile) { return (int32_t)UUTile(inTile)->mTerrainType; }
-extern "C" float ee_units_uu_host_tile_height(uint64_t inTile) { return UUTile(inTile)->GetHeight(); }
-extern "C" uint32_t ee_units_uu_host_tile_units(uint64_t inTile, uint64_t* outUnits, uint32_t inCapacity)
-{
-    uint32_t theCount = 0;
-    for (RTSTileUnitNode* theNode = UUTile(inTile)->mUnits; theNode != NULL; theNode = theNode->mNext, theCount++)
-        if (theCount < inCapacity)
-            outUnits[theCount] = UUHandle(theNode->mUnit);
-    return theCount;
-}
 extern "C" uint8_t ee_units_uu_host_is_edge_tile(int32_t inX, int32_t inY) { return ::gWorld.mMap->IsEdgeTile((long)inX, (long)inY); }
 extern "C" int32_t ee_units_uu_host_raised_corners(uint64_t inMap, int32_t inX, int32_t inY)
 {
@@ -2773,52 +2625,7 @@ extern "C" int32_t ee_units_uu_host_raised_corners(uint64_t inMap, int32_t inX, 
 extern "C" float ee_units_uu_host_mesh_z(uint64_t inMap, int32_t inX, int32_t inY) { return ((EEMap*)(uintptr_t)inMap)->mTerrainMesh.GetZ(inX, inY); }
 extern "C" float ee_units_uu_host_mesh_ground(float inX, float inY) { return ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(inX, inY); }
 
-extern "C" void ee_units_uu_host_unit(uint64_t inUnit, EeUnitsUuUnit* outUnit)
-{
-    EEUnit* theUnit = UUUnit(inUnit);
-    if (theUnit == NULL)
-        return;
-    EEComplexUnit* theComplex = theUnit->mComplexUnit;
-    EEUnitClass* theClass = theUnit->mUnitClass;
-    outUnit->obj = inUnit;
-    outUnit->rts = static_cast<EeUnitsRtsUnitFields*>(theUnit);
-    outUnit->unit = static_cast<EeUnitsUnitFields*>(theUnit);
-    outUnit->cx = theComplex != NULL ? static_cast<EeUnitsComplexUnitFields*>(theComplex) : NULL;
-    outUnit->class_fields = theClass != NULL ? static_cast<EeUnitsUnitClassFields*>(theClass) : NULL;
-    outUnit->class_obj = UUHandle(theClass);
-    outUnit->complex = UUHandle(static_cast<EEUnit*>(theComplex));
-    outUnit->player = UUHandle(theUnit->mPlayer);
-    outUnit->tile = UUHandle(theUnit->mTile);
-    outUnit->player_id = theUnit->mPlayer != NULL ? (int32_t)theUnit->mPlayer->GetPlayerID() : -1;
-    outUnit->on_map = theUnit->mTileNode != NULL;
-    outUnit->land_building = theClass != NULL && theClass->IsLandBuilding();
-    outUnit->flies_over = theClass != NULL && theClass->FliesOver();
-    if (theComplex == NULL)
-        return;
-    outUnit->active_group = UUHandle(theComplex->mActiveGroup);
-    const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
-    outUnit->location[0] = theLocation.GetX();
-    outUnit->location[1] = theLocation.GetY();
-    outUnit->location[2] = theLocation.GetZ();
-    if (theComplex->mStats != NULL) {
-        outUnit->stats_max_velocity = theComplex->mStats->mMaxVelocity;
-        outUnit->stats_attack = theComplex->mStats->mAttack;
-    }
-    outUnit->has_stats = theComplex->mStats != NULL;
-    outUnit->command = theComplex->mCommand != NULL ? (int32_t)theComplex->mCommand->mType : 0;
-}
 
-// a class by object, or the class table's entry of a unit type (inUnitType >= 0)
-extern "C" void ee_units_uu_host_class(uint64_t inClass, int32_t inUnitType, EeUnitsUuClass* outClass)
-{
-    EEUnitClass* theClass = inUnitType >= 0 ? gUnitClassTable[inUnitType] : (EEUnitClass*)(uintptr_t)inClass;
-    if (theClass == NULL)
-        return;
-    outClass->obj = UUHandle(theClass);
-    outClass->fields = static_cast<EeUnitsUnitClassFields*>(theClass);
-    outClass->land_building = theClass->IsLandBuilding();
-    outClass->flies_over = theClass->FliesOver();
-}
 extern "C" void ee_units_uu_host_position(uint64_t inUnit, float* outPoint)
 {
     GE3DPoint thePoint;
@@ -2909,37 +2716,18 @@ extern "C" int32_t ee_units_uu_host_player(int32_t inWhich, uint64_t inPlayer, i
 {
     EEPlayer* thePlayer = (EEPlayer*)(uintptr_t)inPlayer;
     switch (inWhich) {
-    case 0: return thePlayer->mEnemies[inValue] != 0;
     case 1: return thePlayer->IsHuman();
     case 2: return gUnitSetManager.Contains((long)inPlayer, (unsigned long)inValue);
     case 3: return (int32_t)thePlayer->mActiveGroup->GetNumUnits();
     case 4: return thePlayer->mActiveGroup->GetContinent();
     case 5: return (int32_t)thePlayer->GetCitizenPassability();
-    case 6: return thePlayer->mSaveVisMap;
     }
     return 0;
-}
-extern "C" uint32_t ee_units_uu_host_player_units(int32_t inPlayer, uint64_t* outUnits, uint32_t inCapacity)
-{
-    uint32_t theCount = 0;
-    for (EEUnit* theUnit = ::gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext), theCount++)
-        if (theCount < inCapacity)
-            outUnits[theCount] = UUHandle(theUnit);
-    return theCount;
-}
-extern "C" uint64_t ee_units_uu_host_part(uint64_t inComplex, uint8_t inNext)
-{
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(UUUnit(inComplex));
-    return UUHandle(static_cast<EEUnit*>(inNext ? theUnit->mNextPart : theUnit->mPreviousPart));
 }
 extern "C" int32_t ee_units_uu_host_facing_quarter(int32_t inX, int32_t inY) { return (int32_t)EEGetFacingQuarter(inX, inY); }
 extern "C" int32_t ee_units_uu_host_resource_users(uint64_t inUnit) { return (int32_t)::gWorld.GetResourceUsers(UUUnit(inUnit)); }
 extern "C" int32_t ee_units_uu_host_random_long(int32_t inMin, int32_t inMax) { return (int32_t)gPhysics->GetRandom((long)inMin, (long)inMax); }
 extern "C" float ee_units_uu_host_random_float(float inMin, float inMax) { return gPhysics->GetRandom(inMin, inMax); }
-extern "C" void ee_units_uu_host_location(uint64_t inComplex, float* outMatrix)
-{
-    memcpy(outMatrix, static_cast<EEComplexUnit*>(UUUnit(inComplex))->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float));
-}
 extern "C" void ee_units_uu_host_set_animation(uint64_t inComplex, int32_t inAnimation)
 {
     static_cast<EEComplexUnit*>(UUUnit(inComplex))->SetAnimation(inAnimation, -1, 0);
@@ -2963,20 +2751,6 @@ extern "C" uint8_t ee_units_uu_host_tile_test(int32_t inWhich, uint64_t inTile, 
     }
     return 0;
 }
-// the map's unit regions: the region size (inWhich 0), the units of region (inX, inY)
-extern "C" int32_t ee_units_uu_host_regions(int32_t inWhich, int32_t inX, int32_t inY)
-{
-    EeCombatUnitRegions* theRegions = ::gWorld.mMap->mUnitRegions;
-    if (inWhich == 0)
-        return (int32_t)ee_combat_regions_size(theRegions);
-    return (int32_t)ee_combat_regions_len(theRegions, (uint32_t)inX, (uint32_t)inY);
-}
-extern "C" int32_t ee_units_uu_host_goal_kind(uint64_t inUnit)
-{
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(UUUnit(inUnit));
-    return theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
-}
-extern "C" float ee_units_uu_host_range(uint64_t inUnit) { return static_cast<EEComplexUnit*>(UUUnit(inUnit))->mStats->GetRange(); }
 extern "C" void ee_units_uu_host_center_offset(uint64_t inComplex, float* ioPoint)
 {
     static_cast<EEComplexUnit*>(UUUnit(inComplex))->AddCenterOffset(ioPoint[0], ioPoint[1]);
@@ -3066,8 +2840,6 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
     EEActiveGroup* theGroup = (EEActiveGroup*)(uintptr_t)inA;
     switch (inWhich) {
-    case 0: return (uint64_t)theGroup->GetNumUnits();
-    case 1: return UUHandle(static_cast<EEUnit*>(theGroup->GetUnit(inX)));
     case 2:
         UUEvent(UUId(theUnit), UUId(UUUnit(inB)), 1);   // TEST ONLY (UUTL)
         theComplex->AddBuildTarget(UUUnit(inB));
@@ -3129,7 +2901,6 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
         return 0;
     }
     case 15: theComplex->mPlayer->mSavedGroups.Reset(inX, inY); return 0;
-    case 16: return (uint64_t)::gWorld.GetMap()->mSize;
     case 17: {   // EEEditorCanPlace's transport under the mouse (inA the player, inX the unit type)
         EEUnitClass* theClass = gUnitClassTable[inX];
         long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->GetUnitUnderMouse();
@@ -3147,7 +2918,6 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
     EEUnit* theUnit = UUUnit(inA);
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
     switch (inWhich) {
-    case 0: return theComplex->GetLineOfSight();
     case 1: return EEIsInGatherReach(inF, theComplex, UUUnit(inB)) ? 1.0f : 0.0f;
     case 2: {   // EEIsTileTopAbove's wall rise
         GE3DPoint thePoint;
@@ -3168,22 +2938,7 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
     return 0.0f;
 }
 
-extern "C" uint32_t ee_units_uu_host_units_near(const float* inCenter, float inRadius, uint64_t* outUnits, uint32_t inCapacity)
-{
-    std::vector<EEUnit*> theUnits;
-    EEGetUnitsNear(GE3DPoint(inCenter[0], inCenter[1], inCenter[2]), inRadius, theUnits);
-    for (uint32_t i = 0; i < theUnits.size() && i < inCapacity; i++)
-        outUnits[i] = UUHandle(theUnits[i]);
-    return (uint32_t)theUnits.size();
-}
 
-extern "C" uint32_t ee_units_uu_host_region_units(int32_t inX, int32_t inY, uint64_t* outUnits, uint32_t inCapacity)
-{
-    EEUnitRegion theRegion(::gWorld.mMap->mUnitRegions, inX, inY);
-    for (uint32_t i = 0; i < (uint32_t)theRegion.size() && i < inCapacity; i++)
-        outUnits[i] = UUHandle(static_cast<EEUnit*>(theRegion[i]));
-    return (uint32_t)theRegion.size();
-}
 
 extern "C" uint8_t ee_units_uu_host_find_path(uint64_t inUnit, const int32_t* inFrom, const int32_t* inTo, const int32_t* inBounds,
                                               uint32_t inLimit, uint8_t inWalls, int32_t* outFirst)

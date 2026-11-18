@@ -4890,49 +4890,6 @@ struct EeUnitsUuSoundView {
   float zoom;
 };
 
-/// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
-/// virtuals' answers the host reads once (`ee_units_uu_host_unit`). The records are null for a missing part (no
-/// complex unit, no class); `obj` 0 is no unit.
-struct EeUnitsUuUnit {
-  uint64_t obj;
-  const EeUnitsRtsUnitFields *rts;
-  const EeUnitsUnitFields *unit;
-  /// `mComplexUnit`'s record
-  const EeUnitsComplexUnitFields *cx;
-  /// `mUnitClass`'s record
-  const EeUnitsUnitClassFields *class_fields;
-  uint64_t class_obj;
-  uint64_t complex;
-  uint64_t player;
-  /// `mTile` (`EETile*`)
-  uint64_t tile;
-  /// the complex unit's `mActiveGroup`
-  uint64_t active_group;
-  /// `mPlayer->GetPlayerID()` (-1: no player)
-  int32_t player_id;
-  /// `mTileNode != NULL`
-  uint8_t on_map;
-  /// the class's `IsLandBuilding()`, `FliesOver()` (virtuals)
-  uint8_t land_building;
-  uint8_t flies_over;
-  /// the complex unit's location (`mPhysicalModel.GetLocation()`'s x, y, z)
-  float location[3];
-  /// the complex unit's `mStats->mMaxVelocity`, `mStats->mAttack`
-  float stats_max_velocity;
-  float stats_attack;
-  /// the complex unit's `mStats != NULL`; its current command's `mType` (0: none)
-  uint8_t has_stats;
-  int32_t command;
-};
-
-/// A unit class as the utilities read it: its record and its two virtuals' answers (`ee_units_uu_host_class`).
-struct EeUnitsUuClass {
-  uint64_t obj;
-  const EeUnitsUnitClassFields *fields;
-  uint8_t land_building;
-  uint8_t flies_over;
-};
-
 /// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
 /// count) or reads (`cap` entries).
 struct EeUnitsWorldIo {
@@ -5023,6 +4980,49 @@ struct EeUnitsBuildUnit {
   bool land_building;
   /// the complex unit's `mAnimation` (the gathering)
   int32_t animation;
+};
+
+/// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
+/// virtuals' answers the host reads once (`ee_units_uu_host_unit`). The records are null for a missing part (no
+/// complex unit, no class); `obj` 0 is no unit.
+struct EeUnitsUuUnit {
+  uint64_t obj;
+  const EeUnitsRtsUnitFields *rts;
+  const EeUnitsUnitFields *unit;
+  /// `mComplexUnit`'s record
+  const EeUnitsComplexUnitFields *cx;
+  /// `mUnitClass`'s record
+  const EeUnitsUnitClassFields *class_fields;
+  uint64_t class_obj;
+  uint64_t complex;
+  uint64_t player;
+  /// `mTile` (`EETile*`)
+  uint64_t tile;
+  /// the complex unit's `mActiveGroup`
+  uint64_t active_group;
+  /// `mPlayer->GetPlayerID()` (-1: no player)
+  int32_t player_id;
+  /// `mTileNode != NULL`
+  uint8_t on_map;
+  /// the class's `IsLandBuilding()`, `FliesOver()` (virtuals)
+  uint8_t land_building;
+  uint8_t flies_over;
+  /// the complex unit's location (`mPhysicalModel.GetLocation()`'s x, y, z)
+  float location[3];
+  /// the complex unit's `mStats->mMaxVelocity`, `mStats->mAttack`
+  float stats_max_velocity;
+  float stats_attack;
+  /// the complex unit's `mStats != NULL`; its current command's `mType` (0: none)
+  uint8_t has_stats;
+  int32_t command;
+};
+
+/// A unit class as the utilities read it: its record and its two virtuals' answers (`ee_units_uu_host_class`).
+struct EeUnitsUuClass {
+  uint64_t obj;
+  const EeUnitsUnitClassFields *fields;
+  uint8_t land_building;
+  uint8_t flies_over;
 };
 
 /// One unit as the bookkeeping reads it (`EE_UNITS_PLAYER_UNIT_INFO`): its class's members, its own, and its
@@ -7702,15 +7702,47 @@ uint8_t ee_units_uu_editor_can_place(uint64_t player,
 /// `EEDepositLoad` (84).
 void ee_units_uu_deposit_load(uint64_t unit, uint64_t container);
 
-extern uint64_t ee_units_uu_host_map();
+/// `EEIsUnitMovable`.
+uint8_t ee_units_uu_is_unit_movable(uint64_t unit);
 
-extern uint64_t ee_units_uu_host_map_tile(uint64_t map, int32_t x, int32_t y);
+/// `EEIsSameResearch`.
+uint8_t ee_units_uu_is_same_research(int32_t first, int32_t second);
 
-extern int32_t ee_units_uu_host_tile_terrain(uint64_t tile);
+/// `EEGetResourceIndex`.
+int32_t ee_units_uu_resource_index(uint64_t unit);
 
-extern float ee_units_uu_host_tile_height(uint64_t tile);
+/// `EEGetDistanceSquared`: the squared ground distance between two complex units.
+float ee_units_uu_distance_squared(uint64_t unit, uint64_t other);
 
-extern uint32_t ee_units_uu_host_tile_units(uint64_t tile, uint64_t *out, uint32_t capacity);
+/// `EEIsCloakedEnemyOf`.
+uint8_t ee_units_uu_cloaked_enemy(uint64_t unit, uint64_t player);
+
+/// `EEGetLeadUnitID`: the id of the player's viewed unit, else its selected group's first unit, else -1.
+int64_t ee_units_uu_lead_unit_id(uint64_t player);
+
+/// `EEGetAimPoint` (63): into `out`.
+///
+/// # Safety
+/// `target` and `out` hold three floats.
+void ee_units_uu_aim_point(uint64_t unit, const float (*target)[3], float (*out)[3]);
+
+/// `EEGetUnitsNear`: `io` replaced; their number.
+///
+/// # Safety
+/// `center` holds three floats; `io` a live unit vector.
+int32_t ee_units_uu_units_near(const float (*center)[3], float radius, void *io);
+
+/// `EEGetUnitsInRadius`: `io` replaced; their number.
+///
+/// # Safety
+/// `io` a live unit vector.
+int32_t ee_units_uu_units_in_radius(float x, float y, float radius, void *io);
+
+/// `EEUUGetIsUnitClassTargetable` (`can_target` 0) and `EECanTargetClass` (1): `attacker` may be 0, a null class is
+/// never targetable.
+uint8_t ee_units_uu_targetable(uint64_t attacker,
+                               uint64_t class_,
+                               uint8_t can_target);
 
 extern uint8_t ee_units_uu_host_is_edge_tile(int32_t x, int32_t y);
 
@@ -7719,10 +7751,6 @@ extern int32_t ee_units_uu_host_raised_corners(uint64_t map, int32_t x, int32_t 
 extern float ee_units_uu_host_mesh_z(uint64_t map, int32_t x, int32_t y);
 
 extern float ee_units_uu_host_mesh_ground(float x, float y);
-
-extern void ee_units_uu_host_unit(uint64_t obj, EeUnitsUuUnit *out);
-
-extern void ee_units_uu_host_class(uint64_t class_obj, int32_t unit_type, EeUnitsUuClass *out);
 
 extern void ee_units_uu_host_position(uint64_t obj, float *out);
 
@@ -7762,10 +7790,6 @@ extern float ee_units_uu_host_terrain_tilt(const float *m, uint8_t roll);
 
 extern int32_t ee_units_uu_host_player(int32_t which, uint64_t player, int32_t value);
 
-extern uint32_t ee_units_uu_host_player_units(int32_t index, uint64_t *out, uint32_t capacity);
-
-extern uint64_t ee_units_uu_host_part(uint64_t complex, uint8_t next);
-
 extern int32_t ee_units_uu_host_facing_quarter(int32_t x, int32_t y);
 
 extern int32_t ee_units_uu_host_resource_users(uint64_t unit);
@@ -7773,8 +7797,6 @@ extern int32_t ee_units_uu_host_resource_users(uint64_t unit);
 extern int32_t ee_units_uu_host_random_long(int32_t min, int32_t max);
 
 extern float ee_units_uu_host_random_float(float min, float max);
-
-extern void ee_units_uu_host_location(uint64_t complex, float *out);
 
 extern void ee_units_uu_host_set_animation(uint64_t complex, int32_t animation);
 
@@ -7798,12 +7820,6 @@ extern uint8_t ee_units_uu_host_tile_test(int32_t which,
                                           int32_t x,
                                           int32_t y);
 
-extern int32_t ee_units_uu_host_regions(int32_t which, int32_t x, int32_t y);
-
-extern int32_t ee_units_uu_host_goal_kind(uint64_t unit);
-
-extern float ee_units_uu_host_range(uint64_t unit);
-
 extern void ee_units_uu_host_center_offset(uint64_t complex, float *io);
 
 extern uint8_t ee_units_uu_host_tiles_test(int32_t which,
@@ -7826,16 +7842,6 @@ extern uint64_t ee_units_uu_host_world(int32_t which,
                                        float f);
 
 extern float ee_units_uu_host_world_f(int32_t which, uint64_t a, uint64_t b, float f);
-
-extern uint32_t ee_units_uu_host_units_near(const float *center,
-                                            float radius,
-                                            uint64_t *out,
-                                            uint32_t capacity);
-
-extern uint32_t ee_units_uu_host_region_units(int32_t x,
-                                              int32_t y,
-                                              uint64_t *out,
-                                              uint32_t capacity);
 
 extern uint8_t ee_units_uu_host_find_path(uint64_t unit,
                                           const int32_t *from,

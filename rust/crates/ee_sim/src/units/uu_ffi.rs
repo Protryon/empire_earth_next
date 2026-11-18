@@ -8,12 +8,14 @@
 
 use std::ffi::c_void;
 
+use ee_base::math::types::Ge2DPoint;
 use ee_base::math::types::GeTransformation;
 
 use crate::units::uu;
 use crate::units::uu_host::{set_tiles, set_units, tiles_of, units_of, Game};
 use crate::units::uu_note::Note;
 use crate::units::uu_place;
+use crate::units::uu_reads;
 use crate::units::uu_spots;
 use crate::units::uu_tiles::{self, EeUnitsUuSteps, EeUnitsUuWallPiece};
 use crate::units::uu_world::{self, EeUnitsUuSoundView, UuWorld};
@@ -1354,4 +1356,179 @@ pub extern "C" fn ee_units_uu_deposit_load(unit: u64, container: u64) {
         n.u(unit).u(container).i(amount).i(kind);
     }
     uu_world::deposit_load(&mut Game, unit, container);
+}
+
+// ---- round 3: the plain reads (uu_reads.rs) over the world views
+
+/// A class's `IsLandBuilding()` (the dispatch table's bodies 1 and 3, EEUnitClassKinds.cpp).
+fn land_building(category: u64) -> bool {
+    use crate::units::cls_dispatch::{EE_UNITS_BODY_IS_LAND_BUILDING, EE_UNIT_CLASS_BODIES};
+    category < 256 && matches!(EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_IS_LAND_BUILDING][category as usize], 1 | 3)
+}
+
+/// `EEIsUnitMovable`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_is_unit_movable(unit: u64) -> u8 {
+    u8::from(with_unit(unit, |u| {
+        let class = u.class().expect("a unit has a class");
+        let speed: f32 = crate::world_field!(class.fields(), mMaxVelocity);
+        uu_reads::is_unit_movable(u.hit_points(), class.category(), speed)
+    }))
+}
+
+/// `EEIsSameResearch`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_is_same_research(first: i32, second: i32) -> u8 {
+    u8::from(uu_reads::is_same_research(first, second))
+}
+
+/// `EEGetResourceIndex`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_resource_index(unit: u64) -> i32 {
+    with_unit(unit, |u| {
+        let land = u.class().is_some_and(|c| land_building(c.category()));
+        uu_reads::resource_index(u.resource_type(), u.has_tile_node(), land)
+    })
+}
+
+/// `EEGetDistanceSquared`: the squared ground distance between two complex units.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_distance_squared(unit: u64, other: u64) -> f32 {
+    let a = with_unit(unit, |u| u.location());
+    let b = with_unit(other, |u| u.location());
+    Ge2DPoint { x: a[0], y: a[1] }.distance_to_squared(Ge2DPoint { x: b[0], y: b[1] })
+}
+
+/// `EEIsCloakedEnemyOf`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_cloaked_enemy(unit: u64, player: u64) -> u8 {
+    // SAFETY: the caller's live player
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let Some(p) = (unsafe { crate::world::PlayerView::of(&t, player) }) else { return 0 };
+    u8::from(with_unit(unit, |u| {
+        let on_map = u.has_tile_node();
+        let (cloakable, cloaked) = u.complex_unit().map_or((false, false), |c| (c.cloakable(), c.cloaked()));
+        let Some(owner) = u.player() else { return false };
+        let same = owner.handle() == p.handle();
+        uu_reads::is_cloaked_enemy(on_map, cloakable, cloaked, same, !same && owner.enemy(p.id() as usize) != 0)
+    }))
+}
+
+/// `EEGetLeadUnitID`: the id of the player's viewed unit, else its selected group's first unit, else -1.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_lead_unit_id(player: u64) -> i64 {
+    // SAFETY: the caller's live player
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let Some(p) = (unsafe { crate::world::PlayerView::of(&t, player) }) else { return -1 };
+    let first = p.selected_group().filter(|g| !g.is_empty()).map(|g| with_unit(g.unit_handle(0), |u| u.id()));
+    let viewed = p.selected_viewed_unit_handle();
+    uu_reads::lead_unit_id(first, (viewed != 0).then(|| with_unit(viewed, |u| u.id()))).map_or(-1, i64::from)
+}
+
+/// `EEGetAimPoint` (63): into `out`.
+///
+/// # Safety
+/// `target` and `out` hold three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_aim_point(unit: u64, target: *const [f32; 3], out: *mut [f32; 3]) {
+    let n = Note::begin(63);
+    // SAFETY: the caller's contract
+    let target = unsafe { *target };
+    n.u(unit).p(target);
+    let (position, range) = with_unit(unit, |u| (u.location(), u.stats().map_or(0.0, |s| s.range())));
+    let p = uu_reads::aim_point(position, target, range);
+    // SAFETY: the caller's contract
+    unsafe { *out = p };
+    n.p(p);
+}
+
+/// A unit's tile, id and class tile size (the collector's reads).
+fn collector_unit(unit: u64) -> ([i32; 2], u32, i32) {
+    let (x, y, size) = foot_of(unit);
+    ([x as i32, y as i32], with_unit(unit, |u| u.id()), size as i32)
+}
+
+/// The units of the world map's unit regions under `rect` that `keep` holds for (the collector, unique).
+pub(crate) fn collect_units(rect: uu_reads::TileRect, keep: impl FnMut(u64) -> bool, out: &mut Vec<u64>) -> i32 {
+    // SAFETY: the utility's caller holds the world
+    let t = unsafe { WorldRead::begin() };
+    let Some(map) = crate::world::WorldView::global(&t).and_then(|w| w.map()) else { return out.len() as i32 };
+    // SAFETY: the map's live regions table (the map owns it)
+    let Some(regions) = (unsafe { map.unit_regions().as_ref() }) else { return out.len() as i32 };
+    uu_reads::units_in_rectangle(regions, rect, collector_unit, keep, out)
+}
+
+/// `EEGetUnitsNear` (the units within `radius` of `center`).
+pub(crate) fn units_near(center: [f32; 3], radius: f32) -> Vec<u64> {
+    let mut out = Vec::new();
+    collect_units(
+        uu_reads::near_rect(center, radius),
+        |u| uu_reads::in_circle(with_unit(u, |v| v.location()), center, radius),
+        &mut out,
+    );
+    out
+}
+
+/// `EEGetUnitsNear`: `io` replaced; their number.
+///
+/// # Safety
+/// `center` holds three floats; `io` a live unit vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_units_near(center: *const [f32; 3], radius: f32, io: *mut c_void) -> i32 {
+    // SAFETY: the caller's contract
+    let units = units_near(unsafe { *center }, radius);
+    // SAFETY: the caller's contract
+    unsafe { set_units(io, &units) };
+    units.len() as i32
+}
+
+/// `EEGetUnitsInRadius`: `io` replaced; their number.
+///
+/// # Safety
+/// `io` a live unit vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_units_in_radius(x: f32, y: f32, radius: f32, io: *mut c_void) -> i32 {
+    let mut units = Vec::new();
+    let count = match uu_reads::radius_rect([x, y], radius) {
+        Some(rect) => collect_units(rect, |_| true, &mut units),
+        None => 0,
+    };
+    // SAFETY: the caller's contract
+    unsafe { set_units(io, &units) };
+    count
+}
+
+/// `EEUUGetIsUnitClassTargetable` (`can_target` 0) and `EECanTargetClass` (1): `attacker` may be 0, a null class is
+/// never targetable.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_targetable(attacker: u64, class: u64, can_target: u8) -> u8 {
+    // SAFETY: the caller's live class (or 0)
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above
+    let Some(c) = (unsafe { crate::world::ClassView::of(&t, class) }) else { return 0 };
+    let flare: bool = crate::world_field!(c.fields(), mIsFlare);
+    let mut i = crate::combat::leaves::EeCombatTargetableIn {
+        attacker: i32::from(attacker != 0),
+        category: c.category() as i32,
+        unit_type: c.unit_type() as u32,
+        family: c.family() as u32,
+        can_be_attacked: i32::from(!flare),
+        ..Default::default()
+    };
+    if attacker != 0 {
+        with_unit(attacker, |a| {
+            let ac = a.class().expect("an attacker has a class");
+            let ammo: std::os::raw::c_long = crate::world_field!(ac.fields(), mAmmoType);
+            i.ammo_type = ammo as i32;
+            i.land_building = i32::from(land_building(ac.category()));
+            i.computer = i32::from(a.player().is_some_and(|p| p.has_computer_player()));
+        });
+    }
+    u8::from(if can_target != 0 {
+        crate::combat::leaves::can_target_class(&i)
+    } else {
+        crate::combat::leaves::targetable(&i)
+    })
 }

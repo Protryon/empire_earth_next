@@ -120,6 +120,8 @@ pub struct EeWorldLayout {
     /// lane P: `EEMap::mTileArray` (the `EETile` array), `mVisibilityWords` (the tiles' visibility words)
     pub map_tile_array: u64,
     pub map_visibility_words: u64,
+    /// the unit utilities lane: `EEMap::mUnitRegions` (the `EeCombatUnitRegions*`)
+    pub map_unit_regions: u64,
     // ---- RTSTile / EETile
     /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)
     pub tile_stride: u64,

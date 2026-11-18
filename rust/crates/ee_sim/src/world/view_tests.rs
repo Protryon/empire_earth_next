@@ -208,6 +208,7 @@ fn fake_layout() -> EeWorldLayout {
         map_tiles: offset_of!(FakeMap, tiles) as u64,
         map_tile_array: 0,
         map_visibility_words: 0,
+        map_unit_regions: 0,
         tile_stride: std::mem::size_of::<FakeTile>() as u64,
         tile_terrain_type: offset_of!(FakeTile, terrain) as u64,
         tile_units: offset_of!(FakeTile, units) as u64,

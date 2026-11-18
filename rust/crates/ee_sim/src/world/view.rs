@@ -1087,6 +1087,11 @@ impl<'t> MapView<'t> {
         let v: c_ulong = crate::world_field!(self.rts(), mU19561C);
         v as u64
     }
+    /// `mUnitRegions` (the map's unit regions; null before the map has them)
+    pub fn unit_regions(&self) -> *const crate::combat::regions::EeCombatUnitRegions {
+        // SAFETY: a live map's pointer member
+        unsafe { pointer(self.object, layout().map_unit_regions) as *const _ }
+    }
     /// The visibility words per tile (two players a word)
     pub fn visibility_words(&self) -> usize {
         let n = self.player_count() as usize;
