@@ -44,8 +44,6 @@ public:
     EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID, unsigned long inEnemyID,
                                         const EECPASGWeights& inWeights);
     EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID, unsigned long inEnemyID);   // 0xfe8f (weights 0)
-    // +0x0c 0xfec1: 1 + the influence at inTo's region: inPlayerID's enemies' (inEnemies), else mEnemyID's
-    virtual unsigned long GetInfluenceCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo, bool inEnemies);
 
     EECPASGWeights mWeights;                // +0x0c
     unsigned long mPlayerID;                // +0x48

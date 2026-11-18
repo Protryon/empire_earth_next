@@ -45,7 +45,6 @@ public:
     virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);  // +0x18 0x161609
     virtual void Idle() = 0;                // +0x1c
     virtual void Tick() = 0;                // +0x20
-    virtual void CreateGameTimer() = 0;     // +0x24
     virtual void Unlock() = 0;              // +0x28
 
     // Not inline: every GetRandom() site calls it (0x437ab: `add ecx, 0x18; jmp __imp_Generate`, the ICF representative
@@ -111,7 +110,6 @@ public:
     virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);  // +0x18 0x152f45
     virtual void Idle();                    // +0x1c 0x15305a
     virtual void Tick();                    // +0x20 0x153082
-    virtual void CreateGameTimer();         // +0x24 0x15394b
     virtual void Unlock();                  // +0x28 0x153c4d
     void ClearServerMessages();             // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
     void AutoSave();                        // 0x151d1f (Virtual18's message 0x50a: an EEMLoadOrSaveGame of "AutoSave <date>"; provisional name)
@@ -138,7 +136,6 @@ public:
     long PostInit();
     // inline (COMDAT 0x761b5, first emitted by EECPCombatManager.cpp): the queued unit swaps (mSound2Index7.size())
     // (provisional name)
-    unsigned long GetNumUnitSwaps() const { return this->mUnitSwaps.size(); }
     long GetUnitSwapKind(EEComplexUnit* inUnit);  // 0x1526d2 (ret 4): the unit's queued swap kind (0: none; 1, 5, 7) (provisional name)
     // (provisional names): 0x1520cf the out-of-synch checksum (inDump: also the "OOS <date>.log" dump)
     // 0x15253e the elapsed game time as text; 0x153430 one queued swap (camera, contagion, scenario, effects);

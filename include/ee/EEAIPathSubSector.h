@@ -19,8 +19,6 @@ public:
     // 0x2bf08 (??_G 0x2beec; the members' dtors inline, the base's vptr store last)
     EEAIPathSubSector();
     virtual ~EEAIPathSubSector();
-    // 0x2bf45: the complex unit standing on mLocation that fits mKind (4, 5, 0xc, 0xd, 0xe: gates, walls, ...), 0 if none
-    EEComplexUnit* GetBlockingUnit();
     // 0x2c0b9 (ret 8): appends the links listed under inID; always returns false
     bool GetLinks(unsigned short inID, std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >& outLinks);
     // 0x2c10f (ret 4): whether the gate (unit class category 0x19) on mTiles lets gWorld's player inPlayer through

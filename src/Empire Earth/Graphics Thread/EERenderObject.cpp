@@ -1780,36 +1780,11 @@ const EeGfxRaster gEERustRaster = {
 // (off in the orthographic view)
 void SetSceneFog() { ApplyLighting(EeGfxLighting::SceneFog); }
 
-// Turns the fog off
-void SetFogOff() { ApplyLighting(EeGfxLighting::FogOff); }
-
 // Turns lighting off (no ambient light, no lights)
 void SetLightingOff() { ApplyLighting(EeGfxLighting::Off); }
 
-// Lights with the environment's prelit colour as ambient, dimmed by the light fade, and no lights
-void SetPrelitLighting() { ApplyLighting(EeGfxLighting::Prelit); }
-
-// Lights with the environment's second ambient colour (the clouds'), dimmed by the light fade, and no lights
-void SetCloudLighting() { ApplyLighting(EeGfxLighting::Cloud); }
-
-// Lights with white ambient light dimmed by the light fade, and no lights
-void SetWhiteLighting() { ApplyLighting(EeGfxLighting::White); }
-
 // Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
 void SetTerrainLighting() { ApplyLighting(EeGfxLighting::Terrain); }
-
-// Sets the map objects' lighting: unit ambient and a flattened sun light when unit lighting is on, else the
-// prelit colour at a fixed intensity
-void SetMapObjectLighting() { ApplyLighting(EeGfxLighting::MapObject); }
-
-// Sets the units' lighting: unit ambient and the sun light when unit lighting is on, else the prelit colour
-void SetUnitLighting() { ApplyLighting(EeGfxLighting::Unit); }
-
-// Restores the units' lighting at full strength for a unit in view (not fogged)
-void RestoreUnitLighting() { ApplyLighting(EeGfxLighting::RestoreUnit); }
-
-// Halves the units' lighting for a fogged unit (the dim prelit colour without unit lighting)
-void DimUnitLighting() { ApplyLighting(EeGfxLighting::DimUnit); }
 
 // Posts the game's render objects, the user interface's last, to the graphics thread
 void EEPostGraphicsAll()

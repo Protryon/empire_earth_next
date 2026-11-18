@@ -141,10 +141,6 @@ public:
     EEComplexUnit* GetUnloadTransport(long* outX = NULL, long* outY = NULL);
     void SetUnloadTransport(EEComplexUnit* inTransport);
     bool CanUnloadAtDestination();
-    // a new unload tile, then the unload tiles found for it (the AI's search for a place to unload)
-    void SetUnloadDestination(long inX, long inY);
-    // the transport dropped without its release (the air bomber's unused goal keeps the plane's reference)
-    void ForgetUnloadTransport();
 
     // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
     // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
@@ -186,7 +182,6 @@ public:
     U2DPoint<long> GetLoadUnitTile();
     bool IsLoadGarrisonValid();
     unsigned long GetNumLoadUnits();
-    EEComplexUnit* GetLoadUnitAt(unsigned long inIndex);
     bool HasLoadUnit(EEComplexUnit* inUnit);
     void AddLoadUnit(EEComplexUnit* inUnit);
     void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits);
@@ -200,7 +195,6 @@ public:
     EEUnit* GetBuildTarget();
     long GetBuildTargetType();
     long GetBuildTechTreeID();
-    EETechTreeNode* GetBuildTechNode();
     EEUnitClass* GetBuildTargetClass();
     bool IsBuildSiteTaken();
 
@@ -214,12 +208,10 @@ public:
     EEUnit* GetGatherStorage();
     bool IsGathering();
     bool IsGatherWaiting();
-    void SetGatherResource(EEUnit* inResource);
     void SetGatherStorage(EEUnit* inStorage);
     // a waiting area by the resource (true when found); an unfinished living settlement within twice the
     // gatherer's line of sight (NULL if none)
     bool FindGatherSpot(EEComplexUnit* inUnit);
-    EEUnit* FindUnfinishedFarm(EEComplexUnit* inUnit);
 
     bool mIsActive;                         // +0x04 (of the original: +0x00 was its vptr)
     unsigned char mKind;                    // +0x05

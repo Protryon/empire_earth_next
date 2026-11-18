@@ -104,7 +104,6 @@ LLE_API unsigned long UMGetFloatingPointRoundingMode();
 LLE_API float UMArcTan2(float inY, float inX);  // proven ?UMArcTan2@@YAMMM@Z (Default.dll CMUSpreadTeams 0x3aa3)
 LLE_API float UMCos(float inAngle);             // proven ?UMCos@@YAMM@Z (Default.dll import)
 LLE_API float UMArcCos(float inValue);          // proven ?UMArcCos@@YAMM@Z (GETransformation::GetPitch 0xd7dd)
-LLE_API float UMArcTan(float inValue);          // proven ?UMArcTan@@YAMM@Z (GEViewport::ComputePlanes 0x37270)
 LLE_API float UMTan(float inAngle);             // proven ?UMTan@@YAMM@Z (GEViewport ctor 0x36aba)
 // Provisional name: no UMSin export; GEQuaternion::Slerp (0x23526) computes sines as UMCos(pi/2 - x) inline
 // pi/2 is 1.5707964f (0x3fc90fdb) in every module: the engine's word 0x10097808, the exe's 0x43c008

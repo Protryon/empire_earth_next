@@ -209,21 +209,6 @@ void EECalamityClass::Reset(EECalamity* inCalamity)
                                                                                              theTargetUnit);
 }
 
-// Ages the calamity (and its contagion helper, if given); returns 7 once its lifetime is over, else 0
-long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTime, long inHelperID)
-{
-    // the age and the lifetime test: ee_tech calamity.rs (computed before the helper's update, as the C++ did)
-    EeCalamityAge theAge = ee_calamity_update_time_alive(inCalamity->GetTimeAlive(), inElapsedTime, this->mLifeTime);
-    if (inHelperID != -1) {
-        EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inHelperID);
-        EECalamityCaptureEvent(kCalamityOpHelperUpdate, inHelperID, theHelper != NULL);   // CALW (TEST ONLY)
-        if (theHelper != NULL)
-            EECalamityCaptureContagion(theHelper, inElapsedTime);   // CONT (TEST ONLY): theHelper->Update
-    }
-    inCalamity->mTimeAlive = theAge.time_alive;
-    return theAge.done ? 7 : 0;
-}
-
 // Updates the calamity's main or secondary sound for the target location with the given falloff; a volume other than
 // -1 replaces the computed one (clamped to 0..1)
 void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,
@@ -245,13 +230,6 @@ void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound
     if (inVolume != -1.0f)
         theVolume = (1.0f < inVolume) ? 1.0f : max(0.0f, inVolume);
     gSoundManager->SetSoundParameters(theNode, theVolume, thePan, thePitch);
-}
-
-// Checks whether the calamity can be cast at the tile with no caster
-long EECalamityClass::CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned long inY, bool inCheck)
-{
-    GE3DPoint theLocation;
-    return this->CanCastAt(NULL, theLocation, inX, inY, inCheck, inTargetUnit);
 }
 
 // Returns 0 if the caster (or nature) is alive with enough power and sees the tile, 2 if immunity blocks it there,

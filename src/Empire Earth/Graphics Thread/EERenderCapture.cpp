@@ -328,11 +328,6 @@ uint64_t WorldKey()
 
 }   // namespace
 
-bool EERenderCaptureActive()
-{
-    return CaptureFile() != NULL;
-}
-
 void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount)
 {
     FILE* theFile = CaptureFile();

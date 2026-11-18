@@ -27,14 +27,6 @@ const unsigned long kEERuleCategoryCount = sizeof(kEERuleCategoryNames) / sizeof
 const char* const kEEAICheatNames[] = {"cost", "reveal", "epochs", "extra", "popband", "catchup", "retire"};
 const unsigned long kEEAICheatCount = sizeof(kEEAICheatNames) / sizeof(kEEAICheatNames[0]);
 
-long EEAICheatBit(const std::string& inName)
-{
-    for (unsigned long i = 0; i < kEEAICheatCount; i++)
-        if (inName == kEEAICheatNames[i])
-            return 1L << i;
-    return 0;
-}
-
 EERuleNumber EERuleNumber::Constant(float inValue)
 {
     EERuleNumber n;

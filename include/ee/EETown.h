@@ -42,7 +42,6 @@ public:
     EEPPatrolGroup* mPatrolGroup;           // +0x6c (0: 0xabc27 creates one and registers it with mPlayer; Reset Dereferences it)
     unsigned short GetContinent() const { return this->mContinent; }
     unsigned short mContinent;              // +0x70 (ctor 0; 0xabfda passes it to gContinentManager 0x21e22 as a sector id)
-    long GetTownID() const { return this->mTownID; }
     long mTownID;                           // +0x74 (ctor argument 2)
     unsigned long mValue;                   // +0x78 (0xabc27 adds the unit's value; unsigned: sorts 0x47db9c ja / 0x45a8ad jb)
     long mNumWalls;                         // +0x7c

@@ -178,30 +178,11 @@ long EECameraControl::AddKey(const EECameraKey& inKey)
 // (the original's EECameraRayDistance 0x527c09 built each ray twice; the Rust builds it once and measures it twice)
 void EECameraControl::SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
 
-void EECameraControl::CopyKey(const EECameraKey& inKey, EECameraKey& outKey) { outKey = inKey; }
-
-void EECameraControl::NextKey() { ee_app_camera_next_key(EE_CAMERA_HOST); }
-
-void EECameraControl::BuildView(GETransformation& outTransformation, float inStep)
-{
-    ee_app_camera_build_view(EE_CAMERA_HOST, inStep, EECameraRust<EeGeTransformation>(outTransformation));
-}
-
 void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint) { ee_app_camera_point(this, 0, inStep, EECameraRust<EeGe3DPoint>(outPoint)); }
-
-void EECameraControl::SlerpViewTurn(float inStep, GEQuaternion& outQuaternion)
-{
-    ee_app_camera_slerp(this, 0, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
-}
 
 void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformation)
 {
     ee_app_camera_turn(this, 0, inStep, EECameraRust<EeGeTransformation>(outTransformation));
-}
-
-void EECameraControl::SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion)
-{
-    ee_app_camera_slerp(this, 1, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
 }
 
 void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransformation)
@@ -275,8 +256,6 @@ void EECameraControl::Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_C
 
 void EECameraControl::ResetZoom() { this->SetZoom(1.0f); }
 
-void EECameraControl::GoTo(const EECameraKey& inKey) { ee_app_camera_go_to(EE_CAMERA_HOST, EECameraRust<EeAppCameraKey>(inKey)); }
-
 void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
 {
     ee_app_camera_set_offset(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inPoint), inFlag);
@@ -291,8 +270,6 @@ void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bo
 {
     ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
 }
-
-void EECameraControl::KeepPose() { ee_app_camera_keep_pose(this); }
 
 void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain)
 {

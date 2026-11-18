@@ -26,12 +26,6 @@ float UMArcCos(float inValue)
     return ee_ge_um_arccos(inValue);
 }
 
-// Returns the arc tangent by a short power series, folding values outside -1..1 back into it
-float UMArcTan(float inValue)
-{
-    return ee_ge_um_arctan(inValue);
-}
-
 // Returns the angle of the vector (y, x) in -pi..pi from the arc cosine of its normalised x
 float UMArcTan2(float inY, float inX)
 {

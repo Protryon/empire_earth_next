@@ -113,10 +113,6 @@ public:
                    bool inCheck, EEUnit* inTargetUnit)
         { return CanCastAt(inUnit, const_cast<GE3DPoint&>(inLocation), inX, inY, inCheck, inTargetUnit); }
 #endif
-    // +0x40 (0xade97): Virtual3C(0, GE3DPoint(), inX, inY, inCheck, inTargetUnit)
-    virtual long CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned long inY, bool inCheck);
-    // +0x44 (0xadd8a): advances inCalamity's clock; 7 once its life time is over, else 0. Ticks the contagion helper.
-    virtual long UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTime, long inHelperID);
     // +0x48 (0xadde9): volume/pan/pitch of one of the calamity's two sounds from its location
     // (inVolume -1: the computed volume, else inVolume clamped to 0..1; inFalloff: EEComputeSoundParameters's)
     virtual void UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,

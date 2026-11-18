@@ -74,8 +74,6 @@ public:
     unsigned long GetDrawCount() const { return this->mDrawCount; }
     GESurface* GetDrawingSurface() const;
     // the record (ee_ui controlobj.rs): the members and the base's logic, for Rust callers
-    EeUiControlFields* GetFields() { return this; }
-    const EeUiControlFields* GetFields() const { return this; }
     UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
     bool GetHasMouseCapture() const;
     unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }

@@ -17,7 +17,6 @@ public:
     // (the dtor 0x1c740 destroys a vector<long> at +0x68)
     // New (port): the members behind accessors (R5b.1 blocker (b))
     const std::vector<unsigned long>& GetAreaSerials() const { return this->mAreaSerials; }
-    unsigned long GetAreaSerialsAt(unsigned long inIndex) const { return this->mAreaSerials[inIndex]; }
     long GetIndex() const { return this->mIndex; }
     void SetIndex(long inIndex) { this->mIndex = inIndex; }
     unsigned short GetContinentID() const { return this->mContinentID; }

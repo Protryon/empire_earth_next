@@ -1235,62 +1235,6 @@ void EEAIContinentManager::GetChokePoints(std::vector<EEAIChokePoint*>& outChoke
     }
 }
 
-// Returns the closest point of the nearest land continent adjacent to inTile's non-land continent; inTile itself
-// on land, off the map or without such a neighbour
-EETileLocation EEAIContinentManager::GetNearestLandTile(const EETileLocation& inTile)
-{
-    std::vector<unsigned short> theIDs;
-    U2DPoint<long> theClosest;
-    EEAIContinent* theContinent;
-    if ((unsigned long)inTile.mX < this->mWidth && (unsigned long)inTile.mY < this->mHeight)
-        theContinent = this->GetContinentAt(inTile.mX, inTile.mY);
-    else
-        theContinent = NULL;
-    long theY = inTile.mY;
-    long theDistance = 0;
-    long theX = inTile.mX;
-    if (theContinent && theContinent->GetCategory() != kContinentCategoryLand) {
-        this->GetAdjacentIDs(theIDs, theContinent->GetID());
-        for (long i = theIDs.size() - 1; i >= 0; i--) {
-            EEAIContinent* theOther = gContinentManager.GetContinentByID(theIDs[i]);
-            if (!theOther || theOther->GetCategory() != kContinentCategoryLand)
-                continue;
-            theClosest = theOther->GetClosestPoint(inTile);
-            if (theDistance != 0 && !(theClosest.DistanceSquared(inTile) < theDistance))
-                continue;
-            theX = theClosest.mX;
-            theY = theClosest.mY;
-            theDistance = theClosest.DistanceSquared(inTile);
-        }
-    }
-    return EETileLocation(theX, theY);
-}
-
-// Lists, sorted and once each, the continents adjacent to inFirst or inSecond (themselves included) that inScreen
-// accepts
-void EEAIContinentManager::GetAdjacentContinents(unsigned short inFirst, unsigned short inSecond,
-    std::vector<unsigned short>& outIDs, EEAIFOContinentScreenContinentsShareAdjacentID* inScreen)
-{
-    std::vector<unsigned short> theFirstIDs;
-    std::vector<unsigned short> theSecondIDs;
-    outIDs.clear();
-    this->GetConnectedIDs(theFirstIDs, inFirst);
-    this->GetConnectedIDs(theSecondIDs, inSecond);
-    long i;
-    for (i = theFirstIDs.size() - 1; i >= 0; i--) {
-        if (inScreen->Test(theFirstIDs[i]))
-            outIDs.push_back(theFirstIDs[i]);
-    }
-    for (i = theSecondIDs.size() - 1; i >= 0; i--) {
-        if (inScreen->Test(theSecondIDs[i]))
-            outIDs.push_back(theSecondIDs[i]);
-    }
-    std::sort(outIDs.begin(), outIDs.end());
-    std::vector<unsigned short>::iterator theEnd = std::unique(outIDs.begin(), outIDs.end());
-    if (theEnd != outIDs.end())
-        outIDs.erase(theEnd, outIDs.end());
-}
-
 // Returns in outPoint the center of continent inID's hull, (0, 0) for an unknown id
 void EEAIContinentManager::GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint)
 {
@@ -1630,33 +1574,6 @@ EEAIArea* EEAIContinentManager::GetRandomContinent(unsigned char inKind, URandom
     return theResult;
 }
 
-// Returns the rectangle area containing inTile, NULL if none
-EEAIRectangleArea* EEAIContinentManager::GetRectangleAreaAt(const EETileLocation& inTile)
-{
-    EEAIRectangleArea* theResult = NULL;
-    const std::vector<EEAIRectangleArea*>& theAreas = this->mRectangleAreas;
-    for (long i = theAreas.size() - 1; i >= 0; i--) {
-        if (theAreas[i] && theAreas[i]->Contains(inTile)) {
-            theResult = theAreas[i];
-            break;
-        }
-    }
-    return theResult;
-}
-
-// Returns the continent id under inUnit's tile, 0 without a unit or off the map
-unsigned short EEAIContinentManager::GetUnitContinentID(EEUnit* inUnit)
-{
-    unsigned short theResult = 0;
-    if (inUnit) {
-        unsigned long theX = inUnit->mTileX;
-        unsigned long theY = inUnit->mTileY;
-        if (gWorld.mMap->GetTile(theX, theY))
-            theResult = this->GetContinentID(theX, theY);
-    }
-    return theResult;
-}
-
 // GetTilesNextTo's lookup: the manager's GetContinentID
 static unsigned short EEAIContinentIDAt(void* inManager, int32_t inX, int32_t inY)
 {
@@ -1698,23 +1615,6 @@ bool EEAIContinentManager::IsNextToArea(long inX, long inY, unsigned short inID)
 {
     std::vector<U2DPoint<long> > theTiles;
     return this->GetTilesNextTo(inX, inY, theTiles, inID);
-}
-
-// Returns whether every continent adjacent to inID is of category inKind
-bool EEAIContinentManager::AllNeighborsOfKind(unsigned short inID, unsigned char inKind)
-{
-    std::vector<unsigned short> theIDs;
-    bool theResult = true;
-    this->GetAdjacentIDs(theIDs, inID);
-    const std::vector<EEAIContinent*>& theContinents = this->mContinents;
-    for (long i = theIDs.size() - 1; i >= 0; i--) {
-        EEAIContinent* theContinent = theContinents[theIDs[i]];
-        if (theContinent && theContinent->GetCategory() != inKind) {
-            theResult = false;
-            break;
-        }
-    }
-    return theResult;
 }
 
 // Computes the AI tile values (grid, and the map tile clamped to +-120); inWater: water and space tiles get 10 per

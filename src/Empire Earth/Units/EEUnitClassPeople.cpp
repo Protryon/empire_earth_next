@@ -85,21 +85,6 @@ void EEGetRingCorners(long inArg1, long inX, long inY, long inSizeX, long inSize
 // 0x24697b: the tiles of a footprint (inSizeX by inSizeY at (inX, inY)) (provisional name; arguments inferred)
 void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector<U2DPoint<long> >& outTiles);
 
-// Searches rings 2..9 around the citizen for a tile on its continent where a unit of the given type fits; returns
-// whether one was found (ee_units citizen.rs)
-bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation)
-{
-    EEUCNote theNote(40); theNote.C(this).U(inUnit).I(inUnitType);   // TEST ONLY (UCBD)
-    float thePoint[2] = {0.0f, 0.0f};
-    bool theFound = ee_units_cz_find_wood_site(EEObj(inUnit), (int32_t)inUnitType, &thePoint) != 0;
-    if (theFound) {
-        outLocation.SetX(thePoint[0]);
-        outLocation.SetY(thePoint[1]);
-        theNote.F(outLocation.GetX()).F(outLocation.GetY());   // TEST ONLY (UCBD)
-    }
-    return theNote.R(theFound);
-}
-
 // Returns the nearest gatherable resource of a kind within inRange rings of a centre unit, not in ioUnits (tiles
 // shuffled per ring; another path area costs 400; a dead animal wins at once; boats look for naval resources)
 // (ee_units citizen.rs)
@@ -141,18 +126,6 @@ EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
     EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_cz_find_storage(EEObj(inUnit), inAnyStorage);
     theNote.U(theResult).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
     return theResult;
-}
-
-// Finds where the citizen gathers or builds at a footprint: the free tile nearest it (a farm's own tiles when farming,
-// corners when needed, not on a wall piece of the type being built), else the footprint's corner; z from the map
-// (ee_units citizen.rs)
-void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX,
-                                long inSizeY, GE3DPoint& outLocation)
-{
-    EEUCNote theNote(44); theNote.C(this).S(inUnit).I((long)inX).I((long)inY).I(inSizeX).I(inSizeY);   // TEST ONLY (UCBD)
-    ee_units_cz_find_gather_point(EEObj(inUnit), (uint32_t)inX, (uint32_t)inY, (int32_t)inSizeX, (int32_t)inSizeY,
-                                  (float(*)[3])&outLocation.mX);
-    theNote.P(outLocation);   // TEST ONLY (UCBD)
 }
 
 // Researches a tech on a unit (idling it unless only goal kinds 1, 2, 7, 10 are queued); if that kills the unit,

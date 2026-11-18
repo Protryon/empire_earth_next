@@ -100,7 +100,6 @@ public:
     void AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile);
     void FreeMachines();                // 0xa5eba (the spare machine queues)
     void FreePaths();                   // 0xa5f39 (both queues in progress)
-    void FreeRegions();
     void SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom, const EETileCoordinate& inTo);
     void SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
                      const EETileCoordinate& inTo);

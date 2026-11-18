@@ -21,30 +21,17 @@ public:
         : mTable(ee_cp_influence_new((uint32_t)inMapSize, 9, (uint32_t)inNumPlayers)), mRegionSize(9),
           mNumPlayers(inNumPlayers) {}
     ~EEInfluenceTable() { ee_cp_influence_free(this->mTable); }
-    // 0xa5685: the sum of GetValue over the rectangle of regions (not clipped)
-    long SumValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
-        { return ee_cp_influence_sum(this->mTable, 0, (uint32_t)inPlayer, Rect(inRect)); }
     // 0xa56f6: the sum of GetOthersValue, the start corner clipped at 0
     long SumOthersValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
         { return ee_cp_influence_sum(this->mTable, 1, (uint32_t)inPlayer, Rect(inRect)); }
     // 0x24495a (EEFOFindNewTargetNearOldTarget.cpp): SumOthersValue over the regions under inTiles
     long SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles);
-    // 0xa57f9: the total minus inPlayer's (0 off the grid)
-    long GetOthersValue(unsigned long inPlayer, unsigned long inX, unsigned long inY)
-        { return ee_cp_influence_value(this->mTable, 1, (uint32_t)inPlayer, (uint32_t)inX, (uint32_t)inY); }
     // 0xa5839 / 0xa58a7: the unit's class influence added to (or, clamped at 0, taken from) its owner's and the
     // total entry of the region of (inX, inY)
     void AddUnit(EEUnit* inUnit, long inX, long inY)
         { ee_cp_influence_unit(this->mTable, true, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
     void RemoveUnit(EEUnit* inUnit, long inX, long inY)
         { ee_cp_influence_unit(this->mTable, false, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
-    // 0xa5920: the values in region inRegion of the players inPlayer is at war with (player 0 only if inWithFirst)
-    long GetEnemyValue(unsigned long inPlayer, const U2DPoint<long>& inRegion, bool inWithFirst)
-    {
-        EeCpRect theRegion = {(int32_t)inRegion.mX, (int32_t)inRegion.mY, (int32_t)inRegion.mX, (int32_t)inRegion.mY};
-        return ee_cp_influence_enemies(this->mTable, (uint64_t)(uintptr_t)&gWorld, (uint32_t)inPlayer, theRegion,
-                                       inWithFirst, false);
-    }
     // 0xa598d: over a rectangle of regions, its start corner clipped at 0
     long SumEnemyValue(unsigned long inPlayer, const U2DRectangle<long>& inRect, bool inWithFirst)
         { return ee_cp_influence_enemies(this->mTable, (uint64_t)(uintptr_t)&gWorld, (uint32_t)inPlayer, Rect(inRect), inWithFirst, true); }

@@ -200,12 +200,6 @@ void RTSUnit::DescribeLong(UWideString& ioString)
     ioString += theString;
 }
 
-// Returns a hash of the unit's id and tile
-unsigned long RTSUnit::HashValue()
-{
-    return static_cast<uint32_t>(((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX);   // a 32-bit hash on every data model
-}
-
 // Resets the unit as valid, creating a tile node when it is to be linked into tiles
 void RTSUnit::Initialize(long inLinked)
 {

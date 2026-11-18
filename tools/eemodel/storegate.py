@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import units   # noqa: E402
 import verify   # noqa: E402
 import clang_build   # noqa: E402
-from ee import CLANG, LLD_LINK, LLVM_LIB, MODULE_FLAGS, RUNTIME_LIBS, lib_paths   # noqa: E402
+from ee import CLANG, LLD_LINK, LLVM_LIB, LLVM_NM, MODULE_FLAGS, RUNTIME_LIBS, lib_paths   # noqa: E402
 
 SRC = HERE / "storegate"
 DIGESTS = SRC / "digests.json"
@@ -141,16 +141,36 @@ def build(game_out, out):
     import build as game_build
     inputs = [*drivers, out / "engine.lib", *game_build.SDK_LIBS, *game_build.static_libs(), *RUNTIME_LIBS]
     (out / "link.rsp").write_text("".join(f'"{x}"\n' for x in inputs))
-    # the mixer's objects pull in ee_sound's music, whose C++ side (ee_musiccpp_*) is the game's: the driver never
-    # plays music, so those (and only those) may stay unresolved
+    # The one Rust library (ee_game.lib) and the engine's objects call into the game's C++ (the screens', units', AI
+    # and music hosts, Lua, the database's file search), which the driver does not link: it never reaches them. A
+    # symbol may stay unresolved only when the game's own objects (the exe and WON modules, their library members)
+    # define it, so an engine or driver symbol that went missing still fails the link.
     code, log = run([str(LLD_LINK), "/nologo", "/INCREMENTAL:NO", "/MACHINE:X64", "/SUBSYSTEM:CONSOLE",
-                     "/NODEFAULTLIB", "/DEBUG", "/FORCE:UNRESOLVED", f"/OUT:{exe}", *lib_paths(), "@link.rsp"], out)
+                     "/NODEFAULTLIB", "/DEBUG", "/FORCE:UNRESOLVED", "/DEMANGLE:NO", f"/OUT:{exe}", *lib_paths(),
+                     "@link.rsp"], out)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S" not in l)
     (out / "link.log").write_text(log)
-    unexpected = sorted(set(s for s in re.findall(r"undefined symbol: (\S+)", log) if not s.startswith("ee_musiccpp_")))
+    unresolved = set(re.findall(r"undefined symbol: (\S+)", log))
+    unexpected = sorted(unresolved - game_symbols(game_out)) if unresolved else []
     if code or unexpected:
         sys.exit(f"link failed ({out / 'link.log'}): unresolved {unexpected}\n{log[-4000:]}")
     return exe
+
+
+def game_symbols(game_out):
+    """The external symbols the game's own objects define (the modules the driver leaves out)."""
+    mods = ["exe", "won"]
+    objs = [units.obj_path(game_out, j) for m in mods for j in units.jobs_for(m)]
+    objs += [units.obj_path(game_out, j) for j in units.lib_jobs(mods)]
+    missing = [o for o in objs if not o.exists()]
+    if missing:
+        sys.exit(f"{len(missing)} game objects missing (first {missing[0]}): build the game first (python -I build.py)")
+    syms = set()
+    for i in range(0, len(objs), 200):
+        r = subprocess.run([str(LLVM_NM), "--defined-only", "--extern-only", "--format=just-symbols",
+                            *map(str, objs[i:i + 200])], capture_output=True, text=True)
+        syms.update(l.strip() for l in r.stdout.splitlines() if l.strip() and not l.endswith(":"))
+    return syms
 
 
 def tree_hash(tree):

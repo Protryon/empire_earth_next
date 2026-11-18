@@ -270,46 +270,6 @@ extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp
     return 0;
 }
 
-// Finds a site near the resource center for a building: towers by gold or iron, houses in the main building's
-// morale area, temples/universities/hospitals clear of their effects, others in rings round the center
-bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTile)
-{
-    EECPPlaceScope theScope(kPlceCenterFindBuildSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass).State(this);
-    EECPRC_CONTEXT;
-    int32_t theTile[2] = {(int32_t)outTile.mX, (int32_t)outTile.mY};
-    bool theResult = ee_cp_center_find_build_site(&theContext, EECPRCHandle(this), (int32_t)inUnitClass, theTile);
-    if (theResult) {
-        outTile.mX = theTile[0];
-        outTile.mY = theTile[1];
-    }
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0).State(this);
-    return theResult;
-}
-
-// Returns the smallest radius among the area effect templates of a unit class's upgrade (0 when it has none)
-long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
-{
-    EECPPlaceScope theScope(kPlceCenterMinEffectRadius, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass);
-    EECPRC_CONTEXT;
-    long theResult = ee_cp_center_min_effect_radius(&theContext, (int32_t)inUnitClass);
-    theScope.I(theResult);
-    return theResult;
-}
-
-// Returns how full the main building's morale effect is: its level plus the unfinished houses in range, over
-// its maximum level (1 without a main building or effect)
-float EECPResourceCenter::GetMoraleFill()
-{
-    EECPPlaceScope theScope(kPlceCenterMoraleFill, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.State(this);
-    EECPRC_CONTEXT;
-    float theResult = ee_cp_center_morale_fill(&theContext, EECPRCHandle(this));
-    theScope.F(theResult);
-    return theResult;
-}
-
 // Returns the free tile nearest the middle of the resource units (or next to the single unit or main building),
 // else the first candidate tile; leaves outCenter unchanged when there is nothing to measure
 void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
@@ -323,30 +283,6 @@ void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
     outCenter.mX = theTile[0];
     outCenter.mY = theTile[1];
     theScope.I(theScopeSet ? outCenter.mX : 0).I(theScopeSet ? outCenter.mY : 0);
-}
-
-// Returns the first resource unit of the given resource type that is not exhausted, or NULL
-EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
-{
-    EECPPlaceScope theScope(kPlceCenterFindResourceUnit, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I((long)inUnitType).State(this);
-    EECPRC_CONTEXT;
-    EEUnit* theResult = EECPRCObject<EEUnit>(
-        ee_cp_center_find_resource_unit(&theContext, EECPRCHandle(this), (uint32_t)inUnitType));
-    theScope.U(theResult);
-    return theResult;
-}
-
-// Returns whether any tile under a unit class's footprint at (inX, inY) has an area effect of the kind for the player
-bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, long inKind)
-{
-    EECPPlaceScope theScope(kPlceCenterIsInAreaEffect, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).I(inUnitClass).I(inKind);
-    EECPRC_CONTEXT;
-    bool theResult = ee_cp_center_is_in_area_effect(&theContext, (int32_t)inX, (int32_t)inY, (int32_t)inUnitClass,
-        (int32_t)inKind);
-    theScope.I(theResult);
-    return theResult;
 }
 
 // The file host of Load: the saved game's primitives and the centre's lists (ee_sim::cp::resource_center's

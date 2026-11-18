@@ -15,7 +15,6 @@ public:
     // inline: the region loops read through them, so size and operator[] sit one level deeper and are refused where
     // the original calls them out of line (EEGetUnitsInRectangle 0xa509a) (provisional names)
     long GetCount() const { return this->size(); }
-    T& GetAt(long inIndex) { return (*this)[inIndex]; }
     void Remove(const T& inValue)
     {
         for (iterator it = begin(); it != end(); ++it)
@@ -50,10 +49,6 @@ public:
         return (unsigned long)inTile.mX < this->mRegionsX && (unsigned long)inTile.mY < this->mRegionsY ?
             &this->mRegions[inTile.mX * this->mRegionsY + inTile.mY] : NULL;
     }
-    // inline (COMDAT 0x6136d after its first user EECPAttackSubGroup::Virtual1C4 0x460e65; ret 8, hidden result, y
-    // divided first): the region holding inTile (provisional name)
-    U2DPoint<long> GetRegionPoint(const U2DPoint<long>& inTile)
-        { return U2DPoint<long>(inTile.mX / this->mRegionSize, inTile.mY / this->mRegionSize); }
     // inline (COMDAT 0xe06f, EEAIArea.cpp's range; EEHerd.cpp's unit collector too): inTiles' edges in regions
     // (provisional name)
     U2DRectangle<long> GetRegions(const U2DRectangle<long>& inTiles)

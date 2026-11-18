@@ -30856,3 +30856,29 @@ list, open_data.py's comments): a harness run from a checkout rebuilds its own `
   campaign step (game_session.py `--campaign learning`, slot.py) to `STOP <windowed session complete> reached`;
   scenario_check 27/27; gates.sh `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13913` units [4, 42, 44]
   alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2688 joiner=2690`, GATES PASS.
+
+## LLE rest, round 2: the dead-member census across the game (tools/dead_members.py), the store gate's link check, the font bitmap's direct path (branch rust-lle-rest2, 2026-11-18)
+
+Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs/progress/lle-rest.md ("Round 2").
+
+- **The census as a tool** (`tools/dead_members.py report|delete`). A member is dead when its name appears as a
+  word nowhere in src, include (not include/rust), tools or tests outside comments, its declarations and its
+  column-0 definitions: counting every word (not only calls) catches the names taken by address, which round 1's
+  call census missed (`NEProtocol::AddTo`). Over include/ee it found 284 names outside the WON headers; with the
+  engine's, 275 went in three commits per area, and two more passes reached a fixpoint (the members only those had
+  called). Both builds linked 0/0 at the first try every time. A declaration regex that let the type start with a
+  space matched calls inside multi-line inline bodies (`        ee_x(...)`): the type must start with a word.
+- **Generated headers.** The census deleted two members of EERulesGen.h (eedata's rulesgen output); the data gate
+  checks that header against its generator, so they were restored and the tool skips files marked GENERATED.
+- **Free functions** need a column-0 pass (a definition `Type Name(` at column 0 is a declaration, not a use):
+  44 dead in include/ee; the 19 with Rust mentions were comments only (Rust calls C++ only through `extern "C"` hosts).
+- **The store gate's link check** failed since the crate restructure (~425 game symbols the one `ee_game.lib` and
+  the engine's objects reference). It now links with `/DEMANGLE:NO` and allows exactly the external symbols the exe
+  and WON modules' objects define (llvm-nm): any other missing name, an engine or driver symbol, still fails.
+- **Direct paths.** The font bitmap made by the C++ (`ee_ge_fb_new` -> `create_with(.., true)`) sets its glyph
+  textures' stage and references them on the GETexture's Rust object. The same flag on the primitives broke their
+  cargo tests (misaligned read of a recorded handle): those tests construct through the C entry points
+  (`ee_ge_prim_new*`), so a constructor flag set there cannot tell the replays from the game. The vertex host stays.
+- **Verified**: both builds 0/0, the Rust gate, the oracle seeds 2-7, the store gate (25,140 lines), gates.sh GATES
+  PASS (tour; ai-game time-cap [4, 42, 42], both computers alive on classic_lua; lan-game), the tour's menus against
+  round 1's pre-round exe identical but the build label.

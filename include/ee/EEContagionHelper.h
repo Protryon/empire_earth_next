@@ -67,7 +67,6 @@ public:
     std::vector<EEUnit*> mUnits;            // +0x04 (each referenced)
     EEContagionFunctor* mFunctor;           // +0x14
     EECalamity* mCalamity;                  // +0x18
-    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x28 (Load; RestorePointers turns them into mUnits)
 
 };

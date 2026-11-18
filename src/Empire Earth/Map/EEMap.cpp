@@ -575,14 +575,6 @@ void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
     EEMapEdit(this, 4, inX, inY, inTerrain);
 }
 
-// Gives the vertices of a tile rectangle that are not under water a colour type's colour set (ee_app map.rs)
-void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff)
-{
-    EEAppMapScope theScope(this, kAppMapSetCliffColorSets, inLeft, inRight, inTop, inBottom, inCliff, 0, inLeft, inRight,
-                           inBottom, inTop);   // MAPC (TEST ONLY)
-    EEMapEdit(this, 6, inLeft, inRight, inTop, inBottom, inCliff);
-}
-
 // Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction, then makes
 // tiles with three or more cliff neighbours cliffs too (ee_app map.rs)
 void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
