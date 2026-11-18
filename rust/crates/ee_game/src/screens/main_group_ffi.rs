@@ -26,6 +26,12 @@ impl Host {
 
 impl GroupHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        if let Some(rec) = crate::screens::main_form_fields::group_record(self.0) {
+            // SAFETY: the live group's record; no call out while the reference lives
+            if let Some(r) = crate::screens::main_form_fields::group_op(unsafe { &mut *rec }, op, a, b) {
+                return r;
+            }
+        }
         if op == crate::screens::main_group::EE_SCREENS_MGR_OP_UI_STATE {
             if let Some(rec) = crate::screens::main_form_fields::record(self.form(0)) {
                 // SAFETY: the group's live form's record (its mOwner, an EEUIFMainGame)

@@ -1,4 +1,4 @@
-//! `EEUIFMainGame`'s plain members as a Rust record the C++ class derives from (the UI thread lane, round 1:
+//! `EEUIFMainGame`'s and its main panel group's (`EEUIFMGMainGroup`) plain members as Rust records the C++ classes derive from (the UI thread lane, round 1:
 //! `class EEUIFMainGame : public UIForm, public EeScreensMainFormFields`, ee/EEUIFMainGame.h). The members keep
 //! their C++ names, types and order (the original's +0x520 `mKeyboardModes` .. +0x5f3 `mIsButtonBlinking`), so the
 //! C++ that reads them by name is unchanged. The form's host's field ops (`EE_SCREENS_MF_OP_FIELD`, `SET_FIELD`)
@@ -122,6 +122,81 @@ pub(crate) fn op(r: &mut EeScreensMainFormFields, op: u32, a: i64, b: i64) -> Op
     }
 }
 
+/// `EEUIFMGMainGroup`'s plain members (ee/EEUIFMGMainGroup.h, the original's +0x0c `mMode` .. +0x25 `mReset`), a
+/// Rust record the C++ class derives from as `EeScreensMainFormFields` is the form's.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeScreensMainGroupFields {
+    /// the mode: 0, 3, 4 (the market's unit type 0x321); 1, 2 tested
+    pub mMode: c_long,
+    /// the shown unit's hit points, id and the previous id
+    pub mHitPoints: c_long,
+    pub mUnitID: c_ulong,
+    pub mPreviousID: c_ulong,
+    pub mL1C: c_long,
+    /// the unit class's `mL294`
+    pub mL20: c_long,
+    /// a unit is shown; the group was reset (`Reset`)
+    pub mHasUnit: bool,
+    pub mReset: bool,
+}
+
+/// The record's offset in `EEUIFMGMainGroup`.
+static GROUP_OFFSET: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+/// `EEUIFMGMainGroup`'s constructor: the group `group` and its record `fields`.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_group_fields(group: *mut c_void, fields: *mut EeScreensMainGroupFields) {
+    GROUP_OFFSET.store(fields as usize - group as usize, Ordering::Relaxed);
+}
+
+/// The record of the group `group` (an `EEUIFMGMainGroup*`).
+pub(crate) fn group_record(group: *mut c_void) -> Option<*mut EeScreensMainGroupFields> {
+    let offset = GROUP_OFFSET.load(Ordering::Relaxed);
+    (!group.is_null() && offset != usize::MAX).then(|| (group as usize + offset) as *mut EeScreensMainGroupFields)
+}
+
+/// The main group host's `EE_SCREENS_MGR_OP_FIELD` / `SET_FIELD` on the record (the C++'s
+/// `member = (decltype(member))value; return (int64_t)member;`); None for its other ops.
+pub(crate) fn group_op(r: &mut EeScreensMainGroupFields, op: u32, a: i64, b: i64) -> Option<i64> {
+    use crate::screens::main_group::*;
+    let set = match op {
+        EE_SCREENS_MGR_OP_FIELD => None,
+        EE_SCREENS_MGR_OP_SET_FIELD => Some(b),
+        _ => return None,
+    };
+    macro_rules! put {
+        ($m:ident, $t:ty) => {{
+            if let Some(v) = set {
+                r.$m = v as $t;
+            }
+            r.$m as i64
+        }};
+    }
+    Some(match a {
+        EE_SCREENS_MGR_FIELD_MODE => put!(mMode, c_long),
+        EE_SCREENS_MGR_FIELD_HIT_POINTS => put!(mHitPoints, c_long),
+        EE_SCREENS_MGR_FIELD_UNIT_ID => put!(mUnitID, c_ulong),
+        EE_SCREENS_MGR_FIELD_PREVIOUS_ID => put!(mPreviousID, c_ulong),
+        EE_SCREENS_MGR_FIELD_L1C => put!(mL1C, c_long),
+        EE_SCREENS_MGR_FIELD_L20 => put!(mL20, c_long),
+        EE_SCREENS_MGR_FIELD_HAS_UNIT => {
+            if let Some(v) = set {
+                r.mHasUnit = v != 0;
+            }
+            r.mHasUnit as i64
+        }
+        EE_SCREENS_MGR_FIELD_RESET => {
+            if let Some(v) = set {
+                r.mReset = v != 0;
+            }
+            r.mReset as i64
+        }
+        // (the C++ answered 0 for another field)
+        _ => 0,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,5 +228,24 @@ mod tests {
         assert!(record(core::ptr::null_mut()).is_none());
         ee_screens_main_form_fields(0x2000 as *mut c_void, 0x2040 as *mut EeScreensMainFormFields);
         assert_eq!(record(0x1000 as *mut c_void), Some(0x1040 as *mut EeScreensMainFormFields));
+        assert!(group_record(core::ptr::null_mut()).is_none());
+        ee_screens_main_group_fields(0x3000 as *mut c_void, 0x3008 as *mut EeScreensMainGroupFields);
+        assert_eq!(group_record(0x10 as *mut c_void), Some(0x18 as *mut EeScreensMainGroupFields));
+    }
+
+    #[test]
+    fn the_group_fields() {
+        use crate::screens::main_group::*;
+        let mut r = EeScreensMainGroupFields::default();
+        assert_eq!(
+            group_op(&mut r, EE_SCREENS_MGR_OP_SET_FIELD, EE_SCREENS_MGR_FIELD_UNIT_ID, -1),
+            Some(c_ulong::MAX as i64)
+        );
+        assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_SET_FIELD, EE_SCREENS_MGR_FIELD_HIT_POINTS, -3), Some(-3));
+        assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_SET_FIELD, EE_SCREENS_MGR_FIELD_RESET, 9), Some(1));
+        assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_FIELD, EE_SCREENS_MGR_FIELD_HAS_UNIT, 0), Some(0));
+        assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_FIELD, 99, 0), Some(0));
+        assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_UI_STATE, 0, 0), None);
+        assert!(r.mReset && r.mHitPoints == -3);
     }
 }

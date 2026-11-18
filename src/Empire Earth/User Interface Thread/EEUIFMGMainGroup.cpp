@@ -55,14 +55,9 @@ long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
-    : EEUIFMGGroup(inOwner)
+    : EEUIFMGGroup(inOwner), EeScreensMainGroupFields()
 {
-    this->mReset = false;
-    this->mUnitID = 0;
-    this->mHasUnit = false;
-    this->mHitPoints = 0;
-    this->mL20 = 0;
-    this->mPreviousID = 0;
+    ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
     this->mStatusBox = new EEUIFMGStatusBox(inOwner);
 }
 
@@ -129,27 +124,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
     EEUIFMGStatusBox* theBox = theGroup->mStatusBox;
     auto Button = [&]() { return static_cast<EEUIFMGStatusButton*>(theForm->GetControl((unsigned long)inA)); };
     switch (inOp) {
-    case EE_SCREENS_MGR_OP_FIELD:
-    case EE_SCREENS_MGR_OP_SET_FIELD: {
-        bool theSet = inOp == EE_SCREENS_MGR_OP_SET_FIELD;
-#define EE_MGR_FIELD(id, member) \
-    case id: \
-        if (theSet) \
-            member = (decltype(member))inB; \
-        return (int64_t)member;
-        switch (inA) {
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_MODE, theGroup->mMode)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_HIT_POINTS, theGroup->mHitPoints)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_UNIT_ID, theGroup->mUnitID)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_PREVIOUS_ID, theGroup->mPreviousID)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_L1C, theGroup->mL1C)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_L20, theGroup->mL20)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_HAS_UNIT, theGroup->mHasUnit)
-            EE_MGR_FIELD(EE_SCREENS_MGR_FIELD_RESET, theGroup->mReset)
-        }
-#undef EE_MGR_FIELD
-        return 0;
-    }
     case EE_SCREENS_MGR_OP_FORMS: return inA == 0 ? (int64_t)theForm : (int64_t)gUIManager->mMainGameForm;
     case EE_SCREENS_MGR_OP_WORLD_UNIT: return reinterpret_cast<int64_t>(gWorld.GetUnit((unsigned long)inA));
     case EE_SCREENS_MGR_OP_PLAYER_UNIT:
