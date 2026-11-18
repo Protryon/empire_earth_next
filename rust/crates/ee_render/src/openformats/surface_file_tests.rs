@@ -1,5 +1,5 @@
 //! `surface_file.rs`'s tests: the members' host calls in the original's order over a recording host (a memory surface,
-//! a file over a C temporary stream, a libjpeg stand-in that serves canned rows and records the rows written).
+//! a file over a C temporary stream); the JPEGs real ones through that stream.
 
 use super::*;
 use std::cell::RefCell;
@@ -30,13 +30,6 @@ struct World {
     written: Vec<u8>,
     /// what `FileRead` serves
     contents: Vec<u8>,
-    /// the decoder's canned rows (each `stride` bytes) and dimensions
-    rows: Vec<Vec<u8>>,
-    dims: [u32; 3],
-    next_row: usize,
-    /// the encoder's rows
-    encoded: Vec<Vec<u8>>,
-    buffer: Vec<u8>,
 }
 
 thread_local! {
@@ -53,7 +46,6 @@ fn log(s: &str) {
 
 const SURFACE: usize = 0x5000;
 const FILE: usize = 0x6000;
-const JPEG: usize = 0x7000;
 
 unsafe extern "C" fn host(op: EeOfSurfOp, obj: *mut c_void, a: isize, b: isize, c: isize) -> isize {
     use EeOfSurfOp::*;
@@ -61,10 +53,6 @@ unsafe extern "C" fn host(op: EeOfSurfOp, obj: *mut c_void, a: isize, b: isize, 
     match op {
         Format | Depth | BytesPerRow | Memory | PixelWidth | PixelHeight | NoAlpha | Lock | Unlock => {
             assert_eq!(o, SURFACE)
-        }
-        JpegDecNew | JpegEncNew => assert_eq!(o, 0),
-        JpegDecStart | JpegDecRow | JpegDecFinish | JpegDecDestroy | JpegEncBuffer | JpegEncRow | JpegEncEnd => {
-            assert_eq!(o, JPEG)
         }
         _ => assert_eq!(o, FILE),
     }
@@ -143,32 +131,6 @@ unsafe extern "C" fn host(op: EeOfSurfOp, obj: *mut c_void, a: isize, b: isize, 
             }
             FileLength => {
                 *(a as *mut c_ulong) = w.contents.len() as c_ulong;
-                0
-            }
-            JpegDecNew => {
-                w.next_row = 0;
-                JPEG as isize
-            }
-            JpegDecStart => {
-                std::ptr::copy_nonoverlapping(w.dims.as_ptr(), b as *mut u32, 3);
-                (w.dims[0] * w.dims[2]) as isize
-            }
-            JpegDecRow => {
-                if w.next_row < w.rows.len() {
-                    w.next_row += 1;
-                    w.rows[w.next_row - 1].as_ptr() as isize
-                } else {
-                    0
-                }
-            }
-            JpegEncNew => {
-                w.buffer = vec![0xee; (b * 3 + b % 4) as usize];
-                JPEG as isize
-            }
-            JpegEncBuffer => w.buffer.as_mut_ptr() as isize,
-            JpegEncRow => {
-                let row = w.buffer.clone();
-                w.encoded.push(row);
                 0
             }
             _ => 0,
@@ -320,21 +282,58 @@ fn a_png_lands_in_the_top_left_corner_and_a_larger_one_is_refused() {
     assert_eq!(out, [7; 3]);
 }
 
+/// A fresh C temporary stream holding `bytes`, rewound.
+fn stream_of(bytes: &[u8]) -> *mut c_void {
+    let stream = unsafe { tmpfile() };
+    assert!(!stream.is_null());
+    unsafe {
+        assert_eq!(fwrite(bytes.as_ptr().cast(), 1, bytes.len(), stream), bytes.len());
+        fseek(stream, 0, SEEK_SET);
+    }
+    stream
+}
+
+/// The whole of a stream, rewound first.
+fn stream_bytes(stream: *mut c_void) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut chunk = [0u8; 4096];
+    unsafe { fseek(stream, 0, SEEK_SET) };
+    loop {
+        let n = unsafe { fread(chunk.as_mut_ptr().cast(), 1, chunk.len(), stream) };
+        if n == 0 {
+            break;
+        }
+        out.extend_from_slice(&chunk[..n]);
+    }
+    out
+}
+
+/// A JPEG of `width` x `height` RGB pixels at quality 100 without chroma subsampling.
+fn jpeg_of(width: u16, height: u16, rgb: &[u8]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let mut e = jpeg_encoder::Encoder::new(&mut bytes, 100);
+    e.set_sampling_factor(jpeg_encoder::SamplingFactor::F_1_1);
+    e.encode(rgb, width, height, jpeg_encoder::ColorType::Rgb).unwrap();
+    bytes
+}
+
+fn close_to(got: u32, want: u32, tolerance: i32) -> bool {
+    (0..4).all(|i| (((got >> (i * 8)) & 0xff) as i32 - ((want >> (i * 8)) & 0xff) as i32).abs() <= tolerance)
+}
+
 #[test]
 fn a_jpeg_reads_its_rows_opaque_and_reopens_an_open_file_after_the_image() {
     reset(2, 2, 32);
-    let stream = unsafe { tmpfile() };
-    assert!(!stream.is_null());
+    // flat 2 x 2 colours: one 8 x 8 block, quality 100, within a step or two of the pixels
+    let stream = stream_of(&jpeg_of(2, 2, &[200, 100, 50, 200, 100, 50, 200, 100, 50, 200, 100, 50]));
     with(|w| {
         w.stream = stream as usize;
         w.open = true;
         w.position = 0;
-        w.dims = [2, 2, 3];
-        w.rows = vec![vec![1, 2, 3, 4, 5, 6], vec![7, 8, 9, 10, 11, 12]];
     });
     assert_eq!(load(K_IMAGE_FILE_JPG), 0);
-    assert_eq!(pixel32(0, 0), 0xff01_0203);
-    assert_eq!(pixel32(1, 1), 0xff0a_0b0c);
+    assert!(close_to(pixel32(0, 0), 0xffc8_6432, 2), "{:08x}", pixel32(0, 0));
+    assert!(close_to(pixel32(1, 1), 0xffc8_6432, 2), "{:08x}", pixel32(1, 1));
     let log = take_log();
     let expect = [
         "Format",
@@ -344,66 +343,147 @@ fn a_jpeg_reads_its_rows_opaque_and_reopens_an_open_file_after_the_image() {
         "FileFOpen",
         "mode rb",
         "FileStream",
-        "JpegDecNew",
         "Lock",
-        "JpegDecStart",
+        "PixelWidth",
+        "PixelHeight",
         "Depth",
         "BytesPerRow",
         "PixelWidth",
         "Memory",
-        "JpegDecRow",
-        "JpegDecRow",
-        "JpegDecRow",
-        "JpegDecFinish",
-        "JpegDecDestroy",
         "Unlock",
         "FileClose",
         "FileOpen",
         "FileSetPosition",
-        "at 0 0 0",
     ];
-    assert_eq!(log, expect);
+    assert_eq!(log[..expect.len()], expect);
+    // reopened where the decoder's 4 KB reads left the stream: the whole (short) file read
+    let size = stream_bytes(stream).len();
+    assert_eq!(log[expect.len()..], [format!("at {size} 0 0")]);
 
-    // a failed lock destroys the decompressor without reading
+    // a failed lock reads nothing
     with(|w| {
         w.lock_fails = true;
         w.open = false;
     });
     assert_eq!(load(K_IMAGE_FILE_JPG), 0);
     let log = take_log();
-    assert_eq!(log[log.len() - 3..], ["Lock", "JpegDecDestroy", "FileClose"]);
+    assert_eq!(log[log.len() - 2..], ["Lock", "FileClose"]);
     unsafe { fclose(stream) };
 }
 
 #[test]
-fn a_jpg2_writes_placeholder_offsets_two_images_and_patches_them() {
-    reset(1, 1, 32);
-    set_pixel32(0, 0, 0x8011_2233);
+fn a_corrupt_or_larger_jpeg_fails_where_libjpeg_ended_the_process() {
+    reset(2, 2, 32);
+    let stream = stream_of(b"not a jpeg at all");
+    with(|w| w.stream = stream as usize);
+    assert_eq!(load(K_IMAGE_FILE_JPG), K_ERROR_FAILED);
+    let mut out = [7; 3];
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, &mut out) }, K_ERROR_FAILED);
+    assert_eq!(out, [7; 3]);
+    unsafe { fclose(stream) };
+    // a 3 x 1 image does not go into a 2 x 2 surface
+    reset(2, 2, 32);
+    let stream = stream_of(&jpeg_of(3, 1, &[9; 9]));
+    with(|w| w.stream = stream as usize);
+    assert_eq!(load(K_IMAGE_FILE_JPG), K_ERROR_FAILED);
+    assert_eq!(pixel32(0, 0), 0);
+    let mut out = [0; 3];
+    unsafe { fseek(stream, 0, SEEK_SET) };
+    assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG, &mut out) }, 0);
+    assert_eq!(out, [3, 1, 24]);
+    unsafe { fclose(stream) };
+}
+
+/// The two offsets `SaveAsJPG2` patched through the file (`FileWriteLong`, which the test host records) written into
+/// the stream, as the real file has them.
+fn patch_offsets(stream: *mut c_void) {
+    let written = with(|w| w.written.clone());
+    assert_eq!(written.len(), 8);
+    unsafe {
+        fseek(stream, 0, SEEK_SET);
+        fwrite(written.as_ptr().cast(), 1, 8, stream);
+        fseek(stream, 0, SEEK_SET);
+    }
+}
+
+#[test]
+fn a_jpg2_round_trips_its_colour_and_alpha() {
+    // 32 x 16: an opaque red half and a half-transparent blue half (each a 16 x 16 block of the 4:2:0 encoding)
+    let (width, height) = (32, 16);
+    let want = |x: usize| if x < 16 { 0xffc0_2010u32 } else { 0x8010_20c0 };
+    reset(width, height, 32);
+    for y in 0..height as usize {
+        for x in 0..width as usize {
+            set_pixel32(x, y, want(x));
+        }
+    }
     let stream = unsafe { tmpfile() };
     with(|w| w.stream = stream as usize);
     assert_eq!(save(K_IMAGE_FILE_JPG2), 0);
-    let (encoded, written) = with(|w| (w.encoded.clone(), w.written.clone()));
-    // the colour row, then the alpha three times (the buffers' padding: 1 % 4)
-    assert_eq!(encoded, [vec![0x11, 0x22, 0x33, 0xee], vec![0x80, 0x80, 0x80, 0xee]]);
-    // the two offsets patched in: the stream held the two placeholder words (8 bytes) and nothing else
-    assert_eq!(written, [8, 0, 0, 0, 8, 0, 0, 0]);
     let log = take_log();
     let at = log.iter().position(|l| l == "FileOpen").unwrap();
     assert_eq!(log[at..], ["FileOpen", "FileSetPosition", "at 0 0 0", "FileWriteLong", "FileWriteLong", "FileClose"]);
-    unsafe { fclose(stream) };
+    // the header: the alpha JPEG's offset, then the end; two JPEGs (SOI .. EOI) between
+    patch_offsets(stream);
+    let bytes = stream_bytes(stream);
+    let word = |i: usize| u32::from_le_bytes(bytes[i..i + 4].try_into().unwrap()) as usize;
+    let (alpha, end) = (word(0), word(4));
+    assert_eq!(end, bytes.len());
+    assert_eq!(&bytes[8..10], &[0xff, 0xd8]);
+    assert_eq!(&bytes[alpha - 2..alpha + 2], &[0xff, 0xd9, 0xff, 0xd8]);
+    assert_eq!(&bytes[end - 2..], &[0xff, 0xd9]);
 
-    // the attributes of a JPG2: its colour image's, 32 bits whatever the result
+    // read back into a cleared surface: within the quality-80 4:2:0 encoding's error of every pixel
+    reset(width, height, 32);
+    with(|w| w.stream = stream as usize);
+    unsafe { fseek(stream, 0, SEEK_SET) };
+    assert_eq!(load(K_IMAGE_FILE_JPG2), 0);
+    for y in 0..height as usize {
+        for x in 0..width as usize {
+            // the chroma's fancy upsampling blends the two halves' colours in the two columns either side
+            let tolerance = if (14..18).contains(&x) { 80 } else { 24 };
+            assert!(close_to(pixel32(x, y), want(x), tolerance), "{x} {y}: {:08x} for {:08x}", pixel32(x, y), want(x));
+        }
+    }
+    // the alpha is a greyscale JPEG: flat halves come back almost exact
+    assert!(close_to(pixel32(0, 0) & 0xff00_0000, 0xff00_0000, 2));
+    assert!(close_to(pixel32(31, 15) & 0xff00_0000, 0x8000_0000, 2));
+
+    // the attributes of a JPG2: its colour image's, 32 bits
     let mut out = [0; 3];
-    with(|w| {
-        w.stream = 0;
-        w.dims = [5, 6, 3];
-    });
+    unsafe { fseek(stream, 0, SEEK_SET) };
     assert_eq!(unsafe { ee_of_surf_attributes(host, FILE as *mut c_void, K_IMAGE_FILE_JPG2, &mut out) }, 0);
-    assert_eq!(out, [0, 0, 32]);
+    assert_eq!(out, [32, 16, 32]);
+    unsafe { fclose(stream) };
 }
 
 #[test]
-fn a_jpeg_of_an_unlocked_surface_is_blank_rows() {
+fn a_jpeg_round_trips_a_16_bit_surface() {
+    reset(8, 8, 16);
+    // 0xf800: pure red in 5-6-5 (format 0)
+    with(|w| {
+        for y in 0..8 {
+            for x in 0..8 {
+                let at = y * w.bytes_per_row as usize + x * 2;
+                w.pixels[at..at + 2].copy_from_slice(&0xf800u16.to_le_bytes());
+            }
+        }
+    });
+    let stream = unsafe { tmpfile() };
+    with(|w| w.stream = stream as usize);
+    assert_eq!(save(K_IMAGE_FILE_JPG), 0);
+    let first = with(|w| u16::from_le_bytes(w.pixels[0..2].try_into().unwrap()));
+    reset(8, 8, 16);
+    with(|w| w.stream = stream as usize);
+    unsafe { fseek(stream, 0, SEEK_SET) };
+    assert_eq!(load(K_IMAGE_FILE_JPG), 0);
+    let back = with(|w| u16::from_le_bytes(w.pixels[0..2].try_into().unwrap()));
+    assert_eq!(back >> 11, first >> 11, "{back:04x} for {first:04x}");
+    unsafe { fclose(stream) };
+}
+
+#[test]
+fn a_jpeg_of_an_unlocked_surface_is_black() {
     reset(2, 3, 16);
     let stream = unsafe { tmpfile() };
     with(|w| {
@@ -411,10 +491,21 @@ fn a_jpeg_of_an_unlocked_surface_is_blank_rows() {
         w.lock_fails = true;
     });
     assert_eq!(save(K_IMAGE_FILE_JPG), 0);
-    let encoded = with(|w| w.encoded.clone());
-    assert_eq!(encoded, vec![vec![0u8; 8]; 3]);
     let log = take_log();
     assert!(!log.contains(&"Unlock".to_string()));
     assert_eq!(log.last().unwrap(), "FileClose");
+    let picture = jpeg::decode(&mut jpeg::SliceInput { data: &stream_bytes(stream), pos: 0 }).unwrap();
+    assert_eq!((picture.width, picture.height), (2, 3));
+    assert!(picture.rows.iter().all(|&v| v <= 2));
+    unsafe { fclose(stream) };
+}
+
+#[test]
+fn an_empty_surface_saves_no_jpeg_and_fails() {
+    reset(0, 2, 32);
+    let stream = unsafe { tmpfile() };
+    with(|w| w.stream = stream as usize);
+    assert_eq!(save(K_IMAGE_FILE_JPG), K_ERROR_FAILED);
+    assert!(stream_bytes(stream).is_empty());
     unsafe { fclose(stream) };
 }

@@ -629,6 +629,16 @@ impl<'a, I: Input> Dec<'a, I> {
         Ok(())
     }
 
+    /// libjpeg's `output_components`: the samples a pixel of the output colour space has.
+    fn output_components(&self) -> usize {
+        match self.color_spaces().1 {
+            0 => self.comps.len(),
+            1 => 1,
+            2 => 3,
+            _ => 4,
+        }
+    }
+
     /// The colour spaces: (jpeg_color_space, out_color_space) as 0 unknown, 1 gray, 2 RGB, 3 YCbCr, 4 CMYK, 5 YCCK.
     fn color_spaces(&self) -> (u8, u8) {
         match self.comps.len() {
@@ -1233,15 +1243,7 @@ impl<'a, I: Input> Dec<'a, I> {
         }
         let ups = self.upsamplers()?;
         let (space, out) = self.color_spaces();
-        let comps = if out == 0 {
-            self.comps.len()
-        } else if out == 1 {
-            1
-        } else if out == 2 {
-            3
-        } else {
-            4
-        };
+        let comps = self.output_components();
         let mut rows = alloc(w * h * comps, 0u8)?;
         let tabs = YccTables::new();
         let mut up: Vec<Vec<u8>> = vec![vec![0u8; w + 8]; self.comps.len()];
@@ -1533,6 +1535,14 @@ pub fn attributes<I: Input>(input: &mut I) -> R<(u32, u32)> {
     let mut d = Dec::new(input);
     d.run(false)?;
     Ok((d.width, d.height))
+}
+
+/// The size and libjpeg's `output_components` (what `jpeg_read_header` and `jpeg_start_decompress` report), or why
+/// not.
+pub fn info<I: Input>(input: &mut I) -> R<(u32, u32, usize)> {
+    let mut d = Dec::new(input);
+    d.run(false)?;
+    Ok((d.width, d.height, d.output_components()))
 }
 
 /// libjpeg's decode of the whole file (the output rows), or why not.

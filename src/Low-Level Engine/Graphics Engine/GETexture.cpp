@@ -55,7 +55,6 @@
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
 #include "lle/GETextureSet.h"
 extern "C" {
-#include "jpeglib/jpeglib.h"
 }
 
 // the Rust mirrors (texobj_tex.rs), field for field
@@ -677,20 +676,11 @@ void GETextureSet::SetTexture(unsigned long inX, unsigned long inY, GETexture* i
 
 // ---- GESurface (GESurface.cpp, folded here in R4.3 part 16)
 
-// a libjpeg decompressor or compressor with its error manager and one-row buffer
-template <typename Info> struct GEJpeg {
-    Info mInfo;
-    jpeg_error_mgr mError;
-    JSAMPARRAY mBuffer;
-};
-
 // The calls the image members make on other objects (EeOfSurfOp), in the original's statements
 static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     GESurface* theSurface = (GESurface*)inObj;
     FSFileSpec* theFile = (FSFileSpec*)inObj;
-    GEJpeg<jpeg_decompress_struct>* theDecoder = (GEJpeg<jpeg_decompress_struct>*)inObj;
-    GEJpeg<jpeg_compress_struct>* theEncoder = (GEJpeg<jpeg_compress_struct>*)inObj;
     unsigned long theWritten;
     switch (inOp) {
     case EeOfSurfOp::Format: return (intptr_t)theSurface->GetPixelFormat();
@@ -715,54 +705,6 @@ static intptr_t GESurfaceHost(EeOfSurfOp inOp, void* inObj, intptr_t a, intptr_t
     case EeOfSurfOp::FileWriteLong: return theFile->Write((long)a);
     case EeOfSurfOp::FileRead: return theFile->Read((unsigned char*)a, (unsigned long)b, *(unsigned long*)c);
     case EeOfSurfOp::FileLength: return theFile->GetLength(*(unsigned long*)a);
-    case EeOfSurfOp::JpegDecNew: {
-        GEJpeg<jpeg_decompress_struct>* theJpeg = new GEJpeg<jpeg_decompress_struct>;
-        theJpeg->mInfo.err = jpeg_std_error(&theJpeg->mError);
-        jpeg_create_decompress(&theJpeg->mInfo);
-        return (intptr_t)theJpeg;
-    }
-    case EeOfSurfOp::JpegDecStart: {
-        jpeg_decompress_struct& theInfo = theDecoder->mInfo;
-        jpeg_stdio_src(&theInfo, (FILE*)a);
-        jpeg_read_header(&theInfo, TRUE);
-        jpeg_start_decompress(&theInfo);
-        const uint32_t theSize[3] = {theInfo.output_width, theInfo.output_height, (uint32_t)theInfo.output_components};
-        memcpy((void*)b, theSize, sizeof theSize);
-        JDIMENSION theRowStride = theInfo.output_width * theInfo.output_components;
-        theDecoder->mBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
-        return (intptr_t)theRowStride;
-    }
-    case EeOfSurfOp::JpegDecRow:
-        if (theDecoder->mInfo.output_scanline < theDecoder->mInfo.output_height &&
-            jpeg_read_scanlines(&theDecoder->mInfo, theDecoder->mBuffer, 1) >= 1)
-            return (intptr_t)theDecoder->mBuffer[0];
-        return 0;
-    case EeOfSurfOp::JpegDecFinish: jpeg_finish_decompress(&theDecoder->mInfo); return 0;
-    case EeOfSurfOp::JpegDecDestroy: jpeg_destroy_decompress(&theDecoder->mInfo); delete theDecoder; return 0;
-    case EeOfSurfOp::JpegEncNew: {
-        GEJpeg<jpeg_compress_struct>* theJpeg = new GEJpeg<jpeg_compress_struct>;
-        jpeg_compress_struct& theInfo = theJpeg->mInfo;
-        theInfo.err = jpeg_std_error(&theJpeg->mError);
-        jpeg_create_compress(&theInfo);
-        jpeg_stdio_dest(&theInfo, (FILE*)a);
-        theInfo.image_width = (JDIMENSION)b;
-        theInfo.image_height = (JDIMENSION)c;
-        theInfo.input_components = 3;
-        theInfo.in_color_space = JCS_RGB;
-        jpeg_set_defaults(&theInfo);
-        jpeg_set_quality(&theInfo, 80, TRUE);
-        jpeg_start_compress(&theInfo, TRUE);
-        theJpeg->mBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE,
-                                                        (JDIMENSION)(b * 3 + b % 4), 1);
-        return (intptr_t)theJpeg;
-    }
-    case EeOfSurfOp::JpegEncBuffer: return (intptr_t)theEncoder->mBuffer[0];
-    case EeOfSurfOp::JpegEncRow: jpeg_write_scanlines(&theEncoder->mInfo, theEncoder->mBuffer, 1); return 0;
-    case EeOfSurfOp::JpegEncEnd:
-        jpeg_finish_compress(&theEncoder->mInfo);
-        jpeg_destroy_compress(&theEncoder->mInfo);
-        delete theEncoder;
-        return 0;
     }
     return 0;
 }

@@ -27,8 +27,8 @@ enum class EeOfFileOp : uint32_t {
   Verify,
 };
 
-/// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface, the file,
-/// or a libjpeg handle); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.
+/// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface or the
+/// file); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.
 enum class EeOfSurfOp : uint32_t {
   /// `surface->GetPixelFormat()`.
   Format = 1,
@@ -74,27 +74,6 @@ enum class EeOfSurfOp : uint32_t {
   FileRead,
   /// `file->GetLength(*(unsigned long*)a)`.
   FileLength,
-  /// A new decompressor (`jpeg_std_error`, `jpeg_create_decompress`) -> its handle.
-  JpegDecNew,
-  /// `jpeg_stdio_src(obj, (FILE*)a)`, `jpeg_read_header`, `jpeg_start_decompress`, the row buffer allocated;
-  /// `b` (three `u32`) gets the output width, height and components -> the row's length.
-  JpegDecStart,
-  /// The next scanline while `output_scanline < output_height` and `jpeg_read_scanlines` reads one -> the row, or
-  /// NULL.
-  JpegDecRow,
-  /// `jpeg_finish_decompress(obj)`.
-  JpegDecFinish,
-  /// `jpeg_destroy_decompress(obj)`; the handle freed.
-  JpegDecDestroy,
-  /// A new quality-80 RGB compressor of `b` x `c` on stream `a`, started, with its row buffer of `b * 3 + b % 4`
-  /// bytes -> its handle.
-  JpegEncNew,
-  /// The compressor's row buffer.
-  JpegEncBuffer,
-  /// `jpeg_write_scanlines(obj, buffer, 1)`.
-  JpegEncRow,
-  /// `jpeg_finish_compress(obj)`, `jpeg_destroy_compress(obj)`; the handle freed.
-  JpegEncEnd,
 };
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
@@ -208,7 +187,7 @@ long ee_of_surf_load(EeOfSurfHostFn host,
 long ee_of_surf_save(EeOfSurfHostFn host, void *surface, void *file, uint8_t kind);
 
 /// `GESurface::GetImageFileAttributes(file, type, ...)`: `out` the width, height and depth (written only as the
-/// original wrote them). BMP fails, JPG, JPG2 (its colour image's size, 32 bits), PNG; any other type fails.
+/// original wrote them). BMP fails, JPG, JPG2 (its colour image's size, after the header; 32 bits), PNG; any other type fails.
 ///
 /// # Safety
 /// `host` serves the file; `out` holds three values.

@@ -1,8 +1,8 @@
 //! `GESurface`'s image-file pixel loops (R4.3, tenth part): a locked surface's rows as the 3-byte pixels the BMP
 //! and JPEG writers take (blue, green, red for a BMP; red, green, blue or the alpha three times for a JPEG or a
 //! JPG2's alpha image), a decoded JPEG scanline into the surface (opaque colour, or the alpha merged into the pixels
-//! already there), and a decoded PNG into the surface's top left. GESurface.cpp keeps the files, libjpeg's calls and
-//! the surface's virtuals (the renderer's DX7Surface implements them); each row's conversion is here.
+//! already there), and a decoded PNG into the surface's top left. The files and the codecs are surface_file.rs's, the
+//! surface's virtuals C++'s (the renderer's DX7Surface implements them); each row's conversion is here.
 //!
 //! A 32-bit surface is written as A8R8G8B8 whatever its format (the original's `(a << 24) | (r << 16) | ...`); a
 //! 16-bit one through `GEPackColor` (`pixel::pack`). Pixels are read and written unaligned, in the machine's order.

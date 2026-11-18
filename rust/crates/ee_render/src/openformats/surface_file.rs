@@ -4,9 +4,14 @@
 //!
 //! `GESurface` stays the C++ abstract class the renderer implements (`DX7Surface`); its image members are one-line
 //! forwarders. Every call the original made on another object is one host operation (`EeOfSurfOp`,
-//! `GETexture.cpp`'s `GESurfaceHost`): the surface's virtuals, the file's (an `FSFileSpec`, whose virtuals a memory
-//! file overrides) and libjpeg's (its structures stay C: a decoder or encoder is a handle the host owns). The C
-//! stream's own calls (`fseek`, `ftell`, `_getw`/`_putw`) are made here, on the `FILE*` the file's `FOpen` opened.
+//! `GETexture.cpp`'s `GESurfaceHost`): the surface's virtuals and the file's (an `FSFileSpec`, whose virtuals a memory
+//! file overrides). The C stream's own calls (`fseek`, `ftell`, `fread`, `fwrite`, `_getw`/`_putw`) are made here, on
+//! the `FILE*` the file's `FOpen` opened.
+//!
+//! The JPEGs were libjpeg 6b's until libjpeg left the tree (2026-11-17): they are decoded by ee_base's `jpeg` (libjpeg
+//! 6b's decode in Rust, read through the stream as libjpeg's stdio source read it) and written by the `jpeg-encoder`
+//! crate at quality 80. Its bytes differ from libjpeg's; only this game reads them back. Where libjpeg's error manager
+//! ended the process (a corrupt file, an empty image), the member now fails.
 
 #![allow(clippy::unnecessary_cast)] // `c_ulong` is `u32` on Windows, `u64` on Linux and macOS
 
@@ -14,10 +19,11 @@ use std::ffi::{c_int, c_long, c_ulong, c_void};
 
 use crate::ge::surface_px::{ee_ge_surf_png_store, ee_ge_surf_row_in, ee_ge_surf_row_out, EeGeSurfRow};
 
+use ee_base::jpeg;
 use ee_base::png::png_to_picture;
 
-/// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface, the file,
-/// or a libjpeg handle); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.
+/// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface or the
+/// file); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeOfSurfOp {
@@ -65,27 +71,6 @@ pub enum EeOfSurfOp {
     FileRead,
     /// `file->GetLength(*(unsigned long*)a)`.
     FileLength,
-    /// A new decompressor (`jpeg_std_error`, `jpeg_create_decompress`) -> its handle.
-    JpegDecNew,
-    /// `jpeg_stdio_src(obj, (FILE*)a)`, `jpeg_read_header`, `jpeg_start_decompress`, the row buffer allocated;
-    /// `b` (three `u32`) gets the output width, height and components -> the row's length.
-    JpegDecStart,
-    /// The next scanline while `output_scanline < output_height` and `jpeg_read_scanlines` reads one -> the row, or
-    /// NULL.
-    JpegDecRow,
-    /// `jpeg_finish_decompress(obj)`.
-    JpegDecFinish,
-    /// `jpeg_destroy_decompress(obj)`; the handle freed.
-    JpegDecDestroy,
-    /// A new quality-80 RGB compressor of `b` x `c` on stream `a`, started, with its row buffer of `b * 3 + b % 4`
-    /// bytes -> its handle.
-    JpegEncNew,
-    /// The compressor's row buffer.
-    JpegEncBuffer,
-    /// `jpeg_write_scanlines(obj, buffer, 1)`.
-    JpegEncRow,
-    /// `jpeg_finish_compress(obj)`, `jpeg_destroy_compress(obj)`; the handle freed.
-    JpegEncEnd,
 }
 
 /// The host. `obj` as `EeOfSurfOp` says.
@@ -296,46 +281,89 @@ fn close_at(io: &Io, position: &mut c_long) -> bool {
     was_open
 }
 
-/// A decoded JPEG's scanlines into the locked surface from its first pixel: opaque colour, or (`alpha`) the alpha
-/// merged into the pixels there; the decompressor finished and destroyed.
-fn read_jpeg(io: &Io, format: c_ulong, decoder: *mut c_void, stream: *mut c_void, alpha: bool) {
-    let mut dims = [0u32; 3];
-    let stride = io.call(EeOfSurfOp::JpegDecStart, decoder, stream as isize, dims.as_mut_ptr() as isize, 0) as c_ulong;
+/// The C stream a JPEG is read from, as libjpeg's stdio source (jdatasrc.c) read it: 4 KB `fread`s, a skip read
+/// through (past the end, the decoder's fake end of image follows), so the stream's position after a decode is where
+/// libjpeg left it.
+struct StreamInput(*mut c_void);
+
+impl jpeg::Input for StreamInput {
+    fn read_max(&mut self, out: &mut [u8]) -> (usize, i32) {
+        // SAFETY: an open C stream; `out` holds out.len() bytes
+        (unsafe { fread(out.as_mut_ptr().cast(), 1, out.len(), self.0) }, 0)
+    }
+    fn skip(&mut self, n: u32) -> i32 {
+        let mut scratch = [0u8; 4096];
+        let mut left = n as usize;
+        while left > 0 {
+            let (got, _) = self.read_max(&mut scratch[..left.min(4096)]);
+            if got == 0 {
+                break;
+            }
+            left -= got;
+        }
+        0
+    }
+}
+
+/// A JPEG decoded from the stream's position into the locked surface from its first pixel: opaque colour, or
+/// (`alpha`) the first sample of each pixel as the alpha of the pixel there. A grey JPEG's sample is all three
+/// (libjpeg's rows of one sample were read three to a pixel). False when it does not decode or is larger than the
+/// surface (libjpeg's error manager ended the process; libjpeg's rows ran past a smaller surface).
+fn read_jpeg(io: &Io, format: c_ulong, stream: *mut c_void, alpha: bool) -> bool {
+    let Ok(p) = jpeg::decode(&mut StreamInput(stream)) else {
+        return false;
+    };
+    let width = p.width as usize;
+    if width == 0
+        || p.height == 0
+        || p.width as c_ulong > io.s(EeOfSurfOp::PixelWidth) as c_ulong
+        || p.height as c_ulong > io.s(EeOfSurfOp::PixelHeight) as c_ulong
+    {
+        return false;
+    }
+    let mut row = vec![0u8; width * 3];
     let depth = io.depth();
     let skip = io.skip(depth);
     let mut pixel = io.memory();
-    loop {
-        let row = io.call(EeOfSurfOp::JpegDecRow, decoder, 0, 0, 0) as *const u8;
-        if row.is_null() {
-            break;
+    for source in p.rows.chunks_exact(width * p.comps) {
+        for (x, rgb) in row.chunks_exact_mut(3).enumerate() {
+            if p.comps < 3 {
+                rgb.fill(source[x * p.comps]);
+            } else {
+                rgb.copy_from_slice(&source[x * p.comps..x * p.comps + 3]);
+            }
         }
-        // SAFETY: the locked surface holds the image's rows; `row` holds `stride` bytes
-        pixel = unsafe { ee_ge_surf_row_in(format, depth, row, stride, alpha, pixel, skip) };
+        // SAFETY: the locked surface holds the image's rows (checked above); `row` holds `width * 3` bytes
+        pixel = unsafe { ee_ge_surf_row_in(format, depth, row.as_ptr(), row.len() as c_ulong, alpha, pixel, skip) };
     }
-    io.call(EeOfSurfOp::JpegDecFinish, decoder, 0, 0, 0);
-    io.call(EeOfSurfOp::JpegDecDestroy, decoder, 0, 0, 0);
+    true
 }
 
-/// A new decompressor.
-fn decoder(io: &Io) -> *mut c_void {
-    io.call(EeOfSurfOp::JpegDecNew, std::ptr::null_mut(), 0, 0, 0) as *mut c_void
-}
-
-/// `GetJPGFileAttributes`: the width, height and components times 8 of a JPEG (the file opened and closed).
-fn jpg_attributes(io: &Io, out: &mut [c_ulong; 3]) -> c_long {
+/// `GetJPGFileAttributes`: the width, height and components times 8 of a JPEG (the file opened and closed); of a
+/// JPG2 (`jpg2`), its colour JPEG's after the two-word header.
+fn jpg_attributes(io: &Io, out: &mut [c_ulong; 3], jpg2: bool) -> c_long {
     let result = io.fopen(b"rb\0");
     if result != K_ERROR_OK {
         return result;
     }
-    let decoder = decoder(io);
     let stream = io.stream();
+    let mut ok = true;
     if !stream.is_null() {
-        let mut dims = [0u32; 3];
-        io.call(EeOfSurfOp::JpegDecStart, decoder, stream as isize, dims.as_mut_ptr() as isize, 0);
-        *out = [dims[0] as c_ulong, dims[1] as c_ulong, dims[2].wrapping_mul(8) as c_ulong];
-        io.call(EeOfSurfOp::JpegDecDestroy, decoder, 0, 0, 0);
+        if jpg2 {
+            // SAFETY: the file's open C stream
+            unsafe { fseek(stream, 8, SEEK_SET) };
+        }
+        match jpeg::info(&mut StreamInput(stream)) {
+            Ok((width, height, comps)) => *out = [width as c_ulong, height as c_ulong, (comps * 8) as c_ulong],
+            Err(_) => ok = false,
+        }
     }
-    io.close()
+    let result = io.close();
+    if ok {
+        result
+    } else {
+        K_ERROR_FAILED
+    }
 }
 
 /// After a read through the C stream: a file that was open is reopened for reading at `position`, else closed.
@@ -364,23 +392,25 @@ fn load_jpg(io: &Io) -> c_long {
         return result;
     }
     let stream = io.stream();
+    let mut ok = true;
     if !stream.is_null() {
         // SAFETY: the file's open C stream
         unsafe { fseek(stream, position, SEEK_SET) };
-        let decoder = decoder(io);
         if io.lock() == K_ERROR_OK {
-            read_jpeg(io, format, decoder, stream, false);
+            ok = read_jpeg(io, format, stream, false);
             io.unlock();
-        } else {
-            // the lock failed: still release the decompressor's memory pools
-            io.call(EeOfSurfOp::JpegDecDestroy, decoder, 0, 0, 0);
+        }
+        if was_open {
+            // SAFETY: as above
+            position = unsafe { ftell(stream) };
         }
     }
-    if was_open {
-        // SAFETY: as above
-        position = unsafe { ftell(stream) };
+    let result = reopen_read(io, was_open, position);
+    if ok {
+        result
+    } else {
+        K_ERROR_FAILED
     }
-    reopen_read(io, was_open, position)
 }
 
 /// `LoadJPG2`: the colour JPEG, then the alpha JPEG at the offset of the two-word header, merged into the pixels'
@@ -395,6 +425,7 @@ fn load_jpg2(io: &Io) -> c_long {
         return result;
     }
     let stream = io.stream();
+    let mut ok = true;
     if !stream.is_null() {
         // SAFETY: the file's open C stream
         let alpha_position = unsafe {
@@ -403,19 +434,22 @@ fn load_jpg2(io: &Io) -> c_long {
             end = c_long::from(get_word(stream));
             alpha
         };
-        let first = decoder(io);
         if io.lock() == K_ERROR_OK {
-            read_jpeg(io, format, first, stream, false);
-            // SAFETY: as above
-            unsafe { fseek(stream, c_long::from(alpha_position), SEEK_SET) };
-            let second = decoder(io);
-            read_jpeg(io, format, second, stream, true);
+            ok = read_jpeg(io, format, stream, false);
+            if ok {
+                // SAFETY: as above
+                unsafe { fseek(stream, c_long::from(alpha_position), SEEK_SET) };
+                ok = read_jpeg(io, format, stream, true);
+            }
             io.unlock();
-        } else {
-            io.call(EeOfSurfOp::JpegDecDestroy, first, 0, 0, 0);
         }
     }
-    reopen_read(io, was_open, end)
+    let result = reopen_read(io, was_open, end);
+    if ok {
+        result
+    } else {
+        K_ERROR_FAILED
+    }
 }
 
 /// The JPEG writers' open: a file that was open appended to (its position taken first), else created.
@@ -434,45 +468,44 @@ fn open_for_jpeg(io: &Io, position: &mut c_long) -> (bool, c_long) {
     (true, result)
 }
 
-/// A new started quality-80 compressor on the stream and its row buffer.
-fn encoder(io: &Io, stream: *mut c_void, width: c_ulong, height: c_ulong) -> (*mut c_void, *mut u8) {
-    let encoder =
-        io.call(EeOfSurfOp::JpegEncNew, std::ptr::null_mut(), stream as isize, width as isize, height as isize)
-            as *mut c_void;
-    let buffer = io.call(EeOfSurfOp::JpegEncBuffer, encoder, 0, 0, 0) as *mut u8;
-    (encoder, buffer)
-}
-
-/// One JPEG's rows: the locked surface's (`kind`: colour or alpha), or blank rows when the lock failed (libjpeg
-/// aborts on an image with missing rows).
-#[allow(clippy::too_many_arguments)]
-fn jpeg_rows(
-    io: &Io,
-    encoder: *mut c_void,
-    buffer: *mut u8,
-    format: c_ulong,
-    width: c_ulong,
-    height: c_ulong,
-    locked: bool,
-    kind: EeGeSurfRow,
-) {
-    if locked {
+/// One JPEG's pixels, three bytes each: the locked surface's rows (`kind`: colour, or the alpha in all three), or
+/// black rows when the lock failed.
+fn jpeg_pixels(io: &Io, format: c_ulong, width: c_ulong, height: c_ulong, locked: bool, kind: EeGeSurfRow) -> Vec<u8> {
+    let w3 = width as usize * 3;
+    let mut data = vec![0u8; w3 * height as usize];
+    if locked && w3 != 0 {
         let bytes_per_row = io.s(EeOfSurfOp::BytesPerRow) as c_ulong;
         let depth = io.depth();
-        for y in 0..height {
-            let offset = y.wrapping_mul(bytes_per_row / (depth / 8)).wrapping_mul(depth / 8);
+        let mut buffer = vec![0u8; row_size(width) as usize];
+        for (y, out) in data.chunks_exact_mut(w3).enumerate() {
+            let offset = (y as c_ulong).wrapping_mul(bytes_per_row / (depth / 8)).wrapping_mul(depth / 8);
             let row = io.memory().wrapping_add(offset as usize);
-            // SAFETY: the locked surface holds the row; the buffer holds `width * 3` bytes
-            unsafe { ee_ge_surf_row_out(format, depth, row, width, kind, buffer) };
-            io.call(EeOfSurfOp::JpegEncRow, encoder, 0, 0, 0);
-        }
-    } else {
-        // SAFETY: the buffer holds `row_size(width)` bytes
-        unsafe { std::ptr::write_bytes(buffer, 0, row_size(width) as usize) };
-        for _ in 0..height {
-            io.call(EeOfSurfOp::JpegEncRow, encoder, 0, 0, 0);
+            // SAFETY: the locked surface holds the row; the buffer holds `row_size(width)` bytes
+            unsafe { ee_ge_surf_row_out(format, depth, row, width, kind, buffer.as_mut_ptr()) };
+            out.copy_from_slice(&buffer[..w3]);
         }
     }
+    data
+}
+
+/// The pixels as a quality-80 JPEG (the `jpeg-encoder` crate) written to the stream, of their first samples alone
+/// (`grey`: the alpha, a greyscale JPEG where libjpeg wrote it three times as colour). False when they cannot be (an
+/// empty image or a side over 65,535: libjpeg's error manager ended the process) or the write falls short.
+fn write_jpeg(stream: *mut c_void, data: &[u8], width: c_ulong, height: c_ulong, grey: bool) -> bool {
+    let (Ok(w), Ok(h)) = (u16::try_from(width), u16::try_from(height)) else {
+        return false;
+    };
+    let (data, kind) = if grey {
+        (data.iter().step_by(3).copied().collect(), jpeg_encoder::ColorType::Luma)
+    } else {
+        (data.to_vec(), jpeg_encoder::ColorType::Rgb)
+    };
+    let mut bytes: Vec<u8> = Vec::new();
+    if jpeg_encoder::Encoder::new(&mut bytes, 80).encode(&data, w, h, kind).is_err() {
+        return false;
+    }
+    // SAFETY: the file's open C stream; `bytes` holds bytes.len() bytes
+    unsafe { fwrite(bytes.as_ptr().cast(), 1, bytes.len(), stream) == bytes.len() }
 }
 
 /// `SaveAsJPG`: a quality-80 JPEG, written at the position of a file that was open (reopened for appending after).
@@ -486,31 +519,36 @@ fn save_jpg(io: &Io) -> c_long {
         return result;
     }
     let stream = io.stream();
+    let mut ok = true;
     if !stream.is_null() {
         // SAFETY: the file's open C stream
         unsafe { fseek(stream, position, SEEK_SET) };
-        let (jpeg, buffer) = encoder(io, stream, width, height);
-        if io.lock() == K_ERROR_OK {
-            jpeg_rows(io, jpeg, buffer, format, width, height, true, EeGeSurfRow::Rgb);
+        let locked = io.lock() == K_ERROR_OK;
+        let data = jpeg_pixels(io, format, width, height, locked, EeGeSurfRow::Rgb);
+        if locked {
             io.unlock();
-        } else {
-            jpeg_rows(io, jpeg, buffer, format, width, height, false, EeGeSurfRow::Rgb);
         }
-        io.call(EeOfSurfOp::JpegEncEnd, jpeg, 0, 0, 0);
+        ok = write_jpeg(stream, &data, width, height, false);
     }
-    if !was_open {
-        return io.close();
-    }
-    // SAFETY: as above
-    let position = unsafe { ftell(stream) };
-    let mut result = io.close();
-    if result == K_ERROR_OK {
-        result = io.open(K_FILE_ACCESS_APPEND);
+    let result = if !was_open || stream.is_null() {
+        io.close()
+    } else {
+        // SAFETY: as above
+        let position = unsafe { ftell(stream) };
+        let mut result = io.close();
         if result == K_ERROR_OK {
-            result = io.set_position(position, false);
+            result = io.open(K_FILE_ACCESS_APPEND);
+            if result == K_ERROR_OK {
+                result = io.set_position(position, false);
+            }
         }
+        result
+    };
+    if ok {
+        result
+    } else {
+        K_ERROR_FAILED
     }
-    result
 }
 
 /// `SaveAsJPG2`: placeholder offsets, the colour JPEG and the alpha JPEG (the surface locked over both), then the
@@ -527,6 +565,7 @@ fn save_jpg2(io: &Io) -> c_long {
         return result;
     }
     let stream = io.stream();
+    let mut ok = true;
     if !stream.is_null() {
         // SAFETY: the file's open C stream
         unsafe {
@@ -534,18 +573,16 @@ fn save_jpg2(io: &Io) -> c_long {
             put_word(alpha as c_int, stream);
             put_word(end as c_int, stream);
         }
-        let (jpeg, buffer) = encoder(io, stream, width, height);
         let locked = io.lock() == K_ERROR_OK;
-        jpeg_rows(io, jpeg, buffer, format, width, height, locked, EeGeSurfRow::Rgb);
-        io.call(EeOfSurfOp::JpegEncEnd, jpeg, 0, 0, 0);
-        // SAFETY: as above
-        alpha = unsafe { ftell(stream) };
-        let (jpeg, buffer) = encoder(io, stream, width, height);
-        jpeg_rows(io, jpeg, buffer, format, width, height, locked, EeGeSurfRow::Alpha);
+        let colour = jpeg_pixels(io, format, width, height, locked, EeGeSurfRow::Rgb);
+        let alphas = jpeg_pixels(io, format, width, height, locked, EeGeSurfRow::Alpha);
         if locked {
             io.unlock();
         }
-        io.call(EeOfSurfOp::JpegEncEnd, jpeg, 0, 0, 0);
+        ok = write_jpeg(stream, &colour, width, height, false);
+        // SAFETY: as above
+        alpha = unsafe { ftell(stream) };
+        ok = write_jpeg(stream, &alphas, width, height, true) && ok;
         // SAFETY: as above
         end = unsafe { ftell(stream) };
     }
@@ -568,7 +605,11 @@ fn save_jpg2(io: &Io) -> c_long {
             }
         }
     }
-    result
+    if ok {
+        result
+    } else {
+        K_ERROR_FAILED
+    }
 }
 
 /// A PNG file's bytes, read whole from its start (an open file must be open for reading and stays open; a closed one
@@ -695,7 +736,7 @@ pub unsafe extern "C" fn ee_of_surf_save(
 }
 
 /// `GESurface::GetImageFileAttributes(file, type, ...)`: `out` the width, height and depth (written only as the
-/// original wrote them). BMP fails, JPG, JPG2 (its colour image's size, 32 bits), PNG; any other type fails.
+/// original wrote them). BMP fails, JPG, JPG2 (its colour image's size, after the header; 32 bits), PNG; any other type fails.
 ///
 /// # Safety
 /// `host` serves the file; `out` holds three values.
@@ -710,9 +751,9 @@ pub unsafe extern "C" fn ee_of_surf_attributes(
     // SAFETY: the caller's contract
     let out = unsafe { &mut *out };
     match kind {
-        K_IMAGE_FILE_JPG => jpg_attributes(&io, out),
+        K_IMAGE_FILE_JPG => jpg_attributes(&io, out, false),
         K_IMAGE_FILE_JPG2 => {
-            let result = jpg_attributes(&io, out);
+            let result = jpg_attributes(&io, out, true);
             out[2] = 32;
             result
         }

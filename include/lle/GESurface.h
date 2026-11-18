@@ -100,7 +100,7 @@ protected:
 enum GEImageFileType {
     kImageFileTGA = 0,  // the original's Targa: no longer read or written (RUST_PLAN D9)
     kImageFileBMP = 1,  // saved (24-bit, bottom up); never loaded
-    kImageFileJPG = 2,  // libjpeg, quality 80
+    kImageFileJPG = 2,  // quality 80 (ee_base's jpeg decodes, the jpeg-encoder crate writes: openformats surface_file.rs)
     kImageFileJPG2 = 3,  // two JPEGs (colour, alpha) behind a two-word offset header
     kImageFilePNG = 4,  // port: loaded only
 };

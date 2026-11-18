@@ -49,7 +49,6 @@ namespace WONAPI {
 #include "rust/won_gui/imgdec.h"
 #include "rust/won_gui/imgfilter.h"
 #include "rust/won_gui/inputobj.h"
-#include "rust/won_gui/jpeg.h"
 #include "rust/won_gui/labelobj.h"
 #include "rust/won_gui/layoutobj.h"
 #include "rust/won_gui/listobj.h"
