@@ -32,6 +32,8 @@ error classes) and prints the units that compile. --dialect ms keeps the Microso
 build uses (-fms-extensions -fms-compatibility -fdelayed-template-parsing); gnu drops them.
 
 Outputs go to build/xbuild/<target>/ (env EE_XBUILD_OUT overrides). Nothing here touches tools/build.py's outputs.
+wontest runs each program under a memory cap (EE_TEST_MEM_MB, default 2048; 0 turns it off): on Windows a job
+object, elsewhere RLIMIT_AS at twice the cap. A program past it is killed and fails.
 """
 import argparse
 import concurrent.futures
@@ -242,19 +244,130 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
-    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
+def job_info_type():
+    """JOBOBJECT_EXTENDED_LIMIT_INFORMATION (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Basic(ctypes.Structure):
+        _fields_ = [("PerProcessUserTimeLimit", ctypes.c_longlong), ("PerJobUserTimeLimit", ctypes.c_longlong),
+                    ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                    ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                    ("SchedulingClass", wintypes.DWORD)]
+
+    class Extended(ctypes.Structure):
+        _fields_ = [("Basic", Basic), ("Io", ctypes.c_ulonglong * 6), ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+    return Extended
+
+
+def memory_job(limit):
+    """Windows: a job object that kills its processes when they commit more than `limit` bytes together, or when
+    this process ends (its handle closes); None elsewhere or if it cannot be made."""
+    if not IS_WINDOWS:
+        return None
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateJobObjectW.restype = wintypes.HANDLE
+    job = k32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    info = job_info_type()()
+    info.Basic.LimitFlags = 0x2000 | 0x200   # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_JOB_MEMORY
+    info.JobMemoryLimit = limit
+    if not k32.SetInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info)):
+        k32.CloseHandle(wintypes.HANDLE(job))
+        return None
+    return job
+
+
+def job_peak(job):
+    """The job's peak committed memory in bytes (0 if unknown)."""
+    import ctypes
+    from ctypes import wintypes
+    info = job_info_type()()
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not k32.QueryInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info), None):
+        return 0
+    return info.PeakJobMemoryUsed
+
+
+# a test program's memory cap (MB; env EE_TEST_MEM_MB overrides, 0 = none): above it the program is killed and fails,
+# so a leaking test can never exhaust the machine (won_cfgtab_test once grew 70 MB/s past 10 GB)
+TEST_MEM_MB = int(os.environ.get("EE_TEST_MEM_MB", "2048"))
+
+
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None, mem_mb=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure.
+    With `mem_mb` (default TEST_MEM_MB for the WON drivers' callers), a program that commits more is killed and fails
+    (a Windows job object; elsewhere RLIMIT_AS, at twice the cap: address space, not commit)."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
+    limit = (mem_mb or 0) * 1024 * 1024
+    preexec = None
+    if limit and not IS_WINDOWS:
+        def preexec():
+            import resource
+            try:
+                resource.setrlimit(resource.RLIMIT_AS, (2 * limit, 2 * limit))
+            except (ValueError, OSError):
+                pass
+    job = memory_job(limit) if limit else None
+    flags = 0x4 if job else 0   # CREATE_SUSPENDED: in the job before its first instruction
+    proc = subprocess.Popen([str(exe), *args], env=env, cwd=cwd, creationflags=flags, preexec_fn=preexec)
+    if job:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.AssignProcessToJobObject(wintypes.HANDLE(job), wintypes.HANDLE(int(proc._handle)))
+        resume_process(proc.pid)
     try:
-        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+        code = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
         return 1
-    print(f"{exe.name}: exit {r.returncode}")
-    return r.returncode
+    finally:
+        if job:
+            peak = job_peak(job)
+            ctypes.WinDLL("kernel32").CloseHandle(wintypes.HANDLE(job))
+    if job and peak >= limit - (64 << 20):
+        print(f"{exe.name}: FAILED, over its memory cap ({mem_mb} MB; peak {peak >> 20} MB; killed)", flush=True)
+        return code or 1
+    print(f"{exe.name}: exit {code}" + (f" (peak {peak >> 20} MB)" if job else ""))
+    return code
+
+
+def resume_process(pid):
+    """Resumes every thread of a process started suspended (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ThreadID", wintypes.DWORD),
+                    ("th32OwnerProcessID", wintypes.DWORD), ("tpBasePri", wintypes.LONG),
+                    ("tpDeltaPri", wintypes.LONG), ("dwFlags", wintypes.DWORD)]
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.OpenThread.restype = wintypes.HANDLE
+    snap = k32.CreateToolhelp32Snapshot(0x4, 0)   # TH32CS_SNAPTHREAD
+    e = Entry()
+    e.dwSize = ctypes.sizeof(Entry)
+    ok = k32.Thread32First(wintypes.HANDLE(snap), ctypes.byref(e))
+    while ok:
+        if e.th32OwnerProcessID == pid:
+            h = k32.OpenThread(0x2, False, e.th32ThreadID)   # THREAD_SUSPEND_RESUME
+            if h:
+                k32.ResumeThread(wintypes.HANDLE(h))
+                k32.CloseHandle(wintypes.HANDLE(h))
+        ok = k32.Thread32Next(wintypes.HANDLE(snap), ctypes.byref(e))
+    k32.CloseHandle(wintypes.HANDLE(snap))
 
 
 # ---- test / fonttest
@@ -929,7 +1042,7 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT, mem_mb=TEST_MEM_MB)
             if code:
                 failed.append(name)
             result |= code
