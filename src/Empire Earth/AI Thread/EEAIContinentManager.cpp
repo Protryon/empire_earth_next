@@ -134,7 +134,7 @@ typedef EEAIAStarGraphMachine<EEAIAStarGraphTerrainStorage, EEAIAStarGraphContin
 // 0x27604 (COMDAT; declared in ee/EEAIContinentManager.h)
 inline void EEAIContinentManager::SetPathSector(EEAIPathSector* inSector)
 {
-    this->SetTable(EeAStarCmTable::PathSectors, inSector->mID, inSector);
+    this->SetTable(EeAStarCmTable::PathSectors, inSector->GetID(), inSector);
 }
 
 // 0x26fed (COMDAT; declared in ee/EEAIContinentManager.h)
@@ -348,7 +348,7 @@ void EEAIContinentManager::AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles)
         EEAIPathSector* theSector = this->GetPathSector(ioTiles[i]);
         if (!theSector)
             continue;
-        ee_astar_cm_add_sector_tile(&this->mRecord, theSector->mID, U2DHullPointOf(ioTiles[i]));
+        ee_astar_cm_add_sector_tile(&this->mRecord, theSector->GetID(), U2DHullPointOf(ioTiles[i]));
     }
 }
 
@@ -466,26 +466,22 @@ void EEAIContinentManager::LinkSubSectors(EEAIPathSubSector* inSubSector, const 
         if (!inAdd) {
             if (inSubSector->HasLinks(*inID)) {
                 inSubSector->RemoveLinks(*inID);
-                theOther->RemoveLinks(inSubSector->mID);
+                theOther->RemoveLinks(inSubSector->GetID());
             }
         } else {
-            if (!inSubSector->IsNeighbor(theOther)) {
-                unsigned short theID = *inID;
-                inSubSector->mLinks.insert(std::make_pair(theID, inLink));
-            }
-            if (!theOther->IsNeighbor(inSubSector)) {
-                unsigned short theID = inSubSector->mID;
-                theOther->mLinks.insert(std::make_pair(theID, inLink));
-            }
+            if (!inSubSector->IsNeighbor(theOther))
+                inSubSector->AddLink(*inID, inLink);
+            if (!theOther->IsNeighbor(inSubSector))
+                theOther->AddLink(inSubSector->GetID(), inLink);
         }
         EEAIPathSubSector* theNeighbor;
         if (!inSubSector->IsNeighbor(theOther)) {
             theNeighbor = theOther;
-            inSubSector->mNeighbors.push_back(theNeighbor);
+            inSubSector->AddNeighbor(theNeighbor);
         }
         if (!theOther->IsNeighbor(inSubSector)) {
             theNeighbor = inSubSector;
-            theOther->mNeighbors.push_back(theNeighbor);
+            theOther->AddNeighbor(theNeighbor);
         }
     }
 }
@@ -799,9 +795,9 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
     this->CreatePathSectors(inMap, &theMachine);
     for (long i = this->GetPathSubSectors().size() - 1; i >= 0; i--) {
         EEAIPathSubSector* theSubSector = this->GetPathSubSectorsAt(i);
-        EEAIContinent* theContinent = theSubSector ? this->GetContinentsAt(theSubSector->mContinentID) : NULL;
+        EEAIContinent* theContinent = theSubSector ? this->GetContinentsAt(theSubSector->GetContinentID()) : NULL;
         if (theContinent)
-            theSubSector->mSector->AddNeighbor(theContinent);
+            theSubSector->GetSector()->AddNeighbor(theContinent);
     }
 }
 
@@ -823,7 +819,7 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
     for (long x = 0; x < this->mRecord.sectors_x; x++) {
         for (long y = 0; y < this->mRecord.sectors_y; y++) {
             EEAIPathSector* thePathSector = new EEAIPathSector;
-            thePathSector->mID = theID;
+            thePathSector->SetID(theID);
             theID++;
             // the sector's rectangle, clipped to the map (Rust: ee_astar sectors.rs sector_rect, GetSectorEnd 0x263cb
             // included)
@@ -833,9 +829,8 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
             theBounds.mLeft = theRect.left;
             theBounds.mBottom = theRect.bottom;
             theBounds.mRight = theRect.right;
-            thePathSector->mCenter.mX = theRect.center_x;
-            thePathSector->mCenter.mY = theRect.center_y;
-            thePathSector->mBounds = theBounds;
+            thePathSector->SetCenter(U2DPoint<long>(theRect.center_x, theRect.center_y));
+            thePathSector->SetBounds(theBounds);
             this->SetPathSector(thePathSector);
         }
     }
@@ -849,7 +844,7 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
             theTile.mX = i;
             theTile.mY = j;
             EEAIPathSector* thePathSector = this->GetPathSector(theTile);
-            theMachine.mGoal.mSectorBounds = thePathSector->mBounds;
+            theMachine.mGoal.mSectorBounds = thePathSector->GetBounds();
             theMachine.mGoal.mSector = thePathSector;
             theMachine.mGoal.mStartTile.mX = i;
             theMachine.mGoal.mStartTile.mY = j;
@@ -866,13 +861,13 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
         EEAIPathSubSector* theSubSector = theIt->second;
         theSubSector->UpdateLocation();
         this->SetTable(EeAStarCmTable::PathSubSectors, theIt->first, theSubSector);
-        EEAIPathArea* theArea = this->GetPathArea(theSubSector->mPathAreaID);
+        EEAIPathArea* theArea = this->GetPathArea(theSubSector->GetPathAreaID());
         if (theArea) {
             EETileCoordinate theTile;
-            theTile = theSubSector->mLocation;
+            theTile = theSubSector->GetLocation();
             EEAIPathSector* thePathSector = this->GetPathSector(theTile);
             if (thePathSector) {
-                theArea->AddSectorID(thePathSector->mID);
+                theArea->AddSectorID(thePathSector->GetID());
                 thePathSector->AddPathAreaID(theArea->GetID());
             }
         }
@@ -1003,7 +998,7 @@ void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector
         if (!this->mRecord.sub_sector_ids)
             continue;
         for (long j = theTiles.size() - 1; j >= 0; j--) {
-            unsigned short theID = theSubSector->mID;
+            unsigned short theID = theSubSector->GetID();
             this->mRecord.sub_sector_ids[theTiles[j].mX * this->mRecord.width + (theTiles.begin() + j)->mY] = theID;
         }
     }
@@ -1012,16 +1007,16 @@ void EEAIContinentManager::RelinkSubSectors(std::map<unsigned short, std::vector
     for (std::map<unsigned short, std::vector<EETileCoordinate> >::iterator theIt = inSectors.begin(); theIt != inSectors.end(); ++theIt) {
         EEAIPathSector* theSector = this->GetPathSectorByID(theIt->first);
         long theSize = gWorld.mMap->mSize;
-        long theEndX = theSector->mBounds.mRight + 2;
+        long theEndX = theSector->GetBounds().mRight + 2;
         if (theSize <= theEndX)
             theEndX = theSize;
-        long theEndY = theSector->mBounds.mBottom + 2;
+        long theEndY = theSector->GetBounds().mBottom + 2;
         if (theSize <= theEndY)
             theEndY = theSize;
-        long x = theSector->mBounds.mLeft - 1;
+        long x = theSector->GetBounds().mLeft - 1;
         if (x < 1)
             x = 0;
-        long y = theSector->mBounds.mTop - 1;
+        long y = theSector->GetBounds().mTop - 1;
         if (y < 1)
             y = 0;
         this->ApplySubSectorLinks(ee_astar_sub_sector_links((int32_t)x, (int32_t)theEndX, (int32_t)y, (int32_t)theEndY, &theCallbacks));
@@ -1379,9 +1374,9 @@ EEAIContinent* EEAIContinentManager::FindContinent(long inX, long inY) const
     theTile.mY = inY;
     EEAIPathSector* theSector = this->GetPathSector(theTile);
     if (theSector) {
-        for (long i = theSector->mNeighbors.size() - 1; i >= 0; i--) {
-            if (theSector->mNeighbors[i] && theSector->mNeighbors[i]->Contains(thePoint)) {
-                theResult = theSector->mNeighbors[i];
+        for (long i = theSector->GetNeighbors().size() - 1; i >= 0; i--) {
+            if (theSector->GetNeighbors()[i] && theSector->GetNeighbors()[i]->Contains(thePoint)) {
+                theResult = theSector->GetNeighbors()[i];
                 break;
             }
         }
@@ -1543,8 +1538,8 @@ EEAIPathArea* EEAIContinentManager::GetPathAreaAt(const EETileLocation& inTile)
     EEAIPathArea* theResult = NULL;
     if (gWorld.mMap && gWorld.mMap->GetTileAtLocation(inTile)) {
         EEAIPathSubSector* theSubSector = this->GetPathSubSectorAt(inTile.GetX(), inTile.GetY());
-        if (theSubSector && !theSubSector->mIsStale) {
-            theResult = this->GetPathArea(theSubSector->mPathAreaID);
+        if (theSubSector && !theSubSector->IsStale()) {
+            theResult = this->GetPathArea(theSubSector->GetPathAreaID());
             if (theResult)
                 return theResult;
         }
@@ -1620,7 +1615,7 @@ EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(EEUnit* inUnit)
     EEAIPathSubSector* theQ = [&]() -> EEAIPathSubSector* {
     return this->GetPathSubSectorAt(inUnit->GetTileX(), inUnit->GetTileY());
     }();
-    q.I(theQ != NULL ? (long)theQ->mID : -1);
+    q.I(theQ != NULL ? (long)theQ->GetID() : -1);
     return theQ;
 }
 
@@ -1628,17 +1623,17 @@ EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(EEUnit* inUnit)
 EEAIPathSubSector* EEAIContinentManager::FindPathSubSector(long inX, long inY)
 {
     U2DPoint<long> thePoint(inX, inY);
-    std::map<unsigned short, EEAIPathSubSector*>::iterator theIt;
     EETileCoordinate theTile;
     theTile.mX = inX;
     theTile.mY = inY;
     EEAIPathSubSector* theResult = NULL;
     EEAIPathSector* theSector = this->GetPathSector(theTile);
     if (theSector) {
-        for (theIt = theSector->mSubSectors.begin(); theIt != theSector->mSubSectors.end(); ++theIt) {
-            EEAIPathSubSector* theSubSector = theIt->second;
+        EEAIListView<EeAStarSectorSub> theSubSectors = theSector->GetSubSectors();
+        for (const EeAStarSectorSub* theIt = theSubSectors.begin(); theIt != theSubSectors.end(); ++theIt) {
+            EEAIPathSubSector* theSubSector = (EEAIPathSubSector*)(uintptr_t)theIt->sub;
             if (theSubSector->mTiles.Contains(thePoint)) {
-                theResult = theIt->second;
+                theResult = theSubSector;
                 break;
             }
         }
@@ -1662,7 +1657,7 @@ unsigned short EEAIContinentManager::FindPathSubSectorID(long inX, long inY)
 {
     EEAIPathSubSector* theSubSector = this->FindPathSubSector(inX, inY);
     unsigned short theID;
-    theID = theSubSector ? theSubSector->mID : 0;
+    theID = theSubSector ? theSubSector->GetID() : 0;
     return theID;
 }
 
@@ -1848,7 +1843,7 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
     unsigned short theNewID = 0;
     if (theArea && theArea->GetKind() != theKind) {
         if (theSubSector)
-            theSubSector->mIsStale = true;
+            theSubSector->SetStale(true);
         if (theTile) {
             // the choice (Rust: ee_astar repair.rs over the eight neighbours): the largest same-kind area to join and
             // the others to merge into it (std::sort/std::unique by id, walked from the highest id down), the one
@@ -1946,8 +1941,8 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
                 }
             }
             for (j = this->GetPathSubSectors().size() - 1; j >= 0; j--) {
-                if (this->GetPathSubSectors()[j] && this->GetPathSubSectors()[j]->mPathAreaID == theOld->GetID())
-                    this->GetPathSubSectorsAt(j)->mPathAreaID = theNewID;
+                if (this->GetPathSubSectors()[j] && this->GetPathSubSectors()[j]->GetPathAreaID() == theOld->GetID())
+                    this->GetPathSubSectorsAt(j)->SetPathAreaID(theNewID);
             }
             this->RemoveArea(theOld);
             this->SetTable(EeAStarCmTable::PathAreas, theOld->GetID(), NULL);
@@ -1966,8 +1961,8 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
                     theSector->RemovePathAreaID(theArea->GetID());
             }
             for (j = this->GetPathSubSectors().size() - 1; j >= 0; j--) {
-                if (this->GetPathSubSectors()[j] && this->GetPathSubSectors()[j]->mPathAreaID == theArea->GetID())
-                    this->GetPathSubSectorsAt(j)->mPathAreaID = theNewID;
+                if (this->GetPathSubSectors()[j] && this->GetPathSubSectors()[j]->GetPathAreaID() == theArea->GetID())
+                    this->GetPathSubSectorsAt(j)->SetPathAreaID(theNewID);
             }
             this->RemoveArea(theArea);
             this->SetTable(EeAStarCmTable::PathAreas, theArea->GetID(), NULL);
@@ -1980,7 +1975,7 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
             theSector = this->GetPathSector(inTile);
             if (theSector) {
                 theSector->AddPathAreaID(theNewID);
-                theArea->AddSectorID(theSector->mID);
+                theArea->AddSectorID(theSector->GetID());
             }
             std::sort(theSectorIDs.begin(), theSectorIDs.end());
             std::vector<unsigned short>::iterator theEnd = std::unique(theSectorIDs.begin(), theSectorIDs.end());
@@ -1990,7 +1985,7 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
                 theSector = this->GetPathSectorsAt(theSectorIDs[j]);
                 if (theSector) {
                     theSector->AddPathAreaID(theNewID);
-                    theArea->AddSectorID(theSector->mID);
+                    theArea->AddSectorID(theSector->GetID());
                 }
             }
         }
@@ -2041,8 +2036,8 @@ bool EEAIContinentManager::Rebuild()
             theSector = this->GetPathSectors()[theIt->first];
             this->RemoveSubSectors(theSector);
             this->RemoveSectorTiles(theSector);
-            theBounds.Extend(theSector->mBounds.GetTopLeft());
-            theBounds.Extend(theSector->mBounds.GetBottomRight());
+            theBounds.Extend(theSector->GetBounds().GetTopLeft());
+            theBounds.Extend(theSector->GetBounds().GetBottomRight());
         }
     }
     theMachine.mGoal.mTileBounds = theBounds;
@@ -2050,15 +2045,15 @@ bool EEAIContinentManager::Rebuild()
     theStorage->Init(theMap->mSize, theMap->mSize);
     for (theIt = theTiles.begin(); theIt != theTiles.end(); ++theIt) {
         theSector = this->GetPathSectors()[theIt->first];
-        for (x = theSector->mBounds.mRight; x >= theSector->mBounds.mLeft; x--) {
-            for (y = theSector->mBounds.mBottom; y >= theSector->mBounds.mTop; y--) {
+        for (x = theSector->GetBounds().mRight; x >= theSector->GetBounds().mLeft; x--) {
+            for (y = theSector->GetBounds().mBottom; y >= theSector->GetBounds().mTop; y--) {
                 if (theMachine.mSubSectorIDs[theMachine.mHeight * x + y] != 0 || !theMap->GetTile(x, y))
                     continue;
                 theTile.mX = x;
                 theTile.mY = y;
                 theSector = this->GetPathSector(theTile);
                 theMachine.mGoal.mSector = theSector;
-                theMachine.mGoal.mSectorBounds = theSector->mBounds;
+                theMachine.mGoal.mSectorBounds = theSector->GetBounds();
                 theMachine.mGoal.mStartTile.mX = x;
                 theMachine.mGoal.mStartTile.mY = y;
                 theMachine.mGoal.mGoalTile.mX = theMap->mSize;
@@ -2076,7 +2071,7 @@ bool EEAIContinentManager::Rebuild()
         theSubSector = theNew->second;
         theSubSector->UpdateLocation();
         this->SetTable(EeAStarCmTable::PathSubSectors, theNew->first, theSubSector);
-        theSubSector->mIsStale = true;
+        theSubSector->SetStale(true);
         theSubSectors.push_back(theSubSector);
     }
     this->RelinkSubSectors(theTiles, theSubSectors);
@@ -2084,19 +2079,19 @@ bool EEAIContinentManager::Rebuild()
     for (i = theMachine.mGoal.mStaleTiles.size() - 1; i >= 0; i--)
         this->RepairPathArea(theMachine.mGoal.mStaleTiles[i]);
     for (i = theSubSectors.size() - 1; i >= 0; i--) {
-        (*(theSubSectors.begin() + i))->mIsStale = true;
-        theArea = this->GetPathAreaAt((*(theSubSectors.begin() + i))->mLocation);
+        (*(theSubSectors.begin() + i))->SetStale(true);
+        theArea = this->GetPathAreaAt((*(theSubSectors.begin() + i))->GetLocation());
         if (theArea) {
-            theTile.mX = theSubSectors[i]->mLocation.GetX();
-            theTile.mY = (*(theSubSectors.begin() + i))->mLocation.mY;
+            theTile.mX = theSubSectors[i]->GetLocation().GetX();
+            theTile.mY = (*(theSubSectors.begin() + i))->GetLocation().mY;
             theSector = this->GetPathSector(theTile);
             if (theSector) {
                 theSector->AddPathAreaID(theArea->GetID());
-                theArea->AddSectorID(theSector->mID);
+                theArea->AddSectorID(theSector->GetID());
             }
-            theSubSectors[i]->mPathAreaID = theArea->GetID();
+            theSubSectors[i]->SetPathAreaID(theArea->GetID());
         }
-        theSubSectors[i]->mIsStale = false;
+        theSubSectors[i]->SetStale(false);
     }
     this->mRecord.state = 0;
     this->ClearChecksum();
@@ -2209,26 +2204,25 @@ void EEAIContinentManager::PruneChokePoints()
 // Removes inSector's sub-sectors: unlinks their neighbours, clears them from the list and id grid, frees their ids
 void EEAIContinentManager::RemoveSubSectors(EEAIPathSector* inSector)
 {
-    std::map<unsigned short, EEAIPathSubSector*>::iterator theIt;
     EEAIPathSubSector* theSubSector;
     long i;
     long j;
     unsigned short theID;
     std::vector<U2DPoint<long> > theTiles;
     std::vector<unsigned short> theIDs;
-    theIDs.reserve(inSector->mSubSectors.size());
-    for (theIt = inSector->mSubSectors.begin();
-         theIt != inSector->mSubSectors.end(); ++theIt) {
-        theSubSector = theIt->second;
-        for (i = theSubSector->mNeighbors.size() - 1; i >= 0; i--)
-            (*(theSubSector->mNeighbors.begin() + i))->RemoveNeighbor(theSubSector);
-        this->SetTable(EeAStarCmTable::PathSubSectors, theSubSector->mID, NULL);
+    EEAIListView<EeAStarSectorSub> theSubSectors = inSector->GetSubSectors();
+    theIDs.reserve(theSubSectors.size());
+    for (const EeAStarSectorSub* theIt = theSubSectors.begin(); theIt != theSubSectors.end(); ++theIt) {
+        theSubSector = (EEAIPathSubSector*)(uintptr_t)theIt->sub;
+        for (i = theSubSector->GetNeighbors().size() - 1; i >= 0; i--)
+            theSubSector->GetNeighbors()[i]->RemoveNeighbor(theSubSector);
+        this->SetTable(EeAStarCmTable::PathSubSectors, theSubSector->GetID(), NULL);
         theSubSector->mTiles.BuildPointList(theTiles, 1);
         if (this->mRecord.sub_sector_ids) {
             for (j = theTiles.size() - 1; j >= 0; j--)
                 this->mRecord.sub_sector_ids[this->mRecord.width * theTiles[j].mX + (theTiles.begin() + j)->mY] = 0;
         }
-        theID = theSubSector->mID;
+        theID = theSubSector->GetID();
         theIDs.push_back(theID);
     }
     inSector->DeleteSubSectors();
@@ -2246,7 +2240,7 @@ bool EEAIContinentManager::RemoveArea(EEAIArea* inArea)
 // Drops inSector's pending rebuild tiles
 void EEAIContinentManager::RemoveSectorTiles(EEAIPathSector* inSector)
 {
-    ee_astar_cm_remove_sector_tiles(&this->mRecord, inSector->mID);
+    ee_astar_cm_remove_sector_tiles(&this->mRecord, inSector->GetID());
 }
 
 // NEAR: the original calls RTSMap::GetTile out of line for the first five tiles (inline budget)

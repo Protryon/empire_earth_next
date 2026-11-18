@@ -535,9 +535,9 @@ bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<
         EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theLast.mX, theLast.mY);
         if (theSector != NULL) {
             theResult = theSector == theToSector;
-            *outTile = theToSector->mLocation;
+            *outTile = theToSector->GetLocation();
             if (!theResult) {
-                long theKind = theToSector->mKind;
+                long theKind = theToSector->GetKind();
                 if (theKind == kAITileWall || theKind == kAITileGate || theKind == kAITileUnitObstacle) {
                     theResult = theSector->IsNeighbor(theToSector);
                     if (theResult)
@@ -545,7 +545,7 @@ bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<
                 }
                 if (!theResult && !inUnit->GetClass()->mIsMelee) {
                     float theRange = UMSquare(inUnit->mStats->mRange);
-                    theResult = theTo.DistanceToSquaredF(theSector->mLocation) <= theRange;
+                    theResult = theTo.DistanceToSquaredF(theSector->GetLocation()) <= theRange;
                     if (inUseClosestTile) {
                         *outTile = theSector->mTiles.GetClosestPoint(theTo);
                         theResult = theTo.DistanceToSquaredF(*outTile) <= theRange;

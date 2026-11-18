@@ -266,7 +266,7 @@ long ContinentIndex(const EEAIContinent* inContinent)
     return -1;
 }
 
-void WriteContinents(Writer& ioWriter, const std::vector<EEAIContinent*>& inContinents)
+template <class V> void WriteContinents(Writer& ioWriter, const V& inContinents)
 {
     ioWriter.U32((unsigned long)inContinents.size());
     for (size_t i = 0; i < inContinents.size(); i++)
@@ -443,12 +443,14 @@ void WriteRegions(Writer& ioWriter)
         const EEAIPathSector* theSector = theManager.GetPathSectors()[i];
         if (theSector == NULL)
             continue;
-        for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theSector->mSubSectors.begin();
-             theIt != theSector->mSubSectors.end(); ++theIt)
-            if (theIt->second != NULL && theNumbers.find(theIt->second) == theNumbers.end()) {
-                theSubSectors.push_back(theIt->second);
-                theNumbers[theIt->second] = (unsigned long)theSubSectors.size();
+        EEAIListView<EeAStarSectorSub> theHeld = theSector->GetSubSectors();
+        for (const EeAStarSectorSub* theIt = theHeld.begin(); theIt != theHeld.end(); ++theIt) {
+            const EEAIPathSubSector* theSub = (const EEAIPathSubSector*)(uintptr_t)theIt->sub;
+            if (theSub != NULL && theNumbers.find(theSub) == theNumbers.end()) {
+                theSubSectors.push_back(theSub);
+                theNumbers[theSub] = (unsigned long)theSubSectors.size();
             }
+        }
     }
     // a sub sector by its number (0: none; one that is not listed: also 0)
     struct Numbers {
@@ -466,45 +468,46 @@ void WriteRegions(Writer& ioWriter)
         ioWriter.Flag(theSector != NULL);
         if (theSector == NULL)
             continue;
-        ioWriter.U16(theSector->mID);
-        ioWriter.Rect(theSector->mBounds);
-        ioWriter.Point(theSector->mCenter);
-        WriteContinents(ioWriter, theSector->mNeighbors);
-        ioWriter.Shorts(theSector->mPathAreaIDs);
-        ioWriter.U32((unsigned long)theSector->mSubSectors.size());
-        for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theSector->mSubSectors.begin();
-             theIt != theSector->mSubSectors.end(); ++theIt) {
-            ioWriter.U16(theIt->first);
-            ioWriter.U32(theNumber.Of(theIt->second));
+        ioWriter.U16(theSector->GetID());
+        ioWriter.Rect(theSector->GetBounds());
+        ioWriter.Point(theSector->GetCenter());
+        WriteContinents(ioWriter, theSector->GetNeighbors());
+        ioWriter.Shorts(std::vector<unsigned short>(theSector->GetPathAreaIDs()));
+        EEAIListView<EeAStarSectorSub> theHeld = theSector->GetSubSectors();
+        ioWriter.U32((unsigned long)theHeld.size());
+        for (const EeAStarSectorSub* theIt = theHeld.begin(); theIt != theHeld.end(); ++theIt) {
+            ioWriter.U16(theIt->id);
+            ioWriter.U32(theNumber.Of((const EEAIPathSubSector*)(uintptr_t)theIt->sub));
         }
     }
     ioWriter.U32((unsigned long)theSubSectors.size());
     for (i = 0; i < theSubSectors.size(); i++) {
         const EEAIPathSubSector* theSubSector = theSubSectors[i];
         long theSector = -1;
-        for (size_t s = 0; theSubSector->mSector != NULL && s < theManager.GetPathSectors().size() && theSector < 0; s++)
-            if (theManager.GetPathSectors()[s] == theSubSector->mSector)
+        for (size_t s = 0; theSubSector->GetSector() != NULL && s < theManager.GetPathSectors().size() && theSector < 0; s++)
+            if (theManager.GetPathSectors()[s] == theSubSector->GetSector())
                 theSector = (long)s;
         ioWriter.I32(theSector);
         WriteSparse(ioWriter, theSubSector->mTiles);
-        ioWriter.U32((unsigned long)theSubSector->mNeighbors.size());
-        for (size_t n = 0; n < theSubSector->mNeighbors.size(); n++)
-            ioWriter.U32(theNumber.Of(theSubSector->mNeighbors[n]));
-        ioWriter.U32((unsigned long)theSubSector->mLinks.size());
-        for (std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::const_iterator theIt =
-                 theSubSector->mLinks.begin(); theIt != theSubSector->mLinks.end(); ++theIt) {
-            ioWriter.U16(theIt->first);
-            ioWriter.U32(theNumber.Of(theIt->second.first));
-            ioWriter.U32(theNumber.Of(theIt->second.second));
+        EEAIHandleView<EEAIPathSubSector> theNeighbors = theSubSector->GetNeighbors();
+        ioWriter.U32((unsigned long)theNeighbors.size());
+        for (size_t n = 0; n < theNeighbors.size(); n++)
+            ioWriter.U32(theNumber.Of(theNeighbors[n]));
+        EEAIListView<EeAStarSubSectorLink> theLinks = theSubSector->GetAllLinks();
+        ioWriter.U32((unsigned long)theLinks.size());
+        for (const EeAStarSubSectorLink* theIt = theLinks.begin(); theIt != theLinks.end(); ++theIt) {
+            ioWriter.U16(theIt->id);
+            ioWriter.U32(theNumber.Of((const EEAIPathSubSector*)(uintptr_t)theIt->first));
+            ioWriter.U32(theNumber.Of((const EEAIPathSubSector*)(uintptr_t)theIt->second));
         }
-        ioWriter.Point(theSubSector->mLocation);
-        ioWriter.I32(theSubSector->mNumTiles);
-        ioWriter.U16(theSubSector->mContinentID);
-        ioWriter.U16(theSubSector->mPathAreaID);
-        ioWriter.U16(theSubSector->mID);
-        ioWriter.I32(theSubSector->mKind);
-        ioWriter.I32(theSubSector->mPlayerID);
-        ioWriter.Flag(theSubSector->mIsStale);
+        ioWriter.Point(theSubSector->GetLocation());
+        ioWriter.I32(theSubSector->GetNumTiles());
+        ioWriter.U16(theSubSector->GetContinentID());
+        ioWriter.U16(theSubSector->GetPathAreaID());
+        ioWriter.U16(theSubSector->GetID());
+        ioWriter.I32(theSubSector->GetKind());
+        ioWriter.I32(theSubSector->GetPlayerID());
+        ioWriter.Flag(theSubSector->IsStale());
     }
     ioWriter.U32((unsigned long)theManager.GetPathSubSectors().size());
     for (i = 0; i < theManager.GetPathSubSectors().size(); i++)
@@ -822,10 +825,16 @@ bool ReadRegions(Reader& ioReader)
         EEAIPathSector* theSector = new EEAIPathSector;
         thePathSectors[i] = theSector;
         unsigned long theHeldCount = 0;
-        if (!ioReader.U16(theSector->mID) || !ioReader.Rect(theSector->mBounds) || !ioReader.Point(theSector->mCenter)
-            || !ReadContinents(ioReader, theSector->mNeighbors) || !ioReader.Shorts(theSector->mPathAreaIDs)
-            || !ioReader.Count(theHeldCount))
+        EeAStarSectorRecord* theRecord = theSector->Record();
+        std::vector<EEAIContinent*> theSectorNeighbors;
+        std::vector<unsigned short> theSectorIDs;
+        if (!ioReader.U16(theRecord->id) || !ioReader.Rect(reinterpret_cast<U2DRectangle<long>&>(theRecord->bounds))
+            || !ioReader.Point(reinterpret_cast<U2DPoint<long>&>(theRecord->center))
+            || !ReadContinents(ioReader, theSectorNeighbors) || !ioReader.Shorts(theSectorIDs) || !ioReader.Count(theHeldCount))
             return false;
+        for (size_t n = 0; n < theSectorNeighbors.size(); n++)
+            ee_astar_sector_add_neighbor(theRecord, (uint64_t)(uintptr_t)theSectorNeighbors[n], false);
+        ee_astar_sector_set_path_area_ids(theRecord, theSectorIDs.data(), theSectorIDs.size());
         for (unsigned long k = 0; k < theHeldCount; k++) {
             unsigned short theKey = 0;
             unsigned long theNumber = 0;
@@ -851,8 +860,8 @@ bool ReadRegions(Reader& ioReader)
         unsigned long theNeighborCount = 0, theLinkCount = 0;
         if (!ioReader.I32(theSector) || !ReadSparse(ioReader, theSubSector->mTiles) || !ioReader.Count(theNeighborCount))
             return false;
-        theSubSector->mSector = theSector >= 0 && (size_t)theSector < thePathSectors.size()
-            ? thePathSectors[theSector] : NULL;
+        theSubSector->SetSector(theSector >= 0 && (size_t)theSector < thePathSectors.size()
+            ? thePathSectors[theSector] : NULL);
         for (unsigned long n = 0; n < theNeighborCount; n++) {
             unsigned long theNumber = 0;
             if (!ioReader.U32(theNumber))
@@ -868,10 +877,11 @@ bool ReadRegions(Reader& ioReader)
                 return false;
             theLinks[i].mLinks.push_back(std::make_pair(theKey, std::make_pair(theFirst, theSecond)));
         }
-        if (!ioReader.Point(theSubSector->mLocation) || !ioReader.I32(theSubSector->mNumTiles)
-            || !ioReader.U16(theSubSector->mContinentID) || !ioReader.U16(theSubSector->mPathAreaID)
-            || !ioReader.U16(theSubSector->mID) || !ioReader.I32(theSubSector->mKind) || !ioReader.I32(theSubSector->mPlayerID)
-            || !ioReader.Flag(theSubSector->mIsStale))
+        EeAStarSubSectorRecord* theFields = theSubSector->Record();
+        if (!ioReader.Point(reinterpret_cast<U2DPoint<long>&>(theFields->location)) || !ioReader.I32(theFields->num_tiles)
+            || !ioReader.U16(theFields->continent_id) || !ioReader.U16(theFields->path_area_id)
+            || !ioReader.U16(theFields->id) || !ioReader.I32(theFields->kind) || !ioReader.I32(theFields->player_id)
+            || !ioReader.Flag(theFields->is_stale))
             return false;
     }
     struct ByNumber {
@@ -882,18 +892,18 @@ bool ReadRegions(Reader& ioReader)
     for (size_t s = 0; s < theHeld.size(); s++)
         for (size_t k = 0; k < theHeld[s].size(); k++) {
             EEAIPathSubSector* theSubSector = theByNumber.Of(theHeld[s][k].second);
-            thePathSectors[s]->mSubSectors.insert(std::make_pair(theHeld[s][k].first, theSubSector));
+            thePathSectors[s]->InsertSubSector(theHeld[s][k].first, theSubSector);
             if (theHeld[s][k].second <= theSubCount)
                 theFiled[theHeld[s][k].second] = true;
         }
     for (unsigned long i = 1; i <= theSubCount; i++) {
         EEAIPathSubSector* theSubSector = theSubSectors[i];
         for (size_t n = 0; n < theLinks[i].mNeighbors.size(); n++)
-            theSubSector->mNeighbors.push_back(theByNumber.Of(theLinks[i].mNeighbors[n]));
+            theSubSector->AddNeighbor(theByNumber.Of(theLinks[i].mNeighbors[n]));
         for (size_t n = 0; n < theLinks[i].mLinks.size(); n++)
-            theSubSector->mLinks.insert(std::make_pair(theLinks[i].mLinks[n].first,
-                                                       std::make_pair(theByNumber.Of(theLinks[i].mLinks[n].second.first),
-                                                                      theByNumber.Of(theLinks[i].mLinks[n].second.second))));
+            theSubSector->AddLink(theLinks[i].mLinks[n].first,
+                                  std::make_pair(theByNumber.Of(theLinks[i].mLinks[n].second.first),
+                                                 theByNumber.Of(theLinks[i].mLinks[n].second.second)));
     }
     if (!ioReader.Count(theCount))
         return false;
@@ -913,7 +923,7 @@ bool ReadRegions(Reader& ioReader)
     TableStore(EeAStarCmTable::PathSubSectors, theTable);
     for (unsigned long i = 1; i <= theSubCount; i++)
         if (!theFiled[i])   // no sector held it in the saved game (not owned there either): kept, not freed
-            ESDebugOut("EEAIContinentSave: a saved sub sector (id %u) is in no sector\n", (unsigned)theSubSectors[i]->mID);
+            ESDebugOut("EEAIContinentSave: a saved sub sector (id %u) is in no sector\n", (unsigned)theSubSectors[i]->GetID());
     std::vector<U2DPoint<long> > theShore, theIceShore;
     std::vector<unsigned short> theFreeSubSectors, theFreePathAreas;
     if (!ioReader.Points(theShore) || !ioReader.Points(theIceShore) || !ioReader.Shorts(theFreeSubSectors)

@@ -620,8 +620,8 @@ bool EESaveGraphMachine(EEGraphPathMachine* inMachine, EePathSavedGraph& outSave
                                 theGoal.mPlayerID, theGoal.mRevLimit, theGoal.mMaxRevs, theGoal.mGoalSector,
                                 theGoal.mStartSector, theGoal.mL70,
                                 theGoal.mUnit != NULL ? (long)theGoal.mUnit->mUnitID : -1L,
-                                theGoal.mFrom == NULL ? -1L : (long)theGoal.mFrom->mID,
-                                theGoal.mTo == NULL ? -1L : (long)theGoal.mTo->mID};
+                                theGoal.mFrom == NULL ? -1L : (long)theGoal.mFrom->GetID(),
+                                theGoal.mTo == NULL ? -1L : (long)theGoal.mTo->GetID()};
     for (int f = 0; f < 17; f++)
         outSaved.goal[f] = (int32_t)theFields[f];
     const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB31, theGoal.mAcceptNearest, theGoal.mB33, theGoal.mB34,
@@ -1113,18 +1113,18 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         theManager->ClampTile(gWorld.mMap, theFromCenter);
         EEPathPutTile(i, theFromCenter);
         EEAIPathSubSector* theFromSector = gContinentManager.GetPathSubSectorAt(theFromCenter.GetX(), theFromCenter.GetY());
-        theFromCenter = theFromSector->mSector->mCenter;
+        theFromCenter = theFromSector->GetSector()->GetCenter();
         theManager->ClampTile(gWorld.mMap, theToCenter);
         EEPathPutTile(i + 2, theToCenter);
         EEAIPathSubSector* theToSector = gContinentManager.GetPathSubSectorAt(theToCenter.GetX(), theToCenter.GetY());
-        theToCenter = theToSector->mSector->mCenter;
+        theToCenter = theToSector->GetSector()->GetCenter();
         theGoal.SetUnit(EEPathUnitOf(io->h[1]));
         if (theRequest)
             theGoal.mPathFlags = theRequest->mFlags;
-        theMachine->SetGoal(theFromCenter, theFromSector->mID);
-        theMachine->SetStart(theToCenter, theToSector->mID);
+        theMachine->SetGoal(theFromCenter, theFromSector->GetID());
+        theMachine->SetStart(theToCenter, theToSector->GetID());
         theMachine->mTile = theToCenter;
-        theMachine->mSector = theToSector->mID;
+        theMachine->mSector = theToSector->GetID();
         theGoal.mPoint38 = theToCenter;
         theGoal.mFrom = theFromSector;
         theGoal.mTo = theToSector;
@@ -1634,7 +1634,7 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
         EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
         if (theSector)
             fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),
-                    theSector->mLocation.GetX(), theSector->mLocation.GetY());
+                    theSector->GetLocation().GetX(), theSector->GetLocation().GetY());
     }
     std::vector<EePathQueued> theQueued(ee_path_manager_queued(this->mRust, NULL, 0));
     ee_path_manager_queued(this->mRust, theQueued.data(), (uint32_t)theQueued.size());
@@ -1802,7 +1802,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         if (thePath.size() > 1 && inUnit->mTile) {
             for (long i = 0; i < (long)thePath.size() - 2; i++) {
                 EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath[i]);
-                theTile = theSector->mLocation;
+                theTile = theSector->GetLocation();
                 EEUGRust* theGoal = EEUGRust::NewLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f,
                                                          inUnit->GetGoal() && inUnit->GetGoal()->GetB1C(), theForced,
                                                          false, 0.0f, true, 0);
@@ -1826,15 +1826,15 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         inRequest->mPath.clear();
         if (thePath.size() != 0) {
             EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath.back());
-            theLast = theSector->mLocation;
+            theLast = theSector->GetLocation();
             inRequest->mPath.push_back(theLast);
             if (inMachine->mGoal.GetFrom())
-                theDistance = UMAbs(inMachine->mGoal.mFrom->mLocation.GetX() - theLast.GetX()) +
-                              UMAbs(inMachine->mGoal.mFrom->mLocation.GetY() - theLast.GetY());
+                theDistance = UMAbs(inMachine->mGoal.mFrom->GetLocation().GetX() - theLast.GetX()) +
+                              UMAbs(inMachine->mGoal.mFrom->GetLocation().GetY() - theLast.GetY());
         }
         for (long i = thePath.size() - 2; i >= 0; i--) {
             EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath[i]);
-            theTile = theSector->mLocation;
+            theTile = theSector->GetLocation();
             inRequest->mPath.push_back(theTile);
             theDistance += UMAbs(theTile.GetX() - theLast.GetX()) + UMAbs(theTile.GetY() - theLast.GetY());
         }
@@ -1849,12 +1849,12 @@ done:
 // (0xaacf0, 0xab6c1).
 inline unsigned short EEAIAStarPathGraphGoal::GetGoalID() const
 {
-    return this->mTo->mID;
+    return this->mTo->GetID();
 }
 
 inline U2DPoint<long> EEAIPathSubSector::GetGraphLocation() const
 {
-    return U2DPoint<long>(this->mSector->mCenter.mX, this->mSector->mCenter.mY);
+    return U2DPoint<long>(this->GetSector()->GetCenter().mX, this->GetSector()->GetCenter().mY);
 }
 
 // Returns the Manhattan distance between two tiles times 10 (ICF-folded with EEAIAStarPathfindingGoalBase's)
@@ -1882,9 +1882,9 @@ long EEAIAStarPathGraphGoal::GetStepCost(EEAIAStarGraphNode* inParent, EEAIPathS
 // (ICF-folded into 0x410799, the wall planner's +0x04): 1 inside one sector, 10 straight, 14 diagonal
 long EEAIAStarPathGraphGoal::GetDefaultStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo)
 {
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inParent->mObject)->mSector;
-    EEAIPathSector* theTo = inTo->mSector;
+    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inParent->mObject)->GetSector();
+    EEAIPathSector* theTo = inTo->GetSector();
     if (theFrom != theTo)
-        return theFrom->mCenter.mX == theTo->mCenter.mX || theFrom->mCenter.mY == theTo->mCenter.mY ? 10 : 14;
+        return theFrom->GetCenter().mX == theTo->GetCenter().mX || theFrom->GetCenter().mY == theTo->GetCenter().mY ? 10 : 14;
     return 1;
 }

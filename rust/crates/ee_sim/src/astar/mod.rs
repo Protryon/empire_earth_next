@@ -56,6 +56,7 @@ pub mod pm_bounded;
 pub mod pm_record;
 pub mod queries;
 pub mod repair;
+pub mod sector_rec;
 pub mod sectors;
 pub mod sparse;
 pub mod storage;

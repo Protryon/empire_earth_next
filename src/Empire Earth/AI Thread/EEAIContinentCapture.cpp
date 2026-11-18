@@ -109,7 +109,7 @@ static void EEAICaptureArea(EESimCaptureRecord& ioRecord, const EEAIArea& inArea
 }
 
 template <class T>
-static void EEAICaptureIDs(EESimCaptureRecord& ioRecord, const std::vector<T*>& inObjects)
+static void EEAICaptureIDs(EESimCaptureRecord& ioRecord, const T& inObjects)
 {
     ioRecord.I32((int)inObjects.size());
     for (size_t i = 0; i < inObjects.size(); i++)
@@ -238,16 +238,17 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
         theRecord.I32(theSector != NULL);
         if (!theSector)
             continue;
-        theRecord.U32(theSector->mID);
-        EEAICaptureRectangle(theRecord, theSector->mBounds);
-        EEAICapturePoint(theRecord, theSector->mCenter);
-        EEAICaptureIDs(theRecord, theSector->mNeighbors);
-        EEAICaptureShorts(theRecord, theSector->mPathAreaIDs);
-        theRecord.I32((int)theSector->mSubSectors.size());
-        for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theSector->mSubSectors.begin();
-             theIt != theSector->mSubSectors.end(); ++theIt) {
-            theRecord.U32(theIt->first);
-            theRecord.I32(theIt->second ? (int)theIt->second->mID : -1);
+        theRecord.U32(theSector->GetID());
+        EEAICaptureRectangle(theRecord, theSector->GetBounds());
+        EEAICapturePoint(theRecord, theSector->GetCenter());
+        EEAICaptureIDs(theRecord, theSector->GetNeighbors());
+        EEAICaptureShorts(theRecord, theSector->GetPathAreaIDs());
+        EEAIListView<EeAStarSectorSub> theHeld = theSector->GetSubSectors();
+        theRecord.I32((int)theHeld.size());
+        for (const EeAStarSectorSub* theIt = theHeld.begin(); theIt != theHeld.end(); ++theIt) {
+            const EEAIPathSubSector* theSub = (const EEAIPathSubSector*)(uintptr_t)theIt->sub;
+            theRecord.U32(theIt->id);
+            theRecord.I32(theSub ? (int)theSub->GetID() : -1);
         }
     }
 
@@ -258,23 +259,24 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
         theRecord.I32(theSubSector != NULL);
         if (!theSubSector)
             continue;
-        theRecord.U32(theSubSector->mID);
-        theRecord.I32((int)theSubSector->mKind);
-        EEAICapturePoint(theRecord, theSubSector->mLocation);
-        theRecord.U32(theSubSector->mContinentID);
-        theRecord.U32(theSubSector->mPathAreaID);
-        theRecord.I32((int)theSubSector->mPlayerID);
-        theRecord.I32(theSubSector->mIsStale);
-        theRecord.I32(theSubSector->mSector ? (int)theSubSector->mSector->mID : -1);
+        theRecord.U32(theSubSector->GetID());
+        theRecord.I32((int)theSubSector->GetKind());
+        EEAICapturePoint(theRecord, theSubSector->GetLocation());
+        theRecord.U32(theSubSector->GetContinentID());
+        theRecord.U32(theSubSector->GetPathAreaID());
+        theRecord.I32((int)theSubSector->GetPlayerID());
+        theRecord.I32(theSubSector->IsStale());
+        theRecord.I32(theSubSector->GetSector() ? (int)theSubSector->GetSector()->GetID() : -1);
         EEAICaptureTiles(theRecord, theSubSector->mTiles);
-        EEAICaptureIDs(theRecord, theSubSector->mNeighbors);
-        theRecord.I32((int)theSubSector->mLinks.size());
-        for (std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::const_iterator theIt =
-                 theSubSector->mLinks.begin();
-             theIt != theSubSector->mLinks.end(); ++theIt) {
-            theRecord.U32(theIt->first);
-            theRecord.I32(theIt->second.first ? (int)theIt->second.first->mID : -1);
-            theRecord.I32(theIt->second.second ? (int)theIt->second.second->mID : -1);
+        EEAICaptureIDs(theRecord, theSubSector->GetNeighbors());
+        EEAIListView<EeAStarSubSectorLink> theLinks = theSubSector->GetAllLinks();
+        theRecord.I32((int)theLinks.size());
+        for (const EeAStarSubSectorLink* theIt = theLinks.begin(); theIt != theLinks.end(); ++theIt) {
+            const EEAIPathSubSector* theFirst = (const EEAIPathSubSector*)(uintptr_t)theIt->first;
+            const EEAIPathSubSector* theSecond = (const EEAIPathSubSector*)(uintptr_t)theIt->second;
+            theRecord.U32(theIt->id);
+            theRecord.I32(theFirst ? (int)theFirst->GetID() : -1);
+            theRecord.I32(theSecond ? (int)theSecond->GetID() : -1);
         }
     }
 

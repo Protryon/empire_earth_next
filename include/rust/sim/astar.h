@@ -509,11 +509,17 @@ struct EeAStarGraphStorage;
 /// A list of ids (opaque to C++).
 struct EeAStarIdList;
 
+/// A sector's lists (opaque to C++).
+struct EeAStarSectorLists;
+
 /// A list of area serials (opaque to C++).
 struct EeAStarSerialList;
 
 /// One storage (opaque to C++).
 struct EeAStarStorage;
+
+/// A sub sector's lists (opaque to C++).
+struct EeAStarSubSectorLists;
 
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
@@ -1268,6 +1274,54 @@ struct EePathRequestRecord {
   bool flags[17];
 };
 
+/// `EEAIPathSector`'s members.
+struct EeAStarSectorRecord {
+  /// the lists (`ee_astar_sector_*`)
+  EeAStarSectorLists *lists;
+  /// `mBounds` (`U2DRectangle<long>`'s layout)
+  EeHullRect bounds;
+  /// `mCenter` (`U2DPoint<long>`'s layout)
+  EeHullPoint center;
+  /// `mID`: its index in the manager's sectors
+  uint16_t id;
+};
+
+/// One sub sector of a sector (`mSubSectors`' entry).
+struct EeAStarSectorSub {
+  uint16_t id;
+  /// the `EEAIPathSubSector*`
+  uint64_t sub;
+};
+
+/// `EEAIPathSubSector`'s members but the tiles.
+struct EeAStarSubSectorRecord {
+  /// the lists (`ee_astar_sub_sector_*`)
+  EeAStarSubSectorLists *lists;
+  /// `mLocation`: the tiles' center
+  EeHullPoint location;
+  /// `mSector`: the `EEAIPathSector*`
+  uint64_t sector;
+  /// `mNumTiles`
+  long num_tiles;
+  /// `mContinentID`, `mPathAreaID`, `mID`
+  uint16_t continent_id;
+  uint16_t path_area_id;
+  uint16_t id;
+  /// `mKind`: the tile kind
+  long kind;
+  /// `mPlayerID`
+  long player_id;
+  /// `mIsStale`: its path area is being repaired
+  bool is_stale;
+};
+
+/// One link of a sub sector (`mLinks`' entry: the other's id, then the two corner sub sectors or 0).
+struct EeAStarSubSectorLink {
+  uint16_t id;
+  uint64_t first;
+  uint64_t second;
+};
+
 /// A tile search's machine and goal as the saved game holds them (save 0.276; the C++ fills and applies it).
 struct EePathSavedMachine {
   int32_t tile[2];
@@ -1656,6 +1710,24 @@ size_t ee_astar_cm_adjacent_ids(const EeAStarCmRecord *r,
                                 uint16_t id,
                                 bool with_self,
                                 uint16_t *out);
+
+/// The adjacent continents and their count; valid until they next change.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+const uint64_t *ee_astar_continent_neighbors(const EeAStarContinentRecord *r, size_t *count);
+
+/// `mNeighbors.push_back(continent)`.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_add_neighbor(EeAStarContinentRecord *r, uint64_t continent);
+
+/// `mNeighbors.clear()`.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_clear_neighbors(EeAStarContinentRecord *r);
 
 /// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
 ///
@@ -2753,6 +2825,126 @@ uint32_t ee_path_manager_dump(EePathManager *p,
 /// # Safety
 /// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
 void ee_path_points_append(void *list, const EePathPoint *points, uint32_t count);
+
+/// # Safety
+/// `r` points to a record (uninitialised is fine).
+void ee_astar_sector_init(EeAStarSectorRecord *r);
+
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_free(EeAStarSectorRecord *r);
+
+/// The sector's sub sectors in id order; `count` gets their number. Valid until they change.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`; `count` writable.
+const EeAStarSectorSub *ee_astar_sector_subs(const EeAStarSectorRecord *r, size_t *count);
+
+/// `mSubSectors.insert((id, sub))`.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_insert_sub(EeAStarSectorRecord *r, uint16_t id, uint64_t sub);
+
+/// `mSubSectors.clear()` (the C++ deletes the objects first).
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_clear_subs(EeAStarSectorRecord *r);
+
+/// The continents touching the sector; `count` gets their number.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`; `count` writable.
+const uint64_t *ee_astar_sector_neighbors(const EeAStarSectorRecord *r, size_t *count);
+
+/// `AddNeighbor` (`unique`), or a plain `push_back` (a saved game's list).
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_add_neighbor(EeAStarSectorRecord *r, uint64_t continent, bool unique);
+
+/// The sector's path area ids; `count` gets their number.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`; `count` writable.
+const uint16_t *ee_astar_sector_path_area_ids(const EeAStarSectorRecord *r, size_t *count);
+
+/// `AddPathAreaID`.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_add_path_area_id(EeAStarSectorRecord *r, uint16_t id);
+
+/// `RemovePathAreaID`.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`.
+void ee_astar_sector_remove_path_area_id(EeAStarSectorRecord *r, uint16_t id);
+
+/// The path area ids as saved.
+///
+/// # Safety
+/// `r` from `ee_astar_sector_init`; `ids` holds `count` ids (NULL for 0).
+void ee_astar_sector_set_path_area_ids(EeAStarSectorRecord *r, const uint16_t *ids, size_t count);
+
+/// # Safety
+/// `r` points to a record (uninitialised is fine).
+void ee_astar_sub_sector_init(EeAStarSubSectorRecord *r);
+
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`.
+void ee_astar_sub_sector_free(EeAStarSubSectorRecord *r);
+
+/// Every link in order; `count` gets their number.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`; `count` writable.
+const EeAStarSubSectorLink *ee_astar_sub_sector_links_all(const EeAStarSubSectorRecord *r,
+                                                          size_t *count);
+
+/// The links under `id`; `count` gets their number.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`; `count` writable.
+const EeAStarSubSectorLink *ee_astar_sub_sector_links_of(const EeAStarSubSectorRecord *r,
+                                                         uint16_t id,
+                                                         size_t *count);
+
+/// `mLinks.insert((id, (first, second)))`.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`.
+void ee_astar_sub_sector_insert_link(EeAStarSubSectorRecord *r,
+                                     uint16_t id,
+                                     uint64_t first,
+                                     uint64_t second);
+
+/// `RemoveLinks`.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`.
+void ee_astar_sub_sector_remove_links(EeAStarSubSectorRecord *r, uint16_t id);
+
+/// `RemoveNeighbor` (`other` the sub sector, `other_id` its id).
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`.
+bool ee_astar_sub_sector_remove_neighbor(EeAStarSubSectorRecord *r,
+                                         uint64_t other,
+                                         uint16_t other_id);
+
+/// The neighbours; `count` gets their number.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`; `count` writable.
+const uint64_t *ee_astar_sub_sector_neighbors(const EeAStarSubSectorRecord *r, size_t *count);
+
+/// `mNeighbors.push_back(other)`.
+///
+/// # Safety
+/// `r` from `ee_astar_sub_sector_init`.
+void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other);
 
 }  // extern "C"
 

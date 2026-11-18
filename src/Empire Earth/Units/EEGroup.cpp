@@ -382,8 +382,8 @@ void EEGroup::MoveAlong(EEGroupPathRequest* inRequest)
             for (long i = 1; i < (long)inRequest->mPath->mPath.size() - 1; i++) {
                 const EETileCoordinate& theTile = inRequest->mPath->mPath[i];
                 theSubSector = gContinentManager.GetPathSubSectorAt(theTile.GetX(), theTile.GetY());
-                GE3DPoint theCenter((float)theSubSector->mLocation.GetX() + 0.5f,
-                                    (float)theSubSector->mLocation.GetY() + 0.5f, 0.0f);
+                GE3DPoint theCenter((float)theSubSector->GetLocation().GetX() + 0.5f,
+                                    (float)theSubSector->GetLocation().GetY() + 0.5f, 0.0f);
                 thePath.push_back(theCenter);
             }
             for (long p = 0; p < (long)thePath.size(); p++) {

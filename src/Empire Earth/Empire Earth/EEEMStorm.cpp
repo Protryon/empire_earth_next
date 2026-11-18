@@ -91,8 +91,8 @@ GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 // whether a route step's sectors' centres share an axis (the planners' straight step)
 static bool EEStormStraight(EEAIPathSubSector* inFrom, EEAIPathSubSector* inTo)
 {
-    return inFrom->mSector->mCenter.mX == inTo->mSector->mCenter.mX ||
-           inFrom->mSector->mCenter.mY == inTo->mSector->mCenter.mY;
+    return inFrom->GetSector()->GetCenter().mX == inTo->GetSector()->GetCenter().mX ||
+           inFrom->GetSector()->GetCenter().mY == inTo->GetSector()->GetCenter().mY;
 }
 
 // Returns the cost of a snow storm's route step: cheap over cliffs and hills, dear over forest, shallows and the
@@ -100,10 +100,10 @@ static bool EEStormStraight(EEAIPathSubSector* inFrom, EEAIPathSubSector* inTo)
 long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
     EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    long theKind = inTo->mKind;
+    long theKind = inTo->GetKind();
     bool theHill = (theKind == kAITileLand || theKind == kAITileWall || theKind == kAITileGate) &&
-                   gContinentManager.GetHillAt(inTo->mLocation) != NULL;
-    return ee_app_storm_route_cost(true, theFrom->mSector != inTo->mSector, EEStormStraight(theFrom, inTo), theKind,
+                   gContinentManager.GetHillAt(inTo->GetLocation()) != NULL;
+    return ee_app_storm_route_cost(true, theFrom->GetSector() != inTo->GetSector(), EEStormStraight(theFrom, inTo), theKind,
                                    theHill);
 }
 
@@ -112,7 +112,7 @@ long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, E
 long EEAIGPGModifierStormRoutePlannerRain::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
     EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    return ee_app_storm_route_cost(false, theFrom->mSector != inTo->mSector, EEStormStraight(theFrom, inTo), inTo->mKind,
+    return ee_app_storm_route_cost(false, theFrom->GetSector() != inTo->GetSector(), EEStormStraight(theFrom, inTo), inTo->GetKind(),
                                    false);
 }
 
