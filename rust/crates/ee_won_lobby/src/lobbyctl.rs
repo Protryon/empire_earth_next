@@ -1101,6 +1101,39 @@ pub enum EeWonLobbyCtlOp {
     GameAddrText,
 }
 
+/// The resource row of a control string (LobbyCtrlHost.cpp's `CtlString` as it was).
+pub fn string_row(s: isize) -> Option<crate::resource::EeWonLobbyRes> {
+    use crate::resource::EeWonLobbyRes as R;
+    use EeWonLobbyCtlString as S;
+    const T: [(S, R); 9] = [
+        (S::Ready, R::GameStagingCtrl_Ready_String),
+        (S::NotReady, R::GameStagingCtrl_NotReady_String),
+        (S::StartGame, R::GameStagingCtrl_StartGame_String),
+        (S::LeaveGame, R::GameStagingCtrl_LeaveGame_String),
+        (S::DissolveGame, R::GameStagingCtrl_DissolveGame_String),
+        (S::Ban, R::GameUserListCtrl_Ban_String),
+        (S::Kick, R::GameUserListCtrl_Kick_String),
+        (S::CheckingAddress, R::LobbyOptions_CheckingAddress_String),
+        (S::AddressUnavailable, R::LobbyOptions_AddressUnavailable_String),
+    ];
+    T.iter().find(|(k, _)| *k as isize == s).map(|&(_, r)| r)
+}
+
+/// The op that sends a string op's string as its resource row in the game.
+fn game_string_op(op: EeWonLobbyCtlOp) -> Option<EeWonLobbyCtlOp> {
+    match op {
+        EeWonLobbyCtlOp::ButtonSetText => Some(EeWonLobbyCtlOp::ButtonSetRes),
+        EeWonLobbyCtlOp::LabelSetText => Some(EeWonLobbyCtlOp::LabelSetRes),
+        _ => None,
+    }
+}
+
+/// `string_row` for the drivers: the row, or -1.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyctl_string_row(s: isize) -> i32 {
+    string_row(s).map_or(-1, |r| r as i32)
+}
+
 /// The inward calls.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1541,7 +1574,14 @@ impl EeWonLobbyCtl {
             if let Some(r) = crate::rows::ctl_op(op, a, b, c) {
                 return r;
             }
+            if let (Some(res), Some(row)) = (game_string_op(op), string_row(b)) {
+                return self.host_op(res, a, row as isize, c);
+            }
         }
+        self.host_op(op, a, b, c)
+    }
+
+    fn host_op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
         match self.host {
             // SAFETY: the host is the C++ control's (or a test's), called with the control it was given for
             Some(f) => unsafe { f(self.ctl, op, a, b, c) },

@@ -1097,6 +1097,9 @@ using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
 
 extern "C" {
 
+/// `string_row` for the drivers: the row, or -1.
+int32_t ee_won_lobbyctl_string_row(ptrdiff_t s);
+
 /// The look-up `index` of `SLOTS` (NULL past the end).
 const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
 

@@ -166,23 +166,6 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     return NULL;
 }
 
-static const GUIString& CtlString(intptr_t inString)
-{
-    typedef EeWonLobbyCtlString S;
-    switch ((S)inString) {
-    case S::Ready: return LOBBY_STRING(GameStagingCtrl_Ready_String);
-    case S::NotReady: return LOBBY_STRING(GameStagingCtrl_NotReady_String);
-    case S::StartGame: return LOBBY_STRING(GameStagingCtrl_StartGame_String);
-    case S::LeaveGame: return LOBBY_STRING(GameStagingCtrl_LeaveGame_String);
-    case S::DissolveGame: return LOBBY_STRING(GameStagingCtrl_DissolveGame_String);
-    case S::Ban: return LOBBY_STRING(GameUserListCtrl_Ban_String);
-    case S::Kick: return LOBBY_STRING(GameUserListCtrl_Kick_String);
-    case S::CheckingAddress: return LOBBY_STRING(LobbyOptions_CheckingAddress_String);
-    case S::AddressUnavailable: return LOBBY_STRING(LobbyOptions_AddressUnavailable_String);
-    }
-    return gEmptyGUIString;
-}
-
 static const SmartPtr<Image>& CtlImage(intptr_t inImage)
 {
     typedef EeWonLobbyCtlImage I;
@@ -260,8 +243,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         return 0;
     case Op::ButtonIsChecked: return aButton->IsChecked() ? 1 : 0;
     case Op::ButtonSetCheck: aButton->SetCheck(b != 0, c != 0); return 0;
-    case Op::ButtonSetText: aButton->SetText(CtlString(b), true); return 0;
-    case Op::LabelSetText: aLabel->SetText(CtlString(b), true); return 0;
+    // ButtonSetText / LabelSetText: their strings come as resource rows (lobbyctl.rs string_row: ButtonSetRes,
+    // LabelSetRes, LobbyNetCtrlHost.cpp's)
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameCanReady: return aGame->CanReady() ? 1 : 0;
     case Op::GameMatchesSpec: return aGame->MatchesRoomSpec((int)b) ? 1 : 0;

@@ -582,3 +582,22 @@ fn golden_replay_connect_fails_on_a_changed_op() {
     assert_ne!(changed, GOLDEN_EEDLG);
     assert!(replay(Box::leak(changed.into_boxed_str())).is_err());
 }
+
+/// The dialogs' strings as resource rows (round 17): the lobby's nine, none for the EE game's two and the empty one;
+/// a game-made dialog sends the row ops, the EE strings still as strings.
+#[test]
+fn string_rows() {
+    use crate::resource::EeWonLobbyRes as R;
+    assert_eq!(string_row(EeWonLobbyDlgString::Ok as isize), Some(R::LobbyGlobal_OK_String));
+    assert_eq!(string_row(EeWonLobbyDlgString::Warn as isize), Some(R::AdminActionDialog_Warn_String));
+    assert_eq!(string_row(EeWonLobbyDlgString::AbortLaunch as isize), None);
+    assert_eq!(string_row(EeWonLobbyDlgString::Empty as isize), None);
+    let n = (0..12).filter(|&v| string_row(v).is_some()).count();
+    assert_eq!(n, 9);
+    assert_eq!(
+        EeWonLobbyDlg::game_op(Op::ButtonSetString, 9),
+        (Op::ButtonSetRes, R::LobbyGlobal_Cancel_String as isize)
+    );
+    assert_eq!(EeWonLobbyDlg::game_op(Op::ButtonSetString, 10), (Op::ButtonSetString, 10));
+    assert_eq!(EeWonLobbyDlg::game_op(Op::Relayout, 9), (Op::Relayout, 9));
+}

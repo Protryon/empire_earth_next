@@ -104,6 +104,9 @@ enum class EeWonLobbyPopupOp : uint32_t {
   DeliverFriend,
   /// `this->GetRoot()->ClosePopup(this)`.
   ClosePopup,
+  /// `((PopupMenu*)a)->AddItem(gLobbyResources[b].mString, NULL, NULL, c)` (R6 WONLobby round 17: `MenuAddItem`'s
+  /// string as its resource row in the game).
+  MenuAddRes,
 };
 
 /// The inward calls.
@@ -168,6 +171,9 @@ using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
                                            ptrdiff_t c);
 
 extern "C" {
+
+/// `string_row` for the drivers: the row, or -1.
+int32_t ee_won_lobbypopup_string_row(ptrdiff_t s);
 
 /// A new popup object for the C++ `popup` of `kind`.
 /// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
