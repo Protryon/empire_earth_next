@@ -371,8 +371,10 @@ the caller passes the view in as a value tree and gets the orders back as one.
 **C++ and longjmp.** Lua is C and raises its errors with longjmp. No function Lua calls into holds a C++ object with
 a destructor while Lua can raise. The value tree is pushed inside the protected call and read back outside it.
 
-**Tests:** `python -I tools/xbuild.py luatest` (Windows, Linux, macOS) builds `tests/platform/lua_test.cpp` with
-`ee_lua.c`, `EECPLua.cpp` and the platform layer. It runs the 125 checks against the scripts in
+**Tests:** (lane A round 3: EECPLua.cpp, its header and luatest are deleted; the runtime is Rust's, `ee_sim::ai`
+lua_host.rs, and its tests are `cargo test`'s: golden_lua.rs part A and lua_host.rs part B, recorded from a driver over
+the unmodified EECPLua.cpp, on the scripts of `tests/platform/lua/ai/`.) Before: `python -I tools/xbuild.py luatest`
+(Windows, Linux, macOS) built `tests/platform/lua_test.cpp` with `ee_lua.c`, `EECPLua.cpp` and the platform layer. It runs the 125 checks against the scripts in
 `tests/platform/lua/ai/`, which cover:
 - the sandbox;
 - the budget, including a `pcall` around an endless loop;
