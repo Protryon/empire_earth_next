@@ -31117,3 +31117,14 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   scores, a top-up's arithmetic and draws, the observing local player, a scenario with two humans, the epoch score
   and the truncation).
 - **Behaviour:** none.
+- **Gates, on the tree merged with origin/rust 9a277da24** (a clean merge; `strip_markers.py --check` and the headers
+  current): both builds 0/0 (the test profile too), the Rust gate PASS, the oracle identical on seeds 2-7, the
+  captures at seeds 2-3 oracle 212, late 214, space 210, calamity 222, app 26 digests PASS (WSTA among them), the
+  plain saveload 18/18 identical, the matrix `saveload expect: PASS`, the editor (14,448 lines) and civilization
+  builder (4,062) gates PASS, scenario_check 27/27, `--games` (3 games) equal to single runs and to the unmodified
+  exe, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13481` units [4, 42, 42] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2786 joiner=2786`, GATES PASS.
+- **Only a tour reaches**: nothing new (EE-SIM's driver is TEST ONLY; RecordStatistics runs when a game is left: the
+  post-game summary reads its records, which a tour does not open).
+- **Short of the target**: net -1,704 C++ against the 3,000 asked. The rest of the area is object wiring or test
+  drivers made of UI calls (docs/progress/app-core.md "Measured, not moved").
