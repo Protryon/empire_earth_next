@@ -1067,6 +1067,15 @@ bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
 /// `EECPLuaStatusName`: a static C string.
 const char *ee_ai_lua_status_name(uint32_t status);
 
+/// `EECPCombatManager::IsMilitaryClass(class)` (an `EEUnitClass*`; false for NULL).
+///
+/// # Safety
+/// `class` is 0 or a live unit class.
+bool ee_ai_military_class(uint64_t class_);
+
+/// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
+bool ee_ai_military_type(unsigned long unit_type);
+
 /// `EE_AI_UNITS_HOST_FACTS`'s record before the C++ fills it: no goal, no gathers (-1), no stance (-1).
 ///
 /// # Safety

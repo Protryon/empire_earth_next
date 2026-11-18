@@ -28,6 +28,7 @@ pub mod lua_ffi;
 pub mod lua_host;
 pub mod lua_value;
 pub mod manifest;
+pub mod military;
 pub mod names;
 pub mod next_save;
 pub mod seat;
