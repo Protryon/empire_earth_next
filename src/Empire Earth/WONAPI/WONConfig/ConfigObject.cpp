@@ -390,10 +390,6 @@ ConfigObject* ConfigObject::NextChild()
         return NULL;
     return (*this->mChildItr++).get();
 }
-bool ConfigObject::HasMoreChildren()
-{
-    return this->mChildItr!=this->mChildList.end();
-}
 void ConfigObject::RegisterKeyGroup(const char* theKey, ConfigObjectFactory theFactory, SmartPtr<ConfigObject>* theGroup)
 {
     if(this->mKeyGroupMap.insert(KeyGroupMap::value_type(theKey,ConfigObjectEntry(theFactory,theGroup))).second==false)

@@ -162,10 +162,6 @@ public:
     // runs the dialog: true when every player connected (0x290a8a)
     bool Run(EELobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
     void End(bool inOK) { this->LCall(EeWonLobbyDlgCall::ConnectEnd, inOK); }  // 0x290c85 (100001 / 100002)
-    void SetConnected(unsigned char inSlot, bool inConnected)  // 0x290cb3 (a player's state)
-    { this->LCall(EeWonLobbyDlgCall::ConnectSetConnected, inSlot, inConnected); }
-    bool IsRunning() { return this->LCall(EeWonLobbyDlgCall::Field, 7) != 0; }  // mIsRunning
-    bool IsEnded() { return this->LCall(EeWonLobbyDlgCall::Field, 8) != 0; }    // mIsEnded (ended by End)
 };
 
 // the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338).
@@ -202,15 +198,6 @@ public:
     EELobbyConfig();
 
     unsigned short mFileTransferPort;       // +0xf8 "EEFileTransferPort" (8889)
-};
-
-// a game of the server list (vtable 0x44c674; the inline ctor is the factory's). R6 WONLobby round 6: its texts
-// (GetOptionText 0x294ebc, GetNumberText, GetWondersText, GetEpochText, GetOnOffText) and the details' paint are ee_won
-// eeglue.rs's
-class EELobbyServerDetailsItem : public ServerDetailsItem {
-public:
-    virtual void PaintDetailsHook(Graphics& inGraphics, MultiListArea* inList);   // +0x38 0x295010
-    virtual int GetDetailsHeightHook(MultiListArea* inList);    // +0x3c 0x2954fc
 };
 
 }

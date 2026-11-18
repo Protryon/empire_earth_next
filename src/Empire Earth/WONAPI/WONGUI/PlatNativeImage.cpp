@@ -114,24 +114,6 @@ SmartPtr<Image> PlatNativeImage::Duplicate()
     return theCopy.get();
 }
 
-// An icon of the image and its mask (the lobby surface has no window icons to show it in)
-SmartPtr<NativeIcon> PlatNativeImage::GetIcon()
-{
-    return new PlatNativeIcon(this->mDisplayContext.get(), this);
-}
-
-// A cursor from the image and its mask; as the original, the hot spot is (0, 0) whatever is asked for
-SmartPtr<Cursor> PlatNativeImage::GetCursor(int, int)
-{
-    SmartPtr<RawImage32> theRaw = this->GetRaw();
-    int theCount = this->GetWidth() * this->GetHeight();
-    std::vector<uint32_t> thePixels(theRaw->mImageData, theRaw->mImageData + theCount);
-    if (!theRaw->mDoTransparency)
-        for (int i = 0; i < theCount; i++)
-            thePixels[i] |= 0xff000000;
-    return new PlatCursor(thePixels.data(), this->GetWidth(), this->GetHeight(), 0, 0);
-}
-
 // Creates a blank (black) image of the given size for this display context, at the lobby surface's pixel scale (the
 // windows' offscreen images and what the GUI composes for them)
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height)

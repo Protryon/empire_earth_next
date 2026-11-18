@@ -1,29 +1,15 @@
-// TEST ONLY: the headless simulation's driver (EE-SIM.exe; platform/PlatSim.h). Port addition, no original address.
+// TEST ONLY: the headless simulation's host (EE-SIM.exe; platform/PlatSim.h). Port addition, no original address.
 //
 // EE-SIM.exe is the game (every unit of EE-AOC.exe) with another entry (EESimMain.cpp: main -> EESimMain). It runs the
 // game's own start-up, menus, lobby, loading and simulation with the front end stubbed (platform/PlatSim.h: a hidden
-// window, no rendering, no sound) and, instead of a player, this driver:
-//   1. on a thread of its own, the menus as the harness drives them (tools/harness/session_exercise.py, ai_game.py):
-//      main menu -> single player -> random map; the lobby's slots and options set by line name, absolutely, in the
-//      harness's order (the same controls of form 26 and the same defaults); Start. The start seed is pinned
-//      (EEMStartLoading::Execute takes gPlatSimSeed, as the harness's --seed pin);
-//   2. when the game form is up and the physics timer runs: the idle human's civilization flags set as the harness's
-//      civilization pre-empt leaves them (EEPlayer::mCivilizationChosen, mCivilizationLocked), so the civilization
-//      timer opens no form; then gPlatSimRun lets the physics thread run (RTSPhysics::Main's simulation branch: one
-//      communications tick of 14 physics ticks after the other, no wall clock);
-//   3. after every communications tick, on the physics thread (gPlatSimAfterTick): the samples every --sample-seconds
-//      of game time and the end of the run (--game-seconds, the game's own end, or with --no-human-defeat the last
-//      computer standing, as ai_game.py);
-//   4. the report (JSON) and an exit without the game's shutdown.
-// EE_AI_TRACE=1: the EE-AI debug strings go to --trace (default stdout) as "debugstring EE-AI ..." lines, the
-// harness's session-log form (tools/harness/ai_trace.py extract/compare/summary read the file as it is).
-// --checksum-trace FILE: after every communications tick, one line of the simulation's state hashes (ChecksumLine;
-// docs/RUST_PLAN.md R5a.1), so two runs name the first divergent tick (tools/sim_oracle.py ticks).
-// --save-at MS=FILE: at the first communications tick at or after game ms MS, the game saves (the autosave's request,
-// EEMLoadOrSaveGame through SendToAllAndWait, under a fixed name); the file is copied to FILE at the end of the run.
-// --load-save FILE: instead of the lobby, the game's own load path (main menu -> single player -> Load Game -> the
-// file -> Load, as the harness's --load-save), then the run as usual. Together: "load equals continue" (R5a.2;
-// tools/sim_oracle.py saveload): a game loaded from a save must trace like the game that went on.
+// window, no rendering, no sound) and, instead of a player, a driver. The driver is Rust (ee_game sim_driver: its
+// options, the menus and the lobby as the harness drives them, the run on the physics thread's after-tick, the
+// samples, the end of the run, the JSON report, --games' batch; EE-SIM --help). This file is its host
+// (EeSimDriverHost): the UI's controls under the UI lock, the world lock, the platform switches, the C library's
+// streams and environment, the idle human's set-up, the save requests, --flare and --volcano, and the TEST ONLY
+// parts that read or drive C++ objects: the simulation capture's sweeps (the combat formulas', the unit-list
+// target search's, the missiles'), the per-CT checksum line's fields (--checksum-trace), the state dump (--dump-at,
+// --dump-load, --dump-tick) and the physics random stream's trace (--rng-trace); and the fault handler.
 #ifdef _WIN32
 #include <winsock2.h>
 #include <io.h>
@@ -142,6 +128,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
+#include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
 #include "rust/sim/combat.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
@@ -452,355 +439,7 @@ static void EECombatMissileSweep()
 
 namespace {
 
-// ------------------------------------------------------------------------------------------------ options
-
-struct Options {
-    unsigned long mSeed = 2;
-    long mComputers = 2;
-    std::string mMapSize = "Small";
-    std::string mMapType;
-    std::string mDifficulty = "Hard";
-    std::vector<std::pair<long, std::string>> mLobby;   // --lobby CONTROL=VALUE
-    double mGameSeconds = 2700;
-    double mSampleSeconds = 30;
-    double mWallTimeout = 3600;
-    long mPTRate = 40;
-    bool mNoHumanDefeat = true;
-    bool mHumanOut = true;                               // --keep-human: off
-    std::string mReport;                                 // the JSON report ("-": stdout)
-    std::string mTrace;                                  // the EE-AI lines ("" stdout)
-    std::string mLog;                                    // every debug string
-    std::string mChecksumTrace;                          // the per-CT checksum lines ("" none)
-    std::vector<std::string> mSets;                      // --set doc.key=value
-    std::string mCheats, mPersonality;
-    std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's Classic: classic_lua)
-    long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
-    bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
-    bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
-    bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
-    bool mUnitSweep = false;                             // --unit-sweep (TEST ONLY; the capture's units game)
-    bool mAppSweep = false;                              // --app-sweep (TEST ONLY; the capture's app game)
-    bool mGroupSweep = false;                            // --group-sweep (TEST ONLY; the capture's groups game)
-    long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
-    std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
-    std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
-    std::string mScenario;                               // --scenario FILE ("" a random map from the lobby)
-    std::string mCampaign;                               // --campaign NAME ("" none): learning, roman, pacific, asian
-    long mScenarioIndex = -1;                            // --scenario-index K (with --campaign; -1 the preselection)
-    std::string mEditorScript;                           // --editor-script FILE ("" a game, not the editor)
-    std::string mEditorOut;                              // --editor-out FILE (the script's steps; "" stdout)
-    bool mQuiet = false;
-    long mFlareMs = -1;                                  // --flare SECONDS:PLAYER (TEST ONLY): -1 none
-    unsigned long mFlarePlayer = 0;
-    long mVolcanoMs = -1;                                // --volcano SECONDS:PLAYER (TEST ONLY): -1 none
-    unsigned long mVolcanoPlayer = 0;
-    std::string mErr;                                    // --games: the game's stderr ("" the process's)
-    std::string mID;                                     // --games: the game's name in the batch's markers
-};
-
-Options sOptions;
-FILE* sTraceFile = NULL;
-FILE* sLogFile = NULL;
-FILE* sChecksumFile = NULL;
-FILE* sRngFile = NULL;                                   // --rng-trace (RngTraceHook, below)
-std::mutex sOutLock;
-std::chrono::steady_clock::time_point sStartWall;
-std::chrono::steady_clock::time_point sGameWall;
-// the wall time of each phase of the game's run (start-up to the main menu, menus, lobby, loading, game), in the report
-std::vector<std::pair<std::string, double> > sPhases;
-std::chrono::steady_clock::time_point sPhaseWall;
-
-void Phase(const char* inName)
-{
-    auto theNow = std::chrono::steady_clock::now();
-    sPhases.push_back({inName, std::chrono::duration<double>(theNow - sPhaseWall).count()});
-    sPhaseWall = theNow;
-}
-
-// --games (several games in one process): the debug strings the start-up wrote before the first game (the AI
-// manifest's line), written again at the head of every game's trace and log, so each holds what a run of its own
-// would; between two games the debug strings go nowhere (a single run has quit by then)
-FILE* sGamesFile = NULL;   // --games FILE or - (stdin): read a line at a time, when the last game has ended
-Options sBase;              // the command line's options, under every game's own
-bool sBatch = false;
-enum { kOutPreamble, kOutGame, kOutBetween } sOutState = kOutPreamble;
-std::string sPreambleTrace, sPreambleLog;
-
-void Note(const char* inFormat, ...)
-{
-    if (sOptions.mQuiet)
-        return;
-    double theSeconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - sStartWall).count();
-    char theText[1024];
-    va_list theArguments;
-    va_start(theArguments, inFormat);
-    vsnprintf(theText, sizeof(theText), inFormat, theArguments);
-    va_end(theArguments);
-    std::lock_guard<std::mutex> theGuard(sOutLock);
-    fprintf(stderr, "[sim %7.1f] %s\n", theSeconds, theText);
-    fflush(stderr);
-}
-
-// the game's debug strings: EE-AI lines to the trace, everything to --log
-// the game's load failure message (EEReportLoadFailure's "EE load failure: " debug line; "" none): the wait for the
-// game ends with it, a clean failure, instead of the wait's timeout
-std::string sLoadFailure;
-
-void DebugHandler(const char* inText)
-{
-    if (!inText)
-        return;
-    std::lock_guard<std::mutex> theGuard(sOutLock);
-    if (!strncmp(inText, "EE load failure: ", 17) && sLoadFailure.empty()) {
-        sLoadFailure = inText + 17;
-        while (!sLoadFailure.empty() && (sLoadFailure.back() == '\n' || sLoadFailure.back() == '\r'))
-            sLoadFailure.pop_back();
-        if (sLoadFailure.empty())
-            sLoadFailure = "(no message)";
-    }
-    if (sBatch && sOutState != kOutGame) {
-        if (sOutState == kOutPreamble) {
-            size_t theLength = strlen(inText);
-            bool theNewLine = theLength == 0 || inText[theLength - 1] != '\n';
-            if (!strncmp(inText, "EE-AI", 5))
-                sPreambleTrace += std::string("debugstring ") + inText + (theNewLine ? "\n" : "");
-            sPreambleLog += std::string(inText) + (theNewLine ? "\n" : "");
-        }
-        return;
-    }
-    if (!strncmp(inText, "EE-AI", 5)) {
-        FILE* theOut = sTraceFile ? sTraceFile : stdout;
-        fputs("debugstring ", theOut);
-        fputs(inText, theOut);
-        size_t theLength = strlen(inText);
-        if (theLength == 0 || inText[theLength - 1] != '\n')
-            fputc('\n', theOut);
-    }
-    if (sLogFile) {
-        fputs(inText, sLogFile);
-        size_t theLength = strlen(inText);
-        if (theLength == 0 || inText[theLength - 1] != '\n')
-            fputc('\n', sLogFile);
-    }
-}
-
-[[noreturn]] void Quit(int inCode)
-{
-    {
-        std::lock_guard<std::mutex> theGuard(sOutLock);
-        fflush(stdout);
-        fflush(stderr);
-        if (sTraceFile)
-            fflush(sTraceFile);
-        if (sLogFile)
-            fflush(sLogFile);
-        if (sChecksumFile)
-            fflush(sChecksumFile);
-        if (sRngFile)
-            fflush(sRngFile);
-    }
-    EESimCaptureRecord::Flush();
-#ifdef _WIN32
-    TerminateProcess(GetCurrentProcess(), (UINT)inCode);
-#endif
-    _exit(inCode);
-}
-
-// a failed run: the report with the error, then the exit (the game is built without exceptions)
-[[noreturn]] void Fail(const std::string& inError);
-
-std::string JsonString(const std::string& inText)
-{
-    std::string out = "\"";
-    for (unsigned char c : inText) {
-        if (c == '"' || c == '\\') {
-            out += '\\';
-            out += (char)c;
-        } else if (c < 0x20 || c >= 0x7f) {
-            char buf[8];
-            snprintf(buf, sizeof(buf), "\\u%04x", c);
-            out += buf;
-        } else
-            out += (char)c;
-    }
-    return out + "\"";
-}
-
-// ------------------------------------------------------------------------------------------------ the samples
-
-struct PlayerSample {
-    unsigned long mIndex = 0;
-    bool mHuman = false;
-    long mEpoch = -1;
-    long mPopulation = 0;       // EEPlayer::mPopulationCount (the harness's units_lb14)
-    long mVictoryUnits = 0;     // EEPlayer::mEndOfGameCount (victory_units_lb18)
-    long mCitizens = 0;
-    long mArmy = 0;             // live units that are neither citizens nor buildings (priests and heroes too)
-    long mBuildings = 0;
-    long mNaval = 0;            // of the army: warships, submarines and naval transports
-    long mAir = 0;              // of the army: planes, helicopters and helicopter transports
-    long mTowers = 0;           // of the buildings: the towers and space turrets
-    long mWalls = 0;            // of the buildings: wall pieces and gates (EEUnitClass::mIsWall, not mIsTower: the towers are walls too)
-    long mWonders = 0;          // EEPlayer::GetNumWonderUnits
-    long mStrength = 0;         // the army's hit points x attack, summed (soldiers, ships, heroes)
-    long mValue = 0;            // the cost of every live unit and building, all resources summed
-    long mResources[5] = {0, 0, 0, 0, 0};
-    unsigned long mResult = 0;  // EEPlayer::mGameResult: 1 victorious, 2 defeated
-};
-
-struct Sample {
-    long mGameMs = 0;
-    unsigned long mPT = 0;
-    double mWall = 0;
-    std::vector<PlayerSample> mPlayers;
-};
-
-struct Defeat {
-    unsigned long mPlayer;
-    long mGameMs;
-    unsigned long mPT;
-};
-
-std::mutex sStateLock;
-std::condition_variable sDone;
-bool sFinished = false;
-std::string sOutcome;
-std::vector<Sample> sSamples;
-std::vector<Defeat> sDefeats;
-std::vector<unsigned long> sResults;   // per world player, the last result seen
-std::vector<std::vector<long> > sEpochMs;   // per world player: the game ms each epoch was first reached (-1: not)
-long sNextSampleMs = 0;
-long sStandingSince = -1;              // game ms the last-computer-standing condition holds from
-long sVolcanoCastMs = -1;              // --volcano: the cast's game ms, the second logged, the boulders seen
-long sVolcanoSecond = 0;
-unsigned long sVolcanoShots = 0, sVolcanoTotal = 0;
-std::vector<unsigned long> sVolcanoSeen;
-
-bool IsBuildingCategory(long inCategory)
-{
-    return inCategory == kUnitCategoryBuilding || inCategory == kUnitCategoryNavalBuilding
-        || inCategory == kUnitCategoryMiningBuilding || inCategory == kUnitCategoryGate
-        || inCategory == kUnitCategoryFortress || inCategory == kUnitCategoryBuildingPriest
-        || inCategory == kUnitCategorySpaceBuilding;
-}
-
-// under the world lock (the physics thread's, or the driver's read lock)
-Sample TakeSample()
-{
-    Sample s;
-    s.mGameMs = gPhysics->mGameTime;
-    s.mPT = gPhysics->mNumTicksDone;
-    s.mWall = std::chrono::duration<double>(std::chrono::steady_clock::now() - sGameWall).count();
-    for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(i);
-        if (thePlayer == NULL)
-            continue;
-        PlayerSample p;
-        p.mIndex = i;
-        p.mHuman = (long)i == gWorld.mCurrentPlayer;
-        p.mEpoch = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->mCurrentEpoch : -1;
-        p.mPopulation = thePlayer->mPopulationCount;
-        p.mVictoryUnits = thePlayer->mEndOfGameCount;
-        p.mResult = thePlayer->mGameResult;
-        p.mWonders = (long)thePlayer->GetNumWonderUnits();
-        for (long r = 0; r < 5; r++)
-            p.mResources[r] = thePlayer->mResourceCaps[kResourceFood + r];
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
-                continue;
-            long theCategory = theUnit->mUnitClass->mCategory;
-            if (theCategory == kUnitCategoryAmbient || theCategory == kUnitCategoryResource
-                || theCategory == kUnitCategoryProjectile)
-                continue;   // the AI's path points (ambient units), resources, shots
-            if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
-                p.mCitizens++;
-            else if (IsBuildingCategory(theCategory)) {
-                p.mBuildings++;
-                unsigned long theFamily = theUnit->mUnitClass->GetFamily();
-                if (theFamily == kUnitFamilyTowers || theFamily == kUnitFamilyTowerSpaceTurret)
-                    p.mTowers++;
-                if (theUnit->mUnitClass->mIsWall && !theUnit->mUnitClass->mIsTower)
-                    p.mWalls++;
-            } else {
-                p.mArmy++;
-                if (theCategory == kUnitCategoryNaval || theCategory == kUnitCategorySubmergedNaval
-                    || theCategory == kUnitCategoryNavalTransport)
-                    p.mNaval++;
-                else if (theCategory == kUnitCategoryAirplane || theCategory == kUnitCategoryHelicopter
-                    || theCategory == kUnitCategoryHelicopterTransport)
-                    p.mAir++;
-                if (theUnit->mStats != NULL)
-                    p.mStrength += (long)(theUnit->mHitPoints * theUnit->mStats->mAttack);
-            }
-            EETechTreeNode* theNode = thePlayer->mTechnologies != NULL
-                ? thePlayer->mTechnologies->Get(theUnit->mUnitClass->mTechnology) : NULL;
-            if (theNode != NULL && theNode->mData != NULL)
-                for (long r = kResourceFood; r <= kResourceIron; r++)
-                    p.mValue += theNode->GetCost(r, theUnit->mUnitClass->mUnitType, 1.0f);
-        }
-        s.mPlayers.push_back(p);
-    }
-    return s;
-}
-
-void Finish(const char* inOutcome)
-{
-    gPlatSimRun = 0;
-    std::lock_guard<std::mutex> theGuard(sStateLock);
-    if (sFinished)
-        return;
-    sOutcome = inOutcome;
-    sFinished = true;
-    sDone.notify_all();
-}
-
-// the end of a game in the tick hook (the physics thread): the end sweep first, in a captured game
-void FinishGame(const char* inOutcome)
-{
-    static bool sSwept = false;
-    if (EESimCaptureRecord::Active() && !sSwept) {
-        sSwept = true;
-        if (sOptions.mEffectSweep) {
-            // the 3D effects' sweep alone (the game's own records held since its start: EESimMain)
-            EESimCaptureRecord::Hold(false);
-            EEEffectCaptureSweep();
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-            Finish(inOutcome);
-            return;
-        }
-        if (sOptions.mGroupSweep) {
-            // the active groups' sweep alone (the game's own records held since its start: EESimMain)
-            EESimCaptureRecord::Hold(false);
-            EEActiveGroupCaptureSweep();
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-            Finish(inOutcome);
-            return;
-        }
-        EECombatListSearchSweep();
-        if (sOptions.mAppSweep) {
-            // EEMap's sight and out-of-synch checksum (MAPS, MAPK; their TSGT): no game reaches them. The changed
-            // sight would reach the other threads: nothing records after it
-            EECombatCaptureFlush();
-            const unsigned int kTags[] = {EECaptureTag("MAPS"), EECaptureTag("MAPK"), EECaptureTag("TSGT")};
-            EESimCaptureRecord::Only(kTags, 3);
-            EESimCaptureRecord::Exclusive(true);
-            EESightCaptureSweep();
-            EESimCaptureRecord::Exclusive(false);
-            EESimCaptureRecord::Only(0);
-            EESimCaptureRecord::Close();
-        }
-        if (sOptions.mMissileSweep) {
-            EECombatMissileSweep();
-            // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-        }
-    }
-    EECombatCaptureFlush();
-    Finish(inOutcome);
-}
+// ------------------------------------------------------------------------------------------------ the checksum line
 
 // The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
 // commands and update counts (2), calamities (0x10), air traffic (0x40), the continent manager's checksum (0x100).
@@ -809,20 +448,13 @@ void FinishGame(const char* inOutcome)
 // multiplayer game (flag 1 only) never reads. The game's own OOS check uses flag 1.
 const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
 
-// --checksum-trace: one line per communications tick (the physics thread, under the world's write lock, after the
-// CT's last physics tick). Only reads: no random draws, no caches filled; EEPhysics::mLastOutOfSynchChecksum, the one member
-// GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
-//   CT <the game's CTs run, from 1> pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
-//      oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
-//      inputs=<user inputs executed>
-// The CT number counts from the game's first CT: the communications' own count (GetNumberOfCTsProcessedInPhysics)
-// includes the CTs the send thread sent before the sim took over, a wall-clock-dependent number (22-25 in six runs).
-// A line only after physics ticks ran: around a save the physics loop passes gPlatSimAfterTick without running a
-// tick, a wall-clock-dependent number of times (151 at one autosave of seed 2), and those lines would differ by run.
-unsigned long sChecksumLines = 0;
-unsigned long sChecksumLastPT = 0;
-
-void ChecksumFields(FILE* inFile)
+// --checksum-trace's fields (the driver writes "CT <n> " or "LOADED " before them; the physics thread, under the
+// world's write lock, after the CT's last physics tick). Only reads: no random draws, no caches filled;
+// EEPhysics::mLastOutOfSynchChecksum, the one member GetOutOfSynchChecksum writes (and nothing reads), is put back:
+//   pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
+//   oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
+//   inputs=<user inputs executed>
+std::string ChecksumText()
 {
     unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
     unsigned long theChecksum = gPhysics->GetOutOfSynchChecksum(false, kChecksumFlags);
@@ -833,19 +465,13 @@ void ChecksumFields(FILE* inFile)
         theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
         theCount++;
     }
-    fprintf(inFile, "pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
-            gPhysics->mNumTicksDone, gPhysics->mCurrentTick,
-            gPhysics->mGameTime, (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum,
-            theCount, (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(), gPhysics->mInputMessagesProcessed);
-}
-
-void ChecksumLine()
-{
-    if (sChecksumFile == NULL || (sChecksumLines > 0 && gPhysics->mNumTicksDone == sChecksumLastPT))
-        return;
-    sChecksumLastPT = gPhysics->mNumTicksDone;
-    fprintf(sChecksumFile, "CT %lu ", ++sChecksumLines);
-    ChecksumFields(sChecksumFile);
+    char theText[512];
+    snprintf(theText, sizeof(theText), "pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
+             gPhysics->mNumTicksDone, gPhysics->mCurrentTick, gPhysics->mGameTime,
+             (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum, theCount,
+             (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(),
+             gPhysics->mInputMessagesProcessed);
+    return theText;
 }
 
 // --dump-at / --dump-load (TEST ONLY, the save/load fidelity hunt): the state the checksum line sums, item by item, so
@@ -857,7 +483,7 @@ void DumpState(const std::string& inPath)
     if (!f)
         return;
     fprintf(f, "STATE ");
-    ChecksumFields(f);
+    fputs(ChecksumText().c_str(), f);
     fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
             (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
     {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
@@ -1009,22 +635,7 @@ void DumpState(const std::string& inPath)
     fclose(f);
 }
 
-std::vector<std::pair<long, std::string>> sDumps;   // --dump-at MS=FILE, in game-ms order
-size_t sNextDump = 0;
-std::string sDumpLoad;                               // --dump-load FILE
-
-// --dump-tick MS=FILE (TEST ONLY): the state dump after the first physics tick at or after game ms MS, in a continued
-// game and in a loaded one alike (gPhysicsAfterTickHook, ee/EEPhysics.h: after every physics tick of the headless
-// loop, where --dump-at writes after a communications tick's last)
-std::vector<std::pair<long, std::string>> sTickDumps;   // in game-ms order
-size_t sNextTickDump = 0;
-
-void TickDumpHook()
-{
-    while (sNextTickDump < sTickDumps.size() && gPhysics->mGameTime >= sTickDumps[sNextTickDump].first)
-        DumpState(sTickDumps[sNextTickDump++].second);
-}
-
+FILE* sRngFile = NULL;
 // --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
 // MS (gURandomTraceHook, lle/URandom.h), one line each: the draw's number, the new seed, the game ms and the callers
 // as exe-relative addresses (tools/sim.py resolve adds the map's preferred base). The same MS in a continued game and
@@ -1065,339 +676,60 @@ void RngTraceHook(URandom* inRandom)
     fprintf(sRngFile, "\n");
 }
 
-// the physics thread, after each communications tick, under the world's write lock
-// --save-at: the saves' names in data\Saved Games (the game's folder; copied out at the end of the run)
-std::string SaveName(size_t inIndex)
-{
-    return "EE-SIM save " + std::to_string(inIndex);
-}
-
-std::string SavePath(const std::string& inName)
-{
-    return std::string("data\\Saved Games\\") + inName + (const char*)gSavedGameExtension;
-}
-
-size_t sNextSave = 0;
-
-// the save requests of --save-at, as EEPhysics::AutoSave sends one (but quiet and not an autosave: no autosave is
-// trimmed, the preferences are not written). It runs at the start of the next communications tick that carries it
-// (EEPhysics::Tick: DrainInput executes it, ServeLoadSaveRequests saves), between two communications ticks: the
-// loaded game goes on from there.
-void RequestSaves(long inTime)
-{
-    while (sNextSave < sOptions.mSaves.size() && inTime >= sOptions.mSaves[sNextSave].first) {
-        std::string theName = SaveName(sNextSave) + (const char*)gSavedGameExtension;
-        UWideString theFile(theName.c_str());   // load, quiet, tick, time, auto-save, the wait id, the name
-        NEMessage* theSave = new EEMRecord(kMessageLoadOrSaveGame, {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(),
-                                                                    TMGetTime(), 0, 0, theFile});
-        static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
-        theSave->Dereference();
-        Note("SAVE %zu requested at game ms %ld PT %lu", sNextSave, inTime, gPhysics->mNumTicksDone);
-        sNextSave++;
-    }
-}
-
-bool CopyAFile(const std::string& inFrom, const std::string& inTo)
-{
-    FILE* a = fopen(inFrom.c_str(), "rb");
-    if (!a)
-        return false;
-    FILE* b = fopen(inTo.c_str(), "wb");
-    if (!b) {
-        fclose(a);
-        return false;
-    }
-    char theBuffer[65536];
-    size_t n;
-    bool theOK = true;
-    while ((n = fread(theBuffer, 1, sizeof(theBuffer), a)) > 0)
-        theOK = theOK && fwrite(theBuffer, 1, n, b) == n;
-    fclose(a);
-    return fclose(b) == 0 && theOK;
-}
-
-void AfterTick()
-{
-    // --scenario: a shown dialog message ends now (gScenarioSimDialogs, ee/EEScenarioManager.h)
-    if (gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog)
-        gWorld.mScenarioManager->ShowDialogMessage();
-    ChecksumLine();
-    long theTime = gPhysics->mGameTime;
-    RequestSaves(theTime);
-    while (sNextDump < sDumps.size() && theTime >= sDumps[sNextDump].first)
-        DumpState(sDumps[sNextDump++].second);
-    unsigned long theCount = gWorld.GetNumPlayers();
-    if (sResults.size() < theCount)
-        sResults.resize(theCount, 0);
-    for (unsigned long i = 1; i < theCount; i++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(i);
-        unsigned long theResult = thePlayer ? thePlayer->mGameResult : 0;
-        long theEpoch = thePlayer && thePlayer->mTechnologies ? thePlayer->mTechnologies->mCurrentEpoch : -1;
-        if (theEpoch >= 0) {
-            std::lock_guard<std::mutex> theGuard(sStateLock);
-            if (sEpochMs.size() < theCount)
-                sEpochMs.resize(theCount);
-            std::vector<long>& theTimes = sEpochMs[i];
-            if ((long)theTimes.size() <= theEpoch)
-                theTimes.resize(theEpoch + 1, -1);
-            for (long e = 0; e <= theEpoch; e++)   // an advance reaches every epoch up to it (a skip counts for each)
-                if (theTimes[e] < 0)
-                    theTimes[e] = theTime;
-        }
-        if (theResult != sResults[i]) {
-            sResults[i] = theResult;
-            if (theResult == 2)
-                sDefeats.push_back(Defeat{i, theTime, gPhysics->mNumTicksDone});
-            Note("RESULT player %lu %s at game ms %ld PT %lu", i,
-                 theResult == 1 ? "victorious" : theResult == 2 ? "defeated" : "?", theTime, gPhysics->mNumTicksDone);
-        }
-    }
-    // TEST ONLY: the formation and combat sweeps of the simulation capture (ee/EEFormation.h, above), every five game
-    // minutes
-    static long sNextSweepMs = 300000;
-    if (EESimCaptureRecord::Active() && theTime >= sNextSweepMs) {
-        sNextSweepMs += 300000;
-        EEFormationCaptureSweep();
-        EECombatCaptureSweep();
-        EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
-        EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
-        EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
-        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
-        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
-        EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
-        static bool sMessageSweepDone = false;   // the game messages' sweep, once (ee/EEMessageCapture.h)
-        if (!sMessageSweepDone) {
-            sMessageSweepDone = true;
-            EEMessageCaptureSweep();
-        }
-    }
-    // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
-    static long sNextCastMs = 300000;
-    static long sCasts = 0;
-    static bool sCastsAligned = false;
-    if (!sCastsAligned) {   // a loaded game casts on the continued game's schedule (sim_oracle.py saveload)
-        sCastsAligned = true;
-        if (!sOptions.mLoadSave.empty()) {
-            sCasts = theTime / 300000;
-            sNextCastMs = (sCasts + 1) * 300000;
-        }
-    }
-    if (sOptions.mCalamities && theTime >= sNextCastMs) {
-        sNextCastMs += 300000;
-        EETechCaptureCastCalamities(sCasts++);
-    }
-    // TEST ONLY: --unit-sweep makes every player aircraft, ships under water, sea animals and spaceships every five
-    // game minutes and sends them at the next player (Physics Thread/EEPhysicsSweep.cpp)
-    static long sNextUnitSweepMs = 300000;
-    static long sUnitSweeps = 0;
-    if (sOptions.mUnitSweep && theTime >= sNextUnitSweepMs) {
-        sNextUnitSweepMs += 300000;
-        EEPhysicsUnitSweep(sUnitSweeps++);
-    }
-    // TEST ONLY: the mini map's cells every game minute (MMSN); --app-sweep's cheat lines at five game minutes and
-    // storms at ten (ee/EEAppCapture.h)
-    static long sNextMiniMapMs = 60000;
-    if (EESimCaptureRecord::Active() && theTime >= sNextMiniMapMs) {
-        sNextMiniMapMs += 60000;
-        EEAppCaptureMiniMapSnapshot();
-        EESightCaptureSnapshot();   // TSGT: the whole map's visibility words
-    }
-    static int sAppSweeps = 0;
-    if (sOptions.mAppSweep && sAppSweeps == 0 && theTime >= 300000) {
-        sAppSweeps = 1;
-        EEAppCaptureCheatSweep();
-    }
-    if (sOptions.mAppSweep && sAppSweeps == 1 && theTime >= 600000) {
-        sAppSweeps = 2;
-        EEAppCaptureStormSweep();
-    }
-    if (theTime >= sNextSampleMs) {
-        Sample s = TakeSample();
-        {
-            std::lock_guard<std::mutex> theGuard(sStateLock);
-            sSamples.push_back(s);
-        }
-        sNextSampleMs += (long)(sOptions.mSampleSeconds * 1000);
-        if (!sOptions.mQuiet) {
-            std::string theLine;
-            for (const PlayerSample& p : s.mPlayers) {
-                char buf[160];
-                snprintf(buf, sizeof(buf), " p%lu e%ld c%ld a%ld b%ld", p.mIndex, p.mEpoch, p.mCitizens, p.mArmy,
-                         p.mBuildings);
-                theLine += buf;
-            }
-            Note("game s %ld PT %lu:%s", theTime / 1000, s.mPT, theLine.c_str());
-        }
-    }
-    // --flare (TEST ONLY): once, the idle human's flare at the player's first building, told to the human's allies as
-    // EEMSendFlare::Execute tells them (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no
-    // computer sends
-    if (sOptions.mFlareMs >= 0 && theTime >= sOptions.mFlareMs) {
-        sOptions.mFlareMs = -1;
-        EEPlayer* theHuman = gWorld.GetCurrentPlayer();
-        EEPlayer* theTarget = sOptions.mFlarePlayer < theCount ? gWorld.GetPlayer(sOptions.mFlarePlayer) : NULL;
-        EEUnit* theSpot = NULL;
-        for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
-             u = static_cast<EEUnit*>(u->mNext))
-            if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
-                theSpot = u;
-        if (theHuman != NULL && theSpot != NULL) {
-            U2DPoint<long> theTile(theSpot->GetTileX(), theSpot->GetTileY());
-            std::vector<EEPlayer*> theAllies = theHuman->mAllies;
-            for (EEPlayer* a : theAllies)
-                a->FlareReceived(theHuman, theTile);
-            Note("FLARE at %ld,%ld (player %lu) to %lu allies at game ms %ld", theTile.mX, theTile.mY,
-                 sOptions.mFlarePlayer, (unsigned long)theAllies.size(), theTime);
-        } else
-            Note("FLARE: no building of player %lu", sOptions.mFlarePlayer);
-    }
-    // --volcano (TEST ONLY): once, a volcano (the calamity class 9, no caster) cast 6 tiles off the player's first
-    // building for that player; then every game second the volcano projectiles (boulders) launched in it
-    {
-        if (sOptions.mVolcanoMs >= 0 && theTime >= sOptions.mVolcanoMs) {
-            sOptions.mVolcanoMs = -1;
-            EEPlayer* theTarget = sOptions.mVolcanoPlayer < theCount ? gWorld.GetPlayer(sOptions.mVolcanoPlayer) : NULL;
-            EEUnit* theSpot = NULL;
-            for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
-                 u = static_cast<EEUnit*>(u->mNext))
-                if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
-                    theSpot = u;
-            if (theSpot != NULL) {
-                long theX = theSpot->GetTileX() + 6, theY = theSpot->GetTileY() + 6;
-                bool theCast = USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(
-                    9, 0xffffffffUL, theX, theY, sOptions.mVolcanoPlayer);
-                Note("VOLCANO cast %d at %ld,%ld (player %lu) at game ms %ld", theCast ? 1 : 0, theX, theY,
-                     sOptions.mVolcanoPlayer, theTime);
-                sVolcanoCastMs = theTime;
-                sVolcanoSecond = theTime / 1000;
-            } else
-                Note("VOLCANO: no building of player %lu", sOptions.mVolcanoPlayer);
-        }
-        if (sVolcanoCastMs >= 0) {
-            for (unsigned long i = 0; i < theCount; i++) {
-                EEPlayer* thePlayer = gWorld.GetPlayer(i);
-                for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL;
-                     u = static_cast<EEUnit*>(u->mNext))
-                    if (u->mUnitClass->GetUnitType() == kUnitTypeVolcanoProjectile &&
-                        std::find(sVolcanoSeen.begin(), sVolcanoSeen.end(), u->GetUnitID()) == sVolcanoSeen.end()) {
-                        sVolcanoSeen.push_back(u->GetUnitID());
-                        sVolcanoShots++;
-                        sVolcanoTotal++;
-                    }
-            }
-            if (theTime / 1000 > sVolcanoSecond) {
-                Note("VOLCANO s %ld: %lu boulders launched (total %lu)", sVolcanoSecond - sVolcanoCastMs / 1000,
-                     sVolcanoShots, sVolcanoTotal);
-                sVolcanoSecond = theTime / 1000;
-                sVolcanoShots = 0;
-                if (sVolcanoSeen.size() > 100000)
-                    sVolcanoSeen.clear();
-            }
-        }
-    }
-    // the end of the run (tools/harness/ai_game.py's rules)
-    if (gPhysics->mGameOver) {
-        FinishGame("game-end");
-        return;
-    }
-    if (sOptions.mNoHumanDefeat) {
-        long theAlive = 0;
-        bool theOthersDone = true;
-        for (unsigned long i = 1; i < theCount; i++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(i);
-            if (thePlayer == NULL || (long)i == gWorld.mCurrentPlayer)
-                continue;
-            if (thePlayer->mEndOfGameCount > 0)
-                theAlive++;
-            else if (thePlayer->mGameResult == 0)
-                theOthersDone = false;
-        }
-        if (theAlive <= 1 && theOthersDone) {
-            if (sStandingSince < 0)
-                sStandingSince = theTime;
-            else if (theTime - sStandingSince >= 1000) {   // two harness samples apart
-                FinishGame("last-computer-standing");
-                return;
-            }
-        } else
-            sStandingSince = -1;
-    } else {
-        bool theAll = theCount > 1;
-        for (unsigned long i = 1; i < theCount; i++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(i);
-            if (thePlayer && thePlayer->mGameResult == 0)
-                theAll = false;
-        }
-        if (theAll) {
-            FinishGame("game-end");
-            return;
-        }
-    }
-    if (theTime >= (long)(sOptions.mGameSeconds * 1000))
-        FinishGame("time-cap");
-}
-
-// ------------------------------------------------------------------------------------------------ the menus
+// ------------------------------------------------------------------------------------------------ the driver's host
 
 const unsigned long kTriggerEvent = 0x3f0;
-const unsigned long kFormMain = 12, kFormSingle = 6, kFormLobbyID = 26, kFormGame = 11;
-const long kPlayerType = 30, kTeam = 62, kCitizens = 126;
-const long kEngine = 275;   // the port's engine boxes (ee/EEUIManager.h kLobbyEngineCombo + slot)
-const long kVisibleSlots = 8;
+const unsigned long kFormLobbyID = 26;
+const unsigned long kFormLoad = 13, kFormLoadScenario = 4, kFormCampaignSelect = 33;
+const unsigned long kCampaignScenarioList = 2;   // the campaign scenario select form's scenario list
 
 struct UILock {
     UILock() { gUIManager->LockUIForCopyData(); }
     ~UILock() { gUIManager->UnlockUIForCopyData(); }
 };
 
-unsigned long TopForm()
+size_t PutText(const std::string& inText, char* outBuffer, size_t inCapacity)
+{
+    if (inCapacity > 0) {
+        size_t n = inText.size() < inCapacity - 1 ? inText.size() : inCapacity - 1;
+        memcpy(outBuffer, inText.data(), n);
+        outBuffer[n] = 0;
+    }
+    return inText.size();
+}
+
+unsigned int HostTopForm()
 {
     if (gUIManager == NULL)
         return 0;
     UILock theLock;
     UIForm* theForm = gUIManager->GetCurrentForm();
-    return theForm ? theForm->GetFormID() : 0;
+    return theForm ? (unsigned int)theForm->GetFormID() : 0;
 }
 
-void SimSleep(long inMilliseconds)
+size_t HostTopFormClass(char* outBuffer, size_t inCapacity)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(inMilliseconds));
-}
-
-void WaitFor(const char* inWhat, double inSeconds, const std::function<bool()>& inTest)
-{
-    auto theEnd = std::chrono::steady_clock::now() + std::chrono::duration<double>(inSeconds);
-    while (!inTest()) {
-        if (std::chrono::steady_clock::now() > theEnd) {
-            std::string theClass = "none";
-            if (gUIManager) {   // the form's class too (an id -1 form: a message box is EEUIFError)
-                UILock theLock;
-                UIForm* theForm = gUIManager->GetCurrentForm();
-                if (theForm) theClass = typeid(*theForm).name();
-            }
-            Fail(std::string("timed out waiting for ") + inWhat + " (top form " +
-                                     std::to_string(TopForm()) + " " + theClass + ")");
-        }
-        SimSleep(50);
+    std::string theClass = "none";   // (an id -1 form: a message box is EEUIFError)
+    if (gUIManager) {
+        UILock theLock;
+        UIForm* theForm = gUIManager->GetCurrentForm();
+        if (theForm)
+            theClass = typeid(*theForm).name();
     }
+    return PutText(theClass, outBuffer, inCapacity);
 }
 
-void WaitForm(unsigned long inForm, double inSeconds = 120)
-{
-    WaitFor(("form " + std::to_string(inForm)).c_str(), inSeconds, [&] { return TopForm() == inForm; });
-}
-
-void Click(unsigned long inForm, unsigned long inControl)
+int HostClick(unsigned int inForm, unsigned int inControl)
 {
     UILock theLock;
     UIForm* theForm = gUIManager->GetCurrentForm();
     if (!theForm || theForm->GetFormID() != inForm || inControl >= theForm->GetControlCount())
-        Fail("click: form " + std::to_string(inForm) + " control " + std::to_string(inControl) +
-                                 " is not on top");
+        return 1;
     UIControl* theControl = theForm->GetControl(inControl);
     if (!theControl || !theControl->GetTriggerEvent(kTriggerEvent))
-        Fail("click: control " + std::to_string(inControl) + " has no trigger event");
+        return 2;
     theControl->FireTriggerEvent(kTriggerEvent);
+    return 0;
 }
 
 UIComboBox* Combo(UIForm* inForm, long inControl)
@@ -1407,8 +739,15 @@ UIComboBox* Combo(UIForm* inForm, long inControl)
     return dynamic_cast<UIComboBox*>(inForm->GetControl(inControl));
 }
 
-// the combo's lines and selection (on the lobby form) -> false when the control is not a combo there
-bool ComboState(long inControl, std::vector<std::string>& outLines, long& outSelection)
+void PushLines(const UILBString* inList, void* inSink, EeSimDriverPushFn inPush)
+{
+    for (unsigned long k = 0; k < inList->GetLineCount(); k++) {
+        const char* theText = (const char*)inList->GetData(k);
+        inPush(inSink, theText ? theText : "");
+    }
+}
+
+bool HostComboLines(long inControl, void* inSink, EeSimDriverPushFn inPush, long* outSelection)
 {
     UILock theLock;
     UIForm* theForm = gUIManager->GetCurrentForm();
@@ -1417,331 +756,63 @@ bool ComboState(long inControl, std::vector<std::string>& outLines, long& outSel
     UIComboBox* theCombo = Combo(theForm, inControl);
     if (!theCombo || !theCombo->GetListBox())
         return false;
-    outLines.clear();
-    const UILBString* theList = theCombo->GetListBox();
-    for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
-        const char* theText = (const char*)theList->GetData(k);
-        outLines.push_back(theText ? theText : "");
-    }
+    PushLines(theCombo->GetListBox(), inSink, inPush);
     unsigned long theSelection = 0xffffffffUL;
     theCombo->GetCurrentSelection(theSelection);
-    outSelection = (long)(int32_t)theSelection;
+    *outSelection = (long)(int32_t)theSelection;
     return true;
 }
 
-std::string Lower(std::string inText)
+bool HostComboSelect(long inControl, unsigned long inIndex)
 {
-    size_t a = inText.find_first_not_of(" \t");
-    size_t b = inText.find_last_not_of(" \t");
-    inText = a == std::string::npos ? std::string() : inText.substr(a, b - a + 1);
-    for (char& c : inText)
-        c = (char)tolower((unsigned char)c);
-    return inText;
+    UILock theLock;
+    UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), inControl);
+    if (!theCombo)
+        return false;
+    theCombo->SetCurrentSelection(inIndex);
+    return true;
 }
 
-// a line by name (ai_game.py resolve): "#k" an index, else the exact line, else the one line it starts, else the
-// one line containing it
-long Resolve(const std::string& inValue, const std::vector<std::string>& inLines, const std::string& inWhat)
+// the load screen's (EE_SIM_DRIVER_LIST_LOAD), the play scenario screen's or the campaign scenario select form's
+// file list (NULL: not on top)
+UILBString* ScreenList(int inWhich)
 {
-    if (!inValue.empty() && inValue[0] == '#') {
-        long k = atol(inValue.c_str() + 1);
-        if (k < 0 || k >= (long)inLines.size())
-            Fail(inWhat + ": index " + inValue + " outside the combo's " +
-                                     std::to_string(inLines.size()) + " lines");
-        return k;
-    }
-    std::string theKey = Lower(inValue);
-    std::vector<long> theHits;
-    for (size_t k = 0; k < inLines.size(); k++)
-        if (Lower(inLines[k]) == theKey)
-            return (long)k;
-    for (size_t k = 0; k < inLines.size(); k++)
-        if (Lower(inLines[k]).compare(0, theKey.size(), theKey) == 0)
-            theHits.push_back((long)k);
-    if (theHits.empty())
-        for (size_t k = 0; k < inLines.size(); k++)
-            if (Lower(inLines[k]).find(theKey) != std::string::npos)
-                theHits.push_back((long)k);
-    if (theHits.size() != 1) {
-        std::string theAll;
-        for (const std::string& l : inLines)
-            theAll += (theAll.empty() ? "" : "|") + l;
-        Fail(inWhat + ": '" + inValue + "' matches " + std::to_string(theHits.size()) +
-                                 " of the lines " + theAll);
-    }
-    return theHits[0];
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    unsigned long theForms[3] = {kFormLoad, kFormLoadScenario, kFormCampaignSelect};
+    unsigned long theControls[3] = {(unsigned long)kSPLoadGameFileListBox, (unsigned long)kLoadGameLoadFileListBox,
+                                    kCampaignScenarioList};
+    if (!theForm || inWhich < 0 || inWhich > 2 || theForm->GetFormID() != theForms[inWhich] ||
+        theControls[inWhich] >= theForm->GetControlCount())
+        return NULL;
+    return dynamic_cast<UILBString*>(theForm->GetControl(theControls[inWhich]));
 }
 
-struct Chosen {
-    long mControl;
-    std::string mLabel, mValue, mLine;
-    long mIndex;
-};
-std::vector<Chosen> sChosen;
-
-void Select(long inControl, const std::string& inValue, const std::string& inLabel)
+bool HostListLines(int inWhich, void* inSink, EeSimDriverPushFn inPush, unsigned long* outSelection)
 {
-    std::vector<std::string> theLines;
-    long theSelection = -1;
-    if (!ComboState(inControl, theLines, theSelection))
-        Fail(inLabel + ": control " + std::to_string(inControl) + " is not a combo on the lobby");
-    if (theLines.empty()) {
-        // a combo the lobby has not filled yet (or is filling again from a lobby update): under load the lines come
-        // later than the driver's pause ("index #0 outside the combo's 0 lines", an exit 2 before the game)
-        WaitFor((inLabel + "'s lines").c_str(), 60, [&] {
-            return ComboState(inControl, theLines, theSelection) && !theLines.empty();
-        });
-    }
-    long theIndex = Resolve(inValue, theLines, inLabel);
-    if (theSelection != theIndex) {
-        {
-            UILock theLock;
-            UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), inControl);
-            if (!theCombo)
-                Fail(inLabel + ": the lobby went away");
-            theCombo->SetCurrentSelection((unsigned long)theIndex);
-        }
-        WaitFor((inLabel + " to stick").c_str(), 20, [&] {
-            std::vector<std::string> l;
-            long s = -1;
-            return ComboState(inControl, l, s) && s == theIndex;
-        });
-        SimSleep(200);   // the lobby's update round trip through the local server
-    }
-    sChosen.push_back(Chosen{inControl, inLabel, inValue, theLines[theIndex], theIndex});
-    Note("LOBBY %s: control %ld = %ld '%s'", inLabel.c_str(), inControl, theIndex, theLines[theIndex].c_str());
+    UILock theLock;
+    *outSelection = 0xffffffffUL;
+    UILBString* theList = ScreenList(inWhich);
+    if (!theList)
+        return false;
+    unsigned long theSelection = 0xffffffffUL;
+    bool theOK = theList->GetCurrentSelection(theSelection) == kErrorOK;
+    // (the campaign's list: the selection only when the list gives one; the file lists: as it is written)
+    *outSelection = inWhich == EE_SIM_DRIVER_LIST_CAMPAIGN && !theOK ? 0xffffffffUL : theSelection;
+    PushLines(theList, inSink, inPush);
+    return true;
 }
 
-void SetUpLobby()
+bool HostListSelect(int inWhich, unsigned long inIndex)
 {
-    long n = sOptions.mComputers;
-    WaitFor("the lobby's combos", 60, [&] {
-        std::vector<std::string> l;
-        long s;
-        // each combo there and filled: the slots' lines come with the local server's first lobby update
-        for (long k = 0; k < kVisibleSlots; k++)
-            if (!ComboState(kPlayerType + k, l, s) || l.empty())
-                return false;
-        for (long c : {177L, 179L, 207L})
-            if (!ComboState(c, l, s) || l.empty())
-                return false;
-        return true;
-    });
-    SimSleep(1500);   // the local server's readiness and queued lobby updates (the harness waits 3 s)
-    // (control, value, label), applied in order, absolutely (ai_game.py)
-    std::vector<std::pair<long, std::string>> theOptions = {
-        {175, "Random Map"}, {177, "Small"}, {179, "Continental"}, {181, "Standard - High"},
-        {183, "Prehistoric Age"}, {185, "Space Age"}, {187, "1200"}, {189, "Off"}, {205, "Standard"},
-        {207, "Easy"}, {209, "Very Fast"}};
-    auto set = [&](long inControl, const std::string& inValue) {
-        for (auto& o : theOptions)
-            if (o.first == inControl) {
-                o.second = inValue;
-                return;
-            }
-        theOptions.push_back({inControl, inValue});
-    };
-    if (!sOptions.mMapSize.empty())
-        set(177, sOptions.mMapSize);
-    if (!sOptions.mMapType.empty())
-        set(179, sOptions.mMapType);
-    if (!sOptions.mDifficulty.empty())
-        set(207, sOptions.mDifficulty);
-    for (auto& l : sOptions.mLobby)
-        set(l.first, l.second);
-    for (long s = 0; s <= n; s++) {   // the playing slots: no team (free for all), 5 starting citizens
-        bool theTeam = false, theCitizens = false;
-        for (auto& o : theOptions) {
-            theTeam = theTeam || o.first == kTeam + s;
-            theCitizens = theCitizens || o.first == kCitizens + s;
-        }
-        if (!theTeam)
-            theOptions.push_back({kTeam + s, "-"});
-        if (!theCitizens)
-            theOptions.push_back({kCitizens + s, "5"});
-    }
-    // --engine: each computer seat's engine box (seat s = slot s; a shorter list is taken in turn), unless --lobby
-    // sets that box itself; without --engine the boxes keep the lobby's Classic, which plays the AI the manifest
-    // marks "classic" (classic_lua: the C++ classic is gone since the merge of main's stages 5 and 6)
-    std::vector<std::string> theEngines;
-    for (size_t a = 0; !sOptions.mEngine.empty() && a <= sOptions.mEngine.size();) {
-        size_t b = sOptions.mEngine.find(',', a);
-        if (b == std::string::npos)
-            b = sOptions.mEngine.size();
-        theEngines.push_back(sOptions.mEngine.substr(a, b - a));
-        a = b + 1;
-    }
-    for (long s = 1; s <= n && !theEngines.empty(); s++) {
-        bool theSet = false;
-        for (auto& o : theOptions)
-            theSet = theSet || o.first == kEngine + s;
-        if (theSet)
-            continue;
-        // the box's line by the choice's name (ee/EECPEngine.h: classic, random, an AI's id, or next for the
-        // manifest's first AI), not by its text: the manifest's names are free text
-        const std::string& theName = theEngines[(size_t)(s - 1) % theEngines.size()];
-        long theChoice = EECPChoiceByName(theName);
-        if (theChoice < 0) {
-            std::string theKnown = "classic, random";
-            for (const EECPAIEntry& e : EECPAIManifest())
-                theKnown += ", " + e.mID;
-            Fail("--engine: '" + theName + "' is no engine (" + theKnown + (EECPAIManifest().empty() ? "" : ", next") + ")");
-        }
-        theOptions.push_back({kEngine + s, "#" + std::to_string(theChoice)});
-    }
-    Select(kPlayerType, "#0", "slot 0 human");
-    for (long s = 1; s < kVisibleSlots; s++)
-        Select(kPlayerType + s, s <= n ? "Computer" : "Open", "slot " + std::to_string(s));
-    for (auto& o : theOptions)
-        Select(o.first, o.second, "control " + std::to_string(o.first));
-    SimSleep(1000);
-    for (const Chosen& c : sChosen) {
-        std::vector<std::string> l;
-        long s = -1;
-        if (!ComboState(c.mControl, l, s) || s != c.mIndex)
-            Fail("lobby selection of control " + std::to_string(c.mControl) +
-                                     " changed after setting it");
-    }
+    UILock theLock;
+    UILBString* theList = ScreenList(inWhich);
+    if (!theList)
+        return false;
+    theList->ChangeSelectionIndex(inIndex, true, false);
+    return true;
 }
 
-// ------------------------------------------------------------------------------------------------ the report
-
-void WriteReport(int inCode, const std::string& inError)
-{
-    std::string j = "{\n";
-    j += "  \"test_only\": true,\n  \"kind\": \"ee-sim-v1\",\n";
-    j += "  \"setup\": {\"seed\": " + std::to_string(sOptions.mSeed) + ", \"computers\": " +
-         std::to_string(sOptions.mComputers) + ", \"game_seconds\": " + std::to_string((long)sOptions.mGameSeconds) +
-         ", \"pt_rate\": " + std::to_string(sOptions.mPTRate) + ", \"no_human_defeat\": " +
-         (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"human_out\": " +
-         (sOptions.mHumanOut ? "true" : "false") + ", \"cheats\": " +
-         JsonString(sOptions.mCheats.empty() ? "all" : sOptions.mCheats) + ", \"personality\": " +
-         JsonString(sOptions.mPersonality) + ", \"engine\": " +
-         JsonString(sOptions.mEngine.empty() ? "classic" : sOptions.mEngine) + ", \"sets\": [";
-    for (size_t k = 0; k < sOptions.mSets.size(); k++)
-        j += (k ? ", " : "") + JsonString(sOptions.mSets[k]);
-    j += "],\n    \"lobby\": [";
-    for (size_t k = 0; k < sChosen.size(); k++)
-        j += std::string(k ? ", " : "") + "{\"control\": " + std::to_string(sChosen[k].mControl) + ", \"value\": " +
-             JsonString(sChosen[k].mValue) + ", \"index\": " + std::to_string(sChosen[k].mIndex) + ", \"line\": " +
-             JsonString(sChosen[k].mLine) + "}";
-    j += "]},\n";
-    std::lock_guard<std::mutex> theGuard(sStateLock);
-    j += "  \"outcome\": " + JsonString(inError.empty() ? sOutcome : "error") + ",\n";
-    if (!inError.empty())
-        j += "  \"error\": " + JsonString(inError) + ",\n";
-    double theWall = std::chrono::duration<double>(std::chrono::steady_clock::now() - sStartWall).count();
-    double theGame = std::chrono::duration<double>(std::chrono::steady_clock::now() - sGameWall).count();
-    char buf[256];
-    snprintf(buf, sizeof(buf), "  \"wall_seconds\": %.2f,\n  \"wall_seconds_game\": %.2f,\n", theWall,
-             sGameWall.time_since_epoch().count() ? theGame : 0.0);
-    j += buf;
-    j += "  \"wall_phases\": {";
-    for (size_t k = 0; k < sPhases.size(); k++) {
-        snprintf(buf, sizeof(buf), "%s\"%s\": %.2f", k ? ", " : "", sPhases[k].first.c_str(), sPhases[k].second);
-        j += buf;
-    }
-    j += "},\n";
-    const Sample* theLast = sSamples.empty() ? NULL : &sSamples.back();
-    j += "  \"game_ms\": " + std::to_string(theLast ? theLast->mGameMs : 0) + ",\n";
-    j += "  \"pt\": " + std::to_string(theLast ? theLast->mPT : 0) + ",\n";
-    j += "  \"no_human_defeat_hits\": " + std::to_string((long)gPlatSimNoHumanDefeatHits) + ",\n";
-    std::vector<unsigned long> theAlive;
-    std::vector<unsigned long> theWinners;
-    if (theLast)
-        for (const PlayerSample& p : theLast->mPlayers) {
-            if (!p.mHuman && p.mVictoryUnits > 0)
-                theAlive.push_back(p.mIndex);
-            if (p.mResult == 1)
-                theWinners.push_back(p.mIndex);
-        }
-    auto list = [](const std::vector<unsigned long>& v) {
-        std::string s = "[";
-        for (size_t k = 0; k < v.size(); k++)
-            s += (k ? ", " : "") + std::to_string(v[k]);
-        return s + "]";
-    };
-    j += "  \"alive_computers\": " + list(theAlive) + ",\n  \"winners\": " + list(theWinners) + ",\n";
-    j += "  \"winner\": " + std::string(sOutcome == "last-computer-standing" && theAlive.size() == 1
-                                             ? std::to_string(theAlive[0]) : "null") + ",\n";
-    j += "  \"defeat_order\": [";
-    for (size_t k = 0; k < sDefeats.size(); k++)
-        j += std::string(k ? ", " : "") + "{\"player\": " + std::to_string(sDefeats[k].mPlayer) + ", \"game_ms\": " +
-             std::to_string(sDefeats[k].mGameMs) + ", \"pt\": " + std::to_string(sDefeats[k].mPT) + "}";
-    j += "],\n";
-    auto players = [](const Sample& s) {
-        std::string o = "[";
-        for (size_t k = 0; k < s.mPlayers.size(); k++) {
-            const PlayerSample& p = s.mPlayers[k];
-            char b[768];
-            snprintf(b, sizeof(b),
-                     "%s{\"index\": %lu, \"human\": %s, \"result\": %lu, \"epoch\": %ld, \"population\": %ld, "
-                     "\"victory_units\": %ld, \"citizens\": %ld, \"army\": %ld, \"buildings\": %ld, "
-                     "\"naval\": %ld, \"air\": %ld, \"towers\": %ld, \"walls\": %ld, \"wonders\": %ld, "
-                     "\"strength\": %ld, \"value\": %ld, \"resources\": {\"food\": %ld, \"wood\": %ld, \"stone\": %ld, \"gold\": %ld, \"iron\": %ld}}",
-                     k ? ", " : "", p.mIndex, p.mHuman ? "true" : "false", p.mResult, p.mEpoch, p.mPopulation,
-                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings,
-                     p.mNaval, p.mAir, p.mTowers, p.mWalls, p.mWonders, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
-                     p.mResources[2], p.mResources[3], p.mResources[4]);
-            o += b;
-        }
-        return o + "]";
-    };
-    j += "  \"players\": " + (theLast ? players(*theLast) : std::string("[]")) + ",\n";
-    // per world player, the game ms each epoch was first reached (index: the epoch; the start epoch and those below
-    // it: the first tick's; an epoch never reached is missing from the end)
-    j += "  \"epoch_ms\": {";
-    bool theFirst = true;
-    for (size_t i = 1; i < sEpochMs.size(); i++) {
-        if (sEpochMs[i].empty())
-            continue;
-        j += std::string(theFirst ? "" : ", ") + "\"" + std::to_string(i) + "\": [";
-        theFirst = false;
-        for (size_t e = 0; e < sEpochMs[i].size(); e++)
-            j += (e ? ", " : "") + std::to_string(sEpochMs[i][e]);
-        j += "]";
-    }
-    j += "},\n";
-    j += "  \"samples\": [\n";
-    for (size_t k = 0; k < sSamples.size(); k++) {
-        snprintf(buf, sizeof(buf), "    {\"game_ms\": %ld, \"pt\": %lu, \"wall\": %.2f, \"players\": ", sSamples[k].mGameMs,
-                 sSamples[k].mPT, sSamples[k].mWall);
-        j += buf + players(sSamples[k]) + (k + 1 < sSamples.size() ? "},\n" : "}\n");
-    }
-    j += "  ],\n  \"exit_code\": " + std::to_string(inCode) + "\n}\n";
-    if (sOptions.mReport.empty() || sOptions.mReport == "-") {
-        std::lock_guard<std::mutex> theOut(sOutLock);
-        fputs(j.c_str(), stdout);
-        fflush(stdout);
-    } else {
-        std::string theTemporary = sOptions.mReport + ".tmp";
-        FILE* f = fopen(theTemporary.c_str(), "wb");
-        if (f) {
-            fwrite(j.data(), 1, j.size(), f);
-            fclose(f);
-            remove(sOptions.mReport.c_str());
-            rename(theTemporary.c_str(), sOptions.mReport.c_str());
-        }
-    }
-}
-
-void EndGameOutput(int inCode);
-
-void Fail(const std::string& inError)
-{
-    gPlatSimRun = 0;
-    Note("FAILED: %s", inError.c_str());
-    WriteReport(2, inError);
-    EndGameOutput(2);
-    Quit(2);   // (in a batch too: the process's state is unknown; tools/sim.py plays the rest in a new one)
-}
-
-// ------------------------------------------------------------------------------------------------ the load
-
-static bool IsScreenEvent(UIEvent*, unsigned long) { return true; }
-static bool IsScreenEvent(EEScreenEvent* inEvent, unsigned long inCode) { return inEvent->mEvent == inCode; }
-// the control of the form on top whose trigger event is a T (an EEScreenEvent: of the code inScreen); -1: none
-template <class T> long ControlWithEvent(unsigned long inForm, unsigned long inScreen = 0)
+long HostControlWithEvent(unsigned int inForm, unsigned int inCode)
 {
     UILock theLock;
     UIForm* theForm = gUIManager->GetCurrentForm();
@@ -1749,320 +820,325 @@ template <class T> long ControlWithEvent(unsigned long inForm, unsigned long inS
         return -1;
     for (unsigned long k = 0; k < theForm->GetControlCount(); k++) {
         UIControl* theControl = theForm->GetControl(k);
-        T* theEvent = theControl ? dynamic_cast<T*>(theControl->GetTriggerEvent(kTriggerEvent)) : NULL;
-        if (theEvent != NULL && IsScreenEvent(theEvent, inScreen))
+        EEScreenEvent* theEvent =
+            theControl ? dynamic_cast<EEScreenEvent*>(theControl->GetTriggerEvent(kTriggerEvent)) : NULL;
+        if (theEvent != NULL && theEvent->mEvent == inCode)
             return (long)k;
     }
     return -1;
 }
 
-const unsigned long kFormLoad = 13;
-const char* kLoadName = "EE-SIM load";
-
-// the load screen's file list (NULL: not on top)
-UILBString* LoadList()
+void HostPhysics(EeSimDriverPhysics* outPhysics)
 {
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != kFormLoad || (unsigned long)kSPLoadGameFileListBox >= theForm->GetControlCount())
-        return NULL;
-    return dynamic_cast<UILBString*>(theForm->GetControl(kSPLoadGameFileListBox));
+    outPhysics->present = gPhysics != NULL;
+    if (gPhysics == NULL)
+        return;
+    outPhysics->timer_running = gPhysics->mTimerRunning;
+    outPhysics->game_over = gPhysics->mGameOver;
+    outPhysics->game_ms = gPhysics->mGameTime;
+    outPhysics->pt = gPhysics->mNumTicksDone;
 }
 
-// the line of kLoadName in the load screen's file list (-1: not listed) and the list's selection
-long LoadLine(unsigned long& outSelection)
+bool HostEditorUp()
 {
     UILock theLock;
-    outSelection = 0xffffffffUL;
-    UILBString* theList = LoadList();
-    if (!theList)
-        return -1;
-    theList->GetCurrentSelection(outSelection);
-    for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
-        const char* theText = (const char*)theList->GetData(k);
-        if (theText && !strcmp(theText, kLoadName))
-            return (long)k;
-    }
-    return -1;
+    return gUIManager->mScenarioEditorForm != NULL && gUIManager->GetCurrentForm() == gUIManager->mScenarioEditorForm &&
+           gWorld.GetMap() != NULL;
 }
 
-// --load-save: the file staged as data\Saved Games\EE-SIM load.ees, then the single-player form's Load Game, the file
-// selected in the load screen's list (UIListBox::ChangeSelectionIndex, as the screen's own keys do), Load
-// (EE_SCREENS_SPL_LOAD: the file validated, EEMStartLoading of a saved game)
-void LoadFromMenu()
+void HostLock(int inOp)
 {
-    std::string theStaged = SavePath(kLoadName);
-    remove(theStaged.c_str());
-    if (!CopyAFile(sOptions.mLoadSave, theStaged))
-        Fail("--load-save: cannot copy " + sOptions.mLoadSave + " to " + theStaged);
-    long theButton = ControlWithEvent<EEScreenEvent>(kFormSingle, EE_SCREENS_SP_LOAD_GAME);
-    if (theButton < 0)
-        Fail("--load-save: no Load Game button on the single-player form");
-    Click(kFormSingle, (unsigned long)theButton);
-    WaitForm(kFormLoad);
-    unsigned long theSelection = 0;
-    WaitFor("the load screen to list the file", 60, [&] { return LoadLine(theSelection) >= 0; });
-    long theLine = LoadLine(theSelection);
-    {
-        UILock theLock;
-        UILBString* theList = LoadList();
-        if (!theList)
-            Fail("--load-save: the load screen went away");
-        theList->ChangeSelectionIndex((unsigned long)theLine, true, false);
+    switch (inOp) {
+    case EE_SIM_DRIVER_WRITE_LOCK: gWorld.mLock->WriteLock(); break;
+    case EE_SIM_DRIVER_WRITE_UNLOCK: gWorld.mLock->WriteUnlock(); break;
+    case EE_SIM_DRIVER_READ_LOCK: gWorld.mLock->ReadLock(); break;
+    default: gWorld.mLock->ReadUnlock(); break;
     }
-    WaitFor("the load selection to stick", 20,
-            [&] { return LoadLine(theSelection) == theLine && theSelection == (unsigned long)theLine; });
-    SimSleep(200);
-    long theLoad = ControlWithEvent<EEScreenEvent>(kFormLoad, EE_SCREENS_SPL_LOAD);
-    if (theLoad < 0)
-        Fail("--load-save: no Load button on the load screen");
-    Note("UI load %s", sOptions.mLoadSave.c_str());
-    Click(kFormLoad, (unsigned long)theLoad);
 }
 
-const unsigned long kFormLoadScenario = 4;               // 'In Game Scenario & Load Game Screen' (kFormLoadGame)
-const char* kScenarioName = "EE-SIM scenario";
-
-// the line of kScenarioName in the play scenario screen's file list (-1: not listed) and the list's selection
-long ScenarioLine(unsigned long& outSelection)
+// the idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder opened and
+// cancelled): the civilization timer sends its messages but opens no form, and the computers' civilizations are not
+// locked at its expiry. With inHumanOut, allied both ways with every computer from the start: the computers' attack
+// choice prefers a human, and the classic's early raids went to this seat, which never fights back (the computers
+// stay at war with each other; an observer seat, or its units removed, ends the single-player game at once)
+void HostPrepareHuman(bool inHumanOut)
 {
-    UILock theLock;
-    outSelection = 0xffffffffUL;
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != kFormLoadScenario ||
-        (unsigned long)kLoadGameLoadFileListBox >= theForm->GetControlCount())
-        return -1;
-    UILBString* theList = dynamic_cast<UILBString*>(theForm->GetControl(kLoadGameLoadFileListBox));
-    if (!theList)
-        return -1;
-    theList->GetCurrentSelection(outSelection);
-    for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
-        const char* theText = (const char*)theList->GetData(k);
-        if (theText && !strcmp(theText, kScenarioName))
-            return (long)k;
+    EEPlayer* theHuman = gWorld.GetCurrentPlayer();
+    theHuman->mCivilizationChosen = true;
+    theHuman->mCivilizationLocked = true;
+    if (!inHumanOut)
+        return;
+    for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
+        EEPlayer* theOther = gWorld.GetPlayer(i);
+        if (theOther == NULL || theOther == theHuman)
+            continue;
+        theHuman->SetDiplomaticStance(theOther, 0, gWorld.GetMap());
+        theOther->SetDiplomaticStance(theHuman, 0, gWorld.GetMap());
     }
-    return -1;
 }
 
-// --scenario: the file staged as data\Scenarios\EE-SIM scenario.scn, then the random map lobby's game type box set to
-// Scenario (the lobby pushes the Play Scenario screen), the file selected there, Load (the lobby takes the scenario's
-// options and players), Start (tools/harness/scenario_game.py's standalone scenario). The controls are found by form
-// and index (the forms are data), not by event class.
-void ScenarioFromLobby()
+std::string sDumpLoad;
+
+void HostDumpAfterLoad(const char* inPath)
 {
-    std::string theStaged = std::string("data\\Scenarios\\") + kScenarioName + (const char*)gScenarioExtension;
-    remove(theStaged.c_str());
-    if (!CopyAFile(sOptions.mScenario, theStaged))
-        Fail("--scenario: cannot copy " + sOptions.mScenario + " to " + theStaged);
-    Click(kFormSingle, 1);
-    WaitForm(kFormLobbyID);
-    Note("UI lobby (scenario)");
-    WaitFor("the lobby's game type box", 60, [&] {
-        // filled (SetUpLobby's wait): under load an empty box took no selection and the run timed out before the game
-        std::vector<std::string> l, d;
-        long s;
-        return ComboState(175, l, s) && l.size() > 2 && ComboState(207, d, s) && !d.empty();
-    });
-    SimSleep(1500);   // the local server's readiness (SetUpLobby's wait)
-    {
-        UILock theLock;
-        UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), 175);
-        if (!theCombo)
-            Fail("--scenario: no game type box on the lobby");
-        theCombo->SetCurrentSelection(2);   // Scenario: EEUIELEGameType pushes the Play Scenario screen
-    }
-    WaitForm(kFormLoadScenario);
-    unsigned long theSelection = 0;
-    WaitFor("the play scenario screen to list the file", 60, [&] { return ScenarioLine(theSelection) >= 0; });
-    long theLine = ScenarioLine(theSelection);
-    {
-        UILock theLock;
-        UIForm* theForm = gUIManager->GetCurrentForm();
-        UILBString* theList = theForm && theForm->GetFormID() == kFormLoadScenario
-                                  ? dynamic_cast<UILBString*>(theForm->GetControl(kLoadGameLoadFileListBox))
-                                  : NULL;
-        if (!theList)
-            Fail("--scenario: the play scenario screen went away");
-        theList->ChangeSelectionIndex((unsigned long)theLine, true, false);
-    }
-    WaitFor("the scenario selection to stick", 20,
-            [&] { return ScenarioLine(theSelection) == theLine && theSelection == (unsigned long)theLine; });
-    SimSleep(200);
-    Note("UI load scenario %s", sOptions.mScenario.c_str());
-    Click(kFormLoadScenario, kLoadGameLoadButton);
-    WaitForm(kFormLobbyID);
-    SimSleep(3000);   // the scenario's options and players through the local server (the harness waits 3 s)
-    Click(kFormLobbyID, 10);
-    Note("UI start (scenario)");
+    sDumpLoad = inPath;
+    EEAfterLoad([] { DumpState(sDumpLoad); });   // at the first tick, after the load's own fix-ups
 }
 
-const unsigned long kFormPlayCampaign = 8, kFormCampaignSelect = 33, kFormScenarioIntro = 19;
-const unsigned long kCampaignScenarioList = 2;   // the campaign scenario select form's scenario list
-
-// the campaign scenario select form's scenario list (NULL: not on top)
-UILBString* CampaignScenarioList()
+size_t HostChecksumFields(char* outBuffer, size_t inCapacity)
 {
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != kFormCampaignSelect || kCampaignScenarioList >= theForm->GetControlCount())
-        return NULL;
-    return dynamic_cast<UILBString*>(theForm->GetControl(kCampaignScenarioList));
+    return PutText(ChecksumText(), outBuffer, inCapacity);
 }
 
-// the button of the form on top whose trigger is the screen event inCode, clicked (it must be there)
-void ClickScreenEvent(unsigned long inForm, unsigned long inCode, const char* inWhat)
+void HostDumpState(const char* inPath)
 {
-    long theButton = -1;
-    WaitFor(inWhat, 60, [&] { return (theButton = ControlWithEvent<EEScreenEvent>(inForm, inCode)) >= 0; });
-    Click(inForm, (unsigned long)theButton);
+    DumpState(inPath);
 }
 
-// --campaign NAME [--scenario-index K]: a shipped campaign's scenario through the campaign screens, as
-// tools/harness/scenario_game.py plays it: the single-player form's Learn to Play (or Campaign, then the play campaign
-// form's campaign), the scenario select form (form 33: the list line K selected, the default difficulty), Start, the
-// scenario intro (form 19), Start. The Learning Campaign's scenarios are single-player files the lobby's Play Scenario
-// screen refuses ("This is not a valid multiplayer scenario file.")
-void CampaignFromMenu()
+// a --save-at request, as EEPhysics::AutoSave sends one (but quiet and not an autosave: no autosave is trimmed, the
+// preferences are not written). It runs at the start of the next communications tick that carries it (EEPhysics::
+// Tick: DrainInput executes it, ServeLoadSaveRequests saves), between two communications ticks
+void HostRequestSave(const char* inName)
 {
-    const std::string& theName = sOptions.mCampaign;
-    if (theName == "learning")
-        ClickScreenEvent(kFormSingle, EE_SCREENS_PC_LEARNING, "the Learn to Play button");   // (EEUIEPCELearningCampaign)
-    else {
-        ClickScreenEvent(kFormSingle, EE_SCREENS_SP_CAMPAIGN, "the Campaign button");
-        WaitForm(kFormPlayCampaign);
-        unsigned long theCode = theName == "roman"     ? EE_SCREENS_PC_CAMPAIGN_1
-                                : theName == "pacific" ? EE_SCREENS_PC_CAMPAIGN_2
-                                                       : EE_SCREENS_PC_CAMPAIGN_3;
-        ClickScreenEvent(kFormPlayCampaign, theCode, "the campaign's button");
-    }
-    WaitForm(kFormCampaignSelect);
-    unsigned long theLines = 0;
-    WaitFor("the campaign's scenario list", 60, [&] {
-        UILock theLock;
-        UILBString* theList = CampaignScenarioList();
-        return theList && (theLines = theList->GetLineCount()) > 0;
-    });
-    SimSleep(1000);   // (the harness waits 2 s for the form's fill)
-    if (sOptions.mScenarioIndex >= 0) {
-        if ((unsigned long)sOptions.mScenarioIndex >= theLines)
-            Fail("--scenario-index " + std::to_string(sOptions.mScenarioIndex) + " outside the campaign's " +
-                 std::to_string(theLines) + " scenarios");
-        {
-            UILock theLock;
-            UILBString* theList = CampaignScenarioList();
-            if (!theList)
-                Fail("--campaign: the scenario select form went away");
-            theList->ChangeSelectionIndex((unsigned long)sOptions.mScenarioIndex, true, false);
-        }
-        WaitFor("the campaign scenario selection to stick", 20, [&] {
-            UILock theLock;
-            UILBString* theList = CampaignScenarioList();
-            unsigned long theSelection = 0xffffffffUL;
-            return theList && theList->GetCurrentSelection(theSelection) == kErrorOK &&
-                   theSelection == (unsigned long)sOptions.mScenarioIndex;
-        });
-        SimSleep(500);
-    }
-    {
-        UILock theLock;
-        UILBString* theList = CampaignScenarioList();
-        unsigned long theSelection = 0xffffffffUL;
-        const char* theText = theList && theList->GetCurrentSelection(theSelection) == kErrorOK &&
-                                      theSelection < theList->GetLineCount()
-                                  ? (const char*)theList->GetData(theSelection)
-                                  : NULL;
-        Note("UI campaign %s scenario %lu of %lu: %s", theName.c_str(), theSelection, theLines, theText ? theText : "?");
-    }
-    ClickScreenEvent(kFormCampaignSelect, EE_SCREENS_CS_START, "the scenario select form's Start");
-    WaitForm(kFormScenarioIntro);
-    SimSleep(1000);
-    ClickScreenEvent(kFormScenarioIntro, EE_SCREENS_SI_START, "the scenario intro's Start");
-    Note("UI start (campaign scenario)");
+    UWideString theFile(inName);   // load, quiet, tick, time, auto-save, the wait id, the name
+    NEMessage* theSave = new EEMRecord(kMessageLoadOrSaveGame, {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(),
+                                                                TMGetTime(), 0, 0, theFile});
+    static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
+    theSave->Dereference();
 }
 
-// ------------------------------------------------------------------------------------------------ the editor
-
-const unsigned long kFormEditors = 9;   // the editor form has no form id (UIForm id -1): found as the manager's
-
-// --editor-script: the main menu's Editors, the sub-menu's Scenario Editor (EEUIManager::StartScenarioEditor: a local
-// server, load type 3), the editor form (the manager's mScenarioEditorForm) over its default map, then the script (EESimEditor.cpp) and the exit
-[[noreturn]] void RunEditor()
+size_t HostExtension(int inWhich, char* outBuffer, size_t inCapacity)
 {
-    long theButton = ControlWithEvent<EEScreenEvent>(kFormMain, EE_SCREENS_EDITORS_OPEN);
-    if (theButton < 0)
-        Fail("--editor-script: no Editors button on the main menu");
-    Click(kFormMain, (unsigned long)theButton);
-    WaitForm(kFormEditors);
-    theButton = ControlWithEvent<EEScreenEvent>(kFormEditors, EE_SCREENS_EDITORS_SCENARIO_EDITOR);
-    if (theButton < 0)
-        Fail("--editor-script: no Scenario Editor button on the editors' menu");
-    Click(kFormEditors, (unsigned long)theButton);
-    Note("UI scenario editor");
-    // the load ends in the game form; the main game form enters the editor once a communications tick has run
-    // (EE_SCREENS_MG_ENTER_EDITOR), so the physics runs until the editor form is up, then stops for good: the editor
-    // pauses the game and reloads ScenDefault (gPhysics->Init), and the script's actions are the world's only writes
-    unsigned long theLast = 0;
-    WaitFor("the scenario editor", 600, [&] {
-        unsigned long theTop = TopForm();
-        if (theTop != theLast)
-            Note("UI form %lu", theTop);
-        theLast = theTop;
-        if (theTop == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning)
-            gPlatSimRun = 1;
-        UILock theLock;
-        return gUIManager->mScenarioEditorForm != NULL &&
-               gUIManager->GetCurrentForm() == gUIManager->mScenarioEditorForm && gWorld.GetMap() != NULL;
-    });
-    gPlatSimRun = 0;
-    SimSleep(2000);   // the editor's own posted work (its tabs' loads) before the script's first step
-    FILE* theOut = sOptions.mEditorOut.empty() ? stdout : fopen(sOptions.mEditorOut.c_str(), "wb");
-    if (theOut == NULL)
-        Fail("--editor-out: cannot write " + sOptions.mEditorOut);
+    return PutText(inWhich == 0 ? (const char*)gSavedGameExtension : (const char*)gScenarioExtension, outBuffer,
+                   inCapacity);
+}
+
+void HostSetRun(int inRun)
+{
+    gPlatSimRun = inRun;
+}
+
+void AfterTickTrampoline()
+{
+    ee_sim_driver_after_tick();
+}
+
+void HostSetAfterTick(bool inOn)
+{
+    gPlatSimAfterTick = inOn ? AfterTickTrampoline : NULL;
+}
+
+void HostSetSwitches(const EeSimDriverSwitches* inSwitches)
+{
+    gPlatSimMode = 1;
+    gPlatSimSeedSet = inSwitches->seed_set;   // a loaded game: the file's seed, as the game loads it
+    gPlatSimSeed = inSwitches->seed;
+    gPlatSimNoHumanDefeat = inSwitches->no_human_defeat;
+    gScenarioSimDialogs = inSwitches->scenario_dialogs;
+    // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
+    // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
+    // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)
+    gPlatSimPortOffset = inSwitches->port_offset >= 0 ? inSwitches->port_offset : kPlatSimAnyPort;
+}
+
+long HostNoHumanDefeatHits(long inOp)
+{
+    if (inOp == 0)
+        gPlatSimNoHumanDefeatHits = 0;
+    return (long)gPlatSimNoHumanDefeatHits;
+}
+
+void HostCancelGame()
+{
+    gUserInterface->PostCancelGame();
+}
+
+int HostRunEditor(const char* inScript, const char* inOut, char* outError, size_t inCapacity)
+{
+    FILE* theOut = inOut == NULL ? stdout : fopen(inOut, "wb");
+    if (theOut == NULL) {
+        PutText(std::string("--editor-out: cannot write ") + inOut, outError, inCapacity);
+        return 1;
+    }
     std::string theError;
-    int theCode = EESimEditorRun(sOptions.mEditorScript, theOut, theError);
+    int theCode = EESimEditorRun(inScript, theOut, theError);
     if (theOut != stdout)
         fclose(theOut);
     if (theCode != 0)
-        Fail("--editor-script: " + theError);
-    Note("EDITOR script done");
-    {
-        std::lock_guard<std::mutex> theGuard(sStateLock);
-        sOutcome = "editor-script";
-    }
-    WriteReport(0, std::string());
-    Quit(0);
+        PutText("--editor-script: " + theError, outError, inCapacity);
+    else
+        fflush(stdout);
+    return theCode != 0 ? 1 : 0;
 }
 
-// ------------------------------------------------------------------------------------------------ the driver
-
-bool sLeftGame = false;    // --games: the last game was left (LeaveGame), this one's first phase is the leave
-int sProcessStderr = -1;   // --games: the process's stderr while a game's own (--err) is in place
-size_t sGameIndex = 0;
-
-// a line on the process's stderr (the batch's markers), whatever the game's stderr is
-void Marker(const char* inFormat, ...)
+// the player's first living building (NULL: none)
+EEUnit* FirstBuilding(unsigned long inPlayer)
 {
-    char theText[1024];
-    va_list theArguments;
-    va_start(theArguments, inFormat);
-    int n = vsnprintf(theText, sizeof(theText) - 1, inFormat, theArguments);
-    va_end(theArguments);
-    if (n < 0)
+    EEPlayer* thePlayer = gWorld.GetPlayer(inPlayer);
+    for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+        if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
+            return u;
+    return NULL;
+}
+
+// --flare: the idle human's flare at the building, told to the human's allies as EEMSendFlare::Execute tells them
+// (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no computer sends
+void HostFlare(unsigned long inPlayer, EeSimDriverSpot* outSpot)
+{
+    EEPlayer* theHuman = gWorld.GetCurrentPlayer();
+    EEUnit* theSpot = FirstBuilding(inPlayer);
+    if (theHuman == NULL || theSpot == NULL)
         return;
-    if (n > (int)sizeof(theText) - 2)
-        n = (int)sizeof(theText) - 2;
-    theText[n++] = '\n';
-    std::lock_guard<std::mutex> theGuard(sOutLock);
-    fflush(stderr);
-    if (sProcessStderr >= 0) {
-#ifdef _WIN32
-        _write(sProcessStderr, theText, (unsigned)n);
-#else
-        if (write(sProcessStderr, theText, (size_t)n) < 0)
-            return;
-#endif
+    U2DPoint<long> theTile(theSpot->GetTileX(), theSpot->GetTileY());
+    std::vector<EEPlayer*> theAllies = theHuman->mAllies;
+    for (EEPlayer* a : theAllies)
+        a->FlareReceived(theHuman, theTile);
+    *outSpot = {true, theTile.mX, theTile.mY, (unsigned long)theAllies.size()};
+}
+
+// --volcano: a volcano (the calamity class 9, no caster) cast 6 tiles off the building for that player
+void HostVolcano(unsigned long inPlayer, EeSimDriverSpot* outSpot)
+{
+    EEUnit* theSpot = FirstBuilding(inPlayer);
+    if (theSpot == NULL)
         return;
+    long theX = theSpot->GetTileX() + 6, theY = theSpot->GetTileY() + 6;
+    bool theCast = USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(9, 0xffffffffUL, theX, theY,
+                                                                                         inPlayer);
+    *outSpot = {true, theX, theY, theCast ? 1UL : 0UL};
+}
+
+void HostVolcanoBoulders(void* inSink, EeSimDriverPushFn inPush)
+{
+    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(i);
+        for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+            if (u->mUnitClass->GetUnitType() == kUnitTypeVolcanoProjectile)
+                inPush(inSink, std::to_string(u->GetUnitID()).c_str());
     }
-    fwrite(theText, 1, (size_t)n, stderr);
-    fflush(stderr);
+}
+
+bool HostCaptureActive()
+{
+    return EESimCaptureRecord::Active();
+}
+
+void HostSweep(int inKind, long inArg)
+{
+    switch (inKind) {
+    case EE_SIM_DRIVER_SWEEP_FIVE_MINUTES:   // every five game minutes of a captured game
+        EEFormationCaptureSweep();   // (ee/EEFormation.h)
+        EECombatCaptureSweep();
+        EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+        EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
+        EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
+        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
+        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
+        EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
+        break;
+    case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)
+    case EE_SIM_DRIVER_SWEEP_CALAMITIES: EETechCaptureCastCalamities(inArg); break;   // --calamities
+    case EE_SIM_DRIVER_SWEEP_UNITS: EEPhysicsUnitSweep(inArg); break;   // --unit-sweep (EEPhysicsSweep.cpp)
+    case EE_SIM_DRIVER_SWEEP_MINUTE:   // every game minute: the mini map's cells (MMSN), the tile sight (TSGT)
+        EEAppCaptureMiniMapSnapshot();
+        EESightCaptureSnapshot();
+        break;
+    case EE_SIM_DRIVER_SWEEP_CHEATS: EEAppCaptureCheatSweep(); break;   // --app-sweep at five game minutes
+    case EE_SIM_DRIVER_SWEEP_STORMS: EEAppCaptureStormSweep(); break;   // --app-sweep at ten
+    case EE_SIM_DRIVER_SWEEP_END: {   // the end of a game; inArg 0: nothing swept, only the flush
+        if (inArg & 2) {   // the 3D effects' sweep alone (the game's own records held since its start)
+            EESimCaptureRecord::Hold(false);
+            EEEffectCaptureSweep();
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+            return;
+        }
+        if (inArg & 4) {   // the active groups' sweep alone (the game's own records held since its start)
+            EESimCaptureRecord::Hold(false);
+            EEActiveGroupCaptureSweep();
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+            return;
+        }
+        if (inArg & 1)
+            EECombatListSearchSweep();
+        if (inArg & 8) {
+            // EEMap's sight and out-of-synch checksum (MAPS, MAPK; their TSGT): no game reaches them. The changed
+            // sight would reach the other threads: nothing records after it
+            EECombatCaptureFlush();
+            const unsigned int kTags[] = {EECaptureTag("MAPS"), EECaptureTag("MAPK"), EECaptureTag("TSGT")};
+            EESimCaptureRecord::Only(kTags, 3);
+            EESimCaptureRecord::Exclusive(true);
+            EESightCaptureSweep();
+            // EEWorld::RecordStatistics (WSTA): only a game left runs it (EEWorld::Clear); its random draws and the
+            // computers' topped-up totals reach nothing after it
+            EESimCaptureRecord::Only(EECaptureTag("WSTA"));
+            EEAppCaptureStatisticsSweep();
+            EESimCaptureRecord::Exclusive(false);
+            EESimCaptureRecord::Only(0);
+            EESimCaptureRecord::Close();
+        }
+        if (inArg & 16) {
+            EECombatMissileSweep();
+            // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+        }
+        EECombatCaptureFlush();
+        break;
+    }
+    case EE_SIM_DRIVER_SWEEP_HOLD: EESimCaptureRecord::Hold(inArg != 0); break;
+    case EE_SIM_DRIVER_SWEEP_DIALOG:   // --scenario: a shown dialog message ends now (ee/EEScenarioManager.h)
+        if (gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog)
+            gWorld.mScenarioManager->ShowDialogMessage();
+        break;
+    }
+}
+
+bool HostRulesAdd(const char* inText, char* outError, size_t inCapacity)
+{
+    std::string theError;
+    if (EERulesAddOverride(inText, theError))
+        return true;
+    PutText(theError, outError, inCapacity);
+    return false;
+}
+
+void HostRulesProblems(void* inSink, EeSimDriverPushFn inPush)
+{
+    std::vector<std::string> theProblems;
+    EERulesOverrideProblems(theProblems);
+    for (const std::string& p : theProblems)
+        inPush(inSink, p.c_str());
+}
+
+long HostEngineChoice(const char* inName)
+{
+    return EECPChoiceByName(inName);
+}
+
+void HostEngineIDs(void* inSink, EeSimDriverPushFn inPush)
+{
+    for (const EECPAIEntry& e : EECPAIManifest())
+        inPush(inSink, e.mID.c_str());
+}
+
+void HostSetEnv(const char* inName, const char* inValue)
+{
+#ifdef _WIN32
+    _putenv_s(inName, inValue);
+#else
+    setenv(inName, inValue, 1);
+#endif
+}
+
+int HostDupStderr()
+{
+#ifdef _WIN32
+    return _dup(2);
+#else
+    return dup(2);
+#endif
 }
 
 void SetStderr(int inFile)
@@ -2075,609 +1151,92 @@ void SetStderr(int inFile)
 #endif
 }
 
-// the driver's state of one game, cleared before each game of a batch
-void ResetRun()
+void HostSetStderr(const char* inFile, int inDescriptor)
 {
-    {
-        std::lock_guard<std::mutex> theGuard(sStateLock);
-        sFinished = false;
-        sOutcome.clear();
-        sSamples.clear();
-        sDefeats.clear();
-        sResults.clear();
-        sEpochMs.clear();
-        sNextSampleMs = 0;
-        sStandingSince = -1;
-        sNextSave = 0;
-        sNextDump = 0;
-        sVolcanoCastMs = -1;
-        sVolcanoSecond = 0;
-        sVolcanoShots = sVolcanoTotal = 0;
-        sVolcanoSeen.clear();
-    }
-    {
-        std::lock_guard<std::mutex> theGuard(sOutLock);
-        sLoadFailure.clear();
-    }
-    sChosen.clear();
-    gPlatSimNoHumanDefeatHits = 0;
-    gPlatSimAfterTick = NULL;
-    sGameWall = std::chrono::steady_clock::time_point();
-}
-
-// --games: the next game's options, files and stderr in place (the physics thread holds between games)
-void BeginGame(size_t inIndex, const Options& inGame, bool inAfterGame)
-{
-    sGameIndex = inIndex;
-    sOptions = inGame;
-    ResetRun();
-    gPlatSimSeed = (uint32_t)sOptions.mSeed;
-    gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
-    if (inAfterGame) {   // (the first game's wall time and phases count from the process's start)
-        sStartWall = sPhaseWall = std::chrono::steady_clock::now();
-        sPhases.clear();
-    }
-    Marker("EE-SIM GAME %lu BEGIN %s", (unsigned long)inIndex, sOptions.mID.c_str());
-    std::lock_guard<std::mutex> theGuard(sOutLock);
-    if (!sOptions.mErr.empty()) {
-        FILE* theErr = fopen(sOptions.mErr.c_str(), "w");
-        if (theErr != NULL) {
-#ifdef _WIN32
-            SetStderr(_fileno(theErr));
-#else
-            SetStderr(fileno(theErr));
-#endif
-            fclose(theErr);
-        }
-    }
-}
-
-// --games: the game's trace and log from here (after the last game was left), headed by the start-up's lines
-void StartGameOutput()
-{
-    std::lock_guard<std::mutex> theGuard(sOutLock);
-    if (!sOptions.mTrace.empty())
-        sTraceFile = fopen(sOptions.mTrace.c_str(), "w");
-    if (!sOptions.mLog.empty())
-        sLogFile = fopen(sOptions.mLog.c_str(), "w");
-    fputs(sPreambleTrace.c_str(), sTraceFile ? sTraceFile : stdout);
-    if (sLogFile)
-        fputs(sPreambleLog.c_str(), sLogFile);
-    sOutState = kOutGame;
-}
-
-// --games: the game's files closed and the process's stderr back, then the end marker (exit code and outcome)
-void EndGameOutput(int inCode)
-{
-    if (!sBatch)
+    if (inFile == NULL) {
+        SetStderr(inDescriptor);
         return;
-    {
-        std::lock_guard<std::mutex> theGuard(sOutLock);
-        sOutState = kOutBetween;
-        fflush(stdout);
-        if (sTraceFile)
-            fclose(sTraceFile);
-        if (sLogFile)
-            fclose(sLogFile);
-        sTraceFile = sLogFile = NULL;
-        if (!sOptions.mErr.empty() && sProcessStderr >= 0)
-            SetStderr(sProcessStderr);
     }
-    std::string theOutcome;
-    {
-        std::lock_guard<std::mutex> theGuard(sStateLock);
-        theOutcome = sOutcome;
-    }
-    Marker("EE-SIM GAME %lu END %d %s", (unsigned long)sGameIndex, inCode,
-           inCode == 2 ? "error" : theOutcome.empty() ? "-" : theOutcome.c_str());
-}
-
-// the main menu to the end of the game, then the report -> the exit code (0, or 3 at the wall timeout)
-int PlayGame()
-{
-    int theCode = 0;
-    {
-        Phase(sLeftGame ? "leave" : "startup");
-        sLeftGame = false;
-        for (size_t k = 0; k < sOptions.mSaves.size(); k++)
-            remove(SavePath(SaveName(k)).c_str());   // a stage is reused: no file of an earlier run
-        if (TopForm() == kFormMain) {   // (a game left returns to the single player menu)
-            Note("UI main menu");
-            if (!sOptions.mEditorScript.empty())
-                RunEditor();
-            Click(kFormMain, 0);
-        }
-        WaitForm(kFormSingle);
-        bool theScenario = !sOptions.mScenario.empty() || !sOptions.mCampaign.empty();
-        bool theLoaded = !sOptions.mLoadSave.empty() || theScenario;
-        if (!sOptions.mCampaign.empty())
-            CampaignFromMenu();
-        else if (theScenario)
-            ScenarioFromLobby();
-        else if (theLoaded)
-            LoadFromMenu();
-        else {
-            Click(kFormSingle, 1);
-            WaitForm(kFormLobbyID);
-            Note("UI lobby");
-            Phase("menus");
-            SetUpLobby();
-            Click(kFormLobbyID, 10);
-            Note("UI start");
-            Phase("lobby");
-        }
-        long theExpected = sOptions.mComputers + 2;
-        WaitFor("the game", 600, [&] {
-            {
-                std::string theFailure;
-                {
-                    std::lock_guard<std::mutex> theGuard(sOutLock);
-                    theFailure = sLoadFailure;
-                }
-                if (!theFailure.empty())   // a clean failure (the load's teardown came through)
-                    Fail("load failed: " + theFailure);
-            }
-            return TopForm() == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning &&
-                   (theLoaded ? gWorld.GetNumPlayers() > 1 : (long)gWorld.GetNumPlayers() == theExpected) &&
-                   gWorld.GetMap() != NULL;
-        });
-        SimSleep(500);
-        if (theLoaded) {
-            // the saved players carry their flags (the harness's loaded game: no civilization pre-empt)
-            gWorld.mLock->WriteLock();
-            sResults.assign(gWorld.GetNumPlayers(), 0);
-            for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++)
-                if (gWorld.GetPlayer(i) != NULL)
-                    sResults[i] = gWorld.GetPlayer(i)->mGameResult;
-            Note("LOADED %s: game ms %ld PT %lu",
-                 !sOptions.mCampaign.empty() ? sOptions.mCampaign.c_str()
-                 : theScenario              ? sOptions.mScenario.c_str()
-                                            : sOptions.mLoadSave.c_str(),
-                 gPhysics->mGameTime, gPhysics->mNumTicksDone);
-            if (sChecksumFile) {   // the loaded state (not a "CT" line: the comparisons skip it)
-                fprintf(sChecksumFile, "LOADED ");
-                ChecksumFields(sChecksumFile);
-            }
-            if (!sDumpLoad.empty())
-                EEAfterLoad([] { DumpState(sDumpLoad); });   // at the first tick, after the load's own fix-ups
-            gWorld.mLock->WriteUnlock();
-        } else {
-            // the idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder
-            // opened and cancelled): the civilization timer sends its messages but opens no form, and the computers'
-            // civilizations are not locked at its expiry
-            gWorld.mLock->WriteLock();
-            EEPlayer* theHuman = gWorld.GetCurrentPlayer();
-            theHuman->mCivilizationChosen = true;
-            theHuman->mCivilizationLocked = true;
-            // (the idle human out of the fighting from the start: the computers' attack choice prefers a human, and the
-            // classic's early raids went to this seat, which never fights back, in 60 of 64 games against boom from
-            // minute 4. Allied both ways with every computer it is no AI's enemy (the classic's and the Lua view's
-            // target lists skip allies); the computers stay at war with each other. An observer seat, or its units
-            // removed, ends the single-player game at once. --keep-human: the old seat)
-            if (sOptions.mHumanOut) {
-                for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
-                    EEPlayer* theOther = gWorld.GetPlayer(i);
-                    if (theOther == NULL || theOther == theHuman)
-                        continue;
-                    theHuman->SetDiplomaticStance(theOther, 0, gWorld.GetMap());
-                    theOther->SetDiplomaticStance(theHuman, 0, gWorld.GetMap());
-                }
-            }
-            sResults.assign(gWorld.GetNumPlayers(), 0);
-            gWorld.mLock->WriteUnlock();
-        }
-        Note("GAME players %lu local %ld: running", gWorld.GetNumPlayers(), gWorld.mCurrentPlayer);
-        Phase("loading");
-        sGameWall = std::chrono::steady_clock::now();
-        gPlatSimAfterTick = AfterTick;
-        gPlatSimRun = 1;
-        std::unique_lock<std::mutex> theLock(sStateLock);
-        if (!sDone.wait_for(theLock, std::chrono::duration<double>(sOptions.mWallTimeout), [] { return sFinished; })) {
-            gPlatSimRun = 0;
-            sOutcome = "wall-timeout";
-            theCode = 3;
-        }
-    }
-    gPlatSimRun = 0;
-    SimSleep(50);
-    if (gPhysics != NULL) {
-        // the final state (the physics thread has stopped between two communications ticks)
-        gWorld.mLock->ReadLock();
-        Sample s = TakeSample();
-        gWorld.mLock->ReadUnlock();
-        std::lock_guard<std::mutex> theGuard(sStateLock);
-        if (sSamples.empty() || sSamples.back().mGameMs != s.mGameMs)
-            sSamples.push_back(s);
-    }
-    {
-        std::lock_guard<std::mutex> theGuard(sStateLock);
-        const Sample* theLast = sSamples.empty() ? NULL : &sSamples.back();
-        std::string theUnits;
-        if (theLast)
-            for (const PlayerSample& p : theLast->mPlayers)
-                theUnits += " " + std::to_string(p.mIndex) + ":" + std::to_string(p.mPopulation) + "/" +
-                            std::to_string(p.mVictoryUnits);
-        double theGame = std::chrono::duration<double>(std::chrono::steady_clock::now() - sGameWall).count();
-        Note("SIM %s: PT %lu game s %ld units%s; %.1f wall s in game (%.0fx real time)", sOutcome.c_str(),
-             theLast ? theLast->mPT : 0UL, theLast ? theLast->mGameMs / 1000 : 0L, theUnits.c_str(), theGame,
-             theLast && theGame > 0 ? theLast->mGameMs / 1000.0 / theGame : 0.0);
-    }
-    for (size_t k = 0; k < sOptions.mSaves.size(); k++) {
-        if (k >= sNextSave)
-            Note("SAVE %zu (game ms %ld) not requested: the run ended before", k, sOptions.mSaves[k].first);
-        else if (!CopyAFile(SavePath(SaveName(k)), sOptions.mSaves[k].second)) {
-            Note("SAVE %zu: %s not written or not copied to %s", k, SavePath(SaveName(k)).c_str(),
-                 sOptions.mSaves[k].second.c_str());
-            theCode = theCode ? theCode : 5;
-        }
-    }
-    Phase("game");
-    WriteReport(theCode, std::string());
-    return theCode;
-}
-
-// --games: the game left as a player leaves it (the game menu's quit: EEUserInterface::CancelGame clears the world and
-// the game state and opens the post-game summary), then the summary's exit, back to the single player menu
-void LeaveGame()
-{
-    sLeftGame = true;
-    gUserInterface->PostCancelGame();
-    unsigned long theLast = 0;
-    bool theExited = false;   // (the summary's exit once: a second close, still queued, would close the next form)
-    WaitFor("the single player menu after the game", 120, [&] {
-        unsigned long theTop = TopForm();
-        if (theTop != theLast) {
-            Note("UI form %lu", theTop);
-            theLast = theTop;
-        }
-        if (theTop == kFormPostGameSummary && !theExited) {
-            // (the summary's Exit: an EEScreenEvent of ee_game's post_game.rs, the original's EEUIEPGSEExit)
-            long theExit = ControlWithEvent<EEScreenEvent>(kFormPostGameSummary, EE_SCREENS_PGS_EXIT);
-            if (theExit >= 0) {
-                theExited = true;
-                Click(kFormPostGameSummary, (unsigned long)theExit);
-            }
-        }
-        return (theTop == kFormSingle || theTop == kFormMain) && theExited;
-    });
-    // (the menu settled: the form on top for 300 ms; a click into a form still opening was lost)
-    auto theSince = std::chrono::steady_clock::now();
-    unsigned long theTop = TopForm();
-    WaitFor("the single player menu to settle", 30, [&] {
-        unsigned long theNow = TopForm();
-        if (theNow != theTop) {
-            theTop = theNow;
-            theSince = std::chrono::steady_clock::now();
-        }
-        return (theTop == kFormSingle || theTop == kFormMain) &&
-               std::chrono::steady_clock::now() - theSince > std::chrono::milliseconds(300);
-    });
-}
-
-int NextGame(size_t inIndex, Options& outGame, std::string& outError);
-
-void Drive()
-{
-    std::vector<std::string> theProblems;
-    EERulesOverrideProblems(theProblems);
-    if (!theProblems.empty()) {
-        std::string theText;
-        for (const std::string& p : theProblems)
-            theText += (theText.empty() ? "" : "; ") + p;
-        if (sBatch)
-            BeginGame(0, sOptions, false);
-        Fail("--set did not apply: " + theText);
-    }
-    WaitForm(kFormMain, 300);
-    if (!sBatch)
-        Quit(PlayGame());
-    bool thePlayed = false;   // a game ran and was not left yet
-    size_t k = 0;
-    for (;; k++) {
-        Options theGame;
-        std::string theError;
-        int theNext = NextGame(k, theGame, theError);
-        if (theNext == 0)
-            break;
-        if (theNext < 0) {
-            Marker("EE-SIM GAME %lu END 64 bad-options %s", (unsigned long)k, theError.c_str());
-            continue;
-        }
-        BeginGame(k, theGame, thePlayed);
-        if (thePlayed)
-            LeaveGame();   // (a failure here is this game's: its report has the error)
-        thePlayed = true;
-        StartGameOutput();
-        int theCode = PlayGame();
-        EndGameOutput(theCode);
-        if (theCode != 0)
-            Quit(theCode);   // a wall timeout leaves a game running: the rest in a new process
-    }
-    Marker("EE-SIM BATCH END %lu", (unsigned long)k);
-    Quit(0);
-}
-
-const char* kUsage =
-    "EE-SIM.exe: the headless simulation (TEST ONLY). Runs a seeded computer-vs-computer random-map game of the game's\n"
-    "own code without window, rendering or sound, as fast as the CPU allows, and writes a JSON report.\n"
-    "  --seed N               the start seed (default 2)\n"
-    "  --ai N                 computer players, 1..7 (default 2)\n"
-    "  --map-size NAME        lobby map size line (default Small)\n"
-    "  --map-type NAME        lobby map type line (default Continental)\n"
-    "  --difficulty NAME      lobby difficulty line (default Hard)\n"
-    "  --lobby CONTROL=VALUE  any lobby combo of form 26 by line name or #index (e.g. 209=#2)\n"
-    "  --game-seconds S       stop at this game time (default 2700)\n"
-    "  --sample-seconds S     report sample interval in game seconds (default 30)\n"
-    "  --wall-timeout S       give up after this wall time (default 3600)\n"
-    "  --pt-rate N            Min = Max PTs per Second (default 40, the harness's pin)\n"
-    "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
-    "  --flare SECONDS:PLAYER the idle human flares at the player's first building at that game time (TEST ONLY:\n"
-    "                         its allies, the computers, answer it as an ally's flare)\n"
-    "  --volcano SECONDS:PLAYER a volcano cast 6 tiles off the player's first building at that game time; logs the\n"
-    "                         boulders launched every game second (TEST ONLY)\n"
-    "  --keep-human           keep the idle human at war (default: allied with every computer from the start, so no\n"
-    "                         computer attacks it)\n"
-    "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
-    "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
-    "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic (the default: the\n"
-    "                         manifest's classic AI, classic_lua), random, an AI's\n"
-    "                         id from Data/ai/ais.json (e.g. boom) or next (its first AI); one for every seat or a\n"
-    "                         comma list by seat, taken in turn (e.g. boom,classic)\n"
-    "  --set DOC.KEY=VALUE    a rules document value (repeatable), e.g. aipersonalities.balanced.military.army_floor=0.2\n"
-    "  --data DIR             the data root (EE_DATA_ROOT; default the exe's directory)\n"
-    "  --config FILE          the settings file (EE_CONFIG; default <data root>/config.yaml)\n"
-    "  --report FILE          the JSON report (default stdout)\n"
-    "  --trace FILE           the EE-AI trace lines (with EE_AI_TRACE=1 or --ai-trace; default stdout)\n"
-    "  --ai-trace             EE_AI_TRACE=1\n"
-    "  --log FILE             every debug string of the game\n"
-    "  --checksum-trace FILE  one line of state hashes per communications tick (tick, random seed, out-of-synch\n"
-    "                         checksum, units, AI); reading them changes nothing (tools/sim_oracle.py ticks)\n"
-    "  --autosave-ms N        the game's autosave period in PT time (default 0: none; the game and the harness: 600000)\n"
-    "  --save-at MS=FILE      save the game at the first communications tick at or after game ms MS (repeatable); the\n"
-    "                         file is copied to FILE at the end of the run\n"
-    "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
-    "  --scenario FILE        play this scenario (.scn) instead of a random map: the lobby's game type Scenario, the\n"
-    "                         Play Scenario screen, Load, Start (the scenario's own players and options)\n"
-    "  --campaign NAME        play a shipped campaign's scenario through the campaign screens (learning, roman,\n"
-    "                         pacific, asian: single player, the campaign, its scenario select form, the intro, Start;\n"
-    "                         the single-player scenarios the lobby refuses, the Learning Campaign's)\n"
-    "  --scenario-index K     with --campaign: the scenario list line (default: the screen's preselection; every\n"
-    "                         Learning Campaign scenario is open, of the others only the first)\n"
-    "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
-    "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
-    "  --dump-tick MS=FILE    the same after the first physics tick at or after game ms MS (repeatable; --dump-at\n"
-    "                         writes after a communications tick's last physics tick)\n"
-    "  --rng-trace MS=FILE    every draw of the physics random stream after game ms MS with its callers (exe-relative\n"
-    "                         addresses, tools/sim.py resolve), at most 50,000 draws\n"
-    "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: none fixed, the system picks a\n"
-    "                         free port at each bind)\n"
-    "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
-    "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
-    "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
-    "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
-    "  --unit-sweep           TEST ONLY: every five game minutes every player gets aircraft, ships under water,\n"
-    "                         sea animals and spaceships sent at the next player (the capture's units game)\n"
-    "  --app-sweep            TEST ONLY: with EE_SIM_CAPTURE, cheat lines at five game minutes (CHET, CHEF, CHLS) and\n"
-    "                         one storm of each kind at ten (STRM; the capture's app game, ee/EEAppCapture.h); at\n"
-    "                         the game's end EEMap's sight and checksum (MAPS, MAPK, TSGT; ee/EESightCapture.h)\n"
-    "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
-    "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
-    "  --group-sweep          TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every player's units\n"
-    "                         get real group commands, each one's outcome recorded (the capture's groups game: AGPL)\n"
-    "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
-    "                         Editor) and this script of its actions and digests (EESimEditor.cpp names the commands)\n"
-    "  --editor-out FILE      the script's steps and digests (default stdout)\n"
-    "  --quiet                no progress on stderr\n"
-    "  --games FILE           several games in a row in this process, one a line: the line's game options over the\n"
-    "                         command line's (# comments; \"...\" quotes). Game options: --seed --ai --map-size\n"
-    "                         --map-type --difficulty --lobby --engine --game-seconds --sample-seconds --wall-timeout\n"
-    "                         --human-defeat --keep-human --flare --volcano --report --trace --log and\n"
-    "                         --err FILE (the game's stderr), --out DIR (DIR/report.json, trace.txt, err.txt),\n"
-    "                         --id NAME (the markers' name). The rest (--set --cheats --personality --ai-trace\n"
-    "                         --pt-rate --autosave-ms --data --config --port-offset) holds for every game. stderr gets\n"
-    "                         \"EE-SIM GAME k BEGIN id\" / \"EE-SIM GAME k END code outcome\" per game and \"EE-SIM\n"
-    "                         BATCH END n\"; a failed game (code 2 or 3) ends the process (tools/sim.py play_games\n"
-    "                         goes on with the rest in a new one). Each game's report and trace equal its run alone\n";
-
-// a path made absolute now (the game moves the current directory to its data root at start)
-std::string Absolute(const std::string& inPath)
-{
-    if (inPath.empty() || inPath == "-")
-        return inPath;
+    FILE* theErr = fopen(inFile, "w");
+    if (theErr != NULL) {
 #ifdef _WIN32
-    char theFull[4096];
-    if (_fullpath(theFull, inPath.c_str(), sizeof(theFull)))
-        return theFull;
-    return inPath;
+        SetStderr(_fileno(theErr));
 #else
-    if (inPath[0] == '/')
-        return inPath;
-    char theDirectory[4096];
-    return getcwd(theDirectory, sizeof(theDirectory)) ? std::string(theDirectory) + "/" + inPath : inPath;
+        SetStderr(fileno(theErr));
 #endif
-}
-
-void SetEnv(const char* inName, const std::string& inValue)
-{
-#ifdef _WIN32
-    _putenv_s(inName, inValue.c_str());
-#else
-    setenv(inName, inValue.c_str(), 1);
-#endif
-}
-
-// the process's stderr, kept while a game's own is in place (--games)
-int EESimDupStderr()
-{
-#ifdef _WIN32
-    return _dup(2);
-#else
-    return dup(2);
-#endif
-}
-
-// a game's own option (the command line's, or a line's of the --games file) at inArgs[ioIndex] -> 1 taken (ioIndex
-// at its last word), 0 not a game option, -1 a bad one (outError)
-int GameOption(const std::vector<std::string>& inArgs, size_t& ioIndex, Options& ioOptions, std::string& outError)
-{
-    const std::string& a = inArgs[ioIndex];
-    static const char* const kWithValue[] = {"--seed", "--ai", "--map-size", "--map-type", "--difficulty", "--lobby",
-        "--game-seconds", "--sample-seconds", "--wall-timeout", "--flare", "--volcano", "--engine", "--report",
-        "--trace", "--log", "--err", "--out", "--id"};
-    bool theValued = false;
-    for (const char* n : kWithValue)
-        theValued = theValued || a == n;
-    std::string v;
-    if (theValued) {
-        if (ioIndex + 1 >= inArgs.size()) {
-            outError = a + " needs a value";
-            return -1;
-        }
-        v = inArgs[++ioIndex];
+        fclose(theErr);
     }
-    auto pair = [&](const char* inForm, long& outMs, unsigned long& outPlayer) {
-        size_t c = v.find(':');
-        if (c == std::string::npos) {
-            outError = std::string(a) + " " + inForm;
-            return -1;
-        }
-        outMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
-        outPlayer = (unsigned long)atol(v.substr(c + 1).c_str());
-        return 1;
-    };
-    if (a == "--seed")
-        ioOptions.mSeed = strtoul(v.c_str(), NULL, 0);
-    else if (a == "--ai")
-        ioOptions.mComputers = atol(v.c_str());
-    else if (a == "--map-size")
-        ioOptions.mMapSize = v;
-    else if (a == "--map-type")
-        ioOptions.mMapType = v;
-    else if (a == "--difficulty")
-        ioOptions.mDifficulty = v;
-    else if (a == "--lobby") {
-        size_t eq = v.find('=');
-        if (eq == std::string::npos) {
-            outError = "--lobby CONTROL=VALUE";
-            return -1;
-        }
-        ioOptions.mLobby.push_back({atol(v.substr(0, eq).c_str()), v.substr(eq + 1)});
-    } else if (a == "--game-seconds")
-        ioOptions.mGameSeconds = atof(v.c_str());
-    else if (a == "--sample-seconds")
-        ioOptions.mSampleSeconds = atof(v.c_str());
-    else if (a == "--wall-timeout")
-        ioOptions.mWallTimeout = atof(v.c_str());
-    else if (a == "--human-defeat")
-        ioOptions.mNoHumanDefeat = false;
-    else if (a == "--no-human-defeat")
-        ioOptions.mNoHumanDefeat = true;
-    else if (a == "--keep-human")
-        ioOptions.mHumanOut = false;
-    else if (a == "--flare")
-        return pair("SECONDS:PLAYER", ioOptions.mFlareMs, ioOptions.mFlarePlayer);
-    else if (a == "--volcano")
-        return pair("SECONDS:PLAYER", ioOptions.mVolcanoMs, ioOptions.mVolcanoPlayer);
-    else if (a == "--engine")
-        ioOptions.mEngine = v;
-    else if (a == "--report")
-        ioOptions.mReport = Absolute(v);
-    else if (a == "--trace")
-        ioOptions.mTrace = Absolute(v);
-    else if (a == "--log")
-        ioOptions.mLog = Absolute(v);
-    else if (a == "--err")
-        ioOptions.mErr = Absolute(v);
-    else if (a == "--id")
-        ioOptions.mID = v;
-    else if (a == "--out") {   // a game's folder: report.json, trace.txt, err.txt
-        std::string d = Absolute(v);
+}
+
+void HostWrite(int inStream, const uint8_t* inBytes, size_t inLength, bool inFlush)
+{
+    if (inStream >= 3) {   // a descriptor (the batch's markers on the process's stderr)
+        fflush(stderr);
 #ifdef _WIN32
-        CreateDirectoryA(d.c_str(), NULL);
-        d += "\\";
+        _write(inStream - 3, inBytes, (unsigned)inLength);
 #else
-        mkdir(d.c_str(), 0777);
-        d += "/";
+        if (write(inStream - 3, inBytes, inLength) < 0)
+            return;
 #endif
-        ioOptions.mReport = d + "report.json";
-        ioOptions.mTrace = d + "trace.txt";
-        ioOptions.mErr = d + "err.txt";
-    } else
-        return 0;
-    return 1;
-}
-
-bool OptionsInRange(const Options& inOptions)
-{
-    return inOptions.mComputers >= 1 && inOptions.mComputers <= 7 && inOptions.mGameSeconds > 0 &&
-           inOptions.mSampleSeconds > 0;
-}
-
-// a line of the --games file -> its words (blanks between them; "..." keeps blanks, \" a quote)
-std::vector<std::string> Words(const std::string& inLine)
-{
-    std::vector<std::string> theWords;
-    std::string theWord;
-    bool theIn = false, theQuoted = false;
-    for (size_t k = 0; k < inLine.size(); k++) {
-        char c = inLine[k];
-        if (c == '\\' && k + 1 < inLine.size() && inLine[k + 1] == '"') {
-            theWord += '"';
-            theIn = true;
-            k++;
-        } else if (c == '"') {
-            theQuoted = !theQuoted;
-            theIn = true;
-        } else if (!theQuoted && (c == ' ' || c == '\t' || c == '\r' || c == '\n')) {
-            if (theIn)
-                theWords.push_back(theWord);
-            theWord.clear();
-            theIn = false;
-        } else {
-            theWord += c;
-            theIn = true;
-        }
+        return;
     }
-    if (theIn)
-        theWords.push_back(theWord);
-    return theWords;
+    FILE* theOut = inStream == 1 ? stdout : stderr;
+    if (inLength > 0)
+        fwrite(inBytes, 1, inLength, theOut);
+    if (inFlush || inStream == 2)
+        fflush(theOut);
 }
 
-// --games: the next game's line (blank lines and # comments skipped): its game options over the command line's ->
-// 1 a game, 0 the end of the file, -1 a bad line (outError)
-int NextGame(size_t inIndex, Options& outGame, std::string& outError)
+void HostRngTrace(long inMs, const char* inPath)
 {
-    std::string theRow;
-    while (true) {
-        theRow.clear();
-        int c;
-        while ((c = fgetc(sGamesFile)) != EOF && c != '\n')
-            theRow += (char)c;
-        if (c == EOF && theRow.empty())
-            return 0;
-        std::vector<std::string> theWords = Words(theRow);
-        if (theWords.empty() || theWords[0][0] == '#')
-            continue;
-        outGame = sBase;   // (a game's files are its own: none from the command line)
-        outGame.mReport.clear();
-        outGame.mTrace.clear();
-        outGame.mLog.clear();
-        outGame.mErr.clear();
-        outGame.mID = std::to_string(inIndex);
-        for (size_t i = 0; i < theWords.size(); i++) {
-            int r = GameOption(theWords, i, outGame, outError);
-            if (r <= 0) {
-                if (r == 0)
-                    outError = theWords[i] + " is not a game's option (--help)";
-                return -1;
-            }
-        }
-        if (!OptionsInRange(outGame)) {
-            outError = "an option is out of range";
-            return -1;
-        }
-        return 1;
-    }
+    sRngTraceMs = inMs;
+    sRngTraceFile = inPath;
+    gURandomTraceHook = RngTraceHook;
+}
+
+void TickDumpTrampoline()
+{
+    ee_sim_driver_tick_dump();
+}
+
+void HostTickHook()
+{
+    gPhysicsAfterTickHook = TickDumpTrampoline;
+}
+
+void HostQuit(int inCode)
+{
+    fflush(stdout);
+    fflush(stderr);
+    if (sRngFile)
+        fflush(sRngFile);
+    EESimCaptureRecord::Flush();
+#ifdef _WIN32
+    TerminateProcess(GetCurrentProcess(), (UINT)inCode);
+#endif
+    _exit(inCode);
+}
+
+long HostWonders(uint64_t inPlayer)
+{
+    return (long)reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->GetNumWonderUnits();
+}
+
+// a unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource
+long HostUnitValue(uint64_t inPlayer, long inTechnology, unsigned long inUnitType)
+{
+    EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer);
+    EETechTreeNode* theNode = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(inTechnology) : NULL;
+    long theValue = 0;
+    if (theNode != NULL && theNode->mData != NULL)
+        for (long r = kResourceFood; r <= kResourceIron; r++)
+            theValue += theNode->GetCost(r, inUnitType, 1.0f);
+    return theValue;
+}
+
+void DebugTrampoline(const char* inText)
+{
+    ee_sim_driver_debug(inText);
 }
 
 }   // namespace
@@ -2686,14 +1245,16 @@ int NextGame(size_t inIndex, Options& outGame, std::string& outError)
 // window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max PTs per Second), no autosave, no music
 void EESimPreferences()
 {
+    long thePTRate = 40, theAutoSave = 0;
+    ee_sim_driver_preferences(&thePTRate, &theAutoSave);
     gGamePreferences.mSettings.mFullScreen = false;
     gGamePreferences.mSettings.mGameBitDepth = 32;
     gGamePreferences.mSettings.mTextureBitDepth = 32;
     gGamePreferences.mSettings.mGameWindowWidth = 800;
     gGamePreferences.mSettings.mGameWindowHeight = 600;
-    gGamePreferences.mSettings.mMinPTsPerSecond = sOptions.mPTRate;
-    gGamePreferences.mSettings.mMaxPTsPerSecond = sOptions.mPTRate;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)sOptions.mAutoSaveMs;
+    gGamePreferences.mSettings.mMinPTsPerSecond = thePTRate;
+    gGamePreferences.mSettings.mMaxPTsPerSecond = thePTRate;
+    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)theAutoSave;
     gGamePreferences.mSettings.mMusicEnabled = false;
     gGamePreferences.mSettings.mWaitForVSync = false;
 }
@@ -2701,7 +1262,7 @@ void EESimPreferences()
 // EESimStart: the driver's thread (EERun, after the engine and the threads are up, before the UI loop)
 void EESimStart()
 {
-    std::thread(Drive).detach();
+    ee_sim_driver_start();
 }
 
 #ifdef _WIN32
@@ -2761,192 +1322,38 @@ static void EESimInstallFaultHandler()
 
 void EESimGameEnded(int inResult);
 
-// EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the options, the switches, then the game's own WinMain. On
-// POSIX the game's main calls it for "ee-aoc --sim ..." and goes on with the game when it returns -1.
+// EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the driver's options and switches (ee_game sim_driver), the
+// debug strings and faults hooked, then the game's own WinMain. On POSIX the game's main calls it for "ee-aoc --sim
+// ..." and goes on with the game when it returns -1.
 int EESimMain(int argc, char** argv)
 {
-    sStartWall = sPhaseWall = std::chrono::steady_clock::now();
-    std::string theData, theConfig, theGames;
-    bool theTraceOn = false;
-    std::vector<std::string> theArgs(argv + 1, argv + argc);
-    for (size_t i = 0; i < theArgs.size(); i++) {
-        std::string a = theArgs[i];
-        auto value = [&]() -> std::string {
-            if (i + 1 >= theArgs.size()) {
-                fprintf(stderr, "EE-SIM: %s needs a value\n", a.c_str());
-                exit(64);
-            }
-            return theArgs[++i];
-        };
-        std::string theError;
-        int theGameOption = GameOption(theArgs, i, sOptions, theError);
-        if (theGameOption < 0) {
-            fprintf(stderr, "EE-SIM: %s\n", theError.c_str());
-            return 64;
-        }
-        if (theGameOption > 0)
-            continue;
-        if (a == "-h" || a == "--help") {
-            fputs(kUsage, stdout);
-            return 0;
-        } else if (a == "--pt-rate")
-            sOptions.mPTRate = atol(value().c_str());
-        else if (a == "--cheats")
-            sOptions.mCheats = value();
-        else if (a == "--personality")
-            sOptions.mPersonality = value();
-        else if (a == "--set") {
-            std::string v = value();
-            if (!EERulesAddOverride(v, theError)) {
-                fprintf(stderr, "EE-SIM: --set %s\n", theError.c_str());
-                return 64;
-            }
-            sOptions.mSets.push_back(v);
-        } else if (a == "--data")
-            theData = Absolute(value());
-        else if (a == "--config")
-            theConfig = Absolute(value());
-        else if (a == "--games")
-            theGames = value() == "-" ? std::string("-") : Absolute(theArgs[i]);
-        else if (a == "--ai-trace")
-            theTraceOn = true;
-        else if (a == "--checksum-trace")
-            sOptions.mChecksumTrace = Absolute(value());
-        else if (a == "--quiet")
-            sOptions.mQuiet = true;
-        else if (a == "--calamities")
-            sOptions.mCalamities = true;
-        else if (a == "--missile-sweep")
-            sOptions.mMissileSweep = true;
-        else if (a == "--unit-sweep")
-            sOptions.mUnitSweep = true;
-        else if (a == "--app-sweep")
-            sOptions.mAppSweep = true;
-        else if (a == "--effect-sweep") {
-            sOptions.mEffectSweep = true;
-            EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
-        } else if (a == "--group-sweep") {
-            sOptions.mGroupSweep = true;
-            EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
-        } else if (a == "--port-offset")
-            sOptions.mPortOffset = atol(value().c_str());
-        else if (a == "--autosave-ms")
-            sOptions.mAutoSaveMs = atol(value().c_str());
-        else if (a == "--save-at") {
-            std::string v = value();
-            size_t eq = v.find('=');
-            if (eq == std::string::npos || eq == 0 || eq + 1 == v.size()) {
-                fprintf(stderr, "EE-SIM: --save-at MS=FILE\n");
-                return 64;
-            }
-            sOptions.mSaves.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
-        } else if (a == "--load-save")
-            sOptions.mLoadSave = Absolute(value());
-        else if (a == "--scenario")
-            sOptions.mScenario = Absolute(value());
-        else if (a == "--campaign") {
-            sOptions.mCampaign = value();
-            if (sOptions.mCampaign != "learning" && sOptions.mCampaign != "roman" && sOptions.mCampaign != "pacific" &&
-                sOptions.mCampaign != "asian") {
-                fprintf(stderr, "EE-SIM: --campaign learning|roman|pacific|asian\n");
-                return 64;
-            }
-        } else if (a == "--scenario-index")
-            sOptions.mScenarioIndex = atol(value().c_str());
-        else if (a == "--editor-script")
-            sOptions.mEditorScript = Absolute(value());
-        else if (a == "--editor-out")
-            sOptions.mEditorOut = Absolute(value());
-        else if (a == "--dump-at") {
-            std::string v = value();
-            size_t eq = v.find('=');
-            if (eq == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --dump-at MS=FILE\n");
-                return 64;
-            }
-            sDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
-        } else if (a == "--dump-load")
-            sDumpLoad = Absolute(value());
-        else if (a == "--dump-tick") {
-            std::string v = value();
-            size_t eq = v.find('=');
-            if (eq == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --dump-tick MS=FILE\n");
-                return 64;
-            }
-            sTickDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
-            gPhysicsAfterTickHook = TickDumpHook;
-        }
-        else if (a == "--rng-trace") {
-            std::string v = value();
-            size_t eq = v.find('=');
-            if (eq == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --rng-trace MS=FILE\n");
-                return 64;
-            }
-            sRngTraceMs = atol(v.substr(0, eq).c_str());
-            sRngTraceFile = Absolute(v.substr(eq + 1));
-            gURandomTraceHook = RngTraceHook;
-        } else {
-            fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
-            return 64;
-        }
-    }
-    if (!OptionsInRange(sOptions) || sOptions.mPTRate < 1 || sOptions.mPTRate > 250) {
-        fprintf(stderr, "EE-SIM: an option is out of range (--help)\n");
-        return 64;
-    }
-    if (!theGames.empty()) {
-        std::string theError;
-        sGamesFile = theGames == "-" ? stdin : fopen(theGames.c_str(), "rb");
-        if (sGamesFile == NULL) {
-            fprintf(stderr, "EE-SIM: cannot read --games %s\n", theGames.c_str());
-            return 66;
-        }
-        sBase = sOptions;
-        sBatch = true;
-        sProcessStderr = EESimDupStderr();
-    }
-    if (!theData.empty())
-        SetEnv("EE_DATA_ROOT", theData);
-    if (!theConfig.empty())
-        SetEnv("EE_CONFIG", theConfig);
-    if (theTraceOn)
-        SetEnv("EE_AI_TRACE", "1");
-    if (!sOptions.mCheats.empty())
-        SetEnv("EE_AI_CHEATS", sOptions.mCheats);
-    if (!sOptions.mPersonality.empty())
-        SetEnv("EE_AI_PERSONALITY", sOptions.mPersonality);
-    if (!sBatch && !sOptions.mTrace.empty()) {
-        sTraceFile = fopen(sOptions.mTrace.c_str(), "w");
-        if (!sTraceFile) {
-            fprintf(stderr, "EE-SIM: cannot write %s\n", sOptions.mTrace.c_str());
-            return 66;
-        }
-    }
-    if (!sBatch && !sOptions.mLog.empty())
-        sLogFile = fopen(sOptions.mLog.c_str(), "w");
-    if (!sOptions.mChecksumTrace.empty()) {
-        sChecksumFile = fopen(sOptions.mChecksumTrace.c_str(), "w");
-        if (!sChecksumFile) {
-            fprintf(stderr, "EE-SIM: cannot write %s\n", sOptions.mChecksumTrace.c_str());
-            return 66;
-        }
-    }
-    std::stable_sort(sOptions.mSaves.begin(), sOptions.mSaves.end(),
-                     [](const std::pair<long, std::string>& a, const std::pair<long, std::string>& b) {
-                         return a.first < b.first;
-                     });
-    gPlatSimMode = 1;
-    gPlatSimSeedSet = sOptions.mLoadSave.empty() ? 1 : 0;   // a loaded game: the file's seed, as the game loads it
-    gPlatSimSeed = (uint32_t)sOptions.mSeed;   // (--games: each game's, BeginGame)
-    gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
-    gScenarioSimDialogs = !sOptions.mScenario.empty() || !sOptions.mCampaign.empty();
-    // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
-    // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
-    // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)
-    gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : kPlatSimAnyPort;
-    PlatDebugSetHandler(DebugHandler);
+    static const EeSimDriverHost kHost = {
+        HostTopForm, HostTopFormClass, HostClick, HostComboLines, HostComboSelect, HostListLines, HostListSelect,
+        HostControlWithEvent, HostPhysics, HostEditorUp, HostLock, HostPrepareHuman, HostDumpAfterLoad,
+        HostChecksumFields, HostDumpState, HostRequestSave, HostExtension, HostSetRun, HostSetAfterTick,
+        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostRunEditor, HostFlare, HostVolcano,
+        HostVolcanoBoulders, HostCaptureActive, HostSweep, HostRulesAdd, HostRulesProblems, HostEngineChoice,
+        HostEngineIDs, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite, HostRngTrace, HostTickHook, HostQuit,
+        HostWonders, HostUnitValue};
+    EeSimDriverEvents theEvents = {};
+    theEvents.sp_load_game = EE_SCREENS_SP_LOAD_GAME;
+    theEvents.spl_load = EE_SCREENS_SPL_LOAD;
+    theEvents.pc_learning = EE_SCREENS_PC_LEARNING;
+    theEvents.sp_campaign = EE_SCREENS_SP_CAMPAIGN;
+    theEvents.pc_campaign[0] = EE_SCREENS_PC_CAMPAIGN_1;
+    theEvents.pc_campaign[1] = EE_SCREENS_PC_CAMPAIGN_2;
+    theEvents.pc_campaign[2] = EE_SCREENS_PC_CAMPAIGN_3;
+    theEvents.cs_start = EE_SCREENS_CS_START;
+    theEvents.si_start = EE_SCREENS_SI_START;
+    theEvents.editors_open = EE_SCREENS_EDITORS_OPEN;
+    theEvents.editors_scenario_editor = EE_SCREENS_EDITORS_SCENARIO_EDITOR;
+    theEvents.pgs_exit = EE_SCREENS_PGS_EXIT;
+    theEvents.form_post_game_summary = kFormPostGameSummary;
+    theEvents.load_scenario_button = kLoadGameLoadButton;
+    int theCode = ee_sim_driver_main(argc, argv, &kHost, &theEvents);
+    if (theCode != EE_SIM_DRIVER_CONTINUE)
+        return theCode;
+    PlatDebugSetHandler(DebugTrampoline);
 #ifdef _WIN32
     AddVectoredExceptionHandler(1, EESimFault);
 #else
@@ -2961,18 +1368,10 @@ int EESimMain(int argc, char** argv)
     setenv("LP_NUM_THREADS", "1", 0);
 #endif
 #endif
-    std::string thePorts = gPlatSimPortOffset == kPlatSimAnyPort
-                               ? std::string("any free")
-                               : std::to_string(33334 + gPlatSimPortOffset) + "/" +
-                                     std::to_string(33335 + gPlatSimPortOffset);
-    if (sBatch)
-        Note("EE-SIM games from %s, ports %s", theGames.c_str(), thePorts.c_str());
-    else
-        Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %s", sOptions.mSeed, sOptions.mComputers,
-             sOptions.mGameSeconds, thePorts.c_str());
 #ifdef _WIN32
     char theEmpty[1] = {0};
     EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
+    return 4;
 #else
     return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
@@ -2981,6 +1380,5 @@ int EESimMain(int argc, char** argv)
 // EESimGameEnded: the game's own start-up returned before the driver ended the run (it was quit, or failed to start)
 void EESimGameEnded(int inResult)
 {
-    WriteReport(4, "the game ended before the simulation (start-up failed?)");
-    Quit(inResult ? inResult : 4);
+    ee_sim_driver_game_ended(inResult);
 }

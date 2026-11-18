@@ -67,6 +67,8 @@ void EEAppCaptureStorm(const EEEMStorm& inStorm, unsigned int inPhase, unsigned 
 // parse and, when applied, CHEF: every player's state after it), at ten one storm of each kind
 void EEAppCaptureCheatSweep();
 void EEAppCaptureStormSweep();
+// TEST ONLY: WSTA, EEWorld::RecordStatistics at the app profile's end (EEAppCaptureWorld.cpp)
+void EEAppCaptureStatisticsSweep();
 // CHLS: a line ListCheatCodes adds to the chat log
 void EEAppCaptureCheatList(const UWideString& inLine);
 

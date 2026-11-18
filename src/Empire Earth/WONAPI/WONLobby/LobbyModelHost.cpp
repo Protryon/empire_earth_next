@@ -192,14 +192,6 @@ bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
     catch (ReadBufferException&) { return false; }
 }
 
-// Reads the game's listing summary from a byte buffer; false without one
-bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
-{
-    if (inData == NULL) return false;
-    ReadBuffer buffer(inData->data(),inData->length());
-    return this->ReadSummary(buffer);
-}
-
 // Builds the join request for the game: message 1, the local ping and the game code's data
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
 {

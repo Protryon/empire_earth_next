@@ -38,6 +38,7 @@
 #include "rust/won_gui/multiobj.h"
 #include "rust/won_gui/paneobj.h"
 #include "rust/won_gui/rootobj.h"
+#include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/treeobj.h"
@@ -235,7 +236,6 @@ public:
     WONRectangle() : x(0), y(0), width(0), height(0) {}
     WONRectangle(int inX, int inY, int inWidth, int inHeight) : x(inX), y(inY), width(inWidth), height(inHeight) {}
     void DoIntersect(const WONRectangle& o) { this->Set(ee_won_gui_rect_intersect(this->Rust(), o.Rust())); }
-    void DoUnion(const WONRectangle& o) { this->Set(ee_won_gui_rect_union(this->Rust(), o.Rust())); }
     bool Intersects(const WONRectangle& o) const { return ee_won_gui_rect_intersects(this->Rust(), o.Rust()); }
     EeWonRect Rust() const { EeWonRect e = { this->x, this->y, this->width, this->height }; return e; }
     void Set(const EeWonRect& e) { this->x = e.x; this->y = e.y; this->width = e.width; this->height = e.height; }
@@ -297,10 +297,6 @@ public:
     virtual void SetEnabled(bool e) { this->KCall(EeWonCompCall::SetEnabled,e); } // +0x90 (0x2f5610)
     virtual void SetVisible(bool v) { this->KCall(EeWonCompCall::SetVisible,v); } // +0x94 (0x2f55b0)
     virtual Component* GetMouseChild() { return NULL; }
-    virtual int GetMinWidth() { return 0; } // returns 0 (shared body at 0x1ad67e)
-    virtual int GetMinHeight() { return 0; } // returns 0 (shared body at 0x1ad67e)
-    virtual int GetMaxWidth() { return 0xffff; }               // +0xa4 0x2905a2
-    virtual int GetMaxHeight() { return 0xffff; }              // +0xa8 (ICF: 0x2905a2)
 
     void SetColorScheme(ColorScheme* s) { this->KCall(EeWonCompCall::SetColorScheme,(intptr_t)s); }
     ColorScheme* GetOwnColorScheme() { return (ColorScheme*)this->KCall(EeWonCompCall::OwnColorScheme); }
@@ -468,13 +464,11 @@ public:
     void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
     void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); }
     void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); }
-    void SetHasUsedDialogKeys(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::HasUsedDialogKeys,v); }
     bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
     Component* GetFocusChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FocusChild); }
     Cursor* GetCurrentCursor() { return (Cursor*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::CurrentCursor); }
     bool IsModal() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ModalCount)>0; }
     Component* GetFrontChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FrontChild); }
-    Component* GetBackChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::BackChild); }
     // Component::GetNextSibling's walk (0x2f5230)
     Component* NextChild(Component* c,bool f,bool w) { return (Component*)this->CCall(EeWonCtCall::NextChild,(intptr_t)c,f,w); }
     void DropFocusChild() { this->CCall(EeWonCtCall::DropFocusChild); }
@@ -691,7 +685,6 @@ public:
     bool IsTransparent() { return this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::Transparent)!=0; }
     void SetTransparentField(bool t) { this->MSet(EeWonMsBtnField::Transparent,t); } // the flag alone (no background grab)
     int GetLeftTextPad() { return (int)this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::LeftTextPad); }
-    void SetLeftTextPad(int l) { this->MSet(EeWonMsBtnField::LeftTextPad,l); }
     void SetHorzAlignField(HorzAlign h) { this->MSet(EeWonMsBtnField::HAlign,h); } // the field alone (the text's centring kept)
     SmartPtr<WrappedText> mText;
     EeWonMsButton* mMsb;
@@ -927,7 +920,6 @@ public:
     virtual void Paint(Graphics& inGraphics); // override
     virtual void SetFrameImageAndBorders(Image*, int, int, int, int);
     virtual void SetFrameImage(Image*);
-    virtual void SetFrameBorders(int, int, int, int);
     virtual void SetFrameLeft(int);
     virtual void SetFrameTop(int);
     virtual void SetFrameRight(int);
@@ -949,9 +941,7 @@ public:
     virtual void SetImageAndTile(Image* i, bool t); // 306c80 (inline, after Image)
     virtual void SetImage(Image* i); // 306c10 (inline, after Image)
     void SetTile(bool doTile) { this->mTile = doTile; }
-    void SetStretch(bool doStretch) { this->mStretch = doStretch; }
     bool GetTile() { return this->mTile; }
-    bool GetStretch() { return this->mStretch; }
     Image* GetImage() { return this->mImage.get(); }
     SmartPtr<Image> mImage; // at +0x30
     bool mTile,mStretch; // at +0x34, +0x35 (set at 0x394da6/0x394dd8)
@@ -1146,9 +1136,6 @@ public:
     static ComponentConfig* CfgFactory();
     static Component* CompFactory();
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
-    void ReadConfig(Component*,const char*,ResourceConfigTable* = NULL,ConfigParser* = NULL);
-    Component* GetChildComponent(const std::string&);
-    ComponentConfig* GetChildConfig(const std::string&);
     void InitComponents(); //382cc0 recursive guarded component initialization
     Direction ReadDirection(); //3856f0
     HorzAlign ReadHorzAlign(); //385950
@@ -1627,9 +1614,7 @@ public:
     Font* GetNamedFont(const std::string& n) { return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)n.data(), (intptr_t)n.size()); } //32c4d0
     Font* GetDefaultFont() { return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont); } //32c540
     Font* GetDefaultFontMod(int,int=0); //32c700
-    Font* GetNamedFontMod(const std::string&,int,int=0);
     static SmartPtr<Font> GetDefaultFont(const FontDescriptor&);
-    static DisplayContext* GetDefaultDisplayContext();
     void RemoveAllTimerEvents() { this->WmCall(EeWonWmCall::RemoveAllTimerEvents); }
     void SetCacheImages(bool c) { this->WmCall(EeWonWmCall::SetCacheImages, c ? 1 : 0); } // 0x32c7f0: a count; at 0 the caches empty
     // the decodes: the Rust answer carries the returned SmartPtr's reference
@@ -1654,7 +1639,6 @@ public:
     void EndPopup(Component* c) { this->WmCall(EeWonWmCall::EndPopup, (intptr_t)c); } //32e4d0
     void CheckEndPopup(Component* c) { this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)c); } //32e790
     int MessageLoop() { return (int)this->WmCall(EeWonWmCall::MessageLoop); } //32e7d0
-    void PumpOnce() { this->GetNextEvent(); } //32e840
     void PostEvent(WindowEventBase* e, bool s = true) { this->WmCall(EeWonWmCall::PostEvent, (intptr_t)e, s ? 1 : 0); } //32e850
     void AddTimerEvent(WindowEventBase* e) { this->WmCall(EeWonWmCall::AddTimerEvent, (intptr_t)e); } //32e960
     void RemoveTimerEvent(WindowEventBase* e) { this->WmCall(EeWonWmCall::RemoveTimerEvent, (intptr_t)e); } //32ea70
@@ -1857,33 +1841,6 @@ bool LobbyIAmCaptain();
 void LobbyNetAdvertiseGame();
 void LobbyNotifyStagingChange();
 
-// a game list row (R6 WONLobby round 13): the members stay here (the EE game's subclass and the list read them), the
-// virtuals forward to the list control's Rust object (srvlistctl.rs), its column paints, orders and the icon
-class ServerDetailsItem : public ListItem {
-public:
-    ServerDetailsItem() { this->mSelectable = true; }
-    virtual ~ServerDetailsItem() {}
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    virtual bool CanSelect(ListArea*,int,int);
-    virtual void MouseDown(ListArea*,int,int,int);
-    virtual void PaintDetailsHook(Graphics&,MultiListArea*) {} // empty inline, vtable +0x38
-    virtual int GetDetailsHeightHook(MultiListArea*) { return 0; } // returns 0, vtable +0x3c
-    SmartPtr<LobbyGame> mGame; //18
-    GUIString mIPAddrStr; //1c
-    int mIconId; //20
-    unsigned char mSummaryHeight; //24
-protected:
-    typedef ServerDetailsItem* (*ItemFactoryFunc)();
-    static ItemFactoryFunc mItemFactoryFunc;
-    static ServerDetailsItem* DefaultItemFactory() { return new ServerDetailsItem; }
-public:
-    static ServerDetailsItem* CreateItem() { return ServerDetailsItem::mItemFactoryFunc(); }
-    static void SetItemFactory(ItemFactoryFunc factory) { ServerDetailsItem::mItemFactoryFunc=factory; }
-
-};
-
 class WindowEventBase : public RefCount {
 public:
     WindowEventBase(long inType = 0) : mEventType(inType), mWindow(NULL) {}
@@ -1955,8 +1912,6 @@ public:
       :ComponentEvent(component,up?ComponentEvent_ListItemUpClicked:ComponentEvent_ListItemClicked),
        mButton(button),mDoubleClick(dbl),mItem(item),mX(x),mY(y) {}
     bool IsSelectedItem(); // SDK ListBox.cpp; 0x2fa550
-    int GetButton() const { return this->mButton; }
-    bool IsDoubleClick() const { return this->mDoubleClick; }
     int mButton;                            // +0x20
     bool mDoubleClick;                      // +0x24
     SmartPtr<ListItem> mItem;               // +0x28
@@ -1998,7 +1953,6 @@ public:
     const FontDescriptor& GetDescriptor() { return this->mDescriptor; }
     int GetSize() { return this->mDescriptor.mSize; }
     int GetStyle() { return this->mDescriptor.mStyle; }
-    const std::string& GetFace() { return this->mDescriptor.mFace; }
     virtual ~Font();                        // 0x326a60, out of line
     virtual void PrepareContext(DisplayContext*);
     virtual void DrawString(DisplayContext*, const GUIString&, unsigned short, unsigned short, int, int);
@@ -2065,7 +2019,6 @@ public:
     virtual void Draw(DisplayContext*,int,int,int,int,int,int) = 0;
     virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //328bf0
     virtual Graphics* PlatformGetGraphics() = 0;
-    virtual SmartPtr<NativeIcon> GetIcon();
     virtual SmartPtr<RawImage32> GetRaw();
     Graphics* mGraphics; // at +0x0c, owned
     SmartPtr<DisplayContext> mDisplayContext; //10
@@ -2189,6 +2142,31 @@ public:
     SmartPtr<Font> mFont;                   // +20
     SmartPtr<Image> mImage;                 // +24
 };
+// RustRow and RustTextRow (R6 WONLobby round 16): list rows whose own members and virtuals are another crate's Rust
+// object (rust/crates/ee_won_gui/src/rowobj.rs: the row kind's call table and its state; the lobby's rows are
+// ee_won_lobby's rows.rs). The text row keeps TextListItem's members, which the lists and the rows' ops read.
+class RustRow : public ListItem {
+public:
+    explicit RustRow(EeWonRow* r) : mRow(r) {}
+    virtual ~RustRow() { ee_won_row_free(this->mRow); }
+    virtual void Paint(Graphics& g,ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::Paint,this,l,(intptr_t)&g,0,0); }
+    virtual void CalcDimensions(ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::CalcDimensions,this,l,0,0,0); }
+    virtual int Compare(const ListItem* o,ListArea* l) const
+    { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustRow*>(this),l,(intptr_t)static_cast<const RustRow*>(o)->mRow,(intptr_t)o,(intptr_t)(static_cast<const ListItem*>(this)-o)); }
+    virtual bool CanSelect(ListArea* l,int x,int y) { return ee_won_row_call(this->mRow,EeWonRowCall::CanSelect,this,l,x,y,0)!=0; }
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { ee_won_row_call(this->mRow,EeWonRowCall::MouseDown,this,l,x,y,b); }
+    EeWonRow* mRow;
+};
+class RustTextRow : public TextListItem {
+public:
+    explicit RustTextRow(EeWonRow* r) : mRow(r) {}
+    virtual ~RustTextRow() { ee_won_row_free(this->mRow); }
+    virtual void Paint(Graphics& g,ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::Paint,this,l,(intptr_t)&g,0,0); }
+    virtual void CalcDimensions(ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::CalcDimensions,this,l,0,0,0); }
+    virtual int Compare(const ListItem* o,ListArea* l) const
+    { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustTextRow*>(this),l,(intptr_t)static_cast<const RustTextRow*>(o)->mRow,(intptr_t)o,0); }
+    EeWonRow* mRow;
+};
 // Allocated at 0x2f4133 (type 0x27), 0x28 bytes; the implicit destructor 0x2f41c0 has no own vptr store.
 class ComboSelChangedEvent : public ComponentEvent {
 public:
@@ -2251,7 +2229,6 @@ public:
     int GetTopPad() { return this->GetField(EeWonGuiField::TopPad); }
     void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
     int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
-    int GetHorzOffset() { return this->GetField(EeWonGuiField::HorzOffset); }
     int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
     int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
@@ -2478,7 +2455,6 @@ public:
     virtual void NotifyMouseItemGone() { this->MCall(EeWonMultiCall::NotifyMouseItemGone); }
     void SetNumColumns(int n) { this->MCall(EeWonMultiCall::SetNumColumns,n); }
     void SetColumnSizeMode(int c,unsigned char m) { this->MCall(EeWonMultiCall::SetColumnSizeMode,c,m); }
-    MultiListItem* InsertRow(int=-1); // inserts a blank row
     void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); }
     int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
     int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
@@ -2529,7 +2505,6 @@ private:
     { return ee_won_mrow_call(this->mRow,l ? static_cast<MultiListArea*>(l)->mMulti : NULL,c,a,b,cc); }
 };
 inline MultiListItem* MultiListArea::InsertItem(MultiListItem* r,int pos) { ListArea::InsertItem(r,pos); return r; }
-inline MultiListItem* MultiListArea::InsertRow(int row) { return this->InsertItem(new MultiListItem,row); }
 
 // MultiListHeader (0xac bytes in the original, the 51 vtable slots of Container; ten overrides).
 class MultiListHeader : public Container {
@@ -2596,7 +2571,6 @@ public:
     void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText);
     TextArea* GetHTMLView() { return this->mHTMLView.get(); }
     const GUIString& GetCurStatus() { return this->mCurStatus; }
-    const GUIString& GetCurLocation() { return this->mCurLocation; }
 protected:
     void SetPageText(const std::wstring&);
     SmartPtr<TextArea> mHTMLView;

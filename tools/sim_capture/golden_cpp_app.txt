@@ -10,6 +10,7 @@ seed 2 MMPX 2 743bdb20aedbcd09
 seed 2 MMSN 20 000ed846508d70ad
 seed 2 STRM 200 f071a50b8bee5ad9
 seed 2 TSGT 17157 2d85cfae46a5bcb4
+seed 2 WSTA 1 fcacb7e2462f20b7
 seed 3 CAMU 38418 ad30834c4e50b4bb
 seed 3 CHEF 30 672c1fe8bfaec341
 seed 3 CHET 42 ecc2b9deb69476ee
@@ -22,6 +23,7 @@ seed 3 MMPX 2 bd6c4856e8080df9
 seed 3 MMSN 20 ff9104bafab08f05
 seed 3 STRM 200 c42ba3721466fb4e
 seed 3 TSGT 17361 218ac7f247ad6774
+seed 3 WSTA 1 317dd0f1f26c8cf8
 seed 4 MAPK 9 03b137e3c5f2f9a1
 seed 4 MAPS 30 86e250195fa4c2cf
 seed 4 TSGT 14534 8165439760dd4bc5

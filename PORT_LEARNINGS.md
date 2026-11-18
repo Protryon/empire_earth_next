@@ -31172,3 +31172,140 @@ LAN/Internet lobby; the error form only with a message box.
   `GEBitmap*`), the mini map's plan executor (viewport clips), the select units' lines, the C++ `DrawTextA`s.
 - The screens' editor list boxes and the world view's 2D draws (`EEROUnits.cpp`).
 - `GEVertexHost`'s vertex cases stay for the store gate's `StoreVertexArray` (no Rust array).
+## R6 WONLobby, round 16: dead WON members, the lobby's list rows as Rust rows (ee_won_gui rowobj.rs, ee_won_lobby rows.rs; branch rust-wonlobby16, 2026-11-18)
+
+Round 15's "Next" put the rows first (round 13's step 2), then the whole-class moves and RoutingLogic.cpp's host,
+for 2,000 net lines. This round did the dead members and the rows; the target was not reached (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| befccddec | 129 dead members deleted: tools/dead_members.py over the WON headers (`--headers include/ee/wonapi "src/Empire Earth/WONAPI"`), the inline definition of `MultiListArea::InsertRow` it missed (`inline T Class::Name(` is not its definition pattern), five comments left above deleted declarations | 35,910 -> 35,601 (-309) |
+| 1c50173c1 | the lobby's list rows as Rust rows (below) | 35,601 -> 35,271 (-330) |
+
+Round total: WON C++ 35,910 -> 35,271 (-639); on the merged tree with origin/rust 9a277da24 the same (the AI lane's
+merge touched no WON file). Far short of the 2,000 target: the rows were the only whole move done, and their C++
+calls stay host ops.
+
+### The rows
+
+- **The shells.** `RustRow : ListItem` and `RustTextRow : TextListItem` (WONLobbyGUI.h) hold one `EeWonRow*`
+  (ee_won_gui rowobj.rs): the row kind's call table (`EeWonRowTable`: a call and a free, the owning crate's) and
+  its state. Their virtuals are `ee_won_row_call` (Paint, CalcDimensions, Compare with the other row's `EeWonRow*`
+  from the original's `static_cast` and the address difference the game list used, CanSelect and MouseDown on the
+  plain row), their destructor `ee_won_row_free`. A row is bound to its shell's address in a window-thread registry
+  (`rowobj::of`), so the controls' ops on an item reach its state, and a table pointer check makes a row of another
+  kind `None`.
+- **What is Rust** (rows.rs): RoomListItem (loading, address, room id; the text, colour, font and image are its
+  `TextListItem` base's, which the controls' generic text-row ops already wrote), FriendsListItem and UserListItem
+  (friend/client, separator, sort group/key), GameUserListItem (client, image, font; the icon table that was
+  LobbyCtrlHost.cpp's `CtlImage` for it and the client tests that were `ClientIs`), ServerDetailsItem (game,
+  address text, icon, summary height) with EELobbyServerDetailsItem as a flag (`ee_won_lobby_rows_ee_details`, set
+  where the glue's factories were set) whose hooks call eeglue.rs directly. The game list's rows forward their
+  virtuals to the list's grandparent control, srvlistctl.rs, as the C++ forwards did (one host op names the control).
+- **Where the ops go.** The controls' row ops (`RoomItemServer`, `FriendRowNew`, `ItemNew`, `RowNew`, the members'
+  `ItemGet`/`ItemSet` fields, ...) are answered by `rows::ctl_op` in the game, after the model's and the settings'
+  answers (lobbyctl.rs `op`); the model reads and the addresses inside the rows are modelobj.rs's and ipobj.rs's. Every
+  C++ call a row makes (graphics, fonts, lists, images, the `TextListItem` base's members and virtuals) is one op of
+  the controls' host, `LobbyCtrlHost`, called with no control: 17 new ops, the rest (the `Gfx*`, `List*`,
+  `FontHeight`, `AddRef`/`Release`, ...) already there for the game list's paint. LobbyNetCtrlHost.cpp's
+  `DeliverJoinRoom` and the glue's `ItemGame` read the rows through `ee_won_lobby_rows_ctl_op` (`INTPTR_MIN` for not
+  a row: -1 is a sort key).
+- **The drivers.** The controls' drivers make their controls without the model, so their scripted hosts still
+  answer the row ops: won_netctl_test, won_lobbyctl_test and won_srvlist_test and their goldens are unchanged (the
+  rewrite round 15 planned was not needed). The new `won_rowobj_test` copies the original rows (and the host cases
+  that made and read them) unchanged over a stand-in world (lists, graphics contexts, fonts, images, texts,
+  addresses, model objects; references counted and traced) and runs rows.rs over the same world through the host ops,
+  with the shells copied from WONLobbyGUI.h: 40,000 sequences, 1.83 million trace lines, 0 differences. The game
+  list rows' virtuals are not in it (they are srvlistctl.rs's, which won_srvlist_test and the LAN game run).
+- **Mutations** (build/r16_mutate.py): 16 of 16 caught. Two were missed at first and were the world's faults: a
+  room's player count never 0 (`x % 3 ? x % 6 : ...` cannot give 0) and the away and admin answers always equal (the
+  stand-in hash's low bits); a third, a game list row keeping its game, was hidden by the driver holding an extra
+  reference to rows that come with one. Lesson: run each mutation the world could hide at full length, and check the
+  world's answers vary (one quick script over the hash found the second).
+- **Behaviour changes.** A game list row's icon id and summary height start at 0 (the original left them as `new`
+  gave them; the control sets both before reading them). A room row's text, colour, font and image live in its
+  `TextListItem` base (the original had its own members of the same names); a row's end gives its image back before
+  its font (reverse member order of the base) where the original's own members did it the other way round: those are
+  resources nothing frees there. RoomListItem is a `TextListItem` now; nothing in WONGUI or the lobby casts list
+  items to `TextListItem` dynamically.
+- **What runs it.** The LAN game builds the game lists (ServerDetailsItem, the EE details) and the game room's
+  player list (GameUserListItem): `lan_game.py` and the capture comparison. The room tree, friends and user lists
+  are the Internet lobby's (the driver only).
+
+### Gates (the round's head merged with origin/rust 9a277da24)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM), after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after the dead members; seeds 2-7 identical on the merged tree |
+| `rust_build.py gate` | PASS, 4,545 tests on the rows commit (after a clippy fix); PASS, 4,576 tests on the merged tree |
+| `won_host_coverage.py` | PASS (rows.rs `ctl_op` and `client_is` read for the controls' ops, item fields and client tests) |
+| `xbuild.py wontest` | all 150 programs exit 0 under the 2 GB cap (peak 557 MB, won_cfgtab_test); won_rowobj_test the new one |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2759 joiner=2754` (the round's start exe, a test-profile build of 48c8472f0: 2729 / 2729) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121) |
+
+The merge of origin/rust needed nothing (no conflict; strip_markers changed 0 files; the headers were current).
+
+### Left
+
+- The dialogs' rows (BadUserItem, ConnectListItem, NetworkAdapterListItem) and the filter combo's FilterListItem:
+  rows.rs kinds, once lobbydlg.rs has a game mode to answer their ops (it has no `_new_model` constructor); ChatLink's
+  segment hook.
+- The widget calls every lobby host repeats (ListArea's, ComboBox's, InputBox's, Label's and Component's
+  non-virtual forwards, ~260 lines of near-duplicate cases over LobbyDialogHost, LobbyCtrlHost, LobbyNetCtrlHost and
+  the EE hosts): Component's calls already take the C++ pointer (`ee_won_comp_call(this, host, ...)`), the others
+  need their Rust object from the C++ pointer (a registry like rowobj's).
+- The whole-class moves (LobbyDialogHost.cpp, LanLogicHost.cpp, InitLogic.cpp, LobbyLogicHost.cpp,
+  ChatCommandParser.cpp's client list and target) and RoutingLogic.cpp's other cases: not started.
+## App core, round 1: EE-SIM's driver whole in Rust, EEWorld::RecordStatistics' decisions in Rust, WSTA (ee_game sim_driver, ee_sim app statistics.rs; branch rust-appcore1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 5678bdf3a | EE-SIM's driver in Rust: options, menus, lobby, run, samples, report, `--games`; EESim.cpp a host table | +446 -2052, net -1,606 |
+| 068449327 | WSTA, a capture of RecordStatistics at the app profile's end (TEST ONLY) | +86 |
+| 2aba1854b | WSTA without the history's start time; goldens again from the C++ | +1 -1 |
+| c3a6706ae | RecordStatistics' decisions in Rust over a host; the C++ fills the records | +79 -263, net -184 |
+| 9038a77e8 | the sample's strength truncated as cvttss2si | Rust only |
+
+- **The driver over a host table.** Everything EE-SIM decides is Rust now (ee_game sim_driver: options.rs, lobby.rs,
+  report.rs, driver.rs); EESim.cpp is `EeSimDriverHost` (41 functions: the UI's controls under the UI lock, the world
+  lock, the platform switches, the C library's streams, environment and descriptors, the save message, the idle
+  human's set-up, --flare/--volcano's world calls, the capture's sweeps) plus the TEST ONLY readers of C++ objects
+  (the combat/list-search/missile sweeps, the checksum fields, the state dump, the random trace) and the fault handler.
+  The samples read the world views (players' saved records, the tech tree's epoch, the units, their classes and
+  stats); only the wonder count and a class's cost (`EEPlayer::GetCost`) stay host calls.
+- **The C library's text mode.** The C++ opened the trace, the log and the checksum trace with `fopen(.., "w")`: CR
+  LF on Windows. Rust's `File` writes bytes, so the first run's checksum lines differed at the first new line. The
+  driver's `TextFile` writes `\r\n` for each `\n` on Windows; the report was "wb" and stays bytes. Everything the C++
+  wrote to stdout/stderr (the trace without --trace, the report to "-", the notes, the markers) still goes through
+  the C library's streams (the host's `write`), so the buffers and `_dup2`'d stderr behave as before.
+- **The C library's numbers.** `atol`, `atof` and `strtoul(.., 0)` are re-implemented (prefix parse, octal and hex,
+  saturation, a minus wrapping the unsigned value): `--seed 0x10` and `--flare 90.5:2` read as before.
+- **The function statics stay statics.** AfterTick's schedules (the five-minute sweeps, the calamity casts, the unit
+  sweeps, the mini map minute, the app sweeps), FinishGame's "swept" flag and the checksum line count were function
+  statics, never reset between `--games` games; the driver keeps them in one struct outside the per-game state.
+- **`(long)` of a float is `cvttss2si`.** The sample's strength and the statistics' epoch score and play times use the
+  conversion's indefinite value (`LONG_MIN`) out of range, as everywhere in the port (ee_sim units::player::trunc_long,
+  app::statistics::trunc_long_f64): a long game's epoch score (`end / epoch x span x 100`) overflows 32 bits.
+- **WSTA's first golden had a wall clock in it.** `mStatistics.mStartTime` is the game's start in wall time: a second
+  run of the unmodified exe differed from the golden in those four bytes alone. The record leaves it out and the
+  goldens were recorded again from the C++ (a decoder of the record's payload found it in one diff). Lesson: run a new capture tag's C++ twice before trusting its golden.
+- **Tests.** sim_driver 9 (the numbers, the game options, a games line, the command line, a line by name, the
+  lobby's choices and order, a sample's counts, the report's text, the text file), app::statistics 5 (the order and
+  scores, a top-up's arithmetic and draws, the observing local player, a scenario with two humans, the epoch score
+  and the truncation).
+- **Behaviour:** none.
+- **Gates, on the tree merged with origin/rust 9a277da24** (a clean merge; `strip_markers.py --check` and the headers
+  current): both builds 0/0 (the test profile too), the Rust gate PASS, the oracle identical on seeds 2-7, the
+  captures at seeds 2-3 oracle 212, late 214, space 210, calamity 222, app 26 digests PASS (WSTA among them), the
+  plain saveload 18/18 identical, the matrix `saveload expect: PASS`, the editor (14,448 lines) and civilization
+  builder (4,062) gates PASS, scenario_check 27/27, `--games` (3 games) equal to single runs and to the unmodified
+  exe, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13481` units [4, 42, 42] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2786 joiner=2786`, GATES PASS.
+- **Only a tour reaches**: nothing new (EE-SIM's driver is TEST ONLY; RecordStatistics runs when a game is left: the
+  post-game summary reads its records, which a tour does not open).
+- **Short of the target**: net -1,704 C++ against the 3,000 asked. The rest of the area is object wiring or test
+  drivers made of UI calls (docs/progress/app-core.md "Measured, not moved").

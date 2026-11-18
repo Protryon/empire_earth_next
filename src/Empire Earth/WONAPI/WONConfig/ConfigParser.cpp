@@ -96,18 +96,6 @@ void ConfigParser::SkipWhitespace()
     EeWonConfigIo anIo = this->Io();
     ee_won_config_skip_whitespace(this->mLexer, &anIo);
 }
-// Skips to the end of the line, consuming the newline
-void ConfigParser::SkipLine()
-{
-    EeWonConfigIo anIo = this->Io();
-    ee_won_config_skip_line(this->mLexer, &anIo);
-}
-// Skips to just past the closing */ of a block comment
-void ConfigParser::SkipBlockComment()
-{
-    EeWonConfigIo anIo = this->Io();
-    ee_won_config_skip_block_comment(this->mLexer, &anIo);
-}
 // Records a parse error with file and line, unless one is already set and append is off
 void ConfigParser::SetError(const std::string& inError, bool inAppend)
 {

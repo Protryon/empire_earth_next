@@ -29,7 +29,6 @@ public:
     AlertEvent(int inKind, int inValue, int inSeverity, const GUIString& inText);
     int GetKind() const { return this->mKind; }
     int GetValue() const { return this->mValue; }
-    int GetSeverity() const { return this->mSeverity; }
     const GUIString& GetText() const { return this->mText; }
     int mKind; // 0x20
     int mValue; // 0x24

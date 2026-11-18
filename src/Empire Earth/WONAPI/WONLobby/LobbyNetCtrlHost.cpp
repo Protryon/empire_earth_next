@@ -35,6 +35,7 @@
 #include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/srvlistctl.h"
 #include "rust/won_lobby/chatctl.h"
+#include "rust/won_lobby/rows.h"
 #include "rust/won_net/ipobj.h"
 using namespace WONAPI;
 
@@ -50,33 +51,6 @@ public:
 };
 
 namespace WONAPI {
-
-// ---- the game list's rows: one forward each into the list control (the list's grandparent)
-
-static intptr_t RowCall(ListArea* inList, EeWonLobbyCtlRowCall inCall, const void* inItem, intptr_t a = 0,
-                        intptr_t b = 0, intptr_t c = 0)
-{
-    intptr_t anArgs[3] = {a, b, c};
-    LobbyRustCtrl* aCtl = static_cast<ServerListCtrl*>(inList->mParent->mParent);
-    return ee_won_lobbyctl_call(aCtl->mLobbyCtl, EeWonLobbyCtlCall::Row, (intptr_t)inCall, (intptr_t)inItem,
-                                (intptr_t)anArgs);
-}
-static intptr_t Pt(int x, int y) { return (intptr_t)(uint32_t)x | ((intptr_t)(uint32_t)y << 32); }
-void ServerDetailsItem::Paint(Graphics& g, ListArea* inList)
-{ RowCall(inList, EeWonLobbyCtlRowCall::Paint, this, (intptr_t)&g, (intptr_t)inList); }
-void ServerDetailsItem::CalcDimensions(ListArea* inList)
-{ RowCall(inList, EeWonLobbyCtlRowCall::CalcDimensions, this, (intptr_t)inList); }
-int ServerDetailsItem::Compare(const ListItem* inOther, ListArea* inList) const
-{
-    return (int)RowCall(inList, EeWonLobbyCtlRowCall::Compare, this, (intptr_t)inOther, (intptr_t)inList,
-                        static_cast<const ListItem*>(this) - inOther);
-}
-bool ServerDetailsItem::CanSelect(ListArea* inList, int x, int y)
-{ return RowCall(inList, EeWonLobbyCtlRowCall::CanSelect, this, (intptr_t)inList, Pt(x, y)) != 0; }
-void ServerDetailsItem::MouseDown(ListArea* inList, int x, int y, int inButton)
-{ RowCall(inList, EeWonLobbyCtlRowCall::MouseDown, this, (intptr_t)inList, Pt(x, y), inButton); }
-
-ServerDetailsItem::ItemFactoryFunc ServerDetailsItem::mItemFactoryFunc = ServerDetailsItem::DefaultItemFactory;
 
 // ---- DrawLobbyPing (MOTDCtrl.cpp's): the game list's and the game room's ping bars
 // The ping ceiling (0x8df4cc) starts at 5000 and is taken from the lobby config while it is still 5000
@@ -377,156 +351,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     return 0;
 }
 
-// ---- the room tree's, the friends list's and the user list's rows (RoomCtrl.cpp's, FriendsListCtrl.cpp's,
-// UserListCtrl.cpp's; their paint, size and order unchanged)
-
-}
-// Creates a room tree entry for a server, or its 'querying server' placeholder when loading
-RoomListItem::RoomListItem(WONAPI::LobbyServer* inServer,bool inLoading)
-    :mColor(-1),mLoading(inLoading),mAddress(inServer->GetAddress()),mGroupId(0xffff)
-{
-    this->UpdateText(inServer,NULL);
-}
-// Creates a room tree entry for a chat room on a server
-RoomListItem::RoomListItem(WONAPI::LobbyGroup* inGroup,WONAPI::LobbyServer* inServer)
-    :mColor(-1),mLoading(false),mAddress(inServer->GetAddress()),mGroupId(inGroup->GetId())
-{
-    this->UpdateText(inServer,inGroup);
-}
-// Orders room tree entries by their text, ignoring case
-int RoomListItem::Compare(const WONAPI::ListItem* inOther,WONAPI::ListArea*) const
-{
-    return this->mText.CompareNoCase(static_cast<const RoomListItem*>(inOther)->mText);
-}
-// Sets the entry's text ('querying server', or the room or server name with its player count) and lock icon
-void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* inGroup)
-{
-    char aCount[50];
-    if(this->mLoading) this->mText=LOBBY_STRING(RoomCtrl_QueryingServer_String);
-    else if(inGroup!=NULL)
-    {
-        sprintf(aCount," (%d)",inGroup->GetNumClients());
-        this->mText=inGroup->GetName();
-        if(static_cast<int>(inGroup->GetNumClients())>0)
-            this->mText.append(aCount);
-    }
-    else if(inServer!=NULL)
-    {
-        sprintf(aCount," (%d)",inServer->GetNumClients());
-        this->mText=inServer->GetName();
-        if(inServer->GetNumClients()!=0)
-            this->mText.append(aCount);
-    }
-    else this->mText.erase();
-    if(inGroup!=NULL && inGroup->IsPasswordProtected()) this->mImage=LOBBY_IMAGE(RoomCtrl_Password_Image);
-    else this->mImage=NULL;
-}
-// Measures the entry: server entries use a bold font, and the lock icon adds width and height
-void RoomListItem::CalcDimensions(WONAPI::ListArea* inList)
-{
-    if(this->mFont.get()==NULL)
-    {
-        if(this->mGroupId==0xffff && !this->mLoading)
-            this->mFont=inList->GetFontMod(inList->mFont.get(),1,0);
-        else this->mFont=inList->mFont;
-    }
-    if(this->mColor<0) this->mColor=inList->GetTextColor();
-    this->mWidth=this->mFont->GetStringWidth(this->mText,0,this->mText.length())+2;
-    this->mHeight=this->mFont->GetHeight();
-    if(this->mImage.get()!=NULL)
-    {
-        this->mWidth+=this->mImage->mWidth+2;
-        if(this->mImage->GetHeight()>this->mHeight) this->mHeight=this->mImage->GetHeight();
-    }
-}
-// Uses the list's selection color (ListArea at 0x140) and its full-row selection flag (list flags at 0x124)
-// Draws the entry with its selection highlight, lock icon and text
-void RoomListItem::Paint(WONAPI::Graphics& g,WONAPI::ListArea* inList)
-{
-    int aColor=this->mColor;
-    if(this->mSelected)
-    {
-        g.SetColor(inList->GetSelColor().GetBackgroundColor(g));
-        int aWidth=inList->GetPaintWidth();
-        if(!inList->ListFlagSet(0x10)) aWidth=this->mWidth;
-        g.FillRect(0,0,aWidth,this->mHeight);
-        aColor=inList->GetSelColor().GetForegroundColor(g,this->mColor);
-    }
-    int x=2;
-    if(this->mImage.get()!=NULL)
-    {
-        g.DrawImage(this->mImage.get(),x,(this->mHeight-this->mImage->mHeight)/2);
-        x=this->mImage->mWidth+4;
-    }
-    g.SetColor(aColor);
-    g.SetFont(this->mFont.get());
-    g.DrawString(this->mText,x,(this->mHeight-this->mFont->GetHeight())/2);
-}
-namespace WONAPI {
-// Creates a friends list entry with no friend (a separator line until a friend is set)
-FriendsListItem::FriendsListItem() { this->mSeparator=true; this->mSortGroup=0; }
-// Sizes a separator (8 pixels high when shown, else 1) or a friend's text entry
-void FriendsListItem::CalcDimensions(ListArea* inList)
-{
-    if(this->mFriend.get()==NULL) {
-        this->mWidth=1;
-        if(this->mSeparator) this->mHeight=8;
-        else this->mHeight=1;
-    } else TextListItem::CalcDimensions(inList);
-}
-// Orders entries by sort group, highest first (online friends, separator, others), then by text
-int FriendsListItem::Compare(const ListItem* inOther,ListArea* inList) const
-{
-    int result=static_cast<const FriendsListItem*>(inOther)->mSortGroup-this->mSortGroup;
-    if(result!=0) return result;
-    return TextListItem::Compare(inOther,inList);
-}
-// Draws a shown separator as a line across the list, or a friend's text entry
-void FriendsListItem::Paint(Graphics& inGraphics,ListArea* inList)
-{
-    if(this->mFriend.get()==NULL) {
-        if(this->mSeparator) {
-            int width=inList->GetTotalWidth()+10;
-            if(inList->GetPaintWidth()>width) width=inList->GetPaintWidth();
-            int y=this->mHeight>>2;
-            inGraphics.SetSysColor(StandardColor_Text);
-            inGraphics.DrawLine(0,y,width,y);
-        }
-    } else TextListItem::Paint(inGraphics,inList);
-}
-// Creates a room user list entry with no client (a separator line until a client is set)
-UserListItem::UserListItem() { this->mSortKey=0; this->mShowSeparator=true; }
-// Orders entries by sort key, highest first (admins, moderators, separator, friends, separator, others), then text
-int UserListItem::Compare(const ListItem* inOther,ListArea* inArea) const
-{
-    const UserListItem* other=static_cast<const UserListItem*>(inOther);
-    int result=other->mSortKey-this->mSortKey;
-    if(result!=0) return result;
-    return TextListItem::Compare(inOther,inArea);
-}
-// Sizes a separator (8 pixels high when shown, else 1) or a client's text entry
-void UserListItem::CalcDimensions(ListArea* inArea)
-{
-    if(this->mClient.get()==NULL) {
-        this->mWidth=1;
-        if(this->mShowSeparator) this->mHeight=8;
-        else this->mHeight=1;
-    } else TextListItem::CalcDimensions(inArea);
-}
-// Draws a shown separator as a line across the list, or a client's text entry
-void UserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
-{
-    if(this->mClient.get()==NULL) {
-        if(this->mShowSeparator) {
-            int width=inArea->GetTotalWidth()+10;
-            if(inArea->GetPaintWidth()>width) width=inArea->GetPaintWidth();
-            int y=this->mHeight>>2;
-            inGraphics.SetSysColor(StandardColor_Text);
-            inGraphics.DrawLine(0,y,width,y);
-        }
-    } else TextListItem::Paint(inGraphics,inArea);
-}
-
 // ---- the small controls' ops
 
 static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -534,7 +358,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     typedef EeWonLobbyCtlOp Op;
     TreeArea* aTree = reinterpret_cast<TreeArea*>(a);
     TreeItem* aNode = reinterpret_cast<TreeItem*>(a);
-    RoomListItem* aRoom = reinterpret_cast<RoomListItem*>(a);
     TextListItem* aText = reinterpret_cast<TextListItem*>(a);
     ComboBox* aCombo = reinterpret_cast<ComboBox*>(a);
     InputBox* anInput = reinterpret_cast<InputBox*>(a);
@@ -555,12 +378,13 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::TreeRemove: aTree->RemoveTreeItem(reinterpret_cast<TreeItem*>(b)); return 0;
     case Op::TreeClear: aTree->ClearTree(b != 0); return 0;
     case Op::TreeContainsPoint: return aNode->ContainsPoint(Lo(b), Hi(b)) ? 1 : 0;
-    case Op::RoomItemServer: return (intptr_t) new RoomListItem(reinterpret_cast<LobbyServer*>(a), b != 0);
-    case Op::RoomItemGroup: return (intptr_t) new RoomListItem(reinterpret_cast<LobbyGroup*>(a), reinterpret_cast<LobbyServer*>(b));
-    case Op::RoomItemUpdate: aRoom->UpdateText(reinterpret_cast<LobbyServer*>(b), reinterpret_cast<LobbyGroup*>(c)); return 0;
-    case Op::RoomItemAddr: return (intptr_t)aRoom->mAddress.GetValue();
-    case Op::RoomItemGroupId: return (intptr_t)aRoom->mGroupId;
-    case Op::DeliverJoinRoom: inCtl->DeliverEvent(new JoinRoomEvent(aRoom->mAddress, aRoom->mGroupId), false); return 0;
+    case Op::DeliverJoinRoom: {
+        // the row's address and room id (rows.rs)
+        const EeWonIpAddr* anAddress = (const EeWonIpAddr*)ee_won_lobby_rows_ctl_op(Op::RoomItemAddr, a, 0, 0);
+        unsigned long anId = (unsigned long)ee_won_lobby_rows_ctl_op(Op::RoomItemGroupId, a, 0, 0);
+        inCtl->DeliverEvent(new JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(anAddress)), anId), false);
+        return 0;
+    }
     case Op::DeliverCreateRoom: {
         IPAddr anAddress;
         if (a != 0) anAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a));
@@ -572,12 +396,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         return 0;
     case Op::ServerListGet: return (intptr_t)LobbyGetServerList();
     case Op::ChatGroup: return (intptr_t)LobbyGetChatGroup();
-    case Op::FriendRowNew: return (intptr_t) new FriendsListItem;
-    case Op::UserRowNew: return (intptr_t) new UserListItem;
-    case Op::ItemFriend: return (intptr_t) static_cast<FriendsListItem*>(aText)->mFriend.get();
-    case Op::ItemSetFriend: static_cast<FriendsListItem*>(aText)->mFriend = reinterpret_cast<LobbyFriend*>(b); return 0;
-    case Op::ItemUserClient: return (intptr_t) static_cast<UserListItem*>(aText)->mClient.get();
-    case Op::ItemSetUserClient: static_cast<UserListItem*>(aText)->mClient = reinterpret_cast<LobbyClient*>(b); return 0;
     case Op::ItemSetText: aText->mText = Txt(b); return 0;
     case Op::ItemSetImageRes: aText->mImage = b < 0 ? NULL : ResImage(b); return 0;
     case Op::ItemSetFont: aText->mFont = reinterpret_cast<Font*>(b); return 0;
@@ -720,32 +538,16 @@ ComponentConfig* ChatCtrlConfig::CfgFactory() { return new ChatCtrlConfig; }
 static intptr_t ItemField(ListItem* inItem, intptr_t inField, bool inSet, intptr_t inValue)
 {
     typedef EeWonLobbyCtlItemField F;
-    ServerDetailsItem* aRow = static_cast<ServerDetailsItem*>(inItem);
     switch ((F)inField) {
     case F::Height: if (inSet) inItem->mHeight = (int)inValue; return inItem->mHeight;
     case F::Top: if (inSet) inItem->mTop = (int)inValue; return inItem->mTop;
     case F::Width: if (inSet) inItem->mWidth = (int)inValue; return inItem->mWidth;
     case F::Selected: if (inSet) inItem->mSelected = inValue != 0; return inItem->mSelected ? 1 : 0;
     case F::Selectable: if (inSet) inItem->mSelectable = inValue != 0; return inItem->mSelectable ? 1 : 0;
-    case F::IconId: if (inSet) aRow->mIconId = (int)inValue; return aRow->mIconId;
-    case F::SummaryHeight:
-        if (inSet) aRow->mSummaryHeight = (unsigned char)inValue;
-        return aRow->mSummaryHeight;
     case F::Color:
         if (inSet) static_cast<TextListItem*>(inItem)->mColor = inValue;
         return (intptr_t)static_cast<TextListItem*>(inItem)->mColor;
-    case F::FriendSeparator:
-        if (inSet) static_cast<FriendsListItem*>(inItem)->mSeparator = inValue != 0;
-        return static_cast<FriendsListItem*>(inItem)->mSeparator ? 1 : 0;
-    case F::FriendSortGroup:
-        if (inSet) static_cast<FriendsListItem*>(inItem)->mSortGroup = (signed char)inValue;
-        return static_cast<FriendsListItem*>(inItem)->mSortGroup;
-    case F::UserSortKey:
-        if (inSet) static_cast<UserListItem*>(inItem)->mSortKey = (signed char)inValue;
-        return static_cast<UserListItem*>(inItem)->mSortKey;
-    case F::UserShowSeparator:
-        if (inSet) static_cast<UserListItem*>(inItem)->mShowSeparator = inValue != 0;
-        return static_cast<UserListItem*>(inItem)->mShowSeparator ? 1 : 0;
+    default: break; // the friend and user rows' members are rows.rs's
     }
     return 0;
 }
@@ -758,26 +560,40 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     MultiListArea* aMulti = reinterpret_cast<MultiListArea*>(a);
     Graphics* g = reinterpret_cast<Graphics*>(a);
     ComboBox* aCombo = reinterpret_cast<ComboBox*>(a);
-    ServerDetailsItem* aRow = reinterpret_cast<ServerDetailsItem*>(a);
     FilterListItem* aFilter = reinterpret_cast<FilterListItem*>(a);
+    TextListItem* aText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a));
     ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
     // the model's ops are answered by its Rust objects (modelobj.rs) before the host
-    case Op::RowNew: {
-        ServerDetailsItem* aNew = ServerDetailsItem::CreateItem();
-        aNew->AddRef();
-        return (intptr_t)aNew;
+    // the game list's rows are rows.rs's: their control (the list's grandparent) and their game's address text
+    case Op::ListOwnerCtl: return (intptr_t) static_cast<LobbyRustCtrl*>(static_cast<ServerListCtrl*>(aList->mParent->mParent))->mLobbyCtl;
+    case Op::GameAddrText: return Held(reinterpret_cast<LobbyGame*>(a)->GetAddress().GetHostAndPortString(true));
+    // round 16: the lobby's rows (rows.rs; RustRow and RustTextRow over their Rust states)
+    case Op::RowShellNew:
+        if (b != 0) return (intptr_t) static_cast<ListItem*>(new RustTextRow(reinterpret_cast<EeWonRow*>(a)));
+        return (intptr_t) static_cast<ListItem*>(new RustRow(reinterpret_cast<EeWonRow*>(a)));
+    case Op::RowTextPaint: aText->TextListItem::Paint(*reinterpret_cast<Graphics*>(b), reinterpret_cast<ListArea*>(c)); return 0;
+    case Op::RowTextCalc: aText->TextListItem::CalcDimensions(reinterpret_cast<ListArea*>(b)); return 0;
+    case Op::RowTextCompare: return aText->TextListItem::Compare(reinterpret_cast<ListItem*>(b), reinterpret_cast<ListArea*>(c));
+    case Op::ItemSetTextRes: aText->mText = ResText(b); return 0;
+    case Op::ItemSetTextCount: {
+        char aCount[50];
+        sprintf(aCount, " (%d)", Lo(c));
+        aText->mText = Txt(b);
+        if (Hi(c) != 0) aText->mText.append(aCount);
+        return 0;
     }
-    case Op::RowGame: return (intptr_t)aRow->mGame.get();
-    case Op::RowSetGame: aRow->mGame = reinterpret_cast<LobbyGame*>(b); return 0;
-    case Op::RowSetAddrText: aRow->mIPAddrStr = aRow->mGame->GetAddress().GetHostAndPortString(true); return 0;
-    case Op::RowAddrText: return Dat(aRow->mIPAddrStr);
+    case Op::ItemTextErase: aText->mText.erase(); return 0;
+    case Op::ItemImage: return (intptr_t)aText->mImage.get();
+    case Op::ItemFont: return (intptr_t)aText->mFont.get();
+    case Op::ItemTextWidth: return reinterpret_cast<Font*>(b)->GetStringWidth(aText->mText, 0, aText->mText.length());
+    case Op::ItemTextDraw: reinterpret_cast<Graphics*>(b)->DrawString(aText->mText, Lo(c), Hi(c)); return 0;
+    case Op::ItemTextCompare: return aText->mText.CompareNoCase(reinterpret_cast<TextListItem*>(b)->mText);
+    case Op::ImageWidth: return reinterpret_cast<Image*>(a)->mWidth;
+    case Op::ImageHeight: return reinterpret_cast<Image*>(a)->mHeight;
+    case Op::ResImage: return (intptr_t)ResImage(a);
     case Op::ItemGet: return ItemField(reinterpret_cast<ListItem*>(a), b, false, 0);
     case Op::ItemSet: ItemField(reinterpret_cast<ListItem*>(a), b, true, c); return 0;
-    case Op::RowDetailsHeight: return aRow->GetDetailsHeightHook(reinterpret_cast<MultiListArea*>(b));
-    case Op::RowPaintDetails:
-        aRow->PaintDetailsHook(*reinterpret_cast<Graphics*>(b), reinterpret_cast<MultiListArea*>(c));
-        return 0;
     case Op::DefaultFont: return (intptr_t)aComp->GetDefaultFont();
     case Op::DefaultFontMod: return (intptr_t)aComp->GetDefaultFontMod((int)b, (int)c);
     case Op::FontMod: return (intptr_t)aComp->GetFontMod(reinterpret_cast<Font*>(b), (int)c, 0);

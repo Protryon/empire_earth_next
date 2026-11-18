@@ -48,8 +48,5 @@ Component* ComponentCursor::GetComponent(int& mouseX,int& mouseY)
     mouseY=this->mMouseY;
     return this->mComponent.get();
 }
-// A component cursor is not a Windows cursor (the linker folds this body into the identical one at
-// 0x0070a7b0)
-bool ComponentCursor::IsNative() { return false; }
 }
 // (MSCursor's destructor, 0x007d0320, went with the GDI backend: PlatCursor is in PlatNativeImage.cpp)

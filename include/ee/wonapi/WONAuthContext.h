@@ -87,8 +87,6 @@ public:
     }
     bool SaveToFile(const std::string&); // AuthContext.cpp
     bool LoadFromFile(const std::string&);
-    bool IsBeta() const { return this->Flag(0); }
-    bool IsForceCheck() const { return this->Flag(1); }
     const ByteBuffer* GetRaw() const { return mKey.get(); } //genuine SDK borrowed key accessor
     bool IsValid() const { return mValid; } //genuine SDK CDKey validity bool18
 protected:
@@ -99,16 +97,6 @@ protected:
         this->mValid = ee_won_cdkey_is_valid(WonBytes(this->mProduct), this->mProduct.length(),
                                              reinterpret_cast<const uint8_t*>(inRaw));
         return this->mValid;
-    }
-    // 2e35a0: the Blowfish key from the product name's CRCs, optionally after the machine id
-    void GetSymmetricKey(Blowfish& outKey, bool inUseMachine = true) const
-    {
-        bool gotId = false;
-        DWORD machineId = inUseMachine ? CDKey::GetMachineId(&gotId) : 0;
-        uint8_t bytes[12];
-        size_t length = ee_won_cdkey_symmetric_key(WonBytes(this->mProduct), this->mProduct.length(), machineId,
-                                                   inUseMachine && gotId, bytes);
-        outKey.SetKey(bytes, static_cast<int>(length));
     }
     virtual void NotifyUsedOldMethodToDecrypt() {} //actual slot0/326b60, no virtual destructor
     virtual bool GetUseNewEncryptMethod() const { return true; } //actual slot4/2f30d0
@@ -152,11 +140,6 @@ public:
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_ADD_USER_DATA, inCommunity,
                        inData != NULL ? std::string(inData->data(), inData->length()) : std::string(), inData != NULL ? 1 : 0);
-    }
-    void SetLoginSecretFile(const std::string& inFile)
-    {
-        ee_won_auth_login_set(ee_won_authctx_login(this->mCore), EE_WON_AUTH_LOGIN_SECRET_FILE, NULL, 0, WonBytes(inFile),
-                              inFile.size(), 0);
     }
     void AddNickname(const std::wstring& inKey) { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_NICKNAME, inKey); }
     void SetNickname(const std::wstring& inKey, const std::wstring& inName)
