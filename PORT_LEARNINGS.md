@@ -30025,6 +30025,137 @@ same way, also over a one-file resource directory (so before its resource lines)
 look at it (round 13's 148 included it).
 
 origin/rust had nothing new at the end of the round (no merge).
+## Lane A, round 2: every `ai.*` binding in Rust, the tech tree's views, the military class tests and the AI switches (ee_sim::ai units_more.rs, military.rs, switches.rs; ee_sim::world tech_view.rs; branch rust-ai-lua2, 2026-11-17)
+
+- **The golden first, again.** Round 2's base (`build/ai_golden/c0`) was recorded on the round's start, cb6e60d50,
+  twice and equal; it equals round 1's base too. The 32 bindings moved in one piece and the 15 games stayed
+  identical at the first try: the bindings' C++ was a sequence of Lua calls over values, and the port kept the
+  order of every Lua call and every charge (a charge can raise: what it skips must be what the C++ skipped).
+- **What a "view" cannot be.** A tech node's plain members are Rust records already (ee_sim::tech's
+  `EeTechNodeFields`, `EeTechNodeDataFields`), so `NodeView` reads them in place; but `GetIsAvailable`,
+  `GetIsObsolete` and `GetCost` are virtuals whose bodies are the tech walks and the simulation capture's records
+  (TNWK, the cost capture): reading the flag instead of calling them would change the capture. They stay host
+  calls. The same holds for the class virtuals `IsLandBuilding`, `FliesOver`, `GetPopulationCost` and `IsTransport`
+  (the category dispatch). Rule: a view reads members, never stands in for a method with a body.
+- **The tree's containers through its own host.** The epochs' list and each epoch's `std::map` of nodes are C++
+  containers. The tree view looks nodes up through `EETechHost` (the walks' host, ops EPOCHS, EPOCH, NODE,
+  EPOCH_NODES), whose address the layout carries (`tech_host`): no new C++ for the lookups, and the walks and the
+  AI read the same containers the same way. An epoch's node ids are its map's keys; `EETechTreeEpoch::Load` keys
+  each node by its data's id, so the view returns the data ids.
+- **The continent manager behind fourteen ops.** The bindings over the continents, forests, hills, choke points,
+  the shore and the wall planner reach those objects only through `EE_AI_UNITS_HOST_AREA_*`/`WALL_*`/`ROUTE_*`
+  (`EECPUnitsWallsHost`). Their URandom draws are local streams seeded by the script, so a pick computed whole in
+  the host before the charge is the same as the C++'s pick after it. The choke points' nearest-first order keeps
+  its `std::multimap` (equal distances in insertion order) in the host.
+- **The captures see what the binding golden cannot.** The tile lists came back through a buffer that grew and
+  asked again when a list did not fit; for ai.water_sites that computed the shore twice, and the continent
+  capture (CNTN, one record per GetTilesNextTo) had 1.5 times its records while every binding answer stayed equal.
+  A list longer than the buffer is now read again from the host's copy (`EE_AI_UNITS_HOST_TILES_AGAIN`). Rule: a
+  host op with a captured body runs once per C++ call it replaces; run the captures before calling a move done.
+- **cbindgen emits only reachable types.** A `#[repr(C)]` record used only through a `void*` host op is not in the
+  header: one exported function taking a pointer to each (`ee_ai_units_records_size`, which the C++ also checks
+  against its own `sizeof`s) puts them there.
+- **A child module for a second file of bindings.** `#[path = "units_more.rs"] mod more;` inside units_bind.rs gives
+  the new file every private helper of the first (the `Game` reads, `charge`, the host) without widening their
+  visibility; cbindgen follows the `#[path]`.
+- **Shell heredocs mangle backslashes.** A Python edit script with `'\0'` in a bash heredoc arrived as a NUL
+  character and its replace silently failed to match; write such scripts with the editor into a file and run it.
+- **Python text writes on this machine use cp1252.** `open(p, 'w')` without `encoding` wrote EECPNextUnits.cpp's
+  `§` as one byte; read and write sources with `encoding='utf-8'` (or bytes).
+- **The switches.** EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS and EE_AI_EXP are parsed in Rust (switches.rs,
+  unit tests); the personality ids are resolved through a C++ callback (the rules' `Find`) and the warnings go out
+  through `ESDebugOut`. Checked by a game with every switch set on the old and the new EE-SIM: the EE-AI lines are
+  the same but the wall-clock EE-AIPROF lines.
+- **Results.** C++ -1,516 net over four code commits: the bindings -1,349 (EECPNextUnits.cpp 2,504 -> 1,145
+  lines, the layout +10), the military tests -90, the switches -89, the tiles fix +12 (C++ counted by `git diff
+  --numstat` over src). Binding golden identical in all 15 games after each commit; a mutation (ai.techs'
+  obsolete_epoch + 1) caught at classic-2's first ai.techs call (line 24). On the final tree: oracle seeds 2-7
+  identical; captures oracle, late, space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect`
+  PASS; both builds 0/0; the Rust gate PASS.
+## AI lane B, round 2: PLCE, EECPPlacement whole and EECPResourceCenter's bodies in Rust (ee_sim::cp placement, resource_center; branch rust-ai-cp1, 2026-11-17)
+
+- **The golden first, committed.** PLCE (ee/EECPPlaceCapture.h) records every outermost call into the placement, a
+  resource centre or their free functions: the method, the player, the inputs and the outputs, with the state the
+  state-changing calls leave. The entry points became recording wrappers on the unmodified C++ (each body wrapped in
+  a lambda by a script, so the body itself stayed byte for byte), the goldens were taken from that build, and the
+  move kept the scopes in the forwarders, so the digests compare the same outermost calls.
+- **Lesson: run the unmodified build twice before trusting a new tag.** The first PLCE digests differed between two
+  runs of the same build while every other tag agreed. Two causes, both in the record, not the game: out tiles were
+  recorded on the way in (the callers' uninitialized locals), and `EECPResourceCenter::mIsActive` is not set by the
+  constructor (a new centre's flag is garbage until its first `SetActive`; the game never reads it before). The
+  record now takes a found tile only when the call found one, GetCenter's only when there was something to measure,
+  and the active flag only where it is set (SetActive's argument, Load's read).
+- **Lesson: the gates' AI does not reach the code.** In the oracle, late, space and calamity games the computer
+  players run classic_lua, which places through `ai.find_site` (lane A's binding), not `ai.place`: PLCE held only
+  the centres' bookkeeping, no FindSite, CanBuildAt or finder. sim_capture got `--profile placement`: the oracle's
+  game with the boom and Age of AI scripts (`--engine boom,ageofai`), whose verbs place through `ai.place`
+  (`EECPNextPlaceSearch`: 313 and 48 outermost calls at seeds 2 and 3, every finder and thousands of CanBuildAt
+  under them). Its golden file lists only PLCE.
+- **The world through one host per module, the reads exact.** `PlaceHost` (place_host.rs) is the world both
+  modules ask; the game's implementation (place_game.rs) calls `ee_cp_place_host` (EECPPlacement.cpp) and
+  `ee_cp_center_host` (EECPResourceCenter.cpp). A unit's members come in one `UNIT_INFO` read through the C++
+  rather than the world views: `IsLandBuilding` is a virtual class method and `IsDropSite` a class method, and one
+  struct per unit costs one call. Lists the original kept across loop iterations stay in-out (EEGetTilesInRadius
+  appends, EEGetUnitsInRectangle appends and dedups the whole accumulated list, EEGetPlayerUnitsOfType's caller
+  passes the list it had), so the host takes the list as it is and hands back what the C++ call left.
+- **Lesson: a TEST ONLY note can pin a call to C++.** The ring and square tile lists are pure Rust already
+  (`units::uu_tiles`); the C++ wrappers the original called (`EEGetSquareRingTiles` and family) are forwarders with
+  a TEST ONLY UUTL note per outermost call, and UUTL has goldens. The port calls the Rust directly, and the C++
+  wrappers only while the capture records (`EeCpPlaceCtx::capture`): same tiles, the notes kept. One wrapper's note
+  records its input list (`EEGetSquareBlockRing` writes `T(outTiles)` even with `inAppend` 0), so that call takes the
+  previous ring's tiles in, as the original's reused vector held them.
+- **Sorts with ties.** `std::sort` is not stable; five of the original's sorts compare keys with ties (tiles by
+  distance, the anti-air clusters by size, gates by distance, a centre's units by an area effect bit). The
+  permutation a comparison sort makes depends only on the comparisons' outcomes, so `sort_by_key` hands the keys to
+  the C++ (`EE_CP_PLACE_SORT`: `std::sort` over (key, index) comparing keys) and applies the order. The stable sorts
+  (FindCenterSite's `stable_sort`, the (distance, index) pairs) and the totally ordered ones (U2DPoint's `operator<`
+  before `unique`) are Rust's sorts. A sort used only for its first element (FindSpaceSite's own units) is a min.
+- **Shuffles.** `EEAIRandomShuffle` is Dinkum's `random_shuffle`: for each position from the second, a draw of
+  `GetRandom(0, count - 1)` and a swap; place_host.rs `shuffle` makes the same draws through the host.
+- **Kept quirks.** FindWonderSite lists every ring to 199 after a find (the tile list calls, and their notes, stay);
+  FindTowerSite's gate tiles accumulate across gates and are filtered again for each; the choke points' unit list
+  accumulates; FindGranarySite's centre keeps the previous centre's tile when GetCenter finds nothing.
+- **cbindgen exports `pub(crate)` constants, and the header splitter matches names across crates.** The unit type
+  constants (`TYPE_PATH_POINT` ...) went into `rust/sim/cp.h` and moved ee_render's same-named constant to
+  common.h. They live in a `/// cbindgen:ignore` module with a `CP_` prefix now; `EeCpPlaceCtx`'s opaque placement
+  pointer needs `#[allow(improper_ctypes)]` on the extern block of the two hosts.
+- **Gates.** The move's commit: both builds 0/0; the Rust gate PASS (4,454 tests, 15 new: the epoch classes, the
+  tile math, the shuffle's draws, CanBuildAt's border runs, the town centre rule, the ring and adjacent searches, the
+  wonder rings, GetCenter, the area effects, the drop-site adoption, the morale fill, the settlement ring, the
+  centre's save and load bytes, Restore's dropped units); oracle seeds 2-3 identical; the captures at seeds 2-3
+  (placement 2, oracle 206, late 208, space 204, calamity 216 digests) equal to their goldens; scenario_check 27/27;
+  saveload seeds 2-3 PASS. Only the sim gates exercise this code: the renderer reaches none of it.
+- **Result.** C++ -1,519 net for the move (+737 -2,256; the TEST ONLY PLCE capture added 549 before it); Rust 4,541
+  lines with tests. On the tree merged with origin/rust cb6e60d50 (clean): both builds and
+  the test profile 0/0, the Rust gate PASS (4,508 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3
+  PASS, scenario_check 27/27.
+- **CPEV, the computer player's own calls.** The second TEST ONLY tag (the same scope class with its own depth, so a
+  CPEV call's placement calls still record PLCE as before): one record per outermost call of WorkOutPopulation,
+  Regroup, UpdateGroups, EnterEpoch, ChooseCivilization, EECPPendingEpoch, AvoidsEnemies, CanProduce,
+  RestoreManagers, DamageTaken, the unit events (UnitPlaced, UnitTaken, UnitCompleted, UnitGoalDone, UnitStranded,
+  UnitsSwapped), SetActive, EpochReached and PayImprovement, its arguments and, when it ends, the player's state (an
+  FNV-1a of the record EeCpFields, the favourite history, the units to kill, the danger zones, every centre with its
+  active flag, the town tile).
+- **Lesson: two threads call the same methods.** The first CPEV digests differed between two runs of one build in one
+  seed only: the interface thread asks `CanProduce` and `AvoidsEnemies` too, at its own times, so their records
+  interleave by timing. CPEV records only on the thread that runs the computer players' Update (noted at its first
+  call). The record's hash stops at the record's last member: the two bytes of tail padding after its closing bools
+  are whatever the allocation left.
+- **The player's bodies (events.rs).** WorkOutPopulation, the centres' grouping, the favourite choice (one body for
+  the four kinds; the screener stays C++, asked per class: it calls EECPCountOwn, whose PLCE record must stay),
+  RestoreManagers' missing favourites, ChooseCivilization's pick, the retire cheat, EECPPendingEpoch and AvoidsEnemies.
+  A third host (ee_cp_player_host). **Lesson: a moved body must call what the original called.** Regroup and
+  UpdateGroups call the centres' IsWithinRadius, AddUnit, Contains, AdoptDropSite, SetUnit, GetCenter and SetActive,
+  each an outermost PLCE call: the Rust bodies call those C++ forwarders through the host, not the Rust functions
+  behind them, and the centres' sort stays the original std::sort with its comparator (it asks every centre's
+  GetCenter per comparison, so even a key sort would change the records).
+- **The forwarders through two helpers.** EECPAsk (a test) and EECPSearch (a search with its tile in and out, the
+  centres for the searches over them) make the same PLCE words as the written-out forwarders (the placement profile's
+  PLCE digests equal), 81 lines less.
+- **Result of the round.** C++ -1,316 net (the target was 3,000: what is left of EEComputerPlayer.cpp is mostly calls
+  into lane A's hooks and the units' goals). On the tree merged with origin/rust 4929244f3: both builds and the test
+  profile 0/0, the Rust gate PASS (4,523 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3 PASS with
+  PLCE and CPEV, saveload 18/18, the matrix `saveload expect: PASS`, scenario_check 27/27.
 ## R6 WONLobby, round 15: won_cfgtab_test's leak, the WON drivers under a memory cap (branch rust-wonlobby15, 2026-11-17)
 
 ### won_cfgtab_test: the driver's own world never freed what it made

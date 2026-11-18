@@ -43,6 +43,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
+#include "rust/sim/ai.h"   // ee_ai_switch*: the TEST ONLY switches (switches.rs)
 #include "ee/EECPExperimentTimers.h"
 #include "ee/EECPNext.h"
 #include "ee/EEGameLog.h"
@@ -62,11 +63,7 @@ bool gCPTraceHashOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
-static std::vector<std::string> sExperiments;   // EE_AI_EXP (TEST ONLY): ",a,b," per player in turn
-static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
-static std::vector<long> sCheats;          // EE_AI_CHEATS (TEST ONLY): the cheats it lets through, per player in turn
 static char sCheatNames[128];
-static std::vector<long> sPersonalities;   // EE_AI_PERSONALITY (TEST ONLY): positions in the rules' personalities
 static const long kMaxTracedPlayers = 64;
 static unsigned long sNextStats[kMaxTracedPlayers];
 static unsigned long sNextProfile[kMaxTracedPlayers];
@@ -79,6 +76,19 @@ static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last at
 static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
 static long sSpend[kMaxTracedPlayers][8][5];                 // TEST ONLY: paid since the last spend line, by kind
 
+// a personality's position in the rules (-1: none), and a line of the debug output: the switches' callbacks
+static long EECPTraceFindPersonality(const char* inName)
+{
+    return EEGetRules().mAIPersonalities.Find(inName);
+}
+
+static void EECPTraceDebugOut(const char* inLine)
+{
+    ESDebugOut("%s", inLine);
+}
+
+// EE_AI_TRACE, and the TEST ONLY switches (EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS, EE_AI_EXP): Rust's
+// (ee_ai switches.rs), read once
 void EECPTraceInit()
 {
     if (sInitialized)
@@ -87,100 +97,19 @@ void EECPTraceInit()
     const char* theTrace = getenv("EE_AI_TRACE");
     gCPTraceOn = theTrace != NULL && theTrace[0] != '\0' && strcmp(theTrace, "0") != 0;
     gCPTraceHashOn = gCPTraceOn;   // the sim hash only with EE_AI_TRACE (the game log turns gCPTraceOn on alone)
-    const char* thePersonality = getenv("EE_AI_PERSONALITY");
-    if (thePersonality != NULL && thePersonality[0] != 0) {
-        std::string theList(thePersonality);
-        size_t theStart = 0;
-        while (theStart <= theList.size()) {
-            size_t theEnd = theList.find(',', theStart);
-            if (theEnd == std::string::npos)
-                theEnd = theList.size();
-            std::string theName = theList.substr(theStart, theEnd - theStart);
-            long k = EEGetRules().mAIPersonalities.Find(theName);
-            if (k >= 0)
-                sPersonalities.push_back(k);
-            else
-                ESDebugOut("EE-AI EE_AI_PERSONALITY: unknown personality '%s' ignored\n", theName.c_str());
-            theStart = theEnd + 1;
-        }
-    }
-    const char* theDemand = getenv("EE_AI_DEMAND");
-    if (theDemand != NULL && theDemand[0] != '\0') {
-        std::string theList(theDemand);
-        size_t theStart = 0;
-        while (theStart <= theList.size()) {
-            size_t theEnd = theList.find('/', theStart);
-            if (theEnd == std::string::npos)
-                theEnd = theList.size();
-            std::string theValue = theList.substr(theStart, theEnd - theStart);
-            sDemandSplit.push_back(!theValue.empty() && theValue != "0");
-            theStart = theEnd + 1;
-        }
-    }
-    const char* theCheats = getenv("EE_AI_CHEATS");
-    // "a,b": one set for every computer player; "set/set/...": the sets taken in turn by player (as EE_AI_PERSONALITY)
-    if (theCheats != NULL && theCheats[0] != '\0') {
-        std::string theSets(theCheats);
-        size_t theSetStart = 0;
-        while (theSetStart <= theSets.size()) {
-            size_t theSetEnd = theSets.find('/', theSetStart);
-            if (theSetEnd == std::string::npos)
-                theSetEnd = theSets.size();
-            std::string theList = theSets.substr(theSetStart, theSetEnd - theSetStart);
-            long theSet = 0;
-            size_t theStart = 0;
-            while (theStart <= theList.size()) {
-                size_t theEnd = theList.find(',', theStart);
-                if (theEnd == std::string::npos)
-                    theEnd = theList.size();
-                std::string theName = theList.substr(theStart, theEnd - theStart);
-                long theBit = theName == "all" ? (long)kAICheatAll : EEAICheatBit(theName);
-                if (theBit == 0 && theName != "none" && !theName.empty())
-                    ESDebugOut("EE-AI EE_AI_CHEATS: unknown cheat '%s' ignored\n", theName.c_str());
-                theSet |= theBit;
-                theStart = theEnd + 1;
-            }
-            sCheats.push_back(theSet);
-            theSetStart = theSetEnd + 1;
-        }
-    }
-    // the named experiments, "a,b" for every computer player or "set/set/..." in turn by player ("-" or "": none)
-    const char* theExperiments = getenv("EE_AI_EXP");
-    if (theExperiments != NULL && theExperiments[0] != '\0') {
-        std::string theSets(theExperiments);
-        size_t theSetStart = 0;
-        while (theSetStart <= theSets.size()) {
-            size_t theSetEnd = theSets.find('/', theSetStart);
-            if (theSetEnd == std::string::npos)
-                theSetEnd = theSets.size();
-            std::string theSet = "," + theSets.substr(theSetStart, theSetEnd - theSetStart) + ",";
-            for (size_t c = 0; c < theSet.size(); c++)
-                if (theSet[c] == '+')
-                    theSet[c] = ',';   // "a+b" joins experiments too (a comma-separated --env-vary value cannot hold ',')
-            sExperiments.push_back(theSet);
-            theSetStart = theSetEnd + 1;
-        }
-    }
+    ee_ai_switches_init(EECPTraceFindPersonality, EECPTraceDebugOut);
 }
 
 bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName)
 {
     EECPTraceInit();
-    if (sExperiments.empty())
-        return false;
-    unsigned long theID = inPlayer->mPlayerID;
-    const std::string& theSet = sExperiments[(theID > 0 ? theID - 1 : 0) % sExperiments.size()];
-    return theSet.find("," + std::string(inName) + ",") != std::string::npos;
+    return ee_ai_switch_experiment(inPlayer->mPlayerID, inName);
 }
 
 const char* EECPExperimentNames(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
-    if (sExperiments.empty())
-        return "-";
-    unsigned long theID = inPlayer->mPlayerID;
-    const std::string& theSet = sExperiments[(theID > 0 ? theID - 1 : 0) % sExperiments.size()];
-    return theSet.size() > 2 ? theSet.c_str() : "-";
+    return ee_ai_switch_experiment_names(inPlayer->mPlayerID);
 }
 
 bool EECPMilitiaOn(const EEComputerPlayer* inPlayer)
@@ -285,22 +214,17 @@ float EECPStoneSpan(const EEComputerPlayer* inPlayer)
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
-    if (sDemandSplit.empty())
-        return EECPPersonality(inPlayer).mDemandSplit;
-    unsigned long theID = inPlayer->mPlayerID;
-    return sDemandSplit[(theID > 0 ? theID - 1 : 0) % sDemandSplit.size()];
+    int32_t theDemand = ee_ai_switch_demand(inPlayer->mPlayerID);
+    return theDemand < 0 ? EECPPersonality(inPlayer).mDemandSplit : theDemand != 0;
 }
 
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
     const EEAIPersonalityRules& theRules = EEGetRules().mAIPersonalities;
-    if (!sPersonalities.empty()) {
-        unsigned long theID = inPlayer->mPlayerID;
-        long k = sPersonalities[(theID > 0 ? theID - 1 : 0) % sPersonalities.size()];
-        if (k >= 0 && (size_t)k < theRules.mPersonalities.size())
-            return theRules.mPersonalities[k];
-    }
+    long k = ee_ai_switch_personality(inPlayer->mPlayerID);
+    if (k >= 0 && (size_t)k < theRules.mPersonalities.size())
+        return theRules.mPersonalities[k];
     return theRules.ForPlayer(inPlayer->mPlayerID);
 }
 
@@ -308,11 +232,7 @@ const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
 static long EECPCheats(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
-    long theMask = kAICheatAll;
-    if (!sCheats.empty()) {
-        unsigned long theID = inPlayer != NULL ? inPlayer->mPlayerID : 1;
-        theMask = sCheats[(theID > 0 ? theID - 1 : 0) % sCheats.size()];
-    }
+    long theMask = ee_ai_switch_cheats(inPlayer != NULL ? inPlayer->mPlayerID : 1);
     return EEDifficultyAICheats(gWorld.mLobbyOptions.mDifficulty) & theMask;
 }
 
@@ -323,16 +243,7 @@ bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat)
 
 const char* EECPCheatNames(const EEComputerPlayer* inPlayer)
 {
-    long theCheats = EECPCheats(inPlayer);
-    sCheatNames[0] = '\0';
-    for (unsigned long i = 0; i < kEEAICheatCount; i++)
-        if (theCheats & (1L << i)) {
-            if (sCheatNames[0] != '\0')
-                strcat(sCheatNames, ",");
-            strcat(sCheatNames, kEEAICheatNames[i]);
-        }
-    if (sCheatNames[0] == '\0')
-        strcpy(sCheatNames, "none");
+    ee_ai_switch_cheat_names(EECPCheats(inPlayer), sCheatNames, sizeof(sCheatNames));
     return sCheatNames;
 }
 
