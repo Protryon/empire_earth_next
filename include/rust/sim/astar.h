@@ -140,19 +140,12 @@ constexpr static const int32_t EE_PATH_GRAPH_REVS = 34;
 /// machine `h0` (`i0` 0 tile, 1 graph) `SetMaxRevs(i1)`
 constexpr static const int32_t EE_PATH_SET_MAX_REVS = 35;
 
-/// `FinishPath`: tile machine `h0`'s result to unit `h1`
-constexpr static const int32_t EE_PATH_FINISH_PATH = 36;
-
 /// `RequestUnitPaths(h1 unit, h2 request, h0 graph machine)` -> its result
 constexpr static const int32_t EE_PATH_REQUEST_UNIT_PATHS = 37;
 
 /// `FinishGraphPath`'s unit part: unit `h0`'s auto waypoint goal -> 1 and (`i0`, `i1`) its tile, (`i2`, `i3`) the
 /// goal's (the unit's path dropped), else 0
 constexpr static const int32_t EE_PATH_AUTO_WAYPOINT = 38;
-
-/// `TryShortPath(h0 unit, gWorld.mMap, i0 type, (i1, i2), (i3, i4))` with `i5` searches queued -> the result and
-/// the tile reached in `i3`, `i4`
-constexpr static const int32_t EE_PATH_SHORT_PATH = 39;
 
 /// unit `h0`'s player id
 constexpr static const int32_t EE_PATH_UNIT_PLAYER = 40;
@@ -260,6 +253,98 @@ constexpr static const int32_t EE_PATH_MODIFIER_NONE = 0;
 constexpr static const int32_t EE_PATH_MODIFIER_STORM_RAIN = 9;
 
 constexpr static const int32_t EE_PATH_MODIFIER_STORM_SNOW = 10;
+
+/// `PrepareBoundedMachine(h1 map)` -> the bounded machine
+constexpr static const int32_t EE_PATH_BM_PREPARE = 100;
+
+/// the bounded goal's modifier of type `i0` (sea 2, space 0x10; else none)
+constexpr static const int32_t EE_PATH_BM_MODIFIER = 101;
+
+/// the bounded goal's `SetModifier(h1)`
+constexpr static const int32_t EE_PATH_BM_SET_MODIFIER = 102;
+
+/// the bounded goal's `SetUnit(h1)`
+constexpr static const int32_t EE_PATH_BM_SET_UNIT = 103;
+
+/// `SetStart(i0, i1)`, `SetGoal(i2, i3)` and, when `i4`, `mTile = (i2, i3)`
+constexpr static const int32_t EE_PATH_BM_ENDS = 104;
+
+/// `SetMaxRevs(i0)`
+constexpr static const int32_t EE_PATH_BM_SET_MAX_REVS = 105;
+
+/// `GetMaxRevs()`
+constexpr static const int32_t EE_PATH_BM_MAX_REVS = 106;
+
+/// the goal's `mBounds` and the machine's `mSearchBounds` = (top `i0`, left `i1`, bottom `i2`, right `i3`)
+constexpr static const int32_t EE_PATH_BM_BOUNDS = 107;
+
+/// `Run()`
+constexpr static const int32_t EE_PATH_BM_RUN = 108;
+
+/// `mTile` -> `i0`, `i1`
+constexpr static const int32_t EE_PATH_BM_TILE = 109;
+
+/// `Reset()`
+constexpr static const int32_t EE_PATH_BM_RESET = 110;
+
+/// `GetPath(*h1)` (a C++ `std::vector<U2DPoint<long> >`), or `GetPath(*h1, *h2)` with the visited tiles
+constexpr static const int32_t EE_PATH_BM_PATH = 111;
+
+/// `FindBoundedPath`'s setup: `CancelSearch`, the goal's `mMaxRevs = i0`, start (`i1`, `i2`), goal (`i3`, `i4`),
+/// the destination, `mRevLimit = -1`, `SetUnit(h1)`, `mIsBounded`
+constexpr static const int32_t EE_PATH_BM_BOUNDED_START = 112;
+
+/// the goal's `ReleaseModifier()`
+constexpr static const int32_t EE_PATH_BM_RELEASE_MODIFIER = 113;
+
+/// `RunBoundedPath`'s setup: the goal's `mMaxRevs = i0`, `SetUnit(h1)`, `mAcceptNearest`, start (`i1`, `i2`), goal
+/// (`i3`, `i4`), then `Run()` -> `!mSearchFailed`
+constexpr static const int32_t EE_PATH_BM_RUN_BOUNDED = 114;
+
+/// the goal's `GetPoints` into the point list `h1`
+constexpr static const int32_t EE_PATH_BM_GOAL_POINTS = 115;
+
+/// tile machine `h0`'s points (`GetPoints`, the bounded or a path machine by `mType`) into the point list `h1`
+constexpr static const int32_t EE_PATH_TM_POINTS = 116;
+
+/// tile machine `h0`'s goal flags: 1 `mAcceptNearest`, 2 `mTookNearest`
+constexpr static const int32_t EE_PATH_TM_FLAGS = 117;
+
+/// tile machine `h0`'s `mType`
+constexpr static const int32_t EE_PATH_TM_TYPE = 118;
+
+/// the map `h1`'s size (`mSize`)
+constexpr static const int32_t EE_PATH_MAP_SIZE = 119;
+
+/// unit `h0`'s waypoints' locations into the point list `h1`
+constexpr static const int32_t EE_PATH_UNIT_WAYPOINT_POINTS = 120;
+
+/// unit `h0`'s location -> the bits of x, y in `i0`, `i1`
+constexpr static const int32_t EE_PATH_UNIT_LOCATION = 121;
+
+/// unit `h0`'s tile (`mTileX`, `mTileY`) -> `i0`, `i1`
+constexpr static const int32_t EE_PATH_UNIT_TILE = 122;
+
+/// unit `h0` `DropPath()`
+constexpr static const int32_t EE_PATH_UNIT_DROP_PATH = 123;
+
+/// unit `h0` `TakePath(the points h1, i0)`
+constexpr static const int32_t EE_PATH_UNIT_TAKE_PATH = 124;
+
+/// unit `h0`: `mIsPathDone = true`, `mBoundedPathTiles.clear()`
+constexpr static const int32_t EE_PATH_UNIT_PATH_DONE = 125;
+
+/// unit `h0` `SnapLastWaypoint()`, then when `i0` its goal's `PathTaken`
+constexpr static const int32_t EE_PATH_UNIT_SNAP = 126;
+
+/// whether the capture is on (`EESimCaptureRecord::Active()`)
+constexpr static const int32_t EE_PATH_CAPTURE_ACTIVE = 127;
+
+/// a capture record of tag `i0`: the bytes `h1[..i1]`
+constexpr static const int32_t EE_PATH_CAPTURE_COMMIT = 128;
+
+/// the points `h2[..i0]` appended to the C++ vector `h1` (`std::vector<GE3DPoint>`)
+constexpr static const int32_t EE_PATH_POINTS_OUT = 129;
 
 /// `kAIChainLandCliff` .. `kAIChainLandCliffSpace` (ee/EEAIKindIDs.h).
 constexpr static const int32_t CHAIN_LAND_CLIFF = 1;
@@ -980,7 +1065,7 @@ struct EeShoreCallbacks {
 /// One host call's values: handles in `h`, the arguments and answers in `i`.
 struct EePathIo {
   uint64_t h[4];
-  int64_t i[10];
+  int64_t i[12];
 };
 
 /// The C++ host: `(context, op, io) -> the answer`.
@@ -2093,7 +2178,8 @@ void ee_path_manager_free(EePathManager *p);
 /// 15 `RequestUnitPath(h0, from (i0, i1), to (i2, i3), unlimited i4, revs i5, graph i6, modifier h1, i7)`,
 /// 16 `RequestPendingPath(h0, (i0, i1))`, 17 `AddPending(unit i0, (i1, i2))`, 18 the loaded running state
 /// put back, 19 the graph searches' resolve, 20 the pending count, 21 the queued count, 22 `mLCC`,
-/// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back.
+/// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back,
+/// 27 `FindPath` (pm_bounded.rs), 28 `FindBoundedPath` (its points appended to the C++ vector `i6`).
 ///
 /// # Safety
 /// `p` a live manager, `io` live; the handles live objects of their kinds.
@@ -2215,6 +2301,12 @@ void ee_path_tiles_free(void *list);
 uint32_t ee_path_manager_dump(EePathManager *p,
                               uint8_t *out,
                               uint32_t cap);
+
+/// Appends `count` points to a Rust point list (a host operation's list in `h1`).
+///
+/// # Safety
+/// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
+void ee_path_points_append(void *list, const EePathPoint *points, uint32_t count);
 
 }  // extern "C"
 

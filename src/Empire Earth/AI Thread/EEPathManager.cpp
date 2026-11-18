@@ -87,18 +87,8 @@ static const EePathPoint* EEPathPoints(const std::vector<GE3DPoint>& inPoints)
     return inPoints.empty() ? NULL : reinterpret_cast<const EePathPoint*>(&inPoints[0]);
 }
 
-// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path splicing's record PMSP, one per call of
-// TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's detour search and the bounded searches' revolutions and
-// bounds: a u32 kind, the inputs, the outputs (points as three f32, lists with their u32 length first)
-enum {
-    kPathSpliceCapture = 0x50534d50,   // "PMSP"
-    kPathSpliceTrim = 1,
-    kPathSpliceAppend = 2,
-    kPathSpliceJoin = 3,
-    kPathSpliceDetour = 4,
-    kPathSpliceShortPath = 5,
-    kPathSpliceFailedBounds = 6,
-};
+// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the record writers of PMRQ below (points as three
+// f32, lists with their u32 length first); the splicing's PMSP records are pm_bounded.rs's, in the same layout
 
 static void EEPathCapturePoints(EESimCaptureRecord& ioRecord, const std::vector<GE3DPoint>& inPoints)
 {
@@ -767,6 +757,192 @@ void EERequestRecordOf(const EEAutoPathRequest& inRequest, EePathRequestRecord& 
 }
 }   // namespace
 
+// a C++ point list into a Rust one (pm_bounded.rs's lists)
+static void EEPathPointsOut(uint64_t inList, const std::vector<GE3DPoint>& inPoints)
+{
+    if (!inPoints.empty())
+        ee_path_points_append(reinterpret_cast<void*>(inList), reinterpret_cast<const EePathPoint*>(&inPoints[0]),
+                              (uint32_t)inPoints.size());
+}
+
+static std::vector<GE3DPoint> EEPathPointsIn(uint64_t inPoints, int64_t inCount)
+{
+    const GE3DPoint* thePoints = reinterpret_cast<const GE3DPoint*>(inPoints);
+    return std::vector<GE3DPoint>(thePoints, thePoints + inCount);
+}
+
+// The bounded machine's and the units' operations (pm_bounded.rs EE_PATH_BM_*, EE_PATH_UNIT_*, the capture)
+static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathIo* io)
+{
+    int64_t* i = io->i;
+    EEBoundedPathMachine* theMachine = inManager->mBoundedMachine;
+    EEComplexUnit* theUnit = EEPathUnitOf(io->h[0]);
+    switch (inOp) {
+    case EE_PATH_BM_PREPARE:
+        inManager->PrepareBoundedMachine(reinterpret_cast<EEMap*>(io->h[1]));
+        return (int64_t)EEPathHandle(static_cast<EEAIAStarMachineBase*>(inManager->mBoundedMachine));
+    case EE_PATH_BM_MODIFIER: {
+        EEAIPathGoalModifierBase* theModifier = NULL;
+        if (i[0] == kAIMachineWaterPath)
+            theModifier = new EEAIBPGModifierSea(&theMachine->mGoal);
+        else if (i[0] == kAIMachineSpacePath)
+            theModifier = new EEAIBPGModifierSpace(&theMachine->mGoal);
+        if (theModifier != NULL) {
+            theMachine->mGoal.SetModifier(theModifier);
+            theModifier->Dereference();
+        }
+        return 0;
+    }
+    case EE_PATH_BM_SET_MODIFIER:
+        theMachine->mGoal.SetModifier(reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[1]));
+        return 0;
+    case EE_PATH_BM_SET_UNIT:
+        theMachine->mGoal.SetUnit(EEPathUnitOf(io->h[1]));
+        return 0;
+    case EE_PATH_BM_ENDS:
+        theMachine->SetStart(EEPathTileArg(i));
+        theMachine->SetGoal(EEPathTileArg(i + 2));
+        if (i[4])
+            theMachine->mTile = EEPathTileArg(i + 2);
+        return 0;
+    case EE_PATH_BM_SET_MAX_REVS:
+        theMachine->SetMaxRevs((long)i[0]);
+        return 0;
+    case EE_PATH_BM_MAX_REVS:
+        return theMachine->GetMaxRevs();
+    case EE_PATH_BM_BOUNDS: {
+        EEAIAStarBounds theBounds;
+        theBounds.mTop = (long)i[0];
+        theBounds.mLeft = (long)i[1];
+        theBounds.mBottom = (long)i[2];
+        theBounds.mRight = (long)i[3];
+        theMachine->mGoal.mBounds = theBounds;
+        theMachine->mSearchBounds = theBounds;
+        return 0;
+    }
+    case EE_PATH_BM_RUN:
+        theMachine->Run();
+        return theMachine->mFound;
+    case EE_PATH_BM_TILE:
+        EEPathPutTile(i, theMachine->mTile);
+        return 0;
+    case EE_PATH_BM_RESET:
+        theMachine->Reset();
+        return 0;
+    case EE_PATH_BM_PATH:
+        if (io->h[2] == 0)
+            theMachine->GetPath(*reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]));
+        else
+            theMachine->GetPath(*reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]),
+                                *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[2]));
+        return 0;
+    case EE_PATH_BM_BOUNDED_START: {   // FindBoundedPath's setup
+        EEAIAStarBoundedPathGoal& theGoal = theMachine->mGoal;
+        theMachine->CancelSearch();
+        theGoal.mMaxRevs = (long)i[0];
+        theMachine->SetStart(EEPathTileArg(i + 1));
+        theMachine->SetGoal(EEPathTileArg(i + 3));
+        theGoal.mDestination = EEPathTileArg(i + 3);
+        theGoal.mRevLimit = -1;
+        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
+        theGoal.mIsBounded = true;
+        return 0;
+    }
+    case EE_PATH_BM_RELEASE_MODIFIER:
+        theMachine->mGoal.ReleaseModifier();
+        return 0;
+    case EE_PATH_BM_RUN_BOUNDED: {   // RunBoundedPath
+        EEAIAStarBoundedPathGoal& theGoal = theMachine->mGoal;
+        theGoal.mMaxRevs = (long)i[0];
+        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
+        theGoal.mAcceptNearest = true;
+        theMachine->SetStart(EEPathTileArg(i + 1));
+        theMachine->SetGoal(EEPathTileArg(i + 3));
+        theMachine->Run();
+        return !theGoal.mSearchFailed;
+    }
+    case EE_PATH_BM_GOAL_POINTS: {
+        std::vector<GE3DPoint> thePoints;
+        theMachine->mGoal.GetPoints(thePoints);
+        EEPathPointsOut(io->h[1], thePoints);
+        return 0;
+    }
+    case EE_PATH_TM_POINTS: {
+        std::vector<GE3DPoint> thePoints;
+        EEAIAStarMachineBase* theTile = EEPathTile(io->h[0]);
+        if (theTile->mType == kAIMachineBoundedPath)
+            ((EEBoundedPathMachine*)theTile)->GetPoints(thePoints);
+        else
+            ((EEPathMachine*)theTile)->GetPoints(thePoints);
+        EEPathPointsOut(io->h[1], thePoints);
+        return 0;
+    }
+    case EE_PATH_TM_FLAGS: {
+        EEAIAStarMachineBase* theTile = EEPathTile(io->h[0]);
+        if (theTile->mType == kAIMachineBoundedPath)
+            return (((EEBoundedPathMachine*)theTile)->mGoal.mAcceptNearest ? 1 : 0)
+                | (((EEBoundedPathMachine*)theTile)->mGoal.mTookNearest ? 2 : 0);
+        return (((EEPathMachine*)theTile)->mGoal.mAcceptNearest ? 1 : 0) | (((EEPathMachine*)theTile)->mGoal.mTookNearest ? 2 : 0);
+    }
+    case EE_PATH_TM_TYPE:
+        return EEPathTile(io->h[0])->GetType();
+    case EE_PATH_MAP_SIZE:
+        return reinterpret_cast<EEMap*>(io->h[1])->mSize;
+    case EE_PATH_POINTS_OUT: {   // into the C++ vector h1
+        std::vector<GE3DPoint> thePoints = EEPathPointsIn(io->h[2], i[0]);
+        std::vector<GE3DPoint>& theOut = *reinterpret_cast<std::vector<GE3DPoint>*>(io->h[1]);
+        theOut.insert(theOut.end(), thePoints.begin(), thePoints.end());
+        return 0;
+    }
+    case EE_PATH_UNIT_WAYPOINT_POINTS: {
+        std::vector<GE3DPoint> thePoints;
+        for (size_t k = 0; k < theUnit->mWaypoints.size(); k++)
+            thePoints.push_back(theUnit->mWaypoints[k].mLocation);
+        EEPathPointsOut(io->h[1], thePoints);
+        return 0;
+    }
+    case EE_PATH_UNIT_LOCATION: {
+        float theX = theUnit->mPhysicalModel.GetLocation().GetX(), theY = theUnit->mPhysicalModel.GetLocation().GetY();
+        uint32_t theBits[2];
+        memcpy(&theBits[0], &theX, 4);
+        memcpy(&theBits[1], &theY, 4);
+        i[0] = theBits[0];
+        i[1] = theBits[1];
+        return 0;
+    }
+    case EE_PATH_UNIT_TILE:
+        EEPathPutTile(i, theUnit->GetTile());
+        return 0;
+    case EE_PATH_UNIT_DROP_PATH:
+        theUnit->DropPath();
+        return 0;
+    case EE_PATH_UNIT_TAKE_PATH: {
+        std::vector<GE3DPoint> thePath = EEPathPointsIn(io->h[1], i[0]);
+        theUnit->TakePath(thePath, i[1] != 0);
+        return 0;
+    }
+    case EE_PATH_UNIT_PATH_DONE:
+        if (theUnit->mIsPathDone != true)
+            theUnit->mIsPathDone = true;
+        theUnit->mBoundedPathTiles.clear();
+        return 0;
+    case EE_PATH_UNIT_SNAP:
+        theUnit->SnapLastWaypoint();
+        if (i[0] && theUnit->GetGoal())
+            theUnit->GetGoal()->PathTaken(theUnit);
+        return 0;
+    case EE_PATH_CAPTURE_ACTIVE:   // TEST ONLY
+        return EESimCaptureRecord::Active();
+    case EE_PATH_CAPTURE_COMMIT: {
+        EESimCaptureRecord theRecord((unsigned int)i[0]);
+        theRecord.Bytes(reinterpret_cast<const void*>(io->h[1]), (unsigned int)i[1]);
+        theRecord.Commit();
+        return 0;
+    }
+    }
+    return 0;
+}
+
 // The Rust manager's host: one call per operation (pm.rs EE_PATH_*)
 static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
 {
@@ -810,9 +986,9 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return gWorld.mMap != NULL;
     case EE_PATH_LOADING:
         return gLoadingSavedGame;
-    case EE_PATH_CLAMP: {
+    case EE_PATH_CLAMP: {   // (on the map h1 when i2)
         EETileCoordinate theTile = EEPathTileArg(i);
-        theManager->ClampTile(gWorld.mMap, theTile);
+        theManager->ClampTile(i[2] ? reinterpret_cast<EEMap*>(io->h[1]) : gWorld.mMap, theTile);
         EEPathPutTile(i, theTile);
         return 0;
     }
@@ -968,9 +1144,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     }
     case EE_PATH_REQUEST_UNIT_PATHS:
         return theManager->RequestUnitPaths(EEPathUnitOf(io->h[1]), reinterpret_cast<EEAutoPathRequest*>(io->h[2]), EEGraphOf(h));
-    case EE_PATH_FINISH_PATH:
-        theManager->FinishPath(EEPathTile(h), EEPathUnitOf(io->h[1]));
-        return 0;
     // the units
     case EE_PATH_AUTO_WAYPOINT: {   // FinishGraphPath's unit part
         EEComplexUnit* theUnit = EEPathUnitOf(h);
@@ -983,13 +1156,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         i[2] = UMFloor(theGoal->GetLocation().GetX());
         theUnit->DropPath();
         return 1;
-    }
-    case EE_PATH_SHORT_PATH: {
-        EETileCoordinate theTo = EEPathTileArg(i + 3);
-        bool theResult = theManager->TryShortPath(EEPathUnitOf(h), gWorld.mMap, (long)i[0], EEPathTileArg(i + 1), theTo,
-                                                  (long)i[5]);
-        EEPathPutTile(i + 3, theTo);
-        return theResult;
     }
     case EE_PATH_UNIT_PLAYER:
         return EEPathUnitOf(h)->GetPlayer()->GetPlayerID();
@@ -1113,6 +1279,8 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     case EE_PATH_QUEUE_RESOLVE:
         EEQueueGraphResolve();
         return 0;
+    default:
+        return EEPathBoundedHost(theManager, inOp, io);
     }
     return 0;
 }
@@ -1507,41 +1675,6 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
     }
 }
 
-// Applies a finished tile search to its unit: as a failed path unless its goal accepted the nearest tile and did
-// not take it, else as a found path
-void EEPathManager::FinishPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
-{
-    bool theFound;
-    bool theBlocked;
-    if (inMachine->mType == kAIMachineBoundedPath) {
-        theFound = ((EEBoundedPathMachine*)inMachine)->mGoal.mAcceptNearest;
-        theBlocked = ((EEBoundedPathMachine*)inMachine)->mGoal.mTookNearest;
-    } else {
-        theFound = ((EEPathMachine*)inMachine)->mGoal.mAcceptNearest;
-        theBlocked = ((EEPathMachine*)inMachine)->mGoal.mTookNearest;
-    }
-    if (!theFound || theBlocked)
-        this->FinishFailedPath(inMachine, inUnit);
-    else
-        this->FinishFoundPath(inMachine, inUnit);
-}
-
-// (the vector clear() 0x688c2c between the flag and SnapLastWaypoint is the unit's mBoundedPathTiles)
-// Gives the unit the found path, marks its path done, clears its bounded path tiles and snaps its last waypoint
-void EEPathManager::FinishFoundPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
-{
-    std::vector<GE3DPoint> thePath;
-    if (inMachine->mType == kAIMachineBoundedPath)
-        ((EEBoundedPathMachine*)inMachine)->GetPoints(thePath);
-    else
-        ((EEPathMachine*)inMachine)->GetPoints(thePath);
-    inUnit->TakePath(thePath, false);
-    if (inUnit->mIsPathDone != true)
-        inUnit->mIsPathDone = true;
-    inUnit->mBoundedPathTiles.clear();
-    inUnit->SnapLastWaypoint();
-}
-
 // Makes sure the bounded path machine exists for the map, recreating it (with corner checks) for another map
 void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
 {
@@ -1556,7 +1689,7 @@ void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
 }
 
 // Runs a bounded tile search (at most 200 steps; a window around inFrom when inBounds is empty) and returns its
-// path (and the visited tiles when asked)
+// path (and the visited tiles when asked): ee_sim::astar pm_bounded.rs find_path
 void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
                              const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType,
                              long inRevs, EEAIPathGoalModifierBase* inModifier, std::vector<U2DPoint<long> >* outVisited)
@@ -1572,80 +1705,16 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
         theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
         theCapture.mRecord.U32(outVisited != NULL ? 1 : 0);
     }
-    EEAIAStarBounds theBounds = inBounds;
-    EETileCoordinate theFrom;
-    theFrom = inFrom;
-    EETileCoordinate theTo;
-    theTo = inTo;
-    long theRevs = inRevs;
     outPath.clear();
-    this->ClampTile(inMap, theFrom);
-    this->ClampTile(inMap, theTo);
-    this->PrepareBoundedMachine(inMap);
-    EEBoundedPathMachine* theMachine = this->mBoundedMachine;
-    if (inModifier != NULL) {
-        theMachine->mGoal.SetModifier(inModifier);
-    } else {
-        EEAIPathGoalModifierBase* theModifier = NULL;
-        if (inType == 2)
-            theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
-        else if (inType == 0x10)
-            theModifier = new EEAIBPGModifierSpace(&this->mBoundedMachine->mGoal);
-        else
-            goto set;
-        theMachine->mGoal.SetModifier(theModifier);
-        theModifier->Dereference();
-    }
-set:
-    theMachine->mGoal.SetUnit(inUnit);
-    this->mBoundedMachine->SetStart(theFrom);
-    this->mBoundedMachine->SetGoal(theTo);
-    this->mBoundedMachine->mTile = theTo;
-    if (inRevs <= 0) {
-        if (inUnit != NULL) {   // SetPathRevs (Rust: ee_astar path_splice.rs path_revs)
-            int64_t theInputs[3];
-            EEPathRevsInputs(inUnit, theFrom, theTo, theInputs);
-            this->mBoundedMachine->SetMaxRevs(ee_path_path_revs((int32_t)theInputs[0], theInputs[1] != 0, theInputs[2] != 0));
-        } else
-            this->mBoundedMachine->SetMaxRevs(200);
-        theRevs = this->mBoundedMachine->GetMaxRevs();
-        if (theRevs > 200) {
-            theRevs = 200;
-            this->mBoundedMachine->SetMaxRevs(theRevs);
-        }
-    } else {
-        if (inRevs > 200)
-            theRevs = 200;
-        this->mBoundedMachine->SetMaxRevs(theRevs);
-    }
-    if (theBounds.mLeft == theBounds.mRight || theBounds.mBottom == theBounds.mTop) {
-        theBounds.mTop = inFrom.GetY() - theRevs - 1;
-        if (theBounds.mTop <= 0)
-            theBounds.mTop = 0;
-        theBounds.mLeft = inFrom.GetX() - theRevs - 1;
-        if (theBounds.mLeft <= 0)
-            theBounds.mLeft = 0;
-        long theLast = inMap->mSize - 1;
-        theBounds.mRight = inFrom.GetX() + 1 + theRevs;
-        if (theBounds.mRight >= theLast)
-            theBounds.mRight = theLast;
-        theBounds.mBottom = inFrom.GetY() + 1 + theRevs;
-        if (theBounds.mBottom >= theLast)
-            theBounds.mBottom = theLast;
-    }
-    this->mBoundedMachine->mGoal.mBounds = theBounds;
-    this->mBoundedMachine->mSearchBounds = theBounds;
-    this->mBoundedMachine->Run();
-    if (outVisited == NULL)
-        this->mBoundedMachine->GetPath(outPath);
-    else
-        this->mBoundedMachine->GetPath(outPath, *outVisited);
-    bool theReached;
-    if (inTo.GetX() == this->mBoundedMachine->mTile.GetX() && inTo.GetY() == this->mBoundedMachine->mTile.GetY())
-        theReached = true;
-    else
-        theReached = false;
-    this->mBoundedMachine->Reset();
+    EePathIo theIO = {};
+    theIO.h[0] = EEPathHandle(inUnit);
+    theIO.h[1] = EEPathHandle(inMap);
+    theIO.h[2] = EEPathHandle(&outPath);
+    theIO.h[3] = EEPathHandle(outVisited);
+    const int64_t theValues[11] = {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inBounds.mBottom, inBounds.mLeft, inBounds.mRight,
+                                   inBounds.mTop, inType, inRevs, (int64_t)EEPathHandle(inModifier)};
+    memcpy(theIO.i, theValues, sizeof(theValues));
+    ee_path_manager_call(this->mRust, 27, &theIO);
     if (theCapture.On()) {
         theCapture.Points(outPath);
         if (outVisited != NULL)
@@ -1653,9 +1722,8 @@ set:
     }
 }
 
-// The window grows from the unclamped inFrom; inArg8 is not read; *outReached is the result; the machine is prepared twice.
 // Runs a bounded search within inMargin tiles of inFrom and, when it reaches inTo, appends the path (start first);
-// returns whether it reached inTo
+// returns whether it reached inTo (*outReached the same; inArg8 is not read): pm_bounded.rs find_bounded_path
 bool EEPathManager::FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
                                     const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
                                     bool inArg8, bool* outReached)
@@ -1669,51 +1737,9 @@ bool EEPathManager::FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long in
         theCapture.mRecord.I32((int)inMargin);
         EEPathCapturePoints(theCapture.mRecord, outPath);
     }
-    std::vector<GE3DPoint> thePath;
-    EEAIAStarBounds theBounds;
-    EETileCoordinate theFrom = inFrom;
-    EETileCoordinate theTo = inTo;
-    bool theReached;
-    *outReached = false;
-    this->ClampTile(inMap, theFrom);
-    this->ClampTile(inMap, theTo);
-    this->PrepareBoundedMachine(inMap);
-    this->PrepareBoundedMachine(inMap);
-    theBounds.mTop = inFrom.GetY() - inMargin > 0 ? inFrom.GetY() - inMargin : 0;
-    theBounds.mLeft = inFrom.GetX() - inMargin > 0 ? inFrom.GetX() - inMargin : 0;
-    theBounds.mRight = inFrom.GetX() + inMargin < inMap->mSize - 1 ? inFrom.GetX() + inMargin : inMap->mSize - 1;
-    theBounds.mBottom = inFrom.GetY() + inMargin < inMap->mSize - 1 ? inFrom.GetY() + inMargin : inMap->mSize - 1;
-    this->mBoundedMachine->mGoal.mBounds = theBounds;
-    this->mBoundedMachine->mSearchBounds = theBounds;
-    EEAIPathGoalModifierBase* theModifier;
-    if (inType == 2)
-        theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
-    else if (inType == 0x10)
-        theModifier = new EEAIBPGModifierSpace(&this->mBoundedMachine->mGoal);
-    else
-        goto start;
-    this->mBoundedMachine->mGoal.SetModifier(theModifier);
-    theModifier->Dereference();
-start:
-    this->mBoundedMachine->CancelSearch();
-    EEAIAStarBoundedPathGoal& theGoal = this->mBoundedMachine->mGoal;
-    theGoal.mMaxRevs = inMargin;
-    this->mBoundedMachine->SetStart(theFrom);
-    this->mBoundedMachine->SetGoal(theTo);
-    theGoal.mDestination = theTo;
-    theGoal.mRevLimit = -1;
-    theGoal.SetUnit(inUnit);
-    this->mBoundedMachine->mGoal.mIsBounded = true;
-    this->mBoundedMachine->Run();
-    this->mBoundedMachine->GetPoints(thePath);
-    theReached = this->mBoundedMachine->mTile.GetX() == theTo.GetX() && this->mBoundedMachine->mTile.GetY() == theTo.GetY();
+    bool theReached = this->Call(28, EEPathHandle(inUnit), EEPathHandle(inMap),
+                                 {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inType, inMargin, (int64_t)EEPathHandle(&outPath)}) != 0;
     *outReached = theReached;
-    if (theReached) {
-        for (long i = thePath.size() - 1; i >= 0; i--)
-            outPath.push_back(thePath[i]);
-    }
-    theGoal.ReleaseModifier();
-    this->mBoundedMachine->Reset();
     if (theCapture.On()) {
         theCapture.mRecord.U32(theReached ? 1 : 0);
         EEPathCapturePoints(theCapture.mRecord, outPath);
@@ -1736,140 +1762,6 @@ void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EE
                                                   theLocations.size());
     if (theFound >= 0)
         ioPath.insert(ioPath.end(), theLocations.begin() + theFound + 1, theLocations.end());
-}
-
-// The y test floors the comparison's result, not the coordinate (the original's parenthesis).
-// Cuts the new path from its last point on the unit's tile on (the part already walked) and drops the unit's path;
-// returns whether it cut
-bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
-{
-    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
-    bool theCapture = EESimCaptureRecord::Active();
-    if (theCapture) {
-        theRecord.U32(kPathSpliceTrim);
-        theRecord.U32((unsigned int)inUnit->mWaypoints.size());
-        theRecord.F32(inUnit->mPhysicalModel.GetLocation().GetX());
-        theRecord.F32(inUnit->mPhysicalModel.GetLocation().GetY());
-        EEPathCapturePoints(theRecord, ioPath);
-    }
-    // (Rust: ee_astar path_splice.rs trim_index; the y test floors the coordinate, where the original floored the
-    // comparison's result)
-    bool theResult = false;
-    ptrdiff_t theCut = ee_path_trim_index(EEPathPoints(ioPath), ioPath.size(), inUnit->mWaypoints.size(),
-                                          inUnit->mPhysicalModel.GetLocation().GetX(),
-                                          inUnit->mPhysicalModel.GetLocation().GetY());
-    if (theCut >= 0) {
-        theResult = true;
-        ioPath.erase(ioPath.begin() + theCut, ioPath.end());
-        inUnit->DropPath();
-    }
-    if (theCapture) {
-        theRecord.U32(theResult);
-        theRecord.U32((unsigned int)ioPath.size());
-        theRecord.Commit();
-    }
-    return theResult;
-}
-
-// Unless TrimPath cuts the path, appends the unit's last waypoint (when the path does not end on its tile) and its
-// other waypoints, last first, then drops the unit's path
-void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
-{
-    if (inUnit == NULL)
-        return;
-    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
-    bool theCapture = EESimCaptureRecord::Active();
-    if (theCapture) {
-        theRecord.U32(kPathSpliceAppend);
-        EEPathCapturePoints(theRecord, ioPath);
-        EEPathCaptureWaypoints(theRecord, inUnit->mWaypoints);
-    }
-    if (this->TrimPath(inUnit, ioPath)) {
-        if (theCapture) {
-            theRecord.U32(1);
-            theRecord.Commit();
-        }
-        return;
-    }
-    // (Rust: ee_astar path_splice.rs append_waypoints: the points to append)
-    std::deque<EEComplexUnitWaypoint>& theWaypoints = inUnit->mWaypoints;
-    std::vector<GE3DPoint> theLocations;
-    theLocations.reserve(theWaypoints.size());
-    for (size_t i = 0; i < theWaypoints.size(); i++)
-        theLocations.push_back(theWaypoints[i].mLocation);
-    std::vector<GE3DPoint> theAdded(theLocations.size());
-    size_t theCount = ee_path_append_waypoints(EEPathPoints(ioPath), ioPath.size(), EEPathPoints(theLocations),
-                                               theLocations.size(),
-                                               theAdded.empty() ? NULL : reinterpret_cast<EePathPoint*>(&theAdded[0]));
-    ioPath.insert(ioPath.end(), theAdded.begin(), theAdded.begin() + theCount);
-    if (theCapture) {
-        theRecord.U32(0);
-        EEPathCapturePoints(theRecord, ioPath);
-        theRecord.Commit();
-    }
-    if (ioPath.size() != 0)
-        inUnit->DropPath();
-}
-
-// Runs a short bounded search toward ioTo (a few steps, more with the queue length and distance), gives the unit
-// its result and sets ioTo to the tile reached; returns the goal's took-nearest flag
-bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
-                                 EETileCoordinate& ioTo, long inQueued)
-{
-    this->PrepareBoundedMachine(inMap);
-    EEAIAStarPathfindingGoalBase* theGoal = &this->mBoundedMachine->mGoal;
-    if (inType == 2) {
-        EEAIPathGoalModifierBase* theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
-        theGoal->SetModifier(theModifier);
-        theModifier->Dereference();
-    } else if (inType == 0x10) {
-        EEAIPathGoalModifierBase* theModifier = new EEAIBPGModifierSpace(&this->mBoundedMachine->mGoal);
-        theGoal->SetModifier(theModifier);
-        theModifier->Dereference();
-    }
-    theGoal->SetUnit(inUnit);
-    inUnit->Reference();   // (the original's search node held the unit)
-    this->mBoundedMachine->SetStart(inFrom);
-    this->mBoundedMachine->SetGoal(ioTo);
-    this->mBoundedMachine->mTile = ioTo;
-    // (Rust: ee_astar path_splice.rs: 4 more than the queued searches, 11 at most, plus the distance, divided by
-    // 20 above 20; the bounds revs + 1 around the start, clipped to the map)
-    long theQueued = inQueued;
-    long theRevs = ee_path_short_path_revs((int32_t)theQueued, (int32_t)inFrom.GetX(), (int32_t)inFrom.GetY(),
-                                           (int32_t)ioTo.GetX(), (int32_t)ioTo.GetY());
-    this->mBoundedMachine->SetMaxRevs(theRevs);
-    EEAIAStarBounds theBounds;
-    EePathBounds theRect = ee_path_bounds_around((int32_t)inFrom.GetX(), (int32_t)inFrom.GetY(), (int32_t)(theRevs + 1),
-                                                 (int32_t)inMap->mSize);
-    theBounds.mTop = theRect.top;
-    theBounds.mLeft = theRect.left;
-    theBounds.mRight = theRect.right;
-    theBounds.mBottom = theRect.bottom;
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY
-        EESimCaptureRecord theRecord(kPathSpliceCapture);
-        theRecord.U32(kPathSpliceShortPath);
-        theRecord.I32((int)theQueued);
-        theRecord.I32((int)inFrom.GetX());
-        theRecord.I32((int)inFrom.GetY());
-        theRecord.I32((int)ioTo.GetX());
-        theRecord.I32((int)ioTo.GetY());
-        theRecord.I32((int)inMap->mSize);
-        theRecord.I32((int)theRevs);
-        EEPathCaptureBounds(theRecord, theBounds);
-        theRecord.Commit();
-    }
-    this->mBoundedMachine->mGoal.mBounds = theBounds;
-    this->mBoundedMachine->mSearchBounds = theBounds;
-    this->mBoundedMachine->Run();
-    this->FinishPath(this->mBoundedMachine, inUnit);
-    bool theResult = this->mBoundedMachine->mGoal.mTookNearest;
-    ioTo = this->mBoundedMachine->mTile;
-    if (inUnit->mIsPathDone != true)
-        inUnit->mIsPathDone = true;
-    inUnit->mBoundedPathTiles.clear();
-    this->mBoundedMachine->Reset();
-    inUnit->Dereference();
-    return theResult;
 }
 
 // Applies a graph path: a unit gets a location goal per sub sector on the way (or inserted before a pending attack),
@@ -1951,180 +1843,6 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
     }
 done:
     return inMachine->mGoal.GetTo()->GetID() == inMachine->GetSector();
-}
-
-// FinishFailedPath's second join: the count from inPath's end of the point among its first ten (from the tenth
-// down) on inDetour's first tile, -1 without one
-static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const std::vector<GE3DPoint>& inDetour)
-{
-    // (Rust: ee_astar path_splice.rs detour_join_count)
-    long theIndex = (long)ee_path_detour_join_count(EEPathPoints(inPath), inPath.size(), EEPathPoints(inDetour),
-                                                    inDetour.size());
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY
-        EESimCaptureRecord theRecord(kPathSpliceCapture);
-        theRecord.U32(kPathSpliceDetour);
-        EEPathCapturePoints(theRecord, inPath);
-        EEPathCapturePoints(theRecord, inDetour);
-        theRecord.I32((int)theIndex);
-        theRecord.Commit();
-    }
-    return theIndex;
-}
-
-// NEAR: the original builds the unit's tile through the (const long&, const long&) pair ctor 0xaa817 and tests the
-// distance through the out-of-line U2DPoint<long>::DistanceToSquared 0x8a3f (its locals are EETileCoordinates here,
-// the type RunBoundedPath and the machines take).
-// Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
-// inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
-void EEPathManager::FinishFailedPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
-{
-    std::vector<GE3DPoint> thePath;
-    std::vector<GE3DPoint> theJoined;
-    std::vector<GE3DPoint> theDetour;
-    EEAIAStarMachineBase* theMachine = inMachine;
-    EEComplexUnit* theUnit = inUnit;
-    EEAIAStarBounds theBounds;
-    EETileCoordinate theFrom;
-    theFrom.mX = 0;
-    theFrom.mY = 0;
-    EETileCoordinate theTo;
-    theTo.mX = 0;
-    theTo.mY = 0;
-    long theCount;
-    theMachine->GetPoints(thePath);
-    if (theUnit->mIsPathDone != true)
-        theUnit->mIsPathDone = true;
-    theUnit->mBoundedPathTiles.clear();
-    if (thePath.size() > theUnit->mWaypoints.size() && (long)theUnit->mWaypoints.size() > 0 &&
-        (long)(thePath.size() - theUnit->mWaypoints.size()) >= 0) {
-        theFrom = theUnit->GetTile();
-        long theY = UMFloor(thePath[(thePath.size() - theUnit->mWaypoints.size())].GetY());
-        long theX = UMFloor((*(thePath.begin() + (thePath.size() - theUnit->mWaypoints.size()))).GetX());
-        theTo.mX = theX;
-        theTo.mY = theY;
-        if ((theFrom.GetX() - theTo.GetX()) * (theFrom.GetX() - theTo.GetX()) + (theFrom.GetY() - theTo.GetY()) * (theFrom.GetY() - theTo.GetY()) <= 2)
-            this->TrimPath(theUnit, thePath);
-    }
-    if ((long)theUnit->mWaypoints.size() >= 1 &&
-        (thePath.size() > 4 ||
-         (thePath.size() != 0 &&
-          (UMAbs(UMFloor((*theUnit->mWaypoints.begin()).mLocation.GetX()) - theUnit->GetTileX()) > 1 ||
-           UMAbs(UMFloor((*theUnit->mWaypoints.begin()).mLocation.GetY()) - theUnit->GetTileY()) > 1)))) {
-        this->PrepareBoundedMachine(gWorld.GetMap());
-        theCount = thePath.size() < 10 ? thePath.size() : 10;
-        long theY = UMFloor((*(thePath.begin() + (thePath.size() - theCount))).GetY());
-        long theX = UMFloor(thePath[(thePath.size() - theCount)].GetX());
-        theTo.mX = theX;
-        theTo.mY = theY;
-        theFrom.mX = theUnit->GetTileX();
-        theFrom.mY = theUnit->GetTileY();
-        EePathBounds theRect = ee_path_bounds_around((int32_t)theFrom.GetX(), (int32_t)theFrom.GetY(), 26,
-                                                     (int32_t)gWorld.GetMap()->GetSize());
-        theBounds.mTop = theRect.top;
-        theBounds.mLeft = theRect.left;
-        theBounds.mBottom = theRect.bottom;
-        theBounds.mRight = theRect.right;
-        if (EESimCaptureRecord::Active()) {   // TEST ONLY
-            EESimCaptureRecord theRecord(kPathSpliceCapture);
-            theRecord.U32(kPathSpliceFailedBounds);
-            theRecord.I32((int)theFrom.GetX());
-            theRecord.I32((int)theFrom.GetY());
-            theRecord.I32((int)gWorld.GetMap()->GetSize());
-            EEPathCaptureBounds(theRecord, theBounds);
-            theRecord.Commit();
-        }
-        this->mBoundedMachine->mSearchBounds = theBounds;
-        this->mBoundedMachine->mGoal.mBounds = theBounds;
-        this->mBoundedMachine->mGoal.mMaxRevs = 50;
-        EEAIPathGoalModifierBase* theModifier;
-        if (theMachine->GetType() == kAIMachineWaterPath)
-            theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
-        else if (theMachine->GetType() == kAIMachineSpacePath)
-            theModifier = new EEAIBPGModifierSpace(&this->mBoundedMachine->mGoal);
-        else
-            goto run;
-        this->mBoundedMachine->mGoal.SetModifier(theModifier);
-        theModifier->Dereference();
-    run:
-        if (this->RunBoundedPath(this->mBoundedMachine, theUnit, theFrom, theTo, 50)) {
-            this->mBoundedMachine->mGoal.GetPoints(theDetour);
-            if (this->JoinPaths(thePath, theDetour, &theJoined, theCount))
-                goto joined;
-        }
-        if (thePath.size() > 0) {
-            this->mBoundedMachine->mGoal.GetPoints(theDetour);
-            if (theDetour.size() > 0) {
-                long theIndex = EEPathDetourJoinCount(thePath, theDetour);
-                if (theIndex != -1 && this->JoinPaths(thePath, theDetour, &theJoined, theIndex))
-                    goto joined;
-            }
-            this->AppendWaypoints(theUnit, thePath);
-            theUnit->TakePath(thePath, true);
-        }
-        this->mBoundedMachine->Reset();
-        goto done;
-    joined:
-        theUnit->DropPath();
-        theUnit->TakePath(theJoined, true);
-        this->mBoundedMachine->Reset();
-    } else {
-        this->AppendWaypoints(theUnit, thePath);
-        theUnit->TakePath(thePath, true);
-    }
-done:
-    theUnit->SnapLastWaypoint();
-    if (theUnit->GetGoal())
-        theUnit->GetGoal()->PathTaken(theUnit);
-}
-
-// Runs the bounded machine between two tiles for a unit with a step budget, accepting the nearest tile; returns
-// whether the search did not fail
-bool EEPathManager::RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
-                                   const EETileCoordinate& inTo, long inRevs)
-{
-    EEAIAStarBoundedPathGoal& theGoal = inMachine->mGoal;
-    theGoal.mMaxRevs = inRevs;
-    theGoal.SetUnit(inUnit);
-    theGoal.mAcceptNearest = true;
-    inMachine->SetStart(inFrom);
-    inMachine->SetGoal(inTo);
-    inMachine->Run();
-    return !theGoal.mSearchFailed;
-}
-
-// When inDetour starts on the point inCount from inPath's end, fills outPath with inPath up to that point, then
-// inDetour; returns whether it joined them
-bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPoint>& inDetour,
-                              std::vector<GE3DPoint>* outPath, long inCount)
-{
-    bool theResult = false;
-    EESimCaptureRecord theRecord(kPathSpliceCapture);   // TEST ONLY
-    bool theCapture = EESimCaptureRecord::Active() && outPath != NULL;
-    if (theCapture) {
-        theRecord.U32(kPathSpliceJoin);
-        EEPathCapturePoints(theRecord, inPath);
-        EEPathCapturePoints(theRecord, inDetour);
-        theRecord.I32((int)inCount);
-    }
-    // (Rust: ee_astar path_splice.rs join_paths: the test)
-    if (outPath != NULL && inDetour.size() > 0) {
-        if (ee_path_join_paths(EEPathPoints(inPath), inPath.size(), EEPathPoints(inDetour), inDetour.size(),
-                               (size_t)inCount)) {
-            outPath->reserve(inPath.size() + inDetour.size());
-            unsigned long i;
-            for (i = 0; i < inPath.size() - inCount; i++)
-                outPath->push_back(inPath[i]);
-            for (i = 0; i < inDetour.size(); i++)
-                outPath->push_back(inDetour[i]);
-            theResult = true;
-        }
-    }
-    if (theCapture) {
-        theRecord.U32(theResult);
-        EEPathCapturePoints(theRecord, *outPath);
-        theRecord.Commit();
-    }
-    return theResult;
 }
 
 // The path graph machine's goal hooks (ee/EEAIAStarPathGraphGoal.h). GetGoalID and the node tile are read inline

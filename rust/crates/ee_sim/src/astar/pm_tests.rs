@@ -125,7 +125,14 @@ impl PathHost for Fake {
             EE_PATH_UNIT_WAYPOINTS => self.waypoints,
             EE_PATH_UNIT_PATH_TYPE => 1,
             EE_PATH_UNIT_COUNT_REQUEST => 1,
-            EE_PATH_SHORT_PATH => self.short_done as i64,
+            // the short search's goal took the nearest tile and accepted it (pm_bounded.rs try_short_path)
+            crate::astar::pm_bounded::EE_PATH_TM_FLAGS => {
+                if self.short_done {
+                    3
+                } else {
+                    0
+                }
+            }
             EE_PATH_REQUEST_NEW => 0x5000 + io.i[0],
             EE_PATH_HAS_MAP | EE_PATH_PM_LOAD => 1,
             _ => 0,
@@ -153,7 +160,7 @@ fn tile_search_runs_until_done() {
     assert_eq!(host.refs[&unit(7)], 1);
     // the history counts the request at its unclamped goal; the short search ran first
     assert_eq!(m.record.history.len(), 1);
-    assert_eq!(host.count(EE_PATH_SHORT_PATH), 1);
+    assert_eq!(host.count(crate::astar::pm_bounded::EE_PATH_BM_RUN), 1);
     assert!(!m.is_path_done(&mut host, unit(7)));
     assert_eq!(m.path_goal(&mut host, unit(7)), (false, (5, 6)));
     m.update(&mut host);
@@ -162,7 +169,8 @@ fn tile_search_runs_until_done() {
     assert_eq!(host.machines[&mach].rev_limit, 0x10);
     m.update(&mut host);
     assert!(m.paths.is_empty());
-    assert_eq!(host.count(EE_PATH_FINISH_PATH), 1);
+    // the short search's result and the tile search's: each snaps the unit's last waypoint
+    assert_eq!(host.count(crate::astar::pm_bounded::EE_PATH_UNIT_SNAP), 2);
     assert_eq!(host.refs[&unit(7)], 0);
     assert_eq!(m.spare_paths.len(), 1);
     assert!(m.is_path_done(&mut host, unit(7)));

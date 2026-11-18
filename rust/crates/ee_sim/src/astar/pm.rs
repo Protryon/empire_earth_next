@@ -43,7 +43,7 @@ const STEP_BUDGET: i64 = 0x20;
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EePathIo {
     pub h: [u64; 4],
-    pub i: [i64; 10],
+    pub i: [i64; 12],
 }
 
 // ---- the host's operations (h0 the object, `i` the values)
@@ -121,16 +121,11 @@ pub const EE_PATH_GM_START: i32 = 33;
 pub const EE_PATH_GRAPH_REVS: i32 = 34;
 /// machine `h0` (`i0` 0 tile, 1 graph) `SetMaxRevs(i1)`
 pub const EE_PATH_SET_MAX_REVS: i32 = 35;
-/// `FinishPath`: tile machine `h0`'s result to unit `h1`
-pub const EE_PATH_FINISH_PATH: i32 = 36;
 /// `RequestUnitPaths(h1 unit, h2 request, h0 graph machine)` -> its result
 pub const EE_PATH_REQUEST_UNIT_PATHS: i32 = 37;
 /// `FinishGraphPath`'s unit part: unit `h0`'s auto waypoint goal -> 1 and (`i0`, `i1`) its tile, (`i2`, `i3`) the
 /// goal's (the unit's path dropped), else 0
 pub const EE_PATH_AUTO_WAYPOINT: i32 = 38;
-/// `TryShortPath(h0 unit, gWorld.mMap, i0 type, (i1, i2), (i3, i4))` with `i5` searches queued -> the result and
-/// the tile reached in `i3`, `i4`
-pub const EE_PATH_SHORT_PATH: i32 = 39;
 /// unit `h0`'s player id
 pub const EE_PATH_UNIT_PLAYER: i32 = 40;
 /// unit `h0`'s waypoint count
@@ -631,11 +626,11 @@ impl PathManager {
 
     // ---- the requests
 
-    /// `FinishPath`: the C++'s, on the node's machine and unit.
+    /// `FinishPath` on the node's machine and unit (pm_bounded.rs).
     fn finish_path(&mut self, host: &mut dyn PathHost, n: u32) {
         let m = self.node(n).path_machine;
         let unit = self.unit_of(host, n);
-        op(host, EE_PATH_FINISH_PATH, &[m, unit], &[]);
+        crate::astar::pm_bounded::finish_path(host, m, unit);
     }
 
     /// `SetGraphRevs`
@@ -772,15 +767,11 @@ impl PathManager {
         }
         self.cancel_paths(host, unit, false);
         if !unlimited && (!arg8 || unit == 0 || op(host, EE_PATH_UNIT_WAYPOINTS, &[unit], &[]) < 7) {
-            let queued = self.paths.len() as i64;
-            let (done, io) = ask(
-                host,
-                EE_PATH_SHORT_PATH,
-                &[unit],
-                &[kind, from.0 as i64, from.1 as i64, to.0 as i64, to.1 as i64, queued],
-            );
-            from = (io.i[3] as i32, io.i[4] as i32);
-            if done != 0 {
+            let queued = self.paths.len() as i32;
+            let mut short = to;
+            let done = crate::astar::pm_bounded::try_short_path(host, unit, map, kind, from, &mut short, queued);
+            from = short;
+            if done {
                 return;
             }
         }
@@ -1927,7 +1918,8 @@ unsafe fn with<R>(p: *mut EePathManager, body: impl FnOnce(&mut PathManager, &mu
 /// 15 `RequestUnitPath(h0, from (i0, i1), to (i2, i3), unlimited i4, revs i5, graph i6, modifier h1, i7)`,
 /// 16 `RequestPendingPath(h0, (i0, i1))`, 17 `AddPending(unit i0, (i1, i2))`, 18 the loaded running state
 /// put back, 19 the graph searches' resolve, 20 the pending count, 21 the queued count, 22 `mLCC`,
-/// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back.
+/// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back,
+/// 27 `FindPath` (pm_bounded.rs), 28 `FindBoundedPath` (its points appended to the C++ vector `i6`).
 ///
 /// # Safety
 /// `p` a live manager, `io` live; the handles live objects of their kinds.
@@ -2015,6 +2007,17 @@ pub unsafe extern "C" fn ee_path_manager_call(p: *mut EePathManager, what: i32, 
         26 => {
             m.restore_searches(host);
             0
+        }
+        27 => {
+            let b = [i[4] as i32, i[5] as i32, i[6] as i32, i[7] as i32];
+            crate::astar::pm_bounded::find_path(host, h[0], h[1], t(0), t(2), b, h[2], i[8], i[9], i[10] as u64, h[3]);
+            0
+        }
+        28 => {
+            let (reached, path) =
+                crate::astar::pm_bounded::find_bounded_path(host, h[0], h[1], i[4], t(0), t(2), i[5] as i32);
+            crate::astar::pm_bounded::points_out(host, i[6] as u64, &path);
+            reached as i64
         }
         _ => -1,
     })

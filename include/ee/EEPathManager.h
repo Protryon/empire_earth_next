@@ -102,29 +102,13 @@ public:
     // first (provisional name)
     static void MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EEComplexUnitWaypoint>& inWaypoints, long inArg3);
 
-    // the Rust manager's host (EEPathManager.cpp): what stays C++ (provisional names; addresses are the bodies)
+    // the Rust manager's host (EEPathManager.cpp): what stays C++ (provisional names; addresses are the bodies).
+    // TryShortPath, TrimPath, AppendWaypoints, JoinPaths, RunBoundedPath and FinishPath with its found and failed
+    // halves are Rust (pm_bounded.rs) over the host's bounded machine
     int64_t Call(int32_t inWhat, uint64_t inH0 = 0, uint64_t inH1 = 0, std::initializer_list<int64_t> inValues = {},
                  int64_t* outValues = NULL);
     void PrepareBoundedMachine(EEMap* inMap);
-    // 0xa78c1: a short bounded search first (true: done; ioTo gets the reached tile; inQueued the tile searches
-    // queued) (provisional name)
-    bool TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
-                      EETileCoordinate& ioTo, long inQueued);
-    // 0xa75f4: ioPath loses its points from the last one on inUnit's tile on (true when cut) (provisional name)
-    bool TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath);
-    // 0xa777f: unless TrimPath cut it, inUnit's remaining waypoints appended to ioPath (provisional name)
-    void AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath);
-    // 0xa8bf4: inPath up to its point inCount from the end, then inDetour, when inDetour starts there (provisional
-    // name)
-    bool JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPoint>& inDetour, std::vector<GE3DPoint>* outPath,
-                   long inCount);
     bool RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine);
-    bool RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
-                        const EETileCoordinate& inTo, long inRevs);
-    // a finished tile search's result to its unit (the original's took the search node)
-    void FinishPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit);
-    void FinishFailedPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit);
-    void FinishFoundPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit);
     // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
 
