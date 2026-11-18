@@ -799,6 +799,12 @@ pub struct EeCombatQueryHost {
 // are callable with it.
 impl QueryHost for EeCombatQueryHost {
     fn read(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> u32 {
+        // the plain member reads over the world views (query_views.rs), else the C++'s
+        // SAFETY: the host's calls run on the simulation thread, which holds the world
+        let t = unsafe { crate::world::view::WorldRead::begin() };
+        if let Some(v) = crate::combat::query_views::query_read(&t, code, object) {
+            return v;
+        }
         unsafe { (self.read)(self.ctx, code, object, arg) }
     }
     fn handle(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> EeCombatHandle {

@@ -617,6 +617,7 @@ uint64_t EEQueryHandleOf(const EEUnit* inUnit)
     return (uint64_t)(uintptr_t)inUnit;
 }
 
+// (the plain member reads are Rust's: ee_combat query_views.rs)
 uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     EEQueryContext* theContext = (EEQueryContext*)inContext;
@@ -627,8 +628,6 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEQueryComplex(inObject)->mPhysicalModel.GetModel() != NULL;
     case EE_COMBAT_Q_TARGETABLE:
         return EEUUGetIsUnitClassTargetable(inArg ? theUnit : NULL, theObject->mUnitClass);
-    case EE_COMBAT_Q_FIRING_HIGH:
-        return EEQueryComplex(inObject)->mIsFiringHigh;
     case EE_COMBAT_Q_PASSABLE:
         return EEQueryComplex(inObject)->IsPassableBy(theUnit);
     case EE_COMBAT_Q_UNIT_SET:
@@ -653,16 +652,10 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEIsSeenBy(EEQueryComplex(inObject), theUnit->GetPlayer(), true);
     case EE_COMBAT_Q_DUMMY_HEAD:
         return theObject == NULL || RTSDummyHead(theObject) != NULL;
-    case EE_COMBAT_Q_SPECIAL_ATTACK:
-        return EEQueryComplex(inObject)->mIsSpecialAttack;
-    case EE_COMBAT_Q_HEAL_RANGE:
-        return EEConditionBits(theObject->GetUnitClass()->mHealRange);
     case EE_COMBAT_Q_PROJECTILE_CATEGORY: {
         EEUnitClass* theProjectile = theObject->GetUnitClass()->mProjectileClass;
         return theProjectile != NULL ? (uint32_t)theProjectile->mCategory : EE_COMBAT_Q_NONE;
     }
-    case EE_COMBAT_Q_COLLISION_RADIUS:
-        return EEConditionBits(EEQueryComplex(inObject)->mCollisionRadius);
     case EE_COMBAT_Q_HIT_DISTANCE_SQUARED:
         return EEConditionBits(EEGetHitDistanceSquared(theUnit, theObject, -10000.0f, -10000.0f));
     case EE_COMBAT_Q_TAG_COUNT: {
@@ -670,8 +663,6 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         EETagPointList* theTags = theComplex->GetModel()->mTagPoints[theComplex->mAnimation];
         return theTags != NULL ? (uint32_t)theTags->GetNumTagPoints() : 0;
     }
-    case EE_COMBAT_Q_WEAPON_TAG:
-        return (uint32_t)EEQueryComplex(inObject)->mWeaponTagPoint;
     case EE_COMBAT_Q_IN_RANGE_TO_HIT:
         return EEIsInRangeToHit(theUnit, theObject);
     case EE_COMBAT_Q_BALLISTIC_HIT:
@@ -681,8 +672,6 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         memcpy(&theDistance, &inArg, 4);
         return EEIsInContactRange(theUnit, theObject, theDistance);
     }
-    case EE_COMBAT_Q_ATTACK_GOAL:
-        return EEAttackUnitCast(EEQueryComplex(inObject)->mGoalState) != NULL;
     case EE_COMBAT_Q_REGION_COUNT: {
         EeCombatUnitRegions* theTable = ::gWorld.mMap->mUnitRegions;
         long theSize = ee_combat_regions_size(theTable);
@@ -697,16 +686,11 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetY());
     case EE_COMBAT_Q_CONTACT_Z:
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetZ());
-    case EE_COMBAT_Q_GAME_TIME: return (uint32_t)gPhysics->mGameTime;
-    case EE_COMBAT_Q_TILE_SIZE: return (uint32_t)theObject->mUnitClass->mTileSize;
     case EE_COMBAT_Q_IGNORED_COUNT: return (uint32_t)EEQueryComplex(inObject)->mIgnoredTargets.size();
-    case EE_COMBAT_Q_CLASS_MAX_VELOCITY: return EEConditionBits(theObject->mUnitClass->mMaxVelocity);
-    case EE_COMBAT_Q_MAP_SIZE: return (uint32_t)::gWorld.mMap->mSize;
     case EE_COMBAT_Q_DISTANCE_SQUARED: return EEConditionBits(theUnit->DistanceSquaredTo(EEQueryComplex(inObject)));
     case EE_COMBAT_Q_TARGETS_ENEMIES: return EEQueryComplex(inObject)->mBehavior->mCanTargetEnemies;
     case EE_COMBAT_Q_MOVES_FREELY: return EEQueryComplex(inObject)->mBehavior->CanMoveFreely(EEQueryComplex(inObject));
     case EE_COMBAT_Q_GOAL_B1C: return EEQueryComplex(inObject)->mGoalState->GetB1C();
-    case EE_COMBAT_Q_AMMUNITION: return (uint32_t)EEQueryComplex(inObject)->mAmmunition;
     case EE_COMBAT_Q_SHOT_CLASS: {
         EEUnitClass* theClass = theContext->mClass;
         return (theClass->mProjectileClass != NULL ? EE_COMBAT_SHOT_CLASS_PROJECTILE : 0)
@@ -718,18 +702,9 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_HIGH_TECH_TOOLS:
         return EEGetRules().Epoch(theObject->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;   // epochs.yaml
     case EE_COMBAT_Q_SPARKS_EFFECT: return theObject->mUnitClass->mImpactSparksEffect != NULL;
-    case EE_COMBAT_Q_RESOURCE_TYPE: return (uint32_t)theObject->mResourceType;
     // leaves.rs (R5b.2, thirteenth round)
-    case EE_COMBAT_Q_INNER_SPHERE: return EEConditionBits(theObject->mUnitClass->GetInnerCollisionSphere());
-    case EE_COMBAT_Q_SHOOTS_HIGH: return theObject->mUnitClass->mShootsHigh;
-    case EE_COMBAT_Q_TOWER: return theObject->mUnitClass->mIsTower;
     case EE_COMBAT_Q_WAYPOINTS: return (uint32_t)EEQueryComplex(inObject)->mWaypoints.size();
     case EE_COMBAT_Q_MAX_VELOCITY: return EEConditionBits(EEQueryComplex(inObject)->GetMaxVelocity());
-    // the drop location (R5b.2, fifteenth round)
-    case EE_COMBAT_Q_ACTIVE_GOAL_KIND: {
-        EEUnitGoal* theGoal = EEQueryComplex(inObject)->mActiveGoal;
-        return theGoal != NULL ? (uint32_t)theGoal->mKind : EE_COMBAT_Q_NONE;
-    }
     }
     return 0;
 }
