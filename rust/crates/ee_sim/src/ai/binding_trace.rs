@@ -74,7 +74,7 @@ fn emit(line: &str) {
     text.extend_from_slice(line.as_bytes());
     text.extend_from_slice(b"\n\0");
     if out == 0 {
-        eprint!("{line}\n");
+        eprintln!("{line}");
         return;
     }
     // SAFETY: the registered function takes a NUL-terminated text
@@ -194,7 +194,11 @@ pub unsafe extern "C-unwind" fn ee_ai_binding_trace_enter(state: *mut std::ffi::
 /// # Safety
 /// As [`ee_ai_binding_trace_enter`].
 #[no_mangle]
-pub unsafe extern "C-unwind" fn ee_ai_binding_trace_leave(state: *mut std::ffi::c_void, name: *const c_char, results: c_int) {
+pub unsafe extern "C-unwind" fn ee_ai_binding_trace_leave(
+    state: *mut std::ffi::c_void,
+    name: *const c_char,
+    results: c_int,
+) {
     if mode() == 0 {
         return;
     }

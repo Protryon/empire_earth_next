@@ -10,6 +10,9 @@
 //! - `units_lua`: the per-unit bindings' Lua helpers (argument readers, result pushers, the units filter);
 //! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
 //! - `binding_trace` (TEST ONLY): the trace of the bindings' calls, the port's golden;
+//! - `units_state`: the per-unit interface's state (`EECPUnitsState`): the held set, the events, the enemy memory,
+//!   the danger layers and the route;
+//! - `units_bind` (the game only): its hooks and the `ai.*` bindings over the world views and one C++ host;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
 //! The C++ keeps its objects (the states, the manifest's entries) and hands plain values over. `golden` checks every
@@ -28,8 +31,10 @@ pub mod manifest;
 pub mod names;
 pub mod next_save;
 pub mod seat;
+pub mod units_bind;
 pub mod units_lua;
 pub mod units_save;
+pub mod units_state;
 
 #[cfg(test)]
 mod golden;
