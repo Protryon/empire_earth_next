@@ -30129,3 +30129,30 @@ origin/rust had nothing new at the end of the round (no merge).
   lines with tests. On the tree merged with origin/rust cb6e60d50 (clean): both builds and
   the test profile 0/0, the Rust gate PASS (4,508 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3
   PASS, scenario_check 27/27.
+- **CPEV, the computer player's own calls.** The second TEST ONLY tag (the same scope class with its own depth, so a
+  CPEV call's placement calls still record PLCE as before): one record per outermost call of WorkOutPopulation,
+  Regroup, UpdateGroups, EnterEpoch, ChooseCivilization, EECPPendingEpoch, AvoidsEnemies, CanProduce,
+  RestoreManagers, DamageTaken, the unit events (UnitPlaced, UnitTaken, UnitCompleted, UnitGoalDone, UnitStranded,
+  UnitsSwapped), SetActive, EpochReached and PayImprovement, its arguments and, when it ends, the player's state (an
+  FNV-1a of the record EeCpFields, the favourite history, the units to kill, the danger zones, every centre with its
+  active flag, the town tile).
+- **Lesson: two threads call the same methods.** The first CPEV digests differed between two runs of one build in one
+  seed only: the interface thread asks `CanProduce` and `AvoidsEnemies` too, at its own times, so their records
+  interleave by timing. CPEV records only on the thread that runs the computer players' Update (noted at its first
+  call). The record's hash stops at the record's last member: the two bytes of tail padding after its closing bools
+  are whatever the allocation left.
+- **The player's bodies (events.rs).** WorkOutPopulation, the centres' grouping, the favourite choice (one body for
+  the four kinds; the screener stays C++, asked per class: it calls EECPCountOwn, whose PLCE record must stay),
+  RestoreManagers' missing favourites, ChooseCivilization's pick, the retire cheat, EECPPendingEpoch and AvoidsEnemies.
+  A third host (ee_cp_player_host). **Lesson: a moved body must call what the original called.** Regroup and
+  UpdateGroups call the centres' IsWithinRadius, AddUnit, Contains, AdoptDropSite, SetUnit, GetCenter and SetActive,
+  each an outermost PLCE call: the Rust bodies call those C++ forwarders through the host, not the Rust functions
+  behind them, and the centres' sort stays the original std::sort with its comparator (it asks every centre's
+  GetCenter per comparison, so even a key sort would change the records).
+- **The forwarders through two helpers.** EECPAsk (a test) and EECPSearch (a search with its tile in and out, the
+  centres for the searches over them) make the same PLCE words as the written-out forwarders (the placement profile's
+  PLCE digests equal), 81 lines less.
+- **Result of the round.** C++ -1,316 net (the target was 3,000: what is left of EEComputerPlayer.cpp is mostly calls
+  into lane A's hooks and the units' goals). On the tree merged with origin/rust 4929244f3: both builds and the test
+  profile 0/0, the Rust gate PASS (4,523 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3 PASS with
+  PLCE and CPEV, saveload 18/18, the matrix `saveload expect: PASS`, scenario_check 27/27.
