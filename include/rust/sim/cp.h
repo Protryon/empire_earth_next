@@ -11,6 +11,392 @@
 /// The last save version whose computer players hold the deleted C++ managers' blocks in the original's layout.
 constexpr static const uint32_t EE_CP_LEGACY_LAST_VERSION = 250;
 
+/// The table's records (`gCPBehaviors[129]`).
+constexpr static const size_t EE_CP_BEHAVIORS = 129;
+
+constexpr static const unsigned long EASY = 0;
+
+constexpr static const unsigned long MEDIUM = 1;
+
+constexpr static const unsigned long HARD = 2;
+
+/// `mCombatManager->Load(major, minor, file)`: its result.
+constexpr static const int32_t EE_CP_SAVE_COMBAT_LOAD = 400;
+
+/// `mPlacement->Load(file)` (the town centre tile): its result.
+constexpr static const int32_t EE_CP_SAVE_PLACEMENT_LOAD = 401;
+
+/// The placement's town centre tile's x (`index` 0) or y (1) into `io.i`.
+constexpr static const int32_t EE_CP_SAVE_TOWN_TILE = 402;
+
+/// Sets the placement's town centre tile's x (`index` 0) or y (1) to `io.i`.
+constexpr static const int32_t EE_CP_SAVE_SET_TOWN_TILE = 403;
+
+/// A new resource centre (no unit) loaded and pushed, loaded or not: the load's result.
+constexpr static const int32_t EE_CP_SAVE_CENTER_LOAD = 404;
+
+/// `mFavoriteTypeHistory.resize(io.i, make_pair(0, 0))`.
+constexpr static const int32_t EE_CP_SAVE_HISTORY_RESIZE = 405;
+
+/// `mFavoriteTypeHistory[index].first` (`HISTORY_FIRST`) or `.second` into `io.i`; the `SET_` ones store `io.i`.
+constexpr static const int32_t EE_CP_SAVE_HISTORY_FIRST = 406;
+
+constexpr static const int32_t EE_CP_SAVE_HISTORY_SECOND = 407;
+
+constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_FIRST = 408;
+
+constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_SECOND = 409;
+
+/// `mCombatManager->Save(major, minor, file)`: its result.
+constexpr static const int32_t EE_CP_SAVE_COMBAT_SAVE = 410;
+
+/// `mPlacement->Save(file)`: its result.
+constexpr static const int32_t EE_CP_SAVE_PLACEMENT_SAVE = 411;
+
+/// `mResourceCenters.size()` into `io.i`.
+constexpr static const int32_t EE_CP_SAVE_CENTERS = 412;
+
+/// `mResourceCenters[index]->Save(major, minor, file)`: its result.
+constexpr static const int32_t EE_CP_SAVE_CENTER_SAVE = 413;
+
+/// `mFavoriteTypeHistory.size()` into `io.i`.
+constexpr static const int32_t EE_CP_SAVE_HISTORY_COUNT = 414;
+
+/// `EEComputerPlayer`'s plain members, `mLBD4` (+0xbd4) to `mAttackStarted` (+0xf56), in the class's order.
+struct EeCpFields {
+  /// (unsigned: Load)
+  unsigned long mLBD4;
+  /// +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)
+  unsigned long mDifficulty;
+  unsigned long mFavoriteLandType;
+  unsigned long mFavoriteSeaType;
+  unsigned long mFavoriteAirType;
+  unsigned long mFavoriteSpaceType;
+  float mUnitCostMedium;
+  /// +0xbf0 (fld at 0x47346f)
+  float mComputerAggression;
+  float mCarrierChance;
+  float mCarrierPopPercentage;
+  float mAttackFrequencyPerEpoch;
+  float mSpecializedUnitPercentage;
+  float mRPSSelectionNonIslands;
+  float mRPSSelectionIslands;
+  float mSpecializedUnitChance;
+  /// +0xc10 (EECPDefenseCommander 0x783e7: the aid chance)
+  float mTownGuardPercentage;
+  /// +0xc14 (fld at 0x4734d2)
+  float mCitizenPercentage;
+  float mDMEarlyAttackScale;
+  float mEpochCatchUpEasy;
+  float mEpochCatchUpHard;
+  float mEpochCatchUpDeathmatch;
+  /// +0xc28
+  float mGuardContinentPercentage;
+  /// +0xc2c
+  float mGuardChokepointAirPercentage;
+  /// +0xc30
+  float mGuardChokepointPercentage;
+  /// +0xc34
+  float mGuardHighGroundPercentage;
+  float mFC38;
+  float mFC3C;
+  float mFC40;
+  float mFC44;
+  float mFC48;
+  float mFC4C;
+  float mFC50;
+  float mFC54;
+  float mFC58;
+  /// +0xc5c
+  float mGuardTownPercentage;
+  /// +0xc60
+  float mGuardTownLandPercentage;
+  float mGuardWaterwayPercentage;
+  float mHeroChance;
+  float mHeroPopPercentage;
+  /// +0xc70 (EECPDefenseCommander 0x799fa: the defense share)
+  float mDefensiveUnitCap;
+  /// (float: Load/Init)
+  float mSiegeWeaponPercentage;
+  /// (float: Load/Init)
+  float mMaxAttackResponseRange;
+  /// (float: Load/Init)
+  float mMilitaryPopPercentage;
+  /// +0xc80 (EECPDefenseCommander 0x785cb: the allies' threat limit)
+  float mAidThreatThreshold;
+  /// (float: Load/Init)
+  float mPriestPopPercentage;
+  /// (float: Load/Init)
+  float mPriestChance;
+  /// (float: Load/Init)
+  float mProphetPopPercentage;
+  /// (float: Load/Init)
+  float mProphetChance;
+  /// (float: Load/Init)
+  float mEnableInterval;
+  /// +0xc98 (EECPIntelligencePlayerFile::Update: the worker-count weight) (provisional name)
+  float mWorkerCountWeight;
+  /// +0xc9c (Update: the military-count weight) (provisional name)
+  float mMilitaryCountWeight;
+  /// (float: Load/Init)
+  float mNavalUnitWeight;
+  /// (float: Load/Init)
+  float mAirUnitWeight;
+  /// +0xca8 (float: EECPResourceCenter::FindBuildSite 0x48bee3 flds it)
+  float mTowerSpacing;
+  /// (float: Load/Init)
+  float mDMAttackFrequencyModifierEasy;
+  /// (float: Load/Init)
+  float mDMAttackFrequencyModifierMedium;
+  /// (float: Load/Init)
+  float mDMAttackFrequencyModifierHard;
+  /// (float: Load/Init)
+  float mDMInitialAttackModifierEasy;
+  /// (float: Load/Init)
+  float mDMInitialAttackModifierMedium;
+  /// (float: Load/Init)
+  float mDMInitialAttackModifierHard;
+  long mLCC4;
+  long mLCC8;
+  long mLCCC;
+  long mLCD0;
+  long mLCD4;
+  /// +0xcd8 (EECPPlayerInteractionManager's ctor 0x895de copies it)
+  long mSeed;
+  long mShipsToMaintainDMEasy;
+  long mShipsToMaintainDMMedium;
+  long mShipsToMaintainDMHard;
+  long mShipsToMaintainEasy;
+  long mShipsToMaintainMedium;
+  long mShipsToMaintainHard;
+  long mShipMaintenanceTimer;
+  /// +0xcf8 (EECPMilitaryAidPackage 0x84e42: the aid delay against a human, by mDifficulty) (provisional name)
+  long mAssistAlliesDelayEasy;
+  /// +0xcfc
+  long mAssistAlliesDelayMedium;
+  /// +0xd00
+  long mAssistAlliesDelayHard;
+  long mPopulationCap;
+  long mCarrierMaxPerGroup;
+  /// +0xd0c (EECPExplorationManager::Update: the wanted explorers of kind 2 when +0xf55)
+  long mNumAirExplorers;
+  long mAttackEnemyChance;
+  long mAttackToClaimResourceChance;
+  long mAttackForRevengeChance;
+  long mAttackGroupSizeMax;
+  long mAttackGroupSizeMin;
+  long mAttackFrequencyModifierEasy;
+  long mAttackFrequencyModifierHard;
+  long mAttackFrequencyCeiling;
+  long mAttackFrequencyFloor;
+  long mAttackFrequencyMax;
+  long mAttackFrequencyMin;
+  long mInitialAttackDelayPerEpoch;
+  long mAttackDelayModifierEasy;
+  long mAttackDelayModifierHard;
+  long mLD48;
+  long mLD4C;
+  long mLD50;
+  long mLD54;
+  long mAttackDelayCeiling;
+  long mAttackDelayFloor;
+  /// +0xd60 (EECPDefenseCommander 0x78866: minutes before the citizens' raid)
+  long mInitialAttackDelayMax;
+  long mInitialAttackDelayMin;
+  long mAttackGroupModifierEasy;
+  long mAttackGroupModifierMedium;
+  long mAttackGroupModifierHard;
+  /// +0xd74 (EECPDefenseCommander 0x78866: the building count limit)
+  long mBonzaiAttackLevel;
+  long mLD78;
+  long mLD7C;
+  long mUnitCostReductionEasy;
+  long mUnitCostReductionHard;
+  long mDefenseGroupSizeMax;
+  long mDefenseGroupSizeMin;
+  long mEpochFrequencyMax;
+  long mEpochFrequencyMin;
+  long mEpochFrequencyModifierEasy;
+  long mEpochFrequencyModifierHard;
+  long mEpochCatchUpMin;
+  long mEpochCatchUpMax;
+  long mExpansionTimerEasy;
+  long mExpansionTimerMedium;
+  long mExpansionTimerHard;
+  long mHeroMaxPerGroup;
+  long mNumImprovedAttributes;
+  long mNumImprovedUnitTypes;
+  long mReplenishDelayMax;
+  long mReplenishDelayMin;
+  long mNumLandExplorers;
+  long mNumChokePointsToGuard;
+  long mAntiAirMax;
+  long mAirportMax;
+  long mArcheryRangeMax;
+  long mBarracksMax;
+  long mDockMax;
+  long mGranaryMax;
+  long mHospitalMax;
+  long mCyberFactoryMax;
+  long mCyberLabMax;
+  long mNavalYardMax;
+  long mSiegeFactoryMax;
+  long mSpaceDockMax;
+  long mStableMax;
+  long mTankFactoryMax;
+  long mTempleMax;
+  long mTowerMax;
+  long mUniversityMax;
+  long mMinMilitaryBuildingsEasy;
+  long mMinMilitaryBuildingsEasyDM;
+  long mMinMilitaryBuildingsMedium;
+  long mMinMilitaryBuildingsMediumDM;
+  long mMinMilitaryBuildingsHard;
+  long mMinMilitaryBuildingsHardDM;
+  long mPopLimitAdjustmentEasy;
+  long mPopLimitAdjustmentMedium;
+  long mPopLimitAdjustmentHard;
+  long mPriestMaxPerGroup;
+  long mProphetMaxPerGroup;
+  /// +0xe40 (EECPResearchManager::SetNextTime 0x8b1fb scales it by GetResearchFrequencyModifier)
+  long mResearchFrequency;
+  long mResearchFrequencyModifierEasy;
+  long mResearchFrequencyModifierHard;
+  long mDropOffDistance;
+  long mExtraResources;
+  long mNumSeaExplorers;
+  long mTownCenterUpgradeTimer;
+  long mMaxEnabledManagers;
+  long mManagerAttackWait;
+  long mManagerEpochAdvanceWait;
+  long mEnableStockProduction;
+  long mEnableStockResource;
+  long mEnableStockCivilization;
+  long mEnableStockExploration;
+  long mEnableStockDefense;
+  long mEnableStockBuild;
+  long mLE80;
+  long mEnableStockResearch;
+  long mEnableStockCombat;
+  long mUnitsPerAntiAirBuilding;
+  long mUnitsPerAirport;
+  long mUnitsPerArcheryRange;
+  long mUnitsPerBarracks;
+  long mUnitsPerDock;
+  long mUnitsPerGranary;
+  long mUnitsPerHospital;
+  long mUnitsPerCyberFactory;
+  long mUnitsPerCyberLab;
+  long mUnitsPerNavalYard;
+  long mUnitsPerSiegeFactory;
+  long mUnitsPerSpaceDock;
+  long mUnitsPerStable;
+  long mUnitsPerTankFactory;
+  long mUnitsPerTemple;
+  long mUnitsPerTower;
+  long mUnitsPerUniversity;
+  long mCapitolUpgradeTimer;
+  long mMaxFlameThrowers;
+  /// +0xed8
+  long mTownGuardUpdateEasy;
+  /// +0xedc
+  long mTownGuardUpdateMedium;
+  /// +0xee0
+  long mTownGuardUpdateHard;
+  /// +0xee4
+  long mDMTownGuardUpdateEasy;
+  /// +0xee8
+  long mDMTownGuardUpdateMedium;
+  /// +0xeec
+  long mDMTownGuardUpdateHard;
+  long mDefensiveUnitUpdateEasy;
+  long mDefensiveUnitUpdateMedium;
+  long mDefensiveUnitUpdateHard;
+  long mDMDefensiveUnitUpdateEasy;
+  long mDMDefensiveUnitUpdateMedium;
+  long mDMDefensiveUnitUpdateHard;
+  long mIslandExpansionTimerEasy;
+  long mIslandExpansionTimerMedium;
+  long mIslandExpansionTimerHard;
+  long mLF14;
+  long mLF18;
+  long mLF1C;
+  long mLF20;
+  long mLF24;
+  /// (unsigned: Load)
+  unsigned long mNextAttackTime;
+  /// (unsigned: Load)
+  unsigned long mNextEnableTime;
+  long mLastDamagedTime;
+  long mNextPopulationTime;
+  /// (unsigned: Load)
+  unsigned long mNextExpansionTime;
+  /// (unsigned: Load)
+  unsigned long mDMEarlyAttackTime;
+  /// (unsigned: Load)
+  unsigned long mNextIslandExpansionTime;
+  bool mCanAttack;
+  /// +0xf45 (set: Update skips the managers)
+  bool mIsStarted;
+  bool mIsEnableTimeSet;
+  bool mCitizenDamaged;
+  bool mBuildingDamaged;
+  /// +0xf49 (Update is only called while set; provisional name)
+  bool mActive;
+  bool mUsesFishing;
+  bool mIsCheating;
+  bool mCanBuild;
+  bool mCanExplore;
+  bool mBF4E;
+  bool mCanGather;
+  bool mCanDefend;
+  bool mIsCitizenPercentageSet;
+  bool mIgnoreOthers;
+  bool mReplaceOnLoad;
+  bool mRegroupPending;
+  bool mAttackStarted;
+};
+
+/// One record of the behaviour table (`EECPBehavior`, ee/EECPBehavior.h: 56 bytes).
+struct EeCpBehavior {
+  int32_t unused1;
+  /// the slot (records with index <= 0 are skipped)
+  int32_t index;
+  int32_t i1_min;
+  int32_t i1_max;
+  /// `mIntValue1`
+  int32_t i1;
+  int32_t i2_min;
+  int32_t i2_max;
+  /// `mIntValue2`
+  int32_t i2;
+  int32_t unused2;
+  int32_t float_min;
+  int32_t float_max;
+  int32_t float_scale;
+  /// `mFloatValue`
+  float fv;
+  bool settable;
+};
+
+/// What a load read past the fields: the running state of a 0.256-or-later save (the caller puts it back at the
+/// first tick) and whether the fields read without an error before it.
+struct EeCpLoaded {
+  /// the result was kErrorOK after the favourite space type (the original registered the favourites' restore
+  /// there, for a 0.254-or-later save)
+  bool favorites_ok;
+  /// the running state below was read
+  bool running;
+  long population_cap;
+  bool enable_time_set;
+  bool regroup_pending;
+  long next_population_time;
+  long last_damaged_time;
+};
+
+/// The game's generator for [`ee_cp_set_next_attack_time`]: `GetRandom(min, max)`.
+using EeCpRandomFn = long(*)(void *ctx, long min, long max);
+
 extern "C" {
 
 /// Steps over a retail file's combat manager block (`EECPCombatManager::Load` at 0.228-0.250).
@@ -41,6 +427,121 @@ int32_t ee_cp_skip_legacy_exploration(void *file,
                                       EeUnitsPlayerSaveFn host,
                                       uint32_t major,
                                       uint32_t minor);
+
+/// `EEComputerPlayer::Init`'s values (both constructors).
+///
+/// # Safety
+/// `p` is the computer player's record; `behaviors` points to `gCPBehaviors` (129 records).
+void ee_cp_init(EeCpFields *p,
+                const EeCpBehavior *behaviors,
+                long difficulty,
+                unsigned long player_id,
+                bool cheat_cost);
+
+/// `EEComputerPlayer::Load` after `EEPlayer::Load` (its result `result`).
+///
+/// # Safety
+/// `host` serves the file's primitives and `cp::save`'s operations on `ctx`; `p` is the player's record; `out` is
+/// valid.
+int32_t ee_cp_load(void *ctx,
+                   EeUnitsPlayerSaveFn host,
+                   EeCpFields *p,
+                   uint32_t major,
+                   uint32_t minor,
+                   int32_t result,
+                   EeCpLoaded *out);
+
+/// `EEComputerPlayer::Save` after `EEPlayer::Save` (its result `result`).
+///
+/// # Safety
+/// As [`ee_cp_load`].
+int32_t ee_cp_save(void *ctx,
+                   EeUnitsPlayerSaveFn host,
+                   const EeCpFields *p,
+                   uint32_t major,
+                   uint32_t minor,
+                   uint32_t game_time,
+                   int32_t result);
+
+/// `GetAttackDelayModifier`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_attack_delay_modifier(const EeCpFields *p);
+
+/// `GetAttackFrequencyModifier`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_attack_frequency_modifier(const EeCpFields *p);
+
+/// `GetUnitCostModifier`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_unit_cost_modifier(const EeCpFields *p);
+
+/// `GetDMAttackFrequencyModifier`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_dm_attack_frequency_modifier(const EeCpFields *p);
+
+/// `GetDMInitialAttackModifier`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_dm_initial_attack_modifier(const EeCpFields *p);
+
+/// `GetPopLimitAdjustment`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+float ee_cp_pop_limit_adjustment(const EeCpFields *p);
+
+/// `GetIslandExpansionTimer`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+unsigned long ee_cp_island_expansion_timer(const EeCpFields *p);
+
+/// `ScaleCost`.
+///
+/// # Safety
+/// `p` is a computer player's record.
+long ee_cp_scale_cost(const EeCpFields *p, long cost);
+
+/// The scenario effects' setters (`what`: 0 `SetDMAttackFrequencyModifier`, 1 `SetDMInitialAttackModifier`, 2
+/// `SetIslandExpansionTimer` with `value` a whole number of ms) for the player's difficulty.
+///
+/// # Safety
+/// `p` is a computer player's record.
+void ee_cp_set_by_difficulty(EeCpFields *p,
+                             uint32_t what,
+                             float value,
+                             unsigned long timer);
+
+/// `SetNextAttackTime`.
+///
+/// # Safety
+/// `p` is a computer player's record; `random` accepts `ctx`.
+void ee_cp_set_next_attack_time(EeCpFields *p,
+                                unsigned long time,
+                                long epochs,
+                                bool deathmatch,
+                                EeCpRandomFn random,
+                                void *ctx);
+
+/// `RestoreManagers`' field steps: `what` 0 rebases the next attack time to `game_time`, 1 the next expansion time,
+/// 2 the bounds, drop-off distance and regroup (`ok`: the restores succeeded), 3 the pre-0.229 timers
+/// (`game_time` the minor, `ok` major > 0).
+///
+/// # Safety
+/// `p` is a computer player's record.
+void ee_cp_restore_fields(EeCpFields *p,
+                          uint32_t what,
+                          unsigned long game_time,
+                          bool ok);
 
 }  // extern "C"
 

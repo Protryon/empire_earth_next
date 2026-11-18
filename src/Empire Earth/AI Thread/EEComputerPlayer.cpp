@@ -68,7 +68,6 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPExperimentTimers.h"
-#include "rust/sim/cp.h"            // the legacy blocks' readers (ee_sim::cp::legacy_load)
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -520,87 +519,14 @@ unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
 // Returns a cost scaled by the difficulty's unit cost modifier when the AI cheats, never below 0
 long EEComputerPlayer::ScaleCost(long inCost)
 {
-    long theResult = inCost;
-    if (this->mIsCheating)
-        theResult = UMFloatToLong(this->GetUnitCostModifier() * inCost);
-    if (theResult < 0)
-        theResult = 0;
-    return theResult;
+    return ee_cp_scale_cost(this, inCost);
 }
 
-// Returns the attack delay factor for easy or hard difficulty (percent / 100), else 1
-float EEComputerPlayer::GetAttackDelayModifier()
-{
-    float theResult = 1.0f;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mAttackDelayModifierEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mAttackDelayModifierHard * 0.01f;
-    return theResult;
-}
 
-// Returns the attack frequency factor for easy or hard difficulty (percent / 100), else 1
-float EEComputerPlayer::GetAttackFrequencyModifier()
-{
-    float theResult = 1.0f;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mAttackFrequencyModifierEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mAttackFrequencyModifierHard * 0.01f;
-    return theResult;
-}
 
-// Returns the unit cost factor for the AI's difficulty (percent / 100)
-float EEComputerPlayer::GetUnitCostModifier()
-{
-    float theResult;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mUnitCostReductionEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mUnitCostReductionHard * 0.01f;
-    else
-        theResult = this->mUnitCostMedium * 0.01f;
-    return theResult;
-}
 
-// Returns the deathmatch attack frequency factor for the AI's difficulty, else 1
-float EEComputerPlayer::GetDMAttackFrequencyModifier()
-{
-    float theResult = 1.0f;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mDMAttackFrequencyModifierEasy;
-    else if (this->mDifficulty == kDifficultyMedium)
-        theResult = this->mDMAttackFrequencyModifierMedium;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mDMAttackFrequencyModifierHard;
-    return theResult;
-}
 
-// Returns the deathmatch initial attack factor for the AI's difficulty, else 1
-float EEComputerPlayer::GetDMInitialAttackModifier()
-{
-    float theResult = 1.0f;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mDMInitialAttackModifierEasy;
-    else if (this->mDifficulty == kDifficultyMedium)
-        theResult = this->mDMInitialAttackModifierMedium;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mDMInitialAttackModifierHard;
-    return theResult;
-}
 
-// Returns the epoch advance factor: the deathmatch catch-up value, else easy/hard percent / 100, else 1
-float EEComputerPlayer::GetEpochFrequencyModifier()
-{
-    float theResult = 1.0f;
-    if (this->IsDeathmatch())
-        theResult = this->mEpochCatchUpDeathmatch;
-    else if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mEpochFrequencyModifierEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mEpochFrequencyModifierHard * 0.01f;
-    return theResult;
-}
 
 // Returns true for a deathmatch game (resource setting 4, not a scenario)
 bool EEComputerPlayer::IsDeathmatch()
@@ -611,18 +537,6 @@ bool EEComputerPlayer::IsDeathmatch()
     return theResult;
 }
 
-// Returns the population cap factor for the AI's difficulty (percent / 100)
-float EEComputerPlayer::GetPopLimitAdjustment()
-{
-    float theResult;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mPopLimitAdjustmentEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mPopLimitAdjustmentHard * 0.01f;
-    else
-        theResult = this->mPopLimitAdjustmentMedium * 0.01f;
-    return theResult;
-}
 
 // Returns the AI's population cap, working it out first if unset and inactive; the player's limit when ignoring others
 long EEComputerPlayer::GetPopulationLimit(long inArg)
@@ -634,25 +548,7 @@ long EEComputerPlayer::GetPopulationLimit(long inArg)
     return this->mPopulationCap;
 }
 
-// Returns the island expansion interval for the AI's difficulty, else 60 seconds
-unsigned long EEComputerPlayer::GetIslandExpansionTimer()
-{
-    unsigned long theResult = 60000;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mIslandExpansionTimerEasy;
-    else if (this->mDifficulty == kDifficultyMedium)
-        theResult = this->mIslandExpansionTimerMedium;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mIslandExpansionTimerHard;
-    return theResult;
-}
 
-// Returns true on an island or planets map once the next island expansion time has come
-bool EEComputerPlayer::IsIslandExpansionDue()
-{
-    return gWorld.mMap != NULL && ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)
-        && gPhysics->mGameTime >= this->mNextIslandExpansionTime;
-}
 
 // Collects nature's stone, gold, iron and forage resources reachable from the town center (all on water maps)
 // into outUnits and counts the fish
@@ -763,735 +659,98 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     }
 }
 
-// Initialises the computer player: difficulty, default favourite unit types, timers and flags, every tuning
-// value from the AI behaviour records, then creates the exploration, civilization, combat and other managers
-// The tuning members come from the computer player behaviour records (gCPBehaviors, db\dbcpbehavior.dat:
-// 0x4e6118 + 0x38 * index). As in the original, both the attack-frequency and the attack-delay bounds read
-// record 19 (Attack Frequency Boundaries); record 21 (Attack Frequency Boundary) is only set by scenario effects
+// Initialises the computer player: the difficulty, the default favourite unit types, the timers and flags and every
+// tuning value from the AI behaviour records (gCPBehaviors, db\dbcpbehavior.dat), then the placement and the combat
+// manager
+
 void EEComputerPlayer::Init()
 {
-    this->mDifficulty = EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty);   // gameoptions.yaml ai_level
-    this->mLBD4 = 0;
-    this->mFavoriteLandType = 20;
-    this->mFavoriteSeaType = 242;
-    this->mFavoriteAirType = 72;
-    this->mFavoriteSpaceType = 730;
-    this->mSeed = this->mPlayerID % 10;
-    this->mNextAttackTime = 0;
-    this->mCanAttack = true;
-    this->mIsStarted = false;
-    this->mLF24 = 0;
-    this->mLCC8 = 0;
-    this->mLCCC = 0;
-    this->mLCD0 = 0;
-    this->mLCD4 = 0;
-    this->mNextEnableTime = 0;
-    this->mIsEnableTimeSet = false;
-    this->mLastDamagedTime = 0;
-    this->mBuildingDamaged = false;
-    this->mCitizenDamaged = false;
-    this->mActive = true;
-    this->mIgnoreOthers = false;
-    this->mNextPopulationTime = 0;
-    this->mPopulationCap = 0;
-    this->mNextExpansionTime = 0;
-    this->mNextIslandExpansionTime = 0;
-    this->mUsesFishing = false;
-    this->mAssistAlliesDelayEasy = gCPBehaviors[kCPBehaviorTroopsToAssistAllies].mIntValue1 * 60000;
-    this->mAssistAlliesDelayMedium = gCPBehaviors[kCPBehaviorTroopsToAssistAllies].mIntValue2 * 60000;
-    this->mAssistAlliesDelayHard = (long)gCPBehaviors[kCPBehaviorTroopsToAssistAllies].mFloatValue * 60000;
-    this->mNavalUnitWeight = gCPBehaviors[kCPBehaviorNavalUnitWeight].mFloatValue;
-    this->mAirUnitWeight = gCPBehaviors[kCPBehaviorAirUnitWeight].mFloatValue;
-    this->mMaxFlameThrowers = gCPBehaviors[kCPBehaviorDesiredNumberOfFlameThrowers].mIntValue1;
-    this->mUnitCostMedium = gCPBehaviors[kCPBehaviorUnitCostReductionMedium].mFloatValue;
-    this->mCarrierMaxPerGroup = gCPBehaviors[kCPBehaviorCarrierUsage].mIntValue1;
-    this->mCarrierPopPercentage = gCPBehaviors[kCPBehaviorCarrierUsage].mFloatValue;
-    this->mCarrierChance = gCPBehaviors[kCPBehaviorCarrierUsage].mIntValue2 * 0.01f;
-    this->mNumAirExplorers = gCPBehaviors[kCPBehaviorNumberOfAirExplorers].mIntValue1;
-    this->mComputerAggression = gCPBehaviors[kCPBehaviorComputerVsComputerAggression].mFloatValue;
-    this->mAttackEnemyChance = gCPBehaviors[kCPBehaviorAttackEnemy].mIntValue1;
-    this->mAttackToClaimResourceChance = gCPBehaviors[kCPBehaviorAttackToClaimResource].mIntValue1;
-    this->mAttackForRevengeChance = gCPBehaviors[kCPBehaviorAttackForRevenge].mIntValue1;
-    this->mAttackGroupSizeMax = gCPBehaviors[kCPBehaviorAttackGroupSize].mIntValue2;
-    this->mAttackGroupSizeMin = gCPBehaviors[kCPBehaviorAttackGroupSize].mIntValue1;
-    this->mAttackFrequencyPerEpoch = gCPBehaviors[kCPBehaviorAttackFrequencyPerEpoch].mFloatValue;
-    this->mAttackFrequencyModifierEasy = gCPBehaviors[kCPBehaviorAttackFrequencyModifier].mIntValue1;
-    this->mAttackFrequencyModifierHard = gCPBehaviors[kCPBehaviorAttackFrequencyModifier].mIntValue2;
-    this->mAttackFrequencyCeiling = gCPBehaviors[kCPBehaviorAttackFrequencyBoundary].mIntValue2;
-    this->mAttackFrequencyFloor = gCPBehaviors[kCPBehaviorAttackFrequencyBoundary].mIntValue1;
-    this->mAttackFrequencyMax = gCPBehaviors[kCPBehaviorAttackFrequency].mIntValue2;
-    this->mAttackFrequencyMin = gCPBehaviors[kCPBehaviorAttackFrequency].mIntValue1;
-    this->mInitialAttackDelayPerEpoch = gCPBehaviors[kCPBehaviorInitialAttackDelayPerEpoch].mIntValue1;
-    this->mAttackDelayModifierEasy = gCPBehaviors[kCPBehaviorAttackDelayModifier].mIntValue1;
-    this->mAttackDelayModifierHard = gCPBehaviors[kCPBehaviorAttackDelayModifier].mIntValue2;
-    this->mAttackDelayCeiling = gCPBehaviors[kCPBehaviorAttackFrequencyBoundaries].mIntValue2;
-    this->mAttackDelayFloor = gCPBehaviors[kCPBehaviorAttackFrequencyBoundaries].mIntValue1;
-    this->mInitialAttackDelayMax = gCPBehaviors[kCPBehaviorInitialAttackDelay].mIntValue2;
-    this->mInitialAttackDelayMin = gCPBehaviors[kCPBehaviorInitialAttackDelay].mIntValue1;
-    this->mSpecializedUnitPercentage = gCPBehaviors[kCPBehaviorSpecializedUnitPercentage].mFloatValue;
-    this->mAttackGroupModifierEasy = gCPBehaviors[kCPBehaviorAttackGroupModifier].mIntValue1;
-    this->mAttackGroupModifierMedium = gCPBehaviors[kCPBehaviorAttackGroupModifier].mIntValue2;
-    this->mAttackGroupModifierHard = (long)gCPBehaviors[kCPBehaviorAttackGroupModifier].mFloatValue;
-    this->mRPSSelectionNonIslands = gCPBehaviors[kCPBehaviorRPSSelectionNonIslands].mFloatValue;
-    this->mRPSSelectionIslands = gCPBehaviors[kCPBehaviorRPSSelectionIslands].mFloatValue;
-    this->mSpecializedUnitChance = gCPBehaviors[kCPBehaviorSpecializedUnitSelectionChance].mFloatValue;
-    this->mBonzaiAttackLevel = gCPBehaviors[kCPBehaviorBonzaiAttackLevel].mIntValue1;
-    this->mDMEarlyAttackTime = gCPBehaviors[kCPBehaviorDMEarlyAttack].mIntValue2 * 60000;
-    this->mDMEarlyAttackScale = gCPBehaviors[kCPBehaviorDMEarlyAttack].mIntValue1 * 0.01f;
-    this->mTownGuardPercentage = gCPBehaviors[kCPBehaviorTownGuardPercentage].mFloatValue;
-    this->mLD78 = gCPBehaviors[17].mIntValue1;
-    this->mLD7C = gCPBehaviors[16].mIntValue1;
-    this->mCitizenPercentage = gCPBehaviors[kCPBehaviorCitizenPercentage].mFloatValue;
-    this->mUnitCostReductionEasy = gCPBehaviors[kCPBehaviorUnitCostReductionEasyAndHard].mIntValue1;
-    this->mUnitCostReductionHard = gCPBehaviors[kCPBehaviorUnitCostReductionEasyAndHard].mIntValue2;
-    this->mDefenseGroupSizeMax = gCPBehaviors[kCPBehaviorDefenseGroupSizeModifierPercentage].mIntValue2;
-    this->mDefenseGroupSizeMin = gCPBehaviors[kCPBehaviorDefenseGroupSizeModifierPercentage].mIntValue1;
-    this->mEpochFrequencyMax = gCPBehaviors[kCPBehaviorEpochFrequency].mIntValue2;
-    this->mEpochFrequencyMin = gCPBehaviors[kCPBehaviorEpochFrequency].mIntValue1;
-    this->mEpochCatchUpMax = gCPBehaviors[kCPBehaviorEpochCatchUp].mIntValue2;
-    this->mEpochCatchUpMin = gCPBehaviors[kCPBehaviorEpochCatchUp].mIntValue1;
-    this->mEpochCatchUpEasy = gCPBehaviors[kCPBehaviorEpochCatchUpModifier].mIntValue1 * 0.01f;
-    this->mEpochCatchUpHard = gCPBehaviors[kCPBehaviorEpochCatchUpModifier].mIntValue2 * 0.01f;
-    this->mEpochCatchUpDeathmatch = gCPBehaviors[kCPBehaviorEpochCatchUpModifier].mFloatValue * 0.01f;
-    this->mEpochFrequencyModifierEasy = gCPBehaviors[kCPBehaviorEpochFrequencyModifier].mIntValue1;
-    this->mEpochFrequencyModifierHard = gCPBehaviors[kCPBehaviorEpochFrequencyModifier].mIntValue2;
-    this->mExpansionTimerEasy = gCPBehaviors[kCPBehaviorExpansionTimer].mIntValue1;
-    this->mExpansionTimerMedium = gCPBehaviors[kCPBehaviorExpansionTimer].mIntValue2;
-    this->mExpansionTimerHard = (long)gCPBehaviors[kCPBehaviorExpansionTimer].mFloatValue;
-    this->mGuardContinentPercentage = gCPBehaviors[kCPBehaviorGuardContinentPercentage].mFloatValue;
-    this->mGuardChokepointAirPercentage = gCPBehaviors[kCPBehaviorGuardChokepointAirPercentage].mFloatValue;
-    this->mGuardChokepointPercentage = gCPBehaviors[kCPBehaviorGuardChokepointPercentage].mFloatValue;
-    this->mGuardHighGroundPercentage = gCPBehaviors[kCPBehaviorGuardHighGroundPercentage].mFloatValue;
-    this->mFC38 = gCPBehaviors[79].mFloatValue;
-    this->mFC3C = gCPBehaviors[83].mFloatValue;
-    this->mFC40 = gCPBehaviors[80].mFloatValue;
-    this->mFC44 = gCPBehaviors[74].mFloatValue;
-    this->mFC48 = gCPBehaviors[84].mFloatValue;
-    this->mFC4C = gCPBehaviors[81].mFloatValue;
-    this->mFC50 = gCPBehaviors[75].mFloatValue;
-    this->mFC54 = gCPBehaviors[85].mFloatValue;
-    this->mFC58 = gCPBehaviors[76].mFloatValue;
-    this->mGuardTownPercentage = gCPBehaviors[kCPBehaviorGuardTownPercentage].mFloatValue;
-    this->mGuardTownLandPercentage = gCPBehaviors[kCPBehaviorGuardTownLandPercentage].mFloatValue;
-    this->mGuardWaterwayPercentage = gCPBehaviors[kCPBehaviorGuardWaterwayPercentage].mFloatValue;
-    this->mHeroMaxPerGroup = gCPBehaviors[kCPBehaviorHeroUsage].mIntValue1;
-    this->mHeroPopPercentage = gCPBehaviors[kCPBehaviorHeroUsage].mFloatValue;
-    this->mHeroChance = gCPBehaviors[kCPBehaviorHeroUsage].mIntValue2 * 0.01f;
-    this->mNumImprovedUnitTypes = gCPBehaviors[kCPBehaviorUnitSelectedForImprovements].mIntValue1;
-    this->mNumImprovedAttributes = gCPBehaviors[kCPBehaviorUnitAttributesSelectedForImprovements].mIntValue1;
-    this->mReplenishDelayMax = gCPBehaviors[kCPBehaviorInitialDelayInReplenishmentDefenseUnits].mIntValue2;
-    this->mReplenishDelayMin = gCPBehaviors[kCPBehaviorInitialDelayInReplenishmentDefenseUnits].mIntValue1;
-    this->mNumLandExplorers = gCPBehaviors[kCPBehaviorNumberOfLandExplorers].mIntValue1;
-    this->mNumChokePointsToGuard = gCPBehaviors[kCPBehaviorNumChokePointsToGuard].mIntValue1;
-    this->mAntiAirMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfAntiAirBuildings].mFloatValue;
-    this->mAirportMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfAirports].mFloatValue;
-    this->mArcheryRangeMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfArcheryRanges].mFloatValue;
-    this->mBarracksMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfBarracks].mFloatValue;
-    this->mDockMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfDocks].mFloatValue;
-    this->mGranaryMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfGranaries].mFloatValue;
-    this->mHospitalMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfHospitals].mFloatValue;
-    this->mCyberFactoryMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfCyberFactories].mFloatValue;
-    this->mCyberLabMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfCyberLaboratories].mFloatValue;
-    this->mNavalYardMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfNavalYards].mFloatValue;
-    this->mUniversityMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfUniversities].mFloatValue;
-    this->mSiegeFactoryMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfSiegeFactories].mFloatValue;
-    this->mSpaceDockMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfSpaceDocks].mFloatValue;
-    this->mStableMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfStables].mFloatValue;
-    this->mTankFactoryMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfTankFactories].mFloatValue;
-    this->mTempleMax = (long)gCPBehaviors[kCPBehaviorDesiredNumberOfTemples].mFloatValue;
-    this->mTowerMax = gCPBehaviors[kCPBehaviorDesiredNumberOfTowers].mIntValue2;
-    this->mDefensiveUnitCap = gCPBehaviors[kCPBehaviorDefensiveUnitCap].mFloatValue;
-    this->mSiegeWeaponPercentage = gCPBehaviors[kCPBehaviorSiegeWeaponPercentage].mFloatValue * 0.01f;
-    this->mMaxAttackResponseRange = gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue;
-    this->mMinMilitaryBuildingsEasy = gCPBehaviors[kCPBehaviorEasyMinNumberMilitaryBuildings].mIntValue1;
-    this->mMinMilitaryBuildingsEasyDM = gCPBehaviors[kCPBehaviorEasyMinNumberMilitaryBuildings].mIntValue2;
-    this->mMinMilitaryBuildingsMedium = gCPBehaviors[kCPBehaviorMediumMinNumberMilitaryBuildings].mIntValue1;
-    this->mMinMilitaryBuildingsMediumDM = gCPBehaviors[kCPBehaviorMediumMinNumberMilitaryBuildings].mIntValue2;
-    this->mMinMilitaryBuildingsHard = gCPBehaviors[kCPBehaviorHardMinNumberMilitaryBuildings].mIntValue1;
-    this->mMinMilitaryBuildingsHardDM = gCPBehaviors[kCPBehaviorHardMinNumberMilitaryBuildings].mIntValue2;
-    this->mMilitaryPopPercentage = gCPBehaviors[kCPBehaviorNumberOfMilitaryUnitsToTrain].mFloatValue;
-    this->mAidThreatThreshold = gCPBehaviors[kCPBehaviorAidThreatThreshold].mFloatValue;
-    this->mPopLimitAdjustmentEasy = gCPBehaviors[kCPBehaviorPopulationLimitAdjustment].mIntValue1;
-    this->mPopLimitAdjustmentMedium = gCPBehaviors[kCPBehaviorPopulationLimitAdjustment].mIntValue2;
-    this->mPopLimitAdjustmentHard = (long)gCPBehaviors[kCPBehaviorPopulationLimitAdjustment].mFloatValue;
-    this->mPriestMaxPerGroup = gCPBehaviors[kCPBehaviorPriestUsage].mIntValue1;
-    this->mPriestPopPercentage = gCPBehaviors[kCPBehaviorPriestUsage].mFloatValue;
-    this->mPriestChance = gCPBehaviors[kCPBehaviorPriestUsage].mIntValue2 * 0.01f;
-    this->mProphetMaxPerGroup = gCPBehaviors[kCPBehaviorProphetUsage].mIntValue1;
-    this->mProphetPopPercentage = gCPBehaviors[kCPBehaviorProphetUsage].mFloatValue;
-    this->mProphetChance = gCPBehaviors[kCPBehaviorProphetUsage].mIntValue2 * 0.01f;
-    this->mResearchFrequency = gCPBehaviors[kCPBehaviorResearchFrequency].mIntValue1;
-    this->mResearchFrequencyModifierEasy = gCPBehaviors[kCPBehaviorResearchFrequencyModifier].mIntValue1;
-    this->mResearchFrequencyModifierHard = gCPBehaviors[kCPBehaviorResearchFrequencyModifier].mIntValue2;
-    this->mDropOffDistance = gCPBehaviors[kCPBehaviorResourceDropOffDistance].mIntValue1;
-    this->mExtraResources = gCPBehaviors[kCPBehaviorComputerPlayerExtraResources].mIntValue1;
-    this->mNumSeaExplorers = gCPBehaviors[kCPBehaviorNumberOfSeaExplorers].mIntValue1;
-    this->mTownCenterUpgradeTimer = gCPBehaviors[kCPBehaviorTownCenterUpgradeTimer].mIntValue1;
-    this->mMaxEnabledManagers = gCPBehaviors[kCPBehaviorMaxEnabledManagers].mIntValue1;
-    this->mManagerAttackWait = gCPBehaviors[kCPBehaviorManagerAttackWait].mIntValue1;
-    this->mManagerEpochAdvanceWait = gCPBehaviors[kCPBehaviorManagerEpochAdvanceWait].mIntValue1;
-    this->mEnableStockProduction = gCPBehaviors[kCPBehaviorEnableStockProduction].mIntValue1;
-    this->mEnableStockResource = gCPBehaviors[kCPBehaviorEnableStockResource].mIntValue1;
-    this->mEnableStockCivilization = gCPBehaviors[kCPBehaviorEnableStockCivilization].mIntValue1;
-    this->mEnableStockExploration = gCPBehaviors[kCPBehaviorEnableStockExploration].mIntValue1;
-    this->mEnableStockDefense = gCPBehaviors[kCPBehaviorEnableStockDefense].mIntValue1;
-    this->mEnableStockBuild = gCPBehaviors[kCPBehaviorEnableStockBuild].mIntValue1;
-    this->mLE80 = gCPBehaviors[60].mIntValue1;
-    this->mEnableStockResearch = gCPBehaviors[kCPBehaviorEnableStockResearch].mIntValue1;
-    this->mEnableStockCombat = gCPBehaviors[kCPBehaviorEnableStockCombat].mIntValue1;
-    this->mEnableInterval = gCPBehaviors[kCPBehaviorEnableInterval].mFloatValue;
-    this->mMilitaryCountWeight = gCPBehaviors[kCPBehaviorCountWeights].mIntValue1 * 0.01f;
-    this->mWorkerCountWeight = gCPBehaviors[kCPBehaviorCountWeights].mIntValue2 * 0.01f;
-    this->mUnitsPerAntiAirBuilding = gCPBehaviors[kCPBehaviorDesiredNumberOfAntiAirBuildings].mIntValue1;
-    this->mUnitsPerAirport = gCPBehaviors[kCPBehaviorDesiredNumberOfAirports].mIntValue1;
-    this->mUnitsPerArcheryRange = gCPBehaviors[kCPBehaviorDesiredNumberOfArcheryRanges].mIntValue1;
-    this->mUnitsPerBarracks = gCPBehaviors[kCPBehaviorDesiredNumberOfBarracks].mIntValue1;
-    this->mUnitsPerDock = gCPBehaviors[kCPBehaviorDesiredNumberOfDocks].mIntValue1;
-    this->mUnitsPerGranary = gCPBehaviors[kCPBehaviorDesiredNumberOfGranaries].mIntValue1;
-    this->mUnitsPerHospital = gCPBehaviors[kCPBehaviorDesiredNumberOfHospitals].mIntValue1;
-    this->mUnitsPerCyberFactory = gCPBehaviors[kCPBehaviorDesiredNumberOfCyberFactories].mIntValue1;
-    this->mUnitsPerCyberLab = gCPBehaviors[kCPBehaviorDesiredNumberOfCyberLaboratories].mIntValue1;
-    this->mUnitsPerNavalYard = gCPBehaviors[kCPBehaviorDesiredNumberOfNavalYards].mIntValue1;
-    this->mUnitsPerUniversity = gCPBehaviors[kCPBehaviorDesiredNumberOfUniversities].mIntValue1;
-    this->mUnitsPerSiegeFactory = gCPBehaviors[kCPBehaviorDesiredNumberOfSiegeFactories].mIntValue1;
-    this->mUnitsPerSpaceDock = gCPBehaviors[kCPBehaviorDesiredNumberOfSpaceDocks].mIntValue1;
-    this->mUnitsPerStable = gCPBehaviors[kCPBehaviorDesiredNumberOfStables].mIntValue1;
-    this->mUnitsPerTankFactory = gCPBehaviors[kCPBehaviorDesiredNumberOfTankFactories].mIntValue1;
-    this->mUnitsPerTemple = gCPBehaviors[kCPBehaviorDesiredNumberOfTemples].mIntValue1;
-    this->mUnitsPerTower = gCPBehaviors[kCPBehaviorDesiredNumberOfTowers].mIntValue1;
-    this->mCapitolUpgradeTimer = gCPBehaviors[kCPBehaviorCapitolUpgradeTimer].mIntValue1;
-    this->mTowerSpacing = gCPBehaviors[kCPBehaviorDesiredNumberOfTowers].mFloatValue;
-    this->mShipsToMaintainDMEasy = gCPBehaviors[kCPBehaviorShipsToMaintainDeathmatch].mIntValue1;
-    this->mShipsToMaintainDMMedium = gCPBehaviors[kCPBehaviorShipsToMaintainDeathmatch].mIntValue2;
-    this->mShipsToMaintainDMHard = (long)gCPBehaviors[kCPBehaviorShipsToMaintainDeathmatch].mFloatValue;
-    this->mShipsToMaintainEasy = gCPBehaviors[kCPBehaviorShipsToMaintain].mIntValue1;
-    this->mShipsToMaintainMedium = gCPBehaviors[kCPBehaviorShipsToMaintain].mIntValue2;
-    this->mShipsToMaintainHard = (long)gCPBehaviors[kCPBehaviorShipsToMaintain].mFloatValue;
-    this->mShipMaintenanceTimer = gCPBehaviors[kCPBehaviorMinimumShipMaintenanceTimer].mIntValue1;
-    this->mDefensiveUnitUpdateEasy = gCPBehaviors[kCPBehaviorDefensiveUnitUpdate].mIntValue1 * 60000;
-    this->mDefensiveUnitUpdateMedium = gCPBehaviors[kCPBehaviorDefensiveUnitUpdate].mIntValue2 * 60000;
-    this->mDefensiveUnitUpdateHard = (long)gCPBehaviors[kCPBehaviorDefensiveUnitUpdate].mFloatValue * 60000;
-    this->mDMDefensiveUnitUpdateEasy = gCPBehaviors[kCPBehaviorDefensiveUnitUpdateDeathmatch].mIntValue1 * 60000;
-    this->mDMDefensiveUnitUpdateMedium = gCPBehaviors[kCPBehaviorDefensiveUnitUpdateDeathmatch].mIntValue2 * 60000;
-    this->mDMDefensiveUnitUpdateHard = (long)gCPBehaviors[kCPBehaviorDefensiveUnitUpdateDeathmatch].mFloatValue * 60000;
-    this->mTownGuardUpdateEasy = gCPBehaviors[kCPBehaviorTownGuardUpdate].mIntValue1 * 60000;
-    this->mTownGuardUpdateMedium = gCPBehaviors[kCPBehaviorTownGuardUpdate].mIntValue2 * 60000;
-    this->mTownGuardUpdateHard = (long)gCPBehaviors[kCPBehaviorTownGuardUpdate].mFloatValue * 60000;
-    this->mDMTownGuardUpdateEasy = gCPBehaviors[kCPBehaviorTownGuardUpdateDeathmatch].mIntValue1 * 60000;
-    this->mDMTownGuardUpdateMedium = gCPBehaviors[kCPBehaviorTownGuardUpdateDeathmatch].mIntValue2 * 60000;
-    this->mDMTownGuardUpdateHard = (long)gCPBehaviors[kCPBehaviorTownGuardUpdateDeathmatch].mFloatValue * 60000;
-    this->mIslandExpansionTimerEasy = gCPBehaviors[kCPBehaviorIslandExpansionTimer].mIntValue1;
-    this->mIslandExpansionTimerMedium = gCPBehaviors[kCPBehaviorIslandExpansionTimer].mIntValue2;
-    this->mIslandExpansionTimerHard = (long)gCPBehaviors[kCPBehaviorIslandExpansionTimer].mFloatValue;
-    this->mDMAttackFrequencyModifierEasy = gCPBehaviors[kCPBehaviorDMAttackFrequencyModifier].mIntValue1 * 0.01f;
-    this->mDMAttackFrequencyModifierMedium = gCPBehaviors[kCPBehaviorDMAttackFrequencyModifier].mIntValue2 * 0.01f;
-    this->mDMAttackFrequencyModifierHard = gCPBehaviors[kCPBehaviorDMAttackFrequencyModifier].mFloatValue * 0.01f;
-    this->mDMInitialAttackModifierEasy = gCPBehaviors[kCPBehaviorDMInitialAttackModifier].mIntValue1 * 0.01f;
-    this->mDMInitialAttackModifierMedium = gCPBehaviors[kCPBehaviorDMInitialAttackModifier].mIntValue2 * 0.01f;
-    this->mDMInitialAttackModifierHard = gCPBehaviors[kCPBehaviorDMInitialAttackModifier].mFloatValue * 0.01f;
-    this->mLD50 = 1;
-    this->mLD54 = 1;
-    this->mLD48 = 1;
-    this->mLD4C = 1;
-    this->mLF14 = -1;
-    this->mLF18 = -1;
-    this->mLF1C = -1;
-    this->mLF20 = -1;
-    this->mDropOffDistance = UMFloatToLong((float)sqrt(this->mDropOffDistance));
-    this->mCanBuild = true;
-    this->mIsCheating = EECPCheatOn(this, kAICheatCost);   // EE_AI_CHEATS (the original: always true)
-    this->mCanDefend = true;
-    this->mBF4E = true;
-    this->mCanExplore = true;
-    this->mCanGather = true;
-    this->mIsCitizenPercentageSet = true;
-    this->mReplaceOnLoad = false;
-    this->mRegroupPending = false;
-    this->mAttackStarted = false;
+    static_assert(sizeof(EeCpBehavior) == sizeof(EECPBehavior), "ee_sim::cp::init reads gCPBehaviors as EeCpBehavior");
+    // the tuning values, timers and flags (ee_sim::cp::init); the difficulty is gameoptions.yaml's ai_level, the cost
+    // cheat EE_AI_CHEATS' (the original: always on)
+    ee_cp_init(this, reinterpret_cast<const EeCpBehavior*>(gCPBehaviors), EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty),
+               this->mPlayerID, EECPCheatOn(this, kAICheatCost));
     this->mPlacement = new EECPPlacement(this);
     this->mCombatManager = new EECPCombatManager(this);
 }
 
-// Loads the computer player from a saved game (the current format only since stage 5): the base player, the combat
-// and civilization managers, the resource centers and the tuning values; returns the first read error
-// Built without /Og while the rest of the unit is -O1 (CLAUDE.md rule 4 evidence: 4,968 [ebp-N] references, every
-// local memory-resident, args re-pushed from [ebp+N] per call, `leave`); the pragma takes the row from 1.29 to 50.66
-// with no other row moving, and with it the function is exact. One version block per save format (the
-// last one current). The local names are chosen for the no-/Og frame hash (docs/LEARNINGS.md): the original names
-// are unknown. make_pair(0L, 0L) is the original's: two literal temporaries and the out-of-line make_pair<long, long>
-// (0x440046), converted to pair<unsigned long, long> inline until the inline budget runs out (the last 3 blocks).
-#pragma optimize("g", off)
+// The C++ parts of Load and Save (ee_sim::cp::save): the file's primitives (EESavePrimitive), the combat manager's
+// and the placement's blocks, the resource centres, the favourite types' history
+struct EECPSaveContext {
+    EEComputerPlayer* mPlayer;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t EECPSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EECPSaveContext& theContext = *static_cast<EECPSaveContext*>(inContext);
+    EEComputerPlayer* thePlayer = theContext.mPlayer;
+    FSFile& theFile = *theContext.mFile;
+    switch (inOp) {
+    case EE_CP_SAVE_COMBAT_LOAD:
+        return thePlayer->mCombatManager->Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_CP_SAVE_PLACEMENT_LOAD:
+        return thePlayer->mPlacement->Load(theFile);
+    case EE_CP_SAVE_TOWN_TILE:
+        io->i = inIndex == 0 ? thePlayer->mPlacement->mTownCenterTile.mX : thePlayer->mPlacement->mTownCenterTile.mY;
+        return kErrorOK;
+    case EE_CP_SAVE_SET_TOWN_TILE:
+        (inIndex == 0 ? thePlayer->mPlacement->mTownCenterTile.mX : thePlayer->mPlacement->mTownCenterTile.mY) = (long)io->i;
+        return kErrorOK;
+    case EE_CP_SAVE_CENTER_LOAD: {
+        EECPResourceCenter* theCenter = new EECPResourceCenter(thePlayer, NULL);
+        long theResult = theCenter->Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+        thePlayer->mResourceCenters.push_back(theCenter);
+        return theResult;
+    }
+    case EE_CP_SAVE_HISTORY_RESIZE:
+        thePlayer->mFavoriteTypeHistory.resize((size_t)io->i, std::make_pair(0UL, 0L));
+        return kErrorOK;
+    case EE_CP_SAVE_HISTORY_FIRST:
+        io->i = (int64_t)thePlayer->mFavoriteTypeHistory[inIndex].first;
+        return kErrorOK;
+    case EE_CP_SAVE_HISTORY_SECOND:
+        io->i = (int64_t)thePlayer->mFavoriteTypeHistory[inIndex].second;
+        return kErrorOK;
+    case EE_CP_SAVE_HISTORY_SET_FIRST:
+        thePlayer->mFavoriteTypeHistory[inIndex].first = (unsigned long)io->i;
+        return kErrorOK;
+    case EE_CP_SAVE_HISTORY_SET_SECOND:
+        thePlayer->mFavoriteTypeHistory[inIndex].second = (long)io->i;
+        return kErrorOK;
+    case EE_CP_SAVE_COMBAT_SAVE:
+        return thePlayer->mCombatManager->Save(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_CP_SAVE_PLACEMENT_SAVE:
+        return thePlayer->mPlacement->Save(theFile);
+    case EE_CP_SAVE_CENTERS:
+        io->i = (int64_t)thePlayer->mResourceCenters.size();
+        return kErrorOK;
+    case EE_CP_SAVE_CENTER_SAVE:
+        return thePlayer->mResourceCenters[inIndex]->Save(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_CP_SAVE_HISTORY_COUNT:
+        io->i = (int64_t)thePlayer->mFavoriteTypeHistory.size();
+        return kErrorOK;
+    }
+    return EESavePrimitive(theFile, inOp, io);
+}
+
+// Loads the computer player from a saved game: the base player, then ee_sim::cp::save's block (the combat manager's
+// and the placement's, or a retail file's legacy blocks; the fields, the resource centres, the history; the
+// refusals of the formats that no longer load); returns the first read error
 long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    long theObsoleteLong = 0;
-    long theObsoleteLong2 = 0;
-    float theOldFloat;
-    EECPResourceCenter* theCenter;
-    unsigned long theCount;
-    unsigned long theIdx;
-    theResult = EEPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-    // stage 5 (docs/AI_RESEARCH.md §8.90): only the original's last two blocks load (from 0.229: the Learning
-    // Campaign's scenarios are 0.231 files; the seventh block lacks four fields, read below from 0.232); the six older
-    // blocks went (save compatibility is not a goal)
-    if (theResult == kErrorOK && inMajorVersion == 0 && inMinorVersion < 0xe5)
-        return kErrorFailed;
-    // port: the merge of main's stages 5 and 6 (save 0.281): the computer player's block without the C++ managers'
-    // timers and intelligence files (0.269, 0.271), the next engine's state block main's version 6; an older save
-    // does not load
-    // A retail file (to 0.250: the campaigns' scenarios) holds the deleted C++ managers' blocks in the original's layout:
-    // stepped over (ee_sim::cp::legacy_load), the build manager's town centre tile kept as the placement's. A port save of
-    // 0.251-0.280 holds them with the port's additions and does not load
-    bool theLegacy = inMajorVersion == 0 && inMinorVersion <= EE_CP_LEGACY_LAST_VERSION;
-    if (theResult == kErrorOK && !theLegacy && !EESaveHasLuaOnlyComputers(inMajorVersion, inMinorVersion))
-        return kErrorFailed;
-    if (theResult == kErrorOK)
-        theResult = theLegacy ? ee_cp_skip_legacy_combat(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion)
-                              : this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == kErrorOK && theLegacy) {
-        U2DPoint<long>& theTile = this->mPlacement->mTownCenterTile;
-        int32_t theXY[2] = {(int32_t)theTile.mX, (int32_t)theTile.mY};
-        theResult = ee_cp_skip_legacy_civilization(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion, theXY);
-        theTile.mX = theXY[0];
-        theTile.mY = theXY[1];
-        if (theResult == kErrorOK)
-            theResult = ee_cp_skip_legacy_exploration(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion);
-    } else if (theResult == kErrorOK)
-        theResult = this->mPlacement->Load(inFile);   // (stage 6: the managers' block is the town centre tile)
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLBD4);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFavoriteLandType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextEnableTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsEnableTimeSet);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mBuildingDamaged);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCitizenDamaged);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsStarted);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextAttackTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mActive);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            // a resource center's read error is reported (it used to be discarded)
-            for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
-                theCenter = new EECPResourceCenter(this, NULL);
-                theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
-                this->mResourceCenters.push_back(theCenter);
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesFishing);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitCostMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCarrierMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCarrierPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCarrierChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumAirExplorers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mComputerAggression);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackEnemyChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackToClaimResourceChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackForRevengeChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackGroupSizeMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackGroupSizeMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyPerEpoch);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyCeiling);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyFloor);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mInitialAttackDelayPerEpoch);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackDelayCeiling);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackDelayFloor);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mInitialAttackDelayMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mInitialAttackDelayMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSpecializedUnitPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTownGuardPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLD78);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLD7C);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCitizenPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefenseGroupSizeMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefenseGroupSizeMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEpochFrequencyMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEpochFrequencyMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardContinentPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardChokepointAirPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardChokepointPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardHighGroundPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC38);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC3C);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC40);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC44);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC48);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC4C);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC50);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC54);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFC58);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardTownPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardTownLandPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGuardWaterwayPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHeroMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHeroPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHeroChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumImprovedUnitTypes);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumImprovedAttributes);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mReplenishDelayMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mReplenishDelayMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumLandExplorers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumChokePointsToGuard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAirportMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mArcheryRangeMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mBarracksMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDockMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGranaryMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHospitalMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCyberFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCyberLabMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNavalYardMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUniversityMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSiegeFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mStableMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTempleMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefensiveUnitCap);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMaxAttackResponseRange);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMilitaryPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAidThreatThreshold);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPriestMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPriestPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPriestChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mProphetMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mProphetPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mProphetChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mResearchFrequency);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDropOffDistance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNumSeaExplorers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMaxEnabledManagers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mManagerAttackWait);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mManagerEpochAdvanceWait);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockProduction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockResource);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockCivilization);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockExploration);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockDefense);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockBuild);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLE80);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockResearch);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableStockCombat);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEnableInterval);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMilitaryCountWeight);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mWorkerCountWeight);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerAirport);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerArcheryRange);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerBarracks);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerDock);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerGranary);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerHospital);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerCyberFactory);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerCyberLab);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerNavalYard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerUniversity);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerSiegeFactory);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerStable);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerTemple);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCanBuild);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsCheating);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCanDefend);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mBF4E);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCanExplore);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCanGather);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsCitizenPercentageSet);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCanAttack);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIgnoreOthers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDifficulty);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackFrequencyModifierHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackDelayModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackDelayModifierHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackGroupModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackGroupModifierHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitCostReductionEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitCostReductionHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEpochFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mEpochFrequencyModifierHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPopLimitAdjustmentEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPopLimitAdjustmentHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mResearchFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mResearchFrequencyModifierHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextExpansionTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUnitsPerTankFactory);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTankFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsEasyDM);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsMediumDM);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinMilitaryBuildingsHardDM);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mRPSSelectionNonIslands);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mRPSSelectionIslands);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSpecializedUnitChance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMEarlyAttackTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMEarlyAttackScale);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNavalUnitWeight);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAirUnitWeight);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            this->mFavoriteTypeHistory.resize(theCount, std::make_pair(0L, 0L));
-            for (theIdx = 0; theIdx < theCount; theIdx++) {
-                theResult = inFile.Read(this->mFavoriteTypeHistory[theIdx].first);
-                if (theResult == kErrorOK)
-                    theResult = inFile.Read(this->mFavoriteTypeHistory[theIdx].second);
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMaxFlameThrowers);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackStarted);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefensiveUnitUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefensiveUnitUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDefensiveUnitUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMDefensiveUnitUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMDefensiveUnitUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMDefensiveUnitUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTownGuardUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTownGuardUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTownGuardUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMTownGuardUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMTownGuardUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDMTownGuardUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPopLimitAdjustmentMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttackGroupModifierMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAssistAlliesDelayEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAssistAlliesDelayMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAssistAlliesDelayHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainDMEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainDMMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainDMHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipsToMaintainHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShipMaintenanceTimer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSiegeWeaponPercentage);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mBonzaiAttackLevel);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFavoriteSeaType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFavoriteAirType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextIslandExpansionTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mExpansionTimerEasy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mExpansionTimerMedium);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mExpansionTimerHard);
-    // (0.229-0.231, the original's seventh block: the same fields up to here, without these four)
-    if (inMajorVersion > 0 || inMinorVersion >= 0xe8) {
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mLF14);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mLF1C);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mLF18);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mLF20);
-    }
-    if (inMajorVersion > 0 || inMinorVersion >= 0xec) {
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mUnitsPerSpaceDock);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mSpaceDockMax);
-    }
-    if (inMajorVersion > 0 || inMinorVersion >= 0xed) {
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mFavoriteSpaceType);
-    }
+    long theResult = EEPlayer::Load(inMajorVersion, inMinorVersion, inFile);
+    EECPSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
+    EeCpLoaded theLoaded;
+    theResult = ee_cp_load(&theContext, &EECPSaveOperation, this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
+                           (int32_t)theResult, &theLoaded);
     // port (0.254 on, no format change): the favourite land, sea, air and space types and their history as saved. The
     // load enters the player's epochs again (EnterEpoch), which picks new favourites at random after this Load, so the
     // loaded game trained and costed another army (seed 2's 2100 s save: class 207 for the saved 24 at the first
     // update); put back at the first tick (EEAfterLoad)
-    if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+    if (theLoaded.favorites_ok && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         EEComputerPlayer* theSelf = this;
         unsigned long thePlayerID = this->mPlayerID;
         unsigned long theLand = this->mFavoriteLandType, theSea = this->mFavoriteSeaType;
@@ -1512,35 +771,23 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     // after RepairPointers (which asks for a regroup) and before the first Update (EEAfterLoad): the pop cap
     // (WorkOutPopulation's), the enable-time flag (saved as false until now: Update set the time again), the regroup
     // flag, the population time (unsaved: Update worked the population out at once) and the last damage time
-    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
-        long thePopulationCap = 0;
-        bool theEnableTimeSet = false;
-        bool theRegroupPending = false;
-        long theNextPopulationTime = 0;
-        long theLastDamagedTime = 0;
-        if ((theResult = inFile.Read(thePopulationCap)) == kErrorOK && (theResult = inFile.Read(theEnableTimeSet)) == kErrorOK
-            && (theResult = inFile.Read(theRegroupPending)) == kErrorOK && (theResult = inFile.Read(theNextPopulationTime)) == kErrorOK)
-            theResult = inFile.Read(theLastDamagedTime);
-        if (theResult == kErrorOK) {
-            EEComputerPlayer* theSelf = this;
-            unsigned long thePlayerID = this->mPlayerID;
-            EEAfterLoad([theSelf, thePlayerID, thePopulationCap, theEnableTimeSet, theRegroupPending, theNextPopulationTime,
-                         theLastDamagedTime]() {
-                if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
-                    || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
-                    return;   // not the world's computer player of that id any more
-                theSelf->mPopulationCap = thePopulationCap;
-                theSelf->mIsEnableTimeSet = theEnableTimeSet;
-                theSelf->mRegroupPending = theRegroupPending;
-                theSelf->mNextPopulationTime = theNextPopulationTime;
-                theSelf->mLastDamagedTime = theLastDamagedTime;
-            });
-        }
+    if (theLoaded.running) {
+        EEComputerPlayer* theSelf = this;
+        unsigned long thePlayerID = this->mPlayerID;
+        EeCpLoaded theRunning = theLoaded;
+        EEAfterLoad([theSelf, thePlayerID, theRunning]() {
+            if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
+                || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
+                return;   // not the world's computer player of that id any more
+            theSelf->mPopulationCap = theRunning.population_cap;
+            theSelf->mIsEnableTimeSet = theRunning.enable_time_set;
+            theSelf->mRegroupPending = theRunning.regroup_pending;
+            theSelf->mNextPopulationTime = theRunning.next_population_time;
+            theSelf->mLastDamagedTime = theRunning.last_damaged_time;
+        });
     }
     return theResult;
 }
-
-#pragma optimize("g", on)
 
 // Loads the epoch's kind-7 tech-tree media for a real epoch, then the player's own epoch media
 void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
@@ -1725,25 +972,16 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
     if (theResult == kErrorOK)
         theResult = this->mPlacement->Restore();
     if (theResult == kErrorOK) {
-        this->mNextAttackTime += gPhysics->mGameTime;
+        ee_cp_restore_fields(this, 0, gPhysics->mGameTime, true);   // the saved relative times rebased
         for (unsigned long i = 0, n = this->mResourceCenters.size(); i < n; i++) {
             if (theResult != kErrorOK)
                 break;
             theResult = this->mResourceCenters[i]->Restore(inMajorVersion, inMinorVersion);
         }
         if (theResult == kErrorOK)
-            this->mNextExpansionTime += gPhysics->mGameTime;
+            ee_cp_restore_fields(this, 1, gPhysics->mGameTime, true);
     }
-    this->mAttackFrequencyMin = min(this->mAttackFrequencyMin, this->mAttackFrequencyMax);
-    this->mAttackFrequencyMax = max(this->mAttackFrequencyMin, this->mAttackFrequencyMax);
-    this->mAttackFrequencyFloor = min(this->mAttackFrequencyFloor, this->mAttackFrequencyCeiling);
-    this->mAttackFrequencyCeiling = max(this->mAttackFrequencyFloor, this->mAttackFrequencyCeiling);
-    if (theResult == kErrorOK) {
-        long theValue = this->mDropOffDistance;
-        if (theValue > 25)
-            this->mDropOffDistance = UMFloatToLong((float)sqrt(theValue));
-    }
-    this->mRegroupPending = true;
+    ee_cp_restore_fields(this, 2, 0, theResult == kErrorOK);   // the attack bounds, the drop-off distance, a regroup
     if (gUnitClassTable[this->mFavoriteAirType] == NULL) {
         this->ChooseFavoriteAirType();
         if (gUnitClassTable[this->mFavoriteAirType] == NULL)
@@ -1772,10 +1010,7 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
             && !theUnit->GetUnitClass()->CanMoveOnTerrain(static_cast<EEComplexUnit*>(theUnit), 9))
             this->AddStrandedUnit(theUnit);
     }
-    if (inMajorVersion == 0 && inMinorVersion < 0xe5) {
-        this->mExpansionTimerMedium = this->mExpansionTimerEasy;
-        this->mExpansionTimerHard = this->mExpansionTimerEasy;
-    }
+    ee_cp_restore_fields(this, 3, inMinorVersion, inMajorVersion > 0);   // a pre-0.229 save's one expansion timer
     return theResult;
 }
 
@@ -1888,40 +1123,15 @@ void EEComputerPlayer::EpochReached(long inEpoch)
 
 // Schedules the next attack: a random number of minutes (initial delay before the first, frequency after), scaled
 // by epoch span and difficulty or deathmatch modifier, clamped, added to inTime
+static long EECPAttackRandom(void*, long inMinimum, long inMaximum)
+{
+    return gPhysics->GetRandom(inMinimum, inMaximum);
+}
+
 void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
 {
     long theEpochs = gWorld.mGameOptions.mEpochEnd - gWorld.mGameOptions.mEpochStart + 1;
-    long theMinutes;
-    if (!this->mIsStarted) {
-        theMinutes = gPhysics->GetRandom(this->GetInitialAttackDelayMin(), this->GetInitialAttackDelayMax());
-        theMinutes += this->mInitialAttackDelayPerEpoch * theEpochs;
-        if (this->IsDeathmatch())
-            theMinutes = UMFloatToLong(this->GetDMInitialAttackModifier() * theMinutes);
-        else
-            theMinutes = UMFloatToLong(this->GetAttackDelayModifier() * theMinutes);
-        long theLow = this->GetAttackDelayFloor();
-        long theHigh = this->GetAttackDelayCeiling();
-        if (theMinutes < theLow)
-            theMinutes = theLow;
-        if (theMinutes > theHigh)
-            theMinutes = theHigh;
-        this->mNextAttackTime = theMinutes * 60000 + inTime;
-    } else {
-        theMinutes = gPhysics->GetRandom(this->GetAttackFrequencyMin(), this->GetAttackFrequencyMax());
-        theMinutes += UMFloatToLong(this->GetAttackFrequencyPerEpoch() * theEpochs);
-        if (this->IsDeathmatch())
-            theMinutes = UMFloatToLong(this->GetDMAttackFrequencyModifier() * theMinutes);
-        else
-            theMinutes = UMFloatToLong(this->GetAttackFrequencyModifier() * theMinutes);
-        long theLow = this->GetAttackFrequencyFloor();
-        long theHigh = this->GetAttackFrequencyCeiling();
-        if (theMinutes < theLow)
-            theMinutes = theLow;
-        if (theMinutes > theHigh)
-            theMinutes = theHigh;
-        this->mNextAttackTime = theMinutes * 60000 + inTime;
-        this->mAttackStarted = true;
-    }
+    ee_cp_set_next_attack_time(this, inTime, theEpochs, this->IsDeathmatch(), &EECPAttackRandom, NULL);
 }
 
 // Schedules the next island expansion the difficulty's island timer (minutes) from now
@@ -1933,444 +1143,10 @@ void EEComputerPlayer::SetNextIslandExpansionTime()
 
 long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount;
-    unsigned long i;
     long theResult = EEPlayer::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mCombatManager->Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mPlacement->Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLBD4);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFavoriteLandType);
-    // the flag is saved as false (a loaded game schedules its next manager-enable check afresh), without
-    // clearing it in the running game
-    bool theEnableTimeSet = false;
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNextEnableTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(theEnableTimeSet);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mBuildingDamaged);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCitizenDamaged);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsStarted);
-    if (theResult == kErrorOK) {
-        unsigned long theTime = this->mNextAttackTime - gPhysics->mGameTime;
-        theResult = outFile.Write(theTime);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mActive);
-    if (theResult == kErrorOK) {
-        theCount = this->mResourceCenters.size();
-        theResult = outFile.Write(theCount);
-        // a resource center's write error is reported (it used to be discarded)
-        for (i = 0; i < theCount && theResult == kErrorOK; i++)
-            theResult = this->mResourceCenters[i]->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesFishing);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitCostMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCarrierMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCarrierPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCarrierChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumAirExplorers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mComputerAggression);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackEnemyChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackToClaimResourceChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackForRevengeChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackGroupSizeMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackGroupSizeMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyPerEpoch);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyCeiling);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyFloor);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mInitialAttackDelayPerEpoch);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackDelayCeiling);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackDelayFloor);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mInitialAttackDelayMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mInitialAttackDelayMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSpecializedUnitPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTownGuardPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLD78);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLD7C);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCitizenPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefenseGroupSizeMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefenseGroupSizeMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEpochFrequencyMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEpochFrequencyMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardContinentPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardChokepointAirPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardChokepointPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardHighGroundPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC38);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC3C);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC40);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC44);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC48);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC4C);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC50);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC54);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFC58);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardTownPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardTownLandPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGuardWaterwayPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHeroMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHeroPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHeroChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumImprovedUnitTypes);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumImprovedAttributes);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mReplenishDelayMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mReplenishDelayMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumLandExplorers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumChokePointsToGuard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAirportMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mArcheryRangeMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mBarracksMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDockMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGranaryMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHospitalMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCyberFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCyberLabMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNavalYardMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUniversityMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSiegeFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mStableMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTempleMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefensiveUnitCap);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMaxAttackResponseRange);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMilitaryPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAidThreatThreshold);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPriestMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPriestPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPriestChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mProphetMaxPerGroup);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mProphetPopPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mProphetChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mResearchFrequency);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDropOffDistance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumSeaExplorers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMaxEnabledManagers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mManagerAttackWait);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mManagerEpochAdvanceWait);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockProduction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockResource);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockCivilization);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockExploration);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockDefense);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockBuild);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLE80);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockResearch);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableStockCombat);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEnableInterval);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMilitaryCountWeight);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mWorkerCountWeight);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerAirport);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerArcheryRange);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerBarracks);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerDock);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerGranary);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerHospital);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerCyberFactory);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerCyberLab);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerNavalYard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerUniversity);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerSiegeFactory);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerStable);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerTemple);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCanBuild);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsCheating);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCanDefend);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mBF4E);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCanExplore);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCanGather);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsCitizenPercentageSet);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCanAttack);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIgnoreOthers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDifficulty);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackFrequencyModifierHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackDelayModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackDelayModifierHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackGroupModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackGroupModifierHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitCostReductionEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitCostReductionHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEpochFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mEpochFrequencyModifierHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPopLimitAdjustmentEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPopLimitAdjustmentHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mResearchFrequencyModifierEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mResearchFrequencyModifierHard);
-    if (theResult == kErrorOK) {
-        unsigned long theTime2 = this->mNextExpansionTime - gPhysics->mGameTime;  // block-scoped: takes inMinorVersion's dead slot
-        theResult = outFile.Write(theTime2);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerTankFactory);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTankFactoryMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsEasyDM);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsMediumDM);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinMilitaryBuildingsHardDM);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mRPSSelectionNonIslands);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mRPSSelectionIslands);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSpecializedUnitChance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMEarlyAttackTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMEarlyAttackScale);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNavalUnitWeight);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAirUnitWeight);
-    if (theResult == kErrorOK) {
-        theCount = this->mFavoriteTypeHistory.size();
-        theResult = outFile.Write(theCount);
-        for (i = 0; i < theCount; i++) {
-            if (theResult == kErrorOK)
-                theResult = outFile.Write((this->mFavoriteTypeHistory.begin() + i)->first);
-            if (theResult == kErrorOK)
-                theResult = outFile.Write(this->mFavoriteTypeHistory[i].second);
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMaxFlameThrowers);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackStarted);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefensiveUnitUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefensiveUnitUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDefensiveUnitUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMDefensiveUnitUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMDefensiveUnitUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMDefensiveUnitUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTownGuardUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTownGuardUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTownGuardUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMTownGuardUpdateEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMTownGuardUpdateMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDMTownGuardUpdateHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPopLimitAdjustmentMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttackGroupModifierMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAssistAlliesDelayEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAssistAlliesDelayMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAssistAlliesDelayHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainDMEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainDMMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainDMHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipsToMaintainHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mShipMaintenanceTimer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSiegeWeaponPercentage);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mBonzaiAttackLevel);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFavoriteSeaType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFavoriteAirType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNextIslandExpansionTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mExpansionTimerEasy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mExpansionTimerMedium);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mExpansionTimerHard);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLF14);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLF1C);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLF18);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLF20);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUnitsPerSpaceDock);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSpaceDockMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFavoriteSpaceType);
-    // port (0.256): the running values (Load), without changing the running game
-    if (theResult == kErrorOK && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
-        if ((theResult = outFile.Write(this->mPopulationCap)) == kErrorOK && (theResult = outFile.Write(this->mIsEnableTimeSet)) == kErrorOK
-            && (theResult = outFile.Write(this->mRegroupPending)) == kErrorOK && (theResult = outFile.Write(this->mNextPopulationTime)) == kErrorOK)
-            theResult = outFile.Write(this->mLastDamagedTime);
-    }
-    return theResult;
+    EECPSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};
+    return ee_cp_save(&theContext, &EECPSaveOperation, this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
+                      (uint32_t)gPhysics->mGameTime, (int32_t)theResult);
 }
 
 // Turns the AI on or off, handing all units to the unit manager or releasing them when the state changes
@@ -2392,38 +1168,8 @@ void EEComputerPlayer::SetCitizenPercentage(float inValue)
     this->mIsCitizenPercentageSet = true;
 }
 
-// Sets the deathmatch attack frequency modifier for the player's difficulty
-void EEComputerPlayer::SetDMAttackFrequencyModifier(float inValue)
-{
-    if (this->mDifficulty == kDifficultyEasy)
-        this->mDMAttackFrequencyModifierEasy = inValue;
-    else if (this->mDifficulty == kDifficultyMedium)
-        this->mDMAttackFrequencyModifierMedium = inValue;
-    else if (this->mDifficulty == kDifficultyHard)
-        this->mDMAttackFrequencyModifierHard = inValue;
-}
 
-// Sets the deathmatch initial attack delay modifier for the player's difficulty
-void EEComputerPlayer::SetDMInitialAttackModifier(float inValue)
-{
-    if (this->mDifficulty == kDifficultyEasy)
-        this->mDMInitialAttackModifierEasy = inValue;
-    else if (this->mDifficulty == kDifficultyMedium)
-        this->mDMInitialAttackModifierMedium = inValue;
-    else if (this->mDifficulty == kDifficultyHard)
-        this->mDMInitialAttackModifierHard = inValue;
-}
 
-// Sets the island expansion timer for the player's difficulty
-void EEComputerPlayer::SetIslandExpansionTimer(unsigned long inValue)
-{
-    if (this->mDifficulty == kDifficultyEasy)
-        this->mIslandExpansionTimerEasy = inValue;
-    else if (this->mDifficulty == kDifficultyMedium)
-        this->mIslandExpansionTimerMedium = inValue;
-    else if (this->mDifficulty == kDifficultyHard)
-        this->mIslandExpansionTimerHard = inValue;
-}
 
 // Queues a stranded unit to be killed on the next update; a stranded citizen is also reported as a threat
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
