@@ -30359,3 +30359,8 @@ commit now has the same cache key in every worktree.
   stopped in EETerrainColorTable at the missing ColorPalette.png: a stopped run at that line means the tree, not
   the code.
 
+- **Then origin/rust 4929244f and ec39733e** (the audio merge, WONLobby 13, WON 14, AI lane A rounds 1-2, AI lane B
+  rounds 1-2 with PLCE, CPEV and the placement profile). Only PORT_LEARNINGS and golden_cpp.txt conflicted. The
+  oracle equal to the ref (two runs; the ref recorded again). Re-read in two equal runs: oracle (322 lines: the 320
+  above plus PLCE and CPEV in seed 2; seed 3's did not move), late, space, calamity and placement (unchanged: the
+  last plays boom against ageofai). Saveload 18/18, the Rust gate (4,523 tests), both builds 0/0, gates.sh PASS.
