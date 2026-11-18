@@ -25,7 +25,7 @@
 #endif
 #include "lle/NEProtocol.h"
 #ifdef NE_PROTOCOL_ORIG
-#include "lle/PIMModule.h"
+#include "orig_p/lle/PIMModule.h"   // the plug-in registry the original protocol used (deleted, LLE round 8)
 #endif
 #include "rust/net/net.h"
 #include "rust/net/net_tcp.h"

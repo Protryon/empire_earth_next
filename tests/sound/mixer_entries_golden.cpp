@@ -11,10 +11,10 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/PIMModule.h"
+#include "lle/SEMixer.h"
 #include "platform/PlatSim.h"
 
-extern const PIMPlugin gPIMPluginMixer;
+extern "C" void* ee_soundcpp_module_entry(void* inModule, const char* inName);
 extern "C" void SPIMSetMasterVolume(float inVolume);
 
 static uint64_t gRand;
@@ -26,10 +26,7 @@ static uint32_t R(uint32_t n)
 
 static void* Entry(const char* inName)
 {
-    for (const PIMEntry* e = gPIMPluginMixer.mEntries; e->mName != NULL; e++)
-        if (strcmp(e->mName, inName) == 0)
-            return e->mProc;
-    return NULL;
+    return ee_soundcpp_module_entry(NULL, inName);
 }
 
 template <class F> static F E(const char* inName)
@@ -49,13 +46,19 @@ int main(int argc, char** argv)
     int theSequences = argc > 1 ? atoi(argv[1]) : 200;
     gPlatSimMode = 1;
     gRand = 5;
-    printf("plugin %s\n", gPIMPluginMixer.mFile);
-    int n = 0;
-    for (const PIMEntry* e = gPIMPluginMixer.mEntries; e->mName != NULL; e++, n++)
-        printf("entry %s %d\n", e->mName, e->mProc != NULL);
-    printf("entries %d\n", n);
-    printf("name %s type %lx valid %d\n", (const char*)*(*E<const UString* (*)()>("PIMGetName"))(),
-           (*E<unsigned long (*)()>("PIMGetType"))(), (int)(*E<bool (*)()>("PIMIsValid"))());
+    // the header: the plug-in's entry names as the original table listed them (PIMGetName, PIMGetType and PIMIsValid
+    // went with the plug-in registry, LLE round 8: SEMixerPlugInName and SEMixerPlugInIsValid answer for them)
+    static const char* const kNames[] = {"SPIMActivateMixer", "SPIMCreateChannels", "SPIMDeactivateMixer",
+        "SPIMDeleteWaveData", "SPIMDestroyChannels", "SPIMDuplicateSample", "SPIMGetCPUUsage", "SPIMGetChannelCount",
+        "SPIMGetDirectSoundInterface", "SPIMGetHighestTimerDelay", "SPIMGetMaximumChannelCount", "SPIMGetOutputRate",
+        "SPIMGetSampleOffset", "SPIMGetSamplePlayBackTime", "SPIMGetVolume", "SPIMInitializeMixer",
+        "SPIMIsChannelBusyPlaying", "SPIMLoadWaveData", "SPIMMixAhead", "SPIMPlayChannel", "SPIMProcessMessage",
+        "SPIMSetChannelSample", "SPIMSetLatency", "SPIMSetMovieSource", "SPIMSetMusicSource", "SPIMSetSampleLooping",
+        "SPIMSetSampleOffset", "SPIMSetSamplePan", "SPIMSetSamplePitch", "SPIMSetSampleVolume", "SPIMSetVolume",
+        "SPIMStopAllChannels", "SPIMStopChannel"};
+    for (const char* theName : kNames)
+        printf("entry %s %d\n", theName, Entry(theName) != NULL);
+    printf("name %s valid %d\n", (const char*)SEMixerPlugInName(), (int)SEMixerPlugInIsValid());
     for (int s = 0; s < theSequences; s++) {
         printf("seq %d\n", s);
         for (int op = 0, ops = 5 + R(40); op < ops; op++) {

@@ -23,7 +23,6 @@ public:
     const GE2DPoint& GetLocation() const { return *reinterpret_cast<const GE2DPoint*>(ee_ge_text_location(this->mRust)); }
     const UWideString& GetText() const { return *static_cast<const UWideString*>(ee_ge_text_string(this->mRust)); }
     const GERectangle& GetTextExtent() const { return *reinterpret_cast<const GERectangle*>(ee_ge_text_extent_of(this->mRust)); }
-    unsigned long GetAlignment() const { return ee_ge_text_alignment(this->mRust); }
     void SetAlignment(unsigned long inAlignment) { ee_ge_text_set_alignment(this->mRust, inAlignment); }
     void SetBgColor(const GEColor& inColor) { *reinterpret_cast<GEColor*>(ee_ge_text_color(this->mRust, false)) = inColor; }
     void SetFgColor(const GEColor& inColor) { *reinterpret_cast<GEColor*>(ee_ge_text_color(this->mRust, true)) = inColor; }

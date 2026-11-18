@@ -27,8 +27,3 @@ long UDataCompression::Compress(const char* inData, unsigned long inLength, char
         ESVERIFY_AT(NULL == "PKWARE implode() error!", 140);
     return theResult;
 }
-
-bool UDataCompression::GetIsCompressed(const char* inData, unsigned long inLength)
-{
-    return ee_is_compressed(reinterpret_cast<const uint8_t*>(inData), (uint32_t)inLength);
-}

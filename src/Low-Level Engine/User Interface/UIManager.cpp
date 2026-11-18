@@ -51,7 +51,6 @@
 #include "lle/UITiledBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
@@ -129,7 +128,6 @@ intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b,
     UIManager* theManager = static_cast<UIManager*>(inManager);
     UIForm* theForm = reinterpret_cast<UIForm*>(a);
     GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
-    UIIMECandidate* theCandidate = reinterpret_cast<UIIMECandidate*>(a);
     SESMInstanceNode* theInstance = reinterpret_cast<SESMInstanceNode*>(a);
     UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
     switch (inOp) {
@@ -267,24 +265,6 @@ intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b,
     case EeUiOp::MgrLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
     case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
     case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
-    // the IME candidate window
-    case EeUiOp::MgrCandidateNew:
-        return (intptr_t) new UIIMECandidate(theManager, 0.2f, 0.35f, reinterpret_cast<GEFont*>(a));
-    case EeUiOp::MgrCandidateCall:
-        switch (b) {
-        case 0: return theCandidate->DrawPolygons();
-        case 1: return theCandidate->DrawTextA();
-        case 2: theCandidate->CloseCandidateWindow(); return 0;
-        case 3: return theCandidate->CopyData();
-        default: delete theCandidate; return 0;
-        }
-    case EeUiOp::MgrCandidateSetList:
-        theCandidate->SetCandidateList(*reinterpret_cast<const UIIMECandidateList*>(b), f[0]);
-        return 0;
-    case EeUiOp::MgrCandidateOpen:
-        theCandidate->OpenCandidateWindow(UIManagerRect(f), GERectangle(UIManagerBits(b, 1), UIManagerBits(c, 1),
-                                                                        UIManagerBits(c, 0), UIManagerBits(b, 0)));
-        return 0;
     // the music
     case EeUiOp::MgrSoundStop: theManager->GetSoundManager()->Stop(theInstance, false); return 0;
     case EeUiOp::MgrSoundUnload: theManager->GetSoundManager()->Unload((long)a); return 0;
@@ -353,14 +333,6 @@ void UIManager::AddIMEResultString(const UWideString& inString)
     this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString);
 }
 
-// Updates the IME candidate list of the focused IME-enabled control: hides the window for a style-2 list of at
-// most one candidate, else shows it at the control; returns OK
-long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
-{
-    return (long)this->Call(EeUiManagerCall::ChangeCandidateWindow, (intptr_t)&inList, (intptr_t)inList.mStyle,
-                            (intptr_t)inList.mCount);
-}
-
 // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
 long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                            unsigned long inCursor)
@@ -373,9 +345,6 @@ void UIManager::ChangeRasterizer(GERasterizer* inRasterizer)
 {
     this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer);
 }
-
-// Closes the IME candidate window; returns OK
-long UIManager::CloseIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::CloseCandidateWindow); }
 
 // Tells the top form the IME composition string closed, under the UI lock; returns its result
 long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
@@ -439,12 +408,7 @@ UI_MANAGER_BITMAP(GetRadioDownOff, 18)
 UI_MANAGER_BITMAP(GetRadioOn, 19)
 UI_MANAGER_BITMAP(GetRadioDownOn, 20)
 #undef UI_MANAGER_BITMAP
-UIIMECandidate* UIManager::GetCandidateWindow() const
-{
-    return reinterpret_cast<UIIMECandidate*>(this->Call(EeUiManagerCall::CandidateWindow));
-}
 UIForm* UIManager::GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
-bool UIManager::GetDrawCandidateWindow() const { return this->Call(EeUiManagerCall::DrawCandidateWindow) != 0; }
 GEFont* UIManager::GetFont(unsigned long inIndex) const
 {
     return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex));
@@ -493,7 +457,6 @@ void UIManager::SetFont(unsigned long inIndex, GEFont* inFont)
 {
     this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont);
 }
-void UIManager::SetNumberOfFonts(unsigned long inCount) { this->Call(EeUiManagerCall::SetNumberOfFonts, (intptr_t)inCount); }
 
 // Returns the form with the given ID (NULL: none)
 UIForm* UIManager::GetFormByID(unsigned long inID) const
@@ -561,9 +524,6 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     delete theDbFile;
 }
 
-// Opens the IME candidate window over the client area for the focused IME-enabled control; returns OK
-long UIManager::OpenIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::OpenCandidateWindow); }
-
 // Tells the top form an IME composition string opened, under the UI lock; returns its result
 long UIManager::OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
 
@@ -579,9 +539,6 @@ long UIManager::Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::
 // Marks every visible form and all its controls dirty
 void UIManager::RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
 
-// Rebuilds each visible form's clip rectangles from the visible forms above it
-void UIManager::ResetClippedForms() { this->Call(EeUiManagerCall::ResetClippedForms); }
-
 // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
 void UIManager::RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
 
@@ -591,24 +548,12 @@ void UIManager::ProcessAllEventsForForm(UIForm* inForm)
     this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm);
 }
 
-// Stops the playing music and releases its instance
-void UIManager::RemoveAndStopSoundInstance() { this->Call(EeUiManagerCall::RemoveAndStopSoundInstance); }
-
-// Releases the music instance
-void UIManager::RemoveSoundInstance() { this->Call(EeUiManagerCall::RemoveSoundInstance); }
-
 // Deletes the UI database tables (controls, backgrounds, fonts)
 void UIManager::RemoveDatabase()
 {
     UIControlsTable::DeleteAll();
     UIBackgroundTable::DeleteAll();
     UIFontTable::DeleteAll();
-}
-
-// Replaces the music instance, moving the reference to the new one
-void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
-{
-    this->Call(EeUiManagerCall::SetSoundInstance, (intptr_t)inInstance);
 }
 
 // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK

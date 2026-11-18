@@ -22,8 +22,6 @@ public:
     void ResumeScrolling();
     void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset);
     void ScrollText(unsigned long inTime, unsigned long inEndDelay);
-    void SetPixelStartingOffset(unsigned long inOffset);
-    void SetStartingLine(unsigned long inLine);
     void StopScrolling();
 };
 

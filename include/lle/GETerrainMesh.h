@@ -91,7 +91,6 @@ public:
     long RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID);
     long Save(FSFile& inFile) const;
     void SetColorFromColorTableIndex(unsigned long inX, unsigned long inY, unsigned char inIndex);
-    void SetColorSet(unsigned long inX, unsigned long inY, unsigned long inColorSetID);
     void SetColorTable(std::vector<GEColor>& inColorTable);
     void SetGlobalWaterState(unsigned long inWaterSetID, unsigned long inColorSetID, unsigned long inAnimationPeriod,
                              float inTextureScale);

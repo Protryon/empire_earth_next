@@ -30305,3 +30305,67 @@ origin/rust had nothing new at the end of the round (no merge).
   original `mSectorTiles[key] = tiles` did.
 - **Not done this round:** the objects' lifetimes (the classes still own their records), the build passes and
   `Rebuild` (they run the C++ machines), `CanGetTo` (the unit store), the path machines' goal state.
+
+## LLE rest, round 1: the plug-in registry, 123 dead engine members and the IME candidate window deleted; the texture manager reaches GETexture's Rust directly (ee_audio mixerobj.rs, ee_render texobj.rs tex_direct; branch rust-lle-rest1, 2026-11-17)
+
+The first round of the lane that takes the rest of the Low-Level Engine (docs/progress/lle-rest.md, with the
+file-by-file measure). Asked: 3,000 net C++ lines. Done: -1,123.
+
+| Commit | What | Net C++ (src + include, not include/rust) |
+|---|---|---|
+| 9ee4f5350 | `PIMModule` deleted; the mixer and the Default generator linked directly | -193 |
+| 8dc2dbc87 | 123 dead members of the engine's headers; `UIIMECandidate` whole | -778 |
+| b32476f37 | the texture manager's and the texture's bounce operations answered in Rust | -137 |
+| bd8223f79 | the census's second pass | -15 |
+
+- **The measure.** What is left of the engine is the C++ surface the game calls (value types, `UString`, the
+  toolkit's controls and forms, the NE server and client, the GE classes the renderer and the store gate subclass)
+  and the hosts' operations. No large class is whole-movable now; the lines come out one host case at a time, or
+  as dead code.
+- **The dead-member census** (scratch `build/lle8_mcensus2.py`): every member declared at class indent in
+  include/lle, include/dx7 and the engine's own headers, against every `name(` in src, include (not include/rust),
+  tools and tests, skipping the declaration and column-0 definitions. 134 names had none; 10 were left out by hand
+  (the GERustIO function table's entries and `NEProtocol::AddTo`, taken by address: a census of calls misses a
+  function pointer, so check `&name`/bare uses, and the build is the final check). The deletion script removed the
+  declarations, the out-of-line definitions with the comments right above them, and the build linked 0/0 first
+  try; four header comments left orphaned were removed by hand. The linker's census (tools/dead_census.py) found
+  only 3 of these: a virtual member is kept by its vtable and an unused inline one is never emitted, so neither
+  shows there.
+- **The IME candidate window** was dead in the port: `CreateIMECandidateWindow` (the manager's call 13) had no
+  caller, so the window never existed, and the three entry points that open, change and close it had none either
+  (the system's input method draws the candidate list since the text input moved to the platform layer). The
+  form's two candidate questions fall to the Rust's default answer (not shown), which is what the game saw.
+- **PIM.** Each plug-in kind had one linked plug-in. The mixer plug-in answers the Rust mixers' module walk itself
+  (`ee_soundcpp_*` moved from SEMixer.cpp to Mixer.cpp: one module, the entry table by name), so the Rust and its
+  goldens kept their seam; the sound drivers in tests/sound fake that seam instead of `PIMModule`'s members. The
+  mixer entry golden (tests/sound/mixer_entries_golden.cpp, 300 sequences) prints the same 7,717 sequence lines as
+  round 7's run and the same 33 entry names. `EERandomMap` calls the generator's `EERMPIM*` exports directly. The
+  NE protocol test's original build keeps the deleted header as tests/net/orig_p/lle/PIMModule.h.
+- **Direct when the C++ made it.** The texture manager's host answered 12 operations by calling a `GETexture`
+  forwarder that called straight back into Rust. A manager made by `ee_ge_texman_new` (the C++ constructor) now
+  answers them on the texture's Rust object (`cppobj::counted`), with the forwarder's casts (bools 0/1, `long`
+  sign-extended, `unsigned long` zero-extended, the bias as its bits); one made by `create` (the cargo replays,
+  over recorded handles) asks its host, so every golden replays unchanged. The same flag on the texture
+  (`ee_ge_tex_new`) answers `TexObj`, `TexRefCount` and `Dereference`. This is the pattern for the other hosts'
+  bounce operations (the toolkit's can use `direct.rs`'s registry: a replay's handles are never registered).
+- **Pinned by the store gate**, which runs the C++ texture manager over every texture of the open tree (17,535
+  texture loads, reloads and refreshes; 25,140 lines equal). Its link check fails on the rust branch before this
+  round (`ee_game.lib` brings the screens', units' and Lua's symbols; the driver links with `/FORCE:UNRESOLVED`):
+  run it with `--exe build/storegate/storegate.exe` after the failed check. A stage-read mutation is caught (2
+  refresh lines); a reference-count and a dropped-levels mutation are not observable there, so a unit test
+  (`a_cpp_managers_texture_operations_are_the_forwarders_calls`) checks every answer against the texture's own
+  accessors.
+- **Tooling notes.** Python's `read_text`/`write_text` rewrite LF files as CRLF on this machine (the round's first
+  edit turned seven LF files into whole-file diffs): edit with bytes. In the Bash tool a `\\` inside a heredoc
+  reaches the file as `\`: write scripts with backslashes through the Write tool. The scratch driver scripts of
+  round 7 linked `ee_rust.lib`, a stale file since the crate restructure: link `ee_game.lib`.
+- **Verification** (the round's last commit, bd8223f79): both builds 0/0 (`--sim` and the test profile); the Rust
+  gate PASS (4,500 tests); the oracle seeds 2-7 identical to the reference; `xbuild.py nettest` exit 0; `wontest`
+  all but `won_cfgtab_test`, which exits 1 with no output, as the main checkout's own build of it from 2026-11-16
+  does (not this round's: the WON code is untouched); `gates.sh` GATES PASS (tour; ai-game time-cap, units
+  [4, 42, 42], alive_computers [2, 3], classic_lua twice; lan-game); the tour's menu captures against the round's
+  pre-round test-profile exe identical but the build label (216 pixels on the main menu and settings-closed; the
+  game frames differ by the game's timing, as always); the store gate PASS (above); `cargo check` of ee_render,
+  ee_ui and ee_audio for aarch64-apple-darwin, and of ee_render and ee_ui for x86_64-unknown-linux-gnu (ee_audio's
+  cpal needs alsa-sys's pkg-config there, as before). Display code only a tour reaches: none changed but the IME
+  candidate window, which nothing opened.

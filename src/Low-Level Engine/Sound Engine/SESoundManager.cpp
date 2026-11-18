@@ -35,10 +35,8 @@ unsigned long SESample::GetLengthInSamples() const { return ee_sound_sample_leng
 unsigned long SESample::GetMixerChannel() const { return Wide(ee_sound_sample_mixer_channel(SAMPLE)); }
 float SESample::GetPan() const { return ee_sound_sample_pan(SAMPLE); }
 float SESample::GetPitch() const { return ee_sound_sample_pitch(SAMPLE); }
-unsigned long SESample::GetSampleOffset() { return ee_sound_sample_offset(SAMPLE); }
 unsigned long SESample::GetSampleRate() const { return ee_sound_sample_rate(SAMPLE); }
 float SESample::GetVolume() const { return ee_sound_sample_volume(SAMPLE); }
-long SESample::LoadWaveData(FSFileSpec* inSpec) { return ee_sound_sample_load_wave_data(SAMPLE, inSpec); }
 void SESample::SetIsLooping(bool inLooping) { ee_sound_sample_set_is_looping(SAMPLE, inLooping); }
 long SESample::SetOffset(unsigned long inOffset) { return ee_sound_sample_set_offset(SAMPLE, (uint32_t)inOffset); }
 long SESample::SetPan(float inPan) { return ee_sound_sample_set_pan(SAMPLE, inPan); }

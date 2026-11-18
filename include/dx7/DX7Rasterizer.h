@@ -48,12 +48,8 @@ public:
 
     virtual long ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                 unsigned long inMode, bool inFullScreen, unsigned long inBackBuffers);
-    virtual long ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
-                                          unsigned long inWidth, unsigned long inHeight);
     virtual long AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex);
-    virtual long AddValidScreen(GEScreen* inScreen);
     virtual long BeginScene(GESurface* inTarget, unsigned long inScreen);
-    virtual bool CanDoCurrentState(GETexture* inTexture, unsigned long inScreen);
     virtual long Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen);
     virtual long ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen);
     virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen);
@@ -86,14 +82,12 @@ public:
                                       float inOpacity);
     virtual long DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inSorted);
     virtual long EndScene(unsigned long inScreen);
-    virtual long GetAvailableVideoMemory(unsigned long inScreen, unsigned long& outBytes);
     virtual long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes);
     virtual unsigned long GetCaps(unsigned long inCap, unsigned long inScreen);
     virtual bool GetCanModulateTextureAlpha(unsigned long inScreen);
     virtual bool GetDirtyRectangleSupport(unsigned long inScreen);
     virtual void Light(GETerrainMesh& inMesh, unsigned long inScreen);
     virtual long RemoveAllLights(unsigned long inScreen);
-    virtual long RemoveLight(unsigned long inIndex, unsigned long inScreen);
     virtual void SetAlphaTesting(unsigned long inState, unsigned long inScreen);
     virtual void SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen);
     virtual void SetAlphaTestingRefValue(float inValue, unsigned long inScreen);
@@ -103,9 +97,7 @@ public:
     virtual void SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen);
     virtual void SetColorKeying(unsigned long inState, unsigned long inScreen);
     virtual void SetCulling(unsigned long inState);
-    virtual void SetDebugColor(const GEColor& inColor);
     virtual void SetDithering(unsigned long inState, unsigned long inScreen);
-    virtual void SetDrawStyle(unsigned long inStyle, unsigned long inScreen);
     virtual void SetFog(unsigned long inState, unsigned long inScreen);
     virtual void SetFogColor(const GEColor& inColor, unsigned long inScreen);
     virtual void SetFogRange(float inStart, float inEnd, unsigned long inScreen);
@@ -123,12 +115,8 @@ public:
 
 protected:
     virtual long ActivateRasterizer();
-    virtual long ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
-                                   GETextureManager* inManager, GEWindow* inWindow);
     virtual long CreateTextureHandle(GETexture* inTexture);
-    virtual long DemoteTexture(GETexture* inTexture);
     virtual void DestroyTextureHandle(GETexture* inTexture);
-    virtual long DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inSorted);
     virtual long PromoteTexture(GETexture* inTexture);
     virtual void SetRenderTarget(GESurface* inTarget, unsigned long inScreen);
 

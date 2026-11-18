@@ -26,7 +26,6 @@ class EEPlayer;
 class EETerrainTable;
 class EEUnitClass;
 class GE3DPoint;
-class PIMModule;
 struct EeRmapGameState;
 struct EeRmapGameHost;
 
@@ -40,13 +39,25 @@ struct EERMGenerator {
     UString mModuleName;                    // +0x28 the generator PIM's name ("UseMapGenerator")
 };
 
-// the generator PIM entry points (cdecl: `push edi; call [esi+0x41c]; pop ecx`)
-typedef long (*EERMPIMFunction)(EERandomMapData* inMap);
-typedef long (*EERMPIMSetValuesFunction)(EERandomMapData* inMap, const UString& inScript);
+// the generator's entry points (Default.cpp: the "rmap" plug-in's exports, linked in; the plug-in registry went)
+extern "C" {
+long EERMPIMCreateFlatMap(EERandomMapData* ioMap);
+long EERMPIMCreateHeightMap(EERandomMapData* ioMap);
+long EERMPIMCreateNeutralLandWaterMap(EERandomMapData* ioMap);
+long EERMPIMCreatePlayerLandWaterMap(EERandomMapData* ioMap);
+long EERMPIMCreateTrees(EERandomMapData* ioMap);
+long EERMPIMFilterHeightMap(EERandomMapData* ioMap);
+long EERMPIMGenerateNeutralPositions(EERandomMapData* ioMap);
+long EERMPIMGeneratePlayerPositions(EERandomMapData* ioMap);
+long EERMPIMGenerateResources(EERandomMapData* ioMap);
+long EERMPIMGenerateShallows(EERandomMapData* ioMap);
+long EERMPIMSetRandomMapValues(EERandomMapData* ioMap, const UString& inScriptName);
+}
+const UString& EERMPIMGetName();            // the generator's name ("Default"; its PIMGetName)
 
 class EERandomMap {
 public:
-    EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers);
+    EERandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers);
     virtual ~EERandomMap();
 
     // 0x28655a: up to 11 tries with fresh seeds until the players can reach each other (cdecl)
@@ -73,22 +84,9 @@ public:
     long SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed);
     void RunGamePass(void (*inPass)(EeRmapGameState* ioState, EeRmapGameHost* inHost));   // port: one Rust pass
 
-    static FSFileSpec sGeneratorDirectory;  // 0x565588 (guard 0x565580 bit 1)
     static std::vector<EERMGenerator> sRandomMapGenerators;   // 0x565570 (guard bit 2)
 
     EERandomMapData mData;                  // +0x004 (the PIMs' state)
-    EERMPIMFunction mCreateFlatMap;         // +0x400 "EERMPIMCreateFlatMap"
-    EERMPIMFunction mCreateHeightMap;       // +0x404
-    EERMPIMFunction mCreateNeutralLandWaterMap;   // +0x408
-    EERMPIMFunction mCreatePlayerLandWaterMap;    // +0x40c
-    EERMPIMFunction mCreateTrees;           // +0x410
-    EERMPIMFunction mFilterHeightMapPIM;    // +0x414 "EERMPIMFilterHeightMap"
-    EERMPIMFunction mGenerateNeutralPositions;    // +0x418
-    EERMPIMFunction mGeneratePlayerPositions;     // +0x41c
-    EERMPIMFunction mGenerateResources;     // +0x420
-    EERMPIMFunction mGenerateShallows;      // +0x424
-    EERMPIMSetValuesFunction mSetRandomMapValues; // +0x428
-    PIMModule* mModule;                     // +0x42c (assigned in the ctor's body)
     EEMap* mMap;                            // +0x430 (Initialize)
     std::vector<EEPlayer*>* mGamePlayers;   // +0x434 (init list)
     EEGameOptions* mOptions;                // +0x438 (init list)

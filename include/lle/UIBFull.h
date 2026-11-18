@@ -17,8 +17,6 @@ public:
             unsigned long inDrawPriority, unsigned long inColumns, unsigned long inRows, bool inVisible);
     virtual ~UIBFull();
     virtual long DrawBackground(const GERectangle& inRectangle);
-    GEBitmap* GetBackgroundBitmap(unsigned long inColumn, unsigned long inRow) const
-        { return static_cast<GEBitmap*>(this->mBitmaps[this->mColumns * inRow + inColumn]); }
     virtual long LoadBackground();
     virtual void SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow);   // slot 0x1c
     void SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows);

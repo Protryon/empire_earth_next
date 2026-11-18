@@ -106,7 +106,6 @@ public:
     virtual long OpenIMECompositionString();
     virtual void RelayoutForm(const GERectangle& inRectangle);
     virtual void SetHelpTextPopupLocation();
-    virtual void UpdateInformation() {}
     virtual long UpdateKeyboard();
     virtual long UpdateMouse();
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat);
@@ -125,7 +124,6 @@ public:
     // port: makes room for a control at inIndex (the controls the table did not have: UIControlsTable::AddControlLike);
     // grows the control arrays (made with the form, mControlCount long)
     void ReserveControlIndex(unsigned long inIndex);
-    void AddDrawControl(unsigned long inIndex);
     void AddEvent(const UIEventData& inEvent);
     void AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup);
     void AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
@@ -157,20 +155,16 @@ public:
     bool GetUseExclusiveCoords() const;
     UIManager* GetManager() const;
     const GE2DPoint& GetMouseLocation() const;
-    UIEvent* GetMouseMoveEvent() const;
     UIControl* GetMouseOverControl() const;
     UWideString GetMusicFileName() const;
     // Num Lock is off (GetKeyState(VK_NUMLOCK) & 1 was the original's test; 0x100596a2)
     static bool GetNumLockOff() { return PlatKeyIsToggled(VK_NUMLOCK) ? false : true; }
     const GERectangle& GetRectangle() const;
-    bool GetShouldFadeIn();
     bool GetTabbingOn() const;
     unsigned long GetTabStop() const;
     bool GetUseGDIForText() const;
-    void LoadBackgrounds();
     void LockDrawBackground();
     void RedrawIntersectControls(const GERectangle& inRectangle);
-    void RemoveAllHotKeys();
     void RemoveAllHotKeysForAGroup(unsigned long inGroup);
     void RemoveBackground(UIBackground* inBackground);
     void RemoveControl(UIControl* inControl, unsigned long inGroup);
@@ -181,7 +175,6 @@ public:
     void SetFormActivateEvent(UIEvent* inEvent);
     void SetFormCloseEvent(UIEvent* inEvent);
     void SetFormDeactivateEvent(UIEvent* inEvent);
-    void SetFormKeyboardCapturedEvent(UIEvent* inEvent);
     void SetFormManager(UIFormManager* inFormManager);
     void SetFormOpenEvent(UIEvent* inEvent);
     void SetFormUpdateEvent(UIEvent* inEvent);
@@ -198,9 +191,7 @@ public:
     void SetTabbing(bool inTabbing);
     bool SetTabStop(unsigned long inTabStop);
     void SetUseToolTips(bool inUseToolTips);
-    void ShiftTab();
     void Tab();
-    void UnloadBackgrounds();
     void UnlockDrawBackground();
     void UpdateHelpString();
     void UpdateMouseLocation(const GE2DPoint& inLocation);
@@ -210,14 +201,9 @@ protected:
     UIControl* GetKeyboardCaptured() const;
     UIControl* GetMouseCaptured() const;
 private:
-    void AddCopyDirtyRectangle(const GERectangle& inRectangle);
     void AddDirtyRectangle(const GERectangle& inRectangle);
-    void CheckedRadioButton(long& ioIndex);
-    void SetFormEvent(unsigned long inType, UIEvent* inEvent);
     void SetKeyboardCaptured(UIControl* inControl);
     void SetMouseCaptured(UIControl* inControl);
-    void SetMouseOverControl(UIControl* inControl);
-    void UpdateHelpText(bool inForce);
     // the forwarders' one call into the Rust form, and the Rust form's calls out
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const;
     static intptr_t HostOp(void* inForm, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,

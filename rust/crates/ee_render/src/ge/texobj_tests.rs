@@ -608,3 +608,67 @@ fn the_surface_description_follows_the_texture_description() {
     assert_eq!((d.kind, d.width), (6, 9), "the rest as it was");
     assert_eq!(buffered(vec![b'a'; 100], 64).len(), 64);
 }
+
+/// A texture's host that answers nothing (the direct path's test makes no call out but the stage setters' marks).
+unsafe extern "C" fn quiet_tex_host(
+    _owner: *mut c_void,
+    _op: crate::ge::texobj_tex::EeGeTexOp,
+    _obj: *mut c_void,
+    _a: isize,
+    _b: isize,
+    _c: isize,
+) -> isize {
+    0
+}
+
+/// LLE round 8: the texture operations a C++-made manager answers on the texture's Rust object (`tex_direct`) give
+/// what the C++ host's forwarder gave: the getters' casts, the setters' values, the stage and its bias bits, the
+/// reference count read in place; the operations the C++ keeps are not answered.
+#[test]
+fn a_cpp_managers_texture_operations_are_the_forwarders_calls() {
+    use crate::ge::cppobj::CppCounted;
+    use crate::ge::texobj_tex::{self as tex, EeGeTexVal};
+    let mut cpp = CppCounted { vtable: std::ptr::null(), count: 3, rust: std::ptr::null_mut() };
+    let obj = &mut cpp as *mut CppCounted as usize;
+    let t = EeGeTexture::create(quiet_tex_host, obj, 0);
+    cpp.rust = t.cast();
+    unsafe {
+        let d = |op, a: isize, b: isize| tex_direct(op, obj, a, b);
+        assert_eq!(d(EeGeManOp::RefCount, 0, 0), Some(3));
+        assert_eq!(d(EeGeManOp::TexReference, 0, 0), Some(0));
+        assert_eq!(cpp.count, 4, "Reference() is the count's increment");
+        // the setters and their getters
+        assert_eq!(d(EeGeManOp::TexSet, EeGeTexField::FromPack as isize, 5), Some(0));
+        assert_eq!(tex::ee_ge_tex_get(t, EeGeTexVal::FromPack), 1, "SetIsFromTexturePack(b != 0)");
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::FromPack as isize, 0), Some(1));
+        d(EeGeManOp::TexSet, EeGeTexField::PackMipLevels as isize, -2);
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::PackMipLevels as isize, 0), Some(-2), "long, sign-extended");
+        d(EeGeManOp::TexSet, EeGeTexField::NumMipLevelsToDrop as isize, 3);
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::NumMipLevelsToDrop as isize, 0), Some(3));
+        d(EeGeManOp::TexSet, EeGeTexField::IsManaged as isize, 9);
+        assert_eq!(tex::ee_ge_tex_get(t, EeGeTexVal::IsManaged), 1);
+        d(EeGeManOp::TexSet, EeGeTexField::Promoted as isize, 1);
+        assert_eq!(tex::ee_ge_tex_get(t, EeGeTexVal::IsPromoted), 1, "SetIsPromoted");
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::FrameCount as isize, 0), Some(1));
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::FrameFormat as isize, 0), Some(1));
+        assert_eq!(d(EeGeManOp::TexGet, EeGeTexField::CreateMipMaps as isize, 0), Some(0));
+        // the stage: the constructor's, then a setter and the bias as its bits
+        assert_eq!(d(EeGeManOp::TexStage, EeGeTexStage::TextureAddressingMode as isize, 0), Some(ADDRESSING_CLAMP));
+        assert_eq!(d(EeGeManOp::TexStage, EeGeTexStage::MipFilterMode as isize, 0), Some(MIP_FILTER_POINT));
+        d(EeGeManOp::TexSetStage, EeGeTexStage::ColorMode as isize, STAGE_OP_MODULATE);
+        assert_eq!(d(EeGeManOp::TexStage, EeGeTexStage::ColorMode as isize, 0), Some(STAGE_OP_MODULATE));
+        assert_eq!((*tex::ee_ge_tex_stage(t)).color_mode, STAGE_OP_MODULATE as c_ulong);
+        d(EeGeManOp::TexSetStage, EeGeTexStage::MipMapBias as isize, 1.5f32.to_bits() as isize);
+        assert_eq!((*tex::ee_ge_tex_stage(t)).mip_map_bias, 1.5);
+        assert_eq!(d(EeGeManOp::TexStage, EeGeTexStage::MipMapBias as isize, 0), Some(1.5f32.to_bits() as isize));
+        assert_eq!(d(EeGeManOp::TexFrame, 0, 0), Some(tex::ee_ge_tex_frame_texture(t, 0) as isize), "GetFrameTexture");
+        // what stays the C++'s
+        for op in
+            [EeGeManOp::TexNew, EeGeManOp::BaseDereference, EeGeManOp::TexSurfaceDescription, EeGeManOp::LockEnter]
+        {
+            assert_eq!(d(op, 0, 0), None, "{op:?}");
+        }
+        assert_eq!(d(EeGeManOp::TexGet, 99, 0), None, "an unknown field");
+        drop(Box::from_raw(t));
+    }
+}

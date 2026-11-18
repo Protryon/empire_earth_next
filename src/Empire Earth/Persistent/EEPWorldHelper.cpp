@@ -32,7 +32,6 @@
 #include "lle/UIBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIFormManager.h"
 #include "lle/UIManager.h"

@@ -254,11 +254,6 @@ unsigned long GEModel::SizeOf()
     return ee_ge_mod_size_of(this->mRust);
 }
 
-void GEModel::SortTagPoints()
-{
-    ee_ge_mod_sort_tag_points(this->mRust);
-}
-
 bool GEModel::Verify() const
 {
     return ee_ge_mod_verify(this->mRust);
@@ -686,8 +681,6 @@ long GETerrainMesh::RegisterTextureSet(GETextureSet* inTextureSet, unsigned long
 }
 
 void GETerrainMesh::SetColorFromColorTableIndex(unsigned long inX, unsigned long inY, unsigned char inIndex) { ee_ge_tm_point_edit(this->mRust, inX, inY, 1, inIndex, 0.0f); }
-
-void GETerrainMesh::SetColorSet(unsigned long inX, unsigned long inY, unsigned long inColorSetID) { ee_ge_tm_point_edit(this->mRust, inX, inY, 2, inColorSetID, 0.0f); }
 
 void GETerrainMesh::SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
 

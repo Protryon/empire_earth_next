@@ -39,9 +39,6 @@ public:
 #endif
     virtual bool Get32BitDeviceSupport() = 0;
     virtual bool Get32BitTextureSupport() = 0;
-    virtual bool GetAttachedToDesktop() const = 0;
-    virtual bool GetCanMagFilterSurfaces() const = 0;
-    virtual bool GetCanMinFilterSurfaces() const = 0;
     virtual const GEVideoMode& GetCurrentMode() const = 0;
     virtual unsigned long GetCurrentModeIndex() const = 0;
     virtual const GERectangle& GetDesktopRectangle() = 0;
@@ -49,7 +46,6 @@ public:
     virtual const GEVideoMode& GetMode(unsigned long inIndex) const = 0;
     virtual unsigned long GetModeCount() const = 0;
     virtual const UString& GetName() const = 0;
-    virtual bool GetSharesPrimary() = 0;
     virtual long Release(const GEWindow* inWindow) = 0;
     virtual long RestoreAllSurfaces() = 0;
     virtual long SetMode(unsigned long inIndex) = 0;

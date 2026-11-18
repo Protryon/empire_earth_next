@@ -23,11 +23,8 @@ public:
         GE3DPoint thePoint(inPoint.GetX() * inW, inPoint.GetY() * inW, inPoint.GetZ() * inW);
         this->mPerspectiveDenormalization.Apply(thePoint, outPoint);
     }
-    const GE3DPlane& GetBottomPlane() const { return this->mBottomPlane; }
     const GETransformation& GetCamera() const { return this->mCamera; }
     const GETransformation& GetCameraInverse() const { return this->mCameraInverse; }
-    void GetDepthRange(float& outNear, float& outFar) const { outNear = this->mNearDepth; outFar = this->mFarDepth; }
-    float GetFieldOfView() const { return this->mFieldOfView; }
     float GetFrontClippingDistance() const { return this->mFrontClippingDistance; }
     const GE3DPlane& GetFrontPlane() const { return this->mFrontPlane; }
     void GetFrustrumWorldPlanes(std::vector<GE3DPlane>& outPlanes, bool inOrthographic) const
@@ -42,11 +39,8 @@ public:
     float GetHalfWidth() const { return this->mHalfWidth; }
     const GE3DPlane& GetLeftPlane() const { return this->mLeftPlane; }
     const GERectangle& GetOrthographicRectangle() const { return this->mOrthographicRectangle; }
-    const GETransformation& GetOrthographicProjection() const { return this->mOrthographicProjection; }
-    const GETransformation& GetPerspectiveProjection() const { return this->mPerspectiveProjection; }
     float GetRearClippingDistance() const { return this->mRearClippingDistance; }
     const GE3DPlane& GetRightPlane() const { return this->mRightPlane; }
-    const GE3DPlane& GetTopPlane() const { return this->mTopPlane; }
     const GERectangle& GetViewRectangle() const { return this->mViewRectangle; }
     float GetXCenter() const { return this->mXCenter; }
     float GetYCenter() const { return this->mYCenter; }

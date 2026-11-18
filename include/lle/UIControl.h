@@ -60,11 +60,6 @@ public:
     static bool EnterKeyPressed();
     void FireTriggerEvent(unsigned long inEvent);
     bool GetAlwaysDirty() { return this->mAlwaysDirty; }
-    static void GetBorderColors(GEColor& outDark, GEColor& outLight)
-    {
-        outDark = UIControl::sDarkBorder;
-        outLight = UIControl::sLightBorder;
-    }
     float GetBorderOpacity() const { return this->mBorderOpacity; }
     unsigned long GetBorderThickness() { return this->mBorderThickness; }
     float GetBgOpacity() const

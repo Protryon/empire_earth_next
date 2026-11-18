@@ -56,7 +56,6 @@ public:
             return this->GetTextLabel()->GetGEText();
         return reinterpret_cast<UIEditBox*>(this->PartOf(3))->GetGEText();
     }
-    bool GetIsListBoxOpen() const { return this->Call(EeUiComboCall::IsListBoxOpen) != 0; }
     const UILBString* GetListBox() const { return this->GetList(); }
     GERhombus* GetSelectedBackground() const { return this->GetList()->GetSelectedBackground(); }
 #ifdef LLE_EXE_HEADERS   // the game sets the label's text (EESEInstructions::Virtual14 0x171ce3 calls
