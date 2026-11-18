@@ -30025,3 +30025,31 @@ same way, also over a one-file resource directory (so before its resource lines)
 look at it (round 13's 148 included it).
 
 origin/rust had nothing new at the end of the round (no merge).
+## R6 WONLobby, round 15: won_cfgtab_test's leak, the WON drivers under a memory cap (branch rust-wonlobby15, 2026-11-17)
+
+### won_cfgtab_test: the driver's own world never freed what it made
+
+Round 14 found won_cfgtab_test growing by about 70 MB a second past 10 GB (and, over a one-file resource directory,
+ending at 3.6 GB with exit 1 and no output). Run under a 2 GB job object and stopped after 4 s, every backtrace was in
+the original side's `StretchImageConfig::Virtual24` (MULTIEXPORT's loop); printing its counts showed the cause:
+
+- The stand-in world (`won_cfgtab_world.h`) has its own `SmartPtr`, which does not own: every config, image, stretch
+  image, filter and layout that the world or either side's handlers made with `new` lived to the program's end.
+- MULTIEXPORT's and MULTICROPEXPORT's count is a `ReadInt`, and the world's `ReadInt` of a non-number is a hash of
+  the token, up to 99,999. Each such instruction made that many child configs (a config, an image, a stretch image
+  and a raw image each): about 25 MB per instruction per side, never freed.
+- The resource files never use those keys with such counts; the 5,000 random instructions and the 4,000 image
+  sequences (round 41) hold hundreds of them. The run needed on the order of 10 GB. Round 41 ran it on an idle
+  machine and passed (383,620 checks); with eight lanes on 32 GB the commit fails part-way (the 3.6 GB exit 1:
+  an allocation failing; the output was still in the pipe's buffer) or it fills the machine.
+
+Not a port fault: nothing the driver links changed (the crate restructure, the inline IPAddr and StringUtil forwards
+and the loose test link were the suspects; the world, the original statements and cfgtab.rs/cfgimg.rs are as round
+41 left them, and every check still matches). The fix is in the world: `Obj` and `ComponentConfig` derive from a
+small `Owned` base whose class `operator new` records each object, and each run frees the previous run's objects
+before it starts (`Owned::FreeAll` in `RunSeq`). Components stay as they were (the skin's slots keep the last ones
+assigned across runs). The traces are unchanged: 383,620 checks, 0 mismatches, peak 557 MB; `--print` is
+byte-identical to `golden_cfgtab.txt`.
+
+**Lesson:** a stand-in world whose pointers do not own is fine for short scripts, but any count a driver reads from
+a hashed token bounds nothing: free per run, or bound the counts, and run every driver under a memory cap.
