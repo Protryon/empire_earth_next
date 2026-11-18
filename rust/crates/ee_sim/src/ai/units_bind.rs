@@ -2840,3 +2840,376 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall(l: *mut c_void) -> c_int {
     run(&g, s, &m, true);
     done(l, &g, s, "wall", unit_type, x1 * 10000 + y1)
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The searches over the player's units, the map and the classic's information cheat
+
+/// `EECPEngineSeesAll(player)`: the manifest's "sees_all".
+pub const EE_AI_UNITS_HOST_SEES_ALL: i32 = 43;
+/// `EEPlayerBlockTakes(player, a, b - 1, c - 1, size + 2, size + 2, 0)` with `out` the size (a `c_long`).
+pub const EE_AI_UNITS_HOST_BLOCK_TAKES: i32 = 44;
+
+const TYPE_TOWN_CENTER: u64 = 0x23;
+const TYPE_CAPITOL: u64 = 0x29;
+const TYPE_SETTLEMENT: u64 = 0x2b;
+const CAT_LAND: u64 = 5;
+const CAT_HERO: u64 = 0x17;
+const FAMILY_BUILDING: u64 = 3;
+
+fn tile_size(c: &ClassView<'_>) -> c_long {
+    crate::world_field!(c.fields(), mTileSize)
+}
+
+/// `ai.drop_site(x, y[, kind])` -> the id of the player's nearest finished drop site for the resource kind ("food":
+/// a granary too), its tile distance and its centre x, y; nil when it has none
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_drop_site(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    charge(l, s, 500);
+    if !is_int(l, 1) || !is_int(l, 2) {
+        return 0;
+    }
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    let (x, y) = (int_at(l, 1), int_at(l, 2));
+    let food = lua_type(l, 3) == LUA_TSTRING && CStr::from_ptr(lua_tostring(l, 3)) == c"food";
+    let mut best: Option<(UnitView<'_>, c_long, c_long)> = None;
+    for u in g.me.units() {
+        let Some(class) = u.class() else { continue };
+        let k = class.unit_type();
+        if k != TYPE_TOWN_CENTER && k != TYPE_CAPITOL && k != TYPE_SETTLEMENT && !(food && k == TYPE_GRANARY) {
+            continue;
+        }
+        if !u.complex_unit().is_some_and(|c| c.is_built()) || !(u.hit_points() > 0) || !Game::on_map(&u) {
+            continue;
+        }
+        let half = tile_size(&class) / 2;
+        let (ux, uy) = u.tile_xy();
+        let d = d2(ux as c_long + half, uy as c_long + half, x, y);
+        let better = match &best {
+            None => true,
+            Some((b, bd, _)) => d < *bd || (d == *bd && u.id() < b.id()),
+        };
+        if better {
+            best = Some((u, d, half));
+        }
+    }
+    let Some((b, d, half)) = best else { return 0 };
+    let (bx, by) = b.tile_xy();
+    lua_pushinteger(l, b.id() as lua_Integer);
+    lua_pushinteger(l, isqrt_up(d) as lua_Integer);
+    lua_pushinteger(l, (bx as c_long + half) as lua_Integer);
+    lua_pushinteger(l, (by as c_long + half) as lua_Integer);
+    4
+}
+
+/// `ai.enemy_force(player, x, y, r)` -> n, hp, attack: the player's land soldiers within r tiles, seen or not;
+/// only for an AI that "sees_all"
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_enemy_force(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    charge(l, s, COST_CALL);
+    if host(EE_AI_UNITS_HOST_SEES_ALL, me_ptr, 0, 0, 0) == 0 || !(1..=4).all(|i| is_int(l, i)) {
+        return 0;
+    }
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    let p = lua_tointeger(l, 1);
+    if p < 0 || p as u64 >= g.world.num_players() {
+        return 0;
+    }
+    let Some(other) = g.world.player(p as usize) else { return 0 };
+    let (x, y, r) = (int_at(l, 2), int_at(l, 3), int_at(l, 4));
+    let (mut n, mut hp, mut attack, mut scanned): (c_long, c_long, c_long, i64) = (0, 0, 0, 0);
+    for u in other.units() {
+        scanned += 1;
+        let Some(st) = u.stats() else { continue };
+        let Some(class) = u.class() else { continue };
+        if u.complex_unit_handle() == 0 || !(u.hit_points() > 0) || attack_of(&st) == 0.0 {
+            continue;
+        }
+        if crate::units::player_views::land_building(&class) {
+            continue;
+        }
+        let k = class.category();
+        if k != CAT_LAND && k != CAT_HERO {
+            continue;
+        }
+        let (ux, uy) = u.tile_xy();
+        let (dx, dy) = (ux as c_long - x, uy as c_long - y);
+        if dx * dx + dy * dy > r * r {
+            continue;
+        }
+        n += 1;
+        hp += u.hit_points() as c_long;
+        attack += um::lrintf(attack_of(&st)) as c_long;
+    }
+    charge(l, s, scanned * COST_SCAN);
+    lua_pushinteger(l, n as lua_Integer);
+    lua_pushinteger(l, hp as lua_Integer);
+    lua_pushinteger(l, attack as lua_Integer);
+    3
+}
+
+/// `ai.player_file(player)` -> {gatherers, types, military, strength}: the classic's intelligence file of a player
+/// (every unit alive, seen or not); only for an AI that "sees_all"
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_player_file(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    charge(l, s, COST_CALL);
+    if host(EE_AI_UNITS_HOST_SEES_ALL, me_ptr, 0, 0, 0) == 0 || !is_int(l, 1) {
+        return 0;
+    }
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    let p = lua_tointeger(l, 1);
+    if p < 0 || p as u64 >= g.world.num_players() {
+        return 0;
+    }
+    let Some(other) = g.world.player(p as usize) else { return 0 };
+    let (mut gatherers, mut scanned): (c_long, i64) = (0, 0);
+    let mut count = [0 as c_long; 4];
+    let mut strength = [0 as c_long; 4]; // land, sea, air, space
+    let mut types: std::collections::BTreeMap<c_long, c_long> = std::collections::BTreeMap::new();
+    for u in other.units() {
+        scanned += 1;
+        let Some(c) = u.class() else { continue };
+        if !(u.hit_points() > 0) {
+            continue;
+        }
+        let k = c.category();
+        if k == CAT_LAND_CITIZEN || k == CAT_NAVAL_CITIZEN {
+            gatherers += 1;
+            continue;
+        }
+        if c.family() == FAMILY_BUILDING || c.family() == FAMILY_ANIMAL {
+            continue;
+        }
+        *types.entry(c.unit_type() as c_long).or_insert(0) += 1;
+        let f = c.fields();
+        let attack: c_long = crate::world_field!(f, mAttack);
+        let calamity: bool = crate::world_field!(f, mHasCalamityPowers);
+        let medic: bool = crate::world_field!(f, mIsMedic);
+        let conversion: f32 = crate::world_field!(f, mConversionRate);
+        if !(attack > 0) && !calamity && !medic && conversion == 0.0 {
+            continue;
+        }
+        let domains: u8 = crate::world_field!(f, mDomains);
+        let d = if domains & 1 != 0 {
+            2
+        } else if domains & 4 != 0 {
+            1
+        } else if domains & 8 != 0 {
+            3
+        } else {
+            0
+        };
+        count[d] += 1;
+        strength[d] += crate::world_field!(f, mInfluence);
+    }
+    // (the map moves into the state's scratch before a charge can raise)
+    (*s).sorted.clear();
+    (*s).sorted.extend(types.into_iter().map(|(k, n)| EeAiUnitsSortEntry { key: n as i64, id: k }));
+    let n_types = (*s).sorted.len();
+    charge(l, s, scanned * COST_SCAN + n_types as i64 * COST_FIELD);
+    const DOMAINS: [&CStr; 4] = [c"land", c"sea", c"air", c"space"];
+    lua_createtable(l, 0, 4);
+    set_int(l, c"gatherers", gatherers);
+    lua_createtable(l, 0, n_types as c_int);
+    for k in 0..n_types {
+        let e = (&(*s).sorted)[k];
+        lua_pushinteger(l, e.key as lua_Integer);
+        lua_setfield(l, -2, name_of(&mut *s, e.id));
+    }
+    lua_setfield(l, -2, c"types".as_ptr());
+    lua_createtable(l, 0, 4);
+    for d in 0..4 {
+        set_int(l, DOMAINS[d], count[d]);
+    }
+    lua_setfield(l, -2, c"military".as_ptr());
+    lua_createtable(l, 0, 4);
+    for d in 0..4 {
+        set_int(l, DOMAINS[d], strength[d]);
+    }
+    lua_setfield(l, -2, c"strength".as_ptr());
+    1
+}
+
+fn test_spawn_on() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("EE_AI_TEST_SPAWN").is_ok_and(|v| v.starts_with('1')))
+}
+
+/// TEST ONLY (EE_AI_TEST_SPAWN=1): `ai.test_town(player)` -> x, y of the player's first town centre or capitol
+/// (fog ignored); off: nil
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_test_town(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    charge(l, s, COST_CALL);
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    if !test_spawn_on()
+        || !is_int(l, 1)
+        || lua_tointeger(l, 1) < 0
+        || lua_tointeger(l, 1) as u64 >= g.world.num_players()
+    {
+        return 0;
+    }
+    let Some(p) = g.world.player(lua_tointeger(l, 1) as usize) else { return 0 };
+    for u in p.units() {
+        let Some(c) = u.class() else { continue };
+        if (c.unit_type() == TYPE_TOWN_CENTER || c.unit_type() == TYPE_CAPITOL) && u.hit_points() > 0 {
+            let half = tile_size(&c) / 2;
+            let (x, y) = u.tile_xy();
+            lua_pushinteger(l, (x as c_long + half) as lua_Integer);
+            lua_pushinteger(l, (y as c_long + half) as lua_Integer);
+            return 2;
+        }
+    }
+    0
+}
+
+/// `ai.find_site(type, x, y, {min, max, safe, margin, far})` -> x, y: the nearest explored tile where the class
+/// can be placed, ring by ring; nil: none
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_find_site(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    let unit_type = class_arg(l, 1);
+    let Some(class) = class_at(&g, unit_type) else { return 0 };
+    let Some(map) = g.world.map() else { return 0 };
+    if !is_int(l, 2) || !is_int(l, 3) {
+        return 0;
+    }
+    let (x, y) = (int_at(l, 2), int_at(l, 3));
+    let (mut min, mut max): (c_long, c_long) = (0, 12);
+    opt_int(l, 4, c"min", &mut min);
+    opt_int(l, 4, c"max", &mut max);
+    let min = min.max(0);
+    let max = max.min(30);
+    let safe = opt_bool(l, 4, c"safe", false);
+    // margin: the footprint grown by a tile on every side is free as well; far: the rings from max inward
+    let margin = opt_bool(l, 4, c"margin", false);
+    let far = opt_bool(l, 4, c"far", false);
+    let mut size = tile_size(&class);
+    charge(l, s, COST_CALL + ((2 * max + 1) * (2 * max + 1)) as i64 * if margin { 6 } else { 4 });
+    let mut found: Option<(c_long, c_long)> = None;
+    let mut k = min;
+    while k <= max && found.is_none() {
+        let r = if far { max - (k - min) } else { k };
+        let mut dy = -r;
+        while dy <= r && found.is_none() {
+            for dx in -r..=r {
+                if dx > -r && dx < r && dy > -r && dy < r {
+                    continue; // the ring only
+                }
+                let (tx, ty) = (x + dx, y + dy);
+                let tile = if tx >= 0 && ty >= 0 { map.tile(tx as i64, ty as i64) } else { None };
+                if !tile.is_some_and(|t| g.tile_explored(&t)) {
+                    continue;
+                }
+                if safe && (*s).layer_at(Layer::Threat, tx, ty) > 0 {
+                    continue;
+                }
+                if host(EE_AI_UNITS_HOST_CAN_PLACE, me_ptr, unit_type as i64, tx as i64, ty as i64) != 0
+                    && (!margin
+                        || ee_ai_units_host(
+                            EE_AI_UNITS_HOST_BLOCK_TAKES,
+                            me_ptr,
+                            unit_type as i64,
+                            tx as i64,
+                            ty as i64,
+                            (&mut size as *mut c_long).cast(),
+                        ) != 0)
+                {
+                    found = Some((tx, ty));
+                    break;
+                }
+            }
+            dy += 1;
+        }
+        k += 1;
+    }
+    let Some((fx, fy)) = found else { return 0 };
+    lua_pushinteger(l, fx as lua_Integer);
+    lua_pushinteger(l, fy as lua_Integer);
+    2
+}
+
+/// `ai.shore(x, y, {sea, land, max})` -> x, y, sea, land: the nearest explored land tile, ring by ring, that
+/// touches water (of the water body `sea` when given) and lies on the land mass `land` when given
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_shore(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return 0 };
+    let Some(map) = g.world.map() else { return 0 };
+    if !is_int(l, 1) || !is_int(l, 2) {
+        return 0;
+    }
+    let (x, y) = (int_at(l, 1), int_at(l, 2));
+    let (mut sea, mut land, mut max): (c_long, c_long, c_long) = (0, 0, 20);
+    opt_int(l, 3, c"sea", &mut sea);
+    opt_int(l, 3, c"land", &mut land);
+    opt_int(l, 3, c"max", &mut max);
+    let max = max.clamp(0, 40);
+    charge(l, s, COST_CALL + ((2 * max + 1) * (2 * max + 1)) as i64 * 6);
+    let (w, h) = map_size();
+    const SIDE: [[c_long; 2]; 4] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for r in 0..=max {
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx > -r && dx < r && dy > -r && dy < r {
+                    continue;
+                }
+                let (tx, ty) = (x + dx, y + dy);
+                if tx < 0 || ty < 0 || tx >= w || ty >= h {
+                    continue;
+                }
+                if !map.tile(tx as i64, ty as i64).is_some_and(|t| g.tile_explored(&t)) {
+                    continue;
+                }
+                let mass = continent(tx, ty, false) as c_long;
+                if mass == 0 || (land != 0 && mass != land) {
+                    continue;
+                }
+                let mut water: c_long = 0;
+                for side in &SIDE {
+                    if water != 0 {
+                        break;
+                    }
+                    let (nx, ny) = (tx + side[0], ty + side[1]);
+                    if nx < 0 || ny < 0 || nx >= w || ny >= h {
+                        continue;
+                    }
+                    let b = continent(nx, ny, true) as c_long;
+                    if b != 0 && (sea == 0 || b == sea) {
+                        water = b;
+                    }
+                }
+                if water == 0 {
+                    continue;
+                }
+                lua_pushinteger(l, tx as lua_Integer);
+                lua_pushinteger(l, ty as lua_Integer);
+                lua_pushinteger(l, water as lua_Integer);
+                lua_pushinteger(l, mass as lua_Integer);
+                return 4;
+            }
+        }
+    }
+    0
+}

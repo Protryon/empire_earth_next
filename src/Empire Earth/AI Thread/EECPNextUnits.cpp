@@ -638,26 +638,6 @@ static bool EECPUnitsTestOn()
     return sOn == 1;
 }
 
-// TEST ONLY (EE_AI_TEST_SPAWN=1): ai.test_town(player) -> x, y of the player's first town centre or capitol (fog ignored): the
-// micro test scripts place their fights with it. Off: nil
-static int LuaTestTown(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPUnitsTestOn() || !lua_isinteger(L, 1) || lua_tointeger(L, 1) < 0
-        || (unsigned long)lua_tointeger(L, 1) >= gWorld.mNumPlayers || gWorld.mPlayers[lua_tointeger(L, 1)] == NULL)
-        return 0;
-    for (EEUnit* theUnit = gWorld.mPlayers[lua_tointeger(L, 1)]->mFirstUnit; theUnit != NULL;
-         theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if ((theUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || theUnit->mUnitClass->mUnitType == kUnitTypeCapitol)
-            && theUnit->mHitPoints > 0) {
-            long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
-            lua_pushinteger(L, (lua_Integer)(theUnit->GetTileX() + theHalf));
-            lua_pushinteger(L, (lua_Integer)(theUnit->GetTileY() + theHalf));
-            return 2;
-        }
-    return 0;
-}
-
 // TEST ONLY (EE_AI_TEST_SPAWN=1): ai.test_spawn(type, x, y, player) -> true: the cheat's unit (EEMHackANewUnit) is
 // made (it is the player's from the next tick: find it with ai.units). The micro test scripts set their armies up
 // with it. Off: false
@@ -716,149 +696,6 @@ static unsigned short EECPUnitsAreaNear(long inX, long inY, long inKind)
                 unsigned short a = gContinentManager.GetContinent(U2DPoint<long>(inX + dx, inY + dy), inKind);
                 if (a != 0)
                     return a;
-            }
-    return 0;
-}
-
-// ai.find_site(type, x, y, {min = 0, max = 12, safe = false}) -> x, y: the nearest explored tile where the class can be
-// placed (EECanPlaceOnTile), ring by ring from (x, y); with safe, only where the threat layer is 0. nil: none
-static int LuaFindSite(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    long theType = EECPUnitsClassArg(L, 1);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || !lua_isinteger(L, 2) || !lua_isinteger(L, 3) || gWorld.mMap == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    long theMin = 0, theMax = 12;
-    EECPUnitsOptInt(L, 4, "min", theMin);
-    EECPUnitsOptInt(L, 4, "max", theMax);
-    theMin = theMin < 0 ? 0 : theMin;
-    theMax = theMax > 30 ? 30 : theMax;
-    bool theSafe = EECPUnitsOptBool(L, 4, "safe", false);
-    // margin: the footprint grown by a tile on every side is free as well (the classic build manager's CanBuildAt
-    // inMargin, EEPlayerBlockTakes); far: the rings from max inward (FindBuildSite's production order)
-    bool theMargin = EECPUnitsOptBool(L, 4, "margin", false);
-    bool theFar = EECPUnitsOptBool(L, 4, "far", false);
-    long theSize = gUnitClassTable[theType]->GetTileSize();
-    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * (theMargin ? 6 : 4));   // the most it can test, before it does
-    long theX = -1, theY = -1;
-    for (long k = theMin; k <= theMax && theX < 0; k++) {
-        long r = theFar ? theMax - (k - theMin) : k;
-        for (long dy = -r; dy <= r && theX < 0; dy++)
-            for (long dx = -r; dx <= r; dx++) {
-                if (dx > -r && dx < r && dy > -r && dy < r)
-                    continue;   // the ring only
-                long tx = x + dx, ty = y + dy;
-                EETile* theTile = tx >= 0 && ty >= 0
-                    ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty)) : NULL;
-                if (theTile == NULL || !theTile->IsVisibleTo(me))
-                    continue;
-                if (theSafe && EECPUnitsDangerAt(s, tx, ty) > 0)
-                    continue;
-                if (EECanPlaceOnTile(me, theType, tx, ty, false, 1)
-                    && (!theMargin || EEPlayerBlockTakes(me, theType, tx - 1, ty - 1, theSize + 2, theSize + 2, 0))) {
-                    theX = tx;
-                    theY = ty;
-                    break;
-                }
-            }
-    }
-    if (theX < 0)
-        return 0;
-    lua_pushinteger(L, (lua_Integer)theX);
-    lua_pushinteger(L, (lua_Integer)theY);
-    return 2;
-}
-
-// ai.drop_site(x, y[, kind]) -> the id of the player's nearest finished drop site for the resource kind ("food":
-// a granary too; the default any), its tile distance, and its centre x, y; nil when it has none
-static int LuaDropSite(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsCharge(L, 500);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-        return 0;
-    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
-    bool theFood = lua_type(L, 3) == LUA_TSTRING && strcmp(lua_tostring(L, 3), "food") == 0;
-    EEUnit* theBest = NULL;
-    long theBestD2 = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        if (theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol && theType != kUnitTypeSettlement
-            && !(theFood && theType == kUnitTypeGranary))
-            continue;
-        if (theUnit->mComplexUnit == NULL || !theUnit->mComplexUnit->mIsBuilt || !(theUnit->mHitPoints > 0) || !EECPUnitsOnMap(theUnit))
-            continue;
-        long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
-        long d2 = EECPUnitsD2(theUnit->GetTileX() + theHalf, theUnit->GetTileY() + theHalf, x, y);
-        if (theBest == NULL || d2 < theBestD2 || (d2 == theBestD2 && theUnit->mUnitID < theBest->mUnitID)) {
-            theBest = theUnit;
-            theBestD2 = d2;
-        }
-    }
-    if (theBest == NULL)
-        return 0;
-    long theHalf = theBest->mUnitClass->GetTileSize() / 2;
-    long d = 0;
-    while ((d + 1) * (d + 1) <= theBestD2)
-        d++;
-    lua_pushinteger(L, (lua_Integer)theBest->mUnitID);
-    lua_pushinteger(L, (lua_Integer)d);
-    lua_pushinteger(L, (lua_Integer)(theBest->GetTileX() + theHalf));
-    lua_pushinteger(L, (lua_Integer)(theBest->GetTileY() + theHalf));
-    return 4;
-}
-
-// ai.shore(x, y, {sea = id, land = id, max = 20}) -> x, y, sea, land: the nearest explored land tile, ring by ring
-// from (x, y), that touches water (of the water body `sea` when given) and lies on the land mass `land` when given;
-// nil: none within max rings
-static int LuaShore(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
-    long theSea = 0, theLand = 0, theMax = 20;
-    EECPUnitsOptInt(L, 3, "sea", theSea);
-    EECPUnitsOptInt(L, 3, "land", theLand);
-    EECPUnitsOptInt(L, 3, "max", theMax);
-    theMax = theMax < 0 ? 0 : theMax > 40 ? 40 : theMax;
-    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * 6);
-    long w, h;
-    EECPUnitsMapSize(w, h);
-    static const long kSide[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    for (long r = 0; r <= theMax; r++)
-        for (long dy = -r; dy <= r; dy++)
-            for (long dx = -r; dx <= r; dx++) {
-                if (dx > -r && dx < r && dy > -r && dy < r)
-                    continue;
-                long tx = x + dx, ty = y + dy;
-                if (tx < 0 || ty < 0 || tx >= w || ty >= h)
-                    continue;
-                EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty));
-                if (theTile == NULL || !theTile->IsVisibleTo(me))
-                    continue;
-                unsigned short theMass = gContinentManager.GetContinent(U2DPoint<long>(tx, ty), kAIPathLandMass);
-                if (theMass == 0 || (theLand != 0 && theMass != theLand))
-                    continue;
-                unsigned short theWater = 0;
-                for (int k = 0; k < 4 && theWater == 0; k++) {
-                    long nx = tx + kSide[k][0], ny = ty + kSide[k][1];
-                    if (nx < 0 || ny < 0 || nx >= w || ny >= h)
-                        continue;
-                    unsigned short b = gContinentManager.GetContinent(U2DPoint<long>(nx, ny), kAIPathWaterBody);
-                    if (b != 0 && (theSea == 0 || b == theSea))
-                        theWater = b;
-                }
-                if (theWater == 0)
-                    continue;
-                lua_pushinteger(L, (lua_Integer)tx);
-                lua_pushinteger(L, (lua_Integer)ty);
-                lua_pushinteger(L, (lua_Integer)theWater);
-                lua_pushinteger(L, (lua_Integer)theMass);
-                return 4;
             }
     return 0;
 }
@@ -973,102 +810,6 @@ static int LuaEnemyNear(lua_State* L)
         }
     }
     lua_pushboolean(L, theCount > 0 ? 1 : 0);
-    return 1;
-}
-
-// ai.enemy_force(player, x, y, r) -> n, hp, attack: the player's land soldiers (an attack, a land unit or hero, not a
-// building) within r tiles of the tile, counted and summed - every one, seen or not, as the classic's militia counts
-// the raiders (EECPRMMilitia). Only for an AI whose manifest entry declares "sees_all" (the classic's information
-// cheat); nothing for every other AI (ai.seen is the fog-honest count)
-static int LuaEnemyForce(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isinteger(L, 3)
-        || !lua_isinteger(L, 4))
-        return 0;
-    lua_Integer thePlayer = lua_tointeger(L, 1);
-    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3), r = (long)lua_tointeger(L, 4);
-    long n = 0, theHP = 0, theAttack = 0, theScanned = 0;
-    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
-        theScanned++;
-        if (u->mComplexUnit == NULL || !(u->mHitPoints > 0) || u->mStats == NULL || u->mStats->mAttack == 0.0f
-            || u->mUnitClass->IsLandBuilding())
-            continue;
-        long theCategory = u->mUnitClass->mCategory;
-        if (theCategory != kUnitCategoryLand && theCategory != kUnitCategoryLandMilitaryHero)
-            continue;
-        long dx = u->GetTileX() - x, dy = u->GetTileY() - y;
-        if (dx * dx + dy * dy > r * r)
-            continue;
-        n++;
-        theHP += (long)u->mHitPoints;
-        theAttack += UMFloatToLong(u->mStats->mAttack);
-    }
-    EECPUnitsCharge(L, theScanned * kCostScan);
-    lua_pushinteger(L, (lua_Integer)n);
-    lua_pushinteger(L, (lua_Integer)theHP);
-    lua_pushinteger(L, (lua_Integer)theAttack);
-    return 3;
-}
-
-// ai.player_file(player) -> {gatherers, types = {[class] = n}, military = {land, sea, air, space} (counts),
-// strength = {land, sea, air, space} (the classes' influence)}: the classic's intelligence file of a player
-// (EECPIntelligencePlayerFile::Update / AddUnitClass / AddUnitType: every unit of the player alive, seen or not - its
-// citizens as gatherers, its non-building units by class, the ones with an attack, calamity power, heal or conversion
-// in their domain's strength). Only for an AI whose manifest entry declares "sees_all" (the classic's information
-// cheat); nothing for every other AI
-static int LuaPlayerFile(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* st = EECPUnitsGet(me);
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1))
-        return 0;
-    lua_Integer thePlayer = lua_tointeger(L, 1);
-    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
-        return 0;
-    long theGatherers = 0, theScanned = 0;
-    long theCount[4] = {0, 0, 0, 0}, theStrength[4] = {0, 0, 0, 0};   // land, sea, air, space
-    std::map<long, long> theTypes;
-    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
-        theScanned++;
-        if (!(u->mHitPoints > 0) || u->mUnitClass == NULL)
-            continue;
-        EEUnitClass* c = u->mUnitClass;
-        if (c->mCategory == kUnitCategoryLandCitizen || c->mCategory == kUnitCategoryNavalCitizen) {
-            theGatherers++;
-            continue;
-        }
-        if (c->mFamily == kUnitFamilyBuilding || c->mFamily == kUnitFamilyAnimal)
-            continue;
-        theTypes[c->GetUnitType()]++;
-        if (!(c->GetAttack() > 0) && !c->mHasCalamityPowers && !c->GetIsMedic() && c->GetConversionRate() == 0.0f)
-            continue;
-        long d = (c->GetDomains() & kMovementAir) ? 2 : (c->GetDomains() & kMovementSea) ? 1 : (c->GetDomains() & kMovementSpace) ? 3 : 0;
-        theCount[d]++;
-        theStrength[d] += (long)c->mInfluence;
-    }
-    EECPUnitsCharge(L, theScanned * kCostScan + (int64_t)theTypes.size() * kCostField);
-    static const char* const kDomains[4] = {"land", "sea", "air", "space"};
-    lua_createtable(L, 0, 4);
-    EECPUnitsSetInt(L, "gatherers", theGatherers);
-    lua_createtable(L, 0, (int)theTypes.size());
-    for (std::map<long, long>::iterator it = theTypes.begin(); it != theTypes.end(); ++it) {
-        lua_pushinteger(L, (lua_Integer)it->second);
-        lua_setfield(L, -2, EECPUnitsName(st, it->first));
-    }
-    lua_setfield(L, -2, "types");
-    lua_createtable(L, 0, 4);
-    for (int d = 0; d < 4; d++)
-        EECPUnitsSetInt(L, kDomains[d], theCount[d]);
-    lua_setfield(L, -2, "military");
-    lua_createtable(L, 0, 4);
-    for (int d = 0; d < 4; d++)
-        EECPUnitsSetInt(L, kDomains[d], theStrength[d]);
-    lua_setfield(L, -2, "strength");
     return 1;
 }
 
@@ -2379,12 +2120,12 @@ static const luaL_Reg kUnitsFunctions[] = {
     {"build", (lua_CFunction)ee_ai_units_lua_build}, {"repair", (lua_CFunction)ee_ai_units_lua_repair}, {"garrison", (lua_CFunction)ee_ai_units_lua_garrison}, {"load", (lua_CFunction)ee_ai_units_lua_load}, {"unload", (lua_CFunction)ee_ai_units_lua_unload},
     {"train", (lua_CFunction)ee_ai_units_lua_train}, {"research", (lua_CFunction)ee_ai_units_lua_research}, {"stance", (lua_CFunction)ee_ai_units_lua_stance}, {"stop", (lua_CFunction)ee_ai_units_lua_stop},
     {"explore", (lua_CFunction)ee_ai_units_lua_explore}, {"delete", (lua_CFunction)ee_ai_units_lua_delete}, {"take", (lua_CFunction)ee_ai_units_lua_take}, {"release", (lua_CFunction)ee_ai_units_lua_release},
-    {"reflex", (lua_CFunction)ee_ai_units_lua_reflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
+    {"reflex", (lua_CFunction)ee_ai_units_lua_reflex}, {"test_spawn", LuaTestSpawn}, {"test_town", (lua_CFunction)ee_ai_units_lua_test_town},
     {"danger", (lua_CFunction)ee_ai_units_lua_danger}, {"danger_box", (lua_CFunction)ee_ai_units_lua_danger_box}, {"mark", (lua_CFunction)ee_ai_units_lua_mark}, {"route", (lua_CFunction)ee_ai_units_lua_route},
-    {"find_site", LuaFindSite}, {"heal", (lua_CFunction)ee_ai_units_lua_heal}, {"rally", (lua_CFunction)ee_ai_units_lua_rally}, {"cancel", (lua_CFunction)ee_ai_units_lua_cancel},
+    {"find_site", (lua_CFunction)ee_ai_units_lua_find_site}, {"heal", (lua_CFunction)ee_ai_units_lua_heal}, {"rally", (lua_CFunction)ee_ai_units_lua_rally}, {"cancel", (lua_CFunction)ee_ai_units_lua_cancel},
     {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", (lua_CFunction)ee_ai_units_lua_formation}, {"pack", (lua_CFunction)ee_ai_units_lua_pack}, {"dropoff", (lua_CFunction)ee_ai_units_lua_dropoff},
     {"farm", (lua_CFunction)ee_ai_units_lua_farm}, {"cast", (lua_CFunction)ee_ai_units_lua_cast}, {"replant", (lua_CFunction)ee_ai_units_lua_replant},
-    {"path_len", (lua_CFunction)ee_ai_units_lua_path_len}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+    {"path_len", (lua_CFunction)ee_ai_units_lua_path_len}, {"drop_site", (lua_CFunction)ee_ai_units_lua_drop_site}, {"shore", (lua_CFunction)ee_ai_units_lua_shore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", (lua_CFunction)ee_ai_units_lua_enemy_force}, {"player_file", (lua_CFunction)ee_ai_units_lua_player_file}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
     {"config", (lua_CFunction)ee_ai_units_lua_config}, {"used", LuaUsed},
     {"wall", (lua_CFunction)ee_ai_units_lua_wall}, {"gate", LuaGate}, {"lock", (lua_CFunction)ee_ai_units_lua_lock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
     {"diplomacy", LuaDiplomacy}, {"patrol", (lua_CFunction)ee_ai_units_lua_patrol},
@@ -2741,6 +2482,12 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
         return a >= 0 && (unsigned long)a < EEUnitBehavior::sTable.size() && EEUnitBehavior::sTable[(unsigned long)a] != NULL;
     case EE_AI_UNITS_HOST_HAS_NODE:
         return me->mTechnologies->Get((long)a) != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_SEES_ALL:
+        return EECPEngineSeesAll(me) ? 1 : 0;
+    case EE_AI_UNITS_HOST_BLOCK_TAKES: {
+        long theSize = *(const long*)outRecord;
+        return EEPlayerBlockTakes(me, (long)a, (long)b - 1, (long)c - 1, theSize + 2, theSize + 2, 0) ? 1 : 0;
+    }
     case EE_AI_UNITS_HOST_HAS_TREE:
         return me->mTechnologies != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_WALL_CLASS:

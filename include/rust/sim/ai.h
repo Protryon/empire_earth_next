@@ -164,6 +164,12 @@ constexpr static const int32_t EE_AI_UNITS_HOST_NODE_AFFORD = 42;
 
 constexpr static const int32_t EE_AI_UNITS_MSG_BUILD_WALL = 26;
 
+/// `EECPEngineSeesAll(player)`: the manifest's "sees_all".
+constexpr static const int32_t EE_AI_UNITS_HOST_SEES_ALL = 43;
+
+/// `EEPlayerBlockTakes(player, a, b - 1, c - 1, size + 2, size + 2, 0)` with `out` the size (a `c_long`).
+constexpr static const int32_t EE_AI_UNITS_HOST_BLOCK_TAKES = 44;
+
 constexpr static const long EV_ATTACKED = 1;
 
 constexpr static const long EV_DIED = 2;
@@ -1152,6 +1158,30 @@ int ee_ai_units_lua_patrol(void *l);
 /// `ai.wall(ids, type, x1, y1, x2, y2)`: the citizens lay a straight wall of the class between the two tiles, as a
 /// human's drag does (EEPlanWall); n = the citizens sent
 int ee_ai_units_lua_wall(void *l);
+
+/// `ai.drop_site(x, y[, kind])` -> the id of the player's nearest finished drop site for the resource kind ("food":
+/// a granary too), its tile distance and its centre x, y; nil when it has none
+int ee_ai_units_lua_drop_site(void *l);
+
+/// `ai.enemy_force(player, x, y, r)` -> n, hp, attack: the player's land soldiers within r tiles, seen or not;
+/// only for an AI that "sees_all"
+int ee_ai_units_lua_enemy_force(void *l);
+
+/// `ai.player_file(player)` -> {gatherers, types, military, strength}: the classic's intelligence file of a player
+/// (every unit alive, seen or not); only for an AI that "sees_all"
+int ee_ai_units_lua_player_file(void *l);
+
+/// TEST ONLY (EE_AI_TEST_SPAWN=1): `ai.test_town(player)` -> x, y of the player's first town centre or capitol
+/// (fog ignored); off: nil
+int ee_ai_units_lua_test_town(void *l);
+
+/// `ai.find_site(type, x, y, {min, max, safe, margin, far})` -> x, y: the nearest explored tile where the class
+/// can be placed, ring by ring; nil: none
+int ee_ai_units_lua_find_site(void *l);
+
+/// `ai.shore(x, y, {sea, land, max})` -> x, y, sea, land: the nearest explored land tile, ring by ring, that
+/// touches water (of the water body `sea` when given) and lies on the land mass `land` when given
+int ee_ai_units_lua_shore(void *l);
 
 /// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
 long ee_ai_units_class_arg(void *state,
