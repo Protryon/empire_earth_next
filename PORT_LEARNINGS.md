@@ -30072,6 +30072,91 @@ origin/rust had nothing new at the end of the round (no merge).
   obsolete_epoch + 1) caught at classic-2's first ai.techs call (line 24). On the final tree: oracle seeds 2-7
   identical; captures oracle, late, space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect`
   PASS; both builds 0/0; the Rust gate PASS.
+## R5b.1, the path manager whole in Rust: the searches, queues, pools, requests, updates, bounded searches and saved parts over one host; PMRQ; the dead function objects (ee_sim::astar pm.rs, pm_bounded.rs; branch rust-ai-path1, 2026-11-17)
+
+- **What moved.** `EEPathManager` is a Rust object (`pm.rs`, the C++ handle `mRust`): the search nodes (the
+  original's `UMemoryPool<EEPathManagerNode>`, now a slab with `mPaths`/`mAutoPaths` as queues of its indices), the
+  spare path and graph machines, the pending units (`mPending`), `mLCC`, `mNextRequestID`, `mNextRegionTime`,
+  `mIsUpdatingRegions` and the request record (pm_record.rs, now the manager's member; its C interface is gone).
+  Every decision is Rust in the C++'s order: `Update`, `UpdateAutoPaths`, `UpdatePaths` (the 32-step budget, the
+  growing step limit, the prunes), the cancels and completions, the queries, `RequestPath`, `RequestGroupPath`,
+  `StartGraphPath`, `RequestUnitPath`, `FinishGraphPath`, the two budgets' inputs, the machines' pools,
+  `RequestPendingPaths`, `SetRegionUpdates`/`UpdateRegions`, `Reset`, `Clear`, `DumpSim`'s lines. `pm_bounded.rs`
+  has the bounded searches (`TryShortPath`, `FindPath`, `FindBoundedPath`), a finished search's result (`FinishPath`,
+  `FinishFoundPath`, `FinishFailedPath`'s detour) and the splicing between them (`TrimPath`, `AppendWaypoints`,
+  `JoinPaths`, `RunBoundedPath`), its PMSP records written in the C++'s layout and committed through the host.
+  The saved game's parts (the running state 0.256, the tile searches 0.276, a request 0.277, the graph searches and
+  the first tick's resolve 0.278) are Rust, written and read as the same typed `FSFile` calls in the same order
+  through a typed file callback (`EePathFileFn`: u32, i32, u16, bool, f32, bytes); the machines' saved fields are
+  repr(C) records (`EePathSavedMachine`, `EePathSavedGraph`) that the host fills and applies.
+  `EEPathManagerNode` and `EEPathManagerPending` are deleted; `EEComplexDoppelganger`'s load calls `AddPending`.
+- **What stays C++** (`EEPathManagerHost`, one switch over the `EE_PATH_*` operations, and its bounded half
+  `EEPathBoundedHost`): the machines with their C++ goals and modifiers (made, run, reset, released, their limits,
+  the sea and space modifiers by type, `StartGraphPath`'s setup over the sub sectors, the budgets' inputs:
+  `U2DPoint<long>::DistanceTo` is the exe's float sqrt, never re-derived in Rust), the bounded machine and its goal,
+  the units (references, handles, `gWorld.GetUnit`, waypoints, `TakePath`, `DropPath`, `SnapLastWaypoint`,
+  `UnitStranded`), the requests, the owners awaiting loaded requests (`std::function`s), `RequestUnitPaths`' location
+  goals, the C++ vectors the bounded searches fill, `MergeWaypoints`, `ClampTile`, `PrepareBoundedMachine`.
+- **The orders kept.** A node holds its unit by id (the `EEUnitHandle` it was: resolved to the same object while
+  referenced), and a node without a unit matches `NULL` as the handle compare did (`HasAutoPath(NULL)` is true while
+  a request's search runs). A released node keeps its request referenced until reused, as the pool's did (only the
+  freeing time could move; no live address can be shared). `gWorld.GetUnit` (the pending, pruned and loaded units)
+  and the handle resolve (the nodes) stay two operations. A lone search under the step budget runs again in the
+  same update. The bounded goal's `GetPoints` appends: `FinishFailedPath`'s second call after a failed join doubles
+  the detour list, kept (one list for both calls).
+- **PMRQ** (TEST ONLY, EEPathManager.cpp): one record per outermost entry (the requests, the bounded searches, the
+  cancels and completions, the queries, `Update`, the pending paths, the region updates, `Reset`): its inputs and
+  result, the queues after it (unit, tile, passes, request, the machine's type, revs, steps, found and limits), and
+  each unit and request whose search left the queues with its waypoints, flags, goals or path. It reads the queues
+  through `ee_path_manager_queued`, so it is the same over any implementation. Its golden lines (oracle, late,
+  space, calamity, seeds 2-3) come from the unmodified C++ (907df110b); the Rust manager gives the same records
+  (the capture files byte for byte the same length).
+- **Dead code.** The C++ AI's unit counters and kill scorers in EEAIFunctionObjects (no build kept them since
+  stage 5; `EEAIFOUnitsToKillScoringBase.h` deleted), the continent manager's `GetAdjacentContinents`,
+  `GetNearestLandTile`, `GetUnitContinentID`, `AllNeighborsOfKind`, `GetRectangleAreaAt`,
+  `EEAIArea::GetHullClosestPoint`, `EEAIPathSubSector::GetBlockingUnit`. `tools/dead_census.py` lists inlined functions too: each
+  name was grepped (a function inlined into its only caller is not dead).
+- **Lesson.** A typed file callback keeps a saved layout without a byte format: Rust says which `FSFile` overload
+  to call and the C++ writes what it always wrote, so a text or big-endian file would still see typed values.
+- **Net C++** (excluding the generated headers): PMRQ 907df110b +292 (TEST ONLY); the manager 502a58dbb -728
+  (1213+/1941-); the bounded searches 717457462 -298 (208+/506-); the dead code fdb48f3cf -822 (4+/826-). Round:
+  -1,556 (-1,848 without the capture). Rust: pm.rs, pm_bounded.rs (+ 14 unit tests over fake hosts: the queues,
+  the budget, the pools' caps, the pending order, the region schedule, the dump's lines, the saved layouts, a loaded
+  search's place, the PMSP records of the trim, the append and the join; pm_record.rs's handle test went with its
+  C interface).
+- **Gates.** Both builds 0/0 and the test profile 0/0; the Rust gate PASS (4,428 tests; ee_render's movie-thread
+  timing test failed once under load and passed alone and in the rerun); the oracle seeds 2-3 identical after each
+  code commit; the captures at seeds 2-3 PASS: oracle 206, late 208, space 204, calamity 216 digests (PMRQ, PMSP,
+  ASRN, ASGR among them); the plain saveload (seeds 2-7 at 600/1350/2100 s) 18/18; the matrix (`--settings all
+  --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` (oracle, plains,
+  islands, highlands, mediterranean, medium, late, space 4/4, calamity 3/4, next 2/4, as before); the editor gate
+  `sim_editor: PASS` (its quick save's chunks).
+  The oracle seeds 2-7 identical on the last commit; `gates.sh` through its slot: `RESULT PASS tour`, `RESULT PASS
+  ai-game outcome time-cap` (units [4, 38, 39], alive_computers [2, 3], classic_lua twice), `RESULT PASS lan-game`,
+  `GATES PASS`.
+- **Behaviour:** none. One corrected answer: a failed read inside a saved running state's record gives
+  `kErrorBeyondEnd` (0xa), as the C++ load did.
+- **Other lanes' files:** EEComputerPlayer.cpp (lane B) lost one `#include` (the deleted scorer header).
+### Round 3 (same branch): CNTQ, and what the continents' move needs
+
+- **CNTQ** (TEST ONLY, EEAIContinentManager.cpp): one record per outermost call of 24 queries and changes (CanGetTo,
+  InSameContinent, InSameArea, HasShoreTile, IsNextToArea, the area lookups by tile, the choke point, connected and
+  adjacent id lists, the continent's center and tiles, the largest continent, the connections, the random areas,
+  the unit's sub sector, RepairPathArea, RemoveForestTile, UpdateWallUnit). Each body is wrapped in a lambda so every
+  return goes through the record; a change ends with `EEAIContinentDigest()`, the FNV-1a 64 of the bytes a CNTR
+  record would hold (EEAIContinentCapture.cpp's writer split into a fill and a commit; `EESimCaptureRecord::Data()`
+  added). The digest returns 0 before the game's regions exist: `UpdateWallUnit` runs while the scenario's units are
+  made, and the per-tile sub sector lookup divides by a sector size of 0 there (the first run died of it, c0000094).
+  About 0.65 million records per oracle game, 1.1 million in the late profile. Golden lines: oracle (two equal runs),
+  late, space, calamity, seeds 2-3, from the C++ manager (c3875f066).
+- **The continents as whole objects is cross-lane work.** The manager's tables are read outside this lane: the serial
+  table `mAreas` by EECPTrace.cpp (lane A), the towns and herds (lane B) are areas the save's serial table and the
+  manager's `AddArea`/`RemoveArea` hold, the counters (`mLastSerial` 24 uses, `mTileFlags`/`mFlagsWidth` 50) by the
+  units and the Lua bindings. A move needs, in order: a Rust table of the area records by serial (C++ registering at
+  `AddArea`/`RemoveArea`), the other kinds' members as records like `EEAIArea`'s, the sub sectors and sectors as
+  records (the graph machine walks them as `AStarGraphableObjectBase`), then the queries over the records (CNTQ
+  gates them), then `Rebuild`/`RepairPathArea` (whose goals create the C++ objects), and last the save block, whose
+  0.263 bytes the records' writers must reproduce.
 ## AI lane B, round 2: PLCE, EECPPlacement whole and EECPResourceCenter's bodies in Rust (ee_sim::cp placement, resource_center; branch rust-ai-cp1, 2026-11-17)
 
 - **The golden first, committed.** PLCE (ee/EECPPlaceCapture.h) records every outermost call into the placement, a
@@ -30156,6 +30241,70 @@ origin/rust had nothing new at the end of the round (no merge).
   into lane A's hooks and the units' goals). On the tree merged with origin/rust 4929244f3: both builds and the test
   profile 0/0, the Rust gate PASS (4,523 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3 PASS with
   PLCE and CPEV, saveload 18/18, the matrix `saveload expect: PASS`, scenario_check 27/27.
+## R5b.1, round 4: the continent manager's data in Rust: its record and tables, every area kind's members, the sectors and sub sectors as records; the saved block, CNTR, the queries, RepairPathArea and the link walks over them (ee_sim::astar cm.rs, area_kinds.rs, sector_rec.rs, cm_io.rs, cm_query.rs, cm_repair.rs, cm_links.rs, cm_build.rs; branch rust-ai-path2, 2026-11-18)
+
+- **What moved, in the order round 3 named.** (1) `EEAIContinentManager`'s members are one record, `EeAStarCmRecord`
+  (cm.rs): the counters, the sector grid (`EEAIPathSectorRegionInformation`, class and unit deleted), the four tile
+  grids (Rust boxes, the record's pointers kept for the C++ inlines), and behind it the tables: the serial table
+  (was `mAreas`, a sorted vector with `std::map`'s insert), the eight kinds' objects by id (the C++ addresses), the
+  pending sector tiles, the shore lists, the free ids. The scalars stay at fixed addresses (Empire Earth.cpp's
+  `gMapWidth`, `gContinentManagerClearing` and the others alias them). (2) The other kinds' members as records like
+  the continent's (area_kinds.rs: path area with its sorted sector ids, choke point with its area serials, forest,
+  hill, rectangle area), (3) the path sectors and sub sectors (sector_rec.rs: a sector's sub sectors by id, its
+  continents, its sorted path area ids; a sub sector's links as a multimap, its neighbours), and the continents'
+  neighbours in their record. (6, before 4: the record walk the save needs is the queries' too) The saved block in
+  Rust (cm_io.rs): `WriteRegions` and `ReadRegions` byte for byte (0.263), `EEWriteAreaBytes`/`EEReadAreaBytes`,
+  `EEContinentRegionsDigest`, the CNTR record (`EEAIContinentFill`) and CNTQ's digest, `FindContinent` and
+  `FindPathSubSector`. (4) The queries (cm_query.rs) and (5) `RemoveForestTile`, `RepairPathArea` and
+  `GetAdjacentAreaID` (cm_repair.rs); then the link walks' `LinkSubSectors` and `RemoveSubSectors` (cm_links.rs),
+  `CreateContinentGrid`'s store, `UpdateTileValues` and `EEAIRectangleArea::UpdateContinents` (cm_build.rs).
+- **How Rust reaches the C++ objects.** The tables hold the objects' addresses; each record is a private base of its
+  class, and the C++ registers once where each sits (`EeAStarCmLayout`: offsets measured on objects made in the
+  manager's ctor, with a check that every kind's `EEAIArea` is its first base). What only the C++ can answer is one
+  host (`EeAStarCmHostFn`, EEAIContinentSave.cpp): `EEAIArea::Contains`, `Create` and `RemoveTile` (their hull tests
+  and rebuilds write the HULL records: a Rust test of its own would drop those records, so the geometry stays the
+  C++ method over the Rust hull), a tile's kind, wall, terrain, wood and AI value, `EEGetRandomInt`, the town or herd
+  an area is (the players' lists), the region size global, making and deleting the objects a load or a repair makes.
+- **The orders kept.** `U2DPoint<long>::operator<` is the lower y first, then the larger x: the shore list's binary
+  search used x-then-y in the first build and the oracle parted at 1630 s of seed 2 (the second time this lane met
+  that order: pm_record.rs). The serial table keeps `std::map`'s insert (a present serial keeps its area); the sector
+  map and the link multimap likewise (a link goes after the equal keys); `std::find` from the front; every walk the
+  C++ made from the last element down; each `GetAdjacentAreaID` reads the tile and its eight neighbours again (their
+  `Contains` calls are captured). `EEContinentRegionsDigest` is an `unsigned long` FNV-1a (32 bits on Windows, 64 on
+  LP64), as the C++'s was.
+- **Lesson.** Capture records written inside geometry (HULL, AREA) pin where the geometry runs: a query can move to
+  Rust whole only if its geometry calls still go through the capturing C++ method. A host per question keeps the
+  records and the order without a Rust capture writer.
+- **Lesson.** cbindgen emits `template<typename T = void> struct Option` for an `Option<fn>` parameter, which the
+  per-module header splitter refuses ("cannot name the header item"): take a plain `fn` type.
+- **Edits outside the lane's files**: the callers' member reads became accessors (EECPNextUnits.cpp host ops 80-94's
+  forests, hills, continents and adjacency; EECPTrace.cpp's area dump through `GetAreas()`; EEPlayer.cpp's serials
+  through `NewSerial()`; EEHerd.cpp, EETown, EEPathManager.cpp, EEEMStorm.cpp, EEComplexUnit.cpp, EEGroup.cpp,
+  EEUGRust.cpp, EECombatGoals.cpp, EEFOFindNewTargetNearOldTarget.cpp, EECPPlacement.cpp, EECPNextView.cpp,
+  EEPWorldHelper.cpp, Empire Earth.cpp's aliases). The towns and herds (lane B) keep their interface: `AddArea`,
+  `RemoveArea`, `GetArea` and `SetSerial` as before.
+- **Net C++** (without the generated headers): the record and tables c4039c4c9 -36 (715+/751-; the region
+  information class deleted), the kinds' records 16dd490c1 -72, the sectors' and sub sectors' records 6149b4461 +2
+  (375+/373-: the callers' accessors), the state as bytes 19202b306 -1,085 (179+/1,264-: EEAIContinentSave.cpp's
+  writer and reader, the CNTR fill), the queries and RepairPathArea e89793782 -441, the link walks and build steps
+  8de11d3a6 -164. Round: -1,796 (rust-ai-path1's -1,556 not counted). Rust: cm.rs, area_kinds.rs, sector_rec.rs,
+  cm_io.rs, cm_query.rs, cm_repair.rs, cm_links.rs, cm_build.rs (+ 19 unit tests: the serial table as a map, the
+  pending tiles, the id stacks, the grids and lookups, the shore order, the kinds' lists, the sector map and the link
+  multimap, the encodings, a sparse set's round trip, a damaged block refused, the empty-map steps).
+- **Gates** (on the tree merged with origin/rust ec39733e7): both builds 0/0, the test profile 0/0; the Rust gate
+  PASS (4,554 tests; ee_base's COM thread test failed once under load and passed alone and in the rerun); the oracle
+  seeds 2-7 identical (and seeds 2-3 after each code commit); all twelve capture profiles at seeds 2-3 PASS (oracle
+  212, late 214, space 210, calamity 222, app 24, effects 6, groups 2, missile 22, placement 4, scenario 43,
+  transport 185, units 175 digests: CNTR, CNTQ, HULL, AREA, PMRQ among them, every one from the C++); the plain
+  saveload (seeds 2-7 at 600/1350/2100 s) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) `saveload expect: PASS` (38 saves identical); `sim_editor: PASS`;
+  `gates.sh` through its slot: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap` (units [4, 43, 43],
+  alive_computers [2, 3], classic_lua twice), `RESULT PASS lan-game`, `GATES PASS`.
+- **Behaviour:** none intended. Two debug messages of a load are counts now (the saved serials of no known owner,
+  the saved sub sectors no sector held), and a saved pending sector with no tiles is kept as an empty entry, as the
+  original `mSectorTiles[key] = tiles` did.
+- **Not done this round:** the objects' lifetimes (the classes still own their records), the build passes and
+  `Rebuild` (they run the C++ machines), `CanGetTo` (the unit store), the path machines' goal state.
 
 ## LLE rest, round 1: the plug-in registry, 123 dead engine members and the IME candidate window deleted; the texture manager reaches GETexture's Rust directly (ee_audio mixerobj.rs, ee_render texobj.rs tex_direct; branch rust-lle-rest1, 2026-11-17)
 
@@ -30882,3 +31031,50 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
 - **Verified**: both builds 0/0, the Rust gate, the oracle seeds 2-7, the store gate (25,140 lines), gates.sh GATES
   PASS (tour; ai-game time-cap [4, 42, 42], both computers alive on classic_lua; lan-game), the tour's menus against
   round 1's pre-round exe identical but the build label.
+
+## R5b.1, the merge of origin/rust fbc73afb9 into rust-ai-path2 (main merge 4, AI lanes A round 3 and B round 2, the LLE, UI, WON, audio, libjpeg and movies rounds; 2026-11-18)
+
+- **Conflicts.** `EECPTrace.cpp`'s out-of-sync dump: rust's side (lane A moved it into `ee_sim::ai::next_trace.rs`);
+  its continent read is now `EECPNext.cpp`'s `EE_AI_NEXT_HOST_AREAS`, which this branch rewrote over the accessors
+  (`GetLastSerial`, `GetContinents()`... `GetAreas()`: the serial table is an `EEAIListView<EeAStarCmArea>` of
+  serial/area pairs, no `std::map` any more). Lane A's forest host ops (`EE_AI_NEXT_HOST_FORESTS`, `_FOREST`,
+  `_FOREST_POINT`) read `GetForests()`. `EECPNextView.cpp` (deleted by rust, its forest walk now Rust over those ops)
+  stays deleted; this branch's `GetForests()` edits there went with it. The units host ops (80-94,
+  `EECPNextUnits.cpp`) merged cleanly with their accessors. `golden_cpp.txt`: rust's lines, PMRQ and CNTQ re-added.
+  PORT_LEARNINGS merged without a conflict. `rust_build.py header` current, `rust_includes.py` 0 changes,
+  `strip_markers.py --check` 0.
+- **No compile error after the resolution**: a grep for `gContinentManager.m[A-Z]` outside the manager's own files
+  found every member read the new code had added (all in `EECPNext.cpp` and the conflicted trace) before the build.
+- **Goldens re-recorded** (two equal runs each, seeds 2-3): CNTQ in all four profiles (classic_lua of main merge 4
+  asks the continents other questions); PMRQ moved only in the oracle's seed 2 (327099 c066409bfa8795f8). Every
+  other line of the four profiles equalled rust's goldens.
+- **The shared tree was rebuilt under the first capture run** (06:33, by another session: the lead's local rust
+  48c8472f0 changed `tools/eemodel/storegate.py`, so its converter hash d8c64c3598c0216f differs from this branch's
+  f3a198ef46f53400). EE-SIM then stopped at once with `sRandomMapGenerators.size() > 0` (an empty `Data`). Check
+  `open_data.json` before a capture chain. gates.sh ran with `EE_GATES_TREE` naming the main checkout's tree: a tree
+  outside this checkout's `build/open_data` is never rebuilt for a converter hash, so the run did not rebuild it again.
+- **Gates on the merge.** Both builds 0/0 (EE-AOC 630 inputs, EE-SIM 631) and the test profile 0/0; the Rust gate
+  PASS (4,569 tests); the oracle seeds 2-7 identical to the new ref; the twelve capture profiles at seeds 2-3 PASS
+  (oracle 208, late, space, calamity with the new lines; app 24, effects 6, groups 2, missile 22, placement 4,
+  scenario 43, transport 185, units 175); the plain saveload 18/18 identical; the matrix `saveload expect: PASS`
+  (calamity 3/4, next 2/4 at 915/276 as rust has it); the editor gate `sim_editor: PASS (14448 lines)`; gates.sh
+  through slot.py: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13749` units [4, 43, 43] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2685 joiner=2691`, `GATES PASS`.
+- **Then origin/rust 48c8472f0 (LLE rest round 2), merged on top.** Its dead-member deletions conflicted in the files
+  this branch rewrote (the continent manager and its area kinds, the path manager, the function objects). Each
+  conflict hunk keeps this branch's side, with rust's deletions applied where the member is still dead here
+  (`EEAIChokePoint::GetAreaSerialsAt`, `EEAIContinent::HasNeighbor`, the manager's `GetPathAreaByID`, `GetForest`,
+  `GetForestsAt`, `EEAIRectangleArea::GetBaseRandomPoint`, whose body the clean part of the merge deleted, and
+  `GetScenarioAreaID`); `GetInfluenceCost` and `EEHasPathToTarget` go as rust has it. Lesson: `git checkout
+  --ours FILE` takes the whole file and drops the other side's clean hunks too (it lost rust's deletions in
+  `EEAIContinent.h` and `EEAIContinentManager.h` here, and `--theirs` lost this branch's accessor edits in two .cpp
+  files, which the compiler caught). Resolve the hunks only: `git checkout -m FILE` recreates the conflict, then
+  keep one side of each `<<<<<<< ours` hunk. This merge also brings rust-lle-rest2's `tools/eemodel/storegate.py`,
+  so the converter hash is the shared tree's again (d8c64c3598c0216f).
+- **Gates on the final merge.** Both builds 0/0 (EE-AOC 630 inputs, EE-SIM 631) and the test profile 0/0; the Rust
+  gate PASS (4,569 tests); the oracle seeds 2-7 identical to the new ref; the twelve capture profiles at seeds 2-3
+  PASS (oracle 212, late 214, space 210, calamity 222 digests with PMRQ and CNTQ gated; app 24, effects 6, groups 2,
+  missile 22, placement 4, scenario 43, transport 185, units 175); saveload 18/18; the matrix `saveload expect: PASS`
+  (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
+  `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
+  `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.

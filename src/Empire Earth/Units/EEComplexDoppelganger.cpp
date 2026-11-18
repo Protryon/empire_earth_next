@@ -1130,11 +1130,7 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
             if (theResult == 0)
                 theResult = theGoalTile.Load(inFile);
             if (!theHasPath) {
-                EEPathManagerPending thePending;
-                thePending.mUnitID = theComplex->mUnitID;
-                thePending.mTile.mX = theGoalTile.mX;
-                thePending.mTile.mY = theGoalTile.mY;
-                gPathManager.mPending.push_back(thePending);
+                gPathManager.AddPending(theComplex->mUnitID, theGoalTile);
             }
             return theResult;
         }

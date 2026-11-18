@@ -46,28 +46,15 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECPASGFlags.h"
 
-// Creates an empty path sub-sector with no sector, ids 0, kind none and no owner
-EEAIPathSubSector::EEAIPathSubSector()
-    : mSector(NULL), mContinentID(0), mPathAreaID(0), mID(0), mKind(kAITileNone), mPlayerID(0), mIsStale(false)
-{
-}
-
-// Destroys the sub-sector (members only)
-EEAIPathSubSector::~EEAIPathSubSector()
-{
-}
-
 // Appends the sub-sector's links to the sub-sector with the given id; always returns false
 bool EEAIPathSubSector::GetLinks(unsigned short inID,
                                  std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >& outLinks)
 {
-    std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::iterator theLink;
-    if (this->mLinks.size() > 0) {
-        std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::iterator theEnd =
-            this->mLinks.upper_bound(inID);
-        for (theLink = this->mLinks.lower_bound(inID); theLink != theEnd; ++theLink)
-            outLinks.push_back(theLink->second);
-    }
+    size_t theCount;
+    const EeAStarSubSectorLink* theLinks = ee_astar_sub_sector_links_of(this, inID, &theCount);
+    for (size_t i = 0; i < theCount; i++)
+        outLinks.push_back(std::make_pair((EEAIPathSubSector*)(uintptr_t)theLinks[i].first,
+                                          (EEAIPathSubSector*)(uintptr_t)theLinks[i].second));
     return false;
 }
 
@@ -115,52 +102,13 @@ bool EEAIPathSubSector::AreLinksBlocked(EEAIPathSubSector* inOther, const EECPAS
     std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> > theLinks;
     bool theResult = true;
     if (inOther && this->IsNeighbor(inOther) && inOther != this) {
-        inOther->GetLinks(this->mID, theLinks);
+        inOther->GetLinks(this->GetID(), theLinks);
         theResult = theLinks.size() == 0;
         for (long i = theLinks.size() - 1; i >= 0 && !theResult; i--) {
-            if (inFlags.mFlags[theLinks[i].first->mKind] == true || inFlags.mFlags[theLinks[i].second->mKind] == true)
+            if (inFlags.mFlags[theLinks[i].first->GetKind()] == true || inFlags.mFlags[theLinks[i].second->GetKind()] == true)
                 theResult = true;
         }
     }
     return theResult;
 }
 
-// Drops every link to or through the other sub-sector and removes it from the neighbours; returns whether it
-// was a neighbour
-bool EEAIPathSubSector::RemoveNeighbor(EEAIPathSubSector* inOther)
-{
-    bool theResult = false;
-    std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::iterator theLink;
-    for (theLink = this->mLinks.begin(); theLink != this->mLinks.end();) {
-        if (theLink->first == inOther->mID || theLink->second.first == inOther ||
-            theLink->second.second == inOther)
-            theLink = this->mLinks.erase(theLink);
-        else
-            ++theLink;
-    }
-    std::vector<EEAIPathSubSector*>::iterator theNeighbor = std::find(this->mNeighbors.begin(), this->mNeighbors.end(), inOther);
-    if (theNeighbor != this->mNeighbors.end()) {
-        theResult = true;
-        this->mNeighbors.erase(theNeighbor);
-    }
-    return theResult;
-}
-
-// Drops the sub-sector's links to the sub-sector with the given id
-void EEAIPathSubSector::RemoveLinks(unsigned short inID)
-{
-    if (this->mLinks.size() <= 0)
-        return;
-    std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::iterator theEnd =
-        this->mLinks.upper_bound(inID);
-    std::multimap<unsigned short, std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >::iterator theFirst =
-        this->mLinks.lower_bound(inID);
-    if (theFirst != this->mLinks.end())
-        this->mLinks.erase(theFirst, theEnd);
-}
-
-// Fills the sub-sector's tile set from a tile list
-void EEAIPathSubSector::CreateTiles(const std::vector<U2DPoint<long> >& inTiles)
-{
-    this->mTiles.Create(inTiles);
-}

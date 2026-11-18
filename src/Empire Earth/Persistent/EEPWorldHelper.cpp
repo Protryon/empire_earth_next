@@ -166,7 +166,7 @@ static int64_t EEPWorldFill(EeUnitsWorldIo* io, size_t inIndex, uint64_t inValue
     return 0;
 }
 
-template <class T> static int64_t EEPWorldFillAll(EeUnitsWorldIo* io, const std::vector<T*>& inItems)
+template <class V> static int64_t EEPWorldFillAll(EeUnitsWorldIo* io, const V& inItems)
 {
     for (size_t i = 0; i < inItems.size(); i++)
         EEPWorldFill(io, i, (uint64_t)(uintptr_t)inItems[i]);
@@ -477,7 +477,7 @@ static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
         return 0;
     }
     case EE_UNITS_WORLD_COMPLEX: return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->a)));
-    case EE_UNITS_WORLD_FORESTS: return EEPWorldFillAll(io, gContinentManager.mForests);
+    case EE_UNITS_WORLD_FORESTS: return EEPWorldFillAll(io, gContinentManager.GetForests());
     case EE_UNITS_WORLD_FOREST_RENEWAL: return (int64_t)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNextRenewal();
     case EE_UNITS_WORLD_FOREST_TILES: {
         std::vector<U2DPoint<long> > theTiles;

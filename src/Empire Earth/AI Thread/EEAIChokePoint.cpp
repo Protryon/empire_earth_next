@@ -67,16 +67,6 @@ static void EEAIChokeCreate(EEMap* inMap);
 static void EEAIChokeDone();
 
 // Destroys the choke point (members only)
-EEAIChokePoint::~EEAIChokePoint()
-{
-}
-
-// Appends the serials of the areas the choke point joins
-void EEAIChokePoint::AddAreaSerials(const std::vector<unsigned long>& inSerials)
-{
-    this->mAreaSerials.insert(this->mAreaSerials.end(), inSerials.begin(), inSerials.end());
-}
-
 // Builds the continent manager's choke points: classifies every tile by area serial, smooths inPasses - 1
 // times to flag the tiles between areas, flood-fills the flagged runs into choke points and frees the grids
 // (Rust: ee_astar choke.rs build_grids does the classification (EEAIChokeGetTileSerial 0x1ccd0 over what
@@ -137,11 +127,11 @@ static void EEAIChokeCreate(EEMap* inMap)
             theMachine.mGoal.CreateChokePoint();
         }
     }
-    gContinentManager.mChokePoints.resize(theMachine.mGoal.mNextIndex);
+    gContinentManager.ResizeTable(EeAStarCmTable::ChokePoints, theMachine.mGoal.mNextIndex);
     for (std::map<long, EEAIChokePoint*>::iterator theIt = theMachine.mGoal.mChokePoints.begin();
          theIt != theMachine.mGoal.mChokePoints.end(); theIt++) {
         EEAIChokePoint* theChokePoint = theIt->second;
-        theChokePoint->SetSerial(++gContinentManager.mLastSerial);
+        theChokePoint->SetSerial(gContinentManager.NewSerial());
         gContinentManager.AddChokePoint(theChokePoint);
     }
 }
@@ -166,7 +156,7 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
     EETileLocation theTile(inX, inY);
     EEAIForest* theForest = gContinentManager.GetForestAt(theTile);
     unsigned short theID = theForest ? theForest->GetID() : 0;
-    const std::vector<EEAIForest*>& theForests = gContinentManager.mForests;
+    EEAIHandleView<EEAIForest> theForests = gContinentManager.GetForests();
     theForest = theForests[theID];
     if (theForest) {
         outInfo->forest = true;

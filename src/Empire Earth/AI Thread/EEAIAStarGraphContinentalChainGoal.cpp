@@ -56,7 +56,7 @@ EEAIAStarGraphContinentalChainGoal::EEAIAStarGraphContinentalChainGoal()
 void EEAIAStarGraphContinentalChainGoal::NumberChain()
 {
     unsigned long theKind = this->mKind;
-    unsigned short theID = theKind < 7 ? ++gContinentManager.mNextIDs[theKind] : 0;
+    unsigned short theID = theKind < 7 ? gContinentManager.NextChainID(theKind) : 0;
     // the closed list, then the fast open list (the storage's lists are Rust's: ee_astar graph.rs)
     static const EeAStarGraphList kLists[2] = {EeAStarGraphList::Closed, EeAStarGraphList::FastOpen};
     std::vector<AStarGraphableObjectBase*> theObjects;

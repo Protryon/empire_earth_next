@@ -13,25 +13,9 @@
 
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
+#include "ee/EEAIListView.h"
 
 class EEAIPathArea;
-
-// New (port): a read-only view of one of the record's lists (valid until that list next changes); it converts to a
-// std::vector copy
-template <class T> class EEAIListView {
-public:
-    EEAIListView(const T* inData, size_t inSize) : mData(inData), mSize(inSize) {}
-    const T* begin() const { return this->mData; }
-    const T* end() const { return this->mData + this->mSize; }
-    size_t size() const { return this->mSize; }
-    bool empty() const { return this->mSize == 0; }
-    const T& operator[](size_t inIndex) const { return this->mData[inIndex]; }
-    operator std::vector<T>() const { return std::vector<T>(this->begin(), this->end()); }
-
-private:
-    const T* mData;
-    size_t mSize;
-};
 
 class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase, private EeAStarContinentRecord {
 public:
@@ -70,7 +54,7 @@ public:
     void AddIDEC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsEc, inID); }
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIContinent>): out-of-line COMDAT 0x275eb
     // (`jbe`: unsigned) and the hull's center as the node tile (0x28aa7 reads +0x44/+0x48) (provisional names)
-    unsigned long GetNumNeighbors() const { return this->mNeighbors.size(); }
+    unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
     const U2DPoint<long>& GetGraphLocation() const { return this->GetHullCenter(); }
 
     // New (port): the members behind accessors (R5b.1 blocker (b)); the lists, counts, category and id are the
@@ -101,14 +85,20 @@ public:
     EEAIListView<unsigned short> GetIDsCC() const { return this->GetIDs(EeAStarContinentList::IdsCc); }
     EEAIListView<unsigned short> GetIDsDC() const { return this->GetIDs(EeAStarContinentList::IdsDc); }
     EEAIListView<unsigned short> GetIDsEC() const { return this->GetIDs(EeAStarContinentList::IdsEc); }
-    const std::vector<EEAIContinent*>& GetNeighbors() const { return this->mNeighbors; }
-    void AddNeighbor(EEAIContinent* inContinent) { this->mNeighbors.push_back(inContinent); }
-    void ClearNeighbors() { this->mNeighbors.clear(); }
+    EEAIHandleView<EEAIContinent> GetNeighbors() const
+    {
+        size_t theCount;
+        const uint64_t* theNeighbors = ee_astar_continent_neighbors(this, &theCount);
+        return EEAIHandleView<EEAIContinent>(theNeighbors, theCount);
+    }
+    void AddNeighbor(EEAIContinent* inContinent) { ee_astar_continent_add_neighbor(this, (uint64_t)(uintptr_t)inContinent); }
+    void ClearNeighbors() { ee_astar_continent_clear_neighbors(this); }
     unsigned short GetCount(long inKind) const { return this->counts[inKind]; }
     void SetCount(long inKind, unsigned short inCount) { this->counts[inKind] = inCount; }
     unsigned char GetCategory() const { return this->category; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
     void SetCategory(unsigned char inCategory) { this->category = inCategory; }
     unsigned short GetID() const { return this->id; }
+    EeAStarContinentRecord* Record() { return this; }   // the record (ee_sim::astar cm_io.rs's layout)
     void SetID(unsigned short inID) { this->id = inID; }
     // the lists in a saved game (EEAIContinentSave.cpp's writer and reader: Points, Longs, Shorts), in this order
     template <class W> void WriteLists(W& ioWriter) const
@@ -140,11 +130,11 @@ public:
     }
 
 private:
-    std::vector<EEAIContinent*> mNeighbors; // +0xfc the adjacent continents (the chain machine's graph edges)
     // +0x6c..+0x11c: the shore tiles, the choke point indices (EEAIContinentManager::mChokePoints), the forest, path
-    // area and hill ids, the four region id lists (from the path-area unit's 0x17a4b), mCounts (ctor body
-    // `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven), mCategory (byte; the factory copies its +0x50 byte) and
-    // mID (+0x11c, the mContinents index): EeAStarContinentRecord
+    // area and hill ids, the four region id lists (from the path-area unit's 0x17a4b), +0xfc the adjacent continents
+    // (the chain machine's graph edges), mCounts (ctor body `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven),
+    // mCategory (byte; the factory copies its +0x50 byte) and mID (+0x11c, the mContinents index):
+    // EeAStarContinentRecord
 };
 
 #endif
