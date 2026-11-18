@@ -358,4 +358,3 @@ unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned 
 unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_red(inFormat, inColor); }
 unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_green(inFormat, inColor); }
 unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_blue(inFormat, inColor); }
-unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_alpha(inFormat, inColor); }

@@ -13,6 +13,5 @@ LLE_API unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, u
 LLE_API unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor);
 LLE_API unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor);
 LLE_API unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor);
-LLE_API unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor);
 
 #endif
