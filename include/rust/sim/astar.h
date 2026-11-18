@@ -245,7 +245,7 @@ constexpr static const uint32_t EE_PATH_FILE_F32 = 5;
 constexpr static const uint32_t EE_PATH_FILE_BYTES = 6;
 
 /// `kErrorBeyondEnd`, `LoadRunningState`'s answer for a short record.
-constexpr static const int32_t EE_PATH_ERROR_BEYOND_END = -16;
+constexpr static const int32_t EE_PATH_ERROR_BEYOND_END = 10;
 
 /// The graph search's modifier kinds (`EEGraphModifierKind`; 3..8, the deleted sub groups' route planners, unused).
 constexpr static const int32_t EE_PATH_MODIFIER_NONE = 0;
