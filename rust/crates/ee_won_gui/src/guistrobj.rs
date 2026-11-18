@@ -149,6 +149,27 @@ fn write(text: *mut c_void, ws: usize, at: usize, v: &[u32]) {
     }
 }
 
+/// The offset of a C++ `GUIStringData`'s `mText` block (after the vtable pointer and `RefCount::mRefCount`, padded;
+/// asserted by GUIStringSingleton.cpp).
+pub const EE_WON_GSTR_DATA_AT: usize = 2 * std::mem::size_of::<usize>();
+/// The `wchar_t` size of the game's texts.
+pub const EE_WON_GSTR_WCHAR: usize = if cfg!(windows) { 2 } else { 4 };
+
+/// A C++ `GUIStringData*`'s units (to its length), read in place; NULL: none (R6 WONLobby round 17: the lobby's
+/// Rust objects read the model's and the resources' texts without a host op).
+///
+/// # Safety
+/// `data` is NULL or a live `GUIStringData` (or a block laid out as one: its `EeWonGuiStrBuf` at
+/// [`EE_WON_GSTR_DATA_AT`]) whose text is this module's allocation.
+pub unsafe fn data_units(data: *const c_void) -> Vec<u32> {
+    if data.is_null() {
+        return Vec::new();
+    }
+    // SAFETY: the block at its offset (the contract)
+    let buf = unsafe { &*((data as *const u8).add(EE_WON_GSTR_DATA_AT) as *const EeWonGuiStrBuf) };
+    buf.units(EE_WON_GSTR_WCHAR)
+}
+
 impl EeWonGuiStrBuf {
     /// `Init()`.
     pub fn new() -> Self {

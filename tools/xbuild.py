@@ -869,8 +869,13 @@ WON_TESTS = {
     # recorded over RegAuth.cpp before its port in net round 27)
     "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
-    "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_chat_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # ChatCommandParser whole in Rust (chatobj.rs, R6 WONLobby round 17): ChatCommandParser.cpp's statements as they
+    # were (tests/won/won_chatparser_orig.h) against the game's forwards, each over real model shells
+    "won_chatparser_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # the lobby dialogs', popups' and controls' strings as resource rows (string_row, R6 WONLobby round 17) against
+    # the switches they replaced (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString)
+    "won_restext_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)

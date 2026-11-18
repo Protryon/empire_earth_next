@@ -778,6 +778,9 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ListOwnerCtl,
   /// `((LobbyGame*)a)->GetAddress().GetHostAndPortString(true)` (held).
   GameAddrText,
+  /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
+  /// picture as its resource row in the game, rows.rs icon_res).
+  IconSetRes,
 };
 
 /// The inward calls.
@@ -1096,6 +1099,9 @@ using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
                                          ptrdiff_t c);
 
 extern "C" {
+
+/// `string_row` for the drivers: the row, or -1.
+int32_t ee_won_lobbyctl_string_row(ptrdiff_t s);
 
 /// The look-up `index` of `SLOTS` (NULL past the end).
 const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);

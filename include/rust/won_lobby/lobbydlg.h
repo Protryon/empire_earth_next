@@ -304,6 +304,13 @@ enum class EeWonLobbyDlgOp : uint32_t {
   EventButton,
   /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
   ListRefresh,
+  /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+  LabelSetRes,
+  /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+  ButtonSetRes,
+  /// `aTitle = gLobbyResources[b].mString; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+  /// ((Label*)a)->SetText(aTitle, true)`.
+  AdminTitleRes,
 };
 
 /// The inward calls (the shells' methods).
@@ -426,12 +433,20 @@ using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
 
 extern "C" {
 
+/// `string_row` for the drivers: the row, or -1.
+int32_t ee_won_lobbydlg_string_row(ptrdiff_t s);
+
 /// The control `index` of a kind's table (member order; its name, file, line and type), NULL past its end.
 const EeWonLobbyDlgSlot *ee_won_lobbydlg_slot(EeWonLobbyDlgKind kind,
                                               uint32_t index);
 
 /// A new dialog object for the C++ `dialog` of `kind`.
 EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
+
+/// A new dialog object made by the game: as `ee_won_lobbydlg_new`, its strings going out as resource rows.
+EeWonLobbyDlg *ee_won_lobbydlg_new_model(void *dialog,
+                                         EeWonLobbyDlgKind kind,
+                                         EeWonLobbyDlgHostFn host);
 
 /// Releases the controls (reverse member order) and frees the object.
 ///

@@ -13,6 +13,10 @@ struct LobbyResourceSlot {
     WONAPI::SmartPtr<WONAPI::Sound> mSound;
 };
 extern LobbyResourceSlot gLobbyResources[];
+// the slots bound to the Rust objects, which read a string's GUIStringData in place (resource.rs ee_won_lobbyres_bind;
+// R6 WONLobby round 17): once, wherever the array is defined (the game's WONLobbyResource.cpp or a driver)
+static_assert(sizeof(WONAPI::GUIString) == sizeof(void*), "resource.rs string_data: a slot's GUIString is its data pointer");
+inline const bool gLobbyResourcesBound = (ee_won_lobbyres_bind(gLobbyResources, sizeof(LobbyResourceSlot)), true);
 #define LOBBY_STRING(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mString)
 #define LOBBY_IMAGE(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mImage)
 #define LOBBY_SOUND(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mSound)
