@@ -29669,3 +29669,99 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
   out-of-synch checksum runs there).
 - **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
   references the sight drives are the same host calls as before (MMSN covers the counts).
+
+## Vendored graphics code out: libjpeg and the movie player (branch rust-vendor-gfx, 2026-11-17)
+
+Two owner decisions: libjpeg leaves the tree (the JPEGs are Rust), and movie playback leaves the game (no movies
+ship: the open tree's Data/Movies is empty; they only existed when converted from a retail disc).
+
+### libjpeg
+
+- **jpeg.rs moved to ee_base** (`ee_base::jpeg`, from ee_won_gui): it has no WON dependency left. Its input is the
+  `Input` trait; WONGUI's JPGDecoder reads through a `FileInput` adapter over the C++ FileReader in imgdec.rs (a trait
+  of ee_base for a type of ee_won_net cannot be implemented in ee_won_gui: the orphan rule, hence the newtype). The
+  decoder's own unit tests moved with it; the replay of `golden_jpeg.txt` stays with imgdec (it goes through the
+  FileReader path). A new `jpeg::info` gives libjpeg's `output_components` with the size (`GetJPGFileAttributes`).
+- **The Graphics Engine's JPG and JPG2 surface files** (openformats `surface_file.rs`) decode with ee_base's jpeg through
+  the C stream (a `StreamInput`: 4 KB `fread`s, a skip read through, as libjpeg's stdio source; so the stream's
+  position after a decode, which `LoadJPG` reopens an open file at, is libjpeg's) and encode with the `jpeg-encoder`
+  crate 0.7.1 at quality 80 (4:2:0, as libjpeg's defaults). The bytes differ from libjpeg's; only this game reads them
+  back (the post-game and F9 JPG screenshots; a scenario's `.jpg` map picture is read). Changes against the original:
+  a corrupt JPEG or an empty image fails (libjpeg's default error manager called `exit()`); a JPEG larger than the
+  surface is refused (libjpeg's rows ran past it); a grey JPEG fills all three channels (the row loop read one-sample
+  rows three bytes to a pixel); a JPG2's alpha is a greyscale JPEG (libjpeg wrote the alpha three times as colour);
+  a JPG2's attributes read its colour JPEG after the 8-byte header (the original read from offset 0, which libjpeg
+  rejected, ending the process). GETexture.cpp's libjpeg ops (`JpegDec*`, `JpegEnc*`) are gone from `EeOfSurfOp`.
+- **Deleted**: `src/ThirdParty/libjpeg` (59 files), `include/jpeglib`, `link/jpeg`, the `jpeg` module in tools/units.py,
+  tools/ee.py, tools/eemodel/storegate.py, and the `won_jpeg_test` driver (`tests/won/won_jpeg_test.cpp`,
+  `won_jpeg_orig.h`): it compiled libjpeg to compare JPGDecoder's original statements with jpeg.rs and has no
+  reference left. Its golden (400 inputs in hex with the original's answers) is self-contained and still replayed by
+  cargo. The driver ran once more after the move, before the deletion: 10,056 cases, 0 failures; won_image_test 125
+  pictures, 0 failures.
+- Spurious `#include "rust/won_gui/jpeg.h"` lines (12 files: rust_includes.py had matched `NATURAL_ORDER`) went with
+  the header.
+- **The Bash tool here collapses `\\` to `\` inside heredocs**, quoted delimiter or not: a Python edit script with
+  backslashes must be written with the Write tool (or use `chr(92)`).
+
+FOLLOW-UP (owner, 2026-11-17): jpeg.rs stays the decoder while the goldens depend on its bit-exact output. Once the
+whole Rust port is done, replace it with a maintained library decoder (e.g. `zune-jpeg`) and re-record what depends on
+its pixels (golden_jpeg.txt, won_image_test's golden, the lobby captures). The module's doc comment says so too.
+
+### Movies
+
+Every place that played a movie now goes on as the original did when the movie file was missing:
+- **The intro** (Sierra, Mad Doc, Empire Earth): `EEPlayIntroMovies` became `EEStartMenuScreen` (the window raised,
+  the black clear, the menus' screen, the vsync preference); `EEParseCommandLineFirstPass` only chose whether to play
+  them and is gone.
+- **The scenario intro**: the movie button's event posts the sound-over event at once (the original played the movie
+  first when there was one); the button shows when there is a sound; `HasMedia` and the open check no longer count a
+  movie. `EEUISCIFormManager::OpenMovie`/`GetMovie`/`mMovie` are gone; the scenario's movie name stays in its media
+  strings (a scenario file format field), and the scenario editor still has its movie file box (not a player).
+- **The graphics thread**: messages 0x40c/0x40d (play, stop), `PlayMovie`, `PostStopMovie`, the movie frame in `Render`
+  and the saved volumes are gone. **The UI thread**: messages 0x41c/0x41d (`PostPlayMovie`, `PostMovieDone`) are gone;
+  `UpdateKeyboard`/`UpdateMouse` no longer test for a playing movie.
+- **The UI table's movie control** (type 0x1d): no control (no table uses it); `UIMovie`, its Rust record and
+  `UIControlsTable::CreateMovie` are gone.
+- **Deleted**: pl_mpeg, `DX7Movie` (ee_render's `dx7/movie.rs`, `movobj.rs`), `GEMovie` and `GERasterizer`'s two
+  `CreateMovie` slots, the mixer's movie source (`SPIMSetMovieSource`, `SEMixer::SetMovieSource`), tools/convert_movies.py
+  and make_play_dir's `--movies`.
+
+**Goldens cut, not faked.** Each golden that recorded movie behaviour was reduced to what the original does without a
+movie, and every cut is named in the test's doc comment:
+- `golden_ui_manager.txt`: the Escape/Return/Space tests, the playing-movie test, stop and wait (ops 20 with keys 0..2,
+  21, 22, 23) and the mouse presses (27) taken out of the keyboard and mouse lines; the rest is the original's run.
+- `golden_ui_thread.txt`: messages 0x41c/0x41d keep their lines without ops (nothing posts them; the thread ignores them).
+- `golden_scenario_screens.txt`: the `opensave '<name>.bik' 'Movies\' -> 1` lines taken out; 202 of the 2,000 cases
+  (a movie found, or a found movie's file still counted in a later case's open-file count) re-recorded from this port,
+  because the cases share state (sound ids, open files) and dropping them shifted every later case. The other 1,798
+  are the original's recording.
+- `golden_mediaobj.txt`: the 17 movie sequences dropped (23 bitmap sequences left; the digest mixes the movie member as
+  the NULL it was there). `golden_tableobj.txt`: its two movie controls became no control (op 491 and the control's
+  colour and opacity sets taken out, the result 0). ee_audio's `golden_objects.txt`: the 212 `moviesrc` lines dropped
+  (they changed nothing else). The C++ recorders in tests/sound still name `SetMovieSource`: they record over the
+  original units at their base and are not built by the tools.
+
+The converters' hash (`open_data.converters_hash`: open_data.py and tools/eemodel/*.py) changed (storegate.py's module
+list, open_data.py's comments): a harness run from a checkout rebuilds its own `build/open_data/tree` once.
+
+### Gates
+
+- Builds: `build.py -j 3 --sim` (EE-AOC 691 inputs, EE-SIM 692) and `--test-profile windowed-software`: 0 unresolved,
+  0 duplicates.
+- Rust gate: tests 4,402 passed, clippy clean (after two fixes: an `as_chunks_mut` and an unreachable test arm), rustfmt
+  clean, headers current. Linux `cargo check --target x86_64-unknown-linux-gnu --tests` of ee_base, ee_render, ee_ui,
+  ee_audio, ee_won_gui and ee_game: clean, no warning. `xbuild.py targets`: windows-x86_64 here (no Linux sysroot,
+  macOS needs the SDK).
+- Oracle seeds 2-3 against the main checkout's `ref`: identical (5,728 and 5,292 lines).
+- `xbuild.py wontest`: 144 drivers, all exit 0; won_image_test 125 pictures, 0 failures (won_jpeg_test: see above).
+- `gates.sh` through its slot: `RESULT PASS tour` (F3 input check ok), `RESULT PASS ai-game outcome time-cap PT 13525`
+  units [4, 42, 42], alive [2, 3], engines classic_lua x 2, `RESULT PASS lan-game PT host=2763 joiner=2760`, GATES PASS.
+- The legacy campaign step (`game_session.py --exercise ai-game --campaign learning --play-seconds 60`, slot.py):
+  campaign select, the scenario intro (form 19), Start, gameplay, `STOP <windowed session complete> reached`. Rerun
+  after the shared tree's rebuild (the first run's start overlapped it).
+- `tools/scenario_check.py`: SCENARIO CHECK PASS 27/27 (on a tree with Data/Campaigns: the main checkout's has none).
+- **Only a tour or a game reaches**: the JPG surface files (the F9/post-game screenshots, a scenario's `.jpg` map
+  picture), the menus' start (EEStartMenuScreen), the scenario intro's movie button. EE-SIM and the goldens do not draw.
+  The lobby captures of the gates' LAN game against build/lan_ref/pre_won11 (the lead's reference): the lobby's first
+  screen, the LAN screen and the create dialog identical on both sides; the staging screens and the LAN list within
+  0.003-0.006 % (the caret, the list's time); the in-game frames differ everywhere (another moment of another game).
