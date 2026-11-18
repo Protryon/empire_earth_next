@@ -954,22 +954,14 @@ void HostCancelGame()
     gUserInterface->PostCancelGame();
 }
 
-int HostRunEditor(const char* inScript, const char* inOut, char* outError, size_t inCapacity)
+int HostEditorStep(const char* const* inWords, size_t inCount, void* inSink, EeSimDriverPushFn inPush)
 {
-    FILE* theOut = inOut == NULL ? stdout : fopen(inOut, "wb");
-    if (theOut == NULL) {
-        PutText(std::string("--editor-out: cannot write ") + inOut, outError, inCapacity);
-        return 1;
-    }
-    std::string theError;
-    int theCode = EESimEditorRun(inScript, theOut, theError);
-    if (theOut != stdout)
-        fclose(theOut);
-    if (theCode != 0)
-        PutText("--editor-script: " + theError, outError, inCapacity);
-    else
-        fflush(stdout);
-    return theCode != 0 ? 1 : 0;
+    std::vector<std::string> theWords(inWords, inWords + inCount);
+    std::vector<std::string> theLines;
+    int theCode = EESimEditorStep(theWords, theLines);
+    for (const std::string& l : theLines)
+        inPush(inSink, l.c_str());
+    return theCode;
 }
 
 // the player's first living building (NULL: none)
@@ -1332,7 +1324,7 @@ int EESimMain(int argc, char** argv)
         HostTopForm, HostTopFormClass, HostClick, HostComboLines, HostComboSelect, HostListLines, HostListSelect,
         HostControlWithEvent, HostPhysics, HostEditorUp, HostLock, HostPrepareHuman, HostDumpAfterLoad,
         HostChecksumFields, HostDumpState, HostRequestSave, HostExtension, HostSetRun, HostSetAfterTick,
-        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostRunEditor, HostFlare, HostVolcano,
+        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostEditorStep, HostFlare, HostVolcano,
         HostVolcanoBoulders, HostCaptureActive, HostSweep, HostRulesAdd, HostRulesProblems, HostEngineChoice,
         HostEngineIDs, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite, HostRngTrace, HostTickHook, HostQuit,
         HostWonders, HostUnitValue};

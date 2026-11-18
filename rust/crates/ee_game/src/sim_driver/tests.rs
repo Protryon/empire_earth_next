@@ -284,3 +284,40 @@ fn a_text_file_writes_the_c_librarys_new_lines() {
     assert_eq!(std::fs::read(&path).unwrap(), want);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn an_editor_script_runs_line_by_line() {
+    use super::editor::{lines, run, words, Step};
+    assert_eq!(words(" tab\t2\r"), s(&["tab", "2"]));
+    assert_eq!(lines(b"a\nb\r\n\nc"), s(&["a", "b\r", "", "c"]));
+    assert_eq!(lines(b"a\n"), s(&["a"]));
+    let dir = std::env::temp_dir().join(format!("ee_sim_editor_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("s.txt");
+    std::fs::write(&path, b"tab 1 # the map\n\n# nothing\ndigest x\nnope\n").unwrap();
+    let path = path.to_str().unwrap().to_string();
+    let mut seen = Vec::new();
+    let mut out = Vec::new();
+    let r = run(
+        &path,
+        &mut |w| {
+            seen.push(w.to_vec());
+            match w[0].as_str() {
+                "tab" => Step::Done(vec![]),
+                "digest" => Step::Done(vec!["  map none".into()]),
+                _ => Step::Unknown,
+            }
+        },
+        &mut |b| out.extend_from_slice(b),
+    );
+    assert_eq!(r, Err((2, format!("{path}:5: unknown command nope"))));
+    assert_eq!(seen, vec![s(&["tab", "1"]), s(&["digest", "x"]), s(&["nope"])]);
+    assert_eq!(String::from_utf8(out).unwrap(), "step 1 tab 1 # the map\nstep 4 digest x\n  map none\n");
+    let r = run(&path, &mut |_| Step::Unfinished, &mut |_| {});
+    assert_eq!(r, Err((3, format!("{path}:1: 'tab' did not finish"))));
+    assert_eq!(
+        run("/no/such/script", &mut |_| Step::Unknown, &mut |_| {}),
+        Err((2, "cannot read /no/such/script".into()))
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
