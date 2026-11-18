@@ -336,9 +336,9 @@ long EECPEngine(const EEComputerPlayer* inPlayer)
 
 std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
 {
-    if (EECPEngine(inPlayer) != kEECPEngineNext || inPlayer->mNextState == NULL)
+    if (EECPEngine(inPlayer) != kEECPEngineNext)
         return std::string();
-    return inPlayer->mNextState->mAI;
+    return EECPNextAI(inPlayer);
 }
 
 bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer)
@@ -366,7 +366,7 @@ void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
     // no AI (a manifest without a "classic" AI): the seat stands idle (EECPNextPrepare logs it)
     const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
     inPlayer->mEngine = kEECPEngineNext;
-    EECPNextGetState(inPlayer)->mAI = theAI != NULL ? theAI->mID : std::string("none");
+    EECPNextSetAI(inPlayer, theAI != NULL ? theAI->mID : std::string("none"));
 }
 
 // EE_AI_ENGINE (TEST ONLY): the choices in turn by player id from player 1 (empty: unset)

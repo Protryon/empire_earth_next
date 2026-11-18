@@ -42,17 +42,12 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
                        "Empire Earth/AI Thread/EECPReflexes.cpp",
-                       "Empire Earth/AI Thread/EECPNextView.cpp",
-                       # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
-                       "Empire Earth/AI Thread/EECPNextArmy.cpp",
                        # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
                        "Empire Earth/AI Thread/EECPEngine.cpp",
                        # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
                        "Empire Earth/AI Thread/EECPLua.cpp",
-                       # the next engine's strategy: the personality's Lua script behind the verbs (§3.2)
-                       "Empire Earth/AI Thread/EECPNextLua.cpp",
                        # the tile A* searches' view of the world (docs/RUST_PLAN.md R5b.1; ee/EEAIAStarView.h)
                        "Empire Earth/AI Thread/EEAIAStarView.cpp",
                        # TEST ONLY: the capture of the tile A* searches (EE_SIM_CAPTURE; ee/EEAIAStarCapture.h)

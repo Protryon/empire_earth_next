@@ -13,6 +13,8 @@
 //! - `units_state`: the per-unit interface's state (`EECPUnitsState`): the held set, the events, the enemy memory,
 //!   the danger layers and the route;
 //! - `units_bind` (the game only): its hooks and the `ai.*` bindings over the world views and one C++ host;
+//! - `next_state`, `next_value`, `next_game` (the game only): the next engine (EECPNext*.cpp before): its per-player
+//!   record, the view and its table, the tick, the army's memory, the gather safety, the strategy step, the save;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
 //! The C++ keeps its objects (the states, the manifest's entries) and hands plain values over. `golden` checks every
@@ -30,7 +32,10 @@ pub mod lua_value;
 pub mod manifest;
 pub mod military;
 pub mod names;
+pub mod next_game;
 pub mod next_save;
+pub mod next_state;
+pub mod next_value;
 pub mod seat;
 pub mod switches;
 pub mod units_bind;
