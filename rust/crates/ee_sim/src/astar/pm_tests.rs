@@ -355,7 +355,7 @@ fn saved_layouts() {
     assert_eq!(RunningState::read(&mut r).unwrap(), rs);
     // a short record is the file's end
     let mut r: VecDeque<Item> = vec![Item::U32(1), Item::U32(2)].into_iter().collect();
-    assert_eq!(RunningState::read(&mut r), Err(-1));
+    assert_eq!(RunningState::read(&mut r), Err(EE_PATH_ERROR_BEYOND_END));
 }
 
 /// A loaded game: the searches' units ask no path again, the searches go back at the queues' front.

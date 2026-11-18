@@ -1232,16 +1232,8 @@ impl RunningState {
     }
 
     pub fn read(r: &mut dyn FileIn) -> Result<RunningState, i32> {
-        let mut error = 0;
-        let record = PathRecord::load_words(|| match r.u32() {
-            Ok(v) => Some(v),
-            Err(e) => {
-                error = e;
-                None
-            }
-        });
-        // (a short record is the file's end: kErrorBeyondEnd)
-        let record = record.ok_or(if error != 0 { error } else { EE_PATH_ERROR_BEYOND_END })?;
+        // (a failed read inside the record is the original's kErrorBeyondEnd, whatever the file said)
+        let record = PathRecord::load_words(|| r.u32().ok()).ok_or(EE_PATH_ERROR_BEYOND_END)?;
         Ok(RunningState {
             record,
             lcc: r.i32()?,
@@ -1253,7 +1245,7 @@ impl RunningState {
 }
 
 /// `kErrorBeyondEnd`, `LoadRunningState`'s answer for a short record.
-pub const EE_PATH_ERROR_BEYOND_END: i32 = -0x10;
+pub const EE_PATH_ERROR_BEYOND_END: i32 = 0xa;
 
 /// A path request as the saved game holds it (save 0.277, `EESaveAutoPathRequest`).
 #[repr(C)]
