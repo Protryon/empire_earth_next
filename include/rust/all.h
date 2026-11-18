@@ -22,6 +22,7 @@
 #include "rust/data/tables.h"
 #include "rust/game/app.h"
 #include "rust/game/screens.h"
+#include "rust/game/sim_driver.h"
 #include "rust/net/net.h"
 #include "rust/net/net_tcp.h"
 #include "rust/render/dx7.h"
