@@ -97,17 +97,6 @@ void EEUnitClass::CallParatroopPlane(EEComplexUnit* inUnit)
     }
 }
 
-bool EEUnitClass::CanAttackMove()
-{
-    return EEClassBody(this, EE_UNITS_BODY_CAN_ATTACK_MOVE) == 2;
-}
-
-bool EEUnitClass::CanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
-{
-    EEUCNote theNote(1); theNote.C(this).U(inUnit1).U(inUnit2);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_tr_can_carry(EEObj(this), EEObj(inUnit1), EEObj(inUnit2)));
-}
-
 bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
     EEUCNote theNote(2); theNote.C(this).U(inTransport).I(inX).I(inY);   // TEST ONLY (UCBD)
@@ -210,12 +199,6 @@ bool EEUnitClass::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inT
     }());
     theNote.P(outLocation);
     return theResult;
-}
-
-long EEUnitClass::FindGatheringTile(std::vector<EEComplexUnit*>* inUnits, U2DPoint<long> inFrom, U2DPoint<long>* outTile)
-{
-    EEUCNote theNote(3); theNote.C(this).Us(*inUnits).T(inFrom);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_tr_gathering_tile(EEObj(this), inUnits, (int32_t)inFrom.mX, (int32_t)inFrom.mY, (long(*)[2])outTile));
 }
 
 void EEUnitClass::FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)

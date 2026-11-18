@@ -170,12 +170,6 @@ long EEUIFScenarioEditor::DrawPolygons()
     return UIForm::DrawPolygons();
 }
 
-// Leaves the current tab: hides the brush highlight, leaves its group (unless switching), disables its controls
-void EEUIFScenarioEditor::LeaveTab()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_TAB, 0, NULL, NULL);
-}
-
 // Switches to a tab: enters or leaves full view as needed, enables its controls, enters and loads its group
 void EEUIFScenarioEditor::SelectTab(unsigned char inFlag, long inTab)
 {
@@ -249,18 +243,6 @@ void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0,
                          const_cast<UWideString*>(&inText), NULL);
-}
-
-// Enters full view: resets the game render list to its base object, hides the mini map and redraws all controls
-void EEUIFScenarioEditor::EnterFullView()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_ENTER_FULL_VIEW, 0, NULL, NULL);
-}
-
-// Leaves full view: restores the full game render list, shows the mini map and redraws all controls
-void EEUIFScenarioEditor::LeaveFullView()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_FULL_VIEW, 0, NULL, NULL);
 }
 
 // Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),

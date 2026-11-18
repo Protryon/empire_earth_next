@@ -146,8 +146,6 @@ public:
     const GE3DPoint& GetUnitLocation();
     // 0x102f8b: the effects' random number; a value around inCenter, up to half of inSpread either way
     static float GetRandom();
-    static float GetRandomSpread(float inSpread, float inCenter) { return (0.5f - EEEffect::GetRandom()) * inSpread + inCenter; }
-    static float GetRandomSpread(long inSpread, long inCenter) { return (0.5f - EEEffect::GetRandom()) * inSpread + inCenter; }
 
     // the 2D kinds' position and the 3D kinds' transformation, each then its region
     void SetPosition(const GE3DPoint& inPosition);

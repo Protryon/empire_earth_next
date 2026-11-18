@@ -109,7 +109,6 @@ public:
     float GetRange() const { return this->mRange; }
     float GetScale() const { return this->mScale; }  // inline (EESGUnitSorter::Compare loads both operands)
     float GetAttack() const { return this->mAttack; }  // inline (likewise)
-    float GetLeadership() const { return this->mLeadership; }  // inline (EESMObject 0x5c8871)
     long GetMaxHitPoints() const { return this->mMaxHitPoints; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
     // inline (EEWheel::Update 0x23c957 loads them as values) (provisional names)
@@ -133,7 +132,6 @@ public:
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
-    unsigned long GetTerrainMask() const { return this->mTerrainMask; }
     bool GetIsInitialized() const { return this->mIsInitialized; }
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
@@ -188,7 +186,6 @@ public:
     float GetNearestFootprintTile(EEUnit* inUnit, long* outX, long* outY);  // 0x229314; base-unit footprint distance
     float GetTileDistanceSquared(EEUnit* inOther);  // 0x14f455 (EEAirTrafficControl.cpp: the squared tile distance; provisional name)
     bool IsPathMarker();                    // 0x708c9 (EECPCivilizationManager.cpp; every caller out of line): unit type 0x104 or 0xdf (provisional name)
-    bool Fn27C0B4();                        // 0x27c0b4 (ICF-folded `return false`; EERenderObject 0x10b556 tests it for class 0xdf) (provisional name)
 
     // the RTSUnit slots EEUnit overrides (EEUnit.cpp)
     virtual ~EEUnit();                      // +0x00 0x228d36 (calls Virtual30; ??_G 0x228d1a)
@@ -230,7 +227,6 @@ public:
     // +0x6c 0x229973 (2 arguments: EEPlayer::FinishUnitsLoad 0x1690a5): after Load, the saved hit-point
     // fraction (Load memcpy's the float into mHitPoints) back to hit points; returns 0
     virtual long FinishLoad(long, long);
-    virtual void ResearchCompleted(unsigned long);  // +0x70
     // +0x74: damage from inAttacker for player inPlayerNumber (the contagion functors; provisional names)
     virtual void TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNumber, long inMode);
     virtual void SightMoved(unsigned long, unsigned long, unsigned long, unsigned long);  // +0x78
@@ -372,7 +368,6 @@ public:
 
     virtual bool IsNextToTile(long inX, long inY); // original1fab56 ret8/AL; sole footprint caller
     virtual bool StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX, long inY, bool inFlag);               // +0x80
-    virtual void SetFoundation(bool);       // +0x84 (sets +0x351)
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew);  // +0x88 (ret 8: inNew replaces inOld as cargo/carrier)
 
     void StartAction(long inAction);
@@ -427,13 +422,10 @@ public:
     // 0x1fa229 (EEUCSpaceBuilding::HasArrived: where the unit is going; 7 when it has no path: long) (provisional name)
     long GetNextWaypointPoint(GE3DPoint& outLocation);
     long GetPathLength(float& outDistance);  // 0x1fa1e1: the path's remaining length (7: no path) (provisional name)
-    bool GetCatchableContagions(EEComplexUnit* inUnit, unsigned long& outFlags);  // 0x1f6a31 (calamity flags of inUnit this one takes)
     void UpdateWaterState(bool inArg);      // 0x1f7c47 (mWaterState from the class's +0x2d0 bits and the tile) (provisional name)
     void ApplyAreaEffects();                // 0x1f9b72 (the area effects over the largest radius) (provisional name)
     // 0x1f9c9b (ret 0x20): up to inTries points around inTarget away from this unit until inScreen accepts one
     // (EECPAttackSubGroupUnit::Flee's flee) (provisional name)
-    bool FindFleePoint(GE3DPoint* inTarget, GE3DPoint* outPoint, long inTries, float inArg4, float inArg5, float inArg6,
-                  float inArg7, EEFleeFromLocationScreenBase* inScreen);
     bool IsOnOtherContinentThan(EEComplexUnit* inUnit);
     bool IsOnOtherContinent(long inTileX, long inTileY);  // 0x1fa6f9 (another continent than the unit's) (provisional name)
     unsigned short GetFootprintContinent(long inKind);  // 0x1fa7f6 (the first continent among the unit's tiles) (provisional name)
@@ -486,11 +478,8 @@ public:
     void UpdateHealSearchTimer();           // 0x20e104 (EEUCBasicPriest::Update: mHealSearchTimer down by 0.001 per ms) (provisional name)
     long UpdateRottingAwayTime();           // New (R5b.4 leaf 6): the classes' kActionUnitRotting countdown (returns the time)
     void UpdateResourcesRotting();          // New (R5b.4 leaf 6): the classes' kActionResourcesRotting step
-    float GetF220() const { return this->mF220; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; faddp) (provisional name)
     void SetF220(float inValue) { if (this->mF220 != inValue) this->mF220 = inValue; }
     // inline (EEPMNaval::PushMoving 0x55c1cb: fld; fadd; fcom; je; fstp) (provisional names)
-    void SetPushVelocityX(float inValue) { if (this->mPushVelocityX != inValue) this->mPushVelocityX = inValue; }
-    void SetPushVelocityY(float inValue) { if (this->mPushVelocityY != inValue) this->mPushVelocityY = inValue; }
     void SetTargetSearchTimer(long inValue) { if (this->mTargetSearchTimer != inValue) this->mTargetSearchTimer = inValue; }
     void SetIsAnimationPaused(bool inValue) { if (this->mIsAnimationPaused != inValue) this->mIsAnimationPaused = inValue; }  // (EEUnitAI.cpp action 5000)
     void SetAnimationTime(unsigned long inValue) { if (this->mAnimationTime != inValue) this->mAnimationTime = inValue; }  // (EEUnitAI.cpp action 5000)
@@ -543,7 +532,6 @@ public:
     void QueueGoal(EEUnitGoal* inGoal, long inItem);  // 0x3d416: queues inGoal in mGoalQueues[inItem]
     // inline (COMDAT 0xd5c5 after its first user EECPASGUSpaceCarrier::Retarget)
     unsigned long GetNumCargoUnits() { return this->mCargo.size(); }
-    unsigned long GetNumWaypoints() { return this->mWaypoints.size(); }  // EECPASGLand::HasIdleUnitToLoad 0x447c96 (provisional name)
     bool HasCargo(EEComplexUnit* inCargo);  // 0x46fc0 (EEMImmediateCargoUnload; provisional name)
     bool UnloadCargoNow(EEComplexUnit* inCargo);  // 0x1fd0fe (EEMImmediateCargoUnload; provisional name)
     // 0x229314: a free tile near inUnit for this unit (EEMPathTo; returns a distance; provisional name)
@@ -620,7 +608,6 @@ public:
     virtual void LoadMedia(bool inIsFoundation);  // +0x64 0x1fb814
     virtual void SightOff(unsigned long, unsigned long);     // +0x68 0x1fd336
     virtual long FinishLoad(long, long);    // +0x6c 0x1f3395
-    virtual void ResearchCompleted(unsigned long);  // +0x70 (ICF-folded empty `ret 4` 0x157269)
     virtual void SightMoved(unsigned long, unsigned long, unsigned long, unsigned long);  // +0x78 0x1ff834
 
     EEComplexUnit();
@@ -634,7 +621,6 @@ public:
     static EEComplexUnit* Create();
     static EEComplexUnit* Create(EEUnitClass* inClass, const GETransformation& inTransformation, EEPlayer* inPlayer, unsigned long inGoalQueueCount);
     static bool SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks);
-    bool GetB34F();                         // 0x1f7b45 (out of line) (provisional name)
     bool HasCalamityFlag(unsigned long inFlag);
     void ClearGarrison();                   // 0x1f8bd8: mL28C = mL288 = 0 (provisional name)
     bool HasEffect(long inKind);            // 0x1f9ddb: GetEffect into a dummy (provisional name)
@@ -686,7 +672,6 @@ public:
     // 0x269137 (in EEUIFMGMainGroup.cpp after its first user Update, called out of line: defined there):
     // mCitizenBuildQueue[inIndex] (provisional name)
     EEUnit* GetCitizenBuildTarget(unsigned long inIndex);
-    void PopProductionQueue();              // 0x93dbb: mBuildQueue.erase(mBuildQueue.begin()) (EECPUnitManager.cpp's range) (provisional name)
     bool IsResearchQueued(long inTechnology);  // 0x937dd (the main group's technology buttons: the tech tree node's mU4C) (provisional name)
     // (provisional names; types inferred)
     void HoldUnit(EEComplexUnit* inUnit);   // 0x1f5c42: links inUnit into mHeldUnits (kept sorted by mGrowth)
@@ -716,7 +701,6 @@ public:
     void SetLastHitPoints(long inValue) { if (this->mLastHitPoints != inValue) this->mLastHitPoints = inValue; }
     void SetAmmunition(unsigned long inValue) { if (this->mAmmunition != inValue) this->mAmmunition = inValue; }
     void SetBehavior(EEUnitBehavior* inValue) { if (this->mBehavior != inValue) this->mBehavior = inValue; }
-    void SetAIState(long inValue) { if (this->mAIState != inValue) this->mAIState = inValue; }  // inline (EECPExplorationManager 0x7f352: cmp then store)
     void SetPowerRegenTimer(long inValue) { if (this->mPowerRegenTimer != inValue) this->mPowerRegenTimer = inValue; }  // (EEUnitClass::RegeneratePower)
     void SetTrailEffectTimer(long inValue) { if (this->mTrailEffectTimer != inValue) this->mTrailEffectTimer = inValue; }  // (EEUnitClass::UpdateTrail)
     void SetRegenerationTimer(long inValue) { if (this->mRegenerationTimer != inValue) this->mRegenerationTimer = inValue; }  // (EEUnitClass::Regenerate)
@@ -776,7 +760,6 @@ public:
     // New (R5b.4): an EEUnitStoreModel (GEPhysicalModel's layout; its location setters report to the unit store)
     EEUnitStoreModel& GetPhysicalModel() { return this->mPhysicalModel; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     EEUnitStoreModel mPhysicalModel;        // +0x130
-    void SetAngularVelocity(const GEOrientation& inV) { this->mAngularVelocity = inV; }
     GEOrientation mAngularVelocity;         // +0x17c (saved)
     GEOrientation mOrientation;             // +0x188 (saved)
     std::vector<U2DPoint<long> > mBoundedPathTiles;  // +0x194 (filled from EEGetUnitTiles's vector 0x2373bd; assigned with operator= 0x1a4f4 at 0x419ccb)
@@ -820,21 +803,15 @@ public:
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
     RTSUnit* mBlockingUnit;                 // +0x20c
-    float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
-    float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
     // `!= 0` test; a member read gives `fadd [ecx]`)
-    float GetF24C() const { return this->mF24C; }
     SESMInstanceNode* mSound;               // +0x25c
     EEEffectHandle mConversionEffect;       // +0x2c0 (saved; -1: none, ReleaseConversionEffect)
     EEEffectHandle mHealEffect;             // +0x2c4 (saved; -1: none, ReleaseHealEffect)
     long GetFormationRank() const { return this->mFormationRank; }
     EEEffectHandle mFireEffect;             // +0x310 provisional name (the fire functor's effect on the unit; saved)
     unsigned long GetGrazeTime() const { return this->mGrazeTime; }
-    long GetAIState() const { return this->mAIState; }
-    unsigned short GetExperience() const { return this->mExperience; }
-    bool GetIsCommandable() const { return this->mIsCommandable; }  // inline (0x61c806 budget) r37_big B2
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsDetachedFromAI() const { return this->mIsDetachedFromAI; }
@@ -986,7 +963,6 @@ public:
     // +0x0c (base 0x2907a3: empty): adjusts a path for the class (EEUCSeaAnimal 0x219d87: random depths) (provisional
     // name)
     void AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
-    bool CanAttackMove();           // +0x10
     void CargoRemoved(EEComplexUnit* inUnit, EEComplexUnit* inCargo);  // +0x14 (EEUCFortress 0x2101da: ret 8, the cargo)
     // +0x18 (EEComplexUnit::LoadCargo pushes (this, cargo, its third argument) after loading a cargo)
     void CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg);   // bool: 0x6101b5 `cmp byte`
@@ -1056,9 +1032,6 @@ public:
     long GetTechnology() const { return this->mTechnology; }
     bool IsPriest();                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
     long GetNumResearchTechnologies() { return this->mResearchTechnologies.size(); }      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
-    // 0x7028: gUnitClassTable[inUnitType]'s +0x1d0 is non-zero and one of mCounterKind1/mCounterKind2/mL1DC
-    // (EECPAttackSubGroupUnit::GetCounterFactor 0x633ad; provisional name)
-    bool IsCounteredBy(long inUnitType);
     // EEUnitClass.cpp members (provisional names)
     void AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, float inZ, bool inSnapToMap);
     float GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTarget);  // 0x23187a (a height factor against inTarget)
@@ -1144,13 +1117,11 @@ public:
     // The kinds' own virtuals (the EEUC* families' vtable slots until R5b.4 round 32), dispatchers by kind like
     // the ones above (EEUnitClassKinds.cpp); a kind without a body answers the default
     void CallParatroopPlane(EEComplexUnit* inUnit);  // (EEUCLand)
-    bool CanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2);  // (EEUCTransport)
     bool CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);  // (EEUCTransport)
     bool CheckGroundImpact(EEComplexUnit* inUnit);  // (EEUCMissile)
     bool CheckWaterImpact(EEComplexUnit* inUnit);  // (EEUCMissile)
     void FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected);  // (EEUCTransport)
     bool FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation, GE3DPoint& outLocation);  // (EEUCTransport)
-    long FindGatheringTile(std::vector<EEComplexUnit*>* inUnits, U2DPoint<long> inFrom, U2DPoint<long>* outTile);  // (EEUCTransport)
     void FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile);  // (EEUCTransport)
     void FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);  // (EEUCAirplane)
     long GetUnloadFailedTextID();  // (EEUCTransport)
@@ -1171,8 +1142,6 @@ public:
     EEUnit* FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind, std::vector<EEUnit*>* ioUnits);
     EEUnit* FindStorage(EEComplexUnit* inUnit, bool inAnyStorage);
     bool HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource);
-    void FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX, long inSizeY, GE3DPoint& outLocation);
-    bool FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation);
     EEUnit* FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange, unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms);
     void BasicPriestLoadMedia(EEPlayer* inPlayer);
     void BasicPriestUnloadMedia(EEPlayer* inPlayer);
@@ -1392,24 +1361,16 @@ public:
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     float GetMaxRoll() const { return this->mMaxRoll; }  // inline value getter (0x55da2c / 0x55937a)
     float GetFacingOffset() const { return this->mFacingOffset; }
-    float GetConversionRate() const { return this->mConversionRate; }
     float GetBobHeight() const { return this->mBobHeight; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; fmul st(2)) (provisional name)
     float GetBobPitch() const { return this->mBobPitch; }  // inline (EEPMNaval::ApplyBob 0x55b668 loads it as a value before the bob: fld [eax+0x194]) (provisional name)
     // inline (the heal goal's Virtual64 0x22569f loads it as an FP value after the ratio; provisional name)
     float GetHealThreshold() const { return this->mHealThreshold; }
-    unsigned long GetAIKind() const { return this->mAIKind; }
     long GetEpoch() const { return this->mEpoch; }
     long GetInfluence() const { return this->mInfluence; }
-    long GetTransportCapacity() const { return this->mTransportCapacity; }
     long GetMiniMapColor() const { return this->mMiniMapColor; }  // inline (EEMiniMap 0x51e53b loads it before the colour pushes) (provisional name)
-    bool GetBlocksTile() const { return this->mBlocksTile; }
-    bool GetCanEnterAirTransports() const { return this->mCanEnterAirTransports; }
-    bool GetCanEnterSeaTransports() const { return this->mCanEnterSeaTransports; }
-    bool GetCanEnterSpaceTransports() const { return this->mCanEnterSpaceTransports; }
     bool GetIsWall() const { return this->mIsWall; }
     bool GetIsAttackUnit() const { return this->mIsAttackUnit; }
     bool GetIsDefenseUnit() const { return this->mIsDefenseUnit; }
-    bool GetHasCalamityPowers() const { return this->mHasCalamityPowers; }
     volatile bool mIsMediaLoaded;           // +0x328 the ctor stores it (volatile: VirtualB4 0x638432 clears it with `mov byte`, not `and`)
 };
 

@@ -338,22 +338,6 @@ void EEScenarioManager::Update()
     ee_scenario_manager_update(&theHost);
 }
 
-// Resolves a scenario player choice (0 nature, 1/3 a random/every human, 2/4 a random/every computer, 5/6 a random
-// player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
-long EEScenarioManager::ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle)
-{
-    // the choice is Rust's (ee_scenario condition.rs choose_player, the AI's shuffle with it; the SMCP record too)
-    EESMHostContext theContext = {NULL, NULL};
-    EeScenarioHost theHost = EESMHost(&theContext);
-    int32_t thePlayers[EE_SCENARIO_MAX_PLAYERS];
-    size_t theCount = 0;
-    long theResult = ee_scenario_choose_player(&theHost, (int32_t)inType, inSingle, outPlayers != NULL, thePlayers,
-                                               &theCount);
-    if (outPlayers != NULL)
-        outPlayers->assign(thePlayers, thePlayers + theCount);
-    return theResult;
-}
-
 // Replays every pending effect of a loaded game, makes the triggers evaluate on the next tick and starts recording
 // new pending effects
 void EEScenarioManager::ApplyPendingEffects()

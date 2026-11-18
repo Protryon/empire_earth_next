@@ -96,7 +96,6 @@ public:
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic);  // 0x1b005b (EESMTrigger 0x1c9c84)
     // 0x1b260a: a scenario player choice (0 nature, 1/3 humans, 2/4 computers, 5/6 random, 7.. player n - 6) as one
     // player (the result, -1 if none) and the candidate list (provisional name)
-    long ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle);
     EESMCondition* FindConditionByID(long inID);    // 0x1b322d (mID)
     EESMEffect* FindEffectByID(long inID);  // 0x1b3269 (mID)
     EESMObject* FindObjectByID(long inID);  // 0x1b32a8 (mL64)
@@ -132,8 +131,6 @@ public:
     // inline (out-of-line COMDAT 0x1c5152, emitted by EESMEffect.cpp: Execute's inline budget refuses it)
     // (provisional name)
     unsigned long GetNumMessages() { return this->mMessages.size(); }
-    unsigned long GetNumObjects() { return this->mObjects.size(); }  // (0x59ccc0, 0x5b1ae4)
-    unsigned long GetNumConditions() { return this->mConditions.size(); }
     unsigned long GetNumEffects() { return this->mEffects.size(); }
     unsigned long GetNumTriggers() { return this->mTriggers.size(); }
     // Layout: the ctor 0x1afa90 (member ctors in order) and the Save/Load field census of
@@ -149,7 +146,6 @@ public:
     std::vector<EESMObject*> mObjects;      // +0x114 (virtual delete; Reset's default object 0x32c9)
     std::vector<EESMArea*> mAreas;          // +0x124 (Reset's two default areas 0x32ce/0x32cf)
     std::vector<EESMEffect*> mPendingEffects;  // +0x134 (0x1b000d appends new effects)
-    EESMDialogMessage& GetDialogMessage(unsigned long inIndex) { return this->mMessages[inIndex]; }
     std::vector<EESMDialogMessage> mMessages;    // +0x144 (0x40-byte elements by value)
     std::vector<UWideString> mImportErrors;  // +0x154 (_Buy 0x6ba94)
     EeScenarioTimedQueue* mTimedEffects;    // +0x164 (the timed effects, sorted by time: owned by the Rust queue)

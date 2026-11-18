@@ -30,8 +30,6 @@ public:
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bfa67
     virtual void ExpandTokens(const UWideString& inText, UWideString& outText);            // +0x04 0x1bef17
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x20 0x1c0134
-    // inline accessor (the effect editors' std::find takes its value as a temporary: 0x184bd6 exact; provisional name)
-    long GetPlacedEffect() const { return this->mPlacedEffect; }
     // inline accessors (EESETSEffect's Virtual24/Virtual2C: EESMCondition's shape; provisional names)
     const UWideString& GetName() const { return this->mName; }
     const UWideString& GetText() const { return this->mText; }
@@ -40,10 +38,6 @@ public:
     unsigned long GetType() const { return this->mType; }
     unsigned long GetID() const { return this->mID; }
     float GetFloatValue() const { return this->mFloatValue; }  // inline (Copy 0x5bc60f copies it with fld/fstp; provisional name)
-    long GetIntValue1() const { return this->mIntValue1; }  // inline (0x58d4d5 passes it to std::find as an rvalue temporary; provisional name)
-    long GetIntValue2() const { return this->mIntValue2; }  // inline (0x58d4d5, as GetIntValue1; provisional name)
-    unsigned long GetPlayerAction() const { return this->mPlayerAction; }
-    bool GetIsAttack() const { return this->mIsAttack; }
     void SetName(const UWideString& inName) { this->mName = inName; }
     void SetText(const UWideString& inText) { this->mText = inText; }
     void SetType(unsigned long inType) { this->mType = inType; }

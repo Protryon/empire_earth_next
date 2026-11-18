@@ -177,12 +177,6 @@ void EEComplexUnit::SightOffHere()
     this->SightOff(this->GetTileX(), this->GetTileY());
 }
 
-// Sets whether the unit is a building foundation
-void EEComplexUnit::SetFoundation(bool inIsFoundation)
-{
-    this->mIsFoundation = inIsFoundation;
-}
-
 // Destroys the unit, freeing its turret angles, orbitals, wheels and model
 EEComplexUnit::~EEComplexUnit()
 {
@@ -565,25 +559,6 @@ bool EEComplexUnit::CanTake(EEComplexUnit* inCargo, unsigned long inValue)
     return this->mResourceType == kResourceAny || this->mResourceType == inValue ? true : false;
 }
 
-// Collects the other unit's calamities this unit could catch; returns only the last calamity's test
-bool EEComplexUnit::GetCatchableContagions(EEComplexUnit* inUnit, unsigned long& outFlags)
-{
-    std::vector<unsigned long> theFlags;
-    bool theResult = false;
-    outFlags = 0;
-    if (inUnit->mCalamityFlags != 0) {
-        EESplitCalamityFlags(inUnit->mCalamityFlags, theFlags);
-        for (long i = theFlags.size() - 1; i >= 0; i--) {
-            if (this->HasCalamityFlag(theFlags[i]))
-                continue;
-            theResult = this->GetUnitClass()->IsAffectedByCalamity(theFlags[i]);
-            if (theResult)
-                outFlags |= theFlags[i];
-        }
-    }
-    return theResult;
-}
-
 // Removes the unit from play: drops its path, goals, queues, sound and every unit reference it holds
 void EEComplexUnit::Invalidate()
 {
@@ -893,12 +868,6 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
     this->RefreshGoals();
     this->RefreshActiveGoal();
     EEUnit::CopyFrom(inUnit);
-}
-
-// Returns the unit's mB34F flag
-bool EEComplexUnit::GetB34F()
-{
-    return this->mB34F;
 }
 
 // Replaces the unit's sound instance, referencing the new one
@@ -1378,29 +1347,6 @@ void EEComplexUnit::ApplyAreaEffects()
     theLocation.SetX(thePoint.GetX());
     theLocation.SetY(thePoint.GetY());
     ::gAEManager.CollectEffects(theRadius, theLocation, thePlayerID, &this->mAreaEffects, this);
-}
-
-// Tries random points away from a threat until the screen accepts one; returns whether one was found
-bool EEComplexUnit::FindFleePoint(GE3DPoint* inTarget, GE3DPoint* outPoint, long inTries, float inMinAngle,
-                            float inMaxAngle, float inMinDistance, float inMaxDistance,
-                            EEFleeFromLocationScreenBase* inScreen)
-{
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    bool theResult = false;
-    this->GetPosition(thePosition);
-    float theAngle = EEGetHeadingBetween(inTarget, &thePosition);
-    theAngle = EEJitterHeading(theAngle, inMinAngle, inMaxAngle);
-    for (long i = inTries - 1; i >= 0 && !theResult; i--) {
-        float theDistance = gPhysics->GetRandom(inMinDistance, inMaxDistance);
-        thePoint.SetX(UMCos(theAngle) * theDistance + thePosition.mX);
-        thePoint.SetY(UMCos(1.5707964f - theAngle) * theDistance + thePosition.GetY());
-        if (inScreen->Screen(thePoint)) {
-            *outPoint = thePoint;
-            theResult = true;
-        }
-    }
-    return theResult;
 }
 
 // Adds the finished building's sight and, for other players' units, shows it on the minimap
@@ -3776,9 +3722,5 @@ void EEComplexUnit::DescribeLong(class UWideString &)
 }
 
 void EEComplexUnit::FnE123D()
-{
-}
-
-void EEComplexUnit::ResearchCompleted(unsigned long)
 {
 }

@@ -36,23 +36,15 @@ public:
     unsigned long GetUnitAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }  // 0x1c8274 (`outUnits = mUnits`)
     unsigned long GetUnitCount() const { return this->mUnits.size(); }  // inline (EESMEffect 0x5bd5eb, EESMObject 0x5c6458)
     // inline value getters (EESMEffect 0x5c2b3e / 0x5bc942 read the object test through them)
-    unsigned long GetOwner() const { return this->mOwner; }
     bool GetIsSelectOnMap() const { return this->mIsSelectOnMap; }
     unsigned long GetParent() const { return this->mParent; }
     unsigned long GetInAreaCheck() const { return this->mInAreaCheck; }
     unsigned long GetNearCheck() const { return this->mNearCheck; }
-    unsigned long GetHasAttributeCheck() const { return this->mHasAttributeCheck; }
-    unsigned long GetVisibleByCheck() const { return this->mVisibleByCheck; }
-    unsigned long GetHasStateCheck() const { return this->mHasStateCheck; }
-    unsigned long GetSelectedByCheck() const { return this->mSelectedByCheck; }
     unsigned long GetAttribute() const { return this->mAttribute; }
     bool GetIsAttributePercent() const { return this->mIsAttributePercent; }
     unsigned long GetFamily() const { return this->mFamily; }
     unsigned long GetClass() const { return this->mClass; }
-    unsigned long GetMinCount() const { return this->mMinCount; }
-    unsigned long GetMaxCount() const { return this->mMaxCount; }
     unsigned long GetArea() const { return this->mArea; }
-    unsigned long GetNearObject() const { return this->mNearObject; }
     void SetUnits(const std::vector<unsigned long>& inUnits);
     void SetParent(long inParent);          // 0x1c96b7 (0 when it would close a cycle; provisional name)
     void SetName(const UWideString& inName);    // 0x1c9628 (also renames the conditions that use the object)

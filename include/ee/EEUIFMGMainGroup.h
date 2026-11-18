@@ -26,7 +26,6 @@ public:
     virtual void Reset() {}                 // +0x10 (0x1720c6: empty)
     virtual bool WantsRefresh() { return false; }   // +0x14 (0xac9f3: false)
 
-    EEUIFMainGame* GetOwner() const { return this->mOwner; }
     EEUIFMainGame* mOwner;                  // +0x04 the main game form
 };
 

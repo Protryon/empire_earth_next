@@ -65,18 +65,11 @@ public:
     EECameraControl();
     long AddKey(const EECameraKey& inKey);      // 0x1277e5: appends a key unless locked (5)
     void SetClippingDistances();            // 0x1279f0: the viewport's clipping distances
-    void CopyKey(const EECameraKey& inKey, EECameraKey& outKey);
-    void NextKey();                         // 0x127e5b: the next key, or the end of the key list
-    void BuildView(GETransformation& outTransformation, float inStep);
-    void SlerpViewTurn(float inStep, GEQuaternion& outQuaternion);
-    void SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion);
     void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint);
     void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint);  // 0x12844f: the point to look at on a unit
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);
     static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom
     void StartPath();                       // 0x1286fa: plays the key list
-    void GoTo(const EECameraKey& inKey);        // 0x12935b: moves towards a key
-    void KeepPose();                        // 0x12976f: the current state becomes the start
 
     std::vector<EECameraKey> mKeys;         // +0x004 (0xa4-byte POD elements: `_Buy` 0x12a081; provisional name)
     EEUnitHandle<EEUnit> mUnitA;            // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name; a handle since R5a.4: read on the graphics and physics threads)

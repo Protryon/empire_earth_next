@@ -21,17 +21,11 @@ public:
         : mTable(ee_cp_influence_new((uint32_t)inMapSize, 9, (uint32_t)inNumPlayers)), mRegionSize(9),
           mNumPlayers(inNumPlayers) {}
     ~EEInfluenceTable() { ee_cp_influence_free(this->mTable); }
-    // 0xa5685: the sum of GetValue over the rectangle of regions (not clipped)
-    long SumValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
-        { return ee_cp_influence_sum(this->mTable, 0, (uint32_t)inPlayer, Rect(inRect)); }
     // 0xa56f6: the sum of GetOthersValue, the start corner clipped at 0
     long SumOthersValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
         { return ee_cp_influence_sum(this->mTable, 1, (uint32_t)inPlayer, Rect(inRect)); }
     // 0x24495a (EEFOFindNewTargetNearOldTarget.cpp): SumOthersValue over the regions under inTiles
     long SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles);
-    // 0xa57f9: the total minus inPlayer's (0 off the grid)
-    long GetOthersValue(unsigned long inPlayer, unsigned long inX, unsigned long inY)
-        { return ee_cp_influence_value(this->mTable, 1, (uint32_t)inPlayer, (uint32_t)inX, (uint32_t)inY); }
     // 0xa5839 / 0xa58a7: the unit's class influence added to (or, clamped at 0, taken from) its owner's and the
     // total entry of the region of (inX, inY)
     void AddUnit(EEUnit* inUnit, long inX, long inY)

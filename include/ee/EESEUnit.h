@@ -52,9 +52,7 @@ public:
     void ReselectUnitType();                // 0x19c05d (re-selects the unit type at the mouse while placing)
     void ShowCargo(bool inShow);
     void ShowUnitStatus(EEUnit* inUnit);    // 0x19c1a1 (the upgrade panel shows inUnit)
-    long GetLayer();                        // 0x19c221 (0 world, 1 players, 2 neither radio button)
     float GetRotationAngle();               // 0x19c246 (the rotation button's yaw; EESELoadThread Handle402)
-    long GetSortMode();                     // 0x19c251 (0..3 by the three sort radio buttons)
     void SelectUnitType(const GE2DPoint& inLocation);   // 0x19c37b (the unit list's selection starts placing it)
     void UpdateSelection();                 // 0x19c535 (the cargo list after the selection changed)
     void RefreshUnitList();                 // 0x19c64b (the unit classes for the mode, sort and layer)

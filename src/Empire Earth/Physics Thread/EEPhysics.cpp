@@ -1145,12 +1145,6 @@ void EEPhysics::ReportStatistics()
     gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReportStatistics, {theFirst, theSecond}), kSlotNone);
 }
 
-// Creates the game timer
-void EEPhysics::CreateGameTimer()
-{
-    EECreateGameTimer();
-}
-
 // Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
 // to the saved game; returns the first write error
 long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)

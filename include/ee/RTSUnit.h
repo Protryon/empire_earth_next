@@ -54,7 +54,6 @@ public:
     virtual void SightOnHere() = 0;         // +0x0c
     virtual void Describe(UWideString& ioString);   // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
     virtual void DescribeLong(UWideString& ioString);  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
-    virtual unsigned long HashValue();      // +0x18 0x23da44 ((id << 4 + y) << 4 + x)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x23db4f
     virtual void Clear();                   // +0x20 0x23dd46 (Reset, mIsValid = false)
     virtual void SightOffHere() = 0;        // +0x24

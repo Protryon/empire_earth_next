@@ -55,12 +55,6 @@ void UIRBMap::Check()
     ee_screens_semp_kind(this->GetForm(), (uint32_t)this->GetId());
 }
 
-// Hides every kind's controls of the map tab (editor_map.rs)
-void UIRBMap::HideControls()
-{
-    ee_screens_semp_kind(this->GetForm(), 0);
-}
-
 // Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the kind radio buttons, the
 // Create Map button and the elevation file controls (editor_map.rs)
 EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)

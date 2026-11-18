@@ -333,25 +333,6 @@ public:
     float GetTerrainRoll(const GETransformation& inLocation);  // 0x11c847 (EEComplexUnit::PlaceOnGround: the roll, with mRollsWithTerrain) (provisional name)
     // 0xc5bb: the tile at inLocation (EEPlayer::RemoveSharedSightAt/RemoveOwnSightAt; provisional name)
     EETile* GetTileAtLocation(const EETileLocation& inLocation);
-    // inline: the highest / lowest corner of tile (inX, inY), -1 off the map (COMDATs 0x212753 / 0x2128e1 after their
-    // first user EEUCGate.cpp's 0x211d00) (provisional names)
-    float GetMaximumCornerZ(unsigned long inX, unsigned long inY)
-    {
-        // the nested max (windows.h macro: re-evaluated arms) and RTSMap::GetTile expanded in place, -1 loaded
-        // directly (EEUCGate 0x612753)
-        if (RTSMap::GetTile(inX, inY) != NULL)
-            return max(this->mTerrainMesh.GetZ(inX, inY), max(this->mTerrainMesh.GetZ(inX + 1, inY),
-                            max(this->mTerrainMesh.GetZ(inX, inY + 1), this->mTerrainMesh.GetZ(inX + 1, inY + 1))));
-        return -1.0f;
-    }
-    float GetMinimumCornerZ(unsigned long inX, unsigned long inY)
-    {
-        // as GetMaximumCornerZ (EEUCGate 0x6128e1)
-        if (RTSMap::GetTile(inX, inY) != NULL)
-            return min(this->mTerrainMesh.GetZ(inX, inY), min(this->mTerrainMesh.GetZ(inX + 1, inY),
-                            min(this->mTerrainMesh.GetZ(inX, inY + 1), this->mTerrainMesh.GetZ(inX + 1, inY + 1))));
-        return -1.0f;
-    }
     // defined in RTSMap.cpp's range, so presumably RTSMap's in the original; kept EEMap's here because names.txt and
     // their callers bind the EEMap names (provisional names)
     void PrepareSave();                     // 0x122517 (EESEASaveScenario before saving a scenario)
@@ -372,7 +353,6 @@ public:
     void Initialize();                      // 0x11c9a3 (the ctors' common part)
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared);
     void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff);
-    void SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff);  // 0x11d433 (cliff colours)
     void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop);
     void RegisterTerrainSets();             // 0x11dd95 (registers the terrain texture and colour sets with the mesh)
     void SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload);  // 0x11dfb7 (the tile's texture set)
@@ -386,7 +366,6 @@ public:
     EeCombatUnitRegions* mUnitRegions;
     EETile* mTileArray;                     // +0x195644 (new EETile[n]: Virtual1C; Virtual18/24 hand them out) (provisional name)
     uint32_t* mVisibilityWords;             // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
-    unsigned long GetMapCharacteristics() const { return this->mMapCharacteristics; }
     // +0x19564c mMapCharacteristics .. +0x195660 mChecksumCursor: the record EeUnitsMapFields (the base above)
 };
 

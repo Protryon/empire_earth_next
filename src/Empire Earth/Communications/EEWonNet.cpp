@@ -1173,15 +1173,6 @@ void EEWonNet::LoginCallback(AsyncOp* inOp)
         theKey.SaveToRegistry();
 }
 
-// DEAD-IN-AOC: base exe 0x4c9612 (AoC: GetHTTPDocumentOp's and AsyncOpWithTracker's implicit dtors 0x4cff46/
-// 0x4cff95 and the tracker family 0x4d157f.. survive, WONAPI uses them too; GetMOTDOp itself is gone). (r25pre-won-2)
-void EEWonNet::RequestMOTD()
-{
-    this->mMOTDOp = RustServerOp::NewHttpDocument(kWonProductName, HTTPDocType_MOTD); // GetMOTDOp
-    this->mMOTDOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::MOTDCallback));
-    this->mMOTDOp->RunAsync(15000);
-}
-
 // DEAD-IN-AOC: base exe 0x4c975d (hands the game's and the system's message of the day to the UI thread: message
 // 0x440, whose AoC handler is EEUserInterface::ShowMessageOfTheDay). (r25pre-won-2)
 void EEWonNet::MOTDCallback(AsyncOp* inOp)

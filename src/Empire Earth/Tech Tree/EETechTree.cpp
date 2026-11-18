@@ -171,21 +171,6 @@ static int32_t EETechSaveHost(void* inContext, int32_t inOp, EeTechHostIo* io)
     return theResult;
 }
 
-// Reads a tech's researched, obsolete and editor-obsoleted flags; false for an unknown tech id
-bool EETechTree::GetTechIDState(long inTechID, bool& outIsResearched, bool& outIsObsolete,
-    bool& outScenEditorObsoleted)
-{
-    bool theResult = false;
-    EETechTreeNode* theNode = this->Get(inTechID);
-    if (theNode != NULL) {
-        outIsResearched = theNode->mIsResearched;
-        outIsObsolete = theNode->GetIsObsolete();
-        outScenEditorObsoleted = theNode->mScenEditorObsoleted;
-        theResult = true;
-    }
-    return theResult;
-}
-
 long gEpochCount = 15;
 // the epoch of each node id: the block gTechTree loaded it in
 static std::map<long, long> sNodeEpochs;

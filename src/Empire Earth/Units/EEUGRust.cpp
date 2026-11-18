@@ -1728,17 +1728,6 @@ bool EEUGRust::CanUnloadAtDestination()
     return Goal(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD, this) != 0;
 }
 
-void EEUGRust::ForgetUnloadTransport()
-{
-    Goal(EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT, this);
-}
-
-void EEUGRust::SetUnloadDestination(long inX, long inY)
-{
-    EeUnitsGoalIo theArgs = {{inX, inY}};
-    Goal(EE_UNITS_GOAL_UNLOAD_SET_DESTINATION, this, 0, 0, &theArgs);
-}
-
 EEUGRust* EEUGRust::NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg)
 {
     EEUGRust* theGoal = new EEUGRust(kGoalBuildRepair, inArg);
@@ -1770,13 +1759,6 @@ long EEUGRust::GetBuildTechTreeID()
     EeUnitsGoalIo theArgs = {};
     Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
     return (long)theArgs.i[1];
-}
-
-EETechTreeNode* EEUGRust::GetBuildTechNode()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
-    return ObjectOf<EETechTreeNode>((uint64_t)theArgs.i[2]);
 }
 
 EEUnitClass* EEUGRust::GetBuildTargetClass()
@@ -1834,11 +1816,6 @@ bool EEUGRust::IsGatherWaiting()
     EeUnitsGoalIo theArgs = {};
     Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
     return theArgs.i[2] != 0;
-}
-
-void EEUGRust::SetGatherResource(EEUnit* inResource)
-{
-    Goal(EE_UNITS_GOAL_GATHER_SET_RESOURCE, this, Handle(inResource));
 }
 
 void EEUGRust::SetGatherStorage(EEUnit* inStorage)
@@ -1916,11 +1893,6 @@ bool EEUGRust::IsLoadGarrisonValid()
 unsigned long EEUGRust::GetNumLoadUnits()
 {
     return (unsigned long)Goal(EE_UNITS_GOAL_LOAD_UNIT_COUNT, this);
-}
-
-EEComplexUnit* EEUGRust::GetLoadUnitAt(unsigned long inIndex)
-{
-    return ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_LOAD_UNIT_AT, this, inIndex));
 }
 
 bool EEUGRust::HasLoadUnit(EEComplexUnit* inUnit)
@@ -2056,10 +2028,4 @@ void EEUGRust::SetPathAttempts(long inValue)
 {
     this->mPathAttempts = inValue;
     Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
-}
-
-// an unfinished living settlement within twice the gatherer's line of sight (NULL if none; world.rs)
-EEUnit* EEUGRust::FindUnfinishedFarm(EEComplexUnit* inUnit)
-{
-    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_UNFINISHED_FARM, this, Handle(inUnit)));
 }

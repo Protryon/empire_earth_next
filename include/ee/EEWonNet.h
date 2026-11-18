@@ -448,7 +448,6 @@ public:
     bool Initialize();                      // base 0x4c9e16 (reads SierraCom.cfg into mDirectoryServers)
     void GetTitanServerList();              // base 0x4c9883
     void GetTitanServerListCompletion(WONAPI::AsyncOp* inOp);   // base 0x4c9ad9
-    void RequestMOTD();                     // base 0x4c9612
     void MOTDCallback(WONAPI::AsyncOp* inOp);                   // base 0x4c975d
     void Login(const char* inName, const char* inPassword);       // base 0x4c91a3
     void LoginCallback(WONAPI::AsyncOp* inOp);                  // base 0x4c9414

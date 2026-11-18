@@ -839,12 +839,3 @@ bool EEUnit::IsFoundation()
 void EEUnit::SightOff(unsigned long, unsigned long)
 {
 }
-
-void EEUnit::ResearchCompleted(unsigned long)
-{
-}
-
-bool EEUnit::Fn27C0B4()
-{
-    return false;
-}

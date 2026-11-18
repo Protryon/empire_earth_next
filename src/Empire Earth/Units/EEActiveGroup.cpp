@@ -184,15 +184,6 @@ bool EEActiveGroup::RequestPaths(std::vector<EEComplexUnit*>& inUnits)
     return theResult;
 }
 
-// The formation's placement (ee_units ag.rs lay_out_formation): the aircraft held in a container get the goal
-// directly; the formation is centred on the goal (yawed by the location goal's yaw, or towards the unload
-// destination) and arranged; the units then take the slots, either the nearest free slot (slower, then larger first:
-// the goal is near the units) or by their order across the move direction; every unit gets a goal at its slot.
-void EEActiveGroup::LayOutFormation()
-{
-    ee_units_ag_lay_out_formation(EEObj(this));
-}
-
 // Appends a goal to the goal queue and makes the queue's unit its owner
 void EEUnitVectorItem::Add(EEUnitGoal* inGoal)
 {

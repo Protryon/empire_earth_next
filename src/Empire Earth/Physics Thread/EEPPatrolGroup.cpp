@@ -85,12 +85,6 @@ void EEPPatrolGroup::AddPoint(const GE2DPoint& inPoint, unsigned long inPlayerID
     PGRun(EE_UNITS_PG_OP_ADD_POINT, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
 }
 
-// Creates a patrol point at the given spot after the last one
-void EEPPatrolGroup::AppendPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID)
-{
-    PGRun(EE_UNITS_PG_OP_APPEND, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
-}
-
 // Returns the patrol point nearest to the tile (the first of equals), or NULL when there are none
 EEComplexUnit* EEPPatrolGroup::GetNearest(long inTileX, long inTileY)
 {
@@ -121,13 +115,6 @@ EEComplexUnit* EEPPatrolGroup::GetPrevious(EEComplexUnit* inUnit)
 void EEPPatrolGroup::InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inUnit)
 {
     PGRun(EE_UNITS_PG_OP_INSERT_AT, this, PGArgs(inUnit, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
-}
-
-// Creates a path point unit for the player at the spot and inserts it after the given point (at the end
-// for NULL)
-void EEPPatrolGroup::InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inAfter)
-{
-    PGRun(EE_UNITS_PG_OP_INSERT, this, PGArgs(inAfter, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
 }
 
 // Reads the group's id, its patrol point unit ids (as placeholders for RepairPointers) and the loop flag
