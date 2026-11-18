@@ -270,7 +270,7 @@ static intptr_t Get(intptr_t inObj, MF inField) { return O(Op::MGet, inObj, (int
 static intptr_t Item(intptr_t inItem, F inField) { return O(Op::ItemGet, inItem, (intptr_t)inField); }
 static void SetItem(intptr_t inItem, F inField, intptr_t v) { O(Op::ItemSet, inItem, (intptr_t)inField, v); }
 static bool CanJoin(intptr_t inGame) { return (short)O(Op::MCall, inGame, (intptr_t)MC::GameJoinStatus, 0) == 0; }
-static const int kGrayText = 6, kText = 13;
+static const int kGrayText = 6, kText = 14;
 // the resource rows: ServerListCtrl_GameExpanded_Image, _GameNotExpanded_Image, _Querying_String, _QueryFailed_String,
 // _NotFullFilter_String, _FullFilter_String, _OpenFilter_String, _StopRefresh_String, _RefreshList_String
 static intptr_t Res(EeWonLobbyRes inRes) { return (intptr_t)inRes; }

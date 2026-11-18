@@ -250,6 +250,19 @@ static intptr_t EvField(ComponentEvent* e, EeWonLobbyCtlEvField f)
     case F::CmDuration: return (intptr_t)cm->mDuration;
     case F::CmRoomName: return Dat(cm->mRoomName);
     case F::CmComment: return Dat(cm->mComment);
+    case F::GcGroup: return (intptr_t) static_cast<GroupChangedEvent*>(e)->mGroup.get();
+    case F::GcServer: return (intptr_t) static_cast<GroupChangedEvent*>(e)->mServer.get();
+    case F::ScServer: return (intptr_t) static_cast<ServerChangedEvent*>(e)->mServer.get();
+    case F::FcFriend: return (intptr_t) static_cast<FriendChangedEvent*>(e)->mFriend.get();
+    case F::LisStatus: return Dat(static_cast<LoginInitStatusEvent*>(e)->mStatus);
+    case F::LisDescription: return Dat(static_cast<LoginInitStatusEvent*>(e)->mDescription);
+    case F::LisAllowIgnore: return static_cast<LoginInitStatusEvent*>(e)->mAllowIgnore ? 1 : 0;
+    case F::LisKind: return static_cast<LoginInitStatusEvent*>(e)->mKind;
+    case F::SlfUserName: return Dat(static_cast<SetLoginFieldsEvent*>(e)->mUserName);
+    case F::SlfPassword: return Dat(static_cast<SetLoginFieldsEvent*>(e)->mPassword);
+    case F::QarEmail: return Dat(static_cast<QueryAccountResultEvent*>(e)->mEmail);
+    case F::QarNewsletter: return static_cast<QueryAccountResultEvent*>(e)->mNewsletter ? 1 : 0;
+    case F::GhdOp: return (intptr_t) static_cast<GotHTTPDocumentEvent*>(e)->mOp.get();
     default: break;
     }
     return 0;
@@ -724,6 +737,21 @@ static intptr_t ItemField(ListItem* inItem, intptr_t inField, bool inSet, intptr
     case F::SummaryHeight:
         if (inSet) aRow->mSummaryHeight = (unsigned char)inValue;
         return aRow->mSummaryHeight;
+    case F::Color:
+        if (inSet) static_cast<TextListItem*>(inItem)->mColor = inValue;
+        return (intptr_t)static_cast<TextListItem*>(inItem)->mColor;
+    case F::FriendSeparator:
+        if (inSet) static_cast<FriendsListItem*>(inItem)->mSeparator = inValue != 0;
+        return static_cast<FriendsListItem*>(inItem)->mSeparator ? 1 : 0;
+    case F::FriendSortGroup:
+        if (inSet) static_cast<FriendsListItem*>(inItem)->mSortGroup = (signed char)inValue;
+        return static_cast<FriendsListItem*>(inItem)->mSortGroup;
+    case F::UserSortKey:
+        if (inSet) static_cast<UserListItem*>(inItem)->mSortKey = (signed char)inValue;
+        return static_cast<UserListItem*>(inItem)->mSortKey;
+    case F::UserShowSeparator:
+        if (inSet) static_cast<UserListItem*>(inItem)->mShowSeparator = inValue != 0;
+        return static_cast<UserListItem*>(inItem)->mShowSeparator ? 1 : 0;
     }
     return 0;
 }

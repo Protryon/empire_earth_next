@@ -125,7 +125,7 @@ pub(crate) const L_SUMMARY: usize = 5;
 const FILTER_POS: isize = 1;
 /// `StandardColor_GrayText`, `StandardColor_Text`.
 pub(crate) const SC_GRAY_TEXT: isize = 6;
-pub(crate) const SC_TEXT: isize = 13;
+pub(crate) const SC_TEXT: isize = 14;
 
 /// The calls a row makes (its virtuals), `EeWonLobbyCtlRowCall`.
 #[repr(u32)]
