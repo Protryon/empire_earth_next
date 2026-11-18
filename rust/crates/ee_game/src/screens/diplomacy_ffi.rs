@@ -8,13 +8,12 @@ use crate::screens::menus_ffi::Form;
 
 /// cbindgen:ignore
 mod sys {
-    use crate::screens::diplomacy::EeScreensDiplomacyPlayer;
 
     extern "C" {
-        /// Player `index` of the world into `out`; false (nothing written) for an empty entry.
-        pub fn ee_screenscpp_diplomacy_player(index: u32, out: *mut EeScreensDiplomacyPlayer) -> bool;
         /// `EEMPayTribute` to player `to` with food, wood, gold, stone, iron, to the local input.
         pub fn ee_screenscpp_diplomacy_tribute(to: u32, amounts: *const u32);
+        /// `gWorld.GetPlayer(index)->IsHuman()` (a virtual).
+        pub fn ee_screenscpp_player_is_human(index: u32) -> bool;
     }
 }
 
@@ -29,8 +28,9 @@ impl DiplomacyHost for Form {
     }
     fn player(&mut self, index: u32) -> Option<EeScreensDiplomacyPlayer> {
         let begun = crate::screens::sgvw::begin();
-        let mut out = EeScreensDiplomacyPlayer::default();
-        let r = unsafe { sys::ee_screenscpp_diplomacy_player(index, &mut out) }.then_some(out);
+        // SAFETY: a player of the world (the fill found it)
+        let r =
+            crate::screens::hud_views::diplomacy_player(index, || unsafe { sys::ee_screenscpp_player_is_human(index) });
         if let Some(g) = begun {
             crate::screens::sgvw::record(g, &format!("DP {index} {r:?}"));
         }

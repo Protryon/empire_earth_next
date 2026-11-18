@@ -6950,6 +6950,10 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_BUTTON_TECH = 42;
 /// The status button a's `mCount += b`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_ADD_COUNT = 43;
 
+/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->mMainGameForm`, a = 1): the
+/// toolkit's ops on them are `hud_views`' (the FFI adapter's, below the trait).
+constexpr static const uint32_t EE_SCREENS_MGR_OP_FORMS = 44;
+
 /// The group's fields: `mMode`, `mHitPoints`, `mUnitID`, `mPreviousID`, `mL1C`, `mL20`, `mHasUnit`, `mReset`.
 constexpr static const int64_t EE_SCREENS_MGR_FIELD_MODE = 0;
 

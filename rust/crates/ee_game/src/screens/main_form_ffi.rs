@@ -23,8 +23,22 @@ mod sys {
 
 struct Host(*mut c_void);
 
+impl Host {
+    /// The call record's form (`EEUIFMGFormCall::mForm`, its first member: an `EEUIFMainGame*`).
+    fn form(&self) -> *mut c_void {
+        // SAFETY: the host's live call record, whose first member is the form (EEUIFMainGame.cpp asserts it)
+        unsafe { *(self.0 as *const *mut c_void) }
+    }
+}
+
 impl FormHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, io: &mut EeScreensMainFormIo) -> i64 {
+        if let Some(r) = crate::screens::hud_views::main_form(op, a) {
+            return r;
+        }
+        if let Some(r) = crate::screens::hud_views::main_form_toolkit(self.form(), op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_main_form(self.0, op, a, b, io) }
     }
     fn set_text(&mut self, text: &[u8]) {

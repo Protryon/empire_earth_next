@@ -7,12 +7,12 @@ use crate::screens::menus_ffi::Form;
 
 /// cbindgen:ignore
 mod sys {
-    use crate::screens::hot_keys::EeScreensHotKeyUnit;
 
     extern "C" {
-        /// The current player's units (the aircraft's snapshot with the distances) into `out`, up to `capacity`;
-        /// their count.
-        pub fn ee_screenscpp_hot_key_units(aircraft: bool, out: *mut EeScreensHotKeyUnit, capacity: usize) -> usize;
+        /// The aircraft's target: the map point under the game view's centre (or its tile's centre), x and y.
+        pub fn ee_screenscpp_hot_key_target(out: *mut f32);
+        /// The snapshot's complex units (`HK_CENTER`'s, by the snapshot's index).
+        pub fn ee_screenscpp_hot_key_keep(units: *const u64, count: usize);
     }
 }
 
@@ -27,16 +27,25 @@ impl HotKeyHost for Form {
     }
     fn units(&mut self, aircraft: bool) -> Vec<EeScreensHotKeyUnit> {
         let begun = crate::screens::sgvw::begin();
-        let mut out = vec![EeScreensHotKeyUnit::default(); 1024];
-        let mut n = unsafe { sys::ee_screenscpp_hot_key_units(aircraft, out.as_mut_ptr(), out.len()) };
-        if n > out.len() {
-            out.resize(n, EeScreensHotKeyUnit::default());
-            n = unsafe { sys::ee_screenscpp_hot_key_units(aircraft, out.as_mut_ptr(), out.len()) }.min(n);
-        }
-        out.truncate(n);
+        let out = hot_key_units(aircraft);
         if let Some(g) = begun {
             crate::screens::sgvw::record(g, &format!("HK {} {out:?}", aircraft as u32));
         }
         out
     }
+}
+
+/// The current player's units as the hot keys see them (`hud_views::hot_key_units`), the aircraft's target from
+/// the C++; the snapshot's complex units kept for `HK_CENTER`.
+pub(crate) fn hot_key_units(aircraft: bool) -> Vec<EeScreensHotKeyUnit> {
+    let mut target = [0.0f32; 2];
+    if aircraft {
+        // SAFETY: two floats
+        unsafe { sys::ee_screenscpp_hot_key_target(target.as_mut_ptr()) };
+    }
+    let mut complexes = Vec::new();
+    let out = crate::screens::hud_views::hot_key_units(aircraft, target, &mut complexes);
+    // SAFETY: the handles' count
+    unsafe { sys::ee_screenscpp_hot_key_keep(complexes.as_ptr(), complexes.len()) };
+    out
 }

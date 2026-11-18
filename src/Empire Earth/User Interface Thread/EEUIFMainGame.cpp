@@ -277,7 +277,7 @@ void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
 // One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
 // picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
 struct EEUIFMGFormCall {
-    EEUIFMainGame* mForm;
+    EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
     EEUnit* mPicked;
     UWideString mText;
     const GEColor* mColor;
@@ -302,6 +302,7 @@ struct EEUIFMGFormCall {
           mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
           mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
 };
+static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
 
 // Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
 // original's UpdateBackgroundMedia, ShowAllBackgrounds, SetPauseText, PauseInformation, ResumeInformation,
@@ -819,7 +820,8 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
 }
 // ---- (the mouse modes' ops end)
 
-// (a member: UIForm's GetMouseCaptured and CopyData are protected)
+// (a member: UIForm's GetMouseCaptured and CopyData are protected). The plain world reads and the controls' display
+// modes and dirty flags are hud_views.rs' (the world's views, the toolkit's direct path)
 int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo)
 {
     EEUIFMGFormCall& theCall = *static_cast<EEUIFMGFormCall*>(inCall);
@@ -838,11 +840,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_ERROR_LOCK:
         inA != 0 ? theForm->mErrorCriticalSection->Enter() : theForm->mErrorCriticalSection->Leave();
         return 0;
-    case EE_SCREENS_MF_OP_HAS_PLAYER: return gWorld.GetCurrentPlayer() != NULL;
-    case EE_SCREENS_MF_OP_GROUP_HAS_FIRST:
-        return gWorld.GetCurrentPlayer()->mSelectedGroup != NULL &&
-               gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit() != NULL;
-    case EE_SCREENS_MF_OP_HAS_VIEWED: return gWorld.GetCurrentPlayer()->mSelectedViewedUnit != NULL;
     case EE_SCREENS_MF_OP_SET_UNIT_SELECTED: gUnitSelected = inA != 0; return 0;
     case EE_SCREENS_MF_OP_FIELD:
     case EE_SCREENS_MF_OP_SET_FIELD: {
@@ -888,7 +885,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->f[2] = theView.GetRight(), ioIo->f[3] = theView.GetBottom();
         return 0;
     }
-    case EE_SCREENS_MF_OP_IS_CURRENT: return theForm->GetManager()->GetCurrentForm() == theForm;
     case EE_SCREENS_MF_OP_ADD_DIRTY:
         theForm->GetManager()->AddDirtyRectangle(GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]), theForm);
         return 0;
@@ -953,7 +949,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition); return 0;
     case EE_SCREENS_MF_OP_BASE_COPY_DATA: return theForm->UIForm::CopyData();
-    case EE_SCREENS_MF_OP_RESOURCE: return gWorld.GetCurrentPlayer()->mResourceCaps[inA + 2];
     case EE_SCREENS_MF_OP_LABEL_INT: return atoi(theLabel->GetText(0));
     case EE_SCREENS_MF_OP_LABEL_SET_LONG: theLabel->SetText((long)inB); return 0;
     case EE_SCREENS_MF_OP_POPULATION: return gWorld.GetCurrentPlayer()->GetTotalPopulation(false, false);
@@ -973,7 +968,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_LABEL_DIFFERS: return theLabel->GetText(0) != theCall.mText;
     case EE_SCREENS_MF_OP_LABEL_SET_TEXT: theLabel->SetText(theCall.mText); return 0;
-    case EE_SCREENS_MF_OP_VICTORY_ENABLED: return gWorld.mVictoryEnabled == true;
     case EE_SCREENS_MF_OP_NUM_TEAMS: return gWorld.GetNumTeams();
     case EE_SCREENS_MF_OP_COUNTDOWN: {
         unsigned long theValue = 0;
@@ -981,8 +975,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->n[0] = theValue;
         return (int64_t)(intptr_t)theWinner;
     }
-    case EE_SCREENS_MF_OP_SET_MODE: theForm->GetControl((unsigned long)inA)->SetDisplayMode((unsigned long)inB); return 0;
-    case EE_SCREENS_MF_OP_MODE: return theForm->GetControl((unsigned long)inA)->GetDisplayMode();
     case EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR:
         theLabel->GetGEText()->SetFgColor(reinterpret_cast<EEPlayer*>(inB)->mColor);
         return 0;
@@ -992,7 +984,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         sprintf(theCall.mText, theFormat, (const char*)reinterpret_cast<EEPlayer*>(inA)->mName, (unsigned long)inB);
         return 0;
     }
-    case EE_SCREENS_MF_OP_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_SCREENS_MF_OP_TEXT_TIME: theCall.mText = gPhysics->GetTimeString(); return 0;
     case EE_SCREENS_MF_OP_TEXT_STRING: gResource->GetString((unsigned long)inA, theCall.mText); return 0;
     case EE_SCREENS_MF_OP_FPS: ioIo->f[0] = gRasterizer->GetFramesPerSecond(theForm->GetManager()->GetScreen()); return 0;
@@ -1001,9 +992,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_HAS_TEAMS: return gWorld.mTeams.size() > 0;
     case EE_SCREENS_MF_OP_SET_MUTED: gSoundManager->SetIsMuted(inA != 0); return 0;
     case EE_SCREENS_MF_OP_MUTED: return gSoundManager->GetIsMuted();
-    case EE_SCREENS_MF_OP_GAME_RESULT: return gWorld.GetCurrentPlayer()->mGameResult;
     case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->Rust(EE_SCREENS_MF_DO_PAUSE_TEXT, inA); return 0;
-    case EE_SCREENS_MF_OP_SET_DIRTY: theForm->GetControl((unsigned long)inA)->SetDirty(true); return 0;
     case EE_SCREENS_MF_OP_LAG_STATUS: return gWorld.mLagStatus;
     case EE_SCREENS_MF_OP_LAG_COLOR:
         static_cast<UIBitmap*>(theForm->GetControl((unsigned long)inA))->GetBitmap()->SetColor(gWorld.mPlayers[inB]->mColor);

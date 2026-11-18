@@ -119,7 +119,8 @@ static void EEMainGroupHotKey(EEUIFMainGame* inForm, UIHotKey* inHotKey, EEUIFMG
     }
 }
 
-// The main group's host (ee_screens main_group.rs, EE_SCREENS_MGR_OP_*): units as handles (EEUnit*)
+// The main group's host (ee_screens main_group.rs, EE_SCREENS_MGR_OP_*): units as handles (EEUnit*). Its world reads
+// and toolkit calls are hud_views.rs' (the world's views, the toolkit's direct path)
 extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
     EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(inGroup);
@@ -150,21 +151,7 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         return 0;
     }
     case EE_SCREENS_MGR_OP_UI_STATE: return theForm->mUIState;
-    case EE_SCREENS_MGR_OP_IN_CINEMATIC: return gWorld.mInCinematic;
-    case EE_SCREENS_MGR_OP_SET_MODE: theForm->GetControl((unsigned long)inA)->SetDisplayMode((unsigned long)inB); return 0;
-    case EE_SCREENS_MGR_OP_PANELS_OFF:
-        gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
-        gUIManager->mMainGameForm->GetBackgroundByID(0x97)->SetVisibility(false);
-        gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
-        gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
-        return 0;
-    case EE_SCREENS_MGR_OP_SELECTED_COUNT: return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits();
-    case EE_SCREENS_MGR_OP_SELECTED_UNIT:
-        return reinterpret_cast<int64_t>(gWorld.GetCurrentPlayer()->mSelectedGroup->GetUnit((unsigned long)inA));
-    case EE_SCREENS_MGR_OP_VIEWED_UNIT:
-        return reinterpret_cast<int64_t>(static_cast<EEUnit*>(gWorld.GetCurrentPlayer()->mSelectedViewedUnit));
-    case EE_SCREENS_MGR_OP_UNIT_HP: return theUnit->mHitPoints;
-    case EE_SCREENS_MGR_OP_UNIT_ID: return theUnit->mUnitID;
+    case EE_SCREENS_MGR_OP_FORMS: return inA == 0 ? (int64_t)theForm : (int64_t)gUIManager->mMainGameForm;
     case EE_SCREENS_MGR_OP_WORLD_UNIT: return reinterpret_cast<int64_t>(gWorld.GetUnit((unsigned long)inA));
     case EE_SCREENS_MGR_OP_PLAYER_UNIT:
         return reinterpret_cast<int64_t>(gWorld.GetCurrentPlayer()->GetUnit((unsigned long)inA));
@@ -174,11 +161,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         else
             EEAddCloakEffect(reinterpret_cast<EEUnit*>(inB));
         return 0;
-    case EE_SCREENS_MGR_OP_UNIT_KIND:
-        return (theUnit->mComplexUnit != NULL ? 1 : 0) | (theUnit->mPlayer == gWorld.GetCurrentPlayer() ? 2 : 0) |
-               (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen ? 4 : 0) |
-               (theUnit->mUnitClass->mUnitType == kUnitTypeMarketCP ? 8 : 0);
-    case EE_SCREENS_MGR_OP_UNIT_L294: return theUnit->mUnitClass->mL294;
     case EE_SCREENS_MGR_OP_BOX: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(inB);
         if (inA == EE_SCREENS_MGR_BOX_FILL)
@@ -209,7 +191,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         return 0;
     }
     case EE_SCREENS_MGR_OP_SHOW_COMMANDS: theGroup->ShowCommands(theUnit); return 0;
-    case EE_SCREENS_MGR_OP_REMOVE_HOT_KEYS: theForm->RemoveAllHotKeysForAGroup((unsigned long)inA); return 0;
     case EE_SCREENS_MGR_OP_BUTTON_OBJECT: return EEButtonObject::Get((unsigned long)inA) != NULL;
     case EE_SCREENS_MGR_OP_SET_COMMAND: Button()->SetCommandButton((unsigned long)inB); return 0;
     case EE_SCREENS_MGR_OP_BEHAVIOR: {
@@ -233,8 +214,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         EEMainGroupHotKey(theForm, EEButtonObject::Get((unsigned long)inA)->GetHotKey(),
                           static_cast<EEUIFMGStatusButton*>(theForm->GetControl((unsigned long)inC)), inB);
         return 0;
-    case EE_SCREENS_MGR_OP_AIRPORT:
-        return theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mUnitClass->mUnitType == kUnitTypeAirport;
     case EE_SCREENS_MGR_OP_TIME_LEFT: return theUnit->mComplexUnit->mGoalQueues[inB].GetTimeLeft();
     case EE_SCREENS_MGR_OP_TIMER_TEXT: {
         UWideString theText;
@@ -247,26 +226,13 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         theTimer->SetText(theText, gU531930);
         return 0;
     }
-    case EE_SCREENS_MGR_OP_COMPLEX_LOCAL: return theUnit->mComplexUnit->mPlayer == gWorld.GetCurrentPlayer();
-    case EE_SCREENS_MGR_OP_COMMAND: return theUnit->mComplexUnit->mUnitClass->mCommands[inB];
-    case EE_SCREENS_MGR_OP_BEFORE_WW2:
-        return theUnit->mComplexUnit->mPlayer->GetTechTree()->mCurrentEpoch < kTechEpochAtomicWW2;
     case EE_SCREENS_MGR_OP_RESET_COUNT:
         Button()->mCount = 0;
         Button()->SetDirty(true);
         return 0;
-    case EE_SCREENS_MGR_OP_ON_MAP_LOCAL:
-        return theUnit->GetTileNode() && theUnit->mPlayer == gWorld.GetCurrentPlayer();
-    case EE_SCREENS_MGR_OP_WORKER: {
-        long theCategory = theUnit->GetComplexUnit()->GetClass()->GetCategory();
-        return theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen;
-    }
-    case EE_SCREENS_MGR_OP_QUEUE_SIZE:
-        return inB != 0 ? theUnit->GetComplexUnit()->mCitizenBuildQueue.size()
-                        : theUnit->GetComplexUnit()->GetBuildQueueSize();
-    case EE_SCREENS_MGR_OP_QUEUE_KEY:
-        return inB != 0 ? theUnit->GetComplexUnit()->GetCitizenBuildTarget((unsigned long)inC)->GetClass()->GetTechnology()
-                        : theUnit->GetComplexUnit()->mBuildQueue[inC].mTechnology;
+    // (the production queue's size and keys, inB 0, are hud_views.rs'; these are the citizen's build queue's)
+    case EE_SCREENS_MGR_OP_QUEUE_SIZE: return theUnit->GetComplexUnit()->mCitizenBuildQueue.size();
+    case EE_SCREENS_MGR_OP_QUEUE_KEY: return theUnit->GetComplexUnit()->GetCitizenBuildTarget((unsigned long)inC)->GetClass()->GetTechnology();
     case EE_SCREENS_MGR_OP_BUTTON_TECH: return Button()->mIsCommand ? EE_SCREENS_MGR_COMMAND : Button()->mTechnology;
     case EE_SCREENS_MGR_OP_ADD_COUNT: Button()->mCount += (long)inB; return 0;
     }

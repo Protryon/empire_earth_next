@@ -171,9 +171,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         if (inA == 0) gUIManager->Fn26FA6A();
         else gUIManager->Fn26FA55();
         break;
-    case EE_SCREENS_SB_OP_GROUP_COUNT: return theGroup == NULL ? -1 : (int64_t)theGroup->GetNumUnits();
-    case EE_SCREENS_SB_OP_UNIT: return theUnit != NULL;
-    case EE_SCREENS_SB_OP_UNIT_TYPE: return theUnit->GetUnitClass()->mUnitType;
     case EE_SCREENS_SB_OP_UNIT_POWER: return inB != 0 ? theUnit->GetPower() : (long)theUnit->mPower;
     case EE_SCREENS_SB_OP_UNLOAD_COST: return gFortressUnloadCost;
     case EE_SCREENS_SB_OP_FIRST_CATEGORY: return inFirst->GetUnitClass()->mCategory;
@@ -226,9 +223,7 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_SHIFT: return UIControl::ShiftKeyPressed();
     case EE_SCREENS_SB_OP_NODE_KIND: return theNode->mData->mKind;
     case EE_SCREENS_SB_OP_NODE_CLASS: return theNode->mData->mUnitClass;
-    case EE_SCREENS_SB_OP_CLASS_PRESENT: return theClass != NULL;
     case EE_SCREENS_SB_OP_CLASS_LAND_BUILDING: return theClass->IsLandBuilding() && theClass->mCategory != kUnitCategoryNavalBuilding;
-    case EE_SCREENS_SB_OP_CLASS_GATE: return theClass->mCategory == kUnitCategoryGate;
     case EE_SCREENS_SB_OP_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
     case EE_SCREENS_SB_OP_BUILD_UNIT: theForm->BuildUnit(theButton->mUnitID, theButton->mTechnology); break;
     case EE_SCREENS_SB_OP_START_WALL: theForm->StartWall(theButton->mTechnology); break;
@@ -299,7 +294,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_NODE_NAME_ID: return theNode->mData->mNameID;
     case EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED: return thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
     case EE_SCREENS_SB_OP_CLASS_POPULATION: return theClass->GetPopulationCost();
-    case EE_SCREENS_SB_OP_CLASS_NAME_ID: return theClass->mNameStringID;
     case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
     case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
     case EE_SCREENS_SB_OP_BITMAPS:

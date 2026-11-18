@@ -407,89 +407,31 @@ static UWideString Text(const uint8_t* inText, size_t inLength)
 
 // ---- the hot keys' (hot_keys.rs): inForm is the main game form
 
-// the last snapshot's complex units (EE_SCREENS_GAME_HK_CENTER's record index), filled by ee_screenscpp_hot_key_units
+// the last snapshot's complex units (EE_SCREENS_GAME_HK_CENTER's record index), kept by ee_screenscpp_hot_key_keep
 static std::vector<EEComplexUnit*> sHotKeyUnits;
 
-// the current player's units as the hot keys see them (hot_keys.rs EeScreensHotKeyUnit; the aircraft's with the
-// squared distances from the point under the view's centre); up to inCapacity into outUnits; their count
-extern "C" size_t ee_screenscpp_hot_key_units(bool inAircraft, EeScreensHotKeyUnit* outUnits, size_t inCapacity)
+// the aircraft's target (hot_keys_ffi.rs): the map point under the game view's centre, or its tile's centre
+extern "C" void ee_screenscpp_hot_key_target(float* outXY)
 {
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
     GE3DPoint theTarget;
-    GE3DPoint theLocation;
-    if (inAircraft) {
-        GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
-        if (gWorld.mMap->GetLocationAt(theCursor, theTarget, true) == NULL) {
-            long theX;
-            long theY;
-            gWorld.mMap->GetTileAt(theCursor, theX, theY);
-            theTarget.SetX(theX + 0.5f);
-            theTarget.SetY(theY + 0.5f);
-        }
-        theTarget.SetZ(0.0f);
-        theLocation.SetZ(0.0f);
+    GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
+    if (gWorld.mMap->GetLocationAt(theCursor, theTarget, true) == NULL) {
+        long theX;
+        long theY;
+        gWorld.mMap->GetTileAt(theCursor, theX, theY);
+        theTarget.SetX(theX + 0.5f);
+        theTarget.SetY(theY + 0.5f);
     }
+    outXY[0] = theTarget.GetX();
+    outXY[1] = theTarget.GetY();
+}
+
+// the snapshot's complex units (hud_views.rs hot_key_units), EE_SCREENS_GAME_HK_CENTER's by the snapshot's index
+extern "C" void ee_screenscpp_hot_key_keep(const uint64_t* inUnits, size_t inCount)
+{
     sHotKeyUnits.clear();
-    size_t theCount = 0;
-    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit; theUnit = static_cast<EEUnit*>(theUnit->mNext), theCount++) {
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        sHotKeyUnits.push_back(theComplex);
-        if (theCount >= inCapacity)
-            continue;
-        EeScreensHotKeyUnit& r = outUnits[theCount];
-        r = EeScreensHotKeyUnit();
-        r.unit_id = theUnit->mUnitID;
-        if (theComplex == NULL)
-            continue;
-        r.flags |= EE_SCREENS_HK_F_COMPLEX;
-        if (theUnit->mHitPoints > 0)
-            r.flags |= EE_SCREENS_HK_F_ALIVE;
-        if (theUnit->mTile != NULL)
-            r.flags |= EE_SCREENS_HK_F_ON_TILE;
-        if ((r.flags & (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) == (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) {
-            // the unit selection's fields
-            r.complex_id = theComplex->mUnitID;
-            r.unit_type = theUnit->mUnitClass->mUnitType;
-            r.category = theUnit->mUnitClass->mCategory;
-            r.command = theComplex->mCommand ? theComplex->mCommand->mType : 0;
-            r.max_velocity = Bits(theUnit->mStats->mMaxVelocity);
-        }
-        if (theGroup->Contains(theUnit->GetComplexUnit()))
-            r.flags |= EE_SCREENS_HK_F_SELECTED;
-        // the aircraft's fields (of the complex unit)
-        r.c_category = theComplex->mUnitClass->mCategory;
-        r.c_hit_points = theComplex->mHitPoints;
-        if (theComplex->mIsCommandable)
-            r.flags |= EE_SCREENS_HK_F_C_COMMANDABLE;
-        if (theComplex->mTileX != -10000)
-            r.flags |= EE_SCREENS_HK_F_C_TILE;
-        if (theComplex->mContainer)
-            r.flags |= EE_SCREENS_HK_F_C_CONTAINER;
-        if (theComplex->mIsDisabled)
-            r.flags |= EE_SCREENS_HK_F_C_DISABLED;
-        if (theComplex->mPreviousPart != NULL)
-            r.flags |= EE_SCREENS_HK_F_C_PREVIOUS_PART;
-        if (theComplex->mGoalState) {
-            r.flags |= EE_SCREENS_HK_F_C_GOAL;
-            r.c_goal_kind = theComplex->mGoalState->mKind;
-        }
-        r.c_family = theComplex->mUnitClass->mFamily;
-        r.c_ammo = theComplex->mUnitClass->mAmmoType;
-        r.c_type = theComplex->mUnitClass->mUnitType;
-        r.c_max_hit_points = theComplex->mStats->mMaxHitPoints;
-        if (inAircraft) {
-            if (theComplex->mContainer == NULL) {
-                theLocation.SetX(theComplex->mPhysicalModel.GetLocation().GetX());
-                theLocation.SetY(theComplex->mPhysicalModel.GetLocation().GetY());
-            } else {
-                theLocation.SetX(theComplex->mContainer->mPhysicalModel.GetLocation().GetX());
-                theLocation.SetY(theComplex->mContainer->mPhysicalModel.GetLocation().GetY());
-            }
-            r.distance = Bits(theLocation.DistanceToSquared(theTarget));
-        }
-    }
-    return theCount;
+    for (size_t i = 0; i < inCount; i++)
+        sHotKeyUnits.push_back(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnits[i]));
 }
 
 static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
@@ -884,25 +826,10 @@ static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
 
 // ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
 
-// player inIndex of the world as the diplomacy form reads it; false for an empty entry
-extern "C" bool ee_screenscpp_diplomacy_player(uint32_t inIndex, EeScreensDiplomacyPlayer* outPlayer)
+// player inIndex's IsHuman() (a virtual; hud_views.rs diplomacy_player reads the rest)
+extern "C" bool ee_screenscpp_player_is_human(uint32_t inIndex)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayer(inIndex);
-    if (thePlayer == NULL)
-        return false;
-    outPlayer->player_id = thePlayer->GetPlayerID();
-    outPlayer->game_result = thePlayer->GetGameResult();
-    outPlayer->observer = thePlayer->GetObserverMode();
-    outPlayer->human = thePlayer->IsHuman();
-    outPlayer->slot = thePlayer->GetSlot();
-    for (long r = 0; r < 5; r++)
-        outPlayer->resources[r] = thePlayer->GetResource(kResourceFood + r);
-    for (unsigned long q = 0; q < 17; q++) {
-        outPlayer->enemies[q] = thePlayer->GetEnemy(q);
-        outPlayer->send_chat[q] = thePlayer->GetSendChatMessage(q);
-    }
-    outPlayer->tribute_fee = thePlayer->GetTributeFee();
-    return true;
+    return gWorld.GetPlayer(inIndex)->IsHuman();
 }
 
 // a tribute to player inTo (food, wood, gold, stone, iron) to the local input
@@ -2924,14 +2851,7 @@ extern "C" void ee_screenscpp_game_view(uint32_t inGroup, uint32_t inArg, EeScre
         v->speed_high = gWorldTable.GetFloatValue2(kWorldGameSpeedRange);
         v->hot_key_mode = gUIManager->mMainGameForm ? gUIManager->mMainGameForm->mHotKeyMode : 0;
         break;
-    case EE_SCREENS_VIEW_PLAYER:   // (the player's members are the views': game_view_ffi.rs world_view)
-        if (EEPlayer* thePlayer = EEScreensViewPlayer(inArg)) {
-            EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-            for (unsigned long i = 0; theGroup && i < theGroup->GetNumUnits(); i++)
-                if (theGroup->GetUnit(i) && theGroup->GetUnit(i)->mUnitClass->mUnitType == kUnitTypeAirport)
-                    v->airport_selected = true;
-        }
-        break;
+    // (EE_SCREENS_VIEW_PLAYER: the player's members are the views': game_view_ffi.rs world_view, hud_views.rs)
     case EE_SCREENS_VIEW_COLOUR: {
         const GEColor& theColour = EEGetPlayerColor(inArg);
         v->colour[0] = theColour.mRed, v->colour[1] = theColour.mGreen, v->colour[2] = theColour.mBlue;

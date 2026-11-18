@@ -10,6 +10,12 @@ struct Portrait(*mut c_void);
 impl PortraitHost for Portrait {
     fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
         let (op, a) = crate::screens::portrait::hud_op(op, a);
+        let class = crate::screens::hud_ctl::EE_SCREENS_HC_CLASS;
+        if op >= class {
+            if let Some(r) = crate::screens::hud_views::portrait(op - class, a) {
+                return r;
+            }
+        }
         crate::screens::hud_ctl::HudHost::op(&mut crate::screens::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }

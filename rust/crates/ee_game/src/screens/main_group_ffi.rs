@@ -16,8 +16,22 @@ mod sys {
 
 struct Host(*mut c_void);
 
+impl Host {
+    /// `EE_SCREENS_MGR_OP_FORMS`: the group's form (0) or the manager's main game form (1).
+    fn form(&self, which: i64) -> *mut c_void {
+        use crate::screens::main_group::EE_SCREENS_MGR_OP_FORMS;
+        unsafe { sys::ee_screenscpp_main_group(self.0, EE_SCREENS_MGR_OP_FORMS, which, 0, 0) as *mut c_void }
+    }
+}
+
 impl GroupHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        if let Some(r) = crate::screens::hud_views::main_group(op, a, b, c) {
+            return r;
+        }
+        if let Some(r) = crate::screens::hud_views::main_group_toolkit(|| self.form(0), || self.form(1), op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_main_group(self.0, op, a, b, c) }
     }
 }

@@ -123,7 +123,7 @@ void EEUICPortrait::SetUnit(EEUnit* inUnit)
 }
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*, EEUIRustControl's host the toolkit's): units and nodes as
-// handles, ioF the op's floats
+// handles, ioF the op's floats (the unit's owner, production time and research are hud_views.rs')
 int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     EEUICPortrait* inPortrait = this;
@@ -161,14 +161,8 @@ int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* io
         return 0;
     case EE_SCREENS_PT_OP_COMPLEX:
         return (int64_t)inPortrait->mUnit->GetComplexUnit();
-    case EE_SCREENS_PT_OP_LOCAL:
-        return theUnit->GetPlayer() == gWorld.GetCurrentPlayer();
-    case EE_SCREENS_PT_OP_PRODUCTION:
-        return theUnit->mProductionTime;
     case EE_SCREENS_PT_OP_RESEARCHED:
         return theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
-    case EE_SCREENS_PT_OP_RESEARCH:
-        return theUnit->mCurrentResearch;
     case EE_SCREENS_PT_OP_NODE:
         return (int64_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inA);
     case EE_SCREENS_PT_OP_SCALE:
