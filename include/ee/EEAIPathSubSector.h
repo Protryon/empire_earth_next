@@ -41,7 +41,7 @@ public:
         { return ee_astar_sub_sector_remove_neighbor(this, (uint64_t)(uintptr_t)inOther, inOther->id); }
     // 0x2c379 (ret 4): erases the links listed under inID
     void RemoveLinks(unsigned short inID) { ee_astar_sub_sector_remove_links(this, inID); }
-    void CreateTiles(const std::vector<U2DPoint<long> >& inTiles) { this->mTiles.Create(inTiles); }   // 0x2c3bc
+    void CreateTiles(const std::vector<U2DPoint<long> >& inTiles) { this->mTiles.Create(inTiles); }
 
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIPathSubSector>; 0xab6c1 takes the node tile from
     // mSector +0x40/+0x44) (provisional names)

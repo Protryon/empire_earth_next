@@ -3,6 +3,7 @@
 // EEAIArea serial of what EEAIContinentManager's lookup returns. Requires ee/EEAIArea.h.
 #ifndef EE_EEAIFOREST_H
 #define EE_EEAIFOREST_H
+#include "rust/sim/astar.h"
 
 // Port: the members are the Rust record EeAStarForestRecord (ee_sim::astar area_kinds.rs), the private base:
 // +0x68 the resource kind, +0x6c/+0x70/+0x74 the trees by kind 1/2/3, +0x78 (zeroed), +0x7c the next renewal

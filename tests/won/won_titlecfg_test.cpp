@@ -17,7 +17,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONTitleConfigMsg.h"
-#include "rust/all.h"
+#include "rust/won_net/strcase.h"
 
 using namespace WONAPI;
 using std::string;

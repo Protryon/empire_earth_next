@@ -3,6 +3,7 @@
 // EEAIArea serial of what EEAIContinentManager's lookup returns. Requires ee/EEAIArea.h.
 #ifndef EE_EEAIHILL_H
 #define EE_EEAIHILL_H
+#include "rust/sim/astar.h"
 
 // Port: the members are the Rust record EeAStarHillRecord (ee_sim::astar area_kinds.rs), the private base: +0x68
 // its continent (the hill goal's +0x56), +0x6a its id (EEAIContinent::AddHillID 0x26e13 reads it)
