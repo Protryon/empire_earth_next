@@ -19,9 +19,6 @@ class EEUnit;
 class FSFile;
 struct EeCpPlacement;                       // the Rust data (rust/sim/cp.h)
 
-// 0x6b6b2 (cdecl, EECPBuildManager.cpp's range): unit classes 0x24, 0x41, 0x2d8, 0x302, 0x31f (EECPUnitManager 0x941bb)
-// (provisional name)
-bool EECPIsSiteClass(long inUnitClass);
 // 0x23d1f1 (cdecl; callers EECPBuildManager::FindSpaceSite for class 0x2d8 and 0x2037c6): whether (inX, inY) suits inPlayer's
 // class-0x2d8 site (provisional name)
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer);

@@ -68,8 +68,6 @@ bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inU
 bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
 class GERectangle;
-// 0x241743 (cdecl): the bounds of inUnits into outBounds (EECPAttackSubGroup::GetUnitsCenter) (provisional name)
-void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds, long inTerrainFilter);
 // 0x246a26 / 0x24720e: the tiles of (and around) a footprint of inSize at (inX, inY) (EEUGGather::HasGatherRoom)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
 // 0x24cc5f: the gather-rate index of inResource (EEComplexUnit mStats->mL110[]; EEUGGather) (provisional name)

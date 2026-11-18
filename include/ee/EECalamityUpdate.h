@@ -24,8 +24,6 @@ struct EECalamityUpdateHost {
     void* mPending;                         // a class step's object for its next step (the cloak's area effect)
 };
 
-// the class's common parameters: its enum, lifetime, immunity flag and which sounds it has
-EeCalamityParams EECalamityBaseParams(EECalamityClass* inClass, EESoundObject* inSound, EESoundObject* inSecondarySound);
 // runs the class's update in Rust; the calamity's members in and out (EeCalamityState) around it and every host call
 long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
                          EESoundObject* inSound, EESoundObject* inSecondarySound);

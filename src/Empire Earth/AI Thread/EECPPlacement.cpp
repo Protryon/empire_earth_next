@@ -549,15 +549,6 @@ void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
 // ---------------------------------------------------------------------------------------------------------------
 // The free functions
 
-bool EECPIsSiteClass(long inUnitClass)
-{
-    EECPPlaceScope theScope(kPlceIsSiteClass, NULL);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass);
-    bool theResult = ee_cp_is_site_class((int32_t)inUnitClass);
-    theScope.I(theResult);
-    return theResult;
-}
-
 long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
 {
     EECPPlaceScope theScope(kPlceCountOwn, inPlayer);   // PLCE (TEST ONLY)

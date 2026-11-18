@@ -16,19 +16,10 @@ class EEUnit;
 class EETile;
 class EEDoppelganger;
 
-// free functions of the render units (cdecl; provisional names; types inferred)
-void SetWhiteLighting();                    // 0x10f7c8: ambient colour 1, 1, 1 and intensity (the effects' Virtual18)
 void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue);
-void SetPrelitLighting();                   // 0x10f71c: the effects' lighting set-up (EEE3DLinearProjectile::DrawPass5)
 void SetTerrainLighting();                  // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
-void SetUnitLighting();                     // 0x10fa01: the effects' lighting set-up before a model draw (EEE3DDisease::DrawPass5)
 void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
 void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
-void SetCloudLighting();                    // 0x10f772: lighting set-up (EEROTerrain::RenderScene's clouds)
-void SetFogOff();                           // 0x10f6c7 (EEROUnits::DrawPlacement)
-void SetMapObjectLighting();                // 0x10f8de (EEROUnits::DrawObjectModels)
-void RestoreUnitLighting();                 // 0x10fae8 (EEROUnits::DrawObjectModels)
-void DimUnitLighting();                     // 0x10fb74 (EEROUnits::DrawObjectModels)
 
 
 // EEEffect.cpp's batch functions (declared here for the render objects)

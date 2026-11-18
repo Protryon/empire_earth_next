@@ -618,17 +618,6 @@ bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit)
     return theNote.R(ee_units_uu_can_stand_on(inTile.mX, inTile.mY, UUHandle(static_cast<EEUnit*>(inUnit))) != 0);
 }
 
-void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds, long inTerrainFilter)
-{
-    EEUUNote theNote(54); theNote.Us(inUnits).I(inTerrainFilter).F(outBounds.GetLeft()).F(outBounds.GetTop()).F(outBounds.GetRight()).F(outBounds.GetBottom()).OutR(&outBounds);   // TEST ONLY (UUTL)
-    float theBounds[4] = {outBounds.GetLeft(), outBounds.GetTop(), outBounds.GetRight(), outBounds.GetBottom()};
-    ee_units_uu_selection_bounds(&inUnits, &theBounds, inTerrainFilter);   // ee_units uu_world.rs selection_bounds
-    outBounds.SetLeft(theBounds[0]);
-    outBounds.SetTop(theBounds[1]);
-    outBounds.SetRight(theBounds[2]);
-    outBounds.SetBottom(theBounds[3]);
-}
-
 // Computes where an attacker should aim to intercept a moving target (else its location)
 // Where inAttacker should aim at a moving inTarget: the intercept point along the target's next waypoint (the
 // quadratic of the two speeds), else the target's location
@@ -1968,15 +1957,6 @@ bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther)
     return EEIsSeenBy(inUnit, inOther->GetPlayer(), true);
 }
 
-// Extends a wall line to the walls of the same type it joins at either end
-// The tile line of a wall through inTiles (from the walls of inClass's type it joins at either end) (inferred)
-long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer, EEUnitClass* inClass,
-                    std::vector<EETileCoordinate>& outTiles)
-{
-    EEUUNote theNote(26); theNote.T(inTiles).Pl(inPlayer).C(inClass).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
-    return theNote.R(ee_units_uu_extend_wall_line(&inTiles, UUHandle(inPlayer), (uint32_t)inClass->mUnitType, &outTiles));
-}
-
 // Finds a place for a unit next to a target, preferring its own path area and continent
 // A place for inUnit next to inTarget, preferring tiles in inUnit's own path area and continent (inferred)
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
@@ -2342,12 +2322,6 @@ long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& o
     return theNote.R(ee_units_uu_units_on(0, &inTiles, &outUnits));
 }
 
-// Returns a player's living unit of a type on a tile, or NULL
-EEUnit* EEGetWallAt(const EETileCoordinate& inTile, EEPlayer* inPlayer, long inUnitType)
-{
-    return UUUnit(ee_units_uu_tile_unit_of_type(inTile.mX, inTile.mY, (uint32_t)inUnitType, UUHandle(inPlayer), 1));
-}
-
 // Collects the units of a type on a list of tiles; their number
 long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long inUnitType, std::vector<EEUnit*>& outUnits)
 {
@@ -2448,13 +2422,6 @@ void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
 {
     EEUUNote theNote(46); theNote.T(ioTiles).OutT(&ioTiles);   // TEST ONLY (UUTL)
     ee_units_uu_drop_tiles(1, &ioTiles);
-}
-
-// Turns a compass direction by a number of steps, either way
-long EETurnDirection(long inDirection, long inSteps, bool inClockwise)
-{
-    EEUUNote theNote(47); theNote.I(inDirection).I(inSteps).I(inClockwise);   // TEST ONLY (UUTL)
-    return theNote.R(ee_units_uu_turn_direction(inDirection, inSteps, inClockwise));
 }
 
 // Turns an angle by a random share of a full turn, kept in (-pi, pi]

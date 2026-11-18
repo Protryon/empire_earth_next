@@ -1290,16 +1290,6 @@ void HostCall(void* inContext, EeCalamityState* ioState, const EeCalamityCall* i
 
 }   // namespace
 
-EeCalamityParams EECalamityBaseParams(EECalamityClass* inClass, EESoundObject* inSound, EESoundObject* inSecondarySound)
-{
-    EeCalamityParams theParams = EeCalamityParams();
-    theParams.class_enum = (int32_t)inClass->mClassEnum;
-    theParams.lifetime = inClass->mLifeTime;
-    theParams.flags = (inClass->mIsBlockedByImmunity ? EE_CALAMITY_BLOCKED_BY_IMMUNITY : 0) |
-                      (inSound != NULL ? EE_CALAMITY_SOUND : 0) | (inSecondarySound != NULL ? EE_CALAMITY_SECONDARY_SOUND : 0);
-    return theParams;
-}
-
 namespace {
 
 // the host of one Rust run over the class and calamity (its sounds: the ones the class's run passes); the calamity's

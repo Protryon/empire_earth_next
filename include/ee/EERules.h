@@ -40,8 +40,6 @@ enum EEDamageForm {
 
 #include "ee/EERulesGen.h"
 
-long EEAICheatBit(const std::string& inName);  // 0: not a cheat name
-
 // ------------------------------------------------------------------------------------------------ all of them
 
 struct EERules {

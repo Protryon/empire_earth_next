@@ -51,10 +51,6 @@ class EEEffect;
 // (EERenderObject::QueueEffects 0x10bff5 passes it to every visible effect), keyed by the effect's texture
 typedef std::map<GETexture*, std::deque<EEEffect*> > EEEffectQueue;
 
-// 0x102f3d (cdecl): a random value in [inMinimum, inMaximum] (also declared locally by EECPCombatManager.cpp)
-float GetEffectRandomFloat(float inMinimum, float inMaximum);
-// 0x102f57 (cdecl): a random integer in [inMinimum, inMaximum]
-long GetEffectRandomLong(long inMinimum, long inMaximum);
 // TEST ONLY (tools/sim_capture.py EFST): the effects' random generator's seed
 unsigned long EEEffectRandomSeed();
 
