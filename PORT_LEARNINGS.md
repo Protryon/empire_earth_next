@@ -31078,3 +31078,97 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
   `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
   `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
+
+## The HUD 2D lane, round 1: the Rust 2D draw list; the toolkit's, the HUD's and the font bitmap's draws and GE object members on it (ee_render ge/list2d.rs, dx7/digest2d.rs; ee_ui draw2d.rs; ee_game hud_draw.rs; branch rust-hud2d1, 2026-11-18)
+
+The brief: build the Rust 2D draw list the UI thread lane named as its blocker, move the HUD's, screens' and
+toolkit's drawing onto it and delete the C++ host cases, at least 3,000 net C++ lines. **Net C++ -249**: far short;
+why under "The measure".
+
+### The measure
+
+Every 2D draw already ended in Rust: `GERasterizer`'s virtual `Draw(GEBitmap*)`, `Draw(GERhombus*)`, `Draw(GELine*,
+n)`, `Draw(GEPoint*, n)` are `DX7Rasterizer` one-line forwarders to `ee_dx7r_draw_*` (dx7/draw2d.rs), and the GE
+objects are whole Rust objects behind one-pointer C++ shells (`GERhombus`, `GELine`, `GEPoint`, `GEText`) or
+reference-counted shells (`GEBitmap`, `GEFontBitmap`). The C++ between the HUD's Rust and those draws was one host
+case per draw or per object member (about 50 draw call sites, about 80 GE member cases in the toolkit's hosts, 16 in
+the font bitmap's host), the temporaries the C++ built on its stack, and the members the C++ classes own. The UI
+thread lane's ~3,500 "O" lines were mostly other objects (sounds, sessions, files, the tech tree's buttons, the
+physics): the drawing part of them was a few hundred lines, and that is what this round could take. Docs:
+docs/progress/hud-2d.md has the call-site table.
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 46f5f9c6e | `dx7/digest2d.rs`: the 2D-draw digest (`EE_DRAW2D_DIGEST`) at the DX7 rasterizer's Rust entries | 0 |
+| 08b0bf14d | `ge/list2d.rs` the draw list (`Cmd`, `Target`, `DrawList`, `draw`), the DX7 direct path and the C++ executor (`GERasterizerDraw2D`), `Shape`; `ee_ui::draw2d`: the toolkit's seven draw ops on the list, `UIControl::DrawBorder` in Rust | +1 |
+| dd52fbfe1 | `hud_draw.rs`: the ping's and the portrait's bars as Rust `Shape`s per control, the portrait's bitmap, the icon bar's temporaries; the error form's and the generic background's fills (`ee_ge_draw2d_fill`) | -55 |
+| 6a7f6d89b | `fbobj.rs` `direct_op`: the font bitmap's working text, drawing bitmap and two draws (16 host cases) | -54 |
+| e5901fab2 | rustfmt of the digest's hooks | 0 |
+| 7f2d322df | the toolkit's GE object members (16 ops' cases in 8 hosts) on the objects' Rust | -49 |
+| 7cdf80b3d | `GEBitmap`'s shell inline in its header (as `GERhombus`, `GEText`) | -92 |
+
+- **Below the traits.** Every move is in an FFI adapter or behind `list2d::ready()`: the executor is registered by
+  `GERasterizer`'s constructor (the game and the store gate), never in a cargo test, so every replay golden makes
+  its op as before and is unchanged by construction. The direct paths answer only in the game.
+- **The DX7 direct path.** `DX7Rasterizer`'s constructor registers (`GERasterizer*` -> `EeDx7Rasterizer*`); a
+  bitmap, rhombus, line or point command on it calls the same `ee_dx7r_draw_*` its virtual `Draw` forwarded to.
+  Texts (the GX surface and the font bitmap are C++) and any other rasterizer (the store gate's `StoreRasterizer`)
+  go through the executor's virtual call. The text draw on the manager's drawing surface is the clipped text with
+  a null surface (the executor takes `GetSecondarySurface(screen)`, `UIManager::GetDrawingSurface`'s body).
+- **Shapes.** A rhombus or line Rust makes is a `Box<*mut EeGePrim>`: its address is a C++ `GERhombus*`/`GELine*`
+  (one pointer, asserted in DX7Rasterizer.cpp), made with the C++'s vertex host (`GEVertexHost`, registered with the
+  executor). The order of the C++'s setters is kept (colour and opacity touch different bits of a vertex's colour
+  and the rectangle its points: they commute, `vertarr.rs`).
+- **HUD controls' draw objects** live in a registry keyed by the control (`hud_draw.rs`), made by the class's
+  constructor and freed by `EEUIRustControl`'s new destructor (`ee_screens_hud_draw_free`); the C++ classes lose the
+  members (`EEUICPing::mBars`, the portrait's three bars).
+- **cbindgen**: an `Option<EeGeBmpHostFn>` parameter (an `Option` of a type alias of a fn) is emitted as a
+  `template<typename T = void>` struct, which the header splitter cannot name ("cannot name the header item"): spell
+  the fn type out (`EeGeDraw2DVertexHost`).
+
+### Checks
+
+- **The digest.** Recorded on the unmodified C++ (the digest commit alone, `build/hud2d/pre`): the fixture tour
+  `--input-check --play-seconds 120 --view-check --seed 7` (1,522 distinct commands: 652 bitmaps, 553 lines, 107
+  rhombi, 210 texts) and the orders game with box select. Two pre-round runs differ from each other only in fading
+  bitmaps (the blinking buttons' and the menus' fades: the alpha byte), one progress-bar rhombus's width and the
+  frame count (722 and 1,500 frames). The moved builds differ from the pre-round runs in exactly the same kinds,
+  plus the build label's text and the mini map's camera outline by one float ulp (the camera's timing; a C++ draw
+  this round did not touch): no command kind, text or draw the lane moved changed.
+- **Pixels** against the pre-round test-profile exe: every menu capture equal but the build label (220-226 pixels);
+  in game the resource bar, the bottom panel with the icon and command buttons and the top bar equal but the
+  blinking crown; the map differs between any two live games.
+- The store gate PASS (25,140 lines); SGVW of the tour equal to `tools/sgvw/tour_view.txt` (79 distinct lines);
+  `VIEW CHECK PASS`, F3 ok, `RESULT PASS tour`.
+
+### Gates
+
+On the result merged with origin/rust 9a277da24 (a clean merge; strip_markers, `rust_build.py header` and
+`rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 630, EE-SIM 631 inputs) and the test profile 0/0; the
+oracle seeds 2-7 identical to the reference; the Rust gate PASS (4,575 tests, clippy, rustfmt, headers); the store
+gate PASS (25,140 lines); the editor gate PASS 14,448 with SGVW equal to `tools/sgvw/editor.txt` (25,136 lines); the
+civilization gate PASS 4,062; the orders game with box select and the scroll check (`BOX SELECT PASS`, `ORDERS PASS`,
+`SCROLL CHECK PASS`, `RESULT PASS random-game`; its box-selected frame's status box, resource bar, icon bar and top
+bar equal to the pre-round exe's); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 41, 41], alive [2, 3],
+classic_lua x 2; lan-game). `cargo check --target aarch64-apple-darwin` of ee_render, ee_ui (with tests) and ee_game,
+and `--target x86_64-unknown-linux-gnu` of ee_render and ee_ui (with tests): clean; ee_game on Linux stops in
+alsa-sys's pkg-config (ee_audio's cpal), as before. Per commit before the merge: build `--sim` 0/0, the Rust gate,
+the oracle seeds 2-3 identical, the test-profile tour. Not run: the sim_capture profiles (no simulation code).
+
+### What only a tour reaches
+
+All of it is display code: the toolkit's draws and GE members, the HUD's bars, the font bitmap's ops, `DrawBorder`,
+the GEBitmap inlines. EE-SIM draws nothing (the oracle is unchanged by construction); the goldens never register an
+executor. The portrait's bars show only with a building producing or researching; the ping meter only in the
+LAN/Internet lobby; the error form only with a message box.
+
+### Left
+
+- The toolkit's primitives' create and delete ops (`RhombusCreate`, `LineCreate` and the `new GERhombus` of the C++
+  constructors: a Rust-made object must be Rust-deleted), `UIStatusBar`'s two member rhombi, the texts' members.
+- The HUD's C++-owned bitmaps (status button, saved group, mini map: `SetFaceBitmap` and the texture manager take a
+  `GEBitmap*`), the mini map's plan executor (viewport clips), the select units' lines, the C++ `DrawTextA`s.
+- The screens' editor list boxes and the world view's 2D draws (`EEROUnits.cpp`).
+- `GEVertexHost`'s vertex cases stay for the store gate's `StoreVertexArray` (no Rust array).
