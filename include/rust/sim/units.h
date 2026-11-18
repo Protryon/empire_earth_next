@@ -7168,19 +7168,24 @@ EeUnitsUuSteps ee_units_uu_sub_tile_steps(float size,
                                           int32_t dy,
                                           uint8_t square);
 
-/// `EEGetSquareRing` (`out` replaced).
+/// `EEGetSquareRing` (19; `square` 1: `EEGetSideTiles`, 20) (`out` replaced).
 ///
 /// # Safety
 /// `out` is a live `std::vector<U2DPoint<long> >`.
-void ee_units_uu_square_ring(int32_t x, int32_t y, int32_t width, int32_t height, void *out);
+void ee_units_uu_square_ring(int32_t x,
+                             int32_t y,
+                             int32_t width,
+                             int32_t height,
+                             uint8_t square,
+                             void *out);
 
-/// `EEGetSquareRingTiles` (`out` replaced).
+/// `EEGetSquareRingTiles` (33) (`out` replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
 void ee_units_uu_square_ring_tiles(int32_t x, int32_t y, int32_t radius, void *out);
 
-/// `EEGetTilesInRadius` (appended to `io`).
+/// `EEGetTilesInRadius` (35) (appended to `io`).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7190,13 +7195,19 @@ void ee_units_uu_tiles_in_radius(int32_t x,
                                  uint8_t inclusive,
                                  void *io);
 
-/// `EEGetTilesNearPoint` (appended to `io`).
+/// `EEGetTilesNearPoint`'s tiles (appended to `io`), not noted (the app capture's own reads).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
 void ee_units_uu_tiles_near_point(float x, float y, float distance, void *io);
 
-/// `EEDropDiagonalCorners` (`which` 0) and `EEDropRepeatedTiles` (1) on `io`.
+/// `EEGetTilesNearPoint` (34) (appended to `io`).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`]; `point` holds three floats.
+void ee_units_uu_get_tiles_near_point(const float (*point)[3], float distance, void *io);
+
+/// `EEDropDiagonalCorners` (`which` 0, 15) and `EEDropRepeatedTiles` (1, 46) on `io`.
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7205,7 +7216,7 @@ void ee_units_uu_drop_tiles(int32_t which, void *io);
 /// `EETurnDirection`.
 int32_t ee_units_uu_turn_direction(int32_t direction, int32_t steps, uint8_t clockwise);
 
-/// `EEGetTileInDirection`.
+/// `EEGetNextTile` (30).
 ///
 /// # Safety
 /// `out` holds two `int32_t`s.
@@ -7215,7 +7226,7 @@ void ee_units_uu_tile_in_direction(int32_t x,
                                    int32_t distance,
                                    int32_t (*out)[2]);
 
-/// `EEMoveInDirection`.
+/// `EEMoveInDirection` (31).
 ///
 /// # Safety
 /// `out` holds two floats.
@@ -7225,10 +7236,10 @@ void ee_units_uu_move_in_direction(float x,
                                    int32_t distance,
                                    float (*out)[2]);
 
-/// `EEGetTileDirection`.
+/// `EEGetTileDirection` (14).
 int32_t ee_units_uu_tile_direction(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
-/// `EEGetSlotTile`.
+/// `EEGetSlotTile` (45).
 ///
 /// # Safety
 /// `out` holds two `int32_t`s.
@@ -7237,10 +7248,10 @@ void ee_units_uu_slot_tile(int32_t x, int32_t y, int32_t direction, int32_t (*ou
 /// `EEOrientWallPiece`'s frame set and yaw.
 EeUnitsUuWallPiece ee_units_uu_wall_piece(int32_t corner);
 
-/// `EEIsCornerBlocked`.
+/// `EEIsCornerBlocked` (23).
 uint8_t ee_units_uu_is_corner_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
-/// `EEGetBlockRing` (`io` cleared unless `append`).
+/// `EEGetBlockRing` (21; `square` 1: `EEGetSquareBlockRing`, 22) (`io` cleared unless `append`).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7250,9 +7261,10 @@ void ee_units_uu_block_ring(int32_t corners,
                             int32_t width,
                             int32_t height,
                             void *io,
-                            uint8_t append);
+                            uint8_t append,
+                            uint8_t square);
 
-/// `EEGetRingCorners` (`out` replaced).
+/// `EEGetRingCorners` (24; `square` 1: `EEGetCornerTiles`, 25) (`out` replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7261,6 +7273,7 @@ void ee_units_uu_ring_corners(int32_t corners,
                               int32_t y,
                               int32_t width,
                               int32_t height,
+                              uint8_t square,
                               void *out);
 
 /// `EERemoveEdgeTiles`.
@@ -7280,7 +7293,7 @@ void ee_units_uu_ring_tiles(int32_t x,
                             int32_t corners,
                             void *out);
 
-/// `EEGetSortedRingTiles` (`out` replaced).
+/// `EEGetSortedRingTiles` (6) (`out` replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`]; `from` holds three floats.
@@ -7292,7 +7305,8 @@ void ee_units_uu_sorted_ring_tiles(const float (*from)[3],
                                    int32_t corners,
                                    void *out);
 
-/// `EEGetUnitsOn` (`which` 0: appended to `io`), `EEGetUnitsOnTiles` (1); the number found (all of `io` for 1).
+/// `EEGetUnitsOn` (`which` 0, 42: appended to `io`), `EEGetUnitsOnTiles` (1, not noted); the number found (all of
+/// `io` for 1).
 ///
 /// # Safety
 /// `tiles` a live tile vector, `io` a live `std::vector<EEUnit*>`.
@@ -7300,49 +7314,57 @@ int32_t ee_units_uu_units_on(int32_t which,
                              const void *tiles,
                              void *io);
 
-/// `EEGetUnitsOfTypeOnTiles` (`player` given) and `EEGetWallUnitsOfTypeOnTiles` (`has_player` 0): appended to
-/// `io`; their number.
+/// `EEGetUnitsOnTile` (41): `io` replaced by the units of tile (x, y); their number.
+///
+/// # Safety
+/// `io` a live `std::vector<EEUnit*>`.
+int32_t ee_units_uu_units_on_tile(int32_t x, int32_t y, void *io);
+
+/// `EEGetUnitsInRectangle` (38) over a screen rectangle: the units of its tiles (`UMFloor` of each side, every
+/// column from the left, each from the top) appended to `io` as `EEGetUnitsOnTiles` does; their number.
+///
+/// # Safety
+/// `io` a live `std::vector<EEUnit*>`.
+int32_t ee_units_uu_units_in_rectangle(float left,
+                                       float top,
+                                       float right,
+                                       float bottom,
+                                       void *io);
+
+/// `EEGetWallUnitsOfTypeOnTiles` (43): appended to `io`; their number.
 ///
 /// # Safety
 /// As [`ee_units_uu_units_on`].
-int32_t ee_units_uu_units_of_type_on_tiles(const void *tiles,
-                                           uint64_t player,
-                                           uint8_t has_player,
-                                           int32_t unit_type,
-                                           void *io);
+int32_t ee_units_uu_units_of_type_on_tiles(const void *tiles, int32_t unit_type, void *io);
 
-/// `EEGetTileUnitOfType` (`has_player` 0) and `EEGetWallAt`.
-uint64_t ee_units_uu_tile_unit_of_type(int32_t x,
-                                       int32_t y,
-                                       uint32_t unit_type,
-                                       uint64_t player,
-                                       uint8_t has_player);
+/// `EEGetTileUnitOfType` (39).
+uint64_t ee_units_uu_tile_unit_of_type(int32_t x, int32_t y, uint32_t unit_type);
 
-/// `EEGetPlayerUnitsOfType` (appended to `io`); their number.
+/// `EEGetPlayerUnitsOfType` (40) (appended to `io`); their number.
 ///
 /// # Safety
 /// `io` a live `std::vector<EEUnit*>`.
 int32_t ee_units_uu_player_units_of_type(int32_t unit_type, int32_t index, void *io);
 
-/// `EEGetFootprintTiles` (`which` 0), `EEGetResourceSpots` (1): into `io` as the C++ did.
+/// `EEGetFootprintTiles` (`which` 0, 36), `EEGetResourceSpots` (1, 44): into `io` as the C++ did.
 ///
 /// # Safety
 /// `unit` a live unit, `io` a live tile vector.
 void ee_units_uu_unit_tiles(int32_t which, uint64_t unit, void *io);
 
-/// `EEGetFarmDropSites` (appended to `io`).
+/// `EEGetFarmDropSites` (16) (appended to `io`).
 ///
 /// # Safety
 /// `unit` a live unit, `io` a live `std::vector<EEUnit*>`.
 uint8_t ee_units_uu_farm_drop_sites(uint64_t unit, void *io);
 
-/// `EEFindFreeFarm`.
+/// `EEFindFreeFarm` (17): the farm's complex unit (0: none).
 ///
 /// # Safety
 /// `unit` a live unit, `ring` a live `int32_t`.
 uint64_t ee_units_uu_find_free_farm(uint64_t unit, uint8_t free_only, int32_t *ring);
 
-/// `EEGetWallLine` (`out` replaced).
+/// `EEGetWallLine` (37) (`out` replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7373,13 +7395,13 @@ void ee_units_uu_make_wall_junctions(const uint64_t *units,
                                      uint64_t player,
                                      uint64_t map);
 
-/// `EEGetTileUnitStanding`.
+/// `EEGetTileUnitStanding` (11).
 int32_t ee_units_uu_tile_unit_standing(uint64_t unit,
                                        uint64_t player,
                                        int32_t unit_type,
                                        uint8_t ignore_owner);
 
-/// `EEGetBlockingUnits` (`standing` 2) and `EEGetMovableTileUnits` (1): `out` replaced.
+/// `EEGetBlockingUnits` (`standing` 2, 2) and `EEGetMovableTileUnits` (1, 3): `out` replaced.
 ///
 /// # Safety
 /// `out` a live `std::vector<EEUnit*>`; `tile` a live tile or 0.
@@ -7390,13 +7412,13 @@ uint8_t ee_units_uu_tile_units_standing(uint64_t player,
                                         int32_t standing,
                                         void *out);
 
-/// `EEIsTileUnblocked`.
+/// `EEIsTileUnblocked` (50).
 uint8_t ee_units_uu_is_tile_unblocked(uint64_t player, int32_t unit_class, uint64_t tile);
 
-/// `EECanStandOn`.
+/// `EECanStandOn` (8).
 uint8_t ee_units_uu_can_stand_on(int32_t x, int32_t y, uint64_t unit);
 
-/// `EEFindPlaceOnTile`: `io` (the location, its z the caller's) gets the spot's x and y.
+/// `EEFindPlaceOnTile` (4): `io` (the location) gets the spot's x and y (its z stays).
 ///
 /// # Safety
 /// `io` holds three floats.
@@ -7410,21 +7432,18 @@ uint8_t ee_units_uu_find_place_on_tile(uint64_t unit,
                                        int32_t square,
                                        float (*io)[3]);
 
-/// `EEGetTilesAround` (`out` replaced).
+/// `EEGetTilesAroundUnit` (5): the tiles around `target` (its tile and size) for `unit` (`out` replaced).
 ///
 /// # Safety
-/// As [`ee_units_uu_square_ring`].
+/// As [`ee_units_uu_square_ring`]; `target` a live unit.
 void ee_units_uu_tiles_around(uint64_t unit,
                               uint64_t target,
-                              int32_t x,
-                              int32_t y,
-                              int32_t size,
                               int32_t range,
                               int32_t corners,
                               uint8_t virtual_call,
                               void *out);
 
-/// `EEPickTileNear`: `io` as [`ee_units_uu_find_place_on_tile`]'s.
+/// `EEPickTileNear` (7): `io` as [`ee_units_uu_find_place_on_tile`]'s.
 ///
 /// # Safety
 /// `tiles` a live tile vector; `io` holds three floats.
@@ -7434,7 +7453,7 @@ uint8_t ee_units_uu_pick_tile_near(const void *tiles,
                                    uint8_t ignore_blocked_line,
                                    float (*io)[3]);
 
-/// `EEFindPlacement`: `m` (a `GETransformation`'s matrix) is turned and moved to the place found.
+/// `EEFindPlacement` (10): `m` (a `GETransformation`'s matrix) is turned and moved to the place found.
 ///
 /// # Safety
 /// `point` holds three floats, `m` sixteen.
@@ -7458,13 +7477,13 @@ uint8_t ee_units_uu_find_placement(const float (*point)[3],
 /// `point` holds three floats, `out` two `int32_t`s.
 float ee_units_uu_nearest_footprint_tile(uint64_t unit, const float (*point)[3], int32_t (*out)[2]);
 
-/// `EETurnAway`.
+/// `EETurnAway` (32).
 int32_t ee_units_uu_turn_away(int32_t direction, int32_t spread);
 
-/// `EEJitterHeading`.
+/// `EEJitterHeading` (48).
 float ee_units_uu_jitter_heading(float angle, float min, float max);
 
-/// `EECanPlaceUnitOnTile`: `flag` written as the C++ wrote it (only when the tile's blockers were asked).
+/// `EECanPlaceUnitOnTile` (49): `flag` written as the C++ wrote it (only when the tile's blockers were asked).
 ///
 /// # Safety
 /// `flag` a live byte.
@@ -7474,28 +7493,39 @@ uint8_t ee_units_uu_can_place_unit_on_tile(uint64_t player,
                                            int32_t x,
                                            int32_t y,
                                            uint8_t skip_player_checks,
-                                           uint8_t ignore_owner,
+                                           int32_t ignore_owner,
                                            uint8_t *flag);
 
-/// `EEBlockTakes` / `EEPlayerBlockTakes`.
+/// `EEPlayerBlockTakes` (13).
 uint8_t ee_units_uu_block_takes(uint64_t player,
                                 int32_t unit_type,
                                 int32_t x,
                                 int32_t y,
                                 int32_t width,
                                 int32_t height,
-                                uint8_t ignore_owner);
+                                int32_t ignore_owner);
 
-/// `EEAdjustNavalPath`'s smoothing: the kept points' indices into `kept` (room for `count`); their number.
+/// `EEBlockTakes` (12): [`ee_units_uu_block_takes`] for the unit's player (none for no unit).
+uint8_t ee_units_uu_unit_block_takes(uint64_t unit,
+                                     int32_t unit_type,
+                                     int32_t x,
+                                     int32_t y,
+                                     int32_t width,
+                                     int32_t height,
+                                     int32_t ignore_owner);
+
+/// `EEAdjustNavalPath` (1): with `smooth`, the kept points' indices into `kept` (room for `count`); their number
+/// (every point without `smooth`).
 ///
 /// # Safety
-/// `points` holds `count` (x, y) pairs, `kept` `count` indices.
+/// `points` holds `count` points, `kept` `count` indices.
 uint32_t ee_units_uu_naval_path(uint64_t unit,
-                                const float (*points)[2],
+                                const float (*points)[3],
                                 uint32_t count,
+                                uint8_t smooth,
                                 uint32_t *kept);
 
-/// `EEGetDockShipPlacement`: `m` (a `GETransformation`'s matrix) gets the place and yaw.
+/// `EEGetDockShipPlacement` (9): `m` (a `GETransformation`'s matrix) gets the place and yaw.
 ///
 /// # Safety
 /// `point` holds three floats, `m` sixteen; `unit` a live unit.
@@ -7506,8 +7536,8 @@ uint8_t ee_units_uu_dock_ship_placement(const float (*point)[3],
                                         uint8_t facing_only,
                                         float (*m)[4][4]);
 
-/// `EEFindOpenSpot` (0), `EEFindResourceSpot` (1), `EEFindNextFreeTile` (2), `EEGetWallSpot` (3): `io` (the
-/// location, its z the caller's) gets the spot.
+/// `EEFindOpenSpot` (0), `EEFindResourceSpot` (1, 27), `EEFindNextFreeTile` (2, 28), `EEGetWallSpot` (3, 29): `io`
+/// (the location) gets the spot.
 ///
 /// # Safety
 /// `unit` and `target` live units; `io` holds three floats.
@@ -7519,13 +7549,13 @@ uint8_t ee_units_uu_spot(int32_t which,
 /// `EEGetAttackPart`.
 uint64_t ee_units_uu_attack_part(uint64_t unit, uint64_t target);
 
-/// `EEGetSeabedDepth` (`which` 0) and `EEAdjustDiveDepth` (1): the point's new height.
+/// `EEGetSeabedDepth` (`which` 0, 51) and `EEAdjustDiveDepth` (1, 52): the point's new height.
 ///
 /// # Safety
 /// `unit` is a live unit; `at` holds three floats.
 float ee_units_uu_seabed(int32_t which, uint64_t unit, const float (*at)[3]);
 
-/// `EEGetUnitTiles` (appended to `io`).
+/// `EEGetUnitTiles` (53) (appended to `io`).
 ///
 /// # Safety
 /// `unit` is a live unit; `io` a live tile vector.
@@ -7537,7 +7567,7 @@ void ee_units_uu_unit_tiles_margin(uint64_t unit, float margin, void *io);
 /// `units` is a live unit vector; `bounds` holds four floats.
 void ee_units_uu_selection_bounds(const void *units, float (*bounds)[4], int32_t filter);
 
-/// `EEGetUnitRadius` (`which` 0, two complex units) and `EEGetAngleFromNorth` (1, `from` and `to`).
+/// `EEGetUnitRadius` (`which` 0, 55: two complex units) and `EEGetAngleFromNorth` (1, 56: `from` and `to`).
 ///
 /// # Safety
 /// The units are live; the points hold three floats when `which` is 1.
@@ -7547,16 +7577,22 @@ float ee_units_uu_angle(int32_t which,
                         const float (*from)[3],
                         const float (*to)[3]);
 
-/// `EEIsWithinReach` (`at` null) and `EEIsWithinReachOf`.
+/// `EEGetHeadingBetween` (57): the ground heading from `from` to `to` (`UMArcTan2(-dx, dy)`).
+///
+/// # Safety
+/// The points hold three floats.
+float ee_units_uu_heading_between(const float (*from)[3], const float (*to)[3]);
+
+/// `EEIsWithinReach` (`at` null, 60) and `EEIsWithinReachOf` (61).
 ///
 /// # Safety
 /// The units are live; `at` is null or holds three floats.
 uint8_t ee_units_uu_within_reach(uint64_t unit, uint64_t target, const float (*at)[3]);
 
-/// `EEIsFootprintVisibleTo`.
+/// `EEIsFootprintVisibleTo` (62).
 uint8_t ee_units_uu_footprint_visible(uint64_t unit, uint64_t player);
 
-/// `EEGetEscapePoint` (`io` left alone without attackers).
+/// `EEGetEscapePoint` (18) (`io` left alone without attackers).
 ///
 /// # Safety
 /// `unit` is a live complex unit; `io` holds two floats.
@@ -7568,12 +7604,12 @@ uint8_t ee_units_uu_escape_point(uint64_t unit, float (*io)[2]);
 /// `unit` is a live complex unit; `out` a live unit vector.
 void ee_units_uu_enemies_around(uint64_t unit, void *out);
 
-/// `EEAddToFootprintTiles` (`which` 0), `EERemoveFromFootprintTiles` (1), `EEAddBuildingRegion` (2),
-/// `EERemoveBuildingRegion` (3).
+/// `EEAddToFootprintTiles` (`which` 0, 66), `EERemoveFromFootprintTiles` (1, 67), `EEAddBuildingRegion` (2, 69),
+/// `EERemoveBuildingRegion` (3, 70).
 void ee_units_uu_footprint(int32_t which,
                            uint64_t unit);
 
-/// `EEStepAsideFromSite`.
+/// `EEStepAsideFromSite` (71).
 void ee_units_uu_step_aside(uint64_t unit,
                             uint64_t class_,
                             uint64_t player,
@@ -7581,13 +7617,13 @@ void ee_units_uu_step_aside(uint64_t unit,
                             int32_t y,
                             uint8_t force);
 
-/// `EEBuildWall`.
+/// `EEBuildWall` (73).
 ///
 /// # Safety
 /// `group` is a live active group; `pieces` a live unit vector.
 void ee_units_uu_build_wall(uint64_t group, const void *pieces);
 
-/// `EEPlanWall` (the new pieces appended to `out`).
+/// `EEPlanWall` (74) (the new pieces appended to `out`).
 ///
 /// # Safety
 /// `class` and `player` are live; `out` a live unit vector.
@@ -7601,10 +7637,10 @@ void ee_units_uu_plan_wall(float start_x,
                            uint8_t skip_player_checks,
                            void *out);
 
-/// `EEShapeWall` (its raised corners unused).
-void ee_units_uu_shape_wall(uint64_t complex, int32_t corner);
+/// `EEShapeWall` (76) (its raised corners unused but noted).
+void ee_units_uu_shape_wall(uint64_t complex, int32_t corner, int32_t raised_corners);
 
-/// `EEIsTileTopAbove` (`wall`: the wall found, 0 for none).
+/// `EEIsTileTopAbove` (77) (`wall`: the wall found, 0 for none).
 ///
 /// # Safety
 /// `wall` points to a u64.
@@ -7614,7 +7650,7 @@ uint8_t ee_units_uu_tile_top_above(int32_t x,
                                    uint8_t bare,
                                    uint64_t *wall);
 
-/// `EEIsLineBlocked` (`wall` written only when a tile was asked, `last`: the last free tile).
+/// `EEIsLineBlocked` (78) (`wall` written only when a tile was asked, `last`: the last free tile).
 ///
 /// # Safety
 /// `wall` points to a u64, `written` to a byte, `last` to two ints.
@@ -7626,13 +7662,14 @@ uint8_t ee_units_uu_line_blocked(int32_t x1,
                                  uint8_t *written,
                                  int32_t (*last)[2]);
 
-/// `EEGetPathLengthTo` (`tile` in and out).
+/// `EEGetPathLengthTo` (80) (`tile` in and out).
 ///
 /// # Safety
 /// `unit` is a live complex unit; `tile` holds two ints.
 float ee_units_uu_path_length_to(uint64_t unit, int32_t (*tile)[2], uint32_t limit, uint8_t walls);
 
-/// `EEComputeSoundParameters` (`out`: volume, pan, pitch) over the camera's view the caller gathered.
+/// `EEComputeSoundParameters` (`out`: volume, pan, pitch) over the camera's view the caller gathered (kind 82:
+/// counted in the depth, never recorded).
 ///
 /// # Safety
 /// `view` points to a view; `location` holds three floats, `out` three.
@@ -7641,17 +7678,18 @@ void ee_units_uu_sound_parameters(const EeUnitsUuSoundView *view,
                                   const float (*location)[3],
                                   float (*out)[3]);
 
-/// `EEGetDopplerPitch`'s factor (`pitch` written unless silent or still).
+/// `EEGetDopplerPitch` (83)'s factor (`pitch` written unless silent or still).
 ///
 /// # Safety
 /// `location` holds a matrix, `camera` three floats, `pitch` one.
-void ee_units_uu_doppler_pitch(float volume,
+void ee_units_uu_doppler_pitch(uint64_t unit,
+                               float volume,
                                float velocity,
                                const float (*location)[4][4],
                                const float (*camera)[3],
                                float *pitch);
 
-/// `EEEditorCanPlace`.
+/// `EEEditorCanPlace` (72).
 ///
 /// # Safety
 /// `at` holds three floats.
@@ -7661,7 +7699,7 @@ uint8_t ee_units_uu_editor_can_place(uint64_t player,
                                      int32_t x,
                                      int32_t y);
 
-/// `EEDepositLoad`.
+/// `EEDepositLoad` (84).
 void ee_units_uu_deposit_load(uint64_t unit, uint64_t container);
 
 extern uint64_t ee_units_uu_host_map();
@@ -7806,6 +7844,26 @@ extern uint8_t ee_units_uu_host_find_path(uint64_t unit,
                                           uint32_t limit,
                                           uint8_t walls,
                                           int32_t *first);
+
+/// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
+/// the digest's halves) written (2).
+extern uint32_t ee_units_uu_host_note(int32_t which,
+                                      uint32_t a,
+                                      uint32_t b,
+                                      uint32_t c,
+                                      uint32_t d);
+
+/// Opens a note of `kind`; whether it records (its words are worth sending).
+uint8_t ee_units_uu_note_begin(uint32_t kind);
+
+/// A word of the thread's innermost open note (dropped unless it records).
+void ee_units_uu_note_word(uint32_t word);
+
+/// Closes the thread's innermost open note (folded when it records).
+void ee_units_uu_note_end();
+
+/// An event of the thread's recording note (the C++ host's writes: `UUEvent`).
+void ee_units_uu_note_event(int32_t a, int32_t b, int32_t c);
 
 /// `EEPWorldHelper::Load`'s running state over the host.
 ///

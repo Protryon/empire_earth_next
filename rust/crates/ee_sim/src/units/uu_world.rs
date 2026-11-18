@@ -300,6 +300,12 @@ pub fn unit_radius<H: UuHost + ?Sized>(h: &mut H, unit: u64, other: u64) -> f32 
     UuView(u).class().inner() * angle
 }
 
+/// `EEGetHeadingBetween`: the ground heading from `from` to `to`, `UMArcTan2(-(dx), dy)` (0 north, a quarter turn
+/// left for west).
+pub fn heading_between(from: [f32; 3], to: [f32; 3]) -> f32 {
+    ee_base::math::um::um_arctan2(-(to[0] - from[0]), to[1] - from[1])
+}
+
 /// `EEGetAngleFromNorth` (0x242345): the angle between north (an identity frame's forward, flattened) and the
 /// direction from `to` to `from`.
 #[allow(clippy::manual_clamp)] // the C++'s two tests (the same for a NaN)

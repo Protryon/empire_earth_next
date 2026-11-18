@@ -109,6 +109,7 @@ pub mod update;
 pub mod uu;
 pub mod uu_ffi;
 pub mod uu_host;
+pub mod uu_note;
 pub mod uu_place;
 pub mod uu_spots;
 #[cfg(test)]
