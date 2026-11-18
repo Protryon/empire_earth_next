@@ -75,10 +75,47 @@ enum {
     kPlceCenterGetCenter,
 };
 
+// CPEV (TEST ONLY; AI lane B, round 2): EEComputerPlayer's own calls, the same record shape with its own thread-local
+// depth (a CPEV call's placement calls still record PLCE as before). Its scope appends the computer player's state when
+// it ends: an FNV-1a of the record EeCpFields, the favourite history, the units to kill, the danger zones, every
+// resource centre with its active flag (all set by then), the town centre tile.
+enum {
+    kCpevWorkOutPopulation = 1,
+    kCpevRegroup,
+    kCpevUpdateGroups,
+    kCpevGetObjectsToGroup,
+    kCpevGetObjectRegion,
+    kCpevChooseFavoriteAir,
+    kCpevChooseFavoriteLand,
+    kCpevChooseFavoriteSea,
+    kCpevChooseFavoriteSpace,
+    kCpevEnterEpoch,
+    kCpevChooseCivilization,
+    kCpevPendingEpoch,
+    kCpevAvoidsEnemies,
+    kCpevCanProduce,
+    kCpevRestoreManagers,
+    kCpevDamageTaken,
+    kCpevUnitPlaced,
+    kCpevUnitTaken,
+    kCpevUnitCompleted,
+    kCpevUnitGoalDone,
+    kCpevSetActive,
+    kCpevEpochReached,
+    kCpevUnitStranded,
+    kCpevPayImprovement,
+    kCpevUnitsSwapped,
+};
+
+// CPEV records the calls of the thread that runs the computer players' Update (noted at its first call)
+void EECPPlaceCaptureThread();
+
 class EECPPlaceScope {
 public:
     // inPlayer: the computer player (NULL: none)
     EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer);
+    // a CPEV record (inEvents: true)
+    EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer, bool inEvents);
     ~EECPPlaceScope();
     bool On() const { return this->mOn; }
     EECPPlaceScope& I(long inValue)
@@ -96,8 +133,13 @@ public:
     EECPPlaceScope& State(const EECPResourceCenter* inCenter);
     // every resource centre of the player: their number and an FNV-1a of their states
     EECPPlaceScope& Centers(const EEComputerPlayer* inPlayer);
+    // CPEV: the computer player's state (appended by the destructor)
+    EECPPlaceScope& Player(const EEComputerPlayer* inPlayer);
 
 private:
+    void Begin(unsigned int inMethod, const EEComputerPlayer* inPlayer);
+    const EEComputerPlayer* mSelf;
+    bool mEvents;
     bool mOuter;
     bool mOn;
     unsigned int mMethod;

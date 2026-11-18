@@ -2,6 +2,7 @@
 // tools/sim_capture.py). Reads the objects only.
 #include <windows.h>
 #include <string.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <vector>
 #include <deque>
@@ -34,11 +35,14 @@
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECPPlaceCapture.h"
+#include "platform/PlatThread.h"
 #include "rust/sim/cp.h"
 
 namespace {
 
 thread_local int sPlaceDepth = 0;
+thread_local int sEventDepth = 0;
+uint32_t sEventThread = 0;   // the computer players' Update thread (CPEV records only there)
 
 void Fnv(uint64_t& ioHash, long inValue)
 {
@@ -51,18 +55,40 @@ void Fnv(uint64_t& ioHash, long inValue)
 }   // namespace
 
 EECPPlaceScope::EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer)
-    : mOuter(sPlaceDepth++ == 0), mOn(false), mMethod(inMethod),
-      mPlayer(inPlayer != NULL ? (unsigned int)inPlayer->mPlayerID : 0xffffffffu)
+    : mSelf(inPlayer), mEvents(false), mOuter(sPlaceDepth++ == 0)
 {
+    this->Begin(inMethod, inPlayer);
+}
+
+EECPPlaceScope::EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer, bool inEvents)
+    : mSelf(inPlayer), mEvents(inEvents), mOuter((inEvents ? sEventDepth : sPlaceDepth)++ == 0)
+{
+    this->Begin(inMethod, inPlayer);
+}
+
+void EECPPlaceScope::Begin(unsigned int inMethod, const EEComputerPlayer* inPlayer)
+{
+    this->mMethod = inMethod;
+    this->mPlayer = inPlayer != NULL ? (unsigned int)inPlayer->mPlayerID : 0xffffffffu;
     this->mOn = this->mOuter && EESimCaptureRecord::Active();
+    if (this->mEvents && (sEventThread == 0 || PlatCurrentThreadId() != sEventThread))
+        this->mOn = false;   // (the interface thread asks CanProduce and AvoidsEnemies too, at its own times)
+}
+
+void EECPPlaceCaptureThread()
+{
+    if (sEventThread == 0 && EESimCaptureRecord::Active())
+        sEventThread = PlatCurrentThreadId();
 }
 
 EECPPlaceScope::~EECPPlaceScope()
 {
-    sPlaceDepth--;
+    (this->mEvents ? sEventDepth : sPlaceDepth)--;
     if (!this->mOn)
         return;
-    EESimCaptureRecord r(EECaptureTag("PLCE"));
+    if (this->mEvents)
+        this->Player(this->mSelf);
+    EESimCaptureRecord r(this->mEvents ? EECaptureTag("CPEV") : EECaptureTag("PLCE"));
     r.U32(this->mMethod);
     r.U32(this->mPlayer);
     r.U32((unsigned int)this->mWords.size());
@@ -130,4 +156,36 @@ EECPPlaceScope& EECPPlaceScope::Centers(const EEComputerPlayer* inPlayer)
         Fnv(theHash, (long)theCenter->mUnit.GetSavedID());
     }
     return this->I((long)inPlayer->mResourceCenters.size()).I((long)(uint32_t)theHash).I((long)(uint32_t)(theHash >> 32));
+}
+
+EECPPlaceScope& EECPPlaceScope::Player(const EEComputerPlayer* inPlayer)
+{
+    if (!this->mOn || inPlayer == NULL)
+        return *this;
+    uint64_t theHash = 0xcbf29ce484222325ull;
+    const unsigned char* theBytes = (const unsigned char*)static_cast<const EeCpFields*>(inPlayer);
+    // (up to the last member: the tail padding after the closing bools is whatever the allocation left)
+    for (size_t i = 0; i < offsetof(EeCpFields, mAttackStarted) + sizeof(bool); i++)
+        theHash = (theHash ^ theBytes[i]) * 0x100000001b3ull;
+    this->I((long)(uint32_t)theHash).I((long)(uint32_t)(theHash >> 32));
+    theHash = 0xcbf29ce484222325ull;
+    for (size_t i = 0; i < inPlayer->mFavoriteTypeHistory.size(); i++) {
+        Fnv(theHash, (long)inPlayer->mFavoriteTypeHistory[i].first);
+        Fnv(theHash, inPlayer->mFavoriteTypeHistory[i].second);
+    }
+    this->I((long)inPlayer->mFavoriteTypeHistory.size()).I((long)(uint32_t)theHash);
+    this->I((long)inPlayer->mUnitsToKill.size()).I((long)inPlayer->mDangerZones.size());
+    theHash = 0xcbf29ce484222325ull;
+    for (size_t k = 0; k < inPlayer->mResourceCenters.size(); k++) {
+        const EECPResourceCenter* theCenter = inPlayer->mResourceCenters[k];
+        Fnv(theHash, (long)theCenter->mUnits.size());
+        for (size_t i = 0; i < theCenter->mUnits.size(); i++)
+            Fnv(theHash, (long)theCenter->mUnits[i].GetSavedID());
+        Fnv(theHash, (long)theCenter->mUnit.GetSavedID());
+        Fnv(theHash, theCenter->mIsActive ? 1 : 0);
+    }
+    this->I((long)inPlayer->mResourceCenters.size()).I((long)(uint32_t)theHash);
+    if (inPlayer->mPlacement != NULL)
+        this->I(inPlayer->mPlacement->mTownCenterTile.mX).I(inPlayer->mPlacement->mTownCenterTile.mY);
+    return *this;
 }
