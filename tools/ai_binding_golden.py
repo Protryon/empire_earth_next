@@ -47,6 +47,7 @@ GAMES = {
     "airwing-2": (2, 400, ["--engine", "next,classic"], {"EE_AI_NEXT_SCRIPT": "airwing", "EE_AI_TEST_SPAWN": "1"},
                   True),
     "kite-2": (2, 400, [], {"EE_AI_NEXT_SCRIPT": "kite", "EE_AI_TEST_SPAWN": "1"}, True),
+    "cover-2": (2, 240, [], {"EE_AI_NEXT_SCRIPT": "cover", "EE_AI_TEST_SPAWN": "1"}, True),
 }
 
 
@@ -85,7 +86,9 @@ def one(name, game, exe, data, full):
 def lines(p):
     with gzip.open(p, "rt", errors="replace") as f:
         for line in f:
-            yield line.rstrip("\n")
+            # the engine's start line names the scripts folders' hash: a test script added to tests/ai_units changes it
+            if " folder hash " not in line:
+                yield line.rstrip("\n")
 
 
 def compare(base, name, games):
