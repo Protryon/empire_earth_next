@@ -31078,3 +31078,91 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
   `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
   `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
+## R6 WONLobby, round 16: dead WON members, the lobby's list rows as Rust rows (ee_won_gui rowobj.rs, ee_won_lobby rows.rs; branch rust-wonlobby16, 2026-11-18)
+
+Round 15's "Next" put the rows first (round 13's step 2), then the whole-class moves and RoutingLogic.cpp's host,
+for 2,000 net lines. This round did the dead members and the rows; the target was not reached (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| befccddec | 129 dead members deleted: tools/dead_members.py over the WON headers (`--headers include/ee/wonapi "src/Empire Earth/WONAPI"`), the inline definition of `MultiListArea::InsertRow` it missed (`inline T Class::Name(` is not its definition pattern), five comments left above deleted declarations | 35,910 -> 35,601 (-309) |
+| 1c50173c1 | the lobby's list rows as Rust rows (below) | 35,601 -> 35,271 (-330) |
+
+Round total: WON C++ 35,910 -> 35,271 (-639); on the merged tree with origin/rust 9a277da24 the same (the AI lane's
+merge touched no WON file). Far short of the 2,000 target: the rows were the only whole move done, and their C++
+calls stay host ops.
+
+### The rows
+
+- **The shells.** `RustRow : ListItem` and `RustTextRow : TextListItem` (WONLobbyGUI.h) hold one `EeWonRow*`
+  (ee_won_gui rowobj.rs): the row kind's call table (`EeWonRowTable`: a call and a free, the owning crate's) and
+  its state. Their virtuals are `ee_won_row_call` (Paint, CalcDimensions, Compare with the other row's `EeWonRow*`
+  from the original's `static_cast` and the address difference the game list used, CanSelect and MouseDown on the
+  plain row), their destructor `ee_won_row_free`. A row is bound to its shell's address in a window-thread registry
+  (`rowobj::of`), so the controls' ops on an item reach its state, and a table pointer check makes a row of another
+  kind `None`.
+- **What is Rust** (rows.rs): RoomListItem (loading, address, room id; the text, colour, font and image are its
+  `TextListItem` base's, which the controls' generic text-row ops already wrote), FriendsListItem and UserListItem
+  (friend/client, separator, sort group/key), GameUserListItem (client, image, font; the icon table that was
+  LobbyCtrlHost.cpp's `CtlImage` for it and the client tests that were `ClientIs`), ServerDetailsItem (game,
+  address text, icon, summary height) with EELobbyServerDetailsItem as a flag (`ee_won_lobby_rows_ee_details`, set
+  where the glue's factories were set) whose hooks call eeglue.rs directly. The game list's rows forward their
+  virtuals to the list's grandparent control, srvlistctl.rs, as the C++ forwards did (one host op names the control).
+- **Where the ops go.** The controls' row ops (`RoomItemServer`, `FriendRowNew`, `ItemNew`, `RowNew`, the members'
+  `ItemGet`/`ItemSet` fields, ...) are answered by `rows::ctl_op` in the game, after the model's and the settings'
+  answers (lobbyctl.rs `op`); the model reads and the addresses inside the rows are modelobj.rs's and ipobj.rs's. Every
+  C++ call a row makes (graphics, fonts, lists, images, the `TextListItem` base's members and virtuals) is one op of
+  the controls' host, `LobbyCtrlHost`, called with no control: 17 new ops, the rest (the `Gfx*`, `List*`,
+  `FontHeight`, `AddRef`/`Release`, ...) already there for the game list's paint. LobbyNetCtrlHost.cpp's
+  `DeliverJoinRoom` and the glue's `ItemGame` read the rows through `ee_won_lobby_rows_ctl_op` (`INTPTR_MIN` for not
+  a row: -1 is a sort key).
+- **The drivers.** The controls' drivers make their controls without the model, so their scripted hosts still
+  answer the row ops: won_netctl_test, won_lobbyctl_test and won_srvlist_test and their goldens are unchanged (the
+  rewrite round 15 planned was not needed). The new `won_rowobj_test` copies the original rows (and the host cases
+  that made and read them) unchanged over a stand-in world (lists, graphics contexts, fonts, images, texts,
+  addresses, model objects; references counted and traced) and runs rows.rs over the same world through the host ops,
+  with the shells copied from WONLobbyGUI.h: 40,000 sequences, 1.83 million trace lines, 0 differences. The game
+  list rows' virtuals are not in it (they are srvlistctl.rs's, which won_srvlist_test and the LAN game run).
+- **Mutations** (build/r16_mutate.py): 16 of 16 caught. Two were missed at first and were the world's faults: a
+  room's player count never 0 (`x % 3 ? x % 6 : ...` cannot give 0) and the away and admin answers always equal (the
+  stand-in hash's low bits); a third, a game list row keeping its game, was hidden by the driver holding an extra
+  reference to rows that come with one. Lesson: run each mutation the world could hide at full length, and check the
+  world's answers vary (one quick script over the hash found the second).
+- **Behaviour changes.** A game list row's icon id and summary height start at 0 (the original left them as `new`
+  gave them; the control sets both before reading them). A room row's text, colour, font and image live in its
+  `TextListItem` base (the original had its own members of the same names); a row's end gives its image back before
+  its font (reverse member order of the base) where the original's own members did it the other way round: those are
+  resources nothing frees there. RoomListItem is a `TextListItem` now; nothing in WONGUI or the lobby casts list
+  items to `TextListItem` dynamically.
+- **What runs it.** The LAN game builds the game lists (ServerDetailsItem, the EE details) and the game room's
+  player list (GameUserListItem): `lan_game.py` and the capture comparison. The room tree, friends and user lists
+  are the Internet lobby's (the driver only).
+
+### Gates (the round's head merged with origin/rust 9a277da24)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM), after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after the dead members; seeds 2-7 identical on the merged tree |
+| `rust_build.py gate` | PASS, 4,545 tests on the rows commit (after a clippy fix); PASS, 4,576 tests on the merged tree |
+| `won_host_coverage.py` | PASS (rows.rs `ctl_op` and `client_is` read for the controls' ops, item fields and client tests) |
+| `xbuild.py wontest` | all 150 programs exit 0 under the 2 GB cap (peak 557 MB, won_cfgtab_test); won_rowobj_test the new one |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2759 joiner=2754` (the round's start exe, a test-profile build of 48c8472f0: 2729 / 2729) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121) |
+
+The merge of origin/rust needed nothing (no conflict; strip_markers changed 0 files; the headers were current).
+
+### Left
+
+- The dialogs' rows (BadUserItem, ConnectListItem, NetworkAdapterListItem) and the filter combo's FilterListItem:
+  rows.rs kinds, once lobbydlg.rs has a game mode to answer their ops (it has no `_new_model` constructor); ChatLink's
+  segment hook.
+- The widget calls every lobby host repeats (ListArea's, ComboBox's, InputBox's, Label's and Component's
+  non-virtual forwards, ~260 lines of near-duplicate cases over LobbyDialogHost, LobbyCtrlHost, LobbyNetCtrlHost and
+  the EE hosts): Component's calls already take the C++ pointer (`ee_won_comp_call(this, host, ...)`), the others
+  need their Rust object from the C++ pointer (a registry like rowobj's).
+- The whole-class moves (LobbyDialogHost.cpp, LanLogicHost.cpp, InitLogic.cpp, LobbyLogicHost.cpp,
+  ChatCommandParser.cpp's client list and target) and RoutingLogic.cpp's other cases: not started.
