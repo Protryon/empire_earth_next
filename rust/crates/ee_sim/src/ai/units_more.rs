@@ -1370,6 +1370,10 @@ pub const EE_AI_UNITS_HOST_ROUTE_STATE: i32 = 92;
 /// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
 pub const EE_AI_UNITS_HOST_ROUTE_TAKE: i32 = 93;
 
+/// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
+/// computed twice (the shore's GetTilesNextTo and FindPath are captured).
+pub const EE_AI_UNITS_HOST_TILES_AGAIN: i32 = 94;
+
 /// An area's facts (`EE_AI_UNITS_HOST_AREA_INFO`, `AREA_POINT`).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -1423,30 +1427,26 @@ fn area_info(a: u64) -> EeAiUnitsArea {
     r
 }
 
-/// The host fills `s.tiles` (the op with `a` and the list's ends) -> the count it has (-1: none). The list grows
-/// to the count and is filled again when it was too short.
+/// The host fills `s.tiles` (the op with `a` and the list's ends) -> the count it has (-1: none). A list longer
+/// than the room is read again from the host's copy (`EE_AI_UNITS_HOST_TILES_AGAIN`), never computed twice.
 unsafe fn fill_tiles(op: i32, me: *mut c_void, s: *mut UnitsState, a: i64, ends: [[c_long; 2]; 2]) -> i64 {
     let v = &mut (*s).tiles;
-    let mut cap = v.capacity().max(256);
-    loop {
+    let cap = v.capacity().max(256);
+    v.resize(cap, (0, 0));
+    let mut t = EeAiUnitsTiles { xy: v.as_mut_ptr().cast(), len: 0, cap, from: ends[0], to: ends[1] };
+    let n = ee_ai_units_host(op, me, a, 0, 0, (&mut t as *mut EeAiUnitsTiles).cast());
+    if n < 0 {
+        v.clear();
+        return n;
+    }
+    if n as usize > cap {
+        let cap = n as usize;
         v.resize(cap, (0, 0));
         let mut t = EeAiUnitsTiles { xy: v.as_mut_ptr().cast(), len: 0, cap, from: ends[0], to: ends[1] };
-        let n = ee_ai_units_host(op, me, a, 0, 0, (&mut t as *mut EeAiUnitsTiles).cast());
-        if n < 0 {
-            v.clear();
-            return n;
-        }
-        if (n as usize) <= cap {
-            v.truncate(n as usize);
-            return n;
-        }
-        if op == EE_AI_UNITS_HOST_ROUTE_TAKE {
-            // the take dropped the route: never asked twice (the state's length is the room made)
-            v.truncate(cap);
-            return n;
-        }
-        cap = n as usize;
+        ee_ai_units_host(EE_AI_UNITS_HOST_TILES_AGAIN, me, 0, 0, 0, (&mut t as *mut EeAiUnitsTiles).cast());
     }
+    v.truncate(n as usize);
+    n
 }
 
 /// The host reads `tiles` (the op with `a`) -> its answer

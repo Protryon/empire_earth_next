@@ -314,6 +314,10 @@ constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_STATE = 92;
 /// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
 constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TAKE = 93;
 
+/// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
+/// computed twice (the shore's GetTilesNextTo and FindPath are captured).
+constexpr static const int32_t EE_AI_UNITS_HOST_TILES_AGAIN = 94;
+
 constexpr static const long EV_ATTACKED = 1;
 
 constexpr static const long EV_DIED = 2;

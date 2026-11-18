@@ -646,12 +646,18 @@ static void EECPUnitsExec(EEComputerPlayer* me, const EeAiUnitsMessage& m)
 // The continent manager and the walls for the Rust bindings (ee_ai units_more.rs): the only reads of the
 // continent manager's objects the bindings make (lane C re-points these when the continents move)
 
+// the last list handed out, for a second read into a larger buffer (EE_AI_UNITS_HOST_TILES_AGAIN): a list is never
+// computed twice (the shore's GetTilesNextTo and FindPath are captured)
+static std::vector<U2DPoint<long> > sUnitsLastTiles;
+
 static void EECPUnitsTilesOut(EeAiUnitsTiles& ioTiles, const std::vector<U2DPoint<long> >& inTiles)
 {
     for (size_t k = 0; k < inTiles.size() && k < ioTiles.cap; k++) {
         ioTiles.xy[2 * k] = inTiles[k].mX;
         ioTiles.xy[2 * k + 1] = inTiles[k].mY;
     }
+    if (inTiles.size() > ioTiles.cap)
+        sUnitsLastTiles = inTiles;
 }
 
 static void EECPUnitsTilesIn(const EeAiUnitsTiles& inTiles, std::vector<U2DPoint<long> >& outTiles)
@@ -812,6 +818,12 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     case EE_AI_UNITS_HOST_AREA_PICK:
         EECPUnitsAreaPick(*(EeAiUnitsAreaPick*)outRecord);
         return 0;
+    case EE_AI_UNITS_HOST_TILES_AGAIN: {
+        std::vector<U2DPoint<long> > theTiles;
+        theTiles.swap(sUnitsLastTiles);
+        EECPUnitsTilesOut(*(EeAiUnitsTiles*)outRecord, theTiles);
+        return (int64_t)theTiles.size();
+    }
     case EE_AI_UNITS_HOST_WATER_SHORE:
         return EECPUnitsWaterShore(*(EeAiUnitsTiles*)outRecord);
     case EE_AI_UNITS_HOST_WALL_LINE: {
@@ -1137,7 +1149,7 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_AREA_POINT: case EE_AI_UNITS_HOST_AREA_PICK: case EE_AI_UNITS_HOST_WATER_SHORE:
     case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED: case EE_AI_UNITS_HOST_FOREST_AT:
     case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_WALL_PATH: case EE_AI_UNITS_HOST_ROUTE_REQUEST:
-    case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE:
+    case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE: case EE_AI_UNITS_HOST_TILES_AGAIN:
         return EECPUnitsWallsHost(me, inOp, a, b, outRecord);
     default:
         return 0;
