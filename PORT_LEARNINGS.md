@@ -31078,3 +31078,42 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
   `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
   `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
+
+## App core, round 1: EE-SIM's driver whole in Rust, EEWorld::RecordStatistics' decisions in Rust, WSTA (ee_game sim_driver, ee_sim app statistics.rs; branch rust-appcore1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 5678bdf3a | EE-SIM's driver in Rust: options, menus, lobby, run, samples, report, `--games`; EESim.cpp a host table | +446 -2052, net -1,606 |
+| 068449327 | WSTA, a capture of RecordStatistics at the app profile's end (TEST ONLY) | +86 |
+| 2aba1854b | WSTA without the history's start time; goldens again from the C++ | +1 -1 |
+| c3a6706ae | RecordStatistics' decisions in Rust over a host; the C++ fills the records | +79 -263, net -184 |
+| 9038a77e8 | the sample's strength truncated as cvttss2si | Rust only |
+
+- **The driver over a host table.** Everything EE-SIM decides is Rust now (ee_game sim_driver: options.rs, lobby.rs,
+  report.rs, driver.rs); EESim.cpp is `EeSimDriverHost` (41 functions: the UI's controls under the UI lock, the world
+  lock, the platform switches, the C library's streams, environment and descriptors, the save message, the idle
+  human's set-up, --flare/--volcano's world calls, the capture's sweeps) plus the TEST ONLY readers of C++ objects
+  (the combat/list-search/missile sweeps, the checksum fields, the state dump, the random trace) and the fault handler.
+  The samples read the world views (players' saved records, the tech tree's epoch, the units, their classes and
+  stats); only the wonder count and a class's cost (`EEPlayer::GetCost`) stay host calls.
+- **The C library's text mode.** The C++ opened the trace, the log and the checksum trace with `fopen(.., "w")`: CR
+  LF on Windows. Rust's `File` writes bytes, so the first run's checksum lines differed at the first new line. The
+  driver's `TextFile` writes `\r\n` for each `\n` on Windows; the report was "wb" and stays bytes. Everything the C++
+  wrote to stdout/stderr (the trace without --trace, the report to "-", the notes, the markers) still goes through
+  the C library's streams (the host's `write`), so the buffers and `_dup2`'d stderr behave as before.
+- **The C library's numbers.** `atol`, `atof` and `strtoul(.., 0)` are re-implemented (prefix parse, octal and hex,
+  saturation, a minus wrapping the unsigned value): `--seed 0x10` and `--flare 90.5:2` read as before.
+- **The function statics stay statics.** AfterTick's schedules (the five-minute sweeps, the calamity casts, the unit
+  sweeps, the mini map minute, the app sweeps), FinishGame's "swept" flag and the checksum line count were function
+  statics, never reset between `--games` games; the driver keeps them in one struct outside the per-game state.
+- **`(long)` of a float is `cvttss2si`.** The sample's strength and the statistics' epoch score and play times use the
+  conversion's indefinite value (`LONG_MIN`) out of range, as everywhere in the port (ee_sim units::player::trunc_long,
+  app::statistics::trunc_long_f64): a long game's epoch score (`end / epoch x span x 100`) overflows 32 bits.
+- **WSTA's first golden had a wall clock in it.** `mStatistics.mStartTime` is the game's start in wall time: a second
+  run of the unmodified exe differed from the golden in those four bytes alone. The record leaves it out and the
+  goldens were recorded again from the C++ (a decoder of the record's payload found it in one diff). Lesson: run a new capture tag's C++ twice before trusting its golden.
+- **Tests.** sim_driver 9 (the numbers, the game options, a games line, the command line, a line by name, the
+  lobby's choices and order, a sample's counts, the report's text, the text file), app::statistics 5 (the order and
+  scores, a top-up's arithmetic and draws, the observing local player, a scenario with two humans, the epoch score
+  and the truncation).
+- **Behaviour:** none.
