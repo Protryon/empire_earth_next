@@ -136,4 +136,3 @@ fn restarts_resync_as_libjpeg_does() {
         assert_eq!((d.unread_marker, d.next_restart_num), (left, (desired + 1) & 7), "marker {found:x}");
     }
 }
-

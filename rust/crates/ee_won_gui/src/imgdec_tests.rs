@@ -3,8 +3,8 @@
 //! their corruptions, in hex, with the original JPGDecoder's answers on libjpeg 6b).
 use super::*;
 use crate::imgdec::{attributes as img_attributes, decode as img_decode, EeWonImgDec, EeWonImgKind};
-use ee_won_net::file::EeWonFileReader;
 use ee_won_net::file::status_text;
+use ee_won_net::file::EeWonFileReader;
 
 /// A FileReader over memory, as `FileReader(const void*, unsigned long)` opens one.
 fn reader(b: &[u8]) -> EeWonFileReader {
