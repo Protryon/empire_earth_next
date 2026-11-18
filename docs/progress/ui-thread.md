@@ -75,6 +75,19 @@ what the world's views (`ee_sim::world`), the toolkit's direct path (`ee_ui dire
   in game the status box, the resource bar and the icon bar regions of the box-selected frame are equal (the map
   and the mini map differ between any two live games).
 
+## Gates (round 1, on the result merged with origin/rust ec39733e7, merge 8c0b98ab4)
+
+Both builds 0/0 (EE-AOC 689, EE-SIM 690 inputs); the test profile 0/0; the oracle seeds 2-7 identical to the
+reference; the Rust gate PASS (4,531 tests; `ee_base` `fs::golden_spec::golden_spec_replays` failed once in the full
+run under load and passed alone and in its crate's run); the editor gate PASS 14,448 with SGVW equal to
+`tools/sgvw/editor.txt` (25,136 lines); the civilization gate PASS 4,062; the tour with `--view-check --seed 7`
+(`RESULT PASS tour`, F3 ok, `VIEW CHECK PASS`, SGVW 79 distinct lines equal to `tools/sgvw/tour_view.txt`); the
+orders game (`BOX SELECT PASS`, `ORDERS PASS`, `RESULT PASS random-game`); the scroll check (`SCROLL CHECK PASS`);
+`gates.sh` GATES PASS (tour; ai-game time-cap, alive [2, 3], classic_lua x 2; lan-game). Per commit: build `--sim`
+0/0, oracle seeds 2-3 identical, the Rust gate PASS (commits 1-3; commit 4: unit tests, the test profile and the
+orders game, then the merged tree's gates). Not run: the sim_capture profiles (no simulation code changed). Main
+merge 4 had not landed on origin/rust when the round ended.
+
 ## What only a person reaches
 
 The sends (no fixture clicks a command button, the icon bar, the portrait, a diplomacy control or a hot key), the
