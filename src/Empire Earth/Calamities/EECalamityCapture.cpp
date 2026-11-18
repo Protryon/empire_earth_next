@@ -26,7 +26,6 @@
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
 #include "ee/EEContagionFunctor.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
@@ -376,46 +375,48 @@ void EECalamityCaptureContagionSave()
 {
     if (!EESimCaptureRecord::Active())
         return;
-    EEContagionManager* theContagion = ::gWorld.GetContagionManager();
+    EeContagionManager* theContagion = ::gWorld.GetContagionManager()->mRust;
     EESimCaptureRecord r(EECaptureTag("CALK"));
     r.U32(1);
-    r.U32((unsigned int)theContagion->GetOutOfSynchChecksum());
-    r.U32((unsigned int)theContagion->mHelpers.size());
-    for (size_t i = 0; i < theContagion->mHelpers.size(); i++)
-        r.U32((unsigned int)theContagion->mHelpers[i]->GetOutOfSynchChecksum());
+    r.U32((unsigned int)ee_contagion_manager_checksum(theContagion));
+    r.U32((unsigned int)ee_contagion_manager_count(theContagion));
+    for (size_t i = 0; i < ee_contagion_manager_count(theContagion); i++)
+        r.U32((unsigned int)ee_contagion_helper_checksum(ee_contagion_manager_at(theContagion, i)));
     FSMemoryFile theFile;
-    r.I32(theContagion->Save(0, kSaveGameMinorVersion, theFile));
+    r.I32(ee_contagion_manager_save(theContagion, (uint64_t)(uintptr_t)&theFile, true));
     FileBytes(r, theFile);
     theFile.SetPosition(0, kFileOriginBegin, false);
-    EEContagionManager* theCopy = new EEContagionManager;
-    r.I32(theCopy->Load(0, kSaveGameMinorVersion, theFile));
-    r.I32(theCopy->mNextHelperID);
-    r.U32((unsigned int)theCopy->mHelpers.size());
-    for (size_t i = 0; i < theCopy->mHelpers.size(); i++) {
-        EEContagionHelper* h = theCopy->mHelpers[i];
-        r.U32(theCopy->mCalamityIndexes[i]);
-        r.I32(h->mHelperID);
-        r.F32(h->mTimeSinceLastSpread);
-        r.F32(h->mTimeSinceLastUpdate);
-        r.U32((unsigned int)h->mUnitIDs.size());
-        for (size_t j = 0; j < h->mUnitIDs.size(); j++)
-            r.U32(h->mUnitIDs[j]);
-        r.U32((unsigned int)h->mUnits.size());
+    EeContagionManager* theCopy = ee_contagion_manager_new();
+    r.I32(ee_contagion_manager_load(theCopy, (uint64_t)(uintptr_t)&theFile, 0, kSaveGameMinorVersion, true));
+    r.I32(ee_contagion_manager_next_id(theCopy));
+    r.U32((unsigned int)ee_contagion_manager_count(theCopy));
+    for (size_t i = 0; i < ee_contagion_manager_count(theCopy); i++) {
+        EeContagionHelper* h = ee_contagion_manager_at(theCopy, i);
+        EeContagionHelperFields theFields = ee_contagion_helper_fields(h);
+        r.U32(ee_contagion_manager_calamity_index(theCopy, i));
+        r.I32(theFields.mHelperID);
+        r.F32(theFields.mTimeSinceLastSpread);
+        r.F32(theFields.mTimeSinceLastUpdate);
+        r.U32((unsigned int)ee_contagion_helper_count(h, true));
+        for (size_t j = 0; j < ee_contagion_helper_count(h, true); j++)
+            r.U32((unsigned int)ee_contagion_helper_unit(h, true, j));
+        r.U32((unsigned int)ee_contagion_helper_count(h, false));
     }
     // a helper loaded at the oldest version's layout (no update timer) from the first helper's bytes
-    if (!theContagion->mHelpers.empty()) {
+    if (ee_contagion_manager_count(theContagion) > 0) {
         FSMemoryFile theHelperFile;
-        r.I32(theContagion->mHelpers[0]->Save(0, kSaveGameMinorVersion, theHelperFile));
+        r.I32(ee_contagion_helper_save(ee_contagion_manager_at(theContagion, 0), (uint64_t)(uintptr_t)&theHelperFile));
         theHelperFile.SetPosition(0, kFileOriginBegin, false);
-        EEContagionHelper theOld;
-        r.I32(theOld.Load(0, 0xe6, theHelperFile));
+        EeContagionHelperFields theOld;
+        size_t theOldIDs = 0;
+        r.I32(ee_contagion_helper_load_probe((uint64_t)(uintptr_t)&theHelperFile, 0, 0xe6, &theOld, &theOldIDs));
         r.I32(theOld.mHelperID);
         r.F32(theOld.mTimeSinceLastSpread);
         r.F32(theOld.mTimeSinceLastUpdate);
-        r.U32((unsigned int)theOld.mUnitIDs.size());
+        r.U32((unsigned int)theOldIDs);
     }
-    DeleteVectorContents(theCopy->mHelpers);
-    delete theCopy;
+    ee_contagion_manager_delete_helpers(theCopy);
+    ee_contagion_manager_free(theCopy);
     r.Commit();
 }
 

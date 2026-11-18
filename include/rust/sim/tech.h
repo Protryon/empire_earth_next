@@ -470,6 +470,57 @@ constexpr static const uint32_t EE_CONTAGION_IO_HELPER_CALAMITY = 12;
 /// The manager: helper `*value`'s own `Save` (the index in; its result).
 constexpr static const uint32_t EE_CONTAGION_IO_SAVE_HELPER = 13;
 
+/// The capture's contagion events (`EEContagionCaptureOp`, ee/EETechCapture.h) the store sends itself.
+constexpr static const int32_t EE_CONTAGION_EVENT_UPDATE_UNITS = 2;
+
+constexpr static const int32_t EE_CONTAGION_EVENT_NEW = 4;
+
+constexpr static const int32_t EE_CONTAGION_EVENT_APPLY = 5;
+
+constexpr static const int32_t EE_CONTAGION_EVENT_REMOVE = 6;
+
+constexpr static const int32_t EE_CONTAGION_EVENT_FUNCTOR_UPDATE = 10;
+
+/// `ee_contagion_world`'s operations (`EEContagionManager.cpp`): `a`, `b`, `c` the objects or values, `x` a float,
+/// `io` the op's in or out value.
+constexpr static const uint32_t EE_CONTAGION_WORLD_REFERENCE = 1;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_MARK = 2;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_INFECT = 3;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CURE = 4;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_APPLY = 5;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_FUNCTOR_UPDATE = 6;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_NEAR = 7;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CAN_INFECT = 8;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_IMMUNE = 9;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_RANDOM = 10;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_DISTANCE = 11;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_UNIT = 12;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CALAMITY_CHECKSUM = 13;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CALAMITY_INDEX = 14;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CALAMITY_FUNCTOR = 15;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CALAMITY_DUMP = 16;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_TEXT = 17;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_FILE = 18;
+
+constexpr static const uint32_t EE_CONTAGION_WORLD_CAPTURE = 19;
+
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
 
@@ -926,42 +977,6 @@ enum class EeTechUnitWalk : uint32_t {
   FlightTime,
 };
 
-/// The host calls (`EeContagionCall::op`).
-enum class EeContagionOp : int32_t {
-  /// The functor's `UpdateUnits(&mUnits)` (a functor that skips the spread).
-  UpdateUnits = 1,
-  /// The functor's `Update(x, calamity)`.
-  FunctorUpdate = 2,
-  /// The helper's unit count: value.
-  UnitCount = 3,
-  /// Held unit `index` is alive: ok.
-  UnitAlive = 4,
-  /// The functor's `Apply(held unit index, x, calamity)`.
-  Apply = 5,
-  /// Held unit `index` removed and cured (`RemoveUnit(iterator, true)`).
-  Remove = 6,
-  /// Held unit `index` is a complex unit: ok.
-  HeldComplex = 7,
-  /// `GetUnitsInArea(x, held unit index)` into the near list (replacing the last): value its size.
-  NearUnits = 8,
-  /// Near unit `index` against held unit `index2`: flags `EE_CONTAGION_NEAR_*`, id its unit id.
-  NearView = 9,
-  /// `gPhysics->mRandom.Generate()`: x.
-  Random = 10,
-  /// The distance squared from held unit `index2` to near unit `index`: x.
-  DistanceSquared = 11,
-  /// Near unit `index` added to the new units.
-  AddNew = 12,
-  /// New unit `index`: flags `EE_CONTAGION_NEW_*`, id its unit id.
-  NewView = 13,
-  /// New unit `index`'s immunity (effect kind 3): ok when it has one (the host plays its effect).
-  Immune = 14,
-  /// New unit `index` added and infected (`AddUnit(unit, true)`).
-  AddUnit = 15,
-  /// The capture's record of a step (TEST ONLY, `EECalamityCaptureContagionEvent(value, index, index2, x, y)`).
-  Capture = 16,
-};
-
 /// The node operations of [`ee_tech_walk_node`] (`a`, `b`: the C++ arguments).
 enum class EeTechNodeOp : int32_t {
   /// the virtual `GetIsAvailable` (0/1)
@@ -1034,6 +1049,15 @@ enum class EeTechTreeOp : int32_t {
 
 /// The running state: the units' effects and the active list.
 struct EeAreaEffectRunning;
+
+/// One contagion helper (`EEContagionHelper`).
+struct EeContagionHelper;
+
+/// The contagion manager (`EEContagionManager`).
+struct EeContagionManager;
+
+/// A near-unit list the C++ fills (`EE_CONTAGION_WORLD_NEAR`).
+struct EeContagionUnitList;
 
 /// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
 /// `mSavedSOLs`), applied by `ApplySavedState`.
@@ -1615,12 +1639,6 @@ struct EeContagionHelperFields {
   float mTimeSinceLastUpdate;
 };
 
-/// The C++'s I/O callback: `call(ctx, op, value)`.
-struct EeContagionIoFfi {
-  void *ctx;
-  long (*call)(void *ctx, uint32_t op, void *value);
-};
-
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
 struct EeTechEffectValues {
   float value;
@@ -1768,39 +1786,6 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
-};
-
-/// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
-struct EeContagionState {
-  float since_spread;
-  float since_update;
-};
-
-/// One host call.
-struct EeContagionCall {
-  EeContagionOp op;
-  int32_t index;
-  int32_t index2;
-  int32_t value;
-  float x;
-  float y;
-};
-
-/// The host's answer.
-struct EeContagionReply {
-  bool ok;
-  uint8_t pad[3];
-  uint32_t flags;
-  int32_t value;
-  uint32_t id;
-  float x;
-};
-
-/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
-/// one [`EeContagionCall`] on the helper.
-struct EeContagionHostFfi {
-  void *ctx;
-  void (*call)(void *ctx, const EeContagionCall *call, EeContagionReply *reply);
 };
 
 /// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
@@ -2540,37 +2525,183 @@ EeContagionFunctorHit ee_contagion_functor_apply_damage(const EeContagionFunctor
                                                         int32_t hit_points,
                                                         float attack);
 
-/// [`helper_load`] into `*fields`.
+/// Appends a unit to the list `ee_contagion_world` fills.
 ///
 /// # Safety
-/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
-long ee_contagion_helper_load(EeContagionHelperFields *fields,
-                              unsigned long major,
-                              unsigned long minor,
-                              EeContagionIoFfi io);
+/// `list` is the list the call was handed.
+void ee_contagion_unit_list_push(EeContagionUnitList *list, uint64_t unit);
 
-/// [`helper_save`] of `*fields`.
+extern int64_t ee_contagion_world(uint32_t op,
+                                  uint64_t a,
+                                  uint64_t b,
+                                  uint64_t c,
+                                  float x,
+                                  void *io);
+
+/// `new EEContagionManager`: no helpers, the last id 0.
+EeContagionManager *ee_contagion_manager_new();
+
+/// `delete` of the manager (its list only: the helpers are not deleted, as the original's destructor).
 ///
 /// # Safety
-/// `fields` valid for reads; `io`'s callback valid.
-long ee_contagion_helper_save(const EeContagionHelperFields *fields, EeContagionIoFfi io);
+/// `m` from `ee_contagion_manager_new`, or null.
+void ee_contagion_manager_free(EeContagionManager *m);
 
-/// [`helper_checksum`].
+/// The manager's `operator=`: the other's list (the same helpers), last id and indexes.
 ///
 /// # Safety
-/// `fields` valid for reads.
-long ee_contagion_helper_checksum(const EeContagionHelperFields *fields,
-                                  long unit_ids,
-                                  long calamity);
+/// Both managers live.
+void ee_contagion_manager_assign(EeContagionManager *m, const EeContagionManager *other);
 
-/// [`manager_load`]; the last helper id into `*next_id`.
+/// `CreateContagionHelper`; the new id.
 ///
 /// # Safety
-/// `next_id` valid for writes; `io`'s callback valid, not touching `*next_id`.
-long ee_contagion_manager_load(long *next_id, bool counter, EeContagionIoFfi io);
+/// As the module's.
+long ee_contagion_manager_create(EeContagionManager *m,
+                                 uint64_t functor,
+                                 uint64_t calamity,
+                                 uint64_t target);
 
-/// [`manager_save`].
-long ee_contagion_manager_save(long next_id, bool counter, EeContagionIoFfi io);
+/// `DestroyContagionHelper` (always true).
+///
+/// # Safety
+/// As the module's.
+bool ee_contagion_manager_destroy(EeContagionManager *m, long id);
+
+/// `GetContagionHelper` (null for none).
+///
+/// # Safety
+/// As the module's.
+EeContagionHelper *ee_contagion_manager_helper(const EeContagionManager *m, long id);
+
+/// The number of helpers.
+///
+/// # Safety
+/// As the module's.
+size_t ee_contagion_manager_count(const EeContagionManager *m);
+
+/// The helper at `i` of the list.
+///
+/// # Safety
+/// As the module's; `i` below the count.
+EeContagionHelper *ee_contagion_manager_at(const EeContagionManager *m, size_t i);
+
+/// `mNextHelperID`.
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_manager_next_id(const EeContagionManager *m);
+
+/// The loaded helper `i`'s calamity index (`mCalamityIndexes[i]`).
+///
+/// # Safety
+/// As the module's; `i` below the loaded count.
+unsigned long ee_contagion_manager_calamity_index(const EeContagionManager *m, size_t i);
+
+/// `GetOutOfSynchChecksum`.
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_manager_checksum(const EeContagionManager *m);
+
+/// `DumpOutOfSynch` to the file (a `FILE*`).
+///
+/// # Safety
+/// As the module's.
+void ee_contagion_manager_dump(const EeContagionManager *m, uint64_t file);
+
+/// `SwapUnit`.
+///
+/// # Safety
+/// As the module's.
+void ee_contagion_manager_swap_unit(EeContagionManager *m, uint64_t old, uint64_t new_);
+
+/// `Load` from the file (an `FSFile*`).
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_manager_load(EeContagionManager *m,
+                               uint64_t file,
+                               unsigned long major,
+                               unsigned long minor,
+                               bool counter);
+
+/// `Save` to the file (an `FSFile*`).
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_manager_save(EeContagionManager *m, uint64_t file, bool counter);
+
+/// `RestorePointers` over the loaded calamities (`EECalamity*`, nulls for the deleted).
+///
+/// # Safety
+/// As the module's; `calamities` valid for `count` reads.
+long ee_contagion_manager_restore(EeContagionManager *m, const uint64_t *calamities, size_t count);
+
+/// `AddUnit`.
+///
+/// # Safety
+/// As the module's.
+bool ee_contagion_helper_add_unit(EeContagionHelper *h, uint64_t unit, bool notify);
+
+/// `Update`: the functor's getters, the immunity flag of the calamity's class.
+///
+/// # Safety
+/// As the module's.
+void ee_contagion_helper_update(EeContagionHelper *h, bool blocked_by_immunity, float elapsed);
+
+/// The helper's numbers.
+///
+/// # Safety
+/// As the module's.
+EeContagionHelperFields ee_contagion_helper_fields(const EeContagionHelper *h);
+
+/// `mCalamity`.
+///
+/// # Safety
+/// As the module's.
+uint64_t ee_contagion_helper_calamity(const EeContagionHelper *h);
+
+/// `mUnits.size()` (`ids`: `mUnitIDs.size()`).
+///
+/// # Safety
+/// As the module's.
+size_t ee_contagion_helper_count(const EeContagionHelper *h, bool ids);
+
+/// `mUnits[i]` (`ids`: `mUnitIDs[i]`).
+///
+/// # Safety
+/// As the module's; `i` below the count.
+uint64_t ee_contagion_helper_unit(const EeContagionHelper *h, bool ids, size_t i);
+
+/// `GetOutOfSynchChecksum`.
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_helper_checksum(const EeContagionHelper *h);
+
+/// `Save` to the file (an `FSFile*`).
+///
+/// # Safety
+/// As the module's.
+long ee_contagion_helper_save(EeContagionHelper *h, uint64_t file);
+
+/// A fresh helper's `Load` from the file (TEST ONLY: the capture's old-layout reload): its numbers and the count
+/// of unit ids it read into `*fields` and `*ids`; the result.
+///
+/// # Safety
+/// As the module's; `fields`, `ids` valid for writes.
+long ee_contagion_helper_load_probe(uint64_t file,
+                                    unsigned long major,
+                                    unsigned long minor,
+                                    EeContagionHelperFields *fields,
+                                    size_t *ids);
+
+/// Every helper deleted (TEST ONLY: the capture's reloaded copy, whose helpers hold no units).
+///
+/// # Safety
+/// As the module's.
+void ee_contagion_manager_delete_helpers(EeContagionManager *m);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///
@@ -2733,15 +2864,6 @@ EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, 
 /// # Safety
 /// `unit` must be valid for reads.
 uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
-
-/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
-///
-/// # Safety
-/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
-void ee_contagion_update(const EeContagionParams *params,
-                         EeContagionState *state,
-                         float elapsed,
-                         const EeContagionHostFfi *host);
 
 /// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
 EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);

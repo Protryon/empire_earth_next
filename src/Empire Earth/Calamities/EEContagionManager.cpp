@@ -1,10 +1,12 @@
 // C:\EEX\Empire Earth\Calamities\EEContagionManager.cpp (file name inferred: no __FILE__; the class name). The world's
 // contagion helpers: 0xb662f..0xb6bd1 (the three save keys' init chains first, then EEContagionFunctor::CanInfect);
 // with the six contagion functors as one (ee/EEContagionFunctor.h; their units EE*Functor.cpp are gone).
-// Unit flags: the exe's module set. The unit closes with its template COMDATs: vector<EEContagionHelper*>::push_back
-// (0xb6b74) and DeleteVectorContents<vector<EEContagionHelper*> > (0xb6ba0).
+// Unit flags: the exe's module set. The manager and its helpers are Rust's (ee/EEContagionManager.h); here are the
+// functors and the world under the Rust (ee_contagion_world).
 #include <windows.h>
 #include <stdio.h>
+#include <string.h>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE3DPoint.h"
@@ -21,7 +23,6 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
@@ -31,6 +32,8 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPlayer.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
@@ -233,148 +236,140 @@ bool EEUnitSetManager::Contains(long inUnitType, unsigned long inSet)
     return false;
 }
 
-// Creates the contagion manager with no helpers
-EEContagionManager::EEContagionManager()
-{
-    this->mNextHelperID = 0;
-}
-
-// Destroys the contagion manager (members only; the helpers are not deleted)
-EEContagionManager::~EEContagionManager()
-{
-}
-
-// Creates a helper for the calamity with the next id, infecting the target unit if given; returns the id
-long EEContagionManager::CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity,
-                                               EEUnit* inTargetUnit)
-{
-    EEContagionHelper* theHelper = NULL;
-    theHelper = new EEContagionHelper(inFunctor, inCalamity);
-    this->mNextHelperID++;
-    long theHelperID = this->mNextHelperID;
-    theHelper->SetHelperID(theHelperID);
-    if (inTargetUnit != NULL)
-        theHelper->AddUnit(inTargetUnit, true);
-    this->mHelpers.push_back(theHelper);
-    return theHelperID;
-}
-
-// Deletes the helper with the id; does nothing while a loaded game awaits its pointers; always returns true
-bool EEContagionManager::DestroyContagionHelper(long inHelperID)
-{
-    if (this->mCalamityIndexes.size() != 0)
-        return true;
-    for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin();
-         theIterator != this->mHelpers.end(); ++theIterator) {
-        EEContagionHelper* theHelper = *theIterator;
-        if (theHelper->mHelperID != inHelperID)
-            continue;
-        delete theHelper;
-        this->mHelpers.erase(theIterator);
-        break;
-    }
-    return true;
-}
-
-// Writes every helper and the next helper id to the out-of-sync dump
-void EEContagionManager::DumpOutOfSynch(FILE* inFile)
-{
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Manager Dump\n");
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Manager Help list size %zu\n", this->mHelpers.size());
-    for (unsigned long i = 0; i < this->mHelpers.size(); i++) {
-        EEContagionHelper*& theHelper = this->mHelpers[i];
-        theHelper->DumpOutOfSynch(inFile);
-    }
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEContagionManager-Unique Number is %ld\n", this->mNextHelperID);
-}
-
-// Returns the calamity at the index in the list, NULL if out of range
-EECalamity* EEContagionManager::GetCalamity(std::vector<EECalamity*>& inCalamities, unsigned long inIndex)
-{
-    EECalamity* theCalamity = NULL;
-    if (inIndex < inCalamities.size())
-        theCalamity = inCalamities[inIndex];
-    return theCalamity;
-}
-
-// Returns the sum of the helpers' sync checksums plus the last helper id
-long EEContagionManager::GetOutOfSynchChecksum()
-{
-    long theChecksum = 0;
-    for (unsigned long i = 0; i < this->mHelpers.size(); i++) {
-        EEContagionHelper*& theHelper = this->mHelpers[i];
-        theChecksum += theHelper->GetOutOfSynchChecksum();
-    }
-    return this->mNextHelperID + theChecksum;
-}
-
-// Returns the helper with the id, NULL if none
-EEContagionHelper* EEContagionManager::GetContagionHelper(long inHelperID)
-{
-    EEContagionHelper* theHelper = NULL;
-    for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin(); theIterator != this->mHelpers.end();
-         ++theIterator)
-        if ((*theIterator)->mHelperID == inHelperID) {
-            theHelper = *theIterator;
-            break;
-        }
-    return theHelper;
-}
-
-// Deletes the helpers and reads them from a saved game with their calamity indexes; returns the first read error
-// (a helper's own load result is ignored). Port (0.273, ee/EESaveGameFiles.h EESaveHasContagionCounter): the running
-// game's last helper id, which RestorePointers goes on from; an older save goes on from its highest helper's id as
-// the original did (ee_tech contagion_save.rs manager_load)
+// Reads the helpers and their calamity indexes from a saved game (the last helper id from 0.273 on: ee/
+// EESaveGameFiles.h EESaveHasContagionCounter); the first read error (contagion_store.rs EeContagionManager::load)
 long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEContagionIo theIo = {&inFile, NULL, this, inMajorVersion, inMinorVersion};
-    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
-    return ee_contagion_manager_load(&this->mNextHelperID, EESaveHasContagionCounter(inMajorVersion, inMinorVersion),
-                                     theFfi);
+    return ee_contagion_manager_load(this->mRust, (uint64_t)(uintptr_t)&inFile, inMajorVersion, inMinorVersion,
+                                     EESaveHasContagionCounter(inMajorVersion, inMinorVersion));
 }
 
-// Reconnects each loaded helper to its calamity and functor and its units, deletes helpers without a calamity, and
-// resumes ids after the highest
-long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
-{
-    std::vector<long> theDeadHelpers;
-    // port (0.273): from the saved last helper id (Load: 0 for an older save, where the original started from 0)
-    std::vector<unsigned long>::iterator theIndex = this->mCalamityIndexes.begin();
-    for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin(); theIterator != this->mHelpers.end();
-         ++theIterator, ++theIndex) {
-        EECalamity* theCalamity = this->GetCalamity(inCalamities, *theIndex);
-        if (theCalamity != NULL) {
-            (*theIterator)->SetCalamity(theCalamity);
-            (*theIterator)->SetFunctor(theCalamity->mClass->GetContagionFunctor());
-            (*theIterator)->RestorePointers();
-            long theHelperID = (*theIterator)->mHelperID;
-            this->mNextHelperID = max(this->mNextHelperID, theHelperID);
-        } else {
-            long theHelperID = (*theIterator)->mHelperID;
-            theDeadHelpers.push_back(theHelperID);
-        }
-    }
-    this->mCalamityIndexes.clear();
-    for (unsigned long i = 0; i < theDeadHelpers.size(); i++)
-        this->DestroyContagionHelper(theDeadHelpers[i]);
-    return kErrorOK;
-}
-
-// Writes each helper with its calamity's index to the saved game; returns 9 if a calamity is not active, else the
-// first write error; the last helper id from 0.273 on (ee_tech contagion_save.rs manager_save)
+// Writes each helper with its calamity's index; 9 if a calamity is not active, else the first write error
 long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEContagionIo theIo = {&outFile, NULL, this, inMajorVersion, inMinorVersion};
-    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
-    return ee_contagion_manager_save(this->mNextHelperID, EESaveHasContagionCounter(inMajorVersion, inMinorVersion),
-                                     theFfi);
+    return ee_contagion_manager_save(this->mRust, (uint64_t)(uintptr_t)&outFile,
+                                     EESaveHasContagionCounter(inMajorVersion, inMinorVersion));
 }
 
-// Replaces the old unit by the new one in every helper
-void EEContagionManager::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
+long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
 {
-    for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin(); theIterator != this->mHelpers.end();
-         ++theIterator)
-        (*theIterator)->SwapUnit(inOldUnit, inNewUnit);
+    std::vector<uint64_t> theCalamities;
+    for (EECalamity* theCalamity : inCalamities)
+        theCalamities.push_back((uint64_t)(uintptr_t)theCalamity);
+    return ee_contagion_manager_restore(this->mRust, theCalamities.data(), theCalamities.size());
 }
 
+bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify)
+{
+    return ee_contagion_helper_add_unit(inHelper, (uint64_t)(uintptr_t)inUnit, inNotify);
+}
+
+void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime)
+{
+    EECalamity* theCalamity = reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
+    ee_contagion_helper_update(inHelper, theCalamity->mClass->mIsBlockedByImmunity, inElapsedTime);
+}
+
+namespace {
+
+template<class T> T* Object(uint64_t inHandle) { return reinterpret_cast<T*>((uintptr_t)inHandle); }
+
+uint32_t FloatBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+}   // namespace
+
+// New (port): the world under the Rust contagion manager and helpers (contagion_store.rs EE_CONTAGION_WORLD_*): each
+// case the original helper's or manager's statement on the units, functors and calamities by address
+extern "C" int64_t ee_contagion_world(uint32_t inOp, uint64_t inA, uint64_t inB, uint64_t inC, float inX, void* ioValue)
+{
+    switch (inOp) {
+    case EE_CONTAGION_WORLD_REFERENCE:
+        if (inB != 0)
+            Object<EEUnit>(inA)->Reference();
+        else
+            Object<EEUnit>(inA)->Dereference();
+        return 0;
+    case EE_CONTAGION_WORLD_MARK: {
+        EEComplexUnit* theUnit = Object<EEUnit>(inA)->mComplexUnit;
+        unsigned long theFlags = Object<EECalamity>(inB)->mClass->mClassFlags;
+        if (theUnit != NULL)
+            theUnit->mCalamityFlags = inC != 0 ? theUnit->mCalamityFlags | theFlags : theUnit->mCalamityFlags & ~theFlags;
+        return 0;
+    }
+    case EE_CONTAGION_WORLD_INFECT: Object<EEContagionFunctor>(inA)->Infect(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
+    case EE_CONTAGION_WORLD_CURE: Object<EEContagionFunctor>(inA)->Cure(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
+    case EE_CONTAGION_WORLD_APPLY:
+        Object<EEContagionFunctor>(inA)->Apply(Object<EEUnit>(inB), inX, Object<EECalamity>(inC));
+        return 0;
+    case EE_CONTAGION_WORLD_FUNCTOR_UPDATE: Object<EEContagionFunctor>(inA)->Update(inX, Object<EECalamity>(inC)); return 0;
+    case EE_CONTAGION_WORLD_NEAR: {
+        // GetUnitsInArea: the square of the radius around the unit, unless it is inside a carrier
+        EEComplexUnit* theUnit = Object<EEComplexUnit>(inA);
+        GE3DPoint thePosition;
+        theUnit->GetPosition(thePosition);
+        if (theUnit->mContainer != NULL)
+            return 0;
+        EETileArea theArea;
+        theArea.mLeft = UMFloor(thePosition.GetX() - inX);
+        theArea.mTop = UMFloor(thePosition.GetY() - inX);
+        theArea.mRight = UMFloor(thePosition.GetX() + inX);
+        theArea.mBottom = UMFloor(thePosition.GetY() + inX);
+        std::vector<EEComplexUnit*> theUnits;
+        EEAnyUnit theFilter;
+        EEGetUnitsInRectangle(theArea, theUnits, theFilter, true);
+        for (EEComplexUnit* theNear : theUnits)
+            ee_contagion_unit_list_push(static_cast<EeContagionUnitList*>(ioValue), (uint64_t)(uintptr_t)theNear);
+        return 0;
+    }
+    case EE_CONTAGION_WORLD_CAN_INFECT: {
+        EEUnit* theUnit = Object<EEUnit>(inB);
+        return Object<EEContagionFunctor>(inA)->CanInfectType(theUnit->mUnitClass->GetCategory(), theUnit->mUnitClass->GetUnitType());
+    }
+    case EE_CONTAGION_WORLD_IMMUNE: {
+        EEUnit* theUnit = Object<EEUnit>(inA);
+        EEGraphicEffect* theEffect = NULL;
+        if (!theUnit->mComplexUnit->GetEffect(3, theEffect))
+            return 0;
+        EECalamityCaptureContagionEvent(kContagionNew, theUnit->mUnitID, 2);   // CONT (TEST ONLY)
+        if (theEffect != NULL)
+            gEffectManager->CreateUnitEffect(theUnit->mComplexUnit, theEffect, NULL, 0, 0, 0);
+        return 1;
+    }
+    case EE_CONTAGION_WORLD_RANDOM: return FloatBits(gPhysics->mRandom.Generate());
+    case EE_CONTAGION_WORLD_DISTANCE:
+        return FloatBits(Object<EEComplexUnit>(inA)->mPhysicalModel.GetLocation().DistanceSquaredTo(
+            Object<EEComplexUnit>(inB)->mPhysicalModel.GetLocation()));
+    case EE_CONTAGION_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((unsigned long)inA);
+    case EE_CONTAGION_WORLD_CALAMITY_CHECKSUM: return Object<EECalamity>(inA)->GetOutOfSynchChecksum();
+    case EE_CONTAGION_WORLD_CALAMITY_INDEX: {
+        long theIndex = 0;
+        return EECalamityManager::GetInstance()->GetCalamityIndex(Object<EECalamity>(inA), theIndex) ? theIndex : -1;
+    }
+    case EE_CONTAGION_WORLD_CALAMITY_FUNCTOR:
+        return (int64_t)(uintptr_t)Object<EECalamity>(inA)->mClass->GetContagionFunctor();
+    case EE_CONTAGION_WORLD_CALAMITY_DUMP: Object<EECalamity>(inA)->DumpOutOfSynch(Object<FILE>(inB)); return 0;
+    case EE_CONTAGION_WORLD_TEXT: fputs(static_cast<const char*>(ioValue), Object<FILE>(inB)); return 0;
+    case EE_CONTAGION_WORLD_FILE: {
+        FSFile& theFile = *Object<FSFile>(inB);
+        switch (inA) {
+        case EE_CONTAGION_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
+        case EE_CONTAGION_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
+        case EE_CONTAGION_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
+        case EE_CONTAGION_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
+        case EE_CONTAGION_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
+        case EE_CONTAGION_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
+        }
+        return kErrorFailed;
+    }
+    case EE_CONTAGION_WORLD_CAPTURE:   // CONT (TEST ONLY)
+        EECalamityCaptureContagionEvent((int32_t)inA, (int32_t)inB, (int32_t)inC, inX, *static_cast<float*>(ioValue));
+        return 0;
+    }
+    ESVERIFY_AT(false, 1);
+    return 0;
+}

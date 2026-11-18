@@ -17,6 +17,7 @@
 //! - [`calamity_start`]: every calamity class's `Start` and `Stop` over the same host.
 //! - [`contagion_save`]: the contagion helpers' and their manager's `Load`, `Save` and checksum.
 //! - [`contagion`]: the contagion helpers' update and spread over a host, the functors' damage arithmetic.
+//! - [`contagion_store`]: the contagion manager and its helpers whole (their lists, units, update, saves, dumps).
 //! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
 //! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
 //!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
@@ -46,6 +47,8 @@ pub mod civilization;
 pub mod contagion;
 pub mod contagion_functor;
 pub mod contagion_save;
+pub mod contagion_store;
+pub mod contagion_store_ffi;
 pub mod effects;
 pub mod ffi;
 pub mod nodes;

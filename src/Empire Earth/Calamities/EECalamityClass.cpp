@@ -19,7 +19,6 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEMedia.h"

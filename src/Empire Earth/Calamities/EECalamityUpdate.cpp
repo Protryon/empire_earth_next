@@ -35,7 +35,6 @@
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEMap.h"
@@ -218,16 +217,16 @@ void ApplyEffect(EECalamityClass* inClass, EECalamity* inCalamity)
                 if (theEffect != NULL)
                     gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
             } else
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         } else if (inCalamity->GetCasterUnit() != NULL) {
             EEPlayer* theCasterPlayer = inCalamity->mCasterUnit->mPlayer;
             if ((theUnit->GetPlayer() != theCasterPlayer && theCasterPlayer->mEnemies[theUnit->GetPlayer()->mPlayerID] != 0) ||
                 inClass->mClassEnum == kCalamityAEMindControl)
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         } else {
             EEPlayer* theGaia = ::gWorld.mPlayers[0];
             if (theUnit->GetPlayer() != theGaia && theGaia->mEnemies[theUnit->GetPlayer()->mPlayerID] != 0)
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         }
     }
 }
