@@ -168,10 +168,14 @@ fn v2(a: i32, b: i32) -> [i64; 5] {
 
 impl CzHost for Game {
     fn unit(&mut self, u: u64) -> EeUnitsCzUnit {
-        self.run(EE_UNITS_CZ_UNIT, u, 0, [0; 5], &[]).1.unit
+        // SAFETY: the host's unit is live
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::UnitView::of(&t, u) }.map_or_else(EeUnitsCzUnit::default, |v| cz_unit_fields(&v))
     }
     fn class_tile_size(&mut self, unit_type: i32) -> i32 {
-        self.q(EE_UNITS_CZ_CLASS_TILE_SIZE, 0, 0, v2(unit_type, 0)) as i32
+        // SAFETY: as above (`gUnitClassTable[type]`, a listed class)
+        let t = unsafe { crate::world::WorldRead::begin() };
+        crate::world::view::ClassView::by_index(&t, unit_type as usize).map_or(0, |c| c.tile_size() as i32)
     }
     fn map_size(&mut self) -> (u32, u32) {
         let io = self.run(EE_UNITS_CZ_MAP_SIZE, 0, 0, [0; 5], &[]).1;
@@ -203,16 +207,28 @@ impl CzHost for Game {
         self.q(EE_UNITS_CZ_BLOCK_TAKES, u, 0, [unit_type as i64, x as i64, y as i64, size as i64, 0]) != 0
     }
     fn tile(&mut self, x: i32, y: i32) -> u64 {
-        self.q(EE_UNITS_CZ_TILE, 0, 0, v2(x, y)) as u64
+        // SAFETY: as above
+        let t = unsafe { crate::world::WorldRead::begin() };
+        crate::world::WorldView::global(&t)
+            .and_then(|w| w.map())
+            .and_then(|m| m.tile(i64::from(x), i64::from(y)))
+            .map_or(0, |v| v.handle())
     }
     fn tile_units(&mut self, tile: u64) -> Vec<u64> {
-        self.run(EE_UNITS_CZ_TILE_UNITS, tile, 0, [0; 5], &[]).2.units
+        // SAFETY: as above; the tile handle is a live tile
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::TileView::of(&t, tile) }
+            .map_or_else(Vec::new, |v| v.units().map(|u| u.map_or(0, |u| u.handle())).collect())
     }
     fn tile_terrain(&mut self, tile: u64) -> i32 {
-        self.q(EE_UNITS_CZ_TERRAIN, tile, 0, [0; 5]) as i32
+        // SAFETY: as above
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::TileView::of(&t, tile) }.map_or(0, |v| v.terrain_type() as i32)
     }
     fn tile_height(&mut self, tile: u64) -> f32 {
-        self.f(EE_UNITS_CZ_HEIGHT, tile, 0, [0.0; 3])
+        // SAFETY: as above
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::TileView::of(&t, tile) }.map_or(0.0, |v| v.height())
     }
     fn can_gather(&mut self, u: u64, target: u64, x: i32, y: i32) -> bool {
         self.q(EE_UNITS_CZ_CAN_GATHER, u, target, v2(x, y)) != 0
@@ -260,7 +276,10 @@ impl CzHost for Game {
         self.f(EE_UNITS_CZ_DISTANCE_TO, a, b, [0.0; 3])
     }
     fn player_units(&mut self, player: u64) -> Vec<u64> {
-        self.run(EE_UNITS_CZ_PLAYER_UNITS, player, 0, [0; 5], &[]).2.units
+        // SAFETY: as above; the player handle is a live player
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::PlayerView::of(&t, player) }
+            .map_or_else(Vec::new, |p| p.units().map(|u| u.handle()).collect())
     }
 }
 
@@ -337,4 +356,39 @@ pub unsafe extern "C" fn ee_units_cz_find_gather_point(
 #[no_mangle]
 pub extern "C" fn ee_units_cz_has_gather_point(unit: u64, resource: u64) -> u8 {
     citizen::has_gather_point(&mut Game, unit, resource) as u8
+}
+
+/// The citizen bodies' reads of a unit (`EE_UNITS_CZ_UNIT`, once a C++ fill) over the views: the unit's, its
+/// complex unit's (`mComplexUnit`) and its class's.
+// (`c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there)
+#[allow(clippy::unnecessary_cast)]
+fn cz_unit_fields(u: &crate::world::UnitView) -> EeUnitsCzUnit {
+    let class = u.class();
+    let x = u.complex_unit();
+    let (tx, ty) = u.tile_xy();
+    let mut o = EeUnitsCzUnit {
+        obj: u.handle(),
+        class_obj: class.map_or(0, |c| c.handle()),
+        complex: u.complex_unit_handle(),
+        player: u.player().map_or(0, |p| p.handle()),
+        goal_state: x.map_or(0, |x| x.goal_handle()),
+        goal_kind: x.and_then(|x| x.goal()).map_or(-1, |g| i32::from(g.0)),
+        tile_x: tx as i32,
+        tile_y: ty as i32,
+        hit_points: u.hit_points() as i32,
+        resource_type: u.resource_type() as u32,
+        on_map: u8::from(u.has_tile_node()),
+        disabled: u8::from(x.is_some_and(|x| crate::world_field!(x.complex(), mIsDisabled))),
+        built: u8::from(x.is_some_and(|x| x.is_built())),
+        foundation: u8::from(x.is_some_and(|x| crate::world_field!(x.complex(), mIsFoundation))),
+        ..EeUnitsCzUnit::default()
+    };
+    if let Some(c) = class {
+        o.category = c.category() as u32;
+        o.unit_type = c.unit_type() as u32;
+        o.family = c.family() as u32;
+        o.tile_size = c.tile_size() as i32;
+        o.drop_site = u8::from(crate::units::rust_goal::class_drop_site(&c));
+    }
+    o
 }

@@ -586,49 +586,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_SET_VALUES:
         memcpy(&theGroup->mSpeed, io->list, 17 * sizeof(float));   // mSpeed .. mCapFactor, in their order
         return 0;
-    case EE_UNITS_AG_UNIT: {
-        EEUnit* u = (EEUnit*)(uintptr_t)inA;
-        EeUnitsAgUnit& o = io->unit;
-        EEUnitClass* c = u->mUnitClass;
-        o.obj = inA;
-        o.class_obj = EEObj(c);
-        o.complex = EEObj(u->mComplexUnit);
-        o.player = EEObj(u->mPlayer);
-        o.tile_x = (int32_t)u->GetTileX();
-        o.tile_y = (int32_t)u->GetTileY();
-        o.hit_points = (int32_t)u->mHitPoints;
-        o.resource_amount = (int32_t)u->mResourceAmount;
-        o.resource_type = (uint32_t)u->mResourceType;
-        o.is_valid = u->mIsValid;
-        o.tile_height = u->mTile != NULL ? u->mTile->GetHeight() : 0.0f;
-        if (EEComplexUnit* x = u->mComplexUnit) {
-            const GE3DPoint& l = x->mPhysicalModel.GetLocation();
-            o.goal_state = EEObj(x->mGoalState);
-            o.container = EEObj(x->mContainer);
-            o.power = (int32_t)x->mPower;
-            o.formation_slot = (uint32_t)x->mFormationSlot;
-            o.velocity = x->mVelocity;
-            o.location[0] = l.mX; o.location[1] = l.mY; o.location[2] = l.mZ;
-            o.commandable = x->mIsCommandable;
-            o.is_built = x->mIsBuilt;
-            o.detached = x->mIsDetachedFromAI;
-        }
-        if (c != NULL) {
-            o.category = (uint32_t)c->mCategory; o.unit_type = (uint32_t)c->mUnitType;
-            o.ai_kind = (uint32_t)c->mAIKind; o.family = (uint32_t)c->mFamily;
-            o.tile_size = (int32_t)c->mTileSize; o.air_traffic_type = (int32_t)c->mAirTrafficType;
-            o.class_max_velocity = c->mMaxVelocity; o.inner_sphere = c->GetInnerCollisionSphere();
-            o.can_attack_ground = c->mCanAttackGround; o.paratrooper_bomber = c->mIsParatrooperBomber;
-            o.can_patrol = c->mCanPatrol; o.has_special_attack = c->mHasSpecialAttack;
-            o.is_priest = c->IsPriest(); o.is_crusader = c->IsCrusader(); o.is_transport = c->IsTransport();
-        }
-        if (EEUnitClassUpgrade* s = u->mStats) {
-            o.max_velocity = s->GetMaxVelocity(); o.acceleration = s->GetAcceleration();
-            o.max_angular_velocity = s->GetMaxAngularVelocity(); o.angular_acceleration = s->mAngularAcceleration;
-            o.range = s->GetRange(); o.line_of_sight = s->GetLineOfSight(); o.attack = s->mAttack;
-        }
-        return 0;
-    }
+    // (EE_UNITS_AG_UNIT's reads are Rust's views: ag_host.rs ag_unit_fields)
     case EE_UNITS_AG_QUEUED_GOAL:
         return EEObj(theUnit->GetQueuedGoal((unsigned long)inC));
     case EE_UNITS_AG_CLEAR_QUEUE:
