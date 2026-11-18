@@ -72,7 +72,6 @@ public:
         { size_t theCount; return reinterpret_cast<const U2DPoint<long>*>(ee_astar_area_hull_points(this, &theCount)); }
     const U2DPoint<long>& GetHullPoint(long inIndex) const { return this->GetHullPointData()[inIndex]; }
     std::vector<U2DPoint<long> > GetHullPoints() const;   // a copy
-    U2DPoint<long> GetHullClosestPoint(const U2DPoint<long>& inPoint);   // the nearest vertex (HULL 4)
     U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint);   // (HULL 2)
     void SetHullPoints(const std::vector<U2DPoint<long> >& inPoints);   // SetPoints(points, false) (HULL 1)
     void ClearHull() { ee_astar_area_clear_hull(this); }

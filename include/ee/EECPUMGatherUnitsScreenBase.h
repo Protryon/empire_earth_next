@@ -32,11 +32,11 @@ public:
     }
     virtual ~EECPUMGatherUnitsScreenBase() {}   // +0x00 (??_G 0x7895f: the derived gatherers' implicit dtors fold into it)
     // +0x04 0x2b1c1 (ret 8): a pending request of inClass: mRequested += its count
-    virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest);
+    virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest) = 0;
     // +0x08 0x2b1da (ret 4): one unit: mUnits++
-    virtual bool CountUnit(EEComplexUnit* inUnit);
+    virtual bool CountUnit(EEComplexUnit* inUnit) = 0;
     // +0x0c 0x2b1ec (ret 8): all units of inClass: mUnits += the deque's size
-    virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits);
+    virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits) = 0;
 
     // inline: units plus requests (EECPDefenseCommander::Fn78866 0x478866 adds them as `add edx, ecx` with mRequested
     // loaded first) (provisional name)
@@ -48,27 +48,6 @@ public:
     bool mByClass;                          // +0x0c (0x93ed4: walk the unit manager's class map)
     bool mRequests;                         // +0x0d (... then the requests and upgrades)
     bool mByUnit;                           // +0x0e (slot +0x08 per unit instead of +0x0c per class)
-};
-
-// RTTI EECPUGatherSpecialUnitsCount > EECPUMGatherUnitsScreenBase (vtable 0x43c144: slots 0x2b450/0x2b48b/0x2b4c2): the
-// units and requests of one unit type (or, when mUnitType is 0, of one category +0x1d0). EECPDefenseCommander builds
-// it on the stack (0x7b923, 0x7bc5b).
-class EECPUGatherSpecialUnitsCount : public EECPUMGatherUnitsScreenBase {
-public:
-    EECPUGatherSpecialUnitsCount(EEComputerPlayer* inPlayer, long inUnitType, long inCategory, bool inByClass = true)
-        : EECPUMGatherUnitsScreenBase(inByClass, true, false)
-    {
-        this->mPlayer = inPlayer;
-        this->mUnitType = inUnitType;
-        this->mCategory = inCategory;
-    }
-    virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest);   // +0x04 0x2b450
-    virtual bool CountUnit(EEComplexUnit* inUnit);   // +0x08 0x2b48b
-    virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits);   // +0x0c 0x2b4c2
-
-    EEComputerPlayer* mPlayer;              // +0x10
-    long mUnitType;                         // +0x14 (EEUnitClass +0x1bc)
-    long mCategory;                         // +0x18 (EEUnitClass +0x1d0)
 };
 
 // the unit manager's GatherUnits over the player's units (stage 6: no unit manager): by class (the player's units of each

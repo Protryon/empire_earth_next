@@ -116,12 +116,33 @@ static void EEAICaptureIDs(EESimCaptureRecord& ioRecord, const std::vector<T*>& 
         ioRecord.I32(inObjects[i] ? (int)inObjects[i]->GetID() : -1);
 }
 
+static void EEAIContinentFill(EESimCaptureRecord& theRecord);
+
 void EEAIContinentCapture(unsigned long inTag)
 {
     if (!EESimCaptureRecord::Active())
         return;
-    EEAIContinentManager& theManager = gContinentManager;
     EESimCaptureRecord theRecord((unsigned int)inTag);
+    EEAIContinentFill(theRecord);
+    theRecord.Commit();
+}
+
+unsigned long long EEAIContinentDigest()
+{
+    // (no regions yet: before the game's BuildRegions, the per-tile lookups have no sectors to divide by)
+    if (gContinentManager.mPathSectors.empty() || gContinentManager.mRegionInformation.mSectorSize == 0)
+        return 0;
+    EESimCaptureRecord theRecord(0);
+    EEAIContinentFill(theRecord);
+    unsigned long long theHash = 0xcbf29ce484222325ull;
+    for (size_t i = 0; i < theRecord.Data().size(); i++)
+        theHash = (theHash ^ theRecord.Data()[i]) * 0x100000001b3ull;
+    return theHash;
+}
+
+static void EEAIContinentFill(EESimCaptureRecord& theRecord)
+{
+    EEAIContinentManager& theManager = gContinentManager;
     size_t i;
     size_t j;
 
@@ -325,7 +346,6 @@ void EEAIContinentCapture(unsigned long inTag)
         theRecord.U32((unsigned int)theIt->first);
         theRecord.I32(theIt->second ? (int)theIt->second->GetAreaType() : -1);
     }
-    theRecord.Commit();
 }
 
 // The hulls' and the areas' geometry records (lle/U2DPolygon.h, kGeomCaptureHull / kGeomCaptureArea): one open record

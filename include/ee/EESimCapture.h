@@ -42,6 +42,7 @@ public:
         this->mData.insert(this->mData.end(), theBytes, theBytes + inSize);
     }
     void Commit();                          // appends the record to the capture file
+    const std::vector<unsigned char>& Data() const { return this->mData; }   // the payload so far
 
 private:
     unsigned int mTag;
