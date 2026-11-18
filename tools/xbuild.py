@@ -646,15 +646,11 @@ WON_TESTS = {
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
-    # ee_won's imgdec.rs now, R6 WON round 41)
+    # Rust now: ee_won_gui's imgdec.rs and ee_base's jpeg.rs, R6 WON round 41). won_jpeg_test, JPGDecoder's
+    # statements on libjpeg 6b against jpeg.rs, left with libjpeg (2026-11-17); its golden
+    # (rust/crates/ee_won_gui/src/golden_jpeg.txt) is replayed by cargo
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
-    # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
-    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won_gui/src/golden_jpeg.txt)
-    "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                      WON_SRC / "WONCommon" / "StringUtil.cpp",
-                      *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
-                        for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)

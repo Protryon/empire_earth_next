@@ -1,6 +1,6 @@
 //! imgdec (and ee_base's jpeg through JPGDecoder's FileReader path): unit tests and the replay of the driver's golden (`golden_jpeg.txt`, written by
-//! tests/won/won_jpeg_test.cpp `--golden`: libjpeg's own compressed pictures and their corruptions, in hex, with the
-//! original JPGDecoder's answers on libjpeg 6b).
+//! tests/won/won_jpeg_test.cpp `--golden`, retired with libjpeg on 2026-11-17: libjpeg's own compressed pictures and
+//! their corruptions, in hex, with the original JPGDecoder's answers on libjpeg 6b).
 use super::*;
 use crate::imgdec::{attributes as img_attributes, decode as img_decode, EeWonImgDec, EeWonImgKind};
 use ee_won_net::file::EeWonFileReader;

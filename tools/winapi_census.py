@@ -27,7 +27,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-THIRD_PARTY = ("src/ThirdParty/", "include/winsdk/", "include/jpeglib/", "include/miniaudio/", "include/pl_mpeg/")
+THIRD_PARTY = ("src/ThirdParty/", "include/winsdk/", "include/miniaudio/", "include/pl_mpeg/")
 EXTS = {".cpp", ".c", ".h"}
 
 # (family, exact names, name regex). A name matches the first family that lists it (order matters: specific first).

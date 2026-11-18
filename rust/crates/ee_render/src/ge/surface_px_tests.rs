@@ -1,5 +1,5 @@
 //! `surface_px.rs`'s tests: each loop against the original's formulas on 32-bit and 16-bit surfaces (the scratch
-//! golden over the unmodified GESurface.cpp runs the whole codecs through libjpeg; these pin the rows).
+//! golden over the unmodified GESurface.cpp ran the whole codecs through libjpeg, gone since; these pin the rows).
 
 use super::*;
 

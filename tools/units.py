@@ -11,11 +11,11 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
-# Every module is linked into the one exe (no DLLs): the game, the engine with libjpeg (the lobby's JPEG too), and the
+# Every module is linked into the one exe (no DLLs): the game, the engine, and the
 # plug-ins (TCP protocol, mixer, Default random maps, the DX7 T&L renderer), registered in PIMModule.cpp.
-MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "won", "exe"]
+MODULES = ["tcp", "mixer", "default", "lle", "dx7hrtnl", "won", "exe"]
 TARGETS = ["exe"]
-TARGET_MODULES = {"exe": ["exe", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
+TARGET_MODULES = {"exe": ["exe", "won", "lle", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, and new game units that have no address in the original (the db text loader, ...)

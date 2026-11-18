@@ -70,7 +70,7 @@ nothing to copy.
 ## What it builds
 
 One statically linked x86_64 `EE-AOC.exe` with the static C runtime. The original's DLLs are linked into it: the engine
-(`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
+(`Low-Level Engine.dll`, with the DCL), the TCP protocol, the mixer, the Default random map generator
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
 gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on the wgpu crate (in the
@@ -81,7 +81,7 @@ DLLs only.
 | Module | Was | Source |
 |---|---|---|
 | `exe` | `EE-AOC.exe` (game; its libpng and zlib are gone: PNG is ee_openformats' reader) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/lua` |
-| `lle`, `jpeg` | `Low-Level Engine.dll` (engine core, libjpeg, the DCL) | `src/Low-Level Engine/`, `src/ThirdParty/` |
+| `lle` | `Low-Level Engine.dll` (engine core, the DCL; its libjpeg is gone: JPEG is ee_base's decoder and the jpeg-encoder crate) | `src/Low-Level Engine/`, `src/ThirdParty/` |
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
 | `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer; now on wgpu) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
 | `tcp` | `TCP Protocol.dll` (network) | `src/Low-Level Engine/Network Engine/TCP Protocol/` |
