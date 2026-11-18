@@ -433,6 +433,8 @@ void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 
 static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
 
+// (the working text's and the drawing bitmap's members and the two draws are the Rust object's own: fbobj.rs
+// direct_op, on the 2D draw list)
 intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEText* theText = (GEText*)inObj;
@@ -442,17 +444,11 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     GETexture* theTexture = (GETexture*)inObj;
     GEScreen* theScreen = (GEScreen*)inObj;
     unsigned long* theLongs = (unsigned long*)a;
-    float* theFloats = (float*)a;
-    GETextureCoordinate* theCoordinates = (GETextureCoordinate*)a;
     switch (inOp) {
     case EeGeFbOp::TextNew:
         return (intptr_t)new GEText((GEFont*)inObj);
     case EeGeFbOp::TextDelete:
         delete theText;
-        return 0;
-    case EeGeFbOp::TextPrepare:
-        theText->SetFgColor(GEColor());
-        theText->SetIsTransparent(true);
         return 0;
     case EeGeFbOp::TextSetByte: {
         // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
@@ -465,19 +461,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         theText->SetText(theString);
         return 0;
     }
-    case EeGeFbOp::TextExtent:
-        theFloats[0] = theText->GetTextExtent().GetWidth();
-        theFloats[1] = theText->GetTextExtent().GetHeight();
-        return 0;
-    case EeGeFbOp::TextSetLocation:
-        theText->SetLocation(*(const GE2DPoint*)a);
-        return 0;
-    case EeGeFbOp::TextString:
-        return (intptr_t)(const char*)theText->GetText();
-    case EeGeFbOp::TextLocation:
-        return (intptr_t)&theText->GetLocation();
-    case EeGeFbOp::TextColor:
-        return (intptr_t)&theText->GetFgColor();
     case EeGeFbOp::TextOps:
         return (intptr_t)GERustTextOps();
     case EeGeFbOp::FontRange: {
@@ -498,47 +481,10 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::RasterSetBlending:
         theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
         return 0;
-    case EeGeFbOp::RasterDrawText:
-        return theRasterizer->Draw((GEText*)a, (GESurface*)b);
-    case EeGeFbOp::RasterDrawBitmap:
-        return theRasterizer->Draw((GEBitmap*)a, (unsigned long)b);
     case EeGeFbOp::BmpNew:
         return (intptr_t)new GEBitmap;
     case EeGeFbOp::BmpDereference:
         theBitmap->Dereference();
-        return 0;
-    case EeGeFbOp::BmpSetTexture:
-        theBitmap->SetTexture((GETexture*)a, (unsigned long)b);
-        return 0;
-    case EeGeFbOp::BmpStretch: {
-        const GERectangle* theRects = (const GERectangle*)a;
-        theBitmap->ComputeStretchedCoordsAndScale(theRects[0], theRects[0], theRects[1], (unsigned long)b);
-        return 0;
-    }
-    case EeGeFbOp::BmpUvsPerVertex: {
-        GETextureCoordinate theCoordinate;
-        theBitmap->GetTextureCoordinatesPerVertex(theCoordinates[0], theCoordinate, theCoordinate, theCoordinates[1]);
-        return 0;
-    }
-    case EeGeFbOp::BmpScales:
-        theFloats[0] = theBitmap->GetXScale();
-        theFloats[1] = theBitmap->GetYScale();
-        return 0;
-    case EeGeFbOp::BmpSetColor:
-        theBitmap->SetColor(*(const GEColor*)a);
-        return 0;
-    case EeGeFbOp::BmpSetUvs:
-        theBitmap->SetTextureCoordinates(theCoordinates[0], theCoordinates[1], theCoordinates[2], theCoordinates[3]);
-        return 0;
-    case EeGeFbOp::BmpSetXyScale: {
-        uint32_t theBits[2] = {(uint32_t)a, (uint32_t)b};
-        float theScales[2];
-        memcpy(theScales, theBits, sizeof(theScales));
-        theBitmap->SetXYScale(theScales[0], theScales[1]);
-        return 0;
-    }
-    case EeGeFbOp::BmpSetLocation:
-        theBitmap->SetLocation(*(const GE2DPoint*)a);
         return 0;
     case EeGeFbOp::TexSurface:
         return (intptr_t)theTexture->GetSurface();
