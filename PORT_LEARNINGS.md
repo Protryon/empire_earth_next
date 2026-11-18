@@ -31309,3 +31309,121 @@ The merge of origin/rust needed nothing (no conflict; strip_markers changed 0 fi
   post-game summary reads its records, which a tour does not open).
 - **Short of the target**: net -1,704 C++ against the 3,000 asked. The rest of the area is object wiring or test
   drivers made of UI calls (docs/progress/app-core.md "Measured, not moved").
+
+## R6 WONLobby, round 17: ChatCommandParser whole in Rust, the hosts' string and picture switches as resource rows (ee_won_lobby chatobj.rs, lobbydlg.rs / lobbypopup.rs / lobbyctl.rs string_row, rows.rs icon_res; branch rust-wonlobby17, 2026-11-18)
+
+Round 16's "Left" put the whole-class moves first (LobbyDialogHost.cpp, LanLogicHost.cpp, InitLogic.cpp,
+LobbyLogicHost.cpp, ChatCommandParser.cpp's client list and target), then RoutingLogic.cpp's host, the dialogs' rows,
+ChatLink's segment hook and the widget forwards, for 2,000 net lines. This round did the parser and the hosts'
+string and picture tables; the target was not reached (below: why, and what each remaining move needs).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| bd7a354bb | ChatCommandParser whole in Rust (below); ChatCommandParser.cpp deleted, the class inline forwards in WONLobbyParser.h | 35,271 -> 35,113 (-158) |
+| 1eb7b7ab9 | the dialogs', popups' and controls' strings as resource rows in the game: LobbyDialogHost.cpp's AdminString and PopupString and LobbyCtrlHost.cpp's CtlString gone; lobbydlg.rs's game mode | 35,113 -> 35,057 (-56) |
+| 4b691a901 | the controls' icon pictures as resource rows (rows.rs icon_res): LobbyCtrlHost.cpp's CtlImage gone | 35,057 -> 35,040 (-17) |
+
+Round total: WON C++ 35,271 -> 35,040 (-231); one unit deleted. The merge of origin/rust 173931330 (the app core
+round) touched no WON file: the same on the merged tree.
+
+### ChatCommandParser (chatobj.rs)
+
+- **Two reads in place.** A C++ `GUIStringData`'s text is its `EeWonGuiStrBuf` block at `2 * sizeof(void*)`
+  (guistrobj.rs `data_units`, `EE_WON_GSTR_DATA_AT`; GUIStringSingleton.cpp asserts the offset), so a Rust object
+  reads a model text (a client's name, `EeWonModelField::ClientName`) without a host op. The resource strings are
+  read the same way through the slot array: WONLobbyResourceGlobals.h binds `gLobbyResources` once with an inline
+  variable (`ee_won_lobbyres_bind(gLobbyResources, sizeof(LobbyResourceSlot))`), so wherever the array is defined (the
+  game's WONLobbyResource.cpp or a driver) resource.rs's `text(row)` answers. Both are new and general: any lobby
+  object can read a model text or a resource string in Rust from now on.
+- **The members.** The room's client list and the target client are model shells held in `Cell`s with one reference
+  each (modelobj.rs `assign`: `SmartPtr::operator=`'s order), released target first by `ee_won_chatparser_free` (the
+  original's reverse member order; not in `Drop`: the state is `Clone` for the goldens).
+- **The methods.** `SetClientList`, `FindClient` (the names from `ListCount` / `ListAt` / `ClientName`, chat.rs's
+  `find_client`), `HandleInput` (the target cleared, the parse, the chosen client held), `InitCommands` (the 24 rows,
+  `AddCommands` over each resource string), `AddCommands` (ffi_parse.rs's `read_wstring` / `check_next_char` over the
+  text to its first NUL, as `StringParser::ReadValue(std::list<std::wstring>&)` read it; no names, the built-in short
+  name), `GetHelp` (the client's moderator, room captain (room flags bit 1), game captain and admin answers, the
+  header and each help row with `<n>`). The C++ class is one-line forwards (WONLobbyParser.h); the getters' texts
+  come back as units.
+- **The drivers.** won_chat_test (its golden recorded over the C++ class) passes unchanged over the forwards (564
+  lines). The new won_chatparser_test runs ChatCommandParser.cpp's statements as they were (tests/won/
+  won_chatparser_orig.h, written by tools/won_chatparser_orig.py from 030204242) against the forwards, each over its
+  own world of real model shells (LobbyClientList, LobbyClient) built the same way: random command spellings and help
+  rows in the slots, random lists, then up to 40 steps of every method, list changes, renames, removals, the world's
+  references given back; after each step the whole state, the target's and the list's identity, every object freed
+  (in order) and every live object's reference count are compared. 3,000 sequences, 64,264 steps, 0 mismatches.
+  The first run found two driver faults (the world's AddClient drew its flag once per world; the original's
+  SmartPtrs take their references without the model host, so a trace of AddRef calls cannot be compared: counts are).
+- **Mutations** (build/r17/mutate_chat.py): 12 of 13 caught (the target not cleared, the names reversed, the room
+  flags not stored, no short name, the first name only, the shutdown commands skipped, the room captain from bit 0,
+  no break after the header, the list not released at the end, the match kind lost, the admin read as moderator, the
+  old list not released). Not caught: clearing the target again when the parse failed (equivalent: it was cleared
+  first).
+- **Behaviour changes.** None the game reaches. The help text is built whole and becomes one `GUIString` (the
+  original appended to one; both cap at 65,535 units only past any real help).
+- **What runs it.** The LAN game's chat panel and every lobby start (InitCommands): `lan_game.py`. The client names,
+  targets and help are the Internet lobby's (the drivers only).
+
+### The hosts' string and picture switches
+
+LobbyDialogHost.cpp's `AdminString` (the admin and status dialogs' nine lobby strings and the EE connect dialog's
+two), `PopupString` (the options menus' 25) and LobbyCtrlHost.cpp's `CtlString` (9) and `CtlImage` (10) mapped an
+enum to a resource global. In the game those objects now send the row: `string_row` in lobbydlg.rs, lobbypopup.rs
+and lobbyctl.rs, rows.rs's `icon_res` (already the game user rows' table), with new ops `LabelSetRes`,
+`ButtonSetRes`, `AdminTitleRes` (dialogs), `MenuAddRes` (popups), `IconSetRes` (controls; the controls' text ops
+reuse LobbyNetCtrlHost.cpp's `ButtonSetRes` / `LabelSetRes`). The translation happens only for an object the game
+made: lobbydlg.rs gained its game mode for this (`ee_won_lobbydlg_new_model`, `LobbyRustDialog`'s constructor), the
+popups and controls already had theirs; the drivers' objects send the old ops, so won_lobbydlg_test,
+won_lobbypopup_test, won_lobbyctl_test and their goldens are unchanged. The EE game's two dialog strings stay
+strings (`EeString`: `EELobbyResource_Named` has no slot array). `won_restext_test`: the four switches as they were
+against the rows for every value -5..60 (264 checks, 0 mismatches; 5 of 5 mutations caught: a swapped dialog row,
+a dropped one, a swapped popup row, a swapped control row and a swapped picture). won_host_coverage.py reads the
+translations (`game_op`, `game_string_op`, `game_image_op`) and the tables (a new "mentions in a Rust function"
+reading for `string_row` / `icon_res`) and checks the dialog and popup string enums too.
+
+### Why the whole-class moves did not happen, and what each needs
+
+Each remaining host's ops are C++ calls on objects the Rust cannot reach yet, not decisions:
+
+- **LobbyDialogHost.cpp's dialog host** (~120 ops): half are one-line forwards to WONGUI Rust objects (InputBox,
+  Label, ComboBox, ListArea, Button, Dialog: `ee_won_*_call(this->mRust, ...)`) reachable once a registry maps a C++
+  widget to its Rust object (each `ee_won_*_new(component, host)` gets the C++ pointer: register there, unregister in
+  `_free`); Component's calls already take the C++ pointer (compobj.rs `comp()`, the virtuals through
+  ComponentLifetime.cpp's host). The other half touch C++ members (Label's `WrappedText`, fonts, `mInputFilter`,
+  WONFrame borders, the bad user rows' records, `PlatFind`, `LobbyDoDialog`, the EE game's load) and need a shared
+  WONGUI host for widget members, the rows (below) and the dialog logic's calls.
+- **The dialogs' rows**: BadUserItem (a `ListItem` with a multi-list column paint and sort), ConnectListItem (a
+  `TextListItem` and a slot: the LAN game's connect dialog) and NetworkAdapterListItem (a `MultiListItem`: needs a
+  third shell, `RustMultiRow`) as rows.rs kinds; lobbydlg.rs's game mode (this round) is where their ops will be
+  answered.
+- **LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp**: their ops make and deliver C++ events
+  (`LobbyBroadcastEvent(new ...Event)`), run C++ ops on C++ sockets and servers, and call the lobby's C++ free
+  functions (LobbyNet*, LobbyRunOpWithStatus); the events are the blocker shared by all three and RoutingLogic.cpp:
+  the event classes (LobbyEvents.cpp, LobbyEventHooks.cpp) need a Rust form first.
+
+### Gates (the round's head merged with origin/rust 173931330)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (merged tree) |
+| `rust_build.py gate` | PASS, 4,601 tests (merged tree; the first commit's run failed rustfmt only, fixed in it) |
+| `won_host_coverage.py` | PASS (the translations and tables read; the dialog and popup string enums checked too) |
+| `xbuild.py wontest` | all 152 programs exit 0 under the 2 GB cap (peak 558 MB, won_cfgtab_test); won_chatparser_test and won_restext_test the new ones; won_chat_test's golden unchanged |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2793 joiner=2798` (the round's start exe, a test-profile build of 030204242: 2758 / 2753) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121, as in rounds 15 and 16) |
+
+The merge of origin/rust 173931330 needed nothing (no conflict; strip_markers changed 0 files; the headers were
+current).
+
+### Left
+
+- The widget registry and a shared WONGUI host for the widgets' C++ members (the ~260 repeated lines), then
+  LobbyDialogHost.cpp's dialog host answered in lobbydlg.rs's game mode and the popup host in lobbypopup.rs's.
+- The dialogs' rows (BadUserItem, ConnectListItem, NetworkAdapterListItem with a `RustMultiRow` shell) and the filter
+  combo's FilterListItem as rows.rs kinds; ChatLink's segment hook.
+- The lobby's events in Rust (the shared blocker), then LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp and
+  RoutingLogic.cpp's remaining cases.
