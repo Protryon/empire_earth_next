@@ -29924,3 +29924,61 @@ the resource centres' world queries.
 - **Results.** EECPNextUnits.cpp 4,792 -> 2,504 lines (with the host, about 390 lines); 57 of the 90 bindings in
   Rust; the binding golden identical in all 15 games after each of the three moves, and a mutation (a record's
   `sight` read from the range) caught at the first `ai.unit` call; both builds 0/0; the Rust gate PASS.
+
+## AI lane B, round 2: PLCE, EECPPlacement whole and EECPResourceCenter's bodies in Rust (ee_sim::cp placement, resource_center; branch rust-ai-cp1, 2026-11-17)
+
+- **The golden first, committed.** PLCE (ee/EECPPlaceCapture.h) records every outermost call into the placement, a
+  resource centre or their free functions: the method, the player, the inputs and the outputs, with the state the
+  state-changing calls leave. The entry points became recording wrappers on the unmodified C++ (each body wrapped in
+  a lambda by a script, so the body itself stayed byte for byte), the goldens were taken from that build, and the
+  move kept the scopes in the forwarders, so the digests compare the same outermost calls.
+- **Lesson: run the unmodified build twice before trusting a new tag.** The first PLCE digests differed between two
+  runs of the same build while every other tag agreed. Two causes, both in the record, not the game: out tiles were
+  recorded on the way in (the callers' uninitialized locals), and `EECPResourceCenter::mIsActive` is not set by the
+  constructor (a new centre's flag is garbage until its first `SetActive`; the game never reads it before). The
+  record now takes a found tile only when the call found one, GetCenter's only when there was something to measure,
+  and the active flag only where it is set (SetActive's argument, Load's read).
+- **Lesson: the gates' AI does not reach the code.** In the oracle, late, space and calamity games the computer
+  players run classic_lua, which places through `ai.find_site` (lane A's binding), not `ai.place`: PLCE held only
+  the centres' bookkeeping, no FindSite, CanBuildAt or finder. sim_capture got `--profile placement`: the oracle's
+  game with the boom and Age of AI scripts (`--engine boom,ageofai`), whose verbs place through `ai.place`
+  (`EECPNextPlaceSearch`: 313 and 48 outermost calls at seeds 2 and 3, every finder and thousands of CanBuildAt
+  under them). Its golden file lists only PLCE.
+- **The world through one host per module, the reads exact.** `PlaceHost` (place_host.rs) is the world both
+  modules ask; the game's implementation (place_game.rs) calls `ee_cp_place_host` (EECPPlacement.cpp) and
+  `ee_cp_center_host` (EECPResourceCenter.cpp). A unit's members come in one `UNIT_INFO` read through the C++
+  rather than the world views: `IsLandBuilding` is a virtual class method and `IsDropSite` a class method, and one
+  struct per unit costs one call. Lists the original kept across loop iterations stay in-out (EEGetTilesInRadius
+  appends, EEGetUnitsInRectangle appends and dedups the whole accumulated list, EEGetPlayerUnitsOfType's caller
+  passes the list it had), so the host takes the list as it is and hands back what the C++ call left.
+- **Lesson: a TEST ONLY note can pin a call to C++.** The ring and square tile lists are pure Rust already
+  (`units::uu_tiles`); the C++ wrappers the original called (`EEGetSquareRingTiles` and family) are forwarders with
+  a TEST ONLY UUTL note per outermost call, and UUTL has goldens. The port calls the Rust directly, and the C++
+  wrappers only while the capture records (`EeCpPlaceCtx::capture`): same tiles, the notes kept. One wrapper's note
+  records its input list (`EEGetSquareBlockRing` writes `T(outTiles)` even with `inAppend` 0), so that call takes the
+  previous ring's tiles in, as the original's reused vector held them.
+- **Sorts with ties.** `std::sort` is not stable; five of the original's sorts compare keys with ties (tiles by
+  distance, the anti-air clusters by size, gates by distance, a centre's units by an area effect bit). The
+  permutation a comparison sort makes depends only on the comparisons' outcomes, so `sort_by_key` hands the keys to
+  the C++ (`EE_CP_PLACE_SORT`: `std::sort` over (key, index) comparing keys) and applies the order. The stable sorts
+  (FindCenterSite's `stable_sort`, the (distance, index) pairs) and the totally ordered ones (U2DPoint's `operator<`
+  before `unique`) are Rust's sorts. A sort used only for its first element (FindSpaceSite's own units) is a min.
+- **Shuffles.** `EEAIRandomShuffle` is Dinkum's `random_shuffle`: for each position from the second, a draw of
+  `GetRandom(0, count - 1)` and a swap; place_host.rs `shuffle` makes the same draws through the host.
+- **Kept quirks.** FindWonderSite lists every ring to 199 after a find (the tile list calls, and their notes, stay);
+  FindTowerSite's gate tiles accumulate across gates and are filtered again for each; the choke points' unit list
+  accumulates; FindGranarySite's centre keeps the previous centre's tile when GetCenter finds nothing.
+- **cbindgen exports `pub(crate)` constants, and the header splitter matches names across crates.** The unit type
+  constants (`TYPE_PATH_POINT` ...) went into `rust/sim/cp.h` and moved ee_render's same-named constant to
+  common.h. They live in a `/// cbindgen:ignore` module with a `CP_` prefix now; `EeCpPlaceCtx`'s opaque placement
+  pointer needs `#[allow(improper_ctypes)]` on the extern block of the two hosts.
+- **Gates.** The move's commit: both builds 0/0; the Rust gate PASS (4,454 tests, 15 new: the epoch classes, the
+  tile math, the shuffle's draws, CanBuildAt's border runs, the town centre rule, the ring and adjacent searches, the
+  wonder rings, GetCenter, the area effects, the drop-site adoption, the morale fill, the settlement ring, the
+  centre's save and load bytes, Restore's dropped units); oracle seeds 2-3 identical; the captures at seeds 2-3
+  (placement 2, oracle 206, late 208, space 204, calamity 216 digests) equal to their goldens; scenario_check 27/27;
+  saveload seeds 2-3 PASS. Only the sim gates exercise this code: the renderer reaches none of it.
+- **Result.** C++ -1,519 net for the move (+737 -2,256; the TEST ONLY PLCE capture added 549 before it); Rust 4,541
+  lines with tests. On the tree merged with origin/rust cb6e60d50 (clean): both builds and
+  the test profile 0/0, the Rust gate PASS (4,508 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3
+  PASS, scenario_check 27/27.

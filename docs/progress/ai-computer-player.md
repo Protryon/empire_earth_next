@@ -7,83 +7,80 @@ player and its economy: `EEComputerPlayer.cpp`, `EECPPlacement.cpp`, `EEHerd.cpp
 (EECPNext*, EECPLua, EECPEngine*, EECPReflexes, EECPTrace, EECPCombatManager), lane C the path manager, continents,
 areas and the A* goals.
 
-## What is where (round 1, branch rust-ai-cp1)
+## What is where (rounds 1 and 2, branch rust-ai-cp1)
 
 `rust/crates/ee_sim/src/cp/` (a module of ee_sim; C interface `rust/sim/cp.h`):
 
-- `legacy_load.rs`: **`EECPLegacyLoad.cpp` whole**: the readers that step over a retail file's (0.229-0.250: the
-  campaigns' scenarios) deleted C++ combat, civilization and exploration manager blocks; the town centre tile goes to
-  the placement. The C++ file and its header are gone.
-- `fields.rs`: **`EEComputerPlayer`'s 238 plain members** (`mLBD4` .. `mAttackStarted`: the tuning values, timers
-  and flags) as the record `EeCpFields` the class derives from (`class EEComputerPlayer : public EEPlayer, public
-  EeCpFields`). The names, types and order are the C++'s, so every reader (lane A's files included) is unchanged.
-  The containers (`mResourceCenters`, `mFavoriteTypeHistory`, `mUnitsToKill`, `mDangerZones`), the managers'
-  pointers and the engines' states stay C++ members.
-- `init.rs`: **`Init`'s values** from the behaviour table (`EeCpBehavior` is `EECPBehavior`'s record; the C++ passes
-  `gCPBehaviors`, the lobby's AI level and the cost cheat). The record is zeroed first.
-- `save.rs`: **`EEComputerPlayer::Load` and `Save`** as one field order (`seg_*` lists) used by both, over the player
-  save's host (`EeUnitsPlayerSaveFn`): the file's primitives pass to `EESavePrimitive`; the combat manager's and the
-  placement's blocks, the resource centres and the favourite types' history are host operations
-  (`EE_CP_SAVE_*`, `EECPSaveOperation` in EEComputerPlayer.cpp). The version refusals (before 0.229, 0.251-0.280),
-  the legacy blocks, the 0.232/0.236/0.237 fields, the 0.256 running state (returned in `EeCpLoaded`; the C++
-  registers the two `EEAfterLoad` restores as before) are Rust's.
-- `player.rs`: the per-difficulty scales (`GetAttackDelayModifier` .. `GetIslandExpansionTimer`: inline forwarders in
-  the header now), their scenario setters, `ScaleCost`, `SetNextAttackTime` (the game's generator through a callback)
-  and `RestoreManagers`' field steps (the time rebase, the attack bounds, the drop-off root, the regroup, the
-  pre-0.229 timers).
-- `influence.rs`: **`EEInfluenceTable` whole**: the per-region, per-player influence values are a Rust array; every
-  body (values, sums, the enemies' sums through the world views, AddUnit/RemoveUnit reading the unit's class
-  influence and owner through `UnitView`) is Rust. `ee/EEInfluenceTable.h` is a shim (no RTSRegionTable base any
-  more; it keeps `mRegionSize` and `GetRegions` for the readers that divide tile coordinates by it).
-  `EEInfluenceTable.cpp` is gone; `EEWorld::CreateInfluenceTable` passes the map's size.
-- `timers.rs`: **the experiments' timers** (the 0.258 block: ten arrays of 64, the claim ranges of the 0.265
-  resource state block) are Rust's (`timers::STATE`; the C++ global `gCPExperimentTimers` and the struct are gone,
-  nothing read them since main's stages 5 and 6), with both blocks' save and load. The danger zones stay the
-  computer players' (`mDangerZones`, read by lane A's reflexes) over `EECPStateOperation`; a load's copies are put in
-  place at the first tick (`ee_cp_timers_apply`, the `EEAfterLoad` restores as before).
-- `file.rs`: the saved game's primitives as these use them (`SaveFile`), and a byte file for the tests.
-- Dead code deleted: `GetEpochFrequencyModifier`, `IsIslandExpansionDue` (no caller), `GetTileValue`'s declaration.
+- `placement.rs` (round 2): **`EECPPlacement` whole**: the "unit near" tests (`HasUnitNear`, `HasAntiAirNear`,
+  `HasTownCenterNear`, `HasGateNear`, `HasTowerNear`, `HasWallNear`, `HasEnemyNear`), `CollectSiteTiles`,
+  `CanBuildAt` (with its border rule), `FindSite` and every finder (airport, anti-air, centre, granary, production,
+  shore, space, tower, wonder), `IsNearAirportEnd`, `HasBuilderFor`, `SetTownCenter`, `UnitAdded`, `Reset`,
+  `Restore`, the epoch's classes (`EECPAntiAirClass` ..), `EECPIsSiteClass`, `EECPCountOwn` and the Lua verbs'
+  `EECPNextPlaceSearch` with its searches (ring, tower ring, adjacent, the dock by the fish). The class's own data is
+  Rust's: `EeCpPlacement` (the dock and space site tiles, whether they were collected, `UnitAdded`'s classes), owned
+  by the C++ object as `mRust`. `mTownCenterTile` and `mPlayer` stay C++ members (lane A's files read the tile).
+- `resource_center.rs` (round 2): **`EECPResourceCenter`'s bodies**: `FindBuildSite` (towers, settlements, houses,
+  production buildings, temples, universities, hospitals), `GetCenter`, `GetMoraleFill`, `IsInAreaEffect`,
+  `GetMinEffectRadius`, `FindResourceUnit`, `IsWithinRadius`, `AdoptDropSite`'s test, `Contains`, and the saved
+  game's `Load`, `Save` and `Restore`. `mUnits`, `mUnit` and `mIsActive` stay C++ members (EEComputerPlayer, lane A's
+  view and trace read them); the references and the vector's growth stay C++ (constructor, destructor, `AddUnit`,
+  `SetUnit`, `ReleaseUnit`; `SetActive` sets the flag and asks Rust's `GetCenter`, discarded as before).
+- `place_host.rs` (round 2): the world both ask, one trait (`PlaceHost`), and the helpers: the tile lists (the pure
+  math of `units::uu_tiles`, the same Rust the C++ wrappers call), `EEAIRandomShuffle` (Dinkum's draws through the
+  host's `GetRandom`), the C++ `std::sort` by key for the sorts with ties (`sort_by_key`).
+- `place_game.rs` (round 2): the game's host (`ee_cp_place_host` in EECPPlacement.cpp, `ee_cp_center_host` in
+  EECPResourceCenter.cpp: one switch each; a unit's members in one `UNIT_INFO` read, since `IsLandBuilding` and
+  `IsDropSite` are class methods) and the C ABI the forwarders call (`ee_cp_*`, with a context `EeCpPlaceCtx` per
+  call: the player, its record, the town tile, the Rust data, whether the capture records).
+- `legacy_load.rs` (round 1): **`EECPLegacyLoad.cpp` whole** (a retail file's deleted manager blocks).
+- `fields.rs` (round 1): **`EEComputerPlayer`'s 238 plain members** as the record `EeCpFields` the class derives
+  from.
+- `init.rs`, `save.rs`, `player.rs` (round 1): `Init`'s values, `Load`/`Save` as one field order, the
+  per-difficulty scales and `RestoreManagers`' field steps.
+- `influence.rs` (round 1): **`EEInfluenceTable` whole**. `timers.rs` (round 1): the experiments' timers.
+- `file.rs`: the saved game's primitives (`SaveFile`), and a byte file for the tests.
+
+What is left in the two C++ files: the forwarders with their TEST ONLY PLCE scopes, the two host switches, the town
+tile's `Load`/`Save` (U2DPoint's own two-word read and write), the two `EETileDistanceLess` comparators other units
+sort with (defined in EECPPlacement.cpp since the original) and `EEComplexUnit::DistanceSquaredToUnit` (defined in
+EECPResourceCenter.cpp since the original; six other callers).
 
 ## Goldens and how they were taken
 
-- **The record** (round 1): a TEMP dump of all 238 fields, the history and the centre count (never committed;
-  `build/cp/patch_dump.py`) at the end of `Init`, of `RestoreManagers` and at the start of `Save`, on the unmodified
-  C++ and again on the moved code: saveload seed 2 at 600 and 1350 s (14 lines: the 6 constructions, 4 restores and
-  4 saves) equal byte for byte.
-- **The saves**: the players chunk (tag 5: every computer player's block) of the saves at 600, 1350 and 2100 s of
-  seeds 2 and 3 equal to the unmodified build's, decompressed, byte for byte. Chunks 4, 8 and 12 differ between two
-  runs of the same unmodified build too (not a change).
-- **The legacy reader**: `tools/scenario_check.py` (all 27 campaign scenarios and the corrupt case) on the unmodified
-  build and on each commit: every report's outcome, end time, players, samples (less the wall time), alive
-  computers, defeat order and epochs equal.
-- **The timers and the resource state**: the world chunk (tag 7, which holds both blocks) of the six saves equal to
-  the unmodified build's; saveload seeds 2-3 continue identically.
-- The oracle (seeds 2-3 per commit) identical to `build/rust_oracle/ref`.
+- **PLCE** (round 2, committed: ee/EECPPlaceCapture.h, src/Empire Earth/AI Thread/EECPPlaceCapture.cpp): one record
+  at the return of every outermost call into the placement, a resource centre or their free functions (one
+  thread-local depth for all), with the method, the player, the inputs and the outputs (results, found tiles, the
+  placement's town tile and site lists, a centre's unit ids and main unit, the player's centres after the searches).
+  Recorded on the unmodified C++ (commit 1ccecbcda) for seeds 2-3 of oracle, late, space, calamity and the new
+  `--profile placement` (the oracle's game with the boom and Age of AI scripts). The gates' classic_lua builds through
+  ai.find_site, so the four standard profiles record the centres' bookkeeping only (UnitAdded, AddUnit,
+  AdoptDropSite, IsWithinRadius, SetActive, GetCenter, the epoch classes); the placement profile runs the site
+  searches (313 and 48 outermost ai.place calls, with every finder and CanBuildAt under them). Records per seed 2 /
+  3: oracle 9,976 / 8,929, late 15,006 / 14,144, space 17,690 / 13,777, calamity 5,573 / 7,494, placement 10,246 /
+  8,869. Two runs of the unmodified build give the same digests.
+- **The rest**: every other capture tag of the five profiles, the oracle, scenario_check 27/27, saveload.
 
 ## Not moved yet (what is left)
 
-- `EEComputerPlayer.cpp` (~1,380 lines): the favourite type choices (the screeners), `Regroup`, `UpdateGroups`,
-  `Update`, `DamageTaken`, `WorkOutPopulation`, the unit events (`UnitPlaced`, `UnitTaken`, `UnitGoalDone`,
-  `SendToNearestBase`, the transport idle), `EnterEpoch`/`ChooseCivilization`, `GetObjectsToGroup`, the host
-  operations of the moved saves, and `RestoreManagers`' C++ parts (the favourites' re-choice, the stranded units).
-- `EECPPlacement.cpp` (1,749): the site searches (`FindSite` and its finders, `CanBuildAt`, the "unit near" tests).
-- `EECPResourceCenter.cpp` (743): `FindBuildSite`, `GetCenter`, `GetMoraleFill`, the area-effect tests, its
-  Load/Save/Restore (the C++ calls them through `EE_CP_SAVE_CENTER_*`).
-- `EEHerd.cpp` (1,365) and `EETown.cpp` (407): both derive from `EEAIArea` (lane C's); the player lane's
-  `player_areas.rs` and `town_save.rs` already drive their bookkeeping and saves from Rust.
+- `EEComputerPlayer.cpp` (~1,380 lines): the favourite type choices, `Regroup`, `UpdateGroups`, `Update`,
+  `DamageTaken`, `WorkOutPopulation`, the unit events, `EnterEpoch`/`ChooseCivilization`, `GetObjectsToGroup`, the
+  host operations of the moved saves, `RestoreManagers`' C++ parts.
+- `EEHerd.cpp` (1,365) and `EETown.cpp` (407): both derive from `EEAIArea` (lane C's).
+- The two shims could shrink further once the centres' unit lists are Rust's (C++ vectors of handles that
+  EEComputerPlayer and lane A's files read) and the town tile is read through Rust.
 
-## Results (round 1, 2026-11-17)
+## Results (round 2, 2026-11-17)
 
-Commits on `rust-ai-cp1` (from origin/rust 0bfe280ce; origin/rust did not move during the round, so the merge was
-empty): 49368a116 (legacy readers, C++ -404), e8cdb3c38 (the record, Init, Load, Save, the scales: -1,490),
-fde0a48c9 (the influence table: -128), 338cd1ddb (the experiment timers: -65), the docs. **C++ -2,087 net** (+244
--2,331; the target was 3,000). Rust: `ee_sim::cp`, 3,739 lines with tests (23 unit tests).
+Commits on `rust-ai-cp1`: 1ccecbcda (PLCE, TEST ONLY, with its goldens: C++ +549), 0dac90b5a (the placement and the
+centres' bodies: C++ -1,519 net, +737 -2,256), bacdd41ff (the merge of origin/rust cb6e60d50; clean), the docs.
+Rust: `ee_sim::cp` placement.rs, resource_center.rs, place_host.rs, place_game.rs and their tests (4,541 lines, 15
+unit tests).
 
-On the final tree: both builds 0/0 (EE-AOC, EE-SIM, the test profile); the Rust gate PASS (4,439 tests); oracle
-seeds 2-7 identical to the reference; the captures at seeds 2-3: oracle 204, late 206, space 202, calamity 214
-digests equal to their goldens; the plain saveload 18/18 identical; the matrix (`--settings all --seeds 2-3 --at
-1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` (calamity seed 2 has no 1900 s save, next
-seed 2 parts at 915 and 276 ticks, as expected); `scenario_check.py` 27/27 with every report equal to the unmodified
-build's; sim_editor PASS (14,448 lines); `gates.sh` (slot 1): tour, ai-game (time-cap, alive [2, 3], classic_lua)
-and lan-game PASS, GATES PASS.
+Per the move's commit: both builds 0/0; the Rust gate PASS (4,454 tests); oracle seeds 2-3 identical; the captures
+at seeds 2-3 equal to their goldens (placement 2, oracle 206, late 208, space 204, calamity 216 digests, PLCE in
+each); scenario_check 27/27; saveload seeds 2-3 PASS (all six saves identical).
 
+On the tree merged with origin/rust (cb6e60d50; the merge needed nothing): both builds 0/0 (EE-AOC, EE-SIM, and the
+test profile's EE-AOC); the Rust gate PASS (4,508 tests); oracle seeds 2-7 identical to the reference; the captures at
+seeds 2-3 equal to their goldens (placement 2, oracle 206, late 208, space 204, calamity 216 digests); scenario_check
+27/27. Not run here: the harness gates (gates.sh: the lead's), the saveload matrix.
