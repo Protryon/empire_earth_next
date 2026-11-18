@@ -30112,3 +30112,17 @@ The C++ GUIString capped a text at 65,535 units; the Rust holds whole texts (eve
 **What runs it.** The LAN game: the LAN name, the broadcast port, the direct connects, the options popups' flags,
 the user file `_wonuser0.dat` (`lan_game.py`). The login users, friends, reconnect ids and the global file's users
 are the Internet lobby's (the driver only).
+
+### The hosts' cases that were Lobby* calls, answered in Rust
+
+With the settings in Rust, a host case that only called a `Lobby*` function on numbers is a Rust call. persistobj.rs
+answers them in the game: `ctl_op` (the lobby controls: the options popup's PrefGet / PrefSet over a table of the
+twelve preferences, `pref_flag`, the LAN name count, RestoreDefaults, ResetFilters, RemoveLanName, the ignored and
+user counts, a user's last use, the friends, the current user), `route_op` (RoutingLogic's `Pref` 1..7, the friends)
+and `lobby_op` (the staging sounds and confirmations, the LAN logic's saved direct count and its LAN user), each
+reached from lobbyctl.rs, routelogic.rs and lobbyhost.rs after modelobj.rs's answers. The C++ gives the object's
+finder once (`ee_won_persist_set_lobby(LobbyPersist)`, LobbyPersistentData's constructor); before that (every
+driver) the ops still go to their hosts, so the drivers and their goldens are unchanged. 27 host cases and the two
+preference switches are gone from LobbyCtrlHost.cpp, LobbyNetCtrlHost.cpp, RoutingLogic.cpp, LobbyLogicHost.cpp and
+LanLogicHost.cpp. won_host_coverage.py reads the three functions (and `pref_flag` for EeWonLobbyCtlPref): PASS.
+Texts (a GUIStringData* argument) stay with the hosts: the Rust would need the string's units back from the C++.

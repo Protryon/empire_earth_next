@@ -203,6 +203,9 @@ const uint32_t *ee_won_persist_user_text(const EeWonPersistUser *u,
                                          int32_t which,
                                          size_t *count);
 
+/// Gives the function that finds the lobby's object (`LobbyPersist`).
+void ee_won_persist_set_lobby(EeWonPersist *(*f)());
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_PERSISTOBJ_H

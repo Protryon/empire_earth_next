@@ -4,7 +4,8 @@
 // object (rust/crates/ee_won_lobby/src/persistobj.rs: the containers, the files, the password key, the rules); the
 // functions are inline forwards in WONLobbyPersistence.h. This unit is the handle's constructor and the object's
 // host: the friends (LobbyFriend shells), the resource strings, the click sound, the config's LAN-number switch and
-// the clock.
+// the clock. The Rust finds the lobby's object through LobbyPersist (the controls', logics' and routing logic's
+// ops over the settings, answered there).
 
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
@@ -62,6 +63,8 @@ LobbyPersistentData::LobbyPersistentData()
     int32_t aKey[2] = {0x22fa655f, (int32_t)CDKey::GetMachineId(NULL)}; // two little-endian longs (AppendLong)
     EeWonPersistHost aHost = {NULL, PersistHost};
     this->mRust = ee_won_persist_new(aHost, sizeof(wchar_t), reinterpret_cast<const uint8_t*>(aKey), sizeof(aKey));
+    // the hosts' ops over the saved settings are answered in Rust from the lobby's object (persistobj.rs)
+    ee_won_persist_set_lobby(LobbyPersist);
 }
 
 EeWonPersist* LobbyPersist()

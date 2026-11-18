@@ -110,14 +110,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::LastInputTick: return (intptr_t)GetLobbyWindow()->GetLastInputTick();
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Pref:
-        switch (a) {
-        case 1: return LobbyGetChatSoundEffects();
-        case 2: return LobbyGetStagingSoundEffects();
-        case 3: return LobbyGetLobbySoundEffects();
-        case 4: return LobbyGetAutoPingGames();
-        case 5: return LobbyGetLobbyMusic();
-        case 6: return LobbyGetAnonymousToFriends();
-        case 7: return LobbyGetFilterDirtyWords();
+        switch (a) { // 1..7: the saved settings' (persistobj.rs route_op)
         case 8: return LobbyOnInternetScreen();
         case 9: return LobbyUserCanceledLastStatusOp();
         }
@@ -175,12 +168,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::ListAt: return (intptr_t)L->mServerList->ServerAt((size_t)a);
     case O::ListAddressIs: return S(b)->GetAddress() == L->mServerList->AddressAt((size_t)a);
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
-    case O::FindFriend: return (intptr_t)LobbyFindFriend((unsigned long)a);
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
-    case O::RemoveFriend: LobbyRemoveFriend((unsigned long)a); return 0;
-    case O::FriendCount: return (intptr_t)LobbyGetFriendCount();
-    case O::FriendAt: return (intptr_t)LobbyGetFriendAt((size_t)a);
     case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
     case O::GameList:

@@ -227,3 +227,24 @@ fn users_by_name_and_the_current_user() {
     p.prefs.set_current_user(2);
     assert_eq!(call(&mut p, C::CurrentUser, "", "", 0, 0), bob as isize);
 }
+
+#[test]
+fn the_hosts_ops_answer_from_the_object() {
+    use crate::lobbyctl::{EeWonLobbyCtlOp as O, EeWonLobbyCtlPref as P};
+    let mut p = make(false);
+    let q: *mut EeWonPersist = &mut *p;
+    assert_eq!(ctl_op(q, O::PrefGet, P::ConnectionSpeed as isize, 0), Some(25));
+    ctl_op(q, O::PrefSet, P::ConnectionSpeed as isize, 70_056);
+    assert_eq!(ctl_op(q, O::PrefGet, P::ConnectionSpeed as isize, 0), Some(70_056 & 0xffff));
+    ctl_op(q, O::PrefSet, P::AutoPingGames as isize, 5);
+    assert_eq!(ctl_op(q, O::PrefGet, P::AutoPingGames as isize, 0), Some(1));
+    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 4), Some(1));
+    // the C++'s Pref values
+    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 8), None);
+    assert_eq!(ctl_op(q, O::MGet, 0, 0), None);
+    assert_eq!(lobby_op(q, crate::lobbyhost::EeWonLobbyOp::ShowConfirmations), Some(1));
+    // without lobby data: the functions' defaults
+    assert_eq!(ctl_op(std::ptr::null_mut(), O::PrefGet, P::ConnectionSpeed as isize, 0), Some(50));
+    // the drivers never set the game's function: their hosts answer
+    assert_eq!(game_ctl_op(O::PrefGet, 0, 0), None);
+}

@@ -294,8 +294,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return anOp->IsKilled();
     }
     case EeWonLobbyOp::PlaySound: LobbyPlaySound(gLobbyResources[inC].mSound.get()); return 0; // a resource row
-    case EeWonLobbyOp::StagingSoundEffects: return LobbyGetStagingSoundEffects();
-    case EeWonLobbyOp::ShowConfirmations: return LobbyGetShowConfirmations();
     case EeWonLobbyOp::FirewallTestDone: return LobbyIsFirewallTestDone();
     case EeWonLobbyOp::BehindFirewall: return LobbyIsBehindFirewall();
     case EeWonLobbyOp::GameScreenType: return LobbyGetGameScreenType();

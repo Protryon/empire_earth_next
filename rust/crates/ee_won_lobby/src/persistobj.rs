@@ -1267,6 +1267,181 @@ pub unsafe extern "C" fn ee_won_persist_user_text(
     t.as_ptr()
 }
 
+// ---- the hosts' ops that were Lobby* calls, answered here in the game (round 15)
+
+/// The game's `LobbyPersist()`, given once by the C++ (LobbyPersistentData's constructor): the lobby's object, or
+/// NULL without lobby data.
+static LOBBY: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Gives the function that finds the lobby's object (`LobbyPersist`).
+#[no_mangle]
+pub extern "C" fn ee_won_persist_set_lobby(f: Option<extern "C" fn() -> *mut EeWonPersist>) {
+    LOBBY.store(f.map_or(0, |f| f as usize), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Whether the game gave its function (the drivers' hosts answer these ops themselves).
+fn in_game() -> bool {
+    LOBBY.load(std::sync::atomic::Ordering::Relaxed) != 0
+}
+
+/// The lobby's object (NULL without lobby data, or before the C++ gave its function).
+fn lobby() -> *mut EeWonPersist {
+    let f = LOBBY.load(std::sync::atomic::Ordering::Relaxed);
+    if f == 0 {
+        return std::ptr::null_mut();
+    }
+    // SAFETY: the value stored by ee_won_persist_set_lobby
+    let f: extern "C" fn() -> *mut EeWonPersist = unsafe { std::mem::transmute(f) };
+    f()
+}
+
+/// A call with numbers only (as `LobbyPC`) on `p`, the lobby's object or NULL.
+fn num_call(p: *mut EeWonPersist, call: EeWonPersistCall, a: i64, b: i64) -> isize {
+    let none = EeWonPersistText { text: std::ptr::null(), count: 0, unit_size: 4 };
+    // SAFETY: a live object or NULL (the callers' contract); no text, no pointer the call keeps
+    unsafe { ee_won_persist_call(p, call, none, none, a, b, std::ptr::null_mut()) }
+}
+
+/// [`ctl_op`] on the lobby's object, in the game only.
+pub(crate) fn game_ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, b: isize) -> Option<isize> {
+    if in_game() {
+        ctl_op(lobby(), op, a, b)
+    } else {
+        None
+    }
+}
+/// [`route_op`] on the lobby's object, in the game only.
+pub(crate) fn game_route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize) -> Option<isize> {
+    if in_game() {
+        route_op(lobby(), op, a)
+    } else {
+        None
+    }
+}
+/// [`lobby_op`] on the lobby's object, in the game only.
+pub(crate) fn game_lobby_op(op: crate::lobbyhost::EeWonLobbyOp) -> Option<isize> {
+    if in_game() {
+        lobby_op(lobby(), op)
+    } else {
+        None
+    }
+}
+
+/// The options popup's preference (`EeWonLobbyCtlPref`, PrefGet / PrefSet) as its flag; None for the connection
+/// speed (a number) and for no preference.
+fn pref_flag(p: isize) -> Option<F> {
+    use crate::lobbyctl::EeWonLobbyCtlPref as P;
+    const PREFS: [P; 12] = [
+        P::CrossPromotion,
+        P::DoAutoAfk,
+        P::AutoPingGames,
+        P::ShowGamesInProgress,
+        P::LobbyMusic,
+        P::LobbySoundEffects,
+        P::ChatSoundEffects,
+        P::StagingSoundEffects,
+        P::ShowConfirmations,
+        P::FilterDirtyWords,
+        P::AnonymousToFriends,
+        P::ConnectionSpeed,
+    ];
+    let p = *PREFS.get(usize::try_from(p).ok()?)?;
+    Some(match p {
+        P::CrossPromotion => F::CrossPromotion,
+        P::DoAutoAfk => F::DoAutoAfk,
+        P::AutoPingGames => F::AutoPingGames,
+        P::ShowGamesInProgress => F::ShowGamesInProgress,
+        P::LobbyMusic => F::LobbyMusic,
+        P::LobbySoundEffects => F::LobbySoundEffects,
+        P::ChatSoundEffects => F::ChatSoundEffects,
+        P::StagingSoundEffects => F::StagingSoundEffects,
+        P::ShowConfirmations => F::ShowConfirmations,
+        P::FilterDirtyWords => F::FilterDirtyWords,
+        P::AnonymousToFriends => F::AnonymousToFriends,
+        // (ctl_op's number)
+        P::ConnectionSpeed => return None,
+    })
+}
+
+/// The lobby controls' ops over the saved settings (LobbyCtrlHost.cpp's and LobbyNetCtrlHost.cpp's cases), for the
+/// controls made by `ee_won_lobbyctl_new_model` in the game (once `ee_won_persist_set_lobby` ran): the answer, or `None` for an op that is not one of them.
+pub(crate) fn ctl_op(p: *mut EeWonPersist, op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, b: isize) -> Option<isize> {
+    let lobby_call = |c, a, b| num_call(p, c, a, b);
+    let flag = |f: F| num_call(p, EeWonPersistCall::Flag, f as i64, 0);
+    use crate::lobbyctl::EeWonLobbyCtlOp as O;
+    use crate::lobbyctl::EeWonLobbyCtlPref as P;
+    use EeWonPersistCall as C;
+    let pref = pref_flag;
+    Some(match op {
+        O::PrefGet => match pref(a) {
+            Some(f) => flag(f),
+            None if a == P::ConnectionSpeed as isize => lobby_call(C::ConnectionSpeed, 0, 0),
+            None => 0,
+        },
+        O::PrefSet => {
+            match pref(a) {
+                Some(f) => lobby_call(C::ChangeFlag, f as i64, i64::from(b != 0)),
+                None if a == P::ConnectionSpeed as isize => lobby_call(C::ChangeConnectionSpeed, b as i32 as i64, 0),
+                None => 0,
+            };
+            0
+        }
+        O::LanNameCount => lobby_call(C::LanNameCount, 0, 0),
+        O::RestoreDefaults => lobby_call(C::RestoreDefaults, 0, 0),
+        O::ResetFilters => lobby_call(C::ResetFilters, 0, 0),
+        O::RemoveLanName => lobby_call(C::RemoveLanName, 0, 0),
+        O::IgnoredCount => lobby_call(C::IgnoredCount, 0, 0),
+        O::FriendCount => lobby_call(C::FriendCount, 0, 0),
+        O::FriendAt => lobby_call(C::FriendAt, a as i64, 0),
+        O::CurrentUser => lobby_call(C::CurrentUser, 0, 0),
+        O::UserCount => lobby_call(C::UserCount, 0, 0),
+        O::UserLastUseAt => lobby_call(C::UserLastUseAt, a as i64, 0),
+        _ => return None,
+    })
+}
+
+/// RoutingLogic's ops over the saved settings (RoutingLogic.cpp's cases), for the game's logic.
+pub(crate) fn route_op(p: *mut EeWonPersist, op: crate::routelogic::EeWonRouteLogicOp, a: isize) -> Option<isize> {
+    let lobby_call = |c, a, b| num_call(p, c, a, b);
+    let flag = |f: F| num_call(p, EeWonPersistCall::Flag, f as i64, 0);
+    use crate::routelogic::EeWonRouteLogicOp as O;
+    use EeWonPersistCall as C;
+    Some(match op {
+        // the original's `Pref` 1..7 (8 and 9 are the C++'s: the screen, the status op)
+        O::Pref if (1..=7).contains(&a) => flag(
+            [
+                F::ChatSoundEffects,
+                F::StagingSoundEffects,
+                F::LobbySoundEffects,
+                F::AutoPingGames,
+                F::LobbyMusic,
+                F::AnonymousToFriends,
+                F::FilterDirtyWords,
+            ][a as usize - 1],
+        ),
+        O::FindFriend => lobby_call(C::FindFriend, a as std::ffi::c_ulong as i64, 0),
+        O::RemoveFriend => lobby_call(C::RemoveFriend, a as std::ffi::c_ulong as i64, 0),
+        O::FriendCount => lobby_call(C::FriendCount, 0, 0),
+        O::FriendAt => lobby_call(C::FriendAt, a as i64, 0),
+        _ => return None,
+    })
+}
+
+/// The lobby logics' ops over the saved settings (LobbyLogicHost.cpp's and LanLogicHost.cpp's cases).
+pub(crate) fn lobby_op(p: *mut EeWonPersist, op: crate::lobbyhost::EeWonLobbyOp) -> Option<isize> {
+    let lobby_call = |c, a, b| num_call(p, c, a, b);
+    let flag = |f: F| num_call(p, EeWonPersistCall::Flag, f as i64, 0);
+    use crate::lobbyhost::EeWonLobbyOp as O;
+    use EeWonPersistCall as C;
+    Some(match op {
+        O::StagingSoundEffects => flag(F::StagingSoundEffects),
+        O::ShowConfirmations => flag(F::ShowConfirmations),
+        O::LanDirectCount => lobby_call(C::DirectCount, 0, 0),
+        O::LanNoCurrentUser => lobby_call(C::SetCurrentUser, 0, 0),
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 #[path = "persistobj_tests.rs"]
 mod tests;

@@ -1500,6 +1500,9 @@ impl EeWonLobbyCtl {
             if let Some(r) = crate::modelobj::ctl_op(op, a, b, c) {
                 return r;
             }
+            if let Some(r) = crate::persistobj::game_ctl_op(op, a, b) {
+                return r;
+            }
         }
         match self.host {
             // SAFETY: the host is the C++ control's (or a test's), called with the control it was given for
