@@ -6,7 +6,6 @@
 #include <vector>
 #include <deque>
 #include <map>
-#include <set>
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
@@ -35,6 +34,7 @@
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECPPlaceCapture.h"
+#include "rust/sim/cp.h"
 
 namespace {
 
@@ -93,16 +93,11 @@ EECPPlaceScope& EECPPlaceScope::State(const EECPPlacement* inPlacement)
     if (!this->mOn || inPlacement == NULL)
         return *this;
     this->I(inPlacement->mTownCenterTile.mX).I(inPlacement->mTownCenterTile.mY);
-    const std::vector<U2DPoint<long> >* theLists[2] = {&inPlacement->mWaterSites, &inPlacement->mSpaceSites};
-    for (int k = 0; k < 2; k++) {
-        uint64_t theHash = 0xcbf29ce484222325ull;
-        for (size_t i = 0; i < theLists[k]->size(); i++) {
-            Fnv(theHash, (*theLists[k])[i].mX);
-            Fnv(theHash, (*theLists[k])[i].mY);
-        }
-        this->I((long)theLists[k]->size()).I((long)(uint32_t)theHash).I((long)(uint32_t)(theHash >> 32));
-    }
-    this->I(inPlacement->mSiteTilesCollected ? 1 : 0).I((long)inPlacement->mTypesSeen.size());
+    // the Rust data: the water and space sites' sizes and FNV-1a 64 (low, high), collected, the classes seen
+    uint32_t theDigest[8];
+    ee_cp_placement_digest(inPlacement->mRust, theDigest);
+    for (int k = 0; k < 8; k++)
+        this->I((long)theDigest[k]);
     return *this;
 }
 

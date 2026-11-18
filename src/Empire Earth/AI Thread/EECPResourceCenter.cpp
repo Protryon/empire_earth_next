@@ -1,7 +1,15 @@
 // C:\EEX\Empire Earth\AI Thread\EECPResourceCenter.cpp (file name inferred: no __FILE__; the class-static key
 // "EECPResourceCenter-Data"). A computer player's resource center: 0x8bbbf..0x8e702 (the key chain first; the vector /
 // sort / find_if COMDATs close the unit).
+//
+// AI lane B, round 2: the bodies are Rust's (ee_sim::cp::resource_center, rust/sim/cp.h): FindBuildSite, GetCenter,
+// GetMoraleFill, IsInAreaEffect, GetMinEffectRadius, FindResourceUnit, IsWithinRadius, AdoptDropSite's test, Contains,
+// Load, Save and Restore. What stays here: the members other files read (mUnits, mUnit, mIsActive), the references
+// and the vector's growth (the constructor, destructor, AddUnit, SetUnit, ReleaseUnit), the forwarders with their TEST
+// ONLY PLCE scopes, EEComplexUnit::DistanceSquaredToUnit (the original's, defined in this unit), and
+// ee_cp_center_host: the centres and area effects the Rust bodies ask.
 #include <windows.h>
+#include <stdint.h>
 #include <vector>
 #include <deque>
 #include <map>
@@ -42,35 +50,26 @@
 #include "ee/EECPPlacement.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEAIRandom.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EECPPlaceCapture.h"
+#include "rust/sim/cp.h"
 
 const UString EECPResourceCenter::sData("EECPResourceCenter-Data");
 
-// The tiles by their distance from mCenter, the nearer first: the unit's own predicate (its sort COMDATs 0x48d45c..
-// call operator() out of line). Unit-local (provisional name)
-struct EECPRCTileNearer {
-    EECPRCTileNearer(const EETileCoordinate& inCenter) : mCenter(inCenter) {}
-    EECPRCTileNearer(const EECPRCTileNearer& inOther) : mCenter(inOther.mCenter) {}
-    ~EECPRCTileNearer() {}
-    bool operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const;
+static_assert(sizeof(EEUnitHandle<EEUnit>) == 4, "a centre's unit handle is its unit id");
 
-    EETileCoordinate mCenter;
-};
+EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cpp
 
-// Orders two tiles by their squared distance from mCenter, the nearer first
-// built without /Og (frame locals, leave; like EECPUnitTileDistanceLess 0x42cf1e): the pragma alone makes it exact
-#pragma optimize("g", off)
-bool EECPRCTileNearer::operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const
+static uint64_t EECPRCHandle(const void* inObject)
 {
-    long theLeft = inFirst.DistanceToSquared(this->mCenter);
-    long theRight = inSecond.DistanceToSquared(this->mCenter);
-    bool theResult = theLeft < theRight;
-    return theResult;
+    return (uint64_t)(uintptr_t)inObject;
 }
-#pragma optimize("g", on)
+
+template <class T> static T* EECPRCObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>((uintptr_t)inHandle);
+}
 
 // Creates a resource center for the computer player, holding the given resource unit if any, with no main building
 EECPResourceCenter::EECPResourceCenter(EEComputerPlayer* inPlayer, EEUnit* inUnit)
@@ -94,29 +93,22 @@ void EECPResourceCenter::AddUnit(EEUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterAddUnit, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.U(inUnit);
-    [&]() {
     inUnit->Reference();
     this->mUnits.push_back(inUnit);
-    }();
     theScope.State(this);
 }
 
-// find's result in a local iterator, compared with a freshly loaded end()
+#define EECPRC_CONTEXT EeCpPlaceCtx theContext = EECPPlaceContext(this->mPlayer)
+
 // Returns whether the center holds the unit
 bool EECPResourceCenter::Contains(EEUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterContains, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.U(inUnit);
-    bool theScopeResult = [&]() -> bool {
-    bool theResult = false;
-    if (this->mUnits.size() > 0) {
-        std::vector<EEUnitHandle<EEUnit> >::iterator theFound = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
-        theResult = theFound != this->mUnits.end();
-    }
+    EECPRC_CONTEXT;
+    bool theResult = ee_cp_center_contains(&theContext, EECPRCHandle(this), EECPRCHandle(inUnit));
+    theScope.I(theResult);
     return theResult;
-    }();
-    theScope.I(theScopeResult);
-    return theScopeResult;
 }
 
 // Makes the player's drop site (not a granary) the center's main building if the center has none and the site is
@@ -125,20 +117,11 @@ void EECPResourceCenter::AdoptDropSite(EEComplexUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterAdoptDropSite, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.CU(inUnit).State(this);
-    [&]() {
-    long theRadius = this->mPlayer->mDropOffDistance;
-    long theArea = theRadius * theRadius;
-    if (this->mUnit != NULL || inUnit->mPlayer != this->mPlayer || !inUnit->GetUnitClass()->IsDropSite() || inUnit->GetUnitClass()->mUnitType == kUnitTypeGranary)
-        return;
-    unsigned long i, n;
-    for (i = 0, n = this->mUnits.size(); i < n; i++) {
-        if (!(inUnit->DistanceSquaredToUnit(this->mUnits[i]) < (float)theArea))
-            continue;
+    EECPRC_CONTEXT;
+    if (ee_cp_center_adopts(&theContext, EECPRCHandle(this), EECPRCHandle(static_cast<EEUnit*>(inUnit)))) {
         this->mUnit = inUnit;
         inUnit->Reference();
-        break;
     }
-    }();
     theScope.State(this);
 }
 
@@ -187,310 +170,121 @@ struct EECPRCLiveBuildingInRectangle {
     U2DRectangle<long> mRect;               // +0x04
 };
 
-// A unit whose tile is one of mTiles (the find_if predicate 0x8d75b, out of line; 0x10 bytes: the vector copy is built
-// straight into find_if's argument slot) (provisional name)
-struct EECPRCUnitOnTiles {
-    EECPRCUnitOnTiles(const std::vector<U2DPoint<long> >& inTiles) : mTiles(inTiles) {}
-    bool operator()(EEUnit* inUnit) const
-    {
-        U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
-        return std::find(this->mTiles.begin(), this->mTiles.end(), theTile) != this->mTiles.end();
+// the unit's first morale-from-buildings effect (NULL: none)
+static EEAreaEffect* EECPRCMoraleEffect(EEComplexUnit* inUnit)
+{
+    for (std::vector<EEAreaEffect*>::iterator theIterator = inUnit->mAreaEffects.mItems.begin();
+         theIterator != inUnit->mAreaEffects.mItems.end(); ++theIterator) {
+        if ((*theIterator)->mKind == kAreaEffectMoraleFromBuildings)
+            return *theIterator;
     }
+    return NULL;
+}
 
-    std::vector<U2DPoint<long> > mTiles;    // +0x00
-};
-
-// Orders the units without an area effect of mKind for mPlayer on their tile first (the sort predicate 0x8e0ab, out
-// of line, ret 8; 8 bytes by value) (provisional name)
-struct EECPRCAreaEffectLess {
-    EECPRCAreaEffectLess(long inKind, long inPlayer) : mKind(inKind), mPlayer(inPlayer) {}
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const
-    {
-        unsigned long theFirst = 0;
-        if (gAEManager.HasAreaEffect(this->mKind, inFirst->GetTileX(), inFirst->GetTileY(), this->mPlayer))
-            theFirst = 1;
-        unsigned long theSecond = 0;
-        if (gAEManager.HasAreaEffect(this->mKind, inSecond->GetTileX(), inSecond->GetTileY(), this->mPlayer))
-            theSecond = 1;
-        return theFirst < theSecond;
+// The centres' and area effects' world (ee_sim::cp::place_game's EE_CP_CENTER_* operations; `inA` the centre)
+extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
+    EeCpPlaceIo* io)
+{
+    EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(EECPRCObject<EEPlayer>(inContext->player));
+    EECPResourceCenter* theCenter = EECPRCObject<EECPResourceCenter>(inA);
+    const int64_t* v = io->v;
+    switch (inOp) {
+    case EE_CP_CENTER_UNITS:
+        for (size_t i = 0; i < theCenter->mUnits.size(); i++)
+            ee_cp_place_push(io->list, (int64_t)theCenter->mUnits[i].GetSavedID(), 0);
+        return 0;
+    case EE_CP_CENTER_UNIT:
+        return (int64_t)theCenter->mUnit.GetSavedID();
+    case EE_CP_CENTER_ACTIVE:
+        return theCenter->mIsActive ? 1 : 0;
+    case EE_CP_CENTER_SET_ORDER:
+        for (size_t i = 0; i < io->input_len && i < theCenter->mUnits.size(); i++)
+            theCenter->mUnits[i] = EEUnitHandle<EEUnit>::FromSavedID((uint32_t)io->input[2 * i]);
+        return 0;
+    case EE_CP_CENTER_CLEAR:
+        theCenter->mUnits.clear();
+        return 0;
+    case EE_CP_CENTER_ADD_UNIT:
+        theCenter->AddUnit(EECPRCObject<EEUnit>(inB));
+        return 0;
+    case EE_CP_CENTER_RESTORE_MAIN:
+        if ((int32_t)(uint32_t)v[0] != -1) {
+            theCenter->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit((uint32_t)v[0]));
+            if (theCenter->GetUnit() != NULL)
+                theCenter->GetUnit()->Reference();
+            else
+                return 3;
+        } else
+            theCenter->mUnit = NULL;
+        return 0;
+    case EE_CP_CENTER_DISTANCE_TO_UNIT:
+        io->f[0] = static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA))->DistanceSquaredToUnit(EECPRCObject<EEUnit>(inB));
+        return 0;
+    case EE_CP_CENTER_HAS_AREA_EFFECT:
+        return gAEManager.HasAreaEffect((long)v[0], (long)v[1], (long)v[2], (long)v[3]) ? 1 : 0;
+    case EE_CP_CENTER_MORALE_RADIUS: {
+        EEAreaEffect* theEffect = EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA)));
+        if (theEffect == NULL)
+            return 0;
+        io->f[0] = theEffect->GetRadius();
+        return 1;
     }
+    case EE_CP_CENTER_MORALE_RECOUNT: {
+        EEAreaEffect* theEffect = EECPRCMoraleEffect(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>(inA)));
+        if (theEffect == NULL)
+            return 0;
+        theEffect->MarkDirty();
+        theEffect->Recount(0);
+        io->v[0] = theEffect->GetLevel();
+        io->v[1] = theEffect->mTemplate->mMaxLevel;
+        io->f[0] = theEffect->GetRadius();
+        return 1;
+    }
+    case EE_CP_CENTER_EFFECT_TEMPLATES: {
+        EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[(long)v[0]];
+        for (unsigned long i = 0; i < 4; i++)
+            io->v[i] = (int64_t)(uint32_t)theUpgrade->mAreaEffectTemplates[i];
+        return 0;
+    }
+    case EE_CP_CENTER_TEMPLATE_RADIUS:
+        io->f[0] = gAEManager.mTemplates[(unsigned long)v[0]]->mRadius;
+        return 0;
+    case EE_CP_PLACE_UNITS_IN_RECT: {
+        U2DRectangle<long> theRect;
+        theRect.mLeft = (long)v[0];
+        theRect.mTop = (long)v[1];
+        theRect.mRight = (long)v[2];
+        theRect.mBottom = (long)v[3];
+        std::vector<EEComplexUnit*> theUnits;
+        for (size_t i = 0; i < io->input_len; i++)
+            theUnits.push_back(static_cast<EEComplexUnit*>(EECPRCObject<EEUnit>((uint64_t)io->input[2 * i])));
+        if (v[4] == 1)
+            EEGetUnitsInRectangle(theRect, theUnits, EECPRCLiveBuildingInRectangle(thePlayer, theRect), true);
+        else
+            EEGetUnitsInRectangle(theRect, theUnits, EECPRCBuildingInRectangle(thePlayer, theRect), true);
+        for (size_t i = 0; i < theUnits.size(); i++)
+            ee_cp_place_push(io->list, (int64_t)EECPRCHandle(static_cast<EEUnit*>(theUnits[i])), 0);
+        return 0;
+    }
+    }
+    return 0;
+}
 
-    long mKind;                             // +0x00
-    long mPlayer;                           // +0x04
-};
-
-// The tile vector is vector<U2DPoint<long> > (the zeroed U2DPoint locals pushed into it; EEGetSquareRingTiles /
-// EEGetSquareRing / find 0x8d7bc / copy ctor 0x26f46 by their bound names)
 // Finds a site near the resource center for a building: towers by gold or iron, houses in the main building's
 // morale area, temples/universities/hospitals clear of their effects, others in rings round the center
 bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTile)
 {
     EECPPlaceScope theScope(kPlceCenterFindBuildSite, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I(inUnitClass).State(this);
-    bool theScopeResult = [&]() -> bool {
-    std::vector<EEComplexUnit*> theBuildings;
-    U2DRectangle<long> theRect;
-    U2DPoint<long> theSite;
-    U2DPoint<long> theUnitCenter;
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    EECPPlacement* theBuildManager = this->mPlayer->mPlacement;
-    long theRange = this->mPlayer->mDropOffDistance;
-    long theSize = gUnitClassTable[inUnitClass]->GetTileSize();
-    bool theFound = false;
-    EETileCoordinate theCenter;
-    theCenter.mX = 0;
-    theCenter.mY = 0;
-    long theKind2 = 0;
-    unsigned long theCount = 0;
-    long theEffectRadius = 0;
-    unsigned short theContinent;
-    std::vector<U2DPoint<long> >::iterator it;
-    unsigned long i;
-    if ((inUnitClass == EECPTowerClass(this->mPlayer) || inUnitClass == kUnitTypePriestTower) && this->mUnit != NULL) {
-        float theFactor = this->mPlayer->mUnitClassUpgrades[inUnitClass]->mRange;
-        float theRadius = this->mPlayer->mTowerSpacing * theFactor;
-        float theRadiusSquared = theRadius * theRadius;
-        theContinent = gContinentManager.GetContinent(U2DPoint<long>(this->GetUnit()->GetTileX(), this->GetUnit()->GetTileY()), kAIPathLandMass);
-        for (i = 0, theCount = this->mUnits.size(); i < theCount && !theFound; i++) {
-            EEUnit* theUnit = this->mUnits[i];
-            // port: also by the food of a worked centre (the forage and hunting grounds the early raids go for); the
-            // original guarded only gold and iron
-            if (theUnit->GetResourceType() != kResourceGold && theUnit->GetResourceType() != kResourceIron
-                && !(theUnit->GetResourceType() == kResourceFood && this->mIsActive))
-                continue;
-            for (long theRing = 2; theRing < UMFloatToLong(theFactor) && !theFound; theRing++) {
-                EEGetSquareRingTiles(theUnit->GetTileX(), theUnit->GetTileY(), theRing, theTiles);
-                theCenter.mX = this->GetUnit()->GetTileX() + this->GetUnit()->GetUnitClass()->GetTileSize() / 2;
-                theCenter.mY = this->GetUnit()->GetTileY() + this->GetUnit()->GetUnitClass()->GetTileSize() / 2;
-                std::sort(theTiles.begin(), theTiles.end(), EECPRCTileNearer(theCenter));
-                for (it = theTiles.begin() + (theTiles.size() > 3 ? 3 : 0); it != theTiles.end() && !theFound;
-                     it++) {
-                    if (theBuildManager->HasTowerNear(it->GetX(), it->GetY(), theRadiusSquared))
-                        continue;
-                    theFound = theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                        this->GetUnit()->GetTileX(), this->GetUnit()->GetTileY());
-                    if (theFound) {
-                        outTile.mX = it->GetX();
-                        outTile.mY = it->GetY();
-                    }
-                }
-            }
-        }
-    } else {
-        switch (inUnitClass) {
-        case kUnitTypeSettlement: {
-            this->GetCenter(theCenter);
-            unsigned short theCenterContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
-            for (long theRing = 2; theRing < theRange && !theFound; theRing++) {
-                EEGetSquareRingTiles(theCenter.GetX(), theCenter.GetY(), theRing, theTiles);
-                for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                    theFound = theBuildManager->CanBuildAt(theCenterContinent, kUnitTypeSettlement, *it, theSize, true, true, theCenter.GetX(),
-                                                        theCenter.GetY());
-                    if (theFound) {
-                        outTile.mX = it->GetX();
-                        outTile.mY = it->GetY();
-                    }
-                }
-            }
-            break;
-        }
-        case kUnitTypeHouse: {
-            EEUnit* theUnit;
-            if (this->mUnits.size() > 0) {
-                theContinent = gContinentManager.GetContinent(this->mUnits[0], kAIPathLandMass);
-                theUnit = this->mUnits[0];
-            } else {
-                theContinent = gContinentManager.GetContinent(this->GetUnit(), kAIPathLandMass);
-                theUnit = this->GetUnit();
-            }
-            EETileCoordinate theUnitTile;
-            theUnitTile.mX = theUnit->GetTileX();
-            theUnitTile.mY = theUnit->GetTileY();
-            long theUnitSize = this->GetUnit()->GetUnitClass()->GetTileSize();
-            long theX = this->GetUnit()->GetTileX() + theUnitSize / 2;
-            long theY = this->GetUnit()->GetTileY() + theUnitSize / 2;
-            for (std::vector<EEAreaEffect*>::iterator theIterator = this->GetUnit()->mAreaEffects.mItems.begin();
-                 theIterator != this->GetUnit()->mAreaEffects.mItems.end(); ++theIterator) {
-                EEAreaEffect* theEffect = (*theIterator)->mKind == kAreaEffectMoraleFromBuildings ? *theIterator : NULL;
-                if (theEffect == NULL)
-                    continue;
-                theEffectRadius = UMFloatToLong(theEffect->GetRadius());
-                break;
-            }
-            if (this->GetMoraleFill() > 0.0f) {
-                theRect.mTop = theY - theEffectRadius;
-                theRect.mBottom = theEffectRadius + theY - 1;
-                theRect.mLeft = theX - theEffectRadius;
-                theRect.mRight = theEffectRadius + theX - 1;
-                EEGetUnitsInRectangle(theRect, theBuildings, EECPRCLiveBuildingInRectangle(this->mPlayer, theRect), true);
-                for (i = 0, theCount = theBuildings.size(); i < theCount; i++) {
-                    EEComplexUnit* theBuilding = theBuildings[i];
-                    theSite = U2DPoint<long>(theBuilding->GetTileX() - theSize, theBuilding->GetTileY());
-                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
-                        theTiles.push_back(theSite);
-                    theSite = U2DPoint<long>(theBuilding->GetTileX() + theSize, theBuilding->GetTileY());
-                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
-                        theTiles.push_back(theSite);
-                    theSite = U2DPoint<long>(theBuilding->GetTileX(), theBuilding->GetTileY() - theSize);
-                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
-                        theTiles.push_back(theSite);
-                    theSite = U2DPoint<long>(theBuilding->GetTileX(), theBuilding->GetTileY() + theSize);
-                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
-                        theTiles.push_back(theSite);
-                }
-            }
-            if (theTiles.size() > 0)
-                EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-            for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                U2DPoint<long> theTile = *it;
-                theFound = theBuildManager->CanBuildAt(theContinent, kUnitTypeHouse, *it, theSize, false, true, -1, -1);
-                if (!theFound)
-                    continue;
-                unsigned long j, n;
-                for (j = 0, n = this->mUnits.size(); j < n && theFound; j++) {
-                    EEUnit* theOther = this->mUnits[j];
-                    long theOtherSize = theOther->GetUnitClass()->GetTileSize();
-                    float theHalf = theOtherSize * 0.5f;
-                    theUnitCenter = U2DPoint<long>(UMFloatToLong(theOther->GetTileX() + theHalf),
-                                                   UMFloatToLong(theOther->GetTileY() + theHalf));
-                    theHalf = theSize * 0.5f;
-                    theSite = U2DPoint<long>(UMFloatToLong(theTile.GetX() + theHalf), UMFloatToLong(theTile.GetY() + theHalf));
-                    theFound = theSite.DistanceTo(theUnitCenter) >= theOtherSize + 2;
-                }
-                if (theFound) {
-                    outTile.mX = it->GetX();
-                    outTile.mY = it->GetY();
-                }
-            }
-            if (!theFound) {
-                for (long theRing = theEffectRadius - 2; theRing > theUnitSize && !theFound; theRing--) {
-                    EEGetSquareRingTiles(theX, theY, theRing, theTiles);
-                    for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                        theFound = theBuildManager->CanBuildAt(theContinent, kUnitTypeHouse, *it, theSize, false, true, theUnitTile.GetX(),
-                                                            theUnitTile.GetY());
-                        if (!theFound)
-                            continue;
-                        unsigned long j, n;
-                        for (j = 0, n = this->mUnits.size(); j < n && theFound; j++) {
-                            EEUnit* theOther = this->mUnits[j];
-                            long theOtherSize = theOther->GetUnitClass()->GetTileSize();
-                            float theHalf = theOtherSize * 0.5f;
-                            theUnitCenter = U2DPoint<long>(UMFloatToLong(theOther->GetTileX() + theHalf),
-                                                           UMFloatToLong(theOther->GetTileY() + theHalf));
-                            theHalf = theSize * 0.5f;
-                            theSite = U2DPoint<long>(UMFloatToLong(it->GetX() + theHalf),
-                                                     UMFloatToLong(it->GetY() + theHalf));
-                            theFound = theSite.DistanceTo(theUnitCenter) >= theOtherSize + 2;
-                        }
-                        if (theFound) {
-                            outTile.mX = it->GetX();
-                            outTile.mY = it->GetY();
-                        }
-                    }
-                }
-            }
-            break;
-        }
-        case kUnitTypeBarracks:
-        case kUnitTypeArcheryRange:
-        case kUnitTypeSiegeFactory:
-        case kUnitTypeStable:
-        case kUnitTypeMissileBase:
-        case kUnitTypeTankFactory:
-        case kUnitTypeCyberFactory:
-        case kUnitTypeCyberLaboratory:
-        case kUnitTypeCpMissileBase:
-            if (this->GetUnit() != NULL) {
-                if (this->mUnits.size() == 0) {
-                    theCenter.mX = theBuildManager->mTownCenterTile.GetX();
-                    theCenter.mY = theBuildManager->mTownCenterTile.GetY();
-                } else
-                    this->GetCenter(theCenter);
-                theContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
-                if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000) {
-                    for (long theRing = theRange + 5; theRing > 1 && !theFound; theRing--) {
-                        EEGetSquareRingTiles(theCenter.GetX(), theCenter.GetY(), theRing, theTiles);
-                        for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                            theFound = theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                                theCenter.GetX(), theCenter.GetY());
-                            if (theFound) {
-                                outTile.mX = it->GetX();
-                                outTile.mY = it->GetY();
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-        case kUnitTypeTemple:
-        case kUnitTypeUniversity:
-        case kUnitTypeHospital: {
-            this->GetCenter(theCenter);
-            theContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
-            long theKind;
-            long theOtherClass = 0;
-            if (inUnitClass == kUnitTypeHospital)
-                theKind = 1;
-            else if (inUnitClass == kUnitTypeTemple) {
-                theKind = 3;
-                theKind2 = 4;
-                theOtherClass = 0x3c;
-            } else {
-                theKind = 4;
-                theKind2 = 3;
-                theOtherClass = 0x27;
-            }
-            EEGetPlayerUnitsOfType(inUnitClass, this->mPlayer->mPlayerID, theUnits);
-            EEGetPlayerUnitsOfType(theOtherClass, this->mPlayer->mPlayerID, theUnits);
-            std::vector<EEUnit*>::iterator theUnit = theUnits.begin();
-            while (theUnit != theUnits.end()) {
-                if ((*theUnit)->GetTileNode() == NULL || (*theUnit)->GetComplexUnit()->GetIsBuilt())
-                    theUnit = theUnits.erase(theUnit);
-                else
-                    theUnit++;
-            }
-            long theRadius = this->GetMinEffectRadius(inUnitClass);
-            if (inUnitClass == kUnitTypeHospital)
-                theRadius *= 3;
-            EEGetTilesInRadius(theCenter.GetX(), theCenter.GetY(), theRadius, true, theTiles);
-            if (std::find_if(theUnits.begin(), theUnits.end(), EECPRCUnitOnTiles(theTiles)) == theUnits.end()) {
-                std::sort(this->mUnits.begin(), this->mUnits.end(), EECPRCAreaEffectLess(theKind, this->mPlayer->mPlayerID));
-                for (i = 0, theCount = this->mUnits.size(); i < theCount && !theFound; i++) {
-                    EEUnit* theOther = this->mUnits[i];
-                    long theX = theOther->GetTileX();
-                    long theY = theOther->GetTileY();
-                    long theOtherSize = theOther->GetUnitClass()->GetTileSize();
-                    bool theBlocked = false;
-                    bool theBlocked2 = false;
-                    for (long k = 0; k < theRadius && !theFound && !theBlocked && !theBlocked2; k++) {
-                        long theSide = theOtherSize + theSize + 2 * k;
-                        EEGetSquareRing(theX - k - theSize, theY - k - theSize, theSide, theSide, theTiles);
-                        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-                        for (it = theTiles.begin(); it != theTiles.end() && !theFound && !theBlocked && !theBlocked2;
-                             it++) {
-                            theBlocked = this->IsInAreaEffect(it->GetX(), it->GetY(), inUnitClass, theKind);
-                            theBlocked2 = this->IsInAreaEffect(it->GetX(), it->GetY(), inUnitClass, theKind2);
-                            if (!theBlocked && !theBlocked2 &&
-                                theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                         theCenter.GetX(), theCenter.GetY())) {
-                                outTile.mX = it->GetX();
-                                outTile.mY = it->GetY();
-                                theFound = true;
-                            } else
-                                theFound = false;
-                        }
-                    }
-                }
-            }
-            break;
-        }
-        }
+    EECPRC_CONTEXT;
+    int32_t theTile[2] = {(int32_t)outTile.mX, (int32_t)outTile.mY};
+    bool theResult = ee_cp_center_find_build_site(&theContext, EECPRCHandle(this), (int32_t)inUnitClass, theTile);
+    if (theResult) {
+        outTile.mX = theTile[0];
+        outTile.mY = theTile[1];
     }
-    return theFound;
-    }();
-    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0).State(this);
-    return theScopeResult;
+    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0).State(this);
+    return theResult;
 }
 
 // Returns the smallest radius among the area effect templates of a unit class's upgrade (0 when it has none)
@@ -498,21 +292,10 @@ long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
 {
     EECPPlaceScope theScope(kPlceCenterMinEffectRadius, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I(inUnitClass);
-    long theScopeResult = [&]() -> long {
-    long theRadius = 0;
-    EEUnitClassUpgrade* theUpgrade = this->mPlayer->mUnitClassUpgrades[inUnitClass];
-    for (unsigned long i = 0; i < 4; i++) {
-        unsigned long theTemplate = i < 4 ? theUpgrade->mAreaEffectTemplates[i] : 0;
-        if (theTemplate <= 0)
-            continue;
-        float theTemplateRadius = gAEManager.mTemplates[theTemplate]->mRadius;
-        if (theRadius == 0 || theTemplateRadius < theRadius)
-            theRadius = UMFloatToLong(theTemplateRadius);
-    }
-    return theRadius;
-    }();
-    theScope.I(theScopeResult);
-    return theScopeResult;
+    EECPRC_CONTEXT;
+    long theResult = ee_cp_center_min_effect_radius(&theContext, (int32_t)inUnitClass);
+    theScope.I(theResult);
+    return theResult;
 }
 
 // Returns how full the main building's morale effect is: its level plus the unfinished houses in range, over
@@ -521,44 +304,12 @@ float EECPResourceCenter::GetMoraleFill()
 {
     EECPPlaceScope theScope(kPlceCenterMoraleFill, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.State(this);
-    float theScopeResult = [&]() -> float {
-    std::vector<EEComplexUnit*> theUnits;
-    float theResult = 1.0f;
-    EEComplexUnit* theUnit = this->mUnit;
-    U2DRectangle<long> theRect;
-    if (theUnit != NULL) {
-        long theHalf = theUnit->GetUnitClass()->mTileSize / 2;
-        long theX = theUnit->GetTileX() + theHalf;
-        long theY = theUnit->GetTileY() + theHalf;
-        for (std::vector<EEAreaEffect*>::iterator theIterator = theUnit->mAreaEffects.mItems.begin();
-             theIterator != theUnit->mAreaEffects.mItems.end(); ++theIterator) {
-            EEAreaEffect* theEffect = (*theIterator)->mKind == kAreaEffectMoraleFromBuildings ? *theIterator : NULL;
-            if (theEffect == NULL)
-                continue;
-            theEffect->MarkDirty();
-            theEffect->Recount(0);
-            long theCount = theEffect->GetLevel();
-            long theMax = theEffect->mTemplate->mMaxLevel;
-            long theRadius = UMFloatToLong(theEffect->GetRadius());
-            theRect.mTop = theY - theRadius;
-            theRect.mLeft = theX - theRadius;
-            theRect.mBottom = theRadius + theY - 1;
-            theRect.mRight = theRadius + theX - 1;
-            EEGetUnitsInRectangle(theRect, theUnits, EECPRCBuildingInRectangle(this->mPlayer, theRect), true);
-            if (theMax == 0)
-                theResult = 1.0f;
-            else
-                theResult = (float)(theUnits.size() + theCount) / theMax;
-            break;
-        }
-    }
+    EECPRC_CONTEXT;
+    float theResult = ee_cp_center_morale_fill(&theContext, EECPRCHandle(this));
+    theScope.F(theResult);
     return theResult;
-    }();
-    theScope.F(theScopeResult);
-    return theScopeResult;
 }
 
-// NEAR: the original reads mUnits[i] through out-of-line begin()/operator+ and keeps the box in memory
 // Returns the free tile nearest the middle of the resource units (or next to the single unit or main building),
 // else the first candidate tile; leaves outCenter unchanged when there is nothing to measure
 void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
@@ -566,80 +317,24 @@ void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
     EECPPlaceScope theScope(kPlceCenterGetCenter, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.State(this);
     bool theScopeSet = this->mUnits.size() > 0 || this->GetUnit() != NULL;
-    [&]() {
-    std::vector<EETileCoordinate> theTiles;
-    EEAIAStarBounds theBounds;
-    EETileCoordinate theCenter;
-    theCenter.mX = 0;
-    theCenter.mY = 0;
-    bool theFound = false;
-    if (this->mUnits.size() > 1) {
-        EETileCoordinate theTile;
-        theTile.mX = this->mUnits[0]->GetTileX();
-        theTile.mY = this->mUnits[0]->GetTileY();
-        theBounds.Set(theTile);
-        for (unsigned long i = 1; i < this->mUnits.size(); i++) {
-            theTile.mX = this->mUnits[i]->GetTileX();
-            theTile.mY = this->mUnits[i]->GetTileY();
-            theBounds.Extend(theTile);
-        }
-        theBounds.GetCenter(theCenter);
-        long theRadius = (theBounds.mRight - theBounds.mLeft) / 2;
-        if (theRadius < 5)
-            theRadius = 5;
-        EEGetTilesInRadius(theCenter.GetX(), theCenter.GetY(), theRadius, true, theTiles);
-        std::sort(theTiles.begin(), theTiles.end(), EECPRCTileNearer(theCenter));
-    } else {
-        EEUnit* theUnit;
-        long theY;
-        long theSize;
-        if (this->mUnits.size() > 0) {
-            theSize = this->mUnits[0]->GetClass()->GetTileSize();
-            theY = this->mUnits[0]->GetTileY();
-            theUnit = this->mUnits[0];
-        } else {
-            theUnit = this->mUnit;
-            if (theUnit == NULL)
-                goto search;
-            theSize = theUnit->GetUnitClass()->GetTileSize();
-            theY = theUnit->GetTileY();
-        }
-        EEGetSquareBlockRing(1, theUnit->GetTileX(), theY, theSize, theTiles, 0);
-    }
-search:
-    std::vector<EETileCoordinate>::iterator it;
-    for (it = theTiles.begin(); it != theTiles.end(); ++it) {
-        if (theFound)
-            break;
-        EETile* theTile = gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>(it->GetX(), it->GetY()));
-        if (theTile != NULL && theTile->mUnits == NULL) {
-            outCenter = *it;
-            theFound = true;
-        } else
-            theFound = false;
-    }
-    if (!theFound && theTiles.size() > 0)
-        outCenter = theTiles[0];
-    }();
+    EECPRC_CONTEXT;
+    int32_t theTile[2] = {(int32_t)outCenter.mX, (int32_t)outCenter.mY};
+    ee_cp_center_get_center(&theContext, EECPRCHandle(this), theTile);
+    outCenter.mX = theTile[0];
+    outCenter.mY = theTile[1];
     theScope.I(theScopeSet ? outCenter.mX : 0).I(theScopeSet ? outCenter.mY : 0);
 }
+
 // Returns the first resource unit of the given resource type that is not exhausted, or NULL
 EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
 {
     EECPPlaceScope theScope(kPlceCenterFindResourceUnit, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I((long)inUnitType).State(this);
-    EEUnit* theScopeResult = [&]() -> EEUnit* {
-    EEUnit* theResult = NULL;
-    unsigned long i, n;
-    for (i = 0, n = this->mUnits.size(); i < n && theResult == NULL; i++) {
-        EEUnit* theUnit = this->mUnits[i];
-        if (theUnit->mResourceType == inUnitType && theUnit->mResourceAmount > 0)
-            theResult = theUnit;
-    }
+    EECPRC_CONTEXT;
+    EEUnit* theResult = EECPRCObject<EEUnit>(
+        ee_cp_center_find_resource_unit(&theContext, EECPRCHandle(this), (uint32_t)inUnitType));
+    theScope.U(theResult);
     return theResult;
-    }();
-    theScope.U(theScopeResult);
-    return theScopeResult;
 }
 
 // Returns whether any tile under a unit class's footprint at (inX, inY) has an area effect of the kind for the player
@@ -647,22 +342,42 @@ bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, lo
 {
     EECPPlaceScope theScope(kPlceCenterIsInAreaEffect, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I(inX).I(inY).I(inUnitClass).I(inKind);
-    bool theScopeResult = [&]() -> bool {
-    long thePlayerID = this->mPlayer->mPlayerID;
-    bool theResult = false;
-    if (inKind != 0) {
-        EEUnitClass* theClass = gUnitClassTable[inUnitClass];
-        if (theClass != NULL) {
-            for (long x = inX; x < inX + theClass->mTileSize && !theResult; x++) {
-                for (long y = inY; y < inY + theClass->mTileSize && !theResult; y++)
-                    theResult = gAEManager.HasAreaEffect(inKind, x, y, thePlayerID);
-            }
-        }
-    }
+    EECPRC_CONTEXT;
+    bool theResult = ee_cp_center_is_in_area_effect(&theContext, (int32_t)inX, (int32_t)inY, (int32_t)inUnitClass,
+        (int32_t)inKind);
+    theScope.I(theResult);
     return theResult;
-    }();
-    theScope.I(theScopeResult);
-    return theScopeResult;
+}
+
+// The file host of Load: the saved game's primitives and the centre's lists (ee_sim::cp::resource_center's
+// EE_CP_CENTER_FILE_* operations)
+struct EECPRCFileContext {
+    EECPResourceCenter* mCenter;
+    FSFile* mFile;
+};
+
+static int32_t EECPRCFileOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EECPRCFileContext& theContext = *static_cast<EECPRCFileContext*>(inContext);
+    EECPResourceCenter* theCenter = theContext.mCenter;
+    switch (inOp) {
+    case EE_CP_CENTER_FILE_CLEAR:
+        theCenter->mUnits.clear();
+        return kErrorOK;
+    case EE_CP_CENTER_FILE_PUSH_ID:
+        theCenter->mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID((uint32_t)io->i));   // ids until Restore
+        return kErrorOK;
+    case EE_CP_CENTER_FILE_SET_MAIN:
+        theCenter->mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)io->i);
+        return kErrorOK;
+    case EE_CP_CENTER_FILE_ACTIVE:
+        io->b = theCenter->mIsActive ? 1 : 0;
+        return kErrorOK;
+    case EE_CP_CENTER_FILE_SET_ACTIVE:
+        theCenter->mIsActive = io->b != 0;
+        return kErrorOK;
+    }
+    return EESavePrimitive(*theContext.mFile, inOp, io);
 }
 
 // Reads the resource unit ids and the main building's id (resolved by Restore) and, from version 0.141 on, the
@@ -671,67 +386,22 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
 {
     EECPPlaceScope theScope(kPlceCenterLoad, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I((long)inMajorVersion).I((long)inMinorVersion);
-    long theScopeResult = [&]() -> long {
-    unsigned long theCount;
-    unsigned long theID;
-    unsigned long i;
-    long theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        this->mUnits.clear();
-        for (i = 0; i < theCount; i++) {
-            theResult = inFile.Read(theID);
-            if (theResult == kErrorOK)
-                this->mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID(theID));  // the ids sit in the list until Restore
-        }
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theID);
-            if (theResult == kErrorOK) {
-                this->mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
-                if (inMinorVersion >= 0x8d)
-                    theResult = inFile.Read(this->mIsActive);
-            }
-        }
-    }
+    EECPRCFileContext theFile = {this, &inFile};
+    long theResult = ee_cp_center_load(&theFile, &EECPRCFileOperation, (uint32_t)inMinorVersion);
+    theScope.I(theResult).State(this).I(inMinorVersion >= 0x8d && theResult == kErrorOK ? (this->mIsActive ? 1 : 0) : 2);
     return theResult;
-    }();
-    theScope.I(theScopeResult).State(this).I(inMinorVersion >= 0x8d && theScopeResult == kErrorOK ? (this->mIsActive ? 1 : 0) : 2);
-    return theScopeResult;
 }
 
-// NEAR: the original reads the elements as *(begin() + i) through the out-of-line Ptrit operator+ and pushes the
-// element's address as a const long&
 // Turns the loaded ids back into units (dropping missing and duplicate ones) and references the main building;
 // returns 3 if the main building no longer exists
 long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     EECPPlaceScope theScope(kPlceCenterRestore, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I((long)inMajorVersion).I((long)inMinorVersion).State(this);
-    long theScopeResult = [&]() -> long {
-    std::vector<long> theIDs;
-    long theResult = 0;
-    unsigned long i;
-    for (i = 0; i < this->mUnits.size(); i++)
-        theIDs.push_back((int32_t)this->mUnits[i].GetSavedID());
-    this->mUnits.clear();
-    for (i = 0; i < theIDs.size(); i++) {
-        if (gWorld.mPlayers[0] == NULL)
-            continue;
-        EEUnit* theUnit = gWorld.GetUnit(theIDs[i]);
-        if (theUnit != NULL && !this->Contains(theUnit))
-            this->AddUnit(theUnit);
-    }
-    if ((int32_t)this->mUnit.GetSavedID() != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnit.GetSavedID()));
-        if (this->GetUnit() != NULL)
-            this->GetUnit()->Reference();
-        else
-            theResult = 3;
-    } else
-        this->mUnit = NULL;
+    EECPRC_CONTEXT;
+    long theResult = ee_cp_center_restore(&theContext, EECPRCHandle(this));
+    theScope.I(theResult).State(this);
     return theResult;
-    }();
-    theScope.I(theScopeResult).State(this);
-    return theScopeResult;
 }
 
 // Returns whether a unit's tile is within the player's drop-off distance of the center
@@ -739,17 +409,10 @@ bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterIsWithinRadius, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.U(inUnit).State(this);
-    bool theScopeResult = [&]() -> bool {
-    EETileDistanceLess theCenter(0, 0);
-    long theRadius = this->mPlayer->mDropOffDistance;
-    this->GetCenter(theCenter.mCenter);
-    EETileCoordinate theTile;
-    theTile.mX = inUnit->GetTileX();
-    theTile.mY = inUnit->GetTileY();
-    return theCenter.DistanceSquared(theTile) < theRadius * theRadius;
-    }();
-    theScope.I(theScopeResult);
-    return theScopeResult;
+    EECPRC_CONTEXT;
+    bool theResult = ee_cp_center_is_within_radius(&theContext, EECPRCHandle(this), EECPRCHandle(inUnit));
+    theScope.I(theResult);
+    return theResult;
 }
 
 // Writes the ids of the valid resource units, the main building's id (-1 for none) and the active flag; returns
@@ -758,35 +421,10 @@ long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMino
 {
     EECPPlaceScope theScope(kPlceCenterSave, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I((long)inMajorVersion).I((long)inMinorVersion).State(this);
-    long theScopeResult = [&]() -> long {
-    unsigned long i;
-    unsigned long theCount;
-    for (i = 0, theCount = 0; i < this->mUnits.size(); i++) {
-        if (this->mUnits[i]->mIsValid)
-            theCount++;
-    }
-    long theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    // stop at the first failed id write (each result used to overwrite the previous one)
-    for (i = 0; i < this->mUnits.size() && theResult == 0; i++) {
-        EEUnit* theUnit = this->mUnits[i];
-        if (theUnit->mIsValid) {
-            unsigned long theID = theUnit->GetUnitID();
-            theResult = outFile.Write(theID);
-        }
-    }
-    if (theResult == 0) {
-        unsigned long theMainID;
-        theMainID = (this->mUnit != NULL && this->mUnit->mIsValid) ? this->mUnit->GetUnitID() : -1;
-        theResult = outFile.Write(theMainID);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mIsActive);
-    }
+    EECPRC_CONTEXT;
+    long theResult = ee_cp_center_save(&theContext, EECPRCHandle(this), &outFile, &EESaveFilePrimitive);
+    theScope.I(theResult);
     return theResult;
-    }();
-    theScope.I(theScopeResult);
-    return theScopeResult;
 }
 
 // Sets the center's main building, moving the reference from the old one
@@ -794,13 +432,11 @@ void EECPResourceCenter::SetUnit(EEComplexUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterSetUnit, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.CU(inUnit);
-    [&]() {
     if (this->mUnit != NULL)
         this->mUnit->Dereference();
     this->mUnit = inUnit;
     if (inUnit != NULL)
         inUnit->Reference();
-    }();
     theScope.State(this);
 }
 
@@ -809,12 +445,10 @@ void EECPResourceCenter::ReleaseUnit(EEComplexUnit* inUnit)
 {
     EECPPlaceScope theScope(kPlceCenterReleaseUnit, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.CU(inUnit);
-    [&]() {
     if (this->mUnit == inUnit) {
         this->mUnit->Dereference();
         this->mUnit = NULL;
     }
-    }();
     theScope.State(this);
 }
 
@@ -823,13 +457,11 @@ void EECPResourceCenter::SetActive(bool inFlag, long inArg2)
 {
     EECPPlaceScope theScope(kPlceCenterSetActive, this->mPlayer);   // PLCE (TEST ONLY)
     theScope.I(inFlag).I(inArg2);
-    [&]() {
-    EETileCoordinate theCenter;
-    theCenter.mX = 0;
-    theCenter.mY = 0;
     this->mIsActive = inFlag;
-    if (inFlag)
-        this->GetCenter(theCenter);
-    }();
+    if (inFlag) {
+        EECPRC_CONTEXT;
+        int32_t theCenter[2] = {0, 0};
+        ee_cp_center_get_center(&theContext, EECPRCHandle(this), theCenter);
+    }
     theScope.State(this);
 }

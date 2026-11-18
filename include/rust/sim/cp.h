@@ -14,11 +14,198 @@ constexpr static const uint32_t EE_CP_LEGACY_LAST_VERSION = 250;
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;
 
+constexpr static const int32_t EE_CP_PLACE_EPOCH = 1;
+
+constexpr static const int32_t EE_CP_PLACE_PASSABILITY = 2;
+
+/// `mUnitClassUpgrades[v0]->mRange` into `f0`
+constexpr static const int32_t EE_CP_PLACE_RANGE = 3;
+
+/// `GetTechTree()->Get(v0)`: its `mData->mKind` into `v0`, whether there is one returned
+constexpr static const int32_t EE_CP_PLACE_TECH_KIND = 4;
+
+constexpr static const int32_t EE_CP_PLACE_HAS_PATHFINDING = 5;
+
+constexpr static const int32_t EE_CP_PLACE_CLAIM_RANGE_ON = 6;
+
+constexpr static const int32_t EE_CP_PLACE_CLAIM_RANGE = 7;
+
+/// the player's units from `mFirstUnit` (pushed)
+constexpr static const int32_t EE_CP_PLACE_OWN_UNITS = 8;
+
+/// `EEGetPlayerUnitsOfType(v0, v1, units)` on the input list (the result pushed)
+constexpr static const int32_t EE_CP_PLACE_UNITS_OF_TYPE = 9;
+
+/// player 0's units (pushed); 0 returned without a player 0
+constexpr static const int32_t EE_CP_PLACE_NATURE_UNITS = 10;
+
+/// `mTowns`: (continent or -1 for a null town, the hull centre packed x << 32 | y) pushed
+constexpr static const int32_t EE_CP_PLACE_TOWNS = 11;
+
+/// `mResourceCenters` (pushed)
+constexpr static const int32_t EE_CP_PLACE_CENTERS = 12;
+
+constexpr static const int32_t EE_CP_PLACE_HAS_PLAYER0 = 13;
+
+/// `gWorld.GetUnit(v0)`
+constexpr static const int32_t EE_CP_PLACE_WORLD_UNIT = 14;
+
+/// unit `a` into `io.unit`
+constexpr static const int32_t EE_CP_PLACE_UNIT_INFO = 15;
+
+constexpr static const int32_t EE_CP_PLACE_CLASS_COUNT = 17;
+
+constexpr static const int32_t EE_CP_PLACE_CLASS_EXISTS = 18;
+
+constexpr static const int32_t EE_CP_PLACE_CLASS_TILE_SIZE = 19;
+
+constexpr static const int32_t EE_CP_PLACE_CLASS_TERRAIN = 20;
+
+constexpr static const int32_t EE_CP_PLACE_CLASS_TECHNOLOGY = 21;
+
+constexpr static const int32_t EE_CP_PLACE_HAS_MAP = 22;
+
+constexpr static const int32_t EE_CP_PLACE_MAP_FLAGS = 23;
+
+/// `GetTileAtLocation(v0, v1)`'s terrain (-1: no tile)
+constexpr static const int32_t EE_CP_PLACE_TILE_TERRAIN = 24;
+
+/// `GetTile(v0, v1)`'s terrain (-1: no tile)
+constexpr static const int32_t EE_CP_PLACE_MAP_TILE_TERRAIN = 25;
+
+/// `GetTileAtLocation(v0, v1)`: -1 no tile, 1 its `mUnits` NULL, 0 not
+constexpr static const int32_t EE_CP_PLACE_TILE_FREE = 26;
+
+constexpr static const int32_t EE_CP_PLACE_IS_EDGE = 27;
+
+constexpr static const int32_t EE_CP_PLACE_LARGEST_CONTINENT = 28;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_FROM_ID = 29;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_BY_ID = 30;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_AT = 31;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_ID = 32;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_FLAG = 33;
+
+/// continent `a`'s `GetShoreNextTo(v0, tiles)` on the input tiles (the result pushed)
+constexpr static const int32_t EE_CP_PLACE_SHORE_NEXT_TO = 34;
+
+constexpr static const int32_t EE_CP_PLACE_SHORE_TILES = 35;
+
+/// continent (`v0` 0) or choke point (`v0` 1) `a`'s `GetHullCenter()` into `v0`, `v1`
+constexpr static const int32_t EE_CP_PLACE_HULL_CENTER = 36;
+
+constexpr static const int32_t EE_CP_PLACE_ARE_CONNECTED = 37;
+
+constexpr static const int32_t EE_CP_PLACE_TILE_CONTINENT = 38;
+
+constexpr static const int32_t EE_CP_PLACE_UNIT_CONTINENT = 39;
+
+constexpr static const int32_t EE_CP_PLACE_CONTINENT_ID_AT = 40;
+
+constexpr static const int32_t EE_CP_PLACE_CHOKE_AT = 41;
+
+constexpr static const int32_t EE_CP_PLACE_HILL_AT = 42;
+
+constexpr static const int32_t EE_CP_PLACE_PATH_AREA_AT = 43;
+
+constexpr static const int32_t EE_CP_PLACE_UNIT_PATH_AREA = 44;
+
+constexpr static const int32_t EE_CP_PLACE_CHOKE_POINTS = 45;
+
+/// area `a`'s `GetHullBounds()` into `v0..v3` (left, top, right, bottom)
+constexpr static const int32_t EE_CP_PLACE_HULL_BOUNDS = 46;
+
+/// choke point `a`'s `GetTileSet().BuildPointList(tiles, 1)` on the input tiles
+constexpr static const int32_t EE_CP_PLACE_CHOKE_TILES = 47;
+
+constexpr static const int32_t EE_CP_PLACE_BLOCK_TAKES = 48;
+
+constexpr static const int32_t EE_CP_PLACE_FACING_QUARTER = 49;
+
+constexpr static const int32_t EE_CP_PLACE_SITE_THREAT = 50;
+
+constexpr static const int32_t EE_CP_PLACE_TILE_UNIT_OF_TYPE = 51;
+
+/// `EEGetUnitsInRectangle(rect v0..v3, units, filter v4, true)` on the input units
+constexpr static const int32_t EE_CP_PLACE_UNITS_IN_RECT = 52;
+
+constexpr static const int32_t EE_CP_PLACE_RANDOM = 53;
+
+constexpr static const int32_t EE_CP_PLACE_SPACE_DOCK_OPEN = 54;
+
+/// `std::sort` of the input keys: the order into `io.order`
+constexpr static const int32_t EE_CP_PLACE_SORT = 55;
+
+/// the tile lists through their C++ wrappers (the capture's notes)
+constexpr static const int32_t EE_CP_PLACE_SQUARE_RING_TILES = 56;
+
+constexpr static const int32_t EE_CP_PLACE_SQUARE_BLOCK_RING = 57;
+
+constexpr static const int32_t EE_CP_PLACE_SQUARE_RING = 58;
+
+constexpr static const int32_t EE_CP_PLACE_SIDE_TILES = 59;
+
+constexpr static const int32_t EE_CP_PLACE_CORNER_TILES = 60;
+
+constexpr static const int32_t EE_CP_PLACE_TILES_IN_RADIUS = 61;
+
+/// `mUnits`' saved ids (pushed)
+constexpr static const int32_t EE_CP_CENTER_UNITS = 100;
+
+constexpr static const int32_t EE_CP_CENTER_UNIT = 101;
+
+constexpr static const int32_t EE_CP_CENTER_ACTIVE = 102;
+
+/// `mUnits` from the input ids
+constexpr static const int32_t EE_CP_CENTER_SET_ORDER = 103;
+
+constexpr static const int32_t EE_CP_CENTER_CLEAR = 104;
+
+/// `AddUnit(b)`
+constexpr static const int32_t EE_CP_CENTER_ADD_UNIT = 105;
+
+/// Restore's main unit from saved id `v0`
+constexpr static const int32_t EE_CP_CENTER_RESTORE_MAIN = 106;
+
+/// unit `a`'s `DistanceSquaredToUnit(b)` into `f0`
+constexpr static const int32_t EE_CP_CENTER_DISTANCE_TO_UNIT = 107;
+
+constexpr static const int32_t EE_CP_CENTER_HAS_AREA_EFFECT = 108;
+
+/// unit `a`'s morale-from-buildings effect: found returned, its radius in `f0`
+constexpr static const int32_t EE_CP_CENTER_MORALE_RADIUS = 109;
+
+/// the same recounted: found returned, level `v0`, maximum `v1`, radius `f0`
+constexpr static const int32_t EE_CP_CENTER_MORALE_RECOUNT = 110;
+
+/// class `v0`'s upgrade's four area effect templates into `v0..v3`
+constexpr static const int32_t EE_CP_CENTER_EFFECT_TEMPLATES = 111;
+
+constexpr static const int32_t EE_CP_CENTER_TEMPLATE_RADIUS = 112;
+
 constexpr static const unsigned long EASY = 0;
 
 constexpr static const unsigned long MEDIUM = 1;
 
 constexpr static const unsigned long HARD = 2;
+
+/// `mUnits.clear()`
+constexpr static const int32_t EE_CP_CENTER_FILE_CLEAR = 200;
+
+/// `mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID(io.i))`
+constexpr static const int32_t EE_CP_CENTER_FILE_PUSH_ID = 201;
+
+/// `mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(io.i)`
+constexpr static const int32_t EE_CP_CENTER_FILE_SET_MAIN = 202;
+
+/// `mIsActive = io.b`; `io.b` in: `mIsActive` (the read's old value)
+constexpr static const int32_t EE_CP_CENTER_FILE_SET_ACTIVE = 203;
+
+constexpr static const int32_t EE_CP_CENTER_FILE_ACTIVE = 204;
 
 /// `mCombatManager->Load(major, minor, file)`: its result.
 constexpr static const int32_t EE_CP_SAVE_COMBAT_LOAD = 400;
@@ -80,6 +267,9 @@ constexpr static const int32_t EE_CP_STATE_PUSH_PLAYER = 423;
 
 /// The table (the C++ shim's `mTable`).
 struct EeCpInfluence;
+
+/// The class's own data (the C++ object owns it: `EECPPlacement::mRust`).
+struct EeCpPlacement;
 
 /// `EEComputerPlayer`'s plain members, `mLBD4` (+0xbd4) to `mAttackStarted` (+0xf56), in the class's order.
 struct EeCpFields {
@@ -424,6 +614,84 @@ struct EeCpRect {
   int32_t bottom;
 };
 
+/// What the C++ hands every call: the computer player and its placement.
+struct EeCpPlaceCtx {
+  /// the `EEComputerPlayer*` (its `EEPlayer*`: the first base)
+  uint64_t player;
+  /// `mPlayerID`
+  uint32_t player_id;
+  /// the player's record (`static_cast<EeCpFields*>(player)`)
+  const EeCpFields *fields;
+  /// `mPlacement->mTownCenterTile`'s `mX`, `mY` (null: no placement)
+  long *town;
+  /// `mPlacement->mRust` (null: no placement)
+  EeCpPlacement *placement;
+  /// `EESimCaptureRecord::Active()`: the tile lists go through the C++ wrappers (their TEST ONLY notes)
+  uint8_t capture;
+};
+
+/// One unit's members the searches read (`UNIT_INFO`; a null unit reads as `Default`).
+struct EeCpUnitInfo {
+  /// `mTileX`, `mTileY`
+  int32_t tile[2];
+  /// `mUnitID`
+  uint32_t id;
+  /// `mUnitClass->mUnitType`, `GetTileSize()`, `mCategory`, `mFamily`, `mTechnology`
+  int32_t unit_type;
+  int32_t tile_size;
+  int32_t category;
+  int32_t family;
+  int32_t technology;
+  /// `mHitPoints`, `mResourceAmount`, `mResourceType`
+  int32_t hit_points;
+  int32_t resource_amount;
+  int32_t resource_type;
+  /// `mComplexUnit` (0: none) and, when there is one, its `mTileX`, `mTileY`, `mHitPoints`, `mIsBuilt`, `mFacing`,
+  /// `mPreviousPart`, `mNextPart`
+  uint64_t complex;
+  int32_t complex_tile[2];
+  int32_t complex_hit_points;
+  uint8_t complex_built;
+  /// `mIsValid`, `mTile != NULL`, `GetTileNode() != NULL`, `mUnitClass->IsLandBuilding()`, `mIsWall`, `IsDropSite()`
+  uint8_t valid;
+  uint8_t has_tile;
+  uint8_t has_tile_node;
+  uint8_t land_building;
+  uint8_t wall;
+  uint8_t drop_site;
+  uint8_t has_class;
+  uint32_t facing;
+  uint64_t previous_part;
+  uint64_t next_part;
+  /// `mPlayer` (the owner's `EEPlayer*`)
+  uint64_t player;
+};
+
+/// One host operation's values.
+struct EeCpPlaceIo {
+  /// up to six integer arguments and results
+  int64_t v[6];
+  /// float results
+  float f[3];
+  /// UNIT_INFO's result
+  EeCpUnitInfo unit;
+  /// the list an operation starts from (`input_len` pairs; the sort's keys: `input_len` single values)
+  const int64_t *input;
+  size_t input_len;
+  /// the list an operation pushes onto (`ee_cp_place_push`)
+  void *list;
+  /// the sort's order out (`input_len` indices)
+  uint32_t *order;
+};
+
+/// What `EECPNextPlaceSearch` returns: found, x, y, gap.
+struct EeCpPlaceResult {
+  uint8_t found;
+  int32_t x;
+  int32_t y;
+  int32_t gap;
+};
+
 extern "C" {
 
 /// Steps over a retail file's combat manager block (`EECPCombatManager::Load` at 0.228-0.250).
@@ -652,6 +920,346 @@ int32_t ee_cp_resource_state_save(void *ctx,
 /// As [`ee_cp_resource_state_save`].
 int32_t ee_cp_resource_state_load(void *ctx,
                                   EeUnitsPlayerSaveFn host);
+
+extern int64_t ee_cp_place_host(const EeCpPlaceCtx *ctx,
+                                int32_t op,
+                                uint64_t a,
+                                uint64_t b,
+                                EeCpPlaceIo *io);
+
+extern int64_t ee_cp_center_host(const EeCpPlaceCtx *ctx,
+                                 int32_t op,
+                                 uint64_t a,
+                                 uint64_t b,
+                                 EeCpPlaceIo *io);
+
+/// Pushes a pair onto a host operation's list.
+///
+/// # Safety
+/// `list` is the `EeCpPlaceIo::list` of a running operation.
+void ee_cp_place_push(void *list, int64_t a, int64_t b);
+
+/// A placement's own data, for `EECPPlacement::mRust` (`ee_cp_placement_free` frees it).
+EeCpPlacement *ee_cp_placement_new();
+
+/// # Safety
+/// `p` is null or came from [`ee_cp_placement_new`] and is not used after.
+void ee_cp_placement_free(EeCpPlacement *p);
+
+/// TEST ONLY (PLCE): the data's digest into `out[8]`: the water sites' count and FNV-1a 64 (low, high words), the
+/// space sites' the same, whether the tiles were collected, the classes seen's count.
+///
+/// # Safety
+/// `p` is a live placement's data; `out` has 8 words.
+void ee_cp_placement_digest(const EeCpPlacement *p,
+                            uint32_t *out);
+
+/// `HasUnitNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_unit_near(const EeCpPlaceCtx *ctx,
+                         int32_t unit_type,
+                         int32_t x,
+                         int32_t y,
+                         float squared);
+
+/// `HasAntiAirNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_anti_air_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
+
+/// `HasTownCenterNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_town_center_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float distance);
+
+/// `HasGateNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_gate_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float radius);
+
+/// `HasTowerNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_tower_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
+
+/// `HasWallNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_wall_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, float squared);
+
+/// `HasEnemyNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_enemy_near(const EeCpPlaceCtx *ctx, int32_t x, int32_t y);
+
+/// `CollectSiteTiles`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+void ee_cp_collect_site_tiles(const EeCpPlaceCtx *ctx, int32_t kind);
+
+/// `FindAirportSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_airport_site(const EeCpPlaceCtx *ctx, int32_t *out);
+
+/// `FindAntiAirSiteNear`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_anti_air_site_near(const EeCpPlaceCtx *ctx, uint64_t unit, int32_t *out);
+
+/// `FindAntiAirSiteAround`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_anti_air_site_around(const EeCpPlaceCtx *ctx,
+                                     int32_t x,
+                                     int32_t y,
+                                     int32_t size,
+                                     int32_t *out);
+
+/// `FindAntiAirSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_anti_air_site(const EeCpPlaceCtx *ctx, int32_t *out);
+
+/// `FindCenterSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_center_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
+
+/// `FindGranarySite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_granary_site(const EeCpPlaceCtx *ctx, int32_t *out);
+
+/// `FindProductionSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_production_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
+
+/// `FindShoreSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_shore_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
+
+/// `FindSpaceSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_space_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
+
+/// `FindTowerSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_tower_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t size, int32_t *out);
+
+/// `FindWonderSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_wonder_site(const EeCpPlaceCtx *ctx, int32_t class_, uint32_t size, int32_t *out);
+
+/// `FindSite` (`out`: the tile in and out)
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_find_site(const EeCpPlaceCtx *ctx, int32_t class_, int32_t *out);
+
+/// `IsNearAirportEnd`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_is_near_airport_end(const EeCpPlaceCtx *ctx,
+                               int32_t x,
+                               int32_t y,
+                               int32_t size,
+                               float distance);
+
+/// `HasBuilderFor`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_has_builder_for(const EeCpPlaceCtx *ctx, int32_t x, int32_t y, int32_t class_);
+
+/// `SetTownCenter`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+void ee_cp_set_town_center(const EeCpPlaceCtx *ctx, uint64_t unit);
+
+/// `UnitAdded`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+void ee_cp_unit_added(const EeCpPlaceCtx *ctx, uint64_t unit);
+
+/// `Reset`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+void ee_cp_placement_reset(const EeCpPlaceCtx *ctx);
+
+/// `Restore`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+int32_t ee_cp_placement_restore(const EeCpPlaceCtx *ctx);
+
+/// `CanBuildAt`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_can_build_at(const EeCpPlaceCtx *ctx,
+                        uint16_t continent,
+                        int32_t class_,
+                        int32_t x,
+                        int32_t y,
+                        int32_t size,
+                        bool margin,
+                        bool strict,
+                        int32_t from_x,
+                        int32_t from_y);
+
+/// `EECPCountOwn`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+int32_t ee_cp_count_own(const EeCpPlaceCtx *ctx, int32_t unit_type);
+
+/// `EECPNextPlaceSearch` (`units`: `count` ids)
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+EeCpPlaceResult ee_cp_next_place_search(const EeCpPlaceCtx *ctx,
+                                        int32_t class_,
+                                        int32_t mode,
+                                        int32_t x,
+                                        int32_t y,
+                                        int32_t first,
+                                        int32_t last,
+                                        const int64_t *units,
+                                        size_t count,
+                                        int32_t site);
+
+/// `EECPAntiAirClass` of the player's epoch.
+int32_t ee_cp_anti_air_class(int32_t epoch);
+
+/// `EECPFishingBoatClass`
+int32_t ee_cp_fishing_boat_class(int32_t epoch);
+
+/// `EECPGateClass`
+int32_t ee_cp_gate_class(int32_t epoch);
+
+/// `EECPTowerClass`
+int32_t ee_cp_tower_class(int32_t epoch);
+
+/// `EECPWallClass`
+int32_t ee_cp_wall_class(int32_t epoch);
+
+/// `EECPIsSiteClass`
+bool ee_cp_is_site_class(int32_t class_);
+
+/// `Contains`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_center_contains(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
+
+/// `AdoptDropSite`'s test (the C++ takes the reference)
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_center_adopts(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
+
+/// `FindBuildSite`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_center_find_build_site(const EeCpPlaceCtx *ctx,
+                                  uint64_t center,
+                                  int32_t class_,
+                                  int32_t *out);
+
+/// `GetMinEffectRadius`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+int32_t ee_cp_center_min_effect_radius(const EeCpPlaceCtx *ctx, int32_t class_);
+
+/// `GetMoraleFill`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+float ee_cp_center_morale_fill(const EeCpPlaceCtx *ctx, uint64_t center);
+
+/// `GetCenter` (`out`: the tile in and out)
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+void ee_cp_center_get_center(const EeCpPlaceCtx *ctx, uint64_t center, int32_t *out);
+
+/// `FindResourceUnit`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+uint64_t ee_cp_center_find_resource_unit(const EeCpPlaceCtx *ctx,
+                                         uint64_t center,
+                                         uint32_t resource);
+
+/// `IsInAreaEffect`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_center_is_in_area_effect(const EeCpPlaceCtx *ctx,
+                                    int32_t x,
+                                    int32_t y,
+                                    int32_t class_,
+                                    int32_t kind);
+
+/// `IsWithinRadius`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+bool ee_cp_center_is_within_radius(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
+
+/// `Restore`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+int32_t ee_cp_center_restore(const EeCpPlaceCtx *ctx, uint64_t center);
+
+/// `Save` (`file`, `host`: the saved game's primitives)
+///
+/// # Safety
+/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+int32_t ee_cp_center_save(const EeCpPlaceCtx *ctx,
+                          uint64_t center,
+                          void *file,
+                          EeUnitsPlayerSaveFn host);
+
+/// `EECPResourceCenter::Load`: `host` serves the file's primitives and the centre's operations
+/// (`EE_CP_CENTER_FILE_*`) on `file`.
+///
+/// # Safety
+/// `host` must accept `file` with those operations for the call.
+int32_t ee_cp_center_load(void *file, EeUnitsPlayerSaveFn host, uint32_t minor);
 
 }  // extern "C"
 
