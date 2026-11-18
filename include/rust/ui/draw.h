@@ -6,17 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/rect.h"
 
 /// `UITextLabel`'s margin (`kTextLabelMargin`), half of it kept from an edge of a label fitted to its text.
 constexpr static const float TEXT_LABEL_MARGIN = 6.0;
-
-/// One line of `UIControl::DrawBorder`: from `start` to `end` in the light colour (`UIControl::sLightBorder`) or the
-/// dark one (`sDarkBorder`).
-struct EeUiBorderLine {
-  EeUiPoint start;
-  EeUiPoint end;
-  bool light;
-};
 
 #endif  // EE_RUST_UI_DRAW_H

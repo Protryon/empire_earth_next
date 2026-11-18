@@ -358,13 +358,13 @@ impl EeUiList {
             result = self.op(Op::PartDrawPolygons, self.bar.get(), 0);
         }
         if f.copied_has_selection {
-            result = self.op(Op::RhombusDraw, self.copied_selected, 0);
+            result = crate::draw2d::rhombus(self.copied_selected, || self.op(Op::RhombusDraw, self.copied_selected, 0));
             if f.copied_has_focus {
                 let r = self.host.get_rect(Op::RhombusRect, self.copied_selected);
                 for (s, e) in draw::list_focus_lines(&r) {
                     let mut p = [s.x, s.y, e.x, e.y];
                     self.host.op_f(Op::LineSetPoints, line, 0, 0, 0, &mut p);
-                    result = self.op(Op::LineDraw, line, 0);
+                    result = crate::draw2d::line(line, || self.op(Op::LineDraw, line, 0));
                 }
             }
         }

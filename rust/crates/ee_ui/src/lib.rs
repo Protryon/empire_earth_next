@@ -24,6 +24,7 @@ pub mod controlobj;
 pub mod controls_table;
 pub mod direct;
 pub mod draw;
+pub mod draw2d;
 pub mod edit;
 pub mod edit_draw;
 pub mod edit_keys;

@@ -62,7 +62,6 @@ struct UIGraphHost {
             break;
         case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
         case EeUiOp::LineSetOpacity: theLine->SetOpacity(f[0]); break;
-        case EeUiOp::LineDraw: return g->GetRasterizer()->Draw(theLine, g->GetScreenIndex());
         default: break;
         }
         return 0;

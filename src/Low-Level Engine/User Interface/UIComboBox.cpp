@@ -194,7 +194,6 @@ struct UIComboBox::Rust {
         case EeUiOp::RhombusDelete: delete theRhombus; break;
         case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
         case EeUiOp::RhombusSetColor: theRhombus->SetColor(GEColor(f[0], f[1], f[2])); break;
-        case EeUiOp::RhombusDraw: return c->GetRasterizer()->Draw(theRhombus, c->GetScreenIndex());
         case EeUiOp::DrawCountDecrement: c->mDrawCount--; break;
         default: break;
         }

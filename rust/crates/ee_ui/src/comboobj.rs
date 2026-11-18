@@ -493,7 +493,7 @@ impl EeUiCombo {
         op(Op::BaseDrawPolygons, 0);
         op(Op::PartDrawPolygons, self.text_box());
         if self.f.get().copied_has_focus {
-            op(Op::RhombusDraw, self.rhombus);
+            crate::draw2d::rhombus(self.rhombus, || op(Op::RhombusDraw, self.rhombus));
         }
         let mut r = op(Op::PartDrawPolygons, self.drop);
         if self.f.get().copied_list_box_open {

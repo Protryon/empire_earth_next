@@ -156,7 +156,7 @@ impl EeUiButton {
             let (c, d) = (pack(src.bottom, src.left), pack(src.right, src.top));
             self.host.op_f(Op::BitmapStretch, bitmap as isize, 0, c, d, &mut f);
             self.host.op_point(Op::BitmapSetLocation, bitmap as isize, s.location);
-            r = self.op(Op::BitmapDraw, bitmap as isize, 0);
+            r = crate::draw2d::bitmap(bitmap as isize, || self.op(Op::BitmapDraw, bitmap as isize, 0));
         }
         r
     }

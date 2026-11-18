@@ -461,7 +461,7 @@ impl EeUiButton {
         if !f.copied_bitmap.is_null() {
             let bitmap = f.copied_bitmap as isize;
             self.host.op_point(Op::BitmapSetLocation, bitmap, f.bitmap_location);
-            r = self.op(Op::BitmapDraw, bitmap, 0);
+            r = crate::draw2d::bitmap(bitmap, || self.op(Op::BitmapDraw, bitmap, 0));
         }
         r
     }

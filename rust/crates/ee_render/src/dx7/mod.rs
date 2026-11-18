@@ -21,7 +21,7 @@ pub mod surfobj;
 pub use crate::ge::vertarr as vertex;
 
 #[cfg(not(test))]
-mod draw_ffi;
+pub(crate) mod draw_ffi;
 #[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]

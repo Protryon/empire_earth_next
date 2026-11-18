@@ -617,7 +617,7 @@ impl EeUiForm {
                 self.op(Op::FormRhombusLabelColor, rh, popup);
                 self.host.op_f(Op::RhombusSetOpacity, rh, 0, 0, 0, &mut [SHADOW_OPACITY, 0.0, 0.0, 0.0]);
                 self.op_rect(Op::RhombusSetRect, rh, r);
-                self.op(Op::FormRhombusDraw, rh, 0);
+                crate::draw2d::rhombus(rh, || self.op(Op::FormRhombusDraw, rh, 0));
                 self.op(Op::RhombusDelete, rh, 0);
             }
             result = self.op(Op::PartDrawPolygons, popup, 0);
@@ -668,7 +668,7 @@ impl EeUiForm {
         self.host.op_point(Op::BitmapSetLocation, bitmap, location);
         self.host.op_f(Op::BitmapSetScale, bitmap, 0, 0, 0, &mut [r.width() / w, r.height() / h, 0.0, 0.0]);
         self.host.op_f(Op::FormBitmapSetTexCoords, bitmap, 0, 0, 0, &mut [u0, v0, u1, v1]);
-        self.op(Op::FormBitmapDraw, bitmap, 0)
+        crate::draw2d::bitmap(bitmap, || self.op(Op::FormBitmapDraw, bitmap, 0))
     }
 
     pub fn draw_clipped_text(&self, r: UiRect, text: isize, control: isize) -> isize {
@@ -1352,7 +1352,7 @@ struct TextOut<'a> {
 
 impl TextDraw for TextOut<'_> {
     fn draw(&mut self, r: UiRect) -> c_long {
-        self.f.op_rect(Op::FormTextDraw, self.text, r) as c_long
+        crate::draw2d::text(self.text, r, || self.f.op_rect(Op::FormTextDraw, self.text, r))
     }
 }
 

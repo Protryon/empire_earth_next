@@ -105,7 +105,6 @@ struct UIBackgroundHost {
             break;
         case EeUiOp::BgBitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); break;
         case EeUiOp::BgBitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
-        case EeUiOp::BgBitmapDraw: return m->GetRasterizer()->Draw(theBitmap, s);
         case EeUiOp::BgFormRect: UIObjHost::PutRect(f, theForm->GetRectangle()); break;
         case EeUiOp::BgFormFade: f[0] = theForm->GetFadeOpacity(); break;
         default: break;

@@ -26,7 +26,8 @@ struct Digest {
     hash: u64,
 }
 
-static DIGEST: Mutex<Digest> = Mutex::new(Digest { file: None, seen: BTreeSet::new(), frame: 0, count: 0, hash: FNV_OFFSET });
+static DIGEST: Mutex<Digest> =
+    Mutex::new(Digest { file: None, seen: BTreeSet::new(), frame: 0, count: 0, hash: FNV_OFFSET });
 
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
@@ -145,7 +146,17 @@ mod tests {
 
     #[test]
     fn vertices_and_texture_text() {
-        let v = [Dx7StdColorVertex { x: 1.0, y: 2.0, z: 0.0, nx: 0.0, ny: 0.0, nz: 0.0, color: 0xff00ff00, tu: 0.5, tv: 1.0 }];
+        let v = [Dx7StdColorVertex {
+            x: 1.0,
+            y: 2.0,
+            z: 0.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 0.0,
+            color: 0xff00ff00,
+            tu: 0.5,
+            tv: 1.0,
+        }];
         let mut s = String::from("bmp");
         unsafe { vertices(&mut s, v.as_ptr(), 1) };
         texture(&mut s, None);

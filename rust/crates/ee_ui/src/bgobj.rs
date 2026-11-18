@@ -264,7 +264,7 @@ impl Bg {
             h.op_f(Op::BgFormFade, 0, 0, 0, 0, &mut fade);
             h.op_f(Op::BgBitmapSetOpacity, bitmap, 0, 0, 0, &mut [fade[0], 0.0, 0.0, 0.0]);
         }
-        h.op(Op::BgBitmapDraw, bitmap, 0, 0, 0) as c_long
+        crate::draw2d::bitmap(bitmap, || h.op(Op::BgBitmapDraw, bitmap, 0, 0, 0)) as c_long
     }
 
     /// A grid tile's draw: the first tile's texture's size the texture rectangle.

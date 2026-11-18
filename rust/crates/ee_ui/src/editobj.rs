@@ -337,7 +337,7 @@ impl ImeHost for Underlines<'_> {
         o.host.op_f(Op::LineSetPoints, o.underline, 0, 0, 0, &mut f);
         let mut c = color_buf(o.copied_ime_color.get());
         o.host.op_f(Op::LineSetColor, o.underline, 0, 0, 0, &mut c);
-        o.op(Op::LineDraw, o.underline, 0) as c_long
+        crate::draw2d::line(o.underline, || o.op(Op::LineDraw, o.underline, 0)) as c_long
     }
 }
 
@@ -668,7 +668,7 @@ impl EeUiEdit {
                 let (from, to) = edit_draw::selection_span(&s, i, len);
                 let r = self.selected_text_rect(i, from, to);
                 self.host.op_rect(Op::RhombusSetRect, self.rhombus, 0, r);
-                result = self.op(Op::RhombusDraw, self.rhombus, 0);
+                result = crate::draw2d::rhombus(self.rhombus, || self.op(Op::RhombusDraw, self.rhombus, 0));
                 if i == c_ulong::MAX {
                     break;
                 }
@@ -689,7 +689,7 @@ impl EeUiEdit {
             result = edit_draw::ime_underlines(&mut u, &m, &tr, height, result as c_long) as isize;
         }
         if f.copied_cursor_on {
-            result = self.op(Op::LineDraw, self.cursor, 0);
+            result = crate::draw2d::line(self.cursor, || self.op(Op::LineDraw, self.cursor, 0));
         }
         result
     }

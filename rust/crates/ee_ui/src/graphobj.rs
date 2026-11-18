@@ -577,7 +577,7 @@ impl GraphHost for Draw<'_> {
     fn line(&mut self, from: UiPoint, to: UiPoint) -> c_long {
         let h = &self.g.host;
         h.op_f(Op::LineSetPoints, self.line, 0, 0, 0, &mut [from.x, from.y, to.x, to.y]);
-        h.op(Op::LineDraw, self.line, 0, 0, 0) as c_long
+        crate::draw2d::line(self.line, || h.op(Op::LineDraw, self.line, 0, 0, 0)) as c_long
     }
     fn border(&mut self, rect: UiRect, thickness: c_ulong) -> c_long {
         self.g.host.op_rect(Op::DrawBorder, thickness as isize, 0, rect) as c_long

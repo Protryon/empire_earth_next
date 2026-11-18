@@ -159,7 +159,7 @@ impl EeUiSlider {
         let f = self.fields();
         let bitmap = f.thumb_bitmap as isize;
         self.host.op_point(Op::BitmapSetLocation, bitmap, f.copied_thumb.top_left());
-        self.host.op(Op::BitmapDraw, bitmap, 0, 0, 0)
+        crate::draw2d::bitmap(bitmap, || self.host.op(Op::BitmapDraw, bitmap, 0, 0, 0))
     }
 
     pub fn set_location(&self, at: UiPoint) {
