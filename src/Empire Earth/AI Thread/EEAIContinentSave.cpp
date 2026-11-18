@@ -259,7 +259,7 @@ void WriteArea(Writer& ioWriter, const EEAIArea& inArea)
 // a continent by its place in mContinents (-1: none or not listed)
 long ContinentIndex(const EEAIContinent* inContinent)
 {
-    const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
+    EEAIHandleView<EEAIContinent> theContinents = gContinentManager.GetContinents();
     for (size_t i = 0; inContinent != NULL && i < theContinents.size(); i++)
         if (theContinents[i] == inContinent)
             return (long)i;
@@ -291,18 +291,18 @@ void AreaOwner(const EEAIArea* inArea, long& outOwner, long& outIndex, long& out
     outPlayer = -1;
     if (inArea == NULL)
         return;
-    for (size_t i = 0; i < theManager.mContinents.size(); i++)
-        if (theManager.mContinents[i] == inArea) { outOwner = kOwnerContinent; outIndex = (long)i; return; }
-    for (size_t i = 0; i < theManager.mHills.size(); i++)
-        if (theManager.mHills[i] == inArea) { outOwner = kOwnerHill; outIndex = (long)i; return; }
-    for (size_t i = 0; i < theManager.mPathAreas.size(); i++)
-        if (theManager.mPathAreas[i] == inArea) { outOwner = kOwnerPathArea; outIndex = (long)i; return; }
-    for (size_t i = 0; i < theManager.mForests.size(); i++)
-        if (theManager.mForests[i] == inArea) { outOwner = kOwnerForest; outIndex = (long)i; return; }
-    for (size_t i = 0; i < theManager.mChokePoints.size(); i++)
-        if (theManager.mChokePoints[i] == inArea) { outOwner = kOwnerChokePoint; outIndex = (long)i; return; }
-    for (size_t i = 0; i < theManager.mRectangleAreas.size(); i++)
-        if (theManager.mRectangleAreas[i] == inArea) { outOwner = kOwnerRectangle; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetContinents().size(); i++)
+        if (theManager.GetContinents()[i] == inArea) { outOwner = kOwnerContinent; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetHills().size(); i++)
+        if (theManager.GetHills()[i] == inArea) { outOwner = kOwnerHill; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetPathAreas().size(); i++)
+        if (theManager.GetPathAreas()[i] == inArea) { outOwner = kOwnerPathArea; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetForests().size(); i++)
+        if (theManager.GetForests()[i] == inArea) { outOwner = kOwnerForest; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetChokePoints().size(); i++)
+        if (theManager.GetChokePoints()[i] == inArea) { outOwner = kOwnerChokePoint; outIndex = (long)i; return; }
+    for (size_t i = 0; i < theManager.GetRectangleAreas().size(); i++)
+        if (theManager.GetRectangleAreas()[i] == inArea) { outOwner = kOwnerRectangle; outIndex = (long)i; return; }
     for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
         EEPlayer* thePlayer = gWorld.mPlayers[p];
         if (thePlayer == NULL)
@@ -325,49 +325,49 @@ void WriteRegions(Writer& ioWriter)
     ioWriter.U32(kRegionsMagic);
     ioWriter.U32(kRegionsFormat);
     // the counters
-    ioWriter.U32(theManager.mWidth);
-    ioWriter.U32(theManager.mHeight);
-    ioWriter.I32(theManager.mState);
-    ioWriter.U32(theManager.mLastSerial);
-    ioWriter.I32(theManager.mL118);
-    ioWriter.U16(theManager.mNextPathAreaID);
-    ioWriter.U16(theManager.mLastSubSectorID);
-    ioWriter.I32(theManager.mChecksum);
-    ioWriter.I32(theManager.mNextID124);
-    ioWriter.I32(theManager.mNextID128);
-    ioWriter.I32(theManager.mNextID12C);
-    ioWriter.I32(theManager.mNextID130);
-    ioWriter.I32(theManager.mNumWaterTiles);
-    ioWriter.I32(theManager.mNumLandTiles);
-    ioWriter.I32(theManager.mNumSpaceTiles);
-    ioWriter.I32(theManager.mFlagsWidth);
-    ioWriter.Flag(theManager.mClearing);
+    ioWriter.U32(theManager.mRecord.width);
+    ioWriter.U32(theManager.mRecord.height);
+    ioWriter.I32(theManager.mRecord.state);
+    ioWriter.U32(theManager.mRecord.last_serial);
+    ioWriter.I32(theManager.mRecord.l118);
+    ioWriter.U16(theManager.mRecord.next_path_area_id);
+    ioWriter.U16(theManager.mRecord.last_sub_sector_id);
+    ioWriter.I32(theManager.mRecord.checksum);
+    ioWriter.I32(theManager.mRecord.next_land_mass);
+    ioWriter.I32(theManager.mRecord.next_water_body);
+    ioWriter.I32(theManager.mRecord.next_space_region);
+    ioWriter.I32(theManager.mRecord.next_surface_region);
+    ioWriter.I32(theManager.mRecord.num_water_tiles);
+    ioWriter.I32(theManager.mRecord.num_land_tiles);
+    ioWriter.I32(theManager.mRecord.num_space_tiles);
+    ioWriter.I32(theManager.mRecord.flags_width);
+    ioWriter.Flag(theManager.mRecord.clearing);
     for (i = 0; i < 7; i++)
-        ioWriter.U16(theManager.mNextIDs[i]);
-    ioWriter.I32(theManager.mRegionInformation.mSectorSize);
-    ioWriter.I32(theManager.mRegionInformation.mSectorArea);
-    ioWriter.I32(theManager.mRegionInformation.mSectorsX);
-    ioWriter.I32(theManager.mRegionInformation.mSectorsY);
+        ioWriter.U16(theManager.mRecord.next_ids[i]);
+    ioWriter.I32(theManager.mRecord.sector_size);
+    ioWriter.I32(theManager.mRecord.sector_area);
+    ioWriter.I32(theManager.mRecord.sectors_x);
+    ioWriter.I32(theManager.mRecord.sectors_y);
     ioWriter.I32(gEEAIRegionSize);
     // the grids
-    size_t theTiles = (size_t)theManager.mWidth * theManager.mHeight;
-    ioWriter.Flag(theManager.mTileValues != NULL);   // longs: written one by one (sizeof(long) differs by system)
-    for (size_t t = 0; theManager.mTileValues != NULL && t < theTiles; t++)
-        ioWriter.I32(theManager.mTileValues[t]);
-    WriteGrid(ioWriter, theManager.mContinentIDs, theTiles * sizeof(unsigned short));
-    WriteGrid(ioWriter, theManager.mPathSubSectorIDs, theTiles * sizeof(unsigned short));
-    WriteGrid(ioWriter, theManager.mTileFlags, (size_t)theManager.mFlagsWidth * theManager.mFlagsWidth * sizeof(bool));
+    size_t theTiles = (size_t)theManager.mRecord.width * theManager.mRecord.height;
+    ioWriter.Flag(theManager.mRecord.tile_values != NULL);   // longs: written one by one (sizeof(long) differs by system)
+    for (size_t t = 0; theManager.mRecord.tile_values != NULL && t < theTiles; t++)
+        ioWriter.I32(theManager.mRecord.tile_values[t]);
+    WriteGrid(ioWriter, theManager.mRecord.continent_ids, theTiles * sizeof(unsigned short));
+    WriteGrid(ioWriter, theManager.mRecord.sub_sector_ids, theTiles * sizeof(unsigned short));
+    WriteGrid(ioWriter, theManager.mRecord.tile_flags, (size_t)theManager.mRecord.flags_width * theManager.mRecord.flags_width * sizeof(bool));
     // the map tiles' AI values (UpdateTileValues set them, RemoveForestTile lowers them; the path searches read them)
-    for (unsigned long x = 0; x < theManager.mWidth; x++)
-        for (unsigned long y = 0; y < theManager.mHeight; y++) {
+    for (unsigned long x = 0; x < theManager.mRecord.width; x++)
+        for (unsigned long y = 0; y < theManager.mRecord.height; y++) {
             const EETile* theTile = gWorld.mMap != NULL ? gWorld.mMap->GetTile((long)x, (long)y) : NULL;
             signed char theValue = theTile != NULL ? theTile->mAIValue : 0;
             ioWriter.Bytes(&theValue, 1);
         }
     // the continents
-    ioWriter.U32((unsigned long)theManager.mContinents.size());
-    for (i = 0; i < theManager.mContinents.size(); i++) {
-        const EEAIContinent* theContinent = theManager.mContinents[i];
+    ioWriter.U32((unsigned long)theManager.GetContinents().size());
+    for (i = 0; i < theManager.GetContinents().size(); i++) {
+        const EEAIContinent* theContinent = theManager.GetContinents()[i];
         ioWriter.Flag(theContinent != NULL);
         if (theContinent == NULL)
             continue;
@@ -380,9 +380,9 @@ void WriteRegions(Writer& ioWriter)
         ioWriter.U16(theContinent->GetID());
     }
     // the hills
-    ioWriter.U32((unsigned long)theManager.mHills.size());
-    for (i = 0; i < theManager.mHills.size(); i++) {
-        const EEAIHill* theHill = theManager.mHills[i];
+    ioWriter.U32((unsigned long)theManager.GetHills().size());
+    for (i = 0; i < theManager.GetHills().size(); i++) {
+        const EEAIHill* theHill = theManager.GetHills()[i];
         ioWriter.Flag(theHill != NULL);
         if (theHill == NULL)
             continue;
@@ -390,9 +390,9 @@ void WriteRegions(Writer& ioWriter)
         theHill->WriteFields(ioWriter);
     }
     // the path areas
-    ioWriter.U32((unsigned long)theManager.mPathAreas.size());
-    for (i = 0; i < theManager.mPathAreas.size(); i++) {
-        const EEAIPathArea* theArea = theManager.mPathAreas[i];
+    ioWriter.U32((unsigned long)theManager.GetPathAreas().size());
+    for (i = 0; i < theManager.GetPathAreas().size(); i++) {
+        const EEAIPathArea* theArea = theManager.GetPathAreas()[i];
         ioWriter.Flag(theArea != NULL);
         if (theArea == NULL)
             continue;
@@ -400,9 +400,9 @@ void WriteRegions(Writer& ioWriter)
         theArea->WriteFields(ioWriter);
     }
     // the forests
-    ioWriter.U32((unsigned long)theManager.mForests.size());
-    for (i = 0; i < theManager.mForests.size(); i++) {
-        const EEAIForest* theForest = theManager.mForests[i];
+    ioWriter.U32((unsigned long)theManager.GetForests().size());
+    for (i = 0; i < theManager.GetForests().size(); i++) {
+        const EEAIForest* theForest = theManager.GetForests()[i];
         ioWriter.Flag(theForest != NULL);
         if (theForest == NULL)
             continue;
@@ -410,9 +410,9 @@ void WriteRegions(Writer& ioWriter)
         theForest->WriteFields(ioWriter);
     }
     // the choke points
-    ioWriter.U32((unsigned long)theManager.mChokePoints.size());
-    for (i = 0; i < theManager.mChokePoints.size(); i++) {
-        const EEAIChokePoint* theChokePoint = theManager.mChokePoints[i];
+    ioWriter.U32((unsigned long)theManager.GetChokePoints().size());
+    for (i = 0; i < theManager.GetChokePoints().size(); i++) {
+        const EEAIChokePoint* theChokePoint = theManager.GetChokePoints()[i];
         ioWriter.Flag(theChokePoint != NULL);
         if (theChokePoint == NULL)
             continue;
@@ -420,9 +420,9 @@ void WriteRegions(Writer& ioWriter)
         theChokePoint->WriteFields(ioWriter);
     }
     // the rectangle areas
-    ioWriter.U32((unsigned long)theManager.mRectangleAreas.size());
-    for (i = 0; i < theManager.mRectangleAreas.size(); i++) {
-        const EEAIRectangleArea* theArea = theManager.mRectangleAreas[i];
+    ioWriter.U32((unsigned long)theManager.GetRectangleAreas().size());
+    for (i = 0; i < theManager.GetRectangleAreas().size(); i++) {
+        const EEAIRectangleArea* theArea = theManager.GetRectangleAreas()[i];
         ioWriter.Flag(theArea != NULL);
         if (theArea == NULL)
             continue;
@@ -432,15 +432,15 @@ void WriteRegions(Writer& ioWriter)
     // the sub sectors: every one listed by id or held by a sector, numbered from 1 in that order
     std::vector<const EEAIPathSubSector*> theSubSectors;
     std::map<const EEAIPathSubSector*, unsigned long> theNumbers;
-    for (i = 0; i < theManager.mPathSubSectors.size(); i++) {
-        const EEAIPathSubSector* theSubSector = theManager.mPathSubSectors[i];
+    for (i = 0; i < theManager.GetPathSubSectors().size(); i++) {
+        const EEAIPathSubSector* theSubSector = theManager.GetPathSubSectors()[i];
         if (theSubSector != NULL && theNumbers.find(theSubSector) == theNumbers.end()) {
             theSubSectors.push_back(theSubSector);
             theNumbers[theSubSector] = (unsigned long)theSubSectors.size();
         }
     }
-    for (i = 0; i < theManager.mPathSectors.size(); i++) {
-        const EEAIPathSector* theSector = theManager.mPathSectors[i];
+    for (i = 0; i < theManager.GetPathSectors().size(); i++) {
+        const EEAIPathSector* theSector = theManager.GetPathSectors()[i];
         if (theSector == NULL)
             continue;
         for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theSector->mSubSectors.begin();
@@ -460,9 +460,9 @@ void WriteRegions(Writer& ioWriter)
         }
     } theNumber = {theNumbers};
     // the sectors (the sub sector each holds by its number; its continents by index)
-    ioWriter.U32((unsigned long)theManager.mPathSectors.size());
-    for (i = 0; i < theManager.mPathSectors.size(); i++) {
-        const EEAIPathSector* theSector = theManager.mPathSectors[i];
+    ioWriter.U32((unsigned long)theManager.GetPathSectors().size());
+    for (i = 0; i < theManager.GetPathSectors().size(); i++) {
+        const EEAIPathSector* theSector = theManager.GetPathSectors()[i];
         ioWriter.Flag(theSector != NULL);
         if (theSector == NULL)
             continue;
@@ -482,8 +482,8 @@ void WriteRegions(Writer& ioWriter)
     for (i = 0; i < theSubSectors.size(); i++) {
         const EEAIPathSubSector* theSubSector = theSubSectors[i];
         long theSector = -1;
-        for (size_t s = 0; theSubSector->mSector != NULL && s < theManager.mPathSectors.size() && theSector < 0; s++)
-            if (theManager.mPathSectors[s] == theSubSector->mSector)
+        for (size_t s = 0; theSubSector->mSector != NULL && s < theManager.GetPathSectors().size() && theSector < 0; s++)
+            if (theManager.GetPathSectors()[s] == theSubSector->mSector)
                 theSector = (long)s;
         ioWriter.I32(theSector);
         WriteSparse(ioWriter, theSubSector->mTiles);
@@ -506,31 +506,33 @@ void WriteRegions(Writer& ioWriter)
         ioWriter.I32(theSubSector->mPlayerID);
         ioWriter.Flag(theSubSector->mIsStale);
     }
-    ioWriter.U32((unsigned long)theManager.mPathSubSectors.size());
-    for (i = 0; i < theManager.mPathSubSectors.size(); i++)
-        ioWriter.U32(theNumber.Of(theManager.mPathSubSectors[i]));
+    ioWriter.U32((unsigned long)theManager.GetPathSubSectors().size());
+    for (i = 0; i < theManager.GetPathSubSectors().size(); i++)
+        ioWriter.U32(theNumber.Of(theManager.GetPathSubSectors()[i]));
     // the shore tiles, the free ids, the sectors' pending tiles
-    ioWriter.Points(theManager.mShoreTiles);
-    ioWriter.Points(theManager.mIceShoreTiles);
-    ioWriter.Shorts(theManager.mFreeSubSectorIDs);
-    ioWriter.Shorts(theManager.mFreePathAreaIDs);
-    ioWriter.U32((unsigned long)theManager.mSectorTiles.size());
-    for (std::map<unsigned short, std::vector<EETileCoordinate> >::const_iterator theIt = theManager.mSectorTiles.begin();
-         theIt != theManager.mSectorTiles.end(); ++theIt) {
+    ioWriter.Points(theManager.GetShoreTiles(EeAStarCmShore::Shore));
+    ioWriter.Points(theManager.GetShoreTiles(EeAStarCmShore::IceShore));
+    ioWriter.Shorts(theManager.GetFreeIDs(EeAStarCmFree::SubSectors));
+    ioWriter.Shorts(theManager.GetFreeIDs(EeAStarCmFree::PathAreas));
+    std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > > theSectorTiles = theManager.GetSectorTiles();
+    ioWriter.U32((unsigned long)theSectorTiles.size());
+    for (std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > >::const_iterator theIt = theSectorTiles.begin();
+         theIt != theSectorTiles.end(); ++theIt) {
         ioWriter.U16(theIt->first);
         ioWriter.Points(theIt->second);
     }
     // the serial table: each serial's area by its owner
-    ioWriter.U32((unsigned long)theManager.mAreas.size());
-    for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = theManager.mAreas.begin(); theIt != theManager.mAreas.end();
-         ++theIt) {
+    EEAIListView<EeAStarCmArea> theAreas = theManager.GetAreas();
+    ioWriter.U32((unsigned long)theAreas.size());
+    for (const EeAStarCmArea* theIt = theAreas.begin(); theIt != theAreas.end(); ++theIt) {
         long theOwner, theIndex, thePlayer;
-        AreaOwner(theIt->second, theOwner, theIndex, thePlayer);
-        ioWriter.U32(theIt->first);
+        EEAIArea* theArea = (EEAIArea*)(uintptr_t)theIt->area;
+        AreaOwner(theArea, theOwner, theIndex, thePlayer);
+        ioWriter.U32(theIt->serial);
         ioWriter.I32(theOwner);
         ioWriter.I32(theIndex);
         ioWriter.I32(thePlayer);
-        ioWriter.U32(theIt->second != NULL ? theIt->second->GetSerial() : 0);
+        ioWriter.U32(theArea != NULL ? theArea->GetSerial() : 0);
     }
 }
 
@@ -591,16 +593,15 @@ bool ReadContinents(Reader& ioReader, std::vector<EEAIContinent*>& outContinents
         long theIndex = -1;
         if (!ioReader.I32(theIndex))
             return false;
-        const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
+        EEAIHandleView<EEAIContinent> theContinents = gContinentManager.GetContinents();
         outContinents.push_back(theIndex >= 0 && (size_t)theIndex < theContinents.size() ? theContinents[theIndex] : NULL);
     }
     return true;
 }
 
-template <class T> bool ReadGrid(Reader& ioReader, T*& ioGrid, size_t inBytes)
+template <class T> bool ReadGrid(Reader& ioReader, EeAStarCmGrid inGrid, T* const& ioGrid, size_t inBytes)
 {
-    delete[] ioGrid;
-    ioGrid = NULL;
+    ee_astar_cm_set_grid(&gContinentManager.mRecord, inGrid, false, 0);
     bool thePresent = false;
     if (!ioReader.Flag(thePresent))
         return false;
@@ -609,8 +610,26 @@ template <class T> bool ReadGrid(Reader& ioReader, T*& ioGrid, size_t inBytes)
     unsigned long theBytes = 0;
     if (!ioReader.U32(theBytes) || theBytes != inBytes)
         return false;
-    ioGrid = new T[inBytes / sizeof(T)];
+    ee_astar_cm_set_grid(&gContinentManager.mRecord, inGrid, true, inBytes / sizeof(T));
     return ioReader.Bytes(ioGrid, inBytes);
+}
+
+// a Rust table as a vector (the reader works on these and stores them back)
+template <class T> std::vector<T*> TableCopy(EeAStarCmTable inTable)
+{
+    EEAIHandleView<T> theTable = gContinentManager.Table<T>(inTable);
+    std::vector<T*> theResult;
+    for (size_t i = 0; i < theTable.size(); i++)
+        theResult.push_back(theTable[i]);
+    return theResult;
+}
+
+template <class T> void TableStore(EeAStarCmTable inTable, const std::vector<T*>& inObjects)
+{
+    gContinentManager.ResizeTable(inTable, 0);
+    gContinentManager.ResizeTable(inTable, inObjects.size());
+    for (size_t i = 0; i < inObjects.size(); i++)
+        gContinentManager.SetTable(inTable, i, inObjects[i]);
 }
 
 // a table resized to inCount, keeping the objects it has below that (those past it deleted)
@@ -661,52 +680,51 @@ bool ReadRegions(Reader& ioReader)
         return false;
     // the regions BuildRegions would make go; the continents and hills Clear made are kept as objects (what the load
     // repaired since may point at them) and take their saved contents; the grids are replaced below
-    theManager.mSectorTiles.clear();
+    ee_astar_cm_clear_sector_tiles(&theManager.mRecord);
     theManager.DeleteChokePoints();
     theManager.DeleteForests();
     theManager.DeleteRectangleAreas();
     theManager.DeletePathAreas();
     theManager.DeletePathSectors();
-    theManager.mPathSubSectors.clear();
-    theManager.mAreas.clear();
+    theManager.ResizeTable(EeAStarCmTable::PathSubSectors, 0);
+    ee_astar_cm_clear_areas(&theManager.mRecord);
     unsigned short theShort;
-    bool theOK = ioReader.U32(theManager.mWidth) && ioReader.U32(theManager.mHeight) && ioReader.I32(theManager.mState)
-        && ioReader.U32(theManager.mLastSerial) && ioReader.I32(theManager.mL118) && ioReader.U16(theManager.mNextPathAreaID)
-        && ioReader.U16(theManager.mLastSubSectorID) && ioReader.I32(theManager.mChecksum) && ioReader.I32(theManager.mNextID124)
-        && ioReader.I32(theManager.mNextID128) && ioReader.I32(theManager.mNextID12C) && ioReader.I32(theManager.mNextID130)
-        && ioReader.I32(theManager.mNumWaterTiles) && ioReader.I32(theManager.mNumLandTiles)
-        && ioReader.I32(theManager.mNumSpaceTiles) && ioReader.I32(theManager.mFlagsWidth) && ioReader.Flag(sSavedClearing);
+    bool theOK = ioReader.U32(theManager.mRecord.width) && ioReader.U32(theManager.mRecord.height) && ioReader.I32(theManager.mRecord.state)
+        && ioReader.U32(theManager.mRecord.last_serial) && ioReader.I32(theManager.mRecord.l118) && ioReader.U16(theManager.mRecord.next_path_area_id)
+        && ioReader.U16(theManager.mRecord.last_sub_sector_id) && ioReader.I32(theManager.mRecord.checksum) && ioReader.I32(theManager.mRecord.next_land_mass)
+        && ioReader.I32(theManager.mRecord.next_water_body) && ioReader.I32(theManager.mRecord.next_space_region) && ioReader.I32(theManager.mRecord.next_surface_region)
+        && ioReader.I32(theManager.mRecord.num_water_tiles) && ioReader.I32(theManager.mRecord.num_land_tiles)
+        && ioReader.I32(theManager.mRecord.num_space_tiles) && ioReader.I32(theManager.mRecord.flags_width) && ioReader.Flag(sSavedClearing);
     for (long i = 0; i < 7 && theOK; i++) {
         theOK = ioReader.U16(theShort);
-        theManager.mNextIDs[i] = theShort;
+        theManager.mRecord.next_ids[i] = theShort;
     }
     long theRegionSize = 0;
-    theOK = theOK && ioReader.I32(theManager.mRegionInformation.mSectorSize) && ioReader.I32(theManager.mRegionInformation.mSectorArea)
-        && ioReader.I32(theManager.mRegionInformation.mSectorsX) && ioReader.I32(theManager.mRegionInformation.mSectorsY)
+    theOK = theOK && ioReader.I32(theManager.mRecord.sector_size) && ioReader.I32(theManager.mRecord.sector_area)
+        && ioReader.I32(theManager.mRecord.sectors_x) && ioReader.I32(theManager.mRecord.sectors_y)
         && ioReader.I32(theRegionSize);
-    if (!theOK || gWorld.mMap == NULL || theManager.mWidth != (unsigned long)gWorld.mMap->mSize
-        || theManager.mHeight != (unsigned long)gWorld.mMap->mSize)   // another map's block
+    if (!theOK || gWorld.mMap == NULL || theManager.mRecord.width != (unsigned long)gWorld.mMap->mSize
+        || theManager.mRecord.height != (unsigned long)gWorld.mMap->mSize)   // another map's block
         return false;
     gEEAIRegionSize = theRegionSize;
-    sSavedLastSerial = theManager.mLastSerial;
-    size_t theTiles = (size_t)theManager.mWidth * theManager.mHeight;
-    delete[] theManager.mTileValues;
-    theManager.mTileValues = NULL;
+    sSavedLastSerial = theManager.mRecord.last_serial;
+    size_t theTiles = (size_t)theManager.mRecord.width * theManager.mRecord.height;
+    ee_astar_cm_set_grid(&theManager.mRecord, EeAStarCmGrid::TileValues, false, 0);
     bool theValues = false;
     if (!ioReader.Flag(theValues))
         return false;
     if (theValues) {
-        theManager.mTileValues = new long[theTiles];
+        ee_astar_cm_set_grid(&theManager.mRecord, EeAStarCmGrid::TileValues, true, theTiles);
         for (size_t t = 0; t < theTiles; t++)
-            if (!ioReader.I32(theManager.mTileValues[t]))
+            if (!ioReader.I32(theManager.mRecord.tile_values[t]))
                 return false;
     }
-    if (!ReadGrid(ioReader, theManager.mContinentIDs, theTiles * sizeof(unsigned short))
-        || !ReadGrid(ioReader, theManager.mPathSubSectorIDs, theTiles * sizeof(unsigned short))
-        || !ReadGrid(ioReader, theManager.mTileFlags, (size_t)theManager.mFlagsWidth * theManager.mFlagsWidth * sizeof(bool)))
+    if (!ReadGrid(ioReader, EeAStarCmGrid::ContinentIds, theManager.mRecord.continent_ids, theTiles * sizeof(unsigned short))
+        || !ReadGrid(ioReader, EeAStarCmGrid::SubSectorIds, theManager.mRecord.sub_sector_ids, theTiles * sizeof(unsigned short))
+        || !ReadGrid(ioReader, EeAStarCmGrid::TileFlags, theManager.mRecord.tile_flags, (size_t)theManager.mRecord.flags_width * theManager.mRecord.flags_width * sizeof(bool)))
         return false;
-    for (unsigned long x = 0; x < theManager.mWidth; x++)
-        for (unsigned long y = 0; y < theManager.mHeight; y++) {
+    for (unsigned long x = 0; x < theManager.mRecord.width; x++)
+        for (unsigned long y = 0; y < theManager.mRecord.height; y++) {
             signed char theValue = 0;
             if (!ioReader.Bytes(&theValue, 1))
                 return false;
@@ -719,20 +737,27 @@ bool ReadRegions(Reader& ioReader)
     unsigned long theCount = 0;
     if (!ioReader.Count(theCount))
         return false;
-    KeepTable(theManager.mContinents, theCount);
+    std::vector<EEAIContinent*> theContinents = TableCopy<EEAIContinent>(EeAStarCmTable::Continents);
+    std::vector<EEAIHill*> theHills = TableCopy<EEAIHill>(EeAStarCmTable::Hills);
+    std::vector<EEAIPathArea*> thePathAreas;
+    std::vector<EEAIForest*> theForests;
+    std::vector<EEAIChokePoint*> theChokePoints;
+    std::vector<EEAIRectangleArea*> theRectangleAreas;
+    std::vector<EEAIPathSector*> thePathSectors;
+    KeepTable(theContinents, theCount);
     theNeighbors.resize(theCount);
     for (unsigned long i = 0; i < theCount; i++) {
         bool thePresent = false;
         if (!ioReader.Flag(thePresent))
             return false;
         if (!thePresent) {
-            delete theManager.mContinents[i];
-            theManager.mContinents[i] = NULL;
+            delete theContinents[i];
+            theContinents[i] = NULL;
             continue;
         }
-        if (theManager.mContinents[i] == NULL)
-            theManager.mContinents[i] = new EEAIContinent;
-        EEAIContinent* theContinent = theManager.mContinents[i];
+        if (theContinents[i] == NULL)
+            theContinents[i] = new EEAIContinent;
+        EEAIContinent* theContinent = theContinents[i];
         theContinent->ClearNeighbors();
         unsigned long theNeighborCount = 0, theCategory = 0;
         if (!ReadArea(ioReader, *theContinent) || !theContinent->ReadLists(ioReader)
@@ -756,28 +781,29 @@ bool ReadRegions(Reader& ioReader)
         theContinent->SetID(theID);
     }
     for (unsigned long i = 0; i < theCount; i++)
-        for (size_t n = 0; theManager.mContinents[i] != NULL && n < theNeighbors[i].size(); n++) {
+        for (size_t n = 0; theContinents[i] != NULL && n < theNeighbors[i].size(); n++) {
             long theIndex = theNeighbors[i][n];
-            theManager.mContinents[i]->AddNeighbor(theIndex >= 0 && (unsigned long)theIndex < theCount
-                                                                ? theManager.mContinents[theIndex] : NULL);
+            theContinents[i]->AddNeighbor(theIndex >= 0 && (unsigned long)theIndex < theCount
+                                                                ? theContinents[theIndex] : NULL);
         }
-    if (!ReadTable(ioReader, theManager.mHills, [&ioReader](EEAIHill& outHill) {
+    TableStore(EeAStarCmTable::Continents, theContinents);   // ReadContinents below reads them from the table
+    if (!ReadTable(ioReader, theHills, [&ioReader](EEAIHill& outHill) {
             return ReadArea(ioReader, outHill) && outHill.ReadFields(ioReader);
         }, true))
         return false;
-    if (!ReadTable(ioReader, theManager.mPathAreas, [&ioReader](EEAIPathArea& outArea) {
+    if (!ReadTable(ioReader, thePathAreas, [&ioReader](EEAIPathArea& outArea) {
             return ReadArea(ioReader, outArea) && outArea.ReadFields(ioReader);
         }))
         return false;
-    if (!ReadTable(ioReader, theManager.mForests, [&ioReader](EEAIForest& outForest) {
+    if (!ReadTable(ioReader, theForests, [&ioReader](EEAIForest& outForest) {
             return ReadArea(ioReader, outForest) && outForest.ReadFields(ioReader);
         }))
         return false;
-    if (!ReadTable(ioReader, theManager.mChokePoints, [&ioReader](EEAIChokePoint& outChokePoint) {
+    if (!ReadTable(ioReader, theChokePoints, [&ioReader](EEAIChokePoint& outChokePoint) {
             return ReadArea(ioReader, outChokePoint) && outChokePoint.ReadFields(ioReader);
         }))
         return false;
-    if (!ReadTable(ioReader, theManager.mRectangleAreas, [&ioReader](EEAIRectangleArea& outArea) {
+    if (!ReadTable(ioReader, theRectangleAreas, [&ioReader](EEAIRectangleArea& outArea) {
             return ReadArea(ioReader, outArea) && outArea.ReadFields(ioReader);
         }))
         return false;
@@ -785,7 +811,7 @@ bool ReadRegions(Reader& ioReader)
     std::vector<std::vector<std::pair<unsigned short, unsigned long> > > theHeld;
     if (!ioReader.Count(theCount))
         return false;
-    theManager.mPathSectors.assign(theCount, (EEAIPathSector*)NULL);
+    thePathSectors.assign(theCount, (EEAIPathSector*)NULL);
     theHeld.resize(theCount);
     for (unsigned long i = 0; i < theCount; i++) {
         bool thePresent = false;
@@ -794,7 +820,7 @@ bool ReadRegions(Reader& ioReader)
         if (!thePresent)
             continue;
         EEAIPathSector* theSector = new EEAIPathSector;
-        theManager.mPathSectors[i] = theSector;
+        thePathSectors[i] = theSector;
         unsigned long theHeldCount = 0;
         if (!ioReader.U16(theSector->mID) || !ioReader.Rect(theSector->mBounds) || !ioReader.Point(theSector->mCenter)
             || !ReadContinents(ioReader, theSector->mNeighbors) || !ioReader.Shorts(theSector->mPathAreaIDs)
@@ -825,8 +851,8 @@ bool ReadRegions(Reader& ioReader)
         unsigned long theNeighborCount = 0, theLinkCount = 0;
         if (!ioReader.I32(theSector) || !ReadSparse(ioReader, theSubSector->mTiles) || !ioReader.Count(theNeighborCount))
             return false;
-        theSubSector->mSector = theSector >= 0 && (size_t)theSector < theManager.mPathSectors.size()
-            ? theManager.mPathSectors[theSector] : NULL;
+        theSubSector->mSector = theSector >= 0 && (size_t)theSector < thePathSectors.size()
+            ? thePathSectors[theSector] : NULL;
         for (unsigned long n = 0; n < theNeighborCount; n++) {
             unsigned long theNumber = 0;
             if (!ioReader.U32(theNumber))
@@ -856,7 +882,7 @@ bool ReadRegions(Reader& ioReader)
     for (size_t s = 0; s < theHeld.size(); s++)
         for (size_t k = 0; k < theHeld[s].size(); k++) {
             EEAIPathSubSector* theSubSector = theByNumber.Of(theHeld[s][k].second);
-            theManager.mPathSectors[s]->mSubSectors.insert(std::make_pair(theHeld[s][k].first, theSubSector));
+            thePathSectors[s]->mSubSectors.insert(std::make_pair(theHeld[s][k].first, theSubSector));
             if (theHeld[s][k].second <= theSubCount)
                 theFiled[theHeld[s][k].second] = true;
         }
@@ -871,26 +897,40 @@ bool ReadRegions(Reader& ioReader)
     }
     if (!ioReader.Count(theCount))
         return false;
-    theManager.mPathSubSectors.assign(theCount, (EEAIPathSubSector*)NULL);
+    std::vector<EEAIPathSubSector*> theTable(theCount, (EEAIPathSubSector*)NULL);
     for (unsigned long i = 0; i < theCount; i++) {
         unsigned long theNumber = 0;
         if (!ioReader.U32(theNumber))
             return false;
-        theManager.mPathSubSectors[i] = theByNumber.Of(theNumber);
+        theTable[i] = theByNumber.Of(theNumber);
     }
+    TableStore(EeAStarCmTable::Hills, theHills);
+    TableStore(EeAStarCmTable::PathAreas, thePathAreas);
+    TableStore(EeAStarCmTable::Forests, theForests);
+    TableStore(EeAStarCmTable::ChokePoints, theChokePoints);
+    TableStore(EeAStarCmTable::RectangleAreas, theRectangleAreas);
+    TableStore(EeAStarCmTable::PathSectors, thePathSectors);
+    TableStore(EeAStarCmTable::PathSubSectors, theTable);
     for (unsigned long i = 1; i <= theSubCount; i++)
         if (!theFiled[i])   // no sector held it in the saved game (not owned there either): kept, not freed
             ESDebugOut("EEAIContinentSave: a saved sub sector (id %u) is in no sector\n", (unsigned)theSubSectors[i]->mID);
-    if (!ioReader.Points(theManager.mShoreTiles) || !ioReader.Points(theManager.mIceShoreTiles)
-        || !ioReader.Shorts(theManager.mFreeSubSectorIDs) || !ioReader.Shorts(theManager.mFreePathAreaIDs)
-        || !ioReader.Count(theCount))
+    std::vector<U2DPoint<long> > theShore, theIceShore;
+    std::vector<unsigned short> theFreeSubSectors, theFreePathAreas;
+    if (!ioReader.Points(theShore) || !ioReader.Points(theIceShore) || !ioReader.Shorts(theFreeSubSectors)
+        || !ioReader.Shorts(theFreePathAreas) || !ioReader.Count(theCount))
         return false;
+    ee_astar_cm_set_shore(&theManager.mRecord, EeAStarCmShore::Shore, U2DHullPoints(theShore), theShore.size());
+    ee_astar_cm_set_shore(&theManager.mRecord, EeAStarCmShore::IceShore, U2DHullPoints(theIceShore), theIceShore.size());
+    ee_astar_cm_add_free_ids(&theManager.mRecord, EeAStarCmFree::SubSectors, theFreeSubSectors.data(), theFreeSubSectors.size(), true);
+    ee_astar_cm_add_free_ids(&theManager.mRecord, EeAStarCmFree::PathAreas, theFreePathAreas.data(), theFreePathAreas.size(), true);
     for (unsigned long i = 0; i < theCount; i++) {
         unsigned short theKey = 0;
         std::vector<EETileCoordinate> theTilesOf;
         if (!ioReader.U16(theKey) || !ioReader.Points(theTilesOf))
             return false;
-        theManager.mSectorTiles[theKey] = theTilesOf;
+        ee_astar_cm_remove_sector_tiles(&theManager.mRecord, theKey);   // `mSectorTiles[key] = tiles`
+        for (size_t k = 0; k < theTilesOf.size(); k++)
+            ee_astar_cm_add_sector_tile(&theManager.mRecord, theKey, U2DHullPointOf(theTilesOf[k]));
     }
     // the serial table: the manager's own areas now, the herds and towns as their players are repaired
     if (!ioReader.Count(theCount))
@@ -905,12 +945,12 @@ bool ReadRegions(Reader& ioReader)
         EEAIArea* theArea = NULL;
         size_t theAt = (size_t)theIndex;
         switch (theOwner) {
-        case kOwnerContinent: theArea = theAt < theManager.mContinents.size() ? theManager.mContinents[theAt] : NULL; break;
-        case kOwnerHill: theArea = theAt < theManager.mHills.size() ? theManager.mHills[theAt] : NULL; break;
-        case kOwnerPathArea: theArea = theAt < theManager.mPathAreas.size() ? theManager.mPathAreas[theAt] : NULL; break;
-        case kOwnerForest: theArea = theAt < theManager.mForests.size() ? theManager.mForests[theAt] : NULL; break;
-        case kOwnerChokePoint: theArea = theAt < theManager.mChokePoints.size() ? theManager.mChokePoints[theAt] : NULL; break;
-        case kOwnerRectangle: theArea = theAt < theManager.mRectangleAreas.size() ? theManager.mRectangleAreas[theAt] : NULL; break;
+        case kOwnerContinent: theArea = theAt < theManager.GetContinents().size() ? theManager.GetContinents()[theAt] : NULL; break;
+        case kOwnerHill: theArea = theAt < theManager.GetHills().size() ? theManager.GetHills()[theAt] : NULL; break;
+        case kOwnerPathArea: theArea = theAt < theManager.GetPathAreas().size() ? theManager.GetPathAreas()[theAt] : NULL; break;
+        case kOwnerForest: theArea = theAt < theManager.GetForests().size() ? theManager.GetForests()[theAt] : NULL; break;
+        case kOwnerChokePoint: theArea = theAt < theManager.GetChokePoints().size() ? theManager.GetChokePoints()[theAt] : NULL; break;
+        case kOwnerRectangle: theArea = theAt < theManager.GetRectangleAreas().size() ? theManager.GetRectangleAreas()[theAt] : NULL; break;
         case kOwnerTown: theTowns[std::make_pair(thePlayer, theIndex)] = theSerial; break;
         case kOwnerHerd: theHerds[std::make_pair(thePlayer, theIndex)] = theSerial; break;
         default:
@@ -918,7 +958,7 @@ bool ReadRegions(Reader& ioReader)
             break;
         }
         if (theArea != NULL)
-            theManager.mAreas.insert(std::make_pair(theSerial, theArea));
+            ee_astar_cm_add_area(&theManager.mRecord, theSerial, (uint64_t)(uintptr_t)theArea);
     }
     // the herds and towns the load made again: their saved serials (by player and id), else the load's
     unsigned long theUnmatched = 0;
@@ -1027,14 +1067,15 @@ bool EERestoreContinentRegions()
         return false;
     }
     EEAIContinentManager& theManager = gContinentManager;
-    theManager.mClearing = sSavedClearing;
+    theManager.mRecord.clearing = sSavedClearing;
     // an area of the load past the saved counter (a herd or town the saved game did not have) keeps the counter
-    if (!theManager.mAreas.empty() && theManager.mAreas.rbegin()->first > sSavedLastSerial) {
+    EEAIListView<EeAStarCmArea> theAreas = theManager.GetAreas();
+    if (!theAreas.empty() && theAreas[theAreas.size() - 1].serial > sSavedLastSerial) {
         ESDebugOut("EEAIContinentSave: an area of the load has serial %lu past the saved %lu: the counter stays\n",
-                   theManager.mAreas.rbegin()->first, sSavedLastSerial);
-        theManager.mLastSerial = theManager.mAreas.rbegin()->first;
+                   (unsigned long)theAreas[theAreas.size() - 1].serial, sSavedLastSerial);
+        theManager.mRecord.last_serial = theAreas[theAreas.size() - 1].serial;
     } else
-        theManager.mLastSerial = sSavedLastSerial;
+        theManager.mRecord.last_serial = sSavedLastSerial;
     return true;
 }
 

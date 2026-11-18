@@ -628,12 +628,14 @@ void EECPOutOfSynchDump(FILE* inFile)
 {
     {   // the continent manager's areas (serial/kind), its serial counter and its lists' sizes
         fprintf(inFile, "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
-                EEContinentRegionsDigest(), (unsigned long)gContinentManager.mLastSerial, gContinentManager.mContinents.size(), gContinentManager.mHills.size(),
-                gContinentManager.mPathAreas.size(), gContinentManager.mPathSectors.size(), gContinentManager.mPathSubSectors.size(),
-                gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(), gContinentManager.mAreas.size());
-        for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
-             theIt != gContinentManager.mAreas.end(); ++theIt)
-            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->first, theIt->second != NULL ? (long)theIt->second->GetAreaType() : -1L);
+                EEContinentRegionsDigest(), (unsigned long)gContinentManager.GetLastSerial(), gContinentManager.GetContinents().size(), gContinentManager.GetHills().size(),
+                gContinentManager.GetPathAreas().size(), gContinentManager.GetPathSectors().size(), gContinentManager.GetPathSubSectors().size(),
+                gContinentManager.GetChokePoints().size(), gContinentManager.GetForests().size(), gContinentManager.GetAreas().size());
+        EEAIListView<EeAStarCmArea> theAreas = gContinentManager.GetAreas();
+        for (const EeAStarCmArea* theIt = theAreas.begin(); theIt != theAreas.end(); ++theIt) {
+            EEAIArea* theArea = (EEAIArea*)(uintptr_t)theIt->area;
+            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->serial, theArea != NULL ? (long)theArea->GetAreaType() : -1L);
+        }
         fprintf(inFile, "\n");
     }
     for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {

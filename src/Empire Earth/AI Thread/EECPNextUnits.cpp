@@ -696,7 +696,7 @@ static void EECPUnitsAreaPick(EeAiUnitsAreaPick& p)
         std::vector<EEAIForest*> theForests;
         for (size_t i = 0; i < theLand->GetForestIDs().size(); i++) {
             unsigned short theID = theLand->GetForestIDs()[i];
-            EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
+            EEAIForest* theForest = theID < gContinentManager.GetForests().size() ? gContinentManager.GetForests()[theID] : NULL;
             if (theForest != NULL && (theForest->HullContains(theFrom)
                     || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
                 theForests.push_back(theForest);
@@ -707,7 +707,7 @@ static void EECPUnitsAreaPick(EeAiUnitsAreaPick& p)
         std::vector<EEAIHill*> theHills;
         for (size_t i = 0; i < theLand->GetHillIDs().size(); i++) {
             unsigned short theID = theLand->GetHillIDs()[i];
-            EEAIHill* theHill = theID < gContinentManager.mHills.size() ? gContinentManager.mHills[theID] : NULL;
+            EEAIHill* theHill = theID < gContinentManager.GetHills().size() ? gContinentManager.GetHills()[theID] : NULL;
             if (theHill != NULL && (theHill->HullContains(theFrom)
                     || theHill->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
                 theHills.push_back(theHill);
@@ -743,7 +743,7 @@ static int64_t EECPUnitsWaterShore(EeAiUnitsTiles& t)
     EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
     EEAIContinent* theLand = gContinentManager.GetContinentAt(t.from[0], t.from[1]);
     if (theWater == NULL || theLand == NULL
-        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->GetID()])
+        || !gContinentManager.AreAdjacent(theWaterID, theLand->GetID()))
         return -1;
     std::vector<U2DPoint<long> > theShore;
     theWater->GetShoreNextTo(theLand->GetID(), theShore);
@@ -794,7 +794,7 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     case EE_AI_UNITS_HOST_AREA_AT:
         return (int64_t)(uintptr_t)gContinentManager.GetContinentAt((long)a, (long)b);
     case EE_AI_UNITS_HOST_AREA_BY_ID:
-        if (a <= 0 || (size_t)a >= gContinentManager.mContinents.size())
+        if (a <= 0 || (size_t)a >= gContinentManager.GetContinents().size())
             return 0;
         return (int64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)a);
     case EE_AI_UNITS_HOST_AREA_INFO: {

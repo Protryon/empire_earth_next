@@ -308,7 +308,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
         unsigned short theForestID =
             gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
-        EEAIForest* theForest = gContinentManager.mForests[theForestID];
+        EEAIForest* theForest = gContinentManager.GetForests()[theForestID];
         if (theForest != NULL && theForest->GetNumTiles() > 1) {
             theCenter.SetX(inResource->GetTileX());
             theCenter.SetY(inResource->GetTileY());

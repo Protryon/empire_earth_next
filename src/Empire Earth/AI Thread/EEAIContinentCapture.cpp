@@ -130,7 +130,7 @@ void EEAIContinentCapture(unsigned long inTag)
 unsigned long long EEAIContinentDigest()
 {
     // (no regions yet: before the game's BuildRegions, the per-tile lookups have no sectors to divide by)
-    if (gContinentManager.mPathSectors.empty() || gContinentManager.mRegionInformation.mSectorSize == 0)
+    if (gContinentManager.GetPathSectors().empty() || gContinentManager.mRecord.sector_size == 0)
         return 0;
     EESimCaptureRecord theRecord(0);
     EEAIContinentFill(theRecord);
@@ -147,51 +147,51 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     size_t j;
 
     // the counters
-    theRecord.U32((unsigned int)theManager.mWidth);
-    theRecord.U32((unsigned int)theManager.mHeight);
-    theRecord.I32((int)theManager.mState);
-    theRecord.U32((unsigned int)theManager.mLastSerial);
-    theRecord.U32(theManager.mNextPathAreaID);
-    theRecord.U32(theManager.mLastSubSectorID);
-    theRecord.I32((int)theManager.mNumWaterTiles);
-    theRecord.I32((int)theManager.mNumLandTiles);
-    theRecord.I32((int)theManager.mNumSpaceTiles);
-    theRecord.I32((int)theManager.mFlagsWidth);
-    theRecord.I32((int)theManager.mNextID124);
-    theRecord.I32((int)theManager.mNextID128);
-    theRecord.I32((int)theManager.mNextID12C);
-    theRecord.I32((int)theManager.mNextID130);
-    theRecord.I32((int)theManager.mChecksum);
-    theRecord.I32(theManager.mClearing);
+    theRecord.U32((unsigned int)theManager.mRecord.width);
+    theRecord.U32((unsigned int)theManager.mRecord.height);
+    theRecord.I32((int)theManager.mRecord.state);
+    theRecord.U32((unsigned int)theManager.mRecord.last_serial);
+    theRecord.U32(theManager.mRecord.next_path_area_id);
+    theRecord.U32(theManager.mRecord.last_sub_sector_id);
+    theRecord.I32((int)theManager.mRecord.num_water_tiles);
+    theRecord.I32((int)theManager.mRecord.num_land_tiles);
+    theRecord.I32((int)theManager.mRecord.num_space_tiles);
+    theRecord.I32((int)theManager.mRecord.flags_width);
+    theRecord.I32((int)theManager.mRecord.next_land_mass);
+    theRecord.I32((int)theManager.mRecord.next_water_body);
+    theRecord.I32((int)theManager.mRecord.next_space_region);
+    theRecord.I32((int)theManager.mRecord.next_surface_region);
+    theRecord.I32((int)theManager.mRecord.checksum);
+    theRecord.I32(theManager.mRecord.clearing);
     for (i = 0; i < 7; i++)
-        theRecord.U32(theManager.mNextIDs[i]);
-    theRecord.I32(theManager.mContinentIDs != NULL);
-    theRecord.I32(theManager.mPathSubSectorIDs != NULL);
-    theRecord.I32(theManager.mTileValues != NULL);
-    theRecord.I32(theManager.mTileFlags != NULL);
+        theRecord.U32(theManager.mRecord.next_ids[i]);
+    theRecord.I32(theManager.mRecord.continent_ids != NULL);
+    theRecord.I32(theManager.mRecord.sub_sector_ids != NULL);
+    theRecord.I32(theManager.mRecord.tile_values != NULL);
+    theRecord.I32(theManager.mRecord.tile_flags != NULL);
 
     // the tiles: the continent id (the grid, or the lookup through the sectors once the grid is freed), the sub
     // sector id, the tile value
-    for (long x = 0; x < (long)theManager.mWidth; x++) {
-        for (long y = 0; y < (long)theManager.mHeight; y++) {
+    for (long x = 0; x < (long)theManager.mRecord.width; x++) {
+        for (long y = 0; y < (long)theManager.mRecord.height; y++) {
             theRecord.U32(theManager.GetContinentID(x, y));
             theRecord.U32(theManager.GetPathSubSectorID(x, y));
-            theRecord.I32(theManager.mTileValues ? (int)theManager.mTileValues[x * theManager.mWidth + y] : 0);
+            theRecord.I32(theManager.mRecord.tile_values ? (int)theManager.mRecord.tile_values[x * theManager.mRecord.width + y] : 0);
         }
     }
     // the continent adjacency matrix
-    if (theManager.mTileFlags) {
-        long theCount = theManager.mFlagsWidth * theManager.mFlagsWidth;
+    if (theManager.mRecord.tile_flags) {
+        long theCount = theManager.mRecord.flags_width * theManager.mRecord.flags_width;
         theRecord.I32((int)theCount);
         for (long k = 0; k < theCount; k++)
-            theRecord.I32(theManager.mTileFlags[k]);
+            theRecord.I32(theManager.mRecord.tile_flags[k]);
     } else
         theRecord.I32(0);
 
     // the continents
-    theRecord.I32((int)theManager.mContinents.size());
-    for (i = 0; i < theManager.mContinents.size(); i++) {
-        EEAIContinent* theContinent = theManager.mContinents[i];
+    theRecord.I32((int)theManager.GetContinents().size());
+    for (i = 0; i < theManager.GetContinents().size(); i++) {
+        EEAIContinent* theContinent = theManager.GetContinents()[i];
         theRecord.I32(theContinent != NULL);
         if (!theContinent)
             continue;
@@ -213,9 +213,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the path areas
-    theRecord.I32((int)theManager.mPathAreas.size());
-    for (i = 0; i < theManager.mPathAreas.size(); i++) {
-        EEAIPathArea* theArea = theManager.mPathAreas[i];
+    theRecord.I32((int)theManager.GetPathAreas().size());
+    for (i = 0; i < theManager.GetPathAreas().size(); i++) {
+        EEAIPathArea* theArea = theManager.GetPathAreas()[i];
         theRecord.I32(theArea != NULL);
         if (!theArea)
             continue;
@@ -232,9 +232,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the path sectors
-    theRecord.I32((int)theManager.mPathSectors.size());
-    for (i = 0; i < theManager.mPathSectors.size(); i++) {
-        EEAIPathSector* theSector = theManager.mPathSectors[i];
+    theRecord.I32((int)theManager.GetPathSectors().size());
+    for (i = 0; i < theManager.GetPathSectors().size(); i++) {
+        EEAIPathSector* theSector = theManager.GetPathSectors()[i];
         theRecord.I32(theSector != NULL);
         if (!theSector)
             continue;
@@ -252,9 +252,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the sub sectors
-    theRecord.I32((int)theManager.mPathSubSectors.size());
-    for (i = 0; i < theManager.mPathSubSectors.size(); i++) {
-        EEAIPathSubSector* theSubSector = theManager.mPathSubSectors[i];
+    theRecord.I32((int)theManager.GetPathSubSectors().size());
+    for (i = 0; i < theManager.GetPathSubSectors().size(); i++) {
+        EEAIPathSubSector* theSubSector = theManager.GetPathSubSectors()[i];
         theRecord.I32(theSubSector != NULL);
         if (!theSubSector)
             continue;
@@ -279,9 +279,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the choke points
-    theRecord.I32((int)theManager.mChokePoints.size());
-    for (i = 0; i < theManager.mChokePoints.size(); i++) {
-        EEAIChokePoint* theChokePoint = theManager.mChokePoints[i];
+    theRecord.I32((int)theManager.GetChokePoints().size());
+    for (i = 0; i < theManager.GetChokePoints().size(); i++) {
+        EEAIChokePoint* theChokePoint = theManager.GetChokePoints()[i];
         theRecord.I32(theChokePoint != NULL);
         if (!theChokePoint)
             continue;
@@ -292,9 +292,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the hills
-    theRecord.I32((int)theManager.mHills.size());
-    for (i = 0; i < theManager.mHills.size(); i++) {
-        EEAIHill* theHill = theManager.mHills[i];
+    theRecord.I32((int)theManager.GetHills().size());
+    for (i = 0; i < theManager.GetHills().size(); i++) {
+        EEAIHill* theHill = theManager.GetHills()[i];
         theRecord.I32(theHill != NULL);
         if (!theHill)
             continue;
@@ -304,9 +304,9 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the forests
-    theRecord.I32((int)theManager.mForests.size());
-    for (i = 0; i < theManager.mForests.size(); i++) {
-        EEAIForest* theForest = theManager.mForests[i];
+    theRecord.I32((int)theManager.GetForests().size());
+    for (i = 0; i < theManager.GetForests().size(); i++) {
+        EEAIForest* theForest = theManager.GetForests()[i];
         theRecord.I32(theForest != NULL);
         if (!theForest)
             continue;
@@ -321,30 +321,32 @@ static void EEAIContinentFill(EESimCaptureRecord& theRecord)
     }
 
     // the rectangle areas (the scenario's)
-    theRecord.I32((int)theManager.mRectangleAreas.size());
-    for (i = 0; i < theManager.mRectangleAreas.size(); i++) {
-        EEAIRectangleArea* theArea = theManager.mRectangleAreas[i];
+    theRecord.I32((int)theManager.GetRectangleAreas().size());
+    for (i = 0; i < theManager.GetRectangleAreas().size(); i++) {
+        EEAIRectangleArea* theArea = theManager.GetRectangleAreas()[i];
         theRecord.I32(theArea != NULL);
         if (theArea)
             EEAICaptureArea(theRecord, *theArea);
     }
 
     // the shore tiles, the free ids, the dirty sectors' tiles
-    EEAICapturePoints(theRecord, theManager.mShoreTiles);
-    EEAICapturePoints(theRecord, theManager.mIceShoreTiles);
-    EEAICaptureShorts(theRecord, theManager.mFreeSubSectorIDs);
-    EEAICaptureShorts(theRecord, theManager.mFreePathAreaIDs);
-    theRecord.I32((int)theManager.mSectorTiles.size());
-    for (std::map<unsigned short, std::vector<EETileCoordinate> >::const_iterator theIt = theManager.mSectorTiles.begin();
-         theIt != theManager.mSectorTiles.end(); ++theIt) {
+    EEAICapturePoints(theRecord, theManager.GetShoreTiles(EeAStarCmShore::Shore));
+    EEAICapturePoints(theRecord, theManager.GetShoreTiles(EeAStarCmShore::IceShore));
+    EEAICaptureShorts(theRecord, theManager.GetFreeIDs(EeAStarCmFree::SubSectors));
+    EEAICaptureShorts(theRecord, theManager.GetFreeIDs(EeAStarCmFree::PathAreas));
+    std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > > theSectorTiles = theManager.GetSectorTiles();
+    theRecord.I32((int)theSectorTiles.size());
+    for (std::vector<std::pair<unsigned short, std::vector<EETileCoordinate> > >::const_iterator theIt = theSectorTiles.begin();
+         theIt != theSectorTiles.end(); ++theIt) {
         theRecord.U32(theIt->first);
         EEAICapturePoints(theRecord, theIt->second);
     }
-    theRecord.I32((int)theManager.mAreas.size());
-    for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = theManager.mAreas.begin();
-         theIt != theManager.mAreas.end(); ++theIt) {
-        theRecord.U32((unsigned int)theIt->first);
-        theRecord.I32(theIt->second ? (int)theIt->second->GetAreaType() : -1);
+    EEAIListView<EeAStarCmArea> theAreas = theManager.GetAreas();
+    theRecord.I32((int)theAreas.size());
+    for (const EeAStarCmArea* theIt = theAreas.begin(); theIt != theAreas.end(); ++theIt) {
+        const EEAIArea* theArea = (const EEAIArea*)(uintptr_t)theIt->area;
+        theRecord.U32((unsigned int)theIt->serial);
+        theRecord.I32(theArea ? (int)theArea->GetAreaType() : -1);
     }
 }
 

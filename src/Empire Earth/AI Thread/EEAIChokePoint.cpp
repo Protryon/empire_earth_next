@@ -137,11 +137,11 @@ static void EEAIChokeCreate(EEMap* inMap)
             theMachine.mGoal.CreateChokePoint();
         }
     }
-    gContinentManager.mChokePoints.resize(theMachine.mGoal.mNextIndex);
+    gContinentManager.ResizeTable(EeAStarCmTable::ChokePoints, theMachine.mGoal.mNextIndex);
     for (std::map<long, EEAIChokePoint*>::iterator theIt = theMachine.mGoal.mChokePoints.begin();
          theIt != theMachine.mGoal.mChokePoints.end(); theIt++) {
         EEAIChokePoint* theChokePoint = theIt->second;
-        theChokePoint->SetSerial(++gContinentManager.mLastSerial);
+        theChokePoint->SetSerial(gContinentManager.NewSerial());
         gContinentManager.AddChokePoint(theChokePoint);
     }
 }
@@ -166,7 +166,7 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
     EETileLocation theTile(inX, inY);
     EEAIForest* theForest = gContinentManager.GetForestAt(theTile);
     unsigned short theID = theForest ? theForest->GetID() : 0;
-    const std::vector<EEAIForest*>& theForests = gContinentManager.mForests;
+    EEAIHandleView<EEAIForest> theForests = gContinentManager.GetForests();
     theForest = theForests[theID];
     if (theForest) {
         outInfo->forest = true;

@@ -470,7 +470,7 @@ long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
 void* EEGraphObjectOf(void* inContext, int32_t inIndex)
 {
     (void)inContext;
-    const std::vector<EEAIPathSubSector*>& theSectors = gContinentManager.mPathSubSectors;
+    EEAIHandleView<EEAIPathSubSector> theSectors = gContinentManager.GetPathSubSectors();
     if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
         return NULL;
     return static_cast<AStarGraphableObjectBase*>(theSectors[inIndex]);
@@ -478,9 +478,9 @@ void* EEGraphObjectOf(void* inContext, int32_t inIndex)
 
 EEAIPathSubSector* EESubSectorOf(long inID)
 {
-    if (inID < 0 || (size_t)inID >= gContinentManager.mPathSubSectors.size())
+    if (inID < 0 || (size_t)inID >= gContinentManager.GetPathSubSectors().size())
         return NULL;
-    return gContinentManager.mPathSubSectors[inID];
+    return gContinentManager.GetPathSubSectors()[inID];
 }
 
 void EEPathBounds(int32_t* outValues, const EEAIAStarBounds& inBounds)
@@ -606,7 +606,7 @@ bool EESaveGraphMachine(EEGraphPathMachine* inMachine, EePathSavedGraph& outSave
 {
     EEAIAStarPathGraphGoal& theGoal = inMachine->mGoal;
     long theKind = EEGraphModifierKindOf(theGoal.mModifier);
-    if (theKind < 0 || inMachine->mNodeCount != (long)gContinentManager.mPathSubSectors.size() + 1
+    if (theKind < 0 || inMachine->mNodeCount != (long)gContinentManager.GetPathSubSectors().size() + 1
         || !ee_astar_graph_objects_match(inMachine->mCore, EEGraphObjectOf, NULL))
         return false;
     const long theMachine[9] = {inMachine->mTile.mX, inMachine->mTile.mY, inMachine->mType, inMachine->mRevs,
@@ -977,7 +977,7 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     case EE_PATH_GAME_TIME:
         return gPhysics ? (int64_t)(uint32_t)gPhysics->GetGameTime() : 0;
     case EE_PATH_SUB_SECTORS:
-        return (int64_t)gContinentManager.mPathSubSectors.size();
+        return (int64_t)gContinentManager.GetPathSubSectors().size();
     case EE_PATH_SUB_SECTOR:
         return EESubSectorOf((long)i[0]) != NULL;
     case EE_PATH_MAP:
@@ -1629,8 +1629,8 @@ void EEPathManager::DumpSim(FILE* inFile)
 void EEPathManager::DumpOutOfSynch(FILE* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());
-    for (long i = gContinentManager.mPathSubSectors.size() - 1; i > 0; i--) {
+    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.GetPathSubSectors().size());
+    for (long i = gContinentManager.GetPathSubSectors().size() - 1; i > 0; i--) {
         EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
         if (theSector)
             fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),

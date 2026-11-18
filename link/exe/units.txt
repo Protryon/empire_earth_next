@@ -25,7 +25,6 @@
 1d846 1ed2c Empire Earth/AI Thread/EEAIContinent.cpp
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp
 29f57 2bb72 Empire Earth/AI Thread/EEAIFunctionObjects.cpp
-2bb72 2bbd3 Empire Earth/AI Thread/EEAIPathSectorRegionInformation.cpp
 2bbd3 2be88 Empire Earth/AI Thread/EEAIPathSector.cpp
 2be88 2c79f Empire Earth/AI Thread/EEAIPathSubSector.cpp
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp

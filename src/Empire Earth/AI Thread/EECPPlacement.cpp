@@ -208,7 +208,7 @@ void EECPPlacement::CollectSiteTiles(char inKind)
     EEAIContinent* theContinent = gContinentManager.GetContinentAt(theCenter.mX, theCenter.mY);
     if (theContinent == NULL)
         return;
-    if (gContinentManager.mTileFlags[theKindID * gContinentManager.mFlagsWidth + theContinent->GetID()]) {
+    if (gContinentManager.AreAdjacent(theKindID, theContinent->GetID())) {
         theKindContinent->GetShoreNextTo(theContinent->GetID(), theTiles);
         theRegion = theTiles;
         for (std::vector<U2DPoint<long> >::iterator it = theRegion.begin(); it != theRegion.end(); it++) {

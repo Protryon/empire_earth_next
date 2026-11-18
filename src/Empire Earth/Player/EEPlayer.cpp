@@ -683,7 +683,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         bool theResult;
         if (a[0] == 0) {
             EETown* theTown = new EETown(thePlayer, ++gWorld.mTownIDCounter);
-            theTown->SetSerial(++gContinentManager.mLastSerial);
+            theTown->SetSerial(gContinentManager.NewSerial());
             gContinentManager.AddArea(theTown);
             theResult = theTown->AddUnit(theNew);
             if (theResult) {
@@ -693,7 +693,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
                 delete theTown;
         } else {
             EEHerd* theHerd = new EEHerd(thePlayer, theNew->mUnitClass->mAnimalID, ++gWorld.mHerdIDCounter);
-            theHerd->SetSerial(++gContinentManager.mLastSerial);
+            theHerd->SetSerial(gContinentManager.NewSerial());
             gContinentManager.AddArea(theHerd);
             theResult = theHerd->AddUnit(theNew);
             if (theResult)
@@ -1527,8 +1527,7 @@ void EEPlayer::RegisterHerds()
     for (long i = this->mHerds.size() - 1; i >= 0; i--) {
         if (this->mHerds[i] == NULL)
             continue;
-        ++gContinentManager.mLastSerial;
-        this->mHerds[i]->SetSerial(gContinentManager.mLastSerial);
+        this->mHerds[i]->SetSerial(gContinentManager.NewSerial());
         gContinentManager.AddArea(this->mHerds[i]);
     }
 }
@@ -1539,8 +1538,7 @@ void EEPlayer::RegisterTowns()
     for (long i = this->mTowns.size() - 1; i >= 0; i--) {
         if (this->mTowns[i] == NULL)
             continue;
-        ++gContinentManager.mLastSerial;
-        this->mTowns[i]->SetSerial(gContinentManager.mLastSerial);
+        this->mTowns[i]->SetSerial(gContinentManager.NewSerial());
         gContinentManager.AddArea(this->mTowns[i]);
     }
 }
@@ -2457,7 +2455,7 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         return 0;
     case EE_UNITS_TOWN_MAKE_COMMIT:
         for (size_t m = 0; m < theContext.mMade.size(); m++) {
-            theContext.mMade[m]->SetSerial(++gContinentManager.mLastSerial);
+            theContext.mMade[m]->SetSerial(gContinentManager.NewSerial());
             gContinentManager.AddArea(theContext.mMade[m]);
             thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theContext.mMade[m]->mTownID, theContext.mMade[m]));
             thePlayer->mTowns.push_back(theContext.mMade[m]);

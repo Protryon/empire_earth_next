@@ -469,8 +469,8 @@ static void EECPNextSortForests(EEComputerPlayer* inPlayer, EECPNextState* inSta
     inState->mForestsY = theTown.mY;
     inState->mForestsTime = theNow;
     std::vector<std::pair<long long, unsigned short> > theOrder;
-    for (unsigned long i = 0, n = gContinentManager.mForests.size(); i < n; i++) {
-        EEAIForest* theForest = gContinentManager.mForests[(unsigned short)i];
+    for (unsigned long i = 0, n = gContinentManager.GetForests().size(); i < n; i++) {
+        EEAIForest* theForest = gContinentManager.GetForests()[(unsigned short)i];
         if (theForest == NULL)
             continue;
         long long theKey = 0;
@@ -505,7 +505,7 @@ EEUnit* EECPNextForestTarget(EEComputerPlayer* inPlayer)
     EECPNextSortForests(inPlayer, theState);
     U2DPoint<long> theCenter = inPlayer->mPlacement->mTownCenterTile;
     for (unsigned long i = 0; i < theState->mForests.size(); i++) {
-        EEAIForest* theForest = gContinentManager.mForests[theState->mForests[i]];
+        EEAIForest* theForest = gContinentManager.GetForests()[theState->mForests[i]];
         if (theForest == NULL)
             continue;
         // (a forest of one tree only while fewer than 8 gather: the original's inCount, 0 here)
@@ -539,7 +539,7 @@ EEUnit* EECPNextWoodTarget(EEComputerPlayer* inPlayer)
         EEUnit* theBest = NULL;
         long long theBestDistance = 0;
         for (unsigned long i = 0; i < theState->mForests.size(); i++) {
-            EEAIForest* theForest = gContinentManager.mForests[theState->mForests[i]];
+            EEAIForest* theForest = gContinentManager.GetForests()[theState->mForests[i]];
             if (theForest == NULL)
                 continue;
             U2DPoint<long> thePoint = theForest->GetClosestPoint(theDrop);

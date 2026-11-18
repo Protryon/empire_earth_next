@@ -10,6 +10,9 @@
 /// A tile of an area of its own (`0x36`).
 constexpr static const int32_t KIND_AREA = 54;
 
+/// The tables by id (`EeAStarCmTable`'s numbers).
+constexpr static const size_t EE_ASTAR_CM_TABLES = 8;
+
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 
@@ -368,6 +371,54 @@ constexpr static const int32_t REPAIR_SINGLE = 2;
 /// The tile gets a new area.
 constexpr static const int32_t REPAIR_NEW = 3;
 
+/// Which table of objects by id (the C++ manager's vectors).
+enum class EeAStarCmTable {
+  /// `mContinents` (`EEAIContinent*` by its id)
+  Continents = 0,
+  /// `mPathSectors` (`EEAIPathSector*` by its id)
+  PathSectors = 1,
+  /// `mPathSubSectors` (`EEAIPathSubSector*` by its id; not owned: the sectors own them)
+  PathSubSectors = 2,
+  /// `mForests` (`EEAIForest*`)
+  Forests = 3,
+  /// `mPathAreas` (`EEAIPathArea*`)
+  PathAreas = 4,
+  /// `mHills` (`EEAIHill*`)
+  Hills = 5,
+  /// `mChokePoints` (`EEAIChokePoint*` by its index)
+  ChokePoints = 6,
+  /// `mRectangleAreas` (`EEAIRectangleArea*`)
+  RectangleAreas = 7,
+};
+
+/// Which shore list.
+enum class EeAStarCmShore {
+  /// `mShoreTiles` (sorted after the grid is built)
+  Shore = 0,
+  /// `mIceShoreTiles`
+  IceShore = 1,
+};
+
+/// Which free id list.
+enum class EeAStarCmFree {
+  /// `mFreeSubSectorIDs`
+  SubSectors = 0,
+  /// `mFreePathAreaIDs`
+  PathAreas = 1,
+};
+
+/// Which tile grid.
+enum class EeAStarCmGrid {
+  /// `mTileValues` (`long` per tile)
+  TileValues = 0,
+  /// `mContinentIDs` (`unsigned short` per tile)
+  ContinentIds = 1,
+  /// `mPathSubSectorIDs` (`unsigned short` per tile)
+  SubSectorIds = 2,
+  /// `mTileFlags` (`bool`, `mFlagsWidth` squared: the continents' adjacency)
+  TileFlags = 3,
+};
+
 /// Which id list (`EEAIContinent`'s members in their order).
 enum class EeAStarContinentList {
   /// `mForestIDs` (sorted, duplicates kept)
@@ -446,6 +497,9 @@ enum class EeAStarGraphList {
 /// The hull's points (opaque to C++).
 struct EeAStarAreaHull;
 
+/// The tables (opaque to C++).
+struct EeAStarCmTables;
+
 /// The lists (opaque to C++).
 struct EeAStarContinentLists;
 
@@ -501,6 +555,64 @@ struct EeAStarAreaRecord {
   unsigned long serial;
   /// `mAreaType`: the area kind (`kAIArea*`)
   long area_type;
+};
+
+/// `EEAIContinentManager`'s members (`ee_astar_cm_init` / `ee_astar_cm_free` in its ctor and dtor). The grid
+/// pointers are the tables' grids (NULL: none), kept here for the C++'s inline lookups.
+struct EeAStarCmRecord {
+  /// the tables (`ee_astar_cm_*`)
+  EeAStarCmTables *tables;
+  /// `mTileValues` (width x height)
+  long *tile_values;
+  /// `mContinentIDs` (width x height)
+  uint16_t *continent_ids;
+  /// `mPathSubSectorIDs` (width x height)
+  uint16_t *sub_sector_ids;
+  /// `mTileFlags` (flags_width squared)
+  bool *tile_flags;
+  /// `mNextIDs`: the continental chains' next numbers by kind
+  uint16_t next_ids[7];
+  /// `mState` (2 while `Rebuild` repairs the path areas)
+  long state;
+  /// `mLastSerial`: the last area serial handed out
+  unsigned long last_serial;
+  /// `mL118` (only zeroed)
+  long l118;
+  /// `mNextPathAreaID`
+  uint16_t next_path_area_id;
+  /// `mLastSubSectorID`
+  uint16_t last_sub_sector_id;
+  /// `mChecksum`
+  long checksum;
+  /// `mNextID124`..`mNextID130`: the next land mass, water body, space region and surface region ids
+  long next_land_mass;
+  long next_water_body;
+  long next_space_region;
+  long next_surface_region;
+  /// `mNumWaterTiles`, `mNumLandTiles`, `mNumSpaceTiles`
+  long num_water_tiles;
+  long num_land_tiles;
+  long num_space_tiles;
+  /// `mFlagsWidth`: the adjacency matrix's side (the continent count)
+  long flags_width;
+  /// `mWidth`, `mHeight`: the map's tiles
+  unsigned long width;
+  unsigned long height;
+  /// `mClearing` (between `Clear` and the end of `BuildRegions`)
+  bool clearing;
+  /// the sector grid (was `EEAIPathSectorRegionInformation`): tiles per sector side, its square, sectors per side
+  long sector_size;
+  long sector_area;
+  long sectors_x;
+  long sectors_y;
+};
+
+/// One entry of the serial table.
+struct EeAStarCmArea {
+  /// the area's serial (`EEAIArea::GetSerial()` when added)
+  unsigned long serial;
+  /// the `EEAIArea*`
+  uint64_t area;
 };
 
 /// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
@@ -1210,6 +1322,205 @@ void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles,
 /// # Safety
 /// `r` a live record, `tiles` a live set.
 bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
+
+/// # Safety
+/// `r` points to a record (uninitialised is fine).
+void ee_astar_cm_init(EeAStarCmRecord *r);
+
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_free(EeAStarCmRecord *r);
+
+/// Table `table`'s entries (the objects' addresses by id, 0 none); `count` gets its size. Valid until it changes.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `count` writable.
+const uint64_t *ee_astar_cm_table(const EeAStarCmRecord *r,
+                                  EeAStarCmTable table,
+                                  size_t *count);
+
+/// `table.resize(count, NULL)` (entries below `count` kept).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_table_resize(EeAStarCmRecord *r, EeAStarCmTable table, size_t count);
+
+/// `table[id] = object` (the table grows to hold `id` when `grow`: `push_back` past its end; else an id past the
+/// end is ignored).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_table_set(EeAStarCmRecord *r,
+                           EeAStarCmTable table,
+                           size_t id,
+                           uint64_t object);
+
+/// `table.push_back(object)`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_table_push(EeAStarCmRecord *r, EeAStarCmTable table, uint64_t object);
+
+/// The serial table (sorted by serial); `count` gets its size. Valid until it changes.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `count` writable.
+const EeAStarCmArea *ee_astar_cm_areas(const EeAStarCmRecord *r, size_t *count);
+
+/// `AddArea`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_add_area(EeAStarCmRecord *r, unsigned long serial, uint64_t area);
+
+/// `RemoveArea`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+bool ee_astar_cm_remove_area(EeAStarCmRecord *r, unsigned long serial);
+
+/// `GetArea`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+uint64_t ee_astar_cm_area(const EeAStarCmRecord *r, unsigned long serial);
+
+/// Empties the serial table.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_clear_areas(EeAStarCmRecord *r);
+
+/// `AddSectorTiles`' insert of one tile under sector `id`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_add_sector_tile(EeAStarCmRecord *r, uint16_t id, EeHullPoint tile);
+
+/// `RemoveSectorTiles`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_remove_sector_tiles(EeAStarCmRecord *r, uint16_t id);
+
+/// The pending sectors' count (`mSectorTiles.size()`).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+size_t ee_astar_cm_sector_tiles_count(const EeAStarCmRecord *r);
+
+/// The `index`-th pending sector in id order: its id, and its tiles (`count` gets their number). NULL past the end.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `id` and `count` writable.
+const EeHullPoint *ee_astar_cm_sector_tiles(const EeAStarCmRecord *r,
+                                            size_t index,
+                                            uint16_t *id,
+                                            size_t *count);
+
+/// Empties the pending sector tiles.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_clear_sector_tiles(EeAStarCmRecord *r);
+
+/// A shore list; `count` gets its size. Valid until it changes.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `count` writable.
+const EeHullPoint *ee_astar_cm_shore(const EeAStarCmRecord *r, EeAStarCmShore list, size_t *count);
+
+/// Replaces a shore list with `count` tiles.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `tiles` holds `count` points (NULL for 0).
+void ee_astar_cm_set_shore(EeAStarCmRecord *r,
+                           EeAStarCmShore list,
+                           const EeHullPoint *tiles,
+                           size_t count);
+
+/// `IsShoreTile`: `std::binary_search` of (x, y) in the shore list.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+bool ee_astar_cm_is_shore(const EeAStarCmRecord *r, long x, long y);
+
+/// A free id list; `count` gets its size.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `count` writable.
+const uint16_t *ee_astar_cm_free_ids(const EeAStarCmRecord *r, EeAStarCmFree list, size_t *count);
+
+/// Appends `count` ids to a free id list (`insert(end, ...)` / `push_back`); `clear` empties it first.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `ids` holds `count` ids (NULL for 0).
+void ee_astar_cm_add_free_ids(EeAStarCmRecord *r,
+                              EeAStarCmFree list,
+                              const uint16_t *ids,
+                              size_t count,
+                              bool clear);
+
+/// `NewSubSectorID`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+uint16_t ee_astar_cm_new_sub_sector_id(EeAStarCmRecord *r);
+
+/// `NewPathAreaID`.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+uint16_t ee_astar_cm_new_path_area_id(EeAStarCmRecord *r);
+
+/// A grid of `count` zeroed entries (`allocate`), or none (`!allocate`); the record's pointer follows.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_set_grid(EeAStarCmRecord *r,
+                          EeAStarCmGrid grid,
+                          bool allocate,
+                          size_t count);
+
+/// A grid's entry count (0: none).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+size_t ee_astar_cm_grid_len(const EeAStarCmRecord *r, EeAStarCmGrid grid);
+
+/// `Reset`'s part on the record and tables: the counters, the serial table, the pending tiles, the shore lists
+/// and the free path area ids (the C++ deletes the objects first and empties the object tables).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_reset(EeAStarCmRecord *r);
+
+/// `EEAIPathSectorRegionInformation::Init` (`map_size` the map's tiles per side).
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_init_sectors(EeAStarCmRecord *r, long map_size, long sector_size);
+
+/// `DeletePathSectors`' part after the sectors are deleted: the last sub sector id, its free ids, the sector grid.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+void ee_astar_cm_sectors_deleted(EeAStarCmRecord *r);
+
+/// The path sector table's index of (x, y) (`GetPathSector`), -1 off the map.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`.
+ptrdiff_t ee_astar_cm_sector_index(const EeAStarCmRecord *r, long x, long y);
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: the ids into `out` (room for `flags_width`); their count.
+///
+/// # Safety
+/// `r` from `ee_astar_cm_init`; `out` holds `flags_width` ids.
+size_t ee_astar_cm_adjacent_ids(const EeAStarCmRecord *r,
+                                uint16_t id,
+                                bool with_self,
+                                uint16_t *out);
 
 /// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
 ///

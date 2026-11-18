@@ -155,14 +155,14 @@ void EEEMStorm::Begin()
     EEPlayer* thePlayer = gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)];
     if (thePlayer == NULL || thePlayer->mTowns.size() == 0
         || (theArea = thePlayer->mTowns[gPhysics->GetRandom(0L, (long)thePlayer->mTowns.size() - 1)]) == NULL) {
-        theArea = gContinentManager.mContinents[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)];
+        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)];
         if (theArea == NULL)
-            theArea = gContinentManager.mContinents[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
+            theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
     }
     this->mGoal = theArea->GetRandomPoint();
     theArea = NULL;
     if (this->mType == kStormRain || this->mType == kStormHurricane) {
-        theArea = gContinentManager.mContinents[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)];
+        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)];
     } else if (this->mType == kStormSnow || this->mType == kStormBlizzard) {
         if (gPhysics->GetRandom() <= 0.5f)
             theArea = dynamic_cast<EEAIContinent*>(gContinentManager.GetRandomContinent(kContinentCategoryCliff, gPhysics->mRandom));
@@ -170,7 +170,7 @@ void EEEMStorm::Begin()
             theArea = dynamic_cast<EEAIHill*>(gContinentManager.GetRandomArea(kAIAreaHill, gPhysics->mRandom, 0));
     }
     if (theArea == NULL)
-        theArea = gContinentManager.mContinents[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
+        theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
     this->mStart = theArea->GetRandomPoint();
     theShaper->mInner.Set(this->mStart);
 

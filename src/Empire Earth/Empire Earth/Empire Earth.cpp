@@ -180,12 +180,12 @@ long& gEEAIRegionSize = gPathManager.mLC8;   // +0xc8
 // chain at 0x53ec5c (wrapper)
 EEAIContinentManager gContinentManager;
 // data the original placed inside gContinentManager (it addressed them as globals): references to the members
-unsigned long& gContinentManagerChecksum = reinterpret_cast<unsigned long&>(gContinentManager.mChecksum);   // +0x120
-long& gDCGameSpeed = gContinentManager.mNumWaterTiles;   // +0x134
-long& gNumSpaceTiles = gContinentManager.mNumSpaceTiles;   // +0x13c
-unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mWidth);   // +0x144
-unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mHeight);   // +0x148
-bool& gContinentManagerClearing = gContinentManager.mClearing;   // +0x14c
+unsigned long& gContinentManagerChecksum = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.checksum);   // +0x120
+long& gDCGameSpeed = gContinentManager.mRecord.num_water_tiles;   // +0x134
+long& gNumSpaceTiles = gContinentManager.mRecord.num_space_tiles;   // +0x13c
+unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.width);   // +0x144
+unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.height);   // +0x148
+bool& gContinentManagerClearing = gContinentManager.mRecord.clearing;   // +0x14c
 // chain at 0x53ec86 (wrapper)
 EEWorldTable gWorldTable;
 // chain at 0x53ecc6 (wrapper)

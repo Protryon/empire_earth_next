@@ -13,25 +13,9 @@
 
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
+#include "ee/EEAIListView.h"
 
 class EEAIPathArea;
-
-// New (port): a read-only view of one of the record's lists (valid until that list next changes); it converts to a
-// std::vector copy
-template <class T> class EEAIListView {
-public:
-    EEAIListView(const T* inData, size_t inSize) : mData(inData), mSize(inSize) {}
-    const T* begin() const { return this->mData; }
-    const T* end() const { return this->mData + this->mSize; }
-    size_t size() const { return this->mSize; }
-    bool empty() const { return this->mSize == 0; }
-    const T& operator[](size_t inIndex) const { return this->mData[inIndex]; }
-    operator std::vector<T>() const { return std::vector<T>(this->begin(), this->end()); }
-
-private:
-    const T* mData;
-    size_t mSize;
-};
 
 class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase, private EeAStarContinentRecord {
 public:
