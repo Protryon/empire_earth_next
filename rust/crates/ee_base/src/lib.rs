@@ -1,5 +1,5 @@
 //! The platform layer, the leaves (utilities, errors, time, threads, strings, codecs, files, input), the GE math and
-//! the PNG reader: what every other crate of the game builds on.
+//! the PNG reader and the JPEG decoder: what every other crate of the game builds on.
 
 // `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
 // model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
@@ -14,6 +14,9 @@ pub mod error;
 pub mod fs;
 /// The crate ee_input before the restructure.
 pub mod input;
+/// The JPEG decoder (libjpeg 6b's, in Rust; moved from ee_won_gui).
+/// cbindgen:ignore
+pub mod jpeg;
 pub mod math;
 /// The crate ee_panic before the restructure.
 /// cbindgen:ignore

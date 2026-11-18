@@ -1,9 +1,10 @@
-//! WONGUI's JPEG decoder in Rust (R6 WON round 41): JPGDecoder.cpp's decode on the engine's libjpeg 6b
-//! (src/ThirdParty/libjpeg), as that library decodes with JPGDecoder's settings: the default decompression
-//! parameters (the slow integer IDCT, fancy upsampling, no scaling, no quantization, no block smoothing needed by
-//! complete files), JPGDecoder's source manager (4 KB reads from a FileReader, a fake end of image after the data,
-//! a fatal error on an empty file, skips past the buffer through `SkipBytes`, which throws) and its error manager (a
-//! fatal error longjmps back: `false` from the attributes, NULL from the decode).
+//! The JPEG decoder (R6 WON round 41, moved here from ee_won_gui when libjpeg left the tree): libjpeg 6b's decode
+//! in Rust, as WONGUI's JPGDecoder ran it, with JPGDecoder's settings: the default decompression parameters (the
+//! slow integer IDCT, fancy upsampling, no scaling, no quantization, no block smoothing needed by complete files),
+//! JPGDecoder's source manager (4 KB reads through an [`Input`], a fake end of image after the data, a fatal error
+//! on an empty file, skips past the buffer, whose status is thrown) and its error manager (a fatal error is
+//! [`Stop::Fail`]). Its users: WONGUI's JPGDecoder (ee_won_gui imgdec.rs, over the C++ FileReader) and the Graphics
+//! Engine's JPG and JPG2 surface files (ee_render openformats surface_file.rs, over a byte slice).
 //!
 //! What is libjpeg's here, statement for statement where it decides the output: the marker reader (jdmarker.c:
 //! SOI, SOF0/1/2/9/10, DHT, DQT, DRI, SOS, the JFIF APP0 and Adobe APP14 markers, the skipped APPn, COM, DNL and DAC
@@ -20,10 +21,13 @@
 //!
 //! Where it differs: a two-component image fails (JPGDecoder read three samples a pixel past the end of libjpeg's
 //! row of two there). No file the lobby reads has two.
+//!
+//! FOLLOW-UP (the owner's decision, 2026-11-17): this hand port stays the decoder while the goldens depend on its
+//! bit-exact output (ee_won_gui's golden_jpeg.txt, the lobby captures). Once the whole Rust port is done, replace
+//! it with a maintained library decoder (e.g. the `zune-jpeg` crate) and re-record what depends on its pixels.
 
-use ee_won_net::file::EeWonFileReader;
-
-/// Why a decode stopped: libjpeg's fatal error (the longjmp), or a FileReader status the C++ throws.
+/// Why a decode stopped: libjpeg's fatal error (the longjmp), or a status of the input's (WONGUI: a FileReader
+/// status the C++ throws).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stop {
     Fail,
@@ -32,21 +36,11 @@ pub enum Stop {
 
 type R<T> = Result<T, Stop>;
 
-/// What JPGDecoder reads through: `ReadMaxBytes` (the count, and a status Check throws for) and `SkipBytes`.
+/// What the decoder reads through (JPGDecoder: FileReader's `ReadMaxBytes`, the count and a status Check throws for,
+/// and `SkipBytes`).
 pub trait Input {
     fn read_max(&mut self, out: &mut [u8]) -> (usize, i32);
     fn skip(&mut self, n: u32) -> i32;
-}
-
-impl Input for EeWonFileReader {
-    fn read_max(&mut self, out: &mut [u8]) -> (usize, i32) {
-        // SAFETY: `out` holds out.len() bytes
-        let (n, s) = unsafe { EeWonFileReader::read_max(self, out.as_mut_ptr(), out.len() as i32) };
-        (n.max(0) as usize, s)
-    }
-    fn skip(&mut self, n: u32) -> i32 {
-        EeWonFileReader::skip(self, n as _)
-    }
 }
 
 /// A byte slice as a FileReader over memory reads it (a skip past the end is the reader's past-end status, 1).
