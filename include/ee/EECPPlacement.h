@@ -1,15 +1,15 @@
 // A computer player's placement searches (stage 6, docs/AI_LUA_VERBS.md): what was left of the original's build
 // manager (EECPBuildManager, 0x66af0..0x6e8d4) once its queues, builders and runner moved into Lua (data/ai/lib/verbs.lua):
 // the town centre tile, the shore and space site tiles, the "unit near" tests, CanBuildAt and FindSite with its finders.
-// The Lua verbs call them through ai.place. Member names are provisional. Requires <deque>, <vector>, <utility>, lle/U2DPoint.h (through lle/LowLevelEngine.h),
-// ee/EETileCoordinate.h.
+// The Lua verbs call them through ai.place. Their bodies and the class's own data (the site tiles, the classes seen)
+// are Rust's (ee_sim::cp::placement; AI lane B, round 2): the members below are the forwarders. Member names are
+// provisional. Requires <deque>, <vector>, <utility>, lle/U2DPoint.h (through lle/LowLevelEngine.h), ee/EETileCoordinate.h.
 #ifndef EE_EECPPLACEMENT_H
 #define EE_EECPPLACEMENT_H
 
 #include <deque>
 #include <vector>
 #include <utility>
-#include <set>
 #include "ee/EETileCoordinate.h"
 
 class EEComputerPlayer;
@@ -17,20 +17,7 @@ class EEPlayer;
 class EEComplexUnit;
 class EEUnit;
 class FSFile;
-
-// The find_if predicate of the build manager's "any unit of that type near (x, y)" tests (12 bytes passed by value;
-// its operator() 0x921f7 and find_if 0x921d0 sit in EECPResourceManager.cpp's range, the (tile, distance) ctor 0x6a20e
-// after its first user 0x69ee0). The distance is squared by the callers. Name is provisional
-struct EECPUnitWithinDistance {
-    EECPUnitWithinDistance(long inX, long inY, float inDistanceSquared)
-        : mCenter(inX, inY), mDistanceSquared(inDistanceSquared) {}
-    EECPUnitWithinDistance(const U2DPoint<long>& inCenter, float inDistanceSquared)
-        : mCenter(inCenter), mDistanceSquared(inDistanceSquared) {}
-    bool operator()(EEUnit* inUnit) const;
-
-    U2DPoint<long> mCenter;                 // +0x00
-    float mDistanceSquared;                 // +0x08
-};
+struct EeCpPlacement;                       // the Rust data (rust/sim/cp.h)
 
 // 0x6b6b2 (cdecl, EECPBuildManager.cpp's range): unit classes 0x24, 0x41, 0x2d8, 0x302, 0x31f (EECPUnitManager 0x941bb)
 // (provisional name)
@@ -79,14 +66,11 @@ public:
     bool CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize, bool inArg5,
         bool inArg6, long inX, long inY);
 
-    std::vector<U2DPoint<long> > mWaterSites;  // (CollectSiteTiles(2))
-    std::vector<U2DPoint<long> > mSpaceSites;  // (CollectSiteTiles(4))
     U2DPoint<long> mTownCenterTile;         // (-10000: none)
     EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;
-    unsigned long mNextResourceCenter;      // (FindProductionSite's round robin)
-    bool mSiteTilesCollected;
-    std::set<long> mTypesSeen;              // (UnitAdded's classes; not saved)
+    EeCpPlacement* mRust;                   // the dock and space site tiles (CollectSiteTiles(2), (4)), whether they
+                                            // were collected, UnitAdded's classes (not saved)
 };
 
 // the epoch's classes (the original civilization manager's GetAntiAirClass, GetFishingBoatClass, GetGateClass,
