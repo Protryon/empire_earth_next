@@ -11,9 +11,14 @@
 //! - `placement`: `EECPPlacement` whole (the site searches, `CanBuildAt`, the "unit near" tests, the epoch's classes,
 //!   the verbs' `EECPNextPlaceSearch`); `resource_center`: `EECPResourceCenter`'s bodies; `place_host`: the world
 //!   both ask ([`place_host::PlaceHost`]); `place_game`: its game host and their C ABI;
+//! - `events`: `EEComputerPlayer`'s own bodies (the population cap, the centres' grouping, the favourite types,
+//!   the civilization's pick, the retired units, the pending epoch, `AvoidsEnemies`) over [`events::PlayerHost`];
 //! - `legacy_load`: the readers that step over a retail file's deleted C++ manager blocks (`EECPLegacyLoad.cpp`);
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
 
+pub mod events;
+#[cfg(test)]
+mod events_tests;
 pub mod ffi;
 pub mod fields;
 pub mod file;

@@ -114,7 +114,7 @@ EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer)
     EeCpPlaceCtx theContext;
     theContext.player = EECPHandle(static_cast<EEPlayer*>(inPlayer));
     theContext.player_id = (uint32_t)inPlayer->mPlayerID;
-    theContext.fields = static_cast<const EeCpFields*>(inPlayer);
+    theContext.fields = static_cast<EeCpFields*>(inPlayer);
     EECPPlacement* thePlacement = inPlayer->mPlacement;
     theContext.town = thePlacement != NULL ? &thePlacement->mTownCenterTile.mX : NULL;
     theContext.placement = thePlacement != NULL ? thePlacement->mRust : NULL;

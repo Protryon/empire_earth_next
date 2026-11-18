@@ -28,6 +28,14 @@ pub(crate) struct Fake {
     pub ranges: Vec<(i32, f32)>,
     pub morale: Option<(i32, i32, f32)>,
     pub class_size: i32,
+    /// the events tests' world: the record, the players (human, population), the teams with enough wonders,
+    /// the favourite candidates by class, the history, the cheats on
+    pub rec: Box<super::fields::EeCpFields>,
+    pub players: Vec<(bool, i32)>,
+    pub wonder_teams: Vec<bool>,
+    pub candidates: Vec<Option<(i32, i32)>>,
+    pub history: Vec<(u32, i32)>,
+    pub cheats: i32,
 }
 
 impl Default for Fake {
@@ -46,6 +54,12 @@ impl Default for Fake {
             ranges: Vec::new(),
             morale: None,
             class_size: 2,
+            rec: Box::default(),
+            players: Vec::new(),
+            wonder_teams: Vec::new(),
+            candidates: Vec::new(),
+            history: Vec::new(),
+            cheats: 0,
         }
     }
 }

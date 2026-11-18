@@ -8,6 +8,15 @@
 #include <stddef.h>
 #include "rust/sim/units.h"
 
+/// The kinds of favourite (`ChooseFavoriteLandType` .. `ChooseFavoriteSpaceType`).
+constexpr static const int32_t EE_CP_FAVORITE_LAND = 0;
+
+constexpr static const int32_t EE_CP_FAVORITE_SEA = 1;
+
+constexpr static const int32_t EE_CP_FAVORITE_AIR = 2;
+
+constexpr static const int32_t EE_CP_FAVORITE_SPACE = 3;
+
 /// The last save version whose computer players hold the deleted C++ managers' blocks in the original's layout.
 constexpr static const uint32_t EE_CP_LEGACY_LAST_VERSION = 250;
 
@@ -186,6 +195,79 @@ constexpr static const int32_t EE_CP_CENTER_MORALE_RECOUNT = 110;
 constexpr static const int32_t EE_CP_CENTER_EFFECT_TEMPLATES = 111;
 
 constexpr static const int32_t EE_CP_CENTER_TEMPLATE_RADIUS = 112;
+
+constexpr static const int32_t EE_CP_PLAYER_BEHAVIOR_FLOAT = 300;
+
+constexpr static const int32_t EE_CP_PLAYER_BASE_POP_LIMIT = 301;
+
+constexpr static const int32_t EE_CP_PLAYER_DEATHMATCH = 302;
+
+constexpr static const int32_t EE_CP_PLAYER_CHEAT_ON = 303;
+
+constexpr static const int32_t EE_CP_PLAYER_NUM_TEAMS = 304;
+
+constexpr static const int32_t EE_CP_PLAYER_TEAM_WONDERS = 305;
+
+constexpr static const int32_t EE_CP_PLAYER_TEAM_CONTAINS = 306;
+
+constexpr static const int32_t EE_CP_PLAYER_NUM_PLAYERS = 307;
+
+/// player `v0`: -1 none, else `IsHuman()`
+constexpr static const int32_t EE_CP_PLAYER_HUMAN = 308;
+
+constexpr static const int32_t EE_CP_PLAYER_POPULATION = 309;
+
+constexpr static const int32_t EE_CP_PLAYER_HANDLE = 310;
+
+constexpr static const int32_t EE_CP_PLAYER_PATH_AREA_ID = 311;
+
+constexpr static const int32_t EE_CP_PLAYER_UNIT_CONTINENT_AT = 312;
+
+/// `new EECPResourceCenter(player, a)` (not listed)
+constexpr static const int32_t EE_CP_PLAYER_CENTER_CREATE = 313;
+
+/// centre `a` listed at the end (`v0` 0) or the front
+constexpr static const int32_t EE_CP_PLAYER_CENTER_LIST = 314;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_IS_WITHIN = 315;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_ADD = 316;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_CONTAINS = 317;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_ADOPT = 318;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_SET_MAIN = 319;
+
+/// centre `a`'s `GetCenter` on the tile `v0`, `v1` (in and out)
+constexpr static const int32_t EE_CP_PLAYER_CENTER_GET_CENTER = 320;
+
+constexpr static const int32_t EE_CP_PLAYER_CENTER_SET_ACTIVE = 321;
+
+/// `std::sort(mResourceCenters, EECPCenterDistanceLess(v0, v1))`
+constexpr static const int32_t EE_CP_PLAYER_CENTERS_SORT = 322;
+
+/// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
+constexpr static const int32_t EE_CP_PLAYER_FAVORITE_CANDIDATE = 323;
+
+constexpr static const int32_t EE_CP_PLAYER_HISTORY_PUSH = 324;
+
+constexpr static const int32_t EE_CP_PLAYER_IS_EPOCH = 325;
+
+constexpr static const int32_t EE_CP_PLAYER_UNIT_IS_BUILDING = 326;
+
+/// unit `a`'s current research, then its build queue's technologies (pushed)
+constexpr static const int32_t EE_CP_PLAYER_UNIT_RESEARCH = 327;
+
+constexpr static const int32_t EE_CP_PLAYER_UNIT_OBSOLETE = 328;
+
+constexpr static const int32_t EE_CP_PLAYER_SEEN_BY = 329;
+
+constexpr static const int32_t EE_CP_PLAYER_KILL = 330;
+
+constexpr static const int32_t EE_CP_PLAYER_IS_TRANSPORT = 331;
+
+constexpr static const int32_t EE_CP_PLAYER_CARGO = 332;
 
 constexpr static const unsigned long EASY = 0;
 
@@ -621,7 +703,7 @@ struct EeCpPlaceCtx {
   /// `mPlayerID`
   uint32_t player_id;
   /// the player's record (`static_cast<EeCpFields*>(player)`)
-  const EeCpFields *fields;
+  EeCpFields *fields;
   /// `mPlacement->mTownCenterTile`'s `mX`, `mY` (null: no placement)
   long *town;
   /// `mPlacement->mRust` (null: no placement)
@@ -920,6 +1002,12 @@ int32_t ee_cp_resource_state_save(void *ctx,
 /// As [`ee_cp_resource_state_save`].
 int32_t ee_cp_resource_state_load(void *ctx,
                                   EeUnitsPlayerSaveFn host);
+
+extern int64_t ee_cp_player_host(const EeCpPlaceCtx *ctx,
+                                 int32_t op,
+                                 uint64_t a,
+                                 uint64_t b,
+                                 EeCpPlaceIo *io);
 
 extern int64_t ee_cp_place_host(const EeCpPlaceCtx *ctx,
                                 int32_t op,
@@ -1260,6 +1348,63 @@ int32_t ee_cp_center_save(const EeCpPlaceCtx *ctx,
 /// # Safety
 /// `host` must accept `file` with those operations for the call.
 int32_t ee_cp_center_load(void *file, EeUnitsPlayerSaveFn host, uint32_t minor);
+
+/// `WorkOutPopulation`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context.
+void ee_cp_work_out_population(const EeCpPlaceCtx *ctx);
+
+/// `Regroup`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+void ee_cp_regroup(const EeCpPlaceCtx *ctx);
+
+/// `UpdateGroups`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+void ee_cp_update_groups(const EeCpPlaceCtx *ctx);
+
+/// `ChooseFavorite*Type` (`kind`: `EE_CP_FAVORITE_*`)
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+void ee_cp_choose_favorite(const EeCpPlaceCtx *ctx, int32_t kind);
+
+/// RestoreManagers' missing favourites
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+void ee_cp_restore_favorites(const EeCpPlaceCtx *ctx);
+
+/// `ChooseCivilization`'s pick: the civilization's name (NUL-terminated), or null for none
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+const uint8_t *ee_cp_choose_civilization(const EeCpPlaceCtx *ctx,
+                                         int32_t epoch,
+                                         bool waterless,
+                                         bool space);
+
+/// `EECPRetireObsoleteUnits`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+void ee_cp_retire_obsolete_units(const EeCpPlaceCtx *ctx);
+
+/// `EECPPendingEpoch`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+int32_t ee_cp_pending_epoch(const EeCpPlaceCtx *ctx);
+
+/// `AvoidsEnemies`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+bool ee_cp_avoids_enemies(const EeCpPlaceCtx *ctx, uint64_t unit);
 
 }  // extern "C"
 

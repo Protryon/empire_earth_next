@@ -10,6 +10,7 @@
 use std::ffi::c_void;
 use std::os::raw::c_long;
 
+use super::events::{self as ev, PlayerHost};
 use super::fields::EeCpFields;
 use super::file::SaveFile;
 use super::place_host::{EeCpUnitInfo, PlaceHost, Rect, RectFilter, Tile};
@@ -25,7 +26,7 @@ pub struct EeCpPlaceCtx {
     /// `mPlayerID`
     pub player_id: u32,
     /// the player's record (`static_cast<EeCpFields*>(player)`)
-    pub fields: *const EeCpFields,
+    pub fields: *mut EeCpFields,
     /// `mPlacement->mTownCenterTile`'s `mX`, `mY` (null: no placement)
     pub town: *mut c_long,
     /// `mPlacement->mRust` (null: no placement)
@@ -155,9 +156,52 @@ pub const EE_CP_CENTER_MORALE_RECOUNT: i32 = 110;
 pub const EE_CP_CENTER_EFFECT_TEMPLATES: i32 = 111;
 pub const EE_CP_CENTER_TEMPLATE_RADIUS: i32 = 112;
 
+// the player's (EEComputerPlayer.cpp; `a`, `b` units or centres)
+pub const EE_CP_PLAYER_BEHAVIOR_FLOAT: i32 = 300;
+pub const EE_CP_PLAYER_BASE_POP_LIMIT: i32 = 301;
+pub const EE_CP_PLAYER_DEATHMATCH: i32 = 302;
+pub const EE_CP_PLAYER_CHEAT_ON: i32 = 303;
+pub const EE_CP_PLAYER_NUM_TEAMS: i32 = 304;
+pub const EE_CP_PLAYER_TEAM_WONDERS: i32 = 305;
+pub const EE_CP_PLAYER_TEAM_CONTAINS: i32 = 306;
+pub const EE_CP_PLAYER_NUM_PLAYERS: i32 = 307;
+/// player `v0`: -1 none, else `IsHuman()`
+pub const EE_CP_PLAYER_HUMAN: i32 = 308;
+pub const EE_CP_PLAYER_POPULATION: i32 = 309;
+pub const EE_CP_PLAYER_HANDLE: i32 = 310;
+pub const EE_CP_PLAYER_PATH_AREA_ID: i32 = 311;
+pub const EE_CP_PLAYER_UNIT_CONTINENT_AT: i32 = 312;
+/// `new EECPResourceCenter(player, a)` (not listed)
+pub const EE_CP_PLAYER_CENTER_CREATE: i32 = 313;
+/// centre `a` listed at the end (`v0` 0) or the front
+pub const EE_CP_PLAYER_CENTER_LIST: i32 = 314;
+pub const EE_CP_PLAYER_CENTER_IS_WITHIN: i32 = 315;
+pub const EE_CP_PLAYER_CENTER_ADD: i32 = 316;
+pub const EE_CP_PLAYER_CENTER_CONTAINS: i32 = 317;
+pub const EE_CP_PLAYER_CENTER_ADOPT: i32 = 318;
+pub const EE_CP_PLAYER_CENTER_SET_MAIN: i32 = 319;
+/// centre `a`'s `GetCenter` on the tile `v0`, `v1` (in and out)
+pub const EE_CP_PLAYER_CENTER_GET_CENTER: i32 = 320;
+pub const EE_CP_PLAYER_CENTER_SET_ACTIVE: i32 = 321;
+/// `std::sort(mResourceCenters, EECPCenterDistanceLess(v0, v1))`
+pub const EE_CP_PLAYER_CENTERS_SORT: i32 = 322;
+/// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
+pub const EE_CP_PLAYER_FAVORITE_CANDIDATE: i32 = 323;
+pub const EE_CP_PLAYER_HISTORY_PUSH: i32 = 324;
+pub const EE_CP_PLAYER_IS_EPOCH: i32 = 325;
+pub const EE_CP_PLAYER_UNIT_IS_BUILDING: i32 = 326;
+/// unit `a`'s current research, then its build queue's technologies (pushed)
+pub const EE_CP_PLAYER_UNIT_RESEARCH: i32 = 327;
+pub const EE_CP_PLAYER_UNIT_OBSOLETE: i32 = 328;
+pub const EE_CP_PLAYER_SEEN_BY: i32 = 329;
+pub const EE_CP_PLAYER_KILL: i32 = 330;
+pub const EE_CP_PLAYER_IS_TRANSPORT: i32 = 331;
+pub const EE_CP_PLAYER_CARGO: i32 = 332;
+
 // (the context's placement pointer is opaque to the C++, which only hands it back)
 #[allow(improper_ctypes)]
 extern "C" {
+    fn ee_cp_player_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_place_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_center_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
 }
@@ -195,7 +239,9 @@ impl Game {
     fn call(&mut self, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> i64 {
         // SAFETY: the C++ switch reads the live objects the bodies hand it
         unsafe {
-            if op >= 100 {
+            if op >= 300 {
+                ee_cp_player_host(self.ctx, op, a, b, io)
+            } else if op >= 100 {
                 ee_cp_center_host(self.ctx, op, a, b, io)
             } else {
                 ee_cp_place_host(self.ctx, op, a, b, io)
@@ -544,6 +590,117 @@ impl PlaceHost for Game {
             return;
         }
         crate::units::uu_tiles::tiles_in_radius(t[0], t[1], radius, inclusive, tiles)
+    }
+}
+
+impl PlayerHost for Game {
+    fn fields(&mut self) -> *mut EeCpFields {
+        self.ctx().fields
+    }
+    fn behavior_float(&mut self, i: i32) -> f32 {
+        self.qf(EE_CP_PLAYER_BEHAVIOR_FLOAT, 0, 0, &[i as i64]).1.f[0]
+    }
+    fn base_population_limit(&mut self) -> i32 {
+        self.q(EE_CP_PLAYER_BASE_POP_LIMIT, 0, &[]) as i32
+    }
+    fn is_deathmatch(&mut self) -> bool {
+        self.q(EE_CP_PLAYER_DEATHMATCH, 0, &[]) != 0
+    }
+    fn cheat_on(&mut self, cheat: i32) -> bool {
+        self.q(EE_CP_PLAYER_CHEAT_ON, 0, &[cheat as i64]) != 0
+    }
+    fn num_teams(&mut self) -> u32 {
+        self.q(EE_CP_PLAYER_NUM_TEAMS, 0, &[]) as u32
+    }
+    fn team_has_wonders(&mut self, team: u32) -> bool {
+        self.q(EE_CP_PLAYER_TEAM_WONDERS, 0, &[team as i64]) != 0
+    }
+    fn team_contains(&mut self, team: u32, player: u32) -> bool {
+        self.q(EE_CP_PLAYER_TEAM_CONTAINS, 0, &[team as i64, player as i64]) != 0
+    }
+    fn num_players(&mut self) -> u32 {
+        self.q(EE_CP_PLAYER_NUM_PLAYERS, 0, &[]) as u32
+    }
+    fn num_world_players(&mut self) -> u32 {
+        self.q(EE_CP_PLAYER_NUM_PLAYERS, 0, &[]) as u32
+    }
+    fn player_human(&mut self, i: u32) -> Option<bool> {
+        let r = self.q(EE_CP_PLAYER_HUMAN, 0, &[i as i64]);
+        (r >= 0).then_some(r != 0)
+    }
+    fn player_population(&mut self, i: u32) -> i32 {
+        self.q(EE_CP_PLAYER_POPULATION, 0, &[i as i64]) as i32
+    }
+    fn player_handle_at(&mut self, i: u32) -> u64 {
+        self.q(EE_CP_PLAYER_HANDLE, 0, &[i as i64]) as u64
+    }
+    fn path_area_id(&mut self, t: Tile) -> u16 {
+        self.q(EE_CP_PLAYER_PATH_AREA_ID, 0, &xy(t)) as u16
+    }
+    fn unit_continent_at(&mut self, unit: u64) -> u64 {
+        self.q(EE_CP_PLAYER_UNIT_CONTINENT_AT, unit, &[]) as u64
+    }
+    fn center_create(&mut self, unit: u64) -> u64 {
+        self.q(EE_CP_PLAYER_CENTER_CREATE, unit, &[]) as u64
+    }
+    fn center_list(&mut self, center: u64, front: bool) {
+        self.q(EE_CP_PLAYER_CENTER_LIST, center, &[front as i64]);
+    }
+    fn center_is_within(&mut self, center: u64, unit: u64) -> bool {
+        self.qf(EE_CP_PLAYER_CENTER_IS_WITHIN, center, unit, &[]).0 != 0
+    }
+    fn center_add(&mut self, center: u64, unit: u64) {
+        self.qf(EE_CP_PLAYER_CENTER_ADD, center, unit, &[]);
+    }
+    fn center_contains(&mut self, center: u64, unit: u64) -> bool {
+        self.qf(EE_CP_PLAYER_CENTER_CONTAINS, center, unit, &[]).0 != 0
+    }
+    fn center_adopt(&mut self, center: u64, unit: u64) {
+        self.qf(EE_CP_PLAYER_CENTER_ADOPT, center, unit, &[]);
+    }
+    fn center_set_main(&mut self, center: u64, unit: u64) {
+        self.qf(EE_CP_PLAYER_CENTER_SET_MAIN, center, unit, &[]);
+    }
+    fn center_get_center(&mut self, center: u64, tile: &mut Tile) {
+        let io = self.qf(EE_CP_PLAYER_CENTER_GET_CENTER, center, 0, &xy(*tile)).1;
+        *tile = [io.v[0] as i32, io.v[1] as i32];
+    }
+    fn center_set_active(&mut self, center: u64, active: bool) {
+        self.q(EE_CP_PLAYER_CENTER_SET_ACTIVE, center, &[active as i64]);
+    }
+    fn centers_sort(&mut self, from: Tile) {
+        self.q(EE_CP_PLAYER_CENTERS_SORT, 0, &xy(from));
+    }
+    fn favorite_candidate(&mut self, class: u32, kind: i32, epoch: i32) -> Option<(i32, i32)> {
+        let (r, io) = self.qf(EE_CP_PLAYER_FAVORITE_CANDIDATE, 0, 0, &[class as i64, kind as i64, epoch as i64]);
+        (r != 0).then_some((io.v[0] as i32, io.v[1] as i32))
+    }
+    fn history_push(&mut self, unit_type: u32, epoch: i32) {
+        self.q(EE_CP_PLAYER_HISTORY_PUSH, 0, &[unit_type as i64, epoch as i64]);
+    }
+    fn is_epoch(&mut self, id: i32) -> bool {
+        self.q(EE_CP_PLAYER_IS_EPOCH, 0, &[id as i64]) != 0
+    }
+    fn unit_is_building(&mut self, unit: u64) -> bool {
+        self.q(EE_CP_PLAYER_UNIT_IS_BUILDING, unit, &[]) != 0
+    }
+    fn unit_research(&mut self, unit: u64) -> Vec<i32> {
+        self.list(EE_CP_PLAYER_UNIT_RESEARCH, unit, &[], &[]).1.into_iter().map(|p| p[0] as i32).collect()
+    }
+    fn unit_obsolete(&mut self, unit: u64) -> bool {
+        self.q(EE_CP_PLAYER_UNIT_OBSOLETE, unit, &[]) != 0
+    }
+    fn seen_by(&mut self, unit: u64, player: u64) -> bool {
+        self.qf(EE_CP_PLAYER_SEEN_BY, unit, player, &[]).0 != 0
+    }
+    fn kill(&mut self, unit: u64) {
+        self.q(EE_CP_PLAYER_KILL, unit, &[]);
+    }
+    fn is_transport(&mut self, unit: u64) -> bool {
+        self.q(EE_CP_PLAYER_IS_TRANSPORT, unit, &[]) != 0
+    }
+    fn cargo(&mut self, unit: u64) -> Vec<u64> {
+        self.handles(EE_CP_PLAYER_CARGO, unit, &[], &[]).1
     }
 }
 
@@ -1223,4 +1380,113 @@ pub unsafe extern "C" fn ee_cp_center_load(file: *mut c_void, host: EeUnitsPlaye
     // SAFETY: the caller's contract
     let mut f = unsafe { SaveFile::new(file, host) };
     rc::load(&mut f, minor)
+}
+
+// ---- EEComputerPlayer's own bodies (ee_sim::cp::events)
+
+/// `WorkOutPopulation`
+///
+/// # Safety
+/// `ctx` is the C++ caller's context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_work_out_population(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::work_out_population(&mut h)
+}
+
+/// `Regroup`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_regroup(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::regroup(&mut h)
+}
+
+/// `UpdateGroups`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_update_groups(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::update_groups(&mut h)
+}
+
+/// `ChooseFavorite*Type` (`kind`: `EE_CP_FAVORITE_*`)
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_choose_favorite(ctx: *const EeCpPlaceCtx, kind: i32) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::choose_favorite(&mut h, kind)
+}
+
+/// RestoreManagers' missing favourites
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_restore_favorites(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::restore_favorites(&mut h)
+}
+
+/// `ChooseCivilization`'s pick: the civilization's name (NUL-terminated), or null for none
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_choose_civilization(
+    ctx: *const EeCpPlaceCtx,
+    epoch: i32,
+    waterless: bool,
+    space: bool,
+) -> *const u8 {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    match ev::choose_civilization(&mut h, epoch, waterless, space) {
+        Some(i) => ev::CP_CIVILIZATIONS[i].as_ptr(),
+        None => std::ptr::null(),
+    }
+}
+
+/// `EECPRetireObsoleteUnits`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_retire_obsolete_units(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::retire_obsolete_units(&mut h)
+}
+
+/// `EECPPendingEpoch`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_pending_epoch(ctx: *const EeCpPlaceCtx) -> i32 {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::pending_epoch(&mut h)
+}
+
+/// `AvoidsEnemies`
+///
+/// # Safety
+/// As [`ee_cp_work_out_population`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_avoids_enemies(ctx: *const EeCpPlaceCtx, unit: u64) -> bool {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    ev::avoids_enemies(&mut h, unit)
 }
