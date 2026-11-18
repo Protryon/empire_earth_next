@@ -12013,6 +12013,18 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
 
 extern int64_t ee_screenscpp_hud_ctl(void *ctl, uint32_t op, int64_t a, int64_t b, float *f);
 
+/// `EEUIRustControl`'s destructor: the control's draw objects freed (nothing for a control with none).
+void ee_screens_hud_draw_free(void *control);
+
+/// `EEUICPortrait`'s constructor's draw objects: its bitmap (`mPortrait`, the class's), the research bar (green),
+/// the improvement bar (yellow) and the background (red, over the portrait's rectangle), all half opaque.
+///
+/// # Safety
+/// `bitmap` is the portrait's live `GEBitmap*`; `rect` four floats (left, top, right, bottom).
+void ee_screens_portrait_draw_init(void *portrait,
+                                   void *bitmap,
+                                   const float *rect);
+
 /// `EEUICPing`'s constructor part: the bars placed from the location (x, y).
 void ee_screens_ping_init(EeScreensPingFields *rec, void *ctl, float x, float y);
 

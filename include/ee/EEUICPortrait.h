@@ -13,7 +13,6 @@
 class EEButtonObject;
 class EEUnit;
 class GEBitmap;
-class GERhombus;
 class GEText;
 
 class EEUICPortrait : public EEUIRustControl {
@@ -38,9 +37,7 @@ protected:
 
     GEText* mText;                          // +0x0a0 the level number
     GEBitmap* mPortrait;                    // +0x0a4 (new GEBitmap)
-    GERhombus* mFirstBar;                   // +0x0a8 green
-    GERhombus* mBackground;                 // +0x0ac red
-    GERhombus* mSecondBar;                  // +0x0b0 yellow
+    // (+0x0a8 mFirstBar, +0x0ac mBackground, +0x0b0 mSecondBar: the bars are Rust's, ee_screens hud_draw.rs)
     EEUnitHandle<EEUnit> mUnit;             // +0x0b4 (referenced; a handle since R5a.4: read on the UI thread and in CopyData)
     EEButtonObject* mButton;                // +0x0b8 the unit class's button (loaded while shown)
     unsigned long mLevel;                   // +0x0bc
