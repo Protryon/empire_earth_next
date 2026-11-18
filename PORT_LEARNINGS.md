@@ -29669,3 +29669,51 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
   out-of-synch checksum runs there).
 - **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
   references the sight drives are the same host calls as before (MMSN covers the counts).
+
+## Lane A, round 1: the per-unit Lua interface's state, its queries and its commands in Rust; the bindings' trace golden (ee_sim::ai units_state.rs, units_bind.rs; branch rust-ai-lua1, 2026-11-17)
+
+- **The golden first.** A binding's behaviour is what the script sees, so the golden is at the Lua boundary:
+  `EE_AI_BINDING_TRACE` (ai/binding_trace.rs) hashes every binding call's arguments and results and every step's
+  view and orders into `EE-AIB` lines in EE-SIM's trace (the oracle's `compare` keeps `EE-AI ` lines only, so the
+  oracle is blind to them). Reading the values must not change them: raw `lua_next`, integers and floats by
+  `lua_tointegerx`/`lua_tonumberx` (never `lua_tolstring` on a number: it converts the slot in place and would
+  break `lua_next` on a key), strings only by `lua_tolstring`, no Lua allocation. The registration with the trace
+  on wraps each function in a `LuaTraced<K>` template (no upvalue added: a closure's size is Lua memory, and Lua
+  memory moves the GC). The traced oracle seeds 2-3 equal `ref`: the trace changes nothing.
+- **Coverage.** The oracle's classic_lua games call 47 of the 90 bindings. ageofai, boom, the late and space
+  starts, an island map and tests/ai_units (helpers, commands, types, raid, airwing, kite) bring it to 77; a new
+  test script, `tests/ai_units/cover.lua`, calls the other 13 with good and bad arguments. Fifteen games, 6
+  minutes, 17 million lines; recorded twice on the unmodified C++, equal.
+- **A test script changes every test game's first line.** The engine's start line holds the hash of the scripts
+  folders: adding cover.lua to tests/ai_units changed it in the six games that read that folder. The compare
+  leaves that line out.
+- **The shape of the move.** `UnitsState` (Rust) is the whole state; the C++ `EECPUnitsState` is a shell holding
+  its pointer, the remaining C++ bindings' scratch and the wall routes' `EEAutoPathRequest*` (C++ objects with a
+  reference count, not saved). The bindings are `extern "C-unwind"` functions in the same `luaL_Reg` table (the
+  same order, so the `ai` table's layout is unchanged); they read units, classes, stats, players, tiles and the
+  map through the world views, and ask one C++ host for the rest (the unit lookup, a goal's place and target, the
+  continents, the class names, the selection and a message's run). A command's `EEMRecord` is built by the host
+  from Rust's typed values (integers as `long long`, floats as `double`, points): the record constructor packs them
+  by the message's member types, so the bytes are the C++'s.
+- **Rules kept for longjmp.** A charge over the budget or a refused allocation raises out of a binding: the
+  bindings keep their scratch in the state (as the C++ did), use raw pointers to it (no `&mut` across a Lua or
+  host call; the host calls back into Rust for `take`), and hold only the read token (its drop counts only in
+  debug builds). One `BTreeMap` local in `ai.gatherers` is moved into the state's scratch before the charge.
+- **Containers.** `std::set`/`std::map` became `BTreeSet`/`BTreeMap` (the same order); the route's open list is a
+  `BinaryHeap<Reverse<(cost, cell)>>`: its pairs are distinct (a cell is pushed again only with a lower cost), so
+  every heap pops them in the same order as `std::pop_heap` with `std::greater` did.
+- **mlua (the owner's request this round): not switched.** mlua-sys 0.13's `vendored` feature builds lua-src
+  551.x, which is Lua 5.5.1, not 5.4.7. An older lua-src (547.x) has 5.4.7, but its build cannot take our
+  determinism macros: ee_lua.c defines, as one unit, `luai_makeseed` (the fixed string hash seed),
+  `l_randomizePivot` (table.sort's pivot), `luai_numpow` and `lua_number2str` as calls of functions defined in the
+  same unit, and the ASCII ctype replacements only for the auxiliary and standard libraries (after the core is
+  included, so the core keeps lctype.c). lua-src compiles Lua's files one by one with its own flags; `CFLAGS` -D
+  could carry the first two, not the function-backed ones nor a per-file ctype. And mlua's high-level `Lua` adds
+  allocations inside the state (its registry data, its reference thread), which change the memory counts and the
+  GC's timing that the step traces and the memory cap see. What can be done exactly: keep these sources but build
+  them from a Rust `-sys` crate's build.rs (the same ee_lua.c, the same flags), or take mlua's high-level API over
+  our build (`external`), after checking its allocations. Deleting src/ThirdParty/lua outright cannot keep the
+  `ai=` hashes.
+- **Results.** EECPNextUnits.cpp 4,792 -> 2,504 lines (with the host, about 390 lines); 57 of the 90 bindings in
+  Rust; the binding golden identical in all 15 games after each of the three moves, and a mutation (a record's
+  `sight` read from the range) caught at the first `ai.unit` call; both builds 0/0; the Rust gate PASS.
