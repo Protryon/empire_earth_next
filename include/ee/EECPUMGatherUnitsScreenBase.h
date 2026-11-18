@@ -40,7 +40,6 @@ public:
 
     // inline: units plus requests (EECPDefenseCommander::Fn78866 0x478866 adds them as `add edx, ecx` with mRequested
     // loaded first) (provisional name)
-    long GetTotal() const { return this->mUnits + this->mRequested; }
     long GetUnits() const { return this->mUnits; }
     long mUnits;                            // +0x04
     long GetRequested() const { return this->mRequested; }

@@ -120,21 +120,6 @@ std::vector<U2DPoint<long> > EEAIArea::GetHullPoints() const
     return std::vector<U2DPoint<long> >(thePoints, thePoints + this->GetHullPointCount());
 }
 
-U2DPoint<long> EEAIArea::GetHullClosestPoint(const U2DPoint<long>& inPoint)
-{
-    EEGeomCaptureScope theScope;
-    U2DPoint<long> theResult = U2DHullPoint(ee_hull_closest_point(EEAIAreaHullPoints(this->GetHullPointData()),
-                                                                  this->GetHullPointCount(), U2DHullPointOf(inPoint)));
-    if (theScope.mOuter) {   // TEST ONLY: HULL 4
-        EEGeomCaptureBegin(kGeomCaptureHull, 4);
-        EEGeomCapturePoints(this->GetHullPointData(), this->GetHullPointCount(), false);
-        EEGeomCapturePoint(inPoint);
-        EEGeomCapturePoint(theResult);
-        EEGeomCaptureCommit();
-    }
-    return theResult;
-}
-
 U2DPoint<long> EEAIArea::GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint)
 {
     EEGeomCaptureScope theScope;
@@ -197,24 +182,6 @@ float EEAIArea::GetHullDistanceSquared(EEAIArea* inOther)
         EEGeomCaptureCommit();
     }
     return theResult;
-}
-
-// Appends the units standing on the area's tiles (empty area: none)
-void EEAIArea::GetUnitsOnTiles(std::vector<EEUnit*>& outUnits)
-{
-    if (this->mTiles.Size() > 0) {
-        EEAIAreaContainsUnit thePredicate(this);
-        EEGetUnitsInRectangle(this->GetHullBounds(), outUnits, thePredicate, true);
-    }
-}
-
-// Appends the units standing inside the area's hull (empty area: none)
-void EEAIArea::GetUnitsInHull(std::vector<EEUnit*>& outUnits)
-{
-    if (this->mTiles.Size() > 0) {
-        EEAIAreaHullContainsUnit thePredicate(this);
-        EEGetUnitsInRectangle(this->GetHullBounds(), outUnits, thePredicate, true);
-    }
 }
 
 // Returns the point itself when it is inside the area's hull, else the closest point on the hull outline

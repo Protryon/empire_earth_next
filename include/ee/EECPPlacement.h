@@ -31,30 +31,6 @@ public:
     EECPPlacement(EEComputerPlayer* inPlayer);
     ~EECPPlacement();
     static const UString sData;             // "EECPBuildManager-Data" (the original's key)
-    bool HasUnitNear(long inUnitType, long inX, long inY, float inDistance);
-    bool HasAntiAirNear(long inX, long inY);
-    bool HasTownCenterNear(long inX, long inY, float inDistance);
-    bool HasGateNear(long inX, long inY, float inRadius);
-    bool HasTowerNear(long inX, long inY, float inRadius);
-    bool HasWallNear(long inX, long inY, float inRadius);
-    void CollectSiteTiles(char inKind);     // 0x67b87 (2: the dock sites, 4: the space dock sites)
-    bool HasEnemyNear(long inX, long inY);
-    bool FindAirportSite(EETileCoordinate& outTile);
-    bool FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile);
-    bool FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile);
-    bool FindAntiAirSite(EETileCoordinate& outTile);
-    bool FindCenterSite(long inUnitClass, EETileCoordinate& outTile);
-    bool FindGranarySite(EETileCoordinate& outTile);
-    bool FindProductionSite(long inUnitClass, EETileCoordinate& outTile);
-    bool FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
-    bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
-    bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
-    bool FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile);
-    bool FindSite(long inUnitClass, EETileCoordinate& ioTile);
-    bool IsNearAirportEnd(long inX, long inY, long inSize, float inDistance);
-    // whether one of the player's citizens could build the class at the tile (FindBuilder's land rule, any citizen)
-    bool HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass);
-    void SetTownCenter(EEUnit* inUnit);
     // a unit the player gained: the first of a class that is not a land building sets the town centre tile while
     // there is none (the original unit manager's UnitAdded rule)
     void UnitAdded(EEComplexUnit* inUnit);
@@ -62,9 +38,6 @@ public:
     long Restore();                         // the site tiles collected again
     long Load(FSFile& inFile);              // the town centre tile
     long Save(FSFile& outFile);
-    // 0x6b0fb: a site test (EECPResourceCenter's too)
-    bool CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize, bool inArg5,
-        bool inArg6, long inX, long inY);
 
     U2DPoint<long> mTownCenterTile;         // (-10000: none)
     EEComputerPlayer* GetPlayer() const { return this->mPlayer; }

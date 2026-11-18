@@ -336,12 +336,6 @@ void EEPathManager::FreePaths()
     }
 }
 
-// Deletes every unit's region map (its repeated goal tile counts)
-void EEPathManager::FreeRegions()
-{
-    ee_path_record_free_regions(this->mRecord);
-}
-
 // Sets a graph search's step budget to the distance times 250/75/90/110 (by distance band); at most 40 per tile when
 // the goal sector's kind is not allowed, 3 when a computer citizen's newest request within 4 s was the same tile
 void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom,

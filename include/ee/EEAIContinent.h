@@ -68,15 +68,6 @@ public:
     void AddIDCC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsCc, inID); }
     void AddIDDC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsDc, inID); }
     void AddIDEC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsEc, inID); }
-    // inline (COMDAT 0x26e7b in EEAIContinentManager.cpp's range): inContinent is in mNeighbors
-    bool HasNeighbor(EEAIContinent* inContinent)
-    {
-        std::vector<EEAIContinent*>::iterator theEnd = this->mNeighbors.end();
-        std::vector<EEAIContinent*>::iterator theIt;
-        for (theIt = this->mNeighbors.begin(); theIt != theEnd && *theIt != inContinent; ++theIt) {
-        }
-        return theIt != theEnd;
-    }
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIContinent>): out-of-line COMDAT 0x275eb
     // (`jbe`: unsigned) and the hull's center as the node tile (0x28aa7 reads +0x44/+0x48) (provisional names)
     unsigned long GetNumNeighbors() const { return this->mNeighbors.size(); }
@@ -91,14 +82,12 @@ public:
         return EEAIListView<U2DPoint<long> >(reinterpret_cast<const U2DPoint<long>*>(theTiles), theCount);
     }
     void AddShoreTile(const U2DPoint<long>& inTile) { ee_astar_continent_add_shore_tile(this, U2DHullPointOf(inTile)); }
-    void ClearShoreTiles() { ee_astar_continent_clear_shore(this); }
     EEAIListView<long> GetChokePoints() const
     {
         size_t theCount;
         const long* theIndices = ee_astar_continent_choke_points(this, &theCount);
         return EEAIListView<long>(theIndices, theCount);
     }
-    long GetChokePointsAt(unsigned long inIndex) const { return this->GetChokePoints()[inIndex]; }
     EEAIListView<unsigned short> GetIDs(EeAStarContinentList inList) const
     {
         size_t theCount;
@@ -109,10 +98,8 @@ public:
     EEAIListView<unsigned short> GetPathAreaIDs() const { return this->GetIDs(EeAStarContinentList::PathAreas); }
     EEAIListView<unsigned short> GetHillIDs() const { return this->GetIDs(EeAStarContinentList::Hills); }
     EEAIListView<unsigned short> GetIDsBC() const { return this->GetIDs(EeAStarContinentList::IdsBc); }
-    unsigned short GetIDsBCAt(unsigned long inIndex) const { return this->GetIDsBC()[inIndex]; }
     EEAIListView<unsigned short> GetIDsCC() const { return this->GetIDs(EeAStarContinentList::IdsCc); }
     EEAIListView<unsigned short> GetIDsDC() const { return this->GetIDs(EeAStarContinentList::IdsDc); }
-    unsigned short GetIDsDCAt(unsigned long inIndex) const { return this->GetIDsDC()[inIndex]; }
     EEAIListView<unsigned short> GetIDsEC() const { return this->GetIDs(EeAStarContinentList::IdsEc); }
     const std::vector<EEAIContinent*>& GetNeighbors() const { return this->mNeighbors; }
     void AddNeighbor(EEAIContinent* inContinent) { this->mNeighbors.push_back(inContinent); }

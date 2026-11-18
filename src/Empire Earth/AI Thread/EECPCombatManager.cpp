@@ -53,15 +53,6 @@ long EECPCombatManager::Save(unsigned long inMajorVersion, unsigned long inMinor
     return 0;
 }
 
-// Returns true for a live, AI-controlled unit of a military class that can move
-bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
-{
-    if (!inUnit->mIsDetachedFromAI && this->IsMilitaryClass(inUnit->mUnitClass) && inUnit->mStats && inUnit->mHitPoints > 0 && !inUnit->mPreviousPart
-        && inUnit->GetMaxVelocity() > 0.0f)
-        return true;
-    return false;
-}
-
 // Returns true for a mobile military class (not a citizen, building, projectile or naval mine): Rust (ee_ai
 // military.rs)
 bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
@@ -73,12 +64,4 @@ bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
 bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
 {
     return ee_ai_military_type(inUnitType);
-}
-
-// Returns true when the unit's type is military
-bool EECPCombatManager::IsMilitaryTypeUnit(EEUnit* inUnit)
-{
-    if (inUnit)
-        return EECPCombatManager::IsMilitaryType(inUnit->mUnitClass->mUnitType);
-    return false;
 }

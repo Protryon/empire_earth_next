@@ -117,7 +117,6 @@ public:
     // a CPEV record (inEvents: true)
     EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer, bool inEvents);
     ~EECPPlaceScope();
-    bool On() const { return this->mOn; }
     EECPPlaceScope& I(long inValue)
     {
         if (this->mOn)

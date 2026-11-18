@@ -116,21 +116,6 @@ long EEAIFOUnitsToKillScoringBase::ScoreMilitary(EEComplexUnit* inUnit)
     return UMCeil(theScore);
 }
 
-// Scores a transport for disbanding: 10000, more when parked unloading, idle or detached from the AI, plus its
-// cargo count
-long EEAIFOUnitsToKillScoringBase::ScoreTransport(EEComplexUnit* inUnit)
-{
-    long theScore = 10000;
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnloadTransport) {
-        if (inUnit->mVelocity == 0.0f)
-            theScore = 10500;
-    } else if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle)
-        theScore = 10200;
-    else if (inUnit->mIsDetachedFromAI)
-        theScore = 10100;
-    return inUnit->GetNumCargoUnits() + theScore;
-}
-
 // Scores a citizen for disbanding: idle highest, then waiting gatherers plus a per-resource bonus (wood most),
 // builders lowest
 long EEAIFOUnitsToKillScoringBase::ScoreCitizen(EEComplexUnit* inUnit)
@@ -175,32 +160,6 @@ EEAIFOUnitsToKillForMilitary::EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inP
     this->mMilitaryToKill = inMilitaryToKill;
 }
 
-// Returns whether a live, population-costing, uncontained unit may be disbanded: citizens while citizens remain
-// to kill, non-transport military (not space carriers) while military remain; transports never
-bool EEAIFOUnitsToKillForMilitary::CanKill(EEComplexUnit* inUnit)
-{
-    bool theResult = false;
-    if (inUnit->mHitPoints > 0 && inUnit->mUnitClass->GetPopulationCost() > 0 && inUnit->mIsCollidable != 0
-        && inUnit->mContainer == NULL) {
-        if (inUnit->mIsCitizen)
-            theResult = this->mCitizensToKill > 0;
-        else if (!inUnit->mUnitClass->IsTransport() && inUnit->mUnitClass->mUnitType != kUnitTypeSp15SpaceCarrier && this->mMilitaryToKill > 0)
-            theResult = true;
-    }
-    return theResult;
-}
-
-// Returns a unit's disband score as a citizen or as military; transports and space carriers score 0
-long EEAIFOUnitsToKillForMilitary::GetKillScore(EEComplexUnit* inUnit)
-{
-    long theResult = 0;
-    if (inUnit->mIsCitizen)
-        theResult = this->ScoreCitizen(inUnit);
-    else if (!inUnit->mUnitClass->IsTransport() && inUnit->mUnitClass->mUnitType != kUnitTypeSp15SpaceCarrier)
-        theResult = this->ScoreMilitary(inUnit);
-    return theResult;
-}
-
 // Adds a request's count to the requested total when its class is a land or naval citizen; returns whether it
 // counted
 bool EECPUGatherCitizenUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
@@ -236,14 +195,6 @@ long EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(EEComputerPlayer* inPlayer,
     outCount = theCount;
     outRatio = theRatio;
     return theResult;
-}
-
-// Returns the player's citizen surplus over its citizen share of the population limit
-long EEAIFOUnitsToKillScoringBase::GetCitizensToKill(EEComputerPlayer* inPlayer)
-{
-    long theCount = 0;
-    float theRatio = 0.0f;
-    return EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(inPlayer, theRatio, theCount);
 }
 
 // Counts one unit when it is a land or naval citizen; returns whether it counted

@@ -22,11 +22,6 @@ public:
     void AddUnit(EEUnit* inUnit);           // 0x8bcae (references it, push_back)
     bool Contains(EEUnit* inUnit);
     void AdoptDropSite(EEComplexUnit* inUnit);  // 0x8bd2b (ret 4): adopts a building as the main unit when it lies within the radius of a unit
-    bool FindBuildSite(long inUnitClass, EETileCoordinate& outTile);
-    long GetMinEffectRadius(long inUnitClass);  // 0x8cbec (ret 4): the smallest area effect template radius of the class's upgrade
-    float GetMoraleFill();
-    EEUnit* FindResourceUnit(unsigned long inUnitType);  // 0x8d065 (ret 4): the first unit of that type with +0x40 > 0
-    bool IsInAreaEffect(long inX, long inY, long inUnitClass, long inKind);  // 0x8d0a2 (ret 0x10): area effect over the class's footprint
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
     bool IsWithinRadius(EEUnit* inUnit);    // 0x8d2bc (ret 4): the unit lies within the radius of the centre

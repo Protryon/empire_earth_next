@@ -54,8 +54,6 @@ public:
 class EEAIFOUnitsToKillForMilitary : public EEAIFOUnitsToKillScoringBase {
 public:
     EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inPlayer, long inCitizensToKill, long inTransportsToKill, long inMilitaryToKill);
-    virtual bool CanKill(EEComplexUnit* inUnit);     // +0x10 0x2a271
-    virtual long GetKillScore(EEComplexUnit* inUnit);  // +0x14 0x2a2d7
 
     EEComputerPlayer* mPlayer;              // +0x14 (0x8740b, 0x9ad76 pass their computer player)
 };

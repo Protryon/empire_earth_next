@@ -98,14 +98,6 @@ unsigned short EEAIRectangleArea::UpdateContinents()
     return theResult;
 }
 
-// NEAR: the original returns EEAIArea::GetRandomPoint() straight into the hidden result; ours copies a temporary (the
-// open U2DPoint<long> copy-ctor family)
-// Returns a random tile of the area (EEAIArea's pick); the two arguments are unused
-U2DPoint<long> EEAIRectangleArea::GetBaseRandomPoint(long inArg1, long inArg2)
-{
-    return EEAIArea::GetRandomPoint();
-}
-
 // NEAR: the original calls RTSMap::GetTile (0x2f85), _Ptrit::operator+ and begin() out of line and builds the
 // random point straight in its local (inline-budget / U2DPoint copy family)
 // Returns a random area tile; when it is off the map, a random on-map tile of the area instead (unchanged when

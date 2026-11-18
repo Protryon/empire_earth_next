@@ -310,11 +310,6 @@ EECPLuaState* EECPLuaState::From(lua_State* inL)
     return (EECPLuaState*)ee_ai_lua_owner(inL);
 }
 
-uint64_t EECPLuaState::NextRandom()
-{
-    return ee_ai_lua_next_random(this->mHost);
-}
-
 void EECPLuaState::Charge(lua_State* inL, int64_t inAmount)
 {
     ee_ai_lua_charge(inL, inAmount);
@@ -357,11 +352,6 @@ bool EECPLuaState::IsOpen() const
 int64_t EECPLuaState::LastInstructions() const
 {
     return ee_ai_lua_used(this->mHost);
-}
-
-int64_t EECPLuaState::Budget() const
-{
-    return ee_ai_lua_budget(this->mHost);
 }
 
 size_t EECPLuaState::MemoryUsed() const

@@ -182,14 +182,12 @@ public:
     EECPLuaStatus LastStatus() const { return this->mStatus; }
     const std::string& LastError() const { return this->mError; }
     int64_t LastInstructions() const;   // this or the last call's count (a multiple of the hook step, plus charges)
-    int64_t Budget() const;             // the instructions a call may use
     size_t MemoryUsed() const;
     size_t MemoryPeak() const;
     uint64_t RngState() const;
 
     // ---- for the bindings' C functions
     static EECPLuaState* From(lua_State* inL);
-    uint64_t NextRandom();
     // A C function's cost in instruction equivalents (docs/AI_LUA_UNITS.md §2.1): added to the call's count, which
     // the budget bounds; over the budget it raises as the hook does
     void Charge(lua_State* inL, int64_t inAmount);
