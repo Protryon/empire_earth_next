@@ -50,7 +50,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
-#include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EECalamityManager.h"
 #include "ee/EEAreaUtilities.h"

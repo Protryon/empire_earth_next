@@ -144,8 +144,8 @@ long EEAIAStarView::GetTileFlag(long inX, long inY)
 
 long EEAIAStarView::GetTileValue(long inX, long inY)
 {
-    if (gContinentManager.mTileValues)
-        return Note(kViewTileValue, inX, inY, gContinentManager.mTileValues[gContinentManager.mWidth * inX + inY]);
+    if (gContinentManager.GetTileValues())
+        return Note(kViewTileValue, inX, inY, gContinentManager.GetTileValues()[gContinentManager.GetWidth() * inX + inY]);
     return Note(kViewTileValue, inX, inY, gContinentManager.GetTileFlag(inX, inY));
 }
 
@@ -165,7 +165,7 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathAreaAt(long inX, long inY)
 
 EEAIAStarPathAreaInfo EEAIAStarView::GetPathArea(unsigned short inID)
 {
-    EEAIPathArea* theArea = gContinentManager.mPathAreas[inID];
+    EEAIPathArea* theArea = gContinentManager.GetPathAreas()[inID];
     EEAIAStarPathAreaInfo theInfo;
     theInfo.mFound = true;
     theInfo.mID = theArea->GetID();

@@ -228,13 +228,13 @@ long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathS
 {
     U2DRectangle<long> theRect;
     EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    std::pair<long, int> theRegion(inTo->mLocation.GetX() / theTable->mRegionSize,
-                                   inTo->mLocation.GetY() / theTable->mRegionSize);
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->mSector;
+    std::pair<long, int> theRegion(inTo->GetLocation().GetX() / theTable->mRegionSize,
+                                   inTo->GetLocation().GetY() / theTable->mRegionSize);
+    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->GetSector();
     long theCost;
-    if (theFrom == inTo->mSector)
+    if (theFrom == inTo->GetSector())
         theCost = 1;
-    else if (theFrom->mCenter.mX == inTo->mSector->mCenter.mX || theFrom->mCenter.mY == inTo->mSector->mCenter.mY)
+    else if (theFrom->GetCenter().mX == inTo->GetSector()->GetCenter().mX || theFrom->GetCenter().mY == inTo->GetSector()->GetCenter().mY)
         theCost = 10;
     else
         theCost = 14;
@@ -252,13 +252,13 @@ long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathS
 // +0x08 (no address: ICF-folded into EEAIGPGModifierSpaceRoutePlanner's identical 0x10aa1)
 bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->mKind];
+    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
     if (!theResult) {
-        if (inSector->mKind != kAITileGate)
+        if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = inSector->IsPassable(this->mPlayerID);
     }
-    if (theResult && inFrom != NULL && inSector->mLinks.size() > 0)
+    if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
         theResult = this->mGoal->HasPassableLink(inSector, inFrom);
     return theResult;
 }
@@ -321,10 +321,10 @@ bool EEUnitClass::IsMiddlePart(EEComplexUnit* inGate)
 // (the path graph goal's default step cost is ICF-folded into it)
 long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->mSector;
-    EEAIPathSector* theTo = inTo->mSector;
+    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject)->GetSector();
+    EEAIPathSector* theTo = inTo->GetSector();
     if (theFrom != theTo)
-        return theFrom->mCenter.mX == theTo->mCenter.mX || theFrom->mCenter.mY == theTo->mCenter.mY ? 10 : 14;
+        return theFrom->GetCenter().mX == theTo->GetCenter().mX || theFrom->GetCenter().mY == theTo->GetCenter().mY ? 10 : 14;
     return 1;
 }
 
@@ -332,13 +332,13 @@ long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFro
 // link from inFrom
 bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->mKind];
+    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
     if (!theResult) {
-        if (inSector->mKind != kAITileGate)
+        if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = this->IsGateOpen(inSector, this->mPlayerID);
     }
-    if (theResult && inFrom != NULL && inSector->mLinks.size() > 0)
+    if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
         theResult = this->mGoal->HasPassableLink(inSector, inFrom);
     return theResult;
 }

@@ -2869,7 +2869,7 @@ extern "C" uint64_t ee_units_uu_host_continent(int32_t inWhich, uint64_t inA, ui
     case 4: return gContinentManager.AreConnected(theA, (EEAIContinent*)(uintptr_t)inB, (long)(int32_t)inC);
     case 5: return gContinentManager.AreConnectedForUnit(UUUnit(inC), theA, (EEAIContinent*)(uintptr_t)inB);
     case 6: return (uint64_t)(int64_t)gContinentManager.GetTileFlag(theX, theY);
-    case 7: return gContinentManager.mTileFlags[inA * gContinentManager.mFlagsWidth + inB];
+    case 7: return gContinentManager.AreAdjacent(inA, inB);
     case 8: return theA->GetCategory();
     case 9: return gContinentManager.AreConnectedByID((unsigned short)inA, (unsigned short)inB, (long)(int32_t)inC);
     case 10: return gContinentManager.GetContinent(U2DPoint<long>(theX, theY), (long)(int32_t)inC);

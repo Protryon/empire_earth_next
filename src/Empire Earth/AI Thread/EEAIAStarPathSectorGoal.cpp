@@ -85,14 +85,14 @@ void EEAIAStarPathSectorGoal::CreateSubSector()
 {
     EEAIPathSubSector* theSubSector = new EEAIPathSubSector;
     std::sort(this->mTiles.begin(), this->mTiles.end());
-    theSubSector->mSector = this->mSector;
-    theSubSector->mID = this->mNextID;
-    theSubSector->mContinentID = this->mContinentID;
-    theSubSector->mPathAreaID = this->mPathAreaID;
-    theSubSector->mNumTiles = this->mTileCount;
+    theSubSector->SetSector(this->mSector);
+    theSubSector->SetID(this->mNextID);
+    theSubSector->SetContinentID(this->mContinentID);
+    theSubSector->SetPathAreaID(this->mPathAreaID);
+    theSubSector->SetNumTiles(this->mTileCount);
     theSubSector->CreateTiles(this->mTiles);
-    theSubSector->mKind = !this->mClassifyTiles ? this->mPathAreaKind : this->mKind;
-    this->mSector->mSubSectors.insert(std::map<unsigned short, EEAIPathSubSector*>::value_type(theSubSector->mID, theSubSector));
+    theSubSector->SetKind(!this->mClassifyTiles ? this->mPathAreaKind : this->mKind);
+    this->mSector->InsertSubSector(theSubSector->GetID(), theSubSector);
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mSubSectors.insert(std::map<unsigned short, EEAIPathSubSector*>::value_type(this->mNextID, theSubSector));

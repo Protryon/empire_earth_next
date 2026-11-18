@@ -46,62 +46,26 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIPathSector.h"
 
-// Creates an empty path sector with id 0
-EEAIPathSector::EEAIPathSector()
-    : mID(0)
-{
-}
-
 // Destroys the path sector, deleting its sub-sectors
 EEAIPathSector::~EEAIPathSector()
 {
     this->DeleteSubSectors();
-}
-
-// Adds a continent touching the sector unless it is already listed
-void EEAIPathSector::AddNeighbor(EEAIContinent* inContinent)
-{
-    std::vector<EEAIContinent*>::iterator theNeighbor = std::find(this->mNeighbors.begin(), this->mNeighbors.end(), inContinent);
-    if (theNeighbor == this->mNeighbors.end())
-        this->mNeighbors.push_back(inContinent);
-}
-
-// Adds a path area id to the sector's sorted id list unless it is already there
-void EEAIPathSector::AddPathAreaID(unsigned short inID)
-{
-    if (!std::binary_search(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end(), inID)) {
-        this->mPathAreaIDs.push_back(inID);
-        std::sort(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end());
-    }
+    ee_astar_sector_free(this);
 }
 
 // Returns the sector's path area containing the point (last listed first), or NULL
 EEAIPathArea* EEAIPathSector::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
-    EEAIPathArea* theResult = NULL;
-    for (long i = this->mPathAreaIDs.size() - 1; i >= 0; i--) {
-        EEAIPathArea* theArea = gContinentManager.GetPathArea(this->mPathAreaIDs[i]);
-        if (theArea && theArea->Contains(inPoint)) {
-            theResult = theArea;
-            break;
-        }
-    }
-    return theResult;
+    return (EEAIPathArea*)(uintptr_t)ee_astar_cm_object_path_area_at(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this, true,
+                                                                     inPoint.mX, inPoint.mY);   // Rust: cm_query.rs
 }
 
 // Deletes every sub-sector of the sector and empties the sub-sector map
 void EEAIPathSector::DeleteSubSectors()
 {
-    std::map<unsigned short, EEAIPathSubSector*>::iterator theSubSector;
-    for (theSubSector = this->mSubSectors.begin(); theSubSector != this->mSubSectors.end(); ++theSubSector)
-        delete theSubSector->second;
-    this->mSubSectors.clear();
+    EEAIListView<EeAStarSectorSub> theSubSectors = this->GetSubSectors();
+    for (size_t i = 0; i < theSubSectors.size(); i++)
+        delete (EEAIPathSubSector*)(uintptr_t)theSubSectors[i].sub;
+    ee_astar_sector_clear_subs(this);
 }
 
-// Removes a path area id from the sector's sorted id list when present
-void EEAIPathSector::RemovePathAreaID(unsigned short inID)
-{
-    std::vector<unsigned short>::iterator theID = std::lower_bound(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end(), inID);
-    if (theID != this->mPathAreaIDs.end() && *theID == inID)
-        this->mPathAreaIDs.erase(theID);
-}
