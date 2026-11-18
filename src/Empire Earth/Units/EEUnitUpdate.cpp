@@ -113,42 +113,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
         return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
     case EE_UNITS_UPD_R_PHYSICS_MODEL:
         return theClass->mPhysicsModel != NULL ? 1 : 0;
-    case EE_UNITS_UPD_R_MEDIC:
-        return theClass->mIsMedic ? 1 : 0;
-    case EE_UNITS_UPD_R_REGENERATES:
-        return theUnit->mStats != NULL && theUnit->mStats->mRegeneration > 0 ? 1 : 0;
-    // the store's fields, for a unit with no record
-    case EE_UNITS_UPD_R_HERD:
-        return theUnit->mHerd != NULL ? 1 : 0;
-    case EE_UNITS_UPD_R_OWNER:
-        return (int64_t)theUnit->mPlayer->mPlayerID;
-    case EE_UNITS_UPD_R_TILE_X:
-        return (int64_t)theUnit->mTileX;
-    case EE_UNITS_UPD_R_COMMAND:
-        return theUnit->mCommand ? (int64_t)theUnit->mCommand->mType : 0;
-    case EE_UNITS_UPD_R_GOAL_KIND:
-        return theUnit->mGoalState != NULL ? (int64_t)theUnit->mGoalState->mKind : -1;
-    case EE_UNITS_UPD_R_UNIT_TYPE:
-        return (int64_t)theUnit->mUnitClass->mUnitType;
-    case EE_UNITS_UPD_R_HIT_POINTS:
-        return (int64_t)theUnit->mHitPoints;
-    case EE_UNITS_UPD_R_FAMILY:
-        return (int64_t)theUnit->mUnitClass->mFamily;
-    case EE_UNITS_UPD_R_BUILT:
-        return theUnit->mIsBuilt ? 1 : 0;
-    case EE_UNITS_UPD_R_FLIGHT_TIME:
-        return (int64_t)theUnit->mFlightTime;
-    // the others
-    case EE_UNITS_UPD_R_CONVERSION_START:
-        return (int64_t)theUnit->mConversionStartTime;
-    case EE_UNITS_UPD_R_CINEMATIC:
-        return ::gWorld.mInCinematic ? 1 : 0;
-    case EE_UNITS_UPD_R_TICK_MS:
-        return (int64_t)gPhysics->mTickTimeMs;
-    case EE_UNITS_UPD_R_PHYSICS_ORDER:
-        return (int64_t)theUnit->mCurrentPhysicsOrder;
-    case EE_UNITS_UPD_R_PHYSICS_ACTION:
-        return (int64_t)theUnit->mCurrentPhysicsAction;
+    // (the plain member reads are Rust's: ee_units update_views.rs)
     case EE_UNITS_UPD_R_POSITION_Z: {
         GE3DPoint thePosition;
         theUnit->GetPosition(thePosition);
@@ -156,61 +121,25 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     }
     case EE_UNITS_UPD_R_CALAMITY_CAMOUFLAGE:
         return USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17) ? 1 : 0;
-    case EE_UNITS_UPD_R_CLASS_UNARMED:
-        return theClass->mAttack == 0.0f ? 1 : 0;
     case EE_UNITS_UPD_R_IS_PRIEST:
         return theClass->IsPriest() ? 1 : 0;
-    case EE_UNITS_UPD_R_STATS_POWER:
-        return (int64_t)theUnit->mStats->mPower;
-    case EE_UNITS_UPD_R_GAME_TIME:
-        return (int64_t)gPhysics->mGameTime;
-    case EE_UNITS_UPD_R_GRAZE_TIME:
-        return (int64_t)theUnit->mGrazeTime;
-    case EE_UNITS_UPD_R_GATHER_TIME_2:
-        return (int64_t)theUnit->mStats->mGatherTimes[2];
-    case EE_UNITS_UPD_R_GATHER_TIME_6:
-        return (int64_t)theUnit->mStats->mGatherTimes[6];
     case EE_UNITS_UPD_R_WORK_TIME_FACTOR:
         return EEUpdateBits(::gWorld.GetGameVariant()->mWorkTimeFactor);
-    case EE_UNITS_UPD_R_WORK_TIMER:
-        return (int64_t)theUnit->mWorkTimer;
     case EE_UNITS_UPD_R_MINE:
         return theUnit->mMine != NULL ? 1 : 0;
     case EE_UNITS_UPD_R_MINE_RESOURCE_TYPE:
         return (int64_t)theUnit->mMine->mResourceType;
-    case EE_UNITS_UPD_R_FIRST_PART:
-        return theUnit->mPreviousPart == NULL ? 1 : 0;
-    case EE_UNITS_UPD_R_HAS_NEXT_PART:
-        return theUnit->mNextPart != NULL ? 1 : 0;
-    case EE_UNITS_UPD_R_OPEN_FRACTION:
-        return EEUpdateBits(theUnit->mOpenFraction);
     // ActionChanged's
-    case EE_UNITS_ACT_R_ANIMATION:
-        return (int64_t)theUnit->GetAnimation();
     case EE_UNITS_ACT_R_ATTACK_FRAME_SET:
         return (int64_t)(unsigned long)EEGetAttackFrameSet(theUnit);
     case EE_UNITS_ACT_R_SWIMMING:
         return theUnit->IsSwimming() ? 1 : 0;
-    case EE_UNITS_ACT_R_LAND_BUILDING:
-        return theClass->IsLandBuilding() ? 1 : 0;
-    case EE_UNITS_ACT_R_CLASS_ARMED:
-        return theClass->mAttack > 0 ? 1 : 0;
-    case EE_UNITS_ACT_R_FIRE_OVER_WALLS:
-        return theUnit->mStats->mCanFireOverWalls ? 1 : 0;
     case EE_UNITS_ACT_R_RANDOM:
         return EEUpdateBits(gPhysics->GetRandom());
-    case EE_UNITS_ACT_R_IS_WALL:
-        return theUnit->mUnitClass->mIsWall ? 1 : 0;
-    case EE_UNITS_ACT_R_ROTTING_TIME:
-        return (int64_t)theClass->mRottingTime;
     case EE_UNITS_ACT_R_PATH_ATTEMPTS_EXCEEDED: {
         EEUnitGoal* theGoal = theUnit->mGoalState;
         return (unsigned long)theGoal->mPathAttempts > (unsigned long)theGoal->GetMaxPathAttempts() ? 1 : 0;
     }
-    case EE_UNITS_ACT_R_CLASS_RESOURCE_AMOUNT:
-        return (int64_t)theUnit->mUnitClass->mResourceAmount;
-    case EE_UNITS_ACT_R_NO_HEADING:
-        return theUnit->mInitialContactHeading == kUnitAINoHeading ? 1 : 0;
     case EE_UNITS_ACT_R_WORLD_CLEARING:
         return gWorldClearing ? 1 : 0;
     case EE_UNITS_ACT_R_QUEUED_GOALS:
@@ -221,35 +150,16 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
         return theUnit->mStats->mDeathSound != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_BLOOD_STAIN:
         return theUnit->mUnitClass->mBloodStainEffect != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_DOMAINS:
-        return (int64_t)theUnit->mUnitClass->mDomains;
-    case EE_UNITS_ACT_R_CATEGORY:
-        return (int64_t)theUnit->mUnitClass->mCategory;
-    case EE_UNITS_ACT_R_CONTAINER:
-        return theUnit->mContainer != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_RESOURCE_AMOUNT:
-        return (int64_t)theUnit->mResourceAmount;
-    // the fourteenth round's
     case EE_UNITS_ACT_R_IS_HUMAN:
         return theUnit->mPlayer->IsHuman() ? 1 : 0;
     case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY:
         return theUnit->mCitizenBuildQueue.size() == 0 ? 1 : 0;
-    case EE_UNITS_ACT_R_AIRCRAFT_CARRIER:
-        return theUnit->mUnitClass->mAIKind == kAIKindAircraftCarrier ? 1 : 0;
-    case EE_UNITS_ACT_R_EXITING_UNIT:
-        return (int64_t)theUnit->mExitingUnitID;
-    case EE_UNITS_ACT_R_AIR_TRAFFIC_TYPE:
-        return (int64_t)theUnit->mUnitClass->mAirTrafficType;
     case EE_UNITS_ACT_R_WAYPOINTS:
         return (int64_t)(long)theUnit->mWaypoints.size();
     case EE_UNITS_ACT_R_HOME_BASE:
         return theUnit->mHomeBase != NULL ? 1 : 0;
-    case EE_UNITS_ACT_R_CLEARANCE_GRANTED:
-        return theUnit->mIsClearanceGranted == true ? 1 : 0;
     case EE_UNITS_ACT_R_BOMBER:
         return theClass->mProjectileClass != NULL && theClass->mProjectileClass->mCategory == kUnitCategoryBomb ? 1 : 0;
-    case EE_UNITS_ACT_R_COMMANDABLE:
-        return theUnit->mIsCommandable ? 1 : 0;
     default:
         return 0;
     }
@@ -578,7 +488,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_SET_WORK_TIMER:
         theUnit->SetWorkTimer((long)inA);
         break;
-    // the fourteenth round's
     case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
         EEUnit* theStorage = theClass->FindStorage(theUnit, inA != 0);
         if (theStorage != NULL)
@@ -728,7 +637,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
 void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
-    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct};
+    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
     ee_units_update(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), &theHost);
 }
 
@@ -736,7 +645,7 @@ void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* i
 {
     EEUnitActionScope theScope(inUnit->mUnitID);   // TEST ONLY (USST kind 13)
     EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
-    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct};
+    EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
     ee_units_action_changed(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
                             &theHost);
 }

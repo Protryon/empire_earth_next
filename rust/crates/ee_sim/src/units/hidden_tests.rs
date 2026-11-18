@@ -40,16 +40,20 @@ impl HiddenHost for Mock {
 }
 
 fn complex_me(x: i64, y: i64) -> HiddenSelf {
-    HiddenSelf { complex: true, tile: (x, y), tile_size: 1, can_be_hidden: true, seen_by_local: true, ..Default::default() }
+    HiddenSelf {
+        complex: true,
+        tile: (x, y),
+        tile_size: 1,
+        can_be_hidden: true,
+        seen_by_local: true,
+        ..Default::default()
+    }
 }
 
 #[test]
 fn check_tiles_order() {
     assert_eq!(check_tiles(5, 6, 1), vec![(5, 6), (5, 7), (4, 7), (4, 6)]);
-    assert_eq!(
-        check_tiles(5, 6, 2),
-        vec![(5, 6), (4, 8), (4, 7), (4, 6), (6, 8), (5, 8)]
-    );
+    assert_eq!(check_tiles(5, 6, 2), vec![(5, 6), (4, 8), (4, 7), (4, 6), (6, 8), (5, 8)]);
 }
 
 #[test]

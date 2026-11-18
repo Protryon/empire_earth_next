@@ -209,6 +209,8 @@ pub struct EeUnitsUpdateHost {
     pub ctx: *mut c_void,
     pub read: extern "C" fn(ctx: *mut c_void, code: i32) -> i64,
     pub act: extern "C" fn(ctx: *mut c_void, code: i32, a: i64, b: i64) -> i64,
+    /// the class whose sequence runs (an `EEUnitClass*`: the host's `theClass`, for update_views.rs's reads)
+    pub class: u64,
 }
 
 /// The calls as a trait (the FFI table; the tests' mock).
@@ -780,7 +782,7 @@ pub fn update(kind: i32, host: &mut impl UpdateHost, record: &mut dyn FnMut() ->
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_update(kind: i32, id: u32, object: u64, host: *const EeUnitsUpdateHost) -> bool {
     // SAFETY: the caller's contract
-    let mut h = unsafe { &*host };
+    let mut h = crate::units::update_views::ViewUpdateHost { host: unsafe { &*host }, unit: object };
     let mut record = || with_store(|s| crate::units::step::record_of(s, id, object).copied());
     update(kind, &mut h, &mut record)
 }

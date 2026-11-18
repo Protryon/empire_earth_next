@@ -1274,7 +1274,7 @@ pub unsafe extern "C" fn ee_units_action_changed(
     host: *const crate::units::update::EeUnitsUpdateHost,
 ) -> bool {
     // SAFETY: the caller's contract
-    let mut h = unsafe { &*host };
+    let mut h = crate::units::update_views::ViewUpdateHost { host: unsafe { &*host }, unit: object };
     let mut record = || with_store(|s| crate::units::step::record_of(s, id, object).copied());
     action_changed(kind, &mut h, &mut record)
 }
