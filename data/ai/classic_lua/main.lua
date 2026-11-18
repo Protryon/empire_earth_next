@@ -19,6 +19,7 @@ local RS = require("classic_lua.research")
 local MIL = require("classic_lua.militia")
 local ARMY = require("classic_lua.army")
 local EXPLORE = require("classic_lua.explore")
+local SEA = require("classic_lua.sea")   -- (the war on water, AI_RESEARCH 8.96)
 local TAC = require("lib.tactics")
 local C = T.C
 
@@ -346,6 +347,7 @@ function M.step(view, memory)
     CIV.update(view, memory)
     EXPLORE.step(view, memory)   -- (ExplorationManager: before the combat's defence takes the free soldiers)
     ARMY.step(view, memory)   -- (EECPCombatManager::Tick: army.lua)
+    SEA.step(view, memory)   -- (New: the sea raids and the fleet, after the army's pool)
     -- (the standing army's check at the next 30 s when the step has used most of its instruction budget: a large
     -- game's step passed it here)
     if view.time % 30000 < 1000 and not require("lib.groups").over_share(800) then

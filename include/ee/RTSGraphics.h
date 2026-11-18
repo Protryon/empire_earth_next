@@ -11,7 +11,6 @@
 #include <vector>
 
 class FSFileSpec;
-class GEMovie;
 class GERasterizer;
 class GESurface;
 class RTSMouse;
@@ -50,13 +49,11 @@ public:
     void PostClearRenderObjects();          // 0x11a984: posts 0x406
     void Shutdown();                        // 0x11a999: posts 0x401 and waits for mThreadDone
     long PostPause();                       // 0x11a9bd (Post's result: EEUserInterface 0x2784d9 tests eax): waits for mIsResumePending, sets mIsPausePending, posts 0x402 (pause: mIsPaused = true) (provisional name)
-    long PlayMovie(const FSFileSpec& inFile, UReferenceCounter* inMovieDoneEvent);  // 0x11a9ea (Post's result): posts 0x40c with a copy
     void PostPushRenderObject(RTSRenderObject* inObject);   // 0x11aa38: posts 0x404
     void PostSetFlag5B(bool inFlag);        // 0x11aa51: posts 0x40a (provisional name)
     void PostSetRasterizer(GERasterizer* inRasterizer, unsigned long inScreen);   // 0x11aa6c: posts 0x407
     void PostSetFlag54(bool inFlag);        // 0x11aa87: posts 0x408 (provisional name)
     void PostResume();                      // 0x11aaa2: waits for mIsPausePending, sets mIsResumePending, posts 0x403 (resume: mIsPaused = false) (provisional name)
-    void PostStopMovie();                   // 0x11aacf: posts 0x40d
     void SetSurface(GESurface* inSurface);  // 0x11aae4: mU34, and mU38 the last attached surface before type 3
     // port: the frame while the WON lobby is shown (Main, instead of Render): the lobby's composited frame copied to
     // the back buffer and shown (the original showed the lobby in its own GDI window)
@@ -74,13 +71,9 @@ public:
     GESurface* mSurface;                    // +0x34 (the screen's secondary surface)
     GESurface* mU38;                        // +0x38
     UIManager* mUIManager;                  // +0x3c
-    UReferenceCounter* mMovieDoneEvent;     // +0x40 (PlayMovie's second argument, referenced; class provisional name)
-    GEMovie* mMovie;                        // +0x44
-    float mSavedMasterVolume;               // +0x48 (the master volume, saved while a movie plays)
-    float mSavedConductorVolume;            // +0x4c (the conductor's volume, saved likewise)
+    // (+0x40..+0x4c: the original's movie, its done event and the volumes saved while it played; no movie plays)
     long mL50;                              // +0x50
     bool mB54;                              // +0x54
-    volatile bool mIsMoviePlaying;          // +0x55 (a movie is playing; volatile: `mov byte ptr [x], 0`, 0x11a63b)
     volatile bool mIsPaused;                // +0x56 (= true; volatile: `mov byte ptr [x], 0`, 0x11a530)
     volatile bool mIsPausePending;          // +0x57 (PostResume waits for it to clear)
     volatile bool mIsResumePending;         // +0x58 (PostPause waits for it to clear)
@@ -96,7 +89,7 @@ public:
 };
 
 class SEMixer;
-extern SEMixer* gConductor;             // 0x5319c0 (the mixer; its conductor at +0 is muted for a movie) (provisional name)
+extern SEMixer* gConductor;             // 0x5319c0 (the mixer; its conductor at +0) (provisional name)
 bool EELobbyIsShown();                      // 0x297ed0: a global flag (the thread skips the frame while it is set) (provisional name)
 void EELobbyLock();                         // 0x297f15: enters a global critical section (0x565858) (provisional name)
 void EELobbyUnlock();                       // 0x297f21: leaves it (provisional name)

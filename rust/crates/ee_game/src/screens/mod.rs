@@ -250,6 +250,8 @@ pub mod hud;
 pub mod hud_ctl;
 #[cfg(not(test))]
 mod hud_ctl_ffi;
+pub(crate) mod hud_sends;
+pub(crate) mod hud_views;
 pub mod icon_bar;
 #[cfg(not(test))]
 mod icon_bar_ffi;
@@ -261,6 +263,7 @@ pub mod lobby_options;
 pub mod main_form;
 #[cfg(not(test))]
 mod main_form_ffi;
+pub mod main_form_fields;
 pub mod main_game;
 #[cfg(not(test))]
 mod main_game_ffi;

@@ -16,7 +16,7 @@ use crate::sound::conductorobj::{self, EeSoundConductor};
 use crate::sound::mixers::{self, EngineHost, Host, Mixer, Registry};
 use crate::sound::sys;
 
-/// A mixer's music or movie source: interleaved stereo float frames added at the output rate.
+/// A mixer's music source: interleaved stereo float frames added at the output rate.
 pub type EeSoundSource = Option<unsafe extern "C" fn(*mut c_void, *mut f32, c_ulong)>;
 
 type F0 = Option<unsafe extern "C" fn() -> c_long>;
@@ -61,11 +61,10 @@ pub struct EeSoundSpim {
     /// This port's additions (optional).
     pub get_output_rate: FU,
     pub set_music_source: FSource,
-    pub set_movie_source: FSource,
 }
 
 /// The entry names, in `EeSoundSpim`'s order.
-const NAMES: [&[u8]; 33] = [
+const NAMES: [&[u8]; 32] = [
     b"SPIMActivateMixer\0",
     b"SPIMCreateChannels\0",
     b"SPIMDeactivateMixer\0",
@@ -98,7 +97,6 @@ const NAMES: [&[u8]; 33] = [
     b"SPIMStopChannel\0",
     b"SPIMGetOutputRate\0",
     b"SPIMSetMusicSource\0",
-    b"SPIMSetMovieSource\0",
 ];
 
 /// A mixer: its conductor, its plug-in module and the module's entry points.
@@ -149,14 +147,14 @@ pub(crate) unsafe fn delete_wave_data(m: *mut EeSoundMixer, s: *mut crate::sound
 /// `module` is the plug-in's module (`ee_soundcpp_first_module`'s).
 pub(crate) unsafe fn create(module: *mut c_void, window: *mut c_void) -> *mut EeSoundMixer {
     let conductor = EeSoundConductor::new();
-    let mut entries = [null_mut::<c_void>(); 33];
+    let mut entries = [null_mut::<c_void>(); 32];
     let m = Box::into_raw(Box::new(EeSoundMixer { conductor, module, spim: unsafe { std::mem::zeroed() } }));
     registry().register(Mixer(m.cast()));
     for (e, name) in entries.iter_mut().zip(NAMES) {
         *e = unsafe { sys::ee_soundcpp_module_entry(module, name.as_ptr() as *const c_char) };
     }
     // the table's fields are the entries in order, each an optional function pointer (pointer-sized, null: None)
-    unsafe { (*m).spim = std::mem::transmute::<[*mut c_void; 33], EeSoundSpim>(entries) };
+    unsafe { (*m).spim = std::mem::transmute::<[*mut c_void; 32], EeSoundSpim>(entries) };
     unsafe { (*m).spim.initialize_mixer.expect("SPIMInitializeMixer")(window) };
     unsafe { (*m).conductor.set_mixer(m) };
     m
@@ -355,21 +353,6 @@ pub unsafe extern "C" fn ee_sound_mixer_set_music_source(
     context: *mut c_void,
 ) {
     if let Some(f) = unsafe { spim(m).set_music_source } {
-        unsafe { f(source, context) }
-    }
-}
-
-/// `SetMovieSource` (nothing for a plug-in without it).
-///
-/// # Safety
-/// `m` is a live mixer.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_mixer_set_movie_source(
-    m: *mut EeSoundMixer,
-    source: EeSoundSource,
-    context: *mut c_void,
-) {
-    if let Some(f) = unsafe { spim(m).set_movie_source } {
         unsafe { f(source, context) }
     }
 }

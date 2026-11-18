@@ -39,35 +39,29 @@ fn construct_adds_the_port_controls() {
     assert_eq!(h.ops.last().unwrap().0, EE_SCREENS_UM_OP_SAVE_EVENT);
 }
 
-/// A movie stops on Space and is waited for; F9 then posts the screenshot and skips the base update.
+/// F9 posts the screenshot and skips the base update.
 #[test]
-fn keyboard_stops_the_movie_then_f9() {
-    let mut playing = 3;
+fn keyboard_f9_posts_the_screenshot() {
     let mut h = Log {
         ops: Vec::new(),
         answer: move |op, a, _| match op {
-            EE_SCREENS_UM_OP_KEY_PRESSED => (a == EE_SCREENS_UM_KEY_SPACE || a == EE_SCREENS_UM_KEY_F9) as i64,
-            EE_SCREENS_UM_OP_MOVIE_PLAYING => {
-                playing -= 1;
-                (playing >= 0) as i64
-            }
+            EE_SCREENS_UM_OP_KEY_PRESSED => (a == EE_SCREENS_UM_KEY_F9) as i64,
             EE_SCREENS_UM_OP_KEYS_FREE => 1,
             _ => 7,
         },
     };
     assert_eq!(update_keyboard(&mut h), 0);
     let ops: Vec<u32> = h.ops.iter().map(|o| o.0).collect();
-    assert_eq!(ops.iter().filter(|&&o| o == EE_SCREENS_UM_OP_SLEEP).count(), 2);
-    assert_eq!(ops.last(), Some(&EE_SCREENS_UM_OP_POST_F9));
+    assert_eq!(ops, [EE_SCREENS_UM_OP_KEYS_FREE, EE_SCREENS_UM_OP_KEY_PRESSED, EE_SCREENS_UM_OP_POST_F9]);
 }
 
-/// No press: no movie test, the base update's result.
+/// The mouse: the base update alone, its result.
 #[test]
-fn mouse_without_a_press_only_updates() {
+fn mouse_only_updates() {
     let mut h = Log { ops: Vec::new(), answer: |op, _, _| if op == EE_SCREENS_UM_OP_BASE_MOUSE { 5 } else { 0 } };
     assert_eq!(update_mouse(&mut h), 5);
     let ops: Vec<u32> = h.ops.iter().map(|o| o.0).collect();
-    assert_eq!(ops, [EE_SCREENS_UM_OP_BUTTON_PRESSED, EE_SCREENS_UM_OP_BUTTON_PRESSED, EE_SCREENS_UM_OP_BASE_MOUSE]);
+    assert_eq!(ops, [EE_SCREENS_UM_OP_BASE_MOUSE]);
 }
 
 const GOLDEN: &str = include_str!("../golden_ui_manager.txt");
@@ -91,7 +85,10 @@ impl UiHost for Replay {
 }
 
 /// The original constructor, `StartScenarioEditor`, `UpdateKeyboard` and `UpdateMouse` over random fake worlds
-/// (`build/sc26/um`, seed 1): the same ops with the same arguments and records, in order, and the same results.
+/// (`build/sc26/um`, seed 1): the same ops with the same arguments and records, in order, and the same results. The
+/// movie's ops were taken out of the recorded keyboard and mouse updates when movies left the game (2026-11-17: the
+/// Escape, Return and Space tests and the playing movie's test, stop and wait; the mouse presses): what is left is
+/// what the original does when no movie plays.
 #[test]
 fn golden_ui_manager() {
     let mut count = 0;

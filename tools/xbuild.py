@@ -2,7 +2,6 @@
 
   python -I tools/xbuild.py test     [--target T] [--no-run] [--no-network]     platform layer tests (tests/platform)
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
-  python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py wontest  [--target T] [--no-run] [PROGRAM ...]      WON wire format, crypto, sockets, ops (tests/won)
   python -I tools/xbuild.py nettest  [--target T] [--no-run] [PROGRAM ...]      the Network Engine's goldens (tests/net)
@@ -32,6 +31,8 @@ error classes) and prints the units that compile. --dialect ms keeps the Microso
 build uses (-fms-extensions -fms-compatibility -fdelayed-template-parsing); gnu drops them.
 
 Outputs go to build/xbuild/<target>/ (env EE_XBUILD_OUT overrides). Nothing here touches tools/build.py's outputs.
+wontest runs each program under a memory cap (EE_TEST_MEM_MB, default 2048; 0 turns it off): on Windows a job
+object, elsewhere RLIMIT_AS at twice the cap. A program past it is killed and fails.
 """
 import argparse
 import concurrent.futures
@@ -242,19 +243,130 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
-    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
+def job_info_type():
+    """JOBOBJECT_EXTENDED_LIMIT_INFORMATION (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Basic(ctypes.Structure):
+        _fields_ = [("PerProcessUserTimeLimit", ctypes.c_longlong), ("PerJobUserTimeLimit", ctypes.c_longlong),
+                    ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                    ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                    ("SchedulingClass", wintypes.DWORD)]
+
+    class Extended(ctypes.Structure):
+        _fields_ = [("Basic", Basic), ("Io", ctypes.c_ulonglong * 6), ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+    return Extended
+
+
+def memory_job(limit):
+    """Windows: a job object that kills its processes when they commit more than `limit` bytes together, or when
+    this process ends (its handle closes); None elsewhere or if it cannot be made."""
+    if not IS_WINDOWS:
+        return None
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateJobObjectW.restype = wintypes.HANDLE
+    job = k32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    info = job_info_type()()
+    info.Basic.LimitFlags = 0x2000 | 0x200   # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_JOB_MEMORY
+    info.JobMemoryLimit = limit
+    if not k32.SetInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info)):
+        k32.CloseHandle(wintypes.HANDLE(job))
+        return None
+    return job
+
+
+def job_peak(job):
+    """The job's peak committed memory in bytes (0 if unknown)."""
+    import ctypes
+    from ctypes import wintypes
+    info = job_info_type()()
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not k32.QueryInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info), None):
+        return 0
+    return info.PeakJobMemoryUsed
+
+
+# a test program's memory cap (MB; env EE_TEST_MEM_MB overrides, 0 = none): above it the program is killed and fails,
+# so a leaking test can never exhaust the machine (won_cfgtab_test once grew 70 MB/s past 10 GB)
+TEST_MEM_MB = int(os.environ.get("EE_TEST_MEM_MB", "2048"))
+
+
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None, mem_mb=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure.
+    With `mem_mb` (default TEST_MEM_MB for the WON drivers' callers), a program that commits more is killed and fails
+    (a Windows job object; elsewhere RLIMIT_AS, at twice the cap: address space, not commit)."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
+    limit = (mem_mb or 0) * 1024 * 1024
+    preexec = None
+    if limit and not IS_WINDOWS:
+        def preexec():
+            import resource
+            try:
+                resource.setrlimit(resource.RLIMIT_AS, (2 * limit, 2 * limit))
+            except (ValueError, OSError):
+                pass
+    job = memory_job(limit) if limit else None
+    flags = 0x4 if job else 0   # CREATE_SUSPENDED: in the job before its first instruction
+    proc = subprocess.Popen([str(exe), *args], env=env, cwd=cwd, creationflags=flags, preexec_fn=preexec)
+    if job:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.AssignProcessToJobObject(wintypes.HANDLE(job), wintypes.HANDLE(int(proc._handle)))
+        resume_process(proc.pid)
     try:
-        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+        code = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
         return 1
-    print(f"{exe.name}: exit {r.returncode}")
-    return r.returncode
+    finally:
+        if job:
+            peak = job_peak(job)
+            ctypes.WinDLL("kernel32").CloseHandle(wintypes.HANDLE(job))
+    if job and peak >= limit - (64 << 20):
+        print(f"{exe.name}: FAILED, over its memory cap ({mem_mb} MB; peak {peak >> 20} MB; killed)", flush=True)
+        return code or 1
+    print(f"{exe.name}: exit {code}" + (f" (peak {peak >> 20} MB)" if job else ""))
+    return code
+
+
+def resume_process(pid):
+    """Resumes every thread of a process started suspended (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ThreadID", wintypes.DWORD),
+                    ("th32OwnerProcessID", wintypes.DWORD), ("tpBasePri", wintypes.LONG),
+                    ("tpDeltaPri", wintypes.LONG), ("dwFlags", wintypes.DWORD)]
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.OpenThread.restype = wintypes.HANDLE
+    snap = k32.CreateToolhelp32Snapshot(0x4, 0)   # TH32CS_SNAPTHREAD
+    e = Entry()
+    e.dwSize = ctypes.sizeof(Entry)
+    ok = k32.Thread32First(wintypes.HANDLE(snap), ctypes.byref(e))
+    while ok:
+        if e.th32OwnerProcessID == pid:
+            h = k32.OpenThread(0x2, False, e.th32ThreadID)   # THREAD_SUSPEND_RESUME
+            if h:
+                k32.ResumeThread(wintypes.HANDLE(h))
+                k32.CloseHandle(wintypes.HANDLE(h))
+        ok = k32.Thread32Next(wintypes.HANDLE(snap), ctypes.byref(e))
+    k32.CloseHandle(wintypes.HANDLE(snap))
 
 
 # ---- test / fonttest
@@ -272,24 +384,6 @@ def cmd_test(a):
     if a.no_run:
         return 0
     return run_program(t, exe, ["--no-network"] if a.no_network else [])
-
-
-# the computer player's Lua runtime (ee/EECPLua.h) with the vendored Lua and the platform layer (PlatFOpen); the
-# test scripts are tests/platform/lua/ai/*.lua, the folder passed in plays the part of Data
-def cmd_luatest(a):
-    t = Target(a.target)
-    why = t.can_build()
-    if why:
-        sys.exit(f"{t.name}: {why}")
-    srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
-            ROOT / "tests" / "platform" / "lua_test.cpp"]
-    libs = rust_libs(t)
-    exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS],
-                        libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
-    print(f"built {exe}")
-    if a.no_run:
-        return 0
-    return run_program(t, exe, [str(ROOT / "tests" / "platform" / "lua") + os.sep])
 
 
 def font_dir():
@@ -418,6 +512,10 @@ WON_TESTS = {
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
     "won_persist_test": [],
+    # LobbyPersistentData and the Lobby* functions over it as one Rust object (persistobj.rs, R6 WONLobby round 15):
+    # the original's statements (won_persistobj_orig.h) against the game's forwards, the state and files compared
+    # after every step
+    "won_persistobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
@@ -658,13 +756,10 @@ WON_TESTS = {
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
-    # ee_won's imgdec.rs now, R6 WON round 41)
+    # Rust now: ee_won_gui's imgdec.rs and ee_base's jpeg.rs, R6 WON round 41). won_jpeg_test, JPGDecoder's
+    # statements on libjpeg 6b against jpeg.rs, left with libjpeg (2026-11-17); its golden
+    # (rust/crates/ee_won_gui/src/golden_jpeg.txt) is replayed by cargo
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")]],
-    # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
-    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won_gui/src/golden_jpeg.txt)
-    "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                      *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
-                        for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
@@ -929,7 +1024,7 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT, mem_mb=TEST_MEM_MB)
             if code:
                 failed.append(name)
             result |= code
@@ -1616,12 +1711,12 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
+    for name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
                  "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdltest"):
+        if name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -1646,7 +1741,7 @@ def main():
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
     a.sim = a.cmd == "sim"
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 

@@ -697,8 +697,6 @@ constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
 
-constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
-
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
@@ -2897,10 +2895,6 @@ constexpr static const int32_t EE_UNITS_GOAL_UNFINISHED_FARM = 482;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
-
-constexpr static const uint8_t GOAL_PATROL = 9;
-
-constexpr static const uint8_t GOAL_EXPLORE = 10;
 
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 

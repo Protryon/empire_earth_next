@@ -1331,65 +1331,16 @@ bool EECreateInstanceMutex()
 #endif
 }
 
-#include "lle/GEMovie.h"
-#include "lle/ISEntity.h"
-
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen); // defined below
 
-// Plays the Sierra, Mad Doc and Empire Earth intro movies unless skipped (Escape, Space or a click skips one),
-// then switches to 1024x768
-void EEPlayIntroMovies(bool inSkipMovies)
+// Switches to the menus' screen after start-up. The original played the Sierra, Mad Doc and Empire Earth intro movies
+// here first (unless the command line hosted or joined a game); the port has no movie player and plays none.
+void EEStartMenuScreen()
 {
-    std::vector<UString> theMovies;
     GERectangle theRectangle(0.0f, 0.0f, 640.0f, 480.0f);
-    long thePriority = TSScheduler::GetCurrentThread()->GetPriority();
-    TSScheduler::GetCurrentThread()->SetPriority(PLAT_PRIORITY_NORMAL);
     PlatWindowRaise(gGameWindow->GetOSRepresentation());
-    gRasterizer->SetWaitForVSync(true, gGamePreferences.mSettings.GetScreenID());
     gISMouse->Resume();
     gISKeyboard->Resume();
-    theMovies.push_back("Movies\\Sierra.bik");
-    theMovies.push_back("Movies\\MadDocSoftware.bik");
-    theMovies.push_back("Movies\\Empire Earth.bik");
-    for (std::vector<UString>::iterator it = theMovies.begin(); it != theMovies.end() && inSkipMovies == false; it++) {
-        FSFileSpec* theFile;
-        if (gDataPath->FindFile(*it, theFile) != kErrorOK)
-            continue;
-        GEMovie* theMovie = gRasterizer->CreateMovie(*theFile, gGamePreferences.mSettings.GetScreenID(), theRectangle, false);
-        if (theMovie != NULL) {
-            long theResult;
-            do {
-                unsigned long theMessage;
-                void* theParameter1;
-                void* theParameter2;
-                gUserInterface->mThread->Receive(theMessage, theParameter1, theParameter2);
-                theResult = theMovie->RenderFrame();
-                if (theResult == kErrorOK)
-                    theResult = gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
-                if (theResult != kErrorOK && theResult != 7)
-                    gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->RestoreAllSurfaces();
-                gISMouse->Refresh();
-                gISKeyboard->Refresh();
-                ISEntity* theEntity;
-                gISKeyboard->GetEntity(kKeyEscape, theEntity);
-                if (theEntity->JustPressed())
-                    theResult = 7;
-                gISKeyboard->GetEntity(kKeySpace, theEntity);
-                if (theEntity->JustPressed())
-                    theResult = 7;
-                gISMouse->GetEntity(kMouseLeftButton, theEntity);
-                if (theEntity->JustPressed())
-                    theResult = 7;
-                PlatSleep(1);
-            } while (theResult != 7);
-            gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
-
-            gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
-            theMovie->Stop();
-            theMovie->Dereference();
-        }
-        delete theFile;
-    }
     gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
 
     gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
@@ -1398,7 +1349,6 @@ void EEPlayIntroMovies(bool inSkipMovies)
     gISMouse->Suspend();
     gISKeyboard->Suspend();
     gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, gGamePreferences.mSettings.GetScreenID());
-    TSScheduler::GetCurrentThread()->SetPriority(thePriority);
 }
 
 // Closes the single-instance mutex and saves the preferences
@@ -1791,7 +1741,6 @@ bool EEInitializeDisplay()
 #include <objbase.h>
 #endif
 
-bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies);
 bool EEParseCommandLine(const char* inCommandLine); // 0x52d703 (after start-up)
 HINSTANCE gInstance;
 UResourceFile* gResource;
@@ -1808,7 +1757,6 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
     long theResult;
     bool theInitialized;
     EEStartScreen theSplashScreen(inInstance);
-    bool theShowMovies;
     if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
         // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
         // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
@@ -1828,7 +1776,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
 #endif
         UMSetFloatingPointPrecision(kFPPrecision53);
         UMFastMath::BuildSqrtTable();
-        if (EEParseCommandLineFirstPass(inCommandLine, theShowMovies)) {
+        {   // (the original's first command-line pass here only chose whether to play the intro movies)
             gInstance = inInstance;
             ESInitialize(inInstance);
             // the game's directory is the data root (the executable's directory, or EE_DATA_ROOT), wherever it was
@@ -1855,7 +1803,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
                 if (!gPlatSimMode)
                     theSplashScreen.Stop();
                 if (theInitialized) {
-                    EEPlayIntroMovies(gPlatSimMode || theShowMovies == false);
+                    EEStartMenuScreen();
                     EEInitializePart2();
                     EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
                     if (gPlatSimMode)

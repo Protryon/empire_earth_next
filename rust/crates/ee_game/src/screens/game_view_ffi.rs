@@ -42,6 +42,11 @@ impl ViewHost for Form {
             if let Some(w) = WorldView::global(&t) {
                 world_view(&w, group, arg, &mut v);
             }
+            if group == EE_SCREENS_VIEW_PLAYER {
+                // the selected group's airport (hud_views)
+                let index = (arg != EE_SCREENS_VIEW_CURRENT).then_some(arg as usize);
+                v.airport_selected = crate::screens::hud_views::airport_selected(index);
+            }
         }
         v
     }

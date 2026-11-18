@@ -77,6 +77,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEMessage.h"
 #include "ee/EEStringIDs.h"
+#include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h"

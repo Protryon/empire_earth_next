@@ -24,20 +24,6 @@ enum class EeUiBitmapCall : uint32_t {
   SetBitmap = 6,
 };
 
-/// UIMovie's inward calls.
-enum class EeUiMovieCall : uint32_t {
-  /// The constructor's part after `UIControl`'s: the movie `a`, referenced.
-  Init = 1,
-  /// The destructor: the movie stopped and released.
-  Release = 2,
-  /// `CopyData()` -> the base's result; the control stays dirty while the movie plays.
-  CopyData = 3,
-  /// `DrawPolygons()` -> the base's result.
-  DrawPolygons = 4,
-  /// `DrawTextA()`: the base's, then the movie's frame -> the render's result.
-  DrawText = 5,
-};
-
 /// `UIBitmap`'s members (`include/lle/UIBitmap.h`), the C++ class's private base.
 struct EeUiBitmapFields {
   /// The host of the calls out (its object is the record).
@@ -50,14 +36,6 @@ struct EeUiBitmapFields {
   void *mCopiedBitmap;
 };
 
-/// `UIMovie`'s members (`include/lle/UIMovie.h`), the C++ class's private base.
-struct EeUiMovieFields {
-  /// The host of the calls out (its object is the record).
-  EeUiHostFn mMovieHost;
-  /// The movie (`GEMovie*`, referenced).
-  void *mMovie;
-};
-
 extern "C" {
 
 /// One of UIBitmap's methods ([`EeUiBitmapCall`]); `host` is read by `Init` only.
@@ -68,12 +46,6 @@ ptrdiff_t ee_ui_bitmap_call(EeUiBitmapFields *rec,
                             EeUiHostFn host,
                             EeUiBitmapCall call,
                             ptrdiff_t a);
-
-/// One of UIMovie's methods ([`EeUiMovieCall`]); `host` is read by `Init` only.
-///
-/// # Safety
-/// As [`movie_call`].
-ptrdiff_t ee_ui_movie_call(EeUiMovieFields *rec, EeUiHostFn host, EeUiMovieCall call, ptrdiff_t a);
 
 }  // extern "C"
 

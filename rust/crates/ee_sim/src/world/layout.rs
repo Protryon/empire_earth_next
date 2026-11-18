@@ -153,11 +153,19 @@ pub struct EeWorldLayout {
     pub tech_host: u64,
     /// `EeCpFields` in `EEComputerPlayer`
     pub cp_fields: u64,
+    // ---- the HUD's reads (the UI thread lane, round 1)
+    /// `EEGroup::mUnits` (a `std::vector<EEComplexUnit*>`; `EESelectedGroup`'s `GetUnit`/`GetNumUnits` are
+    /// `EEGroup`'s)
+    pub group_units: u64,
+    /// `EEUnitClassUpgrade::mUnitClass` (an `EEUnitClass*`: the stats' own class) and `mButton` (an
+    /// `EEButtonObject*`)
+    pub stats_unit_class: u64,
+    pub stats_button: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test_layout"))]
 thread_local! {
     /// a test's layout for its thread (tests run in parallel and the registered layout is the process's)
     static TEST_LAYOUT: std::cell::Cell<Option<&'static EeWorldLayout>> = const { std::cell::Cell::new(None) };
@@ -174,7 +182,7 @@ pub fn set(layout: EeWorldLayout) -> bool {
 
 /// The registered layout (None before the C++ registered it, as in the unit tests).
 pub fn get() -> Option<&'static EeWorldLayout> {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test_layout"))]
     if let Some(l) = TEST_LAYOUT.with(|t| t.get()) {
         return Some(l);
     }
@@ -187,17 +195,17 @@ pub fn layout() -> &'static EeWorldLayout {
 }
 
 /// TEST ONLY: `layout` for this thread until the guard drops.
-#[cfg(test)]
+#[cfg(any(test, feature = "test_layout"))]
 pub fn with_test_layout(layout: EeWorldLayout) -> TestLayout {
     let l: &'static EeWorldLayout = Box::leak(Box::new(layout));
     TEST_LAYOUT.with(|t| t.set(Some(l)));
     TestLayout(())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test_layout"))]
 pub struct TestLayout(());
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test_layout"))]
 impl Drop for TestLayout {
     fn drop(&mut self) {
         TEST_LAYOUT.with(|t| t.set(None));

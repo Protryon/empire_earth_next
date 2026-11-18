@@ -268,46 +268,6 @@ static bool ClientIs(LobbyClient* inClient, intptr_t inTest)
     return false;
 }
 
-static intptr_t PrefGet(intptr_t inPref)
-{
-    typedef EeWonLobbyCtlPref P;
-    switch ((P)inPref) {
-    case P::CrossPromotion: return LobbyGetCrossPromotion();
-    case P::DoAutoAfk: return LobbyGetDoAutoAFK();
-    case P::AutoPingGames: return LobbyGetAutoPingGames();
-    case P::ShowGamesInProgress: return LobbyGetShowGamesInProgress();
-    case P::LobbyMusic: return LobbyGetLobbyMusic();
-    case P::LobbySoundEffects: return LobbyGetLobbySoundEffects();
-    case P::ChatSoundEffects: return LobbyGetChatSoundEffects();
-    case P::StagingSoundEffects: return LobbyGetStagingSoundEffects();
-    case P::ShowConfirmations: return LobbyGetShowConfirmations();
-    case P::FilterDirtyWords: return LobbyGetFilterDirtyWords();
-    case P::AnonymousToFriends: return LobbyGetAnonymousToFriends();
-    case P::ConnectionSpeed: return LobbyGetConnectionSpeed();
-    }
-    return 0;
-}
-
-static void PrefSet(intptr_t inPref, intptr_t inValue)
-{
-    typedef EeWonLobbyCtlPref P;
-    bool aFlag = inValue != 0;
-    switch ((P)inPref) {
-    case P::CrossPromotion: LobbySetCrossPromotion(aFlag); return;
-    case P::DoAutoAfk: LobbySetDoAutoAFK(aFlag); return;
-    case P::AutoPingGames: LobbySetAutoPingGames(aFlag); return;
-    case P::ShowGamesInProgress: LobbySetShowGamesInProgress(aFlag); return;
-    case P::LobbyMusic: LobbySetLobbyMusic(aFlag); return;
-    case P::LobbySoundEffects: LobbySetLobbySoundEffects(aFlag); return;
-    case P::ChatSoundEffects: LobbySetChatSoundEffects(aFlag); return;
-    case P::StagingSoundEffects: LobbySetStagingSoundEffects(aFlag); return;
-    case P::ShowConfirmations: LobbySetShowConfirmations(aFlag); return;
-    case P::FilterDirtyWords: LobbySetFilterDirtyWords(aFlag); return;
-    case P::AnonymousToFriends: LobbySetAnonymousToFriends(aFlag); return;
-    case P::ConnectionSpeed: LobbySetConnectionSpeed((int)inValue); return;
-    }
-}
-
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
@@ -401,15 +361,12 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ItemSetImage: anItem->mImage = CtlImage(b); return 0;
     case Op::ButtonOf: return (intptr_t)dynamic_cast<Button*>(aComp);
     case Op::ControlId: return aComp->mControlId;
-    case Op::PrefGet: return PrefGet(a);
-    case Op::PrefSet: PrefSet(a, b); return 0;
     case Op::ComboGetSel: return aCombo->GetSelItem();
     case Op::ComboSetSel: aCombo->SetSelItem((int)b, c != 0); return 0;
     case Op::ComboClear: aCombo->Clear(b != 0); return 0;
     case Op::ComboShowTabSelect: aCombo->SetTextAndSel(LobbyGetTabSelect(), false); return 0;
     case Op::SaveTabSelect: LobbySetTabSelect(aCombo->mEdit->GetText()); return 0;
     case Op::SaveLanName: LobbySetLanName(aCombo->mEdit->GetText()); return 0;
-    case Op::LanNameCount: return (intptr_t)LobbyGetLanNameCount();
     case Op::ComboAddLanName: aCombo->AddString(LobbyGetLanNameAt((size_t)b), -1); return 0;
     case Op::ComboShowLanName: aCombo->SetTextAndSel(LobbyGetLanName(), true); return 0;
     case Op::LanBroadcastPort: return (intptr_t)LobbyGetLanBroadcastPort();
@@ -421,16 +378,13 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     }
     case Op::LabelSetLocalAddress: aLabel->SetText(IPAddr::GetLocalAddr().GetHostString(true), true); return 0;
     case Op::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)a, b != 0); return 0;
-    case Op::RestoreDefaults: LobbyRestoreDefaults(); return 0;
     case Op::ResetNetworkAdapter: LobbySetNetworkAdapter(LobbyGetNetworkAdapter()); return 0;
-    case Op::ResetFilters: LobbyResetFilters(); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
     case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
     case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
     case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
     case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
-    case Op::RemoveLanName: LobbyRemoveLanName(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;

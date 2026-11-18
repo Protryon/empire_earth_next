@@ -104,13 +104,6 @@ void SPIMSetMuted(bool muted);
 void SPIMSetMusicSource(void (*source)(void *context, float *frames, unsigned long count),
                         void *context);
 
-/// `SPIMSetMovieSource`: as the music source.
-///
-/// # Safety
-/// As `SPIMSetMusicSource`.
-void SPIMSetMovieSource(void (*source)(void *context, float *frames, unsigned long count),
-                        void *context);
-
 /// `SPIMActivateMixer`'s device: the named output (the system's default when there is none of that name; NULL or ""
 /// for the default) through cpal, else, or with `null_only` (the headless simulation), the null device; the mixer
 /// pulls the mix on the device's thread from now on. The device's rate (the caller hands it to

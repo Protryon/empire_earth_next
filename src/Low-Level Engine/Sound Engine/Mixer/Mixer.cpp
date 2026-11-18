@@ -166,7 +166,6 @@ static const struct {
     SPIM_ENTRY(SPIMProcessMessage),
     SPIM_ENTRY(SPIMSetChannelSample),
     SPIM_ENTRY(SPIMSetLatency),
-    SPIM_ENTRY(SPIMSetMovieSource),
     SPIM_ENTRY(SPIMSetMusicSource),
     SPIM_ENTRY(SPIMSetSampleLooping),
     SPIM_ENTRY(SPIMSetSampleOffset),

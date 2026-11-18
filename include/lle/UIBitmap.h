@@ -2,7 +2,7 @@
 // top left corner. Vtable 0x10098bfc. The original's sizeof was 0xb0 (??_E stride, 0x1005d46c).
 //
 // Whole in Rust (rust/crates/ee_ui/src/mediaobj.rs, R6 ui round 21): the members are EeUiBitmapFields, the class's
-// private base; every method forwards there (UIBitmap.cpp, with UIMovie's), and the Rust record calls out through
+// private base; every method forwards there (UIBitmap.cpp), and the Rust record calls out through
 // UIMediaHost. Requires lle/UIControl.h.
 #ifndef LLE_UIBITMAP_H
 #define LLE_UIBITMAP_H

@@ -357,15 +357,15 @@ void EEUIManager::StartScenarioEditor()
     ee_screens_ui_manager_start_editor(&theCall);
 }
 
-// Skips a playing movie on Escape, Return or Space; handles F9 screenshots outside text entry; then the keys
-// (ee_screens ui_manager.rs)
+// Handles F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a
+// playing movie on Escape, Return or Space)
 long EEUIManager::UpdateKeyboard()
 {
     EEUIManagerCall theCall(this);
     return (long)ee_screens_ui_manager_update_keyboard(&theCall);
 }
 
-// Skips a playing movie on a mouse click, then handles the mouse (ee_screens ui_manager.rs)
+// Handles the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
 long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
     EEUIManagerCall theCall(this);
@@ -472,16 +472,11 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UM_OP_KEY_PRESSED:
         gISKeyboard->GetEntity(kKeys[inA], theKey);
         return theKey->JustPressed();
-    case EE_SCREENS_UM_OP_MOVIE_PLAYING: return gGraphics->mIsMoviePlaying;
-    case EE_SCREENS_UM_OP_STOP_MOVIE: gGraphics->PostStopMovie(); break;
-    case EE_SCREENS_UM_OP_SLEEP: PlatSleep((unsigned long)inA); break;
     case EE_SCREENS_UM_OP_KEYS_FREE:
         return theManager->GetCurrentForm() != NULL && !theManager->GetCurrentForm()->GetIsKeyboardCaptured() &&
                !gLoadingSavedGame;
     case EE_SCREENS_UM_OP_POST_F9: EEPostF9Key(); break;
     case EE_SCREENS_UM_OP_BASE_KEYBOARD: return theManager->UIManager::UpdateKeyboard();
-    case EE_SCREENS_UM_OP_BUTTON_PRESSED:
-        return (inA == 0 ? UIManager::GetLMouseButton() : UIManager::GetRMouseButton())->JustPressed();
     case EE_SCREENS_UM_OP_BASE_MOUSE: return theManager->UIManager::UpdateMouse(*ioCall.mMouse);
     }
     return 0;

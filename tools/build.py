@@ -6,9 +6,10 @@ static UCRT).
 
 -> <out>/exe/EE-AOC.exe with its .map and .pdb (default out: build/clang), linked at the fixed image base 0x400000
 (as the x64 build has always run). x86_64 is the only target (--x64 is accepted and ignored). The exe holds the game
-with the engine (and its libjpeg, which the lobby's JPEG reader uses too), the plug-ins the original loaded as DLLs (TCP
+with the engine, the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer) and the
-language resources, with pl_mpeg for the movies (the sound device, the decoders and the music are Rust: cpal, symphonia, rustysynth). Only Windows system DLLs are
+language resources (the sound device, the decoders and the music are Rust: cpal, symphonia, rustysynth). Only
+Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
 of every object, the Windows SDK import libraries, the static libraries (SDL3,
 the Rust library) and runtime, and the resources.
@@ -134,6 +135,13 @@ def static_libs():
 
 LINK_FLAGS = ["/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF", "/MACHINE:X64", "/SUBSYSTEM:WINDOWS", "/NODEFAULTLIB",
               "/FIXED", "/BASE:0x400000", "/HIGHENTROPYVA:NO", "/ENTRY:WinMainCRTStartup", "/ERRORLIMIT:0", "/DEBUG"]
+# A checkout-independent exe: the same commit gives the same bytes in every worktree (tools/sim_bench.py --cache keys
+# a game on them; PORT_LEARNINGS.md "Checkout-independent builds"). /Brepro writes a hash of the image where the link
+# time was (the COFF header's and the debug directory's time stamps); /PDBALTPATH:%_PDB% names the PDB in the debug
+# directory without its folder (a debugger looks beside the exe first). The PDB's GUID is a hash of the PDB, so the
+# PDB must not name the checkout either: every input is given relative to the link's folder (relative()), and
+# /PDBSOURCEPATH makes them absolute against a fixed folder name in the PDB's module and linker records.
+REPRO_FLAGS = ["/Brepro", "/PDBALTPATH:%_PDB%", f"/PDBSOURCEPATH:{ee.FILE_PREFIX}\\out\\exe"]
 # Windows system DLLs the game imports (the Windows SDK's import libraries), in the order of the original images'
 # import tables: a name both WSOCK32 (Winsock 1.1: the TCP protocol's) and WS2_32 export resolves to WSOCK32's
 SDK_LIBS = ["imm32.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "ole32.lib", "wsock32.lib",
@@ -145,6 +153,18 @@ def run(cmd, cwd):
     r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def relative(path, base):
+    """a link input relative to the folder the link runs in (REPRO_FLAGS); a bare library name (kernel32.lib), or a
+    file on another drive, as it is"""
+    p = pathlib.Path(path)
+    if not p.is_absolute():
+        return str(path)
+    try:
+        return os.path.relpath(p, base)
+    except ValueError:
+        return str(p)
 
 
 def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
@@ -178,13 +198,13 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     tag = "" if name == "EE-AOC" else f"-{name}"
     dst.mkdir(parents=True, exist_ok=True)   # a fresh worktree has no exe directory yet
     rsp = dst / f"link{tag}.rsp"
-    rsp.write_text("".join(f'"{x}"\n' for x in inputs))
+    rsp.write_text("".join(f'"{relative(x, dst)}"\n' for x in inputs))
     exe = dst / f"{name}.exe"
     exe.unlink(missing_ok=True)
     flags = LINK_FLAGS if entry is None else [
         {"/SUBSYSTEM:WINDOWS": "/SUBSYSTEM:CONSOLE", "/ENTRY:WinMainCRTStartup": "/ENTRY:mainCRTStartup"}.get(f, f)
         for f in LINK_FLAGS]
-    code, log = run([str(LLD_LINK), "/nologo", *flags, f"/OUT:{exe.name}", f"/MAP:{exe.stem}.map",
+    code, log = run([str(LLD_LINK), "/nologo", *flags, *REPRO_FLAGS, f"/OUT:{exe.name}", f"/MAP:{exe.stem}.map",
                      f"/PDB:{exe.stem}.pdb", *lib_paths(), f"@{rsp.name}"], dst)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S with unrecognized magic" not in l)
     (dst / f"link{tag}.log").write_text(log)

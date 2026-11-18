@@ -34,7 +34,13 @@ constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
 constexpr static const uint8_t GOAL_ATTACK_GROUND = 3;
 
+constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
+
 constexpr static const int64_t CATEGORY_PLANET_SPACESHIP = 34;
+
+constexpr static const uint8_t GOAL_PATROL = 9;
+
+constexpr static const uint8_t GOAL_EXPLORE = 10;
 
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;

@@ -1,7 +1,7 @@
 //! The mixer's output device (cpal: WASAPI, Core Audio, ALSA) and its decoder (symphonia: WAV, MP3, FLAC), which
-//! replaced miniaudio. The device thread pulls the mix from [`Mixer::mix`] (the channels, then the music and the
-//! movie), stereo float at the device's own rate; a device of another format or channel count gets the same frames
-//! converted. Without a device (the headless simulation, a machine with no output) a null device pulls the mix at the
+//! replaced miniaudio. The device thread pulls the mix from [`Mixer::mix`] (the channels, then the music), stereo
+//! float at the device's own rate; a device of another format or channel count gets the same frames converted.
+//! Without a device (the headless simulation, a machine with no output) a null device pulls the mix at the
 //! rate of a 48 kHz device in real time, as miniaudio's null backend did, so the game always has its mixer.
 //!
 //! The decoder keeps miniaudio's sample conversions (dr_wav's: 8-bit `x * (2 / 255) - 1`, 16-bit `x / 32768`, 24-bit

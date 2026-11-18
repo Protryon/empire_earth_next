@@ -56,7 +56,6 @@
 #include "lle/GEVertex.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "lle/GEMovie.h"
 #include "lle/GEPhysicalModel.h"
 #include "lle/GEPoint.h"
 #include "lle/GERhombus.h"

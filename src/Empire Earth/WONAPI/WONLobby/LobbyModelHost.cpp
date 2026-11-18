@@ -16,6 +16,7 @@
 #include <map>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"

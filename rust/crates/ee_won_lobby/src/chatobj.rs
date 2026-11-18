@@ -362,6 +362,85 @@ pub unsafe extern "C" fn ee_won_chatparser_handle_input(
     ok
 }
 
+// ---- InitCommands' and GetHelp's tables (R6 WONLobby round 15: ChatCommandParser.cpp's 24 AddCommands calls and its
+// help switch)
+
+use crate::resource::EeWonLobbyRes as R;
+
+/// InitCommands' calls in the original's order: (the resource row of the command's names, the command); a row of
+/// -1 is the empty list (the command's built-in short name).
+const INIT_COMMANDS: [(i32, i32); 24] = [
+    (R::ChatCommandLogic_Whisper_String as i32, chat::WHISPER),
+    (R::ChatCommandLogic_Block_String as i32, chat::BLOCK),
+    (R::ChatCommandLogic_Emote_String as i32, chat::EMOTE),
+    (R::ChatCommandLogic_Ignore_String as i32, chat::IGNORE),
+    (R::ChatCommandLogic_Away_String as i32, chat::AWAY),
+    (R::ChatCommandLogic_Invite_String as i32, chat::INVITE),
+    (R::ChatCommandLogic_Uninvite_String as i32, chat::UNINVITE),
+    (R::ChatCommandLogic_Reply_String as i32, chat::REPLY),
+    (R::ChatCommandLogic_Clear_String as i32, chat::CLEAR),
+    (R::ChatCommandLogic_Help_String as i32, chat::HELP),
+    (R::ChatCommandLogic_ShowTeam_String as i32, chat::SHOW_TEAM),
+    (R::ChatCommandLogic_Moderator_String as i32, chat::MODERATOR),
+    (R::ChatCommandLogic_ServerMute_String as i32, chat::SERVER_MUTE),
+    (R::ChatCommandLogic_ServerBan_String as i32, chat::SERVER_BAN),
+    (R::ChatCommandLogic_Mute_String as i32, chat::MUTE),
+    (R::ChatCommandLogic_Ban_String as i32, chat::BAN),
+    (R::ChatCommandLogic_Unmute_String as i32, chat::UNMUTE),
+    (R::ChatCommandLogic_ServerUnmute_String as i32, chat::SERVER_UNMUTE),
+    (R::ChatCommandLogic_Unban_String as i32, chat::UNBAN),
+    (R::ChatCommandLogic_ServerUnban_String as i32, chat::SERVER_UNBAN),
+    (R::ChatCommandLogic_Alert_String as i32, chat::ALERT),
+    (-1, chat::START_SHUTDOWN),
+    (-1, chat::ABORT_SHUTDOWN),
+    (R::ChatCommandLogic_Warn_String as i32, chat::WARN),
+];
+
+/// InitCommands' `i`th call: the names' resource row (-1: none), the command in `*command`; -2 past the end.
+///
+/// # Safety
+/// `command` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_chatparser_init_command(i: usize, command: *mut i32) -> i32 {
+    match INIT_COMMANDS.get(i) {
+        Some(&(row, c)) => {
+            // SAFETY: writable (the contract)
+            unsafe { *command = c };
+            row
+        }
+        None => -2,
+    }
+}
+
+/// A command's help line's resource row (`ChatHelpString`: the warning's for any other command).
+#[no_mangle]
+pub extern "C" fn ee_won_chat_help_row(command: i32) -> i32 {
+    (match command {
+        chat::HELP => R::ChatCommandLogic_HelpHelp_String,
+        chat::WHISPER => R::ChatCommandLogic_WhisperHelp_String,
+        chat::REPLY => R::ChatCommandLogic_ReplyHelp_String,
+        chat::EMOTE => R::ChatCommandLogic_EmoteHelp_String,
+        chat::IGNORE => R::ChatCommandLogic_IgnoreHelp_String,
+        chat::CLEAR => R::ChatCommandLogic_ClearHelp_String,
+        chat::SHOW_TEAM => R::ChatCommandLogic_ShowTeamHelp_String,
+        chat::BLOCK => R::ChatCommandLogic_BlockHelp_String,
+        chat::AWAY => R::ChatCommandLogic_AwayHelp_String,
+        chat::INVITE => R::ChatCommandLogic_InviteHelp_String,
+        chat::UNINVITE => R::ChatCommandLogic_UninviteHelp_String,
+        chat::MUTE => R::ChatCommandLogic_MuteHelp_String,
+        chat::UNMUTE => R::ChatCommandLogic_UnmuteHelp_String,
+        chat::BAN => R::ChatCommandLogic_BanHelp_String,
+        chat::UNBAN => R::ChatCommandLogic_UnbanHelp_String,
+        chat::MODERATOR => R::ChatCommandLogic_ModeratorHelp_String,
+        chat::SERVER_MUTE => R::ChatCommandLogic_ServerMuteHelp_String,
+        chat::SERVER_UNMUTE => R::ChatCommandLogic_ServerUnmuteHelp_String,
+        chat::SERVER_BAN => R::ChatCommandLogic_ServerBanHelp_String,
+        chat::SERVER_UNBAN => R::ChatCommandLogic_ServerUnbanHelp_String,
+        chat::ALERT => R::ChatCommandLogic_AlertHelp_String,
+        _ => R::ChatCommandLogic_WarnHelp_String,
+    }) as i32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -399,5 +478,23 @@ mod tests {
         p.set_number(EeWonChatParserNumber::AllowColonEmote, 1);
         assert_eq!(p.handle_input(&w(":wave"), &[], true), (true, None));
         assert_eq!((p.number(EeWonChatParserNumber::Command), p.text(EeWonChatParserText::Text)), (3, &w("wave")[..]));
+    }
+
+    /// The tables as ChatCommandParser.cpp had them: every command but none and broadcast named once, in its order.
+    #[test]
+    fn init_and_help_tables() {
+        let mut c = 0;
+        assert_eq!(unsafe { ee_won_chatparser_init_command(0, &mut c) }, R::ChatCommandLogic_Whisper_String as i32);
+        assert_eq!(c, chat::WHISPER);
+        assert_eq!(unsafe { ee_won_chatparser_init_command(21, &mut c) }, -1);
+        assert_eq!(c, chat::START_SHUTDOWN);
+        assert_eq!(unsafe { ee_won_chatparser_init_command(23, &mut c) }, R::ChatCommandLogic_Warn_String as i32);
+        assert_eq!(unsafe { ee_won_chatparser_init_command(24, &mut c) }, -2);
+        let mut seen: Vec<i32> = INIT_COMMANDS.iter().map(|&(_, c)| c).collect();
+        seen.sort();
+        assert_eq!(seen, (2..=25).collect::<Vec<_>>());
+        assert_eq!(ee_won_chat_help_row(chat::REPLY), R::ChatCommandLogic_ReplyHelp_String as i32);
+        assert_eq!(ee_won_chat_help_row(chat::WARN), R::ChatCommandLogic_WarnHelp_String as i32);
+        assert_eq!(ee_won_chat_help_row(chat::START_SHUTDOWN), R::ChatCommandLogic_WarnHelp_String as i32);
     }
 }

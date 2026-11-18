@@ -39,7 +39,6 @@ pub mod guiwrap;
 pub mod imgdec;
 pub mod imgfilter;
 pub mod inputobj;
-pub mod jpeg;
 pub mod labelobj;
 pub mod layoutobj;
 pub mod listobj;

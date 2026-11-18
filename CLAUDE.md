@@ -114,7 +114,7 @@ python -I tools/open_data.py db-regen                              # data/db con
 python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but db, ai
 python -I tools/fetch_data.py [--without textures-4x]            # the media releases into data/ (+ build/data-root)
 python -I tools/open_data.py check build/open_data/tree        # also: no binary form in the tree
-python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...] [--movies DIR]   # exe + data + movies
+python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...]   # exe + data
 ```
 
 The db converter is `tools/eedata/eedata.py`. Run `-h` for the full list.

@@ -23,3 +23,4 @@ ee_won_net = { path = "../ee_won_net" }
 
 [dev-dependencies]
 ee_ui = { path = "../ee_ui", features = ["no_cpp"] }
+ee_sim = { path = "../ee_sim", features = ["test_layout"] }

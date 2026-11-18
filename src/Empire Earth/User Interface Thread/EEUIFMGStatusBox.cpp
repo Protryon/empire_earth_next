@@ -35,7 +35,6 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
-extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;
 
 // one loaded icon (0x14 bytes) (provisional name)
@@ -70,71 +69,6 @@ EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm) : mForm(inForm)
     this->mC90 = NULL;
     for (long j = 0; j < 14; j++)
         this->mAttributes[j] = -1;
-}
-
-// The selected unit's values the status box shows, for ee_screens hud.rs (`inFill`: whether the owner is friendly
-// to the local player, read only when the class carries or garrisons)
-static void EEStatusBoxView(EEUnit* inUnit, const EEUIFMGStatusBox* inBox, bool inFill, EeScreensHudUnit& outView)
-{
-    memset(&outView, 0, sizeof(outView));
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    EEUnitClass* theStatsClass = theStats->mUnitClass;
-    outView.category = theClass->mCategory;
-    outView.unit_type = inUnit->mUnitClass->mUnitType;
-    outView.class_hit_points = theClass->mHitPoints;
-    outView.hit_points = inUnit->GetHitPoints();
-    outView.max_hit_points = theStats->mMaxHitPoints;
-    outView.stats_class_hit_points = theStatsClass->mHitPoints;
-    outView.class_attack = theClass->mAttack;
-    outView.stats_attack = theStats->mAttack;
-    outView.stats_class_attack = theStatsClass->mAttack;
-    outView.class_range = theClass->GetRange();
-    outView.stats_range = theStats->mRange;
-    outView.stats_class_range = theStatsClass->GetRange();
-    outView.class_speed = theClass->GetMaxVelocity();
-    outView.stats_speed = theStats->mMaxVelocity;
-    outView.stats_class_speed = theStatsClass->GetMaxVelocity();
-    outView.class_area_effect = theClass->mAreaEffect;
-    outView.stats_area_effect = theStats->mAreaEffect;
-    outView.stats_class_area_effect = theStatsClass->GetAreaEffect();
-    outView.class_repair = theClass->mRepairRate;
-    outView.stats_repair = theStats->mRepairRate;
-    outView.stats_class_repair = theStatsClass->mRepairRate;
-    outView.upgrades_range = theClass->mUpgradesRange == true;
-    outView.upgrades_area_effect = theClass->mUpgradesAreaEffect;
-    outView.upgrades_repair = theClass->mUpgradesRepair;
-    outView.upgrades_armor[0] = theClass->mUpgradesShockArmor;
-    outView.upgrades_armor[1] = theClass->mUpgradesPierceArmor;
-    outView.upgrades_armor[2] = theClass->mUpgradesArrowArmor;
-    outView.upgrades_armor[3] = theClass->mUpgradesGunArmor;
-    outView.upgrades_armor[4] = theClass->mUpgradesMissileArmor;
-    outView.upgrades_armor[5] = theClass->mUpgradesLaserArmor;
-    outView.class_transport = theClass->mTransportCapacity;
-    outView.class_flight_time = theClass->mFlightTime;
-    outView.class_garrison = theClass->mGarrisonCapacity;
-    if (inFill && (theClass->mTransportCapacity > 0 || theClass->mGarrisonCapacity > 0))
-        outView.friendly = gWorld.GetCurrentPlayer() == inUnit->mPlayer ||
-                           inUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID] == 0;
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    if (theUnit != NULL) {
-        outView.complex = true;
-        outView.complex_class_transport = theUnit->GetUnitClass()->mTransportCapacity;
-        outView.complex_class_garrison = theUnit->GetUnitClass()->mGarrisonCapacity;
-        outView.cargo_room = theUnit->mCargoRoom;
-        outView.flight_time = theUnit->mFlightTime;
-        outView.stats_flight_time = theStats->mFlightTime;
-        outView.stats_class_flight_time = theStatsClass->mFlightTime;
-        outView.power = theUnit->mPower;
-        outView.stats_power = theStats->mPower;
-        outView.stats_class_power = theStatsClass->mPower;
-        outView.garrison_count = theUnit->mGarrisonCount;
-    }
-    outView.two_bars = inBox->mCA8 != NULL && inBox->mCAC != NULL;
-    outView.resource_type = inUnit->mResourceType;
-    outView.resource_amount = inUnit->mResourceAmount;
-    outView.carry_amount = theStats->mCarryAmount;
-    outView.using_carbon = gUsingCarbon;
 }
 
 // Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
@@ -421,11 +355,15 @@ extern "C" int64_t ee_screenscpp_status_box(void* inCall, uint32_t inOp, int64_t
     return EEUIFMGStatusBox::HostOp(inCall, inOp, inA, inB, inC);
 }
 
-extern "C" void ee_screenscpp_status_box_view(void* inCall, bool inFill, EeScreensHudUnit* outView)
+// The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
+// EEStatusBoxView), and whether the box has its third and fourth bars
+extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
 {
     EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
-    EEStatusBoxView(theCall.mUnit, theCall.mBox, inFill, *outView);
+    *outTwoBars = theCall.mBox->mCA8 != NULL && theCall.mBox->mCAC != NULL;
+    return (int64_t)theCall.mUnit;
 }
+
 
 // (FillArmorAttributes 0x66ae16, UpdateArmorTexts 0x66c91d and GetAttributeText 0x66cb84 are Rust's: status_box.rs
 // fill_armor_attributes, update_armor_texts; hud.rs attribute_text)

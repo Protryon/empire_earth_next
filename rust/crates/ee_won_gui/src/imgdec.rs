@@ -1,6 +1,6 @@
 //! WONGUI's image decoders in Rust (R6 WON round 41): ImageDecoder.cpp's multi-decoder (the decoders by file
 //! extension, the set it owns, the current extension), PNGDecoder.cpp's attributes and decode (the pixels from
-//! ee_openformats' PNG reader, as round 18 made them) and JPGDecoder.cpp's (jpeg.rs, libjpeg 6b's decode in
+//! ee_openformats' PNG reader, as round 18 made them) and JPGDecoder.cpp's (ee_base's jpeg.rs, libjpeg 6b's decode in
 //! Rust), each reading through the C++ FileReader's Rust core.
 //!
 //! The C++ keeps the decoder classes (the lobby's root window holds a MultiImageDecoder; JPGDecoder::Add and
@@ -8,7 +8,7 @@
 //! (the pixels are handed over by `ee_won_img_take`), and the exceptions: a FileReader status comes back for the
 //! C++ to throw as FileReaderException, where the original's reads threw.
 
-use crate::jpeg::{self, Stop};
+use ee_base::jpeg::{self, Stop};
 use ee_won_net::file::EeWonFileReader;
 use ee_won_net::strcase::compare_no_case;
 
@@ -45,8 +45,22 @@ fn available(r: &mut EeWonFileReader) -> Result<u64, Stop> {
     Ok(len.wrapping_sub(r.pos()) as u64)
 }
 
-fn read_max(r: &mut impl jpeg::Input, out: &mut [u8]) -> Result<usize, Stop> {
-    let (n, s) = r.read_max(out);
+/// JPGDecoder's source: the decoder reads through the FileReader (a status is one the C++ throws).
+struct FileInput<'a>(&'a mut EeWonFileReader);
+
+impl jpeg::Input for FileInput<'_> {
+    fn read_max(&mut self, out: &mut [u8]) -> (usize, i32) {
+        // SAFETY: `out` holds out.len() bytes
+        let (n, s) = unsafe { EeWonFileReader::read_max(self.0, out.as_mut_ptr(), out.len() as i32) };
+        (n.max(0) as usize, s)
+    }
+    fn skip(&mut self, n: u32) -> i32 {
+        EeWonFileReader::skip(self.0, n as _)
+    }
+}
+
+fn read_max(r: &mut EeWonFileReader, out: &mut [u8]) -> Result<usize, Stop> {
+    let (n, s) = jpeg::Input::read_max(&mut FileInput(r), out);
     if s != 0 {
         return Err(Stop::Throw(s));
     }
@@ -108,7 +122,7 @@ pub fn png_decode(r: &mut EeWonFileReader) -> Result<(i32, i32, bool, Vec<u32>),
 pub fn attributes(kind: EeWonImgKind, r: &mut EeWonFileReader) -> Result<(i32, i32), Stop> {
     match kind {
         EeWonImgKind::Png => png_attributes(r),
-        EeWonImgKind::Jpg => jpeg::attributes(r).map(|(w, h)| (w as i32, h as i32)),
+        EeWonImgKind::Jpg => jpeg::attributes(&mut FileInput(r)).map(|(w, h)| (w as i32, h as i32)),
     }
 }
 
@@ -116,7 +130,7 @@ pub fn attributes(kind: EeWonImgKind, r: &mut EeWonFileReader) -> Result<(i32, i
 pub fn decode(kind: EeWonImgKind, r: &mut EeWonFileReader) -> Result<(i32, i32, bool, Vec<u32>), Stop> {
     match kind {
         EeWonImgKind::Png => png_decode(r),
-        EeWonImgKind::Jpg => jpeg::decode_argb(r).map(|(w, h, px)| (w as i32, h as i32, false, px)),
+        EeWonImgKind::Jpg => jpeg::decode_argb(&mut FileInput(r)).map(|(w, h, px)| (w as i32, h as i32, false, px)),
     }
 }
 
@@ -280,3 +294,7 @@ pub unsafe extern "C" fn ee_won_img_dec(
         EeWonImgDecCall::Owned => d.owned.get(a).copied().unwrap_or(0),
     }
 }
+
+#[cfg(test)]
+#[path = "imgdec_tests.rs"]
+mod tests;

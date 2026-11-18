@@ -841,7 +841,9 @@ Pre-work, whichever way D8 goes:
 ### R7: the end
 
 - `main` in Rust;
-- the last vendored C (zlib/libpng/libjpeg -> `flate2`/`png`/`jpeg-decoder`, miniaudio -> cpal and dmusic -> rustysynth done 2026-11-17, pl_mpeg)
+- the last vendored C (zlib/libpng/libjpeg -> `flate2`/`png`/`jpeg-decoder`, miniaudio -> cpal and dmusic -> rustysynth
+  done 2026-11-17; libjpeg and pl_mpeg are gone since 2026-11-17: ee_base's jpeg.rs and the `jpeg-encoder` crate, no
+  movie player)
   replaced or kept behind `-sys` crates (WON's PNG and JPEG decoders use the same codecs, so they go first or
   together);
 - the clang toolchain becomes optional, then gone;

@@ -120,20 +120,7 @@ pub const EE_SCREENS_UI_OP_CHAT_TYPE: u32 = 49;
 pub const EE_SCREENS_UI_OP_CHAT_LOG: u32 = 50;
 /// `delete` the chat log entry a.
 pub const EE_SCREENS_UI_OP_DELETE_CHAT: u32 = 51;
-/// `gGraphics->mIsMoviePlaying`.
-pub const EE_SCREENS_UI_OP_MOVIE_PLAYING: u32 = 52;
-/// `gGraphics->PlayMovie(*a, b) == kErrorOK`.
-pub const EE_SCREENS_UI_OP_PLAY_MOVIE: u32 = 53;
-/// `gMouse->mPointer = a`.
-pub const EE_SCREENS_UI_OP_SET_POINTER: u32 = 54;
-/// `gGraphics->PostStopMovie()`.
-pub const EE_SCREENS_UI_OP_STOP_MOVIE: u32 = 55;
-/// `gUserInterface->PostPlayMovie(*a, b)`.
-pub const EE_SCREENS_UI_OP_REPOST_MOVIE: u32 = 56;
-/// The reference counter a's `Dereference()`.
-pub const EE_SCREENS_UI_OP_DEREFERENCE: u32 = 57;
-/// `delete` the file spec a.
-pub const EE_SCREENS_UI_OP_DELETE_SPEC: u32 = 58;
+// (52..58: the play-movie (0x41c) and movie-done (0x41d) messages' ops, gone with the movies)
 /// The main game form's `ShowInformation` of the dialog message a.
 pub const EE_SCREENS_UI_OP_SHOW_INFORMATION: u32 = 59;
 /// The dialog message a's text into the chat log (a new entry of type 1, `AddEntry`, deleted).
@@ -392,27 +379,6 @@ pub fn handle_message(host: &mut impl UiHost, message: u32, p1: i64, p2: i64) {
                 h.a(EE_SCREENS_UI_OP_DELETE_CHAT, p1);
             }
         }
-        0x41c => {
-            if h.o(EE_SCREENS_UI_OP_MOVIE_PLAYING) == 0 {
-                if h.ab(EE_SCREENS_UI_OP_PLAY_MOVIE, p1, p2) != 0 {
-                    h.a(EE_SCREENS_UI_OP_SET_POINTER, 6);
-                }
-                while h.o(EE_SCREENS_UI_OP_MOVIE_PLAYING) == 0 {
-                    h.o(EE_SCREENS_UI_OP_SLEEP);
-                }
-            } else {
-                h.o(EE_SCREENS_UI_OP_STOP_MOVIE);
-                while h.o(EE_SCREENS_UI_OP_MOVIE_PLAYING) != 0 {}
-                h.o(EE_SCREENS_UI_OP_SLEEP);
-                h.ab(EE_SCREENS_UI_OP_REPOST_MOVIE, p1, p2);
-            }
-            if p2 != 0 {
-                h.a(EE_SCREENS_UI_OP_DEREFERENCE, p2);
-            }
-            if p1 != 0 {
-                h.a(EE_SCREENS_UI_OP_DELETE_SPEC, p1);
-            }
-        }
         0x422 => {
             if h.has_main() {
                 h.lock(SCREENS_UI_LOCK_UI);
@@ -474,14 +440,6 @@ pub fn handle_message(host: &mut impl UiHost, message: u32, p1: i64, p2: i64) {
         }
         0x420 => {
             h.0.op(EE_SCREENS_UI_OP_CIV_BUILDER, p1, p2, 0);
-        }
-        0x41d => {
-            h.o(EE_SCREENS_UI_OP_REDRAW);
-            h.a(EE_SCREENS_UI_OP_SET_POINTER, 0);
-            if p1 != 0 {
-                h.a(EE_SCREENS_UI_OP_POST_EVENT, p1);
-                h.a(EE_SCREENS_UI_OP_DEREFERENCE, p1);
-            }
         }
         0x432 => {
             if h.o(EE_SCREENS_UI_OP_MAIN_FORM) != 0 {

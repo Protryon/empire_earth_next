@@ -88,27 +88,14 @@ long EEUICUnitIconBar::MouseRButtonDown()
 }
 
 // The bar's own ops (icon_bar.rs EE_SCREENS_IB_OP_*, EEUIRustControl's host the toolkit's): units and buttons as
-// handles, ioF the op's floats
+// handles, ioF the op's floats; the selection's and the units' reads are hud_views.rs'
 int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     EEUICUnitIconBar* inBar = this;
-    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
     EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
     EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
     NEMessage* theMessage = NULL;
     switch (inOp - EE_SCREENS_HC_CLASS) {
-    case EE_SCREENS_IB_OP_GROUP_COUNT:
-        return theGroup ? (int64_t)theGroup->GetNumUnits() : -1;
-    case EE_SCREENS_IB_OP_GROUP_UNIT:
-        return (int64_t)theGroup->GetUnit((unsigned long)inA);
-    case EE_SCREENS_IB_OP_CARGO_COUNT:
-        return (int64_t)theUnit->GetNumCargoUnits();
-    case EE_SCREENS_IB_OP_CARGO:
-        return (int64_t)theUnit->GetCargo((unsigned long)inB);
-    case EE_SCREENS_IB_OP_UNIT_ID:
-        return theUnit->GetUnitID();
-    case EE_SCREENS_IB_OP_UNIT_TYPE:
-        return theUnit->GetUnitClass()->mUnitType;
     case EE_SCREENS_IB_OP_CLASS: {
         EEUnitClass* theClass = theUnit->GetUnitClass();
         return (theClass->IsTransport() ? EE_SCREENS_IB_CLASS_TRANSPORT : 0) |
@@ -119,32 +106,12 @@ int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         return theUnit->GetQueuedGoal((unsigned long)inB) != NULL;
     case EE_SCREENS_IB_OP_NO_GOALS:
         return theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL;
-    case EE_SCREENS_IB_OP_TILE:
-        return (int64_t)(uint32_t)theUnit->GetTileX() | (int64_t)theUnit->GetTileY() << 32;
-    case EE_SCREENS_IB_OP_HIT_POINTS:
-        return theUnit->GetHitPoints();
-    case EE_SCREENS_IB_OP_MAX_HIT_POINTS:
-        return theUnit->mStats->mMaxHitPoints;
-    case EE_SCREENS_IB_OP_BUTTON:
-        return (int64_t)theUnit->mStats->mButton;
     case EE_SCREENS_IB_OP_SELECT_THESE: {
         const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
         std::vector<long> theList(theIDs, theIDs + inB);
         theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
         break;
     }
-    case EE_SCREENS_IB_OP_SELECT:
-        theMessage = new EEMRecord(kMessageSelectUnit, {(long)inA});
-        break;
-    case EE_SCREENS_IB_OP_UNLOAD:
-        theMessage = new EEMRecord(kMessageImmediateCargoUnload, {(long)inA, (long)inB, false});
-        break;
-    case EE_SCREENS_IB_OP_SCRAMBLE:
-        theMessage = new EEMRecord(kMessageScrambleAircraft, {(long)(int32_t)inB, (long)(inB >> 32), (long)inA});
-        break;
-    case EE_SCREENS_IB_OP_REMOVE:
-        theMessage = new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {(long)inA});
-        break;
     case EE_SCREENS_IB_OP_SOUND:
         gSoundManager->Play(inA == 0 ? sIconBarDownSound : sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
         break;

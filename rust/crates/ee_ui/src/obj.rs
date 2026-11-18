@@ -717,8 +717,7 @@ pub enum EeUiOp {
     TblSet = 489,
     /// The manager's virtual `CreateUserDefinedControl(the table)` -> the control or NULL.
     TblUserDefined = 490,
-    /// The table's `CreateMovie(the manager, f)` -> the control.
-    TblMovie = 491,
+    // 491: the table's CreateMovie (gone with the movies)
     /// Form `a`'s manager's `CreateControlEvent(a, b)` -> the event or NULL.
     TblEventNew = 492,
     /// Event `a`'s `Dereference()`.
@@ -879,17 +878,7 @@ pub enum EeUiOp {
     /// The file's `Close()`.
     BgtFileClose = 600,
 
-    // ---- the movie control (R6 ui round 21, mediaobj.rs): on movie a
-    /// Movie `a`'s `Reference()`.
-    MovieReference = 610,
-    /// Movie `a`'s `Stop()`.
-    MovieStop = 611,
-    /// Movie `a`'s `Dereference()`.
-    MovieRelease = 612,
-    /// *Pure*: movie `a`'s `GetIsPlaying()`.
-    MoviePlaying = 613,
-    /// Movie `a`'s `RenderFrame()` -> its result.
-    MovieRender = 614,
+    // 610..614: the movie control's calls on its movie (R6 ui round 21; gone with the movies)
 
     // ---- the events (R6 ui round 21, eventobj.rs): on the event's record, or on the events file (with the
     // background table's file ops, 597..600)
@@ -1112,7 +1101,6 @@ impl EeUiOp {
                 | BgtTextureDepth
                 | BgtEntryAlpha
                 | BgtEntryFormId
-                | MoviePlaying
                 | GrpIsButton
                 | GrpShown
                 | GrpOnCurrentForm

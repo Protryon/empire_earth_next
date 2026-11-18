@@ -28,7 +28,7 @@ import ee   # noqa: E402
 
 ROOT = ee.ROOT
 NM = ee.LLVM / "llvm-nm.exe" if (ee.LLVM / "llvm-nm.exe").exists() else ee.LLVM / "llvm-nm"
-MODULES = ["exe", "lle", "default", "tcp", "mixer", "dx7hrtnl"]   # exeimg and jpeg are third-party code
+MODULES = ["exe", "lle", "default", "tcp", "mixer", "dx7hrtnl"]
 MAP_ROW = re.compile(r"^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)")
 GENERATED = ("??_G", "??_E", "??__E", "??__F", "??_R", "??_7", "??_8", "?dtor$", "?catch$", "?fin$", "$")
 
@@ -278,7 +278,7 @@ def first_party_lines():
     """The first-party C++ line count: src (but ThirdParty and WONAPI) and include (but the generated rust headers,
     the third-party copies and include/ee/wonapi)."""
     n = 0
-    skip_inc = {"rust", "pl_mpeg", "jpeglib"}
+    skip_inc = {"rust"}
     for base, skip in ((ROOT / "src", {"ThirdParty"}), (ROOT / "include", skip_inc)):
         for p in base.rglob("*"):
             if p.suffix not in (".cpp", ".c", ".h", ".inl", ".hpp") or not p.is_file():

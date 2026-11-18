@@ -1,5 +1,7 @@
 //! The controls table object's tests: its golden (the round's base UIControlsTable over random call sequences,
-//! `build/ui18`), the first sequences replayed, and changed answers that must fail.
+//! `build/ui18`), the first sequences replayed, and changed answers that must fail. Its two movie controls (type 0x1d:
+//! op 491, the bitmap colour and opacity sets on the control, its address returned) became no control when movies
+//! left the game (2026-11-17): the ops taken out, the result 0.
 
 use super::*;
 use crate::obj::replay::{host_current, Replay};

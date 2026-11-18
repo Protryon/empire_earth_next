@@ -288,6 +288,10 @@ crate can replace.
    scenario editor lists `.mpg` files. `binkw32.dll`, the Bink header and the mixer's DirectSound bridge are gone:
    the exe imports only Windows system DLLs. Fixed on the way: a movie created with a rectangle ignored it (the
    original reset the flag), and the playback thread started before its events existed.
+   **Removed on 2026-11-17** (owner's decision): no movies ship (the open tree's `Data/Movies` is empty), so pl_mpeg,
+   `DX7Movie` (ee_render's dx7 movie modules), `GEMovie`, `UIMovie`, the mixer's movie source, the graphics thread's
+   and the UI thread's movie messages and `tools/convert_movies.py` are deleted. Every place that played a movie (the
+   intro, the scenario intro's movie button) goes on as the original did when the file was missing.
 5. Then: DirectDraw/D3D7 and DirectInput (plan below), Winsock.
 
 Each step ends with the harness gates and a PORT_LEARNINGS.md entry.

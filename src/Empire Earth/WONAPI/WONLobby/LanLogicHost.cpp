@@ -406,8 +406,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::LanPasswordDialog: l->mPasswordDialog->Reset(); return LobbyDoDialog(l->mPasswordDialog.get());
     case EeWonLobbyOp::LanPasswordTake: Take(inB, LanUtf16(l->mPasswordDialog->GetPassword())); return 0;
     case EeWonLobbyOp::LanPingGame: LobbyPingGame(g, false); return 0;
-    case EeWonLobbyOp::LanNoCurrentUser: LobbySetCurrentUser(NULL); return 0;
-    case EeWonLobbyOp::LanDirectCount: return (intptr_t)LobbyGetDirectConnectCount();
     case EeWonLobbyOp::LanDirectAddressAt:
         ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), LobbyGetDirectConnectAddressAt((size_t)inC).GetValue());
         return 0;

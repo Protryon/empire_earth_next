@@ -658,6 +658,13 @@ struct EeWorldLayout {
   uint64_t tech_host;
   /// `EeCpFields` in `EEComputerPlayer`
   uint64_t cp_fields;
+  /// `EEGroup::mUnits` (a `std::vector<EEComplexUnit*>`; `EESelectedGroup`'s `GetUnit`/`GetNumUnits` are
+  /// `EEGroup`'s)
+  uint64_t group_units;
+  /// `EEUnitClassUpgrade::mUnitClass` (an `EEUnitClass*`: the stats' own class) and `mButton` (an
+  /// `EEButtonObject*`)
+  uint64_t stats_unit_class;
+  uint64_t stats_button;
 };
 
 /// The check's counts and digest.

@@ -1,8 +1,6 @@
-"""Prepare a directory to play the build: the exe, the unified open game data (tools/open_data.py) and the movies
-converted for the build's player.
+"""Prepare a directory to play the build: the exe and the unified open game data (tools/open_data.py).
 
-  python -I tools/make_play_dir.py OUT [--exe PATH | --posix-exe PATH] [--data TREE|BUNDLE.zip|DIR ...] [--movies DIR ...]
-                                       [--force]
+  python -I tools/make_play_dir.py OUT [--exe PATH | --posix-exe PATH] [--data TREE|BUNDLE.zip|DIR ...] [--force]
 
 OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
@@ -13,10 +11,7 @@ OUT gets:
     --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
     folder tools/fetch_data.py unzipped them into. No
     data.ssa and nothing of the original Empire Earth's install is needed or referenced;
-  - Data/Movies: every Bink movie (.bik) found in the --movies directories (an extracted retail disc, an installation
-    that has Data\\Movies) converted to MPEG-1 (.mpg, tools/convert_movies.py, needs ffmpeg). Encodes are cached in
-    build/play_cache/movies (keyed by file name and size), so a second play directory costs a copy. The build plays
-    X.mpg when the game asks for X.bik.
+  - no movies: the game has no movie player (2026-11-17) and skips every movie (the intro, a scenario's).
 Run OUT\\EE-AOC.exe. The game keeps its settings in OUT\\config.yaml (it creates the file). OUT must be outside the
 repository or under its build/ folder (git-ignored). --force replaces an existing OUT made by this script.
 
@@ -36,7 +31,6 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TREE = ROOT / "build" / "open_data" / "tree"
-CACHE = ROOT / "build" / "play_cache" / "movies"
 
 
 def check_out(out):
@@ -82,45 +76,6 @@ def drop_binary_forms(out):
     return len(gone)
 
 
-def movies(out, sources):
-    """Convert every .bik in the sources into OUT/Data/Movies/<name>.mpg (through the cache)."""
-    found = {}
-    for d in sources:
-        for p in pathlib.Path(d).rglob("*"):
-            if p.suffix.lower() == ".bik" and p.is_file():
-                found.setdefault(p.name.lower(), p)
-    if not found:
-        print("movies: none (pass --movies with an extracted retail disc or an installation that has "
-              "Data\\Movies): the game skips its movies")
-        return 0
-    CACHE.mkdir(parents=True, exist_ok=True)
-    todo = []
-    for key, src in sorted(found.items()):
-        cached = CACHE / f"{src.stem}.{src.stat().st_size}.mpg"
-        if not cached.exists():
-            todo.append((src, cached))
-    if todo:
-        work = CACHE / "work"
-        if work.exists():
-            shutil.rmtree(work)
-        work.mkdir()
-        for src, _ in todo:
-            shutil.copy2(src, work / src.name)
-        print(f"movies: encoding {len(todo)} of {len(found)} (the rest are cached)", flush=True)
-        r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "convert_movies.py"), str(work)])
-        if r.returncode:
-            sys.exit("movies: tools/convert_movies.py failed")
-        for src, cached in todo:
-            (work / f"{src.stem}.mpg").replace(cached)
-        shutil.rmtree(work)
-    dest = out / "Data" / "Movies"
-    dest.mkdir(parents=True, exist_ok=True)
-    for key, src in sorted(found.items()):
-        shutil.copy2(CACHE / f"{src.stem}.{src.stat().st_size}.mpg", dest / f"{src.stem}.mpg")
-    print(f"movies: {len(found)} converted into {dest}")
-    return len(found)
-
-
 def posix_files(exe, out):
     """The POSIX game and a launcher (the game's directory is its data root; its settings go to config.yaml there)"""
     shutil.copy2(exe, out / "ee-aoc")
@@ -139,8 +94,6 @@ def main():
                     help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree, "
                          "else build/data-root when tools/fetch_data.py filled data/); "
                          "repeatable, each over the ones before")
-    ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
-                    help="a directory with .bik movies (repeatable)")
     ap.add_argument("--force", action="store_true", help="replace an existing OUT")
     ap.add_argument("--posix-exe", type=pathlib.Path,
                     help="the Linux/macOS game (tools/xbuild.py game) in place of EE-AOC.exe")
@@ -182,9 +135,8 @@ def main():
         posix_files(exe, out)
     else:
         shutil.copy2(exe, out / "EE-AOC.exe")
-    count = movies(out, a.movies)
     (out / "play.json").write_bytes((json.dumps(dict(
-        exe=str(exe), data=[str(d) for d in datas], movies=count,
+        exe=str(exe), data=[str(d) for d in datas],
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
     print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 

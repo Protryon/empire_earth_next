@@ -2,7 +2,7 @@
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
 has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: pl_mpeg for the movies, Lua for the computer players)
+code built from source (LIB_UNITS: Lua for the computer players)
 is compiled with the modules that link it.
 """
 import pathlib
@@ -11,11 +11,11 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
-# Every module is linked into the one exe (no DLLs): the game, the engine with libjpeg (the lobby's JPEG too), and the
+# Every module is linked into the one exe (no DLLs): the game, the engine, and the
 # plug-ins (TCP protocol, mixer, Default random maps, the DX7 T&L renderer).
-MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "won", "exe"]
+MODULES = ["tcp", "mixer", "default", "lle", "dx7hrtnl", "won", "exe"]
 TARGETS = ["exe"]
-TARGET_MODULES = {"exe": ["exe", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
+TARGET_MODULES = {"exe": ["exe", "won", "lle", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, and new game units that have no address in the original (the db text loader, ...)
@@ -41,20 +41,12 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
-                       "Empire Earth/AI Thread/EECPReflexes.cpp",
                        # TEST ONLY: the placement and resource centres' capture (PLCE; ee/EECPPlaceCapture.h)
                        "Empire Earth/AI Thread/EECPPlaceCapture.cpp",
-                       "Empire Earth/AI Thread/EECPNextView.cpp",
-                       # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
-                       "Empire Earth/AI Thread/EECPNextArmy.cpp",
                        # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
                        "Empire Earth/AI Thread/EECPEngine.cpp",
                        # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
-                       # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
-                       "Empire Earth/AI Thread/EECPLua.cpp",
-                       # the next engine's strategy: the personality's Lua script behind the verbs (§3.2)
-                       "Empire Earth/AI Thread/EECPNextLua.cpp",
                        # the tile A* searches' view of the world (docs/RUST_PLAN.md R5b.1; ee/EEAIAStarView.h)
                        "Empire Earth/AI Thread/EEAIAStarView.cpp",
                        # TEST ONLY: the capture of the tile A* searches (EE_SIM_CAPTURE; ee/EEAIAStarCapture.h)
@@ -186,11 +178,10 @@ WON_NOT_LINKED = set()
 
 
 EXTRA_UNITS["won"] = _won_extra_units()
-LIB_UNITS = {"pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
-             # Lua 5.4 for the computer player's strategy scripts (docs/AI_LUA_PLAN.md §3)
+LIB_UNITS = {# Lua 5.4 for the computer player's strategy scripts (docs/AI_LUA_PLAN.md §3)
              "lua": "ThirdParty/lua/ee_lua.c"}
 # (the sound device, the decoders and the music are Rust: rust/crates/ee_audio, on cpal, symphonia and rustysynth)
-LIB_MEMBERS = {"dx7hrtnl": ["pl_mpeg"], "exe": ["lua"]}
+LIB_MEMBERS = {"exe": ["lua"]}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 

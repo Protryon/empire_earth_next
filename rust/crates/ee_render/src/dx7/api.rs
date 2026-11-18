@@ -24,9 +24,6 @@ pub(crate) const K_ALREADY: i32 = 2;
 pub(crate) const K_FAILED: i32 = 9;
 pub(crate) const K_NOT_SUPPORTED: i32 = 0xd;
 
-// kSurface*
-pub(crate) const SURFACE_SYSTEM_MEMORY: c_ulong = 4;
-
 // GXIID
 pub(crate) const IID_DIRECT3D7: u32 = 1;
 pub(crate) const IID_HAL_DEVICE: u32 = 2;

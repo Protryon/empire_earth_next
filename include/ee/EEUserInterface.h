@@ -83,8 +83,7 @@ public:
     void PostLoadGameFailed(bool inFlag);   // 0x279233 (inFlag as the second message parameter)
     void PostHostMigrated();
     void PostLoadSavedGame(const FSFileSpec& inSpec);  // 0x2792ed (new FSFileSpec(inSpec))
-    void PostPlayMovie(const FSFileSpec& inSpec, UReferenceCounter* inObject);   // 0x27934c (references inObject)
-    void PostMovieDone(UReferenceCounter* inObject);   // 0x279396 (references inObject)
+    // (0x27934c PostPlayMovie and 0x279396 PostMovieDone, messages 0x41c and 0x41d: gone with the movies)
     void PostHideMessages();
     void PostErrorClosed(UIForm* inForm, EEUIFErrorCallbackData* inData);  // 0x279438 (EEUIFError::Close)
     long PostDisplayCivBuilder();           // 0x27947d (returns Post's result: 0x65ff56 returns it)

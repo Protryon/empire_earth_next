@@ -10,6 +10,11 @@
 //! the campaign's and the options' fields carried from case to case (`golden_scenario_screens.txt`). The replay runs
 //! [`dispatch`] over a host that prints what the driver's fakes print for each host call. The driver relinked over
 //! `EEScreens.cpp` and this crate prints the same file, and the same on seeds 2-4 at ten times the size.
+//!
+//! Movies left the game on 2026-11-17 (no movie plays; the intro never opens one). Every `opensave '<name>.bik'
+//! 'Movies\' -> 1` line (a movie looked for and not found) was taken out of the golden, and the 202 cases that found
+//! a movie, or whose open-file count still held one found before, were re-recorded from this port: what is left of
+//! the original's recording is what it does for a scenario without a movie.
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -231,13 +236,7 @@ impl ScenarioHost for Driver {
             EE_SCREENS_GAME_SOUND_STOP => self.line(&format!("soundstop {a} 0")),
             EE_SCREENS_GAME_SOUND_LATENCY => self.line(&format!("latency {a}")),
             EE_SCREENS_GAME_SI_OPEN_MAP => return self.open_media(0) as u32,
-            EE_SCREENS_GAME_SI_OPEN_MOVIE => return self.open_media(1) as u32,
             EE_SCREENS_GAME_SI_OPEN_SOUND => return self.open_media(2) as u32,
-            EE_SCREENS_GAME_SI_PLAY_MOVIE => {
-                let movie = if self.open_media(1) { self.files[1].clone().unwrap() } else { Vec::new() };
-                self.bytes(&[b"playmovie '", &movie, format!("' {}", event_name(a)).as_bytes()]);
-                assert!(dispatch(self, &STATE, a));
-            }
             EE_SCREENS_GAME_SI_PLAY_SOUND => {
                 let sound = if self.open_media(2) { self.files[2].clone().unwrap() } else { Vec::new() };
                 let file = cat(&[b"Sounds\\", &sound]);

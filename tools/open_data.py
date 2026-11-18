@@ -30,7 +30,7 @@ The merge follows the original game's data path (EEShowSinglePlayerScreen; tools
 Data folder, the original game's Data folder, this install's data.ssa, the original game's data.ssa. The first place
 that has a name (compared without case) wins. The original game's folder therefore beats this install's archive; the
 build reports every such clash. Left out: Data\\dxm (a community mod), the data.ssa archives themselves, Bink movies
-(.bik; tools/make_play_dir.py --movies converts them) and the original game's own campaigns (its Data\\Campaigns:
+(.bik: the game has no movie player) and the original game's own campaigns (its Data\\Campaigns:
 Art of Conquest never lists them; merged in, they would appear as custom campaigns). The campaign archives (Data\\Campaigns\\*.ssa) stay archives: a
 campaign is a package by design (its name, description, author, password and required civilization are archive tags,
 the campaign editor writes .ssa files, built-in campaigns are checked against the archive's checksum and the progress
@@ -206,7 +206,7 @@ SKIP_DIRS = {'dxm'}                       # Data\dxm: a community mod
 # the original game's own campaigns: Art of Conquest never lists them (its campaign screen lists its own
 # Data\Campaigns; the original's were reachable only by name), merged in they would appear as custom campaigns
 BASE_ONLY_SKIP = {'campaigns'}
-SKIP_EXT = {'.bik'}                      # movies: converted by make_play_dir.py --movies
+SKIP_EXT = {'.bik'}                      # movies: the game has no movie player (2026-11-17)
 BINARY_EXT = ('.cem', '.sst', '.tga', '.dls')   # the binary forms the game no longer reads (RUST_PLAN D9), anywhere
 
 
@@ -259,7 +259,7 @@ How to use it
   tools/make_play_dir.py in the source repository prepares such a folder from this bundle.
 
 Not included
-  Movies (no .bik on the source installation; make_play_dir.py --movies converts them from a retail disc).
+  Movies (the game has no movie player: it skips the intro's and the scenarios' movies).
 
 Contents
   Data/            the game data (Data/db: tables as text; Data/Models: glTF; Data/Textures: PNG)
