@@ -47,11 +47,6 @@
 #include "ee/EEAIRandom.h"
 
 // Creates an empty rectangle area with no scenario area, tile counts or continent
-EEAIRectangleArea::EEAIRectangleArea()
-    : mScenarioAreaID(0), mNumLandTiles(0), mNumWaterTiles(0), mNumSpaceTiles(0), mContinentID(0), mID(0)
-{
-}
-
 // NEAR: the original calls the map's _Tree(pred, alloc) ctor out of line (ours expands it and refuses _Tree_val one
 // level deeper) and keeps the inner loop counter in edi; EE_LOST_DEBUG 1..16 does not close it
 // Recounts the rectangle's land, water and space tiles and stores and returns the continent with the most
@@ -62,11 +57,11 @@ unsigned short EEAIRectangleArea::UpdateContinents()
     std::map<unsigned short, long>::iterator theCount;
     EEMap* theMap = gWorld.mMap;
     unsigned short theResult;
-    this->mNumLandTiles = 0;
-    this->mNumWaterTiles = 0;
-    this->mNumSpaceTiles = 0;
-    for (long theX = this->mRect.mLeft; theX <= this->mRect.mRight; theX++) {
-        for (long theY = this->mRect.mTop; theY <= this->mRect.mBottom; theY++) {
+    this->num_land_tiles = 0;
+    this->num_water_tiles = 0;
+    this->num_space_tiles = 0;
+    for (long theX = this->rect.left; theX <= this->rect.right; theX++) {
+        for (long theY = this->rect.top; theY <= this->rect.bottom; theY++) {
             if (!theMap->GetTile(theX, theY))
                 continue;
             unsigned short theID = gContinentManager.GetContinentID(theX, theY);
@@ -74,11 +69,11 @@ unsigned short EEAIRectangleArea::UpdateContinents()
             if (!theContinent)
                 continue;
             if (theContinent->GetCategory() == kContinentCategoryLand)
-                this->mNumLandTiles++;
+                this->num_land_tiles++;
             else if (theContinent->GetCategory() == kContinentCategoryWater)
-                this->mNumWaterTiles++;
+                this->num_water_tiles++;
             else if (theContinent->GetCategory() == kContinentCategorySpace)
-                this->mNumSpaceTiles++;
+                this->num_space_tiles++;
             theCount = theCounts.find((long)theContinent->GetID());
             if (theCount != theCounts.end())
                 theCount->second++;
@@ -94,7 +89,7 @@ unsigned short EEAIRectangleArea::UpdateContinents()
             theResult = theCount->first;
         }
     }
-    this->mContinentID = theResult;
+    this->continent_id = theResult;
     return theResult;
 }
 

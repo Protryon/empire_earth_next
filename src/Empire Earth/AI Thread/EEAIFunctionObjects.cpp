@@ -260,14 +260,6 @@ bool EECPUGatherHeroesCount::CountUnits(EEUnitClass* inClass, std::deque<EECompl
 
 // Adds a sector id to the path area's sorted id list unless it is already there (twin of the EEAIContinent
 // id-list helpers)
-void EEAIPathArea::AddSectorID(unsigned short inSectorID)
-{
-    if (!std::binary_search(this->mSectorIDs.begin(), this->mSectorIDs.end(), inSectorID)) {
-        this->mSectorIDs.push_back(inSectorID);
-        std::sort(this->mSectorIDs.begin(), this->mSectorIDs.end());
-    }
-}
-
 // Returns the tech node's unit class at the index, or its default unit class past the end
 // (out of line in this range)
 long EETechTreeNode::GetUnitClass(unsigned long inIndex)

@@ -506,6 +506,12 @@ struct EeAStarContinentLists;
 /// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
 struct EeAStarGraphStorage;
 
+/// A list of ids (opaque to C++).
+struct EeAStarIdList;
+
+/// A list of area serials (opaque to C++).
+struct EeAStarSerialList;
+
 /// One storage (opaque to C++).
 struct EeAStarStorage;
 
@@ -555,6 +561,52 @@ struct EeAStarAreaRecord {
   unsigned long serial;
   /// `mAreaType`: the area kind (`kAIArea*`)
   long area_type;
+};
+
+/// `EEAIPathArea`'s members.
+struct EeAStarPathAreaRecord {
+  /// `mSectorIDs`: the path sectors it is in (sorted, unique)
+  EeAStarIdList *sector_ids;
+  /// `mContinentID`
+  uint16_t continent_id;
+  /// `mID`: the index in the manager's path areas
+  uint16_t id;
+  /// `mKind`: the tile kind (`EEAIGetTileKind`)
+  long kind;
+  /// `mUnitID`: the wall or gate of an obstacle area, -1
+  long unit_id;
+  /// the region ids by kind
+  uint16_t surface_region;
+  uint16_t water_body;
+  uint16_t land_mass;
+  uint16_t space_region;
+};
+
+/// `EEAIChokePoint`'s members.
+struct EeAStarChokeRecord {
+  /// `mAreaSerials`: the areas it joins
+  EeAStarSerialList *area_serials;
+  /// `mIndex`: its index in the manager's choke points
+  long index;
+  /// `mContinentID`
+  uint16_t continent_id;
+};
+
+/// `EEAIForest`'s members.
+struct EeAStarForestRecord {
+  /// `mResourceKind`: the highest kind (1..3) with trees
+  long resource_kind;
+  /// the trees by kind 1, 2, 3
+  long num_resources1;
+  long num_resources2;
+  long num_resources3;
+  /// `mL78` (only zeroed)
+  long l78;
+  /// `mNextRenewal`: the game time of the next regrowth
+  unsigned long next_renewal;
+  /// `mContinentID`, `mID`
+  uint16_t continent_id;
+  uint16_t id;
 };
 
 /// `EEAIContinentManager`'s members (`ee_astar_cm_init` / `ee_astar_cm_free` in its ctor and dtor). The grid
@@ -1261,6 +1313,28 @@ struct EePathSavedGraph {
   bool sub_group;
 };
 
+/// `EEAIHill`'s members.
+struct EeAStarHillRecord {
+  uint16_t continent_id;
+  uint16_t id;
+};
+
+/// `EEAIRectangleArea`'s members.
+struct EeAStarRectRecord {
+  /// `mRect`: the scenario area's tiles
+  EeHullRect rect;
+  /// `mScenarioAreaID`
+  long scenario_area_id;
+  /// the tiles by continent category (`UpdateContinents`)
+  long num_land_tiles;
+  long num_water_tiles;
+  long num_space_tiles;
+  /// `mContinentID`: the continent with most of its tiles
+  uint16_t continent_id;
+  /// `mID`
+  uint16_t id;
+};
+
 extern "C" {
 
 /// The record of a new area: everything zero, no hull.
@@ -1322,6 +1396,67 @@ void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles,
 /// # Safety
 /// `r` a live record, `tiles` a live set.
 bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
+
+/// # Safety
+/// `r` points to a record (uninitialised is fine).
+void ee_astar_path_area_init(EeAStarPathAreaRecord *r);
+
+/// # Safety
+/// `r` from `ee_astar_path_area_init`.
+void ee_astar_path_area_free(EeAStarPathAreaRecord *r);
+
+/// A path area's sector ids; `count` gets their number. Valid until they change.
+///
+/// # Safety
+/// `r` from `ee_astar_path_area_init`; `count` writable.
+const uint16_t *ee_astar_path_area_sector_ids(const EeAStarPathAreaRecord *r, size_t *count);
+
+/// `AddSectorID`.
+///
+/// # Safety
+/// `r` from `ee_astar_path_area_init`.
+void ee_astar_path_area_add_sector_id(EeAStarPathAreaRecord *r, uint16_t id);
+
+/// The sector ids as they were saved.
+///
+/// # Safety
+/// `r` from `ee_astar_path_area_init`; `ids` holds `count` ids (NULL for 0).
+void ee_astar_path_area_set_sector_ids(EeAStarPathAreaRecord *r, const uint16_t *ids, size_t count);
+
+/// # Safety
+/// `r` points to a record (uninitialised is fine).
+void ee_astar_choke_init(EeAStarChokeRecord *r);
+
+/// # Safety
+/// `r` from `ee_astar_choke_init`.
+void ee_astar_choke_free(EeAStarChokeRecord *r);
+
+/// A choke point's area serials; `count` gets their number. Valid until they change.
+///
+/// # Safety
+/// `r` from `ee_astar_choke_init`; `count` writable.
+const unsigned long *ee_astar_choke_area_serials(const EeAStarChokeRecord *r, size_t *count);
+
+/// `AddAreaSerials` (appended); `clear` empties the list first (a saved game's).
+///
+/// # Safety
+/// `r` from `ee_astar_choke_init`; `serials` holds `count` serials (NULL for 0).
+void ee_astar_choke_add_area_serials(EeAStarChokeRecord *r,
+                                     const unsigned long *serials,
+                                     size_t count,
+                                     bool clear);
+
+/// `UpdateResourceKind`.
+///
+/// # Safety
+/// `r` a forest's record.
+void ee_astar_forest_update_resource_kind(EeAStarForestRecord *r);
+
+/// `RemoveTile`'s count upkeep for a tile of tree kind `kind`.
+///
+/// # Safety
+/// `r` a forest's record.
+void ee_astar_forest_remove_resource(EeAStarForestRecord *r, long kind);
 
 /// # Safety
 /// `r` points to a record (uninitialised is fine).

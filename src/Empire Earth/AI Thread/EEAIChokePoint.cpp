@@ -67,16 +67,6 @@ static void EEAIChokeCreate(EEMap* inMap);
 static void EEAIChokeDone();
 
 // Destroys the choke point (members only)
-EEAIChokePoint::~EEAIChokePoint()
-{
-}
-
-// Appends the serials of the areas the choke point joins
-void EEAIChokePoint::AddAreaSerials(const std::vector<unsigned long>& inSerials)
-{
-    this->mAreaSerials.insert(this->mAreaSerials.end(), inSerials.begin(), inSerials.end());
-}
-
 // Builds the continent manager's choke points: classifies every tile by area serial, smooths inPasses - 1
 // times to flag the tiles between areas, flood-fills the flagged runs into choke points and frees the grids
 // (Rust: ee_astar choke.rs build_grids does the classification (EEAIChokeGetTileSerial 0x1ccd0 over what

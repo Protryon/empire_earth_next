@@ -2387,12 +2387,6 @@ EEAIContinent* EEAIContinentManager::GetContinentByID(unsigned short inID) const
     return this->GetContinents()[inID];
 }
 
-// Creates an empty forest: no resources, no continent, id 0
-// out of line (EEAIAStarPathAreaGoal::CreateAreas 0x17510 news it)
-EEAIForest::EEAIForest()
-    : mResourceKind(0), mNumResources1(0), mNumResources2(0), mNumResources3(0), mL78(0), mNextRenewal(0), mContinentID(0), mID(0)
-{
-}
 
 // 0x563bc8 (.bss) = gUnitClassTable[0x147] (0x563bc8 - 0x5636ac = 0x51c): the unit class RegrowTrees creates
 // (its vtable +0x30 is EEUnitClass::CreateUnit(x, y, player, bool, creator)); no store to it is known in the exe
@@ -2426,20 +2420,6 @@ bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long i
     return theResult;
 }
 
-// Sets the forest's resource kind to the highest kind (1, 2, 3) with a positive count; unchanged when none has any
-void EEAIForest::UpdateResourceKind()
-{
-    std::map<long, long> theCounts;
-    std::map<long, long>::iterator theIt;
-    theCounts.insert(std::map<long, long>::value_type(1, this->mNumResources1));
-    theCounts.insert(std::map<long, long>::value_type(2, this->mNumResources2));
-    theCounts.insert(std::map<long, long>::value_type(3, this->mNumResources3));
-    for (theIt = theCounts.begin(); theIt != theCounts.end(); ++theIt) {
-        if (theIt->second > 0)
-            this->mResourceKind = theIt->first;
-    }
-}
-
 long EEAIHasResourceUnit(EETile* inTile);   // 0x29ced (EEAIAStarPathAreaGoal.cpp declares it the same way)
 
 // Removes inPoint from the forest and, if it was there, lowers the count of that tile's wood resource kind;
@@ -2449,20 +2429,7 @@ bool EEAIForest::RemoveTile(const U2DPoint<long>& inPoint)
     EETile* theTile = gWorld.mMap->GetTileAtLocation(inPoint);
     bool theResult = EEAIArea::RemoveTile(inPoint);
     if (theResult) {
-        long theResource = EEAIHasResourceUnit(theTile);
-        if (theResource != 0) {
-            switch (theResource) {
-            case 1:
-                this->mNumResources1--;
-                break;
-            case 2:
-                this->mNumResources2--;
-                break;
-            case 3:
-                this->mNumResources3--;
-                break;
-            }
-        }
+        ee_astar_forest_remove_resource(this, EEAIHasResourceUnit(theTile));
     }
     return theResult;
 }
