@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEScore.cpp
-// A music score on dmusic (see lle/SEScore.h): whole in Rust (rust/crates/ee_audio/src/sound objects.rs).
+// A music score on the music engine (see lle/SEScore.h): whole in Rust (rust/crates/ee_audio/src/sound objects.rs).
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"

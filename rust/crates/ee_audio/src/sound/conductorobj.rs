@@ -1,7 +1,7 @@
-//! `SEConductor` whole in Rust: music score playback on dmusic (a DirectMusic reimplementation,
-//! `src/ThirdParty/dmusic`). The conductor lives inside its mixer ([`crate::mixerobj::EeSoundMixer`]); an
+//! `SEConductor` whole in Rust: music score playback on the music engine (`crate::dmusic`: a DirectMusic
+//! performance on rustysynth, ported from dmusic, reached under dmusic's C names through `sys`). The conductor lives inside its mixer ([`crate::mixerobj::EeSoundMixer`]); an
 //! `SEConductor*` is an [`EeSoundConductor`] and the C++ class is data-less. The decisions are `conductor.rs`'s; this
-//! module holds dmusic's loader and performance, the scores ([`crate::objects::EeSoundScore`]), the scalar members,
+//! module holds the engine's loader and performance, the scores ([`crate::objects::EeSoundScore`]), the scalar members,
 //! the music folder and the lock (a Thread System section, taken where the C++ took it). The performance renders
 //! into the mixer's output: the mixer's device thread calls [`render`] (`SEMixer::SetMusicSource`), reading the
 //! performance without the lock, as the original did; it is an atomic here.
@@ -194,9 +194,10 @@ unsafe extern "C" fn render(conductor: *mut c_void, frames: *mut f32, count: c_u
     }
 }
 
-/// dmusic's loader: a score file (segment, style or DLS bank) from the music folder in a `malloc`'d buffer (dmusic
-/// frees it); NULL when it cannot be opened (`length` untouched then). A `gm.dls` the folder lacks is the general
-/// MIDI set built into the program (`SEGeneralMIDI.c`: EE.sf2; main 32b4344f4: the original took the system's).
+/// The music engine's loader: a score file (segment, style or instrument collection: a SoundFont, `X.sf2` for the
+/// original's `X.dls`) from the music folder in a `malloc`'d buffer (the engine frees it); NULL when it cannot be
+/// opened (`length` untouched then). A `gm.sf2` the folder lacks is the general MIDI set built into the program
+/// (`crate::dmusic::GENERAL_MIDI`, EE.sf2; main 32b4344f4: the original took the system's `gm.dls`).
 unsafe extern "C" fn resolve(conductor: *mut c_void, file: *const c_char, length: *mut usize) -> *mut c_void {
     let c = unsafe { &*(conductor as *const EeSoundConductor) };
     let folder = unsafe { &(*c.inner.get()).folder };
@@ -213,7 +214,7 @@ unsafe extern "C" fn resolve(conductor: *mut c_void, file: *const c_char, length
     unsafe {
         let stream = sys::PlatFOpen(path.as_ptr() as *const c_char, c"rb".as_ptr());
         if stream.is_null() {
-            if !file.eq_ignore_ascii_case(b"gm.dls") {
+            if !file.eq_ignore_ascii_case(b"gm.sf2") {
                 return null_mut();
             }
             let mut n = 0usize;

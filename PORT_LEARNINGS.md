@@ -29669,3 +29669,57 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
   out-of-synch checksum runs there).
 - **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
   references the sight drives are the same host calls as before (MMSN covers the counts).
+
+## The vendored audio libraries replaced by Rust crates: cpal, symphonia, rustysynth (branch rust-vendor-audio, 2026-11-17)
+
+What went: miniaudio (`include/miniaudio`, 92.6k lines), dmusic with TinySoundFont (`src/ThirdParty/dmusic`, 11.2k)
+and `SEGeneralMIDI.c`. What came: `ee_audio::dmusic` (the DirectMusic engine, ~2.4k lines with tests),
+`ee_audio::mixer::device` (cpal device, symphonia decoder), `tools/dls2sf2.py` (the banks, once, at data build time).
+
+- **The music: port the interpreter, replace only the synthesizer.** The songs are not MIDI files: they are
+  DirectMusic segments on styles whose patterns are chosen at run time by the groove level (the music manager's
+  intensity), so no offline conversion to MIDI could keep the behaviour. rustysynth replaces TinySoundFont only; the
+  rest of dmusic (segments, styles, bands, the message heap, the clock, the pattern choice, the composer, the
+  reverb) is a line-for-line port with every EE patch.
+- **Golden at the synthesizer's seam.** `tests/sound/dm_golden.c` builds dmusic's own sources with `Synth.c`
+  replaced by a logger: each call into the synthesizer (note, control, band, reset) at the frame it lands on. The
+  Rust performance with a logging `Sink` prints the same lines: 176k lines over the game's eight songs (local,
+  retail data) and the committed `golden_dmusic.txt` over synthetic songs (`tests/sound/dm_testsong.py`). That
+  fixes timing, groove levels, pattern choice, stops and transitions independently of how the synthesizer sounds.
+- **Build the reference driver as the game built it.** With mingw gcc the golden differed from the Rust in the
+  last bit of a few curve values; built with clang-cl /O1 and the UCRT (the game's toolchain, whose `powf`/`sinf`
+  Rust's msvc target also calls) they agree. dmusic's `M_PI` is its own 3.14159 where the C headers define none
+  (the game's build): the Rust uses 3.14159, not `f32::consts::PI`.
+- **Port a heap's equal-element order.** A binary heap returns equal messages in an order of its own; dmusic's heap
+  is ported step for step, including its compare against the slot past the end (which held the element being
+  sifted, so the result is the left child) instead of a `BinaryHeap`.
+- **Undefined behaviour in the reference.** `DmPerformance_handleSegmentMessage`'s default groove command left its
+  groove range uninitialised; in the synthetic songs' loop the stack garbage drew an extra random number. The
+  driver zeroes it (documented in its header); the game's songs never reach that path (their golden is the same
+  with and without the change). C union aliasing that is behaviour is kept: a composed transition's chord and
+  command carry the last chord's time (they shared `msg.time`), so usually both fall outside the one-measure
+  transition and the groove pattern plays.
+- **SoundFont numbering vs DLS numbering.** A converted DLS bank keeps TinySoundFont's numbering (MSB << 8 | LSB,
+  drum kits 128) and the converter writes "dls2sf2" in INFO/ISFT; the built-in `EE.sf2` numbers by the MSB and falls
+  back to the capital tone / standard kit, as dmusic's EE patch did. rustysynth's bank select takes any value on a
+  non-percussion channel, so the performance channels use MIDI channels 0-8 and 10-15 (15 per synthesizer, more
+  synthesizers per collection as needed) and the presets are checked before selecting (a missing one leaves the
+  channel's last, as TinySoundFont did; rustysynth would fall back to its default).
+- **rustysynth applies 0.4 of initialAttenuation** (the EMU convention; TinySoundFont and DLS apply all of it), so
+  the converter writes the DLS attenuation x 2.5. With that the renders' RMS match TinySoundFont's to 0.1 %
+  (Honor 0.1686 / 0.1684, Pawns 0.0710 / 0.0709, Enmity 0.1122 / 0.1122; 100 ms envelope correlation 0.97-0.99).
+  rustysynth's own reverb and chorus are off: the original's reverb runs on the mix as before.
+- **What sounds different**: the synthesis (rustysynth's envelopes, filter and interpolation; voices start on its
+  64-frame blocks, up to 1.3 ms late), the random numbers (an LCG of the C `rand` form instead of the CRT's shared
+  `rand()`; the sequences are random either way), and the MP3 effects' last bits (below).
+- **The decoder: keep the old library's sample conversions.** symphonia hands out the file's own integer samples;
+  converting them with dr_wav's formulas (8-bit `x * 0.00784313725490196078f - 1`, 16-bit `x / 32768`) gives all
+  879 WAVs bit for bit what miniaudio gave (digest of every file, frames, rate and channels). The ten MP3s: aligned,
+  at most 2.7e-5 apart (below a 16-bit step); the five 22 kHz ones gain the last 576 frames (one MPEG-2 granule
+  minimp3 dropped).
+- **The device.** cpal's stream is not `Send` everywhere: it lives on its own thread, which reports the rate and
+  waits for the stop. The stream takes the device's default format and channel count; the stereo mix is spread
+  over it (mono gets the mean). No device (or the simulation) falls back to a null device that pulls 10 ms at
+  48 kHz in real time, as miniaudio's null backend did. cpal's Windows backend links through raw-dylib: no new import
+  libraries; Linux needs `libasound2-dev` (alsa-sys's build script asks pkg-config; a cross `cargo check` from Windows
+  passes with `PKG_CONFIG_ALLOW_CROSS=1` and `PKG_CONFIG` naming a stub that prints `-lasound`), macOS the CoreAudio, AudioToolbox and AudioUnit frameworks (added to xbuild.py's links).
