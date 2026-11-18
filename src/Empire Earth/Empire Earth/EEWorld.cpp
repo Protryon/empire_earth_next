@@ -223,62 +223,48 @@ void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
     this->mGhostUnits.push_back(inGhost);
 }
 
+// The teams are Rust's (ee_sim app teams.rs): the stances it reads, and the C++ mirror (mTeams: the AI thread's, the
+// server's and the save's) rebuilt after every change (a team's victory condition keeps only its team's address)
+static bool EETeamsPresent(void*, uint32_t inPlayer)
+{
+    return inPlayer < 17 && gWorld.mPlayers[inPlayer] != NULL;
+}
+
+static bool EETeamsObserver(void*, uint32_t inPlayer)
+{
+    return gWorld.mPlayers[inPlayer]->mObserverMode;
+}
+
+static bool EETeamsEnemy(void*, uint32_t inPlayer, uint32_t inOther)
+{
+    return gWorld.mPlayers[inPlayer]->mEnemies[inOther] != 0;
+}
+
+static const EeAppTeamsWorld kTeamsWorld = {NULL, EETeamsPresent, EETeamsObserver, EETeamsEnemy};
+
+static void EEMirrorTeams(std::vector<EETeam>& outTeams)
+{
+    outTeams.resize(ee_app_teams_get(SIZE_MAX, NULL, 0));
+    for (size_t k = 0; k < outTeams.size(); k++) {
+        std::vector<uint32_t> thePlayers(ee_app_teams_get(k, NULL, 0));
+        ee_app_teams_get(k, thePlayers.data(), thePlayers.size());
+        outTeams[k].mPlayers.assign(thePlayers.begin(), thePlayers.end());
+    }
+}
+
 // Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
 void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
 {
-    EETeam theTeam(inPlayers);
-    for (unsigned long i = 0; i < this->mTeams.size(); i++) {
-        bool theDisjoint = true;
-        for (unsigned long j = 0; j < this->mTeams[i].mPlayers.size() && theDisjoint; j++) {
-            EEPlayer* thePlayer = this->mPlayers[this->mTeams[i].mPlayers[j]];
-            if (thePlayer == NULL)
-                continue;
-            for (unsigned long k = 0; k < theTeam.GetNumPlayers(); k++) {
-                if (this->mPlayers[theTeam.mPlayers[k]] != NULL) {
-                    unsigned long theID = thePlayer->GetPlayerID();
-                    if (this->mPlayers[theTeam.mPlayers[k]]->mEnemies[theID] != 0) {
-                        theDisjoint = false;
-                        break;
-                    }
-                }
-                if (thePlayer->mEnemies[theTeam.mPlayers[k]] != 0) {
-                    theDisjoint = false;
-                    break;
-                }
-            }
-        }
-        if (!theDisjoint)
-            continue;
-        theTeam.Merge(this->mTeams[i]);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    this->mTeams.push_back(theTeam);
+    std::vector<uint32_t> thePlayers(inPlayers.begin(), inPlayers.end());
+    ee_app_teams_add(thePlayers.data(), thePlayers.size(), &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
 }
 
 // Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
 void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
 {
-    EETeam theTeam(inPlayer1, inPlayer2);
-    EETeam theOther;
-    for (unsigned long i = 0; i < this->mTeams.size(); i++) {
-        theOther.mPlayers = this->mTeams[i].mPlayers;
-        EEPlayer* thePlayer1 = this->mPlayers[inPlayer1];
-        EEPlayer* thePlayer2 = this->mPlayers[inPlayer2];
-        unsigned long j;
-        for (j = 0; j < theOther.GetNumPlayers(); j++) {
-            EEPlayer* thePlayer = this->mPlayers[theOther.mPlayers[j]];
-            if (thePlayer1->mEnemies[thePlayer->GetPlayerID()] != 0 || thePlayer->mEnemies[inPlayer1] != 0
-                || thePlayer2->mEnemies[thePlayer->GetPlayerID()] != 0 || thePlayer->mEnemies[inPlayer2] != 0)
-                break;
-        }
-        if (!(j >= theOther.GetNumPlayers()))
-            continue;
-        theTeam.Merge(this->mTeams[i]);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    this->mTeams.push_back(theTeam);
+    ee_app_teams_ally((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
 }
 
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
@@ -315,6 +301,16 @@ static void EEDropUnbornDeactivations()
     sUnbornDeactivations.clear();
 }
 
+// the active lists' reference changes (ee_sim app active.rs), applied as each is made
+static void EEActiveRefs(uint32_t inID, int32_t inDelta)
+{
+    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);
+    for (; inDelta > 0; inDelta--)
+        theUnit->Reference();
+    for (; inDelta < 0; inDelta++)
+        theUnit->Dereference();
+}
+
 // port: the waiting deactivations whose units have an id now join the queue (one entry per unit, as the original's
 // pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
 void EEWorld::QueueBornDeactivations()
@@ -325,11 +321,8 @@ void EEWorld::QueueBornDeactivations()
     theWaiting.swap(sUnbornDeactivations);
     for (size_t i = 0; i < theWaiting.size(); i++) {
         EEComplexUnit* theUnit = theWaiting[i];
-        if (!UIsNone32(theUnit->mUnitID)
-            && std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), theUnit) == this->mDeactivateQueue.end())
-            this->mDeactivateQueue.push_back(theUnit);   // the reference DeactivateUnit took goes with it
-        else
-            theUnit->Dereference();
+        if (UIsNone32(theUnit->mUnitID) || !ee_app_active_deactivate((uint32_t)theUnit->mUnitID))
+            theUnit->Dereference();   // (queued: the reference DeactivateUnit took goes with it)
     }
 }
 
@@ -365,6 +358,7 @@ void EEWorld::Clear()
     delete this->mScenarioManager;
     this->mScenarioManager = NULL;
     this->mTeams.clear();
+    ee_app_teams_clear();
     USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
     for (unsigned long i = 1; i < this->mNumPlayers; i++) {
         if (this->mPlayers[i] == NULL || !(this->mPlayers[i]->mHackUnitClass < EEUnitClassCount()))
@@ -385,23 +379,7 @@ void EEWorld::Clear()
     gMiniMap = NULL;
     gPathManager.Reset();
     gLocalPlayerOut = false;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
-    for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
-        (*it)->Dereference();
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
-        (*it)->Dereference();
-    EEDropUnbornDeactivations();
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
-    for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
-        (*ct)->Dereference();
-    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
-    for (mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
-        mt->second->Dereference();
-    this->mActivateQueue.clear();
-    this->mDeactivateQueue.clear();
-    this->mUpdateUnits.clear();
-    EEUnitOrderClear();   // New (R5b.4): the Rust list of the stepped units follows (ee/EEUnitStore.h)
-    this->mActiveUnits.clear();
+    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
     EEPPatrolGroup::ResetIDs();
     gCollisionDetectionUnit = 2000;
     delete this->mCalamityHelper;
@@ -517,28 +495,9 @@ void EEComplexUnit::ClearCollisionState()
 // player at war with each other
 void EEWorld::RebuildTeams()
 {
-    EETeam theTeam;
     EEPlayer* theGaia = this->mPlayers[0];
-    std::vector<long> theUnused;
-    this->mTeams.clear();
-    if (this->mTeams.size() == 0) {
-        for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-            if (this->mPlayers[i]->mObserverMode)
-                continue;
-            theTeam.AddPlayer(i);
-            this->mTeams.push_back(theTeam);
-            theTeam.mPlayers.clear();
-        }
-    }
-    for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i]->mObserverMode)
-            continue;
-        for (unsigned long j = i + 1; j < this->mNumPlayers; j++) {
-            if (!this->mPlayers[j]->mObserverMode
-                && (this->mPlayers[j] == this->mPlayers[i] || this->mPlayers[i]->mEnemies[this->mPlayers[j]->GetPlayerID()] == 0))
-                this->AddAlliance(i, j);
-        }
-    }
+    ee_app_teams_rebuild((uint32_t)this->mNumPlayers, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     for (unsigned long k = 1; k < this->mNumPlayers; k++)
         theGaia->SetDiplomaticStance(this->mPlayers[k], 1, this->mMap);
     for (unsigned long m = 1; m < this->mNumPlayers; m++) {
@@ -861,8 +820,12 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gArtificialIntelligence->CollectComputerPlayers();
     gUserInterface->SetLoadProgress(kWorldLoadProgress22);
     if (inState->GetNumTeams() > 0) {
-        for (i = 0; i < inState->GetNumTeams(); i++)
-            this->mTeams.push_back(inState->mTeams[i]);
+        for (i = 0; i < inState->GetNumTeams(); i++) {
+            const std::vector<unsigned long>& theTeam = inState->mTeams[i].mPlayers;
+            std::vector<uint32_t> thePlayers(theTeam.begin(), theTeam.end());
+            ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), thePlayers.data(), thePlayers.size());
+        }
+        EEMirrorTeams(this->mTeams);
         for (i = this->mNumPlayers; i <= 16; i++) {
             if (this->mPlayers[i] == NULL)
                 this->RemovePlayerFromTeams(i);
@@ -1267,44 +1230,8 @@ void EEWorld::ClearContinents()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator theFound;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
-    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
     this->QueueBornDeactivations();
-    if (this->mActivateQueue.size() != 0) {
-        for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it) {
-            long theID = (*it)->GetUnitID();
-            mt = this->mActiveUnits.find(theID);
-            if (mt == this->mActiveUnits.end()) {
-                this->mUpdateUnits.push_back(*it);
-                EEUnitOrderPush(it->GetSavedID());   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
-                (*it)->Reference();
-                (*it)->Reference();
-                long theKey = (*it)->GetUnitID();
-                this->mActiveUnits[theKey] = *it;
-            }
-            (*it)->Dereference();
-        }
-        this->mActivateQueue.clear();
-    }
-    if (this->mDeactivateQueue.size() == 0)
-        return;
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it) {
-        long theID = (*it)->GetUnitID();
-        mt = this->mActiveUnits.find(theID);
-        if (mt != this->mActiveUnits.end()) {
-            theFound = std::find(this->mUpdateUnits.begin(), this->mUpdateUnits.end(), *it);
-            if (theFound != this->mUpdateUnits.end()) {
-                (*it)->Dereference();
-                (*it)->Dereference();
-                EEUnitOrderErase(theFound->GetSavedID());   // New (R5b.4): the Rust list follows
-                this->mUpdateUnits.erase(theFound);
-                this->mActiveUnits.erase(mt);
-            }
-        }
-        (*it)->Dereference();
-    }
-    this->mDeactivateQueue.clear();
+    ee_app_active_update(EEActiveRefs);
 }
 
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
@@ -1312,11 +1239,8 @@ void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
     if (inUnit == NULL || UIsNone32(inUnit->mUnitID) || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mActivateQueue.begin(), this->mActivateQueue.end(), inUnit);
-    if (it == this->mActivateQueue.end()) {
+    if (ee_app_active_activate((uint32_t)inUnit->mUnitID))
         inUnit->Reference();
-        this->mActivateQueue.push_back(inUnit);
-    }
 }
 
 // Queues a unit for deactivation unless it is a path point or is already queued
@@ -1334,45 +1258,22 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
         return;
     }
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), inUnit);
-    if (it == this->mDeactivateQueue.end()) {
-        this->mDeactivateQueue.push_back(inUnit);
+    if (ee_app_active_deactivate((uint32_t)inUnit->mUnitID))
         inUnit->Reference();
-    }
 }
 
 // Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
 // dropping the pending activation queues
 void EEWorld::RebuildActiveUnits()
 {
-    EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst;
-
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it; for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
-        (*it)->Dereference();
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
-        (*it)->Dereference();
-    EEDropUnbornDeactivations();
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
-    for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
-        (*ct)->Dereference();
-
-    for (std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
-        mt->second->Dereference();
-    this->mActivateQueue.clear();
-    this->mDeactivateQueue.clear();
-    this->mUpdateUnits.clear();
-    EEUnitOrderClear();   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
-    this->mActiveUnits.clear();
-    for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
+    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);
+    for (EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
         if (theComplex == NULL || theComplex->mPreviousPart != NULL || theComplex->mTileX == -10000
             || theComplex->mUnitClass->mUnitType == kUnitTypePathPoint
             || (theUnit->mUnitClass->mIsInactive && !(theComplex->mHitPoints <= 0)))
             continue;
-        this->mUpdateUnits.push_back(theComplex);
-        EEUnitOrderPush(theComplex->mUnitID);   // New (R5b.4): the Rust list follows
-        long theKey = theComplex->mUnitID;
-        this->mActiveUnits[theKey] = theComplex;
+        ee_app_active_start((uint32_t)theComplex->mUnitID);
         theComplex->Reference();
         theComplex->Reference();
     }
@@ -1416,19 +1317,8 @@ void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
 // Removes a player from every team, re-adding each team's remaining players as a new team
 void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
 {
-    std::vector<std::vector<unsigned long> > theTeams;
-    std::vector<unsigned long> thePlayers;
-    unsigned long i;
-    for (i = 0; i < this->mTeams.size(); i++) {
-        if (!this->mTeams[i].ContainsPlayer(inPlayer))
-            continue;
-        this->mTeams[i].RemovePlayer(inPlayer, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    for (i = 0; i < theTeams.size(); i++)
-        this->AddTeam(theTeams[i]);
+    ee_app_teams_remove((uint32_t)inPlayer, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     this->TeamsChanged();
 }
 
@@ -1441,21 +1331,8 @@ void EEWorld::RemoveShareBonus()
 // Splits every team holding both players into new teams without each of them
 void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
 {
-    std::vector<std::vector<unsigned long> > theTeams;
-    std::vector<unsigned long> thePlayers;
-    unsigned long i;
-    for (i = 0; i < this->mTeams.size(); i++) {
-        if (!this->mTeams[i].Contains(inPlayer1, inPlayer2))
-            continue;
-        this->mTeams[i].RemovePlayer(inPlayer1, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams[i].RemovePlayer(inPlayer2, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    for (i = 0; i < theTeams.size(); i++)
-        this->AddTeam(theTeams[i]);
+    ee_app_teams_break((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     this->TeamsChanged();
 }
 
@@ -1786,21 +1663,6 @@ void EEWorld::GameSpeedChanged()
 // Creates an empty team with a wonder victory condition
 EETeam::EETeam()
 {
-    this->mVictoryCondition = new EEVCWonder(this);
-}
-
-// Creates a team of two players with a wonder victory condition
-EETeam::EETeam(long inPlayer1, long inPlayer2)
-{
-    this->AddPlayer(inPlayer1);
-    this->AddPlayer(inPlayer2);
-    this->mVictoryCondition = new EEVCWonder(this);
-}
-
-// Creates a team of the given players with a wonder victory condition
-EETeam::EETeam(const std::vector<unsigned long>& inPlayers)
-{
-    this->mPlayers = inPlayers;
     this->mVictoryCondition = new EEVCWonder(this);
 }
 
