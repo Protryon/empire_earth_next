@@ -39,7 +39,6 @@ class EEAIAStarContinentGoal;
 class EEAIAStarPathAreaStorage;
 class EEAIAStarPathSectorStorage;
 class EEAIAStarPathSectorGoal;
-class EEAIFOContinentScreenContinentsShareAdjacentID;
 class EEComplexUnit;
 class URandom;
 template <class S, class G, class M> class EEAIAStarMachine;
@@ -176,8 +175,6 @@ public:
     // 0x22635 (const-shaped: lea; mov): the tiles of continent inID (provisional name)
     void GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const;
     EEAIHill* GetHillAt(const EETileLocation& inTile);
-    // 0x22eb4: the last of mRectangleAreas whose 0xc6fd(inTile) holds (argument type inferred)
-    EEAIRectangleArea* GetRectangleAreaAt(const EETileLocation& inTile);
     // 0x273c9 (ret 8): id = 0x273f1(inX, inY); id ? mPathSubSectors[id] : 0 (the 0x60c7 shape over +0x5c)
     EEAIPathSubSector* GetPathSubSectorAt(long inX, long inY);
     bool Rebuild();                         // 0x245a5 (EEPathManager::UpdateRegions: false = not done yet; provisional name)
@@ -191,7 +188,6 @@ public:
     void GetChokePoints(std::vector<EEAIChokePoint*>& outChokePoints, unsigned short inID, bool inClear);
     // 0x21e80: like GetConnectedIDs for another id list (EEUCTransport::ContinentsConnect; provisional name)
     void GetAdjacentIDs(std::vector<unsigned short>& outIDs, unsigned short inID);
-    EETileLocation GetNearestLandTile(const EETileLocation& inTile);  // 0x22320 (a tile by value; EECPASGLand::GetTargetContinent) (provisional name)
     // inline (COMDAT 0x88ce9 after its first user EECPPersonnel::DraftUnit) (provisional name)
     unsigned long GetNumContinents() { return this->mContinents.size(); }
     // (EEAIContinentManager.cpp; provisional names)
@@ -219,14 +215,10 @@ public:
     unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind);
     bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const;
     bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind);
-    void GetAdjacentContinents(unsigned short inFirst, unsigned short inSecond, std::vector<unsigned short>& outIDs,
-        EEAIFOContinentScreenContinentsShareAdjacentID* inScreen);
     void GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint);
     bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond);
     EEAIArea* GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent);
-    unsigned short GetUnitContinentID(EEUnit* inUnit);
     bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID);
-    bool AllNeighborsOfKind(unsigned short inID, unsigned char inKind);
     void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4; Rust: ee_astar tile_values.rs)
     void RepairPathArea(const U2DPoint<long>& inTile);  // 0x2372b (ret 4): the path areas after inTile changed kind (provisional name)
     void RemoveSubSectors(EEAIPathSector* inSector);
