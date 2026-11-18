@@ -70,6 +70,12 @@ impl Form {
             }
             return r;
         }
+        if let Some(m) =
+            crate::screens::hud_sends::screens(op, a, b, c, d, crate::screens::hud_views::current_player_index)
+        {
+            let r = crate::screens::hud_sends::send(&m);
+            return if crate::screens::hud_sends::screens_answers(op) { r as u32 } else { 0 };
+        }
         let r = unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) };
         if let Some(g) = begun.filter(|_| crate::screens::sgvw::HOST_WORLD_OPS.contains(&op)) {
             crate::screens::sgvw::record(g, &format!("C {op} {a} {b} {c} {d} -> {r}"));

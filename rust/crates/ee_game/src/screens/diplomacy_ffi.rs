@@ -10,8 +10,6 @@ use crate::screens::menus_ffi::Form;
 mod sys {
 
     extern "C" {
-        /// `EEMPayTribute` to player `to` with food, wood, gold, stone, iron, to the local input.
-        pub fn ee_screenscpp_diplomacy_tribute(to: u32, amounts: *const u32);
         /// `gWorld.GetPlayer(index)->IsHuman()` (a virtual).
         pub fn ee_screenscpp_player_is_human(index: u32) -> bool;
     }
@@ -46,6 +44,6 @@ impl DiplomacyHost for Form {
         self.get(EE_SCREENS_TEXT_STRING, id)
     }
     fn pay_tribute(&mut self, to: u32, amounts: [u32; 5]) {
-        unsafe { sys::ee_screenscpp_diplomacy_tribute(to, amounts.as_ptr()) }
+        crate::screens::hud_sends::send(&crate::screens::hud_sends::tribute(to, &amounts));
     }
 }

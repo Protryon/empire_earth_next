@@ -18,6 +18,12 @@ impl IconBarHost for Bar {
                 return r;
             }
         }
+        if op >= class {
+            if let Some(m) = crate::screens::hud_sends::icon_bar(op - class, a, b) {
+                crate::screens::hud_sends::send(&m);
+                return 0;
+            }
+        }
         crate::screens::hud_ctl::HudHost::op(&mut crate::screens::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }

@@ -94,6 +94,18 @@ fn unit_type(u: &UnitView<'_>) -> u64 {
     u.class().map_or(0, |c| c.unit_type())
 }
 
+/// `gWorld.mCurrentPlayer` (0 without a world).
+pub(crate) fn current_player_index() -> i64 {
+    let t = token();
+    world(&t).map_or(0, |w| w.current_player_index())
+}
+
+/// The unit `handle`'s `GetUnitID()` (0 for none).
+pub(crate) fn unit_id(handle: i64) -> i64 {
+    let t = token();
+    unit(&t, handle).map_or(0, |u| u.id() as i64)
+}
+
 /// The main panel group's host (`ee_screenscpp_main_group`): its world reads.
 pub(crate) fn main_group(op: u32, a: i64, b: i64, c: i64) -> Option<i64> {
     let t = token();

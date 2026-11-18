@@ -36,6 +36,12 @@ pub extern "C" fn ee_screens_status_button_op(call: *mut c_void, op: u32, a: i64
     if let Some(r) = crate::screens::hud_views::status_button(op, a) {
         return r;
     }
+    if op == EE_SCREENS_SB_OP_SEND {
+        if let Some(m) = crate::screens::hud_sends::status_button(a, b, c) {
+            crate::screens::hud_sends::send(&m);
+            return 0;
+        }
+    }
     // SAFETY: call is the form's live call record
     form_op(&mut |op, a, b, io| unsafe { sys::ee_screenscpp_main_form(call, op, a, b, io) }, op, a, b, c)
 }

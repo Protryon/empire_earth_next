@@ -444,14 +444,6 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     case EE_SCREENS_GAME_HK_RESET_SAVED:
         thePlayer->mSavedGroups.Reset(0x14, true);
         break;
-    case EE_SCREENS_GAME_HK_GROUP:
-        if (inA == 0)
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupSelect, {(unsigned char)inB, inC != 0}), kSlotNone);
-        else if (inA == 1)
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupAddSelection, {(unsigned char)inB}), kSlotNone);
-        else
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupCreate, {(unsigned char)inB}), kSlotNone);
-        break;
     case EE_SCREENS_OP_HK_GROUP_BUTTON:
         static_cast<EEUIBSavedGroup*>(inForm->GetControl(inA))->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
         break;
@@ -466,12 +458,6 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         gISKeyboard->GetEntity(kKeyShift, theKey);
         return (uint32_t)theKey->GetValue();
     }
-    case EE_SCREENS_GAME_HK_SELECT_UNIT:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectUnit, {inA}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_HK_ADD_UNIT:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {inA}), kSlotNone);
-        break;
     case EE_SCREENS_GAME_HK_CENTER: {
         // the camera on the unit, the mini map refreshed, the camera no longer following
         const GETransformation& theTransformation = sHotKeyUnits[inA]->mPhysicalModel.GetLocation();
@@ -562,9 +548,6 @@ extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t i
 static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
     switch (inOp) {
-    case EE_SCREENS_GAME_CH_CHAT_TYPE:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectPlayerChatType, {(long)inA}), kSlotNone);
-        break;
     case EE_SCREENS_OP_CH_SEND_KEYS: {
         // Enter: one event for the hot key and the edit box's Enter
         UIHotKey theHotKey;
@@ -653,9 +636,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         else
             gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {gPhysics->mGameTime}), kSlotNone);
         break;
-    case EE_SCREENS_GAME_MG_RALLY:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageIncrementRallyTimer, {(unsigned char)inA}), kSlotNone);
-        break;
     case EE_SCREENS_GAME_MG_TO_EDITOR: {
         // back from a test game to the scenario editor: the ghosts cleared, the player to the editor slot, the
         // simulation stopped, the editor switch and the pause posted
@@ -693,11 +673,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     case EE_SCREENS_GAME_MG_SET_CLOCK:
         inForm->mClockMode = (long)inA;
         break;
-    case EE_SCREENS_GAME_MG_KILL:
-        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageKillUnit, {inA != 0}), kSlotNone);
-    case EE_SCREENS_GAME_MG_ATTACK:
-        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackPlayers, {gWorld.mCurrentPlayer, inA != 0}),
-                                                                kSlotNone);
     case EE_SCREENS_GAME_MG_SET_HIDDEN_MODE:
         gHiddenUnitsMode = (long)inA;
         break;
@@ -721,9 +696,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     case EE_SCREENS_GAME_MG_ZOOM_STYLE:
         gGamePreferences.mSettings.mZoomStyle = gWorld.mCameraControl.mMode;
         break;
-    case EE_SCREENS_GAME_MG_SEND_SPEED:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageGameSpeed, {Float(inA)}), kSlotNone);
-        break;
     case EE_SCREENS_GAME_MG_SELECTED_COMMAND: {
         EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->mMainGameForm->mGroups[0]);
         EEUnit* theUnit = theGroup->GetSelectedUnit();
@@ -731,9 +703,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
             return 0;
         return theUnit->mUnitClass->mCommands[inA];
     }
-    case EE_SCREENS_GAME_MG_BEHAVIOR:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetUnitBehavior, {(long)inA}), kSlotNone);
-        break;
     case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
         gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
         gUIManager->mMainGameForm->GetBackgroundByID(0x97)->SetVisibility(false);
@@ -832,10 +801,11 @@ extern "C" bool ee_screenscpp_player_is_human(uint32_t inIndex)
     return gWorld.GetPlayer(inIndex)->IsHuman();
 }
 
-// a tribute to player inTo (food, wood, gold, stone, iron) to the local input
-extern "C" void ee_screenscpp_diplomacy_tribute(uint32_t inTo, const uint32_t* inAmounts)
+// a record message (Actions/EEARust.cpp ee_screenscpp_ga_record) to the local input: the input's result (the sends
+// of the screens', the HUD's and the mouse modes' hosts are ee_game hud_sends.rs')
+extern "C" int64_t ee_screenscpp_send_local(void* inMessage)
 {
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessagePayTribute, {inAmounts[0], inAmounts[2], inAmounts[4], inAmounts[3], inAmounts[1], (unsigned char)inTo}), kSlotNone);
+    return gCommunications->ProcessLocalUserInput(static_cast<EEMessage*>(inMessage), kSlotNone);
 }
 
 static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC,
@@ -867,15 +837,6 @@ static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t i
         return (uint32_t)atoi(static_cast<UIButton*>(inForm->GetControl(inA))->GetGEText()->GetText());
     case EE_SCREENS_OP_DS_LABEL_NUMBER:
         return (uint32_t)static_cast<UITextLabel*>(inForm->GetControl(inA))->GetTextAsInt(0);
-    case EE_SCREENS_GAME_DS_RESOURCES:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAddRemoveResources, {inC, inA, (long)inB, (unsigned char)inD}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_DS_STANCE:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetDiplomaticStance, {(long)inA, (long)inB}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_DS_CHAT:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectCustomPlayerForChat, {(long)inA, inB != 0}), kSlotNone);
-        break;
     default:
         return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
     }
@@ -1980,9 +1941,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gGameOptions = *sLobbyCopy;
         break;
     // the in-game options menu's (main_game_options.rs)
-    case EE_SCREENS_GAME_GO_RESIGN:
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageResign), kSlotNone);
-        break;
     case EE_SCREENS_GAME_GO_RESTART:
         gUserInterface->PostRestartGame();
         break;

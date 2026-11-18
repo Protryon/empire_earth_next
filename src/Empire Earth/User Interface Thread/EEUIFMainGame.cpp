@@ -705,11 +705,6 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
     case EE_SCREENS_MF_OP_MD_SEND: {
         NEMessage* theMessage;
         switch (inA) {
-        case EE_SCREENS_MF_SEND_AIRPORT:
-            theMessage = new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)inB,
-                                                                   (long)ioIo->n[0], (unsigned char)ioIo->n[1]});
-            break;
-        case EE_SCREENS_MF_SEND_ATTACK_GROUND: theMessage = new EEMRecord(kMessageAttackGround, {ioIo->f[0], ioIo->f[1]}); break;
         case EE_SCREENS_MF_SEND_LOAD_GARRISON:
             theMessage = new EEMRecord(kMessageLoadGarrison, {thePicked->GetUnitID(), theFirst->mComplexUnit->mUnitID, 0});
             break;
@@ -719,11 +714,10 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
             break;
         case EE_SCREENS_MF_SEND_HEAL: theMessage = new EEMRecord(kMessageHealUnit, {theComplex->mUnitID}); break;
         case EE_SCREENS_MF_SEND_CONVERT: theMessage = new EEMRecord(kMessageAttackUnit, {theComplex->mUnitID, inB != 0, true}); break;
-        case EE_SCREENS_MF_SEND_RALLY:
+        default:   // EE_SCREENS_MF_SEND_RALLY (the airport's, the attack ground's and the flare's are hud_sends.rs')
             theMessage = new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)ioIo->n[0],
                                                               theFirst->mComplexUnit->GetUnitID(), (unsigned char)ioIo->n[1]});
             break;
-        default: theMessage = new EEMRecord(kMessageSendFlare, {(long)ioIo->n[0], (long)ioIo->n[1]}); break;
         }
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         return 0;

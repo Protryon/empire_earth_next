@@ -112,18 +112,6 @@ int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
         break;
     }
-    case EE_SCREENS_IB_OP_SELECT:
-        theMessage = new EEMRecord(kMessageSelectUnit, {(long)inA});
-        break;
-    case EE_SCREENS_IB_OP_UNLOAD:
-        theMessage = new EEMRecord(kMessageImmediateCargoUnload, {(long)inA, (long)inB, false});
-        break;
-    case EE_SCREENS_IB_OP_SCRAMBLE:
-        theMessage = new EEMRecord(kMessageScrambleAircraft, {(long)(int32_t)inB, (long)(inB >> 32), (long)inA});
-        break;
-    case EE_SCREENS_IB_OP_REMOVE:
-        theMessage = new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {(long)inA});
-        break;
     case EE_SCREENS_IB_OP_SOUND:
         gSoundManager->Play(inA == 0 ? sIconBarDownSound : sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
         break;

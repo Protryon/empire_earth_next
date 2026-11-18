@@ -39,6 +39,12 @@ impl FormHost for Host {
         if let Some(r) = crate::screens::hud_views::main_form_toolkit(self.form(), op, a, b) {
             return r;
         }
+        if op == crate::screens::mouse_modes::EE_SCREENS_MF_OP_MD_SEND {
+            if let Some(m) = crate::screens::hud_sends::mouse_mode(a, b, io) {
+                crate::screens::hud_sends::send(&m);
+                return 0;
+            }
+        }
         unsafe { sys::ee_screenscpp_main_form(self.0, op, a, b, io) }
     }
     fn set_text(&mut self, text: &[u8]) {

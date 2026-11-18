@@ -323,6 +323,9 @@ fn hud_reads_over_the_views() {
     assert_eq!(units[1], EeScreensHotKeyUnit { unit_id: 88, ..Default::default() });
     assert_eq!(hot_key_units(false, [0.0; 2], &mut keep)[0].distance, 0);
 
+    // the sends' reads: the current player's index, a unit's id
+    assert_eq!((current_player_index(), unit_id(c), unit_id(0)), (1, 77, 0));
+
     // no current player, no group
     world.current = 3;
     assert_eq!(main_form(EE_SCREENS_MF_OP_HAS_PLAYER, 0), Some(0));

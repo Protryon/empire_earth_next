@@ -16,14 +16,10 @@
 #include "lle/UIControl.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIForm.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEMessage.h"
-#include "ee/EECommunications.h"
 #include "lle/UResourceFile.h"
 #include "lle/GEText.h"
 #include "ee/EmpireEarth.h"
@@ -135,7 +131,6 @@ int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* io
     UWideString theName;
     float theFloat;
     uint32_t theBits;
-    NEMessage* theMessage = NULL;
     switch (inOp - EE_SCREENS_HC_CLASS) {
     case EE_SCREENS_PT_OP_HAS_UNIT: return inPortrait->mUnit != NULL;
     case EE_SCREENS_PT_OP_RELEASE:
@@ -227,17 +222,9 @@ int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* io
         return inPortrait->mUnit && inPortrait->mUnit->mHitPoints > 0 && inPortrait->mUnit->mTileNode;
     case EE_SCREENS_PT_OP_COMPLEX_FIELD:
         return (int64_t)(EEComplexUnit*)inPortrait->mUnit->mComplexUnit;
-    case EE_SCREENS_PT_OP_REMOVE_TECHNOLOGY:
-        theMessage = new EEMRecord(kMessageRemoveTechnology, {theUnit->GetUnitID(), (long)inB, true, false});
-        break;
-    case EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT:
-        theMessage = new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), (long)inB});
-        break;
     case EE_SCREENS_PT_OP_SOUND:
         gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         return 0;
     }
-    if (theMessage != NULL)
-        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
     return 0;
 }
