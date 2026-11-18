@@ -184,7 +184,6 @@ public:
     void SetLayout(UILayoutUtility& inLayout);
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent);
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent);
-    void SetMouseMoveEvent(UIEvent* inEvent);
     void SetMouseWheelMoveEvent(UIEvent* inEvent);
     void SetMusicFileName(const UWideString& inName);
     void SetPopup(UIControl* inControl);

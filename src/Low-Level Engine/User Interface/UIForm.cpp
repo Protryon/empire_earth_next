@@ -604,7 +604,6 @@ void UIForm::SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEv
 void UIForm::SetFormCloseEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 1, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
-void UIForm::SetMouseMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 11, (intptr_t)inEvent); }
 void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
 void UIForm::SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
 void UIForm::SetFormActivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 14, (intptr_t)inEvent); }
