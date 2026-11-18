@@ -235,11 +235,6 @@ static long EECPUnitsD2(long inX1, long inY1, long inX2, long inY2)
     return dx * dx + dy * dy;
 }
 
-static long EECPUnitsStrength(EEUnit* inUnit)
-{
-    return inUnit->mStats != NULL ? (long)inUnit->mHitPoints * (long)UMFloatToLong(inUnit->mStats->mAttack) : 0;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The held set and the reflexes
 
@@ -268,12 +263,6 @@ bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName)
     if (inPlayer == NULL || inPlayer->mUnitsState == NULL)
         return strcmp(inName, "held") != 0;
     return ee_ai_units_reflex_on(inPlayer->mUnitsState->mRust, inName);
-}
-
-// a unit becomes the script's: out of the classic attack commander (DetachUnitFromAI) and the gatherer lists
-static void EECPUnitsTake(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit)
-{
-    ee_ai_units_take(s->mRust, inPlayer, EECPUnitsHandle(inUnit));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -426,32 +415,6 @@ static void EECPUnitsSetBool(lua_State* L, const char* inKey, bool inValue)
 
 // ---------------------------------------------------------------------------------------------------------------
 // Queries
-
-// the filters of ai.units / ai.seen / ai.resources
-// a unit the player may know of -> the unit, else NULL (own, allied, seen now; a resource on an explored tile)
-static EEUnit* EECPUnitsKnown(EEComputerPlayer* me, long inID)
-{
-    EEUnit* theUnit = EECPUnitsAlive(EECPUnitsForward(me->mUnitsState, inID));
-    if (theUnit == NULL) {
-        theUnit = EECPUnitsPending(me, EECPUnitsForward(me->mUnitsState, inID));   // a foundation not placed yet (ai.build's id)
-        if (theUnit != NULL && theUnit->mUnitClass != NULL && theUnit->mComplexUnit != NULL)
-            return theUnit;   // the player's own (its owner field may still be unset)
-    }
-    if (theUnit == NULL) {
-        theUnit = gWorld.GetUnit((unsigned long)inID);   // a resource is alive with hit points 0 (a worked mine)
-        if (theUnit == NULL || !theUnit->mIsValid || !EECPUnitsIsResource(theUnit))
-            return NULL;
-    }
-    if (theUnit->mUnitClass == NULL)
-        return NULL;
-    if (EECPUnitsIsResource(theUnit))
-        return EECPUnitsExplored(me, theUnit) ? theUnit : NULL;
-    if (EECPUnitsIsProjectile(theUnit))
-        return NULL;
-    if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer != NULL && theUnit->mPlayer != me)
-        return NULL;
-    return EECPUnitsSeen(me, theUnit) ? theUnit : NULL;
-}
 
 // ai.can_hurt(attacker_type, target_type) -> whether the attacker's weapon hurts the target's family (the damage
 // table, combat.yaml: a human reads it too; EECPAttackSubGroupUnit::CanAttack's test without the ignored targets)
@@ -646,56 +609,6 @@ static bool EECPUnitsWithinLimits(EECPUnitsState* s, long inUnits)
     return ee_ai_units_within_limits(s->mRust, inUnits, (long)gPhysics->mGameTime);
 }
 
-// the ids at inIndex -> s->mIds2: the player's own living units on the map (or inside, with inInside) that pass
-// inTest; the first reason one failed in outReason
-static void EECPUnitsOwnUnits(EEComputerPlayer* me, EECPUnitsState* s, bool inInside, bool (*inTest)(EEComplexUnit*),
-    long& outReason)
-{
-    s->mIds2.clear();
-    outReason = kOK;
-    for (unsigned long k = 0; k < s->mIds.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds[k]);
-        if (c == NULL || EECPUnitsIsProjectile(c)) {
-            if (outReason == kOK)
-                outReason = kNotOwn;
-            continue;
-        }
-        if (c->mIsDisabled || (!inInside && (c->mContainer != NULL || c->GetTileX() == -10000))
-            || (inTest != NULL && !inTest(c))) {
-            if (outReason == kOK)
-                outReason = kCannotDo;
-            continue;
-        }
-        if (std::find(s->mIds2.begin(), s->mIds2.end(), (long)c->mUnitID) == s->mIds2.end())
-            s->mIds2.push_back((long)c->mUnitID);
-    }
-}
-
-// runs a human's message for the player on the units of s->mIds2 (the selection), and takes them
-static void EECPUnitsRun(EEComputerPlayer* me, EECPUnitsState* s, EEMessage& inMessage, bool inTake)
-{
-    EESelectedGroup* theSelection = me->mActiveGroup;
-    if (theSelection == NULL)
-        return;
-    theSelection->Clear();
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL) {
-            theSelection->Add(c);
-            if (inTake)
-                EECPUnitsTake(me, s, c);
-        }
-    }
-    unsigned char theSlot = me->mSlot;
-    me->mSlot = kBorrowedSlot;
-    if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {
-        inMessage.SetOriginatingSlot(kBorrowedSlot);
-        inMessage.Execute();
-    }
-    me->mSlot = theSlot;
-    theSelection->Clear();
-}
-
 static void EECPUnitsTraceCmd(EEComputerPlayer* me, EECPUnitsState* s, const char* inVerb, long inReason, long inCount,
     long inArg1, long inArg2)
 {
@@ -710,385 +623,9 @@ static void EECPUnitsTraceCmd(EEComputerPlayer* me, EECPUnitsState* s, const cha
         kReasonNames[inReason]);
 }
 
-static bool EECPUnitsMobile(EEComplexUnit* c)
-{
-    return !c->mUnitClass->IsBuilding() && c->mStats != NULL && c->mStats->mMaxVelocity > 0.0f;
-}
-
-static bool EECPUnitsCanAttack(EEComplexUnit* c)
-{
-    if (EECPUnitsMobile(c) || (c->mStats != NULL && c->mStats->mAttack != 0.0f))
-        return true;
-    // a missile base holding its ICBM launches it at the target (the classic's CheckSpecials / Update ICBM: the
-    // attack goal goes to the ICBM's container, as a human's attack order on the base does)
-    for (unsigned long i = 0; i < c->GetNumCargoUnits(); i++) {
-        EEComplexUnit* theCargo = c->GetCargo(i);
-        if (theCargo != NULL && theCargo->mUnitClass->GetFamily() == kUnitFamilyICBM)
-            return true;
-    }
-    return false;
-}
-
-static bool EECPUnitsCitizen(EEComplexUnit* c)
-{
-    long k = c->mUnitClass->mCategory;
-    return k == kUnitCategoryLandCitizen || k == kUnitCategoryNavalCitizen;
-}
-
-static bool EECPUnitsBuilding(EEComplexUnit* c)
-{
-    return c->mUnitClass->IsBuilding() && c->mIsBuilt;
-}
-
-// the shared start of a unit command: the ids at 1, the charge, the own units -> false with the result pushed
-static bool EECPUnitsBegin(lua_State* L, EEComputerPlayer* me, EECPUnitsState* s, bool inInside,
-    bool (*inTest)(EEComplexUnit*), const char* inVerb, int& outResults)
-{
-    EECPUnitsReadIds(L, 1, s->mIds);
-    EECPUnitsCharge(L, kCostCommand + (int64_t)s->mIds.size() * kCostOrdered);
-    long theReason;
-    EECPUnitsOwnUnits(me, s, inInside, inTest, theReason);
-    if (s->mIds2.empty()) {
-        EECPUnitsTraceCmd(me, s, inVerb, theReason == kOK ? kBadArgument : theReason, 0, 0, 0);
-        outResults = EECPUnitsResult(L, theReason == kOK ? kBadArgument : theReason, 0, 0);
-        return false;
-    }
-    if (!EECPUnitsWithinLimits(s, (long)s->mIds2.size())) {
-        EECPUnitsTraceCmd(me, s, inVerb, kLimit, 0, 0, 0);
-        outResults = EECPUnitsResult(L, kLimit, 0, 0);
-        return false;
-    }
-    return true;
-}
-
 static bool EECPUnitsTileOK(long x, long y)
 {
     return gWorld.mMap != NULL && x >= 0 && y >= 0 && gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) != NULL;
-}
-
-// ai.move(ids, x, y, {queue, forced, formation})
-static int LuaMove(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "move", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    bool theQueue = EECPUnitsOptBool(L, 4, "queue", false);
-    bool theForced = EECPUnitsOptBool(L, 4, "forced", false);
-    bool theFormation = EECPUnitsOptBool(L, 4, "formation", false);
-    EEMRecord theMessage(kMessagePathTo, {0.0f, (float)x + 0.5f, (float)y + 0.5f, theForced, false, theQueue, theFormation});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "move", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.attack(ids, target, {queue}): the target seen now, or a building the player remembers
-static int LuaAttack(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCanAttack, "attack", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == me || (theTarget->mPlayer != NULL && theTarget->mPlayer != gWorld.mPlayers[0]
-        && me->IsAlly(theTarget->mPlayer)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    bool theKnown = EECPUnitsSeen(me, theTarget) || ee_ai_units_remembered_building(s->mRust, theID) == 1;
-    if (!theKnown) {
-        EECPUnitsTraceCmd(me, s, "attack", kNotSeen, 0, theID, 0);
-        return EECPUnitsResult(L, kNotSeen, 0, 0);
-    }
-    EEMRecord theMessage(kMessageAttackUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false), false});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "attack", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.attack_ground(ids, x, y)
-static int LuaAttackGround(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCanAttack, "attack_ground", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMRecord theMessage(kMessageAttackGround, {(float)x + 0.5f, (float)y + 0.5f});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "attack_ground", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.gather(ids, resource, {queue}): a resource on an explored tile with some left
-static int LuaGather(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "gather", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? (long)lua_tointeger(L, 2) : 0;
-    EEUnit* theTarget = theID > 0 ? gWorld.GetUnit((unsigned long)theID) : NULL;
-    if (theTarget == NULL || !theTarget->mIsValid || theTarget->mResourceAmount <= 0)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    if (!EECPUnitsExplored(me, theTarget)) {
-        EECPUnitsTraceCmd(me, s, "gather", kUnexplored, 0, theID, 0);
-        return EECPUnitsResult(L, kUnexplored, 0, 0);
-    }
-    EEMRecord theMessage(kMessageGatherResource, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "gather", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// the newest own building of a class whose tile is (x, y) (the foundation a build order just made), 0 if none
-static long EECPUnitsNewBuilding(EEComputerPlayer* me, long inType, long inX, long inY, long inAbove)
-{
-    long theBest = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if (theUnit->mUnitClass->mUnitType == inType && theUnit->GetTileX() == inX && theUnit->GetTileY() == inY
-            && (long)theUnit->mUnitID > inAbove && (long)theUnit->mUnitID > theBest)
-            theBest = (long)theUnit->mUnitID;
-    for (unsigned long k = 0; theBest == 0; k++) {
-        RTSUnit* thePending = me->GetPendingUnit(k);
-        if (thePending == NULL)
-            break;
-        EEUnit* theUnit = static_cast<EEUnit*>(thePending);
-        if (theUnit->mUnitClass != NULL && theUnit->mUnitClass->mUnitType == inType && theUnit->GetTileX() == inX
-            && theUnit->GetTileY() == inY)
-            theBest = (long)theUnit->mUnitID;
-    }
-    return theBest;
-}
-
-// ai.build(ids, type, x, y, {queue}) -> ..., the foundation's id: the citizens build it (it is the script's)
-static int LuaBuild(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "build", r))
-        return r;
-    long theType = EECPUnitsClassArg(L, 2);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || (!gUnitClassTable[theType]->IsBuilding() && !gUnitClassTable[theType]->IsLandBuilding())   // a fortress: a land building of a transport class
-        || !lua_isinteger(L, 3) || !lua_isinteger(L, 4))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 3), y = (long)lua_tointeger(L, 4);
-    long theTech = gUnitClassTable[theType]->mTechnology;
-    if (!me->EEPlayer::CanProduce(theTech, 0x20, 1, true, 3, NULL)) {
-        EECPUnitsTraceCmd(me, s, "build", kCannotAfford, 0, theType, x);
-        return EECPUnitsResult(L, kCannotAfford, 0, 0);
-    }
-    if (!EECanPlaceOnTile(me, theType, x, y, false, 1)) {
-        EECPUnitsTraceCmd(me, s, "build", kCannotPlace, 0, theType, x);
-        return EECPUnitsResult(L, kCannotPlace, 0, 0);
-    }
-    long theBefore = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if ((long)theUnit->mUnitID > theBefore)
-            theBefore = (long)theUnit->mUnitID;
-    EEMRecord theMessage(kMessageBuildUnit, {GE2DPoint((float)x, (float)y), theTech, EECPUnitsOptBool(L, 5, "queue", false) ? 1 : 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    long theNew = EECPUnitsNewBuilding(me, theType, x, y, theBefore);
-    if (theNew != 0) {
-        EEComplexUnit* c = EECPUnitsOwn(me, theNew);
-        if (c != NULL)
-            EECPUnitsTake(me, s, c);
-    }
-    EECPUnitsTraceCmd(me, s, "build", theNew != 0 ? kOK : kCannotPlace, (long)s->mIds2.size(), theType, theNew);
-    return EECPUnitsResult(L, theNew != 0 ? kOK : kCannotPlace, theNew != 0 ? (long)s->mIds2.size() : 0, theNew);
-}
-
-// ai.repair(ids, target): an own or allied unit or building
-static int LuaRepair(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "repair", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageRepairUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "repair", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.garrison(ids, building) / ai.load(ids, transport)
-static int EECPUnitsLoadInto(lua_State* L, bool inGarrison)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    const char* theVerb = inGarrison ? "garrison" : "load";
-    if (!EECPUnitsBegin(L, me, s, false, NULL, theVerb, r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEComplexUnit* theInto = EECPUnitsOwn(me, theID);
-    if (theInto == NULL || (inGarrison ? theInto->mUnitClass->mGarrisonCapacity <= 0 : !theInto->mUnitClass->IsTransport()))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    s->mIds2.erase(std::remove(s->mIds2.begin(), s->mIds2.end(), theID), s->mIds2.end());
-    long theBefore = (long)theInto->GetNumCargoUnits();
-    if (inGarrison) {
-        EEMRecord theMessage(kMessageLoadGarrison, {theID, -1, 0});
-        EECPUnitsRun(me, s, theMessage, true);
-    } else {
-        EEMRecord theMessage(kMessageLoadTransport, {theID, -1, 0});
-        EECPUnitsRun(me, s, theMessage, true);
-    }
-    EECPUnitsTake(me, s, theInto);
-    EECPUnitsTraceCmd(me, s, theVerb, kOK, (long)s->mIds2.size(), theID, theBefore);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaGarrison(lua_State* L)
-{
-    return EECPUnitsLoadInto(L, true);
-}
-
-static int LuaLoad(lua_State* L)
-{
-    return EECPUnitsLoadInto(L, false);
-}
-
-// ai.unload(containers, x, y)
-static int LuaUnload(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "unload", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMRecord theMessage(kMessageUnloadTransport, {s->mIds2[0], x, y});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "unload", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.train(buildings, type, n) / ai.research(buildings, tech): the queue of the least busy of the buildings
-static int EECPUnitsQueue(lua_State* L, bool inTrain)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    const char* theVerb = inTrain ? "train" : "research";
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, theVerb, r))
-        return r;
-    long theTech = -1;
-    if (inTrain) {
-        long theType = EECPUnitsClassArg(L, 2);
-        if (theType >= 0 && (unsigned long)theType < EEUnitClassCount() && gUnitClassTable[theType] != NULL)
-            theTech = gUnitClassTable[theType]->mTechnology;
-    } else if (lua_type(L, 2) == LUA_TSTRING) {
-        theTech = EECPNextTechByName(lua_tostring(L, 2));
-    } else if (lua_isinteger(L, 2))
-        theTech = (long)lua_tointeger(L, 2);
-    long n = lua_isinteger(L, 3) ? (long)lua_tointeger(L, 3) : 1;
-    if (theTech < 0 || n < 1 || n > 5)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // one building of the same type at a time: the message queues at the selected buildings of the clicked one's type
-    EEComplexUnit* theFirst = EECPUnitsOwn(me, s->mIds2[0]);
-    long theBefore = 0;
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL)
-            theBefore += (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0);
-    }
-    for (long k = 0; k < n; k++) {
-        EEMRecord theMessage(kMessageResearchTechnology, {(long)theFirst->mUnitID, theTech, false});
-        EECPUnitsRun(me, s, theMessage, false);
-    }
-    long theAfter = 0;
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL)
-            theAfter += (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0);
-    }
-    long theQueued = theAfter - theBefore;
-    long theReason = theQueued > 0 ? kOK : kCannotAfford;
-    EECPUnitsTraceCmd(me, s, theVerb, theReason, theQueued, theTech, n);
-    return EECPUnitsResult(L, theReason, theQueued > 0 ? theQueued : 0, 0);
-}
-
-static int LuaTrain(lua_State* L)
-{
-    return EECPUnitsQueue(L, true);
-}
-
-static int LuaResearch(lua_State* L)
-{
-    return EECPUnitsQueue(L, false);
-}
-
-// ai.stance(ids, n): the behaviour table's index (the unit panel's buttons)
-static int LuaStance(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "stance", r))
-        return r;
-    if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || (unsigned long)lua_tointeger(L, 2) >= EEUnitBehavior::sTable.size()
-        || EEUnitBehavior::sTable[(unsigned long)lua_tointeger(L, 2)] == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageSetUnitBehavior, {(long)lua_tointeger(L, 2)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "stance", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaStop(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "stop", r))
-        return r;
-    EEMRecord theMessage(kMessageStopActiveGroup);
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "stop", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaExplore(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "explore", r))
-        return r;
-    EEMRecord theMessage(kMessageExplore);
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "explore", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaDelete(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, true, NULL, "delete", r))
-        return r;
-    EEMRecord theMessage(kMessageKillUnit, {1});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "delete", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
 }
 
 static bool EECPUnitsTestOn()
@@ -2077,80 +1614,6 @@ static int LuaUsed(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // More commands (batch 2)
 
-// ai.heal(ids, target)
-static int LuaHeal(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "heal", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageHealUnit, {theID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "heal", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.rally(buildings, x, y) or ai.rally(buildings, target): each building's rally goal
-static int LuaRally(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, "rally", r))
-        return r;
-    long x = 0, y = 0, theTarget = -1;
-    if (lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
-        x = (long)lua_tointeger(L, 2);
-        y = (long)lua_tointeger(L, 3);
-        if (!EECPUnitsTileOK(x, y))
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-    } else if (lua_isinteger(L, 2)) {
-        EEUnit* theUnit = EECPUnitsKnown(me, (long)lua_tointeger(L, 2));
-        if (theUnit == NULL)
-            return EECPUnitsResult(L, kNotSeen, 0, 0);
-        theTarget = (long)theUnit->mUnitID;
-        x = theUnit->GetTileX();
-        y = theUnit->GetTileY();
-    } else
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // the message sets the rally of the selected buildings of the named one's type
-    long n = (long)s->mIds2.size();
-    EEMRecord theMessage(kMessageSetRallyGoal, {GE2DPoint((float)x + 0.5f, (float)y + 0.5f), theTarget, s->mIds2[0], 0});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "rally", kOK, n, x, y);
-    return EECPUnitsResult(L, kOK, n, 0);
-}
-
-// ai.cancel(buildings, type or tech): one of it out of their queues
-static int LuaCancel(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, "cancel", r))
-        return r;
-    long theTech = -1;
-    if (lua_type(L, 2) == LUA_TSTRING) {
-        long theType = EECPUnitsClassArg(L, 2);
-        if (theType >= 0 && (unsigned long)theType < EEUnitClassCount() && gUnitClassTable[theType] != NULL)
-            theTech = gUnitClassTable[theType]->mTechnology;
-        else
-            theTech = EECPNextTechByName(lua_tostring(L, 2));
-    } else if (lua_isinteger(L, 2))
-        theTech = (long)lua_tointeger(L, 2);
-    if (theTech < 0)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageRemoveTechnology, {s->mIds2[0], theTech, false, false});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "cancel", kOK, (long)s->mIds2.size(), theTech, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
 // the tech node of a unit class the player may make now; else the refusal's reason
 static EETechTreeNode* EECPNextClassNode(EEComputerPlayer* inPlayer, long inType, long& outReason)
 {
@@ -2242,171 +1705,10 @@ static int LuaImproveCost(lua_State* L)
     return 1;
 }
 
-// ai.formation(ids, kind)
-static int LuaFormation(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "formation", r))
-        return r;
-    if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || lua_tointeger(L, 2) > 16)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageChangeFormation, {(long)lua_tointeger(L, 2), true});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "formation", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.pack(ids, true/false)
-static int LuaPack(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "pack", r))
-        return r;
-    EEMRecord theMessage(kMessagePackUnpack, {lua_toboolean(L, 2) != 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "pack", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.dropoff(ids, building)
-static int LuaDropoff(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "dropoff", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEComplexUnit* theDrop = EECPUnitsOwn(me, theID);
-    if (theDrop == NULL || !theDrop->mIsBuilt)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageDropoffResource, {theID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "dropoff", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.replant(granary) -> ok: the granary's missing field foundations are laid again (the human's replant command;
-// a granary placed by a human's build order comes without its fields)
-static int LuaReplant(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsCharge(L, kCostCommand);
-    long theID = lua_isinteger(L, 1) ? EECPUnitsForward(s, (long)lua_tointeger(L, 1)) : 0;
-    EEComplexUnit* theGranary = EECPUnitsOwn(me, theID);
-    if (theGranary == NULL || !theGranary->mIsBuilt || theGranary->mTileNode == NULL
-        || (theGranary->mUnitClass->mUnitType != kUnitTypeGranary && theGranary->mUnitClass->mUnitType != kUnitTypeGranaryImproved))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    s->mIds2.clear();
-    s->mIds2.push_back(theID);
-    if (!EECPUnitsWithinLimits(s, 1))
-        return EECPUnitsResult(L, kLimit, 0, 0);
-    EEMRecord theMessage(kMessageReplantFarms, {theID});
-    theMessage.Execute();
-    EECPUnitsTraceCmd(me, s, "replant", kOK, 1, theID, 0);
-    return EECPUnitsResult(L, kOK, 1, 0);
-}
-
-// ai.farm(ids, granary or farm, {queue}): the citizens farm by it (the free farms nearest first)
-static int LuaFarm(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "farm", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    if (EECPUnitsOwn(me, theID) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageSmartFarmers, {theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "farm", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.cast(ids, tech, target) / ai.cast(ids, tech, x, y): a power or calamity by the first caster that can
-static int LuaCast(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "cast", r))
-        return r;
-    long theTech = lua_type(L, 2) == LUA_TSTRING ? EECPNextTechByName(lua_tostring(L, 2))
-                   : lua_isinteger(L, 2)        ? (long)lua_tointeger(L, 2) : -1;
-    if (theTech < 0 || me->mTechnologies->Get(theTech) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long theTarget = -1, x = 0, y = 0;
-    if (lua_isinteger(L, 3) && lua_isinteger(L, 4)) {
-        x = (long)lua_tointeger(L, 3);
-        y = (long)lua_tointeger(L, 4);
-    } else if (lua_isinteger(L, 3)) {
-        EEUnit* theUnit = EECPUnitsKnown(me, (long)lua_tointeger(L, 3));
-        if (theUnit == NULL)
-            return EECPUnitsResult(L, kNotSeen, 0, 0);
-        theTarget = (long)theUnit->mUnitID;
-        x = theUnit->GetTileX();
-        y = theUnit->GetTileY();
-    } else
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageCastCalamity, {s->mIds2[0], theTarget, x, y, theTech});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "cast", kOK, (long)s->mIds2.size(), theTech, theTarget);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Walls, gates, diplomacy (Age of AI's defence.c walls, diplo.c): the human's messages, as the orders above
 
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits);   // EECPWallManager.cpp
-
-static bool EECPUnitsGatePiece(EEComplexUnit* c)
-{
-    return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(c->GetUnitClass()) != NULL;
-}
-
-// ai.wall(ids, type, x1, y1, x2, y2): the citizens lay a straight wall of the class between the two tiles, as a
-// human's drag does (EEPlanWall: along the tiles or exactly diagonal); n = the citizens sent
-static int LuaWall(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "wall", r))
-        return r;
-    // the class: "wall" (or nil) is the epoch's wall as the classic wall manager takes it (GetWallClass)
-    long theType = (lua_type(L, 2) == LUA_TNIL || (lua_type(L, 2) == LUA_TSTRING && strcmp(lua_tostring(L, 2), "wall") == 0))
-        && me->mTechnologies != NULL ? EECPWallClass(me) : EECPUnitsClassArg(L, 2);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || !gUnitClassTable[theType]->mIsWall || !lua_isinteger(L, 3) || !lua_isinteger(L, 4) || !lua_isinteger(L, 5)
-        || !lua_isinteger(L, 6))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x1 = (long)lua_tointeger(L, 3), y1 = (long)lua_tointeger(L, 4), x2 = (long)lua_tointeger(L, 5), y2 = (long)lua_tointeger(L, 6);
-    if (gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x1, (unsigned long)y1) == NULL
-        || gWorld.mMap->GetTile((unsigned long)x2, (unsigned long)y2) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // (no CanProduce: the classic wall manager sends the message as it is, EEPlanWall and EEBuildWall check the
-    // placement and pay the pieces; a wall tech is never "available" the production way for a computer player)
-    long theTech = gUnitClassTable[theType]->mTechnology;
-    EETechTreeNode* theNode = me->mTechnologies->Get(theTech);
-    if (theNode == NULL) {   // (the wall tech is never "available" the production way: the classic manager never asks)
-        EECPUnitsTraceCmd(me, s, "wall", kNotInEpoch, 0, theType, 0);
-        return EECPUnitsResult(L, kNotInEpoch, 0, 0);
-    }
-    if (!me->CanAfford(theNode, 0x20, 1)) {
-        EECPUnitsTraceCmd(me, s, "wall", kCannotAfford, 0, theType, x1);
-        return EECPUnitsResult(L, kCannotAfford, 0, 0);
-    }
-    EEMRecord theMessage(kMessageBuildWall, {GE2DPoint((float)x1, (float)y1), GE2DPoint((float)x2, (float)y2), theTech, (long)me->mPlayerID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "wall", kOK, (long)s->mIds2.size(), theType, x1 * 10000 + y1);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
 
 // ai.gate(type, x, y): a gate of the class over the finished wall pieces at the tile, there at once as the human's
 // gate button lays it (EEBuildGate: the five pieces turned into the gate's parts); the side is the first the gate
@@ -2455,58 +1757,6 @@ static int LuaGate(lua_State* L)
     theMessage.Execute();
     EECPUnitsTraceCmd(me, s, "gate", kOK, 1, theType, x * 10000 + y);
     return EECPUnitsResult(L, kOK, 1, 0);
-}
-
-// ai.patrol(ids, {{x, y}, ...}): the mobile units patrol through 2..8 points (EEMAddPatrolPoint for each, as the
-// human's patrol clicks: the first makes the patrol goal, the others add points)
-static int LuaPatrol(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "patrol", r))
-        return r;
-    if (lua_type(L, 2) != LUA_TTABLE)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long n = (long)lua_rawlen(L, 2);
-    if (n < 2 || n > 8)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    std::vector<GE2DPoint> thePoints;
-    for (long k = 1; k <= n; k++) {
-        lua_rawgeti(L, 2, k);
-        if (lua_type(L, -1) != LUA_TTABLE) {
-            lua_pop(L, 1);
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-        }
-        lua_rawgeti(L, -1, 1);
-        lua_rawgeti(L, -2, 2);
-        bool ok = lua_isinteger(L, -2) && lua_isinteger(L, -1);
-        long x = ok ? (long)lua_tointeger(L, -2) : -1, y = ok ? (long)lua_tointeger(L, -1) : -1;
-        lua_pop(L, 3);
-        if (!ok || gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) == NULL)
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-        thePoints.push_back(GE2DPoint((float)x, (float)y));
-    }
-    for (unsigned long k = 0; k < thePoints.size(); k++) {
-        EEMRecord theMessage(kMessageAddPatrolPoint, {thePoints[k]});
-        EECPUnitsRun(me, s, theMessage, true);
-    }
-    EECPUnitsTraceCmd(me, s, "patrol", kOK, (long)s->mIds2.size(), n, (long)thePoints[0].GetX() * 10000 + (long)thePoints[0].GetY());
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.lock(ids, on): the gates locked or unlocked (their three moving parts)
-static int LuaLock(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsGatePiece, "lock", r))
-        return r;
-    EEMRecord theMessage(kMessageLockUnlock, {lua_toboolean(L, 2) != 0});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "lock", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
 }
 
 static long EECPUnitsOptAmount(lua_State* L, int inTable, const char* inKey)
@@ -3125,19 +2375,19 @@ static const luaL_Reg kUnitsFunctions[] = {
     {"units", (lua_CFunction)ee_ai_units_lua_units}, {"unit", (lua_CFunction)ee_ai_units_lua_unit}, {"get", (lua_CFunction)ee_ai_units_lua_get}, {"seen", (lua_CFunction)ee_ai_units_lua_seen}, {"memory", (lua_CFunction)ee_ai_units_lua_memory},
     {"resources", (lua_CFunction)ee_ai_units_lua_resources}, {"tile", (lua_CFunction)ee_ai_units_lua_tile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", (lua_CFunction)ee_ai_units_lua_events},
     {"can_place", LuaCanPlace}, {"reach", (lua_CFunction)ee_ai_units_lua_reach}, {"strength", (lua_CFunction)ee_ai_units_lua_strength},
-    {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
-    {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},
-    {"train", LuaTrain}, {"research", LuaResearch}, {"stance", LuaStance}, {"stop", LuaStop},
-    {"explore", LuaExplore}, {"delete", LuaDelete}, {"take", (lua_CFunction)ee_ai_units_lua_take}, {"release", (lua_CFunction)ee_ai_units_lua_release},
+    {"move", (lua_CFunction)ee_ai_units_lua_move}, {"attack", (lua_CFunction)ee_ai_units_lua_attack}, {"attack_ground", (lua_CFunction)ee_ai_units_lua_attack_ground}, {"gather", (lua_CFunction)ee_ai_units_lua_gather},
+    {"build", (lua_CFunction)ee_ai_units_lua_build}, {"repair", (lua_CFunction)ee_ai_units_lua_repair}, {"garrison", (lua_CFunction)ee_ai_units_lua_garrison}, {"load", (lua_CFunction)ee_ai_units_lua_load}, {"unload", (lua_CFunction)ee_ai_units_lua_unload},
+    {"train", (lua_CFunction)ee_ai_units_lua_train}, {"research", (lua_CFunction)ee_ai_units_lua_research}, {"stance", (lua_CFunction)ee_ai_units_lua_stance}, {"stop", (lua_CFunction)ee_ai_units_lua_stop},
+    {"explore", (lua_CFunction)ee_ai_units_lua_explore}, {"delete", (lua_CFunction)ee_ai_units_lua_delete}, {"take", (lua_CFunction)ee_ai_units_lua_take}, {"release", (lua_CFunction)ee_ai_units_lua_release},
     {"reflex", (lua_CFunction)ee_ai_units_lua_reflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
     {"danger", (lua_CFunction)ee_ai_units_lua_danger}, {"danger_box", (lua_CFunction)ee_ai_units_lua_danger_box}, {"mark", (lua_CFunction)ee_ai_units_lua_mark}, {"route", (lua_CFunction)ee_ai_units_lua_route},
-    {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
-    {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
-    {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
+    {"find_site", LuaFindSite}, {"heal", (lua_CFunction)ee_ai_units_lua_heal}, {"rally", (lua_CFunction)ee_ai_units_lua_rally}, {"cancel", (lua_CFunction)ee_ai_units_lua_cancel},
+    {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", (lua_CFunction)ee_ai_units_lua_formation}, {"pack", (lua_CFunction)ee_ai_units_lua_pack}, {"dropoff", (lua_CFunction)ee_ai_units_lua_dropoff},
+    {"farm", (lua_CFunction)ee_ai_units_lua_farm}, {"cast", (lua_CFunction)ee_ai_units_lua_cast}, {"replant", (lua_CFunction)ee_ai_units_lua_replant},
     {"path_len", (lua_CFunction)ee_ai_units_lua_path_len}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
     {"config", (lua_CFunction)ee_ai_units_lua_config}, {"used", LuaUsed},
-    {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
-    {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
+    {"wall", (lua_CFunction)ee_ai_units_lua_wall}, {"gate", LuaGate}, {"lock", (lua_CFunction)ee_ai_units_lua_lock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
+    {"diplomacy", LuaDiplomacy}, {"patrol", (lua_CFunction)ee_ai_units_lua_patrol},
     {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", (lua_CFunction)ee_ai_units_lua_gatherers},
     {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
     {NULL, NULL}};
@@ -3274,6 +2524,76 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
 // ---------------------------------------------------------------------------------------------------------------
 // The host of the Rust bindings (ee_ai units_bind.rs EE_AI_UNITS_HOST_*): what the world views do not hold
 
+// a command's message (ee_ai units_bind.rs EE_AI_UNITS_MSG_*), as the human's: on the selection under the borrowed
+// slot (mode 0, EECPUnitsRun's), or run as it is (mode 1)
+static const unsigned char kUnitsMessages[] = {0, kMessagePathTo, kMessageAttackUnit, kMessageAttackGround,
+    kMessageGatherResource, kMessageBuildUnit, kMessageRepairUnit, kMessageLoadGarrison, kMessageLoadTransport,
+    kMessageUnloadTransport, kMessageResearchTechnology, kMessageSetUnitBehavior, kMessageStopActiveGroup, kMessageExplore,
+    kMessageKillUnit, kMessageHealUnit, kMessageSetRallyGoal, kMessageRemoveTechnology, kMessageChangeFormation,
+    kMessagePackUnpack, kMessageDropoffResource, kMessageReplantFarms, kMessageSmartFarmers, kMessageCastCalamity,
+    kMessageAddPatrolPoint, kMessageLockUnlock, kMessageBuildWall};
+
+static EEMRecordValue EECPUnitsValue(const EeAiUnitsMsgValue& inValue)
+{
+    if (inValue.kind == 2)
+        return EEMRecordValue(GE2DPoint(inValue.x, inValue.y));
+    if (inValue.kind == 1)
+        return EEMRecordValue((double)inValue.x);
+    return EEMRecordValue((long long)inValue.i);
+}
+
+static void EECPUnitsExecute(EEComputerPlayer* me, EEMessage& inMessage, long inMode)
+{
+    if (inMode == 1) {
+        inMessage.Execute();
+        return;
+    }
+    unsigned char theSlot = me->mSlot;
+    me->mSlot = kBorrowedSlot;
+    if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {
+        inMessage.SetOriginatingSlot(kBorrowedSlot);
+        inMessage.Execute();
+    }
+    me->mSlot = theSlot;
+    me->mActiveGroup->Clear();
+}
+
+static void EECPUnitsExec(EEComputerPlayer* me, const EeAiUnitsMessage& m)
+{
+    static_assert(sizeof(kUnitsMessages) == EE_AI_UNITS_MSG_BUILD_WALL + 1, "ee_ai units_bind.rs EE_AI_UNITS_MSG_*");
+    unsigned char theType = kUnitsMessages[m.message];
+    const EeAiUnitsMsgValue* v = m.values;
+    switch (m.count) {
+    case 0: { EEMRecord theMessage(theType); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 1: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 2: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 3: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 4: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 5: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
+            EECPUnitsValue(v[4])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 7: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
+            EECPUnitsValue(v[4]), EECPUnitsValue(v[5]), EECPUnitsValue(v[6])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
 {
     EEComputerPlayer* me = (EEComputerPlayer*)inPlayer;
@@ -3395,6 +2715,41 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
         if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mIsValid)
             return (int64_t)theGather->GetGatherResource()->mUnitID;
         return 0;
+    }
+    case EE_AI_UNITS_HOST_SELECT_BEGIN:
+        if (me->mActiveGroup == NULL)
+            return 0;
+        me->mActiveGroup->Clear();
+        return 1;
+    case EE_AI_UNITS_HOST_SELECT_ADD:
+        me->mActiveGroup->Add((EEComplexUnit*)(uintptr_t)a);
+        return 0;
+    case EE_AI_UNITS_HOST_EXEC:
+        EECPUnitsExec(me, *(const EeAiUnitsMessage*)outRecord);
+        return 0;
+    case EE_AI_UNITS_HOST_TECH_BY_NAME:
+        return EECPNextTechByName((const char*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_CAN_PRODUCE:
+        return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
+    case EE_AI_UNITS_HOST_CAN_PLACE:
+        return EECanPlaceOnTile(me, (long)a, (long)b, (long)c, false, 1) ? 1 : 0;
+    case EE_AI_UNITS_HOST_IS_TRANSPORT:
+        return ((EEUnitClass*)(uintptr_t)a)->IsTransport() ? 1 : 0;
+    case EE_AI_UNITS_HOST_LAND_BUILDING:
+        return ((EEUnitClass*)(uintptr_t)a)->IsLandBuilding() ? 1 : 0;
+    case EE_AI_UNITS_HOST_BEHAVIOR_OK:
+        return a >= 0 && (unsigned long)a < EEUnitBehavior::sTable.size() && EEUnitBehavior::sTable[(unsigned long)a] != NULL;
+    case EE_AI_UNITS_HOST_HAS_NODE:
+        return me->mTechnologies->Get((long)a) != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_HAS_TREE:
+        return me->mTechnologies != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_WALL_CLASS:
+        return EECPWallClass(me);
+    case EE_AI_UNITS_HOST_NODE_AFFORD: {
+        EETechTreeNode* theNode = me->mTechnologies->Get((long)a);
+        if (theNode == NULL)
+            return -1;
+        return me->CanAfford(theNode, 0x20, 1) ? 1 : 0;
     }
     default:
         return 0;

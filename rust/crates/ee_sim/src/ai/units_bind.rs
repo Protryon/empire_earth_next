@@ -1911,3 +1911,932 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_gatherers(l: *mut c_void) -> c_i
     }
     1
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The commands: a human's messages run on the computer player's selection (AI_LUA_UNITS §3)
+
+/// The selection (`mActiveGroup`) cleared (0: the player has none).
+pub const EE_AI_UNITS_HOST_SELECT_BEGIN: i32 = 30;
+/// The complex unit `a` added to the selection.
+pub const EE_AI_UNITS_HOST_SELECT_ADD: i32 = 31;
+/// The message `out` (an `EeAiUnitsMessage`) run (its mode says how).
+pub const EE_AI_UNITS_HOST_EXEC: i32 = 32;
+/// `EECPNextTechByName(a)` (a NUL-terminated name).
+pub const EE_AI_UNITS_HOST_TECH_BY_NAME: i32 = 33;
+/// `player->EEPlayer::CanProduce(a, 0x20, 1, true, 3, NULL)`.
+pub const EE_AI_UNITS_HOST_CAN_PRODUCE: i32 = 34;
+/// `EECanPlaceOnTile(player, a, b, c, false, 1)`.
+pub const EE_AI_UNITS_HOST_CAN_PLACE: i32 = 35;
+/// The class `a`'s `IsTransport()`.
+pub const EE_AI_UNITS_HOST_IS_TRANSPORT: i32 = 36;
+/// `a` indexes a behaviour of `EEUnitBehavior::sTable` (in range, not NULL).
+pub const EE_AI_UNITS_HOST_BEHAVIOR_OK: i32 = 37;
+/// `player->mTechnologies->Get(a) != NULL`.
+pub const EE_AI_UNITS_HOST_HAS_NODE: i32 = 38;
+/// The class `a`'s `IsLandBuilding()`.
+pub const EE_AI_UNITS_HOST_LAND_BUILDING: i32 = 39;
+
+/// `EEMRecord`'s members as a command sends them: an integer (`kind` 0), a float (1) or a point (2: `x`, `y`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeAiUnitsMsgValue {
+    pub kind: i32,
+    pub i: i64,
+    pub x: f32,
+    pub y: f32,
+}
+
+/// A command's message (`EE_AI_UNITS_HOST_EXEC`): `message` one of `EE_AI_UNITS_MSG_*`, `mode` 0 run on the
+/// selection under the borrowed slot (`EECPUnitsRun`), 1 run as it is (`Execute`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EeAiUnitsMessage {
+    pub message: i32,
+    pub mode: i32,
+    pub count: i32,
+    pub values: [EeAiUnitsMsgValue; 8],
+}
+
+pub const EE_AI_UNITS_MSG_PATH_TO: i32 = 1;
+pub const EE_AI_UNITS_MSG_ATTACK_UNIT: i32 = 2;
+pub const EE_AI_UNITS_MSG_ATTACK_GROUND: i32 = 3;
+pub const EE_AI_UNITS_MSG_GATHER: i32 = 4;
+pub const EE_AI_UNITS_MSG_BUILD: i32 = 5;
+pub const EE_AI_UNITS_MSG_REPAIR: i32 = 6;
+pub const EE_AI_UNITS_MSG_LOAD_GARRISON: i32 = 7;
+pub const EE_AI_UNITS_MSG_LOAD_TRANSPORT: i32 = 8;
+pub const EE_AI_UNITS_MSG_UNLOAD: i32 = 9;
+pub const EE_AI_UNITS_MSG_RESEARCH: i32 = 10;
+pub const EE_AI_UNITS_MSG_BEHAVIOR: i32 = 11;
+pub const EE_AI_UNITS_MSG_STOP: i32 = 12;
+pub const EE_AI_UNITS_MSG_EXPLORE: i32 = 13;
+pub const EE_AI_UNITS_MSG_KILL: i32 = 14;
+pub const EE_AI_UNITS_MSG_HEAL: i32 = 15;
+pub const EE_AI_UNITS_MSG_RALLY: i32 = 16;
+pub const EE_AI_UNITS_MSG_REMOVE_TECH: i32 = 17;
+pub const EE_AI_UNITS_MSG_FORMATION: i32 = 18;
+pub const EE_AI_UNITS_MSG_PACK: i32 = 19;
+pub const EE_AI_UNITS_MSG_DROPOFF: i32 = 20;
+pub const EE_AI_UNITS_MSG_REPLANT: i32 = 21;
+pub const EE_AI_UNITS_MSG_SMART_FARMERS: i32 = 22;
+pub const EE_AI_UNITS_MSG_CAST: i32 = 23;
+pub const EE_AI_UNITS_MSG_PATROL_POINT: i32 = 24;
+pub const EE_AI_UNITS_MSG_LOCK: i32 = 25;
+
+/// The message record's size (the C++ checks its copy of the layout against it).
+///
+/// # Safety
+/// None: `m` is not read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_units_message_size(m: *const EeAiUnitsMessage) -> usize {
+    let _ = m;
+    std::mem::size_of::<EeAiUnitsMessage>()
+}
+
+enum V {
+    I(i64),
+    F(f32),
+    P(f32, f32),
+}
+
+fn message(id: i32, mode: i32, values: &[V]) -> EeAiUnitsMessage {
+    let mut m = EeAiUnitsMessage { message: id, mode, count: values.len() as i32, ..Default::default() };
+    for (k, v) in values.iter().enumerate() {
+        m.values[k] = match *v {
+            V::I(i) => EeAiUnitsMsgValue { kind: 0, i, ..Default::default() },
+            V::F(f) => EeAiUnitsMsgValue { kind: 1, x: f, ..Default::default() },
+            V::P(x, y) => EeAiUnitsMsgValue { kind: 2, x, y, ..Default::default() },
+        };
+    }
+    m
+}
+
+// the refusal reasons (`CmdReason`; units_lua.rs REASON_NAMES)
+const OK: c_long = 0;
+const BAD_ARGUMENT: c_long = 1;
+const NOT_OWN: c_long = 2;
+const NOT_SEEN: c_long = 3;
+const UNEXPLORED: c_long = 4;
+const CANNOT_PLACE: c_long = 5;
+const CANNOT_AFFORD: c_long = 6;
+const CANNOT_DO: c_long = 7;
+const LIMIT: c_long = 8;
+const REASON_TEXT: [&str; 11] = [
+    "none",
+    "bad_argument",
+    "not_own",
+    "not_seen",
+    "unexplored",
+    "cannot_place",
+    "cannot_afford",
+    "cannot_do",
+    "limit",
+    "full",
+    "not_in_epoch",
+];
+const COST_COMMAND: i64 = 300;
+const COST_ORDERED: i64 = 100;
+const FAMILY_ICBM: u64 = 0x37;
+const TYPE_GRANARY: u64 = 0x34;
+const TYPE_GRANARY_IMPROVED: u64 = 0x2ba;
+
+unsafe fn result(l: *mut lua_State, reason: c_long, count: c_long, id: c_long) -> c_int {
+    crate::ai::units_lua::ee_ai_units_result(l.cast(), reason, count, id)
+}
+
+fn stats_velocity(c: &UnitView<'_>) -> Option<f32> {
+    c.stats().map(|s| crate::world_field!(s.fields(), mMaxVelocity))
+}
+
+/// `EECPUnitsMobile`
+fn mobile(c: &UnitView<'_>) -> bool {
+    !c.class().is_some_and(|k| is_building(&k)) && stats_velocity(c).is_some_and(|v| v > 0.0)
+}
+
+/// `EECPUnitsCanAttack`: mobile or armed, or a missile base holding its ICBM
+fn can_attack(g: &Game<'_>, c: &UnitView<'_>) -> bool {
+    if mobile(c) || armed(c) {
+        return true;
+    }
+    (0..c.cargo_len())
+        .any(|i| g.unit(c.cargo_handle(i)).and_then(|k| k.class()).is_some_and(|k| k.family() == FAMILY_ICBM))
+}
+
+fn citizen(c: &UnitView<'_>) -> bool {
+    let k = category(c);
+    k == CAT_LAND_CITIZEN || k == CAT_NAVAL_CITIZEN
+}
+
+fn built_building(c: &UnitView<'_>) -> bool {
+    c.class().is_some_and(|k| is_building(&k)) && c.is_built()
+}
+
+fn gate_piece(c: &UnitView<'_>) -> bool {
+    use crate::units::kinds::{EE_CLASS_KIND_GATE, EE_UNIT_CLASS_KINDS};
+    c.class()
+        .is_some_and(|k| k.category() < 256 && EE_UNIT_CLASS_KINDS[k.category() as usize] & EE_CLASS_KIND_GATE != 0)
+}
+
+#[derive(Clone, Copy)]
+enum Test {
+    Any,
+    Mobile,
+    CanAttack,
+    Citizen,
+    Building,
+    Gate,
+}
+
+fn passes_test(g: &Game<'_>, c: &UnitView<'_>, t: Test) -> bool {
+    match t {
+        Test::Any => true,
+        Test::Mobile => mobile(c),
+        Test::CanAttack => can_attack(g, c),
+        Test::Citizen => citizen(c),
+        Test::Building => built_building(c),
+        Test::Gate => gate_piece(c),
+    }
+}
+
+/// `EECPUnitsOwnUnits`: `ids` -> `ids2`, the player's own living units on the map (or inside, with `inside`)
+/// that pass the test -> the first reason one failed
+fn own_units(g: &Game<'_>, s: &mut UnitsState, inside: bool, test: Test) -> c_long {
+    s.ids2.clear();
+    let mut reason = OK;
+    for k in 0..s.ids.len() {
+        let id = s.ids[k];
+        let Some(c) = g.own(s, id).filter(|c| !is_projectile(c)) else {
+            if reason == OK {
+                reason = NOT_OWN;
+            }
+            continue;
+        };
+        let disabled: bool = crate::world_field!(c.complex(), mIsDisabled);
+        if disabled || (!inside && (c.container_handle() != 0 || c.tile_xy().0 == NO_TILE)) || !passes_test(g, &c, test)
+        {
+            if reason == OK {
+                reason = CANNOT_DO;
+            }
+            continue;
+        }
+        let cid = c.id() as c_long;
+        if !s.ids2.contains(&cid) {
+            s.ids2.push(cid);
+        }
+    }
+    reason
+}
+
+/// `EECPUnitsTraceCmd`: the `next.cmd` line (the FNV-1a of the units' ids)
+fn trace_cmd(g: &Game<'_>, s: &UnitsState, verb: &str, reason: c_long, count: c_long, a: c_long, b: c_long) {
+    if host(EE_AI_UNITS_HOST_TRACE_ON, g.me_ptr, 0, 0, 0) == 0 {
+        return;
+    }
+    let mut hash: std::ffi::c_ulong = 2166136261;
+    for &id in &s.ids2 {
+        hash = (hash ^ id as std::ffi::c_ulong).wrapping_mul(16777619);
+    }
+    let text = format!(
+        "{verb} n={count} a={a} b={b} ids={:08x} first={} result={} reason={}",
+        hash as u64 & 0xffff_ffff,
+        s.ids2.first().copied().unwrap_or(0),
+        if reason == OK { "ok" } else { "refused" },
+        REASON_TEXT[reason as usize]
+    );
+    trace(g.me_ptr, c"next.cmd", &text);
+}
+
+/// `EECPUnitsRun`: the message run for the player on the units of `ids2` (the selection), which it takes
+unsafe fn run(g: &Game<'_>, s: *mut UnitsState, m: &EeAiUnitsMessage, take_them: bool) {
+    if host(EE_AI_UNITS_HOST_SELECT_BEGIN, g.me_ptr, 0, 0, 0) == 0 {
+        return;
+    }
+    let n = (*s).ids2.len();
+    for k in 0..n {
+        let id = (&(*s).ids2)[k];
+        if let Some(c) = g.own(&*s, id) {
+            host(EE_AI_UNITS_HOST_SELECT_ADD, g.me_ptr, c.handle() as i64, 0, 0);
+            if take_them {
+                take(g, &mut *s, &c);
+            }
+        }
+    }
+    let mut m = *m;
+    host_out(EE_AI_UNITS_HOST_EXEC, g.me_ptr, 0, (&mut m as *mut EeAiUnitsMessage).cast());
+}
+
+fn exec_plain(g: &Game<'_>, m: &EeAiUnitsMessage) {
+    let mut m = *m;
+    m.mode = 1;
+    host_out(EE_AI_UNITS_HOST_EXEC, g.me_ptr, 0, (&mut m as *mut EeAiUnitsMessage).cast());
+}
+
+/// `EECPUnitsBegin`: the ids at 1, the charge, the own units -> Some(the result's count) when refused
+unsafe fn begin(
+    l: *mut lua_State,
+    g: &Game<'_>,
+    s: *mut UnitsState,
+    inside: bool,
+    test: Test,
+    verb: &str,
+) -> Option<c_int> {
+    read_ids(l, 1, &mut (*s).ids);
+    charge(l, s, COST_COMMAND + (*s).ids.len() as i64 * COST_ORDERED);
+    let reason = own_units(g, &mut *s, inside, test);
+    if (*s).ids2.is_empty() {
+        let r = if reason == OK { BAD_ARGUMENT } else { reason };
+        trace_cmd(g, &*s, verb, r, 0, 0, 0);
+        return Some(result(l, r, 0, 0));
+    }
+    if !(*s).within_limits((*s).ids2.len() as c_long, now()) {
+        trace_cmd(g, &*s, verb, LIMIT, 0, 0, 0);
+        return Some(result(l, LIMIT, 0, 0));
+    }
+    None
+}
+
+fn tile_ok(g: &Game<'_>, x: c_long, y: c_long) -> bool {
+    x >= 0 && y >= 0 && g.world.map().is_some_and(|m| m.tile(x as i64, y as i64).is_some())
+}
+
+unsafe fn xy_arg(l: *mut lua_State, g: &Game<'_>, i: c_int) -> Option<(c_long, c_long)> {
+    if !is_int(l, i) || !is_int(l, i + 1) || !tile_ok(g, int_at(l, i), int_at(l, i + 1)) {
+        return None;
+    }
+    Some((int_at(l, i), int_at(l, i + 1)))
+}
+
+unsafe fn ids_len(s: *mut UnitsState) -> c_long {
+    (*s).ids2.len() as c_long
+}
+
+unsafe fn first_id(s: *mut UnitsState) -> i64 {
+    (&(*s).ids2)[0] as i64
+}
+
+/// The forwarded id at `i` (0: not an integer)
+unsafe fn forwarded_arg(l: *mut lua_State, s: *mut UnitsState, i: c_int) -> c_long {
+    if is_int(l, i) {
+        (*s).forward_id(int_at(l, i))
+    } else {
+        0
+    }
+}
+
+macro_rules! command {
+    ($l:ident, $g:ident, $s:ident, $inside:expr, $test:expr, $verb:expr) => {
+        let $l = $l as *mut lua_State;
+        let me_ptr = me_of($l);
+        let $s = state_of(me_ptr);
+        let t = WorldRead::begin();
+        let Some($g) = Game::new(&t, me_ptr) else {
+            return result($l, BAD_ARGUMENT, 0, 0);
+        };
+        if let Some(r) = begin($l, &$g, $s, $inside, $test, $verb) {
+            return r;
+        }
+    };
+}
+
+/// The usual end: the trace line, then ok with the units' count
+unsafe fn done(l: *mut lua_State, g: &Game<'_>, s: *mut UnitsState, verb: &str, a: c_long, b: c_long) -> c_int {
+    let n = ids_len(s);
+    trace_cmd(g, &*s, verb, OK, n, a, b);
+    result(l, OK, n, 0)
+}
+
+/// `ai.move(ids, x, y, {queue, forced, formation})`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_move(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Mobile, "move");
+    let Some((x, y)) = xy_arg(l, &g, 2) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    let queue = opt_bool(l, 4, c"queue", false);
+    let forced = opt_bool(l, 4, c"forced", false);
+    let formation = opt_bool(l, 4, c"formation", false);
+    let m = message(
+        EE_AI_UNITS_MSG_PATH_TO,
+        0,
+        &[
+            V::F(0.0),
+            V::F(x as f32 + 0.5),
+            V::F(y as f32 + 0.5),
+            V::I(forced as i64),
+            V::I(0),
+            V::I(queue as i64),
+            V::I(formation as i64),
+        ],
+    );
+    run(&g, s, &m, true);
+    done(l, &g, s, "move", x, y)
+}
+
+/// `ai.attack(ids, target, {queue})`: the target seen now, or a building the player remembers
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_attack(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::CanAttack, "attack");
+    let id = forwarded_arg(l, s, 2);
+    let Some(target) = g.alive(id) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    if let Some(p) = target.player() {
+        if p.handle() == g.me.handle() || (p.handle() != g.gaia() && g.is_ally(&p)) {
+            return result(l, BAD_ARGUMENT, 0, 0);
+        }
+    }
+    let known = g.seen(&target) || (*s).memory.get(&id).is_some_and(|r| r.building != 0);
+    if !known {
+        trace_cmd(&g, &*s, "attack", NOT_SEEN, 0, id, 0);
+        return result(l, NOT_SEEN, 0, 0);
+    }
+    let queue = opt_bool(l, 3, c"queue", false);
+    run(&g, s, &message(EE_AI_UNITS_MSG_ATTACK_UNIT, 0, &[V::I(id as i64), V::I(queue as i64), V::I(0)]), true);
+    done(l, &g, s, "attack", id, 0)
+}
+
+/// `ai.attack_ground(ids, x, y)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_attack_ground(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::CanAttack, "attack_ground");
+    let Some((x, y)) = xy_arg(l, &g, 2) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    run(&g, s, &message(EE_AI_UNITS_MSG_ATTACK_GROUND, 0, &[V::F(x as f32 + 0.5), V::F(y as f32 + 0.5)]), true);
+    done(l, &g, s, "attack_ground", x, y)
+}
+
+/// `ai.gather(ids, resource, {queue})`: a resource on an explored tile with some left
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_gather(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Citizen, "gather");
+    let id = if is_int(l, 2) { int_at(l, 2) } else { 0 };
+    let target = if id > 0 { g.unit(unit_handle(id)) } else { None };
+    let Some(target) = target.filter(|t| t.valid() && t.resource_amount() > 0) else {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    };
+    if !g.explored(&target) {
+        trace_cmd(&g, &*s, "gather", UNEXPLORED, 0, id, 0);
+        return result(l, UNEXPLORED, 0, 0);
+    }
+    let queue = opt_bool(l, 3, c"queue", false);
+    run(&g, s, &message(EE_AI_UNITS_MSG_GATHER, 0, &[V::I(id as i64), V::I(queue as i64)]), true);
+    done(l, &g, s, "gather", id, 0)
+}
+
+/// `EECPUnitsNewBuilding`: the newest own building of a class whose tile is (x, y), else the first such pending
+/// foundation (0: none)
+fn new_building(g: &Game<'_>, unit_type: c_long, x: c_long, y: c_long, above: c_long) -> c_long {
+    let mut best: c_long = 0;
+    for u in g.me.units() {
+        let (ux, uy) = u.tile_xy();
+        let id = u.id() as c_long;
+        if u.class().map_or(-1, |c| c.unit_type() as c_long) == unit_type
+            && ux == x as i64
+            && uy == y as i64
+            && id > above
+            && id > best
+        {
+            best = id;
+        }
+    }
+    let mut k = 0;
+    while best == 0 && k < g.me.pending_units_len() {
+        // GetPendingUnit: NULL past the end, which ends the scan
+        let Some(u) = g.unit(g.me.pending_unit_handle(k)) else { break };
+        let (ux, uy) = u.tile_xy();
+        if u.class().is_some_and(|c| c.unit_type() as c_long == unit_type) && ux == x as i64 && uy == y as i64 {
+            best = u.id() as c_long;
+        }
+        k += 1;
+    }
+    best
+}
+
+unsafe fn class_arg(l: *mut lua_State, i: c_int) -> c_long {
+    crate::ai::units_lua::ee_ai_units_class_arg(l.cast(), i, class_by_name)
+}
+
+fn class_at<'t>(g: &Game<'t>, t: c_long) -> Option<ClassView<'t>> {
+    if t < 0 || t as usize >= ClassView::count(g.t) {
+        return None;
+    }
+    ClassView::by_index(g.t, t as usize)
+}
+
+/// `ai.build(ids, type, x, y, {queue})` -> ..., the foundation's id: the citizens build it (it is the script's)
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_build(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Citizen, "build");
+    let unit_type = class_arg(l, 2);
+    let class = class_at(&g, unit_type)
+        .filter(|c| is_building(c) || host(EE_AI_UNITS_HOST_LAND_BUILDING, g.me_ptr, c.handle() as i64, 0, 0) != 0);
+    let Some(class) = class.filter(|_| is_int(l, 3) && is_int(l, 4)) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    let (x, y) = (int_at(l, 3), int_at(l, 4));
+    let tech = class.technology();
+    if host(EE_AI_UNITS_HOST_CAN_PRODUCE, g.me_ptr, tech, 0, 0) == 0 {
+        trace_cmd(&g, &*s, "build", CANNOT_AFFORD, 0, unit_type, x);
+        return result(l, CANNOT_AFFORD, 0, 0);
+    }
+    if host(EE_AI_UNITS_HOST_CAN_PLACE, g.me_ptr, unit_type as i64, x as i64, y as i64) == 0 {
+        trace_cmd(&g, &*s, "build", CANNOT_PLACE, 0, unit_type, x);
+        return result(l, CANNOT_PLACE, 0, 0);
+    }
+    let before = g.me.units().map(|u| u.id() as c_long).fold(0, |m, id| if id > m { id } else { m });
+    let queue = opt_bool(l, 5, c"queue", false);
+    run(&g, s, &message(EE_AI_UNITS_MSG_BUILD, 0, &[V::P(x as f32, y as f32), V::I(tech), V::I(queue as i64)]), true);
+    let new = new_building(&g, unit_type, x, y, before);
+    if new != 0 {
+        if let Some(c) = g.own(&*s, new) {
+            take(&g, &mut *s, &c);
+        }
+    }
+    let n = ids_len(s);
+    let reason = if new != 0 { OK } else { CANNOT_PLACE };
+    trace_cmd(&g, &*s, "build", reason, n, unit_type, new);
+    result(l, reason, if new != 0 { n } else { 0 }, new)
+}
+
+/// `ai.repair(ids, target)` and `ai.heal(ids, target)`: an own or allied unit
+unsafe fn repair_heal(l: *mut c_void, heal: bool) -> c_int {
+    let verb = if heal { "heal" } else { "repair" };
+    command!(l, g, s, false, if heal { Test::Any } else { Test::Citizen }, verb);
+    let id = forwarded_arg(l, s, 2);
+    if !g.alive(id).and_then(|t| t.player()).is_some_and(|p| g.is_ally(&p)) {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let m = if heal {
+        message(EE_AI_UNITS_MSG_HEAL, 0, &[V::I(id as i64)])
+    } else {
+        let queue = opt_bool(l, 3, c"queue", false);
+        message(EE_AI_UNITS_MSG_REPAIR, 0, &[V::I(id as i64), V::I(queue as i64)])
+    };
+    run(&g, s, &m, true);
+    done(l, &g, s, verb, id, 0)
+}
+
+/// `ai.repair(ids, target)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_repair(l: *mut c_void) -> c_int {
+    repair_heal(l, false)
+}
+
+/// `ai.heal(ids, target)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_heal(l: *mut c_void) -> c_int {
+    repair_heal(l, true)
+}
+
+/// `ai.garrison(ids, building)` / `ai.load(ids, transport)`
+unsafe fn load_into(l: *mut c_void, garrison: bool) -> c_int {
+    let verb = if garrison { "garrison" } else { "load" };
+    command!(l, g, s, false, Test::Any, verb);
+    let id = forwarded_arg(l, s, 2);
+    let into = g.own(&*s, id).filter(|c| match c.class() {
+        Some(k) if garrison => {
+            let capacity: c_long = crate::world_field!(k.fields(), mGarrisonCapacity);
+            capacity > 0
+        }
+        Some(k) => host(EE_AI_UNITS_HOST_IS_TRANSPORT, g.me_ptr, k.handle() as i64, 0, 0) != 0,
+        None => false,
+    });
+    let Some(into) = into else { return result(l, BAD_ARGUMENT, 0, 0) };
+    (*s).ids2.retain(|&k| k != id);
+    let before = into.cargo_len() as c_long;
+    let kind = if garrison { EE_AI_UNITS_MSG_LOAD_GARRISON } else { EE_AI_UNITS_MSG_LOAD_TRANSPORT };
+    run(&g, s, &message(kind, 0, &[V::I(id as i64), V::I(-1), V::I(0)]), true);
+    take(&g, &mut *s, &into);
+    done(l, &g, s, verb, id, before)
+}
+
+/// `ai.garrison(ids, building)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_garrison(l: *mut c_void) -> c_int {
+    load_into(l, true)
+}
+
+/// `ai.load(ids, transport)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_load(l: *mut c_void) -> c_int {
+    load_into(l, false)
+}
+
+/// `ai.unload(containers, x, y)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_unload(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Any, "unload");
+    let Some((x, y)) = xy_arg(l, &g, 2) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    run(&g, s, &message(EE_AI_UNITS_MSG_UNLOAD, 0, &[V::I(first_id(s)), V::I(x as i64), V::I(y as i64)]), true);
+    done(l, &g, s, "unload", x, y)
+}
+
+fn queued_at(g: &Game<'_>, s: &UnitsState) -> c_long {
+    let mut n: c_long = 0;
+    for &id in &s.ids2 {
+        if let Some(c) = g.own(s, id) {
+            n += c.build_queue_len() as c_long + (c.current_research() != NO_RESEARCH) as c_long;
+        }
+    }
+    n
+}
+
+unsafe fn tech_by_name(l: *mut lua_State, i: c_int) -> c_long {
+    host(EE_AI_UNITS_HOST_TECH_BY_NAME, std::ptr::null_mut(), lua_tostring(l, i) as i64, 0, 0) as c_long
+}
+
+/// `ai.train(buildings, type, n)` / `ai.research(buildings, tech)`: the queue of the least busy of the buildings
+unsafe fn queue(l: *mut c_void, train: bool) -> c_int {
+    let verb = if train { "train" } else { "research" };
+    command!(l, g, s, false, Test::Building, verb);
+    let mut tech: c_long = -1;
+    if train {
+        if let Some(c) = class_at(&g, class_arg(l, 2)) {
+            tech = c.technology() as c_long;
+        }
+    } else if lua_type(l, 2) == LUA_TSTRING {
+        tech = tech_by_name(l, 2);
+    } else if is_int(l, 2) {
+        tech = int_at(l, 2);
+    }
+    let n = if is_int(l, 3) { int_at(l, 3) } else { 1 };
+    if tech < 0 || !(1..=5).contains(&n) {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    // one building of the same type at a time: the message queues at the selected buildings of the clicked one's type
+    let first = g.own(&*s, (&(*s).ids2)[0]).map_or(0, |c| c.id() as i64);
+    let before = queued_at(&g, &*s);
+    for _ in 0..n {
+        run(&g, s, &message(EE_AI_UNITS_MSG_RESEARCH, 0, &[V::I(first), V::I(tech as i64), V::I(0)]), false);
+    }
+    let queued = queued_at(&g, &*s) - before;
+    let reason = if queued > 0 { OK } else { CANNOT_AFFORD };
+    trace_cmd(&g, &*s, verb, reason, queued, tech, n);
+    result(l, reason, queued.max(0), 0)
+}
+
+/// `ai.train(buildings, type, n)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_train(l: *mut c_void) -> c_int {
+    queue(l, true)
+}
+
+/// `ai.research(buildings, tech)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_research(l: *mut c_void) -> c_int {
+    queue(l, false)
+}
+
+/// `ai.stance(ids, n)`: the behaviour table's index
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_stance(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Any, "stance");
+    if !is_int(l, 2)
+        || lua_tointeger(l, 2) < 0
+        || host(EE_AI_UNITS_HOST_BEHAVIOR_OK, g.me_ptr, lua_tointeger(l, 2), 0, 0) == 0
+    {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let n = int_at(l, 2);
+    run(&g, s, &message(EE_AI_UNITS_MSG_BEHAVIOR, 0, &[V::I(n as i64)]), true);
+    done(l, &g, s, "stance", n, 0)
+}
+
+/// `ai.stop(ids)`, `ai.explore(ids)`, `ai.delete(ids)`
+unsafe fn plain(l: *mut c_void, verb: &'static str) -> c_int {
+    let (inside, test, msg, take_them) = match verb {
+        "stop" => (false, Test::Any, EE_AI_UNITS_MSG_STOP, true),
+        "explore" => (false, Test::Mobile, EE_AI_UNITS_MSG_EXPLORE, true),
+        _ => (true, Test::Any, EE_AI_UNITS_MSG_KILL, false),
+    };
+    command!(l, g, s, inside, test, verb);
+    let m = if msg == EE_AI_UNITS_MSG_KILL { message(msg, 0, &[V::I(1)]) } else { message(msg, 0, &[]) };
+    run(&g, s, &m, take_them);
+    done(l, &g, s, verb, 0, 0)
+}
+
+/// `ai.stop(ids)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_stop(l: *mut c_void) -> c_int {
+    plain(l, "stop")
+}
+
+/// `ai.explore(ids)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_explore(l: *mut c_void) -> c_int {
+    plain(l, "explore")
+}
+
+/// `ai.delete(ids)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_delete(l: *mut c_void) -> c_int {
+    plain(l, "delete")
+}
+
+/// A target argument at `i`: (x, y) at i, i + 1, or a unit the player may know of -> (target, x, y); Err: the
+/// refusal (bad_argument, not_seen)
+unsafe fn place_or_unit(
+    l: *mut lua_State,
+    g: &Game<'_>,
+    s: *mut UnitsState,
+    i: c_int,
+    check_tile: bool,
+) -> Result<(c_long, c_long, c_long), c_long> {
+    if is_int(l, i) && is_int(l, i + 1) {
+        let (x, y) = (int_at(l, i), int_at(l, i + 1));
+        if check_tile && !tile_ok(g, x, y) {
+            return Err(BAD_ARGUMENT);
+        }
+        return Ok((-1, x, y));
+    }
+    if is_int(l, i) {
+        let Some(u) = g.known(&*s, int_at(l, i)) else { return Err(NOT_SEEN) };
+        let (x, y) = u.tile_xy();
+        return Ok((u.id() as c_long, x as c_long, y as c_long));
+    }
+    Err(BAD_ARGUMENT)
+}
+
+/// `ai.rally(buildings, x, y)` or `ai.rally(buildings, target)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_rally(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Building, "rally");
+    let (target, x, y) = match place_or_unit(l, &g, s, 2, true) {
+        Ok(v) => v,
+        Err(r) => return result(l, r, 0, 0),
+    };
+    // the message sets the rally of the selected buildings of the named one's type
+    let n = ids_len(s);
+    let m = message(
+        EE_AI_UNITS_MSG_RALLY,
+        0,
+        &[V::P(x as f32 + 0.5, y as f32 + 0.5), V::I(target as i64), V::I(first_id(s)), V::I(0)],
+    );
+    run(&g, s, &m, false);
+    trace_cmd(&g, &*s, "rally", OK, n, x, y);
+    result(l, OK, n, 0)
+}
+
+/// `ai.cancel(buildings, type or tech)`: one of it out of their queues
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_cancel(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Building, "cancel");
+    let mut tech: c_long = -1;
+    if lua_type(l, 2) == LUA_TSTRING {
+        tech = match class_at(&g, class_arg(l, 2)) {
+            Some(c) => c.technology() as c_long,
+            None => tech_by_name(l, 2),
+        };
+    } else if is_int(l, 2) {
+        tech = int_at(l, 2);
+    }
+    if tech < 0 {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let m = message(EE_AI_UNITS_MSG_REMOVE_TECH, 0, &[V::I(first_id(s)), V::I(tech as i64), V::I(0), V::I(0)]);
+    run(&g, s, &m, false);
+    done(l, &g, s, "cancel", tech, 0)
+}
+
+/// `ai.formation(ids, kind)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_formation(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Mobile, "formation");
+    if !is_int(l, 2) || !(0..=16).contains(&lua_tointeger(l, 2)) {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let k = int_at(l, 2);
+    run(&g, s, &message(EE_AI_UNITS_MSG_FORMATION, 0, &[V::I(k as i64), V::I(1)]), true);
+    done(l, &g, s, "formation", k, 0)
+}
+
+/// `ai.pack(ids, on)` and `ai.lock(ids, on)`
+unsafe fn switch(l: *mut c_void, lock: bool) -> c_int {
+    let verb = if lock { "lock" } else { "pack" };
+    command!(l, g, s, false, if lock { Test::Gate } else { Test::Any }, verb);
+    let on = lua_toboolean(l, 2) != 0;
+    let msg = if lock { EE_AI_UNITS_MSG_LOCK } else { EE_AI_UNITS_MSG_PACK };
+    run(&g, s, &message(msg, 0, &[V::I(on as i64)]), !lock);
+    done(l, &g, s, verb, lua_toboolean(l, 2) as c_long, 0)
+}
+
+/// `ai.pack(ids, on)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_pack(l: *mut c_void) -> c_int {
+    switch(l, false)
+}
+
+/// `ai.lock(ids, on)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_lock(l: *mut c_void) -> c_int {
+    switch(l, true)
+}
+
+/// `ai.dropoff(ids, building)` and `ai.farm(ids, granary or farm, {queue})`
+unsafe fn to_building(l: *mut c_void, farm: bool) -> c_int {
+    let verb = if farm { "farm" } else { "dropoff" };
+    command!(l, g, s, false, Test::Citizen, verb);
+    let id = forwarded_arg(l, s, 2);
+    let to = g.own(&*s, id);
+    let m = if farm {
+        if to.is_none() {
+            return result(l, BAD_ARGUMENT, 0, 0);
+        }
+        let queue = opt_bool(l, 3, c"queue", false);
+        message(EE_AI_UNITS_MSG_SMART_FARMERS, 0, &[V::I(id as i64), V::I(queue as i64)])
+    } else {
+        if !to.is_some_and(|c| c.is_built()) {
+            return result(l, BAD_ARGUMENT, 0, 0);
+        }
+        message(EE_AI_UNITS_MSG_DROPOFF, 0, &[V::I(id as i64)])
+    };
+    run(&g, s, &m, true);
+    done(l, &g, s, verb, id, 0)
+}
+
+/// `ai.dropoff(ids, building)`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_dropoff(l: *mut c_void) -> c_int {
+    to_building(l, false)
+}
+
+/// `ai.farm(ids, granary or farm, {queue})`
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_farm(l: *mut c_void) -> c_int {
+    to_building(l, true)
+}
+
+/// `ai.replant(granary)` -> ok: the granary's missing field foundations laid again
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_replant(l: *mut c_void) -> c_int {
+    let l = l as *mut lua_State;
+    let me_ptr = me_of(l);
+    let s = state_of(me_ptr);
+    charge(l, s, COST_COMMAND);
+    let t = WorldRead::begin();
+    let Some(g) = Game::new(&t, me_ptr) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    let id = if is_int(l, 1) { (*s).forward_id(int_at(l, 1)) } else { 0 };
+    let granary = g.own(&*s, id).filter(|c| {
+        let k = c.class().map_or(0, |k| k.unit_type());
+        c.is_built() && c.has_tile_node() && (k == TYPE_GRANARY || k == TYPE_GRANARY_IMPROVED)
+    });
+    if granary.is_none() {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    (*s).ids2.clear();
+    (*s).ids2.push(id);
+    if !(*s).within_limits(1, now()) {
+        return result(l, LIMIT, 0, 0);
+    }
+    exec_plain(&g, &message(EE_AI_UNITS_MSG_REPLANT, 1, &[V::I(id as i64)]));
+    trace_cmd(&g, &*s, "replant", OK, 1, id, 0);
+    result(l, OK, 1, 0)
+}
+
+/// `ai.cast(ids, tech, target)` / `ai.cast(ids, tech, x, y)`: a power or calamity by the first caster that can
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_cast(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Any, "cast");
+    let tech = if lua_type(l, 2) == LUA_TSTRING {
+        tech_by_name(l, 2)
+    } else if is_int(l, 2) {
+        int_at(l, 2)
+    } else {
+        -1
+    };
+    if tech < 0 || host(EE_AI_UNITS_HOST_HAS_NODE, g.me_ptr, tech as i64, 0, 0) == 0 {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let (target, x, y) = match place_or_unit(l, &g, s, 3, false) {
+        Ok(v) => v,
+        Err(r) => return result(l, r, 0, 0),
+    };
+    let m = message(
+        EE_AI_UNITS_MSG_CAST,
+        0,
+        &[V::I(first_id(s)), V::I(target as i64), V::I(x as i64), V::I(y as i64), V::I(tech as i64)],
+    );
+    run(&g, s, &m, true);
+    done(l, &g, s, "cast", tech, target)
+}
+
+/// `ai.patrol(ids, {{x, y}, ...})`: the mobile units patrol through 2..8 points
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_patrol(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Mobile, "patrol");
+    if lua_type(l, 2) != LUA_TTABLE {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let n = lua_rawlen(l, 2) as c_long;
+    if !(2..=8).contains(&n) {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    let mut points = [(0.0f32, 0.0f32); 8];
+    for k in 1..=n {
+        lua_rawgeti(l, 2, k as lua_Integer);
+        if lua_type(l, -1) != LUA_TTABLE {
+            lua_pop(l, 1);
+            return result(l, BAD_ARGUMENT, 0, 0);
+        }
+        lua_rawgeti(l, -1, 1);
+        lua_rawgeti(l, -2, 2);
+        let ok = is_int(l, -2) && is_int(l, -1);
+        let (x, y) = if ok { (int_at(l, -2), int_at(l, -1)) } else { (-1, -1) };
+        lua_pop(l, 3);
+        if !ok || !g.world.map().is_some_and(|m| m.tile(x as i64, y as i64).is_some()) {
+            return result(l, BAD_ARGUMENT, 0, 0);
+        }
+        points[(k - 1) as usize] = (x as f32, y as f32);
+    }
+    for p in &points[..n as usize] {
+        run(&g, s, &message(EE_AI_UNITS_MSG_PATROL_POINT, 0, &[V::P(p.0, p.1)]), true);
+    }
+    let first = (points[0].0 as c_long) * 10000 + points[0].1 as c_long;
+    done(l, &g, s, "patrol", n, first)
+}
+
+/// The player has a tech tree (`mTechnologies != NULL`).
+pub const EE_AI_UNITS_HOST_HAS_TREE: i32 = 40;
+/// `EECPWallClass(player)`: the epoch's wall as the classic wall manager takes it.
+pub const EE_AI_UNITS_HOST_WALL_CLASS: i32 = 41;
+/// The tech `a`'s node: -1 none, else `CanAfford(node, 0x20, 1)` (0 or 1).
+pub const EE_AI_UNITS_HOST_NODE_AFFORD: i32 = 42;
+pub const EE_AI_UNITS_MSG_BUILD_WALL: i32 = 26;
+const NOT_IN_EPOCH: c_long = 10;
+
+/// `ai.wall(ids, type, x1, y1, x2, y2)`: the citizens lay a straight wall of the class between the two tiles, as a
+/// human's drag does (EEPlanWall); n = the citizens sent
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_units_lua_wall(l: *mut c_void) -> c_int {
+    command!(l, g, s, false, Test::Citizen, "wall");
+    // the class: "wall" (or nil) is the epoch's wall as the classic wall manager takes it (GetWallClass)
+    let named =
+        lua_type(l, 2) == LUA_TNIL || (lua_type(l, 2) == LUA_TSTRING && CStr::from_ptr(lua_tostring(l, 2)) == c"wall");
+    let unit_type = if named && host(EE_AI_UNITS_HOST_HAS_TREE, g.me_ptr, 0, 0, 0) != 0 {
+        host(EE_AI_UNITS_HOST_WALL_CLASS, g.me_ptr, 0, 0, 0) as c_long
+    } else {
+        class_arg(l, 2)
+    };
+    let class = class_at(&g, unit_type).filter(|c| c.wall());
+    let Some(class) = class.filter(|_| (3..=6).all(|i| is_int(l, i))) else { return result(l, BAD_ARGUMENT, 0, 0) };
+    let (x1, y1, x2, y2) = (int_at(l, 3), int_at(l, 4), int_at(l, 5), int_at(l, 6));
+    let on_map = |x: c_long, y: c_long| g.world.map().is_some_and(|m| m.tile(x as i64, y as i64).is_some());
+    if !on_map(x1, y1) || !on_map(x2, y2) {
+        return result(l, BAD_ARGUMENT, 0, 0);
+    }
+    // (no CanProduce: EEPlanWall and EEBuildWall check the placement and pay the pieces; a wall tech is never
+    // "available" the production way for a computer player)
+    let tech = class.technology();
+    match host(EE_AI_UNITS_HOST_NODE_AFFORD, g.me_ptr, tech, 0, 0) {
+        -1 => {
+            trace_cmd(&g, &*s, "wall", NOT_IN_EPOCH, 0, unit_type, 0);
+            return result(l, NOT_IN_EPOCH, 0, 0);
+        }
+        0 => {
+            trace_cmd(&g, &*s, "wall", CANNOT_AFFORD, 0, unit_type, x1);
+            return result(l, CANNOT_AFFORD, 0, 0);
+        }
+        _ => {}
+    }
+    let me_id = g.me.id() as i64;
+    let m = message(
+        EE_AI_UNITS_MSG_BUILD_WALL,
+        0,
+        &[V::P(x1 as f32, y1 as f32), V::P(x2 as f32, y2 as f32), V::I(tech), V::I(me_id)],
+    );
+    run(&g, s, &m, true);
+    done(l, &g, s, "wall", unit_type, x1 * 10000 + y1)
+}

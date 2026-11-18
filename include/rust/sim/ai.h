@@ -73,6 +73,97 @@ constexpr static const int32_t EE_AI_UNITS_HOST_GATHER_TARGET = 21;
 /// `gCPTraceOn`.
 constexpr static const int32_t EE_AI_UNITS_HOST_TRACE_ON = 22;
 
+/// The selection (`mActiveGroup`) cleared (0: the player has none).
+constexpr static const int32_t EE_AI_UNITS_HOST_SELECT_BEGIN = 30;
+
+/// The complex unit `a` added to the selection.
+constexpr static const int32_t EE_AI_UNITS_HOST_SELECT_ADD = 31;
+
+/// The message `out` (an `EeAiUnitsMessage`) run (its mode says how).
+constexpr static const int32_t EE_AI_UNITS_HOST_EXEC = 32;
+
+/// `EECPNextTechByName(a)` (a NUL-terminated name).
+constexpr static const int32_t EE_AI_UNITS_HOST_TECH_BY_NAME = 33;
+
+/// `player->EEPlayer::CanProduce(a, 0x20, 1, true, 3, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PRODUCE = 34;
+
+/// `EECanPlaceOnTile(player, a, b, c, false, 1)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PLACE = 35;
+
+/// The class `a`'s `IsTransport()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_TRANSPORT = 36;
+
+/// `a` indexes a behaviour of `EEUnitBehavior::sTable` (in range, not NULL).
+constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIOR_OK = 37;
+
+/// `player->mTechnologies->Get(a) != NULL`.
+constexpr static const int32_t EE_AI_UNITS_HOST_HAS_NODE = 38;
+
+/// The class `a`'s `IsLandBuilding()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_LAND_BUILDING = 39;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PATH_TO = 1;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_ATTACK_UNIT = 2;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_ATTACK_GROUND = 3;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_GATHER = 4;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD = 5;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REPAIR = 6;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOAD_GARRISON = 7;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOAD_TRANSPORT = 8;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_UNLOAD = 9;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_RESEARCH = 10;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BEHAVIOR = 11;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_STOP = 12;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_EXPLORE = 13;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_KILL = 14;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_HEAL = 15;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_RALLY = 16;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REMOVE_TECH = 17;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_FORMATION = 18;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PACK = 19;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_DROPOFF = 20;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REPLANT = 21;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_SMART_FARMERS = 22;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_CAST = 23;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PATROL_POINT = 24;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOCK = 25;
+
+/// The player has a tech tree (`mTechnologies != NULL`).
+constexpr static const int32_t EE_AI_UNITS_HOST_HAS_TREE = 40;
+
+/// `EECPWallClass(player)`: the epoch's wall as the classic wall manager takes it.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_CLASS = 41;
+
+/// The tech `a`'s node: -1 none, else `CanAfford(node, 0x20, 1)` (0 or 1).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_AFFORD = 42;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD_WALL = 26;
+
 constexpr static const long EV_ATTACKED = 1;
 
 constexpr static const long EV_DIED = 2;
@@ -361,6 +452,23 @@ struct EeAiUnitsFacts {
   long stance;
   /// `mGarrisonCount`
   long garrisoned;
+};
+
+/// `EEMRecord`'s members as a command sends them: an integer (`kind` 0), a float (1) or a point (2: `x`, `y`).
+struct EeAiUnitsMsgValue {
+  int32_t kind;
+  int64_t i;
+  float x;
+  float y;
+};
+
+/// A command's message (`EE_AI_UNITS_HOST_EXEC`): `message` one of `EE_AI_UNITS_MSG_*`, `mode` 0 run on the
+/// selection under the borrowed slot (`EECPUnitsRun`), 1 run as it is (`Execute`).
+struct EeAiUnitsMessage {
+  int32_t message;
+  int32_t mode;
+  int32_t count;
+  EeAiUnitsMsgValue values[8];
 };
 
 /// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
@@ -956,6 +1064,94 @@ int ee_ai_units_lua_path_len(void *l);
 
 /// `ai.gatherers()` -> {[resource id] = n}: the own living citizens and boats whose gather goal is that resource
 int ee_ai_units_lua_gatherers(void *l);
+
+/// The message record's size (the C++ checks its copy of the layout against it).
+///
+/// # Safety
+/// None: `m` is not read.
+size_t ee_ai_units_message_size(const EeAiUnitsMessage *m);
+
+/// `ai.move(ids, x, y, {queue, forced, formation})`
+int ee_ai_units_lua_move(void *l);
+
+/// `ai.attack(ids, target, {queue})`: the target seen now, or a building the player remembers
+int ee_ai_units_lua_attack(void *l);
+
+/// `ai.attack_ground(ids, x, y)`
+int ee_ai_units_lua_attack_ground(void *l);
+
+/// `ai.gather(ids, resource, {queue})`: a resource on an explored tile with some left
+int ee_ai_units_lua_gather(void *l);
+
+/// `ai.build(ids, type, x, y, {queue})` -> ..., the foundation's id: the citizens build it (it is the script's)
+int ee_ai_units_lua_build(void *l);
+
+/// `ai.repair(ids, target)`
+int ee_ai_units_lua_repair(void *l);
+
+/// `ai.heal(ids, target)`
+int ee_ai_units_lua_heal(void *l);
+
+/// `ai.garrison(ids, building)`
+int ee_ai_units_lua_garrison(void *l);
+
+/// `ai.load(ids, transport)`
+int ee_ai_units_lua_load(void *l);
+
+/// `ai.unload(containers, x, y)`
+int ee_ai_units_lua_unload(void *l);
+
+/// `ai.train(buildings, type, n)`
+int ee_ai_units_lua_train(void *l);
+
+/// `ai.research(buildings, tech)`
+int ee_ai_units_lua_research(void *l);
+
+/// `ai.stance(ids, n)`: the behaviour table's index
+int ee_ai_units_lua_stance(void *l);
+
+/// `ai.stop(ids)`
+int ee_ai_units_lua_stop(void *l);
+
+/// `ai.explore(ids)`
+int ee_ai_units_lua_explore(void *l);
+
+/// `ai.delete(ids)`
+int ee_ai_units_lua_delete(void *l);
+
+/// `ai.rally(buildings, x, y)` or `ai.rally(buildings, target)`
+int ee_ai_units_lua_rally(void *l);
+
+/// `ai.cancel(buildings, type or tech)`: one of it out of their queues
+int ee_ai_units_lua_cancel(void *l);
+
+/// `ai.formation(ids, kind)`
+int ee_ai_units_lua_formation(void *l);
+
+/// `ai.pack(ids, on)`
+int ee_ai_units_lua_pack(void *l);
+
+/// `ai.lock(ids, on)`
+int ee_ai_units_lua_lock(void *l);
+
+/// `ai.dropoff(ids, building)`
+int ee_ai_units_lua_dropoff(void *l);
+
+/// `ai.farm(ids, granary or farm, {queue})`
+int ee_ai_units_lua_farm(void *l);
+
+/// `ai.replant(granary)` -> ok: the granary's missing field foundations laid again
+int ee_ai_units_lua_replant(void *l);
+
+/// `ai.cast(ids, tech, target)` / `ai.cast(ids, tech, x, y)`: a power or calamity by the first caster that can
+int ee_ai_units_lua_cast(void *l);
+
+/// `ai.patrol(ids, {{x, y}, ...})`: the mobile units patrol through 2..8 points
+int ee_ai_units_lua_patrol(void *l);
+
+/// `ai.wall(ids, type, x1, y1, x2, y2)`: the citizens lay a straight wall of the class between the two tiles, as a
+/// human's drag does (EEPlanWall); n = the citizens sent
+int ee_ai_units_lua_wall(void *l);
 
 /// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
 long ee_ai_units_class_arg(void *state,
