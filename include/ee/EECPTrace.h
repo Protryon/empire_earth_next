@@ -40,6 +40,10 @@ void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5
 void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit);       // counted into the next stats line
 void EECPTraceHash(unsigned long inTime);   // every 10 game s: the out-of-synch checksum's parts ("sim hash")
 void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds);
+// a new game (EEWorld, before its players are made): the per-player state the computer players keep in file statics
+// (the trace's counters, the loss incidents, the reflexes' cool-downs) cleared, as at the process's start, so a game
+// plays and traces the same after another game in the process (EE-SIM --games) as alone
+void EECPNewGame();   // ee_ai_new_game (ee_sim::ai next_trace.rs)
 
 #define EE_CP_TRACE(player, event, ...) \
     do { if (gCPTraceOn) EECPTraceOut((player), (event), __VA_ARGS__); } while (0)

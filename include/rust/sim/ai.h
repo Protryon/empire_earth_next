@@ -1490,6 +1490,12 @@ void ee_ai_next_naval_flee(void *me,
 /// `me` is a live computer player.
 void ee_ai_next_flee_raids(void *me);
 
+/// `EECPNewGame` (EEWorld::StartGame, before its players are made): the computer players' per-game statics cleared as
+/// at the process's start, so a game plays and traces the same after another game in the process (EE-SIM --games) as
+/// alone: the trace's counters and next sim hash time, the loss incidents (`EECPNextArmyNewGame`) and the reflexes'
+/// cool-downs (`EECPReflexesNewGame`)
+void ee_ai_new_game();
+
 /// `EECPTraceIncome`: a resource amount the player got (EEComputerPlayer::AddResource), for the next income line.
 void ee_ai_trace_income(unsigned long player,
                         long resource,

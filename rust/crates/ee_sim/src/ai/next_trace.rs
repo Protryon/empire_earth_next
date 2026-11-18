@@ -58,6 +58,18 @@ const ZERO: Counters = Counters {
 static COUNTERS: Mutex<[Counters; MAX_TRACED]> = Mutex::new([ZERO; MAX_TRACED]);
 static NEXT_HASH: Mutex<c_ulong> = Mutex::new(0);
 
+/// `EECPNewGame` (EEWorld::StartGame, before its players are made): the computer players' per-game statics cleared as
+/// at the process's start, so a game plays and traces the same after another game in the process (EE-SIM --games) as
+/// alone: the trace's counters and next sim hash time, the loss incidents (`EECPNextArmyNewGame`) and the reflexes'
+/// cool-downs (`EECPReflexesNewGame`)
+#[no_mangle]
+pub extern "C" fn ee_ai_new_game() {
+    *COUNTERS.lock().unwrap_or_else(|e| e.into_inner()) = [ZERO; MAX_TRACED];
+    *NEXT_HASH.lock().unwrap_or_else(|e| e.into_inner()) = 0;
+    new_game_losses();
+    super::reflex::new_game();
+}
+
 fn counters<R>(id: c_ulong, f: impl FnOnce(&mut Counters) -> R) -> R {
     let mut all = COUNTERS.lock().unwrap_or_else(|e| e.into_inner());
     f(&mut all[id as usize])
@@ -740,4 +752,34 @@ pub extern "C" fn ee_ai_trace_hash(time: c_ulong) {
     );
     let c = cstr(line.as_bytes());
     host(EE_AI_NEXT_HOST_DEBUG_OUT, std::ptr::null_mut(), c.as_ptr() as i64, 0, 0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_game_clears_the_per_game_statics() {
+        counters(5, |c| {
+            c.lost[0] = 3;
+            c.income[2] = 7;
+            c.next_stats = 30000;
+            c.profile_sum = 99;
+        });
+        *NEXT_HASH.lock().unwrap() = 20000;
+        with_losses(5, 1000, |l| {
+            l.next_id = 4;
+            l.incidents.push(Incident::default());
+            l.hits.insert(1, LossHit::default());
+        });
+        ee_ai_new_game();
+        counters(5, |c| {
+            assert_eq!((c.lost, c.income[2], c.next_stats, c.profile_sum), ([0; 3], 0, 0, 0));
+        });
+        assert_eq!(*NEXT_HASH.lock().unwrap(), 0);
+        // a later time than before: the "new game" heuristic does not fire, the reset alone cleared them
+        with_losses(5, 2000, |l| {
+            assert_eq!((l.next_id, l.incidents.len(), l.hits.len()), (0, 0, 0));
+        });
+    }
 }

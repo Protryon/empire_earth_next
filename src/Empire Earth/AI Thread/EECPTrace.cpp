@@ -65,6 +65,13 @@ const char* gCPTraceManager = "-";
 static bool sInitialized = false;
 static char sCheatNames[128];
 
+// a new game (EEWorld, before its players are made): the computer players' per-game statics, now Rust's (the
+// trace's counters and next hash line, the loss incidents, the reflexes' cool-downs), cleared as at the start
+void EECPNewGame()
+{
+    ee_ai_new_game();
+}
+
 // a personality's position in the rules (-1: none), and a line of the debug output: the switches' callbacks
 static long EECPTraceFindPersonality(const char* inName)
 {

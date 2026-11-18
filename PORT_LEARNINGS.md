@@ -30523,3 +30523,209 @@ rows (round 14's step 2) were not started: the persistent data's cluster gave th
 
 The merge of origin/rust needed only PORT_LEARNINGS.md's end (both sides appended) and one trailing address comment
 (strip_markers).
+
+## Several games a process (EE-SIM --games, branch simmulti, 2026-11-16)
+
+- **Where a game's wall time goes now** (Hard Small, 2 AIs, the report's new `wall_phases`): process start ~0.1 s,
+  the engine and database to the main menu ~2.2 s (up to 7 s while other benches load the machine), menus 0.1 s,
+  lobby 4.9 s (fixed sleeps: 1.5 s, 200 ms a change, 1 s), loading 2.8 s, report and exit under 0.4 s (the exit is
+  TerminateProcess). The game itself is no longer 4-7 s: with the Lua AIs a 45-minute game takes ~20 s and a
+  90-minute one ~65-80 s. The overhead a game (~10 s) is a third of a 45-minute game at most.
+- **The AI is two thirds of the game** (tools/sim_profile.py, 90 minutes, classic and boom against Age of AI, the
+  physics thread): EEArtificialIntelligence::Update 67%, of it EECPLuaState::Call 38-40% (luaV_execute's own
+  instructions 7.4% self; the C functions the scripts call, LuaUnit 6%, LuaGet 4%, LuaUnits, LuaTechs, LuaClass;
+  the GC 6%; Lua's realloc 5.7%), the view built per step (EECPNextBuildView) 8.6-9.6%, the save check after each call
+  (EECPLuaState::CheckMemory) 6-9%, the per-unit micro tick 10-11%; the engine (EEPhysics::UpdateUnits) 27%. The
+  heap (RtlAllocateHeap + RtlFreeHeap) is ~10% of the thread, mostly Lua and EECPLuaValue vectors.
+  EETechTreeEpoch::Get's std::map<long, string> lookup is 1.5%. Per player (EE-AIPROF): classic_lua 21-24 s, boom
+  18-20 s, Age of AI 17-19 s of a 90-minute game.
+- **The game supports a second game in a process** (a player quits to the menus and starts another), so a batch
+  leaves each game the player's way: EEUserInterface::CancelGame (the physics stopped, the game media unloaded, a
+  fresh client, LeaveMap: the action queues, the world and the game state cleared), then the post-game summary's exit
+  (EEUIEPGSEExit), which lands on the single player menu (form 6), not the main menu. Fire the summary's exit once and
+  let form 6 settle: a second close, still queued, closed the next lobby ("control 30 is not a combo on the lobby"),
+  and a click into a form still opening was lost (12 of 32 games of the first try).
+- **What the port kept between games**: the computer players' per-player file statics. EECPTrace's counters (the
+  next game's first "cp losses" line counted the units the world clear removed, "cp income" the last game's tail),
+  EECPNextArmy's loss incidents (a heuristic "new game" reset only when the new game's time was below the last one's)
+  and EECPReflexes' cool-downs (militia, naval flee: per player id, so a call late in one game could block one in the
+  next: a behaviour change, not only a trace one). EECPNewGame (ee/EECPTrace.h) clears them in EEWorld's world set-up,
+  before the players are made; they are zero at the process's start, so a single game is unchanged (the 16 games
+  below equal main's exe). The original game's own globals have their resets (EEPPatrolGroup's IDs, the herd counter
+  in EEWorld, the pools, the path manager); the Lua states are made per player per game (EECPNextOpen) and seeded
+  from the game's seed.
+- **The trace's start-up lines**: the AI manifest's line ("EE-AI engine Data\ai\ais.json: ...") is written once, at
+  start-up; the driver keeps the debug strings written before the first game and writes them at the head of every
+  game's trace and log, and drops those between games (a single run has quit by then).
+- **The proof** (16 games: seeds 2-17, the engines classic, boom, ageofai, classic+ageofai, boom+ageofai,
+  boom+classic in turn, Small Continental, Small Islands and Medium Continental in turn, 900 game s; one batch
+  process in the list's order, one in a shuffled order, each game alone, and each game alone with main's EE-SIM.exe):
+  every report (wall fields aside) and every trace (EE-AIPROF lines aside: wall time) identical, 64 of 64.
+- **What it gains**: little now. 45-minute games on 2 slots: 229 games an hour one process a game, 237 in a batch
+  (the start-up's 2.2 s saved, the leave's 0.9 s paid, the second lobby 1 s shorter); 90-minute games 93.2 against
+  94.7 (4 games each; the game parts vary by 10 s from load alone). The game part dominates; the lobby (3.9-4.9 s) and the loading (2.8 s) are the rest.
+- **A lobby without fixed sleeps failed**: counting the lobby updates posted to the UI thread and applied, and waiting
+  for each change's own update, found that most changes (slots to Open, several option combos) post none back (each
+  waited its full 2 s), and with the last fixed second gone the game hung in loading after Start (2 of 2 games in one
+  run, 1 of 4 in another). Reverted; a faster lobby needs to know which change is answered by what.
+- **Crashes**: a failed game (error 2, wall timeout 3) ends its process after its report and END marker; a fault
+  kills it, the frames in the game's own err file (its stderr). tools/sim.py's Batch starts a new process for the next
+  game; sim_bench.play retries a game that failed before its game ran in a process of its own.
+- **Fork after loading (POSIX)** was the alternative: a fresh copy of every global for free, but not on Windows, and
+  the game's threads (UI, graphics, physics, preloading, the local server's) do not survive fork(). The in-process
+  leave is the player's own path, and the proof checks it.
+
+## Checkout-independent builds (2026-11-16)
+
+`tools/sim_bench.py --cache` keys a game on the EE-SIM exe's bytes, and every worktree builds its own exe, so each
+worktree replayed the baselines the others had cached. Two checkouts of the same commit gave different bytes for
+three reasons (found by diffing the two exes section by section, then the PDBs):
+- **The link time**: the COFF header's and the debug directory's time stamps. `/Brepro` writes a hash of the image
+  there instead.
+- **The PDB's path** in the debug directory (the CodeView record), whose length also moved everything after it in
+  .rdata (so .text's RIP-relative displacements and every .pdata entry differed too). `/PDBALTPATH:%_PDB%` writes the
+  file name only; a debugger looks for it beside the exe first.
+- **The PDB's GUID**, which lld derives from a hash of the PDB, and the PDB named the checkout: every object's path
+  (its module records), the archives' member paths and the linker's command line and folder. The link now gets every
+  input relative to its folder (`build.py relative()`, also in exeimg.lib's response file) and
+  `/PDBSOURCEPATH:C:\EEX\out\exe` makes them absolute against a fixed name.
+- **The anonymous namespaces' names**: the MSVC ABI mangles them `?A0x<hash>`, the hash of the main source file's
+  name as it was given to the compiler (clang's MicrosoftMangle; no `-fmacro-prefix-map`/`-ffile-prefix-map` applies
+  to it), and the RTTI type names of their polymorphic classes are strings in the exe. clang-cl now runs in the
+  staging root's parent and gets the unit as `eex\...` (a third-party unit compiled in place as `src\...` from the
+  checkout); `-fmacro-prefix-map=eex=C:\EEX` keeps `__FILE__` reading `C:\EEX\...` as before. A test profile's
+  rewritten copy of a unit had the compiler's process and thread ids in its name; it is named by its object now.
+
+Proof: the same commit built in two worktrees whose paths differ in length (`empire_earth_next-benchtools`,
+`empire_earth_next-bt2`, each with its own SDL3 build) gives byte-identical EE-SIM.exe, EE-AOC.exe and their PDBs, and the same for the test profile's EE-AOC.exe;
+a game (seeds 2 and 3, 45 minutes, classic_lua against Age of AI) plays identically on the exe of before and after
+(`tools/sim_compare.py`: traces and reports identical). The PDB still resolves the game's functions
+(`llvm-symbolizer --obj=EE-SIM.exe` from another folder finds `EEPhysics::Tick`). EE-SIM.exe built from the same
+commit now has the same cache key in every worktree.
+
+## Sequential tests for AI benches (2026-11-16)
+
+`tools/sim_bench.py --sprt` plays a variant against a baseline seed by seed and stops when a sequential test decides
+(`tools/sim_sprt.py`; README "Testing").
+- **Pairs, not counts.** Both builds play the same seed (map, start, opponent); the outcome of a pair is the
+  difference of the two W-L-C scores. Most pairs of a small change are identical (d = 0), which a fixed W-L-C count
+  ignores and the paired test uses.
+- **The textbook pentanomial GSPRT is too weak at 64 pairs.** Its maximum-likelihood distributions can put the
+  mean on an outcome not seen yet (no pair at d = +1) at no cost, so the LLR moved by the same -0.1 a pair whether
+  the pairs were identical or all lost (the 8.86 pool variant, 5-6-21 -> 5-13-14, and an identical variant both
+  stopped at pair 28). The normal model of d with a variance prior (4 pseudo-pairs of 0.2) is used instead; its
+  error rates were measured on the benches' own outcomes (`sim_sprt.py oc`), not assumed.
+- **A normal model of a heavy-tailed continuous score misleads.** The paired difference of the mixed share accepted
+  "better" after 13-16 pairs for a variant whose 32-pair mean was negative (a few -0.2..-0.35 pairs came late). The
+  optional continuous statistic is the sign of that difference (`--stat ahead`).
+- **Order matters.** A defeat ends a game early, so the first games to finish are not a random sample; the test
+  reads only the seeds whose games are all done, in seed order.
+- **64 seeds resolve about +0.2 a game, not +0.1** (power 58% at +0.1, 33% inconclusive; +0.05 needs about 170
+  pairs). The test saves games mostly on variants that change nothing or lose (H0 after 17-26 pairs instead of 32).
+- **Replaying past benches from the cache**: the cache's key.json files name the exe, the scripts and the options of
+  each game, so the A/B benches of §8.86 and §8.93 (whose folders were gone with their worktrees) could be rebuilt
+  from build/sim/cache for the replay.
+
+## The shared bench queue (2026-11-16)
+
+`tools/bench.py` (README "Testing") is one daemon per machine that plays the games every checkout's `sim_bench.py
+--queue` submits.
+- **The game runs on the requester's own tools**, not the daemon's: a worker `python -I <checkout>/tools/bench.py
+  work JOB` stages the requester's data/ai and data/db (sim.stage_tree) with the requester's EE_* variables. A daemon
+  that played with its own checkout's scripts would have stored other inputs under the requester's cache key.
+- **The key is checked again when the game starts.** An exe rebuilt or a script edited while the game waited in the
+  queue would otherwise be played and cached under the key of the old inputs; the worker recomputes the key and
+  fails the game instead.
+- **The cache key no longer needs a stage**: the rules documents are hashed from the checkout's data/db (the stage
+  holds a copy with LF line ends), so a cached game is found before any staging, and a requester can key a game
+  without a slot. The keys are the same as before (checked against the old code).
+- **Ports belong to slots, slots to the daemon**: slot k plays on port offset 9000 + 64 k (TCP 42334 and up), so
+  no bench needs a --port-base. An offset over 32201 wraps the 16-bit port (33334 + offset): 41000 gave port 8798.
+- **A requester's death is its connection's end**: its queued games are dropped unless another bench waits for them;
+  a running game finishes and goes to the cache.
+- **A sync of the data tree dropped every cached game.** The key hashed the tree's open_data.json and its Data/ai and
+  Data/db, which the harness rewrites (`open_data.py sync`, e.g. for the gates) whenever main's data/ai or data/db
+  moved on, although the stage replaces both with the requester's own data/ai and data/db (already in the key).
+  The key now leaves them out (CACHE_FORMAT 2: every older entry misses once).
+
+## main merge 4: classic_lua's raids and water war, EE-SIM --games, checkout-independent builds (branch rust-mainmerge4, 2026-11-17)
+
+- **What came.** main 158e3be7 (33 commits since ff7db710, 24 files): classic_lua's raids from the pool, the push
+  when clearly ahead, the war on water and the island food (data/ai/classic_lua, lib/groups.lua; AI_RESEARCH
+  8.93-8.97); EE-SIM `--games` (several games a process) with the AI's per-game statics cleared at each new world
+  (EECPNewGame from EEWorld::StartGame); the shared bench queue (tools/bench.py), sim_bench `--sprt`
+  (tools/sim_sprt.py), `--batch` and `wall_phases`; checkout-independent exes. Main's C++ edits all landed in code
+  rust still has in C++ (EECPTrace, EECPNextArmy, EECPReflexes, EEWorld, EESim): nothing to port into Rust, and
+  main touched no Rust.
+- **The conflicts.**
+  - EESim.cpp: main split Drive into PlayGame (one game), LeaveGame and a batch loop, and moved the game options into
+    GameOption; rust had added the scenario, campaign, load, save, dump, rng-trace and editor paths to the same
+    Drive. PlayGame now holds rust's branches (the editor from the main menu, the save files removed per game, the
+    saves copied at the end) with main's phases; rust's options stay process options (in a batch they hold for
+    every game). ResetRun also clears the save and dump cursors and the load failure. The start note prints "ports
+    any free" for rust's system-picked ports (kPlatSimAnyPort).
+  - LeaveGame found the post-game summary's Exit by `dynamic_cast<EEUIEPGSEExit*>`: on rust that screen is ee_game's
+    post_game.rs and its controls carry EEScreenEvent `EE_SCREENS_PGS_EXIT`, so it uses ControlWithEvent and Click.
+    Checked: two 600 s games in one process give the traces and reports of their runs alone (the EE-AIPROF lines
+    and the wall fields aside), the second one after a LeaveGame.
+  - sim_bench.py: main moved a run into `play()` with a per-slot `--port-offset`; rust's rule stays (no fixed ports:
+    EE-SIM's server binds ports the system picks, "EE-SIM: the local server binds ports the system picks"). The
+    queue daemon still hands a port to `play()`; it is not used.
+  - clang_build.py: main compiles a unit by a relative name from a fixed folder (`main_file_name`: build/eex's
+    parent or the checkout) because the MSVC ABI names anonymous namespaces by a hash of the main file's name as
+    given. Merged into rust's cached compile: the relative top folder (`eex`, `src`) gets its own
+    `-ffile-prefix-map` to the canonical root, the test overlay copy's map uses its relative name, and the object
+    cache resolves a relative dependency against the compile's folder (it dropped every entry before: a relative
+    path hashed as missing). objcache's SCHEMA is 2, since every object's anonymous namespace names changed under
+    the same key (the first build after the merge recompiles everything once).
+  - build.py: rust's (no image library archive) with main's reproducible link (`/Brepro`, `/PDBALTPATH`, inputs
+    relative to the link folder). PORT_LEARNINGS: main's four new sections appended at the end.
+- **The re-baseline (each run twice on the merged tree, equal).** The oracle ref (seeds 2-7: 6,087, 5,300, 6,072,
+  7,649, 7,842 and 6,540 EE-AI lines; in the worktree's build/rust_oracle/ref, not tracked). Capture goldens, every
+  (seed, tag) scope kept, no tag dropped: oracle 312 of 578 digests changed (seeds 2, 5, 6, 7 broadly; seeds 3 and 4
+  only TCST, +1,600 and +2,105 GetCost records, the same in both runs: the new scripts ask costs without deciding
+  differently there), missile 44 of 66 (the oracle's four seeds), transport 167 of 185 (Small Islands: the war on
+  water), units 3 TCST lines. late, space, calamity, effects, scenario, app and groups did not change: the new
+  behaviour waits for conditions those games never meet (raids after 20 minutes with 16 in the pool, the island
+  food after an hour, water maps). saveload_expect.txt: the same outcomes (a comment line). The editor and
+  civilization builder gates did not change.
+- **Flakes seen under load, not the merge.** The Rust gate's `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`
+  (ee_render, timing) and `gamespy a_failed_start_leaves_the_current_record` (ee_won_net: the base port's
+  neighbour taken by another process) each failed once beside running sims and passed 3/3 alone; the full gate then
+  passed. One scenario capture (seed 7, "the meat grinder") stopped at start in EETerrainColorTable's verification
+  and played to its cap when rerun alone.
+- **Lesson: memory.** Two capture chains (four EE-SIMs), a test-profile build, the Rust gate and the data gate at
+  once, beside other lanes, exhausted the commit charge: Rust aborted on an allocation, the data gate raised
+  MemoryError, bash could not fork, and Windows froze and restarted. Every result of that hour was discarded and
+  rerun one chain at a time.
+- **Gates on the final tree.** Both builds 0/0; the Rust gate PASS (4,344 tests); the oracle against the new ref
+  identical on seeds 2-7; the eleven capture profiles PASS; the plain saveload 18/18 identical; the matrix `--expect`
+  PASS; the editor (14,448 lines) and civilization builder (4,062) gates PASS; eedata check and cppgate PASS;
+  scenario_check 27/27; gates.sh GATES PASS (tour, ai-game time-cap with both classic_lua players alive, lan-game).
+
+- **Then origin/rust f63bd44b merged in** (data round 3, WONGUI B round 3, A* round 1 with save 0.283, lane V's
+  ee_sim::world and VWCK, WONLobby round 12). Only PORT_LEARNINGS (both sides kept), golden_cpp.txt and
+  saveload_expect.txt conflicted; the two data files were taken from rust and re-read. The oracle traces equal the
+  ref of the main merge (rust's rounds do not move the AI); the ref was recorded again on this tree. Of the goldens
+  only the oracle's changed: the main merge's 312 lines plus VWCK in seeds 2, 5, 6 and 7, the seeds whose games
+  classic_lua changed (late's and calamity's VWCK lines and every other profile pass as rust recorded them).
+  saveload_expect.txt as rust has it (next seed 2 at 915/276 since 0.283; the same in two runs), the editor gate
+  unchanged. Gates again on the merged tree, one heavy job at a time: both builds 0/0, the Rust gate (4,383 tests),
+  the oracle (two equal runs), the eleven profiles (two equal runs each), saveload 18/18, the matrix `--expect`, the
+  editor and civilization builder gates, eedata check and cppgate, scenario_check 27/27, gates.sh GATES PASS.
+
+- **Then origin/rust 0bfe280c** (the LP64 fix, lane S's SGVW, data round 4, lane R's RFIL, lane P's TSGT, MAPS and
+  MAPK). Only PORT_LEARNINGS and golden_cpp.txt conflicted (golden taken from rust and re-read). Two equal runs of
+  every profile: the oracle golden changed in 320 lines, the 316 above plus TSGT in seeds 2, 5, 6 and 7; the app
+  profile's TSGT, MAPS and MAPK (seeds 2-7) did not move (its 20-minute games end before the new behaviour starts),
+  nor did any other profile. The oracle against the ref: identical. SGVW: the editor trace (25,136 lines) and the
+  tours' distinct reads (tour 51, view 79) equal their goldens. RFIL: golden_fill in the Rust gate (no live
+  tour compare). The main checkout's data tree was rebuilt under a run here (the audio converter), and its runs
+  stopped in EETerrainColorTable at the missing ColorPalette.png: a stopped run at that line means the tree, not
+  the code.
+
+- **Then origin/rust 4929244f and ec39733e** (the audio merge, WONLobby 13, WON 14, AI lane A rounds 1-2, AI lane B
+  rounds 1-2 with PLCE, CPEV and the placement profile). Only PORT_LEARNINGS and golden_cpp.txt conflicted. The
+  oracle equal to the ref (two runs; the ref recorded again). Re-read in two equal runs: oracle (322 lines: the 320
+  above plus PLCE and CPEV in seed 2; seed 3's did not move), late, space, calamity and placement (unchanged: the
+  last plays boom against ageofai). Saveload 18/18, the Rust gate (4,523 tests), both builds 0/0, gates.sh PASS.

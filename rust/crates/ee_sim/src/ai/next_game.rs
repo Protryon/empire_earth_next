@@ -1548,6 +1548,12 @@ fn with_losses<R>(id: usize, now: c_long, f: impl FnOnce(&mut Losses) -> R) -> R
     f(l)
 }
 
+/// `EECPNextArmyNewGame` (EECPNewGame, at each new world): every player's loss hits and incidents, next incident id and
+/// last loss time cleared, as at the process's start (`with_losses` makes the 64 defaults again)
+fn new_game_losses() {
+    LOSSES.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
 const DOING: [&str; 14] = [
     "idle", "forage", "hunt", "fish", "farm", "food", "wood", "stone", "gold", "iron", "build", "fight", "move",
     "other",

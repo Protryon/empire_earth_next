@@ -11,7 +11,7 @@
 #include <wctype.h>
 #include <string>
 #include <vector>
-#include "rust/all.h"
+#include "rust/won_net/strcase.h"
 
 #include "ee/wonapi/WONStringCompare.h" // the forwards the game keeps (StringUtil.cpp is deleted)
 

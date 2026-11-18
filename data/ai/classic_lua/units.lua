@@ -294,6 +294,9 @@ function M.reserve_share(view, memory)
     return share, e ~= nil and e.cost or nil
 end
 
+local ISLAND_FOOD = {s02_fishing_boat_stone = true, s04_fishing_boat_bronze = true, s11_fishing_boat_modern = true,
+                     b_granary = true, b_farm = true}
+
 -- CanAfford(class or tech cost, n): the stock covers it, and the classic's rules hold
 function M.can_afford(view, memory, cost, n, class, is_epoch)
     if is_epoch and T.cheat(memory, "epochs") then
@@ -310,6 +313,12 @@ function M.can_afford(view, memory, cost, n, class, is_epoch)
     local citizen = class == C.citizen or class == C.female_citizen
     local few = M.workers(view, memory) < RECOVERY
     if citizen and (few or M.workers(view, memory) < RESERVE_FREE_WORKERS) then
+        return true
+    end
+    -- New (AI_RESEARCH 8.97): on island and planets maps the fishing boats, then the granary and its farms, are the
+    -- food: the stock pays them whatever the epoch's reserve holds (with the whole advance kept once it is ordered, a
+    -- Large Islands town with a dock had no boat all game)
+    if ISLAND_FOOD[class] and (memory.t.island or memory.t.planets) then
         return true
     end
     -- military.prehistoric_army: the Prehistoric army cap unless a stronger enemy army is near

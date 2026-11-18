@@ -122,6 +122,13 @@ fn order_move(c: &UnitView<'_>, x: c_long, y: c_long) {
 static MILITIA_LAST: Mutex<[c_ulong; 64]> = Mutex::new([0; 64]);
 static NAVAL_LAST: Mutex<[c_ulong; 64]> = Mutex::new([0; 64]);
 
+/// `EECPReflexesNewGame` (EECPNewGame, at each new world): the militia and naval flight cool-downs cleared, so a
+/// cool-down from the last game in the process never blocks a reflex in the next
+pub(super) fn new_game() {
+    *MILITIA_LAST.lock().unwrap_or_else(|e| e.into_inner()) = [0; 64];
+    *NAVAL_LAST.lock().unwrap_or_else(|e| e.into_inner()) = [0; 64];
+}
+
 /// `sLast[id] != 0 && now >= sLast[id] && now - sLast[id] < ms`: too soon; else the time is taken
 fn too_soon(last: &Mutex<[c_ulong; 64]>, id: c_ulong, ms: c_ulong) -> bool {
     let k = if id < 64 { id as usize } else { 63 };
@@ -519,4 +526,18 @@ pub(super) unsafe fn flee_raids(me: *mut c_void) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_next_flee_raids(me: *mut c_void) {
     flee_raids(me);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_game_clears_the_cool_downs() {
+        MILITIA_LAST.lock().unwrap()[3] = 5000;
+        NAVAL_LAST.lock().unwrap()[63] = 7000;
+        new_game();
+        assert_eq!(*MILITIA_LAST.lock().unwrap(), [0; 64]);
+        assert_eq!(*NAVAL_LAST.lock().unwrap(), [0; 64]);
+    }
 }
