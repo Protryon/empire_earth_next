@@ -37,9 +37,4 @@ public:
     bool mUseWaterAreas;                    // +0x09
 };
 
-// 0x249201 (cdecl): up to inTries random tiles of inBounds (gPhysics->mRandom) until inScreen accepts one; outTile is
-// cleared first. Provisional name and unit.
-bool EEFOFindLocation(EEAIAStarBounds& inBounds, U2DPoint<long>& outTile, URandom& inRandom,
-                      EEFOLocationScreenBase& inScreen, long inTries);
-
 #endif

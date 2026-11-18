@@ -497,67 +497,6 @@ void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
     ioLocation.SetZ(ee_units_uu_seabed(1, UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&ioLocation.mX));
 }
 
-// Tells whether a unit can reach a target across path sub-sectors within a step limit; reports the target
-// tile or its closest reachable tile
-// Whether inUnit can reach inTarget across path sub-sectors (a path request of inArg5 (10/25 by distance when out
-// of 1..25) steps; *outTile: the target sub-sector's location, or its closest tile when inArg4 is set)
-bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile, bool inUseClosestTile, long inMaxSteps)
-{
-    EEUUNote theNote(79); theNote.U(inUnit).U(inTarget).I(inUseClosestTile).I(inMaxSteps).OutL(&outTile->mX, &outTile->mY);   // TEST ONLY (UUTL)
-    EECPASGFlags theFlags;
-    U2DPoint<long> theFrom(inUnit->mTileX, inUnit->mTileY);
-    U2DPoint<long> theTo(inTarget->mTileX, inTarget->mTileY);
-    EEAIPathSubSector* theFromSector = gContinentManager.GetPathSubSectorAt(inUnit);
-    EEAIPathSubSector* theToSector = gContinentManager.GetPathSubSectorAt(inTarget);
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    bool theResult = false;
-    outTile->mX = 0;
-    outTile->mY = 0;
-    if (theClass->mMaxVelocity == 0.0f || (theClass->mDomains & kMovementLandOrSea) == 0 || theFromSector == theToSector
-        || theFromSector == NULL || theToSector == NULL)
-        return true;
-    if (inUnit->mContainer != NULL || inTarget->mContainer != NULL)
-        return false;
-    long theSteps;
-    if (inMaxSteps > 0 && inMaxSteps <= 0x19)
-        theSteps = inMaxSteps;
-    else if (inUnit->DistanceSquaredTo(inTarget) <= 64.0f)
-        theSteps = 10;
-    else
-        theSteps = 0x19;
-    theClass->GetTerrainFlags(inUnit, theFlags);
-    EEAutoPathRequest* theRequest = gPathManager.RequestPath(inUnit->GetPlayer()->GetPlayerID(), theFrom, theTo, &theFlags, 1,
-                                                             theSteps, NULL, 1);
-    if (theRequest == NULL)
-        return false;
-    if (theRequest->mIsDone && theRequest->mPath.size() != 0) {
-        EETileCoordinate& theLast = theRequest->mPath.back();
-        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theLast.mX, theLast.mY);
-        if (theSector != NULL) {
-            theResult = theSector == theToSector;
-            *outTile = theToSector->mLocation;
-            if (!theResult) {
-                long theKind = theToSector->mKind;
-                if (theKind == kAITileWall || theKind == kAITileGate || theKind == kAITileUnitObstacle) {
-                    theResult = theSector->IsNeighbor(theToSector);
-                    if (theResult)
-                        theResult = theToSector->AreLinksBlocked(theSector, theFlags);
-                }
-                if (!theResult && !inUnit->GetClass()->mIsMelee) {
-                    float theRange = UMSquare(inUnit->mStats->mRange);
-                    theResult = theTo.DistanceToSquaredF(theSector->mLocation) <= theRange;
-                    if (inUseClosestTile) {
-                        *outTile = theSector->mTiles.GetClosestPoint(theTo);
-                        theResult = theTo.DistanceToSquaredF(*outTile) <= theRange;
-                    }
-                }
-            }
-        }
-    }
-    theRequest->UReferenceCounter::Dereference();
-    return theResult;
-}
-
 // Tells whether a unit can be pushed aside: alive and not a building, aircraft, projectile or fixed object
 bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
 {
@@ -843,15 +782,6 @@ float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo)
 {
     EEUUNote theNote(57); theNote.P(*inFrom).P(*inTo);   // TEST ONLY (UUTL)
     return theNote.RF(UMArcTan2(-(inTo->GetX() - inFrom->GetX()), inTo->GetY() - inFrom->GetY()));
-}
-
-// Returns the heading from one tile to another
-float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo)
-{
-    EEUUNote theNote(58); theNote.I(inFrom.mX).I(inFrom.mY).I(inTo.mX).I(inTo.mY);   // TEST ONLY (UUTL)
-    float theY = (float)inTo.GetY() - (float)inFrom.GetY();
-    float theX = (float)inTo.GetX() - (float)inFrom.GetX();
-    return theNote.RF(UMArcTan2(-theX, theY));
 }
 
 
@@ -1546,21 +1476,6 @@ bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
     return theInRange;
 }
 
-// Splits calamity flags into their single bits
-void EESplitCalamityFlags(unsigned long inFlags, std::vector<unsigned long>& outFlags)
-{
-    if ((inFlags & 1) != 0)
-        outFlags.push_back(1);
-    if ((inFlags & 2) != 0)
-        outFlags.push_back(2);
-    if ((inFlags & 4) != 0)
-        outFlags.push_back(4);
-    if ((inFlags & 8) != 0)
-        outFlags.push_back(8);
-    if ((inFlags & 0x10) != 0)
-        outFlags.push_back(0x10);
-}
-
 // Walks a tile path back from its end and drops the middle tile wherever two tiles one step apart
 // differ by exactly (+1, +1), cutting diagonal corners
 void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles)
@@ -1772,29 +1687,6 @@ float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     GE2DPoint theFirst(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY());
     GE2DPoint theSecond(inOther->mPhysicalModel.GetLocation().GetX(), inOther->mPhysicalModel.GetLocation().GetY());
     return theFirst.DistanceToSquared(theSecond);
-}
-
-// Returns the bounds of a unit's area effect of a kind, grown by its radius; false when it has none
-bool EEGetAreaEffectBounds(long inKind, EEComplexUnit* inUnit, EEAIAStarBounds* outBounds)
-{
-    bool theFound = false;
-    outBounds->Clear();
-    if (inUnit != NULL) {
-        for (std::vector<EEAreaEffect*>::iterator it = inUnit->mAreaEffects.mItems.begin();
-             it != inUnit->mAreaEffects.mItems.end(); it++) {
-            if ((*it)->mTemplate->mKind != inKind)
-                continue;
-            theFound = true;
-            long theRadius = UMFloatToLong((*it)->GetRadius());
-            outBounds->mTop = inUnit->GetTileY();
-            outBounds->mLeft = inUnit->GetTileX();
-            outBounds->mBottom = inUnit->GetTileY();
-            outBounds->mRight = inUnit->GetTileX();
-            outBounds->Grow(theRadius, true);
-            break;
-        }
-    }
-    return theFound;
 }
 
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
@@ -2176,27 +2068,6 @@ long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
     return theResult;
 }
 
-// Picks a random tile of the bounds that a screen accepts; (0, 0) when none in the tries
-bool EEFOFindLocation(EEAIAStarBounds& inBounds, U2DPoint<long>& outTile, URandom& inRandom,
-                      EEFOLocationScreenBase& inScreen, long inTries)
-{
-    bool theFound = false;
-    U2DPoint<long> theTile(0, 0);
-    outTile.mX = 0;
-    outTile.mY = 0;
-    for (long i = inTries - 1; i >= 0; i--) {
-        if (theFound)
-            break;
-        long theY = EEGetRandomInt(inBounds.mTop, inBounds.mBottom, inRandom);
-        theTile.mX = EEGetRandomInt(inBounds.mLeft, inBounds.mRight, inRandom);
-        theTile.mY = theY;
-        theFound = inScreen.Screen(theTile);
-    }
-    if (theFound)
-        outTile = theTile;
-    return theFound;
-}
-
 // Returns the id of a player's leading unit, -1 when none
 unsigned long EEGetLeadUnitID(EEPlayer* inPlayer)
 {
@@ -2335,18 +2206,6 @@ void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles
 {
     EEUUNote theNote(36); theNote.U(inUnit).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     ee_units_uu_unit_tiles(0, UUHandle(inUnit), &outTiles);
-}
-
-// Collects the tiles of a wall line between two points
-void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector<EETileCoordinate>& outTiles)
-{
-    EETileCoordinate theFrom;
-    EETileCoordinate theTo;
-    theFrom.mX = (long)inFrom.GetX();
-    theFrom.mY = (long)inFrom.GetY();
-    theTo.mX = (long)inTo.GetX();
-    theTo.mY = (long)inTo.GetY();
-    EEGetWallLine(theFrom, theTo, outTiles);
 }
 
 // Collects the tiles of a wall line between two tiles

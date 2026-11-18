@@ -27,26 +27,6 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPNextUnits.h"
 
-// Returns a unit type's weight: 3 for the space fighter, 1 otherwise
-long EEAIGetUnitTypeWeight(long inUnitType)
-{
-    return inUnitType == kUnitTypeSp15SpaceFighter ? 3 : 1;
-}
-
-// Returns the player's first unit of the type whose class transport capacity over its complex unit's, plus
-// its cargo room, is nonzero; NULL when none
-EEUnit* EEAIFindUpgradableUnit(long inUnitType, EEPlayer* inPlayer)
-{
-    std::vector<EEUnit*> theUnits;
-    EEGetPlayerUnitsOfType(inUnitType, inPlayer->GetPlayerID(), theUnits);
-    for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
-        EEUnit* theUnit = *it;
-        if (theUnit->mUnitClass->mTransportCapacity - theUnit->mComplexUnit->mUnitClass->mTransportCapacity + theUnit->mComplexUnit->mCargoRoom != 0)
-            return theUnit;
-    }
-    return NULL;
-}
-
 // Lists every player's computer player and spreads their updates over a second (1000 ms / count), starting
 // with the first at time 0
 void EEArtificialIntelligence::CollectComputerPlayers()

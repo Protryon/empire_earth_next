@@ -52,12 +52,6 @@ inline bool EESaveHasExperimentTimers(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 258;
 }
-// port: from 0.259 a save holds the computer players' count of units in production (EECPUnitManager): a loaded game
-// counted from 0 and made room for more units
-inline bool EESaveHasProductionCount(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 259;
-}
 // port: from 0.260 a save holds the towns' ids, order and counters (EESaveTowns): a load rebuilt the towns with new
 // ids in its own order
 inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -69,12 +63,6 @@ inline bool EESaveHasTowns(unsigned long inMajorVersion, unsigned long inMinorVe
 long EESaveTowns(FSFile& outFile);
 // inAreas: the save has the towns' areas (EESaveHasTownAreas)
 long EELoadTowns(FSFile& inFile, bool inAreas);
-// port: from 0.261 a save holds the computer players' gatherer lists (EECPResourceManager): a load filed the citizens
-// again in its own order, most of them twice (their resource's list and the idle list)
-inline bool EESaveHasGathererOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 261;
-}
 // port: from 0.262 a save holds the dead units the units' last attackers still reference (EEPWorldHelper): a load
 // read NULL where the running game kept the dead attacker
 inline bool EESaveHasGhosts(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -89,29 +77,11 @@ inline bool EESaveHasContinentRegions(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 263;
 }
-// port: from 0.264 a save holds each attack sub group's position (EECPAttackSubGroup::mPosition: FindPosition keeps it
-// between its refreshes and scans for targets around it)
-inline bool EESaveHasSubGroupPosition(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 264;
-}
 // port: from 0.265 a save holds the computer players' claim ranges and danger zones after the continent manager
 // (EECPSaveResourceState, ee/EECPExperimentTimers.h): FindResourceTarget reads them, a load started them empty
 inline bool EESaveHasResourceState(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     return inMajorVersion > 0 || inMinorVersion >= 265;
-}
-// port: from 0.266 a save holds the order of each class's units the computer players' unit managers track
-// (EECPUnitManager::mUnits): a load filed them again in its own order
-inline bool EESaveHasUnitManagerOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 266;
-}
-// port: from 0.267 a save holds the computer players' repair, airport site and space dock site timers
-// (EECPCivilizationManager): a load started them at 0
-inline bool EESaveHasCivilizationTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 267;
 }
 // port: from 0.268 the towns' block holds each town's area as it is (its tiles, hull, bounds and continent): a load
 // rebuilt the towns from their buildings in its own order, and a building the saved town's hull had taken could start
@@ -120,24 +90,11 @@ inline bool EESaveHasTownAreas(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 268;
 }
-// port: from 0.269 a save holds the computer players' manager timers the original kept out of it (the attack
-// commander's next drop of spent groups, the next exploration, the personnel's next update, the next builder and raid
-// checks; EEComputerPlayer::GetManagerTimers): a load started them at 0
-inline bool EESaveHasManagerTimers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 269;
-}
 // port: from 0.270 a save holds the order of each player's unit list (EEPWorldHelper): the load inserted the units by
 // hash bucket index, where the running list holds the buckets in the order they last filled
 inline bool EESaveHasPlayerUnitOrder(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     return inMajorVersion > 0 || inMinorVersion >= 270;
-}
-// port: from 0.271 a save holds each computer player's intelligence files (EECPIntelligence::SaveFiles): a load made
-// them again from the world at their first use, where the running game's files held what they saw up to 30 s before
-inline bool EESaveHasIntelligence(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 271;
 }
 // port: from 0.272 each ghost (EESaveHasGhosts) also holds its resource type and amount, and the ghosts include the
 // resources and drop sites the gather goals still hold out of the world (a hunted animal's carcass gone, its gatherer
@@ -168,13 +125,6 @@ inline bool EESaveHasPathSearches(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 276;
 }
-// port: from 0.277 a save holds the wall manager's path request (EECPWallManager::Save, after the runs): a load
-// asked the wall being planned its path again at its first Update, which then waited a step (and found another path)
-// where the continued game went on with the finished one
-inline bool EESaveHasWallRequest(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 277;
-}
 // port: from 0.278 a save holds the graph searches in progress (EEPathManager::SaveGraphSearches: node, machine,
 // goal, modifier, request and the storage as ee_astar's bytes), and an attack sub group's running request waits for
 // its own (EEAwaitAutoPathRequest): a load asked each again at the first tick (the sub groups) or from the load (the
@@ -196,13 +146,6 @@ inline bool EESaveHasActiveGroups(unsigned long inMajorVersion, unsigned long in
 inline bool EESaveHasUnitsLuaState(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     return inMajorVersion > 0 || inMinorVersion >= 280;
-}
-// port: from 0.281 (the merge of main's stages 5 and 6: the C++ classic AI deleted) a computer player's block has no
-// manager timers or intelligence files (EESaveHasManagerTimers, EESaveHasIntelligence) and its next engine's state is
-// main's "EENS" version 6; EEComputerPlayer::Load refuses an older save
-inline bool EESaveHasLuaOnlyComputers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return inMajorVersion > 0 || inMinorVersion >= 281;
 }
 // port: from 0.282 a save holds each player's tech nodes that are not allowed (EETechTreeNode::mIsAllowed false: a
 // one-off technology queued or researched; EEPWorldHelper.cpp EESaveTechAllowed, after the graph searches): a load

@@ -272,9 +272,6 @@ struct EECPNextView {
 };
 
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView);
-// lookups in a view (NULL: none)
-const EECPNextBuildings* EECPNextFindBuildings(const EECPNextView& inView, long inType);
-const EECPNextClassCost* EECPNextFindCost(const EECPNextView& inView, long inType);
 
 // ---------------------------------------------------------------------------------------------------------------
 // The verbs. Stage 6 (docs/AI_LUA_VERBS.md): the economy verbs (gather, claim, release, claim_range, build, fish, train,
@@ -284,10 +281,6 @@ const EECPNextClassCost* EECPNextFindCost(const EECPNextView& inView, long inTyp
 void EECPNextArmyStep(EEComputerPlayer* inPlayer);
 // the view's army fields: free_soldiers, free_strength and the enemies' army fields
 void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView);
-// the armed enemy ships the player sees now (x << 16 | y), and whether a tile lies within inRange of one of them: the
-// fish finder leaves the fish near them alone (EECPResourceManager::FindFish, the next engine only)
-void EECPNextSeenWarships(EEComputerPlayer* inPlayer, std::vector<long>& outTiles);
-bool EECPNextNearTiles(const std::vector<long>& inTiles, long inX, long inY, long inRange);
 // the citizens' losses in the AI trace (trace on only; nothing the game reads): a hit on a land citizen
 // (EEComputerPlayer::DamageTaken; inAttacker the attacker's player id) and a citizen lost (UnitTaken): next.death and
 // next.raid lines (EECPNextArmy.cpp)

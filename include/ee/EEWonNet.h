@@ -26,24 +26,6 @@ struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 
-inline const wchar_t* WStringGetCStr(const std::wstring &theStr)
-{
-#ifdef _LINUX // this is a work around for a bug in some versions of basic_string
-	if(theStr.length()==0)
-		return L"";
-	else
-	{
-		if(theStr.capacity() < theStr.length() + 1)
-			((std::wstring&)theStr).reserve(theStr.length() + 1);
-
-		((std::wstring&)theStr)[theStr.length()] = L'\0';
-		return theStr.data();
-	}
-#else
-	return theStr.c_str();
-#endif
-}
-
 
 // WONAPI's network address (passed by value: 0x28 bytes in the original; provisional class name). A Rust value since
 // WON round 14, its methods inline forwards since WONLobby round 14 (IPAddr.cpp deleted) (rust/crates/ee_won_net/src/ipobj.rs EeWonIpAddr: the remember flag +0x00, the host text +0x04, the

@@ -829,9 +829,6 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass);
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit);
 // 0x246c87 (cdecl): the complex unit acting on inUnit, 0 if none (SetGatheredResource) (provisional name)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit);
-// 0x24572b (cdecl): the single flags of inFlags into outFlags (EEComplexUnit::GetCatchableContagions) (provisional
-// name)
-void EESplitCalamityFlags(unsigned long inFlags, std::vector<unsigned long>& outFlags);
 // 0x24b5b3 (cdecl): the tiles inUnit stands on (EEComplexUnit::GetFootprintContinent) (provisional name)
 void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles);
 // 0x23d5c3 (cdecl; EEComplexUnit::ReleaseFireEffect for unit type 0x321) (provisional name)

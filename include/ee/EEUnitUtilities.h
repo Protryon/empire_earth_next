@@ -55,7 +55,6 @@ bool EEGetDockShipFacing(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUni
 bool EEFindDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, GETransformation* outTransformation);
 // 0x20da86: EECanConvert (ee/EEAreaUtilities.h)
 float EEGetAngleFromNorth(GE3DPoint* inFrom, GE3DPoint* inTo);
-float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo);
 bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget);
 // 0x243561 EEFindPlacement: declared in ee/EEUnit.h; the wrapper 0x24352f (no unit, inArg9 false) (provisional
 // name)
@@ -167,7 +166,6 @@ void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<
 template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual);
 EEUnit* EEGetWallAt(const EETileCoordinate& inTile, EEPlayer* inPlayer, long inUnitType);
 void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, std::vector<EETileCoordinate>& outTiles);
-void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector<EETileCoordinate>& outTiles);
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<EETileCoordinate>* outTiles, bool inEnds, bool inThin);  // the same body over EETileCoordinate (0x24b794)
 long EEGetUnitsOnTiles(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 // (0x24b8ac EEGetPathLengthTo: ee/EEAreaUtilities.h)

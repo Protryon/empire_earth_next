@@ -562,22 +562,6 @@ struct EECPNextPlace {
     long mX, mY, mReach, mStrength;
 };
 
-const EECPNextBuildings* EECPNextFindBuildings(const EECPNextView& inView, long inType)
-{
-    for (unsigned long k = 0; k < inView.buildings.size(); k++)
-        if (inView.buildings[k].type == inType)
-            return &inView.buildings[k];
-    return NULL;
-}
-
-const EECPNextClassCost* EECPNextFindCost(const EECPNextView& inView, long inType)
-{
-    for (unsigned long k = 0; k < inView.costs.size(); k++)
-        if (inView.costs[k].type == inType)
-            return &inView.costs[k];
-    return NULL;
-}
-
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
