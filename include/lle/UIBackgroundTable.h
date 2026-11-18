@@ -23,7 +23,6 @@ public:
     static long Create(FSFileSpec& inFile);
     static void CreateBackgrounds(UIManager* inManager);
     static void DeleteAll();
-    static unsigned long GetArraySize() { return ee_ui_bgtable_count(); }
     bool GetAttribute1() const { return this->mAttribute1; }
     bool GetAttribute2() const { return this->mAttribute2; }
     bool GetAttribute3() const { return this->mAttribute3; }
@@ -42,8 +41,6 @@ public:
     const GERectangle& GetTextureRect() const { return *reinterpret_cast<const GERectangle*>(&this->mTextureRect); }
     float GetTileWidthPercent() const { return this->mTileWidthPercent; }
     float GetTileHeightPercent() const { return this->mTileHeightPercent; }
-    static UIBackgroundTable* GetUIBackgroundTable(unsigned long inIndex)
-        { return static_cast<UIBackgroundTable*>(ee_ui_bgtable_at(inIndex)); }
     bool GetVisible() const { return this->mVisible; }
 private:
     UString mTextureFile;

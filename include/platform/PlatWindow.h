@@ -192,7 +192,7 @@ int PlatClipboardSetText(const char* inText);
 // -> a malloc'ed copy of the clipboard's text (free() it), NULL when it holds none
 char* PlatClipboardGetText(void);
 
-// ---- text input (WM_CHAR and the input method: UIEditBox, UIIMECandidate)
+// ---- text input (WM_CHAR and the input method: UIEditBox; the system draws the candidate list)
 // Starts delivering PLAT_EVENT_TEXT / TEXT_EDITING to inWindow; inX, inY, inWidth, inHeight is the edit area the
 // input method places its candidate window by.
 void PlatTextInputStart(PlatWindow* inWindow, int32_t inX, int32_t inY, int32_t inWidth, int32_t inHeight);

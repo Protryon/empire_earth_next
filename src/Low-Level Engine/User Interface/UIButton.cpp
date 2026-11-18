@@ -155,7 +155,6 @@ GE2DPoint UIButton::GetBitmapLocation() const
 unsigned long UIButton::GetState() const { return (unsigned long)EE_UI_BUTTON(State); }
 GEBitmap* UIButton::GetFocusedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(FocusedBitmap); }
 GEText* UIButton::GetGEText() { return (GEText*)EE_UI_BUTTON(Text); }
-bool UIButton::GetIsButtonDown() const { return EE_UI_BUTTON(IsButtonDown) != 0; }
 GEBitmap* UIButton::GetNormalBitmap() const { return (GEBitmap*)EE_UI_BUTTON(NormalBitmap); }
 GEBitmap* UIButton::GetPressedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(PressedBitmap); }
 void UIButton::SetBitmapDrawOffset(const GE2DPoint& inOffset)
@@ -174,5 +173,3 @@ void UIButton::SetTextRectangle(const GERectangle& inRectangle)
     UIButtonHost::CallF(this, C::SetTextRectangle, inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight,
                         inRectangle.mTop);
 }
-void UIButton::ReplaceNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplaceNormalBitmap, (intptr_t)inBitmap); }
-void UIButton::ReplacePressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplacePressedBitmap, (intptr_t)inBitmap); }

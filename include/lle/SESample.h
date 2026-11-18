@@ -20,10 +20,8 @@ public:
     unsigned long GetMixerChannel() const;   // -1: not on a channel
     float GetPan() const;
     float GetPitch() const;
-    unsigned long GetSampleOffset();
     unsigned long GetSampleRate() const;
     float GetVolume() const;
-    long LoadWaveData(FSFileSpec* inSpec);
     void SetIsLooping(bool inLooping);
     long SetOffset(unsigned long inOffset);
     long SetPan(float inPan);

@@ -12,12 +12,22 @@
 //! original did (`GETexture::Load` writes into it).
 //!
 //! The texture pack's settings and the made textures' counter stay `managers.rs`'s process-wide state.
+//!
+//! LLE round 8: the host operations on a texture that only crossed into C++ to reach its Rust object (the fields,
+//! the stage, the frames, the reference count, `Load`, `Recreate`, the logical shift, the allocated size, the
+//! non-virtual `Dereference`) are answered here for a manager the C++ made (`ee_ge_texman_new`): the texture is a
+//! `GETexture`, read in place (`cppobj::counted`), and each answer is the C++ forwarder's call with its casts. A
+//! manager made over a recorded world (`create`, the replays) asks its host as before. What stays C++: making a
+//! texture, `UReferenceCounter::Dereference` (the virtual destructor), the surface reads (`GESurface`'s virtuals),
+//! the files, the lock, the path and the dump.
 
 use std::collections::BTreeMap;
 use std::ffi::{c_char, c_long, c_ulong, c_void};
 
+use crate::ge::cppobj;
 use crate::ge::managers::{self, with_pack, NOT_FOUND, OK};
 use crate::ge::manobj::{c_bytes, c_string, next_after, EeGeManHostFn, EeGeManOp};
+use crate::ge::texobj_tex::{self as tex, EeGeTexStageField, EeGeTexVal, EeGeTexture};
 
 /// The original's buffer for a made texture's name (`char theName[64]`).
 const MADE_NAME_CAPACITY: usize = 64;
@@ -126,6 +136,148 @@ pub struct EeGeTextureManager {
     screen: usize,
     /// `mMemoryFootprint`: the cached textures' `GetAllocatedSize`s.
     footprint: c_ulong,
+    /// Made by the C++ (`ee_ge_texman_new`): its textures are `GETexture`s, whose Rust objects it reaches directly.
+    direct: bool,
+}
+
+/// The `EeGeTexField` of a host operation's `a` (the manager passes only its own values).
+fn tex_field(a: isize) -> Option<EeGeTexField> {
+    use EeGeTexField as F;
+    [
+        F::FromPack,
+        F::PackMipLevels,
+        F::NumMipLevelsToDrop,
+        F::IsManaged,
+        F::CreateMipMaps,
+        F::FrameFormat,
+        F::FrameCount,
+        F::Promoted,
+    ]
+    .into_iter()
+    .find(|f| *f as isize == a)
+}
+
+/// The `EeGeTexStage` of a host operation's `a`.
+fn tex_stage(a: isize) -> Option<EeGeTexStage> {
+    use EeGeTexStage as S;
+    [
+        S::AlphaMode,
+        S::ColorMode,
+        S::MagFilterMode,
+        S::MinFilterMode,
+        S::MipFilterMode,
+        S::MipMapBias,
+        S::TextureAddressingMode,
+    ]
+    .into_iter()
+    .find(|s| *s as isize == a)
+}
+
+/// A host operation on the texture `obj` answered on its Rust object as the C++ host's forwarder made it (the
+/// GETexture.h accessor's or GETexture.cpp member's call, with its casts); `None` for one the C++ makes.
+///
+/// # Safety
+/// For a texture operation `obj` is a live `GETexture*`; the arguments are as `EeGeManOp` says.
+pub(crate) unsafe fn tex_direct(op: EeGeManOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    use EeGeManOp as O;
+    use EeGeTexField as F;
+    use EeGeTexStage as S;
+    // SAFETY (every use): the caller's contract
+    let t = || unsafe { cppobj::counted::<EeGeTexture>(obj) };
+    let get = |v: EeGeTexVal| unsafe { tex::ee_ge_tex_get(t(), v) };
+    let set = |v: EeGeTexVal, value: isize| unsafe { tex::ee_ge_tex_set(t(), v, value) };
+    Some(match op {
+        // the host's TexGet: bools 0 or 1, long sign-extended, unsigned long zero-extended
+        O::TexGet => match tex_field(a)? {
+            F::FromPack => (get(EeGeTexVal::FromPack) != 0) as isize,
+            F::PackMipLevels => get(EeGeTexVal::PackMipLevels) as c_long as isize,
+            F::NumMipLevelsToDrop => get(EeGeTexVal::NumMipLevelsToDrop) as c_ulong as isize,
+            F::CreateMipMaps => (get(EeGeTexVal::CreateMipMaps) != 0) as isize,
+            F::FrameFormat => get(EeGeTexVal::FrameFormat) as c_ulong as isize,
+            F::FrameCount => get(EeGeTexVal::FrameCount) as c_ulong as isize,
+            F::IsManaged | F::Promoted => 0,
+        },
+        // the host's TexSet: SetIsFromTexturePack(b != 0), SetTexturePackMipLevels((long)b),
+        // SetNumMipLevelsToDrop((unsigned long)b), SetIsManaged(b != 0), SetIsPromoted(b != 0)
+        O::TexSet => {
+            match tex_field(a)? {
+                F::FromPack => set(EeGeTexVal::FromPack, (b != 0) as isize),
+                F::PackMipLevels => set(EeGeTexVal::PackMipLevels, b as c_long as isize),
+                F::NumMipLevelsToDrop => set(EeGeTexVal::NumMipLevelsToDrop, b as c_ulong as isize),
+                F::IsManaged => set(EeGeTexVal::IsManaged, (b != 0) as isize),
+                F::Promoted => set(EeGeTexVal::IsPromoted, (b != 0) as isize),
+                F::CreateMipMaps | F::FrameFormat | F::FrameCount => {}
+            }
+            0
+        }
+        // GetStage()'s field (the bias as its bits)
+        O::TexStage => {
+            // SAFETY: the texture's own stage
+            let s = unsafe { &*tex::ee_ge_tex_stage(t()) };
+            match tex_stage(a)? {
+                S::AlphaMode => s.alpha_mode as isize,
+                S::ColorMode => s.color_mode as isize,
+                S::MagFilterMode => s.mag_filter_mode as isize,
+                S::MinFilterMode => s.min_filter_mode as isize,
+                S::MipFilterMode => s.mip_filter_mode as isize,
+                S::MipMapBias => s.mip_map_bias.to_bits() as isize,
+                S::TextureAddressingMode => s.texture_addressing_mode as isize,
+            }
+        }
+        // SetStage...((unsigned long)b, -1); the bias from its bits
+        O::TexSetStage => {
+            let field = match tex_stage(a)? {
+                S::AlphaMode => EeGeTexStageField::AlphaMode,
+                S::ColorMode => EeGeTexStageField::ColorMode,
+                S::MagFilterMode => EeGeTexStageField::MagFilterMode,
+                S::MinFilterMode => EeGeTexStageField::MinFilterMode,
+                S::MipFilterMode => EeGeTexStageField::MipFilterMode,
+                S::TextureAddressingMode => EeGeTexStageField::TextureAddressingMode,
+                S::MipMapBias => {
+                    // SAFETY: a live texture
+                    unsafe { tex::ee_ge_tex_set_stage_bias(t(), f32::from_bits(b as u32)) };
+                    return Some(0);
+                }
+            };
+            // SAFETY: a live texture
+            unsafe { tex::ee_ge_tex_set_stage(t(), field, b as c_ulong) };
+            0
+        }
+        O::TexSetLogicalShift => {
+            // SAFETY: a live texture
+            unsafe { tex::ee_ge_tex_set_logical_shift(t(), a as c_ulong) };
+            0
+        }
+        // SAFETY (the arms below): a live texture
+        O::TexFrame => unsafe { tex::ee_ge_tex_frame_texture(t(), a as c_ulong) as isize },
+        O::TexReference => {
+            unsafe { cppobj::reference(obj) };
+            0
+        }
+        O::TexDereference => {
+            unsafe { tex::ee_ge_tex_dereference(t()) };
+            0
+        }
+        O::RefCount => unsafe { cppobj::reference_count(obj) as isize },
+        O::TexRecreate => unsafe { tex::ee_ge_tex_recreate(t(), a as *mut c_void) as isize },
+        O::TexAllocatedSize => unsafe { tex::ee_ge_tex_allocated_size(t()) as isize },
+        O::TexLoad => {
+            // SAFETY: a is the manager's own EeGeTexLoad
+            let l = unsafe { *(a as *const EeGeTexLoad) };
+            unsafe {
+                tex::ee_ge_tex_load(
+                    t(),
+                    l.file,
+                    l.description,
+                    b as *mut c_void,
+                    l.create_mipmaps,
+                    l.num_mip_levels_to_drop,
+                    l.frame_format,
+                ) as isize
+            }
+        }
+        _ => return None,
+    })
 }
 
 /// Every access to the object is one short statement: a host call may come back in and use it.
@@ -162,7 +314,13 @@ impl EeGeTextureManager {
     /// `p` is live; the operation's arguments are as `EeGeManOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeManOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
         // SAFETY: the caller's contract (host and owner are copied out before the call)
-        let (host, owner) = unsafe { ((*p).host, (*p).owner) };
+        let (host, owner, direct) = unsafe { ((*p).host, (*p).owner, (*p).direct) };
+        if direct {
+            // SAFETY: the C++ manager's textures are GETextures
+            if let Some(r) = unsafe { tex_direct(op, obj, a, b) } {
+                return r;
+            }
+        }
         // SAFETY: the host's contract
         unsafe { host(owner, op, obj as *mut c_void, a, b, c) }
     }
@@ -298,6 +456,7 @@ impl EeGeTextureManager {
             path: 0,
             screen: 0,
             footprint: 0,
+            direct: false,
         }));
         // SAFETY: p is live
         unsafe {
@@ -675,7 +834,11 @@ pub unsafe extern "C" fn ee_ge_texman_new(
     path: *mut c_void,
 ) -> *mut EeGeTextureManager {
     // SAFETY: the caller's contract
-    unsafe { EeGeTextureManager::create(host, owner, path as usize) }
+    unsafe {
+        let p = EeGeTextureManager::create(host, owner, path as usize);
+        (*p).direct = true;
+        p
+    }
 }
 
 /// `~GETextureManager`.

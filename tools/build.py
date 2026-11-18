@@ -7,7 +7,7 @@ static UCRT).
 -> <out>/exe/EE-AOC.exe with its .map and .pdb (default out: build/clang), linked at the fixed image base 0x400000
 (as the x64 build has always run). x86_64 is the only target (--x64 is accepted and ignored). The exe holds the game
 with the engine (and its libjpeg, which the lobby's JPEG reader uses too), the plug-ins the original loaded as DLLs (TCP
-protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
+protocol, the mixer, the Default random map generator, the DX7 T&L renderer) and the
 language resources, with pl_mpeg for the movies (the sound device, the decoders and the music are Rust: cpal, symphonia, rustysynth). Only Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
 of every object, the Windows SDK import libraries, the static libraries (SDL3,

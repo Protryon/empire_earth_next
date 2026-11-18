@@ -67,8 +67,6 @@
 #include "rust/ui/hotkey.h"
 #include "rust/ui/hotkey_ffi.h"
 #include "rust/ui/hotkeyobj.h"
-#include "rust/ui/ime.h"
-#include "rust/ui/ime_ffi.h"
 #include "rust/ui/labelobj.h"
 #include "rust/ui/layout.h"
 #include "rust/ui/layout_ffi.h"

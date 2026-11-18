@@ -18,7 +18,6 @@
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp
 4b190 4b275 Network Engine/Network Engine.cpp
-4b275 4b4b7 PIMModule.cpp
 4bbce 4e8aa Sound Engine/SEConductor.cpp
 4e8aa 4eef6 Sound Engine/SEMixer.cpp
 4eef6 4f08e Sound Engine/SEScore.cpp
@@ -47,7 +46,6 @@
 7042f 75330 User Interface/UIForm.cpp
 75b7c 76f27 User Interface/UIGraph.cpp
 76f27 774b9 User Interface/UIHotKey.cpp
-774b9 77f75 User Interface/UIIMECandidate.cpp
 78251 785cd User Interface/UILBString.cpp
 78c81 7ba37 User Interface/UIManager.cpp
 7badf 7c38e User Interface/UIRadioButton.cpp

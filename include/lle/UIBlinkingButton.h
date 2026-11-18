@@ -19,7 +19,6 @@ public:
     virtual long CopyData();
     virtual long DrawPolygons();            // ICF-folded with UIButton::DrawPolygons (0x1005eb30)
     virtual long DrawTextA();
-    bool GetIsBlinking();
     void SetIsBlinking(bool inBlinking);
     // the original's members (+0x108 TMPoll mPoll: one blink phase, +0x128 mBlinkPhase, +0x12c mBlinkRate, the full
     // opacities +0x130..+0x13c, +0x140 mSavedAlwaysDirty, +0x141 mNeedsOpacities, +0x142 mIsBlinking; sizeof 0x148)

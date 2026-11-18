@@ -29,7 +29,6 @@ public:
     void SetPolygonStartingIndex(unsigned long inIndex, unsigned long inLOD) { ee_ge_mat_set(this->mRust, EeGeMatField::PolygonStart, inLOD, inIndex); }
     void SetPolygonRangeLength(unsigned long inLength, unsigned long inLOD) { ee_ge_mat_set(this->mRust, EeGeMatField::PolygonLength, inLOD, inLength); }
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_mat_set_texture(this->mRust, inTexture, inScreen); }
-    void SetTextureIndex(unsigned long inIndex) { ee_ge_mat_set(this->mRust, EeGeMatField::TextureIndex, 0, inIndex); }
     void SetVertexRangeLength(unsigned long inLength) { ee_ge_mat_set(this->mRust, EeGeMatField::VertexLength, 0, inLength); }
     void SetVertexStartingIndex(unsigned long inIndex) { ee_ge_mat_set(this->mRust, EeGeMatField::VertexStart, 0, inIndex); }
     // the footprint of the original object (its members by value: a UString, a GEColor, three arrays, five fields)

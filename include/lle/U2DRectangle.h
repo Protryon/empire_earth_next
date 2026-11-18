@@ -46,32 +46,6 @@ public:
     // name)
     // name (was EEAIAStarBounds)
     void Grow(T inMargin, bool inClamp);
-    // exe: the overlap of the two rectangles, false when they do not meet (0x7669d, ret 8; inline COMDAT emitted in
-    // EECPCombatManager.cpp after its first user Update 0x47219a) (provisional name; was EEAIAStarBounds)
-    bool Intersect(const U2DRectangle& inOther, U2DRectangle& outOverlap) const
-    {
-        bool theResult = false;
-        if (this->mLeft <= inOther.mRight && this->mRight >= inOther.mLeft && this->mTop <= inOther.mBottom && this->mBottom >= inOther.mTop) {
-            theResult = true;
-            if (this->mLeft < inOther.mLeft)
-                outOverlap.mLeft = inOther.mLeft;
-            else
-                outOverlap.mLeft = this->mLeft;
-            if (this->mRight > inOther.mRight)
-                outOverlap.mRight = inOther.mRight;
-            else
-                outOverlap.mRight = this->mRight;
-            if (this->mTop < inOther.mTop)
-                outOverlap.mTop = inOther.mTop;
-            else
-                outOverlap.mTop = this->mTop;
-            if (this->mBottom > inOther.mBottom)
-                outOverlap.mBottom = inOther.mBottom;
-            else
-                outOverlap.mBottom = this->mBottom;
-        }
-        return theResult;
-    }
     // exe: the middle of the rectangle (0x61340, ret 4, hidden result; out of line, defined below the class)
     // (provisional name; was EEAIAStarBounds)
     void GetCenter(U2DPoint<T>& outCenter) const;
