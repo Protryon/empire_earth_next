@@ -42,27 +42,6 @@ GUIString ChatString(const uint32_t* inUnits, size_t inCount)
         aText += (wchar_t)inUnits[i];
     return GUIString(aText);
 }
-void ChatWordSink(void* inContext, const uint32_t* inUnits, size_t inCount)
-{
-    *static_cast<GUIString*>(inContext) = ChatString(inUnits, inCount);
-}
-// The texts a parse set
-struct ChatTexts {
-    bool mHasTargetName, mHasText;
-    GUIString mTargetName, mText;
-    ChatTexts() : mHasTargetName(false), mHasText(false) {}
-};
-void ChatTextSink(void* inContext, int32_t inWhich, const uint32_t* inUnits, size_t inCount)
-{
-    ChatTexts* theTexts = static_cast<ChatTexts*>(inContext);
-    if (inWhich == EE_WON_CHAT_TARGET_NAME) {
-        theTexts->mHasTargetName = true;
-        theTexts->mTargetName = ChatString(inUnits, inCount);
-    } else {
-        theTexts->mHasText = true;
-        theTexts->mText = ChatString(inUnits, inCount);
-    }
-}
 // The room's clients and their names, in the list's order
 struct ChatClients {
     std::vector<LobbyClient*> mClients;
@@ -120,30 +99,12 @@ void ChatCommandParser::SetInvitation(bool inInvitation)
 // Registers the localized names of every chat command (whisper, block, emote, ignore, ... alert, warn)
 void ChatCommandParser::InitCommands()
 {
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Whisper_String),LobbyChatCommand_Whisper);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Block_String),LobbyChatCommand_Block);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Emote_String),LobbyChatCommand_Emote);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Ignore_String),LobbyChatCommand_Ignore);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Away_String),LobbyChatCommand_Away);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Invite_String),LobbyChatCommand_Invite);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Uninvite_String),LobbyChatCommand_Uninvite);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Reply_String),LobbyChatCommand_Reply);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Clear_String),LobbyChatCommand_Clear);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Help_String),LobbyChatCommand_Help);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_ShowTeam_String),LobbyChatCommand_ShowTeam);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Moderator_String),LobbyChatCommand_Moderator);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerMute_String),LobbyChatCommand_ServerMute);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerBan_String),LobbyChatCommand_ServerBan);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Mute_String),LobbyChatCommand_Mute);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Ban_String),LobbyChatCommand_Ban);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Unmute_String),LobbyChatCommand_Unmute);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerUnmute_String),LobbyChatCommand_ServerUnmute);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Unban_String),LobbyChatCommand_Unban);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerUnban_String),LobbyChatCommand_ServerUnban);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Alert_String),LobbyChatCommand_Alert);
- this->AddCommands(gEmptyWideString,LobbyChatCommand_StartShutdown);
- this->AddCommands(gEmptyWideString,LobbyChatCommand_AbortShutdown);
- this->AddCommands(LOBBY_STRING(ChatCommandLogic_Warn_String),LobbyChatCommand_Warn);
+ int command=0;
+ for(size_t i=0;;i++) {
+  int row=ee_won_chatparser_init_command(i,&command); // chatobj.rs's table, the original's order
+  if(row==-2) break;
+  this->AddCommands(row>=0 ? (std::wstring)gLobbyResources[row].mString : std::wstring(gEmptyWideString),command);
+ }
 }
 
 // Sets the room's client list (used to resolve names) and the room flags (used for the help text)
@@ -222,34 +183,6 @@ void ChatCommandParser::AddHelpEntry(int command,const GUIString& entry,GUIStrin
  out.append(GUIString("<n>"));
 }
 
-// A command's help line (the resource's)
-static const GUIString& ChatHelpString(int command)
-{
- switch(command) {
- case LobbyChatCommand_Help: return LOBBY_STRING(ChatCommandLogic_HelpHelp_String);
- case LobbyChatCommand_Whisper: return LOBBY_STRING(ChatCommandLogic_WhisperHelp_String);
- case LobbyChatCommand_Reply: return LOBBY_STRING(ChatCommandLogic_ReplyHelp_String);
- case LobbyChatCommand_Emote: return LOBBY_STRING(ChatCommandLogic_EmoteHelp_String);
- case LobbyChatCommand_Ignore: return LOBBY_STRING(ChatCommandLogic_IgnoreHelp_String);
- case LobbyChatCommand_Clear: return LOBBY_STRING(ChatCommandLogic_ClearHelp_String);
- case LobbyChatCommand_ShowTeam: return LOBBY_STRING(ChatCommandLogic_ShowTeamHelp_String);
- case LobbyChatCommand_Block: return LOBBY_STRING(ChatCommandLogic_BlockHelp_String);
- case LobbyChatCommand_Away: return LOBBY_STRING(ChatCommandLogic_AwayHelp_String);
- case LobbyChatCommand_Invite: return LOBBY_STRING(ChatCommandLogic_InviteHelp_String);
- case LobbyChatCommand_Uninvite: return LOBBY_STRING(ChatCommandLogic_UninviteHelp_String);
- case LobbyChatCommand_Mute: return LOBBY_STRING(ChatCommandLogic_MuteHelp_String);
- case LobbyChatCommand_Unmute: return LOBBY_STRING(ChatCommandLogic_UnmuteHelp_String);
- case LobbyChatCommand_Ban: return LOBBY_STRING(ChatCommandLogic_BanHelp_String);
- case LobbyChatCommand_Unban: return LOBBY_STRING(ChatCommandLogic_UnbanHelp_String);
- case LobbyChatCommand_Moderator: return LOBBY_STRING(ChatCommandLogic_ModeratorHelp_String);
- case LobbyChatCommand_ServerMute: return LOBBY_STRING(ChatCommandLogic_ServerMuteHelp_String);
- case LobbyChatCommand_ServerUnmute: return LOBBY_STRING(ChatCommandLogic_ServerUnmuteHelp_String);
- case LobbyChatCommand_ServerBan: return LOBBY_STRING(ChatCommandLogic_ServerBanHelp_String);
- case LobbyChatCommand_ServerUnban: return LOBBY_STRING(ChatCommandLogic_ServerUnbanHelp_String);
- case LobbyChatCommand_Alert: return LOBBY_STRING(ChatCommandLogic_AlertHelp_String);
- default: return LOBBY_STRING(ChatCommandLogic_WarnHelp_String);
- }
-}
 
 // Builds a client's chat help; outside LAN adds block/away, invite if game captain, mute/ban if captain of this
 // room or a moderator, server mute/ban and warn if a moderator, alert if an admin; team help in game rooms
@@ -269,6 +202,6 @@ GUIString ChatCommandParser::GetHelp(unsigned short clientId)
  out.append(GUIString("<n>"));
  int32_t commands[32];
  size_t count=ee_won_chat_help((uint32_t)this->GetRoomFlags(),isModerator,isRoomCaptain,isGameCaptain,isAdmin,commands);
- for(size_t k=0;k<count;k++) this->AddHelpEntry(commands[k],ChatHelpString(commands[k]),out);
+ for(size_t k=0;k<count;k++) this->AddHelpEntry(commands[k],gLobbyResources[ee_won_chat_help_row(commands[k])].mString,out);
  return out;
 }

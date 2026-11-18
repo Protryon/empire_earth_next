@@ -30126,3 +30126,12 @@ driver) the ops still go to their hosts, so the drivers and their goldens are un
 preference switches are gone from LobbyCtrlHost.cpp, LobbyNetCtrlHost.cpp, RoutingLogic.cpp, LobbyLogicHost.cpp and
 LanLogicHost.cpp. won_host_coverage.py reads the three functions (and `pref_flag` for EeWonLobbyCtlPref): PASS.
 Texts (a GUIStringData* argument) stay with the hosts: the Rust would need the string's units back from the C++.
+
+### ChatCommandParser's tables
+
+InitCommands' 24 `AddCommands` calls and the help lines' 23-case switch (`ChatHelpString`) are tables in chatobj.rs
+(`ee_won_chatparser_init_command`: the names' resource row and the command in the original's order, -1 for the two
+shutdown commands' empty lists; `ee_won_chat_help_row`: the warning's line for any other command), the C++ a loop
+and a look-up; the unused text sinks (ChatWordSink, ChatTexts, ChatTextSink) are gone. A unit test holds the
+tables to the original's order. No driver links ChatCommandParser.cpp: the Internet lobby's chat reaches it (the
+LAN game's chat panel parses through the same object: `lan_game.py`).
