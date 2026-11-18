@@ -161,6 +161,14 @@ extern "C" {
     fn ee_ai_next_string_append(string: *mut c_void, data: *const u8, len: usize);
 }
 
+/// Appends bytes to a C++ `std::string` (EECPNext.cpp `ee_ai_next_string_append`).
+///
+/// # Safety
+/// `out` is a live `std::string`.
+pub(crate) unsafe fn string_append(out: *mut c_void, bytes: &[u8]) {
+    ee_ai_next_string_append(out, bytes.as_ptr(), bytes.len());
+}
+
 fn host(op: i32, me: *mut c_void, a: i64, b: i64, c: i64) -> i64 {
     // SAFETY: the C++ switch over the live game (the simulation thread, inside a call from it)
     unsafe { ee_ai_next_host(op, me, a, b, c, std::ptr::null_mut()) }

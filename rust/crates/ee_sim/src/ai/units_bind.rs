@@ -3436,6 +3436,59 @@ pub unsafe extern "C" fn ee_ai_units_open(state: *mut c_void, player: *mut c_voi
     }
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// The save (EECPUnitsSave, EECPUnitsLoad before; lane A, round 3): "EENU" (units_save.rs), saved with the computer
+// player from version 0.254
+
+/// `EECPUnitsSave`: the player's per-unit state's bytes appended to `out` (a C++ `std::string`; nothing without a
+/// state); TEST ONLY with EE_AI_SAVE_CHECK=1, a `next.savecheck units=` line (the bytes decode into a fresh state
+/// that encodes to the same bytes).
+///
+/// # Safety
+/// `me` is a live computer player, `units` its per-unit state (or null), `out` a live `std::string`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_units_save(me: *mut c_void, units: *mut c_void, out: *mut c_void) {
+    if units.is_null() {
+        return;
+    }
+    let n = ee_ai_units_state_save(units, std::ptr::null_mut(), 0);
+    let mut bytes = vec![0u8; n];
+    ee_ai_units_state_save(units, bytes.as_mut_ptr(), n);
+    crate::ai::next_game::string_append(out, &bytes);
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*ON.get_or_init(|| std::env::var("EE_AI_SAVE_CHECK").is_ok_and(|v| v.starts_with('1'))) {
+        return;
+    }
+    let mut counts = [0usize; 4];
+    let same = ee_ai_units_state_save_check(units, bytes.as_ptr(), bytes.len(), counts.as_mut_ptr());
+    trace(
+        me,
+        c"next.savecheck",
+        &format!(
+            "units={} bytes={} held={} events={} memory={} trades={}",
+            if same { "same" } else { "DIFFERENT" },
+            bytes.len(),
+            counts[0],
+            counts[1],
+            counts[2],
+            counts[3]
+        ),
+    );
+}
+
+/// `EECPUnitsLoad`: the per-unit state from its bytes (made when missing; empty: none) -> false when they are not
+/// a block.
+///
+/// # Safety
+/// `me` is a live computer player; `data` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_units_load(me: *mut c_void, data: *const u8, len: usize) -> bool {
+    if len == 0 {
+        return true;
+    }
+    ee_ai_units_state_load(state_of(me) as *mut c_void, data, len)
+}
+
 // the rest of the bindings (lane A round 2)
 #[path = "units_more.rs"]
 mod more;

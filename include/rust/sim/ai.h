@@ -1941,6 +1941,25 @@ int ee_ai_units_lua_find_site(void *l);
 /// touches water (of the water body `sea` when given) and lies on the land mass `land` when given
 int ee_ai_units_lua_shore(void *l);
 
+/// `EECPUnitsSave`: the player's per-unit state's bytes appended to `out` (a C++ `std::string`; nothing without a
+/// state); TEST ONLY with EE_AI_SAVE_CHECK=1, a `next.savecheck units=` line (the bytes decode into a fresh state
+/// that encodes to the same bytes).
+///
+/// # Safety
+/// `me` is a live computer player, `units` its per-unit state (or null), `out` a live `std::string`.
+void ee_ai_units_save(void *me,
+                      void *units,
+                      void *out);
+
+/// `EECPUnitsLoad`: the per-unit state from its bytes (made when missing; empty: none) -> false when they are not
+/// a block.
+///
+/// # Safety
+/// `me` is a live computer player; `data` holds `len` bytes.
+bool ee_ai_units_load(void *me,
+                      const uint8_t *data,
+                      size_t len);
+
 /// The host records' sizes summed (the C++ checks its copy of their layout against it once; it also puts the
 /// records in the header).
 ///

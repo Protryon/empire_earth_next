@@ -5,7 +5,7 @@
 //
 // The functions go into the script's `ai` table (EECPLuaConfig::mOpen) beside the coarse verbs, which keep working.
 // Fog-honest: other players' units only while their tile is seen (EETile::IsSeenBy), resources only on explored
-// tiles. Every binding charges its cost to the call's instruction budget (EECPLuaState::Charge).
+// tiles. Every binding charges its cost to the call's instruction budget (ee_ai lua_host.rs charge).
 #ifndef EE_EECPNEXTUNITS_H
 #define EE_EECPNEXTUNITS_H
 

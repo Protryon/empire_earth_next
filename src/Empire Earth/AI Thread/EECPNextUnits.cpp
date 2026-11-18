@@ -8,7 +8,7 @@
 //   resources only on explored tiles (IsVisibleTo);
 // - no Lua error while a C++ object with a destructor lives: arguments are read into the player's scratch vectors
 //   (members, not locals), bad arguments are refused with a result instead of raised, and only the budget charge
-//   (EECPLuaState::Charge) raises, before anything is built;
+//   (ee_ai lua_host.rs charge) raises, before anything is built;
 // - commands run the human's own messages (EEMessage.cpp's Execute) on the computer player's selection, at once
 //   (AI_LUA_UNITS §3.2): the selection is filled with the units, the player answers to a borrowed slot id while the
 //   message runs, and both are put back.
@@ -427,43 +427,18 @@ void EECPUnitsMicroTick(unsigned long inTime)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save: "EENU" (version 4: the militia and held reflexes; 3: the lost layer's trades; 2: the hurt spots and the
-// marks). The state and its format are Rust's (ee_ai units_state.rs, units_save.rs).
-
-// TEST ONLY (EE_AI_SAVE_CHECK=1, as EECPNextSaveCheck): the bytes decode into a fresh state that encodes to the same
-// bytes; `next.savecheck units=same|DIFFERENT` with the counts
-static void EECPUnitsSaveCheck(const EEComputerPlayer* inPlayer, const EECPUnitsState* s, const std::string& inBytes)
-{
-    static int sOn = -1;
-    if (sOn < 0) {
-        const char* theValue = getenv("EE_AI_SAVE_CHECK");
-        sOn = theValue != NULL && theValue[0] == '1' ? 1 : 0;
-    }
-    if (!sOn)
-        return;
-    size_t theCounts[4];
-    bool theSame = ee_ai_units_state_save_check(s->mRust, (const uint8_t*)inBytes.data(), inBytes.size(), theCounts);
-    EECPTraceScope theScope("next");
-    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "next.savecheck", "units=%s bytes=%lu held=%lu events=%lu memory=%lu trades=%lu",
-        theSame ? "same" : "DIFFERENT", (unsigned long)inBytes.size(), (unsigned long)theCounts[0],
-        (unsigned long)theCounts[1], (unsigned long)theCounts[2], (unsigned long)theCounts[3]);
-}
+// marks). The state, its format and the save (with its TEST ONLY check) are Rust's (ee_ai units_state.rs,
+// units_save.rs, units_bind.rs ee_ai_units_save).
 
 void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
 {
     outBytes.clear();
-    const EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL)
-        return;
-    outBytes.resize(ee_ai_units_state_save(s->mRust, NULL, 0));
-    ee_ai_units_state_save(s->mRust, (uint8_t*)&outBytes[0], outBytes.size());
-    EECPUnitsSaveCheck(inPlayer, s, outBytes);
+    ee_ai_units_save(const_cast<EEComputerPlayer*>(inPlayer), EECPUnitsRust(inPlayer), &outBytes);
 }
 
 bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
 {
-    if (inBytes.empty())
-        return true;
-    return ee_ai_units_state_load(EECPUnitsGet(inPlayer)->mRust, (const uint8_t*)inBytes.data(), inBytes.size());
+    return ee_ai_units_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
 }
 
 // ---------------------------------------------------------------------------------------------------------------
