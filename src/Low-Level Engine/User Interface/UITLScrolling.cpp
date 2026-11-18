@@ -55,9 +55,4 @@ void UITLScrolling::ScrollText(unsigned long inTime, unsigned long inEndDelay)
 {
     UITLScrollingRust::Call(this, EeUiLabelCall::ScrollTextFor, inTime, inEndDelay);
 }
-void UITLScrolling::SetPixelStartingOffset(unsigned long inOffset)
-{
-    UITLScrollingRust::Call(this, EeUiLabelCall::SetPixelStartingOffset, inOffset);
-}
-void UITLScrolling::SetStartingLine(unsigned long inLine) { UITLScrollingRust::Call(this, EeUiLabelCall::SetStartingLine, inLine); }
 void UITLScrolling::StopScrolling() { UITLScrollingRust::Call(this, EeUiLabelCall::StopScrolling); }

@@ -39,29 +39,23 @@ public:
     void Copy();
     virtual long CopyData();
     void Cut();
-    void DeleteSelectedText();
     void DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
                     unsigned long inEndLine);
     void DeleteText();
     virtual long DrawPolygons();
     virtual long DrawTextA();
     void GetAllText(UWideString& outString) const;
-    bool GetCursorOn() const;
     GEText* GetGEText() const;
     virtual bool GetIMEEnabled() const;
-    bool GetIsPasswordBox() const;
-    bool GetIsTextSelected() const;
     unsigned long GetLineCount() const;
     const char* GetText(unsigned long inLine) const;
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
-    void Paste();
     virtual long OpenIMECompositionString();
     virtual void ReleaseCapturedKeyboard();
     void SelectText();
     void SelectText(unsigned long inCaretIndex, unsigned long inStartIndex, unsigned long inCaretLine,
                     unsigned long inStartLine);
     void SetCaretLocation(unsigned long inIndex, unsigned long inLine);
-    void SetCharScroll(unsigned long inCharScroll);
     void SetCursorColor(const GEColor& inColor);
     void SetIsPasswordBox(bool inPasswordBox);
     virtual void SetLocation(const GE2DPoint& inLocation);

@@ -44,15 +44,12 @@ public:
         { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
     unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
-    bool GetIsCompressed() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FrameIsCompressed) != 0; }
-    bool GetIsPromoted() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FrameIsPromoted) != 0; }
     unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
     GETexture* GetStageTexture(unsigned long inStage) const { return this->GetStage()->mTexture; }
     unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
     bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
     long Promote() { return ee_ge_tex_promote(this->mRust); }
     void SetData(void* inData) { ee_ge_tex_set(this->mRust, EeGeTexVal::FrameData, (intptr_t)inData); }
-    void SetHasChanged() { ee_ge_tex_set(this->mRust, EeGeTexVal::HasChanged, 1); }
     void ValidateChanges() { ee_ge_tex_set(this->mRust, EeGeTexVal::HasChanged, 0); }
 
     unsigned long GetFrame() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::Frame); }

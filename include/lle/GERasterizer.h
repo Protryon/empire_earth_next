@@ -97,12 +97,8 @@ class LLE_API GERasterizer {                // sizeof 0x68 in the original (vect
 public:
     virtual long ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                 unsigned long inMode, bool inFullScreen, unsigned long inBackBuffers) = 0;
-    virtual long ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
-                                          unsigned long inWidth, unsigned long inHeight) = 0;
     virtual long AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex) = 0;
-    virtual long AddValidScreen(GEScreen* inScreen);
     virtual long BeginScene(GESurface* inTarget, unsigned long inScreen) = 0;
-    virtual bool CanDoCurrentState(GETexture* inTexture, unsigned long inScreen) = 0;
     virtual long Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen) = 0;
     virtual long ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen) = 0;
     virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen) = 0;
@@ -137,14 +133,12 @@ public:
                                       float inOpacity) = 0;
     virtual long DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inSorted) = 0;
     virtual long EndScene(unsigned long inScreen) = 0;
-    virtual long GetAvailableVideoMemory(unsigned long inScreen, unsigned long& outBytes) = 0;
     virtual long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) = 0;
     virtual unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) = 0;
     virtual bool GetCanModulateTextureAlpha(unsigned long inScreen) = 0;
     virtual bool GetDirtyRectangleSupport(unsigned long inScreen) = 0;
     virtual void Light(GETerrainMesh& inMesh, unsigned long inScreen) = 0;
     virtual long RemoveAllLights(unsigned long inScreen) = 0;
-    virtual long RemoveLight(unsigned long inIndex, unsigned long inScreen) = 0;
     virtual void SetAlphaTesting(unsigned long inState, unsigned long inScreen);
     virtual void SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen);
     virtual void SetAlphaTestingRefValue(float inValue, unsigned long inScreen);
@@ -154,16 +148,13 @@ public:
     virtual void SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen);
     virtual void SetColorKeying(unsigned long inState, unsigned long inScreen);
     virtual void SetCulling(unsigned long inState);
-    virtual void SetDebugColor(const GEColor& inColor) = 0;
     virtual void SetDisplayNoTextureMode(bool inState, unsigned long inScreen);
     virtual void SetDisplayOverdrawMode(bool inState, unsigned long inScreen);
     virtual void SetDithering(unsigned long inState, unsigned long inScreen);
-    virtual void SetDrawStyle(unsigned long inStyle, unsigned long inScreen);
     virtual void SetFog(unsigned long inState, unsigned long inScreen);
     virtual void SetFogColor(const GEColor& inColor, unsigned long inScreen);
     virtual void SetFogRange(float inStart, float inEnd, unsigned long inScreen);
     virtual void SetFogType(unsigned long inType, unsigned long inScreen);
-    virtual void SetFogValue(float inValue, unsigned long inScreen);
     virtual void SetLighting(unsigned long inState, unsigned long inScreen);
     virtual void SetProjectionMode(unsigned long inMode, unsigned long inScreen);
     virtual void SetShading(unsigned long inState, unsigned long inScreen);
@@ -180,36 +171,20 @@ public:
     virtual long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen) = 0;
 
     long Activate();
-    long CreateFontBitmap(GEFont* inFont, unsigned long inScreen);
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer();
     unsigned long GetAlphaTesting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mAlphaTesting; }
-    unsigned long GetAlphaTestingCompareState(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mAlphaTestingCompareState; }
     float GetAlphaTestingRefValue(unsigned long inScreen) const
         { return this->GetScreenState(inScreen)->mAlphaTestingRefValue; }
     const GEColor& GetAmbientColor() const;
     float GetAmbientIntensity() const;
-    unsigned long GetAntiAliasing(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mAntiAliasing; }
     void GetBlending(unsigned long& outSource, unsigned long& outDestination, unsigned long inScreen) const
     {
         outSource = this->GetScreenState(inScreen)->mBlendSource;
         outDestination = this->GetScreenState(inScreen)->mBlendDestination;
     }
-    unsigned long GetColorKeying(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mColorKeying; }
-    const GEColor& GetComputedAmbientColor() const;
     unsigned long GetCulling() const;
-    unsigned long GetDithering(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mDithering; }
-    unsigned long GetDrawStyle(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mDrawStyle; }
-    float GetDrawnPolyAreaPerFrame(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mDrawnPolyAreaPerFrame; }
-    float GetDrawnPolyAreaPerSecond(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mDrawnPolyAreaPerSecond; }
-    float GetDrawnPolysPerFrame(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mDrawnPolysPerFrame; }
-    float GetDrawnPolysPerSecond(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mDrawnPolysPerSecond; }
     unsigned long GetFog(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mFogState; }
     void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
     {
@@ -224,11 +199,8 @@ public:
     bool GetIsActivated() const;
     bool GetIsScreenActivated(unsigned long inScreen) const
         { return this->GetScreenState(inScreen)->mIsScreenActivated; }
-    bool GetIsPolyAreaProfiling();
     unsigned long GetLighting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mLighting; }
     const UString& GetName() const;
-    unsigned long GetProjectionMode(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mProjectionMode; }
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
                        bool inOrthographic);
     float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic);
@@ -239,47 +211,27 @@ public:
     GEScreen* GetScreen(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mScreen; }
     unsigned long GetScreenCount() const;
     unsigned long GetScreenID() const;
-    float GetScenePolysPerFrame(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mScenePolysPerFrame; }
-    float GetScenePolysPerSecond(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mScenePolysPerSecond; }
     GESurface* GetSecondarySurface(unsigned long inScreen) const
         { return this->GetScreenState(inScreen)->mSecondarySurface; }
-    unsigned long GetShading(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mShading; }
-    unsigned long GetSpecular(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mSpecular; }
     GETextureManager* GetTextureManager(unsigned long inScreen) const
         { return this->GetScreenState(inScreen)->mScreen->GetTextureManager(); }
-    float GetTotalTextureChangesPerFrame(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->mTotalTextureChangesPerFrame; }
     GEViewport& GetViewport(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mViewport; }
     GEWindow* GetWindow(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mWindow; }
     unsigned long GetZBuffer(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mZBuffer; }
     unsigned long GetZCompare(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mZCompare; }
-    void SetPolyAreaProfiling(bool inState);
     void SetScreenID(unsigned long inID);
     void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2);
 protected:
     GERasterizer(const UString& inName);
     // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
     GERScreenState* GetScreenState(unsigned long inScreen) const;
-    TSCriticalSection* GetDrawingAccess() const;
-    void GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const;
-    static void SetActiveRasterizer(GERasterizer* inRasterizer);
-    void IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
-                                    bool& outVisible, bool& outClipped);
-    void IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
-                                   GETransformation& inTransformation, bool& outVisible, bool& outClipped);
     virtual ~GERasterizer();                // slot 0x114
     // Eight more pure slots follow the dtor (vtable 0x10097954 ends at 0x138), in alphabetical order; names and
     // signatures proven by DX7HRDisplay.dll's overrides (exports ?ActivateRasterizer@DX7Rasterizer@@MAEJXZ, ...).
     // Activate calls ActivateRasterizer and keys mIsActivated on its keseOK result.
     virtual long ActivateRasterizer() = 0;                                              // slot 0x118
-    virtual long ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
-                                   GETextureManager* inManager, GEWindow* inWindow) = 0;  // slot 0x11c
     virtual long CreateTextureHandle(GETexture* inTexture) = 0;     // slot 0x120: GETexture gains a surface
-    virtual long DemoteTexture(GETexture* inTexture) = 0;           // slot 0x124
     virtual void DestroyTextureHandle(GETexture* inTexture) = 0;    // slot 0x128: GETexture loses its surface
-    virtual long DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inSorted) = 0;
     virtual long PromoteTexture(GETexture* inTexture) = 0;          // slot 0x130
     virtual void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) = 0;      // slot 0x134
 

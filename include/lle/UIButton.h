@@ -34,7 +34,6 @@ public:
     unsigned long GetState() const;         // UIButtonState
     GEBitmap* GetFocusedBitmap() const;
     GEText* GetGEText();
-    bool GetIsButtonDown() const;
     GEBitmap* GetNormalBitmap() const;
     GEBitmap* GetPressedBitmap() const;
     void SetBitmapDrawOffset(const GE2DPoint& inOffset);
@@ -59,9 +58,6 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo();
     virtual void TabbedFrom();
-    // the radio button's bitmap swaps: the bitmap replaced (references moved) without SetDirty
-    void ReplaceNormalBitmap(GEBitmap* inBitmap);
-    void ReplacePressedBitmap(GEBitmap* inBitmap);
 
     EeUiButton* mRust;                      // the state (buttonobj.rs)
 };

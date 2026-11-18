@@ -21,7 +21,6 @@ public:
     GEBitmap();
     void ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle, const GERectangle& inSourceRectangle,
                                         const GERectangle& inDestinationRectangle, unsigned long inScreen);
-    void FlipHorizontally();
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const;
     float GetHeight() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Height); }

@@ -131,20 +131,6 @@ long GERasterizer::Activate()
     return (long)ee_ge_rast_activate(this->mRust);
 }
 
-// Adds a render state block for another screen; always succeeds
-long GERasterizer::AddValidScreen(GEScreen* inScreen)
-{
-    ee_ge_rast_add_screen(this->mRust, inScreen);
-    return kErrorOK;
-}
-
-// Creates a font bitmap of the font for the given screen (the bitmap registers itself); always succeeds
-long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
-{
-    ee_ge_rast_create_font_bitmap(this->mRust, inFont, inScreen);
-    return kErrorOK;
-}
-
 // Deactivates the rasterizer: deletes every screen's render state and clears the active rasterizer
 long GERasterizer::Deactivate()
 {
@@ -163,22 +149,6 @@ float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETra
 float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
 {
     return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
-}
-
-// Tests a model's bounding box against an orthographic view volume: sets visible/clipped and per-plane clip flags
-void GERasterizer::IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport,
-                                              GETransformation& inTransformation, bool& outVisible, bool& outClipped)
-{
-    ee_ge_rast_model_visible(this->mRust, inModel, 1.0f, GERust(*inViewport), GERust(inTransformation), true, &outVisible,
-                             &outClipped);
-}
-
-// Tests a model's bounding sphere against a perspective view volume: sets visible/clipped and per-plane clip flags
-void GERasterizer::IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
-                                             GETransformation& inTransformation, bool& outVisible, bool& outClipped)
-{
-    ee_ge_rast_model_visible(this->mRust, inModel, inScale, GERust(*inViewport), GERust(inTransformation), false,
-                             &outVisible, &outClipped);
 }
 
 // The base's render state setters (0x10024352..0x100245e9): each records the state in the screen's record.
@@ -244,11 +214,6 @@ void GERasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
     ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Dithering, (intptr_t)inState);
 }
 
-void GERasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::DrawStyle, (intptr_t)inStyle);
-}
-
 void GERasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 {
     ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogState, (intptr_t)inState);
@@ -267,11 +232,6 @@ void GERasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScree
 void GERasterizer::SetFogType(unsigned long inType, unsigned long inScreen)
 {
     ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType);
-}
-
-void GERasterizer::SetFogValue(float inValue, unsigned long inScreen)
-{
-    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogDensity, GEFloatBits(inValue));
 }
 
 void GERasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
@@ -326,19 +286,12 @@ GERScreenState* GERasterizer::GetScreenState(unsigned long inScreen) const
 }
 
 const GEColor& GERasterizer::GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
-const GEColor& GERasterizer::GetComputedAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, true)); }
 float GERasterizer::GetAmbientIntensity() const { return GEBitsFloat(ee_ge_rast_get(this->mRust, EeGeRastVal::AmbientIntensity)); }
 unsigned long GERasterizer::GetCulling() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::Culling); }
 bool GERasterizer::GetIsActivated() const { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsActivated) != 0; }
-bool GERasterizer::GetIsPolyAreaProfiling() { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsPolyAreaProfiling) != 0; }
 const UString& GERasterizer::GetName() const { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
 unsigned long GERasterizer::GetScreenCount() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }
 unsigned long GERasterizer::GetScreenID() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenId); }
-TSCriticalSection* GERasterizer::GetDrawingAccess() const
-{
-    return reinterpret_cast<TSCriticalSection*>(ee_ge_rast_get(this->mRust, EeGeRastVal::DrawingAccess));
-}
-void GERasterizer::SetPolyAreaProfiling(bool inState) { ee_ge_rast_set(this->mRust, EeGeRastVal::IsPolyAreaProfiling, inState); }
 void GERasterizer::SetScreenID(unsigned long inID) { ee_ge_rast_set(this->mRust, EeGeRastVal::ScreenId, (intptr_t)inID); }
 
 void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
@@ -347,17 +300,7 @@ void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRippl
     ee_ge_rast_ripple(this->mRust, &theRipple, true);
 }
 
-void GERasterizer::GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const
-{
-    float theRipple[3];
-    ee_ge_rast_ripple(this->mRust, &theRipple, false);
-    outRipple0 = theRipple[0];
-    outRipple1 = theRipple[1];
-    outRipple2 = theRipple[2];
-}
-
 GERasterizer* GERasterizer::GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
-void GERasterizer::SetActiveRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_set_active(inRasterizer); }
 void GERasterizer::ClearRasterizers() { ee_ge_rast_list(0, NULL, 0); }
 void GERasterizer::AddRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_list(1, inRasterizer, 0); }
 unsigned long GERasterizer::GetRasterizerCount() { return (unsigned long)(uintptr_t)ee_ge_rast_list(2, NULL, 0); }

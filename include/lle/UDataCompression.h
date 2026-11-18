@@ -9,7 +9,6 @@ public:
     virtual ~UDataCompression();
     long Compress(const char* inData, unsigned long inLength, char* outData, unsigned long inCapacity,
                   unsigned long& outLength, unsigned long inLevel);
-    bool GetIsCompressed(const char* inData, unsigned long inLength);
 };
 
 #endif

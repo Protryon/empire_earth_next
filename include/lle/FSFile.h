@@ -47,8 +47,6 @@ public:
     virtual void GetVolume(UString& outVolume) const = 0;                           // +0x2c
     virtual const UString& GetVolume() const = 0;                                   // +0x28
     virtual long Open(unsigned long inAccess) = 0;                                  // +0x30
-    virtual void PopIndentHint() {}                                                 // +0x34
-    virtual void PushIndentHint() {}                                                // +0x38
     virtual long Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead) = 0;   // +0x64
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead) = 0;            // +0x60
     virtual long Read(uint32_t& outValue) = 0;                                      // +0x5c

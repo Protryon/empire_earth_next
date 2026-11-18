@@ -28,10 +28,6 @@ bool SEMixer::ProcessMessage(unsigned long inMessage, void* inParameter1, void* 
 // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
 long SEMixer::UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
 unsigned long SEMixer::GetOutputRate() const { return ee_sound_mixer_output_rate(RUST); }
-void SEMixer::SetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
-{
-    ee_sound_mixer_set_music_source(RUST, inSource, inContext);
-}
 void SEMixer::SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
 {
     ee_sound_mixer_set_movie_source(RUST, inSource, inContext);

@@ -34,7 +34,6 @@ public:
     // this port's additions: the mixer's output rate, and the music (the conductor) and movie sound sources its
     // device thread mixes in (interleaved stereo float frames added at the output rate)
     unsigned long GetOutputRate() const;
-    void SetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext);
     void SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext);
 private:
     SEMixer() = delete;

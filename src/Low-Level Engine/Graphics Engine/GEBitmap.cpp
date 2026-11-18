@@ -416,12 +416,6 @@ void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectan
                       GERust(inDestinationRectangle), inScreen);
 }
 
-// Mirrors the bitmap's texture left to right (resets the texture coordinates to the full flipped texture)
-void GEBitmap::FlipHorizontally()
-{
-    ee_ge_bmp_flip(this->mRust, false);
-}
-
 // Sets the bitmap's texture for one screen, referencing the new one and releasing the old; takes its frame size
 void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {

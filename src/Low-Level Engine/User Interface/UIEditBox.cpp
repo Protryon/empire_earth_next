@@ -190,7 +190,6 @@ long UIEditBox::CloseIMECompositionString() { return (long)R::Call(this, C::ImeC
 void UIEditBox::Copy() { R::Call(this, C::Copy); }
 long UIEditBox::CopyData() { return (long)R::Call(this, C::CopyData); }
 void UIEditBox::Cut() { R::Call(this, C::Cut); }
-void UIEditBox::DeleteSelectedText() { R::Call(this, C::DeleteSelectedText); }
 void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex, unsigned long inEndLine)
 {
     R::Call(this, C::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine);
@@ -199,14 +198,10 @@ void UIEditBox::DeleteText() { R::Call(this, C::Clear); }
 long UIEditBox::DrawPolygons() { return (long)R::Call(this, C::DrawPolygons); }
 long UIEditBox::DrawTextA() { return (long)R::Call(this, C::DrawText); }
 void UIEditBox::GetAllText(UWideString& outString) const { outString = (const char*)R::Call(this, C::AllText); }
-bool UIEditBox::GetCursorOn() const { return R::Call(this, C::CursorOn) != 0; }
 GEText* UIEditBox::GetGEText() const { return reinterpret_cast<GEText*>(R::Call(this, C::Text)); }
 bool UIEditBox::GetIMEEnabled() const { return R::Call(this, C::ImeEnabled) != 0; }
-bool UIEditBox::GetIsPasswordBox() const { return R::Call(this, C::IsPasswordBox) != 0; }
-bool UIEditBox::GetIsTextSelected() const { return R::Call(this, C::IsTextSelected) != 0; }
 unsigned long UIEditBox::GetLineCount() const { return (unsigned long)R::Call(this, C::LineCount); }
 const char* UIEditBox::GetText(unsigned long inLine) const { return (const char*)R::Call(this, C::Line, inLine); }
-void UIEditBox::Paste() { R::Call(this, C::Paste); }
 long UIEditBox::OpenIMECompositionString() { return (long)R::Call(this, C::ImeOpen); }
 void UIEditBox::ReleaseCapturedKeyboard() { R::Call(this, C::ReleaseKeyboard); }
 void UIEditBox::SelectText() { R::Call(this, C::SelectAll); }
@@ -215,7 +210,6 @@ void UIEditBox::SelectText(unsigned long inCaretIndex, unsigned long inStartInde
     R::Call(this, C::Select, inCaretIndex, inStartIndex, inCaretLine, inStartLine);
 }
 void UIEditBox::SetCaretLocation(unsigned long inIndex, unsigned long inLine) { R::Call(this, C::SetCaretLocation, inIndex, inLine); }
-void UIEditBox::SetCharScroll(unsigned long inCharScroll) { R::Call(this, C::SetCharScroll, inCharScroll); }
 void UIEditBox::SetCursorColor(const GEColor& inColor) { R::Color(this, C::SetCursorColor, inColor); }
 void UIEditBox::SetIsPasswordBox(bool inPasswordBox) { R::Call(this, C::SetIsPasswordBox, inPasswordBox); }
 void UIEditBox::SetLocation(const GE2DPoint& inLocation) { R::Point(this, C::SetLocation, inLocation); }
