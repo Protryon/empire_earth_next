@@ -30266,3 +30266,33 @@ shutdown commands' empty lists; `ee_won_chat_help_row`: the warning's line for a
 and a look-up; the unused text sinks (ChatWordSink, ChatTexts, ChatTextSink) are gone. A unit test holds the
 tables to the original's order. No driver links ChatCommandParser.cpp: the Internet lobby's chat reaches it (the
 LAN game's chat panel parses through the same object: `lan_game.py`).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c15bfe1f | won_cfgtab_test's world frees its objects per run (above) | |
+| e5e479ff | `xbuild.py wontest` runs each driver under a job-object memory cap (EE_TEST_MEM_MB, default 2,048; RLIMIT_AS elsewhere) | |
+| eee6e187 | LobbyPersistentData whole in Rust (persistobj.rs); LobbyPersistentAccessors, Setters, Queries, Filters, Load, LobbyRestoreDefaults, LobbyOptionSet and WONLobbyMap.h deleted; golden won_persistobj_test | 37,683 -> 36,048 (-1,635) |
+| 74fb3edf | WONLobbyGUI.h includes WONLobbyResource.h itself (it came through WONLobbyMap.h) | 36,049 (+1) |
+| c56d7c6c | the hosts' Lobby* cases on numbers answered in Rust | 35,985 (-64) |
+| 1c5c9784 | ChatCommandParser's command and help tables in chatobj.rs | 35,918 (-67) |
+
+Round total: WON C++ 37,683 -> 35,918 (-1,765), six units and one header deleted. Short of the 2,000 target; the
+rows (round 14's step 2) were not started: the persistent data's cluster gave the most lines for one verified move.
+
+### Gates (the round's head, merged with origin/rust ec39733e)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-7 identical |
+| `rust_build.py gate` | PASS, 4,533 tests (one earlier run failed ee_base's golden_spec_replays under load; it passes alone) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 150 programs exit 0 under the 2 GB cap (won_cfgtab_test peak 557 MB; won_persistobj_test the new one) |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2779 joiner=2779` (the round's start exe: 2796 / 2797) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121); the start exe is this worktree's round 14 test-profile build (5d078efba's WON code) |
+
+The merge of origin/rust needed only PORT_LEARNINGS.md's end (both sides appended) and one trailing address comment
+(strip_markers).
