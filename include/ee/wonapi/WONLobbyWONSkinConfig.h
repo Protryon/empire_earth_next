@@ -14,7 +14,6 @@ public:
     // Implicit destructor (0x00726770): releases the component, then Cursor; stores no own vptr.
     ComponentCursor(Component*,int=0,int=0); // at 0x00726710
     virtual Component* GetComponent(int&,int&); // slot 0x08, at 0x007267d0
-    virtual bool IsNative(); // slot 0x0c, at 0x0070a7b0
 };
 // Fieldless config (0x78 bytes; declarations only).
 class WONSkinConfig : public ComponentConfig {

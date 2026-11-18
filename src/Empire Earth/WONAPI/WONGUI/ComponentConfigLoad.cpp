@@ -82,19 +82,6 @@ void ComponentConfig::InitComponents()
 
 #include <stdlib.h>
 namespace WONAPI {
-// Reads the configuration file; on failure shows the error in a message box, closes every window and
-// exits the program (not identified in the original exe)
-void ComponentConfig::ReadConfig(Component* theComponent,const char* theFileName,ResourceConfigTable* theTable,ConfigParser* theParser)
-{
-    if(this->ReadConfig_Unsafe(theComponent,theFileName,theTable,theParser))
-        return;
-    // Inline InitSystemColorScheme: makes sure the system colour scheme exists
-    WindowManager::GetDefaultWindowManager()->GetSystemColorScheme();
-    MSMessageBox::Msg(Window::GetDefaultWindow(),GUIString("Config Error"),this->mConfigError,
-                      GUIString("Ok"),gEmptyGUIString,gEmptyGUIString);
-    WindowManager::GetDefaultWindowManager()->CloseAllWindows();
-    exit(0);
-}
 }
 
 namespace WONAPI {

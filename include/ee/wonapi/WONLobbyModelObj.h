@@ -69,7 +69,6 @@ public:
     LobbyClient() : LobbyModelObject(EeWonModelKind::Client) {}
     void ClearGroup(unsigned short inId, bool inGame) { this->M(LobbyMC::ClientClearGroup, inId, inGame); }
     bool IsInChatGroup() { return this->M(LobbyMC::ClientInChat) != 0; }
-    bool IsFriend() { return this->MGet(LobbyMF::ClientIsFriend) != 0; }
     bool IsInGameGroup() { return this->M(LobbyMC::ClientInGame) != 0; }
     void UpdateIgnoreStatus() { this->M(LobbyMC::ClientUpdateIgnore); }
     bool IsAnonymous() { return this->M(LobbyMC::ClientAnonymous) != 0; }
@@ -86,12 +85,7 @@ public:
     bool IsTeammate(LobbyClient* inOther) { return this->M(LobbyMC::ClientIsTeammate, (intptr_t)inOther) != 0; }
 
     unsigned short GetClientId() { return (unsigned short)this->MGet(LobbyMF::ClientId); }
-    void SetIsFriend(bool inFriend) { this->MSet(LobbyMF::ClientIsFriend, inFriend); }
-    void SetInvited(bool inValue) { this->MSet(LobbyMF::ClientInvited, inValue); }
     unsigned long GetWONUserId() const { return (unsigned long)this->MGet(LobbyMF::ClientWonUserId); }
-    unsigned long GetCDKeyId() const { return (unsigned long)this->MGet(LobbyMF::ClientCdKeyId); }
-    unsigned short GetChatGroupId() const { return (unsigned short)this->MGet(LobbyMF::ClientChatGroupId); }
-    unsigned short GetGameGroupId() const { return (unsigned short)this->MGet(LobbyMF::ClientGameGroupId); }
     void SetGroupId(unsigned short inId, bool inGame) { this->M(LobbyMC::ClientSetGroupId, inId, inGame); }
     void SetMemberFlags(unsigned char inFlags, bool inGame) { this->M(LobbyMC::ClientSetMemberFlags, inFlags, inGame); }
     bool IsIgnored() const { return this->MGet(LobbyMF::ClientIgnored) != 0; }
@@ -102,7 +96,6 @@ public:
     void SetClientFlags(unsigned long inFlags) { this->MSet(LobbyMF::ClientFlags, (intptr_t)inFlags); }
     void SetBlocked(bool inBlocked) { this->MSet(LobbyMF::ClientBlocked, inBlocked); }
     void SetIgnored(bool inIgnored) { this->MSet(LobbyMF::ClientIgnored, inIgnored); }
-    bool IsInvited() const { return this->MGet(LobbyMF::ClientInvited) != 0; }
     SmartPtr<LobbyPlayer> GetPlayer() const { return SmartPtr<LobbyPlayer>((LobbyPlayer*)this->MGet(LobbyMF::ClientPlayer)); }
 };
 
@@ -155,7 +148,6 @@ public:
     void ClearPlayers() { this->M(LobbyMC::GameClearPlayers); }
     bool IsSameGame(LobbyGame* inOther) { return this->M(LobbyMC::GameIsSameGame, (intptr_t)inOther) != 0; }
     void ReadGroup(LobbyGroup* inGroup) { this->M(LobbyMC::GameReadGroup, (intptr_t)inGroup); }
-    bool ReadSummaryBuffer(const ByteBuffer* inBuffer);
     ConstSmartPtr<ByteBuffer> GetJoinRequest();
     void HandleHostGame(LobbyClient* inClient) { this->M(LobbyMC::GameHandleHost, (intptr_t)inClient); }
     bool AreAllReady() { return this->M(LobbyMC::GameAllReady) != 0; }
@@ -198,15 +190,12 @@ public:
     virtual void HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom) {}
     virtual GUIString GetStatusStringHook(short inStatus) { return gEmptyGUIString; } // returns an empty string
     void CopyFrom(LobbyGame* inGame) { this->M(LobbyMC::GameCopyFrom, (intptr_t)inGame); }
-    void SetClients(LobbyClientList* inClients) { this->MSet(LobbyMF::GameClients, (intptr_t)inClients); }
     void SetName(const GUIString& inName) { this->MSetText(LobbyMF::GameName, inName); }
     void SetPassword(const GUIString& inPassword) { this->MSetText(LobbyMF::GamePassword, inPassword); }
     void SetAskToJoin(bool inAsk) { this->MSet(LobbyMF::GameAskToJoin, inAsk); }
     void SetInviteOnly(bool inInvite) { this->MSet(LobbyMF::GameInviteOnly, inInvite); }
     void SetSkill(long inSkill) { this->MSet(LobbyMF::GameSkill, inSkill); }
     void SetAddress(const IPAddr& inAddress) { this->MSetAddr(LobbyMF::GameAddress, inAddress); }
-    void SetIsHost(bool inHost) { this->MSet(LobbyMF::GameIsHost, inHost); }
-    void SetCaptainId(unsigned short inId) { this->MSet(LobbyMF::GameCaptainId, inId); }
     long GetSkill() const { return (long)this->MGet(LobbyMF::GameSkill); }
     bool GetAskToJoin() const { return this->MGet(LobbyMF::GameAskToJoin) != 0; }
     bool GetHasPassword() const { return this->MGet(LobbyMF::GameHasPassword) != 0; }
@@ -234,7 +223,6 @@ public:
     bool ReadDetails(ReadBuffer& inBuffer);
 
     bool IsInProgress() const { return this->MGet(LobbyMF::GameInProgress) != 0; }
-    bool GetShowDetails() const { return this->MGet(LobbyMF::GameShowDetails) != 0; }
     long GetGameType() { return (long)this->MGet(LobbyMF::GameType); }
     long GetNumPlayers() { return (long)this->MGet(LobbyMF::GameNumPlayers); }
     long GetMaxPlayers() { return (long)this->MGet(LobbyMF::GameOpenSlots); }
@@ -250,7 +238,6 @@ public:
     static void SetGameFactory(LobbyGameFactory factory) { LobbyGame::mGameFactory=factory; }
 
     unsigned short GetGroupId() const { return (unsigned short)this->MGet(LobbyMF::GameGroupId); }
-    bool GetIsFiltered() const { return this->MGet(LobbyMF::GameFiltered) != 0; }
     GUIString GetName() const { return this->MText(LobbyMF::GameName); }
     GUIString GetPassword() const { return this->MText(LobbyMF::GamePassword); }
     IPAddr GetAddress() const { return this->MAddr(LobbyMF::GameAddress); }
@@ -258,16 +245,9 @@ public:
     unsigned short GetCaptainId() const { return (unsigned short)this->MGet(LobbyMF::GameCaptainId); }
     void SetGameType(long inType) { this->MSet(LobbyMF::GameType, inType); }
     void SetGroupId(unsigned short inId) { this->MSet(LobbyMF::GameGroupId, inId); }
-    bool GetHaveDetails() const { return this->MGet(LobbyMF::GameHaveDetails) != 0; }
     void SetInProgress(bool inValue) { this->MSet(LobbyMF::GameInProgress, inValue); }
     bool GetInviteOnly() const { return this->MGet(LobbyMF::GameInviteOnly) != 0; }
-    bool IsInvited() const { return this->MGet(LobbyMF::GameInvited) != 0; }
-    void SetInvited(bool inValue) { this->MSet(LobbyMF::GameInvited, inValue); }
-    void SetIsFiltered(bool inValue) { this->MSet(LobbyMF::GameFiltered, inValue); }
     bool GetIsHost() const { return this->MGet(LobbyMF::GameIsHost) != 0; }
-    long GetLastSeenTime() const { return (long)this->MGet(LobbyMF::GameLastSeen); }
-    void SetLastSeenTime(long inTime) { this->MSet(LobbyMF::GameLastSeen, inTime); }
-    bool GetPingReplied() const { return this->MGet(LobbyMF::GamePingReplied) != 0; }
     void SetPingReplied(bool inValue) { this->MSet(LobbyMF::GamePingReplied, inValue); }
     void SetShowDetails(bool inValue) { this->MSet(LobbyMF::GameShowDetails, inValue); }
 };

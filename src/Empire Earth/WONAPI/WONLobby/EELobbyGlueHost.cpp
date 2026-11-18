@@ -88,6 +88,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eeglue.h"
+#include "rust/won_lobby/rows.h"
 #include "rust/won_lobby/eesound.h"
 
 using namespace WONAPI;
@@ -233,12 +234,6 @@ SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
 EELobbyConfig::EELobbyConfig() { this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889); }
 
-void EELobbyServerDetailsItem::PaintDetailsHook(Graphics& inGraphics, MultiListArea*)
-{
-    Glue(GL::PaintDetails, (intptr_t)this, (intptr_t)&inGraphics);
-}
-int EELobbyServerDetailsItem::GetDetailsHeightHook(MultiListArea* inList) { return (int)Glue(GL::DetailsHeight, (intptr_t)inList); }
-
 // the game form's open event once a game is done (vtable 0x84c6e8; ??_G ICF-folded 0x5e60e7)
 class EELobbyGameDoneEvent : public UIEvent {
 public:
@@ -282,7 +277,6 @@ static Component* EELobbyNewColorButton() { return new EELobbyColorButton; }
 static Component* EELobbyNewFileDialog() { return new EELobbyFileDialog; }
 static Component* EELobbyNewConnectDialog() { return new EELobbyConnectDialog; }
 static LobbyConfig* EELobbyNewConfig() { return new EELobbyConfig; }
-static ServerDetailsItem* EELobbyNewServerDetailsItem() { return new EELobbyServerDetailsItem; }
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
 
@@ -385,7 +379,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
     case Op::GameIsHost: return reinterpret_cast<LobbyGame*>(a)->GetIsHost() ? 1 : 0;
-    case Op::ItemGame: return (intptr_t)reinterpret_cast<ServerDetailsItem*>(a)->mGame.get();
+    case Op::ItemGame: return ee_won_lobby_rows_ctl_op(EeWonLobbyCtlOp::RowGame, a, 0, 0); // a game list row's (rows.rs)
     case Op::DialogRust: return (intptr_t)reinterpret_cast<LobbyRustDialog*>(a)->mLobbyDlg;
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
@@ -410,7 +404,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::SetFactories:
         LobbyGame::SetGameFactory(EELobbyNewGame);
         LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer);
-        ServerDetailsItem::SetItemFactory(EELobbyNewServerDetailsItem);
+        ee_won_lobby_rows_ee_details(); // the game list's rows paint the EE game's details (rows.rs)
         LobbyConfig::SetAllocator(EELobbyNewConfig);
         return 0;
     case Op::AddResources: {

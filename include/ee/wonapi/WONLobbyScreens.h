@@ -6,17 +6,6 @@ namespace WONAPI {
 class JoinedRoomEvent;
 class LeftRoomEvent;
 class ClientChangedEvent;
-// UserListItem (0x30 bytes, constructor 0x7ca6a0): one user in the room's user list.
-class UserListItem : public TextListItem {
-public:
-    UserListItem();
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    SmartPtr<LobbyClient> mClient; // 0x28
-    signed char mSortKey; // 0x2c, signed (compared sign-extended)
-    bool mShowSeparator; // 0x2d; true from the constructor
-};
 // UserListCtrl (0xa0 bytes, constructor 0x7ca8f0): the room's user list with Whisper and Ignore buttons.
 class UserListCtrl : public LobbyRustCtrl {
 public:
@@ -40,17 +29,6 @@ public:
 };
 class QueryAccountResultEvent;
 void DrawLobbyPing(Graphics*,unsigned short,int,int,int); // 0x7c12b0; draws a ping indicator
-// GameUserListItem (0x24 bytes): one player in the staged game; ListItem (0x18) plus three owned pointers.
-class GameUserListItem : public ListItem {
-public:
-    GameUserListItem(LobbyClient*);
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    SmartPtr<LobbyClient> mClient;
-    SmartPtr<Image> mImage; // set by lobbyctl.rs's icon rule (the original UpdateIcon)
-    SmartPtr<Font> mFont;
-};
 // GameUserListCtrl (R6 WONLobby round 4): the game room's players and Kick/Ban button, a lobbyctl.rs object
 class GameUserListCtrl : public LobbyRustCtrl {
 public:

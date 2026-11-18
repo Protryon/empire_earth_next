@@ -223,8 +223,6 @@ public:
     virtual void Draw(DisplayContext* inContext, int x, int y, int left, int top, int width, int height);
     virtual SmartPtr<RawImage32> GetRaw();
     virtual SmartPtr<Image> Duplicate();
-    virtual SmartPtr<NativeIcon> GetIcon();
-    SmartPtr<Cursor> GetCursor(int inHotX, int inHotY);
     uint32_t* GetPixels();
     int GetPitchPixels();
     int GetPixelWidth() { return this->mSurface->GetWidth(); }

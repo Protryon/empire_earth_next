@@ -46,8 +46,6 @@ public:
     void UngetStr(const std::string&);
     void UngetStr(const std::wstring&);
     void SkipWhitespace();
-    void SkipLine();
-    void SkipBlockComment();
     bool OpenFile(const std::string&);
     void CloseFile();
     void Reset();
@@ -97,9 +95,7 @@ public:
     bool GetSubKey(const std::string& inName, RegKey& outKey, bool = false, bool = true) const
     { return ee_won_regkey_child(this->mKey, outKey.mKey, false, B(inName), inName.size()); }
     GetResult GetFirstSubKey(RegKey&) const { return NotFound; } // config.yaml blocks are not enumerated
-    GetResult GetNextSubKey(RegKey&) const { return NoMore; }
     GetResult GetFirstValueName(std::string&, DataType&) const { return NotFound; } // nor their keys
-    GetResult GetNextValueName(std::string&, DataType&) const { return NoMore; }
     bool SetValue(const std::string& inName, const std::string& inValue)
     { return this->Op(EE_WON_REGKEY_SET_TEXT, inName, NULL, NULL, B(inValue), inValue.size()) != 0; }
     bool SetValue(const std::string& inName, unsigned long inValue) // a REG_DWORD: 32 bits
@@ -114,8 +110,6 @@ public:
     { long long n = 0; int r = this->Op(EE_WON_REGKEY_QUERY_DWORD, inName, NULL, &n); outValue = (DWORD)n; return r; }
     bool OpenNewKey(int inRoot, const std::string& inPath, bool, bool)
     { long long n = inRoot; return this->Op(EE_WON_REGKEY_OPEN_NEW, inPath, NULL, &n) != 0; }
-    void CloseKey() { ee_won_regkey_op(this->mKey, EE_WON_REGKEY_CLOSE, NULL, 0, NULL, 0, NULL, NULL, NULL); }
-    bool GetToBuf(const std::string& inName, std::string& outText) const { return this->Op(EE_WON_REGKEY_GET_TO_BUF, inName, &outText) != 0; }
     // 0, 2 wrong type, 4 empty (the caller's buffer left alone) or 1 missing
     int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue)
     {
