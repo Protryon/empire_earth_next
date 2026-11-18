@@ -10,7 +10,7 @@
 #include "lle/PIMModule.h"
 
 // The plug-ins linked into the game (each defined next to its entry points)
-extern const PIMPlugin gPIMPluginMixer;                // ' snd' the sound mixer (miniaudio)
+extern const PIMPlugin gPIMPluginMixer;                // ' snd' the sound mixer (Rust: cpal, symphonia)
 extern const PIMPlugin gPIMPluginDefaultRandomMap;     // 'rmap' Default random map generator
 static const PIMPlugin* const sPlugins[] = {
     &gPIMPluginMixer, &gPIMPluginDefaultRandomMap,   // (the renderer is linked directly: GEInitialize)
