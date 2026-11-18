@@ -13,6 +13,33 @@ constexpr static const int32_t KIND_AREA = 54;
 /// The tables by id (`EeAStarCmTable`'s numbers).
 constexpr static const size_t EE_ASTAR_CM_TABLES = 8;
 
+/// `h0` an `EEAIArea*`, `i0`/`i1` a tile: `Contains` (1/0)
+constexpr static const int32_t EE_ASTAR_CM_CONTAINS = 1;
+
+/// `h0` an `EEAIArea*` of no table: a town (`i0` 7, `i1` its town id, `i2` its player) or a herd (8), else `i0` 0
+constexpr static const int32_t EE_ASTAR_CM_OWNER = 2;
+
+/// `gEEAIRegionSize`
+constexpr static const int32_t EE_ASTAR_CM_REGION_SIZE = 3;
+
+/// `gEEAIRegionSize = i0`
+constexpr static const int32_t EE_ASTAR_CM_SET_REGION_SIZE = 4;
+
+/// the map's size, -1 without a map
+constexpr static const int32_t EE_ASTAR_CM_MAP_SIZE = 5;
+
+/// tile (`i0`, `i1`)'s `mAIValue`, 0 off the map
+constexpr static const int32_t EE_ASTAR_CM_AI_VALUE = 6;
+
+/// tile (`i0`, `i1`)'s `mAIValue = i2` (nothing off the map)
+constexpr static const int32_t EE_ASTAR_CM_SET_AI_VALUE = 7;
+
+/// a new object of table `i0`'s class (`EeAStarCmTable`) -> its address
+constexpr static const int32_t EE_ASTAR_CM_NEW = 8;
+
+/// `delete` object `h0` of table `i0`'s class
+constexpr static const int32_t EE_ASTAR_CM_DELETE = 9;
+
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 
@@ -497,6 +524,12 @@ enum class EeAStarGraphList {
 /// The hull's points (opaque to C++).
 struct EeAStarAreaHull;
 
+/// A byte block (opaque to C++).
+struct EeAStarCmBytes;
+
+/// A load's leftovers (opaque to C++).
+struct EeAStarCmLoad;
+
 /// The tables (opaque to C++).
 struct EeAStarCmTables;
 
@@ -671,6 +704,51 @@ struct EeAStarCmArea {
   unsigned long serial;
   /// the `EEAIArea*`
   uint64_t area;
+};
+
+/// Each record's offset in its object (bytes from the object's address; the area kinds' from the derived class's,
+/// which is also its `EEAIArea*`), registered once by the C++ (`EEAIContinentManager`'s ctor).
+struct EeAStarCmLayout {
+  /// `EeAStarAreaRecord` in `EEAIArea`
+  size_t area_record;
+  /// the `EeSparseArray*` of `EEAIArea::mTiles`
+  size_t area_tiles;
+  size_t continent;
+  size_t path_area;
+  size_t forest;
+  size_t hill;
+  size_t choke;
+  size_t rect;
+  /// `EeAStarSectorRecord` in `EEAIPathSector`
+  size_t sector;
+  /// `EeAStarSubSectorRecord` in `EEAIPathSubSector`
+  size_t sub_sector;
+  /// the `EeSparseArray*` of `EEAIPathSubSector::mTiles`
+  size_t sub_tiles;
+};
+
+/// One host call's values.
+struct EeAStarCmIo {
+  uint64_t h[2];
+  int64_t i[4];
+};
+
+/// The host: `op` with `io`; the answer.
+using EeAStarCmHostFn = int64_t(*)(void *ctx, int32_t op, EeAStarCmIo *io);
+
+/// A load's counters.
+struct EeAStarCmLoadInfo {
+  unsigned long last_serial;
+  bool clearing;
+  uint32_t unknown_owners;
+  uint32_t unfiled_sub_sectors;
+};
+
+/// A town or herd the saved serial table named.
+struct EeAStarCmOwned {
+  int64_t player;
+  int64_t index;
+  int64_t serial;
 };
 
 /// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
@@ -1710,6 +1788,95 @@ size_t ee_astar_cm_adjacent_ids(const EeAStarCmRecord *r,
                                 uint16_t id,
                                 bool with_self,
                                 uint16_t *out);
+
+/// The layout of the records in their objects (once; later calls replace it).
+///
+/// # Safety
+/// `layout` points to a layout.
+void ee_astar_cm_set_layout(const EeAStarCmLayout *layout);
+
+/// The host the state's readers and writers call.
+void ee_astar_cm_set_host(EeAStarCmHostFn f, void *ctx);
+
+/// A block's bytes; `len` gets their count.
+///
+/// # Safety
+/// `b` from this module; `len` writable.
+const uint8_t *ee_astar_cm_bytes_data(const EeAStarCmBytes *b, size_t *len);
+
+/// # Safety
+/// `b` from this module (or NULL), not used after.
+void ee_astar_cm_bytes_free(EeAStarCmBytes *b);
+
+/// `WriteRegions`: the save block.
+///
+/// # Safety
+/// `r` the manager's record; its objects live.
+EeAStarCmBytes *ee_astar_cm_write_regions(const EeAStarCmRecord *r);
+
+/// `EEContinentRegionsDigest`.
+///
+/// # Safety
+/// As `ee_astar_cm_write_regions`.
+unsigned long ee_astar_cm_regions_digest(const EeAStarCmRecord *r);
+
+/// `EEAIContinentFill` (TEST ONLY): the CNTR record's bytes.
+///
+/// # Safety
+/// As `ee_astar_cm_write_regions`.
+EeAStarCmBytes *ee_astar_cm_capture_fill(const EeAStarCmRecord *r);
+
+/// `EEAIContinentDigest` (TEST ONLY).
+///
+/// # Safety
+/// As `ee_astar_cm_write_regions`.
+uint64_t ee_astar_cm_capture_digest(const EeAStarCmRecord *r);
+
+/// `ReadRegions`: NULL on a bad block (or another map's).
+///
+/// # Safety
+/// `r` the manager's record; `data` holds `len` bytes.
+EeAStarCmLoad *ee_astar_cm_read_regions(EeAStarCmRecord *r, const uint8_t *data, size_t len);
+
+/// A load's counters.
+///
+/// # Safety
+/// `l` from `ee_astar_cm_read_regions`.
+EeAStarCmLoadInfo ee_astar_cm_load_info(const EeAStarCmLoad *l);
+
+/// The towns (`herds` false) or herds the saved serial table named; `count` gets their number.
+///
+/// # Safety
+/// `l` from `ee_astar_cm_read_regions`; `count` writable.
+const EeAStarCmOwned *ee_astar_cm_load_owned(const EeAStarCmLoad *l, bool herds, size_t *count);
+
+/// # Safety
+/// `l` from `ee_astar_cm_read_regions` (or NULL), not used after.
+void ee_astar_cm_load_free(EeAStarCmLoad *l);
+
+/// `EEWriteAreaBytes`: one area (`h` an `EEAIArea*`) as the save writes it.
+///
+/// # Safety
+/// `h` a live area.
+EeAStarCmBytes *ee_astar_cm_area_bytes(uint64_t h);
+
+/// `EEReadAreaBytes`: an area from those bytes; false unless they were exactly one area.
+///
+/// # Safety
+/// `h` a live area; `data` holds `len` bytes.
+bool ee_astar_cm_read_area(uint64_t h, const uint8_t *data, size_t len);
+
+/// `FindContinent`.
+///
+/// # Safety
+/// `r` the manager's record; its objects live.
+uint64_t ee_astar_cm_find_continent(const EeAStarCmRecord *r, long x, long y);
+
+/// `FindPathSubSector`.
+///
+/// # Safety
+/// As `ee_astar_cm_find_continent`.
+uint64_t ee_astar_cm_find_sub_sector(const EeAStarCmRecord *r, long x, long y);
 
 /// The adjacent continents and their count; valid until they next change.
 ///

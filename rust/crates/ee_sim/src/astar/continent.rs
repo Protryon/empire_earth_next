@@ -57,6 +57,15 @@ pub struct EeAStarContinentRecord {
 }
 
 impl EeAStarContinentLists {
+    /// `mNeighbors`.
+    pub fn neighbors(&self) -> &[u64] {
+        &self.neighbors
+    }
+
+    pub fn neighbors_mut(&mut self) -> &mut Vec<u64> {
+        &mut self.neighbors
+    }
+
     /// `std::sort` after a `push_back` (`AddChokePoint`, `AddForestID`, `AddHillID`).
     fn push_sorted<T: Ord + Copy>(list: &mut Vec<T>, value: T) {
         list.push(value);

@@ -296,9 +296,12 @@ void EEAIContinentManager::Shutdown()
     EEAIAStarStorage::FreeNodePool();
 }
 // Creates an empty continent manager: no grids, every id and counter at 0 (the record: ee_sim::astar cm.rs)
+void EEAIRegisterContinentState();   // EEAIContinentSave.cpp: the records' places and the host (cm_io.rs)
+
 EEAIContinentManager::EEAIContinentManager()
 {
     ee_astar_cm_init(&this->mRecord);
+    EEAIRegisterContinentState();
 }
 
 // Destroys the continent manager by shutting down the global one (Shutdown), then frees its tables
@@ -1367,21 +1370,7 @@ unsigned short EEAIContinentManager::FindContinentID(long inX, long inY) const
 // Finds the continent containing (inX, inY) among its path sector's neighbouring continents, NULL if none
 EEAIContinent* EEAIContinentManager::FindContinent(long inX, long inY) const
 {
-    U2DPoint<long> thePoint(inX, inY);
-    EEAIContinent* theResult = NULL;
-    EETileCoordinate theTile;
-    theTile.mX = inX;
-    theTile.mY = inY;
-    EEAIPathSector* theSector = this->GetPathSector(theTile);
-    if (theSector) {
-        for (long i = theSector->GetNeighbors().size() - 1; i >= 0; i--) {
-            if (theSector->GetNeighbors()[i] && theSector->GetNeighbors()[i]->Contains(thePoint)) {
-                theResult = theSector->GetNeighbors()[i];
-                break;
-            }
-        }
-    }
-    return theResult;
+    return (EEAIContinent*)(uintptr_t)ee_astar_cm_find_continent(&this->mRecord, inX, inY);   // Rust: cm_io.rs
 }
 
 // Returns the continent id at inUnit's tile, 0 off the grid
@@ -1622,23 +1611,7 @@ EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(EEUnit* inUnit)
 // Finds the sub-sector containing (inX, inY) among its path sector's sub-sectors, NULL if none
 EEAIPathSubSector* EEAIContinentManager::FindPathSubSector(long inX, long inY)
 {
-    U2DPoint<long> thePoint(inX, inY);
-    EETileCoordinate theTile;
-    theTile.mX = inX;
-    theTile.mY = inY;
-    EEAIPathSubSector* theResult = NULL;
-    EEAIPathSector* theSector = this->GetPathSector(theTile);
-    if (theSector) {
-        EEAIListView<EeAStarSectorSub> theSubSectors = theSector->GetSubSectors();
-        for (const EeAStarSectorSub* theIt = theSubSectors.begin(); theIt != theSubSectors.end(); ++theIt) {
-            EEAIPathSubSector* theSubSector = (EEAIPathSubSector*)(uintptr_t)theIt->sub;
-            if (theSubSector->mTiles.Contains(thePoint)) {
-                theResult = theSubSector;
-                break;
-            }
-        }
-    }
-    return theResult;
+    return (EEAIPathSubSector*)(uintptr_t)ee_astar_cm_find_sub_sector(&this->mRecord, inX, inY);   // Rust: cm_io.rs
 }
 
 // Returns the path sub-sector id at inUnit's tile, 0 off the grid

@@ -111,6 +111,7 @@ public:
     unsigned char GetCategory() const { return this->category; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
     void SetCategory(unsigned char inCategory) { this->category = inCategory; }
     unsigned short GetID() const { return this->id; }
+    EeAStarContinentRecord* Record() { return this; }   // the record (ee_sim::astar cm_io.rs's layout)
     void SetID(unsigned short inID) { this->id = inID; }
     // the lists in a saved game (EEAIContinentSave.cpp's writer and reader: Points, Longs, Shorts), in this order
     template <class W> void WriteLists(W& ioWriter) const

@@ -38,6 +38,7 @@ pub mod area_goals;
 pub mod area_kinds;
 pub mod choke;
 pub mod cm;
+pub mod cm_io;
 pub mod continent;
 pub mod continent_grid;
 pub mod ffi;
