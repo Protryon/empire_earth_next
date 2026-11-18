@@ -31005,3 +31005,32 @@ list, open_data.py's comments): a harness run from a checkout rebuilds its own `
   campaign step (game_session.py `--campaign learning`, slot.py) to `STOP <windowed session complete> reached`;
   scenario_check 27/27; gates.sh `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13913` units [4, 42, 44]
   alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2688 joiner=2690`, GATES PASS.
+
+## R5b.1, the merge of origin/rust fbc73afb9 into rust-ai-path2 (main merge 4, AI lanes A round 3 and B round 2, the LLE, UI, WON, audio, libjpeg and movies rounds; 2026-11-18)
+
+- **Conflicts.** `EECPTrace.cpp`'s out-of-sync dump: rust's side (lane A moved it into `ee_sim::ai::next_trace.rs`);
+  its continent read is now `EECPNext.cpp`'s `EE_AI_NEXT_HOST_AREAS`, which this branch rewrote over the accessors
+  (`GetLastSerial`, `GetContinents()`... `GetAreas()`: the serial table is an `EEAIListView<EeAStarCmArea>` of
+  serial/area pairs, no `std::map` any more). Lane A's forest host ops (`EE_AI_NEXT_HOST_FORESTS`, `_FOREST`,
+  `_FOREST_POINT`) read `GetForests()`. `EECPNextView.cpp` (deleted by rust, its forest walk now Rust over those ops)
+  stays deleted; this branch's `GetForests()` edits there went with it. The units host ops (80-94,
+  `EECPNextUnits.cpp`) merged cleanly with their accessors. `golden_cpp.txt`: rust's lines, PMRQ and CNTQ re-added.
+  PORT_LEARNINGS merged without a conflict. `rust_build.py header` current, `rust_includes.py` 0 changes,
+  `strip_markers.py --check` 0.
+- **No compile error after the resolution**: a grep for `gContinentManager.m[A-Z]` outside the manager's own files
+  found every member read the new code had added (all in `EECPNext.cpp` and the conflicted trace) before the build.
+- **Goldens re-recorded** (two equal runs each, seeds 2-3): CNTQ in all four profiles (classic_lua of main merge 4
+  asks the continents other questions); PMRQ moved only in the oracle's seed 2 (327099 c066409bfa8795f8). Every
+  other line of the four profiles equalled rust's goldens.
+- **The shared tree was rebuilt under the first capture run** (06:33, by another session: the lead's local rust
+  48c8472f0 changed `tools/eemodel/storegate.py`, so its converter hash d8c64c3598c0216f differs from this branch's
+  f3a198ef46f53400). EE-SIM then stopped at once with `sRandomMapGenerators.size() > 0` (an empty `Data`). Check
+  `open_data.json` before a capture chain. gates.sh ran with `EE_GATES_TREE` naming the main checkout's tree: a tree
+  outside this checkout's `build/open_data` is never rebuilt for a converter hash, so the run did not rebuild it again.
+- **Gates on the merge.** Both builds 0/0 (EE-AOC 630 inputs, EE-SIM 631) and the test profile 0/0; the Rust gate
+  PASS (4,569 tests); the oracle seeds 2-7 identical to the new ref; the twelve capture profiles at seeds 2-3 PASS
+  (oracle 208, late, space, calamity with the new lines; app 24, effects 6, groups 2, missile 22, placement 4,
+  scenario 43, transport 185, units 175); the plain saveload 18/18 identical; the matrix `saveload expect: PASS`
+  (calamity 3/4, next 2/4 at 915/276 as rust has it); the editor gate `sim_editor: PASS (14448 lines)`; gates.sh
+  through slot.py: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13749` units [4, 43, 43] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2685 joiner=2691`, `GATES PASS`.
