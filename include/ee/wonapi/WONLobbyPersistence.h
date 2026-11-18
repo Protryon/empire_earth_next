@@ -142,7 +142,7 @@ inline void FileWriterCheck(int inStatus)
 // class is the C++ handle WONLobbyPrv keeps (its constructor and the object's host: LobbyPersistentData.cpp).
 class LobbyPersistentData : public RefCount {
 public:
-    LobbyPersistentData(); // 0x75bcb0
+    LobbyPersistentData();
     ~LobbyPersistentData() { ee_won_persist_free(this->mRust); }
     EeWonPersist* mRust;
 private:
