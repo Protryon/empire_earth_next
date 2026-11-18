@@ -23,6 +23,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
@@ -98,34 +99,10 @@
 
 namespace {
 
-enum EventKind { kEvAttacked = 1, kEvDied, kEvCreated, kEvBuilt, kEvIdle, kEvSwapped, kEvConverted, kEvAttackPlayer,
-                 kEvDefendPlayer, kEvFlare };
-const char* const kEventNames[] = {"", "attacked", "died", "created", "built", "idle", "swapped", "converted",
-                                   "attack_player", "defend_player", "flare"};
-
-struct UnitsEvent {
-    long mKind, mUnit, mOther, mType, mAmount, mTime;
-};
-
-struct Remembered {                 // the enemy memory (AI_LUA_UNITS §2.5)
-    long mPlayer, mType, mX, mY, mHP, mSeen, mBuilding;
-};
-
-struct DangerMark {                 // ai.mark: the script's own danger
-    long mX, mY, mR, mValue, mUntil;
-};
-
-const long kDangerCell = 4;         // the danger layers' and the route's cell (tiles)
-const long kLostMs = 1200000;       // the lost layer remembers a bad trade this long (Age of AI's 20 minutes)
-const long kMaxTrades = 1024;       // (minute, cell) records of the lost layer
-const long kInfluenceSpread = 3;    // cells
-
-const long kMaxEvents = 512;
-const long kMaxRemembered = 4000;
 const long kMaxIds = 4000;           // ids one call takes
 const long kMicroMs = 250;           // the micro step's period (game ms)
 const int64_t kMicroBudget = 300000;
-const long kForwardMs = 600000;      // a swap's forwarding entry lives 10 minutes
+const long kDangerCell = 4;          // the danger layers' cell (tiles; ee_ai units_state.rs DANGER_CELL)
 const unsigned char kBorrowedSlot = 0xfd;   // the slot id a computer player answers to while its order runs
 
 // the costs in instruction equivalents (AI_LUA_UNITS §2.1)
@@ -134,40 +111,14 @@ const int64_t kCostCall = 200, kCostId = 20, kCostScan = 5, kCostRecord = 300, k
 
 }  // namespace
 
+// The state is Rust's (ee_ai units_state.rs: the held set, the events, the forwarding, the enemy memory, the reflexes,
+// the limits, the danger layers; units_bind.rs: its hooks and the bindings that read the world). The C++ keeps the
+// commands' scratch and ai.wall_route's path requests (C++ objects, not saved).
 struct EECPUnitsState {
-    std::set<long> mHeld;
-    std::vector<UnitsEvent> mEvents;
-    long mDropped = 0;
-    std::map<long, long> mAttackedAt;               // unit -> its index in mEvents (one attacked event per delivery)
-    std::map<long, std::pair<long, long> > mForward; // old id -> (new id, game ms)
-    std::map<long, Remembered> mMemory;
-    long mMemoryMs = 180000;
-    long mMemoryNext = 0;
-    bool mReflexNavalFlee = true;
-    bool mReflexDanger = true;
-    bool mReflexMilitia = true;    // the engine's citizen militia (EECPRMMilitia); off when the script fights its own
-    bool mReflexHeld = false;      // the militia and the danger zones act on the script's held citizens too (lib/verbs.lua)
-    bool mUsed = false;                             // a binding was called (the save's shadow step cannot replay commands)
-    long mMicroNext = -1;                           // -1: not started; 0x7fffffff: the script has no micro
-    long mOrdersThisStep = 0, mUnitOrdersThisStep = 0;
-    long mStepStamp = -1;                           // the game ms of the counters above
-    // the threat layer (AI_LUA_UNITS §4.4): kDangerCell cells, rebuilt every game second
-    std::vector<long> mThreat;
-    long mDangerW = 0, mDangerH = 0;
-    std::vector<std::pair<long, long> > mHurt;      // own citizens hurt: (x + y * 65536, game ms), 2 minutes
-    std::vector<DangerMark> mMarks;
-    // the lost layer (§4.4): the hit points own units lost over those they dealt, by cell and minute, 20 minutes
-    std::map<std::pair<long, long>, std::pair<long, long> > mTrades;   // (minute, cell) -> (lost, dealt)
-    std::vector<long> mLost;
-    // the influence layer: own strength less the remembered enemies', spread over kInfluenceSpread cells
-    std::vector<long> mInfluence;
-    std::vector<long> mG, mFrom;                    // the route's scratch
-    std::vector<unsigned char> mOpen;
-    std::vector<std::pair<long, long> > mHeap;
+    void* mRust = ee_ai_units_state_new();
     // scratch (members, so that a Lua error never skips a destructor)
     std::vector<long> mIds, mIds2;
     std::vector<std::pair<long long, long> > mSorted;
-    std::map<long, std::string> mNames;
     // ai.wall_route's path requests (the path manager's, held until read; not saved: a loaded game forgets them)
     std::map<long, EEAutoPathRequest*> mRoutes;
     long mNextRoute = 1;
@@ -176,8 +127,14 @@ struct EECPUnitsState {
         for (std::map<long, EEAutoPathRequest*>::iterator it = mRoutes.begin(); it != mRoutes.end(); ++it)
             if (it->second != NULL)
                 it->second->Dereference();
+        ee_ai_units_state_free(mRust);
     }
 };
+
+static uint64_t EECPUnitsHandle(const RTSUnit* inUnit)
+{
+    return (uint64_t)(uintptr_t)inUnit;
+}
 
 static EECPUnitsState* EECPUnitsGet(EEComputerPlayer* inPlayer)
 {
@@ -197,13 +154,7 @@ void EECPUnitsDelete(EEComputerPlayer* inPlayer)
 
 static long EECPUnitsForward(const EECPUnitsState* s, long inID)
 {
-    for (int k = 0; k < 8 && s != NULL; k++) {
-        std::map<long, std::pair<long, long> >::const_iterator it = s->mForward.find(inID);
-        if (it == s->mForward.end())
-            break;
-        inID = it->second.first;
-    }
-    return inID;
+    return s != NULL ? ee_ai_units_forward(s->mRust, inID) : inID;
 }
 
 static EEUnit* EECPUnitsAlive(long inID)
@@ -273,80 +224,6 @@ static bool EECPUnitsIsProjectile(EEUnit* inUnit)
     return k == kUnitCategoryProjectile || k == kUnitCategoryBomb || k == kUnitCategoryMissile || k == kUnitCategoryTorpedo;
 }
 
-static const char* EECPUnitsCategoryClass(EEUnitClass* c, bool inHasResource)
-{
-    long k = c->mCategory;
-    if (k == kUnitCategoryProjectile || k == kUnitCategoryBomb || k == kUnitCategoryMissile || k == kUnitCategoryTorpedo)
-        return "projectile";
-    switch (c->mCategory) {
-    case kUnitCategoryLandCitizen: return "citizen";
-    case kUnitCategoryNavalCitizen: return "boat";
-    case kUnitCategoryResource: return "resource";
-    case kUnitCategoryAmbient: return inHasResource ? "resource" : "ambient";
-    case kUnitCategoryAirplane: case kUnitCategoryHelicopter: return "air";
-    case kUnitCategoryNaval: case kUnitCategorySubmergedNaval: return "ship";
-    case kUnitCategoryLandTransport: case kUnitCategoryHelicopterTransport: case kUnitCategoryNavalTransport:
-    case kUnitCategorySpaceTransport:
-        return "transport";
-    case kUnitCategoryLandPriest: case kUnitCategoryNavalPriest: case kUnitCategoryHelicopterPriest:
-    case kUnitCategoryBuildingPriest:
-        return "priest";
-    case kUnitCategoryLandMilitaryHero: return "hero";
-    case kUnitCategorySeaAnimal: case kUnitCategoryAirAnimal: return "animal";
-    default:
-        break;
-    }
-    if (c->IsBuilding())
-        return "building";
-    if (c->GetFamily() == kUnitFamilyAnimal)
-        return "animal";
-    return "soldier";
-}
-
-static const char* EECPUnitsCategory(EEUnit* inUnit)
-{
-    return EECPUnitsCategoryClass(inUnit->mUnitClass, inUnit->mResourceAmount > 0);
-}
-
-static bool EECPUnitsArmed(EEUnit* inUnit)
-{
-    return inUnit->mStats != NULL && inUnit->mStats->mAttack != 0.0f;
-}
-
-static const char* EECPUnitsAction(EEComplexUnit* inUnit)
-{
-    if (inUnit->mContainer != NULL)
-        return "inside";
-    if (inUnit->mUnitClass->IsBuilding()) {
-        if (!inUnit->mIsBuilt)
-            return "unbuilt";
-        return inUnit->mCurrentResearch != 100000 ? "produce" : "idle";
-    }
-    EEUnitGoal* g = inUnit->GetGoalState();
-    if (g == NULL)
-        return "idle";
-    switch (g->GetKind()) {
-    case kGoalLocation: return "move";
-    case kGoalAttackUnit: return "attack";
-    case kGoalAttackGround: return "attack_ground";
-    case kGoalBuildRepair: return "build";
-    case kGoalGather: return "gather";
-    case kGoalLoadTransport: return "load";
-    case kGoalUnloadTransport: return "unload";
-    case kGoalPatrol: return "patrol";
-    case kGoalExplore: return "explore";
-    case kGoalCastCalamity: return "cast";
-    case kGoalLoadGarrison: return "garrison";
-    case kGoalHealUnit: return "heal";
-    default: return "other";
-    }
-}
-
-static bool EECPUnitsIdle(EEComplexUnit* inUnit)
-{
-    return inUnit->mContainer == NULL && strcmp(EECPUnitsAction(inUnit), "idle") == 0;
-}
-
 static long EECPUnitsCenti(float inValue)
 {
     return UMFloor(inValue * 100.0f);
@@ -358,17 +235,12 @@ static long EECPUnitsD2(long inX1, long inY1, long inX2, long inY2)
     return dx * dx + dy * dy;
 }
 
-static long EECPUnitsStrength(EEUnit* inUnit)
-{
-    return inUnit->mStats != NULL ? (long)inUnit->mHitPoints * (long)UMFloatToLong(inUnit->mStats->mAttack) : 0;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The held set and the reflexes
 
 bool EECPUnitsHoldsID(const EEComputerPlayer* inPlayer, long inID)
 {
-    return inPlayer != NULL && inPlayer->mUnitsState != NULL && inPlayer->mUnitsState->mHeld.count(inID) != 0;
+    return inPlayer != NULL && inPlayer->mUnitsState != NULL && ee_ai_units_holds(inPlayer->mUnitsState->mRust, inID);
 }
 
 bool EECPUnitsHolds(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit)
@@ -379,180 +251,69 @@ bool EECPUnitsHolds(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUni
 void EECPUnitsHeld(const EEComputerPlayer* inPlayer, std::vector<long>& outIDs)
 {
     outIDs.clear();
-    if (inPlayer != NULL && inPlayer->mUnitsState != NULL)
-        outIDs.assign(inPlayer->mUnitsState->mHeld.begin(), inPlayer->mUnitsState->mHeld.end());
+    if (inPlayer == NULL || inPlayer->mUnitsState == NULL)
+        return;
+    void* s = inPlayer->mUnitsState->mRust;
+    outIDs.resize(ee_ai_units_held(s, NULL, 0));
+    ee_ai_units_held(s, outIDs.data(), outIDs.size());
 }
 
 bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName)
 {
     if (inPlayer == NULL || inPlayer->mUnitsState == NULL)
         return strcmp(inName, "held") != 0;
-    if (strcmp(inName, "held") == 0)
-        return inPlayer->mUnitsState->mReflexHeld;
-    if (strcmp(inName, "naval_flee") == 0)
-        return inPlayer->mUnitsState->mReflexNavalFlee;
-    if (strcmp(inName, "danger") == 0)
-        return inPlayer->mUnitsState->mReflexDanger;
-    if (strcmp(inName, "militia") == 0)
-        return inPlayer->mUnitsState->mReflexMilitia;
-    return true;
-}
-
-// a unit becomes the script's: out of the classic attack commander (DetachUnitFromAI) and the gatherer lists
-static void EECPUnitsTake(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit)
-{
-    long theID = (long)inUnit->mUnitID;
-    if (s->mHeld.count(theID))
-        return;
-    s->mHeld.insert(theID);
-    if (!inUnit->mUnitClass->IsBuilding()) {
-        inPlayer->DetachUnitFromAI(inUnit);
-    }
-}
-
-// a unit the script lets go is the engine's again (stage 6: no runner takes it; the Lua verbs hold the citizens)
-static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit, bool inWork)
-{
-    (void)inPlayer;
-    (void)inWork;
-    if (s->mHeld.erase((long)inUnit->mUnitID) == 0 || inUnit->mUnitClass->IsBuilding())
-        return;
-    if (inUnit->mIsDetachedFromAI)
-        inUnit->mIsDetachedFromAI = false;
+    return ee_ai_units_reflex_on(inPlayer->mUnitsState->mRust, inName);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Events
 
-static void EECPUnitsEventAdd(EECPUnitsState* s, long inKind, long inUnit, long inOther, long inType, long inAmount)
-{
-    if ((long)s->mEvents.size() >= kMaxEvents) {
-        s->mDropped++;
-        return;
-    }
-    UnitsEvent e = {inKind, inUnit, inOther, inType, inAmount, (long)gPhysics->mGameTime};
-    s->mEvents.push_back(e);
-}
-
-// the lost layer's record of a hit where inUnit stands: own hit points lost, or dealt to an enemy (AI_LUA_UNITS §4.4)
-static void EECPUnitsTrade(EECPUnitsState* s, EEUnit* inUnit, long inLost, long inDealt)
-{
-    if (s->mDangerW <= 0 || !EECPUnitsOnMap(inUnit) || (inLost <= 0 && inDealt <= 0))
-        return;
-    long cx = inUnit->GetTileX() / kDangerCell, cy = inUnit->GetTileY() / kDangerCell;
-    if (cx < 0 || cy < 0 || cx >= s->mDangerW || cy >= s->mDangerH)
-        return;
-    std::pair<long, long> theKey((long)gPhysics->mGameTime / 60000, cy * s->mDangerW + cx);
-    std::map<std::pair<long, long>, std::pair<long, long> >::iterator it = s->mTrades.find(theKey);
-    if (it == s->mTrades.end()) {
-        if ((long)s->mTrades.size() >= kMaxTrades)
-            s->mTrades.erase(s->mTrades.begin());   // the oldest minute goes first
-        it = s->mTrades.insert(std::make_pair(theKey, std::make_pair(0L, 0L))).first;
-    }
-    it->second.first += inLost;
-    it->second.second += inDealt;
-}
-
 void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL || inVictim == NULL || inVictim->mPlayer == NULL || inVictim->mPlayer == inPlayer
-        || inVictim->mPlayer == gWorld.mPlayers[0] || inPlayer->IsAlly(inVictim->mPlayer))
-        return;
-    EECPUnitsTrade(s, inVictim, 0, inAmount);
+    if (inPlayer->mUnitsState != NULL && inVictim != NULL)
+        ee_ai_units_on_dealt(inPlayer->mUnitsState->mRust, inPlayer, inAmount, EECPUnitsHandle(inVictim));
 }
 
 void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long inAmount, EEUnit* inUnit)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL || inUnit == NULL)
-        return;
-    long theLost = inAmount;   // an animal's or an ally's hit is no trade (the event still comes below)
-    if (inAttackerPlayer <= 0 || (unsigned long)inAttackerPlayer >= gWorld.mNumPlayers || gWorld.mPlayers[inAttackerPlayer] == NULL
-        || inPlayer->IsAlly(gWorld.mPlayers[inAttackerPlayer]))
-        theLost = 0;
-    long theID = (long)inUnit->mUnitID;
-    long theAttacker = 0;
-    EEComplexUnit* theLast = inUnit->mComplexUnit != NULL ? inUnit->mComplexUnit->mLastAttacker : NULL;
-    if (theLast != NULL && theLast->mHitPoints > 0 && EECPUnitsSeen(inPlayer, theLast))
-        theAttacker = (long)theLast->mUnitID;
-    std::map<long, long>::iterator it = s->mAttackedAt.find(theID);
-    if (it != s->mAttackedAt.end() && it->second < (long)s->mEvents.size() && s->mEvents[it->second].mUnit == theID
-        && s->mEvents[it->second].mKind == kEvAttacked) {
-        UnitsEvent& e = s->mEvents[it->second];
-        e.mAmount += inAmount;
-        if (theAttacker != 0)
-            e.mOther = theAttacker;
-        e.mType = inAttackerPlayer;
-        e.mTime = (long)gPhysics->mGameTime;
-        EECPUnitsTrade(s, inUnit, theLost, 0);
-        return;
-    }
-    s->mAttackedAt[theID] = (long)s->mEvents.size();
-    EECPUnitsEventAdd(s, kEvAttacked, theID, theAttacker, inAttackerPlayer, inAmount);
-    EECPUnitsTrade(s, inUnit, theLost, 0);
-    long theCategory = inUnit->mUnitClass->mCategory;
-    if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) && inAttackerPlayer > 0
-        && EECPUnitsOnMap(inUnit) && s->mHurt.size() < 256)
-        s->mHurt.push_back(std::make_pair(inUnit->GetTileX() + inUnit->GetTileY() * 65536, (long)gPhysics->mGameTime));
+    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
+        ee_ai_units_on_damage(inPlayer->mUnitsState->mRust, inPlayer, inAttackerPlayer, inAmount, EECPUnitsHandle(inUnit));
 }
 
 void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s != NULL && inUnit != NULL && inUnit->mUnitClass != NULL)
-        EECPUnitsEventAdd(s, kEvCreated, (long)inUnit->mUnitID, 0, inUnit->mUnitClass->mUnitType, 0);
+    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
+        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 3, EECPUnitsHandle(inUnit));   // created
 }
 
-// the attack-players order (EEAttackPlayers: a player's "attack me" / "defend me" call): the classic's
-// EECPCombatManager::AttackPlayer / DefendPlayer, an event for a script seat ("attack_player" / "defend_player",
-// `player` the one who called)
 void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s != NULL)
-        EECPUnitsEventAdd(s, inDefend ? kEvDefendPlayer : kEvAttackPlayer, 0, inPlayerID, -1, 0);
+    if (inPlayer->mUnitsState != NULL)
+        ee_ai_units_on_player(inPlayer->mUnitsState->mRust, inDefend ? 9 : 8, inPlayerID, 0, 0);
 }
 
-// an ally's flare (EEComputerPlayer::FlareReceived): the classic's CombatManager::Attack at the tile, an event for a
-// script seat ("flare", `player` who flared, `x`, `y`)
 void EECPUnitsOnFlare(EEComputerPlayer* inPlayer, long inPlayerID, long inX, long inY)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s != NULL)
-        EECPUnitsEventAdd(s, kEvFlare, 0, inPlayerID, inX, inY);
+    if (inPlayer->mUnitsState != NULL)
+        ee_ai_units_on_player(inPlayer->mUnitsState->mRust, 10, inPlayerID, inX, inY);
 }
 
 void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s != NULL && inUnit != NULL && inUnit->mUnitClass != NULL && inUnit->mUnitClass->IsBuilding())
-        EECPUnitsEventAdd(s, kEvBuilt, (long)inUnit->mUnitID, 0, inUnit->mUnitClass->mUnitType, 0);
+    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
+        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 4, EECPUnitsHandle(inUnit));   // built
 }
 
 void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL || inUnit == NULL || inSwapped)
-        return;
-    long theID = (long)inUnit->mUnitID;
-    long theKiller = 0;
-    if (inUnit->mLastAttacker != NULL && EECPUnitsSeen(inPlayer, inUnit->mLastAttacker))
-        theKiller = (long)inUnit->mLastAttacker->mUnitID;
-    // converted: alive and another player's now. A unit killed still has its hit points here (EEComplexUnit::Kill
-    // calls UnitTaken before it zeroes them), so the hit points alone made every kill a "converted" event and no
-    // script ever saw "died" (AI_RESEARCH §8.41); a priest's conversion is a swap (EEConvertUnit), skipped above
-    bool theConverted = inUnit->mHitPoints > 0 && inUnit->mPlayer != NULL && inUnit->mPlayer != inPlayer;
-    EECPUnitsEventAdd(s, theConverted ? kEvConverted : kEvDied, theID, theKiller,
-        inUnit->mUnitClass != NULL ? inUnit->mUnitClass->mUnitType : -1, 0);
-    s->mHeld.erase(theID);
+    if (inPlayer->mUnitsState != NULL && inUnit != NULL && !inSwapped)
+        ee_ai_units_on_taken(inPlayer->mUnitsState->mRust, inPlayer, EECPUnitsHandle(inUnit));
 }
 
 void EECPUnitsOnGoalDone(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
 {
-    EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s != NULL && inUnit != NULL && s->mHeld.count((long)inUnit->mUnitID))
-        EECPUnitsEventAdd(s, kEvIdle, (long)inUnit->mUnitID, 0, inUnit->mUnitClass->mUnitType, 0);
+    if (inPlayer->mUnitsState != NULL && inUnit != NULL)
+        ee_ai_units_on_unit(inPlayer->mUnitsState->mRust, 5, EECPUnitsHandle(inUnit));   // idle
 }
 
 void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& ioSwaps)
@@ -564,69 +325,16 @@ void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& io
     for (unsigned long k = 0; k < ioSwaps.size(); k++) {
         if (ioSwaps[k].mOld == NULL || ioSwaps[k].mNew == NULL)
             continue;
-        long theOld = (long)ioSwaps[k].mOld->mUnitID, theNew = (long)ioSwaps[k].mNew->mUnitID;
         if (ioSwaps[k].mOld->mPlayer != inPlayer && ioSwaps[k].mNew->mPlayer != inPlayer)
             continue;
-        s->mForward[theOld] = std::make_pair(theNew, theNow);
-        if (s->mHeld.erase(theOld) && ioSwaps[k].mNew->mPlayer == inPlayer)
-            s->mHeld.insert(theNew);
-        EECPUnitsEventAdd(s, kEvSwapped, theOld, theNew, ioSwaps[k].mNew->mUnitClass->mUnitType, 0);
+        ee_ai_units_on_swap(s->mRust, (long)ioSwaps[k].mOld->mUnitID, (long)ioSwaps[k].mNew->mUnitID,
+            ioSwaps[k].mNew->mPlayer == inPlayer, ioSwaps[k].mNew->mUnitClass->mUnitType, theNow);
     }
-    for (std::map<long, std::pair<long, long> >::iterator it = s->mForward.begin(); it != s->mForward.end();) {
-        if (theNow - it->second.second > kForwardMs)
-            s->mForward.erase(it++);
-        else
-            ++it;
-    }
+    ee_ai_units_forward_expire(s->mRust, theNow);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The enemy memory: every second, what the player sees of its enemies
-
-static void EECPUnitsRemember(EEComputerPlayer* inPlayer, EECPUnitsState* s)
-{
-    long theNow = (long)gPhysics->mGameTime;
-    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
-        EEPlayer* theOther = gWorld.mPlayers[p];
-        if (theOther == NULL || theOther == inPlayer || inPlayer->IsAlly(theOther))
-            continue;
-        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (!(theUnit->mHitPoints > 0) || theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mContainer != NULL
-                || EECPUnitsIsProjectile(theUnit) || !EECPUnitsOnMap(theUnit) || !static_cast<EETile*>(theUnit->mTile)->IsSeenBy(inPlayer))
-                continue;
-            long theID = (long)theUnit->mUnitID;
-            std::map<long, Remembered>::iterator it = s->mMemory.find(theID);
-            if (it == s->mMemory.end() && (long)s->mMemory.size() >= kMaxRemembered)
-                continue;
-            Remembered& r = s->mMemory[theID];
-            r.mPlayer = (long)p;
-            r.mType = theUnit->mUnitClass->mUnitType;
-            r.mX = theUnit->GetTileX();
-            r.mY = theUnit->GetTileY();
-            r.mHP = theUnit->mHitPoints;
-            r.mSeen = theNow;
-            r.mBuilding = theUnit->mUnitClass->IsBuilding() ? 1 : 0;
-        }
-    }
-    // forget: the dead whose place is seen; buildings whose tile is seen without them; mobile units after memory_ms
-    for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end();) {
-        Remembered& r = it->second;
-        bool theForget = false;
-        if (r.mSeen != theNow) {
-            EETile* theTile = gWorld.mMap != NULL && r.mX >= 0 && r.mY >= 0
-                ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)r.mX, (unsigned long)r.mY)) : NULL;
-            bool theTileSeen = theTile != NULL && theTile->IsSeenBy(inPlayer);
-            if (r.mBuilding)
-                theForget = theTileSeen;   // seen now, it would have been refreshed
-            else
-                theForget = theNow - r.mSeen > s->mMemoryMs || (theTileSeen && EECPUnitsAlive(it->first) == NULL);
-        }
-        if (theForget)
-            s->mMemory.erase(it++);
-        else
-            ++it;
-    }
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Lua helpers
@@ -638,21 +346,18 @@ static EEComputerPlayer* EECPUnitsMe(lua_State* L)
 
 static void EECPUnitsCharge(lua_State* L, int64_t inAmount)
 {
-    EECPUnitsGet(EECPUnitsMe(L))->mUsed = true;
+    ee_ai_units_mark_used(EECPUnitsGet(EECPUnitsMe(L))->mRust);
     EECPLuaState::From(L)->Charge(L, inAmount);
 }
 
 bool EECPUnitsUsed(const EEComputerPlayer* inPlayer)
 {
-    return inPlayer != NULL && inPlayer->mUnitsState != NULL && inPlayer->mUnitsState->mUsed;
+    return inPlayer != NULL && inPlayer->mUnitsState != NULL && ee_ai_units_used(inPlayer->mUnitsState->mRust);
 }
 
 static const char* EECPUnitsName(EECPUnitsState* s, long inType)
 {
-    std::map<long, std::string>::iterator it = s->mNames.find(inType);
-    if (it == s->mNames.end())
-        it = s->mNames.insert(std::make_pair(inType, EECPNextClassName(inType))).first;
-    return it->second.c_str();
+    return ee_ai_units_class_name(s->mRust, inType);
 }
 
 static long EECPUnitsClassByName(const char* inName)
@@ -693,12 +398,6 @@ static const char* EECPUnitsOptString(lua_State* L, int inTable, const char* inK
     return ee_ai_units_opt_string(L, inTable, inKey);
 }
 
-// `near = {x, y, r}` -> true with the values
-static bool EECPUnitsOptNear(lua_State* L, int inTable, long& outX, long& outY, long& outR)
-{
-    return ee_ai_units_opt_near(L, inTable, &outX, &outY, &outR);
-}
-
 static void EECPUnitsSetInt(lua_State* L, const char* inKey, long inValue)
 {
     ee_ai_units_set_int(L, inKey, inValue);
@@ -714,548 +413,8 @@ static void EECPUnitsSetBool(lua_State* L, const char* inKey, bool inValue)
     ee_ai_units_set_bool(L, inKey, inValue);
 }
 
-// the ids of s->mSorted (key, id), sorted, up to inLimit, as a Lua array
-static void EECPUnitsPushSorted(lua_State* L, EECPUnitsState* s, long inLimit)
-{
-    static_assert(sizeof(std::pair<long long, long>) == sizeof(EeAiUnitsSortEntry), "the pairs' layout");
-    ee_ai_units_push_sorted(L, (EeAiUnitsSortEntry*)s->mSorted.data(), s->mSorted.size(), inLimit);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Queries
-
-static int LuaMe(lua_State* L)
-{
-    lua_pushinteger(L, (lua_Integer)EECPUnitsMe(L)->mPlayerID);
-    return 1;
-}
-
-static int LuaTime(lua_State* L)
-{
-    lua_pushinteger(L, (lua_Integer)gPhysics->mGameTime);
-    return 1;
-}
-
-static int LuaPlayers(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsCharge(L, kCostCall + 16 * kCostRecord / 10);
-    lua_newtable(L);
-    long n = 0;
-    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
-        EEPlayer* theOther = gWorld.mPlayers[p];
-        if (theOther == NULL || theOther->mObserverMode)
-            continue;
-        lua_newtable(L);
-        EECPUnitsSetInt(L, "id", (long)theOther->mPlayerID);
-        EECPUnitsSetBool(L, "me", theOther == me);
-        EECPUnitsSetBool(L, "ally", theOther != me && me->IsAlly(theOther));
-        EECPUnitsSetBool(L, "enemy", !me->IsAlly(theOther));
-        EECPUnitsSetBool(L, "hostile", theOther != me && theOther->GetEnemy(me->mPlayerID) != 0);   // their stance towards me
-        // the teams the player is in (EEWorld::AddAlliance: both sides allied): the other players of those teams
-        lua_newtable(L);
-        long na = 0;
-        for (unsigned long t = 0; t < gWorld.mTeams.size(); t++) {
-            if (!gWorld.mTeams[t].ContainsPlayer(theOther->mPlayerID))
-                continue;
-            for (unsigned long k = 0; k < gWorld.mTeams[t].GetNumPlayers(); k++) {
-                unsigned long q = gWorld.mTeams[t].GetPlayersAt(k);
-                if (q != theOther->mPlayerID && q > 0 && q < gWorld.mNumPlayers && gWorld.mPlayers[q] != NULL) {
-                    lua_pushinteger(L, (lua_Integer)q);
-                    lua_rawseti(L, -2, (lua_Integer)++na);
-                }
-            }
-        }
-        lua_setfield(L, -2, "allies");
-        EECPUnitsSetBool(L, "alive", theOther->mFirstUnit != NULL);
-        EECPUnitsSetBool(L, "human", theOther->IsHuman());
-        lua_rawseti(L, -2, (lua_Integer)++n);
-    }
-    return 1;
-}
-
-static void EECPUnitsMapSize(long& outW, long& outH);
-
-static int LuaMap(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    lua_newtable(L);
-    long w = 0, h = 0;
-    EECPUnitsMapSize(w, h);
-    EECPUnitsSetInt(L, "width", w);
-    EECPUnitsSetInt(L, "height", h);
-    return 1;
-}
-
-// the filters of ai.units / ai.seen / ai.resources
-static const long kUnitsMaxTypes = 16;   // class names in one filter's `type` list
-struct EECPUnitsFilter {
-    long mType = -1;   // -1 any class, -2 an unknown name (nothing), -3 the list mTypes
-    long mTypes[kUnitsMaxTypes] = {0};
-    long mTypeCount = 0;
-    const char* mCategory = NULL;
-    bool mHasNear = false;
-    long mX = 0, mY = 0, mR = 0;
-    int mIdle = -1, mBuilt = -1, mArmed = -1;
-    const char* mHeld = NULL;
-    const char* mAction = NULL;
-    long mPlayer = -1;
-    int mEnemy = -1;
-    long mKind = -1;
-    long mLimit = -1;
-};
-
-static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
-{
-    static_assert(kUnitsMaxTypes == 16, "ee_ai units_lua.rs MAX_TYPES");
-    EeAiUnitsFilter r;
-    r.kind_type = f.mType;
-    for (long k = 0; k < kUnitsMaxTypes; k++)
-        r.types[k] = f.mTypes[k];
-    r.type_count = f.mTypeCount;
-    r.category = f.mCategory;
-    r.has_near = f.mHasNear;
-    r.x = f.mX;
-    r.y = f.mY;
-    r.r = f.mR;
-    r.idle = f.mIdle;
-    r.built = f.mBuilt;
-    r.armed = f.mArmed;
-    r.held = f.mHeld;
-    r.action = f.mAction;
-    r.player = f.mPlayer;
-    r.enemy = f.mEnemy;
-    r.kind = f.mKind;
-    r.limit = f.mLimit;
-    ee_ai_units_read_filter(L, inTable, &r, EECPUnitsClassByName);
-    f.mType = r.kind_type;
-    for (long k = 0; k < kUnitsMaxTypes; k++)
-        f.mTypes[k] = r.types[k];
-    f.mTypeCount = r.type_count;
-    f.mCategory = r.category;
-    f.mHasNear = r.has_near;
-    f.mX = r.x;
-    f.mY = r.y;
-    f.mR = r.r;
-    f.mIdle = r.idle;
-    f.mBuilt = r.built;
-    f.mArmed = r.armed;
-    f.mHeld = r.held;
-    f.mAction = r.action;
-    f.mPlayer = r.player;
-    f.mEnemy = r.enemy;
-    f.mKind = r.kind;
-    f.mLimit = r.limit;
-}
-
-// a class against a filter's `type` (one class, a list, or any)
-static bool EECPUnitsTypeMatch(const EECPUnitsFilter& f, long inType)
-{
-    if (f.mType == -1)
-        return true;
-    if (f.mType != -3)
-        return inType == f.mType;
-    for (long k = 0; k < f.mTypeCount; k++)
-        if (f.mTypes[k] == inType)
-            return true;
-    return false;
-}
-
-// the common tests of a filter; outKey the sort key (the squared distance with near, else 0)
-static bool EECPUnitsPasses(EEUnit* inUnit, const EECPUnitsFilter& f, long long& outKey)
-{
-    if (!EECPUnitsTypeMatch(f, inUnit->mUnitClass->mUnitType))
-        return false;
-    if (f.mCategory != NULL && strcmp(EECPUnitsCategory(inUnit), f.mCategory) != 0)
-        return false;
-    if (f.mArmed >= 0 && (EECPUnitsArmed(inUnit) ? 1 : 0) != f.mArmed)
-        return false;
-    outKey = 0;
-    if (f.mHasNear) {
-        if (!EECPUnitsOnMap(inUnit))
-            return false;
-        long d2 = EECPUnitsD2(inUnit->GetTileX(), inUnit->GetTileY(), f.mX, f.mY);
-        if (d2 > f.mR * f.mR)
-            return false;
-        outKey = d2;
-    }
-    return true;
-}
-
-static int LuaUnits(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsFilter f;
-    EECPUnitsReadFilter(L, 1, f);
-    s->mSorted.clear();
-    long theTested = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        theTested++;
-        EEComplexUnit* c = theUnit->mComplexUnit;
-        if (c == NULL || !(theUnit->mHitPoints > 0) || !theUnit->mIsValid || EECPUnitsIsProjectile(theUnit))
-            continue;
-        long long theKey;
-        if (!EECPUnitsPasses(theUnit, f, theKey))
-            continue;
-        if (f.mIdle >= 0 && (EECPUnitsIdle(c) ? 1 : 0) != f.mIdle)
-            continue;
-        if (f.mBuilt >= 0 && (c->mIsBuilt ? 1 : 0) != f.mBuilt)
-            continue;
-        if (f.mHeld != NULL && (strcmp(f.mHeld, "lua") == 0) != (s->mHeld.count((long)theUnit->mUnitID) != 0))
-            continue;
-        if (f.mAction != NULL && strcmp(EECPUnitsAction(c), f.mAction) != 0)
-            continue;
-        s->mSorted.push_back(std::make_pair(theKey, (long)theUnit->mUnitID));
-    }
-    EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)s->mSorted.size() * kCostId);
-    EECPUnitsPushSorted(L, s, f.mLimit);
-    return 1;
-}
-
-static int LuaSeen(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsFilter f;
-    EECPUnitsReadFilter(L, 1, f);
-    s->mSorted.clear();
-    long theTested = 0;
-    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
-        EEPlayer* theOther = gWorld.mPlayers[p];
-        if (theOther == NULL || theOther == me || (f.mPlayer >= 0 && (long)p != f.mPlayer))
-            continue;
-        if (f.mEnemy >= 0 && (me->IsAlly(theOther) ? 0 : 1) != f.mEnemy)
-            continue;
-        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            theTested++;
-            if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mComplexUnit->mContainer != NULL
-                || EECPUnitsIsProjectile(theUnit) || !EECPUnitsSeen(me, theUnit))
-                continue;
-            long long theKey;
-            if (!EECPUnitsPasses(theUnit, f, theKey))
-                continue;
-            s->mSorted.push_back(std::make_pair(theKey, (long)theUnit->mUnitID));
-        }
-    }
-    EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)s->mSorted.size() * kCostId);
-    EECPUnitsPushSorted(L, s, f.mLimit);
-    return 1;
-}
-
-static int LuaResources(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsFilter f;
-    EECPUnitsReadFilter(L, 1, f);
-    bool theRoom = EECPUnitsOptBool(L, 1, "has_room", false);
-    s->mSorted.clear();
-    long theTested = 0;
-    EEPlayer* theGaia = gWorld.mPlayers[0];
-    for (EEUnit* theUnit = theGaia != NULL ? theGaia->mFirstUnit : NULL; theUnit != NULL;
-         theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        theTested++;
-        if (!EECPUnitsIsResource(theUnit) || !EECPUnitsExplored(me, theUnit))
-            continue;
-        if (f.mKind >= 0 && (long)theUnit->mResourceType - kResourceFood != f.mKind)
-            continue;
-        long long theKey;
-        if (!EECPUnitsPasses(theUnit, f, theKey))
-            continue;
-        if (theRoom && !EECPNextHasRoom(me, theUnit))
-            continue;
-        s->mSorted.push_back(std::make_pair(theKey, (long)theUnit->mUnitID));
-    }
-    EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)s->mSorted.size() * kCostId);
-    EECPUnitsPushSorted(L, s, f.mLimit);
-    return 1;
-}
-
-// one unit's record on the stack (the fields by what the player may know: AI_LUA_UNITS §2.3)
-static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsState* s, EEUnit* inUnit)
-{
-    bool theOwn = inUnit->mPlayer == me || (inUnit->mPlayer == NULL && EECPUnitsPending(me, (long)inUnit->mUnitID) != NULL);
-    bool theAlly = !theOwn && inUnit->mPlayer != NULL && inUnit->mPlayer != gWorld.mPlayers[0] && me->IsAlly(inUnit->mPlayer);
-    EEComplexUnit* c = inUnit->mComplexUnit;
-    lua_createtable(L, 0, 24);
-    EECPUnitsSetInt(L, "id", (long)inUnit->mUnitID);
-    EECPUnitsSetStr(L, "type", EECPUnitsName(s, inUnit->mUnitClass->mUnitType));
-    EECPUnitsSetStr(L, "category", EECPUnitsCategory(inUnit));
-    EECPUnitsSetInt(L, "player", inUnit->mPlayer != NULL ? (long)inUnit->mPlayer->mPlayerID : 0);
-    EECPUnitsSetInt(L, "x", inUnit->GetTileX());
-    EECPUnitsSetInt(L, "y", inUnit->GetTileY());
-    if (c != NULL) {
-        const GETransformation& theAt = c->mPhysicalModel.GetLocation();
-        EECPUnitsSetInt(L, "px", EECPUnitsCenti(theAt.GetX()));
-        EECPUnitsSetInt(L, "py", EECPUnitsCenti(theAt.GetY()));
-    }
-    if (EECPUnitsIsResource(inUnit)) {
-        static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
-        EECPUnitsSetStr(L, "kind", kKinds[(long)inUnit->mResourceType - kResourceFood]);
-        EECPUnitsSetInt(L, "amount", inUnit->mResourceAmount);
-        // a resource's hit points stand at 1 until it is first gathered from (the classic's GetGatherCapacity and
-        // its sites count only those: mHitPoints > 0)
-        EECPUnitsSetBool(L, "untapped", inUnit->mHitPoints > 0);
-        EECPUnitsSetInt(L, "workers", EECPNextAssigned(me, inUnit));
-        EECPUnitsSetBool(L, "has_room", EECPNextHasRoom(me, inUnit));
-        return;
-    }
-    EECPUnitsSetInt(L, "hp", inUnit->mHitPoints);
-    if (inUnit->mStats != NULL) {
-        EECPUnitsSetInt(L, "hp_max", inUnit->mStats->mMaxHitPoints);
-        EECPUnitsSetInt(L, "attack", UMFloatToLong(inUnit->mStats->mAttack));
-        EECPUnitsSetInt(L, "range", EECPUnitsCenti(inUnit->mStats->mRange));
-        EECPUnitsSetInt(L, "sight", EECPUnitsCenti(inUnit->mStats->mLineOfSight));
-        EECPUnitsSetInt(L, "speed", EECPUnitsCenti(inUnit->mStats->mMaxVelocity));
-    }
-    EECPUnitsSetBool(L, "armed", EECPUnitsArmed(inUnit));
-    if (c == NULL)
-        return;
-    EECPUnitsSetBool(L, "built", c->mIsBuilt);
-    if (!EECPUnitsOnMap(inUnit) && c->mUnitClass->IsBuilding() && !c->mIsBuilt)
-        EECPUnitsSetBool(L, "pending", true);   // a foundation the builders have not reached (ai.build's id)
-    const char* theAction = EECPUnitsAction(c);
-    if (!theOwn && !theAlly) {
-        // what a human sees of another player's unit: moving, attacking or standing
-        if (strcmp(theAction, "move") != 0 && strcmp(theAction, "attack") != 0 && strcmp(theAction, "idle") != 0)
-            theAction = "busy";
-        EECPUnitsSetStr(L, "action", theAction);
-        return;
-    }
-    EECPUnitsSetStr(L, "action", theAction);
-    EEUnitGoal* g = c->GetGoalState();
-    if (g != NULL) {
-        GE3DPoint thePlace;
-        g->GetGoalLocation(thePlace);
-        EECPUnitsSetInt(L, "tx", UMFloor(thePlace.GetX()));
-        EECPUnitsSetInt(L, "ty", UMFloor(thePlace.GetY()));
-        // the goal's target unit (AI_LUA_UNITS §2.3 `target`): the resource gathered, the building built or repaired,
-        // the unit attacked; and a gatherer's resource kind
-        EEUnit* theTarget = NULL;
-        if (EEUGRust* theGather = EEGatherGoalCast(g)) {
-            theTarget = theGather->GetGatherResource();
-            long r = (long)c->mResourceType - kResourceFood;
-            static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
-            if (r >= 0 && r < 5)
-                EECPUnitsSetStr(L, "gathers", kKinds[r]);
-            // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
-            if (theGather->IsGatherWaiting() && c->mCurrentPhysicsAction != 0)
-                EECPUnitsSetBool(L, "waiting", true);
-        } else if (EEUGRust* theBuild = EEBuildRepairGoalCast(g)) {
-            theTarget = theBuild->GetBuildTarget();
-            // a builder waiting for its foundation's site to clear while another unit holds it (the classic's
-            // FindStalledBuilder: CancelStalledBuilds cancels these)
-            if ((c->mCommand ? c->mCommand->mType : 0) == kActionWaitForBuildSiteToClear && theTarget != NULL
-                && theTarget->mComplexUnit != NULL && !theTarget->mComplexUnit->mIsBuilt && theBuild->IsBuildSiteTaken())
-                EECPUnitsSetBool(L, "stalled", true);
-        }
-        else if (EEUGRust* theAttack = EEAttackUnitCast(g))
-            theTarget = theAttack->GetAttackTarget();
-        if (theTarget != NULL && theTarget->mIsValid)
-            EECPUnitsSetInt(L, "target", (long)theTarget->mUnitID);
-    }
-    if (c->mContainer != NULL)
-        EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
-    // an own aircraft's home base (the airport or carrier it returns to; the classic air sub-group's reach)
-    if (theOwn && c->mHomeBase != NULL && c->mHomeBase->mIsValid)
-        EECPUnitsSetInt(L, "base", (long)c->mHomeBase->mUnitID);
-    if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
-        // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
-        EECPASGFlags theFlags;
-        memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
-        theFlags.mPlayerID = 0;
-        c->mUnitClass->GetTerrainFlags(c, theFlags);
-        if (theFlags.mFlags[kAITileForest])
-            EECPUnitsSetBool(L, "crosses_forest", true);
-        if (theFlags.mFlags[kAITileCliff])
-            EECPUnitsSetBool(L, "crosses_cliff", true);
-    }
-    EECPUnitsSetInt(L, "cargo", (long)c->GetNumCargoUnits());
-    EECPUnitsSetInt(L, "garrisoned", c->mGarrisonCount);   // citizens inside a town centre, capitol or settlement
-    if (c->mUnitClass->IsBuilding()) {
-        EECPUnitsSetInt(L, "queue", (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0));
-        if (c->mCurrentResearch != 100000)
-            EECPUnitsSetInt(L, "producing", c->mCurrentResearch);
-        if (!c->mBuildQueue.empty()) {   // the techs queued behind the one being made (EEComplexUnit::IsResearchQueued)
-            lua_createtable(L, (int)c->mBuildQueue.size(), 0);
-            for (size_t k = 0; k < c->mBuildQueue.size(); k++) {
-                lua_pushinteger(L, (lua_Integer)c->mBuildQueue[k].mTechnology);
-                lua_rawseti(L, -2, (lua_Integer)k + 1);
-            }
-            lua_setfield(L, -2, "queued");
-        }
-    }
-    long theStance = -1;
-    for (unsigned long k = 0; k < EEUnitBehavior::sTable.size(); k++)
-        if (EEUnitBehavior::sTable[k] == c->mBehavior)
-            theStance = (long)k;
-    EECPUnitsSetInt(L, "stance", theStance);
-    if (theOwn) {
-        EECPUnitsSetStr(L, "held", s->mHeld.count((long)inUnit->mUnitID) ? "lua" : "engine");
-        if (c->mLastAttacker != NULL && c->mLastAttacker->mHitPoints > 0 && EECPUnitsSeen(me, c->mLastAttacker))
-            EECPUnitsSetInt(L, "attacker", (long)c->mLastAttacker->mUnitID);
-    }
-}
-
-// a unit the player may know of -> the unit, else NULL (own, allied, seen now; a resource on an explored tile)
-static EEUnit* EECPUnitsKnown(EEComputerPlayer* me, long inID)
-{
-    EEUnit* theUnit = EECPUnitsAlive(EECPUnitsForward(me->mUnitsState, inID));
-    if (theUnit == NULL) {
-        theUnit = EECPUnitsPending(me, EECPUnitsForward(me->mUnitsState, inID));   // a foundation not placed yet (ai.build's id)
-        if (theUnit != NULL && theUnit->mUnitClass != NULL && theUnit->mComplexUnit != NULL)
-            return theUnit;   // the player's own (its owner field may still be unset)
-    }
-    if (theUnit == NULL) {
-        theUnit = gWorld.GetUnit((unsigned long)inID);   // a resource is alive with hit points 0 (a worked mine)
-        if (theUnit == NULL || !theUnit->mIsValid || !EECPUnitsIsResource(theUnit))
-            return NULL;
-    }
-    if (theUnit->mUnitClass == NULL)
-        return NULL;
-    if (EECPUnitsIsResource(theUnit))
-        return EECPUnitsExplored(me, theUnit) ? theUnit : NULL;
-    if (EECPUnitsIsProjectile(theUnit))
-        return NULL;
-    if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer != NULL && theUnit->mPlayer != me)
-        return NULL;
-    return EECPUnitsSeen(me, theUnit) ? theUnit : NULL;
-}
-
-static int LuaUnit(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostRecord);
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    if (!lua_isinteger(L, 1)) {
-        lua_pushnil(L);
-        return 1;
-    }
-    EEUnit* theUnit = EECPUnitsKnown(me, (long)lua_tointeger(L, 1));
-    if (theUnit == NULL)
-        lua_pushnil(L);
-    else
-        EECPUnitsPushRecord(L, me, s, theUnit);
-    return 1;
-}
-
-// ai.get(ids, fields) -> {field = {values...}}; a unit not known: nil in each (the record's own fields)
-static int LuaGet(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsReadIds(L, 1, s->mIds);
-    long theFields = lua_type(L, 2) == LUA_TTABLE ? (long)lua_rawlen(L, 2) : 0;
-    EECPUnitsCharge(L, kCostCall + (int64_t)s->mIds.size() * (theFields * kCostField + kCostId));
-    lua_newtable(L);                      // the result (index 3)
-    int theResult = lua_gettop(L);
-    for (long f = 1; f <= theFields; f++) {
-        lua_rawgeti(L, 2, f);
-        lua_newtable(L);
-        lua_settable(L, theResult);
-    }
-    for (unsigned long k = 0; k < s->mIds.size(); k++) {
-        EEUnit* theUnit = EECPUnitsKnown(me, s->mIds[k]);
-        if (theUnit == NULL)
-            continue;
-        EECPUnitsPushRecord(L, me, s, theUnit);
-        int theRecord = lua_gettop(L);
-        for (long f = 1; f <= theFields; f++) {
-            lua_rawgeti(L, 2, f);         // the field's name
-            lua_pushvalue(L, -1);
-            lua_gettable(L, theResult);   // its column
-            lua_insert(L, -2);
-            lua_gettable(L, theRecord);   // the value
-            lua_rawseti(L, -2, (lua_Integer)(k + 1));
-            lua_pop(L, 1);
-        }
-        lua_pop(L, 1);
-    }
-    return 1;
-}
-
-static int LuaMemory(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsFilter f;
-    EECPUnitsReadFilter(L, 1, f);
-    long theSince = 0;
-    EECPUnitsOptInt(L, 1, "since", theSince);
-    int theBuildings = -1;
-    if (lua_type(L, 1) == LUA_TTABLE) {
-        lua_getfield(L, 1, "buildings");
-        if (!lua_isnil(L, -1))
-            theBuildings = lua_toboolean(L, -1) ? 1 : 0;
-        lua_pop(L, 1);
-    }
-    s->mSorted.clear();
-    for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
-        const Remembered& r = it->second;
-        if ((f.mPlayer >= 0 && r.mPlayer != f.mPlayer) || !EECPUnitsTypeMatch(f, r.mType) || r.mSeen < theSince
-            || (theBuildings >= 0 && r.mBuilding != theBuildings))
-            continue;
-        if (f.mCategory != NULL && (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
-                || strcmp(EECPUnitsCategoryClass(gUnitClassTable[r.mType], false), f.mCategory) != 0))
-            continue;
-        long long theKey = 0;
-        if (f.mHasNear) {
-            long d2 = EECPUnitsD2(r.mX, r.mY, f.mX, f.mY);
-            if (d2 > f.mR * f.mR)
-                continue;
-            theKey = d2;
-        }
-        s->mSorted.push_back(std::make_pair(theKey, it->first));
-    }
-    std::sort(s->mSorted.begin(), s->mSorted.end());
-    long n = (long)s->mSorted.size();
-    if (f.mLimit >= 0 && n > f.mLimit)
-        n = f.mLimit;
-    EECPUnitsCharge(L, kCostCall + (int64_t)s->mMemory.size() * kCostScan + n * kCostRecord / 3);
-    lua_createtable(L, (int)n, 0);
-    for (long k = 0; k < n; k++) {
-        const Remembered& r = s->mMemory[s->mSorted[k].second];
-        lua_createtable(L, 0, 8);
-        EECPUnitsSetInt(L, "id", s->mSorted[k].second);
-        EECPUnitsSetInt(L, "player", r.mPlayer);
-        EECPUnitsSetStr(L, "type", EECPUnitsName(s, r.mType));
-        EECPUnitsSetInt(L, "x", r.mX);
-        EECPUnitsSetInt(L, "y", r.mY);
-        EECPUnitsSetInt(L, "hp", r.mHP);
-        EECPUnitsSetInt(L, "seen", r.mSeen);
-        EECPUnitsSetBool(L, "building", r.mBuilding != 0);
-        lua_rawseti(L, -2, (lua_Integer)(k + 1));
-    }
-    return 1;
-}
-
-static int LuaTile(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostTile);
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL) {
-        lua_pushnil(L);
-        return 1;
-    }
-    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
-    EETile* theTile = x >= 0 && y >= 0 ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y)) : NULL;
-    if (theTile == NULL) {
-        lua_pushnil(L);
-        return 1;
-    }
-    bool theExplored = theTile->IsVisibleTo(me);
-    lua_createtable(L, 0, 6);
-    EECPUnitsSetBool(L, "explored", theExplored);
-    EECPUnitsSetBool(L, "visible", theTile->IsSeenBy(me));
-    if (theExplored) {
-        U2DPoint<long> theAt(x, y);
-        EECPUnitsSetInt(L, "continent", (long)gContinentManager.GetContinent(theAt, kAIPathLandMass));
-        EECPUnitsSetInt(L, "sea", (long)gContinentManager.GetContinent(theAt, kAIPathWaterBody));
-        EECPUnitsSetInt(L, "terrain", theTile->GetTerrainType());
-    }
-    return 1;
-}
 
 // ai.can_hurt(attacker_type, target_type) -> whether the attacker's weapon hurts the target's family (the damage
 // table, combat.yaml: a human reads it too; EECPAttackSubGroupUnit::CanAttack's test without the ignored targets)
@@ -1346,7 +505,7 @@ static int LuaClass(lua_State* L)
     EEUnitClass* c = gUnitClassTable[theType];
     lua_createtable(L, 0, 16);
     EECPUnitsSetStr(L, "type", EECPUnitsName(s, theType));
-    EECPUnitsSetStr(L, "category", EECPUnitsCategoryClass(c, false));
+    EECPUnitsSetStr(L, "category", ee_ai_units_category_class((uint64_t)(uintptr_t)c, false));
     EECPUnitsSetInt(L, "family", (long)c->GetFamily());
     EECPUnitsSetInt(L, "tech", c->mTechnology);   // the class's own tech (what ai.train orders; ai.techs' id)
     {
@@ -1414,61 +573,6 @@ static int LuaClass(lua_State* L)
     return 1;
 }
 
-static int LuaEvents(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    long n = (long)s->mEvents.size();
-    EECPUnitsCharge(L, kCostCall + n * kCostId * 3);
-    lua_createtable(L, (int)n, 0);
-    for (long k = 0; k < n; k++) {
-        const UnitsEvent& e = s->mEvents[k];
-        lua_createtable(L, 0, 6);
-        EECPUnitsSetStr(L, "kind", kEventNames[e.mKind]);
-        EECPUnitsSetInt(L, "unit", e.mUnit);
-        EECPUnitsSetInt(L, "time", e.mTime);
-        switch (e.mKind) {
-        case kEvAttacked:
-            if (e.mOther != 0)
-                EECPUnitsSetInt(L, "attacker", e.mOther);
-            EECPUnitsSetInt(L, "player", e.mType);
-            EECPUnitsSetInt(L, "damage", e.mAmount);
-            break;
-        case kEvDied: case kEvConverted:
-            if (e.mOther != 0)
-                EECPUnitsSetInt(L, "killer", e.mOther);
-            if (e.mType >= 0)
-                EECPUnitsSetStr(L, "type", EECPUnitsName(s, e.mType));
-            break;
-        case kEvAttackPlayer: case kEvDefendPlayer:
-            EECPUnitsSetInt(L, "player", e.mOther);
-            break;
-        case kEvFlare:
-            EECPUnitsSetInt(L, "player", e.mOther);
-            EECPUnitsSetInt(L, "x", e.mType);
-            EECPUnitsSetInt(L, "y", e.mAmount);
-            break;
-        case kEvSwapped:
-            EECPUnitsSetInt(L, "new", e.mOther);
-            EECPUnitsSetStr(L, "type", EECPUnitsName(s, e.mType));
-            break;
-        default:
-            if (e.mType >= 0)
-                EECPUnitsSetStr(L, "type", EECPUnitsName(s, e.mType));
-            break;
-        }
-        lua_rawseti(L, -2, (lua_Integer)(k + 1));
-    }
-    s->mEvents.clear();
-    s->mAttackedAt.clear();
-    if (s->mDropped > 0) {
-        EECPTraceScope theScope("next");
-        EE_CP_TRACE(me, "next.events", "dropped=%ld (at most %ld between deliveries)", s->mDropped, kMaxEvents);
-        s->mDropped = 0;
-    }
-    return 1;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Helpers
 
@@ -1487,37 +591,6 @@ static int LuaCanPlace(lua_State* L)
 
 static unsigned short EECPUnitsAreaNear(long inX, long inY, long inKind);
 
-// ai.reach(x1, y1, x2, y2) -> whether both tiles are on one land mass (a tile on none takes its nearest within 3)
-static int LuaReach(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostTile * 2);
-    for (int i = 1; i <= 4; i++)
-        if (!lua_isinteger(L, i)) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-    unsigned short ca = EECPUnitsAreaNear((long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2), kAIPathLandMass);
-    lua_pushboolean(L, ca != 0 && ca == EECPUnitsAreaNear((long)lua_tointeger(L, 3), (long)lua_tointeger(L, 4), kAIPathLandMass) ? 1 : 0);
-    return 1;
-}
-
-// ai.strength(ids) -> the sum of hit points x attack of the units the player may know of
-static int LuaStrength(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsReadIds(L, 1, s->mIds);
-    EECPUnitsCharge(L, kCostCall + (int64_t)s->mIds.size() * kCostField);
-    long long theSum = 0;
-    for (unsigned long k = 0; k < s->mIds.size(); k++) {
-        EEUnit* theUnit = EECPUnitsKnown(me, s->mIds[k]);
-        if (theUnit != NULL)
-            theSum += EECPUnitsStrength(theUnit);
-    }
-    lua_pushinteger(L, (lua_Integer)theSum);
-    return 1;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Commands
 
@@ -1531,70 +604,9 @@ static int EECPUnitsResult(lua_State* L, long inReason, long inCount, long inID)
     return ee_ai_units_result(L, inReason, inCount, inID);
 }
 
-// the per-step limits (AI_LUA_UNITS §3.4)
 static bool EECPUnitsWithinLimits(EECPUnitsState* s, long inUnits)
 {
-    long theNow = (long)gPhysics->mGameTime;
-    if (s->mStepStamp != theNow) {
-        s->mStepStamp = theNow;
-        s->mOrdersThisStep = 0;
-        s->mUnitOrdersThisStep = 0;
-    }
-    if (s->mOrdersThisStep + 1 > 400 || s->mUnitOrdersThisStep + inUnits > 4000)
-        return false;
-    s->mOrdersThisStep++;
-    s->mUnitOrdersThisStep += inUnits;
-    return true;
-}
-
-// the ids at inIndex -> s->mIds2: the player's own living units on the map (or inside, with inInside) that pass
-// inTest; the first reason one failed in outReason
-static void EECPUnitsOwnUnits(EEComputerPlayer* me, EECPUnitsState* s, bool inInside, bool (*inTest)(EEComplexUnit*),
-    long& outReason)
-{
-    s->mIds2.clear();
-    outReason = kOK;
-    for (unsigned long k = 0; k < s->mIds.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds[k]);
-        if (c == NULL || EECPUnitsIsProjectile(c)) {
-            if (outReason == kOK)
-                outReason = kNotOwn;
-            continue;
-        }
-        if (c->mIsDisabled || (!inInside && (c->mContainer != NULL || c->GetTileX() == -10000))
-            || (inTest != NULL && !inTest(c))) {
-            if (outReason == kOK)
-                outReason = kCannotDo;
-            continue;
-        }
-        if (std::find(s->mIds2.begin(), s->mIds2.end(), (long)c->mUnitID) == s->mIds2.end())
-            s->mIds2.push_back((long)c->mUnitID);
-    }
-}
-
-// runs a human's message for the player on the units of s->mIds2 (the selection), and takes them
-static void EECPUnitsRun(EEComputerPlayer* me, EECPUnitsState* s, EEMessage& inMessage, bool inTake)
-{
-    EESelectedGroup* theSelection = me->mActiveGroup;
-    if (theSelection == NULL)
-        return;
-    theSelection->Clear();
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL) {
-            theSelection->Add(c);
-            if (inTake)
-                EECPUnitsTake(me, s, c);
-        }
-    }
-    unsigned char theSlot = me->mSlot;
-    me->mSlot = kBorrowedSlot;
-    if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {
-        inMessage.SetOriginatingSlot(kBorrowedSlot);
-        inMessage.Execute();
-    }
-    me->mSlot = theSlot;
-    theSelection->Clear();
+    return ee_ai_units_within_limits(s->mRust, inUnits, (long)gPhysics->mGameTime);
 }
 
 static void EECPUnitsTraceCmd(EEComputerPlayer* me, EECPUnitsState* s, const char* inVerb, long inReason, long inCount,
@@ -1611,436 +623,9 @@ static void EECPUnitsTraceCmd(EEComputerPlayer* me, EECPUnitsState* s, const cha
         kReasonNames[inReason]);
 }
 
-static bool EECPUnitsMobile(EEComplexUnit* c)
-{
-    return !c->mUnitClass->IsBuilding() && c->mStats != NULL && c->mStats->mMaxVelocity > 0.0f;
-}
-
-static bool EECPUnitsCanAttack(EEComplexUnit* c)
-{
-    if (EECPUnitsMobile(c) || (c->mStats != NULL && c->mStats->mAttack != 0.0f))
-        return true;
-    // a missile base holding its ICBM launches it at the target (the classic's CheckSpecials / Update ICBM: the
-    // attack goal goes to the ICBM's container, as a human's attack order on the base does)
-    for (unsigned long i = 0; i < c->GetNumCargoUnits(); i++) {
-        EEComplexUnit* theCargo = c->GetCargo(i);
-        if (theCargo != NULL && theCargo->mUnitClass->GetFamily() == kUnitFamilyICBM)
-            return true;
-    }
-    return false;
-}
-
-static bool EECPUnitsCitizen(EEComplexUnit* c)
-{
-    long k = c->mUnitClass->mCategory;
-    return k == kUnitCategoryLandCitizen || k == kUnitCategoryNavalCitizen;
-}
-
-static bool EECPUnitsBuilding(EEComplexUnit* c)
-{
-    return c->mUnitClass->IsBuilding() && c->mIsBuilt;
-}
-
-// the shared start of a unit command: the ids at 1, the charge, the own units -> false with the result pushed
-static bool EECPUnitsBegin(lua_State* L, EEComputerPlayer* me, EECPUnitsState* s, bool inInside,
-    bool (*inTest)(EEComplexUnit*), const char* inVerb, int& outResults)
-{
-    EECPUnitsReadIds(L, 1, s->mIds);
-    EECPUnitsCharge(L, kCostCommand + (int64_t)s->mIds.size() * kCostOrdered);
-    long theReason;
-    EECPUnitsOwnUnits(me, s, inInside, inTest, theReason);
-    if (s->mIds2.empty()) {
-        EECPUnitsTraceCmd(me, s, inVerb, theReason == kOK ? kBadArgument : theReason, 0, 0, 0);
-        outResults = EECPUnitsResult(L, theReason == kOK ? kBadArgument : theReason, 0, 0);
-        return false;
-    }
-    if (!EECPUnitsWithinLimits(s, (long)s->mIds2.size())) {
-        EECPUnitsTraceCmd(me, s, inVerb, kLimit, 0, 0, 0);
-        outResults = EECPUnitsResult(L, kLimit, 0, 0);
-        return false;
-    }
-    return true;
-}
-
 static bool EECPUnitsTileOK(long x, long y)
 {
     return gWorld.mMap != NULL && x >= 0 && y >= 0 && gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) != NULL;
-}
-
-// ai.move(ids, x, y, {queue, forced, formation})
-static int LuaMove(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "move", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    bool theQueue = EECPUnitsOptBool(L, 4, "queue", false);
-    bool theForced = EECPUnitsOptBool(L, 4, "forced", false);
-    bool theFormation = EECPUnitsOptBool(L, 4, "formation", false);
-    EEMRecord theMessage(kMessagePathTo, {0.0f, (float)x + 0.5f, (float)y + 0.5f, theForced, false, theQueue, theFormation});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "move", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.attack(ids, target, {queue}): the target seen now, or a building the player remembers
-static int LuaAttack(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCanAttack, "attack", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == me || (theTarget->mPlayer != NULL && theTarget->mPlayer != gWorld.mPlayers[0]
-        && me->IsAlly(theTarget->mPlayer)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    std::map<long, Remembered>::iterator it = s->mMemory.find(theID);
-    bool theKnown = EECPUnitsSeen(me, theTarget) || (it != s->mMemory.end() && it->second.mBuilding);
-    if (!theKnown) {
-        EECPUnitsTraceCmd(me, s, "attack", kNotSeen, 0, theID, 0);
-        return EECPUnitsResult(L, kNotSeen, 0, 0);
-    }
-    EEMRecord theMessage(kMessageAttackUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false), false});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "attack", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.attack_ground(ids, x, y)
-static int LuaAttackGround(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCanAttack, "attack_ground", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMRecord theMessage(kMessageAttackGround, {(float)x + 0.5f, (float)y + 0.5f});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "attack_ground", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.gather(ids, resource, {queue}): a resource on an explored tile with some left
-static int LuaGather(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "gather", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? (long)lua_tointeger(L, 2) : 0;
-    EEUnit* theTarget = theID > 0 ? gWorld.GetUnit((unsigned long)theID) : NULL;
-    if (theTarget == NULL || !theTarget->mIsValid || theTarget->mResourceAmount <= 0)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    if (!EECPUnitsExplored(me, theTarget)) {
-        EECPUnitsTraceCmd(me, s, "gather", kUnexplored, 0, theID, 0);
-        return EECPUnitsResult(L, kUnexplored, 0, 0);
-    }
-    EEMRecord theMessage(kMessageGatherResource, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "gather", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// the newest own building of a class whose tile is (x, y) (the foundation a build order just made), 0 if none
-static long EECPUnitsNewBuilding(EEComputerPlayer* me, long inType, long inX, long inY, long inAbove)
-{
-    long theBest = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if (theUnit->mUnitClass->mUnitType == inType && theUnit->GetTileX() == inX && theUnit->GetTileY() == inY
-            && (long)theUnit->mUnitID > inAbove && (long)theUnit->mUnitID > theBest)
-            theBest = (long)theUnit->mUnitID;
-    for (unsigned long k = 0; theBest == 0; k++) {
-        RTSUnit* thePending = me->GetPendingUnit(k);
-        if (thePending == NULL)
-            break;
-        EEUnit* theUnit = static_cast<EEUnit*>(thePending);
-        if (theUnit->mUnitClass != NULL && theUnit->mUnitClass->mUnitType == inType && theUnit->GetTileX() == inX
-            && theUnit->GetTileY() == inY)
-            theBest = (long)theUnit->mUnitID;
-    }
-    return theBest;
-}
-
-// ai.build(ids, type, x, y, {queue}) -> ..., the foundation's id: the citizens build it (it is the script's)
-static int LuaBuild(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "build", r))
-        return r;
-    long theType = EECPUnitsClassArg(L, 2);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || (!gUnitClassTable[theType]->IsBuilding() && !gUnitClassTable[theType]->IsLandBuilding())   // a fortress: a land building of a transport class
-        || !lua_isinteger(L, 3) || !lua_isinteger(L, 4))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 3), y = (long)lua_tointeger(L, 4);
-    long theTech = gUnitClassTable[theType]->mTechnology;
-    if (!me->EEPlayer::CanProduce(theTech, 0x20, 1, true, 3, NULL)) {
-        EECPUnitsTraceCmd(me, s, "build", kCannotAfford, 0, theType, x);
-        return EECPUnitsResult(L, kCannotAfford, 0, 0);
-    }
-    if (!EECanPlaceOnTile(me, theType, x, y, false, 1)) {
-        EECPUnitsTraceCmd(me, s, "build", kCannotPlace, 0, theType, x);
-        return EECPUnitsResult(L, kCannotPlace, 0, 0);
-    }
-    long theBefore = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if ((long)theUnit->mUnitID > theBefore)
-            theBefore = (long)theUnit->mUnitID;
-    EEMRecord theMessage(kMessageBuildUnit, {GE2DPoint((float)x, (float)y), theTech, EECPUnitsOptBool(L, 5, "queue", false) ? 1 : 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    long theNew = EECPUnitsNewBuilding(me, theType, x, y, theBefore);
-    if (theNew != 0) {
-        EEComplexUnit* c = EECPUnitsOwn(me, theNew);
-        if (c != NULL)
-            EECPUnitsTake(me, s, c);
-    }
-    EECPUnitsTraceCmd(me, s, "build", theNew != 0 ? kOK : kCannotPlace, (long)s->mIds2.size(), theType, theNew);
-    return EECPUnitsResult(L, theNew != 0 ? kOK : kCannotPlace, theNew != 0 ? (long)s->mIds2.size() : 0, theNew);
-}
-
-// ai.repair(ids, target): an own or allied unit or building
-static int LuaRepair(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "repair", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageRepairUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "repair", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.garrison(ids, building) / ai.load(ids, transport)
-static int EECPUnitsLoadInto(lua_State* L, bool inGarrison)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    const char* theVerb = inGarrison ? "garrison" : "load";
-    if (!EECPUnitsBegin(L, me, s, false, NULL, theVerb, r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEComplexUnit* theInto = EECPUnitsOwn(me, theID);
-    if (theInto == NULL || (inGarrison ? theInto->mUnitClass->mGarrisonCapacity <= 0 : !theInto->mUnitClass->IsTransport()))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    s->mIds2.erase(std::remove(s->mIds2.begin(), s->mIds2.end(), theID), s->mIds2.end());
-    long theBefore = (long)theInto->GetNumCargoUnits();
-    if (inGarrison) {
-        EEMRecord theMessage(kMessageLoadGarrison, {theID, -1, 0});
-        EECPUnitsRun(me, s, theMessage, true);
-    } else {
-        EEMRecord theMessage(kMessageLoadTransport, {theID, -1, 0});
-        EECPUnitsRun(me, s, theMessage, true);
-    }
-    EECPUnitsTake(me, s, theInto);
-    EECPUnitsTraceCmd(me, s, theVerb, kOK, (long)s->mIds2.size(), theID, theBefore);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaGarrison(lua_State* L)
-{
-    return EECPUnitsLoadInto(L, true);
-}
-
-static int LuaLoad(lua_State* L)
-{
-    return EECPUnitsLoadInto(L, false);
-}
-
-// ai.unload(containers, x, y)
-static int LuaUnload(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "unload", r))
-        return r;
-    if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMRecord theMessage(kMessageUnloadTransport, {s->mIds2[0], x, y});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "unload", kOK, (long)s->mIds2.size(), x, y);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.train(buildings, type, n) / ai.research(buildings, tech): the queue of the least busy of the buildings
-static int EECPUnitsQueue(lua_State* L, bool inTrain)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    const char* theVerb = inTrain ? "train" : "research";
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, theVerb, r))
-        return r;
-    long theTech = -1;
-    if (inTrain) {
-        long theType = EECPUnitsClassArg(L, 2);
-        if (theType >= 0 && (unsigned long)theType < EEUnitClassCount() && gUnitClassTable[theType] != NULL)
-            theTech = gUnitClassTable[theType]->mTechnology;
-    } else if (lua_type(L, 2) == LUA_TSTRING) {
-        theTech = EECPNextTechByName(lua_tostring(L, 2));
-    } else if (lua_isinteger(L, 2))
-        theTech = (long)lua_tointeger(L, 2);
-    long n = lua_isinteger(L, 3) ? (long)lua_tointeger(L, 3) : 1;
-    if (theTech < 0 || n < 1 || n > 5)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // one building of the same type at a time: the message queues at the selected buildings of the clicked one's type
-    EEComplexUnit* theFirst = EECPUnitsOwn(me, s->mIds2[0]);
-    long theBefore = 0;
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL)
-            theBefore += (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0);
-    }
-    for (long k = 0; k < n; k++) {
-        EEMRecord theMessage(kMessageResearchTechnology, {(long)theFirst->mUnitID, theTech, false});
-        EECPUnitsRun(me, s, theMessage, false);
-    }
-    long theAfter = 0;
-    for (unsigned long k = 0; k < s->mIds2.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds2[k]);
-        if (c != NULL)
-            theAfter += (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0);
-    }
-    long theQueued = theAfter - theBefore;
-    long theReason = theQueued > 0 ? kOK : kCannotAfford;
-    EECPUnitsTraceCmd(me, s, theVerb, theReason, theQueued, theTech, n);
-    return EECPUnitsResult(L, theReason, theQueued > 0 ? theQueued : 0, 0);
-}
-
-static int LuaTrain(lua_State* L)
-{
-    return EECPUnitsQueue(L, true);
-}
-
-static int LuaResearch(lua_State* L)
-{
-    return EECPUnitsQueue(L, false);
-}
-
-// ai.stance(ids, n): the behaviour table's index (the unit panel's buttons)
-static int LuaStance(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "stance", r))
-        return r;
-    if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || (unsigned long)lua_tointeger(L, 2) >= EEUnitBehavior::sTable.size()
-        || EEUnitBehavior::sTable[(unsigned long)lua_tointeger(L, 2)] == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageSetUnitBehavior, {(long)lua_tointeger(L, 2)});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "stance", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaStop(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "stop", r))
-        return r;
-    EEMRecord theMessage(kMessageStopActiveGroup);
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "stop", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaExplore(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "explore", r))
-        return r;
-    EEMRecord theMessage(kMessageExplore);
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "explore", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-static int LuaDelete(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, true, NULL, "delete", r))
-        return r;
-    EEMRecord theMessage(kMessageKillUnit, {1});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "delete", kOK, (long)s->mIds2.size(), 0, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.take(ids) / ai.release(ids): the held set
-static int EECPUnitsHold(lua_State* L, bool inTake)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    bool theWork = !inTake && EECPUnitsOptBool(L, 2, "gather", false);
-    EECPUnitsReadIds(L, 1, s->mIds);
-    EECPUnitsCharge(L, kCostCall + (int64_t)s->mIds.size() * kCostId);
-    long n = 0;
-    for (unsigned long k = 0; k < s->mIds.size(); k++) {
-        EEComplexUnit* c = EECPUnitsOwn(me, s->mIds[k]);
-        if (c == NULL)
-            continue;
-        if (inTake)
-            EECPUnitsTake(me, s, c);
-        else
-            EECPUnitsRelease(me, s, c, theWork);
-        n++;
-    }
-    lua_pushinteger(L, (lua_Integer)n);
-    return 1;
-}
-
-static int LuaTake(lua_State* L)
-{
-    return EECPUnitsHold(L, true);
-}
-
-static int LuaRelease(lua_State* L)
-{
-    return EECPUnitsHold(L, false);
-}
-
-// ai.reflex{naval_flee = false, danger = false, militia = false, held = true, memory_ms = 180000} (held: the militia
-// and the danger zones take the held citizens too; every flag saved, the militia and held ones from EENU version 4)
-static int LuaReflex(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    s->mReflexNavalFlee = EECPUnitsOptBool(L, 1, "naval_flee", s->mReflexNavalFlee);
-    s->mReflexDanger = EECPUnitsOptBool(L, 1, "danger", s->mReflexDanger);
-    s->mReflexMilitia = EECPUnitsOptBool(L, 1, "militia", s->mReflexMilitia);
-    s->mReflexHeld = EECPUnitsOptBool(L, 1, "held", s->mReflexHeld);
-    long theMs;
-    if (EECPUnitsOptInt(L, 1, "memory_ms", theMs) && theMs >= 0 && theMs <= 3600000)
-        s->mMemoryMs = theMs;
-    return 0;
 }
 
 static bool EECPUnitsTestOn()
@@ -2051,26 +636,6 @@ static bool EECPUnitsTestOn()
         sOn = theValue != NULL && theValue[0] == '1' ? 1 : 0;
     }
     return sOn == 1;
-}
-
-// TEST ONLY (EE_AI_TEST_SPAWN=1): ai.test_town(player) -> x, y of the player's first town centre or capitol (fog ignored): the
-// micro test scripts place their fights with it. Off: nil
-static int LuaTestTown(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPUnitsTestOn() || !lua_isinteger(L, 1) || lua_tointeger(L, 1) < 0
-        || (unsigned long)lua_tointeger(L, 1) >= gWorld.mNumPlayers || gWorld.mPlayers[lua_tointeger(L, 1)] == NULL)
-        return 0;
-    for (EEUnit* theUnit = gWorld.mPlayers[lua_tointeger(L, 1)]->mFirstUnit; theUnit != NULL;
-         theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        if ((theUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || theUnit->mUnitClass->mUnitType == kUnitTypeCapitol)
-            && theUnit->mHitPoints > 0) {
-            long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
-            lua_pushinteger(L, (lua_Integer)(theUnit->GetTileX() + theHalf));
-            lua_pushinteger(L, (lua_Integer)(theUnit->GetTileY() + theHalf));
-            return 2;
-        }
-    return 0;
 }
 
 // TEST ONLY (EE_AI_TEST_SPAWN=1): ai.test_spawn(type, x, y, player) -> true: the cheat's unit (EEMHackANewUnit) is
@@ -2112,244 +677,9 @@ static void EECPUnitsMapSize(long& outW, long& outH)
     outH = gWorld.mMap != NULL ? (long)gMapHeight : 0;
 }
 
-// adds inValue to every cell whose centre is within inRange tiles of (inX, inY)
-static void EECPUnitsDangerAdd(EECPUnitsState* s, long inX, long inY, long inRange, long inValue)
-{
-    long c = kDangerCell;
-    long x0 = (inX - inRange) / c, x1 = (inX + inRange) / c, y0 = (inY - inRange) / c, y1 = (inY + inRange) / c;
-    for (long cy = y0 < 0 ? 0 : y0; cy <= y1 && cy < s->mDangerH; cy++)
-        for (long cx = x0 < 0 ? 0 : x0; cx <= x1 && cx < s->mDangerW; cx++) {
-            long dx = cx * c + c / 2 - inX, dy = cy * c + c / 2 - inY;
-            long r = inRange + c / 2;
-            if (dx * dx + dy * dy > r * r)
-                continue;
-            long& v = s->mThreat[cy * s->mDangerW + cx];
-            v = v + inValue > 30000 ? 30000 : v + inValue;
-        }
-}
-
-// adds inValue to the influence cell at (inX, inY) and, falling off linearly, to the cells within kInfluenceSpread
-static void EECPUnitsInfluenceAdd(EECPUnitsState* s, long inX, long inY, long inValue)
-{
-    long cx0 = inX / kDangerCell, cy0 = inY / kDangerCell, r = kInfluenceSpread;
-    for (long cy = cy0 - r; cy <= cy0 + r; cy++)
-        for (long cx = cx0 - r; cx <= cx0 + r; cx++) {
-            if (cx < 0 || cy < 0 || cx >= s->mDangerW || cy >= s->mDangerH)
-                continue;
-            long dx = cx > cx0 ? cx - cx0 : cx0 - cx, dy = cy > cy0 ? cy - cy0 : cy0 - cy;
-            long d = dx > dy ? dx : dy;
-            long long v = (long long)inValue * (r + 1 - d) / (r + 1);
-            long long sum = (long long)s->mInfluence[cy * s->mDangerW + cx] + v;
-            s->mInfluence[cy * s->mDangerW + cx] = sum > 1000000000LL ? 1000000000L : sum < -1000000000LL ? -1000000000L : (long)sum;
-        }
-}
-
-// the threat layer, rebuilt from what the player sees and remembers, and where its citizens were hurt
-static void EECPUnitsDangerBuild(EEComputerPlayer* inPlayer, EECPUnitsState* s)
-{
-    long w, h;
-    EECPUnitsMapSize(w, h);
-    s->mDangerW = (w + kDangerCell - 1) / kDangerCell;
-    s->mDangerH = (h + kDangerCell - 1) / kDangerCell;
-    s->mThreat.assign((size_t)(s->mDangerW * s->mDangerH), 0);
-    long theNow = (long)gPhysics->mGameTime;
-    for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
-        const Remembered& r = it->second;
-        if (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
-            || r.mPlayer <= 0 || (unsigned long)r.mPlayer >= gWorld.mNumPlayers || gWorld.mPlayers[r.mPlayer] == NULL)
-            continue;
-        EEPlayer* theOwner = gWorld.mPlayers[r.mPlayer];
-        if ((unsigned long)r.mType >= theOwner->mUnitClassUpgrades.size() || theOwner->mUnitClassUpgrades[r.mType] == NULL)
-            continue;
-        EEUnitClassUpgrade* u = theOwner->mUnitClassUpgrades[r.mType];
-        long theAttack = UMFloatToLong(u->mAttack);
-        if (theAttack <= 0)
-            continue;
-        long theRange = UMFloor(u->mRange) + (r.mBuilding ? 2 : 1);
-        long theAge = theNow - r.mSeen;
-        long theValue = theAttack;
-        if (!r.mBuilding && theAge > 0)   // a soldier seen a while ago counts less (none after memory_ms)
-            theValue = theAttack * (s->mMemoryMs - (theAge < s->mMemoryMs ? theAge : s->mMemoryMs)) / (s->mMemoryMs > 0 ? s->mMemoryMs : 1);
-        if (theValue > 0)
-            EECPUnitsDangerAdd(s, r.mX, r.mY, theRange < 2 ? 2 : theRange, theValue);
-    }
-    for (unsigned long k = 0; k < s->mHurt.size();) {
-        if (theNow - s->mHurt[k].second > 120000) {
-            s->mHurt.erase(s->mHurt.begin() + k);
-            continue;
-        }
-        EECPUnitsDangerAdd(s, s->mHurt[k].first % 65536, s->mHurt[k].first / 65536, 6, 5);
-        k++;
-    }
-    for (unsigned long k = 0; k < s->mMarks.size();) {
-        if (theNow >= s->mMarks[k].mUntil) {
-            s->mMarks.erase(s->mMarks.begin() + k);
-            continue;
-        }
-        EECPUnitsDangerAdd(s, s->mMarks[k].mX, s->mMarks[k].mY, s->mMarks[k].mR, s->mMarks[k].mValue);
-        k++;
-    }
-    // the lost layer: where own units lost more hit points than they dealt in the last kLostMs, the difference over
-    // 10 on the cell and half of it on the cells round it (Age of AI's DANGER_LOST, cover.c)
-    s->mLost.assign((size_t)(s->mDangerW * s->mDangerH), 0);
-    long theMinute = theNow / 60000 - kLostMs / 60000;
-    while (!s->mTrades.empty() && s->mTrades.begin()->first.first < theMinute)
-        s->mTrades.erase(s->mTrades.begin());
-    for (std::map<std::pair<long, long>, std::pair<long, long> >::iterator it = s->mTrades.begin(); it != s->mTrades.end(); ++it) {
-        long theNet = it->second.first - it->second.second;
-        long c = it->first.second;
-        if (theNet <= 0 || c < 0 || c >= s->mDangerW * s->mDangerH)
-            continue;
-        long v = theNet / 10;
-        v = v > 30000 ? 30000 : v;
-        long cx = c % s->mDangerW, cy = c / s->mDangerW;
-        for (long dy = -1; dy <= 1; dy++)
-            for (long dx = -1; dx <= 1; dx++) {
-                long nx = cx + dx, ny = cy + dy;
-                if (nx < 0 || ny < 0 || nx >= s->mDangerW || ny >= s->mDangerH)
-                    continue;
-                long& cell = s->mLost[ny * s->mDangerW + nx];
-                long add = (dx == 0 && dy == 0) ? v : v / 2;
-                cell = cell + add > 30000 ? 30000 : cell + add;
-            }
-    }
-    // the influence layer: own strength less the remembered enemies' (weighed down with age as the threat layer
-    // does), each spread over kInfluenceSpread cells with a linear fall-off
-    s->mInfluence.assign((size_t)(s->mDangerW * s->mDangerH), 0);
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (!(theUnit->mHitPoints > 0) || !EECPUnitsOnMap(theUnit) || theUnit->mStats == NULL || EECPUnitsIsProjectile(theUnit))
-            continue;
-        long v = EECPUnitsStrength(theUnit);
-        if (v > 0)
-            EECPUnitsInfluenceAdd(s, theUnit->GetTileX(), theUnit->GetTileY(), v);
-    }
-    for (std::map<long, Remembered>::iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
-        const Remembered& r = it->second;
-        if (r.mType < 0 || (unsigned long)r.mType >= EEUnitClassCount() || gUnitClassTable[r.mType] == NULL
-            || r.mPlayer <= 0 || (unsigned long)r.mPlayer >= gWorld.mNumPlayers || gWorld.mPlayers[r.mPlayer] == NULL)
-            continue;
-        EEPlayer* theOwner = gWorld.mPlayers[r.mPlayer];
-        if ((unsigned long)r.mType >= theOwner->mUnitClassUpgrades.size() || theOwner->mUnitClassUpgrades[r.mType] == NULL)
-            continue;
-        long theAttack = UMFloatToLong(theOwner->mUnitClassUpgrades[r.mType]->mAttack);
-        if (theAttack <= 0)
-            continue;
-        long theAge = theNow - r.mSeen;
-        long v = r.mHP * theAttack;
-        if (!r.mBuilding && theAge > 0)
-            v = (long)((long long)v * (s->mMemoryMs - (theAge < s->mMemoryMs ? theAge : s->mMemoryMs)) / (s->mMemoryMs > 0 ? s->mMemoryMs : 1));
-        if (v > 0)
-            EECPUnitsInfluenceAdd(s, r.mX, r.mY, -v);
-    }
-}
-
-static long EECPUnitsLayerAt(const std::vector<long>& inLayer, const EECPUnitsState* s, long inX, long inY)
-{
-    if (inX < 0 || inY < 0 || inLayer.empty())
-        return 0;
-    long cx = inX / kDangerCell, cy = inY / kDangerCell;
-    if (cx >= s->mDangerW || cy >= s->mDangerH)
-        return 0;
-    return inLayer[cy * s->mDangerW + cx];
-}
-
 static long EECPUnitsDangerAt(const EECPUnitsState* s, long inX, long inY)
 {
-    return EECPUnitsLayerAt(s->mThreat, s, inX, inY);
-}
-
-// the layer an optional string argument names: "threat" (the default), "lost" or "influence"; NULL: unknown
-static const std::vector<long>* EECPUnitsLayerArg(lua_State* L, int inIndex, const EECPUnitsState* s)
-{
-    switch (ee_ai_units_layer_arg(L, inIndex)) {
-    case 0:
-        return &s->mThreat;
-    case 1:
-        return &s->mLost;
-    case 2:
-        return &s->mInfluence;
-    default:
-        return NULL;
-    }
-}
-
-// ai.danger(x, y[, layer]) -> the layer's value at the tile (0: none); layer "threat" (the default), "lost" or
-// "influence" (own less enemy strength: negative where the enemy is stronger)
-static int LuaDanger(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostTile);
-    EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
-    const std::vector<long>* theLayer = EECPUnitsLayerArg(L, 3, s);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || theLayer == NULL) {
-        lua_pushinteger(L, 0);
-        return 1;
-    }
-    lua_pushinteger(L, (lua_Integer)EECPUnitsLayerAt(*theLayer, s, (long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2)));
-    return 1;
-}
-
-// ai.danger_box(x1, y1, x2, y2[, layer]) -> the highest and the summed value of the cells over the box
-static int LuaDangerBox(lua_State* L)
-{
-    EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
-    const std::vector<long>* theLayer = EECPUnitsLayerArg(L, 5, s);
-    for (int i = 1; i <= 4; i++)
-        if (!lua_isinteger(L, i) || s->mDangerW <= 0 || theLayer == NULL || theLayer->empty()) {
-            lua_pushinteger(L, 0);
-            lua_pushinteger(L, 0);
-            return 2;
-        }
-    long x1 = (long)lua_tointeger(L, 1) / kDangerCell, y1 = (long)lua_tointeger(L, 2) / kDangerCell;
-    long x2 = (long)lua_tointeger(L, 3) / kDangerCell, y2 = (long)lua_tointeger(L, 4) / kDangerCell;
-    if (x1 > x2)
-        std::swap(x1, x2);
-    if (y1 > y2)
-        std::swap(y1, y2);
-    x1 = x1 < 0 ? 0 : x1;
-    y1 = y1 < 0 ? 0 : y1;
-    x2 = x2 >= s->mDangerW ? s->mDangerW - 1 : x2;
-    y2 = y2 >= s->mDangerH ? s->mDangerH - 1 : y2;
-    long theMax = 0, theSum = 0, theCells = 0;
-    for (long cy = y1; cy <= y2; cy++)
-        for (long cx = x1; cx <= x2; cx++) {
-            long v = (*theLayer)[cy * s->mDangerW + cx];
-            theMax = v > theMax ? v : theMax;
-            theSum += v;
-            theCells++;
-        }
-    EECPUnitsCharge(L, kCostCall + theCells * kCostScan);
-    lua_pushinteger(L, (lua_Integer)theMax);
-    lua_pushinteger(L, (lua_Integer)theSum);
-    return 2;
-}
-
-// ai.mark(x, y, r, value, ms): the script's own danger, added to the threat layer until it runs out (at most 64)
-static int LuaMark(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
-    for (int i = 1; i <= 5; i++)
-        if (!lua_isinteger(L, i)) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-    if ((long)s->mMarks.size() >= 64 || lua_tointeger(L, 3) < 0 || lua_tointeger(L, 3) > 40 || lua_tointeger(L, 5) <= 0
-        || lua_tointeger(L, 5) > 3600000) {
-        lua_pushboolean(L, 0);
-        return 1;
-    }
-    DangerMark m;
-    m.mX = (long)lua_tointeger(L, 1);
-    m.mY = (long)lua_tointeger(L, 2);
-    m.mR = (long)lua_tointeger(L, 3);
-    long v = (long)lua_tointeger(L, 4);
-    m.mValue = v < 0 ? 0 : v > 30000 ? 30000 : v;
-    m.mUntil = (long)gPhysics->mGameTime + (long)lua_tointeger(L, 5);
-    s->mMarks.push_back(m);
-    if (s->mDangerW > 0)
-        EECPUnitsDangerAdd(s, m.mX, m.mY, m.mR, m.mValue);   // at once, not only from the next rebuild
-    lua_pushboolean(L, 1);
-    return 1;
+    return ee_ai_units_danger_at(s->mRust, inX, inY);
 }
 
 // the land mass (or water body) at a tile, else the nearest within 3 tiles: a tree's tile, or a building's, is on
@@ -2366,324 +696,6 @@ static unsigned short EECPUnitsAreaNear(long inX, long inY, long inKind)
                 unsigned short a = gContinentManager.GetContinent(U2DPoint<long>(inX + dx, inY + dy), inKind);
                 if (a != 0)
                     return a;
-            }
-    return 0;
-}
-
-// whether a route cell is open for the kind (a land mass or a water body): one of five tiles of the cell is on it
-static bool EECPUnitsCellOpen(long inCX, long inCY, long inKind, unsigned short inArea)
-{
-    static const long kAt[5][2] = {{2, 2}, {0, 0}, {3, 0}, {0, 3}, {3, 3}};
-    for (int k = 0; k < 5; k++) {
-        U2DPoint<long> theAt(inCX * kDangerCell + kAt[k][0], inCY * kDangerCell + kAt[k][1]);
-        if (gContinentManager.GetContinent(theAt, inKind) == inArea)
-            return true;
-    }
-    return false;
-}
-
-// the A* over the kDangerCell cells of the start's land mass (or water body), from (x1, y1) to (x2, y2): 10 a
-// straight step, 14 a diagonal, plus inAvoid x the threat and inAvoidLost x the lost layer of the cell entered. The
-// cells of the way end in s->mIds (start to goal); outExpanded counts the cells closed. false: no way
-static bool EECPUnitsCellRoute(EECPUnitsState* s, long inKind, long x1, long y1, long x2, long y2, long inAvoid,
-    long inAvoidLost, long& outExpanded)
-{
-    outExpanded = 0;
-    unsigned short theArea = EECPUnitsAreaNear(x1, y1, inKind);
-    if (theArea == 0 || EECPUnitsAreaNear(x2, y2, inKind) != theArea)
-        return false;
-    long w = s->mDangerW, h = s->mDangerH, n = w * h;
-    long theStart = (y1 / kDangerCell) * w + x1 / kDangerCell, theGoal = (y2 / kDangerCell) * w + x2 / kDangerCell;
-    if (theStart < 0 || theStart >= n || theGoal < 0 || theGoal >= n)
-        return false;
-    if ((long)s->mLost.size() != n)
-        s->mLost.assign((size_t)n, 0);
-    s->mG.assign((size_t)n, -1);
-    s->mFrom.assign((size_t)n, -1);
-    s->mOpen.assign((size_t)n, 0);   // 2 closed, 3 blocked
-    s->mHeap.clear();
-    s->mG[theStart] = 0;
-    long gx = theGoal % w, gy = theGoal / w;
-    s->mHeap.push_back(std::make_pair(0L, theStart));
-    static const long kStep[8][3] = {{1, 0, 10}, {-1, 0, 10}, {0, 1, 10}, {0, -1, 10},
-                                     {1, 1, 14}, {1, -1, 14}, {-1, 1, 14}, {-1, -1, 14}};
-    bool theFound = false;
-    while (!s->mHeap.empty()) {
-        std::pop_heap(s->mHeap.begin(), s->mHeap.end(), std::greater<std::pair<long, long> >());
-        long c = s->mHeap.back().second;
-        s->mHeap.pop_back();
-        if (s->mOpen[c] == 2)
-            continue;
-        s->mOpen[c] = 2;
-        outExpanded++;
-        if (c == theGoal) {
-            theFound = true;
-            break;
-        }
-        long cx = c % w, cy = c / w;
-        for (int k = 0; k < 8; k++) {
-            long nx = cx + kStep[k][0], ny = cy + kStep[k][1];
-            if (nx < 0 || ny < 0 || nx >= w || ny >= h)
-                continue;
-            long d = ny * w + nx;
-            if (s->mOpen[d] >= 2)
-                continue;
-            if (d != theGoal && !EECPUnitsCellOpen(nx, ny, inKind, theArea)) {
-                s->mOpen[d] = 3;
-                continue;
-            }
-            long g = s->mG[c] + kStep[k][2] + inAvoid * s->mThreat[d] + inAvoidLost * s->mLost[d];
-            if (s->mG[d] >= 0 && s->mG[d] <= g)
-                continue;
-            s->mG[d] = g;
-            s->mFrom[d] = c;
-            long dx = nx > gx ? nx - gx : gx - nx, dy = ny > gy ? ny - gy : gy - ny;
-            long theH = 10 * (dx > dy ? dx : dy) + 4 * (dx < dy ? dx : dy);
-            s->mHeap.push_back(std::make_pair(g + theH, d));
-            std::push_heap(s->mHeap.begin(), s->mHeap.end(), std::greater<std::pair<long, long> >());
-        }
-    }
-    if (!theFound)
-        return false;
-    s->mIds.clear();
-    for (long c = theGoal; c >= 0; c = s->mFrom[c])
-        s->mIds.push_back(c);
-    std::reverse(s->mIds.begin(), s->mIds.end());
-    return true;
-}
-
-// the shared argument reading of ai.route and ai.path_len: the tiles at 1-4 and the options at inOpts
-static bool EECPUnitsRouteArgs(lua_State* L, int inOpts, EECPUnitsState* s, EEComputerPlayer* me, long& x1, long& y1,
-    long& x2, long& y2, long& outAvoid, long& outAvoidLost, long& outKind)
-{
-    for (int i = 1; i <= 4; i++)
-        if (!lua_isinteger(L, i))
-            return false;
-    x1 = (long)lua_tointeger(L, 1);
-    y1 = (long)lua_tointeger(L, 2);
-    x2 = (long)lua_tointeger(L, 3);
-    y2 = (long)lua_tointeger(L, 4);
-    outAvoid = 4;
-    outAvoidLost = 0;
-    EECPUnitsOptInt(L, inOpts, "avoid", outAvoid);
-    EECPUnitsOptInt(L, inOpts, "avoid_lost", outAvoidLost);
-    outAvoid = outAvoid < 0 ? 0 : outAvoid > 100 ? 100 : outAvoid;
-    outAvoidLost = outAvoidLost < 0 ? 0 : outAvoidLost > 100 ? 100 : outAvoidLost;
-    outKind = EECPUnitsOptBool(L, inOpts, "sea", false) ? kAIPathWaterBody : kAIPathLandMass;
-    if (!EECPUnitsTileOK(x1, y1) || !EECPUnitsTileOK(x2, y2))
-        return false;
-    if (s->mDangerW <= 0)
-        EECPUnitsDangerBuild(me, s);
-    return true;
-}
-
-// ai.route(x1, y1, x2, y2, {avoid = 4, avoid_lost = 0, sea = false}) -> waypoints {{x, y}, ...} (the last is the
-// goal) and the cost; nil when the goal is not on the start's land mass (or water body). An A* over 4-tile cells:
-// 10 a straight step, 14 a diagonal, plus avoid x the threat layer (and avoid_lost x the lost layer) of the cell
-// entered (AI_LUA_UNITS §4.3, step 1)
-static int LuaRoute(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    long x1, y1, x2, y2, theAvoid, theAvoidLost, theKind;
-    if (!EECPUnitsRouteArgs(L, 5, s, me, x1, y1, x2, y2, theAvoid, theAvoidLost, theKind))
-        return 0;
-    EECPUnitsCharge(L, 5000);
-    long theExpanded = 0;
-    bool theFound = EECPUnitsCellRoute(s, theKind, x1, y1, x2, y2, theAvoid, theAvoidLost, theExpanded);
-    EECPUnitsCharge(L, theExpanded * 10);
-    if (!theFound)
-        return 0;
-    long w = s->mDangerW;
-    long theGoal = s->mIds.back();
-    // a waypoint where the direction changes
-    s->mIds2.clear();
-    for (unsigned long k = 1; k + 1 < s->mIds.size(); k++) {
-        long a = s->mIds[k - 1], b = s->mIds[k], c = s->mIds[k + 1];
-        if (b - a != c - b)
-            s->mIds2.push_back(b);
-    }
-    while (s->mIds2.size() > 15) {   // at most 16 waypoints with the goal: every second corner goes
-        for (unsigned long k = 1; k < s->mIds2.size(); k++)
-            s->mIds2.erase(s->mIds2.begin() + k);
-    }
-    lua_createtable(L, (int)s->mIds2.size() + 1, 0);
-    for (unsigned long k = 0; k <= s->mIds2.size(); k++) {
-        lua_createtable(L, 2, 0);
-        long x = k < s->mIds2.size() ? (s->mIds2[k] % w) * kDangerCell + kDangerCell / 2 : x2;
-        long y = k < s->mIds2.size() ? (s->mIds2[k] / w) * kDangerCell + kDangerCell / 2 : y2;
-        lua_pushinteger(L, (lua_Integer)x);
-        lua_rawseti(L, -2, 1);
-        lua_pushinteger(L, (lua_Integer)y);
-        lua_rawseti(L, -2, 2);
-        lua_rawseti(L, -2, (lua_Integer)(k + 1));
-    }
-    lua_pushinteger(L, (lua_Integer)s->mG[theGoal]);
-    return 2;
-}
-
-// ai.path_len(x1, y1, x2, y2, {sea = false}) -> the length in tiles of the way over the cells (no danger), or nil
-// when there is none: coarse (4-tile cells), about the walking distance round water and cliffs
-static int LuaPathLen(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    long x1, y1, x2, y2, theAvoid, theAvoidLost, theKind;
-    if (!EECPUnitsRouteArgs(L, 5, s, me, x1, y1, x2, y2, theAvoid, theAvoidLost, theKind))
-        return 0;
-    EECPUnitsCharge(L, 2000);
-    long theExpanded = 0;
-    bool theFound = EECPUnitsCellRoute(s, theKind, x1, y1, x2, y2, 0, 0, theExpanded);
-    EECPUnitsCharge(L, theExpanded * 10);
-    if (!theFound)
-        return 0;
-    long theCost = s->mG[s->mIds.back()];
-    long theLen = theCost * kDangerCell / 10;
-    long dx = x1 > x2 ? x1 - x2 : x2 - x1, dy = y1 > y2 ? y1 - y2 : y2 - y1;
-    long theStraight = dx > dy ? dx : dy;
-    lua_pushinteger(L, (lua_Integer)(theLen < theStraight ? theStraight : theLen));
-    return 1;
-}
-
-// ai.find_site(type, x, y, {min = 0, max = 12, safe = false}) -> x, y: the nearest explored tile where the class can be
-// placed (EECanPlaceOnTile), ring by ring from (x, y); with safe, only where the threat layer is 0. nil: none
-static int LuaFindSite(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    long theType = EECPUnitsClassArg(L, 1);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || !lua_isinteger(L, 2) || !lua_isinteger(L, 3) || gWorld.mMap == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    long theMin = 0, theMax = 12;
-    EECPUnitsOptInt(L, 4, "min", theMin);
-    EECPUnitsOptInt(L, 4, "max", theMax);
-    theMin = theMin < 0 ? 0 : theMin;
-    theMax = theMax > 30 ? 30 : theMax;
-    bool theSafe = EECPUnitsOptBool(L, 4, "safe", false);
-    // margin: the footprint grown by a tile on every side is free as well (the classic build manager's CanBuildAt
-    // inMargin, EEPlayerBlockTakes); far: the rings from max inward (FindBuildSite's production order)
-    bool theMargin = EECPUnitsOptBool(L, 4, "margin", false);
-    bool theFar = EECPUnitsOptBool(L, 4, "far", false);
-    long theSize = gUnitClassTable[theType]->GetTileSize();
-    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * (theMargin ? 6 : 4));   // the most it can test, before it does
-    long theX = -1, theY = -1;
-    for (long k = theMin; k <= theMax && theX < 0; k++) {
-        long r = theFar ? theMax - (k - theMin) : k;
-        for (long dy = -r; dy <= r && theX < 0; dy++)
-            for (long dx = -r; dx <= r; dx++) {
-                if (dx > -r && dx < r && dy > -r && dy < r)
-                    continue;   // the ring only
-                long tx = x + dx, ty = y + dy;
-                EETile* theTile = tx >= 0 && ty >= 0
-                    ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty)) : NULL;
-                if (theTile == NULL || !theTile->IsVisibleTo(me))
-                    continue;
-                if (theSafe && EECPUnitsDangerAt(s, tx, ty) > 0)
-                    continue;
-                if (EECanPlaceOnTile(me, theType, tx, ty, false, 1)
-                    && (!theMargin || EEPlayerBlockTakes(me, theType, tx - 1, ty - 1, theSize + 2, theSize + 2, 0))) {
-                    theX = tx;
-                    theY = ty;
-                    break;
-                }
-            }
-    }
-    if (theX < 0)
-        return 0;
-    lua_pushinteger(L, (lua_Integer)theX);
-    lua_pushinteger(L, (lua_Integer)theY);
-    return 2;
-}
-
-// ai.drop_site(x, y[, kind]) -> the id of the player's nearest finished drop site for the resource kind ("food":
-// a granary too; the default any), its tile distance, and its centre x, y; nil when it has none
-static int LuaDropSite(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsCharge(L, 500);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-        return 0;
-    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
-    bool theFood = lua_type(L, 3) == LUA_TSTRING && strcmp(lua_tostring(L, 3), "food") == 0;
-    EEUnit* theBest = NULL;
-    long theBestD2 = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        if (theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol && theType != kUnitTypeSettlement
-            && !(theFood && theType == kUnitTypeGranary))
-            continue;
-        if (theUnit->mComplexUnit == NULL || !theUnit->mComplexUnit->mIsBuilt || !(theUnit->mHitPoints > 0) || !EECPUnitsOnMap(theUnit))
-            continue;
-        long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
-        long d2 = EECPUnitsD2(theUnit->GetTileX() + theHalf, theUnit->GetTileY() + theHalf, x, y);
-        if (theBest == NULL || d2 < theBestD2 || (d2 == theBestD2 && theUnit->mUnitID < theBest->mUnitID)) {
-            theBest = theUnit;
-            theBestD2 = d2;
-        }
-    }
-    if (theBest == NULL)
-        return 0;
-    long theHalf = theBest->mUnitClass->GetTileSize() / 2;
-    long d = 0;
-    while ((d + 1) * (d + 1) <= theBestD2)
-        d++;
-    lua_pushinteger(L, (lua_Integer)theBest->mUnitID);
-    lua_pushinteger(L, (lua_Integer)d);
-    lua_pushinteger(L, (lua_Integer)(theBest->GetTileX() + theHalf));
-    lua_pushinteger(L, (lua_Integer)(theBest->GetTileY() + theHalf));
-    return 4;
-}
-
-// ai.shore(x, y, {sea = id, land = id, max = 20}) -> x, y, sea, land: the nearest explored land tile, ring by ring
-// from (x, y), that touches water (of the water body `sea` when given) and lies on the land mass `land` when given;
-// nil: none within max rings
-static int LuaShore(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || gWorld.mMap == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2);
-    long theSea = 0, theLand = 0, theMax = 20;
-    EECPUnitsOptInt(L, 3, "sea", theSea);
-    EECPUnitsOptInt(L, 3, "land", theLand);
-    EECPUnitsOptInt(L, 3, "max", theMax);
-    theMax = theMax < 0 ? 0 : theMax > 40 ? 40 : theMax;
-    EECPUnitsCharge(L, kCostCall + (2 * theMax + 1) * (2 * theMax + 1) * 6);
-    long w, h;
-    EECPUnitsMapSize(w, h);
-    static const long kSide[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    for (long r = 0; r <= theMax; r++)
-        for (long dy = -r; dy <= r; dy++)
-            for (long dx = -r; dx <= r; dx++) {
-                if (dx > -r && dx < r && dy > -r && dy < r)
-                    continue;
-                long tx = x + dx, ty = y + dy;
-                if (tx < 0 || ty < 0 || tx >= w || ty >= h)
-                    continue;
-                EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)tx, (unsigned long)ty));
-                if (theTile == NULL || !theTile->IsVisibleTo(me))
-                    continue;
-                unsigned short theMass = gContinentManager.GetContinent(U2DPoint<long>(tx, ty), kAIPathLandMass);
-                if (theMass == 0 || (theLand != 0 && theMass != theLand))
-                    continue;
-                unsigned short theWater = 0;
-                for (int k = 0; k < 4 && theWater == 0; k++) {
-                    long nx = tx + kSide[k][0], ny = ty + kSide[k][1];
-                    if (nx < 0 || ny < 0 || nx >= w || ny >= h)
-                        continue;
-                    unsigned short b = gContinentManager.GetContinent(U2DPoint<long>(nx, ny), kAIPathWaterBody);
-                    if (b != 0 && (theSea == 0 || b == theSea))
-                        theWater = b;
-                }
-                if (theWater == 0)
-                    continue;
-                lua_pushinteger(L, (lua_Integer)tx);
-                lua_pushinteger(L, (lua_Integer)ty);
-                lua_pushinteger(L, (lua_Integer)theWater);
-                lua_pushinteger(L, (lua_Integer)theMass);
-                return 4;
             }
     return 0;
 }
@@ -2798,102 +810,6 @@ static int LuaEnemyNear(lua_State* L)
         }
     }
     lua_pushboolean(L, theCount > 0 ? 1 : 0);
-    return 1;
-}
-
-// ai.enemy_force(player, x, y, r) -> n, hp, attack: the player's land soldiers (an attack, a land unit or hero, not a
-// building) within r tiles of the tile, counted and summed - every one, seen or not, as the classic's militia counts
-// the raiders (EECPRMMilitia). Only for an AI whose manifest entry declares "sees_all" (the classic's information
-// cheat); nothing for every other AI (ai.seen is the fog-honest count)
-static int LuaEnemyForce(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isinteger(L, 3)
-        || !lua_isinteger(L, 4))
-        return 0;
-    lua_Integer thePlayer = lua_tointeger(L, 1);
-    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
-        return 0;
-    long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3), r = (long)lua_tointeger(L, 4);
-    long n = 0, theHP = 0, theAttack = 0, theScanned = 0;
-    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
-        theScanned++;
-        if (u->mComplexUnit == NULL || !(u->mHitPoints > 0) || u->mStats == NULL || u->mStats->mAttack == 0.0f
-            || u->mUnitClass->IsLandBuilding())
-            continue;
-        long theCategory = u->mUnitClass->mCategory;
-        if (theCategory != kUnitCategoryLand && theCategory != kUnitCategoryLandMilitaryHero)
-            continue;
-        long dx = u->GetTileX() - x, dy = u->GetTileY() - y;
-        if (dx * dx + dy * dy > r * r)
-            continue;
-        n++;
-        theHP += (long)u->mHitPoints;
-        theAttack += UMFloatToLong(u->mStats->mAttack);
-    }
-    EECPUnitsCharge(L, theScanned * kCostScan);
-    lua_pushinteger(L, (lua_Integer)n);
-    lua_pushinteger(L, (lua_Integer)theHP);
-    lua_pushinteger(L, (lua_Integer)theAttack);
-    return 3;
-}
-
-// ai.player_file(player) -> {gatherers, types = {[class] = n}, military = {land, sea, air, space} (counts),
-// strength = {land, sea, air, space} (the classes' influence)}: the classic's intelligence file of a player
-// (EECPIntelligencePlayerFile::Update / AddUnitClass / AddUnitType: every unit of the player alive, seen or not - its
-// citizens as gatherers, its non-building units by class, the ones with an attack, calamity power, heal or conversion
-// in their domain's strength). Only for an AI whose manifest entry declares "sees_all" (the classic's information
-// cheat); nothing for every other AI
-static int LuaPlayerFile(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* st = EECPUnitsGet(me);
-    EECPUnitsCharge(L, kCostCall);
-    if (!EECPEngineSeesAll(me) || !lua_isinteger(L, 1))
-        return 0;
-    lua_Integer thePlayer = lua_tointeger(L, 1);
-    if (thePlayer < 0 || thePlayer >= (lua_Integer)gWorld.mNumPlayers || gWorld.mPlayers[thePlayer] == NULL)
-        return 0;
-    long theGatherers = 0, theScanned = 0;
-    long theCount[4] = {0, 0, 0, 0}, theStrength[4] = {0, 0, 0, 0};   // land, sea, air, space
-    std::map<long, long> theTypes;
-    for (EEUnit* u = gWorld.mPlayers[thePlayer]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
-        theScanned++;
-        if (!(u->mHitPoints > 0) || u->mUnitClass == NULL)
-            continue;
-        EEUnitClass* c = u->mUnitClass;
-        if (c->mCategory == kUnitCategoryLandCitizen || c->mCategory == kUnitCategoryNavalCitizen) {
-            theGatherers++;
-            continue;
-        }
-        if (c->mFamily == kUnitFamilyBuilding || c->mFamily == kUnitFamilyAnimal)
-            continue;
-        theTypes[c->GetUnitType()]++;
-        if (!(c->GetAttack() > 0) && !c->mHasCalamityPowers && !c->GetIsMedic() && c->GetConversionRate() == 0.0f)
-            continue;
-        long d = (c->GetDomains() & kMovementAir) ? 2 : (c->GetDomains() & kMovementSea) ? 1 : (c->GetDomains() & kMovementSpace) ? 3 : 0;
-        theCount[d]++;
-        theStrength[d] += (long)c->mInfluence;
-    }
-    EECPUnitsCharge(L, theScanned * kCostScan + (int64_t)theTypes.size() * kCostField);
-    static const char* const kDomains[4] = {"land", "sea", "air", "space"};
-    lua_createtable(L, 0, 4);
-    EECPUnitsSetInt(L, "gatherers", theGatherers);
-    lua_createtable(L, 0, (int)theTypes.size());
-    for (std::map<long, long>::iterator it = theTypes.begin(); it != theTypes.end(); ++it) {
-        lua_pushinteger(L, (lua_Integer)it->second);
-        lua_setfield(L, -2, EECPUnitsName(st, it->first));
-    }
-    lua_setfield(L, -2, "types");
-    lua_createtable(L, 0, 4);
-    for (int d = 0; d < 4; d++)
-        EECPUnitsSetInt(L, kDomains[d], theCount[d]);
-    lua_setfield(L, -2, "military");
-    lua_createtable(L, 0, 4);
-    for (int d = 0; d < 4; d++)
-        EECPUnitsSetInt(L, kDomains[d], theStrength[d]);
-    lua_setfield(L, -2, "strength");
     return 1;
 }
 
@@ -3429,19 +1345,6 @@ static int LuaUnexplored(lua_State* L)
     return 2;
 }
 
-// ai.config{memory_ms = n} -> memory_ms: the enemy memory's life for mobile units (30 s to 30 minutes; the default
-// 3 minutes, Age of AI's fight_memory)
-static int LuaConfig(lua_State* L)
-{
-    EECPUnitsCharge(L, kCostCall);
-    EECPUnitsState* s = EECPUnitsGet(EECPUnitsMe(L));
-    long v;
-    if (EECPUnitsOptInt(L, 1, "memory_ms", v))
-        s->mMemoryMs = v < 30000 ? 30000 : v > 1800000 ? 1800000 : v;
-    lua_pushinteger(L, (lua_Integer)s->mMemoryMs);
-    return 1;
-}
-
 // ai.used() -> the instructions and charges this call has used so far (a multiple of the hook step, plus the helpers'
 // charges), against the budget (ai.used's second value): a script's own profiling; it changes nothing
 static int LuaUsed(lua_State* L)
@@ -3451,80 +1354,6 @@ static int LuaUsed(lua_State* L)
 
 // ---------------------------------------------------------------------------------------------------------------
 // More commands (batch 2)
-
-// ai.heal(ids, target)
-static int LuaHeal(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "heal", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEUnit* theTarget = EECPUnitsAlive(theID);
-    if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageHealUnit, {theID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "heal", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.rally(buildings, x, y) or ai.rally(buildings, target): each building's rally goal
-static int LuaRally(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, "rally", r))
-        return r;
-    long x = 0, y = 0, theTarget = -1;
-    if (lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
-        x = (long)lua_tointeger(L, 2);
-        y = (long)lua_tointeger(L, 3);
-        if (!EECPUnitsTileOK(x, y))
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-    } else if (lua_isinteger(L, 2)) {
-        EEUnit* theUnit = EECPUnitsKnown(me, (long)lua_tointeger(L, 2));
-        if (theUnit == NULL)
-            return EECPUnitsResult(L, kNotSeen, 0, 0);
-        theTarget = (long)theUnit->mUnitID;
-        x = theUnit->GetTileX();
-        y = theUnit->GetTileY();
-    } else
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // the message sets the rally of the selected buildings of the named one's type
-    long n = (long)s->mIds2.size();
-    EEMRecord theMessage(kMessageSetRallyGoal, {GE2DPoint((float)x + 0.5f, (float)y + 0.5f), theTarget, s->mIds2[0], 0});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "rally", kOK, n, x, y);
-    return EECPUnitsResult(L, kOK, n, 0);
-}
-
-// ai.cancel(buildings, type or tech): one of it out of their queues
-static int LuaCancel(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsBuilding, "cancel", r))
-        return r;
-    long theTech = -1;
-    if (lua_type(L, 2) == LUA_TSTRING) {
-        long theType = EECPUnitsClassArg(L, 2);
-        if (theType >= 0 && (unsigned long)theType < EEUnitClassCount() && gUnitClassTable[theType] != NULL)
-            theTech = gUnitClassTable[theType]->mTechnology;
-        else
-            theTech = EECPNextTechByName(lua_tostring(L, 2));
-    } else if (lua_isinteger(L, 2))
-        theTech = (long)lua_tointeger(L, 2);
-    if (theTech < 0)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageRemoveTechnology, {s->mIds2[0], theTech, false, false});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "cancel", kOK, (long)s->mIds2.size(), theTech, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
 
 // the tech node of a unit class the player may make now; else the refusal's reason
 static EETechTreeNode* EECPNextClassNode(EEComputerPlayer* inPlayer, long inType, long& outReason)
@@ -3617,171 +1446,10 @@ static int LuaImproveCost(lua_State* L)
     return 1;
 }
 
-// ai.formation(ids, kind)
-static int LuaFormation(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "formation", r))
-        return r;
-    if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || lua_tointeger(L, 2) > 16)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageChangeFormation, {(long)lua_tointeger(L, 2), true});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "formation", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.pack(ids, true/false)
-static int LuaPack(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "pack", r))
-        return r;
-    EEMRecord theMessage(kMessagePackUnpack, {lua_toboolean(L, 2) != 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "pack", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.dropoff(ids, building)
-static int LuaDropoff(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "dropoff", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    EEComplexUnit* theDrop = EECPUnitsOwn(me, theID);
-    if (theDrop == NULL || !theDrop->mIsBuilt)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageDropoffResource, {theID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "dropoff", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.replant(granary) -> ok: the granary's missing field foundations are laid again (the human's replant command;
-// a granary placed by a human's build order comes without its fields)
-static int LuaReplant(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    EECPUnitsCharge(L, kCostCommand);
-    long theID = lua_isinteger(L, 1) ? EECPUnitsForward(s, (long)lua_tointeger(L, 1)) : 0;
-    EEComplexUnit* theGranary = EECPUnitsOwn(me, theID);
-    if (theGranary == NULL || !theGranary->mIsBuilt || theGranary->mTileNode == NULL
-        || (theGranary->mUnitClass->mUnitType != kUnitTypeGranary && theGranary->mUnitClass->mUnitType != kUnitTypeGranaryImproved))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    s->mIds2.clear();
-    s->mIds2.push_back(theID);
-    if (!EECPUnitsWithinLimits(s, 1))
-        return EECPUnitsResult(L, kLimit, 0, 0);
-    EEMRecord theMessage(kMessageReplantFarms, {theID});
-    theMessage.Execute();
-    EECPUnitsTraceCmd(me, s, "replant", kOK, 1, theID, 0);
-    return EECPUnitsResult(L, kOK, 1, 0);
-}
-
-// ai.farm(ids, granary or farm, {queue}): the citizens farm by it (the free farms nearest first)
-static int LuaFarm(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "farm", r))
-        return r;
-    long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
-    if (EECPUnitsOwn(me, theID) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageSmartFarmers, {theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "farm", kOK, (long)s->mIds2.size(), theID, 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.cast(ids, tech, target) / ai.cast(ids, tech, x, y): a power or calamity by the first caster that can
-static int LuaCast(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, NULL, "cast", r))
-        return r;
-    long theTech = lua_type(L, 2) == LUA_TSTRING ? EECPNextTechByName(lua_tostring(L, 2))
-                   : lua_isinteger(L, 2)        ? (long)lua_tointeger(L, 2) : -1;
-    if (theTech < 0 || me->mTechnologies->Get(theTech) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long theTarget = -1, x = 0, y = 0;
-    if (lua_isinteger(L, 3) && lua_isinteger(L, 4)) {
-        x = (long)lua_tointeger(L, 3);
-        y = (long)lua_tointeger(L, 4);
-    } else if (lua_isinteger(L, 3)) {
-        EEUnit* theUnit = EECPUnitsKnown(me, (long)lua_tointeger(L, 3));
-        if (theUnit == NULL)
-            return EECPUnitsResult(L, kNotSeen, 0, 0);
-        theTarget = (long)theUnit->mUnitID;
-        x = theUnit->GetTileX();
-        y = theUnit->GetTileY();
-    } else
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRecord theMessage(kMessageCastCalamity, {s->mIds2[0], theTarget, x, y, theTech});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "cast", kOK, (long)s->mIds2.size(), theTech, theTarget);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Walls, gates, diplomacy (Age of AI's defence.c walls, diplo.c): the human's messages, as the orders above
 
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits);   // EECPWallManager.cpp
-
-static bool EECPUnitsGatePiece(EEComplexUnit* c)
-{
-    return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(c->GetUnitClass()) != NULL;
-}
-
-// ai.wall(ids, type, x1, y1, x2, y2): the citizens lay a straight wall of the class between the two tiles, as a
-// human's drag does (EEPlanWall: along the tiles or exactly diagonal); n = the citizens sent
-static int LuaWall(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsCitizen, "wall", r))
-        return r;
-    // the class: "wall" (or nil) is the epoch's wall as the classic wall manager takes it (GetWallClass)
-    long theType = (lua_type(L, 2) == LUA_TNIL || (lua_type(L, 2) == LUA_TSTRING && strcmp(lua_tostring(L, 2), "wall") == 0))
-        && me->mTechnologies != NULL ? EECPWallClass(me) : EECPUnitsClassArg(L, 2);
-    if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || !gUnitClassTable[theType]->mIsWall || !lua_isinteger(L, 3) || !lua_isinteger(L, 4) || !lua_isinteger(L, 5)
-        || !lua_isinteger(L, 6))
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long x1 = (long)lua_tointeger(L, 3), y1 = (long)lua_tointeger(L, 4), x2 = (long)lua_tointeger(L, 5), y2 = (long)lua_tointeger(L, 6);
-    if (gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x1, (unsigned long)y1) == NULL
-        || gWorld.mMap->GetTile((unsigned long)x2, (unsigned long)y2) == NULL)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    // (no CanProduce: the classic wall manager sends the message as it is, EEPlanWall and EEBuildWall check the
-    // placement and pay the pieces; a wall tech is never "available" the production way for a computer player)
-    long theTech = gUnitClassTable[theType]->mTechnology;
-    EETechTreeNode* theNode = me->mTechnologies->Get(theTech);
-    if (theNode == NULL) {   // (the wall tech is never "available" the production way: the classic manager never asks)
-        EECPUnitsTraceCmd(me, s, "wall", kNotInEpoch, 0, theType, 0);
-        return EECPUnitsResult(L, kNotInEpoch, 0, 0);
-    }
-    if (!me->CanAfford(theNode, 0x20, 1)) {
-        EECPUnitsTraceCmd(me, s, "wall", kCannotAfford, 0, theType, x1);
-        return EECPUnitsResult(L, kCannotAfford, 0, 0);
-    }
-    EEMRecord theMessage(kMessageBuildWall, {GE2DPoint((float)x1, (float)y1), GE2DPoint((float)x2, (float)y2), theTech, (long)me->mPlayerID});
-    EECPUnitsRun(me, s, theMessage, true);
-    EECPUnitsTraceCmd(me, s, "wall", kOK, (long)s->mIds2.size(), theType, x1 * 10000 + y1);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
 
 // ai.gate(type, x, y): a gate of the class over the finished wall pieces at the tile, there at once as the human's
 // gate button lays it (EEBuildGate: the five pieces turned into the gate's parts); the side is the first the gate
@@ -3830,58 +1498,6 @@ static int LuaGate(lua_State* L)
     theMessage.Execute();
     EECPUnitsTraceCmd(me, s, "gate", kOK, 1, theType, x * 10000 + y);
     return EECPUnitsResult(L, kOK, 1, 0);
-}
-
-// ai.patrol(ids, {{x, y}, ...}): the mobile units patrol through 2..8 points (EEMAddPatrolPoint for each, as the
-// human's patrol clicks: the first makes the patrol goal, the others add points)
-static int LuaPatrol(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "patrol", r))
-        return r;
-    if (lua_type(L, 2) != LUA_TTABLE)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    long n = (long)lua_rawlen(L, 2);
-    if (n < 2 || n > 8)
-        return EECPUnitsResult(L, kBadArgument, 0, 0);
-    std::vector<GE2DPoint> thePoints;
-    for (long k = 1; k <= n; k++) {
-        lua_rawgeti(L, 2, k);
-        if (lua_type(L, -1) != LUA_TTABLE) {
-            lua_pop(L, 1);
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-        }
-        lua_rawgeti(L, -1, 1);
-        lua_rawgeti(L, -2, 2);
-        bool ok = lua_isinteger(L, -2) && lua_isinteger(L, -1);
-        long x = ok ? (long)lua_tointeger(L, -2) : -1, y = ok ? (long)lua_tointeger(L, -1) : -1;
-        lua_pop(L, 3);
-        if (!ok || gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) == NULL)
-            return EECPUnitsResult(L, kBadArgument, 0, 0);
-        thePoints.push_back(GE2DPoint((float)x, (float)y));
-    }
-    for (unsigned long k = 0; k < thePoints.size(); k++) {
-        EEMRecord theMessage(kMessageAddPatrolPoint, {thePoints[k]});
-        EECPUnitsRun(me, s, theMessage, true);
-    }
-    EECPUnitsTraceCmd(me, s, "patrol", kOK, (long)s->mIds2.size(), n, (long)thePoints[0].GetX() * 10000 + (long)thePoints[0].GetY());
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
-}
-
-// ai.lock(ids, on): the gates locked or unlocked (their three moving parts)
-static int LuaLock(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    EECPUnitsState* s = EECPUnitsGet(me);
-    int r;
-    if (!EECPUnitsBegin(L, me, s, false, EECPUnitsGatePiece, "lock", r))
-        return r;
-    EEMRecord theMessage(kMessageLockUnlock, {lua_toboolean(L, 2) != 0});
-    EECPUnitsRun(me, s, theMessage, false);
-    EECPUnitsTraceCmd(me, s, "lock", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
-    return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
 }
 
 static long EECPUnitsOptAmount(lua_State* L, int inTable, const char* inKey)
@@ -4463,32 +2079,6 @@ static int LuaBuildUnsafe(lua_State* L)
     return 1;
 }
 
-// ai.gatherers() -> {[resource id] = n}: the player's own living citizens and boats whose gather goal is that resource
-// (walking there, waiting or working; whoever holds them: the runners' lists, which ai.resource's `workers` counts, do
-// not hold a script's units). One scan of the own units
-static int LuaGatherers(lua_State* L)
-{
-    EEComputerPlayer* me = EECPUnitsMe(L);
-    std::map<long, long> theCounts;
-    long theTested = 0;
-    for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        theTested++;
-        EEComplexUnit* c = theUnit->mComplexUnit;
-        if (c == NULL || !(theUnit->mHitPoints > 0) || !EECPUnitsCitizen(c))
-            continue;
-        EEUGRust* theGather = EEGatherGoalCast(c->GetGoalState());
-        if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mIsValid)
-            theCounts[(long)theGather->GetGatherResource()->mUnitID]++;
-    }
-    EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)theCounts.size() * kCostId);
-    lua_createtable(L, 0, (int)theCounts.size());
-    for (std::map<long, long>::iterator it = theCounts.begin(); it != theCounts.end(); ++it) {
-        lua_pushinteger(L, (lua_Integer)it->second);
-        lua_rawseti(L, -2, (lua_Integer)it->first);
-    }
-    return 1;
-}
-
 // ai.epoch(n) -> epoch n's node: id, name, required_sol, current_sol, cost (as the player pays it), available,
 // researched; nil off the tree
 static int LuaEpoch(lua_State* L)
@@ -4521,35 +2111,64 @@ static int LuaEpoch(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
+static const luaL_Reg kUnitsFunctions[] = {
+    {"me", (lua_CFunction)ee_ai_units_lua_me}, {"time", (lua_CFunction)ee_ai_units_lua_time}, {"players", (lua_CFunction)ee_ai_units_lua_players}, {"map", (lua_CFunction)ee_ai_units_lua_map},
+    {"units", (lua_CFunction)ee_ai_units_lua_units}, {"unit", (lua_CFunction)ee_ai_units_lua_unit}, {"get", (lua_CFunction)ee_ai_units_lua_get}, {"seen", (lua_CFunction)ee_ai_units_lua_seen}, {"memory", (lua_CFunction)ee_ai_units_lua_memory},
+    {"resources", (lua_CFunction)ee_ai_units_lua_resources}, {"tile", (lua_CFunction)ee_ai_units_lua_tile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", (lua_CFunction)ee_ai_units_lua_events},
+    {"can_place", LuaCanPlace}, {"reach", (lua_CFunction)ee_ai_units_lua_reach}, {"strength", (lua_CFunction)ee_ai_units_lua_strength},
+    {"move", (lua_CFunction)ee_ai_units_lua_move}, {"attack", (lua_CFunction)ee_ai_units_lua_attack}, {"attack_ground", (lua_CFunction)ee_ai_units_lua_attack_ground}, {"gather", (lua_CFunction)ee_ai_units_lua_gather},
+    {"build", (lua_CFunction)ee_ai_units_lua_build}, {"repair", (lua_CFunction)ee_ai_units_lua_repair}, {"garrison", (lua_CFunction)ee_ai_units_lua_garrison}, {"load", (lua_CFunction)ee_ai_units_lua_load}, {"unload", (lua_CFunction)ee_ai_units_lua_unload},
+    {"train", (lua_CFunction)ee_ai_units_lua_train}, {"research", (lua_CFunction)ee_ai_units_lua_research}, {"stance", (lua_CFunction)ee_ai_units_lua_stance}, {"stop", (lua_CFunction)ee_ai_units_lua_stop},
+    {"explore", (lua_CFunction)ee_ai_units_lua_explore}, {"delete", (lua_CFunction)ee_ai_units_lua_delete}, {"take", (lua_CFunction)ee_ai_units_lua_take}, {"release", (lua_CFunction)ee_ai_units_lua_release},
+    {"reflex", (lua_CFunction)ee_ai_units_lua_reflex}, {"test_spawn", LuaTestSpawn}, {"test_town", (lua_CFunction)ee_ai_units_lua_test_town},
+    {"danger", (lua_CFunction)ee_ai_units_lua_danger}, {"danger_box", (lua_CFunction)ee_ai_units_lua_danger_box}, {"mark", (lua_CFunction)ee_ai_units_lua_mark}, {"route", (lua_CFunction)ee_ai_units_lua_route},
+    {"find_site", (lua_CFunction)ee_ai_units_lua_find_site}, {"heal", (lua_CFunction)ee_ai_units_lua_heal}, {"rally", (lua_CFunction)ee_ai_units_lua_rally}, {"cancel", (lua_CFunction)ee_ai_units_lua_cancel},
+    {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", (lua_CFunction)ee_ai_units_lua_formation}, {"pack", (lua_CFunction)ee_ai_units_lua_pack}, {"dropoff", (lua_CFunction)ee_ai_units_lua_dropoff},
+    {"farm", (lua_CFunction)ee_ai_units_lua_farm}, {"cast", (lua_CFunction)ee_ai_units_lua_cast}, {"replant", (lua_CFunction)ee_ai_units_lua_replant},
+    {"path_len", (lua_CFunction)ee_ai_units_lua_path_len}, {"drop_site", (lua_CFunction)ee_ai_units_lua_drop_site}, {"shore", (lua_CFunction)ee_ai_units_lua_shore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", (lua_CFunction)ee_ai_units_lua_enemy_force}, {"player_file", (lua_CFunction)ee_ai_units_lua_player_file}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+    {"config", (lua_CFunction)ee_ai_units_lua_config}, {"used", LuaUsed},
+    {"wall", (lua_CFunction)ee_ai_units_lua_wall}, {"gate", LuaGate}, {"lock", (lua_CFunction)ee_ai_units_lua_lock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
+    {"diplomacy", LuaDiplomacy}, {"patrol", (lua_CFunction)ee_ai_units_lua_patrol},
+    {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", (lua_CFunction)ee_ai_units_lua_gatherers},
+    {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
+    {NULL, NULL}};
+static const size_t kUnitsFunctionCount = sizeof(kUnitsFunctions) / sizeof(kUnitsFunctions[0]) - 1;
+
+// TEST ONLY (EE_AI_BINDING_TRACE, ee_ai binding_trace.rs): each binding's arguments and results, the port's golden
+template <size_t K>
+static int LuaTraced(lua_State* L)
+{
+    ee_ai_binding_trace_enter(L, kUnitsFunctions[K].name);
+    int theResults = kUnitsFunctions[K].func(L);
+    ee_ai_binding_trace_leave(L, kUnitsFunctions[K].name, theResults);
+    return theResults;
+}
+
+template <size_t... K>
+static void EECPUnitsTracedTable(lua_CFunction* outTable, std::index_sequence<K...>)
+{
+    ((outTable[K] = LuaTraced<K>), ...);
+}
+
+static void EECPUnitsTraceOut(const char* inText)
+{
+    ESDebugOut("%s", inText);
+}
+
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
 {
     EEComputerPlayer* thePlayer = (EEComputerPlayer*)inPlayer;
     EECPUnitsGet(thePlayer);
-    static const luaL_Reg kFunctions[] = {
-        {"me", LuaMe}, {"time", LuaTime}, {"players", LuaPlayers}, {"map", LuaMap},
-        {"units", LuaUnits}, {"unit", LuaUnit}, {"get", LuaGet}, {"seen", LuaSeen}, {"memory", LuaMemory},
-        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", LuaEvents},
-        {"can_place", LuaCanPlace}, {"reach", LuaReach}, {"strength", LuaStrength},
-        {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
-        {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},
-        {"train", LuaTrain}, {"research", LuaResearch}, {"stance", LuaStance}, {"stop", LuaStop},
-        {"explore", LuaExplore}, {"delete", LuaDelete}, {"take", LuaTake}, {"release", LuaRelease},
-        {"reflex", LuaReflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
-        {"danger", LuaDanger}, {"danger_box", LuaDangerBox}, {"mark", LuaMark}, {"route", LuaRoute},
-        {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
-        {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
-        {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
-        {"config", LuaConfig}, {"used", LuaUsed},
-        {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
-        {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
-        {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
-        {NULL, NULL}};
-    for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
+    static lua_CFunction sTraced[kUnitsFunctionCount] = {};
+    bool theTrace = ee_ai_binding_trace_on();
+    if (theTrace && sTraced[0] == NULL) {
+        ee_ai_binding_trace_set_out(EECPUnitsTraceOut);
+        EECPUnitsTracedTable(sTraced, std::make_index_sequence<kUnitsFunctionCount>());
+    }
+    for (size_t k = 0; k < kUnitsFunctionCount; k++) {
         lua_pushlightuserdata(L, inPlayer);
-        lua_pushcclosure(L, f->func, 1);
-        lua_setfield(L, -2, f->name);
+        lua_pushcclosure(L, theTrace ? sTraced[k] : kUnitsFunctions[k].func, 1);
+        lua_setfield(L, -2, kUnitsFunctions[k].name);
     }
 }
 
@@ -4577,180 +2196,34 @@ void EECPUnitsMicroTick(unsigned long inTime)
         EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
         if (theCP == NULL || theCP->mUnitsState == NULL || theCP->mNextState == NULL || !theCP->mActive)
             continue;
-        EECPUnitsState* s = theCP->mUnitsState;
-        // the enemy memory, once a second
-        if ((long)inTime >= s->mMemoryNext) {
-            s->mMemoryNext = (long)inTime + 1000;
-            EECPUnitsRemember(theCP, s);
-            EECPUnitsDangerBuild(theCP, s);
-        }
+        void* s = theCP->mUnitsState->mRust;
+        ee_ai_units_second(s, theCP, (long)inTime);   // the enemy memory and the danger layers, once a second
         EECPNextState* theNext = theCP->mNextState;
-        if (theNext->mLua == NULL || !theNext->mStarted || theNext->mFailed || s->mMicroNext == 0x7fffffff)
+        long theMicro = ee_ai_units_micro_next(s);
+        if (theNext->mLua == NULL || !theNext->mStarted || theNext->mFailed || theMicro == 0x7fffffff)
             continue;
-        if (s->mMicroNext < 0)
-            s->mMicroNext = (long)inTime + kMicroMs;
-        if ((long)inTime < s->mMicroNext)
+        if (theMicro < 0)
+            theMicro = (long)inTime + kMicroMs;
+        if ((long)inTime < theMicro) {
+            ee_ai_units_set_micro_next(s, theMicro);
             continue;
-        while (s->mMicroNext <= (long)inTime)
-            s->mMicroNext += kMicroMs;
+        }
+        while (theMicro <= (long)inTime)
+            theMicro += kMicroMs;
+        ee_ai_units_set_micro_next(s, theMicro);
         EECPLuaValue theArg = EECPLuaValue::NewMap(), theResult;
         theArg.Set("time", EECPLuaValue::Int((int64_t)inTime));
         bool theFound = false;
         if (!theNext->mLua->CallOptional("micro", theArg, theResult, kMicroBudget, theFound))
             EECPUnitsMicroError(theCP, theNext->mLua);
         else if (!theFound)
-            s->mMicroNext = 0x7fffffff;   // the script has no micro
+            ee_ai_units_set_micro_next(s, 0x7fffffff);   // the script has no micro
     }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save: "EENU" (version 4: the militia and held reflexes; 3: the lost layer's trades; 2: the hurt spots and the
-// marks). The format is Rust's (ee_ai units_save.rs); the state's lists go over in its containers' order and come back
-// into them. Not saved, rebuilt: mAttackedAt from the pending events (the attacked event of each unit, as the damage
-// hook merges them), the layers at the next game second.
-
-static void EECPUnitsSaveState(const EECPUnitsState* s, std::string& outBytes)
-{
-    std::vector<int32_t> theHeld, theForward, theHurt, theTrades;
-    for (std::set<long>::const_iterator it = s->mHeld.begin(); it != s->mHeld.end(); ++it)
-        theHeld.push_back((int32_t)*it);
-    std::vector<EeAiUnitsEvent> theEvents;
-    for (unsigned long k = 0; k < s->mEvents.size(); k++) {
-        const UnitsEvent& e = s->mEvents[k];
-        EeAiUnitsEvent theEvent = {(int32_t)e.mKind, (int32_t)e.mUnit, (int32_t)e.mOther, (int32_t)e.mType,
-            (int32_t)e.mAmount, (int32_t)e.mTime};
-        theEvents.push_back(theEvent);
-    }
-    for (std::map<long, std::pair<long, long> >::const_iterator it = s->mForward.begin(); it != s->mForward.end(); ++it) {
-        theForward.push_back((int32_t)it->first);
-        theForward.push_back((int32_t)it->second.first);
-        theForward.push_back((int32_t)it->second.second);
-    }
-    std::vector<EeAiUnitsRemembered> theMemory;
-    for (std::map<long, Remembered>::const_iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
-        const Remembered& r = it->second;
-        EeAiUnitsRemembered theEntry = {(int32_t)it->first, (int32_t)r.mPlayer, (int32_t)r.mType, (int32_t)r.mX,
-            (int32_t)r.mY, (int32_t)r.mHP, (int32_t)r.mSeen, (int32_t)r.mBuilding};
-        theMemory.push_back(theEntry);
-    }
-    for (unsigned long k = 0; k < s->mHurt.size(); k++) {
-        theHurt.push_back((int32_t)s->mHurt[k].first);
-        theHurt.push_back((int32_t)s->mHurt[k].second);
-    }
-    std::vector<EeAiUnitsMark> theMarks;
-    for (unsigned long k = 0; k < s->mMarks.size(); k++) {
-        const DangerMark& m = s->mMarks[k];
-        EeAiUnitsMark theMark = {(int32_t)m.mX, (int32_t)m.mY, (int32_t)m.mR, (int32_t)m.mValue, (int32_t)m.mUntil};
-        theMarks.push_back(theMark);
-    }
-    for (std::map<std::pair<long, long>, std::pair<long, long> >::const_iterator it = s->mTrades.begin(); it != s->mTrades.end(); ++it) {
-        theTrades.push_back((int32_t)it->first.first);
-        theTrades.push_back((int32_t)it->first.second);
-        theTrades.push_back((int32_t)it->second.first);
-        theTrades.push_back((int32_t)it->second.second);
-    }
-    EeAiUnitsSave v = {};
-    v.held = theHeld.data();
-    v.held_count = theHeld.size();
-    v.events = theEvents.data();
-    v.event_count = theEvents.size();
-    v.forward = theForward.data();
-    v.forward_count = s->mForward.size();
-    v.memory = theMemory.data();
-    v.memory_count = theMemory.size();
-    v.memory_ms = (int32_t)s->mMemoryMs;
-    v.memory_next = (int32_t)s->mMemoryNext;
-    v.reflex_naval_flee = s->mReflexNavalFlee;
-    v.reflex_danger = s->mReflexDanger;
-    v.micro_next = (int32_t)s->mMicroNext;
-    v.hurt = theHurt.data();
-    v.hurt_count = s->mHurt.size();
-    v.marks = theMarks.data();
-    v.mark_count = theMarks.size();
-    v.trades = theTrades.data();
-    v.trade_count = s->mTrades.size();
-    v.reflex_militia = s->mReflexMilitia;
-    v.reflex_held = s->mReflexHeld;
-    size_t theAt = outBytes.size();
-    size_t theLength = ee_ai_units_save_encode(&v, NULL, 0);
-    outBytes.resize(theAt + theLength);
-    ee_ai_units_save_encode(&v, (uint8_t*)&outBytes[theAt], theLength);
-}
-
-// the state from a block (false: not one; the state is then as it was): the counts past kMaxEvents, kMaxRemembered
-// or kMaxTrades, or an event of no kind, refuse it. The layers rebuild at the next game second
-static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
-{
-    const EeAiUnitsLimits theLimits = {(int32_t)kMaxEvents, (int32_t)kMaxRemembered, (int32_t)kMaxTrades,
-        (int32_t)kEvAttacked, (int32_t)kEvConverted};
-    EeAiUnitsDecoded* theDecoded = ee_ai_units_save_decode((const uint8_t*)inBytes.data(), inBytes.size(), &theLimits);
-    if (theDecoded == NULL)
-        return false;
-    const EeAiUnitsSave& v = *ee_ai_units_decoded_view(theDecoded);
-    s->mHeld.clear();
-    for (size_t k = 0; k < v.held_count; k++)
-        s->mHeld.insert(v.held[k]);
-    s->mEvents.clear();
-    s->mAttackedAt.clear();
-    for (size_t k = 0; k < v.event_count; k++) {
-        UnitsEvent e;
-        e.mKind = v.events[k].kind;
-        e.mUnit = v.events[k].unit;
-        e.mOther = v.events[k].other;
-        e.mType = v.events[k].unit_type;
-        e.mAmount = v.events[k].amount;
-        e.mTime = v.events[k].time;
-        if (e.mKind == kEvAttacked)
-            s->mAttackedAt[e.mUnit] = (long)s->mEvents.size();   // a later hit adds to it, as in the running game
-        s->mEvents.push_back(e);
-    }
-    s->mForward.clear();
-    for (size_t k = 0; k < v.forward_count; k++)
-        s->mForward[v.forward[3 * k]] = std::make_pair((long)v.forward[3 * k + 1], (long)v.forward[3 * k + 2]);
-    s->mMemory.clear();
-    for (size_t k = 0; k < v.memory_count; k++) {
-        const EeAiUnitsRemembered& m = v.memory[k];
-        Remembered r;
-        r.mPlayer = m.player;
-        r.mType = m.unit_type;
-        r.mX = m.x;
-        r.mY = m.y;
-        r.mHP = m.hit_points;
-        r.mSeen = m.seen;
-        r.mBuilding = m.building;
-        s->mMemory[m.id] = r;
-    }
-    s->mMemoryMs = v.memory_ms;
-    s->mMemoryNext = v.memory_next;
-    s->mReflexNavalFlee = v.reflex_naval_flee;
-    s->mReflexDanger = v.reflex_danger;
-    s->mReflexMilitia = v.reflex_militia;   // (a version 1-3 block: the defaults, militia on and held off)
-    s->mReflexHeld = v.reflex_held;
-    s->mMicroNext = v.micro_next;
-    s->mHurt.clear();
-    for (size_t k = 0; k < v.hurt_count; k++)
-        s->mHurt.push_back(std::make_pair((long)v.hurt[2 * k], (long)v.hurt[2 * k + 1]));
-    s->mMarks.clear();
-    for (size_t k = 0; k < v.mark_count; k++) {
-        DangerMark m;
-        m.mX = v.marks[k].x;
-        m.mY = v.marks[k].y;
-        m.mR = v.marks[k].r;
-        m.mValue = v.marks[k].value;
-        m.mUntil = v.marks[k].until;
-        s->mMarks.push_back(m);
-    }
-    s->mTrades.clear();
-    for (size_t k = 0; k < v.trade_count; k++)
-        s->mTrades[std::make_pair((long)v.trades[4 * k], (long)v.trades[4 * k + 1])] =
-            std::make_pair((long)v.trades[4 * k + 2], (long)v.trades[4 * k + 3]);
-    ee_ai_units_decoded_free(theDecoded);
-    s->mLost.clear();
-    s->mInfluence.clear();
-    s->mThreat.clear();
-    s->mDangerW = s->mDangerH = 0;   // rebuilt at the next game second
-    return true;
-}
+// marks). The state and its format are Rust's (ee_ai units_state.rs, units_save.rs).
 
 // TEST ONLY (EE_AI_SAVE_CHECK=1, as EECPNextSaveCheck): the bytes decode into a fresh state that encodes to the same
 // bytes; `next.savecheck units=same|DIFFERENT` with the counts
@@ -4763,15 +2236,12 @@ static void EECPUnitsSaveCheck(const EEComputerPlayer* inPlayer, const EECPUnits
     }
     if (!sOn)
         return;
-    EECPUnitsState theCopy;
-    std::string theAgain;
-    bool theDecoded = EECPUnitsLoadState(&theCopy, inBytes);
-    if (theDecoded)
-        EECPUnitsSaveState(&theCopy, theAgain);
+    size_t theCounts[4];
+    bool theSame = ee_ai_units_state_save_check(s->mRust, (const uint8_t*)inBytes.data(), inBytes.size(), theCounts);
     EECPTraceScope theScope("next");
     EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "next.savecheck", "units=%s bytes=%lu held=%lu events=%lu memory=%lu trades=%lu",
-        theDecoded && theAgain == inBytes ? "same" : "DIFFERENT", (unsigned long)inBytes.size(), (unsigned long)s->mHeld.size(),
-        (unsigned long)s->mEvents.size(), (unsigned long)s->mMemory.size(), (unsigned long)s->mTrades.size());
+        theSame ? "same" : "DIFFERENT", (unsigned long)inBytes.size(), (unsigned long)theCounts[0],
+        (unsigned long)theCounts[1], (unsigned long)theCounts[2], (unsigned long)theCounts[3]);
 }
 
 void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
@@ -4780,7 +2250,8 @@ void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
     const EECPUnitsState* s = inPlayer->mUnitsState;
     if (s == NULL)
         return;
-    EECPUnitsSaveState(s, outBytes);
+    outBytes.resize(ee_ai_units_state_save(s->mRust, NULL, 0));
+    ee_ai_units_state_save(s->mRust, (uint8_t*)&outBytes[0], outBytes.size());
     EECPUnitsSaveCheck(inPlayer, s, outBytes);
 }
 
@@ -4788,5 +2259,246 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
 {
     if (inBytes.empty())
         return true;
-    return EECPUnitsLoadState(EECPUnitsGet(inPlayer), inBytes);
+    return ee_ai_units_state_load(EECPUnitsGet(inPlayer)->mRust, (const uint8_t*)inBytes.data(), inBytes.size());
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The host of the Rust bindings (ee_ai units_bind.rs EE_AI_UNITS_HOST_*): what the world views do not hold
+
+// a command's message (ee_ai units_bind.rs EE_AI_UNITS_MSG_*), as the human's: on the selection under the borrowed
+// slot (mode 0, EECPUnitsRun's), or run as it is (mode 1)
+static const unsigned char kUnitsMessages[] = {0, kMessagePathTo, kMessageAttackUnit, kMessageAttackGround,
+    kMessageGatherResource, kMessageBuildUnit, kMessageRepairUnit, kMessageLoadGarrison, kMessageLoadTransport,
+    kMessageUnloadTransport, kMessageResearchTechnology, kMessageSetUnitBehavior, kMessageStopActiveGroup, kMessageExplore,
+    kMessageKillUnit, kMessageHealUnit, kMessageSetRallyGoal, kMessageRemoveTechnology, kMessageChangeFormation,
+    kMessagePackUnpack, kMessageDropoffResource, kMessageReplantFarms, kMessageSmartFarmers, kMessageCastCalamity,
+    kMessageAddPatrolPoint, kMessageLockUnlock, kMessageBuildWall};
+
+static EEMRecordValue EECPUnitsValue(const EeAiUnitsMsgValue& inValue)
+{
+    if (inValue.kind == 2)
+        return EEMRecordValue(GE2DPoint(inValue.x, inValue.y));
+    if (inValue.kind == 1)
+        return EEMRecordValue((double)inValue.x);
+    return EEMRecordValue((long long)inValue.i);
+}
+
+static void EECPUnitsExecute(EEComputerPlayer* me, EEMessage& inMessage, long inMode)
+{
+    if (inMode == 1) {
+        inMessage.Execute();
+        return;
+    }
+    unsigned char theSlot = me->mSlot;
+    me->mSlot = kBorrowedSlot;
+    if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {
+        inMessage.SetOriginatingSlot(kBorrowedSlot);
+        inMessage.Execute();
+    }
+    me->mSlot = theSlot;
+    me->mActiveGroup->Clear();
+}
+
+static void EECPUnitsExec(EEComputerPlayer* me, const EeAiUnitsMessage& m)
+{
+    static_assert(sizeof(kUnitsMessages) == EE_AI_UNITS_MSG_BUILD_WALL + 1, "ee_ai units_bind.rs EE_AI_UNITS_MSG_*");
+    unsigned char theType = kUnitsMessages[m.message];
+    const EeAiUnitsMsgValue* v = m.values;
+    switch (m.count) {
+    case 0: { EEMRecord theMessage(theType); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 1: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 2: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
+    case 3: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 4: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 5: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
+            EECPUnitsValue(v[4])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    case 7: {
+        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
+            EECPUnitsValue(v[4]), EECPUnitsValue(v[5]), EECPUnitsValue(v[6])});
+        EECPUnitsExecute(me, theMessage, m.mode);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
+{
+    EEComputerPlayer* me = (EEComputerPlayer*)inPlayer;
+    switch (inOp) {
+    case EE_AI_UNITS_HOST_STATE:
+        return (int64_t)(uintptr_t)EECPUnitsGet(me)->mRust;
+    case EE_AI_UNITS_HOST_NOW:
+        return (int64_t)gPhysics->mGameTime;
+    case EE_AI_UNITS_HOST_UNIT:
+        return a > 0 ? (int64_t)EECPUnitsHandle(gWorld.GetUnit((unsigned long)a)) : 0;
+    case EE_AI_UNITS_HOST_MAP_SIZE: {
+        long w, h;
+        EECPUnitsMapSize(w, h);
+        return (int64_t)(((uint64_t)(uint32_t)h << 32) | (uint32_t)w);
+    }
+    case EE_AI_UNITS_HOST_CLASS_BY_NAME:
+        return EECPNextClassByName((const char*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_CLASS_NAME: {
+        std::string theName = EECPNextClassName((long)a);
+        size_t n = theName.size() < 1023 ? theName.size() : 1023;
+        memcpy(outRecord, theName.data(), n);
+        ((char*)outRecord)[n] = 0;
+        return (int64_t)n;
+    }
+    case EE_AI_UNITS_HOST_DETACH:
+        me->DetachUnitFromAI((EEComplexUnit*)(uintptr_t)a);
+        return 0;
+    case EE_AI_UNITS_HOST_ATTACH: {
+        EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)a;
+        if (theUnit->mIsDetachedFromAI)
+            theUnit->mIsDetachedFromAI = false;
+        return 0;
+    }
+    case EE_AI_UNITS_HOST_LAST_ATTACKER:
+        return (int64_t)EECPUnitsHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
+    case EE_AI_UNITS_HOST_UPGRADE: {
+        EEPlayer* theOwner = (EEPlayer*)(uintptr_t)a;
+        if (b < 0 || (unsigned long)b >= theOwner->mUnitClassUpgrades.size())
+            return 0;
+        return (int64_t)(uintptr_t)theOwner->mUnitClassUpgrades[(unsigned long)b];
+    }
+    case EE_AI_UNITS_HOST_CONTINENT:
+        return (int64_t)gContinentManager.GetContinent(U2DPoint<long>((long)a, (long)b), c != 0 ? kAIPathWaterBody : kAIPathLandMass);
+    case EE_AI_UNITS_HOST_TRACE:
+        if (gCPTraceOn) {
+            EECPTraceScope theScope("next");
+            EECPTraceOut(me, (const char*)(uintptr_t)a, "%s", (const char*)(uintptr_t)b);
+        }
+        return 0;
+    case EE_AI_UNITS_HOST_TRACE_ON:
+        return gCPTraceOn ? 1 : 0;
+    case EE_AI_UNITS_HOST_FACTS: {
+        EEComplexUnit* c = (EEComplexUnit*)(uintptr_t)a;
+        EeAiUnitsFacts& f = *(EeAiUnitsFacts*)outRecord;
+        ee_ai_units_facts_reset(&f);
+        EEUnitGoal* g = c->GetGoalState();
+        if (g != NULL) {
+            f.has_goal = true;
+            GE3DPoint thePlace;
+            g->GetGoalLocation(thePlace);
+            f.tx = UMFloor(thePlace.GetX());
+            f.ty = UMFloor(thePlace.GetY());
+            // the goal's target unit (AI_LUA_UNITS §2.3 `target`): the resource gathered, the building built or
+            // repaired, the unit attacked; and a gatherer's resource kind
+            EEUnit* theTarget = NULL;
+            if (EEUGRust* theGather = EEGatherGoalCast(g)) {
+                theTarget = theGather->GetGatherResource();
+                long r = (long)c->mResourceType - kResourceFood;
+                if (r >= 0 && r < 5)
+                    f.gathers = r;
+                // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
+                f.waiting = theGather->IsGatherWaiting() && c->mCurrentPhysicsAction != 0;
+            } else if (EEUGRust* theBuild = EEBuildRepairGoalCast(g)) {
+                theTarget = theBuild->GetBuildTarget();
+                // a builder waiting for its foundation's site to clear while another unit holds it (the classic's
+                // FindStalledBuilder: CancelStalledBuilds cancels these)
+                f.stalled = (c->mCommand ? c->mCommand->mType : 0) == kActionWaitForBuildSiteToClear && theTarget != NULL
+                    && theTarget->mComplexUnit != NULL && !theTarget->mComplexUnit->mIsBuilt && theBuild->IsBuildSiteTaken();
+            } else if (EEUGRust* theAttack = EEAttackUnitCast(g))
+                theTarget = theAttack->GetAttackTarget();
+            if (theTarget != NULL && theTarget->mIsValid)
+                f.target = (long)theTarget->mUnitID;
+        }
+        // an own aircraft's home base (the airport or carrier it returns to; the classic air sub-group's reach)
+        if (c->mHomeBase != NULL && c->mHomeBase->mIsValid)
+            f.home_base = (long)c->mHomeBase->mUnitID;
+        if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
+            // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
+            f.moves = true;
+            EECPASGFlags theFlags;
+            memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
+            theFlags.mPlayerID = 0;
+            c->mUnitClass->GetTerrainFlags(c, theFlags);
+            f.crosses_forest = theFlags.mFlags[kAITileForest] != 0;
+            f.crosses_cliff = theFlags.mFlags[kAITileCliff] != 0;
+        }
+        f.garrisoned = c->mGarrisonCount;   // citizens inside a town centre, capitol or settlement
+        for (unsigned long k = 0; k < EEUnitBehavior::sTable.size(); k++)
+            if (EEUnitBehavior::sTable[k] == c->mBehavior)
+                f.stance = (long)k;
+        return 0;
+    }
+    case EE_AI_UNITS_HOST_ASSIGNED:
+        return EECPNextAssigned(me, (EEUnit*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_HAS_ROOM:
+        return EECPNextHasRoom(me, (EEUnit*)(uintptr_t)a) ? 1 : 0;
+    case EE_AI_UNITS_HOST_IS_HUMAN:
+        return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
+    case EE_AI_UNITS_HOST_TEAMS:
+        return (int64_t)gWorld.mTeams.size();
+    case EE_AI_UNITS_HOST_TEAM_HAS:
+        return gWorld.mTeams[(size_t)a].ContainsPlayer((unsigned long)b) ? 1 : 0;
+    case EE_AI_UNITS_HOST_TEAM_SIZE:
+        return (int64_t)gWorld.mTeams[(size_t)a].GetNumPlayers();
+    case EE_AI_UNITS_HOST_TEAM_PLAYER:
+        return (int64_t)gWorld.mTeams[(size_t)a].GetPlayersAt((unsigned long)b);
+    case EE_AI_UNITS_HOST_GATHER_TARGET: {
+        EEUGRust* theGather = EEGatherGoalCast(((EEComplexUnit*)(uintptr_t)a)->GetGoalState());
+        if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mIsValid)
+            return (int64_t)theGather->GetGatherResource()->mUnitID;
+        return 0;
+    }
+    case EE_AI_UNITS_HOST_SELECT_BEGIN:
+        if (me->mActiveGroup == NULL)
+            return 0;
+        me->mActiveGroup->Clear();
+        return 1;
+    case EE_AI_UNITS_HOST_SELECT_ADD:
+        me->mActiveGroup->Add((EEComplexUnit*)(uintptr_t)a);
+        return 0;
+    case EE_AI_UNITS_HOST_EXEC:
+        EECPUnitsExec(me, *(const EeAiUnitsMessage*)outRecord);
+        return 0;
+    case EE_AI_UNITS_HOST_TECH_BY_NAME:
+        return EECPNextTechByName((const char*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_CAN_PRODUCE:
+        return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
+    case EE_AI_UNITS_HOST_CAN_PLACE:
+        return EECanPlaceOnTile(me, (long)a, (long)b, (long)c, false, 1) ? 1 : 0;
+    case EE_AI_UNITS_HOST_IS_TRANSPORT:
+        return ((EEUnitClass*)(uintptr_t)a)->IsTransport() ? 1 : 0;
+    case EE_AI_UNITS_HOST_LAND_BUILDING:
+        return ((EEUnitClass*)(uintptr_t)a)->IsLandBuilding() ? 1 : 0;
+    case EE_AI_UNITS_HOST_BEHAVIOR_OK:
+        return a >= 0 && (unsigned long)a < EEUnitBehavior::sTable.size() && EEUnitBehavior::sTable[(unsigned long)a] != NULL;
+    case EE_AI_UNITS_HOST_HAS_NODE:
+        return me->mTechnologies->Get((long)a) != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_SEES_ALL:
+        return EECPEngineSeesAll(me) ? 1 : 0;
+    case EE_AI_UNITS_HOST_BLOCK_TAKES: {
+        long theSize = *(const long*)outRecord;
+        return EEPlayerBlockTakes(me, (long)a, (long)b - 1, (long)c - 1, theSize + 2, theSize + 2, 0) ? 1 : 0;
+    }
+    case EE_AI_UNITS_HOST_HAS_TREE:
+        return me->mTechnologies != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_WALL_CLASS:
+        return EECPWallClass(me);
+    case EE_AI_UNITS_HOST_NODE_AFFORD: {
+        EETechTreeNode* theNode = me->mTechnologies->Get((long)a);
+        if (theNode == NULL)
+            return -1;
+        return me->CanAfford(theNode, 0x20, 1) ? 1 : 0;
+    }
+    default:
+        return 0;
+    }
 }

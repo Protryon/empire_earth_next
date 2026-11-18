@@ -184,7 +184,7 @@ bool WONLobbyPrv::Init(ResourceConfigTable* input,void (*initFunc)(ComponentConf
     this->mLobbyContainer=new LobbyContainer;
     ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory()+this->mConfig->mResourceDirectory);
     SmartPtr<ResourceConfigTable> resources=GetLobbyResourceConfigTable(input);
-    ServerListCtrl::InitColumnMap();
+    ee_won_lobbyctl_init_columns();
     std::map<std::string,std::string,StringLessNoCase>::iterator itr=this->mConfig->mDefines.begin();
     while(itr!=this->mConfig->mDefines.end()) {
         parser.AddDefine(itr->first,itr->second,false);

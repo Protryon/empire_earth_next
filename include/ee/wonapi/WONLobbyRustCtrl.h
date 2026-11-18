@@ -6,6 +6,8 @@
 #define EE_WONAPI_WONLOBBYRUSTCTRL_H
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/won_lobby/lobbyctl.h"
+#include "rust/won_lobby/srvlistctl.h"
+#include "rust/won_lobby/netctl.h"
 namespace WONAPI {
 class LobbyRustCtrl : public Container {
 public:
@@ -17,6 +19,15 @@ public:
 protected:
     intptr_t CCall(EeWonLobbyCtlCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0) {
         return ee_won_lobbyctl_call(this->mLobbyCtl, c, a, b, cc); }
+};
+// the same shell over a Dialog (R6 WONLobby round 13: QuickPlayCtrl, LoginCtrl); its base event is the Dialog's
+class LobbyRustDialogCtrl : public Dialog {
+public:
+    explicit LobbyRustDialogCtrl(EeWonLobbyCtlKind inKind);
+    virtual ~LobbyRustDialogCtrl();
+    virtual void InitComponent(ComponentInit& inInit);
+    virtual void HandleComponentEvent(ComponentEvent* inEvent);
+    EeWonLobbyCtl* mLobbyCtl;
 };
 }
 #endif

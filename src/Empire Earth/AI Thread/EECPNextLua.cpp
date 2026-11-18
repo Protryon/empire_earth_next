@@ -673,6 +673,17 @@ bool EECPNextPrepare(EEComputerPlayer* inPlayer)
     return true;
 }
 
+// TEST ONLY (EE_AI_BINDING_TRACE, ee_ai binding_trace.rs): the step's view and orders, the port's golden
+static void EECPNextTraceStep(EEComputerPlayer* inPlayer, const char* inWhat, const EECPLuaValue& inView,
+    const EECPLuaValue& inOrders)
+{
+    if (!ee_ai_binding_trace_on())
+        return;
+    std::string theView = inView.ToText(), theOrders = inOrders.ToText();
+    ee_ai_binding_trace_step((int64_t)inPlayer->mPlayerID, inWhat, (const uint8_t*)theView.data(), theView.size(),
+        (const uint8_t*)theOrders.data(), theOrders.size());
+}
+
 void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
@@ -697,13 +708,16 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
         theState->mStarted = true;
         if (!theState->mLua->Init(theView, theOrders))
             EECPNextError(inPlayer, "init", theState->mLua->LastStatus(), theState->mLua->LastError());
-        else
+        else {
+            EECPNextTraceStep(inPlayer, "init", theView, theOrders);
             EECPNextRunOrders(inPlayer, theState, theOrders, "init");
+        }
     }
     if (!theState->mLua->Step(theView, theOrders)) {
         EECPNextError(inPlayer, "step", theState->mLua->LastStatus(), theState->mLua->LastError());
         return;
     }
+    EECPNextTraceStep(inPlayer, "step", theView, theOrders);
     if (theState->mShadow != NULL)
         EECPNextShadowStep(inPlayer, theState, theView, theOrders);   // TEST ONLY (EE_AI_SAVE_CHECK)
     EECPNextRunOrders(inPlayer, theState, theOrders, "step");

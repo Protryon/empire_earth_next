@@ -18,45 +18,15 @@ public:
     bool mShowSeparator; // 0x2d; true from the constructor
 };
 // UserListCtrl (0xa0 bytes, constructor 0x7ca8f0): the room's user list with Whisper and Ignore buttons.
-class UserListCtrl : public Container {
+class UserListCtrl : public LobbyRustCtrl {
 public:
-    UserListCtrl();
-    virtual ~UserListCtrl(); // 0x7ca960; writes its own vtable pointer
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void UpdateItem(LobbyClient*,UserListItem*);
-    void RefreshSeparators();
-    UserListItem* FindItem(LobbyClient*);
-    UserListItem* GetSelectedItem();
-    LobbyClient* GetSelectedClient();
-    void UpdateButtons();
-    void JoinedRoom(JoinedRoomEvent*);
-    void LeftRoom(LeftRoomEvent*);
-    void ClientChanged(ClientChangedEvent*);
-    bool mUpdating; // 0x84
-    int GetRoomSpecFlags() const { return this->mModeFlags; }
-    int mModeFlags; // 0x88, room-spec flags; 5 from the constructor
-    SmartPtr<ListArea> mUserList; // 0x8c
-    SmartPtr<UserListItem> mFirstSeparator; // 0x90
-    SmartPtr<UserListItem> mSecondSeparator; // 0x94
-    SmartPtr<Button> mWhisperButton; // 0x98
-    SmartPtr<Button> mIgnoreButton; // 0x9c
+    UserListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Users) {}
 };
-Image* GetLobbyClientIcon(LobbyClient*,bool); // 0x7cac50; picks a client's icon
 // QuickPlayCtrl (0xb0 bytes, constructor 0x7c14e0, vtable 0x853bf0 with 51 slots): pick a skill level and
 // play; six owned widgets at 0x98..0xac, destructor 0x7c1540.
-class QuickPlayCtrl : public Dialog {
+class QuickPlayCtrl : public LobbyRustDialogCtrl {
 public:
-    QuickPlayCtrl();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void RefreshUserName();
-    SmartPtr<Label> mWelcomeLabel; // 0x98
-    SmartPtr<Button> mNoviceRadio; // 0x9c
-    SmartPtr<Button> mIntermediateRadio; // 0xa0
-    SmartPtr<Button> mAdvancedRadio; // 0xa4
-    SmartPtr<Button> mExpertRadio; // 0xa8
-    SmartPtr<Button> mPlayButton; // 0xac
+    QuickPlayCtrl() : LobbyRustDialogCtrl(EeWonLobbyCtlKind::QuickPlay) {}
 };
 // GameBrowserCtrl (R6 WONLobby round 4): the help and news browser tabs, a lobbyctl.rs object; the home location
 // (assigned by the constructor and the config's HOMELOCATION) and the Paint override stay here.
@@ -88,64 +58,33 @@ public:
 };
 
 // UpdateAccountCtrl (0xbc bytes): Container (0x84), 13 owned controls and the old password at 0xb8.
-class UpdateAccountCtrl : public Container {
+class UpdateAccountCtrl : public LobbyRustCtrl {
 public:
-    UpdateAccountCtrl();
-    virtual ~UpdateAccountCtrl();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    static bool SetDesc(bool,Label*);
-    void CheckInput();
-    void HandleEnteredScreen();
-    void HandleQueryAccountResult(QueryAccountResultEvent*);
-    SmartPtr<InputBox> mUserNameInput,mOldPasswordInput,mPasswordInput,mConfirmPasswordInput,mEmailInput;
-    SmartPtr<Button> mNewsletterCheck;
-    SmartPtr<Label> mUserNameDesc,mOldPasswordDesc,mPasswordDesc,mConfirmPasswordDesc,mEmailDesc;
-    SmartPtr<Button> mQueryButton,mUpdateButton;
-    GUIString mActualOldPassword;
+    UpdateAccountCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::UpdateAccount) {}
 };
 // Login screen and its panels.
 class RustServerOp;
-class LoginScreen : public Container {
+class LoginScreen : public LobbyRustCtrl {
 public:
-    LoginScreen();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void ShowMOTD();
-    void ShowCreateAccountCtrl();
-    void ShowLostPasswordCtrl();
-    void ShowLostUsernameCtrl();
-    SmartPtr<ScreenContainer> mRightPanel; // 0x84
-    SmartPtr<Component> mMOTDCtrl; // 0x88
-    SmartPtr<Component> mCreateAccountCtrl; // 0x8c
-    SmartPtr<Component> mLostUserNameCtrl; // 0x90
-    SmartPtr<Component> mLostPasswordCtrl; // 0x94
-    SmartPtr<Component> mLoginHelpCtrl; // 0x98
+    LoginScreen() : LobbyRustCtrl(EeWonLobbyCtlKind::LoginScreen) {}
+    void ShowMOTD() { this->CCall(EeWonLobbyCtlCall::Page, 0); }
+    void ShowCreateAccountCtrl() { this->CCall(EeWonLobbyCtlCall::Page, 1); }
+    void ShowLostPasswordCtrl() { this->CCall(EeWonLobbyCtlCall::Page, 2); }
+    void ShowLostUsernameCtrl() { this->CCall(EeWonLobbyCtlCall::Page, 3); }
 };
 
 class BrowserComponent;
-class LoginHelpCtrl : public Container {
+class LoginHelpCtrl : public LobbyRustCtrl {
 public:
-    LoginHelpCtrl();
-    virtual void InitComponent(ComponentInit&);
-    virtual void Paint(Graphics&);
-    SmartPtr<BrowserComponent> mBrowser; // 0x84
-    bool mHaveLoadedHelp; // 0x88; 0x8c bytes
+    LoginHelpCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::LoginHelp) {}
+    virtual void Paint(Graphics& inGraphics) { this->CCall(EeWonLobbyCtlCall::Paint, (intptr_t)&inGraphics); }
 };
 
 class BrowserComponent;
-class MOTDCtrl : public Container {
+class MOTDCtrl : public LobbyRustCtrl {
 public:
-    MOTDCtrl();
-    virtual ~MOTDCtrl();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    virtual void Paint(Graphics&);
-    void ShowMessage(RustServerOp*);
-    SmartPtr<BrowserComponent> mBrowser; // 0x84
-    std::string mGameMOTDPath; // 0x88
-    std::string mSysMOTDPath; // 0x98
-    bool mNeedGenHTML; // 0xa8; 0xac bytes
+    MOTDCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Motd) {}
+    virtual void Paint(Graphics& inGraphics) { this->CCall(EeWonLobbyCtlCall::Paint, (intptr_t)&inGraphics); }
 };
 
 // LobbyContainer (0x94 bytes): switches between the login, internet and LAN screens.

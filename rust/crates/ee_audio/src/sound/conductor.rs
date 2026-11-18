@@ -1,8 +1,8 @@
 //! `SEConductor`'s decisions: the score table (names, ids, load counts, the loaded scores), starting and stopping
 //! the conductor, which score plays, the transitions' patterns and the volume curve.
 //!
-//! The C++ keeps the objects and the music library: dmusic's loader and performance (a vendored DirectMusic
-//! reimplementation, `src/ThirdParty/dmusic`), the `SEScore` objects (a segment each), the mixer's music source and
+//! The objects (`conductorobj.rs`) keep the music engine's loader and performance (`crate::dmusic`, a DirectMusic
+//! performance on rustysynth, ported from dmusic), the `SEScore` objects (a segment each), the mixer's music source and
 //! the conductor's lock. They are reached through [`Host`]; a score is an opaque handle. The scalar members the
 //! game reads inline (`GetVolume`, `GetConductorState`, ...) stay C++ members, handed to every call as
 //! [`ConductorFields`] and written back after it, under the lock the C++ held (every write the C++ made was under it).

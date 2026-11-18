@@ -74,8 +74,9 @@ One statically linked x86_64 `EE-AOC.exe` with the static C runtime. The origina
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
 gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on the wgpu crate (in the
-Rust library, `ee_gx`; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through miniaudio,
-music through dmusic and movies through pl_mpeg (all vendored, statically linked). The exe imports Windows system
+Rust library, `ee_gx`; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through the Rust
+library (cpal for the device, symphonia for the decoders, rustysynth for the music) and movies through pl_mpeg (all
+statically linked). The exe imports Windows system
 DLLs only.
 
 | Module | Was | Source |
@@ -85,7 +86,7 @@ DLLs only.
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
 | `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer; now on wgpu) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
 | `tcp` | `TCP Protocol.dll` (network) | `src/Low-Level Engine/Network Engine/TCP Protocol/` |
-| `mixer` | `Miles Sound System Mixer.dll` (sound; now on miniaudio) | `src/Low-Level Engine/Sound Engine/Mixer/` |
+| `mixer` | `Miles Sound System Mixer.dll` (sound; now Rust on cpal and symphonia) | `src/Low-Level Engine/Sound Engine/Mixer/` |
 | (resources) | `Language.dll` | `src/Empire Earth/Language/Language.rc` |
 
 The WON online library (lobby, routing, the lobby's GUI toolkit; `src/Empire Earth/WONAPI`, module `won`) is built
@@ -181,7 +182,7 @@ platform layer's tests, the window/text test programs and the compile census for
 
 The game builds for Linux (x86_64; natively, or cross-compiled from Windows against the pinned Debian sysroot) and
 macOS (arm64; on a Mac only: the Xcode SDK may not leave Apple hardware). Requirements: clang and lld (Linux: e.g.
-`apt install clang lld cmake ninja-build` plus SDL3's X11/Wayland development packages, see
+`apt install clang lld cmake ninja-build libasound2-dev` (ALSA, the sound device) plus SDL3's X11/Wayland development packages, see
 `.github/workflows/posix.yml`), Python 3.12, CMake.
 
 ```
