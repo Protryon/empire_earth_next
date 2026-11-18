@@ -120,7 +120,6 @@
 3628c0 366167 WONLobby/WONLobbyPrv.cpp
 3630a0 3632fc WONLobby/WONLobbyPrvLifetime.cpp
 365120 39b5e3 WONGUI/WONGUIConfig.cpp
-3651e0 3ba288 WONLobby/ChatCtrl.cpp
 3655e0 3c3bfe WONLobby/RoomLabelCtrl.cpp
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
 365a60 3cb7b3 WONLobby/UserListCtrl.cpp

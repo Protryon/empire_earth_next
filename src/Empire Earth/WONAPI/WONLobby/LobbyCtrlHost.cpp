@@ -132,6 +132,19 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case 100034: aType = E::FiltersChanged; break;
     case 100059: aType = E::RefilterAll; break;
     case 100058: aType = E::RefilterShown; break;
+    case ComponentEvent_TextLinkActivated: aType = E::TextLinkActivated; break;
+    case LobbyEvent_Alert: aType = E::Alert; break;
+    case LobbyEvent_AnnounceFriend: aType = E::AnnounceFriend; break;
+    case LobbyEvent_AnnounceClientLocation: aType = E::AnnounceClientLocation; break;
+    case LobbyEvent_ClientModerated: aType = E::ClientModerated; break;
+    case LobbyEvent_ChatCommandError: aType = E::ChatCommandError; break;
+    case LobbyEvent_GroupInvitation: aType = E::GroupInvitation; break;
+    case LobbyEvent_GroupJoinAttempt: aType = E::GroupJoinAttempt; break;
+    case LobbyEvent_JoinedRoom: aType = E::JoinedRoom; break;
+    case LobbyEvent_LeftRoom: aType = E::LeftRoom; break;
+    case LobbyEvent_PlayerTeamChanged: aType = E::PlayerTeamChanged; break;
+    case LobbyEvent_RecvChat: aType = E::RecvChat; break;
+    case LobbyEvent_SetChatInput: aType = E::SetChatInput; break;
     default: break;
     }
     this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
@@ -161,6 +174,7 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     case T::Container: return FindAs<Container>(inConfig, inSlot);
     case T::Component: return FindAs<Component>(inConfig, inSlot);
     case T::ColorButton: return FindAs<EELobbyColorButton>(inConfig, inSlot);
+    case T::TextArea: return FindAs<TextArea>(inConfig, inSlot);
     }
     return NULL;
 }

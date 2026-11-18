@@ -2794,6 +2794,8 @@ pub(crate) fn ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, bb: isize, 
             unsafe { m().set(std::mem::transmute::<u32, EeWonModelField>(bb as u32), c) };
             0
         }
+        // SAFETY: the controls pass a live address
+        O::AddrValid => b(unsafe { ee_won_net::ipobj::ee_won_ipaddr_valid(a as *const EeWonIpAddr) }),
         O::MCall => {
             let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
             // SAFETY: the controls pass a call of this enum and its argument

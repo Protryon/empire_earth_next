@@ -175,47 +175,14 @@ public:
 }
 
 
-// ChatCtrl fields; the global ChatLink is private to its .cpp.
-class ChatLink;
+// ChatCtrl (R6 WONLobby round 13): a chat panel, a lobbyctl.rs object (chatctl.rs: the controls, fonts, colours,
+// room kind, client id and room name, every handler); its config reader stores the room kind and colours through
+// SetField. The links it prints are LobbyNetCtrlHost.cpp's.
 namespace WONAPI {
-class ChatCtrl : public Container {
+class ChatCtrl : public LobbyRustCtrl {
 public:
-    ChatCtrl(); //3b6b80
-    virtual ~ChatCtrl(); // empty; stores its own vptr (0x007b6cbf)
-    virtual void InitComponent(ComponentInit& inInit); //3b6dd0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); //3b9c80
-    void HandleAnnounceClientLocation(AnnounceClientLocationEvent* inEvent);
-    void HandleAnnounceFriend(AnnounceFriendEvent* inEvent);
-    void HandleGroupInvitation(GroupInvitationEvent* inEvent);
-    void HandleGroupJoinAttempt(GroupJoinAttemptEvent* inEvent);
-    void HandlePlayerTeamChanged(PlayerTeamChangedEvent* inEvent);
-    void HandleSetChatInput(SetChatInputEvent* inEvent);
-    void HandleRecvChat(RecvChatEvent* inEvent);
-    void HandleAlert(AlertEvent* inEvent);
-    void HandleJoinedRoom(JoinedRoomEvent* inEvent);
-    void HandleLeftRoom(LeftRoomEvent* inEvent);
-    void ShowParserError(ChatCommandParser* inParser);
-    void SendInput();
-    void HandleChatCommandError(ChatCommandErrorEvent* inEvent);
-    void HandleClientModerated(ClientModeratedEvent* inEvent);
-    bool IsTeamRoom();
-    void AddFormattedText(const GUIString& inFormat,const GUIString*const* inStrings,int inNumStrings,
-        TextSegmentBase*const* inSegments,int inNumSegments,bool inLineBreak);
-    void AddTextLine(const GUIString& inFormat,const GUIString& inText,bool inLineBreak);
-    void AddLinkLine(const GUIString& inFormat,TextSegmentBase* inSegment,bool inLineBreak);
-    SmartPtr<ChatLink> MakeClientLink(LobbyClient* inClient);
-    void HandleTextLinkActivated(TextLinkActivatedEvent* inEvent);
-    void DisableLinkChain(ChatLink* inLink,int inColor,int inLinkedColor);
-    SmartPtr<Font> mBoldFont;
-    SmartPtr<Font> mItalicFont;
-    int mDefaultColor; int mUserColor; int mWhisperColor; int mEmoteColor; int mWarningColor;
-    int mErrorColor; int mHelpColor; int mGroupColor; int mMessageColor; int mAcceptColor; int mRejectColor;
-    SmartPtr<InputBox> mChatInput; //b8
-    SmartPtr<Button> mSendButton; //bc
-    SmartPtr<TextArea> mChatOutput; //c0, pointer only
-    long mRoomSpecFlags; //c4
-    unsigned short mClientId; //c8
-    GUIString mRoomName; //cc
+    ChatCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Chat) {}
+    void SetField(int inField, intptr_t inValue) { this->CCall(EeWonLobbyCtlCall::SetField, inField, inValue); }
 };
 }
 

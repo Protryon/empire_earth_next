@@ -23,6 +23,8 @@ enum class EeWonLobbyCtlType : uint32_t {
   Component = 8,
   /// `EELobbyColorButton` (round 5)
   ColorButton = 9,
+  /// `TextArea` (round 13)
+  TextArea = 10,
 };
 
 /// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
@@ -40,6 +42,8 @@ enum class EeWonLobbyCtlKind : uint32_t {
   PlayerOptions = 6,
   /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
   ServerList = 7,
+  /// ChatCtrl (a chat panel; round 13, chatctl.rs)
+  Chat = 8,
 };
 
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
@@ -481,6 +485,90 @@ enum class EeWonLobbyCtlOp : uint32_t {
   RemoveFilterValue,
   /// An EE game column's handler (`EeWonEeGlueCall` `a`; `b`, `c` its arguments; a filter's text a text).
   EeColumn,
+  /// The event `a`'s member `b` (`EeWonLobbyCtlEvField`).
+  EvGet = 1200,
+  /// The event `a`'s `mHandled` (the member `b`) set.
+  EvSetHandled,
+  /// `new ChatLink(*(const EeWonLobbyCtlLink*)a)` (the constructor of its kind) with a reference added.
+  ChatLinkNew,
+  /// The link `a`'s member `b` (`EeWonLobbyCtlLinkField`).
+  LinkGet,
+  /// The link `a`'s member `b` set to `c`.
+  LinkSet,
+  /// `LobbyAppendFormattedText` over `*(const EeWonLobbyCtlFormat*)a`.
+  ChatAddFormatted,
+  /// `gLobbyResources[a].mString` (a text, the resource's own).
+  ResText,
+  /// `((TextArea*)a)->mFont.get()`.
+  TextAreaFont,
+  /// `((TextArea*)a)->mLinkFont.get()`.
+  TextAreaLinkFont,
+  /// `((TextArea*)a)->AddSegment(GUIString(b), c, true)`.
+  TextAreaAddSegment,
+  /// `((TextArea*)a)->LineBreak(b)`.
+  TextAreaLineBreak,
+  /// `((TextArea*)a)->Reset(b != 0)`.
+  TextAreaReset,
+  /// `((InputBox*)a)->GetText()` (a text).
+  InputText,
+  /// `((InputBox*)a)->AddInputHistory(GUIString(b), true)`.
+  InputAddHistory,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->SetText(GUIString(b), c != 0)`.
+  InputSetText,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `((Component*)a)->RequestFocus()`.
+  RequestFocus,
+  /// `((Component*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `this->IsRootVisible()` (0 or 1).
+  IsRootVisible,
+  /// `LobbyGetCurrentServer()`.
+  CurrentServer,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  /// `LobbyGetRoomChatParser(a)`.
+  RoomChatParser,
+  /// `((ChatCommandParser*)a)->` GetPrefix (`b` 0), GetError (1), GetCommand (2).
+  ParserNumber,
+  /// `((ChatCommandParser*)a)->` GetTargetName (`b` 0), GetText (1): held.
+  ParserText,
+  /// `((ChatCommandParser*)a)->HandleInput(GUIString(b))` (0 or 1).
+  ParserHandleInput,
+  /// `((ChatCommandParser*)a)->GetHelp(b)`: held.
+  ParserHelp,
+  /// `((ChatCommandParser*)a)->GetClients()`.
+  ParserClients,
+  /// The prefix, `GetCommandString(b)`, ` "`, the name `c` (0: `GetTargetName()`), `" `: held.
+  ParserCommandText,
+  /// `LobbyFormatString(gLobbyResources[a].mString, ((ChatCommandParser*)b)->GetTargetName())`: held.
+  FormatTarget,
+  /// The held text `a` with `GUIString(b)` appended: held (`a`'s reference given back).
+  TextAppend,
+  /// The held text `a` with `c` bytes at `b` appended: held.
+  TextAppendBytes,
+  /// `GUIString(a).find(GUIString(b), 0)`.
+  TextFind,
+  /// `LobbyGetIgnoredNameCount()`.
+  IgnoredCount,
+  /// `LobbyGetIgnoredNameAt(a)`: held.
+  IgnoredAt,
+  /// `this->Fn2F5380(a, b)` (FireEvent).
+  FireEvent,
+  /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+  DeliverFriendAction,
+  /// `this->DeliverEvent(new JoinFriendsRoomEvent((LobbyFriend*)a), false)`.
+  DeliverJoinFriendsRoom,
+  /// `this->DeliverEvent(new JumpToRoomEvent(link->mText, link->mGroupId, link->mAddress), false)` of the link `a`.
+  DeliverJumpToRoom,
+  /// `this->DeliverEvent(new AcceptClientEvent((LobbyClient*)a, b != 0), false)`.
+  DeliverAcceptClient,
+  /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
+  AddrValid,
 };
 
 /// The inward calls.
@@ -504,6 +592,8 @@ enum class EeWonLobbyCtlCall : uint32_t {
   Row,
   /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
   Cfg,
+  /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind).
+  SetField,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -556,6 +646,32 @@ enum class EeWonLobbyCtlEvent : uint32_t {
   RefilterAll,
   /// 100058: the shown games to filter again
   RefilterShown,
+  /// `ComponentEvent_TextLinkActivated` (a `TextLinkActivatedEvent`)
+  TextLinkActivated,
+  /// `LobbyEvent_Alert`
+  Alert,
+  /// `LobbyEvent_AnnounceFriend`
+  AnnounceFriend,
+  /// `LobbyEvent_AnnounceClientLocation`
+  AnnounceClientLocation,
+  /// `LobbyEvent_ClientModerated`
+  ClientModerated,
+  /// `LobbyEvent_ChatCommandError`
+  ChatCommandError,
+  /// `LobbyEvent_GroupInvitation`
+  GroupInvitation,
+  /// `LobbyEvent_GroupJoinAttempt`
+  GroupJoinAttempt,
+  /// `LobbyEvent_JoinedRoom`
+  JoinedRoom,
+  /// `LobbyEvent_LeftRoom`
+  LeftRoom,
+  /// `LobbyEvent_PlayerTeamChanged`
+  PlayerTeamChanged,
+  /// `LobbyEvent_RecvChat`
+  RecvChat,
+  /// `LobbyEvent_SetChatInput`
+  SetChatInput,
 };
 
 /// The texts the controls set (the lobby's resource strings).
@@ -633,6 +749,65 @@ enum class EeWonLobbyCtlItemField : uint32_t {
   IconId,
   /// `ServerDetailsItem::mSummaryHeight` (a byte)
   SummaryHeight,
+};
+
+/// An event's member (`EvGet`; round 13), by its class: AnnounceClientLocation, AnnounceFriend,
+/// TextLinkActivated (the link as a `ChatLink`, NULL another), PlayerTeamChanged, RecvChat, JoinedRoom, LeftRoom,
+/// ChatCommandError, Alert, SetChatInput, GroupInvitation, GroupJoinAttempt, ClientModerated. A text is its
+/// `GUIStringData*`, a flag 0 or 1.
+enum class EeWonLobbyCtlEvField : uint32_t {
+  AclHandled = 0,
+  AclRoomId,
+  AclClient,
+  AclRoom,
+  AclServer,
+  AfLocation,
+  AfFriend,
+  AfHandled,
+  TlaLink,
+  PtcClient,
+  RcSender,
+  RcTarget,
+  RcRoomSpec,
+  RcText,
+  RcIsTeam,
+  RcIsWhisper,
+  RcIsWarning,
+  RcIsEmote,
+  JrRoomSpec,
+  JrClientId,
+  JrGroupName,
+  JrServerName,
+  JrClients,
+  LrRoomSpec,
+  LrFlag,
+  LrForced,
+  CceText,
+  AlKind,
+  AlValue,
+  AlSeverity,
+  AlText,
+  SciHandled,
+  SciRoomSpec,
+  SciCommand,
+  SciText,
+  GiKind,
+  GiClient,
+  GiGameName,
+  GiGameId,
+  GiComment,
+  GiFlag,
+  GiInvite,
+  GjaKind,
+  GjaClient,
+  GjaComment,
+  CmRoomSpec,
+  CmClient,
+  CmFlag,
+  CmKind,
+  CmDuration,
+  CmRoomName,
+  CmComment,
 };
 
 /// One control's Rust half.

@@ -36,6 +36,8 @@ pub enum EeWonLobbyCtlKind {
     PlayerOptions = 6,
     /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
     ServerList = 7,
+    /// ChatCtrl (a chat panel; round 13, chatctl.rs)
+    Chat = 8,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -56,6 +58,8 @@ pub enum EeWonLobbyCtlType {
     Component = 8,
     /// `EELobbyColorButton` (round 5)
     ColorButton = 9,
+    /// `TextArea` (round 13)
+    TextArea = 10,
 }
 
 /// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
@@ -125,6 +129,93 @@ pub enum EeWonLobbyCtlEvent {
     RefilterAll,
     /// 100058: the shown games to filter again
     RefilterShown,
+    /// `ComponentEvent_TextLinkActivated` (a `TextLinkActivatedEvent`)
+    TextLinkActivated,
+    /// `LobbyEvent_Alert`
+    Alert,
+    /// `LobbyEvent_AnnounceFriend`
+    AnnounceFriend,
+    /// `LobbyEvent_AnnounceClientLocation`
+    AnnounceClientLocation,
+    /// `LobbyEvent_ClientModerated`
+    ClientModerated,
+    /// `LobbyEvent_ChatCommandError`
+    ChatCommandError,
+    /// `LobbyEvent_GroupInvitation`
+    GroupInvitation,
+    /// `LobbyEvent_GroupJoinAttempt`
+    GroupJoinAttempt,
+    /// `LobbyEvent_JoinedRoom`
+    JoinedRoom,
+    /// `LobbyEvent_LeftRoom`
+    LeftRoom,
+    /// `LobbyEvent_PlayerTeamChanged`
+    PlayerTeamChanged,
+    /// `LobbyEvent_RecvChat`
+    RecvChat,
+    /// `LobbyEvent_SetChatInput`
+    SetChatInput,
+}
+
+/// An event's member (`EvGet`; round 13), by its class: AnnounceClientLocation, AnnounceFriend,
+/// TextLinkActivated (the link as a `ChatLink`, NULL another), PlayerTeamChanged, RecvChat, JoinedRoom, LeftRoom,
+/// ChatCommandError, Alert, SetChatInput, GroupInvitation, GroupJoinAttempt, ClientModerated. A text is its
+/// `GUIStringData*`, a flag 0 or 1.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonLobbyCtlEvField {
+    AclHandled = 0,
+    AclRoomId,
+    AclClient,
+    AclRoom,
+    AclServer,
+    AfLocation,
+    AfFriend,
+    AfHandled,
+    TlaLink,
+    PtcClient,
+    RcSender,
+    RcTarget,
+    RcRoomSpec,
+    RcText,
+    RcIsTeam,
+    RcIsWhisper,
+    RcIsWarning,
+    RcIsEmote,
+    JrRoomSpec,
+    JrClientId,
+    JrGroupName,
+    JrServerName,
+    JrClients,
+    LrRoomSpec,
+    LrFlag,
+    LrForced,
+    CceText,
+    AlKind,
+    AlValue,
+    AlSeverity,
+    AlText,
+    SciHandled,
+    SciRoomSpec,
+    SciCommand,
+    SciText,
+    GiKind,
+    GiClient,
+    GiGameName,
+    GiGameId,
+    GiComment,
+    GiFlag,
+    GiInvite,
+    GjaKind,
+    GjaClient,
+    GjaComment,
+    CmRoomSpec,
+    CmClient,
+    CmFlag,
+    CmKind,
+    CmDuration,
+    CmRoomName,
+    CmComment,
 }
 
 /// A list row's field (`ItemGet` / `ItemSet`; round 13).
@@ -662,6 +753,90 @@ pub enum EeWonLobbyCtlOp {
     RemoveFilterValue,
     /// An EE game column's handler (`EeWonEeGlueCall` `a`; `b`, `c` its arguments; a filter's text a text).
     EeColumn,
+    /// The event `a`'s member `b` (`EeWonLobbyCtlEvField`).
+    EvGet = 1200,
+    /// The event `a`'s `mHandled` (the member `b`) set.
+    EvSetHandled,
+    /// `new ChatLink(*(const EeWonLobbyCtlLink*)a)` (the constructor of its kind) with a reference added.
+    ChatLinkNew,
+    /// The link `a`'s member `b` (`EeWonLobbyCtlLinkField`).
+    LinkGet,
+    /// The link `a`'s member `b` set to `c`.
+    LinkSet,
+    /// `LobbyAppendFormattedText` over `*(const EeWonLobbyCtlFormat*)a`.
+    ChatAddFormatted,
+    /// `gLobbyResources[a].mString` (a text, the resource's own).
+    ResText,
+    /// `((TextArea*)a)->mFont.get()`.
+    TextAreaFont,
+    /// `((TextArea*)a)->mLinkFont.get()`.
+    TextAreaLinkFont,
+    /// `((TextArea*)a)->AddSegment(GUIString(b), c, true)`.
+    TextAreaAddSegment,
+    /// `((TextArea*)a)->LineBreak(b)`.
+    TextAreaLineBreak,
+    /// `((TextArea*)a)->Reset(b != 0)`.
+    TextAreaReset,
+    /// `((InputBox*)a)->GetText()` (a text).
+    InputText,
+    /// `((InputBox*)a)->AddInputHistory(GUIString(b), true)`.
+    InputAddHistory,
+    /// `((InputBox*)a)->Clear(b != 0)`.
+    InputClear,
+    /// `((InputBox*)a)->SetText(GUIString(b), c != 0)`.
+    InputSetText,
+    /// `((InputBox*)a)->SelectRange(b, c)`.
+    InputSelectRange,
+    /// `((Component*)a)->RequestFocus()`.
+    RequestFocus,
+    /// `((Component*)a)->IsDisabled()` (0 or 1).
+    IsDisabled,
+    /// `this->IsRootVisible()` (0 or 1).
+    IsRootVisible,
+    /// `LobbyGetCurrentServer()`.
+    CurrentServer,
+    /// `GetMyLobbyClient()`.
+    MyClient,
+    /// `LobbyGetChatCommandParser()`.
+    ChatParser,
+    /// `LobbyGetRoomChatParser(a)`.
+    RoomChatParser,
+    /// `((ChatCommandParser*)a)->` GetPrefix (`b` 0), GetError (1), GetCommand (2).
+    ParserNumber,
+    /// `((ChatCommandParser*)a)->` GetTargetName (`b` 0), GetText (1): held.
+    ParserText,
+    /// `((ChatCommandParser*)a)->HandleInput(GUIString(b))` (0 or 1).
+    ParserHandleInput,
+    /// `((ChatCommandParser*)a)->GetHelp(b)`: held.
+    ParserHelp,
+    /// `((ChatCommandParser*)a)->GetClients()`.
+    ParserClients,
+    /// The prefix, `GetCommandString(b)`, ` "`, the name `c` (0: `GetTargetName()`), `" `: held.
+    ParserCommandText,
+    /// `LobbyFormatString(gLobbyResources[a].mString, ((ChatCommandParser*)b)->GetTargetName())`: held.
+    FormatTarget,
+    /// The held text `a` with `GUIString(b)` appended: held (`a`'s reference given back).
+    TextAppend,
+    /// The held text `a` with `c` bytes at `b` appended: held.
+    TextAppendBytes,
+    /// `GUIString(a).find(GUIString(b), 0)`.
+    TextFind,
+    /// `LobbyGetIgnoredNameCount()`.
+    IgnoredCount,
+    /// `LobbyGetIgnoredNameAt(a)`: held.
+    IgnoredAt,
+    /// `this->Fn2F5380(a, b)` (FireEvent).
+    FireEvent,
+    /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+    DeliverFriendAction,
+    /// `this->DeliverEvent(new JoinFriendsRoomEvent((LobbyFriend*)a), false)`.
+    DeliverJoinFriendsRoom,
+    /// `this->DeliverEvent(new JumpToRoomEvent(link->mText, link->mGroupId, link->mAddress), false)` of the link `a`.
+    DeliverJumpToRoom,
+    /// `this->DeliverEvent(new AcceptClientEvent((LobbyClient*)a, b != 0), false)`.
+    DeliverAcceptClient,
+    /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
+    AddrValid,
 }
 
 /// The inward calls.
@@ -687,6 +862,8 @@ pub enum EeWonLobbyCtlCall {
     Row,
     /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
     Cfg,
+    /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind).
+    SetField,
 }
 
 /// The host: `(control, op, a, b, c) -> result`.
@@ -773,7 +950,10 @@ const OPTION_IS_CHECK: [bool; 16] =
 /// ServerListCtrl's first look-up in `SLOTS` (round 13).
 pub(crate) const SLOT_SERVER_LIST: usize = 103;
 
-pub static SLOTS: [EeWonLobbyCtlSlot; 108] = [
+/// ChatCtrl's first look-up in `SLOTS` (round 13).
+pub(crate) const SLOT_CHAT: usize = 108;
+
+pub static SLOTS: [EeWonLobbyCtlSlot; 111] = [
     // GameBrowserCtrl::InitComponent (0..=10)
     slot!(c"Browser", c"GameBrowserCtrl.cpp", 27, Browser, -1, B_BROWSER as i32),
     slot!(c"BackButton", c"GameBrowserCtrl.cpp", 28, Button, -1, B_BACK as i32),
@@ -892,6 +1072,10 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 108] = [
     slot!(c"RefreshListButton", c"ServerListCtrl.cpp", 651, Button, -1, crate::srvlistctl::L_REFRESH as i32),
     slot!(c"ServerListSummary", c"ServerListCtrl.cpp", 652, Label, -1, crate::srvlistctl::L_SUMMARY as i32),
     slot!(c"RemoveButton", c"ServerListCtrl.cpp", 653, Component, -1, crate::srvlistctl::L_REMOVE as i32),
+    // ChatCtrl::InitComponent (108..=110)
+    slot!(c"ChatInput", c"ChatCtrl.cpp", 160, Input, -1, crate::chatctl::C_INPUT as i32),
+    slot!(c"SendButton", c"ChatCtrl.cpp", 161, Button, -1, crate::chatctl::C_SEND as i32),
+    slot!(c"ChatOutput", c"ChatCtrl.cpp", 162, TextArea, -1, crate::chatctl::C_OUTPUT as i32),
 ];
 
 /// The number of members each kind holds (released in reverse by the destructor).
@@ -903,6 +1087,7 @@ fn member_count(kind: Kind) -> usize {
         Kind::GameOptions => 19,
         Kind::PlayerOptions => MEMBERS,
         Kind::ServerList => 6,
+        Kind::Chat => 5,
     }
 }
 
@@ -932,7 +1117,7 @@ pub fn connection_speed_index(speed: i32) -> i32 {
 
 /// One control's Rust half.
 pub struct EeWonLobbyCtl {
-    ctl: *mut c_void,
+    pub(crate) ctl: *mut c_void,
     host: EeWonLobbyCtlHostFn,
     /// the model's ops answered by its Rust objects (modelobj.rs; the game's), not the host
     pub(crate) model: Cell<bool>,
@@ -942,7 +1127,7 @@ pub struct EeWonLobbyCtl {
     /// the round 13 kinds' members beyond their controls
     pub(crate) ext: Ext,
     /// `mRoomSpecFlags` (GameStagingCtrl, GameUserListCtrl: 2 from the constructor)
-    room_flags: Cell<i32>,
+    pub(crate) room_flags: Cell<i32>,
     /// `mInGame`
     in_game: Cell<bool>,
     /// GameStagingCtrl's `mLastReady`
@@ -1098,6 +1283,7 @@ impl EeWonLobbyCtl {
             Kind::GameOptions => self.game_options_init(config, &local),
             Kind::PlayerOptions => self.player_options_init(config, &local),
             Kind::ServerList => self.srv_init(config, &local),
+            Kind::Chat => self.chat_init(config, &local),
         }
         // the local SmartPtr<Button> (LobbyOptionsCtrl's reset, restore and remove buttons in turn)
         let l = local.replace(0);
@@ -2027,6 +2213,7 @@ impl EeWonLobbyCtl {
             Kind::GameOptions => self.game_options_event(event, kind),
             Kind::PlayerOptions => self.players_event(event, kind),
             Kind::ServerList => self.srv_event(event, kind, component),
+            Kind::Chat => self.chat_event(event, kind, component),
         }
     }
 
@@ -2053,10 +2240,14 @@ impl EeWonLobbyCtl {
                     113 => self.ext.srv.num_columns.get() as isize,
                     114 => self.ext.srv.map.borrow().len() as isize,
                     115 => self.ext.srv.columns.borrow().len() as isize,
+                    120 => self.ext.chat.client_id.get() as isize,
+                    121 => self.ext.chat.room_name.get(),
+                    130..=140 => self.ext.chat.colors[a as usize - 130].get() as isize,
                     _ => 0,
                 }
             }
             C::Timer => return self.srv_timer_call(a),
+            C::SetField => self.set_field(a, b),
             C::Row => {
                 let Some(call) = crate::srvlistctl::row_call_of(a) else {
                     return 0;
@@ -2080,6 +2271,9 @@ impl EeWonLobbyCtl {
         if self.kind == Kind::ServerList {
             self.srv_release_rows();
         }
+        if self.kind == Kind::Chat {
+            self.chat_release();
+        }
         for i in (0..member_count(self.kind)).rev() {
             let p = self.members[i].replace(0);
             if p != 0 {
@@ -2092,7 +2286,7 @@ impl EeWonLobbyCtl {
     }
 }
 
-const EVENTS: [Ev; 27] = [
+const EVENTS: [Ev; 40] = [
     Ev::Other,
     Ev::ButtonPressed,
     Ev::ComboSelChanged,
@@ -2120,12 +2314,26 @@ const EVENTS: [Ev; 27] = [
     Ev::FiltersChanged,
     Ev::RefilterAll,
     Ev::RefilterShown,
+    Ev::TextLinkActivated,
+    Ev::Alert,
+    Ev::AnnounceFriend,
+    Ev::AnnounceClientLocation,
+    Ev::ClientModerated,
+    Ev::ChatCommandError,
+    Ev::GroupInvitation,
+    Ev::GroupJoinAttempt,
+    Ev::JoinedRoom,
+    Ev::LeftRoom,
+    Ev::PlayerTeamChanged,
+    Ev::RecvChat,
+    Ev::SetChatInput,
 ];
 
 /// The round 13 kinds' members beyond their controls.
 #[derive(Default)]
 pub(crate) struct Ext {
     pub srv: crate::srvlistctl::SrvState,
+    pub chat: crate::chatctl::ChatState,
 }
 
 impl Ext {
@@ -2133,6 +2341,9 @@ impl Ext {
         let e = Ext::default();
         if kind == Kind::ServerList {
             e.srv.num_columns.set(4);
+        }
+        if kind == Kind::Chat {
+            e.chat.init();
         }
         e
     }
