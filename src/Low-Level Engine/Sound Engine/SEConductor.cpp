@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEConductor.cpp
-// Music score playback on dmusic (src/ThirdParty/dmusic), replacing the original's DirectMusic. Whole in Rust
-// (rust/crates/ee_audio/src/sound conductorobj.rs: dmusic's loader and performance, the scores, the music folder's files, the
+// Music score playback on the music engine (rust/crates/ee_audio/src/dmusic: a DirectMusic performance on rustysynth,
+// ported from dmusic), replacing the original's DirectMusic. Whole in Rust
+// (rust/crates/ee_audio/src/sound conductorobj.rs: the engine's loader and performance, the scores, the music folder's files, the
 // lock; the decisions conductor.rs; LLE lane round 6): every member is a forwarder.
 #include <windows.h>
 
@@ -22,7 +23,7 @@ long SEConductor::LoadScore(const UWideString& inName, long& outID)
     return theResult;
 }
 long SEConductor::Play(long inID) { return ee_sound_conductor_play(RUST, (int32_t)inID); }
-// dmusic has no segment queue: the score starts at the next measure (the game never queues)
+// the engine has no segment queue: the score starts at the next measure (the game never queues)
 long SEConductor::Queue(long inID) { return ee_sound_conductor_queue(RUST, (int32_t)inID); }
 long SEConductor::SetChannelGroupCount(unsigned long inCount) { return ee_sound_conductor_set_channel_group_count(RUST, (uint32_t)inCount); }
 long SEConductor::SetConductorState(unsigned long inState) { return ee_sound_conductor_set_state(RUST, (uint32_t)inState); }

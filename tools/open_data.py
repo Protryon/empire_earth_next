@@ -52,6 +52,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'eemodel'))
 sys.path.insert(0, str(ROOT / 'tools' / 'eedata'))
+sys.path.insert(0, str(ROOT / 'tools'))   # dls2sf2
 import sources   # noqa: E402  (tools/eemodel: the game's data path)
 import ssa       # noqa: E402
 
@@ -61,12 +62,13 @@ DB_TEXT = ROOT / 'data' / 'db'      # the db tables as text and the rules docume
 
 
 def converters_hash():
-    """A hash of the code that decides a tree's content (this tool and eemodel, the media's converters): a tree built
-    by other code is stale and the harness rebuilds it. tools/eedata is not in it: the tree's Data/db is the
+    """A hash of the code that decides a tree's content (this tool, eemodel and dls2sf2, the media's converters): a
+    tree built by other code is stale and the harness rebuilds it. tools/eedata is not in it: the tree's Data/db is the
     repository's data/db (db_hash; a converter change comes with a db-regen of data/db, eedata.py check (d))."""
     import hashlib
     h = hashlib.sha256()
-    for p in sorted([pathlib.Path(__file__).resolve(), *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
+    for p in sorted([pathlib.Path(__file__).resolve(), ROOT / 'tools' / 'dls2sf2.py',
+                     *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
         h.update(p.name.encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
     return h.hexdigest()[:16]
 
@@ -205,12 +207,13 @@ SKIP_DIRS = {'dxm'}                       # Data\dxm: a community mod
 # Data\Campaigns; the original's were reachable only by name), merged in they would appear as custom campaigns
 BASE_ONLY_SKIP = {'campaigns'}
 SKIP_EXT = {'.bik'}                      # movies: the game has no movie player (2026-11-17)
-BINARY_EXT = ('.cem', '.sst', '.tga')     # the binary forms the game no longer reads (RUST_PLAN D9), anywhere
+BINARY_EXT = ('.cem', '.sst', '.tga', '.dls')   # the binary forms the game no longer reads (RUST_PLAN D9), anywhere
 
 
 def binary_form(low):
     """whether a file (its lower-case name in Data, backslashes) is a binary form the game does not read: a model,
-    texture or Targa picture, or a db\\*.dat file (the db tables are read as text only)"""
+    texture or Targa picture, a DLS instrument bank (the music's banks are SoundFonts), or a db\\*.dat file (the
+    db tables are read as text only)"""
     return low.endswith(BINARY_EXT) or (low.startswith('db\\') and low.endswith('.dat'))
 
 
@@ -245,7 +248,8 @@ What this is
   Data folder: the contents of both retail data.ssa archives (Art of Conquest and the original Empire Earth) and
   the original game's loose data, merged in the game's own search order. The database tables are text (CSV/YAML),
   the models glTF 2.0 and the textures PNG; sounds (.wav, .mp3), unit AI scripts (.tai), random map scripts (.rmv),
-  civilizations (.civ), the music (DirectMusic .sgt/.sty/.dls) and the campaign packages (.ssa) are as shipped.
+  civilizations (.civ), the music (DirectMusic .sgt/.sty) and the campaign packages (.ssa) are as shipped; the
+  music's instrument banks (DLS) are SoundFont 2 files (.sf2, made by tools/dls2sf2.py).
   Neither a data.ssa archive nor an installation of the original Empire Earth is needed.
 
 How to use it
@@ -409,6 +413,21 @@ def cmd_build(a, out=None):
             converted.add(low)
     report['models_gltf'] = len(models)
     report['textures_png'] = len(pngs)
+    # the music's DLS instrument banks -> SoundFont 2 (tools/dls2sf2.py: dmusic's own conversion, written out once),
+    # next to their segments and styles under the same name; a gm.dls (the general MIDI set) the same way, to gm.sf2
+    import dls2sf2
+    banks = 0
+    for low, p in sorted(winner.items()):
+        if not low.endswith('.dls'):
+            continue
+        raw = (p.folder / p.names[low].replace('\\', os.sep)).read_bytes() if p.folder is not None else p.read(low)
+        name = spell(p.names[low], spelled)
+        target = data / (name[:-4] + '.sf2').replace('\\', os.sep)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(dls2sf2.convert(raw, pathlib.PureWindowsPath(name).stem))
+        converted.add(low)
+        banks += 1
+    report['music_sf2'] = banks
     # a binary form without an open one (a db file with no text form, a model that is not a model): left out
     report['dropped'] = sorted(p.label + ':' + p.names[low] for low, p in winner.items()
                                if low not in converted and binary_form(low))

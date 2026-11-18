@@ -12,6 +12,7 @@ pub mod layout;
 pub mod map_fields;
 pub mod player_fields;
 pub mod stats_fields;
+pub mod tech_view;
 pub mod unit_class_fields;
 pub mod unit_fields;
 pub mod view;
@@ -19,7 +20,10 @@ pub mod view;
 mod view_tests;
 
 pub use layout::EeWorldLayout;
-pub use view::{ClassView, MapView, PlayerView, Record, StatsView, TileView, UnitView, WorldRead, WorldView};
+pub use tech_view::{NodeView, TechTreeView};
+pub use view::{
+    ClassView, GroupView, MapView, PlayerView, Record, StatsView, TileView, UnitView, WorldRead, WorldView,
+};
 
 /// The C++ registers the build's layout (`EEWorldLayoutRegister`, once at start-up). False for a layout of another
 /// size (a stale header) or a second, different one.

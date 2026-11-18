@@ -49,7 +49,6 @@ UIBlinkingButton::UIBlinkingButton(unsigned long inId, GEBitmap* inNormalBitmap,
 
 // Starts or stops blinking; blinking keeps the button redrawn every frame
 void UIBlinkingButton::SetIsBlinking(bool inBlinking) { EE_UI_BLINK(BlinkSetIsBlinking, inBlinking); }
-bool UIBlinkingButton::GetIsBlinking() { return EE_UI_BLINK(BlinkIsBlinking) != 0; }
 
 // Fades the button's background, border and bitmaps in and out while blinking (full otherwise), then copies the button
 long UIBlinkingButton::CopyData() { return (long)EE_UI_BLINK(BlinkCopyData); }

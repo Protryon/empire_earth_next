@@ -1,8 +1,8 @@
 //! `SEMixer` whole in Rust: a loaded mixer plug-in (its `SPIM*` entry points, looked up by name when the mixer is
 //! made) with the conductor that plays scores through it; the registry of mixers and the active mixer
 //! (`sActiveMixer`); `SEInitializeMixers` and `SEShutdown`'s mixers. The decisions are `mixers.rs`'s. An `SEMixer*`
-//! is an [`EeSoundMixer`]; the C++ class is data-less, every member a forwarder. The plug-in module stays a C++
-//! `PIMModule`, reached through `ee_soundcpp_module_*`.
+//! is an [`EeSoundMixer`]; the C++ class is data-less, every member a forwarder. The plug-in module is the mixer
+//! plug-in's entry table (Mixer.cpp: every plug-in is linked in), reached through `ee_soundcpp_module_*`.
 
 // the C ABI's `long`/`unsigned long` are 32-bit on Windows and 64-bit on LP64: the casts are not no-ops there
 #![allow(clippy::unnecessary_cast)]
@@ -144,7 +144,7 @@ pub(crate) unsafe fn delete_wave_data(m: *mut EeSoundMixer, s: *mut crate::sound
 /// plug-in's `SPIMInitializeMixer(window)` and the conductor's mixer.
 ///
 /// # Safety
-/// `module` is a live `PIMModule*`.
+/// `module` is the plug-in's module (`ee_soundcpp_first_module`'s).
 pub(crate) unsafe fn create(module: *mut c_void, window: *mut c_void) -> *mut EeSoundMixer {
     let conductor = EeSoundConductor::new();
     let mut entries = [null_mut::<c_void>(); 32];
@@ -299,15 +299,6 @@ pub unsafe extern "C" fn ee_sound_mixer_use(m: *mut EeSoundMixer) -> i32 {
 #[no_mangle]
 pub unsafe extern "C" fn ee_sound_mixer_conductor(m: *mut EeSoundMixer) -> *mut EeSoundConductor {
     unsafe { &mut (*m).conductor }
-}
-
-/// The mixer's `PIMModule*` (`GetName`, `IsValid`).
-///
-/// # Safety
-/// `m` is a live mixer.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sound_mixer_module(m: *mut EeSoundMixer) -> *mut c_void {
-    unsafe { (*m).module }
 }
 
 /// `GetCPUUsage`.

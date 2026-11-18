@@ -9,11 +9,18 @@
 //!   the seed and SplitMix64;
 //! - `units_lua`: the per-unit bindings' Lua helpers (argument readers, result pushers, the units filter);
 //! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
+//! - `binding_trace` (TEST ONLY): the trace of the bindings' calls, the port's golden;
+//! - `units_state`: the per-unit interface's state (`EECPUnitsState`): the held set, the events, the enemy memory,
+//!   the danger layers and the route;
+//! - `units_bind` (the game only): its hooks and the `ai.*` bindings over the world views and one C++ host;
+//! - `next_state`, `next_value`, `next_game` (the game only): the next engine (EECPNext*.cpp before): its per-player
+//!   record, the view and its table, the tick, the army's memory, the gather safety, the strategy step, the save;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
 //! The C++ keeps its objects (the states, the manifest's entries) and hands plain values over. `golden` checks every
 //! piece against what the unmodified C++ gave (a scratch driver over the original functions).
 
+pub mod binding_trace;
 pub mod ffi;
 pub mod json;
 // Lua's C API, declared by lua.h: not in the headers
@@ -23,11 +30,18 @@ pub mod lua_ffi;
 pub mod lua_host;
 pub mod lua_value;
 pub mod manifest;
+pub mod military;
 pub mod names;
+pub mod next_game;
 pub mod next_save;
+pub mod next_state;
+pub mod next_value;
 pub mod seat;
+pub mod switches;
+pub mod units_bind;
 pub mod units_lua;
 pub mod units_save;
+pub mod units_state;
 
 #[cfg(test)]
 mod golden;

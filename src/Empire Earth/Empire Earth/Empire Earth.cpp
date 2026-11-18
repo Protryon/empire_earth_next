@@ -681,7 +681,6 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 283 every map tile's terrain type (EESaveHasTileTypes)
 const unsigned long kSaveGameMajorVersion = 0;
 const unsigned long kSaveGameMinorVersion = 283;
-#include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
 
@@ -701,10 +700,6 @@ bool EEInitializePart1()
     long theResult = URegisterShutdown(EEReleaseInstanceMutex);
 
     ESVERIFY_AT(theResult == keseOK, 796);
-    theResult = PIMInitialize();
-
-    ESVERIFY_AT(theResult == keseOK, 800);
-    EESetThreadFloatingPoint("EEInitializePart1:PIMInitialize");
     theResult = TSInitialize();
 
     ESVERIFY_AT(theResult == keseOK, 805);

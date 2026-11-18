@@ -2055,8 +2055,8 @@ The models and textures are described in full, with their open forms (glTF, PNG)
 | `campaigns\<name>.txt` (inside campaign `.ssa`) | campaign archives | `src/Empire Earth/Campaign/EECampaign*.cpp` | Not text despite the extension: a list of `UString`s (u32 len incl. NUL + chars) naming the scenarios in order. |
 | `.cem` model | `data.ssa: models\*.cem`, `Data\Models\` | `src/Low-Level Engine/Graphics Engine/GEModel Load.cpp` (writer `GEModel Save.cpp`) | Tag "SSMF", version 2.x (1.0-1.3 also accepted), then chunked model data: sub-models (named, e.g. "Scene Root", "turret_*", orbitals, wheels), frames, vertices, materials, tag points. In the multiplayer checksum. |
 | `.sst` texture | `data.ssa: textures\*.sst`, `Data\Textures\` | `GETexture.cpp` (`GETextureFileHeader`, packed 14 bytes) | `u8 isCompressed, u8 mipLevelCount, u32 frameCount, u32 width, u32 height`, then the frames. `.tga` files have no such header (`GESurface.cpp` reads the 18-byte `GETGAHeader`; type 2 = uncompressed true colour, descriptor bits 4/5 = mirrored/top-down). |
-| `.wav` / `.mp3` | sounds, music, campaign voice | sound engine (this port: miniaudio) | standard formats |
-| `.sgt` | DirectMusic segments named by `dbmusic.mFileName + ".sgt"` | `EEMusicObject` (this port: dmusic replacement) | DirectMusic RIFF |
+| `.wav` / `.mp3` | sounds, music, campaign voice | sound engine (this port: symphonia) | standard formats |
+| `.sgt` | DirectMusic segments named by `dbmusic.mFileName + ".sgt"` | `EEMusicObject` (this port: the Rust DirectMusic engine, `ee_audio::dmusic`) | DirectMusic RIFF; the styles' and bands' DLS collections are converted to SoundFonts (`.sf2`, `tools/dls2sf2.py`) |
 | `.jpg` scenario images, `.ttf` (movies: none, the game has no movie player since 2026-11-17) | scenarios | image loaders | standard formats |
 | `Language.dll` | install root | `UResourceFile` (`gResource->GetString`) | Win32 STRINGTABLE; the source is `src/Empire Earth/Language/Language.rc`. Every `*NameID` in the db points here. |
 

@@ -277,7 +277,7 @@ void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
 // One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
 // picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
 struct EEUIFMGFormCall {
-    EEUIFMainGame* mForm;
+    EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
     EEUnit* mPicked;
     UWideString mText;
     const GEColor* mColor;
@@ -302,6 +302,7 @@ struct EEUIFMGFormCall {
           mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
           mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
 };
+static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
 
 // Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
 // original's UpdateBackgroundMedia, ShowAllBackgrounds, SetPauseText, PauseInformation, ResumeInformation,
@@ -341,8 +342,10 @@ void EEUIFMainGame::HideAllBackgrounds()
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
 // the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
 // construct; it reads no control: they are made after it)
-EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) : UIForm(inManager, inData, true)
+EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
+    : UIForm(inManager, inData, true), EeScreensMainFormFields()
 {
+    ee_screens_main_form_fields(this, static_cast<EeScreensMainFormFields*>(this));
     EEUIFMGFormCall theCall(this);
     ee_screens_main_form_construct(&theCall);
 }
@@ -704,11 +707,6 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
     case EE_SCREENS_MF_OP_MD_SEND: {
         NEMessage* theMessage;
         switch (inA) {
-        case EE_SCREENS_MF_SEND_AIRPORT:
-            theMessage = new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)inB,
-                                                                   (long)ioIo->n[0], (unsigned char)ioIo->n[1]});
-            break;
-        case EE_SCREENS_MF_SEND_ATTACK_GROUND: theMessage = new EEMRecord(kMessageAttackGround, {ioIo->f[0], ioIo->f[1]}); break;
         case EE_SCREENS_MF_SEND_LOAD_GARRISON:
             theMessage = new EEMRecord(kMessageLoadGarrison, {thePicked->GetUnitID(), theFirst->mComplexUnit->mUnitID, 0});
             break;
@@ -718,11 +716,10 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
             break;
         case EE_SCREENS_MF_SEND_HEAL: theMessage = new EEMRecord(kMessageHealUnit, {theComplex->mUnitID}); break;
         case EE_SCREENS_MF_SEND_CONVERT: theMessage = new EEMRecord(kMessageAttackUnit, {theComplex->mUnitID, inB != 0, true}); break;
-        case EE_SCREENS_MF_SEND_RALLY:
+        default:   // EE_SCREENS_MF_SEND_RALLY (the airport's, the attack ground's and the flare's are hud_sends.rs')
             theMessage = new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)ioIo->n[0],
                                                               theFirst->mComplexUnit->GetUnitID(), (unsigned char)ioIo->n[1]});
             break;
-        default: theMessage = new EEMRecord(kMessageSendFlare, {(long)ioIo->n[0], (long)ioIo->n[1]}); break;
         }
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         return 0;
@@ -819,7 +816,8 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
 }
 // ---- (the mouse modes' ops end)
 
-// (a member: UIForm's GetMouseCaptured and CopyData are protected)
+// (a member: UIForm's GetMouseCaptured and CopyData are protected). The plain world reads and the controls' display
+// modes and dirty flags are hud_views.rs' (the world's views, the toolkit's direct path)
 int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo)
 {
     EEUIFMGFormCall& theCall = *static_cast<EEUIFMGFormCall*>(inCall);
@@ -838,13 +836,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_ERROR_LOCK:
         inA != 0 ? theForm->mErrorCriticalSection->Enter() : theForm->mErrorCriticalSection->Leave();
         return 0;
-    case EE_SCREENS_MF_OP_HAS_PLAYER: return gWorld.GetCurrentPlayer() != NULL;
-    case EE_SCREENS_MF_OP_GROUP_HAS_FIRST:
-        return gWorld.GetCurrentPlayer()->mSelectedGroup != NULL &&
-               gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit() != NULL;
-    case EE_SCREENS_MF_OP_HAS_VIEWED: return gWorld.GetCurrentPlayer()->mSelectedViewedUnit != NULL;
     case EE_SCREENS_MF_OP_SET_UNIT_SELECTED: gUnitSelected = inA != 0; return 0;
-    case EE_SCREENS_MF_OP_FIELD:
+    case EE_SCREENS_MF_OP_FIELD:   // (the fields of EeScreensMainFormFields are main_form_fields.rs')
     case EE_SCREENS_MF_OP_SET_FIELD: {
         bool theSet = inOp == EE_SCREENS_MF_OP_SET_FIELD;
 #define EE_MF_FIELD(id, member) \
@@ -853,26 +846,12 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             member = (decltype(member))inB; \
         return (int64_t)member;
         switch (inA) {
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_STRINGS_CHANGED, theForm->mStringsChanged)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ELAPSED, theForm->mElapsed)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_REFRESH_GROUP, theForm->mRefreshGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_UI_STATE, theForm->mUIState)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_GATE_DIRECTION, theForm->mBuildGate.mDirection)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_WALL_STATE, theForm->mBuildWall.mState)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CLOCK_MODE, theForm->mClockMode)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, theForm->mIsCursorLocked)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_INFO_BLINKING, theForm->mInfoBlinking)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUTTON_BLINKING, theForm->mIsButtonBlinking)
             case EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW:
                 if (theSet)
                     theForm->SetDrawToolTipShadow(inB != 0);
                 return (int64_t)theForm->GetDrawToolTipShadow();
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP, theForm->mEntityGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURRENT_GROUP, theForm->mCurrentGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_MEDIA_ID, theForm->mMediaID)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET, theForm->mEntityGroupSet)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_B5F0, theForm->mB5F0)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_HOT_KEY_MODE, theForm->mHotKeyMode)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUILD_TECH, theForm->mBuild->mTechnology)
         }
 #undef EE_MF_FIELD
@@ -888,7 +867,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->f[2] = theView.GetRight(), ioIo->f[3] = theView.GetBottom();
         return 0;
     }
-    case EE_SCREENS_MF_OP_IS_CURRENT: return theForm->GetManager()->GetCurrentForm() == theForm;
     case EE_SCREENS_MF_OP_ADD_DIRTY:
         theForm->GetManager()->AddDirtyRectangle(GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]), theForm);
         return 0;
@@ -953,7 +931,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition); return 0;
     case EE_SCREENS_MF_OP_BASE_COPY_DATA: return theForm->UIForm::CopyData();
-    case EE_SCREENS_MF_OP_RESOURCE: return gWorld.GetCurrentPlayer()->mResourceCaps[inA + 2];
     case EE_SCREENS_MF_OP_LABEL_INT: return atoi(theLabel->GetText(0));
     case EE_SCREENS_MF_OP_LABEL_SET_LONG: theLabel->SetText((long)inB); return 0;
     case EE_SCREENS_MF_OP_POPULATION: return gWorld.GetCurrentPlayer()->GetTotalPopulation(false, false);
@@ -973,7 +950,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_LABEL_DIFFERS: return theLabel->GetText(0) != theCall.mText;
     case EE_SCREENS_MF_OP_LABEL_SET_TEXT: theLabel->SetText(theCall.mText); return 0;
-    case EE_SCREENS_MF_OP_VICTORY_ENABLED: return gWorld.mVictoryEnabled == true;
     case EE_SCREENS_MF_OP_NUM_TEAMS: return gWorld.GetNumTeams();
     case EE_SCREENS_MF_OP_COUNTDOWN: {
         unsigned long theValue = 0;
@@ -981,8 +957,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->n[0] = theValue;
         return (int64_t)(intptr_t)theWinner;
     }
-    case EE_SCREENS_MF_OP_SET_MODE: theForm->GetControl((unsigned long)inA)->SetDisplayMode((unsigned long)inB); return 0;
-    case EE_SCREENS_MF_OP_MODE: return theForm->GetControl((unsigned long)inA)->GetDisplayMode();
     case EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR:
         theLabel->GetGEText()->SetFgColor(reinterpret_cast<EEPlayer*>(inB)->mColor);
         return 0;
@@ -992,7 +966,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         sprintf(theCall.mText, theFormat, (const char*)reinterpret_cast<EEPlayer*>(inA)->mName, (unsigned long)inB);
         return 0;
     }
-    case EE_SCREENS_MF_OP_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_SCREENS_MF_OP_TEXT_TIME: theCall.mText = gPhysics->GetTimeString(); return 0;
     case EE_SCREENS_MF_OP_TEXT_STRING: gResource->GetString((unsigned long)inA, theCall.mText); return 0;
     case EE_SCREENS_MF_OP_FPS: ioIo->f[0] = gRasterizer->GetFramesPerSecond(theForm->GetManager()->GetScreen()); return 0;
@@ -1001,9 +974,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_HAS_TEAMS: return gWorld.mTeams.size() > 0;
     case EE_SCREENS_MF_OP_SET_MUTED: gSoundManager->SetIsMuted(inA != 0); return 0;
     case EE_SCREENS_MF_OP_MUTED: return gSoundManager->GetIsMuted();
-    case EE_SCREENS_MF_OP_GAME_RESULT: return gWorld.GetCurrentPlayer()->mGameResult;
     case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->Rust(EE_SCREENS_MF_DO_PAUSE_TEXT, inA); return 0;
-    case EE_SCREENS_MF_OP_SET_DIRTY: theForm->GetControl((unsigned long)inA)->SetDirty(true); return 0;
     case EE_SCREENS_MF_OP_LAG_STATUS: return gWorld.mLagStatus;
     case EE_SCREENS_MF_OP_LAG_COLOR:
         static_cast<UIBitmap*>(theForm->GetControl((unsigned long)inA))->GetBitmap()->SetColor(gWorld.mPlayers[inB]->mColor);
@@ -1103,12 +1074,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_ENTITY_GROUP:
         inB != 0 ? theForm->GetEntityGroup(inA)->Enable() : theForm->GetEntityGroup(inA)->Disable();
         return 0;
-    case EE_SCREENS_MF_OP_MOUSE_TEST: {
-        // (main_form.rs' order)
-        theForm->mMouseModes[inA] = (long)inB;   // an EE_SCREENS_MF_MODE_*
-        return 0;
-    }
-    case EE_SCREENS_MF_OP_KEYBOARD_TEST: theForm->mKeyboardModes[inA] = (long)inB; return 0;
     case EE_SCREENS_MF_OP_WHEEL_ZOOM:
         theForm->mWheelZoom = EECreateScreenEvent((unsigned long)inA);
         theForm->SetMouseWheelMoveEvent(theForm->mWheelZoom);

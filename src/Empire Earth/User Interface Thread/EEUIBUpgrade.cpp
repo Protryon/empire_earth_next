@@ -167,7 +167,8 @@ void EEUIBUpgrade::SetDirty(bool inDirty)
     UIControl::SetDirty(inDirty);
 }
 
-// The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles
+// The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
+// are hud_views.rs')
 extern "C" int64_t ee_screenscpp_upgrade(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
     return EEUIBUpgrade::HostOp(*static_cast<EEUIBUpgradeCall*>(inCall), inOp, inA, inB, inC);
@@ -177,7 +178,6 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
 {
     EEUIBUpgrade* theButton = ioCall.mButton;
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
-    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
     long* theFields[5] = {&theButton->mAttribute, NULL, &theButton->mLevel, NULL, (long*)&theButton->mLastMessageTime};
     long theAttribute = theButton->mAttribute;
     float theFloat;
@@ -193,14 +193,6 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         else
             *theFields[inA] = (long)inB;
         return 0;
-    case EE_SCREENS_UP_OP_HAS_GROUP:
-        return theGroup != NULL;
-    case EE_SCREENS_UP_OP_FIRST_UNIT:
-        return (int64_t) static_cast<EEUnit*>(theGroup->GetFirstUnit());
-    case EE_SCREENS_UP_OP_GROUP_COUNT:
-        return theGroup->GetNumUnits();
-    case EE_SCREENS_UP_OP_GROUP_UNIT:
-        return (int64_t) static_cast<EEUnit*>(theGroup->GetUnit(0));
     case EE_SCREENS_UP_OP_ALLOWED:
         return gUnitImprovementsAllowed == true;
     case EE_SCREENS_UP_OP_CAN_BUY:

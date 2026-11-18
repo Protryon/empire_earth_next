@@ -23,8 +23,34 @@ mod sys {
 
 struct Host(*mut c_void);
 
+impl Host {
+    /// The call record's form (`EEUIFMGFormCall::mForm`, its first member: an `EEUIFMainGame*`).
+    fn form(&self) -> *mut c_void {
+        // SAFETY: the host's live call record, whose first member is the form (EEUIFMainGame.cpp asserts it)
+        unsafe { *(self.0 as *const *mut c_void) }
+    }
+}
+
 impl FormHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, io: &mut EeScreensMainFormIo) -> i64 {
+        if let Some(rec) = crate::screens::main_form_fields::record(self.form()) {
+            // SAFETY: the call's live form's record; no call out while the reference lives
+            if let Some(r) = crate::screens::main_form_fields::op(unsafe { &mut *rec }, op, a, b) {
+                return r;
+            }
+        }
+        if let Some(r) = crate::screens::hud_views::main_form(op, a) {
+            return r;
+        }
+        if let Some(r) = crate::screens::hud_views::main_form_toolkit(self.form(), op, a, b) {
+            return r;
+        }
+        if op == crate::screens::mouse_modes::EE_SCREENS_MF_OP_MD_SEND {
+            if let Some(m) = crate::screens::hud_sends::mouse_mode(a, b, io) {
+                crate::screens::hud_sends::send(&m);
+                return 0;
+            }
+        }
         unsafe { sys::ee_screenscpp_main_form(self.0, op, a, b, io) }
     }
     fn set_text(&mut self, text: &[u8]) {

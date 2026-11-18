@@ -138,14 +138,6 @@ DX7Rasterizer::~DX7Rasterizer()
 // Enumerates the DirectDraw devices into screens (Ex enumeration on 98/2000) and makes this the active rasterizer
 long DX7Rasterizer::ActivateRasterizer() { return ee_dx7r_activate_rasterizer(this->mDX7); }
 
-// Sets up a screen to render into an offscreen surface of the given size at the desktop depth, retrying with a
-// 16-bit mode if that fails
-long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
-                                             unsigned long inWidth, unsigned long inHeight)
-{
-    return ee_dx7r_activate_rendering_surface(this->mDX7, inScreen, inManager, inWindow, inWidth, inHeight);
-}
-
 // Sets up a screen's primary, back buffer and optional Z-buffer (flipping chain full screen, offscreen buffer
 // windowed), activates Direct3D on them and forces every render state to its default
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
@@ -153,14 +145,6 @@ long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inM
 {
     return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers,
                                    inZBuffer, inZBufferFormat);
-}
-
-// Creates the HAL (or T&L) Direct3D device on the back buffer, sets the viewport and fixed render states, the vertex
-// buffer and the card quirks (texture alpha modulation off on small Rage Pro cards, no dirty rectangles on two cards)
-long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
-                                      GETextureManager* inManager, GEWindow* inWindow)
-{
-    return ee_dx7r_activate_the_screen(this->mDX7, inScreen, inSecondary);
 }
 
 // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
@@ -172,21 +156,8 @@ long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned 
     return theResult;
 }
 
-// Adds a screen with a fresh DirectX 7 screen state
-long DX7Rasterizer::AddValidScreen(GEScreen* inScreen)
-{
-    ee_dx7r_add_valid_screen(this->mDX7, inScreen);
-    return kErrorOK;
-}
-
 // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen) { return ee_dx7r_begin_scene(this->mDX7, inTarget, inScreen); }
-
-// Sets the texture and asks the device whether it can draw the current state in one pass
-bool DX7Rasterizer::CanDoCurrentState(GETexture* inTexture, unsigned long inScreen)
-{
-    return ee_dx7r_can_do_current_state(this->mDX7, inTexture, inScreen);
-}
 
 // Fills a rectangle of the render target with a colour, waiting while the device is still drawing
 long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen)
@@ -223,11 +194,6 @@ GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned l
     return inType <= 1 ? new GEVertexArray(inType, inCount) : NULL;
 }
 
-long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
-{
-    return kErrorOK;
-}
-
 // Releases every screen's texture, vertex buffer, lights, device and Direct3D, deletes the screens and their states
 long DX7Rasterizer::Deactivate()
 {
@@ -242,16 +208,6 @@ void DX7Rasterizer::DestroyTextureHandle(GETexture* inTexture)
 
 // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
-
-// Returns the free video memory of the screen
-long DX7Rasterizer::GetAvailableVideoMemory(unsigned long inScreen, unsigned long& outBytes)
-{
-    uint32_t theBytes = 0;
-    long theResult = ee_dx7r_video_memory(this->mDX7, inScreen, false, &theBytes);
-    if (theResult == kErrorOK)
-        outBytes = theBytes;
-    return theResult;
-}
 
 // Returns whether the screen's card can modulate texture alpha
 bool DX7Rasterizer::GetCanModulateTextureAlpha(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, false); }
@@ -283,9 +239,6 @@ long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
 // Removes all 8 lights
 long DX7Rasterizer::RemoveAllLights(unsigned long inScreen) { return ee_dx7r_remove_all_lights(this->mDX7, inScreen); }
 
-// Disables a light and frees its slot; 9 when the slot was not in use
-long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen) { return ee_dx7r_remove_light(this->mDX7, inIndex, inScreen); }
-
 // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the base.
 void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
 void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
@@ -305,12 +258,7 @@ void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestinat
 }
 void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ColorKeying, inState, inScreen); }
 void DX7Rasterizer::SetCulling(unsigned long inState) { ee_dx7r_set_culling(this->mDX7, inState); }
-void DX7Rasterizer::SetDebugColor(const GEColor& inColor)
-{
-    ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Debug, reinterpret_cast<const EeGeRastColor*>(&inColor), 0);
-}
 void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Dithering, inState, inScreen); }
-void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::DrawStyle, inStyle, inScreen); }
 void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Fog, inState, inScreen); }
 void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
@@ -454,12 +402,6 @@ long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoin
     static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
     return ee_dx7r_draw_3d_line(this->mDX7, inScreen, reinterpret_cast<const float(*)[4]>(inPoints.data()), inPoints.size(),
                                 inTexture, inV, inOrthographic);
-}
-
-// Draws a model and recursively its sub-models (no parent: the top of a hierarchy); stops at the first sub-model error
-long DX7Rasterizer::DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inDetail, bool inOrthographic)
-{
-    return ee_dx7r_draw_model_hierarchy(this->mDX7, inScreen, inModel, inDetail, inOrthographic);
 }
 
 // Draws the sky model like any model; always returns kErrorOK

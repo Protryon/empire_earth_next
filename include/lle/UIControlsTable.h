@@ -56,46 +56,30 @@ public:
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
     static void DeleteAll();
-    unsigned long GetFontTableIndex() const { return this->F().font_table_index; }
     static UIControlsTable* GetUIControlsTable(unsigned long inIndex);
     GEColor GetBackground() const { return reinterpret_cast<const GEColor&>(this->D().background); }
     GEColor GetTextForeground() const { return reinterpret_cast<const GEColor&>(this->D().text_foreground); }
-    GEColor GetSeletedListBox() const { return reinterpret_cast<const GEColor&>(this->D().selected_list_box); }
-    GEColor GetFocusedLineColor() const { return reinterpret_cast<const GEColor&>(this->D().focused_line); }
     UString GetNormalFileName() const { return UString(this->D().names[0]); }
     UString GetPressedFileName() const { return UString(this->D().names[1]); }
     UString GetFocusedFileName() const { return UString(this->D().names[2]); }
     GEFont* GetFont() const { return static_cast<GEFont*>(this->D().font); }
     GEBitmap* GetNormal() const { return NULL; }    // never set (the original left these members uninitialized)
-    GEBitmap* GetPressed() const { return NULL; }
-    GEBitmap* GetFocused() const { return NULL; }
     float GetBackgroundOpacity() const { return this->F().background_opacity; }
-    float GetTextBoxOpacity() const { return this->F().text_box_opacity; }
-    float GetScrollBarBgOpacity() const { return this->F().scroll_bar_bg_opacity; }
     long GetID() const { return this->F().id; }
     long GetFormID() const { return this->F().form_id; }
     unsigned long GetGroup() const { return this->F().group; }
-    long GetGroupID() const { return this->F().group; }
     unsigned long GetControlType() const { return this->F().control_type; }
     long GetFormIndex() const { return this->F().form_index; }
     long GetBorderThickness() const { return this->F().border_thickness; }
     unsigned long GetStringTableID() const { return this->F().string_table_id; }
     long GetStringTableBegin() const { return this->F().string_table_begin; }
     long GetStringTableEnd() const { return this->F().string_table_end; }
-    long GetTextAlignment() const { return this->F().text_alignment; }
-    long GetMaxChars() const { return this->F().max_chars; }
-    long GetStartCurrentSelection() const { return this->F().start_current_selection; }
-    long GetStartRange() const { return this->F().start_range; }
-    long GetEndRange() const { return this->F().end_range; }
-    long GetCurrentRange() const { return this->F().current_range; }
     const UILayoutUtility& GetLayout() const { return reinterpret_cast<const UILayoutUtility&>(this->D().layout); }
     const GERectangle& GetNormalTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().normal_rect); }
     const GERectangle& GetPressedTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().pressed_rect); }
     const GERectangle& GetFocusedTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().focused_rect); }
     bool GetIsVisible() const { return this->F().is_visible; }
     bool GetStartChecked() const { return this->F().start_checked; }
-    bool GetListBoxAlwaysDirty() const { return this->F().list_box_always_dirty; }
-    bool GetSortListBox() const { return this->F().sort_list_box; }
     bool GetFocusedHasAlpha() const { return this->F().focused_has_alpha; }
     bool GetPressedHasAlpha() const { return this->F().pressed_has_alpha; }
     bool GetNormalHasAlpha() const { return this->F().normal_has_alpha; }

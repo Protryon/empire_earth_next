@@ -106,7 +106,7 @@ def parse(path):
     # the chunk list starts at the first (0, 250, 251 or 252, tag 1, size) record after the header
     start=None
     for p in range(4,len(raw)-16):
-        if raw[p:p+12] in tuple(struct.pack('<III',0,v,1) for v in (250,251,252,253,254,255,256)):start=p;break   # 251-256: the port's saves
+        if raw[p:p+12] in tuple(struct.pack('<III',0,v,1) for v in range(250,300)):start=p;break   # 251-299: the port's saves
     if start is None:raise ValueError('no checksum chunk')
     chunks=[];p=start
     while p<len(raw):

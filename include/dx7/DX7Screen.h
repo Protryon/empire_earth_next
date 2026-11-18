@@ -26,9 +26,6 @@ public:
                                GEWindow* inParent);
     virtual bool Get32BitDeviceSupport() { return ee_dx7sc_flag(this->mDX7, 5); }
     virtual bool Get32BitTextureSupport() { return ee_dx7sc_flag(this->mDX7, 6); }
-    virtual bool GetAttachedToDesktop() const { return ee_dx7sc_flag(this->mDX7, 0); }
-    virtual bool GetCanMagFilterSurfaces() const { return ee_dx7sc_flag(this->mDX7, 3); }
-    virtual bool GetCanMinFilterSurfaces() const { return ee_dx7sc_flag(this->mDX7, 4); }
     virtual const GEVideoMode& GetCurrentMode() const { return *reinterpret_cast<const GEVideoMode*>(ee_dx7sc_current_mode(this->mDX7)); }
     virtual unsigned long GetCurrentModeIndex() const { return ee_dx7sc_current_mode_index(this->mDX7); }
     virtual const GERectangle& GetDesktopRectangle() { return *reinterpret_cast<const GERectangle*>(ee_dx7sc_desktop_rectangle(this->mDX7)); }
@@ -38,7 +35,6 @@ public:
     virtual const UString& GetName() const { return *static_cast<const UString*>(ee_dx7sc_name(this->mDX7)); }
     static DX7Screen* GetScreen(unsigned long inIndex) { return static_cast<DX7Screen*>(ee_dx7sc_screen(inIndex)); }
     static unsigned long GetScreenCount() { return ee_dx7sc_screen_count(); }
-    virtual bool GetSharesPrimary() { return ee_dx7sc_flag(this->mDX7, 2); }
     virtual long Release(const GEWindow* inWindow) { return ee_dx7sc_release(this->mDX7, const_cast<GEWindow*>(inWindow)); }
     virtual long RestoreAllSurfaces() { return ee_dx7sc_restore_all(this->mDX7); }
     virtual long SetMode(unsigned long inIndex) { return ee_dx7sc_set_mode(this->mDX7, inIndex); }

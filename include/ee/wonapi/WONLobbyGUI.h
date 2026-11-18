@@ -5,16 +5,17 @@
 #ifndef EE_WONAPI_WONLOBBYGUI_H
 #define EE_WONAPI_WONLOBBYGUI_H
 
+#include "rust/won_net/ffi_net.h" // LobbyGetNetAddresses
 #include <exception>
 #include <deque>
 #include <set>
 #include "ee/wonapi/WONBuffer.h"
+#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 #include "ee/wonapi/WONStringCompare.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/wonapi/WONLobbyMap.h"
 #include "ee/wonapi/WONEventTypes.h"
 #include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 #include "rust/won_gui/barobj.h"
@@ -1833,7 +1834,18 @@ void LobbyResume();
 void LobbyShutdown();
 Container* LobbyGetContainer();
 void LobbyStart();
-void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inFlag);
+// this machine's IP addresses: from the adapter list with details (the original's 0x6b3540), else by host name
+// (IPAddr.cpp's; ipaddr.rs)
+inline void LobbyAddNetAddress(void* ioList, const uint8_t* inName, size_t inLength, uint32_t inHost)
+{
+    static_cast<std::list<LobbyNetAddress>*>(ioList)->push_back(
+        LobbyNetAddress(std::string(reinterpret_cast<const char*>(inName), inLength), static_cast<long>(inHost)));
+}
+inline void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inGetDetails)
+{
+    outAddresses.clear();
+    ee_won_ipaddr_local_addresses(inGetDetails, LobbyAddNetAddress, &outAddresses);
+}
 
 // 0x361390: the local player (NULL when none)
 LobbyPlayer* GetMyLobbyPlayer();
@@ -1845,13 +1857,12 @@ bool LobbyIAmCaptain();
 void LobbyNetAdvertiseGame();
 void LobbyNotifyStagingChange();
 
-class ServerListCtrl;
-class ServerDetailsItem;
-typedef std::list<ServerDetailsItem*> ServerDetailsList;
+// a game list row (R6 WONLobby round 13): the members stay here (the EE game's subclass and the list read them), the
+// virtuals forward to the list control's Rust object (srvlistctl.rs), its column paints, orders and the icon
 class ServerDetailsItem : public ListItem {
 public:
-    ServerDetailsItem();
-    virtual ~ServerDetailsItem();
+    ServerDetailsItem() { this->mSelectable = true; }
+    virtual ~ServerDetailsItem() {}
     virtual void Paint(Graphics&,ListArea*);
     virtual void CalcDimensions(ListArea*);
     virtual int Compare(const ListItem*,ListArea*) const;
@@ -1859,27 +1870,6 @@ public:
     virtual void MouseDown(ListArea*,int,int,int);
     virtual void PaintDetailsHook(Graphics&,MultiListArea*) {} // empty inline, vtable +0x38
     virtual int GetDetailsHeightHook(MultiListArea*) { return 0; } // returns 0, vtable +0x3c
-    void SetGame(LobbyGame*);
-    void CalcIcon();
-    static bool IsStartOfNumber(char);
-    static bool ParseIntFilter(const GUIString&,int&,int&);
-    static void PaintIcon(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintSkill(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintGameName(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintAddress(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintNumPlayers(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintPing(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static int CompareIcon(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareSkill(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareGameName(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareAddress(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareNumPlayers(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int ComparePing(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static void FilterSkill(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterGameName(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterAddress(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterNumPlayers(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterPing(const GUIString&,ServerDetailsList&,ServerListCtrl*);
     SmartPtr<LobbyGame> mGame; //18
     GUIString mIPAddrStr; //1c
     int mIconId; //20
@@ -1985,8 +1975,6 @@ public:
 class LobbyServer;
 LobbyServer* LobbyGetCurrentServer();       // 0x35b6f0; NULL outside a server
 
-bool LobbyIsNameIgnored(const GUIString& inName); // persistent ignore predicates; cdecl
-bool LobbyIsCDKeyBlocked(unsigned long inAddress);
 unsigned short GetLobbyProductId();        // 0x35b580 (LobbyGame summary wire product id)
 
 // 0x361370 (cdecl): the local client

@@ -230,6 +230,9 @@ pub struct EeGeTexture {
     create_mipmaps: bool,
     is_from_texture_pack: bool,
     texture_pack_mip_levels: c_long,
+    /// Made by the C++ (`ee_ge_tex_new`): the other textures it reaches are `GETexture`s, read in place (LLE round 8:
+    /// `TexObj`, `TexRefCount` and the non-virtual `Dereference` are answered here, not by the host).
+    direct: bool,
 }
 
 /// Every access to an object is one short statement: a host call may come back in and use it.
@@ -248,7 +251,19 @@ impl EeGeTexture {
     /// `p` is live; the operation's arguments are as `EeGeTexOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeTexOp, obj: usize, a: isize, b: isize) -> isize {
         // SAFETY: the caller's contract (host and owner are copied out before the call)
-        let (host, owner) = unsafe { (tx(p).host, tx(p).owner) };
+        let (host, owner, direct) = unsafe { (tx(p).host, tx(p).owner, tx(p).direct) };
+        if direct {
+            // SAFETY: a C++ texture's textures are GETextures (cppobj.rs's layout)
+            match op {
+                EeGeTexOp::TexObj => return unsafe { crate::ge::cppobj::counted::<Self>(obj) as isize },
+                EeGeTexOp::TexRefCount => return unsafe { crate::ge::cppobj::reference_count(obj) as isize },
+                EeGeTexOp::TexDereference => {
+                    unsafe { ee_ge_tex_dereference(crate::ge::cppobj::counted::<Self>(obj)) };
+                    return 0;
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the host's contract
         unsafe { host(owner as *mut c_void, op, obj as *mut c_void, a, b, 0) }
     }
@@ -357,6 +372,7 @@ impl EeGeTexture {
             create_mipmaps: false,
             is_from_texture_pack: false,
             texture_pack_mip_levels: 0,
+            direct: false,
         }))
     }
 
@@ -930,7 +946,10 @@ pub unsafe extern "C" fn ee_ge_tex_new(
     owner: *mut c_void,
     manager: *mut c_void,
 ) -> *mut EeGeTexture {
-    EeGeTexture::create(host, owner as usize, manager as usize)
+    let p = EeGeTexture::create(host, owner as usize, manager as usize);
+    // SAFETY: just made
+    unsafe { (*p).direct = true };
+    p
 }
 
 /// `GETexture::GETexture(surface, manager)`'s statements after the fields (`ee_ge_tex_new` first).

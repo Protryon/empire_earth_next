@@ -104,28 +104,40 @@ void SPIMSetMuted(bool muted);
 void SPIMSetMusicSource(void (*source)(void *context, float *frames, unsigned long count),
                         void *context);
 
-/// The device thread's callback: mixes `count` stereo frames.
+/// `SPIMActivateMixer`'s device: the named output (the system's default when there is none of that name; NULL or ""
+/// for the default) through cpal, else, or with `null_only` (the headless simulation), the null device; the mixer
+/// pulls the mix on the device's thread from now on. The device's rate (the caller hands it to
+/// `ee_mixer_activated`).
 ///
 /// # Safety
-/// `frames` is writable for `count * 2` floats.
-void ee_mixer_mix(float *frames, uint32_t count);
+/// `name` is NULL or NUL-terminated.
+uint32_t ee_mixer_device_open(const char *name,
+                              bool null_only);
 
-/// `SPIMLoadWaveData`: a decoded sample from a file image and its interleaved PCM; NULL when empty. The caller stores
-/// the pointer in the sample (`SESample::SetData`).
+/// The device closed: when this returns, its thread no longer mixes.
+void ee_mixer_device_close();
+
+/// `SPIMGetOutputDevices`: the playback devices' names, NUL-terminated (cut to `stride - 1` bytes), `stride` bytes
+/// apart, at most `capacity` of them; how many.
 ///
 /// # Safety
-/// `file` is valid for `file_size`, `pcm` for `pcm_length` floats.
-const void *ee_mixer_sample_create(const uint8_t *file,
-                                   uint32_t file_size,
-                                   const float *pcm,
-                                   size_t pcm_length,
-                                   uint32_t file_channels,
-                                   uint32_t rate);
+/// `out` is writable for `stride * capacity` bytes.
+uint32_t ee_mixer_output_devices(char *out,
+                                 size_t stride,
+                                 uint32_t capacity);
+
+/// `SPIMLoadWaveData`: a file image decoded (WAV, MP3, FLAC: symphonia, miniaudio's sample conversions) into a
+/// sample; NULL when it cannot be decoded. The caller stores the pointer in the sample (`SESample::SetData`).
+///
+/// # Safety
+/// `file` is valid for `file_size` bytes.
+const void *ee_mixer_decode(const uint8_t *file,
+                            uint32_t file_size);
 
 /// The sample's frame count, rate and file-frame size (`SPIMLoadWaveData`).
 ///
 /// # Safety
-/// `data` is a pointer from `ee_mixer_sample_create`.
+/// `data` is a pointer from `ee_mixer_decode`.
 void ee_mixer_sample_info(const void *data,
                           uint32_t *frames,
                           uint32_t *rate,
@@ -134,7 +146,7 @@ void ee_mixer_sample_info(const void *data,
 /// `SPIMDuplicateSample`'s reference on the shared wave data.
 ///
 /// # Safety
-/// `data` is a pointer from `ee_mixer_sample_create`.
+/// `data` is a pointer from `ee_mixer_decode`.
 void ee_mixer_sample_reference(const void *data);
 
 /// `SPIMGetCPUUsage`: not measured.
@@ -154,9 +166,6 @@ bool SPIMProcessMessage();
 
 /// `SPIMSetLatency`: the device's own.
 long SPIMSetLatency(unsigned long _milliseconds);
-
-/// `PIMGetType`: ' snd'.
-unsigned long ee_mixer_pim_type();
 
 }  // extern "C"
 

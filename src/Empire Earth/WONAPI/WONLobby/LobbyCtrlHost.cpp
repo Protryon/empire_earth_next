@@ -87,8 +87,10 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
 // ---- the shell
 
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
+intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
-LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind) : mLobbyCtl(ee_won_lobbyctl_new_model(this, inKind, LobbyCtrlHost)) {}
+LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind)
+    : mLobbyCtl(ee_won_lobbyctl_new_model(static_cast<Container*>(this), inKind, LobbyCtrlHost)) {}
 
 LobbyRustCtrl::~LobbyRustCtrl() { ee_won_lobbyctl_free(this->mLobbyCtl); }
 
@@ -100,11 +102,12 @@ void LobbyRustCtrl::InitComponent(ComponentInit& inInit)
     this->CCall(EeWonLobbyCtlCall::Init, (intptr_t) static_cast<ComponentConfigInit&>(inInit).mConfig);
 }
 
-void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+// a ComponentEvent's type as the controls' event (the rest Other)
+static EeWonLobbyCtlEvent CtlEventOf(int inType)
 {
     typedef EeWonLobbyCtlEvent E;
     E aType = E::Other;
-    switch (inEvent->mType) {
+    switch (inType) {
     case ComponentEvent_ButtonPressed: aType = E::ButtonPressed; break;
     case ComponentEvent_ComboSelChanged: aType = E::ComboSelChanged; break;
     case ComponentEvent_ListSelChanged: aType = E::ListSelChanged; break;
@@ -124,9 +127,61 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case LobbyEvent_EELobbySyncOption: aType = E::SyncOption; break;
     case LobbyEvent_EELobbySyncPlayer: aType = E::SyncPlayer; break;
     case 100064: aType = E::ColorChanged; break;
+    case ComponentEvent_InputTextChanged: aType = E::InputTextChanged; break;
+    case ComponentEvent_InputReturn: aType = E::InputReturn; break;
+    case LobbyEvent_GameChanged: aType = E::GameChanged; break;
+    case LobbyEvent_SyncGameList: aType = E::SyncGameList; break;
+    case 100034: aType = E::FiltersChanged; break;
+    case 100059: aType = E::RefilterAll; break;
+    case 100058: aType = E::RefilterShown; break;
+    case ComponentEvent_TextLinkActivated: aType = E::TextLinkActivated; break;
+    case LobbyEvent_Alert: aType = E::Alert; break;
+    case LobbyEvent_AnnounceFriend: aType = E::AnnounceFriend; break;
+    case LobbyEvent_AnnounceClientLocation: aType = E::AnnounceClientLocation; break;
+    case LobbyEvent_ClientModerated: aType = E::ClientModerated; break;
+    case LobbyEvent_ChatCommandError: aType = E::ChatCommandError; break;
+    case LobbyEvent_GroupInvitation: aType = E::GroupInvitation; break;
+    case LobbyEvent_GroupJoinAttempt: aType = E::GroupJoinAttempt; break;
+    case LobbyEvent_JoinedRoom: aType = E::JoinedRoom; break;
+    case LobbyEvent_LeftRoom: aType = E::LeftRoom; break;
+    case LobbyEvent_PlayerTeamChanged: aType = E::PlayerTeamChanged; break;
+    case LobbyEvent_RecvChat: aType = E::RecvChat; break;
+    case LobbyEvent_SetChatInput: aType = E::SetChatInput; break;
+    case ComponentEvent_TreeItemOpened: aType = E::TreeItemOpened; break;
+    case LobbyEvent_GroupChanged: aType = E::GroupChanged; break;
+    case LobbyEvent_ServerChanged: aType = E::ServerChanged; break;
+    case 100053: aType = E::SetRoomList; break;
+    case LobbyEvent_FriendChanged: aType = E::FriendChanged; break;
+    case 100056: aType = E::RefreshFriends; break;
+    case LobbyEvent_LoginInitStatus: aType = E::LoginInitStatus; break;
+    case LobbyEvent_SetLoginFields: aType = E::SetLoginFields; break;
+    case 100052: aType = E::FillUserNames; break;
+    case LobbyEvent_QueryAccountResult: aType = E::QueryAccountResult; break;
+    case LobbyEvent_GotHTTPDocument: aType = E::GotHttpDocument; break;
     default: break;
     }
-    this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
+    return aType;
+}
+
+void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+{
+    this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)CtlEventOf(inEvent->mType), (intptr_t)inEvent->mComponent);
+}
+
+// the Dialog shell (QuickPlayCtrl, LoginCtrl): the same forwards
+LobbyRustDialogCtrl::LobbyRustDialogCtrl(EeWonLobbyCtlKind inKind)
+    : mLobbyCtl(ee_won_lobbyctl_new_model(static_cast<Container*>(this), inKind, LobbyCtrlHost)) {}
+LobbyRustDialogCtrl::~LobbyRustDialogCtrl() { ee_won_lobbyctl_free(this->mLobbyCtl); }
+void LobbyRustDialogCtrl::InitComponent(ComponentInit& inInit)
+{
+    if (inInit.mType != 2)
+        return;
+    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::Init, (intptr_t) static_cast<ComponentConfigInit&>(inInit).mConfig, 0, 0);
+}
+void LobbyRustDialogCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+{
+    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::Event, (intptr_t)inEvent,
+                         (intptr_t)CtlEventOf(inEvent->mType), (intptr_t)inEvent->mComponent);
 }
 
 // ---- the host
@@ -153,6 +208,11 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     case T::Container: return FindAs<Container>(inConfig, inSlot);
     case T::Component: return FindAs<Component>(inConfig, inSlot);
     case T::ColorButton: return FindAs<EELobbyColorButton>(inConfig, inSlot);
+    case T::TextArea: return FindAs<TextArea>(inConfig, inSlot);
+    case T::TreeArea: return FindAs<TreeArea>(inConfig, inSlot);
+    case T::ListArea: return FindAs<ListArea>(inConfig, inSlot);
+    case T::ScreenContainer: return FindAs<ScreenContainer>(inConfig, inSlot);
+    case T::ServerListCtrl: return FindAs<ServerListCtrl>(inConfig, inSlot);
     }
     return NULL;
 }
@@ -208,50 +268,11 @@ static bool ClientIs(LobbyClient* inClient, intptr_t inTest)
     return false;
 }
 
-static intptr_t PrefGet(intptr_t inPref)
-{
-    typedef EeWonLobbyCtlPref P;
-    switch ((P)inPref) {
-    case P::CrossPromotion: return LobbyGetCrossPromotion();
-    case P::DoAutoAfk: return LobbyGetDoAutoAFK();
-    case P::AutoPingGames: return LobbyGetAutoPingGames();
-    case P::ShowGamesInProgress: return LobbyGetShowGamesInProgress();
-    case P::LobbyMusic: return LobbyGetLobbyMusic();
-    case P::LobbySoundEffects: return LobbyGetLobbySoundEffects();
-    case P::ChatSoundEffects: return LobbyGetChatSoundEffects();
-    case P::StagingSoundEffects: return LobbyGetStagingSoundEffects();
-    case P::ShowConfirmations: return LobbyGetShowConfirmations();
-    case P::FilterDirtyWords: return LobbyGetFilterDirtyWords();
-    case P::AnonymousToFriends: return LobbyGetAnonymousToFriends();
-    case P::ConnectionSpeed: return LobbyGetConnectionSpeed();
-    }
-    return 0;
-}
-
-static void PrefSet(intptr_t inPref, intptr_t inValue)
-{
-    typedef EeWonLobbyCtlPref P;
-    bool aFlag = inValue != 0;
-    switch ((P)inPref) {
-    case P::CrossPromotion: LobbySetCrossPromotion(aFlag); return;
-    case P::DoAutoAfk: LobbySetDoAutoAFK(aFlag); return;
-    case P::AutoPingGames: LobbySetAutoPingGames(aFlag); return;
-    case P::ShowGamesInProgress: LobbySetShowGamesInProgress(aFlag); return;
-    case P::LobbyMusic: LobbySetLobbyMusic(aFlag); return;
-    case P::LobbySoundEffects: LobbySetLobbySoundEffects(aFlag); return;
-    case P::ChatSoundEffects: LobbySetChatSoundEffects(aFlag); return;
-    case P::StagingSoundEffects: LobbySetStagingSoundEffects(aFlag); return;
-    case P::ShowConfirmations: LobbySetShowConfirmations(aFlag); return;
-    case P::FilterDirtyWords: LobbySetFilterDirtyWords(aFlag); return;
-    case P::AnonymousToFriends: LobbySetAnonymousToFriends(aFlag); return;
-    case P::ConnectionSpeed: LobbySetConnectionSpeed((int)inValue); return;
-    }
-}
-
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
-    LobbyRustCtrl* aCtl = static_cast<LobbyRustCtrl*>(inCtl);
+    // the shell (a LobbyRustCtrl or a LobbyRustDialogCtrl) as its Container
+    Container* aCtl = static_cast<Container*>(inCtl);
     Component* aComp = reinterpret_cast<Component*>(a);
     Button* aButton = reinterpret_cast<Button*>(a);
     Label* aLabel = reinterpret_cast<Label*>(a);
@@ -265,9 +286,11 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     switch (inOp) {
     case Op::Find:
         return (intptr_t)FindSlot(reinterpret_cast<ComponentConfig*>(a), ee_won_lobbyctl_slot((uint32_t)b));
-    case Op::FindOptional:
-        return (intptr_t)dynamic_cast<Button*>(
-            reinterpret_cast<ComponentConfig*>(a)->Fn386860(ee_won_lobbyctl_slot((uint32_t)b)->name));
+    case Op::FindOptional: {
+        const EeWonLobbyCtlSlot* aSlot = ee_won_lobbyctl_slot((uint32_t)b);
+        Component* aFound = reinterpret_cast<ComponentConfig*>(a)->Fn386860(aSlot->name);
+        return aSlot->ty == EeWonLobbyCtlType::Component ? (intptr_t)aFound : (intptr_t)dynamic_cast<Button*>(aFound);
+    }
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetControlId: aComp->mControlId = (int)b; return 0;
@@ -295,7 +318,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aBrowser->FindStr(reinterpret_cast<InputBox*>(b)->GetText(), (c & 1) != 0, (c & 2) != 0);
         return 0;
     case Op::BrowserReset: aBrowser->Reset(); return 0;
-    case Op::BrowserGoHome: aBrowser->Go(static_cast<GameBrowserCtrl*>(aCtl)->mHomeLocation, false, 0, -1); return 0;
+    case Op::BrowserGoHome: aBrowser->Go(static_cast<GameBrowserCtrl*>(static_cast<LobbyRustCtrl*>(aCtl))->mHomeLocation, false, 0, -1); return 0;
     case Op::BrowserBack: aBrowser->Back(); return 0;
     case Op::BrowserForward: aBrowser->Forward(); return 0;
     case Op::BrowserStop: aBrowser->Stop(); return 0;
@@ -338,15 +361,12 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ItemSetImage: anItem->mImage = CtlImage(b); return 0;
     case Op::ButtonOf: return (intptr_t)dynamic_cast<Button*>(aComp);
     case Op::ControlId: return aComp->mControlId;
-    case Op::PrefGet: return PrefGet(a);
-    case Op::PrefSet: PrefSet(a, b); return 0;
     case Op::ComboGetSel: return aCombo->GetSelItem();
     case Op::ComboSetSel: aCombo->SetSelItem((int)b, c != 0); return 0;
     case Op::ComboClear: aCombo->Clear(b != 0); return 0;
     case Op::ComboShowTabSelect: aCombo->SetTextAndSel(LobbyGetTabSelect(), false); return 0;
     case Op::SaveTabSelect: LobbySetTabSelect(aCombo->mEdit->GetText()); return 0;
     case Op::SaveLanName: LobbySetLanName(aCombo->mEdit->GetText()); return 0;
-    case Op::LanNameCount: return (intptr_t)LobbyGetLanNameCount();
     case Op::ComboAddLanName: aCombo->AddString(LobbyGetLanNameAt((size_t)b), -1); return 0;
     case Op::ComboShowLanName: aCombo->SetTextAndSel(LobbyGetLanName(), true); return 0;
     case Op::LanBroadcastPort: return (intptr_t)LobbyGetLanBroadcastPort();
@@ -358,16 +378,13 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     }
     case Op::LabelSetLocalAddress: aLabel->SetText(IPAddr::GetLocalAddr().GetHostString(true), true); return 0;
     case Op::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)a, b != 0); return 0;
-    case Op::RestoreDefaults: LobbyRestoreDefaults(); return 0;
     case Op::ResetNetworkAdapter: LobbySetNetworkAdapter(LobbyGetNetworkAdapter()); return 0;
-    case Op::ResetFilters: LobbyResetFilters(); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
     case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
     case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
     case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
     case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
-    case Op::RemoveLanName: LobbyRemoveLanName(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;
@@ -420,8 +437,10 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aLabel->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), theBuffer));
         return 0;
     }
+    default: break;
     }
-    return 0;
+    // round 13's ops (the Internet controls)
+    return LobbyNetCtrlHost(aCtl, inOp, a, b, c);
 }
 
 // ---- the config readers (GameBrowserCtrl.cpp's and GameUserListCtrl.cpp's)

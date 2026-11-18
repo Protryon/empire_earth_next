@@ -69,7 +69,7 @@ pub struct EeWonLobbyMapHooks {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum Key {
+pub(crate) enum Key {
     Num(u64),
     Addr(EeWonIpAddr),
     Units(Vec<u32>),
@@ -95,7 +95,7 @@ fn ordering(c: i32) -> Ordering {
 }
 
 /// The kind's comparator.
-fn compare(kind: EeWonLobbyKeyKind, a: &Key, b: &Key) -> Ordering {
+pub(crate) fn compare(kind: EeWonLobbyKeyKind, a: &Key, b: &Key) -> Ordering {
     use EeWonLobbyKeyKind as K;
     match (kind, a, b) {
         (K::Unsigned, Key::Num(x), Key::Num(y)) => x.cmp(y),

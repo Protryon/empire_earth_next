@@ -576,19 +576,29 @@ M.water_sites = water_sites
 
 local STALL_MEMORY_MS = 600000
 
+-- New (AI_RESEARCH 8.97): a site never used again for the class, within 4 tiles (econ.lua: a dock whose ships could
+-- not get out)
+function M.forbid_site(memory, class, x, y)
+    local bm = M.state(memory)
+    bm.stalls = bm.stalls or {}
+    bm.stalls[string.format("%s@%d,%d", class, x, y)] = {n = 2, t = 0, class = class, x = x, y = y, forever = true}
+end
+
 -- a site within 2 tiles of one that stalled twice for the class in the last ten minutes (cancel_stalled; the
 -- foundation's place and the site's tile may differ by its footprint)
 local function stalled_site(view, memory, class, x, y)
     local stalls = M.state(memory).stalls or {}
     for _, key in ipairs(ai.keys(stalls)) do
         local st = stalls[key]
-        if st.class == class and st.n >= 2 and view.time - st.t <= STALL_MEMORY_MS
-                and math.abs(st.x - x) <= 2 and math.abs(st.y - y) <= 2 then
+        local r = st.forever and 4 or 2
+        if st.class == class and st.n >= 2 and (st.forever or view.time - st.t <= STALL_MEMORY_MS)
+                and math.abs(st.x - x) <= r and math.abs(st.y - y) <= r then
             return true
         end
     end
     return false
 end
+M.stalled_site = stalled_site
 
 local function find_shore_site(view, memory, class)
     local sites = water_sites(view, memory)
@@ -754,7 +764,7 @@ end
 local function cancel_stalled(view, memory)
     local bm = M.state(memory)
     for _, key in ipairs(ai.keys(bm.stalls or {})) do
-        if view.time - bm.stalls[key].t > STALL_MEMORY_MS then
+        if view.time - bm.stalls[key].t > STALL_MEMORY_MS and not bm.stalls[key].forever then
             bm.stalls[key] = nil
         end
     end

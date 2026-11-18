@@ -1,11 +1,11 @@
-//! The C ABI of the mixer plug-in (called by the C++ shim, `Mixer.cpp`) and the `SESample` access through the shim's
+//! The C ABI of the mixer plug-in (called by the C++ shim, `Mixer.cpp`: the entry points, the device, the decoder) and the `SESample` access through the shim's
 //! `ee_mixer_host_*`. Compiled out of `cargo test`.
 
 // `c_ulong`/`c_long` are the plug-in's `unsigned long`/`long`: 32 bits on Windows, 64 on LP64, so their casts are
 // needed on one of them
 #![allow(clippy::unnecessary_cast)]
 
-use std::ffi::{c_long, c_ulong, c_void};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::slice;
 use std::sync::{Arc, OnceLock};
 
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn SPIMDeleteWaveData(sample: *mut c_void) {
     }
     let data = unsafe { ee_mixer_host_data(sample) };
     if !data.is_null() {
-        // SAFETY: the sample's data pointer is a live `Arc<SampleData>` raw pointer (see `ee_mixer_sample_create`)
+        // SAFETY: the sample's data pointer is a live `Arc<SampleData>` raw pointer (see `ee_mixer_decode`)
         unsafe { drop(Arc::from_raw(data as *const SampleData)) };
         unsafe { ee_mixer_host_set_data(sample, std::ptr::null()) };
     }
@@ -268,32 +268,63 @@ pub unsafe extern "C" fn SPIMSetMusicSource(
     mixer().set_music_source(source, context);
 }
 
-/// The device thread's callback: mixes `count` stereo frames.
+/// `SPIMActivateMixer`'s device: the named output (the system's default when there is none of that name; NULL or ""
+/// for the default) through cpal, else, or with `null_only` (the headless simulation), the null device; the mixer
+/// pulls the mix on the device's thread from now on. The device's rate (the caller hands it to
+/// `ee_mixer_activated`).
 ///
 /// # Safety
-/// `frames` is writable for `count * 2` floats.
+/// `name` is NULL or NUL-terminated.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_mix(frames: *mut f32, count: u32) {
-    mixer().mix(unsafe { slice::from_raw_parts_mut(frames, count as usize * 2) });
+pub unsafe extern "C" fn ee_mixer_device_open(name: *const c_char, null_only: bool) -> u32 {
+    let name =
+        if name.is_null() { String::new() } else { unsafe { CStr::from_ptr(name) }.to_string_lossy().into_owned() };
+    crate::mixer::device::open(&name, null_only, |buf| mixer().mix(buf))
 }
 
-/// `SPIMLoadWaveData`: a decoded sample from a file image and its interleaved PCM; NULL when empty. The caller stores
-/// the pointer in the sample (`SESample::SetData`).
+/// The device closed: when this returns, its thread no longer mixes.
+#[no_mangle]
+pub extern "C" fn ee_mixer_device_close() {
+    crate::mixer::device::close();
+}
+
+/// `SPIMGetOutputDevices`: the playback devices' names, NUL-terminated (cut to `stride - 1` bytes), `stride` bytes
+/// apart, at most `capacity` of them; how many.
 ///
 /// # Safety
-/// `file` is valid for `file_size`, `pcm` for `pcm_length` floats.
+/// `out` is writable for `stride * capacity` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_sample_create(
-    file: *const u8,
-    file_size: u32,
-    pcm: *const f32,
-    pcm_length: usize,
-    file_channels: u32,
-    rate: u32,
-) -> *const c_void {
+pub unsafe extern "C" fn ee_mixer_output_devices(out: *mut c_char, stride: usize, capacity: u32) -> u32 {
+    if out.is_null() || stride == 0 {
+        return 0;
+    }
+    let mut n = 0u32;
+    for name in crate::mixer::device::output_devices().into_iter().take(capacity as usize) {
+        let bytes = name.as_bytes();
+        let len = bytes.len().min(stride - 1);
+        unsafe {
+            let at = out.add(n as usize * stride);
+            std::ptr::copy_nonoverlapping(bytes.as_ptr() as *const c_char, at, len);
+            *at.add(len) = 0;
+        }
+        n += 1;
+    }
+    n
+}
+
+/// `SPIMLoadWaveData`: a file image decoded (WAV, MP3, FLAC: symphonia, miniaudio's sample conversions) into a
+/// sample; NULL when it cannot be decoded. The caller stores the pointer in the sample (`SESample::SetData`).
+///
+/// # Safety
+/// `file` is valid for `file_size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_mixer_decode(file: *const u8, file_size: u32) -> *const c_void {
+    if file.is_null() {
+        return std::ptr::null();
+    }
     let file = unsafe { slice::from_raw_parts(file, file_size as usize) };
-    let pcm = unsafe { slice::from_raw_parts(pcm, pcm_length) };
-    match SampleData::new(file, pcm, file_channels, rate) {
+    let Some(d) = crate::mixer::device::decode(file) else { return std::ptr::null() };
+    match SampleData::new(file, &d.pcm, d.channels, d.rate) {
         Some(data) => Arc::into_raw(data) as *const c_void,
         None => std::ptr::null(),
     }
@@ -302,7 +333,7 @@ pub unsafe extern "C" fn ee_mixer_sample_create(
 /// The sample's frame count, rate and file-frame size (`SPIMLoadWaveData`).
 ///
 /// # Safety
-/// `data` is a pointer from `ee_mixer_sample_create`.
+/// `data` is a pointer from `ee_mixer_decode`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_mixer_sample_info(
     data: *const c_void,
@@ -321,7 +352,7 @@ pub unsafe extern "C" fn ee_mixer_sample_info(
 /// `SPIMDuplicateSample`'s reference on the shared wave data.
 ///
 /// # Safety
-/// `data` is a pointer from `ee_mixer_sample_create`.
+/// `data` is a pointer from `ee_mixer_decode`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_mixer_sample_reference(data: *const c_void) {
     unsafe { Arc::increment_strong_count(data as *const SampleData) };
@@ -363,10 +394,4 @@ pub extern "C" fn SPIMProcessMessage() -> bool {
 #[no_mangle]
 pub extern "C" fn SPIMSetLatency(_milliseconds: c_ulong) -> c_long {
     0
-}
-
-/// `PIMGetType`: ' snd'.
-#[no_mangle]
-pub extern "C" fn ee_mixer_pim_type() -> c_ulong {
-    0x20736e64
 }

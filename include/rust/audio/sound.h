@@ -544,12 +544,6 @@ int32_t ee_sound_mixer_use(EeSoundMixer *m);
 /// `m` is a live mixer.
 EeSoundConductor *ee_sound_mixer_conductor(EeSoundMixer *m);
 
-/// The mixer's `PIMModule*` (`GetName`, `IsValid`).
-///
-/// # Safety
-/// `m` is a live mixer.
-void *ee_sound_mixer_module(EeSoundMixer *m);
-
 /// `GetCPUUsage`.
 ///
 /// # Safety

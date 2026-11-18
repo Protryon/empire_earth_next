@@ -83,10 +83,6 @@ public:
     // name)
     // name
     U2DPoint GetClosestPointOnSegment(const U2DPoint& inStart, const U2DPoint& inEnd) const;
-    // exe view only: the heading from this point to inPoint (thiscall COMDAT 0x1efd40, first expanded out of line by
-    // EEActiveGroup::Fn1EBF85 for the unload goal's destination) (provisional name)
-    float GetHeadingTo(const U2DPoint& inPoint) const
-        { float theY = (float)inPoint.mY - this->mY; float theX = -((float)inPoint.mX - this->mX); return UMArcTan2(theX, theY); }  // Y first (fild/fisub [+4]; 0x5efd40)
     // exe view only (owner decision 2): the tiles a line from this tile to inTo crosses, one step of
     // inStep tiles at a time, inTo last (thiscall COMDAT 0xf40d8, EEE3DMarchingLine.cpp; also EEUGGather 0x222ff0).
     // GE3DPoint/GE3DLine/GEVector must be complete where it is instantiated. (provisional name)

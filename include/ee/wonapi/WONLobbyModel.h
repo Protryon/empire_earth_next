@@ -62,7 +62,6 @@ public:
     SmartPtr<LobbyClientList> GetClients() const { return SmartPtr<LobbyClientList>((LobbyClientList*)this->MGet(LobbyMF::GroupClients)); }
 };
 
-LobbyFriend* LobbyFindFriend(unsigned long inUserId); // looks the user up in the persistent friend list
 
 // LobbyServer: a WON routing server with its groups and clients; 0x68 bytes, RTTI LobbyServer : RefCount.
 class LobbyServer : public LobbyModelObject {

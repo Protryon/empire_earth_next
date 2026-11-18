@@ -171,31 +171,16 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         if (inA == 0) gUIManager->Fn26FA6A();
         else gUIManager->Fn26FA55();
         break;
-    case EE_SCREENS_SB_OP_GROUP_COUNT: return theGroup == NULL ? -1 : (int64_t)theGroup->GetNumUnits();
-    case EE_SCREENS_SB_OP_UNIT: return theUnit != NULL;
-    case EE_SCREENS_SB_OP_UNIT_TYPE: return theUnit->GetUnitClass()->mUnitType;
     case EE_SCREENS_SB_OP_UNIT_POWER: return inB != 0 ? theUnit->GetPower() : (long)theUnit->mPower;
     case EE_SCREENS_SB_OP_UNLOAD_COST: return gFortressUnloadCost;
     case EE_SCREENS_SB_OP_FIRST_CATEGORY: return inFirst->GetUnitClass()->mCategory;
     case EE_SCREENS_SB_OP_FIRST_TYPE: return inFirst->GetUnitClass()->mUnitType;
-    case EE_SCREENS_SB_OP_SEND: {
+    case EE_SCREENS_SB_OP_SEND: {   // (the sends of the op's arguments are hud_sends.rs')
         NEMessage* theMessage;
         switch (inA) {
         case EE_SCREENS_SB_SEND_UNLOAD:
             theMessage = new EEMRecord(kMessageUnloadTransport, {inFirst->mUnitID, inFirst->GetTileX(), inFirst->GetTileY()});
             break;
-        case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMRecord(kMessageStopActiveGroup); break;
-        case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMRecord(kMessageDisband); break;
-        case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMRecord(kMessageSelfDestruct); break;
-        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMRecord(kMessagePatrol, {-1}); break;
-        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMRecord(kMessageReplantFarms, {-1}); break;
-        case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMRecord(kMessageClearAirportCommands); break;
-        case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMRecord(kMessageExplore); break;
-        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMRecord(kMessageLockUnlock, {inB != 0}); break;
-        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMRecord(kMessagePackUnpack, {inB != 0}); break;
-        case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMRecord(kMessageGoFanatic); break;
-        case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMRecord(kMessageJITManufacturing); break;
-        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMRecord(kMessageExchangeResources, {(inB & 1) != 0, (long)(inB >> 1), inC != 0}); break;
         case EE_SCREENS_SB_SEND_RESEARCH:
             theMessage = new EEMRecord(kMessageResearchTechnology, {theButton->mUnitID, theButton->mTechnology, inB != 0});
             break;
@@ -226,9 +211,7 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_SHIFT: return UIControl::ShiftKeyPressed();
     case EE_SCREENS_SB_OP_NODE_KIND: return theNode->mData->mKind;
     case EE_SCREENS_SB_OP_NODE_CLASS: return theNode->mData->mUnitClass;
-    case EE_SCREENS_SB_OP_CLASS_PRESENT: return theClass != NULL;
     case EE_SCREENS_SB_OP_CLASS_LAND_BUILDING: return theClass->IsLandBuilding() && theClass->mCategory != kUnitCategoryNavalBuilding;
-    case EE_SCREENS_SB_OP_CLASS_GATE: return theClass->mCategory == kUnitCategoryGate;
     case EE_SCREENS_SB_OP_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
     case EE_SCREENS_SB_OP_BUILD_UNIT: theForm->BuildUnit(theButton->mUnitID, theButton->mTechnology); break;
     case EE_SCREENS_SB_OP_START_WALL: theForm->StartWall(theButton->mTechnology); break;
@@ -299,7 +282,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_NODE_NAME_ID: return theNode->mData->mNameID;
     case EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED: return thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
     case EE_SCREENS_SB_OP_CLASS_POPULATION: return theClass->GetPopulationCost();
-    case EE_SCREENS_SB_OP_CLASS_NAME_ID: return theClass->mNameStringID;
     case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
     case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
     case EE_SCREENS_SB_OP_BITMAPS:

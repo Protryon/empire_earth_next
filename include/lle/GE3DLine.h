@@ -24,7 +24,6 @@ public:
     bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const;
     bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const;
     bool Intersects(const GE3DPlane& inPlane, float& outT) const;
-    bool IntersectsIn2D(const GE3DLine& inLine, float& outT, float& outLineT) const;
     long Load(FSFile& inFile);
     long Save(FSFile& inFile) const;
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }

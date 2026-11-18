@@ -148,7 +148,7 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                         theResult = kErrorFailed;
                                     }
                                     if (theResult == kErrorOK) {
-                                        EECPNextGetState(thePlayer->mComputerPlayer)->mAI = theAI;
+                                        EECPNextSetAI(thePlayer->mComputerPlayer, theAI);
                                     }
                                 }
                             }

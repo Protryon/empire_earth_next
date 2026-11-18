@@ -36,12 +36,10 @@ public:
         return *this;
     }
     void ConvertFrom(const GETransformation& inTransformation);
-    void ConvertTo(GETransformation& outTransformation) const;
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
     void Normalize();
-    void Slerp(const GEQuaternion& inTarget, float inT, GEQuaternion& outQuaternion) const;
 private:
     friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     float mX;                               // +0x00

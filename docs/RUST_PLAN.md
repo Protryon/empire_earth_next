@@ -126,7 +126,7 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
 | LLE Utilities | 9.4k | UString, URandom, compression (PKWARE DCL), encryption, graphs, 2D geometry | Leaf; fan-in 35 modules |
 | LLE File System | 3.9k | FSFile, FSArchive, FSChunk, FSMemoryFile, FSPersistent | Utilities, threads, platform; fan-in 31 |
 | LLE Thread System / Time Manager / Error System | 1.8k | TSThread queues, locks, scheduler, timers | Platform |
-| LLE Sound Engine (+ Mixer plug-in) | 3.5k | Sound manager, conductor (dmusic), mixer on miniaudio | Platform, core |
+| LLE Sound Engine (+ Mixer plug-in) | 3.5k | Sound manager, conductor (Rust DirectMusic engine), mixer on cpal/symphonia | Platform, core |
 | LLE Network Engine (+ TCP plug-in) | 7.2k | Lockstep server/client, messages, TCP on PlatSocket | Platform, core |
 | LLE Graphics Engine | 26.6k | GE* models, textures, fonts, cameras; the DX7 renderer plug-in (9.7k) over GX (3.1k on webgpu.h) | Clean; fan-in 31 |
 | LLE User Interface | 14.4k | UI* widget toolkit, forms from the UI db tables | Graphics Engine; one edge to Database |
@@ -426,7 +426,7 @@ Ordered by isolation:
    - The `.rmv` script reader (`EERandomMap.cpp`) follows.
 5. **File System:** `FSArchive`, `FSChunk`, `FSMemoryFile`, behind the existing classes (fan-in 911 includes, so
    the C++ facade stays until R6).
-6. **Sound Engine** (SE*), then music (dmusic stays C until a Rust DirectMusic player exists) and movies (pl_mpeg ->
+6. **Sound Engine** (SE*), then music (done 2026-11-17: `ee_audio::dmusic` on rustysynth) and movies (pl_mpeg ->
    a Rust MPEG-1 decoder or keep C).
 
 ### R4: the renderer
@@ -841,8 +841,9 @@ Pre-work, whichever way D8 goes:
 ### R7: the end
 
 - `main` in Rust;
-- the last vendored C (zlib/libpng/libjpeg -> `flate2`/`png`/`jpeg-decoder`, miniaudio -> cpal, dmusic; libjpeg and
-  pl_mpeg are gone since 2026-11-17: ee_base's jpeg.rs and the `jpeg-encoder` crate, no movie player)
+- the last vendored C (zlib/libpng/libjpeg -> `flate2`/`png`/`jpeg-decoder`, miniaudio -> cpal and dmusic -> rustysynth
+  done 2026-11-17; libjpeg and pl_mpeg are gone since 2026-11-17: ee_base's jpeg.rs and the `jpeg-encoder` crate, no
+  movie player)
   replaced or kept behind `-sys` crates (WON's PNG and JPEG decoders use the same codecs, so they go first or
   together);
 - the clang toolchain becomes optional, then gone;

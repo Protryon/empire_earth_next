@@ -47,7 +47,6 @@
 #include "lle/UIBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIButton.h"
@@ -78,6 +77,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEMessage.h"
 #include "ee/EEStringIDs.h"
+#include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h"
@@ -271,21 +271,6 @@ static void EELobbyLocks(bool inRelease)
     }
 }
 
-static void EELobbyEpochPaint(Graphics& g, ServerDetailsItem* i, ServerListCtrl*) { Glue(GL::EpochPaint, (intptr_t)&g, (intptr_t)i); }
-static int EELobbyEpochCompare(const ServerDetailsItem* a, const ServerDetailsItem* b, ServerListCtrl*) { return (int)Glue(GL::EpochCompare, (intptr_t)a, (intptr_t)b); }
-static void EELobbyMapTypePaint(Graphics& g, ServerDetailsItem* i, ServerListCtrl*) { Glue(GL::MapTypePaint, (intptr_t)&g, (intptr_t)i); }
-static int EELobbyMapTypeCompare(const ServerDetailsItem* a, const ServerDetailsItem* b, ServerListCtrl*) { return (int)Glue(GL::MapTypeCompare, (intptr_t)a, (intptr_t)b); }
-// the filters keep the listed games whose column text contains the filter text (the Rust decides each)
-static void EELobbyFilter(GL inKeep, const GUIString& inText, std::list<ServerDetailsItem*>& ioItems)
-{
-    std::list<ServerDetailsItem*>::iterator it = ioItems.begin();
-    while (it != ioItems.end()) {
-        if (Glue(inKeep, (intptr_t)*it, (intptr_t)&inText) != 0) ++it;
-        else ioItems.erase(it++);
-    }
-}
-static void EELobbyEpochFilter(const GUIString& t, std::list<ServerDetailsItem*>& l, ServerListCtrl*) { EELobbyFilter(GL::EpochKeep, t, l); }
-static void EELobbyMapTypeFilter(const GUIString& t, std::list<ServerDetailsItem*>& l, ServerListCtrl*) { EELobbyFilter(GL::MapTypeKeep, t, l); }
 static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
 static LobbyGame* EELobbyNewGame() { return new EELobbyGame; }
 static ComponentConfig* EELobbyNewButtonConfig() { return new ButtonConfig; }
@@ -420,13 +405,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
             for (unsigned i = 0; i < aData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)aData->mText[i];
         return aData->mLength;
     }
-    case Op::SetColumnHandlers: {
-        ServerListCtrl::ColumnInfo* theHandlers = ServerListCtrl::GetColumnInfo(a ? "MapType" : "Epoch");
-        theHandlers->mPaintFunc = a ? EELobbyMapTypePaint : EELobbyEpochPaint;
-        theHandlers->mCompareFunc = a ? EELobbyMapTypeCompare : EELobbyEpochCompare;
-        theHandlers->mFilterFunc = a ? EELobbyMapTypeFilter : EELobbyEpochFilter;
-        return 0;
-    }
+    // the column's handlers are srvlistctl.rs's calls into this glue (LobbyNetCtrlHost.cpp's EeColumn)
+    case Op::SetColumnHandlers: ee_won_lobbyctl_ee_column((int)a); return 0;
     case Op::SetFactories:
         LobbyGame::SetGameFactory(EELobbyNewGame);
         LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer);

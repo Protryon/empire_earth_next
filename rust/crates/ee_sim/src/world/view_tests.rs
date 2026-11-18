@@ -218,6 +218,7 @@ fn fake_layout() -> EeWorldLayout {
         unit_node_next: offset_of!(FakeNode, next) as u64,
         player_viewed_unit: offset_of!(FakePlayer, viewed_unit) as u64,
         player_selected_viewed_unit: offset_of!(FakePlayer, selected_viewed_unit) as u64,
+        ..Default::default()
     }
 }
 
@@ -632,4 +633,50 @@ fn the_world_by_address_the_class_table_and_the_lane_s_members() {
     drop(_guard);
     let _guard = with_test_layout(fake_layout());
     assert_eq!(ClassView::count(&t), 0);
+}
+
+/// The HUD's reads (the UI thread lane): a selected group's units in place, the stats' own class and button.
+#[test]
+fn group_and_stats_links() {
+    #[repr(C)]
+    #[derive(Default)]
+    struct FakeGroup {
+        vptr: usize,
+        pad: [usize; 3],
+        units: [usize; 3],
+    }
+    let units: Vec<usize> = vec![0x1000, 0x2000];
+    let mut g = Box::<FakeGroup>::default();
+    g.units = [units.as_ptr() as usize, units.as_ptr() as usize + 2 * std::mem::size_of::<usize>(), 0];
+    let mut p = Box::<FakePlayer>::default();
+    p.selected_group = addr(&*g);
+    let class = Box::<FakeClass>::default();
+    let mut s = Box::<FakeStats>::default();
+    s.pad[0] = addr(&*class) as u64;
+    s.pad[1] = 0x7700;
+    let mut l = fake_layout();
+    l.group_units = offset_of!(FakeGroup, units) as u64;
+    l.stats_unit_class = offset_of!(FakeStats, pad) as u64;
+    l.stats_button = offset_of!(FakeStats, pad) as u64 + 8;
+    let _guard = with_test_layout(l);
+    // SAFETY: the fakes live
+    let t = unsafe { WorldRead::begin() };
+    let player = unsafe { PlayerView::of(&t, addr(&*p) as u64) }.unwrap();
+    let group = player.selected_group().unwrap();
+    assert_eq!(group.handle(), addr(&*g) as u64);
+    assert_eq!(group.len(), 2);
+    assert!(!group.is_empty());
+    assert_eq!(group.first_unit_handle(), 0x1000);
+    assert_eq!(group.unit_handle(1), 0x2000);
+    assert_eq!(group.unit_handle(2), 0);
+    assert!(group.contains(0x2000) && !group.contains(0x3000));
+    g.units[1] = g.units[0];
+    assert!(group.is_empty());
+    assert_eq!(group.first_unit_handle(), 0);
+    let stats = unsafe { super::view::StatsView::of(&t, addr(&*s) as u64) }.unwrap();
+    assert_eq!(stats.class_handle(), addr(&*class) as u64);
+    assert_eq!(stats.class().unwrap().handle(), addr(&*class) as u64);
+    assert_eq!(stats.button_handle(), 0x7700);
+    p.selected_group = 0;
+    assert!(player.selected_group().is_none());
 }

@@ -237,14 +237,11 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         gContinentManager.Clear(gWorld.mMap);
         gContinentManager.BuildRegions(gWorld.mMap);
         break;
-    case EE_SCREENS_UG_OP_NUM_PLAYERS: return gWorld.mNumPlayers;
     case EE_SCREENS_UG_OP_PLAYER: {
         EEPlayer* thePlayer = gWorld.mPlayers[inA];
         switch (inB) {
-        case EE_SCREENS_UG_PLAYER_EXISTS: return thePlayer != NULL;
         case EE_SCREENS_UG_PLAYER_HERDS: thePlayer->RegisterHerds(); thePlayer->AssignHerds(); break;
         case EE_SCREENS_UG_PLAYER_TOWNS: thePlayer->RegisterTowns(); thePlayer->AssignTowns(); break;
-        case EE_SCREENS_UG_PLAYER_COMPUTER: return thePlayer->mComputerPlayer != NULL;
         case EE_SCREENS_UG_PLAYER_CENTRES: thePlayer->mComputerPlayer->RefreshResourceCenters(); break;
         case EE_SCREENS_UG_PLAYER_TOWN_GROUPS: thePlayer->RefreshTownGroups(); break;
         }
@@ -302,7 +299,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UG_OP_B13D_OFF: gUIManager->mB13D = false; break;
     case EE_SCREENS_UG_OP_STATE_CLEAR: gGameState.Clear(); break;
     case EE_SCREENS_UG_OP_STOP_SOUNDS: EEStopAllSounds(); break;
-    case EE_SCREENS_UG_OP_SWAP_SPLASH: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash)); break;
     case EE_SCREENS_UG_OP_SERVER_LOAD:
         theServer->AllowNewPlayers(false);
         theServer->mNumLoadResponses = 0;
@@ -401,11 +397,7 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UG_OP_SCREEN_INACTIVE: gGameScreenActive = false; break;
     case EE_SCREENS_UG_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), inA != 0, inB != 0); break;
     case EE_SCREENS_UG_OP_NOT_MAIN: return gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm();
-    case EE_SCREENS_UG_OP_POP: gUIManager->Pop(); break;
-    case EE_SCREENS_UG_OP_SWAP: gUIManager->SwapForm(reinterpret_cast<UIForm*>(inA)); break;
-    case EE_SCREENS_UG_OP_FORM: return reinterpret_cast<int64_t>(gUIManager->GetFormByID((unsigned long)inA));
     case EE_SCREENS_UG_OP_ONE_RECORD: return gWorld.mStatistics.GetRecords().size() == 1;
-    case EE_SCREENS_UG_OP_PUSH: gUIManager->Push(reinterpret_cast<UIForm*>(inA)); break;
     case EE_SCREENS_UG_OP_SERVER_LOST:
         return gCommunications != NULL && gCommunications->IsClient() &&
                static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading;
@@ -454,10 +446,8 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
             theBuilder->SetMusicFileName(inA == 1 ? UWideString("") : sMusic);
         break;
     }
-    case EE_SCREENS_UG_OP_COPY_LOCK: inA != 0 ? gUIManager->LockUIForCopyData() : gUIManager->UnlockUIForCopyData(); break;
     case EE_SCREENS_UG_OP_CAN_BUY_CIV: return gWorld.mGameOptions.CanBuyCivilization();
     case EE_SCREENS_UG_OP_CUSTOM_CIVS: return gWorld.mGameOptions.mAllowCustomCivs;
-    case EE_SCREENS_UG_OP_CIV_CHOSEN: return gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen;
     case EE_SCREENS_UG_OP_CIV_CHOOSE: {
         UIForm* theForm = gUIManager->GetFormByID(kFormPredefinedCiv);
         EESetCivBuilderButtonBlinking(false);
@@ -625,28 +615,14 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     switch (inOp) {
     case EE_SCREENS_UI_OP_PAUSE: theUI->PauseGraphics(); break;
     case EE_SCREENS_UI_OP_RESUME: theUI->ResumeGraphics(); break;
-    case EE_SCREENS_UI_OP_LOCK:
-        if (inA == 0) gUIManager->LockUIForCopyData();
-        else if (inA == 1) gWorld.mLock->ReadLock();
-        else gWorld.mLock->WriteLock();
+    case EE_SCREENS_UI_OP_LOCK:   // (the copy lock, 0, and the manager's form calls are hud_views.rs')
+        inA == 1 ? gWorld.mLock->ReadLock() : gWorld.mLock->WriteLock();
         break;
     case EE_SCREENS_UI_OP_UNLOCK:
-        if (inA == 0) gUIManager->UnlockUIForCopyData();
-        else if (inA == 1) gWorld.mLock->ReadUnlock();
-        else gWorld.mLock->WriteUnlock();
+        inA == 1 ? gWorld.mLock->ReadUnlock() : gWorld.mLock->WriteUnlock();
         break;
-    case EE_SCREENS_UI_OP_HAS_MANAGER: return gUIManager != NULL;
     case EE_SCREENS_UI_OP_MAIN_FORM: return (int64_t)theMain;
     case EE_SCREENS_UI_OP_EDITOR_FORM: return (int64_t)gUIManager->mScenarioEditorForm;
-    case EE_SCREENS_UI_OP_CURRENT_FORM: return (int64_t)gUIManager->GetCurrentForm();
-    case EE_SCREENS_UI_OP_FORM_BY_ID: return (int64_t)gUIManager->GetFormByID(inA);
-    case EE_SCREENS_UI_OP_SWAP: gUIManager->SwapForm(theForm); break;
-    case EE_SCREENS_UI_OP_PUSH: gUIManager->Push(theForm); break;
-    case EE_SCREENS_UI_OP_POP: gUIManager->Pop(); break;
-    case EE_SCREENS_UI_OP_POP_TO: gUIManager->PopTo(theForm); break;
-    case EE_SCREENS_UI_OP_ON_STACK: return gUIManager->IsFormOnStack(theForm);
-    case EE_SCREENS_UI_OP_VISIBLE: return gUIManager->IsFormVisible(theForm);
-    case EE_SCREENS_UI_OP_REDRAW: gUIManager->RedrawAll(); break;
     case EE_SCREENS_UI_OP_STATUS_VALUE:
         static_cast<UIStatusBar*>(theForm->GetControl(inB))->SetCurrentRangeValue(inC);
         break;

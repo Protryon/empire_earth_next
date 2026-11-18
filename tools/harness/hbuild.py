@@ -7,7 +7,7 @@ runtime inside), built with the test profile:
   python -I tools/build.py --test-profile windowed-software            -> build/clang-test/
 
 The test profile compiles the windowed/software-display policy in, so nothing is patched at staging. The game's
-mixer runs on miniaudio's null device when the machine has no audio output.
+mixer runs on its null device when the machine has no audio output.
 
 The exe is x86_64 (checked from its PE header), and so are the harness's helpers (exe_boot.exe, the bridge and the
 time shim, built with MSYS2 mingw64 gcc). The harness names the game's symbols by their x64 decorations, its

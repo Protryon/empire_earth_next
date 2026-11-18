@@ -7,6 +7,7 @@
 
 #[cfg(test)]
 mod chat_golden;
+pub mod chatctl;
 pub mod chatobj;
 pub mod dialogs;
 pub mod dlglogic;
@@ -30,12 +31,15 @@ pub mod lobbypopup;
 pub mod logics;
 pub mod model;
 pub mod modelobj;
+pub mod netctl;
 pub mod persist;
+pub mod persistobj;
 pub mod prefsobj;
 pub mod resource;
 pub mod routelogic;
 pub mod routing;
 pub mod scrolltext;
+pub mod srvlistctl;
 pub mod staging;
 pub mod stagingobj;
 pub mod statusstr;

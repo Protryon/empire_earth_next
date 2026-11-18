@@ -7,6 +7,597 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `gPhysics->mGameTime`
+constexpr static const int32_t EE_AI_NEXT_HOST_NOW = 1;
+
+/// `gCPTraceOn`
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_ON = 2;
+
+/// `EECPTraceOut(player, b, "%s", c)` under the manager `a` (a C string; 0: the current one)
+constexpr static const int32_t EE_AI_NEXT_HOST_TRACE = 3;
+
+/// `EEGameLogOn()`
+constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG_ON = 4;
+
+/// `EEGameLogLine(a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_GAME_LOG = 5;
+
+/// `gPlatSimMode`
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_MODE = 6;
+
+/// `fprintf(stderr, "%s", a)`, flushed
+constexpr static const int32_t EE_AI_NEXT_HOST_STDERR = 7;
+
+/// `EECPEngineLog("%s", a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_ENGINE_LOG = 8;
+
+/// `gUserInterface->mRandomSeed`
+constexpr static const int32_t EE_AI_NEXT_HOST_GAME_SEED = 9;
+
+/// the file `a` (a game path, PlatFOpen "rb") appended to `out` (a `Vec<u8>`) -> 1, 0: none
+constexpr static const int32_t EE_AI_NEXT_HOST_READ = 10;
+
+/// whether the file `a` opens
+constexpr static const int32_t EE_AI_NEXT_HOST_EXISTS = 11;
+
+/// `EECPNextClassName(a)` appended to `out`
+constexpr static const int32_t EE_AI_NEXT_HOST_CLASS_NAME = 12;
+
+/// the manifest's classic AI's id appended to `out` -> 1, 0: none
+constexpr static const int32_t EE_AI_NEXT_HOST_CLASSIC_AI = 13;
+
+/// the script of the manifest's AI `a` (a C string) appended to `out` -> 1, 0: not in the manifest
+constexpr static const int32_t EE_AI_NEXT_HOST_AI_SCRIPT = 14;
+
+/// the player's per-unit state (`mUnitsState->mRust`, 0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_UNITS_STATE = 15;
+
+/// the placement's town centre tile into `out` (two i64) -> 1, 0: no placement
+constexpr static const int32_t EE_AI_NEXT_HOST_TOWN = 16;
+
+/// a: 0 `GetTotalPopulation(true, false)`, 1 `GetPopulationLimit(0)`, 2 `GetTotalPopulation(true, true)`,
+/// 3 `EEPlayer::GetPopulationLimit(0)`, 4 `mPopulationCap`, 5 `mDropOffDistance`
+constexpr static const int32_t EE_AI_NEXT_HOST_POPULATION = 17;
+
+/// `EECPPendingEpoch(player)`
+constexpr static const int32_t EE_AI_NEXT_HOST_PENDING_EPOCH = 18;
+
+/// `mCombatManager != NULL`
+constexpr static const int32_t EE_AI_NEXT_HOST_HAS_COMBAT = 19;
+
+/// `mCanGather`
+constexpr static const int32_t EE_AI_NEXT_HOST_CAN_GATHER = 20;
+
+/// `GetNumResourceCenters()`
+constexpr static const int32_t EE_AI_NEXT_HOST_RC_COUNT = 21;
+
+/// the centre `a`'s `mUnit` (handle), `mIsActive`, `mUnits.size()` into `out` (three i64)
+constexpr static const int32_t EE_AI_NEXT_HOST_RC = 22;
+
+/// the centre `a`'s `mUnits[b]` (an `EEUnit*`)
+constexpr static const int32_t EE_AI_NEXT_HOST_RC_UNIT = 23;
+
+/// the centre `a`'s `GetCenter` tile into `out` (two i64)
+constexpr static const int32_t EE_AI_NEXT_HOST_RC_CENTER = 24;
+
+/// `gWorld.GetResourceUsers(a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_RESOURCE_USERS = 27;
+
+/// the goal `a`'s target unit (b: 0 `GetGatherResource`, 1 `GetAttackTarget`, 2 `GetBuildTarget`; 0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_GOAL_UNIT = 28;
+
+/// `gContinentManager.GetContinent(a, kAIPathLandMass)` (a unit)
+constexpr static const int32_t EE_AI_NEXT_HOST_CONTINENT_OF = 29;
+
+/// the player `a`'s `GetNearestArea((b, c), true)`'s closest hull point to (b, c) into `out` -> 1, 0: no area
+constexpr static const int32_t EE_AI_NEXT_HOST_AREA_HULL = 30;
+
+/// `gContinentManager.mForests.size()`
+constexpr static const int32_t EE_AI_NEXT_HOST_FORESTS = 31;
+
+/// the forest `a`'s `GetID()` -> -1 when `mForests[a]` is NULL
+constexpr static const int32_t EE_AI_NEXT_HOST_FOREST = 32;
+
+/// the forest `a`'s point closest to (b, c) into `out` (out[2]: 0 `GetClosestPoint`, 1 `GetClosestHullPoint`)
+constexpr static const int32_t EE_AI_NEXT_HOST_FOREST_POINT = 33;
+
+/// `gWorld.GetUnit(a)` (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_UNIT = 34;
+
+/// `player->ScaleCost(node a->GetCost(b, c, 1.0f))`
+constexpr static const int32_t EE_AI_NEXT_HOST_NODE_COST = 35;
+
+/// the node `a`'s `GetIsAvailable()` (b 0) or `GetIsObsolete()` (b 1)
+constexpr static const int32_t EE_AI_NEXT_HOST_NODE_TEST = 36;
+
+/// `EEEpochCount()`
+constexpr static const int32_t EE_AI_NEXT_HOST_EPOCH_COUNT = 37;
+
+/// `gWorld.mGameOptions.mEpochEnd`
+constexpr static const int32_t EE_AI_NEXT_HOST_EPOCH_END = 38;
+
+/// `EECPExperiment(player, a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_EXPERIMENT = 39;
+
+/// the complex unit `a`'s `mLastAttacker` (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_LAST_ATTACKER = 40;
+
+/// `EECPNextGetState(player)` (made when missing)
+constexpr static const int32_t EE_AI_NEXT_HOST_STATE = 43;
+
+/// the player slot `a`'s computer player when it is active with a per-unit and a next state (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_MICRO_PLAYER = 44;
+
+/// `player->mNextState` (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_STATE_OF = 45;
+
+/// `ESDebugOut("%s", a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_DEBUG_OUT = 47;
+
+/// `gCPTraceManager = a` (a static C string) -> the previous one
+constexpr static const int32_t EE_AI_NEXT_HOST_SCOPE = 48;
+
+/// the player's `mPlayerID`
+constexpr static const int32_t EE_AI_NEXT_HOST_PLAYER_ID = 49;
+
+/// `mDangerZones.size()`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_COUNT = 25;
+
+/// the zone `a` (x, y, time) into `out` (three i64)
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER = 26;
+
+/// `mDangerZones.push_back(((a, b), c))`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_ADD = 50;
+
+/// `mDangerZones.erase(begin() + a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_ERASE = 51;
+
+/// the complex unit `a`'s order (out: kind 0 attack the complex unit out[1] / 1 go to the tile (out[2], out[3]);
+/// out[4]: inside `Reference`/`Dereference`): `ClearGoalQueue(0)`, `SetGoal(EEUGRust::NewAttackUnit(unit, target,
+/// false, false) | NewLocation(tile, true, true, false, 0.0f, false, false), 0, 0)`,
+/// `StartAction(kActionPrepareToMove)`, `GetUnitClass()->ActionChanged(unit)`
+constexpr static const int32_t EE_AI_NEXT_HOST_ORDER = 52;
+
+/// `EEGetPlayerUnitsOfType(a, b, units)`: their handles pushed onto `out` (a `Vec<u64>`)
+constexpr static const int32_t EE_AI_NEXT_HOST_UNITS_OF_TYPE = 53;
+
+/// the complex unit `a`'s `mCitizenBuildQueue.size()`
+constexpr static const int32_t EE_AI_NEXT_HOST_CITIZEN_QUEUE = 54;
+
+/// the player `a`'s `IsHuman()`
+constexpr static const int32_t EE_AI_NEXT_HOST_IS_HUMAN = 55;
+
+/// a: 0 `EECPMilitiaOn(player)`, 1 `EECPMilitiaTowersOn(player)`
+constexpr static const int32_t EE_AI_NEXT_HOST_SWITCH = 56;
+
+/// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
+constexpr static const int32_t EE_AI_NEXT_HOST_FORMAT_F2 = 57;
+
+/// the complex unit `a`'s `DistanceSquaredToUnit(b)` (the float's bits)
+constexpr static const int32_t EE_AI_NEXT_HOST_DISTANCE2 = 58;
+
+/// the player `a`'s `mComputerPlayer` (0: none)
+constexpr static const int32_t EE_AI_NEXT_HOST_COMPUTER = 59;
+
+/// the dump's AREAS line (the continent manager's areas, its serial counter and its lists' sizes) appended to `out`:
+/// the one read of the continent manager's `mAreas` (Lane C re-points it)
+constexpr static const int32_t EE_AI_NEXT_HOST_AREAS = 60;
+
+/// the player's `mIsStarted`
+constexpr static const int32_t EE_AI_NEXT_HOST_STARTED = 61;
+
+/// the sim hash's parts into `out` (five i64): the tick, the units counted, the sum of their `GetChecksum(3)`, the
+/// shared random seed, the inputs processed
+constexpr static const int32_t EE_AI_NEXT_HOST_SIM_HASH = 62;
+
+/// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
+constexpr static const long THREAT_RANGE = 9;
+
+/// `kNextThreatMs`: ... remembered this long after they were last seen
+constexpr static const long THREAT_MS = 20000;
+
+/// `kNextTowerMargin`: tiles past a tower's range (the gatherers stand round the mine)
+constexpr static const long TOWER_MARGIN = 3;
+
+/// `EECPNextBlocked*`
+constexpr static const long BLOCKED_NONE = 0;
+
+constexpr static const long BLOCKED_UNEXPLORED = 1;
+
+constexpr static const long BLOCKED_ENEMY_NEAR = 2;
+
+constexpr static const long BLOCKED_DANGER = 3;
+
+constexpr static const long BLOCKED_AREA = 4;
+
+constexpr static const long BLOCKED_TOWER = 5;
+
+/// `EECPNextSeenKind`
+constexpr static const long SEEN_SOLDIER = 0;
+
+constexpr static const long SEEN_CITIZEN = 1;
+
+constexpr static const long SEEN_BOAT = 2;
+
+constexpr static const long SEEN_TOWER = 3;
+
+constexpr static const long SEEN_BUILDING = 4;
+
+constexpr static const long SEEN_SHIP = 5;
+
+/// `kNextResources`
+constexpr static const size_t RESOURCES = 5;
+
+/// `kEECPClaimRange`, `kEECPClaimRangeStep`, `kEECPClaimRangeMax` (ee/EECPTrace.h)
+constexpr static const long CLAIM_RANGE = 25;
+
+constexpr static const long CLAIM_RANGE_STEP = 5;
+
+constexpr static const long CLAIM_RANGE_MAX = 45;
+
+/// `kNextMaxOrders`: orders past this many in one step are dropped (traced)
+constexpr static const size_t MAX_ORDERS = 200;
+
+/// `kNextRefused`, `kNextReasonBadArgument`
+constexpr static const int32_t CODE_REFUSED = 2;
+
+constexpr static const int32_t REASON_BAD_ARGUMENT = 6;
+
+/// `kAICheatAll`
+constexpr static const long CHEAT_ALL = 127;
+
+/// `EECPUnitsGet(player)`: the player's state (made when missing).
+constexpr static const int32_t EE_AI_UNITS_HOST_STATE = 1;
+
+/// `gPhysics->mGameTime`.
+constexpr static const int32_t EE_AI_UNITS_HOST_NOW = 2;
+
+/// `gWorld.GetUnit(a)` (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_UNIT = 3;
+
+/// `gMapWidth | gMapHeight << 32` (0 without a map).
+constexpr static const int32_t EE_AI_UNITS_HOST_MAP_SIZE = 4;
+
+/// `EECPNextClassByName(a)` (a NUL-terminated name).
+constexpr static const int32_t EE_AI_UNITS_HOST_CLASS_BY_NAME = 5;
+
+/// `EECPNextClassName(a)` into `out` (1024 bytes, NUL-terminated) -> its length.
+constexpr static const int32_t EE_AI_UNITS_HOST_CLASS_NAME = 6;
+
+/// `player->DetachUnitFromAI(a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_DETACH = 7;
+
+/// `a->mIsDetachedFromAI = false` (when set).
+constexpr static const int32_t EE_AI_UNITS_HOST_ATTACH = 8;
+
+/// The complex unit `a`'s `mLastAttacker` (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_LAST_ATTACKER = 9;
+
+/// The player `a`'s `mUnitClassUpgrades[b]` (0: none or past the vector).
+constexpr static const int32_t EE_AI_UNITS_HOST_UPGRADE = 10;
+
+/// `gContinentManager.GetContinent((a, b), c ? kAIPathWaterBody : kAIPathLandMass)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CONTINENT = 11;
+
+/// With the trace on: `EECPTraceOut(player, a, "%s", b)` under the "next" scope.
+constexpr static const int32_t EE_AI_UNITS_HOST_TRACE = 12;
+
+/// The facts of the unit `a` (an own or allied complex unit's record, `EeAiUnitsFacts`) into `out`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FACTS = 13;
+
+/// `EECPNextAssigned(player, a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_ASSIGNED = 14;
+
+/// `EECPNextHasRoom(player, a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_HAS_ROOM = 15;
+
+/// The player `a`'s `IsHuman()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_HUMAN = 16;
+
+/// `gWorld.mTeams.size()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAMS = 17;
+
+/// `gWorld.mTeams[a].ContainsPlayer(b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_HAS = 18;
+
+/// `gWorld.mTeams[a].GetNumPlayers()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_SIZE = 19;
+
+/// `gWorld.mTeams[a].GetPlayersAt(b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_PLAYER = 20;
+
+/// The complex unit `a`'s gather goal's resource id, when it has one and it is valid (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_GATHER_TARGET = 21;
+
+/// `gCPTraceOn`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TRACE_ON = 22;
+
+/// The selection (`mActiveGroup`) cleared (0: the player has none).
+constexpr static const int32_t EE_AI_UNITS_HOST_SELECT_BEGIN = 30;
+
+/// The complex unit `a` added to the selection.
+constexpr static const int32_t EE_AI_UNITS_HOST_SELECT_ADD = 31;
+
+/// The message `out` (an `EeAiUnitsMessage`) run (its mode says how).
+constexpr static const int32_t EE_AI_UNITS_HOST_EXEC = 32;
+
+/// `EECPNextTechByName(a)` (a NUL-terminated name).
+constexpr static const int32_t EE_AI_UNITS_HOST_TECH_BY_NAME = 33;
+
+/// `player->EEPlayer::CanProduce(a, 0x20, 1, true, 3, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PRODUCE = 34;
+
+/// `EECanPlaceOnTile(player, a, b, c, false, 1)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PLACE = 35;
+
+/// The class `a`'s `IsTransport()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_TRANSPORT = 36;
+
+/// `a` indexes a behaviour of `EEUnitBehavior::sTable` (in range, not NULL).
+constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIOR_OK = 37;
+
+/// `player->mTechnologies->Get(a) != NULL`.
+constexpr static const int32_t EE_AI_UNITS_HOST_HAS_NODE = 38;
+
+/// The class `a`'s `IsLandBuilding()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_LAND_BUILDING = 39;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PATH_TO = 1;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_ATTACK_UNIT = 2;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_ATTACK_GROUND = 3;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_GATHER = 4;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD = 5;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REPAIR = 6;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOAD_GARRISON = 7;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOAD_TRANSPORT = 8;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_UNLOAD = 9;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_RESEARCH = 10;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BEHAVIOR = 11;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_STOP = 12;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_EXPLORE = 13;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_KILL = 14;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_HEAL = 15;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_RALLY = 16;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REMOVE_TECH = 17;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_FORMATION = 18;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PACK = 19;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_DROPOFF = 20;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_REPLANT = 21;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_SMART_FARMERS = 22;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_CAST = 23;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_PATROL_POINT = 24;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_LOCK = 25;
+
+/// The player has a tech tree (`mTechnologies != NULL`).
+constexpr static const int32_t EE_AI_UNITS_HOST_HAS_TREE = 40;
+
+/// `EECPWallClass(player)`: the epoch's wall as the classic wall manager takes it.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_CLASS = 41;
+
+/// The tech `a`'s node: -1 none, else `CanAfford(node, 0x20, 1)` (0 or 1).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_AFFORD = 42;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD_WALL = 26;
+
+/// `EECPEngineSeesAll(player)`: the manifest's "sees_all".
+constexpr static const int32_t EE_AI_UNITS_HOST_SEES_ALL = 43;
+
+/// `EEPlayerBlockTakes(player, a, b - 1, c - 1, size + 2, size + 2, 0)` with `out` the size (a `c_long`).
+constexpr static const int32_t EE_AI_UNITS_HOST_BLOCK_TAKES = 44;
+
+/// The class `a`'s `FliesOver()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FLIES_OVER = 50;
+
+/// The class `a`'s `GetPopulationCost()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_POP_COST = 51;
+
+/// `gDamageTable[a][b] != 0` (0 without a table).
+constexpr static const int32_t EE_AI_UNITS_HOST_DAMAGES = 52;
+
+/// The player `a`'s `GetTeamIndex()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_INDEX = 53;
+
+/// The player `a`'s `GetNumWonderUnits()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_WONDER_COUNT = 54;
+
+/// `player->ScaleCost(node a->GetCost(b, c, 1.0f))` (the node's virtual: the capture's record).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_COST = 55;
+
+/// `player->ScaleCost(a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SCALE_COST = 56;
+
+/// The node `a`'s `GetIsAvailable()` (virtual: the walk).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_AVAILABLE = 57;
+
+/// The node `a`'s `GetIsObsolete()` (virtual: the walk).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_OBSOLETE = 58;
+
+/// `EECPNextTechName(a)` into `out` (1024 bytes, NUL-terminated) -> its length.
+constexpr static const int32_t EE_AI_UNITS_HOST_TECH_NAME = 59;
+
+/// `player->CanProduce(a, b, 1, c != 0, 3, NULL)` (the computer player's).
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PRODUCE_AS = 60;
+
+/// The node `a`'s researched event improves a citizen's gathering (the classic research manager's test).
+constexpr static const int32_t EE_AI_UNITS_HOST_CITIZEN_UPGRADE = 61;
+
+/// `EEIsEpochID(a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_EPOCH_ID = 62;
+
+/// `EEEpochCount()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_EPOCH_COUNT = 63;
+
+/// The next level's cost of the class `a`'s improvement `b` (`EeAiUnitsImproveCost` into `out`) -> 1, or 0: no
+/// node now or no such improvement.
+constexpr static const int32_t EE_AI_UNITS_HOST_IMPROVE_COST = 64;
+
+/// `player->CanBuy(a, b, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_BUY = 65;
+
+/// `EECPGateClass(player)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_CLASS = 66;
+
+/// The class `a` is a gate class (`EEUnitClassOfKind<EE_CLASS_KIND_GATE>`).
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_GATE_CLASS = 67;
+
+/// The side (1..4) a gate fits on over the player's finished wall at the tile (a, b); 0: none.
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_SIDE = 68;
+
+/// The tribute of `c` of the resource `b` to the player `a` (the moves and both ledgers).
+constexpr static const int32_t EE_AI_UNITS_HOST_TRIBUTE = 69;
+
+/// `gWorld.SetDiplomaticStance(player, a, b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_STANCE = 70;
+
+/// The own finished building `a`'s garrison raised by `b` (`AddGarrison`) -> whether done.
+constexpr static const int32_t EE_AI_UNITS_HOST_GARRISON_FILL = 71;
+
+/// `EECPNextSiteBlocked(player, unit a, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SITE_BLOCKED = 72;
+
+/// `EECPNextBuildUnsafe(player, a, b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_BUILD_UNSAFE = 73;
+
+/// `EECPNextSiteThreat(player, a, b, false, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SITE_THREAT = 74;
+
+/// The classic's enemy test through the fog (the influence regions round the tile (a, b)) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_ENEMY_NEAR_ALL = 75;
+
+/// `EECPNextPlaceSearch` with `out` an `EeAiUnitsPlace` -> 1 found.
+constexpr static const int32_t EE_AI_UNITS_HOST_PLACE = 76;
+
+/// `EECPEngineFillsGarrison(player)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FILLS_GARRISON = 77;
+
+/// The seat's tuning beyond its record (`EeAiUnitsTuning` into `out`).
+constexpr static const int32_t EE_AI_UNITS_HOST_TUNING = 78;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_IMPROVE = 27;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_HACK_NEW_UNIT = 28;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD_GATE = 29;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_EXCHANGE = 30;
+
+/// `gContinentManager.GetContinentAt(a, b)` (an `EEAIContinent*`; 0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_AT = 80;
+
+/// `GetContinentByID(a)` for `0 < a < mContinents.size()` (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_BY_ID = 81;
+
+/// The area `a`'s id, category and tile count (`EeAiUnitsArea` into `out`).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_INFO = 82;
+
+/// A random tile of the area `a` from a stream seeded `(unsigned long)b` (`EeAiUnitsArea`'s x, y) -> 1, or 0 for an
+/// empty area.
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_POINT = 83;
+
+/// A forest's, a hill's or a choke point's random point (`EeAiUnitsAreaPick` in and out).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_PICK = 84;
+
+/// The shore tiles of the largest water body next to the land mass at (a, b) into `out` (a `EeAiUnitsTiles`) ->
+/// their count, -1 when the water body does not touch it.
+constexpr static const int32_t EE_AI_UNITS_HOST_WATER_SHORE = 85;
+
+/// `EEGetWallLine(from, to)` into `out` (a `EeAiUnitsTiles`) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_LINE = 86;
+
+/// The wall line `out` (a `EeAiUnitsTiles`) is blocked by a land building (IsPathBlocked).
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_BLOCKED = 87;
+
+/// `gContinentManager.GetForestAt((a, b)) != NULL`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FOREST_AT = 88;
+
+/// `EEAreTilesLevel` of the five tiles `out` (a `EeAiUnitsTiles`).
+constexpr static const int32_t EE_AI_UNITS_HOST_TILES_LEVEL = 89;
+
+/// The own unit `a`'s wall path from `from` to `to` (`EeAiUnitsTiles` in `out`) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_PATH = 90;
+
+/// A wall route's request for the enemy `a` from `from` to `to` (`EeAiUnitsTiles` in `out`; the old request
+/// dropped) -> its handle (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_REQUEST = 91;
+
+/// The route `a`: -2 not held, -1 running, else its path's length.
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_STATE = 92;
+
+/// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TAKE = 93;
+
+/// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
+/// computed twice (the shore's GetTilesNextTo and FindPath are captured).
+constexpr static const int32_t EE_AI_UNITS_HOST_TILES_AGAIN = 94;
+
+constexpr static const long EV_ATTACKED = 1;
+
+constexpr static const long EV_DIED = 2;
+
+constexpr static const long EV_CREATED = 3;
+
+constexpr static const long EV_BUILT = 4;
+
+constexpr static const long EV_IDLE = 5;
+
+constexpr static const long EV_SWAPPED = 6;
+
+constexpr static const long EV_CONVERTED = 7;
+
+constexpr static const long EV_ATTACK_PLAYER = 8;
+
+constexpr static const long EV_DEFEND_PLAYER = 9;
+
+constexpr static const long EV_FLARE = 10;
+
+/// The danger layers' and the route's cell (tiles).
+constexpr static const long DANGER_CELL = 4;
+
+/// The lost layer remembers a bad trade this long (Age of AI's 20 minutes).
+constexpr static const long LOST_MS = 1200000;
+
+/// (minute, cell) records of the lost layer.
+constexpr static const size_t MAX_TRADES = 1024;
+
+/// The influence layer's spread (cells).
+constexpr static const long INFLUENCE_SPREAD = 3;
+
+constexpr static const size_t MAX_EVENTS = 512;
+
+constexpr static const size_t MAX_REMEMBERED = 4000;
+
+/// The micro step's period (game ms).
+constexpr static const long MICRO_MS = 250;
+
+constexpr static const int64_t MICRO_BUDGET = 300000;
+
+/// A swap's forwarding entry lives 10 minutes.
+constexpr static const long FORWARD_MS = 600000;
+
 /// A manifest read: its entries and log lines.
 struct EeAiManifest;
 
@@ -18,6 +609,9 @@ struct EeAiNextDecoded;
 
 /// A decoded per-unit state and its view.
 struct EeAiUnitsDecoded;
+
+/// The output the C++ registers (`ESDebugOut("%s", text)`).
+using EeAiBindingTraceOut = void(*)(const char *text);
 
 /// An event since the last step: kind, unit type, count.
 struct EeAiNextEvent {
@@ -223,6 +817,164 @@ struct EeAiLuaConfig {
   void *open_context;
 };
 
+/// What a unit's record needs beyond the views (`EE_AI_UNITS_HOST_FACTS`): its goal's place and target, its home
+/// base, the terrain it crosses, its stance.
+struct EeAiUnitsFacts {
+  /// a goal state (then `tx`, `ty`: `GetGoalLocation`, floored)
+  bool has_goal;
+  long tx;
+  long ty;
+  /// a gather goal: the resource kind it carries (0..4; -1 none or not a gather goal)
+  long gathers;
+  /// a gather goal waiting for room (`IsGatherWaiting() && mCurrentPhysicsAction != 0`)
+  bool waiting;
+  /// a build goal stalled (`kActionWaitForBuildSiteToClear`, the target unbuilt, `IsBuildSiteTaken`)
+  bool stalled;
+  /// the goal's target unit id (gathered, built or attacked; valid; 0: none)
+  long target;
+  /// `mHomeBase`'s id when valid (0: none)
+  long home_base;
+  /// not a building and its class moves (`GetMaxVelocity() > 0`): then the two terrain flags
+  bool moves;
+  bool crosses_forest;
+  bool crosses_cliff;
+  /// the behaviour's index in `EEUnitBehavior::sTable` (-1: none)
+  long stance;
+  /// `mGarrisonCount`
+  long garrisoned;
+};
+
+/// `EEMRecord`'s members as a command sends them: an integer (`kind` 0), a float (1) or a point (2: `x`, `y`).
+struct EeAiUnitsMsgValue {
+  int32_t kind;
+  int64_t i;
+  float x;
+  float y;
+};
+
+/// A command's message (`EE_AI_UNITS_HOST_EXEC`): `message` one of `EE_AI_UNITS_MSG_*`, `mode` 0 run on the
+/// selection under the borrowed slot (`EECPUnitsRun`), 1 run as it is (`Execute`).
+struct EeAiUnitsMessage {
+  int32_t message;
+  int32_t mode;
+  int32_t count;
+  EeAiUnitsMsgValue values[8];
+};
+
+/// `EE_AI_UNITS_HOST_IMPROVE_COST`'s answer.
+struct EeAiUnitsImproveCost {
+  long cost[5];
+  long level;
+  long max;
+};
+
+/// `EE_AI_UNITS_HOST_PLACE`'s arguments and answer.
+struct EeAiUnitsPlace {
+  long unit_type;
+  long mode;
+  long x;
+  long y;
+  long first;
+  long last;
+  /// the site's index (the script's, less one)
+  long site;
+  const long *units;
+  size_t units_len;
+  long out_x;
+  long out_y;
+  long out_gap;
+};
+
+/// What `ai.tuning` reads beyond the computer player's record (`EE_AI_UNITS_HOST_TUNING`): the game's options,
+/// the map, the continents, the manifest's switches, the cheats, the personality and the experiments, the
+/// behaviour table's values.
+struct EeAiUnitsTuning {
+  bool deathmatch;
+  bool all_managers;
+  long epoch_start;
+  long epoch_end;
+  bool space;
+  long water_tiles;
+  long land_tiles;
+  long space_tiles;
+  long largest_sea;
+  bool fills_garrison;
+  bool sees_all;
+  long population_limit;
+  bool cheats[7];
+  /// the personality's id (NUL-terminated)
+  char id[128];
+  float epoch_pressure_start;
+  float epoch_pressure_full;
+  float stone_span;
+  float safe_bonus;
+  long surplus;
+  float surplus_cut;
+  long low_stock;
+  float floor[5];
+  float max_citizen_share;
+  long wood_slots;
+  long moves_per_cycle;
+  bool demand_split;
+  bool coast_fishing;
+  bool forage_patches;
+  bool claim_range;
+  bool claim_needed;
+  long early_town_centers;
+  long early_trainers;
+  bool patch_expand;
+  float standing_army;
+  float army_floor;
+  bool militia;
+  bool militia_towers;
+  long prehistoric_army;
+  bool prehistoric_peace;
+  bool stone_peace;
+  bool naval_flee;
+  float epoch_advance_time_scale;
+  /// the carrier fighters to keep: easy, medium, hard; then in a deathmatch
+  long carrier_fighters[6];
+  float population_cap_own_weight;
+  float population_cap_other_weight;
+};
+
+/// An area's facts (`EE_AI_UNITS_HOST_AREA_INFO`, `AREA_POINT`).
+struct EeAiUnitsArea {
+  long id;
+  long category;
+  long tiles;
+  long x;
+  long y;
+};
+
+/// `EE_AI_UNITS_HOST_AREA_PICK`: `kind` 0 the land's forests, 1 its hills (those whose hull holds (x, y) or comes
+/// within r tiles), 2 its choke points (the `r` nearest when r is above 0); the (pick mod count)-th one's random
+/// point
+struct EeAiUnitsAreaPick {
+  long kind;
+  uint64_t land;
+  long x;
+  long y;
+  long r;
+  int64_t pick;
+  int64_t seed;
+  /// out: the land's ids looked at, the ones picked from, whether the picked one has tiles, its point
+  long total;
+  long found;
+  bool ok;
+  long px;
+  long py;
+};
+
+/// A tile list the host fills or reads: `len` (x, y) pairs at `xy` (room for `cap`); `from`, `to` the ends
+struct EeAiUnitsTiles {
+  long *xy;
+  size_t len;
+  size_t cap;
+  long from[2];
+  long to[2];
+};
+
 /// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
 using EeAiUnitsClassByName = long(*)(const char *name);
 
@@ -254,6 +1006,35 @@ struct EeAiUnitsFilter {
 };
 
 extern "C" {
+
+/// Whether the binding trace is on.
+bool ee_ai_binding_trace_on();
+
+/// Registers the trace's output.
+void ee_ai_binding_trace_set_out(EeAiBindingTraceOut out);
+
+/// A binding's call begins: its arguments are the stack.
+///
+/// # Safety
+/// `state` is the binding's live state; `name` NUL-terminated.
+void ee_ai_binding_trace_enter(void *state, const char *name);
+
+/// A binding returned `results` values (the stack's top ones).
+///
+/// # Safety
+/// As [`ee_ai_binding_trace_enter`].
+void ee_ai_binding_trace_leave(void *state, const char *name, int results);
+
+/// A strategy step's view and orders (their `EECPLuaValue` texts).
+///
+/// # Safety
+/// The texts are `len` bytes each (or null with 0).
+void ee_ai_binding_trace_step(int64_t player,
+                              const char *what,
+                              const uint8_t *view,
+                              size_t view_len,
+                              const uint8_t *orders,
+                              size_t orders_len);
 
 /// The "EENS" block of a state into `out` when `cap` holds it -> the block's length (call with `cap` 0 to size it).
 ///
@@ -528,6 +1309,791 @@ bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
 
 /// `EECPLuaStatusName`: a static C string.
 const char *ee_ai_lua_status_name(uint32_t status);
+
+/// `EECPCombatManager::IsMilitaryClass(class)` (an `EEUnitClass*`; false for NULL).
+///
+/// # Safety
+/// `class` is 0 or a live unit class.
+bool ee_ai_military_class(uint64_t class_);
+
+/// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
+bool ee_ai_military_type(unsigned long unit_type);
+
+extern int64_t ee_ai_next_host(int32_t op,
+                               void *player,
+                               int64_t a,
+                               int64_t b,
+                               int64_t c,
+                               void *out);
+
+/// appends to a C++ `std::string` (EECPNext.cpp)
+extern void ee_ai_next_string_append(void *string, const uint8_t *data, size_t len);
+
+/// Appends bytes to a `Vec<u8>` the host was given (`out` of the byte ops).
+///
+/// # Safety
+/// `out` is a live `Vec<u8>`, `data` holds `len` bytes.
+void ee_ai_next_append(void *out, const uint8_t *data, size_t len);
+
+/// Pushes a handle onto a `Vec<u64>` the host was given (`out` of the list ops).
+///
+/// # Safety
+/// `out` is a live `Vec<u64>`.
+void ee_ai_next_push_handle(void *out, uint64_t handle);
+
+/// A new state (`new EECPNextState`).
+void *ee_ai_next_state_new();
+
+/// Frees a state (its Lua states with it).
+///
+/// # Safety
+/// `s` came from `ee_ai_next_state_new` (or is null) and is not used again.
+void ee_ai_next_state_free(void *s);
+
+/// The state's AI id (`mAI`): `len` bytes at the result, valid until the state changes.
+///
+/// # Safety
+/// `s` is a live state; `len` valid.
+const uint8_t *ee_ai_next_state_ai(const void *s, size_t *len);
+
+/// Sets the state's AI id.
+///
+/// # Safety
+/// `s` is a live state; `data` holds `len` bytes.
+void ee_ai_next_state_set_ai(void *s, const uint8_t *data, size_t len);
+
+/// `EECPNextIncome`: a resource index 0..4 got `amount`.
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_next_income(void *s, long index, long amount);
+
+/// `EECPNextEventAdd`.
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_next_event_add(void *s, long kind, long unit_type, long count);
+
+/// `EECPNextTraceHit`: a hit on a land citizen (`attacker` the attacker's player id).
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit or 0.
+void ee_ai_next_trace_hit(void *me, long attacker, uint64_t unit);
+
+/// `EECPNextTraceDeath`: a citizen or fishing boat lost.
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit or 0.
+void ee_ai_next_trace_death(void *me, uint64_t unit);
+
+/// `EECPNextPrepare`: the next engine's start: resolves the script and loads it -> false when it cannot (logged).
+///
+/// # Safety
+/// `me` is a live computer player.
+bool ee_ai_next_prepare(void *me);
+
+/// `EECPNextUpdate`'s body after the classic tick's bookkeeping (EEComputerPlayer's, in EECPNext.cpp): the epoch,
+/// the reflexes' danger zones, the army's scan, one strategy step on a fresh view, the stats line.
+///
+/// # Safety
+/// `me` is a live computer player with a placement and a tech tree; the simulation thread.
+void ee_ai_next_update(void *me,
+                       unsigned long time);
+
+/// `EECPNextSaveState`: the state's bytes appended to `out` (a C++ `std::string`; nothing without a state) ->
+/// false when the script's memory could not be saved (logged; the rest of the block is written).
+///
+/// # Safety
+/// `me` is a live computer player, `out` a live `std::string`.
+bool ee_ai_next_save(void *me,
+                     void *out);
+
+/// `EECPNextLoadState`: the state from its bytes (made when missing) -> false when they are not a block.
+///
+/// # Safety
+/// `me` is a live computer player; `data` holds `len` bytes.
+bool ee_ai_next_load(void *me,
+                     const uint8_t *data,
+                     size_t len);
+
+/// Every physics tick (EEArtificialIntelligence::Update): the enemy memory once a game second and the scripts'
+/// `micro` every 250 game ms.
+///
+/// # Safety
+/// The simulation thread, with the world.
+void ee_ai_next_micro_tick(unsigned long time);
+
+/// `EECPNextSiteThreat`: the unit id of the threat at a tile (0: none) and its kind (`kind`).
+///
+/// # Safety
+/// `me` is a live computer player; `kind` null or valid.
+long ee_ai_next_site_threat(void *me, long x, long y, bool now_only, long *kind);
+
+/// `EECPNextSiteBlocked`: why the gatherer finders pass a resource unit over (`cause`: the unit id that blocks it).
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit; `cause` null or valid.
+long ee_ai_next_site_blocked(void *me,
+                             uint64_t unit,
+                             long *cause);
+
+/// `EECPNextBuildUnsafe`.
+///
+/// # Safety
+/// `me` is a live computer player.
+long ee_ai_next_build_unsafe(void *me, long x, long y);
+
+/// `EECPNextAssigned`.
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit.
+long ee_ai_next_assigned(void *me, uint64_t unit);
+
+/// `EECPNextHasRoom`.
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit.
+bool ee_ai_next_has_room(void *me, uint64_t unit);
+
+/// `EECPNextDropReady` (`unit` 0: at the tile (x, y), for food when `food`, `slack` tiles further) or
+/// `EECPNextUnitDropReady` (the unit's own tile and resource, `kNextDropSlack` further).
+///
+/// # Safety
+/// `me` is a live computer player, `unit` 0 or a live unit.
+bool ee_ai_next_drop_ready(void *me,
+                           uint64_t unit,
+                           long x,
+                           long y,
+                           bool food,
+                           long slack);
+
+/// `EECPRMNoteDanger`: a citizen hit by a player's unit: the militia or a danger zone and its defenders.
+///
+/// # Safety
+/// `me` is a live computer player, `citizen` a live unit.
+void ee_ai_next_note_danger(void *me,
+                            uint64_t citizen,
+                            unsigned long attacker);
+
+/// `EECPRMNavalFlee`: a boat or land unit hit by a warship: the units round it leave (to the farthest dock, or the
+/// town centre).
+///
+/// # Safety
+/// `me` is a live computer player, `victim` a live unit, `attacker` 0 or a live complex unit.
+void ee_ai_next_naval_flee(void *me,
+                           uint64_t victim,
+                           uint64_t attacker);
+
+/// `EECPRMFleeRaids` for the C++.
+///
+/// # Safety
+/// `me` is a live computer player.
+void ee_ai_next_flee_raids(void *me);
+
+/// `EECPNewGame` (EEWorld::StartGame, before its players are made): the computer players' per-game statics cleared as
+/// at the process's start, so a game plays and traces the same after another game in the process (EE-SIM --games) as
+/// alone: the trace's counters and next sim hash time, the loss incidents (`EECPNextArmyNewGame`) and the reflexes'
+/// cool-downs (`EECPReflexesNewGame`)
+void ee_ai_new_game();
+
+/// `EECPTraceIncome`: a resource amount the player got (EEComputerPlayer::AddResource), for the next income line.
+void ee_ai_trace_income(unsigned long player,
+                        long resource,
+                        long amount);
+
+/// `EECPTraceSpend`'s count (TEST ONLY, EE_AI_EXP spending; the caller tests the trace and the experiment).
+///
+/// # Safety
+/// `cost` holds five values.
+void ee_ai_trace_spend(unsigned long player,
+                       long kind,
+                       const long *cost);
+
+/// `EECPTraceUnitLost`: a unit leaving the player (not swapped), by kind, for the next stats line.
+///
+/// # Safety
+/// `me` is a live computer player, `unit` a live unit (or 0).
+void ee_ai_trace_unit_lost(void *me, uint64_t unit);
+
+/// `EECPTraceStats` for the C++.
+///
+/// # Safety
+/// `me` is a live computer player.
+void ee_ai_trace_stats(void *me, unsigned long time);
+
+/// `EECPTraceProfile`: the AI's real time per player: every 60 game s the sum and the largest single update.
+void ee_ai_trace_profile(unsigned long player,
+                         unsigned long time,
+                         int64_t microseconds);
+
+/// `EECPOutOfSynchChecksum`: the computer players' share of the out-of-synch checksum (every player's resources;
+/// per computer player its pop cap, its town tile and its danger zones), in `unsigned long`.
+unsigned long ee_ai_out_of_synch_checksum();
+
+/// `EECPOutOfSynchDump` (TEST ONLY, EE-SIM's state dumps): the parts of the checksum per player and the computer
+/// players' own state, one line each, appended to `out` (a C++ `std::string`).
+///
+/// # Safety
+/// `out` is a live `std::string`.
+void ee_ai_out_of_synch_dump(void *out);
+
+/// `EECPTraceHash` (with the trace): every 10 game s, the parts of the out-of-synch checksum, as a compared trace
+/// line ("EE-AI <ms> p0 sim hash ...").
+void ee_ai_trace_hash(unsigned long time);
+
+/// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
+/// in the rules (-1: unknown), `out` writes a line to the game's debug output.
+///
+/// # Safety
+/// `find` and `out` are callable with a NUL-terminated string.
+void ee_ai_switches_init(long (*find)(const char*),
+                         void (*out)(const char*));
+
+/// `EECPExperiment`: the player `id`'s experiments name `name`.
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+bool ee_ai_switch_experiment(uint64_t id, const char *name);
+
+/// `EECPExperimentNames`: the player's set as ",a,b," ("-": none or empty); the text lives as long as the game.
+const char *ee_ai_switch_experiment_names(uint64_t id);
+
+/// `EE_AI_DEMAND`'s value for the player: 1, 0, or -1 when not set.
+int32_t ee_ai_switch_demand(uint64_t id);
+
+/// `EE_AI_PERSONALITY`'s position for the player (-1: not set).
+long ee_ai_switch_personality(uint64_t id);
+
+/// `EE_AI_CHEATS`'s set for the player (`kAICheatAll` when not set).
+long ee_ai_switch_cheats(uint64_t id);
+
+/// `EECPCheatNames`: the cheats of `bits` by name, "a,b" ("none": none) into `out` (room for `cap` bytes,
+/// NUL-terminated) -> the length.
+///
+/// # Safety
+/// `out` has room for `cap` bytes (at least 1).
+size_t ee_ai_switch_cheat_names(long bits,
+                                char *out,
+                                size_t cap);
+
+/// `EE_AI_UNITS_HOST_FACTS`'s record before the C++ fills it: no goal, no gathers (-1), no stance (-1).
+///
+/// # Safety
+/// `out` points to a record.
+void ee_ai_units_facts_reset(EeAiUnitsFacts *out);
+
+extern int64_t ee_ai_units_host(int32_t op,
+                                void *player,
+                                int64_t a,
+                                int64_t b,
+                                int64_t c,
+                                void *out);
+
+/// `EECPUnitsCategoryClass` of the class `class` (an `EEUnitClass*`): "citizen", "building", "soldier", ...
+///
+/// # Safety
+/// `class` is a live class.
+const char *ee_ai_units_category_class(uint64_t class_,
+                                       bool has_resource);
+
+/// A new state (`EEComputerPlayer::mUnitsState`).
+void *ee_ai_units_state_new();
+
+/// Frees a state (NULL: nothing).
+///
+/// # Safety
+/// `s` is NULL or a live state, not used after.
+void ee_ai_units_state_free(void *s);
+
+/// `EECPUnitsHoldsID`.
+///
+/// # Safety
+/// `s` is a live state.
+bool ee_ai_units_holds(void *s, long id);
+
+/// The held ids into `out` (room for `cap`) -> their count.
+///
+/// # Safety
+/// `s` is a live state; `out` has room for `cap`.
+size_t ee_ai_units_held(void *s, long *out, size_t cap);
+
+/// `EECPUnitsReflexOn` of a state: "held" (off by default), "naval_flee", "danger", "militia"; others true.
+///
+/// # Safety
+/// `s` is a live state; `name` NUL-terminated.
+bool ee_ai_units_reflex_on(void *s,
+                           const char *name);
+
+/// Whether a binding was called (`EECPUnitsUsed`).
+///
+/// # Safety
+/// `s` is a live state.
+bool ee_ai_units_used(void *s);
+
+/// `EECPUnitsForward`.
+///
+/// # Safety
+/// `s` is a live state.
+long ee_ai_units_forward(void *s, long id);
+
+/// `EECPUnitsWithinLimits` at the game ms `now`.
+///
+/// # Safety
+/// `s` is a live state.
+bool ee_ai_units_within_limits(void *s, long units, long now);
+
+/// The enemy memory's building flag of `id` (-1: not remembered).
+///
+/// # Safety
+/// `s` is a live state.
+int ee_ai_units_remembered_building(void *s, long id);
+
+/// The threat layer at a tile (`EECPUnitsDangerAt`).
+///
+/// # Safety
+/// `s` is a live state.
+long ee_ai_units_danger_at(void *s, long x, long y);
+
+/// The class's data id (`EECPUnitsName`; valid while the state lives).
+///
+/// # Safety
+/// `s` is a live state.
+const char *ee_ai_units_class_name(void *s, long unit_type);
+
+/// A binding was called (`EECPUnitsCharge`'s flag).
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_units_mark_used(void *s);
+
+/// `EECPUnitsTake` of the complex unit `unit` by the player `me`.
+///
+/// # Safety
+/// `s` is a live state, `me` the live player, `unit` a live complex unit.
+void ee_ai_units_take(void *s, void *me, uint64_t unit);
+
+/// The micro step's timer: -1 not started, 0x7fffffff no micro.
+///
+/// # Safety
+/// `s` is a live state.
+long ee_ai_units_micro_next(void *s);
+
+/// Sets the micro step's timer.
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_units_set_micro_next(void *s, long v);
+
+/// Once a game second (`EECPUnitsMicroTick`): the enemy memory, then the danger layers.
+///
+/// # Safety
+/// `s` is a live state, `me` its live player.
+void ee_ai_units_second(void *s, void *me, long now);
+
+/// `EECPUnitsOnDamage`: a hit on the unit `unit` by a unit of `attacker_player`.
+///
+/// # Safety
+/// `s` is a live state, `me` its live player, `unit` a live unit.
+void ee_ai_units_on_damage(void *s, void *me, long attacker_player, long amount, uint64_t unit);
+
+/// `EECPUnitsOnDealt`: a hit one of the player's units dealt to `victim`.
+///
+/// # Safety
+/// As [`ee_ai_units_on_damage`].
+void ee_ai_units_on_dealt(void *s, void *me, long amount, uint64_t victim);
+
+/// `EECPUnitsOnPlaced` (`created`), `EECPUnitsOnCompleted` (`built`, a building only) and `EECPUnitsOnGoalDone`
+/// (`idle`, a held unit only) by `kind` (EV_CREATED, EV_BUILT, EV_IDLE).
+///
+/// # Safety
+/// `s` is a live state, `unit` a live complex unit.
+void ee_ai_units_on_unit(void *s,
+                         long kind,
+                         uint64_t unit);
+
+/// `EECPUnitsOnAttackPlayer` (`attack_player`, `defend_player`) and `EECPUnitsOnFlare` (`flare` at x, y).
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_units_on_player(void *s,
+                           long kind,
+                           long player,
+                           long x,
+                           long y);
+
+/// `EECPUnitsOnTaken`: the complex unit `unit` left the player (not a swap): died or converted.
+///
+/// # Safety
+/// As [`ee_ai_units_on_damage`].
+void ee_ai_units_on_taken(void *s, void *me, uint64_t unit);
+
+/// One swap of `EECPUnitsOnSwapped` (the C++ filters the swaps that are not the player's).
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_units_on_swap(void *s, long old, long new_, bool new_mine, long new_type, long now);
+
+/// The swaps' end: forwarding entries past their life go.
+///
+/// # Safety
+/// `s` is a live state.
+void ee_ai_units_forward_expire(void *s, long now);
+
+/// The "EENU" block of a state into `out` when `cap` holds it -> its length (call with `cap` 0 to size it).
+///
+/// # Safety
+/// `s` is a live state; `out` has `cap` writable bytes.
+size_t ee_ai_units_state_save(void *s,
+                              uint8_t *out,
+                              size_t cap);
+
+/// The state from a block (false: not one; the state is as it was).
+///
+/// # Safety
+/// `s` is a live state; `data` has `len` readable bytes.
+bool ee_ai_units_state_load(void *s, const uint8_t *data, size_t len);
+
+/// TEST ONLY (EE_AI_SAVE_CHECK): whether the block decodes into a fresh state that encodes to the same bytes;
+/// `counts` gets the state's held, events, memory and trades counts.
+///
+/// # Safety
+/// As [`ee_ai_units_state_load`]; `counts` has room for 4.
+bool ee_ai_units_state_save_check(void *s,
+                                  const uint8_t *data,
+                                  size_t len,
+                                  size_t *counts);
+
+/// `ai.me()`
+int ee_ai_units_lua_me(void *l);
+
+/// `ai.time()`
+int ee_ai_units_lua_time(void *l);
+
+/// `ai.players()`
+int ee_ai_units_lua_players(void *l);
+
+/// `ai.map()`
+int ee_ai_units_lua_map(void *l);
+
+/// `ai.units(filter)`
+int ee_ai_units_lua_units(void *l);
+
+/// `ai.seen(filter)`
+int ee_ai_units_lua_seen(void *l);
+
+/// `ai.resources(filter)`
+int ee_ai_units_lua_resources(void *l);
+
+/// `ai.unit(id)`
+int ee_ai_units_lua_unit(void *l);
+
+/// `ai.get(ids, fields)` -> {field = {values...}}; a unit not known: nil in each
+int ee_ai_units_lua_get(void *l);
+
+/// `ai.memory(filter)`: the enemy memory
+int ee_ai_units_lua_memory(void *l);
+
+/// `ai.tile(x, y)`
+int ee_ai_units_lua_tile(void *l);
+
+/// `ai.events()`: the events since the last call
+int ee_ai_units_lua_events(void *l);
+
+/// `ai.reach(x1, y1, x2, y2)`: both tiles on one land mass (a tile on none takes its nearest within 3)
+int ee_ai_units_lua_reach(void *l);
+
+/// `ai.strength(ids)`: hit points x attack of the units the player may know of
+int ee_ai_units_lua_strength(void *l);
+
+/// `ai.take(ids)`
+int ee_ai_units_lua_take(void *l);
+
+/// `ai.release(ids)`
+int ee_ai_units_lua_release(void *l);
+
+/// `ai.reflex{naval_flee, danger, militia, held, memory_ms}`
+int ee_ai_units_lua_reflex(void *l);
+
+/// `ai.config{memory_ms}` -> memory_ms (30 s to 30 minutes)
+int ee_ai_units_lua_config(void *l);
+
+/// `ai.danger(x, y[, layer])`
+int ee_ai_units_lua_danger(void *l);
+
+/// `ai.danger_box(x1, y1, x2, y2[, layer])` -> the highest and the summed value of the cells over the box
+int ee_ai_units_lua_danger_box(void *l);
+
+/// `ai.mark(x, y, r, value, ms)`: the script's own danger (at most 64)
+int ee_ai_units_lua_mark(void *l);
+
+/// `ai.route(x1, y1, x2, y2, {avoid, avoid_lost, sea})` -> waypoints and the cost; nil: no way
+int ee_ai_units_lua_route(void *l);
+
+/// `ai.path_len(x1, y1, x2, y2, {sea})` -> the way's length in tiles over the cells (no danger), nil: none
+int ee_ai_units_lua_path_len(void *l);
+
+/// `ai.gatherers()` -> {[resource id] = n}: the own living citizens and boats whose gather goal is that resource
+int ee_ai_units_lua_gatherers(void *l);
+
+/// The message record's size (the C++ checks its copy of the layout against it).
+///
+/// # Safety
+/// None: `m` is not read.
+size_t ee_ai_units_message_size(const EeAiUnitsMessage *m);
+
+/// `ai.move(ids, x, y, {queue, forced, formation})`
+int ee_ai_units_lua_move(void *l);
+
+/// `ai.attack(ids, target, {queue})`: the target seen now, or a building the player remembers
+int ee_ai_units_lua_attack(void *l);
+
+/// `ai.attack_ground(ids, x, y)`
+int ee_ai_units_lua_attack_ground(void *l);
+
+/// `ai.gather(ids, resource, {queue})`: a resource on an explored tile with some left
+int ee_ai_units_lua_gather(void *l);
+
+/// `ai.build(ids, type, x, y, {queue})` -> ..., the foundation's id: the citizens build it (it is the script's)
+int ee_ai_units_lua_build(void *l);
+
+/// `ai.repair(ids, target)`
+int ee_ai_units_lua_repair(void *l);
+
+/// `ai.heal(ids, target)`
+int ee_ai_units_lua_heal(void *l);
+
+/// `ai.garrison(ids, building)`
+int ee_ai_units_lua_garrison(void *l);
+
+/// `ai.load(ids, transport)`
+int ee_ai_units_lua_load(void *l);
+
+/// `ai.unload(containers, x, y)`
+int ee_ai_units_lua_unload(void *l);
+
+/// `ai.train(buildings, type, n)`
+int ee_ai_units_lua_train(void *l);
+
+/// `ai.research(buildings, tech)`
+int ee_ai_units_lua_research(void *l);
+
+/// `ai.stance(ids, n)`: the behaviour table's index
+int ee_ai_units_lua_stance(void *l);
+
+/// `ai.stop(ids)`
+int ee_ai_units_lua_stop(void *l);
+
+/// `ai.explore(ids)`
+int ee_ai_units_lua_explore(void *l);
+
+/// `ai.delete(ids)`
+int ee_ai_units_lua_delete(void *l);
+
+/// `ai.rally(buildings, x, y)` or `ai.rally(buildings, target)`
+int ee_ai_units_lua_rally(void *l);
+
+/// `ai.cancel(buildings, type or tech)`: one of it out of their queues
+int ee_ai_units_lua_cancel(void *l);
+
+/// `ai.formation(ids, kind)`
+int ee_ai_units_lua_formation(void *l);
+
+/// `ai.pack(ids, on)`
+int ee_ai_units_lua_pack(void *l);
+
+/// `ai.lock(ids, on)`
+int ee_ai_units_lua_lock(void *l);
+
+/// `ai.dropoff(ids, building)`
+int ee_ai_units_lua_dropoff(void *l);
+
+/// `ai.farm(ids, granary or farm, {queue})`
+int ee_ai_units_lua_farm(void *l);
+
+/// `ai.replant(granary)` -> ok: the granary's missing field foundations laid again
+int ee_ai_units_lua_replant(void *l);
+
+/// `ai.cast(ids, tech, target)` / `ai.cast(ids, tech, x, y)`: a power or calamity by the first caster that can
+int ee_ai_units_lua_cast(void *l);
+
+/// `ai.patrol(ids, {{x, y}, ...})`: the mobile units patrol through 2..8 points
+int ee_ai_units_lua_patrol(void *l);
+
+/// `ai.wall(ids, type, x1, y1, x2, y2)`: the citizens lay a straight wall of the class between the two tiles, as a
+/// human's drag does (EEPlanWall); n = the citizens sent
+int ee_ai_units_lua_wall(void *l);
+
+/// `ai.drop_site(x, y[, kind])` -> the id of the player's nearest finished drop site for the resource kind ("food":
+/// a granary too), its tile distance and its centre x, y; nil when it has none
+int ee_ai_units_lua_drop_site(void *l);
+
+/// `ai.enemy_force(player, x, y, r)` -> n, hp, attack: the player's land soldiers within r tiles, seen or not;
+/// only for an AI that "sees_all"
+int ee_ai_units_lua_enemy_force(void *l);
+
+/// `ai.player_file(player)` -> {gatherers, types, military, strength}: the classic's intelligence file of a player
+/// (every unit alive, seen or not); only for an AI that "sees_all"
+int ee_ai_units_lua_player_file(void *l);
+
+/// TEST ONLY (EE_AI_TEST_SPAWN=1): `ai.test_town(player)` -> x, y of the player's first town centre or capitol
+/// (fog ignored); off: nil
+int ee_ai_units_lua_test_town(void *l);
+
+/// `ai.find_site(type, x, y, {min, max, safe, margin, far})` -> x, y: the nearest explored tile where the class
+/// can be placed, ring by ring; nil: none
+int ee_ai_units_lua_find_site(void *l);
+
+/// `ai.shore(x, y, {sea, land, max})` -> x, y, sea, land: the nearest explored land tile, ring by ring, that
+/// touches water (of the water body `sea` when given) and lies on the land mass `land` when given
+int ee_ai_units_lua_shore(void *l);
+
+/// `EECPUnitsSave`: the player's per-unit state's bytes appended to `out` (a C++ `std::string`; nothing without a
+/// state); TEST ONLY with EE_AI_SAVE_CHECK=1, a `next.savecheck units=` line (the bytes decode into a fresh state
+/// that encodes to the same bytes).
+///
+/// # Safety
+/// `me` is a live computer player, `units` its per-unit state (or null), `out` a live `std::string`.
+void ee_ai_units_save(void *me,
+                      void *units,
+                      void *out);
+
+/// `EECPUnitsLoad`: the per-unit state from its bytes (made when missing; empty: none) -> false when they are not
+/// a block.
+///
+/// # Safety
+/// `me` is a live computer player; `data` holds `len` bytes.
+bool ee_ai_units_load(void *me,
+                      const uint8_t *data,
+                      size_t len);
+
+/// The host records' sizes summed (the C++ checks its copy of their layout against it once; it also puts the
+/// records in the header).
+///
+/// # Safety
+/// None: the pointers are not read.
+size_t ee_ai_units_records_size(const EeAiUnitsImproveCost *a,
+                                const EeAiUnitsPlace *b,
+                                const EeAiUnitsTuning *c,
+                                const EeAiUnitsArea *d,
+                                const EeAiUnitsAreaPick *e,
+                                const EeAiUnitsTiles *f);
+
+/// `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the
+/// damage table)
+int ee_ai_units_lua_can_hurt(void *l);
+
+/// `ai.wonders()` -> {victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built,
+/// x, y}}}: the wonders; a wonder's tile only where the player has explored it (or "sees_all")
+int ee_ai_units_lua_wonders(void *l);
+
+/// `ai.class(type)` -> static data from the class and the player's improvements (what the unit's panel shows)
+int ee_ai_units_lua_class(void *l);
+
+/// `ai.techs{epoch = n, id = tech, name = data id}` -> the player's tech tree nodes of epochs n..0 (default: the
+/// current epoch) in the tree's order, or the one node
+int ee_ai_units_lua_techs(void *l);
+
+/// `ai.epoch(n)` -> epoch n's node: id, name, required_sol, current_sol, cost, available, researched; nil off the
+/// tree
+int ee_ai_units_lua_epoch(void *l);
+
+/// `ai.improve_cost(class, what)` -> {food=, wood=, stone=, gold=, iron=, level=, max=}: the next level's cost of a
+/// class's improvement (what: "attack", "hit_points", "range", "speed" or its number), or nil
+int ee_ai_units_lua_improve_cost(void *l);
+
+/// `ai.tuning()` -> what the classic computer player reads from data for this seat (floats as thousandths, keys
+/// ending in _k)
+int ee_ai_units_lua_tuning(void *l);
+
+/// `ai.improve(unit, n)`: one level of improvement n for the unit's class
+int ee_ai_units_lua_improve(void *l);
+
+/// `ai.gate(type, x, y)`: a gate of the class over the finished wall pieces at the tile, at once (EEBuildGate);
+/// cannot_place where no wall of five finished pieces lies
+int ee_ai_units_lua_gate(void *l);
+
+/// `ai.tribute(player, {food=, wood=, stone=, gold=, iron=})`: the resources given as a human's tribute
+int ee_ai_units_lua_tribute(void *l);
+
+/// `ai.trade(resource, "buy" or "sell", n)`: n lots of 100 bought with gold or sold for it (1 or 5 a call)
+int ee_ai_units_lua_trade(void *l);
+
+/// `ai.diplomacy(player, "ally" or "enemy")`: the stance towards another player
+int ee_ai_units_lua_diplomacy(void *l);
+
+/// `ai.garrison_fill(id, n)` -> ok: an own finished building's garrison raised by n with no citizen going in (only
+/// for an AI whose manifest entry declares "fills_garrison")
+int ee_ai_units_lua_garrison_fill(void *l);
+
+/// TEST ONLY (EE_AI_TEST_SPAWN=1): `ai.test_spawn(type, x, y, player)` -> true: the cheat's unit (EEMHackANewUnit)
+/// is made. Off: false
+int ee_ai_units_lua_test_spawn(void *l);
+
+/// `ai.can_place(type, x, y)` -> whether the class can be placed there now
+int ee_ai_units_lua_can_place(void *l);
+
+/// `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile: the seat's threat memory, or with
+/// "sees_all" the classic's influence regions through the fog
+int ee_ai_units_lua_enemy_near(void *l);
+
+/// `ai.site_blocked(resource)` -> nil when gatherers may go to the resource, else why not
+int ee_ai_units_lua_site_blocked(void *l);
+
+/// `ai.build_unsafe(x, y)` -> nil when builders may go to the tile, else why not
+int ee_ai_units_lua_build_unsafe(void *l);
+
+/// `ai.place(type, mode, {x =, y =, first =, last =, units = {ids}, site = index})` -> x, y, gap: a building site
+/// by one of build()'s rules; nil: none
+int ee_ai_units_lua_place(void *l);
+
+/// `ai.used()` -> the instructions and charges this call has used so far (ee_ai lua_host.rs)
+int ee_ai_units_lua_used(void *l);
+
+/// `ai.water_sites(x, y, {max = 64})` -> {{x, y}, ...}: the water tiles by the shore for docks, nearest first: the
+/// largest water body's shore next to the land mass at (x, y) and the tiles round it, explored ones only
+int ee_ai_units_lua_water_sites(void *l);
+
+/// `ai.area(id)` or `ai.area(x, y)` -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles}; nil
+/// for none
+int ee_ai_units_lua_area(void *l);
+
+/// `ai.forest_point(x, y, r, pick, seed)` -> x, y, n: a random point of one of the land's forests near the tile
+int ee_ai_units_lua_forest_point(void *l);
+
+/// `ai.hill_point(x, y, r, pick, seed)` -> x, y, n: as ai.forest_point over the land's hills
+int ee_ai_units_lua_hill_point(void *l);
+
+/// `ai.choke_point(x, y, nearest, pick, seed)` -> x, y, n: a random point of one of the land's choke points (of the
+/// `nearest` nearest when above 0); n all of them
+int ee_ai_units_lua_choke_point(void *l);
+
+/// `ai.area_point(id, seed)` -> x, y: a random tile of the area; nil for none or an empty one
+int ee_ai_units_lua_area_point(void *l);
+
+/// `ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}})` -> x, y: the
+/// unexplored grid point on the land mass nearest (x, y), scored by its distance less half its distance from away;
+/// points within grid of a skip entry left out
+int ee_ai_units_lua_unexplored(void *l);
+
+/// `ai.wall_line(x1, y1, x2, y2)` -> {{x, y}, ...}: the tiles a wall between the two lays (EEGetWallLine), in order
+int ee_ai_units_lua_wall_line(void *l);
+
+/// `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, {{ax, ay, bx, by, len, level}, ...}: the classic wall planner's
+/// look at one wall line (a land building on it or within 2 tiles; the open runs that follow a blocked tile, and
+/// whether five level tiles in a row lie on each)
+int ee_ai_units_lua_wall_stretches(void *l);
+
+/// `ai.wall_path(unit, x1, y1, x2, y2)` -> {{x, y}, ...}: the tile path an own unit would take inside the box of
+/// the two tiles (the classic wall planner's FindPath with the wall pather)
+int ee_ai_units_lua_wall_path(void *l);
+
+/// `ai.wall_route(enemy, x1, y1, x2, y2)` -> handle: the classic wall planner's way from the enemy's centre to the
+/// own town (the path manager's request on its coarse graph); one request a player at a time
+int ee_ai_units_lua_wall_route(void *l);
+
+/// `ai.wall_route_result(handle)` -> nil while it runs, the tiles {{x, y}, ...} when done (empty: no way), false for
+/// a handle it does not hold (read already, or a loaded game)
+int ee_ai_units_lua_wall_route_result(void *l);
 
 /// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
 long ee_ai_units_class_arg(void *state,

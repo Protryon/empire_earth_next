@@ -46,7 +46,6 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIBackground.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
@@ -254,10 +253,6 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
         return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth();
     case EeUiOp::FormWindowHeight:
         return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight();
-    case EeUiOp::FormCandidateShown: return theForm->GetManager()->GetDrawCandidateWindow();
-    case EeUiOp::FormCandidateRect:
-        UIFormPutRect(f, theForm->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle());
-        return 0;
     case EeUiOp::FormManagerProcessEvents: theForm->GetManager()->ProcessAllEventsForForm(theForm); return 0;
     case EeUiOp::FormManagerAddDirty: theForm->GetManager()->AddDirtyRectangle(UIFormRect(f), theForm); return 0;
     case EeUiOp::FormMusicStop: theForm->GetManager()->StopMusic(); return 0;
@@ -372,21 +367,10 @@ void UIForm::AddControl(UIControl* inControl, unsigned long inGroup)
     this->Call(EeUiFormCall::AddControl, (intptr_t)inControl, (intptr_t)inGroup);
 }
 
-// Adds a rectangle to the background-redraw list, splitting it around listed rectangles so none overlap
-void UIForm::AddCopyDirtyRectangle(const GERectangle& inRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::AddCopyDirtyRectangle, 0, 0, f);
-}
-
 void UIForm::AddDatabaseControl(const UICDatabase& inControl)
 {
     this->Call(EeUiFormCall::AddDatabaseControl, (intptr_t)inControl.mTableIndex, (intptr_t)inControl.mControl);
 }
-
-// Lists the control in the given slot for drawing this frame
-void UIForm::AddDrawControl(unsigned long inIndex) { this->Call(EeUiFormCall::AddDrawControl, (intptr_t)inIndex); }
 
 // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
 void UIForm::AddDirtyRectangle(const GERectangle& inRectangle)
@@ -444,9 +428,6 @@ long UIForm::ChangeIMECompositionString(const UWideString& inString, const UStri
     UIControl* theControl = this->GetKeyboardCaptured();
     return theControl ? theControl->ChangeIMECompositionString(inString, inAttributes, inCursor) : kErrorOK;
 }
-
-// Moves a radio-button index to the checked button of its run of radio buttons (unchanged if it is checked)
-void UIForm::CheckedRadioButton(long& ioIndex) { ioIndex = (long)this->Call(EeUiFormCall::CheckedRadioButton, ioIndex); }
 
 void UIForm::ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
 
@@ -557,12 +538,6 @@ UIEntityGroup* UIForm::GetEntityGroupById(unsigned long inId) const
     return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId));
 }
 
-// Returns false: forms never fade in
-bool UIForm::GetShouldFadeIn() { return this->Call(EeUiFormCall::ShouldFadeIn) != 0; }
-
-// Loads every background's texture
-void UIForm::LoadBackgrounds() { this->Call(EeUiFormCall::LoadBackgrounds); }
-
 // Opens the form: lays it out on the screen, opens the backgrounds, creates the database controls and their events,
 // fires the open event and marks every control dirty
 void UIForm::Open() { this->Call(EeUiFormCall::Open); }
@@ -573,9 +548,6 @@ long UIForm::OpenIMECompositionString()
     UIControl* theControl = this->GetKeyboardCaptured();
     return theControl ? theControl->OpenIMECompositionString() : kErrorFailed;
 }
-
-// Deletes every hot key of every group
-void UIForm::RemoveAllHotKeys() { this->Call(EeUiFormCall::RemoveAllHotKeys); }
 
 // Deletes every hot key of one group
 void UIForm::RemoveAllHotKeysForAGroup(unsigned long inGroup)
@@ -637,13 +609,6 @@ void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall:
 void UIForm::SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
 void UIForm::SetFormActivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 14, (intptr_t)inEvent); }
 void UIForm::SetFormDeactivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 15, (intptr_t)inEvent); }
-void UIForm::SetFormKeyboardCapturedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 16, (intptr_t)inEvent); }
-
-// Sets the form event of the given type (open, close, mouse buttons, move, wheel); other types are ignored
-void UIForm::SetFormEvent(unsigned long inType, UIEvent* inEvent)
-{
-    this->Call(EeUiFormCall::SetFormEvent, (intptr_t)inType, (intptr_t)inEvent);
-}
 
 // Replaces the form manager, deleting the old one
 void UIForm::SetFormManager(UIFormManager* inFormManager)
@@ -665,12 +630,6 @@ void UIForm::SetKeyboardCaptured(UIControl* inControl)
 
 void UIForm::SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
 
-// Changes the control under the mouse, firing mouse-out/over triggers, and restarts the help-text timer with its help
-void UIForm::SetMouseOverControl(UIControl* inControl)
-{
-    this->Call(EeUiFormCall::SetMouseOverControl, (intptr_t)inControl);
-}
-
 // Replaces the popup control, hiding the old one and redrawing what it (and a tool-tip shadow) covered
 void UIForm::SetPopup(UIControl* inControl) { this->Call(EeUiFormCall::SetPopup, (intptr_t)inControl); }
 
@@ -680,23 +639,14 @@ void UIForm::SetTabbing(bool inTabbing) { this->Call(EeUiFormCall::SetTabbing, i
 // Moves the tab stop to a control if it exists and is tabbable; otherwise keeps the old stop and returns false
 bool UIForm::SetTabStop(unsigned long inTabStop) { return this->Call(EeUiFormCall::SetTabStop, (intptr_t)inTabStop) != 0; }
 
-// Moves the tab stop back to the previous shown, enabled, tabbable control, skipping radio-button runs, wrapping round
-void UIForm::ShiftTab() { this->Call(EeUiFormCall::ShiftTab); }
-
 // Moves the tab stop on to the next shown, enabled, tabbable control, skipping radio-button runs, wrapping round
 void UIForm::Tab() { this->Call(EeUiFormCall::Tab); }
-
-// Unloads every background's texture
-void UIForm::UnloadBackgrounds() { this->Call(EeUiFormCall::UnloadBackgrounds); }
 
 // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
 void UIForm::UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
 
 // Places the tool tip by the mouse inside the form: shifted left at the right edge, above the cursor near the bottom
 void UIForm::SetHelpTextPopupLocation() { this->Call(EeUiFormCall::SetHelpTextPopupLocation); }
-
-// Shows the help text once its delay has passed (or when forced), as a popup tool tip when the form uses tool tips
-void UIForm::UpdateHelpText(bool inForce) { this->Call(EeUiFormCall::UpdateHelpText, inForce); }
 
 // Fires hot keys (higher groups first; one non-always-fire key per frame), then Tab/Shift+Tab, else passes the
 // keyboard to the capturing control or the tab stop
@@ -745,7 +695,6 @@ float UIForm::GetFadeOpacity()
     return f[0];
 }
 UIEvent* UIForm::GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
-UIEvent* UIForm::GetMouseMoveEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 11)); }
 unsigned long UIForm::GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
 UIFormManager* UIForm::GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
 UITextLabel* UIForm::GetHelpTextLabel() const

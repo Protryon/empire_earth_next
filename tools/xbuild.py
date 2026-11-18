@@ -2,7 +2,6 @@
 
   python -I tools/xbuild.py test     [--target T] [--no-run] [--no-network]     platform layer tests (tests/platform)
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
-  python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py wontest  [--target T] [--no-run] [PROGRAM ...]      WON wire format, crypto, sockets, ops (tests/won)
   python -I tools/xbuild.py nettest  [--target T] [--no-run] [PROGRAM ...]      the Network Engine's goldens (tests/net)
@@ -32,6 +31,8 @@ error classes) and prints the units that compile. --dialect ms keeps the Microso
 build uses (-fms-extensions -fms-compatibility -fdelayed-template-parsing); gnu drops them.
 
 Outputs go to build/xbuild/<target>/ (env EE_XBUILD_OUT overrides). Nothing here touches tools/build.py's outputs.
+wontest runs each program under a memory cap (EE_TEST_MEM_MB, default 2048; 0 turns it off): on Windows a job
+object, elsewhere RLIMIT_AS at twice the cap. A program past it is killed and fails.
 """
 import argparse
 import concurrent.futures
@@ -229,9 +230,11 @@ def rust_libs(target):
     lib = str(rust_build.ensure(target.name))
     if target.os == "windows":
         return [lib]
+    # the sound device (cpal): ALSA on Linux (libasound2-dev to build), Core Audio on macOS
     if target.os == "linux":
-        return [lib, "-lpthread", "-ldl", "-lm"]
-    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
+        return [lib, "-lasound", "-lpthread", "-ldl", "-lm"]
+    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation",
+            "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit", "-liconv"]
 
 
 def platform_sources(target):
@@ -240,19 +243,130 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
-    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
+def job_info_type():
+    """JOBOBJECT_EXTENDED_LIMIT_INFORMATION (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Basic(ctypes.Structure):
+        _fields_ = [("PerProcessUserTimeLimit", ctypes.c_longlong), ("PerJobUserTimeLimit", ctypes.c_longlong),
+                    ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                    ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                    ("SchedulingClass", wintypes.DWORD)]
+
+    class Extended(ctypes.Structure):
+        _fields_ = [("Basic", Basic), ("Io", ctypes.c_ulonglong * 6), ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+    return Extended
+
+
+def memory_job(limit):
+    """Windows: a job object that kills its processes when they commit more than `limit` bytes together, or when
+    this process ends (its handle closes); None elsewhere or if it cannot be made."""
+    if not IS_WINDOWS:
+        return None
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateJobObjectW.restype = wintypes.HANDLE
+    job = k32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    info = job_info_type()()
+    info.Basic.LimitFlags = 0x2000 | 0x200   # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_JOB_MEMORY
+    info.JobMemoryLimit = limit
+    if not k32.SetInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info)):
+        k32.CloseHandle(wintypes.HANDLE(job))
+        return None
+    return job
+
+
+def job_peak(job):
+    """The job's peak committed memory in bytes (0 if unknown)."""
+    import ctypes
+    from ctypes import wintypes
+    info = job_info_type()()
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not k32.QueryInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(info), ctypes.sizeof(info), None):
+        return 0
+    return info.PeakJobMemoryUsed
+
+
+# a test program's memory cap (MB; env EE_TEST_MEM_MB overrides, 0 = none): above it the program is killed and fails,
+# so a leaking test can never exhaust the machine (won_cfgtab_test once grew 70 MB/s past 10 GB)
+TEST_MEM_MB = int(os.environ.get("EE_TEST_MEM_MB", "2048"))
+
+
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None, mem_mb=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure.
+    With `mem_mb` (default TEST_MEM_MB for the WON drivers' callers), a program that commits more is killed and fails
+    (a Windows job object; elsewhere RLIMIT_AS, at twice the cap: address space, not commit)."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
+    limit = (mem_mb or 0) * 1024 * 1024
+    preexec = None
+    if limit and not IS_WINDOWS:
+        def preexec():
+            import resource
+            try:
+                resource.setrlimit(resource.RLIMIT_AS, (2 * limit, 2 * limit))
+            except (ValueError, OSError):
+                pass
+    job = memory_job(limit) if limit else None
+    flags = 0x4 if job else 0   # CREATE_SUSPENDED: in the job before its first instruction
+    proc = subprocess.Popen([str(exe), *args], env=env, cwd=cwd, creationflags=flags, preexec_fn=preexec)
+    if job:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.AssignProcessToJobObject(wintypes.HANDLE(job), wintypes.HANDLE(int(proc._handle)))
+        resume_process(proc.pid)
     try:
-        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+        code = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
         return 1
-    print(f"{exe.name}: exit {r.returncode}")
-    return r.returncode
+    finally:
+        if job:
+            peak = job_peak(job)
+            ctypes.WinDLL("kernel32").CloseHandle(wintypes.HANDLE(job))
+    if job and peak >= limit - (64 << 20):
+        print(f"{exe.name}: FAILED, over its memory cap ({mem_mb} MB; peak {peak >> 20} MB; killed)", flush=True)
+        return code or 1
+    print(f"{exe.name}: exit {code}" + (f" (peak {peak >> 20} MB)" if job else ""))
+    return code
+
+
+def resume_process(pid):
+    """Resumes every thread of a process started suspended (Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ThreadID", wintypes.DWORD),
+                    ("th32OwnerProcessID", wintypes.DWORD), ("tpBasePri", wintypes.LONG),
+                    ("tpDeltaPri", wintypes.LONG), ("dwFlags", wintypes.DWORD)]
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.OpenThread.restype = wintypes.HANDLE
+    snap = k32.CreateToolhelp32Snapshot(0x4, 0)   # TH32CS_SNAPTHREAD
+    e = Entry()
+    e.dwSize = ctypes.sizeof(Entry)
+    ok = k32.Thread32First(wintypes.HANDLE(snap), ctypes.byref(e))
+    while ok:
+        if e.th32OwnerProcessID == pid:
+            h = k32.OpenThread(0x2, False, e.th32ThreadID)   # THREAD_SUSPEND_RESUME
+            if h:
+                k32.ResumeThread(wintypes.HANDLE(h))
+                k32.CloseHandle(wintypes.HANDLE(h))
+        ok = k32.Thread32Next(wintypes.HANDLE(snap), ctypes.byref(e))
+    k32.CloseHandle(wintypes.HANDLE(snap))
 
 
 # ---- test / fonttest
@@ -270,24 +384,6 @@ def cmd_test(a):
     if a.no_run:
         return 0
     return run_program(t, exe, ["--no-network"] if a.no_network else [])
-
-
-# the computer player's Lua runtime (ee/EECPLua.h) with the vendored Lua and the platform layer (PlatFOpen); the
-# test scripts are tests/platform/lua/ai/*.lua, the folder passed in plays the part of Data
-def cmd_luatest(a):
-    t = Target(a.target)
-    why = t.can_build()
-    if why:
-        sys.exit(f"{t.name}: {why}")
-    srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
-            ROOT / "tests" / "platform" / "lua_test.cpp"]
-    libs = rust_libs(t)
-    exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS],
-                        libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
-    print(f"built {exe}")
-    if a.no_run:
-        return 0
-    return run_program(t, exe, [str(ROOT / "tests" / "platform" / "lua") + os.sep])
 
 
 def font_dir():
@@ -383,8 +479,7 @@ WON_TESTS = {
     "won_crypto_test": [],  # (the crypto classes are header-only since net round 28)
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
-    "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
-                     WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
+    "won_ops_test": [WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
     # the async machinery's events (golden: rust/crates/ee_won_net/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won_net/src/golden_sockobj.txt, recorded over the C++ classes)
@@ -416,7 +511,11 @@ WON_TESTS = {
     "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
-    "won_persist_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_persist_test": [],
+    # LobbyPersistentData and the Lobby* functions over it as one Rust object (persistobj.rs, R6 WONLobby round 15):
+    # the original's statements (won_persistobj_orig.h) against the game's forwards, the state and files compared
+    # after every step
+    "won_persistobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
@@ -622,6 +721,14 @@ WON_TESTS = {
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
     # rust/crates/ee_won_lobby/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
+    # ServerListCtrl and its rows as lobbyctl.rs kind ServerList (srvlistctl.rs): the original statements over a
+    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won_lobby/src/golden_srvlist.txt)
+    "won_srvlist_test": [],
+    # ChatCtrl as lobbyctl.rs kind Chat (chatctl.rs), the same way (golden: rust/crates/ee_won_lobby/src/golden_chatctl.txt)
+    "won_chatctl_test": [],
+    # the other Internet controls as lobbyctl.rs kinds (netctl.rs), the same way (golden:
+    # rust/crates/ee_won_lobby/src/golden_netctl.txt)
+    "won_netctl_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
     # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)
@@ -641,6 +748,9 @@ WON_TESTS = {
     "won_logics_test": [],
     # RoutingLogic as a Rust object (golden: rust/crates/ee_won_lobby/src/golden_routelogic.txt)
     "won_routelogic_test": [],
+    # RoutingLogic's connection requests (routelogic.rs conn_request) against the RoutingLogic.cpp cases and
+    # RoutingConnection helpers they replaced (golden: rust/crates/ee_won_lobby/src/golden_routeconn.txt)
+    "won_routeconn_req_test": [],
     # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
     # rust/crates/ee_won_lobby/src/golden_modelobj.txt)
     "won_modelobj_test": [],
@@ -649,23 +759,20 @@ WON_TESTS = {
     # Rust now: ee_won_gui's imgdec.rs and ee_base's jpeg.rs, R6 WON round 41). won_jpeg_test, JPGDecoder's
     # statements on libjpeg 6b against jpeg.rs, left with libjpeg (2026-11-17); its golden
     # (rust/crates/ee_won_gui/src/golden_jpeg.txt) is replayed by cargo
-    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
-    "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
-    "won_parse_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_parse_test": [],
     # FileReader / FileWriter (golden: rust/crates/ee_won_net/src/golden_file.txt)
     "won_file_test": [],
     # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won_net/src/golden_config.txt)
-    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
-                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")]],
     # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won_net/src/golden_authlogin.txt)
     "won_auth_test": [],
     # the directory server's entity replies (golden: rust/crates/ee_won_net/src/golden_dir.txt)
-    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
-                     WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
@@ -686,11 +793,11 @@ WON_TESTS = {
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
     # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
     # (golden: rust/crates/ee_won_net/src/golden_http.txt)
-    "won_http_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_http_test": [],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
     # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
-    "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_misc_test": [],
     # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won_net/src/golden_fwop.txt)
     "won_fwop_test": [],
@@ -707,7 +814,7 @@ WON_TESTS = {
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won_net/src/golden_reqdir.txt)
-    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
+    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                         ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
@@ -716,16 +823,15 @@ WON_TESTS = {
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
     # verop.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_verop.txt)
-    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
-                       WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won_net/src/golden_hostop.txt)
-    "won_hostop_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_hostop_test": [],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won_net/src/golden_titlecfg.txt)
-    "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_titlecfg_test": [],
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
     # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won_net/src/golden_peerauth.txt)
@@ -739,10 +845,10 @@ WON_TESTS = {
     "won_peerop_test": "won_peerobj_test",
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
     # over the same stand-ins (golden: rust/crates/ee_won_net/src/golden_authflow.txt)
-    "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_authctx_test": [],
     # HTTPEngine (HTTPSession, HTTPConnection), the original's statements against ee_won's httpengine objects over the
     # same stand-ins (golden: rust/crates/ee_won_net/src/golden_httpengine.txt)
-    "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_httpengine_test": [],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
     # original's statements against tests/won/won_miscops_glue.h over ee_won's miscops module
     # (golden: rust/crates/ee_won_net/src/golden_miscops.txt)
@@ -750,7 +856,7 @@ WON_TESTS = {
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
     # files), the original's statements over the real FileReader / FileWriter against won_cachemap_glue.h over ee_won's
     # cachemap module
-    "won_cachemap_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_cachemap_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won_net/src/golden_path.txt)
     "won_path_test": [],
     # RegKey on config.yaml (golden: rust/crates/ee_won_net/src/golden_regkey.txt)
@@ -760,8 +866,7 @@ WON_TESTS = {
     "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp",
-                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)
@@ -772,12 +877,11 @@ WON_TESTS = {
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
-                                                             "ConfigToken.cpp")],
-                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
+                                                             "ConfigToken.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
-WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
+WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"]]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
 # rust/crates/ee_won_net/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
 # is header-only since net round 26)
@@ -788,7 +892,6 @@ WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONServer" / "ServerOp.cpp",
-                                  WON_SRC / "WONCommon" / "StringUtil.cpp",
                                   WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp"]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
@@ -837,8 +940,7 @@ WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
 # container, timer and thread shims; won_ops_test's units
 WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
-                                    *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
-                                    WON_SRC / "WONCommon" / "StringUtil.cpp"]
+                                    *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp"))]
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
@@ -922,7 +1024,7 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT, mem_mb=TEST_MEM_MB)
             if code:
                 failed.append(name)
             result |= code
@@ -1024,7 +1126,7 @@ def ninja_exe():
 
 
 # SDL subsystems the game uses: video (window, events, keyboard/mouse, clipboard, text input/IME), the message box.
-# Audio stays on miniaudio, so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
+# Audio is the Rust library's (cpal), so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
 # (Linux), Cocoa/Metal (macOS) and Win32 come with video.
 SDL_OPTIONS = ["-DSDL_STATIC=ON", "-DSDL_SHARED=OFF", "-DSDL_TEST_LIBRARY=OFF", "-DSDL_TESTS=OFF",
                "-DSDL_EXAMPLES=OFF", "-DSDL_INSTALL=ON", "-DSDL_AUDIO=OFF", "-DSDL_CAMERA=OFF", "-DSDL_HAPTIC=OFF",
@@ -1226,13 +1328,11 @@ def cmd_census(a):
         jobs = [j for j in jobs if a.only in str(j[1])]
     # the include path of the Windows build (verify.include_paths) minus the MSVC/SDK directories, with the compat
     # headers first; the platform layer's POSIX implementation replaces src/Platform/Win32 (compiled as units here)
-    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    inc = [COMPAT, ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
         inc.append(font_arrays(t))
-    inc.append(general_midi_array(t))   # and the built-in general MIDI set
     have = {pathlib.Path(j[1]).resolve() for j in jobs}
     for s in platform_sources(t):
         if pathlib.Path(s).resolve() not in have:
@@ -1435,25 +1535,6 @@ def macos_icns(out_file):
         subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(out_file)], check=True)
 
 
-def general_midi_array(t):
-    """<out>/gen/SEGeneralMIDIArray.h: the built-in general MIDI set as a C array, for compilers without #embed (as
-    font_arrays) -> the directory"""
-    gen = t.out / "gen"
-    header = gen / "SEGeneralMIDIArray.h"
-    source = ROOT / "src" / "Low-Level Engine" / "Sound Engine" / "EE.sf2"
-    if header.exists() and header.stat().st_mtime > source.stat().st_mtime:
-        return gen
-    gen.mkdir(parents=True, exist_ok=True)
-    data = source.read_bytes()
-    lines = ["/* GENERATED by tools/xbuild.py from EE.sf2 (src/Low-Level Engine/Sound Engine/SEGeneralMIDI.c) */",
-             "static const unsigned char kGeneralMIDI[] = {"]
-    for k in range(0, len(data), 32):
-        lines.append(",".join(str(b) for b in data[k:k + 32]) + ",")
-    lines.append("};")
-    header.write_text("\n".join(lines) + "\n")
-    return gen
-
-
 def game_dialect_flags(t, cxx_game):
     """The game's C++ units keep the Microsoft dialect of the Windows build (with the lenience clang-cl's Microsoft
     mode has, MS_DIALECT_LENIENCE); C, the vendored libraries and the platform layer are standard code. Optimised
@@ -1530,9 +1611,8 @@ def cmd_game(a):
             jobs.append(("platform", s, ""))
     # the window icon's pixels (the generated gen/PlatIconData.h) handed to the Rust window layer at start-up
     jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatWindowIcon.c", ""))
-    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
-           sdl_prefix(t) / "include", font_arrays(t), general_midi_array(t)]
+    inc = [COMPAT, ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
+           sdl_prefix(t) / "include", font_arrays(t)]
     icon_header(t)   # gen/PlatIconData.h, beside the font arrays
     opt = ["-O1"] if not a.debug else ["-O0"]
     san = [f"-fsanitize={a.sanitize}", "-fno-omit-frame-pointer"] if a.sanitize else []
@@ -1567,10 +1647,12 @@ def cmd_game(a):
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
     # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
     libs = [wlib, *sdl_libs(t)]
+    # (and the sound device, cpal: ALSA, Core Audio)
     if t.os == "linux":
-        libs += ["-ldl", "-lm", "-lpthread"]
+        libs += ["-lasound", "-ldl", "-lm", "-lpthread"]
     else:
-        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation",
+                 "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit"]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
     # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the
@@ -1629,12 +1711,12 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
+    for name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
                  "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdltest"):
+        if name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -1659,7 +1741,7 @@ def main():
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
     a.sim = a.cmd == "sim"
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 

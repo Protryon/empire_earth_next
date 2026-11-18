@@ -77,14 +77,6 @@ public:
     void SetInternalTransform(unsigned long inFrame, GETransformation& inTransform) const
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Internal, inFrame, (const EeGeTransformation*)&inTransform); }
     void SetOpacity(float inOpacity) { ee_ge_mod_set_opacity(this->mRust, inOpacity); }
-    void SetTagPoint(unsigned long inIndex, const GE3DPoint& inPoint)
-        { ee_ge_mod_set_tag_point(this->mRust, -1, inIndex, (const EeGe3DPoint*)&inPoint); }
-    void SetTagPoint(unsigned long inFrame, unsigned long inIndex, const GE3DPoint& inPoint)
-        { ee_ge_mod_set_tag_point(this->mRust, (long)inFrame, inIndex, (const EeGe3DPoint*)&inPoint); }
-    void SetTagPointName(const UString& inName, unsigned long inIndex)
-        { const_cast<UString*>(this->GetTagPointNames())[inIndex] = inName; }
-    void SetTextureFilename(const UString& inName, unsigned long inIndex)
-        { const_cast<UString*>(this->GetTextureFilenames())[inIndex] = inName; }
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with StoreLoaded)
@@ -103,7 +95,6 @@ public:
     void SetGraphicsNextFrame(unsigned long inFrame);
     void SetTexture(GETexture* inTexture, unsigned long inIndex);
     unsigned long SizeOf();
-    void SortTagPoints();
     bool Verify() const;
     GEModel(const GEModel&) = delete;
     GEModel& operator=(const GEModel&) = delete;

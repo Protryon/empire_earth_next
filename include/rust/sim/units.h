@@ -697,8 +697,6 @@ constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
 
-constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
-
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
@@ -2898,10 +2896,6 @@ constexpr static const int32_t EE_UNITS_GOAL_UNFINISHED_FARM = 482;
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
 
-constexpr static const uint8_t GOAL_PATROL = 9;
-
-constexpr static const uint8_t GOAL_EXPLORE = 10;
-
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
@@ -3891,6 +3885,16 @@ struct EeUnitsPlayerEvents;
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
 
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
+using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -4094,16 +4098,6 @@ struct EeUnitsAtcIo {
 
 /// The host: `(ctx, op, unit, other, io) -> the answer`.
 using EeUnitsAtcFn = int64_t(*)(void*, int32_t, void*, void*, EeUnitsAtcIo*);
-
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
-using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
 /// A unit's id (`GetUnitID()`).
 using EeUnitsAtcUnitIdFn = unsigned long(*)(void*);

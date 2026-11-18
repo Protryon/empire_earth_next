@@ -24,7 +24,7 @@
 #include "won_ftp_msg.h"
 #include "won_patch_msg.h"
 #include "won_version_msg.h"
-#include "rust/all.h"
+#include "rust/won_net/strcase.h"
 
 using namespace WONAPI;
 using std::string;
@@ -506,6 +506,12 @@ static void BuildVersionFilterSet(const std::string& theFilterString, FilterStri
         commaPos = theFilterString.find(',', lastPos);
     }
     theFilterSet.insert(theFilterString.substr(lastPos, theFilterString.size() - lastPos));
+}
+// StringUtil.cpp's StringToLowerCase (deleted in WONLobby round 14): strcase.rs's ASCII map
+static std::string StringToLowerCase(std::string s)
+{
+    if (!s.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&s[0]), s.length(), false);
+    return s;
 }
 static bool IsFiltered(const FilterStringSet& mFilterStringSet, const std::string& theVersionData)
 {

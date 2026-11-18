@@ -41,7 +41,6 @@ public:
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }
     void SetDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 0, (intptr_t)inEvent); }
     void SetEnabled(bool inEnabled) { this->mEnabled = inEnabled; }
-    void SetForm(UIForm* inForm) { this->mForm = inForm; }
     void SetJustPressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 1, (intptr_t)inEvent); }
     void SetJustUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 3, (intptr_t)inEvent); }
     void SetKey(unsigned long inKey) { this->Call(EeUiHotKeyCall::SetKey, (intptr_t)inKey); }
@@ -51,7 +50,6 @@ public:
     static void UpdatePressedPollAmount() { UIHotKey::sPressedPollAmount = UIHotKey::sPressedPoll.Poll(); }
 #endif
 private:
-    void CalculateKeyCount() { this->Call(EeUiHotKeyCall::CountKeys); }
     intptr_t Call(EeUiHotKeyCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_ui_hotkey_call(this, inCall, a, b); }
 
 #ifdef LOWLEVELENGINE_EXPORTS

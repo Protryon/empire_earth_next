@@ -5,21 +5,21 @@
 //
 // The functions go into the script's `ai` table (EECPLuaConfig::mOpen) beside the coarse verbs, which keep working.
 // Fog-honest: other players' units only while their tile is seen (EETile::IsSeenBy), resources only on explored
-// tiles. Every binding charges its cost to the call's instruction budget (EECPLuaState::Charge).
+// tiles. Every binding charges its cost to the call's instruction budget (ee_ai lua_host.rs charge).
 #ifndef EE_EECPNEXTUNITS_H
 #define EE_EECPNEXTUNITS_H
 
 #include <string>
 #include <vector>
 
-struct lua_State;
 class EEComputerPlayer;
 class EEComplexUnit;
 class EEUnit;
 struct EEPUnitSwap;
 
-// the ai.* functions (EECPLuaConfig::mOpen; the context is the EEComputerPlayer)
-void EECPUnitsOpen(lua_State* inL, void* inPlayer);
+// the player's per-unit state (ee_ai units_state.rs; NULL until used): the Rust engine's handle of it (the ai.*
+// functions are registered by ee_ai units_bind.rs ee_ai_units_open)
+void* EECPUnitsRust(const EEComputerPlayer* inPlayer);
 
 // whether the script holds the unit (ai.take, or any command on it): the classic runners leave it alone
 bool EECPUnitsHolds(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit);

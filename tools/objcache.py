@@ -39,7 +39,7 @@ import zlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import CLANG, ORIG_SRC_ROOT, ROOT, TOOLCHAIN
 
-SCHEMA = "ee-objcache-1"
+SCHEMA = "ee-objcache-2"   # 2: units compiled by a checkout-independent name (clang_build.main_file_name)
 DEFAULT_STORE = r"C:\EEX-objcache-store"
 DEFAULT_MAX_GB = 4.0
 MANIFEST_ENTRIES = 8   # dependency sets kept per manifest key (a header edited and reverted hits again)
@@ -221,9 +221,10 @@ class Cache:
                 return True
         return False
 
-    def insert(self, key, obj, depfile, source):
+    def insert(self, key, obj, depfile, source, cwd=None):
         """Record a fresh compile: its object and its dependency set (the dependency file's prerequisites but the
-        source itself, which the manifest key holds as compiled)."""
+        source itself, which the manifest key holds as compiled; a relative prerequisite is against cwd, the folder
+        the compile ran in)."""
         with self.lock:
             self.misses += 1
         try:
@@ -233,7 +234,7 @@ class Cache:
         src = _norm(source).lower()
         recs = []
         for d in deps:
-            d = os.path.normpath(d)
+            d = os.path.normpath(os.path.join(cwd, d) if cwd is not None and not os.path.isabs(d) else d)
             if d.lower() == src:
                 continue
             h = self.file_hash(d)

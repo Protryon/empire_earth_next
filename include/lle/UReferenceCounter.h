@@ -39,7 +39,6 @@ protected:
     // inline: the mixer's SampleData construction stores the count (1) with no call; the base vtable is
     // re-stored from the imported ??_7UReferenceCounter@@6B@ in ~SampleData. Protected (exported ??1...@@MAE@XZ).
     virtual ~UReferenceCounter() {}
-    void SetReferenceCountToZeroWithoutDeleting() { this->mReferenceCount = 0; }
 public:
 
     unsigned long mReferenceCount;            // proven +0x04

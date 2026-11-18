@@ -29,10 +29,8 @@ class UIControlsTable;
 class UIForm;
 class UResourceFile;
 struct UIDbDataForms;
-struct UIIMECandidateList;
 class UIEntity;
 class UIEvent;
-class UIIMECandidate;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
 LLE_API extern UString gDbUIHotKeyFileName;
@@ -70,11 +68,9 @@ public:
     void AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity);
     void AddForm(UIForm* inForm);           // 0x1005a006; UIForm::Create calls it
     void AddIMEResultString(const UWideString& inString);
-    virtual long ChangeIMECandidateWindow(const UIIMECandidateList& inList);   // slot 0x04
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor);
     void ChangeRasterizer(GERasterizer* inRasterizer);
-    virtual long CloseIMECandidateWindow();
     virtual long CloseIMECompositionString();
     long CopyData();
     void CreateBackgrounds();
@@ -90,7 +86,6 @@ public:
     void ForceUIUpdate();
     GEBitmap* GetAlphaSortDownBitmap() const;
     GEBitmap* GetAlphaSortUpBitmap() const;
-    UIIMECandidate* GetCandidateWindow() const;
     GEBitmap* GetCheckDownNot() const;
     GEBitmap* GetCheckDownOff() const;
     GEBitmap* GetCheckDownOn() const;
@@ -98,7 +93,6 @@ public:
     GEBitmap* GetCheckOff() const;
     GEBitmap* GetCheckOn() const;
     UIForm* GetCurrentForm() const;
-    bool GetDrawCandidateWindow() const;
     GEFont* GetFont(unsigned long inIndex) const;
     UIForm* GetFormByID(unsigned long inID) const;
     unsigned long GetFormCount() const;
@@ -140,7 +134,6 @@ public:
     bool IsFormVisible(UIForm* inForm);
     void LoadDatabase(FSPath* inPath, const UString& inDirectory);
     void LockUIForCopyData();
-    virtual long OpenIMECandidateWindow();
     virtual long OpenIMECompositionString();
     long Pop();
     long PopTo(UIForm* inForm);
@@ -155,7 +148,6 @@ public:
     static void SetMouseLeftHanded(bool inLeftHanded);
     long SwapForm(UIForm* inForm);
     void SetMusicVolume(float inVolume);
-    void SetNumberOfFonts(unsigned long inCount);
     void StartMusic(const UWideString& inFileName);
     void StopMusic();
     void UnlockUIForCopyData();
@@ -164,11 +156,7 @@ public:
 protected:
     virtual long UpdateKeyboard();
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);   // slot 0x30
-    void RemoveAndStopSoundInstance();
-    void RemoveSoundInstance();
-    void SetSoundInstance(SESMInstanceNode* inInstance);
 private:
-    void ResetClippedForms();
     // the forwarders' one call into the Rust manager, and the Rust manager's calls out
     intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const;
     static intptr_t HostOp(void* inManager, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,

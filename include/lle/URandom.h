@@ -33,13 +33,6 @@ public:
     // proven inline (LLE 0x1000de1a, exported in the inline region): Default.dll 0xc0db expands it around a
     // call to the Generate() import
     float Generate(float inMinimum, float inMaximum) { return this->Generate() * (inMaximum - inMinimum) + inMinimum; }
-    // Provisional name. Inline (Default.dll EEClumps 0x8586 expands it around a call to the private
-    // NextInSeries import); the exported Generate() is the same expression but TCP calls it out of line.
-    // Divide in double: `fild q; fild q; fdivp` as in LLE's own Generate (0x1000dde9) and Default.dll 0x8586/0xc192.
-    // `(float)a / (float)b` with unsigned operands gives VC6's `fild q; fidiv dword` instead (probe in unit 9 notes).
-    // NOT a real member (no such export: a dllexport class exports every inline member). Default.dll's stand-in for
-    // an expanded expression; flagged in the step-2 report.
-    float GenerateUnit() { return (float)((double)this->NextInSeries() / (double)this->mModulus); }
     // exported, ICF-folded (0x10b8d, 0x54ae4): plain field accessors (no seed 0 -> 1 fix-up, unlike the ctor)
     unsigned long GetSeed() { return this->mSeed; }
     void SetSeed(unsigned long inSeed) { this->mSeed = inSeed; }

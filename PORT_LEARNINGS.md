@@ -29670,6 +29670,1081 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
 - **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
   references the sight drives are the same host calls as before (MMSN covers the counts).
 
+## The vendored audio libraries replaced by Rust crates: cpal, symphonia, rustysynth (branch rust-vendor-audio, 2026-11-17)
+
+What went: miniaudio (`include/miniaudio`, 92.6k lines), dmusic with TinySoundFont (`src/ThirdParty/dmusic`, 11.2k)
+and `SEGeneralMIDI.c`. What came: `ee_audio::dmusic` (the DirectMusic engine, ~2.4k lines with tests),
+`ee_audio::mixer::device` (cpal device, symphonia decoder), `tools/dls2sf2.py` (the banks, once, at data build time).
+
+- **The music: port the interpreter, replace only the synthesizer.** The songs are not MIDI files: they are
+  DirectMusic segments on styles whose patterns are chosen at run time by the groove level (the music manager's
+  intensity), so no offline conversion to MIDI could keep the behaviour. rustysynth replaces TinySoundFont only; the
+  rest of dmusic (segments, styles, bands, the message heap, the clock, the pattern choice, the composer, the
+  reverb) is a line-for-line port with every EE patch.
+- **Golden at the synthesizer's seam.** `tests/sound/dm_golden.c` builds dmusic's own sources with `Synth.c`
+  replaced by a logger: each call into the synthesizer (note, control, band, reset) at the frame it lands on. The
+  Rust performance with a logging `Sink` prints the same lines: 176k lines over the game's eight songs (local,
+  retail data) and the committed `golden_dmusic.txt` over synthetic songs (`tests/sound/dm_testsong.py`). That
+  fixes timing, groove levels, pattern choice, stops and transitions independently of how the synthesizer sounds.
+- **Build the reference driver as the game built it.** With mingw gcc the golden differed from the Rust in the
+  last bit of a few curve values; built with clang-cl /O1 and the UCRT (the game's toolchain, whose `powf`/`sinf`
+  Rust's msvc target also calls) they agree. dmusic's `M_PI` is its own 3.14159 where the C headers define none
+  (the game's build): the Rust uses 3.14159, not `f32::consts::PI`.
+- **Port a heap's equal-element order.** A binary heap returns equal messages in an order of its own; dmusic's heap
+  is ported step for step, including its compare against the slot past the end (which held the element being
+  sifted, so the result is the left child) instead of a `BinaryHeap`.
+- **Undefined behaviour in the reference.** `DmPerformance_handleSegmentMessage`'s default groove command left its
+  groove range uninitialised; in the synthetic songs' loop the stack garbage drew an extra random number. The
+  driver zeroes it (documented in its header); the game's songs never reach that path (their golden is the same
+  with and without the change). C union aliasing that is behaviour is kept: a composed transition's chord and
+  command carry the last chord's time (they shared `msg.time`), so usually both fall outside the one-measure
+  transition and the groove pattern plays.
+- **SoundFont numbering vs DLS numbering.** A converted DLS bank keeps TinySoundFont's numbering (MSB << 8 | LSB,
+  drum kits 128) and the converter writes "dls2sf2" in INFO/ISFT; the built-in `EE.sf2` numbers by the MSB and falls
+  back to the capital tone / standard kit, as dmusic's EE patch did. rustysynth's bank select takes any value on a
+  non-percussion channel, so the performance channels use MIDI channels 0-8 and 10-15 (15 per synthesizer, more
+  synthesizers per collection as needed) and the presets are checked before selecting (a missing one leaves the
+  channel's last, as TinySoundFont did; rustysynth would fall back to its default).
+- **rustysynth applies 0.4 of initialAttenuation** (the EMU convention; TinySoundFont and DLS apply all of it), so
+  the converter writes the DLS attenuation x 2.5. With that the renders' RMS match TinySoundFont's to 0.1 %
+  (Honor 0.1686 / 0.1684, Pawns 0.0710 / 0.0709, Enmity 0.1122 / 0.1122; 100 ms envelope correlation 0.97-0.99).
+  rustysynth's own reverb and chorus are off: the original's reverb runs on the mix as before.
+- **What sounds different**: the synthesis (rustysynth's envelopes, filter and interpolation; voices start on its
+  64-frame blocks, up to 1.3 ms late), the random numbers (an LCG of the C `rand` form instead of the CRT's shared
+  `rand()`; the sequences are random either way), and the MP3 effects' last bits (below).
+- **The decoder: keep the old library's sample conversions.** symphonia hands out the file's own integer samples;
+  converting them with dr_wav's formulas (8-bit `x * 0.00784313725490196078f - 1`, 16-bit `x / 32768`) gives all
+  879 WAVs bit for bit what miniaudio gave (digest of every file, frames, rate and channels). The ten MP3s: aligned,
+  at most 2.7e-5 apart (below a 16-bit step); the five 22 kHz ones gain the last 576 frames (one MPEG-2 granule
+  minimp3 dropped).
+- **The device.** cpal's stream is not `Send` everywhere: it lives on its own thread, which reports the rate and
+  waits for the stop. The stream takes the device's default format and channel count; the stereo mix is spread
+  over it (mono gets the mean). No device (or the simulation) falls back to a null device that pulls 10 ms at
+  48 kHz in real time, as miniaudio's null backend did. cpal's Windows backend links through raw-dylib: no new import
+  libraries; Linux needs `libasound2-dev` (alsa-sys's build script asks pkg-config; a cross `cargo check` from Windows
+  passes with `PKG_CONFIG_ALLOW_CROSS=1` and `PKG_CONFIG` naming a stub that prints `-lasound`), macOS the CoreAudio, AudioToolbox and AudioUnit frameworks (added to xbuild.py's links).
+## R6 WONLobby, round 13: the Internet lobby's controls as lobbyctl.rs kinds (ee_won_lobby srvlistctl.rs, chatctl.rs, netctl.rs; branch rust-wonlobby13b, 2026-11-17)
+
+Round 12's measure named what kept the WONGUI hosts' readers: the lobby's own Container and ListItem subclasses,
+the Internet controls. This round moved all of them (and the LAN screen's ServerListCtrl, ChatCtrl, RoomLabelCtrl
+and DirectConnectCtrl, which the LAN game builds too) onto round 4's control object: one Rust object per control
+over one host, the C++ class a one-line shell (`LobbyRustCtrl`, or the new `LobbyRustDialogCtrl` for the two
+`Dialog`s), so the resource factories, the config readers and every outside caller did not change.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| dd03536a | ServerListCtrl and its rows (srvlistctl.rs, kind `ServerList`); ServerListCtrl.cpp deleted; the new host unit LobbyNetCtrlHost.cpp | 41,340 -> 40,707 (-633) |
+| 6eebbba6 | ChatCtrl (chatctl.rs, kind `Chat`); ChatCtrl.cpp deleted | 40,707 -> 40,274 (-433) |
+| 7d39e9a8 | RoomCtrl, FriendsListCtrl, UserListCtrl, QuickPlayCtrl, LoginCtrl, CreateAccountCtrl, UpdateAccountCtrl, LostPasswordCtrl, LostUserNameCtrl, LoginHelpCtrl, LoginStatusCtrl, InitFailedCtrl, MOTDCtrl, LoginScreen, DirectConnectCtrl, RoomLabelCtrl (netctl.rs, sixteen kinds); sixteen units deleted | 40,274 -> 38,137 (-2,137) |
+
+| e318ec1d | the host's missing event and row member cases, the rows' text colour (below: what the LAN game found) | 38,137 -> 38,165 (+28) |
+
+Round total: WON C++ 41,340 -> 38,165 (-3,175); eighteen units deleted.
+
+- **The model's ops are the model's.** Every call on a game, client, friend, group, server or list is one of three
+  generic ops (`MGet`, `MSet`, `MCall`: a field or method of `EeWonModelField` / `EeWonModelCall` on the shell's
+  model object). The game's controls are made by `ee_won_lobbyctl_new_model`, so modelobj.rs answers them in Rust
+  (`ctl_op`); the C++ host has no case for them. The drivers make the controls without the model and script the
+  answers. Addresses the same way (`AddrValid`, `AddrEquals`, `AddrClone`, `AddrFree`: ipobj.rs in the game).
+- **Texts** cross as `GUIStringData*`: borrowed from their owner (an event, a control, the model), or held (one
+  reference, released where the original's temporary or local ended: `TextNew`, `TextAppend`, the parser's texts,
+  the saved password). A builder op replaces the held text with the appended copy (the GUIString's copy-on-write).
+- **ServerListCtrl.** The column definitions (InitColumnMap's six, the EE game's Epoch and MapType through the glue's
+  `SetColumnHandlers`) are a Rust table by name (ASCII case ignored); the control's columns, the rows by game (a
+  `BTreeMap` in the games' pointer order, as the `std::map<SmartPtr>`), the filters (ParseIntFilter in Rust: MSVC's
+  `atoi`, clamped), the orders, the paints, the icon, the refilter timer and the config reader's column steps are
+  Rust. `ServerDetailsItem` keeps its members and vtable (the EE game's subclass adds the details); each virtual is
+  one forward through the list's grandparent, the control. The EE columns' handlers are one op (`EeColumn`) into the
+  glue. The config reader stays C++ (its reads, the list's and header's calls, the exceptions) and asks the Rust
+  (`Cfg`: the game type, the column count, the list, a column by name, the push).
+- **ChatCtrl.** Every handler is Rust (the format chosen, the links, the duration's unit and count, the whisper,
+  warning and team rules, the Accept/Reject chain, the commands it runs itself). The links stay C++ `ChatLink`s
+  (the output paints and hit-tests them): one op makes one from an `EeWonLobbyCtlLink`, a formatted line is one op
+  over an `EeWonLobbyCtlFormat`, an event's member one `EvGet`.
+- **The sixteen small controls** (netctl.rs) hold their controls, flags and texts in Rust; their rows
+  (RoomListItem, FriendsListItem, UserListItem) stay C++ list rows (their paint, size and order moved unchanged
+  into LobbyNetCtrlHost.cpp), made and filled by ops. LoginScreen's pages and RoomLabelCtrl's config stores are
+  calls (`Page`, `SetField`). DrawLobbyPing moved from MOTDCtrl.cpp to the host unit.
+- **The shells.** `LobbyRustCtrl` and `LobbyRustDialogCtrl` pass their `Container*` as the host's context; the host
+  casts to `Container` (the browser's home location through `LobbyRustCtrl`). One event map (`CtlEventOf`) for both.
+
+### Goldens, mutations, replays
+
+| Driver | Sequences | Trace lines | Replayed by cargo | Mutations |
+|---|---|---|---|---|
+| won_srvlist_test (new) | 60,000 | 7,532,533 | golden_srvlist.txt (70) | 12 of 13 caught (the timer's 500 ms bound: equivalent below 1,600 games, the driver's lists are smaller) |
+| won_chatctl_test (new) | 60,000 (+ LobbySplitDuration over 0..400,000 s both ways) | 3,379,380 | golden_chatctl.txt (72) | 7 of 7 |
+| won_netctl_test (new) | 80,000 (sixteen kinds) | 3,730,110 | golden_netctl.txt (192) | 8 of 8 |
+| won_lobbyctl_test, won_eeglue_test, won_guiconf_test | as before | | | 0 failures |
+
+The first runs of each differed only in the drivers' own mistakes or in the Rust reading a member once where the
+original read it twice (a `this->mGame`, an event's room kind): the Rust now reads each where the original did, and
+a call's arguments right to left where two of them make ops (MSVC's order).
+
+### What the LAN game found that the goldens could not
+
+The goldens' scripted host answers every op itself, so the C++ host's own cases and the constants both sides share
+are outside them. The first lobby capture comparison against the pre-round exe (0bfe280c, built at the round's
+start) showed two regressions: the login screen's first frame had the login panel where the start-up failure panel
+belonged and an empty status line (LobbyNetCtrlHost.cpp's `EvField` had no cases for LoginInitStatus and the other
+round 13 events: every member read 0), and the LAN list's rows painted in black (`StandardColor_Text` is 14, not
+13: the Rust and the golden both said 13). A script now checks that every op, event member, row member, event and
+slot type the Rust names has a host case (the row members' cases were missing too: fixed in the same commit). After
+the fix every lobby frame matches but for the game's name (`lantest0` against `lantest1`: the harness slot's digit)
+and the staging screen's blinking caret (15 pixels at x 121).
+
+**Lesson for host-backed moves:** check the host's switch against the Rust's enums mechanically, and give every
+enum value the Rust copies from a C++ enum a comparison against the C++ (a static assert or a driver check).
+
+### Behaviour changes
+
+- A filter text past 510 bytes: the original read one uninitialised byte; it is a terminator.
+- `atoi` of an out-of-range filter number clamps on every system (the original's MSVC behaviour; glibc's differed).
+- The rows' map is released in the games' pointer order (std::map's tree order before; nothing observes it).
+- The column names match ignoring ASCII case (GUIStringLessNoCase also folded other letters; no config uses them).
+
+### What runs it
+
+EE-SIM never builds the lobby. The LAN game builds ServerListCtrl (the LAN list and the direct-connect list),
+ChatCtrl and RoomLabelCtrl (the game room), DirectConnectCtrl: `lan_game.py` runs them. The rest is the Internet
+lobby's, reached by the drivers only (no WON server exists).
+
+### Left
+
+- The rows (ServerDetailsItem's forwards, RoomListItem, FriendsListItem, UserListItem, ChatLink) are C++ objects the
+  GUI's lists call through their vtables; the WONGUI hosts' virtual ops they use are the same every C++ list row and
+  container needs, so no host hook became dead this round.
+- IPAddr.cpp and StringUtil.cpp: still called by WONGUI, WONConfig, the title config and the game's UI events.
+- RoutingLogic.cpp's host (548 lines): the events, dialogs and the request helpers EEWonNet.cpp also calls.
+
+### Gates
+
+| Gate | dd03536a | 6eebbba6 | 7d39e9a8 | e318ec1d, the round's head |
+|---|---|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (after a rustfmt fix) | PASS (after a clippy fix) | PASS | PASS |
+| `build.py --test-profile windowed-software` | | | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_srvlist_test, won_lobbyctl_test, won_eeglue_test, won_guiconf_test | won_chatctl_test | won_netctl_test | all 148 programs exit 0 (won_srvlist_test, won_chatctl_test, won_netctl_test the new ones) |
+| `lan_game.py` (slot.py) | | | PASS (PT 2818 / 2819), two lobby regressions in the captures | `RESULT PASS lan-game PT host=2880 joiner=2895` (the pre-round exe: 2941 / 2942); every lobby capture identical but the slot's digit and the caret |
+
+origin/rust had nothing new at the end of the round (no merge).
+## AI lane B, round 1: the legacy readers, EEComputerPlayer's record with Init, Load and Save, and the influence table in Rust (ee_sim::cp; branch rust-ai-cp1, 2026-11-17)
+
+The owner unlocked the AI Thread's C++ for porting, whole classes into Rust. Lane B has the computer player and its
+economy (docs/progress/ai-computer-player.md). This round moved what could move whole without the placement's and
+the resource centres' world queries.
+
+- **What moved.** `EECPLegacyLoad.cpp` whole (`cp::legacy_load`); `EEComputerPlayer`'s 238 plain members as the
+  record `EeCpFields` the class derives from, with `Init`, `Load`, `Save`, the per-difficulty scales, their setters,
+  `ScaleCost`, `SetNextAttackTime` and `RestoreManagers`' field steps (`cp::fields`, `init`, `save`, `player`);
+  `EEInfluenceTable` whole (`cp::influence`: Rust owns the values; the C++ class is a shim with no RTSRegionTable
+  base, keeping `mRegionSize` and `GetRegions` for its readers).
+- **One field order for Load and Save.** The original's two 450-line bodies were the same list of fields with four
+  differences (the enable-time flag saved as false, two times saved relative to the clock, the two counted lists).
+  The Rust has the list once as `seg_*` macros that expand into either `load_fields!` or `save_fields!`; a field
+  written to one side only cannot happen. The record is read and written field by field through `&raw mut`, never by
+  a reference across a host call.
+- **Lesson: cbindgen does not expand macros.** Seven getters made by a `macro_rules!` were missing from
+  `rust/sim/cp.h` and the C++ failed to compile ("use of undeclared identifier"); every `#[no_mangle]` export must be
+  written out. The header check does not catch it (it compares the generated items, not the C++'s uses).
+- **Lesson: the comment and the code disagreed; the code won.** `Init`'s comment said both attack bounds read
+  record 19; the code reads record 21 for the attack frequency's and 19 for the delay's. The generated Rust followed
+  the code and the golden agreed; the unit test written from the comment failed until fixed.
+- **Lesson: whole save files are not a golden.** Two runs of the unmodified build give saves that differ in the
+  header (the date) and in chunks 4 (the map), 8 (the multiplayer helper) and 12 (the environment), so `cmp` of two
+  `.ees` files says nothing. `tools/harness/savefile.py` no longer parses a current save (its version list ends at
+  0.256); a copy with the list widened (build/cp/savefile2.py) compares the decompressed chunks: the players chunk
+  (tag 5, every computer player's block) is byte for byte the unmodified build's in all six saves.
+- **The record golden.** A temporary dump (never committed) of all 238 fields, the history and the centre count at
+  the end of `Init`, of `RestoreManagers` and at `Save`, built into the unmodified C++ and again over the moved code
+  (only the TU changes: the object cache makes the extra builds cheap), run through saveload seed 2 at 600 and
+  1350 s: the 14 lines are equal. It covers the fields no save holds (`mSeed`, `mTowerSpacing`, the deathmatch
+  modifiers, ...).
+- **The legacy golden.** `scenario_check.py` on the unmodified build and on each commit, comparing every report
+  (outcome, end, players, samples less the wall time, alive computers, defeat order, epochs): equal, 27/27.
+- **The experiment timers** (`cp::timers`): nothing has read `gCPExperimentTimers` since main's stages 5 and 6, so
+  the timers moved whole into a Rust static and the C++ global and struct went; the two save blocks keep their
+  bytes (the world chunk of the six saves equals the unmodified build's). The danger zones they save are lane A's
+  readers' and stay C++ vectors behind host operations.
+- **Members `Init` never set** start at 0 now (the record is zeroed first); the original left them as `new` gave
+  them. None of them is saved or read before it is set (the record golden is equal).
+- **Gates.** Per commit: both builds 0/0, oracle seeds 2-3 identical, the Rust gate (4,432 tests), scenario_check
+  27/27; for the record also sim_editor PASS (14,448 lines) and saveload seeds 2-3 PASS. The influence table is read
+  by lane C's path modifiers and the Lua AI's site threat: the oracle covers it.
+- **Final.** C++ -2,087 net over four commits (legacy readers -404, the record -1,490, the influence table -128, the
+  timers -65). On the final tree: oracle seeds 2-7 identical, the four captures (seeds 2-3) PASS, saveload 18/18 and
+  the matrix `--expect` PASS, scenario_check 27/27, the test-profile build 0/0, `gates.sh` GATES PASS.
+## Lane A, round 1: the per-unit Lua interface's state, its queries and its commands in Rust; the bindings' trace golden (ee_sim::ai units_state.rs, units_bind.rs; branch rust-ai-lua1, 2026-11-17)
+
+- **The golden first.** A binding's behaviour is what the script sees, so the golden is at the Lua boundary:
+  `EE_AI_BINDING_TRACE` (ai/binding_trace.rs) hashes every binding call's arguments and results and every step's
+  view and orders into `EE-AIB` lines in EE-SIM's trace (the oracle's `compare` keeps `EE-AI ` lines only, so the
+  oracle is blind to them). Reading the values must not change them: raw `lua_next`, integers and floats by
+  `lua_tointegerx`/`lua_tonumberx` (never `lua_tolstring` on a number: it converts the slot in place and would
+  break `lua_next` on a key), strings only by `lua_tolstring`, no Lua allocation. The registration with the trace
+  on wraps each function in a `LuaTraced<K>` template (no upvalue added: a closure's size is Lua memory, and Lua
+  memory moves the GC). The traced oracle seeds 2-3 equal `ref`: the trace changes nothing.
+- **Coverage.** The oracle's classic_lua games call 47 of the 90 bindings. ageofai, boom, the late and space
+  starts, an island map and tests/ai_units (helpers, commands, types, raid, airwing, kite) bring it to 77; a new
+  test script, `tests/ai_units/cover.lua`, calls the other 13 with good and bad arguments. Fifteen games, 6
+  minutes, 17 million lines; recorded twice on the unmodified C++, equal.
+- **A test script changes every test game's first line.** The engine's start line holds the hash of the scripts
+  folders: adding cover.lua to tests/ai_units changed it in the six games that read that folder. The compare
+  leaves that line out.
+- **The shape of the move.** `UnitsState` (Rust) is the whole state; the C++ `EECPUnitsState` is a shell holding
+  its pointer, the remaining C++ bindings' scratch and the wall routes' `EEAutoPathRequest*` (C++ objects with a
+  reference count, not saved). The bindings are `extern "C-unwind"` functions in the same `luaL_Reg` table (the
+  same order, so the `ai` table's layout is unchanged); they read units, classes, stats, players, tiles and the
+  map through the world views, and ask one C++ host for the rest (the unit lookup, a goal's place and target, the
+  continents, the class names, the selection and a message's run). A command's `EEMRecord` is built by the host
+  from Rust's typed values (integers as `long long`, floats as `double`, points): the record constructor packs them
+  by the message's member types, so the bytes are the C++'s.
+- **Rules kept for longjmp.** A charge over the budget or a refused allocation raises out of a binding: the
+  bindings keep their scratch in the state (as the C++ did), use raw pointers to it (no `&mut` across a Lua or
+  host call; the host calls back into Rust for `take`), and hold only the read token (its drop counts only in
+  debug builds). One `BTreeMap` local in `ai.gatherers` is moved into the state's scratch before the charge.
+- **Containers.** `std::set`/`std::map` became `BTreeSet`/`BTreeMap` (the same order); the route's open list is a
+  `BinaryHeap<Reverse<(cost, cell)>>`: its pairs are distinct (a cell is pushed again only with a lower cost), so
+  every heap pops them in the same order as `std::pop_heap` with `std::greater` did.
+- **mlua (the owner's request this round): not switched.** mlua-sys 0.13's `vendored` feature builds lua-src
+  551.x, which is Lua 5.5.1, not 5.4.7. An older lua-src (547.x) has 5.4.7, but its build cannot take our
+  determinism macros: ee_lua.c defines, as one unit, `luai_makeseed` (the fixed string hash seed),
+  `l_randomizePivot` (table.sort's pivot), `luai_numpow` and `lua_number2str` as calls of functions defined in the
+  same unit, and the ASCII ctype replacements only for the auxiliary and standard libraries (after the core is
+  included, so the core keeps lctype.c). lua-src compiles Lua's files one by one with its own flags; `CFLAGS` -D
+  could carry the first two, not the function-backed ones nor a per-file ctype. And mlua's high-level `Lua` adds
+  allocations inside the state (its registry data, its reference thread), which change the memory counts and the
+  GC's timing that the step traces and the memory cap see. What can be done exactly: keep these sources but build
+  them from a Rust `-sys` crate's build.rs (the same ee_lua.c, the same flags), or take mlua's high-level API over
+  our build (`external`), after checking its allocations. Deleting src/ThirdParty/lua outright cannot keep the
+  `ai=` hashes.
+- **Results.** EECPNextUnits.cpp 4,792 -> 2,504 lines (with the host, about 390 lines); 57 of the 90 bindings in
+  Rust; the binding golden identical in all 15 games after each of the three moves, and a mutation (a record's
+  `sight` read from the range) caught at the first `ai.unit` call; both builds 0/0; the Rust gate PASS.
+
+## R6 WONLobby, round 14: IPAddr.cpp and StringUtil.cpp as inline forwards, RoutingLogic's connection requests in Rust, the host-coverage tool (ee_won_lobby routelogic.rs conn_request; branch rust-wonlobby14, 2026-11-17)
+
+Round 13 measured this round's plan: the two units every caller still reached through out-of-line forwards, then
+Rust rows for WONGUI's lists, then RoutingLogic.cpp's host, then the largest WON units as whole classes, for 2,000
+net lines. This round did the first and the third; the rows and the whole-class moves are left (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| a8fc7a7c | IPAddr.cpp and StringUtil.cpp deleted: IPAddr's methods inline forwards to ipobj.rs in EEWonNet.h, LobbyGetNetAddresses in WONLobbyGUI.h, the string utilities the game calls in WONStringCompare.h (strcase.rs, text.rs), their seven scattered declarations gone, the unused ones deleted | 38,165 -> 37,826 (-339) |
+| 4a83ec36 | tools/won_host_coverage.py (round 13's inline check as a tool) | |
+| fc190793 | tools/lan_capture_compare.py (round 13's bmpdiff and crop scripts as a tool) | |
+| fd37b869 | RoutingLogic's connection requests in Rust (routelogic.rs `conn_request`, answered in the game through `ee_won_routelogic_new_model`; routecpp.rs's `request`): fifteen host cases gone; RoutingConnection's request helpers deleted from WONRouting.h (EEWonNet.cpp, outside the count, keeps the sixteen it calls as a file-local `WonRequests`, +62; the drivers' copy is tests/won/won_routehelpers.h) | 37,826 -> 37,683 (-143) |
+
+Round total: WON C++ 38,165 -> 37,683 (-482); two units deleted. Far short of the 2,000 target: see "Left".
+
+- **Inline forwards.** IPAddr was already a handle on a Rust value (ipobj.rs); its 30 methods are one-line
+  inline members now, and EEWonNet.h includes rust/won_net/ipobj.h (with ffi.h and servctx.h). EEWonNet.h is
+  included by 292 units: an FFI change in those three modules rebuilds them all. The string utilities: the five
+  the game still calls (StringToUpperCaseInPlace, StringCompareNoCase, WStringCompareNoCase, StringToWString and
+  WStringToString, both overloads) are inline in WONStringCompare.h, which EEWonNet.h and WONLobbyResource.h
+  include; the declarations WONLobbyConfig.h, WONLobbyResource.h, WONRouting.h, WONLobbyParser.h and EEWonNet.h
+  repeated are gone. The one-argument conversions stop at the first NUL as before (a copy to it, then the counted
+  conversion).
+- **The connection's requests.** RoutingLogic.cpp's cases ConnDo 6..10, ConnSetClientFlags, ConnSetGroupFlags,
+  ConnBan, ConnMute, ConnBanByWonId, ConnMuteByWonId, ConnAccept, ConnInvite, ConnSendChat, ConnSendChatTo,
+  ConnAlert and ConnStartShutdown each called one RoutingConnection helper, which built a RoutingRequestValues
+  list and ran it (`ee_won_routeconn_request`). `conn_request` builds the same kind and values from the op's
+  arguments (the casts as the cases had them: `unsigned short` cuts, `unsigned long` as 32 bits, `bool` as 0/1,
+  SendChat's flags cut to 16 bits, the game data type "G") and the logic calls routecpp.rs's `request` with them
+  when it was made by `ee_won_routelogic_new_model` (the game's); the drivers' logic (without the model) still
+  gives every op to its scripted host, so won_routelogic_test and its golden are unchanged. Texts cross with a new
+  host op, `TextUnits` (the `GUIString`'s `wchar_t` units; `utf16le` makes WideAppendUtf16LE's bytes). The three
+  helper calls RoutingLogic.cpp keeps (the game list's subscription, SendData, the advertisement's
+  CreateDataObject) are RoutingRequestValues runs in place.
+- **EEWonNet.cpp** (the game's own Internet front end) called sixteen helpers on its SmartRoutingConnection; they
+  are a file-local class there now, the helpers' statements unchanged, so WONRouting.h holds no request helper.
+
+### The host-coverage tool
+
+`python -I tools/won_host_coverage.py` reads each host enum from its generated header and checks every value
+against the `case` labels of the C++ host files and the match arms of the Rust functions that answer it in the
+game (modelobj.rs `ctl_op`, `route_op`, `route_record_op_in`, `lobby_op`, `popup_op`, `eegame_op`, lanown.rs's
+`op`, routelogic.rs `conn_request`); a value the C++ makes (the controls' events) must be named in its host.
+PASS at the round's start and at its end (18 enums: the controls' ops, event and row members, events, slot types,
+strings, images, client tests, prefs and link fields, the routing logic's, the dialogs', popups', the lobby logics'
+and logics' ops, the EE game's and glue's, the dialog logic's).
+
+### Goldens, mutations, replays
+
+| Driver | Sequences | Replayed by cargo | Mutations |
+|---|---|---|---|
+| won_routeconn_req_test (new) | 200,000 requests (146,004 made, 53,996 the host's) | golden_routeconn.txt (69) | 10 of 10 caught |
+| won_routelogic_test, won_routeops_test, won_smartroute_test | as before (routeops and smartroute through tests/won/won_routehelpers.h) | | 0 failures |
+| won_strcase_test | as before (the forwards from WONStringCompare.h, the unused maps over strcase.rs) | | 0 failures |
+
+### Behaviour changes
+
+None in what the game reaches. An `unsigned long` request value is taken as 32 bits on every system (the
+original's; on LP64 the C++ casts kept 64).
+
+### What runs it
+
+The LAN game reaches IPAddr (every socket, the discovery, the direct-connect lists) and the string utilities (the
+config readers, the resource tables); `lan_game.py` and the capture comparison ran them. RoutingLogic and
+EEWonNet's requests are the Internet lobby's (no WON server exists): only the drivers reach them.
+
+### Left
+
+- The rows (step 2 of round 13's plan): a row table in ee_won_gui that ee_won_lobby registers, two generic shells
+  (RustRow, RustTextRow) for ServerDetailsItem, RoomListItem, FriendsListItem, UserListItem and GameUserListItem,
+  ChatLink's segment hook; the row members become Rust state, so won_srvlist_test, won_netctl_test and
+  won_lobbyctl_test must be rewritten against the original statements and re-recorded. About -250.
+- The whole-class moves: LobbyPersistentData.cpp (827), LobbyDialogHost.cpp (626), LanLogicHost.cpp (469),
+  InitLogic.cpp (317), LobbyLogicHost.cpp (310), ChatCommandParser.cpp (274).
+- RoutingLogic.cpp's other cases: the events (each a C++ event class), the dialogs, the buffers' requests
+  (SendData, the advertisement), the status op and the directory ops.
+- won_cfgtab_test (see Gates).
+
+### Gates
+
+| Gate | a8fc7a7c | fd37b869, the round's head |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | (no Rust change) | PASS, 4,494 tests (after a clippy and a rustfmt fix) |
+| `build.py --test-profile windowed-software` | | 0 / 0 |
+| `xbuild.py wontest` | 147 of 148 programs exit 0 (won_cfgtab_test below) | 148 of 149 programs exit 0 (won_routeconn_req_test the new one; won_cfgtab_test below; won_servconn_test needed the helpers' header, 57379a41) |
+| `won_host_coverage.py` | PASS | PASS |
+| `lan_game.py` (slot.py) | | `RESULT PASS lan-game PT host=2766 joiner=2767` (the round's start exe, cb6e60d5: 2700 / 2699) |
+| capture comparison (`lan_capture_compare.py`) | | every lobby capture identical to the start exe's (create dialog, LAN screen, lobby, both staging screens, the LAN list); the game's frames differ by timing, as they do between any two runs |
+
+**won_cfgtab_test** does not finish on this machine, at the round's start either: built from cb6e60d5's sources it
+grows by about 70 MB a second past 10 GB (stopped there: the memory rule); with this round's sources it grows the
+same way, also over a one-file resource directory (so before its resource lines), and ends after about 50 s at
+3.6 GB with exit 1 and no output. Its sequence mode (`--seq`) runs and matches. Not this round's: the lead should
+look at it (round 13's 148 included it).
+
+origin/rust had nothing new at the end of the round (no merge).
+## Lane A, round 2: every `ai.*` binding in Rust, the tech tree's views, the military class tests and the AI switches (ee_sim::ai units_more.rs, military.rs, switches.rs; ee_sim::world tech_view.rs; branch rust-ai-lua2, 2026-11-17)
+
+- **The golden first, again.** Round 2's base (`build/ai_golden/c0`) was recorded on the round's start, cb6e60d50,
+  twice and equal; it equals round 1's base too. The 32 bindings moved in one piece and the 15 games stayed
+  identical at the first try: the bindings' C++ was a sequence of Lua calls over values, and the port kept the
+  order of every Lua call and every charge (a charge can raise: what it skips must be what the C++ skipped).
+- **What a "view" cannot be.** A tech node's plain members are Rust records already (ee_sim::tech's
+  `EeTechNodeFields`, `EeTechNodeDataFields`), so `NodeView` reads them in place; but `GetIsAvailable`,
+  `GetIsObsolete` and `GetCost` are virtuals whose bodies are the tech walks and the simulation capture's records
+  (TNWK, the cost capture): reading the flag instead of calling them would change the capture. They stay host
+  calls. The same holds for the class virtuals `IsLandBuilding`, `FliesOver`, `GetPopulationCost` and `IsTransport`
+  (the category dispatch). Rule: a view reads members, never stands in for a method with a body.
+- **The tree's containers through its own host.** The epochs' list and each epoch's `std::map` of nodes are C++
+  containers. The tree view looks nodes up through `EETechHost` (the walks' host, ops EPOCHS, EPOCH, NODE,
+  EPOCH_NODES), whose address the layout carries (`tech_host`): no new C++ for the lookups, and the walks and the
+  AI read the same containers the same way. An epoch's node ids are its map's keys; `EETechTreeEpoch::Load` keys
+  each node by its data's id, so the view returns the data ids.
+- **The continent manager behind fourteen ops.** The bindings over the continents, forests, hills, choke points,
+  the shore and the wall planner reach those objects only through `EE_AI_UNITS_HOST_AREA_*`/`WALL_*`/`ROUTE_*`
+  (`EECPUnitsWallsHost`). Their URandom draws are local streams seeded by the script, so a pick computed whole in
+  the host before the charge is the same as the C++'s pick after it. The choke points' nearest-first order keeps
+  its `std::multimap` (equal distances in insertion order) in the host.
+- **The captures see what the binding golden cannot.** The tile lists came back through a buffer that grew and
+  asked again when a list did not fit; for ai.water_sites that computed the shore twice, and the continent
+  capture (CNTN, one record per GetTilesNextTo) had 1.5 times its records while every binding answer stayed equal.
+  A list longer than the buffer is now read again from the host's copy (`EE_AI_UNITS_HOST_TILES_AGAIN`). Rule: a
+  host op with a captured body runs once per C++ call it replaces; run the captures before calling a move done.
+- **cbindgen emits only reachable types.** A `#[repr(C)]` record used only through a `void*` host op is not in the
+  header: one exported function taking a pointer to each (`ee_ai_units_records_size`, which the C++ also checks
+  against its own `sizeof`s) puts them there.
+- **A child module for a second file of bindings.** `#[path = "units_more.rs"] mod more;` inside units_bind.rs gives
+  the new file every private helper of the first (the `Game` reads, `charge`, the host) without widening their
+  visibility; cbindgen follows the `#[path]`.
+- **Shell heredocs mangle backslashes.** A Python edit script with `'\0'` in a bash heredoc arrived as a NUL
+  character and its replace silently failed to match; write such scripts with the editor into a file and run it.
+- **Python text writes on this machine use cp1252.** `open(p, 'w')` without `encoding` wrote EECPNextUnits.cpp's
+  `§` as one byte; read and write sources with `encoding='utf-8'` (or bytes).
+- **The switches.** EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS and EE_AI_EXP are parsed in Rust (switches.rs,
+  unit tests); the personality ids are resolved through a C++ callback (the rules' `Find`) and the warnings go out
+  through `ESDebugOut`. Checked by a game with every switch set on the old and the new EE-SIM: the EE-AI lines are
+  the same but the wall-clock EE-AIPROF lines.
+- **Results.** C++ -1,516 net over four code commits: the bindings -1,349 (EECPNextUnits.cpp 2,504 -> 1,145
+  lines, the layout +10), the military tests -90, the switches -89, the tiles fix +12 (C++ counted by `git diff
+  --numstat` over src). Binding golden identical in all 15 games after each commit; a mutation (ai.techs'
+  obsolete_epoch + 1) caught at classic-2's first ai.techs call (line 24). On the final tree: oracle seeds 2-7
+  identical; captures oracle, late, space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect`
+  PASS; both builds 0/0; the Rust gate PASS.
+## AI lane B, round 2: PLCE, EECPPlacement whole and EECPResourceCenter's bodies in Rust (ee_sim::cp placement, resource_center; branch rust-ai-cp1, 2026-11-17)
+
+- **The golden first, committed.** PLCE (ee/EECPPlaceCapture.h) records every outermost call into the placement, a
+  resource centre or their free functions: the method, the player, the inputs and the outputs, with the state the
+  state-changing calls leave. The entry points became recording wrappers on the unmodified C++ (each body wrapped in
+  a lambda by a script, so the body itself stayed byte for byte), the goldens were taken from that build, and the
+  move kept the scopes in the forwarders, so the digests compare the same outermost calls.
+- **Lesson: run the unmodified build twice before trusting a new tag.** The first PLCE digests differed between two
+  runs of the same build while every other tag agreed. Two causes, both in the record, not the game: out tiles were
+  recorded on the way in (the callers' uninitialized locals), and `EECPResourceCenter::mIsActive` is not set by the
+  constructor (a new centre's flag is garbage until its first `SetActive`; the game never reads it before). The
+  record now takes a found tile only when the call found one, GetCenter's only when there was something to measure,
+  and the active flag only where it is set (SetActive's argument, Load's read).
+- **Lesson: the gates' AI does not reach the code.** In the oracle, late, space and calamity games the computer
+  players run classic_lua, which places through `ai.find_site` (lane A's binding), not `ai.place`: PLCE held only
+  the centres' bookkeeping, no FindSite, CanBuildAt or finder. sim_capture got `--profile placement`: the oracle's
+  game with the boom and Age of AI scripts (`--engine boom,ageofai`), whose verbs place through `ai.place`
+  (`EECPNextPlaceSearch`: 313 and 48 outermost calls at seeds 2 and 3, every finder and thousands of CanBuildAt
+  under them). Its golden file lists only PLCE.
+- **The world through one host per module, the reads exact.** `PlaceHost` (place_host.rs) is the world both
+  modules ask; the game's implementation (place_game.rs) calls `ee_cp_place_host` (EECPPlacement.cpp) and
+  `ee_cp_center_host` (EECPResourceCenter.cpp). A unit's members come in one `UNIT_INFO` read through the C++
+  rather than the world views: `IsLandBuilding` is a virtual class method and `IsDropSite` a class method, and one
+  struct per unit costs one call. Lists the original kept across loop iterations stay in-out (EEGetTilesInRadius
+  appends, EEGetUnitsInRectangle appends and dedups the whole accumulated list, EEGetPlayerUnitsOfType's caller
+  passes the list it had), so the host takes the list as it is and hands back what the C++ call left.
+- **Lesson: a TEST ONLY note can pin a call to C++.** The ring and square tile lists are pure Rust already
+  (`units::uu_tiles`); the C++ wrappers the original called (`EEGetSquareRingTiles` and family) are forwarders with
+  a TEST ONLY UUTL note per outermost call, and UUTL has goldens. The port calls the Rust directly, and the C++
+  wrappers only while the capture records (`EeCpPlaceCtx::capture`): same tiles, the notes kept. One wrapper's note
+  records its input list (`EEGetSquareBlockRing` writes `T(outTiles)` even with `inAppend` 0), so that call takes the
+  previous ring's tiles in, as the original's reused vector held them.
+- **Sorts with ties.** `std::sort` is not stable; five of the original's sorts compare keys with ties (tiles by
+  distance, the anti-air clusters by size, gates by distance, a centre's units by an area effect bit). The
+  permutation a comparison sort makes depends only on the comparisons' outcomes, so `sort_by_key` hands the keys to
+  the C++ (`EE_CP_PLACE_SORT`: `std::sort` over (key, index) comparing keys) and applies the order. The stable sorts
+  (FindCenterSite's `stable_sort`, the (distance, index) pairs) and the totally ordered ones (U2DPoint's `operator<`
+  before `unique`) are Rust's sorts. A sort used only for its first element (FindSpaceSite's own units) is a min.
+- **Shuffles.** `EEAIRandomShuffle` is Dinkum's `random_shuffle`: for each position from the second, a draw of
+  `GetRandom(0, count - 1)` and a swap; place_host.rs `shuffle` makes the same draws through the host.
+- **Kept quirks.** FindWonderSite lists every ring to 199 after a find (the tile list calls, and their notes, stay);
+  FindTowerSite's gate tiles accumulate across gates and are filtered again for each; the choke points' unit list
+  accumulates; FindGranarySite's centre keeps the previous centre's tile when GetCenter finds nothing.
+- **cbindgen exports `pub(crate)` constants, and the header splitter matches names across crates.** The unit type
+  constants (`TYPE_PATH_POINT` ...) went into `rust/sim/cp.h` and moved ee_render's same-named constant to
+  common.h. They live in a `/// cbindgen:ignore` module with a `CP_` prefix now; `EeCpPlaceCtx`'s opaque placement
+  pointer needs `#[allow(improper_ctypes)]` on the extern block of the two hosts.
+- **Gates.** The move's commit: both builds 0/0; the Rust gate PASS (4,454 tests, 15 new: the epoch classes, the
+  tile math, the shuffle's draws, CanBuildAt's border runs, the town centre rule, the ring and adjacent searches, the
+  wonder rings, GetCenter, the area effects, the drop-site adoption, the morale fill, the settlement ring, the
+  centre's save and load bytes, Restore's dropped units); oracle seeds 2-3 identical; the captures at seeds 2-3
+  (placement 2, oracle 206, late 208, space 204, calamity 216 digests) equal to their goldens; scenario_check 27/27;
+  saveload seeds 2-3 PASS. Only the sim gates exercise this code: the renderer reaches none of it.
+- **Result.** C++ -1,519 net for the move (+737 -2,256; the TEST ONLY PLCE capture added 549 before it); Rust 4,541
+  lines with tests. On the tree merged with origin/rust cb6e60d50 (clean): both builds and
+  the test profile 0/0, the Rust gate PASS (4,508 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3
+  PASS, scenario_check 27/27.
+- **CPEV, the computer player's own calls.** The second TEST ONLY tag (the same scope class with its own depth, so a
+  CPEV call's placement calls still record PLCE as before): one record per outermost call of WorkOutPopulation,
+  Regroup, UpdateGroups, EnterEpoch, ChooseCivilization, EECPPendingEpoch, AvoidsEnemies, CanProduce,
+  RestoreManagers, DamageTaken, the unit events (UnitPlaced, UnitTaken, UnitCompleted, UnitGoalDone, UnitStranded,
+  UnitsSwapped), SetActive, EpochReached and PayImprovement, its arguments and, when it ends, the player's state (an
+  FNV-1a of the record EeCpFields, the favourite history, the units to kill, the danger zones, every centre with its
+  active flag, the town tile).
+- **Lesson: two threads call the same methods.** The first CPEV digests differed between two runs of one build in one
+  seed only: the interface thread asks `CanProduce` and `AvoidsEnemies` too, at its own times, so their records
+  interleave by timing. CPEV records only on the thread that runs the computer players' Update (noted at its first
+  call). The record's hash stops at the record's last member: the two bytes of tail padding after its closing bools
+  are whatever the allocation left.
+- **The player's bodies (events.rs).** WorkOutPopulation, the centres' grouping, the favourite choice (one body for
+  the four kinds; the screener stays C++, asked per class: it calls EECPCountOwn, whose PLCE record must stay),
+  RestoreManagers' missing favourites, ChooseCivilization's pick, the retire cheat, EECPPendingEpoch and AvoidsEnemies.
+  A third host (ee_cp_player_host). **Lesson: a moved body must call what the original called.** Regroup and
+  UpdateGroups call the centres' IsWithinRadius, AddUnit, Contains, AdoptDropSite, SetUnit, GetCenter and SetActive,
+  each an outermost PLCE call: the Rust bodies call those C++ forwarders through the host, not the Rust functions
+  behind them, and the centres' sort stays the original std::sort with its comparator (it asks every centre's
+  GetCenter per comparison, so even a key sort would change the records).
+- **The forwarders through two helpers.** EECPAsk (a test) and EECPSearch (a search with its tile in and out, the
+  centres for the searches over them) make the same PLCE words as the written-out forwarders (the placement profile's
+  PLCE digests equal), 81 lines less.
+- **Result of the round.** C++ -1,316 net (the target was 3,000: what is left of EEComputerPlayer.cpp is mostly calls
+  into lane A's hooks and the units' goals). On the tree merged with origin/rust 4929244f3: both builds and the test
+  profile 0/0, the Rust gate PASS (4,523 tests), oracle seeds 2-7 identical, the five captures at seeds 2-3 PASS with
+  PLCE and CPEV, saveload 18/18, the matrix `saveload expect: PASS`, scenario_check 27/27.
+
+## LLE rest, round 1: the plug-in registry, 123 dead engine members and the IME candidate window deleted; the texture manager reaches GETexture's Rust directly (ee_audio mixerobj.rs, ee_render texobj.rs tex_direct; branch rust-lle-rest1, 2026-11-17)
+
+The first round of the lane that takes the rest of the Low-Level Engine (docs/progress/lle-rest.md, with the
+file-by-file measure). Asked: 3,000 net C++ lines. Done: -1,123.
+
+| Commit | What | Net C++ (src + include, not include/rust) |
+|---|---|---|
+| 9ee4f5350 | `PIMModule` deleted; the mixer and the Default generator linked directly | -193 |
+| 8dc2dbc87 | 123 dead members of the engine's headers; `UIIMECandidate` whole | -778 |
+| b32476f37 | the texture manager's and the texture's bounce operations answered in Rust | -137 |
+| bd8223f79 | the census's second pass | -15 |
+
+- **The measure.** What is left of the engine is the C++ surface the game calls (value types, `UString`, the
+  toolkit's controls and forms, the NE server and client, the GE classes the renderer and the store gate subclass)
+  and the hosts' operations. No large class is whole-movable now; the lines come out one host case at a time, or
+  as dead code.
+- **The dead-member census** (scratch `build/lle8_mcensus2.py`): every member declared at class indent in
+  include/lle, include/dx7 and the engine's own headers, against every `name(` in src, include (not include/rust),
+  tools and tests, skipping the declaration and column-0 definitions. 134 names had none; 10 were left out by hand
+  (the GERustIO function table's entries and `NEProtocol::AddTo`, taken by address: a census of calls misses a
+  function pointer, so check `&name`/bare uses, and the build is the final check). The deletion script removed the
+  declarations, the out-of-line definitions with the comments right above them, and the build linked 0/0 first
+  try; four header comments left orphaned were removed by hand. The linker's census (tools/dead_census.py) found
+  only 3 of these: a virtual member is kept by its vtable and an unused inline one is never emitted, so neither
+  shows there.
+- **The IME candidate window** was dead in the port: `CreateIMECandidateWindow` (the manager's call 13) had no
+  caller, so the window never existed, and the three entry points that open, change and close it had none either
+  (the system's input method draws the candidate list since the text input moved to the platform layer). The
+  form's two candidate questions fall to the Rust's default answer (not shown), which is what the game saw.
+- **PIM.** Each plug-in kind had one linked plug-in. The mixer plug-in answers the Rust mixers' module walk itself
+  (`ee_soundcpp_*` moved from SEMixer.cpp to Mixer.cpp: one module, the entry table by name), so the Rust and its
+  goldens kept their seam; the sound drivers in tests/sound fake that seam instead of `PIMModule`'s members. The
+  mixer entry golden (tests/sound/mixer_entries_golden.cpp, 300 sequences) prints the same 7,717 sequence lines as
+  round 7's run and the same 33 entry names. `EERandomMap` calls the generator's `EERMPIM*` exports directly. The
+  NE protocol test's original build keeps the deleted header as tests/net/orig_p/lle/PIMModule.h.
+- **Direct when the C++ made it.** The texture manager's host answered 12 operations by calling a `GETexture`
+  forwarder that called straight back into Rust. A manager made by `ee_ge_texman_new` (the C++ constructor) now
+  answers them on the texture's Rust object (`cppobj::counted`), with the forwarder's casts (bools 0/1, `long`
+  sign-extended, `unsigned long` zero-extended, the bias as its bits); one made by `create` (the cargo replays,
+  over recorded handles) asks its host, so every golden replays unchanged. The same flag on the texture
+  (`ee_ge_tex_new`) answers `TexObj`, `TexRefCount` and `Dereference`. This is the pattern for the other hosts'
+  bounce operations (the toolkit's can use `direct.rs`'s registry: a replay's handles are never registered).
+- **Pinned by the store gate**, which runs the C++ texture manager over every texture of the open tree (17,535
+  texture loads, reloads and refreshes; 25,140 lines equal). Its link check fails on the rust branch before this
+  round (`ee_game.lib` brings the screens', units' and Lua's symbols; the driver links with `/FORCE:UNRESOLVED`):
+  run it with `--exe build/storegate/storegate.exe` after the failed check. A stage-read mutation is caught (2
+  refresh lines); a reference-count and a dropped-levels mutation are not observable there, so a unit test
+  (`a_cpp_managers_texture_operations_are_the_forwarders_calls`) checks every answer against the texture's own
+  accessors.
+- **Tooling notes.** Python's `read_text`/`write_text` rewrite LF files as CRLF on this machine (the round's first
+  edit turned seven LF files into whole-file diffs): edit with bytes. In the Bash tool a `\\` inside a heredoc
+  reaches the file as `\`: write scripts with backslashes through the Write tool. The scratch driver scripts of
+  round 7 linked `ee_rust.lib`, a stale file since the crate restructure: link `ee_game.lib`.
+- **Verification** (the round's last commit, bd8223f79): both builds 0/0 (`--sim` and the test profile); the Rust
+  gate PASS (4,500 tests); the oracle seeds 2-7 identical to the reference; `xbuild.py nettest` exit 0; `wontest`
+  all but `won_cfgtab_test`, which exits 1 with no output, as the main checkout's own build of it from 2026-11-16
+  does (not this round's: the WON code is untouched); `gates.sh` GATES PASS (tour; ai-game time-cap, units
+  [4, 42, 42], alive_computers [2, 3], classic_lua twice; lan-game); the tour's menu captures against the round's
+  pre-round test-profile exe identical but the build label (216 pixels on the main menu and settings-closed; the
+  game frames differ by the game's timing, as always); the store gate PASS (above); `cargo check` of ee_render,
+  ee_ui and ee_audio for aarch64-apple-darwin, and of ee_render and ee_ui for x86_64-unknown-linux-gnu (ee_audio's
+  cpal needs alsa-sys's pkg-config there, as before). Display code only a tour reaches: none changed but the IME
+  candidate window, which nothing opened.
+## The UI thread lane, round 1: the HUD's world reads on the views, its toolkit calls on the direct path, the UI's record messages and the main form's members in Rust (ee_game hud_views.rs, hud_sends.rs, main_form_fields.rs; branch rust-uithread1, 2026-11-18)
+
+The brief: all of `User Interface Thread/` (about 12k lines) and `UI Events/` (about 4k) into Rust by whole
+classes, at least 3,000 net C++ lines. The round moved what the world's views, the toolkit's direct path and the
+record messages can answer: **net C++ -404** (commits below). Far short of 3,000; why under "The measure".
+
+### The measure
+
+`build/ut1/measure.py` splits every `switch` of the lane's files into case blocks and classes them by what the body
+names (world objects, toolkit calls, both, other). Of the 16,219 lines in the two directories, 3,670 are the unit
+utilities (`EEFOFindNewTargetNearOldTarget.cpp`: simulation code, the R5b unit utilities lane's) and about 1,600
+the WON boxes and events (the WON lanes'). Of the rest (about 11k), the case blocks are 4,900 lines, and of those
+about 3,500 call a C++ object no Rust object stands for: GE bitmaps, rhombi, models, text and the rasterizer
+(every HUD control's drawing), sounds, the physics, the session (`gCommunications`' servers and clients), files and
+archives, the campaign and intro managers, the tech tree's nodes and buttons (`EEButtonObject`), the civilization
+powers, the unit sets. Earlier rounds (game screens 1-31, screens B 1-4, lane S) already moved the logic: what is
+left is one case per call into such an object, and it moves only with that object. The world reads (about 650 case
+lines) and the toolkit calls (about 450) are what this round could take; the round took the plain ones (a read
+that is a field, or a call that is the toolkit's same inward call).
+
+### What moved
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 07cab23f2 | `hud_views.rs`: the main panel group's, icon bar's, portrait's, improvement and command buttons' and main form's plain world reads and toolkit calls in their FFI adapters; whole fills: `EEStatusBoxView`, the hot keys' unit snapshot, the diplomacy form's player, the read view's airport question; `ee_sim::world` `GroupView`, the stats' class and button | +48 -272, net -224 |
+| 06c020000 | `hud_sends.rs`: 39 record messages (the screens' hot keys, chat type, rally, kill, attack, speed, behaviour, diplomacy, tribute, resign; the icon bar's four, the portrait's two, the command buttons' twelve, the mouse modes' three) built by `ee_screenscpp_ga_record` and sent by one `ee_screenscpp_send_local` | +6 -91, net -85 |
+| dda53fa2f | `main_form_fields.rs`: `EEUIFMainGame`'s 23 plain members a Rust record the class derives from (the field ops, the modes' setters, the clock); the UI thread's manager calls (the forms' stack and lookups, the copy lock) and its world reads on the views | +12 -77, net -65 |
+| 8c79e834b | `EEUIFMGMainGroup`'s 8 plain members a Rust record (`EeScreensMainGroupFields`; its field ops) | +8 -38, net -30 |
+
+- **Below the traits.** Every move is in the FFI adapter (`Host::op` before the C++ hop), never in the logic's
+  host trait: the hosts' replay goldens (`golden_box.txt`, the panel and status button goldens) are unchanged by
+  construction, and the C++ case is the only thing replaced.
+- **Forms by the call's own pointer.** The first version found the main game form by its id (`form_by_id(11)`);
+  `gSavedMainGameForm` (the scenario test's saved form) means two forms of that class can exist. The adapters now
+  use the call's own form: `EEUIFMGFormCall::mForm` (its first member, asserted) and the main group's
+  `EE_SCREENS_MGR_OP_FORMS` (its `mOwner`, or `gUIManager->mMainGameForm` where the C++ used that).
+- **The main form's record.** `class EEUIFMainGame : public UIForm, public EeScreensMainFormFields`: the members keep
+  their names, so the twelve other C++ files reading them compile unchanged; the constructor passes `this` and the
+  record (`ee_screens_main_form_fields`) and Rust keeps the offset. The record is value-initialised (the members were
+  set by the Rust constructor before; zero instead of garbage before that).
+- **`ee_sim::world` additions** (lane V's module): `GroupView` reads `EEGroup::mUnits` in place (`GetUnit` and
+  `GetNumUnits` are `EEGroup`'s, no subclass overrides them; `EEWorldLayoutRegister` checks `EESelectedGroup`'s
+  `EEGroup` base is at offset 0), `Contains` is `EEGroup::Contains`' linear search; the stats' `mUnitClass` and
+  `mButton`; the `test_layout` feature so a dependent crate's tests can set a thread's test layout.
+
+### Goldens and checks
+
+- **Before the move** (origin/rust 4929244f3): the tour `--view-check --seed 7` (SGVW 79 distinct lines equal to
+  `tools/sgvw/tour_view.txt`), the orders game with box select, the editor gate under SGVW (25,136 lines equal to
+  `tools/sgvw/editor.txt`, PASS 14,448), the civilization gate (PASS 4,062); the pre-round test-profile exe kept for
+  the pixel comparison.
+- **The reads: a scratch shadow** (`EE_UT1_SHADOW=<file>`, removed before the commit): each moved read answered by
+  the views and by the C++ case, compared, counted per host and op, every difference a `MISMATCH` line; the three
+  fills (hot keys, diplomacy, status box) also exercised every 16th frame of a game (the hot keys and every world
+  player's diplomacy fill are otherwise reached only by a person). Orders game 21,401 checks, tour 15,601, **0
+  mismatches**. Reached: the main group's 15 of 18 moved ops, the main form's 11 of 12, the icon bar's 5 of 10, the
+  portrait's 3, the improvement button's 2, the status box 182 views, hot keys 148 snapshots, diplomacy 1,258
+  players; not reached: the main group's commands, epoch, queue and worker reads, the icon bar's cargo, the command
+  buttons' class reads (unit tests only).
+- **The sends: a scratch in-game driver** (`EE_UT1_SENDS=<file>`, removed before the commit): the deleted cases'
+  statements copied into a C++ function that builds the message without sending it, the Rust's message through
+  `ee_screenscpp_ga_record`, both exported (`ExportMessage`) and compared byte for byte with their records and
+  types, over 3,126 argument sets (32- and 64-bit edge values: the `(long)` casts, `(unsigned char)`, `!= 0`): **0
+  differences**. Every Rust member then mutated (an integer +1, a float +1): 4,455 mutants, 4,190 caught; the 265
+  not caught are equivalent (a bool member 1 -> 2, a float past f32 precision).
+- **Lesson: an unset member.** The driver's first run differed in all 3,126: `EEMessage::mFastSelectionID` is never
+  set by a sender (the original's constructors leave it too) and is the wire's first byte, so two messages of the
+  same members differ by heap garbage. The comparison zeroes it in both; the game keeps sending what it sent.
+- **Lesson: a mutant must be a valid input.** A kind +1 mutant built a record of another type with these members:
+  `EEMRecord::Field`'s size check stopped the game. Mutate members, not the kind (the kind is compared).
+- **Lesson: cbindgen exports `pub const` inside a `pub(crate) mod`.** The message kinds (`kind::SELECT_UNIT`,
+  ...) went into the C header, and their names, equal to `ee_sim::netmsg`'s, moved those to `common.h` (the header
+  check passed: every header was "current"). They are private `MSG_*` consts now. Grep the header diff for names
+  you did not mean to export.
+- **Pixels.** The tour's menu frames equal the pre-round exe's but the build label (171 pixels); in the orders
+  game's box-selected frame the status box (38,976 pixels), the resource bar and the icon bar regions are equal
+  (the map and the mini map differ between any two live games).
+
+### Gates (round 1, on the result merged with origin/rust ec39733e7, merge 8c0b98ab4)
+
+Both builds 0/0 (EE-AOC 689, EE-SIM 690 inputs); the test profile 0/0; the oracle seeds 2-7 identical to the
+reference; the Rust gate PASS (4,531 tests; `ee_base` `fs::golden_spec::golden_spec_replays` failed once in the full
+run under load and passed alone and in its crate's run); the editor gate PASS 14,448 with SGVW equal to
+`tools/sgvw/editor.txt` (25,136 lines); the civilization gate PASS 4,062; the tour with `--view-check --seed 7`
+(`RESULT PASS tour`, F3 ok, `VIEW CHECK PASS`, SGVW 79 distinct lines equal to `tools/sgvw/tour_view.txt`); the
+orders game (`BOX SELECT PASS`, `ORDERS PASS`, `RESULT PASS random-game`); the scroll check (`SCROLL CHECK PASS`);
+`gates.sh` GATES PASS (tour; ai-game time-cap, alive [2, 3], classic_lua x 2; lan-game). Per commit: build `--sim`
+0/0, oracle seeds 2-3 identical, the Rust gate PASS (commits 1-3; commit 4: unit tests, the test profile and the
+orders game, then the merged tree's gates). Not run: the sim_capture profiles (no simulation code changed). Main
+merge 4 had not landed on origin/rust when the round ended.
+
+### Behaviour
+
+None intended. Where the C++ ran on a NULL pointer (no current player, no selected group, a missing control) the
+views and the direct path answer 0. The main form's members start zeroed.
+
+### What runs it
+
+The tour and the orders game (every frame of a game: the panel, status box, portrait, icon bar, main form;
+the diplomacy form and the options menu in `--view-check`). **Only a person reaches**: the 39 sends, the hot keys,
+the cargo and garrison reads, the commands' and queue reads with a building selected. EE-SIM builds no form: the
+oracle is unchanged by construction.
+
+### Left
+
+- The HUD's drawing (GE bitmaps, rhombi, text, the rasterizer: the portrait, icon bar, mini map, status box, ping,
+  command arrow) moves with a Rust 2D draw list in `ee_render`; then the HUD controls' `RustOp`s and most of
+  `EEUIRustControl`'s host go.
+- The tech tree's buttons (`EEButtonObject`, the nodes' hot keys and buttons) and the civilization powers block the
+  main group's `ShowCommands` (~95 lines) and the command buttons' set-up.
+- `EEScreens.cpp`'s game calls (sessions, servers, files, campaigns: 1,500 case lines) move with their owners.
+- The status box's, improvement button's and portrait's own members as Rust records (as the main form's and the main
+  group's: about 40 lines).
+- The UI thread's `Post*` methods (45 one-line posts to its thread) could become one Rust post if the thread object
+  is Rust's.
+## Lane A, round 3: EECPNextState as a Rust record; the next engine's tick, view, army memory, strategy step, save, reflexes and trace lines in Rust (ee_sim::ai next_state.rs, next_value.rs, next_game.rs, next_reflex.rs, next_trace.rs; branch rust-ai-lua3, 2026-11-18)
+
+- **The golden first, again.** Round 3's base (`build/ai_golden/r3a`) was recorded on the round's start, 4929244f3,
+  twice and equal. The state's move took EECPNext.cpp's tick, EECPNextLua.cpp, EECPNextView.cpp and EECPNextArmy.cpp
+  in one piece (they share the record), and all 15 games stayed identical at the first try.
+- **The view as a Rust value, the same Lua tables.** The Lua host already took a Rust `Value` (`JobValueRef::rust`)
+  as well as a C++ tree; both go through the same `push_value`, so the script's view table is built by the same Lua
+  calls in the same order (the same allocations, the same collector pace) once the Rust map keeps the C++ tree's key
+  order (`MapBuilder`: sorted on insert, a key set twice keeps its last value). The binding trace's step hash reads
+  `to_text` of the same tree, so it is the golden of the view too.
+- **No reference to the record across a Lua call.** The script's top level, its steps and its micro call the
+  bindings, and the bindings' host calls the gather safety's tests (`ai.site_blocked`, `ai.build_unsafe`), which
+  read the record again: open, prepare, the strategy step, the shadow step, the save check and the micro step hold
+  it as a raw pointer and take short-lived references between the calls.
+- **The trace's manager from Rust.** The C++ set `gCPTraceManager` with scopes ("next" for the army step, the view
+  and the strategy step; "cp" for the stats). A host op sets it to a static C string and gives the old one back; the
+  lines written inside keep the manager they had (the micro step's `next.print` lines keep "-": the micro step runs
+  outside any scope).
+- **printf's rounding stays the C library's.** The militia line's `odds=%.2f` is formatted by the host (snprintf):
+  Rust's `{:.2}` and the CRT can round an exact tie differently, and the line is one the oracle compares. Integer
+  formats (`%ld`, `%lu`, `%08lx`) are Rust's `{}` and `{:08x}` of the same C types (`c_long`, `c_ulong`: 32 bits on
+  Windows, the C++'s wrap kept with wrapping ops).
+- **The out-of-synch checksum is `unsigned long` arithmetic.** EECPOutOfSynchChecksum feeds the physics checksum and
+  the sim hash's `ai=`: Rust sums in `c_ulong` with wrapping ops, the town term `x * 1024 + y` in `c_long` first.
+- **What only reflex-on scripts exercise.** Every shipped AI turns the engine's militia and danger reflexes off
+  (`ai.reflex{militia = false, danger = false}`), so the golden and the oracle exercise only the naval flight (60
+  lines in classic-2). A scratch copy of data/ai with the reflexes left on (EE_AI_SCRIPTS), and one with the danger
+  reflex and EE_AI_EXP=flee, played on the old and the new EE-SIM: identical, with 31 militia, 19 flee, 10 raid.defend and 55 navalflee lines.
+  The first try left them silent: the danger path also needs `ai.reflex{held = true}` (classic_lua holds every
+  citizen, and a held citizen is skipped unless the held reflex is on). Rule: before calling a moved path verified,
+  count its trace lines in the runs that verify it.
+- **A test program goes with its handle.** With no C++ caller of the Lua state left, EECPLua.cpp and EECPLua.h are
+  deleted, and luatest (tests/platform/lua_test.cpp) with them: the runtime's golden is Rust's already (golden_lua.rs
+  part A, lua_host.rs part B, recorded from a driver over the unmodified EECPLua.cpp on luatest's scripts). The
+  static_asserts on the Lua build's facts moved to EECPNext.cpp.
+- **Two cbindgen exports may not import the same C function.** An `extern "C"` block declaring
+  `ee_ai_next_string_append` in two modules made the header check fail ("declared twice"); one module declares it
+  and a `pub(crate)` wrapper serves the other.
+- **Stopping a background chain.** TaskStop of a bash chain left its python and EE-SIM children running (they went
+  on into the next run of the script, which had been edited meanwhile); find them by command line and stop them by
+  id (never other lanes' EE-SIM: their paths name their worktrees).
+- **Bash heredocs.** A heredoc whose delimiter was `EOF` and whose Python body held `'''` strings failed with "unexpected
+  EOF while looking for matching `'`"; write the script to a file with the editor (as round 2 found for backslashes).
+- **Results.** C++ -4,051 net in src and include over five code commits (the record and the engine -2,640, the
+  reflexes -386, the trace -371, EECPLua -629, the units save -25), and the 482-line luatest. Binding golden identical
+  in all 15 games after each commit and the merge of origin/rust (lane B round 2); a mutation (the view's citizens
+  counted twice) caught at classic-2 line 4. On the merged tree: oracle seeds 2-7 identical; captures oracle, late,
+  space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect` PASS; both builds 0/0; the Rust gate PASS; gates.sh GATES PASS.
+## R6 WONLobby, round 15: won_cfgtab_test's leak, the WON drivers under a memory cap (branch rust-wonlobby15, 2026-11-17)
+
+### won_cfgtab_test: the driver's own world never freed what it made
+
+Round 14 found won_cfgtab_test growing by about 70 MB a second past 10 GB (and, over a one-file resource directory,
+ending at 3.6 GB with exit 1 and no output). Run under a 2 GB job object and stopped after 4 s, every backtrace was in
+the original side's `StretchImageConfig::Virtual24` (MULTIEXPORT's loop); printing its counts showed the cause:
+
+- The stand-in world (`won_cfgtab_world.h`) has its own `SmartPtr`, which does not own: every config, image, stretch
+  image, filter and layout that the world or either side's handlers made with `new` lived to the program's end.
+- MULTIEXPORT's and MULTICROPEXPORT's count is a `ReadInt`, and the world's `ReadInt` of a non-number is a hash of
+  the token, up to 99,999. Each such instruction made that many child configs (a config, an image, a stretch image
+  and a raw image each): about 25 MB per instruction per side, never freed.
+- The resource files never use those keys with such counts; the 5,000 random instructions and the 4,000 image
+  sequences (round 41) hold hundreds of them. The run needed on the order of 10 GB. Round 41 ran it on an idle
+  machine and passed (383,620 checks); with eight lanes on 32 GB the commit fails part-way (the 3.6 GB exit 1:
+  an allocation failing; the output was still in the pipe's buffer) or it fills the machine.
+
+Not a port fault: nothing the driver links changed (the crate restructure, the inline IPAddr and StringUtil forwards
+and the loose test link were the suspects; the world, the original statements and cfgtab.rs/cfgimg.rs are as round
+41 left them, and every check still matches). The fix is in the world: `Obj` and `ComponentConfig` derive from a
+small `Owned` base whose class `operator new` records each object, and each run frees the previous run's objects
+before it starts (`Owned::FreeAll` in `RunSeq`). Components stay as they were (the skin's slots keep the last ones
+assigned across runs). The traces are unchanged: 383,620 checks, 0 mismatches, peak 557 MB; `--print` is
+byte-identical to `golden_cfgtab.txt`.
+
+**Lesson:** a stand-in world whose pointers do not own is fine for short scripts, but any count a driver reads from
+a hashed token bounds nothing: free per run, or bound the counts, and run every driver under a memory cap.
+
+### LobbyPersistentData whole in Rust (persistobj.rs)
+
+The saved settings were the largest WON unit left (LobbyPersistentData.cpp, 827 lines) and six small units of `Lobby*`
+functions over it, each a NULL check and one member call; the formats (persist.rs), the scalar state (prefsobj.rs)
+and the containers (lobbymap.rs, behind WONLobbyMap.h's C++ wrappers) were already Rust. The class and its
+functions are now one Rust object, `EeWonPersist`:
+
+- **What it holds.** The scalar state (`EeWonLobbyPrefs`), the saved users (records `EeWonPersistUser`, boxed so a
+  `LobbyUserInfo*` stays valid while the user is saved, as a `std::map` value did), the user ids, ignored names,
+  blocked CD key ids, friends (the `LobbyFriend` shells, one reference each), the default and current game filters
+  (each a set in insertion order), the reconnect ids, the LAN names with their times, the direct connects and the
+  Blowfish key. Each container is a sorted vector under lobbymap.rs's comparators (`Key`, `compare`, now
+  `pub(crate)`), so the orders and the "first spelling wins" rule are the same code as before.
+- **One call.** `ee_won_persist_call(p, call, t1, t2, a, b, out)`: 49 calls (`EeWonPersistCall`), two texts, two
+  numbers, a text result as `uint32_t` units. `p` NULL is "no lobby data": every call answers what the function
+  answered without it (50 for the speed, 8585 for the port, empty texts, NULL records). The `Lobby*` functions
+  are inline forwards in WONLobbyPersistence.h (the eleven flags through one macro); `LobbyPersist()` (the object
+  of `gLobbyData->mPersistentData`) and the host are what LobbyPersistentData.cpp keeps (60 lines).
+- **The host** (`EeWonPersistOp`): a friend made (`new LobbyFriend`, one reference), referenced, released and
+  named; a resource string's units; the click sound muted; the config's LAN-number switch; the clock. The files
+  are read and written in Rust with the calls the C++ made (file.rs's reader in 4,096-byte reads, the writer's open
+  without the read-only retry, wonfile.rs's delete).
+- **The texts** are the `GUIString`'s `wchar_t` units; the files' are UTF-16 (identity on Windows, surrogate pairs
+  on UTF-32 systems, as WideAppendUtf16LE and WideAppendUtf16Unit did), the scalar texts UTF-8 (`GetString`,
+  `GUIString(std::string)`: guistring.rs `narrow` / `widen`).
+- **Callers.** `LobbyUserInfo` is the Rust record: AccountLogic.cpp sets and reads its terms-of-use times through
+  `LobbyUserSetTOU` / `LobbyUserTOU`, LobbyNetCtrlHost.cpp its name through `LobbyUserText`.
+  `LobbyGetFilterValues` (a `LobbyOptionSet` copy) became `LobbyGetFilterCount` / `LobbyGetFilterValueAt`; LobbyOptionSet
+  and WONLobbyMap.h (no other user) are deleted. The declarations WONLobbyGUI.h, WONLobbyModel.h, WONLobbyCore.h and
+  EELobbyGameCode.h repeated are gone (their callers include WONLobbyPersistence.h).
+
+**The driver** (`won_persistobj_test`): the original statements, copied from the round's start by
+`tools/won_persist_orig.py` into `tests/won/won_persistobj_orig.h` (WONLobbyMap.h's containers, the class, the seven
+units; namespaces dropped and the one call of a `Lobby*` function inside them qualified `Orig::`, since a `GUIString`
+argument brings WONAPI's forwards in by argument-dependent lookup), against the game's own forwards over the Rust
+object, each side in its own directory. The world: friends are counted records, the resources fixed texts, the
+clock a counter per side, the machine id a constant, the mute and the friends' lives traced. Each step is one of 40
+operations (every function, the current user, saves, loads, restore, no lobby data and a new object, the config's
+switch, a file cut, given another version or deleted the same way on both sides; bursts of up to 60 users or LAN
+names for the pruning), and after each the whole state is compared: every getter, every user's record, every friend
+with its reference count, the lists, the filters of six columns, the reconnect ids of eight addresses, the blocked
+ids, the internal flags, the trace and every file's bytes.
+
+Results: 4,000 sequences, 285,432 checks, 0 mismatches (peak 2 MB). Mutations (`build/r15/mutate.py`, 300 sequences
+each): 14 of 16 caught (a user id not kept, an "existing only" user kept, the ignored dirty rule, RemoveLanName not
+selecting, the direct connects kept over a load, the LAN times saved as 0, a failed decryption, a filter's first
+value only, a friend not released, two settings swapped, ResetFilters not marking the file, the reconnect time for
+its id, the global save not updating the saved sound state, a pruned user's id kept). Not caught: the pruning bound
+at 49 (equivalent: persist.rs's `prune_users` keeps 50 itself) and a pruned user's file kept (the driver only saves
+the current user's file, never an old user's: not reached). The first full run matched; no Rust or C++ difference
+was found.
+
+**Behaviour changes.** None the game reaches. A `LobbyUserInfo` is the Rust record (its fields through functions).
+The C++ GUIString capped a text at 65,535 units; the Rust holds whole texts (every file text has a 16-bit length).
+
+**What runs it.** The LAN game: the LAN name, the broadcast port, the direct connects, the options popups' flags,
+the user file `_wonuser0.dat` (`lan_game.py`). The login users, friends, reconnect ids and the global file's users
+are the Internet lobby's (the driver only).
+
+### The hosts' cases that were Lobby* calls, answered in Rust
+
+With the settings in Rust, a host case that only called a `Lobby*` function on numbers is a Rust call. persistobj.rs
+answers them in the game: `ctl_op` (the lobby controls: the options popup's PrefGet / PrefSet over a table of the
+twelve preferences, `pref_flag`, the LAN name count, RestoreDefaults, ResetFilters, RemoveLanName, the ignored and
+user counts, a user's last use, the friends, the current user), `route_op` (RoutingLogic's `Pref` 1..7, the friends)
+and `lobby_op` (the staging sounds and confirmations, the LAN logic's saved direct count and its LAN user), each
+reached from lobbyctl.rs, routelogic.rs and lobbyhost.rs after modelobj.rs's answers. The C++ gives the object's
+finder once (`ee_won_persist_set_lobby(LobbyPersist)`, LobbyPersistentData's constructor); before that (every
+driver) the ops still go to their hosts, so the drivers and their goldens are unchanged. 27 host cases and the two
+preference switches are gone from LobbyCtrlHost.cpp, LobbyNetCtrlHost.cpp, RoutingLogic.cpp, LobbyLogicHost.cpp and
+LanLogicHost.cpp. won_host_coverage.py reads the three functions (and `pref_flag` for EeWonLobbyCtlPref): PASS.
+Texts (a GUIStringData* argument) stay with the hosts: the Rust would need the string's units back from the C++.
+
+### ChatCommandParser's tables
+
+InitCommands' 24 `AddCommands` calls and the help lines' 23-case switch (`ChatHelpString`) are tables in chatobj.rs
+(`ee_won_chatparser_init_command`: the names' resource row and the command in the original's order, -1 for the two
+shutdown commands' empty lists; `ee_won_chat_help_row`: the warning's line for any other command), the C++ a loop
+and a look-up; the unused text sinks (ChatWordSink, ChatTexts, ChatTextSink) are gone. A unit test holds the
+tables to the original's order. No driver links ChatCommandParser.cpp: the Internet lobby's chat reaches it (the
+LAN game's chat panel parses through the same object: `lan_game.py`).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c15bfe1f | won_cfgtab_test's world frees its objects per run (above) | |
+| e5e479ff | `xbuild.py wontest` runs each driver under a job-object memory cap (EE_TEST_MEM_MB, default 2,048; RLIMIT_AS elsewhere) | |
+| eee6e187 | LobbyPersistentData whole in Rust (persistobj.rs); LobbyPersistentAccessors, Setters, Queries, Filters, Load, LobbyRestoreDefaults, LobbyOptionSet and WONLobbyMap.h deleted; golden won_persistobj_test | 37,683 -> 36,048 (-1,635) |
+| 74fb3edf | WONLobbyGUI.h includes WONLobbyResource.h itself (it came through WONLobbyMap.h) | 36,049 (+1) |
+| c56d7c6c | the hosts' Lobby* cases on numbers answered in Rust | 35,985 (-64) |
+| 1c5c9784 | ChatCommandParser's command and help tables in chatobj.rs | 35,918 (-67) |
+
+Round total: WON C++ 37,683 -> 35,918 (-1,765), six units and one header deleted. Short of the 2,000 target; the
+rows (round 14's step 2) were not started: the persistent data's cluster gave the most lines for one verified move.
+
+### Gates (the round's head, merged with origin/rust ec39733e)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-7 identical |
+| `rust_build.py gate` | PASS, 4,533 tests (one earlier run failed ee_base's golden_spec_replays under load; it passes alone) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 150 programs exit 0 under the 2 GB cap (won_cfgtab_test peak 557 MB; won_persistobj_test the new one) |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2779 joiner=2779` (the round's start exe: 2796 / 2797) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121); the start exe is this worktree's round 14 test-profile build (5d078efba's WON code) |
+
+The merge of origin/rust needed only PORT_LEARNINGS.md's end (both sides appended) and one trailing address comment
+(strip_markers).
+
+## Several games a process (EE-SIM --games, branch simmulti, 2026-11-16)
+
+- **Where a game's wall time goes now** (Hard Small, 2 AIs, the report's new `wall_phases`): process start ~0.1 s,
+  the engine and database to the main menu ~2.2 s (up to 7 s while other benches load the machine), menus 0.1 s,
+  lobby 4.9 s (fixed sleeps: 1.5 s, 200 ms a change, 1 s), loading 2.8 s, report and exit under 0.4 s (the exit is
+  TerminateProcess). The game itself is no longer 4-7 s: with the Lua AIs a 45-minute game takes ~20 s and a
+  90-minute one ~65-80 s. The overhead a game (~10 s) is a third of a 45-minute game at most.
+- **The AI is two thirds of the game** (tools/sim_profile.py, 90 minutes, classic and boom against Age of AI, the
+  physics thread): EEArtificialIntelligence::Update 67%, of it EECPLuaState::Call 38-40% (luaV_execute's own
+  instructions 7.4% self; the C functions the scripts call, LuaUnit 6%, LuaGet 4%, LuaUnits, LuaTechs, LuaClass;
+  the GC 6%; Lua's realloc 5.7%), the view built per step (EECPNextBuildView) 8.6-9.6%, the save check after each call
+  (EECPLuaState::CheckMemory) 6-9%, the per-unit micro tick 10-11%; the engine (EEPhysics::UpdateUnits) 27%. The
+  heap (RtlAllocateHeap + RtlFreeHeap) is ~10% of the thread, mostly Lua and EECPLuaValue vectors.
+  EETechTreeEpoch::Get's std::map<long, string> lookup is 1.5%. Per player (EE-AIPROF): classic_lua 21-24 s, boom
+  18-20 s, Age of AI 17-19 s of a 90-minute game.
+- **The game supports a second game in a process** (a player quits to the menus and starts another), so a batch
+  leaves each game the player's way: EEUserInterface::CancelGame (the physics stopped, the game media unloaded, a
+  fresh client, LeaveMap: the action queues, the world and the game state cleared), then the post-game summary's exit
+  (EEUIEPGSEExit), which lands on the single player menu (form 6), not the main menu. Fire the summary's exit once and
+  let form 6 settle: a second close, still queued, closed the next lobby ("control 30 is not a combo on the lobby"),
+  and a click into a form still opening was lost (12 of 32 games of the first try).
+- **What the port kept between games**: the computer players' per-player file statics. EECPTrace's counters (the
+  next game's first "cp losses" line counted the units the world clear removed, "cp income" the last game's tail),
+  EECPNextArmy's loss incidents (a heuristic "new game" reset only when the new game's time was below the last one's)
+  and EECPReflexes' cool-downs (militia, naval flee: per player id, so a call late in one game could block one in the
+  next: a behaviour change, not only a trace one). EECPNewGame (ee/EECPTrace.h) clears them in EEWorld's world set-up,
+  before the players are made; they are zero at the process's start, so a single game is unchanged (the 16 games
+  below equal main's exe). The original game's own globals have their resets (EEPPatrolGroup's IDs, the herd counter
+  in EEWorld, the pools, the path manager); the Lua states are made per player per game (EECPNextOpen) and seeded
+  from the game's seed.
+- **The trace's start-up lines**: the AI manifest's line ("EE-AI engine Data\ai\ais.json: ...") is written once, at
+  start-up; the driver keeps the debug strings written before the first game and writes them at the head of every
+  game's trace and log, and drops those between games (a single run has quit by then).
+- **The proof** (16 games: seeds 2-17, the engines classic, boom, ageofai, classic+ageofai, boom+ageofai,
+  boom+classic in turn, Small Continental, Small Islands and Medium Continental in turn, 900 game s; one batch
+  process in the list's order, one in a shuffled order, each game alone, and each game alone with main's EE-SIM.exe):
+  every report (wall fields aside) and every trace (EE-AIPROF lines aside: wall time) identical, 64 of 64.
+- **What it gains**: little now. 45-minute games on 2 slots: 229 games an hour one process a game, 237 in a batch
+  (the start-up's 2.2 s saved, the leave's 0.9 s paid, the second lobby 1 s shorter); 90-minute games 93.2 against
+  94.7 (4 games each; the game parts vary by 10 s from load alone). The game part dominates; the lobby (3.9-4.9 s) and the loading (2.8 s) are the rest.
+- **A lobby without fixed sleeps failed**: counting the lobby updates posted to the UI thread and applied, and waiting
+  for each change's own update, found that most changes (slots to Open, several option combos) post none back (each
+  waited its full 2 s), and with the last fixed second gone the game hung in loading after Start (2 of 2 games in one
+  run, 1 of 4 in another). Reverted; a faster lobby needs to know which change is answered by what.
+- **Crashes**: a failed game (error 2, wall timeout 3) ends its process after its report and END marker; a fault
+  kills it, the frames in the game's own err file (its stderr). tools/sim.py's Batch starts a new process for the next
+  game; sim_bench.play retries a game that failed before its game ran in a process of its own.
+- **Fork after loading (POSIX)** was the alternative: a fresh copy of every global for free, but not on Windows, and
+  the game's threads (UI, graphics, physics, preloading, the local server's) do not survive fork(). The in-process
+  leave is the player's own path, and the proof checks it.
+
+## Checkout-independent builds (2026-11-16)
+
+`tools/sim_bench.py --cache` keys a game on the EE-SIM exe's bytes, and every worktree builds its own exe, so each
+worktree replayed the baselines the others had cached. Two checkouts of the same commit gave different bytes for
+three reasons (found by diffing the two exes section by section, then the PDBs):
+- **The link time**: the COFF header's and the debug directory's time stamps. `/Brepro` writes a hash of the image
+  there instead.
+- **The PDB's path** in the debug directory (the CodeView record), whose length also moved everything after it in
+  .rdata (so .text's RIP-relative displacements and every .pdata entry differed too). `/PDBALTPATH:%_PDB%` writes the
+  file name only; a debugger looks for it beside the exe first.
+- **The PDB's GUID**, which lld derives from a hash of the PDB, and the PDB named the checkout: every object's path
+  (its module records), the archives' member paths and the linker's command line and folder. The link now gets every
+  input relative to its folder (`build.py relative()`, also in exeimg.lib's response file) and
+  `/PDBSOURCEPATH:C:\EEX\out\exe` makes them absolute against a fixed name.
+- **The anonymous namespaces' names**: the MSVC ABI mangles them `?A0x<hash>`, the hash of the main source file's
+  name as it was given to the compiler (clang's MicrosoftMangle; no `-fmacro-prefix-map`/`-ffile-prefix-map` applies
+  to it), and the RTTI type names of their polymorphic classes are strings in the exe. clang-cl now runs in the
+  staging root's parent and gets the unit as `eex\...` (a third-party unit compiled in place as `src\...` from the
+  checkout); `-fmacro-prefix-map=eex=C:\EEX` keeps `__FILE__` reading `C:\EEX\...` as before. A test profile's
+  rewritten copy of a unit had the compiler's process and thread ids in its name; it is named by its object now.
+
+Proof: the same commit built in two worktrees whose paths differ in length (`empire_earth_next-benchtools`,
+`empire_earth_next-bt2`, each with its own SDL3 build) gives byte-identical EE-SIM.exe, EE-AOC.exe and their PDBs, and the same for the test profile's EE-AOC.exe;
+a game (seeds 2 and 3, 45 minutes, classic_lua against Age of AI) plays identically on the exe of before and after
+(`tools/sim_compare.py`: traces and reports identical). The PDB still resolves the game's functions
+(`llvm-symbolizer --obj=EE-SIM.exe` from another folder finds `EEPhysics::Tick`). EE-SIM.exe built from the same
+commit now has the same cache key in every worktree.
+
+## Sequential tests for AI benches (2026-11-16)
+
+`tools/sim_bench.py --sprt` plays a variant against a baseline seed by seed and stops when a sequential test decides
+(`tools/sim_sprt.py`; README "Testing").
+- **Pairs, not counts.** Both builds play the same seed (map, start, opponent); the outcome of a pair is the
+  difference of the two W-L-C scores. Most pairs of a small change are identical (d = 0), which a fixed W-L-C count
+  ignores and the paired test uses.
+- **The textbook pentanomial GSPRT is too weak at 64 pairs.** Its maximum-likelihood distributions can put the
+  mean on an outcome not seen yet (no pair at d = +1) at no cost, so the LLR moved by the same -0.1 a pair whether
+  the pairs were identical or all lost (the 8.86 pool variant, 5-6-21 -> 5-13-14, and an identical variant both
+  stopped at pair 28). The normal model of d with a variance prior (4 pseudo-pairs of 0.2) is used instead; its
+  error rates were measured on the benches' own outcomes (`sim_sprt.py oc`), not assumed.
+- **A normal model of a heavy-tailed continuous score misleads.** The paired difference of the mixed share accepted
+  "better" after 13-16 pairs for a variant whose 32-pair mean was negative (a few -0.2..-0.35 pairs came late). The
+  optional continuous statistic is the sign of that difference (`--stat ahead`).
+- **Order matters.** A defeat ends a game early, so the first games to finish are not a random sample; the test
+  reads only the seeds whose games are all done, in seed order.
+- **64 seeds resolve about +0.2 a game, not +0.1** (power 58% at +0.1, 33% inconclusive; +0.05 needs about 170
+  pairs). The test saves games mostly on variants that change nothing or lose (H0 after 17-26 pairs instead of 32).
+- **Replaying past benches from the cache**: the cache's key.json files name the exe, the scripts and the options of
+  each game, so the A/B benches of §8.86 and §8.93 (whose folders were gone with their worktrees) could be rebuilt
+  from build/sim/cache for the replay.
+
+## The shared bench queue (2026-11-16)
+
+`tools/bench.py` (README "Testing") is one daemon per machine that plays the games every checkout's `sim_bench.py
+--queue` submits.
+- **The game runs on the requester's own tools**, not the daemon's: a worker `python -I <checkout>/tools/bench.py
+  work JOB` stages the requester's data/ai and data/db (sim.stage_tree) with the requester's EE_* variables. A daemon
+  that played with its own checkout's scripts would have stored other inputs under the requester's cache key.
+- **The key is checked again when the game starts.** An exe rebuilt or a script edited while the game waited in the
+  queue would otherwise be played and cached under the key of the old inputs; the worker recomputes the key and
+  fails the game instead.
+- **The cache key no longer needs a stage**: the rules documents are hashed from the checkout's data/db (the stage
+  holds a copy with LF line ends), so a cached game is found before any staging, and a requester can key a game
+  without a slot. The keys are the same as before (checked against the old code).
+- **Ports belong to slots, slots to the daemon**: slot k plays on port offset 9000 + 64 k (TCP 42334 and up), so
+  no bench needs a --port-base. An offset over 32201 wraps the 16-bit port (33334 + offset): 41000 gave port 8798.
+- **A requester's death is its connection's end**: its queued games are dropped unless another bench waits for them;
+  a running game finishes and goes to the cache.
+- **A sync of the data tree dropped every cached game.** The key hashed the tree's open_data.json and its Data/ai and
+  Data/db, which the harness rewrites (`open_data.py sync`, e.g. for the gates) whenever main's data/ai or data/db
+  moved on, although the stage replaces both with the requester's own data/ai and data/db (already in the key).
+  The key now leaves them out (CACHE_FORMAT 2: every older entry misses once).
+
+## main merge 4: classic_lua's raids and water war, EE-SIM --games, checkout-independent builds (branch rust-mainmerge4, 2026-11-17)
+
+- **What came.** main 158e3be7 (33 commits since ff7db710, 24 files): classic_lua's raids from the pool, the push
+  when clearly ahead, the war on water and the island food (data/ai/classic_lua, lib/groups.lua; AI_RESEARCH
+  8.93-8.97); EE-SIM `--games` (several games a process) with the AI's per-game statics cleared at each new world
+  (EECPNewGame from EEWorld::StartGame); the shared bench queue (tools/bench.py), sim_bench `--sprt`
+  (tools/sim_sprt.py), `--batch` and `wall_phases`; checkout-independent exes. Main's C++ edits all landed in code
+  rust still has in C++ (EECPTrace, EECPNextArmy, EECPReflexes, EEWorld, EESim): nothing to port into Rust, and
+  main touched no Rust.
+- **The conflicts.**
+  - EESim.cpp: main split Drive into PlayGame (one game), LeaveGame and a batch loop, and moved the game options into
+    GameOption; rust had added the scenario, campaign, load, save, dump, rng-trace and editor paths to the same
+    Drive. PlayGame now holds rust's branches (the editor from the main menu, the save files removed per game, the
+    saves copied at the end) with main's phases; rust's options stay process options (in a batch they hold for
+    every game). ResetRun also clears the save and dump cursors and the load failure. The start note prints "ports
+    any free" for rust's system-picked ports (kPlatSimAnyPort).
+  - LeaveGame found the post-game summary's Exit by `dynamic_cast<EEUIEPGSEExit*>`: on rust that screen is ee_game's
+    post_game.rs and its controls carry EEScreenEvent `EE_SCREENS_PGS_EXIT`, so it uses ControlWithEvent and Click.
+    Checked: two 600 s games in one process give the traces and reports of their runs alone (the EE-AIPROF lines
+    and the wall fields aside), the second one after a LeaveGame.
+  - sim_bench.py: main moved a run into `play()` with a per-slot `--port-offset`; rust's rule stays (no fixed ports:
+    EE-SIM's server binds ports the system picks, "EE-SIM: the local server binds ports the system picks"). The
+    queue daemon still hands a port to `play()`; it is not used.
+  - clang_build.py: main compiles a unit by a relative name from a fixed folder (`main_file_name`: build/eex's
+    parent or the checkout) because the MSVC ABI names anonymous namespaces by a hash of the main file's name as
+    given. Merged into rust's cached compile: the relative top folder (`eex`, `src`) gets its own
+    `-ffile-prefix-map` to the canonical root, the test overlay copy's map uses its relative name, and the object
+    cache resolves a relative dependency against the compile's folder (it dropped every entry before: a relative
+    path hashed as missing). objcache's SCHEMA is 2, since every object's anonymous namespace names changed under
+    the same key (the first build after the merge recompiles everything once).
+  - build.py: rust's (no image library archive) with main's reproducible link (`/Brepro`, `/PDBALTPATH`, inputs
+    relative to the link folder). PORT_LEARNINGS: main's four new sections appended at the end.
+- **The re-baseline (each run twice on the merged tree, equal).** The oracle ref (seeds 2-7: 6,087, 5,300, 6,072,
+  7,649, 7,842 and 6,540 EE-AI lines; in the worktree's build/rust_oracle/ref, not tracked). Capture goldens, every
+  (seed, tag) scope kept, no tag dropped: oracle 312 of 578 digests changed (seeds 2, 5, 6, 7 broadly; seeds 3 and 4
+  only TCST, +1,600 and +2,105 GetCost records, the same in both runs: the new scripts ask costs without deciding
+  differently there), missile 44 of 66 (the oracle's four seeds), transport 167 of 185 (Small Islands: the war on
+  water), units 3 TCST lines. late, space, calamity, effects, scenario, app and groups did not change: the new
+  behaviour waits for conditions those games never meet (raids after 20 minutes with 16 in the pool, the island
+  food after an hour, water maps). saveload_expect.txt: the same outcomes (a comment line). The editor and
+  civilization builder gates did not change.
+- **Flakes seen under load, not the merge.** The Rust gate's `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`
+  (ee_render, timing) and `gamespy a_failed_start_leaves_the_current_record` (ee_won_net: the base port's
+  neighbour taken by another process) each failed once beside running sims and passed 3/3 alone; the full gate then
+  passed. One scenario capture (seed 7, "the meat grinder") stopped at start in EETerrainColorTable's verification
+  and played to its cap when rerun alone.
+- **Lesson: memory.** Two capture chains (four EE-SIMs), a test-profile build, the Rust gate and the data gate at
+  once, beside other lanes, exhausted the commit charge: Rust aborted on an allocation, the data gate raised
+  MemoryError, bash could not fork, and Windows froze and restarted. Every result of that hour was discarded and
+  rerun one chain at a time.
+- **Gates on the final tree.** Both builds 0/0; the Rust gate PASS (4,344 tests); the oracle against the new ref
+  identical on seeds 2-7; the eleven capture profiles PASS; the plain saveload 18/18 identical; the matrix `--expect`
+  PASS; the editor (14,448 lines) and civilization builder (4,062) gates PASS; eedata check and cppgate PASS;
+  scenario_check 27/27; gates.sh GATES PASS (tour, ai-game time-cap with both classic_lua players alive, lan-game).
+
+- **Then origin/rust f63bd44b merged in** (data round 3, WONGUI B round 3, A* round 1 with save 0.283, lane V's
+  ee_sim::world and VWCK, WONLobby round 12). Only PORT_LEARNINGS (both sides kept), golden_cpp.txt and
+  saveload_expect.txt conflicted; the two data files were taken from rust and re-read. The oracle traces equal the
+  ref of the main merge (rust's rounds do not move the AI); the ref was recorded again on this tree. Of the goldens
+  only the oracle's changed: the main merge's 312 lines plus VWCK in seeds 2, 5, 6 and 7, the seeds whose games
+  classic_lua changed (late's and calamity's VWCK lines and every other profile pass as rust recorded them).
+  saveload_expect.txt as rust has it (next seed 2 at 915/276 since 0.283; the same in two runs), the editor gate
+  unchanged. Gates again on the merged tree, one heavy job at a time: both builds 0/0, the Rust gate (4,383 tests),
+  the oracle (two equal runs), the eleven profiles (two equal runs each), saveload 18/18, the matrix `--expect`, the
+  editor and civilization builder gates, eedata check and cppgate, scenario_check 27/27, gates.sh GATES PASS.
+
+- **Then origin/rust 0bfe280c** (the LP64 fix, lane S's SGVW, data round 4, lane R's RFIL, lane P's TSGT, MAPS and
+  MAPK). Only PORT_LEARNINGS and golden_cpp.txt conflicted (golden taken from rust and re-read). Two equal runs of
+  every profile: the oracle golden changed in 320 lines, the 316 above plus TSGT in seeds 2, 5, 6 and 7; the app
+  profile's TSGT, MAPS and MAPK (seeds 2-7) did not move (its 20-minute games end before the new behaviour starts),
+  nor did any other profile. The oracle against the ref: identical. SGVW: the editor trace (25,136 lines) and the
+  tours' distinct reads (tour 51, view 79) equal their goldens. RFIL: golden_fill in the Rust gate (no live
+  tour compare). The main checkout's data tree was rebuilt under a run here (the audio converter), and its runs
+  stopped in EETerrainColorTable at the missing ColorPalette.png: a stopped run at that line means the tree, not
+  the code.
+
+- **Then origin/rust 4929244f and ec39733e** (the audio merge, WONLobby 13, WON 14, AI lane A rounds 1-2, AI lane B
+  rounds 1-2 with PLCE, CPEV and the placement profile). Only PORT_LEARNINGS and golden_cpp.txt conflicted. The
+  oracle equal to the ref (two runs; the ref recorded again). Re-read in two equal runs: oracle (322 lines: the 320
+  above plus PLCE and CPEV in seed 2; seed 3's did not move), late, space, calamity and placement (unchanged: the
+  last plays boom against ageofai). Saveload 18/18, the Rust gate (4,523 tests), both builds 0/0, gates.sh PASS.
+
+- **Then origin/rust bf7759fb** (LLE rest 1, the UI thread 1, WONLobby 15, AI lane A round 3; branch rust-mainmerge4b,
+  2026-11-18). Lane A had moved EECPNextArmy.cpp, EECPReflexes.cpp and the trace into Rust and deleted them, so main's
+  25a29f1de (EECPNewGame) conflicted there and in EECPTrace.cpp. Ported, the C++ files kept deleted: EECPNewGame
+  (EECPTrace.cpp, still called by EEWorld::StartGame before CreatePlayers) calls `ee_ai_new_game` (next_trace.rs),
+  which clears the trace's per-player counters and the next sim hash time (main's `sNextHash`, now a file static on
+  both sides), the loss incidents (next_game.rs `new_game_losses`: LOSSES emptied, `with_losses` makes the 64 defaults
+  again, the same as main's per-player clear of hits, incidents, incident id and loss time) and the militia and
+  naval-flight cool-downs (next_reflex.rs `new_game`). EECPNextArmyNewGame and EECPReflexesNewGame left
+  ee/EECPTrace.h. Two unit tests. Main's other AI Thread edits were only these three files. The oracle ref recorded
+  by the main merge was copied to the main checkout's build/rust_oracle/ref (the old one kept as ref-pre-main4).
+  Gates on the merged tree: both builds and the test profile 0/0; the Rust gate PASS (4,552 tests); the oracle
+  identical on seeds 2-7 (single games: the reset only changes a second game in one process, EE-SIM --games); the
+  twelve capture profiles at seeds 2-3 PASS against the goldens as recorded; saveload 18/18; the matrix `--expect`
+  PASS; the editor (14,448) and civilization builder (4,062) gates PASS; scenario_check 27/27; gates.sh GATES PASS.
+
 ## Vendored graphics code out: libjpeg and the movie player (branch rust-vendor-gfx, 2026-11-17)
 
 Two owner decisions: libjpeg leaves the tree (the JPEGs are Rust), and movie playback leaves the game (no movies

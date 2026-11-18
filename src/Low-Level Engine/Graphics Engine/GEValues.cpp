@@ -359,12 +359,6 @@ bool GE3DLine::Intersects(const GE3DLine& inLine, float& outT, float& outLineT) 
     return ee_ge_line_intersects_line(GERust(*this), GERust(inLine), &outT, &outLineT);
 }
 
-// Intersects two lines in the xy plane; false when they are parallel, else the parameters on each line
-bool GE3DLine::IntersectsIn2D(const GE3DLine& inLine, float& outT, float& outLineT) const
-{
-    return ee_ge_line_intersects_2d(GERust(*this), GERust(inLine), &outT, &outLineT);
-}
-
 // Intersects the line with a plane; false when parallel, else outT gets the parameter of the crossing point
 bool GE3DLine::Intersects(const GE3DPlane& inPlane, float& outT) const
 {
@@ -437,18 +431,6 @@ bool GE3DPlane::Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
 {
     // (degenerate normals: the C++ read an uninitialized parameter, Rust takes 0)
     return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine));
-}
-
-// Tells whether a point lies on the plane or on the normal's side
-bool GE3DPlane::IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const
-{
-    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 2);
-}
-
-// Tells whether a point lies on the plane or behind it
-bool GE3DPlane::IsPointOnOrBelowPlane(const GE3DPoint& inPoint) const
-{
-    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 3);
 }
 
 // Loads the plane's point and normal from a file; returns the first read error
@@ -726,24 +708,12 @@ void GEQuaternion::ConvertFrom(const GETransformation& inTransformation)
     ee_ge_quat_from(GERust(inTransformation), GERust(*this));
 }
 
-// Writes the quaternion's rotation into a transformation (no translation), then normalises the matrix
-void GEQuaternion::ConvertTo(GETransformation& outTransformation) const
-{
-    ee_ge_quat_to(GERust(*this), GERust(outTransformation));
-}
-
 // Scales the quaternion to unit length
 // NEAR: the inline UMFastMath::Sqrt gives the fstp st(4) parameter shape (plain sqrt is further off); the second
 // push ecx of the double argument area is scheduled one load earlier than the original
 void GEQuaternion::Normalize()
 {
     ee_ge_quat_normalize(GERust(*this));
-}
-
-// Interpolates between this quaternion and a target along the shorter arc (linear when they are nearly equal)
-void GEQuaternion::Slerp(const GEQuaternion& inTarget, float inT, GEQuaternion& outQuaternion) const
-{
-    ee_ge_quat_slerp(GERust(*this), GERust(inTarget), inT, GERust(outQuaternion));
 }
 
 // ---- GEBoundingBox (GEBoundingBox.cpp, folded here in R4.3 part 16)

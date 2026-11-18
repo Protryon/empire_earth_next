@@ -1,5 +1,5 @@
 //! Channels and mixing, as the C++ `Mixer.cpp` (linear interpolation, per-side gains, loop by `fmod`, the master
-//! volume over the effects, the music and the movie added after the effects' gain).
+//! volume over the effects, the music added after the effects' gain).
 
 use std::ffi::{c_ulong, c_void};
 use std::sync::{Arc, Mutex};
@@ -10,7 +10,7 @@ pub const CHANNEL_NONE: u32 = u32::MAX;
 /// A sample as the channel layer sees it (the C++ `SESample*`).
 pub type SampleHandle = *mut c_void;
 
-/// The audio source callbacks of the conductor and the movie player: add interleaved stereo floats.
+/// The audio source callbacks of the conductor: add interleaved stereo floats.
 pub type SourceFn = unsafe extern "C" fn(context: *mut c_void, frames: *mut f32, count: c_ulong);
 
 /// The `SESample` accessors the mixer uses.

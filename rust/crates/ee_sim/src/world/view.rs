@@ -160,6 +160,10 @@ impl<'t, T> Record<'t, T> {
     fn at(object: usize, offset: u64) -> Self {
         Record { p: (object + offset as usize) as *const T, _t: PhantomData }
     }
+    /// The record at `object + offset` (the sibling views': tech_view.rs).
+    pub(crate) fn at_offset(object: usize, offset: u64) -> Self {
+        Self::at(object, offset)
+    }
     /// The record's address (for [`world_field!`](crate::world_field)).
     pub fn ptr(&self) -> *const T {
         self.p
@@ -688,6 +692,77 @@ impl<'t> StatsView<'t> {
         let v: c_long = crate::world_field!(self.fields(), mMaxHitPoints);
         v as i64
     }
+    /// `mUnitClass`'s handle (the stats' own class: an upgraded unit's stats keep their class)
+    pub fn class_handle(&self) -> u64 {
+        // SAFETY: a live stats object's pointer member
+        unsafe { pointer(self.object, layout().stats_unit_class) as u64 }
+    }
+    /// `mUnitClass`
+    pub fn class(&self) -> Option<ClassView<'t>> {
+        ClassView::at(self.class_handle() as usize)
+    }
+    /// `mButton`'s handle (an `EEButtonObject*`, 0: none)
+    pub fn button_handle(&self) -> u64 {
+        // SAFETY: a live stats object's pointer member
+        unsafe { pointer(self.object, layout().stats_button) as u64 }
+    }
+}
+
+/// A unit group (`EEGroup`: a player's selected group; its handle is the `EESelectedGroup*`'s address, which is the
+/// `EEGroup*`'s). `GetUnit`/`GetNumUnits` are `EEGroup`'s (no subclass overrides them): `mUnits` read in place.
+#[derive(Clone, Copy)]
+pub struct GroupView<'t> {
+    object: usize,
+    _t: PhantomData<&'t WorldRead>,
+}
+
+impl<'t> GroupView<'t> {
+    fn at(object: usize) -> Option<Self> {
+        (object != 0).then_some(GroupView { object, _t: PhantomData })
+    }
+    /// The view of the group `handle` (an `EEGroup*`; None for 0).
+    ///
+    /// # Safety
+    /// `handle` is 0 or a live group while `token` lives.
+    pub unsafe fn of(token: &'t WorldRead, handle: u64) -> Option<Self> {
+        let _ = token;
+        Self::at(handle as usize)
+    }
+    pub fn handle(&self) -> u64 {
+        self.object as u64
+    }
+    fn range(&self) -> (usize, usize) {
+        let at = layout().group_units;
+        let w = std::mem::size_of::<usize>() as u64;
+        // SAFETY: a live group's vector member: its first two words are its begin and end (EEWorldLayout.cpp
+        // checks the library's layout)
+        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+    }
+    /// `GetNumUnits()` (`mUnits.size()`)
+    pub fn len(&self) -> usize {
+        let (begin, end) = self.range();
+        (end - begin) / std::mem::size_of::<usize>()
+    }
+    /// `GetNumUnits() == 0`
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// `GetUnit(i)`'s handle (an `EEComplexUnit*`; 0 past the end, where the C++ read past it)
+    pub fn unit_handle(&self, i: usize) -> u64 {
+        if i >= self.len() {
+            return 0;
+        }
+        // SAFETY: an element of the vector
+        unsafe { pointer(self.range().0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
+    }
+    /// `GetFirstUnit()`'s handle (0 when empty)
+    pub fn first_unit_handle(&self) -> u64 {
+        self.unit_handle(0)
+    }
+    /// `Contains(unit)` (`EEGroup`'s: the first equal pointer in `mUnits`)
+    pub fn contains(&self, unit: u64) -> bool {
+        (0..self.len()).any(|i| self.unit_handle(i) == unit)
+    }
 }
 
 /// A player (`EEPlayer`; its handle is the `RTSPlayer*`'s address, which is the `EEPlayer*`'s).
@@ -748,6 +823,10 @@ impl<'t> PlayerView<'t> {
     pub fn selected_group_handle(&self) -> u64 {
         // SAFETY: a live player's pointer member
         unsafe { pointer(self.object, layout().player_selected_group) as u64 }
+    }
+    /// `mSelectedGroup`
+    pub fn selected_group(&self) -> Option<GroupView<'t>> {
+        GroupView::at(self.selected_group_handle() as usize)
     }
     /// `mViewedUnit`'s handle (an `RTSUnit*`, 0: none)
     pub fn viewed_unit_handle(&self) -> u64 {

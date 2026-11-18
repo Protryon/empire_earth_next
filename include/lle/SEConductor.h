@@ -1,6 +1,6 @@
-// C:\EEX\Low-Level Engine\Sound Engine\SEConductor.h (RECONSTRUCTION). Music score playback, on dmusic (a
-// DirectMusic reimplementation: segments, styles, bands, DLS and its own synthesizer; src/ThirdParty/dmusic) instead
-// of Microsoft's DirectMusic. The performance renders into the mixer's output (SEMixer::SetMusicSource). Every
+// C:\EEX\Low-Level Engine\Sound Engine\SEConductor.h (RECONSTRUCTION). Music score playback, on the music
+// engine (a DirectMusic performance in Rust: segments, styles, bands, played on rustysynth from SoundFonts converted
+// from the DLS banks; rust/crates/ee_audio/src/dmusic, ported from dmusic) instead of Microsoft's DirectMusic. The performance renders into the mixer's output (SEMixer::SetMusicSource). Every
 // SEMixer has one (SEMixer::GetConductor). Whole in Rust (rust/crates/ee_audio/src/sound conductorobj.rs, the decisions
 // conductor.rs; LLE lane round 6): an SEConductor* is an EeSoundConductor* inside its mixer; the members are
 // defined in SEConductor.cpp. Requires lle/LowLevelEngine.h.
@@ -33,17 +33,17 @@ private:
     ~SEConductor() = delete;
 };
 
-// SEConductor::TransitionTo inCommand: the transition pattern (dmusic embellishment) the conductor plays
+// SEConductor::TransitionTo inCommand: the transition pattern (DirectMusic embellishment) the conductor plays
 enum SETransitionCommand {
     kMusicTransitionGroove = 0,     // DmEmbellishment_GROOVE (default)
     kMusicTransitionFill = 1,       // DmEmbellishment_FILL
     kMusicTransitionBreak = 2,      // DmEmbellishment_BREAK
     kMusicTransitionIntro = 3,      // DmEmbellishment_INTRO
     kMusicTransitionEnd = 4,        // DmEmbellishment_END
-    kMusicTransitionEndAndIntro = 5,  // end only (dmusic has no end-and-intro yet)
+    kMusicTransitionEndAndIntro = 5,  // end only (the engine has no end-and-intro)
 };
 
-// SEConductor::TransitionTo inFlags: the boundary (DirectMusic's composer flags; dmusic transitions on a measure)
+// SEConductor::TransitionTo inFlags: the boundary (DirectMusic's composer flags; the engine transitions on a measure)
 enum SETransitionFlags {
     kTransitionFlagMeasure = 0,
     kTransitionFlagModulate = 1,

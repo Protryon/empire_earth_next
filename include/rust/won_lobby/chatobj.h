@@ -103,6 +103,16 @@ bool ee_won_chatparser_handle_input(EeWonChatParser *p,
                                     uint32_t wchar_size,
                                     int32_t *target);
 
+/// InitCommands' `i`th call: the names' resource row (-1: none), the command in `*command`; -2 past the end.
+///
+/// # Safety
+/// `command` is writable.
+int32_t ee_won_chatparser_init_command(size_t i,
+                                       int32_t *command);
+
+/// A command's help line's resource row (`ChatHelpString`: the warning's for any other command).
+int32_t ee_won_chat_help_row(int32_t command);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_CHATOBJ_H

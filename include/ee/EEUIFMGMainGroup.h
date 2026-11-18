@@ -4,6 +4,8 @@
 #ifndef EE_EEUIFMGMAINGROUP_H
 #define EE_EEUIFMGMAINGROUP_H
 
+#include "rust/game/screens.h"   // EeScreensMainGroupFields
+
 class EEComplexUnit;
 class EEPlayer;
 class EEUnit;
@@ -45,7 +47,9 @@ public:
     unsigned long mKind;                    // the group's index in the main game form's mGroups
 };
 
-class EEUIFMGMainGroup : public EEUIFMGGroup {   // sizeof 0x28 (new site)
+// the plain members (+0x0c mMode .. +0x25 mReset: the mode, the shown unit's hit points and ids, mL1C, mL20, the
+// flags) are the Rust record EeScreensMainGroupFields (ee_screens main_form_fields.rs), under their names
+class EEUIFMGMainGroup : public EEUIFMGGroup, public EeScreensMainGroupFields {
 public:
     EEUIFMGMainGroup(EEUIFMainGame* inOwner);   // 0x267ec8 (the main game form's CreateGroup(0))
     virtual ~EEUIFMGMainGroup();            // +0x00 (??_G 0x267f1c)
@@ -62,17 +66,9 @@ public:
     // (SetUnit 0x268070, ShowCommandButton 0x2682ea, ShowSpecialButtons 0x268dee, Update 0x268f3f: Rust's whole,
     // ee_screens main_group.rs)
 
-    // the ctor 0x267ec8: EEUIFMGGroup(...), the vptr, then these zeroed, +8 = a new object (ctor 0x26ada8)
+    // the ctor 0x267ec8: EEUIFMGGroup(...), the vptr, the record zeroed, +8 = a new object (ctor 0x26ada8)
     EEUIFMGStatusBox* mStatusBox;           // +0x08 (ee/EEUIFMGStatusBox.h)
     long GetMode() const { return this->mMode; }
-    long mMode;                             // +0x0c (not set by the ctor) the mode: 0, 3, 4 (unit type 0x321); 1, 2 tested
-    long mHitPoints;                        // +0x10 the unit's hit points
-    unsigned long mUnitID;                  // +0x14 the selected unit's id
-    unsigned long mPreviousID;              // +0x18 the previous id
-    long mL1C;                              // +0x1c (not set by the ctor)
-    long mL20;                              // +0x20 the unit class's mL294
-    bool mHasUnit;                          // +0x24 a unit is selected
-    bool mReset;                            // +0x25 (Virtual10 sets it)
 };
 
 #endif

@@ -172,16 +172,9 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     }
     case EeGeTexOp::TexNew:
         return (intptr_t)new GETexture((GETextureManager*)inObj);
-    case EeGeTexOp::TexObj:
-        return (intptr_t)theTexture->mRust;
-    case EeGeTexOp::TexDereference:
-        theTexture->Dereference();
-        return 0;
     case EeGeTexOp::TexBaseDereference:
         theTexture->UReferenceCounter::Dereference();
         return 0;
-    case EeGeTexOp::TexRefCount:
-        return (intptr_t)theTexture->mReferenceCount;
     case EeGeTexOp::ManagerRemove:
         return ((GETextureManager*)inObj)->RemoveTexture((GETexture*)a);
     case EeGeTexOp::ManagerPromote:
@@ -243,12 +236,6 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
 long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
 {
     return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
-}
-
-// Recreates the texture's surface on another screen with the same description
-long GETexture::Recreate(GEScreen* inScreen)
-{
-    return ee_ge_tex_recreate(this->mRust, inScreen);
 }
 
 // port: see the header
@@ -377,8 +364,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::PathDereference:
         ((FSPath*)inObj)->Dereference();
         return 0;
-    case EeGeManOp::RefCount:
-        return (intptr_t)theTexture->mReferenceCount;
     case EeGeManOp::BaseDereference:
         theTexture->UReferenceCounter::Dereference();
         return 0;
@@ -398,116 +383,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         return (intptr_t)new GETexture(theManager);
     case EeGeManOp::TexNewFromSurface:
         return (intptr_t)new GETexture((GESurface*)inObj, theManager);
-    case EeGeManOp::TexLoad: {
-        const EeGeTexLoad* theLoad = (const EeGeTexLoad*)a;
-        return theTexture->Load((const EeOfTexture*)theLoad->file, *(GESurfaceDescription*)theLoad->description,
-                                (GEScreen*)b, theLoad->create_mipmaps, theLoad->num_mip_levels_to_drop,
-                                theLoad->frame_format);
-    }
-    case EeGeManOp::TexGet:
-        switch ((EeGeTexField)a) {
-        case EeGeTexField::FromPack:
-            return theTexture->GetIsFromTexturePack();
-        case EeGeTexField::PackMipLevels:
-            return theTexture->GetTexturePackMipLevels();
-        case EeGeTexField::NumMipLevelsToDrop:
-            return (intptr_t)theTexture->GetNumMipLevelsToDrop();
-        case EeGeTexField::CreateMipMaps:
-            return theTexture->GetCreateMIPMaps();
-        case EeGeTexField::FrameFormat:
-            return (intptr_t)theTexture->GetFrameFormat();
-        case EeGeTexField::FrameCount:
-            return (intptr_t)theTexture->GetFrameCount();
-        default:
-            return 0;
-        }
-    case EeGeManOp::TexSet:
-        switch ((EeGeTexField)a) {
-        case EeGeTexField::FromPack:
-            theTexture->SetIsFromTexturePack(b != 0);
-            break;
-        case EeGeTexField::PackMipLevels:
-            theTexture->SetTexturePackMipLevels((long)b);
-            break;
-        case EeGeTexField::NumMipLevelsToDrop:
-            theTexture->SetNumMipLevelsToDrop((unsigned long)b);
-            break;
-        case EeGeTexField::IsManaged:
-            theTexture->SetIsManaged(b != 0);
-            break;
-        case EeGeTexField::Promoted:
-            theTexture->SetIsPromoted(b != 0);
-            break;
-        default:
-            break;
-        }
-        return 0;
-    case EeGeManOp::TexSetLogicalShift:
-        theTexture->SetLogicalShift((unsigned long)a);
-        return 0;
-    case EeGeManOp::TexStage: {
-        const GETStage* theStage = theTexture->GetStage();
-        switch ((EeGeTexStage)a) {
-        case EeGeTexStage::AlphaMode:
-            return (intptr_t)theStage->mAlphaMode;
-        case EeGeTexStage::ColorMode:
-            return (intptr_t)theStage->mColorMode;
-        case EeGeTexStage::MagFilterMode:
-            return (intptr_t)theStage->mMagFilterMode;
-        case EeGeTexStage::MinFilterMode:
-            return (intptr_t)theStage->mMinFilterMode;
-        case EeGeTexStage::MipFilterMode:
-            return (intptr_t)theStage->mMipFilterMode;
-        case EeGeTexStage::MipMapBias: {
-            uint32_t theBits;
-            memcpy(&theBits, &theStage->mMipMapBias, sizeof(theBits));
-            return (intptr_t)theBits;
-        }
-        case EeGeTexStage::TextureAddressingMode:
-            return (intptr_t)theStage->mTextureAddressingMode;
-        default:
-            return 0;
-        }
-    }
-    case EeGeManOp::TexSetStage:
-        switch ((EeGeTexStage)a) {
-        case EeGeTexStage::AlphaMode:
-            theTexture->SetStageAlphaMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::ColorMode:
-            theTexture->SetStageColorMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MagFilterMode:
-            theTexture->SetStageMagFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MinFilterMode:
-            theTexture->SetStageMinFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MipFilterMode:
-            theTexture->SetStageMipFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MipMapBias: {
-            uint32_t theBits = (uint32_t)b;
-            float theBias;
-            memcpy(&theBias, &theBits, sizeof(theBias));
-            theTexture->SetStageMipMapBias(theBias, -1);
-            break;
-        }
-        case EeGeTexStage::TextureAddressingMode:
-            theTexture->SetStageTextureAddressingMode((unsigned long)b, -1);
-            break;
-        default:
-            break;
-        }
-        return 0;
-    case EeGeManOp::TexFrame:
-        return (intptr_t)theTexture->GetFrameTexture((unsigned long)a);
-    case EeGeManOp::TexReference:
-        theTexture->Reference();
-        return 0;
-    case EeGeManOp::TexDereference:
-        theTexture->Dereference();
-        return 0;
     case EeGeManOp::TexSurfaceDescription: {
         GESurfaceDescription* theDescription = (GESurfaceDescription*)a;
         GESurface* theSurface = theTexture->GetSurface();
@@ -518,10 +393,6 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         theDescription->mIsTransparencyEnabled = theSurface->GetIsTransparencyEnabled();
         return 0;
     }
-    case EeGeManOp::TexRecreate:
-        return theTexture->Recreate((GEScreen*)a);
-    case EeGeManOp::TexAllocatedSize:
-        return (intptr_t)theTexture->GetAllocatedSize();
     case EeGeManOp::TexPackLog:
         if (getenv("EE_TEXTURE_PACK_LOG"))   // port: the test's evidence (posix_game.py)
             fprintf(stderr, "texture pack: %s logical %lux%lu pixels %lux%lu (%ld MIP levels dropped)\n",

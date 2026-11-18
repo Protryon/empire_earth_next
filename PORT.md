@@ -259,23 +259,27 @@ crate can replace.
    (until polymorphic `new[]`/`delete[]` are gone or clang emits vector deleting destructors on its own), the
    per-module header views (`tools/odr_check.py`: 28 inline functions with divergent copies, mostly older ODR
    clashes inside the game).
-2. **Audio output: miniaudio** (done). `src/Low-Level Engine/Sound Engine/Mixer/Mixer.cpp` mixes the game's channels
-   (volume, pan, pitch by resampling, loop, position) into one miniaudio playback device (WASAPI, DirectSound,
-   waveOut, else the null device); samples are decoded whole on load (WAV/MP3/FLAC). miniaudio 0.11.21 is vendored
-   (`include/miniaudio/`, options in `ee_miniaudio.h`, implementation `src/ThirdParty/miniaudio/miniaudio.c`).
-   `Mss32.dll`, the Miles headers and `redist\win32` are gone, and so is the harness's silent mixer (the null device
-   serves).
-3. **Music: GothicKit/dmusic** (done). Vendored at `src/ThirdParty/dmusic` (MIT; commit b73b270, with the changes
-   its README lists, each marked "(EE patch)" in the source: the repeat count and the groove level the game sets,
-   instrument selection by the whole bank, the volume curves, the reverb, the stop, the pattern choice, note timing
-   and a clock that keeps the tempo whatever the size of the blocks rendered). `SEConductor`/`SEScore` are
-   rewritten on it with their public interface unchanged; the performance renders at the mixer's rate into its
-   device thread (`SPIMGetOutputRate`, `SPIMSetMusicSource`). The general MIDI instruments six of the songs play
-   are not in the game's files (the original took them from the system's collection): they are built into the
-   program (`EE.sf2`, embedded by `SEGeneralMIDI.c`), and a `gm.dls` in the music folder takes their place. Not
-   carried over: motifs (dmusic has none; the game never plays them), notifications (the game registers none),
-   end-and-intro transitions (dmusic plays the end pattern). The DirectMusic COM code, its GUIDs and `dmusici.h` are
-   gone.
+2. **Audio output: cpal and symphonia** (done; miniaudio until 2026-11-17). `src/Low-Level Engine/Sound Engine/Mixer/Mixer.cpp`
+   keeps the plug-in's entry points over C++ objects; the mixing (volume, pan, pitch by resampling, loop, position),
+   the device and the decoder are Rust (`rust/crates/ee_audio/src/mixer`): one cpal playback stream (WASAPI, Core
+   Audio, ALSA) at the device's own rate and format, else a null device that pulls the mix in real time (the
+   headless simulation, machines without output); samples are decoded whole on load by symphonia (WAV, MP3, FLAC)
+   with miniaudio's sample conversions, so every WAV sample is bit for bit what miniaudio gave. `Mss32.dll`, the
+   Miles headers and `redist\win32` are gone, and so is the harness's silent mixer (the null device serves).
+3. **Music: the DirectMusic engine in Rust on rustysynth** (done; GothicKit/dmusic, vendored C, until 2026-11-17).
+   `rust/crates/ee_audio/src/dmusic` is a port of dmusic (MIT Modern Variant, commit b73b270) with every change the
+   game had made to it: the repeat count and the groove level the game sets, instrument selection by the whole bank,
+   the volume curves, the reverb, the stop, the pattern choice, note timing and a clock that keeps the tempo whatever
+   the size of the blocks rendered. The performance's calls into its synthesizer are dmusic's line for line
+   (`tests/sound/dm_golden.c`, `golden_dmusic.txt`); the synthesizer is rustysynth (SoundFont 2) instead of
+   TinySoundFont. The songs' DLS banks are converted once, when the data is built, into SoundFonts
+   (`tools/dls2sf2.py`, dmusic's own DLS mapping; `X.dls` is loaded as `X.sf2`). `SEConductor`/`SEScore` keep their
+   public interface; the performance renders at the mixer's rate into its device thread (`SPIMGetOutputRate`,
+   `SPIMSetMusicSource`). The general MIDI instruments six of the songs play are not in the game's files (the
+   original took them from the system's collection): they are built into the program (`EE.sf2`, in the crate), and a
+   `gm.sf2` in the music folder takes their place. Not carried over: motifs (the game never plays them),
+   notifications (the game registers none), end-and-intro transitions (the end pattern plays). The DirectMusic COM
+   code, its GUIDs and `dmusici.h` are gone.
 4. **Movies: pl_mpeg** (done). pl_mpeg (MIT, commit c871f2b) is vendored (`include/pl_mpeg/`,
    `src/ThirdParty/pl_mpeg/pl_mpeg.c`). `DX7Movie` decodes on its thread at pl_mpeg's clock, converts frames into
    the back buffer's pixel format, and its sound goes through a ring into the mixer (`SPIMSetMovieSource`,
