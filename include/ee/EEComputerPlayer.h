@@ -62,16 +62,11 @@ public:
     virtual void RefreshTownGroups();       // +0x90 0x3cec9
     // 0x2dccf/0x2de60/0x2df8c/0x2e0b8: a random favorite unit class per screener flag into mFavoriteAirType/mFavoriteLandType/mFavoriteSeaType/mFavoriteSpaceType,
     // recorded with the epoch in mBA0 (EnterEpoch calls all four) (provisional names)
-    void ChooseFavoriteAirType();
-    void ChooseFavoriteLandType();
-    void ChooseFavoriteSeaType();
-    void ChooseFavoriteSpaceType();
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
     void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
     void UpdateGroups();
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
     void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
-    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)
@@ -96,7 +91,6 @@ public:
     // Provisional name
     unsigned long GetNumResourceCenters() { return this->mResourceCenters.size(); }
     EECPResourceCenter* GetResourceCenter(unsigned long inIndex);   // 0x2ef5e (ret 4: mResourceCenters[inIndex]) (provisional name)
-    unsigned short GetObjectRegion(EEComplexUnit* inUnit);  // 0x2e9e7 (ret 4): a path area id for inUnit (EECPWallManager::Update) (provisional name)
     void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
     long GetEpochFrequencyMax() const { return this->mEpochFrequencyMax; }
     long GetEpochFrequencyMin() const { return this->mEpochFrequencyMin; }
@@ -134,15 +128,6 @@ public:
     bool IsDeathmatch();                    // 0x2ec52 (gWorld.mGameOptions.mResources == 4 and a byte clear) (provisional name)
     void WorkOutPopulation();               // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
-    // 0x2db6d (ret 8): fills ioMap with the classes inScreener accepts (EECPUnitSelector::GatherCandidates)
-    // (provisional name)
-    void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener);
-#ifdef __clang__
-    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
-    // forward to them (clang build only; remove once the parameters themselves are const).
-    void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, const EEAIFOUnitSelectionScreener& inScreener)
-        { GetScreenedTypesByLine(ioMap, const_cast<EEAIFOUnitSelectionScreener&>(inScreener)); }
-#endif
 
     // +0xb80 (0x68849 = its size(), 0x2ef5e = operator[]: EECPCivilizationManager 0x6fb5e/0x711ac)
     std::vector<EECPResourceCenter*> mResourceCenters;
