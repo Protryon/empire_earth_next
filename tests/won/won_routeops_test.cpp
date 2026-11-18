@@ -21,6 +21,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_routehelpers.h" // the request helpers WONRouting.h had
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
@@ -851,17 +852,17 @@ static void Requests(RoutingConnection* c)
     ByteBufferPtr aData = Bytes("\x01\x02\x03", 3);
 
     // register: the reply, then the client list (flag 4); the extended list (flag 0x10); a failure
-    REQUEST("register", c->Register(L"me", L"pw", 5, 2, 4, 0x10, done), Msg(51).S(0).S(10).W2("me!").L(77),
+    REQUEST("register", RoutingRequests(c).Register(L"me", L"pw", 5, 2, 4, 0x10, done), Msg(51).S(0).S(10).W2("me!").L(77),
             Msg(23).S(0).S(2).S(10).W2("me!").L(1).S(11).W2("Alice").L(0x20));
-    REQUEST("register ex", c->Register(L"you", L"", 0, 0, 0x10, 0, done), Msg(51).S(0).S(12).W2("you").L(3),
+    REQUEST("register ex", RoutingRequests(c).Register(L"you", L"", 0, 0, 0x10, 0, done), Msg(51).S(0).S(12).W2("you").L(3),
             Msg(74).S(0).S(1).S(12).W2("you").L(2).B(2).B(1).B(4).L(4242).B(2).B(4).L(99));
-    REQUEST("register no list", c->Register(L"x", L"y", 1, 0, 0, 0, done), Msg(51).S(0).S(13).W2("x").L(1));
-    REQUEST("register fails", c->Register(L"x", L"y", 1, 0, 4, 0, done), Msg(51).S(-2510));
+    REQUEST("register no list", RoutingRequests(c).Register(L"x", L"y", 1, 0, 0, 0, done), Msg(51).S(0).S(13).W2("x").L(1));
+    REQUEST("register fails", RoutingRequests(c).Register(L"x", L"y", 1, 0, 4, 0, done), Msg(51).S(-2510));
     // the client lists
-    REQUEST("client list", c->GetClientList(done), Msg(23).S(0).S(2).S(5).W2("Five").L(3).S(20).W2("Twenty").L(0));
-    REQUEST("client list ex", c->GetClientListEx(done),
+    REQUEST("client list", RoutingRequests(c).GetClientList(done), Msg(23).S(0).S(2).S(5).W2("Five").L(3).S(20).W2("Twenty").L(0));
+    REQUEST("client list ex", RoutingRequests(c).GetClientListEx(done),
             Msg(74).S(0).S(2).S(20).W2("me2").L(0x30).B(1).B(2).B(4).L(808).S(40).W2("Forty").L(0).B(0));
-    REQUEST("client list fails", c->GetClientList(done), Msg(23).S(-1));
+    REQUEST("client list fails", RoutingRequests(c).GetClientList(done), Msg(23).S(-1));
     // the group lists
     {
         W w = Msg(25);
@@ -872,7 +873,7 @@ static void Requests(RoutingConnection* c)
         W g2;
         g2.S(102).W2("Other").S(12).S(4).L(0).L(0).S(0).S(1).S(12).B(2);
         w.Entry(g2);
-        REQUEST("group list", c->GetGroupList(0xff, done), w);
+        REQUEST("group list", RoutingRequests(c).GetGroupList(0xff, done), w);
     }
     {
         W w = Msg(25);
@@ -880,9 +881,9 @@ static void Requests(RoutingConnection* c)
         W g;
         g.S(201).W2("New").S(9).B(0x55);
         w.Entry(g);
-        REQUEST("group list 21", c->GetGroupList(0x21, done), w);
+        REQUEST("group list 21", RoutingRequests(c).GetGroupList(0x21, done), w);
     }
-    REQUEST("group list fails", c->GetGroupList(1, done), Msg(25).S(-3));
+    REQUEST("group list fails", RoutingRequests(c).GetGroupList(1, done), Msg(25).S(-3));
     // the members: a reply for another group first (not wanted), then this group's, names and flags
     {
         W other = Msg(29);
@@ -895,7 +896,7 @@ static void Requests(RoutingConnection* c)
         W m2;
         m2.S(17).B(0).W2("Eve").L(0x40);
         w.Entry(m2);
-        REQUEST("members", c->GetMembersOfGroup(102, done), other, w);
+        REQUEST("members", RoutingRequests(c).GetMembersOfGroup(102, done), other, w);
     }
     {
         W w = Msg(29);
@@ -903,9 +904,9 @@ static void Requests(RoutingConnection* c)
         W m1;
         m1.S(30).B(4);
         w.Entry(m1);
-        REQUEST("members plain", c->GetMembersOfGroup(103, done), w);
+        REQUEST("members plain", RoutingRequests(c).GetMembersOfGroup(103, done), w);
     }
-    REQUEST("members fails", c->GetMembersOfGroup(104, done), Msg(29).S(-5).S(104));
+    REQUEST("members fails", RoutingRequests(c).GetMembersOfGroup(104, done), Msg(29).S(-5).S(104));
     // joins: with the member list (join flag 1), a wait (-2541) then success, a failure
     {
         W m = Msg(29);
@@ -916,61 +917,61 @@ static void Requests(RoutingConnection* c)
         W e2;
         e2.S(13).B(0).W2("Bobby");
         m.Entry(e2);
-        REQUEST("join", c->JoinGroup(100, L"pw", L"hi", 1, 2, done), Msg(41).S(0).S(100).W2("welcome"), m);
+        REQUEST("join", RoutingRequests(c).JoinGroup(100, L"pw", L"hi", 1, 2, done), Msg(41).S(0).S(100).W2("welcome"), m);
     }
-    REQUEST("join waits", c->JoinGroup(101, L"", L"", 0, 0, done), Msg(41).S(-2541).S(101).W2("wait"),
+    REQUEST("join waits", RoutingRequests(c).JoinGroup(101, L"", L"", 0, 0, done), Msg(41).S(-2541).S(101).W2("wait"),
             Msg(41).S(0).S(99).W2("other"), Msg(41).S(0).S(101).W2("ok"));
-    REQUEST("join fails", c->JoinGroup(102, L"", L"", 0, 0, done), Msg(41).S(-2524).S(102).W2("no"));
+    REQUEST("join fails", RoutingRequests(c).JoinGroup(102, L"", L"", 0, 0, done), Msg(41).S(-2524).S(102).W2("no"));
     // creates: with the join status (join flag 1); without, the parent id after the name; a failure
-    REQUEST("create", c->CreateGroup(0xffff, L"Game", L"pw", 8, 0x2, 1, 0x4, done),
+    REQUEST("create", RoutingRequests(c).CreateGroup(0xffff, L"Game", L"pw", 8, 0x2, 1, 0x4, done),
             Msg(12).S(0).S(300).W2("Game!"), Msg(41).S(0));
-    REQUEST("create no join", c->CreateGroup(5, L"G2", L"", 4, 0, 0, 0, done), Msg(12).S(0).S(301).W2("G2").S(7));
-    REQUEST("create fails", c->CreateGroup(5, L"G3", L"", 4, 0, 0, 0, done), Msg(12).S(-9));
+    REQUEST("create no join", RoutingRequests(c).CreateGroup(5, L"G2", L"", 4, 0, 0, 0, done), Msg(12).S(0).S(301).W2("G2").S(7));
+    REQUEST("create fails", RoutingRequests(c).CreateGroup(5, L"G3", L"", 4, 0, 0, 0, done), Msg(12).S(-9));
     // the status requests
-    REQUEST("leave", c->LeaveGroup(100, done), Status(0));
-    REQUEST("cancel join", c->CancelJoinGroup(101, false, done), Status(-1));
-    REQUEST("group flags", c->SetGroupFlags(100, 0x3, 0x2, 0x10, 0x10, done), Status(0));
-    REQUEST("alert", c->SendServerAlert(L"hear ye", done), Status(0));
-    REQUEST("alert to", c->SendServerAlertWithRecipientList(L"to two", aTwo, done), Status(0));
-    REQUEST("start shutdown", c->StartServerShutdown(L"bye", 300, done), Status(0));
-    REQUEST("abort shutdown", c->AbortServerShutdown(done), Status(0));
-    REQUEST("client flags", c->SetClientFlags(0x12345, 0x40, 0x6, 0x4, done), Status(0));
-    REQUEST("chat", c->SendChat(L"hello", 0x105, 11, done), Status(0));
-    REQUEST("chat to", c->SendChatTo(L"hi two", 0x3, aTwo, done), Status(0));
-    REQUEST("data", c->SendData(aData, 0x81, 11, done), Status(0));
-    REQUEST("data to", c->SendData(aData, 0x1, aTwo, done), Status(0));
-    REQUEST("moderator", c->BecomeModerator(true, done), Status(0));
-    REQUEST("accept", c->AcceptClient(300, 11, true, L"yes", done), Status(0));
-    REQUEST("invite", c->InviteClient(300, 12, false, L"go", done), Status(0));
-    REQUEST("ban", c->BanClient(100, true, 60, L"spam", 11, done), Status(0));
-    REQUEST("ban won", c->BanClientByWONId(0xffff, false, 0, L"", 123456, done), Status(0));
-    REQUEST("ban cdkey", c->BanClientByCDKeyId(100, true, 5, L"cd", 777, done), Status(0));
-    REQUEST("mute", c->MuteClient(100, true, 600, L"loud", 12, done), Status(0));
-    REQUEST("mute won", c->MuteClientByWONId(100, false, 0, L"", 654321, done), Status(0));
-    REQUEST("mute cdkey", c->MuteClientByCDKeyId(100, true, 9, L"cdm", 888, done), Status(0));
-    REQUEST("create data", c->CreateDataObject(2, 300, "Game", L"g", aData, done), Status(0));
-    REQUEST("replace data", c->ReplaceDataObject(300, "Game", L"g", done), Status(0));
-    REQUEST("modify data", c->ModifyDataObject(300, "Game", L"g", 4, true, aData, done), Status(0));
-    REQUEST("unsubscribe", c->UnsubscribeDataObject(0xffff, "Game", 0x101, done), Status(0));
-    REQUEST("group name", c->SetGroupName(300, L"Renamed", done), Status(0));
-    REQUEST("group max players", c->SetGroupMaxPlayers(300, 6, done), Status(0));
-    REQUEST("relinquish", c->RelinquishCaptaincy(300, 12, done), Status(0));
-    REQUEST("status fails", c->LeaveGroup(5, done), Status(-2520));
+    REQUEST("leave", RoutingRequests(c).LeaveGroup(100, done), Status(0));
+    REQUEST("cancel join", RoutingRequests(c).CancelJoinGroup(101, false, done), Status(-1));
+    REQUEST("group flags", RoutingRequests(c).SetGroupFlags(100, 0x3, 0x2, 0x10, 0x10, done), Status(0));
+    REQUEST("alert", RoutingRequests(c).SendServerAlert(L"hear ye", done), Status(0));
+    REQUEST("alert to", RoutingRequests(c).SendServerAlertWithRecipientList(L"to two", aTwo, done), Status(0));
+    REQUEST("start shutdown", RoutingRequests(c).StartServerShutdown(L"bye", 300, done), Status(0));
+    REQUEST("abort shutdown", RoutingRequests(c).AbortServerShutdown(done), Status(0));
+    REQUEST("client flags", RoutingRequests(c).SetClientFlags(0x12345, 0x40, 0x6, 0x4, done), Status(0));
+    REQUEST("chat", RoutingRequests(c).SendChat(L"hello", 0x105, 11, done), Status(0));
+    REQUEST("chat to", RoutingRequests(c).SendChatTo(L"hi two", 0x3, aTwo, done), Status(0));
+    REQUEST("data", RoutingRequests(c).SendData(aData, 0x81, 11, done), Status(0));
+    REQUEST("data to", RoutingRequests(c).SendData(aData, 0x1, aTwo, done), Status(0));
+    REQUEST("moderator", RoutingRequests(c).BecomeModerator(true, done), Status(0));
+    REQUEST("accept", RoutingRequests(c).AcceptClient(300, 11, true, L"yes", done), Status(0));
+    REQUEST("invite", RoutingRequests(c).InviteClient(300, 12, false, L"go", done), Status(0));
+    REQUEST("ban", RoutingRequests(c).BanClient(100, true, 60, L"spam", 11, done), Status(0));
+    REQUEST("ban won", RoutingRequests(c).BanClientByWONId(0xffff, false, 0, L"", 123456, done), Status(0));
+    REQUEST("ban cdkey", RoutingRequests(c).BanClientByCDKeyId(100, true, 5, L"cd", 777, done), Status(0));
+    REQUEST("mute", RoutingRequests(c).MuteClient(100, true, 600, L"loud", 12, done), Status(0));
+    REQUEST("mute won", RoutingRequests(c).MuteClientByWONId(100, false, 0, L"", 654321, done), Status(0));
+    REQUEST("mute cdkey", RoutingRequests(c).MuteClientByCDKeyId(100, true, 9, L"cdm", 888, done), Status(0));
+    REQUEST("create data", RoutingRequests(c).CreateDataObject(2, 300, "Game", L"g", aData, done), Status(0));
+    REQUEST("replace data", RoutingRequests(c).ReplaceDataObject(300, "Game", L"g", done), Status(0));
+    REQUEST("modify data", RoutingRequests(c).ModifyDataObject(300, "Game", L"g", 4, true, aData, done), Status(0));
+    REQUEST("unsubscribe", RoutingRequests(c).UnsubscribeDataObject(0xffff, "Game", 0x101, done), Status(0));
+    REQUEST("group name", RoutingRequests(c).SetGroupName(300, L"Renamed", done), Status(0));
+    REQUEST("group max players", RoutingRequests(c).SetGroupMaxPlayers(300, 6, done), Status(0));
+    REQUEST("relinquish", RoutingRequests(c).RelinquishCaptaincy(300, 12, done), Status(0));
+    REQUEST("status fails", RoutingRequests(c).LeaveGroup(5, done), Status(-2520));
     // the data object reads
     {
         W w = Msg(49);
         w.S(0).S(2);
         w.S(300).N1("Game").W1("g").Buf2(std::string("\x0a\x0b", 2));
         w.S(301).N1("Game").W1("").Buf2(std::string());
-        REQUEST("read data", c->ReadDataObject(0xffff, "Game", 0x101, done), w);
+        REQUEST("read data", RoutingRequests(c).ReadDataObject(0xffff, "Game", 0x101, done), w);
     }
     {
         W w = Msg(49);
         w.S(0).S(1).S(12).N1("_KeyId").W1("").Buf2(std::string("\x01\x00\x00\x00\x2b\x02\x00\x00", 8));
-        REQUEST("subscribe data", c->SubscribeDataObject(0xffff, "Room", 1, done), w);
-        REQUEST("cd key ids", c->GetClientCDKeyIdList(done, true), w);
+        REQUEST("subscribe data", RoutingRequests(c).SubscribeDataObject(0xffff, "Room", 1, done), w);
+        REQUEST("cd key ids", RoutingRequests(c).GetClientCDKeyIdList(done, true), w);
     }
-    REQUEST("read data fails", c->ReadDataObject(7, "X", 0, done), Msg(49).S(-4));
+    REQUEST("read data fails", RoutingRequests(c).ReadDataObject(7, "X", 0, done), Msg(49).S(-4));
     // the bad user lists: all four optional fields, none
     {
         W w = Msg(21);
@@ -981,16 +982,16 @@ static void Requests(RoutingConnection* c)
         W u2;
         u2.L(5002).W2("Trudy").L(0).L(0).W2("").W2("");
         w.Entry(u2);
-        REQUEST("bad users", c->GetBadUserList(RoutingBadUserListType_MutedUsers, 100, 0x0f, done), w);
+        REQUEST("bad users", RoutingRequests(c).GetBadUserList(RoutingBadUserListType_MutedUsers, 100, 0x0f, done), w);
         W v = Msg(21);
         v.S(0).B(1).S(0xffff).B(0).S(1);
         W u3;
         u3.L(6001).W2("Eve");
         v.Entry(u3);
-        REQUEST("bad users plain", c->GetBadUserList(RoutingBadUserListType_BannedUsers, 0xffff, 0, done), v);
+        REQUEST("bad users plain", RoutingRequests(c).GetBadUserList(RoutingBadUserListType_BannedUsers, 0xffff, 0, done), v);
     }
     // the firewall check without listening: the status, then its result
-    REQUEST("firewall", c->DetectFirewall(0, 5, false, done), Status(0), Msg(19).S(0).S(4321));
+    REQUEST("firewall", RoutingRequests(c).DetectFirewall(0, 5, false, done), Status(0), Msg(19).S(0).S(4321));
 
 #ifndef EE_WON_ROUTE_OPS_RUST
     // the ops the lobby (RoutingLogic) builds itself
@@ -1284,16 +1285,16 @@ static void Requests(RoutingConnection* c)
     {
         Log("== chat no reply");
         SmartPtr<RouteDone> d = new RouteDone("chat no reply");
-        c->SendChat(L"fire and forget", 0x4, 12, d);
+        RoutingRequests(c).SendChat(L"fire and forget", 0x4, 12, d);
         sServer.Expect("chat no reply");
         Log("chat no reply completions " + N(d->mCount));
         SmartPtr<RouteDone> d2 = new RouteDone("disconnect");
-        c->DisconnectClient(d2);
+        RoutingRequests(c).DisconnectClient(d2);
         sServer.Expect("disconnect");
         Log("disconnect completions " + N(d2->mCount));
         SmartPtr<RouteDone> d3 = new RouteDone("alert to none");
         std::list<unsigned short> aNone;
-        c->SendServerAlertWithRecipientList(L"nobody", aNone, d3);
+        RoutingRequests(c).SendServerAlertWithRecipientList(L"nobody", aNone, d3);
         PumpFor(50);
         Log("alert to none completions " + N(d3->mCount));
     }

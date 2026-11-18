@@ -650,6 +650,9 @@ WON_TESTS = {
     "won_logics_test": [],
     # RoutingLogic as a Rust object (golden: rust/crates/ee_won_lobby/src/golden_routelogic.txt)
     "won_routelogic_test": [],
+    # RoutingLogic's connection requests (routelogic.rs conn_request) against the RoutingLogic.cpp cases and
+    # RoutingConnection helpers they replaced (golden: rust/crates/ee_won_lobby/src/golden_routeconn.txt)
+    "won_routeconn_req_test": [],
     # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
     # rust/crates/ee_won_lobby/src/golden_modelobj.txt)
     "won_modelobj_test": [],
