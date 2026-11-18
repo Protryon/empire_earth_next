@@ -29861,3 +29861,12 @@ commit now has the same cache key in every worktree.
   the oracle (two equal runs), the eleven profiles (two equal runs each), saveload 18/18, the matrix `--expect`, the
   editor and civilization builder gates, eedata check and cppgate, scenario_check 27/27, gates.sh GATES PASS.
 
+- **Then origin/rust 0bfe280c** (the LP64 fix, lane S's SGVW, data round 4, lane R's RFIL, lane P's TSGT, MAPS and
+  MAPK). Only PORT_LEARNINGS and golden_cpp.txt conflicted (golden taken from rust and re-read). Two equal runs of
+  every profile: the oracle golden changed in 320 lines, the 316 above plus TSGT in seeds 2, 5, 6 and 7; the app
+  profile's TSGT, MAPS and MAPK (seeds 2-7) did not move (its 20-minute games end before the new behaviour starts),
+  nor did any other profile. The oracle against the ref: identical. SGVW: the editor trace (25,136 lines) and the
+  tours' distinct reads (tour 51, view 79) equal their goldens. RFIL: golden_fill in the Rust gate (no live
+  tour compare). The main checkout's data tree was rebuilt under a run here (the audio converter), and its runs
+  stopped in EETerrainColorTable at the missing ColorPalette.png: a stopped run at that line means the tree, not
+  the code.
