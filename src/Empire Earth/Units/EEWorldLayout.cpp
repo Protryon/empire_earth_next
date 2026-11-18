@@ -148,6 +148,7 @@ void EEWorldLayoutRegister()
     theLayout.map_tiles = offsetof(EEMap, mTiles);
     theLayout.map_tile_array = offsetof(EEMap, mTileArray);   // lane P
     theLayout.map_visibility_words = offsetof(EEMap, mVisibilityWords);
+    theLayout.map_unit_regions = offsetof(EEMap, mUnitRegions);   // the unit utilities lane
     theLayout.tile_stride = sizeof(EETile);
     theLayout.tile_terrain_type = offsetof(EETile, mTerrainType);
     theLayout.tile_units = offsetof(EETile, mUnits);

@@ -11,19 +11,13 @@ use ee_base::math::types::GeTransformation;
 use crate::units::uu::{EeUnitsUuClass, EeUnitsUuUnit, UuHost};
 use crate::units::uu_tiles::Tile;
 use crate::units::uu_world::UuWorld;
+use crate::world::{ClassView, GroupView, MapView, PlayerView, TileView, UnitView, WorldRead, WorldView};
 
 extern "C" {
-    fn ee_units_uu_host_map() -> u64;
-    fn ee_units_uu_host_map_tile(map: u64, x: i32, y: i32) -> u64;
-    fn ee_units_uu_host_tile_terrain(tile: u64) -> i32;
-    fn ee_units_uu_host_tile_height(tile: u64) -> f32;
-    fn ee_units_uu_host_tile_units(tile: u64, out: *mut u64, capacity: u32) -> u32;
     fn ee_units_uu_host_is_edge_tile(x: i32, y: i32) -> u8;
     fn ee_units_uu_host_raised_corners(map: u64, x: i32, y: i32) -> i32;
     fn ee_units_uu_host_mesh_z(map: u64, x: i32, y: i32) -> f32;
     fn ee_units_uu_host_mesh_ground(x: f32, y: f32) -> f32;
-    fn ee_units_uu_host_unit(obj: u64, out: *mut EeUnitsUuUnit);
-    fn ee_units_uu_host_class(class_obj: u64, unit_type: i32, out: *mut EeUnitsUuClass);
     fn ee_units_uu_host_position(obj: u64, out: *mut f32);
     fn ee_units_uu_host_passable_by(obj: u64, by: u64) -> u8;
     fn ee_units_uu_host_is_foundation(obj: u64) -> u8;
@@ -46,13 +40,10 @@ extern "C" {
     fn ee_units_uu_host_ground_point(point: *const f32, out: *mut f32);
     fn ee_units_uu_host_terrain_tilt(m: *const f32, roll: u8) -> f32;
     fn ee_units_uu_host_player(which: i32, player: u64, value: i32) -> i32;
-    fn ee_units_uu_host_player_units(index: i32, out: *mut u64, capacity: u32) -> u32;
-    fn ee_units_uu_host_part(complex: u64, next: u8) -> u64;
     fn ee_units_uu_host_facing_quarter(x: i32, y: i32) -> i32;
     fn ee_units_uu_host_resource_users(unit: u64) -> i32;
     fn ee_units_uu_host_random_long(min: i32, max: i32) -> i32;
     fn ee_units_uu_host_random_float(min: f32, max: f32) -> f32;
-    fn ee_units_uu_host_location(complex: u64, out: *mut f32);
     fn ee_units_uu_host_set_animation(complex: u64, animation: i32);
     fn ee_units_uu_host_set_transformation(complex: u64, m: *const f32);
     fn ee_units_uu_host_tiles_len(v: *const c_void) -> u32;
@@ -62,16 +53,11 @@ extern "C" {
     fn ee_units_uu_host_units_get(v: *const c_void, out: *mut u64);
     fn ee_units_uu_host_units_set(v: *mut c_void, units: *const u64, count: u32);
     fn ee_units_uu_host_tile_test(which: i32, tile: u64, player: u64, x: i32, y: i32) -> u8;
-    fn ee_units_uu_host_regions(which: i32, x: i32, y: i32) -> i32;
-    fn ee_units_uu_host_goal_kind(unit: u64) -> i32;
-    fn ee_units_uu_host_range(unit: u64) -> f32;
     fn ee_units_uu_host_center_offset(complex: u64, io: *mut f32);
     fn ee_units_uu_host_tiles_test(which: i32, tiles: *const [i32; 2], count: u32, kind: i32) -> u8;
     fn ee_units_uu_host_spot(which: i32, unit: u64, x: i32, y: i32, out: *mut f32) -> i32;
     fn ee_units_uu_host_world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64;
     fn ee_units_uu_host_world_f(which: i32, a: u64, b: u64, f: f32) -> f32;
-    fn ee_units_uu_host_units_near(center: *const f32, radius: f32, out: *mut u64, capacity: u32) -> u32;
-    fn ee_units_uu_host_region_units(x: i32, y: i32, out: *mut u64, capacity: u32) -> u32;
     fn ee_units_uu_host_find_path(
         unit: u64,
         from: *const i32,
@@ -84,8 +70,6 @@ extern "C" {
 }
 
 /// `ee_units_uu_host_world`'s questions and writes (one C++ switch).
-const WORLD_GROUP_LEN: i32 = 0;
-const WORLD_GROUP_UNIT: i32 = 1;
 const WORLD_ADD_BUILD_TARGET: i32 = 2;
 const WORLD_RESTART_IDLE: i32 = 3;
 const WORLD_CAN_PRODUCE: i32 = 4;
@@ -100,10 +84,8 @@ const WORLD_LAST_RESOURCE: i32 = 12;
 const WORLD_DEPOSIT_EFFECT: i32 = 13;
 const WORLD_ADD_RESOURCE: i32 = 14;
 const WORLD_STATISTIC: i32 = 15;
-const WORLD_MAP_SIZE: i32 = 16;
 const WORLD_EDITOR_TRANSPORT: i32 = 17;
 /// `ee_units_uu_host_world_f`'s.
-const WORLD_F_LINE_OF_SIGHT: i32 = 0;
 const WORLD_F_GATHER_REACH: i32 = 1;
 const WORLD_F_WALL_RISE: i32 = 2;
 const WORLD_F_DISTANCE_TO_UNIT: i32 = 3;
@@ -124,13 +106,11 @@ const CONTINENT_OF: i32 = 10;
 const CONTINENT_SHORE: i32 = 11;
 const CONTINENT_FOOTPRINT: i32 = 12;
 /// `ee_units_uu_host_player`'s questions.
-const PLAYER_ENEMY: i32 = 0;
 const PLAYER_HUMAN: i32 = 1;
 const PLAYER_UNIT_SET: i32 = 2;
 const PLAYER_GROUP_UNITS: i32 = 3;
 const PLAYER_GROUP_CONTINENT: i32 = 4;
 const PLAYER_PASSABILITY: i32 = 5;
-const PLAYER_SAVES_VISIBILITY: i32 = 6;
 /// `ee_units_uu_host_tile_test`'s questions.
 const TILE_FLAT: i32 = 0;
 const TILE_VISIBLE: i32 = 1;
@@ -148,29 +128,107 @@ fn read_list<T: Copy + Default>(mut f: impl FnMut(*mut T, u32) -> u32) -> Vec<T>
     out
 }
 
+/// `f` of the world map's unit regions (None before there are any).
+fn with_regions<R>(f: impl FnOnce(&crate::combat::regions::EeCombatUnitRegions) -> R) -> Option<R> {
+    // SAFETY: the utilities' callers hold the world
+    let t = unsafe { crate::world::WorldRead::begin() };
+    let map = crate::world::WorldView::global(&t)?.map()?;
+    // SAFETY: the map's live table (the map owns it)
+    unsafe { map.unit_regions().as_ref() }.map(f)
+}
+
+/// `f` of a read token (the utilities' callers hold the world).
+fn read<R>(f: impl FnOnce(&WorldRead) -> R) -> R {
+    // SAFETY: the utilities run on a thread that holds the world
+    let t = unsafe { WorldRead::begin() };
+    f(&t)
+}
+
+/// A class's `IsLandBuilding()` and `FliesOver()` (the dispatch table's bodies, EEUnitClassKinds.cpp).
+fn class_flags(c: &ClassView<'_>) -> (u8, u8) {
+    use crate::units::cls_dispatch::{EE_UNITS_BODY_FLIES_OVER, EE_UNITS_BODY_IS_LAND_BUILDING, EE_UNIT_CLASS_BODIES};
+    let category = c.category();
+    if category >= 256 {
+        return (0, 0);
+    }
+    let land = matches!(EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_IS_LAND_BUILDING][category as usize], 1 | 3);
+    let domains: u8 = crate::world_field!(c.fields(), mDomains);
+    let flies = match EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_FLIES_OVER][category as usize] {
+        1 => true,
+        2 => domains & MOVEMENT_AIR != 0,
+        _ => false,
+    };
+    (u8::from(land), u8::from(flies))
+}
+
+/// `kMovementAir`
+const MOVEMENT_AIR: u8 = 1;
+
+/// A class's record (`ee_units_uu_host_class` was).
+fn class_record(c: &ClassView<'_>) -> EeUnitsUuClass {
+    let (land_building, flies_over) = class_flags(c);
+    EeUnitsUuClass { obj: c.handle(), fields: c.fields().ptr(), land_building, flies_over }
+}
+
+/// A unit's record (`ee_units_uu_host_unit` was): its records, pointers and the class's two virtuals' answers.
+fn unit_record(u: &UnitView<'_>) -> EeUnitsUuUnit {
+    let complex = u.complex_unit();
+    let class = u.class();
+    let player = u.player();
+    let (land_building, flies_over) = class.as_ref().map_or((0, 0), class_flags);
+    let mut out = EeUnitsUuUnit {
+        obj: u.handle(),
+        rts: u.rts().ptr(),
+        unit: u.fields().ptr(),
+        cx: complex.as_ref().map_or(std::ptr::null(), |c| c.complex().ptr()),
+        class_fields: class.as_ref().map_or(std::ptr::null(), |c| c.fields().ptr()),
+        class_obj: class.as_ref().map_or(0, |c| c.handle()),
+        complex: u.complex_unit_handle(),
+        player: player.as_ref().map_or(0, |p| p.handle()),
+        tile: u.tile().map_or(0, |t| t.handle()),
+        player_id: player.as_ref().map_or(-1, |p| p.id() as i32),
+        on_map: u8::from(u.has_tile_node()),
+        land_building,
+        flies_over,
+        ..EeUnitsUuUnit::default()
+    };
+    let Some(c) = complex else { return out };
+    out.active_group = c.active_group_handle();
+    out.location = c.location();
+    if let Some(s) = c.stats() {
+        out.stats_max_velocity = crate::world_field!(s.fields(), mMaxVelocity);
+        out.stats_attack = crate::world_field!(s.fields(), mAttack);
+        out.has_stats = 1;
+    }
+    out.command = c.command_type() as i32;
+    out
+}
+
 /// The game's world.
 pub struct Game;
 
 impl UuHost for Game {
     fn map(&mut self) -> u64 {
-        // SAFETY: a C++ read of gWorld
-        unsafe { ee_units_uu_host_map() }
+        read(|t| WorldView::global(t).and_then(|w| w.map()).map_or(0, |m| m.handle()))
     }
     fn map_tile(&mut self, map: u64, x: i32, y: i32) -> u64 {
-        // SAFETY: the map is the C++'s (0 answers 0)
-        unsafe { ee_units_uu_host_map_tile(map, x, y) }
+        // SAFETY: a live map (or 0)
+        read(|t| unsafe { MapView::of(t, map) }.and_then(|m| m.tile(x.into(), y.into())).map_or(0, |t| t.handle()))
     }
     fn tile_terrain(&mut self, tile: u64) -> i32 {
-        // SAFETY: a tile the C++ gave
-        unsafe { ee_units_uu_host_tile_terrain(tile) }
+        // SAFETY: a live tile the utilities were given
+        read(|t| unsafe { TileView::of(t, tile) }.map_or(0, |t| t.terrain_type() as i32))
     }
     fn tile_height(&mut self, tile: u64) -> f32 {
         // SAFETY: as tile_terrain
-        unsafe { ee_units_uu_host_tile_height(tile) }
+        read(|t| unsafe { TileView::of(t, tile) }.map_or(0.0, |t| t.height()))
     }
     fn tile_units(&mut self, tile: u64, out: &mut Vec<u64>) {
-        // SAFETY: as tile_terrain; the buffer holds `capacity` units
-        *out = read_list(|p, n| unsafe { ee_units_uu_host_tile_units(tile, p, n) });
+        // SAFETY: as tile_terrain
+        *out = read(|t| {
+            unsafe { TileView::of(t, tile) }.map(|t| t.units().map(|u| u.map_or(0, |u| u.handle())).collect())
+        })
+        .unwrap_or_default();
     }
     fn is_edge_tile(&mut self, x: i32, y: i32) -> bool {
         // SAFETY: a C++ read of the map
@@ -189,22 +247,15 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_mesh_ground(x, y) }
     }
     fn unit(&mut self, obj: u64) -> EeUnitsUuUnit {
-        let mut out = EeUnitsUuUnit::default();
-        // SAFETY: a live unit the C++ gave (0 leaves the default)
-        unsafe { ee_units_uu_host_unit(obj, &mut out) };
-        out
+        // SAFETY: a live unit the utilities were given (0 gives the default)
+        read(|t| unsafe { UnitView::of(t, obj) }.map(|u| unit_record(&u)).unwrap_or_default())
     }
     fn class_of_type(&mut self, unit_type: i32) -> EeUnitsUuClass {
-        let mut out = EeUnitsUuClass::default();
-        // SAFETY: the class table's entry
-        unsafe { ee_units_uu_host_class(0, unit_type, &mut out) };
-        out
+        read(|t| ClassView::by_index(t, unit_type as usize).map(|c| class_record(&c)).unwrap_or_default())
     }
     fn class(&mut self, class_obj: u64) -> EeUnitsUuClass {
-        let mut out = EeUnitsUuClass::default();
-        // SAFETY: a class the C++ gave
-        unsafe { ee_units_uu_host_class(class_obj, -1, &mut out) };
-        out
+        // SAFETY: a live class (or 0)
+        read(|t| unsafe { ClassView::of(t, class_obj) }.map(|c| class_record(&c)).unwrap_or_default())
     }
     fn position(&mut self, obj: u64) -> [f32; 3] {
         let mut out = [0.0; 3];
@@ -309,7 +360,7 @@ impl UuHost for Game {
     }
     fn enemy(&mut self, player: u64, other_id: i32) -> bool {
         // SAFETY: a live player
-        unsafe { ee_units_uu_host_player(PLAYER_ENEMY, player, other_id) != 0 }
+        read(|t| unsafe { PlayerView::of(t, player) }.is_some_and(|p| p.enemy(other_id as usize) != 0))
     }
     fn is_human(&mut self, player: u64) -> bool {
         // SAFETY: a live player
@@ -320,12 +371,24 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_player(PLAYER_UNIT_SET, u64::from(unit_type), set) != 0 }
     }
     fn player_units(&mut self, index: i32) -> Vec<u64> {
-        // SAFETY: the buffer holds `capacity` units
-        read_list(|p, n| unsafe { ee_units_uu_host_player_units(index, p, n) })
+        read(|t| {
+            let w = WorldView::global(t);
+            w.and_then(|w| w.player(index as usize))
+                .map(|p| p.units().map(|u| u.handle()).collect())
+                .unwrap_or_default()
+        })
     }
     fn part(&mut self, complex: u64, next: bool) -> u64 {
         // SAFETY: a live complex unit
-        unsafe { ee_units_uu_host_part(complex, u8::from(next)) }
+        read(|t| {
+            unsafe { UnitView::of(t, complex) }.map_or(0, |u| {
+                if next {
+                    u.next_part_handle()
+                } else {
+                    u.previous_part_handle()
+                }
+            })
+        })
     }
     fn facing_quarter(&mut self, x: i32, y: i32) -> i32 {
         // SAFETY: a C++ read of the map
@@ -344,10 +407,8 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_random_float(min, max) }
     }
     fn location(&mut self, complex: u64) -> GeTransformation {
-        let mut m = GeTransformation::IDENTITY;
-        // SAFETY: a live complex unit; sixteen floats
-        unsafe { ee_units_uu_host_location(complex, m.m.as_mut_ptr().cast()) };
-        m
+        // SAFETY: a live complex unit
+        GeTransformation { m: read(|t| unsafe { UnitView::of(t, complex) }.map(|u| u.transform())).unwrap_or_default() }
     }
     fn set_animation(&mut self, complex: u64, animation: i32) {
         // SAFETY: a live complex unit
@@ -379,7 +440,7 @@ impl UuHost for Game {
     }
     fn saves_visibility(&mut self, player: u64) -> bool {
         // SAFETY: a live player
-        unsafe { ee_units_uu_host_player(PLAYER_SAVES_VISIBILITY, player, 0) != 0 }
+        read(|t| unsafe { PlayerView::of(t, player) }.is_some_and(|p| p.save_vis_map()))
     }
     fn continent_category(&mut self, continent: u64) -> u8 {
         // SAFETY: a continent the C++ gave
@@ -392,20 +453,18 @@ impl UuHost for Game {
         }
     }
     fn regions_size(&mut self) -> i32 {
-        // SAFETY: a C++ read of the map's regions
-        unsafe { ee_units_uu_host_regions(0, 0, 0) }
+        with_regions(|r| r.size()).unwrap_or(0)
     }
     fn regions_len(&mut self, x: i32, y: i32) -> i32 {
-        // SAFETY: as regions_size
-        unsafe { ee_units_uu_host_regions(1, x, y) }
+        with_regions(|r| r.region(x as u32, y as u32).map_or(-1, |v| v.len() as i32)).unwrap_or(-1)
     }
     fn goal_kind(&mut self, unit: u64) -> i32 {
         // SAFETY: a live complex unit
-        unsafe { ee_units_uu_host_goal_kind(unit) }
+        read(|t| unsafe { UnitView::of(t, unit) }.and_then(|u| u.goal()).map_or(-1, |g| i32::from(g.0)))
     }
     fn stats_range(&mut self, unit: u64) -> f32 {
         // SAFETY: a live complex unit
-        unsafe { ee_units_uu_host_range(unit) }
+        read(|t| unsafe { UnitView::of(t, unit) }.and_then(|u| u.stats()).map_or(0.0, |s| s.range()))
     }
     fn center_offset(&mut self, complex: u64, x: f32, y: f32) -> (f32, f32) {
         let mut io = [x, y];
@@ -471,11 +530,16 @@ fn world_f(which: i32, a: u64, b: u64, f: f32) -> f32 {
 
 impl UuWorld for Game {
     fn line_of_sight(&mut self, complex: u64) -> f32 {
-        world_f(WORLD_F_LINE_OF_SIGHT, complex, 0, 0.0)
+        // `GetLineOfSight()`: the stats' sight and the unit's own
+        // SAFETY: a live complex unit
+        read(|t| {
+            let u = unsafe { UnitView::of(t, complex) }.expect("a live unit");
+            let base: f32 = u.stats().map_or(0.0, |s| crate::world_field!(s.fields(), mLineOfSight));
+            base + u.sight()
+        })
     }
     fn units_near(&mut self, center: [f32; 3], radius: f32) -> Vec<u64> {
-        // SAFETY: three floats; the buffer holds `capacity` units
-        read_list(|p, n| unsafe { ee_units_uu_host_units_near(center.as_ptr(), radius, p, n) })
+        crate::units::uu_ffi::units_near(center, radius)
     }
     fn gather_reach(&mut self, distance: f32, unit: u64, target: u64) -> bool {
         world_f(WORLD_F_GATHER_REACH, unit, target, distance) != 0.0
@@ -496,10 +560,12 @@ impl UuWorld for Game {
         world(WORLD_STEP_ASIDE, complex, player, class, x, y, if force { 1.0 } else { 0.0 });
     }
     fn group_len(&mut self, group: u64) -> i32 {
-        world(WORLD_GROUP_LEN, group, 0, 0, 0, 0, 0.0) as i32
+        // SAFETY: a live active group (an EEGroup)
+        read(|t| unsafe { GroupView::of(t, group) }.map_or(0, |g| g.len() as i32))
     }
     fn group_unit(&mut self, group: u64, i: i32) -> u64 {
-        world(WORLD_GROUP_UNIT, group, 0, 0, i, 0, 0.0)
+        // SAFETY: as group_len
+        read(|t| unsafe { GroupView::of(t, group) }.map_or(0, |g| g.unit_handle(i as usize)))
     }
     fn add_build_target(&mut self, unit: u64, piece: u64) {
         world(WORLD_ADD_BUILD_TARGET, unit, piece, 0, 0, 0, 0.0);
@@ -517,7 +583,7 @@ impl UuWorld for Game {
         world_f(WORLD_F_WALL_RISE, wall, 0, 0.0)
     }
     fn map_size(&mut self) -> i32 {
-        world(WORLD_MAP_SIZE, 0, 0, 0, 0, 0, 0.0) as i32
+        read(|t| WorldView::global(t).and_then(|w| w.map()).map_or(0, |m| m.size() as i32))
     }
     fn find_path(
         &mut self,
@@ -568,8 +634,7 @@ impl UuWorld for Game {
         world(WORLD_EDITOR_TRANSPORT, player, 0, 0, unit_type, 0, 0.0) != 0
     }
     fn region_units(&mut self, x: i32, y: i32) -> Vec<u64> {
-        // SAFETY: the buffer holds `capacity` units
-        read_list(|p, n| unsafe { ee_units_uu_host_region_units(x, y, p, n) })
+        with_regions(|r| r.region(x as u32, y as u32).cloned().unwrap_or_default()).unwrap_or_default()
     }
 }
 

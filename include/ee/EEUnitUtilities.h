@@ -160,9 +160,7 @@ void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<
 template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual);
 void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, std::vector<EETileCoordinate>& outTiles);
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<EETileCoordinate>* outTiles, bool inEnds, bool inThin);  // the same body over EETileCoordinate (0x24b794)
-long EEGetUnitsOnTiles(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 // (0x24b8ac EEGetPathLengthTo: ee/EEAreaUtilities.h)
-long EEGetUnitsOnTiles(std::vector<EETileCoordinate>& inTiles, std::vector<EEUnit*>& outUnits);  // the same body over EETileCoordinate (0x24c003)
 // 0x24c3df: the units on tile (inX, inY) (as ee/EEE3DEnergyWall.h declares it); returns their count
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);
 // 0x2046fc (EEGhostUnit.cpp defines it): the wall ghosts of inTiles/inCorners for inPlayer
