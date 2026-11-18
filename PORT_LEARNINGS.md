@@ -31309,3 +31309,57 @@ The merge of origin/rust needed nothing (no conflict; strip_markers changed 0 fi
   post-game summary reads its records, which a tour does not open).
 - **Short of the target**: net -1,704 C++ against the 3,000 asked. The rest of the area is object wiring or test
   drivers made of UI calls (docs/progress/app-core.md "Measured, not moved").
+
+## The unit utilities, round 3: the UUTL record in Rust, the plain reads and the host's reads over the world views (ee_sim::units uu_note.rs, uu_reads.rs; branch rust-unitutil-r3, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 50643932b | UUTL in Rust (uu_note.rs); every forwarder's note moves into its Rust entry point | +92 -336, net **-244** |
+| 0adb36690 | (merge) origin/rust 9a277da24 (AI lane C): clean, nothing to resolve | |
+| (merge) | origin/rust 173931330 (app core round 1): clean | |
+| 67db91a5a | the plain reads (uu_reads.rs) and the host's reads over ee_sim::world | +12 -256, net **-244** |
+| 06af75c20 | the forwarders' second descriptions and the dead `EEGetUnitsOnTiles` | -64, net **-64** |
+
+The round: net **-552** C++ (EEFOFindNewTargetNearOldTarget.cpp 3,496 -> 2,945 lines). The target was the whole
+file (about -3,000); the measure below says why the round stops there.
+
+- **The measure.** At the round's start the file was 3,496 lines: ~95 forwarders (each a UUTL note and one Rust call,
+  with two comment blocks), the 160-line note class, 490 lines of hosts for the Rust bodies, ~550 lines of ee_combat's
+  search, new-target and line-of-fire hosts (their tests are virtuals and goal reads, with the CB* capture records),
+  and C++ sequences over object lifetimes (`EEConvertUnit` 150 lines, `EEReplaceUnit`, `EEMakeBuilding`, ...). The
+  forwarders' ~400 C++ call sites are in other lanes' files (mostly src/Empire Earth/Units, which lane U is moving),
+  so the forwarders stay; what could move was the record, the plain reads and the hosts' reads.
+- **UUTL moved whole, digests unchanged.** The note (depth, words, events, the tick fold under a mutex, EE-UU-COUNT
+  on stderr) is Rust; the C++ host writes the record (`ee_units_uu_host_note`: active, tick, commit). Each Rust entry
+  point notes its call with the C++ note's words in order: inputs, events (`ee_units_uu_note_event` from the C++
+  host's writes), the result, then the outputs the C++ destructor read (footprint units, tiles, units, longs, point,
+  matrix, floats, points). Entry points shared by several utilities pick the kind from their selector; the unnoted
+  callers (`EEGetUnitsOnTiles`, the app capture's tiles near a point, `EEFindOpenSpot`) take paths that open no note,
+  because an opened note counts in the depth and could record. The C++ bodies still noted (85, 86, 81, 64) use a
+  20-line wrapper over `ee_units_uu_note_begin/word/end`, so the depth is one per thread on both sides. The goldens of
+  round 2 held at the first build in all four profiles.
+- **The views replace the host's reads.** `EeUnitsUuUnit` and `EeUnitsUuClass` are filled from the views (record
+  addresses through `Record::ptr`); `IsLandBuilding()` and `FliesOver()` are the class dispatch table's bodies (1 or 3;
+  1, or 2 with `mDomains & kMovementAir`), not `mIsLandBuildingClass`. The unit regions needed a layout field
+  (`map_unit_regions`, one `offsetof` line in EEWorldLayout.cpp, lane U's file). A region off the grid reads -1 units,
+  as `ee_combat_regions_len` did.
+- **The collector.** `EEGetUnitsNear`/`EEGetUnitsInRadius` were the ee/EEUnitCollector.h template over the regions:
+  the regions under the rectangle column by column, each from its last unit, the tile test inclusive; the sort-unique
+  by id only when a unit bigger than a tile was found (equal ids are one unit, so any sort gives the same list).
+  `UMCeil`'s round-then-step is local to uu_reads.rs.
+- **Mutations.** A note's two words swapped (`EECanStandOn`'s x and y) fails UUTL alone (seed 2: `20c56730...` against
+  `e2133ae5...`); `EEGetUnitsInRadius`' far side always the radius fails 41 tags of the oracle capture.
+- **Coordination.** One line in lane U's src/Empire Earth/Units/EEWorldLayout.cpp (the layout field).
+- **Not reached by the gate games** (unit tests and review only): as round 2, plus `EEGetLeadUnitID` (a screen),
+  `EEIsCloakedEnemyOf`'s minimap and area-effect callers only where cloaking runs (calamity).
+- **Gates (merged with origin/rust 9a277da24):** build `--sim` 0/0 and the test profile 0/0;
+  the Rust gate PASS (4,577 tests); oracle seeds 2-7 identical to the ref; all twelve capture profiles at seeds 2-3
+  equal to their goldens (oracle 212 digests, late 214, space 210, calamity 222, app 24, effects 6, groups 2, missile
+  22, placement 4, scenario 43, transport 185, units 175; no re-recording); saveload 18/18; the matrix (`--settings all
+  --seeds 2-3 --at 1000,1900 --expect`) PASS; scenario_check 27/27; `gates.sh` (its slot, the main checkout's tree):
+  `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13866` units [4, 43, 43] alive [2, 3] engines
+  classic_lua x 2, `RESULT PASS lan-game`, GATES PASS; through slot.py, `fixture_game.py --exercise random-game
+  --box-select --orders`: BOX SELECT PASS (4 steps), ORDERS PASS (gather, repair, queued repair, move), RESULT PASS.
+  After the second merge (origin/rust 173931330): both builds 0/0, the Rust gate PASS (4,604 tests), oracle
+  seeds 2-7 identical, the oracle, late, space and calamity captures at seeds 2-3 PASS (212, 214, 210, 222 digests).
+  The harness runs, saveload and scenario_check above ran on the first merge only.
