@@ -1536,7 +1536,7 @@ pub fn count_unit(p: &mut PlayerSample, u: &SampleUnit, value: c_long) -> bool {
             p.air += 1;
         }
         if let Some(attack) = u.attack {
-            p.strength = p.strength.wrapping_add((u.hit_points as f32 * attack) as c_long);
+            p.strength = p.strength.wrapping_add(ee_sim::units::player::trunc_long(u.hit_points as f32 * attack));
         }
     }
     p.value = p.value.wrapping_add(value);
