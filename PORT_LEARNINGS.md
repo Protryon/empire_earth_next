@@ -30335,3 +30335,51 @@ oracle is unchanged by construction.
   group's: about 40 lines).
 - The UI thread's `Post*` methods (45 one-line posts to its thread) could become one Rust post if the thread object
   is Rust's.
+## Lane A, round 3: EECPNextState as a Rust record; the next engine's tick, view, army memory, strategy step, save, reflexes and trace lines in Rust (ee_sim::ai next_state.rs, next_value.rs, next_game.rs, next_reflex.rs, next_trace.rs; branch rust-ai-lua3, 2026-11-18)
+
+- **The golden first, again.** Round 3's base (`build/ai_golden/r3a`) was recorded on the round's start, 4929244f3,
+  twice and equal. The state's move took EECPNext.cpp's tick, EECPNextLua.cpp, EECPNextView.cpp and EECPNextArmy.cpp
+  in one piece (they share the record), and all 15 games stayed identical at the first try.
+- **The view as a Rust value, the same Lua tables.** The Lua host already took a Rust `Value` (`JobValueRef::rust`)
+  as well as a C++ tree; both go through the same `push_value`, so the script's view table is built by the same Lua
+  calls in the same order (the same allocations, the same collector pace) once the Rust map keeps the C++ tree's key
+  order (`MapBuilder`: sorted on insert, a key set twice keeps its last value). The binding trace's step hash reads
+  `to_text` of the same tree, so it is the golden of the view too.
+- **No reference to the record across a Lua call.** The script's top level, its steps and its micro call the
+  bindings, and the bindings' host calls the gather safety's tests (`ai.site_blocked`, `ai.build_unsafe`), which
+  read the record again: open, prepare, the strategy step, the shadow step, the save check and the micro step hold
+  it as a raw pointer and take short-lived references between the calls.
+- **The trace's manager from Rust.** The C++ set `gCPTraceManager` with scopes ("next" for the army step, the view
+  and the strategy step; "cp" for the stats). A host op sets it to a static C string and gives the old one back; the
+  lines written inside keep the manager they had (the micro step's `next.print` lines keep "-": the micro step runs
+  outside any scope).
+- **printf's rounding stays the C library's.** The militia line's `odds=%.2f` is formatted by the host (snprintf):
+  Rust's `{:.2}` and the CRT can round an exact tie differently, and the line is one the oracle compares. Integer
+  formats (`%ld`, `%lu`, `%08lx`) are Rust's `{}` and `{:08x}` of the same C types (`c_long`, `c_ulong`: 32 bits on
+  Windows, the C++'s wrap kept with wrapping ops).
+- **The out-of-synch checksum is `unsigned long` arithmetic.** EECPOutOfSynchChecksum feeds the physics checksum and
+  the sim hash's `ai=`: Rust sums in `c_ulong` with wrapping ops, the town term `x * 1024 + y` in `c_long` first.
+- **What only reflex-on scripts exercise.** Every shipped AI turns the engine's militia and danger reflexes off
+  (`ai.reflex{militia = false, danger = false}`), so the golden and the oracle exercise only the naval flight (60
+  lines in classic-2). A scratch copy of data/ai with the reflexes left on (EE_AI_SCRIPTS), and one with the danger
+  reflex and EE_AI_EXP=flee, played on the old and the new EE-SIM: identical, with 31 militia, 19 flee, 10 raid.defend and 55 navalflee lines.
+  The first try left them silent: the danger path also needs `ai.reflex{held = true}` (classic_lua holds every
+  citizen, and a held citizen is skipped unless the held reflex is on). Rule: before calling a moved path verified,
+  count its trace lines in the runs that verify it.
+- **A test program goes with its handle.** With no C++ caller of the Lua state left, EECPLua.cpp and EECPLua.h are
+  deleted, and luatest (tests/platform/lua_test.cpp) with them: the runtime's golden is Rust's already (golden_lua.rs
+  part A, lua_host.rs part B, recorded from a driver over the unmodified EECPLua.cpp on luatest's scripts). The
+  static_asserts on the Lua build's facts moved to EECPNext.cpp.
+- **Two cbindgen exports may not import the same C function.** An `extern "C"` block declaring
+  `ee_ai_next_string_append` in two modules made the header check fail ("declared twice"); one module declares it
+  and a `pub(crate)` wrapper serves the other.
+- **Stopping a background chain.** TaskStop of a bash chain left its python and EE-SIM children running (they went
+  on into the next run of the script, which had been edited meanwhile); find them by command line and stop them by
+  id (never other lanes' EE-SIM: their paths name their worktrees).
+- **Bash heredocs.** A heredoc whose delimiter was `EOF` and whose Python body held `'''` strings failed with "unexpected
+  EOF while looking for matching `'`"; write the script to a file with the editor (as round 2 found for backslashes).
+- **Results.** C++ -4,051 net in src and include over five code commits (the record and the engine -2,640, the
+  reflexes -386, the trace -371, EECPLua -629, the units save -25), and the 482-line luatest. Binding golden identical
+  in all 15 games after each commit and the merge of origin/rust (lane B round 2); a mutation (the view's citizens
+  counted twice) caught at classic-2 line 4. On the merged tree: oracle seeds 2-7 identical; captures oracle, late,
+  space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect` PASS; both builds 0/0; the Rust gate PASS; gates.sh GATES PASS.

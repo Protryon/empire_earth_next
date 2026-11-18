@@ -3214,6 +3214,281 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_shore(l: *mut c_void) -> c_int {
     0
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// The registration (EECPUnitsOpen before; lane A, round 3): the `ai` table's functions in the C++ table's order (the
+// table's layout in Lua is unchanged), each a closure over the computer player (a light userdata upvalue)
+
+type Binding = unsafe extern "C-unwind" fn(*mut c_void) -> c_int;
+
+const UNITS_FUNCTION_COUNT: usize = 89;
+
+static UNITS_FUNCTIONS: [(&CStr, Binding); UNITS_FUNCTION_COUNT] = [
+    (c"me", ee_ai_units_lua_me),
+    (c"time", ee_ai_units_lua_time),
+    (c"players", ee_ai_units_lua_players),
+    (c"map", ee_ai_units_lua_map),
+    (c"units", ee_ai_units_lua_units),
+    (c"unit", ee_ai_units_lua_unit),
+    (c"get", ee_ai_units_lua_get),
+    (c"seen", ee_ai_units_lua_seen),
+    (c"memory", ee_ai_units_lua_memory),
+    (c"resources", ee_ai_units_lua_resources),
+    (c"tile", ee_ai_units_lua_tile),
+    (c"class", more::ee_ai_units_lua_class),
+    (c"can_hurt", more::ee_ai_units_lua_can_hurt),
+    (c"wonders", more::ee_ai_units_lua_wonders),
+    (c"events", ee_ai_units_lua_events),
+    (c"can_place", more::ee_ai_units_lua_can_place),
+    (c"reach", ee_ai_units_lua_reach),
+    (c"strength", ee_ai_units_lua_strength),
+    (c"move", ee_ai_units_lua_move),
+    (c"attack", ee_ai_units_lua_attack),
+    (c"attack_ground", ee_ai_units_lua_attack_ground),
+    (c"gather", ee_ai_units_lua_gather),
+    (c"build", ee_ai_units_lua_build),
+    (c"repair", ee_ai_units_lua_repair),
+    (c"garrison", ee_ai_units_lua_garrison),
+    (c"load", ee_ai_units_lua_load),
+    (c"unload", ee_ai_units_lua_unload),
+    (c"train", ee_ai_units_lua_train),
+    (c"research", ee_ai_units_lua_research),
+    (c"stance", ee_ai_units_lua_stance),
+    (c"stop", ee_ai_units_lua_stop),
+    (c"explore", ee_ai_units_lua_explore),
+    (c"delete", ee_ai_units_lua_delete),
+    (c"take", ee_ai_units_lua_take),
+    (c"release", ee_ai_units_lua_release),
+    (c"reflex", ee_ai_units_lua_reflex),
+    (c"test_spawn", more::ee_ai_units_lua_test_spawn),
+    (c"test_town", ee_ai_units_lua_test_town),
+    (c"danger", ee_ai_units_lua_danger),
+    (c"danger_box", ee_ai_units_lua_danger_box),
+    (c"mark", ee_ai_units_lua_mark),
+    (c"route", ee_ai_units_lua_route),
+    (c"find_site", ee_ai_units_lua_find_site),
+    (c"heal", ee_ai_units_lua_heal),
+    (c"rally", ee_ai_units_lua_rally),
+    (c"cancel", ee_ai_units_lua_cancel),
+    (c"improve", more::ee_ai_units_lua_improve),
+    (c"improve_cost", more::ee_ai_units_lua_improve_cost),
+    (c"formation", ee_ai_units_lua_formation),
+    (c"pack", ee_ai_units_lua_pack),
+    (c"dropoff", ee_ai_units_lua_dropoff),
+    (c"farm", ee_ai_units_lua_farm),
+    (c"cast", ee_ai_units_lua_cast),
+    (c"replant", ee_ai_units_lua_replant),
+    (c"path_len", ee_ai_units_lua_path_len),
+    (c"drop_site", ee_ai_units_lua_drop_site),
+    (c"shore", ee_ai_units_lua_shore),
+    (c"water_sites", more::ee_ai_units_lua_water_sites),
+    (c"area", more::ee_ai_units_lua_area),
+    (c"garrison_fill", more::ee_ai_units_lua_garrison_fill),
+    (c"enemy_force", ee_ai_units_lua_enemy_force),
+    (c"player_file", ee_ai_units_lua_player_file),
+    (c"area_point", more::ee_ai_units_lua_area_point),
+    (c"forest_point", more::ee_ai_units_lua_forest_point),
+    (c"hill_point", more::ee_ai_units_lua_hill_point),
+    (c"choke_point", more::ee_ai_units_lua_choke_point),
+    (c"wall_path", more::ee_ai_units_lua_wall_path),
+    (c"wall_route", more::ee_ai_units_lua_wall_route),
+    (c"wall_route_result", more::ee_ai_units_lua_wall_route_result),
+    (c"wall_line", more::ee_ai_units_lua_wall_line),
+    (c"wall_stretches", more::ee_ai_units_lua_wall_stretches),
+    (c"enemy_near", more::ee_ai_units_lua_enemy_near),
+    (c"unexplored", more::ee_ai_units_lua_unexplored),
+    (c"config", ee_ai_units_lua_config),
+    (c"used", more::ee_ai_units_lua_used),
+    (c"wall", ee_ai_units_lua_wall),
+    (c"gate", more::ee_ai_units_lua_gate),
+    (c"lock", ee_ai_units_lua_lock),
+    (c"tribute", more::ee_ai_units_lua_tribute),
+    (c"trade", more::ee_ai_units_lua_trade),
+    (c"diplomacy", more::ee_ai_units_lua_diplomacy),
+    (c"patrol", ee_ai_units_lua_patrol),
+    (c"tuning", more::ee_ai_units_lua_tuning),
+    (c"techs", more::ee_ai_units_lua_techs),
+    (c"epoch", more::ee_ai_units_lua_epoch),
+    (c"gatherers", ee_ai_units_lua_gatherers),
+    (c"place", more::ee_ai_units_lua_place),
+    (c"site_blocked", more::ee_ai_units_lua_site_blocked),
+    (c"build_unsafe", more::ee_ai_units_lua_build_unsafe),
+];
+
+/// TEST ONLY (EE_AI_BINDING_TRACE, binding_trace.rs): each binding's arguments and results, the port's golden
+unsafe extern "C-unwind" fn traced<const K: usize>(l: *mut lua_State) -> c_int {
+    let (name, f) = UNITS_FUNCTIONS[K];
+    crate::ai::binding_trace::ee_ai_binding_trace_enter(l.cast(), name.as_ptr());
+    let n = f(l.cast());
+    crate::ai::binding_trace::ee_ai_binding_trace_leave(l.cast(), name.as_ptr(), n);
+    n
+}
+
+static UNITS_TRACED: [lua_CFunction; UNITS_FUNCTION_COUNT] = [
+    traced::<0>,
+    traced::<1>,
+    traced::<2>,
+    traced::<3>,
+    traced::<4>,
+    traced::<5>,
+    traced::<6>,
+    traced::<7>,
+    traced::<8>,
+    traced::<9>,
+    traced::<10>,
+    traced::<11>,
+    traced::<12>,
+    traced::<13>,
+    traced::<14>,
+    traced::<15>,
+    traced::<16>,
+    traced::<17>,
+    traced::<18>,
+    traced::<19>,
+    traced::<20>,
+    traced::<21>,
+    traced::<22>,
+    traced::<23>,
+    traced::<24>,
+    traced::<25>,
+    traced::<26>,
+    traced::<27>,
+    traced::<28>,
+    traced::<29>,
+    traced::<30>,
+    traced::<31>,
+    traced::<32>,
+    traced::<33>,
+    traced::<34>,
+    traced::<35>,
+    traced::<36>,
+    traced::<37>,
+    traced::<38>,
+    traced::<39>,
+    traced::<40>,
+    traced::<41>,
+    traced::<42>,
+    traced::<43>,
+    traced::<44>,
+    traced::<45>,
+    traced::<46>,
+    traced::<47>,
+    traced::<48>,
+    traced::<49>,
+    traced::<50>,
+    traced::<51>,
+    traced::<52>,
+    traced::<53>,
+    traced::<54>,
+    traced::<55>,
+    traced::<56>,
+    traced::<57>,
+    traced::<58>,
+    traced::<59>,
+    traced::<60>,
+    traced::<61>,
+    traced::<62>,
+    traced::<63>,
+    traced::<64>,
+    traced::<65>,
+    traced::<66>,
+    traced::<67>,
+    traced::<68>,
+    traced::<69>,
+    traced::<70>,
+    traced::<71>,
+    traced::<72>,
+    traced::<73>,
+    traced::<74>,
+    traced::<75>,
+    traced::<76>,
+    traced::<77>,
+    traced::<78>,
+    traced::<79>,
+    traced::<80>,
+    traced::<81>,
+    traced::<82>,
+    traced::<83>,
+    traced::<84>,
+    traced::<85>,
+    traced::<86>,
+    traced::<87>,
+    traced::<88>,
+];
+
+/// The ai.* functions (`EECPLuaConfig::mOpen`: the `ai` table on top of the stack; the context is the
+/// EEComputerPlayer). Makes the player's per-unit state.
+///
+/// # Safety
+/// `state` is a Lua state of the runtime with the `ai` table on top; `player` a live computer player.
+pub unsafe extern "C" fn ee_ai_units_open(state: *mut c_void, player: *mut c_void) {
+    let l = state as *mut lua_State;
+    state_of(player);
+    let trace = crate::ai::binding_trace::ee_ai_binding_trace_on();
+    if trace {
+        crate::ai::binding_trace::ee_ai_binding_trace_set_out(crate::ai::next_game::debug_out);
+    }
+    for (k, &(name, f)) in UNITS_FUNCTIONS.iter().enumerate() {
+        lua_pushlightuserdata(l, player);
+        // SAFETY: a binding takes the lua_State as a void pointer: the same ABI
+        let f = if trace { UNITS_TRACED[k] } else { std::mem::transmute::<Binding, lua_CFunction>(f) };
+        lua_pushcclosure(l, f, 1);
+        lua_setfield(l, -2, name.as_ptr());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The save (EECPUnitsSave, EECPUnitsLoad before; lane A, round 3): "EENU" (units_save.rs), saved with the computer
+// player from version 0.254
+
+/// `EECPUnitsSave`: the player's per-unit state's bytes appended to `out` (a C++ `std::string`; nothing without a
+/// state); TEST ONLY with EE_AI_SAVE_CHECK=1, a `next.savecheck units=` line (the bytes decode into a fresh state
+/// that encodes to the same bytes).
+///
+/// # Safety
+/// `me` is a live computer player, `units` its per-unit state (or null), `out` a live `std::string`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_units_save(me: *mut c_void, units: *mut c_void, out: *mut c_void) {
+    if units.is_null() {
+        return;
+    }
+    let n = ee_ai_units_state_save(units, std::ptr::null_mut(), 0);
+    let mut bytes = vec![0u8; n];
+    ee_ai_units_state_save(units, bytes.as_mut_ptr(), n);
+    crate::ai::next_game::string_append(out, &bytes);
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*ON.get_or_init(|| std::env::var("EE_AI_SAVE_CHECK").is_ok_and(|v| v.starts_with('1'))) {
+        return;
+    }
+    let mut counts = [0usize; 4];
+    let same = ee_ai_units_state_save_check(units, bytes.as_ptr(), bytes.len(), counts.as_mut_ptr());
+    trace(
+        me,
+        c"next.savecheck",
+        &format!(
+            "units={} bytes={} held={} events={} memory={} trades={}",
+            if same { "same" } else { "DIFFERENT" },
+            bytes.len(),
+            counts[0],
+            counts[1],
+            counts[2],
+            counts[3]
+        ),
+    );
+}
+
+/// `EECPUnitsLoad`: the per-unit state from its bytes (made when missing; empty: none) -> false when they are not
+/// a block.
+///
+/// # Safety
+/// `me` is a live computer player; `data` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_units_load(me: *mut c_void, data: *const u8, len: usize) -> bool {
+    if len == 0 {
+        return true;
+    }
+    ee_ai_units_state_load(state_of(me) as *mut c_void, data, len)
+}
+
 // the rest of the bindings (lane A round 2)
 #[path = "units_more.rs"]
 mod more;

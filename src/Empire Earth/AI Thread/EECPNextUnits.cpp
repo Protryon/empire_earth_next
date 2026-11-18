@@ -8,7 +8,7 @@
 //   resources only on explored tiles (IsVisibleTo);
 // - no Lua error while a C++ object with a destructor lives: arguments are read into the player's scratch vectors
 //   (members, not locals), bad arguments are refused with a result instead of raised, and only the budget charge
-//   (EECPLuaState::Charge) raises, before anything is built;
+//   (ee_ai lua_host.rs charge) raises, before anything is built;
 // - commands run the human's own messages (EEMessage.cpp's Execute) on the computer player's selection, at once
 //   (AI_LUA_UNITS §3.2): the selection is filled with the units, the player answers to a borrowed slot id while the
 //   message runs, and both are put back.
@@ -77,7 +77,6 @@
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
-#include "ee/EECPLua.h"
 #include "ee/EEEvent.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPBehavior.h"
@@ -99,8 +98,6 @@
 
 namespace {
 
-const long kMicroMs = 250;           // the micro step's period (game ms)
-const int64_t kMicroBudget = 300000;
 const unsigned char kBorrowedSlot = 0xfd;   // the slot id a computer player answers to while its order runs
 
 }  // namespace
@@ -129,8 +126,13 @@ static uint64_t EECPUnitsHandle(const RTSUnit* inUnit)
 
 static EECPUnitsState* EECPUnitsGet(EEComputerPlayer* inPlayer)
 {
-    if (inPlayer->mUnitsState == NULL)
+    if (inPlayer->mUnitsState == NULL) {
+        // the host records as this build's header has them (a stale rust/sim/ai.h is refused)
+        if (ee_ai_units_records_size(NULL, NULL, NULL, NULL, NULL, NULL) != sizeof(EeAiUnitsImproveCost) + sizeof(EeAiUnitsPlace)
+                + sizeof(EeAiUnitsTuning) + sizeof(EeAiUnitsArea) + sizeof(EeAiUnitsAreaPick) + sizeof(EeAiUnitsTiles))
+            abort();
         inPlayer->mUnitsState = new EECPUnitsState();
+    }
     return inPlayer->mUnitsState;
 }
 
@@ -410,161 +412,33 @@ static void EECPUnitsTuning(EEComputerPlayer* me, EeAiUnitsTuning& t)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Opening, the micro step
+// The registration and the micro step are Rust (ee_ai units_bind.rs ee_ai_units_open, next_game.rs
+// ee_ai_next_micro_tick)
 
-static const luaL_Reg kUnitsFunctions[] = {
-    {"me", (lua_CFunction)ee_ai_units_lua_me}, {"time", (lua_CFunction)ee_ai_units_lua_time}, {"players", (lua_CFunction)ee_ai_units_lua_players}, {"map", (lua_CFunction)ee_ai_units_lua_map},
-    {"units", (lua_CFunction)ee_ai_units_lua_units}, {"unit", (lua_CFunction)ee_ai_units_lua_unit}, {"get", (lua_CFunction)ee_ai_units_lua_get}, {"seen", (lua_CFunction)ee_ai_units_lua_seen}, {"memory", (lua_CFunction)ee_ai_units_lua_memory},
-    {"resources", (lua_CFunction)ee_ai_units_lua_resources}, {"tile", (lua_CFunction)ee_ai_units_lua_tile}, {"class", (lua_CFunction)ee_ai_units_lua_class}, {"can_hurt", (lua_CFunction)ee_ai_units_lua_can_hurt}, {"wonders", (lua_CFunction)ee_ai_units_lua_wonders}, {"events", (lua_CFunction)ee_ai_units_lua_events},
-    {"can_place", (lua_CFunction)ee_ai_units_lua_can_place}, {"reach", (lua_CFunction)ee_ai_units_lua_reach}, {"strength", (lua_CFunction)ee_ai_units_lua_strength},
-    {"move", (lua_CFunction)ee_ai_units_lua_move}, {"attack", (lua_CFunction)ee_ai_units_lua_attack}, {"attack_ground", (lua_CFunction)ee_ai_units_lua_attack_ground}, {"gather", (lua_CFunction)ee_ai_units_lua_gather},
-    {"build", (lua_CFunction)ee_ai_units_lua_build}, {"repair", (lua_CFunction)ee_ai_units_lua_repair}, {"garrison", (lua_CFunction)ee_ai_units_lua_garrison}, {"load", (lua_CFunction)ee_ai_units_lua_load}, {"unload", (lua_CFunction)ee_ai_units_lua_unload},
-    {"train", (lua_CFunction)ee_ai_units_lua_train}, {"research", (lua_CFunction)ee_ai_units_lua_research}, {"stance", (lua_CFunction)ee_ai_units_lua_stance}, {"stop", (lua_CFunction)ee_ai_units_lua_stop},
-    {"explore", (lua_CFunction)ee_ai_units_lua_explore}, {"delete", (lua_CFunction)ee_ai_units_lua_delete}, {"take", (lua_CFunction)ee_ai_units_lua_take}, {"release", (lua_CFunction)ee_ai_units_lua_release},
-    {"reflex", (lua_CFunction)ee_ai_units_lua_reflex}, {"test_spawn", (lua_CFunction)ee_ai_units_lua_test_spawn}, {"test_town", (lua_CFunction)ee_ai_units_lua_test_town},
-    {"danger", (lua_CFunction)ee_ai_units_lua_danger}, {"danger_box", (lua_CFunction)ee_ai_units_lua_danger_box}, {"mark", (lua_CFunction)ee_ai_units_lua_mark}, {"route", (lua_CFunction)ee_ai_units_lua_route},
-    {"find_site", (lua_CFunction)ee_ai_units_lua_find_site}, {"heal", (lua_CFunction)ee_ai_units_lua_heal}, {"rally", (lua_CFunction)ee_ai_units_lua_rally}, {"cancel", (lua_CFunction)ee_ai_units_lua_cancel},
-    {"improve", (lua_CFunction)ee_ai_units_lua_improve}, {"improve_cost", (lua_CFunction)ee_ai_units_lua_improve_cost}, {"formation", (lua_CFunction)ee_ai_units_lua_formation}, {"pack", (lua_CFunction)ee_ai_units_lua_pack}, {"dropoff", (lua_CFunction)ee_ai_units_lua_dropoff},
-    {"farm", (lua_CFunction)ee_ai_units_lua_farm}, {"cast", (lua_CFunction)ee_ai_units_lua_cast}, {"replant", (lua_CFunction)ee_ai_units_lua_replant},
-    {"path_len", (lua_CFunction)ee_ai_units_lua_path_len}, {"drop_site", (lua_CFunction)ee_ai_units_lua_drop_site}, {"shore", (lua_CFunction)ee_ai_units_lua_shore}, {"water_sites", (lua_CFunction)ee_ai_units_lua_water_sites}, {"area", (lua_CFunction)ee_ai_units_lua_area}, {"garrison_fill", (lua_CFunction)ee_ai_units_lua_garrison_fill}, {"enemy_force", (lua_CFunction)ee_ai_units_lua_enemy_force}, {"player_file", (lua_CFunction)ee_ai_units_lua_player_file}, {"area_point", (lua_CFunction)ee_ai_units_lua_area_point}, {"forest_point", (lua_CFunction)ee_ai_units_lua_forest_point}, {"hill_point", (lua_CFunction)ee_ai_units_lua_hill_point}, {"choke_point", (lua_CFunction)ee_ai_units_lua_choke_point}, {"wall_path", (lua_CFunction)ee_ai_units_lua_wall_path}, {"wall_route", (lua_CFunction)ee_ai_units_lua_wall_route}, {"wall_route_result", (lua_CFunction)ee_ai_units_lua_wall_route_result}, {"wall_line", (lua_CFunction)ee_ai_units_lua_wall_line}, {"wall_stretches", (lua_CFunction)ee_ai_units_lua_wall_stretches}, {"enemy_near", (lua_CFunction)ee_ai_units_lua_enemy_near}, {"unexplored", (lua_CFunction)ee_ai_units_lua_unexplored},
-    {"config", (lua_CFunction)ee_ai_units_lua_config}, {"used", (lua_CFunction)ee_ai_units_lua_used},
-    {"wall", (lua_CFunction)ee_ai_units_lua_wall}, {"gate", (lua_CFunction)ee_ai_units_lua_gate}, {"lock", (lua_CFunction)ee_ai_units_lua_lock}, {"tribute", (lua_CFunction)ee_ai_units_lua_tribute}, {"trade", (lua_CFunction)ee_ai_units_lua_trade},
-    {"diplomacy", (lua_CFunction)ee_ai_units_lua_diplomacy}, {"patrol", (lua_CFunction)ee_ai_units_lua_patrol},
-    {"tuning", (lua_CFunction)ee_ai_units_lua_tuning}, {"techs", (lua_CFunction)ee_ai_units_lua_techs}, {"epoch", (lua_CFunction)ee_ai_units_lua_epoch}, {"gatherers", (lua_CFunction)ee_ai_units_lua_gatherers},
-    {"place", (lua_CFunction)ee_ai_units_lua_place}, {"site_blocked", (lua_CFunction)ee_ai_units_lua_site_blocked}, {"build_unsafe", (lua_CFunction)ee_ai_units_lua_build_unsafe},
-    {NULL, NULL}};
-static const size_t kUnitsFunctionCount = sizeof(kUnitsFunctions) / sizeof(kUnitsFunctions[0]) - 1;
-
-// TEST ONLY (EE_AI_BINDING_TRACE, ee_ai binding_trace.rs): each binding's arguments and results, the port's golden
-template <size_t K>
-static int LuaTraced(lua_State* L)
+void* EECPUnitsRust(const EEComputerPlayer* inPlayer)
 {
-    ee_ai_binding_trace_enter(L, kUnitsFunctions[K].name);
-    int theResults = kUnitsFunctions[K].func(L);
-    ee_ai_binding_trace_leave(L, kUnitsFunctions[K].name, theResults);
-    return theResults;
-}
-
-template <size_t... K>
-static void EECPUnitsTracedTable(lua_CFunction* outTable, std::index_sequence<K...>)
-{
-    ((outTable[K] = LuaTraced<K>), ...);
-}
-
-static void EECPUnitsTraceOut(const char* inText)
-{
-    ESDebugOut("%s", inText);
-}
-
-void EECPUnitsOpen(lua_State* L, void* inPlayer)
-{
-    EEComputerPlayer* thePlayer = (EEComputerPlayer*)inPlayer;
-    EECPUnitsGet(thePlayer);
-    // the host records as this build's header has them (a stale rust/sim/ai.h is refused)
-    if (ee_ai_units_records_size(NULL, NULL, NULL, NULL, NULL, NULL) != sizeof(EeAiUnitsImproveCost) + sizeof(EeAiUnitsPlace)
-            + sizeof(EeAiUnitsTuning) + sizeof(EeAiUnitsArea) + sizeof(EeAiUnitsAreaPick) + sizeof(EeAiUnitsTiles))
-        abort();
-    static lua_CFunction sTraced[kUnitsFunctionCount] = {};
-    bool theTrace = ee_ai_binding_trace_on();
-    if (theTrace && sTraced[0] == NULL) {
-        ee_ai_binding_trace_set_out(EECPUnitsTraceOut);
-        EECPUnitsTracedTable(sTraced, std::make_index_sequence<kUnitsFunctionCount>());
-    }
-    for (size_t k = 0; k < kUnitsFunctionCount; k++) {
-        lua_pushlightuserdata(L, inPlayer);
-        lua_pushcclosure(L, theTrace ? sTraced[k] : kUnitsFunctions[k].func, 1);
-        lua_setfield(L, -2, kUnitsFunctions[k].name);
-    }
-}
-
-static void EECPUnitsMicroError(EEComputerPlayer* inPlayer, EECPLuaState* inLua)
-{
-    std::string theStatus = EECPLuaStatusName(inLua->LastStatus());
-    std::replace(theStatus.begin(), theStatus.end(), ' ', '_');
-    std::string theMessage = inLua->LastError();
-    std::replace(theMessage.begin(), theMessage.end(), '\n', '|');
-    if (gCPTraceOn) {
-        EECPTraceScope theScope("next");
-        EECPTraceOut(inPlayer, "next.error", "in=micro status=%s msg=%s", theStatus.c_str(), theMessage.c_str());
-    }
-    if (gPlatSimMode) {
-        fprintf(stderr, "SIM next.error p%lu t=%lu in=micro status=%s msg=%s\n", inPlayer->mPlayerID, gPhysics->mGameTime,
-            theStatus.c_str(), theMessage.c_str());
-        fflush(stderr);
-    }
+    return inPlayer != NULL && inPlayer->mUnitsState != NULL ? inPlayer->mUnitsState->mRust : NULL;
 }
 
 void EECPUnitsMicroTick(unsigned long inTime)
 {
-    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
-        if (theCP == NULL || theCP->mUnitsState == NULL || theCP->mNextState == NULL || !theCP->mActive)
-            continue;
-        void* s = theCP->mUnitsState->mRust;
-        ee_ai_units_second(s, theCP, (long)inTime);   // the enemy memory and the danger layers, once a second
-        EECPNextState* theNext = theCP->mNextState;
-        long theMicro = ee_ai_units_micro_next(s);
-        if (theNext->mLua == NULL || !theNext->mStarted || theNext->mFailed || theMicro == 0x7fffffff)
-            continue;
-        if (theMicro < 0)
-            theMicro = (long)inTime + kMicroMs;
-        if ((long)inTime < theMicro) {
-            ee_ai_units_set_micro_next(s, theMicro);
-            continue;
-        }
-        while (theMicro <= (long)inTime)
-            theMicro += kMicroMs;
-        ee_ai_units_set_micro_next(s, theMicro);
-        EECPLuaValue theArg = EECPLuaValue::NewMap(), theResult;
-        theArg.Set("time", EECPLuaValue::Int((int64_t)inTime));
-        bool theFound = false;
-        if (!theNext->mLua->CallOptional("micro", theArg, theResult, kMicroBudget, theFound))
-            EECPUnitsMicroError(theCP, theNext->mLua);
-        else if (!theFound)
-            ee_ai_units_set_micro_next(s, 0x7fffffff);   // the script has no micro
-    }
+    ee_ai_next_micro_tick(inTime);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save: "EENU" (version 4: the militia and held reflexes; 3: the lost layer's trades; 2: the hurt spots and the
-// marks). The state and its format are Rust's (ee_ai units_state.rs, units_save.rs).
-
-// TEST ONLY (EE_AI_SAVE_CHECK=1, as EECPNextSaveCheck): the bytes decode into a fresh state that encodes to the same
-// bytes; `next.savecheck units=same|DIFFERENT` with the counts
-static void EECPUnitsSaveCheck(const EEComputerPlayer* inPlayer, const EECPUnitsState* s, const std::string& inBytes)
-{
-    static int sOn = -1;
-    if (sOn < 0) {
-        const char* theValue = getenv("EE_AI_SAVE_CHECK");
-        sOn = theValue != NULL && theValue[0] == '1' ? 1 : 0;
-    }
-    if (!sOn)
-        return;
-    size_t theCounts[4];
-    bool theSame = ee_ai_units_state_save_check(s->mRust, (const uint8_t*)inBytes.data(), inBytes.size(), theCounts);
-    EECPTraceScope theScope("next");
-    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "next.savecheck", "units=%s bytes=%lu held=%lu events=%lu memory=%lu trades=%lu",
-        theSame ? "same" : "DIFFERENT", (unsigned long)inBytes.size(), (unsigned long)theCounts[0],
-        (unsigned long)theCounts[1], (unsigned long)theCounts[2], (unsigned long)theCounts[3]);
-}
+// marks). The state, its format and the save (with its TEST ONLY check) are Rust's (ee_ai units_state.rs,
+// units_save.rs, units_bind.rs ee_ai_units_save).
 
 void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
 {
     outBytes.clear();
-    const EECPUnitsState* s = inPlayer->mUnitsState;
-    if (s == NULL)
-        return;
-    outBytes.resize(ee_ai_units_state_save(s->mRust, NULL, 0));
-    ee_ai_units_state_save(s->mRust, (uint8_t*)&outBytes[0], outBytes.size());
-    EECPUnitsSaveCheck(inPlayer, s, outBytes);
+    ee_ai_units_save(const_cast<EEComputerPlayer*>(inPlayer), EECPUnitsRust(inPlayer), &outBytes);
 }
 
 bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
 {
-    if (inBytes.empty())
-        return true;
-    return ee_ai_units_state_load(EECPUnitsGet(inPlayer)->mRust, (const uint8_t*)inBytes.data(), inBytes.size());
+    return ee_ai_units_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
 }
 
 // ---------------------------------------------------------------------------------------------------------------

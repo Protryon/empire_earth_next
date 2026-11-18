@@ -64,17 +64,6 @@ const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
 static char sCheatNames[128];
-static const long kMaxTracedPlayers = 64;
-static unsigned long sNextStats[kMaxTracedPlayers];
-static unsigned long sNextProfile[kMaxTracedPlayers];
-static long long sProfileSum[kMaxTracedPlayers];
-static long long sProfileMax[kMaxTracedPlayers];
-static unsigned long sProfileCount[kMaxTracedPlayers];
-static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizens, buildings, other units
-static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from the town center: <15, 15-30, more tiles
-static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
-static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
-static long sSpend[kMaxTracedPlayers][8][5];                 // TEST ONLY: paid since the last spend line, by kind
 
 // a personality's position in the rules (-1: none), and a line of the debug output: the switches' callbacks
 static long EECPTraceFindPersonality(const char* inName)
@@ -264,451 +253,50 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
         EEGameLogLine(theLine);
 }
 
-static bool EECPIsBuildingCategory(long inCategory)
-{
-    return inCategory == kUnitCategoryBuilding || inCategory == kUnitCategoryNavalBuilding
-        || inCategory == kUnitCategoryMiningBuilding || inCategory == kUnitCategoryGate
-        || inCategory == kUnitCategoryFortress || inCategory == kUnitCategoryBuildingPriest
-        || inCategory == kUnitCategorySpaceBuilding;
-}
+// ---------------------------------------------------------------------------------------------------------------
+// The trace lines beyond the decisions, the out-of-synch checksum and its dump: Rust's (ee_ai next_trace.rs)
 
-// A resource amount the player got (EEComputerPlayer::AddResource), for the next income line
+// What a payment bought (TEST ONLY, EE_AI_EXP spending), counted into the next "spend" line
 void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5])
 {
-    unsigned long theID = inPlayer->mPlayerID;
-    if (!gCPTraceOn || theID >= kMaxTracedPlayers || inKind < 0 || inKind > 7 || !EECPExperiment(inPlayer, "spending"))
+    if (!gCPTraceOn || inPlayer->mPlayerID >= 64 || inKind < 0 || inKind > 7 || !EECPExperiment(inPlayer, "spending"))
         return;
-    for (long r = 0; r < 5; r++)
-        sSpend[theID][inKind][r] += inCost[r];
+    ee_ai_trace_spend(inPlayer->mPlayerID, inKind, inCost);
 }
 
 void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
 {
-    unsigned long theID = inPlayer->mPlayerID;
-    if (theID < kMaxTracedPlayers && inResource >= 0 && inResource <= kResourceIron && inAmount > 0)
-        sIncome[theID][inResource] += inAmount;
+    ee_ai_trace_income(inPlayer->mPlayerID, inResource, inAmount);
 }
 
-// A soldier, ship or other non-citizen unit lost (any computer seat, the classic's too): one "unit.death" line - its
-// class, tile and distance from the town centre, its goal, and the killer (player:class:kind, its distance). The AI
-// trace only (gCPTraceOn): it reads the dead unit and its last attacker and changes nothing
-static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
-{
-    EEComplexUnit* c = inUnit->mComplexUnit;
-    long theX = inUnit->mTileX, theY = inUnit->mTileY;
-    long theTown = -1;
-    U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
-    if (theCenter.mX != -10000 && theX != -10000) {
-        long theDX = theX - theCenter.mX, theDY = theY - theCenter.mY;
-        theTown = (long)sqrt((double)(theDX * theDX + theDY * theDY));
-    }
-    const char* theGoal = "none";
-    if (c->mActiveGoal != NULL) {
-        switch (c->mActiveGoal->mKind) {
-        case kGoalLocation: theGoal = "move"; break;
-        case kGoalAttackUnit: theGoal = "attack"; break;
-        case kGoalAttackGround: theGoal = "attack_ground"; break;
-        case kGoalPatrol: theGoal = "patrol"; break;
-        case kGoalExplore: theGoal = "explore"; break;
-        case kGoalGather: theGoal = "gather"; break;
-        case kGoalLoadGarrison: theGoal = "garrison"; break;
-        default: theGoal = "other"; break;
-        }
-    }
-    EEComplexUnit* theKiller = c->mLastAttacker;
-    long theKillerPlayer = -1, theKillerClass = -1, theKillerDistance = -1;
-    char theKind = '-';
-    if (theKiller != NULL && theKiller->mUnitClass != NULL) {
-        theKillerPlayer = theKiller->mPlayer != NULL ? (long)theKiller->mPlayer->mPlayerID : -1;
-        theKillerClass = theKiller->mUnitClass->mUnitType;
-        if (theKiller->GetTileX() != -10000 && theX != -10000) {
-            long theDX = theKiller->GetTileX() - theX, theDY = theKiller->GetTileY() - theY;
-            theKillerDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
-        }
-        EEUnitClass* theClass = theKiller->mUnitClass;
-        theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
-            : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : (theClass->mDomains & kMovementSea) ? 'n' : 's';
-    }
-    // the killer's own goal and its target's kind (s soldier, c citizen, b building, n ship, - none): whom it was after
-    const char* theKillerGoal = "-";
-    char theKillerTarget = '-';
-    if (theKiller != NULL && theKiller->mActiveGoal != NULL) {
-        theKillerGoal = theKiller->mActiveGoal->mKind == kGoalAttackUnit ? "attack"
-            : theKiller->mActiveGoal->mKind == kGoalLocation ? "move" : "other";
-        if (theKiller->mActiveGoal->mKind == kGoalAttackUnit) {
-            EEUnit* theTarget = static_cast<EEUGRust*>(theKiller->mActiveGoal)->GetAttackTarget();
-            if (theTarget != NULL && theTarget->mUnitClass != NULL) {
-                EEUnitClass* theTargetClass = theTarget->mUnitClass;
-                theKillerTarget = theTargetClass->IsBuilding() ? 'b'
-                    : theTargetClass->mCategory == kUnitCategoryLandCitizen ? 'c'
-                    : (theTargetClass->mDomains & kMovementSea) ? 'n' : 's';
-            }
-        }
-    }
-    // (the C++ classic's sub-group holding it: always -1 since stage 5 deleted the attack commander; the fields stay
-    // for the trace's readers)
-    long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
-    long theGroupType = -1, theGroupMode = -1;
-    EECPTraceScope theScope("cp");
-    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld kgoal=%s:%c sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
-        EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
-        theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance,
-        theKillerGoal, theKillerTarget, theGroup, theMission, theTaskType, theTaskMode, theTaskDistance, theGroupType, theGroupMode);
-}
-
-// A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
 void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
 {
-    unsigned long theID = inPlayer->mPlayerID;
-    if (theID >= kMaxTracedPlayers || inUnit == NULL || inUnit->mUnitClass == NULL || inUnit->mComplexUnit == NULL)
-        return;
-    long theCategory = inUnit->mUnitClass->mCategory;
-    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
-        // (the braces were missing: every unit lost counted in the citizens' by-killer and by-distance fields, and
-        // the buildings' and others' counts hung off the town-centre test; AI_RESEARCH §8.41)
-        sLost[theID][0]++;
-        EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
-        sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
-        U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
-        if (theCenter.mX != -10000) {
-            long theDX = inUnit->mTileX - theCenter.mX, theDY = inUnit->mTileY - theCenter.mY;
-            long theSquared = theDX * theDX + theDY * theDY;
-            sLostNear[theID][theSquared < 225 ? 0 : theSquared < 900 ? 1 : 2]++;
-        }
-        if (inPlayer->mNextState == NULL)
-            EECPTraceSoldierLost(inPlayer, inUnit);   // (a script's seat has its next.death line)
-    } else if (EECPIsBuildingCategory(theCategory))
-        sLost[theID][1]++;
-    else if (theCategory != kUnitCategoryProjectile) {
-        sLost[theID][2]++;
-        EECPTraceSoldierLost(inPlayer, inUnit);
-    }
+    ee_ai_trace_unit_lost(inPlayer, (uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit));
 }
 
-// One "stats" line per player every 30 game s: epoch, population and its caps, citizens (idle: no goal; free: the
-// ones the unit manager would hand out to build), buildings, other units; the benchmark (tools/harness/ai_bench.py) reads them.
 void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
-    unsigned long theID = inPlayer->mPlayerID;
-    if (!gCPTraceOn || theID >= kMaxTracedPlayers)
-        return;
-    if (sNextStats[theID] > inTime + 30000)
-        sNextStats[theID] = 0;   // a new game in the same process
-    if (inTime < sNextStats[theID])
-        return;
-    sNextStats[theID] = inTime + 30000;
-    long theCitizens = 0;
-    long theBuildings = 0;
-    long theOther = 0;
-    long theUnfinished = 0;
-    long theIdle = 0;
-    long theGatherers[kResourceIron + 1] = {0};   // by the target's resource type (0: unknown)
-    long theFood[5] = {0, 0, 0, 0, 0};            // food gatherers by source: forage bush, animal (hunting), fish, farm, other
-    long theGoals[16] = {0};                      // citizens by active goal kind (EEUnitGoalKind; 0 none)
-    long theBuilders[6] = {0, 0, 0, 0, 0, 0};     // build/repair goals: target unbuilt, built; action build, repair,
-    long theBuildClass = -1;                      // move to the site, other; the first unbuilt target's class
-    long theOtherAction = -1;                     // the first "other" builder's action and its target's hit points share
-    long theOtherHealth = -1;
-    std::vector<EEUnit*> theGathered;             // each gatherer's resource (the trips line)
-    std::map<long, long> theOtherActs;            // the other actions by id (the gatheract line's most common)
-    long theActs[7] = {0, 0, 0, 0, 0, 0, 0};      // gatherers by action: gather, drop off, to the resource, to storage,
-                                                  // waiting, idle, other (the gatheract line)
-    std::vector<EEComplexUnit*> theStores;        // the player's built drop sites
-    long theDropSites[3] = {0, 0, 0};             // built settlements, town centers/capitols, granaries
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
-            continue;
-        long theCategory = theUnit->mUnitClass->mCategory;
-        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
-            theCitizens++;
-            EEUnitGoal* theGoal = theUnit->mComplexUnit->mActiveGoal;
-            theGoals[theGoal == NULL ? 0 : theGoal->mKind >= 0 && theGoal->mKind < 16 ? theGoal->mKind : 15]++;
-            if (theGoal != NULL && theGoal->mKind == kGoalBuildRepair) {
-                EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetBuildTarget();
-                EEComplexUnit* theComplex = theTarget != NULL ? theTarget->mComplexUnit : NULL;
-                bool theBuilt = theComplex != NULL && theComplex->mIsBuilt;
-                theBuilders[theBuilt ? 1 : 0]++;
-                if (!theBuilt && theBuildClass < 0 && theTarget != NULL)
-                    theBuildClass = theTarget->mUnitClass->mUnitType;
-                long theAction = theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
-                theBuilders[theAction == kActionBuildBuilding ? 2 : theAction == kActionRepairBuilding ? 3
-                            : theAction == kActionMoveToRepairSite ? 4 : 5]++;
-                if (theAction != kActionBuildBuilding && theAction != kActionRepairBuilding && theAction != kActionMoveToRepairSite
-                    && theOtherAction < 0 && theTarget != NULL) {
-                    theOtherAction = theAction;
-                    theOtherHealth = UMFloatToLong(theTarget->mHitPoints);
-                }
-            }
-            if (theGoal == NULL)
-                theIdle++;
-            else if (theGoal->mKind == kGoalGather) {
-                EEUnit* theResource = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
-                unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
-                theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
-                if (theResource != NULL && theType >= kResourceFood && theType <= kResourceIron)
-                    theGathered.push_back(theResource);
-                long theAct = theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
-                theActs[theAct == kActionGatherResource ? 0 : theAct == kActionDropoffResource ? 1
-                        : theAct == kActionMoveToResource ? 2 : theAct == kActionMoveToStorage ? 3
-                        : theAct == kActionMoveToWaitingArea ? 4 : theAct == kActionIdle || theAct == 0 ? 5 : 6]++;
-                if (theAct != kActionGatherResource && theAct != kActionDropoffResource && theAct != kActionMoveToResource
-                    && theAct != kActionMoveToStorage && theAct != kActionMoveToWaitingArea && theAct != kActionIdle && theAct != 0)
-                    theOtherActs[theAct]++;
-                if (theType == kResourceFood) {
-                    long theClass = theResource->mUnitClass->mUnitType;
-                    unsigned long theFamily = theResource->mUnitClass->GetFamily();
-                    theFood[theClass == kUnitTypeResForageBush ? 0 : theFamily == kUnitFamilyAnimal ? 1
-                            : theFamily == kUnitFamilyFish || theClass == kUnitTypeResFish ? 2
-                            : theClass == kUnitTypeFarm || theClass == kUnitTypeRoboticFarm ? 3 : 4]++;
-                }
-            } else if (theGoal->mKind == kGoalAttackUnit)
-                theFood[1]++;   // a citizen attacking: hunting (the AI's citizens attack only animals)
-        }
-        else if (EECPIsBuildingCategory(theCategory)) {
-            theBuildings++;
-            long theType = theUnit->mUnitClass->mUnitType;
-            if (theUnit->mComplexUnit->mIsBuilt && theUnit->mUnitClass->IsDropSite())
-                theStores.push_back(theUnit->mComplexUnit);
-            if (theUnit->mComplexUnit->mIsBuilt) {
-                if (theType == kUnitTypeSettlement)
-                    theDropSites[0]++;
-                else if (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol)
-                    theDropSites[1]++;
-                else if (theType == kUnitTypeGranary)
-                    theDropSites[2]++;
-            }
-            if (!theUnit->mComplexUnit->mIsBuilt)
-                theUnfinished++;
-        } else
-            theOther++;
-    }
-    std::vector<EEComplexUnit*> theFree;   // the citizens idle or gathering
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* c = theUnit->mComplexUnit;
-        if (c != NULL && theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && theUnit->mHitPoints > 0 && c->mTileX != -10000
-            && (c->mActiveGoal == NULL || c->mActiveGoal->mKind == kGoalGather))
-            theFree.push_back(c);
-    }
-    long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
-    const char* theSaved = gCPTraceManager;
-    gCPTraceManager = "cp";
-    EECPTraceOut(inPlayer, "losses", "citizens=%ld buildings=%ld other=%ld citizens_by_distance=%ld/%ld/%ld citizens_by_killer=%ld/%ld/%ld",
-        sLost[theID][0], sLost[theID][1], sLost[theID][2], sLostNear[theID][0], sLostNear[theID][1], sLostNear[theID][2],
-        sLostBy[theID][0], sLostBy[theID][1], sLostBy[theID][2]);
-    sLost[theID][0] = sLost[theID][1] = sLost[theID][2] = 0;
-    sLostNear[theID][0] = sLostNear[theID][1] = sLostNear[theID][2] = 0;
-    sLostBy[theID][0] = sLostBy[theID][1] = sLostBy[theID][2] = 0;
-    EECPTraceOut(inPlayer, "stats", "epoch=%ld pop=%ld cap=%ld limit=%ld citizens=%ld idle=%ld free=%lu gather=%ld/%ld/%ld/%ld/%ld/%ld "
-        "buildings=%ld unfinished=%ld other=%ld",
-        theEpoch, inPlayer->GetTotalPopulation(true, true), inPlayer->mPopulationCap,
-        inPlayer->EEPlayer::GetPopulationLimit(0), theCitizens, theIdle, (unsigned long)theFree.size(),
-        theGatherers[kResourceFood], theGatherers[kResourceWood], theGatherers[kResourceStone],
-        theGatherers[kResourceGold], theGatherers[kResourceIron], theGatherers[0], theBuildings, theUnfinished, theOther);
-    // the resource manager's model: the gatherers it wants per resource, the ones it has listed, and its needs
-    // ledger (queued costs earned minus what was gathered or started; UpdateWantedGatherers splits by it)
-    {
-        // the resource units the player's resource centers hold, by resource, and the gatherers they take
-        // (mMiningLimit per unit); "centers" the resource centers
-        unsigned long theSites[kResourceIron + 1] = {0};
-        for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
-            std::vector<EEUnitHandle<EEUnit> >& theUnits = inPlayer->GetResourceCenter(k)->mUnits;
-            for (unsigned long u = 0; u < theUnits.size(); u++) {
-                unsigned long theType = theUnits[u]->mResourceType;
-                if (theType >= kResourceFood && theType <= kResourceIron && theUnits[u]->mHitPoints > 0)
-                    theSites[theType]++;
-            }
-        }
-        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu",
-            theSites[kResourceFood], theSites[kResourceWood], theSites[kResourceStone], theSites[kResourceGold],
-            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters());
-        // the mean distance from each gatherer's resource to the nearest built drop site that takes it, by resource, and
-        // how many are past the drop-off distance (where BuildSettlementFor asks for a settlement); the drop sites
-        double theTrip[kResourceIron + 1] = {0};
-        long theTrips[kResourceIron + 1] = {0};
-        long theFar[kResourceIron + 1] = {0};     // past the drop-off distance
-        // §8.36: gathering with no finished drop site at hand (EECPNextUnitDropReady; patches, mines and trees: the
-        // game, fish and farms are not counted)
-        long theNoDrop[kResourceIron + 1] = {0};
-        for (unsigned long g = 0; g < theGathered.size(); g++) {
-            unsigned long theType = theGathered[g]->mResourceType;
-            float theBest = -1.0f;
-            for (unsigned long k = 0; k < theStores.size(); k++) {
-                long theTakes = theStores[k]->mUnitClass->mResourceType;
-                if (theTakes != kResourceAny && theTakes != (long)theType)
-                    continue;
-                float theDistance = theStores[k]->DistanceSquaredToUnit(theGathered[g]);
-                if (theBest < 0.0f || theDistance < theBest)
-                    theBest = theDistance;
-            }
-            if (theBest < 0.0f)
-                continue;
-            long theClass = theGathered[g]->mUnitClass->mUnitType;
-            unsigned long theFamily = theGathered[g]->mUnitClass->GetFamily();
-            if (theFamily != kUnitFamilyAnimal && theFamily != kUnitFamilyFish && theClass != kUnitTypeResFish
-                && theClass != kUnitTypeFarm && theClass != kUnitTypeRoboticFarm
-                && !(theType == kResourceWood
-                         ? EECPNextDropReady(inPlayer, theGathered[g]->GetTileX(), theGathered[g]->GetTileY(), false, kNextWoodSlack)
-                         : EECPNextUnitDropReady(inPlayer, theGathered[g])))
-                theNoDrop[theType]++;
-            double theLength = sqrt((double)theBest);
-            theTrip[theType] += theLength;
-            theTrips[theType]++;
-            if (theLength > (double)inPlayer->mDropOffDistance)
-                theFar[theType]++;
-        }
-        long theMean[kResourceIron + 1];
-        for (long r = 0; r <= kResourceIron; r++)
-            theMean[r] = theTrips[r] > 0 ? (long)(theTrip[r] / theTrips[r] + 0.5) : -1;
-        EECPTraceOut(inPlayer, "trips", "mean=%ld/%ld/%ld/%ld/%ld n=%ld/%ld/%ld/%ld/%ld far=%ld/%ld/%ld/%ld/%ld dropoff=%ld settlements=%ld towncenters=%ld granaries=%ld nodrop=%ld/%ld/%ld/%ld/%ld",
-            theMean[kResourceFood], theMean[kResourceWood], theMean[kResourceStone], theMean[kResourceGold], theMean[kResourceIron],
-            theTrips[kResourceFood], theTrips[kResourceWood], theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron],
-            theFar[kResourceFood], theFar[kResourceWood], theFar[kResourceStone], theFar[kResourceGold], theFar[kResourceIron],
-            inPlayer->mDropOffDistance, theDropSites[0], theDropSites[1], theDropSites[2], theNoDrop[kResourceFood],
-            theNoDrop[kResourceWood], theNoDrop[kResourceStone], theNoDrop[kResourceGold], theNoDrop[kResourceIron]);
-        // what came in since the last income line, by resource (EEComputerPlayer::AddResource: the gatherers'
-        // deposits, plus refunds and tributes), and the gatherers on each now
-        long theTopOther = -1, theTopCount = 0;
-        for (std::map<long, long>::iterator it = theOtherActs.begin(); it != theOtherActs.end(); ++it)
-            if (it->second > theTopCount) { theTopCount = it->second; theTopOther = it->first; }
-        EECPTraceOut(inPlayer, "gatheract", "gather=%ld dropoff=%ld to_resource=%ld to_storage=%ld waiting=%ld idle=%ld other=%ld top_other=%ld",
-            theActs[0], theActs[1], theActs[2], theActs[3], theActs[4], theActs[5], theActs[6], theTopOther);
-        EECPTraceOut(inPlayer, "income", "got=%ld/%ld/%ld/%ld/%ld gatherers=%ld/%ld/%ld/%ld/%ld",
-            sIncome[theID][kResourceFood], sIncome[theID][kResourceWood], sIncome[theID][kResourceStone],
-            sIncome[theID][kResourceGold], sIncome[theID][kResourceIron], theTrips[kResourceFood], theTrips[kResourceWood],
-            theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron]);
-        if (EECPExperiment(inPlayer, "spending")) {   // TEST ONLY: what was bought since the last line
-            static const char* const kKinds[8] = {"citizens", "soldiers", "buildings", "techs", "epochs", "boats", "improve", "other"};
-            char theLine[1024];
-            long theAt = 0;
-            for (long k = 0; k < 8 && theAt < 900; k++) {
-                theAt += snprintf(theLine + theAt, sizeof(theLine) - theAt, "%s%s=%ld/%ld/%ld/%ld/%ld", k ? " " : "", kKinds[k],
-                    sSpend[theID][k][0], sSpend[theID][k][1], sSpend[theID][k][2], sSpend[theID][k][3], sSpend[theID][k][4]);
-                for (long r = 0; r < 5; r++)
-                    sSpend[theID][k][r] = 0;
-            }
-            EECPTraceOut(inPlayer, "spend", "%s", theLine);
-        }
-        for (long r = 0; r <= kResourceIron; r++)
-            sIncome[theID][r] = 0;
-        EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
-            theFood[0], theFood[1], theFood[2], theFood[3], theFood[4], theGoals[kGoalGather], theGoals[kGoalBuildRepair],
-            theGoals[kGoalLocation], theGoals[kGoalAttackUnit], theGoals[kGoalLoadGarrison], theGoals[0]);
-        EECPTraceOut(inPlayer, "builders", "unbuilt=%ld built=%ld act build=%ld repair=%ld move=%ld other=%ld cls=%ld other_action=%ld other_hp=%ld",
-            theBuilders[0], theBuilders[1], theBuilders[2], theBuilders[3], theBuilders[4], theBuilders[5], theBuildClass,
-            theOtherAction, theOtherHealth);
-    }
-    gCPTraceManager = theSaved;
+    ee_ai_trace_stats(inPlayer, inTime);
 }
 
-// The AI's real time per player: every 60 game s the sum and the largest single update (microseconds).
 void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds)
 {
-    unsigned long theID = inPlayer->mPlayerID;
-    if (!gCPTraceOn || theID >= kMaxTracedPlayers)
-        return;
-    sProfileSum[theID] += inMicroseconds;
-    sProfileCount[theID]++;
-    if (inMicroseconds > sProfileMax[theID])
-        sProfileMax[theID] = inMicroseconds;
-    if (sNextProfile[theID] > inTime + 60000)
-        sNextProfile[theID] = 0;   // a new game in the same process
-    if (inTime < sNextProfile[theID])
-        return;
-    sNextProfile[theID] = inTime + 60000;
-    ESDebugOut("EE-AIPROF %lu p%lu updates=%lu sum_us=%lld max_us=%lld\n", inTime, theID, sProfileCount[theID],
-        sProfileSum[theID], sProfileMax[theID]);
-    sProfileSum[theID] = 0;
-    sProfileMax[theID] = 0;
-    sProfileCount[theID] = 0;
+    ee_ai_trace_profile(inPlayer->mPlayerID, inTime, (int64_t)inMicroseconds);
 }
 
-// TEST ONLY (EE-SIM's --dump-at / --dump-load): the parts of EECPOutOfSynchChecksum per player and the computer
-// player's own timers, one line each, so two dumps name the computer player and the part that differ
 void EECPOutOfSynchDump(FILE* inFile)
 {
-    {   // the continent manager's areas (serial/kind), its serial counter and its lists' sizes
-        fprintf(inFile, "AREAS digest=%08lx last=%lu continents=%zu hills=%zu pathareas=%zu sectors=%zu subsectors=%zu chokepoints=%zu forests=%zu areas=%zu:",
-                EEContinentRegionsDigest(), (unsigned long)gContinentManager.mLastSerial, gContinentManager.mContinents.size(), gContinentManager.mHills.size(),
-                gContinentManager.mPathAreas.size(), gContinentManager.mPathSectors.size(), gContinentManager.mPathSubSectors.size(),
-                gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(), gContinentManager.mAreas.size());
-        for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
-             theIt != gContinentManager.mAreas.end(); ++theIt)
-            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->first, theIt->second != NULL ? (long)theIt->second->GetAreaType() : -1L);
-        fprintf(inFile, "\n");
-    }
-    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        if (thePlayer == NULL)
-            continue;
-        fprintf(inFile, "AI %lu res=", thePlayer->mPlayerID);
-        for (long r = kResourceFood; r <= kResourceIron; r++)
-            fprintf(inFile, "%s%ld", r != kResourceFood ? "," : "", (long)thePlayer->mResourceCaps[r]);
-        EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
-        if (theCP != NULL) {
-            fprintf(inFile, " popcap=%ld", (long)theCP->mPopulationCap);
-            // (main's stages 5 and 6: the C++ managers, their queues, timers and attack groups are gone; the Lua AIs'
-            // state is their scripts' memory)
-            if (theCP->mPlacement != NULL)
-                fprintf(inFile, " town=%ld,%ld", (long)theCP->mPlacement->mTownCenterTile.mX,
-                        (long)theCP->mPlacement->mTownCenterTile.mY);
-            fprintf(inFile, " danger=%zu rc=", theCP->mDangerZones.size());
-            for (unsigned long k = 0; k < theCP->GetNumResourceCenters(); k++) {
-                EECPResourceCenter* theCenter = theCP->GetResourceCenter(k);
-                fprintf(inFile, "%s%lu:%d:%zu", k ? "," : "", theCenter->GetUnit() != NULL ? theCenter->GetUnit()->mUnitID : 0UL,
-                        theCenter->mIsActive ? 1 : 0, theCenter->mUnits.size());
-            }
-            fprintf(inFile, " started=%d", theCP->mIsStarted ? 1 : 0);
-        }
-        fprintf(inFile, "\n");
-    }
+    std::string theText;
+    ee_ai_out_of_synch_dump(&theText);
+    fputs(theText.c_str(), inFile);
 }
 
-// The computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; docs/AI_RESEARCH.md
-// Q2). The original's checksum covers the units, the map, the continents and the shared random seed, but none of the
-// AI's own state, so AI state that drifts between peers showed only later, through the random seed or the units.
-// This adds every player's resources and, per computer player, its pop cap, epoch timer, queue lengths and groups.
 unsigned long EECPOutOfSynchChecksum()
 {
-    unsigned long theChecksum = 0;
-    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        if (thePlayer == NULL)
-            continue;
-        unsigned long theSum = 0;
-        for (long r = kResourceFood; r <= kResourceIron; r++)
-            theSum = theSum * 31 + (unsigned long)thePlayer->mResourceCaps[r];
-        EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
-        if (theCP != NULL) {
-            theSum = theSum * 31 + (unsigned long)theCP->mPopulationCap;
-            if (theCP->mPlacement != NULL)   // (stage 6: the managers' queues are the Lua verbs', in the script's memory)
-                theSum = theSum * 31 + (unsigned long)(theCP->mPlacement->mTownCenterTile.mX * 1024 + theCP->mPlacement->mTownCenterTile.mY);
-            theSum = theSum * 31 + (unsigned long)theCP->mDangerZones.size();
-        }
-        theChecksum += theSum * (thePlayer->mPlayerID + 1);
-    }
-    return theChecksum;
+    return ee_ai_out_of_synch_checksum();
 }
 
-// TEST (with the trace): every 10 game s, the parts of the out-of-synch checksum, as a compared trace line
-// ("EE-AI <ms> p0 sim hash ..."): when two runs of a seed diverge, the first differing line says when (to 10 s) and
-// what first (the units, the shared random seed, the input count, or the players' resources and AI state)
 void EECPTraceHash(unsigned long inTime)
 {
-    static unsigned long sNextHash = 0;
-    if (!gCPTraceOn)
-        return;
-    if (sNextHash > inTime + 10000)
-        sNextHash = 0;   // a new game in the same process
-    if (inTime < sNextHash)
-        return;
-    sNextHash = inTime + 10000;
-    unsigned long theUnits = 0;
-    unsigned long theCount = 0;
-    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        theUnits += static_cast<EEUnit*>(theUnit)->GetChecksum(3);   // hit points, tiles, positions, commands
-        theCount++;
-    }
-    ESDebugOut("EE-AI %lu p0 sim hash pt=%lu units=%lu/%08lx rng=%08lx inputs=%ld ai=%08lx | f=0 w=0 s=0 g=0 i=0\n", inTime,
-        (unsigned long)gPhysics->mCurrentTick, theCount, theUnits, (unsigned long)gPhysics->mRandom.GetSeed(),
-        gPhysics->mInputMessagesProcessed, EECPOutOfSynchChecksum());
+    ee_ai_trace_hash(inTime);
 }
