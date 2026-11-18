@@ -47,12 +47,12 @@ public:
     virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount);   // +0x80 0x2f033 (epochs: always)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit);  // +0x84 0x2f16d
     // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
-    float GetAttackDelayModifier() { return ee_cp_attack_delay_modifier(this); }   // 0x2eafc
-    float GetAttackFrequencyModifier() { return ee_cp_attack_frequency_modifier(this); }   // 0x2eb26
-    float GetUnitCostModifier() { return ee_cp_unit_cost_modifier(this); }   // 0x2eb7c
-    float GetDMAttackFrequencyModifier() { return ee_cp_dm_attack_frequency_modifier(this); }   // 0x2eba8
-    float GetDMInitialAttackModifier() { return ee_cp_dm_initial_attack_modifier(this); }   // 0x2ebd9
-    float GetPopLimitAdjustment() { return ee_cp_pop_limit_adjustment(this); }   // 0x2ec74
+    float GetAttackDelayModifier() { return ee_cp_attack_delay_modifier(this); }
+    float GetAttackFrequencyModifier() { return ee_cp_attack_frequency_modifier(this); }
+    float GetUnitCostModifier() { return ee_cp_unit_cost_modifier(this); }
+    float GetDMAttackFrequencyModifier() { return ee_cp_dm_attack_frequency_modifier(this); }
+    float GetDMInitialAttackModifier() { return ee_cp_dm_initial_attack_modifier(this); }
+    float GetPopLimitAdjustment() { return ee_cp_pop_limit_adjustment(this); }
     unsigned long GetIslandExpansionTimer() { return ee_cp_island_expansion_timer(this); }   // 0x2ed01 (else 60000)
     virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
