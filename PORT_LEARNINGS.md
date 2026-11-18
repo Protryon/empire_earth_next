@@ -29735,3 +29735,23 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
 - **Behaviour:** none. One corrected answer: a failed read inside a saved running state's record gives
   `kErrorBeyondEnd` (0xa), as the C++ load did.
 - **Other lanes' files:** EEComputerPlayer.cpp (lane B) lost one `#include` (the deleted scorer header).
+### Round 3 (same branch): CNTQ, and what the continents' move needs
+
+- **CNTQ** (TEST ONLY, EEAIContinentManager.cpp): one record per outermost call of 24 queries and changes (CanGetTo,
+  InSameContinent, InSameArea, HasShoreTile, IsNextToArea, the area lookups by tile, the choke point, connected and
+  adjacent id lists, the continent's center and tiles, the largest continent, the connections, the random areas,
+  the unit's sub sector, RepairPathArea, RemoveForestTile, UpdateWallUnit). Each body is wrapped in a lambda so every
+  return goes through the record; a change ends with `EEAIContinentDigest()`, the FNV-1a 64 of the bytes a CNTR
+  record would hold (EEAIContinentCapture.cpp's writer split into a fill and a commit; `EESimCaptureRecord::Data()`
+  added). The digest returns 0 before the game's regions exist: `UpdateWallUnit` runs while the scenario's units are
+  made, and the per-tile sub sector lookup divides by a sector size of 0 there (the first run died of it, c0000094).
+  About 0.65 million records per oracle game, 1.1 million in the late profile. Golden lines: oracle (two equal runs),
+  late, space, calamity, seeds 2-3, from the C++ manager (c3875f066).
+- **The continents as whole objects is cross-lane work.** The manager's tables are read outside this lane: the serial
+  table `mAreas` by EECPTrace.cpp (lane A), the towns and herds (lane B) are areas the save's serial table and the
+  manager's `AddArea`/`RemoveArea` hold, the counters (`mLastSerial` 24 uses, `mTileFlags`/`mFlagsWidth` 50) by the
+  units and the Lua bindings. A move needs, in order: a Rust table of the area records by serial (C++ registering at
+  `AddArea`/`RemoveArea`), the other kinds' members as records like `EEAIArea`'s, the sub sectors and sectors as
+  records (the graph machine walks them as `AStarGraphableObjectBase`), then the queries over the records (CNTQ
+  gates them), then `Rebuild`/`RepairPathArea` (whose goals create the C++ objects), and last the save block, whose
+  0.263 bytes the records' writers must reproduce.
