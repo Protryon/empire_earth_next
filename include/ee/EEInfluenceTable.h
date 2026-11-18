@@ -32,13 +32,6 @@ public:
         { ee_cp_influence_unit(this->mTable, true, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
     void RemoveUnit(EEUnit* inUnit, long inX, long inY)
         { ee_cp_influence_unit(this->mTable, false, (uint64_t)(uintptr_t)inUnit, (int32_t)inX, (int32_t)inY); }
-    // 0xa5920: the values in region inRegion of the players inPlayer is at war with (player 0 only if inWithFirst)
-    long GetEnemyValue(unsigned long inPlayer, const U2DPoint<long>& inRegion, bool inWithFirst)
-    {
-        EeCpRect theRegion = {(int32_t)inRegion.mX, (int32_t)inRegion.mY, (int32_t)inRegion.mX, (int32_t)inRegion.mY};
-        return ee_cp_influence_enemies(this->mTable, (uint64_t)(uintptr_t)&gWorld, (uint32_t)inPlayer, theRegion,
-                                       inWithFirst, false);
-    }
     // 0xa598d: over a rectangle of regions, its start corner clipped at 0
     long SumEnemyValue(unsigned long inPlayer, const U2DRectangle<long>& inRect, bool inWithFirst)
         { return ee_cp_influence_enemies(this->mTable, (uint64_t)(uintptr_t)&gWorld, (uint32_t)inPlayer, Rect(inRect), inWithFirst, true); }

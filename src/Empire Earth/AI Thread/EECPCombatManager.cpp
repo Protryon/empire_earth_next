@@ -59,9 +59,3 @@ bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
 {
     return ee_ai_military_class((uint64_t)(uintptr_t)inClass);
 }
-
-// Returns true when the unit type's class is in a military category (ee_ai military.rs)
-bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
-{
-    return ee_ai_military_type(inUnitType);
-}

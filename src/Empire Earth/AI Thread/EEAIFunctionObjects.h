@@ -20,7 +20,6 @@ class EEAIFOContinentScreenBase {
 public:
     virtual ~EEAIFOContinentScreenBase() {}   // +0x00 (??_G 0x58608: the derived screens' dtors fold into it)
     virtual bool Virtual04(long inID) { return inID != 0; }   // +0x04 0x58554
-    virtual bool Test(unsigned short inID) { return inID != 0; }        // +0x08 0x58584
 };
 
 // RTTI EEAIFOContinentScreenContinentsShareAdjacentID > EEAIFOContinentScreenBase (vtable 0x43bcd0: ??_G 0x58608,
@@ -30,7 +29,6 @@ class EEAIFOContinentScreenContinentsShareAdjacentID : public EEAIFOContinentScr
 public:
     EEAIFOContinentScreenContinentsShareAdjacentID(unsigned short inContinent1, unsigned short inContinent2, bool inB08)
         : mContinent1(inContinent1), mContinent2(inContinent2), mB08(inB08) {}
-    virtual bool Test(unsigned short inID);        // +0x08 0x29fcc
 
     unsigned short mContinent1;             // +0x04
     unsigned short mContinent2;             // +0x06
@@ -44,7 +42,6 @@ public:
     EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID(unsigned short inContinent1, unsigned short inContinent2,
                                                                  bool inOcean)
         : EEAIFOContinentScreenContinentsShareAdjacentID(inContinent1, inContinent2, false), mOcean(inOcean) {}
-    virtual bool Test(unsigned short inID);        // +0x08 0x58591 (inline in the original: a COMDAT after FindLandTransport)
 
     bool mOcean;                            // +0x0c
 };

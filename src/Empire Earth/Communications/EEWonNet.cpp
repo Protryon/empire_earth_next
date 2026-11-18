@@ -1173,32 +1173,6 @@ void EEWonNet::LoginCallback(AsyncOp* inOp)
         theKey.SaveToRegistry();
 }
 
-// DEAD-IN-AOC: base exe 0x4c975d (hands the game's and the system's message of the day to the UI thread: message
-// 0x440, whose AoC handler is EEUserInterface::ShowMessageOfTheDay). (r25pre-won-2)
-void EEWonNet::MOTDCallback(AsyncOp* inOp)
-{
-    UWideString theGameMOTD;
-    UWideString theSystemMOTD;
-    ByteBufferPtr theBuffer;
-    RustServerOp* theOp = static_cast<RustServerOp*>((AsyncOp*)inOp);
-    bool theFound = false;
-
-    if (static_cast<AsyncOp*>(inOp) == (AsyncOp*)this->mMOTDOp.get() && inOp->GetStatus() == WS_Success) {
-        if (theOp->GetNum(EE_WON_HTTPDOC_IS_NEW, 0)) {
-            theBuffer = theOp->GetHttpDocument(HTTPDocOwner_Sys);
-            theGameMOTD = GetBufferData(theBuffer);
-            theFound = true;
-        }
-        if (theOp->GetNum(EE_WON_HTTPDOC_IS_NEW, 1)) {
-            theBuffer = theOp->GetHttpDocument(HTTPDocOwner_Game);
-            theSystemMOTD = GetBufferData(theBuffer);
-            theFound = true;
-        }
-        if (theFound == true)
-            gUserInterface->PostMOTD(theGameMOTD, theSystemMOTD);
-    }
-}
-
 // DEAD-IN-AOC: base exe 0x4c9883 (asks the directory servers for the Titan servers). Partial: the base body also
 // creates the user (+0x28) and the two ServerContexts (+0x18/+0x1c), adds four directory paths and shows a
 // cancellable "connecting" message. (r25pre-won-2)

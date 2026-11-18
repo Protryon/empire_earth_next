@@ -19,7 +19,6 @@ public:
     virtual ~EECPCombatManager();           // +0x00 (??_G 0x71e8a, dtor 0x71ea6)
 
     bool IsMilitaryClass(EEUnitClass* inClass);  // 0x737c9 (ret 4; this unused)
-    static bool IsMilitaryType(unsigned long inUnitType);
     // the saved game's block (stage 5: empty; the original's commanders, tasks and threat counts are gone)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);

@@ -860,8 +860,6 @@ public:
     bool AddUnitToHerd(EEComplexUnit* inUnit);  // 0x162e22 (AddUnit result returned in AL)
     void AssignHerds();                     // 0x164453 (player 0, after RegisterHerds; provisional name)
     void AssignTowns();                     // 0x16451a (the other players, after RegisterTowns; provisional name)
-    // const view (0x47d4f3, 0x47897c read the towns through the const operator[]) (provisional name)
-    const std::vector<EETown*>& GetTownList() const { return this->mTowns; }
     // template COMDAT 0xa5313 (EEHerd.cpp's range; ret 8): the herds of mHerds (+0x7dc, EEHerd* elements) inPredicate
     // holds for, the last first (provisional name)
     template <class P, class V> void GetHerds(P inPredicate, V& outHerds)

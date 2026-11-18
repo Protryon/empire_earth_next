@@ -120,7 +120,6 @@ public:
     void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem);  // 0x276a38 (message 0x440)
     // r25pre-won-2: dead in AoC (only EEWonNet.cpp's DEAD-IN-AOC MOTDCallback calls it; name PROVISIONAL): base exe
     // 0x661f01 posts 0x440 (two new UWideString copies). No body yet (owner question).
-    void PostMOTD(const UWideString& inGame, const UWideString& inSystem);
     void PostLoginDone();                   // base exe 0x661aef (message 0x441; DEAD-IN-AOC like PostMOTD)
     void TestScenario();                    // 0x276ab0 (message 0x415: starts the tested scenario)
     void CloseIMECompositionString();       // 0x276cb1 (WM_IME_ENDCOMPOSITION)

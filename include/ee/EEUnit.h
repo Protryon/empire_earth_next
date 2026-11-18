@@ -621,7 +621,6 @@ public:
     static EEComplexUnit* Create();
     static EEComplexUnit* Create(EEUnitClass* inClass, const GETransformation& inTransformation, EEPlayer* inPlayer, unsigned long inGoalQueueCount);
     static bool SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks);
-    bool HasCalamityFlag(unsigned long inFlag);
     void ClearGarrison();                   // 0x1f8bd8: mL28C = mL288 = 0 (provisional name)
     bool HasEffect(long inKind);            // 0x1f9ddb: GetEffect into a dummy (provisional name)
     bool IsGathering();                     // 0x1fa67f: the goal's kind is 6 (provisional name)
@@ -1003,7 +1002,6 @@ public:
     void ActionChanged(EEComplexUnit* inUnit);  // +0x74 (the cloaking calamity calls it on each cloaked unit)
     bool CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType);  // 0x234ad8 (the missile's +0xe4: true = stays) (provisional name)
     void RouteDockWaypoint(EEComplexUnit* inUnit);  // 0x213db5 (the airplane on its carrier after its move: EEPMAirplane::OrientOnCarrier) (provisional name)
-    bool IsAffectedByCalamity(unsigned long inFlag);  // 0x2317d7 (EEComplexUnit::GetCatchableContagions: the class takes that calamity flag) (provisional name)
     bool FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance);  // 0x233a14 (EEUGHealUnit)
     // 0x238087: the projectile launch from the weapon tag point (FireShot) (provisional name)
     void LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation);

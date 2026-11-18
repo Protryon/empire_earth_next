@@ -85,72 +85,6 @@ bool EECPUGatheAircraftCarriersCount::CountUnits(EEUnitClass* inClass, std::dequ
     return theResult;
 }
 
-// Returns true when the continent id is one of the two screened continents or is adjacent to both of them
-// the two id tests as one bool (`bool theResult = a || b; if (!theResult) {..}`), the original's shape
-bool EEAIFOContinentScreenContinentsShareAdjacentID::Test(unsigned short inID)
-{
-    bool theResult = inID == this->mContinent1 || inID == this->mContinent2;
-    if (!theResult) {
-        theResult = gContinentManager.mTileFlags[this->mContinent1 * gContinentManager.mFlagsWidth + inID];
-        if (theResult)
-            theResult = gContinentManager.mTileFlags[this->mContinent2 * gContinentManager.mFlagsWidth + inID];
-    }
-    return theResult;
-}
-
-// Scores a military unit for disbanding: minus its influence, raised for explorers, obsolete units and units
-// below half (more below a fifth) health
-long EEAIFOUnitsToKillScoringBase::ScoreMilitary(EEComplexUnit* inUnit)
-{
-    float theScore = (float)-inUnit->mUnitClass->mInfluence;
-    if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalExplore && theScore != 0.0f)
-        theScore += UMAbs(theScore * 0.5f);
-    if (inUnit->GetTechTreeNode() != NULL && inUnit->GetTechTreeNode()->GetIsObsolete() && theScore < 0.0f)
-        theScore += UMAbs(theScore * 0.65f);
-    long theMaximum = inUnit->mStats->mMaxHitPoints;
-    if (theMaximum > 0) {
-        float theHealth = (float)inUnit->mHitPoints / theMaximum;
-        if (theHealth < 0.5f)
-            theScore += UMAbs(theHealth < 0.2f ? theScore * 0.7f : theScore * 0.35f);
-    }
-    return UMCeil(theScore);
-}
-
-// Scores a citizen for disbanding: idle highest, then waiting gatherers plus a per-resource bonus (wood most),
-// builders lowest
-long EEAIFOUnitsToKillScoringBase::ScoreCitizen(EEComplexUnit* inUnit)
-{
-    EEUGRust* theGather = EEGatherGoalCast(inUnit->GetLoadGoal());
-    long theScore = 10000;
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle)
-        theScore = 10070;
-    else if (theGather != NULL) {
-        if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionWaitForOpenPosition)
-            theScore = 10060;
-        if (theGather->GetGatherResource() != NULL) {
-            switch (theGather->GetGatherResource()->mResourceType) {
-            case kResourceFood:
-                theScore += 10;
-                break;
-            case kResourceWood:
-                theScore += 40;
-                break;
-            case kResourceStone:
-                theScore += 30;
-                break;
-            case kResourceGold:
-                theScore += 15;
-                break;
-            case kResourceIron:
-                theScore += 20;
-                break;
-            }
-        }
-    } else if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalBuildRepair)
-        theScore = 9950;
-    return theScore;
-}
-
 // Creates the disband scorer for a player with the numbers of citizens, transports and military units to kill
 EEAIFOUnitsToKillForMilitary::EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inPlayer, long inCitizensToKill, long inTransportsToKill, long inMilitaryToKill)
 {
@@ -169,31 +103,6 @@ bool EECPUGatherCitizenUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequ
         this->mRequested += inRequest->mCount;
         theResult = true;
     }
-    return theResult;
-}
-
-// Returns how many citizens (existing plus requested) the player has above its citizen share of the population
-// limit; also returns the citizen ratio and count (0 when the limit is 0)
-// NEAR: the original zeroes theCount (edi) after the gatherer and keeps theResult in ebx (declaring theCount later
-// makes VC6 call the gatherer's ctor out of line: 70%)
-long EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(EEComputerPlayer* inPlayer, float& outRatio, long& outCount)
-{
-    float theRatio = 0.0f;
-    float theFactor = inPlayer->mCitizenPercentage;
-    long theResult = 0;
-    long theCount = 0;
-    EECPUGatherCitizenUnitsCount theGatherer(inPlayer);
-    long theMaximum = inPlayer->GetPopulationLimit(0);
-    EECPGatherUnits(inPlayer, theGatherer);
-    if (theMaximum > 0) {
-        float theMaximumF = (float)theMaximum;
-        theRatio = (float)(theGatherer.mUnits + theGatherer.mRequested) / theMaximumF;
-        long theWanted = UMCeil(theMaximumF * theFactor);
-        theCount = UMCeil(theMaximumF * theRatio);
-        theResult = theCount - theWanted;
-    }
-    outCount = theCount;
-    outRatio = theRatio;
     return theResult;
 }
 

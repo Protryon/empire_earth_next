@@ -386,38 +386,6 @@ bool EEUnitClass::CanEnter(EEUnitClass* inClass)
            (this->mUnitType == kUnitTypeSp15SpaceFighter && inClass->mUnitType == kUnitTypeSp15SpaceCarrier);
 }
 
-// Returns whether the class is in the unit set of the calamity flag (plague, leprosy, fire, AE damage, mind control)
-bool EEUnitClass::IsAffectedByCalamity(unsigned long inFlag)
-{
-    bool theResult = false;
-    EECalamityClass* theClass = NULL;
-    switch (inFlag) {
-    case 1:
-        theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(kCalamityPlague);
-        break;
-    case 2:
-        theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(kCalamityLeprosy);
-        break;
-    case 4:
-        theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(kCalamityFire);
-        break;
-    case 8:
-        theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(kCalamityAEExtraDamage);
-        break;
-    case 0x10:
-        theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(kCalamityAEMindControl);
-        break;
-    }
-    if (theClass != NULL) {
-        EEUnitSet* theSet = gUnitSetManager.GetSet(theClass->GetUnitSet());
-        if (theSet != NULL && theSet->Contains(this->mUnitType))
-            theResult = true;
-        else
-            theResult = false;
-    }
-    return theResult;
-}
-
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
 float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {

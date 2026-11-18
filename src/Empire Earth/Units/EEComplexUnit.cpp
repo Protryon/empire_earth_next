@@ -879,12 +879,6 @@ void EEComplexUnit::SetSound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
-// Returns whether the unit carries the given calamity
-bool EEComplexUnit::HasCalamityFlag(unsigned long inFlag)
-{
-    return (this->mCalamityFlags & inFlag) != 0;
-}
-
 // New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
 // what no chunk holds). A pool slot is reused at once, so a unit released one reference too early is read as the
 // next unit given that slot, unseen by AddressSanitizer; from the heap, ASan reports the first stale read with the

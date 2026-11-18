@@ -14,12 +14,6 @@ class EEAIFOUnitsToKillScoringBase {
 public:
     EEAIFOUnitsToKillScoringBase() : mCount(-1), mCitizensToKill(0), mTransportsToKill(0), mMilitaryToKill(0) {}
     virtual ~EEAIFOUnitsToKillScoringBase() {}   // +0x00 (??_G 0x7b906)
-    virtual long ScoreCitizen(EEComplexUnit* inUnit);  // +0x04 0x2a193
-    virtual long ScoreMilitary(EEComplexUnit* inUnit);  // +0x08 0x2a019
-    // 0x2a348 (cdecl; also 0x487423): the citizens counted (EECPUGatherCitizenUnitsCount) against inPlayer's
-    // Virtual7C(0) maximum: outRatio = counted / maximum, outCount = ceil(maximum * outRatio), returns outCount -
-    // ceil(maximum * mCitizenPercentage) (provisional name)
-    static long GetCitizenSurplus(EEComputerPlayer* inPlayer, float& outRatio, long& outCount);
 
     long mCount;                            // +0x04 (-1; the scorers' users store how many to delete)
     long mCitizensToKill;                   // +0x08
