@@ -6,24 +6,13 @@
 #include "ee/wonapi/WONLobbyRustCtrl.h"
 namespace WONAPI {
 class LoginInitStatusEvent;
-class LoginStatusCtrl : public Container {
+class LoginStatusCtrl : public LobbyRustCtrl {
 public:
-    LoginStatusCtrl();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    SmartPtr<Label> mStatusLabel; // +84, allocation88
+    LoginStatusCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::LoginStatus) {}
 };
-class InitFailedCtrl : public Container {
+class InitFailedCtrl : public LobbyRustCtrl {
 public:
-    InitFailedCtrl();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    void HandleLoginInitStatus(LoginInitStatusEvent* inEvent);
-    SmartPtr<Label> mDescLabel; // +84
-    SmartPtr<Button> mRetryButton; // +88
-    SmartPtr<Button> mIgnoreButton; // +8c; allocation90
+    InitFailedCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::InitFailed) {}
 };
 // GameStagingCtrl (R6 WONLobby round 4): the game room's leave/dissolve and start/ready buttons, a lobbyctl.rs object
 class GameStagingCtrl : public LobbyRustCtrl {
@@ -49,23 +38,9 @@ class InputBox;
 class LoginEvent;
 class LoginInitStatusEvent;
 class SetLoginFieldsEvent;
-class LoginCtrl : public Dialog {
+class LoginCtrl : public LobbyRustDialogCtrl {
 public:
-    LoginCtrl();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    void UpdateLoginButton();
-    void FillUserNames();
-    void LoadPassword();
-    void SavePassword();
-    void SetCredentials(SetLoginFieldsEvent* inEvent);
-    void HandleLoginInitStatus(LoginInitStatusEvent* inEvent);
-    SmartPtr<ComboBox> mUserNameCombo; //98
-    SmartPtr<InputBox> mPasswordInput; //9c
-    SmartPtr<Button> mRememberPasswordCheck; //a0
-    SmartPtr<Button> mLoginButton; //a4
-    bool mCanLogin; // offset 0xa8; class size 0xac with alignment
+    LoginCtrl() : LobbyRustDialogCtrl(EeWonLobbyCtlKind::Login) {}
 };
 }
 
@@ -95,52 +70,24 @@ public:
     bool mSeparator; //2c
     signed char mSortGroup; //2d;allocation30
 };
-class FriendsListCtrl : public Container {
+class FriendsListCtrl : public LobbyRustCtrl {
 public:
+    FriendsListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Friends) {}
     static ComponentConfig* CfgFactory(); // at 0x00765320
     static Component* CompFactory(); // at 0x007652c0
-    FriendsListCtrl();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    void UpdateSeparator();
-    void UpdateFriend(LobbyFriend* inFriend,FriendsListItem* inItem);
-    FriendsListItem* FindFriend(LobbyFriend* inFriend);
-    LobbyFriend* GetSelectedFriend();
-    void HandleFriendChanged(FriendChangedEvent* inEvent);
-    void RefreshFriends();
-    void FillFriends();
-    void UpdateButtons();
-    SmartPtr<ListArea> mFriendsList; //84
-    SmartPtr<Button> mRemoveButton; //88
-    SmartPtr<Button> mLocateButton; //8c
-    SmartPtr<FriendsListItem> mSeparator; //90;allocation94
 };
 }
 
 
 // LostPasswordCtrl and LostUserNameCtrl.
 namespace WONAPI {
-class LostPasswordCtrl : public Container {
+class LostPasswordCtrl : public LobbyRustCtrl {
 public:
-    LostPasswordCtrl(); // empty, at 0x007c0320
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit); //3c0400
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); //3c0520
-    void UpdateRetrieveButton(); //3c0460
-    void FillUserNames(); //3c0490
-    SmartPtr<ComboBox> mUserNameCombo; //84
-    SmartPtr<Button> mRetrieveButton; //88
+    LostPasswordCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::LostPassword) {}
 };
-class LostUserNameCtrl : public Container {
+class LostUserNameCtrl : public LobbyRustCtrl {
 public:
-    LostUserNameCtrl(); // empty, at 0x007c0750
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit); //3c0830
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); //3c0930
-    void UpdateRetrieveButton(); //3c0890
-    SmartPtr<InputBox> mEmailInput; //84
-    SmartPtr<Button> mRetrieveButton; //88
+    LostUserNameCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::LostUserName) {}
 };
 }
 
@@ -148,74 +95,21 @@ public:
 // CreateAccountCtrl (0xbc bytes): RTTI CreateAccountCtrl > Container > Component > RefCount,
 // vtable 0x00852e3c.
 namespace WONAPI {
-class CreateAccountCtrl : public Container {
+class CreateAccountCtrl : public LobbyRustCtrl {
 public:
-    CreateAccountCtrl(); // at 0x007ba290
-    // Implicit virtual destructor (0x007ba320; stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit); // at 0x007ba4f0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // at 0x007ba990
-    bool ShowErrorLabel(bool inVisible, Label* inLabel); // does not use this
-    bool IsValidBirthDate(InputBox* inMonth,InputBox* inDay,InputBox* inYear); // does not use this
-    void UpdateCreateButton(); // at 0x007ba800
-    SmartPtr<InputBox> mUserNameInput; //84
-    SmartPtr<InputBox> mPasswordInput; //88
-    SmartPtr<InputBox> mConfirmPasswordInput; //8c
-    SmartPtr<InputBox> mEmailInput; //90
-    SmartPtr<InputBox> mMonthInput; //94
-    SmartPtr<InputBox> mDayInput; //98
-    SmartPtr<InputBox> mYearInput; //9c
-    SmartPtr<Button> mNewsletterCheck; //a0
-    SmartPtr<Label> mUserNameDesc; //a4
-    SmartPtr<Label> mPasswordDesc; //a8
-    SmartPtr<Label> mConfirmPasswordDesc; //ac
-    SmartPtr<Label> mEmailDesc; //b0
-    SmartPtr<Label> mBirthdateDesc; //b4
-    SmartPtr<Button> mCreateButton; //b8
+    CreateAccountCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::CreateAccount) {}
 };
 }
 
 
-// ChatCtrl fields; the global ChatLink is private to its .cpp.
-class ChatLink;
+// ChatCtrl (R6 WONLobby round 13): a chat panel, a lobbyctl.rs object (chatctl.rs: the controls, fonts, colours,
+// room kind, client id and room name, every handler); its config reader stores the room kind and colours through
+// SetField. The links it prints are LobbyNetCtrlHost.cpp's.
 namespace WONAPI {
-class ChatCtrl : public Container {
+class ChatCtrl : public LobbyRustCtrl {
 public:
-    ChatCtrl(); //3b6b80
-    virtual ~ChatCtrl(); // empty; stores its own vptr (0x007b6cbf)
-    virtual void InitComponent(ComponentInit& inInit); //3b6dd0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); //3b9c80
-    void HandleAnnounceClientLocation(AnnounceClientLocationEvent* inEvent);
-    void HandleAnnounceFriend(AnnounceFriendEvent* inEvent);
-    void HandleGroupInvitation(GroupInvitationEvent* inEvent);
-    void HandleGroupJoinAttempt(GroupJoinAttemptEvent* inEvent);
-    void HandlePlayerTeamChanged(PlayerTeamChangedEvent* inEvent);
-    void HandleSetChatInput(SetChatInputEvent* inEvent);
-    void HandleRecvChat(RecvChatEvent* inEvent);
-    void HandleAlert(AlertEvent* inEvent);
-    void HandleJoinedRoom(JoinedRoomEvent* inEvent);
-    void HandleLeftRoom(LeftRoomEvent* inEvent);
-    void ShowParserError(ChatCommandParser* inParser);
-    void SendInput();
-    void HandleChatCommandError(ChatCommandErrorEvent* inEvent);
-    void HandleClientModerated(ClientModeratedEvent* inEvent);
-    bool IsTeamRoom();
-    void AddFormattedText(const GUIString& inFormat,const GUIString*const* inStrings,int inNumStrings,
-        TextSegmentBase*const* inSegments,int inNumSegments,bool inLineBreak);
-    void AddTextLine(const GUIString& inFormat,const GUIString& inText,bool inLineBreak);
-    void AddLinkLine(const GUIString& inFormat,TextSegmentBase* inSegment,bool inLineBreak);
-    SmartPtr<ChatLink> MakeClientLink(LobbyClient* inClient);
-    void HandleTextLinkActivated(TextLinkActivatedEvent* inEvent);
-    void DisableLinkChain(ChatLink* inLink,int inColor,int inLinkedColor);
-    SmartPtr<Font> mBoldFont;
-    SmartPtr<Font> mItalicFont;
-    int mDefaultColor; int mUserColor; int mWhisperColor; int mEmoteColor; int mWarningColor;
-    int mErrorColor; int mHelpColor; int mGroupColor; int mMessageColor; int mAcceptColor; int mRejectColor;
-    SmartPtr<InputBox> mChatInput; //b8
-    SmartPtr<Button> mSendButton; //bc
-    SmartPtr<TextArea> mChatOutput; //c0, pointer only
-    long mRoomSpecFlags; //c4
-    unsigned short mClientId; //c8
-    GUIString mRoomName; //cc
+    ChatCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Chat) {}
+    void SetField(int inField, intptr_t inValue) { this->CCall(EeWonLobbyCtlCall::SetField, inField, inValue); }
 };
 }
 

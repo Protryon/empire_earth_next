@@ -1226,8 +1226,9 @@ int main(int argc, char** argv)
 {
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     // the tables against the original SafeGetComponent arguments
-    CHECK(ee_won_lobbyctl_slot_count() == sizeof(kOrigSlots) / sizeof(kOrigSlots[0]));
-    for (unsigned i = 0; i < ee_won_lobbyctl_slot_count(); i++) {
+    // (round 13's kinds' look-ups follow these; won_srvlist_test and won_netctl_test check them)
+    CHECK(ee_won_lobbyctl_slot_count() >= sizeof(kOrigSlots) / sizeof(kOrigSlots[0]));
+    for (unsigned i = 0; i < sizeof(kOrigSlots) / sizeof(kOrigSlots[0]); i++) {
         const EeWonLobbyCtlSlot* s = ee_won_lobbyctl_slot(i);
         CHECK(strcmp(s->name, kOrigSlots[i].mName) == 0);
         CHECK(strcmp(s->file, kOrigFiles[OrigFileOf((int)i)]) == 0);

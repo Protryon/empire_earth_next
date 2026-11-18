@@ -29723,3 +29723,111 @@ and `SEGeneralMIDI.c`. What came: `ee_audio::dmusic` (the DirectMusic engine, ~2
   48 kHz in real time, as miniaudio's null backend did. cpal's Windows backend links through raw-dylib: no new import
   libraries; Linux needs `libasound2-dev` (alsa-sys's build script asks pkg-config; a cross `cargo check` from Windows
   passes with `PKG_CONFIG_ALLOW_CROSS=1` and `PKG_CONFIG` naming a stub that prints `-lasound`), macOS the CoreAudio, AudioToolbox and AudioUnit frameworks (added to xbuild.py's links).
+## R6 WONLobby, round 13: the Internet lobby's controls as lobbyctl.rs kinds (ee_won_lobby srvlistctl.rs, chatctl.rs, netctl.rs; branch rust-wonlobby13b, 2026-11-17)
+
+Round 12's measure named what kept the WONGUI hosts' readers: the lobby's own Container and ListItem subclasses,
+the Internet controls. This round moved all of them (and the LAN screen's ServerListCtrl, ChatCtrl, RoomLabelCtrl
+and DirectConnectCtrl, which the LAN game builds too) onto round 4's control object: one Rust object per control
+over one host, the C++ class a one-line shell (`LobbyRustCtrl`, or the new `LobbyRustDialogCtrl` for the two
+`Dialog`s), so the resource factories, the config readers and every outside caller did not change.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| dd03536a | ServerListCtrl and its rows (srvlistctl.rs, kind `ServerList`); ServerListCtrl.cpp deleted; the new host unit LobbyNetCtrlHost.cpp | 41,340 -> 40,707 (-633) |
+| 6eebbba6 | ChatCtrl (chatctl.rs, kind `Chat`); ChatCtrl.cpp deleted | 40,707 -> 40,274 (-433) |
+| 7d39e9a8 | RoomCtrl, FriendsListCtrl, UserListCtrl, QuickPlayCtrl, LoginCtrl, CreateAccountCtrl, UpdateAccountCtrl, LostPasswordCtrl, LostUserNameCtrl, LoginHelpCtrl, LoginStatusCtrl, InitFailedCtrl, MOTDCtrl, LoginScreen, DirectConnectCtrl, RoomLabelCtrl (netctl.rs, sixteen kinds); sixteen units deleted | 40,274 -> 38,137 (-2,137) |
+
+| e318ec1d | the host's missing event and row member cases, the rows' text colour (below: what the LAN game found) | 38,137 -> 38,165 (+28) |
+
+Round total: WON C++ 41,340 -> 38,165 (-3,175); eighteen units deleted.
+
+- **The model's ops are the model's.** Every call on a game, client, friend, group, server or list is one of three
+  generic ops (`MGet`, `MSet`, `MCall`: a field or method of `EeWonModelField` / `EeWonModelCall` on the shell's
+  model object). The game's controls are made by `ee_won_lobbyctl_new_model`, so modelobj.rs answers them in Rust
+  (`ctl_op`); the C++ host has no case for them. The drivers make the controls without the model and script the
+  answers. Addresses the same way (`AddrValid`, `AddrEquals`, `AddrClone`, `AddrFree`: ipobj.rs in the game).
+- **Texts** cross as `GUIStringData*`: borrowed from their owner (an event, a control, the model), or held (one
+  reference, released where the original's temporary or local ended: `TextNew`, `TextAppend`, the parser's texts,
+  the saved password). A builder op replaces the held text with the appended copy (the GUIString's copy-on-write).
+- **ServerListCtrl.** The column definitions (InitColumnMap's six, the EE game's Epoch and MapType through the glue's
+  `SetColumnHandlers`) are a Rust table by name (ASCII case ignored); the control's columns, the rows by game (a
+  `BTreeMap` in the games' pointer order, as the `std::map<SmartPtr>`), the filters (ParseIntFilter in Rust: MSVC's
+  `atoi`, clamped), the orders, the paints, the icon, the refilter timer and the config reader's column steps are
+  Rust. `ServerDetailsItem` keeps its members and vtable (the EE game's subclass adds the details); each virtual is
+  one forward through the list's grandparent, the control. The EE columns' handlers are one op (`EeColumn`) into the
+  glue. The config reader stays C++ (its reads, the list's and header's calls, the exceptions) and asks the Rust
+  (`Cfg`: the game type, the column count, the list, a column by name, the push).
+- **ChatCtrl.** Every handler is Rust (the format chosen, the links, the duration's unit and count, the whisper,
+  warning and team rules, the Accept/Reject chain, the commands it runs itself). The links stay C++ `ChatLink`s
+  (the output paints and hit-tests them): one op makes one from an `EeWonLobbyCtlLink`, a formatted line is one op
+  over an `EeWonLobbyCtlFormat`, an event's member one `EvGet`.
+- **The sixteen small controls** (netctl.rs) hold their controls, flags and texts in Rust; their rows
+  (RoomListItem, FriendsListItem, UserListItem) stay C++ list rows (their paint, size and order moved unchanged
+  into LobbyNetCtrlHost.cpp), made and filled by ops. LoginScreen's pages and RoomLabelCtrl's config stores are
+  calls (`Page`, `SetField`). DrawLobbyPing moved from MOTDCtrl.cpp to the host unit.
+- **The shells.** `LobbyRustCtrl` and `LobbyRustDialogCtrl` pass their `Container*` as the host's context; the host
+  casts to `Container` (the browser's home location through `LobbyRustCtrl`). One event map (`CtlEventOf`) for both.
+
+### Goldens, mutations, replays
+
+| Driver | Sequences | Trace lines | Replayed by cargo | Mutations |
+|---|---|---|---|---|
+| won_srvlist_test (new) | 60,000 | 7,532,533 | golden_srvlist.txt (70) | 12 of 13 caught (the timer's 500 ms bound: equivalent below 1,600 games, the driver's lists are smaller) |
+| won_chatctl_test (new) | 60,000 (+ LobbySplitDuration over 0..400,000 s both ways) | 3,379,380 | golden_chatctl.txt (72) | 7 of 7 |
+| won_netctl_test (new) | 80,000 (sixteen kinds) | 3,730,110 | golden_netctl.txt (192) | 8 of 8 |
+| won_lobbyctl_test, won_eeglue_test, won_guiconf_test | as before | | | 0 failures |
+
+The first runs of each differed only in the drivers' own mistakes or in the Rust reading a member once where the
+original read it twice (a `this->mGame`, an event's room kind): the Rust now reads each where the original did, and
+a call's arguments right to left where two of them make ops (MSVC's order).
+
+### What the LAN game found that the goldens could not
+
+The goldens' scripted host answers every op itself, so the C++ host's own cases and the constants both sides share
+are outside them. The first lobby capture comparison against the pre-round exe (0bfe280c, built at the round's
+start) showed two regressions: the login screen's first frame had the login panel where the start-up failure panel
+belonged and an empty status line (LobbyNetCtrlHost.cpp's `EvField` had no cases for LoginInitStatus and the other
+round 13 events: every member read 0), and the LAN list's rows painted in black (`StandardColor_Text` is 14, not
+13: the Rust and the golden both said 13). A script now checks that every op, event member, row member, event and
+slot type the Rust names has a host case (the row members' cases were missing too: fixed in the same commit). After
+the fix every lobby frame matches but for the game's name (`lantest0` against `lantest1`: the harness slot's digit)
+and the staging screen's blinking caret (15 pixels at x 121).
+
+**Lesson for host-backed moves:** check the host's switch against the Rust's enums mechanically, and give every
+enum value the Rust copies from a C++ enum a comparison against the C++ (a static assert or a driver check).
+
+### Behaviour changes
+
+- A filter text past 510 bytes: the original read one uninitialised byte; it is a terminator.
+- `atoi` of an out-of-range filter number clamps on every system (the original's MSVC behaviour; glibc's differed).
+- The rows' map is released in the games' pointer order (std::map's tree order before; nothing observes it).
+- The column names match ignoring ASCII case (GUIStringLessNoCase also folded other letters; no config uses them).
+
+### What runs it
+
+EE-SIM never builds the lobby. The LAN game builds ServerListCtrl (the LAN list and the direct-connect list),
+ChatCtrl and RoomLabelCtrl (the game room), DirectConnectCtrl: `lan_game.py` runs them. The rest is the Internet
+lobby's, reached by the drivers only (no WON server exists).
+
+### Left
+
+- The rows (ServerDetailsItem's forwards, RoomListItem, FriendsListItem, UserListItem, ChatLink) are C++ objects the
+  GUI's lists call through their vtables; the WONGUI hosts' virtual ops they use are the same every C++ list row and
+  container needs, so no host hook became dead this round.
+- IPAddr.cpp and StringUtil.cpp: still called by WONGUI, WONConfig, the title config and the game's UI events.
+- RoutingLogic.cpp's host (548 lines): the events, dialogs and the request helpers EEWonNet.cpp also calls.
+
+### Gates
+
+| Gate | dd03536a | 6eebbba6 | 7d39e9a8 | e318ec1d, the round's head |
+|---|---|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (after a rustfmt fix) | PASS (after a clippy fix) | PASS | PASS |
+| `build.py --test-profile windowed-software` | | | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_srvlist_test, won_lobbyctl_test, won_eeglue_test, won_guiconf_test | won_chatctl_test | won_netctl_test | all 148 programs exit 0 (won_srvlist_test, won_chatctl_test, won_netctl_test the new ones) |
+| `lan_game.py` (slot.py) | | | PASS (PT 2818 / 2819), two lobby regressions in the captures | `RESULT PASS lan-game PT host=2880 joiner=2895` (the pre-round exe: 2941 / 2942); every lobby capture identical but the slot's digit and the caret |
+
+origin/rust had nothing new at the end of the round (no merge).

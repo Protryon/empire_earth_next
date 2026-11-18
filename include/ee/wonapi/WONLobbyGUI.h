@@ -1845,13 +1845,12 @@ bool LobbyIAmCaptain();
 void LobbyNetAdvertiseGame();
 void LobbyNotifyStagingChange();
 
-class ServerListCtrl;
-class ServerDetailsItem;
-typedef std::list<ServerDetailsItem*> ServerDetailsList;
+// a game list row (R6 WONLobby round 13): the members stay here (the EE game's subclass and the list read them), the
+// virtuals forward to the list control's Rust object (srvlistctl.rs), its column paints, orders and the icon
 class ServerDetailsItem : public ListItem {
 public:
-    ServerDetailsItem();
-    virtual ~ServerDetailsItem();
+    ServerDetailsItem() { this->mSelectable = true; }
+    virtual ~ServerDetailsItem() {}
     virtual void Paint(Graphics&,ListArea*);
     virtual void CalcDimensions(ListArea*);
     virtual int Compare(const ListItem*,ListArea*) const;
@@ -1859,27 +1858,6 @@ public:
     virtual void MouseDown(ListArea*,int,int,int);
     virtual void PaintDetailsHook(Graphics&,MultiListArea*) {} // empty inline, vtable +0x38
     virtual int GetDetailsHeightHook(MultiListArea*) { return 0; } // returns 0, vtable +0x3c
-    void SetGame(LobbyGame*);
-    void CalcIcon();
-    static bool IsStartOfNumber(char);
-    static bool ParseIntFilter(const GUIString&,int&,int&);
-    static void PaintIcon(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintSkill(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintGameName(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintAddress(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintNumPlayers(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static void PaintPing(Graphics&,ServerDetailsItem*,ServerListCtrl*);
-    static int CompareIcon(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareSkill(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareGameName(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareAddress(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int CompareNumPlayers(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static int ComparePing(const ServerDetailsItem*,const ServerDetailsItem*,ServerListCtrl*);
-    static void FilterSkill(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterGameName(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterAddress(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterNumPlayers(const GUIString&,ServerDetailsList&,ServerListCtrl*);
-    static void FilterPing(const GUIString&,ServerDetailsList&,ServerListCtrl*);
     SmartPtr<LobbyGame> mGame; //18
     GUIString mIPAddrStr; //1c
     int mIconId; //20
