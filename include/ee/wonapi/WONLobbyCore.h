@@ -84,15 +84,12 @@ void LobbySetNetworkAdapter(long inAddress); // 0x75b9c0 (a numeric IPv4 address
 ServerContext* LobbyGetDirServers(); // 0x75b2b0 (not owned; the private state's 0x60)
 ServerContext* LobbyGetRoomDirServers(); // 0x75b310 (not owned; the private state's 0x64)
 void LobbySetTOUTimes(long inSysTime, long inGameTime); // 0x75b5d0 (stores the private state's 0xbc / 0xc0)
-void LobbyLoadGlobalPrefs(); // checks the lobby exists, then Load 0x75f7b0
 void LobbyBindUDPPort(); // sets up the UDP port from the config
 void LobbySetLobbyPort(unsigned short inPort); // 0x761420 (stores the private state's 0xb8; nothing without a lobby)
 void LobbyShowInternetScreen();
 void LobbyRemoveEventHooks(); // 0x759040 (removes the lobby's event and timer hooks)
 bool LobbyUserCanceledLastStatusOp(); // 0x758f50 (the dialog logic's active-state byte)
 bool LobbyLogout(bool);   // 0x761330 (forwards to StagingLogic's Logout)
-struct LobbyUserInfo;
-LobbyUserInfo* LobbyGetCurrentUser(); // not owned; NULL when no record matches the file ID
 GUIString LobbyFormatString3(const GUIString& inFormat, const GUIString& inFirst,
     const GUIString& inSecond, const GUIString& inThird);
 

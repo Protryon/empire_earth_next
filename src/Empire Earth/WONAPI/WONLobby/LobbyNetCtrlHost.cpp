@@ -586,7 +586,7 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::FriendAt: return (intptr_t)LobbyGetFriendAt((size_t)a);
     case Op::CurrentUser: return (intptr_t)LobbyGetCurrentUser();
     case Op::LabelSetUserWelcome:
-        aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), reinterpret_cast<LobbyUserInfo*>(b)->mUserName), true);
+        aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), LobbyUserText(reinterpret_cast<LobbyUserInfo*>(b), 0)), true);
         return 0;
     case Op::DeliverQuickPlay: inCtl->DeliverEvent(new QuickPlayEvent((int)a), false); return 0;
     case Op::DialogBaseEvent: static_cast<Dialog*>(inCtl)->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
@@ -879,8 +879,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
         return 0;
     case Op::ComboInsertFilterRow: aCombo->InsertItem(new FilterListItem(Txt(b), reinterpret_cast<Font*>(c)), -1); return 0;
     case Op::ComboAddFilterValues: {
-        LobbyOptionSet aFilters = LobbyGetFilterValues(Txt(b));
-        for (size_t i = 0; i < aFilters.size(); ++i) aCombo->AddString(aFilters.ValueAt(i), -1);
+        GUIString aColumn = Txt(b);
+        for (size_t i = 0, n = LobbyGetFilterCount(aColumn); i < n; ++i) aCombo->AddString(LobbyGetFilterValueAt(aColumn, i), -1);
         return 0;
     }
     case Op::ComboItem: return (intptr_t)aCombo->mListArea->GetItem((int)b);

@@ -15,7 +15,6 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/wonapi/WONLobbyMap.h"
 #include "ee/wonapi/WONEventTypes.h"
 #include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 #include "rust/won_gui/barobj.h"
@@ -1975,8 +1974,6 @@ public:
 class LobbyServer;
 LobbyServer* LobbyGetCurrentServer();       // 0x35b6f0; NULL outside a server
 
-bool LobbyIsNameIgnored(const GUIString& inName); // persistent ignore predicates; cdecl
-bool LobbyIsCDKeyBlocked(unsigned long inAddress);
 unsigned short GetLobbyProductId();        // 0x35b580 (LobbyGame summary wire product id)
 
 // 0x361370 (cdecl): the local client

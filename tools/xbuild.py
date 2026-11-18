@@ -531,6 +531,10 @@ WON_TESTS = {
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
     "won_persist_test": [],
+    # LobbyPersistentData and the Lobby* functions over it as one Rust object (persistobj.rs, R6 WONLobby round 15):
+    # the original's statements (won_persistobj_orig.h) against the game's forwards, the state and files compared
+    # after every step
+    "won_persistobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
