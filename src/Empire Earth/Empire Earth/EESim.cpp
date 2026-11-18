@@ -1070,6 +1070,10 @@ void HostSweep(int inKind, long inArg)
             EESimCaptureRecord::Only(kTags, 3);
             EESimCaptureRecord::Exclusive(true);
             EESightCaptureSweep();
+            // EEWorld::RecordStatistics (WSTA): only a game left runs it (EEWorld::Clear); its random draws and the
+            // computers' topped-up totals reach nothing after it
+            EESimCaptureRecord::Only(EECaptureTag("WSTA"));
+            EEAppCaptureStatisticsSweep();
             EESimCaptureRecord::Exclusive(false);
             EESimCaptureRecord::Only(0);
             EESimCaptureRecord::Close();

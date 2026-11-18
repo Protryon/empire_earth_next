@@ -95,6 +95,9 @@ arguments, tile range and an FNV-1a of that range's visibility words and mesh re
 every game minute. At the app profile's end, EE-SIM sweeps EEMap's AddSight and RemoveSight and the out-of-synch
 checksum's windows (MAPS, MAPK and their TSGT; no other record). Its goldens (oracle, app) come from the C++ before
 the tile sight moved (the object-storage plan's lane P).
+WSTA (ee/EEAppCapture.h; the app profile) is EEWorld::RecordStatistics, the end-of-game scores (only a game left
+runs it): at the app profile's end, after the sight sweep, the history's records and every player's resources and
+statistics after it. Its golden comes from the C++ before the statistics moved (the app-core lane).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
