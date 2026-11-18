@@ -125,6 +125,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
+#include "rust/sim/app.h"   // EeAppStats* (ee_sim app statistics.rs)
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -1158,19 +1159,32 @@ long EEWorld::PauseGame()
     return theResult;
 }
 
-// Builds the post-game statistics: tops up computer players' resources against the best human, scores every player,
-// sorts them by score and fills the records (computer play times scaled from the longest human one)
+// RecordStatistics' C++ calls (ee_sim app statistics.rs): the physics random draw, a player's statistics Set (its
+// gate and the game time) and resources
+static float EEStatsRandom(void*, float inLow, float inHigh)
+{
+    return gPhysics->GetRandom(inLow, inHigh);
+}
+
+static void EEStatsSet(void*, uint32_t inSlot, long inSeries, long inValue)
+{
+    gWorld.mPlayers[inSlot]->mSavedGroups.Set(inSeries, inValue);
+}
+
+static long EEStatsCap(void*, uint32_t inSlot, uint32_t inResource)
+{
+    return gWorld.mPlayers[inSlot]->mResourceCaps[inResource];
+}
+
+static void EEStatsSetCap(void*, uint32_t inSlot, uint32_t inResource, long inValue)
+{
+    gWorld.mPlayers[inSlot]->mResourceCaps[inResource] = inValue;
+}
+
+// Builds the post-game statistics: the history's fields here, the scores, the computers' top-ups, the records' order
+// and flags and the computers' play times in Rust (ee_sim app statistics.rs), then the records filled
 void EEWorld::RecordStatistics()
 {
-    EEStatisticsRecord* theRecordPtr = NULL;
-    std::multimap<long, long, std::greater<long> > theScores;
-    std::map<unsigned long, EEStatisticsRecord> theRecords;
-    EEStatisticsRecord theRecord;
-    UWideString theName;
-    UWideString theDefault;
-    std::vector<long> thePlayers;
-    bool theLocalPending = false;
-    unsigned long theHumans = 0;
     this->mStatistics.mStartTime = this->mStartTime;
     this->mStatistics.mTileCount = this->mMap->GetTileCount();
     this->mStatistics.mVictoryEnabled = this->mVictoryEnabled;
@@ -1180,260 +1194,62 @@ void EEWorld::RecordStatistics()
     this->mStatistics.mEndTime = gPhysics->mGameTime;
     if (this->mStatistics.mIsCampaign)
         this->mStatistics.mCampaignName = this->mGameOptions.mCampaignName;
-    thePlayers.clear();
-    unsigned long i;
-    for (i = 0; i < this->mNumPlayers; i++) {
-        EEPlayer* thePlayer = this->mPlayers[i];
-        if (!thePlayer->mObserverMode || thePlayer->mGameResult != 0) {
-            thePlayers.push_back(i);
-        } else {
-            if (this->mPlayers[this->mCurrentPlayer] == thePlayer)
-                theLocalPending = true;
-            if (thePlayer->mDisconnected)
-                thePlayers.push_back(i);
-        }
+    UWideString theDefault;
+    gResource->GetString(IDS_COMPUTER, theDefault);
+    std::vector<EeAppStatsPlayer> thePlayers(this->mNumPlayers);
+    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
+        EEPlayer* p = this->mPlayers[i];
+        thePlayers[i] = {p->GetPlayerID(), p->IsHuman(),
+                         PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)p->mName),
+                                    reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0,
+                         p->mObserverMode, p->mDisconnected, p->mGameResult, p->mSavedGroups.mStats};
     }
-    long theComputerCount = 0;
-    theScores.clear();
-    for (i = 0; i < thePlayers.size(); i++) {
-        EEPlayer* thePlayer = this->mPlayers[thePlayers[i]];
-        if (!thePlayer->IsHuman()) {
-            gResource->GetString(IDS_COMPUTER, theDefault);
-            if (PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer->mName), reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0) {
-                theComputerCount++;
-                sprintf(theRecord.mNameSuffix, " #%ld", theComputerCount);
-            } else {
-                theRecord.mNameSuffix = gEmptyString;
-            }
-            for (unsigned long r = 2; r < 7; r++) {
-                long theBase = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r - 2];
-                long theSeries;
-                if (r == 2)
-                    theSeries = 7;
-                else if (r == 3)
-                    theSeries = 8;
-                else if (r == 4)
-                    theSeries = 10;
-                else if (r == 5)
-                    theSeries = 9;
-                else if (r == 6)
-                    theSeries = 11;
-                else
-                    continue;
-                EEPlayer* theBest = NULL;
-                for (unsigned long j = 0; j < thePlayers.size(); j++) {
-                    EEPlayer* theOther = this->mPlayers[thePlayers[j]];
-                    if (theOther->IsHuman()) {
-                        if (theBest == NULL || theBest->mSavedGroups.GetValue(theSeries) < theOther->mSavedGroups.GetValue(theSeries))
-                            theBest = theOther;
-                    }
-                }
-                // no human among the recorded players: there is no one to top up against (theBest used to be
-                // read through NULL)
-                if (theBest == NULL)
-                    continue;
-                long theBestValue = theBest->mSavedGroups.GetValue(theSeries);
-                long theGathered = theBestValue - theBest->mResourceCaps[r] + theBase;
-                if (thePlayer != theBest)
-                    theBest->mEnemies[thePlayer->GetPlayerID()];
-                float theFactor = gPhysics->GetRandom(0.5f, 1.5f);
-                unsigned long theValue;
-                unsigned long theTarget;
-                if (theBestValue < 1) {
-                    theValue = thePlayer->mSavedGroups.GetValue(theSeries);
-                    theTarget = theValue;
-                } else {
-                    theValue = UMFloatToLong(theBestValue * theFactor);
-                    theTarget = UMFloatToLong(theGathered * theFactor);
-                }
-                long theExcess = theTarget - theBase - theValue;
-                if (theExcess > 0)
-                    theValue += theExcess;
-                long theSpent = theTarget - UMFloatToLong(gPhysics->GetRandom(0.03f, 0.06f) * theTarget);
-                if (thePlayer->mSavedGroups.GetValue(theSeries) < theValue)
-                    thePlayer->mSavedGroups.Set(theSeries, theValue);
-                else
-                    theValue = thePlayer->mSavedGroups.GetValue(theSeries);
-                thePlayer->mResourceCaps[r] = theBase - theSpent + theValue;
-            }
-        } else {
-            theRecord.mNameSuffix = gEmptyString;
-        }
-        unsigned long theScore = 0;
-        long theMilitary = 0;
-        long theUnits = 0;
-        long theEconomy = 0;
-        long theTech = 0;
-        long theGathered = 0;
-        long theStart = 0;
-        if (thePlayer->GetPlayerID() == 0) {
-            theScore = 0x7fffffff;
-        } else {
-            thePlayer->mSavedGroups.CompactEpochHistory();
-            for (long s = 0; s < 31; s++) {
-                unsigned long theValue = thePlayer->mSavedGroups.GetValue(s);
-                unsigned long thePoints = thePlayer->mSavedGroups.GetSeries(s).mPoints.size();
-                switch (s) {
-                case 1:
-                    theEconomy += theValue * -15;
-                    break;
-                case 2:
-                    theEconomy += theValue * 50;
-                    break;
-                case 3:
-                case 5:
-                    theEconomy += theValue * 20;
-                    break;
-                case 4:
-                    theEconomy += theValue * -5;
-                    break;
-                case 7:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceFood];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[0];
-                    break;
-                case 8:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceWood];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[1];
-                    break;
-                case 9:
-                    theGathered += theValue;
-                    theMilitary += theValue >> 3;
-                    theScore += thePlayer->mResourceCaps[kResourceGold];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[3];
-                    break;
-                case 10:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceStone];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[2];
-                    break;
-                case 11:
-                    theGathered += theValue;
-                    theMilitary += theValue >> 3;
-                    theScore += thePlayer->mResourceCaps[kResourceIron];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[4];
-                    break;
-                case 12: {
-                    unsigned long theCount = thePlayer->mSavedGroups.GetSeries(s).mPoints.size();
-                    unsigned long theFirst;
-                    if (theCount <= 1)
-                        theFirst = 0;
-                    else
-                        theFirst = (thePlayer->mSavedGroups.GetSeries(s).mPoints.begin() + 1)->mValue;
-                    for (unsigned long p = 0; p < thePoints; p++) {
-                        unsigned long theEpoch = thePlayer->mSavedGroups.GetSeries(s).mPoints[p].mTime + 1;
-                        unsigned long theTime = (thePlayer->mSavedGroups.GetSeries(s).mPoints.begin() + p)->mValue;
-                        if (theTime < theFirst)
-                            theTime = theFirst;
-                        theUnits += (long)((double)(unsigned long)this->mStatistics.mEndTime / theEpoch * (theTime - theFirst) * 100.0 + 0.5);
-                    }
-                    break;
-                }
-                case 13:
-                    theEconomy += theValue * 10;
-                    break;
-                case 14:
-                    theTech += theValue * 10;
-                    break;
-                case 15:
-                    theTech += thePlayer->mSavedGroups.CountIncreases(s) * 100;
-                    break;
-                case 16:
-                    theTech += theValue * 500;
-                    break;
-                case 18:
-                    theGathered += theValue;
-                    break;
-                case 19:
-                    theTech += theValue * 2;
-                    break;
-                }
-            }
-            long theBonus = (long)(theGathered - theScore + theStart) / 4;
-            long theFloor = this->mStatistics.mIsScenario ? theScore : 0;
-            if (theBonus <= theFloor)
-                theBonus = theFloor;
-            theMilitary += theBonus;
-            theScore = theTech + theEconomy + theUnits + theMilitary;
-        }
-        theRecord.mScore = theScore;
-        theRecord.mEconomyScore = theMilitary;
-        theRecord.mEpochScore = theUnits;
-        theRecord.mMilitaryScore = theEconomy;
-        theRecord.mTechScore = theTech;
-        theScores.insert(std::multimap<long, long, std::greater<long> >::value_type(theScore, thePlayers[i]));
-        theRecords.insert(std::make_pair(*(thePlayers.begin() + i), theRecord));
+    EeAppStatsWorld theWorld = {};
+    theWorld.current = this->mCurrentPlayer;
+    theWorld.is_scenario = this->mStatistics.mIsScenario;
+    theWorld.end_time = this->mStatistics.mEndTime;
+    for (long r = 0; r < 5; r++) {
+        theWorld.base[r] = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r];
+        theWorld.level[r] = EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[r];
     }
+    const EeAppStatsHost theHost = {NULL, EEStatsRandom, EEStatsSet, EEStatsCap, EEStatsSetCap};
+    std::vector<EeAppStatsRecord> theOrder(thePlayers.size());
+    long theCurrent = -1;
+    bool theScenario = this->mStatistics.mIsScenario;
+    size_t n = ee_app_record_statistics(&theWorld, thePlayers.data(), thePlayers.size(), &theHost, theOrder.data(),
+                                             theOrder.size(), &theCurrent, &theScenario);
     this->mStatistics.mRecords.clear();
-    this->mStatistics.mRecords.resize(theScores.size());
-    unsigned long theIndex = 0;
-    unsigned long theMaxTime = 0;
-    std::multimap<long, long, std::greater<long> >::iterator it;
-    for (it = theScores.begin(); it != theScores.end(); ++it, theIndex++) {
-        EEPlayer* thePlayer = this->mPlayers[it->second];
-        EEStatisticsRecord& theSource = (*theRecords.find(it->second)).second;
-        thePlayer->mSavedGroups.Set(14, thePlayer->mSavedGroups.GetLastValue(14));
-        thePlayer->mSavedGroups.Set(13, thePlayer->mSavedGroups.GetLastValue(13));
-        (this->mStatistics.mRecords.begin() + theIndex)->mScore = theSource.mScore;
-        (this->mStatistics.mRecords.begin() + theIndex)->mEconomyScore = theSource.mEconomyScore;
-        this->mStatistics.mRecords[theIndex].mEpochScore = theSource.mEpochScore;
-        this->mStatistics.mRecords[theIndex].mMilitaryScore = theSource.mMilitaryScore;
-        this->mStatistics.mRecords[theIndex].mTechScore = theSource.mTechScore;
-        this->mStatistics.mRecords[theIndex].mColor = thePlayer->mColor;
-        this->mStatistics.mRecords[theIndex].mName = thePlayer->mName + theSource.mNameSuffix;
-        this->mStatistics.mRecords[theIndex].mStatistics = thePlayer->mSavedGroups;
-        this->mStatistics.mRecords[theIndex].mSlot = thePlayer->mSlot;
-        this->mStatistics.mRecords[theIndex].mResult = thePlayer->mGameResult;
-        long theTime = thePlayer->mSavedGroups.mEndTime;
-        if (theTime == 0)
-            theTime = this->mStatistics.mEndTime;
-        this->mStatistics.mRecords[theIndex].mEndTime = theTime;
-        if (thePlayer->GetPlayerID() > 0)
-            this->mStatistics.mRecords[theIndex].mTeam = this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam;
-        else
-            this->mStatistics.mRecords[theIndex].mTeam = 0;
+    this->mStatistics.mRecords.resize(n);
+    for (size_t k = 0; k < n; k++) {
+        const EeAppStatsRecord& o = theOrder[k];
+        EEStatisticsRecord& e = this->mStatistics.mRecords[k];
+        EEPlayer* thePlayer = this->mPlayers[o.slot];
+        UWideString theSuffix;
+        if (o.suffix != 0)
+            sprintf(theSuffix, " #%ld", o.suffix);
+        e.mScore = o.score;
+        e.mEconomyScore = o.economy_score;
+        e.mEpochScore = o.epoch_score;
+        e.mMilitaryScore = o.military_score;
+        e.mTechScore = o.tech_score;
+        e.mColor = thePlayer->mColor;
+        e.mName = thePlayer->mName + theSuffix;
+        e.mStatistics = thePlayer->mSavedGroups;
+        e.mSlot = thePlayer->mSlot;
+        e.mResult = thePlayer->mGameResult;
+        e.mEndTime = thePlayer->mSavedGroups.mEndTime != 0 ? thePlayer->mSavedGroups.mEndTime : this->mStatistics.mEndTime;
+        e.mTeam = thePlayer->GetPlayerID() > 0 ? this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam : 0;
         for (unsigned long r = 2; r < 7; r++)
-            this->mStatistics.mRecords[theIndex].mResources[r] = thePlayer->mResourceCaps[r];
-        if (thePlayer->GetPlayerID() == (unsigned long)this->mCurrentPlayer) {
-            this->mStatistics.mRecords[theIndex].mIsLocal = true;
-            this->mStatistics.mCurrentRecordIndex = theIndex;
-        } else if (theLocalPending) {
-            theLocalPending = false;
-            this->mStatistics.mRecords[theIndex].mIsLocal = true;
-            this->mStatistics.mCurrentRecordIndex = theIndex;
-        } else {
-            this->mStatistics.mRecords[theIndex].mIsLocal = false;
-        }
-        if (thePlayer->IsHuman()) {
-            this->mStatistics.mRecords[theIndex].mIsHuman = true;
-            if (theIndex > 0)
-                theHumans++;
-            if (theMaxTime < this->mStatistics.mRecords[theIndex].mStatistics.GetValue(0x18))
-                theMaxTime = this->mStatistics.mRecords[theIndex].mStatistics.GetValue(0x18);
-        } else {
-            this->mStatistics.mRecords[theIndex].mIsHuman = false;
-        }
+            e.mResources[r] = thePlayer->mResourceCaps[r];
+        e.mIsLocal = o.is_local;
+        e.mIsHuman = o.is_human;
     }
-    theIndex = 0;
-    for (it = theScores.begin(); it != theScores.end(); ++it, theIndex++) {
-        EEPlayer* thePlayer = this->mPlayers[it->second];
-        if (thePlayer->IsHuman())
-            continue;
-        float theFactor;
-        if (thePlayer->mGameResult == 1)
-            theFactor = gPhysics->GetRandom(0.75f, 0.9f);
-        else if (thePlayer->mGameResult == 2)
-            theFactor = gPhysics->GetRandom(0.6f, 0.75f);
-        else
-            theFactor = gPhysics->GetRandom(0.6f, 0.9f);
-        this->mStatistics.mRecords[theIndex].mStatistics.Set(0x18, (long)(theFactor * theMaxTime + 0.5f));
-    }
-    if (theHumans > 1 && this->mStatistics.mIsScenario == true)
-        this->mStatistics.mIsScenario = false;
+    if (theCurrent >= 0)
+        this->mStatistics.mCurrentRecordIndex = theCurrent;
+    for (size_t k = 0; k < n; k++)
+        if (theOrder[k].has_play_time)
+            this->mStatistics.mRecords[k].mStatistics.Set(0x18, theOrder[k].play_time);
+    this->mStatistics.mIsScenario = theScenario;
 }
 
 // Creates an empty statistics record
