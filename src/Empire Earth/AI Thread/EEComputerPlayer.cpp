@@ -1532,125 +1532,75 @@ bool EETeam::ContainsPlayer(unsigned long inPlayerID)
     return it != theEnd;
 }
 
-// port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265 (main's
-// stages 5 and 6 left the timers unused; the block keeps its layout)
-EECPExperimentTimers gCPExperimentTimers;
+// port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265
+// (ee_sim::cp::timers: the timers are Rust's; the danger zones the computer players', over EECPStateOperation)
+struct EECPStateContext {
+    FSFile* mFile;
+    std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > mZones;   // a load's, by player id
+    long mX, mY;                                                                     // the zone being pushed
+};
 
-template <class T>
-static long EECPSaveTimerArray(FSFile& outFile, const T (&inValues)[EECPExperimentTimers::kPlayers])
+static int32_t EECPStateOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
-    long theResult = outFile.Write((unsigned long)EECPExperimentTimers::kPlayers);
-    for (long i = 0; i < EECPExperimentTimers::kPlayers && theResult == kErrorOK; i++)
-        theResult = outFile.Write(inValues[i]);
-    return theResult;
-}
-
-template <class T>
-static long EECPLoadTimerArray(FSFile& inFile, T (&outValues)[EECPExperimentTimers::kPlayers])
-{
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
-        T theValue = 0;
-        theResult = inFile.Read(theValue);
-        if (i < (unsigned long)EECPExperimentTimers::kPlayers)
-            outValues[i] = theValue;
+    EECPStateContext& theContext = *static_cast<EECPStateContext*>(inContext);
+    EEPlayer* thePlayer = inIndex < gWorld.mNumPlayers ? gWorld.mPlayers[inIndex] : NULL;
+    EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+    switch (inOp) {
+    case EE_CP_STATE_ZONES:
+        io->i = theCP != NULL ? (int64_t)theCP->mDangerZones.size() : 0;
+        return kErrorOK;
+    case EE_CP_STATE_ZONE: {
+        const std::pair<U2DPoint<long>, unsigned long>& theZone = theCP->mDangerZones[(size_t)io->i];
+        io->i = io->b == 0 ? (int64_t)theZone.first.mX : io->b == 1 ? (int64_t)theZone.first.mY : (int64_t)theZone.second;
+        return kErrorOK;
     }
-    return theResult;
+    case EE_CP_STATE_PUSH_PLAYER:
+        theContext.mZones.push_back(std::vector<std::pair<U2DPoint<long>, unsigned long> >());
+        return kErrorOK;
+    case EE_CP_STATE_PUSH_ZONE:
+        if (io->b == 0)
+            theContext.mX = (long)io->i;
+        else if (io->b == 1)
+            theContext.mY = (long)io->i;
+        else
+            theContext.mZones.back().push_back(std::make_pair(U2DPoint<long>(theContext.mX, theContext.mY), (unsigned long)io->i));
+        return kErrorOK;
+    }
+    return EESavePrimitive(*theContext.mFile, inOp, io);
 }
 
 long EECPSaveExperimentTimers(FSFile& outFile)
 {
-    const EECPExperimentTimers& t = gCPExperimentTimers;
-    long theResult = EECPSaveTimerArray(outFile, t.mBoats);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mBoatHold);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mSettleLast);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mGuardLast);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mMilitiaLast);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mNavalFleeLast);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleEpoch);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mScheduleStart);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatChecked);
-    if (theResult == kErrorOK) theResult = EECPSaveTimerArray(outFile, t.mThreatUntil);
-    return theResult;
+    return ee_cp_timers_save(&outFile, &EESaveFilePrimitive);
 }
 
 // read into a copy (zero where the file has fewer players), put in place at the loaded game's first tick
 long EECPLoadExperimentTimers(FSFile& inFile)
 {
-    EECPExperimentTimers t = {};
-    long theResult = EECPLoadTimerArray(inFile, t.mBoats);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mBoatHold);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mSettleLast);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mGuardLast);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mMilitiaLast);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mNavalFleeLast);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleEpoch);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mScheduleStart);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatChecked);
-    if (theResult == kErrorOK) theResult = EECPLoadTimerArray(inFile, t.mThreatUntil);
+    long theResult = ee_cp_timers_load(&inFile, &EESaveFilePrimitive);
     if (theResult == kErrorOK)
-        EEAfterLoad([t]() { gCPExperimentTimers = t; });
+        EEAfterLoad([]() { ee_cp_timers_apply(0); });
     return theResult;
 }
 
-// the claim ranges' two arrays, then per player id (gWorld.mNumPlayers of them) the danger zones of its computer
-// player's resource manager: the count, then each zone's tile and game ms (a player with none writes 0)
 long EECPSaveResourceState(FSFile& outFile)
 {
-    long theResult = EECPSaveTimerArray(outFile, gCPExperimentTimers.mClaimSteps);
-    if (theResult == kErrorOK)
-        theResult = EECPSaveTimerArray(outFile, gCPExperimentTimers.mClaimLast);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write((unsigned long)gWorld.mNumPlayers);
-    for (unsigned long p = 0; p < gWorld.mNumPlayers && theResult == kErrorOK; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
-        EEComputerPlayer* theManager = theCP;   // (the danger zones are the computer player's since main's stage 6)
-        unsigned long theCount = theManager != NULL ? (unsigned long)theManager->mDangerZones.size() : 0;
-        theResult = outFile.Write(theCount);
-        for (unsigned long z = 0; z < theCount && theResult == kErrorOK; z++) {
-            theResult = outFile.Write((long)theManager->mDangerZones[z].first.mX);
-            if (theResult == kErrorOK)
-                theResult = outFile.Write((long)theManager->mDangerZones[z].first.mY);
-            if (theResult == kErrorOK)
-                theResult = outFile.Write((unsigned long)theManager->mDangerZones[z].second);
-        }
-    }
-    return theResult;
+    EECPStateContext theContext;
+    theContext.mFile = &outFile;
+    return ee_cp_resource_state_save(&theContext, &EECPStateOperation, (uint32_t)gWorld.mNumPlayers);
 }
 
 long EECPLoadResourceState(FSFile& inFile)
 {
-    EECPExperimentTimers t = {};
-    long theResult = EECPLoadTimerArray(inFile, t.mClaimSteps);
-    if (theResult == kErrorOK)
-        theResult = EECPLoadTimerArray(inFile, t.mClaimLast);
-    unsigned long thePlayers = 0;
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(thePlayers);
-    std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > theZones;
-    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
-        unsigned long theCount = 0;
-        theResult = inFile.Read(theCount);
-        theZones.push_back(std::vector<std::pair<U2DPoint<long>, unsigned long> >());
-        for (unsigned long z = 0; z < theCount && theResult == kErrorOK; z++) {
-            long theX = 0, theY = 0;
-            unsigned long theTime = 0;
-            theResult = inFile.Read(theX);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theY);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theTime);
-            theZones.back().push_back(std::make_pair(U2DPoint<long>(theX, theY), theTime));
-        }
-    }
-    if (theResult == kErrorOK)
-        EEAfterLoad([t, theZones]() {   // after the experiment timers' fixup, which zeroes the claim ranges
-            for (long i = 0; i < EECPExperimentTimers::kPlayers; i++) {
-                gCPExperimentTimers.mClaimSteps[i] = t.mClaimSteps[i];
-                gCPExperimentTimers.mClaimLast[i] = t.mClaimLast[i];
-            }
+    EECPStateContext theContext;
+    theContext.mFile = &inFile;
+    theContext.mX = theContext.mY = 0;
+    long theResult = ee_cp_resource_state_load(&theContext, &EECPStateOperation);
+    if (theResult == kErrorOK) {
+        std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > theZones;
+        theZones.swap(theContext.mZones);
+        EEAfterLoad([theZones]() {   // after the experiment timers' fixup, which zeroes the claim ranges
+            ee_cp_timers_apply(1);
             for (unsigned long p = 0; p < theZones.size() && p < gWorld.mNumPlayers; p++) {
                 EEPlayer* thePlayer = gWorld.mPlayers[p];
                 EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
@@ -1658,6 +1608,6 @@ long EECPLoadResourceState(FSFile& inFile)
                     theCP->mDangerZones = theZones[p];
             }
         });
+    }
     return theResult;
 }
-

@@ -62,6 +62,22 @@ constexpr static const int32_t EE_CP_SAVE_CENTER_SAVE = 413;
 /// `mFavoriteTypeHistory.size()` into `io.i`.
 constexpr static const int32_t EE_CP_SAVE_HISTORY_COUNT = 414;
 
+/// The players of every array.
+constexpr static const size_t EE_CP_TIMER_PLAYERS = 64;
+
+/// The zones of player `index` (0 without a computer player) into `io.i`.
+constexpr static const int32_t EE_CP_STATE_ZONES = 420;
+
+/// Zone `io.i` of player `index`: its tile x, tile y and game ms into `io.i`, `io.f` unused; three calls, `io.b`
+/// selecting 0 x, 1 y, 2 the time.
+constexpr static const int32_t EE_CP_STATE_ZONE = 421;
+
+/// A loaded zone of player `index`: `io.i` the x, then the y, then the time (`io.b` 0, 1, 2; the time closes it).
+constexpr static const int32_t EE_CP_STATE_PUSH_ZONE = 422;
+
+/// A loaded player `index` with no zones yet (the original's `push_back` of an empty list).
+constexpr static const int32_t EE_CP_STATE_PUSH_PLAYER = 423;
+
 /// The table (the C++ shim's `mTable`).
 struct EeCpInfluence;
 
@@ -603,6 +619,39 @@ long ee_cp_influence_enemies(const EeCpInfluence *t,
                              EeCpRect r,
                              bool with_first,
                              bool sum);
+
+/// `EECPSaveExperimentTimers`: the running timers' ten arrays.
+///
+/// # Safety
+/// `host` serves the file's primitives on `file`.
+int32_t ee_cp_timers_save(void *file, EeUnitsPlayerSaveFn host);
+
+/// `EECPLoadExperimentTimers`: the ten arrays into a copy kept for [`ee_cp_timers_apply`] (0).
+///
+/// # Safety
+/// As [`ee_cp_timers_save`].
+int32_t ee_cp_timers_load(void *file, EeUnitsPlayerSaveFn host);
+
+/// At the loaded game's first tick: `what` 0 puts the loaded timers in place (their claim ranges zero), 1 the
+/// loaded resource state's claim ranges.
+void ee_cp_timers_apply(uint32_t what);
+
+/// `EECPSaveResourceState`: the claim ranges, then the danger zones of `players` player ids (the host's
+/// `EE_CP_STATE_*` operations).
+///
+/// # Safety
+/// `host` serves the file's primitives and the zones on `ctx`.
+int32_t ee_cp_resource_state_save(void *ctx,
+                                  EeUnitsPlayerSaveFn host,
+                                  uint32_t players);
+
+/// `EECPLoadResourceState`: the claim ranges into a copy kept for [`ee_cp_timers_apply`] (1), the zones pushed to
+/// the host.
+///
+/// # Safety
+/// As [`ee_cp_resource_state_save`].
+int32_t ee_cp_resource_state_load(void *ctx,
+                                  EeUnitsPlayerSaveFn host);
 
 }  // extern "C"
 

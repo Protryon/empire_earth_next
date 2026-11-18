@@ -6,6 +6,7 @@
 //! - `init`: `Init`'s tuning values from the behaviour table;
 //! - `save`: the class's `Load` and `Save` (one field order for both);
 //! - `player`: the per-difficulty scales, their setters, `ScaleCost`, `SetNextAttackTime`, `RestoreManagers`' fields;
+//! - `timers`: the experiments' timers (Rust's) and the resource state's save blocks;
 //! - `file`: the saved game's primitives as these loads and saves use them;
 //! - `legacy_load`: the readers that step over a retail file's deleted C++ manager blocks (`EECPLegacyLoad.cpp`);
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
@@ -18,3 +19,4 @@ pub mod init;
 pub mod legacy_load;
 pub mod player;
 pub mod save;
+pub mod timers;

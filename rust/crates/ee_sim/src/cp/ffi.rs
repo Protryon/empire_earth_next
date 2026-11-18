@@ -13,6 +13,7 @@ use super::influence::{self, EeCpInfluence, EeCpRect};
 use super::init::{self, EeCpBehavior};
 use super::legacy_load;
 use super::save::{self, EeCpLoaded};
+use super::timers;
 use crate::units::player_save::EeUnitsPlayerSaveFn;
 
 /// The last save version whose computer players hold the deleted C++ managers' blocks in the original's layout.
@@ -347,4 +348,77 @@ pub unsafe extern "C" fn ee_cp_influence_enemies(
         return 0;
     };
     (if sum { t.sum_enemy_value(&enemies, r) } else { t.enemy_value(&enemies, r.left, r.top) }) as c_long
+}
+
+// ---- the experiment timers and the resource state (cp::timers)
+
+/// `EECPSaveExperimentTimers`: the running timers' ten arrays.
+///
+/// # Safety
+/// `host` serves the file's primitives on `file`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_timers_save(file: *mut c_void, host: EeUnitsPlayerSaveFn) -> i32 {
+    // SAFETY: the caller's contract
+    let mut f = unsafe { SaveFile::new(file, host) };
+    let running = timers::STATE.lock().unwrap_or_else(|e| e.into_inner()).running;
+    timers::save_timers(&mut f, &running)
+}
+
+/// `EECPLoadExperimentTimers`: the ten arrays into a copy kept for [`ee_cp_timers_apply`] (0).
+///
+/// # Safety
+/// As [`ee_cp_timers_save`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_timers_load(file: *mut c_void, host: EeUnitsPlayerSaveFn) -> i32 {
+    // SAFETY: the caller's contract
+    let mut f = unsafe { SaveFile::new(file, host) };
+    let (r, t) = timers::load_timers(&mut f);
+    if let Some(t) = t {
+        timers::STATE.lock().unwrap_or_else(|e| e.into_inner()).loaded = Some(t);
+    }
+    r
+}
+
+/// At the loaded game's first tick: `what` 0 puts the loaded timers in place (their claim ranges zero), 1 the
+/// loaded resource state's claim ranges.
+#[no_mangle]
+pub extern "C" fn ee_cp_timers_apply(what: u32) {
+    let mut s = timers::STATE.lock().unwrap_or_else(|e| e.into_inner());
+    if what == 0 {
+        if let Some(t) = s.loaded.take() {
+            s.running = t;
+        }
+    } else if let Some((steps, last)) = s.claims.take() {
+        s.running.claim_steps = steps;
+        s.running.claim_last = last;
+    }
+}
+
+/// `EECPSaveResourceState`: the claim ranges, then the danger zones of `players` player ids (the host's
+/// `EE_CP_STATE_*` operations).
+///
+/// # Safety
+/// `host` serves the file's primitives and the zones on `ctx`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_resource_state_save(ctx: *mut c_void, host: EeUnitsPlayerSaveFn, players: u32) -> i32 {
+    // SAFETY: the caller's contract
+    let mut f = unsafe { SaveFile::new(ctx, host) };
+    let running = timers::STATE.lock().unwrap_or_else(|e| e.into_inner()).running;
+    timers::save_resource_state(&mut f, &running, players)
+}
+
+/// `EECPLoadResourceState`: the claim ranges into a copy kept for [`ee_cp_timers_apply`] (1), the zones pushed to
+/// the host.
+///
+/// # Safety
+/// As [`ee_cp_resource_state_save`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_resource_state_load(ctx: *mut c_void, host: EeUnitsPlayerSaveFn) -> i32 {
+    // SAFETY: the caller's contract
+    let mut f = unsafe { SaveFile::new(ctx, host) };
+    let (r, claims) = timers::load_resource_state(&mut f);
+    if claims.is_some() {
+        timers::STATE.lock().unwrap_or_else(|e| e.into_inner()).claims = claims;
+    }
+    r
 }
