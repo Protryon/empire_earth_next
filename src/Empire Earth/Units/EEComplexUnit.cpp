@@ -2264,8 +2264,8 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
                 if (theSkipped >= 3)
                     theSkip = false;
                 else {
-                    U2DPoint<long> theStart(theStartSector->mCenter.mX, theStartSector->mCenter.mY);
-                    U2DPoint<long> theEnd(theSector->mCenter.mX, theSector->mCenter.mY);
+                    U2DPoint<long> theStart(theStartSector->GetCenter().mX, theStartSector->GetCenter().mY);
+                    U2DPoint<long> theEnd(theSector->GetCenter().mX, theSector->GetCenter().mY);
                     if (!(theStart.DistanceToSquared(theEnd) >= 2))
                         theSkipped++;
                     else
@@ -3297,7 +3297,7 @@ bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
                 if (this->mFormationRank != 0)
                     theLimit = UMCeil(this->mFormationRank / kPathSpeedScale * theLimit);
             }
-            if ((long)this->mWaypoints.size() <= theLimit && theFrom->mCenter.DistanceToSquared(theTo->mCenter) < 2)
+            if ((long)this->mWaypoints.size() <= theLimit && theFrom->GetCenter().DistanceToSquared(theTo->GetCenter()) < 2)
                 theResult = true;
         }
     }

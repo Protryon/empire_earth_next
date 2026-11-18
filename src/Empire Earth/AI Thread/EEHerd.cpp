@@ -583,7 +583,7 @@ void EEHerd::GetYoungUnits(std::vector<EEComplexUnit*>& outUnits)
 void EEHerd::GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits)
 {
     EEHerdUnitFilter theFilter(inContinent, true, false);
-    const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
+    EEAIHandleView<EEAIContinent> theContinents = gContinentManager.GetContinents();
     EEAIContinent* theContinent = theContinents[this->mContinent];
     if (theContinent)
         EEGetUnitsInRectangle(theContinent->GetHullBounds(), outUnits, theFilter, false);

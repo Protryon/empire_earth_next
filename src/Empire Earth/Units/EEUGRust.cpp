@@ -184,7 +184,7 @@ struct EEGatherTileFarther {
     EEGatherTileFarther(EEComplexUnit* inUnit, const EETileCoordinate& inTile) : mTile(inTile), mUnit(inUnit)
     {
         EEAIPathSector* theSector = gContinentManager.GetPathSector(inTile);
-        this->mSector = theSector ? theSector->mID : (unsigned short)0;
+        this->mSector = theSector ? theSector->GetID() : (unsigned short)0;
         this->mPosition.SetX(inUnit->mPhysicalModel.GetLocation().GetX());
         this->mPosition.SetY(inUnit->mPhysicalModel.GetLocation().GetY());
     }
@@ -259,7 +259,7 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
                 inUnit->mUnitClass->GetTerrainFlags(inUnit, theFlags);
                 theHaveFlags = true;
             }
-            if (theFlags.mFlags[theSubSector->mKind])
+            if (theFlags.mFlags[theSubSector->GetKind()])
                 theFound = true;
         }
         if (theFound == true) {
@@ -308,7 +308,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
         unsigned short theForestID =
             gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
-        EEAIForest* theForest = gContinentManager.mForests[theForestID];
+        EEAIForest* theForest = gContinentManager.GetForests()[theForestID];
         if (theForest != NULL && theForest->GetNumTiles() > 1) {
             theCenter.SetX(inResource->GetTileX());
             theCenter.SetY(inResource->GetTileY());

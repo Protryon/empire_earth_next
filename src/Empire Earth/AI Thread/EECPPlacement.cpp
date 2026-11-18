@@ -301,7 +301,7 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
     case EE_CP_PLACE_CONTINENT_ID:
         return EECPObject<EEAIContinent>(inA)->GetID();
     case EE_CP_PLACE_CONTINENT_FLAG:
-        return gContinentManager.mTileFlags[(long)v[0] * gContinentManager.mFlagsWidth + (long)v[1]] ? 1 : 0;
+        return gContinentManager.AreAdjacent((long)v[0], (long)v[1]) ? 1 : 0;
     case EE_CP_PLACE_SHORE_NEXT_TO: {
         std::vector<U2DPoint<long> > theTiles = EECPInputTiles(io);
         EECPObject<EEAIContinent>(inA)->GetShoreNextTo((unsigned short)v[0], theTiles);

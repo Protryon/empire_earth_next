@@ -98,9 +98,9 @@ bool EEAIAStarPathGraphGoal::IsGoalNode(EEAIAStarGraphNode* inNode)
     if (!theResult) {
         EEAIPathSubSector* theSector = static_cast<EEAIPathSubSector*>(inNode->mObject);
         theResult = theSector == this->mTo;
-        if (!theResult && UMAbs(theSector->mSector->mCenter.mX - this->mPoint40.mX) <= 1
-            && UMAbs(theSector->mSector->mCenter.mY - this->mPoint40.mY) <= 1 && theSector->IsNeighbor(this->mTo))
-            theResult = !this->mPathFlags.mFlags[this->mTo->mKind];
+        if (!theResult && UMAbs(theSector->GetSector()->GetCenter().mX - this->mPoint40.mX) <= 1
+            && UMAbs(theSector->GetSector()->GetCenter().mY - this->mPoint40.mY) <= 1 && theSector->IsNeighbor(this->mTo))
+            theResult = !this->mPathFlags.mFlags[this->mTo->GetKind()];
     }
     return theResult;
 }
@@ -116,10 +116,10 @@ void EEAIAStarPathGraphGoal::SetFlags(EEComplexUnit* inUnit)
 // and, coming from a linked sub-sector, a passable link joins them
 bool EEAIAStarPathGraphGoal::AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mPathFlags.mFlags[inSector->mKind];
-    if (!theResult && inSector->mKind == kAITileGate)
+    bool theResult = this->mPathFlags.mFlags[inSector->GetKind()];
+    if (!theResult && inSector->GetKind() == kAITileGate)
         theResult = inSector->IsPassable(this->mPlayerID);
-    if (theResult && inFrom && inSector->mLinks.size() > 0)
+    if (theResult && inFrom && inSector->GetAllLinks().size() > 0)
         theResult = this->HasPassableLink(inSector, inFrom);
     return theResult;
 }
@@ -128,10 +128,10 @@ bool EEAIAStarPathGraphGoal::AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPat
 bool EEAIAStarPathGraphGoal::HasPassableLink(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
     std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> > theLinks;
-    inSector->GetLinks(inFrom->mID, theLinks);
+    inSector->GetLinks(inFrom->GetID(), theLinks);
     bool theResult = theLinks.size() == 0;
     for (long i = theLinks.size() - 1; i >= 0 && !theResult; i--) {
-        if (this->mPathFlags.mFlags[theLinks[i].first->mKind] == true || this->mPathFlags.mFlags[theLinks[i].second->mKind] == true)
+        if (this->mPathFlags.mFlags[theLinks[i].first->GetKind()] == true || this->mPathFlags.mFlags[theLinks[i].second->GetKind()] == true)
             theResult = true;
     }
     return theResult;
@@ -142,7 +142,7 @@ bool EEAIAStarPathGraphGoal::HasPassableLink(EEAIPathSubSector* inSector, EEAIPa
 bool EEAIAStarPathGraphGoal::Prepare()
 {
     this->SetFlags(this->mUnit);
-    this->mPoint40 = this->mTo->mSector->mCenter;
+    this->mPoint40 = this->mTo->GetSector()->GetCenter();
     return true;
 }
 
