@@ -126,8 +126,6 @@ public:
     // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
     EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->GetContinents()[inID]; }
     EEAIContinent* GetContinentByID(unsigned short inID) const;  // 0x26fdd: mContinents[inID] (lea; mov: const-shaped)
-    // inline (out-of-line COMDAT 0xa06ef, EECPWallManager.cpp: lea; mov, const-shaped) (provisional name)
-    EEAIPathArea* GetPathAreaByID(unsigned short inID) const { return this->GetPathAreas()[inID]; }
     // inline (EEAIPathSector::GetPathAreaAt 0x2bd4d: the value load, then the const operator[]'s dead lea) (provisional
     // name)
     // name
@@ -143,12 +141,6 @@ public:
         EEAIContinent* theSecond = theContinents[inSecond];
         EEAIContinent* theFirst = theContinents[inFirst];
         return this->AreConnected(theFirst, theSecond, inFlags);
-    }
-    // inline: the two connected-by-id arguments; at a low share the second argument's const operator[] is refused and the first
-    // accessor undone (SendToGather 0x912be, 0x8f40b, 0x8fea6, 0x9055f, 0x90758, 0x6f5ee)
-    bool AreConnectedFromIDs(unsigned short inFirst, unsigned short inSecond, long inFlags)
-    {
-        return this->AreConnected(this->GetContinentFromID(inFirst), this->GetContinentFromID(inSecond), inFlags);
     }
     // area lookups by a tile (bodies read; names and the exact return classes inferred): the continent at the tile
     // (GetContinentAt), then the first of its id list (+0x7c chokes, +0x8c forests, +0xac hills) whose area holds
@@ -259,8 +251,6 @@ public:
     EEAIContinent* GetContinentsAt(unsigned long inIndex) const { return this->GetContinents()[inIndex]; }
     EEAIPathSector* GetPathSectorsAt(unsigned long inIndex) const { return this->GetPathSectors()[inIndex]; }
     EEAIPathSubSector* GetPathSubSectorsAt(unsigned long inIndex) const { return this->GetPathSubSectors()[inIndex]; }
-    EEAIForest* GetForest(unsigned short inID) const { return this->GetForests()[inID]; }
-    EEAIForest* GetForestsAt(unsigned long inIndex) const { return this->GetForests()[inIndex]; }
     EEAIChokePoint* GetChokePointsAt(unsigned long inIndex) const { return this->GetChokePoints()[inIndex]; }
     EEAIHill* GetHill(unsigned short inID) const { return this->GetHills()[inID]; }
     // the serial table, sorted by serial

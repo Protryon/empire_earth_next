@@ -33,11 +33,6 @@ public:
     virtual void AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate);
     // +0x08 0xd705 (ret 4): mTiles.Create(inTiles); the hull from the extreme edge points; 0xd763(DAT_531860)
     virtual void Create(const std::vector<U2DPoint<long> >& inTiles);
-    // +0x0c 0xd859 (ret 4; tiles present: the units on the hull's bounds that Contains() holds, cdecl template
-    // 0xdcbe(&mHull bounds, outUnits, &predicate, true)); parameter type from that template's push_back
-    virtual void GetUnitsOnTiles(std::vector<EEUnit*>& outUnits);
-    // +0x10 0xd87f: the same with 0xde7f (the predicate tests the hull only)
-    virtual void GetUnitsInHull(std::vector<EEUnit*>& outUnits);
     // +0x14 0xd8e6 (ret 8, hidden result): mTiles.GetClosestPoint(inPoint)
     virtual U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint);
     // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it (0xd16e), else the hull's slot +0x14

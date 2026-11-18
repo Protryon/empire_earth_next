@@ -60,7 +60,6 @@ const EECPAIEntry* EECPAIByChoice(unsigned long inChoice);   // NULL: random or 
 const EECPAIEntry* EECPClassicAI();                 // the manifest's "classic" AI, NULL: none
 const EECPAIEntry* EECPAIByID(const std::string& inID);      // NULL: not in the manifest
 long EECPChoiceByName(const std::string& inName);    // classic, random, next (the first AI) or an id -> -1
-std::string EECPChoiceName(unsigned long inChoice);  // "classic", "random", the AI's id ("classic" out of range)
 // a hash of the AI folder's content (ais.json and every .lua by relative path; FNV-1a 32): part of the checksum a
 // joiner must match (EEInitializeNetwork), and logged at the start
 uint32_t EECPAIFolderHash();

@@ -16,15 +16,12 @@ public:
     virtual ~EEAIRectangleArea() {}
     // +0x20 0x2c939: EEAIArea's random point; when its tile is off the map, a random one of the tiles on the map
     virtual U2DPoint<long> GetRandomPoint();
-    // +0x2c 0x2c929 (ret 0xc: two ignored dword arguments): EEAIArea::GetRandomPoint() (provisional name)
-    virtual U2DPoint<long> GetBaseRandomPoint(long inArg1, long inArg2);
     // 0x2c7df: counts the rectangle's tiles per continent category; the continent with most of them (provisional name)
     unsigned short UpdateContinents();
     EeAStarRectRecord* Record() { return this; }
     const EeAStarRectRecord* Record() const { return this; }
     const U2DRectangle<long>& GetRect() const { return reinterpret_cast<const U2DRectangle<long>&>(this->rect); }
     void SetRect(const U2DRectangle<long>& inRect) { reinterpret_cast<U2DRectangle<long>&>(this->rect) = inRect; }
-    long GetScenarioAreaID() const { return this->scenario_area_id; }
     void SetScenarioAreaID(long inID) { this->scenario_area_id = inID; }
     long GetNumLandTiles() const { return this->num_land_tiles; }
     long GetNumWaterTiles() const { return this->num_water_tiles; }

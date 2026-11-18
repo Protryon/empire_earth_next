@@ -55,13 +55,10 @@ bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass);
 void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);  // 0x24181a (moving targets)
 void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile);
-// 0x23f32a (cdecl; EECPAttackSubGroupUnit::ChooseTarget's: a tile to attack inTarget) (provisional name)
-bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile, bool inUseClosestTile, long inMaxSteps);  // bool: `cmp byte [ebp+0x14]`
 // 0x24680c / 0x24240d (cdecl; EECPAttackSubGroupUnit::Flee's: a search window around inUnit; the heading from
 // inFrom to inTo) (provisional name)
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
-bool EEGetAreaEffectBounds(long inArg1, EEComplexUnit* inUnit, EEAIAStarBounds* outBounds);
 float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo);
 bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget);
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
@@ -70,12 +67,7 @@ bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
 bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inUnit at inTarget: the gather goal's arrival)
 bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
-// 0x8282 (cdecl, hidden result): a tile picked from inTiles by inArg (EECPAttackSubGroup::Virtual28) (provisional name)
-inline U2DPoint<long> EEComputeTileCenterPoint(std::vector<EETileCoordinate>& inTiles, long inMustBeInList)
-    { return U2DComputeCenterPoint(inTiles, (unsigned char)inMustBeInList != 0); }
 class GERectangle;
-// 0x241743 (cdecl): the bounds of inUnits into outBounds (EECPAttackSubGroup::GetUnitsCenter) (provisional name)
-void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds, long inTerrainFilter);
 // 0x246a26 / 0x24720e: the tiles of (and around) a footprint of inSize at (inX, inY) (EEUGGather::HasGatherRoom)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
 // 0x24cc5f: the gather-rate index of inResource (EEComplexUnit mStats->mL110[]; EEUGGather) (provisional name)

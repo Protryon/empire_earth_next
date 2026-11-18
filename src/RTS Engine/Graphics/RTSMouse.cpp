@@ -121,12 +121,6 @@ long RTSMouse::RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, boo
     return RTSMouseFrameCall(this, 3, inSurface, &inOrigin, inIsWindowed);
 }
 
-// Returns the picture of pointer inIndex (EEMouse's 10..23 too; NULL past them)
-GESurface* RTSMouse::GetPointerSurface(unsigned long inIndex)
-{
-    return static_cast<GESurface*>(ee_gfx_mouse_frame_pointer(this->mFrame, (uint32_t)inIndex));
-}
-
 // port: a pointer from the texture pack (GETextureManager::SetTexturePack): its file is 32x32 << the pack's scale;
 // the surface holds it at its pixel size (halved for the pack's extra MIP drop: nearest, so the blue colour key stays
 // exact) and keeps 32x32 as its logical size (GESurface::GetLogicalShift), which the save-under and the drawing use.

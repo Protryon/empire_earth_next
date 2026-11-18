@@ -48,12 +48,9 @@ public:
     long mKind;                             // +0xa4
     unsigned short mContinentID;            // +0xa8 (the sub-sector's +0x4c)
     unsigned char mCategory;                // +0xaa
-    unsigned short GetPathAreaID() const { return this->mPathAreaID; }
     unsigned short mPathAreaID;             // +0xac (the sub-sector's +0x4e; the first tile's id)
     unsigned short mNextID;                 // +0xae (= 1; NewSubSectorID)
-    long GetPathAreaKind() const { return this->mPathAreaKind; }
     long mPathAreaKind;                     // +0xb0
-    bool GetClassifyTiles() const { return this->mClassifyTiles; }
     bool mClassifyTiles;                    // +0xb4
 };
 

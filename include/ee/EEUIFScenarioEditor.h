@@ -66,9 +66,6 @@ protected:
 public:
     void PostLoadEvent(UReferenceCounter* inObject);
     void PostShowLoadedObject(UReferenceCounter* inObject);
-    void LeaveTab();
-    void EnterFullView();
-    void LeaveFullView();
     // 0x19f6e9: leaves the editor through the load thread (EESEATestScenario passes true, EESEAExitScenario false)
     void ExitEditor(bool inTestScenario);
     void RefreshCurrentGroup();             // 0x19fc97: the current group's Store (EESEAQuickSaveScenario)

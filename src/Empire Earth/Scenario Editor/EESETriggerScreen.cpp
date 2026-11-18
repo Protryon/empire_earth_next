@@ -99,14 +99,11 @@ void EESETriggerScreen::ShowTab(unsigned long inControlID)
 {
     ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_SHOW_TAB, (uint32_t)inControlID, 0.0f, 0.0f, NULL);
 }
-void EESETriggerScreen::StoreEntry() { EE_SETS_CALL(EE_SCREENS_SETS_STORE_ENTRY); }
 void EESETriggerScreen::Disable() { EE_SETS_CALL(EE_SCREENS_SETS_DISABLE); }
 void EESETriggerScreen::HideText() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_TEXT); }
 void EESETriggerScreen::ShowText() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_TEXT); }
 void EESETriggerScreen::HideAlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_ALPHA_SORT); }
-void EESETriggerScreen::ShowSelection() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_SELECTION); }
 void EESETriggerScreen::IncPriority() { EE_SETS_CALL(EE_SCREENS_SETS_INC_PRIORITY); }
-void EESETriggerScreen::HideGroups() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_GROUPS); }
 void EESETriggerScreen::Load() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_SELECTION); }
 void EESETriggerScreen::NewEntry() { EE_SETS_CALL(EE_SCREENS_SETS_NEW_ENTRY); }
 void EESETriggerScreen::Enter() { EE_SETS_CALL(EE_SCREENS_SETS_ENTER); }

@@ -31,15 +31,10 @@ public:
     // inline: the 3D effects load the parameters as values (EEE3DShield: `fld [+0x38]` twice for two copies, `fld
     // [+0x28]; fmul st1`) (provisional names)
     float GetStartSize() const { return this->mStartSize; }
-    float GetAlpha() const { return this->mAlpha; }
-    float GetParam1() const { return this->mParam1; }
     float GetParam2() const { return this->mParam2; }
-    long GetIntParam1() const { return this->mIntParam1; }
     float GetParam3() const { return this->mParam3; }
     float GetParam4() const { return this->mParam4; }
     float GetParam5() const { return this->mParam5; }
-    float GetParam6() const { return this->mParam6; }
-    float GetParam7() const { return this->mParam7; }  // inline (EEE2DParticle::DrawPass6 loads the colour as values)
     // the unit EEGraphicEffect.cpp (0xd6bed..0xd72c1); the ctor copies a database record
     EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject);
     virtual ~EEGraphicEffect();             // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
@@ -60,7 +55,6 @@ public:
     EEGraphicEffect* mLinkedEffect1;       // +0x10 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect2;       // +0x14 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect3;       // +0x18 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    float GetParam8() const { return this->mParam8; }  // inline value getters
     float GetParam9() const { return this->mParam9; }
     float GetParam10() const { return this->mParam10; }
     long mNumLoads;                         // +0x80

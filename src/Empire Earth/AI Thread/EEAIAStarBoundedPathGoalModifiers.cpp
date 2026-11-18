@@ -216,21 +216,6 @@ EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigne
 {
 }
 
-// Returns 1 plus the influence in the target sector's region: enemy influence against the player (inEnemies),
-// else the enemy player's own
-unsigned long EEAIGPGModiferUseInfluenceCostsBase::GetInfluenceCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo,
-                                                             bool inEnemies)
-{
-    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    U2DPoint<long> theRegion(inTo->GetLocation().GetX() / theTable->mRegionSize, inTo->GetLocation().GetY() / theTable->mRegionSize);
-    unsigned long theInfluence;
-    if (inEnemies)
-        theInfluence = theTable->GetEnemyValue(this->mPlayerID, theRegion, true);
-    else
-        theInfluence = theTable->GetValue(this->mEnemyID, theRegion);
-    return theInfluence + 1;
-}
-
 // Creates the enemy-avoidance route modifier for the player
 EEAIGPModifierEnemyAvoidance::EEAIGPModifierEnemyAvoidance(unsigned long inPlayerID)
     : EEAIGPGModiferUseInfluenceCostsBase(inPlayerID, 0)

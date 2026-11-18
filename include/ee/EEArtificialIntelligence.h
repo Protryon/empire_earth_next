@@ -16,19 +16,12 @@ public:
     virtual ~EEArtificialIntelligence() {}
     void CollectComputerPlayers();          // 0x2cd0e (after a game is set up: 0x139a26, 0x276e53)
     void Update();                          // 0x2cd99 (the physics thread: one computer player per interval)
-    unsigned long GetNumComputerPlayers() const { return this->mComputerPlayers.size(); }   // ICF-folded into UReferenceContainer::GetSize 0x91f11 (EECPWallManager::Update) (provisional name)
 
     std::vector<EEComputerPlayer*> mComputerPlayers;   // +0x04
     unsigned long mUpdateInterval;          // +0x14 (1000 / the number of computer players)
     unsigned long mNextUpdateTime;          // +0x18
     unsigned long mNextPlayer;              // +0x1c
 };
-
-// 0x2cc87: 3 for unit type 0x2f6, else 1 (EECPUnitManager 0x987c7; provisional name)
-long EEAIGetUnitTypeWeight(long inUnitType);
-// 0x2cc9a: the first of inPlayer's units of type inUnitType whose class differs from its complex unit's (by the
-// +0x24c levels and the complex unit's +0x2a8), 0 if none (EECPUnitManager 0x948e6; provisional name)
-EEUnit* EEAIFindUpgradableUnit(long inUnitType, EEPlayer* inPlayer);
 
 extern EEArtificialIntelligence* gArtificialIntelligence;
 

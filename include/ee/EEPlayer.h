@@ -111,7 +111,6 @@ public:
     virtual void Remove(long inPathID);
     // +0x0c (0x20637e for EESelectedGroup): inUnit is in the group (the hot keys' unit selection)
     virtual bool Contains(EEComplexUnit* inUnit);
-    virtual bool HasPathRequest(EEComplexUnit* inUnit);  // +0x10 0x20648c: FindPathRequest(inUnit) != 0
     virtual EEComplexUnit* GetUnit(long inIndex);   // +0x14 0x165bfe: mUnits[inIndex]
     virtual unsigned long GetNumUnits();    // +0x18 0x165c0d: mUnits.size()
     // +0x1c 0x2064f4 / +0x30 0x206e61: FSFile Read/Write slots (+0x5c/+0x94) on the third argument; +0x2c 0x206dd9:
@@ -241,7 +240,6 @@ public:
     void KeepAttackers();                   // 0x1eec0b (SpreadAroundUnit: keeps the units that can attack)
     bool IsReserved(const GE3DPoint& inLocation);  // 0x1efaf0: a mU3C location at (or near) inLocation
     bool IsCellTaken(const GE3DPoint& inLocation);  // 0x1efba8: a mU3C location in inLocation's unit region
-    void LayOutFormation();                 // 0x1ebf85 (Plan for commands 8000 and 0x2ee1: the formation's placement)
     void SpreadForUnload(long inTileX, long inTileY);  // 0x1ef5ce (EEMessage 0xc8615: as SpreadAroundTile, the transports stay)
     // 0x1ef86c (EEMessage 0xbc48f: a calamity's casters for inTarget; the others attack it)
     void SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget);
@@ -482,7 +480,6 @@ public:
     // inline (editor P7: refused Get calls are hoisted and ->mUnitClass is pushed from [eax+0x6c] at 0x5aa1c7,
     // 0x5aa0d1, 0x59721b): the tech's node data. Provisional name.
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }
-    bool GetTechIDState(long inTechID, bool& outIsResearched, bool& outIsObsolete, bool& outScenEditorObsoleted);   // 0x1cbc87 (the asserts name it)
     long Load(FSFileSpec& inFile);          // 0x1cbdf0 (the database: every epoch block of the file)
     static void BuildUnitClassInfo();       // 0x1cbe4a (gTechTree's events by unit class)
     void UnloadAll();
@@ -730,7 +727,6 @@ public:
     static const UString sSendChatMessage;      // "EEPlayer-SendChatMessage"
     static const UString sSendChatMessageType;  // "EEPlayer-SendChatMessageType"
 public:
-    virtual void RefundImprovement(EEUnitClass* inClass, long inImprovement, float inFraction);  // +0x40 0x162915 (ret 0xc)
     // +0x44 (EEMDisband: the unit's technology, its type, 0.75 of its hit-point fraction: a refund) (provisional name)
     virtual void RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction);
     // +0x48..+0xa8: inline in the real header (their bodies 0xa5486/0xa549a/0xa54a1/0xa54a7 sit in
@@ -744,9 +740,7 @@ public:
     // is read as a byte, +0x1c receives the reason through UResourceFile::GetString; provisional names)
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason);
     virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag);  // +0x58 0x163d6f (EESMEffect 0x1be94e passes (another player, false); 0x55cee tests a byte; ret 8: EEComputerPlayer 0x2dca6 forwards both)
-    virtual void DeleteHerds();             // +0x5c
     virtual void Virtual60();               // +0x60
-    virtual void ClearTowns();              // +0x64
     virtual void UnitCompleted(EEComplexUnit* inUnit);  // +0x68 0x164003 (ret 4: EEComputerPlayer 0x2e1e9 forwards it)
     virtual long ScaleCost(long inCost) { return inCost; }  // +0x6c 0xa549a
     // +0x70 0x164bea (ret 0xc): reads inUnit's mStats/mUnitClass and inOther's class, then 0x16542e (provisional name)
@@ -811,7 +805,6 @@ public:
     void DeselectUnit(EEUnit* inUnit);                      // 0x168eb9 (the hurricane's Stop, its unit)
     // 0x164e22: the last town of the vector at +0x7cc whose area holds inUnit's tile, or 0 (the prophet analyzers'
     // 0xaa8b; provisional name)
-    EETown* GetTownOf(EEUnit* inUnit);
     unsigned long GetNumTowns() const { return this->mTowns.size(); }   // inline COMDAT 0x4098f0 (emitted after its first out-of-line user, EECPASGUProphet.cpp 0x409831); /Os post-check undoes it where size() expands inside, it stays where size() is refused (provisional name)
     void LoadUnitClassButtons(long inUnitClass);            // 0x167c5a (the hurricane's Virtual28)
     void UnloadUnitClassButtons(long inUnitClass);          // 0x16b5f9 (the hurricane's Virtual34)
@@ -867,23 +860,6 @@ public:
     bool AddUnitToHerd(EEComplexUnit* inUnit);  // 0x162e22 (AddUnit result returned in AL)
     void AssignHerds();                     // 0x164453 (player 0, after RegisterHerds; provisional name)
     void AssignTowns();                     // 0x16451a (the other players, after RegisterTowns; provisional name)
-    EETown* GetTownByID(long inID);         // 0x1655b5 (the town whose mL74 is inID)
-    // 0x82b30 (ret 4; the argument unread): the town with the largest mL78, the earliest on ties (EECPIntelligence
-    // 0x816a6; it sits among that unit's COMDATs: an inline or template member in the real header) (provisional name)
-    EETown* GetLargestTown(bool* outArg);
-    // 0x164cb0 (ret 8): the town nearest inTile, its closest point into outTile (EECPDefenseCommander) (provisional
-    // name)
-    EETown* GetNearestTown(const EETileLocation& inTile, EETileLocation& outTile);
-    // template COMDAT 0x7d4f3 (EECPDefenseCommander.cpp's range): the towns on continent inContinent (0: all), the
-    // last first (provisional name)
-    template <class V> void GetTowns(const unsigned short& inContinent, V& outTowns)
-    {
-        for (long i = this->mTowns.size() - 1; i >= 0; i--)
-            if (this->GetTownList()[i]->mContinent == inContinent || inContinent == 0)
-                outTowns.push_back(this->mTowns[i]);
-    }
-    // const view (0x47d4f3, 0x47897c read the towns through the const operator[]) (provisional name)
-    const std::vector<EETown*>& GetTownList() const { return this->mTowns; }
     // template COMDAT 0xa5313 (EEHerd.cpp's range; ret 8): the herds of mHerds (+0x7dc, EEHerd* elements) inPredicate
     // holds for, the last first (provisional name)
     template <class P, class V> void GetHerds(P inPredicate, V& outHerds)
@@ -892,7 +868,6 @@ public:
             if (inPredicate(this->mHerds[i]))
                 outHerds.push_back(this->mHerds[i]);
     }
-    bool CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass, long inCount);  // 0x1652a0 (CanAfford's second test)
     // inline (out-of-line COMDAT 0xc350f after its first user EEMPayTribute::Execute): the tribute statistics, inDirection
     // 0 paid / 1 received (provisional names)
     void AddTribute(long inDirection, long inResource, long inAmount)
@@ -915,14 +890,12 @@ public:
     void AddSightSharer(EEPlayer* inPlayer);  // 0x1627b9 (pushes inPlayer into mSightSharers between two walks of the units)
     void RemoveSightSharer(EEPlayer* inPlayer);  // 0x1684ab (the mirror: inPlayer out of mSightSharers; RemoveWonderPower, 0x16ab41)
     void RemoveTownID(long inID);           // 0x163605 (erases mTownsByID's entry inID)
-    bool CanProduceUnitType(long inUnitType, long inArg, UWideString* outReason);  // 0x1639e8 (WriteDetailsHook for the class's technology)
     void AddUnitToRepatrol(EEComplexUnit* inUnit);  // 0x162b35 (one of its own units into mUnitsToRepatrol, referenced)
     void ClearUnitsToRepatrol();            // 0x163fbb (mUnitsToRepatrol dereferenced and cleared)
     void AddOffMapUnit(RTSUnit* inUnit);    // 0x162dab (a new EEWUnitsOffMapInfo for inUnit into mUnitsOffMap)
     void AddStrandedUnit(EEUnit* inUnit);   // 0x163043 (into mStrandedUnits once, referenced)
     bool TrySelectUnit(EEUnit* inUnit, bool inFlag);  // 0x1630ac (selects inUnit; false when another player's unit meets a selection)
     void AddConstructionSite(EEComplexUnit* inUnit);  // 0x16368f (into mConstructionSites unless it has it)
-    void AddWonderPower(EEComplexUnit* inUnit);  // 0x164891 (the first unit of its type; AddWonder)
     EEComplexUnit* GetNextComplexUnit(EEUnit* inUnit);  // 0x167ede (the next unit with a complex unit after inUnit, from the first when 0)
     void AddSharedSight(EETile* inTile, long inX, long inY);  // 0x168120 (AddOwnSight, then the allies sharing the line of sight)
     void AddOwnSight(EETile* inTile, long inX, long inY);  // 0x16820e (counts this player in at the tile)
@@ -953,8 +926,6 @@ public:
     long GetCitizenPassability();           // 0x1650a3 (flags 1/2/4/8 from unit class 0x20's upgrade +0x160)
     EEAIArea* GetNearestArea(const EETileCoordinate& inTile, bool inSameContinent);  // 0x164781 (ret 8; EECPResourceManager::FindResourceTarget takes its slot +0x18) (provisional name)
     long GetTotalPopulation(bool inFirst, bool inSecond);  // 0x1651e0 (mPopulationCount plus the units' AddedToParent: mPendingUnits, then those in a 0x1d container)
-    void RemoveWonderPower(EEComplexUnit* inUnit);  // 0x16890e (the last unit of its type left; RemoveWonder)
-    bool CanAffordTechnology(long inTechnology, float inScale, UWideString* outReason);  // 0x163d1f (CanAffordScaled for the technology; string 0x273a when not)
     bool CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount);  // 0x16542e (ret 0x10; arg 4 an `imul` count)
     long GetImprovementLevel(unsigned long inUnitType, long inImprovement) const;  // 0x164ed7 (an improvement's level; Virtual40; const: as CountQueuedImprovements)
     // 0x164fac: whether the improvement is at its maximum level (the class's mImprovements->mMaxLevel against
@@ -1025,11 +996,9 @@ public:
     class EEAirTrafficControl* mAirTraffic[4];   // +0x9bc (Reset: each a new 0x20-byte object, ctor 0x14e87c(this)); indexed by an airport class's mAirTrafficType - 1 (EEMClearAirportCommands 0xbd588)
     // inline: the garrison goal's ComputeUpgrade (0x226c08) loads its argument before `this` (provisional name)
     EETechTree* GetTechTree() const { return this->mTechnologies; }
-    EETechnologyTable* GetTechnologies() const { return this->mTechnologies; }
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
-    long GetHeroLimit() const { return this->mHeroLimit; }
     long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding)
 };
 

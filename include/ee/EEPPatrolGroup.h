@@ -18,9 +18,7 @@ public:
     virtual ~EEPPatrolGroup();              // ??_G 0x1606b0, dtor 0x1606cc
     static void ResetIDs();                 // 0x160cdc (the counter back to 0; called from 0x13883a)
     // (provisional names): the members the other units do not call
-    void AppendPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID);  // 0x1607c8 (appends after back())
     unsigned long IndexOf(EEComplexUnit* inUnit);    // 0x1608db (inUnit's index; a unit not in the list: its nearest point's)
-    void InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inAfter);  // 0x160a58 (a new point unit)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);
     void RemoveUnit(EEComplexUnit* inUnit);  // 0x160b72 (drops inUnit; the last one releases the group from its player)
     long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x160bf2 (ids -> units)

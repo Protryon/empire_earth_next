@@ -27,7 +27,6 @@ public:
     // inline accessors (EERenderObject::FillRenderLists picks the units in the drawn box; provisional names)
     bool GetIsDrawn() const { return this->mD1; }
     const GERectangle& GetSelectionRectangle() const { return *reinterpret_cast<const GERectangle*>(&this->mRA0); }
-    const GE2DPoint& GetDragStart() const { return *reinterpret_cast<const GE2DPoint*>(&this->mDragStart); }
     // New (port), TEST ONLY readers for the UI fixture's box selection (EETestFixture.cpp)
     bool GetIsDragging() const { return this->mDragging; }
     const GE2DPoint& GetDragEnd() const { return *reinterpret_cast<const GE2DPoint*>(&this->mDragEnd); }

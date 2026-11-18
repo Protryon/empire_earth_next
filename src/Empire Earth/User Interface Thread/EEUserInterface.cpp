@@ -204,17 +204,6 @@ void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWide
     gUIManager->UnlockUIForCopyData();
 }
 
-// DEAD-IN-AOC: base exe 0x661f01. The message-of-the-day poster (message 0x440, handled by ShowMessageOfTheDay above): two
-// new UWideString copies. Only EEWonNet.cpp's DEAD-IN-AOC MOTDCallback calls it, so AoC's link drops it (no marker).
-void EEUserInterface::PostMOTD(const UWideString& inGame, const UWideString& inSystem)
-{
-    UWideString* theGame = new UWideString;
-    UWideString* theSystem = new UWideString;
-    *theGame = inGame;
-    *theSystem = inSystem;
-    this->mThread->Post(0x440, theGame, theSystem, true);
-}
-
 // DEAD-IN-AOC: base exe 0x661aef. The WON login-done poster (message 0x441); dead in AoC like PostMOTD (no marker).
 void EEUserInterface::PostLoginDone()
 {

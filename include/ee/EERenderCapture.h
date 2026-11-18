@@ -13,7 +13,6 @@
 
 struct EERenderFrameInfo;
 
-bool EERenderCaptureActive();
 // FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock
 void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);
 

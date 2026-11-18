@@ -609,9 +609,7 @@ void EESEUnit::Draw(const GERectangle& inRectangle)
 {
     ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_DRAW, 0, 0.0f, 0.0f, const_cast<GERectangle*>(&inRectangle));
 }
-long EESEUnit::GetLayer() { return ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_LAYER); }
 float EESEUnit::GetRotationAngle() { return ee_screens_seun_angle(this->mRust); }
-long EESEUnit::GetSortMode() { return ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_SORT); }
 void EESEUnit::Enter() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_ENTER, 0, 0.0f, 0.0f, NULL); }
 void EESEUnit::SelectUnitType(const GE2DPoint& inLocation)
 {

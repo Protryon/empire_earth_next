@@ -542,33 +542,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         return 0;
     case EeGeFbOp::TexSurface:
         return (intptr_t)theTexture->GetSurface();
-    case EeGeFbOp::TexReference:
-        theTexture->Reference();
-        return 0;
-    case EeGeFbOp::TexStage:
-        switch ((EeGeTexStage)a) {
-        case EeGeTexStage::MinFilterMode:
-            theTexture->SetStageMinFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MagFilterMode:
-            theTexture->SetStageMagFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::MipFilterMode:
-            theTexture->SetStageMipFilterMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::TextureAddressingMode:
-            theTexture->SetStageTextureAddressingMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::AlphaMode:
-            theTexture->SetStageAlphaMode((unsigned long)b, -1);
-            break;
-        case EeGeTexStage::ColorMode:
-            theTexture->SetStageColorMode((unsigned long)b, -1);
-            break;
-        default:
-            break;
-        }
-        return 0;
     case EeGeFbOp::SurfTextUnlock:
         return theSurface->TextUnlock();
     case EeGeFbOp::SurfLock:

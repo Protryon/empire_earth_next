@@ -47,12 +47,6 @@ public:
     virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount);   // +0x80 0x2f033 (epochs: always)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit);  // +0x84 0x2f16d
     // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
-    float GetAttackDelayModifier() { return ee_cp_attack_delay_modifier(this); }
-    float GetAttackFrequencyModifier() { return ee_cp_attack_frequency_modifier(this); }
-    float GetUnitCostModifier() { return ee_cp_unit_cost_modifier(this); }
-    float GetDMAttackFrequencyModifier() { return ee_cp_dm_attack_frequency_modifier(this); }
-    float GetDMInitialAttackModifier() { return ee_cp_dm_initial_attack_modifier(this); }
-    float GetPopLimitAdjustment() { return ee_cp_pop_limit_adjustment(this); }
     unsigned long GetIslandExpansionTimer() { return ee_cp_island_expansion_timer(this); }   // 0x2ed01 (else 60000)
     virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
@@ -92,29 +86,8 @@ public:
     unsigned long GetNumResourceCenters() { return this->mResourceCenters.size(); }
     EECPResourceCenter* GetResourceCenter(unsigned long inIndex);   // 0x2ef5e (ret 4: mResourceCenters[inIndex]) (provisional name)
     void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
-    long GetEpochFrequencyMax() const { return this->mEpochFrequencyMax; }
-    long GetEpochFrequencyMin() const { return this->mEpochFrequencyMin; }
-    // inline (EECPDefenseCommander's ctor 0x77bce loads both into registers before the pushes) (provisional name)
-    long GetReplenishDelayMax() const { return this->mReplenishDelayMax; }
-    long GetReplenishDelayMin() const { return this->mReplenishDelayMin; }
-    // inline (EEComputerPlayer::SetNextAttackTime 0x43d4cd loads each pair into registers before the GetRandom pushes
-    // and the clamps, and mAttackFrequencyPerEpoch with fld before the fimul) (provisional names)
-    long GetAttackFrequencyCeiling() const { return this->mAttackFrequencyCeiling; }
-    long GetAttackFrequencyFloor() const { return this->mAttackFrequencyFloor; }
-    long GetAttackFrequencyMax() const { return this->mAttackFrequencyMax; }
-    long GetAttackFrequencyMin() const { return this->mAttackFrequencyMin; }
-    long GetAttackDelayCeiling() const { return this->mAttackDelayCeiling; }
-    long GetAttackDelayFloor() const { return this->mAttackDelayFloor; }
-    long GetInitialAttackDelayMax() const { return this->mInitialAttackDelayMax; }
-    long GetInitialAttackDelayMin() const { return this->mInitialAttackDelayMin; }
-    float GetAttackFrequencyPerEpoch() const { return this->mAttackFrequencyPerEpoch; }
     // inline float getters: the AI compares load them onto the x87 stack (fld [mAidThreatThreshold]; fld st(1); fcompp) instead of
     // comparing against a memory operand (EECPMilitaryAidPackage 0x485892..0x485a2d) (provisional names)
-    float GetTownGuardPercentage() const { return this->mTownGuardPercentage; }
-    float GetCitizenPercentage() const { return this->mCitizenPercentage; }  // (EECPCombatManager 0x47342e: fld; fsubr [1.0])
-    float GetAidThreatThreshold() const { return this->mAidThreatThreshold; }
-    float GetWorkerCountWeight() const { return this->mWorkerCountWeight; }
-    float GetMilitaryCountWeight() const { return this->mMilitaryCountWeight; }
     void SetCanAttack(bool inValue) { this->mCanAttack = inValue; }  // inline (EESMEffect::SetAIToggle 0x5c26da: 7 free sites set the budget)
     void SetIsCheating(bool inValue) { this->mIsCheating = inValue; }
     void SetCanBuild(bool inValue) { this->mCanBuild = inValue; }
@@ -133,7 +106,6 @@ public:
     std::vector<EECPResourceCenter*> mResourceCenters;
     std::vector<UWideString> mB90;          // +0xb90 (20-byte polymorphic elements: _Tidy 0x40ee8; unused here) (provisional name)
     std::vector<std::pair<unsigned long, long> > mFavoriteTypeHistory;  // +0xba0 (Load: resize(n, make_pair(0, 0)), then first/second)
-    EEComplexUnit* GetUnitsToKillAt(unsigned long inIndex) const { return this->mUnitsToKill[inIndex]; }
     std::vector<EEUnitHandle<EEComplexUnit> > mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills, referenced; the dtor dereferences each; handles since R5a.4)
     EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
@@ -144,65 +116,6 @@ public:
     std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;   // (tile, game ms) EECPReflexes.cpp
     // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
-    float GetCarrierChance() const { return this->mCarrierChance; }
-    float GetCarrierPopPercentage() const { return this->mCarrierPopPercentage; }
-    float GetDMEarlyAttackScale() const { return this->mDMEarlyAttackScale; }
-    float GetHeroChance() const { return this->mHeroChance; }
-    float GetHeroPopPercentage() const { return this->mHeroPopPercentage; }
-    float GetPriestPopPercentage() const { return this->mPriestPopPercentage; }
-    float GetPriestChance() const { return this->mPriestChance; }
-    float GetProphetPopPercentage() const { return this->mProphetPopPercentage; }
-    float GetProphetChance() const { return this->mProphetChance; }
-    float GetAirUnitWeight() const { return this->mAirUnitWeight; }
-    long GetCarrierMaxPerGroup() const { return this->mCarrierMaxPerGroup; }
-    long GetNumAirExplorers() const { return this->mNumAirExplorers; }
-    long GetAttackGroupSizeMax() const { return this->mAttackGroupSizeMax; }
-    long GetAttackGroupSizeMin() const { return this->mAttackGroupSizeMin; }
-    long GetDefenseGroupSizeMax() const { return this->mDefenseGroupSizeMax; }
-    long GetDefenseGroupSizeMin() const { return this->mDefenseGroupSizeMin; }
-    long GetHeroMaxPerGroup() const { return this->mHeroMaxPerGroup; }
-    long GetNumLandExplorers() const { return this->mNumLandExplorers; }
-    long GetAntiAirMax() const { return this->mAntiAirMax; }
-    long GetAirportMax() const { return this->mAirportMax; }
-    long GetArcheryRangeMax() const { return this->mArcheryRangeMax; }
-    long GetBarracksMax() const { return this->mBarracksMax; }
-    long GetDockMax() const { return this->mDockMax; }
-    long GetGranaryMax() const { return this->mGranaryMax; }
-    long GetHospitalMax() const { return this->mHospitalMax; }
-    long GetCyberFactoryMax() const { return this->mCyberFactoryMax; }
-    long GetCyberLabMax() const { return this->mCyberLabMax; }
-    long GetNavalYardMax() const { return this->mNavalYardMax; }
-    long GetSiegeFactoryMax() const { return this->mSiegeFactoryMax; }
-    long GetSpaceDockMax() const { return this->mSpaceDockMax; }
-    long GetStableMax() const { return this->mStableMax; }
-    long GetTankFactoryMax() const { return this->mTankFactoryMax; }
-    long GetTempleMax() const { return this->mTempleMax; }
-    long GetTowerMax() const { return this->mTowerMax; }
-    long GetUniversityMax() const { return this->mUniversityMax; }
-    long GetPriestMaxPerGroup() const { return this->mPriestMaxPerGroup; }
-    long GetProphetMaxPerGroup() const { return this->mProphetMaxPerGroup; }
-    long GetDropOffDistance() const { return this->mDropOffDistance; }
-    long GetNumSeaExplorers() const { return this->mNumSeaExplorers; }
-    long GetUnitsPerAntiAirBuilding() const { return this->mUnitsPerAntiAirBuilding; }
-    long GetUnitsPerAirport() const { return this->mUnitsPerAirport; }
-    long GetUnitsPerArcheryRange() const { return this->mUnitsPerArcheryRange; }
-    long GetUnitsPerBarracks() const { return this->mUnitsPerBarracks; }
-    long GetUnitsPerDock() const { return this->mUnitsPerDock; }
-    long GetUnitsPerGranary() const { return this->mUnitsPerGranary; }
-    long GetUnitsPerHospital() const { return this->mUnitsPerHospital; }
-    long GetUnitsPerCyberFactory() const { return this->mUnitsPerCyberFactory; }
-    long GetUnitsPerCyberLab() const { return this->mUnitsPerCyberLab; }
-    long GetUnitsPerNavalYard() const { return this->mUnitsPerNavalYard; }
-    long GetUnitsPerSiegeFactory() const { return this->mUnitsPerSiegeFactory; }
-    long GetUnitsPerSpaceDock() const { return this->mUnitsPerSpaceDock; }
-    long GetUnitsPerStable() const { return this->mUnitsPerStable; }
-    long GetUnitsPerTankFactory() const { return this->mUnitsPerTankFactory; }
-    long GetUnitsPerTemple() const { return this->mUnitsPerTemple; }
-    long GetUnitsPerTower() const { return this->mUnitsPerTower; }
-    long GetUnitsPerUniversity() const { return this->mUnitsPerUniversity; }
-    unsigned long GetDMEarlyAttackTime() const { return this->mDMEarlyAttackTime; }
-    bool GetCanExplore() const { return this->mCanExplore; }
-    bool GetAttackStarted() const { return this->mAttackStarted; }
     // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
     // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
     unsigned char mEngine = 1;

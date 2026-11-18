@@ -237,12 +237,6 @@ long EEGroup::CountUnitsOfKind(long inKind)
     return theCount;
 }
 
-// Returns whether a pending path request carries the unit
-bool EEGroup::HasPathRequest(EEComplexUnit* inUnit)
-{
-    return this->FindPathRequest(inUnit) != NULL;
-}
-
 // Returns the pending path request that carries the unit, or NULL
 EEGroupPathRequest* EEGroup::FindPathRequest(EEComplexUnit* inUnit)
 {

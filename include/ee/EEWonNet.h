@@ -26,24 +26,6 @@ struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 
-inline const wchar_t* WStringGetCStr(const std::wstring &theStr)
-{
-#ifdef _LINUX // this is a work around for a bug in some versions of basic_string
-	if(theStr.length()==0)
-		return L"";
-	else
-	{
-		if(theStr.capacity() < theStr.length() + 1)
-			((std::wstring&)theStr).reserve(theStr.length() + 1);
-
-		((std::wstring&)theStr)[theStr.length()] = L'\0';
-		return theStr.data();
-	}
-#else
-	return theStr.c_str();
-#endif
-}
-
 
 // WONAPI's network address (passed by value: 0x28 bytes in the original; provisional class name). A Rust value since
 // WON round 14, its methods inline forwards since WONLobby round 14 (IPAddr.cpp deleted) (rust/crates/ee_won_net/src/ipobj.rs EeWonIpAddr: the remember flag +0x00, the host text +0x04, the
@@ -448,8 +430,6 @@ public:
     bool Initialize();                      // base 0x4c9e16 (reads SierraCom.cfg into mDirectoryServers)
     void GetTitanServerList();              // base 0x4c9883
     void GetTitanServerListCompletion(WONAPI::AsyncOp* inOp);   // base 0x4c9ad9
-    void RequestMOTD();                     // base 0x4c9612
-    void MOTDCallback(WONAPI::AsyncOp* inOp);                   // base 0x4c975d
     void Login(const char* inName, const char* inPassword);       // base 0x4c91a3
     void LoginCallback(WONAPI::AsyncOp* inOp);                  // base 0x4c9414
 

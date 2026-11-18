@@ -183,7 +183,6 @@ public:
     long mCollisionDetectionFlags;          // +0xb7c (= 15)
     long mUB80;                             // +0xb80 (= 0)
     long mCurrentPlayer;                    // +0xb84 the local player's index
-    unsigned long GetNumberOfWondersToWin() const { return this->mNumberOfWondersToWin; }
     unsigned long mNumberOfWondersToWin;    // +0xb88 ("TheNumberOfWondersToWin"; = 1)
     long mMaxPlayers;                       // +0xb8c (= 3)
     long mStartTime;                        // +0xb90 (= 0)
@@ -195,8 +194,6 @@ public:
     // inline accessor: one more inline expansion in EEUIECESendMessage::ProcessEvent makes VC6 refuse the
     // _Ptrit::operator+ of UIEditBox::GetText(0) as in the original (0x1d30a0); the GetMainGameForm() accessor
     // variant does the same, this one is the guess
-    bool GetCheatsEnabled() const { return this->mCheatsEnabled; }
-    bool GetTeamsLocked() const { return this->mTeamsLocked; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
     bool mCheatsEnabled;                    // +0xb9a ("TheCheatCodesAllowed"; 0x5318da: the chat line is parsed for cheats)
     bool mUnitImprovementsAllowed;          // +0xb9b ("TheUnitImprovementsAllowed"; = true)
     bool mShowCollisionSpheres;             // +0xb9c

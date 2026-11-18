@@ -69,9 +69,6 @@ public:
     EESETSBaseObject* GetScreen(long inIndex) const { return this->mScreens[inIndex]; }
     // 0x17c1e5: the factory (0 trigger, 1 condition, 2 effect, 3 object, 4 area; ret 0x10, `this` unused)
     EESETSBaseObject* CreateScreen(unsigned long inType, GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
-    void StoreEntry();                      // 0x17c599: writes the current entry back (its Virtual24)
-    void ShowSelection();                   // 0x17c5fd: shows the list's selection
-    void HideGroups();                      // 0x17c743: disables the five entity groups 9..13
     void FillList();                        // 0x17c99f: refills the list from the current screen's names
 
     // inline (COMDAT 0x17eaab, called out of line by EESETSCondition::Store): the name edit box's first line

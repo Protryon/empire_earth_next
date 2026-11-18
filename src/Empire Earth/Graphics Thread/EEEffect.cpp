@@ -396,18 +396,6 @@ long EEEffect::BaseQueue(bool inInView)
     return 0;
 }
 
-// Returns a random float between the minimum and the maximum from the effects' random generator
-float GetEffectRandomFloat(float inMinimum, float inMaximum)
-{
-    return ee_gfx_effect_random_float(inMinimum, inMaximum);
-}
-
-// Returns a random long from the minimum to the maximum (clamped to the maximum) (provisional name)
-long GetEffectRandomLong(long inMinimum, long inMaximum)
-{
-    return ee_gfx_effect_random_long((int32_t)inMinimum, (int32_t)inMaximum);
-}
-
 // Returns the next random fraction from the effects' random generator
 float EEEffect::GetRandom()
 {

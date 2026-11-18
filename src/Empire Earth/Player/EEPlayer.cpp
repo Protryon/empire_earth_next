@@ -890,15 +890,6 @@ void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, flo
     theScope.Record(this, 8, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
-// Refunds a fraction of a unit class improvement's cost at its queued level (ee_units player.rs)
-void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float inFraction)
-{
-    EEPlayerEconScope theScope;
-    if (inClass != NULL)
-        EEPlayerImprovement(this, 9, inClass->mUnitType, inImprovement, false, false, inFraction);
-    theScope.Record(this, 9, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement, EEPlayerFloatBits(inFraction)});
-}
-
 // Selects a unit by ID, starting a new selection when adding a unit of a player other than the selected one
 void EEPlayer::AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag)
 {
@@ -1074,19 +1065,6 @@ bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
     return theScope.Record(this, 10, EEPlayerImprovement(this, 3, inUnitType, inImprovement, false, false, 0.0f, outText) != 0, {inUnitType, inImprovement, outText != NULL}, outText);
 }
 
-// Returns whether the player can produce a unit type (cost and wonder limits included); sets the reason
-bool EEPlayer::CanProduceUnitType(long inUnitType, long inArg, UWideString* outReason)
-{
-    EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        long theTechnology = gUnitClassTable[inUnitType] ? gUnitClassTable[inUnitType]->mTechnology : 100000;
-        if (theTechnology != kTechNone)
-            return this->CanProduce(theTechnology, inArg, 1, true, 3, outReason);
-        return false;
-    }();
-    return theScope.Record(this, 20, theCaptured, {inUnitType, inArg, outReason != NULL}, outReason);
-}
-
 // Whether a technology or unit can be produced (ee_units player.rs can_produce); sets the reason text when not
 bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
@@ -1099,13 +1077,6 @@ bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outR
 {
     EEPlayerEconScope theScope;
     return theScope.Record(this, 11, EEPlayerImprovement(this, 2, inUnitType, inImprovement) != 0, {inUnitType, inImprovement, outReason != NULL}, outReason);
-}
-
-// Whether the player can afford a technology at a cost scale (ee_units player.rs); sets the reason text when not
-bool EEPlayer::CanAffordTechnology(long inTechnology, float inScale, UWideString* outReason)
-{
-    EEPlayerEconScope theScope;
-    return theScope.Record(this, 5, ee_units_player_cost(EEPlayerRefs(this), 3, NULL, inTechnology, 0, inScale, outReason), {inTechnology, EEPlayerFloatBits(inScale), outReason != NULL}, outReason);
 }
 
 
@@ -1185,23 +1156,6 @@ void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* 
 {
     if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetSelectionSound(inSound, inIndex);
-}
-
-// Deletes all of the player's herds
-void EEPlayer::DeleteHerds()
-{
-    for (long i = this->mHerds.size() - 1; i >= 0; i--)
-        delete this->mHerds[i];
-    this->mHerds.clear();
-}
-
-// Deletes all of the player's towns and empties the town lookup
-void EEPlayer::ClearTowns()
-{
-    for (long i = this->mTowns.size() - 1; i >= 0; i--)
-        delete this->mTowns[i];
-    this->mTowns.clear();
-    this->mTownsByID.clear();
 }
 
 // Drops every queued improvement of a unit type
@@ -1364,13 +1318,6 @@ EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// Grants a wonder's power by its bonus kind: area conversion, a hit-point bonus for a unit set, the
-// share bonus, sight of enemies, or healing of a unit set
-void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
-{
-    EEPlayerUnits(this, 9, inUnit);
-}
-
 // Returns the running, or else pending, command group holding a unit; NULL when none
 EEGroup* EEPlayer::GetActiveGroupOf(EEComplexUnit* inUnit)
 {
@@ -1417,55 +1364,10 @@ void EEPlayer::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum(theName, theSum);
 }
 
-// Returns the town containing a tile, or else the nearest town and its closest point to the tile
-EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& outTile)
-{
-    EETown* theTown = NULL;
-    EETileLocation theCandidate;
-    long theDistance = 0;
-    for (long i = this->mTowns.size() - 1; i >= 0; i--) {
-        EETown* theCurrent = this->mTowns[i];
-        if (!(!theCurrent->HullContains(inTile))) {
-            theTown = this->mTowns[i];
-            outTile = inTile;
-            break;
-        } else {
-            if (theTown != NULL) {
-                theCandidate = this->mTowns[i]->GetClosestPoint(inTile);
-                if (theCandidate.DistanceToSquared(inTile) < theDistance) {
-                    outTile = theCandidate;
-                    theTown = this->mTowns[i];   // the closer town too (was its tile only)
-                    theDistance = theCandidate.DistanceToSquared(inTile);   // was (theCandidate): always 0
-                }
-            } else {
-                outTile = this->mTowns[i]->GetClosestPoint(inTile);
-                theTown = this->mTowns[i];
-                theDistance = outTile.DistanceToSquared(inTile);
-            }
-        }
-    }
-    return theTown;
-}
-
 // Returns whether the player still plays: not an observer, or an observer whose game has ended
 bool EEPlayer::IsActive()
 {
     return !this->mObserverMode || this->mGameResult != 0;
-}
-
-// Returns the town whose area contains a unit's tile, or NULL
-EETown* EEPlayer::GetTownOf(EEUnit* inUnit)
-{
-    U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-    EETown* theTown = NULL;
-    for (long i = this->GetNumTowns() - 1; i >= 0; i--) {
-        EETown* theCandidate = this->mTowns[i];
-        if (theCandidate != NULL && theCandidate->HullContains(theTile)) {
-            theTown = this->mTowns[i];
-            break;
-        }
-    }
-    return theTown;
 }
 
 // Appends the player's herds of a unit type's animal to a list
@@ -1569,13 +1471,6 @@ long EEPlayer::GetPopulationLimit(long inArg)
     return this->mPopulationLimitBonus + this->mShareBonus + gWorld.mPlayerPopulationLimit;
 }
 
-// Whether one resource covers the cost and the required statistic is reached (ee_units player.rs)
-bool EEPlayer::CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass, long inCount)
-{
-    EEPlayerEconScope theScope;
-    return theScope.Record(this, 4, ee_units_player_cost(EEPlayerRefs(this), 1, inNode, inUnitClass, inCount, 0.0f, NULL), {EEPlayerNodeID(inNode), inUnitClass, inCount});
-}
-
 // Whether every resource covers a scaled cost, metallurgy pooling iron and gold (ee_units player.rs)
 bool EEPlayer::CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount)
 {
@@ -1596,17 +1491,6 @@ unsigned long EEPlayer::GetTeamIndex()
         }
     }
     return theResult;
-}
-
-// Returns the player's town with an ID, or NULL
-EETown* EEPlayer::GetTownByID(long inID)
-{
-    EETown* theTown = NULL;
-    for (unsigned long i = 0; i < this->mTowns.size() && theTown == NULL; i++) {
-        if (this->mTowns[i]->mTownID == inID)
-            theTown = this->mTowns[i];
-    }
-    return theTown;
 }
 
 // Returns the off-map record of a unit, or NULL
@@ -2286,12 +2170,6 @@ void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
     RTSUnit* theUnit = ::gWorld.GetUnit(inUnitID);
     if (theUnit != NULL)
         this->DeselectUnit(static_cast<EEUnit*>(theUnit));
-}
-
-// Takes away the power of a lost wonder (conversion, hit-point bonus, shared bonus, enemy sight, healing ...)
-void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
-{
-    EEPlayerUnits(this, 10, inUnit);
 }
 
 // Removes an animal from its herds, deleting any herd left with no tiles

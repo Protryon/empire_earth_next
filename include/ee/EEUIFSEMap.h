@@ -44,7 +44,6 @@ public:
     }
     virtual ~UIRBMap() {}                   // ??_G 0x1a3abd
     virtual void Check();                   // slot 0x94 0x1a1907
-    virtual void HideControls();            // slot 0x9c 0x1a1a6b (provisional name)
 };
 
 // (the elevation file combo box's selection event (0x3eb), EEUIFSEEMapType, is an EESEERust: ee/EESEARust.h)

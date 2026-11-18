@@ -184,24 +184,6 @@ float EEAIArea::GetHullDistanceSquared(EEAIArea* inOther)
     return theResult;
 }
 
-// Appends the units standing on the area's tiles (empty area: none)
-void EEAIArea::GetUnitsOnTiles(std::vector<EEUnit*>& outUnits)
-{
-    if (this->mTiles.Size() > 0) {
-        EEAIAreaContainsUnit thePredicate(this);
-        EEGetUnitsInRectangle(this->GetHullBounds(), outUnits, thePredicate, true);
-    }
-}
-
-// Appends the units standing inside the area's hull (empty area: none)
-void EEAIArea::GetUnitsInHull(std::vector<EEUnit*>& outUnits)
-{
-    if (this->mTiles.Size() > 0) {
-        EEAIAreaHullContainsUnit thePredicate(this);
-        EEGetUnitsInRectangle(this->GetHullBounds(), outUnits, thePredicate, true);
-    }
-}
-
 // Returns the point itself when it is inside the area's hull, else the closest point on the hull outline
 U2DPoint<long> EEAIArea::GetClosestHullPoint(const U2DPoint<long>& inPoint)
 {

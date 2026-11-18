@@ -20,6 +20,30 @@ Verified on bd8223f79: both builds 0/0, the Rust gate, the oracle seeds 2-7, net
 `won_cfgtab_test`, failing the same way before the round), gates.sh GATES PASS, the tour's menus against the
 pre-round exe, the store gate, the macOS and Linux `cargo check`s (PORT_LEARNINGS "LLE rest, round 1").
 
+## Round 2 (branch `rust-lle-rest2`, 2026-11-18)
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 18e05b0f7, f8bda8559 | `tools/dead_members.py`: the dead-member census as a tool (report, delete; generated headers skipped) | (tool) |
+| 3b0813fb1 | 153 dead members of the computer player's classes (EEComputerPlayer, EECP*, EEAI*) | -704 |
+| 98a70b5f5 | LLE: `UIControl::GetFields`, `UIForm::SetMouseMoveEvent` | -4 |
+| 1e2dd117d | 120 dead members of the world, units, players, scenario and screens | -605 |
+| b3f96958d | The store gate's link check: a name may stay unresolved only when the game's own objects define it | (tool) |
+| 0346f7fd3 | The font bitmap's glyph textures' stage and reference answered in Rust (fbobj.rs) | -27 |
+| 26ef1eddd | The census's second pass, to a fixpoint (the members only the first pass's had called) | -195 |
+| e8dc0f323 | 25 dead free functions of include/ee (a column-0 pass) | -324 |
+| db59996cb | 19 more dead free functions (their Rust mentions are comments) | -133 |
+
+Round total: -1,992 net C++ lines (target 2,000).
+
+Not done this round (next): the vertex host's texture operations (the primitives' cargo tests construct through
+the same C entry points as the C++, so a constructor flag cannot tell a recorded world from the game: give the C++
+its own entry point first); the form's group and background operations through `direct.rs`; folding
+`DX7Rasterizer` (the store gate's `StoreRasterizer`, `StoreSurface` and `StoreScreen` subclass the bases; the GE
+vertex array's virtuals exist for the store gate's array too); `UILBString` whole; `UIObjHost::Base` from the record.
+What the census leaves: include/ee/wonapi (the WON code is kept as the port's reference), the reconstructed padding
+virtuals (`Virtual14` ...: the vtables' shape), the generated rules header.
+
 ## The measure (task 1): what is left, file by file
 
 `src/Low-Level Engine` after the round is about 13,300 lines and `include/lle` about 9,500. Lines and the host-op

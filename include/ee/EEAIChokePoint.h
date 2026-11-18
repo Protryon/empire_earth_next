@@ -25,7 +25,6 @@ public:
         const unsigned long* theSerials = ee_astar_choke_area_serials(this, &theCount);
         return EEAIListView<unsigned long>(theSerials, theCount);
     }
-    unsigned long GetAreaSerialsAt(unsigned long inIndex) const { return this->GetAreaSerials()[inIndex]; }
     long GetIndex() const { return this->index; }
     void SetIndex(long inIndex) { this->index = inIndex; }
     unsigned short GetContinentID() const { return this->continent_id; }

@@ -19,7 +19,6 @@ public:
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
     virtual long Load(GEScreen* inScreen);        // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
-    virtual GESurface* GetPointerSurface(unsigned long inIndex);  // +0x0c 0x11af52: pointer inIndex below 10 (EEMouse's 0x10a9d1: 10..23 its own), else NULL
     // 0x11af66: finds inFile on the texture path and loads it into *ioSurface on inScreen (EEMouse::Load passes
     // its 14 pointer files; provisional name)
     long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface);
