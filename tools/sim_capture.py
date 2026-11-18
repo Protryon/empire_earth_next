@@ -50,6 +50,11 @@ cancels and completions, the queries, Update, the pending paths, the region upda
 the queued searches after it, and every unit and request whose search left the queues with the waypoints, flags and
 goals or the path it got. Its golden lines (seeds 2-3 of the oracle, late, space and calamity profiles) come from
 the C++ manager before it moved (R5b.1, branch rust-ai-path1).
+CNTQ is the continent manager's queries and changes (EEAIContinentManager.cpp: CanGetTo, the area lookups by tile,
+the id lists, the random areas, the connections, RepairPathArea, RemoveForestTile, UpdateWallUnit; the outermost call
+of a thread): a kind, the inputs, the result (an area as its serial and type), after a change the FNV-1a 64 of the
+state a CNTR record holds. Its golden lines (seeds 2-3 of the oracle, late, space and calamity profiles; the oracle's
+recorded twice, equal) come from the C++ manager before its objects move (R5b.1, branch rust-ai-path1).
 HULL is the AI hulls' geometry (lle/U2DPolygon.h, U2DConvexHull<long>: every SetPoints with its input and the whole
 hull, GetClosestOutlinePoint, GetClosestPoints, GetClosestPoint, Contains and GetScanLines with a hash of the hull, the
 input and the result), AREA the areas' geometry on it (EEAIArea::GetClosestPoints, GetClosestHullPoint,
