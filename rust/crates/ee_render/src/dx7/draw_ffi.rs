@@ -9,6 +9,7 @@
 
 use core::ffi::{c_char, c_long, c_ulong, c_void};
 
+use crate::dx7::digest2d;
 use crate::dx7::draw::*;
 use crate::dx7::draw2d::{self, Draw2DHost, TextHost, TextInfo, TextRect};
 use crate::dx7::draw_model::{self, MaterialInfo, ModelHost, ModelInfo, Plane, ViewportInfo};
@@ -35,14 +36,13 @@ use crate::ge::smallobj::{
     ee_ge_text_transparent, EeGeFont, EeGeFontValue, EeGeMat, EeGeMatField, EeGeText,
 };
 use crate::ge::texobj_tex::{ee_ge_tex_corner, ee_ge_tex_frame_uv_size, ee_ge_tex_get, EeGeTexVal, EeGeTexture};
-use crate::dx7::digest2d;
-use core::fmt::Write as _;
 use crate::ge::tmobj::{
     ee_ge_tm_edge_points, ee_ge_tm_edge_vertices, ee_ge_tm_get, ee_ge_tm_get_f, ee_ge_tm_is_valid, ee_ge_tm_material,
     ee_ge_tm_material_map, ee_ge_tm_point, ee_ge_tm_point_visibility, ee_ge_tm_render_vertices, ee_ge_tm_vertex_color,
     ee_ge_tm_water_color, EeGeTerrainMesh, EeGeTmMaterialView, EeGeTmVal,
 };
 use crate::ge::viewport::GeViewport;
+use core::fmt::Write as _;
 use ee_base::math::types::GeTransformation;
 
 /// cbindgen:ignore
@@ -873,15 +873,30 @@ pub unsafe extern "C" fn ee_dx7r_text_bounds(text: Handle, clip: *const TextRect
     if digest2d::enabled() {
         // SAFETY: the text's bytes (`length` of them) are live for the call
         let bytes = unsafe { core::slice::from_raw_parts(info.text as *const u8, info.length as usize) };
-        let mut s = format!("text {:?} a{} t{} sh{}", String::from_utf8_lossy(bytes), info.alignment, info.transparent as u8, info.shadow_font as u8);
+        let mut s = format!(
+            "text {:?} a{} t{} sh{}",
+            String::from_utf8_lossy(bytes),
+            info.alignment,
+            info.transparent as u8,
+            info.shadow_font as u8
+        );
         digest2d::floats(&mut s, &[info.x, info.y]);
         digest2d::floats(&mut s, &info.foreground);
         digest2d::floats(&mut s, &info.background);
         let font = unsafe { ee_ge_text_font(cppobj::plain(text as usize)) };
         let font: *mut EeGeFont = unsafe { cppobj::counted(font as usize) };
-        let _ = unsafe { write!(s, " font{} st{}", ee_ge_font_value(font, EeGeFontValue::Size), ee_ge_font_value(font, EeGeFontValue::Style)) };
+        let _ = unsafe {
+            write!(
+                s,
+                " font{} st{}",
+                ee_ge_font_value(font, EeGeFontValue::Size),
+                ee_ge_font_value(font, EeGeFontValue::Style)
+            )
+        };
         match unsafe { clip.as_ref() } {
-            Some(c) => { let _ = write!(s, " clip {} {} {} {}", c.left, c.top, c.right, c.bottom); }
+            Some(c) => {
+                let _ = write!(s, " clip {} {} {} {}", c.left, c.top, c.right, c.bottom);
+            }
             None => s.push_str(" clip -"),
         }
         let _ = write!(s, " -> {} {} {} {}", bounds.left, bounds.top, bounds.right, bounds.bottom);
