@@ -9,6 +9,7 @@ use std::os::raw::{c_long, c_ulong};
 
 use super::fields::EeCpFields;
 use super::file::SaveFile;
+use super::influence::{self, EeCpInfluence, EeCpRect};
 use super::init::{self, EeCpBehavior};
 use super::legacy_load;
 use super::save::{self, EeCpLoaded};
@@ -257,4 +258,93 @@ pub unsafe extern "C" fn ee_cp_restore_fields(p: *mut EeCpFields, what: u32, gam
         2 => p.after_restore(ok),
         _ => p.old_expansion_timers(u32::from(ok), game_time as u32),
     }
+}
+
+// ---- the influence table (cp::influence; ee/EEInfluenceTable.h is its shim)
+
+/// `EEInfluenceTable(map, players)`: the table over a map of `map_size` tiles a side in regions of `region_size`.
+#[no_mangle]
+pub extern "C" fn ee_cp_influence_new(map_size: u32, region_size: i32, players: u32) -> *mut EeCpInfluence {
+    Box::into_raw(Box::new(EeCpInfluence::new(map_size, region_size, players)))
+}
+
+/// `~EEInfluenceTable`.
+///
+/// # Safety
+/// `t` is null or a table of [`ee_cp_influence_new`], not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_influence_free(t: *mut EeCpInfluence) {
+    if !t.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(t) });
+    }
+}
+
+/// `GetValue` (`what` 0) or `GetOthersValue` (1) of region (x, y).
+///
+/// # Safety
+/// `t` is a live table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_influence_value(
+    t: *const EeCpInfluence,
+    what: u32,
+    player: u32,
+    x: u32,
+    y: u32,
+) -> c_long {
+    // SAFETY: the caller's contract
+    let t = unsafe { &*t };
+    (if what == 0 { t.value(player, x, y) } else { t.others_value(player, x, y) }) as c_long
+}
+
+/// `SumValue` (`what` 0) or `SumOthersValue` (1) over the regions of `r`.
+///
+/// # Safety
+/// `t` is a live table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_influence_sum(t: *const EeCpInfluence, what: u32, player: u32, r: EeCpRect) -> c_long {
+    // SAFETY: the caller's contract
+    let t = unsafe { &*t };
+    (if what == 0 { t.sum_value(player, r) } else { t.sum_others_value(player, r) }) as c_long
+}
+
+/// `AddUnit` (`add`) or `RemoveUnit`: the unit's class influence for its owner at tile (x, y).
+///
+/// # Safety
+/// `t` is a live table; `unit` a live unit's handle (its `EEUnit*`) while the caller holds the world.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_influence_unit(t: *mut EeCpInfluence, add: bool, unit: u64, x: i32, y: i32) {
+    // SAFETY: the caller's contract
+    let (t, read) = unsafe { (&mut *t, influence::unit_influence(unit)) };
+    if let Some((player, value)) = read {
+        if add {
+            t.add(player, value, x, y);
+        } else {
+            t.remove(player, value, x, y);
+        }
+    }
+}
+
+/// `GetEnemyValue` (`sum` false: region (r.left, r.top)) or `SumEnemyValue` (`sum`: the regions of `r`, the start
+/// corner clipped at 0): the values of the players `player` is at war with in `world` (player 0 only if
+/// `with_first`).
+///
+/// # Safety
+/// `t` is a live table; `world` the live world (`&gWorld`) while the caller holds it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_influence_enemies(
+    t: *const EeCpInfluence,
+    world: u64,
+    player: u32,
+    r: EeCpRect,
+    with_first: bool,
+    sum: bool,
+) -> c_long {
+    // SAFETY: the caller's contract
+    let t = unsafe { &*t };
+    // SAFETY: as above
+    let Some(enemies) = (unsafe { influence::world_enemies(world, player, t.players(), with_first) }) else {
+        return 0;
+    };
+    (if sum { t.sum_enemy_value(&enemies, r) } else { t.enemy_value(&enemies, r.left, r.top) }) as c_long
 }

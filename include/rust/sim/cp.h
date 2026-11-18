@@ -62,6 +62,9 @@ constexpr static const int32_t EE_CP_SAVE_CENTER_SAVE = 413;
 /// `mFavoriteTypeHistory.size()` into `io.i`.
 constexpr static const int32_t EE_CP_SAVE_HISTORY_COUNT = 414;
 
+/// The table (the C++ shim's `mTable`).
+struct EeCpInfluence;
+
 /// `EEComputerPlayer`'s plain members, `mLBD4` (+0xbd4) to `mAttackStarted` (+0xf56), in the class's order.
 struct EeCpFields {
   /// (unsigned: Load)
@@ -397,6 +400,14 @@ struct EeCpLoaded {
 /// The game's generator for [`ee_cp_set_next_attack_time`]: `GetRandom(min, max)`.
 using EeCpRandomFn = long(*)(void *ctx, long min, long max);
 
+/// A rectangle of regions or tiles, edges included (`U2DRectangle<long>`).
+struct EeCpRect {
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+};
+
 extern "C" {
 
 /// Steps over a retail file's combat manager block (`EECPCombatManager::Load` at 0.228-0.250).
@@ -542,6 +553,56 @@ void ee_cp_restore_fields(EeCpFields *p,
                           uint32_t what,
                           unsigned long game_time,
                           bool ok);
+
+/// `EEInfluenceTable(map, players)`: the table over a map of `map_size` tiles a side in regions of `region_size`.
+EeCpInfluence *ee_cp_influence_new(uint32_t map_size,
+                                   int32_t region_size,
+                                   uint32_t players);
+
+/// `~EEInfluenceTable`.
+///
+/// # Safety
+/// `t` is null or a table of [`ee_cp_influence_new`], not used after.
+void ee_cp_influence_free(EeCpInfluence *t);
+
+/// `GetValue` (`what` 0) or `GetOthersValue` (1) of region (x, y).
+///
+/// # Safety
+/// `t` is a live table.
+long ee_cp_influence_value(const EeCpInfluence *t,
+                           uint32_t what,
+                           uint32_t player,
+                           uint32_t x,
+                           uint32_t y);
+
+/// `SumValue` (`what` 0) or `SumOthersValue` (1) over the regions of `r`.
+///
+/// # Safety
+/// `t` is a live table.
+long ee_cp_influence_sum(const EeCpInfluence *t, uint32_t what, uint32_t player, EeCpRect r);
+
+/// `AddUnit` (`add`) or `RemoveUnit`: the unit's class influence for its owner at tile (x, y).
+///
+/// # Safety
+/// `t` is a live table; `unit` a live unit's handle (its `EEUnit*`) while the caller holds the world.
+void ee_cp_influence_unit(EeCpInfluence *t,
+                          bool add,
+                          uint64_t unit,
+                          int32_t x,
+                          int32_t y);
+
+/// `GetEnemyValue` (`sum` false: region (r.left, r.top)) or `SumEnemyValue` (`sum`: the regions of `r`, the start
+/// corner clipped at 0): the values of the players `player` is at war with in `world` (player 0 only if
+/// `with_first`).
+///
+/// # Safety
+/// `t` is a live table; `world` the live world (`&gWorld`) while the caller holds it.
+long ee_cp_influence_enemies(const EeCpInfluence *t,
+                             uint64_t world,
+                             uint32_t player,
+                             EeCpRect r,
+                             bool with_first,
+                             bool sum);
 
 }  // extern "C"
 

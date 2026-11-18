@@ -2,6 +2,7 @@
 //! resource centres, towns, herds and the influence table moved into Rust whole.
 //!
 //! - `fields`: `EEComputerPlayer`'s plain members as the record the class derives from ([`fields::EeCpFields`]);
+//! - `influence`: `EEInfluenceTable` whole (the regions' influence by player, the enemies' sums);
 //! - `init`: `Init`'s tuning values from the behaviour table;
 //! - `save`: the class's `Load` and `Save` (one field order for both);
 //! - `player`: the per-difficulty scales, their setters, `ScaleCost`, `SetNextAttackTime`, `RestoreManagers`' fields;
@@ -12,6 +13,7 @@
 pub mod ffi;
 pub mod fields;
 pub mod file;
+pub mod influence;
 pub mod init;
 pub mod legacy_load;
 pub mod player;
