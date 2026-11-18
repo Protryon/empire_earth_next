@@ -11,6 +11,8 @@
 // EETileDistanceLess comparators other units sort with, and ee_cp_place_host: the world the Rust bodies ask.
 #include <windows.h>
 #include <stdint.h>
+#include <string.h>
+#include <initializer_list>
 #include <vector>
 #include <deque>
 #include <map>
@@ -453,64 +455,83 @@ EECPPlacement::~EECPPlacement()
 
 #define EECP_CONTEXT EeCpPlaceCtx theContext = EECPPlaceContext(this->mPlayer)
 
-bool EECPPlacement::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
+// the forwarders' PLCE records (TEST ONLY): a float argument's bits, a unit's id
+static long EECPBits(float inValue)
 {
-    EECPPlaceScope theScope(kPlceHasUnitNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitType).I(inX).I(inY).F(inDistance);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_unit_near(&theContext, (int32_t)inUnitType, (int32_t)inX, (int32_t)inY, inDistance);
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return (long)theBits;
+}
+
+// a test's forwarder: the PLCE record of its arguments and result around the Rust call
+template <class F> static bool EECPAsk(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
+    F inCall)
+{
+    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
+    for (long theArg : inArgs)
+        theScope.I(theArg);
+    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
+    bool theResult = inCall(&theContext);
     theScope.I(theResult);
     return theResult;
+}
+
+// a search's forwarder: the tile in and, found, out (else what the caller left there, as the original's searches did);
+// the record's found tile and, for the searches over the centres, the player's centres
+template <class F> static bool EECPSearch(unsigned int inKind, EEComputerPlayer* inPlayer, std::initializer_list<long> inArgs,
+    EETileCoordinate& ioTile, bool inCenters, F inCall)
+{
+    EECPPlaceScope theScope(inKind, inPlayer);   // PLCE (TEST ONLY)
+    for (long theArg : inArgs)
+        theScope.I(theArg);
+    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
+    int32_t theTile[2] = {(int32_t)ioTile.mX, (int32_t)ioTile.mY};
+    bool theResult = inCall(&theContext, theTile);
+    if (theResult) {
+        ioTile.mX = theTile[0];
+        ioTile.mY = theTile[1];
+    }
+    theScope.I(theResult).I(theResult ? ioTile.mX : 0).I(theResult ? ioTile.mY : 0);
+    if (inCenters)
+        theScope.Centers(inPlayer);
+    return theResult;
+}
+
+#define EECP_ASK(kind, args, call) return EECPAsk(kind, this->mPlayer, args, [&](const EeCpPlaceCtx* c) { return call; })
+#define EECP_SEARCH(kind, args, tile, centers, call)                                                                    \
+    return EECPSearch(kind, this->mPlayer, args, tile, centers, [&](const EeCpPlaceCtx* c, int32_t* t) { return call; })
+#define EECP_ARGS(...) std::initializer_list<long>({__VA_ARGS__})
+
+bool EECPPlacement::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
+{
+    EECP_ASK(kPlceHasUnitNear, EECP_ARGS(inUnitType, inX, inY, EECPBits(inDistance)),
+        ee_cp_has_unit_near(c, (int32_t)inUnitType, (int32_t)inX, (int32_t)inY, inDistance));
 }
 
 bool EECPPlacement::HasAntiAirNear(long inX, long inY)
 {
-    EECPPlaceScope theScope(kPlceHasAntiAirNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_anti_air_near(&theContext, (int32_t)inX, (int32_t)inY);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasAntiAirNear, EECP_ARGS(inX, inY), ee_cp_has_anti_air_near(c, (int32_t)inX, (int32_t)inY));
 }
 
 bool EECPPlacement::HasTownCenterNear(long inX, long inY, float inDistance)
 {
-    EECPPlaceScope theScope(kPlceHasTownCenterNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).F(inDistance);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_town_center_near(&theContext, (int32_t)inX, (int32_t)inY, inDistance);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasTownCenterNear, EECP_ARGS(inX, inY, EECPBits(inDistance)),
+        ee_cp_has_town_center_near(c, (int32_t)inX, (int32_t)inY, inDistance));
 }
 
 bool EECPPlacement::HasGateNear(long inX, long inY, float inRadius)
 {
-    EECPPlaceScope theScope(kPlceHasGateNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).F(inRadius);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_gate_near(&theContext, (int32_t)inX, (int32_t)inY, inRadius);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasGateNear, EECP_ARGS(inX, inY, EECPBits(inRadius)), ee_cp_has_gate_near(c, (int32_t)inX, (int32_t)inY, inRadius));
 }
 
 bool EECPPlacement::HasTowerNear(long inX, long inY, float inRadius)
 {
-    EECPPlaceScope theScope(kPlceHasTowerNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).F(inRadius);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_tower_near(&theContext, (int32_t)inX, (int32_t)inY, inRadius);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasTowerNear, EECP_ARGS(inX, inY, EECPBits(inRadius)), ee_cp_has_tower_near(c, (int32_t)inX, (int32_t)inY, inRadius));
 }
 
 bool EECPPlacement::HasWallNear(long inX, long inY, float inRadius)
 {
-    EECPPlaceScope theScope(kPlceHasWallNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).F(inRadius);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_wall_near(&theContext, (int32_t)inX, (int32_t)inY, inRadius);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasWallNear, EECP_ARGS(inX, inY, EECPBits(inRadius)), ee_cp_has_wall_near(c, (int32_t)inX, (int32_t)inY, inRadius));
 }
 
 void EECPPlacement::CollectSiteTiles(char inKind)
@@ -524,175 +545,81 @@ void EECPPlacement::CollectSiteTiles(char inKind)
 
 bool EECPPlacement::HasEnemyNear(long inX, long inY)
 {
-    EECPPlaceScope theScope(kPlceHasEnemyNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_enemy_near(&theContext, (int32_t)inX, (int32_t)inY);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasEnemyNear, EECP_ARGS(inX, inY), ee_cp_has_enemy_near(c, (int32_t)inX, (int32_t)inY));
 }
-
-// a found tile into the out tile (else it keeps what the caller left there, as the original's searches did)
-static void EECPTileOut(bool inFound, const int32_t* inTile, EETileCoordinate& outTile)
-{
-    if (inFound) {
-        outTile.mX = inTile[0];
-        outTile.mY = inTile[1];
-    }
-}
-
-#define EECP_TILE_IN(t) int32_t theTile[2] = {(int32_t)(t).mX, (int32_t)(t).mY}
 
 bool EECPPlacement::FindAirportSite(EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindAirportSite, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_airport_site(&theContext, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindAirportSite, EECP_ARGS(), outTile, false, ee_cp_find_airport_site(c, t));
 }
 
 bool EECPPlacement::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindAntiAirSiteNear, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.U(inUnit);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_anti_air_site_near(&theContext, EECPHandle(inUnit), theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    long theID = inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : (long)0xfffffffe;
+    EECP_SEARCH(kPlceFindAntiAirSiteNear, EECP_ARGS(theID), outTile, false,
+        ee_cp_find_anti_air_site_near(c, (uint64_t)(uintptr_t)inUnit, t));
 }
 
 bool EECPPlacement::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindAntiAirSiteAround, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inTile.mX).I(inTile.mY).I(inSize);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_anti_air_site_around(&theContext, (int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inSize,
-        theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindAntiAirSiteAround, EECP_ARGS(inTile.mX, inTile.mY, inSize), outTile, false,
+        ee_cp_find_anti_air_site_around(c, (int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inSize, t));
 }
 
 bool EECPPlacement::FindAntiAirSite(EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindAntiAirSite, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_anti_air_site(&theContext, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindAntiAirSite, EECP_ARGS(), outTile, false, ee_cp_find_anti_air_site(c, t));
 }
 
 bool EECPPlacement::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindCenterSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_center_site(&theContext, (int32_t)inUnitClass, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0).Centers(this->mPlayer);
-    return theResult;
+    EECP_SEARCH(kPlceFindCenterSite, EECP_ARGS(inUnitClass), outTile, true, ee_cp_find_center_site(c, (int32_t)inUnitClass, t));
 }
 
 bool EECPPlacement::FindGranarySite(EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindGranarySite, this->mPlayer);   // PLCE (TEST ONLY)
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_granary_site(&theContext, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindGranarySite, EECP_ARGS(), outTile, false, ee_cp_find_granary_site(c, t));
 }
 
 bool EECPPlacement::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindProductionSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_production_site(&theContext, (int32_t)inUnitClass, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0).Centers(this->mPlayer);
-    return theResult;
+    EECP_SEARCH(kPlceFindProductionSite, EECP_ARGS(inUnitClass), outTile, true,
+        ee_cp_find_production_site(c, (int32_t)inUnitClass, t));
 }
 
 bool EECPPlacement::FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindShoreSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass).I(inSize);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_shore_site(&theContext, (int32_t)inUnitClass, (int32_t)inSize, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindShoreSite, EECP_ARGS(inUnitClass, inSize), outTile, false,
+        ee_cp_find_shore_site(c, (int32_t)inUnitClass, (int32_t)inSize, t));
 }
 
 bool EECPPlacement::FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindSpaceSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass).I(inSize);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_space_site(&theContext, (int32_t)inUnitClass, (int32_t)inSize, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindSpaceSite, EECP_ARGS(inUnitClass, inSize), outTile, false,
+        ee_cp_find_space_site(c, (int32_t)inUnitClass, (int32_t)inSize, t));
 }
 
 bool EECPPlacement::FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindTowerSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass).I(inSize);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_tower_site(&theContext, (int32_t)inUnitClass, (int32_t)inSize, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0).Centers(this->mPlayer);
-    return theResult;
+    EECP_SEARCH(kPlceFindTowerSite, EECP_ARGS(inUnitClass, inSize), outTile, true,
+        ee_cp_find_tower_site(c, (int32_t)inUnitClass, (int32_t)inSize, t));
 }
 
 bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile)
 {
-    EECPPlaceScope theScope(kPlceFindWonderSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass).I((long)inSize);
-    EECP_CONTEXT;
-    EECP_TILE_IN(outTile);
-    bool theResult = ee_cp_find_wonder_site(&theContext, (int32_t)inUnitClass, (uint32_t)inSize, theTile);
-    EECPTileOut(theResult, theTile, outTile);
-    theScope.I(theResult).I(theResult ? outTile.mX : 0).I(theResult ? outTile.mY : 0);
-    return theResult;
+    EECP_SEARCH(kPlceFindWonderSite, EECP_ARGS(inUnitClass, (long)inSize), outTile, false,
+        ee_cp_find_wonder_site(c, (int32_t)inUnitClass, (uint32_t)inSize, t));
 }
 
 bool EECPPlacement::FindSite(long inUnitClass, EETileCoordinate& ioTile)
 {
-    EECPPlaceScope theScope(kPlceFindSite, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inUnitClass);
-    EECP_CONTEXT;
-    EECP_TILE_IN(ioTile);
-    bool theResult = ee_cp_find_site(&theContext, (int32_t)inUnitClass, theTile);
-    EECPTileOut(theResult, theTile, ioTile);
-    theScope.I(theResult).I(theResult ? ioTile.mX : 0).I(theResult ? ioTile.mY : 0).Centers(this->mPlayer);
-    return theResult;
+    EECP_SEARCH(kPlceFindSite, EECP_ARGS(inUnitClass), ioTile, true, ee_cp_find_site(c, (int32_t)inUnitClass, t));
 }
 
 bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
 {
-    EECPPlaceScope theScope(kPlceIsNearAirportEnd, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inX).I(inY).I(inSize).F(inDistance);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_is_near_airport_end(&theContext, (int32_t)inX, (int32_t)inY, (int32_t)inSize, inDistance);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceIsNearAirportEnd, EECP_ARGS(inX, inY, inSize, EECPBits(inDistance)),
+        ee_cp_is_near_airport_end(c, (int32_t)inX, (int32_t)inY, (int32_t)inSize, inDistance));
 }
 
 void EECPPlacement::SetTownCenter(EEUnit* inUnit)
@@ -707,23 +634,15 @@ void EECPPlacement::SetTownCenter(EEUnit* inUnit)
 bool EECPPlacement::CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize,
     bool inMargin, bool inStrict, long inX, long inY)
 {
-    EECPPlaceScope theScope(kPlceCanBuildAt, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inContinent).I(inUnitClass).I(inTile.mX).I(inTile.mY).I(inSize).I(inMargin).I(inStrict).I(inX).I(inY);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_can_build_at(&theContext, inContinent, (int32_t)inUnitClass, (int32_t)inTile.mX,
-        (int32_t)inTile.mY, (int32_t)inSize, inMargin, inStrict, (int32_t)inX, (int32_t)inY);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceCanBuildAt, EECP_ARGS(inContinent, inUnitClass, inTile.mX, inTile.mY, inSize, inMargin, inStrict, inX, inY),
+        ee_cp_can_build_at(c, inContinent, (int32_t)inUnitClass, (int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inSize,
+            inMargin, inStrict, (int32_t)inX, (int32_t)inY));
 }
 
 bool EECPPlacement::HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass)
 {
-    EECPPlaceScope theScope(kPlceHasBuilderFor, this->mPlayer);   // PLCE (TEST ONLY)
-    theScope.I(inTile.mX).I(inTile.mY).I(inUnitClass);
-    EECP_CONTEXT;
-    bool theResult = ee_cp_has_builder_for(&theContext, (int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inUnitClass);
-    theScope.I(theResult);
-    return theResult;
+    EECP_ASK(kPlceHasBuilderFor, EECP_ARGS(inTile.mX, inTile.mY, inUnitClass),
+        ee_cp_has_builder_for(c, (int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inUnitClass));
 }
 
 long EECPPlacement::Restore()
