@@ -4,19 +4,14 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/FSFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EESMObject.h"
-#include "ee/EESMTConditionWrapper.h"
-#include "ee/EESMTEffectWrapper.h"
 #include <algorithm>
 #include "ee/EESMTrigger.h"
-#include "ee/EESMCondition.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
@@ -25,13 +20,8 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile

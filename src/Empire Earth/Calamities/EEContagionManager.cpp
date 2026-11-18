@@ -9,13 +9,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
@@ -26,7 +22,6 @@
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEEffect.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"
@@ -37,7 +32,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
-#include "rust/sim/tech.h"
 #include "ee/EESaveGameFiles.h"
 
 

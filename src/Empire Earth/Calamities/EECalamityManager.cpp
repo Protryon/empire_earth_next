@@ -9,14 +9,9 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/FSFileSpec.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
@@ -25,7 +20,6 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

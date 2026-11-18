@@ -6,23 +6,12 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
 
-#include "ee/EEEffectManager.h"
-#include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EECalamityUpdate.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAreaEffect.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"

@@ -3,10 +3,6 @@
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
-#include "lle/GERectangle.h"
-#include "lle/U2DPoint.h"
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
@@ -19,7 +15,6 @@
 #include "ee/EESMArea.h"
 #include "ee/EESMEffect.h"
 #include "ee/EETechCapture.h"
-#include "lle/FSMemoryFile.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEUnit.h"
@@ -27,7 +22,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
-#include "ee/EECameraControl.h"
 #include "ee/EEEnvironmentManager.h"
 
 namespace {
