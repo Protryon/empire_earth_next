@@ -250,6 +250,7 @@ pub mod hud;
 pub mod hud_ctl;
 #[cfg(not(test))]
 mod hud_ctl_ffi;
+pub mod hud_draw;
 pub(crate) mod hud_sends;
 pub(crate) mod hud_views;
 pub mod icon_bar;

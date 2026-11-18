@@ -12,6 +12,7 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
+#include "rust/render/ge.h"   // ee_ge_draw2d_fill (ee_ge list2d.rs)
 #include "lle/UIEntityGroup.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIForm.h"
@@ -35,17 +36,21 @@ static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);
 
 // The OK button (RTTI EEUIFEBOK > UIButton; vtable 0x44a640; sizeof 0x110). The in-class virtuals follow the ctor
 // with the ??_G in declaration order.
+// The message buttons' tinted face (a rhombus on the 2D draw list, ee_ge list2d.rs)
+static void EEUIFErrorFill(UIButton* inButton)
+{
+    ee_ge_draw2d_fill(inButton->GetRasterizer(), inButton->GetScreenIndex(),
+                      reinterpret_cast<const EeGeRectangle*>(&inButton->GetCopiedDrawRectangle()),
+                      reinterpret_cast<const float*>(&kMessageButtonColor), kMessageButtonOpacity);
+}
+
 class EEUIFEBOK : public UIButton {
     friend class EEUIFError;
 public:
     EEUIFEBOK(UIForm* inForm, unsigned long inId);
     virtual long DrawPolygons()
     {
-        GERhombus theRhombus;
-        theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
-        theRhombus.SetOpacity(kMessageButtonOpacity);
-        this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
+        EEUIFErrorFill(this);
         return UIButton::DrawPolygons();
     }
     virtual ~EEUIFEBOK() {}
@@ -70,11 +75,7 @@ public:
     EEUIFEBCancel(UIForm* inForm, unsigned long inId);
     virtual long DrawPolygons()
     {
-        GERhombus theRhombus;
-        theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
-        theRhombus.SetOpacity(kMessageButtonOpacity);
-        this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
+        EEUIFErrorFill(this);
         return UIButton::DrawPolygons();
     }
     virtual ~EEUIFEBCancel() {}

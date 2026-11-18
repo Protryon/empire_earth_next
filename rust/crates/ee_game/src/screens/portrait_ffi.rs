@@ -17,6 +17,11 @@ impl PortraitHost for Portrait {
             }
         }
         if op >= class {
+            if let Some(r) = crate::screens::hud_draw::portrait(self.0, op - class, a, f) {
+                return r;
+            }
+        }
+        if op >= class {
             if let Some(m) =
                 crate::screens::hud_sends::portrait(op - class, || crate::screens::hud_views::unit_id(a), b)
             {

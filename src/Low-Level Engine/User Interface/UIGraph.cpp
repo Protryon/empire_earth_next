@@ -56,13 +56,6 @@ struct UIGraphHost {
         case EeUiOp::DrawBorder: return g->DrawBorder(UIObjHost::Rect(f), (unsigned long)a);
         case EeUiOp::LineCreate: return (intptr_t) new GELine;
         case EeUiOp::LineDelete: delete theLine; break;
-        case EeUiOp::LineSetPoints:
-            theLine->SetStartPoint(GE2DPoint(f[0], f[1]));
-            theLine->SetEndPoint(GE2DPoint(f[2], f[3]));
-            break;
-        case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
-        case EeUiOp::LineSetOpacity: theLine->SetOpacity(f[0]); break;
-        case EeUiOp::LineDraw: return g->GetRasterizer()->Draw(theLine, g->GetScreenIndex());
         default: break;
         }
         return 0;

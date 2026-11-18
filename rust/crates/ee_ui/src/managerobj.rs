@@ -382,7 +382,10 @@ impl EeUiManager {
             // CreateBitmap: the opacity and coordinates, then the scale (top-right u - top-left u, bottom-left v -
             // top-left v)
             self.op_f(Op::MgrBitmapCoords, bitmap, 0, 0, [u0, v0, u1, v1]);
-            self.op_f(Op::BitmapSetScale, bitmap, 0, 0, [u1 - u0, v1 - v0, 0.0, 0.0]);
+            let (sx, sy) = (u1 - u0, v1 - v0);
+            crate::draw2d::bitmap_set_scale(bitmap, sx, sy, || {
+                self.op_f(Op::BitmapSetScale, bitmap, 0, 0, [sx, sy, 0.0, 0.0])
+            });
         }
     }
 
@@ -489,8 +492,9 @@ impl EeUiManager {
 
     fn scaled_bitmap(&self, bitmap: isize, r: UiRect) -> isize {
         let made = self.op(Op::MgrScaledBitmapNew, bitmap, 0, 0, 0);
-        let scale = self.host.get_point(Op::BitmapScale, bitmap);
-        self.op_f(Op::BitmapSetScale, made, 0, 0, [r.width() * scale.x * 0.05, r.height() * scale.y * 0.05, 0.0, 0.0]);
+        let scale = crate::draw2d::bitmap_scale(bitmap, || self.host.get_point(Op::BitmapScale, bitmap));
+        let (sx, sy) = (r.width() * scale.x * 0.05, r.height() * scale.y * 0.05);
+        crate::draw2d::bitmap_set_scale(made, sx, sy, || self.op_f(Op::BitmapSetScale, made, 0, 0, [sx, sy, 0.0, 0.0]));
         made
     }
 

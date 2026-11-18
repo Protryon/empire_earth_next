@@ -11,8 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// Returns no icon (base native images cannot make one)
-SmartPtr<NativeIcon> NativeImage::GetIcon() { return NULL; }
 // Returns no raw 32-bit copy (base native images cannot make one)
 SmartPtr<RawImage32> NativeImage::GetRaw() { return NULL; }
 }

@@ -250,11 +250,6 @@ intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b,
         theNew->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
         return (intptr_t)theNew;
     }
-    case EeUiOp::BitmapScale:
-        f[0] = theBitmap->GetXScale();
-        f[1] = theBitmap->GetYScale();
-        return 0;
-    case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); return 0;
     case EeUiOp::BitmapRelease: theBitmap->Dereference(); return 0;
     // the locks
     case EeUiOp::MgrLockNew: {

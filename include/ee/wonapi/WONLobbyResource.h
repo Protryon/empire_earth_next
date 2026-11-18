@@ -238,10 +238,6 @@ public:
     Image* SafeGetImage(const std::string&); // at 0x007938b0 (borrowed result)
     Sound* SafeGetSound(const std::string&); // at 0x007938d0 (borrowed result)
     void AddSound(const std::string&,Sound*); //3934a0
-    Font* SafeGetFont(const std::string&);
-    DWORD SafeGetColor(const std::string&);
-    const Background& SafeGetBackground(const std::string&);
-    int SafeGetInt(const std::string&);
     static void EnsureComma(StringParser&); //390f20
     static void EnsureCloseParen(StringParser&); //391060
     static int SafeReadColor(StringParser&); //3911a0
@@ -261,7 +257,6 @@ public:
     ResourceConfigTable(); // at 0x007938f0 (0x20 bytes)
     ResourceConfig* AddConfig(const std::string&,bool* = NULL); // at 0x00793bb0; bool* output
     ResourceConfig* SafeGetConfig(const std::string&); // at 0x00793e50; throws when missing
-    ResourceConfig* GetConfig(const std::string&);
     void ClearGlueResourceFuncs();
     void ClearAllocators();
     void ClearControlIds();
@@ -307,18 +302,10 @@ public:
     ~WONFile() { ee_won_file_free(this->mFile); }
     bool NormalizePath() { return this->Num(EE_WON_FILE_NORMALIZE) != 0; } // false for an empty path
     std::string GetRelativePath(const WONFile& inSub) { return this->Text(EE_WON_FILE_RELATIVE, inSub.mFile); }
-    static WONFile GetWorkingDirectory() { return WONFile(ee_won_file_new(NULL, 0)); }
-    bool SetWorkingDirectory() { return false; } // the game's working directory stays its data root
     static const char PATH_SEP = '\\';
     void Reset() { this->Num(EE_WON_FILE_RESET); }
-    void CalcFileInfo() { this->Num(EE_WON_FILE_CALC_INFO); }
-    void CalcFileDirectory() { this->Num(EE_WON_FILE_CALC_DIRECTORY); }
-    void CalcFullPath() { this->Num(EE_WON_FILE_CALC_FULL_PATH); }
-    void CalcFileExtension() { this->Num(EE_WON_FILE_CALC_EXTENSION); }
     bool SetReadOnly(bool inReadOnly) { return this->Num(EE_WON_FILE_SET_READ_ONLY, inReadOnly) != 0; }
     bool Exists() { return this->Num(EE_WON_FILE_EXISTS) != 0; }
-    bool IsDir() { return this->Num(EE_WON_FILE_IS_DIR) != 0; }
-    bool CreateAsDirectory(bool = true) { return this->Num(EE_WON_FILE_CREATE_DIRECTORY) != 0; }
     std::string GetFilePath() { return this->Text(EE_WON_FILE_PATH); }
     std::string GetFileDirectory() { return this->Text(EE_WON_FILE_DIRECTORY); }
     std::string GetFileExtension() { return this->Text(EE_WON_FILE_EXTENSION); }

@@ -18,6 +18,11 @@ impl IconBarHost for Bar {
                 return r;
             }
         }
+        if op >= class && ee_render::ge::list2d::ready() {
+            if let Some(r) = crate::screens::hud_draw::icon_bar(op - class, a, f) {
+                return r;
+            }
+        }
         if op >= class {
             if let Some(m) = crate::screens::hud_sends::icon_bar(op - class, a, b) {
                 crate::screens::hud_sends::send(&m);

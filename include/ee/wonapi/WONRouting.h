@@ -125,8 +125,6 @@ public:
     void QueueInOpContainer() { ee_won_asyncop_queue_in_container(this->mOp); } // 29f200, or WONAPICore's queue
     // a pending completion: the timer entry dropped, the cleanup hook run, the completion called (29f3a0)
     void Complete() { ee_won_asyncop_complete(this->mOp); }
-    // the hook run and the timeout armed, or a time-out at once for 0 (29f4c0)
-    void StartRunAsync() { ee_won_asyncop_start_run_async(this->mOp); }
     // the time before the time-out; 0 for async runs or once it passed (0x29f700)
     unsigned long TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
     DWORD RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
@@ -267,9 +265,7 @@ public:
     // a copy taken under the lock (the original returned a reference to the member)
     IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
     void WaitForRead(unsigned long);
-    void ClosePrv() { ee_won_asyncsocket_close_handle(this->mSock); } // a hard close if it would block
     // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
-    WONStatus GetLastSocketError() { return ee_won_asyncsocket_last_error(this->mSock); }
     bool IsValid() { return ee_won_asyncsocket_is_valid(this->mSock); }
     // the transform chain, the received message in reverse order, the outgoing in order; the first failure
     WONStatus TransformRecvMsg(ByteBufferPtr& inMessage) { return ee_won_asyncsocket_transform_recv(this->mSock, &inMessage); }
@@ -284,10 +280,6 @@ public:
     // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
     PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
     void SetDestAddr(const IPAddr& inAddr) { ee_won_asyncsocket_set_dest_addr(this->mSock,inAddr.GetValue()); }
-    void SetThreadCloseCallback(CloseCallback inCallback)
-    { ee_won_asyncsocket_set_close_callback(this->mSock, reinterpret_cast<void*>(inCallback)); }
-    // the last socket error recorded (the original's +0x54)
-    WONStatus GetSocketStatus() const { return ee_won_asyncsocket_status(this->mSock); }
     EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
 private:
     AsyncSocket(const AsyncSocket&);
@@ -331,11 +323,7 @@ public:
     virtual AsyncOp* Duplicate() { return NULL; }
 
     bool IsInSocketThread() const { return ee_won_socketop_in_socket_thread(this->mSockOp); }
-    void SetInSocketThread(bool inFlag) { ee_won_socketop_set_in_socket_thread(this->mSockOp,inFlag); }
-    bool GetWaitForEvent(int i) const { return ee_won_socketop_wait_for_event(this->mSockOp,i); }
     void SetWaitForEvent(int i,bool inFlag) { ee_won_socketop_set_wait_for_event(this->mSockOp,i,inFlag); }
-    long GetEventIndex(int i) const { return ee_won_socketop_event_index(this->mSockOp,i); }
-    void SetEventIndex(int i,long inIndex) { ee_won_socketop_set_event_index(this->mSockOp,i,inIndex); }
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
     static void HookAddToSocketThread(void* inOp); // WONAPICore's friend (AsyncOp.cpp: the core table's)
 private:
@@ -504,8 +492,6 @@ public:
     virtual AsyncSocket* Duplicate() { return new QueueSocket(this->GetType()); }
     void StartCloseTimer(long inTimeout) { ee_won_queuesocket_start_close_timer(this->mQueue, inTimeout); }
     void CancelCloseTimer() { ee_won_queuesocket_cancel_close_timer(this->mQueue); }
-    void RunRepeatOp() { ee_won_queuesocket_run_repeat_op(this->mQueue); }
-    void RunQueueOp() { ee_won_queuesocket_run_queue_op(this->mQueue); }
     void SetRepeatCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
     { ee_won_queuesocket_set_repeat_completion(this->mQueue, inCompletion); }
     void SetCloseCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
@@ -626,8 +612,6 @@ public:
     void SetFromAddr(const IPAddr& theAddr) { ee_won_udprecvop_set_address(this->mUdp, theAddr.GetValue()); }
     const ByteBuffer* GetMsg() const
     { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_udprecvop_msg(this->mUdp))); }
-    void SetMsg(const ByteBuffer* theMsg)
-    { ee_won_udprecvop_set_msg(this->mUdp, const_cast<RefCount*>(static_cast<const RefCount*>(theMsg))); }
     QueueSocket* GetSocket() const
     { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udprecvop_socket(this->mUdp)))); }
     UDPManager* GetUDPManager() const;
@@ -784,8 +768,6 @@ public:
     void QueueOp(RustServerOp* inOp, int inId); //2d3290: on the send (0) or receive (1) queue, started when it was empty
     void RunOp(int inId) { ee_won_http_conn_run_op(this->mImpl, inId); } //2d3430: a queue's next request on the socket
     int GetNumOps() { return ee_won_http_conn_num_ops(this->mImpl); }
-    static void StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inConnection) //2d2df0
-    { static_cast<HTTPConnection*>(inConnection.get())->OpCallback(inOp.get()); }
     PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
     EeWonHttpConn* GetConnObject() const { return this->mImpl; }
 protected:
@@ -846,7 +828,6 @@ public:
     // the op's request (Rust's), sent on the connection; added to its list when it waits for a reply
     virtual void SendRequest() { ee_won_routeop_send(this->mRust, static_cast<RefCount*>(this)); }
     virtual RoutingOpType GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
-    bool IsDerivedServerOp() const { return this->GetType() == 60; } // RoutingOp_DerivedServerOp
     RoutingConnection* GetConnection() { return this->mConnection.get(); }
 
     // the members (EE_WON_RTF_* numbers, EE_WON_RTT_* texts)
@@ -860,8 +841,6 @@ public:
         ee_won_routeop_set_text(this->mRust, inWhich, reinterpret_cast<const uint16_t*>(b.data()), b.size() / 2);
     }
     std::string DataType() const { std::string s; ee_won_routeop_data_type(this->mRust, WonStringSink, &s); return s; }
-    void SetDataType(const std::string& inType)
-    { ee_won_routeop_set_data_type(this->mRust, reinterpret_cast<const uint8_t*>(inType.data()), inType.size()); }
     // NULL when the op has no buffer
     ByteBufferPtr GetData() const { ByteBufferPtr b; ee_won_routeop_data(this->mRust, WonByteBufferSink, &b); return b; }
     void SetData(const ByteBuffer* inData)
@@ -874,11 +853,6 @@ public:
         std::vector<uint16_t> anIds(ee_won_routeop_ids(this->mRust, NULL, 0) + 1);
         size_t n = ee_won_routeop_ids(this->mRust, &anIds[0], anIds.size() - 1);
         return std::list<unsigned short>(anIds.begin(), anIds.begin() + n);
-    }
-    void SetRecipients(const std::list<unsigned short>& inIds)
-    {
-        std::vector<uint16_t> anIds(inIds.begin(), inIds.end());
-        ee_won_routeop_set_ids(this->mRust, anIds.empty() ? NULL : &anIds[0], anIds.size());
     }
     unsigned short GetGroupId() const { return (unsigned short)this->Num(EE_WON_RTF_GROUP_ID); }
     unsigned short GetClientId() const { return (unsigned short)this->Num(EE_WON_RTF_CLIENT_ID); }
@@ -1010,7 +984,6 @@ public:
     }
     // the original's public mShuffleAddresses (copies shuffle once while it is on)
     void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
-    bool GetShuffleAddresses() { return ee_won_ctx_shuffle(this->mList); }
 
 private:
     ServerContext(const ServerContext&);
@@ -1112,8 +1085,6 @@ public:
     static RustServerOp* NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
                                    const char* const* inTypes = NULL, int inTypeCount = 0);
     static RustServerOp* NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount);
-    static RustServerOp* NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
-                                       const std::string& inNetAddr);
     static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth);
     static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
                                           const std::string& inEmail);
@@ -1131,7 +1102,6 @@ public:
     static RustServerOp* NewHttpGet(const std::string& inURL);
     void SetBytes(int inWhich, const std::string& inBytes);
     BlockingSocket* GetHttpSocket() const;
-    time_t GetHttpLastModifiedTime();
     // GetHTTPDocumentOp(product, type) (ee_won httpdoc.rs; the type an HTTPDocType, its files in the WON directory)
     static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType);
     ByteBufferPtr GetHttpDocument(int inOwner) const // GetDocument(owner): the cache file, NUL-ended
@@ -1142,10 +1112,8 @@ public:
     // ServerOp's members (ee_won hostbase.rs): the time limits (2ace20, 2acee0), the socket and auth context
     // (borrowed; the op holds a reference), the auth type, the length field, the client key
     void SetMaxTimes(int inConnect, int inSend, int inRecv);
-    void CopyMaxTimes(const RustServerOp* inSource);
     BlockingSocket* GetSocket() const;
     void SetSocket(BlockingSocket* inSocket);
-    AuthContext* GetAuthContext() const;
     AuthType GetAuthType() const { return (AuthType)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_AUTH_TYPE); }
     void SetAuthType(AuthType inType, AuthContext* inContext = NULL);
     void SetLengthFieldSize(unsigned char inSize) { ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_LFS, inSize, NULL); }
@@ -1194,7 +1162,6 @@ public:
 class PeerAuthOp : public RustServerOp {
 public:
     PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
-    WONStatus GetGetCertStatus() const { return (WONStatus)this->GetNum(EE_WON_PEEROP_GET_CERT_STATUS); }
 };
 
 // HTTP operation, 0x15c bytes.
@@ -1249,9 +1216,6 @@ private:
 // the calling thread, the filter's: theInfo is not read)
 class WONDebug {
 public:
-    static void SetStackFileName(const std::string &theName)
-    { ee_won_debug_set_stack_file(reinterpret_cast<const uint8_t*>(theName.data()), theName.size()); }
-    static std::string GetStackFileName() { std::string s; ee_won_debug_stack_file(WonStringSink, &s); return s; }
     static int DumpStackToFile(void* = NULL) { return ee_won_debug_dump_stack(); }
 };
 class Thread : public ThreadBase {
@@ -1356,11 +1320,8 @@ public:
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {
 public:
-    virtual void Virtual00();
     virtual void Virtual04();
     virtual void Virtual08();
-    virtual void Virtual0C();
-    virtual void Virtual10();
     virtual ~WONLobbyWindow();              // +0x14
     virtual void Virtual18();
     void Close(bool inFlag);                // base exe 0x6a2220
@@ -1390,7 +1351,6 @@ public:
     virtual bool NeedThread() {return true;} //2c, true2f30d0
     void SetSingleThreaded(bool value) { this->mSingleThreaded=value; } //inline bool 34 (WON SDK)
     // continues a pending op and finishes it unless it still waits; whether it is done (2b6160, cdecl)
-    static bool DoOp(SocketOp* inOp) { return ee_won_socket_thread_do_op(WonCore(),static_cast<AsyncOp*>(inOp)); }
     bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
 };
 // SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won_net/src/sockthread.rs EeWonSocketThread: the ops
@@ -1424,11 +1384,6 @@ private:
 // ServerConnection.cpp is deleted (the drivers bind its table: tests/won/won_servconn_cpp.h)
 class ServerConnection : public BlockingSocket {
 public:
-    // restarts the keep-alive timer (none for a 0 period) (2aaf10)
-    void StartKeepAlive() { ee_won_servconn_start_keep_alive(this->mConn); }
-    // a no-op message, the timer restarted, when the current keep-alive timer fires (2ab840)
-    void KeepAliveCallback(AsyncOp* inOp) { ee_won_servconn_keep_alive_callback(this->mConn,static_cast<RefCount*>(inOp)); }
-    void SendNoOp() { ee_won_servconn_send_no_op(this->mConn); } // a no-op message queued (2ab910)
     ServerConnection() : BlockingSocket(0) //2aab10: unauthenticated, a 300-second keep-alive
     { this->mConn=ee_won_servconn_new(static_cast<void*>(this),WonCore(),NULL,static_cast<void*>(this->GetDataLock())); }
     virtual ~ServerConnection() { ee_won_servconn_free(this->mConn); } // the original's was implicit, 2aabe0

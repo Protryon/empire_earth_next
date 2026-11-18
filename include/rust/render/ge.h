@@ -177,6 +177,22 @@ enum class EeGeFbOp : uint32_t {
   Verify,
 };
 
+/// What a command draws.
+enum class EeGeDraw2DKind : uint32_t {
+  /// `Draw(GEBitmap*, screen)`.
+  Bitmap = 1,
+  /// `Draw(GERhombus*, screen)`.
+  Rhombus,
+  /// `Draw(GELine*, count, screen)`.
+  Lines,
+  /// `Draw(GEPoint*, count, screen)`.
+  Points,
+  /// `Draw(GEText*, clip, surface)`: `surface` null is the screen's secondary surface (`UIManager::GetDrawingSurface`).
+  TextClipped,
+  /// `Draw(GEText*, surface)`.
+  Text,
+};
+
 /// A call the managers make on another object (the C++ hosts `GEModelManagerHost` and `GETextureManagerHost`).
 /// `obj`, `a`, `b` and `c` are the operation's arguments as each describes; the result is the call's.
 enum class EeGeManOp : uint32_t {
@@ -915,6 +931,29 @@ struct EeGeTextOps {
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
 };
 
+/// One command as the executor reads it.
+struct EeGeDraw2D {
+  EeGeDraw2DKind kind;
+  /// The C++ object (`GEBitmap*`, `GERhombus*`, `GELine*`, `GEPoint*`, `GEText*`).
+  void *object;
+  /// The lines' or points' count.
+  unsigned long count;
+  /// The text's clip (`TextClipped`).
+  EeGeRectangle clip;
+  /// The text's surface (`GESurface*`; null: the secondary surface of the screen).
+  void *surface;
+};
+
+/// The C++ executor: one `GERasterizer::Draw` of `cmd` on `rasterizer`'s `screen` -> its result.
+using EeGeDraw2DExecFn = long(*)(void *rasterizer, unsigned long screen, const EeGeDraw2D *cmd);
+
+/// The primitives' vertex host (`GEVertexHost`, an `EeGeBmpHostFn`; spelled out for cbindgen).
+using EeGeDraw2DVertexHost = ptrdiff_t(*)(void *owner,
+                                          EeGeBmpOp op,
+                                          void *obj,
+                                          ptrdiff_t a,
+                                          ptrdiff_t b);
+
 /// The C++ host: `owner` is the C++ manager the object belongs to.
 using EeGeManHostFn = ptrdiff_t(*)(void *owner,
                                    EeGeManOp op,
@@ -1470,6 +1509,24 @@ void ee_ge_text_extent(const EeGeTextOps *ops,
                        unsigned long characters,
                        int32_t height,
                        EeGeRectangle *out);
+
+/// The game's executor and the primitives' vertex host (`GEVertexHost`), set once by the C++ (`GERasterizer`'s
+/// constructor).
+void ee_ge_draw2d_init(EeGeDraw2DExecFn exec,
+                       EeGeDraw2DVertexHost vertex_host);
+
+/// `rasterizer` (a `GERasterizer*`) draws through `dx7` (its `EeDx7Rasterizer*`); null `dx7` forgets it (the
+/// rasterizer's destructor).
+void ee_ge_draw2d_direct(void *rasterizer,
+                         void *dx7);
+
+/// A rectangle filled with a colour at an opacity (`GERhombus r; r.SetColor; r.SetRectangle; r.SetOpacity;
+/// Draw(&r)`) -> the draw's result.
+long ee_ge_draw2d_fill(void *rasterizer,
+                       unsigned long screen,
+                       const EeGeRectangle *rect,
+                       const float *color,
+                       float opacity);
 
 /// `GETextureStem`: the length of a texture's cache name within `name`.
 ///

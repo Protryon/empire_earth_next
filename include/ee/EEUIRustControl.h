@@ -14,6 +14,7 @@ public:
     EEUIRustControl(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                     unsigned long inBorderThickness)
         : UIControl(kControlTypeCustom, inId, inRectangle, inForm, inIndex, inBorderThickness) {}
+    virtual ~EEUIRustControl() { ee_screens_hud_draw_free(this); }   // its draw objects (ee_screens hud_draw.rs)
     // the host (ee_screenscpp_hud_ctl): EE_SCREENS_HC_* here, the class's own ops in RustOp
     static int64_t HostOp(EEUIRustControl* inControl, uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 protected:

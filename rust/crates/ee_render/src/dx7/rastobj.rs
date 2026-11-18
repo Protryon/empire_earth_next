@@ -1466,6 +1466,9 @@ pub unsafe extern "C" fn ee_dx7r_set_viewport(p: *mut EeDx7Rasterizer, viewport:
 
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_show_scene(p: *mut EeDx7Rasterizer, screen: c_ulong) -> i32 {
+    if crate::dx7::digest2d::enabled() {
+        crate::dx7::digest2d::frame();
+    }
     // SAFETY: the caller's contract
     unsafe { EeDx7Rasterizer::show_scene(p, screen) }
 }

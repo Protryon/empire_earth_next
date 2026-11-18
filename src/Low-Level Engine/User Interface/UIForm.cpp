@@ -284,8 +284,6 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
         f[0] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetWidth();
         f[1] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetHeight();
         return 0;
-    case EeUiOp::BitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); return 0;
-    case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); return 0;
     case EeUiOp::FormBitmapSetTexCoords: {
         GETextureCoordinate theTopLeft;
         GETextureCoordinate theBottomRight;
@@ -302,20 +300,11 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
         theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
         return 0;
     }
-    case EeUiOp::FormBitmapDraw:
-        return theForm->GetManager()->GetRasterizer()->Draw(theBitmap, theForm->GetManager()->GetScreen());
-    case EeUiOp::FormTextDraw:
-        return theForm->GetManager()->GetRasterizer()->Draw(reinterpret_cast<GEText*>(a), UIFormRect(f),
-                                                            theForm->GetManager()->GetDrawingSurface());
     case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus;
     case EeUiOp::RhombusDelete: delete theRhombus; return 0;
-    case EeUiOp::RhombusSetOpacity: theRhombus->SetOpacity(f[0]); return 0;
-    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIFormRect(f)); return 0;
     case EeUiOp::FormRhombusLabelColor:
         theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor());
         return 0;
-    case EeUiOp::FormRhombusDraw:
-        return theForm->GetManager()->GetRasterizer()->Draw(theRhombus, theForm->GetManager()->GetScreen());
     default:
         break;
     }

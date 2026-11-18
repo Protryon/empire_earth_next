@@ -316,111 +316,7 @@ unsigned long GEWindow::GetWidth() const { return ee_ge_win_size(this->mRust, fa
 void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
 // ---- end of the object host
 
-// Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)
-void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
-                                 GEColor& outBottomLeft) const
-{
-    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-    ee_ge_bmp_colors(this->mRust, &theOut);
-}
-
-// Returns the opacities of the bitmap's four corners in vertex order
-void GEBitmap::GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
-                                   float& outBottomLeft) const
-{
-    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-    ee_ge_bmp_opacities(this->mRust, &theOut);
-}
-
-// Returns the texture coordinates of the bitmap's four corners in vertex order
-void GEBitmap::GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, GETextureCoordinate& outTopRight,
-                                              GETextureCoordinate& outBottomRight,
-                                              GETextureCoordinate& outBottomLeft) const
-{
-    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-    ee_ge_bmp_uvs(this->mRust, &theOut);
-}
-
-// Gives all four corners of the bitmap the same colour
-void GEBitmap::SetColor(const GEColor& inColor)
-{
-    this->SetColorPerVertex(inColor, inColor, inColor, inColor);
-}
-
-// Sets the colours of the bitmap's four corners in vertex order
-void GEBitmap::SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
-                                 const GEColor& inBottomLeft)
-{
-    const EeGeBmpQuad theColors = {(void*)&inTopLeft, (void*)&inTopRight, (void*)&inBottomRight, (void*)&inBottomLeft};
-    ee_ge_bmp_set_colors(this->mRust, &theColors);
-}
-
-// Gives all four corners of the bitmap the same opacity
-void GEBitmap::SetOpacity(float inOpacity)
-{
-    this->SetOpacityPerVertex(inOpacity, inOpacity, inOpacity, inOpacity);
-}
-
-// Sets the opacities of the bitmap's four corners in vertex order
-void GEBitmap::SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-{
-    const float theOpacities[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
-    ee_ge_bmp_set_opacities(this->mRust, &theOpacities);
-}
-
-// Sets one scale for both axes of the bitmap and recomputes its corner positions
-void GEBitmap::SetScale(float inScale)
-{
-    this->SetXYScale(inScale, inScale);
-}
-
-// Sets the texture coordinates of the bitmap's four corners in vertex order
-void GEBitmap::SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
-                                     GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft)
-{
-    const EeGeBmpQuad theCoordinates = {&inTopLeft, &inTopRight, &inBottomRight, &inBottomLeft};
-    ee_ge_bmp_set_uvs(this->mRust, &theCoordinates);
-}
-
-// Gives all four corners of the bitmap the same depth (Z)
-void GEBitmap::SetZ(float inZ)
-{
-    this->SetZPerVertex(inZ, inZ, inZ, inZ);
-}
-
-// Sets the depths (Z) of the bitmap's four corners in vertex order, keeping their X and Y
-void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
-{
-    const float theDepths[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
-    ee_ge_bmp_set_depths(this->mRust, &theDepths);
-}
-
-// Creates an untextured, unscaled, unrotated white bitmap: one texture slot per screen and a four-vertex quad
-GEBitmap::GEBitmap()
-{
-    this->mRust = ee_ge_bmp_new(&GEVertexHost, this);
-}
-
-// Destroys the bitmap, deleting its vertex array and releasing the texture of every screen
-GEBitmap::~GEBitmap()
-{
-    ee_ge_bmp_destroy(this->mRust);
-}
-
-// Maps a source rectangle of the screen's texture onto texture coordinates and sets the matching X/Y scale
-void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle,
-                                              const GERectangle& inSourceRectangle,
-                                              const GERectangle& inDestinationRectangle, unsigned long inScreen)
-{
-    ee_ge_bmp_stretch(this->mRust, GERust(inTextureRectangle), GERust(inSourceRectangle),
-                      GERust(inDestinationRectangle), inScreen);
-}
-
-// Sets the bitmap's texture for one screen, referencing the new one and releasing the old; takes its frame size
-void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
-{
-    ee_ge_bmp_set_texture(this->mRust, inTexture, inScreen);
-}
+// (GEBitmap's members forward to its Rust object inline: lle/GEBitmap.h)
 
 // ---- GEFontBitmap (GEFontBitmap.cpp, folded here in R4.3 part 16)
 
@@ -433,6 +329,8 @@ void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 
 static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
 
+// (the working text's and the drawing bitmap's members and the two draws are the Rust object's own: fbobj.rs
+// direct_op, on the 2D draw list)
 intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEText* theText = (GEText*)inObj;
@@ -442,17 +340,11 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     GETexture* theTexture = (GETexture*)inObj;
     GEScreen* theScreen = (GEScreen*)inObj;
     unsigned long* theLongs = (unsigned long*)a;
-    float* theFloats = (float*)a;
-    GETextureCoordinate* theCoordinates = (GETextureCoordinate*)a;
     switch (inOp) {
     case EeGeFbOp::TextNew:
         return (intptr_t)new GEText((GEFont*)inObj);
     case EeGeFbOp::TextDelete:
         delete theText;
-        return 0;
-    case EeGeFbOp::TextPrepare:
-        theText->SetFgColor(GEColor());
-        theText->SetIsTransparent(true);
         return 0;
     case EeGeFbOp::TextSetByte: {
         // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
@@ -465,19 +357,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         theText->SetText(theString);
         return 0;
     }
-    case EeGeFbOp::TextExtent:
-        theFloats[0] = theText->GetTextExtent().GetWidth();
-        theFloats[1] = theText->GetTextExtent().GetHeight();
-        return 0;
-    case EeGeFbOp::TextSetLocation:
-        theText->SetLocation(*(const GE2DPoint*)a);
-        return 0;
-    case EeGeFbOp::TextString:
-        return (intptr_t)(const char*)theText->GetText();
-    case EeGeFbOp::TextLocation:
-        return (intptr_t)&theText->GetLocation();
-    case EeGeFbOp::TextColor:
-        return (intptr_t)&theText->GetFgColor();
     case EeGeFbOp::TextOps:
         return (intptr_t)GERustTextOps();
     case EeGeFbOp::FontRange: {
@@ -498,47 +377,10 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::RasterSetBlending:
         theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
         return 0;
-    case EeGeFbOp::RasterDrawText:
-        return theRasterizer->Draw((GEText*)a, (GESurface*)b);
-    case EeGeFbOp::RasterDrawBitmap:
-        return theRasterizer->Draw((GEBitmap*)a, (unsigned long)b);
     case EeGeFbOp::BmpNew:
         return (intptr_t)new GEBitmap;
     case EeGeFbOp::BmpDereference:
         theBitmap->Dereference();
-        return 0;
-    case EeGeFbOp::BmpSetTexture:
-        theBitmap->SetTexture((GETexture*)a, (unsigned long)b);
-        return 0;
-    case EeGeFbOp::BmpStretch: {
-        const GERectangle* theRects = (const GERectangle*)a;
-        theBitmap->ComputeStretchedCoordsAndScale(theRects[0], theRects[0], theRects[1], (unsigned long)b);
-        return 0;
-    }
-    case EeGeFbOp::BmpUvsPerVertex: {
-        GETextureCoordinate theCoordinate;
-        theBitmap->GetTextureCoordinatesPerVertex(theCoordinates[0], theCoordinate, theCoordinate, theCoordinates[1]);
-        return 0;
-    }
-    case EeGeFbOp::BmpScales:
-        theFloats[0] = theBitmap->GetXScale();
-        theFloats[1] = theBitmap->GetYScale();
-        return 0;
-    case EeGeFbOp::BmpSetColor:
-        theBitmap->SetColor(*(const GEColor*)a);
-        return 0;
-    case EeGeFbOp::BmpSetUvs:
-        theBitmap->SetTextureCoordinates(theCoordinates[0], theCoordinates[1], theCoordinates[2], theCoordinates[3]);
-        return 0;
-    case EeGeFbOp::BmpSetXyScale: {
-        uint32_t theBits[2] = {(uint32_t)a, (uint32_t)b};
-        float theScales[2];
-        memcpy(theScales, theBits, sizeof(theScales));
-        theBitmap->SetXYScale(theScales[0], theScales[1]);
-        return 0;
-    }
-    case EeGeFbOp::BmpSetLocation:
-        theBitmap->SetLocation(*(const GE2DPoint*)a);
         return 0;
     case EeGeFbOp::TexSurface:
         return (intptr_t)theTexture->GetSurface();

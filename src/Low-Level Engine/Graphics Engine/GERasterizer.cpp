@@ -33,6 +33,9 @@
 #include "lle/GEBoundingBox.h"
 #include "lle/GEFont.h"
 #include "lle/GEText.h"
+#include "lle/GEBitmap.h"
+#include "lle/GERhombus.h"
+#include "lle/GEPoint.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
 #include "lle/Graphics Engine.h"
@@ -113,10 +116,31 @@ struct GERasterizerHost {
     }
 };
 
+// The 2D draw list's executor (ee_ge list2d.rs): one virtual draw per command, for every draw the DX7 rasterizer's
+// Rust does not make itself (the texts; any draw on another rasterizer)
+static long GERasterizerDraw2D(void* inRasterizer, unsigned long inScreen, const EeGeDraw2D* inCmd)
+{
+    GERasterizer* theRasterizer = static_cast<GERasterizer*>(inRasterizer);
+    switch (inCmd->kind) {
+    case EeGeDraw2DKind::Bitmap: return theRasterizer->Draw(static_cast<GEBitmap*>(inCmd->object), inScreen);
+    case EeGeDraw2DKind::Rhombus: return theRasterizer->Draw(static_cast<GERhombus*>(inCmd->object), inScreen);
+    case EeGeDraw2DKind::Lines: return theRasterizer->Draw(static_cast<GELine*>(inCmd->object), inCmd->count, inScreen);
+    case EeGeDraw2DKind::Points: return theRasterizer->Draw(static_cast<GEPoint*>(inCmd->object), inCmd->count, inScreen);
+    case EeGeDraw2DKind::TextClipped:
+        return theRasterizer->Draw(static_cast<GEText*>(inCmd->object), *reinterpret_cast<const GERectangle*>(&inCmd->clip),
+                                   inCmd->surface ? static_cast<GESurface*>(inCmd->surface)
+                                                  : theRasterizer->GetSecondarySurface(inScreen));
+    case EeGeDraw2DKind::Text:
+        return theRasterizer->Draw(static_cast<GEText*>(inCmd->object), static_cast<GESurface*>(inCmd->surface));
+    }
+    return 0;
+}
+
 // Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated
 GERasterizer::GERasterizer(const UString& inName)
 {
     this->mRust = ee_ge_rast_new(&GERasterizerHost::Call, this, &inName);
+    ee_ge_draw2d_init(&GERasterizerDraw2D, &GEVertexHost);
 }
 
 // Destroys the rasterizer, releasing the debug font and text and its drawing lock

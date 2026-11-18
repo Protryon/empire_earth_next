@@ -41,7 +41,6 @@ SmartPtr<NativeImage> RawImage32::CreateNativeImage(DisplayContext*) { NotHere()
 SmartPtr<NativeImage> RawImage8::CreateNativeImage(DisplayContext*) { NotHere(); return NULL; }
 SmartPtr<NativeMask> RawImage1::GetMask(DisplayContext*) { NotHere(); return NULL; }
 SmartPtr<NativeImage> RawImage1::GetNative(DisplayContext*) { NotHere(); return NULL; }
-SmartPtr<NativeIcon> NativeImage::GetIcon() { NotHere(); return NULL; }
 SmartPtr<RawImage32> NativeImage::GetRaw() { NotHere(); return NULL; }
 SmartPtr<NativeImage> PlatGUIPackImage(DisplayContext*, NativeImage*, const char*) { NotHere(); return NULL; }
 }

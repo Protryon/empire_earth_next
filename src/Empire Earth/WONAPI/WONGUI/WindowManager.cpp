@@ -249,8 +249,6 @@ static Font* FontMod(WindowManager* inManager, Font* inFont, int inStyle, int in
     return inManager->GetDefaultWindow()->GetFont(aDesc).get();
 }
 Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize) { return FontMod(this, this->GetDefaultFont(), inStyle, inSize); }
-Font* WindowManager::GetNamedFontMod(const std::string& inName, int inStyle, int inSize)
-{ return FontMod(this, this->GetNamedFont(inName), inStyle, inSize); }
 
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
@@ -285,11 +283,6 @@ SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor
 {
     Window* aWindow = Window::GetDefaultWindow();
     return aWindow == NULL ? SmartPtr<Font>() : aWindow->GetFont(theDescriptor);
-}
-DisplayContext* WindowManager::GetDefaultDisplayContext()
-{
-    Window* aWindow = Window::GetDefaultWindow();
-    return aWindow == NULL ? NULL : aWindow->GetDisplayContext();
 }
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)

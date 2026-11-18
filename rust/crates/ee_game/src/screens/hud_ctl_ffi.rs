@@ -13,19 +13,34 @@ use crate::screens::select_units::{self, EeScreensSelectUnitsFields, *};
 /// `EEUICPing`'s constructor part: the bars placed from the location (x, y).
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_ping_init(rec: *mut EeScreensPingFields, ctl: *mut c_void, x: f32, y: f32) {
-    ping::init(&Rec::new(rec), &mut Cpp(ctl), x, y)
+    if ee_render::ge::list2d::ready() {
+        crate::screens::hud_draw::ping_init(ctl);
+    }
+    ping::init(&Rec::new(rec), &mut PingCpp(ctl), x, y)
+}
+
+/// The ping meter's host: its bars on the draw list (`hud_draw.rs`), the rest the C++'s.
+struct PingCpp(*mut c_void);
+
+impl crate::screens::hud_ctl::HudHost for PingCpp {
+    fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        if let Some(r) = crate::screens::hud_draw::ping(self.0, op, a, f) {
+            return r;
+        }
+        crate::screens::hud_ctl::HudHost::op(&mut Cpp(self.0), op, a, b, f)
+    }
 }
 
 /// `EEUICPing::DrawPolygons`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_ping_draw(rec: *mut EeScreensPingFields, ctl: *mut c_void) -> i64 {
-    ping::draw(&Rec::new(rec), &mut Cpp(ctl))
+    ping::draw(&Rec::new(rec), &mut PingCpp(ctl))
 }
 
 /// `EEUICPing::SetPing`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_ping_set(rec: *mut EeScreensPingFields, ctl: *mut c_void, value: f32) {
-    ping::set_ping(&Rec::new(rec), &mut Cpp(ctl), value)
+    ping::set_ping(&Rec::new(rec), &mut PingCpp(ctl), value)
 }
 
 /// `EEUICChatLine`'s constructor part.
