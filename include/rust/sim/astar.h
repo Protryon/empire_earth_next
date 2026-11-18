@@ -40,23 +40,51 @@ constexpr static const int32_t EE_ASTAR_CM_NEW = 8;
 /// `delete` object `h0` of table `i0`'s class
 constexpr static const int32_t EE_ASTAR_CM_DELETE = 9;
 
+/// `kContinentCategoryNone`, `Land`, `MapEdge`
+constexpr static const uint8_t CATEGORY_NONE = 0;
+
+constexpr static const uint8_t CATEGORY_LAND = 1;
+
+constexpr static const uint8_t CATEGORY_MAP_EDGE = 5;
+
+/// `kAIPathWaterBody`, `LandMass`, `SpaceRegion`, `NonSpace`
+constexpr static const long PATH_WATER_BODY = 1;
+
+constexpr static const long PATH_LAND_MASS = 2;
+
+constexpr static const long PATH_SPACE_REGION = 3;
+
+constexpr static const long PATH_NON_SPACE = 4;
+
+/// tile (`i0`, `i1`) of the map exists (`gWorld.mMap && GetTileAtLocation`)
+constexpr static const int32_t EE_ASTAR_CM_HAS_TILE = 20;
+
+/// `EEGetRandomInt(0, i0, *(URandom*)h0)`
+constexpr static const int32_t EE_ASTAR_CM_RANDOM = 21;
+
+/// forest `h0`'s `RemoveTile((i0, i1))` (1/0)
+constexpr static const int32_t EE_ASTAR_CM_FOREST_REMOVE_TILE = 22;
+
+/// `EEAIGetTileKind((i0, i1))`
+constexpr static const int32_t EE_ASTAR_CM_TILE_KIND = 30;
+
+/// `EEAIGetTileWallID((i0, i1))`
+constexpr static const int32_t EE_ASTAR_CM_WALL_ID = 31;
+
+/// tile (`i0`, `i1`)'s terrain, -1 without a tile
+constexpr static const int32_t EE_ASTAR_CM_TERRAIN = 32;
+
+/// area `h0`'s `Create` of the `i0` points at `h1` (`EeHullPoint`s)
+constexpr static const int32_t EE_ASTAR_CM_AREA_CREATE = 33;
+
+/// area `h0`'s `RemoveTile((i0, i1))` (1/0; a forest's own)
+constexpr static const int32_t EE_ASTAR_CM_AREA_REMOVE_TILE = 34;
+
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
-
-/// `kContinentCategoryMapEdge`.
-constexpr static const int32_t CATEGORY_MAP_EDGE = 5;
-
-/// `kAIPathWaterBody`, `kAIPathLandMass`, `kAIPathSpaceRegion`, `kAIPathNonSpace` (ee/EEAIKindIDs.h).
-constexpr static const int32_t PATH_WATER_BODY = 1;
-
-constexpr static const int32_t PATH_LAND_MASS = 2;
-
-constexpr static const int32_t PATH_SPACE_REGION = 3;
-
-constexpr static const int32_t PATH_NON_SPACE = 4;
 
 /// `EEUnitHandle::kNone`: no unit.
 constexpr static const uint32_t EE_PATH_NO_UNIT = 4294967295;
@@ -1877,6 +1905,93 @@ uint64_t ee_astar_cm_find_continent(const EeAStarCmRecord *r, long x, long y);
 /// # Safety
 /// As `ee_astar_cm_find_continent`.
 uint64_t ee_astar_cm_find_sub_sector(const EeAStarCmRecord *r, long x, long y);
+
+/// The tile lookups: `kind` 0 choke point, 1 forest, 2 hill, 3 path area, 4 continent (`GetContinentAt`).
+///
+/// # Safety
+/// `r` the manager's record; its objects live.
+uint64_t ee_astar_cm_area_at(const EeAStarCmRecord *r,
+                             int32_t kind,
+                             long x,
+                             long y);
+
+/// `GetContinent(tile, kind)`.
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`.
+uint16_t ee_astar_cm_region_id_at(const EeAStarCmRecord *r, long x, long y, long kind);
+
+/// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (a sector).
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`; `object` a live continent or sector.
+uint64_t ee_astar_cm_object_path_area_at(const EeAStarCmRecord *r,
+                                         uint64_t object,
+                                         bool sector,
+                                         long x,
+                                         long y);
+
+/// `InSameArea`.
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`; `tiles` holds `count` points.
+bool ee_astar_cm_in_same_area(const EeAStarCmRecord *r,
+                              const EeHullPoint *tiles,
+                              size_t count,
+                              long kind);
+
+/// `AreConnected` (the continents' addresses).
+///
+/// # Safety
+/// `first`, `second` live continents or 0.
+bool ee_astar_cm_are_connected(uint64_t first, uint64_t second, int32_t flags);
+
+/// `GetLargestContinent`.
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`.
+uint16_t ee_astar_cm_largest_continent(const EeAStarCmRecord *r, int8_t kind);
+
+/// `GetRandomArea` (`continent` true: `GetRandomContinent(kind)`, else of area type `kind` on `on_continent`).
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`; `random` a live `URandom*`.
+uint64_t ee_astar_cm_random_area(const EeAStarCmRecord *r,
+                                 bool continent,
+                                 long kind,
+                                 void *random,
+                                 uint16_t on_continent);
+
+/// `GetChokePoints(id)` into `out` (room for `capacity`); their count (more than `capacity`: call again).
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`; `out` holds `capacity` handles.
+size_t ee_astar_cm_choke_points(const EeAStarCmRecord *r,
+                                uint16_t id,
+                                uint64_t *out,
+                                size_t capacity);
+
+/// `RemoveForestTile` at tile (x, y), `empty` whether no wood with resources is left on it.
+///
+/// # Safety
+/// As `ee_astar_cm_area_at`.
+void ee_astar_cm_remove_forest_tile(EeAStarCmRecord *r, long x, long y, bool empty);
+
+/// `RepairPathArea`.
+///
+/// # Safety
+/// `r` the manager's record; its objects live; the layout and host registered.
+void ee_astar_cm_repair_path_area(EeAStarCmRecord *r, long x, long y);
+
+/// `GetAdjacentAreaID`.
+///
+/// # Safety
+/// As `ee_astar_cm_repair_path_area`.
+uint16_t ee_astar_cm_adjacent_area_id(const EeAStarCmRecord *r,
+                                      int32_t kind,
+                                      long x,
+                                      long y,
+                                      int32_t area_kind);
 
 /// The adjacent continents and their count; valid until they next change.
 ///

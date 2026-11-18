@@ -117,6 +117,11 @@ fn layout() -> EeAStarCmLayout {
     }
 }
 
+/// A host call (the other modules' questions to the C++).
+pub(crate) fn call_host(op: i32, io: &mut EeAStarCmIo) -> i64 {
+    host(op, io)
+}
+
 fn host(op: i32, io: &mut EeAStarCmIo) -> i64 {
     let f = HOST_FN.load(Ordering::Acquire);
     if f == 0 {

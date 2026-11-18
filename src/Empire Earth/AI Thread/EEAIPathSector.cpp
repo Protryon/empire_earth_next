@@ -56,16 +56,8 @@ EEAIPathSector::~EEAIPathSector()
 // Returns the sector's path area containing the point (last listed first), or NULL
 EEAIPathArea* EEAIPathSector::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
-    EEAIPathArea* theResult = NULL;
-    EEAIListView<unsigned short> theIDs = this->GetPathAreaIDs();
-    for (long i = theIDs.size() - 1; i >= 0; i--) {
-        EEAIPathArea* theArea = gContinentManager.GetPathArea(theIDs[i]);
-        if (theArea && theArea->Contains(inPoint)) {
-            theResult = theArea;
-            break;
-        }
-    }
-    return theResult;
+    return (EEAIPathArea*)(uintptr_t)ee_astar_cm_object_path_area_at(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this, true,
+                                                                     inPoint.mX, inPoint.mY);   // Rust: cm_query.rs
 }
 
 // Deletes every sub-sector of the sector and empties the sub-sector map
