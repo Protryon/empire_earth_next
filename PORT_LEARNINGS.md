@@ -29831,3 +29831,49 @@ lobby's, reached by the drivers only (no WON server exists).
 | `lan_game.py` (slot.py) | | | PASS (PT 2818 / 2819), two lobby regressions in the captures | `RESULT PASS lan-game PT host=2880 joiner=2895` (the pre-round exe: 2941 / 2942); every lobby capture identical but the slot's digit and the caret |
 
 origin/rust had nothing new at the end of the round (no merge).
+## AI lane B, round 1: the legacy readers, EEComputerPlayer's record with Init, Load and Save, and the influence table in Rust (ee_sim::cp; branch rust-ai-cp1, 2026-11-17)
+
+The owner unlocked the AI Thread's C++ for porting, whole classes into Rust. Lane B has the computer player and its
+economy (docs/progress/ai-computer-player.md). This round moved what could move whole without the placement's and
+the resource centres' world queries.
+
+- **What moved.** `EECPLegacyLoad.cpp` whole (`cp::legacy_load`); `EEComputerPlayer`'s 238 plain members as the
+  record `EeCpFields` the class derives from, with `Init`, `Load`, `Save`, the per-difficulty scales, their setters,
+  `ScaleCost`, `SetNextAttackTime` and `RestoreManagers`' field steps (`cp::fields`, `init`, `save`, `player`);
+  `EEInfluenceTable` whole (`cp::influence`: Rust owns the values; the C++ class is a shim with no RTSRegionTable
+  base, keeping `mRegionSize` and `GetRegions` for its readers).
+- **One field order for Load and Save.** The original's two 450-line bodies were the same list of fields with four
+  differences (the enable-time flag saved as false, two times saved relative to the clock, the two counted lists).
+  The Rust has the list once as `seg_*` macros that expand into either `load_fields!` or `save_fields!`; a field
+  written to one side only cannot happen. The record is read and written field by field through `&raw mut`, never by
+  a reference across a host call.
+- **Lesson: cbindgen does not expand macros.** Seven getters made by a `macro_rules!` were missing from
+  `rust/sim/cp.h` and the C++ failed to compile ("use of undeclared identifier"); every `#[no_mangle]` export must be
+  written out. The header check does not catch it (it compares the generated items, not the C++'s uses).
+- **Lesson: the comment and the code disagreed; the code won.** `Init`'s comment said both attack bounds read
+  record 19; the code reads record 21 for the attack frequency's and 19 for the delay's. The generated Rust followed
+  the code and the golden agreed; the unit test written from the comment failed until fixed.
+- **Lesson: whole save files are not a golden.** Two runs of the unmodified build give saves that differ in the
+  header (the date) and in chunks 4 (the map), 8 (the multiplayer helper) and 12 (the environment), so `cmp` of two
+  `.ees` files says nothing. `tools/harness/savefile.py` no longer parses a current save (its version list ends at
+  0.256); a copy with the list widened (build/cp/savefile2.py) compares the decompressed chunks: the players chunk
+  (tag 5, every computer player's block) is byte for byte the unmodified build's in all six saves.
+- **The record golden.** A temporary dump (never committed) of all 238 fields, the history and the centre count at
+  the end of `Init`, of `RestoreManagers` and at `Save`, built into the unmodified C++ and again over the moved code
+  (only the TU changes: the object cache makes the extra builds cheap), run through saveload seed 2 at 600 and
+  1350 s: the 14 lines are equal. It covers the fields no save holds (`mSeed`, `mTowerSpacing`, the deathmatch
+  modifiers, ...).
+- **The legacy golden.** `scenario_check.py` on the unmodified build and on each commit, comparing every report
+  (outcome, end, players, samples less the wall time, alive computers, defeat order, epochs): equal, 27/27.
+- **The experiment timers** (`cp::timers`): nothing has read `gCPExperimentTimers` since main's stages 5 and 6, so
+  the timers moved whole into a Rust static and the C++ global and struct went; the two save blocks keep their
+  bytes (the world chunk of the six saves equals the unmodified build's). The danger zones they save are lane A's
+  readers' and stay C++ vectors behind host operations.
+- **Members `Init` never set** start at 0 now (the record is zeroed first); the original left them as `new` gave
+  them. None of them is saved or read before it is set (the record golden is equal).
+- **Gates.** Per commit: both builds 0/0, oracle seeds 2-3 identical, the Rust gate (4,432 tests), scenario_check
+  27/27; for the record also sim_editor PASS (14,448 lines) and saveload seeds 2-3 PASS. The influence table is read
+  by lane C's path modifiers and the Lua AI's site threat: the oracle covers it.
+- **Final.** C++ -2,087 net over four commits (legacy readers -404, the record -1,490, the influence table -128, the
+  timers -65). On the final tree: oracle seeds 2-7 identical, the four captures (seeds 2-3) PASS, saveload 18/18 and
+  the matrix `--expect` PASS, scenario_check 27/27, the test-profile build 0/0, `gates.sh` GATES PASS.
