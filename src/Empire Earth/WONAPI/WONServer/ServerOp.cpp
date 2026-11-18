@@ -50,13 +50,6 @@ void RustServerOp::SetMaxTimes(int inConnect, int inSend, int inRecv)
     ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_SEND, (DWORD)inSend, NULL);
     ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_RECV, (DWORD)inRecv, NULL);
 }
-// Copies the time limits of another server op
-void RustServerOp::CopyMaxTimes(const RustServerOp* inSource)
-{
-    this->SetMaxTimes((int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_CONNECT),
-                      (int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_SEND),
-                      (int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_RECV));
-}
 BlockingSocket* RustServerOp::GetSocket() const
 {
     return static_cast<BlockingSocket*>(
@@ -65,11 +58,6 @@ BlockingSocket* RustServerOp::GetSocket() const
 void RustServerOp::SetSocket(BlockingSocket* inSocket)
 {
     ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_SOCKET, 0, static_cast<RefCount*>(inSocket));
-}
-AuthContext* RustServerOp::GetAuthContext() const
-{
-    return static_cast<AuthContext*>(
-        reinterpret_cast<RefCount*>((intptr_t)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_AUTH_CONTEXT)));
 }
 void RustServerOp::SetAuthType(AuthType inType, AuthContext* inContext)
 {
@@ -177,12 +165,6 @@ RustServerOp* RustServerOp::NewGetMultiDir(ServerContext* inContext, DWORD inFla
     for (int i = 0; i < inCount; i++) { aPaths[i] = inPaths[i].data(); aLengths[i] = inPaths[i].size(); }
     return NewRequest(ee_won_reqmake_get_multi_dir(inFlags, &aPaths[0], &aLengths[0], inCount, sizeof(wchar_t)), inContext);
 }
-RustServerOp* RustServerOp::NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
-                                          const std::string& inNetAddr)
-{
-    return NewRequest(ee_won_reqmake_get_service(EE_WON_WIDE(inPath), EE_WON_WIDE(inName), sizeof(wchar_t),
-                                                 WonBytes(inNetAddr), inNetAddr.size()), inContext);
-}
 RustServerOp* RustServerOp::NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
 {
     RustServerOp* anOp = NewRequest(ee_won_reqmake_get_account(), inContext);
@@ -229,17 +211,6 @@ BlockingSocket* RustServerOp::GetHttpSocket() const
     BlockingSocket* aSocket = static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
     if (aSocket == NULL || !aSocket->IsConnected()) return NULL;
     return aSocket;
-}
-time_t RustServerOp::GetHttpLastModifiedTime()
-{
-    time_t aTime = (time_t)this->GetNum(EE_WON_HTTPGET_LAST_MODIFIED);
-    if (aTime != 0) return aTime;
-    std::string aLocal = this->GetBytes(EE_WON_HTTPGET_LOCAL_PATH);
-    if (aLocal.empty()) return 0;
-    WONFile aFile(aLocal);
-    aTime = aFile.GetModifyTime();
-    this->SetNum(EE_WON_HTTPGET_LAST_MODIFIED, (long long)aTime);
-    return aTime;
 }
 RustServerOp* RustServerOp::NewHttpDocument(const std::string& inProduct, int inType)
 {

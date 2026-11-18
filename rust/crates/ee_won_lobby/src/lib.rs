@@ -38,6 +38,7 @@ pub mod prefsobj;
 pub mod resource;
 pub mod routelogic;
 pub mod routing;
+pub mod rows;
 pub mod scrolltext;
 pub mod srvlistctl;
 pub mod staging;

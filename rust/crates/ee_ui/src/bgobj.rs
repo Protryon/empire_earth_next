@@ -257,14 +257,20 @@ impl Bg {
         f[..4].copy_from_slice(&rect_buf(source));
         f[4..8].copy_from_slice(&rect_buf(destination));
         f[8..].copy_from_slice(&rect_buf(texture));
-        h.op_wide(Op::BgBitmapStretch, bitmap, 0, 0, 0, &mut f);
-        h.op_f(Op::BgBitmapSetLocation, bitmap, 0, 0, 0, &mut [destination.left, destination.top, 0.0, 0.0]);
+        crate::draw2d::bitmap_stretch(bitmap, source, destination, texture, || {
+            h.op_wide(Op::BgBitmapStretch, bitmap, 0, 0, 0, &mut f)
+        });
+        crate::draw2d::bitmap_set_location(bitmap, destination.left, destination.top, || {
+            h.op_f(Op::BgBitmapSetLocation, bitmap, 0, 0, 0, &mut [destination.left, destination.top, 0.0, 0.0])
+        });
         if opacity {
             let mut fade = [0.0f32; 4];
             h.op_f(Op::BgFormFade, 0, 0, 0, 0, &mut fade);
-            h.op_f(Op::BgBitmapSetOpacity, bitmap, 0, 0, 0, &mut [fade[0], 0.0, 0.0, 0.0]);
+            crate::draw2d::bitmap_set_opacity(bitmap, fade[0], || {
+                h.op_f(Op::BgBitmapSetOpacity, bitmap, 0, 0, 0, &mut [fade[0], 0.0, 0.0, 0.0])
+            });
         }
-        h.op(Op::BgBitmapDraw, bitmap, 0, 0, 0) as c_long
+        crate::draw2d::bitmap(bitmap, || h.op(Op::BgBitmapDraw, bitmap, 0, 0, 0)) as c_long
     }
 
     /// A grid tile's draw: the first tile's texture's size the texture rectangle.

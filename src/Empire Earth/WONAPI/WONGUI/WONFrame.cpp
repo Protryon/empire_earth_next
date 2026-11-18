@@ -50,8 +50,6 @@ namespace WONAPI {
 void WONFrameComponent::SetFrameImageAndBorders(Image* image,int left,int top,int right,int bottom) { this->mFrame.SetImage(image,left,top,right,bottom); }
 // Sets the frame image, keeping the borders
 void WONFrameComponent::SetFrameImage(Image* image) { this->mFrame.SetImage(image); }
-// Sets the frame's four border widths
-void WONFrameComponent::SetFrameBorders(int left,int top,int right,int bottom) { this->mFrame.mLeft=left; this->mFrame.mTop=top; this->mFrame.mRight=right; this->mFrame.mBottom=bottom; }
 // Sets the frame's left border width
 void WONFrameComponent::SetFrameLeft(int value) { this->mFrame.mLeft=value; }
 // Sets the frame's top border width

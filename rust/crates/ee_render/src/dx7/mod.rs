@@ -5,6 +5,7 @@
 //! (each module's tests say how).
 
 pub mod api;
+pub mod digest2d;
 pub mod draw;
 pub mod draw2d;
 pub mod draw_model;
@@ -20,7 +21,7 @@ pub mod surfobj;
 pub use crate::ge::vertarr as vertex;
 
 #[cfg(not(test))]
-mod draw_ffi;
+pub(crate) mod draw_ffi;
 #[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]

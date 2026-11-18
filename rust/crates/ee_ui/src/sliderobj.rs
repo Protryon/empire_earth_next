@@ -158,8 +158,11 @@ impl EeUiSlider {
         self.host.op(Op::BaseDrawPolygons, 0, 0, 0, 0);
         let f = self.fields();
         let bitmap = f.thumb_bitmap as isize;
-        self.host.op_point(Op::BitmapSetLocation, bitmap, f.copied_thumb.top_left());
-        self.host.op(Op::BitmapDraw, bitmap, 0, 0, 0)
+        let at = f.copied_thumb.top_left();
+        crate::draw2d::bitmap_set_location(bitmap, at.x, at.y, || {
+            self.host.op_point(Op::BitmapSetLocation, bitmap, at)
+        });
+        crate::draw2d::bitmap(bitmap, || self.host.op(Op::BitmapDraw, bitmap, 0, 0, 0))
     }
 
     pub fn set_location(&self, at: UiPoint) {
@@ -167,7 +170,9 @@ impl EeUiSlider {
         let scale = self.host.get_point(Op::DragBarScale, 0);
         let bitmap = self.fields().thumb_bitmap as isize;
         let mut b = [scale.x * thickness * 0.05, scale.y * thickness * 0.05, 0.0, 0.0];
-        self.host.op_f(Op::BitmapSetScale, bitmap, 0, 0, 0, &mut b);
+        crate::draw2d::bitmap_set_scale(bitmap, b[0], b[1], || {
+            self.host.op_f(Op::BitmapSetScale, bitmap, 0, 0, 0, &mut b)
+        });
     }
 
     pub fn change_range(&self, value: c_ulong) {

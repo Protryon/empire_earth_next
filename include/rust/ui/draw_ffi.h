@@ -6,16 +6,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ui/draw.h"
 #include "rust/ui/rect.h"
 
 extern "C" {
-
-/// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
-EeUiBorderLine ee_ui_border_line(EeUiRect r,
-                                 uint32_t side,
-                                 unsigned long i,
-                                 unsigned long border_type);
 
 /// `UILBString::DrawTextA`'s row `i`.
 EeUiRect ee_ui_string_list_row(EeUiRect ctr, unsigned long i, unsigned long line_height);

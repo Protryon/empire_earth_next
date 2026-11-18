@@ -324,23 +324,6 @@ bool ComponentConfig::BaseHandleInstruction(ConfigParser& parser,const std::stri
 }
 
 
-// Direct-child lookups by name: the component or the config, or NULL (not identified in the original exe)
-Component* ComponentConfig::GetChildComponent(const std::string& theName)
-{
-    std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase>::iterator anItr=this->mConfigMap.find(theName);
-    if(anItr==this->mConfigMap.end())
-        return NULL;
-    return anItr->second->mComponent.get();
-}
-ComponentConfig* ComponentConfig::GetChildConfig(const std::string& theName)
-{
-    std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase>::iterator anItr=this->mConfigMap.find(theName);
-    if(anItr!=this->mConfigMap.end())
-        return anItr->second.get();
-    else
-        return NULL;
-}
-
 // Sets the resource folder, adding a trailing '/' when it ends in neither a slash nor a backslash
 void ComponentConfig::SetResourceFolder(const std::string& inFolder)
 {

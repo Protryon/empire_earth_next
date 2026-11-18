@@ -136,23 +136,9 @@ int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         inBar->mIcon->SetLocation(GE2DPoint(ioF[0], ioF[1]));
         inBar->GetRasterizer()->Draw(inBar->mIcon, inBar->GetScreenIndex());
         break;
-    case EE_SCREENS_IB_OP_RHOMBUS: {
-        GERhombus theRhombus;
-        theRhombus.SetColor(GEColor(inA == 1 ? 1.0f : 0.0f, inA == 2 ? 1.0f : 0.0f, 0.0f));
-        theRhombus.SetRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]));
-        inBar->GetRasterizer()->Draw(&theRhombus, inBar->GetScreenIndex());
-        break;
-    }
     case EE_SCREENS_IB_OP_FRAME:
         inBar->mBackground->SetLocation(GE2DPoint(ioF[0], ioF[1]));
         return inBar->GetRasterizer()->Draw(inBar->mBackground, inBar->GetScreenIndex());
-    case EE_SCREENS_IB_OP_LINE: {
-        GELine theLine;
-        theLine.SetStartPoint(GE2DPoint(ioF[0], ioF[1]));
-        theLine.SetEndPoint(GE2DPoint(ioF[2], ioF[3]));
-        theLine.SetColor(GEColor(1.0f, 0.0f, 0.0f));
-        return gRasterizer->Draw(&theLine, 1, inBar->GetScreenIndex());
-    }
     }
     if (theMessage != NULL)
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);

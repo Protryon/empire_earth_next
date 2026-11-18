@@ -38,16 +38,8 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
 {
     this->mPortrait = new GEBitmap;
     this->mPortrait->SetLocation(inRectangle.GetTopLeft());
-    this->mFirstBar = new GERhombus;
-    this->mFirstBar->SetColor(GEColor(0.15f, 1.0f, 0.15f));
-    this->mFirstBar->SetOpacity(0.5f);
-    this->mSecondBar = new GERhombus;
-    this->mSecondBar->SetColor(GEColor(1.0f, 1.0f, 0.15f));
-    this->mSecondBar->SetOpacity(0.5f);
-    this->mBackground = new GERhombus;
-    this->mBackground->SetRectangle(inRectangle);
-    this->mBackground->SetColor(GEColor(1.0f, 0.15f, 0.15f));
-    this->mBackground->SetOpacity(0.5f);
+    const float theRect[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
+    ee_screens_portrait_draw_init(this, this->mPortrait, theRect);   // the bars (ee_screens hud_draw.rs)
     this->mShowFirstBar = false;
     this->mShowSecondBar = false;
     this->mUnit = NULL;
@@ -64,9 +56,6 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
 // Destroys the portrait, releasing its unit and button
 EEUICPortrait::~EEUICPortrait()
 {
-    delete this->mFirstBar;
-    delete this->mBackground;
-    delete this->mSecondBar;
     delete this->mText;
     if (this->mUnit) {
         this->mButton->Release();
@@ -119,14 +108,13 @@ void EEUICPortrait::SetUnit(EEUnit* inUnit)
 }
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*, EEUIRustControl's host the toolkit's): units and nodes as
-// handles, ioF the op's floats (the unit's owner, production time and research are hud_views.rs')
+// handles, ioF the op's floats (the unit's owner, production time and research are hud_views.rs'; the bars' and
+// the draws' hud_draw.rs')
 int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     EEUICPortrait* inPortrait = this;
     EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
     EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(inA);
-    GERhombus* theBars[3] = {inPortrait->mFirstBar, inPortrait->mSecondBar, inPortrait->mBackground};
-    GERectangle theRect;
     UWideString theFormat;
     UWideString theName;
     float theFloat;
@@ -167,16 +155,6 @@ int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* io
         return theBits;
     case EE_SCREENS_PT_OP_BUILD_TIME:
         return theNode->GetBuildTime();
-    case EE_SCREENS_PT_OP_BAR:
-        theRect = theBars[inA]->GetRectangle();
-        ioF[0] = theRect.GetLeft();
-        ioF[1] = theRect.GetTop();
-        ioF[2] = theRect.GetRight();
-        ioF[3] = theRect.GetBottom();
-        return 0;
-    case EE_SCREENS_PT_OP_SET_BAR:
-        theBars[inA]->SetRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]));
-        return 0;
     case EE_SCREENS_PT_OP_IMPROVEMENT_LEVEL:
         return theUnit->GetStats()->mImprovement.GetLevel((long)inB);
     case EE_SCREENS_PT_OP_IMPROVEMENT_TIME:
@@ -196,10 +174,6 @@ int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* io
     case EE_SCREENS_PT_OP_UPDATE_HELP:
         inPortrait->GetForm()->UpdateHelpString();
         return 0;
-    case EE_SCREENS_PT_OP_DRAW:
-        if (inA == 0)
-            return inPortrait->GetRasterizer()->Draw(inPortrait->mPortrait, inPortrait->GetScreenIndex());
-        return inPortrait->GetRasterizer()->Draw(inA == 3 ? theBars[2] : theBars[inA - 1], inPortrait->GetScreenIndex());
     case EE_SCREENS_PT_OP_CONTAINS:
         return GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]).Contains(inPortrait->GetMouseLocation());
     case EE_SCREENS_PT_OP_BUILDING:

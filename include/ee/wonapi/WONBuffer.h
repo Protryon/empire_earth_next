@@ -186,7 +186,6 @@ public:
     void Reset() { ee_won_writer_reset(this->mBuffer); }
     // empties the buffer (the original forgot an allocation another owner had taken; ToByteBuffer hands it over now)
     void Release() { ee_won_writer_reset(this->mBuffer); }
-    void CheckWrite(unsigned long inLength) { ee_won_writer_check_write(this->mBuffer,inLength); }
     void Reserve(unsigned long inNumBytes) { ee_won_writer_reserve(this->mBuffer,inNumBytes); }
     void ReserveChunk(unsigned long theNumBytesToReserve,unsigned long theMaxSize=0)
     { ee_won_writer_reserve_chunk(this->mBuffer,theNumBytesToReserve,theMaxSize); }
