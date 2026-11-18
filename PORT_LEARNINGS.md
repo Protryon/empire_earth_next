@@ -30840,3 +30840,19 @@ list, open_data.py's comments): a harness run from a checkout rebuilds its own `
   The lobby captures of the gates' LAN game against build/lan_ref/pre_won11 (the lead's reference): the lobby's first
   screen, the LAN screen and the create dialog identical on both sides; the staging screens and the LAN list within
   0.003-0.006 % (the caret, the list's time); the in-game frames differ everywhere (another moment of another game).
+- **The merge of origin/rust a7ddd2199** (19 conflicts): the mixer is the audio lane's (cpal, symphonia; the music
+  source is internal to it, SEMixer kept only GetOutputRate) with SPIMSetMovieSource, SEMixer::SetMovieSource and
+  their PIM entry removed (mixer.rs had already merged without its movie field). FriendsListCtrl, QuickPlayCtrl and
+  RoomCtrl stay deleted (WON round 13: netctl.rs); this branch had only dropped their `rust/won_gui/jpeg.h`
+  include, and the Rust side includes no header, so nothing else was needed. The tools take both sides' removals
+  (miniaudio, dmusic; libjpeg, pl_mpeg): `LIB_UNITS` is Lua alone, `LIB_MEMBERS` `{"exe": ["lua"]}`; units.py's
+  MODULES has no `jpeg`; open_data.py keeps rust's `.dls` in BINARY_EXT. Cargo.lock is rust's plus jpeg-encoder.
+- The shared tree did not rebuild: exe_boot.data_tree rebuilds a stale tree only when it is the checkout's own
+  (`tree.parent == OPEN_DATA`), never the main checkout's tree named by EE_HARNESS_OPEN_DATA or EE_GATES_TREE. Its
+  converters hash is origin/rust's (95b1f9ca); this branch's (f3a198ef) differs only by comments and the bundle
+  README's movie line, so its content is current. It will rebuild at the main checkout's first harness run after merging.
+- Gates on the merge: build `--sim` 0/0 (EE-AOC 631 inputs, EE-SIM 632), the test profile 0/0; the Rust gate PASS
+  (4,538 tests); the oracle identical on seeds 2-7; `xbuild.py wontest` 149 drivers, all exit 0, no mismatch; the legacy
+  campaign step (game_session.py `--campaign learning`, slot.py) to `STOP <windowed session complete> reached`;
+  scenario_check 27/27; gates.sh `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13913` units [4, 42, 44]
+  alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2688 joiner=2690`, GATES PASS.
