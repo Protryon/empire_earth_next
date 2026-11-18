@@ -29729,6 +29729,9 @@ tech-node view, the class and upgrade tables' views, the herds, or the C++ conte
   --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` (oracle, plains,
   islands, highlands, mediterranean, medium, late, space 4/4, calamity 3/4, next 2/4, as before); the editor gate
   `sim_editor: PASS` (its quick save's chunks).
+  The oracle seeds 2-7 identical on the last commit; `gates.sh` through its slot: `RESULT PASS tour`, `RESULT PASS
+  ai-game outcome time-cap` (units [4, 38, 39], alive_computers [2, 3], classic_lua twice), `RESULT PASS lan-game`,
+  `GATES PASS`.
 - **Behaviour:** none. One corrected answer: a failed read inside a saved running state's record gives
   `kErrorBeyondEnd` (0xa), as the C++ load did.
 - **Other lanes' files:** EEComputerPlayer.cpp (lane B) lost one `#include` (the deleted scorer header).
