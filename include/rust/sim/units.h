@@ -3907,6 +3907,8 @@ struct EeUnitsUpdateHost {
   void *ctx;
   int64_t (*read)(void *ctx, int32_t code);
   int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
+  /// the class whose sequence runs (an `EEUnitClass*`: the host's `theClass`, for update_views.rs's reads)
+  uint64_t class_;
 };
 
 /// A unit as the bodies read it: its members, its class's and its stats' (`ee_units_ag_host`'s `EE_UNITS_AG_UNIT`
@@ -6000,8 +6002,6 @@ extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
-extern int64_t ee_units_host_object_hit_points(uint32_t unit);
-
 extern void *ee_units_host_player_selection(void *player);
 
 extern uint8_t ee_units_host_unit_seen_by(uint32_t unit, void *player);
@@ -6013,12 +6013,6 @@ extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index
 extern uint8_t ee_units_host_unit_class_targetable(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
-
-extern int64_t ee_units_host_unit_max_hit_points(uint32_t unit);
-
-extern int64_t ee_units_host_unit_garrison_capacity(uint32_t unit);
-
-extern uint8_t ee_units_host_unit_has_tile_node(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_shares_rally_point(uint32_t unit, int64_t unit_type);
 
@@ -6035,10 +6029,6 @@ extern void ee_units_host_unit_queue_timer(uint32_t unit, int64_t queue, int64_t
 extern void *ee_units_host_unit_goal_clone(uint32_t unit);
 
 extern void *ee_units_host_garrison_rally_load(uint32_t garrison);
-
-extern uint8_t ee_units_host_object_record(uint32_t unit, EeUnitRecord *out);
-
-extern int64_t ee_units_host_unit_air_traffic_type(uint32_t unit);
 
 extern void ee_units_host_unit_queue_clear(uint32_t unit, int64_t queue);
 
@@ -6084,15 +6074,7 @@ extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology,
 
 extern int32_t ee_units_host_player_hack_class(void *player);
 
-extern int64_t ee_units_host_unit_class_count();
-
-extern uint8_t ee_units_host_unit_class_info(int32_t unit_type,
-                                             int64_t *category,
-                                             uint8_t *land_building);
-
 extern float ee_units_host_player_class_scale(int64_t player_id, int32_t unit_type);
-
-extern uint8_t ee_units_host_map_has_tile(int64_t x, int64_t y);
 
 extern void ee_units_host_hack_create_unit(int32_t unit_type, float x, float y, int64_t player_id);
 
