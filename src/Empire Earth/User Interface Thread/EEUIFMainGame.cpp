@@ -342,8 +342,10 @@ void EEUIFMainGame::HideAllBackgrounds()
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
 // the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
 // construct; it reads no control: they are made after it)
-EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) : UIForm(inManager, inData, true)
+EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
+    : UIForm(inManager, inData, true), EeScreensMainFormFields()
 {
+    ee_screens_main_form_fields(this, static_cast<EeScreensMainFormFields*>(this));
     EEUIFMGFormCall theCall(this);
     ee_screens_main_form_construct(&theCall);
 }
@@ -835,7 +837,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         inA != 0 ? theForm->mErrorCriticalSection->Enter() : theForm->mErrorCriticalSection->Leave();
         return 0;
     case EE_SCREENS_MF_OP_SET_UNIT_SELECTED: gUnitSelected = inA != 0; return 0;
-    case EE_SCREENS_MF_OP_FIELD:
+    case EE_SCREENS_MF_OP_FIELD:   // (the fields of EeScreensMainFormFields are main_form_fields.rs')
     case EE_SCREENS_MF_OP_SET_FIELD: {
         bool theSet = inOp == EE_SCREENS_MF_OP_SET_FIELD;
 #define EE_MF_FIELD(id, member) \
@@ -844,26 +846,12 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             member = (decltype(member))inB; \
         return (int64_t)member;
         switch (inA) {
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_STRINGS_CHANGED, theForm->mStringsChanged)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ELAPSED, theForm->mElapsed)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_REFRESH_GROUP, theForm->mRefreshGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_UI_STATE, theForm->mUIState)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_GATE_DIRECTION, theForm->mBuildGate.mDirection)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_WALL_STATE, theForm->mBuildWall.mState)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CLOCK_MODE, theForm->mClockMode)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, theForm->mIsCursorLocked)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_INFO_BLINKING, theForm->mInfoBlinking)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUTTON_BLINKING, theForm->mIsButtonBlinking)
             case EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW:
                 if (theSet)
                     theForm->SetDrawToolTipShadow(inB != 0);
                 return (int64_t)theForm->GetDrawToolTipShadow();
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP, theForm->mEntityGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURRENT_GROUP, theForm->mCurrentGroup)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_MEDIA_ID, theForm->mMediaID)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET, theForm->mEntityGroupSet)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_B5F0, theForm->mB5F0)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_HOT_KEY_MODE, theForm->mHotKeyMode)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUILD_TECH, theForm->mBuild->mTechnology)
         }
 #undef EE_MF_FIELD
@@ -1086,12 +1074,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_ENTITY_GROUP:
         inB != 0 ? theForm->GetEntityGroup(inA)->Enable() : theForm->GetEntityGroup(inA)->Disable();
         return 0;
-    case EE_SCREENS_MF_OP_MOUSE_TEST: {
-        // (main_form.rs' order)
-        theForm->mMouseModes[inA] = (long)inB;   // an EE_SCREENS_MF_MODE_*
-        return 0;
-    }
-    case EE_SCREENS_MF_OP_KEYBOARD_TEST: theForm->mKeyboardModes[inA] = (long)inB; return 0;
     case EE_SCREENS_MF_OP_WHEEL_ZOOM:
         theForm->mWheelZoom = EECreateScreenEvent((unsigned long)inA);
         theForm->SetMouseWheelMoveEvent(theForm->mWheelZoom);

@@ -10549,6 +10549,33 @@ struct EeScreensBuildGateFields {
   int32_t player;
 };
 
+/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
+struct EeScreensMainFormFields {
+  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
+  long mKeyboardModes[22];
+  long mMouseModes[22];
+  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
+  long mUIState;
+  /// the background media (-1: none)
+  long mMediaID;
+  /// the enabled entity group and the index into the panel groups
+  long mEntityGroup;
+  unsigned long mCurrentGroup;
+  /// the poll's elapsed time
+  unsigned long mElapsed;
+  unsigned long mHotKeyMode;
+  long mClockMode;
+  bool mEntityGroupSet;
+  /// the error log's strings changed
+  bool mStringsChanged;
+  bool mIsCursorLocked;
+  bool mRefreshGroup;
+  bool mB5F0;
+  bool mB5F1;
+  bool mInfoBlinking;
+  bool mIsButtonBlinking;
+};
+
 /// `CopyData`'s record: what the C++ read (in), what it applies (out).
 struct EeScreensMiniMapCopy {
   float rect[4];
@@ -12172,6 +12199,10 @@ void ee_screens_gate_update(void *call,
                             EeScreensBuildGateFields *gate,
                             float x,
                             float y);
+
+/// `EEUIFMainGame`'s constructor: the form `form` and its record `fields` (the record's offset is the class's).
+void ee_screens_main_form_fields(void *form,
+                                 EeScreensMainFormFields *fields);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.

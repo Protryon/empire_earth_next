@@ -26,6 +26,12 @@ impl Host {
 
 impl GroupHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        if op == crate::screens::main_group::EE_SCREENS_MGR_OP_UI_STATE {
+            if let Some(rec) = crate::screens::main_form_fields::record(self.form(0)) {
+                // SAFETY: the group's live form's record (its mOwner, an EEUIFMainGame)
+                return unsafe { (*rec).mUIState } as i64;
+            }
+        }
         if let Some(r) = crate::screens::hud_views::main_group(op, a, b, c) {
             return r;
         }

@@ -407,6 +407,97 @@ pub(crate) fn main_group_toolkit(
     Some(0)
 }
 
+/// `kFormSplash` (ee/EEUIManager.h).
+const FORM_SPLASH: c_ulong = 23;
+
+/// The UI manager (`gUIManager`: the last manager made, on the toolkit's direct path; NULL before and after it).
+#[cfg_attr(test, allow(dead_code))]
+fn manager() -> direct::Cpp {
+    direct::manager_of(core::ptr::null_mut())
+}
+
+/// The UI manager's calls of the UI thread's message host (`ee_screenscpp_ui_message`, `EE_SCREENS_UI_OP_*`;
+/// `a` the message's form or id), on the manager's Rust object: the copy lock (`LOCK`/`UNLOCK` 0; the world's
+/// locks, 1 and 2, stay the C++'s), the forms' stack and lookups.
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn ui_message_manager(op: u32, a: i64) -> Option<i64> {
+    use crate::screens::ui_thread::*;
+    let call = |c: EeUiManagerCall, x: isize| direct::manager_call(manager(), c, x, 0, 0) as i64;
+    Some(match op {
+        EE_SCREENS_UI_OP_LOCK | EE_SCREENS_UI_OP_UNLOCK if a == 0 => {
+            call(EeUiManagerCall::LockForCopy, (op == EE_SCREENS_UI_OP_UNLOCK) as isize);
+            0
+        }
+        EE_SCREENS_UI_OP_HAS_MANAGER => (!manager().is_null()) as i64,
+        EE_SCREENS_UI_OP_CURRENT_FORM => call(EeUiManagerCall::CurrentForm, 0),
+        EE_SCREENS_UI_OP_FORM_BY_ID => direct::form_by_id(manager(), a as c_ulong) as i64,
+        EE_SCREENS_UI_OP_SWAP => {
+            call(EeUiManagerCall::SwapForm, a as isize);
+            0
+        }
+        EE_SCREENS_UI_OP_PUSH => {
+            call(EeUiManagerCall::Push, a as isize);
+            0
+        }
+        EE_SCREENS_UI_OP_POP => {
+            call(EeUiManagerCall::Pop, 0);
+            0
+        }
+        EE_SCREENS_UI_OP_POP_TO => {
+            call(EeUiManagerCall::PopTo, a as isize);
+            0
+        }
+        EE_SCREENS_UI_OP_ON_STACK => (call(EeUiManagerCall::IsFormOnStack, a as isize) != 0) as i64,
+        EE_SCREENS_UI_OP_VISIBLE => (call(EeUiManagerCall::IsFormVisible, a as isize) != 0) as i64,
+        EE_SCREENS_UI_OP_REDRAW => {
+            call(EeUiManagerCall::RedrawAll, 0);
+            0
+        }
+        _ => return None,
+    })
+}
+
+/// The UI thread's game starts' host (`ee_screenscpp_ui_game`, `EE_SCREENS_UG_OP_*`): its world reads and the
+/// UI manager's calls (the forms' stack, lookups and the copy lock).
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn ui_game(op: u32, a: i64, b: i64) -> Option<i64> {
+    use crate::screens::ui_game::*;
+    let call = |c: EeUiManagerCall, x: isize| direct::manager_call(manager(), c, x, 0, 0) as i64;
+    let t = token();
+    Some(match op {
+        EE_SCREENS_UG_OP_NUM_PLAYERS => world(&t).map_or(0, |w| w.num_players() as i64),
+        EE_SCREENS_UG_OP_PLAYER if b == EE_SCREENS_UG_PLAYER_EXISTS => {
+            world(&t).and_then(|w| w.player(a as usize)).is_some() as i64
+        }
+        EE_SCREENS_UG_OP_PLAYER if b == EE_SCREENS_UG_PLAYER_COMPUTER => {
+            world(&t).and_then(|w| w.player(a as usize)).is_some_and(|p| p.has_computer_player()) as i64
+        }
+        EE_SCREENS_UG_OP_CIV_CHOSEN => current(&t).is_some_and(|p| world_field!(p.saved(), mCivilizationChosen)) as i64,
+        EE_SCREENS_UG_OP_SWAP_SPLASH => {
+            call(EeUiManagerCall::SwapForm, direct::form_by_id(manager(), FORM_SPLASH) as isize);
+            0
+        }
+        EE_SCREENS_UG_OP_POP => {
+            call(EeUiManagerCall::Pop, 0);
+            0
+        }
+        EE_SCREENS_UG_OP_SWAP => {
+            call(EeUiManagerCall::SwapForm, a as isize);
+            0
+        }
+        EE_SCREENS_UG_OP_FORM => direct::form_by_id(manager(), a as c_ulong) as i64,
+        EE_SCREENS_UG_OP_PUSH => {
+            call(EeUiManagerCall::Push, a as isize);
+            0
+        }
+        EE_SCREENS_UG_OP_COPY_LOCK => {
+            call(EeUiManagerCall::LockForCopy, (a == 0) as isize);
+            0
+        }
+        _ => return None,
+    })
+}
+
 /// `EEStatusBoxView`: the unit `handle`'s values the status box shows (`two_bars`: the box has its third and fourth
 /// bars; `fill`: the owner's friendliness is read, only when the class carries or garrisons).
 pub(crate) fn status_box_view(handle: i64, two_bars: bool, fill: bool) -> EeScreensHudUnit {

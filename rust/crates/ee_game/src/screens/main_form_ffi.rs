@@ -33,6 +33,12 @@ impl Host {
 
 impl FormHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, io: &mut EeScreensMainFormIo) -> i64 {
+        if let Some(rec) = crate::screens::main_form_fields::record(self.form()) {
+            // SAFETY: the call's live form's record; no call out while the reference lives
+            if let Some(r) = crate::screens::main_form_fields::op(unsafe { &mut *rec }, op, a, b) {
+                return r;
+            }
+        }
         if let Some(r) = crate::screens::hud_views::main_form(op, a) {
             return r;
         }

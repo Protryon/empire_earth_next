@@ -263,6 +263,7 @@ pub mod lobby_options;
 pub mod main_form;
 #[cfg(not(test))]
 mod main_form_ffi;
+pub mod main_form_fields;
 pub mod main_game;
 #[cfg(not(test))]
 mod main_game_ffi;

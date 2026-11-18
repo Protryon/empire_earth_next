@@ -668,11 +668,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         UIControl* theMessage = inForm->GetControl(kMainGameDialogMessage);
         return (theMessage != NULL && theMessage->GetDisplayMode() == kDisplayModeShown) || gWorld.mInCinematic;
     }
-    case EE_SCREENS_GAME_MG_CLOCK:
-        return (uint32_t)inForm->mClockMode;
-    case EE_SCREENS_GAME_MG_SET_CLOCK:
-        inForm->mClockMode = (long)inA;
-        break;
     case EE_SCREENS_GAME_MG_SET_HIDDEN_MODE:
         gHiddenUnitsMode = (long)inA;
         break;

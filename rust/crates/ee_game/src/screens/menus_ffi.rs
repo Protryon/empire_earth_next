@@ -70,6 +70,20 @@ impl Form {
             }
             return r;
         }
+        if op == crate::screens::main_game::EE_SCREENS_GAME_MG_CLOCK
+            || op == crate::screens::main_game::EE_SCREENS_GAME_MG_SET_CLOCK
+        {
+            // the main game form's mClockMode (its record: main_form_fields)
+            if let Some(rec) = crate::screens::main_form_fields::record(self.0) {
+                // SAFETY: the main game form's events run on its live form
+                let rec = unsafe { &mut *rec };
+                if op == crate::screens::main_game::EE_SCREENS_GAME_MG_SET_CLOCK {
+                    rec.mClockMode = a as core::ffi::c_long;
+                    return 0;
+                }
+                return rec.mClockMode as u32;
+            }
+        }
         if let Some(m) =
             crate::screens::hud_sends::screens(op, a, b, c, d, crate::screens::hud_views::current_player_index)
         {

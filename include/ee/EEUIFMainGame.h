@@ -23,10 +23,13 @@ class EEUnit;
 class UIBackground;
 class TMPoll;
 class TSCriticalSection;
-struct EeScreensMainFormIo;   // rust/ee_screens.h
+#include "rust/game/screens.h"   // EeScreensMainFormFields, EeScreensMainFormIo
 
 
-class EEUIFMainGame : public UIForm {
+// the plain members (+0x520 mKeyboardModes .. +0x5f3 mIsButtonBlinking: the modes of each interface state, the state,
+// the media, the groups, the poll's time, the hot key and clock modes, the flags) are the Rust record
+// EeScreensMainFormFields (ee_screens main_form_fields.rs), under their names
+class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
@@ -105,26 +108,6 @@ public:
     EEABuild* mBuild;                       // +0x514
     EEACalamity* mCalamity;                 // +0x518
     long mL51C;                             // +0x51c
-    // indexed by mUIState: UpdateKeyboard 0x271290 [this + 0x520 + mUIState*4], UpdateMouse 0x2712b8 [this + 0x578 +
-    // mUIState*4] (provisional names)
-    long mKeyboardModes[22];                // +0x520 (port: the keyboard tests as modes: 2 the cinematic's)
-    long mMouseModes[22];                   // +0x578 (port: the mode's EE_SCREENS_MF_MODE_*, ee_screens mouse_modes.rs)
-    long mUIState;                          // +0x5d0 (5: gate, 6: wall, 0xb: ..., 0x11: no scrolling; provisional name)
-    long mMediaID;                          // +0x5d4 (= -1) the background media (UpdateBackgroundMedia)
-    long mEntityGroup;                      // +0x5d8 the enabled entity group (SetEntityGroup)
-    unsigned long mCurrentGroup;            // +0x5dc the index into mGroups
-    unsigned long mElapsed;                 // +0x5e0 (mPoll's elapsed time)
-    unsigned long mHotKeyMode;              // +0x5e4 (unsigned: `cmp 0; jbe` at 0x660260)
-    long mClockMode;                        // +0x5e8
-    bool mEntityGroupSet;                   // +0x5ec
-    bool mStringsChanged;                   // +0x5ed (mStrings changed)
-    bool mIsCursorLocked;                   // +0x5ee (EEMSavedGroupSelect clears it)
-    bool mRefreshGroup;
-    bool mB5F0;
-    bool mB5F1;
-    bool mInfoBlinking;                     // +0x5f2 (EEUISCIFormManager::SetBlinking 0x1e766a; EEMLoadMainScreen
-                                            // clears it; provisional name)
-    bool mIsButtonBlinking;                 // +0x5f3 (EEMLoadMainScreen clears it)
 };
 
 #endif
