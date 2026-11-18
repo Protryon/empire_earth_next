@@ -10,6 +10,7 @@
 #include <deque>
 #include <set>
 #include "ee/wonapi/WONBuffer.h"
+#include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 #include "ee/wonapi/WONStringCompare.h"
 #include "ee/wonapi/EELobbySound.h"
