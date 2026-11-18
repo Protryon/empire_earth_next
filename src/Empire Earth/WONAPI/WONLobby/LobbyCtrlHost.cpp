@@ -87,9 +87,10 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
 // ---- the shell
 
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
-intptr_t LobbyNetCtrlHost(LobbyRustCtrl* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
+intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
-LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind) : mLobbyCtl(ee_won_lobbyctl_new_model(this, inKind, LobbyCtrlHost)) {}
+LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind)
+    : mLobbyCtl(ee_won_lobbyctl_new_model(static_cast<Container*>(this), inKind, LobbyCtrlHost)) {}
 
 LobbyRustCtrl::~LobbyRustCtrl() { ee_won_lobbyctl_free(this->mLobbyCtl); }
 
@@ -101,11 +102,12 @@ void LobbyRustCtrl::InitComponent(ComponentInit& inInit)
     this->CCall(EeWonLobbyCtlCall::Init, (intptr_t) static_cast<ComponentConfigInit&>(inInit).mConfig);
 }
 
-void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+// a ComponentEvent's type as the controls' event (the rest Other)
+static EeWonLobbyCtlEvent CtlEventOf(int inType)
 {
     typedef EeWonLobbyCtlEvent E;
     E aType = E::Other;
-    switch (inEvent->mType) {
+    switch (inType) {
     case ComponentEvent_ButtonPressed: aType = E::ButtonPressed; break;
     case ComponentEvent_ComboSelChanged: aType = E::ComboSelChanged; break;
     case ComponentEvent_ListSelChanged: aType = E::ListSelChanged; break;
@@ -145,9 +147,41 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case LobbyEvent_PlayerTeamChanged: aType = E::PlayerTeamChanged; break;
     case LobbyEvent_RecvChat: aType = E::RecvChat; break;
     case LobbyEvent_SetChatInput: aType = E::SetChatInput; break;
+    case ComponentEvent_TreeItemOpened: aType = E::TreeItemOpened; break;
+    case LobbyEvent_GroupChanged: aType = E::GroupChanged; break;
+    case LobbyEvent_ServerChanged: aType = E::ServerChanged; break;
+    case 100053: aType = E::SetRoomList; break;
+    case LobbyEvent_FriendChanged: aType = E::FriendChanged; break;
+    case 100056: aType = E::RefreshFriends; break;
+    case LobbyEvent_LoginInitStatus: aType = E::LoginInitStatus; break;
+    case LobbyEvent_SetLoginFields: aType = E::SetLoginFields; break;
+    case 100052: aType = E::FillUserNames; break;
+    case LobbyEvent_QueryAccountResult: aType = E::QueryAccountResult; break;
+    case LobbyEvent_GotHTTPDocument: aType = E::GotHttpDocument; break;
     default: break;
     }
-    this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
+    return aType;
+}
+
+void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+{
+    this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)CtlEventOf(inEvent->mType), (intptr_t)inEvent->mComponent);
+}
+
+// the Dialog shell (QuickPlayCtrl, LoginCtrl): the same forwards
+LobbyRustDialogCtrl::LobbyRustDialogCtrl(EeWonLobbyCtlKind inKind)
+    : mLobbyCtl(ee_won_lobbyctl_new_model(static_cast<Container*>(this), inKind, LobbyCtrlHost)) {}
+LobbyRustDialogCtrl::~LobbyRustDialogCtrl() { ee_won_lobbyctl_free(this->mLobbyCtl); }
+void LobbyRustDialogCtrl::InitComponent(ComponentInit& inInit)
+{
+    if (inInit.mType != 2)
+        return;
+    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::Init, (intptr_t) static_cast<ComponentConfigInit&>(inInit).mConfig, 0, 0);
+}
+void LobbyRustDialogCtrl::HandleComponentEvent(ComponentEvent* inEvent)
+{
+    ee_won_lobbyctl_call(this->mLobbyCtl, EeWonLobbyCtlCall::Event, (intptr_t)inEvent,
+                         (intptr_t)CtlEventOf(inEvent->mType), (intptr_t)inEvent->mComponent);
 }
 
 // ---- the host
@@ -175,6 +209,10 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     case T::Component: return FindAs<Component>(inConfig, inSlot);
     case T::ColorButton: return FindAs<EELobbyColorButton>(inConfig, inSlot);
     case T::TextArea: return FindAs<TextArea>(inConfig, inSlot);
+    case T::TreeArea: return FindAs<TreeArea>(inConfig, inSlot);
+    case T::ListArea: return FindAs<ListArea>(inConfig, inSlot);
+    case T::ScreenContainer: return FindAs<ScreenContainer>(inConfig, inSlot);
+    case T::ServerListCtrl: return FindAs<ServerListCtrl>(inConfig, inSlot);
     }
     return NULL;
 }
@@ -273,7 +311,8 @@ static void PrefSet(intptr_t inPref, intptr_t inValue)
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
-    LobbyRustCtrl* aCtl = static_cast<LobbyRustCtrl*>(inCtl);
+    // the shell (a LobbyRustCtrl or a LobbyRustDialogCtrl) as its Container
+    Container* aCtl = static_cast<Container*>(inCtl);
     Component* aComp = reinterpret_cast<Component*>(a);
     Button* aButton = reinterpret_cast<Button*>(a);
     Label* aLabel = reinterpret_cast<Label*>(a);
@@ -319,7 +358,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aBrowser->FindStr(reinterpret_cast<InputBox*>(b)->GetText(), (c & 1) != 0, (c & 2) != 0);
         return 0;
     case Op::BrowserReset: aBrowser->Reset(); return 0;
-    case Op::BrowserGoHome: aBrowser->Go(static_cast<GameBrowserCtrl*>(aCtl)->mHomeLocation, false, 0, -1); return 0;
+    case Op::BrowserGoHome: aBrowser->Go(static_cast<GameBrowserCtrl*>(static_cast<LobbyRustCtrl*>(aCtl))->mHomeLocation, false, 0, -1); return 0;
     case Op::BrowserBack: aBrowser->Back(); return 0;
     case Op::BrowserForward: aBrowser->Forward(); return 0;
     case Op::BrowserStop: aBrowser->Stop(); return 0;

@@ -31,6 +31,7 @@ pub mod lobbypopup;
 pub mod logics;
 pub mod model;
 pub mod modelobj;
+pub mod netctl;
 pub mod persist;
 pub mod prefsobj;
 pub mod resource;

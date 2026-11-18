@@ -12,15 +12,9 @@ class ImageTextButton;
 class CrossPromotionButton;
 class MaxSplitterButton;
 class MultiListHeader;
-class DirectConnectCtrl : public Container {
+class DirectConnectCtrl : public LobbyRustCtrl {
 public:
-    DirectConnectCtrl(); // empty, at 0x007bada0
-    virtual ~DirectConnectCtrl(); // empty; stores its own vptr (0x007bae0f)
-    virtual void InitComponent(ComponentInit& inInit); // at 0x007baeb0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // at 0x007baf20
-    SmartPtr<ServerListCtrl> mConnectionList; //84
-    SmartPtr<Button> mAddButton; //88
-    SmartPtr<Button> mRemoveButton; //8c
+    DirectConnectCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::DirectConnect) {}
 };
 
 class ChatCtrlConfig : public ContainerConfig {

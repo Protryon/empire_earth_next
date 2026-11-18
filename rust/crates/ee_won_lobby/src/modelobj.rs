@@ -2796,6 +2796,15 @@ pub(crate) fn ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, bb: isize, 
         }
         // SAFETY: the controls pass a live address
         O::AddrValid => b(unsafe { ee_won_net::ipobj::ee_won_ipaddr_valid(a as *const EeWonIpAddr) }),
+        // SAFETY (the addresses): the controls pass live addresses and free their copies once
+        O::AddrEquals => b(unsafe {
+            ee_won_net::ipobj::ee_won_ipaddr_compare(a as *const EeWonIpAddr, bb as *const EeWonIpAddr) == 0
+        }),
+        O::AddrClone => unsafe { ee_won_net::ipobj::ee_won_ipaddr_clone(a as *const EeWonIpAddr) as isize },
+        O::AddrFree => {
+            unsafe { ee_won_net::ipobj::ee_won_ipaddr_free(a as *mut EeWonIpAddr) };
+            0
+        }
         O::MCall => {
             let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
             // SAFETY: the controls pass a call of this enum and its argument

@@ -25,6 +25,14 @@ enum class EeWonLobbyCtlType : uint32_t {
   ColorButton = 9,
   /// `TextArea` (round 13)
   TextArea = 10,
+  /// `TreeArea`
+  TreeArea = 11,
+  /// `ListArea`
+  ListArea = 12,
+  /// `ScreenContainer`
+  ScreenContainer = 13,
+  /// `ServerListCtrl`
+  ServerListCtrl = 14,
 };
 
 /// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
@@ -44,6 +52,29 @@ enum class EeWonLobbyCtlKind : uint32_t {
   ServerList = 7,
   /// ChatCtrl (a chat panel; round 13, chatctl.rs)
   Chat = 8,
+  /// RoomCtrl (the room tree; round 13, netctl.rs from here)
+  Room = 9,
+  /// FriendsListCtrl
+  Friends = 10,
+  /// UserListCtrl (the room's users)
+  Users = 11,
+  /// QuickPlayCtrl (a `Dialog`)
+  QuickPlay = 12,
+  /// LoginCtrl (a `Dialog`)
+  Login = 13,
+  CreateAccount = 14,
+  UpdateAccount = 15,
+  LostPassword = 16,
+  LostUserName = 17,
+  LoginHelp = 18,
+  LoginStatus = 19,
+  InitFailed = 20,
+  /// MOTDCtrl
+  Motd = 21,
+  LoginScreen = 22,
+  DirectConnect = 23,
+  /// RoomLabelCtrl
+  RoomLabel = 24,
 };
 
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
@@ -569,6 +600,150 @@ enum class EeWonLobbyCtlOp : uint32_t {
   DeliverAcceptClient,
   /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
   AddrValid,
+  /// `((ListArea*)a)->InsertItem((ListItem*)b, -1)` (the virtual).
+  ListInsert2 = 1300,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, -1)`.
+  TreeInsertChild,
+  /// `((TreeArea*)a)->InsertTreeItem(NULL, (ListItem*)b, c)`.
+  TreeInsertServer,
+  /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, 0)`.
+  TreeInsertLoading,
+  /// `((TreeItem*)a)->GetWrappedItem()`.
+  TreeWrapped,
+  /// `((TreeItem*)a)->GetNumChildren()`.
+  TreeChildCount,
+  /// `((TreeItem*)a)->GetChild(b)`.
+  TreeChild,
+  /// `((TreeItem*)a)->GetParentItem()`.
+  TreeParent,
+  /// `((TreeItem*)a)->GetIndex()`.
+  TreeIndex,
+  /// `((TreeItem*)a)->IsOpen()` (0 or 1).
+  TreeIsOpen,
+  /// `((TreeArea*)a)->OpenItem((TreeItem*)b, c != 0)`.
+  TreeOpen,
+  /// `((TreeArea*)a)->RemoveAllItems((TreeItem*)b)`.
+  TreeRemoveAll,
+  /// `((TreeArea*)a)->RemoveTreeItem((TreeItem*)b)`.
+  TreeRemove,
+  /// `((TreeArea*)a)->ClearTree(b != 0)`.
+  TreeClear,
+  /// `((TreeItem*)a)->ContainsPoint(b's point)` (0 or 1).
+  TreeContainsPoint,
+  /// `new RoomListItem((LobbyServer*)a, b != 0)` (a server's row, its loading placeholder).
+  RoomItemServer,
+  /// `new RoomListItem((LobbyGroup*)a, (LobbyServer*)b)` (a room's row).
+  RoomItemGroup,
+  /// `((RoomListItem*)a)->UpdateText((LobbyServer*)b, (LobbyGroup*)c)`.
+  RoomItemUpdate,
+  /// `((RoomListItem*)a)->mAddress.GetValue()` (a borrowed `const EeWonIpAddr*`).
+  RoomItemAddr,
+  /// `((RoomListItem*)a)->mGroupId`.
+  RoomItemGroupId,
+  /// `IPAddr` `a == b` (six bytes; 0 or 1; answered by ipobj.rs in the game).
+  AddrEquals,
+  /// A copy of the address `a` (an `EeWonIpAddr` the Rust frees with `AddrFree`; ipobj.rs in the game).
+  AddrClone,
+  /// The copy `a` freed.
+  AddrFree,
+  /// `this->DeliverEvent(new JoinRoomEvent(row->mAddress, row->mGroupId), false)` of the room row `a`.
+  DeliverJoinRoom,
+  /// `this->DeliverEvent(new CreateRoomEvent(the address a, NULL: IPAddr()), false)`.
+  DeliverCreateRoom,
+  /// `this->DeliverEvent(new QueryServerGroupsEvent(the address a), false)`.
+  DeliverQueryGroups,
+  /// `LobbyGetServerList()`.
+  ServerListGet,
+  /// `LobbyGetChatGroup()`.
+  ChatGroup,
+  /// `new FriendsListItem` (no reference).
+  FriendRowNew,
+  /// `new UserListItem` (no reference).
+  UserRowNew,
+  /// `((FriendsListItem*)a)->mFriend.get()`.
+  ItemFriend,
+  /// `((FriendsListItem*)a)->mFriend = (LobbyFriend*)b`.
+  ItemSetFriend,
+  /// `((UserListItem*)a)->mClient.get()`.
+  ItemUserClient,
+  /// `((UserListItem*)a)->mClient = (LobbyClient*)b`.
+  ItemSetUserClient,
+  /// `((TextListItem*)a)->mText = GUIString(b)`.
+  ItemSetText,
+  /// `((TextListItem*)a)->mImage = gLobbyResources[b].mImage` (-1: NULL).
+  ItemSetImageRes,
+  /// `((TextListItem*)a)->mFont = (Font*)b`.
+  ItemSetFont,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// `LobbyGetCurrentUser()`.
+  CurrentUser,
+  /// `((Label*)a)->SetText(LobbyFormatString(UserWelcome, ((LobbyUserInfo*)b)->mUserName), true)`.
+  LabelSetUserWelcome,
+  /// `this->DeliverEvent(new QuickPlayEvent(a), false)`.
+  DeliverQuickPlay,
+  /// `this->Dialog::HandleComponentEvent(a)`.
+  DialogBaseEvent,
+  /// `LobbyGetUserCount()`.
+  UserCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetUserNameAt(b), -1)`.
+  ComboAddUserName,
+  /// `LobbyGetUserLastUseAt(a)`.
+  UserLastUseAt,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mPublic` (0 or 1).
+  ConfigIsPublic,
+  /// `LobbyGetUserPassword(GUIString(a))`: held.
+  UserPassword,
+  /// `LobbyAddUser(GUIString(a), GUIString(b), true)`.
+  AddUser,
+  /// `((ComboBox*)a)->SetText(GUIString(b), c != 0)`.
+  ComboSetTextFlag,
+  /// `this->DeliverEvent(new LoginEvent(((InputBox*)a)->GetText(), ((Button*)b)->IsChecked(),
+  /// ((ComboBox*)c)->mEdit->GetText()), false)`.
+  DeliverLogin,
+  /// `GUIString(a).mData->ToInt(0)`.
+  TextToInt,
+  /// The create-account event of the controls `(const intptr_t*)a` (user, password, e-mail, day, month, year,
+  /// newsletter) delivered.
+  DeliverCreateAccount,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((InputBox*)a)->SetText(GUIString(new GUIStringData(((AuthContext*)b)->GetName())), true)`.
+  InputSetAuthName,
+  /// `GUIString(new GUIStringData(((AuthContext*)a)->GetPassword()))`: held.
+  AuthPassword,
+  /// `this->DeliverEvent(new UpdateAccountEvent(((InputBox*)a)->GetText(), ((InputBox*)b)->GetText(),
+  /// ((Button*)c)->IsChecked()), false)`.
+  DeliverUpdateAccount,
+  /// `this->DeliverEvent(new GetLostPasswordEvent(((ComboBox*)a)->mEdit->GetText()), false)`.
+  DeliverLostPassword,
+  /// `this->DeliverEvent(new GetLostUserNameEvent(((InputBox*)a)->GetText()), false)`.
+  DeliverLostUserName,
+  /// `((BrowserComponent*)a)->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"), false, 0, -1)`.
+  BrowserGoLoginHelp,
+  /// `((Label*)a)->SetText(GUIString(b), true)`.
+  LabelSetData,
+  /// `((Container*)a)->EnableLayoutInstructions(b, c != 0)`.
+  EnableLayout,
+  /// `((Container*)a)->Relayout()`.
+  Relayout,
+  /// `((RustServerOp*)a)->GetNum(EE_WON_HTTPDOC_TYPE) == HTTPDocType_MOTD` (0 or 1).
+  HttpDocIsMotd,
+  /// `((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, b ? Game : Sys)`: copied to `(char*)c` (1024 bytes at
+  /// most), its length returned.
+  HttpDocPath,
+  /// `((BrowserComponent*)a)->ShowFiles(the paths at (const EeWonLobbyCtlFiles*)b, true)`.
+  BrowserShowFiles,
+  /// `((ScreenContainer*)a)->ShowScreen((Component*)b, c != 0)`.
+  ScreenShow,
+  /// `((ServerListCtrl*)a)->GetSelGame()`.
+  ListSelGame,
+  /// `this->DeliverEvent(new ChangeDirectConnectEvent(a, (LobbyGame*)b), false)`.
+  DeliverDirectConnect,
+  /// `((Label*)a)->SetText(LobbyFormatString3(GUIString(b), the texts at (const intptr_t*)c), true)`.
+  LabelSetFormat3,
 };
 
 /// The inward calls.
@@ -592,8 +767,11 @@ enum class EeWonLobbyCtlCall : uint32_t {
   Row,
   /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
   Cfg,
-  /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind).
+  /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind;
+  /// RoomLabelCtrl: 0 the prefix, 1 the room kind, 2 the user count shown, 3 the server shown).
   SetField,
+  /// LoginScreen's page `a` shown (0 the message of the day, 1 create account, 2 lost password, 3 lost user name).
+  Page,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -672,6 +850,28 @@ enum class EeWonLobbyCtlEvent : uint32_t {
   RecvChat,
   /// `LobbyEvent_SetChatInput`
   SetChatInput,
+  /// `ComponentEvent_TreeItemOpened` (a `TreeItemOpenedEvent`)
+  TreeItemOpened,
+  /// `LobbyEvent_GroupChanged`
+  GroupChanged,
+  /// `LobbyEvent_ServerChanged`
+  ServerChanged,
+  /// 100053: the room list to fill again
+  SetRoomList,
+  /// `LobbyEvent_FriendChanged`
+  FriendChanged,
+  /// 100056: the friends to show again
+  RefreshFriends,
+  /// `LobbyEvent_LoginInitStatus`
+  LoginInitStatus,
+  /// `LobbyEvent_SetLoginFields`
+  SetLoginFields,
+  /// 100052: the saved user names to list again
+  FillUserNames,
+  /// `LobbyEvent_QueryAccountResult`
+  QueryAccountResult,
+  /// `LobbyEvent_GotHTTPDocument`
+  GotHttpDocument,
 };
 
 /// The texts the controls set (the lobby's resource strings).
@@ -749,6 +949,16 @@ enum class EeWonLobbyCtlItemField : uint32_t {
   IconId,
   /// `ServerDetailsItem::mSummaryHeight` (a byte)
   SummaryHeight,
+  /// `TextListItem::mColor`
+  Color,
+  /// `FriendsListItem::mSeparator` (0 or 1)
+  FriendSeparator,
+  /// `FriendsListItem::mSortGroup` (a signed byte)
+  FriendSortGroup,
+  /// `UserListItem::mSortKey` (a signed byte)
+  UserSortKey,
+  /// `UserListItem::mShowSeparator` (0 or 1)
+  UserShowSeparator,
 };
 
 /// An event's member (`EvGet`; round 13), by its class: AnnounceClientLocation, AnnounceFriend,
@@ -808,6 +1018,26 @@ enum class EeWonLobbyCtlEvField : uint32_t {
   CmDuration,
   CmRoomName,
   CmComment,
+  /// GroupChangedEvent
+  GcGroup,
+  GcServer,
+  /// ServerChangedEvent
+  ScServer,
+  /// FriendChangedEvent
+  FcFriend,
+  /// LoginInitStatusEvent
+  LisStatus,
+  LisDescription,
+  LisAllowIgnore,
+  LisKind,
+  /// SetLoginFieldsEvent
+  SlfUserName,
+  SlfPassword,
+  /// QueryAccountResultEvent
+  QarEmail,
+  QarNewsletter,
+  /// GotHTTPDocumentEvent's `mOp`
+  GhdOp,
 };
 
 /// One control's Rust half.

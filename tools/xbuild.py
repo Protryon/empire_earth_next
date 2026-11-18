@@ -627,6 +627,9 @@ WON_TESTS = {
     "won_srvlist_test": [],
     # ChatCtrl as lobbyctl.rs kind Chat (chatctl.rs), the same way (golden: rust/crates/ee_won_lobby/src/golden_chatctl.txt)
     "won_chatctl_test": [],
+    # the other Internet controls as lobbyctl.rs kinds (netctl.rs), the same way (golden:
+    # rust/crates/ee_won_lobby/src/golden_netctl.txt)
+    "won_netctl_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
     # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)

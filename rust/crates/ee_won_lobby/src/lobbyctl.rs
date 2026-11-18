@@ -38,6 +38,29 @@ pub enum EeWonLobbyCtlKind {
     ServerList = 7,
     /// ChatCtrl (a chat panel; round 13, chatctl.rs)
     Chat = 8,
+    /// RoomCtrl (the room tree; round 13, netctl.rs from here)
+    Room = 9,
+    /// FriendsListCtrl
+    Friends = 10,
+    /// UserListCtrl (the room's users)
+    Users = 11,
+    /// QuickPlayCtrl (a `Dialog`)
+    QuickPlay = 12,
+    /// LoginCtrl (a `Dialog`)
+    Login = 13,
+    CreateAccount = 14,
+    UpdateAccount = 15,
+    LostPassword = 16,
+    LostUserName = 17,
+    LoginHelp = 18,
+    LoginStatus = 19,
+    InitFailed = 20,
+    /// MOTDCtrl
+    Motd = 21,
+    LoginScreen = 22,
+    DirectConnect = 23,
+    /// RoomLabelCtrl
+    RoomLabel = 24,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -60,6 +83,14 @@ pub enum EeWonLobbyCtlType {
     ColorButton = 9,
     /// `TextArea` (round 13)
     TextArea = 10,
+    /// `TreeArea`
+    TreeArea = 11,
+    /// `ListArea`
+    ListArea = 12,
+    /// `ScreenContainer`
+    ScreenContainer = 13,
+    /// `ServerListCtrl`
+    ServerListCtrl = 14,
 }
 
 /// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
@@ -155,6 +186,28 @@ pub enum EeWonLobbyCtlEvent {
     RecvChat,
     /// `LobbyEvent_SetChatInput`
     SetChatInput,
+    /// `ComponentEvent_TreeItemOpened` (a `TreeItemOpenedEvent`)
+    TreeItemOpened,
+    /// `LobbyEvent_GroupChanged`
+    GroupChanged,
+    /// `LobbyEvent_ServerChanged`
+    ServerChanged,
+    /// 100053: the room list to fill again
+    SetRoomList,
+    /// `LobbyEvent_FriendChanged`
+    FriendChanged,
+    /// 100056: the friends to show again
+    RefreshFriends,
+    /// `LobbyEvent_LoginInitStatus`
+    LoginInitStatus,
+    /// `LobbyEvent_SetLoginFields`
+    SetLoginFields,
+    /// 100052: the saved user names to list again
+    FillUserNames,
+    /// `LobbyEvent_QueryAccountResult`
+    QueryAccountResult,
+    /// `LobbyEvent_GotHTTPDocument`
+    GotHttpDocument,
 }
 
 /// An event's member (`EvGet`; round 13), by its class: AnnounceClientLocation, AnnounceFriend,
@@ -216,6 +269,26 @@ pub enum EeWonLobbyCtlEvField {
     CmDuration,
     CmRoomName,
     CmComment,
+    /// GroupChangedEvent
+    GcGroup,
+    GcServer,
+    /// ServerChangedEvent
+    ScServer,
+    /// FriendChangedEvent
+    FcFriend,
+    /// LoginInitStatusEvent
+    LisStatus,
+    LisDescription,
+    LisAllowIgnore,
+    LisKind,
+    /// SetLoginFieldsEvent
+    SlfUserName,
+    SlfPassword,
+    /// QueryAccountResultEvent
+    QarEmail,
+    QarNewsletter,
+    /// GotHTTPDocumentEvent's `mOp`
+    GhdOp,
 }
 
 /// A list row's field (`ItemGet` / `ItemSet`; round 13).
@@ -236,6 +309,16 @@ pub enum EeWonLobbyCtlItemField {
     IconId,
     /// `ServerDetailsItem::mSummaryHeight` (a byte)
     SummaryHeight,
+    /// `TextListItem::mColor`
+    Color,
+    /// `FriendsListItem::mSeparator` (0 or 1)
+    FriendSeparator,
+    /// `FriendsListItem::mSortGroup` (a signed byte)
+    FriendSortGroup,
+    /// `UserListItem::mSortKey` (a signed byte)
+    UserSortKey,
+    /// `UserListItem::mShowSeparator` (0 or 1)
+    UserShowSeparator,
 }
 
 /// Two `i32`s in one argument (`lo | hi << 32`).
@@ -837,6 +920,150 @@ pub enum EeWonLobbyCtlOp {
     DeliverAcceptClient,
     /// `((const EeWonIpAddr*)a)` valid (0 or 1; answered by ipobj.rs in the game).
     AddrValid,
+    /// `((ListArea*)a)->InsertItem((ListItem*)b, -1)` (the virtual).
+    ListInsert2 = 1300,
+    /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, -1)`.
+    TreeInsertChild,
+    /// `((TreeArea*)a)->InsertTreeItem(NULL, (ListItem*)b, c)`.
+    TreeInsertServer,
+    /// `((TreeArea*)a)->InsertTreeItem((TreeItem*)b, (ListItem*)c, 0)`.
+    TreeInsertLoading,
+    /// `((TreeItem*)a)->GetWrappedItem()`.
+    TreeWrapped,
+    /// `((TreeItem*)a)->GetNumChildren()`.
+    TreeChildCount,
+    /// `((TreeItem*)a)->GetChild(b)`.
+    TreeChild,
+    /// `((TreeItem*)a)->GetParentItem()`.
+    TreeParent,
+    /// `((TreeItem*)a)->GetIndex()`.
+    TreeIndex,
+    /// `((TreeItem*)a)->IsOpen()` (0 or 1).
+    TreeIsOpen,
+    /// `((TreeArea*)a)->OpenItem((TreeItem*)b, c != 0)`.
+    TreeOpen,
+    /// `((TreeArea*)a)->RemoveAllItems((TreeItem*)b)`.
+    TreeRemoveAll,
+    /// `((TreeArea*)a)->RemoveTreeItem((TreeItem*)b)`.
+    TreeRemove,
+    /// `((TreeArea*)a)->ClearTree(b != 0)`.
+    TreeClear,
+    /// `((TreeItem*)a)->ContainsPoint(b's point)` (0 or 1).
+    TreeContainsPoint,
+    /// `new RoomListItem((LobbyServer*)a, b != 0)` (a server's row, its loading placeholder).
+    RoomItemServer,
+    /// `new RoomListItem((LobbyGroup*)a, (LobbyServer*)b)` (a room's row).
+    RoomItemGroup,
+    /// `((RoomListItem*)a)->UpdateText((LobbyServer*)b, (LobbyGroup*)c)`.
+    RoomItemUpdate,
+    /// `((RoomListItem*)a)->mAddress.GetValue()` (a borrowed `const EeWonIpAddr*`).
+    RoomItemAddr,
+    /// `((RoomListItem*)a)->mGroupId`.
+    RoomItemGroupId,
+    /// `IPAddr` `a == b` (six bytes; 0 or 1; answered by ipobj.rs in the game).
+    AddrEquals,
+    /// A copy of the address `a` (an `EeWonIpAddr` the Rust frees with `AddrFree`; ipobj.rs in the game).
+    AddrClone,
+    /// The copy `a` freed.
+    AddrFree,
+    /// `this->DeliverEvent(new JoinRoomEvent(row->mAddress, row->mGroupId), false)` of the room row `a`.
+    DeliverJoinRoom,
+    /// `this->DeliverEvent(new CreateRoomEvent(the address a, NULL: IPAddr()), false)`.
+    DeliverCreateRoom,
+    /// `this->DeliverEvent(new QueryServerGroupsEvent(the address a), false)`.
+    DeliverQueryGroups,
+    /// `LobbyGetServerList()`.
+    ServerListGet,
+    /// `LobbyGetChatGroup()`.
+    ChatGroup,
+    /// `new FriendsListItem` (no reference).
+    FriendRowNew,
+    /// `new UserListItem` (no reference).
+    UserRowNew,
+    /// `((FriendsListItem*)a)->mFriend.get()`.
+    ItemFriend,
+    /// `((FriendsListItem*)a)->mFriend = (LobbyFriend*)b`.
+    ItemSetFriend,
+    /// `((UserListItem*)a)->mClient.get()`.
+    ItemUserClient,
+    /// `((UserListItem*)a)->mClient = (LobbyClient*)b`.
+    ItemSetUserClient,
+    /// `((TextListItem*)a)->mText = GUIString(b)`.
+    ItemSetText,
+    /// `((TextListItem*)a)->mImage = gLobbyResources[b].mImage` (-1: NULL).
+    ItemSetImageRes,
+    /// `((TextListItem*)a)->mFont = (Font*)b`.
+    ItemSetFont,
+    /// `LobbyGetFriendCount()`.
+    FriendCount,
+    /// `LobbyGetFriendAt(a)`.
+    FriendAt,
+    /// `LobbyGetCurrentUser()`.
+    CurrentUser,
+    /// `((Label*)a)->SetText(LobbyFormatString(UserWelcome, ((LobbyUserInfo*)b)->mUserName), true)`.
+    LabelSetUserWelcome,
+    /// `this->DeliverEvent(new QuickPlayEvent(a), false)`.
+    DeliverQuickPlay,
+    /// `this->Dialog::HandleComponentEvent(a)`.
+    DialogBaseEvent,
+    /// `LobbyGetUserCount()`.
+    UserCount,
+    /// `((ComboBox*)a)->AddString(LobbyGetUserNameAt(b), -1)`.
+    ComboAddUserName,
+    /// `LobbyGetUserLastUseAt(a)`.
+    UserLastUseAt,
+    /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mPublic` (0 or 1).
+    ConfigIsPublic,
+    /// `LobbyGetUserPassword(GUIString(a))`: held.
+    UserPassword,
+    /// `LobbyAddUser(GUIString(a), GUIString(b), true)`.
+    AddUser,
+    /// `((ComboBox*)a)->SetText(GUIString(b), c != 0)`.
+    ComboSetTextFlag,
+    /// `this->DeliverEvent(new LoginEvent(((InputBox*)a)->GetText(), ((Button*)b)->IsChecked(),
+    /// ((ComboBox*)c)->mEdit->GetText()), false)`.
+    DeliverLogin,
+    /// `GUIString(a).mData->ToInt(0)`.
+    TextToInt,
+    /// The create-account event of the controls `(const intptr_t*)a` (user, password, e-mail, day, month, year,
+    /// newsletter) delivered.
+    DeliverCreateAccount,
+    /// `GetLobbyAuthContext()`.
+    AuthContext,
+    /// `((InputBox*)a)->SetText(GUIString(new GUIStringData(((AuthContext*)b)->GetName())), true)`.
+    InputSetAuthName,
+    /// `GUIString(new GUIStringData(((AuthContext*)a)->GetPassword()))`: held.
+    AuthPassword,
+    /// `this->DeliverEvent(new UpdateAccountEvent(((InputBox*)a)->GetText(), ((InputBox*)b)->GetText(),
+    /// ((Button*)c)->IsChecked()), false)`.
+    DeliverUpdateAccount,
+    /// `this->DeliverEvent(new GetLostPasswordEvent(((ComboBox*)a)->mEdit->GetText()), false)`.
+    DeliverLostPassword,
+    /// `this->DeliverEvent(new GetLostUserNameEvent(((InputBox*)a)->GetText()), false)`.
+    DeliverLostUserName,
+    /// `((BrowserComponent*)a)->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"), false, 0, -1)`.
+    BrowserGoLoginHelp,
+    /// `((Label*)a)->SetText(GUIString(b), true)`.
+    LabelSetData,
+    /// `((Container*)a)->EnableLayoutInstructions(b, c != 0)`.
+    EnableLayout,
+    /// `((Container*)a)->Relayout()`.
+    Relayout,
+    /// `((RustServerOp*)a)->GetNum(EE_WON_HTTPDOC_TYPE) == HTTPDocType_MOTD` (0 or 1).
+    HttpDocIsMotd,
+    /// `((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, b ? Game : Sys)`: copied to `(char*)c` (1024 bytes at
+    /// most), its length returned.
+    HttpDocPath,
+    /// `((BrowserComponent*)a)->ShowFiles(the paths at (const EeWonLobbyCtlFiles*)b, true)`.
+    BrowserShowFiles,
+    /// `((ScreenContainer*)a)->ShowScreen((Component*)b, c != 0)`.
+    ScreenShow,
+    /// `((ServerListCtrl*)a)->GetSelGame()`.
+    ListSelGame,
+    /// `this->DeliverEvent(new ChangeDirectConnectEvent(a, (LobbyGame*)b), false)`.
+    DeliverDirectConnect,
+    /// `((Label*)a)->SetText(LobbyFormatString3(GUIString(b), the texts at (const intptr_t*)c), true)`.
+    LabelSetFormat3,
 }
 
 /// The inward calls.
@@ -862,8 +1089,11 @@ pub enum EeWonLobbyCtlCall {
     Row,
     /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
     Cfg,
-    /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind).
+    /// A config reader's store: the member `a` set to `b` (ChatCtrl: 0..=10 the colours, 20 the room kind;
+    /// RoomLabelCtrl: 0 the prefix, 1 the room kind, 2 the user count shown, 3 the server shown).
     SetField,
+    /// LoginScreen's page `a` shown (0 the message of the day, 1 create account, 2 lost password, 3 lost user name).
+    Page,
 }
 
 /// The host: `(control, op, a, b, c) -> result`.
@@ -953,7 +1183,30 @@ pub(crate) const SLOT_SERVER_LIST: usize = 103;
 /// ChatCtrl's first look-up in `SLOTS` (round 13).
 pub(crate) const SLOT_CHAT: usize = 108;
 
-pub static SLOTS: [EeWonLobbyCtlSlot; 111] = [
+/// The first look-up in `SLOTS` of each of round 13's small kinds (netctl.rs).
+pub(crate) fn slot_of(kind: Kind) -> usize {
+    match kind {
+        Kind::Room => 111,
+        Kind::Friends => 114,
+        Kind::Users => 117,
+        Kind::QuickPlay => 120,
+        Kind::Login => 126,
+        Kind::CreateAccount => 130,
+        Kind::UpdateAccount => 144,
+        Kind::LostPassword => 157,
+        Kind::LostUserName => 159,
+        Kind::LoginHelp => 161,
+        Kind::LoginStatus => 162,
+        Kind::InitFailed => 163,
+        Kind::Motd => 166,
+        Kind::LoginScreen => 167,
+        Kind::DirectConnect => 173,
+        Kind::RoomLabel => 176,
+        _ => 0,
+    }
+}
+
+pub static SLOTS: [EeWonLobbyCtlSlot; 177] = [
     // GameBrowserCtrl::InitComponent (0..=10)
     slot!(c"Browser", c"GameBrowserCtrl.cpp", 27, Browser, -1, B_BROWSER as i32),
     slot!(c"BackButton", c"GameBrowserCtrl.cpp", 28, Button, -1, B_BACK as i32),
@@ -1076,6 +1329,83 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 111] = [
     slot!(c"ChatInput", c"ChatCtrl.cpp", 160, Input, -1, crate::chatctl::C_INPUT as i32),
     slot!(c"SendButton", c"ChatCtrl.cpp", 161, Button, -1, crate::chatctl::C_SEND as i32),
     slot!(c"ChatOutput", c"ChatCtrl.cpp", 162, TextArea, -1, crate::chatctl::C_OUTPUT as i32),
+    // RoomCtrl (111..=113)
+    slot!(c"RoomList", c"RoomCtrl.cpp", 168, TreeArea, -1, 0),
+    slot!(c"JoinButton", c"RoomCtrl.cpp", 169, Button, -1, 1),
+    slot!(c"CreateButton", c"RoomCtrl.cpp", 170, Button, -1, 2),
+    // FriendsListCtrl (114..=116)
+    slot!(c"FriendsList", c"FriendsListCtrl.cpp", 109, ListArea, -1, 0),
+    slot!(c"RemoveButton", c"FriendsListCtrl.cpp", 110, Button, -1, 1),
+    slot!(c"LocateButton", c"FriendsListCtrl.cpp", 111, Button, -1, 2),
+    // UserListCtrl (117..=119)
+    slot!(c"UserList", c"UserListCtrl.cpp", 194, ListArea, -1, 0),
+    slot!(c"WhisperButton", c"UserListCtrl.cpp", 195, Button, -1, 3),
+    slot!(c"IgnoreButton", c"UserListCtrl.cpp", 196, Button, -1, 4),
+    // QuickPlayCtrl (120..=125)
+    slot!(c"WelcomeLabel", c"QuickPlayCtrl.cpp", 29, Label, -1, 0),
+    slot!(c"NoviceRadio", c"QuickPlayCtrl.cpp", 30, Button, -1, 1),
+    slot!(c"IntermediateRadio", c"QuickPlayCtrl.cpp", 31, Button, -1, 2),
+    slot!(c"AdvancedRadio", c"QuickPlayCtrl.cpp", 32, Button, -1, 3),
+    slot!(c"ExpertRadio", c"QuickPlayCtrl.cpp", 33, Button, -1, 4),
+    slot!(c"PlayButton", c"QuickPlayCtrl.cpp", 34, Button, -1, 5),
+    // LoginCtrl (126..=129)
+    slot!(c"UserNameCombo", c"LoginCtrl.cpp", 31, Combo, -1, 0),
+    slot!(c"PasswordInput", c"LoginCtrl.cpp", 32, Input, -1, 1),
+    slot!(c"RememberPasswordCheck", c"LoginCtrl.cpp", 33, Button, -1, 2),
+    slot!(c"LoginButton", c"LoginCtrl.cpp", 34, Button, -1, 3),
+    // CreateAccountCtrl (130..=143)
+    slot!(c"UserNameInput", c"CreateAccountCtrl.cpp", 30, Input, -1, 0),
+    slot!(c"UserNameDesc", c"CreateAccountCtrl.cpp", 31, Label, -1, 8),
+    slot!(c"PasswordInput", c"CreateAccountCtrl.cpp", 32, Input, -1, 1),
+    slot!(c"PasswordDesc", c"CreateAccountCtrl.cpp", 33, Label, -1, 9),
+    slot!(c"ConfirmPasswordInput", c"CreateAccountCtrl.cpp", 34, Input, -1, 2),
+    slot!(c"ConfirmPasswordDesc", c"CreateAccountCtrl.cpp", 35, Label, -1, 10),
+    slot!(c"EmailInput", c"CreateAccountCtrl.cpp", 36, Input, -1, 3),
+    slot!(c"EmailDesc", c"CreateAccountCtrl.cpp", 37, Label, -1, 11),
+    slot!(c"MonthInput", c"CreateAccountCtrl.cpp", 38, Input, -1, 4),
+    slot!(c"DayInput", c"CreateAccountCtrl.cpp", 39, Input, -1, 5),
+    slot!(c"YearInput", c"CreateAccountCtrl.cpp", 40, Input, -1, 6),
+    slot!(c"BirthdateDesc", c"CreateAccountCtrl.cpp", 41, Label, -1, 12),
+    slot!(c"NewsletterCheck", c"CreateAccountCtrl.cpp", 42, Button, -1, 7),
+    slot!(c"CreateButton", c"CreateAccountCtrl.cpp", 43, Button, -1, 13),
+    // UpdateAccountCtrl (144..=156)
+    slot!(c"UserNameInput", c"UpdateAccountCtrl.cpp", 39, Input, -1, 0),
+    slot!(c"OldPasswordInput", c"UpdateAccountCtrl.cpp", 40, Input, -1, 1),
+    slot!(c"PasswordInput", c"UpdateAccountCtrl.cpp", 41, Input, -1, 2),
+    slot!(c"ConfirmPasswordInput", c"UpdateAccountCtrl.cpp", 42, Input, -1, 3),
+    slot!(c"EmailInput", c"UpdateAccountCtrl.cpp", 43, Input, -1, 4),
+    slot!(c"NewsletterCheck", c"UpdateAccountCtrl.cpp", 44, Button, -1, 5),
+    slot!(c"UserNameDesc", c"UpdateAccountCtrl.cpp", 45, Label, -1, 6),
+    slot!(c"OldPasswordDesc", c"UpdateAccountCtrl.cpp", 46, Label, -1, 7),
+    slot!(c"PasswordDesc", c"UpdateAccountCtrl.cpp", 47, Label, -1, 8),
+    slot!(c"ConfirmPasswordDesc", c"UpdateAccountCtrl.cpp", 48, Label, -1, 9),
+    slot!(c"EmailDesc", c"UpdateAccountCtrl.cpp", 49, Label, -1, 10),
+    slot!(c"QueryButton", c"UpdateAccountCtrl.cpp", 50, Button, -1, 11),
+    slot!(c"UpdateButton", c"UpdateAccountCtrl.cpp", 51, Button, -1, 12),
+    // LostPasswordCtrl (157..=158), LostUserNameCtrl (159..=160)
+    slot!(c"UserNameCombo", c"LostPasswordCtrl.cpp", 27, Combo, -1, 0),
+    slot!(c"RetrieveButton", c"LostPasswordCtrl.cpp", 28, Button, -1, 1),
+    slot!(c"EmailInput", c"LostUserNameCtrl.cpp", 27, Input, -1, 0),
+    slot!(c"RetrieveButton", c"LostUserNameCtrl.cpp", 28, Button, -1, 1),
+    // LoginHelpCtrl (161), LoginStatusCtrl (162), InitFailedCtrl (163..=165), MOTDCtrl (166)
+    slot!(c"Browser", c"LoginHelpCtrl.cpp", 40, Browser, -1, 0),
+    slot!(c"StatusLabel", c"LoginStatusCtrl.cpp", 26, Label, -1, 0),
+    slot!(c"RetryButton", c"InitFailedCtrl.cpp", 26, Button, -1, 1),
+    slot!(c"IgnoreButton", c"InitFailedCtrl.cpp", 27, Button, -1, 2),
+    slot!(c"DescLabel", c"InitFailedCtrl.cpp", 28, Label, -1, 0),
+    slot!(c"Browser", c"MOTDCtrl.cpp", 36, Browser, -1, 0),
+    // LoginScreen (167..=172)
+    slot!(c"MOTDCtrl", c"LoginScreen.cpp", 26, Component, -1, 1),
+    slot!(c"CreateAccountCtrl", c"LoginScreen.cpp", 27, Component, -1, 2),
+    slot!(c"LostUserNameCtrl", c"LoginScreen.cpp", 28, Component, -1, 3),
+    slot!(c"LostPasswordCtrl", c"LoginScreen.cpp", 29, Component, -1, 4),
+    slot!(c"LoginHelpCtrl", c"LoginScreen.cpp", 30, Component, -1, 5),
+    slot!(c"RightPanel", c"LoginScreen.cpp", 31, ScreenContainer, -1, 0),
+    // DirectConnectCtrl (173..=175), RoomLabelCtrl (176)
+    slot!(c"ConnectionList", c"DirectConnectCtrl.cpp", 34, ServerListCtrl, -1, 0),
+    slot!(c"AddButton", c"DirectConnectCtrl.cpp", 35, Button, -1, 1),
+    slot!(c"RemoveButton", c"DirectConnectCtrl.cpp", 36, Button, -1, 2),
+    slot!(c"Label", c"RoomLabelCtrl.cpp", 29, Label, -1, 0),
 ];
 
 /// The number of members each kind holds (released in reverse by the destructor).
@@ -1088,6 +1418,7 @@ fn member_count(kind: Kind) -> usize {
         Kind::PlayerOptions => MEMBERS,
         Kind::ServerList => 6,
         Kind::Chat => 5,
+        k => crate::netctl::net_member_count(k),
     }
 }
 
@@ -1284,6 +1615,7 @@ impl EeWonLobbyCtl {
             Kind::PlayerOptions => self.player_options_init(config, &local),
             Kind::ServerList => self.srv_init(config, &local),
             Kind::Chat => self.chat_init(config, &local),
+            _ => self.net_init(config, &local),
         }
         // the local SmartPtr<Button> (LobbyOptionsCtrl's reset, restore and remove buttons in turn)
         let l = local.replace(0);
@@ -2214,6 +2546,7 @@ impl EeWonLobbyCtl {
             Kind::PlayerOptions => self.players_event(event, kind),
             Kind::ServerList => self.srv_event(event, kind, component),
             Kind::Chat => self.chat_event(event, kind, component),
+            _ => self.net_event(event, kind, component),
         }
     }
 
@@ -2223,7 +2556,13 @@ impl EeWonLobbyCtl {
         match call {
             C::Init => self.init(a),
             C::Event => self.event(a, b as u32, c),
-            C::Paint => self.paint(a),
+            C::Paint => {
+                if self.kind == Kind::Browser {
+                    self.paint(a)
+                } else {
+                    self.net_paint(a)
+                }
+            }
             C::ResetBrowser => self.reset_browser(),
             C::Field => {
                 return match a {
@@ -2243,11 +2582,21 @@ impl EeWonLobbyCtl {
                     120 => self.ext.chat.client_id.get() as isize,
                     121 => self.ext.chat.room_name.get(),
                     130..=140 => self.ext.chat.colors[a as usize - 130].get() as isize,
+                    150 => self.ext.net.flag.get() as isize,
+                    151 => self.ext.net.number.get() as isize,
+                    152..=154 => self.ext.net.texts[a as usize - 152].get(),
                     _ => 0,
                 }
             }
             C::Timer => return self.srv_timer_call(a),
-            C::SetField => self.set_field(a, b),
+            C::SetField => {
+                if self.kind == Kind::Chat {
+                    self.set_field(a, b)
+                } else {
+                    self.net_set_field(a, b)
+                }
+            }
+            C::Page => self.login_screen_page(a),
             C::Row => {
                 let Some(call) = crate::srvlistctl::row_call_of(a) else {
                     return 0;
@@ -2274,6 +2623,9 @@ impl EeWonLobbyCtl {
         if self.kind == Kind::Chat {
             self.chat_release();
         }
+        if self.kind as u32 >= Kind::Room as u32 {
+            self.net_release();
+        }
         for i in (0..member_count(self.kind)).rev() {
             let p = self.members[i].replace(0);
             if p != 0 {
@@ -2286,7 +2638,7 @@ impl EeWonLobbyCtl {
     }
 }
 
-const EVENTS: [Ev; 40] = [
+const EVENTS: [Ev; 51] = [
     Ev::Other,
     Ev::ButtonPressed,
     Ev::ComboSelChanged,
@@ -2327,6 +2679,17 @@ const EVENTS: [Ev; 40] = [
     Ev::PlayerTeamChanged,
     Ev::RecvChat,
     Ev::SetChatInput,
+    Ev::TreeItemOpened,
+    Ev::GroupChanged,
+    Ev::ServerChanged,
+    Ev::SetRoomList,
+    Ev::FriendChanged,
+    Ev::RefreshFriends,
+    Ev::LoginInitStatus,
+    Ev::SetLoginFields,
+    Ev::FillUserNames,
+    Ev::QueryAccountResult,
+    Ev::GotHttpDocument,
 ];
 
 /// The round 13 kinds' members beyond their controls.
@@ -2334,6 +2697,7 @@ const EVENTS: [Ev; 40] = [
 pub(crate) struct Ext {
     pub srv: crate::srvlistctl::SrvState,
     pub chat: crate::chatctl::ChatState,
+    pub net: crate::netctl::NetState,
 }
 
 impl Ext {
@@ -2344,6 +2708,12 @@ impl Ext {
         }
         if kind == Kind::Chat {
             e.chat.init();
+        }
+        if kind == Kind::Users {
+            e.net.number.set(5);
+        }
+        if kind == Kind::RoomLabel {
+            e.net.flag.set(true);
         }
         e
     }

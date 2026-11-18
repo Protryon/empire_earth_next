@@ -6,24 +6,10 @@
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
 namespace WONAPI {
-class RoomLabelCtrl : public Container {
+class RoomLabelCtrl : public LobbyRustCtrl {
 public:
-    RoomLabelCtrl();
-    // Implicit destructor (0x7c33a0): it does not write its own vtable pointer.
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void CalcLabel();
-    void SetPrefix(const GUIString& inPrefix) { this->mPrefix=inPrefix; }
-    void SetRoomSpecFlags(int inFlags) { this->mRoomSpecFlags=inFlags; }
-    void SetShowUserCount(bool inShow) { if(!inShow) this->mUserCt=-1; else if(this->mUserCt<0) this->mUserCt=0; }
-    void SetShowServer(bool inShow) { this->mShowServer=inShow; }
-    int mRoomSpecFlags; // 0x84
-    SmartPtr<Label> mLabel; // 0x88
-    GUIString mPrefix; // 0x8c
-    GUIString mServer; // 0x90
-    GUIString mRoom; // 0x94
-    int mUserCt; // 0x98
-    bool mShowServer; // 0x9c
+    RoomLabelCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::RoomLabel) {}
+    void SetField(int inField, intptr_t inValue) { this->CCall(EeWonLobbyCtlCall::SetField, inField, inValue); }
 };
 }
 // Widgets used by RootScreen.
@@ -96,28 +82,9 @@ namespace WONAPI {
 class ServerChangedEvent;
 class GroupChangedEvent;
 // TreeItem and TreeArea are declared in WONLobbyGUI.h.
-class RoomCtrl : public Container {
+class RoomCtrl : public LobbyRustCtrl {
 public:
-    RoomCtrl();
-    // Implicit destructor: it does not write its own vtable pointer.
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void EnableControls();
-    void DoJoinRoom();
-    void DoCreateRoom();
-    TreeItem* GetServerItem(const IPAddr&);
-    TreeItem* GetServerItem(LobbyServer*);
-    TreeItem* GetGroupItem(const IPAddr&,int);
-    TreeItem* GetGroupItem(LobbyServer*,LobbyGroup*);
-    void AddServer(LobbyServer*,bool,int);
-    void AddGroup(TreeItem*,LobbyServer*,LobbyGroup*);
-    void HandleSetRoomList();
-    void HandleServerChanged(ServerChangedEvent*);
-    void HandleGroupChanged(GroupChangedEvent*);
-    void HandleItemOpened(TreeItemOpenedEvent*);
-    SmartPtr<TreeArea> mRoomList; // 0x84
-    SmartPtr<Button> mJoinButton; // 0x88
-    SmartPtr<Button> mCreateButton; // 0x8c
+    RoomCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Room) {}
 }; // 0x90 bytes; Container is 0x84 bytes with 51 vtable slots
 }
 
