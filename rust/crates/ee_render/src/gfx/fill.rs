@@ -768,8 +768,6 @@ pub unsafe extern "C" fn ee_gfx_fill_unit_drawn(
 #[repr(C)]
 pub struct EeGfxOpacityHost {
     pub context: *mut c_void,
-    /// the unit's virtual `UpdateHidden()` (it may write the hidden flags)
-    pub update_hidden: extern "C" fn(*mut c_void, u64) -> bool,
     /// `Fn23CEE2(complex, translucent, opacity)`: the complex unit's own translucency (`opacity` in and out)
     pub own: extern "C" fn(*mut c_void, u64, bool, *mut f32) -> bool,
     /// the class's `IsLandBuilding()`
@@ -819,7 +817,9 @@ pub fn unit_opacity(
     *opacity = 1.0;
     if show_hidden == 1 {
         if (obstacle || unit.hidden_flags() & EE_GFX_FILL_HIDDEN_MOVED == EE_GFX_FILL_HIDDEN_MOVED)
-            && (host.update_hidden)(ctx, unit.handle())
+            // the unit's `UpdateHidden()` (ee_sim units hidden.rs; it may write the hidden flags)
+            // SAFETY: a viewed unit is live and the renderer holds the world for its read
+            && unsafe { ee_sim::units::hidden::ee_units_update_hidden(unit.handle()) }
         {
             result = true;
             *opacity = EE_GFX_FILL_SEE_THROUGH;

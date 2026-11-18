@@ -161,6 +161,10 @@ pub struct EeWorldLayout {
     /// `EEButtonObject*`)
     pub stats_unit_class: u64,
     pub stats_button: u64,
+    // ---- the physics (the units' round 1: the game time and tick of the views)
+    /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
+    pub physics_pointer: u64,
+    pub physics_saved: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

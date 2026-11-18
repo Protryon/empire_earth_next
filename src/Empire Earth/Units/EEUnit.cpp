@@ -185,74 +185,12 @@ void EEUnit::CopyFrom(RTSUnit* inUnit)
     RTSUnit::CopyFrom(inUnit);
 }
 
-// Rechecks, staggered by game-time phase, whether a unit or moving object stands on or beside this obstacle and sets
-// its hidden flag (cleared in cinematics); returns whether the obstacle is hidden
+// Rechecks, staggered by game-time phase, whether a unit or moving object stands on or beside this obstacle (a
+// complex unit: hides the obstacles behind it when it moved) and sets the hidden flags; returns whether it is hidden.
+// Port (the units' round 1): both classes' bodies are Rust over the world views (ee_units hidden.rs)
 bool EEUnit::UpdateHidden()
 {
-    if (!gWorld.mInCinematic) {
-        if ((this->mHiddenFlags & kHiddenFlagHidden) == kHiddenFlagHidden && (signed char)(this->mHiddenFlags & kHiddenFlagPhaseMask) <= (signed char)((gPhysics->mGameTime / 1000) % 3)) {
-            this->mHiddenFlags &= ~(kHiddenFlagHidden | kHiddenFlagPhaseMask);
-            EEMap* theMap = gWorld.mMap;
-            EETile* theCurrentTile = theMap->GetTile(this->mTileX, this->mTileY);
-            unsigned char thePhase = ((gPhysics->mGameTime + 2) / 1000) % 3;
-            std::vector<EETileCoordinate> theTiles;
-            long theSize = this->mUnitClass->mTileSize;
-            if (theSize > 1) {
-                theTiles.reserve(theSize * theSize + 2);
-                EETileCoordinate theTile;
-                theTile.mX = this->mTileX;
-                theTile.mY = this->mTileY;
-                theTiles.push_back(theTile);
-                for (long y = this->mTileY + theSize; y >= this->mTileY; y--) {
-                    theTile.mX = this->mTileX - 1;
-                    theTile.mY = y;
-                    theTiles.push_back(theTile);
-                }
-                for (long x = this->mTileX - 1 + theSize; x >= this->mTileX; x--) {
-                    theTile.mY = this->mTileY + theSize;
-                    theTile.mX = x;
-                    theTiles.push_back(theTile);
-                }
-            } else {
-                theTiles.resize(4);
-                theTiles[0] = EETileCoordinate(this->mTileX, this->mTileY);
-                theTiles[1] = EETileCoordinate(this->mTileX, this->mTileY + 1);
-                theTiles[2] = EETileCoordinate(this->mTileX - 1, this->mTileY + 1);
-                theTiles[3] = EETileCoordinate(this->mTileX - 1, this->mTileY);
-            }
-            for (long i = theTiles.size() - 1; i >= 0; i--) {
-                EETileCoordinate& theCoord = theTiles[i];
-                EETile* theTile = theMap->GetTile(theCoord.mX, theCoord.mY);
-                if (theTile == NULL)
-                    continue;
-                for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                    EEComplexUnit* theUnit = theNode->mUnit->GetComplexUnit();
-                    if (theUnit != NULL) {
-                        bool theResource = theUnit->mResourceType == kResourceFood && theUnit->mResourceAmount > 0 && theUnit->GetComplexUnit() != NULL &&
-                            theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen && theUnit->GetUnitClass()->mCategory != kUnitCategoryNavalCitizen &&
-                            theUnit->GetPlayer()->GetPlayerID() == 0;
-                        if (theUnit->mCanBeHidden && (theUnit->GetHitPoints() > 0 || theResource)) {
-                            this->mHiddenFlags |= kHiddenFlagHidden;
-                            this->mHiddenFlags ^= (this->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;  // the phase into the low 2 bits (orig: xor; and 3; xor)
-                            i = -1;
-                            break;
-                        }
-                    } else {
-                        EEUnitClass* theClass = theNode->mUnit->GetUnitClass();
-                        if (!theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) {
-                            this->mHiddenFlags |= kHiddenFlagHidden;
-                            this->mHiddenFlags ^= (this->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;  // the phase into the low 2 bits (orig: xor; and 3; xor)
-                            i = -1;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        this->mHiddenFlags &= ~kHiddenFlagHidden;
-    }
-    return (this->mHiddenFlags & kHiddenFlagHidden) == kHiddenFlagHidden && !this->IsFoundation();
+    return ee_units_update_hidden(EEObj(this));
 }
 
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)

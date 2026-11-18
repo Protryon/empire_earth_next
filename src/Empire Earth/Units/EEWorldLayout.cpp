@@ -27,6 +27,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEWorldLayout.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EEPhysics.h"
 #include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
@@ -169,6 +170,8 @@ void EEWorldLayoutRegister()
     theLayout.group_units = offsetof(EEGroup, mUnits);   // the UI thread lane (the HUD's reads)
     theLayout.stats_unit_class = offsetof(EEUnitClassUpgrade, mUnitClass);
     theLayout.stats_button = offsetof(EEUnitClassUpgrade, mButton);
+    theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
+    theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

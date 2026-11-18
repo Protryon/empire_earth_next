@@ -1292,6 +1292,13 @@ constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
 /// `GetUnitAt(index)->mUnitID` into `io.i`
 constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
 
+/// `kHiddenFlagPhaseMask`, `kHiddenFlagMoved`, `kHiddenFlagHidden` (ee/EEUnitClassIDs.h)
+constexpr static const uint8_t EE_UNITS_HIDDEN_PHASE_MASK = 3;
+
+constexpr static const uint8_t EE_UNITS_HIDDEN_MOVED = 16;
+
+constexpr static const uint8_t EE_UNITS_HIDDEN_HIDDEN = 32;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -5797,6 +5804,13 @@ int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
 /// # Safety
 /// As [`ee_units_group_load`].
 int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEUnit::UpdateHidden()` and `EEComplexUnit::UpdateHidden()` of `unit` (an `EEUnit*`; its object kind picks
+/// the body).
+///
+/// # Safety
+/// `unit` is a live unit; the caller holds the world (the simulation thread, or the renderer's read).
+bool ee_units_update_hidden(uint64_t unit);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 

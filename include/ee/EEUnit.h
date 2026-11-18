@@ -206,7 +206,7 @@ public:
     // hit points 0, the complex unit out of gWorld, RTSUnit::Invalidate (provisional name)
     virtual void Remove(bool inUnloadInBackground);
     virtual void SightOn(unsigned long, unsigned long);      // +0x3c
-    virtual bool UpdateHidden();            // +0x40 (EERenderObject 0x10f44f tests al)
+    virtual bool UpdateHidden();            // +0x40 (EERenderObject 0x10f44f tests al; both classes' body: ee_units hidden.rs)
     virtual void OutOfSynchDump(FILE* inFile, unsigned long inFlags);  // +0x44 (the out-of-synch dump: EEPhysics 0x15234c)
     // +0x48 0x2292c9 (`ret 4`, returns bool; reads the argument's mStats +0x160 bit 14): EEMPathTo pushes a unit and
     // tests al; EEComplexUnit overrides it (0x1f9e81, ret 4). Name is provisional
@@ -596,7 +596,6 @@ public:
     virtual void FreeNode();                // +0x30 0x1f8a43
     virtual void LastDereference();         // +0x34 0x1fb7fb (Virtual30, the count = 0, back to sMemoryPool)
     virtual void SightOn(unsigned long, unsigned long);      // +0x3c 0x1f7ce7
-    virtual bool UpdateHidden();            // +0x40 0x1f8357
     virtual void OutOfSynchDump(FILE* inFile, unsigned long inFlags);  // +0x44 0x1f908d
     virtual bool IsPassableBy(EEComplexUnit* inUnit);  // +0x48 0x1f9e81
     virtual long GetChecksum(unsigned long);  // +0x4c 0x1fa07f

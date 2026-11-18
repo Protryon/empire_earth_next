@@ -51,6 +51,7 @@ pub mod goals;
 pub mod group;
 pub mod group_save;
 pub mod hack;
+pub mod hidden;
 mod header_consts;
 pub mod host;
 pub mod improve;

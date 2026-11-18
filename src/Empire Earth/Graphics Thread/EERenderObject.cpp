@@ -1301,10 +1301,6 @@ static EEUnit* EEOpacityUnit(uint64_t inUnit)
 {
     return reinterpret_cast<EEUnit*>((uintptr_t)inUnit);
 }
-static bool EEOpacityUpdateHidden(void*, uint64_t inUnit)
-{
-    return EEOpacityUnit(inUnit)->UpdateHidden();
-}
 static bool EEOpacityOwn(void*, uint64_t inUnit, bool inTranslucent, float* ioOpacity)
 {
     return Fn23CEE2(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit), inTranslucent, *ioOpacity);
@@ -1336,7 +1332,7 @@ static float EEOpacityMeshZ(void*, float inX, float inY)
 }
 static const EeGfxOpacityHost* EEOpacityHost()
 {
-    static const EeGfxOpacityHost sHost = {NULL, EEOpacityUpdateHidden, EEOpacityOwn, EEOpacityLandBuilding, EEOpacityModelCenter,
+    static const EeGfxOpacityHost sHost = {NULL, EEOpacityOwn, EEOpacityLandBuilding, EEOpacityModelCenter,
                                            EEOpacityModelRadius, EEOpacityPhysicalScale, EEOpacityPhysicalFrame, EEOpacityMeshZ};
     return &sHost;
 }

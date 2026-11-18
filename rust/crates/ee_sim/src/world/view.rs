@@ -25,6 +25,7 @@ use crate::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::unit_class_fields::EeUnitsUnitClassFields;
+use crate::units::physics_save::EeUnitsPhysicsSaved;
 use crate::world::unit_fields::{bool_byte, EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
 // `RTSUnit::mObjectKind`'s values: an `EEUnit`, an `EEComplexUnit` (0: an `RTSUnit`).
@@ -651,6 +652,11 @@ impl<'t> ClassView<'t> {
     pub fn tree(&self) -> bool {
         crate::world_field!(self.fields(), mIsTree)
     }
+    /// `mTileSize` (tiles per side)
+    pub fn tile_size(&self) -> i64 {
+        let v: c_long = crate::world_field!(self.fields(), mTileSize);
+        v as i64
+    }
     pub fn unload_range(&self) -> f32 {
         crate::world_field!(self.fields(), mUnloadRange)
     }
@@ -1036,6 +1042,30 @@ impl<'t> WorldView<'t> {
     }
     pub fn teams_locked(&self) -> bool {
         self.flag(layout().world_teams_locked)
+    }
+    /// `gPhysics`'s saved block (`EeUnitsPhysicsSaved`, a base of `EEPhysics`; None before the physics exists)
+    pub fn physics(&self) -> Option<Record<'t, EeUnitsPhysicsSaved>> {
+        let at = layout().physics_pointer as usize;
+        if at == 0 {
+            return None;
+        }
+        // SAFETY: the registered address of the `gPhysics` pointer variable
+        let physics = unsafe { pointer(at, 0) };
+        (physics != 0).then(|| Record::at(physics, layout().physics_saved))
+    }
+    /// `gPhysics->mGameTime` (0 before the physics exists)
+    pub fn game_time(&self) -> i64 {
+        self.physics().map_or(0, |p| {
+            let v: c_long = crate::world_field!(p, mGameTime);
+            v as i64
+        })
+    }
+    /// `gPhysics->mTickTimeMs` (0 before the physics exists)
+    pub fn tick_ms(&self) -> i64 {
+        self.physics().map_or(0, |p| {
+            let v: c_long = crate::world_field!(p, mTickTimeMs);
+            v as i64
+        })
     }
     /// The world (`&gWorld`, registered with the layout).
     pub fn global(token: &'t WorldRead) -> Option<Self> {

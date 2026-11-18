@@ -665,6 +665,9 @@ struct EeWorldLayout {
   /// `EEButtonObject*`)
   uint64_t stats_unit_class;
   uint64_t stats_button;
+  /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
+  uint64_t physics_pointer;
+  uint64_t physics_saved;
 };
 
 /// The check's counts and digest.

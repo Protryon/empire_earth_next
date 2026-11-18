@@ -2691,8 +2691,6 @@ struct EeGfxFillUnitResult {
 /// `GetUnitOpacity`'s calls that are not views.
 struct EeGfxOpacityHost {
   void *context;
-  /// the unit's virtual `UpdateHidden()` (it may write the hidden flags)
-  bool (*update_hidden)(void*, uint64_t);
   /// `Fn23CEE2(complex, translucent, opacity)`: the complex unit's own translucency (`opacity` in and out)
   bool (*own)(void*, uint64_t, bool, float*);
   /// the class's `IsLandBuilding()`
