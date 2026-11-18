@@ -31309,4 +31309,3 @@ The merge of origin/rust needed nothing (no conflict; strip_markers changed 0 fi
   post-game summary reads its records, which a tour does not open).
 - **Short of the target**: net -1,704 C++ against the 3,000 asked. The rest of the area is object wiring or test
   drivers made of UI calls (docs/progress/app-core.md "Measured, not moved").
-||||||| 9a277da24
