@@ -32,10 +32,6 @@ void SEMixer::SetMusicSource(void (*inSource)(void*, float*, unsigned long), voi
 {
     ee_sound_mixer_set_music_source(RUST, inSource, inContext);
 }
-void SEMixer::SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
-{
-    ee_sound_mixer_set_movie_source(RUST, inSource, inContext);
-}
 
 // ---- the plug-in module as the Rust mixers reach it (rust/crates/ee_audio/src/sound sys.rs)
 extern "C" {

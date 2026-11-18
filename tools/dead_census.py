@@ -278,7 +278,7 @@ def first_party_lines():
     """The first-party C++ line count: src (but ThirdParty and WONAPI) and include (but the generated rust headers,
     the third-party copies and include/ee/wonapi)."""
     n = 0
-    skip_inc = {"rust", "miniaudio", "pl_mpeg"}
+    skip_inc = {"rust", "miniaudio"}
     for base, skip in ((ROOT / "src", {"ThirdParty"}), (ROOT / "include", skip_inc)):
         for p in base.rglob("*"):
             if p.suffix not in (".cpp", ".c", ".h", ".inl", ".hpp") or not p.is_file():

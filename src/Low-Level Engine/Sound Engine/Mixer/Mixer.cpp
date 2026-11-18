@@ -254,7 +254,6 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(SPIMProcessMessage),
     PIM_ENTRY(SPIMSetChannelSample),
     PIM_ENTRY(SPIMSetLatency),
-    PIM_ENTRY(SPIMSetMovieSource),
     PIM_ENTRY(SPIMSetMusicSource),
     PIM_ENTRY(SPIMSetSampleLooping),
     PIM_ENTRY(SPIMSetSampleOffset),

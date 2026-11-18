@@ -14,7 +14,6 @@ class GEFont;
 class GELight;
 class GELine;
 class GEModel;
-class GEMovie;
 class GEPhysicalModel;
 class GEPoint;
 class GEPolygonArray;
@@ -105,9 +104,7 @@ public:
     virtual bool CanDoCurrentState(GETexture* inTexture, unsigned long inScreen) = 0;
     virtual long Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen) = 0;
     virtual long ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen) = 0;
-    virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen) = 0;
-    virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen, const GERectangle& inRectangle,
-                                 bool inLoop) = 0;
+    // (the original's two CreateMovie slots: no movie player since 2026-11-17)
     virtual GEPolygonArray* CreatePolygonArray(unsigned long inCount) = 0;
     virtual GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount) = 0;   // slot 0x2c
     virtual long Deactivate();

@@ -32,11 +32,10 @@ public:
     bool IsValid();
     bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
     static long UseMixer(SEMixer* inMixer);
-    // this port's additions: the mixer's output rate, and the music (the conductor) and movie sound sources its
-    // device thread mixes in (interleaved stereo float frames added at the output rate)
+    // this port's additions: the mixer's output rate, and the music (the conductor) its device thread mixes in
+    // (interleaved stereo float frames added at the output rate)
     unsigned long GetOutputRate() const;
     void SetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext);
-    void SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext);
 private:
     SEMixer() = delete;
     ~SEMixer() = delete;

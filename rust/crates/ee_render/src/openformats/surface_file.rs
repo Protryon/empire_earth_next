@@ -326,7 +326,7 @@ fn read_jpeg(io: &Io, format: c_ulong, stream: *mut c_void, alpha: bool) -> bool
     let skip = io.skip(depth);
     let mut pixel = io.memory();
     for source in p.rows.chunks_exact(width * p.comps) {
-        for (x, rgb) in row.chunks_exact_mut(3).enumerate() {
+        for (x, rgb) in row.as_chunks_mut::<3>().0.iter_mut().enumerate() {
             if p.comps < 3 {
                 rgb.fill(source[x * p.comps]);
             } else {

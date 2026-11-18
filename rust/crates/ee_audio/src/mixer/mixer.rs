@@ -136,7 +136,6 @@ struct State {
 
 struct Sources {
     music: Option<(SourceFn, usize)>,
-    movie: Option<(SourceFn, usize)>,
     buffer: Vec<f32>,
 }
 
@@ -161,7 +160,7 @@ impl<H: SampleHost> Mixer<H> {
                 device_rate: 0,
                 active: false,
             }),
-            sources: Mutex::new(Sources { music: None, movie: None, buffer: Vec::new() }),
+            sources: Mutex::new(Sources { music: None, buffer: Vec::new() }),
         }
     }
 
@@ -433,11 +432,7 @@ impl<H: SampleHost> Mixer<H> {
         self.sources.lock().expect("no panics while locked").music = source.map(|s| (s, context as usize));
     }
 
-    pub fn set_movie_source(&self, source: Option<SourceFn>, context: *mut c_void) {
-        self.sources.lock().expect("no panics while locked").movie = source.map(|s| (s, context as usize));
-    }
-
-    /// The device thread: mixes every playing channel (linear interpolation), then the music and the movie.
+    /// The device thread: mixes every playing channel (linear interpolation), then the music.
     pub fn mix(&self, out: &mut [f32]) {
         out.fill(0.0);
         let frames = out.len() / 2;
@@ -457,7 +452,7 @@ impl<H: SampleHost> Mixer<H> {
             master = if state.muted { 0.0 } else { state.master_volume };
         }
         let mut sources = self.sources.lock().expect("no panics while locked");
-        let has_music = sources.music.is_some() || sources.movie.is_some();
+        let has_music = sources.music.is_some();
         if has_music {
             let sources = &mut *sources;
             if sources.buffer.len() < out.len() {
@@ -466,10 +461,6 @@ impl<H: SampleHost> Mixer<H> {
             sources.buffer[..out.len()].fill(0.0);
             if let Some((source, context)) = sources.music {
                 // SAFETY: the conductor's contract: its render callback adds `frames` stereo frames
-                unsafe { source(context as *mut c_void, sources.buffer.as_mut_ptr(), frames as c_ulong) };
-            }
-            if let Some((source, context)) = sources.movie {
-                // SAFETY: the movie player's contract, as above
                 unsafe { source(context as *mut c_void, sources.buffer.as_mut_ptr(), frames as c_ulong) };
             }
         }

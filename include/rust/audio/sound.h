@@ -53,7 +53,7 @@ struct EeSoundMixerStart {
   void *module;
 };
 
-/// A mixer's music or movie source: interleaved stereo float frames added at the output rate.
+/// A mixer's music source: interleaved stereo float frames added at the output rate.
 using EeSoundSource = void(*)(void*, float*, unsigned long);
 
 /// The data fields of an `SESMInstanceNode` (its reference count and free flag stay with the C++ object).
@@ -579,12 +579,6 @@ unsigned long ee_sound_mixer_output_rate(EeSoundMixer *m);
 /// # Safety
 /// `m` is a live mixer.
 void ee_sound_mixer_set_music_source(EeSoundMixer *m, EeSoundSource source, void *context);
-
-/// `SetMovieSource` (nothing for a plug-in without it).
-///
-/// # Safety
-/// `m` is a live mixer.
-void ee_sound_mixer_set_movie_source(EeSoundMixer *m, EeSoundSource source, void *context);
 
 /// `SESMInstanceNode::Reference`.
 ///

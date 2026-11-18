@@ -268,18 +268,6 @@ pub unsafe extern "C" fn SPIMSetMusicSource(
     mixer().set_music_source(source, context);
 }
 
-/// `SPIMSetMovieSource`: as the music source.
-///
-/// # Safety
-/// As `SPIMSetMusicSource`.
-#[no_mangle]
-pub unsafe extern "C" fn SPIMSetMovieSource(
-    source: Option<unsafe extern "C" fn(context: *mut c_void, frames: *mut f32, count: c_ulong)>,
-    context: *mut c_void,
-) {
-    mixer().set_movie_source(source, context);
-}
-
 /// The device thread's callback: mixes `count` stereo frames.
 ///
 /// # Safety

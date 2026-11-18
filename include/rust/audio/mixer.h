@@ -104,13 +104,6 @@ void SPIMSetMuted(bool muted);
 void SPIMSetMusicSource(void (*source)(void *context, float *frames, unsigned long count),
                         void *context);
 
-/// `SPIMSetMovieSource`: as the music source.
-///
-/// # Safety
-/// As `SPIMSetMusicSource`.
-void SPIMSetMovieSource(void (*source)(void *context, float *frames, unsigned long count),
-                        void *context);
-
 /// The device thread's callback: mixes `count` stereo frames.
 ///
 /// # Safety

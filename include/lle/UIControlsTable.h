@@ -24,8 +24,8 @@ class UIManager;
 // The class is whole in Rust (rust/crates/ee_ui/src/tableobj.rs, R6 ui round 18): its record, layout, colours, names,
 // events and font, the static array of tables, Create, AddControlLike, MoveControlsHorizontally, DeleteAll,
 // CreateControl and its factories, CreateControlEvent, RelayoutControl and SetupFont are the Rust object mRust; the
-// getters read its data in place. UIControlsTable.cpp keeps the four members that only call GE objects (CreateBitmap,
-// CreateMovie, SetupGEText, SetupStringArray) and the host, UIControlsTable::HostOp.
+// getters read its data in place. UIControlsTable.cpp keeps the three members that only call GE objects (CreateBitmap,
+// SetupGEText, SetupStringArray; the original's CreateMovie left with the movies) and the host, UIControlsTable::HostOp.
 class LLE_API UIControlsTable {
 public:
     UIControlsTable();
@@ -55,7 +55,6 @@ public:
         { return this->CreateBitmap(inManager, inRectangle, this->GetNormalFileName(), this->GetNormalHasAlpha(), this->GetNormalTextureRect()); }
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
-    UIControl* CreateMovie(UIManager* inManager, GERectangle inRectangle) const;
     static void DeleteAll();
     unsigned long GetFontTableIndex() const { return this->F().font_table_index; }
     static UIControlsTable* GetUIControlsTable(unsigned long inIndex);
@@ -147,7 +146,7 @@ enum UIDbControlType {
     kDbControlScrollingTextLabel = 0x1a,      // CreateScrollingTextLabel: UITLScrolling (provisional name)
     kDbControlBlinkingButton = 0x1b,          // CreateButton: new UIBlinkingButton (provisional name)
     kDbControlScalableButton = 0x1c,          // CreateButton: new UIScalableButton (provisional name)
-    kDbControlMovie = 0x1d,                   // CreateMovie: UIMovie (provisional name)
+    kDbControlMovie = 0x1d,                   // no control (the original's CreateMovie: UIMovie; movies left the game) (provisional name)
     kDbControlLineGraph = 0x1e,               // CreateGraph: new UILineGraph (provisional name)
     kDbControlDualButton = 0x1f,              // CreateButton: new UIDualButton (provisional name)
     kDbControlFileComboBox = 0x20,            // CreateFileComboBox: UIFileComboBox (provisional name)

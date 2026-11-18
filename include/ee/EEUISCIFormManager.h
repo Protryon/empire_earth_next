@@ -15,17 +15,16 @@ public:
     virtual ~EEUISCIFormManager() { this->DeleteObjects(); }  // inline (the ??_G 0x1e83cb expands it)
 
     void Clear();
-    void DeleteObjects();                   // 0x1e7205: deletes the four files (the post-game Open calls it)
+    void DeleteObjects();                   // 0x1e7205: deletes the three files (the original's four, with the movie) (the post-game Open calls it)
     static EEUISCIFormManager* Get();
     UWideString GetBriefing();              // 0x1e72cf (mMediaStrings.mInstructions)
     bool OpenMap();                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
-    bool OpenMovie();                       // 0x1e73bd (mMovieFile + ".bik" in "Movies\")
+    // (0x1e73bd OpenMovie and GetMovie: the scenario's movie, gone with the movies; its name stays in mMediaStrings)
     bool OpenScenario();                    // 0x1e7444 (mFile's own name, in "Scenarios\" or the data path)
     bool OpenSound();                       // 0x1e74dc (mSoundFile + ".mp3" in "Sounds\")
     UWideString GetHistory();               // 0x1e7563 (mHistory)
     UWideString GetHints();                 // 0x1e7578 (mW14)
     bool GetMap(FSFileSpec& outSpec);
-    bool GetMovie(FSFileSpec& outSpec);
     bool GetScenario(FSFileSpec& outSpec);
     bool GetSound(FSFileSpec& outSpec);
     bool HasMedia();                        // 0x1e762d (0x27a56f)
@@ -39,7 +38,7 @@ public:
 
     EESMMediaStrings mMediaStrings;         // +0x04 (sizeof 0x8c)
     FSFileSpec* mMap;                       // +0x90 (OpenMap)
-    FSFileSpec* mMovie;                     // +0x94 (OpenMovie)
+    // (+0x94: the original's movie file, OpenMovie's)
     FSFileSpec* mFile;                      // +0x98 (SetFile; OpenScenario)
     FSFileSpec* mSound;                     // +0x9c (OpenSound)
     bool mBA0;                              // +0xa0 (Clear)

@@ -674,8 +674,6 @@ enum class EeUiOp : uint32_t {
   TblSet = 489,
   /// The manager's virtual `CreateUserDefinedControl(the table)` -> the control or NULL.
   TblUserDefined = 490,
-  /// The table's `CreateMovie(the manager, f)` -> the control.
-  TblMovie = 491,
   /// Form `a`'s manager's `CreateControlEvent(a, b)` -> the event or NULL.
   TblEventNew = 492,
   /// Event `a`'s `Dereference()`.
@@ -820,16 +818,6 @@ enum class EeUiOp : uint32_t {
   BgtFileRead = 599,
   /// The file's `Close()`.
   BgtFileClose = 600,
-  /// Movie `a`'s `Reference()`.
-  MovieReference = 610,
-  /// Movie `a`'s `Stop()`.
-  MovieStop = 611,
-  /// Movie `a`'s `Dereference()`.
-  MovieRelease = 612,
-  /// *Pure*: movie `a`'s `GetIsPlaying()`.
-  MoviePlaying = 613,
-  /// Movie `a`'s `RenderFrame()` -> its result.
-  MovieRender = 614,
   /// The event's virtual `InitializeEvent()` -> its result.
   EvInitialize = 630,
   /// The event's virtual `UninitializeEvent()` -> its result.

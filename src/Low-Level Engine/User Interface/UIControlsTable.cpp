@@ -35,7 +35,6 @@
 #include "lle/GEFontBitmap.h"
 #include "lle/GEText.h"
 #include "lle/GELine.h"
-#include "lle/GEMovie.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TMPoll.h"
 #include "lle/TSCriticalSection.h"
@@ -64,7 +63,6 @@
 #include "lle/UIFileComboBox.h"
 #include "lle/UIFileListBox.h"
 #include "lle/UIGraph.h"
-#include "lle/UIMovie.h"
 #include "lle/UIRadioButton.h"
 #include "lle/UIScalableButton.h"
 #include "lle/UITLScrolling.h"
@@ -280,7 +278,6 @@ struct UIControlsTableHost {
         case EeUiOp::TblMake: return (intptr_t)Make(*reinterpret_cast<const EeUiTableMake*>(a));
         case EeUiOp::TblSet: Set(t, reinterpret_cast<UIControl*>(a), (EeUiTableSet)b, c, d, f); return 0;
         case EeUiOp::TblUserDefined: return (intptr_t)m->CreateUserDefinedControl(*t);
-        case EeUiOp::TblMovie: return (intptr_t)t->CreateMovie(m, R(f));
         case EeUiOp::TblEventNew: return (intptr_t)theForm->GetManager()->CreateControlEvent(theForm, (unsigned long)b);
         case EeUiOp::TblEventRelease: reinterpret_cast<UIEvent*>(a)->Dereference(); return 0;
         case EeUiOp::TblFormControl: return (intptr_t)theForm->GetControl((unsigned long)b);
@@ -373,25 +370,6 @@ UIControl* UIControlsTable::CreateControl(UIManager* inManager)
 void UIControlsTable::CreateControlEvent(UIForm* inForm)
 {
     ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControlEvent, (intptr_t)inForm, 0, NULL);
-}
-
-// Creates a movie control playing the description's file from the startup folder (looping per a record flag)
-UIControl* UIControlsTable::CreateMovie(UIManager* inManager, GERectangle inRectangle) const
-{
-    FSFileSpec theFile;
-    UString theFileName;
-    UIForm* theForm = inManager->GetFormByID(this->GetFormID());
-    bool theLoop = this->GetLoopMovie();
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory);
-    theFileName = this->GetNormalFileName();
-    theFile.SetFile(theFileName);
-    GEMovie* theMovie = inManager->GetRasterizer()->CreateMovie(theFile, inManager->GetScreen(), inRectangle,
-                                                                theLoop);
-    UIControl* theControl = new UIMovie(this->GetID(), theMovie, inRectangle, theForm, this->GetFormIndex());
-    if (theMovie)
-        theMovie->Dereference();
-    return theControl;
 }
 
 // Deletes every control description and empties the table

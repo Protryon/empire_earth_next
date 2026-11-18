@@ -27,78 +27,6 @@ constexpr static const unsigned long CLIP_BOTTOM = 32;
 
 constexpr static const size_t LIGHT_SLOTS = 8;
 
-/// The calls the movie makes on C++ objects. `obj` is the object called; `a`, `b` as each says.
-enum class EeDx7MovieOp : uint32_t {
-  /// `TSScheduler::CreateCriticalSection(p)` (`ESVERIFY_AT(.. == keseOK, a)` when `a` is not 0): the section.
-  CsNew = 1,
-  /// `TSScheduler::DestroyCriticalSection(obj)`.
-  CsDelete,
-  /// `obj->Enter()`.
-  CsEnter,
-  /// `obj->Leave()`.
-  CsLeave,
-  /// `TSScheduler::CreateEvent(p, false)` (`ESVERIFY_AT(.. == keseOK, a)`): the event.
-  EventNew,
-  /// `TSScheduler::DestroyEvent(obj)`.
-  EventDelete,
-  /// `obj->Set()`.
-  EventSet,
-  /// `obj->Clear()`.
-  EventClear,
-  /// `obj->Wait(INFINITE)`.
-  EventWait,
-  /// `TSScheduler::CreateThread(p, the playback entry, obj)` (`ESVERIFY_AT(.. == keseOK, a)`; `obj` the object): the
-  /// thread.
-  ThreadNew,
-  /// `TSScheduler::DestroyThread(obj)`.
-  ThreadDelete,
-  /// `obj->SetPriority(a)`.
-  ThreadPriority,
-  /// `obj->Reference()` (the C++ movie).
-  MovieReference,
-  /// `obj->Dereference()` (the C++ movie).
-  MovieDereference,
-  /// `snprintf((char*)a, MAX_PATH, "%s%s%s", volume, directory, file)` of the `FSFileSpec*` `obj`.
-  FileName,
-  /// `UMGetFloatingPointPrecision()` (`a` 0) or `UMGetFloatingPointRoundingMode()` (`a` 1).
-  FpGet,
-  /// `UMSetFloatingPointPrecision(b)` (`a` 0) or `UMSetFloatingPointRoundingMode(b)` (`a` 1).
-  FpSet,
-  /// The `plm_t*` of the movie at the NUL-terminated path `a` (`PlatPathGetAttributes`, `PlatPathToNative`,
-  /// `plm_create_with_filename`), NULL when it cannot be opened.
-  Open,
-  /// `plm_set_video_decode_callback((plm_t*)obj, the frame entry, (void*)a)`.
-  InstallVideo,
-  /// `plm_set_audio_decode_callback((plm_t*)obj, the samples entry, (void*)a)`, then `plm_set_audio_lead_time` of
-  /// the `f64` whose bits are `b`.
-  InstallAudio,
-  /// `SEMixer::GetActiveMixer() ? GetOutputRate() : 0`.
-  MixerRate,
-  /// `SEMixer::GetActiveMixer()->SetMovieSource(the mixer entry, obj)`, or `(NULL, NULL)` when `obj` is NULL.
-  MixerSource,
-  /// `GERasterizer::GetActiveRasterizer()->GetScreen(a)`.
-  ActiveScreen,
-  /// `GERasterizer::GetActiveRasterizer()->GetSecondarySurface(a)`.
-  ActiveTarget,
-  /// `((GEScreen*)obj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)`.
-  ScreenCreateSurface,
-  /// `((uint32_t*)a)[0..4]` = the surface's pixel format, depth, width and height.
-  SurfaceInfo,
-  /// `obj->Lock()`.
-  SurfaceLock,
-  /// `obj->Unlock()`.
-  SurfaceUnlock,
-  /// `((void**)a)[0] = obj->GetMemoryAddress(); ((uintptr_t*)a)[1] = obj->GetBytesPerRow()`.
-  SurfaceMemory,
-  /// `obj->Reference()` (a surface).
-  SurfaceReference,
-  /// `obj->Dereference()` (a surface).
-  SurfaceDereference,
-  /// `obj->CopyTo((GESurface*)a, source, destination, false)`: `b` is 8 floats, the source and destination
-  /// rectangles (left, top, right, bottom).
-  SurfaceCopy,
-};
-
 /// The calls `DX7Screen` and `DX7Surface` make on C++ objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeDx7ObjOp : uint32_t {
   /// `new UString(*(const UString*)obj)`.
@@ -215,9 +143,6 @@ enum class EeDx7RastColor : uint32_t {
   Debug,
 };
 
-/// The movie.
-struct EeDx7Movie;
-
 /// The rasterizer.
 struct EeDx7Rasterizer;
 
@@ -226,9 +151,6 @@ struct EeDx7Screen;
 
 /// The surface.
 struct EeDx7Surface;
-
-/// The host of the movie objects (several threads call it).
-using EeDx7MovieHostFn = ptrdiff_t(*)(EeDx7MovieOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
 /// The host of the screen and surface objects.
 using EeDx7ObjHostFn = ptrdiff_t(*)(EeDx7ObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -346,39 +268,6 @@ struct EeDx7LightParams {
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 extern "C" {
-
-/// `DX7Movie(inFile, inScreen)` (`rect` NULL) or `DX7Movie(inFile, inScreen, inRectangle, inLoop)` (`rect` a
-/// `GERectangle`): `file` is the `FSFileSpec*`, `owner` the C++ movie.
-EeDx7Movie *ee_dx7mv_new(EeDx7MovieHostFn host,
-                         void *owner,
-                         const void *file,
-                         unsigned long screen,
-                         const float *rect,
-                         bool looping);
-
-void ee_dx7mv_destroy(EeDx7Movie *p);
-
-/// The playback thread's entry (`PlayMovie`'s parameter is the object).
-unsigned long ee_dx7mv_play(EeDx7Movie *p);
-
-int32_t ee_dx7mv_render(EeDx7Movie *p);
-
-void ee_dx7mv_stop(EeDx7Movie *p);
-
-/// pl_mpeg's video callback (after `plm_frame_to_bgra`).
-void ee_dx7mv_frame(EeDx7Movie *p, const uint8_t *bgra, unsigned long stride);
-
-/// pl_mpeg's audio callback: `count` interleaved stereo frames.
-void ee_dx7mv_samples(EeDx7Movie *p, const float *samples, unsigned long count);
-
-/// The mixer's movie source (`SEMixer::SetMovieSource`'s context is the object).
-void ee_dx7mv_mix(void *p, float *out, unsigned long count);
-
-/// The name the game gave (NUL-terminated).
-const uint8_t *ee_dx7mv_filename(EeDx7Movie *p);
-
-/// The flags by number: 0 looping, 1 playing, 2 ready, 3 just started.
-bool ee_dx7mv_flag(EeDx7Movie *p, uint32_t which);
 
 /// The screen's fields and name (`name` a `UString*`); [`ee_dx7sc_start`] follows.
 EeDx7Screen *ee_dx7sc_new(EeDx7ObjHostFn host,

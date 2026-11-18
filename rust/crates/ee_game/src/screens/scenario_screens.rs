@@ -41,7 +41,8 @@ pub const EE_SCREENS_CS_START: u32 = 0x2106;
 pub const EE_SCREENS_CS_BACK: u32 = 0x2107;
 pub const EE_SCREENS_CS_CLOSE_CALLBACK: u32 = 0x2108;
 /// The scenario intro form: its open and close events, Back, the briefing, hints and history pages, the map, the movie
-/// (then the sound: the sound-over event, posted), Start, and the buttons' mouse over and out (nothing).
+/// button (the original played the scenario's movie, then the sound; no movie plays: the sound-over event is posted
+/// at once, as the original did for a scenario without a movie), Start, and the buttons' mouse over and out (nothing).
 pub const EE_SCREENS_SI_OPEN: u32 = 0x1301;
 pub const EE_SCREENS_SI_CLOSE: u32 = 0x1302;
 pub const EE_SCREENS_SI_BACK: u32 = 0x1303;
@@ -71,9 +72,9 @@ pub const EE_SCREENS_GAME_SI_BLINK_OFF: u32 = 0x18a; // the intro manager's SetB
 pub const EE_SCREENS_GAME_SOUND_STOP: u32 = 0x18b; // (id) gSoundManager->Stop(id, false)
 pub const EE_SCREENS_GAME_SOUND_LATENCY: u32 = 0x18c; // (ms) gSoundManager->SetLatency
 pub const EE_SCREENS_GAME_SI_OPEN_MAP: u32 = 0x18d; // -> the intro manager's OpenMap()
-pub const EE_SCREENS_GAME_SI_OPEN_MOVIE: u32 = 0x18e; // -> OpenMovie()
+                                                    // 0x18e: the original's OpenMovie (gone with the movies)
 pub const EE_SCREENS_GAME_SI_OPEN_SOUND: u32 = 0x18f; // -> OpenSound()
-pub const EE_SCREENS_GAME_SI_PLAY_MOVIE: u32 = 0x190; // (code) GetMovie, PostPlayMovie(it, the code's event)
+                                                      // 0x190: the original's GetMovie and PostPlayMovie (gone with the movies)
 pub const EE_SCREENS_GAME_SI_PLAY_SOUND: u32 = 0x191; // (id) GetSound, the briefing sound loaded and registered -> its id
 pub const EE_SCREENS_GAME_SI_MAP_BACKDROP: u32 = 0x192; // the form's map backdrop (-2) from GetMap, when it changed
 pub const EE_SCREENS_GAME_SI_GET_SCENARIO: u32 = 0x193; // -> GetScenario (the host keeps the spec)
@@ -458,13 +459,8 @@ pub fn dispatch<H: ScenarioHost>(host: &mut H, state: &Mutex<ScenarioScreens>, e
             host.call(i, EE_SCREENS_OP_SLEEP, 500, 0, 0, 0);
         }
         EE_SCREENS_SI_MOVIE => {
-            // the movie, the sound when it ends; or the sound at once
-            if host.call(i, EE_SCREENS_GAME_SI_OPEN_MOVIE, 0, 0, 0, 0) != 0 {
-                host.call(i, EE_SCREENS_OP_GROUP, 0, 0, 0, 0);
-                host.call(i, EE_SCREENS_GAME_SI_PLAY_MOVIE, EE_SCREENS_SI_SOUND_OVER, 0, 0, 0);
-            } else {
-                host.call(i, EE_SCREENS_OP_POST_EVENT, EE_SCREENS_SI_SOUND_OVER, 0, 0, 0);
-            }
+            // the sound at once (the original played the scenario's movie first when it had one)
+            host.call(i, EE_SCREENS_OP_POST_EVENT, EE_SCREENS_SI_SOUND_OVER, 0, 0, 0);
         }
         EE_SCREENS_SI_SOUND_OVER => {
             // the briefing sound once, then the briefing page
@@ -480,14 +476,14 @@ pub fn dispatch<H: ScenarioHost>(host: &mut H, state: &Mutex<ScenarioScreens>, e
             host.call(i, EE_SCREENS_OP_POST_EVENT, EE_SCREENS_SI_BRIEFING, 0, 0, 0);
         }
         EE_SCREENS_SI_OPEN => {
-            // the map backdrop, the buttons that apply, then the movie or the briefing; no media: start at once
+            // the map backdrop, the buttons that apply (the movie button for the sound alone: no movie plays), then the
+            // sound or the briefing; no media: start at once
             state.lock().unwrap().sound = SC_NO_SOUND;
             host.call(i, EE_SCREENS_GAME_SI_MAP_BACKDROP, 0, 0, 0, 0);
             host.call(i, EE_SCREENS_OP_BACKGROUND, SC_BACKGROUND_81, 0, 0, 0);
             let map = host.call(i, EE_SCREENS_GAME_SI_OPEN_MAP, 0, 0, 0, 0) != 0;
             host.call(i, EE_SCREENS_OP_SHOW, SC_SI_MAP_BUTTON, if map { SC_SHOWN } else { SC_HIDDEN }, 0, 0);
-            let movie = host.call(i, EE_SCREENS_GAME_SI_OPEN_MOVIE, 0, 0, 0, 0) != 0
-                || host.call(i, EE_SCREENS_GAME_SI_OPEN_SOUND, 0, 0, 0, 0) != 0;
+            let movie = host.call(i, EE_SCREENS_GAME_SI_OPEN_SOUND, 0, 0, 0, 0) != 0;
             host.call(i, EE_SCREENS_OP_SHOW, SC_SI_MOVIE_BUTTON, if movie { SC_SHOWN } else { SC_HIDDEN }, 0, 0);
             let flags = flags(host);
             let in_game = flags & EE_SCREENS_SI_FLAG_IN_GAME != 0;
@@ -504,7 +500,6 @@ pub fn dispatch<H: ScenarioHost>(host: &mut H, state: &Mutex<ScenarioScreens>, e
                 && host.text(i, EE_SCREENS_TEXT_SI_HINTS, 0).is_empty()
                 && host.text(i, EE_SCREENS_TEXT_SI_HISTORY, 0).is_empty()
                 && host.call(i, EE_SCREENS_GAME_SI_OPEN_MAP, 0, 0, 0, 0) == 0
-                && host.call(i, EE_SCREENS_GAME_SI_OPEN_MOVIE, 0, 0, 0, 0) == 0
                 && host.call(i, EE_SCREENS_GAME_SI_OPEN_SOUND, 0, 0, 0, 0) == 0;
             if start {
                 host.call(i, EE_SCREENS_OP_ADD_TRIGGER, EE_SCREENS_SI_START, 0, 0, 0);

@@ -1,8 +1,8 @@
 //! `UIControlsTable` as a whole Rust object (R6 ui round 18): one control record of the UI database (its fields,
 //! layout, texture rectangles, colours, file and sound names, form events and the font it holds while it makes a
 //! control), the static array of every table (`sUIControlsArray`), and every method of `UIControlsTable.cpp` but
-//! the four that only call GE objects (`CreateBitmap`, `CreateMovie`, `SetupGEText`, `SetupStringArray`, kept in C++
-//! and reached through ops): `Create` (the database file), `AddControlLike`, `MoveControlsHorizontally`,
+//! the three that only call GE objects (`CreateBitmap`, `SetupGEText`, `SetupStringArray`, kept in C++ and reached
+//! through ops; the original's fourth, `CreateMovie`, left with the movies): `Create` (the database file), `AddControlLike`, `MoveControlsHorizontally`,
 //! `DeleteAll`, `CreateControl` and its factories (`CreateBitmap`, `CreateButton`, ..., `CreateTextLabel`: which
 //! control class a record makes, its constructor's arguments and the setters after it), `CreateControlEvent`,
 //! `RelayoutControl` and `SetupFont`.
@@ -828,7 +828,8 @@ impl EeUiControlsTable {
             ty::FILE_LIST_BOX => self.create_file_list_box(m, r),
             ty::FILE_COMBO_BOX => self.create_file_combo_box(m, r),
             ty::SCROLLING_TEXT_LABEL => self.create_scrolling_label(m, r),
-            ty::MOVIE => self.op_f(Op::TblMovie, 0, 0, 0, m, rect_buf(r)),
+            // no control: the original made a UIMovie playing the record's file; movies left the game (2026-11-17)
+            ty::MOVIE => 0,
             t if t >= ty::STATUS_BUTTON => self.op(Op::TblUserDefined, 0, 0, 0, m),
             _ => 0,
         };

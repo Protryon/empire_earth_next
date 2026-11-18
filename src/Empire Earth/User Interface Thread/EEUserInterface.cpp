@@ -711,16 +711,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_CHAT_TYPE: return reinterpret_cast<EEChatLogEntry*>(inA)->mType;
     case EE_SCREENS_UI_OP_CHAT_LOG: EEUIECLEFormManager::AddEntry(*reinterpret_cast<EEChatLogEntry*>(inA)); break;
     case EE_SCREENS_UI_OP_DELETE_CHAT: delete reinterpret_cast<EEChatLogEntry*>(inA); break;
-    case EE_SCREENS_UI_OP_MOVIE_PLAYING: return gGraphics->mIsMoviePlaying;
-    case EE_SCREENS_UI_OP_PLAY_MOVIE:
-        return gGraphics->PlayMovie(*reinterpret_cast<FSFileSpec*>(inA), reinterpret_cast<UReferenceCounter*>(inB)) == kErrorOK;
-    case EE_SCREENS_UI_OP_SET_POINTER: gMouse->mPointer = inA; break;
-    case EE_SCREENS_UI_OP_STOP_MOVIE: gGraphics->PostStopMovie(); break;
-    case EE_SCREENS_UI_OP_REPOST_MOVIE:
-        gUserInterface->PostPlayMovie(*reinterpret_cast<FSFileSpec*>(inA), reinterpret_cast<UReferenceCounter*>(inB));
-        break;
-    case EE_SCREENS_UI_OP_DEREFERENCE: reinterpret_cast<UReferenceCounter*>(inA)->Dereference(); break;
-    case EE_SCREENS_UI_OP_DELETE_SPEC: delete reinterpret_cast<FSFileSpec*>(inA); break;
     case EE_SCREENS_UI_OP_SHOW_INFORMATION: theMain->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inA)); break;
     case EE_SCREENS_UI_OP_DIALOG_LOG: {
         EEChatLogEntry* theEntry = new EEChatLogEntry;
@@ -919,23 +909,6 @@ long EEUserInterface::PostEvent(UIEvent* inEvent, UIForm* inForm)
 {
     inEvent->Reference();
     return this->mThread->Post(0x40e, inEvent, inForm, true);
-}
-
-// Posts playing a movie (message 0x41c)
-void EEUserInterface::PostPlayMovie(const FSFileSpec& inSpec, UReferenceCounter* inObject)
-{
-    FSFileSpec* theSpec = new FSFileSpec(inSpec);
-    if (inObject != NULL)
-        inObject->Reference();
-    this->mThread->Post(0x41c, theSpec, inObject, true);
-}
-
-// Posts that a movie finished (message 0x41d)
-void EEUserInterface::PostMovieDone(UReferenceCounter* inObject)
-{
-    if (inObject != NULL)
-        inObject->Reference();
-    this->mThread->Post(0x41d, inObject, NULL, true);
 }
 
 // Posts hiding the messages (message 0x432)

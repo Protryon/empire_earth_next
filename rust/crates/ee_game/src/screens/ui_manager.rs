@@ -52,27 +52,18 @@ pub const EE_SCREENS_UM_OP_SET_PLAYER: u32 = 16;
 pub const EE_SCREENS_UM_OP_SERVER_LOAD: u32 = 17;
 /// `gISKeyboard->GetEntity(key a)->JustPressed()` (a an `EE_SCREENS_UM_KEY_*`).
 pub const EE_SCREENS_UM_OP_KEY_PRESSED: u32 = 20;
-/// `gGraphics->mIsMoviePlaying`.
-pub const EE_SCREENS_UM_OP_MOVIE_PLAYING: u32 = 21;
-/// `gGraphics->PostStopMovie()`.
-pub const EE_SCREENS_UM_OP_STOP_MOVIE: u32 = 22;
-/// `PlatSleep(a)`.
-pub const EE_SCREENS_UM_OP_SLEEP: u32 = 23;
+// (21, 22, 23: the playing movie's test, stop and wait, gone with the movies)
 /// `GetCurrentForm() != NULL && !GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame`.
 pub const EE_SCREENS_UM_OP_KEYS_FREE: u32 = 24;
 /// `EEPostF9Key()`.
 pub const EE_SCREENS_UM_OP_POST_F9: u32 = 25;
 /// `UIManager::UpdateKeyboard()`: its result.
 pub const EE_SCREENS_UM_OP_BASE_KEYBOARD: u32 = 26;
-/// `UIManager::GetLMouseButton()` (a 0) or `GetRMouseButton()` (a 1) `->JustPressed()`.
-pub const EE_SCREENS_UM_OP_BUTTON_PRESSED: u32 = 27;
+// (27: the mouse press that stopped a movie)
 /// `UIManager::UpdateMouse(the call's mouse location)`: its result.
 pub const EE_SCREENS_UM_OP_BASE_MOUSE: u32 = 28;
 
-/// The keys `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a).
-pub const EE_SCREENS_UM_KEY_ESCAPE: i64 = 0;
-pub const EE_SCREENS_UM_KEY_RETURN: i64 = 1;
-pub const EE_SCREENS_UM_KEY_SPACE: i64 = 2;
+/// The key `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a; 0..2, Escape, Return and Space, stopped a movie).
 pub const EE_SCREENS_UM_KEY_F9: i64 = 3;
 
 // ---- the ids the port's controls use (the host `static_assert`s them against the game's names)
@@ -338,27 +329,10 @@ pub fn start_scenario_editor(h: &mut impl UiHost) {
     h.op(EE_SCREENS_UM_OP_LOBBY_LOCK, 0, 0, 0);
 }
 
-/// A playing movie stopped and waited for.
-fn stop_movie(h: &mut impl UiHost) {
-    h.op(EE_SCREENS_UM_OP_STOP_MOVIE, 0, 0, 0);
-    while h.op(EE_SCREENS_UM_OP_MOVIE_PLAYING, 0, 0, 0) != 0 {
-        h.op(EE_SCREENS_UM_OP_SLEEP, 1, 0, 0);
-    }
-}
-
-/// `EEUIManager::UpdateKeyboard` (0x6750a9): Escape, Return or Space just pressed stop a playing movie; F9 just
-/// pressed outside text entry (and not while a saved game loads) posts the screenshot and ends the update (0);
-/// otherwise the base manager's keyboard update.
+/// `EEUIManager::UpdateKeyboard` (0x6750a9): F9 just pressed outside text entry (and not while a saved game loads)
+/// posts the screenshot and ends the update (0); otherwise the base manager's keyboard update. (The original first
+/// stopped a playing movie on Escape, Return or Space; no movie plays.)
 pub fn update_keyboard(h: &mut impl UiHost) -> i64 {
-    let mut stop = false;
-    for key in [EE_SCREENS_UM_KEY_ESCAPE, EE_SCREENS_UM_KEY_RETURN, EE_SCREENS_UM_KEY_SPACE] {
-        if h.op(EE_SCREENS_UM_OP_KEY_PRESSED, key, 0, 0) != 0 {
-            stop = true;
-        }
-    }
-    if stop && h.op(EE_SCREENS_UM_OP_MOVIE_PLAYING, 0, 0, 0) != 0 {
-        stop_movie(h);
-    }
     if h.op(EE_SCREENS_UM_OP_KEYS_FREE, 0, 0, 0) != 0
         && h.op(EE_SCREENS_UM_OP_KEY_PRESSED, EE_SCREENS_UM_KEY_F9, 0, 0) != 0
     {
@@ -368,14 +342,9 @@ pub fn update_keyboard(h: &mut impl UiHost) -> i64 {
     h.op(EE_SCREENS_UM_OP_BASE_KEYBOARD, 0, 0, 0)
 }
 
-/// `EEUIManager::UpdateMouse` (0x6751ab): a left or right press just made stops a playing movie; then the base
-/// manager's mouse update.
+/// `EEUIManager::UpdateMouse` (0x6751ab): the base manager's mouse update. (The original first stopped a playing
+/// movie on a left or right press; no movie plays.)
 pub fn update_mouse(h: &mut impl UiHost) -> i64 {
-    if (h.op(EE_SCREENS_UM_OP_BUTTON_PRESSED, 0, 0, 0) != 0 || h.op(EE_SCREENS_UM_OP_BUTTON_PRESSED, 1, 0, 0) != 0)
-        && h.op(EE_SCREENS_UM_OP_MOVIE_PLAYING, 0, 0, 0) != 0
-    {
-        stop_movie(h);
-    }
     h.op(EE_SCREENS_UM_OP_BASE_MOUSE, 0, 0, 0)
 }
 

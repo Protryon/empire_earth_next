@@ -28,7 +28,6 @@
 void EEUISCIFormManager::Clear()
 {
     this->mMap = NULL;
-    this->mMovie = NULL;
     this->mFile = NULL;
     this->mSound = NULL;
     this->mIsLoadingFromGame = false;
@@ -38,13 +37,11 @@ void EEUISCIFormManager::Clear()
     this->mScrollBriefingToEnd = false;
 }
 
-// Closes and deletes the manager's map, movie, scenario and sound files
+// Closes and deletes the manager's map, scenario and sound files
 void EEUISCIFormManager::DeleteObjects()
 {
     delete this->mMap;
     this->mMap = NULL;
-    delete this->mMovie;
-    this->mMovie = NULL;
     delete this->mFile;
     this->mFile = NULL;
     delete this->mSound;
@@ -92,23 +89,6 @@ bool EEUISCIFormManager::OpenMap()
         if (thePNG == kErrorOK)
             theResult = true;
     } else
-        theResult = true;
-    return theResult;
-}
-
-// Opens the scenario's movie (.bik) from Movies; returns whether it was found
-bool EEUISCIFormManager::OpenMovie()
-{
-    UString theName;
-    bool theResult = false;
-    long theError;
-    if (this->mMovie)
-        delete this->mMovie;
-    this->mMovie = NULL;
-    theName = this->mMediaStrings.mMovieFile;
-    theName += ".bik";
-    theError = EEOpenSaveGameFile(theName, "Movies\\", this->mMovie);
-    if (theError == kErrorOK)
         theResult = true;
     return theResult;
 }
@@ -171,17 +151,6 @@ bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec)
     return theResult;
 }
 
-// Opens the scenario's movie and copies its file spec; returns whether it was found
-bool EEUISCIFormManager::GetMovie(FSFileSpec& outSpec)
-{
-    bool theResult = false;
-    if (this->OpenMovie()) {
-        theResult = true;
-        outSpec = *this->mMovie;
-    }
-    return theResult;
-}
-
 // Reopens the scenario file and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetScenario(FSFileSpec& outSpec)
 {
@@ -204,12 +173,13 @@ bool EEUISCIFormManager::GetSound(FSFileSpec& outSpec)
     return theResult;
 }
 
-// Returns whether the scenario has any briefing, hints, history, map, movie or sound
+// Returns whether the scenario has any briefing, hints, history, map or sound (the original counted its movie too;
+// no movie plays)
 bool EEUISCIFormManager::HasMedia()
 {
     bool theResult = false;
     if (this->mMediaStrings.mInstructions.GetLength() > 0 || this->mMediaStrings.mHints.GetLength() > 0
-        || this->mMediaStrings.mHistory.GetLength() > 0 || this->OpenMap() || this->OpenMovie() || this->OpenSound())
+        || this->mMediaStrings.mHistory.GetLength() > 0 || this->OpenMap() || this->OpenSound())
         theResult = true;
     return theResult;
 }

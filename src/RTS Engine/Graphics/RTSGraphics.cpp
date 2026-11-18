@@ -16,7 +16,6 @@
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/GEBitmap.h"
-#include "lle/GEMovie.h"
 #include "lle/GEPixelPack.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TSCriticalSection.h"
@@ -55,12 +54,9 @@ RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTS
     this->mSurface = inRasterizer->GetSecondarySurface(inScreen);
     this->mMouse = inMouse;
     this->mUIManager = inUIManager;
-    this->mMovieDoneEvent = NULL;
     this->mScreen = inScreen;
-    this->mMovie = NULL;
     this->mL50 = 0;
     this->mB54 = false;
-    this->mIsMoviePlaying = false;
     this->mIsPaused = true;
     this->mIsQuitting = false;
     this->mIsPausePending = false;
@@ -81,13 +77,9 @@ RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTS
     this->mThread->SetName(gGraphicsThreadName);
 }
 
-// Destroys the graphics thread and its events, releasing any movie
+// Destroys the graphics thread and its events
 RTSGraphics::~RTSGraphics()
 {
-    if (this->mMovie != NULL) {
-        this->mMovie->Dereference();
-        this->mMovie = NULL;
-    }
     if (this->mLobbyFrame != NULL) {
         this->mLobbyFrame->Dereference();
         this->mLobbyFrame = NULL;
@@ -159,7 +151,7 @@ void RTSGraphics::PushRenderObject(RTSRenderObject* inObject)
 }
 
 // Handles a graphics thread message: quit, pause/resume, the render object list, rasterizer and UI changes, vsync,
-// movie start/stop (sound muted while it plays) and the debug display modes
+// and the debug display modes (the original's 0x40c and 0x40d started and stopped a movie)
 void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {
     // NEAR (docs/REJECTED.md): the original pushes/stores the bool messages' parameter unnormalised (0x11a50f
@@ -202,42 +194,6 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
             this->mUIManager->RedrawAll();
         }
         break;
-    case 0x40c: {
-        FSFileSpec* theFile = static_cast<FSFileSpec*>(inParameter1);
-        this->mMovie = this->mRasterizer->CreateMovie(*theFile, this->mScreen);
-        this->mSavedConductorVolume = gConductor->GetConductor().GetVolume();
-        this->mSavedMasterVolume = gSoundManager->GetMasterVolume();
-        gConductor->GetConductor().SetVolume(0.0f);
-        gSoundManager->SetMasterVolume(0.0f);
-        if (theFile != NULL) {
-            delete theFile;
-        }
-        break;
-    }
-    case 0x40d:
-        if (this->mMovie != NULL) {
-            this->mMovie->Stop();
-            while (this->mMovie->GetIsPlaying()) {
-#ifdef _WIN32
-                Sleep(1);   // Win32 Sleep (see Main): HandleMessage may be inlined into Main
-#else
-                PlatSleep(1);
-#endif
-            }
-            this->mIsMoviePlaying = false;
-            this->mMovie->Dereference();
-            this->mMovie = NULL;
-        }
-        gUserInterface->PostMovieDone(this->mMovieDoneEvent);
-        // release the done event once and forget it (a stop after the movie had ended used to post and release
-        // the already released event again)
-        if (this->mMovieDoneEvent != NULL) {
-            this->mMovieDoneEvent->Dereference();
-            this->mMovieDoneEvent = NULL;
-        }
-        gConductor->GetConductor().SetVolume(this->mSavedConductorVolume);
-        gSoundManager->SetMasterVolume(this->mSavedMasterVolume);
-        break;
     case 0x40a:
         this->mIsSlowPlayback = (bool)inParameter1;
         break;
@@ -257,29 +213,13 @@ long RTSGraphics::RestoreSurfaces()
     return this->mRasterizer->GetScreen(this->mScreen)->RestoreAllSurfaces();
 }
 
-// Draws one frame: the movie's frame while it plays (finishing it when it ends), else every render object's scene;
-// then the mouse pointer and the flip as asked; restores lost surfaces on failure
+// Draws one frame: every render object's scene (the original drew a playing movie's frame instead), then the mouse
+// pointer and the flip as asked; restores lost surfaces on failure
 void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
 {
     GE2DPoint theOrigin(0.0f, 0.0f);
     long theResult;
-    if (this->mMovie != NULL && ((this->mMovie->GetIsReady() && this->mMovie->GetIsPlaying()) || this->mMovie->GetJustStarted())) {
-        this->mIsMoviePlaying = true;
-        theResult = this->mMovie->RenderFrame();
-    } else {
-        if (this->mMovie != NULL && !this->mMovie->GetIsPlaying()) {
-            this->mMovie->Dereference();
-            this->mMovie = NULL;
-            this->mIsMoviePlaying = false;
-            gUserInterface->PostMovieDone(this->mMovieDoneEvent);
-            // release the done event once and forget it (a later stop used to release it again)
-            if (this->mMovieDoneEvent != NULL) {
-                this->mMovieDoneEvent->Dereference();
-                this->mMovieDoneEvent = NULL;
-            }
-            gConductor->GetConductor().SetVolume(this->mSavedConductorVolume);
-            gSoundManager->SetMasterVolume(this->mSavedMasterVolume);
-        }
+    {
         this->FrameStarting();
         this->SceneStarting();
         if (this->mShowOverdraw) {
@@ -327,7 +267,7 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
 }
 
 // port: the frame while the WON lobby is shown (it was a GDI window over the game's): packs a new lobby frame into a
-// system-memory surface in the back buffer's format (as the movie player does), copies it letterboxed to the back
+// system-memory surface in the back buffer's format (as the movie player did), copies it letterboxed to the back
 // buffer and shows it; an unchanged frame is shown again every 100 ms. The lobby is laid out for 1024x768 logical
 // pixels and drawn at a pixel scale k: the letterboxed lobby's size in the back buffer's PIXELS (its logical size
 // times its render scale) over 768, at least 1. The letterbox is the largest 4:3 rectangle of whole back-buffer
@@ -475,17 +415,6 @@ long RTSGraphics::PostPause()
     return this->mThread->Post(0x402, NULL, NULL, true);
 }
 
-// Asks the graphics thread to play a movie file (a copy the thread deletes), keeping a reference to the done event
-long RTSGraphics::PlayMovie(const FSFileSpec& inFile, UReferenceCounter* inMovieDoneEvent)
-{
-    FSFileSpec* theFile = new FSFileSpec(inFile);
-    if (inMovieDoneEvent != NULL) {
-        inMovieDoneEvent->Reference();
-    }
-    this->mMovieDoneEvent = inMovieDoneEvent;
-    return this->mThread->Post(0x40c, theFile, NULL, true);
-}
-
 // Asks the graphics thread to add a render object
 void RTSGraphics::PostPushRenderObject(RTSRenderObject* inObject)
 {
@@ -518,12 +447,6 @@ void RTSGraphics::PostResume()
     }
     this->mIsResumePending = true;
     this->mThread->Post(0x403, NULL, NULL, true);
-}
-
-// Asks the graphics thread to stop the movie, report it done and restore the sound volumes
-void RTSGraphics::PostStopMovie()
-{
-    this->mThread->Post(0x40d, NULL, NULL, true);
 }
 
 // Sets the surface to draw on and, for the mouse, the last surface of its attached chain before the z-buffer

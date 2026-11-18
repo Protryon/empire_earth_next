@@ -8192,7 +8192,8 @@ constexpr static const uint32_t EE_SCREENS_CS_BACK = 8455;
 constexpr static const uint32_t EE_SCREENS_CS_CLOSE_CALLBACK = 8456;
 
 /// The scenario intro form: its open and close events, Back, the briefing, hints and history pages, the map, the movie
-/// (then the sound: the sound-over event, posted), Start, and the buttons' mouse over and out (nothing).
+/// button (the original played the scenario's movie, then the sound; no movie plays: the sound-over event is posted
+/// at once, as the original did for a scenario without a movie), Start, and the buttons' mouse over and out (nothing).
 constexpr static const uint32_t EE_SCREENS_SI_OPEN = 4865;
 
 constexpr static const uint32_t EE_SCREENS_SI_CLOSE = 4866;
@@ -8243,11 +8244,7 @@ constexpr static const uint32_t EE_SCREENS_GAME_SOUND_LATENCY = 396;
 
 constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_MAP = 397;
 
-constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_MOVIE = 398;
-
 constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_SOUND = 399;
-
-constexpr static const uint32_t EE_SCREENS_GAME_SI_PLAY_MOVIE = 400;
 
 constexpr static const uint32_t EE_SCREENS_GAME_SI_PLAY_SOUND = 401;
 
@@ -9514,15 +9511,6 @@ constexpr static const uint32_t EE_SCREENS_UM_OP_SERVER_LOAD = 17;
 /// `gISKeyboard->GetEntity(key a)->JustPressed()` (a an `EE_SCREENS_UM_KEY_*`).
 constexpr static const uint32_t EE_SCREENS_UM_OP_KEY_PRESSED = 20;
 
-/// `gGraphics->mIsMoviePlaying`.
-constexpr static const uint32_t EE_SCREENS_UM_OP_MOVIE_PLAYING = 21;
-
-/// `gGraphics->PostStopMovie()`.
-constexpr static const uint32_t EE_SCREENS_UM_OP_STOP_MOVIE = 22;
-
-/// `PlatSleep(a)`.
-constexpr static const uint32_t EE_SCREENS_UM_OP_SLEEP = 23;
-
 /// `GetCurrentForm() != NULL && !GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame`.
 constexpr static const uint32_t EE_SCREENS_UM_OP_KEYS_FREE = 24;
 
@@ -9532,19 +9520,10 @@ constexpr static const uint32_t EE_SCREENS_UM_OP_POST_F9 = 25;
 /// `UIManager::UpdateKeyboard()`: its result.
 constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_KEYBOARD = 26;
 
-/// `UIManager::GetLMouseButton()` (a 0) or `GetRMouseButton()` (a 1) `->JustPressed()`.
-constexpr static const uint32_t EE_SCREENS_UM_OP_BUTTON_PRESSED = 27;
-
 /// `UIManager::UpdateMouse(the call's mouse location)`: its result.
 constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_MOUSE = 28;
 
-/// The keys `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a).
-constexpr static const int64_t EE_SCREENS_UM_KEY_ESCAPE = 0;
-
-constexpr static const int64_t EE_SCREENS_UM_KEY_RETURN = 1;
-
-constexpr static const int64_t EE_SCREENS_UM_KEY_SPACE = 2;
-
+/// The key `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a; 0..2, Escape, Return and Space, stopped a movie).
 constexpr static const int64_t EE_SCREENS_UM_KEY_F9 = 3;
 
 /// `kTextureResolutionControlID`: the settings' added controls' first id.
@@ -9733,27 +9712,6 @@ constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_LOG = 50;
 
 /// `delete` the chat log entry a.
 constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_CHAT = 51;
-
-/// `gGraphics->mIsMoviePlaying`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_MOVIE_PLAYING = 52;
-
-/// `gGraphics->PlayMovie(*a, b) == kErrorOK`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_PLAY_MOVIE = 53;
-
-/// `gMouse->mPointer = a`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_SET_POINTER = 54;
-
-/// `gGraphics->PostStopMovie()`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_STOP_MOVIE = 55;
-
-/// `gUserInterface->PostPlayMovie(*a, b)`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_REPOST_MOVIE = 56;
-
-/// The reference counter a's `Dereference()`.
-constexpr static const uint32_t EE_SCREENS_UI_OP_DEREFERENCE = 57;
-
-/// `delete` the file spec a.
-constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_SPEC = 58;
 
 /// The main game form's `ShowInformation` of the dialog message a.
 constexpr static const uint32_t EE_SCREENS_UI_OP_SHOW_INFORMATION = 59;

@@ -10,8 +10,6 @@ pub mod draw2d;
 pub mod draw_model;
 pub mod draw_terrain;
 pub mod filter;
-pub mod movie;
-pub mod movobj;
 pub mod raster;
 pub mod screen;
 pub mod scrobj;

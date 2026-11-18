@@ -7,6 +7,9 @@
 //! several calls makes them last first, as the driver did.
 //!
 //! `EE_SOUND_OBJECTS_GOLDEN=<file> cargo test -p ee_sound --lib golden_objects -- --nocapture` replays a long run.
+//!
+//! The driver's `moviesrc` lines (SEMixer::SetMovieSource) were taken out when movies left the game (2026-11-17):
+//! the mixer has no movie source any more, and the lines changed nothing else.
 
 // the C ABI's `long`/`unsigned long` are 32-bit on Windows and 64-bit on LP64: the casts are not no-ops there
 #![allow(clippy::unnecessary_cast, clippy::manual_dangling_ptr)]
@@ -498,9 +501,6 @@ unsafe extern "C" fn set_music_source(source: EeSoundSource, context: *mut c_voi
     t(format!("musicsrc{}", source.is_some() as i32));
     w(|w| w.music_source = source.map(|f| (f as usize, context as usize)));
 }
-unsafe extern "C" fn set_movie_source(source: EeSoundSource, _context: *mut c_void) {
-    t(format!("moviesrc{}", source.is_some() as i32));
-}
 
 fn entry(name: &[u8]) -> Option<*mut c_void> {
     let name = &name[..name.len() - usize::from(name.last() == Some(&0))];
@@ -537,7 +537,6 @@ fn entry(name: &[u8]) -> Option<*mut c_void> {
         b"SPIMStopChannel" => stop_channel as *mut c_void,
         b"SPIMGetOutputRate" => get_output_rate as *mut c_void,
         b"SPIMSetMusicSource" => set_music_source as *mut c_void,
-        b"SPIMSetMovieSource" => set_movie_source as *mut c_void,
         _ => return None,
     };
     Some(p)
@@ -851,10 +850,6 @@ impl Replay {
                     let p = ee_sound_mixer_process_message(mx, 5, null_mut(), null_mut());
                     let rate = ee_sound_mixer_output_rate(mx);
                     format!("{} {} FakeMixer {} {} {rate}", bits(cpu), b(!ds.is_null()), b(v), b(p))
-                }
-                "moviesrc" => {
-                    ee_sound_mixer_set_movie_source(mixer_at(i(1) as i32), None, null_mut());
-                    "-".into()
                 }
                 "newmgr" => {
                     let mx = ee_sound_mixer_active();

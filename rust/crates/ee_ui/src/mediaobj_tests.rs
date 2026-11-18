@@ -1,7 +1,8 @@
-//! UIBitmap's and UIMovie's golden (`golden_mediaobj.txt`): the first sequences the round-21 driver (`build/ui21`)
-//! printed over UIBitmap.cpp/.h and UIMovie.cpp at the round's base (a world of bitmaps, movies, their play state and
-//! the control's rectangle), replayed op for op against the Rust records. Calls 1..6 are `EeUiBitmapCall`'s, 21..25
-//! `EeUiMovieCall`'s; the driver's own: 7 `GetBitmap`, 99 a digest of both records.
+//! UIBitmap's golden (`golden_mediaobj.txt`): the first sequences the round-21 driver (`build/ui21`) printed over
+//! UIBitmap.cpp/.h and UIMovie.cpp at the round's base (a world of bitmaps, movies, their play state and the
+//! control's rectangle), replayed op for op against the Rust record. Calls 1..6 are `EeUiBitmapCall`'s; the driver's
+//! own: 7 `GetBitmap`, 99 a digest of the records (the movie's member mixed as the NULL it is in every bitmap
+//! sequence). The movie sequences (calls 21..25, `UIMovie`'s) were taken out when movies left the game (2026-11-17).
 
 use super::*;
 use crate::obj::replay::{host_current, Replay};
@@ -10,7 +11,6 @@ const GOLDEN: &str = include_str!("golden_mediaobj.txt");
 
 struct Recs {
     b: EeUiBitmapFields,
-    m: EeUiMovieFields,
 }
 
 fn digest(r: &Recs) -> isize {
@@ -24,7 +24,8 @@ fn digest(r: &Recs) -> isize {
     mix(r.b.mLocation[1].to_bits() as u64);
     mix(r.b.mBitmap as u64);
     mix(r.b.mCopiedBitmap as u64);
-    mix(r.m.mMovie as u64);
+    // the movie record's member, NULL in every sequence left
+    mix(0);
     h as isize
 }
 
@@ -35,11 +36,7 @@ unsafe fn dispatch(target: *const c_void, call: u32, a: isize, _b: isize, _f: *m
         7 => unsafe { (*recs).b.mBitmap as isize },
         // SAFETY: as above
         99 => digest(unsafe { &*recs }),
-        // SAFETY: the call numbers are the enums' (the golden's); no reference is used across the call
-        21..=25 => unsafe {
-            movie_call(&raw mut (*recs).m, Some(host_current), core::mem::transmute::<u32, EeUiMovieCall>(call - 20), a)
-        },
-        // SAFETY: as above
+        // SAFETY: the call numbers are the enum's (the golden's); no reference is used across the call
         _ => unsafe {
             bitmap_call(&raw mut (*recs).b, Some(host_current), core::mem::transmute::<u32, EeUiBitmapCall>(call), a)
         },

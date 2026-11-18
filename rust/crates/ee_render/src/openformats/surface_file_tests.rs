@@ -133,7 +133,6 @@ unsafe extern "C" fn host(op: EeOfSurfOp, obj: *mut c_void, a: isize, b: isize, 
                 *(a as *mut c_ulong) = w.contents.len() as c_ulong;
                 0
             }
-            _ => 0,
         })
     }
 }

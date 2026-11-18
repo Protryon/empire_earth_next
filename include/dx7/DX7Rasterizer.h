@@ -32,7 +32,6 @@
 #include "lle/GEText.h"
 #include "lle/GEModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GEMovie.h"
 #include "lle/GELight.h"
 #include "lle/U2DSparseArray.h"
 
@@ -56,9 +55,6 @@ public:
     virtual bool CanDoCurrentState(GETexture* inTexture, unsigned long inScreen);
     virtual long Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen);
     virtual long ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen);
-    virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen);
-    virtual GEMovie* CreateMovie(const FSFileSpec& inFile, unsigned long inScreen, const GERectangle& inRectangle,
-                                 bool inLoop);
     virtual GEPolygonArray* CreatePolygonArray(unsigned long inCount);
     virtual GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount);
     virtual long Deactivate();

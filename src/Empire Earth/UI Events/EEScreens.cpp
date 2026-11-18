@@ -1737,18 +1737,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_SI_OPEN_MAP:
         return EEUISCIFormManager::Get()->OpenMap();
-    case EE_SCREENS_GAME_SI_OPEN_MOVIE:
-        return EEUISCIFormManager::Get()->OpenMovie();
     case EE_SCREENS_GAME_SI_OPEN_SOUND:
         return EEUISCIFormManager::Get()->OpenSound();
-    case EE_SCREENS_GAME_SI_PLAY_MOVIE: {
-        FSFileSpec theMovie;
-        UIEvent* theEvent = EECreateScreenEvent(inA);
-        EEUISCIFormManager::Get()->GetMovie(theMovie);
-        gUserInterface->PostPlayMovie(theMovie, theEvent);
-        theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_GAME_SI_PLAY_SOUND: {
         // the briefing sound once (below Sounds\ unless its file names the folder)
         FSFileSpec theSound;

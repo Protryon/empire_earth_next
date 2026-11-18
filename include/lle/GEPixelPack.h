@@ -1,6 +1,6 @@
 // port: packs 32-bit B, G, R, x pixels (in memory order) into a surface row of a GEPixelFormatID (16 or 32 bits), for
-// the CPU frame buffers copied to the back buffer: the movie player's decoded frames (DX7Movie.cpp) and the WON
-// lobby's composited frame (RTSGraphics::RenderLobby).
+// the CPU frame buffer copied to the back buffer: the WON lobby's composited frame (RTSGraphics::RenderLobby; the
+// movie player's decoded frames were the other, until movies left the game).
 #ifndef LLE_GEPIXELPACK_H
 #define LLE_GEPIXELPACK_H
 

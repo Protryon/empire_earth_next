@@ -1,5 +1,6 @@
 // C:\EEX\Empire Earth\Empire Earth\EECommandLine.cpp (file name inferred: no __FILE__, no class of its own; the
-// command-line parsers Empire Earth.cpp calls (0x12d9e5 before the movies, 0x12d703 after startup) with their
+// command-line parser Empire Earth.cpp calls after startup (0x12d703; the first pass, 0x12d9e5, only chose whether
+// to play the intro movies and is gone with them) with their
 // commands "hostgame", "joinbyip", "update_saved_games", "loadgame", "balancer"; placed between EECivilization.cpp
 // and the storm unit EEEMStorm.cpp (0x12dba8..), so the name sorts between them). 0x12cac8..0x12dba8: four file
 // static UString $E chains ("-", "/t", "\"", "Text-"), loadgame, the saved game / scenario conversion, the command
@@ -351,22 +352,3 @@ bool EEParseCommandLine(const char* inCommandLine)
     return theResult;
 }
 
-// Scans the command line at startup: no intro movies when it hosts or joins a game; always returns true
-bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies)
-{
-    std::vector<UString> theArguments;
-    std::vector<UString> theTokens;
-    UString theLine(inCommandLine);
-    UString theArgument;
-    outShowMovies = true;
-    if (!theLine.Tokenize(sDash, theArguments))
-        return true;
-    for (std::vector<UString>::iterator theIt = theArguments.begin(); theIt != theArguments.end(); theIt++) {
-        theArgument = *theIt;
-        if (EEIsCommand(theArgument, UString("hostgame")))
-            outShowMovies = false;
-        else if (EEIsCommand(theArgument, UString("joinbyip")))
-            outShowMovies = false;
-    }
-    return true;
-}
