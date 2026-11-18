@@ -30383,3 +30383,143 @@ oracle is unchanged by construction.
   in all 15 games after each commit and the merge of origin/rust (lane B round 2); a mutation (the view's citizens
   counted twice) caught at classic-2 line 4. On the merged tree: oracle seeds 2-7 identical; captures oracle, late,
   space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect` PASS; both builds 0/0; the Rust gate PASS; gates.sh GATES PASS.
+## R6 WONLobby, round 15: won_cfgtab_test's leak, the WON drivers under a memory cap (branch rust-wonlobby15, 2026-11-17)
+
+### won_cfgtab_test: the driver's own world never freed what it made
+
+Round 14 found won_cfgtab_test growing by about 70 MB a second past 10 GB (and, over a one-file resource directory,
+ending at 3.6 GB with exit 1 and no output). Run under a 2 GB job object and stopped after 4 s, every backtrace was in
+the original side's `StretchImageConfig::Virtual24` (MULTIEXPORT's loop); printing its counts showed the cause:
+
+- The stand-in world (`won_cfgtab_world.h`) has its own `SmartPtr`, which does not own: every config, image, stretch
+  image, filter and layout that the world or either side's handlers made with `new` lived to the program's end.
+- MULTIEXPORT's and MULTICROPEXPORT's count is a `ReadInt`, and the world's `ReadInt` of a non-number is a hash of
+  the token, up to 99,999. Each such instruction made that many child configs (a config, an image, a stretch image
+  and a raw image each): about 25 MB per instruction per side, never freed.
+- The resource files never use those keys with such counts; the 5,000 random instructions and the 4,000 image
+  sequences (round 41) hold hundreds of them. The run needed on the order of 10 GB. Round 41 ran it on an idle
+  machine and passed (383,620 checks); with eight lanes on 32 GB the commit fails part-way (the 3.6 GB exit 1:
+  an allocation failing; the output was still in the pipe's buffer) or it fills the machine.
+
+Not a port fault: nothing the driver links changed (the crate restructure, the inline IPAddr and StringUtil forwards
+and the loose test link were the suspects; the world, the original statements and cfgtab.rs/cfgimg.rs are as round
+41 left them, and every check still matches). The fix is in the world: `Obj` and `ComponentConfig` derive from a
+small `Owned` base whose class `operator new` records each object, and each run frees the previous run's objects
+before it starts (`Owned::FreeAll` in `RunSeq`). Components stay as they were (the skin's slots keep the last ones
+assigned across runs). The traces are unchanged: 383,620 checks, 0 mismatches, peak 557 MB; `--print` is
+byte-identical to `golden_cfgtab.txt`.
+
+**Lesson:** a stand-in world whose pointers do not own is fine for short scripts, but any count a driver reads from
+a hashed token bounds nothing: free per run, or bound the counts, and run every driver under a memory cap.
+
+### LobbyPersistentData whole in Rust (persistobj.rs)
+
+The saved settings were the largest WON unit left (LobbyPersistentData.cpp, 827 lines) and six small units of `Lobby*`
+functions over it, each a NULL check and one member call; the formats (persist.rs), the scalar state (prefsobj.rs)
+and the containers (lobbymap.rs, behind WONLobbyMap.h's C++ wrappers) were already Rust. The class and its
+functions are now one Rust object, `EeWonPersist`:
+
+- **What it holds.** The scalar state (`EeWonLobbyPrefs`), the saved users (records `EeWonPersistUser`, boxed so a
+  `LobbyUserInfo*` stays valid while the user is saved, as a `std::map` value did), the user ids, ignored names,
+  blocked CD key ids, friends (the `LobbyFriend` shells, one reference each), the default and current game filters
+  (each a set in insertion order), the reconnect ids, the LAN names with their times, the direct connects and the
+  Blowfish key. Each container is a sorted vector under lobbymap.rs's comparators (`Key`, `compare`, now
+  `pub(crate)`), so the orders and the "first spelling wins" rule are the same code as before.
+- **One call.** `ee_won_persist_call(p, call, t1, t2, a, b, out)`: 49 calls (`EeWonPersistCall`), two texts, two
+  numbers, a text result as `uint32_t` units. `p` NULL is "no lobby data": every call answers what the function
+  answered without it (50 for the speed, 8585 for the port, empty texts, NULL records). The `Lobby*` functions
+  are inline forwards in WONLobbyPersistence.h (the eleven flags through one macro); `LobbyPersist()` (the object
+  of `gLobbyData->mPersistentData`) and the host are what LobbyPersistentData.cpp keeps (60 lines).
+- **The host** (`EeWonPersistOp`): a friend made (`new LobbyFriend`, one reference), referenced, released and
+  named; a resource string's units; the click sound muted; the config's LAN-number switch; the clock. The files
+  are read and written in Rust with the calls the C++ made (file.rs's reader in 4,096-byte reads, the writer's open
+  without the read-only retry, wonfile.rs's delete).
+- **The texts** are the `GUIString`'s `wchar_t` units; the files' are UTF-16 (identity on Windows, surrogate pairs
+  on UTF-32 systems, as WideAppendUtf16LE and WideAppendUtf16Unit did), the scalar texts UTF-8 (`GetString`,
+  `GUIString(std::string)`: guistring.rs `narrow` / `widen`).
+- **Callers.** `LobbyUserInfo` is the Rust record: AccountLogic.cpp sets and reads its terms-of-use times through
+  `LobbyUserSetTOU` / `LobbyUserTOU`, LobbyNetCtrlHost.cpp its name through `LobbyUserText`.
+  `LobbyGetFilterValues` (a `LobbyOptionSet` copy) became `LobbyGetFilterCount` / `LobbyGetFilterValueAt`; LobbyOptionSet
+  and WONLobbyMap.h (no other user) are deleted. The declarations WONLobbyGUI.h, WONLobbyModel.h, WONLobbyCore.h and
+  EELobbyGameCode.h repeated are gone (their callers include WONLobbyPersistence.h).
+
+**The driver** (`won_persistobj_test`): the original statements, copied from the round's start by
+`tools/won_persist_orig.py` into `tests/won/won_persistobj_orig.h` (WONLobbyMap.h's containers, the class, the seven
+units; namespaces dropped and the one call of a `Lobby*` function inside them qualified `Orig::`, since a `GUIString`
+argument brings WONAPI's forwards in by argument-dependent lookup), against the game's own forwards over the Rust
+object, each side in its own directory. The world: friends are counted records, the resources fixed texts, the
+clock a counter per side, the machine id a constant, the mute and the friends' lives traced. Each step is one of 40
+operations (every function, the current user, saves, loads, restore, no lobby data and a new object, the config's
+switch, a file cut, given another version or deleted the same way on both sides; bursts of up to 60 users or LAN
+names for the pruning), and after each the whole state is compared: every getter, every user's record, every friend
+with its reference count, the lists, the filters of six columns, the reconnect ids of eight addresses, the blocked
+ids, the internal flags, the trace and every file's bytes.
+
+Results: 4,000 sequences, 285,432 checks, 0 mismatches (peak 2 MB). Mutations (`build/r15/mutate.py`, 300 sequences
+each): 14 of 16 caught (a user id not kept, an "existing only" user kept, the ignored dirty rule, RemoveLanName not
+selecting, the direct connects kept over a load, the LAN times saved as 0, a failed decryption, a filter's first
+value only, a friend not released, two settings swapped, ResetFilters not marking the file, the reconnect time for
+its id, the global save not updating the saved sound state, a pruned user's id kept). Not caught: the pruning bound
+at 49 (equivalent: persist.rs's `prune_users` keeps 50 itself) and a pruned user's file kept (the driver only saves
+the current user's file, never an old user's: not reached). The first full run matched; no Rust or C++ difference
+was found.
+
+**Behaviour changes.** None the game reaches. A `LobbyUserInfo` is the Rust record (its fields through functions).
+The C++ GUIString capped a text at 65,535 units; the Rust holds whole texts (every file text has a 16-bit length).
+
+**What runs it.** The LAN game: the LAN name, the broadcast port, the direct connects, the options popups' flags,
+the user file `_wonuser0.dat` (`lan_game.py`). The login users, friends, reconnect ids and the global file's users
+are the Internet lobby's (the driver only).
+
+### The hosts' cases that were Lobby* calls, answered in Rust
+
+With the settings in Rust, a host case that only called a `Lobby*` function on numbers is a Rust call. persistobj.rs
+answers them in the game: `ctl_op` (the lobby controls: the options popup's PrefGet / PrefSet over a table of the
+twelve preferences, `pref_flag`, the LAN name count, RestoreDefaults, ResetFilters, RemoveLanName, the ignored and
+user counts, a user's last use, the friends, the current user), `route_op` (RoutingLogic's `Pref` 1..7, the friends)
+and `lobby_op` (the staging sounds and confirmations, the LAN logic's saved direct count and its LAN user), each
+reached from lobbyctl.rs, routelogic.rs and lobbyhost.rs after modelobj.rs's answers. The C++ gives the object's
+finder once (`ee_won_persist_set_lobby(LobbyPersist)`, LobbyPersistentData's constructor); before that (every
+driver) the ops still go to their hosts, so the drivers and their goldens are unchanged. 27 host cases and the two
+preference switches are gone from LobbyCtrlHost.cpp, LobbyNetCtrlHost.cpp, RoutingLogic.cpp, LobbyLogicHost.cpp and
+LanLogicHost.cpp. won_host_coverage.py reads the three functions (and `pref_flag` for EeWonLobbyCtlPref): PASS.
+Texts (a GUIStringData* argument) stay with the hosts: the Rust would need the string's units back from the C++.
+
+### ChatCommandParser's tables
+
+InitCommands' 24 `AddCommands` calls and the help lines' 23-case switch (`ChatHelpString`) are tables in chatobj.rs
+(`ee_won_chatparser_init_command`: the names' resource row and the command in the original's order, -1 for the two
+shutdown commands' empty lists; `ee_won_chat_help_row`: the warning's line for any other command), the C++ a loop
+and a look-up; the unused text sinks (ChatWordSink, ChatTexts, ChatTextSink) are gone. A unit test holds the
+tables to the original's order. No driver links ChatCommandParser.cpp: the Internet lobby's chat reaches it (the
+LAN game's chat panel parses through the same object: `lan_game.py`).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c15bfe1f | won_cfgtab_test's world frees its objects per run (above) | |
+| e5e479ff | `xbuild.py wontest` runs each driver under a job-object memory cap (EE_TEST_MEM_MB, default 2,048; RLIMIT_AS elsewhere) | |
+| eee6e187 | LobbyPersistentData whole in Rust (persistobj.rs); LobbyPersistentAccessors, Setters, Queries, Filters, Load, LobbyRestoreDefaults, LobbyOptionSet and WONLobbyMap.h deleted; golden won_persistobj_test | 37,683 -> 36,048 (-1,635) |
+| 74fb3edf | WONLobbyGUI.h includes WONLobbyResource.h itself (it came through WONLobbyMap.h) | 36,049 (+1) |
+| c56d7c6c | the hosts' Lobby* cases on numbers answered in Rust | 35,985 (-64) |
+| 1c5c9784 | ChatCommandParser's command and help tables in chatobj.rs | 35,918 (-67) |
+
+Round total: WON C++ 37,683 -> 35,918 (-1,765), six units and one header deleted. Short of the 2,000 target; the
+rows (round 14's step 2) were not started: the persistent data's cluster gave the most lines for one verified move.
+
+### Gates (the round's head, merged with origin/rust ec39733e)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-7 identical |
+| `rust_build.py gate` | PASS, 4,533 tests (one earlier run failed ee_base's golden_spec_replays under load; it passes alone) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 150 programs exit 0 under the 2 GB cap (won_cfgtab_test peak 557 MB; won_persistobj_test the new one) |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2779 joiner=2779` (the round's start exe: 2796 / 2797) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but the staging screen's caret (15 pixels at x 121); the start exe is this worktree's round 14 test-profile build (5d078efba's WON code) |
+
+The merge of origin/rust needed only PORT_LEARNINGS.md's end (both sides appended) and one trailing address comment
+(strip_markers).

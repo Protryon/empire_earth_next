@@ -503,6 +503,9 @@ impl Host {
             if let Some(r) = crate::modelobj::lobby_op(op, a as isize, b as isize, c) {
                 return r;
             }
+            if let Some(r) = crate::persistobj::game_lobby_op(op) {
+                return r;
+            }
             // the game's host takes the texts and sounds as resource rows (the golden's, their codes)
             match op {
                 EeWonLobbyOp::MessageBox | EeWonLobbyOp::YesNo | EeWonLobbyOp::RunWaitOp => c = lobby_text(c),

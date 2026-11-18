@@ -102,12 +102,6 @@
 35b9c0 35b9ff WONLobby/LobbyNetworkAdapter.cpp
 35ba00 35ba94 WONLobby/LobbyUDPManager.cpp
 35baa0 360e91 WONLobby/LobbyPersistentData.cpp
-35cde0 35e4de WONLobby/LobbyPersistentQueries.cpp
-35cf90 35e3f0 WONLobby/LobbyPersistentAccessors.cpp
-35dea0 35e63e WONLobby/LobbyPersistentFilters.cpp
-35e3f0 35e6a0 WONLobby/LobbyPersistentSetters.cpp
-35e640 35e651 WONLobby/LobbyPersistentLoad.cpp
-35e6a0 35e6e0 WONLobby/LobbyRestoreDefaults.cpp
 3610b0 3628c0 WONLobby/LobbyScreenQueries.cpp
 361260 361ee7 WONLobby/LobbyStagingSupport.cpp
 361440 361b19 WONLobby/LobbyNetworkState.cpp

@@ -110,7 +110,11 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::AccountCreated: {
         CreateAccountEvent* event = reinterpret_cast<CreateAccountEvent*>(a);
         LobbyUserInfo* user = LobbyAddUser(event->mUserName, "", false);
-        if (user) LobbyGetTOUTimes(user->mValue04, user->mValue08);
+        if (user) {
+            long aSys, aGame;
+            LobbyGetTOUTimes(aSys, aGame);
+            LobbyUserSetTOU(user, aSys, aGame);
+        }
         LobbySaveGlobalPrefs(true);
         LobbyBroadcastLobbyEvent(100052, true);
         LobbyBroadcastEvent(new SetLoginFieldsEvent(GUIString(event->mUserName), GUIString(event->mPassword), false), true);
@@ -134,7 +138,7 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
             GUIString name(new GUIStringData(reinterpret_cast<LoginEvent*>(a)->mUserName));
             user = LobbyFindUser(name);
         }
-        return !user || LobbyIsTOUNewer(user->mValue04, user->mValue08);
+        return !user || LobbyIsTOUNewer(LobbyUserTOU(user, 0), LobbyUserTOU(user, 1));
     }
     case O::SetCredentials: {
         AuthContext* auth = reinterpret_cast<AuthContext*>(a);
@@ -164,7 +168,9 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
         if (event->mRemember) password = event->mPassword;
         LobbyUserInfo* user = LobbyAddUser(event->mUserName, password, false);
         if (user) {
-            LobbyGetTOUTimes(user->mValue04, user->mValue08);
+            long aSys, aGame;
+            LobbyGetTOUTimes(aSys, aGame);
+            LobbyUserSetTOU(user, aSys, aGame);
             LobbySaveGlobalPrefs(true);
             LobbySetCurrentUser(user);
         }

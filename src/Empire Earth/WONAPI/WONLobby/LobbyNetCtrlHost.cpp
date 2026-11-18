@@ -366,7 +366,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
         return Held(aText);
     }
     case Op::TextFind: return Txt(a).find(Txt(b), 0);
-    case Op::IgnoredCount: return (intptr_t)LobbyGetIgnoredNameCount();
     case Op::IgnoredAt: return Held(LobbyGetIgnoredNameAt((size_t)a));
     case Op::FireEvent: inCtl->Fn2F5380((int)a, (int)b); return 0;
     case Op::DeliverFriendAction: inCtl->DeliverEvent(new FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
@@ -582,17 +581,12 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::ItemSetText: aText->mText = Txt(b); return 0;
     case Op::ItemSetImageRes: aText->mImage = b < 0 ? NULL : ResImage(b); return 0;
     case Op::ItemSetFont: aText->mFont = reinterpret_cast<Font*>(b); return 0;
-    case Op::FriendCount: return (intptr_t)LobbyGetFriendCount();
-    case Op::FriendAt: return (intptr_t)LobbyGetFriendAt((size_t)a);
-    case Op::CurrentUser: return (intptr_t)LobbyGetCurrentUser();
     case Op::LabelSetUserWelcome:
-        aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), reinterpret_cast<LobbyUserInfo*>(b)->mUserName), true);
+        aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), LobbyUserText(reinterpret_cast<LobbyUserInfo*>(b), 0)), true);
         return 0;
     case Op::DeliverQuickPlay: inCtl->DeliverEvent(new QuickPlayEvent((int)a), false); return 0;
     case Op::DialogBaseEvent: static_cast<Dialog*>(inCtl)->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
-    case Op::UserCount: return (intptr_t)LobbyGetUserCount();
     case Op::ComboAddUserName: return (intptr_t)aCombo->AddString(LobbyGetUserNameAt((size_t)b), -1);
-    case Op::UserLastUseAt: return (intptr_t)LobbyGetUserLastUseAt((size_t)a);
     case Op::ConfigIsPublic: { LobbyConfig* aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mPublic ? 1 : 0; }
     case Op::UserPassword: return Held(LobbyGetUserPassword(Txt(a)));
     case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
@@ -879,8 +873,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
         return 0;
     case Op::ComboInsertFilterRow: aCombo->InsertItem(new FilterListItem(Txt(b), reinterpret_cast<Font*>(c)), -1); return 0;
     case Op::ComboAddFilterValues: {
-        LobbyOptionSet aFilters = LobbyGetFilterValues(Txt(b));
-        for (size_t i = 0; i < aFilters.size(); ++i) aCombo->AddString(aFilters.ValueAt(i), -1);
+        GUIString aColumn = Txt(b);
+        for (size_t i = 0, n = LobbyGetFilterCount(aColumn); i < n; ++i) aCombo->AddString(LobbyGetFilterValueAt(aColumn, i), -1);
         return 0;
     }
     case Op::ComboItem: return (intptr_t)aCombo->mListArea->GetItem((int)b);

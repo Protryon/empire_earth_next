@@ -255,7 +255,6 @@ int LobbyDoDialog(Component* inDialog);
 int LobbyMessageBoxYesNo(const GUIString& inTitle, const GUIString& inText, bool inFlag);
 void LobbyMessageBox(const GUIString& inTitle, const GUIString& inText);
 bool LobbyAddComponentLoader(ResourceConfigTable* inCollection, void (*inFunc)(ComponentConfig* inConfig)); // 0x361fb0 (the init ignores the result)
-void LobbyAddGameOption(const GUIString& inOption, const GUIString& inValue, bool inFlag);
 void LobbySetProductName(const std::wstring& inLoginCommunity, const char* inHashFileListStr);
 extern GUIString gEmptyGUIString;
 }

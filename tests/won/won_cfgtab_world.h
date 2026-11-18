@@ -14,7 +14,25 @@ template<class X> struct SmartPtr {
     operator X*() const { return p; }
     SmartPtr& operator=(X* x) { p = x; return *this; }
 };
-struct Obj { int id; Obj(int i) : id(i) {} virtual ~Obj() {} };
+// Every Obj and ComponentConfig made with new (by the world or by either side's handlers) is freed when the next
+// run starts (R6 WONLobby round 15): the stand-in SmartPtr does not own, and a MULTIEXPORT's or MULTICROPEXPORT's
+// count (a hashed token, up to 99,999) made that many configs and images per instruction, about 25 MB that were
+// never freed; the random instructions and the image sequences hold hundreds of them, tens of GB in all. The
+// components stay (the skin's slots keep the last ones assigned across runs, as before).
+struct Owned {
+    static std::vector<void*>& Made() { static std::vector<void*> v; return v; }
+    static void* operator new(size_t n) { void* p = ::operator new(n); Made().push_back(p); return p; }
+    static void operator delete(void* p)
+    {
+        std::vector<void*>& v = Made();
+        for (size_t i = v.size(); i-- > 0;) if (v[i] == p) { v.erase(v.begin() + (ptrdiff_t)i); break; }
+        ::operator delete(p);
+    }
+    virtual ~Owned() {}
+    // (single inheritance from Owned throughout: the object starts at its Owned)
+    static void FreeAll() { std::vector<void*> v; v.swap(Made()); for (void* p : v) delete static_cast<Owned*>(p); }
+};
+struct Obj : Owned { int id; Obj(int i) : id(i) {} };
 struct Font : Obj { Font(int i) : Obj(i) {} };
 struct Image : Obj { Image(int i) : Obj(i) {} void SetSize(int w, int h); };
 struct RawImage : Image {
@@ -236,7 +254,7 @@ template<class T> T SafeConfigGetComponent(Component* c, const char* name)
 // starting with '!' makes a read throw.
 static std::map<std::string, Component*> sComps;
 static Component* gComp;
-struct ComponentConfig {
+struct ComponentConfig : Owned {
     std::string mText; size_t mPos;
     ComponentConfig() : mPos(0) {}
     virtual ~ComponentConfig() {}
@@ -480,6 +498,7 @@ static ComponentConfig* MakeConfig(int i)
 // and state.
 static std::string RunSeq(int i, const std::vector<std::pair<std::string, std::string>>& steps)
 {
+    Owned::FreeAll();
     sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1; sNextPoint = 0; sNextRaw = 3000; sNextStretch = 500;
     gComp = new Component(1); gComp->mEdit = new Component(2);
     ComponentConfig* c = MakeConfig(i);
