@@ -67,6 +67,10 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPExperimentTimers.h"
+#include "ee/EECPPlaceCapture.h"
+#include "rust/sim/cp.h"
+
+EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cpp
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -196,41 +200,9 @@ void EEComputerPlayer::AddResource(long inIndex, long inAmount)
 // else a weighted average of its own limit and the largest human population, scaled by difficulty
 void EEComputerPlayer::WorkOutPopulation()
 {
-    float theOtherWeight = gCPBehaviors[kCPBehaviorPopulationCapOtherWeight].mFloatValue;
-    float theOwnWeight = gCPBehaviors[kCPBehaviorPopulationCapOwnWeight].mFloatValue;
-    long theOwn = EEPlayer::GetPopulationLimit(0);
-    bool theFound = false;
-    long theMax = 0;
-    bool theFlag = this->IsDeathmatch();
-    if (!this->mIgnoreOthers) {
-        for (unsigned long i = 0; i < gWorld.GetNumTeams(); i++) {
-            if (theFound)
-                break;
-            if (gWorld.mTeams[i].mVictoryCondition->HasEnoughWonders() && !gWorld.mTeams[i].ContainsPlayer(this->GetPlayerID()))
-                theFound = true;
-            else
-                theFound = false;
-        }
-        if (!theFound && !theFlag) {
-            for (unsigned long j = 1; j < gWorld.GetNumPlayers(); j++) {
-                EEPlayer* thePlayer = gWorld.mPlayers[j];
-                if (thePlayer->IsHuman()) {
-                    long theCount = thePlayer->GetTotalPopulation(true, true);
-                    if (theCount >= theOwn)
-                        theCount = theOwn;
-                    if (theMax <= theCount)
-                        theMax = theCount;
-                }
-            }
-            if (!EECPCheatOn(this, kAICheatPopBand))
-                theMax = theOwn;   // EE_AI_CHEATS without popband: no pull toward the human population
-            this->mPopulationCap = UMFloatToLong((theOwn * theOwnWeight + theMax * theOtherWeight) / (theOwnWeight + theOtherWeight));
-            this->mPopulationCap = UMFloatToLong(this->GetPopLimitAdjustment() * this->mPopulationCap);
-            if (this->mPopulationCap > theOwn)
-                this->mPopulationCap = theOwn;   // new: never above the game's population limit (Hard's row 98 is 140%)
-        } else
-            this->mPopulationCap = theOwn;
-    }
+    EECPPlaceScope theScope(kCpevWorkOutPopulation, this, true);   // CPEV (TEST ONLY)
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    ee_cp_work_out_population(&theContext);
 }
 
 // Detaches a unit from AI control: marks it, removes it from the combat manager and sets its AI state
@@ -242,34 +214,13 @@ void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
         inUnit->mAIState = 290008;
 }
 
-// Groups the enabled unit types that pass the screener by AI kind into the map, allocating new type lists
-void EEComputerPlayer::GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener)
-{
-    long i;
-    EEUnitClass* theClass;
-    long theValue;
-    long theType;
-    for (i = 0; i < EEUnitClassCount(); i++) {
-        theClass = gUnitClassTable[i];
-        if (theClass != NULL && theClass->mIsEnabled && inScreener.Screen(theClass)) {
-            theValue = theClass->mAIKind;
-            std::map<long, std::vector<long>*>::iterator it = ioMap.find(theValue);
-            if (it != ioMap.end()) {
-                theType = theClass->mUnitType;
-                it->second->push_back(theType);
-            } else if (theClass->mAIKind != kAIKindNone) {
-                std::vector<long>* theList = new std::vector<long>;
-                theValue = theClass->mUnitType;     // the key's variable again (the original's one [ebp+8] slot)
-                theList->push_back(theValue);
-                ioMap.insert(std::make_pair(theClass->mAIKind, theList));
-            }
-        }
-    }
-}
 
 // Returns true for epoch technologies; otherwise asks the player and refuses a missing node or one of kind 5
 bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
+    EECPPlaceScope theScope(kCpevCanProduce, this, true);   // CPEV (TEST ONLY)
+    theScope.I(inTechnology).I(inUnitClass).I(inCount).I(inCheckCost).I(inWonderMode);
+    bool theScopeResult = [&]() -> bool {
     bool theResult = true;
     if (inTechnology < 0 || inTechnology >= 15) {
         theResult = EEPlayer::CanProduce(inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason);
@@ -282,6 +233,9 @@ bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCo
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells the combat manager and then the player about a target player notice
@@ -290,28 +244,6 @@ void EEComputerPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
     EEPlayer::NoticeTargetPlayer(inPlayer, inFlag);
 }
 
-// Picks a random air unit type of the current epoch as the favorite and records it in the history
-// Shape shared by all four ChooseFavorite*Type: the iterator default-constructed after the map, the epoch loaded
-// into a local before the screener, the index drawn before begin(), the inner random index in a local, make_pair
-// for the history entry
-void EEComputerPlayer::ChooseFavoriteAirType()
-{
-    std::map<long, std::vector<long>*> theClasses;
-    std::map<long, std::vector<long>*>::iterator it;     // default-constructed after the map (_Ptr = 0)
-    long theEpoch = this->mTechnologies->mCurrentEpoch;  // loaded before the screener's pushes
-    this->GetScreenedTypesByLine(theClasses, EEAIFOFavoriteUnitScreener(this, true, false, false, false, theEpoch, 0));
-    if (theClasses.size() > 0) {
-        long theIndex = gPhysics->GetRandom(0L, (long)theClasses.size() - 1);
-        it = theClasses.begin();
-        for (long i = 0; i < theIndex; i++)
-            ++it;
-        long theRandom = gPhysics->GetRandom(0L, (long)it->second->size() - 1);
-        this->mFavoriteAirType = (*it->second)[theRandom];
-        for (it = theClasses.begin(); it != theClasses.end(); ++it)
-            delete it->second;
-    }
-    this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteAirType, this->mTechnologies->mCurrentEpoch));
-}
 
 // Creates a favorite-unit screener for the allowed movement kinds, with the epoch clamped to 0..14
 EEAIFOFavoriteUnitScreener::EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlayer, bool inAllowAir, bool inAllowLand, bool inAllowSea,
@@ -324,65 +256,8 @@ EEAIFOFavoriteUnitScreener::EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlaye
         this->mEpoch = 0;
 }
 
-// Picks a random land unit type of the current epoch as the favorite and records it in the history
-void EEComputerPlayer::ChooseFavoriteLandType()
-{
-    std::map<long, std::vector<long>*> theClasses;
-    std::map<long, std::vector<long>*>::iterator it;     // default-constructed after the map (_Ptr = 0)
-    long theEpoch = this->mTechnologies->mCurrentEpoch;  // loaded before the screener's pushes
-    this->GetScreenedTypesByLine(theClasses, EEAIFOFavoriteUnitScreener(this, false, true, false, false, theEpoch, 0));
-    if (theClasses.size() > 0) {
-        long theIndex = gPhysics->GetRandom(0L, (long)theClasses.size() - 1);
-        it = theClasses.begin();
-        for (long i = 0; i < theIndex; i++)
-            ++it;
-        long theRandom = gPhysics->GetRandom(0L, (long)it->second->size() - 1);
-        this->mFavoriteLandType = (*it->second)[theRandom];
-        for (it = theClasses.begin(); it != theClasses.end(); ++it)
-            delete it->second;
-    }
-    this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteLandType, this->mTechnologies->mCurrentEpoch));
-}
 
-// Picks a random sea unit type of the current epoch as the favorite and records it in the history
-void EEComputerPlayer::ChooseFavoriteSeaType()
-{
-    std::map<long, std::vector<long>*> theClasses;
-    std::map<long, std::vector<long>*>::iterator it;     // default-constructed after the map (_Ptr = 0)
-    long theEpoch = this->mTechnologies->mCurrentEpoch;  // loaded before the screener's pushes
-    this->GetScreenedTypesByLine(theClasses, EEAIFOFavoriteUnitScreener(this, false, false, true, false, theEpoch, 0));
-    if (theClasses.size() > 0) {
-        long theIndex = gPhysics->GetRandom(0L, (long)theClasses.size() - 1);
-        it = theClasses.begin();
-        for (long i = 0; i < theIndex; i++)
-            ++it;
-        long theRandom = gPhysics->GetRandom(0L, (long)it->second->size() - 1);
-        this->mFavoriteSeaType = (*it->second)[theRandom];
-        for (it = theClasses.begin(); it != theClasses.end(); ++it)
-            delete it->second;
-    }
-    this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteSeaType, this->mTechnologies->mCurrentEpoch));
-}
 
-// Picks a random space unit type of the current epoch as the favorite and records it in the history
-void EEComputerPlayer::ChooseFavoriteSpaceType()
-{
-    std::map<long, std::vector<long>*> theClasses;
-    std::map<long, std::vector<long>*>::iterator it;     // default-constructed after the map (_Ptr = 0)
-    long theEpoch = this->mTechnologies->mCurrentEpoch;  // loaded before the screener's pushes
-    this->GetScreenedTypesByLine(theClasses, EEAIFOFavoriteUnitScreener(this, false, false, false, true, theEpoch, 0));
-    if (theClasses.size() > 0) {
-        long theIndex = gPhysics->GetRandom(0L, (long)theClasses.size() - 1);
-        it = theClasses.begin();
-        for (long i = 0; i < theIndex; i++)
-            ++it;
-        long theRandom = gPhysics->GetRandom(0L, (long)it->second->size() - 1);
-        this->mFavoriteSpaceType = (*it->second)[theRandom];
-        for (it = theClasses.begin(); it != theClasses.end(); ++it)
-            delete it->second;
-    }
-    this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteSpaceType, this->mTechnologies->mCurrentEpoch));
-}
 
 // Forwards to the player's handler for this slot
 void EEComputerPlayer::Virtual60()
@@ -393,6 +268,7 @@ void EEComputerPlayer::Virtual60()
 // Handles a finished unit; a land building is offered as drop site to every resource center and rebalances production
 void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kCpevUnitCompleted, this, true); theScope.CU(inUnit);   // CPEV (TEST ONLY)
     EEPlayer::UnitCompleted(inUnit);
     if (this->mUnitsState != NULL)
         EECPUnitsOnCompleted(this, inUnit);
@@ -415,105 +291,12 @@ long EEComputerPlayer::GetHeroCount(bool inByClass, bool inRequests)
 // puts the town center first, activates the ones in range (and connected on water maps) and sets fishing use
 void EEComputerPlayer::Regroup()
 {
-    std::vector<EEUnit*> theUnits;
-    U2DPoint<long> theTown;
-    EETileCoordinate theCenter;
-    theCenter.mX = 0;
-    theCenter.mY = 0;
-    std::vector<EEUnit*> theUnused;
-    long theRange = this->mDropOffDistance;
-    EEMap* theMap = gWorld.mMap;
-    long theCount = 0;
-    bool theWaterMap;
-    if (theMap != NULL && ((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap))
-        theWaterMap = true;
-    else
-        theWaterMap = false;
-    theTown.mX = this->mPlacement->mTownCenterTile.mX;
-    theTown.mY = this->mPlacement->mTownCenterTile.mY;
-    if (gWorld.mPlayers[0] != NULL && theTown.mX != -10000 && theTown.mY != -10000) {
-        this->GetObjectsToGroup(theUnits, theCount);
-        unsigned long theNumUnits;
-        unsigned long i;
-        for (i = 0, theNumUnits = theUnits.size(); i < theNumUnits; i++) {
-            EEUnit* theUnit = theUnits[i];
-            bool theFound = false;
-            unsigned long theNumCenters;
-            unsigned long j;
-            for (j = 0, theNumCenters = this->mResourceCenters.size(); j < theNumCenters && !theFound; j++) {
-                if (this->mResourceCenters[j]->IsWithinRadius(theUnit)) {
-                    this->mResourceCenters[j]->AddUnit(theUnit);
-                    theFound = true;
-                }
-            }
-            if (!theFound) {
-                EECPResourceCenter* theNewCenter = new EECPResourceCenter(this, theUnit);
-                this->mResourceCenters.push_back(theNewCenter);
-            }
-        }
-        std::sort(this->mResourceCenters.begin(), this->mResourceCenters.end(), EECPCenterDistanceLess(theTown));
-        EEComplexUnit* theFirstCapitol = NULL;   // (the unit manager's first tracked capitol)
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL && theFirstCapitol == NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->mUnitClass->mUnitType == 0x29 && theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
-                theFirstCapitol = theUnit->mComplexUnit;
-        if (theFirstCapitol != NULL) {
-            EEComplexUnit* theTownCenter = theFirstCapitol;
-            if (theTownCenter != NULL) {
-                bool theNew = this->mResourceCenters.size() == 0;
-                if (!theNew) {
-                    this->mResourceCenters[0]->AdoptDropSite(theTownCenter);
-                    theNew = this->mResourceCenters[0]->mUnit != theTownCenter;
-                }
-                if (theNew) {
-                    EECPResourceCenter* theNewCenter = new EECPResourceCenter(this, NULL);
-                    theNewCenter->SetUnit(theTownCenter);
-                    this->mResourceCenters.insert(this->mResourceCenters.begin(), theNewCenter);
-                }
-            }
-        }
-        unsigned long theNumCenters;
-        unsigned long k;
-        long theRangeSquared = theRange * theRange;
-        for (k = 0, theNumCenters = this->mResourceCenters.size(); k < theNumCenters; k++) {
-            this->mResourceCenters[k]->GetCenter(theCenter);
-            if (EETileDistanceLess(theTown).DistanceSquared(theCenter) < theRangeSquared * 36
-                && (!theWaterMap || gContinentManager.AreConnected(gContinentManager.GetContinentAt(theCenter.mX, theCenter.mY),
-                    gContinentManager.GetContinentAt(theTown.mX, theTown.mY), this->GetCitizenPassability())))
-                this->mResourceCenters[k]->SetActive(true, 0);
-            else
-                this->mResourceCenters[k]->SetActive(false, 0);
-        }
-        this->mUsesFishing = (unsigned long)theCount >= 10 && theMap != NULL && (theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap;
-    }
+    EECPPlaceScope theScope(kCpevRegroup, this, true);   // CPEV (TEST ONLY)
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    ee_cp_regroup(&theContext);
 }
 
 
-// Returns the most frequent path area id among the tiles around the unit (0 when none has one)
-unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
-{
-    std::map<unsigned short, unsigned long>::iterator theBest;
-    std::map<unsigned short, unsigned long> theCounts;
-    std::vector<EETileCoordinate> theTiles;
-    EEGetSquareRingTiles(inUnit->mTileX, inUnit->mTileY, 1, theTiles);
-    for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end(); ++it) {
-        EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(*it);
-        unsigned short theID = theArea != NULL ? theArea->GetID() : 0;
-        if (theID != 0)
-            theCounts[theID] = theCounts.insert(std::map<unsigned short, unsigned long>::value_type(theID, 0)).first->second + 1;
-    }
-    // no tile around the unit has a path area: there is no first entry to read (the map head node holds no value)
-    if (theCounts.empty())
-        return 0;
-    theBest = theCounts.begin();
-    unsigned short theResult = theBest->first;
-    unsigned long theMax = theBest->second;
-    for (++theBest; theBest != theCounts.end(); ++theBest)
-        if (theBest->second > theMax) {
-            theResult = theBest->first;
-            theMax = theBest->second;
-        }
-    return theResult;
-}
 
 // Returns a cost scaled by the difficulty's unit cost modifier when the AI cheats, never below 0
 long EEComputerPlayer::ScaleCost(long inCost)
@@ -549,44 +332,6 @@ long EEComputerPlayer::GetPopulationLimit(long inArg)
 
 
 
-// Collects nature's stone, gold, iron and forage resources reachable from the town center (all on water maps)
-// into outUnits and counts the fish
-// NEAR: the original passes one tile local to GetPathAreaAt (U2DPoint) and GetContinentAt (EETileCoordinate)
-void EEComputerPlayer::GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount)
-{
-    EEPlayer* theNature = gWorld.mPlayers[0];
-    EETileCoordinate theTile;
-    theTile.mX = 0;
-    theTile.mY = 0;
-    bool theAnyContinent;
-    if (gWorld.GetMap() != NULL && ((gWorld.GetMap()->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.GetMap()->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap))
-        theAnyContinent = true;
-    else
-        theAnyContinent = false;
-    theTile.mX = this->mPlacement->mTownCenterTile.GetX();
-    theTile.mY = this->mPlacement->mTownCenterTile.GetY();
-    outUnits.clear();
-    outCount = 0;
-    for (EEUnit* theUnit = theNature->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mResourceAmount > 0) {
-            if (theUnit->mResourceType == kResourceStone || theUnit->mResourceType == kResourceGold || theUnit->mResourceType == kResourceIron || theUnit->GetUnitClass()->mUnitType == kUnitTypeResForageBush) {
-                if (theAnyContinent)
-                    outUnits.push_back(theUnit);
-                else {
-                    unsigned short theID = 0;
-                    EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(EETileLocation(theTile.GetX(), theTile.GetY()));
-                    if (theArea != NULL)
-                        theID = theArea->GetID();
-                    if (theID == this->GetObjectRegion(static_cast<EEComplexUnit*>(theUnit))
-                        || gContinentManager.AreConnected(gContinentManager.GetContinentAt(theTile),
-                            gContinentManager.GetContinentAt(theUnit), this->GetCitizenPassability()))
-                        outUnits.push_back(theUnit);
-                }
-            } else if (theUnit->GetUnitClass()->mUnitType == kUnitTypeResFish)
-                outCount++;
-        }
-    }
-}
 
 // Returns 50 for unit classes 0x20 and 0x1e0 while a garrison or fortress is planned, else 1
 long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
@@ -605,18 +350,11 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenter(unsigned long inIndex)
 // New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer)
 {
-    // stage 6: an epoch researched or queued at one of the player's buildings (the research manager's queue is gone)
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* c = theUnit->mComplexUnit;
-        if (c == NULL || !c->mUnitClass->IsBuilding() || !(theUnit->mHitPoints > 0))
-            continue;
-        if (c->mCurrentResearch != kTechNone && EEIsEpochID(c->mCurrentResearch))
-            return c->mCurrentResearch;
-        for (unsigned long q = 0; q < c->GetBuildQueueSize(); q++)
-            if (EEIsEpochID((*(c->mBuildQueue.begin() + q)).mTechnology))
-                return (*(c->mBuildQueue.begin() + q)).mTechnology;
-    }
-    return kTechNone;
+    EECPPlaceScope theScope(kCpevPendingEpoch, inPlayer, true);   // CPEV (TEST ONLY)
+    EeCpPlaceCtx theContext = EECPPlaceContext(inPlayer);
+    long theResult = ee_cp_pending_epoch(&theContext);
+    theScope.I(theResult);
+    return theResult;
 }
 
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
@@ -629,6 +367,7 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
 // Records that the player took damage: the time, and whether a land building or a citizen was hit
 void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 {
+    EECPPlaceScope theScope(kCpevDamageTaken, this, true); theScope.I(inPlayer).I(inAmount).U(inUnit);   // CPEV (TEST ONLY)
     long theCategory = inUnit->mUnitClass->mCategory;
     EEPlayer::DamageTaken(inPlayer, inAmount, inUnit);
     this->mLastDamagedTime = gPhysics->mGameTime;
@@ -796,86 +535,38 @@ void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
     EEPlayer::EpochMediaLoaded(inEpoch);
 }
 
-static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer);   // (below)
-
 // Enters an epoch: researches its kind-7 technologies, re-picks the favourite land, sea, air and space types and,
 // outside saved-game loading, retires obsolete units and tells the combat manager
 void EEComputerPlayer::EnterEpoch(long inEpoch)
 {
+    EECPPlaceScope theScope(kCpevEnterEpoch, this, true); theScope.I(inEpoch);   // CPEV (TEST ONLY)
     if (this->mTechnologies != NULL) {
         EETechTreeEpoch* theEpoch = dynamic_cast<EETechTreeEpoch*>(this->mTechnologies->Get(inEpoch));
         if (theEpoch != NULL)
             theEpoch->ResearchKind(7, true);
     }
-    this->ChooseFavoriteLandType();
-    this->ChooseFavoriteSeaType();
-    this->ChooseFavoriteAirType();
-    this->ChooseFavoriteSpaceType();
-    if (!gLoadingSavedGame) {
-        EECPRetireObsoleteUnits(this);
-    }
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    const int32_t kKinds[4] = {EE_CP_FAVORITE_LAND, EE_CP_FAVORITE_SEA, EE_CP_FAVORITE_AIR, EE_CP_FAVORITE_SPACE};
+    for (int k = 0; k < 4; k++)
+        ee_cp_choose_favorite(&theContext, kKinds[k]);
+    if (!gLoadingSavedGame)
+        ee_cp_retire_obsolete_units(&theContext);
 }
 
 // Picks a random premade civilization that fits the current epoch (some excluded on waterless maps, Japan and
 // Korea only on space maps) and loads it for the player
 void EEComputerPlayer::ChooseCivilization()
 {
-    std::vector<UString> theNames;
+    EECPPlaceScope theScope(kCpevChooseCivilization, this, true); struct EECPCivNote { EECPPlaceScope& s; EEComputerPlayer* p; ~EECPCivNote() { const char* c = (const char*)p->mCivilizationFile; unsigned long h = 0; while (c != NULL && *c) h = h * 31 + (unsigned char)*c++; s.I((long)h); } } theScopeNote = {theScope, this};   // CPEV (TEST ONLY)
     long theEpoch = this->mTechnologies != NULL ? this->mTechnologies->mCurrentEpoch : 100000;
-    bool theWater = gWorld.mMap != NULL && (gWorld.mMap->mMapCharacteristics & kRMMapWaterlessMap) == kRMMapWaterlessMap;
+    bool theWaterless = gWorld.mMap != NULL && (gWorld.mMap->mMapCharacteristics & kRMMapWaterlessMap) == kRMMapWaterlessMap;
     bool theSpace = gWorld.mMap != NULL && gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    if (theEpoch != kTechNone) {
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochBronze)
-            theNames.push_back(UString("Babylon"));
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochDark && !theWater)
-            theNames.push_back(UString("Classical Greece"));
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochDark && !theWater)
-            theNames.push_back(UString("Carthage"));
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochDark)
-            theNames.push_back(UString("Kingdom of Israel"));
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochDark)
-            theNames.push_back(UString("Assyrian Empire"));
-        if (theEpoch >= kTechEpochPrehistoric && theEpoch <= kTechEpochMiddle)
-            theNames.push_back(UString("Byzantine Rome"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial && !theWater)
-            theNames.push_back(UString("England"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial)
-            theNames.push_back(UString("Franks"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial && !theWater)
-            theNames.push_back(UString("Spain"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial)
-            theNames.push_back(UString("Kingdom of Italy"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial)
-            theNames.push_back(UString("Austria"));
-        if (theEpoch >= kTechEpochDark && theEpoch <= kTechEpochIndustrial)
-            theNames.push_back(UString("Ottoman Empire"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace && !theWater)
-            theNames.push_back(UString("United States"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("Germany"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("Russia"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace && !theWater)
-            theNames.push_back(UString("Great Britain"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("Italy"));
-        if (theEpoch >= kTechEpochIndustrial && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("France"));
-        if (theEpoch >= kTechEpochAtomicModern && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("Rebel Forces"));
-        if (theEpoch >= kTechEpochAtomicModern && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("China"));
-        if (theEpoch >= kTechEpochDigital && theEpoch <= kTechEpochSpace)
-            theNames.push_back(UString("Novaya Russia"));
-        if (theEpoch >= kTechEpochDigital && theEpoch <= kTechEpochSpace && theSpace) {
-            theNames.push_back(UString("Japan"));
-            theNames.push_back(UString("Korea"));
-        }
-        if (theNames.size() > 0) {
-            long theIndex = gPhysics->GetRandom(0L, (long)theNames.size() - 1);
-            EEApplyCivilizationFile(theNames[theIndex], this);
-            this->mCivilizationFile = theNames[theIndex];
-        }
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    const uint8_t* theName = ee_cp_choose_civilization(&theContext, (int32_t)theEpoch, theWaterless, theSpace);
+    if (theName != NULL) {
+        UString theFile((const char*)theName);
+        EEApplyCivilizationFile(theFile, this);
+        this->mCivilizationFile = theFile;
     }
 }
 
@@ -909,6 +600,7 @@ void EEComputerPlayer::RefreshTownGroups()
 // drop site is offered to every resource center
 void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
+    EECPPlaceScope theScope(kCpevUnitsSwapped, this, true); theScope.I((long)ioSwaps.size());   // CPEV (TEST ONLY)
     if (this->mUnitsState != NULL)
         EECPUnitsOnSwapped(this, ioSwaps);   // the held set and the script's ids follow the new units
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
@@ -967,6 +659,9 @@ void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inM
 // the rest of RepairPointers (EXE 0x43cff8 after the EEPlayer call): the managers, the resource centres, the timers
 long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult)
 {
+    EECPPlaceScope theScope(kCpevRestoreManagers, this, true);   // CPEV (TEST ONLY)
+    theScope.I((long)inMajorVersion).I((long)inMinorVersion).I(inResult);
+    long theScopeResult = [&]() -> long {
     long theResult = inResult;
     if (theResult == kErrorOK)
         theResult = this->mPlacement->Restore();
@@ -981,25 +676,9 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
             ee_cp_restore_fields(this, 1, gPhysics->mGameTime, true);
     }
     ee_cp_restore_fields(this, 2, 0, theResult == kErrorOK);   // the attack bounds, the drop-off distance, a regroup
-    if (gUnitClassTable[this->mFavoriteAirType] == NULL) {
-        this->ChooseFavoriteAirType();
-        if (gUnitClassTable[this->mFavoriteAirType] == NULL)
-            this->mFavoriteAirType = 72;
-    }
-    if (gUnitClassTable[this->mFavoriteLandType] == NULL) {
-        this->ChooseFavoriteLandType();
-        if (gUnitClassTable[this->mFavoriteLandType] == NULL)
-            this->mFavoriteLandType = 20;
-    }
-    if (gUnitClassTable[this->mFavoriteSeaType] == NULL) {
-        this->ChooseFavoriteSeaType();
-        if (gUnitClassTable[this->mFavoriteSeaType] == NULL)
-            this->mFavoriteSeaType = 242;
-    }
-    if (gUnitClassTable[this->mFavoriteSpaceType] == NULL) {
-        this->ChooseFavoriteSpaceType();
-        if (gUnitClassTable[this->mFavoriteSpaceType] == NULL)
-            this->mFavoriteSpaceType = 730;
+    {   // the favourites whose classes are gone chosen again (ee_sim::cp::events restore_favorites)
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        ee_cp_restore_favorites(&theContext);
     }
     this->mSeed = this->mPlayerID % 10;
     for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -1011,6 +690,9 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
     }
     ee_cp_restore_fields(this, 3, inMinorVersion, inMajorVersion > 0);   // a pre-0.229 save's one expansion timer
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Complete goal/utility types after this unit's static definitions preserve existing initializer order.
@@ -1056,62 +738,11 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     this->RefreshActiveGoal();
 }
 
-// From the Atomic - WW1 epoch on, kills the player's living obsolete units of 17 unit types that no human player can
-// see (EE_AI_CHEATS retire; extracted from the deleted EECPPersonnel::RetireObsoleteUnits 0x48707b, stage 5)
-static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer)
-{
-    std::vector<EEPlayer*> thePlayers;
-    std::vector<EEComplexUnit*> theUnits;
-    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
-    long i;
-    if (!EECPCheatOn(inPlayer, kAICheatRetire) || theEpoch < kTechEpochAtomicWW1)
-        return;
-    for (i = (long)gWorld.mNumPlayers - 1; i > 0; i--) {
-        if (gWorld.mPlayers[i] != NULL && gWorld.mPlayers[i]->IsHuman())
-            thePlayers.push_back(gWorld.GetPlayer(i));
-    }
-    if (thePlayers.size() == 0)
-        return;
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit == NULL || theComplexUnit->GetTechTreeNode() == NULL
-            || !theComplexUnit->GetTechTreeNode()->GetIsObsolete())
-            continue;
-        switch (theComplexUnit->mUnitClass->mUnitType) {
-        case kUnitTypeArch06CavalryArcher:
-        case kUnitTypeGunSpear04StoneThrower:
-        case kUnitTypeArch05CrossBow:
-        case kUnitTypeArch06LongBow:
-        case kUnitTypeInf04Phalanx:
-        case kUnitTypeArcheryRange:
-        case kUnitTypeStable:
-        case kUnitTypeInf05Pilum:
-        case kUnitTypeGunSiege06Trebuchet:
-        case kUnitTypeGunSiege09SerpentineCannon:
-        case kUnitTypeCav06Knight:
-        case kUnitTypeGunCannon09BronzeCannon:
-        case kUnitTypeGunSpear06Balistae:
-        case kUnitTypeS09RoyalGalleon:
-        case kUnitTypeCav07CarabineersGun:
-        case kUnitTypeCav09ImperialCuirassierSword:
-        case kUnitTypeInf08Halberdier: {
-            // retired only when no human player sees it (was: when any one human does not)
-            bool theFound = theComplexUnit->mHitPoints > 0;
-            for (i = (long)thePlayers.size() - 1; i >= 0 && theFound; i--)
-                theFound = !EEIsSeenBy(theComplexUnit, thePlayers[i], true);
-            if (theFound)
-                theUnits.push_back(theComplexUnit);
-            break;
-        }
-        }
-    }
-    for (i = (long)theUnits.size() - 1; i >= 0; i--)
-        theUnits[i]->Kill(true, false, false);
-}
 
 // Tells the research manager about a new epoch, enters it if it is a real epoch, then runs the base handling
 void EEComputerPlayer::EpochReached(long inEpoch)
 {
+    EECPPlaceScope theScope(kCpevEpochReached, this, true); theScope.I(inEpoch);   // CPEV (TEST ONLY)
     // (the research manager's EpochReached: the reached epoch's SOL count starts over)
     if (EEIsEpochID(inEpoch) && !gLoadingSavedGame && this->mTechnologies != NULL)
         this->mTechnologies->mEpochs[this->mTechnologies->mCurrentEpoch].mCurrentSOL = 0;
@@ -1151,6 +782,7 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
 // Turns the AI on or off, handing all units to the unit manager or releasing them when the state changes
 void EEComputerPlayer::SetActive(bool inActive)
 {
+    EECPPlaceScope theScope(kCpevSetActive, this, true); theScope.I(inActive);   // CPEV (TEST ONLY)
     if (inActive && !this->mActive) {
         // (the unit manager's AddAllUnits: the town centre tile from the units the player has)
         for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
@@ -1173,6 +805,7 @@ void EEComputerPlayer::SetCitizenPercentage(float inValue)
 // Queues a stranded unit to be killed on the next update; a stranded citizen is also reported as a threat
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kCpevUnitStranded, this, true); theScope.CU(inUnit);   // CPEV (TEST ONLY)
     inUnit->Reference();
     this->mUnitsToKill.push_back(inUnit);
 }
@@ -1222,25 +855,8 @@ void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float in
 // player does
 void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 {
-    EEUnitClass* theClass = gUnitClassTable[inClass->mUnitType];
-    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (inClass != NULL && theTechnology != kTechNone) {
-        EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
-        if (theNode != NULL) {
-            EEUnitClassImprovementTable* theImprovements = inClass->mImprovements;
-            EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inClass->mUnitType];
-            if (theImprovements != NULL) {
-                float theFactor = theImprovements->mEntries[inImprovement].mCostFactor;
-                theFactor *= this->GetImprovementLevel(inClass->mUnitType, inImprovement);
-                for (long i = 2; i < 7; i++) {
-                    float theCost = (float)theNode->mData->mCosts[i] * theUpgrade->mCostScale;
-                    theCost *= theFactor;
-                    long theAmount = UMFloatToLong(theCost);
-                    (void)theAmount;   // (the resource manager's needs ledger: gone in stage 6)
-                }
-            }
-        }
-    }
+    EECPPlaceScope theScope(kCpevPayImprovement, this, true); theScope.I(inClass != NULL ? (long)inClass->mUnitType : -1).I(inImprovement);   // CPEV (TEST ONLY)
+    // (the original credited the resource manager's needs ledger with the scaled costs first: gone in stage 6)
     EEPlayer::PayImprovement(inClass, inImprovement);
 }
 
@@ -1248,6 +864,7 @@ void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 // Registers a new unit with the player and, while the AI is active, with the civilization and combat managers
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kCpevUnitPlaced, this, true); theScope.CU(inUnit);   // CPEV (TEST ONLY)
     EEPlayer::UnitPlaced(inUnit);
     if (this->mUnitsState != NULL)
         EECPUnitsOnPlaced(this, inUnit);
@@ -1260,6 +877,7 @@ void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
 // and, for a land building, every resource center
 void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
+    EECPPlaceScope theScope(kCpevUnitTaken, this, true); theScope.U(static_cast<EEUnit*>(inUnit)).I(inSwapped);   // CPEV (TEST ONLY)
     EEPlayer::UnitTaken(inUnit, inSwapped);
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     if (this->mUnitsState != NULL)
@@ -1323,6 +941,7 @@ static void EECPTransportIdle(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
 // the combat manager, marks citizens as idle gatherers and drops nearly idle units from their group
 void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kCpevUnitGoalDone, this, true); theScope.CU(inUnit);   // CPEV (TEST ONLY)
     unsigned long theGoals = inUnit->mGoalQueues[0].mGoals.size();
     if (inUnit->GetClass()->IsTransport() && !EECPUnitsHolds(this, inUnit)) {
         EECPTransportIdle(this, inUnit);
@@ -1362,6 +981,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
     UWideString theUnused1;
     UWideString theUnused2;
     EECPTraceScope theScope("cp");
+    EECPPlaceCaptureThread();   // CPEV (TEST ONLY)
     if (!this->mIsStarted) {
         // port: the seat's script loads first (ee/EECPEngine.h); a seat whose AI cannot run stands idle (logged)
         if (!this->mObserverMode)
@@ -1401,108 +1021,20 @@ void EEComputerPlayer::Update(unsigned long inTime)
 // centers by distance from the town center and activates gaps; new centers only gather units if centers existed
 void EEComputerPlayer::UpdateGroups()
 {
-    std::vector<EEUnit*> theUnits;
-    U2DPoint<long> theCenter;
-    EECPResourceCenter* theNewCenter = NULL;
-    theCenter = this->mPlacement->mTownCenterTile;
-    if (theCenter.mX != -10000 && theCenter.mY != -10000) {
-        long theCount;
-        this->GetObjectsToGroup(theUnits, theCount);
-        std::vector<EEUnit*>::iterator theUnit;
-        for (theUnit = theUnits.begin(); theUnit != theUnits.end();) {
-            bool theFound = false;
-            unsigned long theNumCenters;
-            unsigned long i;
-            for (i = 0, theNumCenters = this->mResourceCenters.size(); i < theNumCenters && !theFound; i++)
-                theFound = this->mResourceCenters[i]->Contains(*theUnit);
-            if (theFound)
-                theUnit = theUnits.erase(theUnit);
-            else
-                theUnit++;
-        }
-        for (theUnit = theUnits.begin(); theUnit != theUnits.end();) {
-            bool theFound = false;
-            unsigned long theNumCenters;
-            unsigned long i;
-            for (i = 0, theNumCenters = this->mResourceCenters.size(); i < theNumCenters && !theFound; i++) {
-                if (this->mResourceCenters[i]->IsWithinRadius(*theUnit)) {
-                    this->mResourceCenters[i]->AddUnit(*theUnit);
-                    theFound = true;
-                }
-            }
-            if (theFound)
-                theUnit = theUnits.erase(theUnit);
-            else
-                theUnit++;
-        }
-        while (theUnits.size() != 0) {
-            EEUnit* theFirst = theUnits.back();
-            theUnits.pop_back();
-            theNewCenter = new EECPResourceCenter(this, theFirst);
-            for (theUnit = theUnits.begin(); theUnit != theUnits.end();) {
-                bool theFound = false;
-                unsigned long theNumCenters;
-                unsigned long i;
-                for (i = 0, theNumCenters = this->mResourceCenters.size(); i < theNumCenters && !theFound; i++) {
-                    if (theNewCenter->IsWithinRadius(*theUnit)) {
-                        theNewCenter->AddUnit(*theUnit);
-                        theFound = true;
-                    }
-                }
-                if (theFound)
-                    theUnit = theUnits.erase(theUnit);
-                else
-                    theUnit++;
-            }
-            theNewCenter->SetActive(false, 0);
-            this->mResourceCenters.push_back(theNewCenter);
-        }
-        if (theNewCenter != NULL) {
-            std::sort(this->mResourceCenters.begin(), this->mResourceCenters.end(), EECPCenterDistanceLess(theCenter));
-            std::vector<EECPResourceCenter*>::iterator theFirst = this->mResourceCenters.begin();
-            std::vector<EECPResourceCenter*>::iterator theEnd = this->mResourceCenters.end();
-            std::vector<EECPResourceCenter*>::iterator theFound = theEnd;
-            std::vector<EECPResourceCenter*>::iterator theCenter = theFirst;
-            while (theCenter != theEnd && theFound == theEnd) {
-                if ((*theCenter)->mIsActive)
-                    theFound = theCenter;
-                theCenter++;
-            }
-            if (theFound != theFirst && theFound != theEnd) {
-                for (; theFirst != theFound; theFirst++)
-                    (*theFirst)->SetActive(true, 0);
-            }
-            // activate inactive centers between two active ones; with a single center there is no gap (the loop
-            // used to step past its end then, as begin + 1 never equals end - 1)
-            for (theCenter = this->mResourceCenters.begin();
-                this->mResourceCenters.size() >= 2 && ++theCenter != this->mResourceCenters.end() - 1;) {
-                if (!(*theCenter)->mIsActive && (*(theCenter - 1))->mIsActive && (*(theCenter + 1))->mIsActive)
-                    (*theCenter)->SetActive(true, 0);
-            }
-        }
-    }
+    EECPPlaceScope theScope(kCpevUpdateGroups, this, true);   // CPEV (TEST ONLY)
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    ee_cp_update_groups(&theContext);
 }
 
 
 // Returns true for citizens and for loaded transports that carry only citizens
 bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
 {
-    long theCategory = inUnit->mUnitClass->mCategory;
-    bool theResult = theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen;
-    if (!theResult) {
-        if (inUnit->mUnitClass->IsTransport() && inUnit->GetNumCargoUnits() > 0) {
-            unsigned long i = 0;
-            theResult = true;
-            while (i < inUnit->GetNumCargoUnits() && theResult) {
-                long theKind = inUnit->GetCargo(i)->mUnitClass->mCategory;
-                if (theKind == kUnitCategoryLandCitizen || theKind == kUnitCategoryNavalCitizen)
-                    theResult = true;
-                else
-                    theResult = false;
-                i++;
-            }
-        }
-    }
+    EECPPlaceScope theScope(kCpevAvoidsEnemies, this, true);   // CPEV (TEST ONLY)
+    theScope.CU(inUnit);
+    EeCpPlaceCtx theContext = EECPPlaceContext(this);
+    bool theResult = ee_cp_avoids_enemies(&theContext, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit));
+    theScope.I(theResult);
     return theResult;
 }
 
@@ -1609,4 +1141,122 @@ long EECPLoadResourceState(FSFile& inFile)
         });
     }
     return theResult;
+}
+
+// The computer player's world (ee_sim::cp::events over place_game's EE_CP_PLAYER_* operations; `inA`, `inB` units or
+// centres). The centres' members are their forwarders (their PLCE scopes), the centres' sort the original's.
+extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
+    EeCpPlaceIo* io)
+{
+    EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(reinterpret_cast<EEPlayer*>((uintptr_t)inContext->player));
+    EECPResourceCenter* theCenter = reinterpret_cast<EECPResourceCenter*>((uintptr_t)inA);
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)inA);
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
+    EEUnit* theOther = reinterpret_cast<EEUnit*>((uintptr_t)inB);
+    const int64_t* v = io->v;
+    switch (inOp) {
+    case EE_CP_PLAYER_BEHAVIOR_FLOAT:
+        io->f[0] = gCPBehaviors[(long)v[0]].mFloatValue;
+        return 0;
+    case EE_CP_PLAYER_BASE_POP_LIMIT:
+        return thePlayer->EEPlayer::GetPopulationLimit(0);
+    case EE_CP_PLAYER_DEATHMATCH:
+        return thePlayer->IsDeathmatch() ? 1 : 0;
+    case EE_CP_PLAYER_CHEAT_ON:
+        return EECPCheatOn(thePlayer, (long)v[0]) ? 1 : 0;
+    case EE_CP_PLAYER_NUM_TEAMS:
+        return (int64_t)gWorld.GetNumTeams();
+    case EE_CP_PLAYER_TEAM_WONDERS:
+        return gWorld.mTeams[(size_t)v[0]].mVictoryCondition->HasEnoughWonders() ? 1 : 0;
+    case EE_CP_PLAYER_TEAM_CONTAINS:
+        return gWorld.mTeams[(size_t)v[0]].ContainsPlayer((unsigned long)v[1]) ? 1 : 0;
+    case EE_CP_PLAYER_NUM_PLAYERS:
+        return (int64_t)gWorld.mNumPlayers;
+    case EE_CP_PLAYER_HUMAN: {
+        EEPlayer* theWorldPlayer = gWorld.mPlayers[(size_t)v[0]];
+        return theWorldPlayer == NULL ? -1 : theWorldPlayer->IsHuman() ? 1 : 0;
+    }
+    case EE_CP_PLAYER_POPULATION:
+        return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
+    case EE_CP_PLAYER_HANDLE:
+        return (int64_t)(uintptr_t)gWorld.GetPlayer((unsigned long)v[0]);
+    case EE_CP_PLAYER_PATH_AREA_ID: {
+        EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(EETileLocation((long)v[0], (long)v[1]));
+        return theArea != NULL ? theArea->GetID() : 0;
+    }
+    case EE_CP_PLAYER_UNIT_CONTINENT_AT:
+        return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
+    case EE_CP_PLAYER_CENTER_CREATE:
+        return (int64_t)(uintptr_t)new EECPResourceCenter(thePlayer, theUnit);
+    case EE_CP_PLAYER_CENTER_LIST:
+        if (v[0] != 0)
+            thePlayer->mResourceCenters.insert(thePlayer->mResourceCenters.begin(), theCenter);
+        else
+            thePlayer->mResourceCenters.push_back(theCenter);
+        return 0;
+    case EE_CP_PLAYER_CENTER_IS_WITHIN:
+        return theCenter->IsWithinRadius(theOther) ? 1 : 0;
+    case EE_CP_PLAYER_CENTER_ADD:
+        theCenter->AddUnit(theOther);
+        return 0;
+    case EE_CP_PLAYER_CENTER_CONTAINS:
+        return theCenter->Contains(theOther) ? 1 : 0;
+    case EE_CP_PLAYER_CENTER_ADOPT:
+        theCenter->AdoptDropSite(static_cast<EEComplexUnit*>(theOther));
+        return 0;
+    case EE_CP_PLAYER_CENTER_SET_MAIN:
+        theCenter->SetUnit(static_cast<EEComplexUnit*>(theOther));
+        return 0;
+    case EE_CP_PLAYER_CENTER_GET_CENTER: {
+        EETileCoordinate theTile((long)v[0], (long)v[1]);
+        theCenter->GetCenter(theTile);
+        io->v[0] = theTile.mX;
+        io->v[1] = theTile.mY;
+        return 0;
+    }
+    case EE_CP_PLAYER_CENTER_SET_ACTIVE:
+        theCenter->SetActive(v[0] != 0, 0);
+        return 0;
+    case EE_CP_PLAYER_CENTERS_SORT:
+        std::sort(thePlayer->mResourceCenters.begin(), thePlayer->mResourceCenters.end(),
+            EECPCenterDistanceLess(U2DPoint<long>((long)v[0], (long)v[1])));
+        return 0;
+    case EE_CP_PLAYER_FAVORITE_CANDIDATE: {
+        EEUnitClass* theClass = gUnitClassTable[(long)v[0]];
+        long theKind = (long)v[1];
+        EEAIFOFavoriteUnitScreener theScreener(thePlayer, theKind == EE_CP_FAVORITE_AIR, theKind == EE_CP_FAVORITE_LAND,
+            theKind == EE_CP_FAVORITE_SEA, theKind == EE_CP_FAVORITE_SPACE, (long)v[2], 0);
+        if (theClass == NULL || !theClass->mIsEnabled || !theScreener.Screen(theClass))
+            return 0;
+        io->v[0] = theClass->mAIKind;
+        io->v[1] = theClass->mUnitType;
+        return 1;
+    }
+    case EE_CP_PLAYER_HISTORY_PUSH:
+        thePlayer->mFavoriteTypeHistory.push_back(std::make_pair((unsigned long)v[0], (long)v[1]));
+        return 0;
+    case EE_CP_PLAYER_IS_EPOCH:
+        return EEIsEpochID((long)v[0]) ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_IS_BUILDING:
+        return theComplex->mUnitClass->IsBuilding() ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_RESEARCH:
+        ee_cp_place_push(io->list, theComplex->mCurrentResearch, 0);
+        for (unsigned long q = 0; q < theComplex->GetBuildQueueSize(); q++)
+            ee_cp_place_push(io->list, (*(theComplex->mBuildQueue.begin() + q)).mTechnology, 0);
+        return 0;
+    case EE_CP_PLAYER_UNIT_OBSOLETE:
+        return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_SEEN_BY:
+        return EEIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
+    case EE_CP_PLAYER_KILL:
+        theComplex->Kill(true, false, false);
+        return 0;
+    case EE_CP_PLAYER_IS_TRANSPORT:
+        return theUnit->mUnitClass->IsTransport() ? 1 : 0;
+    case EE_CP_PLAYER_CARGO:
+        for (unsigned long i = 0; i < theComplex->GetNumCargoUnits(); i++)
+            ee_cp_place_push(io->list, (int64_t)(uintptr_t)static_cast<EEUnit*>(theComplex->GetCargo(i)), 0);
+        return 0;
+    }
+    return 0;
 }

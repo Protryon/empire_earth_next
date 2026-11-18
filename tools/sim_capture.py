@@ -179,6 +179,21 @@ ApplyUpgrade (the player's fields and the category set's class upgrades before a
 tree's nodes, the media count and HasPower), CVLD every EELoadCivilization, CVAF every EEApplyCivilizationFile with
 the player's civilization after. Their golden lines come from the C++ manager, powers and files before they moved
 (civilization builder lane, round 2; seeds 2-3 of the oracle, late, space, calamity and scenario profiles).
+PLCE is the computer players' placement and resource centres (ee/EECPPlaceCapture.h; every profile): one record at
+the return of every outermost call into EECPPlacement, an EECPResourceCenter or their free functions (the epoch
+classes, EECPCountOwn, EECPNextPlaceSearch: the Lua verbs' ai.place), with the method, the player, the inputs and the
+outputs (the result, out tiles, counts; the town centre tile and site lists, a centre's units and main unit (its active
+flag in SetActive's and Load's), the player's centres after the searches). The gates' classic_lua builds through ai.find_site, so in the oracle,
+late, space and calamity profiles PLCE holds the centres' bookkeeping only; --profile placement plays the oracle's
+game with the boom and Age of AI scripts, whose verbs place through ai.place (the site searches). Its golden lines
+(seeds 2-3 of the oracle, late, space, calamity and placement profiles) come from the C++ placement and centres before they moved into Rust (ee_sim::cp; AI lane B, round 2).
+CPEV is the computer players' own calls (ee/EECPPlaceCapture.h; every profile, the thread that runs their Update):
+one record per outermost WorkOutPopulation, Regroup, UpdateGroups, EnterEpoch, ChooseCivilization, EECPPendingEpoch,
+AvoidsEnemies, CanProduce, RestoreManagers, DamageTaken, unit event (placed, taken, completed, goal done, stranded,
+swapped), SetActive, EpochReached and PayImprovement, with its arguments, its result and the player's state when it
+ends (the record EeCpFields, the favourite history, the units to kill, the danger zones, the centres with their active
+flags, the town tile). Its golden lines (seeds 2-3 of the oracle, late, space, calamity and placement profiles) come
+from the C++ before those bodies moved into Rust (ee_sim::cp events; AI lane B, round 2).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
@@ -231,6 +246,9 @@ PROFILES = {
     # epoch by seed (GROUP_EPOCHS), three computer players with the original's cheats, 15 game minutes; only AGPL
     "groups": ["--difficulty", "Hard", "--game-seconds", "900", "--cheats", "all", "--ai", "3", "--lobby", "{epoch}",
                "--group-sweep"],
+    # the oracle's game with the two script AIs that place through the verbs' ai.place (data/ai/lib/verbs.lua: boom and
+    # Age of AI; the gates' classic_lua places through ai.find_site), so the placement's site searches run (PLCE)
+    "placement": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--engine", "boom,ageofai"],
     "transport": ["--difficulty", "Hard", "--game-seconds", "5400", "--cheats", "all", "--ai", "3", "--lobby", "183=#5",
                   "--map-type", "Small Islands"],
 }

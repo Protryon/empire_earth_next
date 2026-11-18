@@ -10,7 +10,7 @@
 #include "rust/won_net/ffi.h"
 #include "rust/won_net/strcase.h"
 namespace WONAPI {
-inline void StringToUpperCaseInPlace(std::string& ioText) // 0x2a69a0
+inline void StringToUpperCaseInPlace(std::string& ioText)
 {
     if (!ioText.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&ioText[0]), ioText.length(), true);
 }
