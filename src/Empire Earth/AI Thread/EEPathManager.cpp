@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\AI Thread\EEPathManager.cpp (file name inferred: no __FILE__; RTTI classes
-// EEAutoPathRequest (vtable 0x43c430), EEPathManager (vtable 0x43c438), UMemoryPool<EEPathManagerNode> (0x43c440),
-// EEAIPathGoalModifierSpace/Sea (0x43c448/0x43c458), the three A* machines (ee/EEAIAStarMachine.h) and
-// EEPathManagerNode (0x43c570)). 0xa5c31..0xabbaf (EEInfluenceTable.cpp ends at 0xa5c31, EETown.cpp starts at 0xabbaf).
-// The template and inline COMDATs 0xa952e..0xabbaf (the machines' slots, the pool, the deques and maps) follow the
-// manager's members.
+// EEAutoPathRequest (vtable 0x43c430), EEPathManager (vtable 0x43c438), EEAIPathGoalModifierSpace/Sea
+// (0x43c448/0x43c458), the three A* machines (ee/EEAIAStarMachine.h)). 0xa5c31..0xabbaf.
+// The manager is Rust (ee_sim::astar pm.rs: the searches in progress and their nodes, the spare machines, the
+// pending units, the counters, the request record, the requests' and the updates' decisions, the saved game's
+// parts); this file is its host over the machines, units and requests, and keeps the bounded machine's searches.
 #include <windows.h>
 #include <stdio.h>
 #include <typeinfo>
@@ -144,94 +144,6 @@ EEAutoPathRequest::EEAutoPathRequest(long inRequestID, long inPlayerID, const EE
 // Destroys the path request (members only)
 EEAutoPathRequest::~EEAutoPathRequest()
 {
-}
-
-// A path search in progress (pooled: UMemoryPool<EEPathManagerNode>, chunks of 0x32; sizeof 0x38; vtable 0x43c570, one
-// slot: the deleting dtor 0xaa82d). Its members are out-of-line COMDATs that ICF folded into twins elsewhere:
-// ReleaseUnit = EECPAGTask::ReleaseUnit 0x417f5, SetUnit = 0x41912, ReleaseRequest = 0xa5ce0, SetRequest = 0xa5cf6
-// (provisional member names)
-class EEPathManagerNode {
-public:
-    // out of line (COMDAT 0xab32c, after Clear's twin; the pool's New 0xaa2f0 and chunk ctor 0xaa74d call it with
-    // all four arguments 0)
-    EEPathManagerNode(EEComplexUnit* inUnit = NULL, EEAIAStarMachineBase* inPathMachine = NULL,
-                      EEGraphPathMachine* inGraphMachine = NULL, EEAutoPathRequest* inRequest = NULL)
-        : mPathMachine(inPathMachine), mGraphMachine(inGraphMachine), mL20(0), mL24(0), mL28(0), mL2C(0), mPasses(0)
-    {
-        this->mRequest = NULL;
-        this->mUnit = NULL;
-        this->SetUnit(inUnit);
-        this->SetRequest(inRequest);
-    }
-    virtual ~EEPathManagerNode() { this->ReleaseUnit(); this->ReleaseRequest(); }
-    void ReleaseUnit();
-    void SetUnit(EEComplexUnit* inUnit);
-    void ReleaseRequest();
-    void SetRequest(EEAutoPathRequest* inRequest);
-    void Clear();
-
-    long mL04;                              // +0x04
-    EETileCoordinate mTile;                 // +0x08 (the goal)
-    EEAIAStarMachineBase* mPathMachine;     // +0x10 (an EEPathMachine, or the bounded one when its mType is 4)
-    EEGraphPathMachine* mGraphMachine;      // +0x14
-    EEAutoPathRequest* mRequest;            // +0x18 (referenced)
-    EEUnitHandle<EEComplexUnit> mUnit;      // +0x1c (referenced; a handle since R5a.4)
-    long mL20;                              // +0x20
-    long mL24;                              // +0x24
-    long mL28;                              // +0x28
-    long mL2C;                              // +0x2c
-    long mPasses;                           // +0x30 (the passes run so far)
-    long mL34;                              // +0x34
-};
-
-void EEPathManagerNode::ReleaseUnit()
-{
-    if (this->mUnit)
-        this->mUnit->Dereference();
-    this->mUnit = NULL;
-}
-
-void EEPathManagerNode::SetUnit(EEComplexUnit* inUnit)
-{
-    this->ReleaseUnit();
-    this->mUnit = inUnit;
-    if (inUnit)
-        inUnit->Reference();
-}
-
-// Drops the node's reference to its path request
-void EEPathManagerNode::ReleaseRequest()
-{
-    if (this->mRequest) {
-        this->mRequest->Dereference();
-        this->mRequest = NULL;
-    }
-}
-
-// Makes the node hold (and reference) the given path request, releasing the previous one
-void EEPathManagerNode::SetRequest(EEAutoPathRequest* inRequest)
-{
-    this->ReleaseRequest();
-    if (inRequest) {
-        this->mRequest = inRequest;
-        inRequest->Reference();
-    }
-}
-
-// Empties the node for reuse: releases its unit and request, forgets its machines and goal tile, zeroes its passes
-void EEPathManagerNode::Clear()
-{
-    this->ReleaseUnit();
-    this->ReleaseRequest();
-    this->mL20 = 0;
-    this->mL28 = 0;
-    this->mPathMachine = NULL;
-    this->mGraphMachine = NULL;
-    this->mL24 = 0;
-    this->mL2C = 0;
-    this->mPasses = 0;
-    this->mTile.mX = 0;
-    this->mTile.mY = 0;
 }
 
 // Moves a tile that is off the map onto the map tile closest to its center
@@ -425,38 +337,37 @@ private:
 
 void EEPathRequestCapture::Queues(std::vector<EEPathQueueEntry>& outEntries)
 {
-    for (unsigned int q = 0; q < 2; q++) {
-        const std::deque<EEPathManagerNode*>& theQueue = q == 0 ? this->mManager->mPaths : this->mManager->mAutoPaths;
-        for (size_t i = 0; i < theQueue.size(); i++) {
-            const EEPathManagerNode* theNode = theQueue[i];
-            EEPathQueueEntry e;
-            memset(&e, 0, sizeof(e));
-            e.mQueue = q;
-            e.mUnitID = theNode->mUnit.GetSavedID();
-            e.mX = (int)theNode->mTile.mX;
-            e.mY = (int)theNode->mTile.mY;
-            e.mPasses = (int)theNode->mPasses;
-            e.mRequest = theNode->mRequest;
-            e.mRequestID = theNode->mRequest != NULL ? (int)theNode->mRequest->mRequestID : -1;
-            if (q == 0 && theNode->mPathMachine != NULL) {
-                EEAIAStarMachineBase* m = theNode->mPathMachine;
-                e.mType = (int)m->mType;
-                e.mRevs = (int)m->mRevs;
-                e.mSteps = (int)m->mSteps;
-                e.mFound = m->mFound ? 1 : 0;
-                e.mMaxRevs = (int)m->GetMaxRevs();
-                e.mRevLimit = (int)m->GetRevLimit();
-            } else if (q == 1 && theNode->mGraphMachine != NULL) {
-                EEGraphPathMachine* m = theNode->mGraphMachine;
-                e.mType = (int)m->mType;
-                e.mRevs = (int)m->mRevs;
-                e.mSteps = (int)m->mSteps;
-                e.mFound = m->mFound ? 1 : 0;
-                e.mMaxRevs = (int)m->GetMaxRevs();
-                e.mRevLimit = (int)m->GetRevLimit();
-            }
-            outEntries.push_back(e);
+    std::vector<EePathQueued> theQueued(ee_path_manager_queued(this->mManager->mRust, NULL, 0));
+    ee_path_manager_queued(this->mManager->mRust, theQueued.data(), (uint32_t)theQueued.size());
+    for (size_t i = 0; i < theQueued.size(); i++) {
+        const EePathQueued& q = theQueued[i];
+        EEPathQueueEntry e;
+        memset(&e, 0, sizeof(e));
+        e.mQueue = q.queue;
+        e.mUnitID = q.unit;
+        e.mX = q.x;
+        e.mY = q.y;
+        e.mPasses = q.passes;
+        e.mRequest = reinterpret_cast<EEAutoPathRequest*>(q.request);
+        e.mRequestID = q.request != 0 ? (int)reinterpret_cast<EEAutoPathRequest*>(q.request)->mRequestID : -1;
+        if (q.queue == 0 && q.machine != 0) {
+            EEAIAStarMachineBase* m = reinterpret_cast<EEAIAStarMachineBase*>(q.machine);
+            e.mType = (int)m->mType;
+            e.mRevs = (int)m->mRevs;
+            e.mSteps = (int)m->mSteps;
+            e.mFound = m->mFound ? 1 : 0;
+            e.mMaxRevs = (int)m->GetMaxRevs();
+            e.mRevLimit = (int)m->GetRevLimit();
+        } else if (q.queue == 1 && q.machine != 0) {
+            EEGraphPathMachine* m = reinterpret_cast<EEGraphPathMachine*>(q.machine);
+            e.mType = (int)m->mType;
+            e.mRevs = (int)m->mRevs;
+            e.mSteps = (int)m->mSteps;
+            e.mFound = m->mFound ? 1 : 0;
+            e.mMaxRevs = (int)m->GetMaxRevs();
+            e.mRevLimit = (int)m->GetRevLimit();
         }
+        outEntries.push_back(e);
     }
 }
 
@@ -465,162 +376,856 @@ static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
     return inUnit != NULL ? (unsigned int)inUnit->mUnitID : 0xffffffffu;
 }
 
-// Creates the path manager with no bounded machine, nothing queued and region updates off
-EEPathManager::EEPathManager()
-    : mRecord(ee_path_record_new()), mLCC(0), mNextRequestID(0), mNextRegionTime(0), mIsUpdatingRegions(false)
+// ---- The manager in Rust (ee_sim::astar pm.rs): the searches in progress, the spare machines, the pending units,
+// the counters and the request record, and every decision over them. The C++ answers its host's operations over
+// the machines, the units and the requests, and keeps the bounded machine's searches (below).
+
+static EEAIAStarMachineBase* EEPathTile(uint64_t inHandle)
 {
-    this->mBoundedMachine = NULL;
-    this->mLC8 = 5;
+    return reinterpret_cast<EEAIAStarMachineBase*>(inHandle);
+}
+
+static EEPathMachine* EEPathOf(uint64_t inHandle)
+{
+    return static_cast<EEPathMachine*>(EEPathTile(inHandle));
+}
+
+static EEGraphPathMachine* EEGraphOf(uint64_t inHandle)
+{
+    return reinterpret_cast<EEGraphPathMachine*>(inHandle);
+}
+
+static EEComplexUnit* EEPathUnitOf(uint64_t inHandle)
+{
+    return reinterpret_cast<EEComplexUnit*>(inHandle);
+}
+
+static uint64_t EEPathHandle(const void* inObject)
+{
+    return (uint64_t)(uintptr_t)inObject;
+}
+
+static EEComplexUnit* EEPathWorldUnit(int64_t inID)
+{
+    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)inID)));
+}
+
+static EETileCoordinate EEPathTileArg(const int64_t* inValues)
+{
+    EETileCoordinate theTile;
+    theTile.mX = (long)inValues[0];
+    theTile.mY = (long)inValues[1];
+    return theTile;
+}
+
+static void EEPathPutTile(int64_t* outValues, const EETileCoordinate& inTile)
+{
+    outValues[0] = inTile.mX;
+    outValues[1] = inTile.mY;
+}
+
+// SetPathRevs' inputs: the distance, whether the unit is amphibious, whether both tiles are on one continent
+static void EEPathRevsInputs(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
+                             int64_t* outValues)
+{
+    EEAIContinent* theFromContinent = gContinentManager.GetContinentAt(inFrom.GetX(), inFrom.GetY());
+    EEAIContinent* theToContinent = gContinentManager.GetContinentAt(inTo);
+    outValues[0] = inFrom.DistanceTo(inTo);
+    outValues[1] = inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0) && inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1);
+    outValues[2] = theFromContinent == theToContinent;
+}
+
+// the owners waiting for their running requests across a load (EEAwaitAutoPathRequest), by request id until the
+// loaded game's first tick; the resolve takes them (EE_PATH_AWAIT 0) and gives each its request or none
+namespace {
+std::map<long, std::function<void(EEAutoPathRequest*)> > sAwaitedRequests, sResolvingRequests;
+bool sGraphResolveQueued = false;
+
+void EEResolveGraphSearches()
+{
+    sGraphResolveQueued = false;
+    EePathIo theIO = {};
+    ee_path_manager_call(gPathManager.mRust, 19, &theIO);
+}
+
+void EEQueueGraphResolve()
+{
+    if (!sGraphResolveQueued) {
+        sGraphResolveQueued = true;
+        EEAfterLoadLast(EEResolveGraphSearches);   // after every owner's own fix-up (the active groups')
+    }
+}
+
+// the graph search's modifier kinds in a saved game (pm.rs EE_PATH_MODIFIER_*; 3..8 were the attack sub groups'
+// route planners, deleted with the C++ combat tree in main's stage 5)
+enum { kGraphModifierNone = 0, kGraphModifierEnemyAvoidance, kGraphModifierWallPlanner, kGraphModifierStormRain = 9,
+       kGraphModifierStormSnow };
+
+long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
+{
+    if (inModifier == NULL)
+        return kGraphModifierNone;
+    const std::type_info& theType = typeid(*inModifier);
+    if (theType == typeid(EEAIGPModifierEnemyAvoidance))
+        return kGraphModifierEnemyAvoidance;
+    if (theType == typeid(EEAIGPGModifierComputerPlayerWallPlanner))
+        return kGraphModifierWallPlanner;
+    if (theType == typeid(EEAIGPGModifierStormRoutePlannerRain))
+        return kGraphModifierStormRain;
+    if (theType == typeid(EEAIGPGModifierStormRoutePlannerSnow))
+        return kGraphModifierStormSnow;
+    return -1;
+}
+
+void* EEGraphObjectOf(void* inContext, int32_t inIndex)
+{
+    (void)inContext;
+    const std::vector<EEAIPathSubSector*>& theSectors = gContinentManager.mPathSubSectors;
+    if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
+        return NULL;
+    return static_cast<AStarGraphableObjectBase*>(theSectors[inIndex]);
+}
+
+EEAIPathSubSector* EESubSectorOf(long inID)
+{
+    if (inID < 0 || (size_t)inID >= gContinentManager.mPathSubSectors.size())
+        return NULL;
+    return gContinentManager.mPathSubSectors[inID];
+}
+
+void EEPathBounds(int32_t* outValues, const EEAIAStarBounds& inBounds)
+{
+    outValues[0] = (int32_t)inBounds.mBottom;
+    outValues[1] = (int32_t)inBounds.mLeft;
+    outValues[2] = (int32_t)inBounds.mRight;
+    outValues[3] = (int32_t)inBounds.mTop;
+}
+
+void EEPathSetBounds(EEAIAStarBounds& outBounds, const int32_t* inValues)
+{
+    outBounds.mBottom = inValues[0];
+    outBounds.mLeft = inValues[1];
+    outBounds.mRight = inValues[2];
+    outBounds.mTop = inValues[3];
+}
+
+// a tile search's machine and goal into the saved record (SaveSearches)
+bool EESavePathMachine(EEAIAStarMachineBase* inMachine, EePathSavedMachine& outSaved, EePathSavedLists* outLists)
+{
+    if (inMachine->mType == kAIMachineBoundedPath)
+        return false;
+    EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(inMachine);
+    if (theMachine == NULL)
+        return false;
+    const EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
+    outSaved.tile[0] = (int32_t)theMachine->mTile.mX;
+    outSaved.tile[1] = (int32_t)theMachine->mTile.mY;
+    const long theFields[8] = {theMachine->mType, theMachine->mRevs, theMachine->mNumRuns, theMachine->mSteps,
+                               theMachine->mMapWidth, theMachine->mMapHeight, theMachine->mWidth, theMachine->mHeight};
+    for (int f = 0; f < 8; f++)
+        outSaved.fields[f] = (int32_t)theFields[f];
+    outSaved.check_corners = theMachine->mCheckCorners;
+    outSaved.found = theMachine->mFound;
+    outSaved.start[0] = (int32_t)theGoal.mStartTile.mX;
+    outSaved.start[1] = (int32_t)theGoal.mStartTile.mY;
+    outSaved.goal[0] = (int32_t)theGoal.mGoalTile.mX;
+    outSaved.goal[1] = (int32_t)theGoal.mGoalTile.mY;
+    outSaved.rev_limit = (int32_t)theGoal.mRevLimit;
+    outSaved.max_revs = (int32_t)theGoal.mMaxRevs;
+    const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB29, theGoal.mAcceptNearest, theGoal.mB2B, theGoal.mB2C,
+                              theGoal.mTookNearest};
+    for (int f = 0; f < 6; f++)
+        outSaved.flags[f] = theFlags[f];
+    for (size_t i = 0; i < theGoal.mBlockedTiles.size(); i++)
+        ee_path_saved_tile_push(outLists, 0, (int32_t)theGoal.mBlockedTiles[i].mX, (int32_t)theGoal.mBlockedTiles[i].mY);
+    for (size_t i = 0; i < theGoal.mUnitTiles.size(); i++)
+        ee_path_saved_tile_push(outLists, 1, (int32_t)theGoal.mUnitTiles[i].mX, (int32_t)theGoal.mUnitTiles[i].mY);
+    EEPathBounds(outSaved.bounds[0], theGoal.mBounds24);
+    EEPathBounds(outSaved.bounds[1], theGoal.mGoalBounds);
+    EEPathBounds(outSaved.bounds[2], theGoal.mStartBounds);
+    outSaved.destination[0] = (int32_t)theGoal.mDestination.mX;
+    outSaved.destination[1] = (int32_t)theGoal.mDestination.mY;
+    outSaved.l64 = (int32_t)theGoal.mL64;
+    outSaved.offset[0] = theGoal.mOffsetX;
+    outSaved.offset[1] = theGoal.mOffsetY;
+    outSaved.continent = theGoal.mContinentID;
+    outSaved.bounded = theGoal.mIsBounded;
+    outSaved.avoid_units = theGoal.mAvoidUnits;
+    std::vector<unsigned char> theBytes(ee_astar_save(theMachine->mCore, NULL, 0));
+    ee_astar_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+    uint32_t theLength = 0;
+    ee_path_saved_bytes(ee_path_saved_storage(outLists), theBytes.data(), (uint32_t)theBytes.size(), &theLength);
+    return true;
+}
+
+// the saved record back into a new machine for inUnit (the loaded game's first tick)
+bool EELoadPathMachine(EEPathMachine* inMachine, const EePathSavedMachine& inSaved, EePathSavedLists* inLists,
+                       EEComplexUnit* inUnit)
+{
+    uint32_t theLength = 0;
+    const uint8_t* theBytes = ee_path_saved_bytes(ee_path_saved_storage(inLists), NULL, 0, &theLength);
+    if (!ee_astar_load(inMachine->mCore, theBytes, theLength))
+        return false;
+    inMachine->mWidth = inSaved.fields[6];
+    inMachine->mHeight = inSaved.fields[7];
+    inMachine->mTile.mX = inSaved.tile[0];
+    inMachine->mTile.mY = inSaved.tile[1];
+    inMachine->mRevs = inSaved.fields[1];
+    inMachine->mNumRuns = inSaved.fields[2];
+    inMachine->mSteps = inSaved.fields[3];
+    inMachine->mMapWidth = inSaved.fields[4];
+    inMachine->mMapHeight = inSaved.fields[5];
+    inMachine->mCheckCorners = inSaved.check_corners;
+    inMachine->mFound = inSaved.found;
+    EEAIAStarPathfindingGoal& theGoal = inMachine->mGoal;
+    theGoal.Attach(gWorld.mMap, inMachine, inMachine);   // as Run does at a search's start
+    theGoal.SetUnit(inUnit);
+    theGoal.mStartTile = U2DPoint<long>(inSaved.start[0], inSaved.start[1]);
+    theGoal.mGoalTile = U2DPoint<long>(inSaved.goal[0], inSaved.goal[1]);
+    theGoal.mRevLimit = inSaved.rev_limit;
+    theGoal.mMaxRevs = inSaved.max_revs;
+    theGoal.mSearchFailed = inSaved.flags[0];
+    theGoal.mB29 = inSaved.flags[1];
+    theGoal.mAcceptNearest = inSaved.flags[2];
+    theGoal.mB2B = inSaved.flags[3];
+    theGoal.mB2C = inSaved.flags[4];
+    theGoal.mTookNearest = inSaved.flags[5];
+    for (int which = 0; which < 2; which++) {
+        std::vector<U2DPoint<long> >& theTiles = which == 0 ? theGoal.mBlockedTiles : theGoal.mUnitTiles;
+        theTiles.clear();
+        int32_t theTile[2];
+        for (uint32_t k = 0; ee_path_saved_tile(inLists, which, k, theTile); k++)
+            theTiles.push_back(U2DPoint<long>(theTile[0], theTile[1]));
+    }
+    EEPathSetBounds(theGoal.mBounds24, inSaved.bounds[0]);
+    EEPathSetBounds(theGoal.mGoalBounds, inSaved.bounds[1]);
+    EEPathSetBounds(theGoal.mStartBounds, inSaved.bounds[2]);
+    theGoal.mDestination = U2DPoint<long>(inSaved.destination[0], inSaved.destination[1]);
+    theGoal.mL64 = inSaved.l64;
+    theGoal.mOffsetX = inSaved.offset[0];
+    theGoal.mOffsetY = inSaved.offset[1];
+    theGoal.mContinentID = inSaved.continent;
+    theGoal.mIsBounded = inSaved.bounded;
+    theGoal.mAvoidUnits = inSaved.avoid_units;
+    return true;
+}
+
+// a graph search's machine, goal and modifier into the saved record (SaveGraphSearches), when the load can rebuild
+// every part of it
+bool EESaveGraphMachine(EEGraphPathMachine* inMachine, EePathSavedGraph& outSaved, void* outStorage)
+{
+    EEAIAStarPathGraphGoal& theGoal = inMachine->mGoal;
+    long theKind = EEGraphModifierKindOf(theGoal.mModifier);
+    if (theKind < 0 || inMachine->mNodeCount != (long)gContinentManager.mPathSubSectors.size() + 1
+        || !ee_astar_graph_objects_match(inMachine->mCore, EEGraphObjectOf, NULL))
+        return false;
+    const long theMachine[9] = {inMachine->mTile.mX, inMachine->mTile.mY, inMachine->mType, inMachine->mRevs,
+                                inMachine->mNumRuns, inMachine->mSteps, inMachine->mSector, inMachine->mNodeCount,
+                                inMachine->mCount};
+    for (int f = 0; f < 9; f++)
+        outSaved.machine[f] = (int32_t)theMachine[f];
+    outSaved.found = inMachine->mFound;
+    const long theFields[17] = {theGoal.mStartTile.mX, theGoal.mStartTile.mY, theGoal.mGoalTile.mX, theGoal.mGoalTile.mY,
+                                theGoal.mPoint38.mX, theGoal.mPoint38.mY, theGoal.mPoint40.mX, theGoal.mPoint40.mY,
+                                theGoal.mPlayerID, theGoal.mRevLimit, theGoal.mMaxRevs, theGoal.mGoalSector,
+                                theGoal.mStartSector, theGoal.mL70,
+                                theGoal.mUnit != NULL ? (long)theGoal.mUnit->mUnitID : -1L,
+                                theGoal.mFrom == NULL ? -1L : (long)theGoal.mFrom->mID,
+                                theGoal.mTo == NULL ? -1L : (long)theGoal.mTo->mID};
+    for (int f = 0; f < 17; f++)
+        outSaved.goal[f] = (int32_t)theFields[f];
+    const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB31, theGoal.mAcceptNearest, theGoal.mB33, theGoal.mB34,
+                              theGoal.mTookNearest};
+    for (int f = 0; f < 6; f++)
+        outSaved.flags[f] = theFlags[f];
+    outSaved.path_flags_player = (int32_t)theGoal.mPathFlags.mPlayerID;
+    for (int f = 0; f < 17; f++)
+        outSaved.path_flags[f] = theGoal.mPathFlags.mFlags[f];
+    outSaved.modifier = (int32_t)theKind;
+    if (theKind != kGraphModifierNone && theKind != kGraphModifierStormRain && theKind != kGraphModifierStormSnow) {
+        EEAIGPGModiferUseInfluenceCostsBase* theInfluence = static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theGoal.mModifier);
+        for (int w = 0; w < 15; w++)
+            outSaved.weights[w] = theInfluence->mWeights.mValues[w];
+        outSaved.modifier_player = (uint32_t)theInfluence->mPlayerID;
+        outSaved.modifier_enemy = (uint32_t)theInfluence->mEnemyID;
+        // (the land route planners' continents and flags and the sub group owner: none since main's stage 5)
+    }
+    std::vector<unsigned char> theBytes(ee_astar_graph_save(inMachine->mCore, NULL, 0));
+    ee_astar_graph_save(inMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+    uint32_t theLength = 0;
+    ee_path_saved_bytes(outStorage, theBytes.data(), (uint32_t)theBytes.size(), &theLength);
+    return true;
+}
+
+// the saved modifier, NULL for a kind that cannot be rebuilt (the caller's reference)
+EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EePathSavedGraph& s)
+{
+    EEAIGPGModiferUseInfluenceCostsBase* theInfluence = NULL;
+    switch (s.modifier) {
+    case kGraphModifierEnemyAvoidance:
+        theInfluence = new EEAIGPModifierEnemyAvoidance(s.modifier_player);
+        break;
+    case kGraphModifierWallPlanner:
+        theInfluence = new EEAIGPGModifierComputerPlayerWallPlanner(s.modifier_player, s.modifier_enemy);
+        break;
+    case kGraphModifierStormRain:
+        return new EEAIGPGModifierStormRoutePlannerRain;
+    case kGraphModifierStormSnow:
+        return new EEAIGPGModifierStormRoutePlannerSnow;
+    default:
+        return NULL;   // (the deleted sub groups' route planners)
+    }
+    // the members as saved (the ctors take some of them from the sub group's now)
+    for (int w = 0; w < 15; w++)
+        theInfluence->mWeights.mValues[w] = s.weights[w];
+    theInfluence->mPlayerID = s.modifier_player;
+    theInfluence->mEnemyID = s.modifier_enemy;
+    return theInfluence;
+}
+
+// the saved record back into a new graph machine (the loaded game's first tick)
+bool EELoadGraphMachine(EEGraphPathMachine* inMachine, const EePathSavedGraph& s, EEAIGraphPathGoalModifierBase* inModifier,
+                        EEComplexUnit* inGoalUnit, const uint8_t* inBytes, uint32_t inLength)
+{
+    inMachine->Reset();
+    if (!ee_astar_graph_load(inMachine->mCore, inBytes, inLength, EEGraphObjectOf, NULL))
+        return false;
+    inMachine->mCount = s.machine[8];
+    inMachine->mTile.mX = s.machine[0];
+    inMachine->mTile.mY = s.machine[1];
+    inMachine->mRevs = s.machine[3];
+    inMachine->mNumRuns = s.machine[4];
+    inMachine->mSteps = s.machine[5];
+    inMachine->mSector = s.machine[6];
+    inMachine->mFound = s.found;
+    EEAIAStarPathGraphGoal& theGoal = inMachine->mGoal;
+    theGoal.Attach(inMachine, inMachine);   // as Run does at a search's start
+    theGoal.mStartTile = U2DPoint<long>(s.goal[0], s.goal[1]);
+    theGoal.mGoalTile = U2DPoint<long>(s.goal[2], s.goal[3]);
+    theGoal.mPlayerID = s.goal[8];
+    theGoal.mRevLimit = s.goal[9];
+    theGoal.mMaxRevs = s.goal[10];
+    theGoal.mGoalSector = s.goal[11];
+    theGoal.mStartSector = s.goal[12];
+    theGoal.mSearchFailed = s.flags[0];
+    theGoal.mB31 = s.flags[1];
+    theGoal.mAcceptNearest = s.flags[2];
+    theGoal.mB33 = s.flags[3];
+    theGoal.mB34 = s.flags[4];
+    theGoal.mTookNearest = s.flags[5];
+    theGoal.mPoint38 = U2DPoint<long>(s.goal[4], s.goal[5]);
+    theGoal.mPoint40 = U2DPoint<long>(s.goal[6], s.goal[7]);
+    theGoal.SetUnit(inGoalUnit);
+    if (inModifier != NULL)
+        theGoal.SetModifier(inModifier);
+    theGoal.mFrom = EESubSectorOf(s.goal[15]);
+    theGoal.mTo = EESubSectorOf(s.goal[16]);
+    theGoal.mPathFlags.mPlayerID = s.path_flags_player;
+    for (int f = 0; f < 17; f++)
+        theGoal.mPathFlags.mFlags[f] = s.path_flags[f];
+    theGoal.mL70 = s.goal[13];
+    return true;
+}
+
+// a request from its saved record (one reference, the caller's)
+EEAutoPathRequest* EENewLoadedRequest(const EePathRequestRecord& r, const std::vector<EETileCoordinate>& inPath)
+{
+    EECPASGFlags theFlags;
+    theFlags.mPlayerID = r.flags_player;
+    for (int f = 0; f < 17; f++)
+        theFlags.mFlags[f] = r.flags[f];
+    EETileCoordinate theFrom, theTo;
+    theFrom.mX = r.from[0];
+    theFrom.mY = r.from[1];
+    theTo.mX = r.to[0];
+    theTo.mY = r.to[1];
+    EEAutoPathRequest* theRequest = new EEAutoPathRequest(r.id, r.player, theFrom, theTo, theFlags);
+    theRequest->mFlags.mPlayerID = theFlags.mPlayerID;   // (the copy ctor zeroes it)
+    theRequest->mPath = inPath;
+    theRequest->mPathLength = r.length;
+    theRequest->mIsDone = r.done;
+    return theRequest;
+}
+
+void EERequestRecordOf(const EEAutoPathRequest& inRequest, EePathRequestRecord& outRecord, std::vector<int32_t>& outPath)
+{
+    outRecord.from[0] = (int32_t)inRequest.mFrom.mX;
+    outRecord.from[1] = (int32_t)inRequest.mFrom.mY;
+    outRecord.to[0] = (int32_t)inRequest.mTo.mX;
+    outRecord.to[1] = (int32_t)inRequest.mTo.mY;
+    outRecord.player = (int32_t)inRequest.mPlayerID;
+    outRecord.id = (int32_t)inRequest.mRequestID;
+    outRecord.length = (int32_t)inRequest.mPathLength;
+    outRecord.done = inRequest.mIsDone;
+    outRecord.flags_player = (int32_t)inRequest.mFlags.mPlayerID;
+    for (int f = 0; f < 17; f++)
+        outRecord.flags[f] = inRequest.mFlags.mFlags[f];
+    for (size_t i = 0; i < inRequest.mPath.size(); i++) {
+        outPath.push_back((int32_t)inRequest.mPath[i].mX);
+        outPath.push_back((int32_t)inRequest.mPath[i].mY);
+    }
+}
+}   // namespace
+
+// The Rust manager's host: one call per operation (pm.rs EE_PATH_*)
+static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
+{
+    EEPathManager* theManager = static_cast<EEPathManager*>(inContext);
+    int64_t* i = io->i;
+    const uint64_t h = io->h[0];
+    switch (inOp) {
+    case EE_PATH_UNIT_ID:
+        return EEUnitHandleID(EEPathUnitOf(h));
+    case EE_PATH_UNIT_RESOLVE: {
+        EEComplexUnit* theUnit = NULL;
+        EEUnitHandleResolve((uint32_t)i[0], theUnit);
+        return (int64_t)EEPathHandle(theUnit);
+    }
+    case EE_PATH_WORLD_UNIT:
+        return (int64_t)EEPathHandle(EEPathWorldUnit(i[0]));
+    case EE_PATH_UNIT_REFERENCE:
+        EEPathUnitOf(h)->Reference();
+        return 0;
+    case EE_PATH_UNIT_DEREFERENCE:
+        EEPathUnitOf(h)->Dereference();
+        return 0;
+    case EE_PATH_REQUEST_REFERENCE:
+        reinterpret_cast<EEAutoPathRequest*>(h)->Reference();
+        return 0;
+    case EE_PATH_REQUEST_DEREFERENCE:
+        reinterpret_cast<EEAutoPathRequest*>(h)->Dereference();
+        return 0;
+    case EE_PATH_MODIFIER_DEREFERENCE:
+        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(h)->Dereference();
+        return 0;
+    case EE_PATH_GAME_TIME:
+        return gPhysics ? (int64_t)(uint32_t)gPhysics->GetGameTime() : 0;
+    case EE_PATH_SUB_SECTORS:
+        return (int64_t)gContinentManager.mPathSubSectors.size();
+    case EE_PATH_SUB_SECTOR:
+        return EESubSectorOf((long)i[0]) != NULL;
+    case EE_PATH_MAP:
+        return (int64_t)EEPathHandle(gWorld.mMap);
+    case EE_PATH_HAS_MAP:
+        return gWorld.mMap != NULL;
+    case EE_PATH_LOADING:
+        return gLoadingSavedGame;
+    case EE_PATH_CLAMP: {
+        EETileCoordinate theTile = EEPathTileArg(i);
+        theManager->ClampTile(gWorld.mMap, theTile);
+        EEPathPutTile(i, theTile);
+        return 0;
+    }
+    // the tile machines
+    case EE_PATH_PM_NEW:
+        return (int64_t)EEPathHandle(static_cast<EEAIAStarMachineBase*>(new EEPathMachine(1, reinterpret_cast<EEMap*>(io->h[1]))));
+    case EE_PATH_PM_DELETE:
+        delete EEPathOf(h);
+        return 0;
+    case EE_PATH_PM_MAP:
+        return (int64_t)EEPathHandle(EEPathOf(h)->mGoal.mMap);
+    case EE_PATH_PM_TYPE: {
+        EEPathMachine* theMachine = EEPathOf(h);
+        EEAIPathGoalModifierBase* theModifier = NULL;
+        if (i[0] == kAIMachineWaterPath)
+            theModifier = new EEAIPathGoalModifierSea(&theMachine->mGoal);
+        else if (i[0] == kAIMachineSpacePath)
+            theModifier = new EEAIPathGoalModifierSpace(&theMachine->mGoal);
+        if (theModifier != NULL) {
+            theMachine->mGoal.SetModifier(theModifier);
+            theModifier->Dereference();
+        }
+        theMachine->mType = (long)i[0];
+        return 0;
+    }
+    case EE_PATH_TM_RUN:
+        EEPathTile(h)->Run();
+        return EEPathTile(h)->mFound;
+    case EE_PATH_TM_FOUND:
+        return EEPathTile(h)->mFound;
+    case EE_PATH_TM_SET_REV_LIMIT:
+        EEPathTile(h)->SetRevLimit((long)i[0]);
+        return 0;
+    case EE_PATH_TM_REV_LIMIT:
+        return EEPathTile(h)->GetRevLimit();
+    case EE_PATH_TM_STEPS:
+        return EEPathTile(h)->mSteps;
+    case EE_PATH_PM_RESET:
+        EEPathOf(h)->Reset();
+        return 0;
+    case EE_PATH_PM_RELEASE: {
+        EEPathMachine* theMachine = EEPathOf(h);
+        theMachine->Reset();
+        theMachine->mFound = false;
+        if (i[0]) {
+            theMachine->mGoal.ReleaseModifier();
+            theMachine->mGoal.SetUnit(0);
+        }
+        return 0;
+    }
+    case EE_PATH_PM_START: {
+        EEPathMachine* theMachine = EEPathOf(h);
+        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
+        theMachine->CancelSearch();
+        theMachine->SetRevLimit((long)i[4]);
+        theMachine->SetMaxRevs((long)i[5]);
+        theMachine->SetStart(theFrom);
+        theMachine->SetGoal(theTo.GetX(), theTo.GetY());
+        theMachine->mTile = theTo;
+        theMachine->mGoal.mDestination = theTo;
+        theMachine->mGoal.SetUnit(EEPathUnitOf(io->h[1]));
+        theMachine->mCheckCorners = true;
+        return 0;
+    }
+    case EE_PATH_PATH_REVS:
+        EEPathRevsInputs(EEPathUnitOf(h), EEPathTileArg(i), EEPathTileArg(i + 2), i);
+        return 0;
+    case EE_PATH_SET_MAX_REVS:
+        if (i[0] == 0)
+            EEPathTile(h)->SetMaxRevs((long)i[1]);
+        else
+            EEGraphOf(h)->SetMaxRevs((long)i[1]);
+        return 0;
+    // the graph machines
+    case EE_PATH_GM_NEW:
+        return (int64_t)EEPathHandle(new EEGraphPathMachine((long)i[0], (long)i[1]));
+    case EE_PATH_GM_DELETE:
+        delete EEGraphOf(h);
+        return 0;
+    case EE_PATH_GM_COUNT:
+        return EEGraphOf(h)->GetCount();
+    case EE_PATH_GM_TYPE:
+        EEGraphOf(h)->mType = (long)i[0];
+        return 0;
+    case EE_PATH_GM_RUN:
+        EEGraphOf(h)->Run();
+        return EEGraphOf(h)->mFound;
+    case EE_PATH_GM_FOUND:
+        return EEGraphOf(h)->mFound;
+    case EE_PATH_GM_SET_REV_LIMIT:
+        EEGraphOf(h)->SetRevLimit((long)i[0]);
+        return 0;
+    case EE_PATH_GM_REV_LIMIT:
+        return EEGraphOf(h)->GetRevLimit();
+    case EE_PATH_GM_STEPS:
+        return EEGraphOf(h)->mSteps;
+    case EE_PATH_GM_RESET:
+        EEGraphOf(h)->Reset();
+        return 0;
+    case EE_PATH_GM_RELEASE: {
+        EEGraphPathMachine* theMachine = EEGraphOf(h);
+        theMachine->Reset();
+        theMachine->mFound = false;
+        if (i[0]) {
+            theMachine->mGoal.ReleaseModifier();
+            theMachine->mGoal.SetUnit(0);
+        }
+        return 0;
+    }
+    case EE_PATH_GM_START: {   // StartGraphPath's setup: the tiles moved onto the map, the sub sectors' centers
+        EEGraphPathMachine* theMachine = EEGraphOf(h);
+        EEAutoPathRequest* theRequest = reinterpret_cast<EEAutoPathRequest*>(io->h[2]);
+        EEAIGraphPathGoalModifierBase* theModifier = reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[3]);
+        EETileCoordinate theFromCenter = EEPathTileArg(i), theToCenter = EEPathTileArg(i + 2);
+        EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
+        theMachine->Reset();
+        theGoal.Reset();
+        if (!i[5])
+            theGoal.mRevLimit = 0xf;
+        if (theModifier)
+            theGoal.SetModifier(theModifier);
+        theManager->ClampTile(gWorld.mMap, theFromCenter);
+        EEPathPutTile(i, theFromCenter);
+        EEAIPathSubSector* theFromSector = gContinentManager.GetPathSubSectorAt(theFromCenter.GetX(), theFromCenter.GetY());
+        theFromCenter = theFromSector->mSector->mCenter;
+        theManager->ClampTile(gWorld.mMap, theToCenter);
+        EEPathPutTile(i + 2, theToCenter);
+        EEAIPathSubSector* theToSector = gContinentManager.GetPathSubSectorAt(theToCenter.GetX(), theToCenter.GetY());
+        theToCenter = theToSector->mSector->mCenter;
+        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
+        if (theRequest)
+            theGoal.mPathFlags = theRequest->mFlags;
+        theMachine->SetGoal(theFromCenter, theFromSector->mID);
+        theMachine->SetStart(theToCenter, theToSector->mID);
+        theMachine->mTile = theToCenter;
+        theMachine->mSector = theToSector->mID;
+        theGoal.mPoint38 = theToCenter;
+        theGoal.mFrom = theFromSector;
+        theGoal.mTo = theToSector;
+        theGoal.mPlayerID = (long)i[4];
+        return 0;
+    }
+    case EE_PATH_GRAPH_REVS: {   // SetGraphRevs' inputs
+        EEGraphPathMachine* theMachine = EEGraphOf(h);
+        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
+        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.GetY());
+        i[0] = theFrom.DistanceTo(theTo);
+        i[1] = theMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] != 0;
+        EEComplexUnit* theUnit = theMachine->mGoal.mUnit;
+        i[2] = theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen ? (int64_t)(uint32_t)theUnit->GetUnitID()
+                                                                                      : (int64_t)0xffffffffu;
+        return 0;
+    }
+    case EE_PATH_REQUEST_UNIT_PATHS:
+        return theManager->RequestUnitPaths(EEPathUnitOf(io->h[1]), reinterpret_cast<EEAutoPathRequest*>(io->h[2]), EEGraphOf(h));
+    case EE_PATH_FINISH_PATH:
+        theManager->FinishPath(EEPathTile(h), EEPathUnitOf(io->h[1]));
+        return 0;
+    // the units
+    case EE_PATH_AUTO_WAYPOINT: {   // FinishGraphPath's unit part
+        EEComplexUnit* theUnit = EEPathUnitOf(h);
+        EETileCoordinate theFrom = theUnit->GetTile();
+        EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
+        if (!(theGoal && theGoal->GetIsAutoWaypoint() && theUnit->mTile))
+            return 0;
+        EEPathPutTile(i, theFrom);
+        i[3] = UMFloor(theGoal->GetLocation().GetY());
+        i[2] = UMFloor(theGoal->GetLocation().GetX());
+        theUnit->DropPath();
+        return 1;
+    }
+    case EE_PATH_SHORT_PATH: {
+        EETileCoordinate theTo = EEPathTileArg(i + 3);
+        bool theResult = theManager->TryShortPath(EEPathUnitOf(h), gWorld.mMap, (long)i[0], EEPathTileArg(i + 1), theTo,
+                                                  (long)i[5]);
+        EEPathPutTile(i + 3, theTo);
+        return theResult;
+    }
+    case EE_PATH_UNIT_PLAYER:
+        return EEPathUnitOf(h)->GetPlayer()->GetPlayerID();
+    case EE_PATH_UNIT_WAYPOINTS:
+        return (int64_t)EEPathUnitOf(h)->mWaypoints.size();
+    case EE_PATH_UNIT_GOAL_TILE: {
+        EEUGRust* theGoal = EELocationGoalCast(EEPathUnitOf(h)->GetGoal());
+        if (!(theGoal && theGoal->GetIsAutoWaypoint()))
+            return 0;
+        i[0] = (long)theGoal->GetLocation().GetX();
+        i[1] = (long)theGoal->GetLocation().GetY();
+        return 1;
+    }
+    case EE_PATH_UNIT_PATH_TYPE: {
+        EEComplexUnit* theUnit = EEPathUnitOf(h);
+        if (!(theUnit->mUnitClass->CanMoveOnTerrain(theUnit, 1)))
+            return theUnit->mUnitClass->CanMoveOnTerrain(theUnit, 0xc) ? 0x10 : 1;
+        return 2;
+    }
+    case EE_PATH_UNIT_COUNT_REQUEST: {   // the request counted; whether it goes into the history
+        EEComplexUnit* theUnit = EEPathUnitOf(h);
+        if (theUnit->mNumPathRequests != theUnit->mNumPathRequests + 1)
+            theUnit->mNumPathRequests = theUnit->mNumPathRequests + 1;
+        return (!theUnit->GetPlayer()->IsHuman() || theUnit->GetPlayer()->GetPlayerID() == 0) && !theUnit->mIsDetachedFromAI
+            && theUnit->mPreviousPart == NULL;
+    }
+    case EE_PATH_PENDING_UNIT: {   // RequestPendingPath's unit part
+        EEComplexUnit* theUnit = EEPathUnitOf(h);
+        theUnit->DropPath();
+        EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
+        bool theGraph = theUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint());
+        i[0] = theUnit->mTileX;
+        i[1] = theUnit->mTileY;
+        return theGraph;
+    }
+    case EE_PATH_UNIT_STRANDED:
+        EEPathUnitOf(h)->mPlayer->UnitStranded(EEPathUnitOf(h));
+        return 0;
+    // the regions, the pools
+    case EE_PATH_REBUILD:
+        return gContinentManager.Rebuild();
+    case EE_PATH_REGION_DELAY:
+        return (int64_t)(uint32_t)UMFloatToLong(gWorld.mGameSpeed * 10000.0f);
+    case EE_PATH_BOUNDED_FREE:
+        if (theManager->mBoundedMachine)
+            theManager->mBoundedMachine->Reset();
+        if (theManager->mBoundedMachine)
+            delete theManager->mBoundedMachine;
+        theManager->mBoundedMachine = NULL;
+        return 0;
+    case EE_PATH_FREE_POOLS:
+        EEAIAStarGraphStorage::FreeNodePool();
+        EEAIAStarStorage::FreeNodePool();
+        return 0;
+    // the requests
+    case EE_PATH_REQUEST_LOAD: {   // a loaded one (the record in h0)
+        {
+            EePathRequestRecord theRecord;
+            std::vector<int32_t> theTiles(2 * ee_path_request_record_get((const void*)(uintptr_t)h, &theRecord, NULL, 0));
+            ee_path_request_record_get((const void*)(uintptr_t)h, &theRecord, theTiles.data(), (uint32_t)(theTiles.size() / 2));
+            std::vector<EETileCoordinate> thePath;
+            for (size_t k = 0; k + 1 < theTiles.size(); k += 2) {
+                EETileCoordinate theTile;
+                theTile.mX = theTiles[k];
+                theTile.mY = theTiles[k + 1];
+                thePath.push_back(theTile);
+            }
+            return (int64_t)EEPathHandle(EENewLoadedRequest(theRecord, thePath));
+        }
+    }
+    case EE_PATH_REQUEST_NEW: {
+        EETileCoordinate theFrom = EEPathTileArg(i + 2), theTo = EEPathTileArg(i + 4);
+        return (int64_t)EEPathHandle(new EEAutoPathRequest((long)i[0], (long)i[1], theFrom, theTo,
+                                                           *reinterpret_cast<EECPASGFlags*>(io->h[1])));
+    }
+    case EE_PATH_REQUEST_SAVE: {
+        EePathRequestRecord theRecord = {};
+        std::vector<int32_t> thePath;
+        EERequestRecordOf(*reinterpret_cast<EEAutoPathRequest*>(h), theRecord, thePath);
+        ee_path_request_record_set((void*)(uintptr_t)io->h[1], &theRecord, thePath.data(), (uint32_t)(thePath.size() / 2));
+        return 0;
+    }
+    // the saved game
+    case EE_PATH_PM_SAVE:
+        return EESavePathMachine(EEPathTile(h), *reinterpret_cast<EePathSavedMachine*>(io->h[1]),
+                                 reinterpret_cast<EePathSavedLists*>(io->h[2]));
+    case EE_PATH_PM_LOAD:
+        return EELoadPathMachine(EEPathOf(h), *reinterpret_cast<const EePathSavedMachine*>(io->h[1]),
+                                 reinterpret_cast<EePathSavedLists*>(io->h[2]), EEPathUnitOf(io->h[3]));
+    case EE_PATH_GM_SAVE:
+        return EESaveGraphMachine(EEGraphOf(h), *reinterpret_cast<EePathSavedGraph*>(io->h[1]), (void*)(uintptr_t)io->h[2]);
+    case EE_PATH_GM_LOAD:
+        return EELoadGraphMachine(EEGraphOf(h), *reinterpret_cast<const EePathSavedGraph*>(io->h[1]),
+                                  reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[2]), EEPathUnitOf(io->h[3]),
+                                  reinterpret_cast<const uint8_t*>(i[0]), (uint32_t)i[1]);
+    case EE_PATH_GM_MODIFIER:
+        return (int64_t)EEPathHandle(EENewGraphModifier(*reinterpret_cast<const EePathSavedGraph*>(io->h[1])));
+    case EE_PATH_AWAIT:
+        switch (i[0]) {
+        case 0:   // the resolve takes the owners
+            sResolvingRequests.clear();
+            sResolvingRequests.swap(sAwaitedRequests);
+            return 0;
+        case 1:
+            return sResolvingRequests.find((long)i[1]) != sResolvingRequests.end();
+        case 2: {   // the owner takes the load's reference
+            std::map<long, std::function<void(EEAutoPathRequest*)> >::iterator it = sResolvingRequests.find((long)i[1]);
+            std::function<void(EEAutoPathRequest*)> theAttach = it->second;
+            sResolvingRequests.erase(it);
+            theAttach(reinterpret_cast<EEAutoPathRequest*>(h));
+            return 0;
+        }
+        default: {   // the owners' fallback: they ask again
+            std::map<long, std::function<void(EEAutoPathRequest*)> > theRest;
+            theRest.swap(sResolvingRequests);
+            for (std::map<long, std::function<void(EEAutoPathRequest*)> >::iterator it = theRest.begin(); it != theRest.end(); it++)
+                it->second(NULL);
+            return 0;
+        }
+        }
+    case EE_PATH_QUEUE_RESOLVE:
+        EEQueueGraphResolve();
+        return 0;
+    }
+    return 0;
+}
+
+void EEAwaitAutoPathRequest(long inRequestID, std::function<void(EEAutoPathRequest*)> inAttach)
+{
+    std::map<long, std::function<void(EEAutoPathRequest*)> >::iterator it = sAwaitedRequests.find(inRequestID);
+    if (it != sAwaitedRequests.end()) {   // (ids are unique: a second owner of one asks again)
+        it->second(NULL);
+        sAwaitedRequests.erase(it);
+    }
+    sAwaitedRequests[inRequestID] = inAttach;
+    EEQueueGraphResolve();
+}
+
+// Creates the path manager with no bounded machine, nothing queued and region updates off
+EEPathManager::EEPathManager() : mRust(ee_path_manager_new(EEPathManagerHost, this)), mBoundedMachine(NULL), mLC8(5)
+{
 }
 
 // Destroys the path manager, freeing every machine, queued search, region map and the node pools
 EEPathManager::~EEPathManager()
 {
     this->Clear();
-    ee_path_record_free(this->mRecord);
-    this->mRecord = NULL;
+    ee_path_manager_free(this->mRust);
+    this->mRust = NULL;
 }
 
-// Records that a unit asked for a path to a tile, stamped with the game time (newest first)
-void EEPathManager::AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
+// one call of the Rust manager (pm.rs ee_path_manager_call)
+int64_t EEPathManager::Call(int32_t inWhat, uint64_t inH0, uint64_t inH1, std::initializer_list<int64_t> inValues,
+                            int64_t* outValues)
 {
-    ee_path_record_add_history(this->mRecord, (int32_t)inUnit->mUnitID, (int32_t)inTile.GetX(), (int32_t)inTile.GetY(),
-                               (uint32_t)gPhysics->mGameTime);
+    EePathIo theIO = {};
+    theIO.h[0] = inH0;
+    theIO.h[1] = inH1;
+    int k = 0;
+    for (int64_t v : inValues)
+        theIO.i[k++] = v;
+    int64_t theResult = ee_path_manager_call(this->mRust, inWhat, &theIO);
+    if (outValues != NULL) {
+        outValues[0] = theIO.i[0];
+        outValues[1] = theIO.i[1];
+    }
+    return theResult;
 }
 
-// Deletes every spare path and graph machine
-void EEPathManager::FreeMachines()
+void EEPathManager::Update()
 {
-    while (this->mSparePathMachines.size() != 0) {
-        EEPathMachine* theMachine = this->mSparePathMachines.back();
-        theMachine->Reset();
-        this->mSparePathMachines.pop_back();
-        delete theMachine;
-    }
-    while (this->mSpareGraphMachines.size() != 0) {
-        EEGraphPathMachine* theMachine = this->mSpareGraphMachines.back();
-        theMachine->Reset();
-        this->mSpareGraphMachines.pop_back();
-        delete theMachine;
-    }
+    EEPathRequestCapture theCapture(kPathRequestUpdate, this);   // TEST ONLY
+    this->Call(1);
 }
 
-// Drops every queued tile and graph search, returning their machines and nodes
+void EEPathManager::Reset()
+{
+    EEPathRequestCapture theCapture(kPathRequestReset, this);   // TEST ONLY
+    this->Call(2);
+}
+
+void EEPathManager::Clear()
+{
+    this->Call(3);
+}
+
 void EEPathManager::FreePaths()
 {
-    while (this->mPaths.size() != 0) {
-        EEPathManagerNode* theNode = *this->mPaths.begin();
-        this->ReleasePathMachine((EEPathMachine*)theNode->mPathMachine);
-        this->ReleaseNode(theNode);
-        this->mPaths.pop_front();
-    }
-    while (this->mAutoPaths.size() != 0) {
-        EEPathManagerNode* theNode = *this->mAutoPaths.begin();
-        this->ReleaseGraphMachine(theNode->mGraphMachine);
-        this->ReleaseNode(theNode);
-        this->mAutoPaths.pop_front();
-    }
+    this->Call(4);
 }
 
-// Deletes every unit's region map (its repeated goal tile counts)
-void EEPathManager::FreeRegions()
+void EEPathManager::RequestPendingPaths(EEMap* inMap)
 {
-    ee_path_record_free_regions(this->mRecord);
-}
-
-// Sets a graph search's step budget to the distance times 250/75/90/110 (by distance band); at most 40 per tile when
-// the goal sector's kind is not allowed, 3 when a computer citizen's newest request within 4 s was the same tile
-void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom,
-                                 const EETileCoordinate& inTo)
-{
-    EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(inTo.GetX(), inTo.GetY());
-    long theDistance = inFrom.DistanceTo(inTo);
-    unsigned long theTime;
-    theTime = gPhysics ? gPhysics->GetGameTime() : 0;
-    if (theTime > 4000)
-        theTime -= 4000;
-    // (Rust: ee_astar path_splice.rs graph_revs: the distance band's factor, the kind's cap, the repeat's 3)
-    bool theAllowed = inMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] != 0;
-    bool theRepeated = false;
-    EEComplexUnit* theUnit = inMachine->mGoal.mUnit;
-    if (theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen)
-        theRepeated = ee_path_record_repeated(this->mRecord, (int32_t)theUnit->GetUnitID(), (int32_t)inTo.GetX(),
-                                              (int32_t)inTo.GetY(), (uint32_t)theTime);
-    inMachine->SetMaxRevs(ee_path_graph_revs((int32_t)theDistance, theAllowed, theRepeated));
-}
-
-// Sets a tile search's step budget to the distance times 375 (up to 15 tiles), 140 or 145 (over 80); at most 40
-// per tile when a unit that is not amphibious goes to another continent
-void EEPathManager::SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
-                                const EETileCoordinate& inTo)
-{
-    EEAIContinent* theFromContinent = gContinentManager.GetContinentAt(inFrom.GetX(), inFrom.GetY());
-    EEAIContinent* theToContinent = gContinentManager.GetContinentAt(inTo);
-    long theDistance = inFrom.DistanceTo(inTo);
-    bool theAmphibious;
-    if (inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0) && inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1))
-        theAmphibious = true;
-    else
-        theAmphibious = false;
-    // (Rust: ee_astar path_splice.rs path_revs)
-    inMachine->SetMaxRevs(ee_path_path_revs((int32_t)theDistance, theAmphibious, theFromContinent == theToContinent));
-}
-
-// Makes sure the bounded path machine exists for the map, recreating it (with corner checks) for another map
-void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
-{
-    if (this->mBoundedMachine != NULL && this->mBoundedMachine->mMap == inMap)
-        return;
-    if (this->mBoundedMachine) {
-        this->mBoundedMachine->Reset();
-        delete this->mBoundedMachine;
-    }
-    this->mBoundedMachine = new EEBoundedPathMachine(4, inMap);
-    this->mBoundedMachine->mCheckCorners = true;
-}
-
-// Finishes the unit's queued graph search at once (no step limit), applies its result and drops it
-void EEPathManager::CancelAutoPath(EEComplexUnit* inUnit)
-{
-    if (this->mAutoPaths.size() == 0)
-        return;
-    for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
-        if ((*it)->mUnit != inUnit)
-            continue;
-        EEPathManagerNode* theNode = *it;
-        if (theNode) {
-            theNode->mGraphMachine->SetRevLimit(-1);
-            theNode->mGraphMachine->Run();
-            this->FinishGraphPath(theNode);
-            this->CancelAutoPaths(inUnit);
+    EEPathRequestCapture theCapture(kPathRequestPending, this);   // TEST ONLY
+    if (theCapture.On()) {
+        int32_t thePending[3];
+        theCapture.mRecord.U32((unsigned int)this->Call(20));
+        for (uint32_t k = 0; ee_path_manager_pending(this->mRust, k, thePending); k++) {
+            theCapture.mRecord.U32((unsigned int)thePending[0]);
+            theCapture.mRecord.I32(thePending[1]);
+            theCapture.mRecord.I32(thePending[2]);
         }
-        return;
     }
+    this->Call(5);
 }
 
-// Finishes the queued graph search of a path request at once, applies its result and drops it
-void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
+void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
 {
-    EEPathRequestCapture theCapture(kPathRequestCompleteAutoPath, this);   // TEST ONLY
+    EEPathRequestCapture theCapture(kPathRequestRegionUpdates, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(inOn ? 1 : 0);
+        theCapture.mRecord.U32(inNow ? 1 : 0);
+        theCapture.mRecord.U32((unsigned int)this->Call(25));
+        theCapture.mRecord.U32((unsigned int)this->Call(24));
+    }
+    this->Call(6, 0, 0, {inOn, inNow});
+}
+
+void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
+{
+    EEPathRequestCapture theCapture(kPathRequestCancelPaths, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.mRecord.U32(inAutoPaths ? 1 : 0);
+    }
+    this->Call(7, EEPathHandle(inUnit), 0, {inAutoPaths});
+}
+
+void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
+{
+    EEPathRequestCapture theCapture(kPathRequestCancelRequest, this);   // TEST ONLY
     if (theCapture.On())
-        theCapture.Request(inRequest);
-    if (this->mAutoPaths.size() == 0)
-        return;
-    for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
-        if ((*it)->mRequest != inRequest)
-            continue;
-        EEPathManagerNode* theNode = *it;
-        if (theNode) {
-            theNode->mGraphMachine->SetRevLimit(-1);
-            theNode->mGraphMachine->Run();
-            this->FinishGraphPath(theNode);
-            this->CancelAutoPathRequest(inRequest);
-        }
-        return;
-    }
+        theCapture.Request(static_cast<EEAutoPathRequest*>(inRequest));
+    this->Call(8, EEPathHandle(static_cast<EEAutoPathRequest*>(inRequest)));
 }
 
-// Finishes the unit's queued searches at once: its graph search, then its tile search, whose path it takes
 void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 {
     EEPathRequestCapture theCapture(kPathRequestCompletePath, this);   // TEST ONLY
@@ -628,189 +1233,48 @@ void EEPathManager::CompletePath(EEComplexUnit* inUnit)
         theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
         theCapture.Unit(EEPathCaptureUnitID(inUnit));
     }
-    if (this->mAutoPaths.size() != 0)
-        this->CancelAutoPath(inUnit);
-    EEPathManagerNode* theNode = this->FindPath(inUnit);
-    if (!theNode)
-        return;
-    theNode->mPathMachine->SetRevLimit(-1);
-    theNode->mPathMachine->Run();
-    this->FinishPath(theNode);
-    this->CancelPaths(inUnit, true);
+    this->Call(9, EEPathHandle(inUnit));
 }
 
-// Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
-void EEPathManager::DumpOutOfSynch(FILE* inFile)
+void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());
-    for (long i = gContinentManager.mPathSubSectors.size() - 1; i > 0; i--) {
-        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
-        if (theSector)
-            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),
-                    theSector->mLocation.GetX(), theSector->mLocation.GetY());
-    }
-    fprintf(inFile, "OUT OF SYNCH DUMP: Paths In progress: %zu\n", this->mPaths.size());
-    unsigned long j;
-    for (j = 0; j < this->mPaths.size(); j++) {
-        // cast the node's machine (the node itself used to be cast, which always failed)
-        EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(this->mPaths[j]->mPathMachine);
-        if (theMachine) {
-            fprintf(inFile, "OUT OF SYNCH DUMP:\n");
-            fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%ld]: \n", j);
-            unsigned long theUnitID;
-            if (this->mPaths[j]->mUnit)
-                theUnitID = this->mPaths[j]->mUnit->GetUnitID();
-            else
-                theUnitID = 0;
-            fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
-                    this->mPaths[j]->mTile.GetX(), this->mPaths[j]->mTile.GetY(), this->mPaths[j]->mPasses);
-            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
-                    theMachine->GetRevs(), theMachine->GetMaxRevs(), theMachine->GetType());
-        } else {
-            fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN PATHFINDER! Can't Dynamic cast it!\n");
-        }
-    }
-    fprintf(inFile, "OUT OF SYNCH DUMP: Graphs In progress: %zu\n", this->mAutoPaths.size());
-    for (j = 0; j < this->mAutoPaths.size(); j++) {
-        // the node's graph machine (the node itself used to be cast, which always failed)
-        EEGraphPathMachine* theMachine = this->mAutoPaths[j]->mGraphMachine;
-        if (theMachine) {
-            fprintf(inFile, "OUT OF SYNCH DUMP:\n");
-            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", j);
-            unsigned long theUnitID;
-            // the graph search's own unit, tile and passes (they used to be read from mPaths)
-            if (this->mAutoPaths[j]->mUnit)
-                theUnitID = this->mAutoPaths[j]->mUnit->GetUnitID();
-            else
-                theUnitID = 0;
-            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
-                    theUnitID, this->mAutoPaths[j]->mTile.GetX(), this->mAutoPaths[j]->mTile.GetY(),
-                    this->mAutoPaths[j]->mPasses);
-            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->GetRevs(),
-                    theMachine->GetMaxRevs());
-        } else {
-            fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN GraphFinder! Can't Dynamic cast it!\n");
-        }
-    }
+    EEPathRequestCapture theCapture(kPathRequestCompleteAutoPath, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.Request(inRequest);
+    this->Call(10, EEPathHandle(inRequest));
 }
 
-// Returns a graph machine of the given type: a spare one sized for the current sub sector count (spares of another
-// size are deleted), else a new one
-EEGraphPathMachine* EEPathManager::NewGraphMachine(long inType)
-{
-    EEGraphPathMachine* theMachine = NULL;
-    while (this->mSpareGraphMachines.size() != 0) {
-        if (this->mSpareGraphMachines.back()->GetCount() == gContinentManager.mPathSubSectors.size() + 1)
-            theMachine = this->mSpareGraphMachines.back();
-        else
-            delete this->mSpareGraphMachines.back();
-        this->mSpareGraphMachines.pop_back();
-        if (theMachine)
-            break;
-    }
-    if (theMachine == NULL)
-        theMachine = new EEGraphPathMachine(inType, gContinentManager.mPathSubSectors.size() + 1);
-    theMachine->mType = inType;
-    return theMachine;
-}
-
-// Returns a tile path machine for the map (a spare one built for the same map, else a new one), with a sea or
-// space modifier for the types 2 and 0x10
-EEPathMachine* EEPathManager::NewPathMachine(long inType, EEMap* inMap)
-{
-    EEPathMachine* theMachine = NULL;
-    if (this->mSparePathMachines.size() != 0) {
-        theMachine = this->mSparePathMachines.back();
-        this->mSparePathMachines.pop_back();
-        if (inMap != theMachine->mGoal.mMap) {
-            delete theMachine;
-            theMachine = new EEPathMachine(1, inMap);
-        }
-    } else {
-        theMachine = new EEPathMachine(1, inMap);
-    }
-    EEAIPathGoalModifierBase* theModifier;
-    if (inType == 2)
-        theModifier = new EEAIPathGoalModifierSea(&theMachine->mGoal);
-    else if (inType == 0x10)
-        theModifier = new EEAIPathGoalModifierSpace(&theMachine->mGoal);
-    else
-        goto done;
-    theMachine->mGoal.SetModifier(theModifier);
-    theModifier->Dereference();
-done:
-    theMachine->mType = inType;
-    return theMachine;
-}
-
-// Returns an empty node from the pool
-EEPathManagerNode* EEPathManager::NewNode()
-{
-    EEPathManagerNode* theNode = this->mNodePool.New();
-    theNode->Clear();
-    return theNode;
-}
-
-// Returns whether a graph search is queued for the unit
 bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
 {
     EEPathRequestCapture theCapture(kPathRequestHasAutoPath, this);   // TEST ONLY
     if (theCapture.On())
         theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    bool theResult = false;
-    if (this->mAutoPaths.size() != 0) {
-        for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
-            if ((*it)->mUnit == inUnit) {
-                theResult = true;
-                break;
-            }
-        }
-    }
+    bool theResult = this->Call(11, EEPathHandle(inUnit)) != 0;
     if (theCapture.On())
         theCapture.mRecord.U32(theResult ? 1 : 0);
     return theResult;
 }
 
-// Returns false while a tile search is queued for the unit (true for no unit)
 bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
 {
     EEPathRequestCapture theCapture(kPathRequestIsPathDone, this);   // TEST ONLY
     if (theCapture.On())
         theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    bool theResult = true;
-    if (this->mPaths.size() != 0 && inUnit) {
-        std::deque<EEPathManagerNode*>::iterator it;
-        for (it = this->mPaths.begin(); it != this->mPaths.end(); it++) {
-            if ((*it)->mUnit == inUnit) {
-                theResult = false;
-                break;
-            }
-        }
-    }
+    bool theResult = this->Call(12, EEPathHandle(inUnit)) != 0;
     if (theCapture.On())
         theCapture.mRecord.U32(theResult ? 1 : 0);
     return theResult;
 }
 
-// Gets the goal tile of the unit's queued tile search; returns false when one is queued, true (tile 0,0) if not
 bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
 {
     EEPathRequestCapture theCapture(kPathRequestGetPathGoal, this);   // TEST ONLY
     if (theCapture.On())
         theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-    bool theResult = true;
-    outTile.mX = 0;
-    outTile.mY = 0;
-    if (this->mPaths.size() != 0 && inUnit) {
-        for (std::deque<EEPathManagerNode*>::iterator it = this->mPaths.begin(); it != this->mPaths.end(); it++) {
-            if ((*it)->mUnit != inUnit)
-                continue;
-            theResult = false;
-            outTile = (*it)->mTile;
-            break;
-        }
-    }
+    int64_t theTile[2] = {0, 0};
+    bool theResult = this->Call(13, EEPathHandle(inUnit), 0, {}, theTile) != 0;
+    outTile.mX = (long)theTile[0];
+    outTile.mY = (long)theTile[1];
     if (theCapture.On()) {
         theCapture.mRecord.U32(theResult ? 1 : 0);
         theCapture.Tile(outTile);
@@ -818,7 +1282,6 @@ bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
     return theResult;
 }
 
-// Creates a player's graph path request with the next request id and starts its search; returns the request
 EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom,
                                               const EETileCoordinate& inTo, EECPASGFlags* inFlags, long inType,
                                               long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
@@ -836,86 +1299,260 @@ EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EE
         theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
         theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
     }
-    EEAutoPathRequest* theRequest =
-        new EEAutoPathRequest(this->mNextRequestID, inPlayerID, inFrom, inTo, *inFlags);
-    bool theStarted = false;
-    this->mNextRequestID++;
-    this->StartGraphPath(NULL, inFrom, inTo, &theStarted, inPlayerID, theRequest, inType, inRevs, inModifier, inUnlimitedRevs);
+    EEAutoPathRequest* theRequest = reinterpret_cast<EEAutoPathRequest*>(
+        this->Call(14, EEPathHandle(inFlags), EEPathHandle(inModifier),
+                   {(int64_t)inPlayerID, inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inType, inRevs, inUnlimitedRevs}));
     if (theCapture.On())
         theCapture.Request(theRequest);
     return theRequest;
 }
 
-// Starts a graph path search for a unit; returns whether the search still runs (queued)
-bool EEPathManager::RequestGroupPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                     long inPlayerID, long inType, long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
+void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
+                                    bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8)
 {
-    bool theStarted = false;
-    this->StartGraphPath(inUnit, inFrom, inTo, &theStarted, inPlayerID, NULL, inType, inRevs, inModifier, inUnlimitedRevs);
-    return theStarted;
+    EEPathRequestCapture theCapture(kPathRequestUnitPath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.Tile(inFrom);
+        theCapture.Tile(inTo);
+        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
+        theCapture.mRecord.I32((int)inRevs);
+        theCapture.mRecord.U32(inUseGraph ? 1 : 0);
+        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
+        theCapture.mRecord.U32(inArg8 ? 1 : 0);
+        theCapture.Unit(EEPathCaptureUnitID(inUnit));
+    }
+    this->Call(15, EEPathHandle(inUnit), EEPathHandle(inModifier),
+               {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inUnlimitedRevs, inRevs, inUseGraph, inArg8});
 }
 
-// NEAR: the request's flags go to the goal through EECPASGFlags::operator= (out of line 0xaa1da in the original)
-// Starts a sub sector graph search between two tiles (moved onto the map) for a unit or a request: queued while it
-// runs (*outStarted true), else applied and freed at once; always returns false
-bool EEPathManager::StartGraphPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                   bool* outStarted, long inPlayerID, EEAutoPathRequest* inRequest, long inType,
-                                   long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
+void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
 {
-    EEPathManagerNode* theNode = NULL;
-    EEGraphPathMachine* theMachine = this->NewGraphMachine(inType);
-    EETileCoordinate theFrom = inFrom;
-    EETileCoordinate theTo = inTo;
-    *outStarted = false;
-    EETileCoordinate theFromCenter = theFrom;
-    EETileCoordinate theToCenter = theTo;
-    EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
-    if (inUnit)
-        this->CancelAutoPaths(inUnit);
-    theMachine->Reset();
-    theGoal.Reset();
-    if (!inUnlimitedRevs)
-        theGoal.mRevLimit = 0xf;
-    if (inModifier)
-        theGoal.SetModifier(inModifier);
-    this->ClampTile(gWorld.mMap, theFromCenter);
-    theFrom = theFromCenter;
-    EEAIPathSubSector* theFromSector = gContinentManager.GetPathSubSectorAt(theFromCenter.GetX(), theFromCenter.GetY());
-    theFromCenter = theFromSector->mSector->mCenter;
-    this->ClampTile(gWorld.mMap, theToCenter);
-    theTo = theToCenter;
-    EEAIPathSubSector* theToSector = gContinentManager.GetPathSubSectorAt(theToCenter.GetX(), theToCenter.GetY());
-    theToCenter = theToSector->mSector->mCenter;
-    theGoal.SetUnit(inUnit);
-    if (inRequest)
-        theGoal.mPathFlags = inRequest->mFlags;
-    theMachine->SetGoal(theFromCenter, theFromSector->mID);
-    theMachine->SetStart(theToCenter, theToSector->mID);
-    theMachine->mTile = theToCenter;
-    theMachine->mSector = theToSector->mID;
-    theGoal.mPoint38 = theToCenter;
-    theGoal.mFrom = theFromSector;
-    theGoal.mTo = theToSector;
-    theGoal.mPlayerID = inPlayerID;
-    if (inRevs <= 0)
-        this->SetGraphRevs(theMachine, theFrom, theTo);
-    else
-        theMachine->SetMaxRevs(inRevs);
-    theMachine->Run();
-    *outStarted = theMachine->mFound;
-    if (theMachine->mFound) {
-        theNode = this->NewNode();
-        theNode->SetRequest(inRequest);
-        theNode->SetUnit(inUnit);
-        theNode->mGraphMachine = theMachine;
-        theNode->mTile = theTo;
-        theNode->mPasses = 1;
-        this->mAutoPaths.push_back(theNode);
-    } else {
-        this->RequestUnitPaths(inUnit, inRequest, theMachine);
-        this->ReleaseGraphMachine(theMachine);
+    this->Call(16, EEPathHandle(inUnit), 0, {inTile.mX, inTile.mY});
+}
+
+void EEPathManager::AddPending(unsigned long inUnitID, const EETileCoordinate& inTile)
+{
+    this->Call(17, 0, 0, {(int64_t)inUnitID, inTile.mX, inTile.mY});
+}
+
+// the save file through FSFile's typed calls (pm.rs EePathFileFn)
+static int32_t EEPathFileWrite(void* inFile, uint32_t inKind, uint32_t* ioValue, uint8_t* inData, uint32_t inLength)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    switch (inKind) {
+    case EE_PATH_FILE_U32: return (int32_t)theFile.Write(*ioValue);
+    case EE_PATH_FILE_I32: return (int32_t)theFile.Write((int32_t)*ioValue);
+    case EE_PATH_FILE_U16: return (int32_t)theFile.Write((unsigned short)*ioValue);
+    case EE_PATH_FILE_BOOL: return (int32_t)theFile.Write(*ioValue != 0);
+    case EE_PATH_FILE_F32: { float theValue; memcpy(&theValue, ioValue, 4); return (int32_t)theFile.Write(theValue); }
+    default: { unsigned long theWritten = 0; return (int32_t)theFile.Write(inData, inLength, theWritten); }
     }
-    return false;
+}
+
+static int32_t EEPathFileRead(void* inFile, uint32_t inKind, uint32_t* outValue, uint8_t* outData, uint32_t inLength)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    long theResult = 0;
+    switch (inKind) {
+    case EE_PATH_FILE_U32: theResult = theFile.Read(*outValue); break;
+    case EE_PATH_FILE_I32: { int32_t v = 0; theResult = theFile.Read(v); *outValue = (uint32_t)v; break; }
+    case EE_PATH_FILE_U16: { unsigned short v = 0; theResult = theFile.Read(v); *outValue = v; break; }
+    case EE_PATH_FILE_BOOL: { bool v = false; theResult = theFile.Read(v); *outValue = v; break; }
+    case EE_PATH_FILE_F32: { float v = 0; theResult = theFile.Read(v); memcpy(outValue, &v, 4); break; }
+    default: { unsigned long theRead = 0; theResult = theFile.Read(outData, inLength, theRead); *outValue = (uint32_t)theRead; break; }
+    }
+    return (int32_t)theResult;
+}
+
+// port (save version 0.256): the request record, the region maps, the timers and the counters (pm.rs RunningState)
+void EEPathManager::SaveRunningState(FSFile& outFile)
+{
+    ee_path_manager_file(this->mRust, 0, false, EEPathFileWrite, &outFile);
+}
+
+long EEPathManager::LoadRunningState(FSFile& inFile)
+{
+    long theResult = ee_path_manager_file(this->mRust, 0, true, EEPathFileRead, &inFile);
+    if (theResult == 0)
+        EEAfterLoad([]() { gPathManager.Call(18); });
+    return theResult;
+}
+
+// port (save version 0.276): the units' tile searches in progress (pm.rs SavedSearch)
+void EEPathManager::SaveSearches(FSFile& outFile)
+{
+    ee_path_manager_file(this->mRust, 1, false, EEPathFileWrite, &outFile);
+}
+
+long EEPathManager::LoadSearches(FSFile& inFile)
+{
+    long theResult = ee_path_manager_file(this->mRust, 1, true, EEPathFileRead, &inFile);
+    if (theResult == 0)
+        EEAfterLoad([]() { gPathManager.Call(26); });
+    return theResult;
+}
+
+// port (save version 0.278): the graph searches in progress (pm.rs SavedGraph), resolved at the first tick
+void EEPathManager::SaveGraphSearches(FSFile& outFile)
+{
+    ee_path_manager_file(this->mRust, 2, false, EEPathFileWrite, &outFile);
+}
+
+long EEPathManager::LoadGraphSearches(FSFile& inFile)
+{
+    return ee_path_manager_file(this->mRust, 2, true, EEPathFileRead, &inFile);
+}
+
+// port (save version 0.277): a path request's every field (ee/EEAutoPathRequest.h; pm.rs RequestRecord)
+void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest)
+{
+    EePathRequestRecord theRecord = {};
+    std::vector<int32_t> thePath;
+    EERequestRecordOf(inRequest, theRecord, thePath);
+    ee_path_request_write(&theRecord, thePath.data(), (uint32_t)(thePath.size() / 2), EEPathFileWrite, &outFile);
+}
+
+long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
+{
+    outRequest = NULL;
+    EePathRequestRecord theRecord = {};
+    void* theTiles = ee_path_tiles_new();
+    long theResult = ee_path_request_read(&theRecord, theTiles, EEPathFileRead, &inFile);
+    if (theResult == 0) {
+        std::vector<EETileCoordinate> thePath;
+        int32_t theTile[2];
+        for (uint32_t k = 0; ee_path_tiles_get(theTiles, k, theTile); k++) {
+            EETileCoordinate t;
+            t.mX = theTile[0];
+            t.mY = theTile[1];
+            thePath.push_back(t);
+        }
+        outRequest = EENewLoadedRequest(theRecord, thePath);
+    }
+    ee_path_tiles_free(theTiles);
+    return theResult;
+}
+
+// TEST ONLY (EE-SIM's state dumps): the searches in progress, the pending requests and the timers (pm.rs), then the
+// bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search) as a digest of its
+// bytes (ee_astar storage_save.rs) and the C++ members around it
+void EEPathManager::DumpSim(FILE* inFile)
+{
+    std::vector<char> theText(ee_path_manager_dump(this->mRust, NULL, 0));
+    ee_path_manager_dump(this->mRust, reinterpret_cast<uint8_t*>(theText.data()), (uint32_t)theText.size());
+    fwrite(theText.data(), 1, theText.size(), inFile);
+    unsigned long theHash = 2166136261u, theSize = 0;
+    if (this->mBoundedMachine != NULL) {
+        std::vector<unsigned char> theBytes(ee_astar_save(this->mBoundedMachine->mCore, NULL, 0));
+        ee_astar_save(this->mBoundedMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+        for (size_t i = 0; i < theBytes.size(); i++)
+            theHash = (uint32_t)((theHash ^ theBytes[i]) * 16777619u);
+        theSize = (unsigned long)theBytes.size();
+    }
+    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", this->mBoundedMachine != NULL ? 1 : 0, theSize, theHash);
+    if (this->mBoundedMachine != NULL)
+        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", this->mBoundedMachine->mWidth, this->mBoundedMachine->mHeight,
+                this->mBoundedMachine->mMapWidth, this->mBoundedMachine->mMapHeight, this->mBoundedMachine->mFound ? 1 : 0);
+    fprintf(inFile, "\n");
+}
+
+// Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
+void EEPathManager::DumpOutOfSynch(FILE* inFile)
+{
+    fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
+    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());
+    for (long i = gContinentManager.mPathSubSectors.size() - 1; i > 0; i--) {
+        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
+        if (theSector)
+            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),
+                    theSector->mLocation.GetX(), theSector->mLocation.GetY());
+    }
+    std::vector<EePathQueued> theQueued(ee_path_manager_queued(this->mRust, NULL, 0));
+    ee_path_manager_queued(this->mRust, theQueued.data(), (uint32_t)theQueued.size());
+    for (unsigned int q = 0; q < 2; q++) {
+        size_t theCount = 0;
+        for (size_t j = 0; j < theQueued.size(); j++)
+            theCount += theQueued[j].queue == q;
+        fprintf(inFile, q == 0 ? "OUT OF SYNCH DUMP: Paths In progress: %zu\n" : "OUT OF SYNCH DUMP: Graphs In progress: %zu\n",
+                theCount);
+        long k = 0;
+        for (size_t j = 0; j < theQueued.size(); j++) {
+            const EePathQueued& e = theQueued[j];
+            if (e.queue != q)
+                continue;
+            EEComplexUnit* theUnit = NULL;
+            EEUnitHandleResolve(e.unit, theUnit);
+            unsigned long theUnitID = theUnit != NULL ? theUnit->GetUnitID() : 0;
+            fprintf(inFile, "OUT OF SYNCH DUMP:\n");
+            if (q == 0) {
+                // the node's machine (the node itself used to be cast, which always failed)
+                EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(EEPathTile(e.machine));
+                fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%ld]: \n", k++);
+                fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
+                        (long)e.x, (long)e.y, (long)e.passes);
+                if (theMachine)
+                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
+                            theMachine->GetRevs(), theMachine->GetMaxRevs(), theMachine->GetType());
+            } else {
+                EEGraphPathMachine* theMachine = EEGraphOf(e.machine);
+                fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", k++);
+                fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
+                        theUnitID, (long)e.x, (long)e.y, (long)e.passes);
+                if (theMachine)
+                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->GetRevs(),
+                            theMachine->GetMaxRevs());
+            }
+        }
+    }
+}
+
+// Applies a finished tile search to its unit: as a failed path unless its goal accepted the nearest tile and did
+// not take it, else as a found path
+void EEPathManager::FinishPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
+{
+    bool theFound;
+    bool theBlocked;
+    if (inMachine->mType == kAIMachineBoundedPath) {
+        theFound = ((EEBoundedPathMachine*)inMachine)->mGoal.mAcceptNearest;
+        theBlocked = ((EEBoundedPathMachine*)inMachine)->mGoal.mTookNearest;
+    } else {
+        theFound = ((EEPathMachine*)inMachine)->mGoal.mAcceptNearest;
+        theBlocked = ((EEPathMachine*)inMachine)->mGoal.mTookNearest;
+    }
+    if (!theFound || theBlocked)
+        this->FinishFailedPath(inMachine, inUnit);
+    else
+        this->FinishFoundPath(inMachine, inUnit);
+}
+
+// (the vector clear() 0x688c2c between the flag and SnapLastWaypoint is the unit's mBoundedPathTiles)
+// Gives the unit the found path, marks its path done, clears its bounded path tiles and snaps its last waypoint
+void EEPathManager::FinishFoundPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
+{
+    std::vector<GE3DPoint> thePath;
+    if (inMachine->mType == kAIMachineBoundedPath)
+        ((EEBoundedPathMachine*)inMachine)->GetPoints(thePath);
+    else
+        ((EEPathMachine*)inMachine)->GetPoints(thePath);
+    inUnit->TakePath(thePath, false);
+    if (inUnit->mIsPathDone != true)
+        inUnit->mIsPathDone = true;
+    inUnit->mBoundedPathTiles.clear();
+    inUnit->SnapLastWaypoint();
+}
+
+// Makes sure the bounded path machine exists for the map, recreating it (with corner checks) for another map
+void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
+{
+    if (this->mBoundedMachine != NULL && this->mBoundedMachine->mMap == inMap)
+        return;
+    if (this->mBoundedMachine) {
+        this->mBoundedMachine->Reset();
+        delete this->mBoundedMachine;
+    }
+    this->mBoundedMachine = new EEBoundedPathMachine(4, inMap);
+    this->mBoundedMachine->mCheckCorners = true;
 }
 
 // Runs a bounded tile search (at most 200 steps; a window around inFrom when inBounds is empty) and returns its
@@ -965,9 +1602,11 @@ set:
     this->mBoundedMachine->SetGoal(theTo);
     this->mBoundedMachine->mTile = theTo;
     if (inRevs <= 0) {
-        if (inUnit != NULL)
-            this->SetPathRevs((EEPathMachine*)this->mBoundedMachine, inUnit, theFrom, theTo);
-        else
+        if (inUnit != NULL) {   // SetPathRevs (Rust: ee_astar path_splice.rs path_revs)
+            int64_t theInputs[3];
+            EEPathRevsInputs(inUnit, theFrom, theTo, theInputs);
+            this->mBoundedMachine->SetMaxRevs(ee_path_path_revs((int32_t)theInputs[0], theInputs[1] != 0, theInputs[2] != 0));
+        } else
             this->mBoundedMachine->SetMaxRevs(200);
         theRevs = this->mBoundedMachine->GetMaxRevs();
         if (theRevs > 200) {
@@ -1012,114 +1651,6 @@ set:
         if (outVisited != NULL)
             theCapture.Points(*outVisited);
     }
-}
-
-// NEAR: the location goal's tile goes through __ftol here.
-// Requests a unit's path: a graph search when asked; otherwise records the request, tries a short bounded search
-// and, unless that settles it, starts a tile search (queued while it runs); nothing for a -10000 start
-void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                    bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8)
-{
-    EEPathRequestCapture theCapture(kPathRequestUnitPath, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.Tile(inFrom);
-        theCapture.Tile(inTo);
-        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
-        theCapture.mRecord.I32((int)inRevs);
-        theCapture.mRecord.U32(inUseGraph ? 1 : 0);
-        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
-        theCapture.mRecord.U32(inArg8 ? 1 : 0);
-        theCapture.Unit(EEPathCaptureUnitID(inUnit));
-    }
-    EETileCoordinate theShort;
-    theShort.mX = 0;
-    theShort.mY = 0;
-    bool theStarted = false;
-    bool theNoPath = true;
-    EETileCoordinate theTo = inTo;
-    EETileCoordinate theFrom = inFrom;
-    EEMap* theMap = gWorld.mMap;
-    if (theFrom.GetX() == -10000 || theFrom.GetY() == -10000)
-        return;
-    this->ClampTile(theMap, theFrom);
-    this->ClampTile(theMap, theTo);
-    if (inUseGraph) {
-        theStarted = this->RequestGroupPath(inUnit, inFrom, theTo, inUnit->GetPlayer()->GetPlayerID(), 1, -1, inModifier, inUnlimitedRevs);
-        if (!theStarted) {
-            EEUGRust* theGoal = EELocationGoalCast(inUnit->GetGoal());
-            if (theGoal && theGoal->GetIsAutoWaypoint()) {
-                theTo.mX = (long)theGoal->GetLocation().GetX();
-                theTo.mY = (long)theGoal->GetLocation().GetY();
-            }
-        }
-        theNoPath = inUnit->mWaypoints.size() == 0;
-    }
-    if (inUnit != NULL && !theNoPath)
-        return;
-    long theType;
-    if (!(inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1)))
-        theType = inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0xc) ? 0x10 : 1;
-    else
-        theType = 2;
-    if (inUnit->mNumPathRequests != inUnit->mNumPathRequests + 1)
-        inUnit->mNumPathRequests = inUnit->mNumPathRequests + 1;
-    if ((!inUnit->GetPlayer()->IsHuman() || inUnit->GetPlayer()->GetPlayerID() == 0) && !inUnit->mIsDetachedFromAI && inUnit->mPreviousPart == NULL)
-        this->AddHistory(inUnit, inTo);
-    this->CancelPaths(inUnit, false);
-    if (!inUnlimitedRevs && (!inArg8 || inUnit == NULL || (long)inUnit->mWaypoints.size() < 7)) {
-        theShort = theTo;
-        bool theDone = this->TryShortPath(inUnit, theMap, theType, theFrom, theShort);
-        theFrom = theShort;
-        if (theDone)
-            return;
-    }
-    if (!theStarted || !inUseGraph) {
-        EEPathManagerNode* theNode = this->NewNode();
-        EEPathMachine* theMachine = this->NewPathMachine(theType, theMap);
-        EEAIAStarPathfindingGoalBase* theGoal = &theMachine->mGoal;
-        theMachine->CancelSearch();
-        theMachine->SetRevLimit(inUnlimitedRevs ? -1 : 0xf);
-        if (inRevs <= 0)
-            this->SetPathRevs(theMachine, inUnit, theFrom, theTo);
-        else
-            theMachine->SetMaxRevs(inRevs);
-        theNode->SetUnit(inUnit);
-        theNode->mPathMachine = theMachine;
-        theNode->mTile = theTo;
-        theMachine->SetStart(theFrom);
-        theMachine->SetGoal(theTo.GetX(), theTo.GetY());
-        theMachine->mTile = theTo;
-        theGoal->mDestination = theTo;
-        theGoal->SetUnit(inUnit);
-        theMachine->mCheckCorners = true;
-        theMachine->Run();
-        if (theMachine->mFound) {
-            theNode->mPasses = 1;
-            this->mPaths.push_back(theNode);
-        } else {
-            this->FinishPath(theNode);
-            theMachine->Reset();
-            this->ReleasePathMachine(theMachine);
-            this->ReleaseNode(theNode);
-        }
-    }
-}
-
-// Returns the unit's queued tile search node, or NULL
-EEPathManagerNode* EEPathManager::FindPath(EEComplexUnit* inUnit)
-{
-    EEPathManagerNode* theResult = NULL;
-    if (this->mPaths.size() != 0 && inUnit) {
-        std::deque<EEPathManagerNode*>::iterator it;
-        for (it = this->mPaths.begin(); it != this->mPaths.end(); it++) {
-            if ((*it)->mUnit == inUnit) {
-                theResult = *it;
-                break;
-            }
-        }
-    }
-    return theResult;
 }
 
 // The window grows from the unclamped inFrom; inArg8 is not read; *outReached is the result; the machine is prepared twice.
@@ -1283,9 +1814,8 @@ void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint
 // Runs a short bounded search toward ioTo (a few steps, more with the queue length and distance), gives the unit
 // its result and sets ioTo to the tile reached; returns the goal's took-nearest flag
 bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
-                                 EETileCoordinate& ioTo)
+                                 EETileCoordinate& ioTo, long inQueued)
 {
-    EEPathManagerNode* theNode = this->NewNode();
     this->PrepareBoundedMachine(inMap);
     EEAIAStarPathfindingGoalBase* theGoal = &this->mBoundedMachine->mGoal;
     if (inType == 2) {
@@ -1298,15 +1828,13 @@ bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inTyp
         theModifier->Dereference();
     }
     theGoal->SetUnit(inUnit);
-    theNode->SetUnit(inUnit);
-    theNode->mPathMachine = this->mBoundedMachine;
-    theNode->mTile = ioTo;
+    inUnit->Reference();   // (the original's search node held the unit)
     this->mBoundedMachine->SetStart(inFrom);
     this->mBoundedMachine->SetGoal(ioTo);
     this->mBoundedMachine->mTile = ioTo;
     // (Rust: ee_astar path_splice.rs: 4 more than the queued searches, 11 at most, plus the distance, divided by
     // 20 above 20; the bounds revs + 1 around the start, clipped to the map)
-    long theQueued = this->mPaths.size();
+    long theQueued = inQueued;
     long theRevs = ee_path_short_path_revs((int32_t)theQueued, (int32_t)inFrom.GetX(), (int32_t)inFrom.GetY(),
                                            (int32_t)ioTo.GetX(), (int32_t)ioTo.GetY());
     this->mBoundedMachine->SetMaxRevs(theRevs);
@@ -1333,14 +1861,14 @@ bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inTyp
     this->mBoundedMachine->mGoal.mBounds = theBounds;
     this->mBoundedMachine->mSearchBounds = theBounds;
     this->mBoundedMachine->Run();
-    this->FinishPath(theNode);
+    this->FinishPath(this->mBoundedMachine, inUnit);
     bool theResult = this->mBoundedMachine->mGoal.mTookNearest;
     ioTo = this->mBoundedMachine->mTile;
     if (inUnit->mIsPathDone != true)
         inUnit->mIsPathDone = true;
     inUnit->mBoundedPathTiles.clear();
     this->mBoundedMachine->Reset();
-    this->ReleaseNode(theNode);
+    inUnit->Dereference();
     return theResult;
 }
 
@@ -1425,35 +1953,6 @@ done:
     return inMachine->mGoal.GetTo()->GetID() == inMachine->GetSector();
 }
 
-// Applies a finished graph search and, when the unit now has an auto waypoint goal, drops its path and requests a
-// tile path to it; returns whether the goal sub sector was reached
-bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
-{
-    EEGraphPathMachine* theMachine = inNode->mGraphMachine;
-    EEComplexUnit* theUnit = inNode->mUnit;
-    EEAutoPathRequest* theRequest = inNode->mRequest;
-    EETileCoordinate theFrom;
-    theFrom.mX = 0;
-    theFrom.mY = 0;
-    EETileCoordinate theTo;
-    theTo.mX = 0;
-    theTo.mY = 0;
-    bool theResult = this->RequestUnitPaths(theUnit, theRequest, theMachine);
-    if (theUnit) {
-        theFrom = inNode->mUnit->GetTile();
-        EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
-        if (theGoal && theGoal->GetIsAutoWaypoint() && theUnit->mTile) {
-            long theY = UMFloor(theGoal->GetLocation().GetY());
-            long theX = UMFloor(theGoal->GetLocation().GetX());
-            theTo.mX = theX;
-            theTo.mY = theY;
-            theUnit->DropPath();
-            this->RequestUnitPath(theUnit, theFrom, theTo, false, -1, false, NULL, false);
-        }
-    }
-    return theResult;
-}
-
 // FinishFailedPath's second join: the count from inPath's end of the point among its first ten (from the tenth
 // down) on inDetour's first tile, -1 without one
 static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const std::vector<GE3DPoint>& inDetour)
@@ -1477,13 +1976,13 @@ static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const st
 // the type RunBoundedPath and the machines take).
 // Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
 // inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
-void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
+void EEPathManager::FinishFailedPath(EEAIAStarMachineBase* inMachine, EEComplexUnit* inUnit)
 {
     std::vector<GE3DPoint> thePath;
     std::vector<GE3DPoint> theJoined;
     std::vector<GE3DPoint> theDetour;
-    EEAIAStarMachineBase* theMachine = inNode->mPathMachine;
-    EEComplexUnit* theUnit = inNode->mUnit;
+    EEAIAStarMachineBase* theMachine = inMachine;
+    EEComplexUnit* theUnit = inUnit;
     EEAIAStarBounds theBounds;
     EETileCoordinate theFrom;
     theFrom.mX = 0;
@@ -1578,248 +2077,6 @@ done:
         theUnit->GetGoal()->PathTaken(theUnit);
 }
 
-// NEAR: the original computes mPending.begin() + i three times through the out-of-line _Ptrit::operator+ 0x1ba01a
-// (two results unused) and keeps i * 12 in a frame slot
-// Requests the pending unit paths again (the world's StartGame after a map change), last first; then none is pending
-void EEPathManager::RequestPendingPaths(EEMap* inMap)
-{
-    EEPathRequestCapture theCapture(kPathRequestPending, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32((unsigned int)this->mPending.size());
-        for (size_t i = 0; i < this->mPending.size(); i++) {
-            theCapture.mRecord.U32((unsigned int)this->mPending[i].mUnitID);
-            theCapture.Tile(this->mPending[i].mTile);
-        }
-    }
-    for (long i = this->mPending.size() - 1; i >= 0; i--) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mPending[i].mUnitID)));
-        if (theUnit != NULL) {
-            theUnit->DropPath();
-            EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
-            bool theGraph;
-            if (theUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint()))
-                theGraph = true;
-            else
-                theGraph = false;
-            EETileCoordinate theFrom;
-            theFrom.mX = theUnit->mTileX;
-            theFrom.mY = theUnit->mTileY;
-            this->RequestUnitPath(theUnit, theFrom, this->mPending[i].mTile, false, -1, theGraph, NULL, false);
-        }
-    }
-    this->mPending.clear();
-}
-
-// Applies a finished tile search: as a failed path unless its goal accepted the nearest tile and did not take it,
-// else as a found path
-void EEPathManager::FinishPath(EEPathManagerNode* inNode)
-{
-    EEAIAStarMachineBase* theMachine = inNode->mPathMachine;
-    bool theFound;
-    bool theBlocked;
-    if (theMachine->mType == kAIMachineBoundedPath) {
-        theFound = ((EEBoundedPathMachine*)theMachine)->mGoal.mAcceptNearest;
-        theBlocked = ((EEBoundedPathMachine*)theMachine)->mGoal.mTookNearest;
-    } else {
-        theFound = ((EEPathMachine*)theMachine)->mGoal.mAcceptNearest;
-        theBlocked = ((EEPathMachine*)theMachine)->mGoal.mTookNearest;
-    }
-    if (!theFound || theBlocked)
-        this->FinishFailedPath(inNode);
-    else
-        this->FinishFoundPath(inNode);
-}
-
-// (the vector clear() 0x688c2c between the flag and SnapLastWaypoint is the unit's mBoundedPathTiles)
-// Gives the unit the found path, marks its path done, clears its bounded path tiles and snaps its last waypoint
-void EEPathManager::FinishFoundPath(EEPathManagerNode* inNode)
-{
-    std::vector<GE3DPoint> thePath;
-    EEComplexUnit* theUnit = inNode->mUnit;
-    EEAIAStarMachineBase* theMachine = inNode->mPathMachine;
-    if (theMachine->mType == kAIMachineBoundedPath)
-        ((EEBoundedPathMachine*)theMachine)->GetPoints(thePath);
-    else
-        ((EEPathMachine*)theMachine)->GetPoints(thePath);
-    theUnit->TakePath(thePath, false);
-    if (theUnit->mIsPathDone != true)
-        theUnit->mIsPathDone = true;
-    theUnit->mBoundedPathTiles.clear();
-    theUnit->SnapLastWaypoint();
-}
-
-// Frees the bounded machine, the queued searches, spare machines, region maps and history, and resets the node pool
-// and the timers
-void EEPathManager::Reset()
-{
-    EEPathRequestCapture theCapture(kPathRequestReset, this);   // TEST ONLY
-    if (this->mBoundedMachine)
-        this->mBoundedMachine->Reset();
-    if (this->mBoundedMachine)
-        delete this->mBoundedMachine;
-    this->mBoundedMachine = NULL;
-    this->FreePaths();
-    this->FreeMachines();
-    ee_path_record_reset(this->mRecord, 0, 0);
-    this->mNodePool.DumpStats(false);
-    this->mNodePool.Release();
-    this->mNodePool.SetSize(0x32, 0x32, 2);
-    this->mLCC = 0;
-    this->mNextRequestID = 0;
-    this->mIsUpdatingRegions = false;
-    this->mNextRegionTime = 0;
-}
-
-// Keeps a graph machine as a spare (up to 25; its modifier and unit released), else deletes it
-void EEPathManager::ReleaseGraphMachine(EEGraphPathMachine* inMachine)
-{
-    inMachine->Reset();
-    inMachine->mFound = false;
-    if (this->mSpareGraphMachines.size() < 0x19) {
-        inMachine->mGoal.ReleaseModifier();
-        inMachine->mGoal.SetUnit(0);
-        this->mSpareGraphMachines.push_back(inMachine);
-    } else {
-        delete inMachine;
-    }
-}
-
-// Keeps a tile path machine as a spare (up to 35; its modifier and unit released), else deletes it
-void EEPathManager::ReleasePathMachine(EEPathMachine* inMachine)
-{
-    EEPathMachine* theMachine = inMachine;
-    theMachine->Reset();
-    theMachine->mFound = false;
-    if (this->mSparePathMachines.size() < 0x23) {
-        theMachine->mGoal.ReleaseModifier();
-        theMachine->mGoal.SetUnit(0);
-        this->mSparePathMachines.push_back(theMachine);
-    } else {
-        delete theMachine;
-    }
-}
-
-// Releases the node's unit and returns the node to the pool (its request stays referenced until reuse)
-void EEPathManager::ReleaseNode(EEPathManagerNode* inNode)
-{
-    inNode->ReleaseUnit();
-    this->mNodePool.Delete(inNode);
-}
-
-// Drops the unit's queued graph search, if any, returning its machine and node
-void EEPathManager::CancelAutoPaths(EEComplexUnit* inUnit)
-{
-    if (this->mAutoPaths.size() == 0)
-        return;
-    for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
-        if ((*it)->mUnit != inUnit)
-            continue;
-        this->ReleaseGraphMachine((*it)->mGraphMachine);
-        this->ReleaseNode(*it);
-        this->mAutoPaths.erase(it, it + 1);
-        return;
-    }
-}
-
-// Drops the queued graph search of a path request, if any, returning its machine and node
-void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
-{
-    EEPathRequestCapture theCapture(kPathRequestCancelRequest, this);   // TEST ONLY
-    if (theCapture.On())
-        theCapture.Request(static_cast<EEAutoPathRequest*>(inRequest));
-    if (this->mAutoPaths.size() == 0)
-        return;
-    for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
-        if ((*it)->mRequest != inRequest)
-            continue;
-        this->ReleaseGraphMachine((*it)->mGraphMachine);
-        this->ReleaseNode(*it);
-        this->mAutoPaths.erase(it, it + 1);
-        return;
-    }
-}
-
-// Drops the unit's queued tile search (and its graph search when inAutoPaths)
-void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
-{
-    EEPathRequestCapture theCapture(kPathRequestCancelPaths, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
-        theCapture.mRecord.U32(inAutoPaths ? 1 : 0);
-    }
-    if (inAutoPaths)
-        this->CancelAutoPaths(inUnit);
-    if (this->mPaths.size() == 0)
-        return;
-    std::deque<EEPathManagerNode*>::iterator it;
-    for (it = this->mPaths.begin(); it != this->mPaths.end(); it++) {
-        if ((*it)->mUnit != inUnit)
-            continue;
-        this->ReleasePathMachine((EEPathMachine*)(*it)->mPathMachine);
-        this->ReleaseNode(*it);
-        this->mPaths.erase(it, it + 1);
-        return;
-    }
-}
-
-// When due and no graph search is queued, rebuilds the continent regions: retried in 0.1 s until it completes, then
-// region updates stop
-void EEPathManager::UpdateRegions()
-{
-    if (!(this->mNextRegionTime <= gPhysics->mGameTime) || this->mAutoPaths.size() != 0)
-        return;
-    if (!gContinentManager.Rebuild()) {
-        this->mNextRegionTime = gPhysics->mGameTime + 100;
-        return;
-    }
-    this->mIsUpdatingRegions = false;
-}
-
-// Frees the bounded machine, the queued searches, spare machines, region maps, history and every node pool
-void EEPathManager::Clear()
-{
-    if (this->mBoundedMachine)
-        this->mBoundedMachine->Reset();
-    if (this->mBoundedMachine)
-        delete this->mBoundedMachine;
-    this->mBoundedMachine = NULL;
-    this->FreePaths();
-    this->FreeMachines();
-    {
-        int32_t theHistory = 0, theRegions = 0;   // (Clear keeps the timers)
-        ee_path_record_timers(this->mRecord, &theHistory, &theRegions);
-        ee_path_record_reset(this->mRecord, theHistory, theRegions);
-    }
-    this->mNodePool.DumpStats(true);
-    this->mNodePool.Release();
-    EEAIAStarGraphStorage::FreeNodePool();
-    EEAIAStarStorage::FreeNodePool();
-}
-
-// Turns region rebuilds on or off; turning them on schedules the next one now or 10 s (times the game speed) ahead
-void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
-{
-    EEPathRequestCapture theCapture(kPathRequestRegionUpdates, this);   // TEST ONLY
-    if (theCapture.On()) {
-        theCapture.mRecord.U32(inOn ? 1 : 0);
-        theCapture.mRecord.U32(inNow ? 1 : 0);
-        theCapture.mRecord.U32(this->mIsUpdatingRegions ? 1 : 0);
-        theCapture.mRecord.U32((unsigned int)this->mNextRegionTime);
-    }
-    if (this->mIsUpdatingRegions == inOn)
-        return;
-    if (inOn == true) {
-        if (inNow)
-            this->mNextRegionTime = gPhysics->mGameTime + 1;
-        else {
-            float theSpeed = gWorld.mGameSpeed;
-            unsigned long theTime = gPhysics->mGameTime;
-            this->mNextRegionTime = UMFloatToLong(theSpeed * 10000.0f) + theTime;
-        }
-    }
-    this->mIsUpdatingRegions = inOn;
-}
-
 // Runs the bounded machine between two tiles for a unit with a step budget, accepting the nearest tile; returns
 // whether the search did not fail
 bool EEPathManager::RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
@@ -1868,945 +2125,6 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
         theRecord.Commit();
     }
     return theResult;
-}
-
-// a prune timer of the record (the region one when inRegions)
-static long EEPathRecordTimer(EePathRecord* inRecord, bool inRegions)
-{
-    int32_t theHistory = 0, theRegions = 0;
-    ee_path_record_timers(inRecord, &theHistory, &theRegions);
-    return inRegions ? theRegions : theHistory;
-}
-
-// TEST ONLY (EE-SIM's state dumps): the searches in progress, the pending requests and the timers, one line each
-void EEPathManager::DumpSim(FILE* inFile)
-{
-    fprintf(inFile, "PATHS %zu:", this->mPaths.size());
-    for (size_t i = 0; i < this->mPaths.size(); i++) {
-        EEPathManagerNode* theNode = this->mPaths[i];
-        EEAIAStarMachineBase* theMachine = theNode->mPathMachine;
-        fprintf(inFile, " u%lu@%ld,%ld/p%ld/s%ld/f%d", theNode->mUnit != NULL ? theNode->mUnit->mUnitID : 0UL, theNode->mTile.mX,
-                theNode->mTile.mY, theNode->mPasses, theMachine != NULL ? (long)theMachine->mSteps : -1L,
-                theMachine != NULL && theMachine->mFound ? 1 : 0);
-    }
-    fprintf(inFile, "\nAUTOPATHS %zu:", this->mAutoPaths.size());
-    for (size_t i = 0; i < this->mAutoPaths.size(); i++) {
-        EEPathManagerNode* theNode = this->mAutoPaths[i];
-        EEGraphPathMachine* theMachine = theNode->mGraphMachine;
-        fprintf(inFile, " u%lu@%ld,%ld/p%ld/s%ld/f%d", theNode->mUnit != NULL ? theNode->mUnit->mUnitID : 0UL, theNode->mTile.mX,
-                theNode->mTile.mY, theNode->mPasses, theMachine != NULL ? (long)theMachine->mSteps : -1L,
-                theMachine != NULL && theMachine->mFound ? 1 : 0);
-    }
-    fprintf(inFile, "\nPENDING %zu:", this->mPending.size());
-    for (size_t i = 0; i < this->mPending.size(); i++)
-        fprintf(inFile, " u%lu@%ld,%ld", this->mPending[i].mUnitID, this->mPending[i].mTile.mX, this->mPending[i].mTile.mY);
-    fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
-            (size_t)ee_path_record_history_count(this->mRecord), (size_t)ee_path_record_region_count(this->mRecord),
-            EEPathRecordTimer(this->mRecord, false), EEPathRecordTimer(this->mRecord, true),
-            this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
-    // the bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search), as a digest
-    // of its bytes (ee_astar storage_save.rs), and the C++ members around it
-    unsigned long theHash = 2166136261u, theSize = 0;
-    if (this->mBoundedMachine != NULL) {
-        std::vector<unsigned char> theBytes(ee_astar_save(this->mBoundedMachine->mCore, NULL, 0));
-        ee_astar_save(this->mBoundedMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-        for (size_t i = 0; i < theBytes.size(); i++)
-            theHash = (uint32_t)((theHash ^ theBytes[i]) * 16777619u);
-        theSize = (unsigned long)theBytes.size();
-    }
-    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", this->mBoundedMachine != NULL ? 1 : 0, theSize, theHash);
-    if (this->mBoundedMachine != NULL)
-        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", this->mBoundedMachine->mWidth, this->mBoundedMachine->mHeight,
-                this->mBoundedMachine->mMapWidth, this->mBoundedMachine->mMapHeight, this->mBoundedMachine->mFound ? 1 : 0);
-    fprintf(inFile, "\n");
-}
-
-// port (save version 0.256): the history (newest first), the region maps (by unit id, then tile) and the timers.
-// The original saved none of them: a loaded game gave a citizen's repeated request its full search budget
-// (SetGraphRevs), counted no repeated goal tiles (PruneHistory, PruneRegions: no stranded units) and pruned at its
-// first update, not 10 s / 30 s after the saved game's last prune.
-void EEPathManager::SaveRunningState(FSFile& outFile)
-{
-    // the record's words (ee_sim::astar pm_record.rs: the history, the region maps, the two prune timers)
-    std::vector<uint32_t> theWords(ee_path_record_save(this->mRecord, NULL, 0));
-    ee_path_record_save(this->mRecord, theWords.data(), (uint32_t)theWords.size());
-    for (size_t i = 0; i < theWords.size(); i++)
-        outFile.Write(theWords[i]);
-    outFile.Write(this->mLCC);
-    outFile.Write(this->mNextRequestID);
-    outFile.Write(this->mNextRegionTime);
-    outFile.Write(this->mIsUpdatingRegions);
-}
-
-// the record's word reader over the save file
-static int32_t EEPathRecordRead(void* inFile, uint32_t* outWord)
-{
-    return (int32_t)static_cast<FSFile*>(inFile)->Read(*outWord);
-}
-
-long EEPathManager::LoadRunningState(FSFile& inFile)
-{
-    struct State {
-        EePathRecord* mRecord = NULL;
-        long mLCC = 0, mNextRequestID = 0;
-        unsigned long mNextRegionTime = 0;
-        bool mIsUpdatingRegions = false;
-        ~State() { ee_path_record_free(mRecord); }
-    };
-    std::shared_ptr<State> theState = std::make_shared<State>();
-    theState->mRecord = ee_path_record_load(EEPathRecordRead, &inFile);
-    long theResult = theState->mRecord != NULL ? 0 : kErrorBeyondEnd;
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mLCC);
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mNextRequestID);
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mNextRegionTime);
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mIsUpdatingRegions);
-    if (theResult == 0)
-        EEAfterLoad([theState]() {
-            EEPathManager& theManager = gPathManager;
-            ee_path_record_assign(theManager.mRecord, theState->mRecord);
-            theManager.mLCC = theState->mLCC;
-            theManager.mNextRequestID = theState->mNextRequestID;
-            theManager.mNextRegionTime = theState->mNextRegionTime;
-            theManager.mIsUpdatingRegions = theState->mIsUpdatingRegions;
-        });
-    return theResult;
-}
-
-// port (save version 0.277): a path request's every field (ee/EEAutoPathRequest.h)
-void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest)
-{
-    outFile.Write(inRequest.mFrom.mX);
-    outFile.Write(inRequest.mFrom.mY);
-    outFile.Write(inRequest.mTo.mX);
-    outFile.Write(inRequest.mTo.mY);
-    outFile.Write(inRequest.mPlayerID);
-    outFile.Write(inRequest.mRequestID);
-    outFile.Write(inRequest.mPathLength);
-    outFile.Write(inRequest.mIsDone);
-    outFile.Write(inRequest.mFlags.mPlayerID);
-    for (int f = 0; f < 17; f++)
-        outFile.Write(inRequest.mFlags.mFlags[f]);
-    outFile.Write((unsigned long)inRequest.mPath.size());
-    for (size_t i = 0; i < inRequest.mPath.size(); i++) {
-        outFile.Write(inRequest.mPath[i].mX);
-        outFile.Write(inRequest.mPath[i].mY);
-    }
-}
-
-long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
-{
-    EETileCoordinate theFrom, theTo;
-    long thePlayerID = 0, theRequestID = 0, theLength = 0;
-    bool theDone = false;
-    EECPASGFlags theFlags;
-    unsigned long theCount = 0;
-    outRequest = NULL;
-    long theResult = inFile.Read(theFrom.mX);
-    long* const theLongs[] = {&theFrom.mY, &theTo.mX, &theTo.mY, &thePlayerID, &theRequestID, &theLength};
-    for (long* f : theLongs)
-        if (theResult == 0)
-            theResult = inFile.Read(*f);
-    if (theResult == 0)
-        theResult = inFile.Read(theDone);
-    if (theResult == 0)
-        theResult = inFile.Read(theFlags.mPlayerID);
-    for (int f = 0; f < 17 && theResult == 0; f++)
-        theResult = inFile.Read(theFlags.mFlags[f]);
-    if (theResult == 0)
-        theResult = inFile.Read(theCount);
-    std::vector<EETileCoordinate> thePath;
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        EETileCoordinate theTile;
-        theResult = inFile.Read(theTile.mX);
-        if (theResult == 0)
-            theResult = inFile.Read(theTile.mY);
-        thePath.push_back(theTile);
-    }
-    if (theResult != 0)
-        return theResult;
-    outRequest = new EEAutoPathRequest(theRequestID, thePlayerID, theFrom, theTo, theFlags);
-    outRequest->mFlags.mPlayerID = theFlags.mPlayerID;   // (the copy ctor zeroes it)
-    outRequest->mPath = thePath;
-    outRequest->mPathLength = theLength;
-    outRequest->mIsDone = theDone;
-    return 0;
-}
-
-// port (save version 0.276): a unit's tile search in progress as saved (SaveSearches); its storage as ee_astar's
-// bytes (rust/crates/ee_sim/src/astar storage_save.rs)
-namespace {
-struct EESavedSearch {
-    unsigned long mUnitID = 0;
-    EETileCoordinate mTile;                 // the node's
-    long mPasses = 0, mL04 = 0, mL20 = 0, mL24 = 0, mL28 = 0, mL2C = 0;
-    EETileCoordinate mMachineTile;          // the machine's
-    long mType = 0, mRevs = 0, mNumRuns = 0, mSteps = 0, mMapWidth = 0, mMapHeight = 0;
-    bool mCheckCorners = false, mFound = false;
-    long mStorageWidth = 0, mStorageHeight = 0;
-    U2DPoint<long> mStartTile, mGoalTile;   // the goal's
-    long mRevLimit = -1, mMaxRevs = -1;
-    bool mFlags[6] = {false, false, false, false, false, false};
-    std::vector<U2DPoint<long> > mBlockedTiles, mUnitTiles;
-    EEAIAStarBounds mBounds[3];             // mBounds24, mGoalBounds, mStartBounds
-    U2DPoint<long> mDestination;
-    long mL64 = 0;
-    float mOffsetX = 0.5f, mOffsetY = 0.5f;
-    unsigned short mContinentID = 0;
-    bool mIsBounded = false, mAvoidUnits = false;
-    std::vector<unsigned char> mStorage;
-};
-
-void EEWritePoints(FSFile& outFile, const std::vector<U2DPoint<long> >& inPoints)
-{
-    outFile.Write((unsigned long)inPoints.size());
-    for (size_t i = 0; i < inPoints.size(); i++) {
-        outFile.Write(inPoints[i].mX);
-        outFile.Write(inPoints[i].mY);
-    }
-}
-
-long EEReadPoints(FSFile& inFile, std::vector<U2DPoint<long> >& outPoints)
-{
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        U2DPoint<long> thePoint;
-        theResult = inFile.Read(thePoint.mX);
-        if (theResult == 0)
-            theResult = inFile.Read(thePoint.mY);
-        outPoints.push_back(thePoint);
-    }
-    return theResult;
-}
-
-// a search SaveSearches writes: a unit's own tile search on an EEPathMachine (not the bounded machine, mType 4; no
-// group request: those come from a graph search's request, RequestUnitPaths)
-EEPathMachine* EESavableSearch(EEPathManagerNode* inNode)
-{
-    if (inNode == NULL || inNode->mUnit == NULL || inNode->mRequest != NULL || inNode->mPathMachine == NULL
-        || inNode->mPathMachine->mType == 4)
-        return NULL;
-    return dynamic_cast<EEPathMachine*>(inNode->mPathMachine);
-}
-}   // namespace
-
-void EEPathManager::SaveSearches(FSFile& outFile)
-{
-    std::vector<EEPathManagerNode*> theNodes;
-    for (size_t i = 0; i < this->mPaths.size(); i++)
-        if (EESavableSearch(this->mPaths[i]) != NULL)
-            theNodes.push_back(this->mPaths[i]);
-    outFile.Write((unsigned long)theNodes.size());
-    for (size_t i = 0; i < theNodes.size(); i++) {
-        EEPathManagerNode* theNode = theNodes[i];
-        EEPathMachine* theMachine = EESavableSearch(theNode);
-        EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
-        outFile.Write((unsigned long)theNode->mUnit->mUnitID);
-        outFile.Write(theNode->mTile.mX);
-        outFile.Write(theNode->mTile.mY);
-        const long theNodeFields[] = {theNode->mPasses, theNode->mL04, theNode->mL20, theNode->mL24, theNode->mL28, theNode->mL2C};
-        for (long f : theNodeFields)
-            outFile.Write(f);
-        outFile.Write(theMachine->mTile.mX);
-        outFile.Write(theMachine->mTile.mY);
-        const long theMachineFields[] = {theMachine->mType, theMachine->mRevs, theMachine->mNumRuns, theMachine->mSteps,
-                                         theMachine->mMapWidth, theMachine->mMapHeight, theMachine->mWidth, theMachine->mHeight};
-        for (long f : theMachineFields)
-            outFile.Write(f);
-        outFile.Write(theMachine->mCheckCorners);
-        outFile.Write(theMachine->mFound);
-        outFile.Write(theGoal.mStartTile.mX);
-        outFile.Write(theGoal.mStartTile.mY);
-        outFile.Write(theGoal.mGoalTile.mX);
-        outFile.Write(theGoal.mGoalTile.mY);
-        outFile.Write(theGoal.mRevLimit);
-        outFile.Write(theGoal.mMaxRevs);
-        const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB29, theGoal.mAcceptNearest, theGoal.mB2B, theGoal.mB2C,
-                                  theGoal.mTookNearest};
-        for (bool f : theFlags)
-            outFile.Write(f);
-        EEWritePoints(outFile, theGoal.mBlockedTiles);
-        EEWritePoints(outFile, theGoal.mUnitTiles);
-        const EEAIAStarBounds* theBounds[3] = {&theGoal.mBounds24, &theGoal.mGoalBounds, &theGoal.mStartBounds};
-        for (const EEAIAStarBounds* b : theBounds) {
-            outFile.Write(b->mBottom);
-            outFile.Write(b->mLeft);
-            outFile.Write(b->mRight);
-            outFile.Write(b->mTop);
-        }
-        outFile.Write(theGoal.mDestination.mX);
-        outFile.Write(theGoal.mDestination.mY);
-        outFile.Write(theGoal.mL64);
-        outFile.Write(theGoal.mOffsetX);
-        outFile.Write(theGoal.mOffsetY);
-        outFile.Write(theGoal.mContinentID);
-        outFile.Write(theGoal.mIsBounded);
-        outFile.Write(theGoal.mAvoidUnits);
-        std::vector<unsigned char> theBytes(ee_astar_save(theMachine->mCore, NULL, 0));
-        ee_astar_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-        outFile.Write((unsigned long)theBytes.size());
-        unsigned long theWritten = 0;
-        if (!theBytes.empty())
-            outFile.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
-    }
-}
-
-long EEPathManager::LoadSearches(FSFile& inFile)
-{
-    std::shared_ptr<std::vector<EESavedSearch> > theSearches = std::make_shared<std::vector<EESavedSearch> >();
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        EESavedSearch s;
-        theResult = inFile.Read(s.mUnitID);
-        long* const theLongs[] = {&s.mTile.mX, &s.mTile.mY, &s.mPasses, &s.mL04, &s.mL20, &s.mL24, &s.mL28, &s.mL2C,
-                                  &s.mMachineTile.mX, &s.mMachineTile.mY, &s.mType, &s.mRevs, &s.mNumRuns, &s.mSteps,
-                                  &s.mMapWidth, &s.mMapHeight, &s.mStorageWidth, &s.mStorageHeight};
-        for (long* f : theLongs)
-            if (theResult == 0)
-                theResult = inFile.Read(*f);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mCheckCorners);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mFound);
-        long* const theGoalLongs[] = {&s.mStartTile.mX, &s.mStartTile.mY, &s.mGoalTile.mX, &s.mGoalTile.mY, &s.mRevLimit,
-                                      &s.mMaxRevs};
-        for (long* f : theGoalLongs)
-            if (theResult == 0)
-                theResult = inFile.Read(*f);
-        for (int f = 0; f < 6 && theResult == 0; f++)
-            theResult = inFile.Read(s.mFlags[f]);
-        if (theResult == 0)
-            theResult = EEReadPoints(inFile, s.mBlockedTiles);
-        if (theResult == 0)
-            theResult = EEReadPoints(inFile, s.mUnitTiles);
-        for (int b = 0; b < 3 && theResult == 0; b++) {
-            long* const theSides[] = {&s.mBounds[b].mBottom, &s.mBounds[b].mLeft, &s.mBounds[b].mRight, &s.mBounds[b].mTop};
-            for (long* f : theSides)
-                if (theResult == 0)
-                    theResult = inFile.Read(*f);
-        }
-        if (theResult == 0)
-            theResult = inFile.Read(s.mDestination.mX);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mDestination.mY);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mL64);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mOffsetX);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mOffsetY);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mContinentID);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mIsBounded);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mAvoidUnits);
-        unsigned long theLength = 0;
-        if (theResult == 0)
-            theResult = inFile.Read(theLength);
-        if (theResult == 0 && theLength > 0) {
-            s.mStorage.resize(theLength);
-            unsigned long theRead = 0;
-            theResult = inFile.Read(s.mStorage.data(), theLength, theRead);
-            if (theResult == 0 && theRead != theLength)
-                theResult = 1;
-        }
-        theSearches->push_back(s);
-    }
-    if (theResult != 0)
-        return theResult;
-    // the units the saved searches hold ask no path again (their unit's Load put them in mPending, as the original's
-    // load did for every unit with a search in progress)
-    for (size_t i = 0; i < theSearches->size(); i++)
-        for (size_t p = this->mPending.size(); p-- > 0;)
-            if (this->mPending[p].mUnitID == (*theSearches)[i].mUnitID)
-                this->mPending.erase(this->mPending.begin() + p);
-    EEAfterLoad([theSearches]() {
-        EEPathManager& theManager = gPathManager;
-        std::deque<EEPathManagerNode*> theRestored;
-        for (size_t i = 0; i < theSearches->size(); i++) {
-            const EESavedSearch& s = (*theSearches)[i];
-            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mUnitID)));
-            if (theUnit == NULL || gWorld.mMap == NULL)
-                continue;
-            EEPathMachine* theMachine = theManager.NewPathMachine(s.mType, gWorld.mMap);   // its sea/space modifier
-            if (!ee_astar_load(theMachine->mCore, s.mStorage.data(), (uint32_t)s.mStorage.size())) {
-                theManager.ReleasePathMachine(theMachine);
-                continue;
-            }
-            theMachine->mWidth = s.mStorageWidth;
-            theMachine->mHeight = s.mStorageHeight;
-            theMachine->mTile = s.mMachineTile;
-            theMachine->mRevs = s.mRevs;
-            theMachine->mNumRuns = s.mNumRuns;
-            theMachine->mSteps = s.mSteps;
-            theMachine->mMapWidth = s.mMapWidth;
-            theMachine->mMapHeight = s.mMapHeight;
-            theMachine->mCheckCorners = s.mCheckCorners;
-            theMachine->mFound = s.mFound;
-            EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
-            theGoal.Attach(gWorld.mMap, theMachine, theMachine);   // as Run does at a search's start
-            theGoal.SetUnit(theUnit);
-            theGoal.mStartTile = s.mStartTile;
-            theGoal.mGoalTile = s.mGoalTile;
-            theGoal.mRevLimit = s.mRevLimit;
-            theGoal.mMaxRevs = s.mMaxRevs;
-            theGoal.mSearchFailed = s.mFlags[0];
-            theGoal.mB29 = s.mFlags[1];
-            theGoal.mAcceptNearest = s.mFlags[2];
-            theGoal.mB2B = s.mFlags[3];
-            theGoal.mB2C = s.mFlags[4];
-            theGoal.mTookNearest = s.mFlags[5];
-            theGoal.mBlockedTiles = s.mBlockedTiles;
-            theGoal.mUnitTiles = s.mUnitTiles;
-            theGoal.mBounds24 = s.mBounds[0];
-            theGoal.mGoalBounds = s.mBounds[1];
-            theGoal.mStartBounds = s.mBounds[2];
-            theGoal.mDestination = s.mDestination;
-            theGoal.mL64 = s.mL64;
-            theGoal.mOffsetX = s.mOffsetX;
-            theGoal.mOffsetY = s.mOffsetY;
-            theGoal.mContinentID = s.mContinentID;
-            theGoal.mIsBounded = s.mIsBounded;
-            theGoal.mAvoidUnits = s.mAvoidUnits;
-            EEPathManagerNode* theNode = theManager.NewNode();
-            theNode->SetUnit(theUnit);
-            theNode->mPathMachine = theMachine;
-            theNode->mTile = s.mTile;
-            theNode->mPasses = s.mPasses;
-            theNode->mL04 = s.mL04;
-            theNode->mL20 = s.mL20;
-            theNode->mL24 = s.mL24;
-            theNode->mL28 = s.mL28;
-            theNode->mL2C = s.mL2C;
-            theRestored.push_back(theNode);
-        }
-        // before the searches the load itself queued (RequestPendingPaths: units whose search was not saved)
-        theManager.mPaths.insert(theManager.mPaths.begin(), theRestored.begin(), theRestored.end());
-    });
-    return theResult;
-}
-
-// port (save version 0.278): the graph searches in progress (SaveGraphSearches); their storage as ee_astar's bytes
-// (rust/crates/ee_sim/src/astar graph_save.rs), the objects by the nodes' index (the path sub sector ids)
-namespace {
-enum EEGraphModifierKind {
-    kGraphModifierNone = 0,
-    kGraphModifierEnemyAvoidance,
-    kGraphModifierWallPlanner,
-    kGraphModifierLand,
-    kGraphModifierLandWallAvoider,
-    kGraphModifierSea,
-    kGraphModifierHelicopter,
-    kGraphModifierAirplane,
-    kGraphModifierSpace,
-    kGraphModifierStormRain,
-    kGraphModifierStormSnow,
-};
-
-struct EESavedGraphSearch {
-    long mUnitID = -1;                      // the node's unit (-1: none)
-    EEAutoPathRequest* mRequest = NULL;     // the node's request (one reference, the load's) or none
-    long mL04 = 0, mL20 = 0, mL24 = 0, mL28 = 0, mL2C = 0, mPasses = 0, mL34 = 0;
-    EETileCoordinate mTile;
-    EETileCoordinate mMachineTile;
-    long mType = 0, mRevs = 0, mNumRuns = 0, mSteps = 0, mSector = 0, mNodeCount = 0, mCount = 0;
-    bool mFound = false;
-    U2DPoint<long> mStartTile, mGoalTile, mPoint38, mPoint40;
-    long mPlayerID = 0, mRevLimit = -1, mMaxRevs = -1, mGoalSector = 0, mStartSector = 0, mL70 = 0;
-    bool mFlags[6] = {false, false, false, false, false, false};
-    long mGoalUnitID = -1;
-    long mFromID = -1, mToID = -1;          // the sub sectors (-1: none)
-    EECPASGFlags mPathFlags;
-    long mModifierKind = kGraphModifierNone;
-    EECPASGWeights mWeights;
-    unsigned long mModifierPlayerID = 0, mModifierEnemyID = 0;
-    unsigned short mContinent1 = 0, mContinent2 = 0;
-    bool mAnyContinent = false, mAvoidFriendlyBlockers = false;
-    bool mModifierSubGroup = false;         // the modifier's sub group is the request's owner
-    std::vector<unsigned char> mStorage;
-};
-
-struct EEAwaitedRequest {
-    std::function<void(EEAutoPathRequest*)> mAttach;
-};
-
-std::map<long, EEAwaitedRequest> sAwaitedRequests;   // by request id, until the loaded game's first tick
-std::vector<EESavedGraphSearch> sLoadedGraphSearches;
-bool sGraphResolveQueued = false;
-
-void* EEGraphObjectOf(void* inContext, int32_t inIndex)
-{
-    (void)inContext;
-    const std::vector<EEAIPathSubSector*>& theSectors = gContinentManager.mPathSubSectors;
-    if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
-        return NULL;
-    return static_cast<AStarGraphableObjectBase*>(theSectors[inIndex]);
-}
-
-long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
-{
-    if (inModifier == NULL)
-        return kGraphModifierNone;
-    const std::type_info& theType = typeid(*inModifier);
-    if (theType == typeid(EEAIGPModifierEnemyAvoidance))
-        return kGraphModifierEnemyAvoidance;
-    if (theType == typeid(EEAIGPGModifierComputerPlayerWallPlanner))
-        return kGraphModifierWallPlanner;
-    // (the kinds land to space were the attack sub groups' route planners, deleted with the C++ combat tree in
-    // main's stage 5: their numbers stay unused)
-    if (theType == typeid(EEAIGPGModifierStormRoutePlannerRain))
-        return kGraphModifierStormRain;
-    if (theType == typeid(EEAIGPGModifierStormRoutePlannerSnow))
-        return kGraphModifierStormSnow;
-    return -1;
-}
-
-// whether SaveGraphSearches can write the node's search (the load can rebuild every part of it)
-bool EEGraphSearchSavable(EEPathManagerNode* inNode)
-{
-    if (inNode == NULL || inNode->mGraphMachine == NULL)
-        return false;
-    EEGraphPathMachine* theMachine = inNode->mGraphMachine;
-    EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
-    long theKind = EEGraphModifierKindOf(theGoal.mModifier);
-    if (theKind < 0)
-        return false;
-    if (theMachine->mNodeCount != (long)gContinentManager.mPathSubSectors.size() + 1)
-        return false;
-    return ee_astar_graph_objects_match(theMachine->mCore, EEGraphObjectOf, NULL);
-}
-
-long EESubSectorID(EEAIPathSubSector* inSector)
-{
-    return inSector == NULL ? -1 : (long)inSector->mID;
-}
-
-EEAIPathSubSector* EESubSectorOf(long inID)
-{
-    if (inID < 0 || (size_t)inID >= gContinentManager.mPathSubSectors.size())
-        return NULL;
-    return gContinentManager.mPathSubSectors[inID];
-}
-
-// the saved modifier, NULL for a kind that cannot be rebuilt (the caller's reference)
-EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EESavedGraphSearch& s)
-{
-    EEAIGPGModiferUseInfluenceCostsBase* theInfluence = NULL;
-    EEAIGraphPathGoalModifierBase* theResult = NULL;
-    switch (s.mModifierKind) {
-    case kGraphModifierEnemyAvoidance:
-        theResult = theInfluence = new EEAIGPModifierEnemyAvoidance(s.mModifierPlayerID);
-        break;
-    case kGraphModifierWallPlanner:
-        theResult = theInfluence = new EEAIGPGModifierComputerPlayerWallPlanner(s.mModifierPlayerID, s.mModifierEnemyID);
-        break;
-    case kGraphModifierStormRain:
-        return new EEAIGPGModifierStormRoutePlannerRain;
-    case kGraphModifierStormSnow:
-        return new EEAIGPGModifierStormRoutePlannerSnow;
-    default:
-        return NULL;   // (the deleted sub groups' route planners)
-    }
-    if (theInfluence != NULL) {   // the members as saved (the ctors take some of them from the sub group's now)
-        theInfluence->mWeights = s.mWeights;
-        theInfluence->mPlayerID = s.mModifierPlayerID;
-        theInfluence->mEnemyID = s.mModifierEnemyID;
-    }
-    return theResult;
-}
-
-// The loaded game's first tick: each saved graph search back in the queue, before those the load asked, its request
-// given to the owner that waited for it (EEAwaitAutoPathRequest); the owners whose search could not be rebuilt ask
-// again (their fallback)
-void EEResolveGraphSearches()
-{
-    sGraphResolveQueued = false;
-    std::vector<EESavedGraphSearch> theSearches;
-    theSearches.swap(sLoadedGraphSearches);
-    std::map<long, EEAwaitedRequest> theAwaited;
-    theAwaited.swap(sAwaitedRequests);
-    EEPathManager& theManager = gPathManager;
-    std::deque<EEPathManagerNode*> theRestored;
-    for (size_t i = 0; i < theSearches.size(); i++) {
-        EESavedGraphSearch& s = theSearches[i];
-        EEAutoPathRequest* theRequest = s.mRequest;
-        s.mRequest = NULL;
-        std::map<long, EEAwaitedRequest>::iterator theOwner =
-            theRequest != NULL ? theAwaited.find(theRequest->mRequestID) : theAwaited.end();
-        EEComplexUnit* theUnit = s.mUnitID == -1 ? NULL
-            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mUnitID)));
-        EEComplexUnit* theGoalUnit = s.mGoalUnitID == -1 ? NULL
-            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mGoalUnitID)));
-        bool theOK = (s.mUnitID == -1 || theUnit != NULL) && (s.mGoalUnitID == -1 || theGoalUnit != NULL)
-            && s.mNodeCount == (long)gContinentManager.mPathSubSectors.size() + 1
-            && (s.mFromID == -1 || EESubSectorOf(s.mFromID) != NULL) && (s.mToID == -1 || EESubSectorOf(s.mToID) != NULL);
-        EEAIGraphPathGoalModifierBase* theModifier = NULL;
-        if (theOK && s.mModifierKind != kGraphModifierNone) {
-            theModifier = EENewGraphModifier(s);
-            theOK = theModifier != NULL;
-        }
-        EEGraphPathMachine* theMachine = NULL;
-        if (theOK) {
-            theMachine = theManager.NewGraphMachine(s.mType);
-            theMachine->Reset();
-            theOK = ee_astar_graph_load(theMachine->mCore, s.mStorage.data(), (uint32_t)s.mStorage.size(), EEGraphObjectOf, NULL);
-        }
-        if (theOK) {
-            theMachine->mCount = s.mCount;
-            theMachine->mTile = s.mMachineTile;
-            theMachine->mRevs = s.mRevs;
-            theMachine->mNumRuns = s.mNumRuns;
-            theMachine->mSteps = s.mSteps;
-            theMachine->mSector = s.mSector;
-            theMachine->mFound = s.mFound;
-            EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
-            theGoal.Attach(theMachine, theMachine);   // as Run does at a search's start
-            theGoal.mStartTile = s.mStartTile;
-            theGoal.mGoalTile = s.mGoalTile;
-            theGoal.mPlayerID = s.mPlayerID;
-            theGoal.mRevLimit = s.mRevLimit;
-            theGoal.mMaxRevs = s.mMaxRevs;
-            theGoal.mGoalSector = s.mGoalSector;
-            theGoal.mStartSector = s.mStartSector;
-            theGoal.mSearchFailed = s.mFlags[0];
-            theGoal.mB31 = s.mFlags[1];
-            theGoal.mAcceptNearest = s.mFlags[2];
-            theGoal.mB33 = s.mFlags[3];
-            theGoal.mB34 = s.mFlags[4];
-            theGoal.mTookNearest = s.mFlags[5];
-            theGoal.mPoint38 = s.mPoint38;
-            theGoal.mPoint40 = s.mPoint40;
-            theGoal.SetUnit(theGoalUnit);
-            if (theModifier != NULL)
-                theGoal.SetModifier(theModifier);
-            theGoal.mFrom = EESubSectorOf(s.mFromID);
-            theGoal.mTo = EESubSectorOf(s.mToID);
-            theGoal.mPathFlags = s.mPathFlags;
-            theGoal.mL70 = s.mL70;
-            EEPathManagerNode* theNode = theManager.NewNode();
-            theNode->SetRequest(theRequest);
-            theNode->SetUnit(theUnit);
-            theNode->mGraphMachine = theMachine;
-            theNode->mL04 = s.mL04;
-            theNode->mTile = s.mTile;
-            theNode->mL20 = s.mL20;
-            theNode->mL24 = s.mL24;
-            theNode->mL28 = s.mL28;
-            theNode->mL2C = s.mL2C;
-            theNode->mPasses = s.mPasses;
-            theNode->mL34 = s.mL34;
-            theRestored.push_back(theNode);
-        } else if (theMachine != NULL) {
-            theManager.ReleaseGraphMachine(theMachine);
-        }
-        if (theModifier != NULL)
-            theModifier->Dereference();
-        if (theUnit != NULL && !theOK)
-            theManager.RequestPendingPath(theUnit, s.mTile);   // as the load did before 0.278
-        if (theRequest != NULL) {
-            if (theOK && theOwner != theAwaited.end()) {
-                theOwner->second.mAttach(theRequest);   // the owner takes the load's reference
-                theAwaited.erase(theOwner);
-            } else
-                theRequest->Dereference();   // the node's own reference keeps it (none: freed)
-        }
-    }
-    theManager.mAutoPaths.insert(theManager.mAutoPaths.begin(), theRestored.begin(), theRestored.end());
-    for (std::map<long, EEAwaitedRequest>::iterator it = theAwaited.begin(); it != theAwaited.end(); it++) {
-        it->second.mAttach(NULL);   // the owner's fallback: it asks again
-    }
-}
-
-void EEQueueGraphResolve()
-{
-    if (!sGraphResolveQueued) {
-        sGraphResolveQueued = true;
-        EEAfterLoadLast(EEResolveGraphSearches);   // after every owner's own fix-up (the active groups')
-    }
-}
-}   // namespace
-
-void EEAwaitAutoPathRequest(long inRequestID, std::function<void(EEAutoPathRequest*)> inAttach)
-{
-    std::map<long, EEAwaitedRequest>::iterator it = sAwaitedRequests.find(inRequestID);
-    if (it != sAwaitedRequests.end()) {   // (ids are unique: a second owner of one asks again)
-        it->second.mAttach(NULL);
-        sAwaitedRequests.erase(it);
-    }
-    EEAwaitedRequest theOwner = {inAttach};
-    sAwaitedRequests[inRequestID] = theOwner;
-    EEQueueGraphResolve();
-}
-
-// RequestPendingPaths for one unit
-void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
-{
-    inUnit->DropPath();
-    EEUGRust* theGoal = EELocationGoalCast(inUnit->GetGoal());
-    bool theGraph = inUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint());
-    EETileCoordinate theFrom;
-    theFrom.mX = inUnit->mTileX;
-    theFrom.mY = inUnit->mTileY;
-    this->RequestUnitPath(inUnit, theFrom, inTile, false, -1, theGraph, NULL, false);
-}
-
-void EEPathManager::SaveGraphSearches(FSFile& outFile)
-{
-    std::vector<EEPathManagerNode*> theNodes;
-    for (size_t i = 0; i < this->mAutoPaths.size(); i++)
-        if (EEGraphSearchSavable(this->mAutoPaths[i]))
-            theNodes.push_back(this->mAutoPaths[i]);
-    outFile.Write((unsigned long)theNodes.size());
-    for (size_t i = 0; i < theNodes.size(); i++) {
-        EEPathManagerNode* theNode = theNodes[i];
-        EEGraphPathMachine* theMachine = theNode->mGraphMachine;
-        EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
-        EEComplexUnit* theUnit = theNode->mUnit;
-        outFile.Write(theUnit != NULL ? (long)theUnit->mUnitID : -1L);
-        outFile.Write(theNode->mRequest != NULL);
-        if (theNode->mRequest != NULL)
-            EESaveAutoPathRequest(outFile, *theNode->mRequest);
-        const long theNodeFields[] = {theNode->mL04, theNode->mTile.mX, theNode->mTile.mY, theNode->mL20, theNode->mL24,
-                                      theNode->mL28, theNode->mL2C, theNode->mPasses, theNode->mL34};
-        for (long f : theNodeFields)
-            outFile.Write(f);
-        const long theMachineFields[] = {theMachine->mTile.mX, theMachine->mTile.mY, theMachine->mType, theMachine->mRevs,
-                                         theMachine->mNumRuns, theMachine->mSteps, theMachine->mSector,
-                                         theMachine->mNodeCount, theMachine->mCount};
-        for (long f : theMachineFields)
-            outFile.Write(f);
-        outFile.Write(theMachine->mFound);
-        const long theGoalFields[] = {theGoal.mStartTile.mX, theGoal.mStartTile.mY, theGoal.mGoalTile.mX,
-                                      theGoal.mGoalTile.mY, theGoal.mPoint38.mX, theGoal.mPoint38.mY,
-                                      theGoal.mPoint40.mX, theGoal.mPoint40.mY, theGoal.mPlayerID, theGoal.mRevLimit,
-                                      theGoal.mMaxRevs, theGoal.mGoalSector, theGoal.mStartSector, theGoal.mL70,
-                                      theGoal.mUnit != NULL ? (long)theGoal.mUnit->mUnitID : -1L,
-                                      EESubSectorID(theGoal.mFrom), EESubSectorID(theGoal.mTo)};
-        for (long f : theGoalFields)
-            outFile.Write(f);
-        const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB31, theGoal.mAcceptNearest, theGoal.mB33, theGoal.mB34,
-                                  theGoal.mTookNearest};
-        for (bool f : theFlags)
-            outFile.Write(f);
-        outFile.Write(theGoal.mPathFlags.mPlayerID);
-        for (int f = 0; f < 17; f++)
-            outFile.Write(theGoal.mPathFlags.mFlags[f]);
-        long theKind = EEGraphModifierKindOf(theGoal.mModifier);
-        outFile.Write(theKind);
-        if (theKind != kGraphModifierNone && theKind != kGraphModifierStormRain && theKind != kGraphModifierStormSnow) {
-            EEAIGPGModiferUseInfluenceCostsBase* theInfluence =
-                static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theGoal.mModifier);
-            for (int w = 0; w < 15; w++)
-                outFile.Write(theInfluence->mWeights.mValues[w]);
-            outFile.Write(theInfluence->mPlayerID);
-            outFile.Write(theInfluence->mEnemyID);
-            // (the land route planners' continents and flags and the sub group owner: none since main's stage 5)
-            outFile.Write((unsigned short)0);
-            outFile.Write((unsigned short)0);
-            outFile.Write(false);
-            outFile.Write(false);
-            outFile.Write(false);
-        }
-        std::vector<unsigned char> theBytes(ee_astar_graph_save(theMachine->mCore, NULL, 0));
-        ee_astar_graph_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-        outFile.Write((unsigned long)theBytes.size());
-        unsigned long theWritten = 0;
-        if (!theBytes.empty())
-            outFile.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
-    }
-}
-
-long EEPathManager::LoadGraphSearches(FSFile& inFile)
-{
-    std::vector<EESavedGraphSearch> theSearches;
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        theSearches.push_back(EESavedGraphSearch());
-        EESavedGraphSearch& s = theSearches.back();
-        theResult = inFile.Read(s.mUnitID);
-        bool theHasRequest = false;
-        if (theResult == 0)
-            theResult = inFile.Read(theHasRequest);
-        if (theResult == 0 && theHasRequest)
-            theResult = EELoadAutoPathRequest(inFile, s.mRequest);
-        long* const theLongs[] = {&s.mL04, &s.mTile.mX, &s.mTile.mY, &s.mL20, &s.mL24, &s.mL28, &s.mL2C, &s.mPasses,
-                                  &s.mL34, &s.mMachineTile.mX, &s.mMachineTile.mY, &s.mType, &s.mRevs, &s.mNumRuns,
-                                  &s.mSteps, &s.mSector, &s.mNodeCount, &s.mCount};
-        for (long* f : theLongs)
-            if (theResult == 0)
-                theResult = inFile.Read(*f);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mFound);
-        long* const theGoalLongs[] = {&s.mStartTile.mX, &s.mStartTile.mY, &s.mGoalTile.mX, &s.mGoalTile.mY,
-                                      &s.mPoint38.mX, &s.mPoint38.mY, &s.mPoint40.mX, &s.mPoint40.mY, &s.mPlayerID,
-                                      &s.mRevLimit, &s.mMaxRevs, &s.mGoalSector, &s.mStartSector, &s.mL70,
-                                      &s.mGoalUnitID, &s.mFromID, &s.mToID};
-        for (long* f : theGoalLongs)
-            if (theResult == 0)
-                theResult = inFile.Read(*f);
-        for (int f = 0; f < 6 && theResult == 0; f++)
-            theResult = inFile.Read(s.mFlags[f]);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mPathFlags.mPlayerID);
-        for (int f = 0; f < 17 && theResult == 0; f++)
-            theResult = inFile.Read(s.mPathFlags.mFlags[f]);
-        if (theResult == 0)
-            theResult = inFile.Read(s.mModifierKind);
-        if (theResult == 0 && s.mModifierKind != kGraphModifierNone && s.mModifierKind != kGraphModifierStormRain
-            && s.mModifierKind != kGraphModifierStormSnow) {
-            for (int w = 0; w < 15 && theResult == 0; w++)
-                theResult = inFile.Read(s.mWeights.mValues[w]);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mModifierPlayerID);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mModifierEnemyID);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mContinent1);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mContinent2);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mAnyContinent);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mAvoidFriendlyBlockers);
-            if (theResult == 0)
-                theResult = inFile.Read(s.mModifierSubGroup);
-        }
-        unsigned long theLength = 0;
-        if (theResult == 0)
-            theResult = inFile.Read(theLength);
-        if (theResult == 0 && theLength > 0) {
-            s.mStorage.resize(theLength);
-            unsigned long theRead = 0;
-            theResult = inFile.Read(s.mStorage.data(), theLength, theRead);
-            if (theResult == 0 && theRead != theLength)
-                theResult = 1;
-        }
-    }
-    if (theResult != 0) {
-        for (size_t i = 0; i < theSearches.size(); i++)
-            if (theSearches[i].mRequest != NULL)
-                theSearches[i].mRequest->Dereference();
-        return theResult;
-    }
-    // the units the saved searches hold ask no path again (their unit's Load put them in mPending)
-    for (size_t i = 0; i < theSearches.size(); i++)
-        for (size_t p = this->mPending.size(); p-- > 0;)
-            if (theSearches[i].mUnitID != -1 && this->mPending[p].mUnitID == (unsigned long)theSearches[i].mUnitID)
-                this->mPending.erase(this->mPending.begin() + p);
-    for (size_t i = 0; i < sLoadedGraphSearches.size(); i++)   // (a load that never reached its first tick)
-        if (sLoadedGraphSearches[i].mRequest != NULL)
-            sLoadedGraphSearches[i].mRequest->Dereference();
-    sLoadedGraphSearches.swap(theSearches);
-    EEQueueGraphResolve();
-    return theResult;
-}
-
-// Advances the queued graph and tile searches and the region rebuild, when there are any
-void EEPathManager::Update()
-{
-    EEPathRequestCapture theCapture(kPathRequestUpdate, this);   // TEST ONLY
-    if (this->mAutoPaths.size() != 0)
-        this->UpdateAutoPaths();
-    if (this->mPaths.size() != 0)
-        this->UpdatePaths();
-    if (this->mIsUpdatingRegions)
-        this->UpdateRegions();
-}
-
-// Runs the queued graph searches in turn until 32 steps are spent: finished ones are applied and freed, running
-// ones get one more step per pass (up to 32) and go to the back
-void EEPathManager::UpdateAutoPaths()
-{
-    EEPathManagerNode* theNode = NULL;
-    long theRevs = 0;
-    while (this->mAutoPaths.size() != 0 && theRevs < 0x20) {
-        theNode = *this->mAutoPaths.begin();
-        EEGraphPathMachine* theMachine = theNode->mGraphMachine;
-        theMachine->Run();
-        bool theRunning = theMachine->mFound;
-        theNode->mPasses++;
-        if (!theRunning) {
-            theRevs += theMachine->mSteps;
-            this->FinishGraphPath(theNode);
-            this->ReleaseGraphMachine(theMachine);
-            this->ReleaseNode(theNode);
-        } else {
-            theRevs += theMachine->mSteps;
-            unsigned long theLimit = theMachine->GetRevLimit();
-            if (theLimit < 0x20)
-                theMachine->SetRevLimit(theLimit + 1);
-            this->mAutoPaths.push_back(theNode);
-        }
-        this->mAutoPaths.pop_front();
-    }
-}
-
-// Called every 10 s (UpdatePaths)
-// Counts the path requests of the last 5.5 s per unit and goal tile and adds a tile asked for more than once to
-// its unit's region map (an existing entry counts up by one); then clears the history (no counting while loading):
-// ee_sim::astar pm_record.rs
-void EEPathManager::PruneHistory()
-{
-    ee_path_record_prune_history(this->mRecord, (uint32_t)gPhysics->GetGameTime(), gLoadingSavedGame);
-}
-
-// Called every 30 s (UpdatePaths)
-// Cancels the paths of each unit whose region map holds a tile counted 8 or more and tells its player the unit is
-// stranded, after freeing every region map (nothing while loading a saved game); the choice is pm_record.rs's
-void EEPathManager::PruneRegions()
-{
-    std::vector<int32_t> theUnitIDs(ee_path_record_region_count(this->mRecord));
-    uint32_t theCount = ee_path_record_prune_regions(this->mRecord, gLoadingSavedGame,
-                                                     theUnitIDs.empty() ? NULL : theUnitIDs.data(), (uint32_t)theUnitIDs.size());
-    for (uint32_t i = 0; i < theCount && i < theUnitIDs.size(); i++) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theUnitIDs[i])));
-        if (theUnit != NULL) {
-            this->CancelPaths(theUnit, true);
-            theUnit->mPlayer->UnitStranded(theUnit);
-        }
-    }
-}
-
-// Runs the queued tile searches in turn until 32 steps are spent (finished ones applied and freed), then prunes
-// the history every 10 s and the region maps every 30 s
-void EEPathManager::UpdatePaths()
-{
-    EEPathManagerNode* theNode = NULL;
-    unsigned long theTime = gPhysics->mGameTime;
-    long theRevs = 0;
-    while (this->mPaths.size() != 0 && theRevs < 0x20) {
-        theNode = *this->mPaths.begin();
-        EEAIAStarMachineBase* theMachine = theNode->mPathMachine;
-        theMachine->Run();
-        bool theRunning = theMachine->mFound;
-        theNode->mPasses++;
-        if (!theRunning) {
-            theRevs += theMachine->mSteps;
-            this->FinishPath(theNode);
-            this->ReleasePathMachine((EEPathMachine*)theMachine);
-            this->ReleaseNode(theNode);
-        } else {
-            theRevs += theMachine->mSteps;
-            unsigned long theLimit = theMachine->GetRevLimit();
-            if (theLimit < 0x20)
-                theMachine->SetRevLimit(theLimit + 1);
-            this->mPaths.push_back(theNode);
-        }
-        this->mPaths.pop_front();
-    }
-    // the history every 10 s, the region maps every 30 s, each when it holds something (pm_record.rs due)
-    uint32_t theDue = ee_path_record_due(this->mRecord, (uint32_t)theTime);
-    if (theDue & 1)
-        this->PruneHistory();
-    if (theDue & 2)
-        this->PruneRegions();
 }
 
 // The path graph machine's goal hooks (ee/EEAIAStarPathGraphGoal.h). GetGoalID and the node tile are read inline

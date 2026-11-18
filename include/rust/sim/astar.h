@@ -28,6 +28,239 @@ constexpr static const int32_t PATH_SPACE_REGION = 3;
 
 constexpr static const int32_t PATH_NON_SPACE = 4;
 
+/// `EEUnitHandle::kNone`: no unit.
+constexpr static const uint32_t EE_PATH_NO_UNIT = 4294967295;
+
+/// `h0` unit -> its id (`EEUnitHandleID`; none for 0)
+constexpr static const int32_t EE_PATH_UNIT_ID = 1;
+
+/// `i0` id -> the complex unit (`EEUnitHandleResolve`, 0 none)
+constexpr static const int32_t EE_PATH_UNIT_RESOLVE = 2;
+
+/// `h0` unit `Reference()`
+constexpr static const int32_t EE_PATH_UNIT_REFERENCE = 3;
+
+/// `h0` unit `Dereference()`
+constexpr static const int32_t EE_PATH_UNIT_DEREFERENCE = 4;
+
+/// `h0` request `Reference()`
+constexpr static const int32_t EE_PATH_REQUEST_REFERENCE = 5;
+
+/// `h0` request `Dereference()`
+constexpr static const int32_t EE_PATH_REQUEST_DEREFERENCE = 6;
+
+/// the game time (`gPhysics ? GetGameTime() : 0`)
+constexpr static const int32_t EE_PATH_GAME_TIME = 7;
+
+/// `gContinentManager.mPathSubSectors.size()`
+constexpr static const int32_t EE_PATH_SUB_SECTORS = 8;
+
+/// `gWorld.mMap`
+constexpr static const int32_t EE_PATH_MAP = 9;
+
+/// `ClampTile(gWorld.mMap, (i0, i1))` -> `i0`, `i1`
+constexpr static const int32_t EE_PATH_CLAMP = 10;
+
+/// a new `EEPathMachine(1, h1 map)`
+constexpr static const int32_t EE_PATH_PM_NEW = 11;
+
+/// `delete` path machine `h0`
+constexpr static const int32_t EE_PATH_PM_DELETE = 12;
+
+/// path machine `h0`'s goal's map
+constexpr static const int32_t EE_PATH_PM_MAP = 13;
+
+/// path machine `h0`: the modifier of type `i0` (sea 2, space 0x10, else none), then `mType = i0`
+constexpr static const int32_t EE_PATH_PM_TYPE = 14;
+
+/// tile machine `h0` (path or bounded) `Run()` -> `mFound`
+constexpr static const int32_t EE_PATH_TM_RUN = 15;
+
+/// tile machine `h0` `SetRevLimit(i0)`
+constexpr static const int32_t EE_PATH_TM_SET_REV_LIMIT = 16;
+
+/// tile machine `h0` `GetRevLimit()`
+constexpr static const int32_t EE_PATH_TM_REV_LIMIT = 17;
+
+/// tile machine `h0` `mSteps`
+constexpr static const int32_t EE_PATH_TM_STEPS = 18;
+
+/// path machine `h0` `Reset()`
+constexpr static const int32_t EE_PATH_PM_RESET = 19;
+
+/// path machine `h0`: `Reset()`, `mFound = false`, then when `i0` the goal's `ReleaseModifier()` and `SetUnit(0)`
+constexpr static const int32_t EE_PATH_PM_RELEASE = 20;
+
+/// path machine `h0` ready for unit `h1`'s search from (`i0`, `i1`) to (`i2`, `i3`): `CancelSearch`, the step
+/// limit `i4`, the rev limit `i5`, start, goal, `mTile`, the goal's destination, `SetUnit`, `mCheckCorners`
+constexpr static const int32_t EE_PATH_PM_START = 21;
+
+/// unit `h0`'s `SetPathRevs` inputs from (`i0`, `i1`) to (`i2`, `i3`) -> `i0` distance, `i1` amphibious, `i2` the
+/// same continent
+constexpr static const int32_t EE_PATH_PATH_REVS = 22;
+
+/// a new `EEGraphPathMachine(i0, i1)`
+constexpr static const int32_t EE_PATH_GM_NEW = 23;
+
+/// `delete` graph machine `h0`
+constexpr static const int32_t EE_PATH_GM_DELETE = 24;
+
+/// graph machine `h0` `GetCount()`
+constexpr static const int32_t EE_PATH_GM_COUNT = 25;
+
+/// graph machine `h0` `mType = i0`
+constexpr static const int32_t EE_PATH_GM_TYPE = 26;
+
+/// graph machine `h0` `Run()` -> `mFound`
+constexpr static const int32_t EE_PATH_GM_RUN = 27;
+
+/// graph machine `h0` `SetRevLimit(i0)`
+constexpr static const int32_t EE_PATH_GM_SET_REV_LIMIT = 28;
+
+/// graph machine `h0` `GetRevLimit()`
+constexpr static const int32_t EE_PATH_GM_REV_LIMIT = 29;
+
+/// graph machine `h0` `mSteps`
+constexpr static const int32_t EE_PATH_GM_STEPS = 30;
+
+/// graph machine `h0`: `Reset()`, `mFound = false`, then when `i0` the goal's `ReleaseModifier()` and `SetUnit(0)`
+constexpr static const int32_t EE_PATH_GM_RELEASE = 31;
+
+/// graph machine `h0` `Reset()`
+constexpr static const int32_t EE_PATH_GM_RESET = 32;
+
+/// graph machine `h0` ready for unit `h1` / request `h2` from (`i0`, `i1`) to (`i2`, `i3`) for player `i4`, the
+/// step limit unless `i5` (unlimited), modifier `h3`: `StartGraphPath`'s setup -> the tiles on the map in `i0..i3`
+constexpr static const int32_t EE_PATH_GM_START = 33;
+
+/// graph machine `h0`'s `SetGraphRevs` inputs from (`i0`, `i1`) to (`i2`, `i3`) -> `i0` distance, `i1` the goal
+/// sector's kind allowed, `i2` the goal unit's id when a computer player's citizen (else none)
+constexpr static const int32_t EE_PATH_GRAPH_REVS = 34;
+
+/// machine `h0` (`i0` 0 tile, 1 graph) `SetMaxRevs(i1)`
+constexpr static const int32_t EE_PATH_SET_MAX_REVS = 35;
+
+/// `FinishPath`: tile machine `h0`'s result to unit `h1`
+constexpr static const int32_t EE_PATH_FINISH_PATH = 36;
+
+/// `RequestUnitPaths(h1 unit, h2 request, h0 graph machine)` -> its result
+constexpr static const int32_t EE_PATH_REQUEST_UNIT_PATHS = 37;
+
+/// `FinishGraphPath`'s unit part: unit `h0`'s auto waypoint goal -> 1 and (`i0`, `i1`) its tile, (`i2`, `i3`) the
+/// goal's (the unit's path dropped), else 0
+constexpr static const int32_t EE_PATH_AUTO_WAYPOINT = 38;
+
+/// `TryShortPath(h0 unit, gWorld.mMap, i0 type, (i1, i2), (i3, i4))` with `i5` searches queued -> the result and
+/// the tile reached in `i3`, `i4`
+constexpr static const int32_t EE_PATH_SHORT_PATH = 39;
+
+/// unit `h0`'s player id
+constexpr static const int32_t EE_PATH_UNIT_PLAYER = 40;
+
+/// unit `h0`'s waypoint count
+constexpr static const int32_t EE_PATH_UNIT_WAYPOINTS = 41;
+
+/// unit `h0`'s location goal when an auto waypoint -> 1 and its location truncated in `i0`, `i1`
+constexpr static const int32_t EE_PATH_UNIT_GOAL_TILE = 42;
+
+/// unit `h0`'s search type (land 1, sea 2, space 0x10)
+constexpr static const int32_t EE_PATH_UNIT_PATH_TYPE = 43;
+
+/// unit `h0`: `mNumPathRequests` counted; whether its request goes into the history
+constexpr static const int32_t EE_PATH_UNIT_COUNT_REQUEST = 44;
+
+/// `RequestPendingPath`'s unit part: unit `h0`'s path dropped -> its tile in `i0`, `i1`, whether a graph search
+constexpr static const int32_t EE_PATH_PENDING_UNIT = 45;
+
+/// unit `h0` stranded (`mPlayer->UnitStranded`)
+constexpr static const int32_t EE_PATH_UNIT_STRANDED = 46;
+
+/// `gContinentManager.Rebuild()`
+constexpr static const int32_t EE_PATH_REBUILD = 47;
+
+/// `UMFloatToLong(gWorld.mGameSpeed * 10000.0f)`
+constexpr static const int32_t EE_PATH_REGION_DELAY = 48;
+
+/// the bounded machine deleted (`Reset` and `Clear`)
+constexpr static const int32_t EE_PATH_BOUNDED_FREE = 49;
+
+/// the storages' node pools freed (`Clear`)
+constexpr static const int32_t EE_PATH_FREE_POOLS = 50;
+
+/// a new request (`i0` id, `i1` player, from (`i2`, `i3`), to (`i4`, `i5`), the flags `h1`) -> it
+constexpr static const int32_t EE_PATH_REQUEST_NEW = 51;
+
+/// request `h0` into the request record `h1` (`ee_path_request_record_set`)
+constexpr static const int32_t EE_PATH_REQUEST_SAVE = 52;
+
+/// tile machine `h0` (in `mPaths`) as the saved game holds it into the record `h1` -> whether it can be saved
+constexpr static const int32_t EE_PATH_PM_SAVE = 53;
+
+/// path machine `h0` from the record `h1`, for unit `h2` -> whether its storage loaded
+constexpr static const int32_t EE_PATH_PM_LOAD = 54;
+
+/// graph machine `h0` as the saved game holds it into the record `h1` -> whether it can be saved
+constexpr static const int32_t EE_PATH_GM_SAVE = 55;
+
+/// graph machine `h0` from the record `h1` (its modifier `h2`, goal unit `h3`) -> whether its storage loaded
+constexpr static const int32_t EE_PATH_GM_LOAD = 56;
+
+/// a loaded graph search's modifier from the record `h1` -> it (0: none, or one that cannot be rebuilt: `i0` 0)
+constexpr static const int32_t EE_PATH_GM_MODIFIER = 57;
+
+/// modifier `h0` `Dereference()`
+constexpr static const int32_t EE_PATH_MODIFIER_DEREFERENCE = 58;
+
+/// sub sector `i0` exists
+constexpr static const int32_t EE_PATH_SUB_SECTOR = 59;
+
+/// the owners waiting for their requests: 0 take them (the first tick), 1 whether one waits for request id `i0`,
+/// 2 give it request `h0`, 3 give the others none
+constexpr static const int32_t EE_PATH_AWAIT = 60;
+
+/// the graph searches' resolve queued for the loaded game's first tick
+constexpr static const int32_t EE_PATH_QUEUE_RESOLVE = 61;
+
+/// the map is there (`gWorld.mMap != NULL`)
+constexpr static const int32_t EE_PATH_HAS_MAP = 62;
+
+/// `gLoadingSavedGame`
+constexpr static const int32_t EE_PATH_LOADING = 63;
+
+/// `i0` id -> `dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(id))` (0 none)
+constexpr static const int32_t EE_PATH_WORLD_UNIT = 64;
+
+/// tile machine `h0` `mFound`
+constexpr static const int32_t EE_PATH_TM_FOUND = 65;
+
+/// graph machine `h0` `mFound`
+constexpr static const int32_t EE_PATH_GM_FOUND = 66;
+
+/// a loaded request from the request record `h0` (a `RequestRecord`) -> it (one reference, the caller's)
+constexpr static const int32_t EE_PATH_REQUEST_LOAD = 67;
+
+constexpr static const uint32_t EE_PATH_FILE_U32 = 1;
+
+constexpr static const uint32_t EE_PATH_FILE_I32 = 2;
+
+constexpr static const uint32_t EE_PATH_FILE_U16 = 3;
+
+constexpr static const uint32_t EE_PATH_FILE_BOOL = 4;
+
+constexpr static const uint32_t EE_PATH_FILE_F32 = 5;
+
+constexpr static const uint32_t EE_PATH_FILE_BYTES = 6;
+
+/// `kErrorBeyondEnd`, `LoadRunningState`'s answer for a short record.
+constexpr static const int32_t EE_PATH_ERROR_BEYOND_END = -16;
+
+/// The graph search's modifier kinds (`EEGraphModifierKind`; 3..8, the deleted sub groups' route planners, unused).
+constexpr static const int32_t EE_PATH_MODIFIER_NONE = 0;
+
+constexpr static const int32_t EE_PATH_MODIFIER_STORM_RAIN = 9;
+
+constexpr static const int32_t EE_PATH_MODIFIER_STORM_SNOW = 10;
+
 /// `kAIChainLandCliff` .. `kAIChainLandCliffSpace` (ee/EEAIKindIDs.h).
 constexpr static const int32_t CHAIN_LAND_CLIFF = 1;
 
@@ -140,8 +373,11 @@ struct EeAStarStorage;
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
 
-/// The C++ manager's handle.
-struct EePathRecord;
+/// The C++ manager's handle: the manager and its host.
+struct EePathManager;
+
+/// The lists a saved search carries beside its record (the C++ fills them through `ee_path_saved_*`).
+struct EePathSavedLists;
 
 /// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
 struct EeSparseArray;
@@ -741,8 +977,92 @@ struct EeShoreCallbacks {
   uint32_t map_height;
 };
 
-/// A word reader: 0 and the word, or the file's error.
-using EePathRecordRead = int32_t(*)(void *ctx, uint32_t *out);
+/// One host call's values: handles in `h`, the arguments and answers in `i`.
+struct EePathIo {
+  uint64_t h[4];
+  int64_t i[10];
+};
+
+/// The C++ host: `(context, op, io) -> the answer`.
+using EePathHostFn = int64_t(*)(void*, int32_t, EePathIo*);
+
+/// A queued search as the capture and the dumps see it.
+struct EePathQueued {
+  /// 0 `mPaths`, 1 `mAutoPaths`
+  uint32_t queue;
+  uint32_t unit;
+  int32_t x;
+  int32_t y;
+  int32_t passes;
+  uint64_t machine;
+  uint64_t request;
+};
+
+/// The save file through the C++ `FSFile`'s typed calls: `kind` 1 `uint32_t`, 2 `int32_t`, 3 `unsigned short`,
+/// 4 `bool`, 5 `float` (the value's bits), 6 the bytes `data[..len]`. A read returns 0 and the value (or fills the
+/// bytes), else the file's error.
+using EePathFileFn = int32_t(*)(void *ctx,
+                                uint32_t kind,
+                                uint32_t *value,
+                                uint8_t *data,
+                                uint32_t len);
+
+/// A path request as the saved game holds it (save 0.277, `EESaveAutoPathRequest`).
+struct EePathRequestRecord {
+  int32_t from[2];
+  int32_t to[2];
+  int32_t player;
+  int32_t id;
+  int32_t length;
+  bool done;
+  int32_t flags_player;
+  bool flags[17];
+};
+
+/// A tile search's machine and goal as the saved game holds them (save 0.276; the C++ fills and applies it).
+struct EePathSavedMachine {
+  int32_t tile[2];
+  /// `mType`, `mRevs`, `mNumRuns`, `mSteps`, `mMapWidth`, `mMapHeight`, the storage's `mWidth`, `mHeight`
+  int32_t fields[8];
+  bool check_corners;
+  bool found;
+  int32_t start[2];
+  int32_t goal[2];
+  int32_t rev_limit;
+  int32_t max_revs;
+  /// `mSearchFailed`, `mB29`, `mAcceptNearest`, `mB2B`, `mB2C`, `mTookNearest`
+  bool flags[6];
+  /// `mBounds24`, `mGoalBounds`, `mStartBounds`: bottom, left, right, top
+  int32_t bounds[3][4];
+  int32_t destination[2];
+  int32_t l64;
+  float offset[2];
+  uint16_t continent;
+  bool bounded;
+  bool avoid_units;
+};
+
+/// A graph search's machine, goal and modifier as the saved game holds them (save 0.278).
+struct EePathSavedGraph {
+  /// `mTile`'s x, y, `mType`, `mRevs`, `mNumRuns`, `mSteps`, `mSector`, `mNodeCount`, `mCount`
+  int32_t machine[9];
+  bool found;
+  /// start x, y, goal x, y, `mPoint38`, `mPoint40`, `mPlayerID`, `mRevLimit`, `mMaxRevs`, `mGoalSector`,
+  /// `mStartSector`, `mL70`, the goal unit's id (-1 none), the from and to sub sectors (-1 none)
+  int32_t goal[17];
+  /// `mSearchFailed`, `mB31`, `mAcceptNearest`, `mB33`, `mB34`, `mTookNearest`
+  bool flags[6];
+  int32_t path_flags_player;
+  bool path_flags[17];
+  int32_t modifier;
+  float weights[15];
+  uint32_t modifier_player;
+  uint32_t modifier_enemy;
+  uint16_t continents[2];
+  bool any_continent;
+  bool avoid_friendly_blockers;
+  bool sub_group;
+};
 
 extern "C" {
 
@@ -1758,81 +2078,143 @@ void ee_area_shore_in_regions(const EeHullPoint *shore,
                               void *out,
                               void (*push)(void*, long, long));
 
-EePathRecord *ee_path_record_new();
+/// A new manager over the host (`f` called with `ctx`).
+EePathManager *ee_path_manager_new(EePathHostFn f, void *ctx);
 
 /// # Safety
-/// `r` from `ee_path_record_new` / `ee_path_record_load`, or NULL.
-void ee_path_record_free(EePathRecord *r);
+/// `p` from `ee_path_manager_new` (or NULL), not used after.
+void ee_path_manager_free(EePathManager *p);
 
-/// # Safety
-/// `r` a live handle.
-void ee_path_record_add_history(EePathRecord *r, int32_t unit, int32_t x, int32_t y, uint32_t time);
-
-/// # Safety
-/// `r` a live handle.
-bool ee_path_record_repeated(EePathRecord *r, int32_t unit, int32_t x, int32_t y, uint32_t since);
-
-/// # Safety
-/// `r` a live handle.
-void ee_path_record_prune_history(EePathRecord *r, uint32_t now, bool loading);
-
-/// `PruneRegions`' units, in the order to handle them, into `out` (up to `cap`); their count.
+/// The manager's calls (`what`; tiles as `i`, handles as `h`; the answer, `io` for the out values):
+/// 1 `Update`, 2 `Reset`, 3 `Clear`, 4 `FreePaths`, 5 `RequestPendingPaths`, 6 `SetRegionUpdates(i0, i1)`,
+/// 7 `CancelPaths(h0, i0)`, 8 `CancelAutoPathRequest(h0)`, 9 `CompletePath(h0)`, 10 `CompleteAutoPath(h0)`,
+/// 11 `HasAutoPath(h0)`, 12 `IsPathDone(h0)`, 13 `GetPathGoal(h0)` (the tile in `i0`, `i1`),
+/// 14 `RequestPath(player i0, from (i1, i2), to (i3, i4), flags h0, type i5, revs i6, modifier h1, unlimited i7)`,
+/// 15 `RequestUnitPath(h0, from (i0, i1), to (i2, i3), unlimited i4, revs i5, graph i6, modifier h1, i7)`,
+/// 16 `RequestPendingPath(h0, (i0, i1))`, 17 `AddPending(unit i0, (i1, i2))`, 18 the loaded running state
+/// put back, 19 the graph searches' resolve, 20 the pending count, 21 the queued count, 22 `mLCC`,
+/// 23 `mNextRequestID`, 24 `mNextRegionTime`, 25 `mIsUpdatingRegions`, 26 the loaded tile searches put back.
 ///
 /// # Safety
-/// `r` a live handle; `out` writable for `cap` ids (or NULL with `cap` 0).
-uint32_t ee_path_record_prune_regions(EePathRecord *r, bool loading, int32_t *out, uint32_t cap);
+/// `p` a live manager, `io` live; the handles live objects of their kinds.
+int64_t ee_path_manager_call(EePathManager *p,
+                             int32_t what,
+                             EePathIo *io);
 
-/// The region maps' unit count (what `PruneRegions` can return at most).
+/// The queued searches into `out` (up to `cap`), `mPaths` then `mAutoPaths`; their count.
 ///
 /// # Safety
-/// `r` a live handle.
-uint32_t ee_path_record_region_count(EePathRecord *r);
+/// `p` a live manager; `out` writable for `cap` entries (or NULL with `cap` 0).
+uint32_t ee_path_manager_queued(EePathManager *p, EePathQueued *out, uint32_t cap);
 
-/// # Safety
-/// `r` a live handle.
-uint32_t ee_path_record_history_count(EePathRecord *r);
-
-/// `UpdatePaths`' schedule: bit 0 prune the history now, bit 1 the regions.
+/// The pending unit `k` (its id and tile into `out`); false past the end.
 ///
 /// # Safety
-/// `r` a live handle.
-uint32_t ee_path_record_due(EePathRecord *r, uint32_t now);
+/// `p` a live manager, `out` writable for three values.
+bool ee_path_manager_pending(EePathManager *p, uint32_t k, int32_t *out);
 
-/// The two timers (`mNextHistoryPruneTime`, `mNextRegionPruneTime`).
+/// The saved game's parts: `what` 0 the running state, 1 the tile searches, 2 the graph searches; `load` reads
+/// (the answer the file's error, 0 done), else writes.
 ///
 /// # Safety
-/// `r` a live handle; the outputs writable.
-void ee_path_record_timers(EePathRecord *r, int32_t *out_history, int32_t *out_regions);
+/// `p` a live manager; `f` called with `ctx`.
+int32_t ee_path_manager_file(EePathManager *p,
+                             int32_t what,
+                             bool load,
+                             EePathFileFn f,
+                             void *ctx);
 
-/// `Reset`/`Clear`: no history, no region maps, the timers at `history` and `regions`.
+/// A request's record written (`EESaveAutoPathRequest`); `path` its `len` tiles.
 ///
 /// # Safety
-/// `r` a live handle.
-void ee_path_record_reset(EePathRecord *r, int32_t history, int32_t regions);
+/// `r` live, `path` readable for `len` tiles; `f` called with `ctx`.
+void ee_path_request_write(const EePathRequestRecord *r,
+                           const int32_t *path,
+                           uint32_t len,
+                           EePathFileFn f,
+                           void *ctx);
 
-/// `FreeRegions`.
+/// A request's record read (`EELoadAutoPathRequest`): the file's error, or 0 with the record in `out` and its path
+/// in the list `path` (an [`ee_path_tiles_push`] list).
 ///
 /// # Safety
-/// `r` a live handle.
-void ee_path_record_free_regions(EePathRecord *r);
+/// `out` writable, `path` a live list; `f` called with `ctx`.
+int32_t ee_path_request_read(EePathRequestRecord *out,
+                             void *path,
+                             EePathFileFn f,
+                             void *ctx);
 
-/// The save's words into `out` (up to `cap`); their count (call with `cap` 0 for the size).
+/// A request record's (`RequestRecord`, as the host gets it) fields into `out` and its path's length; `path`
+/// receives up to `cap` tiles.
 ///
 /// # Safety
-/// `r` a live handle; `out` writable for `cap` words (or NULL with `cap` 0).
-uint32_t ee_path_record_save(EePathRecord *r, uint32_t *out, uint32_t cap);
+/// `r` a live `RequestRecord` (from a host operation), `out` writable, `path` writable for `cap` tiles.
+uint32_t ee_path_request_record_get(const void *r,
+                                    EePathRequestRecord *out,
+                                    int32_t *path,
+                                    uint32_t cap);
 
-/// A record from the save's words (NULL on a failed read).
+/// A request record's fields and path set from the C++ request (`SaveGraphSearches`).
 ///
 /// # Safety
-/// `read` called with `ctx`.
-EePathRecord *ee_path_record_load(EePathRecordRead read, void *ctx);
+/// `r` a live `RequestRecord`, `rec` readable, `path` readable for `len` tiles.
+void ee_path_request_record_set(void *r,
+                                const EePathRequestRecord *rec,
+                                const int32_t *path,
+                                uint32_t len);
 
-/// The loaded record's contents into the manager's (the loaded game's first tick).
+/// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
+/// the end; `push` appends (x, y).
 ///
 /// # Safety
-/// both live handles.
-void ee_path_record_assign(EePathRecord *r, EePathRecord *from);
+/// `lists` a live `EePathSavedLists`, `out` writable for two values.
+bool ee_path_saved_tile(EePathSavedLists *lists,
+                        uint32_t which,
+                        uint32_t k,
+                        int32_t *out);
+
+/// Appends (x, y) to a saved search's tile list `which`.
+///
+/// # Safety
+/// `lists` a live `EePathSavedLists`.
+void ee_path_saved_tile_push(EePathSavedLists *lists, uint32_t which, int32_t x, int32_t y);
+
+/// A saved search's storage bytes: set from `data[..len]` (`data` non-NULL), and their pointer and length.
+///
+/// # Safety
+/// `bytes` a live `Vec<u8>` (an `EePathSavedLists`'s `storage` or a saved graph's), `data` readable for `len`.
+const uint8_t *ee_path_saved_bytes(void *bytes,
+                                   const uint8_t *data,
+                                   uint32_t len,
+                                   uint32_t *out_len);
+
+/// The storage bytes of a saved search's lists.
+///
+/// # Safety
+/// `lists` a live `EePathSavedLists`.
+void *ee_path_saved_storage(EePathSavedLists *lists);
+
+/// A tile list for [`ee_path_request_read`]: new, its tiles, freed.
+void *ee_path_tiles_new();
+
+/// Tile `k` of the list into `out`; false past the end.
+///
+/// # Safety
+/// `list` from `ee_path_tiles_new`, `out` writable for two values.
+bool ee_path_tiles_get(void *list, uint32_t k, int32_t *out);
+
+/// # Safety
+/// `list` from `ee_path_tiles_new`, not used after.
+void ee_path_tiles_free(void *list);
+
+/// The dump's lines (`DumpSim` but the bounded machine's) into `out` (up to `cap` bytes, no terminator); their
+/// length.
+///
+/// # Safety
+/// `p` a live manager, `out` writable for `cap` bytes.
+uint32_t ee_path_manager_dump(EePathManager *p,
+                              uint8_t *out,
+                              uint32_t cap);
 
 }  // extern "C"
 

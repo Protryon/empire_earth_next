@@ -49,6 +49,7 @@ pub mod modifiers;
 pub mod path_area_kind;
 pub mod path_goals;
 pub mod path_splice;
+pub mod pm;
 pub mod pm_record;
 pub mod queries;
 pub mod repair;
