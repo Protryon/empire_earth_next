@@ -3213,3 +3213,7 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_shore(l: *mut c_void) -> c_int {
     }
     0
 }
+
+// the rest of the bindings (lane A round 2)
+#[path = "units_more.rs"]
+mod more;

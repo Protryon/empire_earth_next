@@ -138,6 +138,21 @@ pub struct EeWorldLayout {
     /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
     pub player_viewed_unit: u64,
     pub player_selected_viewed_unit: u64,
+    // ---- the tech tree and the computer player (lane A round 2: the Lua AI's bindings; tech_view.rs)
+    /// `EEPlayer::mTechnologies` (an `EETechTree*`)
+    pub player_technologies: u64,
+    /// `EeTechTreeFields` in `EETechTree`, `EeTechNodeFields` in `EETechTreeNode`
+    pub tech_tree_fields: u64,
+    pub node_fields: u64,
+    /// `RTSTechTreeNode::mData` (an `RTSTechTreeNodeData*`), `EeTechNodeDataFields` in `RTSTechTreeNodeData`, its
+    /// `mUnitClasses` (a `std::vector<unsigned long>`)
+    pub node_data: u64,
+    pub node_data_fields: u64,
+    pub node_data_unit_classes: u64,
+    /// `&EETechHost` (an address: the tree walks' host, whose lookups the tree view makes)
+    pub tech_host: u64,
+    /// `EeCpFields` in `EEComputerPlayer`
+    pub cp_fields: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

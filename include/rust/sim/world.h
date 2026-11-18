@@ -644,6 +644,20 @@ struct EeWorldLayout {
   /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
   uint64_t player_viewed_unit;
   uint64_t player_selected_viewed_unit;
+  /// `EEPlayer::mTechnologies` (an `EETechTree*`)
+  uint64_t player_technologies;
+  /// `EeTechTreeFields` in `EETechTree`, `EeTechNodeFields` in `EETechTreeNode`
+  uint64_t tech_tree_fields;
+  uint64_t node_fields;
+  /// `RTSTechTreeNode::mData` (an `RTSTechTreeNodeData*`), `EeTechNodeDataFields` in `RTSTechTreeNodeData`, its
+  /// `mUnitClasses` (a `std::vector<unsigned long>`)
+  uint64_t node_data;
+  uint64_t node_data_fields;
+  uint64_t node_data_unit_classes;
+  /// `&EETechHost` (an address: the tree walks' host, whose lookups the tree view makes)
+  uint64_t tech_host;
+  /// `EeCpFields` in `EEComputerPlayer`
+  uint64_t cp_fields;
 };
 
 /// The check's counts and digest.

@@ -26,6 +26,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEWorldLayout.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
@@ -155,6 +157,14 @@ void EEWorldLayoutRegister()
     theLayout.unit_node_next = offsetof(RTSTUnitList, mNext);
     theLayout.player_viewed_unit = offsetof(EEPlayer, mViewedUnit);
     theLayout.player_selected_viewed_unit = offsetof(EEPlayer, mSelectedViewedUnit);
+    theLayout.player_technologies = offsetof(EEPlayer, mTechnologies);   // lane A round 2 (tech_view.rs)
+    theLayout.tech_tree_fields = BaseOffset<EETechTree, EeTechTreeFields>();
+    theLayout.node_fields = BaseOffset<EETechTreeNode, EeTechNodeFields>();
+    theLayout.node_data = offsetof(EETechTreeNode, mData);
+    theLayout.node_data_fields = BaseOffset<RTSTechTreeNodeData, EeTechNodeDataFields>();
+    theLayout.node_data_unit_classes = offsetof(RTSTechTreeNodeData, mUnitClasses);
+    theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
+    theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

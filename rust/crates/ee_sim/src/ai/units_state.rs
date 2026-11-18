@@ -140,6 +140,9 @@ pub struct UnitsState {
     pub ids2: Vec<c_long>,
     pub sorted: Vec<EeAiUnitsSortEntry>,
     pub names: BTreeMap<c_long, CString>,
+    /// tiles as (x, y) (the continent and wall bindings: units_more.rs), the water sites (distance, y, x)
+    pub tiles: Vec<(c_long, c_long)>,
+    pub sites: Vec<(c_long, c_long, c_long)>,
 }
 
 impl Default for UnitsState {
@@ -177,6 +180,8 @@ impl Default for UnitsState {
             ids2: Vec::new(),
             sorted: Vec::new(),
             names: BTreeMap::new(),
+            tiles: Vec::new(),
+            sites: Vec::new(),
         }
     }
 }
