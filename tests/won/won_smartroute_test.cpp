@@ -21,6 +21,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_routehelpers.h" // the request helpers WONRouting.h had
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatSocket.h"
@@ -508,7 +509,7 @@ static void Scenario()
 
     // register with the client list (flag 4): the ignore file is read, bob ignored
     SmartPtr<RouteDone> aReg = new RouteDone("register");
-    c->Register(L"me", L"pw", 0, 2, 4, 0x10, aReg);
+    RoutingRequests(c).Register(L"me", L"pw", 0, 2, 4, 0x10, aReg);
     s.Expect("register");
     {
         W w = Msg(51);
@@ -538,7 +539,7 @@ static void Scenario()
 
     // the group list with members: 100 updated, 101 gone, 102 new (with an unknown client 14)
     SmartPtr<RouteDone> aList = new RouteDone("group list");
-    c->GetGroupList(0xff, aList);
+    RoutingRequests(c).GetGroupList(0xff, aList);
     s.Expect("group list");
     {
         W w = Msg(25);
@@ -697,7 +698,7 @@ static void Scenario()
 
     // the members of group 102: 14 goes (and its client), 12 updated, 17 new
     SmartPtr<RouteDone> aMembers = new RouteDone("members");
-    c->GetMembersOfGroup(102, aMembers);
+    RoutingRequests(c).GetMembersOfGroup(102, aMembers);
     s.Expect("members 102");
     {
         W w = Msg(29);
@@ -715,7 +716,7 @@ static void Scenario()
 
     // join group 100 with its member list
     SmartPtr<RouteDone> aJoin = new RouteDone("join");
-    c->JoinGroup(100, L"", L"hi", 1, 0, aJoin);
+    RoutingRequests(c).JoinGroup(100, L"", L"hi", 1, 0, aJoin);
     s.Expect("join 100");
     {
         W w = Msg(41);
@@ -741,7 +742,7 @@ static void Scenario()
     Dump(c, "joined 100");
     // a failed join: nothing changes
     SmartPtr<RouteDone> aJoinBad = new RouteDone("join bad");
-    c->JoinGroup(102, L"", L"", 0, 0, aJoinBad);
+    RoutingRequests(c).JoinGroup(102, L"", L"", 0, 0, aJoinBad);
     s.Expect("join 102");
     {
         W w = Msg(41);
@@ -753,7 +754,7 @@ static void Scenario()
 
     // async flags
     SmartPtr<RouteDone> aFlags = new RouteDone("set flags");
-    c->SetClientFlags(0, 0, 0x6, 0x4, aFlags);
+    RoutingRequests(c).SetClientFlags(0, 0, 0x6, 0x4, aFlags);
     s.Expect("set flags");
     {
         W w = Msg(66);
@@ -762,7 +763,7 @@ static void Scenario()
     }
     PumpRoute(aFlags, 1);
     SmartPtr<RouteDone> aFlagsBad = new RouteDone("set flags bad");
-    c->SetClientFlags(0, 0, 0xff, 0xff, aFlagsBad);
+    RoutingRequests(c).SetClientFlags(0, 0, 0xff, 0xff, aFlagsBad);
     s.Expect("set flags bad");
     {
         W w = Msg(66);
@@ -774,7 +775,7 @@ static void Scenario()
 
     // CD key ids from _KeyId data objects
     SmartPtr<RouteDone> aRead = new RouteDone("read");
-    c->ReadDataObject(0xffff, "_KeyId", 0, aRead);
+    RoutingRequests(c).ReadDataObject(0xffff, "_KeyId", 0, aRead);
     s.Expect("read _KeyId");
     {
         W w = Msg(49);
@@ -790,7 +791,7 @@ static void Scenario()
     }
     PumpRoute(aRead, 1);
     SmartPtr<RouteDone> aReadOther = new RouteDone("read other");
-    c->ReadDataObject(0xffff, "Other", 0, aReadOther);
+    RoutingRequests(c).ReadDataObject(0xffff, "Other", 0, aReadOther);
     s.Expect("read Other");
     {
         W w = Msg(49);
@@ -936,7 +937,7 @@ static void Scenario()
     s.Accept();
     c->SetProductName("");
     SmartPtr<RouteDone> aReg2 = new RouteDone("register 2");
-    c->Register(L"me2", L"", 0, 0, 0, 0x30, aReg2);
+    RoutingRequests(c).Register(L"me2", L"", 0, 0, 0, 0x30, aReg2);
     s.Expect("register 2");
     {
         W w = Msg(51);
@@ -958,7 +959,7 @@ static void Scenario()
         Note(s, c, "21 joined 200", j2);
     }
     SmartPtr<RouteDone> aCl = new RouteDone("client list");
-    c->GetClientList(aCl);
+    RoutingRequests(c).GetClientList(aCl);
     s.Expect("client list");
     {
         W l = Msg(23);
@@ -971,7 +972,7 @@ static void Scenario()
     PumpRoute(aCl, 1);
     Dump(c, "client list");
     SmartPtr<RouteDone> aClEx = new RouteDone("client list ex");
-    c->GetClientListEx(aClEx);
+    RoutingRequests(c).GetClientListEx(aClEx);
     s.Expect("client list ex");
     {
         W l = Msg(74);
@@ -985,7 +986,7 @@ static void Scenario()
     // the member iterator's group removed by a group list: the iteration ends
     c->StartMemberItr(200);
     SmartPtr<RouteDone> aList2 = new RouteDone("group list 2");
-    c->GetGroupList(0x01, aList2);
+    RoutingRequests(c).GetGroupList(0x01, aList2);
     s.Expect("group list 2");
     {
         W w = Msg(25);

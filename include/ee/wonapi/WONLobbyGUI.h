@@ -5,6 +5,7 @@
 #ifndef EE_WONAPI_WONLOBBYGUI_H
 #define EE_WONAPI_WONLOBBYGUI_H
 
+#include "rust/won_net/ffi_net.h" // LobbyGetNetAddresses
 #include <exception>
 #include <deque>
 #include <set>
@@ -1833,7 +1834,18 @@ void LobbyResume();
 void LobbyShutdown();
 Container* LobbyGetContainer();
 void LobbyStart();
-void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inFlag);
+// this machine's IP addresses: from the adapter list with details (the original's 0x6b3540), else by host name
+// (IPAddr.cpp's; ipaddr.rs)
+inline void LobbyAddNetAddress(void* ioList, const uint8_t* inName, size_t inLength, uint32_t inHost)
+{
+    static_cast<std::list<LobbyNetAddress>*>(ioList)->push_back(
+        LobbyNetAddress(std::string(reinterpret_cast<const char*>(inName), inLength), static_cast<long>(inHost)));
+}
+inline void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inGetDetails)
+{
+    outAddresses.clear();
+    ee_won_ipaddr_local_addresses(inGetDetails, LobbyAddNetAddress, &outAddresses);
+}
 
 // 0x361390: the local player (NULL when none)
 LobbyPlayer* GetMyLobbyPlayer();

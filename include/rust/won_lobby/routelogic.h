@@ -19,6 +19,9 @@ enum class EeWonRouteLogicOp : uint32_t {
   TextLength,
   /// a list `a` the host made (`kind` b: 1 data objects, 2 directory entities, 3 a client iterator) deleted.
   ListFree,
+  /// text `a`'s (`GUIString*`, 0 the empty text) `wchar_t` unit count; its units written to `b` (`uint32_t`s)
+  /// when not 0 (WONLobby round 14: the requests [`conn_request`] makes read their texts with it).
+  TextUnits,
   /// `L->mKilled`.
   Killed = 10,
   /// `(int)((AsyncOp*)a)->GetStatus()`.
@@ -434,6 +437,13 @@ enum class EeWonRouteLogicCall : uint32_t {
 /// The Internet lobby's logic.
 struct EeWonRouteLogic;
 
+/// The text callback of [`ee_won_routelogic_conn_request`]: `text`'s unit count, its units written to `units` when
+/// not NULL.
+using EeWonRouteConnTextFn = size_t(*)(void *ctx, ptrdiff_t text, uint32_t *units);
+
+/// The value callback of [`ee_won_routelogic_conn_request`]: one value's number and bytes, in order.
+using EeWonRouteConnValueFn = void(*)(void *ctx, int64_t num, const uint8_t *bytes, size_t length);
+
 using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
                                            EeWonRouteLogicOp op,
                                            ptrdiff_t a,
@@ -443,6 +453,19 @@ using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
                                            ptrdiff_t e);
 
 extern "C" {
+
+/// [`conn_request`] for the drivers (won_routeconn_req_test): whether op `op` with the connection and arguments
+/// `args` (five) is a request the logic makes in Rust; if so its kind to `kind` and each value to `value`. Texts
+/// (`GUIString*`s in the game) are read through `text`.
+///
+/// # Safety
+/// `args` holds five values; the callbacks are callable with `ctx`; `kind` is writable.
+bool ee_won_routelogic_conn_request(EeWonRouteLogicOp op,
+                                    const ptrdiff_t *args,
+                                    EeWonRouteConnTextFn text,
+                                    EeWonRouteConnValueFn value,
+                                    void *ctx,
+                                    int32_t *kind);
 
 /// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
 EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);

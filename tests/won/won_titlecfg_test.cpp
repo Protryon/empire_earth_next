@@ -121,6 +121,12 @@ static bool CommunityHandleInstruction(SCfg& o, bool mAlreadyInCommunity, SParse
     } else
         return false;
 }
+// StringUtil.cpp's StringToUpperCase (deleted in WONLobby round 14): strcase.rs's ASCII map
+static std::string StringToUpperCase(std::string s)
+{
+    if (!s.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&s[0]), s.length(), true);
+    return s;
+}
 static bool PostParse(SCfg& o, SCfg* anObjectP)
 {
     string aNameLoginStr = StringToUpperCase(o.mNameLoginStr);

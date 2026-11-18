@@ -29924,3 +29924,104 @@ the resource centres' world queries.
 - **Results.** EECPNextUnits.cpp 4,792 -> 2,504 lines (with the host, about 390 lines); 57 of the 90 bindings in
   Rust; the binding golden identical in all 15 games after each of the three moves, and a mutation (a record's
   `sight` read from the range) caught at the first `ai.unit` call; both builds 0/0; the Rust gate PASS.
+
+## R6 WONLobby, round 14: IPAddr.cpp and StringUtil.cpp as inline forwards, RoutingLogic's connection requests in Rust, the host-coverage tool (ee_won_lobby routelogic.rs conn_request; branch rust-wonlobby14, 2026-11-17)
+
+Round 13 measured this round's plan: the two units every caller still reached through out-of-line forwards, then
+Rust rows for WONGUI's lists, then RoutingLogic.cpp's host, then the largest WON units as whole classes, for 2,000
+net lines. This round did the first and the third; the rows and the whole-class moves are left (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| a8fc7a7c | IPAddr.cpp and StringUtil.cpp deleted: IPAddr's methods inline forwards to ipobj.rs in EEWonNet.h, LobbyGetNetAddresses in WONLobbyGUI.h, the string utilities the game calls in WONStringCompare.h (strcase.rs, text.rs), their seven scattered declarations gone, the unused ones deleted | 38,165 -> 37,826 (-339) |
+| 4a83ec36 | tools/won_host_coverage.py (round 13's inline check as a tool) | |
+| fc190793 | tools/lan_capture_compare.py (round 13's bmpdiff and crop scripts as a tool) | |
+| fd37b869 | RoutingLogic's connection requests in Rust (routelogic.rs `conn_request`, answered in the game through `ee_won_routelogic_new_model`; routecpp.rs's `request`): fifteen host cases gone; RoutingConnection's request helpers deleted from WONRouting.h (EEWonNet.cpp, outside the count, keeps the sixteen it calls as a file-local `WonRequests`, +62; the drivers' copy is tests/won/won_routehelpers.h) | 37,826 -> 37,683 (-143) |
+
+Round total: WON C++ 38,165 -> 37,683 (-482); two units deleted. Far short of the 2,000 target: see "Left".
+
+- **Inline forwards.** IPAddr was already a handle on a Rust value (ipobj.rs); its 30 methods are one-line
+  inline members now, and EEWonNet.h includes rust/won_net/ipobj.h (with ffi.h and servctx.h). EEWonNet.h is
+  included by 292 units: an FFI change in those three modules rebuilds them all. The string utilities: the five
+  the game still calls (StringToUpperCaseInPlace, StringCompareNoCase, WStringCompareNoCase, StringToWString and
+  WStringToString, both overloads) are inline in WONStringCompare.h, which EEWonNet.h and WONLobbyResource.h
+  include; the declarations WONLobbyConfig.h, WONLobbyResource.h, WONRouting.h, WONLobbyParser.h and EEWonNet.h
+  repeated are gone. The one-argument conversions stop at the first NUL as before (a copy to it, then the counted
+  conversion).
+- **The connection's requests.** RoutingLogic.cpp's cases ConnDo 6..10, ConnSetClientFlags, ConnSetGroupFlags,
+  ConnBan, ConnMute, ConnBanByWonId, ConnMuteByWonId, ConnAccept, ConnInvite, ConnSendChat, ConnSendChatTo,
+  ConnAlert and ConnStartShutdown each called one RoutingConnection helper, which built a RoutingRequestValues
+  list and ran it (`ee_won_routeconn_request`). `conn_request` builds the same kind and values from the op's
+  arguments (the casts as the cases had them: `unsigned short` cuts, `unsigned long` as 32 bits, `bool` as 0/1,
+  SendChat's flags cut to 16 bits, the game data type "G") and the logic calls routecpp.rs's `request` with them
+  when it was made by `ee_won_routelogic_new_model` (the game's); the drivers' logic (without the model) still
+  gives every op to its scripted host, so won_routelogic_test and its golden are unchanged. Texts cross with a new
+  host op, `TextUnits` (the `GUIString`'s `wchar_t` units; `utf16le` makes WideAppendUtf16LE's bytes). The three
+  helper calls RoutingLogic.cpp keeps (the game list's subscription, SendData, the advertisement's
+  CreateDataObject) are RoutingRequestValues runs in place.
+- **EEWonNet.cpp** (the game's own Internet front end) called sixteen helpers on its SmartRoutingConnection; they
+  are a file-local class there now, the helpers' statements unchanged, so WONRouting.h holds no request helper.
+
+### The host-coverage tool
+
+`python -I tools/won_host_coverage.py` reads each host enum from its generated header and checks every value
+against the `case` labels of the C++ host files and the match arms of the Rust functions that answer it in the
+game (modelobj.rs `ctl_op`, `route_op`, `route_record_op_in`, `lobby_op`, `popup_op`, `eegame_op`, lanown.rs's
+`op`, routelogic.rs `conn_request`); a value the C++ makes (the controls' events) must be named in its host.
+PASS at the round's start and at its end (18 enums: the controls' ops, event and row members, events, slot types,
+strings, images, client tests, prefs and link fields, the routing logic's, the dialogs', popups', the lobby logics'
+and logics' ops, the EE game's and glue's, the dialog logic's).
+
+### Goldens, mutations, replays
+
+| Driver | Sequences | Replayed by cargo | Mutations |
+|---|---|---|---|
+| won_routeconn_req_test (new) | 200,000 requests (146,004 made, 53,996 the host's) | golden_routeconn.txt (69) | 10 of 10 caught |
+| won_routelogic_test, won_routeops_test, won_smartroute_test | as before (routeops and smartroute through tests/won/won_routehelpers.h) | | 0 failures |
+| won_strcase_test | as before (the forwards from WONStringCompare.h, the unused maps over strcase.rs) | | 0 failures |
+
+### Behaviour changes
+
+None in what the game reaches. An `unsigned long` request value is taken as 32 bits on every system (the
+original's; on LP64 the C++ casts kept 64).
+
+### What runs it
+
+The LAN game reaches IPAddr (every socket, the discovery, the direct-connect lists) and the string utilities (the
+config readers, the resource tables); `lan_game.py` and the capture comparison ran them. RoutingLogic and
+EEWonNet's requests are the Internet lobby's (no WON server exists): only the drivers reach them.
+
+### Left
+
+- The rows (step 2 of round 13's plan): a row table in ee_won_gui that ee_won_lobby registers, two generic shells
+  (RustRow, RustTextRow) for ServerDetailsItem, RoomListItem, FriendsListItem, UserListItem and GameUserListItem,
+  ChatLink's segment hook; the row members become Rust state, so won_srvlist_test, won_netctl_test and
+  won_lobbyctl_test must be rewritten against the original statements and re-recorded. About -250.
+- The whole-class moves: LobbyPersistentData.cpp (827), LobbyDialogHost.cpp (626), LanLogicHost.cpp (469),
+  InitLogic.cpp (317), LobbyLogicHost.cpp (310), ChatCommandParser.cpp (274).
+- RoutingLogic.cpp's other cases: the events (each a C++ event class), the dialogs, the buffers' requests
+  (SendData, the advertisement), the status op and the directory ops.
+- won_cfgtab_test (see Gates).
+
+### Gates
+
+| Gate | a8fc7a7c | fd37b869, the round's head |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | (no Rust change) | PASS, 4,494 tests (after a clippy and a rustfmt fix) |
+| `build.py --test-profile windowed-software` | | 0 / 0 |
+| `xbuild.py wontest` | 147 of 148 programs exit 0 (won_cfgtab_test below) | 148 of 149 programs exit 0 (won_routeconn_req_test the new one; won_cfgtab_test below; won_servconn_test needed the helpers' header, 57379a41) |
+| `won_host_coverage.py` | PASS | PASS |
+| `lan_game.py` (slot.py) | | `RESULT PASS lan-game PT host=2766 joiner=2767` (the round's start exe, cb6e60d5: 2700 / 2699) |
+| capture comparison (`lan_capture_compare.py`) | | every lobby capture identical to the start exe's (create dialog, LAN screen, lobby, both staging screens, the LAN list); the game's frames differ by timing, as they do between any two runs |
+
+**won_cfgtab_test** does not finish on this machine, at the round's start either: built from cb6e60d5's sources it
+grows by about 70 MB a second past 10 GB (stopped there: the memory rule); with this round's sources it grows the
+same way, also over a one-file resource directory (so before its resource lines), and ends after about 50 s at
+3.6 GB with exit 1 and no output. Its sequence mode (`--seq`) runs and matches. Not this round's: the lead should
+look at it (round 13's 148 included it).
+
+origin/rust had nothing new at the end of the round (no merge).
