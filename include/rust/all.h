@@ -32,6 +32,7 @@
 #include "rust/sim/app.h"
 #include "rust/sim/astar.h"
 #include "rust/sim/combat.h"
+#include "rust/sim/cp.h"
 #include "rust/sim/formations.h"
 #include "rust/sim/netmsg.h"
 #include "rust/sim/rmap.h"

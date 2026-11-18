@@ -68,7 +68,7 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPExperimentTimers.h"
-#include "ee/EECPLegacyLoad.h"
+#include "rust/sim/cp.h"            // the legacy blocks' readers (ee_sim::cp::legacy_load)
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -1040,18 +1040,22 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     // timers and intelligence files (0.269, 0.271), the next engine's state block main's version 6; an older save
     // does not load
     // A retail file (to 0.250: the campaigns' scenarios) holds the deleted C++ managers' blocks in the original's layout:
-    // stepped over (ee/EECPLegacyLoad.h), the build manager's town centre tile kept as the placement's. A port save of
+    // stepped over (ee_sim::cp::legacy_load), the build manager's town centre tile kept as the placement's. A port save of
     // 0.251-0.280 holds them with the port's additions and does not load
-    bool theLegacy = inMajorVersion == 0 && inMinorVersion <= kEECPLegacyLastVersion;
+    bool theLegacy = inMajorVersion == 0 && inMinorVersion <= EE_CP_LEGACY_LAST_VERSION;
     if (theResult == kErrorOK && !theLegacy && !EESaveHasLuaOnlyComputers(inMajorVersion, inMinorVersion))
         return kErrorFailed;
     if (theResult == kErrorOK)
-        theResult = theLegacy ? EECPSkipLegacyCombatManager(inFile, inMajorVersion, inMinorVersion)
+        theResult = theLegacy ? ee_cp_skip_legacy_combat(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion)
                               : this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult == kErrorOK && theLegacy) {
-        theResult = EECPSkipLegacyCivilizationManager(inFile, inMajorVersion, inMinorVersion, this->mPlacement->mTownCenterTile);
+        U2DPoint<long>& theTile = this->mPlacement->mTownCenterTile;
+        int32_t theXY[2] = {(int32_t)theTile.mX, (int32_t)theTile.mY};
+        theResult = ee_cp_skip_legacy_civilization(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion, theXY);
+        theTile.mX = theXY[0];
+        theTile.mY = theXY[1];
         if (theResult == kErrorOK)
-            theResult = EECPSkipLegacyExplorationManager(inFile, inMajorVersion, inMinorVersion);
+            theResult = ee_cp_skip_legacy_exploration(&inFile, &EESaveFilePrimitive, inMajorVersion, inMinorVersion);
     } else if (theResult == kErrorOK)
         theResult = this->mPlacement->Load(inFile);   // (stage 6: the managers' block is the town centre tile)
     if (theResult == kErrorOK)
