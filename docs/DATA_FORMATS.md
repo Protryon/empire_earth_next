@@ -2057,7 +2057,7 @@ The models and textures are described in full, with their open forms (glTF, PNG)
 | `.sst` texture | `data.ssa: textures\*.sst`, `Data\Textures\` | `GETexture.cpp` (`GETextureFileHeader`, packed 14 bytes) | `u8 isCompressed, u8 mipLevelCount, u32 frameCount, u32 width, u32 height`, then the frames. `.tga` files have no such header (`GESurface.cpp` reads the 18-byte `GETGAHeader`; type 2 = uncompressed true colour, descriptor bits 4/5 = mirrored/top-down). |
 | `.wav` / `.mp3` | sounds, music, campaign voice | sound engine (this port: miniaudio) | standard formats |
 | `.sgt` | DirectMusic segments named by `dbmusic.mFileName + ".sgt"` | `EEMusicObject` (this port: dmusic replacement) | DirectMusic RIFF |
-| `.bik` / `.mpg` movies, `.jpg` scenario images, `.ttf` | `Data\Movies`, scenarios | Bink / DX7 movie / image loaders | standard formats |
+| `.jpg` scenario images, `.ttf` (movies: none, the game has no movie player since 2026-11-17) | scenarios | image loaders | standard formats |
 | `Language.dll` | install root | `UResourceFile` (`gResource->GetString`) | Win32 STRINGTABLE; the source is `src/Empire Earth/Language/Language.rc`. Every `*NameID` in the db points here. |
 
 ---
@@ -2365,7 +2365,7 @@ New names of read fields (record member: evidence):
 * dbgfxeffects: `mIntParam1..3` (the record's +0x90..+0x98 land in EEGraphicEffect::mIntParam1..3), `mFlag1/2`,
   `mEmitPositionSpread`, `mIsEmitFlat`, `mEndsWithUnitOrDuration` (the particle emitter is their only reader).
 * dbuicontrols: `mFitRectToText` (UITextLabel::SetFitRectToText), `mScaleToControl` (fonts scaled to the control;
-  check box bitmaps), `mLoopMovie` (CreateMovie's loop argument).
+  check box bitmaps), `mLoopMovie` (CreateMovie's loop argument; movie controls make no control since 2026-11-17).
 * dbaiunittargeting: `mPreferredUnitType` (a target of this unit type is taken at once: EEFOFindNewTargetNearOldTarget).
 * dbanimals: `mMinRestInterval`, `mMaxRestInterval` (the herd's random rest after an attack: EEHerd::UpdateAttacking).
 * dbcalamity: `mQuakeMinimumStrength`, `mQuakeStrength` (the earthquake is the only reader of +0x6c/+0x70).

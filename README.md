@@ -51,9 +51,9 @@ EE_DATA_ROOT=$PWD/build/data-root build/xbuild/<target>/game/ee-aoc
 
 `<target>` is `macos-arm64` or `linux-x86_64`.
 
-**Movies** (optional): the game plays the retail intro and campaign movies if they are converted from a retail
-disc's `.bik` files. `python -I tools/make_play_dir.py C:\EE-play --data build/data-root --movies DIR` (needs ffmpeg)
-makes a stand-alone play folder with them.
+**Movies:** none. The game has no movie player (2026-11-17): it skips the intro movies and the scenarios' movies, as
+the original did when a movie file was missing. `python -I tools/make_play_dir.py C:\EE-play --data build/data-root`
+makes a stand-alone play folder.
 
 **Staying up to date:**
 
@@ -75,7 +75,7 @@ and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
 gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on the wgpu crate (in the
 Rust library, `ee_gx`; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through miniaudio,
-music through dmusic and movies through pl_mpeg (all vendored, statically linked). The exe imports Windows system
+music through dmusic (both vendored, statically linked); there is no movie player. The exe imports Windows system
 DLLs only.
 
 | Module | Was | Source |
@@ -145,11 +145,10 @@ and files, so a part already current is skipped and a newer one replaces only it
 and `.cfg` files: run the game with `EE_DATA_ROOT=build/data-root`, and its logs and settings land there, not in
 the repository. The `v*` release packages carry `Data/db` and `Data/ai`; there is no db release.
 
-To play, prepare a directory with the exe, that data and the movies converted for the build's player (`--movies DIR`
-points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
+To play, prepare a directory with the exe and that data:
 
 ```
-python -I tools/make_play_dir.py C:\EE-play [--data TREE|BUNDLE.zip] [--movies DIR]   # then run C:\EE-play\EE-AOC.exe
+python -I tools/make_play_dir.py C:\EE-play [--data TREE|BUNDLE.zip]   # then run C:\EE-play\EE-AOC.exe
 ```
 
 The game keeps its settings in `config.yaml` in its directory (it creates the file; `EE_CONFIG` names another file).
@@ -168,9 +167,6 @@ pruned to `EE_OBJ_CACHE_MAX_GB` (default 4) at the end of each build; `python -I
 Objects do not depend on the staging root or the worktree: every compile maps those paths to fixed names
 (`__FILE__` reads `C:\EEX\...` whatever `EE_ORIG_SRC_ROOT` is) and is `/Brepro`. The Rust library is cargo's: set
 `RUSTC_WRAPPER=sccache` (optional, if sccache is installed) to share its compiles too.
-
-The movies need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an
-`.mpg` next to every `.bik` (`make_play_dir.py --movies` does it for a play directory).
 
 Linux and macOS (in progress, PORT.md step 4): `tools/fetch_posix.py` fetches the pinned dependencies (a Debian
 sysroot for cross-compiling to Linux, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
@@ -197,7 +193,7 @@ configuration directory, see above). `tools/make_play_dir.py` prepares a complet
 the data tree or bundle):
 
 ```
-python -I tools/make_play_dir.py OUT --posix-exe build/xbuild/linux-x86_64/game/ee-aoc [--data BUNDLE.zip] [--movies DIR]
+python -I tools/make_play_dir.py OUT --posix-exe build/xbuild/linux-x86_64/game/ee-aoc [--data BUNDLE.zip]
 OUT/run.sh                                         # sets EE_DATA_ROOT=OUT
 ```
 
