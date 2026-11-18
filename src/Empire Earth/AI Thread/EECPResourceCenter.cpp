@@ -45,6 +45,7 @@
 #include "ee/EEAIRandom.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EEAIKindIDs.h"
+#include "ee/EECPPlaceCapture.h"
 
 const UString EECPResourceCenter::sData("EECPResourceCenter-Data");
 
@@ -91,26 +92,40 @@ EECPResourceCenter::~EECPResourceCenter()
 // Adds a resource unit to the center, taking a reference on it
 void EECPResourceCenter::AddUnit(EEUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterAddUnit, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.U(inUnit);
+    [&]() {
     inUnit->Reference();
     this->mUnits.push_back(inUnit);
+    }();
+    theScope.State(this);
 }
 
 // find's result in a local iterator, compared with a freshly loaded end()
 // Returns whether the center holds the unit
 bool EECPResourceCenter::Contains(EEUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterContains, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.U(inUnit);
+    bool theScopeResult = [&]() -> bool {
     bool theResult = false;
     if (this->mUnits.size() > 0) {
         std::vector<EEUnitHandle<EEUnit> >::iterator theFound = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
         theResult = theFound != this->mUnits.end();
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Makes the player's drop site (not a granary) the center's main building if the center has none and the site is
 // within drop-off distance of one of its resource units
 void EECPResourceCenter::AdoptDropSite(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterAdoptDropSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.CU(inUnit).State(this);
+    [&]() {
     long theRadius = this->mPlayer->mDropOffDistance;
     long theArea = theRadius * theRadius;
     if (this->mUnit != NULL || inUnit->mPlayer != this->mPlayer || !inUnit->GetUnitClass()->IsDropSite() || inUnit->GetUnitClass()->mUnitType == kUnitTypeGranary)
@@ -123,6 +138,8 @@ void EECPResourceCenter::AdoptDropSite(EEComplexUnit* inUnit)
         inUnit->Reference();
         break;
     }
+    }();
+    theScope.State(this);
 }
 
 // Returns the squared distance from this unit's position to another unit's position (its tile if not a complex unit)
@@ -208,6 +225,9 @@ struct EECPRCAreaEffectLess {
 // morale area, temples/universities/hospitals clear of their effects, others in rings round the center
 bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceCenterFindBuildSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass).State(this);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEComplexUnit*> theBuildings;
     U2DRectangle<long> theRect;
     U2DPoint<long> theSite;
@@ -468,11 +488,17 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
         }
     }
     return theFound;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0).State(this);
+    return theScopeResult;
 }
 
 // Returns the smallest radius among the area effect templates of a unit class's upgrade (0 when it has none)
 long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
 {
+    EECPPlaceScope theScope(kPlceCenterMinEffectRadius, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass);
+    long theScopeResult = [&]() -> long {
     long theRadius = 0;
     EEUnitClassUpgrade* theUpgrade = this->mPlayer->mUnitClassUpgrades[inUnitClass];
     for (unsigned long i = 0; i < 4; i++) {
@@ -484,12 +510,18 @@ long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
             theRadius = UMFloatToLong(theTemplateRadius);
     }
     return theRadius;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Returns how full the main building's morale effect is: its level plus the unfinished houses in range, over
 // its maximum level (1 without a main building or effect)
 float EECPResourceCenter::GetMoraleFill()
 {
+    EECPPlaceScope theScope(kPlceCenterMoraleFill, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.State(this);
+    float theScopeResult = [&]() -> float {
     std::vector<EEComplexUnit*> theUnits;
     float theResult = 1.0f;
     EEComplexUnit* theUnit = this->mUnit;
@@ -521,6 +553,9 @@ float EECPResourceCenter::GetMoraleFill()
         }
     }
     return theResult;
+    }();
+    theScope.F(theScopeResult);
+    return theScopeResult;
 }
 
 // NEAR: the original reads mUnits[i] through out-of-line begin()/operator+ and keeps the box in memory
@@ -528,6 +563,10 @@ float EECPResourceCenter::GetMoraleFill()
 // else the first candidate tile; leaves outCenter unchanged when there is nothing to measure
 void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
 {
+    EECPPlaceScope theScope(kPlceCenterGetCenter, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.State(this);
+    bool theScopeSet = this->mUnits.size() > 0 || this->GetUnit() != NULL;
+    [&]() {
     std::vector<EETileCoordinate> theTiles;
     EEAIAStarBounds theBounds;
     EETileCoordinate theCenter;
@@ -581,10 +620,15 @@ search:
     }
     if (!theFound && theTiles.size() > 0)
         outCenter = theTiles[0];
+    }();
+    theScope.I(theScopeSet ? outCenter.mX : 0).I(theScopeSet ? outCenter.mY : 0);
 }
 // Returns the first resource unit of the given resource type that is not exhausted, or NULL
 EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
 {
+    EECPPlaceScope theScope(kPlceCenterFindResourceUnit, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I((long)inUnitType).State(this);
+    EEUnit* theScopeResult = [&]() -> EEUnit* {
     EEUnit* theResult = NULL;
     unsigned long i, n;
     for (i = 0, n = this->mUnits.size(); i < n && theResult == NULL; i++) {
@@ -593,11 +637,17 @@ EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
             theResult = theUnit;
     }
     return theResult;
+    }();
+    theScope.U(theScopeResult);
+    return theScopeResult;
 }
 
 // Returns whether any tile under a unit class's footprint at (inX, inY) has an area effect of the kind for the player
 bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, long inKind)
 {
+    EECPPlaceScope theScope(kPlceCenterIsInAreaEffect, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).I(inUnitClass).I(inKind);
+    bool theScopeResult = [&]() -> bool {
     long thePlayerID = this->mPlayer->mPlayerID;
     bool theResult = false;
     if (inKind != 0) {
@@ -610,12 +660,18 @@ bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, lo
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Reads the resource unit ids and the main building's id (resolved by Restore) and, from version 0.141 on, the
 // active flag; returns the first read error
 long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
+    EECPPlaceScope theScope(kPlceCenterLoad, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I((long)inMajorVersion).I((long)inMinorVersion);
+    long theScopeResult = [&]() -> long {
     unsigned long theCount;
     unsigned long theID;
     unsigned long i;
@@ -637,6 +693,9 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).State(this).I(inMinorVersion >= 0x8d && theScopeResult == kErrorOK ? (this->mIsActive ? 1 : 0) : 2);
+    return theScopeResult;
 }
 
 // NEAR: the original reads the elements as *(begin() + i) through the out-of-line Ptrit operator+ and pushes the
@@ -645,6 +704,9 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
 // returns 3 if the main building no longer exists
 long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
+    EECPPlaceScope theScope(kPlceCenterRestore, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I((long)inMajorVersion).I((long)inMinorVersion).State(this);
+    long theScopeResult = [&]() -> long {
     std::vector<long> theIDs;
     long theResult = 0;
     unsigned long i;
@@ -667,11 +729,17 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
     } else
         this->mUnit = NULL;
     return theResult;
+    }();
+    theScope.I(theScopeResult).State(this);
+    return theScopeResult;
 }
 
 // Returns whether a unit's tile is within the player's drop-off distance of the center
 bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterIsWithinRadius, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.U(inUnit).State(this);
+    bool theScopeResult = [&]() -> bool {
     EETileDistanceLess theCenter(0, 0);
     long theRadius = this->mPlayer->mDropOffDistance;
     this->GetCenter(theCenter.mCenter);
@@ -679,12 +747,18 @@ bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
     theTile.mX = inUnit->GetTileX();
     theTile.mY = inUnit->GetTileY();
     return theCenter.DistanceSquared(theTile) < theRadius * theRadius;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Writes the ids of the valid resource units, the main building's id (-1 for none) and the active flag; returns
 // the first write error
 long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
+    EECPPlaceScope theScope(kPlceCenterSave, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I((long)inMajorVersion).I((long)inMinorVersion).State(this);
+    long theScopeResult = [&]() -> long {
     unsigned long i;
     unsigned long theCount;
     for (i = 0, theCount = 0; i < this->mUnits.size(); i++) {
@@ -710,34 +784,52 @@ long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMino
             theResult = outFile.Write(this->mIsActive);
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Sets the center's main building, moving the reference from the old one
 void EECPResourceCenter::SetUnit(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterSetUnit, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.CU(inUnit);
+    [&]() {
     if (this->mUnit != NULL)
         this->mUnit->Dereference();
     this->mUnit = inUnit;
     if (inUnit != NULL)
         inUnit->Reference();
+    }();
+    theScope.State(this);
 }
 
 // Releases and clears the main building if it is the given unit
 void EECPResourceCenter::ReleaseUnit(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceCenterReleaseUnit, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.CU(inUnit);
+    [&]() {
     if (this->mUnit == inUnit) {
         this->mUnit->Dereference();
         this->mUnit = NULL;
     }
+    }();
+    theScope.State(this);
 }
 
 // Sets whether the center is active; activating it also computes its center (the result is discarded)
 void EECPResourceCenter::SetActive(bool inFlag, long inArg2)
 {
+    EECPPlaceScope theScope(kPlceCenterSetActive, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inFlag).I(inArg2);
+    [&]() {
     EETileCoordinate theCenter;
     theCenter.mX = 0;
     theCenter.mY = 0;
     this->mIsActive = inFlag;
     if (inFlag)
         this->GetCenter(theCenter);
+    }();
+    theScope.State(this);
 }

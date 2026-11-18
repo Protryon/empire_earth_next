@@ -58,6 +58,7 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EEUnitRegions.h"
+#include "ee/EECPPlaceCapture.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPPlacement::sData("EECPPlacement-Data");
@@ -111,17 +112,26 @@ EECPPlacement::~EECPPlacement()
 // Tells whether the player has a unit of the given type within the squared distance of a tile
 bool EECPPlacement::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
 {
+    EECPPlaceScope theScope(kPlceHasUnitNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitType).I(inX).I(inY).F(inDistance);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     EEGetPlayerUnitsOfType(inUnitType, this->mPlayer->mPlayerID, theUnits);
     EECPUnitWithinDistance thePredicate(inX, inY, inDistance);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether one of the player's anti-air buildings covers a tile (within its range)
 // NEAR (69): the two mF9C reads and the product order; temporary vs named predicate
 bool EECPPlacement::HasAntiAirNear(long inX, long inY)
 {
+    EECPPlaceScope theScope(kPlceHasAntiAirNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     long theType = EECPAntiAirClass(this->mPlayer);
     float theFirst = this->mPlayer->mUnitClassUpgrades[theType]->mRange;
@@ -130,6 +140,9 @@ bool EECPPlacement::HasAntiAirNear(long inX, long inY)
     EECPUnitWithinDistance thePredicate(inX, inY, theSecond * theFirst);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether one of the player's settlements, town centres or capitols is within the distance of a tile
@@ -137,6 +150,9 @@ bool EECPPlacement::HasAntiAirNear(long inX, long inY)
 // ctor probes in build/a: body assignment, const-reference x/y: no change)
 bool EECPPlacement::HasTownCenterNear(long inX, long inY, float inDistance)
 {
+    EECPPlaceScope theScope(kPlceHasTownCenterNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).F(inDistance);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> the2B;
     std::vector<EEUnit*> the23;
     std::vector<EEUnit*> the29;
@@ -152,39 +168,60 @@ bool EECPPlacement::HasTownCenterNear(long inX, long inY, float inDistance)
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(),
         EECPUnitWithinDistance(inX, inY, inDistance * inDistance));
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether one of the player's gates is within the radius of a tile
 bool EECPPlacement::HasGateNear(long inX, long inY, float inRadius)
 {
+    EECPPlaceScope theScope(kPlceHasGateNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).F(inRadius);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     float theDistance = inRadius * inRadius;
     EEGetPlayerUnitsOfType(EECPGateClass(this->mPlayer), this->mPlayer->GetPlayerID(), theUnits);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(),
         EECPUnitWithinDistance(inX, inY, theDistance));
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether one of the player's towers is within a tile's squared distance (inRadius is used as squared)
 bool EECPPlacement::HasTowerNear(long inX, long inY, float inRadius)
 {
+    EECPPlaceScope theScope(kPlceHasTowerNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).F(inRadius);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     long theType = EECPTowerClass(this->mPlayer);
     EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theUnits);
     EECPUnitWithinDistance thePredicate(inX, inY, inRadius);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether one of the player's walls is within a tile's squared distance (inRadius is used as squared)
 bool EECPPlacement::HasWallNear(long inX, long inY, float inRadius)
 {
+    EECPPlaceScope theScope(kPlceHasWallNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).F(inRadius);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     long theType = EECPWallClass(this->mPlayer);
     EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theUnits);
     EECPUnitWithinDistance thePredicate(inX, inY, inRadius);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
     return theIt != theUnits.end();
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 
@@ -195,6 +232,9 @@ bool EECPPlacement::HasWallNear(long inX, long inY, float inRadius)
 // next to the town centre's continent, nearest the town first; then marks the site tiles collected
 void EECPPlacement::CollectSiteTiles(char inKind)
 {
+    EECPPlaceScope theScope(kPlceCollectSiteTiles, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inKind);
+    [&]() {
     std::vector<U2DPoint<long> > theRegion;
     std::vector<U2DPoint<long> > theRing;
     U2DPoint<long> theCenter;
@@ -228,22 +268,32 @@ void EECPPlacement::CollectSiteTiles(char inKind)
         std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(theCenter));
     }
     this->mSiteTilesCollected = true;
+    }();
+    theScope.State(this);
 }
 
 // Tells whether armed enemy units stand near a tile (influence regions around it, one tile on small island
 // or planet maps), ignoring idle searchers (timer above 60 s)
 bool EECPPlacement::HasEnemyNear(long inX, long inY)
 {
+    EECPPlaceScope theScope(kPlceHasEnemyNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY);
+    bool theScopeResult = [&]() -> bool {
     // a real threat that the player sees or remembers (EECPNextSiteThreat: enemy soldiers seen within kNextThreatRange
     // tiles lately, an enemy tower or armed building in range; docs/AI_RESEARCH.md §8.34). The original counted every
     // armed unit not its own in a box of influence regions, whether the player saw them or not (deleted in stage 5).
     return EECPNextSiteThreat(this->mPlayer, inX, inY, false, NULL) != 0;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Finds an airport site with room for 4 (else 3) runway pieces facing away from the town centre, rings 5..99
 // around it, reachable and with no enemies near
 bool EECPPlacement::FindAirportSite(EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindAirportSite, this->mPlayer);   // PLCE (TEST ONLY)
+    bool theScopeResult = [&]() -> bool {
     std::vector<U2DPoint<long> > theTiles;
     bool theResult = false;
     U2DPoint<long>& theTownTile = this->mTownCenterTile;
@@ -295,19 +345,31 @@ bool EECPPlacement::FindAirportSite(EETileCoordinate& outTile)
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 // Finds an anti-air site around a building (FindAntiAirSiteAround its tile and size)
 bool EECPPlacement::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindAntiAirSiteNear, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.U(inUnit);
+    bool theScopeResult = [&]() -> bool {
     long theSize = inUnit->mUnitClass->mTileSize;
     EETileCoordinate theTile = inUnit->GetTile();
     return this->FindAntiAirSiteAround(theTile, theSize, outTile);
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // Finds an anti-air site in square rings growing out from a tile up to the anti-air range, on the tile's
 // continent
 bool EECPPlacement::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindAntiAirSiteAround, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inTile.mX).I(inTile.mY).I(inSize);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EETileCoordinate> theTiles;
     std::vector<EETileCoordinate> theUnused;
     unsigned short theContinent = gContinentManager.GetContinent(inTile, kAIPathLandMass);
@@ -334,6 +396,9 @@ bool EECPPlacement::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize,
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // FindAntiAirSite's building clusters: a box around a building and the number of buildings in it (20-byte elements; the
@@ -359,6 +424,8 @@ struct EECPBMClusterGreater {
 // the player's buildings
 bool EECPPlacement::FindAntiAirSite(EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindAntiAirSite, this->mPlayer);   // PLCE (TEST ONLY)
+    bool theScopeResult = [&]() -> bool {
     std::vector<EECPBMCluster> theClusters;
     EEAIAStarBounds theBounds;
     std::vector<EEUnit*> theUnits;
@@ -420,6 +487,9 @@ bool EECPPlacement::FindAntiAirSite(EETileCoordinate& outTile)
             theResult = this->FindAntiAirSiteAround(theTile, 1, outTile);
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // FindCenterSite's sort of the resource centres (8 bytes by value to std::sort 0x6c120; its operator() sits among the sort
@@ -491,6 +561,9 @@ struct EECPBMCenterLess {
 // at a claimed one, preferring centres whose units stand in fewer matching area effects
 bool EECPPlacement::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindCenterSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EECPResourceCenter*> theCenters;
     EETileCoordinate theTile;
     theTile.mX = 0;
@@ -553,11 +626,16 @@ bool EECPPlacement::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0).Centers(this->mPlayer);
+    return theScopeResult;
 }
 
 // Finds a granary site just beyond a resource centre's drop-off distance with room for farms around it
 bool EECPPlacement::FindGranarySite(EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindGranarySite, this->mPlayer);   // PLCE (TEST ONLY)
+    bool theScopeResult = [&]() -> bool {
     std::vector<EETileCoordinate> theTiles;
     bool theResult = false;
     EETileCoordinate theCenter;
@@ -608,12 +686,18 @@ bool EECPPlacement::FindGranarySite(EETileCoordinate& outTile)
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // Finds a site for a production building at the active resource centres, round robin from the last used one
 // Common found result and loop exit preserve the original 117-byte body.
 bool EECPPlacement::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindProductionSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass);
+    bool theScopeResult = [&]() -> bool {
     // port: the active resource centres nearest the town centre first (the original went round robin through all
     // of them: barracks and archery ranges stood 30+ tiles out at an undefended mine, playtest 2026-11-06)
     std::vector<EECPResourceCenter*> theCenters;
@@ -627,12 +711,18 @@ bool EECPPlacement::FindProductionSite(long inUnitClass, EETileCoordinate& outTi
         if (theCenters[i]->FindBuildSite(inUnitClass, outTile))
             return true;
     return false;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0).Centers(this->mPlayer);
+    return theScopeResult;
 }
 
 // Finds a dock or navy yard site among the water site tiles away from existing ones; sites without a
 // builder are skipped
 bool EECPPlacement::FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindShoreSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass).I(inSize);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> the24;
     std::vector<EEUnit*> the41;
     std::vector<EEUnit*> theUnits;
@@ -659,6 +749,9 @@ bool EECPPlacement::FindShoreSite(long inUnitClass, long inSize, EETileCoordinat
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // Finds a space dock, turret or station site among space tiles away from units of its class; sites
@@ -668,6 +761,9 @@ bool EECPPlacement::FindShoreSite(long inUnitClass, long inSize, EETileCoordinat
 // (its tile moved by -1, -1)
 bool EECPPlacement::FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindSpaceSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass).I(inSize);
+    bool theScopeResult = [&]() -> bool {
     bool theResult = false;
     std::vector<U2DPoint<long> >& theWater = this->mSpaceSites;
     if (theWater.size() == 0)
@@ -744,12 +840,18 @@ bool EECPPlacement::FindSpaceSite(long inUnitClass, long inSize, EETileCoordinat
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // Finds a tower site: along town continent shores on island maps, then at a resource centre, then near an
 // open gate, then at a choke point near a town not yet guarded by that class
 bool EECPPlacement::FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindTowerSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass).I(inSize);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theGates;
     std::vector<EEAIChokePoint*> theChokePoints;
     std::vector<EEComplexUnit*> theUnits;
@@ -921,6 +1023,9 @@ bool EECPPlacement::FindTowerSite(long inUnitClass, long inSize, EETileCoordinat
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0).Centers(this->mPlayer);
+    return theScopeResult;
 }
 
 // Finds a wonder site with a margin of inSize in rings around the town centre (only once a wall gate exists)
@@ -928,6 +1033,9 @@ bool EECPPlacement::FindTowerSite(long inUnitClass, long inSize, EETileCoordinat
 // but the equivalence check calls it DIFF (the mX read through the out-of-line operator+ return)
 bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile)
 {
+    EECPPlaceScope theScope(kPlceFindWonderSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass).I((long)inSize);
+    bool theScopeResult = [&]() -> bool {
     EEUnitClass* theClass = gUnitClassTable[inUnitClass];
     std::vector<EETileCoordinate> theTiles;
     bool theResult = false;
@@ -954,6 +1062,9 @@ bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETil
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? outTile.mX : 0).I(theScopeResult ? outTile.mY : 0);
+    return theScopeResult;
 }
 
 // Finds a building site for a class by its kind (wonder, granary, dock, centre, airport, tower, production,
@@ -962,6 +1073,9 @@ bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETil
 // (EECPCivilizationManager.cpp), this definition a tile reference
 bool EECPPlacement::FindSite(long inUnitClass, EETileCoordinate& theTile)
 {
+    EECPPlaceScope theScope(kPlceFindSite, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass);
+    bool theScopeResult = [&]() -> bool {
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->GetTechnology() : 100000;
     EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(theID);
     EEUnitClass* theClass = gUnitClassTable[inUnitClass];
@@ -1032,12 +1146,18 @@ bool EECPPlacement::FindSite(long inUnitClass, EETileCoordinate& theTile)
         return theResult;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult).I(theScopeResult ? theTile.mX : 0).I(theScopeResult ? theTile.mY : 0).Centers(this->mPlayer);
+    return theScopeResult;
 }
 
 
 // Tells whether a square of inSize at a tile lies within the distance of the far end of an airport runway
 bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
 {
+    EECPPlaceScope theScope(kPlceIsNearAirportEnd, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inX).I(inY).I(inSize).F(inDistance);
+    bool theScopeResult = [&]() -> bool {
     std::vector<EEUnit*> theUnits;
     U2DPoint<long> theCenter(inX + inSize / 2, inSize / 2 + inY);
     U2DPoint<long> theGate;
@@ -1078,6 +1198,9 @@ bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDi
             theResult = true;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 
@@ -1087,7 +1210,12 @@ bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDi
 // SetXY: VC6 evaluates the arguments right to left (mTileY first)
 void EECPPlacement::SetTownCenter(EEUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceSetTownCenter, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.U(inUnit);
+    [&]() {
     this->mTownCenterTile.SetXY(inUnit->mTileX, inUnit->mTileY);
+    }();
+    theScope.State(this);
 }
 // (static: only CanBuildAt calls it; emitted before it) (provisional name)
 // Tells whether a unit class cannot stand on a tile (off the map or wrong terrain)
@@ -1114,6 +1242,9 @@ struct EECPBMOnContinent {
 bool EECPPlacement::CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize,
     bool inMargin, bool inStrict, long inX, long inY)
 {
+    EECPPlaceScope theScope(kPlceCanBuildAt, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inContinent).I(inUnitClass).I(inTile.mX).I(inTile.mY).I(inSize).I(inMargin).I(inStrict).I(inX).I(inY);
+    bool theScopeResult = [&]() -> bool {
     std::vector<U2DPoint<long> > theTiles;
     U2DPoint<long> theCorner;
     unsigned long theCount = 0;
@@ -1236,13 +1367,22 @@ bool EECPPlacement::CanBuildAt(unsigned short inContinent, long inUnitClass, EET
         }
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // Tells whether a class is built on a shore or space site (dock, navy yard, space dock and two space classes)
 bool EECPIsSiteClass(long inUnitClass)
 {
+    EECPPlaceScope theScope(kPlceIsSiteClass, NULL);   // PLCE (TEST ONLY)
+    theScope.I(inUnitClass);
+    bool theScopeResult = [&]() -> bool {
     return inUnitClass == 0x24 || inUnitClass == 0x41 || inUnitClass == 0x2d8 || inUnitClass == 0x302
         || inUnitClass == 0x31f;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // (EECPResourceManager.cpp's range: 0x4921f7)
@@ -1257,6 +1397,9 @@ bool EECPUnitWithinDistance::operator()(EEUnit* inUnit) const
 // every citizen, whoever holds it (the Lua verbs pick the builder)
 bool EECPPlacement::HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass)
 {
+    EECPPlaceScope theScope(kPlceHasBuilderFor, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inTile.mX).I(inTile.mY).I(inUnitClass);
+    bool theScopeResult = [&]() -> bool {
     EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(inTile);
     bool theEdge = gWorld.mMap != NULL && gWorld.mMap->IsEdgeTile(inTile.mX, inTile.mY);
     for (EEUnit* theUnit = this->mPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -1279,37 +1422,63 @@ bool EECPPlacement::HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass
         }
     }
     return false;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // the site tiles collected again after a load
 long EECPPlacement::Restore()
 {
+    EECPPlaceScope theScope(kPlceRestore, this->mPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     this->mWaterSites.clear();
     this->CollectSiteTiles(2);
     this->mSpaceSites.clear();
     this->CollectSiteTiles(4);
     return 0;
+    }();
+    theScope.I(theScopeResult).State(this);
+    return theScopeResult;
 }
 
 // the town centre tile: the first own unit tracked with no tile yet (the unit manager's UnitAdded rule), saved
 long EECPPlacement::Load(FSFile& inFile)
 {
+    EECPPlaceScope theScope(kPlceLoad, this->mPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     return this->mTownCenterTile.Load(inFile);
+    }();
+    theScope.I(theScopeResult).State(this);
+    return theScopeResult;
 }
 
 long EECPPlacement::Save(FSFile& outFile)
 {
+    EECPPlaceScope theScope(kPlceSave, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.State(this);
+    long theScopeResult = [&]() -> long {
     return this->mTownCenterTile.Save(outFile);
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 void EECPPlacement::Reset()
 {
+    EECPPlaceScope theScope(kPlceReset, this->mPlayer);   // PLCE (TEST ONLY)
+    [&]() {
     this->mTownCenterTile = U2DPoint<long>(-10000, -10000);
     this->mTypesSeen.clear();
+    }();
+    theScope.State(this);
 }
 
 void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
 {
+    EECPPlaceScope theScope(kPlceUnitAdded, this->mPlayer);   // PLCE (TEST ONLY)
+    theScope.CU(inUnit);
+    [&]() {
     if (inUnit == NULL || inUnit->mUnitClass == NULL || !(inUnit->mHitPoints > 0))
         return;
     long theCategory = inUnit->mUnitClass->mCategory;
@@ -1321,15 +1490,23 @@ void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
         return;
     if (this->mTownCenterTile.mX == -10000 && this->mTownCenterTile.mY == -10000 && !inUnit->mUnitClass->IsLandBuilding())
         this->SetTownCenter(inUnit);
+    }();
+    theScope.State(this);
 }
 
 long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
 {
+    EECPPlaceScope theScope(kPlceCountOwn, inPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inType);
+    long theScopeResult = [&]() -> long {
     long theCount = 0;
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
         if (theUnit->mUnitClass->mUnitType == inType && theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
             theCount++;
     return theCount;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1337,6 +1514,8 @@ long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
 
 long EECPAntiAirClass(EEComputerPlayer* inPlayer)
 {
+    EECPPlaceScope theScope(kPlceAntiAirClass, inPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     long theResult = 0;
     long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
     if (theEpoch >= kTechEpochAtomicWW1) {
@@ -1350,10 +1529,15 @@ long EECPAntiAirClass(EEComputerPlayer* inPlayer)
             theResult = 0x91;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 long EECPFishingBoatClass(EEComputerPlayer* inPlayer)
 {
+    EECPPlaceScope theScope(kPlceFishingBoatClass, inPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     long theResult = 0;
     long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
     if (theEpoch >= kTechEpochPrehistoric) {
@@ -1367,10 +1551,15 @@ long EECPFishingBoatClass(EEComputerPlayer* inPlayer)
             theResult = 0x6c;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 long EECPGateClass(EEComputerPlayer* inPlayer)
 {
+    EECPPlaceScope theScope(kPlceGateClass, inPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     long theResult = 0;
     switch (inPlayer->mTechnologies->mCurrentEpoch) {
     case kTechEpochPrehistoric:
@@ -1406,10 +1595,15 @@ long EECPGateClass(EEComputerPlayer* inPlayer)
         break;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 long EECPTowerClass(EEComputerPlayer* inPlayer)
 {
+    EECPPlaceScope theScope(kPlceTowerClass, inPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     long theResult = 0;
     switch (inPlayer->mTechnologies->mCurrentEpoch) {
     case kTechEpochPrehistoric:
@@ -1445,10 +1639,15 @@ long EECPTowerClass(EEComputerPlayer* inPlayer)
         break;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 long EECPWallClass(EEComputerPlayer* inPlayer)
 {
+    EECPPlaceScope theScope(kPlceWallClass, inPlayer);   // PLCE (TEST ONLY)
+    long theScopeResult = [&]() -> long {
     long theResult = 0;
     switch (inPlayer->mTechnologies->mCurrentEpoch) {
     case kTechEpochCopper:
@@ -1480,6 +1679,9 @@ long EECPWallClass(EEComputerPlayer* inPlayer)
         break;
     }
     return theResult;
+    }();
+    theScope.I(theScopeResult);
+    return theScopeResult;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1699,6 +1901,12 @@ static bool EECPNextDockFishSite(EEComputerPlayer* inPlayer, EETileCoordinate& o
 bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
     long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap)
 {
+    EECPPlaceScope theScope(kPlceNextPlaceSearch, inPlayer);   // PLCE (TEST ONLY)
+    theScope.I(inType).I(inMode).I(inX).I(inY).I(inFirst).I(inLast).I((long)inUnits.size());
+    for (size_t theScopeK = 0; theScopeK < inUnits.size(); theScopeK++)
+        theScope.I(inUnits[theScopeK]);
+    theScope.I(inSite);
+    bool theScopeResult = [&]() -> bool {
     outX = outY = -1;
     outGap = -1;
     if (inType < 0 || (unsigned long)inType >= EEUnitClassCount() || gUnitClassTable[inType] == NULL
@@ -1745,5 +1953,8 @@ bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, l
     outX = theTile.mX;
     outY = theTile.mY;
     return true;
+    }();
+    theScope.I(theScopeResult).I(outX).I(outY).I(outGap).Centers(inPlayer);
+    return theScopeResult;
 }
 

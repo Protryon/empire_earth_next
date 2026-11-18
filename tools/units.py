@@ -44,6 +44,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
                        "Empire Earth/AI Thread/EECPReflexes.cpp",
+                       # TEST ONLY: the placement and resource centres' capture (PLCE; ee/EECPPlaceCapture.h)
+                       "Empire Earth/AI Thread/EECPPlaceCapture.cpp",
                        "Empire Earth/AI Thread/EECPNextView.cpp",
                        # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
                        "Empire Earth/AI Thread/EECPNextArmy.cpp",
