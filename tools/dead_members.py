@@ -48,8 +48,11 @@ def headers_of(roots):
     for r in roots:
         base = ROOT / r
         for p in sorted(base.rglob("*.h")) if base.is_dir() else []:
-            if "ThirdParty" not in p.parts and not p.relative_to(ROOT).as_posix().startswith("include/rust/"):
-                yield p
+            if "ThirdParty" in p.parts or p.relative_to(ROOT).as_posix().startswith("include/rust/"):
+                continue
+            if "GENERATED" in read(p)[:400]:   # a generator's output (eedata rulesgen, cppgen): change the generator
+                continue
+            yield p
 
 
 def declarations(roots):
