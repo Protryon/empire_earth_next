@@ -12,6 +12,7 @@
 #include <string.h>
 #include <wchar.h>
 #include "ee/wonapi/WONConfigObject.h"
+#include "ee/wonapi/WONStringCompare.h"
 #include "rust/won_gui/guistring.h" // guistrobj.rs, guistring.rs
 #include "rust/won_gui/guistrobj.h"
 #include "rust/won_net/wonfile.h"
@@ -27,7 +28,6 @@ void FontConfig_Init(ResourceConfigTable*); // at 0x0078a080
 class Font; // owned font results in resource readers; GUI definition follows this header
 class Background;
 class StringParser;
-void StringToUpperCaseInPlace(std::string&); // utility, at 0x006a69a0
 
 class Sound;
 class Image;
@@ -293,10 +293,6 @@ typedef SmartPtr<ResourceConfigTable> ResourceConfigTablePtr; // SDK type
 
 // CriticalSection: ee/EEWonNet.h
 
-// 0x2a6590 (WONAPI string utilities, /GX): widens a string (inCodePage < 0: the default code page 0x2a6570)
-std::wstring StringToWString(const std::string& inString, int inCodePage);
-// 0x2a6410 (WONAPI string utilities, /GX): narrows a wide string
-std::string WStringToString(const std::wstring& inString, int inCodePage);
 
 // a file name split into its parts (0x70 bytes: EELobbyFileDialog 0x29136a has it at [ebp-0x80] below a string
 // temporary at [ebp-0x10]; six strings, then the file's details read on demand; class name and
@@ -357,12 +353,6 @@ private:
 // Server resources.
 
 extern unsigned long gLobbyAcceptTimeout; // DWORD, 20000 (provisional name)
-std::string StringToLowerCase(const std::string&); // at 0x006a66f0
-std::string StringToUpperCase(const std::string&);
-std::wstring WStringToLowerCase(const std::wstring&);
-void StringToLowerCaseInPlace(std::string&);
-void WStringToUpperCaseInPlace(std::wstring&);
-void WStringToLowerCaseInPlace(std::wstring&);
 
 // Popup texts (declarations only).
 

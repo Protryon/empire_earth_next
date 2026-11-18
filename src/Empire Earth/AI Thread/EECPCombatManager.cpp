@@ -27,6 +27,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECPCombatManager.h"
+#include "rust/sim/ai.h"   // ee_ai_military_*
 
 EECPCombatManager::EECPCombatManager(EEComputerPlayer* inPlayer) : mPlayer(inPlayer)
 {
@@ -61,108 +62,17 @@ bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
     return false;
 }
 
-// Returns true for a mobile military class (not a citizen, building, projectile or naval mine)
+// Returns true for a mobile military class (not a citizen, building, projectile or naval mine): Rust (ee_ai
+// military.rs)
 bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
 {
-    bool theResult = false;
-    if (inClass && inClass->mMaxVelocity > 0.0f && inClass->mCategory != kUnitCategoryLandCitizen && inClass->mCategory != kUnitCategoryNavalCitizen && !inClass->mIsProjectile) {
-        switch (inClass->mCategory) {
-        case kUnitCategoryAmbient:
-        case kUnitCategoryResource:
-        case kUnitCategoryBuilding:
-        case kUnitCategoryLandCitizen:
-        case kUnitCategoryProjectile:
-        case kUnitCategoryBomb:
-        case kUnitCategoryMissile:
-        case kUnitCategoryBuilding19:
-        case kUnitCategoryTorpedo:
-        case kUnitCategoryNavalCitizen:
-        case kUnitCategoryMiningBuilding:
-        case kUnitCategoryGate:
-        case kUnitCategoryFortress:
-        case kUnitCategoryBuildingPriest:
-            theResult = false;
-            break;
-        case kUnitCategoryAirplane:
-        case kUnitCategoryNaval:
-        case kUnitCategoryLand:
-        case kUnitCategoryHelicopter:
-        case kUnitCategoryLand8:
-        case kUnitCategorySubmergedNaval:
-        case kUnitCategoryLandPriest:
-        case kUnitCategoryNavalPriest:
-        case kUnitCategoryLand15:
-        case kUnitCategoryLandTransport:
-        case kUnitCategoryHelicopterTransport:
-        case kUnitCategoryNavalTransport:
-        case kUnitCategoryNavalBuilding:
-        case kUnitCategoryLandMilitaryHero:
-        case kUnitCategoryHelicopterPriest:
-        case kUnitCategorySeaAnimal:
-        case kUnitCategoryAirAnimal:
-        case kUnitCategorySpaceship:
-        case kUnitCategorySpaceBuilding:
-        case kUnitCategorySpaceTransport:
-        case kUnitCategoryPlanetSpaceship:
-            theResult = inClass->mUnitType != kUnitTypeS10NavalMine;
-            break;
-        }
-    }
-    return theResult;
+    return ee_ai_military_class((uint64_t)(uintptr_t)inClass);
 }
 
-// Returns true when the unit type's class is in a military category
+// Returns true when the unit type's class is in a military category (ee_ai military.rs)
 bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
 {
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    bool theResult = false;
-    if (theClass) {
-        switch (theClass->mCategory) {
-        case kUnitCategoryAirplane:
-        case kUnitCategoryNaval:
-        case kUnitCategoryLand:
-        case kUnitCategoryHelicopter:
-        case kUnitCategoryLand8:
-        case kUnitCategorySubmergedNaval:
-        case kUnitCategoryLandPriest:
-        case kUnitCategoryNavalPriest:
-        case kUnitCategoryLand15:
-        case kUnitCategoryLandTransport:
-        case kUnitCategoryHelicopterTransport:
-        case kUnitCategoryNavalTransport:
-        case kUnitCategoryNavalBuilding:
-        case kUnitCategoryLandMilitaryHero:
-        case kUnitCategoryHelicopterPriest:
-        case kUnitCategorySeaAnimal:
-        case kUnitCategoryAirAnimal:
-        case kUnitCategorySpaceship:
-        case kUnitCategorySpaceBuilding:
-        case kUnitCategorySpaceTransport:
-        case kUnitCategoryPlanetSpaceship:
-            theResult = true;
-            break;
-        case kUnitCategoryAmbient:
-        case kUnitCategoryResource:
-        case kUnitCategoryBuilding:
-        case kUnitCategoryLandCitizen:
-        case kUnitCategoryProjectile:
-        case kUnitCategoryBomb:
-        case kUnitCategoryMissile:
-        case kUnitCategoryBuilding19:
-        case kUnitCategoryTorpedo:
-        case kUnitCategoryNavalCitizen:
-        case kUnitCategoryMiningBuilding:
-        case kUnitCategoryGate:
-        case kUnitCategoryFortress:
-        case kUnitCategoryBuildingPriest:
-            theResult = false;
-            break;
-        default:
-            theResult = false;
-            break;
-        }
-    }
-    return theResult;
+    return ee_ai_military_type(inUnitType);
 }
 
 // Returns true when the unit's type is military

@@ -24,7 +24,7 @@
 #include "rust/won_lobby/persist.h"
 #include "rust/won_lobby/prefsobj.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-namespace WONAPI { std::wstring StringToWString(const std::string& inString); } // StringUtil.cpp
+#include "ee/wonapi/WONStringCompare.h" // StringToWString (StringUtil.cpp is deleted)
 
 using namespace WONAPI;
 

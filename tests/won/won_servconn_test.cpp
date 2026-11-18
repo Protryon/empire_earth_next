@@ -25,6 +25,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_routehelpers.h" // the request helpers WONRouting.h had
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatSocket.h"
@@ -513,16 +514,16 @@ static void Routing()
 
     // a request: its own completion, the server's status reply
     SmartPtr<RouteDone> aLeave = new RouteDone("leave");
-    r->LeaveGroup(7, aLeave);
+    RoutingRequests(r).LeaveGroup(7, aLeave);
     s.Expect("server got leave");
     PUSH(s, "status 0", 3, 7, 66, 0, 0);
     PumpRoute(aLeave, 1);
 
     // two waiting requests: the first one without a completion takes the default; a status reply for each in order
     SmartPtr<RouteDone> aCancel = new RouteDone("cancel join");
-    r->LeaveGroup(1, NULL);
+    RoutingRequests(r).LeaveGroup(1, NULL);
     s.Expect("server got leave 1");
-    r->CancelJoinGroup(2, false, aCancel);
+    RoutingRequests(r).CancelJoinGroup(2, false, aCancel);
     s.Expect("server got cancel");
     PUSH(s, "status -1", 3, 7, 66, 0xff, 0xff);
     PumpRoute(aDefault, 2);
@@ -531,10 +532,10 @@ static void Routing()
 
     // a notification while a request waits: the notification goes first; the request still waits
     SmartPtr<RouteDone> aList = new RouteDone("client list");
-    r->GetClientList(aList);
+    RoutingRequests(r).GetClientList(aList);
     s.Expect("server got client list");
     SmartPtr<RouteDone> aLeave3 = new RouteDone("leave 3");
-    r->LeaveGroup(3, aLeave3);
+    RoutingRequests(r).LeaveGroup(3, aLeave3);
     s.Expect("server got leave 3");
     PUSH(s, "client left server", 3, 7, 10, 6, 0);
     PumpRoute(aLeft, 2);
@@ -565,7 +566,7 @@ static void Routing()
     Log("route after kill left " + N(aLeft->mCount) + " default " + N(aDefault->mCount));
     // a request's own completion still works
     SmartPtr<RouteDone> aLeave4 = new RouteDone("leave 4");
-    r->LeaveGroup(4, aLeave4);
+    RoutingRequests(r).LeaveGroup(4, aLeave4);
     s.Expect("server got leave 4");
     PUSH(s, "status 0", 3, 7, 66, 0, 0);
     PumpRoute(aLeave4, 1);

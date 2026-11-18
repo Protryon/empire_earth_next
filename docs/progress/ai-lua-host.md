@@ -1,52 +1,78 @@
 # Lane A: the Lua AI host (EECPNextUnits, EECPNextLua, EECPNextView, ...) in Rust
 
-Lane state (one file per lane). Branch `rust-ai-lua1`, from `origin/rust` 0bfe280ce. The lane moves the AI Thread's
-Lua host (about 10k lines: EECPNextUnits.cpp, EECPNextLua.cpp, EECPNextView.cpp, EECPNextArmy.cpp, EECPNext.cpp,
-EECPLua.cpp, EECPEngine*.cpp, EECPReflexes.cpp, EECPTrace.cpp, EECPCombatManager.cpp) into `ee_sim::ai`. The Lua
-scripts (data/ai) do not change, and must see the same values in the same order.
+Lane state (one file per lane). Round 2: branch `rust-ai-lua2`, from `origin/rust` cb6e60d50 (round 1 merged). The
+lane moves the AI Thread's Lua host (EECPNextUnits.cpp, EECPNextLua.cpp, EECPNextView.cpp, EECPNextArmy.cpp,
+EECPNext.cpp, EECPLua.cpp, EECPEngine*.cpp, EECPReflexes.cpp, EECPTrace.cpp, EECPCombatManager.cpp) into
+`ee_sim::ai`. The Lua scripts (data/ai) do not change, and must see the same values in the same order. The Lua C
+library stays (src/ThirdParty/lua; the mlua switch waits on the owner, PORT_LEARNINGS "Lane A, round 1").
 
 ## The golden
 
 - `EE_AI_BINDING_TRACE` (TEST ONLY, `ee_sim::ai::binding_trace`): every `ai.*` binding call writes the FNV-1a 64 of
-  its arguments' and its results' text (`EE-AIB > name a=...`, `EE-AIB < name n=.. r=...`; `full` adds the text),
-  every strategy step the hash of its view and its orders (`EE-AIB step`/`init`). The text is read with raw
-  `lua_next`, `lua_tointegerx`/`lua_tonumberx` and `lua_tolstring` on strings only: no metamethod, conversion or
-  allocation in the state. Off, the registration is the same closures in the same order.
-- `tools/ai_binding_golden.py run NAME` plays 15 seeded EE-SIM games (classic_lua seeds 2-3, ageofai 2-3, boom,
-  ageofai+classic_lua late and space starts, a Large Islands map, the tests/ai_units scripts helpers, commands,
-  types, raid, airwing, kite, cover) with the trace on and keeps the EE-AIB and EE-AI lines gzipped
-  (build/ai_golden/NAME); `compare BASE NAME` names the first differing line per game. About 6 minutes, `--jobs 2`.
-- `build/ai_golden/base` was recorded on the unmodified C++ (8c4258aa7, the trace only), twice, equal; the traced
-  oracle seeds 2-3 equal `ref` (the trace changes nothing). 90 bindings; the games call 77, `tests/ai_units/cover.lua`
-  the rest.
-- Mutation: `sight` read from the range (push_record) is caught at the 59th line of classic-2 (the first `ai.unit`).
+  its arguments' and its results' text, every strategy step the hash of its view and its orders (round 1).
+- `tools/ai_binding_golden.py run NAME` plays 15 seeded EE-SIM games with the trace on (build/ai_golden/NAME);
+  `compare BASE NAME` names the first differing line per game. About 6 minutes, `--jobs 2`.
+- Round 2's base is `build/ai_golden/c0`, recorded on cb6e60d50 (the round's start) twice, equal; it also equals
+  round 1's `base` (8c4258aa7): the merges between changed no binding's answers. Main merge 4 (classic_lua changes)
+  had not reached origin/rust by the end of the round: re-record on it (two equal runs) after that merge.
 
 ## What is where
 
-- `rust/crates/ee_sim/src/ai/units_state.rs`: `UnitsState` (`EECPUnitsState`'s body): held set, events, swap
-  forwarding, enemy memory, reflexes, per-step limits, the threat/lost/influence layers, the route's A*, the EENU
-  block. Unit tests.
-- `rust/crates/ee_sim/src/ai/units_bind.rs` (game only): the state's C ABI, the hooks (damage, dealt, created,
-  built, idle, attack/defend player, flare, taken, swap), the memory and layers' rebuild every game second, and the
-  bindings: me, time, players, map, units, unit, get, seen, memory, resources, tile, events, reach, strength, take,
-  release, reflex, danger, danger_box, mark, route, path_len, config, gatherers; the commands move, attack,
-  attack_ground, gather, build, repair, garrison, load, unload, train, research, stance, stop, explore, delete, heal,
-  rally, cancel, formation, pack, dropoff, replant, farm, cast, wall, patrol, lock; the searches drop_site,
-  enemy_force, player_file, test_town, find_site, shore. They read the world through
-  `ee_sim::world`'s views; `ee_ai_units_host` (EECPNextUnits.cpp) answers the rest (`EE_AI_UNITS_HOST_*`: the unit
-  lookup, a goal's facts, the continents, the names, the trace, the selection and a message's run, the tech tree's
-  few tests).
-- C++ left in EECPNextUnits.cpp: the host, `EECPUnitsState` as a shell (the Rust state's pointer, the scratch of
-  the C++ bindings, the wall routes' path requests), the micro step's loop (it calls `EECPLuaState`), and the
-  bindings over the continent manager's areas, the path manager, the tech tree and the classic tuning: wonders,
-  class, can_hurt, can_place, test_spawn, water_sites, enemy_near, garrison_fill, area, forest_point, hill_point, wall_path/route/route_result/line/
-  stretches, choke_point, area_point, unexplored, used, improve, improve_cost, gate, tribute, trade, diplomacy,
-  tuning, techs, place, site_blocked, build_unsafe, epoch.
+- `rust/crates/ee_sim/src/ai/units_state.rs`: `UnitsState` (round 1), plus the continent and wall bindings' scratch
+  (`tiles`, `sites`).
+- `rust/crates/ee_sim/src/ai/units_bind.rs` (game only): the state's C ABI, the hooks, round 1's 57 bindings.
+- `rust/crates/ee_sim/src/ai/units_more.rs` (game only; a child module of units_bind): the other 32 bindings:
+  class, can_hurt, wonders, techs, epoch, improve_cost, tuning; improve, gate, tribute, trade, diplomacy,
+  garrison_fill, test_spawn; can_place, enemy_near, site_blocked, build_unsafe, place, used; area, area_point,
+  forest_point, hill_point, choke_point, water_sites, unexplored, wall_line, wall_stretches, wall_path, wall_route,
+  wall_route_result. Every binding of the `ai` table is Rust now; the C++ registration table names them.
+- The host (`ee_ai_units_host`, EECPNextUnits.cpp) answers what the views do not hold, ops 1-44 (round 1) and:
+  - 50-78: class methods with bodies (FliesOver, GetPopulationCost), the damage table, a player's team and
+    wonders, the tech node methods with bodies (GetCost with ScaleCost, GetIsAvailable, GetIsObsolete: the walks
+    and the capture's records), tech names, CanProduce, the citizen-upgrade event test, the improvement cost
+    (EECPUnitsImproveCost), CanBuy, the gate class and side, the tribute's moves, the stance, the garrison fill,
+    the view's safety tests (EECPNextSiteBlocked, BuildUnsafe, SiteThreat), the classic's enemy test through the
+    fog, the place search, the tuning's non-record values (`EeAiUnitsTuning`: options, map, continents, cheats,
+    personality and experiments, the behaviour table);
+  - 80-93 (`EECPUnitsWallsHost`): **the only reads of the continent manager's objects** (areas at a tile or by id,
+    their facts and random points, forest/hill/choke picks, the shore, a forest at a tile) and the wall utilities
+    and path manager requests (EEGetWallLine, IsPathBlocked, EEAreTilesLevel, FindPath, RequestPath and the routes
+    the C++ shell keeps). Lane C re-points these ops when the continents move.
+  - The command messages gained ImproveUnit, HackANewUnit, BuildGate, ExchangeResources and two run modes (2: the
+    borrowed slot unchecked, 3: checked; neither clears the selection).
+- `rust/crates/ee_sim/src/world/tech_view.rs`: `TechTreeView` (`PlayerView::tech_tree`, `current_epoch`, `epochs`,
+  `epoch(i)`, `node(id)`, `epoch_node_ids`) and `NodeView` (`fields`, `data`, `id`, `researched`, `epoch`,
+  `obsolete_epoch`, `required_sol`, `current_sol`, `unit_classes_len`, `unit_class(i)`), and
+  `PlayerView::computer_fields` (`EeCpFields`). Layout fields `player_technologies`, `tech_tree_fields`,
+  `node_fields`, `node_data`, `node_data_fields`, `node_data_unit_classes`, `tech_host` (the address of
+  `EETechHost`, whose lookups the tree view makes), `cp_fields`.
+- `rust/crates/ee_sim/src/ai/military.rs`: EECPCombatManager's class tests (IsMilitaryClass, IsMilitaryType).
+- `rust/crates/ee_sim/src/ai/switches.rs`: the TEST ONLY switches EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS,
+  EE_AI_EXP (EECPTraceInit's parse, the per-player picks, the cheat names).
+- C++ left in EECPNextUnits.cpp (1,145 lines, was 2,504): the hooks into the Rust state, the registration table and
+  its TEST ONLY traced wrappers, the micro step's loop, the save, and the host.
 
 ## Not done (next)
 
-- The bindings above (unexplored and area need only views and the continent ops; techs, epoch, class and wonders
-  a tech-node record op; tuning a table of the computer player's behaviour values).
-- EECPNextLua.cpp (the view's Lua table, the orders' run), EECPNextView.cpp, EECPNextArmy.cpp, EECPTrace.cpp,
-  EECPReflexes.cpp, EECPEngine*.cpp, EECPCombatManager.cpp, EECPNext.cpp, EECPLua.cpp: untouched this round.
-- mlua (the owner's request of this round): not switched, see PORT_LEARNINGS "Lane A, round 1".
+- EECPNextUnits.cpp's registration, micro loop and save could follow into Rust (the host stays C++ while the
+  objects it calls are).
+- EECPNextLua.cpp (the view's Lua table, the orders' run), EECPNextView.cpp, EECPNextArmy.cpp, EECPReflexes.cpp,
+  EECPEngine*.cpp, EECPNext.cpp, EECPLua.cpp, the rest of EECPTrace.cpp (the trace lines, the stats, the out of
+  synch dump): untouched. They hold `EECPNextState`'s C++ members (vectors of spots, threats, events; the Lua state
+  handle) and write the EE-AI lines the oracle compares: the next move is EECPNextState as a Rust record with the
+  army scan and the view's threat memory over the world views.
+
+## Results (round 2, 2026-11-17)
+
+Commits: c590229af (the 32 bindings, the tech views: C++ -1,349), 015e458be (the military tests: -90), 54f081277 (the
+switches: -89), the tiles fix (no list computed twice: +12), the docs. C++ -1,516 net.
+
+- Binding golden (base c0) identical in all 15 games after each commit; mutation (ai.techs' obsolete_epoch + 1)
+  caught at classic-2 line 24 (its first ai.techs).
+- The switches: a game with EE_AI_EXP, EE_AI_CHEATS, EE_AI_PERSONALITY and EE_AI_DEMAND set gives the old EE-SIM's
+  EE-AI lines (all but the wall-clock EE-AIPROF lines).
+- Final tree: oracle seeds 2-7 identical; captures oracle (204 digests), late (206), space (202), calamity (214),
+  seeds 2-3, PASS (the oracle capture caught the shore computed twice before the fix: CNTN records); saveload 18/18;
+  the matrix `--expect` PASS; both builds 0/0; the Rust gate PASS.
+- Not run by this lane: gates.sh (the lead's harness sessions). Only a tour exercises nothing here: every change is
+  simulation code the oracle, the captures and the golden reach.

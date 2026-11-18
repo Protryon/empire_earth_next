@@ -122,6 +122,12 @@ static string CString(const ByteBuffer* b)
     return string(d, n);
 }
 
+// StringUtil.cpp's StringToLowerCase (deleted in WONLobby round 14): strcase.rs's ASCII map
+static std::string StringToLowerCase(std::string s)
+{
+    if (!s.empty()) ee_won_case_bytes(reinterpret_cast<uint8_t*>(&s[0]), s.length(), false);
+    return s;
+}
 struct Op {
     typedef int (*VersionCompare)(const string& s1, const string& s2);
     bool mFind;

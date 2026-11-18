@@ -20,6 +20,7 @@ use std::ffi::c_void;
 
 use crate::resource::EeWonLobbyRes as Res;
 use crate::routing;
+use ee_won_net::routecpp::Value;
 use ee_won_net::routeop::{
     EE_WON_RTF_BY_WON_ID, EE_WON_RTF_CAPTAIN_ID, EE_WON_RTF_CLIENT_FLAGS, EE_WON_RTF_CLIENT_ID, EE_WON_RTF_FLAGS16,
     EE_WON_RTF_FLAGS8, EE_WON_RTF_GROUP_FLAGS, EE_WON_RTF_GROUP_ID, EE_WON_RTF_IS_CDKEY, EE_WON_RTF_JOIN_FLAGS,
@@ -43,6 +44,9 @@ pub enum EeWonRouteLogicOp {
     TextLength,
     /// a list `a` the host made (`kind` b: 1 data objects, 2 directory entities, 3 a client iterator) deleted.
     ListFree,
+    /// text `a`'s (`GUIString*`, 0 the empty text) `wchar_t` unit count; its units written to `b` (`uint32_t`s)
+    /// when not 0 (WONLobby round 14: the requests [`conn_request`] makes read their texts with it).
+    TextUnits,
 
     // ---- the lobby
     /// `L->mKilled`.
@@ -673,12 +677,25 @@ impl EeWonRouteLogic {
             if let Some(r) = crate::modelobj::route_op(op, g(0), g(1), g(2), g(3)) {
                 return r;
             }
+            if let Some((kind, values)) = conn_request(op, [g(0), g(1), g(2), g(3), g(4)], &|p| self.text_utf16(p)) {
+                ee_won_net::routecpp::request(g(0) as *mut c_void, kind, &values, std::ptr::null_mut());
+                return 0;
+            }
         }
         // SAFETY: the host is the C++ (or a test's) function given at creation, called with its own object.
         unsafe { (self.host)(self.obj, op, g(0), g(1), g(2), g(3), g(4)) }
     }
     fn b(&self, op: Op, args: &[isize]) -> bool {
         self.h(op, args) != 0
+    }
+    /// A host text's UTF-16 little-endian bytes (a request's text value).
+    fn text_utf16(&self, p: isize) -> Vec<u8> {
+        let n = self.h(Op::TextUnits, &[p, 0]).max(0) as usize;
+        let mut v = vec![0u32; n];
+        if n != 0 {
+            self.h(Op::TextUnits, &[p, v.as_mut_ptr() as isize]);
+        }
+        utf16le(&v)
     }
     /// A held reference given back at the scope's end.
     fn hold(&self, p: isize) -> Held<'_> {
@@ -3004,6 +3021,114 @@ impl EeWonRouteLogic {
             self.assign(cell, 0);
         }
     }
+}
+
+/// The routing connection's requests the game's logic makes in Rust since WONLobby round 14 (RoutingLogic.cpp's
+/// cases for them are gone, and with them `RoutingConnection`'s helpers): an op's request kind (`EE_WON_RTQ_*`)
+/// and its values in the helper's parameter order, as the C++ case's helper built them from the host's arguments
+/// (`g`: the connection and the op's four arguments; `text` reads a `GUIString*` as UTF-16 little-endian bytes, 0
+/// the empty text). The buffers' ops (`ConnSendData`, `ConnAdvertise`) and the connection's own calls stay the
+/// host's. An `unsigned long` is 32 bits, as in the original.
+pub(crate) fn conn_request(op: Op, g: [isize; 5], text: &dyn Fn(isize) -> Vec<u8>) -> Option<(i32, Vec<Value>)> {
+    use ee_won_net::routecpp::*;
+    let n = |x: i64| Value { num: x, bytes: Vec::new() };
+    let w = |p: isize| Value { num: 0, bytes: if p == 0 { Vec::new() } else { text(p) } };
+    let ids = |v: &[u16]| Value { num: 0, bytes: v.iter().flat_map(|i| i.to_le_bytes()).collect() };
+    let s = |x: isize| n(i64::from(x as u16));
+    let ul = |x: isize| n(i64::from(x as u32));
+    let on = |x: isize| n(i64::from(x != 0));
+    let [_, b, c, d, e] = g;
+    Some(match op {
+        Op::ConnDo => match b {
+            6 => (EE_WON_RTQ_ABORT_SHUTDOWN, vec![]),
+            7 => (EE_WON_RTQ_MODERATOR, vec![on(c)]),
+            8 => (EE_WON_RTQ_LEAVE, vec![s(c)]),
+            9 => (EE_WON_RTQ_CANCEL_JOIN, vec![s(c), n(1)]),
+            // the logic's game data type, "G" from the constructor, and an empty name
+            10 => (EE_WON_RTQ_DELETE_DATA, vec![s(c), Value { num: 0, bytes: b"G".to_vec() }, w(0)]),
+            _ => return None,
+        },
+        Op::ConnSetClientFlags => (EE_WON_RTQ_SET_CLIENT_FLAGS, vec![ul(b), ul(c), ul(d), ul(e)]),
+        Op::ConnSetGroupFlags => (EE_WON_RTQ_SET_GROUP_FLAGS, vec![s(b), ul(c), ul(d), n(0), n(0)]),
+        Op::ConnBan | Op::ConnMute => {
+            let kind = if op == Op::ConnBan { EE_WON_RTQ_BAN } else { EE_WON_RTQ_MUTE };
+            (kind, vec![s(b), on(b >> 16), ul(c), w(d), s(e)])
+        }
+        Op::ConnBanByWonId | Op::ConnMuteByWonId => {
+            let kind = if op == Op::ConnBanByWonId { EE_WON_RTQ_BAN_WON_ID } else { EE_WON_RTQ_MUTE_WON_ID };
+            (kind, vec![s(b), n(0), n(0), w(0), ul(c)])
+        }
+        Op::ConnAccept => (EE_WON_RTQ_ACCEPT, vec![s(b), s(c), on(d), w(0)]),
+        Op::ConnInvite => (EE_WON_RTQ_INVITE, vec![s(b), s(c), on(d), w(e)]),
+        // SendChat(text, flags, recipient): SendChatTo with the flags cut to 16 bits and a list of one
+        Op::ConnSendChat => (EE_WON_RTQ_CHAT, vec![w(b), s(c), ids(&[d as u16])]),
+        Op::ConnSendChatTo => {
+            let v: Vec<u16> = if e == 0 || d <= 0 {
+                Vec::new()
+            } else {
+                // SAFETY: the logic passes `d` ids at `e`, live for the call
+                unsafe { std::slice::from_raw_parts(e as *const u16, d as usize) }.to_vec()
+            };
+            (EE_WON_RTQ_CHAT, vec![w(b), s(c), ids(&v)])
+        }
+        Op::ConnAlert => (EE_WON_RTQ_ALERT, vec![w(b)]),
+        Op::ConnStartShutdown => (EE_WON_RTQ_START_SHUTDOWN, vec![w(b), ul(c)]),
+        _ => return None,
+    })
+}
+
+/// A `wchar_t` text's units (16-bit units on Windows, code points elsewhere) as UTF-16 little-endian bytes, as
+/// `WideAppendUtf16LE` makes them.
+fn utf16le(units: &[u32]) -> Vec<u8> {
+    let v: Vec<u16> = if cfg!(windows) {
+        units.iter().map(|&u| u as u16).collect()
+    } else {
+        ee_won_net::text::utf16_from_utf32(units)
+    };
+    ee_won_net::text::utf16_to_le_bytes(&v)
+}
+
+/// The text callback of [`ee_won_routelogic_conn_request`]: `text`'s unit count, its units written to `units` when
+/// not NULL.
+pub type EeWonRouteConnTextFn = unsafe extern "C" fn(ctx: *mut c_void, text: isize, units: *mut u32) -> usize;
+/// The value callback of [`ee_won_routelogic_conn_request`]: one value's number and bytes, in order.
+pub type EeWonRouteConnValueFn = unsafe extern "C" fn(ctx: *mut c_void, num: i64, bytes: *const u8, length: usize);
+
+/// [`conn_request`] for the drivers (won_routeconn_req_test): whether op `op` with the connection and arguments
+/// `args` (five) is a request the logic makes in Rust; if so its kind to `kind` and each value to `value`. Texts
+/// (`GUIString*`s in the game) are read through `text`.
+///
+/// # Safety
+/// `args` holds five values; the callbacks are callable with `ctx`; `kind` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_routelogic_conn_request(
+    op: EeWonRouteLogicOp,
+    args: *const isize,
+    text: EeWonRouteConnTextFn,
+    value: EeWonRouteConnValueFn,
+    ctx: *mut c_void,
+    kind: *mut i32,
+) -> bool {
+    // SAFETY: the caller's contract
+    let g = unsafe { [*args, *args.add(1), *args.add(2), *args.add(3), *args.add(4)] };
+    let read = |p: isize| {
+        // SAFETY: the caller's callback
+        let n = unsafe { text(ctx, p, std::ptr::null_mut()) };
+        let mut v = vec![0u32; n];
+        if n != 0 {
+            // SAFETY: room for `n` units
+            unsafe { text(ctx, p, v.as_mut_ptr()) };
+        }
+        utf16le(&v)
+    };
+    let Some((k, values)) = conn_request(op, g, &read) else { return false };
+    // SAFETY: the caller's contract
+    unsafe { *kind = k };
+    for x in &values {
+        // SAFETY: the caller's callback; the bytes live for the call
+        unsafe { value(ctx, x.num, x.bytes.as_ptr(), x.bytes.len()) };
+    }
+    true
 }
 
 // ---- the C ABI

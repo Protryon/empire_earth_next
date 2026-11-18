@@ -269,3 +269,62 @@ fn replays_the_golden() {
         replay(s);
     }
 }
+
+/// won_routeconn_req_test's lines (the original RoutingLogic.cpp cases' requests, recorded over the C++ helpers)
+/// replayed through `conn_request`: the same kind and values, or none for the host's ops.
+#[test]
+fn replays_the_connection_requests() {
+    let text = include_str!("golden_routeconn.txt");
+    let mut n = 0;
+    for line in text.lines() {
+        let field = |k: &str| -> &str {
+            line.split(' ').find_map(|t| t.strip_prefix(k)).unwrap_or_else(|| panic!("{k} in {line}"))
+        };
+        let num = |k: &str| field(k).parse::<i64>().unwrap();
+        let op_n = num("op=") as u32;
+        // SAFETY: the driver prints ops of this enum
+        let op: Op = unsafe { std::mem::transmute::<u32, Op>(op_n) };
+        let texts: Vec<Vec<u32>> = field("texts=")
+            .split(',')
+            .map(|t| {
+                t.as_bytes()
+                    .chunks(4)
+                    .map(|c| u32::from_str_radix(std::str::from_utf8(c).unwrap(), 16).unwrap())
+                    .collect()
+            })
+            .collect();
+        let ids: Vec<u16> = field("ids=").split(',').filter(|t| !t.is_empty()).map(|t| t.parse().unwrap()).collect();
+        let mut g = [0x1000, num("b=") as isize, num("c=") as isize, num("d=") as isize, num("e=") as isize];
+        if op == Op::ConnSendChatTo {
+            g[3] = ids.len() as isize;
+            g[4] = ids.as_ptr() as isize;
+        }
+        let read = |p: isize| utf16le(&texts[(p - 1) as usize]);
+        let got = conn_request(op, g, &read);
+        let made = num("made=") == 1;
+        assert_eq!(got.is_some(), made, "{line}");
+        let kind = num("kind=") as i32;
+        let want: Vec<(i64, String)> = line
+            .split(" kind=")
+            .nth(1)
+            .unwrap()
+            .split(' ')
+            .skip(1)
+            .take_while(|t| !t.starts_with("made="))
+            .map(|t| {
+                let (a, b) = t.split_once(':').unwrap();
+                (a.parse().unwrap(), b.to_string())
+            })
+            .collect();
+        if let Some((k, values)) = got {
+            assert_eq!(k, kind, "{line}");
+            let have: Vec<(i64, String)> =
+                values.iter().map(|v| (v.num, v.bytes.iter().map(|b| format!("{b:02x}")).collect())).collect();
+            assert_eq!(have, want, "{line}");
+        } else {
+            assert_eq!(kind, -1, "{line}");
+        }
+        n += 1;
+    }
+    assert!(n > 60, "{n} lines");
+}

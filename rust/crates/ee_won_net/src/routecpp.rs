@@ -266,7 +266,7 @@ fn plan(kind: i32) -> Option<Plan> {
 /// A parameter's value: a number, or bytes (a text's UTF-16 little-endian units, a data type, a buffer, the
 /// recipients as 16-bit little-endian ids); a buffer's number says whether there is one.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(crate) struct Value {
+pub struct Value {
     pub num: i64,
     pub bytes: Vec<u8>,
 }
@@ -333,7 +333,8 @@ fn new_route_op(conn: *mut c_void, ty: i32) -> *mut c_void {
 
 /// A request helper: a new op of the kind's type on the connection, its completion, its members from the values,
 /// run async (a local reference held across the run, as the helpers' `SmartPtr`).
-pub(crate) fn request(conn: *mut c_void, kind: i32, values: &[Value], completion: *mut c_void) {
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // `conn` and `completion` reach only the C++ table, as the helpers passed them
+pub fn request(conn: *mut c_void, kind: i32, values: &[Value], completion: *mut c_void) {
     let Some((ty, slots, extra)) = plan(kind) else { return };
     if !sends(kind, values) {
         return;
