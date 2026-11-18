@@ -6950,6 +6950,10 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_BUTTON_TECH = 42;
 /// The status button a's `mCount += b`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_ADD_COUNT = 43;
 
+/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->mMainGameForm`, a = 1): the
+/// toolkit's ops on them are `hud_views`' (the FFI adapter's, below the trait).
+constexpr static const uint32_t EE_SCREENS_MGR_OP_FORMS = 44;
+
 /// The group's fields: `mMode`, `mHitPoints`, `mUnitID`, `mPreviousID`, `mL1C`, `mL20`, `mHasUnit`, `mReset`.
 constexpr static const int64_t EE_SCREENS_MGR_FIELD_MODE = 0;
 
@@ -10545,6 +10549,50 @@ struct EeScreensBuildGateFields {
   int32_t player;
 };
 
+/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
+struct EeScreensMainFormFields {
+  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
+  long mKeyboardModes[22];
+  long mMouseModes[22];
+  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
+  long mUIState;
+  /// the background media (-1: none)
+  long mMediaID;
+  /// the enabled entity group and the index into the panel groups
+  long mEntityGroup;
+  unsigned long mCurrentGroup;
+  /// the poll's elapsed time
+  unsigned long mElapsed;
+  unsigned long mHotKeyMode;
+  long mClockMode;
+  bool mEntityGroupSet;
+  /// the error log's strings changed
+  bool mStringsChanged;
+  bool mIsCursorLocked;
+  bool mRefreshGroup;
+  bool mB5F0;
+  bool mB5F1;
+  bool mInfoBlinking;
+  bool mIsButtonBlinking;
+};
+
+/// `EEUIFMGMainGroup`'s plain members (ee/EEUIFMGMainGroup.h, the original's +0x0c `mMode` .. +0x25 `mReset`), a
+/// Rust record the C++ class derives from as `EeScreensMainFormFields` is the form's.
+struct EeScreensMainGroupFields {
+  /// the mode: 0, 3, 4 (the market's unit type 0x321); 1, 2 tested
+  long mMode;
+  /// the shown unit's hit points, id and the previous id
+  long mHitPoints;
+  unsigned long mUnitID;
+  unsigned long mPreviousID;
+  long mL1C;
+  /// the unit class's `mL294`
+  long mL20;
+  /// a unit is shown; the group was reset (`Reset`)
+  bool mHasUnit;
+  bool mReset;
+};
+
 /// `CopyData`'s record: what the C++ read (in), what it applies (out).
 struct EeScreensMiniMapCopy {
   float rect[4];
@@ -12168,6 +12216,13 @@ void ee_screens_gate_update(void *call,
                             EeScreensBuildGateFields *gate,
                             float x,
                             float y);
+
+/// `EEUIFMainGame`'s constructor: the form `form` and its record `fields` (the record's offset is the class's).
+void ee_screens_main_form_fields(void *form,
+                                 EeScreensMainFormFields *fields);
+
+/// `EEUIFMGMainGroup`'s constructor: the group `group` and its record `fields`.
+void ee_screens_main_group_fields(void *group, EeScreensMainGroupFields *fields);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.

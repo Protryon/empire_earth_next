@@ -19,6 +19,9 @@ struct MessageHost(*mut c_void);
 
 impl UiHost for MessageHost {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        if let Some(r) = crate::screens::hud_views::ui_message_manager(op, a) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_ui_message(self.0, op, a, b, c) }
     }
 }

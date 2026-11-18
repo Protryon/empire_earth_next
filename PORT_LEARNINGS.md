@@ -30220,3 +30220,118 @@ file-by-file measure). Asked: 3,000 net C++ lines. Done: -1,123.
   ee_ui and ee_audio for aarch64-apple-darwin, and of ee_render and ee_ui for x86_64-unknown-linux-gnu (ee_audio's
   cpal needs alsa-sys's pkg-config there, as before). Display code only a tour reaches: none changed but the IME
   candidate window, which nothing opened.
+## The UI thread lane, round 1: the HUD's world reads on the views, its toolkit calls on the direct path, the UI's record messages and the main form's members in Rust (ee_game hud_views.rs, hud_sends.rs, main_form_fields.rs; branch rust-uithread1, 2026-11-18)
+
+The brief: all of `User Interface Thread/` (about 12k lines) and `UI Events/` (about 4k) into Rust by whole
+classes, at least 3,000 net C++ lines. The round moved what the world's views, the toolkit's direct path and the
+record messages can answer: **net C++ -404** (commits below). Far short of 3,000; why under "The measure".
+
+### The measure
+
+`build/ut1/measure.py` splits every `switch` of the lane's files into case blocks and classes them by what the body
+names (world objects, toolkit calls, both, other). Of the 16,219 lines in the two directories, 3,670 are the unit
+utilities (`EEFOFindNewTargetNearOldTarget.cpp`: simulation code, the R5b unit utilities lane's) and about 1,600
+the WON boxes and events (the WON lanes'). Of the rest (about 11k), the case blocks are 4,900 lines, and of those
+about 3,500 call a C++ object no Rust object stands for: GE bitmaps, rhombi, models, text and the rasterizer
+(every HUD control's drawing), sounds, the physics, the session (`gCommunications`' servers and clients), files and
+archives, the campaign and intro managers, the tech tree's nodes and buttons (`EEButtonObject`), the civilization
+powers, the unit sets. Earlier rounds (game screens 1-31, screens B 1-4, lane S) already moved the logic: what is
+left is one case per call into such an object, and it moves only with that object. The world reads (about 650 case
+lines) and the toolkit calls (about 450) are what this round could take; the round took the plain ones (a read
+that is a field, or a call that is the toolkit's same inward call).
+
+### What moved
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 07cab23f2 | `hud_views.rs`: the main panel group's, icon bar's, portrait's, improvement and command buttons' and main form's plain world reads and toolkit calls in their FFI adapters; whole fills: `EEStatusBoxView`, the hot keys' unit snapshot, the diplomacy form's player, the read view's airport question; `ee_sim::world` `GroupView`, the stats' class and button | +48 -272, net -224 |
+| 06c020000 | `hud_sends.rs`: 39 record messages (the screens' hot keys, chat type, rally, kill, attack, speed, behaviour, diplomacy, tribute, resign; the icon bar's four, the portrait's two, the command buttons' twelve, the mouse modes' three) built by `ee_screenscpp_ga_record` and sent by one `ee_screenscpp_send_local` | +6 -91, net -85 |
+| dda53fa2f | `main_form_fields.rs`: `EEUIFMainGame`'s 23 plain members a Rust record the class derives from (the field ops, the modes' setters, the clock); the UI thread's manager calls (the forms' stack and lookups, the copy lock) and its world reads on the views | +12 -77, net -65 |
+| 8c79e834b | `EEUIFMGMainGroup`'s 8 plain members a Rust record (`EeScreensMainGroupFields`; its field ops) | +8 -38, net -30 |
+
+- **Below the traits.** Every move is in the FFI adapter (`Host::op` before the C++ hop), never in the logic's
+  host trait: the hosts' replay goldens (`golden_box.txt`, the panel and status button goldens) are unchanged by
+  construction, and the C++ case is the only thing replaced.
+- **Forms by the call's own pointer.** The first version found the main game form by its id (`form_by_id(11)`);
+  `gSavedMainGameForm` (the scenario test's saved form) means two forms of that class can exist. The adapters now
+  use the call's own form: `EEUIFMGFormCall::mForm` (its first member, asserted) and the main group's
+  `EE_SCREENS_MGR_OP_FORMS` (its `mOwner`, or `gUIManager->mMainGameForm` where the C++ used that).
+- **The main form's record.** `class EEUIFMainGame : public UIForm, public EeScreensMainFormFields`: the members keep
+  their names, so the twelve other C++ files reading them compile unchanged; the constructor passes `this` and the
+  record (`ee_screens_main_form_fields`) and Rust keeps the offset. The record is value-initialised (the members were
+  set by the Rust constructor before; zero instead of garbage before that).
+- **`ee_sim::world` additions** (lane V's module): `GroupView` reads `EEGroup::mUnits` in place (`GetUnit` and
+  `GetNumUnits` are `EEGroup`'s, no subclass overrides them; `EEWorldLayoutRegister` checks `EESelectedGroup`'s
+  `EEGroup` base is at offset 0), `Contains` is `EEGroup::Contains`' linear search; the stats' `mUnitClass` and
+  `mButton`; the `test_layout` feature so a dependent crate's tests can set a thread's test layout.
+
+### Goldens and checks
+
+- **Before the move** (origin/rust 4929244f3): the tour `--view-check --seed 7` (SGVW 79 distinct lines equal to
+  `tools/sgvw/tour_view.txt`), the orders game with box select, the editor gate under SGVW (25,136 lines equal to
+  `tools/sgvw/editor.txt`, PASS 14,448), the civilization gate (PASS 4,062); the pre-round test-profile exe kept for
+  the pixel comparison.
+- **The reads: a scratch shadow** (`EE_UT1_SHADOW=<file>`, removed before the commit): each moved read answered by
+  the views and by the C++ case, compared, counted per host and op, every difference a `MISMATCH` line; the three
+  fills (hot keys, diplomacy, status box) also exercised every 16th frame of a game (the hot keys and every world
+  player's diplomacy fill are otherwise reached only by a person). Orders game 21,401 checks, tour 15,601, **0
+  mismatches**. Reached: the main group's 15 of 18 moved ops, the main form's 11 of 12, the icon bar's 5 of 10, the
+  portrait's 3, the improvement button's 2, the status box 182 views, hot keys 148 snapshots, diplomacy 1,258
+  players; not reached: the main group's commands, epoch, queue and worker reads, the icon bar's cargo, the command
+  buttons' class reads (unit tests only).
+- **The sends: a scratch in-game driver** (`EE_UT1_SENDS=<file>`, removed before the commit): the deleted cases'
+  statements copied into a C++ function that builds the message without sending it, the Rust's message through
+  `ee_screenscpp_ga_record`, both exported (`ExportMessage`) and compared byte for byte with their records and
+  types, over 3,126 argument sets (32- and 64-bit edge values: the `(long)` casts, `(unsigned char)`, `!= 0`): **0
+  differences**. Every Rust member then mutated (an integer +1, a float +1): 4,455 mutants, 4,190 caught; the 265
+  not caught are equivalent (a bool member 1 -> 2, a float past f32 precision).
+- **Lesson: an unset member.** The driver's first run differed in all 3,126: `EEMessage::mFastSelectionID` is never
+  set by a sender (the original's constructors leave it too) and is the wire's first byte, so two messages of the
+  same members differ by heap garbage. The comparison zeroes it in both; the game keeps sending what it sent.
+- **Lesson: a mutant must be a valid input.** A kind +1 mutant built a record of another type with these members:
+  `EEMRecord::Field`'s size check stopped the game. Mutate members, not the kind (the kind is compared).
+- **Lesson: cbindgen exports `pub const` inside a `pub(crate) mod`.** The message kinds (`kind::SELECT_UNIT`,
+  ...) went into the C header, and their names, equal to `ee_sim::netmsg`'s, moved those to `common.h` (the header
+  check passed: every header was "current"). They are private `MSG_*` consts now. Grep the header diff for names
+  you did not mean to export.
+- **Pixels.** The tour's menu frames equal the pre-round exe's but the build label (171 pixels); in the orders
+  game's box-selected frame the status box (38,976 pixels), the resource bar and the icon bar regions are equal
+  (the map and the mini map differ between any two live games).
+
+### Gates (round 1, on the result merged with origin/rust ec39733e7, merge 8c0b98ab4)
+
+Both builds 0/0 (EE-AOC 689, EE-SIM 690 inputs); the test profile 0/0; the oracle seeds 2-7 identical to the
+reference; the Rust gate PASS (4,531 tests; `ee_base` `fs::golden_spec::golden_spec_replays` failed once in the full
+run under load and passed alone and in its crate's run); the editor gate PASS 14,448 with SGVW equal to
+`tools/sgvw/editor.txt` (25,136 lines); the civilization gate PASS 4,062; the tour with `--view-check --seed 7`
+(`RESULT PASS tour`, F3 ok, `VIEW CHECK PASS`, SGVW 79 distinct lines equal to `tools/sgvw/tour_view.txt`); the
+orders game (`BOX SELECT PASS`, `ORDERS PASS`, `RESULT PASS random-game`); the scroll check (`SCROLL CHECK PASS`);
+`gates.sh` GATES PASS (tour; ai-game time-cap, alive [2, 3], classic_lua x 2; lan-game). Per commit: build `--sim`
+0/0, oracle seeds 2-3 identical, the Rust gate PASS (commits 1-3; commit 4: unit tests, the test profile and the
+orders game, then the merged tree's gates). Not run: the sim_capture profiles (no simulation code changed). Main
+merge 4 had not landed on origin/rust when the round ended.
+
+### Behaviour
+
+None intended. Where the C++ ran on a NULL pointer (no current player, no selected group, a missing control) the
+views and the direct path answer 0. The main form's members start zeroed.
+
+### What runs it
+
+The tour and the orders game (every frame of a game: the panel, status box, portrait, icon bar, main form;
+the diplomacy form and the options menu in `--view-check`). **Only a person reaches**: the 39 sends, the hot keys,
+the cargo and garrison reads, the commands' and queue reads with a building selected. EE-SIM builds no form: the
+oracle is unchanged by construction.
+
+### Left
+
+- The HUD's drawing (GE bitmaps, rhombi, text, the rasterizer: the portrait, icon bar, mini map, status box, ping,
+  command arrow) moves with a Rust 2D draw list in `ee_render`; then the HUD controls' `RustOp`s and most of
+  `EEUIRustControl`'s host go.
+- The tech tree's buttons (`EEButtonObject`, the nodes' hot keys and buttons) and the civilization powers block the
+  main group's `ShowCommands` (~95 lines) and the command buttons' set-up.
+- `EEScreens.cpp`'s game calls (sessions, servers, files, campaigns: 1,500 case lines) move with their owners.
+- The status box's, improvement button's and portrait's own members as Rust records (as the main form's and the main
+  group's: about 40 lines).
+- The UI thread's `Post*` methods (45 one-line posts to its thread) could become one Rust post if the thread object
+  is Rust's.

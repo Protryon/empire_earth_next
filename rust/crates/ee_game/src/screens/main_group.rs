@@ -103,6 +103,9 @@ pub const EE_SCREENS_MGR_OP_QUEUE_KEY: u32 = 41;
 pub const EE_SCREENS_MGR_OP_BUTTON_TECH: u32 = 42;
 /// The status button a's `mCount += b`.
 pub const EE_SCREENS_MGR_OP_ADD_COUNT: u32 = 43;
+/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->mMainGameForm`, a = 1): the
+/// toolkit's ops on them are `hud_views`' (the FFI adapter's, below the trait).
+pub const EE_SCREENS_MGR_OP_FORMS: u32 = 44;
 
 /// The group's fields: `mMode`, `mHitPoints`, `mUnitID`, `mPreviousID`, `mL1C`, `mL20`, `mHasUnit`, `mReset`.
 pub const EE_SCREENS_MGR_FIELD_MODE: i64 = 0;
