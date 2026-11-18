@@ -109,22 +109,41 @@ pub const EE_AI_NEXT_HOST_EXPERIMENT: i32 = 39;
 pub const EE_AI_NEXT_HOST_LAST_ATTACKER: i32 = 40;
 /// `EECPTraceStats(player, a)`
 pub const EE_AI_NEXT_HOST_TRACE_STATS: i32 = 41;
-/// `EECPRMFleeRaids(player)`
-pub const EE_AI_NEXT_HOST_FLEE_RAIDS: i32 = 42;
 /// `EECPNextGetState(player)` (made when missing)
 pub const EE_AI_NEXT_HOST_STATE: i32 = 43;
 /// the player slot `a`'s computer player when it is active with a per-unit and a next state (0: none)
 pub const EE_AI_NEXT_HOST_MICRO_PLAYER: i32 = 44;
 /// `player->mNextState` (0: none)
 pub const EE_AI_NEXT_HOST_STATE_OF: i32 = 45;
-/// `EECPRMResourceInDanger(player, a, b)`
-pub const EE_AI_NEXT_HOST_IN_DANGER: i32 = 46;
 /// `ESDebugOut("%s", a)`
 pub const EE_AI_NEXT_HOST_DEBUG_OUT: i32 = 47;
 /// `gCPTraceManager = a` (a static C string) -> the previous one
 pub const EE_AI_NEXT_HOST_SCOPE: i32 = 48;
 /// the player's `mPlayerID`
 pub const EE_AI_NEXT_HOST_PLAYER_ID: i32 = 49;
+/// `mDangerZones.size()`
+pub const EE_AI_NEXT_HOST_DANGER_COUNT: i32 = 25;
+/// the zone `a` (x, y, time) into `out` (three i64)
+pub const EE_AI_NEXT_HOST_DANGER: i32 = 26;
+/// `mDangerZones.push_back(((a, b), c))`
+pub const EE_AI_NEXT_HOST_DANGER_ADD: i32 = 50;
+/// `mDangerZones.erase(begin() + a)`
+pub const EE_AI_NEXT_HOST_DANGER_ERASE: i32 = 51;
+/// the complex unit `a`'s order (out: kind 0 attack the complex unit out[1] / 1 go to the tile (out[2], out[3]);
+/// out[4]: inside `Reference`/`Dereference`): `ClearGoalQueue(0)`, `SetGoal(EEUGRust::NewAttackUnit(unit, target,
+/// false, false) | NewLocation(tile, true, true, false, 0.0f, false, false), 0, 0)`,
+/// `StartAction(kActionPrepareToMove)`, `GetUnitClass()->ActionChanged(unit)`
+pub const EE_AI_NEXT_HOST_ORDER: i32 = 52;
+/// `EEGetPlayerUnitsOfType(a, b, units)`: their handles pushed onto `out` (a `Vec<u64>`)
+pub const EE_AI_NEXT_HOST_UNITS_OF_TYPE: i32 = 53;
+/// the complex unit `a`'s `mCitizenBuildQueue.size()`
+pub const EE_AI_NEXT_HOST_CITIZEN_QUEUE: i32 = 54;
+/// the player `a`'s `IsHuman()`
+pub const EE_AI_NEXT_HOST_IS_HUMAN: i32 = 55;
+/// a: 0 `EECPMilitiaOn(player)`, 1 `EECPMilitiaTowersOn(player)`
+pub const EE_AI_NEXT_HOST_SWITCH: i32 = 56;
+/// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
+pub const EE_AI_NEXT_HOST_FORMAT_F2: i32 = 57;
 
 extern "C" {
     fn ee_ai_next_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64;
@@ -151,6 +170,15 @@ pub unsafe extern "C" fn ee_ai_next_append(out: *mut c_void, data: *const u8, le
     if len > 0 {
         (*(out as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(data, len));
     }
+}
+
+/// Pushes a handle onto a `Vec<u64>` the host was given (`out` of the list ops).
+///
+/// # Safety
+/// `out` is a live `Vec<u64>`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_next_push_handle(out: *mut c_void, handle: u64) {
+    (*(out as *mut Vec<u64>)).push(handle);
 }
 
 fn host_bytes(op: i32, me: *mut c_void, a: i64) -> (i64, Vec<u8>) {
@@ -218,7 +246,7 @@ fn experiment(me: *mut c_void, name: &CStr) -> bool {
 }
 
 fn in_danger(me: *mut c_void, x: c_long, y: c_long) -> bool {
-    host(EE_AI_NEXT_HOST_IN_DANGER, me, x as i64, y as i64, 0) != 0
+    reflex::in_danger(me, x, y)
 }
 
 /// The placement's town centre tile (None: no placement; x -10000: no town centre)
@@ -2228,7 +2256,7 @@ pub unsafe extern "C" fn ee_ai_next_update(me: *mut c_void, time: c_ulong) {
     let id = g.id();
     (*p).note_epoch(g.tree().map_or(0, |t| t.current_epoch() as c_long), time);
     if host(EE_AI_NEXT_HOST_CAN_GATHER, me, 0, 0, 0) != 0 {
-        host(EE_AI_NEXT_HOST_FLEE_RAIDS, me, 0, 0, 0);
+        reflex::flee_raids(me);
     }
     let saved = scope(c"next");
     let s = &mut *p;
@@ -2600,3 +2628,7 @@ pub unsafe extern "C" fn ee_ai_next_drop_ready(
     }
     drop_in(&ready_drops(&g, food), x, y, slack)
 }
+
+// the reflexes (EECPReflexes.cpp before)
+#[path = "next_reflex.rs"]
+mod reflex;

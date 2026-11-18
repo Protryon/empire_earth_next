@@ -125,9 +125,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_LAST_ATTACKER = 40;
 /// `EECPTraceStats(player, a)`
 constexpr static const int32_t EE_AI_NEXT_HOST_TRACE_STATS = 41;
 
-/// `EECPRMFleeRaids(player)`
-constexpr static const int32_t EE_AI_NEXT_HOST_FLEE_RAIDS = 42;
-
 /// `EECPNextGetState(player)` (made when missing)
 constexpr static const int32_t EE_AI_NEXT_HOST_STATE = 43;
 
@@ -137,9 +134,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_MICRO_PLAYER = 44;
 /// `player->mNextState` (0: none)
 constexpr static const int32_t EE_AI_NEXT_HOST_STATE_OF = 45;
 
-/// `EECPRMResourceInDanger(player, a, b)`
-constexpr static const int32_t EE_AI_NEXT_HOST_IN_DANGER = 46;
-
 /// `ESDebugOut("%s", a)`
 constexpr static const int32_t EE_AI_NEXT_HOST_DEBUG_OUT = 47;
 
@@ -148,6 +142,39 @@ constexpr static const int32_t EE_AI_NEXT_HOST_SCOPE = 48;
 
 /// the player's `mPlayerID`
 constexpr static const int32_t EE_AI_NEXT_HOST_PLAYER_ID = 49;
+
+/// `mDangerZones.size()`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_COUNT = 25;
+
+/// the zone `a` (x, y, time) into `out` (three i64)
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER = 26;
+
+/// `mDangerZones.push_back(((a, b), c))`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_ADD = 50;
+
+/// `mDangerZones.erase(begin() + a)`
+constexpr static const int32_t EE_AI_NEXT_HOST_DANGER_ERASE = 51;
+
+/// the complex unit `a`'s order (out: kind 0 attack the complex unit out[1] / 1 go to the tile (out[2], out[3]);
+/// out[4]: inside `Reference`/`Dereference`): `ClearGoalQueue(0)`, `SetGoal(EEUGRust::NewAttackUnit(unit, target,
+/// false, false) | NewLocation(tile, true, true, false, 0.0f, false, false), 0, 0)`,
+/// `StartAction(kActionPrepareToMove)`, `GetUnitClass()->ActionChanged(unit)`
+constexpr static const int32_t EE_AI_NEXT_HOST_ORDER = 52;
+
+/// `EEGetPlayerUnitsOfType(a, b, units)`: their handles pushed onto `out` (a `Vec<u64>`)
+constexpr static const int32_t EE_AI_NEXT_HOST_UNITS_OF_TYPE = 53;
+
+/// the complex unit `a`'s `mCitizenBuildQueue.size()`
+constexpr static const int32_t EE_AI_NEXT_HOST_CITIZEN_QUEUE = 54;
+
+/// the player `a`'s `IsHuman()`
+constexpr static const int32_t EE_AI_NEXT_HOST_IS_HUMAN = 55;
+
+/// a: 0 `EECPMilitiaOn(player)`, 1 `EECPMilitiaTowersOn(player)`
+constexpr static const int32_t EE_AI_NEXT_HOST_SWITCH = 56;
+
+/// `snprintf("%.2f", a)` (a: the double's bits) appended to `out` (the C library's rounding)
+constexpr static const int32_t EE_AI_NEXT_HOST_FORMAT_F2 = 57;
 
 /// `kNextThreatRange`: tiles: seen enemy soldiers this near a resource keep gatherers off it
 constexpr static const long THREAT_RANGE = 9;
@@ -1294,6 +1321,12 @@ extern void ee_ai_next_string_append(void *string, const uint8_t *data, size_t l
 /// `out` is a live `Vec<u8>`, `data` holds `len` bytes.
 void ee_ai_next_append(void *out, const uint8_t *data, size_t len);
 
+/// Pushes a handle onto a `Vec<u64>` the host was given (`out` of the list ops).
+///
+/// # Safety
+/// `out` is a live `Vec<u64>`.
+void ee_ai_next_push_handle(void *out, uint64_t handle);
+
 /// A new state (`new EECPNextState`).
 void *ee_ai_next_state_new();
 
@@ -1419,6 +1452,29 @@ bool ee_ai_next_drop_ready(void *me,
                            long y,
                            bool food,
                            long slack);
+
+/// `EECPRMNoteDanger`: a citizen hit by a player's unit: the militia or a danger zone and its defenders.
+///
+/// # Safety
+/// `me` is a live computer player, `citizen` a live unit.
+void ee_ai_next_note_danger(void *me,
+                            uint64_t citizen,
+                            unsigned long attacker);
+
+/// `EECPRMNavalFlee`: a boat or land unit hit by a warship: the units round it leave (to the farthest dock, or the
+/// town centre).
+///
+/// # Safety
+/// `me` is a live computer player, `victim` a live unit, `attacker` 0 or a live complex unit.
+void ee_ai_next_naval_flee(void *me,
+                           uint64_t victim,
+                           uint64_t attacker);
+
+/// `EECPRMFleeRaids` for the C++.
+///
+/// # Safety
+/// `me` is a live computer player.
+void ee_ai_next_flee_raids(void *me);
 
 /// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
 /// in the rules (-1: unknown), `out` writes a line to the game's debug output.

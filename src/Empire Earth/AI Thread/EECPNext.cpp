@@ -53,6 +53,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EEGameLog.h"
+#include "ee/EEAreaUtilities.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -217,6 +218,22 @@ void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUni
 void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit)
 {
     ee_ai_next_trace_death(inPlayer, EECPNextHandle(inUnit));
+}
+
+// the reflexes (ee/EECPReflexes.h; ee_ai next_reflex.rs)
+void EECPRMNoteDanger(EEComputerPlayer* inPlayer, EEUnit* inCitizen, unsigned long inAttacker)
+{
+    ee_ai_next_note_danger(inPlayer, EECPNextHandle(inCitizen), inAttacker);
+}
+
+void EECPRMNavalFlee(EEComputerPlayer* inPlayer, EEUnit* inVictim, EEComplexUnit* inAttacker)
+{
+    ee_ai_next_naval_flee(inPlayer, EECPNextHandle(inVictim), EECPNextHandle(inAttacker));
+}
+
+void EECPRMFleeRaids(EEComputerPlayer* inPlayer)
+{
+    ee_ai_next_flee_raids(inPlayer);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -461,9 +478,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_TRACE_STATS:
         EECPTraceStats(me, (unsigned long)a);
         return 0;
-    case EE_AI_NEXT_HOST_FLEE_RAIDS:
-        EECPRMFleeRaids(me);
-        return 0;
     case EE_AI_NEXT_HOST_STATE:
         return (int64_t)(uintptr_t)EECPNextGetState(me);
     case EE_AI_NEXT_HOST_MICRO_PLAYER: {
@@ -475,8 +489,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_STATE_OF:
         return (int64_t)(uintptr_t)me->mNextState;
-    case EE_AI_NEXT_HOST_IN_DANGER:
-        return EECPRMResourceInDanger(me, (long)a, (long)b) ? 1 : 0;
     case EE_AI_NEXT_HOST_DEBUG_OUT:
         ESDebugOut("%s", (const char*)(uintptr_t)a);
         return 0;
@@ -487,6 +499,56 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_PLAYER_ID:
         return (int64_t)me->mPlayerID;
+    case EE_AI_NEXT_HOST_DANGER_COUNT:
+        return (int64_t)me->mDangerZones.size();
+    case EE_AI_NEXT_HOST_DANGER:
+        out[0] = me->mDangerZones[(size_t)a].first.mX;
+        out[1] = me->mDangerZones[(size_t)a].first.mY;
+        out[2] = (int64_t)me->mDangerZones[(size_t)a].second;
+        return 0;
+    case EE_AI_NEXT_HOST_DANGER_ADD:
+        me->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(U2DPoint<long>((long)a, (long)b), (unsigned long)c));
+        return 0;
+    case EE_AI_NEXT_HOST_DANGER_ERASE:
+        me->mDangerZones.erase(me->mDangerZones.begin() + (ptrdiff_t)a);
+        return 0;
+    case EE_AI_NEXT_HOST_ORDER: {
+        // the reflexes' orders (ee_ai next_reflex.rs): attack a unit, or go to a tile
+        EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)a;
+        if (out[4] != 0)
+            theUnit->Reference();
+        theUnit->ClearGoalQueue(0);
+        if (out[0] == 0)
+            theUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit, (EEComplexUnit*)(uintptr_t)out[1], false, false), 0, 0);
+        else
+            theUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)out[2], (float)out[3]), true, true, false, 0.0f, false, false), 0, 0);
+        theUnit->StartAction(kActionPrepareToMove);
+        theUnit->GetUnitClass()->ActionChanged(theUnit);
+        if (out[4] != 0)
+            theUnit->Dereference();
+        return 0;
+    }
+    case EE_AI_NEXT_HOST_UNITS_OF_TYPE: {
+        std::vector<EEUnit*> theUnits;
+        EEGetPlayerUnitsOfType((long)a, (long)b, theUnits);
+        for (size_t k = 0; k < theUnits.size(); k++)
+            ee_ai_next_push_handle(outRecord, EECPNextHandle(theUnits[k]));
+        return 0;
+    }
+    case EE_AI_NEXT_HOST_CITIZEN_QUEUE:
+        return (int64_t)((EEComplexUnit*)(uintptr_t)a)->mCitizenBuildQueue.size();
+    case EE_AI_NEXT_HOST_IS_HUMAN:
+        return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
+    case EE_AI_NEXT_HOST_SWITCH:
+        return (a == 0 ? EECPMilitiaOn(me) : EECPMilitiaTowersOn(me)) ? 1 : 0;
+    case EE_AI_NEXT_HOST_FORMAT_F2: {
+        double theValue;
+        memcpy(&theValue, &a, sizeof(theValue));
+        char theText[64];
+        snprintf(theText, sizeof(theText), "%.2f", theValue);
+        ee_ai_next_append(outRecord, (const uint8_t*)theText, strlen(theText));
+        return 0;
+    }
     default:
         return 0;
     }
