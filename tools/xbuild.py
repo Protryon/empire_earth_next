@@ -229,9 +229,11 @@ def rust_libs(target):
     lib = str(rust_build.ensure(target.name))
     if target.os == "windows":
         return [lib]
+    # the sound device (cpal): ALSA on Linux (libasound2-dev to build), Core Audio on macOS
     if target.os == "linux":
-        return [lib, "-lpthread", "-ldl", "-lm"]
-    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
+        return [lib, "-lasound", "-lpthread", "-ldl", "-lm"]
+    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation",
+            "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit", "-liconv"]
 
 
 def platform_sources(target):
@@ -1028,7 +1030,7 @@ def ninja_exe():
 
 
 # SDL subsystems the game uses: video (window, events, keyboard/mouse, clipboard, text input/IME), the message box.
-# Audio stays on miniaudio, so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
+# Audio is the Rust library's (cpal), so SDL's audio, camera, haptic, joystick, sensor, HID and GPU are off; X11 and Wayland
 # (Linux), Cocoa/Metal (macOS) and Win32 come with video.
 SDL_OPTIONS = ["-DSDL_STATIC=ON", "-DSDL_SHARED=OFF", "-DSDL_TEST_LIBRARY=OFF", "-DSDL_TESTS=OFF",
                "-DSDL_EXAMPLES=OFF", "-DSDL_INSTALL=ON", "-DSDL_AUDIO=OFF", "-DSDL_CAMERA=OFF", "-DSDL_HAPTIC=OFF",
@@ -1549,10 +1551,12 @@ def cmd_game(a):
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
     # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
     libs = [wlib, *sdl_libs(t)]
+    # (and the sound device, cpal: ALSA, Core Audio)
     if t.os == "linux":
-        libs += ["-ldl", "-lm", "-lpthread"]
+        libs += ["-lasound", "-ldl", "-lm", "-lpthread"]
     else:
-        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation",
+                 "-framework", "CoreAudio", "-framework", "AudioToolbox", "-framework", "AudioUnit"]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
     # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the
