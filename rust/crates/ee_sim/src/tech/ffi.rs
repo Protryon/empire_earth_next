@@ -241,12 +241,27 @@ pub struct EeCalamityHostFfi {
 
 struct FfiCalamityHost(EeCalamityHostFfi);
 
-impl CalamityHost for FfiCalamityHost {
-    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+impl FfiCalamityHost {
+    fn cpp(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
         let mut reply = EeCalamityReply::default();
         // SAFETY: the C++ host's contract (ee/EECalamityUpdate.h): valid pointers for the call's duration
         unsafe { (self.0.call)(self.0.ctx, state, call, &mut reply) };
         reply
+    }
+}
+
+impl CalamityHost for FfiCalamityHost {
+    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+        // the target's, the caster's and the map's plain members are the world views' (calamity_views.rs)
+        #[cfg(not(test))]
+        {
+            let mut handle = |op| self.cpp(state, &EeCalamityCall::new(op)).key;
+            // SAFETY: the C++ runs the class on the simulation thread; its target and caster are referenced
+            if let Some(reply) = unsafe { crate::tech::calamity_views::answer(&mut handle, call) } {
+                return reply;
+            }
+        }
+        self.cpp(state, call)
     }
 }
 

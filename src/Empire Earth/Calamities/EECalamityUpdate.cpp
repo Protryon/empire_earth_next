@@ -869,6 +869,11 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
     EECalamity* theCalamity = ioHost.mCalamity;
     EECalamityClass* theClass = ioHost.mClass;
     switch (inCall.op) {
+    // the handles the world views read through (calamity_views.rs: the target's, the caster's and the tiles' plain
+    // members never reach this host)
+    case EeCalamityOp::TargetHandle: outReply.key = (uint64_t)(uintptr_t)TargetUnit(theCalamity); return true;
+    case EeCalamityOp::CasterHandle: outReply.key = (uint64_t)(uintptr_t)theCalamity->mCasterUnit; return true;
+    case EeCalamityOp::WorldHandle: outReply.key = (uint64_t)(uintptr_t)&::gWorld; return true;
     case EeCalamityOp::HelperUpdate: {
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCall.index);
         EECalamityCaptureEvent(kCalamityOpHelperUpdate, inCall.index, theHelper != NULL);   // CALW (TEST ONLY)
@@ -974,14 +979,8 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
         outReply.x = theRandom;
         return true;
     }
-    case EeCalamityOp::TargetExists:
-        outReply.ok = TargetUnit(theCalamity) != NULL;
-        return true;
     case EeCalamityOp::PlayClassSound:
         theClass->PlaySound(theCalamity);
-        return true;
-    case EeCalamityOp::TargetHitPoints:
-        outReply.value = (int32_t)TargetUnit(theCalamity)->mComplexUnit->mHitPoints;
         return true;
     case EeCalamityOp::DestroyEffect: {
         EEEffectHandle theHandle;
@@ -990,29 +989,9 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
         gEffectManager->DestroyEffect(theHandle);
         return true;
     }
-    case EeCalamityOp::TargetTinted:
-        outReply.ok = TargetUnit(theCalamity)->mComplexUnit->mIsTinted;
-        return true;
-    case EeCalamityOp::CasterHitPoints:
-        outReply.value = (int32_t)theCalamity->mCasterUnit->mHitPoints;
-        return true;
-    case EeCalamityOp::CasterExists:
-        outReply.ok = theCalamity->mCasterUnit != NULL;
-        return true;
-    case EeCalamityOp::TargetDead: {
-        EEUnit* theTarget = NULL;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && theTarget->GetComplexUnit() != NULL &&
-                      theTarget->GetComplexUnit()->GetHitPoints() <= 0;
-        return true;
-    }
     case EeCalamityOp::MeshZ:
         outReply.x = ::gWorld.mMap->mTerrainMesh.GetMeshZ(inCall.x, inCall.y);
         return true;
-    case EeCalamityOp::TargetAlive: {
-        EEUnit* theTarget = NULL;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && theTarget->mHitPoints > 0;
-        return true;
-    }
     // the starts' and stops' (calamity_start.rs)
     case EeCalamityOp::StopSound:
         if (inCall.index == 0)
@@ -1070,20 +1049,6 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
     case EeCalamityOp::TargetProtected:
         outReply.ok = TargetUnit(theCalamity)->mComplexUnit->IsProtected();
         return true;
-    case EeCalamityOp::TileTerrain: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(inCall.index, inCall.index2);
-        if (theTile != NULL) {
-            outReply.ok = true;
-            outReply.value = (int32_t)theTile->mTerrainType;
-        }
-        return true;
-    }
-    case EeCalamityOp::TargetComplexAlive: {
-        EEUnit* theTarget = NULL;
-        EEComplexUnit* theUnit;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && (theUnit = theTarget->mComplexUnit) != 0 && theUnit->mHitPoints > 0;
-        return true;
-    }
     // the classes' own (each answered for the classes whose runs send it)
     case EeCalamityOp::ClassStep:
         return ClassStep(ioHost, inCall, outReply);

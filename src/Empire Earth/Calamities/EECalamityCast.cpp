@@ -53,17 +53,11 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
     unsigned long theX = (unsigned long)(long)c.index;
     unsigned long theY = (unsigned long)(long)c.index2;
     switch (c.op) {
+    // the handles the world views read through (calamity_views.rs: the caster's hit points and power, the tiles)
+    case EeCalamityOp::CasterHandle: r.key = (uint64_t)(uintptr_t)theUnit; break;
+    case EeCalamityOp::WorldHandle: r.key = (uint64_t)(uintptr_t)&::gWorld; break;
     case EeCalamityOp::CasterPlayerIndex:
         r.value = (int32_t)::gWorld.GetPlayerIndex(theUnit->mPlayer);
-        break;
-    case EeCalamityOp::CasterHitPoints:
-        r.value = (int32_t)theUnit->mHitPoints;
-        break;
-    case EeCalamityOp::CasterPower:
-        r.value = (int32_t)theUnit->GetPower();
-        break;
-    case EeCalamityOp::TileExists:
-        r.ok = ::gWorld.mMap->GetTile(theX, theY) != NULL;
         break;
     case EeCalamityOp::TileVisible:
         r.ok = ::gWorld.mMap->GetTile(theX, theY)->IsVisibleTo(theUnit->mPlayer);
@@ -121,12 +115,6 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
     case EeCalamityOp::TileBlocked:
         r.ok = ::gWorld.IsTileBlocked(theX, theY);
         break;
-    case EeCalamityOp::TerrainType: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(theX, theY);
-        r.ok = theTile != NULL;
-        r.value = theTile != NULL ? (int32_t)theTile->mTerrainType : 0;
-        break;
-    }
     case EeCalamityOp::InnerSphere:
         r.x = gUnitClassTable[theHost.mUnitClassIndex]->GetInnerCollisionSphere();
         break;
