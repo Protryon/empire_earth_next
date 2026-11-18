@@ -262,16 +262,6 @@ ResourceConfigTable::ControlIdMap ResourceConfigTable::mControlIdMap;
 ResourceConfigTable::ConfigAllocatorMap ResourceConfigTable::mConfigAllocatorMap;
 
 
-// Resource group lookup and clear functions (not identified in the original exe)
-ResourceConfig* ResourceConfigTable::GetConfig(const std::string &theName)
-{
-	ResourceMap::iterator anItr = this->mResourceMap.find(theName);
-	if(anItr!=this->mResourceMap.end())
-		return anItr->second;
-	else
-		return NULL;
-}
-
 void ResourceConfigTable::ClearGlueResourceFuncs()
 {
 	this->mGlueResourceFuncSet.clear();

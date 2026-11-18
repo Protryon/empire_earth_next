@@ -23,20 +23,13 @@ public:
     }
     void ClearLocation() { this->M(LobbyMC::FriendClearLocation); }
     void SetStatusFromClient(LobbyClient* inClient) { this->M(LobbyMC::FriendSetStatusFromClient, (intptr_t)inClient); }
-    void SetAnonymous(bool inAnonymous) { this->MSet(LobbyMF::FriendAnonymous, inAnonymous); }
     void StartLocate(unsigned long inTime) { this->M(LobbyMC::FriendStartLocate, (intptr_t)inTime); }
     void EndLocate(unsigned long inTime) { this->M(LobbyMC::FriendEndLocate, (intptr_t)inTime); }
     unsigned long GetUserId() { return (unsigned long)this->MGet(LobbyMF::FriendUserId); }
-    void SetLastLocate(unsigned long inTime) { this->MSet(LobbyMF::FriendLastLocate, (intptr_t)inTime); }
-    unsigned long GetSearchStart() const { return (unsigned long)this->MGet(LobbyMF::FriendSearchStart); }
-    bool GetAnonymous() const { return this->MGet(LobbyMF::FriendAnonymous) != 0; }
     GUIString GetName() const { return this->MText(LobbyMF::FriendName); }
     unsigned char GetFlags() const { return (unsigned char)this->MGet(LobbyMF::FriendFlags); }
     IPAddr GetAddress() const { return this->MAddr(LobbyMF::FriendAddress); }
     GUIString GetLocation() const { return this->MText(LobbyMF::FriendLocation); }
-    unsigned long GetLastLocate() const { return (unsigned long)this->MGet(LobbyMF::FriendLastLocate); }
-    unsigned long GetLastSearch() const { return (unsigned long)this->MGet(LobbyMF::FriendLastSearch); }
-    void SetLastSearch(unsigned long inCount) { this->MSet(LobbyMF::FriendLastSearch, (intptr_t)inCount); }
 };
 
 // LobbyGroup: a routing group, i.e. a chat room or a game. RTTI: LobbyGroup : RefCount; vtable 0x852c4c; 0x20 bytes.
@@ -49,11 +42,7 @@ public:
     LobbyClient* GetCaptain() { return (LobbyClient*)this->M(LobbyMC::GroupCaptain); }
     LobbyClient* FindClient(unsigned short inId) { return (LobbyClient*)this->M(LobbyMC::GroupFind, inId); }
     bool IsPasswordProtected() { return (this->M(LobbyMC::GroupKind) & 1) != 0; }
-    bool IsAskToJoin() { return (this->M(LobbyMC::GroupKind) & 2) != 0; }
-    bool IsInviteOnly() { return (this->M(LobbyMC::GroupKind) & 4) != 0; }
-    bool IsChatGroup() { return (this->M(LobbyMC::GroupKind) & 8) != 0; }
     bool IsGameGroup() { return (this->M(LobbyMC::GroupKind) & 8) == 0; }
-    bool IsPublicChatGroup() { return (this->M(LobbyMC::GroupKind) & 0x10) != 0; }
     unsigned short GetId() { return (unsigned short)this->MGet(LobbyMF::GroupId); }
     GUIString GetName() const { return this->MText(LobbyMF::GroupName); }
     unsigned short GetCaptainId() const { return (unsigned short)this->MGet(LobbyMF::GroupCaptainId); }
@@ -69,7 +58,6 @@ public:
     LobbyServer() : LobbyModelObject(EeWonModelKind::Server) {}
     void Disconnect() { this->M(LobbyMC::ServerDisconnect, (intptr_t)time(NULL)); }
     bool HasAddress(const std::string& inName) { return this->M(LobbyMC::ServerHasAddress, (intptr_t)inName.data(), (intptr_t)inName.length()) != 0; }
-    void SetConnection(RoutingConnection* inConnection) { this->MSet(LobbyMF::ServerConnection, (intptr_t)inConnection); }
     void ReadDirEntity(DirEntity* inEntity);
     void UpdateFriends() { this->M(LobbyMC::ServerUpdateFriends); }
     void ClearFriendLocations() { this->M(LobbyMC::ServerClearFriendLocations, (intptr_t)time(NULL)); }
@@ -77,7 +65,6 @@ public:
     {
         this->M(LobbyMC::ServerAddClientToGroup, (intptr_t)inClient, inFlags, (intptr_t)inGroup);
     }
-    SmartPtr<LobbyGroup> RemoveGroup(unsigned short inId) { return LobbyModelHeld<LobbyGroup>(this->M(LobbyMC::ServerRemoveGroup, inId)); }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::ServerRemoveClient, inId)); }
     SmartPtr<LobbyClient> RemoveClientFromGroup(unsigned short inId, LobbyGroup* inGroup)
     {
@@ -90,20 +77,12 @@ public:
     LobbyGroup* GetGroup(int inId) { return (LobbyGroup*)this->M(LobbyMC::ServerGroup, inId); }
     int GetNumClients() { return (int)this->M(LobbyMC::ServerNumClientsNow); }
     bool IsConnected() { return this->M(LobbyMC::ServerConnected) != 0; }
-    void ClearGroups() { this->M(LobbyMC::ServerClearGroups); }
-    size_t GetGroupCount() const { return (size_t)this->M(LobbyMC::ServerGroupCount); }
-    LobbyGroup* GroupAt(size_t i) const { return (LobbyGroup*)this->M(LobbyMC::ServerGroupAt, (intptr_t)i); } // in id order
 
-    unsigned long GetLastPing() const { return (unsigned long)this->MGet(LobbyMF::ServerLastPing); }
     unsigned short GetMyClientId() const { return (unsigned short)this->MGet(LobbyMF::ServerMyClientId); }
     GUIString GetName() const { return this->MText(LobbyMF::ServerName); }
     IPAddr GetAddress() const { return this->MAddr(LobbyMF::ServerAddress); }
     SmartPtr<LobbyClientList> GetClients() const { return SmartPtr<LobbyClientList>((LobbyClientList*)this->MGet(LobbyMF::ServerClients)); }
     SmartPtr<RoutingConnection> GetConnection() const { return SmartPtr<RoutingConnection>((RoutingConnection*)this->MGet(LobbyMF::ServerConnection)); }
-    void SetLastPing(unsigned long inTime) { this->MSet(LobbyMF::ServerLastPing, (intptr_t)inTime); }
-    void SetMyClientId(unsigned short inId) { this->MSet(LobbyMF::ServerMyClientId, inId); }
-    bool GetQueryingGroups() const { return this->MGet(LobbyMF::ServerQuerying) != 0; }
-    void SetQueryingGroups(bool inValue) { this->MSet(LobbyMF::ServerQuerying, inValue); }
 };
 
 // the servers, in address order

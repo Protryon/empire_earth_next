@@ -162,10 +162,6 @@ public:
     // runs the dialog: true when every player connected (0x290a8a)
     bool Run(EELobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
     void End(bool inOK) { this->LCall(EeWonLobbyDlgCall::ConnectEnd, inOK); }  // 0x290c85 (100001 / 100002)
-    void SetConnected(unsigned char inSlot, bool inConnected)  // 0x290cb3 (a player's state)
-    { this->LCall(EeWonLobbyDlgCall::ConnectSetConnected, inSlot, inConnected); }
-    bool IsRunning() { return this->LCall(EeWonLobbyDlgCall::Field, 7) != 0; }  // mIsRunning
-    bool IsEnded() { return this->LCall(EeWonLobbyDlgCall::Field, 8) != 0; }    // mIsEnded (ended by End)
 };
 
 // the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338).
