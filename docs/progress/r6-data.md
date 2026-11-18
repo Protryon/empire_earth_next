@@ -16,20 +16,27 @@ rounds 1-2 are in `r6-civilization-builder.md`.
   gone; the generator list's `.rmv` read and the script names (ee_sim rmap `rmv.rs`). Net C++ -1,076. Golden:
   `build/data3/golden` (the original copies against the Rust over the real tables, identical).
 
+- Round 4 (`rust-data4`): one media use count (ee_data `media.rs`, `ee/EEMediaUse.h`) behind the five classes that
+  load on first use; five table classes as Rust lists (`EeDataList`, `ee/EEDbList.h`: starting resources, game
+  variants, unit behaviours, upgrades, terrain types); EECivilization's costs, affordability and reapply order (ee_sim
+  tech `civilization.rs`); the songs by epoch and their shuffle; `tools/datafmt/structs.py` reads the Rust records.
+  Net C++ -211. Goldens: `build/data4/golden` (media use, songs).
+
 **Gates of this lane**: `eedata.py check` and `cppgate` (the records' layouts and every table's text), the rmap gate
 (`tools/rmap_gate/rmap_gate.py check`, `check --reader`), the oracle and the random map captures, the editor and civ
 gates (`tools/sim_editor.py`, `--civbuilder`), the tour (the media loads: textures, buttons, graphic objects).
 
-**Measure of the rest**:
-- `Database/`: EETerrainTable 306 (the mesh texture loads, the use counts), EEButtonObject 245, EERules 216,
-  EEDataTextFile 183, EETerrainColorTable 89 (a PNG palette, not a record), EEDatabase/EEDbObject (the unit class
-  records), EECPBehaviorTable.
-- `Data Pre-Loading Thread/` (~1,300): EEGraphicObject's media loads (models, textures, tag points, colour groups,
-  parts), EEGraphicEffect's loads, EEMusicObject's score loads, EESoundObject, EEDataPreLoading (the thread's
-  queue). Five classes repeat the same lock-and-count load pattern.
-- `EERandomMap.cpp`: `PlaceWall` (the wall pieces are EEFOFindNewTargetNearOldTarget.cpp's), `CreateValidMap`,
-  `CreateTeams`, the PIM steps and the host.
-- `Empire Earth/EECivilization.cpp` 325 (a thin client of the civilization manager, which is Rust; saved in games).
+**Measure of the rest** (round 4):
+- `Database/`: EETerrainTable (the mesh texture sets, the previews), EEButtonObject (the texture and its cells),
+  EEAnimal (its media and sounds: a list once the media are handles), EEColorTable and EEAIUnitTargetingTable (their
+  readers index other shapes), EETerrainColorTable (a PNG palette), EERules and EEDataTextFile (the seams to Rust).
+- `Data Pre-Loading Thread/`: EEGraphicObject's media (models, textures, tag points, colour groups, parts: C++ GE
+  objects), EEGraphicEffect's loads and kind lists (GetMedia draws from the physics stream), EESoundObject,
+  EEDataPreLoading (the thread and its queue).
+- `EECivilization`: its members (the purchased and deferred vectors are read directly by about a dozen units), Load
+  and Save.
+- `EEUnitClassUpgrade`: the media and button use counts (the same pattern; its counts are in ee_units' record).
 
-**Next**: whole classes where their readers allow (the table statics as Rust lists, the media use count as one Rust
-object behind the five classes), then EECivilization with the saveload gate.
+**Next**: EEGraphicObject's tag points and parts over the GE objects read in place (ee_render cppobj), the effects'
+kind lists, EECivilization whole once its readers go through accessors, EEUnitClassUpgrade's use counts on
+`media.rs`.

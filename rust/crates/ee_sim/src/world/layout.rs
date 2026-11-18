@@ -77,6 +77,15 @@ pub struct EeWorldLayout {
     pub player_color: u64,
     pub player_first_unit: u64,
     pub player_selected_group: u64,
+    /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
+    pub player_computer_player: u64,
+    /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
+    /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
+    pub player_allies: u64,
+    pub player_sight_sharers: u64,
+    pub player_pending_units: u64,
+    pub player_towns: u64,
+    pub player_herds: u64,
     // ---- RTSWorld / EEWorld
     /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
     pub world_players: u64,
@@ -99,9 +108,18 @@ pub struct EeWorldLayout {
     pub world_in_cinematic: u64,
     pub world_user_paused: u64,
     pub world_using_carbon: u64,
+    /// `EEWorld::mTeamsLocked` (a bool)
+    pub world_teams_locked: u64,
+    /// `&gWorld` (an address, not an offset: the one world's handle) and `&gUnitClassTable` (the address of the
+    /// `std::vector<EEUnitClass*>`; its begin and end are its first two words)
+    pub world_address: u64,
+    pub unit_class_table: u64,
     // ---- RTSMap
     /// `mTiles` (the `EETile*` array, row-major, `mSize` x `mSize`)
     pub map_tiles: u64,
+    /// lane P: `EEMap::mTileArray` (the `EETile` array), `mVisibilityWords` (the tiles' visibility words)
+    pub map_tile_array: u64,
+    pub map_visibility_words: u64,
     // ---- RTSTile / EETile
     /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)
     pub tile_stride: u64,
@@ -116,6 +134,10 @@ pub struct EeWorldLayout {
     /// `mUnit` (an `EEUnit*`), `mNext`
     pub unit_node_unit: u64,
     pub unit_node_next: u64,
+    // ---- EEPlayer (the renderer's reads, Lane R)
+    /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
+    pub player_viewed_unit: u64,
+    pub player_selected_viewed_unit: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

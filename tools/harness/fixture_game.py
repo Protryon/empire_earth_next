@@ -263,6 +263,34 @@ def input_check(g):
     return dict(key='F3', paused=states, ok=ok, held=held)
 
 
+def view_check(g):
+    """TEST ONLY (--view-check; the SGVW trace, tools/sgvw.py): the in-game reads of the screens' read view that no
+    other step reaches, through the fixture's screenevent command on the game form: the game speed (faster, then
+    slower back), the camera's perspective (twice: back to the start), the UI mode's cancel (the ghosts), and the
+    diplomacy, in-game options and chat forms each opened and closed by their own events -> evidence."""
+    steps = []
+
+    def event(form, code, what):
+        fixture_driver._command(g, f'screenevent {form} {code}', ('screen-event',), what)
+        time.sleep(1)
+        steps.append(what)
+
+    def opened(code, close, what):
+        event(GAME, code, f'{what} open')
+        st = g.wait(lambda s: s['form'] not in (None, GAME), f'the {what} form', 30)
+        time.sleep(2)
+        event(st['form'], close, f'{what} close')
+        g.wait(lambda s: s['form'] == GAME, f'the {what} form closed', 30)
+    for code, what in ((0x0b20, 'faster'), (0x0b21, 'slower'), (0x0b1f, 'perspective'), (0x0b1f, 'perspective'),
+                       (0x0b01, 'cancel ui mode')):
+        event(GAME, code, what)
+    opened(0x0b0a, 0x1b08, 'diplomacy')
+    opened(0x0b0b, 0x1c01, 'options')
+    opened(0x0b09, 0x1203, 'chat')
+    g.note(f'VIEW CHECK PASS: {", ".join(steps)}')
+    return {'steps': steps}
+
+
 def chat_check(g):
     """A chat log line (the fixture's chat command: AddChatLogEntry, as a game message adds one) shown by the game
     form's chat lines (EEUICChatLine); its capture is evidence only."""
@@ -314,6 +342,8 @@ def tour(g, a, summary):
             summary['input'] = input_check(g)
         if a.exercise == 'tour':
             summary['chat'] = chat_check(g)
+        if a.view_check:
+            summary['view_check'] = view_check(g)
     if a.box_select:
         summary['box_select'] = fixture_driver.box_select(g, GAME)
         g.note(f'BOX SELECT PASS: {len(summary["box_select"]["steps"])} steps (add grew the group: '
@@ -498,6 +528,8 @@ def main():
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')
     ap.add_argument('--input-check', action='store_true', help='tour/random-game with --play-seconds: F3 twice')
+    ap.add_argument('--view-check', action='store_true',
+                    help='TEST ONLY, tour/random-game with --play-seconds: the read view in-game forms (SGVW)')
     ap.add_argument('--box-select', action='store_true',
                     help='tour/random-game: box selections in the game view (select, add with Shift, a dead unit)')
     ap.add_argument('--orders', action='store_true',

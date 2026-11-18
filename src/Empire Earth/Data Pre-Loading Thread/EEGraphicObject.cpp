@@ -34,6 +34,7 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDbRecords.h"
+#include "ee/EEMediaUse.h"
 #include "ee/EEWheel.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
@@ -44,7 +45,7 @@ extern bool& gTrilinearFilter;
 
 // Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on (the record's
 // members: ee_data tables.rs)
-EEGraphicObject::EEGraphicObject()
+EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
 {
     ee_data_graphic_object_default(this);
     for (unsigned long i = 0; i < 14; i++) {
@@ -64,8 +65,6 @@ EEGraphicObject::EEGraphicObject()
     this->mTexture = NULL;
     this->mShadowModel = NULL;
     this->mShadowTexture = NULL;
-    this->mMediaCount = 0;
-    this->mIsLoading = false;
 }
 
 // Destroys the graphic object: unloads its media if loaded, frees its file names and colour groups
@@ -243,12 +242,8 @@ long EEGraphicObject::LoadMedia()
     std::map<unsigned long, long> theFrames[15];
     std::map<unsigned long, long> theNoFrames;
     long theSlots[14];
-    long theResult = 0;
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 0) {
-        this->mMediaCount = 1;
-        this->mIsLoading = true;
-        sDatabaseLock.mLock->Leave();
+    return EEMediaAcquire(this, sDatabaseLock.mLock, [&]() -> long {
+        long theResult = 0;
         // the texture-frame maps of the animated parts that share frames, by model (ee_data tables.rs)
         EeDataGraphicFramePart theParts[14];
         for (unsigned long i = 0; i < 14; i++)
@@ -311,17 +306,8 @@ long EEGraphicObject::LoadMedia()
         }
         if (this->mModel != NULL)
             this->CollectParts(this->mModel, theTransformation);
-        sDatabaseLock.mLock->Enter();
-        this->mIsLoading = false;
-    } else {
-        this->mMediaCount++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoading == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
-    return theResult;
+        return theResult;
+    });
 }
 
 // Loads a texture by name into the slot if it is empty, with modulate, wrap and the object's mip settings
@@ -432,11 +418,7 @@ long EEGraphicObject::UnloadMedia()
 {
     std::map<long, std::map<const GEModel*, EETagPointList*>*>::iterator theKind;
     std::map<const GEModel*, EETagPointList*>::iterator theModel;
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 1) {
-        this->mMediaCount = 0;
+    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
         if (this->mShadowModel != NULL) {
             this->mShadowModel->Dereference();
             this->mShadowModel = NULL;
@@ -499,10 +481,7 @@ long EEGraphicObject::UnloadMedia()
                 delete this->mColorGroups[thePart][i];
             this->mColorGroups[thePart].clear();
         }
-    } else if (this->mMediaCount > 1) {
-        this->mMediaCount--;
-    }
-    sDatabaseLock.mLock->Leave();
+    });
     return 0;
 }
 

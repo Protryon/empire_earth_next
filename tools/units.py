@@ -93,6 +93,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Empire Earth/EEAppCapture.cpp",
                        # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
                        "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
+                       # TEST ONLY: the tile sight's records (ee/EESightCapture.h: TSGT) and the app profile's end
+                       # sweep of EEMap's sight and checksum (MAPS, MAPK)
+                       "Empire Earth/Map/EESightCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)
@@ -155,6 +158,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Empire Earth/EETestFixtureOrders.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
                        "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
+                       # TEST ONLY: RFIL, the render fill's capture (EE_RENDER_CAPTURE; ee/EERenderCapture.h, tools/rfil.py)
+                       "Empire Earth/Graphics Thread/EERenderCapture.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls
                        # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
                        # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)

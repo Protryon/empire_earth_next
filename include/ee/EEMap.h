@@ -11,6 +11,7 @@
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
+#include "ee/EESightCapture.h"       // TSGT (TEST ONLY): the sight functions' scope
 #include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
 #include "rust/sim/units.h"
 
@@ -70,10 +71,9 @@ public:
     void RemoveAllUnits();
     void RemoveUnit(EEUnit* inUnit);
     bool HasUnit(EEUnit* inUnit);
-    void AddSight(EEPlayer* inPlayer);      // 0x1247ed (counts inPlayer in; a first sighting stores 2) (provisional name)
-    // inline: out-of-line COMDAT 0x124072 after its first user in RTSMap.cpp (AddSight calls it): stores inValue in
-    // inPlayer's 16-bit half of the visibility word (provisional name)
-    void SetVisibility(unsigned long inValue, EEPlayer* inPlayer);
+    // 0x1247ed (counts inPlayer in; a first sighting stores 2) (provisional name). The tile sight, SetVisibility
+    // included, is Rust (ee_units tile_sight.rs; EESightRings.cpp forwards)
+    void AddSight(EEPlayer* inPlayer);
     static const UString sElevation;        // "RTSTile-Elevation" (0x529878; key names are provisional)
     static const UString sModelIndex;       // "RTSTile-ModelIndex" (0x529860)
     static const UString sTerrainIndex;     // "RTSTile-TerrainIndex" (0x529850)
@@ -403,9 +403,6 @@ struct EEMapSaveContext {
 };
 int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 
-// RTSTile::SetVisibility: inline (the out-of-line COMDAT 0x124072 follows its first user in RTSMap.cpp, PrepareSave
-// 0x122517). Its body needs the player's id, so it is defined only where ee/EEPlayer.h came first (RTSMap.cpp,
-// RTSTile.cpp); the real RTSTile.h presumably included the player header. Placement inferred.
 #ifdef EE_EEUNIT_H
 inline RTSTUnitList::~RTSTUnitList()
 {
@@ -414,14 +411,6 @@ inline RTSTUnitList::~RTSTUnitList()
 }
 #endif
 
-#ifdef EE_EEPLAYER_H
-inline void RTSTile::SetVisibility(unsigned long inValue, EEPlayer* inPlayer)
-{
-    unsigned long thePlayerID = inPlayer->GetPlayerID();
-    this->mVisibility[thePlayerID >> 1] = (this->mVisibility[thePlayerID >> 1] & (0xffff << (((thePlayerID + 1) & 1) << 4)))
-        | (inValue << ((thePlayerID & 1) << 4));
-}
-#endif
 
 // Tile terrain types (RTSTile::mTerrainType = dbterrain.dat record +0x78, plus the water kinds EETile::SetTerrainType derives from the height)
 enum EETerrainType {

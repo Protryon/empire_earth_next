@@ -3,7 +3,11 @@
 //! `EESETSETPlayerTechnology`, `EESETSETPlayerCivPoint`, the camera fades and visibility, `EESETSETMiniMapFlare`) over
 //! the effect screen's controls (`editor_effects.rs`).
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::RefCell;
+use std::ffi::{c_long, c_ulong};
 
 use crate::screens::editor_effects::*;
 use crate::screens::editor_players::SeplHost;
@@ -38,11 +42,11 @@ impl PlayerTypes {
             }
             EE_SCREENS_SEET_STORE => {
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mPlayerAction = s;
+                    c.e().mPlayerAction = s as c_ulong;
                     self.family.current.set(s);
                 }
                 let p = c.player(0);
-                c.e().mPlayer = p;
+                c.e().mPlayer = p as c_ulong;
                 self.sub(c, cur(), EE_SCREENS_SEET_HIDE);
                 self.sub(c, cur(), EE_SCREENS_SEET_STORE);
                 c.event_null(COMBO, 0, T_SELECTION);
@@ -57,10 +61,10 @@ impl PlayerTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let action = c.e().mPlayerAction;
-                load_action(c, &self.family, action);
+                load_action(c, &self.family, action as u32);
                 self.sub(c, cur(), EE_SCREENS_SEET_SHOW);
                 let p = c.e().mPlayer;
-                c.set_player(0, p);
+                c.set_player(0, p as u32);
                 self.sub(c, cur(), EE_SCREENS_SEET_LOAD);
             }
             EE_SCREENS_SEET_SHOW => {
@@ -123,7 +127,7 @@ impl PlayerTypes {
             0..=11 => match slot {
                 EE_SCREENS_SEET_LOAD => {
                     let p = c.e().mPlayer;
-                    c.set_player_silent(0, p);
+                    c.set_player_silent(0, p as u32);
                 }
                 EE_SCREENS_SEET_SHOW => c.player_flags(0, 0xde),
                 _ => {}
@@ -139,7 +143,7 @@ impl PlayerTypes {
                 // the original indexes its list with an unset selection when there is none: nothing stored then
                 if let Some(s) = c.selection(ECOMBO, 1) {
                     if let Some(&t) = self.technologies.borrow().get(s as usize) {
-                        c.e().mTechnology = t;
+                        c.e().mTechnology = t as c_long;
                     }
                 }
                 let add = c.checked(RADIO, 2);
@@ -153,10 +157,10 @@ impl PlayerTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let p = c.e().mPlayer;
-                c.set_player_silent(0, p);
+                c.set_player_silent(0, p as u32);
                 let held = c.event_hold(ECOMBO, 1, T_SELECTION);
                 let t = c.e().mTechnology;
-                let found = self.technologies.borrow().iter().position(|&x| x == t);
+                let found = self.technologies.borrow().iter().position(|&x| x == t as i32);
                 c.select(ECOMBO, 1, found.map_or(0, |p| p as u32));
                 c.event_restore(ECOMBO, 1, T_SELECTION, held);
                 let add = c.e().mIsAddTechnology;
@@ -192,7 +196,7 @@ fn civ_points<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let n = c.text_int(EDIT, 0);
-            c.e().mCivPoints = n as u32;
+            c.e().mCivPoints = n as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.hide(LABEL, 3);
@@ -200,7 +204,7 @@ fn civ_points<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let (p, n) = (c.e().mPlayer, c.e().mCivPoints);
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             c.number(EDIT, 0, n as i32);
         }
         EE_SCREENS_SEET_SHOW => {
@@ -220,9 +224,9 @@ fn diplomacy<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let other = c.player(1);
-            c.e().mDiplomacyPlayer = other;
+            c.e().mDiplomacyPlayer = other as c_ulong;
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mDiplomacy = s;
+                c.e().mDiplomacy = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -234,9 +238,9 @@ fn diplomacy<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let (p, other, stance) = (c.e().mPlayer, c.e().mDiplomacyPlayer, c.e().mDiplomacy);
-            c.set_player_silent(0, p);
-            c.set_player_silent(1, other);
-            c.select_silent(ECOMBO, 1, stance);
+            c.set_player_silent(0, p as u32);
+            c.set_player_silent(1, other as u32);
+            c.select_silent(ECOMBO, 1, stance as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             c.set_rect(LABEL, 3, 405.0, 666.0, 20.0, 20.0);
@@ -271,13 +275,13 @@ fn attribute<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mPlayerAttribute = s;
+                c.e().mPlayerAttribute = s as c_ulong;
             }
             if let Some(s) = c.selection(COMBO, 2) {
-                c.e().mPlayerAttributeMode = s;
+                c.e().mPlayerAttributeMode = s as c_ulong;
             }
             let n = c.text_int(EDIT, 0);
-            c.e().mPlayerAttributeAmount = n as u32;
+            c.e().mPlayerAttributeAmount = n as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.hide(LABEL, 3);
@@ -288,16 +292,16 @@ fn attribute<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let p = c.e().mPlayer;
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             let held = c.event_hold(ECOMBO, 1, T_SELECTION);
             let a = c.e().mPlayerAttribute;
-            if c.selection(ECOMBO, 1) != Some(a) {
-                c.select(ECOMBO, 1, a);
+            if c.selection(ECOMBO, 1) != Some(a as u32) {
+                c.select(ECOMBO, 1, a as u32);
             }
             c.event_restore(ECOMBO, 1, T_SELECTION, held);
             let mode = c.e().mPlayerAttributeMode;
-            if c.selection(COMBO, 2) != Some(mode) {
-                c.select(COMBO, 2, mode);
+            if c.selection(COMBO, 2) != Some(mode as u32) {
+                c.select(COMBO, 2, mode as u32);
             }
             let n = c.e().mPlayerAttributeAmount;
             c.number(EDIT, 0, n as i32);
@@ -407,18 +411,18 @@ fn camera<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             c.e().mUsesLocationArea = area;
             if let Some(s) = c.selection(SCEN, 1) {
                 if area {
-                    c.e().mLocationArea = s;
+                    c.e().mLocationArea = s as c_ulong;
                 } else {
-                    c.e().mLocationObject = s;
+                    c.e().mLocationObject = s as c_ulong;
                 }
             }
             let area = c.checked(RADIO, 2);
             c.e().mUsesTargetArea = area;
             if let Some(s) = c.selection(SCEN, 2) {
                 if area {
-                    c.e().mTargetArea = s;
+                    c.e().mTargetArea = s as c_ulong;
                 } else {
-                    c.e().mTargetObject = s;
+                    c.e().mTargetObject = s as c_ulong;
                 }
             }
             let follow = c.checked(CHECK, 1);
@@ -426,9 +430,9 @@ fn camera<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             let track = c.checked(CHECK, 0);
             c.e().mUsesFavorites = track;
             let v = c.slider(0);
-            c.e().mIntValue1 = v;
+            c.e().mIntValue1 = v as c_long;
             let v = c.slider(1);
-            c.e().mIntValue2 = v;
+            c.e().mIntValue2 = v as c_long;
             for k in [1, 0, 3, 2] {
                 c.event_null(RADIO, k, T_CHECKED);
             }
@@ -462,15 +466,15 @@ fn camera<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let p = c.e().mPlayer;
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             let e = *c.e();
-            load_area_object(c, 0, 3, 1, e.mUsesLocationArea, (e.mLocationArea, e.mLocationObject));
-            load_area_object(c, 2, 4, 2, e.mUsesTargetArea, (e.mTargetArea, e.mTargetObject));
+            load_area_object(c, 0, 3, 1, e.mUsesLocationArea, (e.mLocationArea as u32, e.mLocationObject as u32));
+            load_area_object(c, 2, 4, 2, e.mUsesTargetArea, (e.mTargetArea as u32, e.mTargetObject as u32));
             c.set_checked_if(1, e.mIsAttack);
             c.set_checked_if(0, e.mUsesFavorites);
-            c.set_slider_if(0, e.mIntValue1);
+            c.set_slider_if(0, e.mIntValue1 as i32);
             c.fire_range(0);
-            c.set_slider_if(1, e.mIntValue2);
+            c.set_slider_if(1, e.mIntValue2 as i32);
             c.fire_range(1);
             area_object_event(c, 0, EE_SCREENS_SEE_USE_AREA_OBJECT);
             area_object_event(c, 2, EE_SCREENS_SEE_FACE_AREA_OBJECT);
@@ -568,9 +572,9 @@ fn flare<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             c.e().mUsesLocationArea = area;
             if let Some(s) = c.selection(SCEN, 1) {
                 if area {
-                    c.e().mLocationArea = s;
+                    c.e().mLocationArea = s as c_ulong;
                 } else {
-                    c.e().mLocationObject = s;
+                    c.e().mLocationObject = s as c_ulong;
                 }
             }
             c.event_null(RADIO, 1, T_CHECKED);
@@ -587,9 +591,9 @@ fn flare<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let p = c.e().mPlayer;
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             let e = *c.e();
-            load_area_object(c, 0, 3, 1, e.mUsesLocationArea, (e.mLocationArea, e.mLocationObject));
+            load_area_object(c, 0, 3, 1, e.mUsesLocationArea, (e.mLocationArea as u32, e.mLocationObject as u32));
             area_object_event(c, 0, EE_SCREENS_SEE_USE_AREA_OBJECT);
         }
         EE_SCREENS_SEET_SHOW => {

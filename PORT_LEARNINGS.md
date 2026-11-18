@@ -29368,6 +29368,308 @@ The machine froze and restarted once during the round (all processes lost): the 
 - RoutingLogic.cpp's remaining host: the events, dialogs and the connection's request helpers (Rust could call
   routeconn.rs directly, but EEWonNet.cpp also calls most helpers).
 - IPAddr.cpp and StringUtil.cpp stay forwarders while the lobby's C++ calls them.
+## LP64 after the crate restructure: cargo check for Linux and macOS, nettest's session test (2026-11-17)
+
+`cargo check --target x86_64-unknown-linux-gnu --workspace --all-targets` stopped in ee_render, so ee_ui, ee_game and
+the gate library had never been checked off Windows since the restructure (and the owner's Mac build was broken).
+
+- **ee_render `openformats/surface_file.rs`.** The JPG2 trailer is two 4-byte words (`_getw`/`_putw`, int) holding
+  file positions that the C++ keeps as `long` (`FSFileSpec::GetPosition(long&)`, `ftell`). On Windows the two are
+  one type, so the Rust mixed `c_int` and `c_long`. Fix: `c_long::from(get_word(..))` where a word becomes a
+  position, `position as c_int` where one is written (`_putw` truncates the same way); `FileWriteLong` already
+  writes 4 bytes on every data model (`FSFile::Write(const long&)`). Windows: the casts are no-ops.
+- **ee_game screens (187 errors, the scenario editor and the settings form).** `EeScenarioEffectFields` and
+  `EeScenarioConditionFields` keep the C++ classes' `unsigned long`/`long` (ee_sim/scenario/fields.rs: C++ derives
+  from them, so the C++ readers are unchanged), while the screens' host calls are 32-bit (`u32`/`i32`). Fix: casts
+  at that boundary (`as c_ulong` / `as u32`, `as c_long` / `as i32`), not new field types: changing a field to
+  `u32` would change `unsigned long` to `uint32_t` in the generated header and break the C++ that binds
+  `unsigned long&` to it. The settings form's `list_selection` (`c_ulong`) into `call_with`/`text` (`u32`) the same.
+  Every cast is a no-op on Windows (`c_ulong` is `u32` there), so behaviour there cannot change.
+- **ee_won_net `routeconn_tests.rs`.** A test hook declared `-> c_long` where `EeWonRouteConnHooks::handle_reply`
+  returns `i32`: a fn item that only matched on Windows. Now `-> i32`.
+- **Lesson: an alias-typed field leaks the data model into every user.** Rust's type checker is stricter than C's
+  implicit conversions, so each `c_long`/`c_ulong` record field is a compile error on LP64 wherever it meets a
+  fixed-width value; on Windows nothing shows it. Check a change touching such records with
+  `cargo check --target x86_64-unknown-linux-gnu` (the target is installed here; no sysroot is needed for a check)
+  and `--target aarch64-apple-darwin` (also checks here: no Xcode SDK is needed for `cargo check`).
+- **clippy off Windows.** With the checks clean, `cargo clippy --target <linux or macOS> --workspace --all-targets
+  -- -D warnings` (the gate's clippy) failed in ee_base, ee_sim, ee_ui and ee_won_net: 30 `unnecessary_cast` and
+  `useless_conversion` hits, each a cast or `from` that Windows needs (`c_long` to `i64`) and LP64 does not. The
+  opposite also holds: the new casts in the ee_game screens are same-type on Windows, so those six files carry
+  `#![allow(clippy::unnecessary_cast)]` like ee_sim's `fields.rs`. Fix: every crate root has
+  `#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]`, so the Windows gate
+  keeps both lints and the Mac's gate no longer fails on the other data model's casts. Clippy is now clean for
+  x86_64-unknown-linux-gnu and aarch64-apple-darwin.
+- **nettest's `ee_session_test`.** EEServer.cpp and EEClient.cpp include `ee/EEARust.h` since the actions moved to
+  Rust (their `EEARemovePlayer`, `EEABootClientFromCanceledGame`, `EEAServerMigration` became its one-line
+  classes); the stand-in world (tests/net/ee_stand) had the three old headers but not that one, so the real header
+  (and the real game) was found. Fix: a stand-in `tests/net/ee_stand/ee/EEARust.h` that includes `ee_world.h`.
+- **won_gamespy_test: the second instance's port (xbuild.py wontest).** The driver started b asking for A's port
+  and expected it at A+1, the SDK's next port. Windows hands out ephemeral ports in order, machine-wide
+  (consecutive binds anywhere get A+1, A+2, ...), so whenever any program bound a port during the seconds of
+  queries after A, A+1 was taken and b took A+2: 7 failures (b's heartbeats one port ahead, the queries sent to A+1
+  unanswered), seen on the busy shared machine and reproduced with a script that binds a port every 0.5 s. Not the
+  port nor the restructure: the SDK's scan is right. Fix: just before b's start-up the driver finds the first port
+  above A that binds (any address, as the SDK binds a localhost address), sends b's queries there and names it
+  "A+1"; the golden is unchanged, and b landing anywhere else still fails. Under the port script it passes 4/4.
+  `gamespy_tests.rs` `a_failed_start_leaves_the_current_record` assumes qport + 1 the same way, but binds at once
+  (a window of microseconds); left as is.
+
+## Object storage, lane S: the screens' and the editor's game reads on the world's views (branch rust-objS, 2026-11-17)
+
+- **Measure before the plan's counts.** The plan expected 99 plain cases in `EEScreens.cpp`, 42 in `EESEUnit.cpp`
+  and 70 in `EESERBUnitTypes.cpp`; the files held about 35 fill lines, 6 and 23. `ee_screenscpp_call`'s 97 cases are
+  all game calls. A read-and-write case (`SeplWorld`, `SeplPlayer`) frees no C++ line when only its read moves.
+  Net C++ for the move: -33.
+- **Record the lock state with the read.** The TEST ONLY SGVW trace (`ee_game screens/sgvw.rs`, `EE_SGVW`) notes
+  the world lock's holds by the reading thread (`ee_base ts/held.rs` counts them per thread and lock). Two thirds of
+  the editor's world reads run under the world's write lock (`ProcessActions`' `EE_SCREENS_ACTION_LOCK`, the tab
+  switch), where `EeTsLock` deadlocks a read on top; some run with no lock (the editor's construction thread, the
+  lobby, the main menu). That is why V's `WorldRead::begin` takes no lock.
+- **Reach a read before moving it.** No fixture session reached the read view's world and player groups (in play
+  the HUD reads the world through its own hosts). `fixture_game.py --view-check` (screen events on the game form:
+  speed, perspective, the diplomacy, options and chat forms) reaches them; record its golden on the unmodified
+  tree with `--seed` (the players' civilizations are random otherwise).
+- **Mask what is not state.** A live trace's CT count and the version text (it carries the build's commit count)
+  differ between runs and builds; `tools/sgvw.py` masks them (`TIMED`), everything else compares line for line.
+
+## R6 data, round 4: one media use count, five table classes as Rust lists, EECivilization's costs, the songs (branch rust-data4, 2026-11-17)
+
+Branch `rust-data4` from rust-data3 (669ae7ba2), merged with origin/rust 48b2f4f0 (clean).
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 3c6032ccb | `tools/datafmt/structs.py` reads the layouts through eedata's specgen (the Rust records too) | tools |
+| 5bb1bea30 | one media use count (ee_data `media.rs`) behind EEButtonObject, EESoundObject, EEGraphicObject, EETerrainTable, EEMusicObject | +143 -198, net -55 |
+| 6fe9154f3 | EEStartingResources, EEGameVariant, EEUnitBehavior, EEUCUpgradeTable, EETerrainTypeTable as Rust lists | +73 -153, net -80 |
+| 975ad35cc | EECivilization's costs, affordability and reapply order (ee_sim tech `civilization.rs`) | +31 -78, net -47 |
+| 236904e20 | the songs by epoch and their shuffle (ee_data `tables.rs`) | +7 -36, net -29 |
+
+Round total: net -211, far short of the 1,500 aimed at (see "Why short").
+
+- **The media use count** (`media.rs`, `ee/EEMediaUse.h`). Five classes repeated: under the unit's lock the first
+  user sets the count and the loading flag, leaves the lock and loads; later users count themselves and poll the
+  flag with `PlatSleep(1)`; the last release unloads under the lock. `EeDataMediaUse` (`mMediaCount`, `mIsLoading`) is
+  now their base and Rust runs the pattern; the lock stays each unit's `sDatabaseLock` (passed in as callbacks: one
+  global lock would deadlock, an unload under one unit's lock waiting on another unit's loading flag) and the
+  classes' steps are lambdas (a failed button or score load resets the count, a busy score keeps its use, the terrain
+  attaches its textures under the lock). The terrain's `mLoadCount` and the song's `mState` are `mMediaCount`.
+  `EEUnitClassUpgrade` has the same pattern twice but its counts are in ee_units' record (`stats.rs`): left alone.
+- **Table classes as Rust lists** (`tables.rs` `EeDataList`, `ee/EEDbList.h`). The entries are boxed records'
+  members in Rust; `EEDbList<T, K>` reads a list as the `std::vector<T*>` it replaced (`operator[]`, `size`), so the
+  readers (the units' behaviours, the lobby's presets, the unit class's upgrade table, the map's terrain types)
+  compile unchanged. The classes lose their vtables, constructors and destructors; `EEUnitClassImprovementTable`'s
+  mirrored vtable slot (`mU00`) went with it (its static_asserts against `EEUCUpgradeTable` hold), and the terrain
+  type's `mColorSetID` (EEMap writes it) is in `EeDataTerrainTypeFields`. Behaviour change: an index past a list is
+  NULL (the vectors read past their end).
+- **EECivilization** (`civilization.rs`): `CanAfford`, `CanAffordAll` and `GetBaseCost` count against the Rust
+  civilization tables (the base cost is the level's *bonus* times 100: the original passed its value pointer second);
+  `Reapply`, `ApplyDeferred` and `ApplyLevel21ToWorld` walk the upgrades in Rust and apply each through
+  `EECivilizationManager::ApplyUpgrade` (its capture hooks stay). The class keeps its members (its vectors are read
+  directly by a dozen units) and its save format; a whole-class move needs those readers changed first.
+- **The songs** (`tables.rs`): the per-epoch lists and `GetRandom`'s shuffle (each next song drawn from those left
+  with `gMusicRandom`, played from the end); `ClearAll` releases them through a callback.
+- **Goldens** (scratch, `build/data4/golden`, over the ee_data staticlib): `media.cpp` (the five classes' original
+  bodies, 669ae7ba2's, against the adapters: 3,000 random sequences of 12 operations, every lock call, load, unload
+  and count logged; 36,000 lines identical; a mutation of the button's reset flag is caught) and `songs.cpp` (the
+  original GetRandom/ClearAll against the lists: 400 cases, 16,400 lines identical). The lists and the civilization
+  are simulation input: the oracle, the captures, the saveload matrix and the civ gate cover them.
+- **Why short**: what is left in the Data Pre-Loading Thread and Database is mostly C++ object management around
+  GE models, textures and sounds (EEGraphicObject's tag points, parts and colour groups; the terrain mesh's texture
+  sets; the effects' loads), the threads (EEDataPreLoading) and classes whose members are read by many units
+  (EECivilization's vectors). Each needs either its readers rewritten or a Rust object model of the GE objects first.
+- **Data**: no converter or format change this round (`specs.json` unchanged): no `data/db` regeneration.
+- **Gates** (the tree merged with origin/rust 48b2f4f0; the clippy and rustfmt fixes after it touch Rust only):
+  `build.py --sim` and `--test-profile windowed-software` 0/0 (736/737 inputs); `eedata check` PASS, `cppgate` PASS;
+  the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS (oracle 200, late 204, space 202, calamity 212,
+  scenario 43 digests); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS; the editor gate PASS
+  (14,448 lines), the civ gate PASS (4,062 lines); the rmap gate 2088/2088 and `--reader` 2088/2088; the tour through
+  slot.py `RESULT PASS tour` (83.5% lit, F3 ok); the Rust gate: tests and clippy PASS after naming the song lists'
+  type, rustfmt PASS after the module order, the header check current (the full gate rerun is the lead's).
+- **After the merge of origin/rust f63bd44b** (WONLobby 12, world views, A* round 1; PORT_LEARNINGS conflicted on
+  appended sections only: rust's taken, this one appended): both builds 0/0 (734/735 inputs), the oracle seeds 2-7
+  identical, the saveload matrix `--expect` PASS, the Rust gate PASS (the full run).
+## Object plan, Lane R preparation: RFIL, the fill's golden, the fill split into reads and calls (branch rust-objR, 2026-11-17)
+
+The preparation for moving `EERenderObject.cpp`'s fill and `EEEffectHost.cpp`'s `Ask` readers onto Lane V's views
+(`ee_sim::world`); nothing moved to Rust yet. docs/progress/obj-lane-r.md has the gates and every read by object.
+
+- **RFIL in the live game.** `EE_RENDER_CAPTURE=<file>` (TEST ONLY, `EERenderCapture.cpp`) digests every filled
+  frame. The game draws on wall time, so no two runs fill the same frames: `tools/rfil.py compare` matches frames by
+  keys (physics tick, camera, flags, the unit under the pointer and a digest of the visible tiles' units) and requires
+  the matched ones equal. To share ticks between runs the RFIL tours run the harness clock at 1/20
+  (`--time-factor 1/20`: the software renderer draws about one frame per physics tick); seed 7: 65 to 89 matched
+  frames between runs, all equal.
+  - **Trap (addresses):** the texture maps are multimaps keyed by `GETexture*`: their order differs between runs. The
+    capture names a key by its lowest pool index and writes the keys in that order.
+  - **Trap (indeterminate fields):** `FillGhostRecords` fills a local `EERenderUnitRecord`; the scalars it does not set
+    are stack garbage (the driver's two runs differed until only the set fields were compared).
+  - **Trap (input):** the box selection's "dead" step fails at the 1/20 clock (the disbanded unit does not finish dying
+    within its wait), and a selection or kill changes the world at a wall time: the world digest in the key keeps such
+    frames unmatched instead of reported.
+  - **Coverage gap:** the tours at seeds 2, 3 and 7 drew the start's six units and no map object; selections, objects,
+    ghosts and circles are covered only by the driver.
+- **The stub-GE driver** (`build/gxR/drv/make_rfil.py`, scratch): the fill's functions cut verbatim from a commit or the
+  working tree over a stand-in world; prints every call and each frame's full lists. 3,000 frames of seed 2: 21,344
+  render units, 10,882 objects, 1,512 ghost records, 125 circles; two runs identical. 40 frames are the committed
+  `golden_fill.txt`; `golden_fill.rs` replays the parts already in Rust (`capture.rs`' place, jitter and sway,
+  `walk.rs`' owned food) against it.
+  - **Trap (Git Bash heredocs):** a quoted heredoc (`<<'EOF'`) feeding Python on this machine turned `\\n` in the
+    script into a real newline twice (the patched C++ string literals broke). Write such scripts with the Write tool.
+- **The split.** `FillUnit` and `FillObject` keep their calls (counters, `LoadMedia`, the circle, `AddUnit`, the list
+  and map inserts) in the original order and hand every read and field write to `FillUnitFields` /
+  `FillObjectFields`: the driver's trace byte-identical, RFIL equal against the unmodified exe's tours.
+
+## Object plan, Lane R round 2: the fill's fields, IsUnitDrawn's facts, GetUnitOpacity and sixteen effect readers over the world views (ee_gfx fill.rs, effect_views.rs; branch rust-objR, 2026-11-17)
+
+On Lane V's `ee_sim::world` (origin/rust f63bd44ba). docs/progress/obj-lane-r.md has the commits and the numbers:
+the round's code is net -89 C++, far from the plan's -850 to -1,050.
+
+- **Why so little.** The views made the plain reads free, but the fill is mostly not plain reads: the graphic
+  objects (models, textures, turret parts, `LoadMedia`), the physical model, the class virtuals (`GetModel`,
+  `IsLandBuilding`, `GroundLocation`, `IsSidePart`, `UpdateHidden`), `EERenderUnit`'s vectors and name, the render
+  lists, the picker, the upgrades table, `FindWaypointAtTile`. Each is a host entry of three to ten lines: the 210
+  lines of `FillUnitFields` became about 190 of host. The effect host's readers that were only record fields freed
+  real C++ (-73). Measure a move by "which reads are records" before counting on the views.
+- **Mirrors, not copies.** `EERenderShadow` is `EeGfxFillObject` member for member, and `EERenderUnit` now starts
+  with the members Rust writes (`EeGfxFillUnit`; its vectors and name follow): Rust writes the C++ objects in place,
+  `EERenderObject.cpp` static_asserts every offset. Members a fill does not write keep the pool slot's earlier value,
+  as the original's did (the replay starts each entry from the slot's previous dump for that reason).
+  - **Trap (names):** a mirror named `EeGfxRenderUnit` clashed with ro_units.rs's record of the same name: cbindgen
+    emitted one, and EEROUnits.cpp failed on fields it lacked. Name exported records after the module.
+  - **Trap (cbindgen):** a `type Ctx = *mut c_void` alias in an exported struct was emitted as an incomplete `Ctx`;
+    spell the types out. Private `const`s named like another crate's (`GOAL_CAST_CALAMITY`) moved that crate's
+    constant into common.h: prefix them.
+  - **Trap (includes):** host functions that touch `EEWheel` and the class kinds must sit after `EERenderObject.cpp`'s
+    late includes (they renumber an init chain when included earlier); FillObject reaches them by declaration.
+- **The stub-GE driver over the views.** Its stand-in classes now derive from the Rust records and it registers its
+  own `EeWorldLayout`, so the Rust reads the stand-in world as it reads the game's. Where the Rust re-implements a C++
+  member the stubs answer as the game does (`IsPathMarker` by class type, `IsSeenBy` through the visibility words,
+  `Fn27C0B4` false); the unmodified fill over the same stubs is the reference. A stand-in mesh row off the map
+  (x = -1) crashed the views (the old stub read a NULL tile's flag and survived): the game's rows are on the map.
+- **The replay.** `golden_fill_replay.rs` builds every frame as fake objects at offsets it registers with
+  `ee_sim::world::layout::set` (the test binary's one layout) and checks every filled render unit and object bit for
+  bit. The golden needs every tile with units printed, not only the visible rows': a map object's shadow reads its
+  neighbours, which footprints put outside them.
+- **The effect readers.** `EeGfxEffect3DHost`/`EeGfxEffect2DHost` carry the effect's unit (0 while `mUnit` holds a
+  saved id) and the current player; effect_views.rs answers scale, location, tile, sight, colour, vent, class scale,
+  market, farm, ring size, enemy, complex unit, hit points and owner. The effects capture (seeds 2-7, 18 digests)
+  reaches them in EE-SIM.
+- **Only a tour reaches** the fill (EE-SIM never draws): RFIL against the unmodified exe's two tours, all matched
+  frames equal; the tour with box selection and orders.
+
+
+## Object storage, lane P, round 1: TSGT, a game for MAPS and MAPK, the lane measured, the tile sight gathered (branch rust-objP, 2026-11-17)
+
+The preparation that does not need lane V's views (the move waits for V). TEST ONLY code and goldens, one
+behaviour-identical refactor; no Rust change.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b8e9a06f | TEST ONLY: TSGT (`EESightScope` in every sight function), the app profile's end sweep of EEMap's sight and checksum | +328 -1 (test code) |
+| bfa3170e | TEST ONLY: the TSGT golden (oracle, app) and MAPS, MAPK (app), seeds 2-7 | 0 |
+| 3b4efb20 | RTSTile's and EEPlayer's tile sight moved into EESightRings.cpp, bodies unchanged | +113 -107 |
+
+- **TSGT, outermost only.** The sight calls nest (a circle calls `AddSharedSight` per tile, which calls
+  `RTSTile::AddSight`, which may call `SetVisibility`), and the move will put the inner ones in Rust. So a record is
+  written only when the outermost sight call on the thread returns (a thread-local depth, as MAPC's scope), and it
+  hashes the tile range the call can reach (a circle's square, clamped to 32 tiles as the walk is; a whole-map call's
+  map; a tile call's own words, with its index in `mTileArray`) after the call, not the tiles the inner calls
+  touched. Then the record does not change when the inner calls move; only the outermost boundary must keep
+  recording, from Rust if it moves there. A whole-map record each game minute (EE-SIM's tick hook) is a backstop.
+- **Size.** A per-call record looked costly (the circles run on every unit's tile step), but the oracle game makes
+  only 31-40 thousand outermost sight calls in 45 minutes: about 3 MB of a 0.5 GB capture. No folding was needed.
+- **MAPS and MAPK get a game.** EEMap's sight is reached only by a wonder with wonder bonus 3 and the out-of-synch
+  checksum only by a multiplayer game. The app profile now sweeps both at the game's end (`EESightCaptureSweep` from
+  EE-SIM's `FinishGame` under `--app-sweep`): every player's `AddSight` and `RemoveSight` at three points with the
+  wonder sight radius (70), `ExploreUnseen` and `FogSeen`, two full cycles of `ComputeChecksum`'s windows. Recording
+  is limited to MAPS, MAPK and TSGT (`Only`) and to the physics thread (`Exclusive`: the changed sight would make the
+  UI thread redraw the mini map, MMPX), the combat records are flushed first, and the capture is closed after it, so
+  every earlier tag of the profile keeps its golden (the app golden's 18 lines PASS with the sweep).
+- **Stable.** Two runs of each profile at seeds 2-7 gave the same TSGT, MAPS and MAPK digests (and the same capture
+  sizes byte for byte).
+- **The measure** (docs/progress/obj-lane-p.md): EEPlayerHost has 111 cases, of which 33 are plain field reads a
+  view replaces (UNIT_INFO's 27 fields the largest; 5 need a tech-node view and 2 the world table, which are not in
+  V's list); EEPlayer.cpp's other four switches add 23 plain of 92. About 56 plain of 203, not the plan's 97: the
+  rest call C++ objects (virtuals the computer player overrides, the towns and herds, the tech tree, the RNG in its
+  order). EEWorld.cpp's plain bodies are about 550 lines, half of them `RecordStatistics`, which no capture records
+  yet. The doc lists every sight function's callers and the fields each reads.
+- **A machine restart mid-round** killed the second app run; the worktree's files were intact (no NUL bytes, every
+  file ending as written). The half-written capture directory was deleted and that run repeated.
+- **Gates.** Build `--sim` 0/0 after each code commit; the TSGT commit: oracle and app profiles at seeds 2-7 PASS
+  (578 and 18 digests, twice); the gathered tree: oracle seeds 2-3 identical to `ref`, captures at seeds 2-3 oracle
+  202 and app 24 digests PASS (TSGT, MAPS, MAPK included). The merge-time numbers are in the lane's report.
+- **Only a person reaches**: sight shared between allies (`mSharedLOS` with allies): no random map makes an alliance,
+  so TSGT covers that path only in a scenario or lobby team game.
+
+## Object storage, lane P, round 2: the tile sight, the visibility words, the player hosts' plain reads and the end-of-game check on the world views (ee_units tile_sight.rs, map_words.rs, player_views.rs, game_over.rs; branch rust-objP, 2026-11-17)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 2288f358 | (merge) origin/rust f63bd44b: lane V's views, save 0.283 | |
+| dcb6884c | the tile sight in Rust: the circles, ring steps and their table, RTSTile's and EEPlayer's tile sight, FogSeen, ExploreUnseen, PrepareSave's pass; the player view's vectors, the tile's words' address | +64 -274, net -210 |
+| a01842c8 | `EEMap::mVisibilityWords` a Rust buffer (allocation, SetPlayerCount's copy, the free) | +7 -23, net -16 |
+| 156bd162 | 16 EEPlayerHost cases and the tick's unit hit points through the views | +1 -55, net -54 |
+| 5d6d8c05 | `CheckGameOver` and `EEWorldCanRecover` in Rust | +24 -110, net -86 |
+| e490e5b8 | (merge) origin/rust d2bb8d7f: lane S, R6 data round 4, the LP64 fixes | |
+| d5df6c54 | the player views read the world through lane S's `WorldView::global` | -1 |
+| bb332e7f | rustfmt, the module order, a dead assignment clippy found; the header | Rust only |
+
+The round's C++: **net -367** (src, include/ee), short of the plan's -550 to -700, as round 1's measure said: about
+56 of the 203 player-host cases were plain, and 17 of them were movable on the views as they are (the rest need a
+tech-node view, the class and upgrade tables' views, the herds, or the C++ context's player); `RecordStatistics`
+(277 lines) has no gate.
+
+- **The tile sight over the views.** `tile_sight.rs` is the C++ bodies over a `SightWorld` trait (the game's
+  reads `MapView::tile`, `TileView::visibility_word`, the `PlayerView`s' `id`, `shared_los`, `enemy`, `allies`, and
+  `WorldView::current_player`; it writes the words through each tile's `mVisibility`). `IsAlliedWith` and the
+  "the current player sees it" test are the C++'s expressions in their order; `UMFloatToLong` is `lrintf`,
+  `UMFloor` the round-then-step (load.rs's), the ring table `sqrt` of a double cast to float as `EEBuildSightRings`
+  built it (now a `OnceLock`). What ee_sim cannot call stays a C++ host operation: the doppelganger manager, the mini
+  map's cell counts (ee_game) and the mesh's reference counts (ee_render), the statistics' `Reset(0x18, 1)` (its
+  `Set` gate). `RTSTile::SetVisibility` (an inline) and `EEBuildSightRings` are gone; FogSeen and ExploreUnseen take
+  the map they are called on (`EEWorld::StartGame` fogs the state's map, which may not be `gWorld.mMap` yet).
+- **TSGT survives the move by its outermost scope.** The C++ entry points (`EEAddSightCircle`,
+  `EERemoveSightCircle`, `EEMoveSightCircle`, `RTSTile::AddSight`/`RemoveSight`, EEPlayer's four, FogSeen,
+  ExploreUnseen, PrepareSave) stay as forwarders holding the TEST ONLY scope; the inner calls (the ring steps,
+  SetVisibility, the player calls inside a circle) are Rust now and recorded nothing before either (round 1 records
+  only the outermost call). TSGT, MAPS and MAPK stayed equal to their goldens after each step, with the same capture
+  sizes to the byte.
+- **The visibility words.** `map_words.rs`'s buffer carries its length in two words before the pointer the C++
+  holds (the destructor frees without a count). `SetPlayerCount`'s copy indexes the old words by the count of tiles
+  found (y outer, x inner), not by the tile's own pointer, as the C++ did. The save reads and writes through the
+  tiles' pointers, unchanged: the saveload matrix passes.
+- **The player hosts.** `FnHost::call` asks `player_views::answer` first; the unit tests' hosts answer every
+  operation themselves, so the bodies' tests did not change. `GetPopulationCost()` is `mWeight` for every class kind;
+  `IsLandBuilding()` is read from the class body table's row (`EE_UNIT_CLASS_BODIES`), not the cached
+  `mIsLandBuildingClass`. The tick host's context is the C++'s, not the player, so only its unit-only operation
+  (TICK_UNIT_HIT_POINTS) moved.
+- **The end-of-game check.** The C++'s gotos (`alone`, `results`, `done`) are one labelled block that yields the
+  label, then the shared tail. The short circuit of the defeat test is kept: `CanRecover` (and its `CanAfford`, which
+  TCST pins) runs only where the C++ ran it.
+- **A merge lesson.** Lane S added `WorldView::global` (the layout's `&gWorld`) in the same hour as this lane added
+  its own world registration; after the merge the duplicate went (d5df6c54). Check the other lanes' view additions
+  before adding a world-level accessor.
+- **A split lesson.** Splitting one working tree into commits by copying files aside and back failed silently once
+  (a `cp` refusing to overwrite a same-named file stopped a `&&` chain halfway) and committed module lines without
+  their files; the commit was amended before anything built on it. Staging prepared contents with `git hash-object
+  -w` and `git update-index --cacheinfo` leaves the worktree alone and is safer.
+- **Tests.** tile_sight_tests.rs 6, map_words 2, game_over_tests.rs 4 (ee_sim +12).
+- **Behaviour:** none (the oracle identical, every capture tag equal to its golden, the saveload matrix as expected).
+- **Gates.** Per step at seeds 2-3: oracle identical, captures oracle and app (TSGT, MAPS, MAPK) PASS; the views'
+  step also late (PLST, PLEC); the game-over step oracle 2-7 identical, captures oracle 204, app 24, late 206, space
+  202, calamity 214 digests PASS, the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: PASS`. On the tree merged with origin/rust d2bb8d7f (conflicts: the layout,
+  its fake in view_tests.rs and EEWorldLayout.cpp, where both lanes added player members: both kept; PORT_LEARNINGS
+  both sections; `strip_markers.py --check` clean; the headers regenerated): both builds 0/0 (the test profile too),
+  oracle seeds 2-7 identical to `ref`, captures at seeds 2-3 oracle 204, app 24, late 206, space 202, calamity 214
+  digests PASS (TSGT, MAPS, MAPK, PLST, PLEC, TCST among them), the Rust gate PASS (4,411 tests; two unrelated tests
+  failed once each under load, ee_render's movie thread and ee_base's golden_spec temp-dir replay, and passed alone
+  and in the next gate), and through `slot.py` the LAN game `RESULT PASS lan-game` (PT host 2710, joiner 2706; MAPK's
+  out-of-synch checksum runs there).
+- **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
+  references the sight drives are the same host calls as before (MMSN covers the counts).
+
 
 ## Several games a process (EE-SIM --games, branch simmulti, 2026-11-16)
 
@@ -29558,3 +29860,4 @@ commit now has the same cache key in every worktree.
   unchanged. Gates again on the merged tree, one heavy job at a time: both builds 0/0, the Rust gate (4,383 tests),
   the oracle (two equal runs), the eleven profiles (two equal runs each), saveload 18/18, the matrix `--expect`, the
   editor and civilization builder gates, eedata check and cppgate, scenario_check 27/27, gates.sh GATES PASS.
+

@@ -21,6 +21,7 @@
 
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEDbRecords.h"
+#include "ee/EEMediaUse.h"
 #include "lle/GERenderState.h"
 
 std::vector<EETerrainTable*> EETerrainTable::sTable;
@@ -42,13 +43,11 @@ long gFirstCliffTerrain;
 
 
 // Creates an empty terrain: no textures, not water, colour type -1 (ee_data tables.rs)
-EETerrainTable::EETerrainTable()
+EETerrainTable::EETerrainTable() : EeDataMediaUse()
 {
     ee_data_terrain_default(this);
     this->mFirstTexture = 0;
     this->mTextures = NULL;
-    this->mLoadCount = 0;
-    this->mIsLoading = false;
     this->mPreviewTexture = NULL;
 }
 
@@ -108,9 +107,9 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
         EETerrainTable* theTerrain = EETerrainTable::Get(i);
         if (theTerrain == NULL)
             continue;
-        if (theTerrain->mLoadCount > 0)
+        if (theTerrain->mMediaCount > 0)
             fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)theTerrain->mName,
-                    theTerrain->mLoadCount);
+                    theTerrain->mMediaCount);
         if (theTerrain->mPreviewTexture != NULL)
             fprintf(inFile, "\t%s was loaded for list box display\n", (const char*)theTerrain->mName);
     }
@@ -125,27 +124,13 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
 // mesh's texture set, later callers wait for that load
 void EETerrainTable::Load(GETerrainMesh& ioMesh)
 {
-    sDatabaseLock.mLock->Enter();
-    if (this->mLoadCount == 0) {
-        this->mLoadCount = 1;
-        this->mIsLoading = true;
-        sDatabaseLock.mLock->Leave();
-        this->LoadTextures();
-        sDatabaseLock.mLock->Enter();
+    EEMediaAcquire(this, sDatabaseLock.mLock, [this] { this->LoadTextures(); }, [&] {
         GETextureSet* theSet = ioMesh.GetRegisteredTextureSet(this->mTextureSetID);
         for (long y = 0; y < this->mRows; y++) {
             for (long x = 0; x < this->mColumns; x++)
                 theSet->SetTexture(this->mColumns - x - 1, y, this->mTextures[this->mColumns * y + x]);
         }
-        this->mIsLoading = false;
-    } else {
-        this->mLoadCount++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoading == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
+    });
 }
 
 // Loads one terrain texture and sets its terrain stage modes (clamped; linear mip filter when trilinear is on)
@@ -204,26 +189,20 @@ void EELoadTerrainPreviews()
 // Attaches the terrain's loaded textures (columns mirrored) to a texture set, once any load has finished
 void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
 {
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mLoadCount > 0) {
-        for (long y = 0; y < this->mRows; y++) {
-            for (long x = 0; x < this->mColumns; x++)
-                inTextureSet->SetTexture(this->mColumns - x - 1, y, this->mTextures[this->mColumns * y + x]);
+    EEMediaLocked(this, sDatabaseLock.mLock, [&] {
+        if (this->mMediaCount > 0) {
+            for (long y = 0; y < this->mRows; y++) {
+                for (long x = 0; x < this->mColumns; x++)
+                    inTextureSet->SetTexture(this->mColumns - x - 1, y, this->mTextures[this->mColumns * y + x]);
+            }
         }
-    }
-    sDatabaseLock.mLock->Leave();
+    });
 }
 
 // Drops a reference to the terrain's textures; the last one detaches them from the mesh and releases them
 void EETerrainTable::Unload(GETerrainMesh& ioMesh)
 {
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mLoadCount == 1) {
-        this->mLoadCount = 0;
+    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
         GETextureSet* theSet = ioMesh.GetRegisteredTextureSet(this->mTextureSetID);
         for (long y = 0; y < this->mRows; y++) {
             for (long x = 0; x < this->mColumns; x++)
@@ -236,10 +215,7 @@ void EETerrainTable::Unload(GETerrainMesh& ioMesh)
         }
         delete[] this->mTextures;
         this->mTextures = NULL;
-    } else if (this->mLoadCount > 0) {
-        this->mLoadCount--;
-    }
-    sDatabaseLock.mLock->Leave();
+    });
 }
 
 // Releases each terrain's preview texture and its first unit class's button reference

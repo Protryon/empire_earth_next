@@ -17,6 +17,7 @@ class EEComplexUnit;
 #include <deque>
 #include <map>
 #include <vector>
+#include "ee/EEDbList.h"               // gGameVariants
 #include "ee/EECameraControl.h"        // held by value (+0x9d0)
 #include "ee/EEGameOptions.h"          // held by value (+0x110, +0x51c)
 #include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
@@ -36,7 +37,7 @@ class FSPersistent;
 class TSCriticalSection;
 
 class EEGameVariant;
-extern std::vector<EEGameVariant*> gGameVariants;   // 0x4e7f78 (declared in ee/EEGameVariant.h)
+extern EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // 0x4e7f78 (declared in ee/EEGameVariant.h)
 
 class EEWorld : public RTSWorld {
 public:

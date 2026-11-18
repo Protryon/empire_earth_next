@@ -295,6 +295,16 @@ struct FnHost {
 
 impl PlayerTickHost for FnHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        if op == EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS {
+            // the unit's `mHitPoints` (index 0) or its stats' `mMaxHitPoints`, through the world views (lane P);
+            // SAFETY: the C++ hands the player's live unit, and holds the world while the tick runs
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            if let Some(u) = unsafe { crate::world::UnitView::of(&t, io.i as u64) } {
+                let v = if index == 0 { u.hit_points() } else { u.stats().map_or(0, |s| s.max_hit_points()) };
+                return v as i32;
+            }
+        }
         // SAFETY: the C++ callback's contract
         unsafe { (self.f)(self.ctx, op, index, io) }
     }

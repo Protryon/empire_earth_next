@@ -28,8 +28,13 @@ impl DiplomacyHost for Form {
         self.op(op, a, b, c, d)
     }
     fn player(&mut self, index: u32) -> Option<EeScreensDiplomacyPlayer> {
+        let begun = crate::screens::sgvw::begin();
         let mut out = EeScreensDiplomacyPlayer::default();
-        unsafe { sys::ee_screenscpp_diplomacy_player(index, &mut out) }.then_some(out)
+        let r = unsafe { sys::ee_screenscpp_diplomacy_player(index, &mut out) }.then_some(out);
+        if let Some(g) = begun {
+            crate::screens::sgvw::record(g, &format!("DP {index} {r:?}"));
+        }
+        r
     }
     fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
         self.get(which, arg)

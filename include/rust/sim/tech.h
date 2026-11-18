@@ -395,6 +395,10 @@ constexpr static const uint32_t EE_TECH_CIVF_OP_GRANT = 11;
 /// the request refused: the chat line naming the civilization, then the random draw
 constexpr static const uint32_t EE_TECH_CIVF_OP_REFUSE = 12;
 
+/// The attribute index of the upgrades a loaded civilization applies last (`ApplyDeferred`) and the world takes from
+/// player 0 (`ApplyLevel21ToWorld`): the population limit's.
+constexpr static const uint32_t EE_TECH_CIV_DEFERRED_INDEX = 21;
+
 /// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
 constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
 
@@ -1554,6 +1558,9 @@ struct EeTechCivFileHost {
   void (*call)(void *ctx, const EeTechCivFileCall *call, EeTechCivFileReply *reply);
 };
 
+/// A C++ apply step: `EECivilizationManager::ApplyUpgrade(upgrade, player)`.
+using EeTechCivApply = bool(*)(void *context, EeTechCivUpgrade upgrade);
+
 /// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
 /// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
 /// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
@@ -2448,6 +2455,61 @@ int32_t ee_tech_civ_apply_file(EeTechCivFileHost *host, const char *file);
 /// # Safety
 /// `host` names a live host.
 bool ee_tech_civ_request_upgrades(EeTechCivFileHost *host);
+
+/// `CanAfford`: `upgrade`'s cost against `list` into `out_cost` (when not null); whether it is affordable (always with
+/// custom civilizations off).
+///
+/// # Safety
+/// `list` names `count` upgrades; `out_cost` is writable or null.
+bool ee_tech_civ_can_afford(EeTechCivUpgrade upgrade,
+                            const EeTechCivUpgrade *list,
+                            size_t count,
+                            unsigned long available,
+                            bool allow_custom,
+                            unsigned long *out_cost);
+
+/// `GetBaseCost`.
+long ee_tech_civ_base_cost(EeTechCivUpgrade upgrade);
+
+/// [`can_afford_all`] with the loaded tables.
+///
+/// # Safety
+/// `purchased` and `upgrades` name `purchased_count` and `count` upgrades.
+bool ee_tech_civ_can_afford_all(const EeTechCivUpgrade *purchased,
+                                size_t purchased_count,
+                                const EeTechCivUpgrade *upgrades,
+                                size_t count,
+                                unsigned long available,
+                                bool allow_custom);
+
+/// [`reapply`]: the deferred upgrades into `deferred` (room for `count`), their number into `deferred_count`.
+///
+/// # Safety
+/// `purchased` names `count` upgrades; `deferred` has room for `count`; `deferred_count` is writable.
+bool ee_tech_civ_reapply(const EeTechCivUpgrade *purchased,
+                         size_t count,
+                         EeTechCivApply apply,
+                         void *context,
+                         EeTechCivUpgrade *deferred,
+                         size_t *deferred_count);
+
+/// [`apply_all`].
+///
+/// # Safety
+/// `upgrades` names `count` upgrades.
+bool ee_tech_civ_apply_all(const EeTechCivUpgrade *upgrades,
+                           size_t count,
+                           EeTechCivApply apply,
+                           void *context);
+
+/// `ApplyLevel21ToWorld`: applies every purchased upgrade of the deferred index (results ignored).
+///
+/// # Safety
+/// `purchased` names `count` upgrades.
+void ee_tech_civ_apply_deferred_kind(const EeTechCivUpgrade *purchased,
+                                     size_t count,
+                                     EeTechCivApply apply,
+                                     void *context);
 
 /// [`init`] into `*out`.
 ///

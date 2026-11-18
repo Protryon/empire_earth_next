@@ -38,15 +38,33 @@ impl PostGameHost for Form {
         self.put(which, arg, text)
     }
     fn history(&mut self) -> EeScreensPgsHistory {
-        let mut out = EeScreensPgsHistory::default();
-        unsafe { sys::ee_screenscpp_pgs_history(&mut out) };
-        out
+        history()
     }
     fn record(&mut self, index: u32) -> EeScreensPgsRecord {
-        let mut out = EeScreensPgsRecord::default();
-        unsafe { sys::ee_screenscpp_pgs_record(index, &mut out) };
-        out
+        record(index)
     }
+}
+
+/// `gWorld.mStatistics` (traced: SGVW `PH`).
+fn history() -> EeScreensPgsHistory {
+    let begun = crate::screens::sgvw::begin();
+    let mut out = EeScreensPgsHistory::default();
+    unsafe { sys::ee_screenscpp_pgs_history(&mut out) };
+    if let Some(g) = begun {
+        crate::screens::sgvw::record(g, &format!("PH {out:?}"));
+    }
+    out
+}
+
+/// Record `index` of the statistics (traced: SGVW `PR`).
+fn record(index: u32) -> EeScreensPgsRecord {
+    let begun = crate::screens::sgvw::begin();
+    let mut out = EeScreensPgsRecord::default();
+    unsafe { sys::ee_screenscpp_pgs_record(index, &mut out) };
+    if let Some(g) = begun {
+        crate::screens::sgvw::record(g, &format!("PR {index} {out:?}"));
+    }
+    out
 }
 
 /// The post-game summary's event code for a control event id, 0 for another form's.
@@ -57,15 +75,7 @@ pub extern "C" fn ee_screens_post_game_event_for(id: c_ulong) -> u32 {
 
 /// The colours of the statistics' records (toolkit.rs's combined graph).
 pub(crate) fn record_colours() -> Vec<[f32; 3]> {
-    let mut out = EeScreensPgsHistory::default();
-    unsafe { sys::ee_screenscpp_pgs_history(&mut out) };
-    (0..out.records)
-        .map(|i| {
-            let mut r = EeScreensPgsRecord::default();
-            unsafe { sys::ee_screenscpp_pgs_record(i, &mut r) };
-            r.colour
-        })
-        .collect()
+    (0..history().records).map(|i| record(i).colour).collect()
 }
 
 /// The summary's line graph's value format (`EEUIPGSLineGraph::FormatXValues` for `axis` 0, the game's time,

@@ -588,6 +588,15 @@ struct EeWorldLayout {
   uint64_t player_color;
   uint64_t player_first_unit;
   uint64_t player_selected_group;
+  /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
+  uint64_t player_computer_player;
+  /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
+  /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
+  uint64_t player_allies;
+  uint64_t player_sight_sharers;
+  uint64_t player_pending_units;
+  uint64_t player_towns;
+  uint64_t player_herds;
   /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
   uint64_t world_players;
   uint64_t world_map;
@@ -609,8 +618,17 @@ struct EeWorldLayout {
   uint64_t world_in_cinematic;
   uint64_t world_user_paused;
   uint64_t world_using_carbon;
+  /// `EEWorld::mTeamsLocked` (a bool)
+  uint64_t world_teams_locked;
+  /// `&gWorld` (an address, not an offset: the one world's handle) and `&gUnitClassTable` (the address of the
+  /// `std::vector<EEUnitClass*>`; its begin and end are its first two words)
+  uint64_t world_address;
+  uint64_t unit_class_table;
   /// `mTiles` (the `EETile*` array, row-major, `mSize` x `mSize`)
   uint64_t map_tiles;
+  /// lane P: `EEMap::mTileArray` (the `EETile` array), `mVisibilityWords` (the tiles' visibility words)
+  uint64_t map_tile_array;
+  uint64_t map_visibility_words;
   /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)
   uint64_t tile_stride;
   /// `mTerrainType` (a `long`), `mUnits` (the first node), `mVisibility` (`uint32_t*`), `mHeight`, `mAIValue` (a
@@ -623,6 +641,9 @@ struct EeWorldLayout {
   /// `mUnit` (an `EEUnit*`), `mNext`
   uint64_t unit_node_unit;
   uint64_t unit_node_next;
+  /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
+  uint64_t player_viewed_unit;
+  uint64_t player_selected_viewed_unit;
 };
 
 /// The check's counts and digest.

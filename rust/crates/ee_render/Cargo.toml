@@ -14,6 +14,7 @@ path = "src/bin/eemodel_gate.rs"
 
 [dependencies]
 ee_base = { path = "../ee_base" }
+ee_sim = { path = "../ee_sim" }
 log = "0.4"
 parking_lot = "0.12"
 raw-window-handle = "0.6"

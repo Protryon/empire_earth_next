@@ -41,13 +41,6 @@ RTSTile::~RTSTile()
 {
 }
 
-// Drops one of the player's sight references on the tile; the last one leaves it explored
-void RTSTile::RemoveSight(EEPlayer* inPlayer)
-{
-    if (this->GetVisibility(inPlayer->GetPlayerID()) > 1)
-        this->mVisibility[inPlayer->GetPlayerID() >> 1] += -1 << ((inPlayer->GetPlayerID() & 1) << 4);
-}
-
 // Frees a node of the tile's unit list
 void RTSTile::FreeUnitNode(RTSTileUnitNode* inNode)
 {
@@ -81,15 +74,6 @@ void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const
     for (unsigned long i = 0; i < inPlayerCount; i++)
         fprintf(inFile, "Tile Vis Count For Player %ld has a value of %ld\n", i, this->GetVisibility(i));
     fprintf(inFile, "Tile Terrain Type has value %ld\n", this->mTerrainType);
-}
-
-// Adds a sight reference of the player to the tile; an unexplored tile becomes seen
-void RTSTile::AddSight(EEPlayer* inPlayer)
-{
-    if (this->GetVisibility(inPlayer->GetPlayerID()) != 0)
-        this->mVisibility[inPlayer->GetPlayerID() >> 1] += 1 << ((inPlayer->GetPlayerID() & 1) << 4);
-    else
-        this->SetVisibility(2, inPlayer);
 }
 
 // Frees the tile's whole unit list

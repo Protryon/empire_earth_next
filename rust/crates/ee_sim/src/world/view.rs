@@ -179,6 +179,17 @@ macro_rules! world_field {
     }};
 }
 
+/// `gUnitClassTable`'s begin and end.
+fn class_table() -> (usize, usize) {
+    let at = layout().unit_class_table as usize;
+    if at == 0 {
+        return (0, 0);
+    }
+    let w = std::mem::size_of::<usize>() as u64;
+    // SAFETY: the registered vector's first two words (EEWorldLayout.cpp checks the library's layout)
+    unsafe { (pointer(at, 0), pointer(at, w)) }
+}
+
 /// The value of type `T` at `object + offset`.
 ///
 /// # Safety
@@ -565,6 +576,20 @@ impl<'t> ClassView<'t> {
     fn at(object: usize) -> Option<Self> {
         (object != 0).then_some(ClassView { object, _t: PhantomData })
     }
+    /// `gUnitClassTable.size()` (`EEUnitClassCount()`).
+    pub fn count(token: &'t WorldRead) -> usize {
+        let _ = token;
+        let (begin, end) = class_table();
+        (end - begin) / std::mem::size_of::<usize>()
+    }
+    /// `gUnitClassTable[index]` (None for an empty slot or past the table).
+    pub fn by_index(token: &'t WorldRead, index: usize) -> Option<Self> {
+        if index >= Self::count(token) {
+            return None;
+        }
+        // SAFETY: an element of the table; a listed class is live while the world is read
+        Self::at(unsafe { pointer(class_table().0, (index * std::mem::size_of::<usize>()) as u64) })
+    }
     /// The view of the class `handle` (an `EEUnitClass*`; None for 0).
     ///
     /// # Safety
@@ -724,6 +749,21 @@ impl<'t> PlayerView<'t> {
         // SAFETY: a live player's pointer member
         unsafe { pointer(self.object, layout().player_selected_group) as u64 }
     }
+    /// `mViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_viewed_unit) as u64 }
+    }
+    /// `mSelectedViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn selected_viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_selected_viewed_unit) as u64 }
+    }
+    /// `mComputerPlayer != NULL`
+    pub fn has_computer_player(&self) -> bool {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_computer_player) != 0 }
+    }
     /// `mEnemies[player]` (non-zero: at war; 0 past the table)
     pub fn enemy(&self, player: usize) -> u64 {
         let enemies: [c_ulong; 17] = crate::world_field!(self.saved(), mEnemies);
@@ -744,6 +784,65 @@ impl<'t> PlayerView<'t> {
     /// Its units in list order (`mFirstUnit`, then each unit's `mNext`).
     pub fn units(&self) -> impl Iterator<Item = UnitView<'t>> {
         std::iter::successors(self.first_unit(), |u| u.next())
+    }
+    /// The begin and end of the pointer vector at `at`
+    fn vector(&self, at: u64) -> (usize, usize) {
+        let w = std::mem::size_of::<usize>() as u64;
+        // SAFETY: a live player's vector member: its first two words are its begin and end (EEWorldLayout.cpp checks)
+        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+    }
+    fn vector_len(&self, at: u64) -> usize {
+        let (begin, end) = self.vector(at);
+        (end - begin) / std::mem::size_of::<usize>()
+    }
+    fn vector_at(&self, at: u64, i: usize) -> u64 {
+        if i >= self.vector_len(at) {
+            return 0;
+        }
+        // SAFETY: an element of the vector
+        unsafe { pointer(self.vector(at).0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
+    }
+    /// `mSharedLOS` (the saved record's)
+    pub fn shared_los(&self) -> bool {
+        crate::world_field!(self.saved(), mSharedLOS)
+    }
+    /// `mSaveVisMap`
+    pub fn save_vis_map(&self) -> bool {
+        crate::world_field!(self.rts(), mSaveVisMap)
+    }
+    /// `mAllies.size()`, `mAllies[i]`'s handle (0 past the end)
+    pub fn allies_len(&self) -> usize {
+        self.vector_len(layout().player_allies)
+    }
+    pub fn ally_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_allies, i)
+    }
+    /// `mSightSharers.size()`, `mSightSharers[i]`'s handle
+    pub fn sight_sharers_len(&self) -> usize {
+        self.vector_len(layout().player_sight_sharers)
+    }
+    pub fn sight_sharer_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_sight_sharers, i)
+    }
+    /// `mPendingUnits.size()`, `mPendingUnits[i]`'s handle
+    pub fn pending_units_len(&self) -> usize {
+        self.vector_len(layout().player_pending_units)
+    }
+    pub fn pending_unit_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_pending_units, i)
+    }
+    /// `mTowns`, `mHerds`: their sizes and entries' handles (`EETown*`, `EEHerd*`)
+    pub fn towns_len(&self) -> usize {
+        self.vector_len(layout().player_towns)
+    }
+    pub fn town_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_towns, i)
+    }
+    pub fn herds_len(&self) -> usize {
+        self.vector_len(layout().player_herds)
+    }
+    pub fn herd_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_herds, i)
     }
 }
 
@@ -855,6 +954,14 @@ impl<'t> WorldView<'t> {
     }
     pub fn using_carbon(&self) -> bool {
         self.flag(layout().world_using_carbon)
+    }
+    pub fn teams_locked(&self) -> bool {
+        self.flag(layout().world_teams_locked)
+    }
+    /// The world (`&gWorld`, registered with the layout).
+    pub fn global(token: &'t WorldRead) -> Option<Self> {
+        // SAFETY: the registered address is the one live world
+        unsafe { Self::of(token, layout().world_address) }
     }
     /// `mMap`
     pub fn map(&self) -> Option<MapView<'t>> {
@@ -968,6 +1075,12 @@ impl<'t> TileView<'t> {
         let words = unsafe { pointer(self.object, layout().tile_visibility) };
         // SAFETY: the caller's bound: one of the tile's words
         (words != 0).then(|| unsafe { member(words, (word * 4) as u64) })
+    }
+    /// `mVisibility`'s address (0: none), for the tile sight's writes (lane P, tile_sight_host.rs): the words live in
+    /// the map's `mVisibilityWords`
+    pub fn visibility_words_ptr(&self) -> *mut u32 {
+        // SAFETY: the tile's pointer member
+        unsafe { pointer(self.object, layout().tile_visibility) as *mut u32 }
     }
     /// `mVisibility != NULL` (the map gives every tile its words: `EEMap::SetPlayerCount`)
     pub fn has_visibility(&self) -> bool {
