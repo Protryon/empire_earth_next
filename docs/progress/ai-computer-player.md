@@ -71,3 +71,19 @@ areas and the A* goals.
   Load/Save/Restore (the C++ calls them through `EE_CP_SAVE_CENTER_*`).
 - `EEHerd.cpp` (1,365) and `EETown.cpp` (407): both derive from `EEAIArea` (lane C's); the player lane's
   `player_areas.rs` and `town_save.rs` already drive their bookkeeping and saves from Rust.
+
+## Results (round 1, 2026-11-17)
+
+Commits on `rust-ai-cp1` (from origin/rust 0bfe280ce; origin/rust did not move during the round, so the merge was
+empty): 49368a116 (legacy readers, C++ -404), e8cdb3c38 (the record, Init, Load, Save, the scales: -1,490),
+fde0a48c9 (the influence table: -128), 338cd1ddb (the experiment timers: -65), the docs. **C++ -2,087 net** (+244
+-2,331; the target was 3,000). Rust: `ee_sim::cp`, 3,739 lines with tests (23 unit tests).
+
+On the final tree: both builds 0/0 (EE-AOC, EE-SIM, the test profile); the Rust gate PASS (4,439 tests); oracle
+seeds 2-7 identical to the reference; the captures at seeds 2-3: oracle 204, late 206, space 202, calamity 214
+digests equal to their goldens; the plain saveload 18/18 identical; the matrix (`--settings all --seeds 2-3 --at
+1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` (calamity seed 2 has no 1900 s save, next
+seed 2 parts at 915 and 276 ticks, as expected); `scenario_check.py` 27/27 with every report equal to the unmodified
+build's; sim_editor PASS (14,448 lines); `gates.sh` (slot 1): tour, ai-game (time-cap, alive [2, 3], classic_lua)
+and lan-game PASS, GATES PASS.
+

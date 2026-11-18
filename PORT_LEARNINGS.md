@@ -29713,3 +29713,6 @@ the resource centres' world queries.
 - **Gates.** Per commit: both builds 0/0, oracle seeds 2-3 identical, the Rust gate (4,432 tests), scenario_check
   27/27; for the record also sim_editor PASS (14,448 lines) and saveload seeds 2-3 PASS. The influence table is read
   by lane C's path modifiers and the Lua AI's site threat: the oracle covers it.
+- **Final.** C++ -2,087 net over four commits (legacy readers -404, the record -1,490, the influence table -128, the
+  timers -65). On the final tree: oracle seeds 2-7 identical, the four captures (seeds 2-3) PASS, saveload 18/18 and
+  the matrix `--expect` PASS, scenario_check 27/27, the test-profile build 0/0, `gates.sh` GATES PASS.
