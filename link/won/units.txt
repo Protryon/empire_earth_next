@@ -122,7 +122,6 @@
 365120 39b5e3 WONGUI/WONGUIConfig.cpp
 3651e0 3ba288 WONLobby/ChatCtrl.cpp
 3655e0 3c3bfe WONLobby/RoomLabelCtrl.cpp
-365640 3cc511 WONLobby/ServerListCtrl.cpp
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
 365a60 3cb7b3 WONLobby/UserListCtrl.cpp
 366170 366b2f WONLobby/WONStatusString.cpp

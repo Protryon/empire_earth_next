@@ -87,6 +87,7 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
 // ---- the shell
 
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
+intptr_t LobbyNetCtrlHost(LobbyRustCtrl* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
 LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind) : mLobbyCtl(ee_won_lobbyctl_new_model(this, inKind, LobbyCtrlHost)) {}
 
@@ -124,6 +125,13 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case LobbyEvent_EELobbySyncOption: aType = E::SyncOption; break;
     case LobbyEvent_EELobbySyncPlayer: aType = E::SyncPlayer; break;
     case 100064: aType = E::ColorChanged; break;
+    case ComponentEvent_InputTextChanged: aType = E::InputTextChanged; break;
+    case ComponentEvent_InputReturn: aType = E::InputReturn; break;
+    case LobbyEvent_GameChanged: aType = E::GameChanged; break;
+    case LobbyEvent_SyncGameList: aType = E::SyncGameList; break;
+    case 100034: aType = E::FiltersChanged; break;
+    case 100059: aType = E::RefilterAll; break;
+    case 100058: aType = E::RefilterShown; break;
     default: break;
     }
     this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
@@ -265,9 +273,11 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     switch (inOp) {
     case Op::Find:
         return (intptr_t)FindSlot(reinterpret_cast<ComponentConfig*>(a), ee_won_lobbyctl_slot((uint32_t)b));
-    case Op::FindOptional:
-        return (intptr_t)dynamic_cast<Button*>(
-            reinterpret_cast<ComponentConfig*>(a)->Fn386860(ee_won_lobbyctl_slot((uint32_t)b)->name));
+    case Op::FindOptional: {
+        const EeWonLobbyCtlSlot* aSlot = ee_won_lobbyctl_slot((uint32_t)b);
+        Component* aFound = reinterpret_cast<ComponentConfig*>(a)->Fn386860(aSlot->name);
+        return aSlot->ty == EeWonLobbyCtlType::Component ? (intptr_t)aFound : (intptr_t)dynamic_cast<Button*>(aFound);
+    }
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetControlId: aComp->mControlId = (int)b; return 0;
@@ -420,8 +430,10 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aLabel->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), theBuffer));
         return 0;
     }
+    default: break;
     }
-    return 0;
+    // round 13's ops (the Internet controls)
+    return LobbyNetCtrlHost(aCtl, inOp, a, b, c);
 }
 
 // ---- the config readers (GameBrowserCtrl.cpp's and GameUserListCtrl.cpp's)

@@ -622,6 +622,9 @@ WON_TESTS = {
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
     # rust/crates/ee_won_lobby/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
+    # ServerListCtrl and its rows as lobbyctl.rs kind ServerList (srvlistctl.rs): the original statements over a
+    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won_lobby/src/golden_srvlist.txt)
+    "won_srvlist_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
     # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)

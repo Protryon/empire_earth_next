@@ -36,6 +36,7 @@ pub mod resource;
 pub mod routelogic;
 pub mod routing;
 pub mod scrolltext;
+pub mod srvlistctl;
 pub mod staging;
 pub mod stagingobj;
 pub mod statusstr;

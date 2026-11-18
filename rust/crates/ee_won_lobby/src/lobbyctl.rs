@@ -34,6 +34,8 @@ pub enum EeWonLobbyCtlKind {
     GameOptions = 5,
     /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
     PlayerOptions = 6,
+    /// ServerListCtrl (the game lists; round 13, srvlistctl.rs)
+    ServerList = 7,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -109,6 +111,45 @@ pub enum EeWonLobbyCtlEvent {
     SyncPlayer,
     /// 100064: a colour button's colour changed (round 5)
     ColorChanged,
+    /// `ComponentEvent_InputTextChanged` (round 13)
+    InputTextChanged,
+    /// `ComponentEvent_InputReturn`
+    InputReturn,
+    /// `LobbyEvent_GameChanged` (a `GameChangedEvent`)
+    GameChanged,
+    /// `LobbyEvent_SyncGameList` (a `SyncGameListEvent`)
+    SyncGameList,
+    /// 100034: the filter values changed
+    FiltersChanged,
+    /// 100059: every game to filter again
+    RefilterAll,
+    /// 100058: the shown games to filter again
+    RefilterShown,
+}
+
+/// A list row's field (`ItemGet` / `ItemSet`; round 13).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonLobbyCtlItemField {
+    /// `ListItem::mHeight`
+    Height = 0,
+    /// `ListItem::mTop`
+    Top,
+    /// `ListItem::mWidth`
+    Width,
+    /// `ListItem::mSelected` (0 or 1)
+    Selected,
+    /// `ListItem::mSelectable` (0 or 1)
+    Selectable,
+    /// `ServerDetailsItem::mIconId`
+    IconId,
+    /// `ServerDetailsItem::mSummaryHeight` (a byte)
+    SummaryHeight,
+}
+
+/// Two `i32`s in one argument (`lo | hi << 32`).
+pub fn pack(lo: i32, hi: i32) -> isize {
+    (lo as u32 as u64 | ((hi as u32 as u64) << 32)) as isize
 }
 
 /// The texts the controls set (the lobby's resource strings).
@@ -424,6 +465,203 @@ pub enum EeWonLobbyCtlOp {
     ColorGetColor,
     /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
     LabelSetPercent,
+    // ---- round 13: the Internet controls (srvlistctl.rs, netctl.rs). Texts are `GUIStringData*` (borrowed; 0 the
+    // empty string), a resource `res` an `EeWonLobbyRes` row, a point or size two `i32`s packed (`lo | hi << 32`).
+    /// `ee_won_model_get(model of (LobbyModelObject*)a, b)` (answered by modelobj.rs in the game).
+    MGet = 1000,
+    /// `ee_won_model_set(model of a, b, c)`.
+    MSet,
+    /// `ee_won_model_call(model of a, b, c)` (`b` an `EeWonModelCall`).
+    MCall,
+    /// `ServerDetailsItem::CreateItem()` with a reference added (the original's local `SmartPtr`).
+    RowNew = 1010,
+    /// `((ServerDetailsItem*)a)->mGame.get()`.
+    RowGame,
+    /// `((ServerDetailsItem*)a)->mGame = (LobbyGame*)b`.
+    RowSetGame,
+    /// `a->mIPAddrStr = a->mGame->GetAddress().GetHostAndPortString(true)`.
+    RowSetAddrText,
+    /// `((ServerDetailsItem*)a)->mIPAddrStr` (a text).
+    RowAddrText,
+    /// A list row's field `b` (`EeWonLobbyCtlItemField`).
+    ItemGet,
+    /// A list row's field `b` set to `c`.
+    ItemSet,
+    /// `((ServerDetailsItem*)a)->GetDetailsHeightHook((MultiListArea*)b)`.
+    RowDetailsHeight,
+    /// `((ServerDetailsItem*)a)->PaintDetailsHook(*(Graphics*)b, (MultiListArea*)c)`.
+    RowPaintDetails,
+    /// `((Component*)a)->GetDefaultFont()`.
+    DefaultFont = 1030,
+    /// `((Component*)a)->GetDefaultFontMod(b, c)`.
+    DefaultFontMod,
+    /// `((Component*)a)->GetFontMod((Font*)b, c, 0)`.
+    FontMod,
+    /// `((ListArea*)a)->mFont.get()`.
+    ListFont,
+    /// `((Font*)a)->GetHeight()`.
+    FontHeight,
+    /// `gLobbyResources[a].mImage->mHeight` (`LOBBY_IMAGE(...)->mHeight`).
+    ResImageHeight,
+    /// `((MultiListArea*)a)->GetColumnWidth(b)`.
+    ColumnWidth,
+    /// `((ListArea*)a)->EnsureVisible((ListItem*)b)`.
+    ListEnsureVisible,
+    /// `((ListArea*)a)->GetItemPos((ListItem*)b)`.
+    ListItemPos,
+    /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+    ListSetSel,
+    /// `((ListArea*)a)->GetVertOffset()`.
+    ListVertOffset,
+    /// `((ListArea*)a)->SetVertOffset(b)`.
+    ListSetVertOffset,
+    /// `((ListArea*)a)->GetViewHeight()`.
+    ListViewHeight,
+    /// `((ListArea*)a)->GetItemPosAtYPos(b)`.
+    ListItemAtY,
+    /// `((ListArea*)a)->GetPaintWidth()`.
+    ListPaintWidth,
+    /// `((MultiListArea*)a)->GetColumnPaintContext()`.
+    ListPaintColumn,
+    /// `((MultiListArea*)a)->GetSortColumn()`.
+    ListSortColumn,
+    /// `((MultiListArea*)a)->GetSortColumnPrev()`.
+    ListSortColumnPrev,
+    /// `((ListArea*)a)->DeliverEvent(new PingGameEvent((LobbyGame*)b, true), true)`.
+    ListDeliverPing,
+    /// `((ListArea*)a)->GetTotalWidth()`.
+    ListTotalWidth,
+    /// `((ListArea*)a)->GetTextColor()`.
+    ListTextColor,
+    /// `((ListArea*)a)->ListFlagSet(b)` (0 or 1).
+    ListFlagSet,
+    /// `((Graphics*)a)->GetStandardColor(b)`.
+    GfxStandardColor = 1060,
+    /// `((ListArea*)b)->GetSelColor().GetForegroundColor(*(Graphics*)a, c)`.
+    GfxSelFore,
+    /// `((ListArea*)b)->GetSelColor().GetBackgroundColor(*(Graphics*)a)`.
+    GfxSelBack,
+    /// `((Graphics*)a)->SetColor(b)`.
+    GfxSetColor,
+    /// `((Graphics*)a)->SetFont((Font*)b)`.
+    GfxSetFont,
+    /// `((Graphics*)a)->SetSysColor(b)`.
+    GfxSetSysColor,
+    /// `((Graphics*)a)->FillRect(b's point, c's size)`.
+    GfxFillRect,
+    /// `((Graphics*)a)->Translate(b, c)`.
+    GfxTranslate,
+    /// `((Graphics*)a)->DrawImage(gLobbyResources[b].mImage.get(), c's point)`.
+    GfxDrawResImage,
+    /// `((Graphics*)a)->DrawString(GUIString(b), c's point)`.
+    GfxDrawText,
+    /// `((Graphics*)a)->DrawString(gLobbyResources[b].mString, c's point)`.
+    GfxDrawResText,
+    /// `((Graphics*)a)->mFont->GetStringWidth(GUIString(b))`.
+    GfxTextWidth,
+    /// `DrawLobbyPing((Graphics*)a, b, c, 0, 0)`.
+    GfxDrawPing,
+    /// `((Graphics*)a)->DrawLine(b's point, c's point)`.
+    GfxDrawLine,
+    /// `((Graphics*)a)->DrawImage((Image*)b, c's point)`.
+    GfxDrawImage,
+    /// `new GUIStringData(b bytes at (const char*)a)` with a reference (a temporary `GUIString`; `Release` ends it).
+    TextNew = 1080,
+    /// `GUIString(a).CompareNoCase(GUIString(b))`.
+    TextCompareNoCase,
+    /// `GUIString(a).findNoCase(GUIString(b), 0)`.
+    TextFindNoCase,
+    /// `GUIString(a).findNoCase(gLobbyResources[b].mString, 0)`.
+    TextFindRes,
+    /// `GUIString(a).length()`.
+    TextLen,
+    /// `GUIString(a)[b]` (a unit).
+    TextAt,
+    /// `std::string s = GUIString(a)`: its bytes copied to `(char*)b` (at most `c`), its length returned.
+    TextBytes,
+    /// `GUIString(a) == GUIString(b)` (0 or 1).
+    TextEquals,
+    /// `((LobbyGame*)a)->GetAddress().StringCompare(((LobbyGame*)b)->GetAddress())`.
+    GameCompareAddress,
+    /// `((ComboBox*)a)->mEdit->GetText()` (a text).
+    ComboEditText = 1100,
+    /// `LobbyGetNumPingsToDo()`.
+    PingsToDo,
+    /// `LobbyKillPings(1)`.
+    KillPings,
+    /// `this->DeliverEvent(new GameActionEvent(7, (LobbyGame*)a), false)`.
+    DeliverGameAction,
+    /// `this->DeliverEvent(new JoinGameEvent((LobbyGame*)a), false)`.
+    DeliverJoinGame,
+    /// `((GameChangedEvent*)a)->mGame.get()`.
+    EventGame,
+    /// `((SyncGameListEvent*)a)->mGames.get()`.
+    EventGames,
+    /// `((ListItemClickedEvent*)a)->mX`.
+    EventX,
+    /// `((ListItemClickedEvent*)a)->mY`.
+    EventY,
+    /// The event's `mItem.get()` (`ComboSelChangedEvent`, `ListItemClickedEvent`, `TreeItemOpenedEvent`).
+    EventItem,
+    /// `((ComboSelChangedEvent*)a)->mActiveSel` (0 or 1).
+    EventActiveSel,
+    /// `sprintf(n, "%d", b); ((Label*)a)->SetText(LobbyFormatString(ListPingSummary, n), true)`.
+    LabelSetPingSummary,
+    /// `sprintf` of `b` and `c`; `((Label*)a)->SetText(LobbyFormatString2(ListSummary, b's, c's), true)`.
+    LabelSetListSummary,
+    /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+    ButtonSetRes,
+    /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+    LabelSetRes,
+    /// `this->RequestTimer(a != 0)`.
+    RequestTimer,
+    /// `this->mTimerFlags &= ~2`.
+    ClearTimerFlag,
+    /// `this->Container::TimerEvent(a)` (0 or 1).
+    BaseTimer,
+    /// `((ComboBox*)a)->InsertItem(new TextListItem(NoFilter, (Font*)b), -1)`.
+    ComboInsertNoFilter,
+    /// `((ComboBox*)a)->InsertItem(new FilterListItem(GUIString(b), (Font*)c), -1)`.
+    ComboInsertFilterRow,
+    /// `LobbyGetFilterValues(GUIString(b))`'s values, each `((ComboBox*)a)->AddString(value, -1)`.
+    ComboAddFilterValues,
+    /// `((ComboBox*)a)->mListArea->GetItem(b)`.
+    ComboItem,
+    /// `((ComboBox*)a)->mListArea->GetNumItems()`.
+    ComboCount,
+    /// `((ComboBox*)a)->mListArea->GetItemPos((ListItem*)b)`.
+    ComboItemPos,
+    /// `((TextListItem*)a)->mText == GUIString(b)` (0 or 1).
+    TextItemIs,
+    /// `((ComboBox*)a)->UpdateItem((ListItem*)b)`.
+    ComboUpdateItem,
+    /// `((ComboBox*)a)->SetText(GUIString(b), true)`.
+    ComboSetText,
+    /// `((ComboBox*)a)->AddString(GUIString(b), -1)`.
+    ComboAddString,
+    /// `((ComboBox*)a)->DeleteItem(b)`.
+    ComboDeleteItem,
+    /// `((ComboBox*)a)->mEdit->SelectRange(-1, 0)`.
+    ComboSelectEnd,
+    /// `((FilterListItem*)a)->mIsAdd` (0 or 1).
+    FilterIsAdd,
+    /// `((FilterListItem*)a)->mSelPos`.
+    FilterSelPos,
+    /// `((FilterListItem*)a)->mFilterText` (a text).
+    FilterText,
+    /// `((FilterListItem*)a)->mColumnName` (a text).
+    FilterColumn,
+    /// The empty filter: `a->mText = AddRemove; a->mIsAdd = true; a->mFilterText = GUIString(""); a->mSelPos = 0`.
+    FilterClear,
+    /// `a->mSelPos = b & 0xffffffff; a->mIsAdd = b >> 32; a->mFilterText = GUIString(c)`, then the label (Add or
+    /// Remove, the text, the closing quote and parenthesis).
+    FilterSet,
+    /// `LobbyAddFilterValue(GUIString(a), GUIString(b))`.
+    AddFilterValue,
+    /// `LobbyRemoveFilterValue(GUIString(a), GUIString(b))`.
+    RemoveFilterValue,
+    /// An EE game column's handler (`EeWonEeGlueCall` `a`; `b`, `c` its arguments; a filter's text a text).
+    EeColumn,
 }
 
 /// The inward calls.
@@ -440,8 +678,15 @@ pub enum EeWonLobbyCtlCall {
     ResetBrowser,
     /// a member: `a` < 48 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl and
     /// EELobbyPlayerOptionsCtrl: active), 102 the last ready state, 103 the browser's reset flag, 104
-    /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag.
+    /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag; 110.. ServerListCtrl's (the game type, the filter
+    /// flag, the filter time, the column count, the rows, the columns).
     Field,
+    /// ServerListCtrl::TimerEvent(`a`) (0 or 1; round 13).
+    Timer,
+    /// A row's virtual (`EeWonLobbyCtlRowCall` `a`, the row `b`, `c` its three arguments `const intptr_t[3]`).
+    Row,
+    /// The game list's config reader (`EeWonLobbyCtlCfg` `a`, its arguments `b`, `c`).
+    Cfg,
 }
 
 /// The host: `(control, op, a, b, c) -> result`.
@@ -525,7 +770,10 @@ const OPTION_IS_CHECK: [bool; 16] =
     [false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true];
 
 /// Every look-up, kind by kind in the originals' order (the slot index is what `Find` passes).
-pub static SLOTS: [EeWonLobbyCtlSlot; 103] = [
+/// ServerListCtrl's first look-up in `SLOTS` (round 13).
+pub(crate) const SLOT_SERVER_LIST: usize = 103;
+
+pub static SLOTS: [EeWonLobbyCtlSlot; 108] = [
     // GameBrowserCtrl::InitComponent (0..=10)
     slot!(c"Browser", c"GameBrowserCtrl.cpp", 27, Browser, -1, B_BROWSER as i32),
     slot!(c"BackButton", c"GameBrowserCtrl.cpp", 28, Button, -1, B_BACK as i32),
@@ -638,6 +886,12 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 103] = [
     slot!(c"CitizenCombo8", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 46, (P_CITIZEN + 7) as i32),
     slot!(c"ObserveCheck8", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 47, (P_OBSERVE + 7) as i32),
     slot!(c"FileTransferLabel8", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 48, (P_TRANSFER + 7) as i32),
+    // ServerListCtrl::InitComponent (103..=107; the bold font is made after the list, the Remove button optional)
+    slot!(c"ServerList", c"ServerListCtrl.cpp", 647, MultiList, -1, crate::srvlistctl::L_LIST as i32),
+    slot!(c"JoinGameButton", c"ServerListCtrl.cpp", 650, Button, -1, crate::srvlistctl::L_JOIN as i32),
+    slot!(c"RefreshListButton", c"ServerListCtrl.cpp", 651, Button, -1, crate::srvlistctl::L_REFRESH as i32),
+    slot!(c"ServerListSummary", c"ServerListCtrl.cpp", 652, Label, -1, crate::srvlistctl::L_SUMMARY as i32),
+    slot!(c"RemoveButton", c"ServerListCtrl.cpp", 653, Component, -1, crate::srvlistctl::L_REMOVE as i32),
 ];
 
 /// The number of members each kind holds (released in reverse by the destructor).
@@ -648,6 +902,7 @@ fn member_count(kind: Kind) -> usize {
         Kind::LanOptions | Kind::NetOptions => 18,
         Kind::GameOptions => 19,
         Kind::PlayerOptions => MEMBERS,
+        Kind::ServerList => 6,
     }
 }
 
@@ -680,10 +935,12 @@ pub struct EeWonLobbyCtl {
     ctl: *mut c_void,
     host: EeWonLobbyCtlHostFn,
     /// the model's ops answered by its Rust objects (modelobj.rs; the game's), not the host
-    model: Cell<bool>,
-    kind: Kind,
+    pub(crate) model: Cell<bool>,
+    pub(crate) kind: Kind,
     /// the `SmartPtr` members, in the original's member order (see the `B_`, `S_`, `O_` and `U_` indices)
-    members: [Cell<isize>; MEMBERS],
+    pub(crate) members: [Cell<isize>; MEMBERS],
+    /// the round 13 kinds' members beyond their controls
+    pub(crate) ext: Ext,
     /// `mRoomSpecFlags` (GameStagingCtrl, GameUserListCtrl: 2 from the constructor)
     room_flags: Cell<i32>,
     /// `mInGame`
@@ -718,12 +975,13 @@ impl EeWonLobbyCtl {
             is_reset: Cell::new(kind == Kind::Browser),
             my_slot: Cell::new(-1),
             is_host: Cell::new(false),
+            ext: Ext::new(kind),
         }
     }
 
-    fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+    pub(crate) fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
         if self.model.get() {
-            if let Some(r) = crate::modelobj::ctl_op(op, a) {
+            if let Some(r) = crate::modelobj::ctl_op(op, a, b, c) {
                 return r;
             }
         }
@@ -734,8 +992,12 @@ impl EeWonLobbyCtl {
         }
     }
 
-    fn ask(&self, op: Op, a: isize) -> bool {
+    pub(crate) fn ask(&self, op: Op, a: isize) -> bool {
         self.op(op, a, 0, 0) != 0
+    }
+
+    pub(crate) fn ask_with(&self, op: Op, a: isize, b: isize) -> bool {
+        self.op(op, a, b, 0) != 0
     }
 
     /// A call on the C++ game `game`'s Rust object (its `mRust`), as the C++ forwarder made it.
@@ -748,13 +1010,13 @@ impl EeWonLobbyCtl {
         game_call(handle, call, a, b, c)
     }
 
-    fn m(&self, i: usize) -> isize {
+    pub(crate) fn m(&self, i: usize) -> isize {
         self.members[i].get()
     }
 
     /// A `SmartPtr`'s assignment (`ConstSmartPtr::operator=`): nothing for the same pointer, else the old one
     /// released, the new one referenced.
-    fn assign(&self, member: &Cell<isize>, new: isize) {
+    pub(crate) fn assign(&self, member: &Cell<isize>, new: isize) {
         let old = member.get();
         if old == new {
             return;
@@ -769,7 +1031,7 @@ impl EeWonLobbyCtl {
     }
 
     /// `SafeGetComponent(config, member, name, [id,] file, line)`: the look-up, the assignment, the control id.
-    fn find(&self, config: isize, slot: usize, local: &Cell<isize>) {
+    pub(crate) fn find(&self, config: isize, slot: usize, local: &Cell<isize>) {
         let s = &SLOTS[slot];
         let found = self.op(Op::Find, config, slot as isize, 0);
         let member = if s.member < 0 { local } else { &self.members[s.member as usize] };
@@ -779,7 +1041,7 @@ impl EeWonLobbyCtl {
         }
     }
 
-    fn set_enabled(&self, control: isize, enabled: bool) {
+    pub(crate) fn set_enabled(&self, control: isize, enabled: bool) {
         self.op(Op::SetEnabled, control, enabled as isize, 0);
     }
 
@@ -835,6 +1097,7 @@ impl EeWonLobbyCtl {
             }
             Kind::GameOptions => self.game_options_init(config, &local),
             Kind::PlayerOptions => self.player_options_init(config, &local),
+            Kind::ServerList => self.srv_init(config, &local),
         }
         // the local SmartPtr<Button> (LobbyOptionsCtrl's reset, restore and remove buttons in turn)
         let l = local.replace(0);
@@ -985,7 +1248,7 @@ impl EeWonLobbyCtl {
         self.kind == Kind::LanOptions
     }
 
-    fn pref(&self, p: EeWonLobbyCtlPref) -> isize {
+    pub(crate) fn pref(&self, p: EeWonLobbyCtlPref) -> isize {
         self.op(Op::PrefGet, p as isize, 0, 0)
     }
 
@@ -1763,6 +2026,7 @@ impl EeWonLobbyCtl {
             Kind::UserList => self.user_list_event(event, kind, component),
             Kind::GameOptions => self.game_options_event(event, kind),
             Kind::PlayerOptions => self.players_event(event, kind),
+            Kind::ServerList => self.srv_event(event, kind, component),
         }
     }
 
@@ -1783,25 +2047,52 @@ impl EeWonLobbyCtl {
                     103 => self.is_reset.get() as isize,
                     104 => self.my_slot.get() as isize,
                     105 => self.is_host.get() as isize,
+                    110 => self.ext.srv.game_type.get() as isize,
+                    111 => self.ext.srv.need_filter.get() as isize,
+                    112 => self.ext.srv.filter_time.get() as isize,
+                    113 => self.ext.srv.num_columns.get() as isize,
+                    114 => self.ext.srv.map.borrow().len() as isize,
+                    115 => self.ext.srv.columns.borrow().len() as isize,
                     _ => 0,
                 }
+            }
+            C::Timer => return self.srv_timer_call(a),
+            C::Row => {
+                let Some(call) = crate::srvlistctl::row_call_of(a) else {
+                    return 0;
+                };
+                // SAFETY: the shell's three arguments
+                let args = unsafe { *(c as *const [isize; 3]) };
+                return self.row_call(call, b, args[0], args[1], args[2]);
+            }
+            C::Cfg => {
+                let Some(call) = crate::srvlistctl::cfg_call_of(a) else {
+                    return 0;
+                };
+                return self.srv_config(call, b, c);
             }
         }
         0
     }
 
-    /// The destructor: the `SmartPtr` members in reverse order.
+    /// The destructor: the `SmartPtr` members in reverse order (ServerListCtrl: its rows first, its columns last).
     fn release_all(&self) {
+        if self.kind == Kind::ServerList {
+            self.srv_release_rows();
+        }
         for i in (0..member_count(self.kind)).rev() {
             let p = self.members[i].replace(0);
             if p != 0 {
                 self.op(Op::Release, p, 0, 0);
             }
         }
+        if self.kind == Kind::ServerList {
+            self.srv_release_columns();
+        }
     }
 }
 
-const EVENTS: [Ev; 20] = [
+const EVENTS: [Ev; 27] = [
     Ev::Other,
     Ev::ButtonPressed,
     Ev::ComboSelChanged,
@@ -1822,7 +2113,30 @@ const EVENTS: [Ev; 20] = [
     Ev::SyncOption,
     Ev::SyncPlayer,
     Ev::ColorChanged,
+    Ev::InputTextChanged,
+    Ev::InputReturn,
+    Ev::GameChanged,
+    Ev::SyncGameList,
+    Ev::FiltersChanged,
+    Ev::RefilterAll,
+    Ev::RefilterShown,
 ];
+
+/// The round 13 kinds' members beyond their controls.
+#[derive(Default)]
+pub(crate) struct Ext {
+    pub srv: crate::srvlistctl::SrvState,
+}
+
+impl Ext {
+    fn new(kind: Kind) -> Self {
+        let e = Ext::default();
+        if kind == Kind::ServerList {
+            e.srv.num_columns.set(4);
+        }
+        e
+    }
+}
 
 /// The look-up `index` of `SLOTS` (NULL past the end).
 #[no_mangle]

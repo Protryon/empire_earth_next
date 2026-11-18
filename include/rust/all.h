@@ -176,6 +176,7 @@
 #include "rust/won_lobby/routelogic.h"
 #include "rust/won_lobby/routing.h"
 #include "rust/won_lobby/scrolltext.h"
+#include "rust/won_lobby/srvlistctl.h"
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/stagingobj.h"
 #include "rust/won_lobby/statusstr.h"

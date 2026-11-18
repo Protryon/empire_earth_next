@@ -2782,10 +2782,23 @@ pub(crate) fn popup_op(op: crate::lobbypopup::EeWonLobbyPopupOp, a: isize, bb: i
 }
 
 /// The lobby controls' ops on the games and clients (lobbyctl.rs `EeWonLobbyCtlOp`; LobbyCtrlHost.cpp's).
-pub(crate) fn ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize) -> Option<isize> {
+pub(crate) fn ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, bb: isize, c: isize) -> Option<isize> {
     use crate::lobbyctl::EeWonLobbyCtlOp as O;
     let m = || must(a);
     Some(match op {
+        // round 13: the controls' generic member reads, writes and methods (their own field and call numbers)
+        // SAFETY: the controls pass a field of this enum
+        O::MGet => m().get(unsafe { std::mem::transmute::<u32, EeWonModelField>(bb as u32) }),
+        O::MSet => {
+            // SAFETY: as MGet; a text or an address the controls pass is live
+            unsafe { m().set(std::mem::transmute::<u32, EeWonModelField>(bb as u32), c) };
+            0
+        }
+        O::MCall => {
+            let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
+            // SAFETY: the controls pass a call of this enum and its argument
+            unsafe { dispatch(m(), std::mem::transmute::<u32, EeWonModelCall>(bb as u32), c, 0, 0, empty) }
+        }
         O::GameIsHost => b(m().game().is_host.get()),
         O::GameCanStart => {
             let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
