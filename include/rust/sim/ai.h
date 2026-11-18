@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `kAICheatAll`
+constexpr static const long CHEAT_ALL = 127;
+
 /// `EECPUnitsGet(player)`: the player's state (made when missing).
 constexpr static const int32_t EE_AI_UNITS_HOST_STATE = 1;
 
@@ -169,6 +172,151 @@ constexpr static const int32_t EE_AI_UNITS_HOST_SEES_ALL = 43;
 
 /// `EEPlayerBlockTakes(player, a, b - 1, c - 1, size + 2, size + 2, 0)` with `out` the size (a `c_long`).
 constexpr static const int32_t EE_AI_UNITS_HOST_BLOCK_TAKES = 44;
+
+/// The class `a`'s `FliesOver()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FLIES_OVER = 50;
+
+/// The class `a`'s `GetPopulationCost()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_POP_COST = 51;
+
+/// `gDamageTable[a][b] != 0` (0 without a table).
+constexpr static const int32_t EE_AI_UNITS_HOST_DAMAGES = 52;
+
+/// The player `a`'s `GetTeamIndex()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_TEAM_INDEX = 53;
+
+/// The player `a`'s `GetNumWonderUnits()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_WONDER_COUNT = 54;
+
+/// `player->ScaleCost(node a->GetCost(b, c, 1.0f))` (the node's virtual: the capture's record).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_COST = 55;
+
+/// `player->ScaleCost(a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SCALE_COST = 56;
+
+/// The node `a`'s `GetIsAvailable()` (virtual: the walk).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_AVAILABLE = 57;
+
+/// The node `a`'s `GetIsObsolete()` (virtual: the walk).
+constexpr static const int32_t EE_AI_UNITS_HOST_NODE_OBSOLETE = 58;
+
+/// `EECPNextTechName(a)` into `out` (1024 bytes, NUL-terminated) -> its length.
+constexpr static const int32_t EE_AI_UNITS_HOST_TECH_NAME = 59;
+
+/// `player->CanProduce(a, b, 1, c != 0, 3, NULL)` (the computer player's).
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_PRODUCE_AS = 60;
+
+/// The node `a`'s researched event improves a citizen's gathering (the classic research manager's test).
+constexpr static const int32_t EE_AI_UNITS_HOST_CITIZEN_UPGRADE = 61;
+
+/// `EEIsEpochID(a)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_EPOCH_ID = 62;
+
+/// `EEEpochCount()`.
+constexpr static const int32_t EE_AI_UNITS_HOST_EPOCH_COUNT = 63;
+
+/// The next level's cost of the class `a`'s improvement `b` (`EeAiUnitsImproveCost` into `out`) -> 1, or 0: no
+/// node now or no such improvement.
+constexpr static const int32_t EE_AI_UNITS_HOST_IMPROVE_COST = 64;
+
+/// `player->CanBuy(a, b, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_CAN_BUY = 65;
+
+/// `EECPGateClass(player)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_CLASS = 66;
+
+/// The class `a` is a gate class (`EEUnitClassOfKind<EE_CLASS_KIND_GATE>`).
+constexpr static const int32_t EE_AI_UNITS_HOST_IS_GATE_CLASS = 67;
+
+/// The side (1..4) a gate fits on over the player's finished wall at the tile (a, b); 0: none.
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_SIDE = 68;
+
+/// The tribute of `c` of the resource `b` to the player `a` (the moves and both ledgers).
+constexpr static const int32_t EE_AI_UNITS_HOST_TRIBUTE = 69;
+
+/// `gWorld.SetDiplomaticStance(player, a, b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_STANCE = 70;
+
+/// The own finished building `a`'s garrison raised by `b` (`AddGarrison`) -> whether done.
+constexpr static const int32_t EE_AI_UNITS_HOST_GARRISON_FILL = 71;
+
+/// `EECPNextSiteBlocked(player, unit a, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SITE_BLOCKED = 72;
+
+/// `EECPNextBuildUnsafe(player, a, b)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_BUILD_UNSAFE = 73;
+
+/// `EECPNextSiteThreat(player, a, b, false, NULL)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_SITE_THREAT = 74;
+
+/// The classic's enemy test through the fog (the influence regions round the tile (a, b)) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_ENEMY_NEAR_ALL = 75;
+
+/// `EECPNextPlaceSearch` with `out` an `EeAiUnitsPlace` -> 1 found.
+constexpr static const int32_t EE_AI_UNITS_HOST_PLACE = 76;
+
+/// `EECPEngineFillsGarrison(player)`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FILLS_GARRISON = 77;
+
+/// The seat's tuning beyond its record (`EeAiUnitsTuning` into `out`).
+constexpr static const int32_t EE_AI_UNITS_HOST_TUNING = 78;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_IMPROVE = 27;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_HACK_NEW_UNIT = 28;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_BUILD_GATE = 29;
+
+constexpr static const int32_t EE_AI_UNITS_MSG_EXCHANGE = 30;
+
+/// `gContinentManager.GetContinentAt(a, b)` (an `EEAIContinent*`; 0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_AT = 80;
+
+/// `GetContinentByID(a)` for `0 < a < mContinents.size()` (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_BY_ID = 81;
+
+/// The area `a`'s id, category and tile count (`EeAiUnitsArea` into `out`).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_INFO = 82;
+
+/// A random tile of the area `a` from a stream seeded `(unsigned long)b` (`EeAiUnitsArea`'s x, y) -> 1, or 0 for an
+/// empty area.
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_POINT = 83;
+
+/// A forest's, a hill's or a choke point's random point (`EeAiUnitsAreaPick` in and out).
+constexpr static const int32_t EE_AI_UNITS_HOST_AREA_PICK = 84;
+
+/// The shore tiles of the largest water body next to the land mass at (a, b) into `out` (a `EeAiUnitsTiles`) ->
+/// their count, -1 when the water body does not touch it.
+constexpr static const int32_t EE_AI_UNITS_HOST_WATER_SHORE = 85;
+
+/// `EEGetWallLine(from, to)` into `out` (a `EeAiUnitsTiles`) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_LINE = 86;
+
+/// The wall line `out` (a `EeAiUnitsTiles`) is blocked by a land building (IsPathBlocked).
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_BLOCKED = 87;
+
+/// `gContinentManager.GetForestAt((a, b)) != NULL`.
+constexpr static const int32_t EE_AI_UNITS_HOST_FOREST_AT = 88;
+
+/// `EEAreTilesLevel` of the five tiles `out` (a `EeAiUnitsTiles`).
+constexpr static const int32_t EE_AI_UNITS_HOST_TILES_LEVEL = 89;
+
+/// The own unit `a`'s wall path from `from` to `to` (`EeAiUnitsTiles` in `out`) -> the count.
+constexpr static const int32_t EE_AI_UNITS_HOST_WALL_PATH = 90;
+
+/// A wall route's request for the enemy `a` from `from` to `to` (`EeAiUnitsTiles` in `out`; the old request
+/// dropped) -> its handle (0: none).
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_REQUEST = 91;
+
+/// The route `a`: -2 not held, -1 running, else its path's length.
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_STATE = 92;
+
+/// The route `a`'s path into `out` (a `EeAiUnitsTiles`) -> its length; then the route is dropped.
+constexpr static const int32_t EE_AI_UNITS_HOST_ROUTE_TAKE = 93;
+
+/// The list the last op handed out (it did not fit) again into `out` (a `EeAiUnitsTiles`) -> its length: no list is
+/// computed twice (the shore's GetTilesNextTo and FindPath are captured).
+constexpr static const int32_t EE_AI_UNITS_HOST_TILES_AGAIN = 94;
 
 constexpr static const long EV_ATTACKED = 1;
 
@@ -475,6 +623,120 @@ struct EeAiUnitsMessage {
   int32_t mode;
   int32_t count;
   EeAiUnitsMsgValue values[8];
+};
+
+/// `EE_AI_UNITS_HOST_IMPROVE_COST`'s answer.
+struct EeAiUnitsImproveCost {
+  long cost[5];
+  long level;
+  long max;
+};
+
+/// `EE_AI_UNITS_HOST_PLACE`'s arguments and answer.
+struct EeAiUnitsPlace {
+  long unit_type;
+  long mode;
+  long x;
+  long y;
+  long first;
+  long last;
+  /// the site's index (the script's, less one)
+  long site;
+  const long *units;
+  size_t units_len;
+  long out_x;
+  long out_y;
+  long out_gap;
+};
+
+/// What `ai.tuning` reads beyond the computer player's record (`EE_AI_UNITS_HOST_TUNING`): the game's options,
+/// the map, the continents, the manifest's switches, the cheats, the personality and the experiments, the
+/// behaviour table's values.
+struct EeAiUnitsTuning {
+  bool deathmatch;
+  bool all_managers;
+  long epoch_start;
+  long epoch_end;
+  bool space;
+  long water_tiles;
+  long land_tiles;
+  long space_tiles;
+  long largest_sea;
+  bool fills_garrison;
+  bool sees_all;
+  long population_limit;
+  bool cheats[7];
+  /// the personality's id (NUL-terminated)
+  char id[128];
+  float epoch_pressure_start;
+  float epoch_pressure_full;
+  float stone_span;
+  float safe_bonus;
+  long surplus;
+  float surplus_cut;
+  long low_stock;
+  float floor[5];
+  float max_citizen_share;
+  long wood_slots;
+  long moves_per_cycle;
+  bool demand_split;
+  bool coast_fishing;
+  bool forage_patches;
+  bool claim_range;
+  bool claim_needed;
+  long early_town_centers;
+  long early_trainers;
+  bool patch_expand;
+  float standing_army;
+  float army_floor;
+  bool militia;
+  bool militia_towers;
+  long prehistoric_army;
+  bool prehistoric_peace;
+  bool stone_peace;
+  bool naval_flee;
+  float epoch_advance_time_scale;
+  /// the carrier fighters to keep: easy, medium, hard; then in a deathmatch
+  long carrier_fighters[6];
+  float population_cap_own_weight;
+  float population_cap_other_weight;
+};
+
+/// An area's facts (`EE_AI_UNITS_HOST_AREA_INFO`, `AREA_POINT`).
+struct EeAiUnitsArea {
+  long id;
+  long category;
+  long tiles;
+  long x;
+  long y;
+};
+
+/// `EE_AI_UNITS_HOST_AREA_PICK`: `kind` 0 the land's forests, 1 its hills (those whose hull holds (x, y) or comes
+/// within r tiles), 2 its choke points (the `r` nearest when r is above 0); the (pick mod count)-th one's random
+/// point
+struct EeAiUnitsAreaPick {
+  long kind;
+  uint64_t land;
+  long x;
+  long y;
+  long r;
+  int64_t pick;
+  int64_t seed;
+  /// out: the land's ids looked at, the ones picked from, whether the picked one has tiles, its point
+  long total;
+  long found;
+  bool ok;
+  long px;
+  long py;
+};
+
+/// A tile list the host fills or reads: `len` (x, y) pairs at `xy` (room for `cap`); `from`, `to` the ends
+struct EeAiUnitsTiles {
+  long *xy;
+  size_t len;
+  size_t cap;
+  long from[2];
+  long to[2];
 };
 
 /// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
@@ -811,6 +1073,50 @@ bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
 
 /// `EECPLuaStatusName`: a static C string.
 const char *ee_ai_lua_status_name(uint32_t status);
+
+/// `EECPCombatManager::IsMilitaryClass(class)` (an `EEUnitClass*`; false for NULL).
+///
+/// # Safety
+/// `class` is 0 or a live unit class.
+bool ee_ai_military_class(uint64_t class_);
+
+/// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
+bool ee_ai_military_type(unsigned long unit_type);
+
+/// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
+/// in the rules (-1: unknown), `out` writes a line to the game's debug output.
+///
+/// # Safety
+/// `find` and `out` are callable with a NUL-terminated string.
+void ee_ai_switches_init(long (*find)(const char*),
+                         void (*out)(const char*));
+
+/// `EECPExperiment`: the player `id`'s experiments name `name`.
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+bool ee_ai_switch_experiment(uint64_t id, const char *name);
+
+/// `EECPExperimentNames`: the player's set as ",a,b," ("-": none or empty); the text lives as long as the game.
+const char *ee_ai_switch_experiment_names(uint64_t id);
+
+/// `EE_AI_DEMAND`'s value for the player: 1, 0, or -1 when not set.
+int32_t ee_ai_switch_demand(uint64_t id);
+
+/// `EE_AI_PERSONALITY`'s position for the player (-1: not set).
+long ee_ai_switch_personality(uint64_t id);
+
+/// `EE_AI_CHEATS`'s set for the player (`kAICheatAll` when not set).
+long ee_ai_switch_cheats(uint64_t id);
+
+/// `EECPCheatNames`: the cheats of `bits` by name, "a,b" ("none": none) into `out` (room for `cap` bytes,
+/// NUL-terminated) -> the length.
+///
+/// # Safety
+/// `out` has room for `cap` bytes (at least 1).
+size_t ee_ai_switch_cheat_names(long bits,
+                                char *out,
+                                size_t cap);
 
 /// `EE_AI_UNITS_HOST_FACTS`'s record before the C++ fills it: no goal, no gathers (-1), no stance (-1).
 ///
@@ -1182,6 +1488,135 @@ int ee_ai_units_lua_find_site(void *l);
 /// `ai.shore(x, y, {sea, land, max})` -> x, y, sea, land: the nearest explored land tile, ring by ring, that
 /// touches water (of the water body `sea` when given) and lies on the land mass `land` when given
 int ee_ai_units_lua_shore(void *l);
+
+/// The host records' sizes summed (the C++ checks its copy of their layout against it once; it also puts the
+/// records in the header).
+///
+/// # Safety
+/// None: the pointers are not read.
+size_t ee_ai_units_records_size(const EeAiUnitsImproveCost *a,
+                                const EeAiUnitsPlace *b,
+                                const EeAiUnitsTuning *c,
+                                const EeAiUnitsArea *d,
+                                const EeAiUnitsAreaPick *e,
+                                const EeAiUnitsTiles *f);
+
+/// `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the
+/// damage table)
+int ee_ai_units_lua_can_hurt(void *l);
+
+/// `ai.wonders()` -> {victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built,
+/// x, y}}}: the wonders; a wonder's tile only where the player has explored it (or "sees_all")
+int ee_ai_units_lua_wonders(void *l);
+
+/// `ai.class(type)` -> static data from the class and the player's improvements (what the unit's panel shows)
+int ee_ai_units_lua_class(void *l);
+
+/// `ai.techs{epoch = n, id = tech, name = data id}` -> the player's tech tree nodes of epochs n..0 (default: the
+/// current epoch) in the tree's order, or the one node
+int ee_ai_units_lua_techs(void *l);
+
+/// `ai.epoch(n)` -> epoch n's node: id, name, required_sol, current_sol, cost, available, researched; nil off the
+/// tree
+int ee_ai_units_lua_epoch(void *l);
+
+/// `ai.improve_cost(class, what)` -> {food=, wood=, stone=, gold=, iron=, level=, max=}: the next level's cost of a
+/// class's improvement (what: "attack", "hit_points", "range", "speed" or its number), or nil
+int ee_ai_units_lua_improve_cost(void *l);
+
+/// `ai.tuning()` -> what the classic computer player reads from data for this seat (floats as thousandths, keys
+/// ending in _k)
+int ee_ai_units_lua_tuning(void *l);
+
+/// `ai.improve(unit, n)`: one level of improvement n for the unit's class
+int ee_ai_units_lua_improve(void *l);
+
+/// `ai.gate(type, x, y)`: a gate of the class over the finished wall pieces at the tile, at once (EEBuildGate);
+/// cannot_place where no wall of five finished pieces lies
+int ee_ai_units_lua_gate(void *l);
+
+/// `ai.tribute(player, {food=, wood=, stone=, gold=, iron=})`: the resources given as a human's tribute
+int ee_ai_units_lua_tribute(void *l);
+
+/// `ai.trade(resource, "buy" or "sell", n)`: n lots of 100 bought with gold or sold for it (1 or 5 a call)
+int ee_ai_units_lua_trade(void *l);
+
+/// `ai.diplomacy(player, "ally" or "enemy")`: the stance towards another player
+int ee_ai_units_lua_diplomacy(void *l);
+
+/// `ai.garrison_fill(id, n)` -> ok: an own finished building's garrison raised by n with no citizen going in (only
+/// for an AI whose manifest entry declares "fills_garrison")
+int ee_ai_units_lua_garrison_fill(void *l);
+
+/// TEST ONLY (EE_AI_TEST_SPAWN=1): `ai.test_spawn(type, x, y, player)` -> true: the cheat's unit (EEMHackANewUnit)
+/// is made. Off: false
+int ee_ai_units_lua_test_spawn(void *l);
+
+/// `ai.can_place(type, x, y)` -> whether the class can be placed there now
+int ee_ai_units_lua_can_place(void *l);
+
+/// `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile: the seat's threat memory, or with
+/// "sees_all" the classic's influence regions through the fog
+int ee_ai_units_lua_enemy_near(void *l);
+
+/// `ai.site_blocked(resource)` -> nil when gatherers may go to the resource, else why not
+int ee_ai_units_lua_site_blocked(void *l);
+
+/// `ai.build_unsafe(x, y)` -> nil when builders may go to the tile, else why not
+int ee_ai_units_lua_build_unsafe(void *l);
+
+/// `ai.place(type, mode, {x =, y =, first =, last =, units = {ids}, site = index})` -> x, y, gap: a building site
+/// by one of build()'s rules; nil: none
+int ee_ai_units_lua_place(void *l);
+
+/// `ai.used()` -> the instructions and charges this call has used so far (ee_ai lua_host.rs)
+int ee_ai_units_lua_used(void *l);
+
+/// `ai.water_sites(x, y, {max = 64})` -> {{x, y}, ...}: the water tiles by the shore for docks, nearest first: the
+/// largest water body's shore next to the land mass at (x, y) and the tiles round it, explored ones only
+int ee_ai_units_lua_water_sites(void *l);
+
+/// `ai.area(id)` or `ai.area(x, y)` -> {id, category = 1 land / 2 water / 3 cliff / 4 space / 5 map edge, tiles}; nil
+/// for none
+int ee_ai_units_lua_area(void *l);
+
+/// `ai.forest_point(x, y, r, pick, seed)` -> x, y, n: a random point of one of the land's forests near the tile
+int ee_ai_units_lua_forest_point(void *l);
+
+/// `ai.hill_point(x, y, r, pick, seed)` -> x, y, n: as ai.forest_point over the land's hills
+int ee_ai_units_lua_hill_point(void *l);
+
+/// `ai.choke_point(x, y, nearest, pick, seed)` -> x, y, n: a random point of one of the land's choke points (of the
+/// `nearest` nearest when above 0); n all of them
+int ee_ai_units_lua_choke_point(void *l);
+
+/// `ai.area_point(id, seed)` -> x, y: a random tile of the area; nil for none or an empty one
+int ee_ai_units_lua_area_point(void *l);
+
+/// `ai.unexplored(x, y, {land = id, sea = false, grid = 8, away = {ax, ay}, skip = {{x, y}, ...}})` -> x, y: the
+/// unexplored grid point on the land mass nearest (x, y), scored by its distance less half its distance from away;
+/// points within grid of a skip entry left out
+int ee_ai_units_lua_unexplored(void *l);
+
+/// `ai.wall_line(x1, y1, x2, y2)` -> {{x, y}, ...}: the tiles a wall between the two lays (EEGetWallLine), in order
+int ee_ai_units_lua_wall_line(void *l);
+
+/// `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, {{ax, ay, bx, by, len, level}, ...}: the classic wall planner's
+/// look at one wall line (a land building on it or within 2 tiles; the open runs that follow a blocked tile, and
+/// whether five level tiles in a row lie on each)
+int ee_ai_units_lua_wall_stretches(void *l);
+
+/// `ai.wall_path(unit, x1, y1, x2, y2)` -> {{x, y}, ...}: the tile path an own unit would take inside the box of
+/// the two tiles (the classic wall planner's FindPath with the wall pather)
+int ee_ai_units_lua_wall_path(void *l);
+
+/// `ai.wall_route(enemy, x1, y1, x2, y2)` -> handle: the classic wall planner's way from the enemy's centre to the
+/// own town (the path manager's request on its coarse graph); one request a player at a time
+int ee_ai_units_lua_wall_route(void *l);
+
+/// `ai.wall_route_result(handle)` -> nil while it runs, the tiles {{x, y}, ...} when done (empty: no way), false for
+/// a handle it does not hold (read already, or a loaded game)
+int ee_ai_units_lua_wall_route_result(void *l);
 
 /// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
 long ee_ai_units_class_arg(void *state,

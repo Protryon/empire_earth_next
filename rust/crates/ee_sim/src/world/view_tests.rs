@@ -218,6 +218,7 @@ fn fake_layout() -> EeWorldLayout {
         unit_node_next: offset_of!(FakeNode, next) as u64,
         player_viewed_unit: offset_of!(FakePlayer, viewed_unit) as u64,
         player_selected_viewed_unit: offset_of!(FakePlayer, selected_viewed_unit) as u64,
+        ..Default::default()
     }
 }
 

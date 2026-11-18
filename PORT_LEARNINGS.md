@@ -30025,3 +30025,50 @@ same way, also over a one-file resource directory (so before its resource lines)
 look at it (round 13's 148 included it).
 
 origin/rust had nothing new at the end of the round (no merge).
+## Lane A, round 2: every `ai.*` binding in Rust, the tech tree's views, the military class tests and the AI switches (ee_sim::ai units_more.rs, military.rs, switches.rs; ee_sim::world tech_view.rs; branch rust-ai-lua2, 2026-11-17)
+
+- **The golden first, again.** Round 2's base (`build/ai_golden/c0`) was recorded on the round's start, cb6e60d50,
+  twice and equal; it equals round 1's base too. The 32 bindings moved in one piece and the 15 games stayed
+  identical at the first try: the bindings' C++ was a sequence of Lua calls over values, and the port kept the
+  order of every Lua call and every charge (a charge can raise: what it skips must be what the C++ skipped).
+- **What a "view" cannot be.** A tech node's plain members are Rust records already (ee_sim::tech's
+  `EeTechNodeFields`, `EeTechNodeDataFields`), so `NodeView` reads them in place; but `GetIsAvailable`,
+  `GetIsObsolete` and `GetCost` are virtuals whose bodies are the tech walks and the simulation capture's records
+  (TNWK, the cost capture): reading the flag instead of calling them would change the capture. They stay host
+  calls. The same holds for the class virtuals `IsLandBuilding`, `FliesOver`, `GetPopulationCost` and `IsTransport`
+  (the category dispatch). Rule: a view reads members, never stands in for a method with a body.
+- **The tree's containers through its own host.** The epochs' list and each epoch's `std::map` of nodes are C++
+  containers. The tree view looks nodes up through `EETechHost` (the walks' host, ops EPOCHS, EPOCH, NODE,
+  EPOCH_NODES), whose address the layout carries (`tech_host`): no new C++ for the lookups, and the walks and the
+  AI read the same containers the same way. An epoch's node ids are its map's keys; `EETechTreeEpoch::Load` keys
+  each node by its data's id, so the view returns the data ids.
+- **The continent manager behind fourteen ops.** The bindings over the continents, forests, hills, choke points,
+  the shore and the wall planner reach those objects only through `EE_AI_UNITS_HOST_AREA_*`/`WALL_*`/`ROUTE_*`
+  (`EECPUnitsWallsHost`). Their URandom draws are local streams seeded by the script, so a pick computed whole in
+  the host before the charge is the same as the C++'s pick after it. The choke points' nearest-first order keeps
+  its `std::multimap` (equal distances in insertion order) in the host.
+- **The captures see what the binding golden cannot.** The tile lists came back through a buffer that grew and
+  asked again when a list did not fit; for ai.water_sites that computed the shore twice, and the continent
+  capture (CNTN, one record per GetTilesNextTo) had 1.5 times its records while every binding answer stayed equal.
+  A list longer than the buffer is now read again from the host's copy (`EE_AI_UNITS_HOST_TILES_AGAIN`). Rule: a
+  host op with a captured body runs once per C++ call it replaces; run the captures before calling a move done.
+- **cbindgen emits only reachable types.** A `#[repr(C)]` record used only through a `void*` host op is not in the
+  header: one exported function taking a pointer to each (`ee_ai_units_records_size`, which the C++ also checks
+  against its own `sizeof`s) puts them there.
+- **A child module for a second file of bindings.** `#[path = "units_more.rs"] mod more;` inside units_bind.rs gives
+  the new file every private helper of the first (the `Game` reads, `charge`, the host) without widening their
+  visibility; cbindgen follows the `#[path]`.
+- **Shell heredocs mangle backslashes.** A Python edit script with `'\0'` in a bash heredoc arrived as a NUL
+  character and its replace silently failed to match; write such scripts with the editor into a file and run it.
+- **Python text writes on this machine use cp1252.** `open(p, 'w')` without `encoding` wrote EECPNextUnits.cpp's
+  `§` as one byte; read and write sources with `encoding='utf-8'` (or bytes).
+- **The switches.** EE_AI_PERSONALITY, EE_AI_DEMAND, EE_AI_CHEATS and EE_AI_EXP are parsed in Rust (switches.rs,
+  unit tests); the personality ids are resolved through a C++ callback (the rules' `Find`) and the warnings go out
+  through `ESDebugOut`. Checked by a game with every switch set on the old and the new EE-SIM: the EE-AI lines are
+  the same but the wall-clock EE-AIPROF lines.
+- **Results.** C++ -1,516 net over four code commits: the bindings -1,349 (EECPNextUnits.cpp 2,504 -> 1,145
+  lines, the layout +10), the military tests -90, the switches -89, the tiles fix +12 (C++ counted by `git diff
+  --numstat` over src). Binding golden identical in all 15 games after each commit; a mutation (ai.techs'
+  obsolete_epoch + 1) caught at classic-2's first ai.techs call (line 24). On the final tree: oracle seeds 2-7
+  identical; captures oracle, late, space, calamity (seeds 2-3) PASS; saveload 18/18 and the matrix `--expect`
+  PASS; both builds 0/0; the Rust gate PASS.
