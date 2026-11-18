@@ -2,8 +2,7 @@
 // The lobby screens' controls' shell and host (R6 WONLobby round 4): GameBrowserCtrl, GameStagingCtrl,
 // LobbyOptionsCtrl, GameUserListCtrl and the EE room's EELobbyGameOptionsCtrl are one Rust object each (rust/crates/ee_won_lobby/src/lobbyctl.rs). This unit is
 // the shell's two virtuals, the host (each op the original's statements on a control, an event, the lobby's model,
-// its settings or a global, with no decision), the player row GameUserListItem (a list row: paint, size, order; its
-// icon rule is Rust) and the two config readers that were in GameBrowserCtrl.cpp and GameUserListCtrl.cpp.
+// its settings or a global, with no decision) and the two config readers that were in GameBrowserCtrl.cpp and GameUserListCtrl.cpp.
 #include <windows.h>
 #include <stdio.h>
 #include <string>
@@ -26,68 +25,18 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/lobbyctl.h"
+#include "rust/won_lobby/rows.h"
 
 namespace WONAPI {
 bool LobbyIAmReady();
-
-// ---- the player row (GameUserListCtrl's list; the original's GameUserListCtrl.cpp)
-
-// Creates a game player list entry for a client
-GameUserListItem::GameUserListItem(LobbyClient* inClient) : mClient(inClient) {}
-// Sizes the entry to the list font's height, or the icon's if taller
-void GameUserListItem::CalcDimensions(ListArea* inArea)
-{
-    this->mFont=inArea->mFont;
-    this->mHeight=this->mFont->GetHeight();
-    if(this->mImage.get()!=NULL && this->mImage->mHeight>this->mHeight) this->mHeight=this->mImage->mHeight;
-}
-// Orders the game captain first, then players by name ignoring case
-int GameUserListItem::Compare(const ListItem* inOther,ListArea*) const
-{
-    const GameUserListItem* other=static_cast<const GameUserListItem*>(inOther);
-    int mine=this->mClient->IsCaptain(1)?1:0;
-    int theirs=other->mClient->IsCaptain(1)?1:0;
-    if(mine!=theirs) return theirs-mine;
-    return this->mClient->GetName().CompareNoCase(other->mClient->GetName());
-}
-// The ready mark is centered by the status icon's height, not its own (as in the original)
-// Draws one column of the entry: selection background, status icon, ready mark, name or ping bars
-void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
-{
-    MultiListArea* area=static_cast<MultiListArea*>(inArea);
-    int column=area->GetColumnPaintContext();
-    unsigned long color=inGraphics.GetStandardColor(StandardColor_Text);
-    if(this->mSelected) color=area->GetSelColor().GetForegroundColor(inGraphics,color);
-    inGraphics.SetColor(color);
-    inGraphics.SetFont(this->mFont.get());
-    switch(column) {
-    case -1:
-        if(this->mSelected) {
-            inGraphics.SetColor(area->GetSelColor().GetBackgroundColor(inGraphics));
-            inGraphics.FillRect(0,0,area->GetPaintWidth(),this->mHeight);
-        }
-        return;
-    case 0:
-        inGraphics.DrawImage(this->mImage.get(),0,(this->mHeight-this->mImage->mHeight)/2);
-        return;
-    case 1:
-        if(this->mClient->IsReady())
-            inGraphics.DrawImage(LOBBY_IMAGE(GameUserListCtrl_Ready_Image).get(),0,(this->mHeight-this->mImage->mHeight)/2);
-        return;
-    case 2:
-        inGraphics.SetFont(this->mFont.get());
-        inGraphics.DrawString(this->mClient->GetName(),0,(this->mHeight-this->mFont->GetHeight())/2);
-        return;
-    case 3:
-        DrawLobbyPing(&inGraphics,this->mClient->GetPing(),this->mHeight-2,0,0);
-        return;
-    }
-}
 
 // ---- the shell
 
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
 intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
+
+// the lobby's rows (rows.rs) call this host with no control
+[[maybe_unused]] static const bool sRowHost = (ee_won_lobby_rows_host_register(LobbyCtrlHost), true);
 
 LobbyRustCtrl::LobbyRustCtrl(EeWonLobbyCtlKind inKind)
     : mLobbyCtl(ee_won_lobbyctl_new_model(static_cast<Container*>(this), inKind, LobbyCtrlHost)) {}
@@ -252,22 +201,6 @@ static const SmartPtr<Image>& CtlImage(intptr_t inImage)
     return LOBBY_IMAGE(UserListCtrl_Normal_Image);
 }
 
-static bool ClientIs(LobbyClient* inClient, intptr_t inTest)
-{
-    typedef EeWonLobbyCtlClientTest T;
-    switch ((T)inTest) {
-    case T::IsIgnored: return inClient->IsIgnored();
-    case T::IsBlocked: return inClient->IsBlocked();
-    case T::IsMuted: return inClient->IsMuted(true);
-    case T::IsAway: return inClient->IsAway();
-    case T::IsAdmin: return inClient->IsAdmin();
-    case T::IsModerator: return inClient->IsModerator();
-    case T::IsCaptain: return inClient->IsCaptain(1);
-    case T::HasPlayer: return inClient->HasPlayer();
-    }
-    return false;
-}
-
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
@@ -281,7 +214,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     ListArea* aList = reinterpret_cast<ListArea*>(a);
     LobbyGame* aGame = reinterpret_cast<LobbyGame*>(a);
     LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
-    GameUserListItem* anItem = reinterpret_cast<GameUserListItem*>(a);
     ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
     switch (inOp) {
     case Op::Find:
@@ -351,14 +283,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ListClear: aList->Clear(b != 0); return 0;
     case Op::ListBeginUpdate: aList->BeginUpdate(); return 0;
     case Op::ListEndUpdate: aList->EndUpdate(); return 0;
-    case Op::ItemNew: {
-        GameUserListItem* aNew = new GameUserListItem(aClient);
-        aNew->AddRef();
-        return (intptr_t)aNew;
-    }
-    case Op::ItemClient: return (intptr_t)anItem->mClient.get();
-    case Op::ItemClientIs: return ClientIs(anItem->mClient.get(), b) ? 1 : 0;
-    case Op::ItemSetImage: anItem->mImage = CtlImage(b); return 0;
     case Op::ButtonOf: return (intptr_t)dynamic_cast<Button*>(aComp);
     case Op::ControlId: return aComp->mControlId;
     case Op::ComboGetSel: return aCombo->GetSelItem();

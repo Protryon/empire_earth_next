@@ -744,6 +744,40 @@ enum class EeWonLobbyCtlOp : uint32_t {
   DeliverDirectConnect,
   /// `((Label*)a)->SetText(LobbyFormatString3(GUIString(b), the texts at (const intptr_t*)c), true)`.
   LabelSetFormat3,
+  /// `new RustTextRow((EeWonRow*)a)` when `b` is set, else `new RustRow((EeWonRow*)a)` (no reference).
+  RowShellNew,
+  /// `((RustTextRow*)a)->TextListItem::Paint(*(Graphics*)b, (ListArea*)c)`.
+  RowTextPaint,
+  /// `((RustTextRow*)a)->TextListItem::CalcDimensions((ListArea*)b)`.
+  RowTextCalc,
+  /// `((RustTextRow*)a)->TextListItem::Compare((ListItem*)b, (ListArea*)c)`.
+  RowTextCompare,
+  /// `((TextListItem*)a)->mText = gLobbyResources[b].mString`.
+  ItemSetTextRes,
+  /// `((TextListItem*)a)->mText = GUIString(b)`, then ` (%d)` of `c`'s low half appended when its high half is set.
+  ItemSetTextCount,
+  /// `((TextListItem*)a)->mText.erase()`.
+  ItemTextErase,
+  /// `((TextListItem*)a)->mImage.get()`.
+  ItemImage,
+  /// `((TextListItem*)a)->mFont.get()`.
+  ItemFont,
+  /// `((Font*)b)->GetStringWidth(t, 0, t.length())` of the item `a`'s text `t`.
+  ItemTextWidth,
+  /// `((Graphics*)b)->DrawString(((TextListItem*)a)->mText, c's point)`.
+  ItemTextDraw,
+  /// `((TextListItem*)a)->mText.CompareNoCase(((TextListItem*)b)->mText)`.
+  ItemTextCompare,
+  /// `((Image*)a)->mWidth`.
+  ImageWidth,
+  /// `((Image*)a)->mHeight`.
+  ImageHeight,
+  /// `gLobbyResources[a].mImage.get()`.
+  ResImage,
+  /// `((LobbyRustCtrl*)(ServerListCtrl*)((ListArea*)a)->mParent->mParent)->mLobbyCtl`: a game list row's control.
+  ListOwnerCtl,
+  /// `((LobbyGame*)a)->GetAddress().GetHostAndPortString(true)` (held).
+  GameAddrText,
 };
 
 /// The inward calls.

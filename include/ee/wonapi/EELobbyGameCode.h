@@ -200,15 +200,6 @@ public:
     unsigned short mFileTransferPort;       // +0xf8 "EEFileTransferPort" (8889)
 };
 
-// a game of the server list (vtable 0x44c674; the inline ctor is the factory's). R6 WONLobby round 6: its texts
-// (GetOptionText 0x294ebc, GetNumberText, GetWondersText, GetEpochText, GetOnOffText) and the details' paint are ee_won
-// eeglue.rs's
-class EELobbyServerDetailsItem : public ServerDetailsItem {
-public:
-    virtual void PaintDetailsHook(Graphics& inGraphics, MultiListArea* inList);   // +0x38 0x295010
-    virtual int GetDetailsHeightHook(MultiListArea* inList);    // +0x3c 0x2954fc
-};
-
 }
 
 // the lobby's glue (R6 WONLobby round 6: ee_won eeglue.rs; the entry points are WONLobby/EELobbyGlueHost.cpp's)

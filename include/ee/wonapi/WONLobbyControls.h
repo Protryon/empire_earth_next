@@ -59,17 +59,6 @@ public:
 
 // FriendsListCtrl.
 namespace WONAPI {
-class FriendsListItem : public TextListItem {
-public:
-    FriendsListItem();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void Paint(Graphics& inGraphics,ListArea* inList);
-    virtual void CalcDimensions(ListArea* inList);
-    virtual int Compare(const ListItem* inOther,ListArea* inList) const;
-    SmartPtr<LobbyFriend> mFriend; //28
-    bool mSeparator; //2c
-    signed char mSortGroup; //2d;allocation30
-};
 class FriendsListCtrl : public LobbyRustCtrl {
 public:
     FriendsListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Friends) {}

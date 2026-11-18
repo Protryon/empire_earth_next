@@ -38,6 +38,7 @@
 #include "rust/won_gui/multiobj.h"
 #include "rust/won_gui/paneobj.h"
 #include "rust/won_gui/rootobj.h"
+#include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/treeobj.h"
@@ -1840,33 +1841,6 @@ bool LobbyIAmCaptain();
 void LobbyNetAdvertiseGame();
 void LobbyNotifyStagingChange();
 
-// a game list row (R6 WONLobby round 13): the members stay here (the EE game's subclass and the list read them), the
-// virtuals forward to the list control's Rust object (srvlistctl.rs), its column paints, orders and the icon
-class ServerDetailsItem : public ListItem {
-public:
-    ServerDetailsItem() { this->mSelectable = true; }
-    virtual ~ServerDetailsItem() {}
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    virtual bool CanSelect(ListArea*,int,int);
-    virtual void MouseDown(ListArea*,int,int,int);
-    virtual void PaintDetailsHook(Graphics&,MultiListArea*) {} // empty inline, vtable +0x38
-    virtual int GetDetailsHeightHook(MultiListArea*) { return 0; } // returns 0, vtable +0x3c
-    SmartPtr<LobbyGame> mGame; //18
-    GUIString mIPAddrStr; //1c
-    int mIconId; //20
-    unsigned char mSummaryHeight; //24
-protected:
-    typedef ServerDetailsItem* (*ItemFactoryFunc)();
-    static ItemFactoryFunc mItemFactoryFunc;
-    static ServerDetailsItem* DefaultItemFactory() { return new ServerDetailsItem; }
-public:
-    static ServerDetailsItem* CreateItem() { return ServerDetailsItem::mItemFactoryFunc(); }
-    static void SetItemFactory(ItemFactoryFunc factory) { ServerDetailsItem::mItemFactoryFunc=factory; }
-
-};
-
 class WindowEventBase : public RefCount {
 public:
     WindowEventBase(long inType = 0) : mEventType(inType), mWindow(NULL) {}
@@ -2167,6 +2141,31 @@ public:
     long mColor;                            // +1c
     SmartPtr<Font> mFont;                   // +20
     SmartPtr<Image> mImage;                 // +24
+};
+// RustRow and RustTextRow (R6 WONLobby round 16): list rows whose own members and virtuals are another crate's Rust
+// object (rust/crates/ee_won_gui/src/rowobj.rs: the row kind's call table and its state; the lobby's rows are
+// ee_won_lobby's rows.rs). The text row keeps TextListItem's members, which the lists and the rows' ops read.
+class RustRow : public ListItem {
+public:
+    explicit RustRow(EeWonRow* r) : mRow(r) {}
+    virtual ~RustRow() { ee_won_row_free(this->mRow); }
+    virtual void Paint(Graphics& g,ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::Paint,this,l,(intptr_t)&g,0,0); }
+    virtual void CalcDimensions(ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::CalcDimensions,this,l,0,0,0); }
+    virtual int Compare(const ListItem* o,ListArea* l) const
+    { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustRow*>(this),l,(intptr_t)static_cast<const RustRow*>(o)->mRow,(intptr_t)o,(intptr_t)(static_cast<const ListItem*>(this)-o)); }
+    virtual bool CanSelect(ListArea* l,int x,int y) { return ee_won_row_call(this->mRow,EeWonRowCall::CanSelect,this,l,x,y,0)!=0; }
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { ee_won_row_call(this->mRow,EeWonRowCall::MouseDown,this,l,x,y,b); }
+    EeWonRow* mRow;
+};
+class RustTextRow : public TextListItem {
+public:
+    explicit RustTextRow(EeWonRow* r) : mRow(r) {}
+    virtual ~RustTextRow() { ee_won_row_free(this->mRow); }
+    virtual void Paint(Graphics& g,ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::Paint,this,l,(intptr_t)&g,0,0); }
+    virtual void CalcDimensions(ListArea* l) { ee_won_row_call(this->mRow,EeWonRowCall::CalcDimensions,this,l,0,0,0); }
+    virtual int Compare(const ListItem* o,ListArea* l) const
+    { return (int)ee_won_row_call(this->mRow,EeWonRowCall::Compare,const_cast<RustTextRow*>(this),l,(intptr_t)static_cast<const RustTextRow*>(o)->mRow,(intptr_t)o,0); }
+    EeWonRow* mRow;
 };
 // Allocated at 0x2f4133 (type 0x27), 0x28 bytes; the implicit destructor 0x2f41c0 has no own vptr store.
 class ComboSelChangedEvent : public ComponentEvent {

@@ -88,27 +88,6 @@ public:
 }; // 0x90 bytes; Container is 0x84 bytes with 51 vtable slots
 }
 
-// One row of the room list (a server or a room); global namespace, not WONAPI (RTTI .?AVRoomListItem@@).
-// 0x58 bytes; the ListItem base is 0x18 bytes with 14 vtable slots.
-class RoomListItem : public WONAPI::ListItem {
-public:
-    RoomListItem(WONAPI::LobbyServer*,bool);
-    RoomListItem(WONAPI::LobbyGroup*,WONAPI::LobbyServer*); // 0x7c1c50: the group comes first
-    // Implicit destructor (0x7c1b70): it does not write its own vtable pointer.
-    virtual void Paint(WONAPI::Graphics&,WONAPI::ListArea*);
-    virtual void CalcDimensions(WONAPI::ListArea*);
-    virtual int Compare(const WONAPI::ListItem*,WONAPI::ListArea*) const;
-    void UpdateText(WONAPI::LobbyServer*,WONAPI::LobbyGroup*);
-    int mColor; // 0x18
-    bool mLoading; // 0x1c
-    WONAPI::SmartPtr<WONAPI::Image> mImage; // 0x20
-    WONAPI::SmartPtr<WONAPI::Font> mFont; // 0x24
-    WONAPI::GUIString mText; // 0x28
-    WONAPI::IPAddr mAddress; // 0x2c
-    unsigned long mGroupId; // 0x54, the group id (zero-extended), 0xffff on a server row
-};
-
-
 // ServerListCtrl (R6 WONLobby round 13): the game list with filter combos and sortable columns, a lobbyctl.rs
 // object (srvlistctl.rs: the controls, the columns, the rows by game, the filters, the timer); the shell forwards
 // TimerEvent, the config reader (LobbyNetCtrlHost.cpp) and DirectConnectCtrl call it.
