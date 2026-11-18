@@ -53,12 +53,22 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EEGameLog.h"
+#include "ee/EELuaApi.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESaveGameFiles.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_*: the engine (next_game.rs), the name tables (names.rs)
+
+// the facts of the Lua build the Rust runtime (ee_ai lua_api.rs: mlua-sys, lua54) assumes; lua_host.rs checks its side
+static_assert(LUA_VERSION_NUM == 504, "Lua 5.4");
+static_assert(sizeof(lua_Integer) == 8 && sizeof(lua_Number) == 8, "64-bit integers and doubles");
+static_assert(LUAI_MAXSTACK == 1000000 && LUA_REGISTRYINDEX == -1001000, "the stack size and the registry index");
+static_assert(LUAL_BUFFERSIZE == 16 * sizeof(void*) * sizeof(lua_Number), "luaL_Buffer's initial size");
+static_assert(LUA_EXTRASPACE == sizeof(void*) && LUA_IDSIZE == 60, "the extra space and the chunk id size");
+static_assert(LUA_MASKCOUNT == 8 && LUA_NOREF == -2 && LUA_REFNIL == -1, "the count hook's mask, the references");
+static_assert(sizeof(luaL_Buffer) == 4 * sizeof(void*) + LUAL_BUFFERSIZE, "luaL_Buffer's layout");
 
 const char* EECPNextCodeName(long inCode)
 {

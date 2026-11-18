@@ -33,7 +33,6 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
-#include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
 #include "ee/EEGameLog.h"
 #include "platform/PlatFile.h"

@@ -2,7 +2,6 @@
 
   python -I tools/xbuild.py test     [--target T] [--no-run] [--no-network]     platform layer tests (tests/platform)
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
-  python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py wontest  [--target T] [--no-run] [PROGRAM ...]      WON wire format, crypto, sockets, ops (tests/won)
   python -I tools/xbuild.py nettest  [--target T] [--no-run] [PROGRAM ...]      the Network Engine's goldens (tests/net)
@@ -272,24 +271,6 @@ def cmd_test(a):
     if a.no_run:
         return 0
     return run_program(t, exe, ["--no-network"] if a.no_network else [])
-
-
-# the computer player's Lua runtime (ee/EECPLua.h) with the vendored Lua and the platform layer (PlatFOpen); the
-# test scripts are tests/platform/lua/ai/*.lua, the folder passed in plays the part of Data
-def cmd_luatest(a):
-    t = Target(a.target)
-    why = t.can_build()
-    if why:
-        sys.exit(f"{t.name}: {why}")
-    srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
-            ROOT / "tests" / "platform" / "lua_test.cpp"]
-    libs = rust_libs(t)
-    exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS],
-                        libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
-    print(f"built {exe}")
-    if a.no_run:
-        return 0
-    return run_program(t, exe, [str(ROOT / "tests" / "platform" / "lua") + os.sep])
 
 
 def font_dir():
@@ -1616,12 +1597,12 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
+    for name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
                  "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdltest"):
+        if name in ("test", "fonttest", "tcptest", "wontest", "nettest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -1646,7 +1627,7 @@ def main():
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
     a.sim = a.cmd == "sim"
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 
