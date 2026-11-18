@@ -29548,3 +29548,13 @@ commit now has the same cache key in every worktree.
   PASS; the editor (14,448 lines) and civilization builder (4,062) gates PASS; eedata check and cppgate PASS;
   scenario_check 27/27; gates.sh GATES PASS (tour, ai-game time-cap with both classic_lua players alive, lan-game).
 
+- **Then origin/rust f63bd44b merged in** (data round 3, WONGUI B round 3, A* round 1 with save 0.283, lane V's
+  ee_sim::world and VWCK, WONLobby round 12). Only PORT_LEARNINGS (both sides kept), golden_cpp.txt and
+  saveload_expect.txt conflicted; the two data files were taken from rust and re-read. The oracle traces equal the
+  ref of the main merge (rust's rounds do not move the AI); the ref was recorded again on this tree. Of the goldens
+  only the oracle's changed: the main merge's 312 lines plus VWCK in seeds 2, 5, 6 and 7, the seeds whose games
+  classic_lua changed (late's and calamity's VWCK lines and every other profile pass as rust recorded them).
+  saveload_expect.txt as rust has it (next seed 2 at 915/276 since 0.283; the same in two runs), the editor gate
+  unchanged. Gates again on the merged tree, one heavy job at a time: both builds 0/0, the Rust gate (4,383 tests),
+  the oracle (two equal runs), the eleven profiles (two equal runs each), saveload 18/18, the matrix `--expect`, the
+  editor and civilization builder gates, eedata check and cppgate, scenario_check 27/27, gates.sh GATES PASS.
