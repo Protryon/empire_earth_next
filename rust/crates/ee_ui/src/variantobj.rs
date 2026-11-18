@@ -110,11 +110,17 @@ impl EeUiButton {
         self.op_float(Op::SetBorderOpacity, 0, show.border);
         let pressed = self.fields().pressed_bitmap;
         if !pressed.is_null() {
-            self.op_float(Op::BitmapSetOpacity, pressed as isize, show.pressed);
+            crate::draw2d::bitmap_set_opacity(pressed as isize, show.pressed, || {
+                self.op_float(Op::BitmapSetOpacity, pressed as isize, show.pressed);
+                0
+            });
         }
         let normal = self.fields().normal_bitmap;
         if !normal.is_null() {
-            self.op_float(Op::BitmapSetOpacity, normal as isize, show.normal);
+            crate::draw2d::bitmap_set_opacity(normal as isize, show.normal, || {
+                self.op_float(Op::BitmapSetOpacity, normal as isize, show.normal);
+                0
+            });
         }
         button::copy_data(&mut Btn::new(self)) as isize
     }
@@ -155,7 +161,9 @@ impl EeUiButton {
             let mut f = crate::obj::rect_buf(s.destination);
             let (c, d) = (pack(src.bottom, src.left), pack(src.right, src.top));
             self.host.op_f(Op::BitmapStretch, bitmap as isize, 0, c, d, &mut f);
-            self.host.op_point(Op::BitmapSetLocation, bitmap as isize, s.location);
+            crate::draw2d::bitmap_set_location(bitmap as isize, s.location.x, s.location.y, || {
+                self.host.op_point(Op::BitmapSetLocation, bitmap as isize, s.location)
+            });
             r = crate::draw2d::bitmap(bitmap as isize, || self.op(Op::BitmapDraw, bitmap as isize, 0));
         }
         r

@@ -185,6 +185,19 @@ pub fn bitmap_scale(bitmap: isize, op: impl FnOnce() -> crate::rect::UiPoint) ->
     }
 }
 
+/// `BgBitmapStretch`: `ComputeStretchedCoordsAndScale(a, b, c, screen)` on the manager's screen.
+pub fn bitmap_stretch(bitmap: isize, a: UiRect, b: UiRect, c: UiRect, op: impl FnOnce() -> isize) {
+    match target() {
+        Some(t) if direct(bitmap) => {
+            // SAFETY: a live GEBitmap; the rectangles live for the call
+            unsafe { list2d::bitmap_stretch(bitmap as usize, ge(a), ge(b), ge(c), t.screen) }
+        }
+        _ => {
+            op();
+        }
+    }
+}
+
 /// `BitmapSetOpacity`: `SetOpacity(o)`.
 pub fn bitmap_set_opacity(bitmap: isize, o: f32, op: impl FnOnce() -> isize) {
     if direct(bitmap) {

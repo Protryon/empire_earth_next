@@ -86,8 +86,6 @@ struct UIEditBoxRust {
             return r;
         switch (inOp) {
         case EeUiOp::ButtonDown: e->ButtonDown(); break;
-        case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
-        case EeUiOp::RhombusSetColor: theRhombus->SetColor(GEColor(f[0], f[1], f[2])); break;
         case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
         case EeUiOp::PollDelete: delete thePoll; break;
         case EeUiOp::PollRunning: return thePoll->GetIsRunning();
@@ -130,11 +128,6 @@ struct UIEditBoxRust {
                                              GEColor(0.0f, 0.0f, 0.0f), 1.0f);
             return (intptr_t) new GELine();
         case EeUiOp::LineDelete: delete theLine; break;
-        case EeUiOp::LineSetPoints:
-            theLine->SetStartPoint(GE2DPoint(f[0], f[1]));
-            theLine->SetEndPoint(GE2DPoint(f[2], f[3]));
-            break;
-        case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
         case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
         case EeUiOp::RhombusDelete: delete theRhombus; break;
         case EeUiOp::TextFgColor:

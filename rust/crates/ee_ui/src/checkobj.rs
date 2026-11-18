@@ -271,12 +271,17 @@ impl EeUiButton {
     fn box_draw_polygons(&self, scale_bitmap: bool, border: Option<c_ulong>) -> isize {
         let bitmap = self.fields().copied_bitmap;
         let r = if scale_bitmap && !bitmap.is_null() {
-            let full = self.host.get_point(Op::BitmapScale, bitmap as isize);
+            let full =
+                crate::draw2d::bitmap_scale(bitmap as isize, || self.host.get_point(Op::BitmapScale, bitmap as isize));
             let height = self.host.get_rect(Op::CopiedDrawRect, 0).height();
             let (x, y) = draw::box_bitmap_scale(full.x, full.y, height, border);
-            self.host.op_f(Op::BitmapSetScale, bitmap as isize, 0, 0, 0, &mut [x, y, 0.0, 0.0]);
+            crate::draw2d::bitmap_set_scale(bitmap as isize, x, y, || {
+                self.host.op_f(Op::BitmapSetScale, bitmap as isize, 0, 0, 0, &mut [x, y, 0.0, 0.0])
+            });
             let r = self.draw_polygons();
-            self.host.op_f(Op::BitmapSetScale, bitmap as isize, 0, 0, 0, &mut [full.x, full.y, 0.0, 0.0]);
+            crate::draw2d::bitmap_set_scale(bitmap as isize, full.x, full.y, || {
+                self.host.op_f(Op::BitmapSetScale, bitmap as isize, 0, 0, 0, &mut [full.x, full.y, 0.0, 0.0])
+            });
             r
         } else {
             self.draw_polygons()

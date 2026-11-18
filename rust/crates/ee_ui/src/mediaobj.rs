@@ -109,7 +109,9 @@ pub unsafe fn bitmap_call(p: *mut EeUiBitmapFields, host: EeUiHostFn, call: EeUi
             if !copied.is_null() {
                 // SAFETY: the contract
                 let loc = unsafe { (*p).mLocation };
-                h.op_f(Op::BitmapSetLocation, copied as isize, 0, 0, 0, &mut [loc[0], loc[1], 0.0, 0.0]);
+                crate::draw2d::bitmap_set_location(copied as isize, loc[0], loc[1], || {
+                    h.op_f(Op::BitmapSetLocation, copied as isize, 0, 0, 0, &mut [loc[0], loc[1], 0.0, 0.0])
+                });
                 r = crate::draw2d::bitmap(copied as isize, || h.op(Op::BitmapDraw, copied as isize, 0, 0, 0));
             }
             r

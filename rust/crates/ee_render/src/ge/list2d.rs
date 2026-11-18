@@ -448,6 +448,21 @@ pub unsafe fn bitmap_scale(handle: usize) -> (f32, f32) {
     }
 }
 
+/// `GEBitmap::ComputeStretchedCoordsAndScale(texture, source, destination, screen)`.
+///
+/// # Safety
+/// As [`bitmap_set_location`].
+pub unsafe fn bitmap_stretch(
+    handle: usize,
+    texture: GeRectangle,
+    source: GeRectangle,
+    destination: GeRectangle,
+    screen: c_ulong,
+) {
+    // SAFETY: the caller's contract; the rectangles live for the call
+    unsafe { crate::ge::bmpobj::ee_ge_bmp_stretch(bitmap_of(handle), &texture, &source, &destination, screen) };
+}
+
 /// `GEBitmap::SetOpacity`: every corner.
 ///
 /// # Safety

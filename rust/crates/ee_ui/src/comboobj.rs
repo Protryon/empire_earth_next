@@ -371,7 +371,9 @@ impl ComboHost for Bridge<'_> {
         self.act(EeUiComboAct::CopyListColours, 0, 0);
     }
     fn set_focus_rect(&mut self, r: UiRect) {
-        self.0.host.op_rect(Op::RhombusSetRect, self.0.rhombus, 0, r);
+        crate::draw2d::rhombus_set_rect(self.0.rhombus, r, || {
+            self.0.host.op_rect(Op::RhombusSetRect, self.0.rhombus, 0, r)
+        });
     }
     fn base_copy_data(&mut self) -> c_long {
         self.act(EeUiComboAct::BaseCopyData, 0, 0) as c_long
@@ -460,7 +462,7 @@ impl EeUiCombo {
     ) -> Self {
         let rhombus = host.op(Op::RhombusCreate, 0, 0, 0, 0);
         let mut c = [color[0], color[1], color[2], 0.0];
-        host.op_f(Op::RhombusSetColor, rhombus, 0, 0, 0, &mut c);
+        crate::draw2d::rhombus_set_color(rhombus, color, || host.op_f(Op::RhombusSetColor, rhombus, 0, 0, 0, &mut c));
         let f = ComboFields {
             text_box: (if label != 0 { label } else { edit }) as *mut c_void,
             text_box_type,
@@ -615,7 +617,9 @@ impl EeUiCombo {
             }
             C::SetSelectedColor => {
                 let mut c = [fin[0], fin[1], fin[2], 0.0];
-                self.host.op_f(Op::RhombusSetColor, self.rhombus, 0, 0, 0, &mut c);
+                crate::draw2d::rhombus_set_color(self.rhombus, [fin[0], fin[1], fin[2]], || {
+                    self.host.op_f(Op::RhombusSetColor, self.rhombus, 0, 0, 0, &mut c)
+                });
                 // SAFETY: the contract
                 unsafe { write_buf(f, fin) };
                 0

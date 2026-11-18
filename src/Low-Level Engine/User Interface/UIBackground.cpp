@@ -100,11 +100,6 @@ struct UIBackgroundHost {
             theTexture->SetStageMipMapBias(-0.75f, -1);
             theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
             return (intptr_t)theTexture;
-        case EeUiOp::BgBitmapStretch:
-            theBitmap->ComputeStretchedCoordsAndScale(UIObjHost::Rect(f), UIObjHost::Rect(f + 4), UIObjHost::Rect(f + 8), s);
-            break;
-        case EeUiOp::BgBitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiOp::BgBitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
         case EeUiOp::BgFormRect: UIObjHost::PutRect(f, theForm->GetRectangle()); break;
         case EeUiOp::BgFormFade: f[0] = theForm->GetFadeOpacity(); break;
         default: break;

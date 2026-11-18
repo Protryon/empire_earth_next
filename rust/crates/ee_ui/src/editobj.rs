@@ -334,9 +334,11 @@ impl ImeHost for Underlines<'_> {
     fn draw_line(&mut self, start: UiPoint, end: UiPoint) -> c_long {
         let o = self.o;
         let mut f = [start.x, start.y, end.x, end.y];
-        o.host.op_f(Op::LineSetPoints, o.underline, 0, 0, 0, &mut f);
+        crate::draw2d::line_set_points(o.underline, f, || o.host.op_f(Op::LineSetPoints, o.underline, 0, 0, 0, &mut f));
         let mut c = color_buf(o.copied_ime_color.get());
-        o.host.op_f(Op::LineSetColor, o.underline, 0, 0, 0, &mut c);
+        crate::draw2d::line_set_color(o.underline, [c[0], c[1], c[2]], || {
+            o.host.op_f(Op::LineSetColor, o.underline, 0, 0, 0, &mut c)
+        });
         crate::draw2d::line(o.underline, || o.op(Op::LineDraw, o.underline, 0)) as c_long
     }
 }
@@ -520,9 +522,13 @@ impl EeUiEdit {
                 let at = self.run(|e| e.location_from_index(e.s.f.caret_index as c_ulong, e.s.f.caret_line));
                 let height = self.op(Op::TextFontHeight, self.text, 0) as c_long;
                 let mut p = [at.x, at.y, at.x, at.y + height as f32];
-                self.host.op_f(Op::LineSetPoints, self.cursor, 0, 0, 0, &mut p);
+                crate::draw2d::line_set_points(self.cursor, p, || {
+                    self.host.op_f(Op::LineSetPoints, self.cursor, 0, 0, 0, &mut p)
+                });
                 let mut c = color_buf(self.cursor_color.get());
-                self.host.op_f(Op::LineSetColor, self.cursor, 0, 0, 0, &mut c);
+                crate::draw2d::line_set_color(self.cursor, [c[0], c[1], c[2]], || {
+                    self.host.op_f(Op::LineSetColor, self.cursor, 0, 0, 0, &mut c)
+                });
             }
         } else {
             self.update(|f| f.copied_cursor_on = false);
@@ -598,7 +604,9 @@ impl EeUiEdit {
         self.op(Op::TextCopy, self.copied_text, self.text);
         if f.is_text_selected {
             let mut c = color_buf(self.selected_bg.get());
-            self.host.op_f(Op::RhombusSetColor, self.rhombus, 0, 0, 0, &mut c);
+            crate::draw2d::rhombus_set_color(self.rhombus, [c[0], c[1], c[2]], || {
+                self.host.op_f(Op::RhombusSetColor, self.rhombus, 0, 0, 0, &mut c)
+            });
             let lens: Vec<c_ulong> = self.display.borrow().iter().map(|l| char_len(&Platform, l) as c_ulong).collect();
             let f = self.fields();
             let s = edit_draw::copied_selection(
@@ -667,7 +675,9 @@ impl EeUiEdit {
                 };
                 let (from, to) = edit_draw::selection_span(&s, i, len);
                 let r = self.selected_text_rect(i, from, to);
-                self.host.op_rect(Op::RhombusSetRect, self.rhombus, 0, r);
+                crate::draw2d::rhombus_set_rect(self.rhombus, r, || {
+                    self.host.op_rect(Op::RhombusSetRect, self.rhombus, 0, r)
+                });
                 result = crate::draw2d::rhombus(self.rhombus, || self.op(Op::RhombusDraw, self.rhombus, 0));
                 if i == c_ulong::MAX {
                     break;

@@ -337,8 +337,12 @@ impl EeUiList {
             draw::list_selection(lines, f.has_selection, f.current_selection, first, last, &ctr, f.line_height)
         {
             self.update(|f| f.copied_has_selection = true);
-            self.host.op_rect(Op::RhombusSetRect, self.selected, 0, r);
-            self.op(Op::RhombusAssign, self.copied_selected, self.selected);
+            crate::draw2d::rhombus_set_rect(self.selected, r, || {
+                self.host.op_rect(Op::RhombusSetRect, self.selected, 0, r)
+            });
+            crate::draw2d::rhombus_assign(self.copied_selected, self.selected, || {
+                self.op(Op::RhombusAssign, self.copied_selected, self.selected)
+            });
             if self.op(Op::TabbingOn, 0, 0) != 0 && self.op(Op::TabStop, 0, 0) == self.op(Op::Index, 0, 0) {
                 self.update(|f| f.copied_has_focus = true);
                 self.copied_focused_color.set(self.focused_color.get());
@@ -351,7 +355,9 @@ impl EeUiList {
         // the focus rectangle's line (a GELine local of the original's DrawPolygons, made in its colour first)
         let line = self.op(Op::LineCreate, 1, 0);
         let mut c = color_buf(self.copied_focused_color.get());
-        self.host.op_f(Op::LineSetColor, line, 0, 0, 0, &mut c);
+        crate::draw2d::line_set_color(line, [c[0], c[1], c[2]], || {
+            self.host.op_f(Op::LineSetColor, line, 0, 0, 0, &mut c)
+        });
         let mut result = self.op(Op::BaseDrawPolygons, 0, 0);
         let f = self.fields();
         if f.copied_scroll_bar_visible {
@@ -360,10 +366,14 @@ impl EeUiList {
         if f.copied_has_selection {
             result = crate::draw2d::rhombus(self.copied_selected, || self.op(Op::RhombusDraw, self.copied_selected, 0));
             if f.copied_has_focus {
-                let r = self.host.get_rect(Op::RhombusRect, self.copied_selected);
+                let r = crate::draw2d::rhombus_rect(self.copied_selected, || {
+                    self.host.get_rect(Op::RhombusRect, self.copied_selected)
+                });
                 for (s, e) in draw::list_focus_lines(&r) {
                     let mut p = [s.x, s.y, e.x, e.y];
-                    self.host.op_f(Op::LineSetPoints, line, 0, 0, 0, &mut p);
+                    crate::draw2d::line_set_points(line, p, || {
+                        self.host.op_f(Op::LineSetPoints, line, 0, 0, 0, &mut p)
+                    });
                     result = crate::draw2d::line(line, || self.op(Op::LineDraw, line, 0));
                 }
             }
