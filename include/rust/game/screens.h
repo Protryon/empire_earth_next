@@ -11669,6 +11669,12 @@ void ee_screens_sebr_highlight(float x,
                                bool centred,
                                float *out);
 
+/// `EESETriggerJump`'s decision ([`trigger_jump`]): -1 for none, else the screen << 32 | the entry.
+int64_t ee_screens_trigger_jump(unsigned long kind,
+                                unsigned long selection,
+                                unsigned long first_object,
+                                unsigned long count);
+
 /// `EESETSTrigger`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_setr_free`.
 ///

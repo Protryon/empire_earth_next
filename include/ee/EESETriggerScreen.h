@@ -35,6 +35,9 @@ extern bool gB4C3220;                       // 0x4c3220 (= true; set while an en
 // store and load of the open entry, entering and leaving); the class keeps the five sub-screens and forwards.
 struct EeScreensSeTriggerTab;
 
+// opens the tab of a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
+void EESETriggerJump(unsigned long inKind, unsigned long inSelection);
+
 class EESETriggerScreen : public EEUIFSEMainGroup {
 public:
     EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);
