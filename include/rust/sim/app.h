@@ -337,6 +337,17 @@ void ee_app_cheats_apply(const EeAppCheats *p,
                          long player,
                          long parameter);
 
+/// PLST for the player `player` (an `EEPlayer*`): `game_time` the physics' game time (0 without physics), `stats`
+/// and `end_time` its statistics (`mSavedGroups`), `events` its event list's Rust object.
+///
+/// # Safety
+/// The caller holds the player (its physics tick); the pointers are its live members.
+void ee_app_capture_player_state(uint64_t player,
+                                 uint32_t game_time,
+                                 const EeUnitsPlayerStats *stats,
+                                 unsigned long end_time,
+                                 const EeUnitsPlayerEvents *events);
+
 /// `EEWorld::RecordStatistics`' decisions over the world's players: the records in their order into `out` (at most
 /// `cap`) -> their count; `current_index` the local record's (-1: kept), `is_scenario` the history's flag after.
 ///
