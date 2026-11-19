@@ -1712,12 +1712,6 @@ constexpr static const int32_t EE_UNITS_PG_OP_REPAIR = 15;
 
 constexpr static const int32_t EE_UNITS_PG_OP_SAVE = 16;
 
-/// "USPK"
-constexpr static const uint32_t PICK_TAG = 1263555413;
-
-/// "USFL"
-constexpr static const uint32_t FILL_TAG = 1279677269;
-
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -6599,35 +6593,6 @@ int32_t ee_units_pg_save(EeUnitsPatrolGroup *group, uint32_t major, uint32_t min
 /// See above.
 int32_t ee_units_pg_repair(EeUnitsPatrolGroup *group);
 
-/// TEST ONLY: the USPK record of a pick (`EESelectPickCapture`; `player` an `EEPlayer*`).
-///
-/// # Safety
-/// `ids` points to `count` ids and `picked` to `picked_count`.
-void ee_units_select_pick_capture(uint32_t case_,
-                                  uint64_t player,
-                                  const uint32_t *ids,
-                                  size_t count,
-                                  const uint32_t *picked,
-                                  size_t picked_count);
-
-/// TEST ONLY: the USFL record of a fill (`EEFillCapture`; the units as their ids).
-///
-/// # Safety
-/// `ids` points to `count` ids and `taken` to `taken_count`.
-void ee_units_fill_capture(uint32_t case_,
-                           uint64_t player,
-                           const uint32_t *ids,
-                           size_t count,
-                           int64_t slot,
-                           const uint32_t *taken,
-                           size_t taken_count);
-
-/// TEST ONLY: the pick sweep (`EESelectPickSweep`).
-void ee_units_select_pick_sweep();
-
-/// TEST ONLY: the fill sweep (`EEFillSweep`).
-void ee_units_fill_sweep();
-
 /// `TurnTowardAngle` over the C++'s values.
 ///
 /// # Safety
@@ -6701,6 +6666,35 @@ int32_t ee_units_physics_load(void *ctx,
 /// # Safety
 /// As [`ee_units_physics_load`].
 int32_t ee_units_physics_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsPhysicsSaved *rec);
+
+/// TEST ONLY: the USPK record of a pick (`EESelectPickCapture`; `player` an `EEPlayer*`).
+///
+/// # Safety
+/// `ids` points to `count` ids and `picked` to `picked_count`.
+void ee_units_select_pick_capture(uint32_t case_,
+                                  uint64_t player,
+                                  const uint32_t *ids,
+                                  size_t count,
+                                  const uint32_t *picked,
+                                  size_t picked_count);
+
+/// TEST ONLY: the USFL record of a fill (`EEFillCapture`; the units as their ids).
+///
+/// # Safety
+/// `ids` points to `count` ids and `taken` to `taken_count`.
+void ee_units_fill_capture(uint32_t case_,
+                           uint64_t player,
+                           const uint32_t *ids,
+                           size_t count,
+                           int64_t slot,
+                           const uint32_t *taken,
+                           size_t taken_count);
+
+/// TEST ONLY: the pick sweep (`EESelectPickSweep`).
+void ee_units_select_pick_sweep();
+
+/// TEST ONLY: the fill sweep (`EEFillSweep`).
+void ee_units_fill_sweep();
 
 /// The cost decisions: `what` 0 `CanAffordScaled(node, a, f, b)`, 1 `CanAffordSingleResource(node, a, b)`, 2
 /// `EEPlayer::CanAfford(node, a, b)`, 3 `CanAffordTechnology(a, f, reason)`, 4 `EEPlayer::Pay(node, a, f)`, 5

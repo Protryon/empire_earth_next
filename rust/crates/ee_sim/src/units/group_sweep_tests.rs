@@ -1,12 +1,7 @@
 use super::*;
 
 fn unit(id: u32, unit_type: u64, tile: (i64, i64)) -> OwnUnit {
-    OwnUnit {
-        id,
-        class: Some(OwnClass { unit_type, ..OwnClass::default() }),
-        tile,
-        ..OwnUnit::default()
-    }
+    OwnUnit { id, class: Some(OwnClass { unit_type, ..OwnClass::default() }), tile, ..OwnUnit::default() }
 }
 
 fn collect(p: &PlayerFacts, w: &WorldFacts, on_map: impl Fn(i64, i64) -> bool) -> Vec<(SweepCase, Vec<u32>)> {
@@ -64,7 +59,13 @@ fn the_first_unit_on_the_map_gives_the_first_point() {
         .collect();
     assert_eq!(
         attack[..5],
-        [(0x101, false, false), (0x101, false, true), (0x201, false, false), (SWEEP_NO_UNIT, false, false), (9, false, false)]
+        [
+            (0x101, false, false),
+            (0x101, false, true),
+            (0x201, false, false),
+            (SWEEP_NO_UNIT, false, false),
+            (9, false, false)
+        ]
     );
     // Unload's points are whole
     let unload = cases.iter().find(|(c, _)| c.body == SWEEP_UNLOAD_TRANSPORT).unwrap();

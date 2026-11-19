@@ -2,13 +2,15 @@
 //! Thread/EEPhysicsModel.cpp, `ee_units_pm_host_*`). Absent from a test binary.
 
 #![cfg(not(test))]
+// `c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
 
 use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation};
 
+use crate::units::pm::{EeUnitsPmClass, EeUnitsPmStats, EeUnitsPmTick, EeUnitsPmTile, EeUnitsPmUnit, PmHost};
 use crate::world::layout::layout;
 use crate::world::view::{UnitView, WorldRead};
 use crate::world_field;
-use crate::units::pm::{EeUnitsPmClass, EeUnitsPmStats, EeUnitsPmTick, EeUnitsPmTile, EeUnitsPmUnit, PmHost};
 
 extern "C" {
     fn ee_units_pm_host_tick(out: *mut EeUnitsPmTick);

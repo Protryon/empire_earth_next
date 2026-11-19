@@ -1477,7 +1477,9 @@ impl BuildHost for OpHost<'_> {
     }
     fn halt(&mut self, unit: u64, action: i64) {
         // `SetCurrentPhysicsAction((long)action)`, `SetVelocity(0.0f)`, `mAngularVelocity = GEOrientation()`
-        read_unit(unit, |u| crate::units::update_views::halt(u, Some(action as std::os::raw::c_long as std::os::raw::c_ulong)));
+        read_unit(unit, |u| {
+            crate::units::update_views::halt(u, Some(action as std::os::raw::c_long as std::os::raw::c_ulong))
+        });
     }
     fn site_taken(&mut self, target: u64, player: u64, target_type: i32) -> bool {
         crate::units::world::site_taken(self, target, player, target_type)

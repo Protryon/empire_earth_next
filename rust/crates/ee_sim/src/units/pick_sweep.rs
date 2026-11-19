@@ -3,11 +3,6 @@
 //! lane, round 2). EE-SIM runs both sweeps every five game minutes while the capture runs; the game's own picks and
 //! fills write the same records (case 100) when the capture asks for them.
 
-/// "USPK"
-pub const PICK_TAG: u32 = 0x4b50_5355;
-/// "USFL"
-pub const FILL_TAG: u32 = 0x4c46_5355;
-
 fn put(out: &mut Vec<u8>, v: u32) {
     out.extend_from_slice(&v.to_le_bytes());
 }
@@ -72,6 +67,11 @@ pub fn fill_cases(own: &[u32]) -> Vec<(u32, i64, Vec<u32>)> {
 #[cfg(not(test))]
 mod game {
     use super::*;
+
+    /// "USPK"
+    const PICK_TAG: u32 = 0x4b50_5355;
+    /// "USFL"
+    const FILL_TAG: u32 = 0x4c46_5355;
     use crate::app::capture::{commit, ee_app_capture_active};
     use crate::units::ffi::{ee_units_fill_members, ee_units_select_pick};
     use crate::world::view::{WorldRead, WorldView};
@@ -137,7 +137,10 @@ mod game {
         }
         // SAFETY: as above
         let t = unsafe { WorldRead::begin() };
-        commit(FILL_TAG, &fill_record(case, player_index(&t, player), slot, slice(ids, count), slice(taken, taken_count)));
+        commit(
+            FILL_TAG,
+            &fill_record(case, player_index(&t, player), slot, slice(ids, count), slice(taken, taken_count)),
+        );
     }
 
     /// The ids of the units of the player at `index` (its list's order; complex units only when `complex`).

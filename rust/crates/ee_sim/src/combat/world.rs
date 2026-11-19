@@ -686,7 +686,8 @@ impl WorldHost for EeCombatWorldHost {
             // SAFETY: the host's call runs on the simulation thread, which holds the world; its handles are live
             let t = unsafe { crate::world::view::WorldRead::begin() };
             // SAFETY: as above
-            if let Some(r) = unsafe { crate::combat::world_views::world_op(&t, code, object, other, self.class, args) } {
+            if let Some(r) = unsafe { crate::combat::world_views::world_op(&t, code, object, other, self.class, args) }
+            {
                 return r;
             }
         }

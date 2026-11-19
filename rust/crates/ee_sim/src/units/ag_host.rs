@@ -545,7 +545,8 @@ impl AgHost for AgGame {
         // `GetPatrolTarget()`, else `ee_units_pg_last(GetPatrolGroup())` (a patrol goal's)
         match crate::units::patrol::target(goal) {
             0 => {
-                let group = crate::units::patrol::group(goal) as usize as *mut crate::units::patrol_group::EeUnitsPatrolGroup;
+                let group =
+                    crate::units::patrol::group(goal) as usize as *mut crate::units::patrol_group::EeUnitsPatrolGroup;
                 // SAFETY: the goal's live patrol group
                 unsafe { crate::units::patrol_group::ee_units_pg_last(group) as usize as u64 }
             }

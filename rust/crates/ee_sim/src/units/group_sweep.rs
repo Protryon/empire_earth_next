@@ -317,7 +317,8 @@ pub fn player_cases(
             p.own
                 .iter()
                 .find(|u| {
-                    u.class.is_some_and(|c| c.unit_type == UNIT_TYPE_GRANARY || c.unit_type == UNIT_TYPE_GRANARY_IMPROVED)
+                    u.class
+                        .is_some_and(|c| c.unit_type == UNIT_TYPE_GRANARY || c.unit_type == UNIT_TYPE_GRANARY_IMPROVED)
                 })
                 .map(|u| u.id as i32),
         );
@@ -585,7 +586,9 @@ mod game {
     }
 
     /// The tree's node ids, epoch by epoch, in the order of `GetNodeIDs`, with each node's data (None: no data).
-    fn nodes<'t>(p: &PlayerView<'t>) -> Vec<(i64, Option<crate::world::view::Record<'t, crate::tech::nodes::EeTechNodeDataFields>>)> {
+    fn nodes<'t>(
+        p: &PlayerView<'t>,
+    ) -> Vec<(i64, Option<crate::world::view::Record<'t, crate::tech::nodes::EeTechNodeDataFields>>)> {
         let mut out = Vec::new();
         let Some(tree) = p.tech_tree() else { return out };
         for e in 0..tree.epochs() {
@@ -621,8 +624,7 @@ mod game {
             if crate::world_field!(d, mCalamity) == 0 || *id == TECH_TELEPORT {
                 continue;
             }
-            let Some((_, class_enum, by_all)) = host.calamity_of(HostRef(p.handle() as *mut c_void), *id as i32)
-            else {
+            let Some((_, class_enum, by_all)) = host.calamity_of(HostRef(p.handle() as *mut c_void), *id as i32) else {
                 continue;
             };
             let slot = if class_enum == CALAMITY_GROUP_CAST {
@@ -701,7 +703,9 @@ mod game {
                 ee_units_set_airport_command(player, selection, x, y, c.command, c.target, u8::from(c.queued))
             }
             // the building owner's selection is the sweep's (the dry host's player_selection)
-            SWEEP_SET_RALLY_GOAL => ee_units_set_rally_goal(player, c.caster as u32, x, y, c.target, u8::from(c.queued)),
+            SWEEP_SET_RALLY_GOAL => {
+                ee_units_set_rally_goal(player, c.caster as u32, x, y, c.target, u8::from(c.queued))
+            }
             SWEEP_CLEAR_AIRPORT_COMMANDS => ee_units_clear_airport_commands(selection),
             SWEEP_STOP_ACTIVE_GROUP => ee_units_stop_active_group(selection),
             SWEEP_LOAD_GARRISON => ee_units_load_garrison(player, selection, c.target as u32),
