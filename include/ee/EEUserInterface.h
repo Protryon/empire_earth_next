@@ -93,10 +93,10 @@ public:
     // the handlers that call the game's C++ (EEUserInterface.cpp)
     static void HandleEvent(const PlatInputEvent& inEvent);   // the game window's events (ui_thread.rs)
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (message 0x41e)
-    void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);   // 0x2768fe
+    void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);
     void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem);  // 0x276a38 (message 0x440)
     void OpenSelectServer();                // 0x27783c (message 0x441)
-    void PauseGraphics();                   // 0x277e63
+    void PauseGraphics();
     void ResumeGraphics();
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
 };
