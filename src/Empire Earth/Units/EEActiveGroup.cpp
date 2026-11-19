@@ -221,12 +221,16 @@ void EEActiveGroup::Fill(EESelectedGroup* inGroup, long inSort, long inSlot)
     this->SetFormation(inGroup->mFormation);
     if (inSort == 0)
         inGroup->SortUnits();
-    // New (R5b.4): the test of the units the group takes (valid, with hit points, in the slot) is EEFillMembers
-    // (ee/EEUnitStore.h): their indices in the selection's order; each one is taken here in that order
+    // New (R5b.4): the test of the units the group takes (valid, with hit points, in the slot) is
+    // ee_units_fill_members (ee_units group.rs): their indices in the selection's order; each one is taken here in
+    // that order
     std::vector<uint32_t> theTaken(theCount + 1);
-    EEComplexUnit* const* theUnits = theCount > 0 ? &inGroup->mUnits[0] : NULL;
-    size_t theTakenCount = EEFillMembers(theUnits, theCount, inSlot, &theTaken[0]);
-    EEFillCapture(100, inGroup->mPlayer, theUnits, theCount, inSlot, &theTaken[0], theTakenCount);   // TEST ONLY (off by default)
+    std::vector<uint32_t> theIDs(theCount + 1);
+    for (size_t i = 0; i < theCount; i++)
+        theIDs[i] = static_cast<uint32_t>(inGroup->mUnits[i]->mUnitID);
+    size_t theTakenCount = ee_units_fill_members(&theIDs[0], theCount, (int64_t)inSlot, &theTaken[0]);
+    ee_units_fill_capture(100, (uint64_t)(uintptr_t)inGroup->mPlayer, &theIDs[0], theCount, (int64_t)inSlot, &theTaken[0],
+                          theTakenCount);   // TEST ONLY (off by default)
     for (size_t k = 0; k < theTakenCount; k++) {
         EEComplexUnit* theUnit = inGroup->GetUnit((long)theTaken[k]);
         if (theUnit->mActiveGroup)

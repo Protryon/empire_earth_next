@@ -81,6 +81,7 @@ pub mod order;
 pub mod patrol;
 pub mod notes;
 pub mod patrol_group;
+pub mod pick_sweep;
 pub mod physics;
 pub mod physics_save;
 pub mod player;

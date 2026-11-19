@@ -66,24 +66,11 @@ class EEPlayer;
 // the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
 // invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count
 size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs);
-// TEST ONLY: a USPK record of one pick (inCase 100: the game's EEPlayer::SelectUnits; 1..4: the sweep's)
-void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,
-                         const uint32_t* inPicked, size_t inPickedCount);
-// TEST ONLY: the pick over every player's units (USPK records; EE-SIM, every five game minutes)
-void EESelectPickSweep();
-class EEComplexUnit;
-// EEActiveGroup::Fill's test: the indices (in order) of the units of inUnits (a selection's, inCount) that an active
-// group takes for formation slot inSlot: valid, with hit points, in the slot; outIndices has room for inCount; the count
-size_t EEFillMembers(EEComplexUnit* const* inUnits, size_t inCount, long inSlot, uint32_t* outIndices);
-// TEST ONLY: a USFL record of one Fill test (inCase 100: EEActiveGroup::Fill; 1, 2: the sweep's), inPlayer the
-// selection's player
-void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* const* inUnits, size_t inCount, long inSlot,
-                   const uint32_t* inIndices, size_t inTaken);
-// TEST ONLY: the Fill test over every player's units for every slot (USFL records; EE-SIM, every five game minutes)
-void EEFillSweep();
+// (the pick's and the Fill test's USPK and USFL records and sweeps: ee_sim units/pick_sweep.rs; the Fill test:
+// ee_units_fill_members)
 
-// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): EEUnitStepNote adds one call of a leaf
-// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; EEUnitStepCommit (the end of
+// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): ee_units_note_step adds one call of a leaf
+// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; ee_units_note_step_commit (the end of
 // EEPhysics::UpdateUnits) writes the tick's record: the tick, the calls, their FNV-1a. Words: reload / target search
 // [timer, tick ms, written, timer after]; heal search the same with float bits (the tick time, not ms); power
 // [regeneration, maximum, cinematic, land building, built, power, timer, tick ms, interval, written, power set, power
