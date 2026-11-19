@@ -32555,3 +32555,58 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+## The app cluster, round 2: the simulation capture's writer and the cluster's TEST ONLY world readers in Rust over the world views (ee_sim app capture.rs, player_capture.rs; ee_sim netmsg decisions.rs; ee_game sim_driver combat_sweep.rs, digest.rs; ee_game app map_capture.rs; branch rust-app2, 2026-11-19)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 34aeea572 | the simulation capture's writer whole in Rust; EESimCapture.cpp deleted, ee/EESimCapture.h's class forwards | +14 -117, net -103 |
+| f2c1d5517 | NMDC (the Execute decisions' records: the tables and the players' part) in Rust over the views | +12 -166, net -154 |
+| d1775c963 | the combat formulas' capture sweep in Rust over the views (a three-case host) | +31 -101, net -70 |
+| d767da9be | the editor gate's world digest (the map, the mesh, the units) in Rust | +6 -58, net -52 |
+| 0fa39a222 | MAPC and MAPS (the map records) in Rust over the views and the terrain mesh | +9 -82, net -73 |
+| edb7d311f | PLST (a player's state) in Rust over the views and the player's Rust objects | +3 -61, net -58 |
+| e7a9dbcd0 | clippy, rustfmt and a test of the round's Rust | Rust only |
+
+- **The capture's writer.** `EESimCaptureRecord` keeps its interface (379 users) as inline forwarders to
+  `ee_sim::app::capture`: the file opened once from `EE_SIM_CAPTURE`, the thread's "only" tags, the exclusive owner,
+  closed and held, the record written whole under a lock. The stream is still the C library's (`fopen(.., "wb")`,
+  `fwrite`, `fflush`): its buffer is flushed by `exit` as before, so a run that ends without `Flush` loses nothing.
+  Rust records go through `capture::commit` directly (the round's sweeps).
+- **Lesson: a private `extern "C"` block reaches the headers.** The C library's `fopen`, `fwrite` and `fflush`
+  declared in capture.rs went into `common.h` and `sim/app.h` (and would clash with `<stdio.h>`). They live in a
+  private module marked `/// cbindgen:ignore`.
+- **NMDC.** The decisions' tables and the players' part (the market prices both ways, the exchange steps, the takes,
+  every unit's disband refund) are Rust over the views; `EEGetTradePrice`'s rates come from the C++ caller (the world
+  table is C++). The Rust bodies' `EE_NETMSG_OP_DECISION` is one call of `ee_netmsg_capture_decision`.
+- **The combat sweep.** Each formula's record is the C++ wrappers' (the tag, the input record's bytes, the
+  output's). The host answers `EECanHeal` (the C++ records CBCH), a unit's `GetPosition` (virtual) and the stats'
+  class's projectile acceleration (no layout entry for `mProjectileClass`).
+- **The editor digest.** The map's tiles, the mesh (`ee_render::ge::tmobj`'s accessors over `GetRust()`), the units'
+  lines with the Microsoft library's `%a` (`0x1.hhhhhhhhhhhhhp+e`, a zero `0x0.0000000000000p+0`: the golden is
+  Windows'). Lesson: the editor's hash basis is 1469598103934665603, one digit short of FNV's 14695981039346656037;
+  the goldens are over it, so the Rust keeps it.
+- **MAPC, MAPS, PLST.** The rectangle hash, the scope's nesting (a Rust thread-local depth) and the sight hash read the
+  views and the mesh; a scope's map is passed by handle (CreateMap's is not yet the world's). PLST reads the player's
+  plain records, its statistics, events and queue (Rust objects).
+- **Tests.** app::capture 1, netmsg::decisions 1, sim_driver::combat_sweep 1, sim_driver::digest 1,
+  app::map_capture 1, app::player_capture 1.
+- **Behaviour:** none. All of it is TEST ONLY: only EE-SIM's captures, the editor gate and the civilization builder
+  gate reach it (no tour or game draws through it).
+- **Not done: the round's items 2 to 5** (EEWorld whole, EEPlayer and Persistent whole, Communications over ee_net,
+  Empire Earth.cpp). What is left there is object wiring over other lanes' C++ classes (the map, the managers, the
+  UI, the units, the computer players), as rounds 1 and 2 measured: moving it into Rust moves each line into a host
+  case, about zero net. EEPlayer's members are read in 246 files by every lane; its state is already Rust records
+  (`EeUnitsRtsPlayerFields`, `EeUnitsPlayerSaved`, `EeUnitsPlayerFields`, the statistics, events and queue), and
+  what is left in EEPlayer.cpp is small bodies over the selection, the towns and the units' C++ objects. EEMessage's
+  and EEServer's remaining code is already a host of world and UI calls (`EENetMsgWorldAct`, `EESessionHost`).
+  `PlayersDigest` and CHEF read the players' names and upgrade levels and the computer players' switches, which are
+  C++ members: a host of the same size.
+- **Gates** (origin/rust 67f1b9880, nothing newer to merge): both builds 0/0 (the test profile too), the Rust gate
+  PASS (an earlier run failed once in ee_base's `fs::golden_spec_replays` under load, as in round 1; the reruns
+  pass), the oracle identical on seeds 2-7, every capture profile at seeds 2-3 PASS (oracle 212, late 214, space 210,
+  calamity 222, app 26, scenario 43, effects 6, groups 2, missile 22, placement 4, transport 185, units 175 digests),
+  the editor gate (14,448 lines) and the civilization builder gate (4,062) PASS, the plain saveload 18/18 identical,
+  the matrix `saveload expect: PASS`, scenario_check 27/27, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game
+  outcome time-cap PT 13072` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT
+  host=2755 joiner=2758`, GATES PASS. No fixture or start-up code changed: no separate fixture session.
+- **Short of the target**: net -510 C++ against the 3,000 asked.

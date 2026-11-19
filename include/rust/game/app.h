@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/render/ge.h"
 #include "rust/sim/app.h"
 
 /// -> n: the sounds' count; slot -> sound: the slot's record
@@ -1090,6 +1091,33 @@ int32_t ee_app_options_save(const EeAppOptionsFields *options,
                             uint32_t count,
                             void *ctx,
                             EeAppSaveFn call);
+
+/// `EEAppMapScope`'s constructor: true for the outermost edit of this thread.
+bool ee_app_capture_map_enter();
+
+/// `EEAppMapScope`'s destructor: the MAPC record of the outermost edit. `args` holds 6 arguments, `rect` the
+/// rectangle (left, right, bottom, top); `map` is the edited `EEMap` (not always the world's), `mesh` its mesh.
+///
+/// # Safety
+/// `args` and `rect` point to 6 and 4 values; `map` and `mesh` are live (or 0) and the caller holds them.
+void ee_app_capture_map_leave(bool outer,
+                              uint64_t map,
+                              const EeGeTerrainMesh *mesh,
+                              uint32_t kind,
+                              const long *args,
+                              const long *rect);
+
+/// MAPS: after a sight change of the world's map (`player` its id, 0xffffffff none; `mesh` the map's).
+///
+/// # Safety
+/// The caller holds the world; `mesh` is the world map's live mesh.
+void ee_app_capture_sight(uint32_t kind,
+                          uint32_t player,
+                          float x,
+                          float y,
+                          float radius,
+                          bool shared,
+                          const EeGeTerrainMesh *mesh);
 
 /// The map's bodies by entry (`what`): 0 `UpdateWater(a, b)`, 1 `CreateMap`'s fill, 2 `UpdateCliffs(a, b, c, d)`,
 /// 3 `RemoveFlatCliffs(a, b, c, d)`, 4 `PaintTerrain(a, b, c)`, 5 `PaintTerrainRect(a, b, c, d, e, f)`,
