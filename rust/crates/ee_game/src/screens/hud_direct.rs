@@ -176,6 +176,14 @@ pub(crate) unsafe fn main_form(
     let set_text = |t: &[u8]| unsafe { wide_assign(&mut (*call).text, t) };
     Some(match op {
         // ---- the held text and the chat line's
+        // ---- the viewport's view rectangle (ee_gfx input_views.rs: gViewport; zeros before the graphics made it)
+        EE_SCREENS_MF_OP_VIEW_RECT => {
+            let v = ee_render::gfx::input_views::main_viewport().map(|v| v.view_rectangle).unwrap_or_default();
+            io.f[..4].copy_from_slice(&[v.left, v.top, v.right, v.bottom]);
+            0
+        }
+        // ---- the chat log's entries (EEUIECLEFormManager::GetEntryCount: chat_log_ffi.rs)
+        EE_SCREENS_MF_OP_LOG_ENTRIES => crate::screens::chat_log_ffi::ee_screens_chat_log_count() as i64,
         EE_SCREENS_MF_OP_TEXT_SET => {
             // SAFETY: the Rust caller's `a` bytes at `b`
             let bytes = unsafe { core::slice::from_raw_parts(b as *const u8, a.max(0) as usize) };

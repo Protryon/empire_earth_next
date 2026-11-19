@@ -846,12 +846,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         static_cast<EEUIShellList*>(theForm->GetControl(kMainGameErrorLog))->SetLine((unsigned long)inA,
                                                                                   theForm->mStrings[inA]);
         return 0;
-    case EE_SCREENS_MF_OP_VIEW_RECT: {
-        GERectangle theView = gViewport.GetViewRectangle();
-        ioIo->f[0] = theView.GetLeft(), ioIo->f[1] = theView.GetTop();
-        ioIo->f[2] = theView.GetRight(), ioIo->f[3] = theView.GetBottom();
-        return 0;
-    }
     case EE_SCREENS_MF_OP_POLL: return theForm->mPoll->Poll();
     case EE_SCREENS_MF_OP_GROUP: {
         EEUIFMGGroup* theGroup = theForm->mGroups[theForm->mCurrentGroup];
@@ -940,7 +934,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         static_cast<UIBitmap*>(theForm->GetControl((unsigned long)inA))->GetBitmap()->SetColor(gWorld.mPlayers[inB]->mColor);
         return 0;
     case EE_SCREENS_MF_OP_HAS_INSTRUCTIONS: return gWorld.mScenarioManager->mMediaStrings.mInstructions.GetLength() > 0;
-    case EE_SCREENS_MF_OP_LOG_ENTRIES: return EEUIECLEFormManager::GetEntryCount();
     case EE_SCREENS_MF_OP_UPDATE_CURSOR: theForm->UpdateCursorKind(); return 0;
     case EE_SCREENS_MF_OP_INFO_SET_TEXT: {
         UITLScrolling* theText = static_cast<UITLScrolling*>(theForm->GetControl(kMainGameDialogMessage));
