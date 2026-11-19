@@ -62,7 +62,6 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX
                      long inRings, bool inCorners, bool inFacePoint, bool inArg11, GETransformation* outTransformation,
                      EEComplexUnit* inTarget);
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);  // 0x246ea2 (names.txt binds it)
-char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner);
 // EEBlockTakes 0x243c7d: ee/EEAreaUtilities.h
 bool EEPlayerBlockTakes(EEPlayer* inPlayer, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner);
 EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long inX, long inY, float inScale);
@@ -76,7 +75,6 @@ EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClas
 // 0x23e530 / 0x23e598 (cdecl, before the range): the units on inTile in the way of a unit of inUnitType (outUnits) /
 // whether they may be pushed aside (provisional names)
 bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner, std::vector<EEUnit*>& outUnits);
-bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner, std::vector<EEUnit*>& inUnits);
 // 0x24f0e9.. (the rest of the TU) (provisional names)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // (EEWorld.cpp declares it too)
 bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnitType, long inX, long inY, bool inSkipPlayerChecks,
@@ -167,7 +165,6 @@ long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);
 void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>& inCorners, long inTechnology, EEPlayer* inPlayer,
                 float inRotation);
 // (0x250d71: EEGetUnitsInRectangle with ee/EEAreaUtilities.h's EEAnyUnit, the ee/EEUnitCollector.h template)
-EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType);
 long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long inUnitType, std::vector<EEUnit*>& outUnits);
 float EEJitterHeading(float inAngle, float inMin, float inMax);
 class EEGhostUnit;

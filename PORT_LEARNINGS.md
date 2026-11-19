@@ -31079,6 +31079,46 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
   `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
 
+## The units' lane, round 1: UpdateHidden whole in Rust; the units' hosts' plain reads on the world views (ee_sim units hidden.rs, update_views.rs; combat query_views.rs; branch rust-units1, 2026-11-18)
+
+Asked: 4,000 net C++ lines from `src/Empire Earth/Units` (~29k); done: -546 (six commits; docs/progress/units.md has
+the table). Short by far: see "Why short".
+
+- **The measure.** The biggest classes (EEComplexUnit 3,720 lines, EEUnitClass 3,207, EEUGRust 2,031, EEUnitHost
+  1,906) are bags of small methods, each a sequence of world calls (effects, sounds, the path manager, the goal
+  objects, the mini map). `tools/dead_members.py report` finds nothing left here (round 2 of the LLE lane reached a
+  fixpoint). What the views make removable is the host cases that only read a member: the update / ActionChanged
+  host's read switch (44 of its 75 cases), the combat query host (16), the goal host's record fills and plain reads,
+  the unit host's plain externs (9), the active group's and the citizens' unit fills.
+- **UpdateHidden whole** (`EEUnit::` and `EEComplexUnit::`, 170 lines): Rust (units/hidden.rs) over a `HiddenHost`
+  trait, the views' implementation writing `mHiddenFlags` in place through the record's pointer (lane P's pattern for
+  the visibility words), a mock map in the tests (6 tests: the tile order, the phases, the cinematic paths, the
+  part chains). The C++ virtual is one call; `EEComplexUnit`'s override is gone (the Rust body picks by the object
+  kind). The renderer (ee_render fill.rs `unit_opacity`) calls it directly; its `update_hidden` host callback and
+  C++ function are gone. **Only a tour exercises the renderer's call**; `EEUnit::MoveTo`'s call is in every game.
+- **The physics in the views**: layout `physics_pointer` (`&gPhysics`) and `physics_saved` (the base of
+  `EeUnitsPhysicsSaved` in `EEPhysics`); `WorldView::physics`, `game_time`, `tick_ms` (0 before the physics exists).
+- **A host wrapper, not a rewrite of the bodies.** The decisions keep their host traits (the mocks in their tests
+  are unchanged); the FFI side wraps the C++ table (`ViewUpdateHost`, `EeCombatQueryHost::read` asking
+  `query_views::query_read` first, `OpHost`'s methods, `view_of` in host.rs) and answers the plain codes from the
+  views, falling back to the C++ for the rest. The update host's table gained the class (`class`, cbindgen names it
+  `class_` in C): `theClass` is the sequence's class, not always read as the unit's (`mIsMedic`, `mAttack`,
+  `IsLandBuilding`, `mRottingTime` are the host class's; the unit's class answers the others, as the C++ did).
+- **Lessons.** (1) The views' guard: a query read with no registered layout returns None, so the cargo tests'
+  fake contexts keep reaching their mocks. (2) `c_long` reads need `as` casts that clippy calls needless on
+  Windows: `#![allow(clippy::unnecessary_cast)]` per file, as view.rs does. (3) Deleting a `switch` case by script:
+  the last case's end is the switch's own `}`; one deletion took it (caught by reading the diff, not by the build).
+  (4) combat/reads.rs is one of the few CRLF Rust files: a text-mode rewrite turned it LF (restored; check
+  `git ls-files --eol` before writing a Rust file with Python). (5) Never edit Rust or C++ while the chain's build
+  runs: one restart was needed after an edit landed mid-build.
+- **Verified** (on the merge of origin/rust 9a277da24): both builds 0/0; the Rust gate PASS (4,578 tests); the
+  oracle seeds 2-7 identical to the main checkout's ref; the twelve capture profiles at seeds 2-3 PASS against the goldens (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app 24, units 175, groups 2, placement 4, transport 185 digests equal); the plain saveload 18/18 identical; the matrix `saveload expect: PASS` (calamity 11/18, next 3/18 as before); `SCENARIO CHECK PASS: 27/27`; `sim_editor: PASS (14448 lines)`; the test-profile build 0/0; gates.sh through its slot: `RESULT PASS tour` (F3 input check ok), `RESULT PASS ai-game outcome time-cap PT 12565` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2706 joiner=2714`, `GATES PASS`; a tour with `--box-select --orders` (slot.py): `BOX SELECT PASS: 4 steps`, `ORDERS PASS: ran gather, repair, repair-queued, move` (patrol, attack-ground skipped: no button, no unit), `RESULT PASS tour`.
+- **Why short.** The plain reads are two to three lines a case; the rest of each host is world calls that move only
+  with the classes they call (the effects, the path manager, the goals' own objects). The next whole moves need a
+  layout member first (`mWaypoints`, `mMine`, `mHomeBase`, `mCitizenBuildQueue`, the class's effect and projectile
+  pointers, the physical model's frame and scale, `mInitialContactLocation`) or a host per method (FindContacts,
+  StepAside, FindPath, ProduceUnit), the pattern of hidden.rs.
+
 ## The HUD 2D lane, round 1: the Rust 2D draw list; the toolkit's, the HUD's and the font bitmap's draws and GE object members on it (ee_render ge/list2d.rs, dx7/digest2d.rs; ee_ui draw2d.rs; ee_game hud_draw.rs; branch rust-hud2d1, 2026-11-18)
 
 The brief: build the Rust 2D draw list the UI thread lane named as its blocker, move the HUD's, screens' and
@@ -31732,3 +31772,53 @@ What exercises what: the oracle (seeds 2-7) and the missile capture reach the ta
 physics' readers (weapon points, decks, launches); the effects capture (EE-SIM steps every effect kind, seeds 2-7,
 18 digests) reaches the effect readers; the editor gate reaches the terrain raise; only a tour reaches the colour
 groups (the player colour on the buildings), the light glows, the icons and the outlines' draw.
+
+## The unit utilities, round 4: the goals' and the AI placement's Rust call the unit utilities directly; the target searches' plain reads (ee_sim::units uu_direct.rs; branch rust-unitutil-r4, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 4c169ab4d | the goal host (18 cases) and the AI placement host (10 cases) call the noted Rust entry points; 5 forwarders gone | +5 -194, net **-189** |
+| b4425f1f7 | the target searches' candidate position and values, NATURE/WALL/ALIVE and the walk's NATURE and size test through the views | +4 -44, net **-40** |
+| (merge) | origin/rust 104a6603d (WONLobby round 17): clean | |
+
+The round: net **-229** C++ (EEUGRust.cpp -94, EECPPlacement.cpp -61, EEFOFindNewTargetNearOldTarget.cpp 2,945 ->
+2,876, the headers -5).
+
+- **Why it was possible now.** Round 3 moved the UUTL note into each Rust entry point, so a Rust caller that calls the
+  entry point directly is noted exactly as the C++ forwarder's call was: the goal host's chain Rust -> `GoalOp` case ->
+  C++ forwarder -> Rust entry point became Rust -> entry point, with the same outermost-note depth (the goal ops are not
+  noted). The UUTL digests (and every other tag) of all twelve profiles held unchanged.
+- **Natives beside the C ABI.** Entry points over C++ vectors got a Rust-native twin in uu_ffi.rs that holds the note
+  (`tile_units_standing`, `tiles_around`, `pick_tile_near`, `unit_tiles`, `units_on`, `player_units_of_type`,
+  `units_in_radius`, `square_ring`, `square_ring_tiles`, `tiles_in_radius`, `block_ring`, `ring_corners`); the C ABI
+  function converts the vectors and calls it. `uu_direct.rs` is what other modules call: the game's body, and
+  `unreachable!` in a unit-test build (uu_ffi.rs is absent there and no fake host reaches the game's paths), since
+  rust_goal.rs's `OpHost` compiles in the tests too.
+- **The AI placement keeps its two paths.** With the capture off its tile lists stay the pure math; with it on they
+  now take the noted entry points instead of the C++ wrappers (the same math), so the placement's results and the
+  record are as before.
+- **A template instantiation that lived in a deleted case.** `EEGetUnitsInRectangle<EEAnyUnit,
+  std::vector<EEComplexUnit*> >` was instantiated only by EECPPlacement.cpp's rectangle case; EEContagionHelper.cpp
+  calls it with the declaration alone (ee/EEAreaUtilities.h) and the link failed with one unresolved symbol. The unit
+  utilities file now instantiates it explicitly.
+- **The search hosts' plain reads.** `unit_position` and `target` of `EeCombatSearchHost` and `multiple` of
+  `EeCombatTargetHost` are view reads in search_ffi.rs / walks_ffi.rs (a region's candidate is its own complex unit:
+  `mComplexUnit` is `this` for a complex unit, EEUnit.cpp), so the callbacks left the structs. The tests that read only
+  the candidate (NATURE, WALL, ALIVE; the walk's NATURE) are answered in Rust before the C++ callback; the others ask
+  the searching unit, a virtual, a goal or an ignore list and stay C++.
+- **Not done, and why.** EEARust.cpp and EEEffectHost.cpp: their Rust callers (ee_game's game actions, ee_render's
+  effects) run over fake hosts in their unit tests, so a direct call would need those tests reworked for a few lines.
+  `EEFindTargetNear` (the influence table and `EESearchTarget` are C++), `EEGetWaitingGatherer` (a Rust goal's gather
+  resource through the C++ goal object, the physics random, `PermuteValues`) and `EEWorkFarm` (C++ goal construction
+  and actions) have nothing a view can answer. `EEIsInWorkReach` and the other reach tests write CB* capture records
+  from C++ inlines.
+- **For the Units lane** (its files, not edited here): EEUnitHost.cpp's cases calling `EEPlanWall`, `EEBuildWall`,
+  `EECanPlaceOnTile`, `EEFindFreeFarm`, `EEGetFarmDropSites`, `EEIsSeenBy`, `EEUUGetIsUnitClassTargetable`, and
+  EEUGRustCombat.cpp's `EEGetAttackPart`, `EEUUGetIsUnitClassTargetable`, `EECanHeal` cases can call `units::uu_direct`
+  / `uu_ffi` (or ee_combat) from their Rust callers; `EEGetAttackPart`'s forwarder goes with the last of them.
+- **Gates (merged with origin/rust 104a6603d):** build `--sim` 0/0; the Rust gate PASS (4,609 tests); oracle seeds 2-7
+  identical; the captures at seeds 2-3 of oracle (212 digests) and late (214) PASS on the merged tree, and of oracle,
+  late, space, calamity, placement, units and transport PASS on the commits before the merge. The round stopped at
+  the cluster reorganization: the other capture profiles, saveload, scenario_check, the test-profile build and the
+  harness runs were not run, and the branch is not for merging as it stands (it edits the units and AI clusters'
+  files: EEUGRust.cpp, EECPPlacement.cpp, EEFOFindNewTargetNearOldTarget.cpp).

@@ -1390,13 +1390,6 @@ extern "C" void ee_units_host_unit_clear_goals(uint32_t inUnit)
     ComplexOf(inUnit)->ClearGoals(0);
 }
 
-// a read (the dry host does not log it)
-extern "C" int64_t ee_units_host_object_hit_points(uint32_t inUnit)
-{
-    EEUnit* theUnit = UnitOf(inUnit);
-    return theUnit != NULL ? (int64_t)theUnit->mHitPoints : 0;
-}
-
 // ---- EEMSetAirportCommand's and EEMSetRallyGoal's calls (rally.rs) ----
 
 extern "C" void* ee_units_host_player_selection(void* inPlayer)
@@ -1443,21 +1436,6 @@ extern "C" uint8_t ee_units_host_unit_class_targetable(uint32_t inUnit)
 extern "C" uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t inTarget)
 {
     return ComplexOf(inUnit)->CanAttackClass(UnitOf(inTarget)->mUnitClass) ? 1 : 0;
-}
-
-extern "C" int64_t ee_units_host_unit_max_hit_points(uint32_t inUnit)
-{
-    return (int64_t)UnitOf(inUnit)->mStats->mMaxHitPoints;
-}
-
-extern "C" int64_t ee_units_host_unit_garrison_capacity(uint32_t inUnit)
-{
-    return (int64_t)UnitOf(inUnit)->mUnitClass->mGarrisonCapacity;
-}
-
-extern "C" uint8_t ee_units_host_unit_has_tile_node(uint32_t inUnit)
-{
-    return UnitOf(inUnit)->mTileNode != NULL ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType)
@@ -1520,34 +1498,6 @@ extern "C" void* ee_units_host_unit_goal_clone(uint32_t inUnit)
         return theGoal;
     }
     return theUnit->mGoalState->Clone();
-}
-
-// a unit the store does not hold, read on the object (rally.rs `selected`): the fields EEMClearAirportCommands and
-// EEMStopActiveGroup read
-extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* outRecord)
-{
-    EEUnit* theUnit = UnitOf(inUnit);
-    if (theUnit == NULL)
-        return 0;
-    memset(outRecord, 0, sizeof(*outRecord));
-    outRecord->id = inUnit;
-    outRecord->hit_points = (int64_t)theUnit->mHitPoints;
-    EEUnitClass* theClass = theUnit->mUnitClass;
-    outRecord->category = theClass != NULL ? (int64_t)theClass->mCategory : -1;
-    outRecord->unit_type = theClass != NULL ? (int64_t)theClass->mUnitType : -1;
-    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
-    outRecord->command = (int64_t)theComplex->GetCommandType();
-    outRecord->tile_x = (int64_t)theUnit->GetTileX();
-    outRecord->tile_y = (int64_t)theUnit->GetTileY();
-    outRecord->goal_kind = -1;
-    outRecord->domains = theClass != NULL ? (uint8_t)theClass->mDomains : 0;   // (the load orders' formation slots)
-    outRecord->land_building = theClass != NULL && theClass->IsLandBuilding() ? 1 : 0;
-    return 1;
-}
-
-extern "C" int64_t ee_units_host_unit_air_traffic_type(uint32_t inUnit)
-{
-    return (int64_t)ComplexOf(inUnit)->GetUnitClass()->mAirTrafficType;
 }
 
 extern "C" void ee_units_host_unit_queue_clear(uint32_t inUnit, int64_t inQueue)
@@ -1833,30 +1783,9 @@ extern "C" int32_t ee_units_host_player_hack_class(void* inPlayer)
     return (int32_t)static_cast<EEPlayer*>(inPlayer)->mHackUnitClass;
 }
 
-extern "C" int64_t ee_units_host_unit_class_count()
-{
-    return (int64_t)EEUnitClassCount();
-}
-
-// a class of the table: its category and IsLandBuilding (0: none)
-extern "C" uint8_t ee_units_host_unit_class_info(int32_t inUnitType, int64_t* outCategory, uint8_t* outLandBuilding)
-{
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    if (theClass == NULL)
-        return 0;
-    *outCategory = (int64_t)theClass->mCategory;
-    *outLandBuilding = theClass->IsLandBuilding() ? 1 : 0;
-    return 1;
-}
-
 extern "C" float ee_units_host_player_class_scale(int64_t inPlayerID, int32_t inUnitType)
 {
     return gWorld.mPlayers[inPlayerID]->mUnitClassUpgrades[gUnitClassTable[inUnitType]->mUnitType]->mScale;
-}
-
-extern "C" uint8_t ee_units_host_map_has_tile(int64_t inX, int64_t inY)
-{
-    return gWorld.GetMap()->GetTile((long)inX, (long)inY) != NULL ? 1 : 0;
 }
 
 // the cheat's unit (EEMessage.cpp's statements, unchanged): at the point's ground facing pi, its reload cleared and

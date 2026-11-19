@@ -421,6 +421,20 @@ pub const EE_UNITS_RESEARCH_EPOCH: u8 = 16;
 pub mod game {
     use super::*;
 
+    /// A plain read of the unit `id` (the registry's, as `EEUnitHandleResolve`: None for none or a freed unit) over
+    /// the world views (the units' round 1: the host's plain reads moved here).
+    fn view_of<R>(id: u32, f: impl FnOnce(&crate::world::UnitView) -> R) -> Option<R> {
+        if id == u32::MAX {
+            return None;
+        }
+        let object = crate::units::ffi::ee_units_resolve(id) as u64;
+        // SAFETY: a decision runs inside the C++ call that holds the world; a registered unit is live
+        let t = unsafe { crate::world::WorldRead::begin() };
+        // SAFETY: as above
+        let u = unsafe { crate::world::UnitView::of(&t, object) }?;
+        Some(f(&u))
+    }
+
     extern "C" {
         fn ee_units_host_group_ids(group: *mut c_void, out: *mut u32, capacity: usize) -> usize;
         fn ee_units_host_goal_new(spec: *const EeGoalSpec) -> *mut c_void;
@@ -522,16 +536,12 @@ pub mod game {
         fn ee_units_host_goal_clone(goal: *mut c_void) -> *mut c_void;
         fn ee_units_host_group_remove_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_unit_clear_goals(unit: u32);
-        fn ee_units_host_object_hit_points(unit: u32) -> i64;
         fn ee_units_host_player_selection(player: *mut c_void) -> *mut c_void;
         fn ee_units_host_unit_seen_by(unit: u32, player: *mut c_void) -> u8;
         fn ee_units_host_unit_ghost_seen(unit: u32) -> u8;
         fn ee_units_host_unit_attackable(unit: u32, damage_index: i64) -> u8;
         fn ee_units_host_unit_class_targetable(unit: u32) -> u8;
         fn ee_units_host_unit_can_attack_class(unit: u32, target: u32) -> u8;
-        fn ee_units_host_unit_max_hit_points(unit: u32) -> i64;
-        fn ee_units_host_unit_garrison_capacity(unit: u32) -> i64;
-        fn ee_units_host_unit_has_tile_node(unit: u32) -> u8;
         fn ee_units_host_unit_shares_rally_point(unit: u32, unit_type: i64) -> u8;
         fn ee_units_host_unit_num_goal_queues(unit: u32) -> i64;
         fn ee_units_host_unit_clear_goal_queue(unit: u32, queue: i64);
@@ -540,8 +550,6 @@ pub mod game {
         fn ee_units_host_unit_queue_timer(unit: u32, queue: i64, ms: i64);
         fn ee_units_host_unit_goal_clone(unit: u32) -> *mut c_void;
         fn ee_units_host_garrison_rally_load(garrison: u32) -> *mut c_void;
-        fn ee_units_host_object_record(unit: u32, out: *mut EeUnitRecord) -> u8;
-        fn ee_units_host_unit_air_traffic_type(unit: u32) -> i64;
         fn ee_units_host_unit_queue_clear(unit: u32, queue: i64);
         fn ee_units_host_unit_clear_air_traffic(unit: u32);
         fn ee_units_host_unit_refresh_goals(unit: u32);
@@ -567,10 +575,7 @@ pub mod game {
         fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
         fn ee_units_host_player_hack_class(player: *mut c_void) -> i32;
-        fn ee_units_host_unit_class_count() -> i64;
-        fn ee_units_host_unit_class_info(unit_type: i32, category: *mut i64, land_building: *mut u8) -> u8;
         fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
-        fn ee_units_host_map_has_tile(x: i64, y: i64) -> u8;
         fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
         fn ee_units_host_hack_create_building(unit_type: i32, x: i64, y: i64, player_id: i64);
         fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
@@ -873,7 +878,7 @@ pub mod game {
             unsafe { ee_units_host_unit_clear_goals(unit) }
         }
         fn object_hit_points(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_object_hit_points(unit) }
+            view_of(unit, |u| u.hit_points()).unwrap_or(0)
         }
         fn player_record(&mut self, player: u64) -> Option<PlayerRecord> {
             crate::units::players::with_players(|p| p.get(player).copied())
@@ -897,13 +902,14 @@ pub mod game {
             unsafe { ee_units_host_unit_can_attack_class(unit, target) != 0 }
         }
         fn unit_max_hit_points(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_unit_max_hit_points(unit) }
+            view_of(unit, |u| u.stats().map_or(0, |s| s.max_hit_points())).unwrap_or(0)
         }
         fn unit_garrison_capacity(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_unit_garrison_capacity(unit) }
+            view_of(unit, |u| u.class().map_or(0, |c| crate::world_field!(c.fields(), mGarrisonCapacity) as i64))
+                .unwrap_or(0)
         }
         fn unit_has_tile_node(&mut self, unit: u32) -> bool {
-            unsafe { ee_units_host_unit_has_tile_node(unit) != 0 }
+            view_of(unit, |u| u.has_tile_node()).unwrap_or(false)
         }
         fn unit_shares_rally_point(&mut self, unit: u32, unit_type: i64) -> bool {
             unsafe { ee_units_host_unit_shares_rally_point(unit, unit_type) != 0 }
@@ -931,12 +937,29 @@ pub mod game {
             GoalHandle::from_ptr(unsafe { ee_units_host_garrison_rally_load(garrison) })
         }
         fn object_record(&mut self, unit: u32) -> Option<EeUnitRecord> {
-            let mut record = EeUnitRecord::default();
-            // SAFETY: the host writes one record
-            (unsafe { ee_units_host_object_record(unit, &mut record) } != 0).then_some(record)
+            // a unit the store does not hold, read on the object (rally.rs `selected`): the fields
+            // EEMClearAirportCommands and EEMStopActiveGroup read
+            view_of(unit, |u| {
+                let class = u.class();
+                let (x, y) = u.tile_xy();
+                EeUnitRecord {
+                    id: unit,
+                    hit_points: u.hit_points(),
+                    category: class.map_or(-1, |c| c.category() as i64),
+                    unit_type: class.map_or(-1, |c| c.unit_type() as i64),
+                    command: if u.is_complex() { i64::from(u.command_type()) } else { 0 },
+                    tile_x: x,
+                    tile_y: y,
+                    goal_kind: -1,
+                    domains: class.map_or(0, |c| crate::world_field!(c.fields(), mDomains)),
+                    land_building: u8::from(class.is_some_and(|c| c.land_building())),
+                    ..EeUnitRecord::default()
+                }
+            })
         }
         fn unit_air_traffic_type(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_unit_air_traffic_type(unit) }
+            view_of(unit, |u| u.class().map_or(0, |c| crate::world_field!(c.fields(), mAirTrafficType) as i64))
+                .unwrap_or(0)
         }
         fn unit_queue_clear(&mut self, unit: u32, queue: i64) {
             unsafe { ee_units_host_unit_queue_clear(unit, queue) }
@@ -1028,19 +1051,23 @@ pub mod game {
             unsafe { ee_units_host_player_hack_class(player.0) }
         }
         fn unit_class_count(&mut self) -> i64 {
-            unsafe { ee_units_host_unit_class_count() }
+            // SAFETY: a decision runs inside the C++ call that holds the world
+            let t = unsafe { crate::world::WorldRead::begin() };
+            crate::world::view::ClassView::count(&t) as i64
         }
         fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)> {
-            let (mut category, mut land) = (0i64, 0u8);
-            // SAFETY: the two values are written for the call
-            let found = unsafe { ee_units_host_unit_class_info(unit_type, &mut category, &mut land) };
-            (found != 0).then_some((category, land != 0))
+            // SAFETY: as above
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let c = crate::world::view::ClassView::by_index(&t, usize::try_from(unit_type).ok()?)?;
+            Some((c.category() as i64, c.land_building()))
         }
         fn player_class_scale(&mut self, player_id: i64, unit_type: i32) -> f32 {
             unsafe { ee_units_host_player_class_scale(player_id, unit_type) }
         }
         fn map_has_tile(&mut self, x: i64, y: i64) -> bool {
-            unsafe { ee_units_host_map_has_tile(x, y) != 0 }
+            // SAFETY: as above
+            let t = unsafe { crate::world::WorldRead::begin() };
+            crate::world::WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)).is_some()
         }
         fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
             unsafe { ee_units_host_hack_create_unit(unit_type, x, y, player_id) }

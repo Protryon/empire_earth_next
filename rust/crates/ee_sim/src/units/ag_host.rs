@@ -307,9 +307,13 @@ impl AgHost for AgGame {
         self.io(EE_UNITS_AG_SET_VALUES, g, 0, 0, 0, &mut io);
     }
     fn unit(&mut self, u: u64) -> EeUnitsAgUnit {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_UNIT, u, 0, 0, 0, &mut io);
-        io.unit
+        // the unit's fields over the world views (the units' round 1: once the C++ host's fill, EE_UNITS_AG_UNIT)
+        // SAFETY: a group body runs inside the C++ call that holds the world; `u` is a live unit
+        let t = unsafe { crate::world::WorldRead::begin() };
+        match unsafe { crate::world::UnitView::of(&t, u) } {
+            Some(v) => ag_unit_fields(&v),
+            None => EeUnitsAgUnit::default(),
+        }
     }
     fn queued_goal(&mut self, u: u64, q: u32) -> u64 {
         self.op(EE_UNITS_AG_QUEUED_GOAL, u, 0, q as i64, 0) as u64
@@ -564,4 +568,74 @@ pub unsafe extern "C" fn ee_units_ag_reserved(group: u64, point: *const [f32; 3]
     // SAFETY: the caller's contract
     let p = unsafe { *point };
     (if which == 0 { ag::is_reserved(&mut AgGame, group, p) } else { ag::is_cell_taken(&mut AgGame, group, p) }) as u8
+}
+
+/// `kUnitCategory*` of `IsPriest()` and `IsTransport()`; the crusaders' unit types (`IsCrusader()`)
+const PRIEST_CATEGORIES: [u64; 4] = [0xd, 0xe, 0x1a, 0x1e];
+const TRANSPORT_CATEGORIES: [u64; 5] = [0x10, 0x11, 0x12, 0x21, 0x1d];
+const CRUSADER_TYPES: [u64; 4] = [0x2e6, 0x2e7, 0x2e8, 0x2e9];
+
+/// The fields of a unit the group bodies read (`EE_UNITS_AG_UNIT`, once a C++ fill) over the views: the unit's, its
+/// complex unit's (`mComplexUnit`), its class's and its stats'.
+// (`c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there)
+#[allow(clippy::unnecessary_cast)]
+pub(crate) fn ag_unit_fields(u: &crate::world::UnitView) -> EeUnitsAgUnit {
+    use crate::world_field;
+    let class = u.class();
+    let (x, y) = u.tile_xy();
+    let mut o = EeUnitsAgUnit {
+        obj: u.handle(),
+        class_obj: class.map_or(0, |c| c.handle()),
+        complex: u.complex_unit_handle(),
+        player: u.player().map_or(0, |p| p.handle()),
+        tile_x: x as i32,
+        tile_y: y as i32,
+        hit_points: u.hit_points() as i32,
+        resource_amount: u.resource_amount() as i32,
+        resource_type: u.resource_type() as u32,
+        is_valid: u8::from(u.valid()),
+        tile_height: u.tile().map_or(0.0, |t| t.height()),
+        ..EeUnitsAgUnit::default()
+    };
+    if let Some(x) = u.complex_unit() {
+        let c = x.complex();
+        o.goal_state = x.goal_handle();
+        o.container = x.container_handle();
+        o.power = x.power() as i32;
+        o.formation_slot = x.formation_slot() as u32;
+        o.velocity = world_field!(c, mVelocity);
+        o.location = x.location();
+        o.commandable = u8::from(x.commandable());
+        o.is_built = u8::from(x.is_built());
+        o.detached = u8::from(world_field!(c, mIsDetachedFromAI));
+    }
+    if let Some(c) = class {
+        let f = c.fields();
+        o.category = c.category() as u32;
+        o.unit_type = c.unit_type() as u32;
+        o.ai_kind = c.ai_kind() as u32;
+        o.family = c.family() as u32;
+        o.tile_size = c.tile_size() as i32;
+        o.air_traffic_type = world_field!(f, mAirTrafficType) as i32;
+        o.class_max_velocity = world_field!(f, mMaxVelocity);
+        o.inner_sphere = world_field!(f, mInnerCollisionSphere);
+        o.can_attack_ground = u8::from(world_field!(f, mCanAttackGround));
+        o.paratrooper_bomber = u8::from(world_field!(f, mIsParatrooperBomber));
+        o.can_patrol = u8::from(world_field!(f, mCanPatrol));
+        o.has_special_attack = u8::from(world_field!(f, mHasSpecialAttack));
+        o.is_priest = u8::from(PRIEST_CATEGORIES.contains(&c.category()));
+        o.is_crusader = u8::from(CRUSADER_TYPES.contains(&c.unit_type()));
+        o.is_transport = u8::from(TRANSPORT_CATEGORIES.contains(&c.category()));
+    }
+    if let Some(s) = u.stats() {
+        let f = s.fields();
+        o.max_velocity = world_field!(f, mMaxVelocity);
+        o.acceleration = world_field!(f, mAcceleration);
+        o.max_angular_velocity = world_field!(f, mMaxAngularVelocity);
+        o.angular_acceleration = world_field!(f, mAngularAcceleration);
+        o.range = world_field!(f, mRange);
+        o.line_of_sight = world_field!(f, mLineOfSight);
+        o.attack = world_field!(f, mAttack);
+    }
+    o
 }

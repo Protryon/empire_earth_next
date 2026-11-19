@@ -17,7 +17,7 @@ use crate::units::uu_note::Note;
 use crate::units::uu_place;
 use crate::units::uu_reads;
 use crate::units::uu_spots;
-use crate::units::uu_tiles::{self, EeUnitsUuSteps, EeUnitsUuWallPiece};
+use crate::units::uu_tiles::{self, EeUnitsUuSteps, EeUnitsUuWallPiece, Tile};
 use crate::units::uu_world::{self, EeUnitsUuSoundView, UuWorld};
 use crate::world::{UnitView, WorldRead};
 
@@ -47,7 +47,19 @@ pub extern "C" fn ee_units_uu_sub_tile_steps(size: f32, length: i32, dx: i32, dy
     uu_tiles::sub_tile_steps(size, length, dx, dy, square != 0)
 }
 
-/// `EEGetSquareRing` (19; `square` 1: `EEGetSideTiles`, 20) (`out` replaced).
+/// `EEGetSquareRing` (19; `square`: `EEGetSideTiles`, 20).
+pub(crate) fn square_ring(x: i32, y: i32, width: i32, height: i32, square: bool) -> Vec<Tile> {
+    let n = Note::begin(if square { 20 } else { 19 });
+    n.i(x.into()).i(y.into()).i(width.into());
+    if !square {
+        n.i(height.into());
+    }
+    let tiles = uu_tiles::square_ring(x, y, width, height);
+    n.t(&tiles);
+    tiles
+}
+
+/// [`square_ring`] into `out` (replaced).
 ///
 /// # Safety
 /// `out` is a live `std::vector<U2DPoint<long> >`.
@@ -60,45 +72,50 @@ pub unsafe extern "C" fn ee_units_uu_square_ring(
     square: u8,
     out: *mut c_void,
 ) {
-    let n = Note::begin(if square != 0 { 20 } else { 19 });
-    n.i(x.into()).i(y.into()).i(width.into());
-    if square == 0 {
-        n.i(height.into());
-    }
-    let tiles = uu_tiles::square_ring(x, y, width, height);
+    let tiles = square_ring(x, y, width, height, square != 0);
     // SAFETY: the caller's contract
     unsafe { set_tiles(out, &tiles) };
-    n.t(&tiles);
 }
 
-/// `EEGetSquareRingTiles` (33) (`out` replaced).
+/// `EEGetSquareRingTiles` (33).
+pub(crate) fn square_ring_tiles(x: i32, y: i32, radius: i32) -> Vec<Tile> {
+    let n = Note::begin(33);
+    n.i(x.into()).i(y.into()).i(radius.into());
+    let tiles = uu_tiles::square_ring_tiles(x, y, radius);
+    n.t(&tiles);
+    tiles
+}
+
+/// [`square_ring_tiles`] into `out` (replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_square_ring_tiles(x: i32, y: i32, radius: i32, out: *mut c_void) {
-    let n = Note::begin(33);
-    n.i(x.into()).i(y.into()).i(radius.into());
-    let tiles = uu_tiles::square_ring_tiles(x, y, radius);
+    let tiles = square_ring_tiles(x, y, radius);
     // SAFETY: the caller's contract
     unsafe { set_tiles(out, &tiles) };
-    n.t(&tiles);
 }
 
-/// `EEGetTilesInRadius` (35) (appended to `io`).
+/// `EEGetTilesInRadius` (35): appended to `tiles`.
+pub(crate) fn tiles_in_radius(x: i32, y: i32, radius: u32, inclusive: bool, tiles: &mut Vec<Tile>) {
+    let n = Note::begin(35);
+    n.i(x.into()).i(y.into()).i(radius.into()).b(inclusive).t(tiles);
+    uu_tiles::tiles_in_radius(x, y, radius, inclusive, tiles);
+    n.t(tiles);
+}
+
+/// [`tiles_in_radius`] on a C++ tile vector.
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_tiles_in_radius(x: i32, y: i32, radius: u32, inclusive: u8, io: *mut c_void) {
-    let n = Note::begin(35);
     // SAFETY: the caller's contract
     unsafe {
         let mut tiles = tiles_of(io);
-        n.i(x.into()).i(y.into()).i(radius.into()).i(inclusive.into()).t(&tiles);
-        uu_tiles::tiles_in_radius(x, y, radius, inclusive != 0, &mut tiles);
+        tiles_in_radius(x, y, radius, inclusive != 0, &mut tiles);
         set_tiles(io, &tiles);
-        n.t(&tiles);
     }
 }
 
@@ -241,7 +258,32 @@ pub extern "C" fn ee_units_uu_is_corner_blocked(x1: i32, y1: i32, x2: i32, y2: i
     u8::from(r)
 }
 
-/// `EEGetBlockRing` (21; `square` 1: `EEGetSquareBlockRing`, 22) (`io` cleared unless `append`).
+/// `EEGetBlockRing` (21; `square`: `EEGetSquareBlockRing`, 22) on `tiles` (cleared unless `append`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn block_ring(
+    corners: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    tiles: &mut Vec<Tile>,
+    append: bool,
+    square: bool,
+) {
+    let n = Note::begin(if square { 22 } else { 21 });
+    n.i(corners.into()).i(x.into()).i(y.into()).i(width.into());
+    if !square {
+        n.i(height.into());
+    }
+    n.b(append).t(tiles);
+    if !append {
+        tiles.clear();
+    }
+    uu::block_ring(&mut Game, corners, x, y, width, height, tiles, append);
+    n.t(tiles);
+}
+
+/// [`block_ring`] on a C++ tile vector.
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -257,24 +299,27 @@ pub unsafe extern "C" fn ee_units_uu_block_ring(
     append: u8,
     square: u8,
 ) {
-    let n = Note::begin(if square != 0 { 22 } else { 21 });
-    n.i(corners.into()).i(x.into()).i(y.into()).i(width.into());
-    if square == 0 {
-        n.i(height.into());
-    }
-    n.i(append.into());
     // SAFETY: the caller's contract
     unsafe {
-        let before = if n.on() || append != 0 { tiles_of(io) } else { Vec::new() };
-        n.t(&before);
-        let mut tiles = if append != 0 { before } else { Vec::new() };
-        uu::block_ring(&mut Game, corners, x, y, width, height, &mut tiles, append != 0);
+        let mut tiles = tiles_of(io);
+        block_ring(corners, x, y, width, height, &mut tiles, append != 0, square != 0);
         set_tiles(io, &tiles);
-        n.t(&tiles);
     }
 }
 
-/// `EEGetRingCorners` (24; `square` 1: `EEGetCornerTiles`, 25) (`out` replaced).
+/// `EEGetRingCorners` (24; `square`: `EEGetCornerTiles`, 25).
+pub(crate) fn ring_corners(corners: i32, x: i32, y: i32, width: i32, height: i32, square: bool) -> Vec<Tile> {
+    let n = Note::begin(if square { 25 } else { 24 });
+    n.i(corners.into()).i(x.into()).i(y.into()).i(width.into());
+    if !square {
+        n.i(height.into());
+    }
+    let tiles = uu::ring_corners(&mut Game, corners, x, y, width, height);
+    n.t(&tiles);
+    tiles
+}
+
+/// [`ring_corners`] into `out` (replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -288,15 +333,9 @@ pub unsafe extern "C" fn ee_units_uu_ring_corners(
     square: u8,
     out: *mut c_void,
 ) {
-    let n = Note::begin(if square != 0 { 25 } else { 24 });
-    n.i(corners.into()).i(x.into()).i(y.into()).i(width.into());
-    if square == 0 {
-        n.i(height.into());
-    }
-    let tiles = uu::ring_corners(&mut Game, corners, x, y, width, height);
+    let tiles = ring_corners(corners, x, y, width, height, square != 0);
     // SAFETY: the caller's contract
     unsafe { set_tiles(out, &tiles) };
-    n.t(&tiles);
 }
 
 /// `EERemoveEdgeTiles`.
@@ -351,27 +390,28 @@ pub unsafe extern "C" fn ee_units_uu_sorted_ring_tiles(
 /// `io` for 1).
 ///
 /// # Safety
+/// `EEGetUnitsOn` (42): the units of `tiles` appended to `units`; their number.
+pub(crate) fn units_on(tiles: &[Tile], units: &mut Vec<u64>) -> i32 {
+    let n = Note::begin(42);
+    n.t(tiles).us(units);
+    let count = uu::units_on(&mut Game, tiles, units);
+    n.i(count.into()).us(units);
+    count
+}
+
+/// `EEGetUnitsOn` (`which` 0: appended to `io`), `EEGetUnitsOnTiles` (1, not noted); the number found (all of `io`
+/// for 1).
+///
+/// # Safety
 /// `tiles` a live tile vector, `io` a live `std::vector<EEUnit*>`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_units_on(which: i32, tiles: *const c_void, io: *mut c_void) -> i32 {
-    if which != 0 {
-        // SAFETY: the caller's contract
-        return unsafe {
-            let mut units = units_of(io);
-            let count = uu::units_on_tiles(&mut Game, &tiles_of(tiles), &mut units);
-            set_units(io, &units);
-            count
-        };
-    }
-    let n = Note::begin(42);
     // SAFETY: the caller's contract
     unsafe {
         let at = tiles_of(tiles);
         let mut units = units_of(io);
-        n.t(&at).us(&units);
-        let count = uu::units_on(&mut Game, &at, &mut units);
+        let count = if which == 0 { units_on(&at, &mut units) } else { uu::units_on_tiles(&mut Game, &at, &mut units) };
         set_units(io, &units);
-        n.i(count.into()).us(&units);
         count
     }
 }
@@ -461,17 +501,26 @@ pub extern "C" fn ee_units_uu_tile_unit_of_type(x: i32, y: i32, unit_type: u32) 
 /// `EEGetPlayerUnitsOfType` (40) (appended to `io`); their number.
 ///
 /// # Safety
+/// `EEGetPlayerUnitsOfType` (40): appended to `units`; their number.
+pub(crate) fn player_units_of_type(unit_type: i32, index: i32, units: &mut Vec<u64>) -> i32 {
+    let n = Note::begin(40);
+    n.i(unit_type.into()).i(index.into()).us(units);
+    let count = uu::player_units_of_type(&mut Game, unit_type, index, units);
+    n.i(count.into()).us(units);
+    count
+}
+
+/// [`player_units_of_type`] on a C++ unit vector.
+///
+/// # Safety
 /// `io` a live `std::vector<EEUnit*>`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_player_units_of_type(unit_type: i32, index: i32, io: *mut c_void) -> i32 {
-    let n = Note::begin(40);
     // SAFETY: the caller's contract
     unsafe {
         let mut units = units_of(io);
-        n.i(unit_type.into()).i(index.into()).us(&units);
-        let count = uu::player_units_of_type(&mut Game, unit_type, index, &mut units);
+        let count = player_units_of_type(unit_type, index, &mut units);
         set_units(io, &units);
-        n.i(count.into()).us(&units);
         count
     }
 }
@@ -479,21 +528,29 @@ pub unsafe extern "C" fn ee_units_uu_player_units_of_type(unit_type: i32, index:
 /// `EEGetFootprintTiles` (`which` 0, 36), `EEGetResourceSpots` (1, 44): into `io` as the C++ did.
 ///
 /// # Safety
+/// `EEGetFootprintTiles` (`which` 0, 36), `EEGetResourceSpots` (1, 44) on `tiles` (as the C++ did).
+pub(crate) fn unit_tiles(which: i32, unit: u64, tiles: &mut Vec<Tile>) {
+    let n = Note::begin(if which == 0 { 36 } else { 44 });
+    n.u(unit).t(tiles);
+    if which == 0 {
+        uu::footprint_tiles(&mut Game, unit, tiles);
+    } else {
+        uu::resource_spots(&mut Game, unit, tiles);
+    }
+    n.t(tiles);
+}
+
+/// [`unit_tiles`] on a C++ tile vector.
+///
+/// # Safety
 /// `unit` a live unit, `io` a live tile vector.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_unit_tiles(which: i32, unit: u64, io: *mut c_void) {
-    let n = Note::begin(if which == 0 { 36 } else { 44 });
     // SAFETY: the caller's contract
     unsafe {
         let mut tiles = tiles_of(io);
-        n.u(unit).t(&tiles);
-        if which == 0 {
-            uu::footprint_tiles(&mut Game, unit, &mut tiles);
-        } else {
-            uu::resource_spots(&mut Game, unit, &mut tiles);
-        }
+        unit_tiles(which, unit, &mut tiles);
         set_tiles(io, &tiles);
-        n.t(&tiles);
     }
 }
 
@@ -613,6 +670,25 @@ pub extern "C" fn ee_units_uu_tile_unit_standing(unit: u64, player: u64, unit_ty
 /// `EEGetBlockingUnits` (`standing` 2, 2) and `EEGetMovableTileUnits` (1, 3): `out` replaced.
 ///
 /// # Safety
+/// `EEGetBlockingUnits` (`standing` 2, 2) and `EEGetMovableTileUnits` (1, 3): any, and the units.
+pub(crate) fn tile_units_standing(
+    player: u64,
+    unit_type: i32,
+    tile: u64,
+    ignore_owner: bool,
+    standing: i32,
+) -> (bool, Vec<u64>) {
+    let n = Note::begin(if standing == 2 { 2 } else { 3 });
+    n.pl(player).i(unit_type.into()).b(ignore_owner);
+    let mut units = Vec::new();
+    let any = uu::tile_units_standing(&mut Game, player, unit_type, tile, ignore_owner, standing, &mut units);
+    n.b(any).us(&units);
+    (any, units)
+}
+
+/// [`tile_units_standing`] into `out` (replaced).
+///
+/// # Safety
 /// `out` a live `std::vector<EEUnit*>`; `tile` a live tile or 0.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_tile_units_standing(
@@ -623,13 +699,9 @@ pub unsafe extern "C" fn ee_units_uu_tile_units_standing(
     standing: i32,
     out: *mut c_void,
 ) -> u8 {
-    let n = Note::begin(if standing == 2 { 2 } else { 3 });
-    n.pl(player).i(unit_type.into()).i(ignore_owner.into());
-    let mut units = Vec::new();
-    let any = uu::tile_units_standing(&mut Game, player, unit_type, tile, ignore_owner != 0, standing, &mut units);
+    let (any, units) = tile_units_standing(player, unit_type, tile, ignore_owner != 0, standing);
     // SAFETY: the caller's contract
     unsafe { set_units(out, &units) };
-    n.b(any).us(&units);
     u8::from(any)
 }
 
@@ -686,6 +758,20 @@ pub unsafe extern "C" fn ee_units_uu_find_place_on_tile(
 /// `EEGetTilesAroundUnit` (5): the tiles around `target` (its tile and size) for `unit` (`out` replaced).
 ///
 /// # Safety
+/// `EEGetTilesAroundUnit` (5): the tiles around `target` (its tile and size) for `unit`.
+pub(crate) fn tiles_around(unit: u64, target: u64, range: i32, corners: i32, virtual_call: bool) -> Vec<Tile> {
+    let n = Note::begin(5);
+    n.u(unit).u(target).i(range.into()).i(corners.into()).b(virtual_call);
+    let (x, y, size) = foot_of(target);
+    let tiles =
+        uu::tiles_around(&mut Game, unit, target, x as i32, y as i32, size as i32, range, corners, virtual_call);
+    n.t(&tiles);
+    tiles
+}
+
+/// [`tiles_around`] into `out` (replaced).
+///
+/// # Safety
 /// As [`ee_units_uu_square_ring`]; `target` a live unit.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_tiles_around(
@@ -696,17 +782,33 @@ pub unsafe extern "C" fn ee_units_uu_tiles_around(
     virtual_call: u8,
     out: *mut c_void,
 ) {
-    let n = Note::begin(5);
-    n.u(unit).u(target).i(range.into()).i(corners.into()).i(virtual_call.into());
-    let (x, y, size) = foot_of(target);
-    let tiles =
-        uu::tiles_around(&mut Game, unit, target, x as i32, y as i32, size as i32, range, corners, virtual_call != 0);
+    let tiles = tiles_around(unit, target, range, corners, virtual_call != 0);
     // SAFETY: the caller's contract
-    unsafe { set_tiles(out, &tiles) };
-    n.t(&tiles);
+    unsafe { set_tiles(out, &tiles) }
 }
 
 /// `EEPickTileNear` (7): `io` as [`ee_units_uu_find_place_on_tile`]'s.
+///
+/// # Safety
+/// `EEPickTileNear` (7): `io` (the location) gets the spot's x and y (its z stays).
+pub(crate) fn pick_tile_near(
+    tiles: &[Tile],
+    unit: u64,
+    container: u64,
+    ignore_blocked_line: bool,
+    io: &mut [f32; 3],
+) -> bool {
+    let n = Note::begin(7);
+    n.t(tiles).u(unit).u(container).b(ignore_blocked_line);
+    let mut p = *io;
+    let found = uu::pick_tile_near(&mut Game, tiles, unit, container, ignore_blocked_line, &mut p);
+    io[0] = p[0];
+    io[1] = p[1];
+    n.b(found).p(*io);
+    found
+}
+
+/// [`pick_tile_near`] over a C++ tile vector.
 ///
 /// # Safety
 /// `tiles` a live tile vector; `io` holds three floats.
@@ -718,18 +820,8 @@ pub unsafe extern "C" fn ee_units_uu_pick_tile_near(
     ignore_blocked_line: u8,
     io: *mut [f32; 3],
 ) -> u8 {
-    let n = Note::begin(7);
     // SAFETY: the caller's contract
-    unsafe {
-        let at = tiles_of(tiles);
-        n.t(&at).u(unit).u(container).i(ignore_blocked_line.into());
-        let mut p = *io;
-        let found = uu::pick_tile_near(&mut Game, &at, unit, container, ignore_blocked_line != 0, &mut p);
-        (*io)[0] = p[0];
-        (*io)[1] = p[1];
-        n.b(found).p(*io);
-        u8::from(found)
-    }
+    unsafe { u8::from(pick_tile_near(&tiles_of(tiles), unit, container, ignore_blocked_line != 0, &mut *io)) }
 }
 
 /// `EEFindPlacement` (10): `m` (a `GETransformation`'s matrix) is turned and moved to the place found.
@@ -1487,17 +1579,25 @@ pub unsafe extern "C" fn ee_units_uu_units_near(center: *const [f32; 3], radius:
 /// `EEGetUnitsInRadius`: `io` replaced; their number.
 ///
 /// # Safety
+/// `EEGetUnitsInRadius`: the units around (x, y).
+pub(crate) fn units_in_radius(x: f32, y: f32, radius: f32) -> Vec<u64> {
+    let mut units = Vec::new();
+    if let Some(rect) = uu_reads::radius_rect([x, y], radius) {
+        collect_units(rect, |_| true, &mut units);
+    }
+    units
+}
+
+/// [`units_in_radius`]: `io` replaced; their number.
+///
+/// # Safety
 /// `io` a live unit vector.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_uu_units_in_radius(x: f32, y: f32, radius: f32, io: *mut c_void) -> i32 {
-    let mut units = Vec::new();
-    let count = match uu_reads::radius_rect([x, y], radius) {
-        Some(rect) => collect_units(rect, |_| true, &mut units),
-        None => 0,
-    };
+    let units = units_in_radius(x, y, radius);
     // SAFETY: the caller's contract
     unsafe { set_units(io, &units) };
-    count
+    units.len() as i32
 }
 
 /// `EEUUGetIsUnitClassTargetable` (`can_target` 0) and `EECanTargetClass` (1): `attacker` may be 0, a null class is

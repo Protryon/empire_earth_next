@@ -1943,28 +1943,15 @@ struct EeCombatTargetableIn {
   int32_t can_be_attacked;
 };
 
-/// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
-struct EeCombatSearchTarget {
-  /// its class's `mTileSize > 1`
-  int32_t multiple;
-  /// its class's `mUnitType`
-  int32_t unit_type;
-  /// its stats' attack and maximum velocity
-  float attack;
-  float max_velocity;
-};
-
 /// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
 /// function of the right type.
 struct EeCombatSearchHost {
   void *ctx;
   /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
   const EeCombatUnitRegions *unit_regions;
-  void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
   uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
   int32_t (*dummy_head)(void *ctx, uint64_t unit);
   int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
-  void (*target)(void *ctx, uint64_t unit, EeCombatSearchTarget *out);
   float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
   float (*attack_factor)(void *ctx, uint64_t unit);
   int32_t (*line_blocked)(void *ctx, uint64_t unit);
@@ -2243,7 +2230,6 @@ struct EeCombatTargetHost {
   /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
   const EeCombatUnitRegions *unit_regions;
   int32_t (*screen)(void *ctx, uint64_t unit);
-  int32_t (*multiple)(void *ctx, uint64_t unit);
   int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
   /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
   void (*push)(void *ctx, uint64_t unit);
