@@ -38,7 +38,6 @@ EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x24cbd7 (cdecl): the tile next to inTile in direction inDirection (1..8) (provisional name)
 void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile);  // 0x24734c (can inUnit work on inTarget)
-bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);  // 0x248709 (EEUGGather::GetDestination with the resource; provisional name)
 // 0x24b8ac (cdecl; a path distance from inUnit to ioTile, 10000 when none: EEUGGather::EvaluateCondition 0x1f4b; the
 // body writes ioTile; the definition's types, one prototype) (provisional name)
@@ -65,7 +64,6 @@ bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** out
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
 // EEUGGather's helpers (cdecl; signatures from their call sites in EEUGGather.cpp) (provisional name)
 bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inUnit at inTarget: the gather goal's arrival)
-bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
 class GERectangle;
 // 0x246a26 / 0x24720e: the tiles of (and around) a footprint of inSize at (inX, inY) (EEUGGather::HasGatherRoom)

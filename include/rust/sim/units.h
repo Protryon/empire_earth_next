@@ -7164,7 +7164,7 @@ EeUnitsUuSteps ee_units_uu_sub_tile_steps(float size,
                                           int32_t dy,
                                           uint8_t square);
 
-/// `EEGetSquareRing` (19; `square` 1: `EEGetSideTiles`, 20) (`out` replaced).
+/// [`square_ring`] into `out` (replaced).
 ///
 /// # Safety
 /// `out` is a live `std::vector<U2DPoint<long> >`.
@@ -7175,13 +7175,13 @@ void ee_units_uu_square_ring(int32_t x,
                              uint8_t square,
                              void *out);
 
-/// `EEGetSquareRingTiles` (33) (`out` replaced).
+/// [`square_ring_tiles`] into `out` (replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
 void ee_units_uu_square_ring_tiles(int32_t x, int32_t y, int32_t radius, void *out);
 
-/// `EEGetTilesInRadius` (35) (appended to `io`).
+/// [`tiles_in_radius`] on a C++ tile vector.
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7247,7 +7247,7 @@ EeUnitsUuWallPiece ee_units_uu_wall_piece(int32_t corner);
 /// `EEIsCornerBlocked` (23).
 uint8_t ee_units_uu_is_corner_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
-/// `EEGetBlockRing` (21; `square` 1: `EEGetSquareBlockRing`, 22) (`io` cleared unless `append`).
+/// [`block_ring`] on a C++ tile vector.
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7260,7 +7260,7 @@ void ee_units_uu_block_ring(int32_t corners,
                             uint8_t append,
                             uint8_t square);
 
-/// `EEGetRingCorners` (24; `square` 1: `EEGetCornerTiles`, 25) (`out` replaced).
+/// [`ring_corners`] into `out` (replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`].
@@ -7301,8 +7301,8 @@ void ee_units_uu_sorted_ring_tiles(const float (*from)[3],
                                    int32_t corners,
                                    void *out);
 
-/// `EEGetUnitsOn` (`which` 0, 42: appended to `io`), `EEGetUnitsOnTiles` (1, not noted); the number found (all of
-/// `io` for 1).
+/// `EEGetUnitsOn` (`which` 0: appended to `io`), `EEGetUnitsOnTiles` (1, not noted); the number found (all of `io`
+/// for 1).
 ///
 /// # Safety
 /// `tiles` a live tile vector, `io` a live `std::vector<EEUnit*>`.
@@ -7336,13 +7336,13 @@ int32_t ee_units_uu_units_of_type_on_tiles(const void *tiles, int32_t unit_type,
 /// `EEGetTileUnitOfType` (39).
 uint64_t ee_units_uu_tile_unit_of_type(int32_t x, int32_t y, uint32_t unit_type);
 
-/// `EEGetPlayerUnitsOfType` (40) (appended to `io`); their number.
+/// [`player_units_of_type`] on a C++ unit vector.
 ///
 /// # Safety
 /// `io` a live `std::vector<EEUnit*>`.
 int32_t ee_units_uu_player_units_of_type(int32_t unit_type, int32_t index, void *io);
 
-/// `EEGetFootprintTiles` (`which` 0, 36), `EEGetResourceSpots` (1, 44): into `io` as the C++ did.
+/// [`unit_tiles`] on a C++ tile vector.
 ///
 /// # Safety
 /// `unit` a live unit, `io` a live tile vector.
@@ -7397,7 +7397,7 @@ int32_t ee_units_uu_tile_unit_standing(uint64_t unit,
                                        int32_t unit_type,
                                        uint8_t ignore_owner);
 
-/// `EEGetBlockingUnits` (`standing` 2, 2) and `EEGetMovableTileUnits` (1, 3): `out` replaced.
+/// [`tile_units_standing`] into `out` (replaced).
 ///
 /// # Safety
 /// `out` a live `std::vector<EEUnit*>`; `tile` a live tile or 0.
@@ -7428,7 +7428,7 @@ uint8_t ee_units_uu_find_place_on_tile(uint64_t unit,
                                        int32_t square,
                                        float (*io)[3]);
 
-/// `EEGetTilesAroundUnit` (5): the tiles around `target` (its tile and size) for `unit` (`out` replaced).
+/// [`tiles_around`] into `out` (replaced).
 ///
 /// # Safety
 /// As [`ee_units_uu_square_ring`]; `target` a live unit.
@@ -7439,7 +7439,7 @@ void ee_units_uu_tiles_around(uint64_t unit,
                               uint8_t virtual_call,
                               void *out);
 
-/// `EEPickTileNear` (7): `io` as [`ee_units_uu_find_place_on_tile`]'s.
+/// [`pick_tile_near`] over a C++ tile vector.
 ///
 /// # Safety
 /// `tiles` a live tile vector; `io` holds three floats.
@@ -7728,7 +7728,7 @@ void ee_units_uu_aim_point(uint64_t unit, const float (*target)[3], float (*out)
 /// `center` holds three floats; `io` a live unit vector.
 int32_t ee_units_uu_units_near(const float (*center)[3], float radius, void *io);
 
-/// `EEGetUnitsInRadius`: `io` replaced; their number.
+/// [`units_in_radius`]: `io` replaced; their number.
 ///
 /// # Safety
 /// `io` a live unit vector.

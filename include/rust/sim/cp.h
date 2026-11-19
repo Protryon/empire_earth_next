@@ -42,9 +42,6 @@ constexpr static const int32_t EE_CP_PLACE_CLAIM_RANGE = 7;
 /// the player's units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_CP_PLACE_OWN_UNITS = 8;
 
-/// `EEGetPlayerUnitsOfType(v0, v1, units)` on the input list (the result pushed)
-constexpr static const int32_t EE_CP_PLACE_UNITS_OF_TYPE = 9;
-
 /// player 0's units (pushed); 0 returned without a player 0
 constexpr static const int32_t EE_CP_PLACE_NATURE_UNITS = 10;
 
@@ -131,13 +128,9 @@ constexpr static const int32_t EE_CP_PLACE_HULL_BOUNDS = 46;
 /// choke point `a`'s `GetTileSet().BuildPointList(tiles, 1)` on the input tiles
 constexpr static const int32_t EE_CP_PLACE_CHOKE_TILES = 47;
 
-constexpr static const int32_t EE_CP_PLACE_BLOCK_TAKES = 48;
-
 constexpr static const int32_t EE_CP_PLACE_FACING_QUARTER = 49;
 
 constexpr static const int32_t EE_CP_PLACE_SITE_THREAT = 50;
-
-constexpr static const int32_t EE_CP_PLACE_TILE_UNIT_OF_TYPE = 51;
 
 /// `EEGetUnitsInRectangle(rect v0..v3, units, filter v4, true)` on the input units
 constexpr static const int32_t EE_CP_PLACE_UNITS_IN_RECT = 52;
@@ -148,19 +141,6 @@ constexpr static const int32_t EE_CP_PLACE_SPACE_DOCK_OPEN = 54;
 
 /// `std::sort` of the input keys: the order into `io.order`
 constexpr static const int32_t EE_CP_PLACE_SORT = 55;
-
-/// the tile lists through their C++ wrappers (the capture's notes)
-constexpr static const int32_t EE_CP_PLACE_SQUARE_RING_TILES = 56;
-
-constexpr static const int32_t EE_CP_PLACE_SQUARE_BLOCK_RING = 57;
-
-constexpr static const int32_t EE_CP_PLACE_SQUARE_RING = 58;
-
-constexpr static const int32_t EE_CP_PLACE_SIDE_TILES = 59;
-
-constexpr static const int32_t EE_CP_PLACE_CORNER_TILES = 60;
-
-constexpr static const int32_t EE_CP_PLACE_TILES_IN_RADIUS = 61;
 
 /// `mUnits`' saved ids (pushed)
 constexpr static const int32_t EE_CP_CENTER_UNITS = 100;
@@ -708,7 +688,7 @@ struct EeCpPlaceCtx {
   long *town;
   /// `mPlacement->mRust` (null: no placement)
   EeCpPlacement *placement;
-  /// `EESimCaptureRecord::Active()`: the tile lists go through the C++ wrappers (their TEST ONLY notes)
+  /// `EESimCaptureRecord::Active()`: the tile lists go through the noted entry points (their TEST ONLY notes)
   uint8_t capture;
 };
 

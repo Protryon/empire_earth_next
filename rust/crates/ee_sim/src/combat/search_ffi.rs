@@ -16,11 +16,9 @@ pub struct EeCombatSearchHost {
     pub ctx: *mut c_void,
     /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
     pub unit_regions: *const crate::combat::regions::EeCombatUnitRegions,
-    pub unit_position: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [f32; 2]),
     pub list_next: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, prev: i32) -> u64,
     pub dummy_head: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
     pub test: unsafe extern "C" fn(ctx: *mut c_void, test: u32, unit: u64) -> i32,
-    pub target: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut EeCombatSearchTarget),
     pub hit_distance_squared: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, x: f32, y: f32) -> f32,
     pub attack_factor: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> f32,
     pub line_blocked: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
@@ -28,6 +26,14 @@ pub struct EeCombatSearchHost {
     pub ignore: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
     pub footprint_tile: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [i32; 2]),
     pub trace: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, code: i32, score: i32),
+}
+
+/// `f` of the view of a candidate (a handle the C++ search gave: a live unit while the search runs).
+fn with_unit<R>(unit: EeCombatHandle, f: impl FnOnce(crate::world::UnitView<'_>) -> R) -> R {
+    // SAFETY: a search runs inside the C++ call that holds the world
+    let t = unsafe { crate::world::WorldRead::begin() };
+    // SAFETY: as above; the handle is a live unit
+    f(unsafe { crate::world::UnitView::of(&t, unit) }.expect("a candidate"))
 }
 
 impl EeCombatSearchHost {
@@ -54,9 +60,11 @@ impl SearchHost for EeCombatSearchHost {
         store::unit_of(unit).map_or((0, 0), |r| (r.tile_x as i32, r.tile_y as i32))
     }
     fn unit_position(&mut self, unit: EeCombatHandle) -> (f32, f32) {
-        let mut out = [0f32; 2];
-        unsafe { (self.unit_position)(self.ctx, unit, &mut out) };
-        (out[0], out[1])
+        // the candidate's complex unit's location (a region's unit is its own complex unit)
+        with_unit(unit, |u| {
+            let p = u.complex_unit().expect("a candidate with a complex unit").location();
+            (p[0], p[1])
+        })
     }
     fn list_next(&mut self, unit: EeCombatHandle, prev: bool) -> EeCombatHandle {
         unsafe { (self.list_next)(self.ctx, unit, prev as i32) }
@@ -65,12 +73,31 @@ impl SearchHost for EeCombatSearchHost {
         unsafe { (self.dummy_head)(self.ctx, unit) != 0 }
     }
     fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
-        unsafe { (self.test)(self.ctx, test, unit) != 0 }
+        // the plain reads, through the views; the others the C++'s
+        match test {
+            EE_COMBAT_SEARCH_TEST_NATURE => with_unit(unit, |u| u.player().expect("an owner").id() == 0),
+            EE_COMBAT_SEARCH_TEST_WALL => with_unit(unit, |u| {
+                let c = u.class().expect("a candidate's class");
+                let tower: bool = crate::world_field!(c.fields(), mIsTower);
+                c.wall() && !tower
+            }),
+            EE_COMBAT_SEARCH_TEST_ALIVE => with_unit(unit, |u| u.hit_points() > 0),
+            _ => unsafe { (self.test)(self.ctx, test, unit) != 0 },
+        }
     }
     fn target(&mut self, unit: EeCombatHandle) -> EeCombatSearchTarget {
-        let mut out = EeCombatSearchTarget::default();
-        unsafe { (self.target)(self.ctx, unit, &mut out) };
-        out
+        // its class's size and type, its stats' attack and maximum velocity
+        with_unit(unit, |u| {
+            let class = u.class().expect("a candidate's class");
+            let size: std::os::raw::c_long = crate::world_field!(class.fields(), mTileSize);
+            let stats = u.stats().expect("a candidate's stats");
+            EeCombatSearchTarget {
+                multiple: i32::from(size > 1),
+                unit_type: class.unit_type() as i32,
+                attack: crate::world_field!(stats.fields(), mAttack),
+                max_velocity: crate::world_field!(stats.fields(), mMaxVelocity),
+            }
+        })
     }
     fn hit_distance_squared(&mut self, unit: EeCombatHandle, x: f32, y: f32) -> f32 {
         unsafe { (self.hit_distance_squared)(self.ctx, unit, x, y) }

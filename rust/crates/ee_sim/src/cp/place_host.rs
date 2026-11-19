@@ -4,9 +4,9 @@
 //! the unit tests.
 //!
 //! What the original asked of C++ calls with a TEST ONLY note (the UUTL record of `EEGetSquareRingTiles` and its
-//! family) is the trait's tile lists: their default bodies are the pure tile math (`units::uu_tiles`, the same Rust
-//! the C++ wrappers call); the game host takes the wrappers only while the simulation capture records, so the notes
-//! stay. The sorts whose comparator has ties (`std::sort` is not stable) go back to the C++ `std::sort` through
+//! family) is the trait's tile lists: their default bodies are the pure tile math (`units::uu_tiles`); the game host
+//! takes the noted entry points (`units::uu_ffi`, the same math) only while the simulation capture records, so the
+//! notes stay. The sorts whose comparator has ties (`std::sort` is not stable) go back to the C++ `std::sort` through
 //! [`PlaceHost::sort_order`], with the comparator's key: the permutation a comparison sort makes depends only on the
 //! comparisons' outcomes.
 

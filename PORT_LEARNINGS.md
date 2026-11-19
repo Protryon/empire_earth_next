@@ -31638,3 +31638,54 @@ the calamity profile at seeds 2-3 (and the scenario profile at 2-3 for the views
 docs/progress/calamities-scenario.md "Next": `SMEUnitValue`'s, `EEChangeUnit`'s and the object reads' plain reads
 on the views; the event tables as Rust data; `EECalamity`'s C++ members into its record; the scenario elements whole
 once the editor gate reads them through accessors.
+
+
+## The unit utilities, round 4: the goals' and the AI placement's Rust call the unit utilities directly; the target searches' plain reads (ee_sim::units uu_direct.rs; branch rust-unitutil-r4, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 4c169ab4d | the goal host (18 cases) and the AI placement host (10 cases) call the noted Rust entry points; 5 forwarders gone | +5 -194, net **-189** |
+| b4425f1f7 | the target searches' candidate position and values, NATURE/WALL/ALIVE and the walk's NATURE and size test through the views | +4 -44, net **-40** |
+| (merge) | origin/rust 104a6603d (WONLobby round 17): clean | |
+
+The round: net **-229** C++ (EEUGRust.cpp -94, EECPPlacement.cpp -61, EEFOFindNewTargetNearOldTarget.cpp 2,945 ->
+2,876, the headers -5).
+
+- **Why it was possible now.** Round 3 moved the UUTL note into each Rust entry point, so a Rust caller that calls the
+  entry point directly is noted exactly as the C++ forwarder's call was: the goal host's chain Rust -> `GoalOp` case ->
+  C++ forwarder -> Rust entry point became Rust -> entry point, with the same outermost-note depth (the goal ops are not
+  noted). The UUTL digests (and every other tag) of all twelve profiles held unchanged.
+- **Natives beside the C ABI.** Entry points over C++ vectors got a Rust-native twin in uu_ffi.rs that holds the note
+  (`tile_units_standing`, `tiles_around`, `pick_tile_near`, `unit_tiles`, `units_on`, `player_units_of_type`,
+  `units_in_radius`, `square_ring`, `square_ring_tiles`, `tiles_in_radius`, `block_ring`, `ring_corners`); the C ABI
+  function converts the vectors and calls it. `uu_direct.rs` is what other modules call: the game's body, and
+  `unreachable!` in a unit-test build (uu_ffi.rs is absent there and no fake host reaches the game's paths), since
+  rust_goal.rs's `OpHost` compiles in the tests too.
+- **The AI placement keeps its two paths.** With the capture off its tile lists stay the pure math; with it on they
+  now take the noted entry points instead of the C++ wrappers (the same math), so the placement's results and the
+  record are as before.
+- **A template instantiation that lived in a deleted case.** `EEGetUnitsInRectangle<EEAnyUnit,
+  std::vector<EEComplexUnit*> >` was instantiated only by EECPPlacement.cpp's rectangle case; EEContagionHelper.cpp
+  calls it with the declaration alone (ee/EEAreaUtilities.h) and the link failed with one unresolved symbol. The unit
+  utilities file now instantiates it explicitly.
+- **The search hosts' plain reads.** `unit_position` and `target` of `EeCombatSearchHost` and `multiple` of
+  `EeCombatTargetHost` are view reads in search_ffi.rs / walks_ffi.rs (a region's candidate is its own complex unit:
+  `mComplexUnit` is `this` for a complex unit, EEUnit.cpp), so the callbacks left the structs. The tests that read only
+  the candidate (NATURE, WALL, ALIVE; the walk's NATURE) are answered in Rust before the C++ callback; the others ask
+  the searching unit, a virtual, a goal or an ignore list and stay C++.
+- **Not done, and why.** EEARust.cpp and EEEffectHost.cpp: their Rust callers (ee_game's game actions, ee_render's
+  effects) run over fake hosts in their unit tests, so a direct call would need those tests reworked for a few lines.
+  `EEFindTargetNear` (the influence table and `EESearchTarget` are C++), `EEGetWaitingGatherer` (a Rust goal's gather
+  resource through the C++ goal object, the physics random, `PermuteValues`) and `EEWorkFarm` (C++ goal construction
+  and actions) have nothing a view can answer. `EEIsInWorkReach` and the other reach tests write CB* capture records
+  from C++ inlines.
+- **For the Units lane** (its files, not edited here): EEUnitHost.cpp's cases calling `EEPlanWall`, `EEBuildWall`,
+  `EECanPlaceOnTile`, `EEFindFreeFarm`, `EEGetFarmDropSites`, `EEIsSeenBy`, `EEUUGetIsUnitClassTargetable`, and
+  EEUGRustCombat.cpp's `EEGetAttackPart`, `EEUUGetIsUnitClassTargetable`, `EECanHeal` cases can call `units::uu_direct`
+  / `uu_ffi` (or ee_combat) from their Rust callers; `EEGetAttackPart`'s forwarder goes with the last of them.
+- **Gates (merged with origin/rust 104a6603d):** build `--sim` 0/0; the Rust gate PASS (4,609 tests); oracle seeds 2-7
+  identical; the captures at seeds 2-3 of oracle (212 digests) and late (214) PASS on the merged tree, and of oracle,
+  late, space, calamity, placement, units and transport PASS on the commits before the merge. The round stopped at
+  the cluster reorganization: the other capture profiles, saveload, scenario_check, the test-profile build and the
+  harness runs were not run, and the branch is not for merging as it stands (it edits the units and AI clusters'
+  files: EEUGRust.cpp, EECPPlacement.cpp, EEFOFindNewTargetNearOldTarget.cpp).
