@@ -46,10 +46,7 @@ impl TagModels for Fakes {
         self.models[&m].frames
     }
     fn bounding_box(&self, m: usize) -> GeBoundingBox {
-        GeBoundingBox {
-            top_right_back: Ge3DPoint { x: 9.0, y: 9.0, z: self.models[&m].top_z },
-            ..Default::default()
-        }
+        GeBoundingBox { top_right_back: Ge3DPoint { x: 9.0, y: 9.0, z: self.models[&m].top_z }, ..Default::default() }
     }
     fn material_names(&self, m: usize) -> Vec<Vec<u8>> {
         self.models[&m].materials.clone()
@@ -104,7 +101,10 @@ fn world() -> Fakes {
     f.models.insert(
         0x200,
         FakeModel {
-            tags: vec![tag("status bar", &[p(0.0, 0.0, 5.0), p(0.0, 0.0, 6.0)]), tag("weapon_mount2", &[p(2.0, 0.0, 0.0), p(2.0, 0.0, 0.0)])],
+            tags: vec![
+                tag("status bar", &[p(0.0, 0.0, 5.0), p(0.0, 0.0, 6.0)]),
+                tag("weapon_mount2", &[p(2.0, 0.0, 0.0), p(2.0, 0.0, 0.0)]),
+            ],
             internal: vec![moved(1.0, 2.0, 3.0), moved(1.0, 2.0, 3.0)],
             parent: 0x100,
             frames: 2,

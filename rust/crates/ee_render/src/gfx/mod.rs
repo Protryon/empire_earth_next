@@ -50,6 +50,7 @@ pub mod effect_particles;
 pub mod effect_parts;
 pub mod effect_placement;
 pub mod effect_quake;
+pub mod effect_reads;
 pub mod effect_rising;
 pub mod effect_shockwave;
 pub mod effect_shot;

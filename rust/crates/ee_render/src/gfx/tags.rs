@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::mem::ManuallyDrop;
 
-use ee_base::math::types::{GeBoundingBox, GeTransformation, Ge3DPoint};
+use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation};
 
 use crate::ge::cppobj;
 use crate::ge::modobj::{ee_ge_mod_dereference, ee_ge_mod_get, ee_ge_mod_ptr, EeGeModPtr, EeGeModVal, EeGeModel};
@@ -307,7 +307,12 @@ impl EeGfxGraphicTags {
 
 /// `GetOffset(frame[, part])`: the tag point at `frame` (through `part` first when given), carried through its
 /// model's and every parent model's internal transformation at that frame.
-pub fn offset<M: TagModels>(models: &M, point: &EeGfxTagPoint, frame: usize, part: Option<&GeTransformation>) -> Ge3DPoint {
+pub fn offset<M: TagModels>(
+    models: &M,
+    point: &EeGfxTagPoint,
+    frame: usize,
+    part: Option<&GeTransformation>,
+) -> Ge3DPoint {
     let mut model = point.mModel as usize;
     let local = models.tag_point(model, point.mIndex as usize, frame);
     let mut p = match part {
@@ -490,7 +495,11 @@ pub unsafe extern "C" fn ee_gfx_tags_collect(
 /// # Safety
 /// `p` is NULL or a live store.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gfx_tags_find(p: *const EeGfxGraphicTags, model: *const c_void, kind: c_long) -> *mut EeGfxTagList {
+pub unsafe extern "C" fn ee_gfx_tags_find(
+    p: *const EeGfxGraphicTags,
+    model: *const c_void,
+    kind: c_long,
+) -> *mut EeGfxTagList {
     if p.is_null() {
         return std::ptr::null_mut();
     }

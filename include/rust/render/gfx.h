@@ -1070,6 +1070,39 @@ struct EeGfxDecalHost {
   void (*place)(void *context, void *effect, const EeGe3DPoint *point);
 };
 
+/// Where the C++ compiler put the members read here (offsets from the object's address: an `EEGraphicObject*`,
+/// `EEGraphicEffect*`, `EETurretPart*`, `EEOrbital*` or `EEComplexUnit*`).
+struct EeGfxObjectLayout {
+  /// `sizeof(EeGfxObjectLayout)` as the C++ compiled it
+  uint64_t size;
+  /// `EEGraphicObject`: its record base (`EeDataGraphicObjectFields`), `mModels[14]`, `mTextures[14]`,
+  /// `mTagPoints[14]`, `mTags`, `mModel`, `mDefaultPoint`, `mTopPoint`, the vectors `mTurretParts` and `mOrbitals`
+  uint64_t gobj_fields;
+  uint64_t gobj_models;
+  uint64_t gobj_textures;
+  uint64_t gobj_tag_points;
+  uint64_t gobj_tags;
+  uint64_t gobj_model;
+  uint64_t gobj_default_point;
+  uint64_t gobj_top_point;
+  uint64_t gobj_turret_parts;
+  uint64_t gobj_orbitals;
+  /// `EETurretPart::mModel`; `EEOrbital::mModel`, `mSpeed`, `mAngle`
+  uint64_t turret_part_model;
+  uint64_t orbital_model;
+  uint64_t orbital_speed;
+  uint64_t orbital_angle;
+  /// `EEGraphicEffect`: its record base (`EeDataGraphicEffectFields`), `mGraphicObject`
+  uint64_t geffect_fields;
+  uint64_t geffect_object;
+  /// `EEComplexUnit`: `mPhysicalModel`'s scale and frame, `mTurretAngles`
+  uint64_t complex_scale;
+  uint64_t complex_frame;
+  uint64_t complex_turret_angles;
+  /// `EEUnitClassUpgrade::mModel` (the stats' graphic)
+  uint64_t stats_model;
+};
+
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
 struct EeGfxCameraGoTo {
@@ -1863,56 +1896,19 @@ struct EeGfxGraphicFacts {
   bool emit_flat;
 };
 
-/// The beam's unit as its step reads it (`EEE3DCitizenBeam::Step`).
-struct EeGfxBeamUnit {
-  /// the unit is a complex unit
-  bool complex;
-  /// `mAnimation`, `GetFrame()`
-  int32_t animation;
-  int32_t frame;
-};
-
-/// The unit's physical model's frame and its complex unit's animation (`mAnimation`).
-struct EeGfxUnitFrame {
-  uint32_t frame;
-  uint32_t animation;
-};
-
-/// One orbiting part (`EEOrbital`): its model, its speed (radians a second) and its angle.
-struct EeGfxOrbital {
-  EeGfxModel model;
-  float speed;
-  float angle;
-};
-
-/// The graphic object's animation 13 (`mStartFrames[13]`, `mFrameTimes[13]` in ms, `mFrameCounts[13]`).
-struct EeGfxAnimation {
-  uint32_t start;
-  uint32_t frame_time;
-  uint32_t frame_count;
-};
-
-/// A jet's places on the unit (the C++'s tag points at frame 0 around the unit's location scaled by its stats): its
-/// vent, its aim, and the vent's offset from the model's centre turned by that location.
-struct EeGfxVentPoints {
-  EeGe3DPoint from;
-  EeGe3DPoint to;
-  EeGeVector translation;
-};
-
-/// A graphic object's animation `index`: its start frame, frame time (ms), frame count and last frame.
-struct EeGfxFrames {
-  uint32_t start;
-  uint32_t time;
-  uint32_t count;
-  uint32_t last;
-};
-
-/// The beam's two ends as the C++ finds them on the units (`Aim` before `beam::aim`), and whether it has a target unit.
-struct EeGfxTracerEnds {
-  EeGe3DPoint start;
-  EeGe3DPoint end;
-  bool has_target;
+/// The effect's C++ members the answers read (in both hosts): its record, its graphic effect, the addresses of its
+/// kept graphic object, its unit's model and its target (members the C++ answers may change during the call), and
+/// the one C++ call, a unit's graphic.
+struct EeGfxEffectRefs {
+  EeGfxEffectRecord *record;
+  /// `mGraphicEffect` (an `EEGraphicEffect*`)
+  uint64_t graphic_effect;
+  /// `&mGraphicObject`, `&mUnitModel` (`EEGraphicObject**`), `&mTarget` (`EEUnit**`)
+  const uint64_t *graphic_object;
+  const uint64_t *unit_model;
+  const uint64_t *target;
+  /// `((EEUnit*)unit)->GetModel()`
+  uint64_t (*unit_graphic)(void *context, uint64_t unit);
 };
 
 /// The terrain under a farm field, as C++ callbacks over `context` (the `GETerrainMesh`).
@@ -1926,35 +1922,6 @@ struct EeGfxFarmTerrain {
   float (*mesh_z)(void *context, float x, float y);
 };
 
-/// What a smoke generator's tick reads of its unit (`smoke_unit`).
-struct EeGfxSmokeUnit {
-  bool has_unit;
-  /// the unit's physical model's position
-  EeGe3DPoint position;
-  /// the damage smoke's: its command's `mType` (0 without one); the others': `GetCommandType()`
-  int32_t command;
-  /// the damage smoke's: the unit's hit points and its stats' maximum, its tag points of kind 0
-  int32_t hit_points;
-  int32_t max_hit_points;
-  bool has_tag_points;
-  uint32_t tag_point_count;
-};
-
-/// What an emitter's step reads of its unit (`EEE3DParticleEmitter::Step`, 0xf6417; `emitter_unit`).
-struct EeGfxEmitterUnit {
-  /// the effect has a unit, a complex one
-  bool has_unit;
-  bool complex;
-  /// the complex unit's command is the dead one (`kActionDead`); the unit's hit points (`GetHitPoints`)
-  bool dead;
-  int32_t hit_points;
-  /// a complex unit followed (the graphic effect's flag 1): the turret part's result, the tag point's location
-  /// at the unit's frame in its scaled location (its position without a tag point list), and that location
-  int32_t follow_result;
-  EeGe3DPoint location;
-  EeGeTransformation transformation;
-};
-
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1962,10 +1929,11 @@ struct EeGfxEffect3DHost {
   /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
   uint64_t unit;
   uint64_t player;
+  /// the effect's members the Rust answers read (effect_reads.rs: the graphic objects, tag points and physical
+  /// models)
+  EeGfxEffectRefs refs;
   /// the unit's position (`EEUnit::GetPosition`)
   EeGe3DPoint (*unit_position)(void *context);
-  /// the graphic effect's first model's height in its bounding box at frame 0
-  float (*model_height)(void *context);
   /// `MoveToTransformation(mTransformation)` (the region)
   void (*move_to)(void *context);
   /// `gEffectManager->CreateLineEffect` from `start` along `direction` with linked effect 1 or 2
@@ -1979,50 +1947,20 @@ struct EeGfxEffect3DHost {
   void (*queue)(void *context, uint32_t index);
   /// the graphic object is the graphic effect's; `LoadMedia`
   int32_t (*load_media)(void *context);
-  /// the graphic object's model
-  EeGfxModel (*model)(void *context);
-  /// the graphic object's first texture
-  EeGfxModel (*texture)(void *context);
-  /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
-  void (*follow_unit)(void *context);
-  /// the graphic object's model `index` (`mModels[index]`)
-  EeGfxModel (*model_at)(void *context, uint32_t index);
   /// a tracer's end: its graphic effect's linked effect 1 placed at the effect's position, then the unit's
   /// `UnitDamaged` (each when there is one)
   void (*shot_hit)(void *context);
-  /// the citizen beam's start: the unit's first tag point at its animation and frame
-  EeGe3DPoint (*beam_start)(void *context);
-  /// the citizen beam's unit: a complex unit, its animation and frame
-  EeGfxBeamUnit (*beam_unit)(void *context);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
   void (*place_linked)(void *context, const EeGe3DPoint *point);
   /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
   EeGe3DPoint (*complex_position)(void *context);
   /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
   int32_t (*unit_model_media)(void *context);
-  /// the unit's model's first model's bounding radius at frame 0
-  float (*unit_model_radius)(void *context);
-  /// the unit's complex unit's physical model's frame and animation
-  EeGfxUnitFrame (*unit_frame)(void *context);
-  /// the unit's model's model `index` (`mModels[index]`)
-  EeGfxModel (*unit_model_at)(void *context, uint32_t index);
-  /// the graphic object's orbital count (`GetOrbitalCount`)
-  uint32_t (*orbital_count)(void *context);
-  /// a copy of the graphic object's orbital `index` (`*GetOrbital(index)`)
-  EeGfxOrbital (*orbital)(void *context, uint32_t index);
-  /// the graphic object's animation 13: its start frame, frame time and frame count
-  EeGfxAnimation (*animation)(void *context);
   /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
   /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
   void (*animation_sound)(void *context, uint32_t frame, bool changed);
-  /// the hurricane's spawn points: the graphic's tag points of kind 6 (0: none)
-  uint32_t (*spawn_count)(void *context);
-  /// spawn point `index` at `frame` around the unit, scaled by the graphic effect's size
-  EeGe3DPoint (*spawn_at)(void *context, uint32_t index, uint32_t frame);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`): its result
   int32_t (*spawn)(void *context, const EeGe3DPoint *point);
-  /// the graphic object's texture `index` (`mTextures[index]`)
-  EeGfxModel (*texture_at)(void *context, uint32_t index);
   /// the terrain mesh's height at a point (`GetMeshZ`)
   float (*terrain_z)(void *context, float x, float y);
   /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
@@ -2036,16 +1974,6 @@ struct EeGfxEffect3DHost {
   bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
   /// the unit's complex unit is a gate: how open it is into `open`
   bool (*gate_open)(void *context, float *open);
-  /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
-  void (*vent_lists)(void *context);
-  /// the number of vents (kind 5 tag points; after `vent_lists`)
-  uint32_t (*vent_count)(void *context);
-  /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
-  void (*vent_offsets)(void *context, int32_t tag, EeGe3DPoint *points);
-  /// vent `tag`'s places on the unit (after `vent_lists`)
-  EeGfxVentPoints (*vent_points)(void *context, int32_t tag);
-  /// the kept graphic object's animation `index`
-  EeGfxFrames (*frames)(void *context, uint32_t index);
   /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
   int32_t (*reload_media)(void *context);
   /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
@@ -2054,10 +1982,6 @@ struct EeGfxEffect3DHost {
   /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
   /// screen (none without an object)
   void (*queue_screen)(void *context, uint32_t index);
-  /// the tracer beam's ends (`EEE3DTracerBeam::Aim`, 0xfc5a4, before its `beam.rs` part): the shooter's weapon tag
-  /// point (or its tag point of kind 6, or its stats' default point) and the target point (on the target unit's
-  /// location, or the fixed point); whether the beam has a target unit
-  EeGfxTracerEnds (*tracer_ends)(void *context);
   /// the tracer beam's impact: the linked effect 1 placed at the target point on the target unit (or at the fixed
   /// point); the placement's result
   int32_t (*tracer_impact)(void *context);
@@ -2079,8 +2003,6 @@ struct EeGfxEffect3DHost {
   bool (*farm_drop_site)(void *context, int32_t *x, int32_t *y);
   /// the farm unit's crop variant stored (`mCloaked`)
   void (*farm_set_variant)(void *context, int32_t variant);
-  /// the graphic object's `mLoops[index]`
-  bool (*farm_loops)(void *context, uint32_t index);
   /// any player holds a doppelganger of the farm on its tile (`HasDoppelganger(tile, unit)`)
   bool (*farm_doppelganger_any)(void *context);
   /// the current player's doppelganger of the farm is drawn (none, a free camera or a player who sees all: -1),
@@ -2092,10 +2014,6 @@ struct EeGfxEffect3DHost {
   void (*set_scaled_model)(void *context, EeGfxModel model);
   /// the point on the ground under `point` (`gWorld.mMap->GetGroundPoint`; the earthquake's)
   EeGe3DPoint (*ground_point)(void *context, const EeGe3DPoint *point);
-  /// a smoke generator's unit (the damage smoke's tag points of kind 0 read for the step's `smoke_tag_point`)
-  EeGfxSmokeUnit (*smoke_unit)(void *context);
-  /// the damage smoke's tag point `index` at its unit's frame in its scaled location (after `smoke_unit`)
-  EeGe3DPoint (*smoke_tag_point)(void *context, uint32_t index);
   /// the linked effect 1 placed at `point`; the placement's result
   int32_t (*smoke_place)(void *context, const EeGe3DPoint *point);
   /// the weather storms' map (`effect_weather.rs`; its own context)
@@ -2113,8 +2031,6 @@ struct EeGfxEffect3DHost {
   uint32_t (*effect_duration)(void *context);
   /// the emitter placed on its unit (`EEE3DParticleEmitter`'s unit constructor, 0xf5f23)
   void (*emitter_place)(void *context);
-  /// the emitter's unit for its step (`EeGfxEmitterUnit`)
-  EeGfxEmitterUnit (*emitter_unit)(void *context);
   /// the emitter's animation sound at `location` (`first`: its first step)
   void (*emitter_sound)(void *context, const EeGe3DPoint *location, bool first);
   /// a line effect of the linked effect 1 from `start` along `direction`; the creation's result
@@ -2145,12 +2061,6 @@ struct EeGfxConfirmUnit {
   float scale;
 };
 
-/// A point the host may not have (`has` false: no complex unit).
-struct EeGfx2DPoint {
-  bool has;
-  EeGe3DPoint point;
-};
-
 /// `CreateParts`' place: the position and the height (the farthest part plus the effect's size).
 struct EeGfx2DPlace {
   EeGe3DPoint position;
@@ -2168,35 +2078,18 @@ struct EeGfx2DPart {
   bool done;
 };
 
-/// What `IsIconShown` reads of the effect's unit.
-struct EeGfxIconUnit {
-  /// the effect has a unit
-  bool has_unit;
-  /// its class is a land building, and its tile size
-  bool land_building;
-  int32_t tile_size;
-  /// it has a player, and the player's id
-  bool has_player;
-  uint32_t player;
-  /// its complex unit's location's x and y
-  float x;
-  float y;
-};
-
-/// The set-up's unit: its light tags (0 without a list or tags; the host keeps the list for the names) and where it
-/// stands (its complex unit's location, else its tile's centre on the terrain).
-struct EeGfxGlowSetUp {
+/// A graphic object's animation `index`: its start frame, frame time (ms), frame count and last frame.
+struct EeGfxFrames {
+  uint32_t start;
+  uint32_t time;
   uint32_t count;
-  EeGe3DPoint position;
+  uint32_t last;
 };
 
-/// The glows' placing: whether they show (not for another player's cloaked unit or an unfinished land building),
-/// whether the unit has light tags (the host keeps the list, the frame and the scaled location for `glow_point`),
-/// and where it stands.
-struct EeGfxGlowPlace {
-  bool show;
-  bool has_tags;
-  EeGe3DPoint position;
+/// A point the host may not have (`has` false: no complex unit).
+struct EeGfx2DPoint {
+  bool has;
+  EeGe3DPoint point;
 };
 
 /// The visible terrain's bottom-left tile and size, and the unit's tile.
@@ -2216,14 +2109,15 @@ struct EeGfxEffect2DHost {
   /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
   uint64_t unit;
   uint64_t player;
+  /// the effect's members the Rust answers read (effect_reads.rs: the graphic objects, tag points and physical
+  /// models)
+  EeGfxEffectRefs refs;
   /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
   int32_t (*base_queue)(void *context);
   /// pushes the effect on render queue `index` under its graphic's texture for the current screen
   void (*queue)(void *context, uint32_t index);
   /// the graphic effect's object (kept as the effect's) loaded; its result
   int32_t (*load_media)(void *context);
-  /// the kept graphic object's animation `index`
-  EeGfxFrames (*frames)(void *context, uint32_t index);
   /// `MoveToPoint(mPosition)` (the second half of `SetPosition`)
   void (*move_to_point)(void *context);
   /// `EEEffect2D::mModel`
@@ -2239,18 +2133,8 @@ struct EeGfxEffect2DHost {
   float (*terrain_z)(void *context, float x, float y);
   /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
   EeGfxModel (*command_texture)(void *context, uint32_t index);
-  /// a random one of the unit's tag points of `kind` at its animation and frame (`EEEffect::GetRandom`), the unit's
-  /// position without any (the shockwave's `SetUp`, 0xe6259)
-  EeGe3DPoint (*spawn_point)(void *context, uint32_t kind);
   /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
   int32_t (*object_media)(void *context);
-  /// the kept graphic object's texture `index`
-  EeGfxModel (*object_texture)(void *context, uint32_t index);
-  /// the unit's tag points of `kind` at its animation: -1 without a complex unit, 0 without a list
-  int32_t (*tag_count)(void *context, uint32_t kind);
-  /// the unit's tag point `index` of `kind` at its animation and frame under its scaled location (not without a
-  /// complex unit; the list is not tested, as `EEE2DImpact::UpdatePosition`'s)
-  EeGfx2DPoint (*tag_point)(void *context, uint32_t kind, uint32_t index);
   /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
   EeGe3DPoint (*weapon_point)(void *context, int32_t site);
   /// the kept graphic object's (`part0`: the first part's) animation 0 sound for `frame` at `location`
@@ -2262,8 +2146,6 @@ struct EeGfxEffect2DHost {
                           bool part0);
   /// `gDrawBlood`
   bool (*draw_blood)(void *context);
-  /// the unit's model's default point, the unit's stats' scale
-  EeGe3DPoint (*default_point)(void *context);
   /// `gWorld.IsTileBlocked`
   bool (*tile_blocked)(void *context, int32_t x, int32_t y);
   /// `gWorld.mWindDirection`
@@ -2283,14 +2165,8 @@ struct EeGfxEffect2DHost {
   EeGfx2DPoint (*part_follow)(void *context, uint32_t index);
   /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
   EeGe3DPoint (*unit_point)(void *context);
-  /// the kept graphic object's model (`mModel`)
-  EeGfxModel (*object_model)(void *context);
-  /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
-  uint32_t (*orbital_count)(void *context);
-  EeGfxOrbital (*orbital)(void *context, uint32_t index);
   /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
   /// (`gAEManager.HasEffect` with the unit's own list)
-  EeGfxIconUnit (*icon_unit)(void *context);
   bool (*area_effect)(void *context, int32_t kind, float x, float y, uint32_t player);
   /// the unit's pending area effects (`mNumAreaEffects`), and its new count (`FnE123D` at 0)
   int32_t (*area_effects)(void *context);
@@ -2301,13 +2177,6 @@ struct EeGfxEffect2DHost {
   uint32_t (*ghost_units)(void *context);
   /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
   EeGfx2DPoint (*ground_point)(void *context, EeGe3DPoint at);
-  /// the light glow's: the set-up's unit (its light tags kept for the names), tag `index`'s name into `out` (its
-  /// length returned; `capacity` bytes written at most)
-  EeGfxGlowSetUp (*glow_set_up)(void *context);
-  uint32_t (*glow_tag_name)(void *context, uint32_t index, uint8_t *out, uint32_t capacity);
-  /// the placing's unit (its tags, frame and scaled location kept), and tag `index`'s point
-  EeGfxGlowPlace (*glow_place)(void *context);
-  EeGe3DPoint (*glow_point)(void *context, uint32_t index);
   /// the visible terrain and the unit's tile; its visible rows
   EeGfxGlowArea (*glow_area)(void *context);
   uint32_t (*glow_rows)(void *context);
@@ -3167,6 +3036,12 @@ void ee_gfx_decal_track(const EeGfxDecalHost *host,
                         uint32_t kind,
                         float m00,
                         float m10);
+
+/// Registers the layout (once; a second registration must be the same).
+///
+/// # Safety
+/// `layout` points to a layout the C++ filled.
+void ee_gfx_object_layout_set(const EeGfxObjectLayout *layout);
 
 /// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
 ///

@@ -184,43 +184,21 @@ float EEFarmMeshZ(void* inMesh, float inX, float inY)
     return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
 }
 
-// a unit's tile's centre on the terrain (EEE2DLightGlow::SetUp 0xe2067 and PlaceGlows 0xe266f without a complex unit)
-GE3DPoint EETileCentre(EEUnit* inUnit)
-{
-    GE3DPoint thePosition;
-    thePosition.SetX(inUnit->mUnitClass->mTileSize * 0.5f + inUnit->mTileX);
-    thePosition.SetY(inUnit->mUnitClass->mTileSize * 0.5f + inUnit->mTileY);
-    thePosition.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePosition.GetX(), thePosition.GetY()));
-    return thePosition;
-}
-
-
-// the world's answers for one call
+// the world's answers for one call (the reads of the graphic objects, tag points and physical models are ee_gfx
+// effect_reads.rs')
 struct Ask {
     EEEffect* mEffect = NULL;
     EEEffectQueue* mQueues = NULL;
-    EETagPointList* mSpawn = NULL;   // the hurricane's spawn list, read once by SpawnCount for SpawnAt
     EeGfxEffect3DOp mOp = EeGfxEffect3DOp::Create;
     void* mArg = NULL;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
-    EETagPointList* mVentFrom = NULL;   // the damage vent's tag point lists, read once a step by VentLists
-    EETagPointList* mVentTo = NULL;
-    EETagPointList* mSmokeTags = NULL;  // the damage smoke's tag points, read once a step by SmokeUnit for SmokeTagPoint
-    unsigned long mSmokeFrame = 0;
-    GETransformation mSmokeLocation;
-    // the light glow's: the unit's light tags, its frame and its scaled location while the call places the glows
-    EETagPointList* mTags = NULL;
-    unsigned long mFrame = 0;
-    GETransformation mLocation;
     static EEEffect* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
+    // a unit's graphic (a virtual: a foundation shows its player's class graphic)
+    static uint64_t UnitGraphic(void*, uint64_t inUnit) { return (uint64_t)(uintptr_t)reinterpret_cast<EEUnit*>(inUnit)->GetModel(); }
     static EeGe3DPoint UnitPosition(void* inAsk)
     {
         GE3DPoint thePoint;
         E(inAsk)->mUnit->GetPosition(thePoint);
         return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
-    }
-    static float ModelHeight(void* inAsk)
-    {
-        return E(inAsk)->mGraphicEffect->mGraphicObject->mModels[0]->GetBoundingBox(0).GetHeight();
     }
     static void MoveTo(void* inAsk)
     {
@@ -247,31 +225,6 @@ struct Ask {
         E(inAsk)->mGraphicObject = E(inAsk)->GetGraphicObject();
         return E(inAsk)->mGraphicObject->LoadMedia();
     }
-    static void* Model(void* inAsk) { return E(inAsk)->mGraphicObject->mModel; }
-    static void* Texture(void* inAsk) { return E(inAsk)->mGraphicObject->mTextures[0]; }
-    // to the unit's first tag point of type 0x12 (keeping the unit's orientation), else to the unit (EEE3DBlastWave's
-    // and EEE3DShield's FollowUnit, 0xe904a)
-    static void Follow(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
-        GE3DPoint thePoint;
-        GETransformation theLocation(theUnit->mPhysicalModel.GetLocation());
-        float theScale = theUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-        EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 0x12);
-        if (theList != NULL && !theList->mPoints.empty()) {
-            EETagPointList::Scale(theLocation, theScale);
-            theList->mPoints.front()->GetPoint(theFrame, theLocation, thePoint);
-            GETransformation theTransformation(false);
-            theTransformation = theLocation;
-            theTransformation.SetPosition(thePoint.GetX(), thePoint.GetY(), thePoint.GetZ());
-            theEffect->SetTransformation(theTransformation);
-        } else {
-            theEffect->SetTransformation(theLocation);
-        }
-    }
-    static void* ModelAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mModels[inIndex]; }
     // a tracer's end: its impact effect at its position, then the target's hit (EEE3DTracers::Step, 0xfdad4)
     static void ShotHit(void* inAsk)
     {
@@ -283,33 +236,6 @@ struct Ask {
         }
         if (theEffect->mUnit)
             theEffect->mUnit->mUnitClass->UnitDamaged(theEffect->mUnit->mComplexUnit, NULL, 0);
-    }
-    // the citizen beam's start: the unit's first tag point (EEE3DCitizenBeam::Aim, 0xe9606)
-    static EeGe3DPoint BeamStart(void* inAsk)
-    {
-        GE3DPoint theStart;
-        EEUnit* theOwner = E(inAsk)->mUnit;
-        EEModel* theModel = theOwner->GetModel();
-        EEComplexUnit* theUnit = theOwner->mComplexUnit;
-        GETransformation theUnitTransformation(theUnit->mPhysicalModel.GetLocation());
-        float theScale = theUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
-        EETagPointList::Scale(theUnitTransformation, theScale);
-        theList->GetTagPoint(0)->GetPoint(theFrame, theUnitTransformation, theStart);
-        return EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
-    }
-    // the beam's unit as a complex unit (EEE3DCitizenBeam::Step, 0xe9aec)
-    static EeGfxBeamUnit BeamUnit(void* inAsk)
-    {
-        EeGfxBeamUnit theFacts = {};
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(E(inAsk)->mUnit);
-        if (theUnit) {
-            theFacts.complex = true;
-            theFacts.animation = (int32_t)theUnit->mAnimation;
-            theFacts.frame = (int32_t)(long)theUnit->mPhysicalModel.GetFrame();
-        }
-        return theFacts;
     }
     static void PlaceLinked(void* inAsk, const EeGe3DPoint* inPoint)
     {
@@ -332,27 +258,6 @@ struct Ask {
         E(inAsk)->mUnitModel = E(inAsk)->mUnit->GetModel();
         return E(inAsk)->mUnitModel->LoadMedia();
     }
-    static float UnitModelRadius(void* inAsk) { return E(inAsk)->mUnitModel->mModels[0]->GetBoundingRadius(0); }
-    static EeGfxUnitFrame UnitFrame(void* inAsk)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        return EeGfxUnitFrame{(uint32_t)theUnit->mPhysicalModel.GetFrame(), (uint32_t)theUnit->mAnimation};
-    }
-    static void* UnitModelAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mUnitModel->mModels[inIndex]; }
-    // the graphic object's orbitals (EEE3DLinearProjectile::SetUp, 0xf30ba, copies them)
-    static uint32_t OrbitalCount(void* inAsk) { return (uint32_t)E(inAsk)->mGraphicObject->GetOrbitalCount(); }
-    static EeGfxOrbital Orbital(void* inAsk, uint32_t inIndex)
-    {
-        EEOrbital* theOrbital = E(inAsk)->mGraphicObject->GetOrbital(inIndex);
-        return EeGfxOrbital{theOrbital->mModel, theOrbital->mSpeed, theOrbital->mAngle};
-    }
-    // the disease's and virus's animation 13 (EEE3DDisease::Step, 0xec4d7)
-    static EeGfxAnimation Animation(void* inAsk)
-    {
-        EEGraphicObject* theObject = E(inAsk)->mGraphicObject;
-        return EeGfxAnimation{(uint32_t)theObject->mStartFrames[13], (uint32_t)theObject->mFrameTimes[13],
-                              (uint32_t)theObject->mFrameCounts[13]};
-    }
     // the frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd)
     static void AnimationSound(void* inAsk, uint32_t inFrame, bool inChanged)
     {
@@ -371,32 +276,12 @@ struct Ask {
         if (theEffect->mSound)
             theEffect->mSound->Dereference();
     }
-    // the hurricane's spawn points: its graphic's tag points of kind 6 (animation 0) (EEE3DHurricane::GetSpawnPoint,
-    // 0xf188a); none without a list
-    static uint32_t SpawnCount(void* inAsk)
-    {
-        EETagPointList* theList = E(inAsk)->mGraphicEffect->mGraphicObject->GetTagPoints(0, 6);
-        static_cast<Ask*>(inAsk)->mSpawn = theList;
-        return theList == NULL ? 0 : (uint32_t)theList->mPoints.size();
-    }
-    // tag point inIndex at inFrame around the unit, scaled by the graphic effect's size (after SpawnCount)
-    static EeGe3DPoint SpawnAt(void* inAsk, uint32_t inIndex, uint32_t inFrame)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GETransformation theLocation(theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
-        EETagPointList* theList = static_cast<Ask*>(inAsk)->mSpawn;
-        GE3DPoint thePoint;
-        EETagPointList::Scale(theLocation, theEffect->mGraphicEffect->mSize);
-        theList->mPoints[inIndex]->GetPoint((unsigned long)inFrame, theLocation, thePoint);
-        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
-    }
     // the linked effect 1 placed at inPoint; the placement's result
     static int32_t Spawn(void* inAsk, const EeGe3DPoint* inPoint)
     {
         GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
         return gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
     }
-    static void* TextureAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mTextures[inIndex]; }
     static float TerrainZ(void* inAsk, float inX, float inY) { return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY); }
     static bool SpaceTile(void*, uint32_t inX, uint32_t inY)
     {
@@ -465,68 +350,6 @@ struct Ask {
         *outOpen = theUnit->GetOpenFraction();
         return true;
     }
-    // the damage vent's vents (kind 5) and aims (0x38) on the unit's model at its animation (EEE3DDamageVent::Step,
-    // 0xeae33)
-    static void VentLists(void* inAsk)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        EEUnit* theUnit = theAsk->mEffect->mUnit;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        theAsk->mVentFrom = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 5);
-        theAsk->mVentTo = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0x38);
-    }
-    // the vents' count; none on a model without both tag lists (the original read the first list's count through a
-    // null pointer there: a crash the effects sweep met on seed 4, a unit without vents; no vent, no jet now)
-    static uint32_t VentCount(void* inAsk)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        if (theAsk->mVentFrom == NULL || theAsk->mVentTo == NULL)
-            return 0;
-        // ... nor on one with fewer aims than vents (main fc6130210: EE-SIM faulted reading past the aims in Space
-        // Age games on Planets Earth)
-        if (theAsk->mVentTo->GetNumTagPoints() < theAsk->mVentFrom->GetNumTagPoints())
-            return 0;
-        return (uint32_t)theAsk->mVentFrom->GetNumTagPoints();
-    }
-    // a jet's vent's and aim's offsets (EEE3DDamageVentPart::Aim, 0xeb4e9)
-    static void VentOffsets(void* inAsk, int32_t inTag, EeGe3DPoint* outPoints)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        GE3DPoint theFrom;
-        GE3DPoint theTo;
-        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theFrom);
-        theAsk->mVentTo->mPoints[inTag]->GetOffset(0, theTo);
-        outPoints[0] = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
-        outPoints[1] = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
-    }
-    // a jet's vent and aim at frame 0 around the unit's location scaled by its stats, and the vent's offset from the
-    // model's centre turned by that location (EEE3DDamageVent::Step)
-    static EeGfxVentPoints VentPoints(void* inAsk, int32_t inTag)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        EEComplexUnit* theComplex = theAsk->mEffect->mUnit->mComplexUnit;
-        GETransformation theUnitTransformation(theComplex->mPhysicalModel.GetLocation());
-        theAsk->mVentFrom->Scale(theUnitTransformation, theComplex->mStats->GetScale());
-        GE3DPoint theFrom;
-        GE3DPoint theTo;
-        (theAsk->mVentFrom->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theFrom);
-        (theAsk->mVentTo->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theTo);
-        GEModel* theModel = theComplex->GetModel()->mModels[0];
-        GE3DPoint theOffset;
-        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theOffset);
-        GE3DPoint theCenter = theModel->GetCenterPoint();
-        GEVector theTranslation;
-        theUnitTransformation.Apply(GEVector(theOffset.GetX() - theCenter.GetX(), theOffset.GetY() - theCenter.GetY(),
-                                             theOffset.GetZ() - theCenter.GetZ()), theTranslation);
-        return EeGfxVentPoints{EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ}, EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ},
-                               EeGeVector{theTranslation.mX, theTranslation.mY, theTranslation.mZ}};
-    }
-    static EeGfxFrames Frames(void* inAsk, uint32_t inIndex)
-    {
-        EEGraphicObject* theObject = E(inAsk)->mGraphicObject;
-        return EeGfxFrames{(uint32_t)theObject->mStartFrames[inIndex], (uint32_t)theObject->mFrameTimes[inIndex],
-                           (uint32_t)theObject->mFrameCounts[inIndex], (uint32_t)theObject->mLastFrames[inIndex]};
-    }
     // the icon's set-up: the graphic effect's object loaded, then the one it replaces unloaded (EEE3DIcon::SetUp,
     // 0xf23e2: after the new load, so shared media stays loaded)
     static int32_t ReloadMedia(void* inAsk)
@@ -556,59 +379,6 @@ struct Ask {
         EEGraphicObject* theObject = E(inAsk)->GetGraphicObject();
         GETexture* theTexture = theObject ? theObject->GetTexture(gGamePreferences.mSettings.GetScreenID()) : NULL;
         static_cast<Ask*>(inAsk)->mQueues[inIndex][theTexture].push_back(E(inAsk));
-    }
-    // the tracer beam's ends (EEE3DTracerBeam::Aim, 0xfc5a4): from the shooter's weapon tag point (on its turret part
-    // when the tag point's model is one), or its tag point of kind 6 (int param 1 is 1), or its stats' default point,
-    // to the target point on the target's location (scaled by the target's scale when the weapon tag point was used)
-    // or the fixed point
-    static EeGfxTracerEnds TracerEnds(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GE3DPoint theEnd;
-        GE3DPoint theStart;
-        GETransformation theFrom(theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
-        GETransformation theTo(false);
-        GETransformation thePart(false);
-        EEGraphicObject* theGraphic = theEffect->mUnit->GetModel();
-        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
-        float theTargetScale = 1.0f;
-        EETagPointList* theTags = theGraphic->mTagPoints[theUnit->GetAnimation()];
-        float theScale = theUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-        unsigned long thePoint = theEffect->mRecord->tracer.weapon_tag_point;
-        EEUnit* theTarget = theEffect->mTarget;
-        GE3DPoint theTargetPoint(theEffect->mRecord->tracer.target_point.x, theEffect->mRecord->tracer.target_point.y,
-                                 theEffect->mRecord->tracer.target_point.z);
-        if (theTarget) {
-            theTo = theTarget->mComplexUnit->mPhysicalModel.GetLocation();
-            theTargetScale = theTarget->mComplexUnit->mPhysicalModel.GetScale();
-        } else
-            theTo.MakeIdentity();
-        if (theEffect->mGraphicEffect->mIntParam1 == 1) {
-            EETagPointList* theOtherTags = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 6);
-            if (theOtherTags && theOtherTags->GetNumTagPoints() != 0) {
-                EETagPointList::Scale(theFrom, theScale);
-                theOtherTags->GetTagPoint(0)->GetPoint(theFrame, theFrom, theStart);
-            }
-        } else if (theEffect->mGraphicEffect->mIntParam1 == 0 && theTags && theTags->GetNumTagPoints() != 0) {
-            EETagPointList::Scale(theFrom, theScale);
-            if (theGraphic->GetNumParts() > 0) {
-                unsigned long thePartIndex;
-                thePart.MakeIdentity();
-                if (theGraphic->FindTurretPart(theTags->GetTagPoint(thePoint)->mModel, thePartIndex) == 0)
-                    thePart.SetOrientationYPR(theUnit->mTurretAngles[thePartIndex], 0.0f, 0.0f);
-                theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, thePart, theStart);
-            } else
-                theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, theStart);
-            EETagPointList::Scale(theTo, theTargetScale);
-        } else
-            theFrom.Apply(theEffect->mUnit->mStats->mModel->mDefaultPoint, theStart);
-        if (theTarget)
-            theTo.Apply(theTargetPoint, theEnd);
-        else
-            theEnd = theTargetPoint;
-        return EeGfxTracerEnds{EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ}, EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ},
-                               theTarget != NULL};
     }
     // the tracer beam's impact effect at its target point (EEE3DTracerBeam::Step, 0xfd140)
     static int32_t TracerImpact(void* inAsk)
@@ -740,7 +510,6 @@ struct Ask {
         return true;
     }
     static void FarmSetVariant(void* inAsk, int32_t inVariant) { E(inAsk)->mUnit->mComplexUnit->mCloaked = inVariant; }
-    static bool FarmLoops(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mLoops[inIndex]; }
     static bool FarmDoppelgangerAny(void* inAsk)
     {
         EEUnit* theUnit = E(inAsk)->mUnit;
@@ -765,45 +534,6 @@ struct Ask {
     static void SetScaledModel(void* inAsk, void* inModel)
     {
         E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
-    }
-    // the smoke generators' (EEE3DSmokeGenerator::Step, 0xf9a1b): the unit's place and command; the damage smoke's
-    // (0xea75c) whole unit: its health and its tag points of kind 0 at its frame in its scaled location
-    static EeGfxSmokeUnit SmokeUnit(void* inAsk)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        EEEffect* theEffect = theAsk->mEffect;
-        EeGfxSmokeUnit theFacts = {};
-        if (theEffect->mKind == 0x2c) {
-            EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
-            theAsk->mSmokeLocation = theUnit->mPhysicalModel.GetLocation();
-            theAsk->mSmokeTags = theEffect->mUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 0);
-            theAsk->mSmokeFrame = theUnit->mPhysicalModel.GetFrame();
-            // Scale only a list that exists (a model without type-0 tag points has none).
-            if (theAsk->mSmokeTags)
-                EETagPointList::Scale(theAsk->mSmokeLocation, theUnit->mPhysicalModel.GetScale());
-            const GETransformation& theUnitLocation = theUnit->mPhysicalModel.GetLocation();
-            theFacts.has_unit = true;
-            theFacts.position = EeGe3DPoint{theUnitLocation.GetX(), theUnitLocation.GetY(), theUnitLocation.GetZ()};
-            theFacts.command = theUnit->mCommand ? (int32_t)theUnit->mCommand->mType : 0;
-            theFacts.hit_points = (int32_t)theEffect->mUnit->mHitPoints;
-            theFacts.max_hit_points = (int32_t)theEffect->mUnit->mStats->mMaxHitPoints;
-            theFacts.has_tag_points = theAsk->mSmokeTags != NULL;
-            theFacts.tag_point_count = theAsk->mSmokeTags ? (uint32_t)theAsk->mSmokeTags->mPoints.size() : 0;
-        } else if (theEffect->mUnit) {
-            GE3DPoint theLocation;
-            theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-            theFacts.has_unit = true;
-            theFacts.position = EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
-            theFacts.command = (int32_t)theEffect->mUnit->mComplexUnit->GetCommandType();
-        }
-        return theFacts;
-    }
-    static EeGe3DPoint SmokeTagPoint(void* inAsk, uint32_t inIndex)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        GE3DPoint thePoint;
-        theAsk->mSmokeTags->mPoints[inIndex]->GetPoint(theAsk->mSmokeFrame, theAsk->mSmokeLocation, thePoint);
-        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
     static int32_t SmokePlace(void* inAsk, const EeGe3DPoint* inPoint)
     {
@@ -874,50 +604,6 @@ struct Ask {
             theTransformation.SetPosition(theLocation);
         }
         theEffect->SetTransformation(theTransformation);
-    }
-    // the emitter's unit for its step (0xf6417): its death and hit points; followed (the graphic effect's flag 1), the
-    // tag point at its frame in its scaled location (turned by its turret part), else its position
-    static EeGfxEmitterUnit EmitterUnit(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEGraphicEffect* theEffectData = theEffect->mGraphicEffect;
-        EeGfxEmitterUnit theFacts = {};
-        if (theEffect->mUnit == NULL)
-            return theFacts;
-        theFacts.has_unit = true;
-        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
-        if (theUnit == NULL) {
-            theFacts.hit_points = (int32_t)theEffect->mUnit->GetHitPoints();
-            return theFacts;
-        }
-        theFacts.complex = true;
-        if (theEffectData->mFlag1) {
-            GE3DPoint theLocation;
-            GETransformation theTransformation(theUnit->mPhysicalModel.GetLocation());
-            GETransformation thePart(false);
-            EEGraphicObject* theGraphic = theEffect->mUnit->GetModel();
-            EETagPointList* theTags = theGraphic->GetTagPoints(theUnit->GetAnimation(), theEffectData->mTagPointKind);
-            uint32_t theTag = theEffect->mRecord->emitter.tag_point;
-            if (theEffectData->mTagPointKind != 0x15 && theTags) {
-                unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-                theTags->Scale(theTransformation, theUnit->mPhysicalModel.GetScale());
-                if (theGraphic->GetNumParts() > 0) {
-                    unsigned long thePartIndex;
-                    thePart.MakeIdentity();
-                    theFacts.follow_result = (int32_t)theGraphic->FindTurretPart(theTags->GetTagPoint(theTag)->mModel, thePartIndex);
-                    if (theFacts.follow_result == 0)
-                        thePart.SetOrientationYPR(theUnit->mTurretAngles[thePartIndex], 0.0f, 0.0f);
-                    theTags->GetTagPoint(theTag)->GetPoint(theFrame, theTransformation, thePart, theLocation);
-                } else
-                    theTags->GetTagPoint(theTag)->GetPoint(theFrame, theTransformation, theLocation);
-            } else
-                theTransformation.GetPosition(theLocation);
-            theFacts.location = EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
-            theFacts.transformation = *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
-        }
-        theFacts.dead = theUnit->GetCommandType() == kActionDead;
-        theFacts.hit_points = (int32_t)theUnit->GetHitPoints();
-        return theFacts;
     }
     // the emitter's animation sound at its place (its graphic effect's object, if any)
     static void EmitterSound(void* inAsk, const EeGe3DPoint* inLocation, bool inFirst)
@@ -1030,59 +716,6 @@ struct Ask {
     {
         return ee_gfx_ro_units_command_texture(inIndex);   // ee_gfx ro_units.rs (0 unit, 1 path, 2 click)
     }
-    // a random one of the unit's tag points of inKind (the unit itself without any) (EEE2DShockwave::SetUp, 0xe6259)
-    static EeGe3DPoint SpawnPoint(void* inAsk, uint32_t inKind)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GE3DPoint thePosition;
-        GETransformation theTransformation(false);
-        theTransformation = theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation();
-        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
-        EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), (long)inKind);
-        float theScale = theUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-        if (theList && theList->mPoints.size() != 0) {
-            long theIndex = UMFloatToLong(EEEffect::GetRandom() * theList->mPoints.size());
-            if (theIndex == theList->mPoints.size())
-                theIndex = theList->mPoints.size() - 1;
-            EETagPointList::Scale(theTransformation, theScale);
-            theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, thePosition);
-        } else {
-            // no tag points of the kind: at the unit itself, not at the map origin
-            thePosition = GE3DPoint(theTransformation);
-        }
-        return EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
-    }
-    // the unit's tag points of inKind at its animation: -1 without a complex unit (EEE2DImpact::PickTagPoint, 0xe158e)
-    static int32_t TagCount(void* inAsk, uint32_t inKind)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEComplexUnit* theComplex = theUnit ? theUnit->mComplexUnit : NULL;
-        if (!theComplex)
-            return -1;
-        EETagPointList* theList = theComplex->GetModel()->GetTagPoints(theComplex->GetAnimation(), (long)inKind);
-        return theList ? (int32_t)theList->mPoints.size() : 0;
-    }
-    // the tag point inIndex of inKind on the unit's current frame (EEE2DImpact::UpdatePosition, 0xe15e3: the list is
-    // not null-checked)
-    static EeGfx2DPoint TagPoint(void* inAsk, uint32_t inKind, uint32_t inIndex)
-    {
-        EeGfx2DPoint thePoint = {};
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEComplexUnit* theComplex = theUnit ? theUnit->mComplexUnit : NULL;
-        if (!theComplex)
-            return thePoint;
-        unsigned long theFrame = theComplex->mPhysicalModel.GetFrame();
-        float theScale = theComplex->mPhysicalModel.GetScale();
-        GETransformation theTransformation(theComplex->mPhysicalModel.GetLocation());
-        EETagPointList* theList = theComplex->GetModel()->GetTagPoints(theComplex->GetAnimation(), (long)inKind);
-        EETagPointList::Scale(theTransformation, theScale);
-        GE3DPoint thePosition;
-        theList->mPoints[inIndex]->GetPoint(theFrame, theTransformation, thePosition);
-        thePoint.has = true;
-        thePoint.point = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
-        return thePoint;
-    }
     // the unit's weapon tag point (ee_combat's weapon_point; EEE2DMuzzleFlash::SetUp 0xe458e: site 3, the list
     // assumed; sites 1 and 2 (the 2D projectile) test it)
     static EeGe3DPoint WeaponPoint(void* inAsk, int32_t inSite)
@@ -1115,11 +748,6 @@ struct Ask {
             theEffect->mSound->Dereference();
     }
     static bool DrawBlood(void*) { return gDrawBlood; }
-    static EeGe3DPoint DefaultPoint(void* inAsk)
-    {
-        const GE3DPoint& thePoint = E(inAsk)->mUnit->GetModel()->mDefaultPoint;
-        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
-    }
     static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
     static EeGe3DPoint Wind(void*)
     {
@@ -1190,25 +818,6 @@ struct Ask {
         const GE3DPoint& thePoint = E(inAsk)->GetUnitLocation();
         return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
-    // the vortex's: the kept object's own model and orbitals (EEE2DVortex::DrawPass5 0xe7949, Load 0xe7b50)
-    // the marching icons' (EEE2DMarchingIcons::IsIconShown 0xe3cdf, Virtual5C 0xe3d8e, Step 0xe41ef, DrawPass6 0xe3e92)
-    static EeGfxIconUnit IconUnit(void* inAsk)
-    {
-        EeGfxIconUnit theFacts = {};
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        if (!theUnit)
-            return theFacts;
-        theFacts.has_unit = true;
-        theFacts.land_building = theUnit->mUnitClass->IsLandBuilding();
-        theFacts.tile_size = theUnit->mUnitClass->mTileSize;
-        if (theUnit->mPlayer) {
-            theFacts.has_player = true;
-            theFacts.player = (uint32_t)theUnit->mPlayer->mPlayerID;
-            theFacts.x = theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX();
-            theFacts.y = theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY();
-        }
-        return theFacts;
-    }
     static bool AreaEffect(void* inAsk, int32_t inKind, float inX, float inY, uint32_t inPlayer)
     {
         return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
@@ -1247,81 +856,6 @@ struct Ask {
         thePoint.has = true;
         thePoint.point = EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
         return thePoint;
-    }
-    // the light glow's (EEE2DLightGlow::SetUp 0xe2067, Step 0xe25dc, PlaceGlows 0xe266f): the unit's light tags at its
-    // animation (the first without a complex unit), kept for their names and points
-    static EeGfxGlowSetUp GlowSetUp(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        EETagPointList* theTags;
-        GE3DPoint thePosition;
-        if (theComplex != NULL) {
-            theTags = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0xd);
-            const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
-            thePosition = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-        } else {
-            theTags = theUnit->GetModel()->GetTagPoints(0, 0xd);
-            thePosition = EETileCentre(theUnit);
-        }
-        static_cast<Ask*>(inAsk)->mTags = theTags;
-        EeGfxGlowSetUp theSetUp = {theTags != NULL ? (uint32_t)theTags->GetNumTagPoints() : 0u,
-                                   EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ}};
-        return theSetUp;
-    }
-    static uint32_t GlowTagName(void* inAsk, uint32_t inIndex, uint8_t* outName, uint32_t inCapacity)
-    {
-        EETagPoint* thePoint = static_cast<Ask*>(inAsk)->mTags->mPoints[inIndex];
-        UString theName = thePoint->mModel->GetTagPointName(thePoint->mIndex);
-        uint32_t theLength = (uint32_t)theName.GetLength();
-        memcpy(outName, (const char*)theName, theLength < inCapacity ? theLength : inCapacity);
-        return theLength;
-    }
-    // the placing's unit: hidden for another player's cloaked unit or an unfinished land building
-    static EeGfxGlowPlace GlowPlace(void* inAsk)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EeGfxGlowPlace thePlace = {true, false, {}};
-        EETagPointList* theTags;
-        float theScale;
-        GE3DPoint thePosition;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        if (theComplex != NULL) {
-            bool theCloaked = theComplex->mIsCloakable ? theComplex->mIsCloaked : false;
-            if (theCloaked && gWorld.GetCurrentPlayer() != theComplex->mPlayer)
-                thePlace.show = false;
-            if (theComplex->mUnitClass->IsLandBuilding() && !theComplex->mIsBuilt)
-                thePlace.show = false;
-            theTags = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0xd);
-            theScale = theComplex->mPhysicalModel.GetScale();
-            theAsk->mFrame = theComplex->mPhysicalModel.GetFrame();
-            theAsk->mLocation = theComplex->mPhysicalModel.GetLocation();
-            thePosition = GE3DPoint(theAsk->mLocation.GetX(), theAsk->mLocation.GetY(), theAsk->mLocation.GetZ());
-        } else {
-            EEUnitClassUpgrade* theStats = theUnit->mStats;
-            theTags = theUnit->GetModel()->GetTagPoints(0, 0xd);
-            theScale = theStats->mScale;
-            theAsk->mFrame = 0;
-            thePosition = EETileCentre(theUnit);
-            theAsk->mLocation.MakeIdentity();
-            theAsk->mLocation.SetX(thePosition.GetX());
-            theAsk->mLocation.SetY(thePosition.GetY());
-            theAsk->mLocation.SetZ(thePosition.GetZ());
-        }
-        if (theTags != NULL)
-            EETagPointList::Scale(theAsk->mLocation, theScale);
-        theAsk->mTags = theTags;
-        thePlace.has_tags = theTags != NULL;
-        thePlace.position = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
-        return thePlace;
-    }
-    static EeGe3DPoint GlowPoint(void* inAsk, uint32_t inIndex)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        GE3DPoint thePoint;
-        theAsk->mTags->mPoints[inIndex]->GetPoint(theAsk->mFrame, theAsk->mLocation, thePoint);
-        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
     static EeGfxGlowArea GlowArea(void* inAsk)
     {
@@ -1836,6 +1370,48 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
     return theFacts;
 }
 
+// the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#endif
+
+// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
+template <class Derived, class Base> static uint64_t EEBaseOffset()
+{
+    Derived* theObject = reinterpret_cast<Derived*>(static_cast<uintptr_t>(0x10000));
+    return reinterpret_cast<uintptr_t>(static_cast<Base*>(theObject)) - 0x10000;
+}
+
+// The members ee_gfx effect_reads.rs reads in place (the graphic objects, the graphic effects' records, the complex
+// units' physical models and turret angles), registered before the first effect's call
+void EEGfxObjectLayoutRegister()
+{
+    static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "a vector is three words");
+    EeGfxObjectLayout theLayout = {};
+    theLayout.size = sizeof(EeGfxObjectLayout);
+    theLayout.gobj_fields = EEBaseOffset<EEGraphicObject, EeDataGraphicObjectFields>();
+    theLayout.gobj_models = offsetof(EEGraphicObject, mModels);
+    theLayout.gobj_textures = offsetof(EEGraphicObject, mTextures);
+    theLayout.gobj_tag_points = offsetof(EEGraphicObject, mTagPoints);
+    theLayout.gobj_tags = offsetof(EEGraphicObject, mTags);
+    theLayout.gobj_model = offsetof(EEGraphicObject, mModel);
+    theLayout.gobj_default_point = offsetof(EEGraphicObject, mDefaultPoint);
+    theLayout.gobj_top_point = offsetof(EEGraphicObject, mTopPoint);
+    theLayout.gobj_turret_parts = offsetof(EEGraphicObject, mTurretParts);
+    theLayout.gobj_orbitals = offsetof(EEGraphicObject, mOrbitals);
+    theLayout.turret_part_model = offsetof(EETurretPart, mModel);
+    theLayout.orbital_model = offsetof(EEOrbital, mModel);
+    theLayout.orbital_speed = offsetof(EEOrbital, mSpeed);
+    theLayout.orbital_angle = offsetof(EEOrbital, mAngle);
+    theLayout.geffect_fields = EEBaseOffset<EEGraphicEffect, EeDataGraphicEffectFields>();
+    theLayout.geffect_object = offsetof(EEGraphicEffect, mGraphicObject);
+    theLayout.complex_scale = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mScale);
+    theLayout.complex_frame = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame);
+    theLayout.complex_turret_angles = offsetof(EEComplexUnit, mTurretAngles);
+    theLayout.stats_model = offsetof(EEUnitClassUpgrade, mModel);
+    ee_gfx_object_layout_set(&theLayout);
+}
+
 // the effect's unit for the world views (ee_gfx effect_views.rs; 0 while mUnit holds a saved id) and the current player
 static uint64_t EEEffectUnit(const EEEffect* inEffect)
 {
@@ -1852,46 +1428,45 @@ static uint64_t EEEffectPlayer()
 long EEEffect::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
                     unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
 {
+    static const bool sLayout = (EEGfxObjectLayoutRegister(), true);   // effect_reads.rs' offsets, once
+    (void)sLayout;
     Ask theAsk;
     theAsk.mEffect = this;
     theAsk.mQueues = inQueues;
     theAsk.mOp = inOp;
     theAsk.mArg = inArg;
+    EeGfxEffectRefs theRefs = {this->mRecord, (uint64_t)(uintptr_t)this->mGraphicEffect,
+                               reinterpret_cast<const uint64_t*>(&this->mGraphicObject),
+                               reinterpret_cast<const uint64_t*>(&this->mUnitModel),
+                               reinterpret_cast<const uint64_t*>(&this->mTarget), Ask::UnitGraphic};
+    static_assert(sizeof(EEGraphicObject*) == sizeof(uint64_t) && sizeof(EEUnit*) == sizeof(uint64_t), "the refs' words");
     if (this->mIs2D) {
-        EeGfxEffect2DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), Ask::BaseQueue2D, Ask::Push, Ask::OwnMedia, Ask::Frames, Ask::MoveToPoint,
-                                     Ask::PlaneModel, Ask::ConfirmGoal,
-                                     Ask::ConfirmUnit, Ask::TerrainZ, Ask::CommandTexture,
-                                     Ask::SpawnPoint, Ask::Media, Ask::TextureAt, Ask::TagCount, Ask::TagPoint,
-                                     Ask::WeaponPoint, Ask::PartSound, Ask::DrawBlood, Ask::DefaultPoint,
-                                     Ask::TileBlocked, Ask::Wind, Ask::CreateParts, Ask::PartCount,
+        EeGfxEffect2DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), theRefs, Ask::BaseQueue2D, Ask::Push,
+                                     Ask::OwnMedia, Ask::MoveToPoint, Ask::PlaneModel, Ask::ConfirmGoal, Ask::ConfirmUnit,
+                                     Ask::TerrainZ, Ask::CommandTexture, Ask::Media, Ask::WeaponPoint, Ask::PartSound,
+                                     Ask::DrawBlood, Ask::TileBlocked, Ask::Wind, Ask::CreateParts, Ask::PartCount,
                                      Ask::Part, Ask::SetPart, Ask::PartFrames, Ask::PartTexture, Ask::PartsSnapshot,
-                                     Ask::PartFollow, Ask::UnitPoint, Ask::Model, Ask::OrbitalCount,
-                                     Ask::Orbital, Ask::IconUnit, Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects,
-                                     Ask::IconsSelected, Ask::GhostUnits, Ask::GroundAt, Ask::GlowSetUp,
-                                     Ask::GlowTagName, Ask::GlowPlace, Ask::GlowPoint, Ask::GlowArea, Ask::GlowRows,
-                                     Ask::PositionTick, Ask::ParticleGround};
+                                     Ask::PartFollow, Ask::UnitPoint, Ask::AreaEffect, Ask::AreaEffects,
+                                     Ask::SetAreaEffects, Ask::IconsSelected, Ask::GhostUnits, Ask::GroundAt,
+                                     Ask::GlowArea, Ask::GlowRows, Ask::PositionTick, Ask::ParticleGround};
         if (inFile != NULL)
             return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
                                         &theHost);
         EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
         return ee_gfx_effect2d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
     }
-    EeGfxEffect3DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::PlaceLinked,
-                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
-                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
-                                 Ask::Spawn, Ask::TextureAt, Ask::TerrainZ, Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
-                                 Ask::GateOpen, Ask::VentLists, Ask::VentCount,
-                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::QueueScreen,
-                                 Ask::TracerEnds, Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
-                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
-                                 Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel,
-                                 Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace, kStormHost,
-                                 Ask::RainMedia, Ask::RainSounds, Ask::ParticleTick, Ask::ParticleGround,
-                                 Ask::EffectDuration, Ask::EmitterPlace, Ask::EmitterUnit, Ask::EmitterSound,
-                                 Ask::EmitterLine, Ask::EffectQueue, Ask::MarchMedia, Ask::MarchEnds, Ask::MarchSetUnit,
-                                 Ask::MarchUnitID};
+    EeGfxEffect3DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), theRefs, Ask::UnitPosition, Ask::MoveTo,
+                                 Ask::Line, Ask::BaseQueue, Ask::Push, Ask::Media, Ask::ShotHit, Ask::PlaceLinked,
+                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::AnimationSound, Ask::Spawn,
+                                 Ask::TerrainZ, Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
+                                 Ask::GateOpen, Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::QueueScreen,
+                                 Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget, Ask::TracerTargetID,
+                                 Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmTerrain, Ask::FarmDropSite,
+                                 Ask::FarmSetVariant, Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
+                                 Ask::SetScaledModel, Ask::GroundPoint, Ask::SmokePlace, kStormHost, Ask::RainMedia,
+                                 Ask::RainSounds, Ask::ParticleTick, Ask::ParticleGround, Ask::EffectDuration,
+                                 Ask::EmitterPlace, Ask::EmitterSound, Ask::EmitterLine, Ask::EffectQueue,
+                                 Ask::MarchMedia, Ask::MarchEnds, Ask::MarchSetUnit, Ask::MarchUnitID};
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
