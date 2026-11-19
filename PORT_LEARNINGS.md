@@ -31685,3 +31685,94 @@ EE-SIM builds no form: the oracle is unchanged by construction.
 ### Left
 
 docs/progress/ui-cluster.md ("Left").
+
+## The UI cluster lane, round 2: EEUserInterface and EEUIManager's members as Rust records, the UI hosts' cases on them and on the toolkit, the editor's undo, redo and trigger jumps in Rust (ee_game ui_objects.rs, ui_direct.rs; branch rust-uicluster2, 2026-11-18)
+
+The brief: the UI cluster by whole classes (the UI manager, the main game form, the UI thread object, the HUD's forms
+and controls, the UI events, the scenario editor), 3,000 net C++ lines. **Net C++ -1,024** (-1,030 and +6 for the button class name) (commits below): short
+of the target again. What moved, and why the rest did not, under "The measure".
+
+### The measure
+
+The lane's C++ (about 37k lines) has three parts. The host cases (about a thousand `case`s, one per call the Rust
+makes into C++): their share that calls Rust objects (the toolkit, the strings, the sound manager, the threads)
+went in round 1 and this round. The class shells: every game form and control is a C++ subclass of a toolkit class
+for its virtual overrides, its constructor and its C++ sub-objects. The C++ logic never ported (about 9k lines in
+functions that call no Rust: the paint areas, the tech lists, the saved groups, the map backgrounds, the status
+bar, the editor's control factories, the area effects).
+
+A whole-class delete of a form or control needs what the lane does not have yet: a generic C++ shell per toolkit
+base (its virtuals calling one Rust dispatcher by kind), the classes' C++ sub-objects made from Rust, and the game
+calls of their hosts either Rust (other lanes' objects: the units, the graphics thread, gMouse and gViewport, the
+communications, the scenario manager) or narrow host functions. The yield of a case answered in Rust is two to four
+lines; a file deleted whole also takes its includes and header (the undo and redo buttons: 151 lines for 23).
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 565f42ac3 | the readers of `gUIManager->mMainGameForm` / `mScenarioEditorForm` through the typed accessors (192 sites, 46 files; 17 of other lanes) | 0 |
+| 9b00fdd04 | `EEUserInterface` the record `EeScreensUserInterfaceFields` alone (constructor, destructor, posts in Rust; the forwarding members gone), `EEUIManager : EeScreensUiManagerFields`; the UI hosts' cases on the records, the queue, the waits, the editor members and 15 of `EEScreens.cpp`'s in Rust (`ui_objects.rs`, `ui_objects_ffi.rs`) | -501 |
+| 07dbd18fe | dead declarations: 59 unused control and form index enumerators (ee/EEUIManager.h), the editor form's empty `FnE123D` | -64 |
+| 7d6c9c414 | the editor's Undo and Redo: their actions `EEARust` kinds (`game_actions.rs`), the two button classes one local class; `EEUIFSEUndo`/`Redo` .cpp and .h gone | -136 |
+| 169f3f5c2 | the main form's and the UI messages' cases on the records, the toolkit, the sound manager and the strings (`ui_direct.rs`): `gUnitSelected` a Rust static, `ShowEpochName` and `ShowLoadingText` whole, `SetStatusText` gone | -59 |
+| fe8fc173f | the trigger screen's combo boxes' right-click jump decided in Rust (`editor_trigger.rs trigger_jump`), one C++ helper for both combo classes | -153 |
+| 895575c61 | four main game events' cases on the main form's toolkit objects (`ui_direct.rs screens`) | -18 |
+| 6b9f63d8a | the message box's two button classes one; its empty `DrawBackground` override gone (a later commit keeps the No/Cancel class's name as an empty subclass: the civilization gate prints it) | -72 |
+| 7d4aa977d | the editor's three area-or-object combo fills one | -27 |
+| 90d2508a9 | strip_markers on the merged tree | 0 |
+
+- **Records with untyped form pointers.** `EeScreensUiManagerFields` holds the main game and editor forms as
+  `void*` (cbindgen cannot name the C++ classes), so the 192 readers of `gUIManager->mMainGameForm` /
+  `mScenarioEditorForm` read through the typed `GetMainGameForm()` / `GetScenarioEditorForm()` first (a separate,
+  mechanical commit; 17 files of other lanes). The two other lanes' readers of `gUserInterface->mThread` post
+  through `GetThread()`.
+- **A class with no vtable.** `EEUserInterface` derives from its record alone; `new EEUserInterface` (Empire
+  Earth.cpp) and `delete` still work, the constructor and destructor are inline calls into Rust. Its posts are one
+  inline line each over `ee_screens_ui_post`; a TSThread* is its Rust thread (`ee_ts_thread_post`).
+- **Mixed line endings.** EEUIFMainGame.cpp has CRLF and LF lines; a case spanning both did not match a pattern
+  written with `\n`. Edits of these files go through `\r?\n` patterns (or normalise and restore).
+- **units.txt.** A deleted unit must leave `link/exe/units.txt` (the exe's unit list by address), or the build
+  stops with "unit ... does not exist".
+- **clippy.** A `#[cfg(not(test))]` adapter's helpers in a tested module need `cfg_attr(test, allow(dead_code))`;
+  `fraction.clamp` for a manual clamp; `1..=3` for an OR of three literals; `i64::from(unsafe { .. })` where a
+  cast of an `unsafe` block needs parentheses.
+
+### Checks
+
+- The round's start test-profile exe (`build/uc2/pre`) and its three harness runs with the 2D draw digest: the tour
+  (`--input-check --view-check --seed 7`), the orders game (`--box-select --orders --scroll-check --seed 7`), the
+  editor exercise. After each step the same runs (`build/uc2/step.sh`) and `masked.py` (the commands one digest has
+  with the vertex alpha masked): the build label, the loading screen's texts and progress bars at other moments, the
+  live game's resource counts, map rhombi and lines; in one orders run of three the chat's "running out of time to
+  choose a Civilization" warning (game time ~90 s) fell after the run's end (its last sample 81 s).
+- Window captures read: the HUD with the epoch title ("Prehistoric Age", ShowEpochName's Rust), the selection's
+  panels, the main menu.
+
+### Gates
+
+On the round's final tree (origin/rust 2bccb3e94 merged: already up to date; strip_markers removed two trailing
+address comments, committed; `rust_build.py header` and `rust_includes.py` changed nothing): both builds `--sim` 0/0
+(EE-AOC 623, EE-SIM 624 inputs) and the test profile 0/0; the oracle seeds 2-7 identical to the reference; the
+editor gate PASS 14,448; scenario_check 27/27; the tour (`RESULT PASS tour`, `VIEW CHECK PASS`, F3 ok), the orders
+game (`BOX SELECT PASS`, `ORDERS PASS`, `SCROLL CHECK PASS`, `RESULT PASS random-game`), the editor exercise (`RESULT
+PASS editor`), each digest against the round's start's: the build label, the loading screen's texts at other
+moments, a resource count; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 43, 43], alive [2, 3],
+classic_lua x 2; lan-game). The civilization gate failed there once: it prints the controls' classes, and the message
+box's buttons had become one class; the second keeps its name now (`EEUIFEBCancel : EEUIFEBOK`), and on that tree
+the builds 0/0, the civilization gate PASS 4,062, the editor gate PASS 14,448, the Rust gate PASS (4,651 tests, clippy, rustfmt, headers). The Rust
+gate's first run on the final tree failed in `ee_base fs::golden_spec_replays` (an `rmdir` the system refused once:
+not this lane's code; it passed on the next runs). Per step: the build, the Rust gate (4,649..4,651 tests), the
+oracle seeds 2-3 identical, the three harness runs with digests. Not run: the sim_capture profiles (no simulation
+code changed: every move is UI-thread code EE-SIM never builds; the oracle confirms).
+
+### What only a person reaches
+
+The trigger screen's combo boxes' right click (the jump), the Undo and Redo buttons (the editor exercise opens the
+editor; sim_editor drives the undo list through EESimEditor, not the buttons), the message box's buttons (a
+question), the IME composition (an input method), the lag status (a multiplayer game), the load percentage message
+(several humans). EE-SIM builds no form: the oracle is unchanged by construction.
+
+### Left
+
+docs/progress/ui-cluster.md ("Left").
