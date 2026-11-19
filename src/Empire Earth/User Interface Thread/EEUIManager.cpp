@@ -40,7 +40,6 @@
 #include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEUIBSavedGroup.h"
 #include <locale.h>
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
@@ -261,8 +260,18 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
             theForm, inTable.GetFormIndex(), inTable.GetBorderThickness());
         break;
     case kDbControlSavedGroup:
-        theControl = new EEUIBSavedGroup(inTable, theRectangle, theForm);
+    {   // EEUIBSavedGroup (ee_game shells_saved.rs): the table's bitmaps
+        UIButton* theButton = new EEUIShellButton(EE_SCREENS_SK_SAVED_GROUP, {}, inTable.GetID(), NULL, NULL, NULL,
+                                                  theRectangle, theForm, inTable.GetFormIndex(), 0);
+        GEBitmap* theBitmap = inTable.CreateNormalBitmap(theForm->GetManager(), theRectangle);
+        theButton->SetNormalBitmap(theBitmap);
+        theBitmap->Dereference();
+        theBitmap = inTable.CreatePressedBitmap(theForm->GetManager(), theRectangle);
+        theButton->SetPressedBitmap(theBitmap);
+        theBitmap->Dereference();
+        theControl = theButton;
         break;
+    }
     case kDbControlUnitIconBar:
         theControl = new EEUICUnitIconBar(inTable, theRectangle, theForm);
         break;

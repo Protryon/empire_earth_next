@@ -159,7 +159,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
-255c2a 25619b Empire Earth/User Interface Thread/EEUIBSavedGroup.cpp
 25619b 25643d Empire Earth/User Interface Thread/EEUIBuildGate.cpp
 25643d 256845 Empire Earth/User Interface Thread/EEUIBuildWall.cpp
 256845 257223 Empire Earth/User Interface Thread/EEUIBUpgrade.cpp

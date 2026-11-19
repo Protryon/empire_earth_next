@@ -99,7 +99,7 @@
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUIBSavedGroup.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEMiniMap.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
@@ -445,7 +445,7 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         thePlayer->mSavedGroups.Reset(0x14, true);
         break;
     case EE_SCREENS_OP_HK_GROUP_BUTTON:
-        static_cast<EEUIBSavedGroup*>(inForm->GetControl(inA))->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
+        EEUIShell::Op(inForm->GetControl(inA), EE_SCREENS_SKOP_SG_SET_UNIT, (int64_t)thePlayer->mSelectedGroup->GetFirstUnit());
         break;
     case EE_SCREENS_GAME_HK_PLAYER_EVENT: {
         EEAction* theAction = new EEAPlayerEvent;

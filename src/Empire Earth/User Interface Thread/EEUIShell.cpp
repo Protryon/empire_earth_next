@@ -61,6 +61,16 @@
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "rust/render/ge.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
+#include "ee/EEButtonObject.h"
+#include "lle/NEMessage.h"
+#include "lle/NESynchronousCommunications.h"
+#include "ee/EEMessage.h"
+#include "ee/EEMessageID.h"
+#include "ee/EECommunications.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -530,6 +540,57 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         return ee_ge_draw2d_fill(c->GetRasterizer(), c->GetScreenIndex(),
                                  reinterpret_cast<const EeGeRectangle*>(&c->GetCopiedDrawRectangle()), f, f[3]);
     case EE_SCREENS_SH_CLOSE_FORM: gUserInterface->CloseForm(reinterpret_cast<UIForm*>(a)); break;
+    // the saved-group buttons' (shells_saved.rs)
+    case EE_SCREENS_SH_SG_NEW_PORTRAIT: return (int64_t) new GEBitmap;
+    case EE_SCREENS_SH_SG_SOUND: {
+        EESoundObject* theSound = EESoundObject::Get(a == 0 ? kSoundButton1 : kSoundButton2);
+        if (theSound == NULL)
+            return 0;
+        if (b != 0) {
+            theSound->UnloadMedia();
+            return 0;
+        }
+        theSound->LoadMedia();
+        return (int64_t)theSound->GetSampleID();
+    }
+    case EE_SCREENS_SH_SG_PLAY: gSoundManager->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL); break;
+    case EE_SCREENS_SH_SG_PLAYER: return (int64_t)gWorld.GetCurrentPlayer();
+    case EE_SCREENS_SH_SG_FIRST_UNIT: {
+        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+        if (b == 0)
+            return (int64_t)thePlayer->mSelectedGroup->GetFirstUnit();
+        EEGroup* theGroup = thePlayer->mGroups[a];
+        return theGroup && theGroup->GetNumUnits() > 0 ? (int64_t)theGroup->GetFirstUnit() : 0;
+    }
+    case EE_SCREENS_SH_SG_SEND: {
+        unsigned long theGroup = (unsigned long)(b & 0xff);
+        EEMessage* theMessage = a == 0   ? new EEMRecord(kMessageSavedGroupSelect, {theGroup, (b >> 8) != 0})
+                              : a == 1   ? new EEMRecord(kMessageSavedGroupAddSelection, {theGroup})
+                              : a == 2   ? new EEMRecord(kMessageSavedGroupCreate, {theGroup})
+                                         : new EEMRecord(kMessageSavedGroupClear, {theGroup});
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        break;
+    }
+    case EE_SCREENS_SH_SG_SHIFT: return UIControl::ShiftKeyPressed();
+    case EE_SCREENS_SH_SG_INDEX: return (int64_t)c->GetIndex();
+    case EE_SCREENS_SH_SG_FACE: {
+        EEButtonObject* theButton = reinterpret_cast<EEComplexUnit*>(a)->mStats->mButton;
+        theButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(b), c->GetRectangle(), gScreenIndex);
+        f[0] = theButton->GetCellU();
+        f[1] = theButton->GetCellV();
+        return (int64_t)theButton->GetTexture();
+    }
+    case EE_SCREENS_SH_SG_TEXTURE_REF:
+        if (a != 0) {
+            if (b != 0) reinterpret_cast<GETexture*>(a)->Reference();
+            else reinterpret_cast<GETexture*>(a)->Dereference();
+        }
+        break;
+    case EE_SCREENS_SH_SG_SET_TEXTURE: reinterpret_cast<GEBitmap*>(a)->SetTexture(reinterpret_cast<GETexture*>(b), c->GetScreenIndex()); break;
+    case EE_SCREENS_SH_SG_DRAW:
+        reinterpret_cast<GEBitmap*>(a)->SetLocation(static_cast<UIButton*>(c)->GetBitmapLocation());
+        c->GetRasterizer()->Draw(reinterpret_cast<GEBitmap*>(a), c->GetScreenIndex());
+        break;
     case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)reinterpret_cast<EEUIFSETerrain*>(a)->mRust;
     case EE_SCREENS_SH_SLIDER_OF: {
         UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));

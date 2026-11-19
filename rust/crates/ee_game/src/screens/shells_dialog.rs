@@ -198,13 +198,13 @@ impl Kind for DialogButton {
     }
 }
 
-pub(crate) fn make(kind: u32, _args: &[i64]) -> Option<Box<dyn Kind>> {
+pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
     Some(match kind {
         #[cfg(not(test))]
         EE_SCREENS_SK_DIALOG => Box::new(Dialog::new(CppDialog)),
         EE_SCREENS_SK_DIALOG_OK => Box::new(DialogButton::new(false)),
         EE_SCREENS_SK_DIALOG_CANCEL => Box::new(DialogButton::new(true)),
-        _ => return None,
+        _ => return crate::screens::shells_saved::make(kind, args),
     })
 }
 
