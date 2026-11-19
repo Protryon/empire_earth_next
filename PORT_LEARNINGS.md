@@ -32555,3 +32555,94 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+
+## The units' state lane, round 1: the unit saves' reads in place, EEAirTrafficControl and EEPPatrolGroup deleted, EEActiveGroup's record (ee_sim::units unit_save_views.rs, atc_views.rs, ag_fields.rs; branch rust-unitstate1, 2026-11-19)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 283cc3d35 | the unit save's ids, maxima, floats, vector and contact sections and the loads' plain stores in Rust over the views (`ViewSaveHost`, `ViewLoadHost`); the layout's pointer members, vectors, contact list, collision tile, scale, frame, effect handles, class projectile and effect pointers | +44 -145, net -101 |
+| 21e43a611 | `EEAirTrafficControl` and `EEPPatrolGroup` deleted: `EeUnitsAtc` and `EeUnitsPatrolGroup` are the objects their holders keep, the members `ee_units_atc_*` / `ee_units_pg_*`; the ATC's plain reads on the views | +175 -504, net -329 |
+| 32c0609d9 | `EEActiveGroup`'s plain members as the Rust record `EeUnitsActiveGroupFields` (its second base); the group host's record, member, unit store and tile cases in place | +8 -65, net -57 |
+
+| 4efa9f10a | EETown.h, EEUnitGoal.h include rust/sim/units.h for the patrol group's type (tools/rust_includes.py, after the merge) | +2, net +2 |
+
+Round: -485 net C++ lines (target 3,000; see "The scope" below: the brief's largest item was already done).
+
+- **The scope, measured first.** The brief's first item (convert ~300 cross-lane readers of `EEUnitClass`'s members to
+  accessors, then make the class's data a Rust record and delete the hierarchy's data-only classes) was already
+  done in substance: R5b.4 rounds 32-35 collapsed the 36 `EEUC*` classes into one `EEUnitClass`, and its plain
+  members are the Rust record `EeUnitsUnitClassFields`, a base filled by the constructor. The ~1,100
+  `->mUnitClass->mX` reads across the lanes are record reads in place already; accessors would churn ~30 files of
+  other lanes for 0 net lines and delete nothing. What keeps the class alive is its method bodies (the behaviour
+  lane's) and its non-record members (29 effect pointers, sounds, models, the AI script handle, the projectile and
+  death classes). The lead agreed to skip the sweep; the layout now names the projectile class and the 29 effect
+  pointers (`ClassView::projectile_class_handle`, `effect_handle`) for the bodies that move next.
+- **Saves through the views.** The save's queries and sections that are one member (or a member of a pointed-to
+  object) are answered by a host in front of the C++ callback, so unit_save.rs' sequence is unchanged and its mock
+  tests still drive it. The ids keep the original's types: an `unsigned long` id (`(unsigned long)-1` for none)
+  widened to the io's i64, the effect handles as `(long)` of their `uint32_t`. The loads' stores keep both pointer
+  conversions the C++ used: `reinterpret_cast<T*>(theValue)` (zero-extended) for most, `USavedPointer` (the low 32
+  bits sign-extended) for the patrol group, owner, mine and holder. The deques (`mCitizenBuildQueue`, `mWaypoints`,
+  `mIgnoredTargets`) stay C++: their layout differs between MSVC's STL and libc++, so a view would need per-library
+  code; they move when the members become Rust containers.
+- **Behaviour table by the db list.** `EEUnitBehavior::sTable` is an `EEDbList` over ee_data's list, not an
+  array: the save's behaviour index and the default behaviour read `ee_data_list_get(UnitBehaviors, i)`.
+- **Classes deleted by typedef.** `EEPPatrolGroup` became `typedef struct EeUnitsPatrolGroup EEPPatrolGroup`, so
+  the 39 declarations holding one did not change; only member uses did. Its reference count copies
+  `UReferenceCounter` (1 when made; the last `Dereference` runs the destructor's body, then frees): the body's
+  `SetPatrolGroup(NULL)` on each point gives back a reference to the group being destroyed, which in the original
+  wrapped the `unsigned long` count past 0 and freed nothing; the Rust count wraps the same way (tested).
+- **One host per object kind.** The ATC's entry points use the host `ee_units_atc_new` registers once
+  (`OnceLock`), instead of a context and callback per call; `Dump` alone passes its `FILE*` as the context.
+- **Category values.** `kUnitCategoryAirplane` is 3 and `kUnitCategoryPlanetSpaceship` 0x22 (ee/EEUnitClassIDs.h):
+  check every `kUnitCategory*` against the header when porting a test, the names do not suggest the values.
+- **Save bytes are not repeatable.** A byte check of the saves was tried as an extra gate: two runs of the same
+  pre-change EE-SIM (`--save-at`, same seeds and times) write different files. The header carries the wall-clock
+  date (fixed length), and the payload differs in length too (a few dozen bytes in 190 KB) after a common prefix
+  of ~33 KB, so something in the saved state depends on the run (not found this round: the payload is not a plain
+  zlib stream, and the save has no dumper). Until that is found the save gate stays "load equals continue"
+  (`sim_oracle.py saveload`), which passed. A byte-exact gate needs the cause first (timestamps, uninitialised
+  padding, or wall-clock state in some section).
+- **Mechanical edits in other lanes' files** (in 21e43a611): AI Thread/EETown.cpp and include/ee/EETown.h,
+  Communications/EEMessage.cpp, Empire Earth/EESim.cpp, EETestFixture.cpp, EEWorld.cpp, Physics Thread/EEPhysics.cpp,
+  Player/EEPlayer.cpp and include/ee/EEPlayer.h, Scenario Editor Actions/EESEARust.cpp, Scenario Manager/EESMEffect.cpp,
+  include/ee/EEUnitGoal.h, EEUnit.h, and the behaviour lane's Units bodies (EEActiveGroup, EEActiveGroupSweep,
+  EEComplexDoppelganger, EEComplexUnit, EEUGRust, EEUnitAI, EEUnitClass, EEUnitClassAir, EEUnitClassBuildings,
+  EEUnitClassTransports, EEUnitHost, EEUnitUpdate): member -> entry point only. They could not be separate commits:
+  the classes' deletion and their callers' conversion build only together.
+- **What exercises what.** EE-SIM runs the ATC (the space and transport profiles' aircraft and carriers), the patrol
+  groups (the towns' patrols in every game, the groups profile's patrol commands), the save views (saveload), the
+  active group record (every group command). The dump (`ee_units_atc_dump`) is reached only by an out-of-sync
+  report; the LAN game (gates.sh) is the only run of the messages' patrol selection (EEMessage.cpp).
+
+### Gates
+
+Per commit before the merge: both builds (`--sim`) 0/0 and the oracle seeds 2-3 identical after each code commit;
+283cc3d35: the saveload seeds 2-3 at 600/1350 s PASS 4/4; 21e43a611: the Rust gate PASS (4,777 tests) and the
+captures at seeds 2-3 space 210, transport 185, groups 2, units 175, oracle 212, placement 4 digests PASS;
+32c0609d9: the Rust gate PASS (4,779 tests) and the captures groups 2 and units 175 PASS.
+
+Merged with origin/rust a05da1364 (UI cluster round 3, WONLobby round 19) cleanly; strip_markers changed nothing, the
+headers were current, `rust_includes.py` added two includes (4efa9f10a). On that result: both builds 0/0 (EE-AOC
+577, EE-SIM 578 inputs) and the test profile 0/0; the oracle seeds 2-7 identical; the Rust gate PASS (4,799 tests);
+every capture profile at seeds 2-3 PASS: oracle 212, late 214, space 210, calamity 222, units 175, groups 2,
+placement 4, transport 185, app 26, effects 6, missile 22, scenario 43 digests; the plain saveload (seeds 2-7 at
+600/1350/2100 s) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+tools/saveload_expect.txt`) `saveload expect: PASS` (oracle, plains, islands, highlands, mediterranean, medium, late,
+space 4/4, calamity 3/4, next 2/4, as before); `scenario_check.py` 27/27; the editor gate PASS (14,448 lines); the
+civilization builder gate PASS (4,062 lines); gates.sh GATES PASS (`RESULT PASS tour`; ai-game time-cap, units
+[4, 38, 39], alive [2, 3], engines classic_lua x2; `RESULT PASS lan-game`); the tour with `--box-select --orders`
+RESULT PASS (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; patrol skipped: no button).
+
+### What is left
+
+- `EEGroup`, `EESelectedGroup`, `EEActiveGroup` as classes: their bodies are mostly C++ still (EEGroup.cpp's path
+  requests and maps, the selection's highlight and saved groups, the active group's path requests and the
+  formation calls), and ~250 call sites in the UI, player, scenario and message files use their virtuals. The next
+  step is EEGroup's plain bodies (Contains, the finds, GetBounds, the counts) over `GroupView`, then the path request
+  map as a Rust object.
+- The unit save's deques and goal queues (above), the class's media and effect members as Rust handles (the
+  graphics lane's effects are Rust objects now; the class still holds `EEGraphicEffect*`).
+- Map and random map: the map's plain members are Rust records already (`EeUnitsRtsMapFields`, `EeUnitsMapFields`,
+  the effect and unit regions as Rust handles); what is C++ is the terrain mesh and the vertex-colour vectors (the
+  graphics lane's) and the random map's generator list. Not started this round.
