@@ -25,6 +25,7 @@
 
 pub mod actions;
 pub mod ag;
+pub mod ag_fields;
 pub mod ag_host;
 pub mod ai;
 pub mod animate;

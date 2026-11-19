@@ -209,6 +209,10 @@ pub struct EeWorldLayout {
     /// `EEGraphicEffect*` members, `GetEffects()`)
     pub class_projectile_class: u64,
     pub class_effects: u64,
+    /// `EeUnitsActiveGroupFields` in `EEActiveGroup` (its second base) and `EEActiveGroup::mGoal` (an
+    /// `EEUnitGoal*`)
+    pub active_group_fields: u64,
+    pub active_group_goal: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();
