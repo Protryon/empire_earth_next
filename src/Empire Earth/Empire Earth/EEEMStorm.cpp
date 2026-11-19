@@ -41,7 +41,6 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarGraphStorage.h"
 #include "ee/EEAIAStarView.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
