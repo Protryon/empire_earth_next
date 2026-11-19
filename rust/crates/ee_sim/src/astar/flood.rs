@@ -8,10 +8,11 @@
 
 use crate::astar::area_goals::{self, EeAStarPathAreaFill, EeAStarPathSectorFill};
 use crate::astar::continent_grid::EePoint;
-use crate::astar::ffi::{graph_view, view, CView, EeAStarNodeView, EeAStarViewCallbacks};
+use crate::astar::ffi::{graph_view, CView, EeAStarNodeView, EeAStarViewCallbacks};
 use crate::astar::goals::{self, EeAStarChokeFill, EeAStarContinentFill, EeAStarHillFill};
 use crate::astar::graph::{self, GraphHost, GraphKind, GraphList, GraphMachineState, GraphNodeView, GraphStorage, Obj};
 use crate::astar::machine::{self, Host, MachineState};
+use crate::astar::path_search::capture_storage;
 use crate::astar::search_note::*;
 use crate::astar::storage::{AStarRect, GridKind, List, Storage, StorageKind};
 use std::ffi::c_void;
@@ -389,27 +390,6 @@ impl EeAStarFlood {
         self.serials.sort_unstable();
         self.serials.dedup();
         &self.serials
-    }
-}
-
-/// The storage as `CaptureOutputs` writes it: the current and the path's node, the bounds, the lists' digests.
-fn capture_storage(cap: &mut CaptureRun, st: &Storage) {
-    for which in 0..2 {
-        let node = if which == 0 { st.current } else { st.path };
-        cap.bool(node != crate::astar::storage::NIL);
-        if node != crate::astar::storage::NIL {
-            cap.node(&view(st, node));
-        }
-    }
-    let b = st.bounds;
-    cap.i32(b.bottom);
-    cap.i32(b.left);
-    cap.i32(b.right);
-    cap.i32(b.top);
-    cap.bool(st.has_bounds);
-    for list in [List::SortedOpen, List::FastOpen, List::FastClosed, List::OpenTable, List::ClosedTable] {
-        let nodes: Vec<EeAStarNodeView> = st.list(list).into_iter().map(|n| view(st, n)).collect();
-        cap.nodes(&nodes);
     }
 }
 
@@ -813,12 +793,134 @@ pub unsafe extern "C" fn ee_astar_number_chains(kind: u32, cb: *const EeAStarCha
     number_chains(kind, unsafe { &*cb });
 }
 
+/// The unit tests' C views (a callbacks struct whose every query panics).
+#[cfg(test)]
+pub(crate) mod test_view {
+    use crate::astar::area_goals::{EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
+    use crate::astar::ffi::EeAStarViewCallbacks;
+    use crate::astar::modifiers::{Skip, Unit};
+    use std::ffi::c_void;
+    use std::ptr;
+
+    pub(crate) extern "C" fn no_i(_: *mut c_void, _: i32, _: i32) -> i32 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_b(_: *mut c_void, _: i32, _: i32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_u16(_: *mut c_void, _: i32, _: i32) -> u16 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_choke(_: *mut c_void, _: i32, _: *mut u32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_ui(_: *mut c_void, _: Unit) -> i32 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_ub(_: *mut c_void, _: Unit) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_ut(_: *mut c_void, _: Unit, _: i32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_uxy(_: *mut c_void, _: Unit, _: i32, _: i32) -> i32 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_pass(_: *mut c_void, _: Unit, _: i32, _: i32, _: Skip) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_step(_: *mut c_void, _: Unit, _: bool, _: i32, _: i32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_rand(_: *mut c_void, _: f32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_probe(_: *mut c_void, _: Unit, _: u16, _: i32, _: i32) -> bool {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_enter(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: bool) -> bool {
+        unreachable!()
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) extern "C" fn no_cost(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: i32, _: i32, _: i32, _: i32) -> i32 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_cont(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarContinentInfo) {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_area_at(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarPathAreaInfo) {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_area(_: *mut c_void, _: u16, _: *mut EeAStarPathAreaInfo) {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_stored(_: *mut c_void, _: *const c_void, _: i32, _: i32) -> u16 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_blocker(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarBlocker) {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_owner(_: *mut c_void, _: i32, _: i32, _: i32) -> i32 {
+        unreachable!()
+    }
+    pub(crate) extern "C" fn no_wall(_: *mut c_void, _: i32, _: i32, _: i32) -> bool {
+        unreachable!()
+    }
+
+    /// A view whose every query panics; the tests set the ones their search asks.
+    pub(crate) fn callbacks() -> EeAStarViewCallbacks {
+        EeAStarViewCallbacks {
+            ctx: ptr::null_mut(),
+            has_tile: no_b,
+            terrain: no_i,
+            is_edge: no_b,
+            height_level: no_i,
+            continent_id: no_u16,
+            choke_tile: no_choke,
+            ai_value: no_i,
+            tile_flag: no_i,
+            can_move_on: no_ut,
+            are_passable: no_pass,
+            formation_rank: no_ui,
+            step_blocker: no_step,
+            unit_region_state: no_i,
+            epoch: no_ui,
+            is_alone: no_ub,
+            water_state: no_ui,
+            is_sea_going: no_ub,
+            has_hill: no_b,
+            random_at_most: no_rand,
+            crowd_cost: no_uxy,
+            is_wide: no_ub,
+            ignores_formation: no_ub,
+            rank_probe_blocked: no_probe,
+            can_enter: no_enter,
+            modifier_cost: no_cost,
+            has_units: no_b,
+            continent_at: no_cont,
+            tile_value: no_i,
+            path_area_at: no_area_at,
+            path_area: no_area,
+            stored_path_area_id: no_stored,
+            resource_kind: no_i,
+            has_blocker: no_b,
+            first_blocker_id: no_i,
+            first_blocker: no_blocker,
+            first_obstacle_id: no_i,
+            own_wall_first: no_wall,
+            area_gate_owner: no_owner,
+            sector_gate_owner: no_owner,
+            live_dock: no_b,
+            live_space_dock: no_b,
+        }
+    }
+
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::astar::goals::View;
-    use crate::astar::area_goals::{EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
-    use crate::astar::modifiers::{Skip, Unit};
     use std::cell::RefCell;
 
     /// A square map of rows of terrain digits ('0' land, '1' deep water, '9' cliff).
@@ -870,117 +972,12 @@ mod tests {
         false
     }
 
-    extern "C" fn no_i(_: *mut c_void, _: i32, _: i32) -> i32 {
-        unreachable!()
-    }
-    extern "C" fn no_b(_: *mut c_void, _: i32, _: i32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_u16(_: *mut c_void, _: i32, _: i32) -> u16 {
-        unreachable!()
-    }
-    extern "C" fn no_choke(_: *mut c_void, _: i32, _: *mut u32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_ui(_: *mut c_void, _: Unit) -> i32 {
-        unreachable!()
-    }
-    extern "C" fn no_ub(_: *mut c_void, _: Unit) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_ut(_: *mut c_void, _: Unit, _: i32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_uxy(_: *mut c_void, _: Unit, _: i32, _: i32) -> i32 {
-        unreachable!()
-    }
-    extern "C" fn no_pass(_: *mut c_void, _: Unit, _: i32, _: i32, _: Skip) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_step(_: *mut c_void, _: Unit, _: bool, _: i32, _: i32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_rand(_: *mut c_void, _: f32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_probe(_: *mut c_void, _: Unit, _: u16, _: i32, _: i32) -> bool {
-        unreachable!()
-    }
-    extern "C" fn no_enter(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: bool) -> bool {
-        unreachable!()
-    }
-    #[allow(clippy::too_many_arguments)]
-    extern "C" fn no_cost(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: i32, _: i32, _: i32, _: i32) -> i32 {
-        unreachable!()
-    }
-    extern "C" fn no_cont(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarContinentInfo) {
-        unreachable!()
-    }
-    extern "C" fn no_area_at(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarPathAreaInfo) {
-        unreachable!()
-    }
-    extern "C" fn no_area(_: *mut c_void, _: u16, _: *mut EeAStarPathAreaInfo) {
-        unreachable!()
-    }
-    extern "C" fn no_stored(_: *mut c_void, _: *const c_void, _: i32, _: i32) -> u16 {
-        unreachable!()
-    }
-    extern "C" fn no_blocker(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarBlocker) {
-        unreachable!()
-    }
-    extern "C" fn no_owner(_: *mut c_void, _: i32, _: i32, _: i32) -> i32 {
-        unreachable!()
-    }
-    extern "C" fn no_wall(_: *mut c_void, _: i32, _: i32, _: i32) -> bool {
-        unreachable!()
-    }
-
-    /// The view of the test map: the continent fill's queries; every other one is never asked.
     fn callbacks() -> EeAStarViewCallbacks {
-        EeAStarViewCallbacks {
-            ctx: ptr::null_mut(),
-            has_tile,
-            terrain,
-            is_edge,
-            height_level: no_i,
-            continent_id: no_u16,
-            choke_tile: no_choke,
-            ai_value: no_i,
-            tile_flag: no_i,
-            can_move_on: no_ut,
-            are_passable: no_pass,
-            formation_rank: no_ui,
-            step_blocker: no_step,
-            unit_region_state: no_i,
-            epoch: no_ui,
-            is_alone: no_ub,
-            water_state: no_ui,
-            is_sea_going: no_ub,
-            has_hill: no_b,
-            random_at_most: no_rand,
-            crowd_cost: no_uxy,
-            is_wide: no_ub,
-            ignores_formation: no_ub,
-            rank_probe_blocked: no_probe,
-            can_enter: no_enter,
-            modifier_cost: no_cost,
-            has_units: no_b,
-            continent_at: no_cont,
-            tile_value: no_i,
-            path_area_at: no_area_at,
-            path_area: no_area,
-            stored_path_area_id: no_stored,
-            resource_kind: no_i,
-            has_blocker: no_b,
-            first_blocker_id: no_i,
-            first_blocker: no_blocker,
-            first_obstacle_id: no_i,
-            own_wall_first: no_wall,
-            area_gate_owner: no_owner,
-            sector_gate_owner: no_owner,
-            live_dock: no_b,
-            live_space_dock: no_b,
-        }
+        let mut cb = test_view::callbacks();
+        cb.has_tile = has_tile;
+        cb.terrain = terrain;
+        cb.is_edge = is_edge;
+        cb
     }
 
     fn continents(rows: Vec<&'static [u8]>) -> (EeAStarFlood, Vec<(u32, u8, Vec<EePoint>)>) {

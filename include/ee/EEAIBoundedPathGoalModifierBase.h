@@ -9,46 +9,56 @@
 #ifndef EE_EEAIBOUNDEDPATHGOALMODIFIERBASE_H
 #define EE_EEAIBOUNDEDPATHGOALMODIFIERBASE_H
 
-struct EEAIAStarNode;
-class EEAIAStarBoundedPathGoal;
+// A search node as the bounded modifiers see one (CheckNode: the tile; the links and costs are the Rust search's and
+// zero here). Names are provisional.
+struct EEAIAStarNode {
+    EEAIAStarNode* mParent;                 // +0x00
+    EEAIAStarNode* mNext;                   // +0x04
+    EEAIAStarNode* mPrev;                   // +0x08
+    unsigned long mCost;                    // +0x0c
+    long mPathCost;                         // +0x10
+    long mEstimate;                         // +0x14
+    long mX;                                // +0x18
+    long mY;                                // +0x1c
+};
 
 class EEAIBoundedPathGoalModifierBase : public EEAIPathGoalModifierBase {
 public:
     // 0x9f9d3: +0x08 and +0x0c zeroed, the count 1, the vptr last
     EEAIBoundedPathGoalModifierBase() : EEAIPathGoalModifierBase(0), mBoundedGoal(NULL) {}
-    EEAIBoundedPathGoalModifierBase(EEAIAStarBoundedPathGoal* inGoal);   // 0xfb57 (out of line)
-    // +0x0c 0x10b7e: called by EEAIAStarBoundedPathGoal::IsGoalNode 0xeb14 with the node (result unused)
+    EEAIBoundedPathGoalModifierBase(EeAStarPathGoalRec* inGoal);   // 0xfb57 (out of line)
+    // +0x0c 0x10b7e: called by the bounded goal's IsGoalNode 0xeb14 with the node (result unused; path_search.rs)
     virtual bool CheckNode(EEAIAStarNode* inNode) { return inNode == NULL; }
-    void SetGoal(EEAIAStarBoundedPathGoal* inGoal);   // 0xfb80 (both goal pointers)
+    void SetGoal(EeAStarPathGoalRec* inGoal);   // 0xfb80 (both goal pointers)
 
-    EEAIAStarBoundedPathGoal* mBoundedGoal; // +0x0c
+    EeAStarPathGoalRec* mBoundedGoal;       // +0x0c (the bounded search's goal record)
 };
 
 // RTTI EEAIBPGModifierSpace / EEAIBPGModifierSea (vtables 0x439bd8 / 0x439bec; sizeof 0x10; ctors 0xfb98 / 0xfbb0 out of
 // line; both slots ICF-shared: +0x04 0x10b8a GetStepCost(false, ..), +0x08 0x10baa IsPassable(0, mBoundedGoal, ..))
 class EEAIBPGModifierSpace : public EEAIBoundedPathGoalModifierBase {
 public:
-    EEAIBPGModifierSpace(EEAIAStarBoundedPathGoal* inGoal);
+    EEAIBPGModifierSpace(EeAStarPathGoalRec* inGoal);
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(NULL, this->mBoundedGoal, inX, inY, inGoal);
+        return this->IsPassable(this->mBoundedGoal, inX, inY, inGoal);
     }
 };
 
 class EEAIBPGModifierSea : public EEAIBoundedPathGoalModifierBase {
 public:
-    EEAIBPGModifierSea(EEAIAStarBoundedPathGoal* inGoal);
+    EEAIBPGModifierSea(EeAStarPathGoalRec* inGoal);
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(NULL, this->mBoundedGoal, inX, inY, inGoal);
+        return this->IsPassable(this->mBoundedGoal, inX, inY, inGoal);
     }
 };
 

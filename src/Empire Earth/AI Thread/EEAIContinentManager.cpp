@@ -261,14 +261,13 @@ enum {
     kQueryRemoveForestTile, kQueryUpdateWallUnit
 };
 
-// Resets the global continent manager, frees its tile grids (flags, continent ids, values, sub-sector ids) and the
-// A* node pool
+// Resets the global continent manager and frees its tile grids (flags, continent ids, values, sub-sector ids; the A*
+// node pool is gone: each Rust search frees its nodes)
 void EEAIContinentManager::Shutdown()
 {
     gContinentManager.Reset();
     gContinentManager.FreeGrids();
     EEAIContinentsShutDown();
-    EEAIAStarStorage::FreeNodePool();
 }
 // Creates an empty continent manager: no grids, every id and counter at 0 (the record: ee_sim::astar cm.rs)
 void EEAIRegisterContinentState();   // EEAIContinentSave.cpp: the records' places and the host (cm_io.rs)

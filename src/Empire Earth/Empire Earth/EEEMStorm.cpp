@@ -41,15 +41,10 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarBoundedStorage.h"
 #include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarView.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIAStarPathfindingGoalBase.h"
-#include "ee/EEAIAStarBoundedPathGoal.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
@@ -236,8 +231,8 @@ EeAStarStorm EEAIBPGModifierStormShaper::StormState() const
     theStorm.distance_squared = this->mDistanceSquared;
     theStorm.snow = this->mSnow;
     theStorm.rain = this->mRain;
-    theStorm.start_x = this->mBoundedGoal->mStartTile.mX;
-    theStorm.start_y = this->mBoundedGoal->mStartTile.mY;
+    theStorm.start_x = this->mBoundedGoal->start.x;
+    theStorm.start_y = this->mBoundedGoal->start.y;
     return theStorm;
 }
 

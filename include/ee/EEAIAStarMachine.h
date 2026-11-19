@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\AI Thread\EEAIAStarMachine.h (RECONSTRUCTION; file name inferred).
-// The AI's A* search machines: a goal-independent base (EEAIAStarMachineBase, vtable 0x43a17c, 16 slots; ctor 0x1d700;
-// EEAIAStarGraphMachineBase, vtable 0x43a2e0, 12 slots; ctor 0x262ba) and the templates that join a node storage S
-// (second base, at +0x20 / +0x28), a goal G and a map M. Instantiations (EEPathManager.cpp; RTTI, multiple inheritance):
+// The AI's graph A* search machine (EEAIAStarGraphMachineBase, vtable 0x43a2e0, 12 slots; ctor 0x262ba) and the
+// template that joins a node storage S, a goal G and an object M. The tile machines (EEAIAStarMachineBase, vtable
+// 0x43a17c, and EEAIAStarMachine<S, G, M>) are Rust: ee_sim::astar flood.rs, path_search.rs. Instantiations (RTTI):
 //   EEAIAStarMachine<EEAIAStarStorage, EEAIAStarPathfindingGoal, EEMap>          vtables 0x43c46c/0x43c4b0, sizeof 0x11c
 //   EEAIAStarMachine<EEAIAStarBoundedStorage, EEAIAStarBoundedPathGoal, EEMap>   vtables 0x43c514/0x43c558, sizeof 0x148
 //   EEAIAStarGraphMachine<EEAIAStarGraphStorage, EEAIAStarPathGraphGoal, EEAIPathSubSector> 0x43c4c8/0x43c4fc, 0xd8
@@ -17,40 +17,6 @@
 #include "ee/EEAIAStarGraphStorage.h"   // EEAIAStarGraphNode (the graph hooks' node views)
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
-
-class EEAIAStarMachineBase {
-public:
-    EEAIAStarMachineBase(long inType)       // 0x1d700 (inline COMDAT in EEAIChokePoint.cpp's range; mTile: U2DPoint())
-        : mType(inType), mRevs(0), mNumRuns(0), mSteps(0), mCheckCorners(false), mFound(false)
-    {
-    }
-    virtual ~EEAIAStarMachineBase() {}      // +0x00 (??_G 0x1d72e)
-    virtual void Reset() {}                 // +0x04
-    virtual long GetMaxRevs() { return 0; } // +0x08
-    virtual void GetPoints(std::vector<GE3DPoint>& outPath) = 0;   // +0x10
-    virtual void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited) = 0;   // +0x0c (the goal's 0x19429 takes the visited tiles)
-    virtual void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited) = 0;    // +0x18
-    virtual void GetPath(std::vector<U2DPoint<long> >& outPath) = 0;                // +0x14
-    virtual long GetRevLimit() { return 0; }                // +0x1c
-    virtual void Run() = 0;                 // +0x20 (sets mFound)
-    virtual void SetMaxRevs(long inRevs) {} // +0x24
-    virtual void SetGoal(long inX, long inY) = 0;               // +0x2c
-    virtual void SetGoal(const EETileCoordinate& inTile) = 0;   // +0x28
-    virtual void SetRevLimit(long inLimit) {}                   // +0x30
-    virtual void CancelSearch() { this->mFound = false; }  // +0x34 0x1d729 (inline COMDAT)
-    virtual void SetStart(long inX, long inY) = 0;              // +0x3c
-    virtual void SetStart(const EETileCoordinate& inTile) = 0;  // +0x38
-
-    EETileCoordinate mTile;                 // +0x04 (the goal tile)
-    long GetType() const { return this->mType; }
-    long mType;                             // +0x0c (2: land, 0x10: sea/space)
-    long GetRevs() const { return this->mRevs; }
-    long mRevs;                             // +0x10
-    long mNumRuns;                          // +0x14
-    long mSteps;                            // +0x18
-    bool mCheckCorners;                     // +0x1c
-    bool mFound;                            // +0x1d
-};
 
 class EEAIAStarGraphMachineBase {
 public:
@@ -81,43 +47,6 @@ public:
     long mSector;                           // +0x1c (the goal's path sub sector id)
     long mNodeCount;                        // +0x20
     bool mFound;                            // +0x24
-};
-
-template <class S, class G, class M>
-class EEAIAStarMachine : public EEAIAStarMachineBase, public S {
-public:
-    EEAIAStarMachine(long inType, M* inMap);
-    virtual ~EEAIAStarMachine();            // ??_G 0xa9ad1 / 0xa9b6b
-    virtual void Reset();                   // +0x04 0xa97c8 / 0xa99ba
-    virtual long GetMaxRevs() { return this->mGoal.mMaxRevs; }  // +0x08 0xa982d
-    virtual void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);   // +0x0c 0xa9813 (the goal's)
-    virtual void GetPoints(std::vector<GE3DPoint>& outPath);   // +0x10 0xa9804 (the goal's)
-    virtual void GetPath(std::vector<U2DPoint<long> >& outPath);               // +0x14 0xa97f5 (the goal's)
-    virtual void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited);   // +0x18 0xa97e2 (the goal's)
-    virtual long GetRevLimit() { return this->mGoal.mRevLimit; }  // +0x1c 0xa9826
-    virtual void Run();                     // +0x20 0xaa4e5 / 0xaa5b8
-    virtual void SetMaxRevs(long inRevs) { this->mGoal.mMaxRevs = inRevs; }  // +0x24 0xa9834
-    virtual void SetGoal(const EETileCoordinate& inTile) { this->mGoal.mGoalTile = inTile; }  // +0x28 0xa9852
-    virtual void SetGoal(long inX, long inY) { this->mGoal.mGoalTile = U2DPoint<long>(inX, inY); }  // +0x2c 0xa9841
-    virtual void SetRevLimit(long inLimit) { this->mGoal.mRevLimit = inLimit; }  // +0x30 0xa9864
-    virtual void SetStart(const EETileCoordinate& inTile) { this->mGoal.mStartTile = inTile; }  // +0x38 0xa9882
-    virtual void SetStart(long inX, long inY) { this->mGoal.mStartTile = U2DPoint<long>(inX, inY); }  // +0x3c 0xa9871
-
-    // Run's search steps (the <EEAIAStarChokePointStorage, EEAIAStarChokePointGoal, EEMap> COMDATs 0x1d184.. in
-    // EEAIChokePoint.cpp's range) (provisional names). Port: Start 0x1d184, Expand 0x1d1fb and their Restart
-    // 0x1d527, TestTile 0x1d63b, NextNode 0x1d6b1 and AddNode 0x28fc9 are Rust (rust/crates/ee_sim/src/astar machine.rs);
-    // these call it with the goal behind EeAStarCallbacks (EEAIAStarHooks, ee/EEAIAStarMachineSteps.h)
-    bool Start();                           // 0x1d184: the start node, the goal tile
-    void Expand();                          // 0x1d1fb: pops nodes and adds the neighbours the goal accepts
-    EeAStarCallbacks Callbacks();
-    // New (port), TEST ONLY: Run's record in the A* capture (ee/EEAIAStarCapture.h)
-    void CaptureInputs(EEAIAStarCaptureRun& ioRun);
-    void CaptureOutputs(EEAIAStarCaptureRun& ioRun);
-
-    G mGoal;                                // +0x6c / +0x80
-    M* mMap;                                // +0x110 / +0x13c
-    long mMapWidth;                         // +0x114 / +0x140
-    long mMapHeight;                        // +0x118 / +0x144
 };
 
 template <class S, class G, class M>
@@ -156,50 +85,6 @@ public:
 
 // the out-of-line template members (COMDATs per instantiation; EEAIContinentManager.cpp's
 // continent/hill/path-area/path-sector machines 0x25ba0.., the continental-chain graph machine 0x25c55..)
-template <class S, class G, class M>
-EEAIAStarMachine<S, G, M>::EEAIAStarMachine(long inType, M* inMap)
-    : EEAIAStarMachineBase(inType), mMap(inMap), mMapWidth(0), mMapHeight(0)
-{
-}
-
-template <class S, class G, class M>
-EEAIAStarMachine<S, G, M>::~EEAIAStarMachine()
-{
-}
-
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::Reset()
-{
-    ResetNodes();
-    this->mFound = false;
-    this->mGoal.Reset();
-}
-
-// the path slots forward to the goal (0xa97e2..0xa9813; the flood machines' fold into empty ICF bodies)
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited)
-{
-    this->mGoal.GetPoints(outPath, outVisited);
-}
-
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::GetPoints(std::vector<GE3DPoint>& outPath)
-{
-    this->mGoal.GetPoints(outPath);
-}
-
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::GetPath(std::vector<U2DPoint<long> >& outPath)
-{
-    this->mGoal.GetPath(outPath);
-}
-
-template <class S, class G, class M>
-void EEAIAStarMachine<S, G, M>::GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited)
-{
-    this->mGoal.GetPath(outPath, outVisited);
-}
-
 template <class S, class G, class M>
 void EEAIAStarGraphMachine<S, G, M>::GetPath(std::vector<long>& outPath)
 {

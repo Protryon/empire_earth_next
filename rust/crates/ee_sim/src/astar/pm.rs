@@ -1863,12 +1863,21 @@ pub type EePathHostFn = unsafe extern "C" fn(*mut c_void, i32, *mut EePathIo) ->
 struct FnHost {
     ctx: *mut c_void,
     f: EePathHostFn,
+    /// the manager's bounded machine (`EePathManager::bounded`)
+    bounded: *mut *mut crate::astar::path_search::PathSearch,
 }
 
 impl PathHost for FnHost {
     fn call(&mut self, op: i32, io: &mut EePathIo) -> i64 {
+        let (ctx, f) = (self.ctx, self.f);
         // SAFETY: the C++ callback's contract
-        unsafe { (self.f)(self.ctx, op, io) }
+        let mut raw = |op: i32, io: &mut EePathIo| unsafe { f(ctx, op, io) };
+        // the searches' operations are the Rust searches'; the rest is the C++ host's
+        // SAFETY: `bounded` points into the live manager (its calls nest, never overlap on it)
+        if let Some(r) = crate::astar::path_search::intercept(unsafe { &mut *self.bounded }, op, io, &mut raw) {
+            return r;
+        }
+        raw(op, io)
     }
 }
 
@@ -1876,12 +1885,21 @@ impl PathHost for FnHost {
 pub struct EePathManager {
     m: PathManager,
     host: FnHost,
+    /// the bounded machine (`mBoundedMachine`; null for none): a Rust search (path_search.rs)
+    bounded: *mut crate::astar::path_search::PathSearch,
 }
 
 /// A new manager over the host (`f` called with `ctx`).
 #[no_mangle]
 pub extern "C" fn ee_path_manager_new(f: EePathHostFn, ctx: *mut c_void) -> *mut EePathManager {
-    Box::into_raw(Box::new(EePathManager { m: PathManager::default(), host: FnHost { ctx, f } }))
+    let p = Box::into_raw(Box::new(EePathManager {
+        m: PathManager::default(),
+        host: FnHost { ctx, f, bounded: std::ptr::null_mut() },
+        bounded: std::ptr::null_mut(),
+    }));
+    // SAFETY: just made; the box does not move
+    unsafe { (*p).host.bounded = &mut (*p).bounded };
+    p
 }
 
 /// # Safety
@@ -1893,12 +1911,21 @@ pub unsafe extern "C" fn ee_path_manager_free(p: *mut EePathManager) {
     }
 }
 
+/// The bounded machine (`mBoundedMachine`, a path_search.rs search), null for none.
+///
+/// # Safety
+/// `p` from `ee_path_manager_new`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_manager_bounded(p: *mut EePathManager) -> *const c_void {
+    (*p).bounded as *const c_void
+}
+
 /// Runs `body` over the manager. The manager is reentered only by the host's calls that the C++ never makes
 /// during one of these (the original's call graph: a unit asking its path again while its search finishes goes
 /// through the queues, which `body` reads again after each host call).
 unsafe fn with<R>(p: *mut EePathManager, body: impl FnOnce(&mut PathManager, &mut dyn PathHost) -> R) -> R {
     let p = &mut *p;
-    let mut host = FnHost { ctx: p.host.ctx, f: p.host.f };
+    let mut host = FnHost { ctx: p.host.ctx, f: p.host.f, bounded: p.host.bounded };
     body(&mut p.m, &mut host)
 }
 

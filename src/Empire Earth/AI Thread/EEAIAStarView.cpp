@@ -35,7 +35,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/RTSRegionTable.h"

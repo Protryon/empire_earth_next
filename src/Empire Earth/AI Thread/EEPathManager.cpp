@@ -10,6 +10,7 @@
 #include <math.h>
 #include <vector>
 #include <map>
+#include <set>
 #include <deque>
 #include <algorithm>
 #include <string.h>
@@ -47,24 +48,17 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarBoundedStorage.h"
 #include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGoalBase.h"
 #include "ee/EEAIAStarGraphGoalBase.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIAStarPathfindingGoalBase.h"
-#include "ee/EEAIAStarPathfindingGoal.h"
-#include "ee/EEAIAStarBoundedPathGoal.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIAStarMachine.h"
-#include "ee/EEAIAStarMachineSteps.h"
+#include "ee/EEAIAStarView.h"   // the searches' view (ee_sim::astar path_search.rs)
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
@@ -152,30 +146,30 @@ inline void EEPathManager::ClampTile(EEMap* inMap, EETileCoordinate& ioTile)
 
 // The path goal's sea and space modifiers (vtables 0x43c458/0x43c448; sizeof 0xc; the ctor is inline: refcount 1, the
 // goal, the vptr). Their slots +0x04 0xaa63b / 0x10b8a and +0x08 0xaa65b forward to the base's shared tests
-// (provisional member names)
+// (provisional member names). The goal is the Rust search's record (ee_sim::astar path_search.rs)
 class EEAIPathGoalModifierSea : public EEAIPathGoalModifierBase {
 public:
-    EEAIPathGoalModifierSea(EEAIAStarPathfindingGoalBase* inGoal) { this->mGoal = inGoal; }
+    EEAIPathGoalModifierSea(EeAStarPathGoalRec* inGoal) { this->mGoal = inGoal; }
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(true, inFromX, inFromY, inX, inY, inParentX, inParentY);
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(this->mGoal, NULL, inX, inY, inGoal);
+        return this->IsPassable(this->mGoal, inX, inY, inGoal);
     }
 };
 
 class EEAIPathGoalModifierSpace : public EEAIPathGoalModifierBase {
 public:
-    EEAIPathGoalModifierSpace(EEAIAStarPathfindingGoalBase* inGoal) { this->mGoal = inGoal; }
+    EEAIPathGoalModifierSpace(EeAStarPathGoalRec* inGoal) { this->mGoal = inGoal; }
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
     }
     virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
     {
-        return this->IsPassable(this->mGoal, NULL, inX, inY, inGoal);
+        return this->IsPassable(this->mGoal, inX, inY, inGoal);
     }
 };
 
@@ -341,13 +335,14 @@ void EEPathRequestCapture::Queues(std::vector<EEPathQueueEntry>& outEntries)
         e.mRequest = reinterpret_cast<EEAutoPathRequest*>(q.request);
         e.mRequestID = q.request != 0 ? (int)reinterpret_cast<EEAutoPathRequest*>(q.request)->mRequestID : -1;
         if (q.queue == 0 && q.machine != 0) {
-            EEAIAStarMachineBase* m = reinterpret_cast<EEAIAStarMachineBase*>(q.machine);
-            e.mType = (int)m->mType;
-            e.mRevs = (int)m->mRevs;
-            e.mSteps = (int)m->mSteps;
-            e.mFound = m->mFound ? 1 : 0;
-            e.mMaxRevs = (int)m->GetMaxRevs();
-            e.mRevLimit = (int)m->GetRevLimit();
+            EeAStarPathSearchInfo m;
+            ee_astar_path_search_info(reinterpret_cast<const void*>(q.machine), false, &m);
+            e.mType = m.machine_type;
+            e.mRevs = m.revs;
+            e.mSteps = m.steps;
+            e.mFound = m.found ? 1 : 0;
+            e.mMaxRevs = m.max_revs;
+            e.mRevLimit = m.rev_limit;
         } else if (q.queue == 1 && q.machine != 0) {
             EEGraphPathMachine* m = reinterpret_cast<EEGraphPathMachine*>(q.machine);
             e.mType = (int)m->mType;
@@ -369,16 +364,6 @@ static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
 // ---- The manager in Rust (ee_sim::astar pm.rs): the searches in progress, the spare machines, the pending units,
 // the counters and the request record, and every decision over them. The C++ answers its host's operations over
 // the machines, the units and the requests, and keeps the bounded machine's searches (below).
-
-static EEAIAStarMachineBase* EEPathTile(uint64_t inHandle)
-{
-    return reinterpret_cast<EEAIAStarMachineBase*>(inHandle);
-}
-
-static EEPathMachine* EEPathOf(uint64_t inHandle)
-{
-    return static_cast<EEPathMachine*>(EEPathTile(inHandle));
-}
 
 static EEGraphPathMachine* EEGraphOf(uint64_t inHandle)
 {
@@ -497,107 +482,6 @@ void EEPathSetBounds(EEAIAStarBounds& outBounds, const int32_t* inValues)
     outBounds.mLeft = inValues[1];
     outBounds.mRight = inValues[2];
     outBounds.mTop = inValues[3];
-}
-
-// a tile search's machine and goal into the saved record (SaveSearches)
-bool EESavePathMachine(EEAIAStarMachineBase* inMachine, EePathSavedMachine& outSaved, EePathSavedLists* outLists)
-{
-    if (inMachine->mType == kAIMachineBoundedPath)
-        return false;
-    EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(inMachine);
-    if (theMachine == NULL)
-        return false;
-    const EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
-    outSaved.tile[0] = (int32_t)theMachine->mTile.mX;
-    outSaved.tile[1] = (int32_t)theMachine->mTile.mY;
-    const long theFields[8] = {theMachine->mType, theMachine->mRevs, theMachine->mNumRuns, theMachine->mSteps,
-                               theMachine->mMapWidth, theMachine->mMapHeight, theMachine->mWidth, theMachine->mHeight};
-    for (int f = 0; f < 8; f++)
-        outSaved.fields[f] = (int32_t)theFields[f];
-    outSaved.check_corners = theMachine->mCheckCorners;
-    outSaved.found = theMachine->mFound;
-    outSaved.start[0] = (int32_t)theGoal.mStartTile.mX;
-    outSaved.start[1] = (int32_t)theGoal.mStartTile.mY;
-    outSaved.goal[0] = (int32_t)theGoal.mGoalTile.mX;
-    outSaved.goal[1] = (int32_t)theGoal.mGoalTile.mY;
-    outSaved.rev_limit = (int32_t)theGoal.mRevLimit;
-    outSaved.max_revs = (int32_t)theGoal.mMaxRevs;
-    const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB29, theGoal.mAcceptNearest, theGoal.mB2B, theGoal.mB2C,
-                              theGoal.mTookNearest};
-    for (int f = 0; f < 6; f++)
-        outSaved.flags[f] = theFlags[f];
-    for (size_t i = 0; i < theGoal.mBlockedTiles.size(); i++)
-        ee_path_saved_tile_push(outLists, 0, (int32_t)theGoal.mBlockedTiles[i].mX, (int32_t)theGoal.mBlockedTiles[i].mY);
-    for (size_t i = 0; i < theGoal.mUnitTiles.size(); i++)
-        ee_path_saved_tile_push(outLists, 1, (int32_t)theGoal.mUnitTiles[i].mX, (int32_t)theGoal.mUnitTiles[i].mY);
-    EEPathBounds(outSaved.bounds[0], theGoal.mBounds24);
-    EEPathBounds(outSaved.bounds[1], theGoal.mGoalBounds);
-    EEPathBounds(outSaved.bounds[2], theGoal.mStartBounds);
-    outSaved.destination[0] = (int32_t)theGoal.mDestination.mX;
-    outSaved.destination[1] = (int32_t)theGoal.mDestination.mY;
-    outSaved.l64 = (int32_t)theGoal.mL64;
-    outSaved.offset[0] = theGoal.mOffsetX;
-    outSaved.offset[1] = theGoal.mOffsetY;
-    outSaved.continent = theGoal.mContinentID;
-    outSaved.bounded = theGoal.mIsBounded;
-    outSaved.avoid_units = theGoal.mAvoidUnits;
-    std::vector<unsigned char> theBytes(ee_astar_save(theMachine->mCore, NULL, 0));
-    ee_astar_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-    uint32_t theLength = 0;
-    ee_path_saved_bytes(ee_path_saved_storage(outLists), theBytes.data(), (uint32_t)theBytes.size(), &theLength);
-    return true;
-}
-
-// the saved record back into a new machine for inUnit (the loaded game's first tick)
-bool EELoadPathMachine(EEPathMachine* inMachine, const EePathSavedMachine& inSaved, EePathSavedLists* inLists,
-                       EEComplexUnit* inUnit)
-{
-    uint32_t theLength = 0;
-    const uint8_t* theBytes = ee_path_saved_bytes(ee_path_saved_storage(inLists), NULL, 0, &theLength);
-    if (!ee_astar_load(inMachine->mCore, theBytes, theLength))
-        return false;
-    inMachine->mWidth = inSaved.fields[6];
-    inMachine->mHeight = inSaved.fields[7];
-    inMachine->mTile.mX = inSaved.tile[0];
-    inMachine->mTile.mY = inSaved.tile[1];
-    inMachine->mRevs = inSaved.fields[1];
-    inMachine->mNumRuns = inSaved.fields[2];
-    inMachine->mSteps = inSaved.fields[3];
-    inMachine->mMapWidth = inSaved.fields[4];
-    inMachine->mMapHeight = inSaved.fields[5];
-    inMachine->mCheckCorners = inSaved.check_corners;
-    inMachine->mFound = inSaved.found;
-    EEAIAStarPathfindingGoal& theGoal = inMachine->mGoal;
-    theGoal.Attach(gWorld.mMap, inMachine, inMachine);   // as Run does at a search's start
-    theGoal.SetUnit(inUnit);
-    theGoal.mStartTile = U2DPoint<long>(inSaved.start[0], inSaved.start[1]);
-    theGoal.mGoalTile = U2DPoint<long>(inSaved.goal[0], inSaved.goal[1]);
-    theGoal.mRevLimit = inSaved.rev_limit;
-    theGoal.mMaxRevs = inSaved.max_revs;
-    theGoal.mSearchFailed = inSaved.flags[0];
-    theGoal.mB29 = inSaved.flags[1];
-    theGoal.mAcceptNearest = inSaved.flags[2];
-    theGoal.mB2B = inSaved.flags[3];
-    theGoal.mB2C = inSaved.flags[4];
-    theGoal.mTookNearest = inSaved.flags[5];
-    for (int which = 0; which < 2; which++) {
-        std::vector<U2DPoint<long> >& theTiles = which == 0 ? theGoal.mBlockedTiles : theGoal.mUnitTiles;
-        theTiles.clear();
-        int32_t theTile[2];
-        for (uint32_t k = 0; ee_path_saved_tile(inLists, which, k, theTile); k++)
-            theTiles.push_back(U2DPoint<long>(theTile[0], theTile[1]));
-    }
-    EEPathSetBounds(theGoal.mBounds24, inSaved.bounds[0]);
-    EEPathSetBounds(theGoal.mGoalBounds, inSaved.bounds[1]);
-    EEPathSetBounds(theGoal.mStartBounds, inSaved.bounds[2]);
-    theGoal.mDestination = U2DPoint<long>(inSaved.destination[0], inSaved.destination[1]);
-    theGoal.mL64 = inSaved.l64;
-    theGoal.mOffsetX = inSaved.offset[0];
-    theGoal.mOffsetY = inSaved.offset[1];
-    theGoal.mContinentID = inSaved.continent;
-    theGoal.mIsBounded = inSaved.bounded;
-    theGoal.mAvoidUnits = inSaved.avoid_units;
-    return true;
 }
 
 // a graph search's machine, goal and modifier into the saved record (SaveGraphSearches), when the load can rebuild
@@ -771,121 +655,155 @@ static std::vector<GE3DPoint> EEPathPointsIn(uint64_t inPoints, int64_t inCount)
     return std::vector<GE3DPoint>(thePoints, thePoints + inCount);
 }
 
-// The bounded machine's and the units' operations (pm_bounded.rs EE_PATH_BM_*, EE_PATH_UNIT_*, the capture)
+// The searches' world (ee_sim::astar path_search.rs EE_PATH_BLOCKED_TILES): the unit's bounded path tiles and, for a
+// sea unit, the tiles of the stopped contacts in the way of the goal (EEAIAStarPathfindingGoalBase::CollectBlockedTiles
+// 0x19ccb with its EEAIPathBlockerCollector 0x19da3..0x19eb0)
+void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);
+
+// The units blocking a path near the goal (0x19ccb's local; sizeof 0x3c) (provisional name)
+class EEAIPathBlockerCollector {
+public:
+    EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::vector<U2DPoint<long> >& inBlocked,
+                             const U2DPoint<long>& inGoal, bool inNaval, bool inWide);
+    bool Add(EEComplexUnit* inUnit);        // 0x19e38: a unit of the walker's kind (naval or not), not in its group
+    bool AddTiles(EEComplexUnit* inUnit);   // 0x19eb0: inUnit's tiles not yet blocked, except the goal
+    std::vector<U2DPoint<long> > mTiles;    // +0x00 (the new blocked tiles)
+    std::set<U2DPoint<long> > mBlocked;     // +0x10 (the walker's own blocked tiles)
+    U2DPoint<long> mGoal;                   // +0x24
+    EEComplexUnit* mUnit;                   // +0x2c (the walker)
+    bool mNaval;                            // +0x30
+    bool mWide;                             // +0x31 (the tile footprint margin 2.0f, else 1.0f)
+};
+
+// Creates a blocker collector for a walker, its goal tile and naval/wide flags, seeded with the already blocked tiles
+EEAIPathBlockerCollector::EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::vector<U2DPoint<long> >& inBlocked,
+                                                   const U2DPoint<long>& inGoal, bool inNaval, bool inWide)
+    : mGoal(inGoal), mUnit(inUnit), mNaval(inNaval), mWide(inWide)
+{
+    for (long i = inBlocked.size() - 1; i >= 0; i--)
+        this->mBlocked.insert(inBlocked[i]);
+}
+
+// NEAR: the original compares the two naval tests as bytes (an inline bool helper?) and keeps this in ecx
+// Adds a contact's tiles as blockers when it is a stopped sea unit of the walker's naval kind, not the walker and
+// not in its group (naval buildings with air traffic always count); always returns false
+bool EEAIPathBlockerCollector::Add(EEComplexUnit* inUnit)
+{
+    if (inUnit->GetVelocity() != 0.0f || (!(inUnit->mUnitClass->mDomains & kMovementSea)) || this->mUnit == inUnit)
+        return false;
+    // STAND-IN (owner 2026-11-01): the (bool) cast on the naval comparison (docs/LOST_DEBUG.md; 65 -> 74)
+    if ((bool)(inUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval || inUnit->mUnitClass->mCategory == kUnitCategorySeaAnimal) != this->mNaval)
+        return false;
+    if (this->mUnit->mActiveGroup == NULL || this->mUnit->mActiveGroup != inUnit->mActiveGroup
+        || (inUnit->mUnitClass->mCategory == kUnitCategoryNavalBuilding && inUnit->mUnitClass->mAirTrafficType != 0))
+        return this->AddTiles(inUnit);
+    return false;
+}
+
+// NEAR: the original loads both F178s (fld/fld/fcompp) and calls _Ptrit::operator+ out of line
+// Adds a unit's footprint tiles (not the goal, not already blocked) when it is at least as big as the walker or
+// push-immune; always returns false
+bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    if (inUnit->mUnitClass->GetInnerCollisionSphere() >= this->mUnit->mUnitClass->GetInnerCollisionSphere()
+        || inUnit->mPushImmuneUntil > gPhysics->mGameTime) {
+        EEGetUnitTiles(inUnit, theTiles, !this->mWide ? 1.0f : 2.0f);
+        for (long i = theTiles.size() - 1; i >= 0; i--) {
+            if (theTiles[i] != this->mGoal && this->mBlocked.find(theTiles[i]) == this->mBlocked.end())
+                this->mTiles.push_back(theTiles[i]);
+        }
+    }
+    return false;
+}
+
+static void EEPathTilesOut(uint64_t inList, const std::vector<U2DPoint<long> >& inTiles)
+{
+    for (size_t k = 0; k < inTiles.size(); k++)
+        ee_astar_tiles_push(reinterpret_cast<void*>(inList), (int32_t)inTiles[k].mX, (int32_t)inTiles[k].mY);
+}
+
+// The searches' and the units' operations (path_search.rs EE_PATH_VIEW_NEW and below, pm_bounded.rs EE_PATH_UNIT_*,
+// the capture)
 static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathIo* io)
 {
     int64_t* i = io->i;
-    EEBoundedPathMachine* theMachine = inManager->mBoundedMachine;
     EEComplexUnit* theUnit = EEPathUnitOf(io->h[0]);
     switch (inOp) {
-    case EE_PATH_BM_PREPARE:
-        inManager->PrepareBoundedMachine(reinterpret_cast<EEMap*>(io->h[1]));
-        return (int64_t)EEPathHandle(static_cast<EEAIAStarMachineBase*>(inManager->mBoundedMachine));
-    case EE_PATH_BM_MODIFIER: {
+    case EE_PATH_VIEW_NEW: {   // a search's view of the map h1, its callbacks into *h2
+        EEAIAStarView* theView = new EEAIAStarView(reinterpret_cast<EEMap*>(io->h[1]), false);
+        *reinterpret_cast<EeAStarViewCallbacks*>(io->h[2]) = theView->Callbacks();
+        return (int64_t)EEPathHandle(theView);
+    }
+    case EE_PATH_VIEW_FREE:
+        delete reinterpret_cast<EEAIAStarView*>(io->h[0]);
+        return 0;
+    case EE_PATH_GOAL_UNIT:   // EEAIAStarPathfindingGoalBase::SetUnit's facts
+        i[0] = gContinentManager.GetContinentID(theUnit);
+        i[1] = !(theUnit->mPlayer->mComputerPlayer && !theUnit->mUnitClass->IsTransport());
+        return 0;
+    case EE_PATH_BLOCKED_TILES: {   // CollectBlockedTiles (the list h1 is empty)
+        std::vector<U2DPoint<long> > theBlocked = theUnit->mBoundedPathTiles;
+        if (theUnit->mUnitClass->mDomains & kMovementSea) {
+            EEAIPathBlockerCollector theCollector(theUnit, theBlocked, EEPathTileArg(i),
+                                                  theUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval ||
+                                                      theUnit->mUnitClass->mCategory == kUnitCategorySeaAnimal,
+                                                  i[2] != 0);
+            for (UListNode<EEComplexUnit*>* theNode = theUnit->mContacts.mHead; theNode; theNode = theNode->mNext)
+                theCollector.Add(theNode->mData);
+            theBlocked.insert(theBlocked.end(), theCollector.mTiles.begin(), theCollector.mTiles.end());
+        }
+        EEPathTilesOut(io->h[1], theBlocked);
+        return 0;
+    }
+    case EE_PATH_UNIT_TILES: {   // CollectUnitTiles: a sea unit's tiles
+        std::vector<U2DPoint<long> > theTiles;
+        if (theUnit->mUnitClass->mDomains & kMovementSea)
+            EEGetUnitTiles(theUnit, theTiles, 0.0f);
+        EEPathTilesOut(io->h[1], theTiles);
+        return 0;
+    }
+    case EE_PATH_TILE_MODIFIER_NEW: {   // the machine type's modifier for the goal h1 (i1: the bounded goal's)
+        EeAStarPathGoalRec* theGoal = reinterpret_cast<EeAStarPathGoalRec*>(io->h[1]);
         EEAIPathGoalModifierBase* theModifier = NULL;
         if (i[0] == kAIMachineWaterPath)
-            theModifier = new EEAIBPGModifierSea(&theMachine->mGoal);
+            theModifier = i[1] ? (EEAIPathGoalModifierBase*)new EEAIBPGModifierSea(theGoal) : new EEAIPathGoalModifierSea(theGoal);
         else if (i[0] == kAIMachineSpacePath)
-            theModifier = new EEAIBPGModifierSpace(&theMachine->mGoal);
-        if (theModifier != NULL) {
-            theMachine->mGoal.SetModifier(theModifier);
-            theModifier->Dereference();
+            theModifier = i[1] ? (EEAIPathGoalModifierBase*)new EEAIBPGModifierSpace(theGoal) : new EEAIPathGoalModifierSpace(theGoal);
+        return (int64_t)EEPathHandle(theModifier);
+    }
+    case EE_PATH_TILE_MODIFIER_REFERENCE:
+        reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0])->Reference();
+        return 0;
+    case EE_PATH_TILE_MODIFIER_DEREFERENCE:
+        reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0])->Dereference();
+        return 0;
+    case EE_PATH_TILE_MODIFIER_ATTACH: {   // SetModifier's: the modifier's goal; the bounded goal's bounded modifier
+        EEAIPathGoalModifierBase* theModifier = reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0]);
+        EeAStarPathGoalRec* theGoal = reinterpret_cast<EeAStarPathGoalRec*>(io->h[1]);
+        if (!i[0]) {
+            theModifier->mGoal = theGoal;
+            return 0;
         }
+        EEAIBoundedPathGoalModifierBase* theBounded = dynamic_cast<EEAIBoundedPathGoalModifierBase*>(theModifier);
+        theBounded->SetGoal(theGoal);
+        return (int64_t)EEPathHandle(theBounded);
+    }
+    case EE_PATH_CHECK_NODE: {   // the bounded goal's IsGoalNode
+        EEAIAStarNode theNode;
+        memset(&theNode, 0, sizeof(theNode));
+        theNode.mX = (long)i[1];
+        theNode.mY = (long)i[2];
+        reinterpret_cast<EEAIBoundedPathGoalModifierBase*>(io->h[0])->CheckNode(i[0] ? &theNode : NULL);
         return 0;
     }
-    case EE_PATH_BM_SET_MODIFIER:
-        theMachine->mGoal.SetModifier(reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[1]));
-        return 0;
-    case EE_PATH_BM_SET_UNIT:
-        theMachine->mGoal.SetUnit(EEPathUnitOf(io->h[1]));
-        return 0;
-    case EE_PATH_BM_ENDS:
-        theMachine->SetStart(EEPathTileArg(i));
-        theMachine->SetGoal(EEPathTileArg(i + 2));
-        if (i[4])
-            theMachine->mTile = EEPathTileArg(i + 2);
-        return 0;
-    case EE_PATH_BM_SET_MAX_REVS:
-        theMachine->SetMaxRevs((long)i[0]);
-        return 0;
-    case EE_PATH_BM_MAX_REVS:
-        return theMachine->GetMaxRevs();
-    case EE_PATH_BM_BOUNDS: {
-        EEAIAStarBounds theBounds;
-        theBounds.mTop = (long)i[0];
-        theBounds.mLeft = (long)i[1];
-        theBounds.mBottom = (long)i[2];
-        theBounds.mRight = (long)i[3];
-        theMachine->mGoal.mBounds = theBounds;
-        theMachine->mSearchBounds = theBounds;
+    case EE_PATH_TILES_OUT: {   // into the C++ vector h1
+        const EePoint* theTiles = reinterpret_cast<const EePoint*>(io->h[2]);
+        std::vector<U2DPoint<long> >& theOut = *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]);
+        for (int64_t k = 0; k < i[0]; k++)
+            theOut.push_back(U2DPoint<long>(theTiles[k].x, theTiles[k].y));
         return 0;
     }
-    case EE_PATH_BM_RUN:
-        theMachine->Run();
-        return theMachine->mFound;
-    case EE_PATH_BM_TILE:
-        EEPathPutTile(i, theMachine->mTile);
-        return 0;
-    case EE_PATH_BM_RESET:
-        theMachine->Reset();
-        return 0;
-    case EE_PATH_BM_PATH:
-        if (io->h[2] == 0)
-            theMachine->GetPath(*reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]));
-        else
-            theMachine->GetPath(*reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]),
-                                *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[2]));
-        return 0;
-    case EE_PATH_BM_BOUNDED_START: {   // FindBoundedPath's setup
-        EEAIAStarBoundedPathGoal& theGoal = theMachine->mGoal;
-        theMachine->CancelSearch();
-        theGoal.mMaxRevs = (long)i[0];
-        theMachine->SetStart(EEPathTileArg(i + 1));
-        theMachine->SetGoal(EEPathTileArg(i + 3));
-        theGoal.mDestination = EEPathTileArg(i + 3);
-        theGoal.mRevLimit = -1;
-        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
-        theGoal.mIsBounded = true;
-        return 0;
-    }
-    case EE_PATH_BM_RELEASE_MODIFIER:
-        theMachine->mGoal.ReleaseModifier();
-        return 0;
-    case EE_PATH_BM_RUN_BOUNDED: {   // RunBoundedPath
-        EEAIAStarBoundedPathGoal& theGoal = theMachine->mGoal;
-        theGoal.mMaxRevs = (long)i[0];
-        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
-        theGoal.mAcceptNearest = true;
-        theMachine->SetStart(EEPathTileArg(i + 1));
-        theMachine->SetGoal(EEPathTileArg(i + 3));
-        theMachine->Run();
-        return !theGoal.mSearchFailed;
-    }
-    case EE_PATH_BM_GOAL_POINTS: {
-        std::vector<GE3DPoint> thePoints;
-        theMachine->mGoal.GetPoints(thePoints);
-        EEPathPointsOut(io->h[1], thePoints);
-        return 0;
-    }
-    case EE_PATH_TM_POINTS: {
-        std::vector<GE3DPoint> thePoints;
-        EEAIAStarMachineBase* theTile = EEPathTile(io->h[0]);
-        if (theTile->mType == kAIMachineBoundedPath)
-            ((EEBoundedPathMachine*)theTile)->GetPoints(thePoints);
-        else
-            ((EEPathMachine*)theTile)->GetPoints(thePoints);
-        EEPathPointsOut(io->h[1], thePoints);
-        return 0;
-    }
-    case EE_PATH_TM_FLAGS: {
-        EEAIAStarMachineBase* theTile = EEPathTile(io->h[0]);
-        if (theTile->mType == kAIMachineBoundedPath)
-            return (((EEBoundedPathMachine*)theTile)->mGoal.mAcceptNearest ? 1 : 0)
-                | (((EEBoundedPathMachine*)theTile)->mGoal.mTookNearest ? 2 : 0);
-        return (((EEPathMachine*)theTile)->mGoal.mAcceptNearest ? 1 : 0) | (((EEPathMachine*)theTile)->mGoal.mTookNearest ? 2 : 0);
-    }
-    case EE_PATH_TM_TYPE:
-        return EEPathTile(io->h[0])->GetType();
     case EE_PATH_MAP_SIZE:
         return reinterpret_cast<EEMap*>(io->h[1])->mSize;
     case EE_PATH_POINTS_OUT: {   // into the C++ vector h1
@@ -992,75 +910,12 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         EEPathPutTile(i, theTile);
         return 0;
     }
-    // the tile machines
-    case EE_PATH_PM_NEW:
-        return (int64_t)EEPathHandle(static_cast<EEAIAStarMachineBase*>(new EEPathMachine(1, reinterpret_cast<EEMap*>(io->h[1]))));
-    case EE_PATH_PM_DELETE:
-        delete EEPathOf(h);
-        return 0;
-    case EE_PATH_PM_MAP:
-        return (int64_t)EEPathHandle(EEPathOf(h)->mGoal.mMap);
-    case EE_PATH_PM_TYPE: {
-        EEPathMachine* theMachine = EEPathOf(h);
-        EEAIPathGoalModifierBase* theModifier = NULL;
-        if (i[0] == kAIMachineWaterPath)
-            theModifier = new EEAIPathGoalModifierSea(&theMachine->mGoal);
-        else if (i[0] == kAIMachineSpacePath)
-            theModifier = new EEAIPathGoalModifierSpace(&theMachine->mGoal);
-        if (theModifier != NULL) {
-            theMachine->mGoal.SetModifier(theModifier);
-            theModifier->Dereference();
-        }
-        theMachine->mType = (long)i[0];
-        return 0;
-    }
-    case EE_PATH_TM_RUN:
-        EEPathTile(h)->Run();
-        return EEPathTile(h)->mFound;
-    case EE_PATH_TM_FOUND:
-        return EEPathTile(h)->mFound;
-    case EE_PATH_TM_SET_REV_LIMIT:
-        EEPathTile(h)->SetRevLimit((long)i[0]);
-        return 0;
-    case EE_PATH_TM_REV_LIMIT:
-        return EEPathTile(h)->GetRevLimit();
-    case EE_PATH_TM_STEPS:
-        return EEPathTile(h)->mSteps;
-    case EE_PATH_PM_RESET:
-        EEPathOf(h)->Reset();
-        return 0;
-    case EE_PATH_PM_RELEASE: {
-        EEPathMachine* theMachine = EEPathOf(h);
-        theMachine->Reset();
-        theMachine->mFound = false;
-        if (i[0]) {
-            theMachine->mGoal.ReleaseModifier();
-            theMachine->mGoal.SetUnit(0);
-        }
-        return 0;
-    }
-    case EE_PATH_PM_START: {
-        EEPathMachine* theMachine = EEPathOf(h);
-        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
-        theMachine->CancelSearch();
-        theMachine->SetRevLimit((long)i[4]);
-        theMachine->SetMaxRevs((long)i[5]);
-        theMachine->SetStart(theFrom);
-        theMachine->SetGoal(theTo.GetX(), theTo.GetY());
-        theMachine->mTile = theTo;
-        theMachine->mGoal.mDestination = theTo;
-        theMachine->mGoal.SetUnit(EEPathUnitOf(io->h[1]));
-        theMachine->mCheckCorners = true;
-        return 0;
-    }
+    // the tile machines: Rust (path_search.rs)
     case EE_PATH_PATH_REVS:
         EEPathRevsInputs(EEPathUnitOf(h), EEPathTileArg(i), EEPathTileArg(i + 2), i);
         return 0;
-    case EE_PATH_SET_MAX_REVS:
-        if (i[0] == 0)
-            EEPathTile(h)->SetMaxRevs((long)i[1]);
-        else
-            EEGraphOf(h)->SetMaxRevs((long)i[1]);
+    case EE_PATH_SET_MAX_REVS:   // (a tile machine's: path_search.rs)
+        EEGraphOf(h)->SetMaxRevs((long)i[1]);
         return 0;
     // the graph machines
     case EE_PATH_GM_NEW:
@@ -1199,17 +1054,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return gContinentManager.Rebuild();
     case EE_PATH_REGION_DELAY:
         return (int64_t)(uint32_t)UMFloatToLong(gWorld.mGameSpeed * 10000.0f);
-    case EE_PATH_BOUNDED_FREE:
-        if (theManager->mBoundedMachine)
-            theManager->mBoundedMachine->Reset();
-        if (theManager->mBoundedMachine)
-            delete theManager->mBoundedMachine;
-        theManager->mBoundedMachine = NULL;
-        return 0;
-    case EE_PATH_FREE_POOLS:
-        EEAIAStarGraphStorage::FreeNodePool();
-        EEAIAStarStorage::FreeNodePool();
-        return 0;
     // the requests
     case EE_PATH_REQUEST_LOAD: {   // a loaded one (the record in h0)
         {
@@ -1239,12 +1083,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return 0;
     }
     // the saved game
-    case EE_PATH_PM_SAVE:
-        return EESavePathMachine(EEPathTile(h), *reinterpret_cast<EePathSavedMachine*>(io->h[1]),
-                                 reinterpret_cast<EePathSavedLists*>(io->h[2]));
-    case EE_PATH_PM_LOAD:
-        return EELoadPathMachine(EEPathOf(h), *reinterpret_cast<const EePathSavedMachine*>(io->h[1]),
-                                 reinterpret_cast<EePathSavedLists*>(io->h[2]), EEPathUnitOf(io->h[3]));
     case EE_PATH_GM_SAVE:
         return EESaveGraphMachine(EEGraphOf(h), *reinterpret_cast<EePathSavedGraph*>(io->h[1]), (void*)(uintptr_t)io->h[2]);
     case EE_PATH_GM_LOAD:
@@ -1297,7 +1135,7 @@ void EEAwaitAutoPathRequest(long inRequestID, std::function<void(EEAutoPathReque
 }
 
 // Creates the path manager with no bounded machine, nothing queued and region updates off
-EEPathManager::EEPathManager() : mRust(ee_path_manager_new(EEPathManagerHost, this)), mBoundedMachine(NULL), mLC8(5)
+EEPathManager::EEPathManager() : mRust(ee_path_manager_new(EEPathManagerHost, this)), mLC8(5)
 {
 }
 
@@ -1610,18 +1448,16 @@ void EEPathManager::DumpSim(FILE* inFile)
     std::vector<char> theText(ee_path_manager_dump(this->mRust, NULL, 0));
     ee_path_manager_dump(this->mRust, reinterpret_cast<uint8_t*>(theText.data()), (uint32_t)theText.size());
     fwrite(theText.data(), 1, theText.size(), inFile);
-    unsigned long theHash = 2166136261u, theSize = 0;
-    if (this->mBoundedMachine != NULL) {
-        std::vector<unsigned char> theBytes(ee_astar_save(this->mBoundedMachine->mCore, NULL, 0));
-        ee_astar_save(this->mBoundedMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-        for (size_t i = 0; i < theBytes.size(); i++)
-            theHash = (uint32_t)((theHash ^ theBytes[i]) * 16777619u);
-        theSize = (unsigned long)theBytes.size();
-    }
-    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", this->mBoundedMachine != NULL ? 1 : 0, theSize, theHash);
-    if (this->mBoundedMachine != NULL)
-        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", this->mBoundedMachine->mWidth, this->mBoundedMachine->mHeight,
-                this->mBoundedMachine->mMapWidth, this->mBoundedMachine->mMapHeight, this->mBoundedMachine->mFound ? 1 : 0);
+    const void* theBounded = ee_path_manager_bounded(this->mRust);
+    EeAStarPathSearchInfo theInfo = {};
+    theInfo.storage_hash = 2166136261u;
+    if (theBounded != NULL)
+        ee_astar_path_search_info(theBounded, true, &theInfo);
+    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", theBounded != NULL ? 1 : 0, (unsigned long)theInfo.storage_len,
+            (unsigned long)theInfo.storage_hash);
+    if (theBounded != NULL)
+        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", (long)theInfo.width, (long)theInfo.height,
+                (long)theInfo.map_width, (long)theInfo.map_height, theInfo.found ? 1 : 0);
     fprintf(inFile, "\n");
 }
 
@@ -1655,13 +1491,15 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
             fprintf(inFile, "OUT OF SYNCH DUMP:\n");
             if (q == 0) {
                 // the node's machine (the node itself used to be cast, which always failed)
-                EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(EEPathTile(e.machine));
                 fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%ld]: \n", k++);
                 fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
                         (long)e.x, (long)e.y, (long)e.passes);
-                if (theMachine)
+                if (e.machine != 0) {
+                    EeAStarPathSearchInfo theInfo;
+                    ee_astar_path_search_info(reinterpret_cast<const void*>(e.machine), false, &theInfo);
                     fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
-                            theMachine->GetRevs(), theMachine->GetMaxRevs(), theMachine->GetType());
+                            (long)theInfo.revs, (long)theInfo.max_revs, (long)theInfo.machine_type);
+                }
             } else {
                 EEGraphPathMachine* theMachine = EEGraphOf(e.machine);
                 fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", k++);
@@ -1673,19 +1511,6 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
             }
         }
     }
-}
-
-// Makes sure the bounded path machine exists for the map, recreating it (with corner checks) for another map
-void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
-{
-    if (this->mBoundedMachine != NULL && this->mBoundedMachine->mMap == inMap)
-        return;
-    if (this->mBoundedMachine) {
-        this->mBoundedMachine->Reset();
-        delete this->mBoundedMachine;
-    }
-    this->mBoundedMachine = new EEBoundedPathMachine(4, inMap);
-    this->mBoundedMachine->mCheckCorners = true;
 }
 
 // Runs a bounded tile search (at most 200 steps; a window around inFrom when inBounds is empty) and returns its

@@ -25,24 +25,16 @@ class EEComplexUnit;
 struct EEComplexUnitWaypoint;                // ee/EEUnit.h
 class EEMap;
 template <class T> class U2DRectangle;
-typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
+typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAreaUtilities.h
 class EEAIPathGoalModifierBase;
 class EEAIGraphPathGoalModifierBase;
 class GE3DPoint;
-class EEAIAStarMachineBase;             // ee/EEAIAStarMachine.h
-class EEAIAStarStorage;
-class EEAIAStarBoundedStorage;
 class EEAIAStarGraphStorage;
-class EEAIAStarPathfindingGoal;
-class EEAIAStarBoundedPathGoal;
 class EEAIAStarPathGraphGoal;
 class EEAIPathSubSector;
-template <class S, class G, class M> class EEAIAStarMachine;
 template <class S, class G, class M> class EEAIAStarGraphMachine;
 struct EePathManager;                   // rust/sim/astar.h
 
-typedef EEAIAStarMachine<EEAIAStarStorage, EEAIAStarPathfindingGoal, EEMap> EEPathMachine;          // sizeof 0x11c
-typedef EEAIAStarMachine<EEAIAStarBoundedStorage, EEAIAStarBoundedPathGoal, EEMap> EEBoundedPathMachine;   // 0x148
 typedef EEAIAStarGraphMachine<EEAIAStarGraphStorage, EEAIAStarPathGraphGoal, EEAIPathSubSector> EEGraphPathMachine;   // 0xd8
 
 class EEPathManager {
@@ -104,16 +96,14 @@ public:
 
     // the Rust manager's host (EEPathManager.cpp): what stays C++ (provisional names; addresses are the bodies).
     // TryShortPath, TrimPath, AppendWaypoints, JoinPaths, RunBoundedPath and FinishPath with its found and failed
-    // halves are Rust (pm_bounded.rs) over the host's bounded machine
+    // halves are Rust (pm_bounded.rs) over the bounded machine, a Rust search with the path machines (path_search.rs)
     int64_t Call(int32_t inWhat, uint64_t inH0 = 0, uint64_t inH1 = 0, std::initializer_list<int64_t> inValues = {},
                  int64_t* outValues = NULL);
-    void PrepareBoundedMachine(EEMap* inMap);
     bool RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine);
     // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
 
     EePathManager* mRust;                               // the manager (ee_sim::astar pm.rs)
-    EEBoundedPathMachine* mBoundedMachine;              // +0xbc
     long mLC8;                                          // +0xc8 (= 5; gEEAIRegionSize)
 };
 

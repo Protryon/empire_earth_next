@@ -18,7 +18,6 @@
 #include <stddef.h>
 #include <vector>
 #include "rust/sim/astar.h"         // EeAStarAreaRecord
-#include "ee/EEAIAStarStorage.h"     // EEAIAStarBounds (mBounds)
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIListView.h"
 

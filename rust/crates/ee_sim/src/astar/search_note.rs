@@ -14,6 +14,7 @@ pub(crate) const EV_COST: u8 = b'C';
 pub(crate) const EV_ESTIMATE: u8 = b'E';
 pub(crate) const EV_GOAL_NODE: u8 = b'G';
 pub(crate) const EV_SEARCH_DONE: u8 = b'S';
+pub(crate) const EV_MARK_TILE: u8 = b'M';
 pub(crate) const EV_GRAPH_START: u8 = b'o';
 pub(crate) const EV_GRAPH_ESTIMATE: u8 = b'e';
 pub(crate) const EV_GRAPH_GOAL_NODE: u8 = b'g';
