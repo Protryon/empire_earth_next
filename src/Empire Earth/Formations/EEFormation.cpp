@@ -1,101 +1,26 @@
-// C:\EEX\Empire Earth\Formations\EEFormation.cpp (file and folder names inferred: no __FILE__). The formation base: 0xddcc6..0xdde43 (Create, Arrange).
+// C:\EEX\Empire Earth\Formations\EEFormation.cpp (file and folder names inferred: no __FILE__). The formation:
+// 0xdd160..0xde331 (the base's Create and Arrange, and the eight classes the original had, EEFCircle.cpp to
+// EEFWedge.cpp, folded into this one unit: the units' lane, round 2; ee/EEFormation.h).
 // Unit flags: the exe's module set.
 #include <windows.h>
-#include <mbstring.h>
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-
-#include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 
 #include "ee/EEFormation.h"
-#include "ee/EEFCircle.h"
-#include "ee/EEFInwardCircle.h"
-#include "ee/EEFOutwardCircle.h"
-#include "ee/EEFLine.h"
-#include "ee/EEFLongLine.h"
-#include "ee/EEFLooseLine.h"
-#include "ee/EEFShortLine.h"
-#include "ee/EEFStaggeredLine.h"
-#include "ee/EEFWedge.h"
-#include "ee/EEFDeepWedge.h"
-#include "ee/EEFShallowWedge.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
 #include "rust/sim/formations.h"
-#include "ee/EEFormationRust.h"
 
-// Creates the formation of a type: 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge;
-// 6-7 inward, outward circle; NULL for any other type
+// Creates the formation of a type (0-7; ee/EEFormation.h), NULL for any other type
 EEFormation* EEFormation::Create(long inType)
 {
-    EEFormation* theFormation = NULL;
-    switch (inType) {
-    case 0:
-        theFormation = new EEFShortLine;
-        break;
-    case 1:
-        theFormation = new EEFLongLine;
-        break;
-    case 2:
-        theFormation = new EEFLooseLine;
-        break;
-    case 3:
-        theFormation = new EEFStaggeredLine;
-        break;
-    case 4:
-        theFormation = new EEFDeepWedge;
-        break;
-    case 5:
-        theFormation = new EEFShallowWedge;
-        break;
-    case 6:
-        theFormation = new EEFInwardCircle;
-        break;
-    case 7:
-        theFormation = new EEFOutwardCircle;
-        break;
-    }
-    return theFormation;
+    return inType >= 0 && inType < 8 ? new EEFormation(inType) : NULL;
 }
 
 // Collects the group's units and places them into formation slots
@@ -108,67 +33,81 @@ void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlo
     this->Place(theUnits, outSlots);
 }
 
-EEFormationRadii::EEFormationRadii(const EEFormation* inFormation, std::vector<EEComplexUnit*>& inUnits)
+// TEST ONLY: a Place call's record for the simulation capture (tools/sim_capture.py; ee_sim formations/capture.rs
+// decodes it): the type, the frame, the type's members (Rust's words), the units' radii, the slots from inFirst on
+// (as unit indices)
+static void CapturePlace(const EEFormation* inFormation, std::vector<EEComplexUnit*>& inUnits,
+                         std::vector<EEFormationSlot>& inSlots, unsigned long inFirst)
 {
+    uint32_t theTag = 0;
+    uint32_t theWords[EE_FORMATION_SHAPE_WORDS];
+    uint32_t theCount = ee_formation_shape_words((int32_t)inFormation->mType, inFormation->mMinRadius, &theTag, theWords);
+    EESimCaptureRecord theRecord(theTag);
+    theRecord.I32(inFormation->mType);
     for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            this->mFrame.orientation[i][j] = inFormation->mOrientation.mMatrix[i][j];
-    this->mFrame.center[0] = inFormation->mCenter.GetX();
-    this->mFrame.center[1] = inFormation->mCenter.GetY();
-    this->mFrame.center[2] = inFormation->mCenter.GetZ();
-    this->mFrame.heading = inFormation->mHeading;
-    this->mRadii.resize(inUnits.size());
+        theRecord.F32s(inFormation->mOrientation.mMatrix[i], 3);
+    theRecord.F32(inFormation->mCenter.GetX());
+    theRecord.F32(inFormation->mCenter.GetY());
+    theRecord.F32(inFormation->mCenter.GetZ());
+    theRecord.F32(inFormation->mHeading);
+    theRecord.Bytes(theWords, theCount * 4);
+    theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
-        this->mRadii[i] = inUnits[i]->mUnitClass->mOuterCollisionSphere;
-    this->mSlots.resize(inUnits.size());
-}
-
-void EEFormationRadii::Append(unsigned int inCount, std::vector<EEComplexUnit*>& inUnits,
-                              std::vector<EEFormationSlot>& outSlots)
-{
-    EEFormationSlot theSlot;
-    for (unsigned int i = 0; i < inCount; i++) {
-        const EeFormationSlot& theOut = this->mSlots[i];
-        theSlot.mPosition = GE3DPoint(theOut.position[0], theOut.position[1], theOut.position[2]);
-        theSlot.mUnit = inUnits[theOut.unit];
-        theSlot.mHeading = theOut.heading;
-        outSlots.push_back(theSlot);
-    }
-}
-
-void EEFormationCaptureBegin(EESimCaptureRecord& ioRecord, const EEFormation* inFormation)
-{
-    ioRecord.I32(inFormation->mType);
-    for (int i = 0; i < 3; i++)
-        ioRecord.F32s(inFormation->mOrientation.mMatrix[i], 3);
-    ioRecord.F32(inFormation->mCenter.GetX());
-    ioRecord.F32(inFormation->mCenter.GetY());
-    ioRecord.F32(inFormation->mCenter.GetZ());
-    ioRecord.F32(inFormation->mHeading);
-}
-
-void EEFormationCaptureEnd(EESimCaptureRecord& ioRecord, std::vector<EEComplexUnit*>& inUnits,
-                           std::vector<EEFormationSlot>& inSlots, unsigned long inFirst)
-{
-    ioRecord.U32((unsigned int)inUnits.size());
-    for (size_t i = 0; i < inUnits.size(); i++)
-        ioRecord.F32(inUnits[i]->mUnitClass->mOuterCollisionSphere);
-    ioRecord.U32((unsigned int)(inSlots.size() - inFirst));
+        theRecord.F32(inUnits[i]->mUnitClass->mOuterCollisionSphere);
+    theRecord.U32((unsigned int)(inSlots.size() - inFirst));
     for (size_t i = inFirst; i < inSlots.size(); i++) {
         const EEFormationSlot& theSlot = inSlots[i];
-        ioRecord.F32(theSlot.mPosition.GetX());
-        ioRecord.F32(theSlot.mPosition.GetY());
-        ioRecord.F32(theSlot.mPosition.GetZ());
-        ioRecord.F32(theSlot.mHeading);
+        theRecord.F32(theSlot.mPosition.GetX());
+        theRecord.F32(theSlot.mPosition.GetY());
+        theRecord.F32(theSlot.mPosition.GetZ());
+        theRecord.F32(theSlot.mHeading);
         unsigned int theIndex = 0xffffffff;
         for (size_t j = 0; j < inUnits.size(); j++)
             if (inUnits[j] == theSlot.mUnit) {
                 theIndex = (unsigned int)j;
                 break;
             }
-        ioRecord.U32(theIndex);
+        theRecord.U32(theIndex);
     }
-    ioRecord.Commit();
+    theRecord.Commit();
+}
+
+// Places the units by the type's shape (Rust: rows behind the centre, wedges from a point, or a ring), spaced by
+// their outer collision radii. Lines and wedges replace outSlots; a circle appends, and does nothing for no units.
+void EEFormation::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
+{
+    unsigned long theFirst = 0;
+    if (this->IsCircle()) {
+        theFirst = outSlots.size();
+        if (inUnits.size() == 0)
+            return;
+    } else {
+        outSlots.clear();
+    }
+    EeFormationFrame theFrame;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            theFrame.orientation[i][j] = this->mOrientation.mMatrix[i][j];
+    theFrame.center[0] = this->mCenter.GetX();
+    theFrame.center[1] = this->mCenter.GetY();
+    theFrame.center[2] = this->mCenter.GetZ();
+    theFrame.heading = this->mHeading;
+    std::vector<float> theRadii(inUnits.size());
+    for (size_t i = 0; i < inUnits.size(); i++)
+        theRadii[i] = inUnits[i]->mUnitClass->mOuterCollisionSphere;
+    std::vector<EeFormationSlot> theSlots(inUnits.size());
+    unsigned int theCount = ee_formation_place((int32_t)this->mType, this->mMinRadius, &theFrame,
+                                               theRadii.empty() ? NULL : &theRadii[0], (uint32_t)theRadii.size(),
+                                               theSlots.empty() ? NULL : &theSlots[0]);
+    EEFormationSlot theSlot;
+    for (unsigned int i = 0; i < theCount; i++) {
+        theSlot.mPosition = GE3DPoint(theSlots[i].position[0], theSlots[i].position[1], theSlots[i].position[2]);
+        theSlot.mUnit = inUnits[theSlots[i].unit];
+        theSlot.mHeading = theSlots[i].heading;
+        outSlots.push_back(theSlot);
+    }
+    if (EESimCaptureRecord::Active())
+        CapturePlace(this, inUnits, outSlots, theFirst);
 }
 
 void EEFormationCaptureSweep()
@@ -196,9 +135,8 @@ void EEFormationCaptureSweep()
                 theFormation->mHeading = theYaw;
                 if (theSize % 2 == 0)   // odd sizes keep the identity orientation, as EEHerd's circles
                     theFormation->mOrientation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-                EEFCircle* theCircle = dynamic_cast<EEFCircle*>(theFormation);
-                if (theCircle != NULL && theSize % 3 == 0)
-                    theCircle->SetMinRadius((float)theSize * 0.75f);
+                if (theFormation->IsCircle() && theSize % 3 == 0)
+                    theFormation->SetMinRadius((float)theSize * 0.75f);
                 std::vector<EEFormationSlot> theSlots;
                 theFormation->Place(theUnits, theSlots);
                 delete theFormation;

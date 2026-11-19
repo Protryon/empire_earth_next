@@ -8,85 +8,31 @@
 #include <functional>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/SESoundManager.h"
-#include "lle/U2DRectangle.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/Input System.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
-#include "ee/EEUnitUpdate.h"
-#include "rust/sim/units.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EEAIContinentManager.h"
-#include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEAIContinent.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEGhostUnit.h"
 #include "ee/EEAIFOUnitScreeners.h"
-#include "ee/EEGameVariant.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "ee/EEEffectManager.h"
-#include "ee/EECivPowersManager.h"
-#include "ee/EEDatabaseTables.h"
-#include "ee/EECombatFormulas.h"
-#include "GEWindow.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEUnitSetManager.h"
 
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
@@ -1019,35 +965,19 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
         bool the2 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 2, inUnitType, theSide2);
         bool the3 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 3, inUnitType, theSide3);
         bool the4 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 4, inUnitType, theSide4);
-        if (the1 ^ the2 ^ the3 ^ the4) {
-            if (the1) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide1)->mComplexUnit;
+        if (the1 ^ the2 ^ the3 ^ the4) {   // the first fitting direction's middle wall
+            std::vector<EEUnit*>* theSides[4] = {&theSide1, &theSide2, &theSide3, &theSide4};
+            bool theFits[4] = {the1, the2, the3, the4};
+            for (long d = 0; d < 4; d++) {
+                if (!theFits[d])
+                    continue;
+                EEComplexUnit* theWall = EEGetMiddleOf(*theSides[d])->mComplexUnit;
                 if (!theWall->mIsTinted) {
                     theWall->SetColor(sGateHighlight);
                     theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(1);
+                    theWall->SetGateDirection(d + 1);
                 }
-            } else if (the2) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide2)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(2);
-                }
-            } else if (the3) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide3)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(3);
-                }
-            } else if (the4) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide4)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(4);
-                }
+                break;
             }
         }
         theSide1.clear();

@@ -7,21 +7,11 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGameVariant.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EEEvent.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EETechTreeRecord.h"
 #include "ee/EETechCapture.h"

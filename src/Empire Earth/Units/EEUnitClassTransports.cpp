@@ -8,48 +8,22 @@
 #include <set>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
 #include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/GE3DLine.h"
-#include "lle/SESoundManager.h"
-#include "lle/GEBoundingBox.h"
-#include "lle/GEModel.h"
 
-#include "ee/EEUnitUpdate.h"
-#include "rust/sim/units.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
-#include "ee/EEPhysicsModel.h"
-#include "ee/EETileLocation.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
-#include "ee/EmpireEarth.h"
-#include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEAirTrafficControl.h"
 
 // ---- EEUCTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The transports' base
@@ -82,10 +56,14 @@ bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCar
 
 // The class bodies' host (ee_units cls_host.rs; EE_UNITS_CLS_*): the continent manager's lists, the unit utilities'
 // leaves that keep their records, the path lengths and a unit's reads and trial location
+int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* io);
+
 extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* ioIo)
 {
     EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
     std::vector<U2DPoint<long> > theTiles;
+    if (inOp >= EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT)
+        return EEUnitClassMoveOp(inOp, theUnit, inB, inC, inD, ioIo);   // EEUnitClass.cpp
     switch (inOp) {
     case EE_UNITS_CLS_NEXT_TO_AREA:
         return gContinentManager.IsNextToArea((long)inC, (long)inD, (unsigned short)inA);

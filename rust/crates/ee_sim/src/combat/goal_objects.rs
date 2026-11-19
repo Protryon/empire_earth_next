@@ -92,8 +92,65 @@ impl TableHost<'_> {
     }
 }
 
+/// The plain reads of the combat goals' operations, over the world views (the units' lane, round 2: they were
+/// `EECombatGoalHostOp`'s one-line cases); None for another operation (or no unit), which the C++ answers.
+#[cfg(not(test))]
+fn view_read(code: i32, unit: u64) -> Option<i64> {
+    use crate::combat::goal_attack::{
+        EE_COMBAT_G_AMMO_TYPE, EE_COMBAT_G_CATEGORY, EE_COMBAT_G_COMPLEX, EE_COMBAT_G_FAMILY, EE_COMBAT_G_HIT_POINTS,
+        EE_COMBAT_G_ID, EE_COMBAT_G_ON_TILE, EE_COMBAT_G_PARTS, EE_COMBAT_G_PLAYER, EE_COMBAT_G_VELOCITY,
+    };
+    use crate::combat::goal_dispatch::{EE_COMBAT_G_HAS_GROUP, EE_COMBAT_G_MAX_HIT_POINTS};
+    if !matches!(
+        code,
+        EE_COMBAT_G_ON_TILE
+            | EE_COMBAT_G_COMPLEX
+            | EE_COMBAT_G_PARTS
+            | EE_COMBAT_G_FAMILY
+            | EE_COMBAT_G_CATEGORY
+            | EE_COMBAT_G_ID
+            | EE_COMBAT_G_HIT_POINTS
+            | EE_COMBAT_G_VELOCITY
+            | EE_COMBAT_G_PLAYER
+            | EE_COMBAT_G_AMMO_TYPE
+            | EE_COMBAT_G_MAX_HIT_POINTS
+            | EE_COMBAT_G_HAS_GROUP
+    ) {
+        return None;
+    }
+    // SAFETY: a goal's operation runs inside the C++ call that holds the world; its units are live
+    let t = unsafe { crate::world::WorldRead::begin() };
+    // SAFETY: as above
+    let u = unsafe { crate::world::UnitView::of(&t, unit) }?;
+    Some(match code {
+        EE_COMBAT_G_ON_TILE => i64::from(u.has_tile_node()),
+        EE_COMBAT_G_COMPLEX => u.complex_unit_handle() as i64,
+        EE_COMBAT_G_PARTS => i64::from(u.next_part_handle() != 0) | i64::from(u.previous_part().is_some()) << 1,
+        EE_COMBAT_G_FAMILY => u.class()?.family() as i64,
+        EE_COMBAT_G_CATEGORY => u.class()?.category() as i64,
+        EE_COMBAT_G_ID => i64::from(u.id()),
+        EE_COMBAT_G_HIT_POINTS => u.hit_points(),
+        EE_COMBAT_G_VELOCITY => {
+            let v: f32 = crate::world_field!(u.complex(), mVelocity);
+            i64::from(v.to_bits())
+        }
+        EE_COMBAT_G_PLAYER => u.player().map_or(0, |p| p.handle() as i64),
+        EE_COMBAT_G_AMMO_TYPE => crate::world_field!(u.class()?.fields(), mAmmoType) as i64,
+        EE_COMBAT_G_MAX_HIT_POINTS => u.stats()?.max_hit_points(),
+        _ => i64::from(u.active_group_handle() != 0),
+    })
+}
+
+#[cfg(test)]
+fn view_read(_code: i32, _unit: u64) -> Option<i64> {
+    None
+}
+
 impl GoalHost for TableHost<'_> {
     fn op(&mut self, code: i32, unit: u64, args: &mut EeCombatGoalArgs) -> i64 {
+        if let Some(r) = view_read(code, unit) {
+            return r;
+        }
         let mut io = EeCombatGoalIo { i: *args, ..Default::default() };
         let r = self.call(code, unit, 0, &mut io);
         *args = io.i;

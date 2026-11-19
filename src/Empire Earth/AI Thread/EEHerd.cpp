@@ -46,8 +46,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEFormation.h"
-#include "ee/EEFCircle.h"
-#include "ee/EEFInwardCircle.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
@@ -410,7 +408,7 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         for (size_t i = 0; i < io->input_len; i++)
             theUnits.push_back(EEHerdUnit(io->input[i]));
         std::vector<EEFormationSlot> theSlots;
-        EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
+        EEFormation* theFormation = EEFormation::Create(6);
         GE3DPoint theCenter(io->f[0], io->f[1], io->f[2]);
         if (v[0] == 0) {   // Chase (the original never released this formation)
             theFormation->mCenter.mX = theCenter.mX;

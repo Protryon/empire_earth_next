@@ -8,7 +8,6 @@ use std::ffi::c_void;
 use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::beam::{self, EeGfxBeamVertex};
-use crate::gfx::effect_state::EeGfxEffectRecord;
 use crate::gfx::effect_store::EffectStore;
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::farm::{self, EeGfxFarmField, FarmTerrain};
@@ -226,146 +225,7 @@ pub extern "C" fn ee_gfx_beam_stretch_y(y: f32, length: f32) -> f32 {
     beam::stretch_y(y, length)
 }
 
-// ---- the effect manager's containers (effect_store.rs, EEEffectManager.cpp)
-
-/// The effect manager's containers (opaque to the C++).
-pub struct EeGfxEffectStore(pub(crate) EffectStore);
-
-fn store<'a>(s: *const EeGfxEffectStore) -> &'a EffectStore {
-    // SAFETY: the C++ passes the store `ee_gfx_effects_new` made, alive until `ee_gfx_effects_free`
-    unsafe { &(*s).0 }
-}
-
-fn store_mut<'a>(s: *mut EeGfxEffectStore) -> &'a mut EffectStore {
-    // SAFETY: as `store`; the manager's calls do not overlap
-    unsafe { &mut (*s).0 }
-}
-
-/// A new, empty store (`EEEffectManager`'s constructor).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_new() -> *mut EeGfxEffectStore {
-    Box::into_raw(Box::new(EeGfxEffectStore(EffectStore::new())))
-}
-
-/// Frees a store (null: nothing).
-///
-/// # Safety
-/// `s` is null or a store from `ee_gfx_effects_new`, not used again.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effects_free(s: *mut EeGfxEffectStore) {
-    if !s.is_null() {
-        // SAFETY: the function's contract
-        drop(unsafe { Box::from_raw(s) });
-    }
-}
-
-/// The last handle given out.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_last_handle(s: *const EeGfxEffectStore) -> u32 {
-    store(s).last_handle()
-}
-
-/// Sets the last handle given out (a load).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_set_last_handle(s: *mut EeGfxEffectStore, handle: u32) {
-    store_mut(s).set_last_handle(handle)
-}
-
-/// `AddEffect`: links `effect` first and indexes it under a new handle (`new_handle`) or `own`; returns the handle.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_add(s: *mut EeGfxEffectStore, effect: *mut c_void, new_handle: bool, own: u32) -> u32 {
-    store_mut(s).add(effect as usize, new_handle, own)
-}
-
-/// `RemoveEffect`'s unlink.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_unlink(s: *mut EeGfxEffectStore, effect: *mut c_void) {
-    store_mut(s).unlink(effect as usize)
-}
-
-/// The list's first effect (null: none).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_head(s: *const EeGfxEffectStore) -> *mut c_void {
-    store(s).head() as *mut c_void
-}
-
-/// The effect after `effect` in the list (null: none).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_next(s: *const EeGfxEffectStore, effect: *const c_void) -> *mut c_void {
-    store(s).next(effect as usize) as *mut c_void
-}
-
-/// The effect under `handle` (null: none).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_find(s: *const EeGfxEffectStore, handle: u32) -> *mut c_void {
-    store(s).find(handle) as *mut c_void
-}
-
-/// Erases the index's entry under `handle`; whether there was one.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_erase(s: *mut EeGfxEffectStore, handle: u32) -> bool {
-    store_mut(s).erase(handle)
-}
-
-/// The index's size.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_count(s: *const EeGfxEffectStore) -> usize {
-    store(s).count()
-}
-
-/// The index's first entry at or after `cursor` in handle order: its effect (null: none) and handle.
-///
-/// # Safety
-/// `handle` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effects_at_or_after(
-    s: *const EeGfxEffectStore,
-    cursor: u64,
-    handle: *mut u32,
-) -> *mut c_void {
-    match store(s).at_or_after(cursor) {
-        Some((h, e)) => {
-            // SAFETY: the function's contract
-            unsafe { *handle = h };
-            e as *mut c_void
-        }
-        None => std::ptr::null_mut(),
-    }
-}
-
-/// `DestroyEffect`: queues a handle.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_queue_destroy(s: *mut EeGfxEffectStore, handle: u32) {
-    store_mut(s).queue_destroy(handle)
-}
-
-/// Takes the destruction queue's front handle; false when it is empty.
-///
-/// # Safety
-/// `handle` is writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effects_take_destroyed(s: *mut EeGfxEffectStore, handle: *mut u32) -> bool {
-    match store_mut(s).take_destroyed() {
-        Some(h) => {
-            // SAFETY: the function's contract
-            unsafe { *handle = h };
-            true
-        }
-        None => false,
-    }
-}
-
-/// The destruction queue's length.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_destroyed_len(s: *const EeGfxEffectStore) -> usize {
-    store(s).destroyed_len()
-}
-
-/// The destruction queue's `i`th handle.
-#[no_mangle]
-pub extern "C" fn ee_gfx_effects_destroyed_at(s: *const EeGfxEffectStore, i: usize) -> u32 {
-    store(s).destroyed_at(i)
-}
+// ---- the effect manager's capture (effect_store.rs, ffi_manager.rs)
 
 /// TEST ONLY (tools/sim_capture.py EFMU): the manager's state folded into six words: the last handle, the index's,
 /// the list's and the destruction queue's sizes, and an FNV-1a 64 (low, high) of the index (handle, the effect's
@@ -399,25 +259,6 @@ pub fn capture_words(s: &EffectStore, record: &dyn Fn(usize) -> (u32, u32)) -> [
         word(&mut hash, s.destroyed_at(i));
     }
     [s.last_handle(), s.count() as u32, listed, s.destroyed_len() as u32, hash as u32, (hash >> 32) as u32]
-}
-
-/// EFMU's six words into `out` (`record`: an effect's record, as the manager's host answers it).
-///
-/// # Safety
-/// `s` is a live store whose effects are live; `out` holds six words.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effects_capture(
-    s: *const EeGfxEffectStore,
-    record: extern "C" fn(context: *mut c_void, effect: *mut c_void) -> *mut EeGfxEffectRecord,
-    out: *mut u32,
-) {
-    let words = capture_words(store(s), &|e| {
-        // SAFETY: a live effect's record
-        let r = unsafe { &*record(std::ptr::null_mut(), e as *mut c_void) };
-        (r.kind as u32, r.handle)
-    });
-    // SAFETY: the caller's contract
-    unsafe { std::ptr::copy_nonoverlapping(words.as_ptr(), out, 6) };
 }
 
 #[cfg(test)]

@@ -1,5 +1,11 @@
 // C:\EEX\Empire Earth\Formations\EEFormation.h (RECONSTRUCTION; file name inferred). A group formation (RTTI
 // EEFormation > UReferenceCounter; vtable 0x43f838). Names are provisional. Requires lle/LowLevelEngine.h.
+//
+// New (the units' lane, round 2): one concrete class. The original's eight subclasses (EEFShortLine, EEFLongLine,
+// EEFLooseLine, EEFStaggeredLine > EEFLine; EEFDeepWedge, EEFShallowWedge > EEFWedge; EEFInwardCircle,
+// EEFOutwardCircle > EEFCircle) only gave a type its constructor's members (a line's offsets, a wedge's arms, a
+// circle's mode and arc): those are Rust's (rust/crates/ee_sim/src/formations, capture.rs shape_of), and Place is one
+// call there by type. What a caller sets stays here: the frame and a circle's minimum radius.
 #ifndef EE_EEFORMATION_H
 #define EE_EEFORMATION_H
 
@@ -18,40 +24,32 @@ struct EEFormationSlot {
 
 class EEFormation : public UReferenceCounter {
 public:
-    static EEFormation* Create(long inType);   // 0xddcc6: one of the 8 formation classes (0..7), 0 otherwise
+    // 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge; 6-7 inward, outward circle; NULL otherwise
+    static EEFormation* Create(long inType);
 
-    // the inline ctor/dtor (COMDATs 0xdd7f8 / ??_G 0xdd83d, emitted by EEFCircle.cpp) and the two
-    // virtuals (vtable 0x43f838: ??_G, +0x04 0xdddd5, +0x08 pure). Names are provisional.
-    EEFormation(long inType)
-        : mHeading(0.0f), mType(inType)
+    explicit EEFormation(long inType)
+        : mHeading(0.0f), mType(inType), mB5C(true), mMinRadius(0.5f)
     {
-        this->mB5C = true;
     }
     virtual ~EEFormation() {}
-    // +0x04 0xdddd5 (EEFormation.cpp): the group's units into a vector, then Place
-    virtual void Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots);
-    // +0x08: the formation's slots for inUnits (EEFCircle 0xdd1cc, EEFLine 0xdd9a3, EEFWedge 0xde019)
-    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots) = 0;
+    // the group's units into a vector, then Place
+    void Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots);
+    // the formation's slots for inUnits: lines and wedges replace outSlots, a circle appends to it
+    void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);
 
-    // layout: the base ctor 0xdd7f8 (EEFLine's 0xdd8b2 calls it); sizeof 0x60
-    GETransformation mOrientation;          // +0x08
-    void SetCenter(const GE3DPoint& inCenter) { this->mCenter = inCenter; }   // inline: EEHerd::Surround 0xa4351 refuses the GE3DPoint::operator= inside (share)
-    GE3DPoint mCenter;                      // +0x48 (EEActiveGroup::LayOutFormation 0x1ec5f3 assigns it through
-                                            // GE3DPoint::operator=; the ctor 0xdd7f8 zeroes it) (provisional name)
-
-    float mHeading;                         // +0x54
+    bool IsCircle() const { return this->mType == 6 || this->mType == 7; }
+    void SetCenter(const GE3DPoint& inCenter) { this->mCenter = inCenter; }
+    void SetMinRadius(float inRadius) { this->mMinRadius = inRadius; }
     long GetType() const { return this->mType; }
-    long mType;                             // +0x58
-    bool mB5C;                              // +0x5c (= true)
+
+    GETransformation mOrientation;
+    GE3DPoint mCenter;
+    float mHeading;
+    long mType;
+    bool mB5C;
+    float mMinRadius;                       // a circle's lower bound of the radius (0.5; EEHerd sets its own)
 };
 
-// TEST ONLY: a Place call's record for the simulation capture (ee/EESimCapture.h; tools/sim_capture.py). Begin
-// writes the formation's common state (type, orientation, centre, heading), the caller its own, End the units' radii
-// and the slots from inFirst on (as unit indices), then commits.
-class EESimCaptureRecord;
-void EEFormationCaptureBegin(EESimCaptureRecord& ioRecord, const EEFormation* inFormation);
-void EEFormationCaptureEnd(EESimCaptureRecord& ioRecord, std::vector<EEComplexUnit*>& inUnits,
-                           std::vector<EEFormationSlot>& inSlots, unsigned long inFirst);
 // TEST ONLY: with the capture on, EE-SIM calls this every few game minutes: every formation type Places groups of
 // each player's newest units (their real radii and positions), so that lines and wedges, which the computer players
 // never form, are captured too. Reads the world; changes nothing.
