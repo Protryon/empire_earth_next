@@ -42,7 +42,6 @@
 #include "lle/UIRadioButton.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEvent.h"
-#include "lle/UIEMouseWheelScroll.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIBackground.h"
 #include "lle/UIHotKey.h"
@@ -50,6 +49,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
+#include "lle/UIEMouseWheelScroll.h"
 
 // unreferenced (its init chain 0x10070706 is the only user)
 static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
