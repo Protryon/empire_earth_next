@@ -34,6 +34,8 @@ pub mod plat_sys;
 /// cbindgen:ignore
 pub mod plat_ui;
 pub mod png;
+/// The sparse point set (`U2DSparseArrayPointContainer`; was ee_sim::astar's sparse.rs).
+pub mod sparse;
 /// The crate ee_random before the restructure.
 /// cbindgen:ignore
 pub mod random;

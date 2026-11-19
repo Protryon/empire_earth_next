@@ -67,7 +67,7 @@ pub mod repair;
 pub mod search_note;
 pub mod sector_rec;
 pub mod sectors;
-pub mod sparse;
+pub use ee_base::sparse::set as sparse;
 pub mod storage;
 pub mod storage_save;
 pub mod sub_sector_links;
