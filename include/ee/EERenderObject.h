@@ -21,12 +21,6 @@ void SetTerrainLighting();                  // 0x10f833: the effects' lighting s
 void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
 void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
 
-
-// EEEffect.cpp's batch functions (declared here for the render objects)
-class GETexture;
-void BeginEffectBatches(GETexture* inTexture);  // 0x102724: starts both effect batches with inTexture
-void EndEffectBatches();                    // 0x102f20: drops BeginEffectBatches's references
-void FlushEffectBatches();                  // 0x103f64: draws what the batches hold
 // the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by GetFogFactor)
 // (provisional name)
 class GEQuaternion;
@@ -58,12 +52,6 @@ public:
     bool GetUnitOpacity(EEUnit* inUnit, float& outOpacity);  // 0x10f412: the unit's opacity this frame
 #endif
 };
-
-// the effects' render queues, one map per pass (0x4e9418, EERenderObject.cpp's init chain 0x10ac30; [4] holds the water
-// effects: EEROWater::RenderScene) (provisional name); declared where ee/EEEffect.h (the typedef) came first
-#ifdef EE_EEEFFECT_H
-extern EEEffectQueue gEffectQueues[5];
-#endif
 
 #endif
 

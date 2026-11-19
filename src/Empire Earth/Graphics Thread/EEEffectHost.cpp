@@ -1,10 +1,14 @@
-// The effects' constructors and their answers about the world (docs/RUST_PLAN.md R4.4): EEEffect's constructors by
-// the manager's entry points, the operations that read the world (the storms' moves, the marching line's regions, the
-// tile tests, the farm's rebuild, the 2D parts, the damage controller's step) and one host per class for the Rust
-// calls: Ask answers EeGfxEffect3DHost (ee_gfx effect_rising.rs and its kinds' modules) and EeGfxEffect2DHost
-// (effect_2d.rs), their shared questions once; the battlefield decals' placement (EEE2DBattlefieldAmbient.cpp,
-// 0xde374..0xde6e9) and EETagPointList::Scale (0xe1814). Since R4.4's twenty-fifth round one file for what was
-// EEE3DRust.cpp and EEE2DRust.cpp (the original's 60 effect leaves, deleted round by round).
+// The effects' world (docs/RUST_PLAN.md R4.4; the graphics + LLE cluster's second round): the effects and their
+// manager are Rust objects (ee_gfx effect_obj.rs, ffi_manager.rs); this unit answers what they ask of the C++ world.
+// The effects' constructors' weapon points (the units' EECombatEffectWeaponPoint), the C++
+// objects an effect holds (its unit, graphic effect, models, graphic objects and sounds: their references, loads and
+// releases), the map's tiles and doppelgangers, the answers of the 3D kinds (EeGfxEffectAnswers3D: ee_gfx
+// effect_rising.rs and its kinds' modules) and of the 2D ones (EeGfxEffectAnswers2D: effect_2d.rs) that call the
+// units, sounds, area effects and the map, the damage controller's tick facts, the goal markers' questions, the TEST
+// ONLY captures' file and records, the effects' file over an FSFile, the particles' ground, the quad batches' arrays
+// and the battlefield decals' entry points. Since R4.4's twenty-fifth round one file for what was EEE3DRust.cpp and
+// EEE2DRust.cpp (the original's 60 effect leaves, deleted round by round), since the second cluster round also for
+// EEEffect.cpp, EEEffectManager.cpp and EEGraphicalGoalManager.cpp.
 #include <windows.h>
 #include <math.h>
 
@@ -58,6 +62,7 @@
 #include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include "lle/FSMemoryFile.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEEffectMesh.h"
 #include "ee/EEDoppelganger.h"
@@ -68,13 +73,14 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEUnitAction.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
+#include "ee/EESimCapture.h"
+#include "ee/EESaveGameFiles.h"
 #include "rust/base/math.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
@@ -83,7 +89,58 @@ class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
 bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 
+// the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#endif
+
+// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
+template <class Derived, class Base> static uint64_t EEBaseOffset()
+{
+    Derived* theObject = reinterpret_cast<Derived*>(static_cast<uintptr_t>(0x10000));
+    return reinterpret_cast<uintptr_t>(static_cast<Base*>(theObject)) - 0x10000;
+}
+
+// The members ee_gfx effect_reads.rs reads in place (the graphic objects, the graphic effects' records and links, the
+// complex units' physical models and turret angles)
+void EEGfxObjectLayoutRegister()
+{
+    static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "a vector is three words");
+    EeGfxObjectLayout theLayout = {};
+    theLayout.size = sizeof(EeGfxObjectLayout);
+    theLayout.gobj_fields = EEBaseOffset<EEGraphicObject, EeDataGraphicObjectFields>();
+    theLayout.gobj_models = offsetof(EEGraphicObject, mModels);
+    theLayout.gobj_textures = offsetof(EEGraphicObject, mTextures);
+    theLayout.gobj_tag_points = offsetof(EEGraphicObject, mTagPoints);
+    theLayout.gobj_tags = offsetof(EEGraphicObject, mTags);
+    theLayout.gobj_model = offsetof(EEGraphicObject, mModel);
+    theLayout.gobj_default_point = offsetof(EEGraphicObject, mDefaultPoint);
+    theLayout.gobj_top_point = offsetof(EEGraphicObject, mTopPoint);
+    theLayout.gobj_turret_parts = offsetof(EEGraphicObject, mTurretParts);
+    theLayout.gobj_orbitals = offsetof(EEGraphicObject, mOrbitals);
+    theLayout.turret_part_model = offsetof(EETurretPart, mModel);
+    theLayout.orbital_model = offsetof(EEOrbital, mModel);
+    theLayout.orbital_speed = offsetof(EEOrbital, mSpeed);
+    theLayout.orbital_angle = offsetof(EEOrbital, mAngle);
+    theLayout.geffect_fields = EEBaseOffset<EEGraphicEffect, EeDataGraphicEffectFields>();
+    theLayout.geffect_object = offsetof(EEGraphicEffect, mGraphicObject);
+    theLayout.geffect_linked = offsetof(EEGraphicEffect, mLinkedEffect1);
+    static_assert(offsetof(EEGraphicEffect, mLinkedEffect3) == offsetof(EEGraphicEffect, mLinkedEffect1) + 2 * sizeof(void*),
+                  "the links in order");
+    theLayout.complex_scale = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mScale);
+    theLayout.complex_frame = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame);
+    theLayout.complex_turret_angles = offsetof(EEComplexUnit, mTurretAngles);
+    theLayout.stats_model = offsetof(EEUnitClassUpgrade, mModel);
+    ee_gfx_object_layout_set(&theLayout);
+}
+
 namespace {
+EeGfxEffectHead* H(EEEffect* inEffect) { return reinterpret_cast<EeGfxEffectHead*>(inEffect); }
+EEEffect* Fx(EeGfxEffectHead* inEffect) { return reinterpret_cast<EEEffect*>(inEffect); }
+uint64_t U(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
+template <class T> T* P(uint64_t inObject) { return reinterpret_cast<T*>((uintptr_t)inObject); }
+EeGe3DPoint R(const GE3DPoint& inPoint) { return EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ}; }
+
 // the map a weather storm reads and calls into (ee_gfx effect_storm.rs; the storms' and EEEMStorm's moves)
 struct EEStormHostOps {
     static bool OnMap(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->GetTile(inX, inY) != NULL; }
@@ -109,8 +166,6 @@ struct EEStormHostOps {
         gWorld.GetEffectManager()->CreatePlacedEffect(theSplash, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
     }
 };
-const EeGfxStormHost kStormHost = {NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
-                                   EEStormHostOps::StepToward, EEStormHostOps::Ripple};
 
 // a sound replaced by a referenced node (EEE3DRain::SetSound 0xf8337, SetRumble 0xf835e, EEE3DParticleEmitter::SetSound
 // 0xf69bc), the node's own reference then dropped
@@ -137,8 +192,8 @@ void EESetRainSoundLevel(EEEffect* inRain, SESMInstanceNode* inSound, float inVo
     float theVolume;
     float thePan;
     float thePitch;
-    inRain->mTransformation.GetPosition(thePosition);
-    EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, inRain->mBoundingRadius * 5.0f);
+    inRain->Transformation().GetPosition(thePosition);
+    EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, inRain->mRecord->bounding_radius * 5.0f);
     theVolume *= inVolume;
     if (inRain->mRecord->storm.elapsed < EE_GFX_RAIN_FADE_TIME)
         theVolume = EE_GFX_RAIN_FADE_SHARE * theVolume;
@@ -183,109 +238,33 @@ float EEFarmMeshZ(void* inMesh, float inX, float inY)
     return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
 }
 
-// the world's answers for one call (the reads of the graphic objects, tag points and physical models are ee_gfx
-// effect_reads.rs')
+// The C++ answers of one call (the call's EeGfxEffectAsk: its effect, its operation, a constructor's argument; the
+// reads of the graphic objects, tag points and physical models and the effects' own answers are ee_gfx's)
 struct Ask {
-    EEEffect* mEffect = NULL;
-    EEEffectQueue* mQueues = NULL;
-    EeGfxEffect3DOp mOp = EeGfxEffect3DOp::Create;
-    void* mArg = NULL;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
-    static EEEffect* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
+    static EEEffect* E(void* inAsk) { return Fx(static_cast<EeGfxEffectAsk*>(inAsk)->effect); }
     // a unit's graphic (a virtual: a foundation shows its player's class graphic)
-    static uint64_t UnitGraphic(void*, uint64_t inUnit) { return (uint64_t)(uintptr_t)reinterpret_cast<EEUnit*>(inUnit)->GetModel(); }
-    static void MoveTo(void* inAsk)
-    {
-        GETransformation theTransformation(E(inAsk)->mTransformation);
-        E(inAsk)->SetTransformation(theTransformation);
-    }
-    static void Line(void* inAsk, const EeGe3DPoint* inStart, const EeGeVector* inDirection, uint32_t inLinked)
-    {
-        GE3DLine theLine;
-        theLine.SetStart(GE3DPoint(inStart->x, inStart->y, inStart->z));
-        theLine.SetDirection(GEVector(inDirection->x, inDirection->y, inDirection->z));
-        EEGraphicEffect* theEffect = E(inAsk)->mGraphicEffect;
-        gEffectManager->CreateLineEffect(theLine, inLinked == 1 ? theEffect->mLinkedEffect1 : theEffect->mLinkedEffect2, NULL);
-    }
-    static int32_t BaseQueue(void* inAsk) { return E(inAsk)->BaseQueue(true); }
-    static void Push(void* inAsk, uint32_t inIndex)
-    {
-        EEGraphicObject* theObject = E(inAsk)->mGraphicEffect->mGraphicObject;
-        GETexture* theTexture = theObject ? theObject->mTextures[gScreenIndex] : NULL;
-        static_cast<Ask*>(inAsk)->mQueues[inIndex][theTexture].push_back(E(inAsk));
-    }
-    static int32_t Media(void* inAsk)
-    {
-        E(inAsk)->mGraphicObject = E(inAsk)->GetGraphicObject();
-        return E(inAsk)->mGraphicObject->LoadMedia();
-    }
-    // a tracer's end: its impact effect at its position, then the target's hit (EEE3DTracers::Step, 0xfdad4)
-    static void ShotHit(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEGraphicEffect* theImpact = theEffect->mGraphicEffect->mLinkedEffect1;
-        if (theImpact) {
-            GE3DPoint theLocation(theEffect->mTransformation);
-            gEffectManager->CreatePlacedEffect(theLocation, theImpact, NULL);
-        }
-        if (theEffect->mUnit)
-            theEffect->mUnit->mUnitClass->UnitDamaged(theEffect->mUnit->mComplexUnit, NULL, 0);
-    }
-    static void PlaceLinked(void* inAsk, const EeGe3DPoint* inPoint)
-    {
-        EEGraphicEffect* theLinked = E(inAsk)->mGraphicEffect->mLinkedEffect1;
-        if (theLinked) {
-            GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
-            gEffectManager->CreatePlacedEffect(thePoint, theLinked, NULL);
-        }
-    }
-    // the additive pass's unit model (EEE3DAdditivePass::SetUp, 0xe8b78, and RepairPointers, 0xe8dcc)
-    static int32_t UnitModelMedia(void* inAsk)
-    {
-        E(inAsk)->mUnitModel = E(inAsk)->mUnit->GetModel();
-        return E(inAsk)->mUnitModel->LoadMedia();
-    }
+    static uint64_t UnitGraphic(void*, uint64_t inUnit) { return U(P<EEUnit>(inUnit)->GetModel()); }
     // the frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd)
     static void AnimationSound(void* inAsk, uint32_t inFrame, bool inChanged)
     {
         EEEffect* theEffect = E(inAsk);
         GE3DPoint theLocation;
         theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-        SESMInstanceNode* theSound =
-            PlayAnimationSound(theLocation, theEffect->mGraphicObject, 0, theEffect->mSound, inFrame, inChanged);
-        if (theSound != theEffect->mSound) {
-            if (theEffect->mSound)
-                theEffect->mSound->Dereference();
-            theEffect->mSound = theSound;
-            if (theSound)
-                theSound->Reference();
+        KeepSound(theEffect, PlayAnimationSound(theLocation, theEffect->mGraphicObject, 0, theEffect->mSound, inFrame,
+                                                inChanged));
+    }
+    // the effect's sound replaced by inSound (referenced), then its reference dropped (as the original)
+    static void KeepSound(EEEffect* inEffect, SESMInstanceNode* inSound)
+    {
+        if (inSound != inEffect->mSound) {
+            if (inEffect->mSound)
+                inEffect->mSound->Dereference();
+            inEffect->mSound = inSound;
+            if (inSound)
+                inSound->Reference();
         }
-        if (theEffect->mSound)
-            theEffect->mSound->Dereference();
-    }
-    // the linked effect 1 placed at inPoint; the placement's result
-    static int32_t Spawn(void* inAsk, const EeGe3DPoint* inPoint)
-    {
-        GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
-        return gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
-    }
-    static float TerrainZ(void* inAsk, float inX, float inY) { return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY); }
-    static bool SpaceTile(void*, uint32_t inX, uint32_t inY)
-    {
-        return gWorld.mMap->mTerrainMesh.GetIsSpaceTile((unsigned long)inX, (unsigned long)inY);
-    }
-    // the multi-effect's linked effect inIndex through its constructor's entry point (EEE3DMultiEffect's three
-    // constructors, 0xf4247, 0xf42c3, 0xf4339)
-    static int32_t CreateLinked(void* inAsk, uint32_t inIndex)
-    {
-        Ask* theAsk = static_cast<Ask*>(inAsk);
-        EEGraphicEffect* theEffect = theAsk->mEffect->mGraphicEffect;
-        EEGraphicEffect* theLinked = inIndex == 1 ? theEffect->mLinkedEffect1
-                                     : inIndex == 2 ? theEffect->mLinkedEffect2 : theEffect->mLinkedEffect3;
-        if (theAsk->mOp == EeGfxEffect3DOp::CreateLine)
-            return gEffectManager->CreateLineEffect(*static_cast<GE3DLine*>(theAsk->mArg), theLinked, NULL);
-        if (theAsk->mOp == EeGfxEffect3DOp::CreateAt)
-            return gEffectManager->CreatePlacedEffect(*static_cast<GE3DPoint*>(theAsk->mArg), theLinked, NULL);
-        return gEffectManager->CreateUnitEffect(static_cast<EEUnit*>(theAsk->mArg), theLinked, NULL, 0, 0, 0);
+        if (inEffect->mSound)
+            inEffect->mSound->Dereference();
     }
     // the energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784)
     static bool WallGatePosts(void* inAsk, EeGe3DPoint* outFirst, EeGe3DPoint* outSecond)
@@ -300,8 +279,8 @@ struct Ask {
         GE3DPoint theTo;
         theFirst->GetPosition(theFrom);
         theSecond->GetPosition(theTo);
-        *outFirst = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
-        *outSecond = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
+        *outFirst = R(theFrom);
+        *outSecond = R(theTo);
         return true;
     }
     // the height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c)
@@ -327,46 +306,6 @@ struct Ask {
         }
         return theFound;
     }
-    // the icon's set-up: the graphic effect's object loaded, then the one it replaces unloaded (EEE3DIcon::SetUp,
-    // 0xf23e2: after the new load, so shared media stays loaded)
-    static int32_t ReloadMedia(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEGraphicObject* thePrevious = theEffect->mGraphicObject;
-        theEffect->mGraphicObject = theEffect->GetGraphicObject();
-        long theResult = theEffect->mGraphicObject->LoadMedia();
-        if (thePrevious)
-            thePrevious->UnloadMedia();
-        return theResult;
-    }
-    static void QueueScreen(void* inAsk, uint32_t inIndex)
-    {
-        EEGraphicObject* theObject = E(inAsk)->GetGraphicObject();
-        GETexture* theTexture = theObject ? theObject->GetTexture(gGamePreferences.mSettings.GetScreenID()) : NULL;
-        static_cast<Ask*>(inAsk)->mQueues[inIndex][theTexture].push_back(E(inAsk));
-    }
-    // the tracer beam's impact effect at its target point (EEE3DTracerBeam::Step, 0xfd140)
-    static int32_t TracerImpact(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        GETransformation theTransformation;
-        GE3DPoint theLocation;
-        GE3DPoint theTargetPoint(theEffect->mRecord->tracer.target_point.x, theEffect->mRecord->tracer.target_point.y,
-                                 theEffect->mRecord->tracer.target_point.z);
-        if (theEffect->mTarget) {
-            theTransformation = theEffect->mTarget->mComplexUnit->mPhysicalModel.GetLocation();
-            theTransformation.Apply(theTargetPoint, theLocation);
-        } else
-            theLocation = theTargetPoint;
-        return gEffectManager->CreatePlacedEffect(theLocation, theEffect->mGraphicEffect->mLinkedEffect1, NULL);
-    }
-    static void TracerHit(void* inAsk)
-    {
-        EEUnit* theTarget = E(inAsk)->mTarget;
-        theTarget->mUnitClass->UnitDamaged(theTarget->mComplexUnit, NULL, 0);
-    }
-    // serialized ID; RepairPointers resolves it through gWorld.GetUnit
-    static void TracerSavedTarget(void* inAsk, uint32_t inID) { E(inAsk)->mTarget = USavedPointer<EEUnit>(inID); }
     // the volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area
     // split 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near
     // the centre, and the cone heights from the image's alpha (ee_gfx volcano.rs); the model made and referenced,
@@ -445,7 +384,7 @@ struct Ask {
         float theRadius = theModel->GetCenterPoint().DistanceTo(theTop);
         if (theRadius <= theModel->GetBoundingRadius(0))
             theRadius = theModel->GetBoundingRadius(0);
-        theEffect->mBoundingRadius = theRadius;
+        theEffect->mRecord->bounding_radius = theRadius;
         if (theResult == kErrorOK)
             theModel->GetMaterial(0)->SetTexture(theEffect->mGraphicObject->mTextures[0], gScreenIndex);
         return (int32_t)theResult;
@@ -494,26 +433,12 @@ struct Ask {
     {
         E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
     }
-    static int32_t SmokePlace(void* inAsk, const EeGe3DPoint* inPoint)
-    {
-        GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
-        return (int32_t)gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
-    }
     // the earthquake's (EEE3DEarthquake, 0xec6e4..0xed606): the ground under a point
     static EeGe3DPoint GroundPoint(void*, const EeGe3DPoint* inPoint)
     {
         GE3DPoint theGround(inPoint->x, inPoint->y, inPoint->z);
         gWorld.mMap->GetGroundPoint(theGround, theGround);
-        return EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
-    }
-    // the rain's (EEE3DRain::Virtual64, 0xf7792): its three sound objects' media
-    static void RainMedia(void* inAsk)
-    {
-        for (int i = 0; i < 3; i++) {
-            EESoundObject* theSound = EESoundObject::Get(E(inAsk)->mRecord->storm.sounds[i]);
-            if (theSound)
-                theSound->LoadMedia();
-        }
+        return R(theGround);
     }
     // the rain's sounds (EEE3DRain::StartSounds, 0xf8195, after its thunder timer): the loop at the start or after a
     // load, the thunder inRumble (1 or 2), both levels
@@ -531,38 +456,6 @@ struct Ask {
         EESetRainSoundLevel(theRain, theRain->mSound, 0.5f);
         EESetRainSoundLevel(theRain, theRain->mRumble, 1.0f);
     }
-    // the particles' tick and ground (EEE3DParticle::Update 0xf50b2, EEE3DParticleEmitter::Move 0xf60f5), the graphic
-    // effect's duration (EEE3DParticle::Load 0xf53bc)
-    static EeGfxParticleTick ParticleTick(void* inAsk, const EeGe3DPoint* inPosition)
-    {
-        return EEParticleTick(E(inAsk)->mGraphicEffect, *reinterpret_cast<const GE3DPoint*>(inPosition));
-    }
-    static EeGfxParticleGround ParticleGround(void*) { return EEParticleGround(); }
-    // the emitter on a unit (0xf5f23): at its location unless it follows the tag point; a unit without a complex unit
-    // at its tile's centre on the terrain
-    static void EmitterPlace(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEUnit* theOwner = theEffect->mUnit;
-        GETransformation theTransformation;
-        EEComplexUnit* theUnit = theOwner->GetComplexUnit();
-        if (theUnit) {
-            if (!theEffect->mGraphicEffect->mFlag1)
-                theTransformation = theUnit->mPhysicalModel.GetLocation();
-        } else {
-            GE3DPoint theLocation;
-            float theHalf = theOwner->mUnitClass->mTileSize * 0.5f;
-            theLocation.SetX(theOwner->mTileX + theHalf);
-            theLocation.SetY(theOwner->mTileY + theHalf);
-            if (::gWorld.mMap->mTerrainMesh.GetIsValidTile(theOwner->mTileX, theOwner->mTileY))
-                theLocation.SetZ(::gWorld.mMap->GetHeight(theLocation));
-            else
-                theLocation.SetZ(0.0f);
-            theTransformation.MakeIdentity();
-            theTransformation.SetPosition(theLocation);
-        }
-        theEffect->SetTransformation(theTransformation);
-    }
     // the emitter's animation sound at its place (its graphic effect's object, if any)
     static void EmitterSound(void* inAsk, const EeGe3DPoint* inLocation, bool inFirst)
     {
@@ -572,41 +465,7 @@ struct Ask {
             EESetEffectSound(theEffect->mSound, PlayAnimationSound(*reinterpret_cast<const GE3DPoint*>(inLocation), theObject, 0,
                                                                    theEffect->mSound, 0, inFirst));
     }
-    // a line particle of the emitter's burst (CreateLineEffect of the linked effect 1)
-    static int32_t EmitterLine(void* inAsk, const EeGe3DPoint* inStart, const EeGe3DPoint* inDirection)
-    {
-        GE3DLine theLine;
-        theLine.SetStart(*reinterpret_cast<const GE3DPoint*>(inStart));
-        theLine.SetDirection(GEVector(inDirection->x, inDirection->y, inDirection->z));
-        return (int32_t)gEffectManager->CreateLineEffect(theLine, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
-    }
-    // the marching line's: the base effect's queue (not the 3D one's); its graphic effect's object's media; its ends
-    // (the units' positions, else the points); its units' saved ids (as the original, kept as pointers until
-    // RepairPointers) and their ids for a save (-1: none)
-    static int32_t EffectQueue(void* inAsk) { return E(inAsk)->BaseQueue(false); }
-    static void MarchMedia(void* inAsk)
-    {
-        E(inAsk)->mGraphicObject = E(inAsk)->mGraphicEffect->mGraphicObject;
-        E(inAsk)->mGraphicObject->LoadMedia();
-    }
-    static void MarchSetUnit(void* inAsk, uint32_t inWhich, uint32_t inID)
-    {
-        (inWhich == 0 ? E(inAsk)->mFromUnit : E(inAsk)->mToUnit) = reinterpret_cast<EEUnit*>((uintptr_t)inID);
-    }
     // the 2D kinds' answers
-    // the base's queue: EEEffect::Queue for the confirmation (not EEEffect2D's projection), else EEEffect2D's
-    static int32_t BaseQueue2D(void* inAsk) { return E(inAsk)->BaseQueue(E(inAsk)->mKind != 0x41); }
-    // the graphic effect's own object (not GetGraphicObject: EEE3DCommandConfirmation::SetUp, 0xe9eb5)
-    static int32_t OwnMedia(void* inAsk)
-    {
-        E(inAsk)->mGraphicObject = E(inAsk)->mGraphicEffect->mGraphicObject;
-        return E(inAsk)->mGraphicObject->LoadMedia();
-    }
-    static void MoveToPoint(void* inAsk)
-    {
-        GE3DPoint thePosition(E(inAsk)->mPosition);
-        E(inAsk)->MoveToPoint(thePosition);
-    }
     // the goal a state-0 confirmation shows: the last goal of the unit's goal queue as a location goal (on the tile
     // at the effect: blocked when the unit cannot stand there and its player sees it; forced; a move), else whether
     // its active goal unloads a transport (EEE3DCommandConfirmation::SetUp)
@@ -629,103 +488,18 @@ struct Ask {
         return theLoadGoal && theLoadGoal->mKind == kGoalUnloadTransport ? EeGfxConfirmGoal::Unloading
                                                                           : EeGfxConfirmGoal::Other;
     }
-    // the unit's weapon tag point (ee_combat's weapon_point; EEE2DMuzzleFlash::SetUp 0xe458e: site 3, the list
-    // assumed; sites 1 and 2 (the 2D projectile) test it)
-    static EeGe3DPoint WeaponPoint(void* inAsk, int32_t inSite)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEModel* theModel = theUnit->GetModel();
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
-        bool theHasList = inSite <= 2 ? theList && theList->mPoints.size() : true;
-        GE3DPoint theStart;
-        EECombatEffectWeaponPoint(inSite, theComplex, theModel, theList, theHasList, theStart);
-        return EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
-    }
-    // the kept object's animation sound for the frame at the location, kept as the effect's (EEE2DImpact::Step and
-    // SetSound, 0xe166b / 0xe17ed)
+    // the kept object's (inPart0: the first part's) animation sound for the frame at the location, kept as the
+    // effect's (EEE2DImpact::Step and SetSound, 0xe166b / 0xe17ed)
     static void PartSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged, bool inPart0)
     {
         EEEffect* theEffect = E(inAsk);
         GE3DPoint theLocation(inLocation.x, inLocation.y, inLocation.z);
-        EEGraphicObject* theObject = inPart0 ? theEffect->mParts[0].mGraphicObject : theEffect->mGraphicObject;
-        SESMInstanceNode* theSound = PlayAnimationSound(theLocation, theObject, 0, theEffect->mSound, inFrame, inChanged);
-        if (theSound != theEffect->mSound) {
-            if (theEffect->mSound)
-                theEffect->mSound->Dereference();
-            theEffect->mSound = theSound;
-            if (theSound)
-                theSound->Reference();
-        }
-        if (theEffect->mSound)
-            theEffect->mSound->Dereference();
+        EEGraphicObject* theObject =
+            inPart0 ? P<EEGraphicObject>(ee_gfx_effect_part_object(H(theEffect), 0)) : theEffect->mGraphicObject;
+        KeepSound(theEffect, PlayAnimationSound(theLocation, theObject, 0, theEffect->mSound, inFrame, inChanged));
     }
     static bool DrawBlood(void*) { return gDrawBlood; }
     static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
-    static EeGe3DPoint Wind(void*)
-    {
-        const GEVector& theWind = gWorld.mWindDirection;
-        return EeGe3DPoint{theWind.mX, theWind.mY, theWind.mZ};
-    }
-    // the parts (EEEffect2D::mParts): made by CreateParts (0x104623), read and written one at a time
-    static EeGfx2DPlace CreateParts(void* inAsk, float inLift)
-    {
-        GE3DPoint thePosition;
-        float theHeight;
-        E(inAsk)->CreateParts(thePosition, theHeight, inLift);
-        return EeGfx2DPlace{EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ}, theHeight};
-    }
-    static uint32_t PartCount(void* inAsk) { return (uint32_t)E(inAsk)->mParts.size(); }
-    static EeGfx2DPart Part(void* inAsk, uint32_t inIndex)
-    {
-        const EEEffect2DPart& thePart = E(inAsk)->mParts[inIndex];
-        return EeGfx2DPart{EeGe3DPoint{thePart.mPosition.mX, thePart.mPosition.mY, thePart.mPosition.mZ}, (uint32_t)thePart.mTag,
-                           (uint32_t)thePart.mFrame, (uint32_t)thePart.mDrawFrame, thePart.mTime, thePart.mIsDone};
-    }
-    static void SetPart(void* inAsk, uint32_t inIndex, const EeGfx2DPart* inPart)
-    {
-        EEEffect2DPart& thePart = E(inAsk)->mParts[inIndex];
-        thePart.mPosition = GE3DPoint(inPart->position.x, inPart->position.y, inPart->position.z);
-        thePart.mTag = inPart->tag;
-        thePart.mFrame = inPart->frame;
-        thePart.mDrawFrame = inPart->draw_frame;
-        thePart.mTime = inPart->time;
-        thePart.mIsDone = inPart->done;
-    }
-    static EeGfxFrames PartFrames(void* inAsk, uint32_t inIndex)
-    {
-        EEGraphicObject* theObject = E(inAsk)->mParts[inIndex].mGraphicObject;
-        return EeGfxFrames{(uint32_t)theObject->mStartFrames[0], (uint32_t)theObject->mFrameTimes[0],
-                           (uint32_t)theObject->mFrameCounts[0], (uint32_t)theObject->mLastFrames[0]};
-    }
-    static void* PartTexture(void* inAsk, uint32_t inIndex) { return E(inAsk)->mParts[inIndex].mGraphicObject->mTextures[0]; }
-    static void PartsSnapshot(void* inAsk)
-    {
-        std::vector<EEEffect2DPart>& theParts = E(inAsk)->mParts;
-        for (unsigned long i = 0; i < theParts.size(); i++)
-            theParts[i].mDrawFrame = theParts[i].mFrame;
-    }
-    // the part's tag point on the unit's model at its frame (the unit itself for tag 10000) under the unit's location
-    // (EEE2DFire::UpdatePart, 0xe0a22)
-    static EeGfx2DPoint PartFollow(void* inAsk, uint32_t inIndex)
-    {
-        EeGfx2DPoint thePoint = {};
-        EEEffect* theEffect = E(inAsk);
-        EEComplexUnit* theUnit = theEffect->mUnit->GetComplexUnit();
-        if (theUnit == NULL)
-            return thePoint;
-        GE3DPoint theOffset;
-        if (theEffect->mParts[inIndex].mTag != 10000) {
-            GEModel* theModel = theUnit->GetModel()->mModel;
-            unsigned long theModelFrame = theUnit->mPhysicalModel.GetFrame();
-            theOffset = theModel->GetTagPoint(theEffect->mParts[inIndex].mTag, theModelFrame);
-        }
-        GE3DPoint thePosition;
-        theUnit->GetPhysicalModel().GetLocation().Apply(theOffset, thePosition);
-        thePoint.has = true;
-        thePoint.point = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
-        return thePoint;
-    }
     static bool AreaEffect(void* inAsk, int32_t inKind, float inX, float inY, uint32_t inPlayer)
     {
         return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
@@ -761,7 +535,7 @@ struct Ask {
             return thePoint;
         theMap->GetGroundPoint(theLocation, theGround);
         thePoint.has = true;
-        thePoint.point = EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
+        thePoint.point = R(theGround);
         return thePoint;
     }
     static EeGfxGlowArea GlowArea(void* inAsk)
@@ -775,709 +549,20 @@ struct Ask {
                              (int32_t)theUnit->mTileX, (int32_t)theUnit->mTileY};
     }
     static uint32_t GlowRows(void*) { return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows(); }
-    // the particle's (EEE2DParticle::Update 0xe4c31, Step 0xe520d)
-    static EeGfxParticleTick PositionTick(void* inAsk) { return EEParticleTick(E(inAsk)->mGraphicEffect, E(inAsk)->mPosition); }
 };
 
-// a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
-// whether the unit's model has tag points at its animation
-bool ShotStart(long inMode, EEUnit* inUnit, EeGe3DPoint& outStart)
+// the damage controller's tick facts (EEEDamagedEffect::Step, 0x10225c): its graphic effect's, then its unit's (the
+// outer part on the map), the damage tag points of linked effect 1's kind, its health, hidden when cloaked to the
+// current player's enemy
+EeGfxDamagedTick EEDamagedTick(EeGfxEffectHead* inEffect)
 {
-    GE3DPoint theStart;
-    EEModel* theModel = inUnit->GetModel();
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->GetAnimation()];
-    bool theTagged = theList != NULL && theList->GetNumTagPoints() != 0;
-    EECombatEffectWeaponPoint(inMode, theUnit, theModel, theList, theTagged, theStart);
-    outStart = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
-    return theTagged;
-}
-
-// the unit's mouth through the transformation, with the offsets of the cavalry archer, chariot archer, bronze spear
-// cavalry and knight (EEE2DWinterBreath::GetMouthPoint)
-GE3DPoint EEMouthPoint(EEUnit* inUnit, const GETransformation& inTransformation)
-{
-    GE3DPoint theOffset(0.0f, 0.4f, 0.405f);
-    GE3DPoint theResult;
-    switch (inUnit->mUnitClass->mUnitType) {
-    case kUnitTypeArch06CavalryArcher:
-        theOffset.SetY(0.465f);
-        theOffset.SetZ(0.385f);
-        break;
-    case kUnitTypeArch04ChariotArcher:
-        theOffset.SetY(0.872f);
-        theOffset.SetZ(0.465f);
-        break;
-    case kUnitTypeCav04BronzeSpearCavalry:
-    case kUnitTypeCav06Knight:
-        theOffset.SetY(0.272f);
-        theOffset.SetZ(0.235f);
-        break;
-    }
-    inTransformation.Apply(theOffset, theResult);
-    return theResult;
-}
-
-}
-
-// on a unit: the destruction smoke (0x1e) at its location, spread over half its class's scale (0x4ebbfd); the 2D
-// particle (0x2e) at it or its tile's centre on the ground (0 off the map) (0xe489b); the multi-effect's own unit is
-// none (its linked effects are made on inUnit); the light glow keeps its unit when asked (0xe1a7a), the command
-// confirmation shows goal queue inGoalIndex (0xe9d1e), the emitter follows tag point inTagPoint
-EEEffect::EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit, long inTagPoint,
-                   unsigned long inGoalIndex)
-{
-    if (inKind == 0x1e) {
-        const GETransformation& theLocation = inUnit->mComplexUnit->mPhysicalModel.GetLocation();
-        this->Attach(NULL, inGraphicEffect, inKind, false);
-        this->PlaceAt(GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ()));
-        this->mRecord->smoke.radius = inUnit->mUnitClass->mScale * 0.5f;
-        return;
-    }
-    if (inKind == 0x2e) {
-        this->Attach(inUnit, inGraphicEffect, inKind, false);
-        GE3DPoint theLocation;
-        EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-        if (theComplexUnit) {
-            const GETransformation& theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-            theLocation = GE3DPoint(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-        } else {
-            theLocation.SetX(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileX);
-            theLocation.SetY(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileY);
-            if (gWorld.GetMap()->mTerrainMesh.GetIsValidTile(inUnit->mTileX, inUnit->mTileY))
-                theLocation.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
-        }
-        this->StartParticle(theLocation, NULL);
-        return;
-    }
-    this->Attach(inKind == 0x3b ? NULL : inUnit, inGraphicEffect, inKind, inKind == 0xd && inKeepsUnit);
-    if (inKind == 0x41)
-        this->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
-    this->Call(EeGfxEffect3DOp::Create, NULL, NULL, 0, 0, 0, inUnit);
-    if (inKind == 0x3a)
-        this->mRecord->emitter.tag_point = (uint32_t)inTagPoint;
-}
-
-EEEffect::EEEffect(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    this->PlaceAt(inLocation);
-}
-
-// at a point: the 2D particle's start (0xe49c7); the battlefield decal's size and corners on the terrain (hidden and
-// over off the map or not level, 0xde74f); the others' point for Rust (a 2D kind's sprite.start, a 3D kind's
-// aged.location)
-void EEEffect::PlaceAt(const GE3DPoint& inLocation)
-{
-    if (this->mKind == 0x2e) {
-        this->StartParticle(inLocation, NULL);
-        return;
-    }
-    EEGraphicEffect* theEffect = this->mGraphicEffect;
-    if (this->mKind == 0x32) {
-        EeGfxAmbientNew theNew = {theEffect->GetStartSize(), theEffect->GetSize(), (int32_t)theEffect->mIntParam1,
-                                  theEffect->mFlag1};
-        EeGfxParticleGround theGround = EEParticleGround();
-        ee_gfx_effect_ambient_new(this->mRecord, reinterpret_cast<const EeGe3DPoint*>(&inLocation), &theNew, &theGround);
-        return;
-    }
-    (this->mIs2D ? this->mRecord->sprite.start : this->mRecord->aged.location) =
-        EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
-    this->Call(EeGfxEffect3DOp::CreateAt, NULL, NULL, 0, 0, 0, const_cast<GE3DPoint*>(&inLocation));
-}
-
-// from a unit to a point: the command confirmation there (0xe9d91); the smoke muzzle blast and the 2D projectile from
-// the unit's weapon point (0xe6a07, 0xe31dd); the pulse cannon ball from its weapon point (0xf6a26), the citizen beam
-// towards it (0xe94b7), the tracer beam to it (0xfc49d)
-EEEffect::EEEffect(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind,
-                   unsigned long inGoalIndex)
-{
-    EeGe3DPoint theTarget = {inTarget.mX, inTarget.mY, inTarget.mZ};
-    if (inKind == 0x14 || inKind == 0x30) {
-        this->Attach(NULL, inGraphicEffect, inKind, false);
-        GE3DPoint theStart;
-        EEModel* theModel = inUnit->GetModel();
-        EEComplexUnit* theUnit = inUnit->mComplexUnit;
-        EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
-        if (inKind == 0x30)
-            EECombatEffectWeaponPoint(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);
-        else
-            EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
-        this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
-        this->mRecord->sprite.draw_position = theTarget;
-        this->Call(EeGfxEffect3DOp::CreateBetween);
-        return;
-    }
-    this->Attach(inUnit, inGraphicEffect, inKind, false);
-    if (inKind == 0x41) {
-        this->mPosition = inTarget;
-        this->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
-        this->Call(EeGfxEffect3DOp::CreateAt);
-        return;
-    }
-    if (inKind == 0x40) {
-        this->mRecord->tracer.target_point = theTarget;
-        this->mRecord->tracer.weapon_tag_point = inUnit->mComplexUnit->mWeaponTagPoint;
-    } else if (inKind == 0x33) {
-        this->mRecord->shot.end = theTarget;
-    } else {
-        ShotStart(6, inUnit, this->mRecord->shot.path.start);
-        this->mRecord->shot.location = theTarget;
-    }
-    this->Call(EeGfxEffect3DOp::Create);
-}
-
-// between two units: the tracer beam of inFrom on inTo, referenced, aimed at a point picked on its model (0xfc3c5: the
-// original tested the target for null, then used it); the tracers and shells on inTo from inFrom's weapon point to a
-// point of inTo's model in inFrom's player colour (0xfd373); the winter breath at inFrom's mouth tag point (or its
-// mouth by unit type, the breath then inert), its scaled location, whether the tag list was found and whether it moves
-// (0xe819b); the smoke muzzle blast and the 2D projectile from inFrom's weapon tag point to inTo's model point on its
-// scaled location, the blast's 15 higher for a high-arc shooter (0xe6664, 0xe2f58)
-EEEffect::EEEffect(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    static const float kTargetLift = 15.0f;
-    if (inKind == 0x40) {
-        this->Attach(inFrom, inGraphicEffect, inKind, false);
-        this->mTarget = inTo;
-        if (this->mTarget) {
-            this->mTarget->Reference();
-            const GE3DPoint& thePick = this->mTarget->GetModel()->PickPoint();
-            this->mRecord->tracer.target_point = EeGe3DPoint{thePick.mX, thePick.mY, thePick.mZ};
-        }
-        this->mRecord->tracer.weapon_tag_point = inFrom->mComplexUnit->mWeaponTagPoint;
-        this->Call(EeGfxEffect3DOp::Create);
-        return;
-    }
-    if (inKind == 0x21 || inKind == 0x26) {
-        this->Attach(inTo, inGraphicEffect, inKind, false);
-        GE3DPoint theEnd;
-        GETransformation theToTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
-        float theToScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
-        if (ShotStart(7, inFrom, this->mRecord->shot.path.start))
-            EETagPointList::Scale(theToTransformation, theToScale);
-        GE3DPoint theOffset = inTo->GetModel()->PickPoint();
-        theToTransformation.Apply(theOffset, theEnd);
-        const GEColor& theColor = inFrom->mPlayer->mColor;
-        this->mRecord->shot.location = EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ};
-        this->mRecord->shot.color = EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
-        this->Call(EeGfxEffect3DOp::Create);
-        return;
-    }
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    if (inKind == 0x16) {
-        GE3DPoint thePosition;
-        GETransformation theTransformation(inFrom->mComplexUnit->mPhysicalModel.GetLocation());
-        EEComplexUnit* theBreather = inFrom->mComplexUnit;
-        EETagPointList* theMouths = inFrom->GetModel()->GetTagPoints(theBreather->GetAnimation(), 0x16);
-        float theScale = inFrom->mComplexUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theBreather->mPhysicalModel.GetFrame();
-        EETagPointList::Scale(theTransformation, theScale);
-        if (theMouths)
-            theMouths->GetTagPoint(0)->GetPoint(theFrame, theTransformation, thePosition);
-        else
-            thePosition = EEMouthPoint(inFrom, theTransformation);
-        this->mRecord->sprite.start = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
-        this->mRecord->aged.transformation = *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
-        this->mRecord->sprite.flag = theMouths != NULL;
-        this->mRecord->sprite.shrinking = inFrom->mComplexUnit->mVelocity != 0.0f;
-        this->Call(EeGfxEffect3DOp::CreateBetween);
-        return;
-    }
-    bool theProjectile = inKind == 0x30;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    GE3DPoint theOffset;
-    GETransformation theTargetTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
-    EEModel* theModel = inFrom->GetModel();
-    EEComplexUnit* theUnit = inFrom->mComplexUnit;
-    EETagPointList* theList = inFrom->GetModel()->mTagPoints[theUnit->mAnimation];
-    float theTargetScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
-    // the projectile's target point is on its scaled model whatever the shooter has (the same scaling either way)
-    EECombatEffectWeaponPoint(theProjectile ? 1 : 4, theUnit, theModel, theList,
-                              theProjectile ? theList && theList->mPoints.size() : true, theStart);
-    EETagPointList::Scale(theTargetTransformation, theTargetScale);
-    theOffset = inTo->GetModel()->mDefaultPoint;
-    theTargetTransformation.Apply(theOffset, theEnd);
-    if (!theProjectile
-        && (inFrom->mUnitClass->mShootsHigh || (inFrom->mStats->mCanFireOverWalls && inFrom->mComplexUnit->mIsFiringHigh)))
-        theEnd.SetZ(theEnd.GetZ() + kTargetLift);
-    this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
-    this->mRecord->sprite.draw_position = EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ};
-    this->Call(EeGfxEffect3DOp::CreateBetween);
-}
-
-// between two points: the marching line (0xf359c: no set-up call), the linear projectile from inFrom to inTo
-// (0xf2dd6), the earthquake's crack from inFrom towards inTo (0xec727)
-EEEffect::EEEffect(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    if (inKind == 0x2d) {
-        this->mRecord->march.from = EeGe3DPoint{inFrom.mX, inFrom.mY, inFrom.mZ};
-        this->mRecord->march.to = EeGe3DPoint{inTo.mX, inTo.mY, inTo.mZ};
-        return;
-    }
-    this->mRecord->shot.path.start = EeGe3DPoint{inFrom.mX, inFrom.mY, inFrom.mZ};
-    this->mRecord->shot.location = EeGe3DPoint{inTo.mX, inTo.mY, inTo.mZ};
-    this->Call(EeGfxEffect3DOp::Create);
-}
-
-// along a line: the 2D particle at its start with its direction as velocity (0xe4a4a), the velocity particle
-// (EEE2DVelocityParticle), the 3D particle (0xf4e27) and the emitter (0xf5e82) at its start moving along it, the
-// multi-effect's linked effects along it (0xf42c3)
-EEEffect::EEEffect(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    const GE3DPoint& theStart = inLine.GetStart();
-    const GEVector& theDirection = inLine.GetDirection();
-    EeGe3DPoint theVelocity = {theDirection.GetX(), theDirection.GetY(), theDirection.GetZ()};
-    EeGe3DPoint thePoint = {theStart.GetX(), theStart.GetY(), theStart.GetZ()};
-    if (inKind == 0x2e) {
-        this->StartParticle(theStart, &theDirection);
-        return;
-    }
-    if (inKind == 0xc) {
-        this->mRecord->sprite.start = thePoint;
-        this->mRecord->sprite.velocity = theVelocity;
-    } else if (inKind == 0x39 || inKind == 0x3a) {
-        this->mRecord->aged.location = thePoint;
-        (inKind == 0x39 ? this->mRecord->particle.velocity : this->mRecord->emitter.velocity) = theVelocity;
-    }
-    this->Call(EeGfxEffect3DOp::CreateLine, NULL, NULL, 0, 0, 0, const_cast<GE3DLine*>(&inLine));
-}
-
-// the rain (0x2a) and the snow (0x3d) over the tiles, centred on them (EEE3DStorm, 0xfb0c8; the rain's first thunder,
-// EEE3DRain 0xf7394)
-EEEffect::EEEffect(const std::vector<U2DPoint<long> >& inTiles, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    std::vector<int32_t> theTiles;
-    for (size_t i = 0; i < inTiles.size(); i++) {
-        theTiles.push_back((int32_t)inTiles[i].mX);
-        theTiles.push_back((int32_t)inTiles[i].mY);
-    }
-    ee_gfx_storm_new(this->mRecord, theTiles.empty() ? NULL : &theTiles[0], (uint32_t)inTiles.size());
-    this->Call(EeGfxEffect3DOp::Create);
-}
-
-// the water ripple (0x22) at a transformation (0xe7e50): kept in the record's aged.transformation
-EEEffect::EEEffect(const GETransformation& inTransformation, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    this->Attach(NULL, inGraphicEffect, inKind, false);
-    this->mRecord->aged.transformation = *reinterpret_cast<const EeGeTransformation*>(&inTransformation);
-    this->Call(EeGfxEffect3DOp::CreateTransformation);
-}
-
-// the 2D particle's start at a point, moving along inVelocity when given, for its graphic effect's duration from now
-void EEEffect::StartParticle(const GE3DPoint& inPosition, const GEVector* inVelocity)
-{
-    this->SetPosition(inPosition);
-    *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position) = inPosition;
-    if (inVelocity)
-        this->mRecord->particle.velocity = EeGe3DPoint{inVelocity->GetX(), inVelocity->GetY(), inVelocity->GetZ()};
-    this->mRecord->particle.last_time = gPhysics->GetGameClock();
-    this->mRecord->particle.duration = this->mGraphicEffect->mDuration;
-}
-
-// the weather storms': every tile one step towards its place around the new centre (a step off the map stays), the
-// storm recentred on the terrain there; the tiles' bounds; the radius half the longer side (ee_gfx effect_storm.rs)
-void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
-{
-    int32_t theBounds[4] = {(int32_t)outBounds.mLeft, (int32_t)outBounds.mTop, (int32_t)outBounds.mRight,
-                            (int32_t)outBounds.mBottom};
-    EeGe3DPoint thePoint;
-    if (!ee_gfx_storm_move(this->mRecord, (int32_t)inCenter.mX, (int32_t)inCenter.mY, theBounds, &kStormHost, &thePoint))
-        return;
-    outBounds.mLeft = theBounds[0];
-    outBounds.mTop = theBounds[1];
-    outBounds.mRight = theBounds[2];
-    outBounds.mBottom = theBounds[3];
-    GETransformation theTransformation;
-    theTransformation.SetPosition(thePoint.x, thePoint.y, thePoint.z);
-    this->SetTransformation(theTransformation);
-}
-
-void EEEffect::GetBounds(U2DRectangle<long>& outBounds)
-{
-    int32_t theBounds[4];
-    if (!ee_gfx_storm_bounds(this->mRecord, theBounds))
-        return;
-    outBounds.mLeft = theBounds[0];
-    outBounds.mTop = theBounds[1];
-    outBounds.mRight = theBounds[2];
-    outBounds.mBottom = theBounds[3];
-}
-
-U2DPoint<long> EEEffect::GetCenterPoint() const
-{
-    return U2DPoint<long>(this->mRecord->storm.center_x, this->mRecord->storm.center_y);
-}
-
-bool EEEffect::SetFrom(const GE3DPoint& inPoint)
-{
-    if (this->mFromUnit != NULL)
-        return false;
-    this->mRecord->march.from = EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ};
-    return true;
-}
-
-bool EEEffect::SetTo(const GE3DPoint& inPoint)
-{
-    if (this->mToUnit != NULL)
-        return false;
-    this->mRecord->march.to = EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ};
-    return true;
-}
-
-void EEEffect::AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    long theFromY = UMFloor(inFrom.GetY());
-    long theFromX = UMFloor(inFrom.GetX());
-    long theToY = UMFloor(inTo.GetY());
-    long theToX = UMFloor(inTo.GetX());
-    U2DPoint<long> theTile(this->mTileX, this->mTileY);
-    RTSRegionTable<EEEffect*>* theTable = ::gWorld.mMap->mEffectRegions;
-    U2DPoint<long> theStart(theFromX / theTable->mRegionSize, theFromY / theTable->mRegionSize);
-    U2DPoint<long> theEnd(theToX / theTable->mRegionSize, theToY / theTable->mRegionSize);
-    theStart.GetLineTiles(theEnd, 1.0f, theTiles);   // the step along the line in tiles (.rdata 0x440994)
-    for (long i = theTiles.size() - 1; i >= 0; i--) {
-        if (theTiles[i] == theStart || theTiles[i] == theEnd || theTiles[i] == theTile)
-            continue;
-        if (std::find(this->mRegions.begin(), this->mRegions.end(), theTiles[i]) != this->mRegions.end())
-            continue;
-        this->mRegions.push_back(theTiles[i]);
-        EEEffect* theEffect = this;
-        std::vector<EEEffect*>* theRegion = theTable->GetRegion(theTiles[i]);
-        if (theRegion)
-            theRegion->push_back(theEffect);
-    }
-}
-
-void EEEffect::RemoveRegions()
-{
-    RTSRegionTable<EEEffect*>* theTable;
-    if (::gWorld.mMap && (theTable = ::gWorld.mMap->mEffectRegions) != 0) {
-        for (long i = this->mRegions.size() - 1; i >= 0; i--) {
-            EEEffect* theEffect = this;
-            RTSRegion<EEEffect*>* theRegion = theTable->GetRegion(this->mRegions[i]);
-            if (theRegion)
-                theRegion->Remove(theEffect);
-        }
-    }
-    this->mRegions.clear();
-}
-
-// the icon (2) and goal (0x3c): a fixed one moves to inLocation (EEE3DIcon::SetLocation, 0xf2637); others ignore it
-void EEEffect::SetLocation(const GE3DPoint& inLocation)
-{
-    if ((this->mKind == 2 || this->mKind == 0x3c) && !this->mRecord->icon.follow_unit)
-        this->mRecord->icon.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
-}
-
-// the energy wall (0x34): the current player sees the tile or holds a doppelganger of the unit there (then the wall
-// is marked seen: its texture frame restarts) (EEE3DEnergyWall::IsTileVisible, 0xed98d); the others: the base's
-bool EEEffect::IsTileVisible(EEMapTile* inTile)
-{
-    if (this->mKind == 0x29) {   // the farm (EEE3DFarm::IsTileVisible, 0xf0b1c)
-        bool theFarmSeen = false;
-        if (gWorld.mMap) {
-            if (this->mUnit->mHitPoints > 0) {
-                unsigned long theSize = this->mUnit->GetClass()->GetTileSize();
-                for (unsigned long y = 0; y < theSize && !theFarmSeen; y++) {
-                    for (unsigned long x = 0; x < theSize && !theFarmSeen; x++) {
-                        EEMapTile* theTile = gWorld.mMap->GetTile(this->mUnit->GetTileX() + x, this->mUnit->GetTileY() + y);
-                        if (theTile)
-                            theFarmSeen = theTile->IsSeenBy(gWorld.GetCurrentPlayer());
-                    }
-                }
-            }
-            if (!theFarmSeen)
-                theFarmSeen = gDoppelgangerManager.HasDoppelganger(inTile, this->mUnit->mComplexUnit, gWorld.mCurrentPlayer);
-        }
-        return theFarmSeen;
-    }
-    bool theResult = inTile->IsSeenBy(gWorld.GetCurrentPlayer());
-    if (theResult || this->mKind != 0x34)
-        return theResult;
-    long thePlayer = gWorld.mCurrentPlayer;
-    EEUnit* theUnit = this->mUnit;
-    theResult = gDoppelgangerManager.HasDoppelganger(inTile, theUnit, thePlayer);
-    if (theResult)
-        this->mRecord->wall.seen = true;
-    return theResult;
-}
-
-// the farm (0x29): rebuilt on its unit when the changed terrain rectangle overlaps its field (EEE3DFarm::ElevationChanged,
-// 0xf128a); the others: the base's (nothing)
-void EEEffect::ElevationChanged(long inLeft, long inBottom, long inRight, long inTop)
-{
-    if (this->mKind != 0x29)
-        return;
-    GERectangle theRectangle(inLeft, inTop, inRight, inBottom);
-    const EeGfxVolcanoArea& theArea = this->mRecord->farm.area;
-    if (!(theRectangle.mLeft <= theArea.right) || !(theRectangle.mRight >= theArea.left) ||
-        !(theRectangle.mTop <= theArea.bottom) || !(theRectangle.mBottom >= theArea.top))
-        return;
-    this->Call(EeGfxEffect3DOp::Rebuild);
-}
-
-// the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
-// EEE2DRust's)
-EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
-{
-    EEGraphicEffect* theEffect = inEffect;
-    EEGraphicObject* theObject = theEffect ? theEffect->mGraphicObject : NULL;
-    EeGfxGraphicFacts theFacts = {};
-    if (theEffect != NULL) {
-        theFacts.size = theEffect->mSize;
-        theFacts.start_size = theEffect->mStartSize;
-        theFacts.param1 = theEffect->mParam1;
-        theFacts.param2 = theEffect->mParam2;
-        theFacts.param3 = theEffect->mParam3;
-        theFacts.param4 = theEffect->mParam4;
-        theFacts.param5 = theEffect->mParam5;
-        theFacts.param6 = theEffect->mParam6;
-        theFacts.flag1 = theEffect->mFlag1;
-        theFacts.flag2 = theEffect->mFlag2;
-        theFacts.param7 = theEffect->mParam7;
-        theFacts.param8 = theEffect->mParam8;
-        theFacts.duration = (uint32_t)theEffect->mDuration;
-        theFacts.has_object = theObject != NULL;
-        theFacts.alpha_ref = theObject != NULL ? theObject->mAlphaReference : 0.0f;
-    }
-    theFacts.tick_seconds = gPhysics->GetTickSeconds();
-    theFacts.tick_time = gPhysics->GetTickTime();
-    theFacts.has_unit = inUnit != NULL;
-    theFacts.unit_hit_points = inUnit != NULL ? (int32_t)inUnit->mHitPoints : 0;
-    if (theEffect != NULL) {
-        theFacts.int_param1 = (int32_t)theEffect->mIntParam1;
-        theFacts.int_param2 = (int32_t)theEffect->mIntParam2;
-        theFacts.int_param3 = (int32_t)theEffect->mIntParam3;
-        theFacts.has_linked1 = theEffect->mLinkedEffect1 != NULL;
-        theFacts.has_linked3 = theEffect->mLinkedEffect3 != NULL;
-    }
-    theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
-    theFacts.free_camera = gFreeCamera;
-    theFacts.speed = gPhysics->mSpeed;
-    if (theEffect != NULL) {
-        theFacts.alpha = theEffect->mAlpha;
-        theFacts.param9 = theEffect->mParam9;
-        theFacts.param10 = theEffect->mParam10;
-        theFacts.param11 = theEffect->mParam11;
-    }
-    theFacts.has_effect = theEffect != NULL;
-    if (theEffect != NULL) {
-        theFacts.time1 = (uint32_t)theEffect->mTime1;
-        theFacts.time2 = (int32_t)theEffect->mTime2;
-        theFacts.ends_with_unit = theEffect->mEndsWithUnitOrDuration;
-        theFacts.emit_spread = theEffect->mEmitPositionSpread;
-        theFacts.emit_flat = theEffect->mIsEmitFlat;
-    }
-    theFacts.world_speed = gWorld.GetGameSpeed();
-    return theFacts;
-}
-
-// the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Winvalid-offsetof"
-#endif
-
-// where Base sits in a Derived object (a cast of a made-up address: nothing is read)
-template <class Derived, class Base> static uint64_t EEBaseOffset()
-{
-    Derived* theObject = reinterpret_cast<Derived*>(static_cast<uintptr_t>(0x10000));
-    return reinterpret_cast<uintptr_t>(static_cast<Base*>(theObject)) - 0x10000;
-}
-
-// The members ee_gfx effect_reads.rs reads in place (the graphic objects, the graphic effects' records, the complex
-// units' physical models and turret angles), registered before the first effect's call
-void EEGfxObjectLayoutRegister()
-{
-    static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "a vector is three words");
-    EeGfxObjectLayout theLayout = {};
-    theLayout.size = sizeof(EeGfxObjectLayout);
-    theLayout.gobj_fields = EEBaseOffset<EEGraphicObject, EeDataGraphicObjectFields>();
-    theLayout.gobj_models = offsetof(EEGraphicObject, mModels);
-    theLayout.gobj_textures = offsetof(EEGraphicObject, mTextures);
-    theLayout.gobj_tag_points = offsetof(EEGraphicObject, mTagPoints);
-    theLayout.gobj_tags = offsetof(EEGraphicObject, mTags);
-    theLayout.gobj_model = offsetof(EEGraphicObject, mModel);
-    theLayout.gobj_default_point = offsetof(EEGraphicObject, mDefaultPoint);
-    theLayout.gobj_top_point = offsetof(EEGraphicObject, mTopPoint);
-    theLayout.gobj_turret_parts = offsetof(EEGraphicObject, mTurretParts);
-    theLayout.gobj_orbitals = offsetof(EEGraphicObject, mOrbitals);
-    theLayout.turret_part_model = offsetof(EETurretPart, mModel);
-    theLayout.orbital_model = offsetof(EEOrbital, mModel);
-    theLayout.orbital_speed = offsetof(EEOrbital, mSpeed);
-    theLayout.orbital_angle = offsetof(EEOrbital, mAngle);
-    theLayout.geffect_fields = EEBaseOffset<EEGraphicEffect, EeDataGraphicEffectFields>();
-    theLayout.geffect_object = offsetof(EEGraphicEffect, mGraphicObject);
-    theLayout.complex_scale = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mScale);
-    theLayout.complex_frame = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame);
-    theLayout.complex_turret_angles = offsetof(EEComplexUnit, mTurretAngles);
-    theLayout.stats_model = offsetof(EEUnitClassUpgrade, mModel);
-    ee_gfx_object_layout_set(&theLayout);
-}
-
-// the effect's unit for the world views (ee_gfx effect_views.rs; 0 while mUnit holds a saved id) and the current player
-static uint64_t EEEffectUnit(const EEEffect* inEffect)
-{
-    return inEffect->mUnitIsSavedID ? 0 : (uint64_t)(uintptr_t)inEffect->mUnit;
-}
-static uint64_t EEEffectPlayer()
-{
-    return (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-}
-
-// One operation by the kind's class: the 2D kinds' (ee_gfx effect_2d.rs) over EeGfxEffect2DHost, the 3D kinds'
-// (effect_rising.rs) over EeGfxEffect3DHost, both answered by Ask (their shared answers once); Load and Save read no
-// facts (during a load the unit is still its saved id: RepairPointers resolves it)
-long EEEffect::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
-                    unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
-{
-    static const bool sLayout = (EEGfxObjectLayoutRegister(), true);   // effect_reads.rs' offsets, once
-    (void)sLayout;
-    Ask theAsk;
-    theAsk.mEffect = this;
-    theAsk.mQueues = inQueues;
-    theAsk.mOp = inOp;
-    theAsk.mArg = inArg;
-    EeGfxEffectRefs theRefs = {this->mRecord, (uint64_t)(uintptr_t)this->mGraphicEffect,
-                               reinterpret_cast<const uint64_t*>(&this->mGraphicObject),
-                               reinterpret_cast<const uint64_t*>(&this->mUnitModel),
-                               reinterpret_cast<const uint64_t*>(&this->mTarget),
-                               reinterpret_cast<const uint64_t*>(&this->mFromUnit),
-                               reinterpret_cast<const uint64_t*>(&this->mToUnit), reinterpret_cast<const uint64_t*>(&this->mModel),
-                               reinterpret_cast<const uint64_t*>(&this->mVolcanoModel), Ask::UnitGraphic};
-    static_assert(sizeof(EEGraphicObject*) == sizeof(uint64_t) && sizeof(EEUnit*) == sizeof(uint64_t), "the refs' words");
-    if (this->mIs2D) {
-        EeGfxEffect2DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), theRefs, Ask::BaseQueue2D, Ask::Push,
-                                     Ask::OwnMedia, Ask::MoveToPoint, Ask::ConfirmGoal,
-                                     Ask::TerrainZ, Ask::Media, Ask::WeaponPoint, Ask::PartSound,
-                                     Ask::DrawBlood, Ask::TileBlocked, Ask::Wind, Ask::CreateParts, Ask::PartCount,
-                                     Ask::Part, Ask::SetPart, Ask::PartFrames, Ask::PartTexture, Ask::PartsSnapshot,
-                                     Ask::PartFollow, Ask::AreaEffect, Ask::AreaEffects,
-                                     Ask::SetAreaEffects, Ask::IconsSelected, Ask::GroundAt,
-                                     Ask::GlowArea, Ask::GlowRows, Ask::PositionTick, Ask::ParticleGround};
-        if (inFile != NULL)
-            return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                                        &theHost);
-        EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
-        return ee_gfx_effect2d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
-    }
-    EeGfxEffect3DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), theRefs, Ask::MoveTo,
-                                 Ask::Line, Ask::BaseQueue, Ask::Push, Ask::Media, Ask::ShotHit, Ask::PlaceLinked,
-                                 Ask::UnitModelMedia, Ask::AnimationSound, Ask::Spawn,
-                                 Ask::TerrainZ, Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
-                                 Ask::ReloadMedia, Ask::QueueScreen,
-                                 Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
-                                 Ask::VolcanoBuild, Ask::FarmTerrain, Ask::FarmDropSite,
-                                 Ask::FarmSetVariant, Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
-                                 Ask::SetScaledModel, Ask::GroundPoint, Ask::SmokePlace, kStormHost, Ask::RainMedia,
-                                 Ask::RainSounds, Ask::ParticleTick, Ask::ParticleGround,
-                                 Ask::EmitterPlace, Ask::EmitterSound, Ask::EmitterLine, Ask::EffectQueue,
-                                 Ask::MarchMedia, Ask::MarchSetUnit};
-    if (inFile != NULL)
-        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
-    EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
-    return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
-}
-
-// Creates one sprite part per tag point of the effect's kind on the unit (else one part at the unit, tag 10000),
-// lifting a buried position by inOffset; returns the position and the height (farthest part + effect size)
-void EEEffect::CreateParts(GE3DPoint& outPosition, float& outHeight, float inOffset)
-{
-    GE3DPoint theTagPoint;
-    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
-    GE3DPoint thePosition = this->GetUnitLocation();
-    float theMaximum = 0.0f;
-    float theHeight = 1.0f;
-    EEUnit* theUnit = this->mUnit;
-    // The original reads the stats above the null test ([unit+0x34] before the je); a unitless effect (an
-    // explosion at a point) has no unit, so ours reads them inside it.
-    if (theUnit) {
-        EEUnitClassUpgrade* theStats = theUnit->GetStats();
-        EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-        EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theComplexUnit ? theComplexUnit->mAnimation : 0,
-                                                                this->GetGraphicEffect()->GetKind());
-        unsigned long theY = UMFloorUnsigned(thePosition.GetY());
-        unsigned long theX = UMFloorUnsigned(thePosition.GetX());
-        if (theMesh->GetIsValidPoint(theX, theY)) {
-            float theZ = theMesh->GetMeshZ(thePosition.GetX(), thePosition.GetY());
-            if (thePosition.GetZ() < theZ)
-                thePosition.SetZ(theZ + inOffset);
-        }
-        if (theList && theList->GetNumTagPoints() != 0) {
-            GETransformation theTransformation(false);
-            float theScale;
-            unsigned long theFrame;
-            if (theComplexUnit) {
-                theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-                theScale = theComplexUnit->mPhysicalModel.GetScale();
-                theFrame = theComplexUnit->mPhysicalModel.GetFrame();
-            } else {
-                theTransformation.MakeIdentity();
-                theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
-                theFrame = 0;
-                theScale = theStats->GetScale();
-            }
-            EETagPointList::Scale(theTransformation, theScale);
-            for (unsigned long i = 0; i < theList->GetNumTagPoints(); i++) {
-                EEGraphicObject* theObject = this->GetGraphicObject();
-                theObject->LoadMedia();
-                theList->GetTagPoint(i)->GetPoint(theFrame, theTransformation, theTagPoint);
-                this->mParts.push_back(EEEffect2DPart{theTagPoint, theObject, i, (unsigned long)theObject->mStartFrames[0], 0, 0.0f, false});
-                float theDistance = thePosition.DistanceToSquared(theTagPoint);
-                if (theDistance > theMaximum)
-                    theMaximum = theDistance;
-            }
-            theHeight = (float)sqrt(theMaximum) + this->GetGraphicEffect()->GetSize();
-        } else {
-            EEGraphicObject* theObject = this->GetGraphicObject();
-            theObject->LoadMedia();
-            this->mParts.push_back(EEEffect2DPart{thePosition, theObject, 10000, (unsigned long)theObject->mStartFrames[0], 0, 0.0f, false});
-            theHeight = this->GetGraphicEffect()->GetSize();
-        }
-    }
-    outPosition = thePosition;
-    outHeight = theHeight;
-}
-
-// The world the damage controller's Rust tick calls into: its children made and destroyed (from the deleted
-// EEEDamagedEffect.cpp)
-namespace {
-struct EEDamagedHost {
-    static EEEffect& Self(void* inContext) { return *static_cast<EEEffect*>(inContext); }
-    static uint32_t Create(void* inContext, bool inSecondary, uint32_t inIndex)
-    {
-        EEEffect& theEffect = Self(inContext);
-        EEEffectHandle theHandle;
-        EEGraphicEffect* theLinked = inSecondary ? theEffect.GetGraphicEffect()->GetLinkedEffect2()
-                                                 : theEffect.GetGraphicEffect()->GetLinkedEffect1();
-        gWorld.GetEffectManager()->CreateUnitEffect(theEffect.GetUnit(), theLinked, &theHandle, 0, inIndex, 0);
-        return theHandle.mValue;
-    }
-    static void Destroy(void*, uint32_t inHandle)
-    {
-        EEEffectHandle theHandle = {inHandle};
-        gWorld.GetEffectManager()->DestroyEffect(theHandle);
-    }
-};
-}
-
-// The damage controller (0x3e; EEEDamagedEffect::Step, 0x10225c): one child damage effect (plus its secondary) per
-// damage tag point, more as the unit's health drops; all hidden on a cloaked enemy unit; once finished destroys them
-// and returns 7 (the counts and the children's handles are ee_gfx effect_state.rs's). The others: Rust's
-long EEEffect::Step()
-{
-    if (this->mKind != 0x3e)
-        return this->Call(EeGfxEffect3DOp::Step);
+    EEEffect* theSelf = Fx(inEffect);
     EeGfxDamagedTick theTick = {};
-    EEGraphicEffect* theEffect = this->GetGraphicEffect();
+    EEGraphicEffect* theEffect = theSelf->GetGraphicEffect();
     theTick.has_linked2 = theEffect->GetLinkedEffect2() != NULL;
     theTick.param2 = theEffect->GetParam2();
-    EEUnit* theUnit = this->mUnit;
-    if (theUnit && !this->mRecord->damaged.finished) {
+    EEUnit* theUnit = theSelf->mUnit;
+    if (theUnit && !theSelf->mRecord->damaged.finished) {
         theTick.has_unit = true;
         if (theUnit->mTileNode) {
             while (theUnit->mComplexUnit->mPreviousPart)
@@ -1498,47 +583,403 @@ long EEEffect::Step()
                 theTick.hidden = true;
         }
     }
-    EeGfxDamagedHost theHost = {this, EEDamagedHost::Create, EEDamagedHost::Destroy};
-    return ee_gfx_effect_damaged_step(this->mRecord, &theTick, &theHost);
+    return theTick;
 }
 
-// The battlefield decals' placement (EEE2DBattlefieldAmbient.cpp's helpers, 0xde374..0xde6e9: ee_gfx
-// effect_placement.rs) over the graphic effects, the manager's list, the map and the manager's placement
-namespace {
-struct EEDecalOps {
-    static EeGfxDecalEffect Effect(void*, void* inEffect)
+// The goal markers' questions (goal_markers.rs EeGfxGoalHost; the selection is the last player asked; the markers'
+// effects are ee_gfx's)
+struct EEGoalOps {
+    static EESelectedGroup* sGroup;
+    static EEComplexUnit* Unit(uint32_t inUnit) { return sGroup->GetUnit(inUnit); }
+    static uint32_t CurrentPlayer(void*) { return (uint32_t)::gWorld.mCurrentPlayer; }
+    static uint32_t PlayerCount(void*) { return (uint32_t)::gWorld.mNumPlayers; }
+    static EeGfxGoalPlayer Player(void*, uint32_t inPlayer)
     {
-        EEGraphicEffect* theEffect = static_cast<EEGraphicEffect*>(inEffect);
-        return EeGfxDecalEffect{theEffect->GetParam2(), theEffect->GetParam3(), theEffect->GetParam4(), theEffect->GetParam5(),
-                                (int32_t)theEffect->mIntParam2,
-                                {theEffect->mLinkedEffect1, theEffect->mLinkedEffect2, theEffect->mLinkedEffect3}};
+        EEPlayer* thePlayer = ::gWorld.mPlayers[inPlayer];
+        sGroup = thePlayer->mSelectedGroup;
+        return EeGfxGoalPlayer{thePlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicWW2, thePlayer->mShiftMode,
+                               (uint32_t)sGroup->GetNumUnits()};
     }
-    static void* Next(void*, void* inEffect)
+    static EeGfxGoalUnit Facts(void*, uint32_t inUnit)
     {
-        return inEffect ? gEffectManager->Next(static_cast<EEEffect*>(inEffect)) : gEffectManager->First();
+        EEComplexUnit* theUnit = Unit(inUnit);
+        EEUnitClass* theClass = theUnit->mUnitClass;
+        return EeGfxGoalUnit{(uint32_t)theClass->mCategory, (uint32_t)theClass->mUnitType, (int32_t)theClass->mAirTrafficType,
+                             theUnit->mTile != NULL, theUnit->mContainer != NULL, (uint32_t)theUnit->GetNumGoalQueues()};
     }
-    static EeGfxEffectRecord* Record(void*, void* inEffect) { return static_cast<EEEffect*>(inEffect)->mRecord; }
-    static float Height(void*, const EeGe3DPoint* inPoint)
+    static uint32_t GoalCount(void*, uint32_t inUnit, uint32_t inQueue)
     {
-        return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint));
+        return (uint32_t)Unit(inUnit)->mGoalQueues[inQueue].mGoals.size();
     }
-    static void Place(void*, void* inEffect, const EeGe3DPoint* inPoint)
+    // a goal's kind, automatic waypoint, garrison container or attack target, and location
+    static EeGfxGoalStep Goal(void*, uint32_t inUnit, uint32_t inQueue, uint32_t inGoal)
     {
-        gEffectManager->CreatePlacedEffect(*reinterpret_cast<const GE3DPoint*>(inPoint), static_cast<EEGraphicEffect*>(inEffect),
-                                           NULL);
+        EEUnitGoal* theGoal = Unit(inUnit)->mGoalQueues[inQueue].mGoals[inGoal];
+        EeGfxGoalStep theStep = {};
+        theStep.kind = theGoal->mKind;
+        if (theGoal->mKind == kGoalLocation) {
+            theStep.auto_waypoint = EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
+            if (theStep.auto_waypoint)
+                return theStep;
+        }
+        GE3DPoint theTo;
+        theGoal->GetGoalLocation(theTo);
+        theStep.to = R(theTo);
+        EEUGRust* theCast = theGoal->mKind == kGoalLoadGarrison ? EELoadGarrisonGoalCast(theGoal)
+                            : theGoal->mKind == kGoalAttackUnit  ? EEAttackUnitCast(theGoal) : NULL;
+        if (theCast != NULL) {
+            theStep.has_target = true;
+            theStep.target = theGoal->mKind == kGoalLoadGarrison ? (void*)theCast->GetLoadContainer()
+                                                                 : (void*)theCast->GetAttackTarget();
+        }
+        return theStep;
+    }
+    static bool GoalLocation(void*, uint32_t inUnit, uint32_t inQueue, uint32_t inGoal, EeGe3DPoint* outPoint)
+    {
+        EEUnitGoal* thePrevious = Unit(inUnit)->mGoalQueues[inQueue].GetGoalAt(inGoal);
+        if (thePrevious == NULL)
+            return false;
+        GE3DPoint theFrom;
+        thePrevious->GetGoalLocation(theFrom);
+        *outPoint = R(theFrom);
+        return true;
+    }
+    static EeGe3DPoint UnitLocation(void*, uint32_t inUnit, bool inOnTile)
+    {
+        EEComplexUnit* theUnit = Unit(inUnit);
+        return R(GE3DPoint((inOnTile ? theUnit : theUnit->mContainer)->mPhysicalModel.GetLocation()));
+    }
+    // a placed target's outer part; a land building's: the goal's point on its centre's tile corner
+    static void* Target(void*, void* inTarget, EeGe3DPoint* ioTo)
+    {
+        EEUnit* theTarget = static_cast<EEUnit*>(inTarget);
+        if (theTarget->mTileNode != NULL) {
+            EEComplexUnit* theOuter = theTarget->mComplexUnit;
+            while (theOuter->mPreviousPart != NULL)
+                theOuter = theOuter->mPreviousPart;
+            theTarget = theOuter;
+        }
+        if (theTarget->mUnitClass->IsLandBuilding()) {
+            if (theTarget->mTileNode != NULL) {
+                ioTo->x = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX();
+                ioTo->y = theTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY();
+            }
+            ioTo->x = ioTo->x + theTarget->mUnitClass->mTileSize * 0.5f - 0.25f;
+            ioTo->y = ioTo->y - theTarget->mUnitClass->mTileSize * 0.5f + 0.25f;
+        }
+        return theTarget;
+    }
+    static bool Ground(void*, const EeGe3DPoint* inPoint, EeGe3DPoint* outPoint)
+    {
+        if (::gWorld.mMap->GetTile(UMFloor(inPoint->x), UMFloor(inPoint->y)) == NULL)
+            return false;
+        GE3DPoint theGround;
+        ::gWorld.mMap->GetGroundPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theGround);
+        *outPoint = R(theGround);
+        return true;
     }
 };
-const EeGfxDecalHost kDecalHost = {NULL, EEDecalOps::Effect, EEDecalOps::Next, EEDecalOps::Record, EEDecalOps::Height,
-                                   EEDecalOps::Place};
+EESelectedGroup* EEGoalOps::sGroup;
+
+// The effects' file over an FSFile (each the FSFile call of that type) and the TEST ONLY captures' memory files
+struct EEFileOps {
+    static FSFile& File(void* inContext) { return *static_cast<FSFile*>(inContext); }
+    static bool IsOpen(void* inContext) { return File(inContext).GetIsOpen(); }
+    static int32_t ReadU32(void* inContext, uint32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadI32(void* inContext, int32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadF32(void* inContext, float* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadBool(void* inContext, bool* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t WriteU32(void* inContext, uint32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteI32(void* inContext, int32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteF32(void* inContext, float inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteBool(void* inContext, bool inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static EeGfxEffectFile Memory() { return EEEffectFile(*new FSMemoryFile); }
+    static const uint8_t* MemoryData(void* inContext, uint32_t* outLength)
+    {
+        unsigned long theLength = 0;
+        static_cast<FSMemoryFile*>(inContext)->GetLength(theLength);
+        *outLength = (uint32_t)theLength;
+        return static_cast<FSMemoryFile*>(inContext)->GetData();
+    }
+    static void MemoryRewind(void* inContext) { static_cast<FSMemoryFile*>(inContext)->SetPosition(0, kFileOriginBegin, false); }
+    static void MemoryFree(void* inContext) { delete static_cast<FSMemoryFile*>(inContext); }
+};
+
+// The capture's records (EESimCaptureRecord) as the manager's captures write them
+uint32_t EECapture(EeGfxCaptureOp inOp, uint32_t inTag, const uint8_t* inData, uint32_t inLength)
+{
+    switch (inOp) {
+    case EeGfxCaptureOp::Active:
+        return EESimCaptureRecord::Active() ? 1 : 0;
+    case EeGfxCaptureOp::Keeps:
+        return EESimCaptureRecord::Keeps(inTag) ? 1 : 0;
+    case EeGfxCaptureOp::Commit: {
+        EESimCaptureRecord theRecord(inTag);
+        theRecord.Bytes(inData, inLength);
+        theRecord.Commit();
+        return 0;
+    }
+    case EeGfxCaptureOp::Only:
+        if (inData != NULL)
+            EESimCaptureRecord::Only(reinterpret_cast<const unsigned int*>(inData), inLength);
+        else
+            EESimCaptureRecord::Only(0);
+        return 0;
+    case EeGfxCaptureOp::Exclusive:
+        EESimCaptureRecord::Exclusive(inTag != 0);
+        return 0;
+    }
+    return 0;
 }
 
-// Places up to N shell-hole decals of the unit's class around a point (ambient effects on); stops on a failed roll
-// The first one renews a decal already on that spot instead, unless its scatter roll moves it
+// The world the effects and their manager call into (ee_gfx effect_obj.rs EeGfxEffectWorld, ffi_manager.rs
+// EeGfxManagerWorld), registered before main
+template <class T> void Deref(uint64_t inObject) { P<T>(inObject)->Dereference(); }
+template <class T> void Ref(uint64_t inObject) { P<T>(inObject)->Reference(); }
+
+EeGfxEffectWorld EEMakeWorld()
+{
+    EeGfxEffectWorld w = {};
+    w.unit_reference = Ref<EEUnit>;
+    w.unit_release = Deref<EEUnit>;
+    w.unit_by_id = [](uint32_t inID) { return U(gWorld.GetUnit(inID)); };
+    w.graphic_effect_reference = Ref<EEGraphicEffect>;
+    w.graphic_effect_release = Deref<EEGraphicEffect>;
+    w.graphic_effect_load = [](uint64_t inEffect, bool inOnDemand) { P<EEGraphicEffect>(inEffect)->Load(inOnDemand); };
+    w.graphic_effect_unload = [](uint64_t inEffect) { P<EEGraphicEffect>(inEffect)->Unload(); };
+    w.graphic_effect_media = [](uint64_t inEffect) {
+        return U(static_cast<EEGraphicObject*>(P<EEGraphicEffect>(inEffect)->GetMedia()));
+    };
+    w.graphic_effect_by_id = [](uint32_t inID) { return U(EEGraphicEffect::Get(inID)); };
+    w.graphic_effect_count = []() { return (uint32_t)EEGraphicEffect::GetCount(); };
+    w.model_reference = Ref<GEModel>;
+    w.model_release = Deref<GEModel>;
+    w.media_load = [](uint64_t inObject) { return (int32_t)P<EEGraphicObject>(inObject)->LoadMedia(); };
+    w.media_unload = [](uint64_t inObject) { P<EEGraphicObject>(inObject)->UnloadMedia(); };
+    w.sound_release = [](uint64_t inNode) {
+        gSoundManager->Stop(P<SESMInstanceNode>(inNode), false);
+        P<SESMInstanceNode>(inNode)->Dereference();
+    };
+    w.sound_object_unload = [](uint32_t inID) {
+        EESoundObject* theSound = EESoundObject::Get(inID);
+        if (theSound)
+            theSound->UnloadMedia();
+    };
+    w.sound_object_load = [](uint32_t inID) {
+        EESoundObject* theSound = EESoundObject::Get(inID);
+        if (theSound)
+            theSound->LoadMedia();
+    };
+    w.unit_damaged = [](uint64_t inUnit) { P<EEUnit>(inUnit)->mUnitClass->UnitDamaged(P<EEUnit>(inUnit)->mComplexUnit, NULL, 0); };
+    w.loading_saved_game = []() { return (bool)gLoadingSavedGame; };
+    w.regions = []() { return gWorld.mMap != NULL ? gWorld.mMap->mEffectRegions : (EeGfxEffectRegions*)NULL; };
+    w.tile_seen = [](int64_t inX, int64_t inY) {
+        EEMapTile* theTile = gWorld.mMap->GetTile((long)inX, (long)inY);
+        return theTile == NULL ? -1 : theTile->IsSeenBy(gWorld.GetCurrentPlayer()) ? 1 : 0;
+    };
+    w.doppelganger = [](int64_t inX, int64_t inY, uint64_t inUnit, bool inComplex) {
+        EEMapTile* theTile = gWorld.mMap->GetTile((long)inX, (long)inY);
+        EEUnit* theUnit = P<EEUnit>(inUnit);
+        return gDoppelgangerManager.HasDoppelganger(theTile, inComplex ? theUnit->mComplexUnit : theUnit,
+                                                    gWorld.mCurrentPlayer);
+    };
+    w.in_view = [](const EeGe3DPoint* inPoint, float inRadius) {
+        return ee_gfx_effect_in_view(reinterpret_cast<const EeGeViewport*>(&gViewport), gOrthographicView, inPoint, inRadius);
+    };
+    w.tick = []() {
+        return EeGfxEffectTick{gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)(unsigned long)gPhysics->mGameTime,
+                               gFreeCamera, gPhysics->mSpeed, gWorld.GetGameSpeed(), (int64_t)gPhysics->mGameTime,
+                               gPhysics->GetGameClock(), gPhysics->mGameOver,
+                               EeGe3DPoint{gWorld.mWindDirection.mX, gWorld.mWindDirection.mY, gWorld.mWindDirection.mZ}};
+    };
+    w.screen = [](bool inPreferences) {
+        return (uint32_t)(inPreferences ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
+    };
+    // a shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its
+    // animation when inTestList finds them, else assumed
+    w.weapon_point = [](uint64_t inUnit, int32_t inSite, bool inTestList, bool* outTagged) {
+        EEUnit* theUnit = P<EEUnit>(inUnit);
+        EEModel* theModel = theUnit->GetModel();
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
+        *outTagged = theList != NULL && theList->GetNumTagPoints() != 0;
+        GE3DPoint theStart;
+        EECombatEffectWeaponPoint(inSite, theComplex, theModel, theList, inTestList ? *outTagged : true, theStart);
+        return R(theStart);
+    };
+    w.height = [](const EeGe3DPoint* inPoint) { return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint)); };
+    w.mesh = []() { return (const EeGeTerrainMesh*)gWorld.mMap->mTerrainMesh.GetRust(); };
+    w.raster = &gEERustRaster;
+    w.unit_graphic = Ask::UnitGraphic;
+    w.storm = EeGfxStormHost{NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
+                             EEStormHostOps::StepToward, EEStormHostOps::Ripple};
+    w.answers3d = EeGfxEffectAnswers3D{Ask::AnimationSound, Ask::WallGatePosts, Ask::WallPiece, Ask::VolcanoBuild,
+                                       Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant,
+                                       Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
+                                       Ask::SetScaledModel, Ask::GroundPoint, Ask::RainSounds, Ask::EmitterSound};
+    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::PartSound, Ask::DrawBlood, Ask::TileBlocked,
+                                       Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects, Ask::IconsSelected,
+                                       Ask::GroundAt, Ask::GlowArea, Ask::GlowRows};
+    return w;
+}
+
+EeGfxManagerWorld EEMakeManagerWorld()
+{
+    EeGfxManagerWorld w = {};
+    w.damaged_tick = EEDamagedTick;
+    w.effect_detail = [](int64_t inSet) {
+        if (inSet >= 0)
+            gEffectDetail = (unsigned long)inSet;
+        return (uint32_t)gEffectDetail;
+    };
+    w.current = []() { return gEffectManager != NULL ? gEffectManager->mRust : (EeGfxEffectManager*)NULL; };
+    w.goals = EeGfxGoalHost{NULL, EEGoalOps::CurrentPlayer, EEGoalOps::PlayerCount, EEGoalOps::Player, EEGoalOps::Facts,
+                            EEGoalOps::GoalCount, EEGoalOps::Goal, EEGoalOps::GoalLocation, EEGoalOps::UnitLocation,
+                            EEGoalOps::Target, EEGoalOps::Ground, NULL, NULL, NULL, NULL};
+    w.capture = EECapture;
+    w.memory_file = EEFileOps::Memory;
+    w.memory_file_data = EEFileOps::MemoryData;
+    w.memory_file_rewind = EEFileOps::MemoryRewind;
+    w.memory_file_free = EEFileOps::MemoryFree;
+    w.save_major = kSaveGameMajorVersion;
+    w.save_minor = kSaveGameMinorVersion;
+    return w;
+}
+
+const EeGfxEffectWorld kWorld = EEMakeWorld();
+const EeGfxManagerWorld kManagerWorld = EEMakeManagerWorld();
+const bool kRegistered = (EEGfxObjectLayoutRegister(), ee_gfx_effect_world_set(&kWorld), ee_gfx_manager_world_set(&kManagerWorld), true);
+}
+
+EeGfxEffectFile EEEffectFile(FSFile& inFile)
+{
+    EeGfxEffectFile theFile = {&inFile, EEFileOps::IsOpen, EEFileOps::ReadU32, EEFileOps::ReadI32, EEFileOps::ReadF32,
+                               EEFileOps::ReadBool, EEFileOps::WriteU32, EEFileOps::WriteI32, EEFileOps::WriteF32,
+                               EEFileOps::WriteBool};
+    return theFile;
+}
+
+// the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
+// recentred on the terrain there; the tiles' bounds (ee_gfx effect_storm.rs)
+void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
+{
+    int32_t theBounds[4] = {(int32_t)outBounds.mLeft, (int32_t)outBounds.mTop, (int32_t)outBounds.mRight,
+                            (int32_t)outBounds.mBottom};
+    if (!ee_gfx_effect_storm_move(H(this), (int32_t)inCenter.mX, (int32_t)inCenter.mY, theBounds))
+        return;
+    outBounds.mLeft = theBounds[0];
+    outBounds.mTop = theBounds[1];
+    outBounds.mRight = theBounds[2];
+    outBounds.mBottom = theBounds[3];
+}
+
+void EEEffect::GetBounds(U2DRectangle<long>& outBounds)
+{
+    int32_t theBounds[4];
+    if (!ee_gfx_storm_bounds(this->mRecord, theBounds))
+        return;
+    outBounds.mLeft = theBounds[0];
+    outBounds.mTop = theBounds[1];
+    outBounds.mRight = theBounds[2];
+    outBounds.mBottom = theBounds[3];
+}
+
+U2DPoint<long> EEEffect::GetCenterPoint() const
+{
+    return U2DPoint<long>(this->mRecord->storm.center_x, this->mRecord->storm.center_y);
+}
+
+// rain or snow over a set of tiles (their coordinates as x, y pairs)
+long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
+                                          EEEffectHandle* outHandle)
+{
+    std::vector<int32_t> theTiles;
+    for (size_t i = 0; i < inTiles.size(); i++) {
+        theTiles.push_back((int32_t)inTiles[i].mX);
+        theTiles.push_back((int32_t)inTiles[i].mY);
+    }
+    EeGfxEffectArgs a = Args(EeGfxEffectEntry::Weather, inEffect);
+    a.tiles = theTiles.empty() ? NULL : &theTiles[0];
+    a.tile_count = (uint32_t)inTiles.size();
+    return this->Create(a, outHandle);
+}
+
+void EEEffectCaptureSweep()
+{
+    ee_gfx_effects_sweep(gEffectManager != NULL ? gEffectManager->mRust : NULL);
+}
+
+// Returns the goal at an index of the queue (EEUnitVectorItem's member, out of line after its first user, the goal
+// markers' rebuild)
+EEUnitGoal* EEUnitVectorItem::GetGoalAt(unsigned long inIndex)
+{
+    return this->mGoals[inIndex];
+}
+
+// The quad batches' arrays (the camera batch's vertices 0x4e8db8, the ground batch's 0x4e8da8 and their polygons
+// 0x4e8df0: two triangles a quad); their textures, counts, alpha references, quads, flushes and draws are ee_gfx
+// effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) too. The GE value classes pass as their mirrors.
+static GEVertexArray* sEffectVertices[2];
+static GEPolygonArray* sEffectPolygons;
+
+// A batch's quad: its four vertices from inIndex on (the raster table's batch_quad; AddEffectQuad)
+void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex)
+{
+    const GEColor& theColor = *reinterpret_cast<const GEColor*>(&inQuad->color);
+    const GEVector& theNormal = *reinterpret_cast<const GEVector*>(&inQuad->normal);
+    for (unsigned long i = 0; i < 4; i++)
+        sEffectVertices[inWhich]->SetVertex(theColor, *reinterpret_cast<const GE3DPoint*>(&inQuad->points[i]), theNormal,
+                                            *reinterpret_cast<const GETextureCoordinate*>(&inQuad->coords[i]),
+                                            inQuad->opacities[i], inIndex + i);
+}
+
+// A batch's draw: inCount vertices, half as many polygons (the raster table's batch_draw)
+int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture)
+{
+    return (int32_t)gRasterizer->Draw(*sEffectPolygons, inCount / 2, *sEffectVertices[inWhich], inCount,
+                                      static_cast<GETexture*>(inTexture), gScreenIndex, gOrthographicView);
+}
+
+// Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
+// (provisional name)
+void CreateEffectBatchBuffers()
+{
+    sEffectPolygons = gRasterizer->CreatePolygonArray(0x400);
+    unsigned long j = 0;
+    for (unsigned long i = 0; i < 0x200; i++) {
+        sEffectPolygons->SetVertexIndices(j, i * 4, i * 4 + 1, i * 4 + 2);
+        sEffectPolygons->SetVertexIndices(j + 1, i * 4, i * 4 + 2, i * 4 + 3);
+        j += 2;
+    }
+    sEffectVertices[EE_GFX_BATCH_CAMERA] = gRasterizer->CreateVertexArray(1, 0x800);
+    sEffectVertices[EE_GFX_BATCH_GROUND] = gRasterizer->CreateVertexArray(1, 0x800);
+}
+
+// Deletes the quad batches' polygon array and vertex arrays (provisional name)
+void DeleteEffectBatchBuffers()
+{
+    if (sEffectPolygons)
+        delete sEffectPolygons;
+    for (int i = 0; i < 2; i++) {
+        if (sEffectVertices[i])
+            delete sEffectVertices[i];
+    }
+    sEffectPolygons = NULL;
+    sEffectVertices[0] = sEffectVertices[1] = NULL;
+}
+
+// Creates and releases the two shared quad models (provisional names)
+void CreatePlaneModels() { ee_gfx_effect_planes_create(&gEERustRaster); }
+void ReleasePlaneModels() { ee_gfx_effect_planes_release(&gEERustRaster); }
+
+// Places up to N shell-hole decals of the unit's class around a point (ambient effects on; ee_gfx
+// effect_placement.rs over the manager's list); the first one renews a decal already on that spot instead, unless
+// its scatter roll moves it
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
 {
     EEGraphicEffect* theEffect;
     if (gAmbientEffectsEnabled && (theEffect = inUnit->mUnitClass->mShellHoleEffect) != 0)
-        ee_gfx_decal_impact(&kDecalHost, theEffect, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
+        ee_gfx_effects_decal_impact(U(theEffect), R(inLocation));
 }
 
 // Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
@@ -1552,7 +993,7 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
     inUnit->GetPosition(theLocation);
     unsigned long theType = inUnit->mUnitClass->mUnitType;
     const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-    ee_gfx_decal_track(&kDecalHost, theEffect, reinterpret_cast<const EeGe3DPoint*>(&theLocation),
-                       theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
-                       theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
+    ee_gfx_effects_decal_track(U(theEffect), R(theLocation),
+                               theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
+                               theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
 }

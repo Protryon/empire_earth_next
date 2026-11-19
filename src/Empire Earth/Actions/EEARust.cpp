@@ -676,9 +676,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         GE3DPoint theLocation(f[0], f[1], f[2]);
         gEffectManager->CreateEffect(static_cast<EEUnit*>(p), theLocation, theGraphicEffect, &theHandle, 0);
         EEEffect* theEffect = gEffectManager->GetEffect(theHandle);
-        theEffect->SetIsLocalOnly(true);
-        theEffect->SetPlayer(i[1]);
-        theEffect->SetIsSaved(false);
+        theEffect->SetLocalTo(i[1]);
         return 0;
     }
     case EE_SCREENS_GA_OP_WORLD_UNIT: return (intptr_t) static_cast<EEUnit*>(gWorld.GetUnit(i[0]));

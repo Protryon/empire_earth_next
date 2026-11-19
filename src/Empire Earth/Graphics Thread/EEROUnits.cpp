@@ -242,13 +242,7 @@ EeGfxRenderObject ObjectRecord(const EERenderShadow& inObject)
 // the effects' units pass: queue 3, batched per texture
 void UnitsEffects(void*)
 {
-    for (EEEffectQueue::iterator i = gEffectQueues[3].begin(); i != gEffectQueues[3].end(); i++) {
-        BeginEffectBatches(i->first);
-        for (std::deque<EEEffect*>::iterator theEffect = i->second.begin(); theEffect != i->second.end(); theEffect++)
-            (*theEffect)->DrawPass5();
-        FlushEffectBatches();
-        EndEffectBatches();
-    }
+    ee_gfx_effect_queues_draw(5);
 }
 
 // the frame's render lists as records and indices (ee_gfx ro_units.rs)
@@ -366,16 +360,11 @@ void EEROUnits::RenderScene()
 // Draws the unit labels (not in cinematics; ee_gfx ro_units.rs) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
-    EEEffectQueue::iterator theIterator;
-    std::deque<EEEffect*>::iterator theEffect;
     if (!gRenderSnapshot.mInCinematic) {
         UnitsFrame theFrame;
         ee_gfx_ro_units_labels(&gEERustRaster, &theFrame.mScene);
     }
-    for (theIterator = gEffectQueues[1].begin(); theIterator != gEffectQueues[1].end(); theIterator++) {
-        for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
-            (*theEffect)->DrawPass3();
-    }
+    ee_gfx_effect_queues_draw(3);
 }
 
 // Releases the units' media: bar rhombi, line buffer, textures, ring and selection models (ee_gfx ro_units.rs)

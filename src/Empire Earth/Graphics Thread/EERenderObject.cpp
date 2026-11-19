@@ -96,8 +96,6 @@ EERenderEnvironment gRenderEnvironment;
 
 EERenderLists EERenderLists::sInstance;
 
-EEEffectQueue gEffectQueues[5];
-
 // 0x4e9348 (17 colours) and its init chain: EEInitialiseScene's key frames, ee_gfx scene.rs initial_tables
 GEColor gU4E9338(1.0f, 1.0f, 1.0f);
 float gU4E9330;                            // 0x4e9330 (no init chain)
@@ -178,8 +176,7 @@ void EEInitialiseScene()
     gCameraFollowing = false;
     gB529068 = false;
     gF4BE374 = 1.0f;
-    for (unsigned long i = 0; i < 5; i++)
-        gEffectQueues[i].clear();
+    ee_gfx_effect_queues_clear(false);   // the effects' render queues (ee_gfx effect_obj.rs)
     for (unsigned long j = 0; j < 0x200; j++)
         EERenderLists::sInstance.mRenderUnits[j].mHealthBars.resize(1, 0.0f);
     sSceneInitialised = true;
@@ -294,7 +291,7 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     gAreaEffectTexture->Reference();
     // the 50 points on the ground and the first again, the strip's width: ee_gfx capture.rs
     EeGe3DPoint thePoints[0x33];
-    EeGfxParticleGround theGround = EEParticleGround();
+    EeGfxParticleGround theGround = ee_gfx_particle_ground();
     theVertex.second = ee_gfx_capture_ground_circle(&theGround, inLocation.GetX(), inLocation.GetY(), inRadius, thePoints);
     theBack.mPoints.resize(0x33, std::pair<GE3DPoint, float>());
     for (unsigned long i = 0; i < 0x33; i++) {
@@ -305,59 +302,21 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     }
 }
 
-// Rebuilds the effect render queues: drops last frame's, then queues the effects of every map region
-// under a visible tile row
+// Rebuilds the effect render queues (ee_gfx effect_obj.rs): drops last frame's, then queues the effects of every map
+// region under a visible tile row (the rows' y, first and last x)
 void EERenderObject::QueueEffects()
 {
-    std::map<long, std::pair<long, long> > theRows;
-    EEMap* theMap = gWorld.mMap;
-    std::map<long, std::pair<long, long> >::iterator theRow;
-    EEEffectQueue::iterator theEntry;
-    std::deque<EEEffect*>::iterator theEffect;
-    RTSRegionTable<EEEffect*>* theTable = theMap->mEffectRegions;
-    for (unsigned long i = 0; i < 5; i++) {
-        for (theEntry = gEffectQueues[i].begin(); theEntry != gEffectQueues[i].end(); theEntry++) {
-            for (theEffect = theEntry->second.begin(); theEffect != theEntry->second.end(); theEffect++)
-                (*theEffect)->Release();
-        }
-        gEffectQueues[i].clear();
-    }
-    GETerrainMesh* theMesh = &theMap->mTerrainMesh;
+    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
     unsigned long theCount = theMesh->GetNumVisibleTileRows();
+    std::vector<int64_t> theRows(theCount * 3);
     for (unsigned long j = 0; j < theCount; j++) {
-        long theY;
-        long theFirst;
-        long theLast;
+        long theY, theFirst, theLast;
         theMesh->GetVisibleTileRow(j, theY, theFirst, theLast);
-        theFirst /= theTable->mRegionSize;
-        long theKey = theY / theTable->mRegionSize;
-        theLast /= theTable->mRegionSize;
-        theKey = theY / theTable->mRegionSize;
-        theRow = theRows.find(theKey);
-        if (theRow != theRows.end()) {
-            theRow->second.first = min((*theRow).second.first, theFirst);
-            (*theRow).second.second = max(theRow->second.second, theLast);
-        } else {
-            theRows.insert(std::map<long, std::pair<long, long> >::value_type(theKey,
-                std::pair<long, long>(theFirst, theLast)));
-        }
+        theRows[j * 3] = theY;
+        theRows[j * 3 + 1] = theFirst;
+        theRows[j * 3 + 2] = theLast;
     }
-    for (theRow = theRows.begin(); theRow != theRows.end(); theRow++) {
-        long theKey = theRow->first;
-        for (long theX = theRow->second.first; theX <= theRow->second.second; theX++) {
-            std::vector<EEEffect*>* theRegion = theTable->GetRegion(theX, theKey);
-            if (theRegion == NULL)
-                continue;
-            unsigned long theSize = theRegion->size();
-            for (unsigned long k = 0; k < theSize; k++) {
-                EEEffect* theOne = *(theRegion->begin() + k);
-                if (!(!theOne->mIsLocalOnly || theOne->mIsLocalOnly == true && theOne->mPlayer == gWorld.mCurrentPlayer))
-                    continue;
-                if (theOne->Queue(gEffectQueues) == 0)
-                    theOne->Reference();
-            }
-        }
-    }
+    ee_gfx_effect_queues_fill(theRows.empty() ? NULL : &theRows[0], theCount);
 }
 
 // Updates the per-frame render state: grid animation, cloud and sky clocks, light fade, letterbox and
@@ -1253,18 +1212,10 @@ void EERenderObject::FillRenderLists()
 // the shared bitmap and resets the unit picker (only after EEInitialiseScene)
 void EEReleaseScene()
 {
-    EEEffectQueue::iterator theEntry;
-    std::deque<EEEffect*>::iterator theEffect;
     if (!sSceneInitialised)
         return;
     gWorld.mLock->ReadLock();
-    for (unsigned long i = 0; i < 5; i++) {
-        for (theEntry = gEffectQueues[i].begin(); theEntry != gEffectQueues[i].end(); theEntry++) {
-            for (theEffect = theEntry->second.begin(); theEffect != theEntry->second.end(); theEffect++)
-                (*theEffect)->Release();
-        }
-        gEffectQueues[i].clear();
-    }
+    ee_gfx_effect_queues_clear(true);
     gWorld.mLock->ReadUnlock();
     UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
     UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);

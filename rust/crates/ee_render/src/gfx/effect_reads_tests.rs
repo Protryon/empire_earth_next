@@ -13,17 +13,17 @@ use crate::gfx::effect_state::EeGfxEffectRecord;
 use crate::gfx::golden_fill_replay::{register_layout, FClass, FCommand, FPlayer, FStats, FUnit};
 
 #[repr(C)]
-struct FGobj {
-    fields: EeDataGraphicObjectFields,
-    models: [usize; 14],
-    textures: [usize; 14],
-    tag_points: [usize; 14],
-    tags: usize,
-    model: usize,
-    default_point: Ge3DPoint,
-    top_point: Ge3DPoint,
-    turrets: [usize; 3],
-    orbitals: [usize; 3],
+pub(crate) struct FGobj {
+    pub(crate) fields: EeDataGraphicObjectFields,
+    pub(crate) models: [usize; 14],
+    pub(crate) textures: [usize; 14],
+    pub(crate) tag_points: [usize; 14],
+    pub(crate) tags: usize,
+    pub(crate) model: usize,
+    pub(crate) default_point: Ge3DPoint,
+    pub(crate) top_point: Ge3DPoint,
+    pub(crate) turrets: [usize; 3],
+    pub(crate) orbitals: [usize; 3],
 }
 
 impl Default for FGobj {
@@ -61,13 +61,14 @@ struct FOrbital {
 
 #[repr(C)]
 #[derive(Default)]
-struct FGeffect {
-    count: usize,
-    fields: EeDataGraphicEffectFields,
-    object: usize,
+pub(crate) struct FGeffect {
+    pub(crate) count: usize,
+    pub(crate) fields: EeDataGraphicEffectFields,
+    pub(crate) object: usize,
+    pub(crate) linked: [usize; 3],
 }
 
-fn register() {
+pub(crate) fn register() {
     register_layout();
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
@@ -93,6 +94,7 @@ fn register() {
             complex_frame: offset_of!(FUnit, phys_frame) as u64,
             complex_turret_angles: offset_of!(FUnit, turret_angles) as u64,
             stats_model: offset_of!(FStats, model) as u64,
+            geffect_linked: offset_of!(FGeffect, linked) as u64,
         });
     });
 }

@@ -85,18 +85,7 @@ int32_t ShadowTileWater(void*, uint32_t inX, uint32_t inY)
 }
 
 // the effects' ground pass: queue 0, batched per texture
-void ShadowEffects(void*)
-{
-    EEEffectQueue::iterator theIterator;
-    std::deque<EEEffect*>::iterator theEffect;
-    for (theIterator = gEffectQueues[0].begin(); theIterator != gEffectQueues[0].end(); theIterator++) {
-        BeginEffectBatches(theIterator->first);
-        for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
-            (*theEffect)->DrawPass2();
-        FlushEffectBatches();
-        EndEffectBatches();
-    }
-}
+void ShadowEffects(void*) { ee_gfx_effect_queues_draw(2); }
 }
 
 // Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass

@@ -32310,3 +32310,49 @@ Then merged again with origin/rust c9d7de90c (units round 1, the graphics + LLE 
 docs/progress/unit-classes.md "Next": `ProduceUnit`, `Animate`'s sounds, the creation family, `ReleaseUnit` and the
 gate builders, `FlyToGoal` and `IsBombOnTarget`; the lead's other targets for the cluster (`EECalamity`'s members,
 the scenario elements whole, the map and random map state) were not started.
+
+## The Graphics + LLE cluster, round 2: the effects and their manager as Rust objects, their constructors, the regions and render queues (ee_gfx effect_obj.rs, ffi_manager.rs, effect_ctor.rs, effect_sweep.rs; branch rust-gfx-cluster2, 2026-11-18)
+
+The second round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
+
+- **An object whose C++ class is a view of its head.** `EEEffect` was a C++ class (UReferenceCounter, a record pointer,
+  a dozen C++ object pointers, a vector of 2D parts, a vector of regions) whose members other lanes' code and the C++
+  answers of `EEEffectHost.cpp` read. It is now a Rust `Effect` whose first field is a `#[repr(C)]`
+  `EeGfxEffectHead`; `class EEEffect` mirrors that head with typed pointers (`mUnit`, `mGraphicEffect`, `mSound`, ...;
+  a `static_assert` on the size) and inline forwarders, and is never constructed in C++ (deleted constructors). The
+  answers kept compiling with `E(inAsk)->mUnit`; the record's members other code read (`mKind`, `mHandle`, the
+  local-only player) became accessors (`GetKind`, `GetHandle`, `SetLocalTo`), the call sites a separate commit.
+- **The world as a registered table, the answers' tables built whole in Rust.** The C++ registers two static worlds
+  before main (`EeGfxEffectWorld`: references, media loads, sounds, tiles, doppelgangers, the view test, the tick, the
+  weapon points, and the C++ answers of both classes; `EeGfxManagerWorld`: the damage controller's tick, the effect
+  detail, the current manager, the goal markers' questions, the capture). The per-call `EeGfxEffect3DHost` and
+  `EeGfxEffect2DHost` are built field by field in Rust from Rust answers and the C++'s (`EeGfxEffectAnswers3D/2D` hold
+  only the C++ answers), so no table ever holds a null function pointer that a copy would read.
+- **A saved pointer is sign-extended.** `USavedPointer<T>(id)` is `(T*)(intptr_t)(int32_t)id`: a saved "none"
+  (0xffffffff) is the -1 pointer, which the tracer beam's repair tests. A first Rust version stored the id
+  zero-extended and the sweep's tracer-beam-to-a-point case repaired to 7 instead of 0 (EFSW, the only record that
+  differed). The sweep's capture against the lead's EE-SIM (`sim_capture.py run --exe`), decoded record by record,
+  found it at once: when a capture differs, diff it against a reference exe's capture, not the golden's digest.
+- **The regions and the render queues moved with the objects.** `EEMap::mEffectRegions` (was `EEEffectsTable :
+  RTSRegionTable<EEEffect*>`) is a Rust grid (`ee_gfx_effect_regions_new/free`, the map lane's two call sites);
+  `gEffectQueues[5]` (maps from the texture to a deque of effects) are five `BTreeMap<u64, VecDeque>` (the same
+  texture-address order); the passes call `ee_gfx_effect_queues_draw(pass)`, which snapshots a queue before drawing
+  (no lock across an effect's call). QueueEffects hands Rust the visible rows (y, first, last).
+- **The manager owns the goal markers.** `EEGraphicalGoalManager` is gone: the markers' effect calls (create a line
+  or icon, destroy, move) are Rust's over the current manager; only their questions about the selection stay C++.
+  The free order changed harmlessly: the markers' effects are queued for destruction before the store is dropped
+  (the original queued them into a store already freed).
+- **The constructors are Rust** (effect_ctor.rs): the units' reads through the world views and `effect_reads.rs`'
+  layout (physical model, animation, weapon tag point, velocity, high fire, the class's scale, tile size, type and
+  high shot, the stats' fire over walls, the owner's colour, the graphic's pick and default points); only
+  `EECombatEffectWeaponPoint` (the units' template, with its CBEW capture) stays a C++ call. A private `struct Unit`
+  in the new module made cbindgen rewrite astar.h's `Unit` (EeAStarUnit) fields: name private helper types uniquely.
+- **TEST ONLY captures in Rust over C++ files.** EFMU, EFST and the EFSW sweep are Rust; their records go through one
+  `capture` host (active, keeps, commit bytes, only, exclusive) and the saves into an `FSMemoryFile` through a memory
+  file host, so the bytes are the C++ file's.
+
+What exercises what: the oracle (seeds 2-7) and the oracle and missile captures reach the manager's updates, the
+effects' steps, the constructors on the units' side and the damage controller; the effects capture (EE-SIM's sweep:
+every kind through every entry point, saved, loaded, repaired and saved again) reaches the constructors, Load, Save
+and RepairPointers of every kind; only a tour reaches the regions, the render queues, the base queues and the
+passes' draws.
