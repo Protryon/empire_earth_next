@@ -507,6 +507,18 @@ size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, u
     return ee_units_select_pick(reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(inPlayer)), inIDs, inCount, outIDs);
 }
 
+// TEST ONLY: the player's index in the world for the captures (EEWorld::GetPlayerIndex's loop, the last match; here
+// over the world's inline reads, so this unit calls no EEWorld member)
+static long EECapturePlayerIndex(EEPlayer* inPlayer)
+{
+    long theResult = -1;
+    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
+        if (gWorld.GetPlayer(i) == inPlayer)
+            theResult = (long)i;
+    }
+    return theResult;
+}
+
 void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,
                          const uint32_t* inPicked, size_t inPickedCount)
 {
@@ -514,7 +526,7 @@ void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_
         return;
     EESimCaptureRecord theRecord(0x4b505355u);   // "USPK"
     theRecord.U32((unsigned int)inCase);
-    theRecord.I32((int)gWorld.GetPlayerIndex(inPlayer));
+    theRecord.I32((int)EECapturePlayerIndex(inPlayer));
     theRecord.U32((unsigned int)inCount);
     theRecord.Bytes(inIDs, (unsigned int)(inCount * 4));
     theRecord.U32((unsigned int)inPickedCount);
@@ -587,7 +599,7 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
         return;
     EESimCaptureRecord theRecord(0x4c465355u);   // "USFL"
     theRecord.U32((unsigned int)inCase);
-    theRecord.I32((int)gWorld.GetPlayerIndex(inPlayer));
+    theRecord.I32((int)EECapturePlayerIndex(inPlayer));
     theRecord.I32((int)inSlot);
     theRecord.U32((unsigned int)inCount);
     for (size_t i = 0; i < inCount; i++)
