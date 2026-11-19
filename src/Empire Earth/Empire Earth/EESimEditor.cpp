@@ -127,14 +127,12 @@
 #include "rust/sim/scenario.h"
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
-#include "ee/EESEUITechListBox.h"
 #include "ee/EEUIShell.h"
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <string>
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSEMainButton.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "lle/FSChunk.h"
@@ -1218,18 +1216,19 @@ void TerrainDigest(std::vector<std::string>& outLines)
 void TechDigest(std::vector<std::string>& outLines)
 {
     for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
-        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
+        UILBString* l = static_cast<UILBString*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
         l->CopyData();
+        long theCount = (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_COUNT);
         unsigned long theSelection = 0;
         bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
-        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(l->mTechs.size()) + " lines=" +
+        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(theCount) + " lines=" +
                         std::to_string(l->GetLineCount()) + " sel=" +
                         (theSelected ? std::to_string(theSelection) : std::string("none")) + " marked";
-        for (unsigned long d : l->mDependents)
-            s += " " + std::to_string(d);
+        for (long d = 0; d < (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_COUNT); d++)
+            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_AT, d));
         s += " ids";
-        for (long id : l->mTechs)
-            s += " " + std::to_string(id);
+        for (long k = 0; k < theCount; k++)
+            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_AT, k));
         outLines.push_back(s);
         s = "  lines";
         for (unsigned long k = 0; k < l->GetLineCount(); k++)
@@ -1425,7 +1424,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         std::function<void()> theCode;
         std::string theProblem;
         if (c == "tab")
-            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTabButton(L(1))->CheckDirect(); };
+            theCode = [=] { EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetTabButton(L(1)), EE_SCREENS_SKOP_CHECK_DIRECT); };
         else if (c == "blank")
             theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
@@ -2133,7 +2132,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
             theCode = [=] { gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
         else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
-            theCode = [=] { static_cast<EESEUITechListBox*>(EditorControl(w[1]))->Fill(L(2), L(3)); };
+            theCode = [=] { EEUIShell::Op(EditorControl(w[1]), EE_SCREENS_SKOP_TECH_FILL, L(2), L(3)); };
         else if (c == "techstate")   // the two tech lists (TechDigest)
             theCode = [=, &theOutput] { TechDigest(theOutput); };
         else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
