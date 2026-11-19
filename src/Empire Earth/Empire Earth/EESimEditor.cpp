@@ -128,6 +128,7 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "ee/EESEUITechListBox.h"
+#include "ee/EEUIShell.h"
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -154,9 +155,6 @@ extern std::map<const void*, unsigned long> gSeetAlignments;
 long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSEComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
 #include "ee/EESEPlayerScreen.h"
 #include <typeinfo>
 #include "ee/EEComputerPlayer.h"
@@ -921,7 +919,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     std::vector<UISlider*> theSliders;
     std::vector<UIControl*> theChecks, theRadios;
     std::vector<UIComboBox*> theCombos;
-    std::vector<EESETSEScenarioComboBox*> theScenario;
+    std::vector<UIComboBox*> theScenario;
     std::vector<UILBString*> theLists;
     if (inCondition) {
         EESETSConditionControls* t = ConditionControls();
@@ -961,7 +959,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     for (size_t i = 0; i < theScenario.size(); i++) {
         unsigned long theSelection = 0;
         bool theSelected = theScenario[i]->GetCurrentSelection(theSelection) == kErrorOK;
-        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(theScenario[i]->mMode) +
+        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(EEUIShell::Op(theScenario[i], EE_SCREENS_SKOP_MODE)) +
                            " lines=" + std::to_string(theScenario[i]->GetListBox()->GetLineCount()) + " selection=" +
                            (theSelected ? std::to_string(theSelection) : std::string("none")));
     }
@@ -989,6 +987,14 @@ std::string TypeName(const void* inObject, const std::type_info& inType)
     if (theName.compare(0, 6, "class ") == 0)
         theName.erase(0, 6);
     return theName;
+}
+
+// a control's class: a shell's (ee/EEUIShell.h) is the class its kind replaces
+std::string TypeName(UIControl* inControl)
+{
+    if (EEUIShell* s = EEUIShell::Of(inControl))
+        return s->KindName();
+    return TypeName(inControl, typeid(*inControl));
 }
 
 std::string GETextText(GEText* inText)
@@ -1053,7 +1059,7 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
         c->GetBgColor(theBg);
         char theText[320];
         snprintf(theText, sizeof(theText), "  c%lu %s id=0x%lx ix=%lu g=%s r=%g,%g,%g,%g m=%lu bg=%g,%s b=%lu h=%lu", i,
-                 TypeName(c, typeid(*c)).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
+                 TypeName(c).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
                  (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), c->GetDisplayMode(),
                  (double)c->GetBgOpacity(), Colour(theBg).c_str(), c->GetBorderThickness(), c->GetStringTableID());
         std::string theLine = theText;
@@ -1075,7 +1081,7 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
         else if (UISlider* b = dynamic_cast<UISlider*>(c))
             theLine += " v=" + std::to_string(b->GetCurrentRangeValue()) + " max=" + std::to_string(b->GetMaxRange());
         else if (i > 0 && theForm->GetControl(i - 1) != NULL &&
-                 TypeName(theForm->GetControl(i - 1), typeid(*theForm->GetControl(i - 1))) == "EEUIFMGAttribute")
+                 TypeName(theForm->GetControl(i - 1)) == "EEUIFMGAttribute")
             // a unit attribute's value (the unit tab's panel): its bonus follows the tech tree the load thread
             // reloads, shown on a later frame (a timing)
             theLine += " (an attribute value)";
@@ -1750,7 +1756,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                                                                       : t->mEditBox48;
                     b->SetText(UWideString(theText.c_str()));
                 } else if (w[1] == "player")
-                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
                 else if (w[1] == "scen")
                     t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
                 else
@@ -1767,7 +1773,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                 if (w[1] == "edit" || w[1] == "text")
                     (w[1] == "edit" ? t->mEditBoxes[i] : t->mTextEditBox)->SetText(UWideString(theText.c_str()));
                 else if (w[1] == "player")
-                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
                 else if (w[1] == "scen")
                     t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
                 else
