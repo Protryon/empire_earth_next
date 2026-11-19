@@ -5,7 +5,7 @@
 class FSFile;
 class GE3DPlane;
 
-class LLE_API GE3DLine {                    // sizeof 0x18
+class GE3DLine {                    // sizeof 0x18
 public:
     GE3DLine() : mDirection(1.0f, 0.0f, 0.0f) {}   // inline (refused at every -O1 call site, 0x1000c5ba; a no-/Og caller still spends an inline-`this` slot on it: GEVector::GetQuantizedVersion)
     GE3DLine(const GE3DPoint& inStart, const GE3DPoint& inEnd) { this->mStart = inStart; this->ComputeDirection(inEnd); }
@@ -21,19 +21,36 @@ public:
         outPoint.mZ = this->mDirection.GetZ() * inT + this->mStart.GetZ();
     }
     const GE3DPoint& GetStart() const { return this->mStart; }
-    bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const;
-    bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const;
-    bool Intersects(const GE3DPlane& inPlane, float& outT) const;
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
+    // in the third axis; the parameters on each); a plane (false when parallel)
+    bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const
+        { return ee_ge_line_intersects_point(GERust(*this), GERust(inPoint), inTolerance, &outT); }
+    bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const
+        { return ee_ge_line_intersects_line(GERust(*this), GERust(inLine), &outT, &outLineT); }
+    bool Intersects(const GE3DPlane& inPlane, float& outT) const
+        { return ee_ge_line_intersects_plane(GERust(*this), GERust(inPlane), &outT); }
+    template <class F> long Load(F& inFile)
+    {
+        long theResult = this->mStart.Load(inFile);
+        return theResult == kErrorOK ? this->mDirection.Load(inFile) : theResult;
+    }
+    template <class F> long Save(F& inFile) const
+    {
+        long theResult = this->mStart.Save(inFile);
+        return theResult == kErrorOK ? this->mDirection.Save(inFile) : theResult;
+    }
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }
     void SetStart(const GE3DPoint& inStart) { this->mStart = inStart; }
-    bool SolveForX(float inX, float& outT) const;
-    bool SolveForX(float inX, float& outT, GE3DPoint& outPoint) const;
-    bool SolveForY(float inY, float& outT) const;
-    bool SolveForY(float inY, float& outT, GE3DPoint& outPoint) const;
-    bool SolveForZ(float inZ, float& outT) const;
-    bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const;
+    // the parameter (and the point) where the line reaches a given x, y or z; false when it runs parallel to it
+    bool SolveForX(float inX, float& outT) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, NULL); }
+    bool SolveForX(float inX, float& outT, GE3DPoint& outPoint) const
+        { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, GERust(outPoint)); }
+    bool SolveForY(float inY, float& outT) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, NULL); }
+    bool SolveForY(float inY, float& outT, GE3DPoint& outPoint) const
+        { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, GERust(outPoint)); }
+    bool SolveForZ(float inZ, float& outT) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, NULL); }
+    bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const
+        { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, GERust(outPoint)); }
 private:
     friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     void ComputeDirection(const GE3DPoint& inEnd)

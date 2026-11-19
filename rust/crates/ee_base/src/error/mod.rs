@@ -1,8 +1,9 @@
 //! The Low-Level Engine's Error System (`src/Low-Level Engine/Error System/Error System.cpp` before; LLE lane round
 //! 2): the debug-output filter read from `Filter.txt`, the verification failure (`ESVerify`), the last native
-//! error and the checksum sets (`checksum.rs`). C++ keeps `ESDebugOut`'s `printf` formatting and the platform's
-//! debug output, `ESVerify`'s and the native error's exported names as one-line forwarders, and reading
-//! `Filter.txt` through the File System (text mode).
+//! error and the checksum sets (`checksum.rs`). The C++ names are inline forwarders (lle/LowLevelEngineCore.h, LLE
+//! round 8: the unit is gone); `ESDebugOut` keeps its `printf` formatting there and hands the text to
+//! [`ee_error_debug_out`], which reads `Filter.txt` (text mode, through `PlatFOpen`) and sends what passes to the
+//! platform's debug output.
 //!
 //! `Filter.txt` (in the startup directory, read on the first debug message): one filter per line, read as `fgets`
 //! with a 1024-byte buffer read it (a longer line is several filters; a line ends at its first NUL). The first
@@ -113,25 +114,6 @@ fn filters() -> std::sync::MutexGuard<'static, Filters> {
 #[no_mangle]
 pub extern "C" fn ee_error_filters_loaded() -> bool {
     filters().loaded
-}
-
-/// Loads `Filter.txt`'s text as text mode read it (`found` false: the file was not found; `text` may then be NULL).
-///
-/// # Safety
-/// `text` holds `len` bytes, or is NULL with `len` 0.
-#[no_mangle]
-pub unsafe extern "C" fn ee_error_filters_load(found: bool, text: *const u8, len: usize) {
-    let bytes = if text.is_null() { &[][..] } else { std::slice::from_raw_parts(text, len) };
-    filters().load(found.then_some(bytes));
-}
-
-/// Whether a debug message passes the filters (`ESFilterDebugOutput`).
-///
-/// # Safety
-/// `text` is a NUL-terminated string.
-#[no_mangle]
-pub unsafe extern "C" fn ee_error_filter_passes(text: *const c_char) -> bool {
-    filters().passes(CStr::from_ptr(text).to_bytes())
 }
 
 /// `ESDebugOut` after its `printf` formatting (lle/LowLevelEngineCore.h): `Filter.txt` read from the startup

@@ -3,7 +3,7 @@
 #ifndef LLE_GEQUATERNION_H
 #define LLE_GEQUATERNION_H
 
-class LLE_API GEQuaternion {                // sizeof 0x10: x, y, z, w
+class GEQuaternion {                // sizeof 0x10: x, y, z, w
 public:
     GEQuaternion()
     {
@@ -35,11 +35,12 @@ public:
         this->mZ += inQuaternion.mZ;
         return *this;
     }
-    void ConvertFrom(const GETransformation& inTransformation);
+    // from a transformation's rotation (the vector part negated), normalised
+    void ConvertFrom(const GETransformation& inTransformation) { ee_ge_quat_from(GERust(inTransformation), GERust(*this)); }
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
-    void Normalize();
+    void Normalize() { ee_ge_quat_normalize(GERust(*this)); }   // to unit length
 private:
     friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
     float mX;                               // +0x00

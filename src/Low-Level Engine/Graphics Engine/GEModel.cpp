@@ -53,7 +53,6 @@
 #include "lle/FSPath.h"
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_model (a model's .glb/.gltf)
 #include "lle/GEPhysicalModel.h"
-#include "GERustViewport.h"
 #include <stddef.h>
 #include "lle/URandom.h"       // U2DFractal.h
 #include "lle/FSFile.h"
@@ -61,7 +60,6 @@
 #include "lle/U2DFractal.h"
 #include "lle/GETextureSet.h"
 #include "lle/GETerrainMesh.h"
-#include "GERustIO.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 

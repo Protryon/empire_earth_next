@@ -2,7 +2,7 @@
 //! codecs stop at the first error with what they read so far.
 
 use super::*;
-use crate::ge::io::BufferIo;
+use crate::geval::io::BufferIo;
 use std::ffi::c_void;
 
 unsafe extern "C" fn r8(f: *mut c_void, o: *mut u8) -> c_long {
@@ -162,14 +162,14 @@ fn a_transformation_saves_row_by_row_and_a_short_file_keeps_what_was_read() {
         // 5 floats and a half: rows 0 and [1][0] read, the rest as they were
         let mut part = GeTransformation::IDENTITY;
         let r = ee_ge_t_io(&mut part, &table(&mut BufferIo::reader(out.bytes[..22].to_vec())), false);
-        assert_eq!(r, crate::ge::io::END_OF_FILE);
+        assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(part.m[0], s.m[0]);
         assert_eq!(part.m[1][0], s.m[1][0]);
         assert_eq!(part.m[1][1..], GeTransformation::IDENTITY.m[1][1..]);
         assert_eq!(part.m[3], GeTransformation::IDENTITY.m[3]);
         // a write refused at the third float stops there
         let mut limited = BufferIo { write_limit: 10, ..BufferIo::writer() };
-        assert_eq!(ee_ge_t_io(&mut src, &table(&mut limited), true), crate::ge::io::FAILED);
+        assert_eq!(ee_ge_t_io(&mut src, &table(&mut limited), true), crate::geval::io::FAILED);
         assert_eq!(limited.bytes.len(), 8);
     }
 }
@@ -206,7 +206,7 @@ fn the_fields_go_in_the_order_given_and_stop_at_the_first_error() {
         let b = fields(&mut back);
         let r =
             ee_ge_fields_io(b.as_ptr(), 4, &table(&mut BufferIo::reader(out.bytes[..9].to_vec())), -1, false, false);
-        assert_eq!(r, crate::ge::io::END_OF_FILE);
+        assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(back, [20.0, 10.0, 0.0, 0.0]);
     }
 }
@@ -220,7 +220,7 @@ fn a_failed_texture_coordinate_sets_the_position_back() {
     // SAFETY: valid pointers and table
     unsafe {
         let r = ee_ge_fields_io(f.as_ptr(), 2, &table(&mut io), 1, false, true);
-        assert_eq!(r, crate::ge::io::END_OF_FILE);
+        assert_eq!(r, crate::geval::io::END_OF_FILE);
         assert_eq!(io.position, 2);
         assert_eq!(uv, [0.0, 0.25]);
         // without the restore the position stays after the read field

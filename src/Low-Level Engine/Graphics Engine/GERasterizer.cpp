@@ -42,7 +42,6 @@
 #include "platform/PlatFont.h"
 #include "rust/render/ge.h"
 #include "GERustMath.h"
-#include "GERustViewport.h"
 
 // The screen record is the Rust record (the plug-in reads its fields through GetScreenState).
 static_assert(sizeof(GERScreenState) == sizeof(EeGeRastScreen), "GERScreenState is EeGeRastScreen");

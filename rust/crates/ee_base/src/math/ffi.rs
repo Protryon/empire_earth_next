@@ -250,6 +250,34 @@ pub unsafe extern "C" fn ee_ge_vector_quantized_index(v: *const GeVector) -> i32
     quantized_index(unsafe { *v })
 }
 
+/// The quantized direction table (`GEVector::sQuantizedVectorArray`, built on first use) and the shared zero vector.
+static QUANT_TABLE: std::sync::OnceLock<Box<[GeVector]>> = std::sync::OnceLock::new();
+static QUANT_ZERO_VECTOR: GeVector = GeVector { x: 0.0, y: 0.0, z: 0.0 };
+
+/// `GEVector::GetQuantizedVersion`: the nearest entry of the quantized direction table (the cube face the vector's
+/// ray hits, then the grid cell there), the shared zero vector for (0, 0, 0), NULL when no face is hit. The entries
+/// live as long as the process (the C++ kept them in a static array).
+///
+/// # Safety
+/// `v` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_vector_quantized(v: *const GeVector) -> *const GeVector {
+    // SAFETY: the function's contract
+    let index = quantized_index(unsafe { *v });
+    if index >= 0 {
+        let table = QUANT_TABLE.get_or_init(|| {
+            let mut table = vec![GeVector::default(); QUANT_COUNT].into_boxed_slice();
+            build_quantized_table(&mut table);
+            table
+        });
+        &table[index as usize]
+    } else if index == crate::math::vector::QUANT_ZERO {
+        &QUANT_ZERO_VECTOR
+    } else {
+        std::ptr::null()
+    }
+}
+
 // ---- GE3DLine, GE3DPlane ----
 
 /// `GE3DLine::Intersects(point, tolerance, t)`: `t` written only on a hit.
@@ -819,5 +847,28 @@ pub unsafe extern "C" fn ee_ge_rect_remove_intersecting(
     unsafe {
         let (r, other) = (*r, *other);
         r.remove_intersecting(&other, existing, |piece| push(context, &piece));
+    }
+}
+
+#[cfg(test)]
+mod quantized_tests {
+    use super::*;
+
+    #[test]
+    fn the_quantized_vector_is_the_tables_entry() {
+        let mut table = vec![GeVector::default(); QUANT_COUNT];
+        build_quantized_table(&mut table);
+        let v = GeVector::new(0.3, -0.7, 0.2);
+        let index = quantized_index(v);
+        assert!(index >= 0);
+        // SAFETY: valid vectors
+        unsafe {
+            let p = ee_ge_vector_quantized(&v);
+            assert_eq!(*p, table[index as usize]);
+            assert_eq!(p, ee_ge_vector_quantized(&v), "one table for the process");
+            let zero = GeVector::default();
+            assert_eq!(*ee_ge_vector_quantized(&zero), zero);
+            assert!(ee_ge_vector_quantized(&GeVector::new(f32::NAN, 1.0, 0.0)).is_null());
+        }
     }
 }

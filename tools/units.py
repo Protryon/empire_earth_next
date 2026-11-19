@@ -26,9 +26,7 @@ PLATFORM_UNITS = [
                   "Platform/Common/PlatFontData.c"]
 # the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
-# the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
-GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were

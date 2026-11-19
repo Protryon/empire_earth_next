@@ -18,20 +18,6 @@ extern "C" {
 /// Whether `Filter.txt` was read (C++ reads it on the first debug message that has a startup path).
 bool ee_error_filters_loaded();
 
-/// Loads `Filter.txt`'s text as text mode read it (`found` false: the file was not found; `text` may then be NULL).
-///
-/// # Safety
-/// `text` holds `len` bytes, or is NULL with `len` 0.
-void ee_error_filters_load(bool found,
-                           const uint8_t *text,
-                           size_t len);
-
-/// Whether a debug message passes the filters (`ESFilterDebugOutput`).
-///
-/// # Safety
-/// `text` is a NUL-terminated string.
-bool ee_error_filter_passes(const char *text);
-
 /// `ESDebugOut` after its `printf` formatting (lle/LowLevelEngineCore.h): `Filter.txt` read from the startup
 /// directory on the first message that has a startup path (`volume`, `directory`: `gStartupVolume`,
 /// `gStartupDirectory`), then the message sent to the debugger if the filters let it through (a leading '!' always

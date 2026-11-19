@@ -1,11 +1,12 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GETextureCoordinate.h (RECONSTRUCTION). GETextureCoordinate.cpp
-// (~0x10033b1f) holds Load/Save; everything else is inline (ICF-folded with the GE2DPoint twins).
+// C:\EEX\Low-Level Engine\Graphics Engine\GETextureCoordinate.h (RECONSTRUCTION).
 #ifndef LLE_GETEXTURECOORDINATE_H
 #define LLE_GETEXTURECOORDINATE_H
 
+#include "lle/GERust.h"
+
 class FSFileSpec;
 
-class LLE_API GETextureCoordinate {         // sizeof 8: u, v
+class GETextureCoordinate {         // sizeof 8: u, v
 public:
     GETextureCoordinate() : mU(0.0f), mV(0.0f) {}
     GETextureCoordinate(float inU, float inV) : mU(inU), mV(inV) {}
@@ -20,8 +21,9 @@ public:
     float GetV() const { return this->mV; }
     void SetU(float inU) { this->mU = inU; }
     void SetV(float inV) { this->mV = inV; }
-    long Load(FSFileSpec& inFile);
-    long Save(FSFileSpec& inFile);
+    // U and V from (to) an open file (an FSFileSpec); on a failure the position goes back to where it was
+    template <class F> long Load(F& inFile) { const float* f[] = {&mU, &mV}; return GERustFields(inFile, f, 2, true, false, true); }
+    template <class F> long Save(F& inFile) { const float* f[] = {&mU, &mV}; return GERustFields(inFile, f, 2, true, true, true); }
 
     float mU;                               // +0x00
     float mV;                               // +0x04

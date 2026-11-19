@@ -7,8 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-constexpr static const int32_t BEYOND_END = 10;
-
 /// The conductor.
 struct EeSoundConductor;
 

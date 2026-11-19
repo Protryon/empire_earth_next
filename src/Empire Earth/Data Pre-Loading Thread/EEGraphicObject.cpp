@@ -391,9 +391,6 @@ long EEGraphicObject::UnloadMedia()
 // The tag points' geometry and the scale (ee_gfx tags.rs), over the Rust layouts
 static_assert(sizeof(EETagPoint) == sizeof(EeGfxTagPoint) && sizeof(EETagPointList) == sizeof(EeGfxTagList), "tags.rs");
 static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint), "GE");
-static const EeGeTransformation* GERust(const GETransformation& inValue) { return reinterpret_cast<const EeGeTransformation*>(&inValue); }
-static EeGeTransformation* GERust(GETransformation& inValue) { return reinterpret_cast<EeGeTransformation*>(&inValue); }
-static EeGe3DPoint* GERust(GE3DPoint& inValue) { return reinterpret_cast<EeGe3DPoint*>(&inValue); }
 
 void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint)
 {
