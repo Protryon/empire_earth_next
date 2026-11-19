@@ -13,9 +13,6 @@ constexpr static const float CIRCLE_HALF_ARC = 3.14159265;
 /// The most words a shape's capture has (a long line: 4 + 10 offsets).
 constexpr static const uint32_t EE_FORMATION_SHAPE_WORDS = 16;
 
-/// A `GETransformation`'s rotation part.
-struct EeFormationRotation;
-
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
 

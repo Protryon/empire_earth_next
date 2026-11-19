@@ -30,7 +30,7 @@
 #include "ee/EEARust.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSEESElevation.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEPaintElevation.h"
 #include "ee/EEUIFSEElevation.h"
@@ -89,8 +89,9 @@ extern "C" int32_t ee_screenscpp_seel(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SEEL_OP_ELEVATION_SLIDER: {
-        EEUIFSEESElevation* t = new EEUIFSEESElevation(kSEElevationElevationSlider, GE2DPoint(f[0], f[1]),
-                                                       (unsigned long)f[2], theForm, (unsigned long)i[0]);
+        UISlider* t = new EEUIShellSlider(EE_SCREENS_SK_ELEVATION_SLIDER, {}, kSEElevationElevationSlider,
+                                          GERectangle(GE2DPoint(f[0], f[1]), 20.0f, (float)(unsigned long)f[2]), 1,
+                                          theForm, (unsigned long)i[0], 2);
         t->SetRange(0, 0x40);
         t->SetCurrentRangeValue(t->GetMaxRange() - 0x18);
         t->SetPageSize(1);

@@ -9,9 +9,6 @@
 #ifndef EE_EESETSEFFECTCONTROLS_H
 #define EE_EESETSEFFECTCONTROLS_H
 
-class EESETSEComboBox;
-class EESETSEScenarioComboBox;
-class EESETSUICBPlayer;
 class GEFont;
 class UICheckBox;
 class UIComboBox;
@@ -36,9 +33,9 @@ public:
     UIEditBox* mTextEditBox;                // +0x44
     UIEditBox* mEditBox48;                  // +0x48
     UIComboBox* mComboBoxes[4];             // +0x4c (new 0xe0, vtable 0x443424)
-    EESETSEComboBox* mEffectComboBoxes[2];  // +0x5c (new 0xe0, ctor 0x182445)
-    EESETSEScenarioComboBox* mScenarioComboBoxes[4];   // +0x64 (new 0xe8, ctor 0x17e291)
-    EESETSUICBPlayer* mPlayers[3];          // +0x74 (new 0xe8, ctor 0x196ebe)
+    UIComboBox* mEffectComboBoxes[2];       // +0x5c (new 0xe0, ctor 0x182445)
+    UIComboBox* mScenarioComboBoxes[4];   // +0x64 (new 0xe8, ctor 0x17e291)
+    UIComboBox* mPlayers[3];                // +0x74 (new 0xe8, ctor 0x196ebe)
     UIRadioButton* mRadioButtons[6];        // +0x80 (new 0x114, vtable 0x443624)
     UISlider* mSliders[4];                  // +0x98 (new 0xf8, vtable 0x44336c)
     UICheckBox* mCheckBoxes[2];             // +0xa8 (new 0x10c, vtable 0x4431f8)

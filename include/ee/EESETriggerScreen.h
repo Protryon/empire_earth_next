@@ -13,19 +13,6 @@ class UILBString;
 class UIRadioButton;
 class UITextLabel;
 
-// The trigger screen's "show debug ids" check box (RTTI EESETSShowIDsCheckBox > UICheckBox; vtable 0x4434f8, sizeof
-// 0x10c; ctor inline, ??_G 0x17bf58 after the screen's ctor). Name is provisional.
-class EESETSShowIDsCheckBox : public UICheckBox {
-public:
-    EESETSShowIDsCheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GE2DPoint& inLocation,
-                          unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex)
-        : UICheckBox(inId, inText, inFont, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, 0,
-                     false)
-    {
-    }
-    virtual ~EESETSShowIDsCheckBox() {}
-};
-
 // (The trigger event of the editor's control 0x12, EESEEHideUI, is an EESEERust (ee/EESEARust.h): Enter sets its
 // two views through ee_screens_see_hide_ui_views, the original's inline SetRectangles 0x17ccba.)
 
