@@ -142,8 +142,6 @@
 398f90 39a1a0 WONGUI/WONSkinConfig.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
 3b1b40 3b48be WONConfig/ConfigValue.cpp
-3b1d20 3b3d43 WONConfig/ConfigParser.cpp
-3b3d50 3b6a27 WONConfig/ConfigToken.cpp
 3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3db150 3dc3ef WONLobby/AccountLogic.cpp

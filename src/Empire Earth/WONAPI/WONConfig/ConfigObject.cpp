@@ -153,7 +153,7 @@ bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bo
     try {
         if(checkBraces && readStart && !this->ReadGroupStart(parser,this->mName,this->mBaseName)) return false;
         if(prePost && !skip && !this->PreParse(&parser)) return false;
-        while(parser.mAbortReason.empty() && !parser.mStopped) {
+        while(parser.HasNoError() && !parser.IsStopped()) {
             std::string token;
             if(!parser.ReadToken(token,false,false)) {
                 if(checkBraces) {parser.SetError("Expecting '}'",false);return false;}
@@ -170,7 +170,7 @@ bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bo
                 std::string value;
                 std::wstring wideValue;
                 StringParser valueParser("");
-                if(parser.mIsUnicode) {
+                if(parser.IsUnicode()) {
                     if(!parser.ReadToken(wideValue,true,skip)) return false;
                     valueParser.Set(wideValue.c_str());
                 } else {
@@ -193,7 +193,7 @@ bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bo
         if(exception.mFlag) parser.SetError(exception.mText,false);
         else parser.AddWarning(exception.mText);
     }
-    return parser.mAbortReason.empty();
+    return parser.HasNoError();
 }
 // Reads past a group without applying it
 bool ConfigObject::SkipGroup(ConfigParser& parser,bool checkBraces,bool readStart)
@@ -243,9 +243,9 @@ void ConfigObject::RegisterKeyValue(const char* key,ConfigValueBase* value)
 // Parses another config file (relative to this one) into this group; a missing required file is an error
 bool ConfigObject::IncludeFile(ConfigParser& parser,const std::string& path,bool required)
 {
-    std::string file;
-    ee_won_cfg_include_path(CfgBytes(path),path.length(),parser.GetIgnorePathOnIncludeFile(),CfgBytes(parser.mFilePath),
-                            parser.mFilePath.length(),CfgSink,&file);
+    std::string file,base=parser.GetFilePath();
+    ee_won_cfg_include_path(CfgBytes(path),path.length(),parser.GetIgnorePathOnIncludeFile(),CfgBytes(base),
+                            base.length(),CfgSink,&file);
     ConfigParser included;
     included.SetParent(&parser);
     if(included.OpenFile(file)) {
@@ -269,7 +269,7 @@ bool ConfigObject::IncludeGroup(ConfigParser& parser,const std::string& name,boo
     parser.SetState(defined);
     bool result=this->ParseGroup(parser,true,false,false,false);
     parser.SetState(saved);
-    if(!parser.mAbortReason.empty()) parser.SetError("IncludeGroup Error",true);
+    if(!parser.HasNoError()) parser.SetError("IncludeGroup Error",true);
     return result;
 }
 

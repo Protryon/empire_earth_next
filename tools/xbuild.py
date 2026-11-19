@@ -771,7 +771,10 @@ WON_TESTS = {
     # FileReader / FileWriter (golden: rust/crates/ee_won_net/src/golden_file.txt)
     "won_file_test": [],
     # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won_net/src/golden_config.txt)
-    "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")]],
+    "won_config_test": [],
+    # ConfigParser whole in Rust (WON round 21): the original statements (tests/won/won_cfgparser_orig.h) against the
+    # game's class over ee_won_net cfgparser.rs, random sequences
+    "won_cfgparser_test": [],
     # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won_net/src/golden_authlogin.txt)
     "won_auth_test": [],
@@ -891,8 +894,7 @@ WON_TESTS = {
     # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
-    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
-                                                             "ConfigToken.cpp")]],
+    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
