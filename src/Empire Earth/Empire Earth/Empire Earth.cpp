@@ -83,184 +83,138 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EECPEngine.h"
 #include "ee/EECPNextUnits.h"
 
+#include "ee/EEGlobalStorage.h"
+
+class GEFont;
+class FSPath;
+// The ones no header this unit includes declares:
+extern GEFont *gFontArial8, *gFontArial9, *gU531930, *gU531934, *gU531938, *gFontArial16, *gFontArial18,
+    *gFontArial20, *gFontArial24, *gFontArial36, *gFontArial48, *gFontArial72, *gFontArialBold8, *gFontArialBold9,
+    *gFontArialBold10, *gFontArialBold12, *gFontArialBold14, *gFontArialBold16, *gFontTimesNewRoman9,
+    *gFontTimesNewRoman10, *gFontTimesNewRoman12, *gFontTimesNewRoman14, *gFontCourier8, *gFontCourier10,
+    *gFontCourier12, *gFontCourier14, *gFontTahoma8, *gU531994, *gFontTahoma10, *gFontTahoma12, *gFontTahoma14,
+    *gFontTahoma16, *gFontTahoma18, *gFontTahoma20, *gFontTahoma24, *gFontTahoma36, *gFontTahoma48, *gFontTahoma72;
+extern UString gU530BE0, gExecutableName, gSavedGameExtension, gScenarioExtension, gU530B88, gCampaignExtension,
+    gPhysicsThreadName, gGraphicsThreadName, gDataPreLoadingThreadName, gMousePointerThreadName,
+    gScenarioEditorThreadName, gUserInterfaceThreadName, gCommSendThreadName, gCommRecvThreadName,
+    gCommMainThreadName, gCommLagLossThreadName, gCommRecPlayThreadName, gSoundScavengerThreadName,
+    gCDAudioThreadName;
+extern UWideString gU530BC8, gCampaignAOCRoman, gCampaignAOCPacific, gCampaignAOCAsian, gCampaignEEDemo,
+    gCampaignEELearning, gU52A280;
+extern EEEvent gEvent;
+extern EEToHitTable gToHitTable;
+extern EEAIUnitTargetingTable gAIUnitTargetingTable;
+extern EETerrainTable gTerrainTable;
+extern EETerrainColorTable gTerrainColorTable;
+extern EETerrainTypeTable gTerrainTypeTable;
+extern EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
+
+// The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are
+// EEGlobals.cpp's, a data-only unit: there the 48 global objects are only storage (ee/EEGlobalStorage.h). They are
+// constructed here, where their definitions were, in the order of the original's init chains (0x53e967..0x53f27c),
+// each registering its destructor with atexit as its definition did.
 // chain at 0x53e967 (wrapper)
-UString gU530BE0("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375");
+EE_CONSTRUCT_GLOBAL(UString, gU530BE0, ("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375"));
 // chain at 0x53e999 (wrapper)
-UWideString gU530BC8;
+EE_CONSTRUCT_GLOBAL(UWideString, gU530BC8, );
 // chain at 0x53e9c5 (wrapper)
-UString gExecutableName("Empire Earth.exe");
+EE_CONSTRUCT_GLOBAL(UString, gExecutableName, ("Empire Earth.exe"));
 // chain at 0x53e9f7 (wrapper)
-UString gSavedGameExtension(".ees");
+EE_CONSTRUCT_GLOBAL(UString, gSavedGameExtension, (".ees"));
 // chain at 0x53ea29 (wrapper)
-UString gScenarioExtension(".scn");
+EE_CONSTRUCT_GLOBAL(UString, gScenarioExtension, (".scn"));
 // chain at 0x53ea5b (wrapper)
-UString gU530B88(".ssa");
+EE_CONSTRUCT_GLOBAL(UString, gU530B88, (".ssa"));
 // chain at 0x53ea8d (wrapper)
-UString gCampaignExtension(".ssa");
+EE_CONSTRUCT_GLOBAL(UString, gCampaignExtension, (".ssa"));
 // chain at 0x53eabf (wrapper)
-GEViewport gViewport;
+EE_CONSTRUCT_GLOBAL(GEViewport, gViewport, );
 // chain at 0x53eaeb (wrapper)
-EEGamePreferences gGamePreferences;
-// data the original placed inside gGamePreferences (it addressed them as globals): references to the members
-EEGameOptions& gLobbyGameOptions = gGamePreferences.mSettings.mGameOptions;   // +0x4
-long& gDifficultyLevel2 = reinterpret_cast<long&>(gGamePreferences.mSettings.mGameOptions.mDifficulty);   // +0x3fc
-UWideString& gPlayerName = gGamePreferences.mSettings.mPlayerName;   // +0x460
-UWideString& gWonPlayerName = gGamePreferences.mSettings.mSierraUserID;   // +0x474
-UWideString& gHostedGameName = gGamePreferences.mSettings.mSierraGameName;   // +0x488
-UString& gLoadSavedGameName = gGamePreferences.mSettings.mLastGameFile;   // +0x4ec
-UString& gLoadScenarioName = gGamePreferences.mSettings.mLastScenarioFile;   // +0x4fc
-float& gSideScrollSpeed = gGamePreferences.mSettings.mSideScrollSpeed;   // +0x520
-float& gMasterVolume = gGamePreferences.mSettings.mSoundVolume;   // +0x528
-float& gZoomLock = gGamePreferences.mSettings.mZoomLock;   // +0x538
-long& gDifficultyLevel = gGamePreferences.mSettings.mComputerPlayerDifficultyLevel;   // +0x568
-unsigned long& gGameWindowHeight = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mGameWindowHeight);   // +0x570
-unsigned long& gGameWindowWidth = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mGameWindowWidth);   // +0x574
-unsigned long& gTextureMipLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mMIPLevelsToDrop);   // +0x58c
-long& gModelDetail = gGamePreferences.mSettings.mModelDetail;   // +0x590
-unsigned long& gEffectDetail = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mEffectDetail);   // +0x594
-unsigned long& gNetworkAdapter = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mNetworkAdapter);   // +0x598
-unsigned long& gScreenIndex = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mScreenID);   // +0x5a0
-unsigned long& gTerrainMIPLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTerrainMIPLevelsToDrop);   // +0x5a8
-unsigned long& gTexturePixelDepth = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTextureBitDepth);   // +0x5ac
-long& gAutoSaveCount = reinterpret_cast<long&>(gGamePreferences.mSettings.mNumberOfAutoSaves);   // +0x5b0
-long& gHiddenUnitsMode = gGamePreferences.mSettings.mL5BC;   // +0x5c0
-bool& gZoomEnabled = gGamePreferences.mSettings.mZoomEnabled;   // +0x5c5
-bool& gInterpolateFrames = gGamePreferences.mSettings.mAnimationSmoothing;   // +0x5c7
-bool& gFarRearClipping = gGamePreferences.mSettings.mB5C6;   // +0x5ca
-bool& gDrawClouds = gGamePreferences.mSettings.mDisplayClouds;   // +0x5cb
-bool& gDrawGroundShadows = gGamePreferences.mSettings.mDisplayShadows;   // +0x5cc
-bool& gAmbientEffectsEnabled = gGamePreferences.mSettings.mDisplayBattlefieldAmbients;   // +0x5cd
-bool& gTrilinearFilter = gGamePreferences.mSettings.mTrilinearFilter;   // +0x5d2
-bool& gAmbientSoundEnabled = gGamePreferences.mSettings.mAmbientSounds;   // +0x5d6
-bool& gDrawBlood = gGamePreferences.mSettings.mShowBlood;   // +0x5d7
-bool& gMusicFollowsBattle = gGamePreferences.mSettings.mMusicEnabled;   // +0x5d8
-bool& gOrthographicView = gGamePreferences.mSettings.mB5D6;   // +0x5da
-bool& gUnitLighting = gGamePreferences.mSettings.mUnitLighting;   // +0x5db
-bool& gDisplayWeatherEffects = gGamePreferences.mSettings.mDisplayWeatherEffects;   // +0x5de
-bool& gTakeJPGScreenshots = gGamePreferences.mSettings.mTakeJPGScreenshots;   // +0x5e0
-bool& gAntiAliasing = gGamePreferences.mSettings.mAntiAliasing;   // +0x5e1
+EE_CONSTRUCT_GLOBAL(EEGamePreferences, gGamePreferences, );
 // chain at 0x53eb15 (wrapper)
-EEWorld gWorld;
-// data the original placed inside gWorld (it addressed them as globals): references to the members
-long& gNumPlayers = reinterpret_cast<long&>(gWorld.mNumPlayers);   // +0xcc
-long& gGameResources = reinterpret_cast<long&>(gWorld.mGameOptions.mResources);   // +0x4fc
-bool& gAllowCustomCivs = gWorld.mGameOptions.mAllowCustomCivs;   // +0x516
-bool& gIsScenarioGame = gWorld.mGameOptions.mIsScenarioGame;   // +0x519
-EEGameOptions& gGameOptions = gWorld.mLobbyOptions;   // +0x51c
-float& gCameraZoom = gWorld.mCameraControl.mZoom;   // +0xab0
-EEEffectManager*& gEffectManager = gWorld.mEffectManager;   // +0xb1c
-float& gSavedGameSpeed = gWorld.mSavedGameSpeed;   // +0xb70
-unsigned long& gMaxPlayers = reinterpret_cast<unsigned long&>(gWorld.mMaxPlayers);   // +0xb8c
-unsigned long& gStartTime = reinterpret_cast<unsigned long&>(gWorld.mStartTime);   // +0xb90
-unsigned short& gLagStatus = gWorld.mLagStatus;   // +0xb94
-bool& gGameScreenActive = gWorld.mGameScreenActive;   // +0xb97
-bool& gLoadingSavedGame = gWorld.mLoadingSavedGame;   // +0xb98
-bool& gWorldClearing = gWorld.mClearing;   // +0xb99
-bool& gUnitImprovementsAllowed = gWorld.mUnitImprovementsAllowed;   // +0xb9b
-bool& gShowCollisionSpheres = gWorld.mShowCollisionSpheres;   // +0xb9c
-bool& gInCinematic = gWorld.mInCinematic;   // +0xba0
-bool& gLoadingPlayerMedia = gWorld.mLoadingPlayerMedia;   // +0xba3
-bool& gUsingCarbon = gWorld.mUsingCarbon;   // +0xba4
+EE_CONSTRUCT_GLOBAL(EEWorld, gWorld, );
 // chain at 0x53eb3f (wrapper)
-EEEvent gEvent;
+EE_CONSTRUCT_GLOBAL(EEEvent, gEvent, );
 // chain at 0x53eb69 (wrapper)
-EEDatabase gDatabaseObjects;
+EE_CONSTRUCT_GLOBAL(EEDatabase, gDatabaseObjects, );
 // chain at 0x53eb93 (wrapper)
-EETechTree gTechTree;
+EE_CONSTRUCT_GLOBAL(EETechTree, gTechTree, );
 // chain at 0x53ebbd (wrapper)
-EEToHitTable gToHitTable;
-
+EE_CONSTRUCT_GLOBAL(EEToHitTable, gToHitTable, );
 // chain at 0x53ec06 (wrapper)
-EEAIUnitTargetingTable gAIUnitTargetingTable;
+EE_CONSTRUCT_GLOBAL(EEAIUnitTargetingTable, gAIUnitTargetingTable, );
 // chain at 0x53ec32 (wrapper)
-EEPathManager gPathManager;
-// data the original placed inside gPathManager (it addressed them as globals): references to the members
-long& gEEAIRegionSize = gPathManager.mLC8;   // +0xc8
+EE_CONSTRUCT_GLOBAL(EEPathManager, gPathManager, );
 // chain at 0x53ec5c (wrapper)
-EEAIContinentManager gContinentManager;
-// data the original placed inside gContinentManager (it addressed them as globals): references to the members
-unsigned long& gContinentManagerChecksum = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.checksum);   // +0x120
-long& gDCGameSpeed = gContinentManager.mRecord.num_water_tiles;   // +0x134
-long& gNumSpaceTiles = gContinentManager.mRecord.num_space_tiles;   // +0x13c
-unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.width);   // +0x144
-unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.height);   // +0x148
-bool& gContinentManagerClearing = gContinentManager.mRecord.clearing;   // +0x14c
+EE_CONSTRUCT_GLOBAL(EEAIContinentManager, gContinentManager, );
 // chain at 0x53ec86 (wrapper)
-EEWorldTable gWorldTable;
+EE_CONSTRUCT_GLOBAL(EEWorldTable, gWorldTable, );
 // chain at 0x53ecc6 (wrapper)
-EETerrainTable gTerrainTable;
+EE_CONSTRUCT_GLOBAL(EETerrainTable, gTerrainTable, );
 // chain at 0x53ecf0 (wrapper)
-EETerrainColorTable gTerrainColorTable;
+EE_CONSTRUCT_GLOBAL(EETerrainColorTable, gTerrainColorTable, );
 // chain at 0x53ed1b (wrapper)
-EETerrainTypeTable gTerrainTypeTable;
+EE_CONSTRUCT_GLOBAL(EETerrainTypeTable, gTerrainTypeTable, );
 // chain at 0x53ed71 (wrapper)
-EEGameState gGameState;
-// data the original placed inside gGameState (it addressed them as globals): references to the members
-long& gGameStateLoadType = reinterpret_cast<long&>(gGameState.mGameOptions.mLoadType);   // +0x3e0
-bool& gGameStateIsMultiplayer = gGameState.mGameOptions.mIsMultiplayer;   // +0x410
-float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
+EE_CONSTRUCT_GLOBAL(EEGameState, gGameState, );
 // chain at 0x53ed9b (wrapper)
-EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
-
+EE_CONSTRUCT_GLOBAL(EEComputerPlayerBehaviorTable, gComputerPlayerBehaviorTable, );
 // chain at 0x53ede4 (wrapper)
-EEUnitSetManager gUnitSetManager;
+EE_CONSTRUCT_GLOBAL(EEUnitSetManager, gUnitSetManager, );
 // chain at 0x53ee26 (wrapper)
-EEAEManager gAEManager;
+EE_CONSTRUCT_GLOBAL(EEAEManager, gAEManager, );
 // chain at 0x53ee50 (wrapper)
-EEAmbientSoundManager gAmbientSoundManager;
+EE_CONSTRUCT_GLOBAL(EEAmbientSoundManager, gAmbientSoundManager, );
 // chain at 0x53ee7a (wrapper)
-EECivilizationManager gCivilizationManager;
+EE_CONSTRUCT_GLOBAL(EECivilizationManager, gCivilizationManager, );
 // chain at 0x53eea4 (wrapper)
-EEDoppelgangerManager gDoppelgangerManager;
+EE_CONSTRUCT_GLOBAL(EEDoppelgangerManager, gDoppelgangerManager, );
 // chain at 0x53eece (wrapper)
-EECivPowersManager gCivPowersManager;
+EE_CONSTRUCT_GLOBAL(EECivPowersManager, gCivPowersManager, );
 // chain at 0x53eef8 (wrapper)
-UWideString gCampaignAOCRoman("AOCRoman");
+EE_CONSTRUCT_GLOBAL(UWideString, gCampaignAOCRoman, ("AOCRoman"));
 // chain at 0x53ef2a (wrapper)
-UWideString gCampaignAOCPacific("AOCPacific");
+EE_CONSTRUCT_GLOBAL(UWideString, gCampaignAOCPacific, ("AOCPacific"));
 // chain at 0x53ef5c (wrapper)
-UWideString gCampaignAOCAsian("AOCAsian");
+EE_CONSTRUCT_GLOBAL(UWideString, gCampaignAOCAsian, ("AOCAsian"));
 // chain at 0x53ef8e (wrapper)
-UWideString gCampaignEEDemo("EEDemo");
+EE_CONSTRUCT_GLOBAL(UWideString, gCampaignEEDemo, ("EEDemo"));
 // chain at 0x53efc0 (wrapper)
-UWideString gCampaignEELearning("EELearningCampaign");
+EE_CONSTRUCT_GLOBAL(UWideString, gCampaignEELearning, ("EELearningCampaign"));
 // chain at 0x53eff2 (wrapper)
-UWideString gU52A280("een1ve1s_");
+EE_CONSTRUCT_GLOBAL(UWideString, gU52A280, ("een1ve1s_"));
 // chain at 0x53f024 (wrapper)
-UString gPhysicsThreadName("Physics");
+EE_CONSTRUCT_GLOBAL(UString, gPhysicsThreadName, ("Physics"));
 // chain at 0x53f056 (wrapper)
-UString gGraphicsThreadName("Graphics");
+EE_CONSTRUCT_GLOBAL(UString, gGraphicsThreadName, ("Graphics"));
 // chain at 0x53f088 (wrapper)
-UString gDataPreLoadingThreadName("DataPreLd");
+EE_CONSTRUCT_GLOBAL(UString, gDataPreLoadingThreadName, ("DataPreLd"));
 // chain at 0x53f0ba (wrapper)
-UString gMousePointerThreadName("MousePtr");
+EE_CONSTRUCT_GLOBAL(UString, gMousePointerThreadName, ("MousePtr"));
 // chain at 0x53f0ec (wrapper)
-UString gScenarioEditorThreadName("ScenEdit");
+EE_CONSTRUCT_GLOBAL(UString, gScenarioEditorThreadName, ("ScenEdit"));
 // chain at 0x53f11e (wrapper)
-UString gUserInterfaceThreadName("UserIntfc");
+EE_CONSTRUCT_GLOBAL(UString, gUserInterfaceThreadName, ("UserIntfc"));
 // chain at 0x53f150 (wrapper)
-UString gCommSendThreadName("CommSend");
+EE_CONSTRUCT_GLOBAL(UString, gCommSendThreadName, ("CommSend"));
 // chain at 0x53f182 (wrapper)
-UString gCommRecvThreadName("CommRecv");
+EE_CONSTRUCT_GLOBAL(UString, gCommRecvThreadName, ("CommRecv"));
 // chain at 0x53f1b4 (wrapper)
-UString gCommMainThreadName("CommMain");
+EE_CONSTRUCT_GLOBAL(UString, gCommMainThreadName, ("CommMain"));
 // chain at 0x53f1e6 (wrapper)
-UString gCommLagLossThreadName("CommLagLoss");
+EE_CONSTRUCT_GLOBAL(UString, gCommLagLossThreadName, ("CommLagLoss"));
 // chain at 0x53f218 (wrapper)
-UString gCommRecPlayThreadName("CommRecPlay");
+EE_CONSTRUCT_GLOBAL(UString, gCommRecPlayThreadName, ("CommRecPlay"));
 // chain at 0x53f24a (wrapper)
-UString gSoundScavengerThreadName("SoundScavngr");
+EE_CONSTRUCT_GLOBAL(UString, gSoundScavengerThreadName, ("SoundScavngr"));
 // chain at 0x53f27c (wrapper)
-UString gCDAudioThreadName("CDAudio");
+EE_CONSTRUCT_GLOBAL(UString, gCDAudioThreadName, ("CDAudio"));
+extern FSPath* gDataPath;
+extern FSPath* gCivilizationDataPath;
 
-// The unit's own data (provisional names): the network settings EELoadNetworkSettings reads from the string resources
-// (0x4c05d4.., .data, all 1), the start screen's window class (0x4c05e8, a char array: both RegisterClassEx and
-// CreateWindowEx take its address), its bitmap, the bitmap's BITMAP and the memory DC (0x52a18c / 0x52a190 / 0x52a188)
-long gAOCRomanChecksum = 1;
-long gAOCPacificChecksum = 1;
-long gAOCAsianChecksum = 1;
-long gEEDemoChecksum = 1;
-long gEELearningChecksum = 1;
+// The unit's own data (provisional names): the start screen's window class (0x4c05e8, a char array: both
+// RegisterClassEx and CreateWindowEx take its address), its bitmap, the bitmap's BITMAP and the memory DC
+// (0x52a18c / 0x52a190 / 0x52a188)
 #ifdef _WIN32
 static char sStartScreenClassName[] = "Loading Game Window";
 static HBITMAP sStartScreenBitmap;
@@ -553,7 +507,6 @@ void EELoadNetworkSettings()
 #include "ee/EEMessage.h"
 
 void EEEmptyShutdown(bool inShutdown);
-uint32_t gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients; 32-bit on the wire)
 
 #include "GEWindow.h"
 #include "lle/GEFont.h"
@@ -568,69 +521,6 @@ uint32_t gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork 
 
 void EESetVideoMode(unsigned long, unsigned long, unsigned long, bool);
 void EEGraphicsShutdown(bool inShutdown); // registered as a shutdown routine (0x543ece)
-GETextureManager* gTextureManager;
-GEModelManager* gModelManager;
-RTSRenderObject* gU56535C;
-RTSRenderObject* gU565358;
-RTSRenderObject* gU565354;
-RTSRenderObject* gU565350;
-RTSRenderObject* gU565360;
-GEFont* gFontArial8; // 0x531928 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial9; // 0x53192c (UIFontTable::FindOrCreateFont)
-GEFont* gU531930; // 0x531930 (UIFontTable::FindOrCreateFont)
-GEFont* gU531934; // 0x531934 (UIFontTable::FindOrCreateFont)
-GEFont* gU531938; // 0x531938 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial16; // 0x53193c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial18; // 0x531940 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial20; // 0x531944 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial24; // 0x531948 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial36; // 0x53194c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial48; // 0x531950 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial72; // 0x531954 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold8; // 0x531958 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold9; // 0x53195c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold10; // 0x531960 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold12; // 0x531964 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold14; // 0x531968 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold16; // 0x53196c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman9; // 0x531970 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman10; // 0x531974 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman12; // 0x531978 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman14; // 0x53197c (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier8; // 0x531980 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier10; // 0x531984 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier12; // 0x531988 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier14; // 0x53198c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma8; // 0x531990 (UIFontTable::FindOrCreateFont)
-GEFont* gU531994; // 0x531994 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma10; // 0x531998 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma12; // 0x53199c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma14; // 0x5319a0 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma16; // 0x5319a4 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma18; // 0x5319a8 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma20; // 0x5319ac (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma24; // 0x5319b0 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma36; // 0x5319b4 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma48; // 0x5319b8 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma72; // 0x5319bc (UIFontTable::FindOrCreateFont)
-// The subsystem pointers after the font table (.bss 0x5319c0..0x5319d4; their headers declare them)
-class SEMixer;
-class SESoundManager;
-class NESynchronousCommunications;
-class EEWonNet;
-class EEArtificialIntelligence;
-class EECheatCodes;
-class EEUIManager;
-class EEMouse;
-SEMixer* gConductor;
-SESoundManager* gSoundManager;
-NESynchronousCommunications* gCommunications;
-EEWonNet* gWonNet;
-EEArtificialIntelligence* gArtificialIntelligence;
-EECheatCodes* gCheatCodes;
-EEUIManager* gUIManager;
-EEMouse* gMouse;
-bool gFreeCamera;                           // 0x5319e8 (EmpireEarth.h)
 // the game view and water ripple constants (.rdata 0x442090..0x4420a8, read from memory by both graphics initializers)
 static const float kStartViewLeft = 0.0f;
 static const float kStartViewRight = 1600.0f;
@@ -640,45 +530,6 @@ static const float kWaterRipplePeriod = 3.1415927f;
 static const float kWaterRippleSpeed = 0.025f;
 static const float kWaterRippleAmplitude = 0.05f;
 #include "ee/EESaveGameFiles.h"
-// the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
-// port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
-// next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
-// 253 the next engine's AI id after each computer player's engine, EEPPlayerHelper, and the lobby choices' new
-// numbering in EEGameOptionsPlayer, ee/EECPEngine.h; 254 the running game's own values, ee/EESaveGameFiles.h
-// EESaveHasLiveState, docs/RUST_PLAN.md R5a.2: 253 on the rust branch until it merged main's 253; 255 the UTF-8
-// text (EESaveTextIsUtf8); 256 more of the running state (the AI's schedule, timers, targets and path requests, the
-// path manager, the area effects, contacts and tile order, ee/EESaveGameFiles.h EESaveHasRunningState)
-// 257 the units' order in each map region (EESaveHasRegionOrder)
-// 258 the computer players' experiment timers (EESaveHasExperimentTimers)
-// 259 their count of units in production (EESaveHasProductionCount)
-// 260 the towns' ids, order and counters (EESaveHasTowns)
-// 261 the computer players' gatherer lists as saved (EESaveHasGathererOrder)
-// 262 the dead attackers the units still hold (EESaveHasGhosts)
-// 263 the continent manager as it is, with the herds' and towns' serials (EESaveHasContinentRegions)
-// 264 the attack sub groups' positions (EESaveHasSubGroupPosition)
-// 265 the computer players' claim ranges and danger zones (EESaveHasResourceState)
-// 266 the order of the units their unit managers track (EESaveHasUnitManagerOrder)
-// 267 their repair and site timers (EESaveHasCivilizationTimers)
-// 268 the towns' areas (EESaveHasTownAreas)
-// 269 the computer players' manager timers (EESaveHasManagerTimers)
-// 270 the order of each player's unit list (EESaveHasPlayerUnitOrder)
-// 271 the computer players' intelligence files (EESaveHasIntelligence)
-// 272 the ghosts' resources and the gather goals' dead resources (EESaveHasGhostResources)
-// 273 the contagion manager's last helper id (EESaveHasContagionCounter)
-// 274 the next engine's site walkers (EECPNextState::mExplore: its state block's version 4, EECPNextLua.cpp)
-// 275 the attack goals' dying targets and the goals' units out of the world, simple ones too (EESaveHasGoalGhosts)
-// 276 the units' tile searches in progress (EESaveHasPathSearches)
-// 277 the wall manager's path request (EESaveHasWallRequest)
-// 278 the graph searches in progress (EESaveHasGraphSearches)
-// 279 the players' active groups (EESaveHasActiveGroups)
-// 280 the per-unit Lua interface's state after the next engine's, EEPPlayerHelper, ee/EECPNextUnits.h (main's 254,
-// EESaveHasUnitsLuaState)
-// 281 the merge of main's stages 5 and 6: the computer players without the C++ managers' timers and intelligence files,
-// main's next engine state block (EESaveHasLuaOnlyComputers)
-// 282 the players' tech nodes that are not allowed (EESaveHasTechAllowed), the location goals' group path state
-// 283 every map tile's terrain type (EESaveHasTileTypes)
-const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 283;
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
 
@@ -689,7 +540,6 @@ bool EEInitializeSounds(); // 0x543557; EEInitializePart1 tests its result in AL
 void EEInitializeNetwork();
 void EEInitializeDatabase();
 void EEInitializeGameObjects();
-EEUserInterface* gUserInterface; // 0x5318f8, created by EEInitializePart1
 
 // Starts the engine (input, threads, timers), opens the display and initializes graphics, sound, network, the
 // database, game objects and the user interface; returns false (after a message box) when sound fails
@@ -771,11 +621,6 @@ inline void EEDataPreLoading::Shutdown()
 #include "ee/EEUIManager.h"
 
 void EEShutdownThreads(bool inShutdown); // registered as a shutdown routine (0x544324)
-EEMusicManager* gMusicManager;
-RTSMousePointer* gMousePointer;
-EEGraphics* gGraphics;
-EEDataPreLoading* gDataPreLoading;
-EEPhysics* gPhysics;
 
 #include <list>
 #include "lle/GEPhysicalModel.h"
@@ -1066,9 +911,6 @@ void EELoadGameMedia()
 }
 
 
-// The two original zero-initialized search-path pointers, written here after the replacements are populated.
-FSPath* gDataPath;
-FSPath* gCivilizationDataPath;
 
 // Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
 // Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
@@ -1632,8 +1474,6 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 
 void EEEnumerateDisplayDevices();
 void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
-GERasterizer* gRasterizer;
-GEWindow* gGameWindow;
 
 // Starts the graphics engine, picks the preferred rasterizer, validates screen, depths and resolution (falling
 // back to 800x600x16), creates and captures the game window; returns true
@@ -1731,7 +1571,6 @@ bool EEInitializeDisplay()
 
 bool EEParseCommandLine(const char* inCommandLine); // 0x52d703 (after start-up)
 HINSTANCE gInstance;
-UResourceFile* gResource;
 #pragma optimize("g", off)   // rule 4, owner 2026-11-01: WinMain is no-/Og (memory locals, constant push 1/pop eax test)
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
