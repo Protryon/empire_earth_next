@@ -426,6 +426,10 @@ struct EeGfxGlowSpots;
 /// `EEGraphicalGoalManager`: the markers by player, then by type.
 struct EeGfxGoalMarkers;
 
+/// A graphic object's tag points, colour groups and attack points (made at its first load, freed at its last
+/// unload).
+struct EeGfxGraphicTags;
+
 /// The icons' offsets and the frame's copy (owned by the record).
 struct EeGfxMarchingLists;
 
@@ -3107,6 +3111,21 @@ struct EeGfxShadowScene {
   void (*draw_effects)(void *context);
 };
 
+/// One tag point: the model it is tagged on (a `GEModel*`, referenced while the point lives) and the index of the
+/// tag point in that model's per-frame arrays (`EETagPoint`, 8 bytes in the original).
+struct EeGfxTagPoint {
+  void *mModel;
+  unsigned long mIndex;
+};
+
+/// The tag points of one kind (`EETagPointList`): the original's `std::vector<EETagPoint*>` as its data, size and
+/// capacity (a Rust `Vec`'s raw parts).
+struct EeGfxTagList {
+  EeGfxTagPoint **points;
+  size_t len;
+  size_t cap;
+};
+
 /// The 2D kinds: the exhaust trail 3, explosion 4, fire 5, impacts 6 and 7, lightning 8, muzzle flash 9, plasma pulse
 /// 0xa, smoke puffs 0xb and 0xc, light glow 0xd, fire trail 0xe, marching icons 0xf and 0x10, shockwave 0x12, smoke
 /// muzzle blast 0x14, winter breath 0x16, water ripple 0x22, the pooled particle 0x2e, pulse wave 0x2f, 2D projectile
@@ -4509,6 +4528,80 @@ void ee_gfx_ground_shadows_release(const EeGfxRaster *raster);
 /// # Safety
 /// `raster` and `scene` are readable and their functions valid; `scene`'s arrays hold their counts.
 void ee_gfx_ground_shadows_render(const EeGfxRaster *raster, const EeGfxShadowScene *scene);
+
+/// A new, empty store (the first load).
+EeGfxGraphicTags *ee_gfx_tags_new();
+
+/// The store freed after its lists' release (the last unload; NULL: nothing).
+///
+/// # Safety
+/// `p` is NULL or a store of [`ee_gfx_tags_new`], not used again; its models are live.
+void ee_gfx_tags_free(EeGfxGraphicTags *p);
+
+/// `CollectTagPoints(part, model, parent)`; `default_point`, `top` and `bar` are `&mDefaultPoint`, `&mTopPoint` and
+/// `&mBar` (read and written), `weapons` the object's `mTagPoints` (its part's entry set to the part's list).
+///
+/// # Safety
+/// `p` is a live store; `model` and `part0` live models (or `part0` NULL); the pointers valid.
+void ee_gfx_tags_collect(EeGfxGraphicTags *p,
+                         unsigned long part,
+                         void *model,
+                         const EeGeTransformation *parent,
+                         void *part0,
+                         unsigned long last5,
+                         EeGe3DPoint *default_point,
+                         EeGe3DPoint *top,
+                         EeGe3DPoint *bar,
+                         EeGfxTagList **weapons);
+
+/// `GetTagPoints`' lookup: the list of `kind` for `model` (NULL without one or without a store).
+///
+/// # Safety
+/// `p` is NULL or a live store.
+EeGfxTagList *ee_gfx_tags_find(const EeGfxGraphicTags *p, const void *model, long kind);
+
+/// `PickPoint`'s attack point at game time `time` (NULL: none, the default point then).
+///
+/// # Safety
+/// `p` is NULL or a live store.
+const EeGe3DPoint *ee_gfx_tags_pick(const EeGfxGraphicTags *p, long time);
+
+/// `SetGroupColor(color, part)`.
+///
+/// # Safety
+/// `p` is NULL or a live store whose models are live; `color` is three floats.
+void ee_gfx_tags_set_color(const EeGfxGraphicTags *p, unsigned long part, const float *color);
+
+/// The unload's release of part `part`'s list.
+///
+/// # Safety
+/// `p` is NULL or a live store whose models are live.
+void ee_gfx_tags_clear_weapon(EeGfxGraphicTags *p, unsigned long part);
+
+/// `EETagPoint::GetOffset(frame[, part])` (`part` NULL: none).
+///
+/// # Safety
+/// `point` is a live point of a list; `part` NULL or valid; `out` valid.
+void ee_gfx_tag_offset(const EeGfxTagPoint *point,
+                       unsigned long frame,
+                       const EeGeTransformation *part,
+                       EeGe3DPoint *out);
+
+/// `EETagPoint::GetPoint(frame, transformation[, part])` (`part` NULL: none).
+///
+/// # Safety
+/// As [`ee_gfx_tag_offset`]; `transformation` valid.
+void ee_gfx_tag_point(const EeGfxTagPoint *point,
+                      unsigned long frame,
+                      const EeGeTransformation *transformation,
+                      const EeGeTransformation *part,
+                      EeGe3DPoint *out);
+
+/// `EETagPointList::Scale(transformation, scale)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_gfx_tags_scale(EeGeTransformation *t, float s);
 
 }  // extern "C"
 

@@ -136,6 +136,7 @@ pub mod ro_units;
 pub mod scene;
 pub mod select;
 pub mod shadows;
+pub mod tags;
 pub mod terrain;
 pub mod units;
 pub mod view;

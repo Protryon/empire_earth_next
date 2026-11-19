@@ -2071,18 +2071,3 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
                        theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
                        theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
 }
-
-// Scales the rotation part of a transformation by a factor (the translation is kept) (from the deleted
-// EEE2DImpact.cpp, whose range held it)
-void EETagPointList::Scale(GETransformation& ioTransformation, float inScale)
-{
-    ioTransformation.SetElement(0, 0, ioTransformation.GetElement(0, 0) * inScale);
-    ioTransformation.SetElement(0, 1, ioTransformation.GetElement(0, 1) * inScale);
-    ioTransformation.SetElement(0, 2, ioTransformation.GetElement(0, 2) * inScale);
-    ioTransformation.SetElement(1, 0, ioTransformation.GetElement(1, 0) * inScale);
-    ioTransformation.SetElement(1, 1, ioTransformation.GetElement(1, 1) * inScale);
-    ioTransformation.SetElement(1, 2, ioTransformation.GetElement(1, 2) * inScale);
-    ioTransformation.SetElement(2, 0, ioTransformation.GetElement(2, 0) * inScale);
-    ioTransformation.SetElement(2, 1, ioTransformation.GetElement(2, 1) * inScale);
-    ioTransformation.SetElement(2, 2, ioTransformation.GetElement(2, 2) * inScale);
-}
