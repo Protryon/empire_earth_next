@@ -31685,3 +31685,50 @@ EE-SIM builds no form: the oracle is unchanged by construction.
 ### Left
 
 docs/progress/ui-cluster.md ("Left").
+
+## The Graphics + LLE cluster, round 1: the tag points whole in Rust, the effects' reads of the graphic objects and physical models, RTSMap's terrain edits and outlines, EEOrbital, EFMU (ee_gfx tags.rs, effect_reads.rs; ee_ge map_raise.rs; branch rust-gfx-cluster1, 2026-11-18)
+
+The first round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
+
+- **The tag points as a Rust store, the C++ types as views.** `EEGraphicObject`'s tag-point lists (by kind, then by
+  root model: two nested `std::map`s), its weapon-mount lists, colour groups and attack points became one Rust store
+  per loaded object (`EeGfxGraphicTags`). The units', physics' and effects' readers (a dozen sites in other lanes'
+  files) did not change: `EETagPointList` is now a view of the Rust list's raw `Vec` parts (data, size, capacity:
+  `mPoints.size()`, `mPoints[i]`, `front()`, `begin()` keep working) and `EETagPoint` mirrors `EeGfxTagPoint` (a
+  model and an index). A list read as a vector of *pointers* kept `mPoints[i]->GetPoint(...)` valid. Prefer such a
+  view over editing every caller when the callers belong to other lanes.
+  - **Trap (release order):** `GEModel::Dereference` removes a model from its manager when the count falls to 2, so
+    the order the tag points drop their model references could matter. The store keeps the original's order exactly:
+    each part's weapon list with its part (`ee_gfx_tags_clear_weapon` at the same place in `UnloadMedia`), then the
+    kinds' lists by kind and model (`BTreeMap`s iterate as the `std::map`s did).
+- **A render-side layout.** The effect readers needed members no world view had: the graphic objects' models,
+  textures, frames, orbitals, turret parts and store, the graphic effects' records, the complex units' physical-model
+  scale and frame and turret angles, the stats' model. `EeGfxObjectLayout` (offsetof and base casts, registered on the
+  first effect call; `GEPhysicalModel` befriends the registration for its private members) gives Rust those reads; the
+  units' records and pointers stay `ee_sim::world`'s. With it 49 `Ask` answers of EEEffectHost.cpp became Rust over
+  the views (effect_reads.rs). Two things stayed calls: a unit's graphic (`EEUnit::GetModel`, a virtual: a foundation
+  shows its player's class graphic), asked through one host entry, and everything that loads media, plays sounds or
+  makes effects.
+  - The hosts' answers that kept scratch between calls (the hurricane's spawn list, the vent lists, the smoke's
+    location, the glows' list, frame and scaled location) look their lists up again on each call: the same lists
+    while a call lasts (nothing in between loads or unloads the unit's graphic).
+  - The effect's members a C++ answer may change during a call (`mGraphicObject` after a media load, `mUnitModel`,
+    the tracer's target, the marching line's ends, the plane and volcano models) pass by address
+    (`EeGfxEffectRefs`), so the Rust reads what the call left there.
+  - `EEUnit::GetPosition` has two bodies only (`EEUnit`'s tile centre on the tile's height, `EEComplexUnit`'s
+    location); the Rust answers it from the views.
+- **RTSMap's terrain edits** (`Raise`, the four spreads, `SmoothVertex`, `UpdateTiles`, `GetNumRaisedCorners`,
+  `IsTileFlat`) and the continent outlines (`BuildAreaOutlines`, `AddOutlineEdge`) are ee_ge map_raise.rs over the
+  mesh's C entry points (the same ones the C++ accessors called); the tiles' height and units (`PlaceUnitOnGround`)
+  and `UpdateWater` stay the map's virtuals. The C++ converts `long` coordinates to `unsigned long` at each call (a
+  negative coordinate wraps and is off the map); the Rust keeps that with `as c_ulong` on both widths.
+  `tools/sim_editor.py` (elevation paint) passed unchanged, as did the oracle (the random map's raised-corner test).
+- **EEOrbital** (the name test, the speed from the name's degrees, the update) is effect_orbit.rs'. `sscanf("%f")`
+  is a small scanner (white space, sign, digits, point, exponent, inf, nan); a name with no number there kept an
+  uninitialised float in the original, the Rust gives 0.
+- **EFMU** (the effect manager's capture) folds in Rust over the store; the C++ commits the six words.
+
+What exercises what: the oracle (seeds 2-7) and the missile capture reach the tag points through the units' and the
+physics' readers (weapon points, decks, launches); the effects capture (EE-SIM steps every effect kind, seeds 2-7,
+18 digests) reaches the effect readers; the editor gate reaches the terrain raise; only a tour reaches the colour
+groups (the player colour on the buildings), the light glows, the icons and the outlines' draw.
