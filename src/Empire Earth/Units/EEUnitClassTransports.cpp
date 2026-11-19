@@ -56,10 +56,14 @@ bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCar
 
 // The class bodies' host (ee_units cls_host.rs; EE_UNITS_CLS_*): the continent manager's lists, the unit utilities'
 // leaves that keep their records, the path lengths and a unit's reads and trial location
+int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* io);
+
 extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsClsIo* ioIo)
 {
     EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
     std::vector<U2DPoint<long> > theTiles;
+    if (inOp >= EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT)
+        return EEUnitClassMoveOp(inOp, theUnit, inB, inC, inD, ioIo);   // EEUnitClass.cpp
     switch (inOp) {
     case EE_UNITS_CLS_NEXT_TO_AREA:
         return gContinentManager.IsNextToArea((long)inC, (long)inD, (unsigned short)inA);

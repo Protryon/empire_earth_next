@@ -1168,6 +1168,108 @@ constexpr static const int32_t EE_UNITS_CLS_GOAL_HAS_LOCATION = 37;
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 constexpr static const int32_t EE_UNITS_CLS_REQUEST_QUEUED = 38;
 
+/// `gWorld.mMap->GetClosestTile(io.p, ...)`'s `mHeight` into `io.f` (0: no tile)
+constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
+
+/// `EEGetPursuerOf(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
+
+/// `EEGetDirectionTo(a, b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
+
+/// unit `a`'s `GetLineOfSight()` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_MV_LINE_OF_SIGHT = 42;
+
+/// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
+constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
+
+/// `gPhysics->GetRandom(1L, 2L)`
+constexpr static const int32_t EE_UNITS_CLS_MV_RANDOM_1_2 = 44;
+
+/// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL = 45;
+
+/// unit `a`'s `mLastAttacker` dereferenced and cleared
+constexpr static const int32_t EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER = 46;
+
+/// goal `b`'s `mKind`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_KIND = 47;
+
+/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_LOCATION = 48;
+
+/// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_FLAG = 49;
+
+/// goal `b`'s `mPathAttempts += c`
+constexpr static const int32_t EE_UNITS_CLS_MV_PATH_ATTEMPTS = 50;
+
+/// goal `b`'s `GetSidestepCount()` (c -1), else `SetSidestepCount(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SIDESTEP = 51;
+
+/// goal `b`'s `SetGroupPathState(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE = 52;
+
+/// goal `b`'s `GetAttackTarget()->GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_CLS_MV_ATTACK_TARGET = 53;
+
+/// unit `a`'s `IgnoreTarget(b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_IGNORE_TARGET = 54;
+
+/// `EEFindNewTarget` over `EEFOFindNewTargetInMeleeRange(a, b)` with attack goal `c` from `a`'s tile
+constexpr static const int32_t EE_UNITS_CLS_MV_MELEE_RETARGET = 55;
+
+/// unit `a`'s `SetBlockingUnit(b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_BLOCKING = 56;
+
+/// unit `a`'s `AddWaypoint(io.p, c != 0)`
+constexpr static const int32_t EE_UNITS_CLS_MV_ADD_WAYPOINT = 57;
+
+/// unit `a`'s `mWaypoints[c].mLocation` into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_MV_WAYPOINT = 58;
+
+/// unit `a`'s `GetSecondWaypoint(io.p)` (its answer: 0 when there is one)
+constexpr static const int32_t EE_UNITS_CLS_MV_SECOND_WAYPOINT = 59;
+
+/// unit `a`'s `NextWaypoint()`
+constexpr static const int32_t EE_UNITS_CLS_MV_NEXT_WAYPOINT = 60;
+
+/// unit `a`'s `DistanceSquared3D(io.p)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_MV_DISTANCE_3D = 61;
+
+/// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
+constexpr static const int32_t EE_UNITS_CLS_MV_BOUNDED = 62;
+
+/// `gPathManager.FindBoundedPath(a, map, c, a's tile, (io.a, io.b), path, 50, true, &reached)`: the path pushed
+constexpr static const int32_t EE_UNITS_CLS_MV_FIND_BOUNDED_PATH = 63;
+
+/// `EEPathManager::MergeWaypoints(the list's points, a's mWaypoints, 0)`: the list replaced
+constexpr static const int32_t EE_UNITS_CLS_MV_MERGE_WAYPOINTS = 64;
+
+/// unit `a`'s `SetVelocity(io.f)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_VELOCITY = 65;
+
+/// unit `a`'s `StartAction(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_START_ACTION = 66;
+
+/// class `b`'s `ActionChanged(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_MV_ACTION_CHANGED = 67;
+
+/// unit `a`'s `UpdateWaterState(true)`
+constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
+
+/// `gPathManager.CancelPaths(a, true)`
+constexpr static const int32_t EE_UNITS_CLS_MV_CANCEL_PATHS = 69;
+
+/// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
+constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
+
+/// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
+constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
+
+/// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
+constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
+
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
 
@@ -5404,6 +5506,55 @@ int32_t ee_units_cls_condition(uint64_t class_,
 
 /// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
 int32_t ee_units_cls_base_condition(uint64_t class_, uint64_t unit, uint32_t event);
+
+/// Pushes a point onto a host operation's list.
+///
+/// # Safety
+/// `list` is the `EeUnitsClsIo::list` of a running operation.
+void ee_units_cls_push_point(EeUnitsClsListHandle *list, float x, float y, float z);
+
+/// A host operation's points (x, y, z each), `*count` of them.
+///
+/// # Safety
+/// `list` is the `EeUnitsClsIo::list` of a running operation; `count` is writable.
+const float *ee_units_cls_points(EeUnitsClsListHandle *list, size_t *count);
+
+/// Empties a host operation's points (before the C++ pushes their replacement).
+///
+/// # Safety
+/// As [`ee_units_cls_points`].
+void ee_units_cls_clear_points(EeUnitsClsListHandle *list);
+
+/// `EEUnitClass::FindPath(unit)`.
+void ee_units_mv_find_path(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::NextWaypoint(unit)`.
+void ee_units_mv_next_waypoint(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::BaseHasArrived(unit, value)`.
+uint8_t ee_units_mv_has_arrived(uint64_t class_, uint64_t unit, float value);
+
+/// `EEUnitClass::AddWaypointAt(unit, x, y, z, snap)`.
+void ee_units_mv_add_waypoint_at(uint64_t unit, float x, float y, float z, uint8_t snap);
+
+/// `EEUnitClass::PathToward(unit, from, to, snap)` (the points' x, y, z).
+void ee_units_mv_path_toward(uint64_t unit,
+                             float fx,
+                             float fy,
+                             float fz,
+                             float tx,
+                             float ty,
+                             float tz,
+                             uint8_t snap);
+
+/// `EEUnitClass::PathToGoal(unit)`.
+void ee_units_mv_path_to_goal(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::Flee(unit)`.
+void ee_units_mv_flee(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::FleeAttacker(unit)`.
+void ee_units_mv_flee_attacker(uint64_t class_, uint64_t unit);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
