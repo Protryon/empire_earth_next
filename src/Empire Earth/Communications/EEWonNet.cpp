@@ -47,8 +47,7 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/EEUIEWonNetArenaRoomEvents.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEWonNetUI.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
@@ -131,7 +130,7 @@ private:
 wchar_t* kWonProductDirectory = L"/EmpireEarth";
 wchar_t* kWonCommunityName = L"EmpireEarth";
 
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
+static char sEmptyString[] = "";            // the original's pooled "" (gEmptyString, 0x4e5b98)
 unsigned long gWonClientId;                 // 0x4e60b8 (RegisterCallback stores the server's client id)
 extern wchar_t gEmptyWideString[];          // 0x4e60bc (L"", zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 extern unsigned long& gNetworkAdapter;      // 0x5308a0 (the adapter of the local address)
@@ -534,7 +533,7 @@ void EEWonNet::CloseCallback(AsyncOp* inOp)
 
     if (this->mIgnoreClose == false) {
         gResource->GetString(IDS_YOU_HAVE_LOST_YOUR_CONNECTION_TO_SIERRA, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, CloseMessageCallback, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, CloseMessageCallback, true);
     }
     this->mIgnoreClose = false;
     if (static_cast<SocketOp*>(inOp)->GetSocket() == this->mRouting.get())
@@ -573,8 +572,8 @@ void EEWonNet::SelectServer(const std::wstring& inName, IPAddr inAddress)
     this->mRouting->ClearProductName();
     this->mRouting->ConnectAsync(inAddress, 15000);
     gResource->GetString(IDS_CONNECTING_TO_SERVER, theMessage);
-    gUIManager->DisplayCancel(theMessage, 1, (UIForm*)&this->mCancelled, CancelConnectCallback,
-                              gUIManager->GetFormByID(kFormSelectServer));
+    gEEWonNetUI.mDisplayCancel(theMessage, 1, (UIForm*)&this->mCancelled, CancelConnectCallback,
+                               gUIManager->GetFormByID(kFormSelectServer));
 }
 
 // Handles the connection result: registers the client, or disconnects and reports the error; when cancelled or
@@ -589,7 +588,7 @@ void EEWonNet::ConnectCallback(AsyncOp* inOp)
             WONStatusToString(inOp->GetStatus());
             gUserInterface->CloseForm(gUIManager->GetFormByID(kFormSelectServer));
             gResource->GetString(IDS_UNABLE_TO_ACCESS_SERVER_AT_THIS_TIME, theMessage);
-            gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+            gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
         } else {
             this->mIgnoreClose = false;
             CompletionBase<AsyncOpPtr>* theCompletion = new RoutingCompletion(&EEWonNet::RegisterCallback);
@@ -610,7 +609,7 @@ void EEWonNet::ChatRoomListCallback(AsyncOp* inOp)
     gUIManager->LockUIForCopyData();
     if (gWonNet != NULL && this->mCancelled == false) {
         gUIManager->PopTo(gUIManager->GetFormByID(kFormMultiplayer));
-        UIEvent* theEvent = new EEUIEWNAROpenScreen;
+        UIEvent* theEvent = gEEWonNetUI.mNewRoomsOpenScreen();
         gUIManager->GetFormByID(kFormAvailableRooms)->SetFormOpenEvent(theEvent);
         theEvent->Dereference();
         gUIManager->Push(gUIManager->GetFormByID(kFormAvailableRooms));
@@ -633,7 +632,7 @@ void EEWonNet::JoinGameDataCallback(AsyncOp* inOp)
         this->ClearGames();
         this->RejoinRoom(false);
         gResource->GetString(IDS_FAILED_TO_CREATE_GAME, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
     } else {
         unsigned char* theData = new unsigned char[static_cast<RoutingOp*>(inOp)->GetData()->length()];
         memcpy(theData, static_cast<RoutingOp*>(inOp)->GetData()->data(), static_cast<RoutingOp*>(inOp)->GetData()->length());
@@ -664,7 +663,7 @@ void EEWonNet::CreateGameCallback(AsyncOp* inOp)
     if (theStatus != WS_RoutingServG2_GroupAlreadyExists) {
         if (theStatus != WS_Success) {
             gResource->GetString(IDS_FAILED_TO_CREATE_GAME, theMessage);
-            gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+            gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
         } else {
             this->mRoomGroupId = this->mGameListPort;
             this->mCurrentRoom = this->mRoomName;
@@ -675,7 +674,7 @@ void EEWonNet::CreateGameCallback(AsyncOp* inOp)
             if (this->mPassword.length() != 0)
                 theInfo.mPassword = UWideString(this->ToString(this->mPassword).c_str());
             else
-                theInfo.mPassword = UWideString(gEmptyString);
+                theInfo.mPassword = UWideString(sEmptyString);
             NEProtocol::GetProtocol(0, theProtocol);
             theInfo.mGameName = UWideString(this->ToString(this->mGameName).c_str());
             theInfo.mAddress = theProtocol->GetLocalAddress(gNetworkAdapter);
@@ -693,7 +692,7 @@ void EEWonNet::CreateGameCallback(AsyncOp* inOp)
         }
     } else {
         gResource->GetString(IDS_GAME_WITH_THAT_NAME_ALREADY_EXISTS, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
     }
 }
 
@@ -716,7 +715,7 @@ void EEWonNet::HostGame(const char* inName, const char* inPassword)
     UWideString theMessage;
 
     gHostedGameName = UWideString(inName);
-    gGamePreferences.Save();
+    gEEWonNetUI.mSavePreferences();
     this->ClearGames();
     this->mGameName = this->ToWString(inName);
     if (inPassword != NULL)
@@ -727,7 +726,7 @@ void EEWonNet::HostGame(const char* inName, const char* inPassword)
         return;
     if (this->mIsBehindFirewall == true) {
         gResource->GetString(IDS_SIERRA_COM_IS_UNABLE_TO_VERIFY, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, reinterpret_cast<UIForm*>(this), HostGameCallback, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, reinterpret_cast<UIForm*>(this), HostGameCallback, true);
     } else {
         this->CreateGame();
     }
@@ -838,7 +837,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
     }
     if (theFound == false) {
         gResource->GetString(IDS_COULDNT_FIND_GAME_REQUESTED, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
     } else {
         theName = this->ToString(theGroups[theGroup].mName);
         this->ClearGames();
@@ -867,7 +866,7 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
                 gResource->GetString(IDS_PASSWORD_IS_INCORRECT, theMessage);
             else
                 gResource->GetString(IDS_COULDNT_JOIN_GAME, theMessage);
-            gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+            gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
         } else {
             this->mRoomGroupId = this->mGameListPort;
             this->mCurrentRoom = this->mRoomName;
@@ -906,13 +905,13 @@ void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
             theFound = true;
         }
     } else {
-        EEWonNetError(gEmptyString, inOp->GetStatus());
+        EEWonNetError(sEmptyString, inOp->GetStatus());
     }
     if (theFound == false) {
         this->ClearGames();
         this->RejoinRoom(false);
         gResource->GetString(IDS_SPECIFIED_GAME_NOT_FOUND, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
     }
 }
 
@@ -931,7 +930,7 @@ bool EEWonNet::RejoinRoom(bool inFlag)
         WonRequests(this->mRouting.get()).SubscribeDataObject(0xffff, kWonGameObject, true, new RoutingCompletion(&EEWonNet::ListGamesCallback));
     } else {
         gResource->GetString(IDS_YOU_HAVE_LOST_YOUR_CONNECTION_TO_SIERRA, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, CloseMessageCallback, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, CloseMessageCallback, true);
         theResult = false;
     }
     return theResult;
@@ -970,8 +969,8 @@ void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
                                     new RoutingCompletion(&EEWonNet::JoinRoomCallback));
                 this->mJoinRoomCancelled = false;
                 gResource->GetString(IDS_JOINING_ROOM, theMessage);
-                gUIManager->DisplayCancel(theMessage, 1, (UIForm*)&this->mJoinRoomCancelled, CancelConnectCallback,
-                                          gUIManager->GetFormByID(kFormAvailableRooms));
+                gEEWonNetUI.mDisplayCancel(theMessage, 1, (UIForm*)&this->mJoinRoomCancelled, CancelConnectCallback,
+                                           gUIManager->GetFormByID(kFormAvailableRooms));
                 break;
             }
         }
@@ -997,11 +996,11 @@ void EEWonNet::JoinRoomCallback(AsyncOp* inOp)
                     gResource->GetString(IDS_PASSWORD_IS_INCORRECT, theMessage);
                 else
                     gResource->GetString(IDS_COULDNT_JOIN_ROOM, theMessage);
-                gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+                gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
                 this->mRoomName.erase();
             } else {
                 this->mGameListPort = static_cast<RoutingOp*>(inOp)->GetGroupId();
-                UIEvent* theEvent = new EEUIEWNAGOpenScreen;
+                UIEvent* theEvent = gEEWonNetUI.mNewGamesOpenScreen();
                 gUIManager->GetFormByID(kFormAvailableGames)->SetFormOpenEvent(theEvent);
                 theEvent->Dereference();
                 gUserInterface->SwitchToForm(gUIManager->GetFormByID(kFormAvailableGames));
@@ -1298,7 +1297,7 @@ void EEWonNet::UpdateAccountCallback(AsyncOp* inOp)
         EEWonNetError("EEWonNet::ModifyWONAccount()", theStatus);
         gResource->GetString(IDS_COULD_NOT_MODIFY_YOUR_ACCOUNT, theMessage);
     }
-    gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+    gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
 }
 
 // Requests the current account info and shows a cancel box
@@ -1312,8 +1311,8 @@ void EEWonNet::OpenUpdateAccount()
     // after RunAsync, as the original (the setter waits for the Rust op's lock)
     this->mAccountOp->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1);
     gResource->GetString(IDS_GETTING_CURRENT_USER_INFO, theMessage);
-    gUIManager->DisplayCancel(theMessage, 1, (UIForm*)this->mAccountOp.get(), CancelOpCallback,
-                              gUIManager->GetFormByID(kFormUpdateSierraAccount));
+    gEEWonNetUI.mDisplayCancel(theMessage, 1, (UIForm*)this->mAccountOp.get(), CancelOpCallback,
+                               gUIManager->GetFormByID(kFormUpdateSierraAccount));
 }
 
 // Kills the pending WON op (the cancel box's callback)
@@ -1341,8 +1340,8 @@ void EEWonNet::GetAccountCallback(AsyncOp* inOp)
         } else {
             gUserInterface->CloseForm(NULL);
             gResource->GetString(IDS_THERE_WAS_ERROR_GETTING_CURRENT_USER, theMessage);
-            gUIManager->DisplayCancel(theMessage, 1, (UIForm*)this->mAccountOp.get(), CancelOpCallback,
-                                      gUIManager->GetFormByID(kFormUpdateSierraAccount));
+            gEEWonNetUI.mDisplayCancel(theMessage, 1, (UIForm*)this->mAccountOp.get(), CancelOpCallback,
+                                       gUIManager->GetFormByID(kFormUpdateSierraAccount));
         }
     }
 }
@@ -1462,7 +1461,7 @@ void EEWonNet::RegisterCallback(AsyncOp* inOp)
             gResource->GetString(IDS_UNABLE_TO_ACCESS_SERVER_AT_THIS_TIME, theMessage);
         else
             gResource->GetString(IDS_SIERRA_COM_USER_IS_ALREADY, theMessage);
-        gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        gEEWonNetUI.mDisplayMessage(theMessage, 1, NULL, NULL, true);
         this->Disconnect();
     } else {
         gWonClientId = (unsigned long)static_cast<RoutingOp*>(inOp)->Num(EE_WON_RTF_RECONNECT_ID);
