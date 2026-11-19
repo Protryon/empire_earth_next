@@ -20,6 +20,202 @@ constexpr static const int32_t EE_CP_FAVORITE_SPACE = 3;
 /// The last save version whose computer players hold the deleted C++ managers' blocks in the original's layout.
 constexpr static const uint32_t EE_CP_LEGACY_LAST_VERSION = 250;
 
+/// `EEUnitHandle`'s none.
+constexpr static const uint32_t EE_CP_HERD_NONE = 4294967295;
+
+/// unit `a` into `io.unit`
+constexpr static const int32_t EE_CP_HERD_UNIT = 1;
+
+/// the unit of handle `v0` (`EEComplexUnit*`, 0 none)
+constexpr static const int32_t EE_CP_HERD_RESOLVE = 2;
+
+/// `a->mReferenceCount++`
+constexpr static const int32_t EE_CP_HERD_REF = 3;
+
+/// `a->Dereference()`
+constexpr static const int32_t EE_CP_HERD_DEREF = 4;
+
+/// `a->SetHerd(b)`
+constexpr static const int32_t EE_CP_HERD_SET_HERD = 5;
+
+/// `a->SetGrazeTime(v0)`
+constexpr static const int32_t EE_CP_HERD_SET_GRAZE = 6;
+
+/// `a->SetGrowth(f0)`
+constexpr static const int32_t EE_CP_HERD_SET_GROWTH = 7;
+
+/// `a->SetGrowTime(v0)`
+constexpr static const int32_t EE_CP_HERD_SET_GROW_TIME = 8;
+
+/// `gPhysics->GetRandom(v0, v1)` (long)
+constexpr static const int32_t EE_CP_HERD_RANDOM_LONG = 9;
+
+/// `gPhysics->GetRandom(f0, f1)` into `f0`
+constexpr static const int32_t EE_CP_HERD_RANDOM_FLOAT = 10;
+
+/// `gPhysics->GetRandom()` into `f0`
+constexpr static const int32_t EE_CP_HERD_RANDOM = 11;
+
+/// `gPhysics->mRandom.Generate()` into `f0`
+constexpr static const int32_t EE_CP_HERD_GENERATE = 12;
+
+/// `gPhysics->mGameTime` (-1 without physics)
+constexpr static const int32_t EE_CP_HERD_GAME_TIME = 13;
+
+/// `gContinentManager.GetContinentID(a)`
+constexpr static const int32_t EE_CP_HERD_CONTINENT_OF = 14;
+
+/// `gContinentManager.GetContinentID(v0, v1)`
+constexpr static const int32_t EE_CP_HERD_CONTINENT_AT = 15;
+
+/// a continent (v1: 0 `GetContinentFromID(v0)`, 1 `GetContinentByID(v0)`, 2 `GetContinents()[v0]`): whether there
+/// is one, its category into `v0` and its hull's bounds into `v1..v4` (bottom, left, right, top)
+constexpr static const int32_t EE_CP_HERD_CONTINENT = 16;
+
+/// area `a`'s `GetRandomPoint()` into `v0`, `v1`
+constexpr static const int32_t EE_CP_HERD_AREA_POINT = 17;
+
+/// `gContinentManager.GetArea(v0)`
+constexpr static const int32_t EE_CP_HERD_AREA = 18;
+
+/// `gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom)`
+constexpr static const int32_t EE_CP_HERD_MAP_EDGE = 19;
+
+/// `EEAIArea::Create` of the herd over the `input_len` tiles at `input` (x, y pairs)
+constexpr static const int32_t EE_CP_HERD_AREA_CREATE = 20;
+
+/// `GetNumTiles()`
+constexpr static const int32_t EE_CP_HERD_NUM_TILES = 21;
+
+/// `HullContains((v0, v1))`
+constexpr static const int32_t EE_CP_HERD_HULL_CONTAINS = 22;
+
+/// `GetClosestHullPoint((v0, v1))` into `v0`, `v1`
+constexpr static const int32_t EE_CP_HERD_CLOSEST_HULL = 23;
+
+/// `GetHullBounds()` into `v0..v3` (bottom, left, right, top)
+constexpr static const int32_t EE_CP_HERD_HULL_BOUNDS = 24;
+
+/// `((EEHerd*)a)->GetHullDistanceSquared((EEHerd*)b)` into `f0`
+constexpr static const int32_t EE_CP_HERD_HULL_DISTANCE = 25;
+
+/// `EEAIArea::GetRandomPoint()` into `v0`, `v1`
+constexpr static const int32_t EE_CP_HERD_BASE_POINT = 26;
+
+/// `GetTileSet().BuildPointList(tiles, 1)` (pushed)
+constexpr static const int32_t EE_CP_HERD_TILES = 27;
+
+/// `EEGetUnitsInRectangle` of the rectangle `v0..v3` (bottom, left, right, top) with the herd's filter (continent
+/// `v4`, `v5` bit 0 huntable, bit 1 moving): the units pushed
+constexpr static const int32_t EE_CP_HERD_UNITS_IN_RECT = 28;
+
+/// an inward circle (`EEFormation::Create(6)`) placed over the `input` units: `v0` 0 Chase (centre `f0..f2`, a random
+/// radius, kept), 1 MoveTo (centre, radius `f3`; `v1` 0: not placed), 2 Surround (centre, a random radius); the units
+/// after `Place` into `list2`, the slots (x, y, z, heading as float bits) into `list`
+constexpr static const int32_t EE_CP_HERD_FORMATION = 29;
+
+/// `CanStandOn(a, (v0, v1))`; the herd's units at `input`
+constexpr static const int32_t EE_CP_HERD_STAND = 30;
+
+constexpr static const int32_t EE_CP_HERD_MEDIA_LOAD = 31;
+
+constexpr static const int32_t EE_CP_HERD_MEDIA_UNLOAD = 32;
+
+/// `EEAnimal::Get(v0)` (`sTable[v0]`)
+constexpr static const int32_t EE_CP_HERD_ANIMAL = 33;
+
+/// the animal `a`'s record (`static_cast<EeDataAnimalFields*>`)
+constexpr static const int32_t EE_CP_HERD_ANIMAL_FIELDS = 34;
+
+/// the animal `a`'s `mMedia`
+constexpr static const int32_t EE_CP_HERD_ANIMAL_MEDIA = 35;
+
+/// `a->mUnitClass->Flee(a)`
+constexpr static const int32_t EE_CP_HERD_FLEE = 36;
+
+/// `EEDamageFactor(v0, v1)` into `f0`
+constexpr static const int32_t EE_CP_HERD_DAMAGE_FACTOR = 37;
+
+/// `a`'s last attacker dereferenced and cleared
+constexpr static const int32_t EE_CP_HERD_CLEAR_ATTACKER = 38;
+
+/// `a` released by its holder (`ReleaseHeld`, the holder dereferenced, `mHolder` cleared)
+constexpr static const int32_t EE_CP_HERD_RELEASE_HOLDER = 39;
+
+/// `a->mHeldUnits[v0]`
+constexpr static const int32_t EE_CP_HERD_HELD = 40;
+
+/// `a->mWaypoints[v0].mLocation` into `f0..f2`
+constexpr static const int32_t EE_CP_HERD_WAYPOINT = 41;
+
+/// `a->GetPosition()` into `f0..f2`
+constexpr static const int32_t EE_CP_HERD_POSITION = 42;
+
+/// `a->DistanceSquaredTo(b)` into `f0`
+constexpr static const int32_t EE_CP_HERD_DISTANCE = 43;
+
+/// `gWorld.mMap->GetTile(v0, v1) != NULL`
+constexpr static const int32_t EE_CP_HERD_MAP_TILE = 44;
+
+/// `gWorld.mMap->GetTileAtLocation((v0, v1)) != NULL`; -1: no map
+constexpr static const int32_t EE_CP_HERD_MAP_TILE_AT = 45;
+
+/// `gWorld.mMap->mTerrainMesh.GetZ(v0, v1)` into `f0`
+constexpr static const int32_t EE_CP_HERD_MAP_Z = 46;
+
+/// `gWorld.GetMap()->GetSize()`; `gMapWidth`, `gMapHeight` into `v0`, `v1`
+constexpr static const int32_t EE_CP_HERD_MAP_SIZE = 47;
+
+/// a young one of animal `b` born by parent `a` (`CreateUnit`, its growth, grow time, search timer, `HoldUnit`)
+constexpr static const int32_t EE_CP_HERD_BIRTH = 48;
+
+/// `gPathManager.CancelAutoPathRequest(a)`, then `a->Dereference()`
+constexpr static const int32_t EE_CP_HERD_CANCEL_PATH = 49;
+
+/// the herds of player `a` (`EEPlayer::GetHerds`' order: from the last), pushed (`EEHerd*`)
+constexpr static const int32_t EE_CP_HERD_PLAYER_HERDS = 50;
+
+/// herd `a`'s record (`static_cast<EeHerdFields*>`)
+constexpr static const int32_t EE_CP_HERD_FIELDS_OF = 51;
+
+/// `a->mGoalQueues[0].mGoals.size()`
+constexpr static const int32_t EE_CP_HERD_GOALS = 52;
+
+/// `a`'s queued goal `v0`: a location goal's location into `f0`, `f1`; whether it is one
+constexpr static const int32_t EE_CP_HERD_GOAL_LOCATION = 53;
+
+/// `a->GetPhysicalModel().GetLocation()` into `f0`, `f1`
+constexpr static const int32_t EE_CP_HERD_PHYSICAL = 54;
+
+/// `gLoadingSavedGame` (bit 0), `gWorldClearing` (bit 1)
+constexpr static const int32_t EE_CP_HERD_FLAGS = 55;
+
+/// an attack goal on `b` (`NewAttackUnit(a, b, true, false)`) given to `a` (`GiveGoal(.., 0,
+/// kActionInitialAttackState)`, else deleted); whether it was taken
+constexpr static const int32_t EE_CP_HERD_GOAL_ATTACK = 56;
+
+/// a location goal (`NewLocation(&(f0, f1, f2), v0, v1, v2, f3, false, false)`; `v4` 1: the three-float overload)
+/// given to `a` (`GiveGoal(.., v3, kActionPrepareToMove)`, else deleted); whether it was taken
+constexpr static const int32_t EE_CP_HERD_GOAL_MOVE = 57;
+
+/// `gWorld.GetPlayer(v0)`
+constexpr static const int32_t EE_CP_HERD_PLAYER = 58;
+
+/// player `a`'s `mPlayerID`
+constexpr static const int32_t EE_CP_HERD_PLAYER_ID = 59;
+
+/// `dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(v0))`
+constexpr static const int32_t EE_CP_HERD_UNIT_BY_ID = 60;
+
+/// `EESaveHasLiveState(v0, v1)` (bit 0), `EESaveHasContinentRegions(v0, v1)` (bit 1)
+constexpr static const int32_t EE_CP_HERD_SAVE_FLAGS = 61;
+
+/// `EEHerd::IsAnimalOnMap(a)`
+constexpr static const int32_t EE_CP_HERD_ANIMAL_ON_MAP = 62;
+
+/// whether the world has a map (`gWorld.mMap`)
+constexpr static const int32_t EE_CP_HERD_HAS_MAP = 63;
+
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;
 
@@ -269,9 +465,6 @@ constexpr static const int32_t EE_CP_CENTER_FILE_SET_ACTIVE = 203;
 
 constexpr static const int32_t EE_CP_CENTER_FILE_ACTIVE = 204;
 
-/// `mCombatManager->Load(major, minor, file)`: its result.
-constexpr static const int32_t EE_CP_SAVE_COMBAT_LOAD = 400;
-
 /// `mPlacement->Load(file)` (the town centre tile): its result.
 constexpr static const int32_t EE_CP_SAVE_PLACEMENT_LOAD = 401;
 
@@ -295,9 +488,6 @@ constexpr static const int32_t EE_CP_SAVE_HISTORY_SECOND = 407;
 constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_FIRST = 408;
 
 constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_SECOND = 409;
-
-/// `mCombatManager->Save(major, minor, file)`: its result.
-constexpr static const int32_t EE_CP_SAVE_COMBAT_SAVE = 410;
 
 /// `mPlacement->Save(file)`: its result.
 constexpr static const int32_t EE_CP_SAVE_PLACEMENT_SAVE = 411;
@@ -332,6 +522,10 @@ struct EeCpInfluence;
 
 /// The class's own data (the C++ object owns it: `EECPPlacement::mRust`).
 struct EeCpPlacement;
+
+/// The herd's lists (Rust's): the units (`mUnits`, unit handles in the original's order), the looks by unit id
+/// (`mMedia`, `EEMedia*`), a loaded game's area tiles (from Load to RepairPointers; the original's side table).
+struct EeHerdLists;
 
 /// `EEComputerPlayer`'s plain members, `mLBD4` (+0xbd4) to `mAttackStarted` (+0xf56), in the class's order.
 struct EeCpFields {
@@ -676,6 +870,125 @@ struct EeCpRect {
   int32_t bottom;
 };
 
+/// A unit as the herd reads it (`EEComplexUnit` and its class; one host call).
+struct EeHerdUnit {
+  /// `mUnitID`
+  unsigned long unit_id;
+  /// `EEUnitHandleID`: what a handle to it holds
+  uint32_t handle;
+  long tile_x;
+  long tile_y;
+  long hit_points;
+  float growth;
+  unsigned long graze_time;
+  unsigned long grow_time;
+  /// `mCommand ? mCommand->mType : 0`
+  long command;
+  /// `mWaypoints.size()`
+  int64_t waypoints;
+  /// `mHeldUnits.size()`
+  int64_t held;
+  /// `mHolder`
+  uint64_t holder;
+  /// `mHerd` (`EEHerd*`)
+  uint64_t herd;
+  /// `mPlayer`
+  uint64_t player;
+  uint64_t last_attacker;
+  /// `mStats->mModel` (its `EEMedia`)
+  uint64_t model;
+  /// the class's `mAttack`, `mAmmoType`, `mFamily`, `mAnimalID`
+  long attack;
+  long ammo_type;
+  unsigned long family;
+  long animal_id;
+  bool disabled;
+  /// `mStats->mIsInitialized`
+  bool initialized;
+  /// `GetGoal() != NULL`
+  bool has_goal;
+  bool regrowing;
+  bool b34f;
+  /// the class's `CanBeAttacked()`
+  bool can_be_attacked;
+};
+
+/// One host operation's values.
+struct EeHerdIo {
+  int64_t v[6];
+  float f[4];
+  EeHerdUnit unit;
+  /// the units an operation reads (`EEComplexUnit*`)
+  const uint64_t *input;
+  size_t input_len;
+  /// the lists an operation pushes onto (`ee_cp_herd_push`: four values a row)
+  void *list;
+  void *list2;
+};
+
+/// `U2DRectangle<long>` (its layout: bottom, left, right, top).
+struct EeHerdRect {
+  long mBottom;
+  long mLeft;
+  long mRight;
+  long mTop;
+};
+
+/// `U2DPoint<long>`.
+struct EeHerdPoint {
+  long mX;
+  long mY;
+};
+
+/// `EEHerd`'s members (+0x68 .. +0xf9 in the original; the media map is in [`EeHerdLists`]).
+struct EeHerdFields {
+  /// +0x84 the territory
+  EeHerdRect mBounds2;
+  /// +0x94
+  EeHerdPoint mP94;
+  /// +0x9c the target's tile
+  EeHerdPoint mCenter;
+  /// +0xa4 `EEAnimal*` (a load's saved index until RepairPointers)
+  uint64_t mAnimal;
+  /// +0xa8 `UReferenceCounter*`: a path request (cancelled through the path manager)
+  uint64_t mPathRequest;
+  /// +0xac `EEPlayer*` (a load's saved id until RepairPointers)
+  uint64_t mPlayer;
+  /// +0xb0 the leader (a unit handle: its id)
+  uint32_t mLeader;
+  /// +0xb4 the target (a unit handle)
+  uint32_t mTarget;
+  float mFB8;
+  /// +0xbc the animal index (the units' class `mAnimalID`)
+  unsigned long mAnimalID;
+  /// +0xc0 an area serial (`gContinentManager.GetArea`)
+  unsigned long mGrazeAreaID;
+  /// +0xc4 (0, 2, 3, 4, 7, 9, 0xa, 0xb)
+  unsigned long mState;
+  unsigned long mLC8;
+  /// +0xcc the next birth
+  unsigned long mBirthTimer;
+  unsigned long mFollowTime;
+  /// +0xd4 the next update
+  unsigned long mNextUpdateTime;
+  unsigned long mLD8;
+  unsigned long mChaseTime;
+  unsigned long mHuntTime;
+  unsigned long mLE4;
+  /// +0xe8 the animal's herd radius squared (the joining range)
+  long mRadiusSquared;
+  /// +0xec the young ones
+  long mNumYoung;
+  /// +0xf0 the most units
+  long mMaxUnits;
+  uint16_t mContinent;
+  uint16_t mID;
+  bool mBreeds;
+  bool mIsActive;
+  /// the lists (owned; `ee_cp_herd_init` makes them, `ee_cp_herd_free` drops them)
+  EeHerdLists *mLists;
+};
+
 /// What the C++ hands every call: the computer player and its placement.
 struct EeCpPlaceCtx {
   /// the `EEComputerPlayer*` (its `EEPlayer*`: the first base)
@@ -982,6 +1295,139 @@ int32_t ee_cp_resource_state_save(void *ctx,
 /// As [`ee_cp_resource_state_save`].
 int32_t ee_cp_resource_state_load(void *ctx,
                                   EeUnitsPlayerSaveFn host);
+
+/// Pushes a row onto an operation's list (`EeHerdIo::list`, `list2`).
+///
+/// # Safety
+/// `list` is a list of a running operation (a `Vec<[i64; 4]>`).
+void ee_cp_herd_push(void *list, int64_t a, int64_t b, int64_t c, int64_t d);
+
+/// The herd's world (EEHerd.cpp): `herd` the `EEHerd*`.
+extern int64_t ee_cp_herd_host(void *herd, int32_t op, uint64_t a, uint64_t b, EeHerdIo *io);
+
+/// The record's lists made (the constructors, first).
+///
+/// # Safety
+/// `f` is a live record without lists.
+void ee_cp_herd_init(EeHerdFields *f);
+
+/// The record's lists dropped (the destructor, last).
+///
+/// # Safety
+/// `f` is a live record whose lists are not used again.
+void ee_cp_herd_free(EeHerdFields *f);
+
+/// `EEHerd()`: no units, leader, target or path request, then `Clear`.
+///
+/// # Safety
+/// `herd` is the live `EEHerd*` whose record is `f` (its lists made).
+void ee_cp_herd_construct_default(void *herd, EeHerdFields *f);
+
+/// `EEHerd(player, animal, id)`.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`].
+void ee_cp_herd_construct(void *herd, EeHerdFields *f, uint64_t player, long animal, uint16_t id);
+
+/// `Clear` (the destructor's).
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`].
+void ee_cp_herd_clear(void *herd, EeHerdFields *f);
+
+/// `AddUnit`.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`]; `unit` a live `EEComplexUnit*`.
+bool ee_cp_herd_add_unit(void *herd, EeHerdFields *f, uint64_t unit);
+
+/// `RemoveUnit`.
+///
+/// # Safety
+/// As [`ee_cp_herd_add_unit`].
+bool ee_cp_herd_remove_unit(void *herd, EeHerdFields *f, uint64_t unit);
+
+/// `HasUnit`.
+///
+/// # Safety
+/// As [`ee_cp_herd_add_unit`].
+bool ee_cp_herd_has_unit(void *herd, EeHerdFields *f, uint64_t unit);
+
+/// `CanTake`.
+///
+/// # Safety
+/// As [`ee_cp_herd_add_unit`].
+bool ee_cp_herd_can_take(void *herd, EeHerdFields *f, uint64_t unit, bool check_range);
+
+/// `HandleUnitHit`.
+///
+/// # Safety
+/// As [`ee_cp_herd_add_unit`].
+void ee_cp_herd_handle_unit_hit(void *herd, EeHerdFields *f, uint64_t unit);
+
+/// `AttackBack`.
+///
+/// # Safety
+/// As [`ee_cp_herd_add_unit`].
+void ee_cp_herd_attack_back(void *herd, EeHerdFields *f, uint64_t unit, bool all);
+
+/// `Update`.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`].
+void ee_cp_herd_update(void *herd, EeHerdFields *f, unsigned long time);
+
+/// `Create` (the area's override) over `count` tiles.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`]; `tiles` holds `count` points.
+void ee_cp_herd_create(void *herd, EeHerdFields *f, const EeHerdPoint *tiles, size_t count);
+
+/// `GetRandomPoint` (the area's override) into `out`.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`]; `out` a live point.
+void ee_cp_herd_random_point(void *herd, EeHerdFields *f, EeHerdPoint *out);
+
+/// `Load` over the saved game's file (`host` its primitives).
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`]; `host` accepts `ctx`.
+int32_t ee_cp_herd_load(void *herd,
+                        EeHerdFields *f,
+                        uint32_t major,
+                        uint32_t minor,
+                        void *ctx,
+                        EeUnitsPlayerSaveFn host);
+
+/// `Save`.
+///
+/// # Safety
+/// As [`ee_cp_herd_load`].
+int32_t ee_cp_herd_save(void *herd,
+                        EeHerdFields *f,
+                        uint32_t major,
+                        uint32_t minor,
+                        void *ctx,
+                        EeUnitsPlayerSaveFn host);
+
+/// `RepairPointers`.
+///
+/// # Safety
+/// As [`ee_cp_herd_construct_default`].
+long ee_cp_herd_repair_pointers(void *herd, EeHerdFields *f, uint32_t major, uint32_t minor);
+
+/// The units' count (`mUnits.size()`).
+///
+/// # Safety
+/// `f` is a live record.
+size_t ee_cp_herd_unit_count(const EeHerdFields *f);
+
+/// Unit `i`'s handle (`mUnits[i]`: a unit id).
+///
+/// # Safety
+/// `f` is a live record; `i` below the count.
+uint32_t ee_cp_herd_unit_handle(const EeHerdFields *f, size_t i);
 
 extern int64_t ee_cp_player_host(const EeCpPlaceCtx *ctx,
                                  int32_t op,

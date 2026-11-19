@@ -14,6 +14,8 @@
 //! - `events`: `EEComputerPlayer`'s own bodies (the population cap, the centres' grouping, the favourite types,
 //!   the civilization's pick, the retired units, the pending epoch, `AvoidsEnemies`) over [`events::PlayerHost`];
 //! - `legacy_load`: the readers that step over a retail file's deleted C++ manager blocks (`EECPLegacyLoad.cpp`);
+//! - `herd`: `EEHerd` whole (its members as the record the class derives from, its lists, every body) over
+//!   [`herd::HerdHost`]; `herd_game`: its game host and C ABI;
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
 
 pub mod events;
@@ -22,6 +24,10 @@ mod events_tests;
 pub mod ffi;
 pub mod fields;
 pub mod file;
+pub mod herd;
+pub mod herd_game;
+#[cfg(test)]
+mod herd_tests;
 pub mod influence;
 pub mod init;
 pub mod legacy_load;

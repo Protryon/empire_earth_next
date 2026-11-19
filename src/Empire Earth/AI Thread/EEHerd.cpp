@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\AI Thread\EEHerd.cpp (file name inferred: no __FILE__; RTTI class EEHerd > EEAIArea,
 // vtable 0x43c2e8; the save key "EEHerd-SaveLoadData"). A herd of wild animals as an AI area: 0xa1910..0xa543d
-// (EECPWallManager/EEHerd boundary 0xa1910; EEHumanPlayer's ctor starts at 0xa543d). Every member is written; the
-// unit's template COMDATs (0xa4f09..0xa53e8: the media map's
-// _Tree members, vector<EEFormationSlot> back/pop_back/erase, the unit collector and its filter, EEPlayer::GetHerds
-// and its herd filter, EEAnimal::Get, HasUnit) follow from the source.
+// (EECPWallManager/EEHerd boundary 0xa1910; EEHumanPlayer's ctor starts at 0xa543d).
+// Port (the AI Thread cluster, round 2): the herd's bodies are Rust's (ee_sim::cp herd.rs); the class forwards to
+// them, and this file is the herd's host (ee_cp_herd_host): the units, the goals, the formations, the map, the
+// continent manager and the area the herd is.
 #include <windows.h>
 #include <vector>
 #include <deque>
@@ -44,7 +44,6 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAIRandom.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
@@ -53,12 +52,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
-#include <map>
-
-// port (save version 0.254): each loaded herd's area tiles as saved, from Load to RepairPointers, which takes them
-// instead of the animals' tiles now (the original rebuilt the area, its territory margin and leader from those at
-// load). A side table: the herd's layout stays the original's.
-static std::map<const EEHerd*, std::vector<U2DPoint<long> > > sLoadedTiles;
 #include "ee/EEUnitCollector.h"
 #include "ee/EEGlobalConstants.h"
 
@@ -90,637 +83,84 @@ struct EEHerdUnitFilter {
     bool mMoving;
 };
 
-// The other-herd filter of FollowNearestHerd (by value to EEPlayer::GetHerds; COMDAT 0xa536b): another herd of another animal
-// that is no predator, on the same continent (provisional name)
-struct EEHerdOtherHerdFilter {
-    EEHerdOtherHerdFilter(EEHerd* inHerd) : mHerd(inHerd) {}
-    bool operator()(EEHerd* inHerd) const
-    {
-        bool theResult = false;
-        if (inHerd != this->mHerd && inHerd->mAnimalID != this->mHerd->mAnimalID && inHerd->mAnimal != NULL && !inHerd->mAnimal->mIsPredator &&
-            inHerd->mContinent == this->mHerd->mContinent)
-            theResult = true;
-        return theResult;
-    }
-    EEHerd* mHerd;
-};
-
 const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
 // (EEWorld.cpp). Owner by placement only (EECalamity's statics start at 0x4e5e48): PROVISIONAL
 long gHerdUnreadValue = 0;
 
-// Creates an empty herd with no units, leader, target or path request
+static void* EEHerdSelf(EEHerd* inHerd)
+{
+    return static_cast<void*>(inHerd);
+}
+
 EEHerd::EEHerd()
 {
-    this->mLeader = NULL;
-    this->mTarget = NULL;
-    this->mPathRequest = NULL;
-    this->Clear();
+    ee_cp_herd_init(this);
+    this->SetAreaType(kAIAreaHerd);
+    ee_cp_herd_construct_default(EEHerdSelf(this), this);
 }
 
-// Creates a player's herd of one animal type, with its herd radius, birth timer and a random maximum size
 EEHerd::EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID)
 {
-    this->mLeader = NULL;
-    this->mPathRequest = NULL;
-    this->mTarget = NULL;
-    this->Clear();
-    this->mPlayer = inPlayer;
-    this->mID = inID;
-    this->mAnimalID = inAnimal;
-    this->mAnimal = EEAnimal::Get(inAnimal);
-    this->mPathRequest = NULL;
-    this->mRadiusSquared = this->mAnimal->GetHerdRadius() * this->mAnimal->GetHerdRadius();
-    this->mBreeds = this->mAnimal->mBreeds;
-    if (this->mBreeds)
-        this->mBirthTimer = gPhysics->GetRandom(this->mAnimal->GetMinBirthInterval(), this->mAnimal->GetMaxBirthInterval());
-    this->mMaxUnits = gPhysics->GetRandom(this->mAnimal->GetMinHerdSize(), this->mAnimal->GetMaxHerdSize());
+    ee_cp_herd_init(this);
+    this->SetAreaType(kAIAreaHerd);
+    ee_cp_herd_construct(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inPlayer, inAnimal, inID);
 }
 
-// Destroys the herd, releasing its units, looks, path request, leader and target
 EEHerd::~EEHerd()
 {
-    this->Clear();
+    ee_cp_herd_clear(EEHerdSelf(this), this);
+    ee_cp_herd_free(this);
 }
 
-// NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// Adds an animal (unchecked once the herd has tiles, else if CanTake accepts it) and sets its graze time; rebuilds
-// the area when it is adult or the territory is small; returns whether it was added
 bool EEHerd::AddUnit(EEComplexUnit* inUnit)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    bool theResult = false;
-    if (this->GetNumTiles() != 0 || this->CanTake(inUnit, true)) {
-        theResult = true;
-        if (inUnit->GetGrowth() != 1.0f)
-            this->mNumYoung++;
-        this->mContinent = gContinentManager.GetContinentID(inUnit);
-        inUnit->mReferenceCount++;
-        inUnit->SetHerd(this);
-        this->mUnits.push_back(inUnit);
-        this->mIsActive = inUnit->GetStats()->GetIsInitialized();
-        if (gPhysics) {
-            long theTime = gPhysics->GetGameTime();
-            inUnit->SetGrazeTime(theTime + gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()));
-        }
-        else
-            inUnit->SetGrazeTime(inUnit->GetGrazeTime() + this->GetAnimal()->GetMinGrazeTime());
-        for (long i = this->mUnits.size() - 1; i >= 0; i--)
-            theTiles.push_back(U2DPoint<long>(this->mUnits[i]->GetTileX(), this->mUnits[i]->GetTileY()));
-        this->SetUnitMedia((EEMedia*)inUnit->mStats->mModel, inUnit->mUnitID);
-        if (inUnit->GetGrowth() == 1.0f ||
-            (this->mBounds2.mRight - this->mBounds2.mLeft <= 4 && this->mBounds2.mBottom - this->mBounds2.mTop <= 4))
-            this->Create(theTiles);
-        if (inUnit->GetIsRegrowing())
-            this->mState = 10;
-    }
-    return theResult;
+    return ee_cp_herd_add_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
 }
 
-// Reacts to a hit animal: a predator strikes back at an attacker it can hurt one time in four, otherwise the
-// animal flees; then forgets its last attacker
 void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theAttacker = static_cast<EEComplexUnit*>(inUnit->mLastAttacker);
-    std::vector<EEComplexUnit*> theUnits;
-    theUnits.push_back(inUnit);
-    if (inUnit->mHerd->mAnimal->mIsPredator && !(gPhysics->mRandom.Generate() < 0.75f)) {
-        if (theAttacker && inUnit->mUnitClass->mAttack > 0) {
-            long theTarget = inUnit->mUnitClass->mAmmoType;
-            long theSource = theAttacker->mUnitClass->mFamily;
-            if (theAttacker->mUnitClass->CanBeAttacked() && EEDamageFactor(theSource, theTarget) > 0.0f)
-                this->Attack(theAttacker, theUnits);
-        }
-    } else
-        inUnit->mUnitClass->Flee(inUnit);
-    EEComplexUnit*& theAttackerRef = inUnit->mLastAttacker;
-    if (theAttackerRef)
-        theAttackerRef->Dereference();
-    theAttackerRef = NULL;
+    ee_cp_herd_handle_unit_hit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
 }
 
-// Orders each given animal to attack a target
-void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits)
-{
-    for (long i = inUnits.size() - 1; i >= 0; i--) {
-        EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnits[i], inTarget, true, false);
-        if (!this->GiveGoal(inUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
-            delete theGoal;
-    }
-}
-
-// The same over the herd's own list (mUnits holds handles since R5a.4; the list is read live, as the reference was)
-void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUnit> >& inUnits)
-{
-    for (long i = inUnits.size() - 1; i >= 0; i--) {
-        EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnits[i], inTarget, true, false);
-        if (!this->GiveGoal(inUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
-            delete theGoal;
-    }
-}
-
-// Returns whether an animal may stand on a tile: walkable terrain, passable units and no other herd member there
-bool EEHerd::CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile)
-{
-    bool theResult = false;
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(inTile);
-    if (theTile) {
-        long theType = theTile->mTerrainType;
-        theResult = inUnit->GetUnitClass()->CanMoveOnTerrain(inUnit, theType);
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode && theResult == true; theNode = theNode->mNext) {
-            EEComplexUnit* theOwner = theNode->mUnit->mComplexUnit;
-            theResult = theNode->mUnit->IsPassableBy(inUnit);
-            if (theResult == true && theOwner && inUnit->mHolder != theOwner && this->HasUnit(theOwner) &&
-                theOwner->mHolder != inUnit)
-                theResult = false;
-        }
-    }
-    return theResult;
-}
-
-// On a water continent, picks a random moving ship if the target is lost, then sends the herd to circle it or
-// to one of its next waypoints (index may be one past the last); returns whether there is a live moving target
-bool EEHerd::Chase()
-{
-    std::vector<EEComplexUnit*> theTargets;
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EEFormationSlot> theSlots;
-    GE3DPoint thePosition;
-    GE3DPoint theLocation;
-    bool theResult;
-    EEAIContinent* theContinent = gContinentManager.GetContinentFromID(this->mContinent);
-    if (theContinent && theContinent->GetCategory() == kContinentCategoryWater &&
-        !(this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0)) {
-        this->ReleaseTarget();
-        EEHerdUnitFilter theFilter(this->mContinent, false, true);
-        EEGetUnitsInRectangle(theContinent->GetHullBounds(), theTargets, theFilter, false);
-        if (theTargets.size() > 0) {
-            this->mTarget = theTargets[gPhysics->GetRandomElementIndex(theTargets)];
-            this->mTarget->mReferenceCount++;
-            this->mCenter = U2DPoint<long>(this->mTarget->GetTileX(), this->mTarget->GetTileY());
-        }
-    }
-    if (this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0) {
-        theResult = true;
-        EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
-        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
-        this->mTarget->GetPosition(thePosition);
-        theFormation->mCenter.mX = thePosition.mX;
-        theFormation->mCenter.mY = thePosition.mY;
-        theFormation->mCenter.mZ = thePosition.mZ;
-        theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
-        theFormation->Place(theUnits, theSlots);
-        while (theUnits.size() != 0) {
-            EEComplexUnit* theUnit = theUnits.back();
-            if (theUnit->GetTileX() != -10000 && !theUnit->GetIsDisabled()) {
-                float theHeading = 0.0f;
-                bool theFace = false;
-                if (theUnit->DistanceSquaredTo(this->mTarget) > 9.0f && theSlots.size() > 0) {
-                    long theIndex = gPhysics->GetRandomIndex(theSlots);
-                    theLocation = theSlots[theIndex].mPosition;
-                    theFace = true;
-                    theHeading = theSlots[theIndex].mHeading;
-                } else {
-                    long theWaypoint = gPhysics->GetRandom(1L, 7L);
-                    if (theWaypoint >= (long)this->mTarget->mWaypoints.size())
-                        theWaypoint = this->mTarget->mWaypoints.size();
-                    // the clamp above lands one past the last waypoint: that slot holds no waypoint, so it reads
-                    // as the zero location instead of past the end of the path
-                    if (theWaypoint < (long)this->mTarget->mWaypoints.size())
-                        theLocation = this->mTarget->mWaypoints[theWaypoint].mLocation;
-                    else
-                        theLocation = GE3DPoint(0.0f, 0.0f, 0.0f);
-                }
-                EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, true, theFace, theHeading, false, false);
-                if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
-                    delete theGoal;
-            }
-            theUnits.pop_back();
-        }
-    } else {
-        this->ReleaseTarget();
-        theResult = false;
-    }
-    return theResult;
-}
-
-// Queues for every herd animal a walk through all slots of a ring of the given radius around a tile on the
-// herd's continent; returns whether any animal was ordered
-bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
-{
-    bool theResult = false;
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EEFormationSlot> theSlots;
-    EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
-    GE3DPoint theCenter((float)inTile.mX + 0.5f, (float)inTile.GetY() + 0.5f, 0.0f);
-    if (gWorld.mMap->GetTile(inTile.mX, inTile.GetY())) {
-        float theZ = gWorld.mMap->mTerrainMesh.GetZ(inTile.mX, inTile.GetY());
-        if (theZ < 0.0f)
-            theCenter.mZ = theZ * 0.5f;
-    }
-    if ((unsigned long)inTile.mX < gMapWidth && (unsigned long)inTile.GetY() < gMapHeight &&
-        gContinentManager.GetContinentID(inTile.mX, inTile.GetY()) == this->mContinent) {
-        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
-        theFormation->mCenter = theCenter;
-        theFormation->mMinRadius = (float)inRadius;
-        theFormation->Place(theUnits, theSlots);
-        while (theUnits.size() != 0) {
-            if (theUnits.back()->mTileX != -10000 && !theUnits.back()->mIsDisabled) {
-                theResult = true;
-                for (long i = theSlots.size() - 1; i >= 0; i--) {
-                    EEUGRust* theGoal = EEUGRust::NewLocation(&theSlots[i].mPosition, true, false, true,
-                                                             theSlots[i].mHeading, false, false);
-                    if (!this->GiveGoal(theUnits.back(), theGoal, 1, kActionPrepareToMove) && theGoal)
-                        delete theGoal;
-                }
-            }
-            theUnits.pop_back();
-        }
-    }
-    theFormation->Dereference();
-    return theResult;
-}
-
-// On a water continent, picks a random fishing boat as target and circles the herd around it; returns whether
-// the herd was ordered
-bool EEHerd::Hunt()
-{
-    std::vector<EEComplexUnit*> theUnits;
-    bool theResult = false;
-    EEAIContinent* theContinent = gContinentManager.GetContinentByID(this->mContinent);
-    if (!theContinent || theContinent->GetCategory() != kContinentCategoryWater)
-        return theResult;
-    this->ReleaseTarget();
-    this->GetPrey(this->mContinent, theUnits);
-    if (theUnits.size() <= 0)
-        return theResult;
-    this->mTarget = theUnits[gPhysics->GetRandomElementIndex(theUnits)];
-    this->mTarget->mReferenceCount++;
-    this->mCenter = this->mTarget->GetTile();
-    U2DPoint<long> theTile(this->mTarget->GetTile());
-    theResult = this->MoveTo(theTile, gPhysics->GetRandom(2L, 5L));
-    return theResult;
-}
-
-// Resets the herd to empty: releases units, looks, path request, leader and target and zeroes timers and state
-void EEHerd::Clear()
-{
-    this->ClearUnits();
-    this->mBounds2.Clear();
-    this->mCenter = U2DPoint<long>(0, 0);
-    this->mAnimal = NULL;
-    this->mPlayer = NULL;
-    if (this->mPathRequest) {
-        gPathManager.CancelAutoPathRequest(this->mPathRequest);
-        this->mPathRequest->Dereference();
-        this->mPathRequest = NULL;
-    }
-    this->ReleaseLeader();
-    this->ReleaseTarget();
-    this->mNumYoung = 0;
-    this->mP94 = U2DPoint<long>(0, 0);
-    this->mFB8 = 0.0f;
-    this->mFollowTime = 0;
-    this->mGrazeAreaID = 0;
-    this->mState = 0;
-    this->mBirthTimer = 0;
-    this->mLE4 = 0;
-    this->mNextUpdateTime = 0;
-    this->mLD8 = 0;
-    this->mMaxUnits = 0;
-    this->mContinent = 0;
-    this->mID = 0;
-    this->mBreeds = false;
-    this->mLC8 = 0;
-    this->mChaseTime = 0;
-    this->mHuntTime = 0;
-    this->mAnimalID = 0x3e8;
-    this->mRadiusSquared = 0x169;
-    this->SetAreaType(kAIAreaHerd);
-    this->mIsActive = true;
-}
-
-// NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// Makes the animal with the most hit points the leader, giving it the leader look and restoring the old one's
-void EEHerd::PickLeader()
-{
-    EEComplexUnit* theBest = NULL;
-    for (unsigned long i = 0; i < this->mUnits.size(); i++) {
-        if (theBest) {
-            if (this->mUnits[i]->mHitPoints > theBest->mHitPoints)
-                theBest = this->mUnits[i];
-        } else
-            theBest = this->mUnits[i];
-    }
-    if (!theBest || theBest == this->mLeader)
-        return;
-    if (this->mAnimal->mMedia)
-        this->SetUnitMedia(this->mAnimal->mMedia, theBest->mUnitID);
-    if (this->mLeader)
-        this->SetUnitMedia((EEMedia*)this->mLeader->mStats->mModel, this->mLeader->mUnitID);
-    this->ReleaseLeader();
-    this->mLeader = theBest;
-    theBest->mReferenceCount++;
-}
-
-// NEAR: the margin point goes through EETileDistanceLess's copy ctor in the original (0x4d28b, the
-// U2DPoint<long> copy family)
-// Rebuilds the herd's area from tiles and, unless loading a saved game with a big territory, widens the
-// territory by a random margin; then picks the leader
-void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
-{
-    U2DPoint<long> theCorner;
-    EEAIArea::Create(inTiles);
-    if (gLoadingSavedGame && sLoadedTiles.count(this))   // port: a 0.254 save's area, territory and leader as saved
-        return;
-    if (!gLoadingSavedGame || (this->mBounds2.mRight - this->mBounds2.mLeft > 4 || this->mBounds2.mBottom - this->mBounds2.mTop > 4)) {
-        if (gLoadingSavedGame)
-            goto done;
-    }
-    this->mBounds2 = this->GetHullBounds();
-    {
-        long theMargin = gPhysics->GetRandom((this->mAnimal->GetMaxTerritoryMargin() - this->mAnimal->GetMinTerritoryMargin()) / 2, this->mAnimal->GetMaxTerritoryMargin());
-        U2DPoint<long> theLeftTop = this->mBounds2.GetTopLeft();
-        long theY = theLeftTop.mY - theMargin;
-        if (theY < 0)
-            theY = 0;
-        long theX = theLeftTop.mX - theMargin;
-        if (theX < 0)
-            theX = 0;
-        theCorner.mY = theY;
-        theCorner.mX = theX;
-        this->mBounds2.Extend(theCorner);
-        theCorner.mX = this->mBounds2.mRight + theMargin;
-        theCorner.mY = this->mBounds2.mBottom + theMargin;
-        this->mBounds2.Extend(theCorner);
-    }
-done:
-    this->PickLeader();
-}
-
-// Sends a free animal to a random standable tile (graze area, then territory) and sets its next graze time; its
-// young follow to nearby tiles, but those tests and graze-time resets use the parent, not the young
-void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
-{
-    std::vector<U2DPoint<long> > theTried;
-    GE3DPoint theLocation;
-    U2DPoint<long> theOther;
-    U2DPoint<long> theTile;
-    EEAIArea* theArea = gContinentManager.GetArea(this->GetGrazeAreaID());
-    bool theFound = false;
-    if (inUnit->GetHolder() != NULL)
-        return;
-    theTile.SetX(inUnit->GetTileX());
-    theTile.SetY(inUnit->GetTileY());
-    unsigned short theContinent = gContinentManager.GetContinentID(theTile.GetX(), theTile.GetY());
-    if (theArea) {
-        for (long i = 0; i < 15 && !theFound; i++) {
-            theTile = theArea->GetRandomPoint();
-            theFound = this->CanStandOn(inUnit, theTile);
-        }
-    }
-    for (long j = 0; j < 15 && !theFound; j++) {
-        theTile = this->GetRandomTile();
-        theFound = this->CanStandOn(inUnit, theTile);
-    }
-    if (!((unsigned long)theTile.GetX() < gMapWidth) || !((unsigned long)theTile.GetY() < gMapHeight) ||
-        gContinentManager.GetContinentID(theTile.GetX(), theTile.GetY()) != theContinent)
-        return;
-    theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-    theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-    EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f, false, false);
-    bool theMoved = this->GiveGoal(inUnit, theGoal, 0, kActionPrepareToMove);
-    if (!theMoved && theGoal)
-        delete theGoal;
-    inUnit->SetGrazeTime(gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()) + inTime);
-    if (!theMoved || inUnit->mHeldUnits.size() == 0)
-        return;
-    U2DPoint<long> theStart = theTile;
-    long theTop = max(theStart.GetY() - 1, 0);
-    long theLeft = max(theStart.GetX() - 1, 0);
-    long theLimit = gWorld.GetMap()->GetSize() - 1;
-    long theRight = min(theStart.GetX() + 1, theLimit);
-    long theBottom = min(theStart.GetY() + 1, theLimit);
-    for (long k = inUnit->mHeldUnits.size() - 1; k >= 0; k--) {
-        EEComplexUnit* theYoung = inUnit->mHeldUnits[k];
-        theTile = theStart;
-        if (theYoung->GetGrowth() > 0.79f) {
-            theFound = false;
-            for (long m = 0; !theFound && m < 5; m++) {
-                theOther.SetX(gPhysics->GetRandom(0, theRight - theLeft) + theLeft);
-                theOther.SetY(gPhysics->GetRandom(0, theBottom - theTop) + theTop);
-                if (std::find(theTried.begin(), theTried.end(), theOther) == theTried.end())
-                    theFound = this->CanStandOn(theYoung, theOther);
-            }
-            if (theFound) {
-                theTried.push_back(theOther);
-                theTile = theOther;
-            }
-        }
-        theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-        theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-        EEUGRust* theYoungGoal = EEUGRust::NewLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f,
-                                                      false, false);
-        if (!this->GiveGoal(theYoung, theYoungGoal, 0, kActionPrepareToMove) && theYoungGoal)
-            delete theYoungGoal;
-        theYoung->SetGrazeTime(gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()) + inTime);
-    }
-}
-
-// Picks the parent for a newborn: rarely (6.5%) one with one or two young, else an adult with no young (or
-// failing that one with young); NULL when the pick has more than two young
-EEComplexUnit* EEHerd::FindMother()
-{
-    EEComplexUnit* theResult = NULL;
-    EEComplexUnit* theBest = NULL;
-    long theCount = -1;
-    if (gPhysics->GetRandom() <= 0.065f) {
-        for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-            if (this->mUnits[i]->GetTileX() == -10000 || this->mUnits[i]->mIsDisabled || this->mUnits[i]->mHeldUnits.size() <= 0 ||
-                this->mUnits[i]->mHeldUnits.size() > 2)
-                continue;
-            theResult = this->mUnits[i];
-            theCount = this->mUnits[i]->mHeldUnits.size();
-            break;
-        }
-    }
-    if (theResult == NULL) {
-        for (long j = this->mUnits.size() - 1; j >= 0; j--) {
-            if (this->mUnits[j]->mGrowth != 1.0f || this->mUnits[j]->GetTileX() == -10000 || this->mUnits[j]->mIsDisabled)
-                continue;
-            if (this->mUnits[j]->mHeldUnits.size() != 0) {
-                theBest = this->mUnits[j];
-                if (theCount < 0)
-                    theCount = this->mUnits[j]->mHeldUnits.size();
-                else if (theCount >= (long)this->mUnits[j]->mHeldUnits.size())
-                    theCount = this->mUnits[j]->mHeldUnits.size();
-            } else {
-                theResult = this->mUnits[j];
-                theCount = 0;
-                break;
-            }
-        }
-        if (theResult == NULL && theBest != NULL)
-            theResult = theBest;
-    }
-    if (theCount > 2)
-        theResult = NULL;
-    return theResult;
-}
-
-// Collects the herd animals that are not fully grown
-void EEHerd::GetYoungUnits(std::vector<EEComplexUnit*>& outUnits)
-{
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        if (this->mUnits[i]->mGrowth < 1.0f)
-            outUnits.push_back(this->mUnits[i]);
-    }
-}
-
-// Collects the living fishing boats within the herd's continent bounds (on inContinent unless it is 0)
-void EEHerd::GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits)
-{
-    EEHerdUnitFilter theFilter(inContinent, true, false);
-    EEAIHandleView<EEAIContinent> theContinents = gContinentManager.GetContinents();
-    EEAIContinent* theContinent = theContinents[this->mContinent];
-    if (theContinent)
-        EEGetUnitsInRectangle(theContinent->GetHullBounds(), outUnits, theFilter, false);
-}
-
-// Returns a random tile within the herd's territory rectangle
-U2DPoint<long> EEHerd::GetRandomTile()
-{
-    U2DPoint<long> thePoint;
-    long theX = gPhysics->GetRandom(0, this->mBounds2.mRight - this->mBounds2.mLeft);
-    thePoint.mX = this->mBounds2.mLeft + theX;
-    long theY = gPhysics->GetRandom(0, this->mBounds2.mBottom - this->mBounds2.mTop);
-    thePoint.mY = this->mBounds2.mTop + theY;
-    return thePoint;
-}
-
-// Gives a live, enabled, placed animal a goal and starts an action; returns false (goal not taken) otherwise
-bool EEHerd::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction)
-{
-    bool theResult = false;
-    if (inUnit && inUnit->mHitPoints > 0 && !inUnit->mIsDisabled && inUnit->mTileX != -10000) {
-        inUnit->SetGoal(inGoal, inKeepCurrent, 0);
-        inUnit->StartAction(inAction);
-        inUnit->mUnitClass->ActionChanged(inUnit);
-        theResult = true;
-    }
-    return theResult;
-}
-
-// Sends the hit animal (or the whole herd) to attack its last attacker, when it can hurt it
 void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
 {
-    std::vector<EEComplexUnit*> theUnits;
-    EEComplexUnit* theAttacker = static_cast<EEComplexUnit*>(inUnit->mLastAttacker);
-    if (!theAttacker || !(inUnit->mUnitClass->mAttack > 0))
-        return;
-    long theTarget = inUnit->mUnitClass->mAmmoType;
-    long theSource = theAttacker->mUnitClass->mFamily;
-    if (!theAttacker->mUnitClass->CanBeAttacked() || !(EEDamageFactor(theSource, theTarget) > 0.0f))
-        return;
-    if (inAll)
-        theUnits.assign(this->mUnits.begin(), this->mUnits.end());
-    else
-        theUnits.push_back(inUnit);
-    this->Attack(theAttacker, theUnits);
+    ee_cp_herd_attack_back(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit, inAll);
 }
 
-// Exact with EEAnimal +0x34 as a float read through GetGrowthStep(), the unit's mGrowth through GetGrowth(), `1.0f < x`
-// Grows a young animal by one growth step and schedules the next; once adult, its parent lets it go
-void EEHerd::GrowUnit(EEComplexUnit* inUnit)
+bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
 {
-    float theGrowth = this->mAnimal->GetGrowthStep() + inUnit->GetGrowth();
-    if (1.0f < theGrowth)
-        theGrowth = 1.0f;
-    inUnit->SetGrowth(theGrowth);
-    inUnit->SetGrowTime(gPhysics->mGameTime + this->mAnimal->GetGrowInterval());
-    if (!(inUnit->mGrowth >= 1.0f) || !inUnit->mHolder)
-        return;
-    this->mNumYoung--;
-    inUnit->mHolder->ReleaseHeld(inUnit);
-    if (inUnit->mHolder)
-        inUnit->mHolder->Dereference();
-    inUnit->mHolder = NULL;
+    return ee_cp_herd_can_take(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit, inCheckRange);
 }
 
-// NEAR: EEPlayer::mHerds is a vector<long> in ee/EEPlayer.h (EEHerd* elements): the herds go through casts here
-// Surrounds the animal nearest the leader in the nearest other non-predator herd on the continent; returns
-// whether the herd now has a target
-bool EEHerd::FollowNearestHerd()
+bool EEHerd::HasUnit(EEComplexUnit* inUnit)
 {
-    std::vector<EEHerd*> theHerds;
-    EEComplexUnit* theLeader = this->mLeader ? this->mLeader.Get() : this->mUnits[0].Get();
-    float theBest = 0.0f;
-    EEHerd* theBestHerd = NULL;
-    this->mPlayer->GetHerds(EEHerdOtherHerdFilter(this), theHerds);
-    this->ReleaseTarget();
-    for (long i = theHerds.size() - 1; i >= 0; i--) {
-        float theDistance = theHerds[i]->GetHullDistanceSquared(this);
-        if (theBest == 0.0f || theDistance <= theBest) {
-            theBestHerd = theHerds[i];
-            theBest = theDistance;
-        }
-    }
-    if (theBestHerd) {
-        EEComplexUnit* theTarget = NULL;
-        float theNearest = 0.0f;
-        for (long j = theBestHerd->mUnits.size() - 1; j >= 0; j--) {
-            float theDistance = theLeader->DistanceSquaredTo(theBestHerd->mUnits[j]);
-            if (theTarget == NULL || theDistance <= theNearest) {
-                theTarget = theBestHerd->mUnits[j];
-                theNearest = theDistance;
-            }
-        }
-        if (theTarget)
-            this->Surround(theTarget);
-    }
-    return this->mTarget != NULL;
+    return ee_cp_herd_has_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
 }
 
-// Updates the herd: grows the young that are due, runs the current state's handler and schedules the next update
+bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
+{
+    return ee_cp_herd_remove_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
+}
+
 void EEHerd::Update(unsigned long inTime)
 {
-    unsigned long theDelay = 1000;
-    if (this->mNumYoung != 0) {
-        this->mNumYoung = 0;
-        for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-            EEComplexUnit* theUnit = this->mUnits[i];
-            if (!(theUnit->mGrowth < 1.0f))
-                continue;
-            this->mNumYoung++;
-            if (theUnit->mGrowTime <= inTime)
-                this->GrowUnit(theUnit);
-        }
-    }
-    switch (this->mState) {
-    case 0:
-        theDelay = this->UpdateResting(inTime);
-        break;
-    case 2:
-        theDelay = this->UpdateSurrounding(inTime);
-        break;
-    case 3:
-        theDelay = this->UpdateAttacking(inTime);
-        break;
-    case 4:
-        theDelay = this->UpdateIdle(inTime);
-        break;
-    case 7:
-        theDelay = this->UpdateChasing(inTime);
-        break;
-    case 9:
-        theDelay = this->UpdateHunting(inTime);
-        break;
-    case 0xa:
-        theDelay = this->UpdateLeaving(inTime);
-        break;
-    }
-    this->mNextUpdateTime = theDelay + inTime;
+    ee_cp_herd_update(EEHerdSelf(this), this, inTime);
+}
+
+void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
+{
+    std::vector<EeHerdPoint> theTiles(inTiles.size());
+    for (size_t i = 0; i < inTiles.size(); i++)
+        theTiles[i] = EeHerdPoint{inTiles[i].mX, inTiles[i].mY};
+    ee_cp_herd_create(EEHerdSelf(this), this, theTiles.data(), theTiles.size());
+}
+
+U2DPoint<long> EEHerd::GetRandomPoint()
+{
+    EeHerdPoint thePoint;
+    ee_cp_herd_random_point(EEHerdSelf(this), this, &thePoint);
+    return U2DPoint<long>(thePoint.mX, thePoint.mY);
 }
 
 // Returns whether a unit is a placed animal or fish of a known animal type
@@ -730,635 +170,405 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
         EEAnimal::Find(inUnit->mUnitClass->mUnitType) && inUnit->mTileX != -10000 && inUnit->mTileY != -10000;
 }
 
-// Reads the herd from a saved game (ids for its animal, player, leader, target and units); returns the first read
-// error
 long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = 0;
-    unsigned long theCount = 0;
-    unsigned long theValue = 0;
-    theResult = inFile.Read(theValue);
-    this->mAnimal = reinterpret_cast<EEAnimal*>(theValue);
-    theValue = 0;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mPlayer = reinterpret_cast<EEPlayer*>(theValue);
-    }
-    theValue = -1;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mLeader = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
-    }
-    theValue = -1;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mTarget = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
-        if (theResult == 0)
-            theResult = this->mBounds2.Load(inFile);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mID);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mFB8);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mBreeds);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mAnimalID);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mGrazeAreaID);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mState);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mBirthTimer);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLE4);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mNextUpdateTime);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLD8);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mRadiusSquared);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mMaxUnits);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mContinent);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mFollowTime);
-        if (theResult == 0)
-            theResult = this->mCenter.Load(inFile);
-        if (theResult == 0)
-            theResult = this->mP94.Load(inFile);
-    }
-    theCount = 0;
-    // an earlier read error is kept (the unit count's result used to replace it)
-    if (theResult == 0)
-        theResult = inFile.Read(theCount);
-    if (theResult != 0)
-        return theResult;
-    this->mUnits.resize(theCount);
-    for (unsigned long i = 0; i < theCount; i++) {
-        theValue = 0;
-        if (theResult == 0) {
-            theResult = inFile.Read(theValue);
-            this->mUnits[i] = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);   // ids until RepairPointers
-        }
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(this->mHuntTime);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mChaseTime);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mLC8);
-    // port (0.254): the area's tiles (RepairPointers)
-    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        theCount = 0;
-        theResult = inFile.Read(theCount);
-        std::vector<U2DPoint<long> > theTiles;
-        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-            U2DPoint<long> theTile;
-            theResult = inFile.Read(theTile.mX);
-            if (theResult == 0)
-                theResult = inFile.Read(theTile.mY);
-            theTiles.push_back(theTile);
-        }
-        if (theResult == 0)
-            sLoadedTiles[this] = theTiles;
-    }
-    return theResult;
+    return ee_cp_herd_load(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &inFile,
+                           &EESaveFilePrimitive);
 }
 
-// Releases every herd animal (detaching those still in this herd) and forgets their looks
-void EEHerd::ClearUnits()
-{
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        if (this->mUnits[i]->mHerd == this) {
-            this->mUnits[i]->SetHerd(NULL);
-        }
-        this->mUnits[i]->Dereference();
-    }
-    this->mUnits.clear();
-    this->mMedia.clear();
-}
-
-// Unloads and forgets the look recorded for a unit
-void EEHerd::RemoveUnitMedia(unsigned long inKey)
-{
-    std::map<unsigned long, EEMedia*>::iterator theEntry = this->mMedia.find(inKey);
-    if (theEntry != this->mMedia.end()) {
-        theEntry->second->UnloadMedia();
-        this->mMedia.erase(theEntry);
-    }
-}
-
-// Drops the herd's reference to its leader
-void EEHerd::ReleaseLeader()
-{
-    if (this->mLeader)
-        this->mLeader->Dereference();
-    this->mLeader = NULL;
-}
-
-// Drops the herd's reference to its target
-void EEHerd::ReleaseTarget()
-{
-    if (this->mTarget)
-        this->mTarget->Dereference();
-    this->mTarget = NULL;
-}
-
-// Removes an animal from the herd (leader, herd link, look), rebuilding the area only once the herd is empty;
-// returns whether it was in the herd
-bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnitHandle<EEComplexUnit> >::iterator theEntry = std::find(this->mUnits.begin(), this->mUnits.end(), inUnit);
-    bool theResult = theEntry != this->mUnits.end();
-    if (theEntry == this->mUnits.end())
-        return theResult;
-    this->mUnits.erase(theEntry);
-    inUnit->Dereference();
-    for (long i = this->mUnits.size() - 1; i >= 0; i--)
-        theTiles.push_back(U2DPoint<long>(this->mUnits[i]->GetTileX(), this->mUnits[i]->GetTileY()));
-    if (inUnit == this->mLeader)
-        this->ReleaseLeader();
-    if (inUnit->mHerd == this && inUnit->mHerd != NULL)
-        inUnit->mHerd = NULL;
-    this->RemoveUnitMedia(inUnit->GetUnitID());
-    if (!gWorldClearing && theTiles.size() == 0)
-        this->Create(theTiles);
-    return theResult;
-}
-
-// NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// After a load, turns the saved ids back into player, animal, units, leader and target, restores the looks,
-// rebuilds the area and recounts the young; returns 0
-long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
-{
-    std::vector<EEComplexUnit*> theYoung;
-    std::vector<U2DPoint<long> > theTiles;
-    this->mPlayer = gWorld.GetPlayer(USavedID(this->GetPlayer()));
-    this->mAnimal = EEAnimal::sTable[USavedID(this->GetAnimal())];
-    if (this->GetAnimal())
-        this->mRadiusSquared = this->GetAnimal()->GetHerdRadius() * this->GetAnimal()->GetHerdRadius();
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        if (this->mUnits[i].GetSavedID() != 0xffffffff) {
-            unsigned long theID = this->mUnits[i].GetSavedID();
-            this->mUnits[i] = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theID)));
-            if (this->mUnits[i]) {
-                this->mUnits[i]->mReferenceCount++;
-                this->mUnits[i]->SetHerd(this);
-            }
-        } else
-            this->mUnits[i] = NULL;
-        if (this->mUnits[i] == NULL)
-            this->mUnits.erase(this->mUnits.begin() + i);
-    }
-    if (this->mUnits.size() > 0) {
-        if (!this->GetAnimal() || this->GetAnimal()->GetAnimalID() != this->mUnits[0]->GetUnitClass()->GetAnimalID())
-            this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->GetAnimalID());
-    }
-    if (this->mLeader.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
-        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mLeader.GetSavedID())));
-        if (this->GetLeader())
-            this->GetLeader()->mReferenceCount++;
-    } else
-        this->mLeader = NULL;
-    if (this->GetAnimal()) {
-        for (long j = this->mUnits.size() - 1; j >= 0; j--) {
-            this->SetUnitMedia((EEMedia*)this->mUnits[j]->GetStats()->mModel, this->mUnits[j]->GetUnitID());
-            if (this->mUnits[j]->mB34F && this->GetAnimal()->GetMedia())
-                this->SetUnitMedia(this->GetAnimal()->GetMedia(), this->mUnits[j]->GetUnitID());
-        }
-        if (!this->GetLeader() && this->GetAnimal()->GetHasLeader())
-            this->PickLeader();
-    }
-    if (this->mTarget.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mTarget.GetSavedID())));
-        if (this->GetTarget())
-            this->GetTarget()->mReferenceCount++;
-    } else
-        this->mTarget = NULL;
-    // port (0.263): a save with its continent regions keeps the saved continent (the last joining animal's, which
-    // CanTake compares): the first animal's tile at the load can be on another continent (a leaving herd's: a loaded
-    // game's herd refused an animal the continued game's took, seed 2's save at 1000 s)
-    if (this->mUnits.size() > 0 && !EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
-        this->mContinent = gContinentManager.GetContinentID(this->mUnits[0]);
-    for (long k = this->mUnits.size() - 1; k >= 0; k--)
-        theTiles.push_back(U2DPoint<long>(this->mUnits[k]->GetTileX(), this->mUnits[k]->GetTileY()));
-    if (sLoadedTiles.count(this))   // port: a 0.254 save's area as saved (Create keeps the territory and leader)
-        theTiles = sLoadedTiles[this];
-    this->Create(theTiles);
-    sLoadedTiles.erase(this);
-    this->GetYoungUnits(theYoung);
-    this->mNumYoung = theYoung.size();
-    return 0;
-}
-
-// Spawns a newborn held by a chosen parent (when one is found) and schedules the next birth; returns whether born
-bool EEHerd::GiveBirth(unsigned long inTime)
-{
-    EEComplexUnit* theParent = this->FindMother();
-    bool theResult = false;
-    if (theParent) {
-        EEUnitClass* theClass = this->mAnimal->GetUnitClass();
-        EEUnit* theUnit = theClass->CreateUnit(theParent->GetTileX(), theParent->GetTileY(),
-                                               theParent->mPlayer->GetPlayerID(), 0, NULL);
-        EEComplexUnit* theYoung = dynamic_cast<EEComplexUnit*>(theUnit);
-        theYoung->SetGrowth(this->mAnimal->GetNewbornGrowth());
-        theYoung->SetGrowTime(gPhysics->mGameTime + 4000);
-        theYoung->SetTargetSearchTimer(theClass->mTargetSearchInterval);
-        theParent->HoldUnit(theYoung);
-        theResult = true;
-    }
-    this->mBirthTimer = gPhysics->GetRandom(this->mAnimal->GetMinBirthInterval(), this->mAnimal->GetMaxBirthInterval()) + inTime;
-    return theResult;
-}
-
-// Writes the herd to the saved game (ids for its animal, player, leader, target and units); returns the first write
-// error
 long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = 0;
-    unsigned long theCount = 0;
-    unsigned long theValue = this->mAnimal->GetAnimalID();
-    theResult = outFile.Write(theValue);
-    theValue = this->mPlayer->mPlayerID;
-    if (theResult == 0)
-        theResult = outFile.Write(theValue);
-    theValue = this->mLeader == NULL ? -1 : this->mLeader->GetUnitID();
-    if (theResult == 0)
-        theResult = outFile.Write(theValue);
-    theValue = this->mTarget == NULL ? -1 : this->mTarget->GetUnitID();
-    if (theResult == 0) {
-        theResult = outFile.Write(theValue);
-        if (theResult == 0)
-            theResult = this->mBounds2.Save(outFile);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mID);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mFB8);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mBreeds);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mAnimalID);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mGrazeAreaID);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mState);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mBirthTimer);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mLE4);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mNextUpdateTime);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mLD8);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mRadiusSquared);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mMaxUnits);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mContinent);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mFollowTime);
-        if (theResult == 0)
-            theResult = this->mCenter.Save(outFile);
-        if (theResult == 0)
-            theResult = this->mP94.Save(outFile);
+    return ee_cp_herd_save(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &outFile,
+                           &EESaveFilePrimitive);
+}
+
+long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
+{
+    return ee_cp_herd_repair_pointers(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+}
+
+void EEHerd::GetUnits(std::vector<EEComplexUnit*>& outUnits)
+{
+    for (size_t i = 0, n = ee_cp_herd_unit_count(this); i < n; i++) {
+        EEComplexUnit* theUnit;
+        EEUnitHandleResolve(ee_cp_herd_unit_handle(this, i), theUnit);
+        outUnits.push_back(theUnit);
     }
-    theCount = this->mUnits.size();
-    // an earlier write error is kept (the unit count's result used to replace it)
-    if (theResult == 0)
-        theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < theCount; i++) {
-        theValue = this->mUnits[i]->mUnitID;
-        if (theResult == 0)
-            theResult = outFile.Write(theValue);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The herd's host (ee_sim::cp herd.rs EE_CP_HERD_*): `a`, `b` units (EEComplexUnit*), herds, animals or media
+
+static EEComplexUnit* EEHerdUnit(uint64_t inHandle)
+{
+    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inHandle);
+}
+
+static uint64_t EEHerdHandle(const void* inObject)
+{
+    return (uint64_t)(uintptr_t)inObject;
+}
+
+static void EEHerdPushUnits(void* inList, const std::vector<EEComplexUnit*>& inUnits)
+{
+    for (size_t i = 0; i < inUnits.size(); i++)
+        ee_cp_herd_push(inList, (int64_t)EEHerdHandle(inUnits[i]), 0, 0, 0);
+}
+
+static uint32_t EEHerdBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof(theBits));
+    return theBits;
+}
+
+// GiveGoal (0xa31b4): a live, enabled, placed animal takes the goal and starts the action; else the goal is deleted
+static bool EEHerdGiveGoal(EEComplexUnit* inUnit, EEUGRust* inGoal, bool inKeepCurrent, long inAction)
+{
+    if (inUnit && inUnit->mHitPoints > 0 && !inUnit->mIsDisabled && inUnit->mTileX != -10000) {
+        inUnit->SetGoal(inGoal, inKeepCurrent, 0);
+        inUnit->StartAction(inAction);
+        inUnit->mUnitClass->ActionChanged(inUnit);
+        return true;
     }
-    if (theResult == 0)
-        theResult = outFile.Write(this->mHuntTime);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mChaseTime);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mLC8);
-    // port (0.254): the area's tiles, so a loaded herd keeps its area, territory and leader (Load, RepairPointers)
-    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+    if (inGoal)
+        delete inGoal;
+    return false;
+}
+
+extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uint64_t inB, EeHerdIo* io)
+{
+    EEHerd* me = static_cast<EEHerd*>(inHerd);
+    EEComplexUnit* theUnit = EEHerdUnit(inA);
+    const int64_t* v = io->v;
+    switch (inOp) {
+    case EE_CP_HERD_UNIT: {
+        EeHerdUnit& r = io->unit;
+        r.unit_id = theUnit->mUnitID;
+        r.handle = EEUnitHandleID(theUnit);
+        r.tile_x = theUnit->mTileX;
+        r.tile_y = theUnit->mTileY;
+        r.hit_points = theUnit->mHitPoints;
+        r.growth = theUnit->mGrowth;
+        r.graze_time = theUnit->mGrazeTime;
+        r.grow_time = theUnit->mGrowTime;
+        r.command = theUnit->mCommand ? theUnit->mCommand->mType : 0;
+        r.waypoints = (int64_t)theUnit->mWaypoints.size();
+        r.held = (int64_t)theUnit->mHeldUnits.size();
+        r.holder = EEHerdHandle(theUnit->mHolder);
+        r.herd = EEHerdHandle(theUnit->mHerd);
+        r.player = EEHerdHandle(static_cast<EEPlayer*>(theUnit->mPlayer));
+        r.last_attacker = EEHerdHandle(theUnit->mLastAttacker);
+        r.model = EEHerdHandle((EEMedia*)theUnit->mStats->mModel);
+        r.attack = theUnit->mUnitClass->mAttack;
+        r.ammo_type = theUnit->mUnitClass->mAmmoType;
+        r.family = theUnit->mUnitClass->mFamily;
+        r.animal_id = theUnit->mUnitClass->GetAnimalID();
+        r.disabled = theUnit->mIsDisabled;
+        r.initialized = theUnit->GetStats()->GetIsInitialized();
+        r.has_goal = theUnit->GetGoal() != NULL;
+        r.regrowing = theUnit->GetIsRegrowing();
+        r.b34f = theUnit->mB34F;
+        r.can_be_attacked = theUnit->mUnitClass->CanBeAttacked();
+        return 0;
+    }
+    case EE_CP_HERD_RESOLVE: {
+        EEComplexUnit* theResolved;
+        EEUnitHandleResolve((uint32_t)v[0], theResolved);
+        return (int64_t)EEHerdHandle(theResolved);
+    }
+    case EE_CP_HERD_REF:
+        theUnit->mReferenceCount++;
+        return 0;
+    case EE_CP_HERD_DEREF:
+        theUnit->Dereference();
+        return 0;
+    case EE_CP_HERD_SET_HERD:
+        theUnit->SetHerd(reinterpret_cast<EEHerd*>((uintptr_t)inB));
+        return 0;
+    case EE_CP_HERD_SET_GRAZE:
+        theUnit->SetGrazeTime((unsigned long)v[0]);
+        return 0;
+    case EE_CP_HERD_SET_GROWTH:
+        theUnit->SetGrowth(io->f[0]);
+        return 0;
+    case EE_CP_HERD_SET_GROW_TIME:
+        theUnit->SetGrowTime((unsigned long)v[0]);
+        return 0;
+    case EE_CP_HERD_RANDOM_LONG:
+        return gPhysics->GetRandom((long)v[0], (long)v[1]);
+    case EE_CP_HERD_RANDOM_FLOAT:
+        io->f[0] = gPhysics->GetRandom(io->f[0], io->f[1]);
+        return 0;
+    case EE_CP_HERD_RANDOM:
+        io->f[0] = gPhysics->GetRandom();
+        return 0;
+    case EE_CP_HERD_GENERATE:
+        io->f[0] = gPhysics->mRandom.Generate();
+        return 0;
+    case EE_CP_HERD_GAME_TIME:
+        return gPhysics != NULL ? (int64_t)gPhysics->GetGameTime() : -1;
+    case EE_CP_HERD_CONTINENT_OF:
+        return gContinentManager.GetContinentID(theUnit);
+    case EE_CP_HERD_CONTINENT_AT:
+        return gContinentManager.GetContinentID((long)v[0], (long)v[1]);
+    case EE_CP_HERD_CONTINENT: {
+        unsigned short theID = (unsigned short)v[0];
+        EEAIContinent* theContinent = v[1] == 0 ? gContinentManager.GetContinentFromID(theID)
+            : v[1] == 1 ? gContinentManager.GetContinentByID(theID) : gContinentManager.GetContinents()[theID];
+        if (theContinent == NULL)
+            return 0;
+        const U2DRectangle<long>& theBounds = theContinent->GetHullBounds();
+        io->v[0] = theContinent->GetCategory();
+        io->v[1] = theBounds.mBottom;
+        io->v[2] = theBounds.mLeft;
+        io->v[3] = theBounds.mRight;
+        io->v[4] = theBounds.mTop;
+        return 1;
+    }
+    case EE_CP_HERD_AREA_POINT: {
+        U2DPoint<long> thePoint = reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint();
+        io->v[0] = thePoint.mX;
+        io->v[1] = thePoint.mY;
+        return 0;
+    }
+    case EE_CP_HERD_AREA:
+        return (int64_t)EEHerdHandle(gContinentManager.GetArea((unsigned long)v[0]));
+    case EE_CP_HERD_MAP_EDGE:
+        return (int64_t)EEHerdHandle(gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom));
+    case EE_CP_HERD_AREA_CREATE: {
+        const int64_t* theInput = reinterpret_cast<const int64_t*>(io->input);
         std::vector<U2DPoint<long> > theTiles;
-        this->GetTileSet().BuildPointList(theTiles, 1);
-        theCount = theTiles.size();
-        theResult = outFile.Write(theCount);
-        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-            theResult = outFile.Write(theTiles[i].mX);
-            if (theResult == 0)
-                theResult = outFile.Write(theTiles[i].mY);
-        }
+        for (size_t i = 0; i < io->input_len; i++)
+            theTiles.push_back(U2DPoint<long>((long)theInput[2 * i], (long)theInput[2 * i + 1]));
+        me->EEAIArea::Create(theTiles);
+        return 0;
     }
-    return theResult;
-}
-
-// Makes herd animals graze at once: all of them, or the first inIndex after an optional shuffle
-void EEHerd::ResetGrazeTimes(long inIndex, bool inShuffle)
-{
-    std::vector<EEComplexUnit*> theUnits(this->mUnits.begin(), this->mUnits.end());
-    if (inShuffle)
-        EEAIRandomShuffle(theUnits.begin(), theUnits.end());
-    if (inIndex >= 0 && inIndex < (long)theUnits.size())
-        theUnits.erase(theUnits.begin() + inIndex, theUnits.end());
-    for (long i = theUnits.size() - 1; i >= 0; i--)
-        theUnits[i]->SetGrazeTime(0);
-}
-
-// Records the look for a unit, loading it and unloading the one it replaces
-void EEHerd::SetUnitMedia(EEMedia* inMedia, unsigned long inKey)
-{
-    std::map<unsigned long, EEMedia*>::iterator theEntry = this->mMedia.find(inKey);
-    if (theEntry != this->mMedia.end()) {
-        if (inMedia != theEntry->second) {
-            theEntry->second->UnloadMedia();
-            theEntry->second = inMedia;
-            inMedia->LoadMedia();
-        }
-    } else {
-        inMedia->LoadMedia();
-        this->mMedia.insert(std::make_pair(inKey, inMedia));
+    case EE_CP_HERD_NUM_TILES:
+        return me->GetNumTiles();
+    case EE_CP_HERD_HULL_CONTAINS:
+        return me->HullContains(U2DPoint<long>((long)v[0], (long)v[1])) ? 1 : 0;
+    case EE_CP_HERD_CLOSEST_HULL: {
+        U2DPoint<long> thePoint = me->GetClosestHullPoint(U2DPoint<long>((long)v[0], (long)v[1]));
+        io->v[0] = thePoint.mX;
+        io->v[1] = thePoint.mY;
+        return 0;
     }
-}
-
-// Returns whether an animal may join: same player and animal type, room left, and no tiles yet or (inCheckRange)
-// on the herd's continent within the herd radius of its hull
-bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
-{
-    U2DPoint<long> theClosest;
-    U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-    bool theResult = false;
-    if (inUnit->mPlayer == this->mPlayer && EEHerd::IsAnimalOnMap(inUnit) && this->mAnimalID == inUnit->mUnitClass->mAnimalID && this->mUnits.size() < this->mMaxUnits) {
-        theResult = this->GetNumTiles() == 0;
-        if (!theResult && inCheckRange == true) {
-            unsigned short theID = gContinentManager.GetContinentID(theTile.mX, theTile.mY);
-            if (theID == this->mContinent || this->mContinent == 0) {
-                theResult = this->HullContains(theTile);
-                if (!theResult) {
-                    theClosest = this->GetClosestHullPoint(theTile);
-                    theResult = theClosest.DistanceToSquared(theTile) <= this->mRadiusSquared;
-                }
+    case EE_CP_HERD_HULL_BOUNDS: {
+        const U2DRectangle<long>& theBounds = me->GetHullBounds();
+        io->v[0] = theBounds.mBottom;
+        io->v[1] = theBounds.mLeft;
+        io->v[2] = theBounds.mRight;
+        io->v[3] = theBounds.mTop;
+        return 0;
+    }
+    case EE_CP_HERD_HULL_DISTANCE:
+        io->f[0] = reinterpret_cast<EEHerd*>((uintptr_t)inA)->GetHullDistanceSquared(reinterpret_cast<EEHerd*>((uintptr_t)inB));
+        return 0;
+    case EE_CP_HERD_BASE_POINT: {
+        U2DPoint<long> thePoint = me->EEAIArea::GetRandomPoint();
+        io->v[0] = thePoint.mX;
+        io->v[1] = thePoint.mY;
+        return 0;
+    }
+    case EE_CP_HERD_TILES: {
+        std::vector<U2DPoint<long> > theTiles;
+        me->GetTileSet().BuildPointList(theTiles, 1);
+        for (size_t i = 0; i < theTiles.size(); i++)
+            ee_cp_herd_push(io->list, theTiles[i].mX, theTiles[i].mY, 0, 0);
+        return 0;
+    }
+    case EE_CP_HERD_UNITS_IN_RECT: {
+        U2DRectangle<long> theRect;
+        theRect.mBottom = (long)v[0];
+        theRect.mLeft = (long)v[1];
+        theRect.mRight = (long)v[2];
+        theRect.mTop = (long)v[3];
+        std::vector<EEComplexUnit*> theUnits;
+        EEHerdUnitFilter theFilter((unsigned short)v[4], (v[5] & 1) != 0, (v[5] & 2) != 0);
+        EEGetUnitsInRectangle(theRect, theUnits, theFilter, false);
+        EEHerdPushUnits(io->list, theUnits);
+        return 0;
+    }
+    case EE_CP_HERD_FORMATION: {
+        std::vector<EEComplexUnit*> theUnits;
+        for (size_t i = 0; i < io->input_len; i++)
+            theUnits.push_back(EEHerdUnit(io->input[i]));
+        std::vector<EEFormationSlot> theSlots;
+        EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
+        GE3DPoint theCenter(io->f[0], io->f[1], io->f[2]);
+        if (v[0] == 0) {   // Chase (the original never released this formation)
+            theFormation->mCenter.mX = theCenter.mX;
+            theFormation->mCenter.mY = theCenter.mY;
+            theFormation->mCenter.mZ = theCenter.mZ;
+            theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
+            theFormation->Place(theUnits, theSlots);
+        } else if (v[0] == 1) {   // MoveTo
+            if (v[1] != 0) {
+                theFormation->mCenter = theCenter;
+                theFormation->mMinRadius = io->f[3];
+                theFormation->Place(theUnits, theSlots);
+            }
+            theFormation->Dereference();
+        } else {   // Surround
+            theFormation->SetCenter(theCenter);
+            theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
+            theFormation->Place(theUnits, theSlots);
+            theFormation->Dereference();
+        }
+        EEHerdPushUnits(io->list2, theUnits);
+        for (size_t i = 0; i < theSlots.size(); i++)
+            ee_cp_herd_push(io->list, EEHerdBits(theSlots[i].mPosition.mX), EEHerdBits(theSlots[i].mPosition.mY),
+                            EEHerdBits(theSlots[i].mPosition.mZ), EEHerdBits(theSlots[i].mHeading));
+        return 0;
+    }
+    case EE_CP_HERD_STAND: {   // CanStandOn 0xa1e75: walkable terrain, passable units and no other herd member there
+        U2DPoint<long> theAt((long)v[0], (long)v[1]);
+        bool theResult = false;
+        EETile* theTile = gWorld.mMap->GetTileAtLocation(theAt);
+        if (theTile) {
+            long theType = theTile->mTerrainType;
+            theResult = theUnit->GetUnitClass()->CanMoveOnTerrain(theUnit, theType);
+            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode && theResult == true; theNode = theNode->mNext) {
+                EEComplexUnit* theOwner = theNode->mUnit->mComplexUnit;
+                theResult = theNode->mUnit->IsPassableBy(theUnit);
+                if (theResult == true && theOwner && theUnit->mHolder != theOwner
+                    && std::find(io->input, io->input + io->input_len, EEHerdHandle(theOwner)) != io->input + io->input_len
+                    && theOwner->mHolder != theUnit)
+                    theResult = false;
             }
         }
+        return theResult ? 1 : 0;
     }
-    return theResult;
-}
-
-// Places the herd on a ring around a target, sending the nearest animal to each slot, and makes it the target
-void EEHerd::Surround(EEComplexUnit* inTarget)
-{
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EEFormationSlot> theSlots;
-    EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
-    GE3DPoint thePosition;
-    GE3DPoint theUnitPosition;
-    inTarget->GetPosition(thePosition);
-    theUnits.assign(this->mUnits.begin(), this->mUnits.end());
-    theFormation->SetCenter(thePosition);
-    theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
-    theFormation->Place(theUnits, theSlots);
-    while (theUnits.size() != 0 && theSlots.size() != 0) {
-        EEComplexUnit* theBest = NULL;
-        long theBestIndex = 0;
-        float theBestDistance = -1.0f;
-        for (long i = theUnits.size() - 1; i >= 0; i--) {
-            theUnits[i]->GetPosition(theUnitPosition);
-            float theDistance = theSlots.back().mPosition.DistanceToSquared(theUnitPosition);
-            if (theBestDistance != -1.0f && !(theDistance < theBestDistance))
-                continue;
-            theBest = theUnits[i];
-            theBestIndex = i;
-            theBestDistance = theDistance;
-        }
-        theUnits.erase(theUnits.begin() + theBestIndex);
-        EEUGRust* theGoal = EEUGRust::NewLocation(&theSlots.back().mPosition, true, false, true,
-                                                 theSlots.back().mHeading, false, false);
-        if (!this->GiveGoal(theBest, theGoal, 0, kActionPrepareToMove) && theGoal)
-            delete theGoal;
-        theSlots.pop_back();
+    case EE_CP_HERD_MEDIA_LOAD:
+        reinterpret_cast<EEMedia*>((uintptr_t)inA)->LoadMedia();
+        return 0;
+    case EE_CP_HERD_MEDIA_UNLOAD:
+        reinterpret_cast<EEMedia*>((uintptr_t)inA)->UnloadMedia();
+        return 0;
+    case EE_CP_HERD_ANIMAL:
+        return (int64_t)EEHerdHandle(EEAnimal::Get((long)v[0]));
+    case EE_CP_HERD_ANIMAL_FIELDS:
+        return (int64_t)EEHerdHandle(static_cast<EeDataAnimalFields*>(reinterpret_cast<EEAnimal*>((uintptr_t)inA)));
+    case EE_CP_HERD_ANIMAL_MEDIA:
+        return (int64_t)EEHerdHandle(reinterpret_cast<EEAnimal*>((uintptr_t)inA)->mMedia);
+    case EE_CP_HERD_FLEE:
+        theUnit->mUnitClass->Flee(theUnit);
+        return 0;
+    case EE_CP_HERD_DAMAGE_FACTOR:
+        io->f[0] = EEDamageFactor((long)v[0], (long)v[1]);
+        return 0;
+    case EE_CP_HERD_CLEAR_ATTACKER: {
+        EEComplexUnit*& theAttacker = theUnit->mLastAttacker;
+        if (theAttacker)
+            theAttacker->Dereference();
+        theAttacker = NULL;
+        return 0;
     }
-    inTarget->mReferenceCount++;
-    this->ReleaseTarget();
-    this->mTarget = inTarget;
-    this->mCenter = U2DPoint<long>(inTarget->mTileX, inTarget->mTileY);
-    theFormation->Dereference();
-}
-
-// Chase state: while the target lives and the chase timer runs, re-chases it once it moves 3 tiles;
-// otherwise ends the chase, sends the herd grazing and restarts the timer; returns 1000 ms
-unsigned long EEHerd::UpdateChasing(unsigned long inTime)
-{
-    U2DPoint<long> theTile;
-    bool theFollowing = true;
-    if (this->mTarget && this->mTarget->mHitPoints > 0 && this->mChaseTime > inTime) {
-        theTile = this->mTarget->GetTile();
-        if (theTile.DistanceToSquaredF(this->mCenter) > 9.0f) {
-            theFollowing = this->Chase();
-            this->mCenter = theTile;
-        }
-    } else
-        theFollowing = false;
-    if (theFollowing)
-        return 1000;
-    this->ReleaseTarget();
-    this->ResetGrazeTimes(this->mUnits.size(), true);
-    this->mState = 0;
-    this->mChaseTime = gPhysics->GetRandom(this->mAnimal->GetMinHuntInterval(), this->mAnimal->GetMaxHuntInterval()) + inTime;
-    return 1000;
-}
-
-// Hunt state: while the target lives and the hunt timer runs, re-circles it when it changes tile; otherwise, or
-// when circling fails, ends the hunt (grazing, timer restarted); returns 1000 ms
-unsigned long EEHerd::UpdateHunting(unsigned long inTime)
-{
-    U2DPoint<long> theTile;
-    // the hunt goes on while the target lives and the hunt timer runs; a dead target, an expired timer or a
-    // failed circling ends it
-    if (this->mTarget && this->mTarget->mHitPoints > 0 && this->mHuntTime > inTime) {
-        long theY = this->mTarget->mTileY;
-        theTile.mX = this->mTarget->mTileX;
-        theTile.mY = theY;
-        if (theTile == this->mCenter)
-            return 1000;
-        bool theFollowing = this->MoveTo(theTile, gPhysics->GetRandom(2L, 5L));
-        this->mCenter = theTile;
-        if (theFollowing)
-            return 1000;
+    case EE_CP_HERD_RELEASE_HOLDER:
+        theUnit->mHolder->ReleaseHeld(theUnit);
+        if (theUnit->mHolder)
+            theUnit->mHolder->Dereference();
+        theUnit->mHolder = NULL;
+        return 0;
+    case EE_CP_HERD_HELD:
+        return (int64_t)EEHerdHandle(theUnit->mHeldUnits[(size_t)v[0]]);
+    case EE_CP_HERD_WAYPOINT: {
+        const GE3DPoint& theLocation = theUnit->mWaypoints[(size_t)v[0]].mLocation;
+        io->f[0] = theLocation.mX;
+        io->f[1] = theLocation.mY;
+        io->f[2] = theLocation.mZ;
+        return 0;
     }
-    this->ReleaseTarget();
-    this->ResetGrazeTimes(this->mUnits.size(), true);
-    this->mState = 0;
-    this->mHuntTime = gPhysics->GetRandom(this->mAnimal->GetMinHuntInterval(), this->mAnimal->GetMaxHuntInterval()) + inTime;
-    return 1000;
-}
-
-// State 4 handler: does nothing; returns 1000 ms
-unsigned long EEHerd::UpdateIdle(unsigned long inTime)
-{
-    return 1000;
-}
-
-// Attack state: orders animals without a goal to attack the live target; else sends some grazing, sets the
-// follow timer to the rest interval from now and rests; returns 1000 ms
-unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
-{
-    if (this->mTarget && this->mTarget->mHitPoints > 0) {
-        for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-            if (this->mUnits[i]->GetGoal() != NULL)
-                continue;
-            EEUGRust* theGoal = EEUGRust::NewAttackUnit(this->mUnits[i], this->mTarget, true, false);
-            if (!this->GiveGoal(this->mUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
-                delete theGoal;
-        }
-    } else {
-        this->ResetGrazeTimes(gPhysics->GetRandomElementIndex(this->mUnits), true);
-        this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinRestInterval(), this->mAnimal->GetMaxRestInterval()) + inTime;
-        this->mState = 0;
+    case EE_CP_HERD_POSITION: {
+        GE3DPoint thePosition;
+        theUnit->GetPosition(thePosition);
+        io->f[0] = thePosition.mX;
+        io->f[1] = thePosition.mY;
+        io->f[2] = thePosition.mZ;
+        return 0;
     }
-    return 1000;
-}
-
-// Resting state: grazes idle animals, gives birth when due and may start a chase (animal 0xb), a hunt
-// (animal 0xa) or, for predators, following the nearest herd; returns 1000 ms
-unsigned long EEHerd::UpdateResting(unsigned long inTime)
-{
-    if (!this->mIsActive)
-        return 1000;
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        EEComplexUnit* theUnit = this->mUnits[i];
-        long theCommand = theUnit->mCommand ? theUnit->mCommand->mType : 0;
-        if (!theUnit->mIsDisabled && theUnit->mTileX != -10000 && (theCommand == kActionIdle || theCommand == kActionCircle) &&
-            this->mState == 0 && theUnit->mStats->mIsInitialized && theUnit->mGrazeTime < inTime && theUnit->mHolder == NULL)
-            this->Graze(theUnit, inTime);
+    case EE_CP_HERD_DISTANCE:
+        io->f[0] = theUnit->DistanceSquaredTo(EEHerdUnit(inB));
+        return 0;
+    case EE_CP_HERD_MAP_TILE:
+        return gWorld.mMap->GetTile((long)v[0], (long)v[1]) != NULL ? 1 : 0;
+    case EE_CP_HERD_MAP_TILE_AT:
+        return gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])) != NULL ? 1 : 0;
+    case EE_CP_HERD_HAS_MAP:
+        return gWorld.mMap != NULL ? 1 : 0;
+    case EE_CP_HERD_MAP_Z:
+        io->f[0] = gWorld.mMap->mTerrainMesh.GetZ((long)v[0], (long)v[1]);
+        return 0;
+    case EE_CP_HERD_MAP_SIZE:
+        io->v[0] = (int64_t)gMapWidth;
+        io->v[1] = (int64_t)gMapHeight;
+        io->v[2] = gWorld.GetMap()->GetSize();
+        return 0;
+    case EE_CP_HERD_BIRTH: {   // GiveBirth 0xa3d9c's newborn
+        EEAnimal* theAnimal = reinterpret_cast<EEAnimal*>((uintptr_t)inB);
+        EEUnitClass* theClass = theAnimal->GetUnitClass();
+        EEUnit* theNew = theClass->CreateUnit(theUnit->GetTileX(), theUnit->GetTileY(), theUnit->mPlayer->GetPlayerID(), 0, NULL);
+        EEComplexUnit* theYoung = dynamic_cast<EEComplexUnit*>(theNew);
+        theYoung->SetGrowth(theAnimal->GetNewbornGrowth());
+        theYoung->SetGrowTime(gPhysics->mGameTime + 4000);
+        theYoung->SetTargetSearchTimer(theClass->mTargetSearchInterval);
+        theUnit->HoldUnit(theYoung);
+        return 0;
     }
-    if (this->mBreeds && this->mUnits.size() < this->mMaxUnits && this->mBirthTimer < inTime)
-        this->GiveBirth(inTime);
-    if (this->mState == 0 && this->mAnimal->GetAnimalID() == 0xb && this->mChaseTime <= inTime) {
-        if (gPhysics->mRandom.Generate() <= 0.45f && this->Chase() && this->mTarget) {
-            this->mCenter = U2DPoint<long>(this->mTarget->mTileX, this->mTarget->mTileY);
-            this->mState = 7;
-        }
-        this->mChaseTime = gPhysics->GetRandom(this->mAnimal->GetMinHuntInterval(), this->mAnimal->GetMaxHuntInterval()) + inTime;
+    case EE_CP_HERD_CANCEL_PATH: {
+        UReferenceCounter* theRequest = reinterpret_cast<UReferenceCounter*>((uintptr_t)inA);
+        gPathManager.CancelAutoPathRequest(theRequest);
+        theRequest->Dereference();
+        return 0;
     }
-    if (this->mState == 0 && this->mAnimal->GetAnimalID() == 0xa && this->mHuntTime <= inTime) {
-        if (gPhysics->mRandom.Generate() <= 0.45f && this->Hunt() && this->mTarget) {
-            this->mCenter = U2DPoint<long>(this->mTarget->mTileX, this->mTarget->mTileY);
-            this->mState = 9;
-        }
-        this->mHuntTime = gPhysics->GetRandom(this->mAnimal->GetMinHuntInterval(), this->mAnimal->GetMaxHuntInterval()) + inTime;
+    case EE_CP_HERD_PLAYER_HERDS: {
+        EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inA);
+        for (long i = thePlayer->mHerds.size() - 1; i >= 0; i--)
+            ee_cp_herd_push(io->list, (int64_t)EEHerdHandle(thePlayer->mHerds[i]), 0, 0, 0);
+        return 0;
     }
-    if (!this->mAnimal->mIsPredator || !(this->mFollowTime <= inTime))
-        return 1000;
-    if (this->FollowNearestHerd())
-        this->mState = 2;
-    this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinFollowInterval(), this->mAnimal->GetMaxFollowInterval()) + inTime;
-    return 1000;
-}
-
-// Leaving state: sends each animal still on the map to an off-map tile near a random map-edge area; switches
-// to state 0xb once all are off the map; returns 1000 ms
-unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
-{
-    EEAIAStarBounds theBounds;
-    EEMap* theMap = gWorld.GetMap();
-    long theOffMap = 0;
-    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        EEComplexUnit* theUnit = this->GetUnitsAt(i);
-        bool theLeaving = false;
-        if (theMap->GetTile(UMFloor(theUnit->GetPhysicalModel().GetLocation().GetX()),
-                            UMFloor(theUnit->GetPhysicalModel().GetLocation().GetY()))) {
-            for (long j = theUnit->mGoalQueues[0].mGoals.size() - 1; j >= 0 && !theLeaving; j--) {
-                EEUGRust* theGoal = EELocationGoalCast(theUnit->mGoalQueues[0].mGoals[j]);
-                if (theGoal)
-                    theLeaving = theMap->GetTile(UMFloor(theGoal->GetLocation().GetX()), UMFloor(theGoal->GetLocation().GetY())) == NULL;
-            }
-            if (!theLeaving) {
-                U2DPoint<long> theExit;
-                EEAIArea* theArea = gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom);
-                if (theArea) {
-                    U2DPoint<long> thePoint = theArea->GetRandomPoint();
-                    theBounds.mLeft = thePoint.GetX();
-                    theBounds.mRight = thePoint.GetX();
-                    theBounds.mTop = thePoint.GetY();
-                    theBounds.mBottom = thePoint.GetY();
-                    theBounds.Grow(10, false);
-                    U2DPoint<long> theCorner = theBounds.GetTopLeft();
-                    if (!theMap->GetTile(theCorner.GetX(), theCorner.GetY()))
-                        theExit = theBounds.GetTopLeft();
-                    else {
-                        theCorner = theBounds.GetTopRight();
-                        if (!theMap->GetTile(theCorner.GetX(), theCorner.GetY()))
-                            theExit = theBounds.GetTopRight();
-                        else {
-                            theCorner = theBounds.GetBottomRight();
-                            if (!theMap->GetTile(theCorner.GetX(), theCorner.GetY()))
-                                theExit = theBounds.GetBottomRight();
-                            else {
-                                theCorner = theBounds.GetBottomLeft();
-                                if (!theMap->GetTile(theCorner.GetX(), theCorner.GetY()))
-                                    theExit = theBounds.GetBottomLeft();
-                                else
-                                    theExit.SetX(theExit.mY = -10000);
-                            }
-                        }
-                    }
-                } else
-                    theExit.SetX(theExit.mY = -10000);
-                EEUGRust* theExitGoal = EEUGRust::NewLocation((float)theExit.GetX() + 0.5f, (float)theExit.GetY() + 0.5f, 0.0f,
-                                                             true, true, false, 0.0f, false, false);
-                if (!this->GiveGoal(theUnit, theExitGoal, 0, kActionPrepareToMove) && theExitGoal)
-                    delete theExitGoal;
-            }
-        } else
-            theOffMap++;
+    case EE_CP_HERD_FIELDS_OF:
+        return (int64_t)EEHerdHandle(static_cast<EeHerdFields*>(reinterpret_cast<EEHerd*>((uintptr_t)inA)));
+    case EE_CP_HERD_GOALS:
+        return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
+    case EE_CP_HERD_GOAL_LOCATION: {
+        EEUGRust* theGoal = EELocationGoalCast(theUnit->mGoalQueues[0].mGoals[(size_t)v[0]]);
+        if (theGoal == NULL)
+            return 0;
+        io->f[0] = theGoal->GetLocation().GetX();
+        io->f[1] = theGoal->GetLocation().GetY();
+        return 1;
     }
-    if (theOffMap == this->mUnits.size())
-        this->mState = 0xb;
-    return 1000;
-}
-
-// Surround state: follows the target as it moves and attacks once the follow timer expires; rests again when
-// the target is gone; returns 2000 ms
-unsigned long EEHerd::UpdateSurrounding(unsigned long inTime)
-{
-    if (this->mTarget && this->mTarget->mHitPoints > 0) {
-        if (U2DPoint<long>(this->mTarget->mTileX, this->mTarget->mTileY) != this->mCenter)
-            this->Surround(this->mTarget);
-        if (this->mFollowTime <= inTime) {
-            this->Attack(this->mTarget, this->mUnits);
-            this->mState = 3;
-        }
-    } else {
-        this->ReleaseTarget();
-        this->ResetGrazeTimes(this->mUnits.size(), true);
-        this->mState = 0;
+    case EE_CP_HERD_PHYSICAL:
+        io->f[0] = theUnit->GetPhysicalModel().GetLocation().GetX();
+        io->f[1] = theUnit->GetPhysicalModel().GetLocation().GetY();
+        return 0;
+    case EE_CP_HERD_FLAGS:
+        return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
+    case EE_CP_HERD_GOAL_ATTACK:
+        return EEHerdGiveGoal(theUnit, EEUGRust::NewAttackUnit(theUnit, static_cast<EEUnit*>(EEHerdUnit(inB)), true, false), 0,
+                              kActionInitialAttackState) ? 1 : 0;
+    case EE_CP_HERD_GOAL_MOVE: {
+        GE3DPoint theLocation(io->f[0], io->f[1], io->f[2]);
+        EEUGRust* theGoal = v[4] != 0
+            ? EEUGRust::NewLocation(io->f[0], io->f[1], io->f[2], v[0] != 0, v[1] != 0, v[2] != 0, io->f[3], false, false)
+            : EEUGRust::NewLocation(&theLocation, v[0] != 0, v[1] != 0, v[2] != 0, io->f[3], false, false);
+        return EEHerdGiveGoal(theUnit, theGoal, v[3] != 0, kActionPrepareToMove) ? 1 : 0;
     }
-    return 2000;
-}
-
-// Returns a random map tile inside the hull (16 tries), else EEAIArea's random point
-// The vtable's +0x20 (0x43c2e8): EETown's body, ICF-folded into EETown::GetRandomPoint 0x4ac203 (no address of its own;
-// earlier attributed to EEAIArea). Its place in the unit is unknown.
-U2DPoint<long> EEHerd::GetRandomPoint()
-{
-    U2DPoint<long> theResult;
-    bool theFound = false;
-    EEMap* theMap = gWorld.mMap;
-    if (theMap != NULL) {
-        for (long i = 15; i >= 0 && !theFound; i--) {
-            theResult.mX = this->GetHullBounds().mLeft +
-                           gPhysics->GetRandom(0L, this->GetHullBounds().mRight - this->GetHullBounds().mLeft);
-            theResult.mY = this->GetHullBounds().mTop +
-                           gPhysics->GetRandom(0L, this->GetHullBounds().mBottom - this->GetHullBounds().mTop);
-            if (theMap->GetTileAtLocation(theResult))
-                theFound = this->HullContains(theResult);
-        }
+    case EE_CP_HERD_PLAYER: {
+        EEPlayer* thePlayer = gWorld.GetPlayer((unsigned long)v[0]);
+        return (int64_t)EEHerdHandle(thePlayer);
     }
-    if (!theFound)
-        theResult = EEAIArea::GetRandomPoint();
-    return theResult;
+    case EE_CP_HERD_PLAYER_ID:
+        return reinterpret_cast<EEPlayer*>((uintptr_t)inA)->mPlayerID;
+    case EE_CP_HERD_UNIT_BY_ID:
+        return (int64_t)EEHerdHandle(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)v[0]))));
+    case EE_CP_HERD_SAVE_FLAGS:
+        return (EESaveHasLiveState((unsigned long)v[0], (unsigned long)v[1]) ? 1 : 0)
+            | (EESaveHasContinentRegions((unsigned long)v[0], (unsigned long)v[1]) ? 2 : 0);
+    case EE_CP_HERD_ANIMAL_ON_MAP:
+        return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
+    }
+    return 0;
 }
