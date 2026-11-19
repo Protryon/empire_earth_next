@@ -10,7 +10,7 @@
 #include "lle/UIRadioButton.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSERBBrush.h"
+#include "ee/EEUIShell.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
@@ -89,8 +89,8 @@ EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& in
     ioIndex = theIndex;
     this->mTitle = static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(theControls[0]));
     for (unsigned long i = 0; i < 5; i++)
-        this->mButtons[i] = static_cast<EEUIFSERBBrush*>(reinterpret_cast<UIControl*>(theControls[i + 1]));
-    this->mBrushSize = this->mButtons[0]->mBrushSize;
+        this->mButtons[i] = reinterpret_cast<UIControl*>(theControls[i + 1]);
+    this->mBrushSize = (unsigned long)EEUIShell::Op(this->mButtons[0], EE_SCREENS_SKOP_BRUSH_SIZE);
     this->mIsCentered = false;
 }
 

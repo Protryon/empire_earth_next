@@ -65,7 +65,6 @@
 #include "ee/EESMCondition.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUIFSEMainButton.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EESEARust.h"
@@ -83,6 +82,7 @@
 #include "ee/EEUIFSETerrain.h"
 #include "ee/EESEInstructions.h"
 #include "rust/game/screens.h"
+#include "ee/EEUIShell.h"
 #include "rust/sim/scenario.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;
@@ -479,9 +479,14 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         const EeScreensSefmButton& b = *static_cast<const EeScreensSefmButton*>(p[2]);
         UIButton* t;
         if (b.kind == 0) {
-            t = new EEUIFSEMainButton(b.id, (unsigned char)b.flag, theForm->GetButtonTexture(),
-                                      GE2DPoint(b.normal[0], b.normal[1]), GE2DPoint(b.pressed[0], b.pressed[1]),
-                                      GE2DPoint(b.rect[0], b.rect[1]), theForm, b.tab, b.index, b.checked != 0);
+            float theCells[4] = {b.normal[0], b.normal[1], b.pressed[0], b.pressed[1]};
+            uint32_t theBits[4];
+            memcpy(theBits, theCells, sizeof(theBits));
+            t = new EEUIShellRadio(EE_SCREENS_SK_MAIN_BUTTON,
+                                   {(int64_t)(unsigned char)b.flag, (int64_t)theForm->GetButtonTexture(), (int64_t)b.tab,
+                                    theBits[0], theBits[1], theBits[2], theBits[3]},
+                                   b.id, UWideString(""), gU531930, GERectangle(GE2DPoint(b.rect[0], b.rect[1]), 32.0f, 32.0f),
+                                   theForm, b.index, 0, false, b.checked != 0, false);
             t->SetStringTableID(b.help);
             theForm->AddControl(t, 0);
             *theOut = t;
@@ -566,9 +571,9 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
     case EE_SCREENS_SEFM_OP_RELEASE_GRAB_SCROLL: EEReleaseGrabScroll(1); return 0;
     case EE_SCREENS_SEFM_OP_TAB_CHECK:
         if (i[0])
-            static_cast<EEUIFSEMainButton*>(p[0])->CheckDirect();
+            EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_CHECK_DIRECT);
         else
-            static_cast<EEUIFSEMainButton*>(p[0])->Check();
+            static_cast<UIRadioButton*>(p[0])->Check();
         return 0;
     case EE_SCREENS_SEFM_OP_DEREFERENCE:
         switch (i[0]) {

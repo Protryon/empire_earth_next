@@ -37,6 +37,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/Graphics Thread/EEEffectHost.cpp",
                        # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
                        "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
+                       # the generic shells of the game's control classes whose logic is Rust (ee_game shells.rs; ee/EEUIShell.h)
+                       "Empire Earth/User Interface Thread/EEUIShell.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)

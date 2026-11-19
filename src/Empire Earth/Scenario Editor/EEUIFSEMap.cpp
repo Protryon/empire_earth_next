@@ -36,24 +36,15 @@
 #include "ee/EERules.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/game/screens.h"
+#include "ee/EEUIShell.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)
 
 // Releases the Create Map button and creates the map from the tab's settings
-void UIBMap::ButtonUp()
-{
-    UIButton::ButtonUp();
-    this->mMap->CreateMap();
-}
 
 // Selects a map kind (blank, random or seeded) and shows only that kind's controls; blank re-runs the elevation
 // file's selection event (editor_map.rs)
-void UIRBMap::Check()
-{
-    UIRadioButton::Check();
-    ee_screens_semp_kind(this->GetForm(), (uint32_t)this->GetId());
-}
 
 // Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the kind radio buttons, the
 // Create Map button and the elevation file controls (editor_map.rs)
@@ -140,8 +131,9 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SEMP_OP_MAKE_RADIO: {
         gResource->GetString((unsigned long)i[1], theText);
-        UIRBMap* t = new UIRBMap((unsigned long)i[0], theText, gSeplScreenFont, theLocation, 100.0f, (unsigned long)f[2],
-                                 theForm, (unsigned long)i[2], i[3] != 0);
+        UIRadioButton* t = new EEUIShellRadio(EE_SCREENS_SK_MAP_RADIO, {}, (unsigned long)i[0], theText, gSeplScreenFont,
+                                              GERectangle(theLocation, 100.0f, (float)(unsigned long)f[2]), theForm,
+                                              (unsigned long)i[2], 0, false, i[3] != 0, false);
         t->GetTextLabel()->SetBgOpacity(0.4f);
         SempColor(t->GetTextLabel()->GetGEText(), GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
         theForm->AddControl(t, 1);
@@ -149,8 +141,10 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SEMP_OP_MAKE_BUTTON: {
-        UIBMap* t = new UIBMap(0x65, theLocation, 260.0f, gSeplScreenFont->GetHeight() + 10.0f, theForm,
-                               (unsigned long)i[2], static_cast<EEUIFSEMap*>(p[2]));
+        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_MAP_BUTTON, {(int64_t)p[2]}, 0x65, NULL, NULL, NULL,
+                                          GERectangle(theLocation, 260.0f,
+                                                      (float)(unsigned long)(gSeplScreenFont->GetHeight() + 10.0f)),
+                                          theForm, (unsigned long)i[2], 2);
         t->SetBgOpacity(1.0f);
         theForm->AddControl(t, 1);
         *static_cast<UIControl**>(p[0]) = t;
