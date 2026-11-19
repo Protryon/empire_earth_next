@@ -128,6 +128,7 @@
 #include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
 #include "rust/sim/combat.h"
+#include "rust/sim/netmsg.h"   // the decisions' sweep
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -182,109 +183,39 @@ void EEActiveGroupCaptureSweep();          // the active groups' sweep (Units/EE
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
-// TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
-// games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
-// those formulas (and the reach and damage effect tests) over each player's newest 64 living units and their
-// neighbours: real stats, distances and timers, plus fixed variations. It reads the world and writes nothing back.
-// EECanHeal (CBCH: no game heals) runs over each pair both ways, a unit and itself, and a unit and the previous
-// player's newest unit.
+// TEST ONLY: the combat formulas' sweep of the simulation capture: Rust over the world views (ee_game sim_driver
+// combat_sweep.rs); its host: EECanHeal, a unit's position, a class's projectile
+static int32_t EECombatSweepHost(void*, uint32_t inOp, uint64_t inA, uint64_t inB, float* outValues)
+{
+    EEComplexUnit* a = (EEComplexUnit*)(uintptr_t)inA;
+    switch (inOp) {
+    case EE_SIM_DRIVER_COMBAT_CAN_HEAL: EECanHeal(a, (EEComplexUnit*)(uintptr_t)inB); return 0;
+    case EE_SIM_DRIVER_COMBAT_POSITION: {
+        GE3DPoint thePoint;
+        a->GetPosition(thePoint);
+        outValues[0] = thePoint.GetX();
+        outValues[1] = thePoint.GetY();
+        outValues[2] = thePoint.GetZ();
+        return 0;
+    }
+    case EE_SIM_DRIVER_COMBAT_PROJECTILE: {
+        EEUnitClass* theProjectile = ((EEUnitClassUpgrade*)(uintptr_t)inA)->mUnitClass->mProjectileClass;
+        if (theProjectile == NULL)
+            return 0;
+        outValues[0] = theProjectile->GetAcceleration();
+        return 1;
+    }
+    }
+    return 0;
+}
+
 static void EECombatCaptureSweep()
 {
-    const EECombatRules& theRules = EEGetRules().mCombat;
-    int32_t theTick = (int32_t)gPhysics->mTickTimeMs;
-    EEComplexUnit* theOtherPlayers = NULL;
-    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(p);
-        if (thePlayer == NULL)
-            continue;
-        std::vector<EEComplexUnit*> theAll;
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL)
-                theAll.push_back(theUnit->mComplexUnit);
-        size_t theFirst = theAll.size() > 64 ? theAll.size() - 64 : 0;
-        for (size_t i = theFirst; i + 1 < theAll.size(); i++) {
-            EEComplexUnit* a = theAll[i];
-            EEComplexUnit* b = theAll[i + 1];
-            EEUnitClassUpgrade* s = a->mStats;
-            EEUnitClassUpgrade* t = b->mStats;
-            EECanHeal(a, b);
-            EECanHeal(b, a);
-            EECanHeal(a, a);
-            if (theOtherPlayers != NULL)
-                EECanHeal(a, theOtherPlayers);
-            int32_t theHitPoints = (int32_t)a->mHitPoints;
-            int32_t theMax = (int32_t)s->mMaxHitPoints;
-            const int32_t kTimers[] = {(int32_t)a->mRegenerationTimer, 0, theTick, 1000};
-            const int32_t kHits[] = {theHitPoints, 0, theMax, theMax / 3 + 1};
-            for (int32_t theTimer : kTimers) {
-                EeCombatTimerIn theT = {theTimer, theTick, (int32_t)theRules.mRegenerationInterval};
-                EECombatTimer(theT);
-                for (int32_t theHp : kHits) {
-                    EeCombatRegenerateIn theR = {theTimer, theTick, theHp, (int32_t)s->mRegeneration, theMax,
-                                                 (int32_t)theRules.mRegenerationInterval};
-                    EECombatRegenerate(theR);
-                    theR.regeneration = 3;
-                    EECombatRegenerate(theR);
-                }
-            }
-            for (int32_t theHp : kHits) {
-                EeCombatHealIn theH = {theHp, (int32_t)t->mHealingPoints, theMax};
-                EECombatHeal(theH);
-                theH.healing = 7;
-                EECombatHeal(theH);
-                EeCombatDamageEffectIn theE = {theHp, theHp - (int32_t)t->mMaxHitPoints / 4, theMax, 0.5f};
-                EECombatDamageEffect(theE);
-            }
-            const uint32_t kElapsed[] = {0, 900, 999, 1000};
-            for (uint32_t theElapsed : kElapsed) {
-                EeCombatHealStepIn theS = {theElapsed, theTick};
-                EECombatHealStep(theS);
-                theS.tick_ms = 0;
-                EECombatHealStep(theS);
-            }
-            EeCombatConversionCostIn theC = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost), (int32_t)s->mPower};
-            EECombatConversionCost(theC);
-            const int32_t kWork[] = {(int32_t)a->mWorkTimer, 950, 999, -5};
-            for (int32_t theWork : kWork) {
-                for (int theAdaptation = 0; theAdaptation < 2; theAdaptation++) {
-                    EeCombatConversionIn theV = {theWork, gPhysics->mTickSeconds, t->mConversionResistance, theAdaptation,
-                                                 s->mConversionRate, b->mPlayer->mConversionFactor};
-                    EECombatConversion(theV);
-                    theV.resistance = 1.0f;
-                    theV.rate = 0.4f;
-                    EECombatConversion(theV);
-                }
-            }
-            float theDistance = a->DistanceSquaredTo(b);
-            EECombatWithinRange(theDistance, a->mUnitClass->mHealRange);
-            EECombatWithinRange(theDistance, s->mRange);
-            for (int theCrusader = 0; theCrusader < 2; theCrusader++) {
-                EeCombatRangeIn theG = {s->mRange, a->mUnitClass->mHealRange, theCrusader, theDistance,
-                                        b->mUnitClass->IsLandBuilding(), b->mUnitClass->mInnerCollisionSphere};
-                EECombatRange(theG);
-            }
-            for (int theFlags = 0; theFlags < 4; theFlags++) {
-                EeCombatReachIn theQ = {theDistance, a->mUnitClass->mInnerCollisionSphere,
-                                        b->mUnitClass->mInnerCollisionSphere, 0.0f, theFlags & 1, theFlags >> 1};
-                EECombatWorkReach(theQ);
-                EECombatGatherReach(theQ);
-            }
-            if (s->mUnitClass->mProjectileClass != NULL) {
-                GE3DPoint theFrom;
-                GE3DPoint theTo;
-                a->GetPosition(theFrom);
-                b->GetPosition(theTo);
-                for (int theHigh = 0; theHigh < 2; theHigh++) {
-                    EeCombatBallisticIn theB = {theFrom.GetX(), theFrom.GetY(), theFrom.GetZ(), theTo.GetX(), theTo.GetY(),
-                                                theTo.GetZ(), s->mLaunchSpeed,
-                                                s->mUnitClass->mProjectileClass->GetAcceleration(), theHigh};
-                    EECombatBallistic(theB);
-                }
-            }
-        }
-        if (!theAll.empty())
-            theOtherPlayers = theAll.back();
-    }
+    EeSimDriverCombatSweep theSweep = {(int32_t)gPhysics->mTickTimeMs, gPhysics->mTickSeconds,
+                                       (int32_t)EEGetRules().mCombat.mRegenerationInterval,
+                                       (int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost), NULL,
+                                       EECombatSweepHost};
+    ee_sim_driver_combat_sweep(&theSweep);
 }
 
 // TEST ONLY: the unit-list target search's sweep (CBSL). No game of the capture profiles reaches
@@ -1007,7 +938,13 @@ void HostSweep(int inKind, long inArg)
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
         EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
-        EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
+        {   // the Execute decisions' sweep (ee_sim netmsg decisions.rs): EEGetTradePrice's rates by resource
+            const float theRates[7] = {1.0f, 1.0f, gWorldTable.GetFloatValue(kWorldTradeRateFoodWood),
+                                       gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood),
+                                       gWorldTable.GetFloatValue(kWorldTradeRateStoneIron), 1.0f,
+                                       gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
+            ee_netmsg_capture_decision_sweep(theRates);
+        }
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
         EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)

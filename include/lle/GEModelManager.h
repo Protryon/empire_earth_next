@@ -4,7 +4,6 @@
 #ifndef LLE_GEMODELMANAGER_H
 #define LLE_GEMODELMANAGER_H
 
-#include <map>
 #include <stdint.h>
 #include "rust/render/ge.h"   // the manager (ee_ge manobj.rs), its host's EeGeManOp
 
@@ -27,7 +26,9 @@ public:
                             GEModel* inParent);
     void DumpAllLoadedMedia(FSFileSpec& inFile);
     unsigned long GetMemoryFootprint();     // exported, ICF-folded (0x10040123); the sum of the cached models' SizeOf()
-    GEModel* LoadModel(const UString& inName, std::map<unsigned long, long>& ioTextures);
+    // the frames the model shares (the original's std::map<unsigned long, long>: EEGraphicObject's frame maps) as
+    // ee_ge's slice, in frame order
+    GEModel* LoadModel(const UString& inName, const EeGeSharedFrames& inShared = EeGeSharedFrames{NULL, 0});
     long RemoveAllModels();
     long RemoveModel(GEModel* inModel);
     void SetModelPath(FSPath* inPath);

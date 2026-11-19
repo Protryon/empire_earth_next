@@ -4,7 +4,6 @@
 #ifndef EE_EEGRAPHICEFFECT_H
 #define EE_EEGRAPHICEFFECT_H
 
-#include <set>
 #include <vector>
 
 #include "rust/data/tables.h"
@@ -18,23 +17,18 @@ class FSFileSpec;
 class EEGraphicEffect : public UReferenceCounter, public EEMedia, public EeDataGraphicEffectFields {
 public:
     // the table of every effect by index (out-of-line COMDAT 0x432f: 0 past the end; vector 0x4e8424) (provisional
-    // name)
+    // name); the table (and the per-kind media and the not-preloaded ids) are ee_gfx geffect_table.rs'
     static EEGraphicEffect* Get(unsigned long inIndex);
-    // inline (out-of-line COMDAT 0x185a71 after its first user, EESETSETGame.cpp's GraphicEffect::Virtual14 loop)
-    // (provisional name)
-    static unsigned long GetCount() { return EEGraphicEffect::sEffects.size(); }
-    EEGraphicObject* GetGraphicObject() const { return this->mGraphicObject; }  // inline: the effects' Queue tail (0x4ebfd0)
+    // (inline in the original: COMDAT 0x185a71 after its first user, EESETSETGame.cpp's GraphicEffect::Virtual14 loop)
+    static unsigned long GetCount();
+    // port: the effect's table index (the count when it is not in the table: the captures')
+    static unsigned long IndexOf(const EEGraphicEffect* inEffect);
     EEGraphicEffect* GetLinkedEffect1() const { return this->mLinkedEffect1; }  // inline: 0x50225c
     EEGraphicEffect* GetLinkedEffect2() const { return this->mLinkedEffect2; }  // inline: 0x50225c
     long GetKind() const { return this->mKind; }  // inline: EEEffect2D::CreateParts 0x504623 (the kind loaded into edx after the animation's ?:)
     float GetSize() const { return this->mSize; }  // inline (the hurricane copies it through the FP stack)
-    // inline: the 3D effects load the parameters as values (EEE3DShield: `fld [+0x38]` twice for two copies, `fld
-    // [+0x28]; fmul st1`) (provisional names)
-    float GetStartSize() const { return this->mStartSize; }
+    // inline: the 3D effects load the parameters as values (provisional name)
     float GetParam2() const { return this->mParam2; }
-    float GetParam3() const { return this->mParam3; }
-    float GetParam4() const { return this->mParam4; }
-    float GetParam5() const { return this->mParam5; }
     // the unit EEGraphicEffect.cpp (0xd6bed..0xd72c1); the ctor copies a database record
     EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject);
     virtual ~EEGraphicEffect();             // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
@@ -45,7 +39,6 @@ public:
     static void UnloadTable();
     EEMedia* GetMedia();                    // 0xd7074 (the graphic object, or a random one of this effect's kind)
     static void SortMediaByKind();
-    void RecordNotPreloaded();              // 0xd723c (records the effect's id once)
     void Load(bool inIsOnDemand);           // 0xd7100 (counts a use at +0x80) (provisional name)
     void Unload();
 
@@ -55,19 +48,7 @@ public:
     EEGraphicEffect* mLinkedEffect1;       // +0x10 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect2;       // +0x14 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect3;       // +0x18 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    float GetParam9() const { return this->mParam9; }
-    float GetParam10() const { return this->mParam10; }
     long mNumLoads;                         // +0x80
-
-    // the table Get/GetCount read (0x4e8420: allocator byte, _First 0x4e8424, _Last 0x4e8428; a class static like
-    // Get) (provisional name)
-    static std::vector<EEGraphicEffect*> sEffects;
-    // the media of each kind (0x4e7f98, 0x48 kinds): a class static, its atexit dtor shares sEffects' guard
-    // byte 0x4e8418 (provisional name)
-    static std::vector<EEMedia*> sMediaByKind[0x48];
-    // the effect ids (0x4e7f88): a class static, its atexit dtor shares sEffects' guard byte 0x4e8418
-    // (provisional name)
-    static std::set<unsigned long> sIDs;
 };
 
 // dbgfxeffects.dat effects by table index (EEGraphicEffect::Get; LoadTable 0x4d6e9e fills sEffects in file order)

@@ -32706,6 +32706,7 @@ WONCfgTable.inl and won_cfgtab_world.h (its own commit). tests/won/won_gui_test.
   GuiShell.cpp, the kinds' config and caller edits); the 23 MS widgets were small (a constructor and a paint each,
   over Rust objects already: about 1,000 lines with their headers and units). The WON skin, the dialogs and the
   logic-bearing widgets are the next ~1,500 and need the frame and image host ops above.
+
 ## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
 
 Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
@@ -32731,3 +32732,190 @@ and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `
 - Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
   "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
   class view.
+
+## The app cluster, round 2: the simulation capture's writer and the cluster's TEST ONLY world readers in Rust over the world views (ee_sim app capture.rs, player_capture.rs; ee_sim netmsg decisions.rs; ee_game sim_driver combat_sweep.rs, digest.rs; ee_game app map_capture.rs; branch rust-app2, 2026-11-19)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 34aeea572 | the simulation capture's writer whole in Rust; EESimCapture.cpp deleted, ee/EESimCapture.h's class forwards | +14 -117, net -103 |
+| f2c1d5517 | NMDC (the Execute decisions' records: the tables and the players' part) in Rust over the views | +12 -166, net -154 |
+| d1775c963 | the combat formulas' capture sweep in Rust over the views (a three-case host) | +31 -101, net -70 |
+| d767da9be | the editor gate's world digest (the map, the mesh, the units) in Rust | +6 -58, net -52 |
+| 0fa39a222 | MAPC and MAPS (the map records) in Rust over the views and the terrain mesh | +9 -82, net -73 |
+| edb7d311f | PLST (a player's state) in Rust over the views and the player's Rust objects | +3 -61, net -58 |
+| e7a9dbcd0 | clippy, rustfmt and a test of the round's Rust | Rust only |
+
+- **The capture's writer.** `EESimCaptureRecord` keeps its interface (379 users) as inline forwarders to
+  `ee_sim::app::capture`: the file opened once from `EE_SIM_CAPTURE`, the thread's "only" tags, the exclusive owner,
+  closed and held, the record written whole under a lock. The stream is still the C library's (`fopen(.., "wb")`,
+  `fwrite`, `fflush`): its buffer is flushed by `exit` as before, so a run that ends without `Flush` loses nothing.
+  Rust records go through `capture::commit` directly (the round's sweeps).
+- **Lesson: a private `extern "C"` block reaches the headers.** The C library's `fopen`, `fwrite` and `fflush`
+  declared in capture.rs went into `common.h` and `sim/app.h` (and would clash with `<stdio.h>`). They live in a
+  private module marked `/// cbindgen:ignore`.
+- **NMDC.** The decisions' tables and the players' part (the market prices both ways, the exchange steps, the takes,
+  every unit's disband refund) are Rust over the views; `EEGetTradePrice`'s rates come from the C++ caller (the world
+  table is C++). The Rust bodies' `EE_NETMSG_OP_DECISION` is one call of `ee_netmsg_capture_decision`.
+- **The combat sweep.** Each formula's record is the C++ wrappers' (the tag, the input record's bytes, the
+  output's). The host answers `EECanHeal` (the C++ records CBCH), a unit's `GetPosition` (virtual) and the stats'
+  class's projectile acceleration (no layout entry for `mProjectileClass`).
+- **The editor digest.** The map's tiles, the mesh (`ee_render::ge::tmobj`'s accessors over `GetRust()`), the units'
+  lines with the Microsoft library's `%a` (`0x1.hhhhhhhhhhhhhp+e`, a zero `0x0.0000000000000p+0`: the golden is
+  Windows'). Lesson: the editor's hash basis is 1469598103934665603, one digit short of FNV's 14695981039346656037;
+  the goldens are over it, so the Rust keeps it.
+- **MAPC, MAPS, PLST.** The rectangle hash, the scope's nesting (a Rust thread-local depth) and the sight hash read the
+  views and the mesh; a scope's map is passed by handle (CreateMap's is not yet the world's). PLST reads the player's
+  plain records, its statistics, events and queue (Rust objects).
+- **Tests.** app::capture 1, netmsg::decisions 1, sim_driver::combat_sweep 1, sim_driver::digest 1,
+  app::map_capture 1, app::player_capture 1.
+- **Behaviour:** none. All of it is TEST ONLY: only EE-SIM's captures, the editor gate and the civilization builder
+  gate reach it (no tour or game draws through it).
+- **Not done: the round's items 2 to 5** (EEWorld whole, EEPlayer and Persistent whole, Communications over ee_net,
+  Empire Earth.cpp). What is left there is object wiring over other lanes' C++ classes (the map, the managers, the
+  UI, the units, the computer players), as rounds 1 and 2 measured: moving it into Rust moves each line into a host
+  case, about zero net. EEPlayer's members are read in 246 files by every lane; its state is already Rust records
+  (`EeUnitsRtsPlayerFields`, `EeUnitsPlayerSaved`, `EeUnitsPlayerFields`, the statistics, events and queue), and
+  what is left in EEPlayer.cpp is small bodies over the selection, the towns and the units' C++ objects. EEMessage's
+  and EEServer's remaining code is already a host of world and UI calls (`EENetMsgWorldAct`, `EESessionHost`).
+  `PlayersDigest` and CHEF read the players' names and upgrade levels and the computer players' switches, which are
+  C++ members: a host of the same size.
+- **Gates** (origin/rust 67f1b9880, nothing newer to merge): both builds 0/0 (the test profile too), the Rust gate
+  PASS (an earlier run failed once in ee_base's `fs::golden_spec_replays` under load, as in round 1; the reruns
+  pass), the oracle identical on seeds 2-7, every capture profile at seeds 2-3 PASS (oracle 212, late 214, space 210,
+  calamity 222, app 26, scenario 43, effects 6, groups 2, missile 22, placement 4, transport 185, units 175 digests),
+  the editor gate (14,448 lines) and the civilization builder gate (4,062) PASS, the plain saveload 18/18 identical,
+  the matrix `saveload expect: PASS`, scenario_check 27/27, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game
+  outcome time-cap PT 13072` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT
+  host=2755 joiner=2758`, GATES PASS. No fixture or start-up code changed: no separate fixture session.
+- **Short of the target**: net -510 C++ against the 3,000 asked.
+
+## The Graphics + LLE cluster, round 3: the graphic objects' media and the effects' tables in Rust, RFIL and the units' frame over one view of the render lists, the raster table's model and texture calls Rust to Rust, the line picks, the mouse and viewport readers (ee_gfx gobj_media.rs, geffect_table.rs, rfil.rs, units_lists.rs, raster_direct.rs, input_views.rs; ee_ge map_raise.rs; branch rust-gfx-cluster3, 2026-11-19)
+
+The third round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
+
+- **A load in Rust, the lock and the C++ part lists in C++.** `EEGraphicObject::LoadMedia` / `UnloadMedia` are
+  `ee_gfx_gobj_load` / `ee_gfx_gobj_unload` inside the C++'s `EEMediaAcquire` / `EEMediaRelease` (the lock and the
+  use count stay `EEMediaUse.h`'s). The Rust reaches the model manager, the texture manager, the textures' stages and
+  the references directly (the managers are their Rust object alone: `cppobj::plain`; a model or texture is
+  `CppCounted`), and asks one host table (`EeGfxGobjHost`) for what is C++: the sounds' virtual `LoadMedia`, and the
+  part scan's `new EETurretPart / EEOrbital / EEWheel` pushes (other lanes read those vectors). The scan itself
+  (`CollectParts`) walks the models in Rust over a `PartModels` trait, tested on fakes.
+  - **The shared-frames map is a slice.** `GEModelManager::LoadModel(name, std::map&)` became
+    `LoadModel(name, const EeGeSharedFrames&)` (frame order, as both of its consumers converted the map before):
+    the Rust builds the maps with `BTreeMap::entry().or_insert` (a `std::map::insert` keeps the first value). The
+    store gate's caller (tools/eemodel/storegate) passes a vector.
+  - **Mixed line endings.** EEARust.cpp is CRLF with one LF line: a Python edit that normalised the file and wrote it
+    back as CRLF changed that line. Edit such files with byte replacements, and check `git diff --stat` for lines
+    the edit did not mean to touch.
+- **The effects' tables as Rust statics.** `sEffects`, `sMediaByKind[0x48]` and `sIDs` are geffect_table.rs's
+  (`RwLock`/`Mutex`, never held across a call into C++: each walk copies its list first). `Load` / `Unload` recurse in
+  Rust and ask the `EEMedia` virtuals of a host; `GetMedia` keeps its draw in C++ (`gPhysics->GetRandom(0, n - 1)`,
+  the same call, then `ee_gfx_geffect_kind_at`). Other lanes' `std::find` over `sEffects` became
+  `EEGraphicEffect::IndexOf` (the count when absent, as `find - begin` was).
+- **One view of the render lists, two readers.** `EERenderListsView` (EERenderCapture.cpp) hands Rust the pools and
+  vectors in place (`EeGfxRfilLayout`: strides and member offsets) and the six multimaps flattened in their order;
+  RFIL (rfil.rs: the record byte for byte as the C++ wrote it) and the units' render object (units_lists.rs: the
+  records and indices ro_units.rs draws; `UnitRecord`, `ObjectRecord` and `UnitsFrame` are gone) both read it. The
+  world's key (the visible tiles' units) stays C++.
+  - **Trap (cbindgen):** a struct only reached through a `*const c_void` span is not emitted; give it a typed span
+    (`EeGfxRfilPairs`).
+  - **Trap (constants):** the C++ names (`kMovementAir`, `kUnitTypeWaypoint`) must be looked up, not recalled: a
+    first version had both wrong (EEUnitClassIDs.h: 1 and 0x104).
+- **The raster table loses its model, material, vertex, texture and state entries.** 60 of `gEERustRaster`'s lambdas
+  called the C++ shells' forwarders over Rust objects; `impl Raster for &EeGfxRaster` now makes those calls itself
+  (raster_direct.rs; the scroll and stretch scratch is Rust's). The rasterizer's state goes to the DX7 rasterizer's and
+  its base's Rust objects (`DX7Rasterizer::RustObjects`: the game's only rasterizer), the getters read the base's
+  screen record as the header's inline getters did; `SetFogType` is the base's (not overridden). The table keeps the
+  draws, the managers, the camera, the effect batches and the bars, and gains the screen and the rasterizer. The
+  `Raster` trait's mocks did not change: only the table's implementation did.
+  - **Trap (test builds):** dx7 rastobj.rs is `#[cfg(not(test))]` (it imports the C++); code the tests compile that
+    names it needs a stub module under `#[cfg(test)]` (never called there).
+- **The line picks** (`GetTileOnLine`, `GetLocationOnLine`) are map_raise.rs's over `LinePicks` (the tile, the mesh's
+  hit), writing the out-parameters exactly where the C++ did (a terrain hit's coordinates before its tile is looked up).
+- **Readers for the UI lane.** `EEMouse`'s constructor registers its members' addresses (`ee_gfx_input_mouse_set`)
+  and `EEGraphics` the main viewport: `ee_gfx::input_views::{mouse_position, set_mouse_position, mouse_pointer,
+  set_mouse_pointer, mouse_bounds, mouse_frozen, ..., main_viewport}` read and write them in place.
+
+What exercises what: the oracle (seeds 2-7) reaches the graphic objects' loads and the effects' tables (the units'
+graphics, the tag points and parts, the kind-only effects' random draw); the effects capture the effects' loads;
+only a tour reaches the textures' stages, the render lists' view, RFIL, the units' draw over units_lists.rs, the raster
+table's direct calls (every model, effect and shadow draw) and the line picks (the mouse over the map); nothing yet
+reads input_views.rs.
+
+## AI Thread cluster, round 2: the herd whole in Rust, the town's bodies, the computer player's lists (the resource centres whole, the history, the units to kill, the danger zones), EECPCombatManager deleted (ee_sim::cp herd.rs, town.rs, lists.rs; branch rust-aicluster3, 2026-11-19)
+
+The second round of the cluster lane (docs/progress/ai-thread-cluster.md). The brief's step 1 (the computer player
+whole) could only go as far as its state: EEComputerPlayer is an EEPlayer subclass whose overrides call EEPlayer's C++
+bodies and the units' methods, so the class stays until the player is Rust's; its lists and the resource centres
+moved, and the empty combat manager went. Step 2 (the herd and the town) is done; step 3 was not started.
+
+| Commit | What | Net C++ (src + include/ee) |
+|---|---|---|
+| 74f38768c | herd.rs: EEHerd whole over the herd's host (+425 -1,286) | -861 |
+| b24eda2e3 | other clusters' files: EEHerd::GetUnits (EEPlayer::KillHerdUnits), GetAnimal (EEUnitAI) | +1 |
+| 322b33a93 | EECPCombatManager deleted (its save blocks wrote nothing; HAS_COMBAT always true) | -106 |
+| 608b7605f | other clusters' files: its includes dropped (EEGameLog, Empire Earth, EEComplexUnit) | -3 |
+| 44a4cdb89 | town.rs: EETown's bodies over the town's host; ee_cp_area_host shared with the herd | -130 |
+| d050b0451 | the town's space category (4, not 3: AREA caught it) | 0 |
+| 7bbf8c69a | lists.rs: the resource centres whole, the history, the units to kill, the danger zones | -364 |
+| ad836b5a8 | other clusters' files: EEGameLog's EECPResourceCenter.h include | -1 |
+| | **round** | **-1,464** |
+
+Rust: herd.rs (2,027 lines), herd_game.rs, town.rs, town_game.rs, lists.rs, with 10 herd, 4 town and 2 lists unit
+tests (herd_tests.rs, town_tests.rs, lists_tests.rs); the centres' and the save's tests moved onto the Rust records.
+
+- **What moved.** (1) EEHerd: its members are the record `EeHerdFields` the class derives from (the original's names:
+  `mID`, `mState`, `mNextUpdateTime`, `mIsActive`, `mAnimalID` keep their readers in EEPlayer, EESMEffect, the
+  doppelganger and the continent save); its units (handles), looks by unit id and a loaded game's area tiles (the
+  original's side table) are Rust lists; every body is Rust over `HerdHost` (one batched unit read, the goals, the
+  inward circle, the map, the continent manager, the area the herd is). The class keeps Create and GetRandomPoint as
+  its vtable slots and the callers' members as forwarders. (2) EETown: its counters, continent, reach and flags are
+  `EeTownFields`; the owner and the patrol group stay typed members (their readers use them as C++ pointers); every
+  body but IsTownUnit is Rust. (3) The computer player's lists: `EeCpFields::mLists` (after `mAttackStarted`, so CPEV's
+  record hash and the saved fields are unchanged) holds the resource centres (EECPResourceCenter deleted: a centre is
+  a boxed `CpCenter` whose address is its handle, as the object's was), the favourite types' history, the units to
+  kill and the danger zones. (4) EECPCombatManager deleted.
+- **The forwarders' PLCE records from Rust.** The centres' members recorded PLCE in their C++ forwarders; the
+  forwarders are Rust now and open the same `EECPPlaceScope` through `ee_cp_scope_open`/`_word`/`_unit`/`_close`
+  (EECPPlaceCapture.cpp): the scope's depth and outer test stay the C++'s, so nested calls record nothing as before.
+  The capture's `Centers` and `Player` read the lists through `ee_cp_centers_digest` and `ee_cp_lists_digest`, the same
+  FNV-1a over the same words. The placement and oracle profiles' PLCE and CPEV are equal to their goldens.
+- **The centres' sort stays a C++ std::sort.** Its comparator asks both centres' GetCenter per comparison (each a
+  PLCE record), so the comparisons' sequence is the golden: the player host's SORT op sorts the handles with the
+  original's comparator over the Rust GetCenter and hands the order back; the Rust reorders its boxes.
+- **No borrow across a host call, again.** A herd's GiveBirth creates a unit whose placement runs the player's
+  AssignHerds, which adds the newborn to the same herd: the host comes back into the herd while its body runs. The
+  record and its lists are reached through the raw pointer for each read and write (indices, never iterators across a
+  call), as lane A's next state.
+- **Lesson: a capture tag outside the brief's list caught a constant.** The town commit was gated by the oracle seeds
+  2-3 only (identical); the round's later oracle capture failed AREA by 20 records a seed. A bisect (a build of the
+  town commit, one capture seed) put it on the town: its near-water test asked the cliffs (category 3) as if they were
+  space (4), one GetClosestPoints each, and could set the map-edge flag from a cliff. The flag is read by no oracle
+  decision, so the sim hash could not see it. Rule kept: a commit that touches the areas runs a capture before it is
+  called done.
+- **Lesson: a test fake that answers part of a trait.** The lists' forwarders read a centre directly and call the
+  bodies, which read it through the host; a fake host that keeps its own centres sees two different records. The
+  forwarders' unit tests were dropped for the captures (PLCE, CPEV) and pure tests of the records and digests.
+- **Lesson: stale logs.** build/ is shared with earlier lanes' files; a chain that writes build/b3.log, o3.log,
+  g1.log can be read before it runs (its until-loop matched another lane's g1.log). Name every log of the round
+  with the round's prefix.
+- **What runs it.** The oracle and every profile: the herds' grazing, births, growth, leaving the map, joining and
+  leaving, their areas and leaders (HERDCOV counts in a temporary build: thousands of each); the towns of every
+  game's buildings; the centres' grouping and their PLCE (placement profile: the boom and Age of AI verbs). The
+  units profile reached Chase and Hunt (water animals), the scenarios FollowNearestHerd. **No game reaches** a hit
+  animal (HandleUnitHit, AttackBack), Surround, MoveTo, the attack and surround states or a herd's random point:
+  no gate game's units attack animals, and the scenarios' predators found no prey. Those bodies are checked by unit
+  tests only (a predator's strike on a draw not below 0.75, the whole herd attacking back from the last, Surround's
+  nearest-to-each-slot order and the attack once the follow time is up).
+- **Behaviour.** None intended. The herd's Chase formation is still never released (the original's leak); the
+  combat manager's save blocks wrote nothing, so the saves are byte for byte as before.
+- **Gates.** Per step: both builds 0/0 and the oracle seeds 2-3 identical; the herd's captures at seeds 2-3 (transport,
+  late, space, oracle, groups, placement, units: PASS) on a build with a temporary herd coverage count; the lists'
+  placement and oracle captures. On the tree merged with origin/rust 00c2f7673 (merge f2810d42c: EEHerd.cpp's
+  conflict with the units round's formations, `EEFormation::Create(6)` with no cast, taken into the Rust host): both
+  builds and the test profile 0/0; the oracle seeds 2-7 identical; the Rust gate PASS (4,784 tests); all twelve
+  capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario
+  43, units 175, app 26, groups 2, placement 4, transport 185 digests); the plain saveload 18/18 identical; the matrix
+  (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS`;
+  scenario_check 27/27; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 38, 40],
+  alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).

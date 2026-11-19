@@ -16,7 +16,6 @@ public:
     virtual void SceneStarting();           // +0x04 0xe123d trivial: ret (ICF)
     virtual void RenderScene();             // +0x08 0x1131a4
     virtual void FrameDone();               // +0x0c 0xe123d trivial: ret (ICF)
-    virtual void Virtual14(long inArg1);    // +0x14 0x157269 NEW trivial: ret 4 (ICF)
 
     void StepGridMode(bool inBackwards);    // 0x1138a6: mGridMode cycles 0..0x11 (provisional name)
 

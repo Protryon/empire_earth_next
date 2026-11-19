@@ -11,6 +11,7 @@ use std::sync::Once;
 use super::*;
 use crate::gfx::effect_state::EeGfxEffectRecord;
 use crate::gfx::golden_fill_replay::{register_layout, FClass, FCommand, FPlayer, FStats, FUnit};
+use ee_data::media::EeDataMediaUse;
 
 #[repr(C)]
 pub(crate) struct FGobj {
@@ -24,6 +25,7 @@ pub(crate) struct FGobj {
     pub(crate) top_point: Ge3DPoint,
     pub(crate) turrets: [usize; 3],
     pub(crate) orbitals: [usize; 3],
+    pub(crate) media_use: EeDataMediaUse,
 }
 
 impl Default for FGobj {
@@ -39,6 +41,7 @@ impl Default for FGobj {
             top_point: Ge3DPoint::default(),
             turrets: [0; 3],
             orbitals: [0; 3],
+            media_use: EeDataMediaUse { mMediaCount: 0, mIsLoading: 0 },
         }
     }
 }
@@ -66,6 +69,7 @@ pub(crate) struct FGeffect {
     pub(crate) fields: EeDataGraphicEffectFields,
     pub(crate) object: usize,
     pub(crate) linked: [usize; 3],
+    pub(crate) num_loads: std::ffi::c_long,
 }
 
 pub(crate) fn register() {
@@ -95,6 +99,9 @@ pub(crate) fn register() {
             complex_turret_angles: offset_of!(FUnit, turret_angles) as u64,
             stats_model: offset_of!(FStats, model) as u64,
             geffect_linked: offset_of!(FGeffect, linked) as u64,
+            gobj_media_use: offset_of!(FGobj, media_use) as u64,
+            geffect_num_loads: offset_of!(FGeffect, num_loads) as u64,
+            ..Default::default()
         });
     });
 }

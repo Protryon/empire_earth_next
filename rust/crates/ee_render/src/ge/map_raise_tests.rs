@@ -200,3 +200,64 @@ fn on_a_space_map_an_edge_splits_into_the_runs_on_its_continent() {
     outline_edge((3, 5), (3, 6), 7, true, &mut |_, _| 1, &mut |r| runs.push(r));
     assert!(runs.is_empty());
 }
+
+// ---- the line picks
+
+struct Picks {
+    /// the tiles on the map: x and y in 0..4
+    terrain: Option<f32>,
+}
+
+impl LinePicks for Picks {
+    fn tile(&self, x: c_long, y: c_long) -> usize {
+        if (0..4).contains(&x) && (0..4).contains(&y) {
+            0x1000 + (y * 4 + x) as usize
+        } else {
+            0
+        }
+    }
+    fn terrain_hit(&self, _: &Ge3DLine) -> Option<f32> {
+        self.terrain
+    }
+}
+
+fn line(start: [f32; 3], direction: [f32; 3]) -> Ge3DLine {
+    Ge3DLine {
+        start: Ge3DPoint { x: start[0], y: start[1], z: start[2] },
+        direction: ee_base::math::types::GeVector { x: direction[0], y: direction[1], z: direction[2] },
+    }
+}
+
+#[test]
+fn a_line_picks_the_water_before_a_farther_terrain_hit() {
+    // from (0.5, 0.5, 2) down to (2.5, 2.5, -2): the water at t 0.5, (1.5, 1.5)
+    let down = line([0.5, 0.5, 2.0], [2.0, 2.0, -4.0]);
+    let far = Picks { terrain: Some(0.75) };
+    assert_eq!(tile_on_line(&far, &down, true), (0x1000 + 5, Some((1, 1))));
+    let (tile, at) = location_on_line(&far, &down, true);
+    assert_eq!((tile, at), (0x1000 + 5, Some(Ge3DPoint { x: 1.5, y: 1.5, z: 0.0 })));
+    // a nearer terrain hit wins: (1.0, 1.0) at 0.25
+    let near = Picks { terrain: Some(0.25) };
+    assert_eq!(tile_on_line(&near, &down, true), (0x1000 + 5, Some((1, 1))));
+    assert_eq!(location_on_line(&near, &down, true).1, Some(Ge3DPoint { x: 1.0, y: 1.0, z: 1.0 }));
+    // without the water the terrain's hit
+    assert_eq!(tile_on_line(&far, &down, false), (0x1000 + 10, Some((2, 2))));
+    // no terrain hit: the water's
+    let none = Picks { terrain: None };
+    assert_eq!(tile_on_line(&none, &down, true), (0x1000 + 5, Some((1, 1))));
+    assert_eq!(tile_on_line(&none, &down, false), (0, None));
+}
+
+#[test]
+fn a_pick_off_the_map_writes_the_terrain_hit_but_finds_no_tile() {
+    // the water off the map (x -1.5): not found; the terrain hit off the map too
+    let off = line([-3.5, 0.5, 2.0], [4.0, 0.0, -4.0]);
+    let picks = Picks { terrain: Some(0.1) };
+    assert_eq!(tile_on_line(&picks, &off, true), (0, Some((-4, 0))));
+    let (tile, at) = location_on_line(&picks, &off, true);
+    assert_eq!(tile, 0);
+    assert!(at.is_some());
+    // a line parallel to the water never meets it
+    let flat = line([0.5, 0.5, 1.0], [1.0, 0.0, 0.0]);
+    assert_eq!(tile_on_line(&Picks { terrain: None }, &flat, true), (0, None));
+}

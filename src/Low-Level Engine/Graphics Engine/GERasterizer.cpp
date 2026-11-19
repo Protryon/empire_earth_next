@@ -311,7 +311,6 @@ GERScreenState* GERasterizer::GetScreenState(unsigned long inScreen) const
 
 const GEColor& GERasterizer::GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
 float GERasterizer::GetAmbientIntensity() const { return GEBitsFloat(ee_ge_rast_get(this->mRust, EeGeRastVal::AmbientIntensity)); }
-unsigned long GERasterizer::GetCulling() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::Culling); }
 bool GERasterizer::GetIsActivated() const { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsActivated) != 0; }
 const UString& GERasterizer::GetName() const { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
 unsigned long GERasterizer::GetScreenCount() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }

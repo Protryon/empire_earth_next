@@ -31,7 +31,6 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPResourceCenter.h"
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECPPlaceCapture.h"
@@ -127,35 +126,13 @@ EECPPlaceScope& EECPPlaceScope::State(const EECPPlacement* inPlacement)
     return *this;
 }
 
-EECPPlaceScope& EECPPlaceScope::State(const EECPResourceCenter* inCenter)
-{
-    if (!this->mOn || inCenter == NULL)
-        return *this;
-    this->I((long)inCenter->mUnits.size());
-    for (size_t i = 0; i < inCenter->mUnits.size(); i++)
-        this->I((long)inCenter->mUnits[i].GetSavedID());
-    // (not mIsActive: a new centre's is uninitialized until its first SetActive; SetActive's record has the flag)
-    this->I((long)inCenter->mUnit.GetSavedID());
-    return *this;
-}
-
 EECPPlaceScope& EECPPlaceScope::Centers(const EEComputerPlayer* inPlayer)
 {
     if (!this->mOn || inPlayer == NULL)
         return *this;
-    uint64_t theHash = 0xcbf29ce484222325ull;
-    for (size_t k = 0; k < inPlayer->mResourceCenters.size(); k++) {
-        const EECPResourceCenter* theCenter = inPlayer->mResourceCenters[k];
-        if (theCenter == NULL) {
-            Fnv(theHash, -3);
-            continue;
-        }
-        Fnv(theHash, (long)theCenter->mUnits.size());
-        for (size_t i = 0; i < theCenter->mUnits.size(); i++)
-            Fnv(theHash, (long)theCenter->mUnits[i].GetSavedID());
-        Fnv(theHash, (long)theCenter->mUnit.GetSavedID());
-    }
-    return this->I((long)inPlayer->mResourceCenters.size()).I((long)(uint32_t)theHash).I((long)(uint32_t)(theHash >> 32));
+    uint32_t theDigest[3];   // the centres' count and FNV-1a 64 (ee_sim::cp lists.rs centers_digest)
+    ee_cp_centers_digest(inPlayer, theDigest);
+    return this->I((long)theDigest[0]).I((long)theDigest[1]).I((long)theDigest[2]);
 }
 
 EECPPlaceScope& EECPPlaceScope::Player(const EEComputerPlayer* inPlayer)
@@ -168,24 +145,38 @@ EECPPlaceScope& EECPPlaceScope::Player(const EEComputerPlayer* inPlayer)
     for (size_t i = 0; i < offsetof(EeCpFields, mAttackStarted) + sizeof(bool); i++)
         theHash = (theHash ^ theBytes[i]) * 0x100000001b3ull;
     this->I((long)(uint32_t)theHash).I((long)(uint32_t)(theHash >> 32));
-    theHash = 0xcbf29ce484222325ull;
-    for (size_t i = 0; i < inPlayer->mFavoriteTypeHistory.size(); i++) {
-        Fnv(theHash, (long)inPlayer->mFavoriteTypeHistory[i].first);
-        Fnv(theHash, inPlayer->mFavoriteTypeHistory[i].second);
-    }
-    this->I((long)inPlayer->mFavoriteTypeHistory.size()).I((long)(uint32_t)theHash);
-    this->I((long)inPlayer->mUnitsToKill.size()).I((long)inPlayer->mDangerZones.size());
-    theHash = 0xcbf29ce484222325ull;
-    for (size_t k = 0; k < inPlayer->mResourceCenters.size(); k++) {
-        const EECPResourceCenter* theCenter = inPlayer->mResourceCenters[k];
-        Fnv(theHash, (long)theCenter->mUnits.size());
-        for (size_t i = 0; i < theCenter->mUnits.size(); i++)
-            Fnv(theHash, (long)theCenter->mUnits[i].GetSavedID());
-        Fnv(theHash, (long)theCenter->mUnit.GetSavedID());
-        Fnv(theHash, theCenter->mIsActive ? 1 : 0);
-    }
-    this->I((long)inPlayer->mResourceCenters.size()).I((long)(uint32_t)theHash);
+    uint32_t theLists[6];   // the history, the units to kill, the danger zones, the centres (lists.rs lists_digest)
+    ee_cp_lists_digest(inPlayer, theLists);
+    this->I((long)theLists[0]).I((long)theLists[1]);
+    this->I((long)theLists[2]).I((long)theLists[3]);
+    this->I((long)theLists[4]).I((long)theLists[5]);
     if (inPlayer->mPlacement != NULL)
         this->I(inPlayer->mPlacement->mTownCenterTile.mX).I(inPlayer->mPlacement->mTownCenterTile.mY);
     return *this;
+}
+
+// The forwarders' scopes from Rust (ee_sim::cp lists.rs over place_game's host): one EECPPlaceScope each
+extern "C" void* ee_cp_scope_open(uint64_t inPlayer, uint32_t inMethod)
+{
+    return new EECPPlaceScope(inMethod, static_cast<EEComputerPlayer*>(reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)));
+}
+
+extern "C" bool ee_cp_scope_on(void* inScope)
+{
+    return static_cast<EECPPlaceScope*>(inScope)->On();
+}
+
+extern "C" void ee_cp_scope_word(void* inScope, uint32_t inWord)
+{
+    static_cast<EECPPlaceScope*>(inScope)->I((long)inWord);
+}
+
+extern "C" void ee_cp_scope_unit(void* inScope, uint64_t inUnit)
+{
+    static_cast<EECPPlaceScope*>(inScope)->U(reinterpret_cast<const EEUnit*>((uintptr_t)inUnit));
+}
+
+extern "C" void ee_cp_scope_close(void* inScope)
+{
+    delete static_cast<EECPPlaceScope*>(inScope);
 }

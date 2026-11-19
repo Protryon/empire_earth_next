@@ -30,9 +30,7 @@ void Effect(EESimCaptureRecord& ioRecord, EEGraphicEffect* inEffect)
         ioRecord.I32(-1);
         return;
     }
-    std::vector<EEGraphicEffect*>::iterator theFound =
-        std::find(EEGraphicEffect::sEffects.begin(), EEGraphicEffect::sEffects.end(), inEffect);
-    ioRecord.I32((int)(theFound - EEGraphicEffect::sEffects.begin()));
+    ioRecord.I32((int)EEGraphicEffect::IndexOf(inEffect));
     ioRecord.U32(inEffect->mDuration);
     ioRecord.F32(inEffect->GetSize());
     ioRecord.U32(inEffect->mTime1);
@@ -52,8 +50,7 @@ int EffectIndex(EEGraphicEffect* inEffect)
 {
     if (inEffect == NULL)
         return -1;
-    return (int)(std::find(EEGraphicEffect::sEffects.begin(), EEGraphicEffect::sEffects.end(), inEffect) -
-                 EEGraphicEffect::sEffects.begin());
+    return (int)EEGraphicEffect::IndexOf(inEffect);
 }
 
 void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* f)

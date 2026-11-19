@@ -43,6 +43,7 @@
 #include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/render/gfx.h"
 // chain at 0x50972b (wrapper, no dtor): an object whose inline ctor clears one bool (provisional type and name)
 struct EEGraphicsU8E8EB4 {
     EEGraphicsU8E8EB4() : mB00(false) {}
@@ -71,11 +72,13 @@ EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMo
 {
     this->mLockMode = 0;
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 78);
+    ee_gfx_main_viewport_set(reinterpret_cast<EeGeViewport*>(&gViewport));   // port: the Rust readers' (input_views.rs)
 }
 
 // Destroys the graphics object, releasing the scene and the message-queue-done event
 EEGraphics::~EEGraphics()
 {
+    ee_gfx_main_viewport_set(NULL);
     EEReleaseScene();
     TSScheduler::DestroyEvent(this->mMessageQueueDone);
 }

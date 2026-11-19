@@ -45,6 +45,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
 #include "rust/render/ge.h"
+#include "rust/game/app.h"   // the map records
 #include "rust/sim/units.h"
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
@@ -72,102 +73,28 @@ void Hash64(EESimCaptureRecord& ioRecord, uint64_t inHash)
     ioRecord.U32((unsigned int)(inHash >> 32));
 }
 
-// the map around a tile rectangle: the tiles' terrain types and mesh tiles (no reference counts: the sight's), the
-// points' heights, normals and colour indices
-uint64_t MapRectHash(EEMap* theMap, long inLeft, long inRight, long inBottom, long inTop)
-{
-    uint64_t theHash = kFnvBasis;
-    if (theMap == NULL)
-        return theHash;
-    if (inLeft > inRight) {
-        inLeft = 0;
-        inRight = theMap->mSize - 1;
-        inBottom = 0;
-        inTop = theMap->mSize - 1;
-    }
-    GETerrainMesh& theMesh = theMap->mTerrainMesh;
-    for (long y = inBottom - 1; y <= inTop + 1; y++) {
-        for (long x = inLeft - 1; x <= inRight + 1; x++) {
-            EEMapTile* theTile = theMap->GetTile(x, y);
-            FnvValue(theHash, (int32_t)(theTile != NULL ? theTile->mTerrainType : -12345));
-            if (theMesh.GetIsValidTile(x, y)) {
-                const EeGeTmTile* theMeshTile = ee_ge_tm_tile(theMesh.GetRust(), x, y);
-                FnvValue(theHash, theMeshTile->texture_set_id);
-                FnvValue(theHash, theMeshTile->water_info);
-            } else
-                FnvValue(theHash, (uint32_t)0xffffffffu);
-        }
-    }
-    for (long y = inBottom - 1; y <= inTop + 2; y++) {
-        for (long x = inLeft - 1; x <= inRight + 2; x++) {
-            if (!theMesh.GetIsValidPoint(x, y)) {
-                FnvValue(theHash, (uint32_t)0xffffffffu);
-                continue;
-            }
-            FnvValue(theHash, theMesh.GetZ(x, y));
-            const GEVector* theNormal = theMesh.GetVertexNormal(x, y);
-            FnvValue(theHash, theNormal->mX);
-            FnvValue(theHash, theNormal->mY);
-            FnvValue(theHash, theNormal->mZ);
-            FnvValue(theHash, (uint8_t)theMesh.GetColorTableIndex(x, y));
-        }
-    }
-    return theHash;
-}
-
-thread_local int sMapDepth = 0;
-
 }   // namespace
 
+// MAPS, MAPC: Rust (ee_game app map_capture.rs)
 void EEAppCaptureSight(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
-    if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
-        return;
-    EEMap* theMap = gWorld.mMap;
-    std::vector<EETileCoordinate> theTiles;
-    ee_units_uu_tiles_near_point(inX, inY, inRadius, &theTiles);
-    unsigned long theWords = (theMap->mU19561C >> 1) + (theMap->mU19561C & 1);
-    uint64_t theHash = kFnvBasis;
-    for (const EETileCoordinate& theAt : theTiles) {
-        FnvValue(theHash, (int32_t)theAt.mX);
-        FnvValue(theHash, (int32_t)theAt.mY);
-        EEMapTile* theTile = theMap->GetTile(theAt.mX, theAt.mY);
-        if (theTile == NULL)
-            continue;
-        Fnv(theHash, theTile->mVisibility, theWords * sizeof(uint32_t));
-        if (theMap->mTerrainMesh.GetIsValidTile(theAt.mX, theAt.mY))
-            FnvValue(theHash, ee_ge_tm_tile(theMap->mTerrainMesh.GetRust(), theAt.mX, theAt.mY)->reference_count);
-    }
-    EESimCaptureRecord r(EECaptureTag("MAPS"));
-    r.U32(inKind);
-    r.U32(inPlayer != NULL ? (unsigned int)inPlayer->mPlayerID : 0xffffffffu);
-    r.F32(inX);
-    r.F32(inY);
-    r.F32(inRadius);
-    r.U32(inShared ? 1 : 0);
-    r.U32((unsigned int)theTiles.size());
-    Hash64(r, theHash);
-    r.Commit();
+    if (EESimCaptureRecord::Active() && gWorld.mMap != NULL)
+        ee_app_capture_sight(inKind, inPlayer != NULL ? (uint32_t)inPlayer->mPlayerID : 0xffffffffu, inX, inY, inRadius,
+                             inShared, gWorld.mMap->mTerrainMesh.GetRust());
 }
 
 EEAppMapScope::EEAppMapScope(EEMap* inMap, unsigned int inKind, long inA, long inB, long inC, long inD, long inE,
                              long inF, long inLeft, long inRight, long inBottom, long inTop)
-    : mMap(inMap), mOuter(sMapDepth++ == 0), mKind(inKind), mArgs{inA, inB, inC, inD, inE, inF},
+    : mMap(inMap), mOuter(ee_app_capture_map_enter()), mKind(inKind), mArgs{inA, inB, inC, inD, inE, inF},
       mRect{inLeft, inRight, inBottom, inTop}
 {
 }
 
 EEAppMapScope::~EEAppMapScope()
 {
-    sMapDepth--;
-    if (!this->mOuter || !EESimCaptureRecord::Active())
-        return;
-    EESimCaptureRecord r(EECaptureTag("MAPC"));
-    r.U32(this->mKind);
-    for (long theArg : this->mArgs)
-        r.I32((int)theArg);
-    Hash64(r, MapRectHash(this->mMap, this->mRect[0], this->mRect[1], this->mRect[2], this->mRect[3]));
-    r.Commit();
+    ee_app_capture_map_leave(this->mOuter, (uint64_t)(uintptr_t)this->mMap,
+                             this->mMap != NULL ? this->mMap->mTerrainMesh.GetRust() : NULL, this->mKind, this->mArgs,
+                             this->mRect);
 }
 
 void EEAppCaptureChecksum(unsigned long inCursorBefore, long inResult, unsigned long inCursorAfter)

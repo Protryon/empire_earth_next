@@ -273,6 +273,37 @@ void ee_app_active_set(uint32_t id, bool on);
 /// The list `which`'s id at `index` (0xffffffff past its end: the tick's step by index).
 uint32_t ee_app_active_at(uint32_t which, size_t index);
 
+/// `EESimCaptureRecord::Active()`: `EE_SIM_CAPTURE` is set and the file opened.
+bool ee_app_capture_active();
+
+/// `Only(tags, count)`: this thread's records of other tags are dropped (count 0 clears it; at most four).
+///
+/// # Safety
+/// `tags` points to `count` tags (or `count` is 0).
+void ee_app_capture_only(const uint32_t *tags,
+                         uint32_t count);
+
+/// `Exclusive(on)`: while on, every other thread's records are dropped.
+void ee_app_capture_exclusive(bool on);
+
+/// `Close()`: no record of any thread after it.
+void ee_app_capture_close();
+
+/// `Hold(on)`: while on, no record of any thread is written.
+void ee_app_capture_hold(bool on);
+
+/// `Keeps(tag)`: whether a record of `tag` committed now on this thread would be written.
+bool ee_app_capture_keeps(uint32_t tag);
+
+/// `Commit()`: the record of `tag` with `size` payload bytes.
+///
+/// # Safety
+/// `data` points to `size` bytes (or `size` is 0).
+void ee_app_capture_commit(uint32_t tag, const uint8_t *data, size_t size);
+
+/// `Flush()`: the stream's buffer written out (EE-SIM's Quit, before the process ends).
+void ee_app_capture_flush();
+
 /// `Init`: the table from the string resources.
 ///
 /// # Safety
@@ -305,6 +336,17 @@ void ee_app_cheats_apply(const EeAppCheats *p,
                          long code,
                          long player,
                          long parameter);
+
+/// PLST for the player `player` (an `EEPlayer*`): `game_time` the physics' game time (0 without physics), `stats`
+/// and `end_time` its statistics (`mSavedGroups`), `events` its event list's Rust object.
+///
+/// # Safety
+/// The caller holds the player (its physics tick); the pointers are its live members.
+void ee_app_capture_player_state(uint64_t player,
+                                 uint32_t game_time,
+                                 const EeUnitsPlayerStats *stats,
+                                 unsigned long end_time,
+                                 const EeUnitsPlayerEvents *events);
 
 /// `EEWorld::RecordStatistics`' decisions over the world's players: the records in their order into `out` (at most
 /// `cap`) -> their count; `current_index` the local record's (-1: kept), `is_scenario` the history's flag after.
