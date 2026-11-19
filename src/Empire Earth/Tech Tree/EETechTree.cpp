@@ -164,6 +164,13 @@ long EETechTreeEpochOf(long inID)
     return it != sNodeEpochs.end() ? it->second : -1;
 }
 
+// Returns the owner's tech tree node of the technology that makes the unit's class (was EECPEngineHelpers.cpp's:
+// it reaches EETechTreeEpochOf and EETechTreeEpoch::Get through the inline EETechTree::Get)
+EETechTreeNode* EEUnit::GetTechTreeNode()
+{
+    return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
+}
+
 void EERegisterTechNode(long inID, long inEpoch)
 {
     sNodeEpochs[inID] = inEpoch;

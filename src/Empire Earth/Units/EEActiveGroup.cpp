@@ -268,6 +268,15 @@ float EEActiveGroup::GetMaxVelocity(EEComplexUnit* inUnit)
     return this->mMovesTogether ? this->mSpeed : inUnit->mStats->GetMaxVelocity();
 }
 
+// Returns the unit's top speed: its active group's value when it is in one, else its stats'
+// (was EECPEngineHelpers.cpp's, out of line after its first user there)
+float EEComplexUnit::GetMaxVelocity()
+{
+    if (this->mActiveGroup)
+        return this->mActiveGroup->GetMaxVelocity(this);
+    return this->mStats->mMaxVelocity;
+}
+
 // Returns the group's acceleration when it moves together, else the unit's own
 float EEActiveGroup::GetAcceleration(EEComplexUnit* inUnit)
 {
