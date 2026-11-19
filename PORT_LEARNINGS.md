@@ -32617,6 +32617,12 @@ the whole gate under load, passes alone) and ee_won_lobby's `eecolor` tests (`th
 `golden_replay` failed once each inside the whole gate; seven passes alone and with one thread: a shared palette
 between tests run in parallel). The third whole run passed.
 
+Merged again with origin/rust b3ab7ba2c (the units STATE lane's checkpoint: EEAirTrafficControl and EEPPatrolGroup as
+Rust objects, the unit save's reads): clean; `rust_includes.py` narrowed EETown.h and EEUnitGoal.h. On that result: both
+builds 0/0 (577/578 inputs), the oracle seeds 2-7 identical, the oracle, units and transport captures at seeds 2-3
+PASS, the Rust gate PASS (4,804 tests). gates.sh, the tour, saveload, scenario_check and the editor gate ran on the
+first merge only.
+
 ### What exercises what
 
 - The goal host's reads, stores and duplicates: every oracle game (gathering, building, the AI's attacks, the
