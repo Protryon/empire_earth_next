@@ -1877,6 +1877,9 @@ impl PathHost for FnHost {
         if let Some(r) = crate::astar::path_search::intercept(unsafe { &mut *self.bounded }, op, io, &mut raw) {
             return r;
         }
+        if let Some(r) = crate::astar::graph_search::intercept(op, io, &mut raw) {
+            return r;
+        }
         raw(op, io)
     }
 }

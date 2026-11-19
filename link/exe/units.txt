@@ -1,8 +1,6 @@
 052f3 05d47 Empire Earth/Actions/EEAWonNet.cpp
 0d6e3 0e9a1 Empire Earth/AI Thread/EEAIArea.cpp
 0f53b 10bc7 Empire Earth/AI Thread/EEAIAStarBoundedPathGoalModifiers.cpp
-16070 16c0e Empire Earth/AI Thread/EEAIAStarGraphStorage.cpp
-1a64b 1a9ec Empire Earth/AI Thread/EEAIAStarPathGraphGoal.cpp
 1c740 1d846 Empire Earth/AI Thread/EEAIChokePoint.cpp
 1d846 1ed2c Empire Earth/AI Thread/EEAIContinent.cpp
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp

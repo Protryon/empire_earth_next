@@ -46,13 +46,10 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGraphGoalBase.h"
 #include "ee/EEAIAStarView.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEAIPathSubSector.h"
@@ -197,6 +194,20 @@ bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY
     return ee_astar_mod_walls_can_enter(&theCallbacks, this->mBoundedGoal->unit, inX, inY);
 }
 
+// Returns true when the sub-sector has no links to inFrom or any such link has a passable end (the path graph goal's
+// HasPassableLink 0x1a845)
+bool EEAIGraphHasPassableLink(const EeAStarGraphGoalRec* inGoal, EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
+{
+    std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> > theLinks;
+    inSector->GetLinks(inFrom->GetID(), theLinks);
+    bool theResult = theLinks.size() == 0;
+    for (long i = theLinks.size() - 1; i >= 0 && !theResult; i--) {
+        if (inGoal->path_flags[theLinks[i].first->GetKind()] == true || inGoal->path_flags[theLinks[i].second->GetKind()] == true)
+            theResult = true;
+    }
+    return theResult;
+}
+
 // Creates an influence-cost modifier for the player against an enemy, with the given weights
 EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID,
                                                                          unsigned long inEnemyID,
@@ -248,14 +259,14 @@ long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathS
 // +0x08 (no address: ICF-folded into EEAIGPGModifierSpaceRoutePlanner's identical 0x10aa1)
 bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
+    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
     if (!theResult) {
         if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = inSector->IsPassable(this->mPlayerID);
     }
     if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = this->mGoal->HasPassableLink(inSector, inFrom);
+        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
     return theResult;
 }
 
@@ -328,14 +339,14 @@ long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFro
 // link from inFrom
 bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
+    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
     if (!theResult) {
         if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = this->IsGateOpen(inSector, this->mPlayerID);
     }
     if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = this->mGoal->HasPassableLink(inSector, inFrom);
+        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
     return theResult;
 }
 

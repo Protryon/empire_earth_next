@@ -50,6 +50,7 @@ pub mod flood;
 pub mod goals;
 pub mod graph;
 pub mod graph_save;
+pub mod graph_search;
 pub mod hull;
 pub mod machine;
 pub mod manager;

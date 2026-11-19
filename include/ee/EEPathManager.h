@@ -29,13 +29,9 @@ typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAreaUtilities.h
 class EEAIPathGoalModifierBase;
 class EEAIGraphPathGoalModifierBase;
 class GE3DPoint;
-class EEAIAStarGraphStorage;
-class EEAIAStarPathGraphGoal;
 class EEAIPathSubSector;
-template <class S, class G, class M> class EEAIAStarGraphMachine;
 struct EePathManager;                   // rust/sim/astar.h
 
-typedef EEAIAStarGraphMachine<EEAIAStarGraphStorage, EEAIAStarPathGraphGoal, EEAIPathSubSector> EEGraphPathMachine;   // 0xd8
 
 class EEPathManager {
 public:
@@ -99,7 +95,10 @@ public:
     // halves are Rust (pm_bounded.rs) over the bounded machine, a Rust search with the path machines (path_search.rs)
     int64_t Call(int32_t inWhat, uint64_t inH0 = 0, uint64_t inH1 = 0, std::initializer_list<int64_t> inValues = {},
                  int64_t* outValues = NULL);
-    bool RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine);
+    // a found graph path's sub sectors (their ids, the goal's first first) given to the unit or the request (the
+    // search and its result are Rust: graph_search.rs)
+    void RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, const int32_t* inPath, size_t inCount,
+                          EEAIPathSubSector* inFrom);
     // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
 

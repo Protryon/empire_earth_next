@@ -89,6 +89,58 @@ constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
 
+/// sub sector `h0` -> `i0` its id, `i1` kind, `i2` neighbour count, (`i3`, `i4`) its sector's center (the graph
+/// location), `i5` its link count (`GetAllLinks().size()`), `i6` its sector (a handle)
+constexpr static const int32_t EE_PATH_SS_INFO = 141;
+
+/// sub sector `h0`'s neighbour `i0` -> it
+constexpr static const int32_t EE_PATH_SS_NEIGHBOR = 142;
+
+/// sub sector `h0` `IsNeighbor(h1)`
+constexpr static const int32_t EE_PATH_SS_IS_NEIGHBOR = 143;
+
+/// sub sector `h0` `IsPassable(i0)` (a gate open to the player)
+constexpr static const int32_t EE_PATH_SS_GATE_OPEN = 144;
+
+/// `HasPassableLink(h0, h1)` over the goal record `h2`'s flags
+constexpr static const int32_t EE_PATH_SS_PASSABLE_LINK = 145;
+
+/// route planner `h0` `CanEnter(h1, h2)`
+constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_ENTER = 146;
+
+/// route planner `h0` `GetCost(the parent node: object h2, index i0, tile (i1, i2), costs i3 .. i5, h1)`
+constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_COST = 147;
+
+/// route planner `h0` `Reference()`
+constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_REFERENCE = 148;
+
+/// route planner `h0` takes the goal record `h1` (`mGoal`)
+constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_ATTACH = 149;
+
+/// unit `h0`'s terrain flags (`GetTerrainFlags`) into the goal record `h1`
+constexpr static const int32_t EE_PATH_GRAPH_TERRAIN_FLAGS = 150;
+
+/// `RequestUnitPaths`' world: the found path's sub sector ids `h0[..i0]` given to unit `h1` (its goals) or request
+/// `h2` (its path), the goal's start sub sector `h3`
+constexpr static const int32_t EE_PATH_APPLY_GRAPH_PATH = 151;
+
+/// `StartGraphPath`'s world: tiles (`i0`, `i1`), (`i2`, `i3`) moved onto the map (written back), their sub sectors
+/// `h0`, `h1`, those sub sectors' sector centers (`i4`, `i5`), (`i6`, `i7`) and ids `i8`, `i9`
+constexpr static const int32_t EE_PATH_GRAPH_ENDS = 152;
+
+/// request `h0`'s flags into the goal record `h1` (`EECPASGFlags::operator=`)
+constexpr static const int32_t EE_PATH_REQUEST_FLAGS = 153;
+
+/// `SetGraphRevs`' world: from (`i0`, `i1`) to (`i2`, `i3`), the goal's unit `h0` -> `i0` the distance, `i1` the kind of
+/// the sub sector at the end, `i2` the unit's id when a computer player's citizen (else 0xffffffff)
+constexpr static const int32_t EE_PATH_GRAPH_REVS_WORLD = 154;
+
+/// sub sector `i0` as a graph object (`EEGraphObjectOf`: null when none)
+constexpr static const int32_t EE_PATH_GRAPH_OBJECT = 155;
+
+/// route planner `h0` into the saved graph search `h1` -> its kind (`-1`: none that a load can make)
+constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_SAVE = 156;
+
 /// a view of the map `h1` (`new EEAIAStarView(map)`), its callbacks into `*h2` -> the view
 constexpr static const int32_t EE_PATH_VIEW_NEW = 130;
 
@@ -534,28 +586,6 @@ enum class EeAStarSkip {
   Trees = 2,
 };
 
-/// Which members the storage's machine calls (see the module table).
-enum class EeAStarGraphKind {
-  /// `EEAIAStarGraphStorage`
-  Hashed = 0,
-  /// `EEAIAStarGraphTerrainStorage`
-  Terrain = 1,
-};
-
-/// The storage's lists, in the capture's order (`EEAIAStarGraphStorage::CaptureNodes`).
-enum class EeAStarGraphList {
-  /// `mClosedList`
-  Closed = 0,
-  /// `mClosedTable`, every bucket, the last first
-  ClosedTable = 1,
-  /// `mSortedOpen`
-  SortedOpen = 2,
-  /// `mOpenTable`, every bucket, the last first
-  OpenTable = 3,
-  /// `mOpenList` (`Push` / `Pop`)
-  FastOpen = 4,
-};
-
 /// Which goal a fill has.
 enum class EeAStarFloodKind {
   /// `EEAIAStarContinentGoal` (machine type 6)
@@ -587,9 +617,6 @@ struct EeAStarContinentLists;
 
 /// One fill: the machine, its storage, the goal.
 struct EeAStarFlood;
-
-/// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
-struct EeAStarGraphStorage;
 
 /// A list of ids (opaque to C++).
 struct EeAStarIdList;
@@ -931,75 +958,6 @@ struct EeAStarStorm {
   int32_t start_y;
 };
 
-/// A node as the goals and the capture see it.
-struct EeAStarNodeView {
-  int32_t x;
-  int32_t y;
-  uint32_t cost;
-  int32_t path_cost;
-  int32_t estimate;
-  bool has_parent;
-  int32_t parent_x;
-  int32_t parent_y;
-};
-
-/// A graph object by its index, as the C++ loader finds it (`ee_astar_graph_load`, `ee_astar_graph_objects_match`):
-/// the handle, null for none.
-using EeAStarGraphObjectOf = void*(*)(void *ctx, int32_t index);
-
-/// A graph object as the storage keeps it: the C++ pointer's bits (`AStarGraphableObjectBase*`), opaque here.
-using EeAStarGraphObject = size_t;
-
-/// A node as the goals see one (`IsGoalNode`, `GetStepCost`, `SearchDone`): its tile, costs, index and object. The
-/// C++ goals read `mObject`, `mIndex` and `mTile` of the nodes the machine hands them, never the links.
-struct EeAStarGraphNodeView {
-  int32_t x;
-  int32_t y;
-  uint32_t cost;
-  int32_t path_cost;
-  int32_t estimate;
-  int32_t index;
-  EeAStarGraphObject object;
-};
-
-/// `EEAIAStarGraphMachineBase`'s search members.
-struct EeAStarGraphMachineState {
-  int32_t tile_x;
-  int32_t tile_y;
-  int32_t revs;
-  int32_t num_runs;
-  int32_t steps;
-  int32_t sector;
-  bool found;
-};
-
-/// The graph goal and the graph objects (`graph::GraphHost`), as C function pointers over `ctx`. The objects are
-/// the C++ `AStarGraphableObjectBase*` as opaque handles: Rust stores and hands them back, never reads them.
-struct EeAStarGraphCallbacks {
-  void *ctx;
-  void *(*start_object)(void *ctx);
-  int32_t (*goal_id)(void *ctx);
-  int32_t (*estimate)(void *ctx, int32_t from_x, int32_t from_y, int32_t to_x, int32_t to_y);
-  bool (*is_goal_node)(void *ctx, bool has_node, const EeAStarGraphNodeView *node);
-  int32_t (*object_id)(void *ctx, void *object);
-  uint32_t (*num_neighbors)(void *ctx, void *object);
-  void *(*neighbor)(void *ctx, void *object, uint32_t i);
-  void (*graph_location)(void *ctx, void *object, int32_t *x, int32_t *y);
-  bool (*can_enter)(void *ctx, void *neighbor, void *from);
-  int32_t (*step_cost)(void *ctx, const EeAStarGraphNodeView *parent, void *object);
-  void (*search_done)(void *ctx,
-                      bool has_current,
-                      const EeAStarGraphNodeView *current,
-                      bool has_open);
-  bool (*search_failed)(void *ctx);
-  int32_t (*rev_limit)(void *ctx);
-  int32_t (*max_revs)(void *ctx);
-  /// the goal's start (`out[0..2]`) and goal (`out[2..4]`) tiles
-  void (*tiles)(void *ctx, int32_t *out);
-  void (*get_state)(void *ctx, EeAStarGraphMachineState *out);
-  void (*set_state)(void *ctx, const EeAStarGraphMachineState *state);
-};
-
 /// A continent's neighbour (`mNeighbors.push_back`): continent `id` gets `neighbor`.
 struct EeContinentNeighbor {
   uint16_t id;
@@ -1320,6 +1278,16 @@ struct EeAStarChainCallbacks {
   uint16_t (*next_chain_id)(void *ctx, uint32_t kind);
 };
 
+/// A graph search's members as the path manager's dumps and its PMRQ capture read them.
+struct EeAStarGraphSearchInfo {
+  int32_t machine_type;
+  int32_t revs;
+  int32_t steps;
+  bool found;
+  int32_t max_revs;
+  int32_t rev_limit;
+};
+
 /// A search's members as the path manager's dumps and its PMRQ capture read them.
 struct EeAStarPathSearchInfo {
   int32_t machine_type;
@@ -1378,6 +1346,18 @@ struct EePathRequestRecord {
   bool done;
   int32_t flags_player;
   bool flags[17];
+};
+
+/// A node as the goals and the capture see it.
+struct EeAStarNodeView {
+  int32_t x;
+  int32_t y;
+  uint32_t cost;
+  int32_t path_cost;
+  int32_t estimate;
+  bool has_parent;
+  int32_t parent_x;
+  int32_t parent_y;
 };
 
 /// `EEAIPathSector`'s members.
@@ -1525,6 +1505,34 @@ struct EeAStarPathGoalRec {
   EeAStarRect bounds;
   void *bounded_modifier;
   bool b8;
+};
+
+/// `EEAIAStarPathGraphGoal`'s members with its base's.
+struct EeAStarGraphGoalRec {
+  /// `mStartTile`, `mGoalTile`
+  EePoint start;
+  EePoint goal;
+  int32_t player_id;
+  /// `mRevLimit`, `mMaxRevs` (-1: none)
+  int32_t rev_limit;
+  int32_t max_revs;
+  int32_t goal_sector;
+  int32_t start_sector;
+  /// `mSearchFailed`, `mB31`, `mAcceptNearest`, `mB33`, `mB34`, `mTookNearest`
+  bool flags[6];
+  EePoint point38;
+  /// the goal sub sector's sector center (`Prepare`)
+  EePoint point40;
+  /// `mUnit` (referenced), `mModifier` (referenced: an `EEAIGraphPathGoalModifierBase*`)
+  void *unit;
+  void *modifier;
+  /// `mFrom`, `mTo` (`EEAIPathSubSector*`)
+  void *from;
+  void *to;
+  /// `mPathFlags` (`EECPASGFlags`: the player, the passable sub sector kinds)
+  int32_t flags_player;
+  bool path_flags[17];
+  int32_t l70;
 };
 
 extern "C" {
@@ -2217,118 +2225,6 @@ bool ee_astar_mod_storm_can_enter(const EeAStarViewCallbacks *view,
                                   int32_t x,
                                   int32_t y);
 
-/// A new graph storage of the given kind.
-EeAStarGraphStorage *ee_astar_graph_new(EeAStarGraphKind kind);
-
-/// Frees a graph storage.
-///
-/// # Safety
-/// `s` must come from `ee_astar_graph_new` (or be null) and not be used afterwards.
-void ee_astar_graph_free(EeAStarGraphStorage *s);
-
-/// `ResetNodes`.
-///
-/// # Safety
-/// As `gst`.
-void ee_astar_graph_reset_nodes(EeAStarGraphStorage *s);
-
-/// `Init`'s first lines: the counts.
-///
-/// # Safety
-/// As `gst`.
-void ee_astar_graph_init_begin(EeAStarGraphStorage *s, int32_t count);
-
-/// `PrepareArrays` (the virtual slot `Init` calls between its two halves).
-///
-/// # Safety
-/// As `gst`.
-void ee_astar_graph_prepare_arrays(EeAStarGraphStorage *s, int32_t count);
-
-/// `Init`'s last lines: `Clear`, then empty hash tables.
-///
-/// # Safety
-/// As `gst`.
-void ee_astar_graph_init_end(EeAStarGraphStorage *s);
-
-/// `GetFirstPathNode` (false and zeros: no path).
-///
-/// # Safety
-/// As `gst`; `x`, `y`, `index` valid for writes.
-bool ee_astar_graph_first_path_node(EeAStarGraphStorage *s, int32_t *x, int32_t *y, int32_t *index);
-
-/// `GetNextPathNode` (false and zeros at the end).
-///
-/// # Safety
-/// As `ee_astar_graph_first_path_node`.
-bool ee_astar_graph_next_path_node(EeAStarGraphStorage *s, int32_t *x, int32_t *y, int32_t *index);
-
-/// The current node, the found path's node (`which` 0, 1) as the capture sees it; false when none.
-///
-/// # Safety
-/// As `gst`; `out` writable.
-bool ee_astar_graph_node(EeAStarGraphStorage *s, uint32_t which, EeAStarNodeView *out);
-
-/// The nodes of a list (`GraphList`) in its order, as the capture sees them: writes up to `capacity` into `out`,
-/// returns the list's length.
-///
-/// # Safety
-/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
-uint32_t ee_astar_graph_list(EeAStarGraphStorage *s,
-                             EeAStarGraphList which,
-                             EeAStarNodeView *out,
-                             uint32_t capacity);
-
-/// The objects of a list's nodes in its order (the chain goal's `NumberChain`): writes up to `capacity` handles
-/// into `out`, returns the list's length.
-///
-/// # Safety
-/// As `gst`; `out` valid for `capacity` writes (or null with `capacity` 0).
-uint32_t ee_astar_graph_list_objects(EeAStarGraphStorage *s,
-                                     EeAStarGraphList which,
-                                     void **out,
-                                     uint32_t capacity);
-
-/// The graph storage as bytes (`graph_save.rs`): writes them into `out` when they fit in `capacity`, returns their
-/// length.
-///
-/// # Safety
-/// As `gst`; `out` valid for `capacity` writes (or null).
-uint32_t ee_astar_graph_save(EeAStarGraphStorage *s,
-                             uint8_t *out,
-                             uint32_t capacity);
-
-/// Whether each live node's object is the one `object_of` gives for its index (a save checks it before it writes
-/// the storage: the load finds the objects so).
-///
-/// # Safety
-/// As `gst`; `object_of` callable with `ctx`.
-bool ee_astar_graph_objects_match(EeAStarGraphStorage *s,
-                                  EeAStarGraphObjectOf object_of,
-                                  void *ctx);
-
-/// The storage replaced by the one `ee_astar_graph_save` wrote (its own kind), each live node's object from
-/// `object_of`; false, the storage unchanged, for other bytes or an object not found.
-///
-/// # Safety
-/// As `gst`; `data` must hold `length` readable bytes (or `length` be 0); `object_of` callable with `ctx`.
-bool ee_astar_graph_load(EeAStarGraphStorage *s,
-                         const uint8_t *data,
-                         uint32_t length,
-                         EeAStarGraphObjectOf object_of,
-                         void *ctx);
-
-/// The graph machine's `Start`.
-///
-/// # Safety
-/// As `gst`; `cb` valid, its functions callable and not re-entering this storage.
-bool ee_astar_graph_start(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
-
-/// The graph machine's `Expand`.
-///
-/// # Safety
-/// As `ee_astar_graph_start`.
-void ee_astar_graph_expand(EeAStarGraphStorage *s, const EeAStarGraphCallbacks *cb);
-
 /// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
 /// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
 /// continents' categories by id (`next_id` of them).
@@ -2894,6 +2790,10 @@ const EePoint *ee_astar_flood_stale(EeAStarFlood *f, size_t *count);
 /// # Safety
 /// `cb` valid, its functions callable.
 void ee_astar_number_chains(uint32_t kind, const EeAStarChainCallbacks *cb);
+
+/// # Safety
+/// `search` a live graph search (a graph machine's handle); `out` writable.
+void ee_astar_graph_search_info(const void *search, EeAStarGraphSearchInfo *out);
 
 /// Appends a tile to a search's tile list (the host's `EE_PATH_BLOCKED_TILES`, `EE_PATH_UNIT_TILES`).
 ///

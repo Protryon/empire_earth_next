@@ -260,8 +260,8 @@ use ee_sim as _;
 // the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes
 // (the menus' FFI imports the C++ host's calls, absent from a test binary)
 // the computer player's leaves (ee_ai/src/ffi.rs): the next engine's save blocks, the AI manifest and the seat choice,
-// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp; the Lua runtime
-// (lua_ffi.rs), called by EECPLua.cpp (it imports the vendored Lua the C++ build compiles, absent from a test binary)
+// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp (the Lua runtime
+// imports the vendored Lua the C++ build compiles, absent from a test binary)
 #[cfg(not(test))]
 use ee_sim as _;
 

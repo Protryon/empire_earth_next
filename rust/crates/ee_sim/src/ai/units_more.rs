@@ -1330,7 +1330,7 @@ pub unsafe extern "C-unwind" fn ee_ai_units_lua_place(l: *mut c_void) -> c_int {
 /// `ai.used()` -> the instructions and charges this call has used so far (ee_ai lua_host.rs)
 #[no_mangle]
 pub unsafe extern "C-unwind" fn ee_ai_units_lua_used(l: *mut c_void) -> c_int {
-    crate::ai::lua_ffi::ee_ai_lua_used_binding(l)
+    crate::ai::lua_host::used_binding(l.cast())
 }
 
 // ---------------------------------------------------------------------------------------------------------------

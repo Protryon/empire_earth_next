@@ -40,9 +40,25 @@ public:
 // RTTI EEAIGraphPathGoalModifierBase > UReferenceCounter; vtable 0x439c4c (3 slots: ??_G 0x10b5a, 0x10b48, 0x10b4e).
 // The sub sector graph goal's modifier (EEAIAStarPathGraphGoal::SetModifier 0x1a91e stores the goal at +0x08); its
 // route planners (EEAIBoundedPathGoalModifierBase.h) weigh the steps by the influence table. Slot types inferred.
-class EEAIAStarPathGraphGoal;
 class EEAIPathSubSector;
-struct EEAIAStarGraphNode;
+class AStarGraphableObjectBase;
+struct EeAStarGraphGoalRec;               // rust/sim/astar.h (the graph search's goal: ee_sim::astar graph_search.rs)
+
+// A graph search node as the route planners see one (GetCost's parent: its object, the sub sector; the costs as the
+// Rust node had them). Names are provisional.
+struct EEAIAStarGraphNode {
+    AStarGraphableObjectBase* mObject;      // +0x00 (the graph object: the sub sector)
+    long mIndex;                            // +0x10 (its id)
+    unsigned long mCost;                    // +0x14
+    long mPathCost;                         // +0x18
+    long mEstimate;                         // +0x1c
+    long mTileX;                            // +0x20 (the node's tile)
+    long mTileY;
+};
+
+// Whether a sub sector has no link to inFrom or one of them has an end of a kind the goal's flags pass (the path
+// graph goal's HasPassableLink; its route planners ask it too)
+bool EEAIGraphHasPassableLink(const EeAStarGraphGoalRec* inGoal, EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
 
 class EEAIGraphPathGoalModifierBase : public UReferenceCounter {
 public:
@@ -54,7 +70,7 @@ public:
     // +0x08 0x10b4e: whether inSector may be entered
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom) { return inSector != NULL; }
 
-    EEAIAStarPathGraphGoal* mGoal;          // +0x08
+    EeAStarGraphGoalRec* mGoal;             // +0x08 (the Rust search's goal record)
 };
 
 #endif

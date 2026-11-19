@@ -48,16 +48,12 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGraphGoalBase.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEAutoPathRequest.h"
-#include "ee/EEAIAStarPathGraphGoal.h"
-#include "ee/EEAIAStarMachine.h"
 #include "ee/EEAIAStarView.h"   // the searches' view (ee_sim::astar path_search.rs)
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIPathSector.h"
@@ -344,13 +340,14 @@ void EEPathRequestCapture::Queues(std::vector<EEPathQueueEntry>& outEntries)
             e.mMaxRevs = m.max_revs;
             e.mRevLimit = m.rev_limit;
         } else if (q.queue == 1 && q.machine != 0) {
-            EEGraphPathMachine* m = reinterpret_cast<EEGraphPathMachine*>(q.machine);
-            e.mType = (int)m->mType;
-            e.mRevs = (int)m->mRevs;
-            e.mSteps = (int)m->mSteps;
-            e.mFound = m->mFound ? 1 : 0;
-            e.mMaxRevs = (int)m->GetMaxRevs();
-            e.mRevLimit = (int)m->GetRevLimit();
+            EeAStarGraphSearchInfo m;
+            ee_astar_graph_search_info(reinterpret_cast<const void*>(q.machine), &m);
+            e.mType = m.machine_type;
+            e.mRevs = m.revs;
+            e.mSteps = m.steps;
+            e.mFound = m.found ? 1 : 0;
+            e.mMaxRevs = m.max_revs;
+            e.mRevLimit = m.rev_limit;
         }
         outEntries.push_back(e);
     }
@@ -364,11 +361,6 @@ static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
 // ---- The manager in Rust (ee_sim::astar pm.rs): the searches in progress, the spare machines, the pending units,
 // the counters and the request record, and every decision over them. The C++ answers its host's operations over
 // the machines, the units and the requests, and keeps the bounded machine's searches (below).
-
-static EEGraphPathMachine* EEGraphOf(uint64_t inHandle)
-{
-    return reinterpret_cast<EEGraphPathMachine*>(inHandle);
-}
 
 static EEComplexUnit* EEPathUnitOf(uint64_t inHandle)
 {
@@ -484,53 +476,6 @@ void EEPathSetBounds(EEAIAStarBounds& outBounds, const int32_t* inValues)
     outBounds.mTop = inValues[3];
 }
 
-// a graph search's machine, goal and modifier into the saved record (SaveGraphSearches), when the load can rebuild
-// every part of it
-bool EESaveGraphMachine(EEGraphPathMachine* inMachine, EePathSavedGraph& outSaved, void* outStorage)
-{
-    EEAIAStarPathGraphGoal& theGoal = inMachine->mGoal;
-    long theKind = EEGraphModifierKindOf(theGoal.mModifier);
-    if (theKind < 0 || inMachine->mNodeCount != (long)gContinentManager.GetPathSubSectors().size() + 1
-        || !ee_astar_graph_objects_match(inMachine->mCore, EEGraphObjectOf, NULL))
-        return false;
-    const long theMachine[9] = {inMachine->mTile.mX, inMachine->mTile.mY, inMachine->mType, inMachine->mRevs,
-                                inMachine->mNumRuns, inMachine->mSteps, inMachine->mSector, inMachine->mNodeCount,
-                                inMachine->mCount};
-    for (int f = 0; f < 9; f++)
-        outSaved.machine[f] = (int32_t)theMachine[f];
-    outSaved.found = inMachine->mFound;
-    const long theFields[17] = {theGoal.mStartTile.mX, theGoal.mStartTile.mY, theGoal.mGoalTile.mX, theGoal.mGoalTile.mY,
-                                theGoal.mPoint38.mX, theGoal.mPoint38.mY, theGoal.mPoint40.mX, theGoal.mPoint40.mY,
-                                theGoal.mPlayerID, theGoal.mRevLimit, theGoal.mMaxRevs, theGoal.mGoalSector,
-                                theGoal.mStartSector, theGoal.mL70,
-                                theGoal.mUnit != NULL ? (long)theGoal.mUnit->mUnitID : -1L,
-                                theGoal.mFrom == NULL ? -1L : (long)theGoal.mFrom->GetID(),
-                                theGoal.mTo == NULL ? -1L : (long)theGoal.mTo->GetID()};
-    for (int f = 0; f < 17; f++)
-        outSaved.goal[f] = (int32_t)theFields[f];
-    const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB31, theGoal.mAcceptNearest, theGoal.mB33, theGoal.mB34,
-                              theGoal.mTookNearest};
-    for (int f = 0; f < 6; f++)
-        outSaved.flags[f] = theFlags[f];
-    outSaved.path_flags_player = (int32_t)theGoal.mPathFlags.mPlayerID;
-    for (int f = 0; f < 17; f++)
-        outSaved.path_flags[f] = theGoal.mPathFlags.mFlags[f];
-    outSaved.modifier = (int32_t)theKind;
-    if (theKind != kGraphModifierNone && theKind != kGraphModifierStormRain && theKind != kGraphModifierStormSnow) {
-        EEAIGPGModiferUseInfluenceCostsBase* theInfluence = static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theGoal.mModifier);
-        for (int w = 0; w < 15; w++)
-            outSaved.weights[w] = theInfluence->mWeights.mValues[w];
-        outSaved.modifier_player = (uint32_t)theInfluence->mPlayerID;
-        outSaved.modifier_enemy = (uint32_t)theInfluence->mEnemyID;
-        // (the land route planners' continents and flags and the sub group owner: none since main's stage 5)
-    }
-    std::vector<unsigned char> theBytes(ee_astar_graph_save(inMachine->mCore, NULL, 0));
-    ee_astar_graph_save(inMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
-    uint32_t theLength = 0;
-    ee_path_saved_bytes(outStorage, theBytes.data(), (uint32_t)theBytes.size(), &theLength);
-    return true;
-}
-
 // the saved modifier, NULL for a kind that cannot be rebuilt (the caller's reference)
 EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EePathSavedGraph& s)
 {
@@ -555,50 +500,6 @@ EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EePathSavedGraph& s)
     theInfluence->mPlayerID = s.modifier_player;
     theInfluence->mEnemyID = s.modifier_enemy;
     return theInfluence;
-}
-
-// the saved record back into a new graph machine (the loaded game's first tick)
-bool EELoadGraphMachine(EEGraphPathMachine* inMachine, const EePathSavedGraph& s, EEAIGraphPathGoalModifierBase* inModifier,
-                        EEComplexUnit* inGoalUnit, const uint8_t* inBytes, uint32_t inLength)
-{
-    inMachine->Reset();
-    if (!ee_astar_graph_load(inMachine->mCore, inBytes, inLength, EEGraphObjectOf, NULL))
-        return false;
-    inMachine->mCount = s.machine[8];
-    inMachine->mTile.mX = s.machine[0];
-    inMachine->mTile.mY = s.machine[1];
-    inMachine->mRevs = s.machine[3];
-    inMachine->mNumRuns = s.machine[4];
-    inMachine->mSteps = s.machine[5];
-    inMachine->mSector = s.machine[6];
-    inMachine->mFound = s.found;
-    EEAIAStarPathGraphGoal& theGoal = inMachine->mGoal;
-    theGoal.Attach(inMachine, inMachine);   // as Run does at a search's start
-    theGoal.mStartTile = U2DPoint<long>(s.goal[0], s.goal[1]);
-    theGoal.mGoalTile = U2DPoint<long>(s.goal[2], s.goal[3]);
-    theGoal.mPlayerID = s.goal[8];
-    theGoal.mRevLimit = s.goal[9];
-    theGoal.mMaxRevs = s.goal[10];
-    theGoal.mGoalSector = s.goal[11];
-    theGoal.mStartSector = s.goal[12];
-    theGoal.mSearchFailed = s.flags[0];
-    theGoal.mB31 = s.flags[1];
-    theGoal.mAcceptNearest = s.flags[2];
-    theGoal.mB33 = s.flags[3];
-    theGoal.mB34 = s.flags[4];
-    theGoal.mTookNearest = s.flags[5];
-    theGoal.mPoint38 = U2DPoint<long>(s.goal[4], s.goal[5]);
-    theGoal.mPoint40 = U2DPoint<long>(s.goal[6], s.goal[7]);
-    theGoal.SetUnit(inGoalUnit);
-    if (inModifier != NULL)
-        theGoal.SetModifier(inModifier);
-    theGoal.mFrom = EESubSectorOf(s.goal[15]);
-    theGoal.mTo = EESubSectorOf(s.goal[16]);
-    theGoal.mPathFlags.mPlayerID = s.path_flags_player;
-    for (int f = 0; f < 17; f++)
-        theGoal.mPathFlags.mFlags[f] = s.path_flags[f];
-    theGoal.mL70 = s.goal[13];
-    return true;
 }
 
 // a request from its saved record (one reference, the caller's)
@@ -797,6 +698,108 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         reinterpret_cast<EEAIBoundedPathGoalModifierBase*>(io->h[0])->CheckNode(i[0] ? &theNode : NULL);
         return 0;
     }
+    // the graph searches' world (graph_search.rs EE_PATH_SS_INFO and below)
+    case EE_PATH_SS_INFO: {   // a sub sector's facts
+        EEAIPathSubSector* theSector = reinterpret_cast<EEAIPathSubSector*>(io->h[0]);
+        i[0] = theSector->GetID();
+        i[1] = theSector->GetKind();
+        i[2] = (int64_t)theSector->GetNumNeighbors();
+        i[3] = theSector->GetSector()->GetCenter().mX;
+        i[4] = theSector->GetSector()->GetCenter().mY;
+        i[5] = (int64_t)theSector->GetAllLinks().size();
+        i[6] = (int64_t)EEPathHandle(theSector->GetSector());
+        return 0;
+    }
+    case EE_PATH_SS_NEIGHBOR:
+        return (int64_t)EEPathHandle(reinterpret_cast<EEAIPathSubSector*>(io->h[0])->GetNeighbors()[(size_t)i[0]]);
+    case EE_PATH_SS_IS_NEIGHBOR:
+        return reinterpret_cast<EEAIPathSubSector*>(io->h[0])->IsNeighbor(reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
+    case EE_PATH_SS_GATE_OPEN:
+        return reinterpret_cast<EEAIPathSubSector*>(io->h[0])->IsPassable((long)i[0]);
+    case EE_PATH_SS_PASSABLE_LINK:
+        return EEAIGraphHasPassableLink(reinterpret_cast<const EeAStarGraphGoalRec*>(io->h[2]),
+                                        reinterpret_cast<EEAIPathSubSector*>(io->h[0]),
+                                        reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
+    case EE_PATH_GRAPH_MODIFIER_ENTER:
+        return reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->CanEnter(
+            reinterpret_cast<EEAIPathSubSector*>(io->h[1]), reinterpret_cast<EEAIPathSubSector*>(io->h[2]));
+    case EE_PATH_GRAPH_MODIFIER_COST: {   // GetCost with the parent node
+        EEAIAStarGraphNode theParent;
+        theParent.mObject = reinterpret_cast<EEAIPathSubSector*>(io->h[2]);
+        theParent.mIndex = (long)i[0];
+        theParent.mTileX = (long)i[1];
+        theParent.mTileY = (long)i[2];
+        theParent.mCost = (unsigned long)i[3];
+        theParent.mPathCost = (long)i[4];
+        theParent.mEstimate = (long)i[5];
+        return reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->GetCost(&theParent,
+                                                                                  reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
+    }
+    case EE_PATH_GRAPH_MODIFIER_REFERENCE:
+        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->Reference();
+        return 0;
+    case EE_PATH_GRAPH_MODIFIER_ATTACH:
+        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->mGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
+        return 0;
+    case EE_PATH_GRAPH_TERRAIN_FLAGS: {   // SetFlags: the unit class's GetTerrainFlags into the goal's flags
+        EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
+        EECPASGFlags theFlags;
+        theFlags.mPlayerID = theGoal->flags_player;
+        memcpy(theFlags.mFlags, theGoal->path_flags, sizeof(theFlags.mFlags));
+        theUnit->mUnitClass->GetTerrainFlags(theUnit, theFlags);
+        theGoal->flags_player = (int32_t)theFlags.mPlayerID;
+        memcpy(theGoal->path_flags, theFlags.mFlags, sizeof(theFlags.mFlags));
+        return 0;
+    }
+    case EE_PATH_APPLY_GRAPH_PATH:   // RequestUnitPaths' world
+        inManager->RequestUnitPaths(EEPathUnitOf(io->h[1]), reinterpret_cast<EEAutoPathRequest*>(io->h[2]),
+                                    reinterpret_cast<const int32_t*>(io->h[0]), (size_t)i[0],
+                                    reinterpret_cast<EEAIPathSubSector*>(io->h[3]));
+        return 0;
+    case EE_PATH_GRAPH_ENDS: {   // StartGraphPath's: the tiles moved onto the map, their sub sectors and sectors' centers
+        for (int k = 0; k < 2; k++) {
+            EETileCoordinate theTile = EEPathTileArg(i + 2 * k);
+            inManager->ClampTile(gWorld.mMap, theTile);
+            EEPathPutTile(i + 2 * k, theTile);
+            EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTile.GetX(), theTile.GetY());
+            io->h[k] = EEPathHandle(theSector);
+            i[4 + 2 * k] = theSector->GetSector()->GetCenter().mX;
+            i[5 + 2 * k] = theSector->GetSector()->GetCenter().mY;
+            i[8 + k] = theSector->GetID();
+        }
+        return 0;
+    }
+    case EE_PATH_REQUEST_FLAGS: {   // the goal's flags = the request's (EECPASGFlags::operator=)
+        EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
+        const EECPASGFlags& theFlags = reinterpret_cast<EEAutoPathRequest*>(io->h[0])->mFlags;
+        theGoal->flags_player = (int32_t)theFlags.mPlayerID;
+        memcpy(theGoal->path_flags, theFlags.mFlags, sizeof(theFlags.mFlags));
+        return 0;
+    }
+    case EE_PATH_GRAPH_REVS_WORLD: {   // SetGraphRevs' inputs
+        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
+        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.GetY());
+        i[0] = theFrom.DistanceTo(theTo);
+        i[1] = theSector->GetKind();
+        i[2] = theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen ? (int64_t)(uint32_t)theUnit->GetUnitID()
+                                                                                      : (int64_t)0xffffffffu;
+        return 0;
+    }
+    case EE_PATH_GRAPH_OBJECT:
+        return (int64_t)EEPathHandle(EEGraphObjectOf(NULL, (int32_t)i[0]));
+    case EE_PATH_GRAPH_MODIFIER_SAVE: {   // the route planner's kind and members into the saved search
+        EEAIGraphPathGoalModifierBase* theModifier = reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0]);
+        EePathSavedGraph& theSaved = *reinterpret_cast<EePathSavedGraph*>(io->h[1]);
+        long theKind = EEGraphModifierKindOf(theModifier);
+        if (theKind != kGraphModifierEnemyAvoidance && theKind != kGraphModifierWallPlanner)
+            return theKind;
+        EEAIGPGModiferUseInfluenceCostsBase* theInfluence = static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theModifier);
+        for (int w = 0; w < 15; w++)
+            theSaved.weights[w] = theInfluence->mWeights.mValues[w];
+        theSaved.modifier_player = (uint32_t)theInfluence->mPlayerID;
+        theSaved.modifier_enemy = (uint32_t)theInfluence->mEnemyID;
+        return theKind;
+    }
     case EE_PATH_TILES_OUT: {   // into the C++ vector h1
         const EePoint* theTiles = reinterpret_cast<const EePoint*>(io->h[2]);
         std::vector<U2DPoint<long> >& theOut = *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]);
@@ -914,91 +917,7 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     case EE_PATH_PATH_REVS:
         EEPathRevsInputs(EEPathUnitOf(h), EEPathTileArg(i), EEPathTileArg(i + 2), i);
         return 0;
-    case EE_PATH_SET_MAX_REVS:   // (a tile machine's: path_search.rs)
-        EEGraphOf(h)->SetMaxRevs((long)i[1]);
-        return 0;
-    // the graph machines
-    case EE_PATH_GM_NEW:
-        return (int64_t)EEPathHandle(new EEGraphPathMachine((long)i[0], (long)i[1]));
-    case EE_PATH_GM_DELETE:
-        delete EEGraphOf(h);
-        return 0;
-    case EE_PATH_GM_COUNT:
-        return EEGraphOf(h)->GetCount();
-    case EE_PATH_GM_TYPE:
-        EEGraphOf(h)->mType = (long)i[0];
-        return 0;
-    case EE_PATH_GM_RUN:
-        EEGraphOf(h)->Run();
-        return EEGraphOf(h)->mFound;
-    case EE_PATH_GM_FOUND:
-        return EEGraphOf(h)->mFound;
-    case EE_PATH_GM_SET_REV_LIMIT:
-        EEGraphOf(h)->SetRevLimit((long)i[0]);
-        return 0;
-    case EE_PATH_GM_REV_LIMIT:
-        return EEGraphOf(h)->GetRevLimit();
-    case EE_PATH_GM_STEPS:
-        return EEGraphOf(h)->mSteps;
-    case EE_PATH_GM_RESET:
-        EEGraphOf(h)->Reset();
-        return 0;
-    case EE_PATH_GM_RELEASE: {
-        EEGraphPathMachine* theMachine = EEGraphOf(h);
-        theMachine->Reset();
-        theMachine->mFound = false;
-        if (i[0]) {
-            theMachine->mGoal.ReleaseModifier();
-            theMachine->mGoal.SetUnit(0);
-        }
-        return 0;
-    }
-    case EE_PATH_GM_START: {   // StartGraphPath's setup: the tiles moved onto the map, the sub sectors' centers
-        EEGraphPathMachine* theMachine = EEGraphOf(h);
-        EEAutoPathRequest* theRequest = reinterpret_cast<EEAutoPathRequest*>(io->h[2]);
-        EEAIGraphPathGoalModifierBase* theModifier = reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[3]);
-        EETileCoordinate theFromCenter = EEPathTileArg(i), theToCenter = EEPathTileArg(i + 2);
-        EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
-        theMachine->Reset();
-        theGoal.Reset();
-        if (!i[5])
-            theGoal.mRevLimit = 0xf;
-        if (theModifier)
-            theGoal.SetModifier(theModifier);
-        theManager->ClampTile(gWorld.mMap, theFromCenter);
-        EEPathPutTile(i, theFromCenter);
-        EEAIPathSubSector* theFromSector = gContinentManager.GetPathSubSectorAt(theFromCenter.GetX(), theFromCenter.GetY());
-        theFromCenter = theFromSector->GetSector()->GetCenter();
-        theManager->ClampTile(gWorld.mMap, theToCenter);
-        EEPathPutTile(i + 2, theToCenter);
-        EEAIPathSubSector* theToSector = gContinentManager.GetPathSubSectorAt(theToCenter.GetX(), theToCenter.GetY());
-        theToCenter = theToSector->GetSector()->GetCenter();
-        theGoal.SetUnit(EEPathUnitOf(io->h[1]));
-        if (theRequest)
-            theGoal.mPathFlags = theRequest->mFlags;
-        theMachine->SetGoal(theFromCenter, theFromSector->GetID());
-        theMachine->SetStart(theToCenter, theToSector->GetID());
-        theMachine->mTile = theToCenter;
-        theMachine->mSector = theToSector->GetID();
-        theGoal.mPoint38 = theToCenter;
-        theGoal.mFrom = theFromSector;
-        theGoal.mTo = theToSector;
-        theGoal.mPlayerID = (long)i[4];
-        return 0;
-    }
-    case EE_PATH_GRAPH_REVS: {   // SetGraphRevs' inputs
-        EEGraphPathMachine* theMachine = EEGraphOf(h);
-        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
-        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.GetY());
-        i[0] = theFrom.DistanceTo(theTo);
-        i[1] = theMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] != 0;
-        EEComplexUnit* theUnit = theMachine->mGoal.mUnit;
-        i[2] = theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen ? (int64_t)(uint32_t)theUnit->GetUnitID()
-                                                                                      : (int64_t)0xffffffffu;
-        return 0;
-    }
-    case EE_PATH_REQUEST_UNIT_PATHS:
-        return theManager->RequestUnitPaths(EEPathUnitOf(io->h[1]), reinterpret_cast<EEAutoPathRequest*>(io->h[2]), EEGraphOf(h));
+    // the graph machines: Rust (graph_search.rs)
     // the units
     case EE_PATH_AUTO_WAYPOINT: {   // FinishGraphPath's unit part
         EEComplexUnit* theUnit = EEPathUnitOf(h);
@@ -1083,12 +1002,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return 0;
     }
     // the saved game
-    case EE_PATH_GM_SAVE:
-        return EESaveGraphMachine(EEGraphOf(h), *reinterpret_cast<EePathSavedGraph*>(io->h[1]), (void*)(uintptr_t)io->h[2]);
-    case EE_PATH_GM_LOAD:
-        return EELoadGraphMachine(EEGraphOf(h), *reinterpret_cast<const EePathSavedGraph*>(io->h[1]),
-                                  reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[2]), EEPathUnitOf(io->h[3]),
-                                  reinterpret_cast<const uint8_t*>(i[0]), (uint32_t)i[1]);
     case EE_PATH_GM_MODIFIER:
         return (int64_t)EEPathHandle(EENewGraphModifier(*reinterpret_cast<const EePathSavedGraph*>(io->h[1])));
     case EE_PATH_AWAIT:
@@ -1501,13 +1414,15 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
                             (long)theInfo.revs, (long)theInfo.max_revs, (long)theInfo.machine_type);
                 }
             } else {
-                EEGraphPathMachine* theMachine = EEGraphOf(e.machine);
                 fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", k++);
                 fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
                         theUnitID, (long)e.x, (long)e.y, (long)e.passes);
-                if (theMachine)
-                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->GetRevs(),
-                            theMachine->GetMaxRevs());
+                if (e.machine != 0) {
+                    EeAStarGraphSearchInfo theInfo;
+                    ee_astar_graph_search_info(reinterpret_cast<const void*>(e.machine), &theInfo);
+                    fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", (long)theInfo.revs,
+                            (long)theInfo.max_revs);
+                }
             }
         }
     }
@@ -1591,9 +1506,10 @@ void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EE
 
 // Applies a graph path: a unit gets a location goal per sub sector on the way (or inserted before a pending attack),
 // a request the sub sectors' tiles and summed distance; returns whether it reached the goal's sub sector
-bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine)
+void EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, const int32_t* inPath,
+                                     size_t inCount, EEAIPathSubSector* inFrom)
 {
-    std::vector<long> thePath;
+    std::vector<long> thePath(inPath, inPath + inCount);
     EETileCoordinate theTile;
     theTile.mX = 0;
     theTile.mY = 0;
@@ -1603,7 +1519,6 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
     long theDistance = 0;
     bool theAttack = false;
     bool theSet = false;
-    inMachine->GetPath(thePath);
     if (inUnit) {
         EEUGRust* theLocation = EELocationGoalCast(inUnit->GetGoal());
         const EEGoalDeque& theGoals = inUnit->mGoalQueues[0].mGoals;
@@ -1653,9 +1568,9 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
             EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath.back());
             theLast = theSector->GetLocation();
             inRequest->mPath.push_back(theLast);
-            if (inMachine->mGoal.GetFrom())
-                theDistance = UMAbs(inMachine->mGoal.mFrom->GetLocation().GetX() - theLast.GetX()) +
-                              UMAbs(inMachine->mGoal.mFrom->GetLocation().GetY() - theLast.GetY());
+            if (inFrom)
+                theDistance = UMAbs(inFrom->GetLocation().GetX() - theLast.GetX()) +
+                              UMAbs(inFrom->GetLocation().GetY() - theLast.GetY());
         }
         for (long i = thePath.size() - 2; i >= 0; i--) {
             EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath[i]);
@@ -1667,49 +1582,5 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         inRequest->mIsDone = true;
     }
 done:
-    return inMachine->mGoal.GetTo()->GetID() == inMachine->GetSector();
-}
-
-// The path graph machine's goal hooks (ee/EEAIAStarPathGraphGoal.h). GetGoalID and the node tile are read inline
-// (0xaacf0, 0xab6c1).
-inline unsigned short EEAIAStarPathGraphGoal::GetGoalID() const
-{
-    return this->mTo->GetID();
-}
-
-inline U2DPoint<long> EEAIPathSubSector::GetGraphLocation() const
-{
-    return U2DPoint<long>(this->GetSector()->GetCenter().mX, this->GetSector()->GetCenter().mY);
-}
-
-// Returns the Manhattan distance between two tiles times 10 (ICF-folded with EEAIAStarPathfindingGoalBase's)
-long EEAIAStarPathGraphGoal::Estimate(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo) const
-{
-    return (UMAbs(inFrom.GetX() - inTo.GetX()) + UMAbs(inFrom.GetY() - inTo.GetY())) * 10;
-}
-
-// Returns whether the search may enter a sub sector from another, asking the modifier when there is one
-bool EEAIAStarPathGraphGoal::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
-{
-    if (!this->mModifier)
-        return this->AcceptNeighbor(inSector, inFrom);
-    return this->mModifier->CanEnter(inSector, inFrom);
-}
-
-// Returns the cost of a step into a sub sector: the modifier's when there is one, else the default cost
-long EEAIAStarPathGraphGoal::GetStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo)
-{
-    if (!this->mModifier)
-        return this->GetDefaultStepCost(inParent, inTo);
-    return this->mModifier->GetCost(inParent, inTo);
-}
-
-// (ICF-folded into 0x410799, the wall planner's +0x04): 1 inside one sector, 10 straight, 14 diagonal
-long EEAIAStarPathGraphGoal::GetDefaultStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo)
-{
-    EEAIPathSector* theFrom = static_cast<EEAIPathSubSector*>(inParent->mObject)->GetSector();
-    EEAIPathSector* theTo = inTo->GetSector();
-    if (theFrom != theTo)
-        return theFrom->GetCenter().mX == theTo->GetCenter().mX || theFrom->GetCenter().mY == theTo->GetCenter().mY ? 10 : 14;
-    return 1;
+    return;
 }
