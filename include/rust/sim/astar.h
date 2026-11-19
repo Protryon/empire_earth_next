@@ -3150,6 +3150,12 @@ const uint64_t *ee_astar_sub_sector_neighbors(const EeAStarSubSectorRecord *r, s
 /// `r` from `ee_astar_sub_sector_init`.
 void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other);
 
+/// `IsPassable(player)` of the sub-sector whose tile set is `tiles`.
+///
+/// # Safety
+/// `tiles` is a live set; the caller holds the world (the AI's path searches).
+bool ee_astar_sub_sector_is_passable(const EeSparseArray *tiles, long player);
+
 }  // extern "C"
 
 #endif  // EE_RUST_SIM_ASTAR_H

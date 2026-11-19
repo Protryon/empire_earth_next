@@ -72,6 +72,7 @@ pub mod sparse;
 pub mod storage;
 pub mod storage_save;
 pub mod sub_sector_links;
+pub mod sub_sector_pass;
 pub mod tile_kind;
 pub mod tile_values;
 
