@@ -28,4 +28,5 @@ pub mod teams;
 pub mod teams_ffi;
 #[cfg(test)]
 mod teams_tests;
+pub mod unit_sets;
 pub mod voting;

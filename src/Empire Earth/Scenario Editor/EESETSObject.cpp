@@ -281,7 +281,7 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEOB_OP_UNIT_SET_COUNT: return (int32_t)gUnitSetManager.GetSize();
     case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN:
-        return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->mShowInEditor == true;
+        return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->ShowInEditor() == true;
     case EE_SCREENS_SEOB_OP_UNIT_TYPES: {
         std::vector<unsigned long> theTypes;
         theTypes.push_back(0);

@@ -26,7 +26,6 @@ d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
 d61f7 d68c7 Empire Earth/Database/EEDbObject.cpp
-d68c7 d6bed Empire Earth/Database/EEGameVariant.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
@@ -67,8 +66,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 131b7c 13242b Empire Earth/Empire Earth/EEMusicManager.cpp
 13242b 136b6d Empire Earth/Empire Earth/EEPreferences.cpp
 136b6d 136d66 Empire Earth/Empire Earth/EETeam.cpp
-136d66 136f4c Empire Earth/Empire Earth/EEUnitSet.cpp
-136f4c 1372a6 Empire Earth/Empire Earth/EEUnitSetManager.cpp
 1372a6 137b3f Empire Earth/Empire Earth/EEVCWonder.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
 13e967 13e967 Empire Earth/Empire Earth/EEGlobals.cpp   # the globals of Empire Earth.cpp (data only; same init order)

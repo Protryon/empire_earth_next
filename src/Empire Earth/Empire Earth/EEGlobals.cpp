@@ -25,6 +25,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEGameState.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EEGameVariant.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECivilizationManager.h"
@@ -146,6 +147,7 @@ float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
 EE_GLOBAL_STORAGE(EEComputerPlayerBehaviorTable, gComputerPlayerBehaviorTable, "?gComputerPlayerBehaviorTable@@3VEEComputerPlayerBehaviorTable@@A");
 
 EE_GLOBAL_STORAGE(EEUnitSetManager, gUnitSetManager, "?gUnitSetManager@@3VEEUnitSetManager@@A");
+EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // the game variants: ee_data's list (ee/EEDbList.h)
 EE_GLOBAL_STORAGE(EEAEManager, gAEManager, "?gAEManager@@3VEEAEManager@@A");
 EE_GLOBAL_STORAGE(EEAmbientSoundManager, gAmbientSoundManager, "?gAmbientSoundManager@@3VEEAmbientSoundManager@@A");
 EE_GLOBAL_STORAGE(EECivilizationManager, gCivilizationManager, "?gCivilizationManager@@3VEECivilizationManager@@A");
