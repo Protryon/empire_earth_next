@@ -965,7 +965,7 @@ static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
             break;
         case EE_NETMSG_PACT_PATROL_GROUP:
             if (EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(i[1])))
-                theUnit->mPatrolGroup->Select(p, true);
+                ee_units_pg_select(theUnit->mPatrolGroup, p, true);
             break;
         }
         return 0;

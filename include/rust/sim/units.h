@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/astar.h"
 #include "rust/sim/world.h"
 
 /// `EEUnitClass::ActionChanged` (every class's `HandleActionChanged`)
@@ -658,38 +659,6 @@ constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
 
 /// the dump's line: the NUL-terminated text at `unit`
 constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT = 1;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT = 2;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_AIRPORT = 3;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_REQUEST = 4;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT = 5;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES = 6;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE = 7;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_DUMP = 8;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_CHECKSUM = 9;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_LENGTH = 10;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_POSITION = 11;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_AIRPORT = 12;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_PLANE = 13;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_REPAIR_POINTERS = 14;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT = 15;
-
-constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
@@ -1714,7 +1683,7 @@ constexpr static const int32_t EE_UNITS_PG_READ_U32 = 2;
 
 constexpr static const int32_t EE_UNITS_PG_READ_BOOL = 3;
 
-/// The members' operations of [`ee_units_patrol_group`].
+/// The members' operations of [`run`].
 constexpr static const int32_t EE_UNITS_PG_OP_NEW_ID = 0;
 
 constexpr static const int32_t EE_UNITS_PG_OP_RESET_IDS = 1;
@@ -3947,6 +3916,11 @@ struct EeUnitsClsListHandle;
 /// The lists a host operation fills.
 struct EeUnitsCzList;
 
+/// A patrol group: its reference count (`UReferenceCounter`'s, 1 when made), its points (unit handles; between a
+/// load and `RepairPointers` the saved ids in their place) and its fields. Its handle is the box's address; the C++
+/// holders keep `EEPPatrolGroup*` (ee/EEPPatrolGroup.h: a name for this type).
+struct EeUnitsPatrolGroup;
+
 /// The events (`EEPPlayerEventList`'s state).
 struct EeUnitsPlayerEvents;
 
@@ -4465,23 +4439,6 @@ struct EeUnitsPushIn {
   /// the unit's `GetMaxVelocity()`
   float max_velocity;
   float tick_seconds;
-};
-
-/// The fields' record (`mID`, `mIsLoop`, `mIsTownPatrol`) across the C ABI.
-struct EeUnitsPgFields {
-  uint32_t id;
-  uint8_t is_loop;
-  uint8_t is_town_patrol;
-};
-
-/// One call's arguments: a unit (or player, or file), a point, two integers (a player id, tile x/y, a flag, a save's
-/// version).
-struct EeUnitsPgArgs {
-  uint64_t unit;
-  uint64_t file;
-  float point[3];
-  int32_t a;
-  int32_t b;
 };
 
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
@@ -5208,14 +5165,120 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
 /// `input` and `out` are valid.
 void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
-/// A new, empty air traffic control.
-EeUnitsAtc *ee_units_atc_new();
+/// A new, empty air traffic control; `f` is the C++ host all controls call (the first one given is kept).
+EeUnitsAtc *ee_units_atc_new(EeUnitsAtcFn f);
 
-/// The destructor's body over the host, then the state freed. Null does nothing.
+/// The destructor's body over the registered host (every queued plane and airport released), then the state
+/// freed. Null does nothing.
 ///
 /// # Safety
-/// `p` came from [`ee_units_atc_new`] and is not used again; `f` is valid with `ctx`.
-void ee_units_atc_free(EeUnitsAtc *p, void *ctx, EeUnitsAtcFn f);
+/// `p` came from [`ee_units_atc_new`] and is not used again.
+void ee_units_atc_delete(EeUnitsAtc *p);
+
+/// `AddCargoWeight(unit)` (used cargo += the unit's weight)
+///
+/// # Safety
+/// See above.
+void ee_units_atc_add_cargo_weight(EeUnitsAtc *p, EeAStarUnit unit);
+
+/// `RemoveCargoWeight(unit)` (used cargo -= the unit's weight)
+///
+/// # Safety
+/// See above.
+void ee_units_atc_remove_cargo_weight(EeUnitsAtc *p, EeAStarUnit unit);
+
+/// `AddAirport(airport)`
+///
+/// # Safety
+/// See above.
+void ee_units_atc_add_airport(EeUnitsAtc *p, EeAStarUnit airport);
+
+/// `RemoveAirport(airport)` (the airport is gone)
+///
+/// # Safety
+/// See above.
+void ee_units_atc_remove_airport(EeUnitsAtc *p, EeAStarUnit airport);
+
+/// `QueueRequest(airport, unit, kind)`: 0 queued, 3 no such airport, 7 no room
+///
+/// # Safety
+/// See above.
+long ee_units_atc_queue_request(EeUnitsAtc *p, EeAStarUnit airport, EeAStarUnit unit, long kind);
+
+/// `GetFreeCargoWeight(airport)` (-1 when unknown)
+///
+/// # Safety
+/// See above.
+long ee_units_atc_free_cargo_weight(EeUnitsAtc *p, EeAStarUnit airport);
+
+/// `RemoveFromTakeoffQueues(unit)`
+///
+/// # Safety
+/// See above.
+bool ee_units_atc_remove_from_takeoff_queues(EeUnitsAtc *p, EeAStarUnit unit);
+
+/// `ClearAirportQueue(airport, kind)` (drops the idle takeoffs of a kind)
+///
+/// # Safety
+/// See above.
+bool ee_units_atc_clear_airport_queue(EeUnitsAtc *p, EeAStarUnit airport, long kind);
+
+/// `GetChecksum()` (the out-of-sync checksum)
+///
+/// # Safety
+/// See above.
+long ee_units_atc_checksum(EeUnitsAtc *p);
+
+/// `GetQueueLength(airport)` (its takeoff queue's length)
+///
+/// # Safety
+/// See above.
+unsigned long ee_units_atc_queue_length(EeUnitsAtc *p, EeAStarUnit airport);
+
+/// `GetQueuePosition(unit, which)` (-1: not queued)
+///
+/// # Safety
+/// See above.
+long ee_units_atc_queue_position(EeUnitsAtc *p, EeAStarUnit unit, long which);
+
+/// `RemovePlane(airport, unit)`
+///
+/// # Safety
+/// See above.
+void ee_units_atc_remove_plane(EeUnitsAtc *p, EeAStarUnit airport, EeAStarUnit unit);
+
+/// `RepairPointers()`: the saved ids back to units (3 at the first id with no unit)
+///
+/// # Safety
+/// See above.
+long ee_units_atc_repair_pointers(EeUnitsAtc *p);
+
+/// `FindNearestAirport(unit)` (null: none)
+///
+/// # Safety
+/// See above.
+EeAStarUnit ee_units_atc_find_nearest_airport(EeUnitsAtc *p, EeAStarUnit unit);
+
+/// `Update()` (the landings, then the takeoffs)
+///
+/// # Safety
+/// See above.
+void ee_units_atc_update(EeUnitsAtc *p);
+
+/// `Dump(file)`: the lines go to the host's `DUMP_LINE` with `file` as its context
+///
+/// # Safety
+/// See above; `file` is the host's `FILE*`.
+void ee_units_atc_dump(EeUnitsAtc *p, void *file);
+
+/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`
+///
+/// # Safety
+/// See above; `olds` and `news` hold `count` units each.
+void ee_units_atc_replace(EeUnitsAtc *p,
+                          const EeAStarUnit *olds,
+                          const EeAStarUnit *news,
+                          size_t count);
 
 /// The maximum (0) or the used (1) air cargo.
 ///
@@ -5234,29 +5297,6 @@ unsigned long ee_units_atc_slot_count(const EeUnitsAtc *p);
 /// # Safety
 /// `p` is a live state.
 void *ee_units_atc_slot_airport(const EeUnitsAtc *p, unsigned long index);
-
-/// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.
-///
-/// # Safety
-/// `p` is a live state; `f` is valid with `ctx`.
-int64_t ee_units_atc_call(EeUnitsAtc *p,
-                          void *ctx,
-                          EeUnitsAtcFn f,
-                          int32_t call,
-                          void *unit,
-                          void *other,
-                          long value);
-
-/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`.
-///
-/// # Safety
-/// `p` is a live state; `f` is valid with `ctx`; `olds` and `news` hold `count` units each.
-void ee_units_atc_replace_units(EeUnitsAtc *p,
-                                void *ctx,
-                                EeUnitsAtcFn f,
-                                void *const *olds,
-                                void *const *news,
-                                size_t count);
 
 /// `EEAirTrafficControl::Load` into `p` over the file in `f`.
 ///
@@ -6375,12 +6415,6 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
-extern uint32_t ee_units_pg_host_points(uint64_t group, uint64_t *out, uint32_t capacity);
-
-extern void ee_units_pg_host_set_points(uint64_t group, const uint64_t *points, uint32_t count);
-
-extern void ee_units_pg_host_fields(uint64_t group, uint8_t set, EeUnitsPgFields *io);
-
 extern void ee_units_pg_host_unit_tile(uint64_t unit, int32_t *out_x, int32_t *out_y);
 
 extern float ee_units_pg_host_distance(uint64_t unit, int32_t x, int32_t y);
@@ -6395,20 +6429,130 @@ extern uint8_t ee_units_pg_host_live_state(uint32_t major, uint32_t minor);
 
 extern int32_t ee_units_pg_host_file(uint64_t file, int32_t which, uint32_t *io);
 
-/// Every `EEPPatrolGroup` member's body by its operation (`EE_UNITS_PG_OP_*`) on the group object; the result is a
-/// unit handle, an index, an id or an error code as the member returns it.
-uint64_t ee_units_patrol_group(int32_t op,
-                               uint64_t group,
-                               EeUnitsPgArgs args);
-
 /// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
 ///
 /// # Safety
 /// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
-void ee_units_patrol_group_set_points(uint64_t group,
-                                      const int32_t *tiles,
-                                      uint32_t count,
-                                      uint32_t player);
+void ee_units_pg_set_points(EeUnitsPatrolGroup *group,
+                            const int32_t *tiles,
+                            uint32_t count,
+                            uint32_t player);
+
+/// `new EEPPatrolGroup` (one reference)
+EeUnitsPatrolGroup *ee_units_pg_new();
+
+/// `Reference()`
+///
+/// # Safety
+/// See above.
+void ee_units_pg_reference(EeUnitsPatrolGroup *group);
+
+/// `Dereference()` (the last one detaches and kills the points and frees the group)
+///
+/// # Safety
+/// See above.
+void ee_units_pg_dereference(EeUnitsPatrolGroup *group);
+
+/// `mID`, `mIsLoop`, `mIsTownPatrol`, `mPatrolPoints.size()`, `mPatrolPoints[i]` (null past the end)
+///
+/// # Safety
+/// See above.
+unsigned long ee_units_pg_id(const EeUnitsPatrolGroup *group);
+
+/// # Safety
+/// See above.
+bool ee_units_pg_is_loop(const EeUnitsPatrolGroup *group);
+
+/// # Safety
+/// See above.
+bool ee_units_pg_is_town_patrol(const EeUnitsPatrolGroup *group);
+
+/// `mIsTownPatrol = value` (EETown's patrols)
+///
+/// # Safety
+/// See above.
+void ee_units_pg_set_town_patrol(EeUnitsPatrolGroup *group, bool value);
+
+/// # Safety
+/// See above.
+unsigned long ee_units_pg_point_count(const EeUnitsPatrolGroup *group);
+
+/// # Safety
+/// See above.
+void *ee_units_pg_point(const EeUnitsPatrolGroup *group, size_t index);
+
+/// `ResetIDs()`
+void ee_units_pg_reset_ids();
+
+/// `AddPoint(point, player)`
+///
+/// # Safety
+/// See above.
+void ee_units_pg_add_point(EeUnitsPatrolGroup *group, float x, float y, uint32_t player);
+
+/// `InsertPatrolPointAt(point, player, after)`
+///
+/// # Safety
+/// See above.
+void ee_units_pg_insert_at(EeUnitsPatrolGroup *group,
+                           float x,
+                           float y,
+                           uint32_t player,
+                           void *after);
+
+/// `GetNearest(x, y)` (null: no point)
+///
+/// # Safety
+/// See above.
+void *ee_units_pg_nearest(EeUnitsPatrolGroup *group, int32_t x, int32_t y);
+
+/// `GetNext(unit)` (null: past the end)
+///
+/// # Safety
+/// See above.
+void *ee_units_pg_next(EeUnitsPatrolGroup *group, void *unit);
+
+/// `GetPrevious(unit)` (null: before the start)
+///
+/// # Safety
+/// See above.
+void *ee_units_pg_previous(EeUnitsPatrolGroup *group, void *unit);
+
+/// `GetLast()` (null: none)
+///
+/// # Safety
+/// See above.
+void *ee_units_pg_last(EeUnitsPatrolGroup *group);
+
+/// `RemoveUnit(unit)` (the last point gone releases the group from its player)
+///
+/// # Safety
+/// See above.
+void ee_units_pg_remove(EeUnitsPatrolGroup *group, void *unit);
+
+/// `Select(player, flag)` (stops at the first point the player cannot select)
+///
+/// # Safety
+/// See above; `player` is a live `EEPlayer*`.
+void ee_units_pg_select(EeUnitsPatrolGroup *group, void *player, bool flag);
+
+/// `Load(major, minor, file)`: the first read error
+///
+/// # Safety
+/// See above.
+int32_t ee_units_pg_load(EeUnitsPatrolGroup *group, uint32_t major, uint32_t minor, void *file);
+
+/// `Save(major, minor, file)`: the first write error
+///
+/// # Safety
+/// See above.
+int32_t ee_units_pg_save(EeUnitsPatrolGroup *group, uint32_t major, uint32_t minor, void *file);
+
+/// `RepairPointers()`: 3 at the first id with no unit
+///
+/// # Safety
+/// See above.
+int32_t ee_units_pg_repair(EeUnitsPatrolGroup *group);
 
 /// `TurnTowardAngle` over the C++'s values.
 ///

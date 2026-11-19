@@ -424,7 +424,7 @@ void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
                 inUnit->LoadCargo(theCargo, false, 0);
                 if (theCargo == NULL)
                     return;
-                theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1]->RemoveFromTakeoffQueues(theCargo);
+                ee_units_atc_remove_from_takeoff_queues(theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1], theCargo);
                 inUnit->SetExitingUnitID(-1);
                 return;
             }

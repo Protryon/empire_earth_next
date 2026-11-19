@@ -378,13 +378,13 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     if (!(theNeeded > theLimit)) {
         if ((inUnit->GetUnitClass()->GetUnitType() == kUnitTypeCpMissileBase && inClass->GetCategory() == kUnitCategoryMissile) ||
             inClass->IsAircraft() || inClass->GetCategory() == kUnitCategoryProjectile) {
-            EEAirTrafficControl* theTraffic = inClass->mAirTrafficType != 0 ? thePlayer->mAirTraffic[inClass->mAirTrafficType - 1] : 0;
+            EeUnitsAtc* theTraffic = inClass->mAirTrafficType != 0 ? thePlayer->mAirTraffic[inClass->mAirTrafficType - 1] : 0;
             bool theCanLoad;
             if (theTraffic != NULL) {
                 theNeeded = inClass->mWeight;
-                theCanLoad = theTraffic->GetUsedCargo() + theNeeded <= theTraffic->GetMaxCargo();
+                theCanLoad = ee_units_atc_cargo(theTraffic, 1) + theNeeded <= ee_units_atc_cargo(theTraffic, 0);
                 if (theCanLoad)
-                    theCanLoad = theTraffic->GetFreeCargoWeight(inUnit) >= theNeeded;
+                    theCanLoad = ee_units_atc_free_cargo_weight(theTraffic, inUnit) >= theNeeded;
             } else {
                 long theCapacity = inUnit->GetUnitClass()->mTransportCapacity;
                 theCanLoad = inClass->mWeight - inUnit->mCargoRoom + theCapacity <= theCapacity;
@@ -1747,9 +1747,9 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
         return 0;
     case EE_UNITS_CLS_CR_HOME_FIRST_SLOT: {
-        EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
-        if (theControl->GetNumSlots() > 0)
-            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+        EeUnitsAtc* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+        if (ee_units_atc_slot_count(theControl) > 0)
+            inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theControl, 0)));
         else
             inUnit->Kill(true, false, false);
         return EEObj(inUnit->mHomeBase);

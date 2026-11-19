@@ -340,13 +340,13 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     switch (inOp) {
     case EE_UNITS_GOAL_HOST_REFERENCE:
         if (inB != 0)
-            theGroup->Reference();
+            ee_units_pg_reference(theGroup);
         else
             theUnit->Reference();
         return 0;
     case EE_UNITS_GOAL_HOST_DEREFERENCE:
         if (inB != 0)
-            theGroup->Dereference();
+            ee_units_pg_dereference(theGroup);
         else
             theUnit->Dereference();
         return 0;
@@ -423,23 +423,23 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
 
     // the patrol's
     case EE_UNITS_GOAL_HOST_NEW_PATROL_GROUP:
-        return Handle(new EEPPatrolGroup);
+        return Handle(ee_units_pg_new());
     case EE_UNITS_GOAL_HOST_GROUP_NEXT:
-        return Handle(theGroup->GetNext(ObjectOf<EEComplexUnit>(inB)));
+        return Handle(ee_units_pg_next(theGroup, ObjectOf<EEComplexUnit>(inB)));
     case EE_UNITS_GOAL_HOST_GROUP_PREVIOUS:
-        return Handle(theGroup->GetPrevious(ObjectOf<EEComplexUnit>(inB)));
+        return Handle(ee_units_pg_previous(theGroup, ObjectOf<EEComplexUnit>(inB)));
     case EE_UNITS_GOAL_HOST_GROUP_COUNT:
-        return (uint32_t)theGroup->GetNumPoints();
+        return (uint32_t)ee_units_pg_point_count(theGroup);
     case EE_UNITS_GOAL_HOST_GROUP_ID:
-        return (uint32_t)theGroup->mID;
+        return (uint32_t)ee_units_pg_id(theGroup);
     case EE_UNITS_GOAL_HOST_GROUP_NEAREST:
-        return Handle(theGroup->GetNearest((long)ioArgs->i[0], (long)ioArgs->i[1]));
+        return Handle(ee_units_pg_nearest(theGroup, (int32_t)ioArgs->i[0], (int32_t)ioArgs->i[1]));
     case EE_UNITS_GOAL_HOST_PLAYER_GROUP:
         return Handle(theComplex->GetPlayer()->GetPatrolGroup((unsigned long)inB));
     case EE_UNITS_GOAL_HOST_GROUP_POINTS:
-        return (int64_t)theGroup->mPatrolPoints.size();
+        return (int64_t)ee_units_pg_point_count(theGroup);
     case EE_UNITS_GOAL_HOST_GROUP_POINT:
-        return Handle(theGroup->mPatrolPoints[(size_t)inB]);
+        return Handle(ee_units_pg_point(theGroup, (size_t)inB));
 
     // the cast calamity's
     case EE_UNITS_GOAL_HOST_CALAMITY_CLASS: {
