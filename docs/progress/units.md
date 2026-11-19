@@ -1,9 +1,17 @@
-# The units (`src/Empire Earth/Units`, ~29k lines) whole in Rust
+# The units (`src/Empire Earth/Units`, the actions, formations, the physics thread, the unit utilities) whole in Rust
 
-The lane's state (one file per lane; the round's story is PORT_LEARNINGS.md "The units' lane, round 1"). Rust home:
-`ee_sim::units` and `ee_sim::combat`, over the world views (`ee_sim::world`, [world-views.md](world-views.md)).
-Earlier rounds over the same code: [r5b4-world-and-units.md](r5b4-world-and-units.md),
-[r5b2-combat-and-unit-formulas.md](r5b2-combat-and-unit-formulas.md).
+The lane's state (one file per lane; each round's story is a PORT_LEARNINGS.md section: "The units' lane, round 1",
+"The units' lane, round 2"). Rust home: `ee_sim::units`, `ee_sim::combat`, `ee_sim::formations`, over the world
+views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over the same code:
+[r5b4-world-and-units.md](r5b4-world-and-units.md), [r5b2-combat-and-unit-formulas.md](r5b2-combat-and-unit-formulas.md),
+[r5b-unit-utilities.md](r5b-unit-utilities.md).
+
+## Rounds
+
+| Round | Branch | Net C++ | What |
+|---|---|---|---|
+| 1 | `rust-units1` | -546 | `UpdateHidden` whole in Rust; the update, combat query, goal, unit, active group and citizens hosts' plain reads on the views |
+| 2 | `rust-units2` | -1,833 | the formations one class over Rust shapes (9 units, 12 headers gone); the group command sweep's dry host whole in Rust (units/dry.rs); the unit host's and the combat goals' plain reads on the views; `EEUnitOrderPush/Erase/Clear` deleted |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -35,15 +43,37 @@ capture profiles at seeds 2-3, the plain saveload 18/18, the matrix `--expect` P
 editor gate, the test-profile build; gates.sh: see PORT_LEARNINGS "The units' lane, round 1".
 Only a tour exercises the renderer's direct UpdateHidden call (ee_render fill.rs).
 
+## Round 2 (branch `rust-units2`, 2026-11-18)
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 873399560 | the formations one class: `EEFormation` concrete, `Place` one `ee_formation_place` call by type, the capture's members from Rust (`ee_formation_shape_words`); EEFCircle, EEFLine, EEFWedge, the 6 presets and 12 headers deleted (with EEHerd.cpp's cast and includes, AI Thread) | -949 |
+| fe3ac7dff | `EEUnitOrderPush`/`Erase`/`Clear` and their Rust entry points deleted (no caller) | -18 |
+| c9fe4de05 | the dry host whole in Rust (`units::dry::DryHost`, its tests in dry_tests.rs); EEUnitHost.cpp's `sDry` branches and dry machinery deleted; the sweep calls `ee_units_dry_begin`/`_end` | -814 |
+| cf8e9f9d1 | the unit host's `object_unit_type`, `unit_complex_id`, `player_num_capitols`, `unit_power`, `player_hack_class` on the views; `unit_class_targetable` calls `ee_units_uu_targetable` | -40 |
+| f14f017a9 | the combat goals' 12 plain reads on the views (goal_objects.rs `view_read`) | -12 |
+
+Round 2 total: -1,833 net C++ lines (target 4,000).
+
 ## What is left (next)
 
-- The host switches' remaining cases are world calls (methods, the path manager, the effects, sounds, the goal
-  objects' own members); each moves only with the class it calls. The plain reads still in C++ need a layout
-  member first: `mWaypoints`, `mMine`, `mHomeBase`, `mCitizenBuildQueue`, the class's effect and projectile
-  pointers, the physical model's frame and scale, `mInitialContactLocation` (not in the records).
-- The shot host (`EEShotOp`: 8 plain reads) needs the unit and class in its table, as the update host now has.
-- The save operation's id reads (`EEUnitSaveOperation`'s `EE_UNITS_UNIT_SAVE_ID`) need the pointer members in the
-  layout; then saveload 18/18 and the matrix gate them.
-- Whole classes: `EEComplexUnit`'s remaining bodies (FindContacts, StepAside, SetGroupPathGoals, Kill) and
-  `EEUnitClass::FindPath`, `ProduceUnit` are world-call sequences: a Rust body over a host each, the pattern of
-  units/hidden.rs (a trait the views implement, a mock in the tests).
+- `EEComplexUnit`'s remaining bodies (Kill, CopyFrom, SetGroupPathGoals, StepAside, FindContacts, the cargo
+  calls) are world-call sequences (effects, sounds, the path manager, goals, the unit classes' virtuals): each moves
+  as a Rust body over a host trait only with the classes it calls, the pattern of units/hidden.rs.
+- The goal host (`GoalOp`, ~770 lines) is almost all world calls now (actions, goal objects, the transport and
+  calamity classes' virtuals, files); its remaining plain reads need layout members (`mWaypoints`, the goal queues,
+  the patrol group's points, the class's projectile pointer).
+- The unit host (EEUnitHost.cpp, ~1,000 lines) is the game's world calls only (round 2 moved its dry branches); the
+  rest goes with `EEActiveGroup` (its Keep/Spread methods forward to ag.rs already; the host could call ag.rs
+  directly once the group's handle is the Rust record's) and the patrol groups.
+- `EEActiveGroup`, `EEGroup`, `EESelectedGroup`, `EEPPatrolGroup`, `EEAirTrafficControl`: their bodies are Rust
+  (ag.rs, group.rs, patrol_group.rs, atc.rs); the C++ classes keep the members their many holders read (players,
+  the UI, the scenario effects, the messages). Moving the state into Rust records is the next whole-class step;
+  their callers span the app, UI and scenario clusters.
+- The save operation (`EEUnitSaveOperation`, EEComplexDoppelganger.cpp ~550 lines) needs the pointer members in
+  the layout; then saveload 18/18 and the matrix gate it.
+- The TEST ONLY drivers (EEGroupCommandSweep's case builder, EEActiveGroupSweep, EEPhysicsSweep) read tech trees,
+  calamity classes and class virtuals: Rust only once those are views.
+- Small: `EEIsSeenBy`'s host case (needs the combat world host), `EEGetAttackPart`/`EECanHeal` in the combat goal
+  host (the handle conventions differ: combat's are `EEComplexUnit*`, the utilities' `EEUnit*`), `EEPlanWall` and
+  `EECanPlaceOnTile` (the unit host's game paths; their Rust entry points take the C++ vector).
