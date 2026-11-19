@@ -23,9 +23,7 @@
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEAIKindIDs.h"
-// unit-local constants (.rdata next to RTSMap's vtable 0x441d94: 0x441d8c before it, 0x441dbc after it)
-const float kFlatSlope = 0.7f;              // 0x441d8c (IsTileFlat)
-const float kNegativeHeightEpsilon = -0.01f;   // 0x441dbc (SmoothVertex)
+#include "rust/render/ge.h"
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
@@ -72,194 +70,38 @@ RTSMap::~RTSMap()
     TSScheduler::DestroyCriticalSection(this->mCriticalSectionForColoredRectangles);
 }
 
-// Smooths the slope below a raised area ring by ring until nothing changes; returns the lowest row reached
-// and keeps the deepest ring that moved a corner vertex for SpreadLeft/SpreadRight
-long RTSMap::SpreadDown(long inX, long inY, long inEnd, float inHeight, float inSlope)
-{
-    float theHeight = inHeight;
-    float theSteps = inHeight / (inHeight * inSlope);
-    unsigned long theCount = UMFloorUnsigned(theSteps);
-    long theRing = 0;
-    unsigned long theStep = 1;
-    bool theChanged;
-    do {
-        theChanged = false;
-        theRing++;
-        if (theStep == theCount)
-            inHeight = theHeight;
-        else {
-            inHeight = theStep * theHeight * inSlope;
-            theStep++;
-        }
-        long theLeft = inX - theRing;
-        long theRight = inY + theRing + 1;
-        long theY = inEnd - theRing;
-        for (long theX = theLeft; theX <= theRight; theX++) {
-            if (theX == theLeft) {
-                if (this->SmoothVertex(theX, theY, theX + 1, theY + 1, inHeight)) {
-                    if (theRing > this->mL195600)
-                        this->mL195600 = theRing;
-                    theChanged = true;
-                }
-            } else if (theX == theRight) {
-                if (this->SmoothVertex(theX, theY, theX - 1, theY + 1, inHeight)) {
-                    if (theRing > this->mL195604)
-                        this->mL195604 = theRing;
-                    theChanged = true;
-                }
-            } else if (this->SmoothVertex(theX, theY, theX, theY + 1, inHeight))
-                theChanged = true;
-        }
-    } while (theChanged);
-    return inEnd - theRing;
-}
-
-// Smooths the slope above a raised area ring by ring until nothing changes; returns the highest row reached
-// and keeps the last ring that moved a corner vertex (overwritten, not maxed as in SpreadDown)
-long RTSMap::SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope)
-{
-    float theHeight = inHeight;
-    float theSteps = inHeight / (inHeight * inSlope);
-    unsigned long theCount = UMFloorUnsigned(theSteps);
-    long theRing = 0;
-    unsigned long theStep = 1;
-    bool theChanged;
-    do {
-        theChanged = false;
-        theRing++;
-        if (theStep == theCount)
-            inHeight = theHeight;
-        else {
-            inHeight = theStep * theHeight * inSlope;
-            theStep++;
-        }
-        long theLeft = inX - theRing;
-        long theRight = inY + theRing + 1;
-        long theY = inEnd + theRing + 1;
-        for (long theX = theLeft; theX <= theRight; theX++) {
-            if (theX == theLeft) {
-                if (this->SmoothVertex(theX, theY, theX + 1, theY - 1, inHeight)) {
-                    this->mL195600 = theRing;
-                    theChanged = true;
-                }
-            } else if (theX == theRight) {
-                if (this->SmoothVertex(theX, theY, theX - 1, theY - 1, inHeight)) {
-                    this->mL195604 = theRing;
-                    theChanged = true;
-                }
-            } else if (this->SmoothVertex(theX, theY, theX, theY - 1, inHeight))
-                theChanged = true;
-        }
-    } while (theChanged);
-    return theRing + inEnd;
-}
-
-// NEAR: register choice only; the original keeps inX in edx through the loop (reloaded after the calls)
-// and the ring count in eax, and reloads `this` before each call instead of after it.
-// Smooths the slope left of a raised area until nothing changes and the corner rings are covered;
-// returns the leftmost column reached
-long RTSMap::SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope)
-{
-    float theHeight = inHeight;
-    float theSteps = inHeight / (inHeight * inSlope);
-    unsigned long theCount = UMFloorUnsigned(theSteps);
-    long theRing = 0;
-    unsigned long theStep = 1;
-    bool theChanged = true;
-    while (theChanged || this->mL195600 > theRing) {
-        theChanged = false;
-        theRing++;
-        if (theStep == theCount)
-            inHeight = theHeight;
-        else {
-            inHeight = theStep * theHeight * inSlope;
-            theStep++;
-        }
-        long theStart = theRing + inY + 1;
-        long theBottom = inEnd - theRing;
-        long theX = inX - theRing;
-        for (long theY = theStart; theY >= theBottom; theY--) {
-            if (theY == theStart) {
-                if (this->SmoothVertex(theX, theY, theX + 1, theY - 1, inHeight))
-                    theChanged = true;
-            } else if (theY == theBottom) {
-                if (this->SmoothVertex(theX, theY, theX + 1, theY + 1, inHeight))
-                    theChanged = true;
-            } else if (this->SmoothVertex(theX, theY, theX + 1, theY, inHeight))
-                theChanged = true;
-        }
+// The terrain edits (Raise, its spreads and smoothing, the tiles' upkeep, GetNumRaisedCorners, IsTileFlat) are ee_ge
+// map_raise.rs' over the mesh's Rust object; the map's tiles and water are asked here
+namespace {
+struct EEMapRaiseOps {
+    static bool HasTile(void* inMap, unsigned long inX, unsigned long inY)
+    {
+        return static_cast<RTSMap*>(inMap)->GetTile(inX, inY) != NULL;
     }
-    return inX - max(this->mL195600, theRing);
-}
-
-// Smooths the slope right of a raised area until nothing changes and the corner rings are covered;
-// returns the rightmost column reached
-long RTSMap::SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope)
-{
-    float theHeight = inHeight;
-    float theSteps = inHeight / (inHeight * inSlope);
-    unsigned long theCount = UMFloorUnsigned(theSteps);
-    long theRing = 0;
-    unsigned long theStep = 1;
-    bool theChanged = true;
-    long theBottom = inEnd;
-    while (theChanged || this->mL195604 > theRing) {
-        theChanged = false;
-        theRing++;
-        theBottom--;
-        if (theStep == theCount)
-            inHeight = theHeight;
-        else {
-            inHeight = theStep * theHeight * inSlope;
-            theStep++;
-        }
-        long theStart = theRing + inY + 1;
-        long theX = theRing + inX + 1;
-        for (long theY = theStart; theY >= theBottom; theY--) {
-            if (theY == theStart) {
-                if (this->SmoothVertex(theX, theY, theX - 1, theY - 1, inHeight))
-                    theChanged = true;
-            } else if (theY == theBottom) {
-                if (this->SmoothVertex(theX, theY, theX - 1, theY + 1, inHeight))
-                    theChanged = true;
-            } else if (this->SmoothVertex(theX, theY, theX - 1, theY, inHeight))
-                theChanged = true;
-        }
+    // the tile's height, then each of its units back on the ground (UpdateTiles 0x1225fa)
+    static void SettleTile(void* inMap, unsigned long inX, unsigned long inY, float inHeight)
+    {
+        RTSMap* theMap = static_cast<RTSMap*>(inMap);
+        EEMapTile* theTile = theMap->GetTile(inX, inY);
+        theTile->mHeight = inHeight;
+        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
+            theMap->PlaceUnitOnGround(theNode->mUnit);
     }
-    if (this->mL195604 > theRing)
-        return this->mL195604 + inX;
-    return inX + theRing;
+    static void UpdateWater(void* inMap, long inX, long inY) { static_cast<RTSMap*>(inMap)->UpdateWater(inX, inY); }
+    static EeGeMapHost Of(RTSMap* inMap)
+    {
+        EeGeMapHost theHost = {inMap, inMap->mTerrainMesh.GetRust(), HasTile, SettleTile, UpdateWater};
+        return theHost;
+    }
+};
 }
 
-// NEAR: the frame order of the five floats/tile/count (no-/Og layout follows the local-name hash;
-// original: Z01 -4, Z00 -8, tile -0xc, count -0x10, Z11 -0x14, Z10 -0x18, lowest -0x1c). GetTile's ternary
-// form (a temporary [-0x34], then the copy) is what the original shows; it is neutral at -O1 in the includers.
 // Counts the tile's corners at least 0.4 above its lowest corner (0 off the map)
-// (built without /Og: every local lives in the frame, `leave`, the inline GetTile/GetZ results go through
-// temporaries; its neighbours are normal -O1 code)
-#pragma optimize("g", off)
 long RTSMap::GetNumRaisedCorners(unsigned long inX, unsigned long inY)
 {
-    EEMapTile* theTile = this->GetTile(inX, inY);
-    long theCount = 0;
-    if (theTile != NULL) {
-        float theZ00 = this->mTerrainMesh.GetZ(inX, inY);
-        float theZ10 = this->mTerrainMesh.GetZ(inX + 1, inY);
-        float theZ01 = this->mTerrainMesh.GetZ(inX, inY + 1);
-        float theZ11 = this->mTerrainMesh.GetZ(inX + 1, inY + 1);
-        float theLowest = min(theZ00, min(theZ10, min(theZ01, theZ11)));
-        if (theZ00 - theLowest >= 0.4f)
-            theCount++;
-        if (theZ10 - theLowest >= 0.4f)
-            theCount++;
-        if (theZ01 - theLowest >= 0.4f)
-            theCount++;
-        if (theZ11 - theLowest >= 0.4f)
-            theCount++;
-    }
-    return theCount;
+    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
+    return ee_ge_map_raised_corners(&theHost, inX, inY);
 }
-#pragma optimize("g", on)
 
 // Turns every explored but unseen tile back to unexplored for each player but player 0, then unregisters
 // those players from the doppelganger manager (done before a scenario is saved)
@@ -275,77 +117,6 @@ void EEMap::PrepareSave()
 void RTSMap::ClearU1955DC()
 {
     this->mU1955DC.clear();
-}
-
-// Recomputes the height and water flag of the four tiles around a vertex and puts their units back on the ground
-void RTSMap::UpdateTiles(long inX, long inY)
-{
-    for (long theY = inY - 1; theY <= inY; theY++) {
-        for (long theX = inX - 1; theX <= inX; theX++) {
-            if (!this->mTerrainMesh.GetIsValidTile(theX, theY))
-                continue;
-            EEMapTile* theTile = this->GetTile(theX, theY);
-            float theHeight = min(this->mTerrainMesh.GetZ(theX, theY), this->mTerrainMesh.GetZ(theX + 1, theY));
-            theHeight = min(theHeight, this->mTerrainMesh.GetZ(theX, theY + 1));
-            theHeight = min(theHeight, this->mTerrainMesh.GetZ(theX + 1, theY + 1));
-            theTile->mHeight = theHeight;
-            if (theTile->mHeight < 0.0f)
-                this->mTerrainMesh.SetIsWater(theX, theY, true);
-            else
-                this->mTerrainMesh.SetIsWater(theX, theY, false);
-            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
-                this->PlaceUnitOnGround(theNode->mUnit);
-        }
-    }
-}
-
-// NEAR: (1) the 0.01f is the pooled constant 0x43bf0c, not the `__real` 0.01f names.txt binds at
-// 0x43a688 (two 0.01f constants exist; 10 other functions use 0x43bf0c); (2) register/slot choice (`this` at -4,
-// theResult at -8, the mesh pointer at -0xc and used for the row-count reads).
-// Brings a vertex within the slope of a neighbour (copies its height at slope 0), updating tiles and water;
-// returns -1 if raised, 1 if lowered or copied, 0 if unchanged
-long RTSMap::SmoothVertex(unsigned long inX, unsigned long inY, unsigned long inFromX, unsigned long inFromY,
-                          float inSlope)
-{
-    long theResult = 0;
-    GETerrainMesh* theMesh = &this->mTerrainMesh;
-    if (theMesh->GetIsValidPoint(inX, inY) && theMesh->GetIsValidPoint(inFromX, inFromY)) {
-        float theOldZ;
-        if (inSlope == 0.0f) {
-            theOldZ = this->mTerrainMesh.GetZ(inX, inY);
-            theMesh->SetZ(inX, inY, this->mTerrainMesh.GetZ(inFromX, inFromY));
-            theResult = 1;
-        } else {
-            long theDY = inY - inFromY;
-            long theDX = inX - inFromX;
-            inSlope = sqrt((float)(theDY * theDY) + theDX * theDX) * inSlope;
-            float theZ = this->mTerrainMesh.GetZ(inX, inY);
-            float theFromZ = this->mTerrainMesh.GetZ(inFromX, inFromY);
-            if (theZ < theFromZ) {
-                float theTarget = theFromZ - inSlope;
-                if (theZ < theTarget) {
-                    theOldZ = this->mTerrainMesh.GetZ(inX, inY);
-                    this->mTerrainMesh.SetZ(inX, inY,
-                                      theTarget > kNegativeHeightEpsilon && theTarget < kHeightEpsilon ? 0.0f : theTarget);
-                    theResult = -1;
-                }
-            } else {
-                float theTarget = theFromZ + inSlope;
-                if (theZ > theTarget) {
-                    theOldZ = this->mTerrainMesh.GetZ(inX, inY);
-                    this->mTerrainMesh.SetZ(inX, inY,
-                                      theTarget > kNegativeHeightEpsilon && theTarget < kHeightEpsilon ? 0.0f : theTarget);
-                    theResult = 1;
-                }
-            }
-        }
-        if (theResult != 0) {
-            this->UpdateTiles(inX, inY);
-            if ((theOldZ < 0.0f && this->mTerrainMesh.GetZ(inX, inY) >= 0.0f) || this->mTerrainMesh.GetZ(inX, inY) < 0.0f)
-                this->UpdateWater(inX, inY);
-        }
-    }
-    return theResult;
 }
 
 // NEAR: only the load of inPlayerCount is scheduled differently (the original loads it with inWidth).
@@ -427,28 +198,8 @@ EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
 // Returns whether a tile's corner heights differ by at most 0.7 times the map's scale value (false off the map)
 bool RTSMap::IsTileFlat(unsigned long inX, unsigned long inY)
 {
-    if (this->GetTile(inX, inY) == NULL)
-        return false;
-    float theLow = this->mTerrainMesh.GetZ(inX, inY);
-    float theHigh = theLow;
-    float theZ = this->mTerrainMesh.GetZ(inX + 1, inY);
-    if (theZ < theLow)
-        theLow = theZ;
-    if (theZ > theHigh)
-        theHigh = theZ;
-    theZ = this->mTerrainMesh.GetZ(inX, inY + 1);
-    if (theZ < theLow)
-        theLow = theZ;
-    if (theZ > theHigh)
-        theHigh = theZ;
-    theZ = this->mTerrainMesh.GetZ(inX + 1, inY + 1);
-    if (theZ < theLow)
-        theLow = theZ;
-    if (theZ > theHigh)
-        theHigh = theZ;
-    if (theHigh - theLow <= kFlatSlope * this->mF1955F4)
-        return true;
-    return false;
+    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
+    return ee_ge_map_tile_flat(&theHost, this->mF1955F4, inX, inY);
 }
 
 // Returns whether the tiles a radius's diagonal away left, right, below and above a tile are all on the map
@@ -554,63 +305,18 @@ long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return ee_units_rts_map_load(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this));
 }
 
-// NEAR: induction variable x - 1 ([ebp-4], with x + 1 as +2) and the dead-parameter slots of the
-// results/loop counters differ.
 // Raises or smooths the terrain of a rectangle, spreads its edges, recomputes normals and shorelines and
 // returns the changed rectangle through the in/out bounds
 void RTSMap::Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, float inHeight, float inSlope,
                    float inEdgeHeight, float inEdgeSlope, bool inRaise)
 {
-    bool theDone = !inRaise;
-    this->mL195600 = 0;
-    this->mL195604 = 0;
-    for (long theY = *ioTop + 1; theY >= *ioBottom; theY--) {
-        for (long theX = *ioLeft; theX <= *ioRight + 1; theX++) {
-            if (!this->mTerrainMesh.GetIsValidPoint(theX, theY))
-                continue;
-            if (!theDone) {
-                float theOldZ = this->mTerrainMesh.GetZ(theX, theY);
-                this->mTerrainMesh.SetZ(theX, theY, inHeight);
-                this->UpdateTiles(theX, theY);
-                if ((theOldZ < 0.0f && this->mTerrainMesh.GetZ(theX, theY) >= 0.0f) ||
-                    this->mTerrainMesh.GetZ(theX, theY) < 0.0f)
-                    this->UpdateWater(theX, theY);
-                theDone = true;
-            }
-            if (theX == *ioLeft && theY == *ioTop + 1)
-                ;
-            else if (theX == *ioLeft) {
-                this->SmoothVertex(theX, theY, theX, theY + 1, inSlope);
-                this->SmoothVertex(theX, theY, theX + 1, theY + 1, inSlope);
-            } else if (theY == *ioTop + 1)
-                this->SmoothVertex(theX, theY, theX - 1, theY, inSlope);
-            else {
-                this->SmoothVertex(theX, theY, theX - 1, theY + 1, inSlope);
-                this->SmoothVertex(theX, theY, theX - 1, theY, inSlope);
-                this->SmoothVertex(theX, theY, theX, theY + 1, inSlope);
-            }
-        }
-    }
-    long theTop = this->SpreadUp(*ioLeft, *ioRight, *ioTop, inEdgeHeight, inEdgeSlope);
-    long theBottom = this->SpreadDown(*ioLeft, *ioRight, *ioBottom, inEdgeHeight, inEdgeSlope);
-    long theLeft = this->SpreadLeft(*ioLeft, *ioTop, *ioBottom, inEdgeHeight, inEdgeSlope);
-    long theRight = this->SpreadRight(*ioRight, *ioTop, *ioBottom, inEdgeHeight, inEdgeSlope);
-    for (long theNormalY = theBottom - 1; theNormalY <= theTop + 1; theNormalY++) {
-        for (long theNormalX = theLeft - 1; theNormalX <= theRight + 1; theNormalX++) {
-            if (this->mTerrainMesh.GetIsValidPoint(theNormalX, theNormalY))
-                this->mTerrainMesh.ComputeVertexNormal(theNormalX, theNormalY);
-        }
-    }
-    for (long theShoreY = theBottom - 1; theShoreY <= theTop + 1; theShoreY++) {
-        for (long theShoreX = theLeft - 1; theShoreX <= theRight + 1; theShoreX++) {
-            if (this->mTerrainMesh.GetIsValidTile(theShoreX, theShoreY))
-                this->mTerrainMesh.ComputeShorelines(theShoreX, theShoreY);
-        }
-    }
-    *ioLeft = theLeft;
-    *ioTop = theTop;
-    *ioRight = theRight;
-    *ioBottom = theBottom;
+    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
+    long theBounds[4] = {*ioLeft, *ioRight, *ioTop, *ioBottom};
+    ee_ge_map_raise(&theHost, this, &theBounds, inHeight, inSlope, inEdgeHeight, inEdgeSlope, inRaise);
+    *ioLeft = theBounds[0];
+    *ioRight = theBounds[1];
+    *ioTop = theBounds[2];
+    *ioBottom = theBounds[3];
 }
 
 // Frees the map's tile pointer table (not the tiles)
@@ -640,124 +346,26 @@ long RTSMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return ee_units_rts_map_save(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this));
 }
 
-// NEAR: inline budget (begin() refused in the prologue, Contains/operator+ out of line) and the
-// by-value point copies: the original copies the points with the out-of-line copy ctor 0x4d28b (479 callers in
-// the exe), so the exe's U2DPoint<long> probably has the user-declared copy ctor that U2DPoint.h keeps engine-only.
 // Rebuilds the outline runs of continent areas: every rectangle edge not covered by another area of the same
-// continent
+// continent, split on space maps into the runs on the continent (ee_ge map_raise.rs area_outlines)
 void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents)
 {
-    U2DPoint<long> theStart;
-    U2DPoint<long> theEnd;
-    unsigned long theCount = inAreas.size();
+    struct Ops {
+        static unsigned short Continent(void*, long inX, long inY)
+        {
+            EETileCoordinate theTile;
+            theTile.mX = inX;
+            theTile.mY = inY;
+            return gContinentManager.GetContinent(theTile, kAIPathNonSpace);
+        }
+        static void Run(void* inMap, const long* inRun)
+        {
+            static_cast<RTSMap*>(inMap)->mU1955DC.push_back(
+                RTSMapTileRun(U2DPoint<long>(inRun[0], inRun[1]), U2DPoint<long>(inRun[2], inRun[3])));
+        }
+    };
+    static_assert(sizeof(U2DRectangle<long>) == sizeof(EeGeAreaRect), "an area is its four longs");
     this->ClearU1955DC();
-    for (unsigned long i = 0; i < theCount; i++) {
-        long theLeft = inAreas[i].mLeft;
-        long theRight = inAreas[i].mRight;
-        long theTop = inAreas[i].mTop;
-        long theBottom = inAreas[i].mBottom;
-        unsigned short theContinent = inContinents[i];
-        unsigned long j;
-        theStart.mY = theTop;
-        theEnd.mY = theTop;
-        long theX; for (theX = theLeft; theX < theRight; theX++) {
-            theStart.mX = theX;
-            theEnd.mX = theX + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mTop != theTop)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mY = theBottom;
-        theEnd.mY = theBottom;
-        for (theX = theLeft; theX < theRight; theX++) {
-            theStart.mX = theX;
-            theEnd.mX = theX + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mBottom != theBottom)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mX = theLeft;
-        theEnd.mX = theLeft;
-        long theY; for (theY = theTop; theY < theBottom; theY++) {
-            theStart.mY = theY;
-            theEnd.mY = theY + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mLeft != theLeft)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mX = theRight;
-        theEnd.mX = theRight;
-        for (theY = theTop; theY < theBottom; theY++) {
-            theStart.mY = theY;
-            theEnd.mY = theY + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mRight != theRight)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-    }
-}
-
-// NEAR: which of the run start's coordinates sits in ebx (the original: y, from inStart.mY directly).
-// Adds an outline edge as one tile run; on space maps splits it into the runs whose tiles lie on the continent
-void RTSMap::AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent)
-{
-    if (!this->mTerrainMesh.GetIsSpaceMap()) {
-        RTSMapTileRun theRun(inStart, inEnd);
-        this->mU1955DC.push_back(theRun);
-        return;
-    }
-    long theX = inStart.mX;
-    long theY = inStart.mY;
-    long theRunY = theY;
-    long theRunX = theX;
-    long theDX = 0;
-    long theDY = 0;
-    long theCount;
-    if (inStart.mX == inEnd.mX) {
-        theCount = inEnd.mY - inStart.mY;
-        theDY = 1;
-    } else {
-        theCount = inEnd.mX - inStart.mX;
-        theDX = 1;
-    }
-    bool theInRun = false;
-    for (long i = 0; i <= theCount; i++) {
-        EETileCoordinate theTile;
-        theTile.mX = theX;
-        theTile.mY = theY;
-        unsigned short theContinent = gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-        if (!theInRun) {
-            if (theContinent == inContinent) {
-                theRunX = theX;
-                theRunY = theY;
-                theInRun = true;
-            }
-        } else if (theContinent != inContinent) {
-            RTSMapTileRun theRun(U2DPoint<long>(theRunX, theRunY), U2DPoint<long>(theX, theY));
-            this->mU1955DC.push_back(theRun);
-            theInRun = false;
-        }
-        theX += theDX;
-        theY += theDY;
-    }
-    if (theInRun) {
-        RTSMapTileRun theRun(U2DPoint<long>(theRunX, theRunY), U2DPoint<long>(theX - theDX, theY - theDY));
-        this->mU1955DC.push_back(theRun);
-    }
+    ee_ge_map_area_outlines(this, reinterpret_cast<const EeGeAreaRect*>(inAreas.data()), inContinents.data(),
+                            inAreas.size(), this->mTerrainMesh.GetIsSpaceMap(), Ops::Continent, Ops::Run);
 }

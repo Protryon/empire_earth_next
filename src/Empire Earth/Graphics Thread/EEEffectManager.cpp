@@ -315,40 +315,12 @@ static void EECaptureEffectManager(EEEffectManager* inManager)
 {
     if (!EESimCaptureRecord::Active())
         return;
-    unsigned long long theHash = 0xcbf29ce484222325ull;
-    struct Fold {
-        static void Word(unsigned long long& ioHash, unsigned int inValue)
-        {
-            for (int i = 0; i < 4; i++) {
-                ioHash ^= (inValue >> (i * 8)) & 0xff;
-                ioHash *= 0x100000001b3ull;
-            }
-        }
-    };
-    unsigned int theListCount = 0;
-    uint32_t theHandle;
-    EEEffect* theEffect;
-    for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(inManager->mStore, c, &theHandle)));
-         c = (uint64_t)theHandle + 1) {
-        Fold::Word(theHash, (unsigned int)theHandle);
-        Fold::Word(theHash, (unsigned int)theEffect->mKind);
-        Fold::Word(theHash, (unsigned int)theEffect->mHandle.mValue);
-    }
-    for (theEffect = inManager->First(); theEffect; theEffect = inManager->Next(theEffect)) {
-        Fold::Word(theHash, (unsigned int)theEffect->mHandle.mValue);
-        Fold::Word(theHash, (unsigned int)theEffect->mKind);
-        theListCount++;
-    }
-    for (unsigned long i = 0; i < inManager->DestroyedCount(); i++)
-        Fold::Word(theHash, (unsigned int)ee_gfx_effects_destroyed_at(inManager->mStore, i));
+    uint32_t theWords[6];
+    ee_gfx_effects_capture(inManager->mStore, EEEffectManagerOps::Record, theWords);   // ee_gfx ffi_mesh.rs
     EESimCaptureRecord theRecord((unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) |
                                  ((unsigned int)'U' << 24));
-    theRecord.U32((unsigned int)ee_gfx_effects_last_handle(inManager->mStore));
-    theRecord.U32((unsigned int)inManager->Count());
-    theRecord.U32(theListCount);
-    theRecord.U32((unsigned int)inManager->DestroyedCount());
-    theRecord.U32((unsigned int)theHash);
-    theRecord.U32((unsigned int)(theHash >> 32));
+    for (int i = 0; i < 6; i++)
+        theRecord.U32(theWords[i]);
     theRecord.Commit();
 }
 

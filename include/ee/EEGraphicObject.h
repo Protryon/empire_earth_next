@@ -6,9 +6,9 @@
 #ifndef EE_EEGRAPHICOBJECT_H
 #define EE_EEGRAPHICOBJECT_H
 class FSFile;
+struct EeGfxGraphicTags;
 
 #include <vector>
-#include <map>                      // mTagPointMaps
 #include "ee/EEMedia.h"
 #include "rust/data/tables.h"
 #include "rust/data/media.h"
@@ -66,20 +66,18 @@ public:
     float mAngle;                           // +0x0c
 };
 
-// A point tagged on one of a graphic's models: the model and the point's index in its per-frame point arrays (+0x10c).
-// The effects that start at a unit's weapon or body point (EEE3DBlastWave, EEE3DShield, EEE3DPulseCannonBall,
-// EEE3DTracers) look these up through the unit's model. Bodies in another unit's range (0xdaccd/0xdad54, listed
-// MISSING by EEStartingResources.cpp). Names are provisional.
+// A point tagged on one of a graphic's models: the model (referenced) and the point's index in its per-frame point
+// arrays. The effects that start at a unit's weapon or body point, the carriers' decks and the launches look these
+// up through the unit's model. Made and freed by Rust (ee_gfx tags.rs EeGfxTagPoint, this layout); the geometry is
+// Rust's. Names are provisional.
 class EETagPoint {
 public:
-    // inline (EETagPointList::Add 0xd9a5d news one: the model, its reference, the index) (provisional name)
-    EETagPoint(GEModel* inModel, unsigned long inIndex);
     // 0xdaccd: the point at inFrame through the model's part transformations, then inTransformation
     void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint);
     // 0xdad54: likewise with the part's own transformation inPart (a separately oriented part) first
     void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
                   GE3DPoint& outPoint);
-    void GetOffset(unsigned long inFrame, GE3DPoint& outPoint);   // 0xdab97 (the point at inFrame in the model's space; EEUCLandable::IsBombOnTarget) (provisional name)
+    void GetOffset(unsigned long inFrame, GE3DPoint& outPoint);   // 0xdab97 (the point at inFrame in the model's space)
     // 0xdac22: GetOffset with the part's own transformation inPart first (provisional name)
     void GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint);
 
@@ -87,34 +85,26 @@ public:
     unsigned long mIndex;                   // +0x04
 };
 
-// The tag points of one kind (EEModel::FnD84EC's result; EEGraphicObject +0x114[part]). The vector is at +0
-// (the callers' size() is vector<long>'s ICF twin). Names are provisional.
+// The tag points of one kind (GetTagPoints' result; mTagPoints[part]): a list of the graphic object's Rust store
+// (ee_gfx tags.rs EeGfxTagList: the original's std::vector<EETagPoint*> as its data, size and capacity), read here as
+// that vector. Made and freed by Rust only. Names are provisional.
 class EETagPointList {
 public:
     // 0xe1814: scales the orientation rows of ioTransformation by inScale (does not read this)
     static void Scale(GETransformation& ioTransformation, float inScale);
-    // inline (EEE3DCitizenBeam::Aim 0xe9606 calls vector::operator[] out of line through it: the ICF twin 0x11e2a5)
-    // (provisional name)
     EETagPoint* GetTagPoint(unsigned long inIndex) { return this->mPoints[inIndex]; }
-    // inline (EEE3DDamageVent::Step 0xeafab calls vector::size out of line through it: the ICF twin 0x7c428)
-    // (provisional name)
-    unsigned long GetNumTagPoints() const { return this->mPoints.size(); }
-    // 0xdab52 (in EEStartingResources.cpp's range): dereferences each point's model, deletes the points, empties
-    // the list; the inline dtor runs it (UnloadMedia: Clear, Clear, the vector, delete) (provisional name)
-    void Clear();
-    ~EETagPointList() { this->Clear(); }
-    // inline (COMDAT 0xd9a5d, emitted by EEGraphicObject.cpp; CollectTagPoints calls it): a new point for tag point inIndex of
-    // inModel (provisional name)
-    void Add(GEModel* inModel, unsigned long inIndex);
+    unsigned long GetNumTagPoints() const { return (unsigned long)this->mPoints.size(); }
 
-    std::vector<EETagPoint*> mPoints;       // +0x00
-};
-
-// The materials of one model part that take the player colour (EEGraphicObject::mColorGroups; SetGroupColor 0xd9008
-// sets each one's colour; the dtor 0xd7568 deletes them: no vptr). sizeof 0x14. Names are provisional
-struct EEColorGroup {
-    GEModel* mModel;                        // +0x00
-    std::vector<long> mMaterials;           // +0x04 (indices into the model's materials)
+    struct Points {
+        EETagPoint** mData;
+        size_t mSize;
+        size_t mCapacity;
+        size_t size() const { return this->mSize; }
+        bool empty() const { return this->mSize == 0; }
+        EETagPoint* operator[](size_t inIndex) const { return this->mData[inIndex]; }
+        EETagPoint* front() const { return this->mData[0]; }
+        EETagPoint** begin() const { return this->mData; }
+    } mPoints;                              // +0x00
 };
 
 // The record's members (mKind, the mip and alpha settings, mMediaIndex, the per-state animation arrays mHoldTimes ..
@@ -127,9 +117,6 @@ public:
     virtual ~EEGraphicObject();
     // 0xd85ed (vtable 0x43f788 +0x04; +0x08 is UnloadMedia): loads the models, textures and sounds on the first use
     virtual long LoadMedia();
-    // 0xd8bb2 (ret 0xc): the tag points and colour groups of model part inPart (LoadMedia passes each loaded part
-    // model) (provisional name)
-    void CollectTagPoints(unsigned long inPart, GEModel* inModel, const GETransformation& inParent);
     // 0xd907e (vtable 0x43f788 +0x08: the EEMedia override): releases the loaded models, textures and sounds when the
     // load count is 1 (provisional name)
     virtual long UnloadMedia();
@@ -170,18 +157,16 @@ public:
 
     // Third original vector, ctor0xd7354; model replacement0x1ff928 copies EEWheel elements.
     std::vector<EEWheel*> mWheels;         // +0x024 (0x10 bytes, source identity provisional)
-    std::vector<EEColorGroup*> mColorGroups[14];    // +0x034 per model part (SetGroupColor; the dtor) (provisional name)
-    // +0x114: the tag-point lists per model part (EEE3DTracers ctor 0xfd46e / EEE3DPulseCannonBall ctor 0xf6af0 index
-    // it by the complex unit's mFirstFrame2; the ctor's 14-iteration loop zeroes it) (provisional name)
+    // +0x114: the "weapon_mount" tag-point lists per model part (EEE3DTracers ctor 0xfd46e / EEE3DPulseCannonBall ctor
+    // 0xf6af0 index it by the complex unit's animation): lists of mTags (provisional name)
     EETagPointList* mTagPoints[14];
-    // +0x14c: the tag-point lists by point kind, then by model (GetTagPoints 0xd84ec; the dtor destroys it after mPoints)
-    // (provisional name)
-    std::map<long, std::map<const GEModel*, EETagPointList*>*> mTagPointMaps;
+    // the tag-point lists by point kind and model (the original's mTagPointMaps), the colour groups (mColorGroups,
+    // +0x034) and the attack points (mPoints, +0x164): ee_gfx tags.rs, made by the first load, freed by the last unload
+    EeGfxGraphicTags* mTags;
     // +0x158: the default point (a GE3DPoint: the tag-point users Apply() it when there is no list)
     GE3DPoint mDefaultPoint;                // +0x158 (PickPoint returns it when the point list is empty; the ctor
                                             // 0xd7354's three fldz; EEE2DSmokeMuzzleBlast 0xe6664 copies it)
                                             // (provisional name)
-    std::vector<GE3DPoint> mPoints;         // +0x164 (PickPoint 0xd8546: _First +0x168, _Last +0x16c, 0xc each) (provisional name)
     GE3DPoint mTopPoint;                    // +0x174 (EEE3DCommandConfirmation::Step 0xea5f9 copies it) (provisional name)
     // +0x180: the bars' offset from the object (EEROUnits 0x1147f8/0x1157b6 scale each by the unit's size and project
     // it) (provisional names)

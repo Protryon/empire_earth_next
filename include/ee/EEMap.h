@@ -228,16 +228,10 @@ public:
         return inX < this->mSize && inY < this->mSize ? this->mTiles[inY * this->mSize + inX] : 0;
     }
 
-    // RTSMap.cpp's non-virtual members in address order (provisional names unless stated)
-    long SpreadDown(long inX, long inY, long inEnd, float inHeight, float inSlope);  // 0x121e7d (raise-terrain edges)
-    long SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope);
-    long SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope);
-    long SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope);
+    // RTSMap.cpp's non-virtual members in address order (provisional names unless stated); the terrain edits'
+    // spreads (0x121e7d..), UpdateTiles (0x1225fa) and SmoothVertex are ee_ge map_raise.rs'
     long GetNumRaisedCorners(unsigned long inX, unsigned long inY);   // 0x1222ed (EEPlanWall; built without /Og)
     void ClearU1955DC();                    // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
-    void UpdateTiles(long inX, long inY);   // 0x1225fa (the four tiles around vertex (inX, inY))
-    long SmoothVertex(unsigned long inX, unsigned long inY, unsigned long inFromX, unsigned long inFromY,
-                      float inSlope);
     void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles);
     void ApplyVertexColors();
     bool IsTileFlat(unsigned long inX, unsigned long inY);
@@ -253,7 +247,6 @@ public:
     // inline (refused in EEROTerrain::RenderScene's erase; its copy is ICF-folded with the `lea eax, [ecx+4]` 0x1d99fb;
     // provisional name)
     std::vector<RTSColoredRectangle>& GetColoredRectangles() { return this->mColoredRectangles; }
-    void AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent);
 
     static const UString sMapWidth;         // "RTSMap-MapWidth" (0x529840; key names are provisional)
     static const UString sMapHeight;        // "RTSMap-MapHeight" (0x529828)
