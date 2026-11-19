@@ -558,4 +558,3 @@ pub unsafe extern "C" fn ee_cp_zones_set(p: *const EeCpFields, zones: *const EeC
     // SAFETY: the caller's contract
     unsafe { lists(p) }.zones = list.to_vec();
 }
-

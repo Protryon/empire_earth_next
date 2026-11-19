@@ -2,6 +2,8 @@
 //! then each player's id, through the saved game's primitives (cp file.rs's [`SaveFile`] over
 //! `EESaveFilePrimitive`). The victory condition's own load stays the C++ object's (a virtual call, ee/EETeam.h).
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::ffi::{c_ulong, c_void};
 
 use crate::cp::file::{SaveFile, OK};

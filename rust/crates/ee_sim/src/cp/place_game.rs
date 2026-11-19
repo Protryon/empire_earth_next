@@ -175,7 +175,6 @@ extern "C" {
     fn ee_cp_center_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
 }
 
-
 /// Pushes a pair onto a host operation's list.
 ///
 /// # Safety
@@ -786,7 +785,6 @@ pub unsafe extern "C" fn ee_cp_placement_free(p: *mut EeCpPlacement) {
         drop(unsafe { Box::from_raw(p) });
     }
 }
-
 
 // ---- EECPPlacement's members
 

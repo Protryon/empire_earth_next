@@ -91,10 +91,7 @@ pub unsafe extern "C" fn ee_astar_sub_sector_is_passable(tiles: *const EeSparseA
     let walk = (0..set.size()).rev().map(|i| {
         let p = set.get(i);
         let tile = map.as_ref().and_then(|m| m.tile(i64::from(p.x), i64::from(p.y)))?;
-        let unit = tile
-            .units()
-            .flatten()
-            .find(|u| u.class().is_some_and(|c| c.category() == CATEGORY_GATE));
+        let unit = tile.units().flatten().find(|u| u.class().is_some_and(|c| c.category() == CATEGORY_GATE));
         Some(unit.map(|u| u.complex_unit().map(|g| gate_of(&token, &world, &g, player))))
     });
     passable(walk)

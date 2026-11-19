@@ -9,6 +9,8 @@
 //! on the thread that runs the computer players' Update (noted at its first call); the interface thread asks some of
 //! them too, at its own times. Off (no capture file), a scope is the depth's count and no allocation.
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::cell::Cell;
 use std::mem::offset_of;
 use std::sync::atomic::{AtomicU32, Ordering};

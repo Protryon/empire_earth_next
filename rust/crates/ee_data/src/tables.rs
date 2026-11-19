@@ -2387,7 +2387,8 @@ pub extern "C" fn ee_data_objects_begin(count: usize) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_data_objects_load(index: usize, bytes: *const u8) {
     // SAFETY: the caller's guarantee
-    let r: [u8; EE_DATA_OBJECT_RECORD] = unsafe { std::ptr::read_unaligned(bytes as *const [u8; EE_DATA_OBJECT_RECORD]) };
+    let r: [u8; EE_DATA_OBJECT_RECORD] =
+        unsafe { std::ptr::read_unaligned(bytes as *const [u8; EE_DATA_OBJECT_RECORD]) };
     if let Some(slot) = OBJECTS.write().unwrap_or_else(|e| e.into_inner()).get_mut(index) {
         *slot = Some(Box::new(r));
     }
@@ -2652,8 +2653,8 @@ mod cp_behavior_tests {
         b[4..8].copy_from_slice(&5i32.to_le_bytes());
         cp_behavior_store(&mut t, &b.into_record());
         assert_eq!(t[5].mFloatValue, 3.0, "only record 48 is squared");
-        for skipped in [0, -1, 129, 1000] {
-            b[4..8].copy_from_slice(&(skipped as i32).to_le_bytes());
+        for skipped in [0i32, -1, 129, 1000] {
+            b[4..8].copy_from_slice(&skipped.to_le_bytes());
             let before = t;
             cp_behavior_store(&mut t, &b.into_record());
             assert_eq!(t, before);

@@ -6,6 +6,8 @@
 //! A record is written only by the outermost geometry scope of its thread, as the C++ scopes did; the scope opens
 //! where the C++ opened it (HullContains: after its bounds test).
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use std::ffi::{c_long, c_void};
 
 use crate::app::capture_record::{
