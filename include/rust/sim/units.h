@@ -5226,6 +5226,37 @@ struct EeUnitsPlayerUnit {
   long build_queue;
 };
 
+/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
+struct EeUnitsActiveGroupFields {
+  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
+  long mAction;
+  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
+  /// maximum and the minimum
+  float mSpeed;
+  float mMaxSpeed;
+  float mMinSpeed;
+  float mAcceleration;
+  float mMaxAcceleration;
+  float mMinAcceleration;
+  float mTurnSpeed;
+  float mMaxTurnSpeed;
+  float mMinTurnSpeed;
+  float mTurnAcceleration;
+  float mMaxTurnAcceleration;
+  float mMinTurnAcceleration;
+  /// 1 / the means (0 when not > 0)
+  float mInverseSpeed;
+  float mInverseAcceleration;
+  float mInverseTurnSpeed;
+  float mInverseTurnAcceleration;
+  /// the world table's group speed cap factor (the means are capped at the minimum times it)
+  float mCapFactor;
+  bool mIsFinished;
+  bool mIsQueued;
+  bool mMovesTogether;
+  bool mIsSpecialAttack;
+};
+
 extern "C" {
 
 /// A class's `ActionChanged` of the unit `id` (`object`: its address, the record's check) over the store and `host`.

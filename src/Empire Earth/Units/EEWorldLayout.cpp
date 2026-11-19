@@ -210,6 +210,8 @@ void EEWorldLayoutRegister()
     theLayout.herd_id = offsetof(EEHerd, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
     theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    theLayout.active_group_fields = BaseOffset<EEActiveGroup, EeUnitsActiveGroupFields>();
+    theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
         Fail("the class's 29 effect pointers are not contiguous");
     if (!ee_world_set_layout(&theLayout))
