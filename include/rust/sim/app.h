@@ -232,6 +232,37 @@ struct EeAppTeamsWorld {
 
 extern "C" {
 
+/// `EESimCaptureRecord::Active()`: `EE_SIM_CAPTURE` is set and the file opened.
+bool ee_app_capture_active();
+
+/// `Only(tags, count)`: this thread's records of other tags are dropped (count 0 clears it; at most four).
+///
+/// # Safety
+/// `tags` points to `count` tags (or `count` is 0).
+void ee_app_capture_only(const uint32_t *tags,
+                         uint32_t count);
+
+/// `Exclusive(on)`: while on, every other thread's records are dropped.
+void ee_app_capture_exclusive(bool on);
+
+/// `Close()`: no record of any thread after it.
+void ee_app_capture_close();
+
+/// `Hold(on)`: while on, no record of any thread is written.
+void ee_app_capture_hold(bool on);
+
+/// `Keeps(tag)`: whether a record of `tag` committed now on this thread would be written.
+bool ee_app_capture_keeps(uint32_t tag);
+
+/// `Commit()`: the record of `tag` with `size` payload bytes.
+///
+/// # Safety
+/// `data` points to `size` bytes (or `size` is 0).
+void ee_app_capture_commit(uint32_t tag, const uint8_t *data, size_t size);
+
+/// `Flush()`: the stream's buffer written out (EE-SIM's Quit, before the process ends).
+void ee_app_capture_flush();
+
 /// `ActivateUnit` after its checks -> true when queued (take a reference).
 bool ee_app_active_activate(uint32_t id);
 

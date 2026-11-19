@@ -77,8 +77,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        # Actions units' ranges 0x1000..0x52f3 but EEAWonNet's, EEAQuickSaveLoad's 0x1a5529..0x1a5881
                        # and EESEAQuickSaveLoad's 0x1aa70e..0x1aa723
                        "Empire Earth/Actions/EEARust.cpp",
-                       # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
-                       "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the app and world lane's capture records (ee/EEAppCapture.h: CAMU)
                        "Empire Earth/Empire Earth/EEAppCapture.cpp",
                        # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
