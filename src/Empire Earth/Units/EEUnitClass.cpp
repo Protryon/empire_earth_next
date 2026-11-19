@@ -8,8 +8,8 @@
 #include <cstddef>
 #include <string.h>
 #include "ee/EEUnitUpdate.h"
-#include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
+#include "ee/EEUCUpgradeTable.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
