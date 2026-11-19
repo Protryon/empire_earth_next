@@ -39,7 +39,7 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;

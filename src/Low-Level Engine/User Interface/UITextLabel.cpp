@@ -29,7 +29,7 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UITextLabelRust {
     static intptr_t Op(void* inLabel, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)

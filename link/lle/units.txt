@@ -20,7 +20,6 @@
 532d9 53675 Sound Engine/Sound Engine.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp
-5d3a1 5d72a User Interface/UIBitmap.cpp
 5e47c 5ef4b User Interface/UIButton.cpp
 5ef4b 602e4 User Interface/UICheckBox.cpp
 602e4 64ed6 User Interface/UIComboBox.cpp
@@ -28,7 +27,6 @@
 65f69 69cc7 User Interface/UIControlsTable.cpp
 69d6b 6de9d User Interface/UIEditBox.cpp
 6de9d 6e304 User Interface/UIEMouseWheelScroll.cpp
-6e6de 6f278 User Interface/UIESliderChange.cpp
 6fae7 6ff58 User Interface/UIFileListBox.cpp
 6ff58 7042f User Interface/UIFontTable.cpp
 7042f 75330 User Interface/UIForm.cpp

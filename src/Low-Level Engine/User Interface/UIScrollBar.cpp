@@ -39,7 +39,7 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollButton.h"
 #include "lle/UIScrollBar.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UIScrollBarRust {
     static intptr_t Op(void* inBar, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)

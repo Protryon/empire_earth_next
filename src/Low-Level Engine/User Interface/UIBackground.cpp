@@ -49,7 +49,7 @@
 #include "lle/UITiledBackground.h"
 #include "lle/UIBFull.h"
 #include "lle/UIFullBackground.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 static_assert(sizeof(GETextureDescription) == sizeof(EeUiTextureDescription), "ee_ui bgobj.rs");
 static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui bgobj.rs");
