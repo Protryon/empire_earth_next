@@ -15,6 +15,7 @@
 #include "lle/UIRadioButton.h"
 #include "lle/UICheckBox.h"
 #include "lle/UIListBox.h"
+#include "lle/GEText.h"
 #include "lle/UILBString.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIComboBox.h"
@@ -46,6 +47,13 @@ public:
     virtual void Keyboard(bool inCapture) = 0;
     virtual ~EEUIShell() { ee_screens_shell_free(this->mState); }
 protected:
+    // the kind's destructor body now (a most derived class whose kind still needs its own members)
+    void Free()
+    {
+        ee_screens_shell_free(this->mState);
+        this->mState = NULL;
+        this->mOver = 0;
+    }
     void Make(uint32_t inKind, void* inControl, const std::vector<int64_t>& inArgs)
     {
         this->mState = ee_screens_shell_new(inKind, inControl, inArgs.data(), (uint32_t)inArgs.size());
@@ -265,20 +273,27 @@ public:
     EE_SHELL_SELF
 };
 
-// a plain control (UIControl, its pure virtuals EEUIRustControl's: nothing, 0): the paint areas
+// a plain control (UIControl, its pure virtuals EEUIRustControl's: nothing, 0): the paint areas, the icon bar. Its
+// slots hold the C++ objects a kind's host cases need (the icon bar's bitmaps and sounds); EEUIRustControl's class
+// ops (RustOp) are the kind's host cases (EEUIShell.cpp)
 class EEUIShellControl : public EEUIRustControl, public EEUIShell {
 public:
     EEUIShellControl(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inId,
                      const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-        : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
+        : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness), mKind(inKind)
     {
         this->Make(inKind, this, inArgs);
     }
+    virtual ~EEUIShellControl() { this->Free(); }   // the kind's release still reaches the slots and RustOp
+    uint32_t mKind;
+    void* mSlots[4] = {};
     EE_SHELL_COMMON(EEUIRustControl)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
     EE_SHELL_SELF
     const GE2DPoint& MouseLocation() const { return this->GetMouseLocation(); }
     void Capture() { this->CaptureMouse(); }
+protected:
+    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 };
 
 // a form (UIForm): its virtuals the kind's when it overrides them; a kind reaches the form's base calls and its own
@@ -327,5 +342,8 @@ protected:
     EE_SHELL_VOID(UIForm, Open, EE_SCREENS_SV_OPEN)
     EE_SHELL_RECT(UIForm, SetRectangle, EE_SCREENS_SV_SET_RECTANGLE, void, return)
 };
+
+class UIControlsTable;
+UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
 
 #endif

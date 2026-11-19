@@ -8958,6 +8958,21 @@ constexpr static const uint32_t EE_SCREENS_SH_BITMAP_OFFSET = 52;
 /// (`SelectTab`); `b` the flag << 32 | the tab.
 constexpr static const uint32_t EE_SCREENS_SH_SELECT_TAB = 53;
 
+/// `EEUICUnitIconBar` (a control; no args).
+constexpr static const uint32_t EE_SCREENS_SK_ICON_BAR = 129;
+
+/// `Update()` (the refill from the selection).
+constexpr static const uint32_t EE_SCREENS_SKOP_IB_UPDATE = 136;
+
+/// `f[0..4]`: one icon's rectangle (left, top, right, bottom; the frame bitmap's).
+constexpr static const uint32_t EE_SCREENS_SKOP_IB_ICON_RECT = 137;
+
+/// The bar's slots let go (the sounds unloaded, the icon and frame bitmaps released).
+constexpr static const uint32_t EE_SCREENS_SH_IB_FREE = 188;
+
+/// `f[0..2]`: the control's width and height (`GetRectangle()`'s).
+constexpr static const uint32_t EE_SCREENS_SH_SIZE = 189;
+
 /// `EEUIFSEPaintElevation` (a control; args: the scroll action, the brush group).
 constexpr static const uint32_t EE_SCREENS_SK_PAINT_ELEVATION = 96;
 
@@ -9038,50 +9053,50 @@ constexpr static const uint32_t EE_SCREENS_SH_SLIDER_OF = 146;
 constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_RUST = 147;
 
 /// `EEUIBSavedGroup` (a button; no args).
-constexpr static const uint32_t EE_SCREENS_SK_SAVED_GROUP = 112;
+constexpr static const uint32_t EE_SCREENS_SK_SAVED_GROUP = 128;
 
 /// `Refresh()` / `SetUnit((EEComplexUnit*)a)`.
-constexpr static const uint32_t EE_SCREENS_SKOP_SG_REFRESH = 112;
+constexpr static const uint32_t EE_SCREENS_SKOP_SG_REFRESH = 128;
 
-constexpr static const uint32_t EE_SCREENS_SKOP_SG_SET_UNIT = 113;
+constexpr static const uint32_t EE_SCREENS_SKOP_SG_SET_UNIT = 129;
 
 /// -> a new empty `GEBitmap`.
-constexpr static const uint32_t EE_SCREENS_SH_SG_NEW_PORTRAIT = 160;
+constexpr static const uint32_t EE_SCREENS_SH_SG_NEW_PORTRAIT = 176;
 
 /// The sound `a` (0 `kSoundButton1`, 1 `kSoundButton2`) loaded -> its sample id (0: none) / unloaded (`b` 1).
-constexpr static const uint32_t EE_SCREENS_SH_SG_SOUND = 161;
+constexpr static const uint32_t EE_SCREENS_SH_SG_SOUND = 177;
 
 /// `gSoundManager->Play(a, 1, 0, 1, false, NULL)`.
-constexpr static const uint32_t EE_SCREENS_SH_SG_PLAY = 162;
+constexpr static const uint32_t EE_SCREENS_SH_SG_PLAY = 178;
 
 /// -> the local player (0: none).
-constexpr static const uint32_t EE_SCREENS_SH_SG_PLAYER = 163;
+constexpr static const uint32_t EE_SCREENS_SH_SG_PLAYER = 179;
 
 /// -> the local player's selected group's first unit / its saved group `a`'s first unit when it has units (b 1; 0
 /// else).
-constexpr static const uint32_t EE_SCREENS_SH_SG_FIRST_UNIT = 164;
+constexpr static const uint32_t EE_SCREENS_SH_SG_FIRST_UNIT = 180;
 
 /// The message `a` sent for the group `b & 0xff` (`EE_SCREENS_SG_MSG_*`; `b >> 8` the select's double-click flag).
-constexpr static const uint32_t EE_SCREENS_SH_SG_SEND = 165;
+constexpr static const uint32_t EE_SCREENS_SH_SG_SEND = 181;
 
 /// -> `UIControl::ShiftKeyPressed()`.
-constexpr static const uint32_t EE_SCREENS_SH_SG_SHIFT = 166;
+constexpr static const uint32_t EE_SCREENS_SH_SG_SHIFT = 182;
 
 /// -> `GetIndex()`.
-constexpr static const uint32_t EE_SCREENS_SH_SG_INDEX = 167;
+constexpr static const uint32_t EE_SCREENS_SH_SG_INDEX = 183;
 
 /// The unit `a`'s portrait button cut into the bitmap `b` for the control's rectangle -> its texture, `f[0..2]` its
 /// cell.
-constexpr static const uint32_t EE_SCREENS_SH_SG_FACE = 168;
+constexpr static const uint32_t EE_SCREENS_SH_SG_FACE = 184;
 
 /// The texture `a` referenced (`b` 1) or released (0).
-constexpr static const uint32_t EE_SCREENS_SH_SG_TEXTURE_REF = 169;
+constexpr static const uint32_t EE_SCREENS_SH_SG_TEXTURE_REF = 185;
 
 /// The bitmap `a`'s texture set to `b` on the control's screen.
-constexpr static const uint32_t EE_SCREENS_SH_SG_SET_TEXTURE = 170;
+constexpr static const uint32_t EE_SCREENS_SH_SG_SET_TEXTURE = 186;
 
 /// The bitmap `a` drawn at the button's bitmap location.
-constexpr static const uint32_t EE_SCREENS_SH_SG_DRAW = 171;
+constexpr static const uint32_t EE_SCREENS_SH_SG_DRAW = 187;
 
 /// The messages: select (with the double click flag), add the selection, create, clear.
 constexpr static const int64_t EE_SCREENS_SG_MSG_SELECT = 0;

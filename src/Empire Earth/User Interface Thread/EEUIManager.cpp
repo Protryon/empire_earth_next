@@ -81,7 +81,6 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEUICPortrait.h"
 #include "ee/EEUICChatLine.h"
-#include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUICPing.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetGamesBox.h"
@@ -273,7 +272,7 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
         break;
     }
     case kDbControlUnitIconBar:
-        theControl = new EEUICUnitIconBar(inTable, theRectangle, theForm);
+        theControl = EEUIShellNewIconBar(inTable, theRectangle, theForm);
         break;
     case kDbControlPGSLineGraph:
         // the post-game summary's line graph (EEUIPGSLineGraph): its values formatted by ee_screens post_game.rs
