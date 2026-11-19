@@ -55,6 +55,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/AI Thread/EEAIAStarCapture.cpp",
                        # TEST ONLY: the capture of the continent manager's analysis (ee/EEAIContinentCapture.h)
                        "Empire Earth/AI Thread/EEAIContinentCapture.cpp",
+                       # EESaveLoad.cpp's data path lookup, a leaf (PORT_LEARNINGS "Cycle cuts"; ee/EESaveGameFiles.h)
+                       "Empire Earth/Persistent/EEOpenSaveGameFile.cpp",
                        # the continent manager's regions in a saved game (save version 0.263; ee/EESaveGameFiles.h)
                        "Empire Earth/AI Thread/EEAIContinentSave.cpp",
                        # the start of the Rust library (ee_rust_init)
