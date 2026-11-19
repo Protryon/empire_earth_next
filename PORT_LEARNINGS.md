@@ -32741,3 +32741,105 @@ tests (herd_tests.rs, town_tests.rs, lists_tests.rs); the centres' and the save'
   (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS`;
   scenario_check 27/27; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 38, 40],
   alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+
+## The game's leaves, round 1: the AI Thread's captures, the world views' check, the unit store's notes and sweeps, the AI manifest, the edict vote and three tables in Rust (ee_sim app capture_record.rs, astar search_note.rs, world check.rs, units step_note.rs / store_sweep.rs, app voting.rs; ee_game cp_engine.rs; ee_data tables.rs; branch rust-leaves1, 2026-11-19)
+
+The lane takes the leaves and near-leaves tools/cpp_deps.py (branch rust-cppdeps) names in the game's directories
+and moves each whole into Rust; docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 735d7d576 | EESimCapture.cpp into Rust (superseded at the merge by the app lane's identical move) | +13 -116, net -103 |
+| bf67e9743 | the A* and continent captures whole in Rust | +39 -430, net -391 |
+| 596965b3e | VWCK from the views alone; EEWorldViewCheck.cpp deleted | +3 -239, net -236 |
+| e2d6f13a0 | EEVoting whole in Rust | +10 -46, net -36 |
+| fef99845f | the unit store's notes, records and sweeps in Rust | +51 -287, net -236 |
+| e1d46c111, cb086815f | clippy, rustfmt | Rust only |
+| 064fa4982 | EECPCombatManager header-only (origin/rust then deleted it) | +6 -69, net -63 |
+| 6706c9f53 | EEStartingResources, EEUCUpgradeTable header-only | +15 -69, net -54 |
+| 6a33367ee | EECPEngine in Rust | +93 -439, net -346 |
+| 40f15ca79 | EEAIUnitTargetingTable's weights in ee_data | +16 -52, net -36 |
+| a1c2e5d11, (clippy) | ee_data tests and clippy after the merge | Rust only |
+| d430b02ed | (merge) origin/rust 7779d7db1: the capture helpers onto the app lane's writer | |
+| | **the branch against origin/rust after the merge** | **+228 -1,562, net -1,334** |
+
+- **The capture file, twice.** This round moved EESimCapture.cpp into ee_base (`sim_capture.rs`: a `BufWriter` with an
+  `atexit` flush), and the app cluster's round 2 moved it into ee_sim (`app/capture.rs`: the C library's stream, as
+  the C++ wrote it) at the same time. The merge kept the app lane's writer (two writers would each open and truncate
+  the file) and moved this lane's helpers onto it: `ee_sim::app::capture_record` holds `active`, `keeps`, `commit`,
+  `flush` over the writer, the `Record` builder (little-endian fields), the FNV-1a constants and the geometry
+  records. Rust code writes records itself through it, with no C++ host call.
+- **The A* capture** (`EEAIAStarCaptureRun`) is the search's own: the thread's runs are a stack (the innermost gets
+  the notes, as `gEEAIAStarCaptureRun`), a run's record is the bytes, the events' count and FNV-1a 64, the storage
+  digest and (EE_SIM_CAPTURE_ASTAR_EVENTS=1) the raw events. The C++ view notes through `ee_astar_capture_note`.
+- **The continent captures**: CNTB and CNTR are `ee_astar_cm_capture(record, tag)`; the hull and area records
+  (HULL, AREA) are capture_record.rs's thread-local open record and scope depth; lle/U2DPolygon.h's `EEGeomCapture*` are
+  inline forwarders (a point list passes as its `long` pairs, the FNV-1a 32 of the points is Rust's).
+- **VWCK from the views alone.** EEWorldViewCheck.cpp folded the same fields through the C++ members every tick and
+  stopped EE-SIM when the views disagreed; they never did over the lanes since the world views landed, and the VWCK
+  record (whose digest is the views') keeps the capture gate's baseline, so a view that changes what it reads still
+  fails the gate. The cross-check is gone (a behaviour change of the TEST ONLY check, not of the game).
+- **The unit store's notes and sweeps.** USTM's and USST's digests (the step leaves' notes, a class Update's calls,
+  a class ActionChanged's operations and its outermost scope), the tick's commit with its store-read check (exit 3
+  on a mismatch, the same message), USPK and USFL and their EE-SIM sweeps over every player's units (the players and
+  lists through the views; `EEWorld::GetPlayerIndex`'s last match), and `EEFillMembers` by unit objects. The digests
+  were plain statics in C++ and are one mutex in Rust (the physics thread writes them).
+- **The AI manifest** (ee_game `cp_engine.rs`; ee_game, not ee_sim, because its log writes the game log): the files
+  through `PlatFOpen` and `PlatFindFirst` (the game's path forms; `\` as `/` off Windows), the environment through
+  the C library's `getenv` (EE-SIM sets variables with `_putenv_s`), the read once per process, the summary line,
+  EE_AI_ENGINE's list, the resolve, the folder hash (the files sorted by their lower-case `/` keys, CR dropped).
+  `EECPAIEntry` is the Rust entry (texts as pointer and length; `EECPAIID`/`EECPAIText` make strings); the debug
+  output goes back through `ee_cp_engine_debug_out` (ESDebugOut's filters are the Error System's C++). The seats'
+  functions (`EECPEngine`, `EECPEngineAI`, `SeesAll`, `FillsGarrison`, `Name`, `Set`) read EEComputerPlayer and
+  moved to EECPNext.cpp.
+- **Lesson: cbindgen exports a module's `extern "C"` imports.** cp_engine.rs's imports of `ferror` and the
+  `PlatFind*` functions went into the headers: `ferror` clashed with the CRT's declaration in every unit that
+  includes rust/game/cp_engine.h, and the split tool made a new `rust/base/plat_sys.h` for the PlatFind ones (it
+  gives an import to the crate that defines the symbol). A private `/// cbindgen:ignore` module holding the extern
+  blocks keeps them out.
+- **Lesson: a header that includes ee/EEDbRecords.h must come after lle/LowLevelEngine.h.** EEUCUpgradeTable.h's
+  template `Load` needs EEDbRecords.h (for `EEDbLoadList`); EEUnitClass.cpp included it before the LLE umbrella, and
+  UString.h then compiled ahead of the umbrella's set-up: 110 errors far away (EEPlayer not an RTSPlayer). The
+  include moved after the umbrella.
+- **The small ones.** EEVoting: an `EeAppVoting` record with `Propose` in Rust, the class without its vtable
+  (nothing deletes it through a pointer); EECPCombatManager: header-only here (its saves were already empty and its
+  one test had no caller), deleted whole by origin/rust's dead-member pass at the merge; EEStartingResources and EEUCUpgradeTable: header-only (`Load` a template over
+  `EEDbLoadList`, the list a `static constexpr` of the empty `EEDbList`); EEAIUnitTargetingTable: ee_data holds the
+  three rows (None until three records load), the target search copies them with `ee_data_ai_targeting_table`.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EERules (the converter's cppgate compiles EERules.cpp),
+  EEWorldLayout (offsetof), the tables with C++ storage, EETeam, EECPPlaceCapture, the rest of EEUnitStore, EEAIArea,
+  EEMRecord, NEMessage, NESynchronousClient, and the LLE units (the LLE lane's).
+- **Tests**: capture_record 4 (FNV, the record layout, the geometry records, off without the variable); search_note 3; step_note 3; store_sweep 1; voting 1; cp_engine 5; tables 1.
+- **Behaviour changes**: the VWCK cross-check (above); the target search with no targeting table reads zero
+  weights where the C++ dereferenced NULL; EEVoting's +0x09 starts at 0. Nothing else: the oracle and every capture
+  profile are unchanged.
+- **What exercises what**: the captures (every profile; VWCK, USTM, USST, USPK, USFL, ASRN, ASGR, CNTB, CNTR, HULL,
+  AREA in the oracle, late, space and calamity profiles); the manifest and the resolve (every EE-SIM game's engine
+  choice, the oracle, the gates' ai-game `engines`); EE_AI_ENGINE (the placement profile's `--engine boom,ageofai`);
+  the folder hash (the LAN game's join checksum: gates.sh only); the lobby's engine names (the tour only); the edict
+  vote (a network edict message: no gate sends one).
+
+- **The census** (tools/cpp_deps.py report). Before (origin/rust b3ab7ba2c): 532 units, 154,656 lines; leaves 62
+  (3,208 lines); near-leaves 132 (14,051); cycles 4 SCCs, 414 units, 142,132 lines (the largest 379 units, 133,985).
+  After (this branch merged with origin/rust 7779d7db1, so other lanes' rounds count too): 522 units, 150,730 lines;
+  leaves 57 (3,079); near-leaves 131 (13,393); cycles 4 SCCs, 411 units, 138,675 lines (the largest 376 units,
+  130,553). The game's leaves left: EERules, EECPPlaceCapture, EEColorTable, EETeam, EECPBehaviorTable.
+- **Gates, before the merge** (at 6a33367ee): both builds 0/0; the oracle identical on seeds 2-7; the Rust gate's
+  tests PASS but `fs::golden_spec_replays` (the known rmdir timing flake under load: alone it passes); every capture
+  profile at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, units
+  175, app 26, groups 2, placement 4, transport 185 digests).
+- **Gates, on the tree merged with origin/rust 7779d7db1**: `strip_markers.py --check` clean, the headers current;
+  both builds 0/0 and the test profile 0/0; the Rust gate PASS; the oracle identical on seeds 2-7; every capture
+  profile at seeds 2-3 PASS with the same digest counts as above; scenario_check 27/27; the editor gate (14,448
+  lines) and the civilization builder gate (4,062) PASS; `eedata.py check` PASS and `cppgate` PASS (ee_data's
+  tables.rs changed); and gates.sh (EE_GATES_TREE the main checkout's tree):
+  `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13402` units [4, 41, 42] alive [2, 3] engines
+  classic_lua x 2, `RESULT PASS lan-game PT host=2711 joiner=2713`, GATES PASS. No saveload run: nothing moved saves
+  (EEVoting is not saved; EETeam and EEUnitStore's saves did not move).
+- **The merge needed**: EESimCapture.h (both sides made it header-only: origin's kept), ee_sim app/mod.rs (both
+  lists), EESim.cpp (origin's decision sweep with this lane's two sweep calls), EECPCombatManager.h (origin deleted
+  it), and the relocation of ee_base sim_capture.rs's helpers onto origin's writer (ee_sim app capture_record.rs).
+- **Short of the target**: net -1,334 C++ lines against origin/rust (the 3,000 asked). What the queue had left is
+  object storage still in C++ (the tables with C++ members, EETeam's saves, the unit class improvement's saves and
+  strings), the converter-gated EERules, the compiler-only EEWorldLayout and whole C++ class trees (EEAIArea, the
+  message classes): docs/progress/game-leaves.md "Left".
