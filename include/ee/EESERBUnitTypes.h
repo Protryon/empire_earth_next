@@ -5,8 +5,7 @@
 #ifndef EE_EESERBUNITTYPES_H
 #define EE_EESERBUNITTYPES_H
 
-class GEBitmap;
-class EEUIFScenarioEditor;
+class UIButton;
 
 // 0x5318cc: the world's player count the editor's player tab sets (EESEAChangeWorldPlayerCount; provisional name)
 extern unsigned long& gMaxPlayers;
@@ -22,26 +21,9 @@ public:
     unsigned long mCount;                   // +0x0c
 };
 
-// RTTI EESEUIBDiplomacy > UIButton; vtable 0x443298; sizeof 0x108. A 22x22 two-state button (mState 0/1, help
-// strings 0x2198/0x2199) over three static bitmap pairs (0x531fc0/0x531fc8/0x531fd0; loaded by 0x1768a6, released by
-// 0x176b18). ctor 0x176818 (`ret 0x14`), ??_G 0x176883. Names are provisional.
-class EESEUIBDiplomacy : public UIButton {
-public:
-    EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocation, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inBorderThickness);
-    virtual ~EESEUIBDiplomacy() {}
-    static void LoadBitmaps(EEUIFScenarioEditor* inEditor);
-    static void ReleaseBitmaps();
-    void UpdateBitmaps();
-protected:
-    virtual void ButtonUp();                // +0x8c 0x176baf
-public:
-    unsigned long mState;                   // +0x104
-
-    static GEBitmap* sNormalBitmaps[2];
-    static GEBitmap* sFocusedBitmaps[2];
-    static GEBitmap* sPressedBitmaps[2];
-};
+// The diplomacy buttons' bitmaps and help text for the state inState (0 allies, 1 enemies), then the form's help text
+// when inHelp (EESERBUnitTypes.cpp; the buttons a kind over the button shell, ee_game shells_editor.rs)
+void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp);
 
 // (EESEEChangeStartEpoch, the start epoch combo box's event, is an EESEERust: ee/EESEARust.h, editor_events.rs)
 

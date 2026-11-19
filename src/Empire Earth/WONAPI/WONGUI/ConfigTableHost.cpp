@@ -57,10 +57,10 @@ namespace WONAPI {
 EE_CFG_BIND(SplitterConfig,ContainerConfig,mSplitter,Splitter)
 EE_CFG_BIND(ImageButtonConfig,ComponentConfig,mImageButton,ImageButton)
 EE_CFG_BIND(TextAreaConfig,ScrollAreaConfig,mTextArea,TextArea)
-EE_CFG_BIND(MSArrowButtonConfig,ButtonConfig,mMSArrowButton,MSArrowButton)
-EE_CFG_BIND(MS3DFrameConfig,ComponentConfig,mMS3DFrame,MS3DFrame)
+EE_CFG_BIND(MSArrowButtonConfig,ButtonConfig,mMSArrowButton,Component)
+EE_CFG_BIND(MS3DFrameConfig,ComponentConfig,mMS3DFrame,Component)
 EE_CFG_BIND(MSButtonConfig,ButtonConfig,mMSButton,MSButtonBase)
-EE_CFG_BIND(MSTabButtonConfig,MSButtonConfig,mMSTabButton,MSTabButton)
+EE_CFG_BIND(MSTabButtonConfig,MSButtonConfig,mMSTabButton,Component)
 EE_CFG_BIND(WONFrameComponentConfig,ComponentConfig,mFrameComponent,WONFrameComponent)
 #undef EE_CFG_BIND
 // 0x00796a20: the skinned buttons' configs set their pointer before the base's

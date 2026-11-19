@@ -135,8 +135,6 @@ pub const EE_UNITS_AG_HAS_ACTION: i32 = 40;
 pub const EE_UNITS_AG_COMMAND_TYPE: i32 = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 pub const EE_UNITS_AG_NUM_CARGO: i32 = 42;
-/// unit `a`'s `GetPosition(io.p)`
-pub const EE_UNITS_AG_POSITION: i32 = 43;
 /// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
 pub const EE_UNITS_AG_ANGLE: i32 = 44;
 /// the units of tile (c, d) (pushed)
@@ -239,13 +237,33 @@ impl AgGame {
 }
 
 impl AgHost for AgGame {
+    // (`c_long` is 32 bits on Windows and 64 elsewhere: the cast is needed there)
+    #[allow(clippy::unnecessary_cast)]
     fn group(&mut self, g: u64) -> EeUnitsAgGroup {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_GROUP, g, 0, 0, 0, &mut io);
-        io.group
+        // the group's record and members in place (the units' state lane: once the C++ host's EE_UNITS_AG_GROUP)
+        let f = group_fields(g);
+        // SAFETY: a live group's `mGoal` member (the layout's offset)
+        let goal = unsafe { read_at::<usize>(g, layout().active_group_goal) } as u64;
+        // SAFETY: a group body runs inside the C++ call that holds the world
+        let t = unsafe { WorldRead::begin() };
+        // SAFETY: a live group
+        let count = unsafe { GroupView::of(&t, g) }.map_or(0, |v| v.len()) as u32;
+        EeUnitsAgGroup {
+            goal,
+            goal_kind: goal_kind_of(goal),
+            action: f.mAction as i32,
+            count,
+            speed: f.mSpeed,
+            queued: f.mIsQueued as u8,
+            moves_together: f.mMovesTogether as u8,
+            special_attack: f.mIsSpecialAttack as u8,
+        }
     }
     fn group_unit(&mut self, g: u64, i: u32) -> u64 {
-        self.op(EE_UNITS_AG_GROUP_UNIT, g, 0, i as i64, 0) as u64
+        // SAFETY: as above
+        let t = unsafe { WorldRead::begin() };
+        // SAFETY: a live group (`GetUnit(i)`: the vector's element; the C++ read past the end, the view gives 0)
+        unsafe { GroupView::of(&t, g) }.map_or(0, |v| v.unit_handle(i as usize))
     }
     fn remove(&mut self, g: u64, u: u64) {
         self.op(EE_UNITS_AG_REMOVE, g, u, 0, 0);
@@ -254,7 +272,7 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_FINISH, g, 0, 0, 0);
     }
     fn set_moves_together(&mut self, g: u64) {
-        self.op(EE_UNITS_AG_MOVES_TOGETHER, g, 0, 0, 0);
+        with_group_fields(g, |f| f.mMovesTogether = true);
     }
     fn request_all_paths(&mut self, g: u64) {
         self.op(EE_UNITS_AG_REQUEST_ALL, g, 0, 0, 0);
@@ -303,8 +321,7 @@ impl AgHost for AgGame {
         io.f
     }
     fn set_values(&mut self, g: u64, values: &[f32; 17]) {
-        let mut io = EeUnitsAgIo { list: values.as_ptr() as *mut c_void, ..Default::default() };
-        self.io(EE_UNITS_AG_SET_VALUES, g, 0, 0, 0, &mut io);
+        with_group_fields(g, |f| f.set_values(values));
     }
     fn unit(&mut self, u: u64) -> EeUnitsAgUnit {
         // the unit's fields over the world views (the units' round 1: once the C++ host's fill, EE_UNITS_AG_UNIT)
@@ -346,10 +363,15 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_CLEAR_GATHERED, u, 0, 0, 0);
     }
     fn set_special_attack(&mut self, u: u64, v: bool) {
-        self.op(EE_UNITS_AG_SET_SPECIAL, u, 0, v as i64, 0);
+        with_complex_fields(u, |c| c.mIsSpecialAttack = v);
     }
     fn set_formation_place(&mut self, u: u64, slot: Option<u32>, rank: i32) {
-        self.op(EE_UNITS_AG_SET_PLACE, u, 0, slot.map_or(-1, |s| s as i64), rank as i64);
+        with_complex_fields(u, |c| {
+            if let Some(s) = slot {
+                c.mFormationSlot = s as std::os::raw::c_ulong;
+            }
+            c.mFormationRank = rank as std::os::raw::c_long;
+        });
     }
     fn can_take(&mut self, storage: u64, u: u64, resource_type: u32) -> bool {
         self.op(EE_UNITS_AG_CAN_TAKE, storage, u, resource_type as i64, 0) != 0
@@ -360,7 +382,9 @@ impl AgHost for AgGame {
         (io.a as i32, io.b as i32)
     }
     fn has_tile(&mut self, x: i32, y: i32) -> bool {
-        self.op(EE_UNITS_AG_HAS_TILE, 0, 0, x as i64, y as i64) != 0
+        // SAFETY: as above
+        let t = unsafe { WorldRead::begin() };
+        WorldView::global(&t).and_then(|w| w.map()).is_some_and(|m| m.tile(i64::from(x), i64::from(y)).is_some())
     }
     fn tile_at(&mut self, p: [f32; 3]) -> Option<(f32, i32)> {
         let mut io = EeUnitsAgIo { p, ..Default::default() };
@@ -382,15 +406,18 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_HAS_ACTION, class, 0, action as i64, 0) != 0
     }
     fn command_type(&mut self, u: u64) -> i32 {
-        self.op(EE_UNITS_AG_COMMAND_TYPE, u, 0, 0, 0) as i32
+        // SAFETY: as above; `u` is a live complex unit
+        let t = unsafe { WorldRead::begin() };
+        unsafe { UnitView::of(&t, u) }.map_or(0, |v| v.command_type() as i32)
     }
     fn num_cargo(&mut self, u: u64) -> u32 {
-        self.op(EE_UNITS_AG_NUM_CARGO, u, 0, 0, 0) as u32
+        // `GetComplexUnit()->GetNumCargoUnits()`
+        // SAFETY: as above; `u` is a live unit
+        let t = unsafe { WorldRead::begin() };
+        unsafe { UnitView::of(&t, u) }.and_then(|v| v.complex_unit()).map_or(0, |c| c.cargo_len() as u32)
     }
     fn position(&mut self, u: u64) -> [f32; 3] {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_POSITION, u, 0, 0, 0, &mut io);
-        io.p
+        crate::units::unit_geom::position_of(u)
     }
     fn angle_from_north(&mut self, from: [f32; 3], to: [f32; 3]) -> f32 {
         let mut io = EeUnitsAgIo { p: from, q: to, ..Default::default() };
@@ -398,8 +425,11 @@ impl AgHost for AgGame {
         io.f
     }
     fn tile_units(&mut self, x: i32, y: i32) -> Vec<u64> {
-        let mut io = EeUnitsAgIo::default();
-        self.list(EE_UNITS_AG_TILE_UNITS, 0, x as i64, y as i64, &mut io).into_iter().map(|(u, _, _)| u).collect()
+        // the tile's nodes' units in order (a NULL unit as 0)
+        // SAFETY: as above
+        let t = unsafe { WorldRead::begin() };
+        let tile = WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(i64::from(x), i64::from(y)));
+        tile.map_or_else(Vec::new, |tl| tl.units().map(|u| u.map_or(0, |v| v.handle())).collect())
     }
     fn passable_by(&mut self, obj: u64, by: u64) -> bool {
         self.op(EE_UNITS_AG_PASSABLE, obj, by, 0, 0) != 0
@@ -577,6 +607,47 @@ const CRUSADER_TYPES: [u64; 4] = [0x2e6, 0x2e7, 0x2e8, 0x2e9];
 
 /// The fields of a unit the group bodies read (`EE_UNITS_AG_UNIT`, once a C++ fill) over the views: the unit's, its
 /// complex unit's (`mComplexUnit`), its class's and its stats'.
+// ---- the records in place (the units' state lane, round 1)
+use crate::units::ag_fields::EeUnitsActiveGroupFields;
+use crate::units::unit_fields::EeUnitsComplexUnitFields;
+use crate::world::layout::layout;
+use crate::world::{GroupView, UnitView, WorldRead, WorldView};
+
+/// The value of type `T` at `object + offset`.
+///
+/// # Safety
+/// The bytes there are a live member of type `T`.
+unsafe fn read_at<T: Copy>(object: u64, offset: u64) -> T {
+    // SAFETY: the caller's contract
+    unsafe { std::ptr::read((object as usize + offset as usize) as *const T) }
+}
+
+/// An active group's record (`EeUnitsActiveGroupFields`, its second base), for one access.
+fn with_group_fields<R>(g: u64, f: impl FnOnce(&mut EeUnitsActiveGroupFields) -> R) -> R {
+    // SAFETY: a live EEActiveGroup's record base (the layout's offset); the borrow ends inside `f`, before any host
+    // call
+    f(unsafe { &mut *((g as usize + layout().active_group_fields as usize) as *mut EeUnitsActiveGroupFields) })
+}
+
+fn group_fields(g: u64) -> EeUnitsActiveGroupFields {
+    with_group_fields(g, |f| *f)
+}
+
+/// A complex unit's record (`EeUnitsComplexUnitFields`), for one store.
+fn with_complex_fields(u: u64, f: impl FnOnce(&mut EeUnitsComplexUnitFields)) {
+    // SAFETY: a live EEComplexUnit's record base; the borrow ends inside `f`
+    f(unsafe { &mut *((u as usize + layout().complex_unit_fields as usize) as *mut EeUnitsComplexUnitFields) })
+}
+
+/// A goal's `mKind` (-1: no goal)
+fn goal_kind_of(goal: u64) -> i32 {
+    if goal == 0 {
+        return -1;
+    }
+    // SAFETY: a live group's goal (the C++ deletes it only through ClearGoal, which clears the member)
+    i32::from(unsafe { read_at::<u8>(goal, layout().goal_kind) })
+}
+
 // (`c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there)
 #[allow(clippy::unnecessary_cast)]
 pub(crate) fn ag_unit_fields(u: &crate::world::UnitView) -> EeUnitsAgUnit {

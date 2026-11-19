@@ -55,9 +55,8 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     case Op::WrapWidth: return t->mText->GetWidth();
     case Op::WrapHeight: return t->mText->GetHeight();
     case Op::SkinBtn: return SkinBtnOp(t,a,b,c);
-    case Op::SkinBoxPainter: // the subclass's replaceable painter function
-        if ((EeWonMsBox)b == EeWonMsBox::Checkbox) MSCheckbox::CheckboxPainter(*(Graphics*)a,(MSCheckbox*)t);
-        else if ((EeWonMsBox)b == EeWonMsBox::Radio) MSRadioButton::RadioPainter(*(Graphics*)a,(MSRadioButton*)t);
+    case Op::SkinBoxPainter: // the check box's or radio button's default painter function (never replaced), 13 x 13
+        ((EeWonMsBox)b == EeWonMsBox::Checkbox ? MSGraphicsUtil::DrawCheck : MSGraphicsUtil::DrawRadio)(*(Graphics*)a,0,0,13,13,t->IsPressed(),t->IsChecked());
         return 0;
     case Op::Draw: {
         WONDrawSlots aSlots;

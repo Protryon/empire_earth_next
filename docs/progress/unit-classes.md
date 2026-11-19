@@ -57,6 +57,27 @@ and the screens' headers are).
 - The lead's other targets for this cluster: `EECalamity`'s members into its record, the scenario elements whole
   (the editor gate's in-place reads first), the map and the random map's state. Not started this round.
 
+## The units' state lane, round 1 (branch `rust-unitstate1`, 2026-11-19: -485 net C++ lines)
+
+The state layer of this cluster and of the units (the sister lane, units behaviour, moves the bodies). Story and
+gates: PORT_LEARNINGS.md "The units' state lane, round 1".
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 283cc3d35 | the unit save's ids, maxima, floats, vector and contact sections and the loads' plain stores in place (units/unit_save_views.rs); layout entries for the complex unit's pointer members, vectors, contact list, collision tile, scale, frame, effect handles, and the class's projectile class and 29 effect pointers | -101 |
+| 21e43a611 | `EEAirTrafficControl` and `EEPPatrolGroup` deleted: `EeUnitsAtc` (atc.rs, atc_views.rs) and `EeUnitsPatrolGroup` (patrol_group.rs) are the objects their holders keep | -329 |
+| 32c0609d9 | `EEActiveGroup`'s plain members as the record `EeUnitsActiveGroupFields` (units/ag_fields.rs); the group host's plain cases in place | -57 |
+| 4efa9f10a | two includes after the merge (rust_includes.py) | +2 |
+
+Found while measuring: `EEUnitClass` has no subclass hierarchy left (R5b.4 rounds 32-35) and its plain data is the
+record `EeUnitsUnitClassFields` already; the cross-lane `->mUnitClass->mX` reads are record reads in place, so the
+accessor sweep was skipped (agreed with the lead). What keeps the class is its bodies and its non-record members
+(effects, sounds, models, the AI script, the projectile and death classes).
+
+Next for the state layer: `EEGroup`'s plain bodies over `GroupView`, the path request map as a Rust object, then the
+group classes; the save's deques (they need Rust containers first); the class's media and effect members as Rust
+handles; the map's remaining C++ members are the graphics lane's terrain mesh and vertex colours.
+
 ## Gates
 
 See PORT_LEARNINGS.md "Unit classes, data and calamities cluster, round 1".

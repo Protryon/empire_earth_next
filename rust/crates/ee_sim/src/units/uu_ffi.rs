@@ -554,6 +554,16 @@ pub unsafe extern "C" fn ee_units_uu_unit_tiles(which: i32, unit: u64, io: *mut 
     }
 }
 
+/// `EEGetFarmDropSites` (16) into an empty list: whether any, the sites.
+pub(crate) fn farm_drop_sites(unit: u64) -> (bool, Vec<u64>) {
+    let n = Note::begin(16);
+    let mut units = Vec::new();
+    n.u(unit).us(&units);
+    let found = uu::farm_drop_sites(&mut Game, unit, &mut units);
+    n.b(found).us(&units);
+    (found, units)
+}
+
 /// `EEGetFarmDropSites` (16) (appended to `io`).
 ///
 /// # Safety

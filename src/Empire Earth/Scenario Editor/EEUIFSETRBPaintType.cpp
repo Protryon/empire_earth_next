@@ -40,9 +40,6 @@
 #include "lle/UIListBox.h"
 #include "lle/UIRadioButton.h"
 #include "lle/GEText.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEUIFSEMap.h"
 #include "ee/EESEUnit.h"
 #include "lle/UIEditBox.h"
 
@@ -158,11 +155,11 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         break;
     }
     case EE_SCREENS_SEE_OP_MAP_ELEVATION:
-        static_cast<EEUIFSEMap*>(p)->ShowElevationControls(i[0] != 0);
+        ee_screens_semp_call((EeScreensSeMap*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p)),   // the map tab's group
+                             EE_SCREENS_SEMP_SHOW_ELEVATION, i[0] != 0);
         break;
     case EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST:
-        ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p)))->GetTabGroup(kEditorTabUnits))
-            ->RefreshUnitList();
+        static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p))->UnitCall(EE_SCREENS_SEUN_REFRESH);
         break;
     case EE_SCREENS_SEE_OP_EPOCH_COUNT:
         return (int32_t)EEEpochCount();

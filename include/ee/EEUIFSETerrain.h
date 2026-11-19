@@ -3,12 +3,12 @@
 // its controls: the terrain type and colour list boxes, the paint control, the colour/type change events and the paint
 // type radio button (its ctor/??_G live in EEUIFSETRBPaintType.cpp). Names are provisional (RTTI names where there is
 // one).
-// Requires lle/UIListBox.h, lle/UIRadioButton.h, lle/GEText.h, lle/GEBitmap.h, ee/EEUIFSEPaint.h,
+// Requires lle/UIListBox.h, lle/UIRadioButton.h, lle/GEText.h, lle/GEBitmap.h,
 // ee/EEUIFSEMainGroup.h, ee/EESEAPaint.h, <vector>.
 #ifndef EE_EEUIFSETERRAIN_H
 #define EE_EEUIFSETERRAIN_H
 
-class EEUIFSETerrain;
+struct EeScreensSeGroup;
 
 // one line of the terrain type list (0x1c bytes: UIListBox<EESEUITTData>, the dtor's 0x1c stride)
 struct EESEUITTData {
@@ -77,67 +77,28 @@ public:
     bool mIsSelectionFramed;                // +0x140 (CopyData: the copied selection is drawn)
 };
 
-// the tab's paint control (RTTI EEUIFSETerrainPaint > EEUIFSEPaint; vtable 0x445a80, sizeof 0xc0; ??_G 0x1ac539)
-class EEUIFSETerrainPaint : public EEUIFSEPaint {
-public:
-    EEUIFSETerrainPaint(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long inId,
-                        const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                        unsigned long inIndex, EEUIFSETerrain* inTerrain)
-        : EEUIFSEPaint(inScroll, inBrushes, inId, inLocation, inWidth, inHeight, inForm, inIndex), mTerrain(inTerrain)
-    {
-        this->mIsCentered = true;
-    }
-    virtual ~EEUIFSETerrainPaint() {}       // user-declared (??_G 0x1ac539 stores this vtable first)
-    virtual EESEAPaint* CreatePaintAction();  // +0x88 0x1ab344 (a new terrain or mountain paint action)
-    // Actual TerrainPaint vtable445a80 slots44/48 both target1ad67e (xor eax,eax; ret).
-    // Original declaration placement is provisional; scope is this proved derived type.
-    virtual long MouseRButtonDown() { return 0; }
-    virtual long MouseRButtonUp() { return 0; }
-
-    EEUIFSETerrain* mTerrain;               // +0xbc
-};
-
 // the colour list's selection event (RTTI EEUIETerrainColorChange > UIEvent; vtable 0x445b10; ??_G 0x1ac55b)
 class EEUIETerrainColorChange : public UIEvent {
 public:
-    EEUIETerrainColorChange(EEUIFSETerrain* inTerrain) : mTerrain(inTerrain) {}
+    EEUIETerrainColorChange(EeScreensSeGroup* inTerrain) : mTerrain(inTerrain) {}
     virtual ~EEUIETerrainColorChange() {}   // user-declared (??_G 0x1ac55b stores this vtable first)
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1ab4bc
 
-    EEUIFSETerrain* mTerrain;               // the tab (editor_terrain.rs reads the preview through it)
+    EeScreensSeGroup* mTerrain;             // the tab's group (editor_terrain.rs reads the preview through it)
 };
 
 // the type list's selection event (RTTI EEUIETerrainTypeChange > UIEvent; vtable 0x445be4, sizeof 0x10; ??_G 0x1ac586)
 class EEUIETerrainTypeChange : public UIEvent {
 public:
-    EEUIETerrainTypeChange(EEUIFSETerrain* inTerrain) : mTerrain(inTerrain) {}
+    EEUIETerrainTypeChange(EeScreensSeGroup* inTerrain) : mTerrain(inTerrain) {}
     virtual ~EEUIETerrainTypeChange() {}    // user-declared (??_G 0x1ac586 stores this vtable first)
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1ab6d7
 
-    EEUIFSETerrain* mTerrain;               // +0x0c
+    EeScreensSeGroup* mTerrain;             // +0x0c (the tab's group)
 };
 
 struct EeScreensSeTerrain;
 
 // whole in Rust (ee_screens editor_terrain.rs): the class holds its object (the in-editor terrains and colour types,
 // the controls ids 0xc8 .. 0xcf and 205, the selected terrain)
-class EEUIFSETerrain : public EEUIFSEMainGroup {
-public:
-    EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
-                   UIForm* inForm, GEFont* inFont);
-    virtual ~EEUIFSETerrain();              // 1ac5ea (deleting1ac5b1)
-    virtual void Update();                  // 1ac6f9
-    virtual void Leave();                   // 1ac675
-    virtual void Enter();                   // 1ac727
-    virtual void MouseMove(const GE2DPoint& inLocation); // 1aca71
-    // the editor gate's (EESimEditor.cpp: terrainstate)
-    unsigned long GetSelectedTerrain() const;
-    unsigned long GetTerrainCount() const;
-    long GetTerrainID(unsigned long inIndex) const;
-    unsigned long GetColorTypeCount() const;
-    long GetColorTypeID(unsigned long inIndex) const;
-
-    EeScreensSeTerrain* mRust;
-};
-
 #endif

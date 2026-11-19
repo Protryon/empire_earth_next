@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guiconf.h"
+#include "ee/wonapi/WONGUIShell.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
@@ -129,28 +130,6 @@ ComponentConfig* CrossPromotionButtonConfig::CfgFactory()
 
 
 namespace WONAPI {
-// Creates a 15x15 arrow button that maximizes a splitter pane in the given direction
-MaxSplitterButton::MaxSplitterButton(Direction direction) : MSArrowButton(direction)
-{
-    this->SetSize(15,15);
-    this->SetButtonFlags(2,false);
-}
-
-// Draws the arrow button and, while it is checked, a small bar in the button text colour
-void MaxSplitterButton::Paint(Graphics& g)
-{
-    MSArrowButton::Paint(g);
-    if(!this->IsChecked())
-        return;
-    int x=this->Width()/2-3,y=this->Height()/2-2;
-    if(this->IsPressed()) {
-        ++x;
-        ++y;
-    }
-    g.SetSysColor(StandardColor_ButtonText);
-    g.FillRect(x,y,7,4);
-}
-
 // Passes every layout key to the arrow button config
 bool MaxSplitterButtonConfig::Virtual24(const std::string& instruction)
 {
@@ -159,16 +138,9 @@ bool MaxSplitterButtonConfig::Virtual24(const std::string& instruction)
     return false;
 }
 
-// Attaches the config to the maximize-splitter button it configures
-void MaxSplitterButtonConfig::SetComponent(Component* component)
-{
-    MSArrowButtonConfig::SetComponent(component);
-    this->mButton=static_cast<MaxSplitterButton*>(component);
-}
-
 // Creates a maximize-splitter button for the layout file
 Component* MaxSplitterButtonConfig::CompFactory()
 {
-    return new MaxSplitterButton;
+    return WONShellNew(EeWonShellKind::MaxSplitterButton,Direction_Up);
 }
 }

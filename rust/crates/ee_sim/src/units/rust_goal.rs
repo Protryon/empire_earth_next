@@ -155,11 +155,7 @@ pub const EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS: i32 = 7;
 /// `i[0]`: the action, `i[1]` 1: without the class's `ActionChanged`
 pub const EE_UNITS_GOAL_HOST_START_ACTION: i32 = 8;
 pub const EE_UNITS_GOAL_HOST_FIND_UNIT: i32 = 9;
-pub const EE_UNITS_GOAL_HOST_UNIT_POSITION: i32 = 10;
-pub const EE_UNITS_GOAL_HOST_TILE_LOCATION: i32 = 11;
 pub const EE_UNITS_GOAL_HOST_TELL_GROUP: i32 = 12;
-pub const EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION: i32 = 13;
-pub const EE_UNITS_GOAL_HOST_SET_ANIMATION: i32 = 14;
 pub const EE_UNITS_GOAL_HOST_DROP_PATH: i32 = 15;
 pub const EE_UNITS_GOAL_HOST_NEW_GOAL: i32 = 16;
 pub const EE_UNITS_GOAL_HOST_FILE_OPEN: i32 = 17;
@@ -185,34 +181,27 @@ pub const EE_UNITS_GOAL_HOST_CALAMITY_PLACE: i32 = 51;
 pub const EE_UNITS_GOAL_HOST_CALAMITY_INFO: i32 = 52;
 pub const EE_UNITS_GOAL_HOST_CREATE_CALAMITY: i32 = 53;
 pub const EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP: i32 = 54;
-pub const EE_UNITS_GOAL_HOST_SPEND_POWER: i32 = 55;
 pub const EE_UNITS_GOAL_HOST_CAN_CAST_AT: i32 = 56;
 pub const EE_UNITS_GOAL_HOST_FACES_TARGET: i32 = 57;
 pub const EE_UNITS_GOAL_HOST_FACES_POINT: i32 = 58;
 pub const EE_UNITS_GOAL_HOST_UNIT_IN_SET: i32 = 59;
 pub const EE_UNITS_GOAL_HOST_STATS_RANGE: i32 = 60;
 pub const EE_UNITS_GOAL_HOST_CONTACT_RANGE: i32 = 61;
-pub const EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT: i32 = 62;
 pub const EE_UNITS_GOAL_HOST_UNIT_HEIGHT: i32 = 63;
 pub const EE_UNITS_GOAL_HOST_HIT_POINTS: i32 = 64;
 pub const EE_UNITS_GOAL_HOST_UNDETECTABLE: i32 = 65;
 pub const EE_UNITS_GOAL_HOST_COMPLEX_UNIT: i32 = 66;
 // the explore goal's
-pub const EE_UNITS_GOAL_HOST_PLAYER_HUMAN: i32 = 70;
 pub const EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL: i32 = 71;
 pub const EE_UNITS_GOAL_HOST_CONTAINER: i32 = 72;
-pub const EE_UNITS_GOAL_HOST_GROUP_UNITS: i32 = 73;
 pub const EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: i32 = 74;
 pub const EE_UNITS_GOAL_HOST_LINE_OF_SIGHT: i32 = 75;
-pub const EE_UNITS_GOAL_HOST_RING_TILES: i32 = 76;
 pub const EE_UNITS_GOAL_HOST_TILE_SCREEN: i32 = 77;
 pub const EE_UNITS_GOAL_HOST_CELL_TAKEN: i32 = 78;
 pub const EE_UNITS_GOAL_HOST_CAN_STAND: i32 = 79;
 pub const EE_UNITS_GOAL_HOST_PATH_REACHABLE: i32 = 80;
-pub const EE_UNITS_GOAL_HOST_PATH_AREA_ID: i32 = 81;
 pub const EE_UNITS_GOAL_HOST_MAP_DIMENSIONS: i32 = 82;
 pub const EE_UNITS_GOAL_HOST_CONTINENT_POINT: i32 = 83;
-pub const EE_UNITS_GOAL_HOST_RANDOM: i32 = 84;
 pub const EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: i32 = 85;
 pub const EE_UNITS_GOAL_HOST_UNIT_FAMILY: i32 = 86;
 pub const EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: i32 = 87;
@@ -221,7 +210,6 @@ pub const EE_UNITS_GOAL_HOST_UNLOAD_RANGE: i32 = 90;
 pub const EE_UNITS_GOAL_HOST_CLASS_TYPE: i32 = 91;
 pub const EE_UNITS_GOAL_HOST_CARGO_COUNT: i32 = 92;
 pub const EE_UNITS_GOAL_HOST_CARGO_CATEGORY: i32 = 93;
-pub const EE_UNITS_GOAL_HOST_TRANSPORT_KIND: i32 = 94;
 pub const EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: i32 = 95;
 /// `i[0..8]`: the destination, unload, first cargo and found tiles in and out
 pub const EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES: i32 = 96;
@@ -248,11 +236,8 @@ pub const EE_UNITS_GOAL_HOST_BOARDING: i32 = 115;
 pub const EE_UNITS_GOAL_HOST_PICK_TILE_NEAR: i32 = 116;
 /// `list`: the units, `i[4]` the base class's rule; `i[0..4]` the tiles in and out
 pub const EE_UNITS_GOAL_HOST_RENDEZVOUS: i32 = 117;
-pub const EE_UNITS_GOAL_HOST_CENTER_OFFSET: i32 = 118;
 /// `i[0]`: the technology; out: the node, the class, available
 pub const EE_UNITS_GOAL_HOST_GARRISON_UPGRADE: i32 = 119;
-/// `b` 1: `GetGoal()`, 0: `GetLoadGoal()`; `i[0]` its kind
-pub const EE_UNITS_GOAL_HOST_UNIT_GOAL: i32 = 120;
 pub const EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND: i32 = 121;
 pub const EE_UNITS_GOAL_HOST_CLEAR_GOALS: i32 = 122;
 pub const EE_UNITS_GOAL_HOST_DEPOSIT: i32 = 123;
@@ -272,27 +257,21 @@ pub const EE_UNITS_GOAL_HOST_TECH_NODE: i32 = 401;
 pub const EE_UNITS_GOAL_HOST_NODE_INFO: i32 = 402;
 pub const EE_UNITS_GOAL_HOST_PLAYER_ID: i32 = 403;
 pub const EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE: i32 = 404;
-pub const EE_UNITS_GOAL_HOST_BUILDERS_ADD: i32 = 405;
 pub const EE_UNITS_GOAL_HOST_ATTACK_PART: i32 = 406;
 pub const EE_UNITS_GOAL_HOST_IN_WORK_REACH: i32 = 407;
 pub const EE_UNITS_GOAL_HOST_SURROUNDING_TILES: i32 = 408;
 pub const EE_UNITS_GOAL_HOST_COMPLETE_BUILDING: i32 = 409;
 pub const EE_UNITS_GOAL_HOST_PLAY_EFFECT: i32 = 410;
-pub const EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME: i32 = 411;
 pub const EE_UNITS_GOAL_HOST_FILL_PARTS: i32 = 412;
 pub const EE_UNITS_GOAL_HOST_NEXT_FREE_TILE: i32 = 413;
 pub const EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION: i32 = 414;
 pub const EE_UNITS_GOAL_HOST_LOCATION_GOAL: i32 = 415;
-pub const EE_UNITS_GOAL_HOST_TEND_FARM: i32 = 417;
-pub const EE_UNITS_GOAL_HOST_GATHER_NEAR: i32 = 418;
 pub const EE_UNITS_GOAL_HOST_GATE_SIDE_PART: i32 = 419;
 pub const EE_UNITS_GOAL_HOST_BUILD_EVENT: i32 = 420;
 pub const EE_UNITS_GOAL_HOST_ABANDON_BUILDING: i32 = 421;
 pub const EE_UNITS_GOAL_HOST_FACE_TARGET: i32 = 422;
-pub const EE_UNITS_GOAL_HOST_SET_WORK_TIMER: i32 = 423;
 pub const EE_UNITS_GOAL_HOST_HALT: i32 = 424;
 pub const EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: i32 = 428;
-pub const EE_UNITS_GOAL_HOST_RESOURCE_USERS: i32 = 429;
 pub const EE_UNITS_GOAL_HOST_NEW_GATHER: i32 = 430;
 pub const EE_UNITS_GOAL_HOST_SET_GOAL: i32 = 431;
 pub const EE_UNITS_GOAL_HOST_NEAREST_SITE: i32 = 432;
@@ -301,34 +280,25 @@ pub const EE_UNITS_GOAL_HOST_CAN_PRODUCE: i32 = 434;
 pub const EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR: i32 = 435;
 pub const EE_UNITS_GOAL_HOST_FRIENDLY: i32 = 436;
 pub const EE_UNITS_GOAL_HOST_IN_CINEMATIC: i32 = 437;
-pub const EE_UNITS_GOAL_HOST_SET_PAID: i32 = 438;
 pub const EE_UNITS_GOAL_HOST_PAY: i32 = 439;
 pub const EE_UNITS_GOAL_HOST_SET_HIT_POINTS: i32 = 440;
 pub const EE_UNITS_GOAL_HOST_FOUNDATION_STARTED: i32 = 441;
 pub const EE_UNITS_GOAL_HOST_GOAL_ARG: i32 = 442;
 // the gather goal's
-pub const EE_UNITS_GOAL_HOST_FARM_TILE: i32 = 450;
 pub const EE_UNITS_GOAL_HOST_RESOURCE_SPOT: i32 = 451;
 pub const EE_UNITS_GOAL_HOST_NEXT_RESOURCE: i32 = 452;
 pub const EE_UNITS_GOAL_HOST_FIND_STORAGE: i32 = 453;
 pub const EE_UNITS_GOAL_HOST_FREE_TILE: i32 = 454;
-pub const EE_UNITS_GOAL_HOST_TILE_HEIGHT: i32 = 455;
-pub const EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT: i32 = 456;
-pub const EE_UNITS_GOAL_HOST_NEXT_FARM: i32 = 457;
 pub const EE_UNITS_GOAL_HOST_STORAGE_SEARCH: i32 = 458;
 pub const EE_UNITS_GOAL_HOST_GATHER_SPOT: i32 = 459;
 pub const EE_UNITS_GOAL_HOST_DEPOSIT_LOAD: i32 = 461;
 pub const EE_UNITS_GOAL_HOST_NEXT_TREE: i32 = 462;
 pub const EE_UNITS_GOAL_HOST_HUNT: i32 = 464;
 pub const EE_UNITS_GOAL_HOST_SET_GATHERED: i32 = 465;
-pub const EE_UNITS_GOAL_HOST_GATHER_ROOM: i32 = 466;
 pub const EE_UNITS_GOAL_HOST_LAST_WAYPOINT: i32 = 467;
 pub const EE_UNITS_GOAL_HOST_RESOURCE_REACH: i32 = 468;
-pub const EE_UNITS_GOAL_HOST_STORAGE_REACH: i32 = 469;
 pub const EE_UNITS_GOAL_HOST_SET_ACTIVE: i32 = 470;
 pub const EE_UNITS_GOAL_HOST_FIND_GHOST: i32 = 471;
-pub const EE_UNITS_GOAL_HOST_AT_RESOURCE: i32 = 472;
-pub const EE_UNITS_GOAL_HOST_AT_STORAGE: i32 = 473;
 pub const EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: i32 = 474;
 pub const EE_UNITS_GOAL_HOST_ACCESSIBLE: i32 = 475;
 pub const EE_UNITS_GOAL_HOST_PATH_LENGTH: i32 = 476;
@@ -336,12 +306,6 @@ pub const EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH: i32 = 479;
 // the location goal's (from 490)
 /// `a`: the unit; its class's `mCategory`
 pub const EE_UNITS_GOAL_HOST_UNIT_CATEGORY: i32 = 490;
-/// `a`: the unit, `sink`: a `GETransformation` it fills (`mPhysicalModel.GetLocation()`)
-pub const EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION: i32 = 491;
-/// `a`: the unit, `sink`: the `GETransformation` it is given (`SetTransformation(t, true)`)
-pub const EE_UNITS_GOAL_HOST_SET_TRANSFORMATION: i32 = 492;
-/// `a`: the unit, `i[0]`: `SetTargetSearchTimer`'s value
-pub const EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER: i32 = 493;
 /// `a`: the unit; `mGoalQueues[0].mGoals.size()`
 pub const EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN: i32 = 494;
 // the base goal's (round 22)
@@ -376,10 +340,8 @@ pub const EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: i32 = 507;
 pub const EE_UNITS_GOAL_HOST_RELEASE_FIRE: i32 = 508;
 /// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
 pub const EE_UNITS_GOAL_HOST_MINING_BEAM: i32 = 509;
-/// `a`: the gatherer, `i[0]`: `SetResourceType`
-pub const EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE: i32 = 510;
-/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
-pub const EE_UNITS_GOAL_HOST_FIND_FISH: i32 = 511;
+/// `a`: the gatherer, `b`: the centre: its class's `FindResourceOfKind(a, b, i[3], i[0], i[1], &list, i[2])`
+pub const EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND: i32 = 511;
 
 /// The base goal's saved fields (`EEUnitGoal`'s `mAction`, `mB1C`, `mID`, `mB1D`, `mStartTime`, `mCreationTime`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -558,10 +520,49 @@ fn read_unit<R>(unit: u64, f: impl FnOnce(&crate::world::UnitView) -> R) -> R {
     f(&view)
 }
 
+/// A store on the complex unit `unit`'s record, where the adapter called the C++ host's setter before (the units
+/// behaviour lane, round 1: `SET_PHYSICS_ACTION`, `SPEND_POWER`, `BUILDERS_ADD`, `SET_PRODUCTION_TIME`,
+/// `SET_WORK_TIMER`, `SET_TARGET_SEARCH_TIMER`, `SET_PAID` gone from `GoalOp`). The record is the C++ object's: the
+/// store is the member store the setter made (the setters' "when it differs" test changes nothing observable).
+fn write_complex(unit: u64, f: impl FnOnce(&mut crate::world::unit_fields::EeUnitsComplexUnitFields)) {
+    read_unit(unit, |u| {
+        let cx = u.complex().ptr() as *mut crate::world::unit_fields::EeUnitsComplexUnitFields;
+        // SAFETY: a live complex unit's record; no other reference to it is held across the store
+        f(unsafe { &mut *cx })
+    })
+}
+
+/// The unit's class's kinds: 1 a transport, 2 an airplane (`EEUnitClassOfKind`, by its category)
+fn transport_kind(unit: u64) -> i64 {
+    use crate::units::kinds::{class_kinds_of, EE_CLASS_KIND_AIRPLANE, EE_CLASS_KIND_TRANSPORT};
+    let category = read_unit(unit, |u| u.class().map_or(u64::MAX, |c| c.category()));
+    let kinds = u32::try_from(category).map_or(0, class_kinds_of);
+    i64::from(kinds & EE_CLASS_KIND_TRANSPORT != 0) | i64::from(kinds & EE_CLASS_KIND_AIRPLANE != 0) << 1
+}
+
+/// `inUnit->mPlayer->IsHuman()` (a virtual: the unit utilities' host)
+fn player_human(unit: u64) -> bool {
+    let player = read_unit(unit, |u| u.player().map_or(0, |p| p.handle()));
+    crate::units::uu_direct::with_game(|g| g.is_human(player))
+}
+
+/// The squared 2D distance of the complex unit's location to a point, x first (`DistanceSquared2D`)
+fn distance_squared_2d(u: &crate::world::UnitView, x: f32, y: f32) -> f32 {
+    let l = u.location();
+    (l[0] - x) * (l[0] - x) + (l[1] - y) * (l[1] - y)
+}
+
+/// The class's `mInnerCollisionSphere`
+fn inner_sphere(u: &crate::world::UnitView) -> f32 {
+    u.class().map_or(0.0, |c| crate::world_field!(c.fields(), mInnerCollisionSphere))
+}
+
 /// `kTechNone`; `kUnitTypeMechZeusPrototype`, `kUnitTypeFarm`, `kUnitTypeDock`, `kUnitTypeNavyYard`
 const TECH_NONE: i32 = 100_000;
 const UNIT_TYPE_MECH_ZEUS_PROTOTYPE: u64 = 0xc2;
 const UNIT_TYPE_FARM: u64 = 0x2a;
+/// `kUnitCategoryNavalCitizen`
+const CATEGORY_NAVAL_CITIZEN: u64 = 0x16;
 const UNIT_TYPE_DOCK: u64 = 0x24;
 const UNIT_TYPE_NAVY_YARD: u64 = 0x41;
 
@@ -731,19 +732,27 @@ impl GoalHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_FIND_UNIT, u64::from(id), u64::from(complex)) as u64
     }
     fn unit_position(&mut self, unit: u64) -> [f32; 3] {
-        self.op_point(EE_UNITS_GOAL_HOST_UNIT_POSITION, unit, 0, &[])
+        crate::units::uu_direct::with_game(|g| g.position(unit))
     }
     fn tile_location(&mut self, x: i64, y: i64) -> [f32; 3] {
-        self.op_point(EE_UNITS_GOAL_HOST_TILE_LOCATION, 0, 0, &[x, y])
+        // EEMap::GetTileLocation: the tile's centre on the terrain mesh (no tile: the zero point)
+        crate::units::uu_direct::with_game(|g| {
+            let map = g.map();
+            if g.map_tile(map, x as i32, y as i32) == 0 {
+                return [0.0; 3];
+            }
+            let (px, py) = (x as i32 as f32 + 0.5, y as i32 as f32 + 0.5);
+            [px, py, g.mesh_ground(px, py)]
+        })
     }
     fn tell_group(&mut self, unit: u64, point: [f32; 3]) {
         self.op_with_point(EE_UNITS_GOAL_HOST_TELL_GROUP, unit, 0, point);
     }
     fn set_physics_action(&mut self, unit: u64, action: i64) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION, unit, 0, &[action]);
+        write_complex(unit, |c| c.mCurrentPhysicsAction = action as _);
     }
     fn set_animation(&mut self, unit: u64, animation: i64) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_ANIMATION, unit, 0, &[animation]);
+        crate::units::uu_direct::with_game(|g| g.set_animation(unit, animation as i32));
     }
     fn drop_path(&mut self, unit: u64) {
         self.op(EE_UNITS_GOAL_HOST_DROP_PATH, unit, 0);
@@ -852,7 +861,7 @@ impl CalamityHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP, unit, 0);
     }
     fn spend_power(&mut self, unit: u64, cost: i32) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SPEND_POWER, unit, 0, &[i64::from(cost)]);
+        write_complex(unit, |c| c.mPower = (c.mPower as i32).wrapping_sub(cost) as _);
     }
     fn can_cast_at(&mut self, class: u64, unit: u64, x: i32, y: i32) -> bool {
         self.op_ints(EE_UNITS_GOAL_HOST_CAN_CAST_AT, class, unit, &[i64::from(x), i64::from(y)]) != 0
@@ -873,7 +882,7 @@ impl CalamityHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_CONTACT_RANGE, unit, target) != 0
     }
     fn distance_to_unit(&mut self, unit: u64, target: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT, unit, target, &[])[0]
+        crate::units::unit_geom::distance_squared_to_unit_of(unit, target)
     }
     fn unit_height(&mut self, unit: u64) -> f32 {
         read_unit(unit, |u| u.height())
@@ -903,7 +912,7 @@ impl CalamityHost for OpHost<'_> {
 
 impl ExploreHost for OpHost<'_> {
     fn player_human(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
+        player_human(unit)
     }
     fn player_sees_all(&mut self, unit: u64) -> bool {
         read_unit(unit, |u| u.player().expect("a unit's player").sees_all())
@@ -912,7 +921,13 @@ impl ExploreHost for OpHost<'_> {
         read_unit(unit, |u| u.container_handle())
     }
     fn group_units(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_GROUP_UNITS, unit, 0)
+        // the active group's GetNumUnits() (-1: none)
+        read_unit(unit, |u| {
+            // SAFETY: the unit's live group
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            unsafe { crate::world::GroupView::of(&t, u.active_group_handle()) }.map_or(-1, |g| g.len() as i64)
+        })
     }
     fn path_area_bounds(&mut self, unit: u64) -> Option<[i32; 4]> {
         let mut io = EeUnitsGoalIo::default();
@@ -925,12 +940,12 @@ impl ExploreHost for OpHost<'_> {
         read_unit(unit, unit_line_of_sight)
     }
     fn ring_tiles(&mut self, x: i32, y: i32, ring: i32) -> Vec<(i32, i32)> {
-        let mut tiles: Vec<(i32, i32)> = Vec::new();
-        let mut io = EeUnitsGoalIo { sink: (&mut tiles as *mut Vec<(i32, i32)>).cast(), ..Default::default() };
-        io.i[0] = i64::from(x);
-        io.i[1] = i64::from(y);
-        io.i[2] = i64::from(ring);
-        self.call(EE_UNITS_GOAL_HOST_RING_TILES, 0, 0, &mut io);
+        // EEGetSquareRingTiles (noted), then EEAIRandomShuffle over the physics' draws
+        let mut tiles: Vec<(i32, i32)> =
+            crate::units::uu_direct::square_ring_tiles(x, y, ring).into_iter().map(|t| (t[0], t[1])).collect();
+        crate::units::uu_direct::ai_random_shuffle(&mut tiles, |lo, hi| {
+            crate::units::uu_direct::with_game(|g| g.random_long(lo, hi))
+        });
         tiles
     }
     fn tile_screen(&mut self, unit: u64, x: i32, y: i32) -> bool {
@@ -947,7 +962,7 @@ impl ExploreHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_PATH_REACHABLE, unit, 0, &ints) != 0
     }
     fn path_area_id(&mut self, x: i32, y: i32) -> u16 {
-        self.op_ints(EE_UNITS_GOAL_HOST_PATH_AREA_ID, 0, 0, &[i64::from(x), i64::from(y)]) as u16
+        crate::units::uu_direct::with_game(|g| g.path_area_id(x, y))
     }
     fn map_dimensions(&mut self) -> [i32; 4] {
         let mut io = EeUnitsGoalIo::default();
@@ -962,7 +977,7 @@ impl ExploreHost for OpHost<'_> {
         Some((io.i[0] as i32, io.i[1] as i32))
     }
     fn random(&mut self, low: i32, high: i32) -> i32 {
-        self.op_ints(EE_UNITS_GOAL_HOST_RANDOM, 0, 0, &[i64::from(low), i64::from(high)]) as i32
+        crate::units::uu_direct::with_game(|g| g.random_long(low, high))
     }
     fn notice_foreign(&mut self, unit: u64) {
         self.op(EE_UNITS_GOAL_HOST_NOTICE_FOREIGN, unit, 0);
@@ -1059,10 +1074,17 @@ impl crate::units::world::GatheringHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_MINING_BEAM, unit, resource);
     }
     fn set_resource_type(&mut self, unit: u64, resource_type: i32) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE, unit, 0, &[i64::from(resource_type)]);
+        read_unit(unit, |u| {
+            let r = u.fields().ptr() as *mut crate::world::unit_fields::EeUnitsUnitFields;
+            // SAFETY: a live unit's record (SetResourceType's member store)
+            unsafe { (*r).mResourceType = resource_type as _ };
+        });
     }
     fn find_fish(&mut self, unit: u64, fish: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_FIND_FISH, unit, fish) as u64
+        // the naval citizen's FindResourceOfKind around the fish: five times its sight, the fish's type
+        let range = read_unit(unit, |u| crate::units::physics::lrintf(unit_line_of_sight(u) * 5.0));
+        let kind = read_unit(fish, |f| f.resource_type()) as i32;
+        crate::units::gather_world::GatherWorldHost::resource_of_kind(self, unit, fish, fish, range, kind, &[], true)
     }
     fn random_draw(&mut self) -> f32 {
         self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
@@ -1102,7 +1124,7 @@ impl UnloadHost for OpHost<'_> {
         })
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+        transport_kind(unit)
     }
     fn can_unload_at(&mut self, unit: u64, tile: (i32, i32)) -> bool {
         self.op_ints(EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT, unit, 0, &[i64::from(tile.0), i64::from(tile.1)]) != 0
@@ -1121,7 +1143,7 @@ impl UnloadHost for OpHost<'_> {
         near
     }
     fn human(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
+        player_human(unit)
     }
     fn same_player(&mut self, unit: u64, other: u64) -> bool {
         read_unit(unit, |u| u.player().map(|p| p.handle()) == read_unit(other, |o| o.player().map(|p| p.handle())))
@@ -1199,7 +1221,7 @@ impl LoadHost for OpHost<'_> {
         crate::units::uu_direct::line_blocked(from.0, from.1, to.0, to.1)
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+        transport_kind(unit)
     }
     fn can_load(&mut self, container: u64, unit: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_CAN_LOAD, container, unit) != 0
@@ -1223,10 +1245,8 @@ impl LoadHost for OpHost<'_> {
         tiles_out(&io, tiles);
     }
     fn center_offset(&mut self, container: u64, point: &mut [f32; 2]) {
-        let mut io = EeUnitsGoalIo::default();
-        io.f[..2].copy_from_slice(point);
-        self.call(EE_UNITS_GOAL_HOST_CENTER_OFFSET, container, 0, &mut io);
-        point.copy_from_slice(&io.f[..2]);
+        let (x, y) = crate::units::uu_direct::with_game(|g| g.center_offset(container, point[0], point[1]));
+        *point = [x, y];
     }
     fn garrison_upgrade(&mut self, container: u64, technology: i32) -> (bool, i32, bool) {
         let mut io = EeUnitsGoalIo::default();
@@ -1235,9 +1255,12 @@ impl LoadHost for OpHost<'_> {
         (io.i[0] != 0, io.i[1] as i32, io.i[2] != 0)
     }
     fn unit_goal(&mut self, unit: u64, goal_state: bool) -> (u64, i64) {
-        let mut io = EeUnitsGoalIo::default();
-        let goal = self.call(EE_UNITS_GOAL_HOST_UNIT_GOAL, unit, u64::from(goal_state), &mut io) as u64;
-        (goal, io.i[0])
+        // GetGoal() (mGoalState) or GetLoadGoal() (mActiveGoal), its kind (-1: none)
+        read_unit(unit, |u| {
+            let (goal, kind) =
+                if goal_state { (u.goal_handle(), u.goal()) } else { (u.active_goal_handle(), u.active_goal()) };
+            (goal, kind.map_or(-1, |(k, _)| i64::from(k)))
+        })
     }
     fn queued_goal_kind(&mut self, unit: u64, index: i64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND, unit, index as u64)
@@ -1299,7 +1322,7 @@ impl BuildHost for OpHost<'_> {
         let (mut fields, human) = read_unit(unit, |u| build_unit_fields(u, false));
         // `IsHuman()` (a virtual) is the host's
         if human {
-            fields.human = self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0;
+            fields.human = player_human(unit);
         }
         fields
     }
@@ -1331,7 +1354,7 @@ impl BuildHost for OpHost<'_> {
         unsafe { crate::world::view::ClassView::of(&t, class) }.map_or(0, |c| c.unit_type() as i32)
     }
     fn builders_add(&mut self, unit: u64, delta: i32) {
-        self.op_ints(EE_UNITS_GOAL_HOST_BUILDERS_ADD, unit, 0, &[i64::from(delta)]);
+        write_complex(unit, |c| c.mNumBuilders = (c.mNumBuilders as i32).wrapping_add(delta) as _);
     }
     fn attack_part(&mut self, unit: u64, target: u64) -> u64 {
         crate::units::uu_direct::attack_part(unit, target)
@@ -1352,10 +1375,10 @@ impl BuildHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_PLAY_EFFECT, unit, 0, &[i64::from(effect)]);
     }
     fn set_production_time(&mut self, unit: u64, time: i32) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME, unit, 0, &[i64::from(time)]);
+        write_complex(unit, |c| c.mProductionTime = time as _);
     }
     fn set_work_timer(&mut self, unit: u64, time: i32) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_WORK_TIMER, unit, 0, &[i64::from(time)]);
+        write_complex(unit, |c| c.mWorkTimer = time as _);
     }
     fn face_target(&mut self, unit: u64, target: u64) {
         self.op(EE_UNITS_GOAL_HOST_FACE_TARGET, unit, target);
@@ -1377,10 +1400,10 @@ impl BuildHost for OpHost<'_> {
         crate::units::world::help_build_nearby(self, unit, target);
     }
     fn tend_next_farm(&mut self, unit: u64, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_TEND_FARM, unit, target);
+        crate::units::gather_world::tend_next_farm(self, unit, target);
     }
     fn gather_near(&mut self, unit: u64, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_GATHER_NEAR, unit, target);
+        crate::units::gather_world::gather_near_building(self, unit, target);
     }
     fn gate_side_part(&mut self, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_GATE_SIDE_PART, target, 0) != 0
@@ -1407,7 +1430,7 @@ impl BuildHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED, unit, goal) != 0
     }
     fn resource_users(&mut self, unit: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_RESOURCE_USERS, unit, 0) as i32
+        crate::units::uu_direct::with_game(|g| g.resource_users(unit))
     }
     fn new_gather(&mut self, resource: u64, storage: u64, arg: bool) -> u64 {
         self.op_ints(EE_UNITS_GOAL_HOST_NEW_GATHER, resource, storage, &[i64::from(arg)]) as u64
@@ -1443,7 +1466,7 @@ impl BuildHost for OpHost<'_> {
         crate::world::WorldView::global(&t).is_some_and(|w| w.in_cinematic())
     }
     fn set_paid(&mut self, outer: u64) {
-        self.op(EE_UNITS_GOAL_HOST_SET_PAID, outer, 0);
+        write_complex(outer, |c| c.mIsPaidFor = true);
     }
     fn pay(&mut self, player: u64, node: u64, fraction: f32) {
         let mut io = EeUnitsGoalIo::default();
@@ -1463,7 +1486,7 @@ impl BuildHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_DEPOSIT, unit, target);
     }
     fn goal_state(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_GOAL, unit, 1) as u64
+        read_unit(unit, |u| u.goal_handle())
     }
     fn write_f32(&mut self, value: f32) -> i32 {
         self.write(3, i64::from(value.to_bits()))
@@ -1480,24 +1503,13 @@ impl crate::units::location::LocationHost for OpHost<'_> {
         read_unit(unit, |u| u.class().map_or(0, |c| c.category() as i64))
     }
     fn unit_transformation(&mut self, unit: u64) -> ee_base::math::types::GeTransformation {
-        let mut t = ee_base::math::types::GeTransformation::default();
-        let mut io = EeUnitsGoalIo {
-            sink: (&mut t as *mut ee_base::math::types::GeTransformation).cast(),
-            ..Default::default()
-        };
-        self.call(EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION, unit, 0, &mut io);
-        t
+        ee_base::math::types::GeTransformation { m: read_unit(unit, |u| u.transform()) }
     }
     fn set_transformation(&mut self, unit: u64, t: &ee_base::math::types::GeTransformation) {
-        let mut copy = *t;
-        let mut io = EeUnitsGoalIo {
-            sink: (&mut copy as *mut ee_base::math::types::GeTransformation).cast(),
-            ..Default::default()
-        };
-        self.call(EE_UNITS_GOAL_HOST_SET_TRANSFORMATION, unit, 0, &mut io);
+        crate::units::uu_direct::with_game(|g| g.set_transformation(unit, t));
     }
     fn set_target_search_timer(&mut self, unit: u64, value: i64) {
-        self.op_ints(EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER, unit, 0, &[value]);
+        write_complex(unit, |c| c.mTargetSearchTimer = value as _);
     }
     fn goal_queue_len(&mut self, unit: u64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN, unit, 0)
@@ -1524,9 +1536,16 @@ impl OpHost<'_> {
 
 impl GatherHost for OpHost<'_> {
     fn farm_tile(&mut self, farm: u64, near: u64) -> (i32, i32) {
-        let mut io = EeUnitsGoalIo::default();
-        self.call(EE_UNITS_GOAL_HOST_FARM_TILE, farm, near, &mut io);
-        (io.i[0] as i32, io.i[1] as i32)
+        // the farm's footprint (noted) sorted the MSVC way by EETileDistanceLess(near's tile): the nearest first
+        let mut tiles = crate::units::uu_direct::footprint_tiles(farm);
+        let (cx, cy) = read_unit(near, |n| n.tile_xy());
+        let d = |t: &[i32; 2]| {
+            let dy = (cy as i32).wrapping_sub(t[1]);
+            let dx = (cx as i32).wrapping_sub(t[0]);
+            dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy))
+        };
+        crate::units::msvc_sort::sort_by(&mut tiles, |a, b| d(a) < d(b));
+        (tiles[0][0], tiles[0][1])
     }
     fn resource_spot(&mut self, unit: u64, resource: u64, out: &mut [f32; 3]) -> bool {
         crate::units::uu_direct::spot(1, unit, resource, out)
@@ -1543,13 +1562,13 @@ impl GatherHost for OpHost<'_> {
         crate::units::uu_direct::spot(2, unit, storage, out)
     }
     fn tile_height(&mut self, unit: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_TILE_HEIGHT, unit, 0, &[])[0]
+        read_unit(unit, |u| u.tile().expect("a unit's tile").height())
     }
     fn at_resource_spot(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT, unit, resource) != 0
+        crate::units::gather_world::at_resource_spot(self, unit, resource)
     }
     fn next_farm(&mut self, unit: u64, resource: u64) {
-        self.op(EE_UNITS_GOAL_HOST_NEXT_FARM, unit, resource);
+        crate::units::gather_world::next_farm(self, unit, resource);
     }
     fn storage_search(&mut self, unit: u64) -> Option<u64> {
         let found = self.op(EE_UNITS_GOAL_HOST_STORAGE_SEARCH, unit, 0);
@@ -1582,7 +1601,7 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_SET_GATHERED, unit, resource);
     }
     fn gather_room(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_GATHER_ROOM, unit, resource) != 0
+        crate::units::gather_world::has_gather_room(self, unit, resource)
     }
     fn last_waypoint(&mut self, unit: u64) -> [f32; 3] {
         self.op_point(EE_UNITS_GOAL_HOST_LAST_WAYPOINT, unit, 0, &[])
@@ -1591,7 +1610,12 @@ impl GatherHost for OpHost<'_> {
         crate::units::uu_direct::within_reach_of(point, unit, resource)
     }
     fn storage_reach(&mut self, storage: u64, point: [f32; 3]) -> bool {
-        self.op_with_point(EE_UNITS_GOAL_HOST_STORAGE_REACH, storage, 0, point) != 0
+        // IsStorageInReach: within the storage's inner radius times sqrt 2, squared
+        read_unit(storage, |s| {
+            let c = s.complex_unit().expect("a storage's complex unit");
+            let range = inner_sphere(s) * std::f32::consts::SQRT_2;
+            distance_squared_2d(&c, point[0], point[1]) <= range * range
+        })
     }
     fn set_active(&mut self, goal: u64, active: bool) {
         self.op_ints(EE_UNITS_GOAL_HOST_SET_ACTIVE, goal, 0, &[i64::from(active)]);
@@ -1600,10 +1624,33 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_FIND_GHOST, u64::from(id), u64::from(complex)) as u64
     }
     fn at_resource(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE, unit, resource) != 0
+        // IsAtResource: on its farm's tile or within reach of another resource; a land gatherer faces it
+        let (x, y) = read_unit(unit, |u| u.tile_xy());
+        let tile = crate::units::uu_direct::map_tile(x as i32, y as i32);
+        // SAFETY: the goal's caller holds the world; the unit's live tile
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let on_tile = unsafe { crate::world::TileView::of(&t, tile) }
+            .expect("the gatherer's tile")
+            .units()
+            .any(|u| u.is_some_and(|u| u.handle() == resource));
+        let farm = read_unit(resource, |r| r.class().map_or(0, |c| c.unit_type())) == UNIT_TYPE_FARM;
+        let result = if farm { on_tile } else { crate::units::uu_direct::within_reach(unit, resource) };
+        let naval = read_unit(unit, |u| u.class().map_or(0, |c| c.category())) == CATEGORY_NAVAL_CITIZEN;
+        if result && !naval {
+            self.op(EE_UNITS_GOAL_HOST_FACE_TARGET, unit, resource);
+        }
+        result
     }
     fn at_storage(&mut self, unit: u64, storage: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_AT_STORAGE, unit, storage) != 0
+        // IsAtStorage: within the storage's inner radius squared times sqrt 2 (DistanceSquaredTo: y first)
+        read_unit(storage, |s| {
+            let c = s.complex_unit().expect("a storage's complex unit");
+            let (a, b) = (c.location(), read_unit(unit, |u| u.location()));
+            let dy = a[1] - b[1];
+            let dx = a[0] - b[0];
+            let range = inner_sphere(s);
+            dx * dx + dy * dy <= range * range * std::f32::consts::SQRT_2
+        })
     }
     fn line_to_unit_blocked(&mut self, unit: u64, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED, unit, target) != 0
@@ -1826,4 +1873,85 @@ pub fn register_other_goal_kinds(f: unsafe fn(i32, u8, u64, u64, u64, *mut c_voi
 /// `%08lx` of an `unsigned long`
 pub fn hex8(value: u32) -> String {
     format!("{value:08x}")
+}
+
+impl crate::units::gather_world::GatherWorldHost for OpHost<'_> {
+    fn start_only(&mut self, unit: u64, action: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_START_ACTION, unit, 0, &[action, 1]);
+    }
+    fn farm_drop_sites(&mut self, farm: u64) -> (bool, Vec<u64>) {
+        crate::units::uu_direct::farm_drop_sites(farm)
+    }
+    fn find_free_farm(&mut self, unit: u64, ring: &mut i32) -> u64 {
+        crate::units::uu_direct::find_free_farm(unit, true, ring)
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn resource_of_kind(
+        &mut self,
+        unit: u64,
+        center: u64,
+        resource: u64,
+        range: i32,
+        kind: i32,
+        taken: &[u64],
+        farms: bool,
+    ) -> u64 {
+        let mut io = EeUnitsGoalIo { list: taken.as_ptr(), list_len: taken.len(), ..Default::default() };
+        io.i[0] = i64::from(range);
+        io.i[1] = i64::from(kind);
+        io.i[2] = i64::from(farms);
+        io.i[3] = resource as i64;
+        self.call(EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND, unit, center, &mut io) as u64
+    }
+    fn resource_class(&mut self, class: u64) -> (bool, i32) {
+        // SAFETY: the goal's caller holds the world; a live class
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let c = unsafe { crate::world::ClassView::of(&t, class) }.expect("a resource's class");
+        let animal: std::ffi::c_long = crate::world_field!(c.fields(), mAnimalID);
+        (c.tree(), animal as i32)
+    }
+    fn mining_limit(&mut self, player: u64) -> i32 {
+        // SAFETY: as above; a live player
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let p = unsafe { crate::world::PlayerView::of(&t, player) }.expect("a player");
+        let limit: std::ffi::c_long = crate::world_field!(p.fields(), mMiningLimit);
+        limit as i32
+    }
+    fn users_of(&mut self, resource: u64) -> u32 {
+        crate::units::uu_direct::with_game(|g| g.resource_users(resource)) as u32
+    }
+    fn shuffle_units(&mut self, units: &mut [u64]) {
+        crate::units::uu_direct::ai_random_shuffle(units, |lo, hi| {
+            crate::units::uu_direct::with_game(|g| g.random_long(lo, hi))
+        });
+    }
+    fn squared_distance_to_unit(&mut self, complex: u64, other: u64) -> f32 {
+        crate::units::unit_geom::distance_squared_to_unit_of(complex, other)
+    }
+    fn resource_spots(&mut self, resource: u64) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::resource_spots(resource).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn place_on_tile(&mut self, unit: u64, class: u64, x: i32, y: i32) -> bool {
+        let mut p = [0.0f32; 3];
+        crate::units::uu_direct::place_on_tile(unit, class, x, y, 1, x, y, 1, &mut p)
+    }
+    fn side_tiles(&mut self, x: i32, y: i32, size: i32) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::square_ring(x, y, size, size, true).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn corner_tiles(&mut self, x: i32, y: i32, size: i32) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::ring_corners(0, x, y, size, size, true).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn map_tile_units(&mut self, x: i32, y: i32) -> Option<Vec<u64>> {
+        let tile = crate::units::uu_direct::map_tile(x, y);
+        if tile == 0 {
+            return None;
+        }
+        // SAFETY: as above; a live tile
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let v = unsafe { crate::world::TileView::of(&t, tile) }?;
+        Some(v.units().map(|u| u.map_or(0, |u| u.handle())).collect())
+    }
+    fn passable_by(&mut self, unit: u64, by: u64) -> bool {
+        crate::units::uu_direct::with_game(|g| g.passable_by(unit, by))
+    }
 }

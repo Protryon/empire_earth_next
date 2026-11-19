@@ -175,7 +175,9 @@ void CivFormDigest(UIForm* inForm, std::vector<std::string>& outLines)
         outLines.push_back("  no form");
         return;
     }
-    outLines.push_back("  form " + std::to_string(inForm->GetFormID()) + " " + Name(inForm, typeid(*inForm)) + " controls " +
+    EEUIShell* theFormShell = EEUIShell::Of(inForm);   // a form shell: the class its kind replaces
+    outLines.push_back("  form " + std::to_string(inForm->GetFormID()) + " " +
+                       (theFormShell ? std::string(theFormShell->KindName()) : Name(inForm, typeid(*inForm))) + " controls " +
                        std::to_string(inForm->GetControlCount()));
     for (unsigned long i = 0; i < inForm->GetControlCount(); i++) {
         UIControl* c = inForm->GetControl(i);

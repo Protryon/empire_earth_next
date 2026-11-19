@@ -43,7 +43,7 @@ void BrowserComponent::AddedToParent()
 {
     if(this->mScroller.get()==NULL)
     {
-        SmartPtr<MSScrollContainer> scroller=new MSScrollContainer(this->mHTMLView.get());
+        SmartPtr<ScrollbarScroller> scroller=static_cast<ScrollbarScroller*>(WONShellNew(EeWonShellKind::MsScrollContainer,(intptr_t)static_cast<ScrollArea*>(this->mHTMLView.get())));
         scroller->SetScrollbarConditions(ScrollbarCondition_Conditional,ScrollbarCondition_Conditional);
         this->SetScroller(scroller.get());
     }

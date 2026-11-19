@@ -99,7 +99,7 @@ void ComboBoxConfig::SetComponent(Component* component)
 // Binds the Windows-style combo-box config to its combo box
 void MSComboBoxConfig::SetComponent(Component* component)
 {
-    this->mMSComboBox=static_cast<MSComboBox*>(component);
+    this->mMSComboBox=static_cast<ComboBox*>(component);
     ComboBoxConfig::SetComponent(component);
 }
 
@@ -107,41 +107,41 @@ void MSComboBoxConfig::SetComponent(Component* component)
 void MSScrollbarConfig::SetComponent(Component* component)
 {
     ScrollbarConfig::SetComponent(component);
-    this->mMSScrollbar=static_cast<MSScrollbar*>(component);
+    this->mMSScrollbar=static_cast<Scrollbar*>(component);
 }
 
 // Binds the etched frame-group config to its frame (the linker folds this body into the identical one at 0x0078f960)
 void MSEtchedFrameGroupConfig::SetComponent(Component* component)
 {
     ContainerConfig::SetComponent(component);
-    this->mFrame=static_cast<MSEtchedFrameGroup*>(component);
+    this->mFrame=static_cast<Container*>(component);
 }
 
 // Binds the Windows-style tab-control config to its tab control
 void MSTabCtrlConfig::SetComponent(Component* component)
 {
     TabCtrlConfig::SetComponent(component);
-    this->mMSTabCtrl=static_cast<MSTabCtrl*>(component);
+    this->mMSTabCtrl=static_cast<TabCtrl*>(component);
 }
 
 // Binds the Windows-style scroll container config to its scroll container (one folded body with MultiListAreaConfig's)
 void MSScrollContainerConfig::SetComponent(Component* component)
 {
     ScrollbarScrollerConfig::SetComponent(component);
-    this->mScrollContainer=static_cast<MSScrollContainer*>(component);
+    this->mScrollContainer=static_cast<ScrollbarScroller*>(component);
 }
 
 // Binds the Windows-style header-control config to its header
 void MSHeaderControlConfig::SetComponent(Component* component)
 {
-    this->mMSHeader=static_cast<MSHeaderControl*>(component);
+    this->mMSHeader=static_cast<MultiListHeader*>(component);
     MultiListHeaderConfig::SetComponent(component);
 }
 
 // Binds the Windows-style list-control config to its list control
 void MSListCtrlConfig::SetComponent(Component* component)
 {
-    this->mListCtrl=static_cast<MSListCtrl*>(component);
+    this->mListCtrl=static_cast<ScrollbarScroller*>(component);
     MSScrollContainerConfig::SetComponent(component);
 }
 

@@ -89,6 +89,10 @@
 //!   controls, condition and effect rows, operators, store and load.
 //! - [`editor_tscreen`]: the scenario editor's trigger tab whole in Rust (`EESETriggerScreen`): its controls, entry
 //!   list and buttons, sub-tabs, the open entry's store and load.
+//! - [`editor_groups`]: the scenario editor's seven tab groups as Rust objects (once `EEUIFSEMainGroup` and its
+//!   subclasses): the table of their classes' slots; the editor form's slots hold the groups.
+//! - [`editor_tsubs`]: the trigger tab's five sub-screens as one Rust record (once `EESETSBaseObject` and its five
+//!   subclasses): their selections and the table of their slots.
 //! - [`editor_unit`]: the scenario editor's unit tab whole in Rust (`EESEUnit`): its controls, palettes, sorts and
 //!   owners and the class list they fill, the cargo, the unit, wall and gate placement state, the mouse and keys.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
@@ -167,8 +171,6 @@ pub mod debug_sound;
 #[cfg(not(test))]
 mod debug_sound_ffi;
 pub mod dialog;
-#[cfg(not(test))]
-mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
@@ -197,6 +199,9 @@ pub mod editor_events;
 pub mod editor_form;
 #[cfg(not(test))]
 mod editor_form_ffi;
+pub mod editor_groups;
+#[cfg(not(test))]
+mod editor_groups_ffi;
 pub mod editor_instructions;
 #[cfg(not(test))]
 mod editor_instructions_ffi;
@@ -222,6 +227,7 @@ mod editor_trigger_ffi;
 pub mod editor_tscreen;
 #[cfg(not(test))]
 mod editor_tscreen_ffi;
+pub mod editor_tsubs;
 pub mod editor_unit;
 #[cfg(not(test))]
 mod editor_unit_ffi;
@@ -311,9 +317,14 @@ mod settings_form_ffi;
 pub(crate) mod sgvw;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
+pub mod shells_dialog;
 pub mod shells_editor;
 #[cfg(not(test))]
 mod shells_ffi;
+pub mod shells_icon_bar;
+pub mod shells_paint;
+pub mod shells_saved;
+pub mod shells_seditor;
 pub mod shells_tech;
 pub mod shells_unit;
 pub mod single_player;

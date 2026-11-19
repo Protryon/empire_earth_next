@@ -53,7 +53,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEGameSound.h"
 #include "ee/EESoundObject.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEARust.h"
@@ -509,9 +508,9 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         EEUnit* theUnit = static_cast<EEUnit*>(p);
         theUnit->GetPlayer()->ApplyImprovement(theUnit->GetUnitClass()->GetUnitType(), a->mImprovement, i[1] != 0);
         if (i[1] == 0)
-            gUIManager->GetScenarioEditorForm()->GetUnitScreen()->ShowUnitStatus(theUnit);
+            gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SHOW_UNIT, 0, theUnit);
         else
-            static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->ShowUnitStatus(theUnit);
+            gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_SHOW_UNIT, 0, theUnit);
         gUIManager->GetScenarioEditorForm()->UpdateHelpString();
         return 0;
     }

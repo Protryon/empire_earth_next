@@ -711,6 +711,10 @@ struct EeWorldLayout {
   /// `EEGraphicEffect*` members, `GetEffects()`)
   uint64_t class_projectile_class;
   uint64_t class_effects;
+  /// `EeUnitsActiveGroupFields` in `EEActiveGroup` (its second base) and `EEActiveGroup::mGoal` (an
+  /// `EEUnitGoal*`)
+  uint64_t active_group_fields;
+  uint64_t active_group_goal;
 };
 
 /// The check's counts and digest.
