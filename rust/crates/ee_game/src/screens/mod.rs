@@ -322,14 +322,14 @@ pub mod status_button;
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
 mod toolkit;
+#[cfg(not(test))]
+mod ui_direct;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;
 pub mod ui_manager;
 #[cfg(not(test))]
 mod ui_manager_ffi;
-#[cfg(not(test))]
-mod ui_direct;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;

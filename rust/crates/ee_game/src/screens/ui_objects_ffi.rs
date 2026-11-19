@@ -125,7 +125,8 @@ pub(crate) fn ui_game(ui: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> Optio
             0
         }
         EE_SCREENS_UG_OP_RECEIVE => {
-            let (mut message, mut p1, mut p2): (c_ulong, *mut c_void, *mut c_void) = (0, core::ptr::null_mut(), core::ptr::null_mut());
+            let (mut message, mut p1, mut p2): (c_ulong, *mut c_void, *mut c_void) =
+                (0, core::ptr::null_mut(), core::ptr::null_mut());
             // SAFETY: the live thread; `c` the loop's three words
             unsafe {
                 let result = ee_base::ts::ee_ts_thread_receive(thread(&*rec), &mut message, &mut p1, &mut p2);
@@ -159,12 +160,19 @@ pub(crate) fn ui_game(ui: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> Optio
         }
         EE_SCREENS_UG_OP_NOT_MAIN => {
             let m = direct::manager_of(core::ptr::null_mut());
-            (direct::manager_call(m, EeUiManagerCall::CurrentForm, 0, 0, 0) as *mut c_void != ui_objects::main_game_form())
-                as i64
+            (direct::manager_call(m, EeUiManagerCall::CurrentForm, 0, 0, 0) as *mut c_void
+                != ui_objects::main_game_form()) as i64
         }
         EE_SCREENS_UG_OP_SWAP_MAIN | EE_SCREENS_UG_OP_SWAP_EDITOR => {
-            let form = if op == EE_SCREENS_UG_OP_SWAP_MAIN { ui_objects::main_game_form() } else { ui_objects::editor_form() };
-            direct::manager_call(direct::manager_of(core::ptr::null_mut()), EeUiManagerCall::SwapForm, form as isize, 0, 0);
+            let form =
+                if op == EE_SCREENS_UG_OP_SWAP_MAIN { ui_objects::main_game_form() } else { ui_objects::editor_form() };
+            direct::manager_call(
+                direct::manager_of(core::ptr::null_mut()),
+                EeUiManagerCall::SwapForm,
+                form as isize,
+                0,
+                0,
+            );
             0
         }
         _ => return None,
@@ -276,7 +284,15 @@ pub(crate) fn ui_event(op: u32, a: i64) -> Option<i64> {
         EE_SCREENS_UI_EV_POST_QUIT => {
             // WM_QUIT, not queued
             if let Some(u) = ui_objects::ui() {
-                unsafe { ee_base::ts::ee_ts_thread_post(thread(&*u), 0x12, core::ptr::null_mut(), core::ptr::null_mut(), false) };
+                unsafe {
+                    ee_base::ts::ee_ts_thread_post(
+                        thread(&*u),
+                        0x12,
+                        core::ptr::null_mut(),
+                        core::ptr::null_mut(),
+                        false,
+                    )
+                };
             }
             0
         }
@@ -285,7 +301,11 @@ pub(crate) fn ui_event(op: u32, a: i64) -> Option<i64> {
             0
         }
         EE_SCREENS_UI_EV_IME_OPEN | EE_SCREENS_UI_EV_IME_CLOSE => {
-            let call = if op == EE_SCREENS_UI_EV_IME_OPEN { EeUiManagerCall::OpenComposition } else { EeUiManagerCall::CloseComposition };
+            let call = if op == EE_SCREENS_UI_EV_IME_OPEN {
+                EeUiManagerCall::OpenComposition
+            } else {
+                EeUiManagerCall::CloseComposition
+            };
             direct::manager_call(m, call, 0, 0, 0);
             0
         }
