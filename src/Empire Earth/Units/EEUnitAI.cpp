@@ -367,9 +367,9 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         }
     }
     case EE_UNITS_COND_LAUNCH: {
-        EEAirTrafficControl* theTraffic = theUnit->mPlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1];
+        EeUnitsAtc* theTraffic = theUnit->mPlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1];
         if (inC == 0)
-            return theTraffic->GetQueueLength(theUnit) == 0 || theUnit->mExitingUnitID == -1;
+            return ee_units_atc_queue_length(theTraffic, theUnit) == 0 || theUnit->mExitingUnitID == -1;
         long theID = theUnit->mExitingUnitID;
         if (theID == -1)
             return 0;
@@ -379,7 +379,7 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         theUnit->SetExitingUnitID(-1);
         EEUnit* theOther = ::gWorld.GetUnit(theID);
         if (theOther != NULL && theOther->mComplexUnit != NULL)
-            theTraffic->RemovePlane(theUnit, theOther->mComplexUnit);
+            ee_units_atc_remove_plane(theTraffic, theUnit, theOther->mComplexUnit);
         return 0;
     }
     case EE_UNITS_COND_QUEUED_GOAL:

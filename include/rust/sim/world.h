@@ -670,6 +670,47 @@ struct EeWorldLayout {
   /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
   uint64_t physics_pointer;
   uint64_t physics_saved;
+  /// `EEComplexUnit`'s pointer members `mLauncherClass` (an `EEUnitClass*`), `mPatrolGroup` (an
+  /// `EEPPatrolGroup*`), `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`, `mHolder`,
+  /// `mBehavior` (an `EEUnitBehavior*`), `mLastResource` (units: `RTSUnit*` addresses)
+  uint64_t complex_launcher_class;
+  uint64_t complex_patrol_group;
+  uint64_t complex_home_base;
+  uint64_t complex_gathered_resource;
+  uint64_t complex_last_attacker;
+  uint64_t complex_owner;
+  uint64_t complex_mine;
+  uint64_t complex_holder;
+  uint64_t complex_behavior;
+  uint64_t complex_last_resource;
+  /// the vectors `mHeldUnits` (`EEComplexUnit*`), `mUnitVariables` (`long`), `mBoundedPathTiles`
+  /// (`U2DPoint<long>`: two `long`s); begin and end their first two words
+  uint64_t complex_held_units;
+  uint64_t complex_unit_variables;
+  uint64_t complex_bounded_path_tiles;
+  /// `mContacts` (a `UList<EEComplexUnit*>`): its `mHead` and `mCount` (an `unsigned long`); a node's `mData` and
+  /// `mNext`
+  uint64_t complex_contacts_head;
+  uint64_t complex_contacts_count;
+  uint64_t contact_node_data;
+  uint64_t contact_node_next;
+  /// `mCollisionTile` (two `long`s), `mInitialContactLocation` (three floats)
+  uint64_t complex_collision_tile;
+  uint64_t complex_contact_location;
+  /// `mPhysicalModel`'s scale (a float) and frame (an `unsigned long`)
+  uint64_t complex_scale;
+  uint64_t complex_frame;
+  /// the effect handles `mConversionEffect`, `mHealEffect` (`uint32_t` values)
+  uint64_t complex_conversion_effect;
+  uint64_t complex_heal_effect;
+  /// `EEProductionEntry::mFlag` (a `long`)
+  uint64_t build_entry_flag;
+  /// `EEHerd::mID` (an `unsigned short`)
+  uint64_t herd_id;
+  /// `EEUnitClass::mProjectileClass` (an `EEUnitClass*`) and `mAttachedEffect` (the first of the class's 29
+  /// `EEGraphicEffect*` members, `GetEffects()`)
+  uint64_t class_projectile_class;
+  uint64_t class_effects;
 };
 
 /// The check's counts and digest.

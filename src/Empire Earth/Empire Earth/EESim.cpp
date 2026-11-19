@@ -496,7 +496,7 @@ void DumpState(const std::string& inPath)
             if (theTown == NULL)
                 continue;
             fprintf(f, "TOWN %lu %ld units=%ld patrol=%ld hull=", i, (long)theTown->mTownID, (long)theTown->mNumUnits,
-                    theTown->mPatrolGroup != NULL ? (long)theTown->mPatrolGroup->mID : -1L);
+                    theTown->mPatrolGroup != NULL ? (long)ee_units_pg_id(theTown->mPatrolGroup) : -1L);
             for (unsigned long v = 0; v < theTown->GetHullPointCount(); v++)
                 fprintf(f, "%ld,%ld ", (long)theTown->GetHullPoint(v).GetX(), (long)theTown->GetHullPoint(v).GetY());
             fprintf(f, "\n");
@@ -505,10 +505,10 @@ void DumpState(const std::string& inPath)
             EEPPatrolGroup* theGroup = p->mPatrolGroups[g];
             if (theGroup == NULL)
                 continue;
-            fprintf(f, "PATROL %lu %lu town=%d loop=%d points=", i, (unsigned long)theGroup->mID, theGroup->mIsTownPatrol ? 1 : 0,
-                    theGroup->mIsLoop ? 1 : 0);
-            for (size_t k = 0; k < theGroup->mPatrolPoints.size(); k++) {
-                EEComplexUnit* thePoint = theGroup->mPatrolPoints[k];
+            fprintf(f, "PATROL %lu %lu town=%d loop=%d points=", i, (unsigned long)ee_units_pg_id(theGroup), ee_units_pg_is_town_patrol(theGroup) ? 1 : 0,
+                    ee_units_pg_is_loop(theGroup) ? 1 : 0);
+            for (size_t k = 0; k < ee_units_pg_point_count(theGroup); k++) {
+                EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_point(theGroup, k));
                 if (thePoint != NULL)
                     fprintf(f, "%lu@%ld,%ld ", (unsigned long)thePoint->mUnitID, (long)thePoint->mTileX, (long)thePoint->mTileY);
             }

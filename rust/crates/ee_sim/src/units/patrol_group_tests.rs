@@ -298,3 +298,97 @@ fn run_dispatches_by_operation() {
     assert_eq!(run(EE_UNITS_PG_OP_NEAREST, G, EeUnitsPgArgs { a: 4, b: 1, ..args }, &mut m), p[1]);
     assert_eq!(run(EE_UNITS_PG_OP_LAST, G, args, &mut m), p[1]);
 }
+
+/// A host whose groups are the state objects (the game's Ffi's side for points and fields), the world calls the
+/// mock's.
+struct ObjectHost(Mock);
+
+impl PatrolGroupHost for ObjectHost {
+    fn points(&mut self, group: u64) -> Vec<u64> {
+        group_points(group)
+    }
+    fn set_points(&mut self, group: u64, points: &[u64]) {
+        set_group_points(group, points)
+    }
+    fn fields(&mut self, group: u64) -> GroupFields {
+        group_fields(group)
+    }
+    fn set_fields(&mut self, group: u64, fields: GroupFields) {
+        set_group_fields(group, fields)
+    }
+    fn unit_tile(&mut self, unit: u64) -> (i64, i64) {
+        self.0.unit_tile(unit)
+    }
+    fn distance_squared_to_tile(&mut self, unit: u64, x: i64, y: i64) -> f32 {
+        self.0.distance_squared_to_tile(unit, x, y)
+    }
+    fn tile_at(&mut self, x: f32, y: f32, probe: u64) -> (f32, bool) {
+        self.0.tile_at(x, y, probe)
+    }
+    fn create_point(&mut self, group: u64, x: f32, y: f32, player: u32) -> u64 {
+        self.0.create_point(group, x, y, player)
+    }
+    fn set_patrol_group(&mut self, unit: u64, group: u64) {
+        self.0.set_patrol_group(unit, group)
+    }
+    fn patrol_group_of(&mut self, unit: u64) -> u64 {
+        self.0.patrol_group_of(unit)
+    }
+    fn kill_unit(&mut self, unit: u64, kill: bool) {
+        self.0.kill_unit(unit, kill)
+    }
+    fn remove_from_player(&mut self, unit: u64, group: u64) {
+        self.0.remove_from_player(unit, group)
+    }
+    fn try_select(&mut self, player: u64, unit: u64, flag: bool) -> bool {
+        self.0.try_select(player, unit, flag)
+    }
+    fn unit_id(&mut self, unit: u64) -> u32 {
+        self.0.unit_id(unit)
+    }
+    fn find_unit(&mut self, id: u32) -> u64 {
+        self.0.find_unit(id)
+    }
+    fn live_state(&mut self, major: u32, minor: u32) -> bool {
+        self.0.live_state(major, minor)
+    }
+    fn write_u32(&mut self, value: u32) -> i32 {
+        self.0.write_u32(value)
+    }
+    fn write_bool(&mut self, value: bool) -> i32 {
+        self.0.write_bool(value)
+    }
+    fn read_u32(&mut self, value: &mut u32) -> i32 {
+        self.0.read_u32(value)
+    }
+    fn read_bool(&mut self, value: &mut bool) -> i32 {
+        self.0.read_bool(value)
+    }
+}
+
+#[test]
+fn the_group_object_counts_references_and_kills_its_points_last() {
+    let mut host = ObjectHost(Mock::new());
+    let group = new_group();
+    let f = group_fields(group);
+    assert!(!f.is_loop && !f.is_town_patrol);
+    add_point(group, 3.5, 4.5, 1, &mut host);
+    add_point(group, 6.5, 7.5, 1, &mut host);
+    assert_eq!(group_points(group).len(), 2);
+    reference(group);
+    assert!(!dereference(group, &mut host));
+    let log_before = host.0.log.len();
+    // the last reference: the destructor's body detaches and kills both points, then the object goes
+    assert!(dereference(group, &mut host));
+    assert_eq!(host.0.log.len() - log_before, 4);
+}
+
+#[test]
+fn a_reference_given_back_during_the_body_wraps() {
+    let mut host = ObjectHost(Mock::new());
+    let group = new_group();
+    reference(group);
+    // two references: one given back, then the count would pass 0 the way the original's unsigned long did
+    assert!(!dereference(group, &mut host));
+    assert!(dereference(group, &mut host));
+}

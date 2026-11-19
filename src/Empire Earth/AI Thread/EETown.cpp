@@ -85,15 +85,15 @@ bool EETown::AddUnit(EEUnit* inUnit)
             if (this->GetPatrolGroup() == NULL && this->GetHullPointCount() > 1) {
                 this->FindPatrolGroup();
                 if (this->GetPatrolGroup() == NULL) {
-                    this->mPatrolGroup = new EEPPatrolGroup;
-                    this->GetPatrolGroup()->mIsTownPatrol = true;
+                    this->mPatrolGroup = ee_units_pg_new();
+                    ee_units_pg_set_town_patrol(this->GetPatrolGroup(), true);
                     this->GetPlayer()->AddPatrolGroup(this->GetPatrolGroup());
                 }
             }
             if (this->GetPatrolGroup() != NULL) {
                 for (unsigned long i = 0; i < this->GetHullPointCount(); i++)
                     thePoints.push_back(this->GetHullPoint(i));
-                this->GetPatrolGroup()->SetPatrolPoints(thePoints, this->GetPlayer()->GetPlayerID());
+                EEPGSetPatrolPoints(this->GetPatrolGroup(), thePoints, this->GetPlayer()->GetPlayerID());
             }
         }
         if (theClass->GetIsWall()) {
@@ -184,7 +184,7 @@ void EETown::Reset()
     this->mContinent = 0;
     this->mReach = 0x100;
     if (this->mPatrolGroup != NULL) {
-        this->mPatrolGroup->Dereference();
+        ee_units_pg_dereference(this->mPatrolGroup);
         this->mPatrolGroup = NULL;
     }
 }
@@ -231,7 +231,7 @@ void EETown::FindPatrolGroup()
             if (theUnit != NULL && theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint && theUnit->GetPlayer() == this->GetPlayer() &&
                 theUnit->GetComplexUnit()->GetPatrolGroup() != NULL) {
                 this->mPatrolGroup = theUnit->GetComplexUnit()->GetPatrolGroup();
-                this->GetPatrolGroup()->Reference();
+                ee_units_pg_reference(this->GetPatrolGroup());
             }
         }
     }
@@ -327,8 +327,8 @@ void EETown::RefreshPatrolGroup()
     if (this->mPatrolGroup == NULL && this->GetHullPointCount() > 1) {
         this->FindPatrolGroup();
         if (this->mPatrolGroup == NULL) {
-            this->mPatrolGroup = new EEPPatrolGroup;
-            this->mPatrolGroup->mIsTownPatrol = true;
+            this->mPatrolGroup = ee_units_pg_new();
+            ee_units_pg_set_town_patrol(this->mPatrolGroup, true);
             this->mPlayer->AddPatrolGroup(this->mPatrolGroup);
         }
     }
@@ -336,7 +336,7 @@ void EETown::RefreshPatrolGroup()
         return;
     for (long i = 0; i < (long)this->GetHullPointCount(); i++)
         thePoints.push_back(this->GetHullPoint(i));
-    this->mPatrolGroup->SetPatrolPoints(thePoints, this->mPlayer->mPlayerID);
+    EEPGSetPatrolPoints(this->mPatrolGroup, thePoints, this->mPlayer->mPlayerID);
 }
 
 // Removes a tile from the town; when it was a hull vertex, rebuilds the hull (cleared when no tile is left) and the
@@ -372,7 +372,7 @@ bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
             if (this->mPatrolGroup != NULL) {
                 for (unsigned long j = 0; j < this->GetHullPointCount(); j++)
                     thePatrol.push_back(this->GetHullPoint(j));
-                this->mPatrolGroup->SetPatrolPoints(thePatrol, this->mPlayer->mPlayerID);
+                EEPGSetPatrolPoints(this->mPatrolGroup, thePatrol, this->mPlayer->mPlayerID);
             }
         }
     }

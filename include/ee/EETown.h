@@ -8,7 +8,7 @@
 #define EE_EETOWN_H
 
 class EEPlayer;
-class EEPPatrolGroup;
+typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 class EEUnit;
 
 class EETown : public EEAIArea {
