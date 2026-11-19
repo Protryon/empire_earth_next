@@ -132,7 +132,6 @@ public:
     virtual long EndScene(unsigned long inScreen) = 0;
     virtual long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) = 0;
     virtual unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) = 0;
-    virtual bool GetCanModulateTextureAlpha(unsigned long inScreen) = 0;
     virtual bool GetDirtyRectangleSupport(unsigned long inScreen) = 0;
     virtual void Light(GETerrainMesh& inMesh, unsigned long inScreen) = 0;
     virtual long RemoveAllLights(unsigned long inScreen) = 0;
@@ -171,7 +170,6 @@ public:
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer();
-    unsigned long GetAlphaTesting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mAlphaTesting; }
     float GetAlphaTestingRefValue(unsigned long inScreen) const
         { return this->GetScreenState(inScreen)->mAlphaTestingRefValue; }
     const GEColor& GetAmbientColor() const;
@@ -181,7 +179,6 @@ public:
         outSource = this->GetScreenState(inScreen)->mBlendSource;
         outDestination = this->GetScreenState(inScreen)->mBlendDestination;
     }
-    unsigned long GetCulling() const;
     unsigned long GetFog(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mFogState; }
     void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
     {

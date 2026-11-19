@@ -222,19 +222,9 @@ void GEModel::PrepareTransforms()
     ee_ge_mod_prepare_transforms(this->mRust);
 }
 
-void GEModel::SetFractionalFramePosition(float inPosition)
-{
-    ee_ge_mod_set_fractional(this->mRust, inPosition);
-}
-
 void GEModel::SetGraphicsCurrentFrame(unsigned long inFrame)
 {
     ee_ge_mod_set_current_frame(this->mRust, inFrame);
-}
-
-void GEModel::SetGraphicsNextFrame(unsigned long inFrame)
-{
-    ee_ge_mod_set_next_frame(this->mRust, inFrame);
 }
 
 void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
@@ -259,21 +249,8 @@ bool GEModel::Verify() const
 
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
 
-// Allocates the model's arrays from the counts (AllocateInternalData, as the counts chunk did) and stores the model
-// where the original's chunk readers stored it, then creates and fills the sub-models; returns the model's result
-// (a sub-model's is ignored, as the original's). A model whose counts the reader refused is left as constructed.
-long GEModel::StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures)
-{
-    std::vector<EeGeSharedFrame> theShared;
-    for (std::map<unsigned long, long>::const_iterator theIterator = ioTextures.begin(); theIterator != ioTextures.end();
-         theIterator++) {
-        EeGeSharedFrame theEntry;
-        theEntry.frame = (uint32_t)theIterator->first;
-        theEntry.offset = (int32_t)theIterator->second;
-        theShared.push_back(theEntry);
-    }
-    return ee_ge_mod_store_loaded(this->mRust, inModel, theShared.empty() ? NULL : &theShared[0], theShared.size());
-}
+// (StoreLoaded: ee_ge_mod_store_loaded, from the manager's host below: the arrays allocated from the counts, the model
+// stored where the original's chunk readers stored it, the sub-models made and filled)
 
 // UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via
 // GEModel.h; the $D ctors are GEBoundingBox.cpp's COMDATs 0x10014ed4/0x10014efb/0x10014f22)
@@ -358,17 +335,14 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
         theSubModel->UReferenceCounter::Dereference();
         return (intptr_t)theSubModel;
     }
-    case EeGeManOp::ModelFindFile: {
-        std::vector<EeGeSharedFrame> theShared;   // the frames the model shares, in the map's order
-        for (const std::pair<const unsigned long, long>& theFrame : *(std::map<unsigned long, long>*)b)
-            theShared.push_back({(uint32_t)theFrame.first, (int32_t)theFrame.second});
-        return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, theShared.data(), theShared.size(),
-                                (EeGeCemModel**)c);
-    }
+    case EeGeManOp::ModelFindFile:
+        return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, ((const EeGeSharedFrames*)b)->frames,
+                                ((const EeGeSharedFrames*)b)->count, (EeGeCemModel**)c);
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(theManager);
     case EeGeManOp::ModelStoreLoaded:
-        return theModel->StoreLoaded((const EeGeCemModel*)a, *(std::map<unsigned long, long>*)b);
+        return ee_ge_mod_store_loaded(theModel->mRust, (const EeGeCemModel*)a, ((const EeGeSharedFrames*)b)->frames,
+                                      ((const EeGeSharedFrames*)b)->count);
     case EeGeManOp::ModelSizeOf:
         return (intptr_t)theModel->SizeOf();
     case EeGeManOp::ModelVerify:
@@ -427,9 +401,9 @@ unsigned long GEModelManager::GetMemoryFootprint()
 // Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
 // name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
 // original's was "<name>.cem")
-GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long, long>& ioTextures)
+GEModel* GEModelManager::LoadModel(const UString& inName, const EeGeSharedFrames& inShared)
 {
-    return (GEModel*)ee_ge_modman_load(this->mRust, inName, &ioTextures);
+    return (GEModel*)ee_ge_modman_load(this->mRust, inName, &inShared);
 }
 
 // Releases every model nobody else references; returns 5 when some are still in use
@@ -655,8 +629,6 @@ void GETerrainMesh::ComputeShorelines(unsigned long inX, unsigned long inY) { ee
 void GETerrainMesh::ComputeVertexNormal(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 4, 0, 0.0f); }
 
 void GETerrainMesh::CreateFlatMesh(long inWidth, long inHeight) { ee_ge_tm_create_flat_mesh(this->mRust, inWidth, inHeight); }
-
-void GETerrainMesh::GetMeshNormal(float inX, float inY, GEVector& outNormal) const { ee_ge_tm_mesh_normal(this->mRust, inX, inY, GERust(outNormal)); }
 
 float GETerrainMesh::GetMeshZ(float inX, float inY) const { return ee_ge_tm_mesh_z(this->mRust, inX, inY); }
 

@@ -94,12 +94,6 @@ public:
         return this->Create(a, outHandle);
     }
     // a particle, particle emitter or multi-effect along a line
-    long CreateLineEffect(const GE3DLine& inLine, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
-    {
-        EeGfxEffectArgs a = Args(EeGfxEffectEntry::Line, inEffect);
-        a.line = *reinterpret_cast<const EeGe3DLine*>(&inLine);
-        return this->Create(a, outHandle);
-    }
     // an earthquake, 3D projectile or marching line between two points (other kinds: nothing, 0)
     long CreateEffectBetween(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inEffect,
                              EEEffectHandle* outHandle)

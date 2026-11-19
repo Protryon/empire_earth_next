@@ -225,11 +225,12 @@ enum class EeGeManOp : uint32_t {
   /// `obj->SetSubModel(model, b)`, `model->UReferenceCounter::Dereference()`; the model.
   ModelNewSub,
   /// `GEFindModelFile(obj, UString(a), *b, *c)`: `obj` the path, `a` the name (`const char*`), `b` the shared
-  /// frames (`std::map<unsigned long, long>*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
+  /// frames (`const EeGeSharedFrames*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
   ModelFindFile,
   /// `new GEModel(this)`.
   ModelNewEmpty,
-  /// `obj->StoreLoaded(a, *b)`: `a` the file, `b` the shared frames; the result.
+  /// `ee_ge_mod_store_loaded(obj's model, a, b's frames)`: `a` the file, `b` the shared frames
+  /// (`const EeGeSharedFrames*`); the result.
   ModelStoreLoaded,
   /// `obj->SizeOf()`.
   ModelSizeOf,
@@ -949,6 +950,19 @@ using EeGeManHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
 
+/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
+struct EeGeSharedFrame {
+  uint32_t frame;
+  int32_t offset;
+};
+
+/// The shared frames a model load hands its file and its store (`GEModelManager::LoadModel`): `count` entries in the
+/// frames' order (the original's `std::map<unsigned long, long>`; `frames` NULL when there are none).
+struct EeGeSharedFrames {
+  const EeGeSharedFrame *frames;
+  size_t count;
+};
+
 /// The map's tiles and water for the edits: the map (`EEMap*`) and its mesh's Rust object, then the C++'s calls.
 struct EeGeMapHost {
   void *map;
@@ -959,6 +973,8 @@ struct EeGeMapHost {
   void (*settle_tile)(void *map, unsigned long x, unsigned long y, float height);
   /// `UpdateWater(x, y)`
   void (*update_water)(void *map, long x, long y);
+  /// `GetTile(x, y)` (NULL off the map)
+  void *(*tile)(void *map, unsigned long x, unsigned long y);
 };
 
 /// A `U2DRectangle<long>` in the C++'s member order.
@@ -976,12 +992,6 @@ using EeGeModHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t a,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
-
-/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
-struct EeGeSharedFrame {
-  uint32_t frame;
-  int32_t offset;
-};
 
 /// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
 /// `GetPolygonRangeLength(lod)`.
@@ -1600,11 +1610,13 @@ unsigned long ee_ge_modman_footprint(EeGeModelManager *p);
 /// `p` is live.
 unsigned long ee_ge_modman_count(EeGeModelManager *p);
 
-/// `LoadModel(name, textures)`.
+/// `LoadModel(name, shared)`: `shared` the frames the model shares (the original's `std::map<unsigned long, long>`).
 ///
 /// # Safety
-/// `p` is live; `name` is NUL-terminated.
-void *ee_ge_modman_load(EeGeModelManager *p, const char *name, void *textures);
+/// `p` is live; `name` is NUL-terminated; `shared` is live.
+void *ee_ge_modman_load(EeGeModelManager *p,
+                        const char *name,
+                        const EeGeSharedFrames *shared);
 
 /// `RemoveAllModels`.
 ///
@@ -1670,6 +1682,25 @@ void ee_ge_map_area_outlines(void *context,
                              bool space,
                              uint16_t (*continent)(void *context, long x, long y),
                              void (*run)(void *context, const long *run));
+
+/// `RTSMap::GetTileOnLine`: the tile (NULL: none); `x` and `y` written as the C++ wrote them.
+///
+/// # Safety
+/// The host's map and mesh are live; the pointers valid.
+void *ee_ge_map_tile_on_line(const EeGeMapHost *host,
+                             const EeGe3DLine *line,
+                             long *x,
+                             long *y,
+                             bool hit_water);
+
+/// `RTSMap::GetLocationOnLine`: the tile (NULL: none); `location` written as the C++ wrote it.
+///
+/// # Safety
+/// As [`ee_ge_map_tile_on_line`].
+void *ee_ge_map_location_on_line(const EeGeMapHost *host,
+                                 const EeGe3DLine *line,
+                                 EeGe3DPoint *location,
+                                 bool hit_water);
 
 /// Frees a model (`ee_of_find_model`'s; not a sub-model's handle).
 ///

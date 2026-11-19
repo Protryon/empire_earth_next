@@ -22,7 +22,6 @@ class GEModel;
 class EEWheel;
 class EESoundObject;
 class UString;
-struct GETextureDescription;
 
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
@@ -52,9 +51,6 @@ public:
     EEOrbital(const EEOrbital& inOrbital)
         { this->mModel = inOrbital.mModel; this->mSpeed = inOrbital.mSpeed; this->mAngle = inOrbital.mAngle; }
     virtual ~EEOrbital() {}
-    // 0x208c9b (cdecl): the model is an orbiting part (its name starts with "orbital_cw_" or "orbital_ccw_", any case;
-    // EEGraphicObject 0xd76a1 tests each part) (provisional name)
-    static bool IsOrbitalModel(GEModel* inModel);
     // 0x208ce6 (ret 4; after EEGraphicObject 0xd76a1 news one inline: vptr, mAngle 0, mModel 0): the model and the
     // speed from the name's degrees after the prefix, negative for clockwise (provisional name)
     void Init(GEModel* inModel);
@@ -116,12 +112,11 @@ public:
     EEGraphicObject();                      // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
     virtual ~EEGraphicObject();
     // 0xd85ed (vtable 0x43f788 +0x04; +0x08 is UnloadMedia): loads the models, textures and sounds on the first use
+    // (ee_gfx gobj_media.rs, with the part scan 0xd76a1 and the texture loads 0xd8b09)
     virtual long LoadMedia();
     // 0xd907e (vtable 0x43f788 +0x08: the EEMedia override): releases the loaded models, textures and sounds when the
     // load count is 1 (provisional name)
     virtual long UnloadMedia();
-    // 0xd76a1: the part scan of inModel under inParent (turret parts, orbitals, wheels; recursive) (provisional name)
-    void CollectParts(GEModel* inModel, const GETransformation& inParent);
     static long LoadTable(FSFile* inFile); // original-backed 0xd7833; caller1414a3, FSFile IO proof
     // +0x004 not decoded (the ctor 0xd7354: vectors at +0x04/+0x14/+0x24, 14 more at +0x34, a map at +0x14c, ...)
     std::vector<EETurretPart*> mTurretParts; // actual original third-party-free record/vector at+4
@@ -129,10 +124,7 @@ public:
     // 0x138e4b (ICF-folded with EECalamityManager::GetCalamityClassCount): mOrbitals.size() (provisional name)
     unsigned long GetOrbitalCount() const { return this->mOrbitals.size(); }
     unsigned long GetWheelCount() const;    // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
-    // inline (EEE3DDisease::Load expands it with the const operator[]: lea, then the load; Virtual30 calls the const
-    // begin() and operator+ out of line) (provisional name)
     GETexture* GetTexture(unsigned long inIndex) const { return this->mTextures[inIndex]; }  // inline: the effects' Queue tail (0x4ebfd0)
-    EEOrbital* GetOrbital(unsigned long inIndex) const { return this->mOrbitals[inIndex]; }
     // inline; out of line after their first user EEUnitClass::TurretsFacePoint (0x23a59b / 0x23a5ad, in this order)
     // (provisional names)
     const GETransformation& GetTurretPartTransformation(unsigned long inIndex) const { return this->mTurretParts[inIndex]->mTransformation; }
@@ -143,17 +135,8 @@ public:
     EETagPointList* GetTagPoints(unsigned long inPart, long inKind);
     // 0xd85aa: the index of inModel among the parts (0: found; 3: not) (provisional name)
     long FindTurretPart(GEModel* inModel, unsigned long& outIndex);
-    // 0xd8546: the model point (EEE3DTracers ctor: the target unit's) (provisional name)
-    const GE3DPoint& PickPoint();
     // the part count (ICF-folded into 0x91f11, a vector size; EEUnitClass 0x2364f3) (provisional name)
     unsigned long GetNumParts() const { return this->mTurretParts.size(); }
-    // 0xd9008 (ret 8): inColor into the colour groups of model part inPart (EEROUnits::DrawUnitModel passes the render
-    // unit's +0x40 colour) (provisional name)
-    void SetGroupColor(const GEColor& inColor, unsigned long inPart);
-    // 0xd8b09 (ret 0x10): loads inName into ioTexture when it is still empty and sets its stage modes; the loader
-    // 0xd85ed passes mIsDrawn as the fourth argument, which the body does not read (provisional name)
-    void LoadTexture(const UString& inName, GETexture*& ioTexture, const GETextureDescription& inDescription,
-                 bool inUnused);
 
     // Third original vector, ctor0xd7354; model replacement0x1ff928 copies EEWheel elements.
     std::vector<EEWheel*> mWheels;         // +0x024 (0x10 bytes, source identity provisional)

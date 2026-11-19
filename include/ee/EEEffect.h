@@ -62,10 +62,8 @@ public:
     EEUnit* GetUnit() const { return this->mUnit; }
     EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }
     // 0x102f96: the graphic effect's object (a random one of its kind without one; 0 without a graphic effect)
-    EEGraphicObject* GetGraphicObject() { return (EEGraphicObject*)(uintptr_t)ee_gfx_effect_graphic_object(this->Head()); }
     // the 3D kinds' transformation and the 2D kinds' position (the record's)
     GETransformation& Transformation() { return *reinterpret_cast<GETransformation*>(&this->mRecord->transformation); }
-    GE3DPoint& Position() { return *reinterpret_cast<GE3DPoint*>(&this->mRecord->position); }
     void SetTransformation(const GETransformation& inTransformation)
         { ee_gfx_effect_set_transformation(this->Head(), *reinterpret_cast<const EeGeTransformation*>(&inTransformation)); }
     // the weather storms' (EEEMStorm's): the tiles moved one step towards a new centre, the tiles' bounds, the

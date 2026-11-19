@@ -11,6 +11,7 @@
 //!   records the C++ classes derive from, every decision over a host ([`ambient_ffi`]: its C ABI).
 //! - [`map`]: `EEMap`'s sight, cliffs, terrain painting, water colours, checksum and tile count over a host
 //!   ([`map_ffi`]: its C ABI; it reads and edits the terrain mesh itself).
+//! - [`map_capture`]: the capture's map records, MAPC and MAPS (TEST ONLY), over the views and the mesh.
 //! - [`minimap`]: `EEMiniMap`'s cells (sight counts, building and unit dots, the unit layer's pixels), the terrain
 //!   pixels' colours and the redraw's walk ([`minimap_ffi`]: its C ABI, the object the C++ class owns).
 //! - [`cheats`]: `EECheatCodes`' table, chat line parse, lookup, list and dispatch ([`cheats_ffi`]: its C ABI).
@@ -25,6 +26,7 @@ pub mod camera;
 pub mod camera_ffi;
 pub mod ffi;
 pub mod game_options;
+pub mod map_capture;
 pub mod map_ffi;
 pub mod minimap;
 pub mod minimap_ffi;

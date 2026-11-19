@@ -10,9 +10,7 @@
 #include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
-class EECPCombatManager;                    // ee/EECPCombatManager.h
 class EECPPlacement;                        // ee/EECPPlacement.h
-class EECPResourceCenter;                   // ee/EECPResourceCenter.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
@@ -83,8 +81,6 @@ public:
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
     // Provisional name
-    unsigned long GetNumResourceCenters() { return this->mResourceCenters.size(); }
-    EECPResourceCenter* GetResourceCenter(unsigned long inIndex);   // 0x2ef5e (ret 4: mResourceCenters[inIndex]) (provisional name)
     void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
     // inline float getters: the AI compares load them onto the x87 stack (fld [mAidThreatThreshold]; fld st(1); fcompp) instead of
     // comparing against a memory operand (EECPMilitaryAidPackage 0x485892..0x485a2d) (provisional names)
@@ -103,17 +99,14 @@ public:
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
 
     // +0xb80 (0x68849 = its size(), 0x2ef5e = operator[]: EECPCivilizationManager 0x6fb5e/0x711ac)
-    std::vector<EECPResourceCenter*> mResourceCenters;
-    std::vector<UWideString> mB90;          // +0xb90 (20-byte polymorphic elements: _Tidy 0x40ee8; unused here) (provisional name)
-    std::vector<std::pair<unsigned long, long> > mFavoriteTypeHistory;  // +0xba0 (Load: resize(n, make_pair(0, 0)), then first/second)
-    std::vector<EEUnitHandle<EEComplexUnit> > mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills, referenced; the dtor dereferences each; handles since R5a.4)
-    EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
-    EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
+    // port (the AI Thread cluster, round 2): the resource centres (+0xb80, EECPResourceCenter whole), the favourite
+    // types' history (+0xba0), the units to kill (+0xbb0) and the danger zones are Rust lists (ee_sim::cp lists.rs),
+    // the record's mLists (made by Init); the unused +0xb90 vector is gone
+    // (+0xbc0: the combat manager, empty since stage 6 and deleted in the AI Thread cluster's round 2)
     // stage 6 (docs/AI_LUA_VERBS.md): the original civilization manager (+0xbc4) and its unit, build, resource,
     // research and wall managers are gone (the Lua verbs, data/ai/lib/verbs.lua); what the engine and the helper
-    // queries still need: the placement searches (with the town centre tile) and the reflexes' danger zones
+    // queries still need: the placement searches (with the town centre tile)
     EECPPlacement* mPlacement;
-    std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;   // (tile, game ms) EECPReflexes.cpp
     // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
     // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage

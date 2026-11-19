@@ -1,6 +1,8 @@
 // C:\EEX\Empire Earth\AI Thread\EETown.cpp (file name inferred: no __FILE__; RTTI class EETown > EEAIArea,
 // vtable 0x43c57c). A player's town: 0xabbaf..0xac7b9 (EEPathManager.cpp's COMDATs end at 0xabbaf, EEAEExtraDamageFunctor's
 // ctor starts at 0xac7b9).
+// Port (the AI Thread cluster, round 2): the bodies are Rust's (ee_sim::cp town.rs); this file is the town's host
+// (ee_cp_town_host: the units, the area the town is, the continent manager, the patrol groups) and IsTownUnit.
 #include <windows.h>
 #include <vector>
 #include <set>
@@ -44,219 +46,84 @@
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EETown.h"
 
-// NEAR: only the register of the two argument copies differs (ecx vs eax); store order right
+static void* EETownSelf(EETown* inTown)
+{
+    return static_cast<void*>(inTown);
+}
+
+static void* EETownArea(EETown* inTown)
+{
+    return static_cast<void*>(static_cast<EEAIArea*>(inTown));
+}
+
+#define EETOWN_ARGS EETownSelf(this), EETownArea(this), static_cast<EeTownFields*>(this)
+
 // Creates a player's town with the given id: an empty town area with no patrol group, not near water
 EETown::EETown(EEPlayer* inPlayer, long inTownID)
-    : mNearMapEdge(false)
+    : EeTownFields()
 {
     this->mPlayer = inPlayer;
     this->mTownID = inTownID;
     this->SetAreaType(kAIAreaTown);
-    this->mContinent = 0;
     this->mPatrolGroup = NULL;
-    this->mNearWater = false;
     this->Reset();
 }
 
-// Destroys the town, releasing its patrol group
 EETown::~EETown()
 {
     this->Reset();
 }
 
-// NEAR: the original refuses GetPoint's operator+ out of line and copies Virtual50's result field by field (a U2DPoint<long>
-// return type? EEUnit.h is shared); registers otherwise
-// Adds a unit's building to the town when it is the first or the town can take it: adds its tile, sets the patrol
-// group's points to the hull and counts it (walls at a tenth of their value); returns whether it was added
 bool EETown::AddUnit(EEUnit* inUnit)
 {
-    std::vector<U2DPoint<long> > thePoints;
-    U2DPoint<long> theTile;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    EETechTreeNode* theNode = inUnit->GetTechTreeNode();
-    unsigned long theValue = theClass->GetInfluence();
-    long theCount = 1;
-    bool theResult = false;
-    if (this->GetNumTiles() != 0 || this->CanTake(inUnit)) {
-        theTile = inUnit->FindAreaTile(true, 1);
-        theResult = true;
-        this->AddTile(theTile);
-        if (!gLoadingSavedGame) {
-            if (this->GetPatrolGroup() == NULL && this->GetHullPointCount() > 1) {
-                this->FindPatrolGroup();
-                if (this->GetPatrolGroup() == NULL) {
-                    this->mPatrolGroup = ee_units_pg_new();
-                    ee_units_pg_set_town_patrol(this->GetPatrolGroup(), true);
-                    this->GetPlayer()->AddPatrolGroup(this->GetPatrolGroup());
-                }
-            }
-            if (this->GetPatrolGroup() != NULL) {
-                for (unsigned long i = 0; i < this->GetHullPointCount(); i++)
-                    thePoints.push_back(this->GetHullPoint(i));
-                EEPGSetPatrolPoints(this->GetPatrolGroup(), thePoints, this->GetPlayer()->GetPlayerID());
-            }
-        }
-        if (theClass->GetIsWall()) {
-            this->mNumWalls++;
-            theValue = theValue * 0.1f;
-            theCount = 0;
-        }
-        switch (theClass->GetUnitType()) {
-        case kUnitTypeAirport:
-            this->mNumAirports++;
-            break;
-        case kUnitTypeDock:
-        case kUnitTypeNavyYard:
-            this->mNumDocks++;
-            break;
-        }
-        if (theNode != NULL && theNode->mData->mKind == 4) {
-            this->mNumWonders++;
-            theCount--;
-        }
-        this->mNumUnits++;
-        if (theCount > 0)
-            this->mL80++;
-        this->mValue += theValue;
-    }
-    return theResult;
+    return ee_cp_town_add_unit(EETOWN_ARGS, (uint64_t)(uintptr_t)inUnit);
 }
 
-// NEAR: the original calls GetPoint's begin()/operator+ out of line (as 0xac573 does here); ours expands them
-// Adds a tile (the first sets the continent); rebuilds the hull and the near-water flags unless the tile is inside
-// the hull and not a vertex; returns true
 bool EETown::AddTile(const U2DPoint<long>& inTile)
 {
-    std::vector<U2DPoint<long> > thePoints;
-    bool theOnHull = false;
-    if (this->mContinent == 0)
-        this->mContinent = gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY());
-    if (this->HullContains(inTile)) {
-        for (unsigned long i = 0; i < this->GetHullPointCount(); i++) {
-            if (this->GetHullPoint(i) == inTile) {
-                theOnHull = true;
-                break;
-            }
-        }
-        this->GetTileSet().Insert(inTile);
-        if (theOnHull) {
-            this->GetTileSet().BuildPointList(thePoints, 1);
-            this->Create(thePoints);
-            if (!gLoadingSavedGame)
-                this->UpdateNearWater();
-        }
-    } else {
-        this->GetTileSet().Insert(inTile);
-        this->GetTileSet().BuildPointList(thePoints, 1);
-        this->Create(thePoints);
-        if (!gLoadingSavedGame)
-            this->UpdateNearWater();
-    }
-    return true;
+    return ee_cp_town_add_tile(EETOWN_ARGS, inTile.mX, inTile.mY);
 }
 
-// Adds another town's counters and tiles to this one (the hull is not rebuilt)
 void EETown::Merge(EETown* inOther)
 {
-    std::vector<U2DPoint<long> > thePoints;
-    inOther->GetTileSet().BuildPointList(thePoints, 1);
-    this->mNumAirports += inOther->mNumAirports;
-    this->mNumUnits += inOther->mNumUnits;
-    this->mL80 += inOther->mL80;
-    this->mNumDocks += inOther->mNumDocks;
-    this->mValue += inOther->mValue;
-    this->mNumWalls += inOther->mNumWalls;
-    this->mNumWonders += inOther->mNumWonders;
-    for (long i = thePoints.size() - 1; i >= 0; i--)
-        this->GetTileSet().Insert(thePoints[i]);
+    ee_cp_town_merge(EETOWN_ARGS, (uint64_t)(uintptr_t)inOther, static_cast<EeTownFields*>(inOther));
 }
 
-// Zeroes the town's counters and continent, sets its reach to 256 and releases its patrol group
 void EETown::Reset()
 {
-    this->mNumAirports = 0;
-    this->mNumUnits = 0;
-    this->mL80 = 0;
-    this->mNumDocks = 0;
-    this->mValue = 0;
-    this->mNumWalls = 0;
-    this->mNumWonders = 0;
-    this->mContinent = 0;
-    this->mReach = 0x100;
-    if (this->mPatrolGroup != NULL) {
-        ee_units_pg_dereference(this->mPatrolGroup);
-        this->mPatrolGroup = NULL;
-    }
+    ee_cp_town_reset(EETOWN_ARGS);
 }
 
-// NEAR: the original calls both vectors' _Ptrit::operator+ out of line; ours expands them (inline budget)
-// Recomputes whether the town is within 10 tiles of a connected water continent (and of a space one: the map-edge
-// flag); returns the water flag
 bool EETown::UpdateNearWater()
 {
-    std::vector<unsigned short> theIDs;
-    U2DPoint<long> theThis;
-    U2DPoint<long> theOther;
-    this->mNearWater = false;
-    this->mNearMapEdge = false;
-    if (this->mContinent != 0 && this->GetNumTiles() > 0) {
-        gContinentManager.GetConnectedIDs(theIDs, this->mContinent);
-        for (long i = theIDs.size() - 1; i >= 0 && !this->mNearWater; i--) {
-            EEAIContinent* theContinent = gContinentManager.GetContinentFromID(theIDs[i]);
-            if (theContinent == NULL)
-                continue;
-            if (theContinent->GetCategory() == kContinentCategoryWater) {
-                if (theContinent->GetClosestPoints(this, theThis, theOther))
-                    this->mNearWater = theThis.DistanceToSquared(theOther) <= 100;
-            } else if (theContinent->GetCategory() == kContinentCategorySpace) {
-                if (theContinent->GetClosestPoints(this, theThis, theOther))
-                    this->mNearMapEdge = theThis.DistanceToSquared(theOther) <= 100;
-            }
-        }
-    }
-    return this->mNearWater;
+    return ee_cp_town_update_near_water(EETOWN_ARGS);
 }
 
-// NEAR: the original calls GetPoint's begin()/operator+ out of line (index in memory); ours expands them
-// Adopts (references) the patrol group of one of the owner's path-point units on a hull vertex, if any
-void EETown::FindPatrolGroup()
-{
-    for (unsigned long i = 0; i < this->GetHullPointCount() && this->GetPatrolGroup() == NULL; i++) {
-        EEMapTile* theTile = gWorld.GetMap()->GetTile(this->GetHullPoint(i).GetX(), this->GetHullPoint(i).GetY());
-        if (theTile == NULL)
-            continue;
-        for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode != NULL && this->GetPatrolGroup() == NULL;
-             theNode = theNode->GetNext()) {
-            EEUnit* theUnit = theNode->GetUnit();
-            if (theUnit != NULL && theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint && theUnit->GetPlayer() == this->GetPlayer() &&
-                theUnit->GetComplexUnit()->GetPatrolGroup() != NULL) {
-                this->mPatrolGroup = theUnit->GetComplexUnit()->GetPatrolGroup();
-                ee_units_pg_reference(this->GetPatrolGroup());
-            }
-        }
-    }
-}
-
-// NEAR: register order of `left + GetRandom(..)` (the original adds into ecx after the call)
-// Returns a random map tile inside the town's hull (16 tries within its bounds), else the area's random point
 U2DPoint<long> EETown::GetRandomPoint()
 {
-    U2DPoint<long> theResult;
-    bool theFound = false;
-    EEMap* theMap = gWorld.mMap;
-    if (theMap != NULL) {
-        for (long i = 15; i >= 0 && !theFound; i--) {
-            long theX = gPhysics->GetRandom(0L, this->GetHullBounds().mRight - this->GetHullBounds().mLeft);
-            theResult.mX = this->GetHullBounds().mLeft + theX;
-            long theY = gPhysics->GetRandom(0L, this->GetHullBounds().mBottom - this->GetHullBounds().mTop);
-            theResult.mY = this->GetHullBounds().mTop + theY;
-            if (theMap->GetTileAtLocation(theResult))
-                theFound = this->HullContains(theResult);
-        }
-    }
-    if (!theFound)
-        theResult = EEAIArea::GetRandomPoint();
-    return theResult;
+    EeHerdPoint thePoint;
+    ee_cp_town_random_point(EETOWN_ARGS, &thePoint);
+    return U2DPoint<long>(thePoint.mX, thePoint.mY);
+}
+
+bool EETown::RemoveUnit(EEUnit* inUnit)
+{
+    return ee_cp_town_remove_unit(EETOWN_ARGS, (uint64_t)(uintptr_t)inUnit);
+}
+
+void EETown::RefreshPatrolGroup()
+{
+    ee_cp_town_refresh_patrol_group(EETOWN_ARGS);
+}
+
+bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
+{
+    return ee_cp_town_remove_hull_tile(EETOWN_ARGS, inTile.mX, inTile.mY);
+}
+
+bool EETown::CanTake(EEUnit* inUnit)
+{
+    return ee_cp_town_can_take(EETOWN_ARGS, (uint64_t)(uintptr_t)inUnit);
 }
 
 // NEAR: theResult is kept in memory where the original keeps it in bl (the zero register of the NULL tests)
@@ -278,129 +145,137 @@ bool EETown::IsTownUnit(EEUnit* inUnit)
     return theResult;
 }
 
-// NEAR: Virtual50's result copied field by field in the original (see AddUnit)
-// Removes a unit's building from the town (the mirror of AddUnit), counting its counters down; returns whether its tile was in the town (true if not taken)
-bool EETown::RemoveUnit(EEUnit* inUnit)
-{
-    U2DPoint<long> theTile;
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EETechTreeNode* theNode = inUnit->GetTechTreeNode();
-    unsigned long theValue = theClass->mInfluence;
-    long theCount = 1;
-    bool theResult = true;
-    if (this->CanTake(inUnit)) {
-        theTile = inUnit->FindAreaTile(true, 1);
-        theResult = this->RemoveHullTile(theTile);
-        if (theClass->mIsWall) {
-            this->mNumWalls = this->mNumWalls > 0 ? this->mNumWalls - 1 : 0;
-            theCount = 0;
-            theValue = theValue * 0.1f;
-        }
-        switch (theClass->mUnitType) {
-        case kUnitTypeAirport:
-            this->mNumAirports = this->mNumAirports > 0 ? this->mNumAirports - 1 : 0;
-            break;
-        case kUnitTypeDock:
-        case kUnitTypeNavyYard:
-            this->mNumDocks = this->mNumDocks > 0 ? this->mNumDocks - 1 : 0;
-            break;
-        }
-        if (theNode != NULL && theNode->mData->mKind == 4) {
-            this->mNumWonders = this->mNumWonders > 0 ? this->mNumWonders - 1 : 0;
-            theCount--;
-        }
-        this->mNumUnits = this->mNumUnits > 0 ? this->mNumUnits - 1 : 0;
-        if (theCount > 0)
-            this->mL80 = this->mL80 > 0 ? this->mL80 - 1 : 0;
-        if (this->mValue > theValue)
-            this->mValue -= theValue;
-        else
-            this->mValue = 0;
-    }
-    return theResult;
-}
+// ---------------------------------------------------------------------------------------------------------------
+// The town's host (ee_sim::cp town.rs EE_CP_TOWN_*): `a` a unit (EEUnit*) or a town
 
-// Finds or creates the town's patrol group (once the hull has two points) and sets its patrol points to the hull
-void EETown::RefreshPatrolGroup()
+static std::vector<U2DPoint<long> > EETownInputPoints(const TownIo* io)
 {
     std::vector<U2DPoint<long> > thePoints;
-    if (this->mPatrolGroup == NULL && this->GetHullPointCount() > 1) {
-        this->FindPatrolGroup();
-        if (this->mPatrolGroup == NULL) {
-            this->mPatrolGroup = ee_units_pg_new();
-            ee_units_pg_set_town_patrol(this->mPatrolGroup, true);
-            this->mPlayer->AddPatrolGroup(this->mPatrolGroup);
-        }
-    }
-    if (this->mPatrolGroup == NULL)
-        return;
-    for (long i = 0; i < (long)this->GetHullPointCount(); i++)
-        thePoints.push_back(this->GetHullPoint(i));
-    EEPGSetPatrolPoints(this->mPatrolGroup, thePoints, this->mPlayer->mPlayerID);
+    for (size_t i = 0; i < io->input_len; i++)
+        thePoints.push_back(U2DPoint<long>((long)io->input[2 * i], (long)io->input[2 * i + 1]));
+    return thePoints;
 }
 
-// Removes a tile from the town; when it was a hull vertex, rebuilds the hull (cleared when no tile is left) and the
-// patrol points; returns whether the tile was in the town
-bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
+extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uint64_t inB, TownIo* io)
 {
-    std::vector<U2DPoint<long> > thePatrol;
-    std::vector<U2DPoint<long> > thePoints;
-    bool theOnHull = false;
-    bool theResult = false;
-    for (unsigned long i = 0; i < this->GetHullPointCount(); i++) {
-        if (this->GetHullPoint(i) == inTile) {
-            theOnHull = true;
-            break;
+    EETown* me = static_cast<EETown*>(inTown);
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)inA);
+    int64_t* v = io->v;
+    U2DPoint<long> theTile((long)v[0], (long)v[1]);
+    (void)inB;
+    switch (inOp) {
+    case EE_CP_TOWN_UNIT: {
+        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
+        EETileCoordinate theArea = theUnit->FindAreaTile(true, 1);
+        v[0] = theUnit->GetUnitClass()->GetInfluence();
+        v[1] = theNode != NULL && theNode->mData->mKind == 4 ? 1 : 0;
+        v[2] = theUnit->GetUnitClass()->GetIsWall() ? 1 : 0;
+        v[3] = theUnit->GetUnitClass()->GetUnitType();
+        v[4] = theArea.mX;
+        v[5] = theArea.mY;
+        v[6] = (int64_t)(uintptr_t)static_cast<EEPlayer*>(theUnit->mPlayer);
+        return 0;
+    }
+    case EE_CP_TOWN_IS_TOWN_UNIT:
+        return EETown::IsTownUnit(theUnit) ? 1 : 0;
+    case EE_CP_TOWN_PLAYER:
+        return (int64_t)(uintptr_t)me->mPlayer;
+    case EE_CP_TOWN_NUM_TILES:
+        return me->GetNumTiles();
+    case EE_CP_TOWN_HULL_CONTAINS:
+        return me->HullContains(theTile) ? 1 : 0;
+    case EE_CP_TOWN_HULL_POINTS:
+        for (unsigned long i = 0; i < me->GetHullPointCount(); i++)
+            ee_cp_herd_push(io->list, me->GetHullPoint(i).mX, me->GetHullPoint(i).mY, 0, 0);
+        return 0;
+    case EE_CP_TOWN_TILE_INSERT:
+        me->GetTileSet().Insert(theTile);
+        return 0;
+    case EE_CP_TOWN_TILE_CONTAINS:
+        return me->GetTileSet().Contains(theTile) ? 1 : 0;
+    case EE_CP_TOWN_TILE_REMOVE:
+        me->GetTileSet().Remove(theTile);
+        return 0;
+    case EE_CP_TOWN_TILES: {
+        std::vector<U2DPoint<long> > thePoints;
+        (inA != 0 ? reinterpret_cast<EETown*>((uintptr_t)inA) : me)->GetTileSet().BuildPointList(thePoints, 1);
+        for (size_t i = 0; i < thePoints.size(); i++)
+            ee_cp_herd_push(io->list, thePoints[i].mX, thePoints[i].mY, 0, 0);
+        return 0;
+    }
+    case EE_CP_TOWN_CREATE:
+        me->Create(EETownInputPoints(io));
+        return 0;
+    case EE_CP_TOWN_SET_HULL:
+        me->SetHullPoints(EETownInputPoints(io));
+        return 0;
+    case EE_CP_TOWN_CLEAR_HULL:
+        me->ClearHull();
+        return 0;
+    case EE_CP_TOWN_CLOSEST_HULL: {
+        U2DPoint<long> theClosest = me->GetClosestHullPoint(theTile);
+        v[0] = theClosest.mX;
+        v[1] = theClosest.mY;
+        return 0;
+    }
+    case EE_CP_TOWN_CONTINENT_AT:
+        return gContinentManager.GetContinentID(theTile.mX, theTile.mY);
+    case EE_CP_TOWN_CONNECTED: {
+        std::vector<unsigned short> theIDs;
+        gContinentManager.GetConnectedIDs(theIDs, (unsigned short)v[0]);
+        for (size_t i = 0; i < theIDs.size(); i++)
+            ee_cp_herd_push(io->list, theIDs[i], 0, 0, 0);
+        return 0;
+    }
+    case EE_CP_TOWN_CONTINENT: {
+        EEAIContinent* theContinent = gContinentManager.GetContinentFromID((unsigned short)v[0]);
+        if (theContinent == NULL)
+            return -1;
+        if (v[1] != 0) {
+            U2DPoint<long> theThis;
+            U2DPoint<long> theOther;
+            v[2] = theContinent->GetClosestPoints(me, theThis, theOther) ? 1 : 0;
+            v[3] = theThis.mX;
+            v[4] = theThis.mY;
+            v[5] = theOther.mX;
+            v[6] = theOther.mY;
         }
+        return theContinent->GetCategory();
     }
-    if (this->GetTileSet().Contains(inTile)) {
-        theResult = true;
-        this->GetTileSet().Remove(inTile);
-    }
-    if (theOnHull) {
-        this->GetTileSet().BuildPointList(thePoints, 1);
-        if (thePoints.size() > 0) {
-            this->SetHullPoints(thePoints);
-            if (!gLoadingSavedGame && !gWorldClearing)
-                this->UpdateNearWater();
-            this->GetHullPointCount();
-        } else
-            this->ClearHull();
-        if (!gLoadingSavedGame) {
-            if (this->mPatrolGroup == NULL)
-                this->FindPatrolGroup();
-            if (this->mPatrolGroup != NULL) {
-                for (unsigned long j = 0; j < this->GetHullPointCount(); j++)
-                    thePatrol.push_back(this->GetHullPoint(j));
-                EEPGSetPatrolPoints(this->mPatrolGroup, thePatrol, this->mPlayer->mPlayerID);
+    case EE_CP_TOWN_HAS_PATROL:
+        return me->mPatrolGroup != NULL ? 1 : 0;
+    case EE_CP_TOWN_FIND_PATROL:   // FindPatrolGroup 0xac116: an own path point's group on a hull vertex, referenced
+        for (unsigned long i = 0; i < me->GetHullPointCount() && me->mPatrolGroup == NULL; i++) {
+            EEMapTile* theMapTile = gWorld.GetMap()->GetTile(me->GetHullPoint(i).GetX(), me->GetHullPoint(i).GetY());
+            if (theMapTile == NULL)
+                continue;
+            for (RTSTileUnitNode* theNode = theMapTile->GetUnits(); theNode != NULL && me->mPatrolGroup == NULL;
+                 theNode = theNode->GetNext()) {
+                EEUnit* theTileUnit = theNode->GetUnit();
+                if (theTileUnit != NULL && theTileUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint
+                    && theTileUnit->GetPlayer() == me->mPlayer && theTileUnit->GetComplexUnit()->GetPatrolGroup() != NULL) {
+                    me->mPatrolGroup = theTileUnit->GetComplexUnit()->GetPatrolGroup();
+                    ee_units_pg_reference(me->mPatrolGroup);
+                }
             }
         }
-    }
-    return theResult;
-}
-
-// NEAR: theResult kept in memory where the original keeps it in bl, U2DPoint zero stores sunk below the first test
-// Returns whether an own town unit belongs to the town: always when the town is empty, else when it stands on the
-// town's continent inside the hull or within the reach (squared distance) of its closest hull point
-bool EETown::CanTake(EEUnit* inUnit)
-{
-    U2DPoint<long> theTile;
-    U2DPoint<long> theClosest;
-    bool theResult = false;
-    if (inUnit->mPlayer == this->mPlayer && EETown::IsTownUnit(inUnit)) {
-        theResult = this->GetNumTiles() == 0;
-        if (!theResult) {
-            theTile = inUnit->FindAreaTile(true, 1);
-            unsigned short theID = gContinentManager.GetContinentID(theTile.mX, theTile.mY);
-            if (theID == this->mContinent || this->mContinent == 0) {
-                theResult = this->HullContains(theTile);
-                if (!theResult) {
-                    theClosest = this->GetClosestHullPoint(theTile);
-                    theResult = theClosest.DistanceToSquared(theTile) <= this->mReach;
-                }
-            } else
-                theResult = false;
+        return 0;
+    case EE_CP_TOWN_NEW_PATROL:
+        me->mPatrolGroup = ee_units_pg_new();
+        ee_units_pg_set_town_patrol(me->mPatrolGroup, true);
+        me->mPlayer->AddPatrolGroup(me->mPatrolGroup);
+        return 0;
+    case EE_CP_TOWN_SET_PATROL:
+        EEPGSetPatrolPoints(me->mPatrolGroup, EETownInputPoints(io), me->mPlayer->GetPlayerID());
+        return 0;
+    case EE_CP_TOWN_DROP_PATROL:
+        if (me->mPatrolGroup != NULL) {
+            ee_units_pg_dereference(me->mPatrolGroup);
+            me->mPatrolGroup = NULL;
         }
+        return 0;
+    case EE_CP_TOWN_FLAGS:
+        return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
     }
-    return theResult;
+    return 0;
 }

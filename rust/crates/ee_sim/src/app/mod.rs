@@ -1,10 +1,12 @@
 //! The simulation parts of the app and world lane (from ee_app): the map, the storms, the cheats, the end-of-game
-//! statistics (`EEWorld::RecordStatistics`), the world's active unit lists, the teams.
+//! statistics (`EEWorld::RecordStatistics`), the world's active unit lists, the teams, the simulation capture's
+//! writer and its PLST record (TEST ONLY).
 
 pub mod active;
 pub mod active_ffi;
 #[cfg(test)]
 mod active_tests;
+pub mod capture;
 pub mod cheats;
 pub mod cheats_ffi;
 #[cfg(test)]
@@ -12,6 +14,7 @@ mod cheats_tests;
 pub mod map;
 #[cfg(test)]
 mod map_tests;
+pub mod player_capture;
 pub mod statistics;
 pub mod statistics_ffi;
 #[cfg(test)]

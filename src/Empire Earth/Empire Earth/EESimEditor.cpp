@@ -124,6 +124,7 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/base/time.h"
 #include "rust/game/screens.h"
+#include "rust/game/sim_driver.h"   // the world digest
 #include "rust/sim/scenario.h"
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
@@ -382,65 +383,12 @@ void FileDigest(const UString& inName, std::vector<std::string>& outLines)
 void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
 {
     outLines.push_back("digest " + inLabel);
-    EEMap* theMap = gWorld.mMap;
-    if (theMap == NULL) {
-        outLines.push_back("  map none");
+    // the map's tiles and mesh, every player's units (ee_game sim_driver digest.rs, over the world views)
+    if (!ee_sim_driver_world_digest(gWorld.mMap != NULL ? gWorld.mMap->mTerrainMesh.GetRust() : NULL, &outLines,
+                                    [](void* inLines, const char* inLine) {
+                                        static_cast<std::vector<std::string>*>(inLines)->push_back(inLine);
+                                    }))
         return;
-    }
-    unsigned long theSize = theMap->mSize;
-    Hash theTiles, theMesh;
-    for (unsigned long y = 0; y < theSize; y++) {
-        for (unsigned long x = 0; x < theSize; x++) {
-            EEMapTile* theTile = theMap->RTSMap::GetTile(x, y);
-            if (theTile != NULL) {
-                theTiles.mCount++;
-                theTiles.Long((long)(x | y << 16));
-                theTiles.Long(theTile->mTerrainType);
-                theTiles.Float(theTile->mHeight);
-                theTiles.Long(theTile->mAIValue);
-            }
-            if (theMap->mTerrainMesh.GetIsValidTile(x, y)) {
-                theMesh.Long((long)(x | y << 16));
-                theMesh.Long((long)theMap->mTerrainMesh.GetTextureSetID(x, y));
-                theMesh.Long((long)theMap->mTerrainMesh.GetWaterInfo(x, y));
-            }
-            if (theMap->mTerrainMesh.GetIsValidPoint(x, y)) {
-                theMesh.mCount++;
-                theMesh.Long((long)(x | y << 16));
-                theMesh.Float(theMap->mTerrainMesh.GetZ(x, y));
-                theMesh.Long((long)theMap->mTerrainMesh.GetColorTableIndex(x, y));
-            }
-        }
-    }
-    outLines.push_back("  map size=" + std::to_string(theSize) + " tiles=" + std::to_string(theTiles.mCount) + " " +
-                       Hex(theTiles.mValue));
-    outLines.push_back("  mesh points=" + std::to_string(theMesh.mCount) + " " + Hex(theMesh.mValue));
-    Hash theAll;
-    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        if (thePlayer == NULL)
-            continue;
-        for (EEUnit* u = thePlayer->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
-            char theLine[512];
-            EEComplexUnit* c = u->GetComplexUnit();
-            const GETransformation* t = c != NULL ? &c->mPhysicalModel.GetLocation() : NULL;
-            Hash h;
-            if (t != NULL)
-                for (int r = 0; r < 3; r++)
-                    for (int k = 0; k < 4; k++)
-                        h.Float(t->mMatrix[r][k]);
-            snprintf(theLine, sizeof(theLine), "  unit %lu type=%ld player=%lu tile=%ld,%ld hp=%ld sel=%d built=%d cargo=%lu at=%a,%a,%a m=%s",
-                     u->GetUnitID(), (long)u->mUnitClass->mUnitType, i, (long)u->mTileX, (long)u->mTileY,
-                     (long)u->GetHitPoints(), u->mIsEditorSelected ? 1 : 0, c != NULL && c->GetIsBuilt() ? 1 : 0,
-                     c != NULL ? (unsigned long)c->GetNumCargoUnits() : 0UL, t != NULL ? (double)t->mMatrix[0][3] : 0.0,
-                     t != NULL ? (double)t->mMatrix[1][3] : 0.0, t != NULL ? (double)t->mMatrix[2][3] : 0.0,
-                     Hex(h.mValue).c_str());
-            outLines.push_back(theLine);
-            theAll.Bytes(theLine, strlen(theLine));
-            theAll.mCount++;
-        }
-    }
-    outLines.push_back("  units " + std::to_string(theAll.mCount) + " " + Hex(theAll.mValue));
     EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     std::string theSelection = "  selection";
     for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)

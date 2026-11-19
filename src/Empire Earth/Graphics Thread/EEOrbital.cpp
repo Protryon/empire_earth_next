@@ -30,12 +30,6 @@
 // The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",
 // any case; the degrees between the prefix and the name's last '_')
 
-// Returns whether a model's name starts with orbital_cw_ or orbital_ccw_ (ignoring case)
-bool EEOrbital::IsOrbitalModel(GEModel* inModel)
-{
-    return ee_gfx_orbital_is_model(inModel->GetName());
-}
-
 // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
 // orbital_ccw_ counterclockwise)
 void EEOrbital::Init(GEModel* inModel)
