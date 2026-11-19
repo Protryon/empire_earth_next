@@ -8,9 +8,7 @@ use crate::tech::calamity_start;
 use crate::tech::calamity_update::{
     self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState,
 };
-use crate::tech::contagion::{
-    self, ContagionHost, EeCalamityDiscrete, EeContagionCall, EeContagionParams, EeContagionReply, EeContagionState,
-};
+use crate::tech::contagion::{self, EeCalamityDiscrete};
 use crate::tech::effects::{
     self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
     EeTechUnitWalk,
@@ -243,12 +241,27 @@ pub struct EeCalamityHostFfi {
 
 struct FfiCalamityHost(EeCalamityHostFfi);
 
-impl CalamityHost for FfiCalamityHost {
-    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+impl FfiCalamityHost {
+    fn cpp(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
         let mut reply = EeCalamityReply::default();
         // SAFETY: the C++ host's contract (ee/EECalamityUpdate.h): valid pointers for the call's duration
         unsafe { (self.0.call)(self.0.ctx, state, call, &mut reply) };
         reply
+    }
+}
+
+impl CalamityHost for FfiCalamityHost {
+    fn call(&mut self, state: &mut EeCalamityState, call: &EeCalamityCall) -> EeCalamityReply {
+        // the target's, the caster's and the map's plain members are the world views' (calamity_views.rs)
+        #[cfg(not(test))]
+        {
+            let mut handle = |op| self.cpp(state, &EeCalamityCall::new(op)).key;
+            // SAFETY: the C++ runs the class on the simulation thread; its target and caster are referenced
+            if let Some(reply) = unsafe { crate::tech::calamity_views::answer(&mut handle, call) } {
+                return reply;
+            }
+        }
+        self.cpp(state, call)
     }
 }
 
@@ -454,44 +467,6 @@ mod tests {
         };
         assert_eq!(out, [5, 10, 15, 20, 25, 30, 35]);
     }
-}
-
-/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
-/// one [`EeContagionCall`] on the helper.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeContagionHostFfi {
-    pub ctx: *mut c_void,
-    pub call: unsafe extern "C" fn(ctx: *mut c_void, call: *const EeContagionCall, reply: *mut EeContagionReply),
-}
-
-struct FfiContagionHost(EeContagionHostFfi);
-
-impl ContagionHost for FfiContagionHost {
-    fn call(&mut self, call: &EeContagionCall) -> EeContagionReply {
-        let mut reply = EeContagionReply::default();
-        // SAFETY: the C++ host's contract: valid pointers for the call's duration
-        unsafe { (self.0.call)(self.0.ctx, call, &mut reply) };
-        reply
-    }
-}
-
-/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
-///
-/// # Safety
-/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_update(
-    params: *const EeContagionParams,
-    state: *mut EeContagionState,
-    elapsed: f32,
-    host: *const EeContagionHostFfi,
-) {
-    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
-    let (params, mut s, host) = unsafe { (*params, *state, *host) };
-    contagion::update(&mut FfiContagionHost(host), &mut s, &params, elapsed);
-    // SAFETY: as above
-    unsafe { *state = s };
 }
 
 /// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).

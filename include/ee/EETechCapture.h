@@ -149,7 +149,7 @@ void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity);
 // CONT: one contagion helper's Update: the helper's id, class, timers and units before, the elapsed time, the
 // update's world calls in order (EECalamityCaptureContagionEvent: spread candidates with their answers and draws,
 // units added, immune, cured, applied, the damage), the timers and units after
-class EEContagionHelper;
+struct EeContagionHelper;
 enum EEContagionCaptureOp {
     kContagionSpread = 1,       // Spread (the elapsed time, the chance)
     kContagionUpdateUnits,      // the functor's UpdateUnits instead of a spread
@@ -163,7 +163,7 @@ enum EEContagionCaptureOp {
     kContagionFunctorUpdate,    // the functor's Update (its update count)
 };
 void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
-void EECalamityCaptureContagion(EEContagionHelper* inHelper, float inElapsedTime);
+void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime);
 
 // TNWK: one walk over an epoch's nodes or one tree decision (kind: 0 Unlock, 1 ResearchAll, 2 ResearchKind,
 // 3 the epoch's ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's

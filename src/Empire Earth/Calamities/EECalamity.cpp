@@ -9,14 +9,6 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/USingleton.h"
 
@@ -25,14 +17,10 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEVectorIO.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "rust/sim/tech.h"
-#include "lle/FSFile.h"
 
 const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
 

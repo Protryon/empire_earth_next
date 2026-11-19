@@ -2,20 +2,9 @@
 // one scenario trigger condition. Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
 #include "ee/EESMCondition.h"
 #include <vector>
 #include <mbstring.h>
-#include "lle/UResourceFile.h"
-#include "ee/EmpireEarth.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEScenarioManager.h"
-#include "ee/EESMObject.h"
-#include "ee/EESMTrigger.h"
-#include "ee/EEPhysics.h"
-#include "ee/EEComputerPlayer.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 

@@ -6,32 +6,8 @@
 #include <map>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GERectangle.h"
-#include "lle/GETransformation.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
-#include "ee/EmpireEarth.h"
-#include "ee/EEPlayer.h"
 #include "ee/EESMArea.h"
 #include "ee/EEUnit.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEAIContinentManager.h"
-#include "ee/EETown.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
@@ -109,7 +85,6 @@ void EESMArea::Copy(const EESMArea& inArea)
 }
 
 #include "ee/EEPhysics.h"
-#include "ee/EEMap.h"
 
 // Returns the area's centre tile, computing and caching it once: rectangle centre, continent centre, or the hull
 // centre of the town holding the anchor (else the anchor)
