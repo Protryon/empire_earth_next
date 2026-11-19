@@ -31685,3 +31685,91 @@ EE-SIM builds no form: the oracle is unchanged by construction.
 ### Left
 
 docs/progress/ui-cluster.md ("Left").
+## R6 WONLobby, round 18: the lobby's events as Rust objects, their reads in Rust; the dialog host's Component ops (ee_won_lobby lobbyevt.rs, lobbydlg.rs comp_op; branch rust-wonlobby18, 2026-11-18)
+
+Round 17's "Left" named three blockers: the dialog host (a widget registry, the widgets' C++ members), the lobby
+events (shared by every logic host) and the dialogs' rows. This round moved the events whole and the dialog host's
+Component ops; the target (-3,000) was not reached (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c493f43e1 | the 43 lobby event classes one shell over a Rust event; LobbyEvents.cpp and LobbySyncGameEvent.cpp deleted; the receivers' reads in Rust | +242 -762 (-520) |
+| e77d318f4 | LobbyDialogHost.cpp's Component ops answered in lobbydlg.rs's game mode | -12 |
+
+Round total: -532. The merge of origin/rust 2bccb3e94 (UI cluster round 1) touched no WON file.
+
+### The events (lobbyevt.rs)
+
+- **One object, the classes' members as data.** An event is a kind (one per original class) and its members in the
+  class's declaration order (`layout`; a `LobbyChangeEvent`'s change kind first): a number (the maker converts
+  to the member's type: `bool` 0/1, `unsigned short`, `unsigned long`), a referenced object (every `SmartPtr`
+  and every `GUIString` member: a model object, an operation, a `GUIStringData`; `AddRef` when made, `Release` at
+  the end in reverse member order, through the event's host, the C++ `RefCount`), an address (a copy,
+  `ee_won_ipaddr_clone`), or a `std::wstring` / `std::string` copy (its bytes). Holding the `GUIStringData` is
+  exactly the original member: `GUIString` is copy-on-write.
+- **The C++.** WONLobbyEvents.h is the shell `LobbyRustEvent : LobbyEvent` (its constructor binds the shell to
+  the event, its destructor frees it), the readers (`LobbyEvtGet`, `LobbyEvtText`, `LobbyEvtAddr`,
+  `LobbyEvtStr<S>`, `LobbyEvtSet`, `LobbyEvtSetStr`) and one maker per class with the original constructor's
+  signature (a macro line each): the call sites only lost `new`. CreateAccountEvent's members are written after
+  it is made, as before (`LobbyEvtSet*`); its month, day and year read 0 until then (the original's were
+  uninitialised; the host writes them first).
+- **The reads in Rust.** For the game's objects (game mode, as round 17's resource rows) the events' member ops
+  are answered in lobbyevt.rs from the shell's address (`of`): the controls' `EvGet` / `EvSetHandled` and
+  `EventFlags`, `EventRoomSpec`, `EventIs{Add,Delete,Modify}`, `ClientChangedClient`, `PlayerChangedClient`,
+  `EventGame(s)` (`ctl_op`), the logics' `EventDirect*`, `EventClientAction*`, `EventJoinGame`, `EventAction*`
+  (`lobby_op`) and RoutingLogic's `EventNum` 1..12 (`route_event_num`). LobbyNetCtrlHost.cpp's 70-line `EvField`
+  is one test (a WONGUI event's chat link). The drivers' objects still send the ops to their scripted hosts:
+  every earlier golden is unchanged. A text read gives the `GUIStringData*` with no reference added, as the
+  hosts' `Dat` did (a first draft added one, like the controls' `Held`: the golden of the old `EvField` caught it
+  before any build).
+- **The golden** (`won_lobbyevt_test`, `won_lobbyevt_orig.h`: the classes, `EvField` and the deleted cases at
+  8d68d2786, unchanged): each of 60,000 sequences makes one event of a random class with random values on both
+  sides, compares the type and every member the receivers read (the change kind's and the chat flags' tests
+  too), applies the hosts' writes to both (`mHandled`, CreateAccountEvent's members, LoginEvent's user name cut),
+  checks every referenced object's count after the event is made and the order of the releases at its end, and
+  runs the receivers' reads (164,627) against the old cases; 2.3 million checks, 0 failures. Mutations
+  (a scratch script): 14 of 14 caught (two members swapped in a layout, the end's order, no reference
+  taken, a string cut short, writes ignored, a maker's arguments swapped, a default changed, a flag masked, and
+  five read mappings). Two were caught by a crash (a number read as an address), not a failure line.
+- **What runs it.** The LAN game makes and reads ClientChanged, RecvChat, JoinedRoom, GameChanged,
+  SyncGameList, ChangeDirectConnect, PlayerChanged, SetChatInput, ClientAction and GameAction events; the
+  Internet ones (routing, account, login, invitation, moderation) only the golden.
+
+### The dialog host's Component ops (lobbydlg.rs `comp_op`)
+
+Width, Height, Left, Top and IsVisible are the members' block (compmem.rs); RequestFocus, SetSize,
+SetSizeAtLeast, SetDesiredSize, SetDesiredWidth, SetPos and SubscribeToBroadcast are Component's non-virtual
+calls, which the C++ inline `KCall` made as `ee_won_comp_call(this, ee_won_guicpp_comp_call, ...)` (the host
+compobj.rs's `host()` returns in the game). The same calls by construction; the drivers' dialogs still send the
+ops (their goldens unchanged); the LAN game's dialogs (create game, LAN name, status boxes) run them.
+
+### Gates (the round's head merged with origin/rust 2bccb3e94)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (merged tree) |
+| `rust_build.py gate` | PASS after each commit (the first run failed rustfmt only, fixed before the commit); PASS, 4,651 tests on the merged tree |
+| `won_host_coverage.py` | PASS (lobbyevt.rs `ctl_op` / `lobby_op` and lobbydlg.rs `comp_op` read; TlaLink allowed: a WONGUI event's link, one test in EvField) |
+| `xbuild.py wontest` | all 153 programs exit 0 under the 2 GB cap (peak 557 MB, won_cfgtab_test) on the events commit; the dialog drivers and won_lobbyevt_test again after the Component ops |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2868 joiner=2858` (the round's start exe, a test-profile build of 8d68d2786: 2773 / 2773) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but two carets: the staging screen's (15 pixels at x 121, as in rounds 15-17) and the create-game dialog's name box (15 pixels at x 575; the caret shown in one run, blinked off in the other: checked on the crops) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12794` units [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2750 joiner=2752`, GATES PASS |
+
+### Why short of the target, and what is left
+
+- **The widget registry and the widgets' C++ members** (the dialog host's other ~100 ops, the ~260 repeated
+  forward lines over the hosts): not started. The virtual Component calls (SetEnabled, SetVisible, Invalidate)
+  must still dispatch through the C++ vtable (ComboBox and others override them), so only the non-virtual half
+  answers in Rust without moving the widget classes.
+- **The dialogs' rows** (BadUserItem, ConnectListItem, NetworkAdapterListItem with a `RustMultiRow` shell,
+  FilterListItem) and ChatLink's segment hook: not started (about -120 lines; each needs won_rowobj_test's
+  world extended).
+- **The logic hosts** (LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp, RoutingLogic.cpp): the events no
+  longer block them, but their remaining ops are calls on C++ sockets, servers, dialogs and the lobby's free
+  functions. The event makers there are now one C++ call each with no class; making the events from Rust needs a
+  host op that wraps a Rust event in its C++ shell (one generic `Deliver/Broadcast(event)` case per host would
+  replace ~48 maker cases).
