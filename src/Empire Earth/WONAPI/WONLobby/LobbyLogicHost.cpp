@@ -48,7 +48,7 @@ StagingLogic::~StagingLogic() { ee_won_staging_free(this->mRust); }
 // Looks up the create-game dialog from the lobby layout
 void StagingLogic::InitComponent(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, this->mCreateGameDialog, "CreateGameDialog", "StagingLogic.cpp", 41);
+    SafeGetDialog(inConfig, this->mCreateGameDialog, EeWonLobbyDlgKind::CreateGame, "CreateGameDialog", "StagingLogic.cpp", 41);
 }
 
 // The host, leave, logout and start/ready buttons
@@ -146,8 +146,8 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     }
     case EeWonLobbyOp::StCreateDialogRun:
-        st->mCreateGameDialog->SetGameType((int)inC);
-        st->mCreateGameDialog->Reset(false);
+        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::SetGameType, (int)inC);
+        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, false);
         return LobbyDoDialog(st->mCreateGameDialog.get());
     case EeWonLobbyOp::StTakeDialogGame: {
         SmartPtr<LobbyGame> aGame = st->mCreateGameDialog->GetGame();
@@ -156,7 +156,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return Held(aGame.get());
     }
     case EeWonLobbyOp::StLogoutTail:
-        st->mCreateGameDialog->Reset(true);
+        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, true);
         LobbyNetLogout();
         LobbyKillPings(0);
         LobbyShowLoginScreen();
@@ -238,9 +238,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     case EeWonLobbyOp::GameDirectConnect: LobbyDispatchEvent(ChangeDirectConnectEvent(1, g)); return 0;
     case EeWonLobbyOp::GameShowOptions: {
-        SmartPtr<GameOptionsPopup> aPopup = new GameOptionsPopup;
-        aPopup->Init(g);
-        LobbyOpenPopup(aPopup.get(), PopupFlag_StandardPopup, -1, -1);
+        LobbyOpenRustPopup(EeWonLobbyPopupKind::Game, (intptr_t)g);
         return 0;
     }
     // a client

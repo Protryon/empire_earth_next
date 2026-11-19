@@ -40,13 +40,13 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
         return LobbyDoYesNoDialog(LOBBY_STRING(LobbyContainer_VersionOutOfDataTitle_String),
                                   LOBBY_STRING(LobbyContainer_VersionOutOfDataDetails_String), true);
     case O::ShowCredits:
-        aLogic->mCreditsDialog->ResetScrolling();
-        aLogic->mCreditsDialog->StartScrolling();
+        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::ResetScrolling);
+        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::StartScrolling);
         LobbyDoDialog(aLogic->mCreditsDialog.get());
-        aLogic->mCreditsDialog->StopScrolling();
+        aLogic->mCreditsDialog->LCall(EeWonLobbyDlgCall::StopScrolling);
         return 0;
     case O::ShowTOU:
-        aLogic->mTOUDialog->Reset();
+        aLogic->mTOUDialog->LCall(EeWonLobbyDlgCall::Reset);
         return LobbyDoDialog(aLogic->mTOUDialog.get());
     case O::ShowScreen:
         if (a == 1) LobbyShowCreateAccount();
@@ -192,8 +192,8 @@ AccountLogic::~AccountLogic() { ee_won_logic_free(this->mRust); }
 // Looks up the credits and terms-of-use dialogs from the lobby layout
 void AccountLogic::InitComponent(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, this->mCreditsDialog, "CreditsDialog", __FILE__, 43);
-    SafeGetComponent(inConfig, this->mTOUDialog, "TOUDialog", __FILE__, 44);
+    SafeGetDialog(inConfig, this->mCreditsDialog, EeWonLobbyDlgKind::Credits, "CreditsDialog", __FILE__, 43);
+    SafeGetDialog(inConfig, this->mTOUDialog, EeWonLobbyDlgKind::Tou, "TOUDialog", __FILE__, 44);
 }
 // Opens the create-account (terms of use to follow), lost-password or lost-user-name screen if the version is usable
 void AccountLogic::HandleControlEvent(int inControlId)

@@ -174,7 +174,13 @@ namespace WONAPI {
 static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
 LobbyRustDialog::LobbyRustDialog(EeWonLobbyDlgKind inKind)
-    : mLobbyDlg(ee_won_lobbydlg_new_model(this, inKind, LobbyDialogHost)) {}
+    : mLobbyDlg(ee_won_lobbydlg_new_model(this, inKind, LobbyDialogHost)), mKind(inKind)
+{
+    // the subclasses' constructors: the status dialog's start tick, the credits' scrolling text
+    if (inKind == EeWonLobbyDlgKind::Status) this->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)WONTickCount());
+    if (inKind == EeWonLobbyDlgKind::Credits) this->LCall(EeWonLobbyDlgCall::HoldScrollText, (intptr_t) new ScrollingTextComponent);
+}
+
 
 // the controls are released in reverse member order (the original SmartPtr members), before the Dialog base
 LobbyRustDialog::~LobbyRustDialog() { ee_won_lobbydlg_free(this->mLobbyDlg); }
@@ -203,8 +209,6 @@ void LobbyRustDialog::HandleComponentEvent(ComponentEvent* inEvent)
     this->LCall(EeWonLobbyDlgCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
 }
 
-StatusDialog::StatusDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Status) { this->SetStartTick(WONTickCount()); }
-
 const GUIString& LobbyRustDialog::InputText(int inMember)
 {
     return reinterpret_cast<InputBox*>(this->LCall(EeWonLobbyDlgCall::Slot, inMember))->GetText();
@@ -217,7 +221,7 @@ const GUIString& LobbyRustDialog::InputTextOf(intptr_t inInput)
     return reinterpret_cast<InputBox*>(inInput)->GetText();
 }
 
-SmartPtr<LobbyGame> CreateGameDialog::GetGame()
+SmartPtr<LobbyGame> LobbyRustDialog::GetGame()
 {
     LobbyGame* aHeld = reinterpret_cast<LobbyGame*>(this->LCall(EeWonLobbyDlgCall::GetGame));
     SmartPtr<LobbyGame> aGame(aHeld);
@@ -348,10 +352,10 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         ee_won_routeop_records(reinterpret_cast<const EeWonRouteOp*>(b), EE_WON_RTR_BAD_USER, InsertBadUser, &aTarget);
         return 0;
     }
-    case Op::IdsClear: reinterpret_cast<BadUserDialog::IdList*>(a)->clear(); return 0;
+    case Op::IdsClear: reinterpret_cast<std::list<unsigned long>*>(a)->clear(); return 0;
     // the original read the id (0x7f5ca5) before allocating the list node
     case Op::BadUserId: return (intptr_t)reinterpret_cast<BadUserItem*>(a)->mValues[1];
-    case Op::IdsPush: reinterpret_cast<BadUserDialog::IdList*>(a)->push_back((unsigned long)b); return 0;
+    case Op::IdsPush: reinterpret_cast<std::list<unsigned long>*>(a)->push_back((unsigned long)b); return 0;
     case Op::AdapterAddDefault:
         aMulti->InsertItem(new NetworkAdapterListItem(0), -1);
         aMulti->SetString(0, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Default_String), NULL);
@@ -467,6 +471,13 @@ LobbyRustPopup::LobbyRustPopup(EeWonLobbyPopupKind inKind)
     : mLobbyPopup(ee_won_lobbypopup_new_model(this, inKind, LobbyPopupHost))
 {
     this->PCall(EeWonLobbyPopupCall::Construct);
+}
+
+void LobbyOpenRustPopup(EeWonLobbyPopupKind k, intptr_t a, intptr_t b, intptr_t c)
+{
+    SmartPtr<LobbyRustPopup> aPopup = new LobbyRustPopup(k);
+    aPopup->PCall(EeWonLobbyPopupCall::Init, a, b, c);
+    LobbyOpenPopup(aPopup.get(), PopupFlag_StandardPopup, -1, -1);
 }
 
 // the SmartPtr members are released in reverse member order, before the Container base

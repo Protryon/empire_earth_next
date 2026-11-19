@@ -104,10 +104,10 @@ LanLogic::~LanLogic() { ee_won_lan_free(this->mRust); }
 // Looks up the direct-connect, LAN name, LAN port and password dialogs from the lobby layout
 void LanLogic::InitComponent(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, this->mDirectConnectDialog, "DirectConnectDialog", "LanLogic.cpp", 105);
-    SafeGetComponent(inConfig, this->mLanNameDialog, "LanNameDialog", "LanLogic.cpp", 106);
-    SafeGetComponent(inConfig, this->mLanPortDialog, "LanPortDialog", "LanLogic.cpp", 107);
-    SafeGetComponent(inConfig, this->mPasswordDialog, "PasswordDialog", "LanLogic.cpp", 108);
+    SafeGetDialog(inConfig, this->mDirectConnectDialog, EeWonLobbyDlgKind::DirectConnect, "DirectConnectDialog", "LanLogic.cpp", 105);
+    SafeGetDialog(inConfig, this->mLanNameDialog, EeWonLobbyDlgKind::LanName, "LanNameDialog", "LanLogic.cpp", 106);
+    SafeGetDialog(inConfig, this->mLanPortDialog, EeWonLobbyDlgKind::LanPort, "LanPortDialog", "LanLogic.cpp", 107);
+    SafeGetDialog(inConfig, this->mPasswordDialog, EeWonLobbyDlgKind::Password, "PasswordDialog", "LanLogic.cpp", 108);
 }
 
 // The LAN name, LAN port, refresh game list and show LAN screen commands
@@ -244,19 +244,19 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         catch (ReadBufferException&) {}
         return 0;
     }
-    case EeWonLobbyOp::LanNameDialogRun: l->mLanNameDialog->Reset(); return LobbyDoDialog(l->mLanNameDialog.get());
-    case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mLanNameDialog->GetName().length();
+    case EeWonLobbyOp::LanNameDialogRun: l->mLanNameDialog->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mLanNameDialog.get());
+    case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mLanNameDialog->InputText(0).length();
     case EeWonLobbyOp::LanNameDialogSave:
-        LobbySetLanName(l->mLanNameDialog->GetName());
+        LobbySetLanName(l->mLanNameDialog->InputText(0));
         LobbyBroadcastLobbyEvent(0x186d2, true);
         return 0;
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
     case EeWonLobbyOp::LanPortDialogRun:
-        l->mLanPortDialog->SetGamePort(LobbyGetLobbyPort());
-        l->mLanPortDialog->SetPort((int)inC);
-        l->mLanPortDialog->Reset();
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort());
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC);
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::Reset);
         return LobbyDoDialog(l->mLanPortDialog.get());
-    case EeWonLobbyOp::LanPortDialogPort: return l->mLanPortDialog->GetPort();
+    case EeWonLobbyOp::LanPortDialogPort: return (unsigned short)l->mLanPortDialog->LCall(EeWonLobbyDlgCall::GetPort);
     case EeWonLobbyOp::LanSetBroadcastPort:
         LobbySetLanBroadcastPort((int)inC);
         LobbyBroadcastLobbyEvent(0x186d2, true);
@@ -397,8 +397,8 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         sock->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleRecvMsg, l));
         sock->SetRepeatOp(new RecvMsgOp);
         return 0;
-    case EeWonLobbyOp::LanPasswordDialog: l->mPasswordDialog->Reset(); return LobbyDoDialog(l->mPasswordDialog.get());
-    case EeWonLobbyOp::LanPasswordTake: Take(inB, LanUtf16(l->mPasswordDialog->GetPassword())); return 0;
+    case EeWonLobbyOp::LanPasswordDialog: l->mPasswordDialog->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mPasswordDialog.get());
+    case EeWonLobbyOp::LanPasswordTake: Take(inB, LanUtf16(l->mPasswordDialog->InputText(0))); return 0;
     case EeWonLobbyOp::LanPingGame: LobbyPingGame(g, false); return 0;
     case EeWonLobbyOp::LanDirectAddressAt:
         ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), LobbyGetDirectConnectAddressAt((size_t)inC).GetValue());
@@ -406,7 +406,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::LanDirectNameAt: g->SetName(LobbyGetDirectConnectNameAt((size_t)inC)); return 0;
     case EeWonLobbyOp::LanRemoveSavedDirect: LobbyRemoveDirectConnect(g->GetAddress()); return 0;
     case EeWonLobbyOp::LanDirectAsk: {
-        l->mDirectConnectDialog->Reset();
+        l->mDirectConnectDialog->LCall(EeWonLobbyDlgCall::Reset);
         if (LobbyDoDialog(l->mDirectConnectDialog.get()) != 0x186a1)
             return 0;
         IPAddr anAddress;
@@ -415,9 +415,9 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         int aDefaultPort = ee_won_lanlogic_direct_default_port(aConfig != NULL,
                                                                aConfig != NULL ? aConfig->mLobbyPort + LobbyTestPortOffset() : 0,
                                                                LobbyGetLobbyPort());
-        anAddress.SetWithDefaultPortNoDNS(l->mDirectConnectDialog->GetAddress(), aDefaultPort);
+        anAddress.SetWithDefaultPortNoDNS(l->mDirectConnectDialog->InputText(1), aDefaultPort);
         if (!anAddress.IsValid()) {
-            SmartPtr<DNSTestOp> anOp = new DNSTestOp(l->mDirectConnectDialog->GetAddress());
+            SmartPtr<DNSTestOp> anOp = new DNSTestOp(l->mDirectConnectDialog->InputText(1));
             LobbyRunOpWithStatus(anOp.get(), LOBBY_STRING(LANLogic_CheckingAddressTitle_String), LOBBY_STRING(LANLogic_CheckingAddressDetails_String), 1, 0);
             if (!anOp->Succeeded())
                 return 0;
@@ -429,9 +429,9 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 1;
     }
     case EeWonLobbyOp::LanDirectSave: {
-        GUIString aName = l->mDirectConnectDialog->GetName();
+        GUIString aName = l->mDirectConnectDialog->InputText(0);
         if (ee_won_lanlogic_direct_name_is_address(aName.length()))
-            aName = l->mDirectConnectDialog->GetAddress();
+            aName = l->mDirectConnectDialog->InputText(1);
         g->SetName(aName);
         LobbyAddDirectConnect(Addr(inB), aName);
         return 0;
@@ -451,9 +451,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inB), static_cast<RecvBytesFromOp*>(op)->GetAddr().GetValue());
         return 0;
     case EeWonLobbyOp::LanClientOptions: {
-        SmartPtr<ClientOptionsPopup> aPopup = new ClientOptionsPopup;
-        aPopup->Init(cl, static_cast<LobbyClient*>(inB), (int)inC);
-        LobbyOpenPopup(aPopup.get(), PopupFlag_StandardPopup, -1, -1);
+        LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)cl, (intptr_t)inB, (int)inC);
         return 0;
     }
     default: return 0;

@@ -150,15 +150,11 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::ReconnectId: return (intptr_t)LobbyGetReconnectId(S(a)->GetAddress());
     case O::SetReconnectId: LobbySetReconnectId(S(a)->GetAddress(), (unsigned long)b); return 0;
     case O::ClientOptions: {
-        SmartPtr<ClientOptionsPopup> popup = new ClientOptionsPopup;
-        popup->Init(C(a), C(b), (int)c);
-        LobbyOpenPopup(popup.get(), PopupFlag_StandardPopup, -1, -1);
+        LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)C(a), (intptr_t)C(b), (int)c);
         return 0;
     }
     case O::FriendOptions: {
-        SmartPtr<FriendOptionsPopup> popup = new FriendOptionsPopup;
-        popup->Init(F(a), (int)b);
-        LobbyOpenPopup(popup.get(), PopupFlag_StandardPopup, -1, -1);
+        LobbyOpenRustPopup(EeWonLobbyPopupKind::Friend, (intptr_t)F(a), (int)b);
         return 0;
     }
     // ---- the model
@@ -280,33 +276,33 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     case O::DialogReset:
         switch (a) {
-        case 1: L->mAddFriendDialog->Reset(); break;
-        case 2: L->mAdminActionDialog->Reset((int)b, C(c)); break;
-        case 4: L->mCreateRoomDialog->Reset(b != 0); break;
-        case 5: L->mPasswordDialog->Reset(); break;
+        case 1: L->mAddFriendDialog->LCall(EeWonLobbyDlgCall::Reset); break;
+        case 2: L->mAdminActionDialog->LCall(EeWonLobbyDlgCall::Reset, (int)b, (intptr_t)C(c)); break;
+        case 4: L->mCreateRoomDialog->LCall(EeWonLobbyDlgCall::Reset, b != 0); break;
+        case 5: L->mPasswordDialog->LCall(EeWonLobbyDlgCall::Reset); break;
         }
         return 0;
     case O::DialogText:
         switch (a) {
-        case 1: return (intptr_t) new GUIString(L->mCreateRoomDialog->GetRoomName());
-        case 2: return (intptr_t) new GUIString(L->mCreateRoomDialog->GetPassword());
-        case 3: return (intptr_t) new GUIString(L->mPasswordDialog->GetPassword());
-        case 4: return (intptr_t) new GUIString(L->mAdminActionDialog->GetExplanation());
-        case 5: return (intptr_t) new GUIString(L->mAddFriendDialog->GetName());
+        case 1: return (intptr_t) new GUIString(L->mCreateRoomDialog->InputText(0));
+        case 2: return (intptr_t) new GUIString(L->mCreateRoomDialog->InputTextOf(L->mCreateRoomDialog->LCall(EeWonLobbyDlgCall::GetPassword)));
+        case 3: return (intptr_t) new GUIString(L->mPasswordDialog->InputText(0));
+        case 4: return (intptr_t) new GUIString(L->mAdminActionDialog->InputText(2));
+        case 5: return (intptr_t) new GUIString(L->mAddFriendDialog->InputText(0));
         }
         return 0;
     case O::DialogNum:
         switch (a) {
-        case 1: return L->mAdminActionDialog->GetApplyToServer();
-        case 2: return (intptr_t)L->mAdminActionDialog->GetNumSeconds();
+        case 1: return L->mAdminActionDialog->LCall(EeWonLobbyDlgCall::ApplyToServer) != 0;
+        case 2: return (intptr_t)(unsigned long)L->mAdminActionDialog->LCall(EeWonLobbyDlgCall::NumSeconds);
         case 3: return L->mRoomDialog->GetParent() != NULL;
         }
         return 0;
     case O::RoomDialogEnd: GetLobbyWindow()->EndDialog(-1, NULL, L->mRoomDialog.get()); return 0;
-    case O::BadUserSet: L->mBadUserDialog->SetUserList(RO(a)->mRust, b != 0); return 0;
+    case O::BadUserSet: L->mBadUserDialog->LCall(EeWonLobbyDlgCall::SetUserList, (intptr_t)RO(a)->mRust, b != 0); return 0;
     case O::BadUserIds: {
         std::list<unsigned long> ids;
-        L->mBadUserDialog->GetIds(ids);
+        L->mBadUserDialog->LCall(EeWonLobbyDlgCall::GetIds, (intptr_t)&ids);
         for (std::list<unsigned long>::iterator i = ids.begin(); i != ids.end(); ++i)
             ee_won_routelogic_push(reinterpret_cast<void*>(a), *i);
         return 0;
@@ -432,12 +428,12 @@ static intptr_t Call(RoutingLogic* inLogic, EeWonRouteLogicCall inCall, intptr_t
 // Looks up the add-friend, admin-action, bad-user, create-room, password and room dialogs from the lobby layout
 void RoutingLogic::InitComponent(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, this->mAddFriendDialog, "AddFriendDialog", __FILE__, 125);
-    SafeGetComponent(inConfig, this->mAdminActionDialog, "AdminActionDialog", __FILE__, 126);
-    SafeGetComponent(inConfig, this->mBadUserDialog, "BadUserDialog", __FILE__, 127);
-    SafeGetComponent(inConfig, this->mCreateRoomDialog, "CreateRoomDialog", __FILE__, 128);
-    SafeGetComponent(inConfig, this->mPasswordDialog, "PasswordDialog", __FILE__, 129);
-    SafeGetComponent(inConfig, this->mRoomDialog, "RoomDialog", __FILE__, 130);
+    SafeGetDialog(inConfig, this->mAddFriendDialog, EeWonLobbyDlgKind::AddFriend, "AddFriendDialog", __FILE__, 125);
+    SafeGetDialog(inConfig, this->mAdminActionDialog, EeWonLobbyDlgKind::AdminAction, "AdminActionDialog", __FILE__, 126);
+    SafeGetDialog(inConfig, this->mBadUserDialog, EeWonLobbyDlgKind::BadUser, "BadUserDialog", __FILE__, 127);
+    SafeGetDialog(inConfig, this->mCreateRoomDialog, EeWonLobbyDlgKind::CreateRoom, "CreateRoomDialog", __FILE__, 128);
+    SafeGetDialog(inConfig, this->mPasswordDialog, EeWonLobbyDlgKind::Password, "PasswordDialog", __FILE__, 129);
+    SafeGetDialog(inConfig, this->mRoomDialog, EeWonLobbyDlgKind::Room, "RoomDialog", __FILE__, 130);
 }
 
 // Creates the Internet lobby logic with an empty server list and game list (the Rust object: not idle, not yet a
