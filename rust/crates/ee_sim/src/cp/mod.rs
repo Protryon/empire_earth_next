@@ -18,6 +18,8 @@
 //!   [`herd::HerdHost`]; `herd_game`: its game host and C ABI;
 //! - `town`: `EETown`'s bodies (its counters as the record the class derives from) over [`town::TownHost`];
 //!   `town_game`: its game host and C ABI;
+//! - `lists`: the computer player's lists (the resource centres whole, with their forwarders' PLCE records, the
+//!   favourite types' history, the units to kill, the danger zones);
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
 
 pub mod events;
@@ -33,6 +35,9 @@ mod herd_tests;
 pub mod influence;
 pub mod init;
 pub mod legacy_load;
+pub mod lists;
+#[cfg(test)]
+mod lists_tests;
 pub mod place_game;
 pub mod place_host;
 pub mod placement;

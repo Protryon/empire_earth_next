@@ -8,14 +8,14 @@
 #![allow(clippy::too_many_arguments)]
 
 use std::ffi::c_void;
-use std::os::raw::c_long;
+use std::os::raw::{c_long, c_ulong};
 
 use super::events::{self as ev, PlayerHost};
 use super::fields::EeCpFields;
 use super::file::SaveFile;
+use super::lists;
 use super::place_host::{EeCpUnitInfo, PlaceHost, Rect, RectFilter, Tile};
 use super::placement::{self as pl, EeCpPlaceResult, EeCpPlacement};
-use super::resource_center as rc;
 use crate::units::player_save::EeUnitsPlayerSaveFn;
 
 /// What the C++ hands every call: the computer player and its placement.
@@ -69,8 +69,6 @@ pub const EE_CP_PLACE_OWN_UNITS: i32 = 8;
 pub const EE_CP_PLACE_NATURE_UNITS: i32 = 10;
 /// `mTowns`: (continent or -1 for a null town, the hull centre packed x << 32 | y) pushed
 pub const EE_CP_PLACE_TOWNS: i32 = 11;
-/// `mResourceCenters` (pushed)
-pub const EE_CP_PLACE_CENTERS: i32 = 12;
 pub const EE_CP_PLACE_HAS_PLAYER0: i32 = 13;
 /// `gWorld.GetUnit(v0)`
 pub const EE_CP_PLACE_WORLD_UNIT: i32 = 14;
@@ -122,18 +120,7 @@ pub const EE_CP_PLACE_RANDOM: i32 = 53;
 pub const EE_CP_PLACE_SPACE_DOCK_OPEN: i32 = 54;
 /// `std::sort` of the input keys: the order into `io.order`
 pub const EE_CP_PLACE_SORT: i32 = 55;
-// the centres' (EECPResourceCenter.cpp; `a` the centre)
-/// `mUnits`' saved ids (pushed)
-pub const EE_CP_CENTER_UNITS: i32 = 100;
-pub const EE_CP_CENTER_UNIT: i32 = 101;
-pub const EE_CP_CENTER_ACTIVE: i32 = 102;
-/// `mUnits` from the input ids
-pub const EE_CP_CENTER_SET_ORDER: i32 = 103;
-pub const EE_CP_CENTER_CLEAR: i32 = 104;
-/// `AddUnit(b)`
-pub const EE_CP_CENTER_ADD_UNIT: i32 = 105;
-/// Restore's main unit from saved id `v0`
-pub const EE_CP_CENTER_RESTORE_MAIN: i32 = 106;
+// the centres' world (EECPResourceCenter.cpp; `a`, `b` units)
 /// unit `a`'s `DistanceSquaredToUnit(b)` into `f0`
 pub const EE_CP_CENTER_DISTANCE_TO_UNIT: i32 = 107;
 pub const EE_CP_CENTER_HAS_AREA_EFFECT: i32 = 108;
@@ -144,6 +131,11 @@ pub const EE_CP_CENTER_MORALE_RECOUNT: i32 = 110;
 /// class `v0`'s upgrade's four area effect templates into `v0..v3`
 pub const EE_CP_CENTER_EFFECT_TEMPLATES: i32 = 111;
 pub const EE_CP_CENTER_TEMPLATE_RADIUS: i32 = 112;
+/// unit `a`'s `Reference()`, `Dereference()`
+pub const EE_CP_CENTER_UNIT_REFERENCE: i32 = 113;
+pub const EE_CP_CENTER_UNIT_DEREFERENCE: i32 = 114;
+/// `dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(v0))` as its `EEUnit*`
+pub const EE_CP_CENTER_WORLD_COMPLEX: i32 = 115;
 
 // the player's (EEComputerPlayer.cpp; `a`, `b` units or centres)
 pub const EE_CP_PLAYER_BEHAVIOR_FLOAT: i32 = 300;
@@ -160,23 +152,10 @@ pub const EE_CP_PLAYER_POPULATION: i32 = 309;
 pub const EE_CP_PLAYER_HANDLE: i32 = 310;
 pub const EE_CP_PLAYER_PATH_AREA_ID: i32 = 311;
 pub const EE_CP_PLAYER_UNIT_CONTINENT_AT: i32 = 312;
-/// `new EECPResourceCenter(player, a)` (not listed)
-pub const EE_CP_PLAYER_CENTER_CREATE: i32 = 313;
-/// centre `a` listed at the end (`v0` 0) or the front
-pub const EE_CP_PLAYER_CENTER_LIST: i32 = 314;
-pub const EE_CP_PLAYER_CENTER_IS_WITHIN: i32 = 315;
-pub const EE_CP_PLAYER_CENTER_ADD: i32 = 316;
-pub const EE_CP_PLAYER_CENTER_CONTAINS: i32 = 317;
-pub const EE_CP_PLAYER_CENTER_ADOPT: i32 = 318;
-pub const EE_CP_PLAYER_CENTER_SET_MAIN: i32 = 319;
-/// centre `a`'s `GetCenter` on the tile `v0`, `v1` (in and out)
-pub const EE_CP_PLAYER_CENTER_GET_CENTER: i32 = 320;
-pub const EE_CP_PLAYER_CENTER_SET_ACTIVE: i32 = 321;
-/// `std::sort(mResourceCenters, EECPCenterDistanceLess(v0, v1))`
+/// `std::sort` of the input centres by their `GetCenter`'s distance from (`v0`, `v1`) (pushed in order)
 pub const EE_CP_PLAYER_CENTERS_SORT: i32 = 322;
 /// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
 pub const EE_CP_PLAYER_FAVORITE_CANDIDATE: i32 = 323;
-pub const EE_CP_PLAYER_HISTORY_PUSH: i32 = 324;
 pub const EE_CP_PLAYER_IS_EPOCH: i32 = 325;
 pub const EE_CP_PLAYER_UNIT_IS_BUILDING: i32 = 326;
 /// unit `a`'s current research, then its build queue's technologies (pushed)
@@ -193,6 +172,15 @@ extern "C" {
     fn ee_cp_player_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_place_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
     fn ee_cp_center_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
+}
+
+// the PLCE scopes (TEST ONLY; EECPPlaceCapture.cpp: an `EECPPlaceScope` of the player, `player` its `EEPlayer*`)
+extern "C" {
+    fn ee_cp_scope_open(player: u64, method: u32) -> *mut c_void;
+    fn ee_cp_scope_on(scope: *mut c_void) -> bool;
+    fn ee_cp_scope_word(scope: *mut c_void, word: u32);
+    fn ee_cp_scope_unit(scope: *mut c_void, unit: u64);
+    fn ee_cp_scope_close(scope: *mut c_void);
 }
 
 /// Pushes a pair onto a host operation's list.
@@ -344,36 +332,90 @@ impl PlaceHost for Game {
             .collect()
     }
     fn centers(&mut self) -> Vec<u64> {
-        self.handles(EE_CP_PLACE_CENTERS, 0, &[], &[]).1
+        // SAFETY: the player's record with its lists
+        unsafe { lists::handles(self.ctx().fields) }
     }
     fn center_units(&mut self, center: u64) -> Vec<u32> {
         if center == 0 {
             return Vec::new();
         }
-        self.handles(EE_CP_CENTER_UNITS, center, &[], &[]).1.into_iter().map(|u| u as u32).collect()
+        // SAFETY: a live centre
+        unsafe { lists::center(center) }.units.clone()
     }
     fn center_unit(&mut self, center: u64) -> u32 {
         if center == 0 {
             return u32::MAX;
         }
-        self.q(EE_CP_CENTER_UNIT, center, &[]) as u32
+        // SAFETY: as above
+        unsafe { lists::center(center) }.main
     }
     fn center_active(&mut self, center: u64) -> bool {
-        self.q(EE_CP_CENTER_ACTIVE, center, &[]) != 0
+        // SAFETY: as above
+        unsafe { lists::center(center) }.active
     }
     fn center_set_order(&mut self, center: u64, ids: &[u32]) {
-        let pairs: Vec<[i64; 2]> = ids.iter().map(|&id| [id as i64, 0]).collect();
-        self.list(EE_CP_CENTER_SET_ORDER, center, &[], &pairs);
+        // SAFETY: as above
+        let c = unsafe { lists::center(center) };
+        for (slot, &id) in c.units.iter_mut().zip(ids) {
+            *slot = id;
+        }
     }
     fn center_clear_units(&mut self, center: u64) {
-        self.q(EE_CP_CENTER_CLEAR, center, &[]);
+        // SAFETY: as above
+        unsafe { lists::center(center) }.units.clear();
     }
     fn center_add_unit(&mut self, center: u64, unit: u64) {
-        let mut io = Self::io();
-        self.call(EE_CP_CENTER_ADD_UNIT, center, unit, &mut io);
+        lists::add_unit(self, center, unit);
     }
     fn center_restore_main(&mut self, center: u64, id: u32) -> i32 {
-        self.q(EE_CP_CENTER_RESTORE_MAIN, center, &[id as i64]) as i32
+        if id as i32 != -1 {
+            let u = self.world_complex_unit(id);
+            let handle = if u != 0 { self.unit_handle(u) } else { lists::EE_CP_LISTS_NONE };
+            // SAFETY: as above
+            unsafe { lists::center(center) }.main = handle;
+            let main = self.resolve(handle);
+            if main != 0 {
+                self.unit_reference(main);
+            } else {
+                return 3;
+            }
+        } else {
+            // SAFETY: as above
+            unsafe { lists::center(center) }.main = lists::EE_CP_LISTS_NONE;
+        }
+        0
+    }
+    fn unit_reference(&mut self, unit: u64) {
+        self.q(EE_CP_CENTER_UNIT_REFERENCE, unit, &[]);
+    }
+    fn unit_dereference(&mut self, unit: u64) {
+        self.q(EE_CP_CENTER_UNIT_DEREFERENCE, unit, &[]);
+    }
+    fn unit_handle(&mut self, unit: u64) -> u32 {
+        self.unit(unit).id
+    }
+    fn world_complex_unit(&mut self, id: u32) -> u64 {
+        self.q(EE_CP_CENTER_WORLD_COMPLEX, 0, &[id as i64]) as u64
+    }
+    fn scope_open(&mut self, method: u32) -> u64 {
+        // SAFETY: the capture's C interface
+        unsafe { ee_cp_scope_open(self.ctx().player, method) as u64 }
+    }
+    fn scope_on(&mut self, scope: u64) -> bool {
+        // SAFETY: a scope this host opened
+        unsafe { ee_cp_scope_on(scope as *mut c_void) }
+    }
+    fn scope_word(&mut self, scope: u64, word: u32) {
+        // SAFETY: as above
+        unsafe { ee_cp_scope_word(scope as *mut c_void, word) }
+    }
+    fn scope_unit(&mut self, scope: u64, unit: u64) {
+        // SAFETY: as above
+        unsafe { ee_cp_scope_unit(scope as *mut c_void, unit) }
+    }
+    fn scope_close(&mut self, scope: u64) {
+        // SAFETY: as above
+        unsafe { ee_cp_scope_close(scope as *mut c_void) }
     }
     fn has_player0(&mut self) -> bool {
         self.q(EE_CP_PLACE_HAS_PLAYER0, 0, &[]) != 0
@@ -633,42 +675,53 @@ impl PlayerHost for Game {
         self.q(EE_CP_PLAYER_UNIT_CONTINENT_AT, unit, &[]) as u64
     }
     fn center_create(&mut self, unit: u64) -> u64 {
-        self.q(EE_CP_PLAYER_CENTER_CREATE, unit, &[]) as u64
+        lists::create(self, unit)
     }
     fn center_list(&mut self, center: u64, front: bool) {
-        self.q(EE_CP_PLAYER_CENTER_LIST, center, &[front as i64]);
+        // SAFETY: a centre made by center_create, not listed yet
+        unsafe { lists::list_center(self.ctx().fields, center, front) }
     }
     fn center_is_within(&mut self, center: u64, unit: u64) -> bool {
-        self.qf(EE_CP_PLAYER_CENTER_IS_WITHIN, center, unit, &[]).0 != 0
+        lists::is_within_radius(self, center, unit)
     }
     fn center_add(&mut self, center: u64, unit: u64) {
-        self.qf(EE_CP_PLAYER_CENTER_ADD, center, unit, &[]);
+        lists::add_unit(self, center, unit);
     }
     fn center_contains(&mut self, center: u64, unit: u64) -> bool {
-        self.qf(EE_CP_PLAYER_CENTER_CONTAINS, center, unit, &[]).0 != 0
+        lists::contains(self, center, unit)
     }
     fn center_adopt(&mut self, center: u64, unit: u64) {
-        self.qf(EE_CP_PLAYER_CENTER_ADOPT, center, unit, &[]);
+        lists::adopt_drop_site(self, center, unit);
     }
     fn center_set_main(&mut self, center: u64, unit: u64) {
-        self.qf(EE_CP_PLAYER_CENTER_SET_MAIN, center, unit, &[]);
+        lists::set_unit(self, center, unit);
     }
     fn center_get_center(&mut self, center: u64, tile: &mut Tile) {
-        let io = self.qf(EE_CP_PLAYER_CENTER_GET_CENTER, center, 0, &xy(*tile)).1;
-        *tile = [io.v[0] as i32, io.v[1] as i32];
+        lists::get_center(self, center, tile);
     }
     fn center_set_active(&mut self, center: u64, active: bool) {
-        self.q(EE_CP_PLAYER_CENTER_SET_ACTIVE, center, &[active as i64]);
+        lists::set_active(self, center, active, 0);
     }
     fn centers_sort(&mut self, from: Tile) {
-        self.q(EE_CP_PLAYER_CENTERS_SORT, 0, &xy(from));
+        let p = self.ctx().fields;
+        let centers = self.centers();
+        let (_, order) = self.handles(EE_CP_PLAYER_CENTERS_SORT, 0, &xy(from), &centers);
+        // SAFETY: the player's lists (the sort only read the centres)
+        let l = unsafe { lists::lists(p) };
+        let mut boxes: Vec<Option<Box<lists::CpCenter>>> =
+            std::mem::take(&mut l.centers).into_iter().map(Some).collect();
+        for c in order {
+            let i = centers.iter().position(|&h| h == c).expect("a sorted centre");
+            l.centers.push(boxes[i].take().expect("each centre once"));
+        }
     }
     fn favorite_candidate(&mut self, class: u32, kind: i32, epoch: i32) -> Option<(i32, i32)> {
         let (r, io) = self.qf(EE_CP_PLAYER_FAVORITE_CANDIDATE, 0, 0, &[class as i64, kind as i64, epoch as i64]);
         (r != 0).then_some((io.v[0] as i32, io.v[1] as i32))
     }
     fn history_push(&mut self, unit_type: u32, epoch: i32) {
-        self.q(EE_CP_PLAYER_HISTORY_PUSH, 0, &[unit_type as i64, epoch as i64]);
+        // SAFETY: the player's lists
+        unsafe { lists::lists(self.ctx().fields) }.history.push((unit_type as c_ulong, epoch as c_long));
     }
     fn is_epoch(&mut self, id: i32) -> bool {
         self.q(EE_CP_PLAYER_IS_EPOCH, 0, &[id as i64]) != 0
@@ -1216,162 +1269,205 @@ pub extern "C" fn ee_cp_is_site_class(class: i32) -> bool {
     pl::is_site_class(class)
 }
 
-// ---- EECPResourceCenter's members (`center`: the `EECPResourceCenter*`)
+// ---- the computer player's lists (cp::lists): made, dropped, the C++'s loops over the centres
 
-/// `Contains`
+/// The player's lists made (`EEComputerPlayer::Init`, after `ee_cp_init`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+/// `p` is a live record without lists.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_contains(ctx: *const EeCpPlaceCtx, center: u64, unit: u64) -> bool {
+pub unsafe extern "C" fn ee_cp_lists_new(p: *mut EeCpFields) {
     // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::contains(&mut h, center, unit)
+    unsafe { (*p).mLists = Box::into_raw(Box::<lists::EeCpLists>::default()) as usize as u64 };
 }
 
-/// `AdoptDropSite`'s test (the C++ takes the reference)
+/// The destructor's: the units to kill dereferenced (from the last), the centres deleted, the lists dropped.
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+/// `ctx` is a call's context of a player whose lists were made; they are not used again.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_adopts(ctx: *const EeCpPlaceCtx, center: u64, unit: u64) -> bool {
+pub unsafe extern "C" fn ee_cp_lists_free(ctx: *const EeCpPlaceCtx) {
     // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::adopt_drop_site(&mut h, center, unit)
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    let kill = std::mem::take(&mut unsafe { lists::lists(p) }.kill);
+    for &id in kill.iter().rev() {
+        let u = h.resolve(id);
+        if u != 0 {
+            h.unit_dereference(u);
+        }
+    }
+    // SAFETY: as above
+    unsafe {
+        lists::delete_centers(&mut h, p);
+        drop(Box::from_raw((*p).mLists as usize as *mut lists::EeCpLists));
+        (*p).mLists = 0;
+    }
 }
 
-/// `FindBuildSite`
+/// `DeleteVectorContents(mResourceCenters)` (`Clear`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
+/// `ctx` is a call's context.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_find_build_site(
+pub unsafe extern "C" fn ee_cp_centers_delete(ctx: *const EeCpPlaceCtx) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    unsafe { lists::delete_centers(&mut h, p) };
+}
+
+/// The centres' count.
+///
+/// # Safety
+/// `p` is a live record with lists.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_count(p: *const EeCpFields) -> usize {
+    // SAFETY: the caller's contract
+    unsafe { lists::lists(p) }.centers.len()
+}
+
+/// Every centre's `AdoptDropSite(unit)` (`UnitCompleted`, `UnitsSwapped`; `unit` an `EEUnit*`).
+///
+/// # Safety
+/// `ctx` is a call's context; `unit` a live unit.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_centers_adopt(ctx: *const EeCpPlaceCtx, unit: u64) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    unsafe { lists::adopt_by_all(&mut h, p, unit) };
+}
+
+/// Every centre's `ReleaseUnit(unit)` (`UnitTaken`).
+///
+/// # Safety
+/// As [`ee_cp_centers_adopt`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_centers_release(ctx: *const EeCpPlaceCtx, unit: u64) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    unsafe { lists::release_by_all(&mut h, p, unit) };
+}
+
+/// Every centre's `Restore` until one fails (`RestoreManagers`): the result.
+///
+/// # Safety
+/// `ctx` is a call's context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_centers_restore(ctx: *const EeCpPlaceCtx, major: u32, minor: u32) -> i32 {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    unsafe { lists::restore_all(&mut h, p, major, minor) }
+}
+
+/// A new centre loaded from the file and listed (`cp::save`'s CENTER_LOAD): the read's result.
+///
+/// # Safety
+/// `ctx` is a call's context; `host` serves the file's primitives on `file`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_load(
     ctx: *const EeCpPlaceCtx,
-    center: u64,
-    class: i32,
-    out: *mut i32,
-) -> bool {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    let mut t = tile_in(out);
-    let r = rc::find_build_site(&mut h, center, class, &mut t);
-    tile_out(out, t);
-    r
-}
-
-/// `GetMinEffectRadius`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_min_effect_radius(ctx: *const EeCpPlaceCtx, class: i32) -> i32 {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::min_effect_radius(&mut h, class)
-}
-
-/// `GetMoraleFill`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_morale_fill(ctx: *const EeCpPlaceCtx, center: u64) -> f32 {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::morale_fill(&mut h, center)
-}
-
-/// `GetCenter` (`out`: the tile in and out)
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_get_center(ctx: *const EeCpPlaceCtx, center: u64, out: *mut i32) {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    let mut t = tile_in(out);
-    rc::get_center(&mut h, center, &mut t);
-    tile_out(out, t);
-}
-
-/// `FindResourceUnit`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_find_resource_unit(ctx: *const EeCpPlaceCtx, center: u64, resource: u32) -> u64 {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::find_resource_unit(&mut h, center, resource)
-}
-
-/// `IsInAreaEffect`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_is_in_area_effect(
-    ctx: *const EeCpPlaceCtx,
-    x: i32,
-    y: i32,
-    class: i32,
-    kind: i32,
-) -> bool {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::is_in_area_effect(&mut h, [x, y], class, kind)
-}
-
-/// `IsWithinRadius`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_is_within_radius(ctx: *const EeCpPlaceCtx, center: u64, unit: u64) -> bool {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::is_within_radius(&mut h, center, unit)
-}
-
-/// `Restore`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_restore(ctx: *const EeCpPlaceCtx, center: u64) -> i32 {
-    // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    rc::restore(&mut h, center)
-}
-
-/// `Save` (`file`, `host`: the saved game's primitives)
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_save(
-    ctx: *const EeCpPlaceCtx,
-    center: u64,
     file: *mut c_void,
     host: EeUnitsPlayerSaveFn,
+    major: u32,
+    minor: u32,
 ) -> i32 {
     // SAFETY: the caller's contract
-    let (mut h, _s) = unsafe { (game(ctx), state(ctx)) };
-    // SAFETY: the caller's contract
-    let mut f = unsafe { SaveFile::new(file, host) };
-    rc::save(&mut h, &mut f, center)
+    let (mut h, mut f) = unsafe { (game(ctx), SaveFile::new(file, host)) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    unsafe { lists::load(&mut h, p, major, minor, &mut f) }
 }
 
-/// `EECPResourceCenter::Load`: `host` serves the file's primitives and the centre's operations
-/// (`EE_CP_CENTER_FILE_*`) on `file`.
+/// Centre `i`'s `Save` (`cp::save`'s CENTER_SAVE).
 ///
 /// # Safety
-/// `host` must accept `file` with those operations for the call.
+/// As [`ee_cp_center_load`]; `i` below the count.
 #[no_mangle]
-pub unsafe extern "C" fn ee_cp_center_load(file: *mut c_void, host: EeUnitsPlayerSaveFn, minor: u32) -> i32 {
+pub unsafe extern "C" fn ee_cp_center_save_at(
+    ctx: *const EeCpPlaceCtx,
+    i: usize,
+    file: *mut c_void,
+    host: EeUnitsPlayerSaveFn,
+    major: u32,
+    minor: u32,
+) -> i32 {
     // SAFETY: the caller's contract
-    let mut f = unsafe { SaveFile::new(file, host) };
-    rc::load(&mut f, minor)
+    let (mut h, mut f) = unsafe { (game(ctx), SaveFile::new(file, host)) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    let c = lists::handle_of(&unsafe { lists::lists(p) }.centers[i]);
+    lists::save(&mut h, c, major, minor, &mut f)
+}
+
+/// Centre `c`'s `GetCenter` with its PLCE record (the centres' sort's comparator; `tile` in and out).
+///
+/// # Safety
+/// `ctx` is a call's context; `c` a live centre's handle; `tile` two words.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_get_center(ctx: *const EeCpPlaceCtx, c: u64, tile: *mut i32) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let mut t = tile_in(tile);
+    lists::get_center(&mut h, c, &mut t);
+    tile_out(tile, t);
+}
+
+/// Centre `i`'s main unit (`EEUnit*`, 0 none), active flag and unit count into `out[3]` (the next engine's view).
+///
+/// # Safety
+/// `ctx` is a call's context; `i` below the count; `out` three words.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_info(ctx: *const EeCpPlaceCtx, i: usize, out: *mut i64) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    let (main, active, n) = {
+        let c = &unsafe { lists::lists(p) }.centers[i];
+        (c.main, c.active, c.units.len())
+    };
+    let main = h.resolve(main);
+    // SAFETY: as above
+    unsafe { std::slice::from_raw_parts_mut(out, 3).copy_from_slice(&[main as i64, i64::from(active), n as i64]) };
+}
+
+/// Centre `i`'s unit `j` (`EEUnit*`, 0 freed).
+///
+/// # Safety
+/// As [`ee_cp_center_info`]; `j` below its count.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_unit(ctx: *const EeCpPlaceCtx, i: usize, j: usize) -> u64 {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    let id = unsafe { lists::lists(p) }.centers[i].units[j];
+    h.resolve(id)
+}
+
+/// Centre `i`'s `GetCenter` on a default tile (the next engine's view).
+///
+/// # Safety
+/// As [`ee_cp_center_info`]; `tile` two words.
+#[no_mangle]
+pub unsafe extern "C" fn ee_cp_center_get_center_at(ctx: *const EeCpPlaceCtx, i: usize, tile: *mut i32) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { game(ctx) };
+    let p = h.ctx().fields;
+    // SAFETY: as above
+    let c = lists::handle_of(&unsafe { lists::lists(p) }.centers[i]);
+    let mut t = tile_in(tile);
+    lists::get_center(&mut h, c, &mut t);
+    tile_out(tile, t);
 }
 
 // ---- EEComputerPlayer's own bodies (ee_sim::cp::events)

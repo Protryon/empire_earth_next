@@ -35,7 +35,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPResourceCenter.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUnitGoal.h"

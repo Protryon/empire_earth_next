@@ -1,14 +1,13 @@
 use super::*;
 use crate::cp::file::test_file::Bytes;
 
-/// The host of the tests: a byte file, the managers' blocks as one marker word each, a list of centre "records" (one
-/// word each) and the history.
+/// The host of the tests: a byte file, the placement's block as one marker word, a list of centre "records" (one
+/// word each; the record's own lists hold as many centres).
 #[derive(Default)]
 struct Host {
     file: Bytes,
     tile: [i64; 2],
     centers: Vec<u32>,
-    history: Vec<(u32, i32)>,
     log: Vec<i32>,
 }
 
@@ -45,10 +44,6 @@ unsafe extern "C" fn host(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnit
             h.tile[index as usize] = io.i;
             OK
         }
-        EE_CP_SAVE_CENTERS => {
-            io.i = h.centers.len() as i64;
-            OK
-        }
         EE_CP_SAVE_CENTER_SAVE => {
             let c = h.centers[index as usize];
             h.file.u32(c);
@@ -58,30 +53,6 @@ unsafe extern "C" fn host(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnit
             let (r, w) = word(h);
             h.centers.push(w);
             r
-        }
-        EE_CP_SAVE_HISTORY_COUNT => {
-            io.i = h.history.len() as i64;
-            OK
-        }
-        EE_CP_SAVE_HISTORY_RESIZE => {
-            h.history.resize(io.i as usize, (0, 0));
-            OK
-        }
-        EE_CP_SAVE_HISTORY_FIRST => {
-            io.i = i64::from(h.history[index as usize].0);
-            OK
-        }
-        EE_CP_SAVE_HISTORY_SECOND => {
-            io.i = i64::from(h.history[index as usize].1);
-            OK
-        }
-        EE_CP_SAVE_HISTORY_SET_FIRST => {
-            h.history[index as usize].0 = io.i as u32;
-            OK
-        }
-        EE_CP_SAVE_HISTORY_SET_SECOND => {
-            h.history[index as usize].1 = io.i as i32;
-            OK
         }
         // SAFETY: the file's primitives
         _ => unsafe { crate::cp::file::test_file::host(file, op, index, io) },
@@ -99,6 +70,26 @@ macro_rules! set_distinct {
 fn save_of(f: &EeCpFields, h: &mut Host, minor: u32, time: u32) -> i32 {
     // SAFETY: a live host and record
     unsafe { save(h as *mut Host as *mut c_void, host, f, 0, minor, time, OK) }
+}
+
+/// A record with lists: `centers` centres and the history.
+fn with_lists(mut f: EeCpFields, centers: usize, history: &[(u32, i32)]) -> EeCpFields {
+    let l = crate::cp::lists::EeCpLists {
+        centers: (0..centers).map(|_| Box::default()).collect(),
+        history: history.iter().map(|&(a, b)| (a as std::os::raw::c_ulong, b as std::os::raw::c_long)).collect(),
+        ..Default::default()
+    };
+    f.mLists = Box::into_raw(Box::new(l)) as usize as u64;
+    f
+}
+
+fn history_of(f: &EeCpFields) -> Vec<(u32, i32)> {
+    // SAFETY: a record of with_lists
+    unsafe { crate::cp::lists::lists(f) }.history.iter().map(|&(a, b)| (a as u32, b as i32)).collect()
+}
+
+fn fresh() -> EeCpFields {
+    with_lists(EeCpFields::default(), 0, &[])
 }
 
 fn distinct() -> EeCpFields {
@@ -178,21 +169,21 @@ fn load_into(f: &mut EeCpFields, h: &mut Host, minor: u32, out: &mut EeCpLoaded)
 
 #[test]
 fn a_save_loads_back_to_the_same_record_with_the_kept_differences() {
-    let mut f = distinct();
+    let mut f = with_lists(distinct(), 3, &[(20, -1), (242, 7)]);
     f.mNextAttackTime = 70_000;
     f.mNextExpansionTime = 5_000; // before the clock: saved wrapped
     f.mIsEnableTimeSet = true;
-    let mut h = Host { centers: vec![11, 12, 13], history: vec![(20, -1), (242, 7)], ..Default::default() };
+    let mut h = Host { centers: vec![11, 12, 13], ..Default::default() };
     assert_eq!(save_of(&f, &mut h, 283, 60_000), OK);
     // the words: the two markers, 197 shared fields (some bools), the four specials, 3 centres, the history, the
     // running state
     let mut back = Host { file: Bytes { data: h.file.data.clone(), at: 0 }, ..Default::default() };
-    let mut g = EeCpFields::default();
+    let mut g = fresh();
     let mut out = EeCpLoaded::default();
     assert_eq!(load_into(&mut g, &mut back, 283, &mut out), OK);
     assert_eq!(back.file.at, back.file.data.len(), "read to the end");
     assert_eq!(back.centers, vec![11, 12, 13]);
-    assert_eq!(back.history, vec![(20, -1), (242, 7)]);
+    assert_eq!(history_of(&g), vec![(20, -1), (242, 7)]);
     // the enable-time flag is saved as false, the times relative to the clock (RestoreManagers rebases them)
     assert!(!g.mIsEnableTimeSet);
     assert_eq!(g.mNextAttackTime, 10_000);
@@ -211,6 +202,7 @@ fn a_save_loads_back_to_the_same_record_with_the_kept_differences() {
         }
     );
     let mut want = f;
+    want.mLists = g.mLists;
     want.mIsEnableTimeSet = false;
     want.mNextAttackTime = 10_000;
     want.mNextExpansionTime = g.mNextExpansionTime;
@@ -224,7 +216,7 @@ fn a_save_loads_back_to_the_same_record_with_the_kept_differences() {
 
 #[test]
 fn the_block_starts_with_the_original_s_fields_in_order() {
-    let f = distinct();
+    let f = with_lists(distinct(), 0, &[]);
     let mut h = Host::default();
     assert_eq!(save_of(&f, &mut h, 283, 0), OK);
     let d = &h.file.data;
@@ -255,13 +247,13 @@ fn the_block_starts_with_the_original_s_fields_in_order() {
 
 #[test]
 fn a_refused_version_reads_nothing_and_every_lua_only_version_has_the_running_state() {
-    let f = distinct();
+    let f = with_lists(distinct(), 0, &[]);
     let mut h = Host::default();
     assert_eq!(save_of(&f, &mut h, 283, 0), OK);
     // 0.251-0.280 (the C++ managers' blocks with the port's additions) and before 0.229 fail at once
     for minor in [255, 280, 0xe4] {
         let mut back = Host { file: Bytes { data: h.file.data.clone(), at: 0 }, ..Default::default() };
-        let mut g = EeCpFields::default();
+        let mut g = fresh();
         let mut out = EeCpLoaded { favorites_ok: true, ..Default::default() };
         assert_eq!(load_into(&mut g, &mut back, minor, &mut out), FAILED, "minor {minor}");
         assert_eq!((back.file.at, back.log.len()), (0, 0), "nothing read");
@@ -269,7 +261,7 @@ fn a_refused_version_reads_nothing_and_every_lua_only_version_has_the_running_st
     }
     // 0.281 on: the same block, the running state included (0.256 on)
     let mut back = Host { file: Bytes { data: h.file.data.clone(), at: 0 }, ..Default::default() };
-    let mut g = EeCpFields::default();
+    let mut g = fresh();
     let mut out = EeCpLoaded::default();
     assert_eq!(load_into(&mut g, &mut back, 281, &mut out), OK);
     assert_eq!(back.file.at, back.file.data.len());
@@ -278,8 +270,8 @@ fn a_refused_version_reads_nothing_and_every_lua_only_version_has_the_running_st
 
 #[test]
 fn a_short_file_keeps_the_first_error_and_the_history_s_first_values_are_read_on() {
-    let f = distinct();
-    let mut h = Host { history: vec![(1, 2), (3, 4), (5, 6)], ..Default::default() };
+    let f = with_lists(distinct(), 0, &[(1, 2), (3, 4), (5, 6)]);
+    let mut h = Host::default();
     assert_eq!(save_of(&f, &mut h, 283, 0), OK);
     // cut inside the history's second entry's second value
     // the history's count (3) and first entry (1, 2)
@@ -287,10 +279,10 @@ fn a_short_file_keeps_the_first_error_and_the_history_s_first_values_are_read_on
     let at = (0..d.len() - 12).find(|&i| d[i..i + 12] == [3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0]).expect("the history");
     let mut back =
         Host { file: Bytes { data: h.file.data[..at + 4 + 8 + 4 + 2].to_vec(), at: 0 }, ..Default::default() };
-    let mut g = EeCpFields::default();
+    let mut g = fresh();
     let mut out = EeCpLoaded::default();
     assert_eq!(load_into(&mut g, &mut back, 283, &mut out), 0xa);
     // the first entry whole, the second's first value, its second not; the third's first read again (it fails too)
-    assert_eq!(back.history, vec![(1, 2), (3, 0), (0, 0)]);
+    assert_eq!(history_of(&g), vec![(1, 2), (3, 0), (0, 0)]);
     assert!(!out.favorites_ok && !out.running);
 }

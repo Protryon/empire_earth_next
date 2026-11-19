@@ -219,6 +219,31 @@ constexpr static const int32_t EE_CP_HERD_HAS_MAP = 63;
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;
 
+/// `EEUnitHandle`'s none.
+constexpr static const uint32_t EE_CP_LISTS_NONE = 4294967295;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_ADD_UNIT = 60;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_CONTAINS = 61;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_ADOPT_DROP_SITE = 62;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_LOAD = 68;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_RESTORE = 69;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_IS_WITHIN_RADIUS = 70;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_SAVE = 71;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_SET_UNIT = 72;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_SET_ACTIVE = 73;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_RELEASE_UNIT = 74;
+
+constexpr static const uint32_t EE_CP_PLCE_CENTER_GET_CENTER = 75;
+
 constexpr static const int32_t EE_CP_PLACE_EPOCH = 1;
 
 constexpr static const int32_t EE_CP_PLACE_PASSABILITY = 2;
@@ -243,9 +268,6 @@ constexpr static const int32_t EE_CP_PLACE_NATURE_UNITS = 10;
 
 /// `mTowns`: (continent or -1 for a null town, the hull centre packed x << 32 | y) pushed
 constexpr static const int32_t EE_CP_PLACE_TOWNS = 11;
-
-/// `mResourceCenters` (pushed)
-constexpr static const int32_t EE_CP_PLACE_CENTERS = 12;
 
 constexpr static const int32_t EE_CP_PLACE_HAS_PLAYER0 = 13;
 
@@ -338,24 +360,6 @@ constexpr static const int32_t EE_CP_PLACE_SPACE_DOCK_OPEN = 54;
 /// `std::sort` of the input keys: the order into `io.order`
 constexpr static const int32_t EE_CP_PLACE_SORT = 55;
 
-/// `mUnits`' saved ids (pushed)
-constexpr static const int32_t EE_CP_CENTER_UNITS = 100;
-
-constexpr static const int32_t EE_CP_CENTER_UNIT = 101;
-
-constexpr static const int32_t EE_CP_CENTER_ACTIVE = 102;
-
-/// `mUnits` from the input ids
-constexpr static const int32_t EE_CP_CENTER_SET_ORDER = 103;
-
-constexpr static const int32_t EE_CP_CENTER_CLEAR = 104;
-
-/// `AddUnit(b)`
-constexpr static const int32_t EE_CP_CENTER_ADD_UNIT = 105;
-
-/// Restore's main unit from saved id `v0`
-constexpr static const int32_t EE_CP_CENTER_RESTORE_MAIN = 106;
-
 /// unit `a`'s `DistanceSquaredToUnit(b)` into `f0`
 constexpr static const int32_t EE_CP_CENTER_DISTANCE_TO_UNIT = 107;
 
@@ -371,6 +375,14 @@ constexpr static const int32_t EE_CP_CENTER_MORALE_RECOUNT = 110;
 constexpr static const int32_t EE_CP_CENTER_EFFECT_TEMPLATES = 111;
 
 constexpr static const int32_t EE_CP_CENTER_TEMPLATE_RADIUS = 112;
+
+/// unit `a`'s `Reference()`, `Dereference()`
+constexpr static const int32_t EE_CP_CENTER_UNIT_REFERENCE = 113;
+
+constexpr static const int32_t EE_CP_CENTER_UNIT_DEREFERENCE = 114;
+
+/// `dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(v0))` as its `EEUnit*`
+constexpr static const int32_t EE_CP_CENTER_WORLD_COMPLEX = 115;
 
 constexpr static const int32_t EE_CP_PLAYER_BEHAVIOR_FLOAT = 300;
 
@@ -399,34 +411,11 @@ constexpr static const int32_t EE_CP_PLAYER_PATH_AREA_ID = 311;
 
 constexpr static const int32_t EE_CP_PLAYER_UNIT_CONTINENT_AT = 312;
 
-/// `new EECPResourceCenter(player, a)` (not listed)
-constexpr static const int32_t EE_CP_PLAYER_CENTER_CREATE = 313;
-
-/// centre `a` listed at the end (`v0` 0) or the front
-constexpr static const int32_t EE_CP_PLAYER_CENTER_LIST = 314;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_IS_WITHIN = 315;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_ADD = 316;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_CONTAINS = 317;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_ADOPT = 318;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_SET_MAIN = 319;
-
-/// centre `a`'s `GetCenter` on the tile `v0`, `v1` (in and out)
-constexpr static const int32_t EE_CP_PLAYER_CENTER_GET_CENTER = 320;
-
-constexpr static const int32_t EE_CP_PLAYER_CENTER_SET_ACTIVE = 321;
-
-/// `std::sort(mResourceCenters, EECPCenterDistanceLess(v0, v1))`
+/// `std::sort` of the input centres by their `GetCenter`'s distance from (`v0`, `v1`) (pushed in order)
 constexpr static const int32_t EE_CP_PLAYER_CENTERS_SORT = 322;
 
 /// class `v0` for favourite kind `v1` in epoch `v2`: whether it passes, its AI kind and type into `v0`, `v1`
 constexpr static const int32_t EE_CP_PLAYER_FAVORITE_CANDIDATE = 323;
-
-constexpr static const int32_t EE_CP_PLAYER_HISTORY_PUSH = 324;
 
 constexpr static const int32_t EE_CP_PLAYER_IS_EPOCH = 325;
 
@@ -451,20 +440,6 @@ constexpr static const unsigned long MEDIUM = 1;
 
 constexpr static const unsigned long HARD = 2;
 
-/// `mUnits.clear()`
-constexpr static const int32_t EE_CP_CENTER_FILE_CLEAR = 200;
-
-/// `mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID(io.i))`
-constexpr static const int32_t EE_CP_CENTER_FILE_PUSH_ID = 201;
-
-/// `mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(io.i)`
-constexpr static const int32_t EE_CP_CENTER_FILE_SET_MAIN = 202;
-
-/// `mIsActive = io.b`; `io.b` in: `mIsActive` (the read's old value)
-constexpr static const int32_t EE_CP_CENTER_FILE_SET_ACTIVE = 203;
-
-constexpr static const int32_t EE_CP_CENTER_FILE_ACTIVE = 204;
-
 /// `mPlacement->Load(file)` (the town centre tile): its result.
 constexpr static const int32_t EE_CP_SAVE_PLACEMENT_LOAD = 401;
 
@@ -477,29 +452,11 @@ constexpr static const int32_t EE_CP_SAVE_SET_TOWN_TILE = 403;
 /// A new resource centre (no unit) loaded and pushed, loaded or not: the load's result.
 constexpr static const int32_t EE_CP_SAVE_CENTER_LOAD = 404;
 
-/// `mFavoriteTypeHistory.resize(io.i, make_pair(0, 0))`.
-constexpr static const int32_t EE_CP_SAVE_HISTORY_RESIZE = 405;
-
-/// `mFavoriteTypeHistory[index].first` (`HISTORY_FIRST`) or `.second` into `io.i`; the `SET_` ones store `io.i`.
-constexpr static const int32_t EE_CP_SAVE_HISTORY_FIRST = 406;
-
-constexpr static const int32_t EE_CP_SAVE_HISTORY_SECOND = 407;
-
-constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_FIRST = 408;
-
-constexpr static const int32_t EE_CP_SAVE_HISTORY_SET_SECOND = 409;
-
 /// `mPlacement->Save(file)`: its result.
 constexpr static const int32_t EE_CP_SAVE_PLACEMENT_SAVE = 411;
 
-/// `mResourceCenters.size()` into `io.i`.
-constexpr static const int32_t EE_CP_SAVE_CENTERS = 412;
-
 /// `mResourceCenters[index]->Save(major, minor, file)`: its result.
 constexpr static const int32_t EE_CP_SAVE_CENTER_SAVE = 413;
-
-/// `mFavoriteTypeHistory.size()` into `io.i`.
-constexpr static const int32_t EE_CP_SAVE_HISTORY_COUNT = 414;
 
 /// The players of every array.
 constexpr static const size_t EE_CP_TIMER_PLAYERS = 64;
@@ -889,6 +846,10 @@ struct EeCpFields {
   bool mReplaceOnLoad;
   bool mRegroupPending;
   bool mAttackStarted;
+  /// new (the AI Thread cluster, round 2): the lists (`cp::lists::EeCpLists`: the resource centres, the favourite
+  /// types' history, the units to kill, the danger zones), made after `Init`; after the original's members, so the
+  /// record's digests (CPEV: up to `mAttackStarted`) and its saved fields are as they were
+  uint64_t mLists;
 };
 
 /// One record of the behaviour table (`EECPBehavior`, ee/EECPBehavior.h: 56 bytes).
@@ -1056,6 +1017,19 @@ struct EeHerdFields {
   bool mIsActive;
   /// the lists (owned; `ee_cp_herd_init` makes them, `ee_cp_herd_free` drops them)
   EeHerdLists *mLists;
+};
+
+/// A favourite types' history entry: (unit type, epoch).
+struct EeCpHistoryEntry {
+  unsigned long unit_type;
+  long epoch;
+};
+
+/// A danger zone: a tile and the game time it was noted.
+struct EeCpDangerZone {
+  long x;
+  long y;
+  unsigned long time;
 };
 
 /// What the C++ hands every call: the computer player and its placement.
@@ -1529,6 +1503,80 @@ size_t ee_cp_herd_unit_count(const EeHerdFields *f);
 /// `f` is a live record; `i` below the count.
 uint32_t ee_cp_herd_unit_handle(const EeHerdFields *f, size_t i);
 
+/// The history's length.
+///
+/// # Safety
+/// As [`lists`].
+size_t ee_cp_history_count(const EeCpFields *p);
+
+/// History entry `i`.
+///
+/// # Safety
+/// As [`lists`]; `i` below the length.
+EeCpHistoryEntry ee_cp_history_at(const EeCpFields *p, size_t i);
+
+/// The history set to `count` entries.
+///
+/// # Safety
+/// As [`lists`]; `entries` holds `count` entries (or is null with 0).
+void ee_cp_history_set(const EeCpFields *p, const EeCpHistoryEntry *entries, size_t count);
+
+/// A unit to kill (its handle; the C++ took the reference).
+///
+/// # Safety
+/// As [`lists`].
+void ee_cp_kill_push(const EeCpFields *p, uint32_t handle);
+
+/// # Safety
+/// As [`lists`].
+size_t ee_cp_kill_count(const EeCpFields *p);
+
+/// # Safety
+/// As [`lists`]; `i` below the count.
+uint32_t ee_cp_kill_at(const EeCpFields *p, size_t i);
+
+/// # Safety
+/// As [`lists`].
+void ee_cp_kill_clear(const EeCpFields *p);
+
+/// # Safety
+/// As [`lists`].
+size_t ee_cp_zone_count(const EeCpFields *p);
+
+/// # Safety
+/// As [`lists`]; `i` below the count.
+EeCpDangerZone ee_cp_zone_at(const EeCpFields *p, size_t i);
+
+/// A danger zone added.
+///
+/// # Safety
+/// As [`lists`].
+void ee_cp_zone_push(const EeCpFields *p, EeCpDangerZone zone);
+
+/// Danger zone `i` erased.
+///
+/// # Safety
+/// As [`lists`]; `i` below the count.
+void ee_cp_zone_erase(const EeCpFields *p, size_t i);
+
+/// The danger zones set to `count` zones (`Clear`: none; a loaded game's).
+///
+/// # Safety
+/// As [`lists`]; `zones` holds `count` zones (or is null with 0).
+void ee_cp_zones_set(const EeCpFields *p, const EeCpDangerZone *zones, size_t count);
+
+/// TEST ONLY (PLCE): [`centers_digest`] into `out[3]`.
+///
+/// # Safety
+/// As [`lists`]; `out` three words.
+void ee_cp_centers_digest(const EeCpFields *p, uint32_t *out);
+
+/// TEST ONLY (CPEV): [`lists_digest`] into `out[6]`.
+///
+/// # Safety
+/// As [`lists`]; `out` six words.
+void ee_cp_lists_digest(const EeCpFields *p, uint32_t *out);
+
 extern int64_t ee_cp_player_host(const EeCpPlaceCtx *ctx,
                                  int32_t op,
                                  uint64_t a,
@@ -1546,6 +1594,16 @@ extern int64_t ee_cp_center_host(const EeCpPlaceCtx *ctx,
                                  uint64_t a,
                                  uint64_t b,
                                  EeCpPlaceIo *io);
+
+extern void *ee_cp_scope_open(uint64_t player, uint32_t method);
+
+extern bool ee_cp_scope_on(void *scope);
+
+extern void ee_cp_scope_word(void *scope, uint32_t word);
+
+extern void ee_cp_scope_unit(void *scope, uint64_t unit);
+
+extern void ee_cp_scope_close(void *scope);
 
 /// Pushes a pair onto a host operation's list.
 ///
@@ -1790,90 +1848,96 @@ int32_t ee_cp_wall_class(int32_t epoch);
 /// `EECPIsSiteClass`
 bool ee_cp_is_site_class(int32_t class_);
 
-/// `Contains`
+/// The player's lists made (`EEComputerPlayer::Init`, after `ee_cp_init`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_center_contains(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
+/// `p` is a live record without lists.
+void ee_cp_lists_new(EeCpFields *p);
 
-/// `AdoptDropSite`'s test (the C++ takes the reference)
+/// The destructor's: the units to kill dereferenced (from the last), the centres deleted, the lists dropped.
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_center_adopts(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
+/// `ctx` is a call's context of a player whose lists were made; they are not used again.
+void ee_cp_lists_free(const EeCpPlaceCtx *ctx);
 
-/// `FindBuildSite`
+/// `DeleteVectorContents(mResourceCenters)` (`Clear`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_center_find_build_site(const EeCpPlaceCtx *ctx,
-                                  uint64_t center,
-                                  int32_t class_,
-                                  int32_t *out);
+/// `ctx` is a call's context.
+void ee_cp_centers_delete(const EeCpPlaceCtx *ctx);
 
-/// `GetMinEffectRadius`
+/// The centres' count.
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-int32_t ee_cp_center_min_effect_radius(const EeCpPlaceCtx *ctx, int32_t class_);
+/// `p` is a live record with lists.
+size_t ee_cp_center_count(const EeCpFields *p);
 
-/// `GetMoraleFill`
+/// Every centre's `AdoptDropSite(unit)` (`UnitCompleted`, `UnitsSwapped`; `unit` an `EEUnit*`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-float ee_cp_center_morale_fill(const EeCpPlaceCtx *ctx, uint64_t center);
+/// `ctx` is a call's context; `unit` a live unit.
+void ee_cp_centers_adopt(const EeCpPlaceCtx *ctx, uint64_t unit);
 
-/// `GetCenter` (`out`: the tile in and out)
+/// Every centre's `ReleaseUnit(unit)` (`UnitTaken`).
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-void ee_cp_center_get_center(const EeCpPlaceCtx *ctx, uint64_t center, int32_t *out);
+/// As [`ee_cp_centers_adopt`].
+void ee_cp_centers_release(const EeCpPlaceCtx *ctx, uint64_t unit);
 
-/// `FindResourceUnit`
+/// Every centre's `Restore` until one fails (`RestoreManagers`): the result.
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-uint64_t ee_cp_center_find_resource_unit(const EeCpPlaceCtx *ctx,
-                                         uint64_t center,
-                                         uint32_t resource);
+/// `ctx` is a call's context.
+int32_t ee_cp_centers_restore(const EeCpPlaceCtx *ctx, uint32_t major, uint32_t minor);
 
-/// `IsInAreaEffect`
+/// A new centre loaded from the file and listed (`cp::save`'s CENTER_LOAD): the read's result.
 ///
 /// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_center_is_in_area_effect(const EeCpPlaceCtx *ctx,
-                                    int32_t x,
-                                    int32_t y,
-                                    int32_t class_,
-                                    int32_t kind);
-
-/// `IsWithinRadius`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-bool ee_cp_center_is_within_radius(const EeCpPlaceCtx *ctx, uint64_t center, uint64_t unit);
-
-/// `Restore`
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-int32_t ee_cp_center_restore(const EeCpPlaceCtx *ctx, uint64_t center);
-
-/// `Save` (`file`, `host`: the saved game's primitives)
-///
-/// # Safety
-/// `ctx` is the C++ caller's context; the pointer arguments are valid for the call.
-int32_t ee_cp_center_save(const EeCpPlaceCtx *ctx,
-                          uint64_t center,
+/// `ctx` is a call's context; `host` serves the file's primitives on `file`.
+int32_t ee_cp_center_load(const EeCpPlaceCtx *ctx,
                           void *file,
-                          EeUnitsPlayerSaveFn host);
+                          EeUnitsPlayerSaveFn host,
+                          uint32_t major,
+                          uint32_t minor);
 
-/// `EECPResourceCenter::Load`: `host` serves the file's primitives and the centre's operations
-/// (`EE_CP_CENTER_FILE_*`) on `file`.
+/// Centre `i`'s `Save` (`cp::save`'s CENTER_SAVE).
 ///
 /// # Safety
-/// `host` must accept `file` with those operations for the call.
-int32_t ee_cp_center_load(void *file, EeUnitsPlayerSaveFn host, uint32_t minor);
+/// As [`ee_cp_center_load`]; `i` below the count.
+int32_t ee_cp_center_save_at(const EeCpPlaceCtx *ctx,
+                             size_t i,
+                             void *file,
+                             EeUnitsPlayerSaveFn host,
+                             uint32_t major,
+                             uint32_t minor);
+
+/// Centre `c`'s `GetCenter` with its PLCE record (the centres' sort's comparator; `tile` in and out).
+///
+/// # Safety
+/// `ctx` is a call's context; `c` a live centre's handle; `tile` two words.
+void ee_cp_center_get_center(const EeCpPlaceCtx *ctx,
+                             uint64_t c,
+                             int32_t *tile);
+
+/// Centre `i`'s main unit (`EEUnit*`, 0 none), active flag and unit count into `out[3]` (the next engine's view).
+///
+/// # Safety
+/// `ctx` is a call's context; `i` below the count; `out` three words.
+void ee_cp_center_info(const EeCpPlaceCtx *ctx,
+                       size_t i,
+                       int64_t *out);
+
+/// Centre `i`'s unit `j` (`EEUnit*`, 0 freed).
+///
+/// # Safety
+/// As [`ee_cp_center_info`]; `j` below its count.
+uint64_t ee_cp_center_unit(const EeCpPlaceCtx *ctx, size_t i, size_t j);
+
+/// Centre `i`'s `GetCenter` on a default tile (the next engine's view).
+///
+/// # Safety
+/// As [`ee_cp_center_info`]; `tile` two words.
+void ee_cp_center_get_center_at(const EeCpPlaceCtx *ctx, size_t i, int32_t *tile);
 
 /// `WorkOutPopulation`
 ///

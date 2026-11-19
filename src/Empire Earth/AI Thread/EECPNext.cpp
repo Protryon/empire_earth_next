@@ -46,7 +46,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPResourceCenter.h"
 #include "ee/EECPReflexes.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
@@ -321,6 +320,8 @@ std::string EECPNextTechName(long inTech)
 // the resource centres, the danger zones), a goal's target, the continent manager's areas and forests (lane C
 // re-points these), the tech nodes' methods with bodies, the trace, the game log and the files
 
+EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cpp
+
 static void EECPNextAppend(void* outBytes, const std::string& inText)
 {
     ee_ai_next_append(outBytes, (const uint8_t*)inText.data(), inText.size());
@@ -417,22 +418,23 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         return EECPPendingEpoch(me);
     case EE_AI_NEXT_HOST_CAN_GATHER:
         return me->mCanGather ? 1 : 0;
-    case EE_AI_NEXT_HOST_RC_COUNT:
-        return (int64_t)me->GetNumResourceCenters();
+    case EE_AI_NEXT_HOST_RC_COUNT:   // the centres (ee_sim::cp lists.rs)
+        return (int64_t)ee_cp_center_count(me);
     case EE_AI_NEXT_HOST_RC: {
-        EECPResourceCenter* theCenter = me->GetResourceCenter((unsigned long)a);
-        out[0] = (int64_t)EECPNextHandle((EEUnit*)theCenter->mUnit.Get());
-        out[1] = theCenter->mIsActive ? 1 : 0;
-        out[2] = (int64_t)theCenter->mUnits.size();
+        EeCpPlaceCtx theContext = EECPPlaceContext(me);
+        ee_cp_center_info(&theContext, (size_t)a, out);
         return 0;
     }
-    case EE_AI_NEXT_HOST_RC_UNIT:
-        return (int64_t)EECPNextHandle(me->GetResourceCenter((unsigned long)a)->mUnits[(size_t)b].Get());
+    case EE_AI_NEXT_HOST_RC_UNIT: {
+        EeCpPlaceCtx theContext = EECPPlaceContext(me);
+        return (int64_t)ee_cp_center_unit(&theContext, (size_t)a, (size_t)b);
+    }
     case EE_AI_NEXT_HOST_RC_CENTER: {
-        EETileCoordinate theTile;
-        me->GetResourceCenter((unsigned long)a)->GetCenter(theTile);
-        out[0] = theTile.mX;
-        out[1] = theTile.mY;
+        EeCpPlaceCtx theContext = EECPPlaceContext(me);
+        int32_t theTile[2] = {0, 0};
+        ee_cp_center_get_center_at(&theContext, (size_t)a, theTile);
+        out[0] = theTile[0];
+        out[1] = theTile[1];
         return 0;
     }
     case EE_AI_NEXT_HOST_RESOURCE_USERS:
@@ -505,18 +507,20 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_PLAYER_ID:
         return (int64_t)me->mPlayerID;
-    case EE_AI_NEXT_HOST_DANGER_COUNT:
-        return (int64_t)me->mDangerZones.size();
-    case EE_AI_NEXT_HOST_DANGER:
-        out[0] = me->mDangerZones[(size_t)a].first.mX;
-        out[1] = me->mDangerZones[(size_t)a].first.mY;
-        out[2] = (int64_t)me->mDangerZones[(size_t)a].second;
+    case EE_AI_NEXT_HOST_DANGER_COUNT:   // the danger zones (ee_sim::cp lists.rs)
+        return (int64_t)ee_cp_zone_count(me);
+    case EE_AI_NEXT_HOST_DANGER: {
+        EeCpDangerZone theZone = ee_cp_zone_at(me, (size_t)a);
+        out[0] = theZone.x;
+        out[1] = theZone.y;
+        out[2] = (int64_t)theZone.time;
         return 0;
+    }
     case EE_AI_NEXT_HOST_DANGER_ADD:
-        me->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(U2DPoint<long>((long)a, (long)b), (unsigned long)c));
+        ee_cp_zone_push(me, EeCpDangerZone{(long)a, (long)b, (unsigned long)c});
         return 0;
     case EE_AI_NEXT_HOST_DANGER_ERASE:
-        me->mDangerZones.erase(me->mDangerZones.begin() + (ptrdiff_t)a);
+        ee_cp_zone_erase(me, (size_t)a);
         return 0;
     case EE_AI_NEXT_HOST_ORDER: {
         // the reflexes' orders (ee_ai next_reflex.rs): attack a unit, or go to a tile

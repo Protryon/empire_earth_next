@@ -55,7 +55,6 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPResourceCenter.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
@@ -208,10 +207,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
             const U2DPoint<long>& theCenter = theTown->GetHullCenter();
             EECPPush(io, theTown->mContinent, (int64_t)((uint64_t)(uint32_t)theCenter.mX << 32 | (uint32_t)theCenter.mY));
         }
-        return 0;
-    case EE_CP_PLACE_CENTERS:
-        for (size_t i = 0; i < thePlayer->mResourceCenters.size(); i++)
-            EECPPush(io, (int64_t)EECPHandle(thePlayer->mResourceCenters[i]), 0);
         return 0;
     case EE_CP_PLACE_HAS_PLAYER0:
         return gWorld.mPlayers[0] != NULL ? 1 : 0;

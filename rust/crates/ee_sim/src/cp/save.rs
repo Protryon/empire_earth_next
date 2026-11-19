@@ -31,6 +31,7 @@ use super::ffi::EE_CP_LEGACY_LAST_VERSION;
 use super::fields::EeCpFields;
 use super::file::{SaveFile, FAILED, OK};
 use super::legacy_load;
+use super::lists;
 use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo};
 
 // ---- the host's operations beyond the file's primitives
@@ -42,21 +43,10 @@ pub const EE_CP_SAVE_TOWN_TILE: i32 = 402;
 pub const EE_CP_SAVE_SET_TOWN_TILE: i32 = 403;
 /// A new resource centre (no unit) loaded and pushed, loaded or not: the load's result.
 pub const EE_CP_SAVE_CENTER_LOAD: i32 = 404;
-/// `mFavoriteTypeHistory.resize(io.i, make_pair(0, 0))`.
-pub const EE_CP_SAVE_HISTORY_RESIZE: i32 = 405;
-/// `mFavoriteTypeHistory[index].first` (`HISTORY_FIRST`) or `.second` into `io.i`; the `SET_` ones store `io.i`.
-pub const EE_CP_SAVE_HISTORY_FIRST: i32 = 406;
-pub const EE_CP_SAVE_HISTORY_SECOND: i32 = 407;
-pub const EE_CP_SAVE_HISTORY_SET_FIRST: i32 = 408;
-pub const EE_CP_SAVE_HISTORY_SET_SECOND: i32 = 409;
 /// `mPlacement->Save(file)`: its result.
 pub const EE_CP_SAVE_PLACEMENT_SAVE: i32 = 411;
-/// `mResourceCenters.size()` into `io.i`.
-pub const EE_CP_SAVE_CENTERS: i32 = 412;
 /// `mResourceCenters[index]->Save(major, minor, file)`: its result.
 pub const EE_CP_SAVE_CENTER_SAVE: i32 = 413;
-/// `mFavoriteTypeHistory.size()` into `io.i`.
-pub const EE_CP_SAVE_HISTORY_COUNT: i32 = 414;
 
 /// What a load read past the fields: the running state of a 0.256-or-later save (the caller puts it back at the
 /// first tick) and whether the fields read without an error before it.
@@ -334,16 +324,16 @@ pub unsafe fn load(
     if r == OK {
         (r, count) = f.read_ulong(count);
         if r == OK {
-            set(f, EE_CP_SAVE_HISTORY_RESIZE, 0, i64::from(count));
-            for i in 0..count {
-                let old = op(f, EE_CP_SAVE_HISTORY_FIRST, i).1 as u32;
-                let (rf, first) = f.read_ulong(old);
-                set(f, EE_CP_SAVE_HISTORY_SET_FIRST, i, i64::from(first));
+            // SAFETY: the caller's record with its lists (the file's reads do not reach them)
+            let history = &mut unsafe { lists::lists(p) }.history;
+            history.resize(count as usize, (0, 0));
+            for entry in history.iter_mut() {
+                let (rf, first) = f.read_ulong(entry.0 as u32);
+                entry.0 = first as c_ulong;
                 r = rf;
                 if r == OK {
-                    let old = op(f, EE_CP_SAVE_HISTORY_SECOND, i).1 as i32;
-                    let (rs, second) = f.read_long(old);
-                    set(f, EE_CP_SAVE_HISTORY_SET_SECOND, i, i64::from(second));
+                    let (rs, second) = f.read_long(entry.1 as i32);
+                    entry.1 = second as c_long;
                     r = rs;
                 }
             }
@@ -421,7 +411,8 @@ pub unsafe fn save(
     }
     seg_c!(save_fields, f, r, p);
     if r == OK {
-        let count = op(f, EE_CP_SAVE_CENTERS, 0).1 as u32;
+        // SAFETY: as above
+        let count = unsafe { lists::lists(p) }.centers.len() as u32;
         r = f.write_ulong(count);
         // a resource center's write error is reported (it used to be discarded)
         let mut i = 0;
@@ -437,16 +428,15 @@ pub unsafe fn save(
     }
     seg_e!(save_fields, f, r, p);
     if r == OK {
-        let count = op(f, EE_CP_SAVE_HISTORY_COUNT, 0).1 as u32;
-        r = f.write_ulong(count);
-        for i in 0..count {
+        // SAFETY: as above (copied before the writes)
+        let history = unsafe { lists::lists(p) }.history.clone();
+        r = f.write_ulong(history.len() as u32);
+        for (first, second) in history {
             if r == OK {
-                let first = op(f, EE_CP_SAVE_HISTORY_FIRST, i).1 as u32;
-                r = f.write_ulong(first);
+                r = f.write_ulong(first as u32);
             }
             if r == OK {
-                let second = op(f, EE_CP_SAVE_HISTORY_SECOND, i).1 as i32;
-                r = f.write_long(second);
+                r = f.write_long(second as i32);
             }
         }
     }

@@ -42,7 +42,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPResourceCenter.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPReflexes.h"
@@ -73,15 +72,6 @@ EeCpPlaceCtx EECPPlaceContext(EEComputerPlayer* inPlayer);   // EECPPlacement.cp
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
-// Orders resource centers by the distance of their centres from mCenter (0x2ceb4; the sort COMDATs 0x408ae.. take it
-// by value: EETileDistanceLess's copy ctor). Unit-local (provisional name)
-struct EECPCenterDistanceLess {
-    EECPCenterDistanceLess(const U2DPoint<long>& inCenter) : mCenter(inCenter) {}
-    long DistanceSquared(const EETileCoordinate& inTile) const;
-    bool operator()(EECPResourceCenter* inFirst, EECPResourceCenter* inSecond) const;
-
-    EETileCoordinate mCenter;
-};
 
 // EECPUnitTileDistanceLess (0x2cf1e; the sort COMDATs 0x40dc4..): ee/EECPUnitTileDistanceLess.h
 
@@ -95,38 +85,6 @@ const UString EEComputerPlayer::sData("EEComputerPlayer-Data");   // class stati
 //   guarded dtor (byte ptr [0x8e5c68], 2): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 const UString EEComputerPlayer::sCPUOnlyFlag("EEComputerPlayer-CPU Only Flag");   // class static member (owner from the key prefix; EEComputerPlayer declares `static const UString ...;`) (provisional name)
 
-// Returns true when the first resource center lies nearer to mCenter than the second (provisional name)
-// The centers by the distance of their centres from mCenter. Owner and name PROVISIONAL (a unit-local predicate over
-// EETileDistanceLess). Built without /Og (rule 4 evidence: every local memory-resident, `leave`, the bool through a
-// return temp); with the pragma, the hash-fitted local names and the inline DistanceSquared below it is exact (r37).
-#pragma optimize("g", off)
-bool EECPCenterDistanceLess::operator()(EECPResourceCenter* inFirst, EECPResourceCenter* inSecond) const
-{
-    EETileCoordinate theFirstTile;
-    EETileCoordinate theSecondTile;
-    inFirst->GetCenter(theFirstTile);
-    inSecond->GetCenter(theSecondTile);
-    long theLeft = this->DistanceSquared(theFirstTile);
-    long theRight = this->DistanceSquared(theSecondTile);
-    bool theResult = theLeft < theRight;
-    return theResult;
-}
-#pragma optimize("g", on)
-
-
-// Returns the squared tile distance from mCenter. ICF-folds into 0x8a3f (EETileDistanceLess::DistanceSquared).
-// Inline: VC6's /Os post-check undoes its expansion at both no-/Og call sites above (the calls stay out of line)
-// but its two locals keep their caller frame slots (the original's 16 unused bytes below the return temp)
-inline long EECPCenterDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
-{
-    long theDY = inTile.GetY();
-    theDY = this->mCenter.mY - theDY;
-    long theDX = inTile.GetX();
-    theDX = this->mCenter.mX - theDX;
-    theDX *= theDX;
-    theDY *= theDY;
-    return theDX + theDY;
-}
 
 // Returns true when the first unit's tile lies nearer to mCenter than the second's (provisional name)
 // Built without /Og (rule 4 evidence: memory-resident locals, `leave`; exact with the pragma and the header's undone-inline
@@ -173,13 +131,11 @@ EEComputerPlayer::EEComputerPlayer()
 // Destroys the computer player: releases the units queued to kill, deletes its managers and resource centers
 EEComputerPlayer::~EEComputerPlayer()
 {
-    for (long i = this->mUnitsToKill.size() - 1; i >= 0; i--) {
-        if (this->mUnitsToKill[i] != NULL)
-            this->mUnitsToKill[i]->Dereference();
+    {   // the units to kill dereferenced, the centres deleted, the lists dropped (ee_sim::cp lists.rs)
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        ee_cp_lists_free(&theContext);
     }
-    this->mUnitsToKill.clear();
     delete this->mPlacement;
-    DeleteVectorContents(this->mResourceCenters);
     EECPNextDeleteState(this);
     EECPUnitsDelete(this);
 }
@@ -271,9 +227,8 @@ void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
     if (this->mUnitsState != NULL)
         EECPUnitsOnCompleted(this, inUnit);
     if (inUnit->mUnitClass->IsLandBuilding()) {
-        unsigned long i, n;
-        for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
-            this->mResourceCenters[i]->AdoptDropSite(inUnit);
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        ee_cp_centers_adopt(&theContext, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit));
     }
 }
 
@@ -339,11 +294,6 @@ long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
     return theResult;
 }
 
-// Returns the resource center at an index
-EECPResourceCenter* EEComputerPlayer::GetResourceCenter(unsigned long inIndex)
-{
-    return this->mResourceCenters[inIndex];
-}
 
 // New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer)
@@ -406,6 +356,7 @@ void EEComputerPlayer::Init()
     // cheat EE_AI_CHEATS' (the original: always on)
     ee_cp_init(this, reinterpret_cast<const EeCpBehavior*>(gCPBehaviors), EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty),
                this->mPlayerID, EECPCheatOn(this, kAICheatCost));
+    ee_cp_lists_new(this);
     this->mPlacement = new EECPPlacement(this);
 }
 
@@ -433,36 +384,15 @@ static int32_t EECPSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex
         (inIndex == 0 ? thePlayer->mPlacement->mTownCenterTile.mX : thePlayer->mPlacement->mTownCenterTile.mY) = (long)io->i;
         return kErrorOK;
     case EE_CP_SAVE_CENTER_LOAD: {
-        EECPResourceCenter* theCenter = new EECPResourceCenter(thePlayer, NULL);
-        long theResult = theCenter->Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
-        thePlayer->mResourceCenters.push_back(theCenter);
-        return theResult;
+        EeCpPlaceCtx thePlace = EECPPlaceContext(thePlayer);
+        return ee_cp_center_load(&thePlace, &theFile, &EESaveFilePrimitive, theContext.mMajorVersion, theContext.mMinorVersion);
     }
-    case EE_CP_SAVE_HISTORY_RESIZE:
-        thePlayer->mFavoriteTypeHistory.resize((size_t)io->i, std::make_pair(0UL, 0L));
-        return kErrorOK;
-    case EE_CP_SAVE_HISTORY_FIRST:
-        io->i = (int64_t)thePlayer->mFavoriteTypeHistory[inIndex].first;
-        return kErrorOK;
-    case EE_CP_SAVE_HISTORY_SECOND:
-        io->i = (int64_t)thePlayer->mFavoriteTypeHistory[inIndex].second;
-        return kErrorOK;
-    case EE_CP_SAVE_HISTORY_SET_FIRST:
-        thePlayer->mFavoriteTypeHistory[inIndex].first = (unsigned long)io->i;
-        return kErrorOK;
-    case EE_CP_SAVE_HISTORY_SET_SECOND:
-        thePlayer->mFavoriteTypeHistory[inIndex].second = (long)io->i;
-        return kErrorOK;
     case EE_CP_SAVE_PLACEMENT_SAVE:
         return thePlayer->mPlacement->Save(theFile);
-    case EE_CP_SAVE_CENTERS:
-        io->i = (int64_t)thePlayer->mResourceCenters.size();
-        return kErrorOK;
-    case EE_CP_SAVE_CENTER_SAVE:
-        return thePlayer->mResourceCenters[inIndex]->Save(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
-    case EE_CP_SAVE_HISTORY_COUNT:
-        io->i = (int64_t)thePlayer->mFavoriteTypeHistory.size();
-        return kErrorOK;
+    case EE_CP_SAVE_CENTER_SAVE: {
+        EeCpPlaceCtx thePlace = EECPPlaceContext(thePlayer);
+        return ee_cp_center_save_at(&thePlace, inIndex, &theFile, &EESaveFilePrimitive, theContext.mMajorVersion, theContext.mMinorVersion);
+    }
     }
     return EESavePrimitive(theFile, inOp, io);
 }
@@ -486,7 +416,9 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         unsigned long thePlayerID = this->mPlayerID;
         unsigned long theLand = this->mFavoriteLandType, theSea = this->mFavoriteSeaType;
         unsigned long theAir = this->mFavoriteAirType, theSpace = this->mFavoriteSpaceType;
-        std::vector<std::pair<unsigned long, long> > theHistory(this->mFavoriteTypeHistory.begin(), this->mFavoriteTypeHistory.end());
+        std::vector<EeCpHistoryEntry> theHistory(ee_cp_history_count(this));
+        for (size_t i = 0; i < theHistory.size(); i++)
+            theHistory[i] = ee_cp_history_at(this, i);
         EEAfterLoad([theSelf, thePlayerID, theLand, theSea, theAir, theSpace, theHistory]() {
             if (thePlayerID >= gWorld.mNumPlayers || gWorld.mPlayers[thePlayerID] == NULL
                 || gWorld.mPlayers[thePlayerID]->mComputerPlayer != theSelf)
@@ -495,7 +427,7 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theSelf->mFavoriteSeaType = theSea;
             theSelf->mFavoriteAirType = theAir;
             theSelf->mFavoriteSpaceType = theSpace;
-            theSelf->mFavoriteTypeHistory.assign(theHistory.begin(), theHistory.end());
+            ee_cp_history_set(theSelf, theHistory.data(), theHistory.size());
         });
     }
     // port (0.256): the running values the original saved otherwise or not at all (Save), put back at the first tick
@@ -575,11 +507,11 @@ void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inT
 // Rebuilds or updates the resource centers (regrouping if none exist), then refreshes combat, resources and town groups
 void EEComputerPlayer::RefreshResourceCenters()
 {
-    if (this->mResourceCenters.size() == 0)
+    if (ee_cp_center_count(this) == 0)
         this->Regroup();
     else
         this->UpdateGroups();
-    if (this->mResourceCenters.size() == 0)
+    if (ee_cp_center_count(this) == 0)
         this->Regroup();
     this->RefreshTownGroups();
 }
@@ -599,8 +531,8 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
         EEComplexUnit* theUnit = it->mNew;
         if (theUnit->GetUnitClass()->IsDropSite()) {
-            for (unsigned long i = 0, n = this->mResourceCenters.size(); i < n; i++)
-                this->mResourceCenters[i]->AdoptDropSite(theUnit);
+            EeCpPlaceCtx theContext = EECPPlaceContext(this);
+            ee_cp_centers_adopt(&theContext, (uint64_t)(uintptr_t)static_cast<EEUnit*>(theUnit));
         }
     }
     EEPlayer::UnitsSwapped(ioSwaps);
@@ -611,10 +543,13 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 void EEComputerPlayer::Clear()
 {
     EEPlayer::Clear();
-    DeleteVectorContents(this->mResourceCenters);
+    {
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        ee_cp_centers_delete(&theContext);
+    }
     this->mIsStarted = false;
     this->mPlacement->Reset();
-    this->mDangerZones.clear();
+    ee_cp_zones_set(this, NULL, 0);
 }
 
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the
@@ -658,11 +593,8 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
         theResult = this->mPlacement->Restore();
     if (theResult == kErrorOK) {
         ee_cp_restore_fields(this, 0, gPhysics->mGameTime, true);   // the saved relative times rebased
-        for (unsigned long i = 0, n = this->mResourceCenters.size(); i < n; i++) {
-            if (theResult != kErrorOK)
-                break;
-            theResult = this->mResourceCenters[i]->Restore(inMajorVersion, inMinorVersion);
-        }
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        theResult = ee_cp_centers_restore(&theContext, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
         if (theResult == kErrorOK)
             ee_cp_restore_fields(this, 1, gPhysics->mGameTime, true);
     }
@@ -798,7 +730,7 @@ void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
 {
     EECPPlaceScope theScope(kCpevUnitStranded, this, true); theScope.CU(inUnit);   // CPEV (TEST ONLY)
     inUnit->Reference();
-    this->mUnitsToKill.push_back(inUnit);
+    ee_cp_kill_push(this, EEUnitHandleID(inUnit));
 }
 
 // Takes a resource amount from the player, ignoring zero or negative amounts
@@ -880,9 +812,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     if (this->mNextState != NULL && !inSwapped && theUnit->mUnitClass != NULL)
         EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
     if (theUnit->mUnitClass->IsLandBuilding()) {
-        unsigned long i, n;
-        for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
-            this->mResourceCenters[i]->ReleaseUnit(theUnit);
+        EeCpPlaceCtx theContext = EECPPlaceContext(this);
+        ee_cp_centers_release(&theContext, (uint64_t)(uintptr_t)static_cast<EEUnit*>(theUnit));
     }
 }
 
@@ -985,7 +916,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
             EECPEngineName(this).c_str(), EECPEngineSeesAll(this) ? " sees_all=1" : "",
             EECPEngineFillsGarrison(this) ? " fills_garrison=1" : "");
         this->SetNextIslandExpansionTime();
-        if (this->mResourceCenters.size() == 0)
+        if (ee_cp_center_count(this) == 0)
             this->Regroup();
         if (gGameOptions.mLoadType == 0)
             this->ChooseCivilization();
@@ -1001,11 +932,14 @@ void EEComputerPlayer::Update(unsigned long inTime)
         EECPTraceScope theNext("next");
         EECPNextUpdate(this, inTime);
     }
-    for (long i = this->mUnitsToKill.size() - 1; i >= 0; i--) {
-        this->mUnitsToKill[i]->Kill(true, false, false);
-        this->mUnitsToKill[i]->Dereference();
+    for (long i = (long)ee_cp_kill_count(this) - 1; i >= 0; i--) {
+        EEComplexUnit* theUnit;
+        EEUnitHandleResolve(ee_cp_kill_at(this, (size_t)i), theUnit);
+        theUnit->Kill(true, false, false);
+        EEUnitHandleResolve(ee_cp_kill_at(this, (size_t)i), theUnit);
+        theUnit->Dereference();
     }
-    this->mUnitsToKill.clear();
+    ee_cp_kill_clear(this);
 }
 
 // Assigns ungrouped units to resource centers, creating new inactive centers for the rest, then re-sorts the
@@ -1058,7 +992,7 @@ bool EETeam::ContainsPlayer(unsigned long inPlayerID)
 // (ee_sim::cp::timers: the timers are Rust's; the danger zones the computer players', over EECPStateOperation)
 struct EECPStateContext {
     FSFile* mFile;
-    std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > mZones;   // a load's, by player id
+    std::vector<std::vector<EeCpDangerZone> > mZones;   // a load's, by player id
     long mX, mY;                                                                     // the zone being pushed
 };
 
@@ -1069,15 +1003,15 @@ static int32_t EECPStateOperation(void* inContext, int32_t inOp, uint32_t inInde
     EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
     switch (inOp) {
     case EE_CP_STATE_ZONES:
-        io->i = theCP != NULL ? (int64_t)theCP->mDangerZones.size() : 0;
+        io->i = theCP != NULL ? (int64_t)ee_cp_zone_count(theCP) : 0;
         return kErrorOK;
     case EE_CP_STATE_ZONE: {
-        const std::pair<U2DPoint<long>, unsigned long>& theZone = theCP->mDangerZones[(size_t)io->i];
-        io->i = io->b == 0 ? (int64_t)theZone.first.mX : io->b == 1 ? (int64_t)theZone.first.mY : (int64_t)theZone.second;
+        EeCpDangerZone theZone = ee_cp_zone_at(theCP, (size_t)io->i);
+        io->i = io->b == 0 ? (int64_t)theZone.x : io->b == 1 ? (int64_t)theZone.y : (int64_t)theZone.time;
         return kErrorOK;
     }
     case EE_CP_STATE_PUSH_PLAYER:
-        theContext.mZones.push_back(std::vector<std::pair<U2DPoint<long>, unsigned long> >());
+        theContext.mZones.push_back(std::vector<EeCpDangerZone>());
         return kErrorOK;
     case EE_CP_STATE_PUSH_ZONE:
         if (io->b == 0)
@@ -1085,7 +1019,7 @@ static int32_t EECPStateOperation(void* inContext, int32_t inOp, uint32_t inInde
         else if (io->b == 1)
             theContext.mY = (long)io->i;
         else
-            theContext.mZones.back().push_back(std::make_pair(U2DPoint<long>(theContext.mX, theContext.mY), (unsigned long)io->i));
+            theContext.mZones.back().push_back(EeCpDangerZone{theContext.mX, theContext.mY, (unsigned long)io->i});
         return kErrorOK;
     }
     return EESavePrimitive(*theContext.mFile, inOp, io);
@@ -1119,7 +1053,7 @@ long EECPLoadResourceState(FSFile& inFile)
     theContext.mX = theContext.mY = 0;
     long theResult = ee_cp_resource_state_load(&theContext, &EECPStateOperation);
     if (theResult == kErrorOK) {
-        std::vector<std::vector<std::pair<U2DPoint<long>, unsigned long> > > theZones;
+        std::vector<std::vector<EeCpDangerZone> > theZones;
         theZones.swap(theContext.mZones);
         EEAfterLoad([theZones]() {   // after the experiment timers' fixup, which zeroes the claim ranges
             ee_cp_timers_apply(1);
@@ -1127,7 +1061,7 @@ long EECPLoadResourceState(FSFile& inFile)
                 EEPlayer* thePlayer = gWorld.mPlayers[p];
                 EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
                 if (theCP != NULL)
-                    theCP->mDangerZones = theZones[p];
+                    ee_cp_zones_set(theCP, theZones[p].data(), theZones[p].size());
             }
         });
     }
@@ -1135,12 +1069,11 @@ long EECPLoadResourceState(FSFile& inFile)
 }
 
 // The computer player's world (ee_sim::cp::events over place_game's EE_CP_PLAYER_* operations; `inA`, `inB` units or
-// centres). The centres' members are their forwarders (their PLCE scopes), the centres' sort the original's.
+// centres). The centres are Rust's (ee_sim::cp lists.rs); their sort is the original's std::sort here.
 extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,
     EeCpPlaceIo* io)
 {
     EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(reinterpret_cast<EEPlayer*>((uintptr_t)inContext->player));
-    EECPResourceCenter* theCenter = reinterpret_cast<EECPResourceCenter*>((uintptr_t)inA);
     EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)inA);
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
     EEUnit* theOther = reinterpret_cast<EEUnit*>((uintptr_t)inB);
@@ -1177,41 +1110,24 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     }
     case EE_CP_PLAYER_UNIT_CONTINENT_AT:
         return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
-    case EE_CP_PLAYER_CENTER_CREATE:
-        return (int64_t)(uintptr_t)new EECPResourceCenter(thePlayer, theUnit);
-    case EE_CP_PLAYER_CENTER_LIST:
-        if (v[0] != 0)
-            thePlayer->mResourceCenters.insert(thePlayer->mResourceCenters.begin(), theCenter);
-        else
-            thePlayer->mResourceCenters.push_back(theCenter);
-        return 0;
-    case EE_CP_PLAYER_CENTER_IS_WITHIN:
-        return theCenter->IsWithinRadius(theOther) ? 1 : 0;
-    case EE_CP_PLAYER_CENTER_ADD:
-        theCenter->AddUnit(theOther);
-        return 0;
-    case EE_CP_PLAYER_CENTER_CONTAINS:
-        return theCenter->Contains(theOther) ? 1 : 0;
-    case EE_CP_PLAYER_CENTER_ADOPT:
-        theCenter->AdoptDropSite(static_cast<EEComplexUnit*>(theOther));
-        return 0;
-    case EE_CP_PLAYER_CENTER_SET_MAIN:
-        theCenter->SetUnit(static_cast<EEComplexUnit*>(theOther));
-        return 0;
-    case EE_CP_PLAYER_CENTER_GET_CENTER: {
-        EETileCoordinate theTile((long)v[0], (long)v[1]);
-        theCenter->GetCenter(theTile);
-        io->v[0] = theTile.mX;
-        io->v[1] = theTile.mY;
+    case EE_CP_PLAYER_CENTERS_SORT: {   // std::sort by the centres' GetCenter (0x2ceb4: each with its PLCE record)
+        EETileCoordinate theFrom((long)v[0], (long)v[1]);
+        std::vector<uint64_t> theCenters;
+        for (size_t i = 0; i < io->input_len; i++)
+            theCenters.push_back((uint64_t)io->input[2 * i]);
+        std::sort(theCenters.begin(), theCenters.end(), [&](uint64_t inFirst, uint64_t inSecond) {
+            int32_t theFirst[2] = {0, 0};
+            int32_t theSecond[2] = {0, 0};
+            ee_cp_center_get_center(inContext, inFirst, theFirst);
+            ee_cp_center_get_center(inContext, inSecond, theSecond);
+            long theLeft = (theFrom.mX - theFirst[0]) * (theFrom.mX - theFirst[0]) + (theFrom.mY - theFirst[1]) * (theFrom.mY - theFirst[1]);
+            long theRight = (theFrom.mX - theSecond[0]) * (theFrom.mX - theSecond[0]) + (theFrom.mY - theSecond[1]) * (theFrom.mY - theSecond[1]);
+            return theLeft < theRight;
+        });
+        for (size_t i = 0; i < theCenters.size(); i++)
+            ee_cp_place_push(io->list, (int64_t)theCenters[i], 0);
         return 0;
     }
-    case EE_CP_PLAYER_CENTER_SET_ACTIVE:
-        theCenter->SetActive(v[0] != 0, 0);
-        return 0;
-    case EE_CP_PLAYER_CENTERS_SORT:
-        std::sort(thePlayer->mResourceCenters.begin(), thePlayer->mResourceCenters.end(),
-            EECPCenterDistanceLess(U2DPoint<long>((long)v[0], (long)v[1])));
-        return 0;
     case EE_CP_PLAYER_FAVORITE_CANDIDATE: {
         EEUnitClass* theClass = gUnitClassTable[(long)v[0]];
         long theKind = (long)v[1];
@@ -1223,9 +1139,6 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         io->v[1] = theClass->mUnitType;
         return 1;
     }
-    case EE_CP_PLAYER_HISTORY_PUSH:
-        thePlayer->mFavoriteTypeHistory.push_back(std::make_pair((unsigned long)v[0], (long)v[1]));
-        return 0;
     case EE_CP_PLAYER_IS_EPOCH:
         return EEIsEpochID((long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_UNIT_IS_BUILDING:

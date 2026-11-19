@@ -1,14 +1,12 @@
 //! The resource centres' unit tests over the placement tests' fake world.
 
-use std::ffi::c_void;
-
 use super::file::test_file::{self, Bytes};
-use super::file::{SaveFile, OK};
+use super::file::OK;
+use super::lists::CpCenter;
 use super::place_host::Tile;
 use super::placement::{CP_TYPE_GRANARY, CP_TYPE_HOUSE, CP_TYPE_SETTLEMENT};
 use super::placement_tests::Fake;
 use super::resource_center::*;
-use crate::units::player_save::EeUnitsPlayerSaveIo;
 
 fn center(h: &mut Fake, units: &[u64], main: u64, active: bool) -> u64 {
     let ids = units.iter().map(|&u| h.units[u as usize - 1].id).collect();
@@ -99,44 +97,6 @@ fn settlement_site_in_the_rings() {
     let _ = CP_TYPE_HOUSE;
 }
 
-struct LoadCtx {
-    bytes: Bytes,
-    ids: Vec<u32>,
-    main: u32,
-    active: bool,
-    cleared: bool,
-}
-
-unsafe extern "C" fn load_host(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnitsPlayerSaveIo) -> i32 {
-    // SAFETY: the test passes a live LoadCtx and io
-    let (c, io) = unsafe { (&mut *(ctx as *mut LoadCtx), &mut *io) };
-    match op {
-        EE_CP_CENTER_FILE_CLEAR => {
-            c.cleared = true;
-            c.ids.clear();
-            OK
-        }
-        EE_CP_CENTER_FILE_PUSH_ID => {
-            c.ids.push(io.i as u32);
-            OK
-        }
-        EE_CP_CENTER_FILE_SET_MAIN => {
-            c.main = io.i as u32;
-            OK
-        }
-        EE_CP_CENTER_FILE_ACTIVE => {
-            io.b = u8::from(c.active);
-            OK
-        }
-        EE_CP_CENTER_FILE_SET_ACTIVE => {
-            c.active = io.b != 0;
-            OK
-        }
-        // SAFETY: the bytes of the same context
-        _ => unsafe { test_file::host(std::ptr::addr_of_mut!(c.bytes).cast(), op, index, io) },
-    }
-}
-
 #[test]
 fn save_then_load() {
     let mut h = Fake::default();
@@ -153,20 +113,15 @@ fn save_then_load() {
     let mut want = Bytes::default();
     want.u32(1).u32(ida).u32(idtc).b(true);
     assert_eq!(bytes.data, want.data);
-    let mut ctx = LoadCtx { bytes, ids: vec![9], main: 0, active: false, cleared: false };
-    // SAFETY: ctx outlives the file
-    let mut f = unsafe { SaveFile::new(std::ptr::addr_of_mut!(ctx).cast(), load_host) };
-    assert_eq!(load(&mut f, CP_ACTIVE_FLAG_VERSION), OK);
-    assert!(ctx.cleared && ctx.active);
-    assert_eq!((ctx.ids.clone(), ctx.main), (vec![ida], idtc));
+    let mut back = CpCenter { units: vec![9], ..Default::default() };
+    assert_eq!(load_into(&mut test_file::file(&mut bytes), CP_ACTIVE_FLAG_VERSION, &mut back), OK);
+    assert_eq!(back, CpCenter { units: vec![ida], main: idtc, active: true });
     // before 0.141 no flag; a short file: the read's error
     let mut short = Bytes::default();
     short.u32(2).u32(5);
-    let mut ctx = LoadCtx { bytes: short, ids: Vec::new(), main: 0, active: false, cleared: false };
-    // SAFETY: as above
-    let mut f = unsafe { SaveFile::new(std::ptr::addr_of_mut!(ctx).cast(), load_host) };
-    assert_eq!(load(&mut f, 0x8c), 0xa);
-    assert_eq!(ctx.ids, vec![5]);
+    let mut back = CpCenter::default();
+    assert_eq!(load_into(&mut test_file::file(&mut short), 0x8c, &mut back), 0xa);
+    assert_eq!(back.units, vec![5]);
 }
 
 #[test]
