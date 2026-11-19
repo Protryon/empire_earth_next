@@ -288,6 +288,9 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the game messages' unit orders through the units lane's bodies (ee_netmsg bodies.rs)
     #[cfg(not(test))]
     ee_sim::netmsg::bodies::register_unit_orders(unit_order);
+    // the simulation's effects on the renderer's effect manager (ee_sim world/effects.rs, ee_render sim_effects.rs)
+    #[cfg(not(test))]
+    ee_sim::world::effects::register(&ee_render::gfx::sim_effects::RENDER_EFFECTS);
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or

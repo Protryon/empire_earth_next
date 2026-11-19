@@ -295,7 +295,7 @@ fn step(e: EffectPtr) -> i32 {
 
 // ---- the goal markers' effects
 
-fn current() -> *mut EeGfxEffectManager {
+pub(crate) fn current() -> *mut EeGfxEffectManager {
     (mworld().current)()
 }
 
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn ee_gfx_manager_free(m: *mut EeGfxEffectManager) {
 
 /// The detail test and the living units an entry point's kind needs, then the effect made, set up and registered
 /// under a new handle (`out_handle`, may be null); the plan's result or the set-up's.
-fn create(m: *mut EeGfxEffectManager, args: &EeGfxEffectArgs, out_handle: *mut u32) -> i32 {
+pub(crate) fn create(m: *mut EeGfxEffectManager, args: &EeGfxEffectArgs, out_handle: *mut u32) -> i32 {
     let g = GraphicEffect(args.graphic_effect as usize).fields();
     let detail_ok = u64::from(g.mDetailLevel as u32) <= detail();
     let alive = |unit: u64| {
@@ -442,7 +442,7 @@ fn store_of<'a>(m: *const EeGfxEffectManager) -> &'a EffectStore {
     unsafe { &(*m).store }
 }
 
-fn find(m: *mut EeGfxEffectManager, handle: u32) -> EffectPtr {
+pub(crate) fn find(m: *mut EeGfxEffectManager, handle: u32) -> EffectPtr {
     if m.is_null() || handle == 0 {
         return std::ptr::null_mut();
     }
@@ -450,7 +450,7 @@ fn find(m: *mut EeGfxEffectManager, handle: u32) -> EffectPtr {
     ep(unsafe { (*m).store.find(handle) })
 }
 
-fn destroy(m: *mut EeGfxEffectManager, handle: u32) {
+pub(crate) fn destroy(m: *mut EeGfxEffectManager, handle: u32) {
     if !m.is_null() {
         // SAFETY: a live manager
         unsafe { (*m).store.queue_destroy(handle) }
