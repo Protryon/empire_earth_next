@@ -193,7 +193,7 @@ void EEEMStorm::Begin()
     else if (this->mType == kStormSnow || this->mType == kStormBlizzard)
         theEffect = EEGraphicEffect::Get(kGraphicEffectSnow);
     gEffectManager->CreateWeatherEffect(theVisited, theEffect, &theHandle);
-    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = gEffectManager->GetEffect(theHandle);
     this->mStorm->Reference();
     this->mStorm->GetBounds(this->mArea);
     this->mStorm->mRecord->storm.sustained = true;
@@ -295,7 +295,7 @@ long EEEMStorm::Restore()
     long theResult = 0;
     EEEffectHandle theHandle;
     theHandle.mValue = USavedID(this->mStorm);
-    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = gEffectManager->GetEffect(theHandle);
     if (this->mStorm != NULL)
         this->mStorm->Reference();
     else {
@@ -361,7 +361,7 @@ long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     this->mStart.Save(outFile);
     this->mGoal.Save(outFile);
     this->mArea.Save(outFile);
-    unsigned long theHandle = this->mStorm->mHandle.mValue;
+    unsigned long theHandle = this->mStorm->GetHandle().mValue;
     if ((theResult = outFile.Write(theHandle)) == 0 && (theResult = outFile.Write(this->mTargetIntensity)) == 0
         && (theResult = outFile.Write(this->mIntensity)) == 0 && (theResult = outFile.Write(this->mStep)) == 0
         && (theResult = outFile.Write(this->mType)) == 0 && (theResult = outFile.Write(this->mState)) == 0

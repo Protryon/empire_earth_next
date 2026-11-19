@@ -1,8 +1,9 @@
 use super::*;
 use crate::formations::capture::{constructed_as_preset, decode, replay, slots_eq, Record};
 
-/// `EEFCircle`'s constructor values: the half arc (pi) and the minimum radius.
-const CIRCLE_HALF_ARC: f32 = 3.14159265;
+use crate::formations::capture::CIRCLE_HALF_ARC;
+
+/// `EEFCircle`'s constructor's minimum radius.
 const CIRCLE_MIN_RADIUS: f32 = 0.5;
 
 fn hex(text: &str) -> Vec<u8> {

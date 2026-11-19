@@ -32,6 +32,10 @@ constexpr static const uint32_t ALIGN_CENTER = 1;
 
 constexpr static const uint32_t ALIGN_RIGHT = 2;
 
+constexpr static const int32_t EARTHQUAKE = 26;
+
+constexpr static const int32_t GOAL = 60;
+
 constexpr static const uint32_t RESOURCE_WOOD = 3;
 
 constexpr static const uint32_t RESOURCE_STONE = 4;

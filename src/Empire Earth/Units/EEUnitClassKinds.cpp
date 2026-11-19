@@ -13,23 +13,15 @@
 #include <mutex>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEUnit.h"
-#include "ee/EEUnitAction.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPlayer.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEUnitUpdate.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
-#include "ee/EESimCapture.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 
 void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)

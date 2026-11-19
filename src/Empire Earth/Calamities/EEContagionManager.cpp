@@ -166,7 +166,7 @@ void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
             return;
         EEEffect* theEffect = gEffectManager->GetEffect(theEffectHandle);
         if (theEffect != NULL) {
-            if (theEffect->mKind == kEffectDamaged)
+            if (theEffect->GetKind() == kEffectDamaged)
                 theEffect->mRecord->damaged.finished = true;   // the damage controller (0x3e, on EEE2DRust)
             else
                 gEffectManager->DestroyEffect(theEffectHandle);

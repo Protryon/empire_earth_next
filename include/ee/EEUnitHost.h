@@ -1,14 +1,7 @@
 // New (port): the world calls a Rust decision makes (src/Empire Earth/Units/EEUnitHost.cpp; rust/crates/ee_sim/src/units//
 // host.rs, which declares them on its side), declared for the C++ that calls them too: the TEST ONLY group command
-// sweep (EEGroupCommandSweep.cpp) runs the original bodies' statements over these calls.
-//
-// TEST ONLY, the dry host: between EEUnitHostDryBegin and EEUnitHostDryEnd every call logs what it would do and
-// answers without changing the world (no group, goal, draw, order or effect: groups are plain unit lists, a goal a
-// record of its arguments, a draw a counter), so a body's decisions over the live world can be recorded at any point
-// of a game without changing it. The reads (the map's height, the nearest town's patrol point, a route, a unit's
-// type) are the real ones; Fill takes the selection's units by EEFillMembers (the store), the keeps test the objects
-// as the originals did (KeepGroundAttackers' test is the store's: the dry keep compares it with the object's); the
-// spreads keep the group as it is (logged).
+// sweep (EEGroupCommandSweep.cpp) runs the bodies over the dry host (TEST ONLY; ee_sim units/dry.rs: every call
+// logged, nothing changed; ee_units_dry_begin / ee_units_dry_end), which reads through these calls.
 #ifndef EE_EEUNITHOST_H
 #define EE_EEUNITHOST_H
 
@@ -42,7 +35,6 @@ void ee_units_host_acknowledge_unit(void* inPlayer, uint32_t inUnit);
 uint32_t ee_units_host_town_patrol_point(uint32_t inUnit, uint8_t* outFound);
 void ee_units_host_patrol_add_unit_tile(uint32_t inUnit, uint32_t inTarget, void* inPlayer);
 void* ee_units_host_unit_patrol_group(uint32_t inUnit);
-int64_t ee_units_host_object_unit_type(uint32_t inUnit);
 void ee_units_host_group_set_queued(void* inGroup, uint8_t inQueued);
 void ee_units_host_group_spread_around_resource(void* inGroup, uint32_t inTarget);
 void ee_units_host_group_spread_around_tile(void* inGroup, int64_t inX, int64_t inY);
@@ -53,7 +45,6 @@ void* ee_units_host_player_selection(void* inPlayer);
 uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer);
 uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit);
 uint8_t ee_units_host_unit_attackable(uint32_t inUnit, int64_t inDamageIndex);
-uint8_t ee_units_host_unit_class_targetable(uint32_t inUnit);
 uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t inTarget);
 int64_t ee_units_host_unit_max_hit_points(uint32_t inUnit);
 int64_t ee_units_host_unit_garrison_capacity(uint32_t inUnit);
@@ -78,12 +69,6 @@ int64_t ee_units_host_unit_air_traffic_type(uint32_t inUnit);
 // the farm sorts of EEMBuildUnit (EETileDistanceLess) and EEMSmartFarmers (EEFarmDistanceGreater: inGreater) around
 // the tile (inX, inY): the bodies' std::sorts, in EEMessage.cpp with their comparators
 void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool inGreater);
-
-// TEST ONLY: the dry host (above). Begin makes the selection (a dry group of inUnits, returned as the reference the
-// bodies take); End returns the log (words: an event code and its values) and the keeps' disagreements (the store's
-// test against the object's), and frees the dry groups and goals.
-void* EEUnitHostDryBegin(const std::vector<EEComplexUnit*>& inUnits);
-void EEUnitHostDryEnd(std::vector<uint32_t>& outLog, unsigned long& outMismatches);
 
 // TEST ONLY: the group command sweep (EEGroupCommandSweep.cpp; USGC records; EE-SIM, every five game minutes)
 void EEGroupCommandSweep();

@@ -7,25 +7,17 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
-#include "ee/EEWorldConstants.h"
 #include "ee/EEDatabaseTables.h"
 #include "rust/render/ge.h"
-#include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
-#include "ee/EESightCapture.h"
 
 namespace {
 

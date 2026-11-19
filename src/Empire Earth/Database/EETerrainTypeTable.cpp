@@ -8,7 +8,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
@@ -40,18 +39,11 @@ void EETerrainTypeTable::Unload()
 }
 
 // the lookup's classes (included after the table's init chain, as EETerrainTable.cpp does)
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGlobalConstants.h"
-#include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
 

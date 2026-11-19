@@ -107,6 +107,11 @@ impl EeWonTree {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         call_host(self.host, self.comp, op, a, b, c, d)
     }
     fn op1(&self, op: Op, a: isize) -> isize {
@@ -841,7 +846,9 @@ pub extern "C" fn ee_won_tree_new(
     host: EeWonGuiHostFn,
     list: *const EeWonList,
 ) -> *mut EeWonTree {
-    Box::into_raw(Box::new(EeWonTree::new(component, host, list)))
+    let made = Box::into_raw(Box::new(EeWonTree::new(component, host, list)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Tree, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -849,6 +856,7 @@ pub extern "C" fn ee_won_tree_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_tree_free(tree: *mut EeWonTree) {
     if !tree.is_null() {
+        crate::registry::unregister(tree as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(tree) });
     }
@@ -874,7 +882,9 @@ pub unsafe extern "C" fn ee_won_tree_call(
 /// `ItemTop`, `ItemContains` and the references.
 #[no_mangle]
 pub extern "C" fn ee_won_tnode_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonTNode {
-    Box::into_raw(Box::new(EeWonTNode::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonTNode::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::TreeNode, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -882,6 +892,7 @@ pub extern "C" fn ee_won_tnode_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_tnode_free(node: *mut EeWonTNode) {
     if !node.is_null() {
+        crate::registry::unregister(node as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(node) });
     }

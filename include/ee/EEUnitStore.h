@@ -57,12 +57,9 @@ void EEGoalQueueDropped(EEUnitVectorItem* inQueue);
 // holders write through to it by object.
 void EEUnitStoreInsertUnlisted(RTSUnit* inUnit);
 
-// the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order): each change
-// of the deque reported where it is made (UpdateActiveUnits, RebuildActiveUnits, Clear); EEUnitOrderReset copies the
-// deque whole (after a load's reorder, EEPhysics::Tick's after-load fixups). USCK compares the two.
-void EEUnitOrderPush(unsigned long inID);
-void EEUnitOrderErase(unsigned long inID);
-void EEUnitOrderClear();
+// the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order):
+// EEUnitOrderReset copies the deque whole (after a load's reorder, EEPhysics::Tick's after-load fixups). USCK
+// compares the two.
 void EEUnitOrderReset();
 
 class EEPlayer;

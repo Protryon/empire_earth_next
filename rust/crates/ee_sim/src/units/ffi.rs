@@ -97,24 +97,6 @@ pub extern "C" fn ee_units_store_checksum_flag2() -> u64 {
     with_store(|s| s.checksum_flag2())
 }
 
-/// `EEWorld::mUpdateUnits.push_back` (`order`).
-#[no_mangle]
-pub extern "C" fn ee_units_order_push(id: u32) {
-    with_order(|o| o.push(id));
-}
-
-/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
-#[no_mangle]
-pub extern "C" fn ee_units_order_erase(id: u32) -> bool {
-    with_order(|o| o.erase(id))
-}
-
-/// `EEWorld::mUpdateUnits.clear()`.
-#[no_mangle]
-pub extern "C" fn ee_units_order_clear() {
-    with_order(|o| o.clear());
-}
-
 /// The number of stepped units listed.
 #[no_mangle]
 pub extern "C" fn ee_units_order_count() -> u32 {
@@ -296,17 +278,32 @@ pub unsafe extern "C" fn ee_units_fill_members(ids: *const u32, count: usize, sl
     taken.len()
 }
 
+/// The bodies' host: the game's, or the dry host over it while this thread runs a dry sweep (`dry`, TEST ONLY).
+#[cfg(not(test))]
+macro_rules! with_host {
+    ($host:ident => $body:block) => {
+        if crate::units::dry::active() {
+            let mut $host = crate::units::dry::DryHost { game: crate::units::host::game::GameHost };
+            $body
+        } else {
+            let mut $host = crate::units::host::game::GameHost;
+            $body
+        }
+    };
+}
+
 /// `EEMExplore::Execute`'s body (`group::explore`) for the sender `player` (an `EEPlayer*`) and its selection
 /// (`EEGroup*`), through the game's host calls.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_explore(player: *mut c_void, selection: *mut c_void) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::explore(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-    );
+    with_host!(host => {
+        crate::units::group::explore(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+        );
+    })
 }
 
 /// `EEActiveGroup::KeepGroundAttackers`' test over the store (`group::keeps_ground_attacker`): whether the group keeps
@@ -327,14 +324,15 @@ pub extern "C" fn ee_units_keeps_non_citizen(id: u32) -> bool {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_add_patrol_point(player: *mut c_void, selection: *mut c_void, x: f32, y: f32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::add_patrol_point(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        x,
-        y,
-    );
+    with_host!(host => {
+        crate::units::group::add_patrol_point(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            x,
+            y,
+        );
+    })
 }
 
 /// `EEMAttackUnit::Execute`'s body (`group::attack_unit`) for the sender, its selection, the target id and the
@@ -348,22 +346,24 @@ pub extern "C" fn ee_units_attack_unit(
     queued: bool,
     convert: bool,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    let (player, selection) = (crate::units::host::HostRef(player), crate::units::host::HostRef(selection));
-    crate::units::group::attack_unit(&mut host, player, selection, target, queued, convert);
+    with_host!(host => {
+        let (player, selection) = (crate::units::host::HostRef(player), crate::units::host::HostRef(selection));
+        crate::units::group::attack_unit(&mut host, player, selection, target, queued, convert);
+    })
 }
 
 /// `EEMHealUnit::Execute`'s body (`group::heal_unit`) for the sender, its selection and the target id.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_heal_unit(player: *mut c_void, selection: *mut c_void, target: u32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::heal_unit(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        target,
-    );
+    with_host!(host => {
+        crate::units::group::heal_unit(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            target,
+        );
+    })
 }
 
 /// `EEMPathTo::Execute`'s body (`group::path_to`) for the sender, its selection, the message's point (read, and
@@ -385,17 +385,18 @@ pub unsafe extern "C" fn ee_units_path_to(
     queued: bool,
     group_movement: bool,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    let (player, selection) = (crate::units::host::HostRef(player), crate::units::host::HostRef(selection));
-    let o = crate::units::group::PathToOptions { facing, forced, rotating, queued, group_movement };
-    // SAFETY: the caller's two floats
-    let (px, py) = unsafe { (*x, *y) };
-    if let Some((nx, ny)) = crate::units::group::path_to(&mut host, player, selection, px, py, o) {
-        unsafe {
-            *x = nx;
-            *y = ny;
+    with_host!(host => {
+        let (player, selection) = (crate::units::host::HostRef(player), crate::units::host::HostRef(selection));
+        let o = crate::units::group::PathToOptions { facing, forced, rotating, queued, group_movement };
+        // SAFETY: the caller's two floats
+        let (px, py) = unsafe { (*x, *y) };
+        if let Some((nx, ny)) = crate::units::group::path_to(&mut host, player, selection, px, py, o) {
+            unsafe {
+                *x = nx;
+                *y = ny;
+            }
         }
-    }
+    })
 }
 
 /// `EEMAttackGround::Execute`'s body (`group::attack_ground`) for the sender `player` (an `EEPlayer*`), its selection
@@ -403,27 +404,29 @@ pub unsafe extern "C" fn ee_units_path_to(
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_attack_ground(player: *mut c_void, selection: *mut c_void, x: f32, y: f32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::attack_ground(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        x,
-        y,
-    );
+    with_host!(host => {
+        crate::units::group::attack_ground(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            x,
+            y,
+        );
+    })
 }
 
 /// `EEMPatrol::Execute`'s body (`group::patrol`) for the sender, its selection and the message's target id.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_patrol(player: *mut c_void, selection: *mut c_void, target: i32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::patrol(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        target,
-    );
+    with_host!(host => {
+        crate::units::group::patrol(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            target,
+        );
+    })
 }
 
 /// `EEMGatherResource::Execute`'s body (`group::gather`) for the sender, its selection, the target id and the
@@ -431,28 +434,30 @@ pub extern "C" fn ee_units_patrol(player: *mut c_void, selection: *mut c_void, t
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_gather(player: *mut c_void, selection: *mut c_void, target: u32, queued: bool) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::gather(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        target,
-        queued,
-    );
+    with_host!(host => {
+        crate::units::group::gather(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            target,
+            queued,
+        );
+    })
 }
 
 /// `EEMRepairUnit::Execute`'s body (`group::repair`) for the sender, its selection, the target id and the queued flag.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_repair(player: *mut c_void, selection: *mut c_void, target: u32, queued: bool) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::repair(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        target,
-        queued,
-    );
+    with_host!(host => {
+        crate::units::group::repair(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            target,
+            queued,
+        );
+    })
 }
 
 /// `EEActiveGroup::KeepCitizens`' test over the store (`group::keeps_citizen`): whether the group keeps the unit.
@@ -474,42 +479,45 @@ pub extern "C" fn ee_units_build_wall(
     end_x: f32,
     end_y: f32,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::build_wall(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        technology,
-        (start_x, start_y),
-        (end_x, end_y),
-    );
+    with_host!(host => {
+        crate::units::group::build_wall(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            technology,
+            (start_x, start_y),
+            (end_x, end_y),
+        );
+    })
 }
 
 /// `EEMUnloadTransport::Execute`'s body (`group::unload_transport`) for the sender, its selection and the tile.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_unload_transport(player: *mut c_void, selection: *mut c_void, x: i64, y: i64) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::unload_transport(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        x,
-        y,
-    );
+    with_host!(host => {
+        crate::units::group::unload_transport(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            x,
+            y,
+        );
+    })
 }
 
 /// `EEMDropoffResource::Execute`'s body (`group::dropoff_resource`) for the sender, its selection and the drop-off id.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_dropoff_resource(player: *mut c_void, selection: *mut c_void, dropoff: u32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::group::dropoff_resource(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        dropoff,
-    );
+    with_host!(host => {
+        crate::units::group::dropoff_resource(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            dropoff,
+        );
+    })
 }
 
 /// `EEMBuildUnit::Execute`'s body (`commands::build_unit`) for the sender, its selection, the technology, the tile
@@ -524,29 +532,31 @@ pub extern "C" fn ee_units_build_unit(
     y: i64,
     queued: bool,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::commands::build_unit(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        technology,
-        x,
-        y,
-        queued,
-    );
+    with_host!(host => {
+        crate::units::commands::build_unit(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            technology,
+            x,
+            y,
+            queued,
+        );
+    })
 }
 
 /// `EEMSmartFarmers::Execute`'s body (`commands::smart_farmers`) for the sender, its selection and the target id.
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_smart_farmers(player: *mut c_void, selection: *mut c_void, target: u32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::commands::smart_farmers(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        target,
-    );
+    with_host!(host => {
+        crate::units::commands::smart_farmers(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            target,
+        );
+    })
 }
 
 /// `EEMSetAirportCommand::Execute`'s body (`rally::set_airport_command`) for the sender, its selection (null: none),
@@ -563,17 +573,18 @@ pub extern "C" fn ee_units_set_airport_command(
     target: i32,
     queued: u8,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::rally::set_airport_command(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        x,
-        y,
-        command,
-        target,
-        queued != 0,
-    );
+    with_host!(host => {
+        crate::units::rally::set_airport_command(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            x,
+            y,
+            command,
+            target,
+            queued != 0,
+        );
+    })
 }
 
 /// `EEMSetRallyGoal::Execute`'s body (`rally::set_rally_goal`) for the sender, the building's id, the point, the
@@ -581,32 +592,35 @@ pub extern "C" fn ee_units_set_airport_command(
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_set_rally_goal(player: *mut c_void, building: u32, x: f32, y: f32, target: i32, queued: u8) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::rally::set_rally_goal(
-        &mut host,
-        crate::units::host::HostRef(player),
-        building,
-        x,
-        y,
-        target,
-        queued != 0,
-    );
+    with_host!(host => {
+        crate::units::rally::set_rally_goal(
+            &mut host,
+            crate::units::host::HostRef(player),
+            building,
+            x,
+            y,
+            target,
+            queued != 0,
+        );
+    })
 }
 
 /// `EEMClearAirportCommands::Execute`'s body (`rally::clear_airport_commands`) for the sender's selection (null: none).
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_clear_airport_commands(selection: *mut c_void) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::rally::clear_airport_commands(&mut host, crate::units::host::HostRef(selection));
+    with_host!(host => {
+        crate::units::rally::clear_airport_commands(&mut host, crate::units::host::HostRef(selection));
+    })
 }
 
 /// `EEMStopActiveGroup::Execute`'s body (`rally::stop_active_group`) for the sender's selection (null: none).
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_stop_active_group(selection: *mut c_void) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::rally::stop_active_group(&mut host, crate::units::host::HostRef(selection));
+    with_host!(host => {
+        crate::units::rally::stop_active_group(&mut host, crate::units::host::HostRef(selection));
+    })
 }
 
 /// `EEMLoadGarrison::Execute`'s body (`boarding::load_garrison`) for the sender, its selection (null: none) and the
@@ -614,13 +628,14 @@ pub extern "C" fn ee_units_stop_active_group(selection: *mut c_void) {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_load_garrison(player: *mut c_void, selection: *mut c_void, garrison: u32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::boarding::load_garrison(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        garrison,
-    );
+    with_host!(host => {
+        crate::units::boarding::load_garrison(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            garrison,
+        );
+    })
 }
 
 /// `EEMLoadTransport::Execute`'s body (`boarding::load_transport`) for the sender, its selection (null: none), the
@@ -628,14 +643,15 @@ pub extern "C" fn ee_units_load_garrison(player: *mut c_void, selection: *mut c_
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_load_transport(player: *mut c_void, selection: *mut c_void, transport: u32, passenger: i32) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::boarding::load_transport(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        transport,
-        passenger,
-    );
+    with_host!(host => {
+        crate::units::boarding::load_transport(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            transport,
+            passenger,
+        );
+    })
 }
 
 /// `EEMResearchTechnology::Execute`'s body (`research::research_technology`) for the sender, its selection (null:
@@ -649,15 +665,16 @@ pub extern "C" fn ee_units_research_technology(
     technology: i32,
     five: u8,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::research::research_technology(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        building,
-        technology,
-        five != 0,
-    );
+    with_host!(host => {
+        crate::units::research::research_technology(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            building,
+            technology,
+            five != 0,
+        );
+    })
 }
 
 /// `EEMHackANewUnit::Execute`'s body (`hack::hack_new_unit`) for the sender, the message's class (-1: the sender's
@@ -665,8 +682,9 @@ pub extern "C" fn ee_units_research_technology(
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_units_hack_new_unit(sender: *mut c_void, unit_type: i32, x: f32, y: f32, player_id: i64) -> i32 {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::hack::hack_new_unit(&mut host, crate::units::host::HostRef(sender), unit_type, x, y, player_id)
+    with_host!(host => {
+        crate::units::hack::hack_new_unit(&mut host, crate::units::host::HostRef(sender), unit_type, x, y, player_id)
+    })
 }
 
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
@@ -682,17 +700,18 @@ pub extern "C" fn ee_units_cast_calamity(
     y: i32,
     technology: i32,
 ) {
-    let mut host = crate::units::host::game::GameHost;
-    crate::units::commands::cast_calamity(
-        &mut host,
-        crate::units::host::HostRef(player),
-        crate::units::host::HostRef(selection),
-        caster,
-        target,
-        x,
-        y,
-        technology,
-    );
+    with_host!(host => {
+        crate::units::commands::cast_calamity(
+            &mut host,
+            crate::units::host::HostRef(player),
+            crate::units::host::HostRef(selection),
+            caster,
+            target,
+            x,
+            y,
+            technology,
+        );
+    })
 }
 
 #[cfg(test)]

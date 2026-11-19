@@ -793,6 +793,42 @@ constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO = 30;
 /// player `a`'s units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
 
+/// the carrier `a`'s tag point `c` at plane `b`'s frame in its scaled location into `io.p` (0: no tag points)
+constexpr static const int32_t EE_UNITS_CLS_CR_TAG = 73;
+
+/// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_ORIENTATION = 74;
+
+/// unit `a`'s `SetTransformation(its location at io.p, true)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_POSITION = 75;
+
+/// unit `a`'s `mPhysicalModel.SetScale(io.f)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_SCALE = 76;
+
+/// class `b`'s `RouteDockWaypoint(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_CR_ROUTE_DOCK = 77;
+
+/// unit `a`'s player's air traffic control of its class is not NULL
+constexpr static const int32_t EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC = 78;
+
+/// unit `a`'s approach goal at `io.p` (the location goal's point, else a new location goal)
+constexpr static const int32_t EE_UNITS_CLS_CR_DECK_GOAL = 79;
+
+/// `EELocationGoalPoint(unit a's goal)` into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_CR_LOCATION_GOAL_POINT = 80;
+
+/// unit `a` without a home base: the first slot's airport, else killed; the home base after
+constexpr static const int32_t EE_UNITS_CLS_CR_HOME_FIRST_SLOT = 81;
+
+/// `gPhysics->mRandom.Generate()` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
+
+/// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
+
+/// `gContinentManager.CanGetTo(unit a, c, d)`
+constexpr static const int32_t EE_UNITS_CLS_CR_CAN_GET_TO = 84;
+
 /// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
 constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
 
@@ -1167,6 +1203,168 @@ constexpr static const int32_t EE_UNITS_CLS_GOAL_HAS_LOCATION = 37;
 
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 constexpr static const int32_t EE_UNITS_CLS_REQUEST_QUEUED = 38;
+
+/// the mesh `a`'s `GetZ(c, d)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_LV_MESH_Z = 85;
+
+/// the mesh `a`'s `SetZ(c, d, io.f)`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_MESH_Z = 86;
+
+/// the tile `a`'s `mHeight = io.f`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_TILE_HEIGHT = 87;
+
+/// `&gWorld.mMap->mTerrainMesh`
+constexpr static const int32_t EE_UNITS_CLS_LV_MAP_MESH = 88;
+
+/// class `b`'s `CreateUnit(c, d, player io.a, foundation io.b, creator a)->mComplexUnit`
+constexpr static const int32_t EE_UNITS_CLS_LV_CREATE_UNIT = 89;
+
+/// unit `a`'s `LinkPart(b)`
+constexpr static const int32_t EE_UNITS_CLS_LV_LINK_PART = 90;
+
+/// unit `a`'s `SetFacing(c)`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_FACING = 91;
+
+/// `gCameraFollowing = false`
+constexpr static const int32_t EE_UNITS_CLS_LV_CAMERA_OFF = 92;
+
+/// `gWorld.mMap->GetClosestTile(io.p, ...)`'s `mHeight` into `io.f` (0: no tile)
+constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
+
+/// `EEGetPursuerOf(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
+
+/// `EEGetDirectionTo(a, b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
+
+/// unit `a`'s `GetLineOfSight()` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_MV_LINE_OF_SIGHT = 42;
+
+/// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
+constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
+
+/// `gPhysics->GetRandom(1L, 2L)`
+constexpr static const int32_t EE_UNITS_CLS_MV_RANDOM_1_2 = 44;
+
+/// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL = 45;
+
+/// unit `a`'s `mLastAttacker` dereferenced and cleared
+constexpr static const int32_t EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER = 46;
+
+/// goal `b`'s `mKind`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_KIND = 47;
+
+/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) of `io.p` (both read it as an input) into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_LOCATION = 48;
+
+/// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
+constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_FLAG = 49;
+
+/// goal `b`'s `mPathAttempts += c`
+constexpr static const int32_t EE_UNITS_CLS_MV_PATH_ATTEMPTS = 50;
+
+/// goal `b`'s `GetSidestepCount()` (c -1), else `SetSidestepCount(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SIDESTEP = 51;
+
+/// goal `b`'s `SetGroupPathState(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_GROUP_PATH_STATE = 52;
+
+/// goal `b`'s `GetAttackTarget()->GetComplexUnit()`
+constexpr static const int32_t EE_UNITS_CLS_MV_ATTACK_TARGET = 53;
+
+/// unit `a`'s `IgnoreTarget(b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_IGNORE_TARGET = 54;
+
+/// `EEFindNewTarget` over `EEFOFindNewTargetInMeleeRange(a, b)` with attack goal `c` from `a`'s tile
+constexpr static const int32_t EE_UNITS_CLS_MV_MELEE_RETARGET = 55;
+
+/// unit `a`'s `SetBlockingUnit(b)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_BLOCKING = 56;
+
+/// unit `a`'s `AddWaypoint(io.p, c != 0)`
+constexpr static const int32_t EE_UNITS_CLS_MV_ADD_WAYPOINT = 57;
+
+/// unit `a`'s `mWaypoints[c].mLocation` into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_MV_WAYPOINT = 58;
+
+/// unit `a`'s `GetSecondWaypoint(io.p)` (its answer: 0 when there is one)
+constexpr static const int32_t EE_UNITS_CLS_MV_SECOND_WAYPOINT = 59;
+
+/// unit `a`'s `NextWaypoint()`
+constexpr static const int32_t EE_UNITS_CLS_MV_NEXT_WAYPOINT = 60;
+
+/// unit `a`'s `DistanceSquared3D(io.p)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_MV_DISTANCE_3D = 61;
+
+/// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
+constexpr static const int32_t EE_UNITS_CLS_MV_BOUNDED = 62;
+
+/// `gPathManager.FindBoundedPath(a, map, c, a's tile, (io.a, io.b), path, 50, true, &reached)`: the path pushed
+constexpr static const int32_t EE_UNITS_CLS_MV_FIND_BOUNDED_PATH = 63;
+
+/// `EEPathManager::MergeWaypoints(the list's points, a's mWaypoints, 0)`: the list replaced
+constexpr static const int32_t EE_UNITS_CLS_MV_MERGE_WAYPOINTS = 64;
+
+/// unit `a`'s `SetVelocity(io.f)`
+constexpr static const int32_t EE_UNITS_CLS_MV_SET_VELOCITY = 65;
+
+/// unit `a`'s `StartAction(c)`
+constexpr static const int32_t EE_UNITS_CLS_MV_START_ACTION = 66;
+
+/// class `b`'s `ActionChanged(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_MV_ACTION_CHANGED = 67;
+
+/// unit `a`'s `UpdateWaterState(true)`
+constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
+
+/// `gPathManager.CancelPaths(a, true)`
+constexpr static const int32_t EE_UNITS_CLS_MV_CANCEL_PATHS = 69;
+
+/// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
+constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
+
+/// `PathToGoal`'s request for unit `a`, goal `b` to `(io.a, io.b)`: revisions `c`, graph `d & 1`, arg8 `d & 2`
+constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
+
+/// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
+constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
+
+/// unit `a`'s player's `mNumVitalBuildings < 1`
+constexpr static const int32_t EE_UNITS_CLS_ST_NO_VITAL = 93;
+
+/// `gPhysics`' `mTickTimeMs` into `io.a`, `GetTickTime()` into `io.f`, `mGameTime` into `io.b`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOCK = 94;
+
+/// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
+constexpr static const int32_t EE_UNITS_CLS_ST_CINEMATIC_INTERVAL = 95;
+
+/// `EEIsCloakedEnemyOf(unit a, the current player)`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOAKED_ENEMY = 96;
+
+/// `gMiniMap->MoveUnit(a, ...)` onto its tile (c 1) or off it (c 0)
+constexpr static const int32_t EE_UNITS_CLS_ST_MINI_MAP = 97;
+
+/// unit `a`'s `SetCloakableChain(d)` (c 0), `SetCloakedChain(d)` (c 1), `SetOpacityChain(io.f)` (c 2)
+constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
+
+/// class `b`'s `UpdateCloakDetection(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
+
+/// TEST ONLY: `EESimCaptureRecord::Active()`
+constexpr static const int32_t EE_UNITS_CLS_ST_NOTING = 100;
+
+/// TEST ONLY: `EEUnitStepNote(c, d, the io.a words at io.list)`
+constexpr static const int32_t EE_UNITS_CLS_ST_NOTE = 101;
+
+/// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
+constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
+
+/// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
+
+/// `gPhysics->GetRandom(io.p[0], io.p[1])` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_ST_RANDOM_RANGE = 104;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -5264,6 +5462,55 @@ void ee_units_cz_find_gather_point(uint64_t unit,
 /// `EEUnitClass::HasGatherPoint(unit, resource)`.
 uint8_t ee_units_cz_has_gather_point(uint64_t unit, uint64_t resource);
 
+/// # Safety
+/// Both are live classes' records.
+uint8_t ee_units_cls_can_enter(const EeUnitsUnitClassFields *c,
+                               const EeUnitsUnitClassFields *other);
+
+/// # Safety
+/// A live class's record.
+int32_t ee_units_cls_num_goal_queues(const EeUnitsUnitClassFields *c);
+
+/// # Safety
+/// A live class's record.
+uint8_t ee_units_cls_shares_rally_point(const EeUnitsUnitClassFields *c, uint64_t other);
+
+/// # Safety
+/// A live class's record.
+uint8_t ee_units_cls_shares_research(const EeUnitsUnitClassFields *c, int64_t other);
+
+/// # Safety
+/// A live class's record; `stats` a live stats record or null.
+int32_t ee_units_cls_passable_flags(const EeUnitsUnitClassFields *c,
+                                    const EeUnitsUnitClassUpgradeFields *stats);
+
+/// # Safety
+/// As [`ee_units_cls_passable_flags`].
+uint8_t ee_units_cls_can_move_on_terrain(const EeUnitsUnitClassFields *c,
+                                         const EeUnitsUnitClassUpgradeFields *stats,
+                                         int32_t terrain);
+
+/// `EEUnitClass::LandableReturnToAirport(unit)`.
+uint8_t ee_units_cr_return_to_airport(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::RouteDockWaypoint(unit)`.
+void ee_units_cr_route_dock_waypoint(uint64_t unit);
+
+/// `EEUnitClass::ApproachCarrier(unit, steep)`.
+void ee_units_cr_approach_carrier(uint64_t class_, uint64_t unit, uint8_t steep);
+
+/// `EEUnitClass::TakeOffFromCarrier(unit)`.
+void ee_units_cr_take_off_from_carrier(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::IsAwayFromGoal(unit)`.
+uint8_t ee_units_cr_is_away_from_goal(uint64_t unit);
+
+/// `EEAirplaneCircleSide(class, unit)`.
+void ee_units_cr_circle_side(uint64_t unit);
+
+/// `EEAirplaneHoldingPattern(class, unit)`.
+void ee_units_cr_holding_pattern(uint64_t class_, uint64_t unit);
+
 extern int64_t ee_units_cls_host(int32_t op,
                                  uint64_t a,
                                  uint64_t b,
@@ -5414,6 +5661,98 @@ int32_t ee_units_cls_condition(uint64_t class_,
 /// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
 int32_t ee_units_cls_base_condition(uint64_t class_, uint64_t unit, uint32_t event);
 
+/// `EEUnitClass::LevelGround(mesh, x, y, z)`.
+///
+/// # Safety
+/// `z` is a writable float.
+void ee_units_lv_level_ground(uint64_t class_, uint64_t mesh, uint64_t x, uint64_t y, float *z);
+
+/// `EEUnitClass::LevelRunway*(airport)` by the direction's facing (0 +y, 1 -y, 2 +x, else -x).
+void ee_units_lv_level_runway(uint64_t unit, uint64_t facing);
+
+/// `EEUnitClass::CreateRunways(airport, player, foundation)`.
+void ee_units_lv_create_runways(uint64_t class_, uint64_t unit, int64_t player, uint8_t foundation);
+
+/// Pushes a point onto a host operation's list.
+///
+/// # Safety
+/// `list` is the `EeUnitsClsIo::list` of a running operation.
+void ee_units_cls_push_point(EeUnitsClsListHandle *list, float x, float y, float z);
+
+/// A host operation's points (x, y, z each), `*count` of them.
+///
+/// # Safety
+/// `list` is the `EeUnitsClsIo::list` of a running operation; `count` is writable.
+const float *ee_units_cls_points(EeUnitsClsListHandle *list, size_t *count);
+
+/// Empties a host operation's points (before the C++ pushes their replacement).
+///
+/// # Safety
+/// As [`ee_units_cls_points`].
+void ee_units_cls_clear_points(EeUnitsClsListHandle *list);
+
+/// `EEUnitClass::FindPath(unit)`.
+void ee_units_mv_find_path(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::NextWaypoint(unit)`.
+void ee_units_mv_next_waypoint(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::BaseHasArrived(unit, value)`.
+uint8_t ee_units_mv_has_arrived(uint64_t class_, uint64_t unit, float value);
+
+/// `EEUnitClass::AddWaypointAt(unit, x, y, z, snap)`.
+void ee_units_mv_add_waypoint_at(uint64_t unit, float x, float y, float z, uint8_t snap);
+
+/// `EEUnitClass::PathToward(unit, from, to, snap)` (the points' x, y, z).
+void ee_units_mv_path_toward(uint64_t unit,
+                             float fx,
+                             float fy,
+                             float fz,
+                             float tx,
+                             float ty,
+                             float tz,
+                             uint8_t snap);
+
+/// `EEUnitClass::PathToGoal(unit)`.
+void ee_units_mv_path_to_goal(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::Flee(unit)`.
+void ee_units_mv_flee(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::FleeAttacker(unit)`.
+void ee_units_mv_flee_attacker(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UpdateCamouflageTimer(unit)`.
+void ee_units_st_camouflage(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::RegeneratePower(unit)`.
+void ee_units_st_power(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UpdateCloakDetection(unit)`.
+void ee_units_st_cloak_detection(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UnitDamaged(unit, attacker, damage)`.
+void ee_units_st_unit_damaged(uint64_t class_, uint64_t unit);
+
+/// TEST ONLY: begins a dry run of this thread over the selection's units (`count` ids); its reference, which the
+/// bodies take as the sender's selection.
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null for 0).
+void *ee_units_dry_begin(const uint32_t *ids,
+                         size_t count);
+
+/// TEST ONLY: the length of this thread's dry log so far.
+size_t ee_units_dry_log_len();
+
+/// TEST ONLY: ends the dry run: its log into `out` (room for `ee_units_dry_log_len()` words), the keeps'
+/// disagreements into `mismatches`; the number of words.
+///
+/// # Safety
+/// `out` has room for the log; `mismatches` is valid.
+size_t ee_units_dry_end(uint32_t *out,
+                        uint32_t *mismatches);
+
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
 
@@ -5459,15 +5798,6 @@ bool ee_units_store_set_location(uint32_t id,
 
 /// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
 uint64_t ee_units_store_checksum_flag2();
-
-/// `EEWorld::mUpdateUnits.push_back` (`order`).
-void ee_units_order_push(uint32_t id);
-
-/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
-bool ee_units_order_erase(uint32_t id);
-
-/// `EEWorld::mUpdateUnits.clear()`.
-void ee_units_order_clear();
 
 /// The number of stepped units listed.
 uint32_t ee_units_order_count();
@@ -5862,8 +6192,6 @@ extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, v
 
 extern void *ee_units_host_unit_patrol_group(uint32_t unit);
 
-extern int64_t ee_units_host_object_unit_type(uint32_t unit);
-
 extern void ee_units_host_group_set_queued(void *group, uint8_t queued);
 
 extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
@@ -5892,8 +6220,6 @@ extern void ee_units_host_group_spread_around_unit(void *group,
                                                    uint32_t target,
                                                    int64_t x,
                                                    int64_t y);
-
-extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
@@ -5926,8 +6252,6 @@ extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 extern int64_t ee_units_host_technology_unit_class(void *player,
                                                    int32_t technology,
                                                    uint8_t *found);
-
-extern int64_t ee_units_host_player_num_capitols(void *player);
 
 extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
 
@@ -5984,8 +6308,6 @@ extern uint8_t ee_units_host_technology_contains(void *player,
                                                  int32_t technology,
                                                  int64_t unit_type);
 
-extern int64_t ee_units_host_unit_power(uint32_t unit);
-
 extern int64_t ee_units_host_calamity_cost(void *class_);
 
 extern void *ee_units_host_unit_player(uint32_t unit);
@@ -6009,8 +6331,6 @@ extern uint8_t ee_units_host_unit_seen_by(uint32_t unit, void *player);
 extern uint8_t ee_units_host_unit_ghost_seen(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index);
-
-extern uint8_t ee_units_host_unit_class_targetable(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
 
@@ -6071,8 +6391,6 @@ extern int64_t ee_units_host_unit_research_state(uint32_t unit,
                                                  uint8_t *disabled);
 
 extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
-
-extern int32_t ee_units_host_player_hack_class(void *player);
 
 extern float ee_units_host_player_class_scale(int64_t player_id, int32_t unit_type);
 

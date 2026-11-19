@@ -98,8 +98,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         theUnit->StartAction((unsigned long)a[0]);
         theUnit->mUnitClass->ActionChanged(theUnit);
         return 0;
-    case EE_COMBAT_G_ON_TILE: return theUnit->mTileNode != NULL;
-    case EE_COMBAT_G_COMPLEX: return (int64_t)Handle(reinterpret_cast<EEUnit*>(theUnit)->mComplexUnit);
     case EE_COMBAT_G_ATTACKER_FLAGS:
         if (theUnit == NULL)
             return 0;
@@ -108,7 +106,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
     case EE_COMBAT_G_NUM_ATTACKERS:
         theUnit->mNumAttackers += (long)a[0];
         return theUnit->mNumAttackers;
-    case EE_COMBAT_G_PARTS: return (theUnit->mNextPart != NULL ? 1 : 0) | (theUnit->mPreviousPart != NULL ? 2 : 0);
     case EE_COMBAT_G_ATTACK_PART: return (int64_t)Handle(EEGetAttackPart(theUnit, UnitOf((uint64_t)a[0])));
     case EE_COMBAT_G_REFERENCE: reinterpret_cast<EEUnit*>(theUnit)->Reference(); return 0;
     case EE_COMBAT_G_DEREFERENCE: reinterpret_cast<EEUnit*>(theUnit)->Dereference(); return 0;
@@ -120,8 +117,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         a[3] = theTarget->GetTileY();
         return 0;
     }
-    case EE_COMBAT_G_FAMILY: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->mFamily;
-    case EE_COMBAT_G_CATEGORY: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->mCategory;
     case EE_COMBAT_G_PLAYER_ATTACK: {
         EEPlayer* thePlayer = theUnit->mPlayer;
         if (a[0] == 1) {
@@ -149,9 +144,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         return a[1] ? (int64_t)Handle(EEUnitCast<EEComplexUnit>(theFound)) : (int64_t)Handle(static_cast<EEUnit*>(theFound));
     }
     case EE_COMBAT_G_FIND_GHOST: return (int64_t)Handle(EEFindLoadedGhostUnit((unsigned long)a[0]));
-    case EE_COMBAT_G_ID: return (int64_t)(uint32_t)reinterpret_cast<EEUnit*>(theUnit)->mUnitID;
-    case EE_COMBAT_G_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mHitPoints;
-    case EE_COMBAT_G_VELOCITY: return Bits(theUnit->mVelocity);
     case EE_COMBAT_G_POSITION: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
         GE3DPoint thePoint(Float(a[2]), Float(a[3]), Float(a[4]));
@@ -164,12 +156,10 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         a[2] = Bits(thePoint.GetZ());
         return 0;
     }
-    case EE_COMBAT_G_PLAYER: return (int64_t)Handle(reinterpret_cast<EEUnit*>(theUnit)->mPlayer);
     case EE_COMBAT_G_PLAYER_READ: {
         EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inUnit));
         return a[0] == 1 ? (int64_t)thePlayer->mEnemies[a[1]] : (int64_t)thePlayer->mPlayerID;
     }
-    case EE_COMBAT_G_AMMO_TYPE: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->mAmmoType;
     case EE_COMBAT_G_CAN_BE_ATTACKED: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->CanBeAttacked();
     case EE_COMBAT_G_WRITE_U32: {
         unsigned long theValue = (unsigned long)(uint32_t)a[0];
@@ -234,8 +224,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         EEUnitClass* theClass = reinterpret_cast<EEUnit*>(theUnit)->mUnitClass;
         return theClass != NULL ? (int64_t)(uintptr_t)(const char*)theClass->mName : 0;
     }
-    case EE_COMBAT_G_MAX_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mStats->mMaxHitPoints;
-    case EE_COMBAT_G_HAS_GROUP: return theUnit->mActiveGroup != NULL;
     // the heal goal's (ee_combat goal_heal.rs)
     case EE_COMBAT_G_HEAL_ENV:
         a[0] = ::gWorld.mInCinematic;

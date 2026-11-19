@@ -13,8 +13,6 @@
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
 #include "rust/sim/rmap.h"
-#include "platform/PlatFile.h"
-#include "ee/EERandomMapIDs.h"
 
 static UString gName("Default");
 
