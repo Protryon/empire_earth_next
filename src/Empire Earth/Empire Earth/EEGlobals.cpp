@@ -301,3 +301,10 @@ UResourceFile* gResource;
 
 // TEST ONLY: the UI fixture's configure step (EETestFixture.cpp sets it at static initialization; EERun calls it first)
 void (*gEETestFixtureConfigure)();
+// TEST ONLY: the physics' hooks (were EEPhysics.cpp's; ee/EEPhysics.h): the unit being stepped (EE-SIM's random-draw
+// trace), after each tick of RTSPhysics::Main's simulation loop, each executed input's view (the UI fixture's orders)
+class EEComplexUnit;
+class NEMessage;
+EEComplexUnit* gPhysicsSteppingUnit = NULL;
+void (*gPhysicsAfterTickHook)(void) = NULL;
+void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
