@@ -86,7 +86,7 @@ enum {
 };
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
 void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore);
-void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed);
+// (the heal's work, EE_COMBAT_SO_HEAL_WORK, is recorded by ee_sim combat/goal_objects.rs)
 
 // The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
 // EE_COMBAT_SHOT_*, inClass the original's `this`)
@@ -128,8 +128,7 @@ enum {
     EE_COMBAT_GO_DESTINATION = 1,       // extra 0, 1: the attack goal's last target tile after
     EE_COMBAT_GO_SUITS = 2,             // attack ground: the target point's bits
 };
-void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                         const float* inPoint = NULL, uint32_t inExtra0 = 0, uint32_t inExtra1 = 0);
+// (the CBGO record: ee_sim combat/goal_objects.rs capture_op)
 // A body of ee_combat world.rs (EE_COMBAT_WORLD_*: IsTargetIgnored, IgnoreTarget, CanReachUnit,
 // IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host
 // (EECombatGoals.cpp); inClass the class of Attacked or FireShot (`this`), ioX, ioY EEIsAttackReachable's tile (written

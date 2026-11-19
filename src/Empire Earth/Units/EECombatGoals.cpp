@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <mutex>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -58,118 +57,14 @@
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
-namespace {
-
-const unsigned int kConditionTag = EE_COMBAT_TAG('C', 'B', 'T', 'C');
-const uint32_t kConditionBatch = 4096;
-std::mutex sConditionLock;
-uint32_t sConditionCount = 0;
-uint64_t sConditionHash = 0xcbf29ce484222325ull;
-
-void EEConditionFold(const void* inData, size_t inSize)
-{
-    const unsigned char* theBytes = (const unsigned char*)inData;
-    for (size_t i = 0; i < inSize; i++)
-        sConditionHash = (sConditionHash ^ theBytes[i]) * 0x100000001b3ull;
-}
-
-// under sConditionLock
-void EEConditionWrite()
-{
-    EESimCaptureRecord theRecord(kConditionTag);
-    theRecord.U32(sConditionCount);
-    theRecord.U32((uint32_t)sConditionHash);
-    theRecord.U32((uint32_t)(sConditionHash >> 32));
-    theRecord.Commit();
-    sConditionCount = 0;
-    sConditionHash = 0xcbf29ce484222325ull;
-}
-
-bool EEConditionFull()
-{
-    static const bool sFull = getenv("EE_SIM_CAPTURE_CBTC_FULL") != NULL;
-    return sFull;
-}
-
-}   // namespace
-
+// (the records' batches, CBTC .. CBGO, are Rust's: ee_sim combat/capture_fold.rs)
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut)
 {
-    if (!EESimCaptureRecord::Active())
-        return;
-    if (EEConditionFull()) {
-        EECombatCapture(kConditionTag, in, inOut);
-        return;
-    }
-    if (!EESimCaptureRecord::Keeps(kConditionTag))
-        return;
-    std::lock_guard<std::mutex> theGuard(sConditionLock);
-    EEConditionFold(&in, sizeof(in));
-    EEConditionFold(&inOut, sizeof(inOut));
-    if (++sConditionCount == kConditionBatch)
-        EEConditionWrite();
+    ee_combat_capture_condition(&in, &inOut);
 }
 
 namespace {
 
-// A folded tag: inBatch calls to a record (count, FNV-1a 64 of each call's bytes in order)
-struct EECombatFolder {
-    unsigned int mTag;
-    const char* mFullName;
-    std::mutex mLock;
-    int mFull = -1;
-    uint32_t mCount = 0;
-    uint64_t mHash = 0xcbf29ce484222325ull;
-
-    EECombatFolder(unsigned int inTag, const char* inFullName) : mTag(inTag), mFullName(inFullName) {}
-
-    // under mLock
-    void Write()
-    {
-        EESimCaptureRecord theRecord(this->mTag);
-        theRecord.U32(this->mCount);
-        theRecord.U32((uint32_t)this->mHash);
-        theRecord.U32((uint32_t)(this->mHash >> 32));
-        theRecord.Commit();
-        this->mCount = 0;
-        this->mHash = 0xcbf29ce484222325ull;
-    }
-
-    void Add(const void* inData, size_t inSize)
-    {
-        if (!EESimCaptureRecord::Active())
-            return;
-        if (this->mFull < 0)
-            this->mFull = getenv(this->mFullName) != NULL;
-        if (this->mFull) {
-            EESimCaptureRecord theRecord(this->mTag);
-            theRecord.Bytes(inData, (unsigned int)inSize);
-            theRecord.Commit();
-            return;
-        }
-        if (!EESimCaptureRecord::Keeps(this->mTag))
-            return;
-        std::lock_guard<std::mutex> theGuard(this->mLock);
-        const unsigned char* theBytes = (const unsigned char*)inData;
-        for (size_t i = 0; i < inSize; i++)
-            this->mHash = (this->mHash ^ theBytes[i]) * 0x100000001b3ull;
-        if (++this->mCount == 4096)
-            this->Write();
-    }
-
-    void Flush()
-    {
-        std::lock_guard<std::mutex> theGuard(this->mLock);
-        if (this->mCount != 0)
-            this->Write();
-    }
-};
-
-EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQR_FULL");
-EECombatFolder sShots(EE_COMBAT_TAG('C', 'B', 'S', 'O'), "EE_SIM_CAPTURE_CBSO_FULL");
-EECombatFolder sXReads(EE_COMBAT_TAG('C', 'B', 'X', 'R'), "EE_SIM_CAPTURE_CBXR_FULL");
-EECombatFolder sXActions(EE_COMBAT_TAG('C', 'B', 'X', 'A'), "EE_SIM_CAPTURE_CBXA_FULL");
-EECombatFolder sGoalObjects(EE_COMBAT_TAG('C', 'B', 'G', 'O'), "EE_SIM_CAPTURE_CBGO_FULL");
 thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
 
 uint32_t EEShotBits(float inValue)
@@ -224,17 +119,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     theRecord[19] = EEShotBits(inUnit->mVelocity);
     theRecord[20] = inUnit->mPlayer != NULL ? (uint32_t)inUnit->mPlayer->mPopulationCount : 0;
     theRecord[21] = (uint32_t)inUnit->mTileX;
-    sShots.Add(theRecord, sizeof(theRecord));
-}
-
-void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[5] = {EE_COMBAT_SO_HEAL_WORK, (uint32_t)inUnit->mUnitID,
-                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
-                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints : 0, (uint32_t)inElapsed};
-    sShots.Add(theRecord, sizeof(theRecord));
+    ee_combat_capture_fold(EE_COMBAT_FOLD_SHOTS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
@@ -245,7 +130,7 @@ void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const
     uint32_t theRecord[7] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult,
                              inExtra0, inExtra1, inExtra2};
-    sHostReads.Add(theRecord, sizeof(theRecord));
+    ee_combat_capture_fold(EE_COMBAT_FOLD_HOST_READS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
@@ -255,7 +140,7 @@ void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EE
         return;
     uint32_t theRecord[6] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, inExtra0, inExtra1};
-    sXReads.Add(theRecord, sizeof(theRecord));
+    ee_combat_capture_fold(EE_COMBAT_FOLD_X_READS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
@@ -274,7 +159,7 @@ void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const 
     }
     uint32_t theRecord[7] = {inFunc, (uint32_t)inUnit->mUnitID, inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
                              (uint32_t)inResult, inCheckLocation, (uint32_t)inUnit->mIgnoredTargets.size(), theHash};
-    sXReads.Add(theRecord, sizeof(theRecord));
+    ee_combat_capture_fold(EE_COMBAT_FOLD_X_READS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
@@ -305,36 +190,12 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
     theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
     theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer;
-    sXActions.Add(theRecord, sizeof(theRecord));
-}
-
-void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                         const float* inPoint, uint32_t inExtra0, uint32_t inExtra1)
-{
-    if (!EESimCaptureRecord::Active())
-        return;
-    uint32_t theRecord[10] = {inFunc, inKind, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
-                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, 0, 0, 0,
-                              inExtra0, inExtra1};
-    if (inPoint != NULL)
-        memcpy(&theRecord[5], inPoint, 12);
-    sGoalObjects.Add(theRecord, sizeof(theRecord));
+    ee_combat_capture_fold(EE_COMBAT_FOLD_X_ACTIONS, (const uint8_t*)theRecord, sizeof(theRecord));
 }
 
 void EECombatCaptureFlush()
 {
-    if (!EESimCaptureRecord::Active())
-        return;
-    {
-        std::lock_guard<std::mutex> theGuard(sConditionLock);
-        if (sConditionCount != 0)
-            EEConditionWrite();
-    }
-    sHostReads.Flush();
-    sShots.Flush();
-    sXReads.Flush();
-    sXActions.Flush();
-    sGoalObjects.Flush();
+    ee_combat_capture_fold_flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
