@@ -120,12 +120,6 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
     ee_screens_sefm_free(this->mRust);
 }
 
-// Adds a unit to the editor selection, showing the cargo panel for a placed carrier and the status of a lone unit
-void EEUIFScenarioEditor::SelectUnit(EEUnit* inUnit)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit, NULL);
-}
-
 // Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
 void EEUIFScenarioEditor::Close()
 {
@@ -155,36 +149,6 @@ long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
     return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DRAW_BACKGROUND, 0, NULL, theRectangle);
 }
 
-// Draws the form's polygons (no editor additions)
-long EEUIFScenarioEditor::DrawPolygons()
-{
-    return UIForm::DrawPolygons();
-}
-
-// Switches to a tab: enters or leaves full view as needed, enables its controls, enters and loads its group
-void EEUIFScenarioEditor::SelectTab(unsigned char inFlag, long inTab)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8)), NULL, NULL);
-}
-
-// Leaves the editor through the load thread, to test the scenario or to quit, back on the map tab; suspends the form
-void EEUIFScenarioEditor::ExitEditor(bool inTestScenario)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0, NULL, NULL);
-}
-
-// Resumes the editor after a load and reloads the current tab group
-void EEUIFScenarioEditor::ResumeCurrentGroup()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_RESUME_GROUP, 0, NULL, NULL);
-}
-
-// Suspends the editor and passes an event to the load thread, which posts it to the user interface
-void EEUIFScenarioEditor::PostLoadEvent(UReferenceCounter* inObject)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject, NULL);
-}
-
 // Opens the editor: editor camera, backgrounds, paused music and ambient sound, editor game view and mini map,
 // enters the current tab; posts the exit action if a save asked to exit afterwards (editor_form.rs)
 void EEUIFScenarioEditor::Open()
@@ -192,48 +156,11 @@ void EEUIFScenarioEditor::Open()
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL);
 }
 
-// Suspends the editor and passes a loaded object to the load thread to show
-void EEUIFScenarioEditor::PostShowLoadedObject(UReferenceCounter* inObject)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject, NULL);
-}
-
-// Deselects every selected unit and hides the cargo panel and the unit status
-void EEUIFScenarioEditor::ClearSelection()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, NULL, NULL);
-}
-
-// Removes the first unit from the editor selection, updating the cargo panel and the unit status
-void EEUIFScenarioEditor::DeselectFirstUnit()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_FIRST, 0, NULL, NULL);
-}
-
-// Removes a unit from the editor selection, updating the cargo panel, and the unit status if it was first
-void EEUIFScenarioEditor::DeselectUnit(EEUnit* inUnit)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit, NULL);
-}
-
-// Makes the current tab group store its settings
-void EEUIFScenarioEditor::RefreshCurrentGroup()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_STORE_GROUP, 0, NULL, NULL);
-}
-
 // Sets the editor's game view rectangle and disables the current tab group while the UI is hidden
 void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsUIHidden)
 {
     float theRectangle[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_GAME_VIEW, inIsUIHidden ? 1 : 0, NULL, theRectangle);
-}
-
-// Shows the given loading text in the top label, or hides the label for an empty text
-void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0,
-                         const_cast<UWideString*>(&inText), NULL);
 }
 
 // Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),
@@ -320,23 +247,6 @@ extern "C" int32_t ee_screenscpp_sefm(uint32_t inOp, void* const* p, int32_t* i,
 {
     return EEUIFScenarioEditor::Host(inOp, p, i, f);
 }
-
-// the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25): a press posts the
-// button's action (EEAUndo, EEARedo: the UI thread's undo or redo, ee_screens game_actions.rs)
-class EEUIFSEActionButton : public UIButton {
-public:
-    EEUIFSEActionButton(unsigned long inId, uint32_t inKind, const GE2DPoint& inPosition, UIForm* inForm, unsigned long inIndex)
-        : UIButton(inId, NULL, NULL, NULL, GERectangle(inPosition, 65.0f, 25.0f), inForm, inIndex, 0),
-          mAction(new EEARust(inKind)) {}
-    virtual ~EEUIFSEActionButton() { this->mAction->Dereference(); }
-protected:
-    virtual void ButtonUp()
-    {
-        gUserInterface->PostAction(this->mAction);
-        UIButton::ButtonUp();
-    }
-    EEARust* mAction;
-};
 
 int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
@@ -435,14 +345,13 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         return 0;
     }
     case EE_SCREENS_SEFM_OP_UNDO_REDO: {
-        UIButton* t;
-        if (i[0] == 0) {
-            t = new EEUIFSEActionButton(0, kEEAEditorUndo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
-            gResource->GetString(IDS_UNDO, theText);
-        } else {
-            t = new EEUIFSEActionButton(1, kEEAEditorRedo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
-            gResource->GetString(IDS_REDO, theText);
-        }
+        // the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25: kinds over the
+        // button shell, ee_game shells_editor.rs): a press posts the button's action (EEAUndo, EEARedo)
+        EEAction* theAction = new EEARust(i[0] == 0 ? kEEAEditorUndo : kEEAEditorRedo);
+        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)theAction}, i[0] == 0 ? 0 : 1, NULL, NULL,
+                                          NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm,
+                                          (unsigned long)i[1], 0);
+        gResource->GetString(i[0] == 0 ? IDS_UNDO : IDS_REDO, theText);
         t->SetText(theText, gU531930);
         SefmColor(t->GetGEText(), GEColor(1.0f, 1.0f, 1.0f));
         *theOut = t;

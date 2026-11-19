@@ -57,23 +57,34 @@ public:
     virtual void Close();                   // slot 0x38 0x19e68a
     virtual long CopyData();                // slot 0x3c 0x19e72c
     virtual long UpdateMouse();             // slot 0x30 0x1a0083
-protected:
-    virtual long DrawPolygons();            // slot 0x40 0x19f5b3 (UIForm's, protected)
-public:
-    void PostLoadEvent(UReferenceCounter* inObject);
-    void PostShowLoadedObject(UReferenceCounter* inObject);
+    // (DrawPolygons, slot 0x40 0x19f5b3, was UIForm's alone: no override)
+    // the form's members (editor_form.rs EE_SCREENS_SEFM_*): one call each
+    int32_t Call(uint32_t inWhat, int32_t inA = 0, void* inP = NULL, const float* inR = NULL) const
+    {
+        return ee_screens_sefm_call(this->mRust, inWhat, inA, inP, inR);
+    }
+    // suspended, the object passed to the load thread, which posts it to the user interface (an event) or shows it
+    void PostLoadEvent(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject); }
+    void PostShowLoadedObject(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject); }
     // 0x19f6e9: leaves the editor through the load thread (EESEATestScenario passes true, EESEAExitScenario false)
-    void ExitEditor(bool inTestScenario);
-    void RefreshCurrentGroup();             // 0x19fc97: the current group's Store (EESEAQuickSaveScenario)
-    void ResumeCurrentGroup();              // 0x19f757: resumed, the current group's Load (after a quick save/load)
-    void ClearSelection();
-    void DeselectFirstUnit();               // 0x19fab9 (EESEADeleteUnit)
-    void SelectUnit(EEUnit* inUnit);
-    void DeselectUnit(EEUnit* inUnit);
-    void SelectTab(unsigned char inFlag, long inTab);   // 0x19f615 (EEUIFSEMainButton::Check)
+    void ExitEditor(bool inTestScenario) { this->Call(EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0); }
+    void RefreshCurrentGroup() { this->Call(EE_SCREENS_SEFM_STORE_GROUP); }   // 0x19fc97: the current group's Store
+    void ResumeCurrentGroup() { this->Call(EE_SCREENS_SEFM_RESUME_GROUP); }   // 0x19f757: resumed, its Load
+    // the selection: cleared (the cargo panel and the unit status hidden), its first unit or inUnit removed, inUnit
+    // added (the cargo panel for a placed carrier, the status of a lone unit)
+    void ClearSelection() { this->Call(EE_SCREENS_SEFM_CLEAR_SELECTION); }
+    void DeselectFirstUnit() { this->Call(EE_SCREENS_SEFM_DESELECT_FIRST); }   // 0x19fab9 (EESEADeleteUnit)
+    void SelectUnit(EEUnit* inUnit) { this->Call(EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit); }
+    void DeselectUnit(EEUnit* inUnit) { this->Call(EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit); }
+    // 0x19f615 (EEUIFSEMainButton::Check): full view entered or left, the tab's controls enabled, its group entered
+    void SelectTab(unsigned char inFlag, long inTab) { this->Call(EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8))); }
     // 0x17d597 (the brush group's rectangle; EESEAPaintArea; defined in EESETSArea.cpp)
     void SetPaintArea(const GERectangle& inRectangle);
-    void SetLoadText(const UWideString& inText);   // 0x19fd09 (EESEAChangeLoadText)
+    // 0x19fd09 (EESEAChangeLoadText): the top label's text, hidden for an empty one
+    void SetLoadText(const UWideString& inText)
+    {
+        this->Call(EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0, const_cast<UWideString*>(&inText));
+    }
     // 0x19fcb4: the game view rectangle, the current group disabled while the UI is hidden (EESETriggerScreen)
     void SetGameView(const GERectangle& inRectangle, bool inIsUIHidden);
 

@@ -105,7 +105,10 @@ pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
             Box::new(Rotation { bitmaps: Cell::new([0; 4]), rotation: Cell::new(0), direction: Cell::new(0) })
         }
         EE_SCREENS_SK_REMOVE_CARGO => Box::new(RemoveCargo),
-        _ => return crate::screens::shells_paint::make(kind, args),
+        _ => {
+            return crate::screens::shells_seditor::make(kind, args)
+                .or_else(|| crate::screens::shells_paint::make(kind, args))
+        }
     })
 }
 

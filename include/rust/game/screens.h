@@ -9026,6 +9026,27 @@ constexpr static const uint32_t EE_SCREENS_SH_SLIDER_OF = 146;
 /// -> the terrain tab `a`'s Rust (`EEUIFSETerrain::mRust`: made after its paint area).
 constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_RUST = 147;
 
+/// `EESEUIBDiplomacy`: a diplomacy grid button (allies or enemies; the constructor's state enemies).
+constexpr static const uint32_t EE_SCREENS_SK_DIPLOMACY = 112;
+
+/// `EEUIFSEActionButton`: the Undo or Redo button (args: the button's `EEAction*`, released with the button).
+constexpr static const uint32_t EE_SCREENS_SK_ACTION_BUTTON = 113;
+
+/// The diplomacy button's state (`mState`: 0 allies, 1 enemies) / the state set to a, its bitmaps and help text
+/// shown (`UpdateBitmaps`).
+constexpr static const uint32_t EE_SCREENS_SKOP_DIPLOMACY_STATE = 112;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIPLOMACY_SET = 113;
+
+/// The diplomacy button's bitmaps and help text for the state a, then the form's help text when b
+/// (`EESEDiplomacyShow`).
+constexpr static const uint32_t EE_SCREENS_SH_SE_DIPLOMACY = 160;
+
+/// The action a (an `EEAction*`) posted to the user interface / released (`Dereference`).
+constexpr static const uint32_t EE_SCREENS_SH_SE_ACTION_POST = 161;
+
+constexpr static const uint32_t EE_SCREENS_SH_SE_ACTION_RELEASE = 162;
+
 /// `EESEUITechListBox` (a string list box).
 constexpr static const uint32_t EE_SCREENS_SK_TECH_LIST = 64;
 
