@@ -208,8 +208,8 @@ void EEUnitOrderClear()
 static void OrderIDs(std::vector<uint32_t>& outIDs)
 {
     outIDs.clear();
-    for (size_t i = 0; i < gWorld.mUpdateUnits.size(); i++)
-        outIDs.push_back(gWorld.mUpdateUnits[i].GetSavedID());
+    for (size_t i = 0; i < gWorld.GetNumUpdateUnits(); i++)
+        outIDs.push_back(gWorld.GetUpdateUnitID(i));
 }
 
 void EEUnitOrderReset()

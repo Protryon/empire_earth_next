@@ -8,9 +8,11 @@
 //! - [`report`]: the samples and the report's text.
 //! - [`lobby`]: the lobby's choices and a combo's line by name.
 //! - [`driver`]: the driver: its state, the after-tick, the menus, a game, the batch.
+//! - [`editor`]: the scenario editor script's runner and language (--editor-script).
 //! - [`ffi`]: the C ABI EESim.cpp calls.
 
 pub mod driver;
+pub mod editor;
 pub mod ffi;
 pub mod host;
 pub mod lobby;

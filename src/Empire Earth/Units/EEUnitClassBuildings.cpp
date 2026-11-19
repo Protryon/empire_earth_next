@@ -69,7 +69,6 @@
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EELocationCalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
@@ -173,7 +172,7 @@ bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
 bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
 {
-    EELocationCalamityClass* theVolcanoClass = NULL;
+    EECalamityClass* theVolcanoClass = NULL;
     GE3DPoint thePosition;
     GE3DPoint theTarget;
     if (!USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, theVolcanoClass))

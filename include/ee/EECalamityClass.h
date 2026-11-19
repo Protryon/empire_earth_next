@@ -79,9 +79,10 @@ static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every
 
 // New (port): the class's effects, sounds and numbers in one place for every class (ee_tech calamity_class.rs). The
 // numbers are the Rust record EeCalamityClassFields the class derives from (the base members, then the union of the
-// twenty subclasses' own). The subclasses are gone (calamities lane, round 2): the manager makes one of the three
-// bases by the kind's target (ee_tech calamity_class.rs target_kind), each per-class virtual below is the base's, run
-// by tables keyed by mClassEnum, and the classes' world steps are the host's (EECalamityUpdate.cpp).
+// twenty subclasses' own). The subclasses are gone (calamities lane, round 2), and the three bases they derived from
+// (EEGlobalCalamityClass, EELocationCalamityClass, EEUnitCalamityClass; round 4) with them: what a base decided is
+// the kind's target (ee_tech calamity_class.rs target_kind), each per-class member below runs by tables keyed by
+// mClassEnum, and the classes' world steps are the host's (EECalamityUpdate.cpp).
 class EECalamityClass : public EeCalamityClassFields {
 public:
     EECalamityClass();                      // 0xadcd9 (every number 0, no effect, sound or functor)
@@ -90,8 +91,10 @@ public:
     virtual void Stop(EECalamity* inCalamity);               // +0x08
     virtual EEContagionFunctor* GetContagionFunctor();       // +0x0c (base 0x1ad67e: none)
     virtual long GetCost();                 // +0x10 (0xadceb: mCost)
-    virtual long GetTargetKind() = 0;       // +0x14
-    virtual long GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool);  // +0x18 (0xadcef: -1)
+    // +0x14: what the class is cast at (EE_CALAMITY_TARGET_*: 1 nothing, 2 a location, 3 a unit; its base's)
+    long GetTargetKind() { return (long)ee_calamity_class_target_kind((int32_t)this->mClassEnum); }
+    // +0x18: a unit class's (0xb712a): the id of the unit under the mouse, -1 if none; -1 for the others (0xadcef)
+    virtual long GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool);
     virtual unsigned long GetUnitSet();     // +0x1c (0xadcf5: mUnitSet)
     virtual void Initialize(EECalamityData* inData);         // +0x20 (body 0xadd1c, then the class's own)
     virtual void Reset(EECalamity* inCalamity);              // +0x24
@@ -103,7 +106,8 @@ public:
     virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);
     virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 (~EECalamity calls it)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);  // +0x38 (Rust: ee/EECalamityUpdate.h)
-    // +0x3c (0xadec7): 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck)
+    // +0x3c: 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck): the rules of the
+    // class's base (a location's, a unit's or the special attack's; the global classes': 0)
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
                            EEUnit* inTargetUnit);
 #ifdef __clang__
@@ -120,6 +124,14 @@ public:
 
     // New (port): what the Rust tables read of the class's effects and sounds (EeCalamityClassMedia)
     void GetMedia(EeCalamityClassMedia& outMedia);
+    // a location class's (+0x4c): the shared rule over the class's radius, water flag, map area, space terrain and
+    // placed unit class
+    bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
+    // a unit class's (+0x4c): the fire's and the plague's functor decides (CanInfect), the others' the shared rule
+    bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);
+    // the volcano's (0xb4e74; EEUCBuilding calls it): a random location of a map tile between mMinimumRadius and
+    // mMaximumRadius around inCenter, at the tile's height
+    void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation);
 
     // the class's effects (record +0x94..+0xa0), sounds (+0xd4, +0xd8) and contagion functor (owned), each set as
     // its class's Initialize set it

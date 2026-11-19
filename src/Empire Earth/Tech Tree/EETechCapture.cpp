@@ -28,7 +28,6 @@
 #include "ee/EECalamity.h"
 #include "ee/EEMap.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 
 void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
@@ -614,8 +613,8 @@ void StartState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
     UnitState(ioRecord, inCalamity->mTargetUnit);
     UnitState(ioRecord, inCalamity->mCasterUnit);
     EEContagionManager* theManager = ::gWorld.GetContagionManager();
-    ioRecord.U32((unsigned int)theManager->mHelpers.size());
-    ioRecord.I32(theManager->mNextHelperID);
+    ioRecord.U32((unsigned int)ee_contagion_manager_count(theManager->mRust));
+    ioRecord.I32(ee_contagion_manager_next_id(theManager->mRust));
     ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->Count() : 0u);
     ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->DestroyedCount() : 0u);
 }
@@ -690,16 +689,23 @@ void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity)
 
 namespace {
 
-void HelperState(EESimCaptureRecord& ioRecord, EEContagionHelper* inHelper)
+EECalamity* HelperCalamity(EeContagionHelper* inHelper)
 {
-    ioRecord.I32(inHelper->mHelperID);
-    ioRecord.F32(inHelper->mTimeSinceLastSpread);
-    ioRecord.F32(inHelper->mTimeSinceLastUpdate);
-    ioRecord.F32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mTimeElapsedSinceLastUpdate : 0.0f);
-    ioRecord.F32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mDiscreteUpdateTime : 0.0f);
-    ioRecord.U32((unsigned int)inHelper->mUnits.size());
-    for (size_t i = 0; i < inHelper->mUnits.size(); i++) {
-        EEUnit* theUnit = inHelper->mUnits[i];
+    return reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
+}
+
+void HelperState(EESimCaptureRecord& ioRecord, EeContagionHelper* inHelper)
+{
+    EeContagionHelperFields theFields = ee_contagion_helper_fields(inHelper);
+    EECalamity* theCalamity = HelperCalamity(inHelper);
+    ioRecord.I32(theFields.mHelperID);
+    ioRecord.F32(theFields.mTimeSinceLastSpread);
+    ioRecord.F32(theFields.mTimeSinceLastUpdate);
+    ioRecord.F32(theCalamity != NULL ? theCalamity->mTimeElapsedSinceLastUpdate : 0.0f);
+    ioRecord.F32(theCalamity != NULL ? theCalamity->mDiscreteUpdateTime : 0.0f);
+    ioRecord.U32((unsigned int)ee_contagion_helper_count(inHelper, false));
+    for (size_t i = 0; i < ee_contagion_helper_count(inHelper, false); i++) {
+        EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)ee_contagion_helper_unit(inHelper, false, i));
         ioRecord.U32(theUnit->mUnitID);
         ioRecord.I32(theUnit->mHitPoints);
         ioRecord.U32(theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mCalamityFlags : 0xffffffffu);
@@ -715,20 +721,20 @@ void EECalamityCaptureContagionEvent(long inOp, long inA, long inB, float inC, f
     Event(sContagionEvents, sContagionEventCount, inOp, inA, inB, inC, inD);
 }
 
-void EECalamityCaptureContagion(EEContagionHelper* inHelper, float inElapsedTime)
+void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime)
 {
     if (!EESimCaptureRecord::Active() || sContagionCollecting != 0) {
-        inHelper->Update(inElapsedTime);
+        EEContagionHelperUpdate(inHelper, inElapsedTime);
         return;
     }
     EESimCaptureRecord theRecord(EECaptureTag("CONT"));
-    theRecord.I32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mClass->mClassEnum : -1);
+    theRecord.I32(HelperCalamity(inHelper) != NULL ? HelperCalamity(inHelper)->mClass->mClassEnum : -1);
     HelperState(theRecord, inHelper);
     theRecord.F32(inElapsedTime);
     sContagionEvents.clear();
     sContagionEventCount = 0;
     sContagionCollecting++;
-    inHelper->Update(inElapsedTime);
+    EEContagionHelperUpdate(inHelper, inElapsedTime);
     sContagionCollecting--;
     HelperState(theRecord, inHelper);
     theRecord.U32(sContagionEventCount);

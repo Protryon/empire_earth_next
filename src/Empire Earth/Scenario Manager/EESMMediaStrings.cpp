@@ -7,9 +7,6 @@
 #include <mbstring.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
-#include "lle/FSFile.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/UResourceFile.h"

@@ -42,6 +42,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEGameState.h"
 #include "ee/EETeam.h"
+#include "rust/sim/app.h"
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
@@ -448,30 +449,32 @@ static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
     case EE_UNITS_WORLD_STEP_SET:
     case EE_UNITS_WORLD_STEP_DROP:
     case EE_UNITS_WORLD_STEP_ADD: {
-        std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
-        std::deque<EEUnitHandle<EEComplexUnit> >& theList = *theLists[io->a];
+        // the active unit lists (ee_sim app active.rs: 0 stepped, 1 activation, 2 deactivation) as units
+        uint32_t theWhich = (uint32_t)io->a;
         EEComplexUnit* theComplex = reinterpret_cast<EEComplexUnit*>((uintptr_t)io->b);
         if (inOp == EE_UNITS_WORLD_STEP_LIST) {
-            for (size_t i = 0; i < theList.size(); i++)
-                EEPWorldFill(io, i, (uint64_t)(uintptr_t)(EEComplexUnit*)theList[i]);
-            return (int64_t)theList.size();
+            std::vector<uint32_t> theIDs(ee_app_active_list(theWhich, NULL, 0));
+            ee_app_active_list(theWhich, theIDs.data(), theIDs.size());
+            for (size_t i = 0; i < theIDs.size(); i++)
+                EEPWorldFill(io, i, (uint64_t)(uintptr_t)(EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID(theIDs[i]));
+            return (int64_t)theIDs.size();
         }
         if (inOp == EE_UNITS_WORLD_STEP_SET) {   // the references UpdateActiveUnits keeps: the ops below
-            std::deque<EEUnitHandle<EEComplexUnit> > theOrder;
+            std::vector<uint32_t> theIDs;
             for (size_t i = 0; i < io->cap; i++)
-                theOrder.push_back(reinterpret_cast<EEComplexUnit*>((uintptr_t)io->list[i]));
-            theList = theOrder;
+                theIDs.push_back(EEUnitHandleID(reinterpret_cast<EEComplexUnit*>((uintptr_t)io->list[i])));
+            ee_app_active_set_list(theWhich, theIDs.data(), theIDs.size());
         } else if (inOp == EE_UNITS_WORLD_STEP_DROP) {
             theComplex->Dereference();
-            if (io->a == 0) {
+            if (theWhich == 0) {
                 theComplex->Dereference();
-                gWorld.mActiveUnits.erase(theComplex->mUnitID);
+                ee_app_active_set((uint32_t)theComplex->mUnitID, false);
             }
         } else {
             theComplex->Reference();
-            if (io->a == 0) {
+            if (theWhich == 0) {
                 theComplex->Reference();
-                gWorld.mActiveUnits[theComplex->mUnitID] = theComplex;
+                ee_app_active_set((uint32_t)theComplex->mUnitID, true);
             }
         }
         return 0;

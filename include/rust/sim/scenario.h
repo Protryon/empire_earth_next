@@ -795,6 +795,12 @@ constexpr static const uint32_t EE_SCENARIO_READ_WORLD_POPULATION_LIMIT = 51;
 /// `gWorld.mPlayers[a]->mPlayerID`.
 constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_ID = 52;
 
+/// The context's unit (`EESMHostContext::mUnit`, its address) for the world views' reads (unit_views.rs).
+constexpr static const uint32_t EE_SCENARIO_READ_CONTEXT_UNIT = 87;
+
+/// `&gWorld` for the world views' reads (unit_views.rs).
+constexpr static const uint32_t EE_SCENARIO_READ_WORLD = 88;
+
 /// The lists, by the manager's member: `mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`,
 /// `mPendingEffects` (the last only for the index upkeep).
 constexpr static const uint32_t EE_SCENARIO_LIST_TRIGGERS = 0;

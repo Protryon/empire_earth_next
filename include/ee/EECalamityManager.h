@@ -10,10 +10,7 @@
 
 class EECalamity;
 class EECalamityClass;
-class EEGlobalCalamityClass;
-class EELocationCalamityClass;
 class EEPlayer;
-class EEUnitCalamityClass;
 class FSFileSpec;
 
 // A calamity class's enum (dbcalamity.dat +0x84; EECalamityClass::mClassEnum). Enum and enumerator names are
@@ -82,19 +79,11 @@ public:
     void UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum);   // 0xae966 (the class's Virtual34)
     void Update(float inElapsedTime);
 
-    // the class of inClassEnum as a T (dynamic_cast; false if it is not one); COMDATs 0xaea85 (global), 0xaeaec
-    // (location), 0x66a89 (unit)
-    template<class T> bool GetCalamityClass(unsigned long inClassEnum, T*& outClass)
+    // the class of inClassEnum (false if there is none; the original's dynamic_cast to the volcano's base)
+    bool GetCalamityClass(unsigned long inClassEnum, EECalamityClass*& outClass)
     {
-        std::vector<long> theUnused;
-        bool theResult = false;
-        if (inClassEnum < this->mCalamityClasses.size()) {
-            EECalamityClass* theClass = this->mCalamityClasses[inClassEnum];
-            outClass = dynamic_cast<T*>(theClass);
-            if (outClass != NULL)
-                theResult = true;
-        }
-        return theResult;
+        outClass = this->GetCalamityClass(inClassEnum);
+        return outClass != NULL;
     }
 
     std::vector<EECalamity*> mCalamities;   // +0x04

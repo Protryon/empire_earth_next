@@ -2,31 +2,24 @@
 // calamities: 0xadf97..0xaebb7. Unit flags: the exe's module set.
 // The unit closes with its template COMDATs: vector<EECalamity*>::push_back (0xaea04), USingleton's ??_G (0xaea30),
 // DeleteVectorContents<EECalamity> (0xaea54), GetCalamityClass<EEGlobalCalamityClass> (0xaea85),
-// <EELocationCalamityClass> (0xaeaec), DeleteVectorContents<EECalamityClass> (0xaeb53).
+// <EELocationCalamityClass> (0xaeaec), DeleteVectorContents<EECalamityClass> (0xaeb53). The three bases' units
+// (EEGlobalCalamityClass.cpp, EELocationCalamityClass.cpp 0xb6f21, EEUnitCalamityClass.cpp 0xb70cc) are folded into
+// EECalamityClass and the creations below (calamities lane, round 4).
 #include <windows.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/FSFileSpec.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EEGlobalCalamityClass.h"
-#include "ee/EELocationCalamityClass.h"
-#include "ee/EEUnitCalamityClass.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -50,17 +43,33 @@ void EECalamityManager::DestroyCalamities()
 
 namespace {
 
-// New (port): the calamity class of a record's kind: the base its EECC* class derived from (ee_tech calamity_class.rs
-// target_kind; the classes' own steps are EECalamityUpdate.cpp's); none for kinds 1, 2, 5, 6, 11, 12 and unknown ones
-// (LoadCalamityClasses's ESVERIFYs on `new`'s result, lines 128..235, could never fail)
+// New (port): a class for a record's kind when it has a base (ee_tech calamity_class.rs target_kind: none for kinds
+// 1, 2, 5, 6, 11, 12 and unknown ones; LoadCalamityClasses's ESVERIFYs on `new`'s result, lines 128..235, could
+// never fail)
 EECalamityClass* NewCalamityClass(long inClassEnum)
 {
-    switch (ee_calamity_class_target_kind((int32_t)inClassEnum)) {
-    case EE_CALAMITY_TARGET_GLOBAL: return new EEGlobalCalamityClass;
-    case EE_CALAMITY_TARGET_LOCATION: return new EELocationCalamityClass;
-    case EE_CALAMITY_TARGET_UNIT: return new EEUnitCalamityClass;
-    }
-    return NULL;
+    return ee_calamity_class_target_kind((int32_t)inClassEnum) != EE_CALAMITY_TARGET_NONE ? new EECalamityClass : NULL;
+}
+
+// the class of the enum if its base is inKind (the original's GetCalamityClass<T> dynamic_cast)
+EECalamityClass* ClassOfKind(EECalamityManager* inManager, unsigned long inClassEnum, long inKind)
+{
+    EECalamityClass* theClass = inManager->GetCalamityClass(inClassEnum);
+    return theClass != NULL && theClass->GetTargetKind() == inKind ? theClass : NULL;
+}
+
+// a new calamity of the class cast by the caster (referenced), at the location, Reset (the bases' CreateCalamity:
+// 0xae578, 0xb6f21, 0xb70cc)
+EECalamity* NewCalamity(EECalamityClass* inClass, EEUnit* inCasterUnit, const GE3DPoint* inLocation, EEUnit* inTargetUnit)
+{
+    EECalamity* theCalamity = new EECalamity(inClass, inCasterUnit);
+    if (inTargetUnit != NULL) {
+        theCalamity->SetTargetUnit(inTargetUnit);
+        theCalamity->mTargetLocation = GE3DPoint((float)inTargetUnit->GetTileX(), (float)inTargetUnit->GetTileY(), 0.0f);
+    } else if (inLocation != NULL)
+        theCalamity->mTargetLocation = *inLocation;
+    inClass->Reset(theCalamity);
+    return theCalamity;
 }
 
 }   // namespace
@@ -95,11 +104,11 @@ bool EECalamityManager::CreateGlobalCalamity(unsigned long inClassEnum, unsigned
                                              unsigned long inPlayerNumber)
 {
     bool theResult = false;
-    EEGlobalCalamityClass* theClass = NULL;
-    if (this->GetCalamityClass(inClassEnum, theClass)) {
+    EECalamityClass* theClass = ClassOfKind(this, inClassEnum, EE_CALAMITY_TARGET_GLOBAL);
+    if (theClass != NULL) {
         EEUnit* theCasterUnit = gWorld.GetUnit(inCasterUnitID);
         if (theCasterUnit != NULL) {
-            EECalamity* theCalamity = theClass->CreateCalamity(theCasterUnit);
+            EECalamity* theCalamity = NewCalamity(theClass, theCasterUnit, NULL, NULL);
             theCalamity->mPlayerNumber = inPlayerNumber;
             this->AddCalamity(theCalamity);
             theResult = true;
@@ -117,15 +126,15 @@ bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsign
 {
     bool theResult = false;
     GE3DPoint theLocation;
-    EELocationCalamityClass* theClass = NULL;
-    if (this->GetCalamityClass(inClassEnum, theClass)) {
+    EECalamityClass* theClass = ClassOfKind(this, inClassEnum, EE_CALAMITY_TARGET_LOCATION);
+    if (theClass != NULL) {
         EEMapTile* theTile = gWorld.mMap->GetTile(inX, inY);
         EEUnit* theCasterUnit = gWorld.GetUnit(inCasterUnitID);
         if (theTile != NULL && (theCasterUnit != NULL || UIsNone32(inCasterUnitID))) {
             theLocation.SetX(inX + 0.5f);
             theLocation.SetY(inY + 0.5f);
             theLocation.SetZ(theTile->mHeight);
-            EECalamity* theCalamity = theClass->CreateCalamity(theLocation, theCasterUnit);
+            EECalamity* theCalamity = NewCalamity(theClass, theCasterUnit, &theLocation, NULL);
             theCalamity->mPlayerNumber = inPlayerNumber;
             this->AddCalamity(theCalamity);
             theResult = true;
@@ -141,13 +150,13 @@ bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsign
 bool EECalamityManager::CreateUnitCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID,
                                            unsigned long inTargetUnitID, unsigned long inPlayerNumber)
 {
-    EEUnitCalamityClass* theClass = NULL;
+    EECalamityClass* theClass = ClassOfKind(this, inClassEnum, EE_CALAMITY_TARGET_UNIT);
     bool theResult = false;
-    if (this->GetCalamityClass(inClassEnum, theClass)) {
+    if (theClass != NULL) {
         EEUnit* theTargetUnit = gWorld.GetUnit(inTargetUnitID);
         EEUnit* theCasterUnit = gWorld.GetUnit(inCasterUnitID);
         if (theTargetUnit != NULL && (theCasterUnit != NULL || UIsNone32(inCasterUnitID))) {
-            EECalamity* theCalamity = theClass->CreateCalamity(theTargetUnit, theCasterUnit);
+            EECalamity* theCalamity = NewCalamity(theClass, theCasterUnit, NULL, theTargetUnit);
             theCalamity->mPlayerNumber = inPlayerNumber;
             this->AddCalamity(theCalamity);
             theResult = true;

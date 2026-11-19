@@ -1,9 +1,9 @@
 //! The contagion helpers' and their manager's saved form and checksums (`src/Empire Earth/Calamities/
 //! EEContagionHelper.cpp`, `EEContagionManager.cpp`).
 //!
-//! A helper's numbers are the record [`EeContagionHelperFields`] `EEContagionHelper` derives from; its units, unit
-//! ids, functor and calamity stay C++ members. `Load`/`Save` of both classes run over one I/O callback
-//! (`EE_CONTAGION_IO_*`): the numbers through the `FSFile` overload the original called, the C++ lists by part.
+//! A helper's numbers are the record [`EeContagionHelperFields`] of the Rust helper (contagion_store.rs). `Load`/`Save`
+//! of both classes run over one I/O trait (`EE_CONTAGION_IO_*`): the numbers through the `FSFile` overload the original
+//! called, the lists by part.
 
 // the record keeps the C++ member names; c_long/c_ulong are 32 bits on Windows: the casts are needed elsewhere
 #![allow(non_snake_case, clippy::unnecessary_cast)]
@@ -191,100 +191,6 @@ pub fn manager_save<H: ContagionIo>(h: &mut H, next_id: c_long, counter: bool) -
         result = long(h, EE_CONTAGION_IO_WRITE_LONG, &mut next_id.clone());
     }
     result
-}
-
-/// The C++'s I/O callback: `call(ctx, op, value)`.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeContagionIoFfi {
-    pub ctx: *mut c_void,
-    pub call: Option<unsafe extern "C" fn(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long>,
-}
-
-struct FfiIo(EeContagionIoFfi);
-
-impl ContagionIo for FfiIo {
-    fn io(&mut self, op: u32, value: *mut c_void) -> c_long {
-        match self.0.call {
-            // SAFETY: the C++ callback's contract: `value` points at the op's type or is null
-            Some(call) => unsafe { call(self.0.ctx, op, value) },
-            None => 1,
-        }
-    }
-}
-
-// ---- the C ABI (`EEContagionHelper.cpp`, `EEContagionManager.cpp`) ------------------------------------------------
-// SAFETY (every function below): the caller passes valid, aligned pointers; the record is copied in and out.
-
-/// [`helper_load`] into `*fields`.
-///
-/// # Safety
-/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_helper_load(
-    fields: *mut EeContagionHelperFields,
-    major: c_ulong,
-    minor: c_ulong,
-    io: EeContagionIoFfi,
-) -> c_long {
-    // SAFETY: the caller's contract
-    let mut f = unsafe { *fields };
-    let result = helper_load(&mut FfiIo(io), &mut f, major, minor);
-    // SAFETY: as above
-    unsafe { *fields = f };
-    result
-}
-
-/// [`helper_save`] of `*fields`.
-///
-/// # Safety
-/// `fields` valid for reads; `io`'s callback valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_helper_save(
-    fields: *const EeContagionHelperFields,
-    io: EeContagionIoFfi,
-) -> c_long {
-    // SAFETY: the caller's contract
-    let f = unsafe { *fields };
-    helper_save(&mut FfiIo(io), &f)
-}
-
-/// [`helper_checksum`].
-///
-/// # Safety
-/// `fields` valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_helper_checksum(
-    fields: *const EeContagionHelperFields,
-    unit_ids: c_long,
-    calamity: c_long,
-) -> c_long {
-    // SAFETY: the caller's contract
-    let f = unsafe { *fields };
-    helper_checksum(&f, unit_ids, calamity)
-}
-
-/// [`manager_load`]; the last helper id into `*next_id`.
-///
-/// # Safety
-/// `next_id` valid for writes; `io`'s callback valid, not touching `*next_id`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_contagion_manager_load(
-    next_id: *mut c_long,
-    counter: bool,
-    io: EeContagionIoFfi,
-) -> c_long {
-    let mut id: c_long = 0;
-    let result = manager_load(&mut FfiIo(io), &mut id, counter);
-    // SAFETY: the caller's contract
-    unsafe { *next_id = id };
-    result
-}
-
-/// [`manager_save`].
-#[no_mangle]
-pub extern "C" fn ee_contagion_manager_save(next_id: c_long, counter: bool, io: EeContagionIoFfi) -> c_long {
-    manager_save(&mut FfiIo(io), next_id, counter)
 }
 
 #[cfg(test)]

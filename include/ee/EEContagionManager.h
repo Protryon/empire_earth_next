@@ -1,41 +1,57 @@
-// C:\EEX\Empire Earth\Calamities\EEContagionManager.h (RECONSTRUCTION; file name inferred). The world's
-// Layout proven: EEContagionManager sizeof 0x28 = its new-site size, ctor 0xb6723 exact in EEContagionManager.cpp.
-// Member names are provisional.
-// contagion helpers (one per spreading calamity), by id (RTTI EEContagionManager > FSRestorable; vtable 0x43cf7c;
-// EEContagionManager.cpp 0xb662f..0xb6bd1, its three save keys' init chains first). Method names from the calamity
-// asserts ("::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID)", EECCAEExtraDamage.cpp);
-// the other names are provisional. Requires lle/LowLevelEngine.h, lle/FSRestorable.h, <stdio.h>.
+// C:\EEX\Empire Earth\Calamities\EEContagionManager.h (RECONSTRUCTION; file name inferred). The world's contagion
+// helpers (one per spreading calamity), by id. Method names from the calamity asserts
+// ("::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID)", EECCAEExtraDamage.cpp).
+// New (port): the manager and its helpers are Rust's whole (ee_sim::tech contagion_store.rs: the helper list, the
+// helpers' units, ids and timers, every member function; calamities lane, round 4). This class is the C++ name the
+// persistent chunk and the world hold, each member one call; EEContagionHelper is the Rust helper.
+// Requires <vector>, <stdio.h> (FILE).
 #ifndef EE_EECONTAGIONMANAGER_H
 #define EE_EECONTAGIONMANAGER_H
 
+#include "rust/sim/tech.h"   // EeContagionManager, EeContagionHelper (contagion_store.rs)
+
 class EECalamity;
 class EEContagionFunctor;
-class EEContagionHelper;
 class EEUnit;
+class FSFile;
 
-class EEContagionManager : public FSRestorable {
+typedef EeContagionHelper EEContagionHelper;
+
+class EEContagionManager {
 public:
-    EEContagionManager();
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0xb6940
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0xb6abe
-    virtual ~EEContagionManager();          // +0x10 0xb677a (??_G 0xb675e)
-    virtual void DumpOutOfSynch(FILE* inFile);   // +0x14 0xb6851
-    virtual long GetOutOfSynchChecksum();   // +0x18 0xb68e8
-    // +0x1c 0xb69ef: the loaded helpers' calamities by index (helpers whose calamity is gone are destroyed)
-    virtual long RestorePointers(std::vector<EECalamity*>& inCalamities);
+    EEContagionManager() : mRust(ee_contagion_manager_new()) {}
+    ~EEContagionManager() { ee_contagion_manager_free(this->mRust); }   // the list only (the original's)
+    EEContagionManager(const EEContagionManager&) = delete;
+    // the other's helpers (the same ones, as the original's vector copy), last id and loaded indexes
+    EEContagionManager& operator=(const EEContagionManager& inOther)
+    {
+        ee_contagion_manager_assign(this->mRust, inOther.mRust);
+        return *this;
+    }
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    void DumpOutOfSynch(FILE* inFile) { ee_contagion_manager_dump(this->mRust, (uint64_t)(uintptr_t)inFile); }
+    long GetOutOfSynchChecksum() { return ee_contagion_manager_checksum(this->mRust); }
+    // the loaded helpers' calamities by index (helpers whose calamity is gone are destroyed)
+    long RestorePointers(std::vector<EECalamity*>& inCalamities);
+    // the new helper's id (the plague passes its target unit, the area effects none)
+    long CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity, EEUnit* inTargetUnit)
+    {
+        return ee_contagion_manager_create(this->mRust, (uint64_t)(uintptr_t)inFunctor, (uint64_t)(uintptr_t)inCalamity,
+                                           (uint64_t)(uintptr_t)inTargetUnit);
+    }
+    bool DestroyContagionHelper(long inHelperID) { return ee_contagion_manager_destroy(this->mRust, inHelperID); }
+    EEContagionHelper* GetContagionHelper(long inHelperID) { return ee_contagion_manager_helper(this->mRust, inHelperID); }
+    void SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
+    {
+        ee_contagion_manager_swap_unit(this->mRust, (uint64_t)(uintptr_t)inOldUnit, (uint64_t)(uintptr_t)inNewUnit);
+    }
 
-    // 0xb6795: the new helper's id (the plague passes its target unit, the area effects 0)
-    long CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity, EEUnit* inTargetUnit);
-    bool DestroyContagionHelper(long inHelperID);
-    // 0xb68c3: inCalamities[inIndex], 0 past the end
-    EECalamity* GetCalamity(std::vector<EECalamity*>& inCalamities, unsigned long inIndex);
-    EEContagionHelper* GetContagionHelper(long inHelperID);      // 0xb691d: 0 if none
-    void SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);         // 0xb6b4f (every helper's)
-
-    std::vector<EEContagionHelper*> mHelpers;   // +0x04 (owned)
-    long mNextHelperID;                     // +0x14 (the last id handed out)
-    std::vector<unsigned long> mCalamityIndexes;   // +0x18 (Load: each helper's calamity index, for RestorePointers)
-
+    EeContagionManager* mRust;
 };
+
+// a helper's AddUnit and Update (its functor's numbers, its calamity class's immunity flag)
+bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify);
+void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime);
 
 #endif
