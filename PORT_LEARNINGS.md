@@ -32919,3 +32919,144 @@ tests (herd_tests.rs, town_tests.rs, lists_tests.rs); the centres' and the save'
   (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS`;
   scenario_check 27/27; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 38, 40],
   alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+
+## R6 WONLobby, round 21: ConfigParser and ConfigObject whole in Rust; what the census's WON leaves are (ee_won_net cfgparser.rs, cfgobject.rs; branch rust-wonlobby21, 2026-11-19)
+
+The round took the dependency census's (tools/cpp_deps.py) WON leaves bottom-up. The WONConfig chain moved:
+ConfigParser (ConfigParser.cpp and ConfigToken.cpp deleted) and ConfigObject (its body, and ConfigValue.cpp
+deleted; ConfigObject.cpp keeps the host and the typed values) are Rust objects whose C++ classes are handles. Most
+of the other units the census lists as WON leaves turned out not to be movable code (below). The target (-3,000)
+was not reached: -1,902, of which -1,246 is a mechanical include cleanup.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 44f9e41bd | seven units' 177-line lists of every generated Rust module header dropped (LobbyShutdown, LobbyRunState, WONSkinConfig, StretchImageConfig, SimpleComponentConfig, ResourceTableQueries, ComponentLayoutConfigs): they name none of the declarations (rust_includes.py: "names no declaration"); no code changed | -1,246 |
+| d87c3df13 | ConfigParser whole in Rust (cfgparser.rs); ConfigParser.cpp and ConfigToken.cpp deleted; the class a handle of inline forwards | -314 |
+| 63f3a96ab | ConfigObject whole in Rust (cfgobject.rs); ConfigValue.cpp merged into ConfigObject.cpp, which keeps only the host and the typed values | -342 |
+| (merge) | origin/rust 7779d7db1: no WON file changed | 0 |
+
+Round total: WON C++ 33,455 -> 31,553 (-1,902).
+
+### ConfigParser (cfgparser.rs)
+
+- **Every member is Rust's**: the file reader (its `EeWonFileReader` core by value), the lexer (pushback and define
+  scopes, config.rs), the parent link (a raw pointer to the parent's Rust parser: the C++ callers' locals outlive
+  their children as before), the error and warning texts, the flags, the line and the file names. The C++
+  `ConfigParser` (ee/wonapi/WONLobbyConfig.h) holds the Rust object and a copy for `GetAbortReason`'s reference;
+  its methods are inline forwards, and the members its callers read (`mAbortReason.empty()`, `mIsUnicode`,
+  `mFilePath`, `mWarningsAsErrors`, ...) are accessors (`HasNoError`, `IsUnicode`, `GetFilePath`,
+  `SetWarningsAsErrors`, `SetIgnorePathOnIncludeFile`, `Obj`). It is no longer polymorphic (its only virtual was the
+  destructor; nothing derived from it).
+- **The reader's failures are still C++ exceptions**: `OpenFile` and `SetState` return the reader's status and the
+  forward throws `FileReaderException` with its text, in the caller's frame, before anything the original would
+  not have done (a failed reopen is still not rolled back; a failed seek leaves the line and pushback).
+- **The texts are the original's `snprintf`s** into 1,024-byte buffers: " (file:line)" and "Warning (file: line) -
+  text\n" are cut at 1,023 bytes, and each `%s` argument (the file name, the warning) ends at its first NUL.
+- The old lexer C ABI (`ee_won_config_*`) stays: the drivers' copy of the original calls it.
+
+### ConfigObject (cfgobject.rs)
+
+- **Rust holds** the children (held references, `std::list` order), the child iteration (a node or the end: a
+  `Rewind` on an empty list, or running off the last node, leaves the iterator at the end, and a later `AddChild`
+  does not move it: the original's `std::list` end sentinel), the key values and key groups (case-insensitive
+  order through the game's `StringCompareNoCase`; the first registration is kept and a dropped value or object is
+  released, as the failed `insert` released its `SmartPtr`), and every method's statements.
+- **The C++ class keeps** its vtable (WONGUI's resource and component configs, the lobby's config and TitleConfig
+  override the eight hooks; the base hooks are inline forwards), its name, base name and parent (the subclasses read
+  them; TitleConfig passes `&mName`), and the typed values (`ConfigValue<T>` binds to a subclass's member). Those
+  are the host's ops (ConfigObject.cpp `ConfigObject::Host`): the hooks, the values' default, read, write and
+  copy, the group slots' `SmartPtr` assignment, new plain objects and factory objects, a new C++ parser handle for
+  `IncludeFile` (the hooks take a `ConfigParser*`), a parser handle's Rust parser.
+- **Exceptions**: a host op that runs a hook catches `ConfigObjectException` and `FileReaderException` into the
+  entry's record and answers -1 / -2; Rust returns `Err` up its frames; the innermost `ParseGroup` takes a
+  `ConfigObjectException` out of the record (the error with its flag, else a warning), as the original's try did;
+  a `FileReaderException` (and a reader status from `OpenFile` / `SetState`) goes back to the C++ entry, which
+  throws it again. The nested case works as before: a hook's base call is a new entry with its own record, its
+  rethrow crosses the hook and lands in the outer record.
+- **Re-entrance**: every hook can call back into the same object (an override calling the base hook, a child
+  group parse); the Rust functions take raw pointers and borrow the object only between host ops.
+- The C++ `StringParser` (header-only: text pointer, cursor, unit flag) is read in place by Rust through a
+  `#[repr(C)]` view (`EeWonCfgStringParser`; ConfigObject.cpp static_asserts the layout), and `ParseGroup` builds
+  one over its token for the value hook.
+
+### Tests and mutations
+
+- `won_cfgparser_test` (new): the deleted units (tests/won/won_cfgparser_orig.h, renamed `OrigConfigParser`, over
+  the old lexer ABI) against the game's class: 3,000 random sequences of every public method on a root, a child and
+  a grandchild per side, over random plain and UTF-16 files, missing files and a 1,100-byte name; every member, each
+  result, exception and the process-wide line count's change compared: 387,652 checks, 0 mismatches. Mutations
+  (build/w21/mutate.py, scratch): 15 of 15 caught; the NUL-in-a-warning one only after the driver gained a probe
+  (a warning on a parser with no error yet: the random ones mostly came after an error).
+- `won_cfgobject_test` (new): the deleted ConfigObject statements (tests/won/won_cfgobject_orig.h, their parser
+  member reads through the accessors) against the game's class, the same subclass on each (every key type, factory
+  groups, a slot, a fixed group, a dropped duplicate key and group; hooks that throw both kinds, fail, stop the
+  parser, parse and skip children, read group headers, set and query keys, include files, copy the parent's keys):
+  1,500 random file sets (a file names only later files and a group define is included only from the top file:
+  the original recurses for ever on a cycle) and 6 fixed cases, the trees, texts, line counts and hook logs
+  compared: 0 mismatches. Mutations: 15 of 17 caught; two equivalent (PreParse's skip test: no caller passes skip
+  with pre_post; the copy's second index on a match: both maps' keys are unique). The fixed group's names and an
+  included group's error needed fixed cases (the random files never reached them).
+- The existing goldens pass over the port, none re-recorded: `won_config_test` (golden_config.txt, both
+  locales), `won_cfgobj_test` (103 lines), `won_titlecfg_test` (600,000 checks). The drivers' member reads are
+  the accessors now.
+- cargo: cfgparser_tests.rs (the texts' cuts, the root's defines and their warnings, states, the open's names,
+  token errors, the ABI's fields), cfgobject_tests.rs (map order and first registration, the iterator's end, the
+  references, Reset, the copy's walk) over a scripted host; config_golden.rs's lock is shared with them (the line
+  count is process-wide).
+
+### What the census's other WON "leaves" are
+
+The census counts calls from an object's own sections; calls through vtables and function pointers do not show.
+Most WON leaves are exactly that: the C++ ends of Rust objects.
+- **AsyncOp.cpp** (383): the network library's hook tables (`AsyncOpHooks`, `WonCore`, `WonApiHooks`): the Rust
+  ops' and sockets' calls into C++ virtuals (`RunHook`, `Continue`, `Duplicate`, `TransformSendMsg`, ...),
+  `new` of the C++ socket op classes, `dynamic_cast` to a Rust object. It moves only when those classes do.
+- **DirEntityReplyParser.cpp** (100): makes C++ `DirEntity` objects (std::wstring and list members, read by
+  EEWonNet.cpp) from what the Rust readers parsed. **ServerOp.cpp** (232): RustServerOp's host.
+- **ChildLayouts.cpp** (128): the Rust layouts' calls on components; **Sound, Cursor, SelectionColor,
+  ListItemDefaults, ChildLayoutsAdvanced**: C++ base classes' constructors and empty or one-line virtuals (the
+  platform subclasses override them); **ResourceConfigQueries / SafeString**: look-ups in C++ maps of C++
+  resources; **Image, ImageFilters, ImageDecoder**: the polymorphic image classes the whole WONGUI draws with.
+  None of these is logic that can be deleted without moving the classes it serves.
+- **TitleConfig.cpp** (157): no game code makes a TitleConfig (only `won_titlecfg_test`); it is a ConfigObject
+  subclass whose keys bind to its C++ members, and its rules are titlecfg.rs already.
+- `tools/cpp_deps.py report` (merged tree): WONConfig 4 units, 852 lines (1 leaf, 3 near-leaves) -> 1 unit, 147
+  lines (a leaf: ConfigObject.cpp's host); WONGUI 11,441 -> 10,551 lines (the include cleanup); WONLobby 8,249 ->
+  7,893. The game's whole census 525 units / 154,012 lines -> 520 / 149,401 (other lanes' merges included).
+
+### Behaviour changes
+
+None for the game's data. `ConfigParser` has no vtable (nothing derived from it). The typed values' templates are
+instantiated in ConfigObject.cpp. The config readers run once at the lobby's start (the LAN game and the tour);
+nothing reads a config file in a single-player game.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after each code commit; seeds 2-7 identical on the merged tree |
+| `rust_build.py gate` | PASS after each commit (the first run of each failed rustfmt / clippy only, on the new files, fixed before the commit); PASS on the merged tree |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 156 programs exit 0 (154 and the two new ones) under the 2 GB cap, peak 557 MB (won_cfgtab_test); every golden unchanged |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2770 joiner=2771` (the round's merged test-profile exe); the start exe (this round's first merge, WON identical to rust-wonlobby20): 2716 / 2716 |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but `host-staging-ready.bmp` (15 pixels at x 121..122, y 329..344: the staging chat input's caret) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree, merged tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13525` units [4, 42, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2700 joiner=2705`, GATES PASS |
+
+- **A test-profile build without `EE_TOOLCHAIN` has no fonts.** The first start-exe LAN game failed twice with
+  `attempt to divide by zero` in dialogs.rs `status_pad`: the build had run in a shell without the environment,
+  PlatFontData.c's `#embed` found no font files and compiled to 3 KB (the exe's .rdata 3.5 MB against 7.9 MB), every
+  font fell back to the base `Font`, whose height is 0, and the status dialog divides by it (as the original
+  would). Rebuilt with the environment, the same code passed. The objcache keys the embedded files' contents, so
+  the fontless object is not served to a build that has them.
+- The merge of origin/rust 7779d7db1 needed one PORT_LEARNINGS conflict (both appended; both kept). strip_markers
+  changed 0 files, the headers were current; `rust_includes.py` wanted `rust/sim/units.h` in include/ee/EEUnitGoal.h
+  (not this lane's file, a pre-existing gap on origin/rust): left as it was and reported.
+
+### What runs it
+
+The LAN game (both lobby instances read every WONLobby resource and skin file through ConfigObject and
+ConfigParser: ComponentConfigLoad, ResourceConfig, the lobby's config) and the tour's lobby. The drivers above.
