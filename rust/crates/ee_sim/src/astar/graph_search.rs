@@ -808,6 +808,11 @@ mod tests {
         }
     }
 
+    /// a sub sector's handle: its id
+    fn handle(id: usize) -> *mut c_void {
+        id as *mut c_void
+    }
+
     #[test]
     fn a_graph_search_walks_the_row() {
         let mut row = Row { n: 5, refs: Vec::new() };
@@ -816,8 +821,8 @@ mod tests {
         s.set_unit(&mut raw, 0x900);
         {
             let g = s.goal_mut();
-            g.from = 1 as *mut c_void;
-            g.to = 5 as *mut c_void;
+            g.from = handle(1);
+            g.to = handle(5);
             g.start = EePoint { x: 10, y: 0 };
             g.goal = EePoint { x: 50, y: 0 };
             g.start_sector = 5;
