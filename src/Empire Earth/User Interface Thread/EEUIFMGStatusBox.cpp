@@ -51,24 +51,9 @@ EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];
 bool sIconsLoaded;                                  // 0x5652ec; cross-TU flag, original name/ordinary-global ownership provisional
 
 // Creates the main panel's status box with no controls bound and no attributes shown
-EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm) : mForm(inForm)
+EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm)
 {
-    this->mCA8 = NULL;
-    this->mCAC = NULL;
-    this->mAttributeCount = 0;
-    this->mArmorAttributeCount = 0;
-    this->mIsResourceShown = false;
-    for (long i = 0; i < 9; i++) {
-        this->mIcons[i] = NULL;
-        this->mLabels[i] = NULL;
-    }
-    this->mC84 = NULL;
-    this->mC88 = NULL;
-    this->mC8C = NULL;
-    this->mC94 = NULL;
-    this->mC90 = NULL;
-    for (long j = 0; j < 14; j++)
-        this->mAttributes[j] = -1;
+    ee_screens_status_box_init(this, inForm);   // (main_form_fields.rs)
 }
 
 // Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
@@ -84,6 +69,7 @@ struct EEUIFMGStatusBoxCall {
     GETextureDescription mDescription;
     GETexture* mTextures[4];
 };
+static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == 3 * sizeof(void*), "hud_direct.rs BoxCallHead");
 static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTimeOrPower &&
                   EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS == kImprovementHitPoints &&
                   EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT == kImprovementTransport &&
@@ -94,13 +80,7 @@ static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTi
 // The control an EE_SCREENS_BOX_CTL_* names
 UIControl* EEUIFMGStatusBox::GetBoxControl(int64_t inControl) const
 {
-    if (inControl < EE_SCREENS_BOX_CTL_LABEL)
-        return this->mIcons[inControl];
-    if (inControl < EE_SCREENS_BOX_CTL_LEFT_BAR)
-        return this->mLabels[inControl - EE_SCREENS_BOX_CTL_LABEL];
-    UIControl* const theControls[8] = {this->mC84, this->mC88, this->mC8C, this->mC90,
-                                       this->mC94, this->mC98, this->mCA8, this->mCAC};
-    return theControls[inControl - EE_SCREENS_BOX_CTL_LEFT_BAR];
+    return static_cast<UIControl*>(ee_screens_status_box_control(this, inControl));   // (the record's slots)
 }
 
 // two f32s of one host argument (status_box.rs pack: the first in the low 32 bits)
@@ -118,31 +98,6 @@ int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64
     EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
     EEUIFMGStatusBox* theBox = theCall.mBox;
     switch (inOp) {
-    case EE_SCREENS_BOX_OP_GET:
-        if (inA == EE_SCREENS_BOX_FIELD_COUNT)
-            return theBox->mAttributeCount;
-        if (inA == EE_SCREENS_BOX_FIELD_ARMOR_COUNT)
-            return theBox->mArmorAttributeCount;
-        if (inA == EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN)
-            return theBox->mIsResourceShown;
-        return theBox->mAttributes[inA - EE_SCREENS_BOX_FIELD_ATTRIBUTES];
-    case EE_SCREENS_BOX_OP_SET:
-        if (inA == EE_SCREENS_BOX_FIELD_COUNT)
-            theBox->mAttributeCount = (long)inB;
-        else if (inA == EE_SCREENS_BOX_FIELD_ARMOR_COUNT)
-            theBox->mArmorAttributeCount = (long)inB;
-        else if (inA == EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN)
-            theBox->mIsResourceShown = inB != 0;
-        else
-            theBox->mAttributes[inA - EE_SCREENS_BOX_FIELD_ATTRIBUTES] = (long)inB;
-        return 0;
-    case EE_SCREENS_BOX_OP_PRESENT:
-        return theBox->GetBoxControl(inA) != NULL;
-    case EE_SCREENS_BOX_OP_MODE:
-        return theBox->GetBoxControl(inA)->GetDisplayMode();
-    case EE_SCREENS_BOX_OP_SET_MODE:
-        theBox->GetBoxControl(inA)->SetDisplayMode((unsigned long)inB);
-        return 0;
     case EE_SCREENS_BOX_OP_QUEUED: {
         EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA));
         if (theButton->mNumQueued != (long)inB)
@@ -180,11 +135,6 @@ int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64
     case EE_SCREENS_BOX_OP_CIV:
         theCall.mText = theCall.mUnit->GetPlayer()->mCivilization.mName;
         return 0;
-    case EE_SCREENS_BOX_OP_SET_TEXT:
-        static_cast<UITextLabel*>(theBox->GetBoxControl(inA))->SetText(theCall.mText);
-        return 0;
-    case EE_SCREENS_BOX_OP_TEXT_DIFFERS:
-        return !(static_cast<UITextLabel*>(theBox->GetBoxControl(inA))->GetText(0) == theCall.mText);
     case EE_SCREENS_BOX_OP_BAR_ICON:
         static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
             ->SetIconBitmap(sIconBitmaps[inB].mBitmap, sIconBitmaps[inB].mRectangle);
@@ -195,18 +145,12 @@ int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64
     case EE_SCREENS_BOX_OP_BAR_VALUE:
         static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mBar->SetCurrentRangeValue((long)inB);
         return 0;
-    case EE_SCREENS_BOX_OP_DIRTY:
-        theBox->GetBoxControl(inA)->SetDirty(true);
-        return 0;
     case EE_SCREENS_BOX_OP_BAR_COLOR:
         static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
             ->mBar->SetStatusBarColor(inB == 1 ? kStatusColor1 : inB == 2 ? kStatusColor2 : kStatusColor3);
         return 0;
     case EE_SCREENS_BOX_OP_BAR_ENABLED:
         static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mEnabled = inB != 0;
-        return 0;
-    case EE_SCREENS_BOX_OP_STRING_ID:
-        theBox->GetBoxControl(inA)->SetStringTableID((unsigned long)inB);
         return 0;
     case EE_SCREENS_BOX_OP_STRETCH: {
         EEUIFMGAttribute* theRectangle = static_cast<EEUIFMGAttribute*>(theBox->GetBoxControl(inB));
@@ -240,26 +184,12 @@ int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64
         else
             ESVerify(__FILE__, 708, "this->mAttributeCount <= keeuifmgsbMaxAttributes");
         return 0;
-    case EE_SCREENS_BOX_OP_IN_CINEMATIC:
-        return gWorld.mInCinematic;
     case EE_SCREENS_BOX_OP_BACKGROUND: {
         UIBackground* theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID((unsigned long)inA);
         if (theBackground != NULL)
             theBackground->SetVisibility(inB != 0);
         return 0;
     }
-    case EE_SCREENS_BOX_OP_FORMAT:
-        if (inA == EE_SCREENS_BOX_FMT_PAIR)
-            sprintf(theCall.mText, "%ld/%ld", (long)inB, (long)inC);
-        else if (inA == EE_SCREENS_BOX_FMT_BONUS)
-            sprintf(theCall.mText, "+ %ld", (long)inB);
-        else if (inA == EE_SCREENS_BOX_FMT_SUM)
-            sprintf(theCall.mText, "%ld+%ld", (long)inB, (long)inC);
-        else if (inA == EE_SCREENS_BOX_FMT_ONE)
-            sprintf(theCall.mText, "%ld", (long)inB);
-        else
-            theCall.mText = "";
-        return 0;
     case EE_SCREENS_BOX_OP_VALUE_DIFFERS: {
         EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA));
         return theCall.mText != (inB == 0 ? theBar->GetValueText() : theBar->GetValue2Text());
