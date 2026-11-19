@@ -1095,6 +1095,22 @@ struct EeGeRastScreen {
 /// The C++ host: `owner` is the C++ object making the call.
 using EeGeObjHostFn = ptrdiff_t(*)(void *owner, EeGeObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
+/// A vertex array's shadow (its floats live until the array's next change).
+struct EeGeStoreVertices {
+  uint32_t kind;
+  uint32_t out_of_range;
+  const float *points;
+  size_t points_len;
+  const float *normals;
+  size_t normals_len;
+  const float *uvs;
+  size_t uvs_len;
+  const float *colors;
+  size_t colors_len;
+  const float *opacities;
+  size_t opacities_len;
+};
+
 /// `GETextureDescription` (lle/GETextureManager.h), field for field.
 struct EeGeTextureDescription {
   unsigned long surface_volatility;
@@ -1707,6 +1723,20 @@ void *ee_ge_map_location_on_line(const EeGeMapHost *host,
 /// # Safety
 /// `model` came from `ee_of_find_model` and is freed once.
 void ee_ge_cem_free(EeGeCemModel *model);
+
+/// The physical walks' triangle (`EeGePhysicalModels::triangle`, physical_walk.rs): the three corners of polygon
+/// `polygon` of LOD `lod`'s array at frame `frame`'s vertices, each index plus the material's first vertex
+/// `vertex_start` (`unsigned long` arithmetic), as `GetVertexArray(frame)->GetPoint(GetPolygonArray(lod)->
+/// GetVertexIndex1..3(polygon) + vertex_start)` read them.
+///
+/// # Safety
+/// `model` is a live C++ `GEModel*` with arrays at `frame` and `lod`; `out` holds three points.
+void ee_ge_mod_triangle(const void *model,
+                        unsigned long frame,
+                        unsigned long lod,
+                        unsigned long polygon,
+                        unsigned long vertex_start,
+                        EeGe3DPoint *out);
 
 /// `GEModel(manager)`.
 ///
@@ -2522,6 +2552,25 @@ void *ee_ge_win_os(const EeGeWin *p);
 /// # Safety
 /// `p` is live.
 void ee_ge_win_resize(EeGeWin *p, unsigned long width, unsigned long height);
+
+/// Turns the arrays' capture on or off.
+void ee_ge_store_capture(bool on);
+
+/// The shadow of the C++ vertex array `array` into `out`; false when it has none.
+///
+/// # Safety
+/// `array` is a live C++ `GEVertexArray*`, `out` valid.
+bool ee_ge_store_vertices(const void *array, EeGeStoreVertices *out);
+
+/// The shadow of the C++ polygon array `array`: its indices (three per triangle) and the sets past its end; false
+/// when it has none.
+///
+/// # Safety
+/// `array` is a live C++ `GEPolygonArray*`, the outs valid.
+bool ee_ge_store_polygons(const void *array,
+                          const uint32_t **indices,
+                          size_t *count,
+                          uint32_t *out_of_range);
 
 /// `SaveAsBMP`'s, `SaveAsJPG`'s and `SaveAsJPG2`'s row: `width` pixels of `row` (`depth` 32, else 16 bits) as 3
 /// bytes each into `out`.

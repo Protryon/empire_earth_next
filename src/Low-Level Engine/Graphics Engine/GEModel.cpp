@@ -85,53 +85,13 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
         return (intptr_t)((GERasterizer*)inObj)->GetScreenID();
     case EeGeModOp::RasterTextureManager:
         return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
+    // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
     case EeGeModOp::VertexDelete:
         delete theVertices;
         return 0;
-    case EeGeModOp::VertexGather:
-        for (unsigned long i = 0; i < (unsigned long)a; i++)
-            theVertices->GetPoint(((GE3DPoint*)b)[i], i);
-        return 0;
-    case EeGeModOp::VertexGetPoint:
-        theVertices->GetPoint(*(GE3DPoint*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetPoint:
-        theVertices->SetPoint(*(const GE3DPoint*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexGetNormal:
-        theVertices->GetNormal(*(GEVector*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetNormal:
-        theVertices->SetNormal(*(const GEVector*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetUv:
-        theVertices->SetTextureCoordinate(GETextureCoordinate(((const float*)b)[0], ((const float*)b)[1]),
-                                          (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSize:
-        return (intptr_t)theVertices->GetSize();
-    case EeGeModOp::VertexSizeOf:
-        return (intptr_t)theVertices->SizeOf();
     case EeGeModOp::PolygonDelete:
         delete thePolygons;
         return 0;
-    case EeGeModOp::PolygonGather:
-        for (unsigned long i = 0; i < (unsigned long)a; i++) {
-            ((uint32_t*)b)[i * 3] = (uint32_t)thePolygons->GetVertexIndex1(i);
-            ((uint32_t*)b)[i * 3 + 1] = (uint32_t)thePolygons->GetVertexIndex2(i);
-            ((uint32_t*)b)[i * 3 + 2] = (uint32_t)thePolygons->GetVertexIndex3(i);
-        }
-        return 0;
-    case EeGeModOp::PolygonSetIndex:
-        if (c == 1)
-            thePolygons->SetVertexIndex1((unsigned long)a, (unsigned long)b);
-        else if (c == 2)
-            thePolygons->SetVertexIndex2((unsigned long)a, (unsigned long)b);
-        else
-            thePolygons->SetVertexIndex3((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::PolygonSizeOf:
-        return (intptr_t)thePolygons->SizeOf();
     case EeGeModOp::MaterialNew:
         return (intptr_t)new GEMaterial((unsigned long)a, (unsigned long)b);
     case EeGeModOp::MaterialDereference:
@@ -430,24 +390,9 @@ void GEModelManager::SetModelPath(FSPath* inPath)
 // (ee_ge physical_walk.rs, physical.rs)
 
 // The walks read the models through a table (ee_ge physical_walk.rs, EeGePhysicalModels): the handles are the GEModel*
-// the walks were given, read in place (R4.3 part 17: their Rust objects, ee_ge_physical_models), but for the two calls
-// that stay C++: a triangle's corners behind GEVertexArray's and GEPolygonArray's virtuals (the index arithmetic, a
-// polygon's vertex index plus the material's first vertex, is the C++'s unsigned long) and the exact retry.
+// the walks were given, read in place (R4.3 part 17: their Rust objects, ee_ge_physical_models; a triangle's corners
+// from the model's Rust arrays, ee_ge_mod_triangle), but for the exact retry, which stays C++.
 namespace {
-void PMTriangle(const void* inModel, unsigned long inFrame, unsigned long inLOD, unsigned long inPolygon,
-                unsigned long inVertexStart, EeGe3DPoint* outPoints)
-{
-    GEModel* theModel = const_cast<GEModel*>(static_cast<const GEModel*>(inModel));
-    GEVertexArray* theVertices = theModel->GetVertexArray(inFrame);
-    GEPolygonArray* thePolygons = theModel->GetPolygonArray(inLOD);
-    GE3DPoint thePoint;
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex1(inPolygon) + inVertexStart);
-    outPoints[0] = *GERust(thePoint);
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex2(inPolygon) + inVertexStart);
-    outPoints[1] = *GERust(thePoint);
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex3(inPolygon) + inVertexStart);
-    outPoints[2] = *GERust(thePoint);
-}
 // the scaled walk's exact retry: a placed model of its own (it references and releases the model)
 bool PMRetryLine(const void* inModel, const EeGeTransformation* inLocation, unsigned long inFrame, float inScale,
                  const EeGe3DLine* inLine, unsigned long inLOD)
@@ -461,7 +406,7 @@ bool PMRetryLine(const void* inModel, const EeGeTransformation* inLocation, unsi
 EeGePhysicalModels PMTable()
 {
     EeGePhysicalModels theTable;
-    ee_ge_physical_models(PMTriangle, PMRetryLine, &theTable);
+    ee_ge_physical_models(ee_ge_mod_triangle, PMRetryLine, &theTable);
     return theTable;
 }
 const EeGePhysicalModels kPMModels = PMTable();

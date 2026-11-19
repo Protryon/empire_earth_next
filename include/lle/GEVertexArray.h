@@ -4,8 +4,9 @@
 // port (R4.3 part 17): concrete. The renderer's two arrays (DX7StandardVertexArray: GXVERTEX, type 0;
 // DX7StdColorVertexArray: GXVERTEX_STD_COLOR, type 1) were trampolines over one Rust array each: they are this class
 // over ee_render geval vertarr.rs, and the draws read the vertices in place (mVertices, right after the vtable
-// pointer). The methods stay virtual: the store gate's arrays (tools/eemodel/storegate) are a subclass with their own
-// storage. The values travel as floats (GEColor, GE3DPoint, GEVector: three; GETextureCoordinate: two).
+// pointer). The model's calls are on the Rust array (ee_ge modobj.rs array_op); the store gate makes these arrays too,
+// with its capture on (geval vertarr_capture.rs). The values travel as floats (GEColor, GE3DPoint, GEVector: three;
+// GETextureCoordinate: two).
 #ifndef LLE_GEVERTEXARRAY_H
 #define LLE_GEVERTEXARRAY_H
 
@@ -18,11 +19,7 @@ class LLE_API GEVertexArray {
 public:
     GEVertexArray(unsigned long inType, unsigned long inCount)   // type 0 standard, 1 coloured
         : mRust(ee_ge_va_new(inType, inCount)) { this->mVertices = ee_ge_va_vertices(this->mRust); }
-    virtual ~GEVertexArray()                // slot 0
-    {
-        if (this->mRust)
-            ee_ge_va_destroy(this->mRust);
-    }
+    virtual ~GEVertexArray() { ee_ge_va_destroy(this->mRust); }   // slot 0
     virtual void CopyFrom(const GEVertexArray& inArray) { ee_ge_va_copy_from(this->mRust, inArray.mRust); }
     virtual void GetColor(GEColor& outColor, unsigned long inIndex) const { this->Get(EeGeVaField::Color, inIndex, &outColor); }
     virtual void GetNormal(GEVector& outNormal, unsigned long inIndex) const { this->Get(EeGeVaField::Normal, inIndex, &outNormal); }
@@ -53,9 +50,6 @@ public:
     }
     virtual unsigned long SizeOf() const { return ee_ge_va_size(this->mRust, true); }
     void* GetVertices() const { return this->mVertices; }   // the GPU's vertices (GXVERTEX or GXVERTEX_STD_COLOR)
-
-protected:
-    GEVertexArray() : mVertices(NULL), mRust(NULL) {}   // a subclass with its own storage (no vertices, no Rust array)
 
 private:
     static float* Floats(const void* inValue) { return reinterpret_cast<float*>(const_cast<void*>(inValue)); }

@@ -14,6 +14,7 @@
 #include "lle/GEBoundingBox.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
+#include "rust/render/ge.h"
 
 #include <string.h>
 #include <algorithm>
@@ -230,27 +231,31 @@ static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
             ioHash.S(m->GetTextureFilenames()[i]);
     }
     for (unsigned long l = 0; l < m->GetLODCount() && m->GetPolygonArrays(); l++) {
-        StorePolygonArray* theArray = dynamic_cast<StorePolygonArray*>(m->GetPolygonArrays()[l]);
-        ioHash.U(theArray != NULL);
-        if (!theArray)
+        const uint32_t* theIndices = NULL;
+        size_t theCount = 0;
+        uint32_t theOutOfRange = 0;
+        bool theCaptured = m->GetPolygonArrays()[l]
+                           && ee_ge_store_polygons(m->GetPolygonArrays()[l], &theIndices, &theCount, &theOutOfRange);
+        ioHash.U(theCaptured);
+        if (!theCaptured)
             continue;
-        ioHash.U(theArray->mIndices.size());
-        ioHash.Bytes(theArray->mIndices.data(), theArray->mIndices.size() * sizeof(unsigned long));
-        ioHash.U(theArray->mOutOfRange);
+        ioHash.U(theCount);
+        ioHash.Bytes(theIndices, theCount * sizeof(uint32_t));
+        ioHash.U(theOutOfRange);
     }
     for (unsigned long f = 0; f < m->GetFrameCount() && m->GetVertexArrays(); f++) {
         size_t theFirst = FirstOf(m->GetVertexArrays(), f);
         ioHash.U(theFirst);
-        StoreVertexArray* theArray = dynamic_cast<StoreVertexArray*>(m->GetVertexArrays()[f]);
-        if (theFirst != f || !theArray)
+        EeGeStoreVertices v;
+        if (theFirst != f || !m->GetVertexArrays()[f] || !ee_ge_store_vertices(m->GetVertexArrays()[f], &v))
             continue;
-        ioHash.U(theArray->mType);
-        ioHash.Floats(theArray->mPoints);
-        ioHash.Floats(theArray->mNormals);
-        ioHash.Floats(theArray->mUVs);
-        ioHash.Floats(theArray->mColors);
-        ioHash.Floats(theArray->mOpacities);
-        ioHash.U(theArray->mOutOfRange);
+        ioHash.U(v.kind);
+        ioHash.Floats(std::vector<float>(v.points, v.points + v.points_len));
+        ioHash.Floats(std::vector<float>(v.normals, v.normals + v.normals_len));
+        ioHash.Floats(std::vector<float>(v.uvs, v.uvs + v.uvs_len));
+        ioHash.Floats(std::vector<float>(v.colors, v.colors + v.colors_len));
+        ioHash.Floats(std::vector<float>(v.opacities, v.opacities + v.opacities_len));
+        ioHash.U(v.out_of_range);
     }
     for (unsigned long i = 0; i < m->GetSubModelCount() && m->GetSubModels(); i++) {
         ioHash.U(m->GetSubModels()[i] != NULL);
