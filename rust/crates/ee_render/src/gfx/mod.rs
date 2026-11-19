@@ -127,6 +127,7 @@ mod golden_view;
 mod golden_volcano;
 #[cfg(test)]
 mod golden_walk;
+pub mod input_views;
 pub mod lighting;
 pub mod mesh;
 pub mod minimap;
