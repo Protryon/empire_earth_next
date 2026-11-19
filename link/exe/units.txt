@@ -11,7 +11,6 @@
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
 8bbbf 8e702 Empire Earth/AI Thread/EECPResourceCenter.cpp
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
-a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
@@ -54,7 +53,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1245bb 1248f6 RTS Engine/Map/RTSTile.cpp
 1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
-1273d7 127584 Empire Earth/Empire Earth/EECDKeyStrings.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
 12a54a 12c3eb Empire Earth/Empire Earth/EECheatCodes.cpp
 12c3eb 12cac8 Empire Earth/Empire Earth/EECivilization.cpp
