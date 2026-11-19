@@ -60,6 +60,7 @@
 #include "ee/EEUIManager.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
+#include "rust/render/ge.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -523,6 +524,12 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         ISEntity* theKey;
         return gISKeyboard->GetEntity(kKeySpace, theKey) == 0 && theKey->GetValue() > 0;
     }
+    // the message box's buttons' (shells_dialog.rs)
+    case EE_SCREENS_SH_FOCUSED_TEXT_COLOR: static_cast<UIButton*>(c)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); break;
+    case EE_SCREENS_SH_FILL:
+        return ee_ge_draw2d_fill(c->GetRasterizer(), c->GetScreenIndex(),
+                                 reinterpret_cast<const EeGeRectangle*>(&c->GetCopiedDrawRectangle()), f, f[3]);
+    case EE_SCREENS_SH_CLOSE_FORM: gUserInterface->CloseForm(reinterpret_cast<UIForm*>(a)); break;
     case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)reinterpret_cast<EEUIFSETerrain*>(a)->mRust;
     case EE_SCREENS_SH_SLIDER_OF: {
         UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));

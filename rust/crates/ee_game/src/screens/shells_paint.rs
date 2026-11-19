@@ -116,7 +116,7 @@ pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
             level: Cell::new(0),
         }),
         EE_SCREENS_SK_TERRAIN_PAINT => Box::new(TerrainPaint { paint: paint(true), tab: arg(2) }),
-        _ => return None,
+        _ => return crate::screens::shells_dialog::make(kind, args),
     })
 }
 

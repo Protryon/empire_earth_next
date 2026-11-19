@@ -8821,6 +8821,45 @@ constexpr static const uint32_t EE_SCREENS_SH_COPY_FIRST_TO_ALL = 69;
 /// The brush group `a`'s `mBrushSize = b`.
 constexpr static const uint32_t EE_SCREENS_SH_BRUSH_SIZE = 70;
 
+/// `EEUIFError` (a form; no args).
+constexpr static const uint32_t EE_SCREENS_SK_DIALOG = 104;
+
+/// `EEUIFEBOK`, `EEUIFEBCancel` (buttons; no args).
+constexpr static const uint32_t EE_SCREENS_SK_DIALOG_OK = 105;
+
+constexpr static const uint32_t EE_SCREENS_SK_DIALOG_CANCEL = 106;
+
+/// The box's `Display(kind a, alignment b & 0xffffffff, flag b >> 32)` (its inputs the host's).
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_SHOW = 104;
+
+/// A button's `SetCallback(a, b)` / `mCloseForm = a` / `mPressed` / `mCallback` / `mData`.
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_SET_CALLBACK = 105;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_SET_CLOSE = 106;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_PRESSED = 107;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_CALLBACK = 108;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIALOG_DATA = 109;
+
+/// A button's text focused colour `f[0..3]` (`SetFocusedTextColor`).
+constexpr static const uint32_t EE_SCREENS_SH_FOCUSED_TEXT_COLOR = 148;
+
+/// The copied draw rectangle filled with `f[0..3]` at the opacity `f[3]` (the 2D draw list's `ee_ge_draw2d_fill`).
+constexpr static const uint32_t EE_SCREENS_SH_FILL = 149;
+
+/// `gUserInterface->CloseForm(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_CLOSE_FORM = 150;
+
+/// The box's own ops of its host (past `dialog.rs`'): the controls deleted, the background scaled to the window, the
+/// pressed button's callback posted (OK first, then No, then Cancel).
+constexpr static const uint32_t EE_SCREENS_DLG_DELETE = 64;
+
+constexpr static const uint32_t EE_SCREENS_DLG_SCALE_BACKGROUND = 65;
+
+constexpr static const uint32_t EE_SCREENS_DLG_POST_CLOSED = 66;
+
 /// `EESETSShowIDsCheckBox` (a check box with no override).
 constexpr static const uint32_t EE_SCREENS_SK_SHOW_IDS = 32;
 
@@ -8997,6 +9036,61 @@ constexpr static const uint32_t EE_SCREENS_SH_SLIDER_OF = 146;
 
 /// -> the terrain tab `a`'s Rust (`EEUIFSETerrain::mRust`: made after its paint area).
 constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_RUST = 147;
+
+/// `EEUIBSavedGroup` (a button; no args).
+constexpr static const uint32_t EE_SCREENS_SK_SAVED_GROUP = 112;
+
+/// `Refresh()` / `SetUnit((EEComplexUnit*)a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SG_REFRESH = 112;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_SG_SET_UNIT = 113;
+
+/// -> a new empty `GEBitmap`.
+constexpr static const uint32_t EE_SCREENS_SH_SG_NEW_PORTRAIT = 160;
+
+/// The sound `a` (0 `kSoundButton1`, 1 `kSoundButton2`) loaded -> its sample id (0: none) / unloaded (`b` 1).
+constexpr static const uint32_t EE_SCREENS_SH_SG_SOUND = 161;
+
+/// `gSoundManager->Play(a, 1, 0, 1, false, NULL)`.
+constexpr static const uint32_t EE_SCREENS_SH_SG_PLAY = 162;
+
+/// -> the local player (0: none).
+constexpr static const uint32_t EE_SCREENS_SH_SG_PLAYER = 163;
+
+/// -> the local player's selected group's first unit / its saved group `a`'s first unit when it has units (b 1; 0
+/// else).
+constexpr static const uint32_t EE_SCREENS_SH_SG_FIRST_UNIT = 164;
+
+/// The message `a` sent for the group `b & 0xff` (`EE_SCREENS_SG_MSG_*`; `b >> 8` the select's double-click flag).
+constexpr static const uint32_t EE_SCREENS_SH_SG_SEND = 165;
+
+/// -> `UIControl::ShiftKeyPressed()`.
+constexpr static const uint32_t EE_SCREENS_SH_SG_SHIFT = 166;
+
+/// -> `GetIndex()`.
+constexpr static const uint32_t EE_SCREENS_SH_SG_INDEX = 167;
+
+/// The unit `a`'s portrait button cut into the bitmap `b` for the control's rectangle -> its texture, `f[0..2]` its
+/// cell.
+constexpr static const uint32_t EE_SCREENS_SH_SG_FACE = 168;
+
+/// The texture `a` referenced (`b` 1) or released (0).
+constexpr static const uint32_t EE_SCREENS_SH_SG_TEXTURE_REF = 169;
+
+/// The bitmap `a`'s texture set to `b` on the control's screen.
+constexpr static const uint32_t EE_SCREENS_SH_SG_SET_TEXTURE = 170;
+
+/// The bitmap `a` drawn at the button's bitmap location.
+constexpr static const uint32_t EE_SCREENS_SH_SG_DRAW = 171;
+
+/// The messages: select (with the double click flag), add the selection, create, clear.
+constexpr static const int64_t EE_SCREENS_SG_MSG_SELECT = 0;
+
+constexpr static const int64_t EE_SCREENS_SG_MSG_ADD = 1;
+
+constexpr static const int64_t EE_SCREENS_SG_MSG_CREATE = 2;
+
+constexpr static const int64_t EE_SCREENS_SG_MSG_CLEAR = 3;
 
 /// `EESEUITechListBox` (a string list box).
 constexpr static const uint32_t EE_SCREENS_SK_TECH_LIST = 64;
@@ -11824,19 +11918,6 @@ int32_t ee_screens_cursor_kind(void *ctx);
 
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
-
-/// `EEUIFError::Display`: shows the box as the kind (`EE_SCREENS_DIALOG_*`); `flag` is the message's OK shown or
-/// the prompt's password box.
-void ee_screens_dialog_show(void *dialog,
-                            uint32_t kind,
-                            uint32_t alignment,
-                            bool flag);
-
-/// `EEUIFError::Open`: lays the box's controls out for its mode.
-void ee_screens_dialog_open(void *dialog, uint32_t mode);
-
-/// `EEUIFError::EEUIFError`: creates and lays out the box's controls and background.
-void ee_screens_dialog_construct(void *dialog);
 
 /// A paint action's record: the terrain paint (a terrain, b texture), the elevation paint (a the level) or the
 /// bulldozer. Freed by `ee_screens_sea_paint_free` (the action's destructor).
