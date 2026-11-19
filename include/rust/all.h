@@ -21,6 +21,7 @@
 #include "rust/data/media.h"
 #include "rust/data/tables.h"
 #include "rust/game/app.h"
+#include "rust/game/fixture.h"
 #include "rust/game/screens.h"
 #include "rust/game/sim_driver.h"
 #include "rust/net/net.h"
