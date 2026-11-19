@@ -104,30 +104,20 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 16ff5f 1705a2 Empire Earth/Scenario Editor/EESEIAExport.cpp
 1705a2 172125 Empire Earth/Scenario Editor/EESEInstructions.cpp
 172125 172b0f Empire Earth/Scenario Editor/EESELoadThread.cpp
-172b0f 172d2c Empire Earth/Scenario Editor/EESEPSSetPlayers.cpp
-172d2c 173218 Empire Earth/Scenario Editor/EESEBSelect.cpp
 173218 17acf6 Empire Earth/Scenario Editor/EESERBUnitTypes.cpp
-17acf6 17b0b7 Empire Earth/Scenario Editor/EESESCComboBox.cpp
 17b0b7 17ccf3 Empire Earth/Scenario Editor/EESETriggerScreen.cpp
 17ccf3 17daa8 Empire Earth/Scenario Editor/EESETSArea.cpp
-17daa8 17e49e Empire Earth/Scenario Editor/EESETSCComboBox.cpp
 17e49e 17ef10 Empire Earth/Scenario Editor/EESETSCondition.cpp
-181792 182629 Empire Earth/Scenario Editor/EESETSEComboBox.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
-196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
-19764b 199afd Empire Earth/Scenario Editor/EESEUITechListBox.cpp
 199afd 19cc39 Empire Earth/Scenario Editor/EESEUnit.cpp
 19cc39 1a0315 Empire Earth/Scenario Editor/EEUIFScenarioEditor.cpp
 1a0315 1a098e Empire Earth/Scenario Editor/EEUIEOpenCivBuilder.cpp
 1a098e 1a1397 Empire Earth/Scenario Editor/EEUIFSEElevation.cpp
-1a1397 1a147f Empire Earth/Scenario Editor/EEUIFSEESElevation.cpp
-1a147f 1a18f1 Empire Earth/Scenario Editor/EEUIFSEMainButton.cpp
 1a18f1 1a3f10 Empire Earth/Scenario Editor/EEUIFSEMap.cpp
 1a3f10 1a4470 Empire Earth/Scenario Editor/EEUIFSEPaint.cpp
 1a4470 1a4c00 Empire Earth/Scenario Editor/EEUIFSEPaintElevation.cpp
-1a4c00 1a4cbb Empire Earth/Scenario Editor/EEUIFSERBBrush.cpp
 1a4e99 1a5529 Empire Earth/Scenario Editor/EEUIFSEUpgradePanel.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
@@ -169,7 +159,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
-2547e0 254911 Empire Earth/User Interface Thread/EEUIBColor.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
 255c2a 25619b Empire Earth/User Interface Thread/EEUIBSavedGroup.cpp
 25619b 25643d Empire Earth/User Interface Thread/EEUIBuildGate.cpp
@@ -188,7 +177,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 2624a6 26272b Empire Earth/User Interface Thread/EEUIFileComboBox.cpp
 26272b 26783d Empire Earth/User Interface Thread/EEUIFMainGame.cpp
 26783d 267ad9 Empire Earth/User Interface Thread/EEUIFMGAttribute.cpp
-267ad9 267b77 Empire Earth/User Interface Thread/EEUIFMGErrorLog.cpp
 267ec8 2691b2 Empire Earth/User Interface Thread/EEUIFMGMainGroup.cpp
 2691b2 269ca8 Empire Earth/User Interface Thread/EEUIFMGStatusBar.cpp
 269ca8 26de97 Empire Earth/User Interface Thread/EEUIFMGStatusBox.cpp

@@ -345,6 +345,22 @@ pub extern "C" fn ee_won_comp_host_world(host: EeWonGuiHostFn) {
     WORLD_HOST.with(|h| h.set(host));
 }
 
+/// Whether the objects run in the game: the game's host is registered and no world's is on this thread (the drivers
+/// either register a world or link no C++ host).
+pub fn is_game() -> bool {
+    #[cfg(test)]
+    if FORCE_GAME.with(|f| f.get()) {
+        return true;
+    }
+    WORLD_HOST.with(|h| h.get()).is_none() && GAME_HOST.load(Ordering::Acquire) != 0
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The crate's tests: the game's paths with a world's host on this thread.
+    pub(crate) static FORCE_GAME: Cell<bool> = const { Cell::new(false) };
+}
+
 /// The component host: this thread's world's, else the game's.
 pub fn host() -> EeWonGuiHostFn {
     if let Some(f) = WORLD_HOST.with(|h| h.get()) {

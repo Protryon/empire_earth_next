@@ -50,8 +50,6 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
         if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
         return 0;
     case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
-    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
-    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
     case Op::WrapSetMaxWidth: t->mText->SetMaxWidth((int)a); return 0;
     case Op::WrapSetCentered: t->mText->SetCentered(a != 0); return 0;
     case Op::WrapWidth: return t->mText->GetWidth();

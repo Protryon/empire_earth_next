@@ -49,7 +49,7 @@
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EESEUITechListBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
@@ -284,9 +284,8 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         break;
     }
     case EE_SCREENS_SEW_OP_TECH_FILL:
-        static_cast<EESEUITechListBox*>(
-            theEditor->GetControlById(i[0] != 0 ? kSERBUnitTypesTechList : kSERBUnitTypesOtherTechList))
-            ->Fill(i[1], i[2]);
+        EEUIShell::Op(theEditor->GetControlById(i[0] != 0 ? kSERBUnitTypesTechList : kSERBUnitTypesOtherTechList),
+                      EE_SCREENS_SKOP_TECH_FILL, i[1], i[2]);
         break;
     case EE_SCREENS_SEW_OP_ROTATE:
         ee_screens_seu_rotate(f[0]);

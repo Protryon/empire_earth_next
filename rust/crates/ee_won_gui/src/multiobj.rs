@@ -166,6 +166,11 @@ impl EeWonMulti {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         call_host(self.host, self.comp, op, a, b, c, d)
     }
     fn op1(&self, op: Op, a: isize) -> isize {
@@ -871,6 +876,11 @@ impl EeWonMHead {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::Container, op, a, b, c)
+        {
+            return r;
+        }
         call_host(self.host, self.comp, op, a, b, c, 0)
     }
     fn op1(&self, op: Op, a: isize) -> isize {
@@ -1126,7 +1136,9 @@ pub extern "C" fn ee_won_multi_new(
     host: EeWonGuiHostFn,
     list: *const EeWonList,
 ) -> *mut EeWonMulti {
-    Box::into_raw(Box::new(EeWonMulti::new(component, host, list)))
+    let made = Box::into_raw(Box::new(EeWonMulti::new(component, host, list)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Multi, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -1134,6 +1146,7 @@ pub extern "C" fn ee_won_multi_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_multi_free(multi: *mut EeWonMulti) {
     if !multi.is_null() {
+        crate::registry::unregister(multi as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(multi) });
     }

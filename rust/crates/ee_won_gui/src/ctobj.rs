@@ -1345,7 +1345,9 @@ pub extern "C" fn ee_won_ct_new(
     host: EeWonGuiHostFn,
     wheel_to_focus: bool,
 ) -> *mut EeWonContainer {
-    Box::into_raw(Box::new(EeWonContainer::new(component, host, wheel_to_focus)))
+    let made = Box::into_raw(Box::new(EeWonContainer::new(component, host, wheel_to_focus)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Container, made as *const std::ffi::c_void);
+    made
 }
 
 /// The destructor's statements (children told, cursor, layout, timer children and children released), then the
@@ -1356,6 +1358,7 @@ pub extern "C" fn ee_won_ct_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_ct_free(ct: *mut EeWonContainer) {
     if !ct.is_null() {
+        crate::registry::unregister(ct as *const std::ffi::c_void);
         // SAFETY: the contract
         unsafe {
             (*ct).destroy();

@@ -52,14 +52,13 @@
 #include "lle/UICheckBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include "ee/EESETSEScenarioComboBox.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).
 
 // The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
-void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
-void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+void FillAreaObjectComboBox(UITextLabel* inLabel, UIComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
 
 static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
                   kSEEQuickLoad == EE_SCREENS_SEE_QUICK_LOAD && kSEEQuickSave == EE_SCREENS_SEE_QUICK_SAVE &&
@@ -124,10 +123,10 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         static_cast<UIControl*>(p)->SetDisplayMode((unsigned long)i[0]);
         break;
     case EE_SCREENS_SEE_OP_FILL_SCENARIO:
-        FillScenarioComboBox(static_cast<EESETSEScenarioComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
+        FillScenarioComboBox(static_cast<UIComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
         break;
     case EE_SCREENS_SEE_OP_SET_SELECTION:
-        static_cast<UIComboBox*>(static_cast<EESETSEScenarioComboBox*>(p))->SetCurrentSelection((unsigned long)i[0]);
+        static_cast<UIComboBox*>(p)->SetCurrentSelection((unsigned long)i[0]);
         break;
     case EE_SCREENS_SEE_OP_ENTITY_ID:
         return (int32_t)static_cast<UIControl*>(static_cast<UIEntity*>(p))->GetId();
@@ -155,7 +154,7 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
     case EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: {
         UIForm* theForm = static_cast<UIForm*>(p);
         FillAreaObjectComboBox(static_cast<UITextLabel*>(theForm->GetControlById(i[0])),
-                               static_cast<EESETSEScenarioComboBox*>(theForm->GetControlById(i[1])), i[2] != 0);
+                               static_cast<UIComboBox*>(theForm->GetControlById(i[1])), i[2] != 0);
         break;
     }
     case EE_SCREENS_SEE_OP_MAP_ELEVATION:

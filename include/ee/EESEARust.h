@@ -69,7 +69,7 @@ public:
 class UIControl;
 class UIEntity;
 class UITextLabel;
-class EESETSEScenarioComboBox;
+class UIComboBox;
 
 // EESEESliderChange(label, format, scale, offset): the slider's value * scale + offset printed by the format into the
 // label (the format is copied)
@@ -88,7 +88,7 @@ inline void EESEEPushControl(EESEERust* inEvent, UIControl* inControl)
 
 // EESEEUseObjectArea(label, combo box, area control): the combo box refilled with the areas when the area control
 // is the one checked, else with the objects (FillScenarioComboBox), its first line picked
-inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, UIEntity* inAreaControl)
+inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, UIComboBox* inComboBox, UIEntity* inAreaControl)
 {
     EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
     ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);

@@ -127,13 +127,12 @@
 #include "rust/sim/scenario.h"
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
-#include "ee/EESEUITechListBox.h"
+#include "ee/EEUIShell.h"
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <string>
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSEMainButton.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "lle/FSChunk.h"
@@ -154,9 +153,6 @@ extern std::map<const void*, unsigned long> gSeetAlignments;
 long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSEComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
 #include "ee/EESEPlayerScreen.h"
 #include <typeinfo>
 #include "ee/EEComputerPlayer.h"
@@ -921,7 +917,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     std::vector<UISlider*> theSliders;
     std::vector<UIControl*> theChecks, theRadios;
     std::vector<UIComboBox*> theCombos;
-    std::vector<EESETSEScenarioComboBox*> theScenario;
+    std::vector<UIComboBox*> theScenario;
     std::vector<UILBString*> theLists;
     if (inCondition) {
         EESETSConditionControls* t = ConditionControls();
@@ -961,7 +957,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     for (size_t i = 0; i < theScenario.size(); i++) {
         unsigned long theSelection = 0;
         bool theSelected = theScenario[i]->GetCurrentSelection(theSelection) == kErrorOK;
-        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(theScenario[i]->mMode) +
+        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(EEUIShell::Op(theScenario[i], EE_SCREENS_SKOP_MODE)) +
                            " lines=" + std::to_string(theScenario[i]->GetListBox()->GetLineCount()) + " selection=" +
                            (theSelected ? std::to_string(theSelection) : std::string("none")));
     }
@@ -989,6 +985,14 @@ std::string TypeName(const void* inObject, const std::type_info& inType)
     if (theName.compare(0, 6, "class ") == 0)
         theName.erase(0, 6);
     return theName;
+}
+
+// a control's class: a shell's (ee/EEUIShell.h) is the class its kind replaces
+std::string TypeName(UIControl* inControl)
+{
+    if (EEUIShell* s = EEUIShell::Of(inControl))
+        return s->KindName();
+    return TypeName(inControl, typeid(*inControl));
 }
 
 std::string GETextText(GEText* inText)
@@ -1053,7 +1057,7 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
         c->GetBgColor(theBg);
         char theText[320];
         snprintf(theText, sizeof(theText), "  c%lu %s id=0x%lx ix=%lu g=%s r=%g,%g,%g,%g m=%lu bg=%g,%s b=%lu h=%lu", i,
-                 TypeName(c, typeid(*c)).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
+                 TypeName(c).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
                  (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), c->GetDisplayMode(),
                  (double)c->GetBgOpacity(), Colour(theBg).c_str(), c->GetBorderThickness(), c->GetStringTableID());
         std::string theLine = theText;
@@ -1075,7 +1079,7 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
         else if (UISlider* b = dynamic_cast<UISlider*>(c))
             theLine += " v=" + std::to_string(b->GetCurrentRangeValue()) + " max=" + std::to_string(b->GetMaxRange());
         else if (i > 0 && theForm->GetControl(i - 1) != NULL &&
-                 TypeName(theForm->GetControl(i - 1), typeid(*theForm->GetControl(i - 1))) == "EEUIFMGAttribute")
+                 TypeName(theForm->GetControl(i - 1)) == "EEUIFMGAttribute")
             // a unit attribute's value (the unit tab's panel): its bonus follows the tech tree the load thread
             // reloads, shown on a later frame (a timing)
             theLine += " (an attribute value)";
@@ -1212,18 +1216,19 @@ void TerrainDigest(std::vector<std::string>& outLines)
 void TechDigest(std::vector<std::string>& outLines)
 {
     for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
-        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
+        UILBString* l = static_cast<UILBString*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
         l->CopyData();
+        long theCount = (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_COUNT);
         unsigned long theSelection = 0;
         bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
-        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(l->mTechs.size()) + " lines=" +
+        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(theCount) + " lines=" +
                         std::to_string(l->GetLineCount()) + " sel=" +
                         (theSelected ? std::to_string(theSelection) : std::string("none")) + " marked";
-        for (unsigned long d : l->mDependents)
-            s += " " + std::to_string(d);
+        for (long d = 0; d < (long)EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_COUNT); d++)
+            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_MARKED_AT, d));
         s += " ids";
-        for (long id : l->mTechs)
-            s += " " + std::to_string(id);
+        for (long k = 0; k < theCount; k++)
+            s += " " + std::to_string(EEUIShell::Op(l, EE_SCREENS_SKOP_TECH_AT, k));
         outLines.push_back(s);
         s = "  lines";
         for (unsigned long k = 0; k < l->GetLineCount(); k++)
@@ -1419,7 +1424,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         std::function<void()> theCode;
         std::string theProblem;
         if (c == "tab")
-            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTabButton(L(1))->CheckDirect(); };
+            theCode = [=] { EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetTabButton(L(1)), EE_SCREENS_SKOP_CHECK_DIRECT); };
         else if (c == "blank")
             theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
@@ -1750,7 +1755,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                                                                       : t->mEditBox48;
                     b->SetText(UWideString(theText.c_str()));
                 } else if (w[1] == "player")
-                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
                 else if (w[1] == "scen")
                     t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
                 else
@@ -1767,7 +1772,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                 if (w[1] == "edit" || w[1] == "text")
                     (w[1] == "edit" ? t->mEditBoxes[i] : t->mTextEditBox)->SetText(UWideString(theText.c_str()));
                 else if (w[1] == "player")
-                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                    EEUIShell::Op(t->mPlayers[i], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)L(3));
                 else if (w[1] == "scen")
                     t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
                 else
@@ -2127,7 +2132,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
             theCode = [=] { gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
         else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
-            theCode = [=] { static_cast<EESEUITechListBox*>(EditorControl(w[1]))->Fill(L(2), L(3)); };
+            theCode = [=] { EEUIShell::Op(EditorControl(w[1]), EE_SCREENS_SKOP_TECH_FILL, L(2), L(3)); };
         else if (c == "techstate")   // the two tech lists (TechDigest)
             theCode = [=, &theOutput] { TechDigest(theOutput); };
         else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)

@@ -608,7 +608,9 @@ impl EeWonButton {
 /// A new Rust Button for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_btn_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonButton {
-    Box::into_raw(Box::new(EeWonButton::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonButton::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Button, made as *const std::ffi::c_void);
+    made
 }
 
 /// Frees a Rust Button (the original's destructor had no statement).
@@ -618,6 +620,7 @@ pub extern "C" fn ee_won_btn_new(component: *mut c_void, host: EeWonGuiHostFn) -
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_btn_free(btn: *mut EeWonButton) {
     if !btn.is_null() {
+        crate::registry::unregister(btn as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(btn) });
     }

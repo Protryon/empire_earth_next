@@ -36,7 +36,6 @@
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
-#include "ee/EESETSTriggerUIComboBox.h"
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
@@ -65,12 +64,6 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
     theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theScreen->mScreens[theTab]->mSelection = (unsigned long)(uint32_t)theJump;
     theScreen->ShowTab(kSETriggerTabTrigger + theTab);
-}
-
-long EESETSTriggerUIComboBox::MouseRButtonUp()
-{
-    EESETriggerJump(this->mKind, this->GetSelectionIndex());
-    return 0;
 }
 
 // The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor

@@ -64,7 +64,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEUICUnitIconBar.h"
-#include "ee/EEUIFMGErrorLog.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "lle/UIFormManager.h"
@@ -845,8 +845,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         return 0;
     }
     case EE_SCREENS_MF_OP_LOG_LINE:
-        static_cast<EEUIFMGErrorLog*>(theForm->GetControl(kMainGameErrorLog))->SetLine((unsigned long)inA,
-                                                                                    theForm->mStrings[inA]);
+        static_cast<EEUIShellList*>(theForm->GetControl(kMainGameErrorLog))->SetLine((unsigned long)inA,
+                                                                                  theForm->mStrings[inA]);
         return 0;
     case EE_SCREENS_MF_OP_VIEW_RECT: {
         GERectangle theView = gViewport.GetViewRectangle();

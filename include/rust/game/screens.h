@@ -8572,6 +8572,490 @@ constexpr static const uint32_t EE_SCREENS_TEXT_LIST_APPEND = 44;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_QUESTION = 45;
 
+/// `CopyData()`.
+constexpr static const uint32_t EE_SCREENS_SV_COPY_DATA = 0;
+
+/// `DrawPolygons()`.
+constexpr static const uint32_t EE_SCREENS_SV_DRAW_POLYGONS = 1;
+
+/// `DrawTextA()`.
+constexpr static const uint32_t EE_SCREENS_SV_DRAW_TEXT = 2;
+
+/// `MouseLButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_L_DOWN = 3;
+
+/// `MouseLButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_L_UP = 4;
+
+/// `MouseLButtonDoublePressed()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_L_DOUBLE = 5;
+
+/// `MouseRButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_R_DOWN = 6;
+
+/// `MouseRButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_R_UP = 7;
+
+/// `UpdateKeyboard()`.
+constexpr static const uint32_t EE_SCREENS_SV_UPDATE_KEYBOARD = 8;
+
+/// `TabbedTo()`.
+constexpr static const uint32_t EE_SCREENS_SV_TABBED_TO = 9;
+
+/// `TabbedFrom()`.
+constexpr static const uint32_t EE_SCREENS_SV_TABBED_FROM = 10;
+
+/// `MouseMove(f[0], f[1])`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_MOVE = 11;
+
+/// `SetDirty(a)`.
+constexpr static const uint32_t EE_SCREENS_SV_SET_DIRTY = 12;
+
+/// `GetTabable()`.
+constexpr static const uint32_t EE_SCREENS_SV_GET_TABABLE = 13;
+
+/// `GetHelpString(*a)` (a `UWideString*`).
+constexpr static const uint32_t EE_SCREENS_SV_HELP_STRING = 14;
+
+/// A button's `ButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_SV_BUTTON_DOWN = 15;
+
+/// A button's (or a list box's) `ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SV_BUTTON_UP = 16;
+
+/// A button's `MouseOver()`.
+constexpr static const uint32_t EE_SCREENS_SV_MOUSE_OVER = 17;
+
+/// A radio button's `Check()`.
+constexpr static const uint32_t EE_SCREENS_SV_CHECK = 18;
+
+/// A radio button's `UnCheck()`.
+constexpr static const uint32_t EE_SCREENS_SV_UNCHECK = 19;
+
+/// A combo box's `ChangeSelection()`.
+constexpr static const uint32_t EE_SCREENS_SV_CHANGE_SELECTION = 20;
+
+/// A list box's `ChangeSelectionIndex(a, b & 1, b & 2)`.
+constexpr static const uint32_t EE_SCREENS_SV_CHANGE_SELECTION_INDEX = 21;
+
+/// A slider's `ChangeRange(a)`.
+constexpr static const uint32_t EE_SCREENS_SV_CHANGE_RANGE = 22;
+
+/// An edit box's `ProcessEnterKey()`.
+constexpr static const uint32_t EE_SCREENS_SV_PROCESS_ENTER = 23;
+
+/// `EEUIBColor` (a button; args: the player colour).
+constexpr static const uint32_t EE_SCREENS_SK_COLOR = 1;
+
+/// `EESEPSSetPlayers` (a button; args: the font).
+constexpr static const uint32_t EE_SCREENS_SK_SET_PLAYERS = 2;
+
+/// `EEUIFSERBBrush` (a radio button; args: the brush group, the brush size).
+constexpr static const uint32_t EE_SCREENS_SK_BRUSH = 3;
+
+/// `EESETSCComboBox` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_CONDITION_COMBO = 4;
+
+/// `EESETSEComboBox` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_EFFECT_COMBO = 5;
+
+/// `EESETSEScenarioComboBox` (a combo box; args: the screen, the mode).
+constexpr static const uint32_t EE_SCREENS_SK_SCENARIO_COMBO = 6;
+
+/// `EESETSTriggerUIComboBox` (a combo box; args: the jump's kind).
+constexpr static const uint32_t EE_SCREENS_SK_TRIGGER_COMBO = 7;
+
+/// `EESETSAComboBox` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_OBJECT_COMBO = 8;
+
+/// `EESETSUICBPlayer` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_PLAYER_COMBO = 9;
+
+/// `EEUIFMGErrorLog` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_ERROR_LOG = 10;
+
+/// `EEUIFSEESElevation` (a slider).
+constexpr static const uint32_t EE_SCREENS_SK_ELEVATION_SLIDER = 11;
+
+/// `EESETSAEditBox` (an edit box).
+constexpr static const uint32_t EE_SCREENS_SK_OBJECT_EDIT = 12;
+
+/// `EESETSOUnitList` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_LIST = 13;
+
+/// `EEUIBColor::GetColor()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_COLOR = 1;
+
+/// `EEUIBColor::SetColor(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SET_COLOR = 2;
+
+/// `EEUIFSERBBrush::mBrushSize`.
+constexpr static const uint32_t EE_SCREENS_SKOP_BRUSH_SIZE = 3;
+
+/// `EESETSEScenarioComboBox::mMode = a`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SET_MODE = 4;
+
+/// `EESETSEScenarioComboBox::mMode`.
+constexpr static const uint32_t EE_SCREENS_SKOP_MODE = 9;
+
+/// `EESETSUICBPlayer::GetSelectedPlayer()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SELECTED_PLAYER = 5;
+
+/// `EESETSUICBPlayer::SetSelectedPlayer(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SET_SELECTED_PLAYER = 6;
+
+/// `EESETSUICBPlayer::SetFlags(a)` (then its list).
+constexpr static const uint32_t EE_SCREENS_SKOP_SET_FLAGS = 7;
+
+/// `EESETSUICBPlayer::SetPlayerCount(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_SET_PLAYER_COUNT = 8;
+
+/// `EE_SCREENS_SH_BASE + v`: the base class's virtual `v` (`EE_SCREENS_SV_*`) on the shell.
+constexpr static const uint32_t EE_SCREENS_SH_BASE = 256;
+
+/// `SetBgOpacity(f[0])`.
+constexpr static const uint32_t EE_SCREENS_SH_BG_OPACITY = 1;
+
+/// `SetBgColor(GEColor(f[0], f[1], f[2]))`.
+constexpr static const uint32_t EE_SCREENS_SH_BG_COLOR = 2;
+
+/// `SetBgColor(EEGetPlayerColor(a))`.
+constexpr static const uint32_t EE_SCREENS_SH_BG_PLAYER_COLOR = 3;
+
+/// The text (`a` 0: the control's `GetGEText()`, 1: its label's) coloured `f[0..3]` and transparent.
+constexpr static const uint32_t EE_SCREENS_SH_TEXT_FG = 4;
+
+/// A list box's `GetSelectedBackground()->SetColor(f[0..3])`.
+constexpr static const uint32_t EE_SCREENS_SH_SELECTED_COLOR = 5;
+
+/// A list box's `GetSelectedBackground()->SetOpacity(f[0])`.
+constexpr static const uint32_t EE_SCREENS_SH_SELECTED_OPACITY = 6;
+
+/// A button's `SetText(resource string a, (GEFont*)b)`.
+constexpr static const uint32_t EE_SCREENS_SH_BUTTON_TEXT = 7;
+
+/// A combo box's `GetSelectionIndex()`.
+constexpr static const uint32_t EE_SCREENS_SH_SELECTION_INDEX = 8;
+
+/// A combo box's `SetCurrentSelection(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_SELECTION = 9;
+
+/// A combo box's `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SH_DELETE_ALL = 10;
+
+/// A combo box's `AppendLine(resource string a)`.
+constexpr static const uint32_t EE_SCREENS_SH_APPEND_STRING = 11;
+
+/// A combo box's lines "resource string a" printed with 1..=b (`sprintf`), appended.
+constexpr static const uint32_t EE_SCREENS_SH_APPEND_NUMBERED = 12;
+
+/// A list box's `GetScrollBarCaptured()`.
+constexpr static const uint32_t EE_SCREENS_SH_SCROLL_CAPTURED = 13;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_SH_RELEASE_MOUSE = 14;
+
+/// `FireTriggerEvent(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_FIRE = 15;
+
+/// A slider's `GetCurrentRangeValue()`.
+constexpr static const uint32_t EE_SCREENS_SH_SLIDER_VALUE = 16;
+
+/// A slider's `GetMaxRange()`.
+constexpr static const uint32_t EE_SCREENS_SH_SLIDER_MAX = 17;
+
+/// The form's label of id `a`: `SetText((long)b)`.
+constexpr static const uint32_t EE_SCREENS_SH_LABEL_NUMBER = 18;
+
+/// `GetId()`.
+constexpr static const uint32_t EE_SCREENS_SH_ID = 19;
+
+/// The trigger screen's sub-screen `a`: `RefreshControls()`.
+constexpr static const uint32_t EE_SCREENS_SH_TRIGGER_REFRESH = 64;
+
+/// The trigger screen's `RefreshScreen()`.
+constexpr static const uint32_t EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN = 65;
+
+/// `EESETriggerJump(a, b)` (the jump to the entry of kind `a`, line `b`).
+constexpr static const uint32_t EE_SCREENS_SH_TRIGGER_JUMP = 66;
+
+/// The object screen's `UpdateSelection()`.
+constexpr static const uint32_t EE_SCREENS_SH_OBJECT_UPDATE_SELECTION = 67;
+
+/// The object screen's `Store()`.
+constexpr static const uint32_t EE_SCREENS_SH_OBJECT_STORE = 68;
+
+/// The player tab's `CopyFirstPlayerToAll()`.
+constexpr static const uint32_t EE_SCREENS_SH_COPY_FIRST_TO_ALL = 69;
+
+/// The brush group `a`'s `mBrushSize = b`.
+constexpr static const uint32_t EE_SCREENS_SH_BRUSH_SIZE = 70;
+
+/// `EESETSShowIDsCheckBox` (a check box with no override).
+constexpr static const uint32_t EE_SCREENS_SK_SHOW_IDS = 32;
+
+/// `EESEBSelect` (a button; args: the font).
+constexpr static const uint32_t EE_SCREENS_SK_SELECT = 33;
+
+/// `EESETab` (a radio button; args: the font).
+constexpr static const uint32_t EE_SCREENS_SK_TAB = 34;
+
+/// `EESERBUnitTypes` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_TYPES = 35;
+
+/// `EESECBMaxPlayer` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_MAX_PLAYER = 36;
+
+/// `UIBMap` (a button; args: the map tab).
+constexpr static const uint32_t EE_SCREENS_SK_MAP_BUTTON = 37;
+
+/// `UIRBMap` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_MAP_RADIO = 38;
+
+/// `EEUIFSETRBPaintType` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_PAINT_TYPE = 39;
+
+/// `EEUIFSEMainButton` (a radio button; args: the flag, the texture, the tab, the normal and pressed cells' x, y
+/// as `f32` bits).
+constexpr static const uint32_t EE_SCREENS_SK_MAIN_BUTTON = 40;
+
+/// `EEUIFSEMainButton::CheckDirect()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CHECK_DIRECT = 32;
+
+/// A button's `SetText(UWideString(a: NUL-terminated bytes), (GEFont*)b)` (`UIButton::SetText`, a radio button's too).
+constexpr static const uint32_t EE_SCREENS_SH_BUTTON_TEXT_BYTES = 32;
+
+/// A radio button's four checked and unchecked bitmaps NULL.
+constexpr static const uint32_t EE_SCREENS_SH_CLEAR_RADIO_BITMAPS = 33;
+
+/// The form's string list box of id `a`: `GetLineCount()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_COUNT = 34;
+
+/// The form's string list box of id `a`: `GetCurrentSelection` (-1 when it has none).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_SELECTION = 35;
+
+/// The scenario editor's player combo box's current selection.
+constexpr static const uint32_t EE_SCREENS_SH_EDITOR_PLAYER = 36;
+
+/// `EESEARust(kSEATechTree, NULL, a & 0xffffffff, a >> 32, b & 0xffffffff, b >> 32 != 0)`, run and released.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_TREE_MOVE = 37;
+
+/// The player tab's `SelectPage(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_PLAYER_PAGE = 38;
+
+/// The player tab's `FillTechLists()`.
+constexpr static const uint32_t EE_SCREENS_SH_FILL_TECH_LISTS = 39;
+
+/// The player tab's `SetPlayerCount(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_PLAYER_COUNT = 40;
+
+/// A combo box's list's `GetCurrentSelection` (the value it leaves).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_OF_COMBO_SELECTION = 41;
+
+/// The map tab `a`'s `CreateMap()`.
+constexpr static const uint32_t EE_SCREENS_SH_MAP_CREATE = 42;
+
+/// The map tab's kind check of the shell (`ee_screens_semp_kind(form, id)`; answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_MAP_KIND = 43;
+
+/// The terrain tab's paint type check of the shell (`ee_screens_setn_check(form, id)`; answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_CHECK = 44;
+
+/// A new `GEBitmap` of texture `a` on the screen (`b` 0: `gScreenIndex`, 1: the form's manager's) -> the bitmap.
+constexpr static const uint32_t EE_SCREENS_SH_NEW_BITMAP = 45;
+
+/// The bitmap `a`'s texture coordinates (left, top, right, bottom in `f`).
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_COORDS = 46;
+
+/// The bitmap `a`'s `SetXYScale(f[0], f[1])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_SCALE = 47;
+
+/// The bitmap `a`'s `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_RELEASE = 48;
+
+/// The texture `a`'s width and height (`f[0]`, `f[1]`, as floats).
+constexpr static const uint32_t EE_SCREENS_SH_TEXTURE_SIZE = 49;
+
+/// A button's `SetNormalBitmap(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_NORMAL = 50;
+
+/// A button's `SetPressedBitmap(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_PRESSED = 51;
+
+/// A button's `SetBitmapDrawOffset(f[0], f[1])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_OFFSET = 52;
+
+/// The editor's tab selection: `a` 0 posted (`PostSelectEditorTab` with a UI thread, else `SelectTab`), 1 direct
+/// (`SelectTab`); `b` the flag << 32 | the tab.
+constexpr static const uint32_t EE_SCREENS_SH_SELECT_TAB = 53;
+
+/// `EESEUITechListBox` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_TECH_LIST = 64;
+
+/// `AddTech(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_ADD = 64;
+
+/// `Clear()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_CLEAR = 65;
+
+/// `Rebuild()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_REBUILD = 66;
+
+/// `Fill(a, b)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_FILL = 67;
+
+/// `mTechs.size()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_COUNT = 68;
+
+/// `mTechs[a]` (100000 past the end).
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_AT = 69;
+
+/// `mDependents.size()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_MARKED_COUNT = 70;
+
+/// `mDependents[a]`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_MARKED_AT = 71;
+
+/// A list box's `GetCurrentSelection` (-1 when it reports none).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_CURRENT = 80;
+
+/// A list box's visible lines: `ScrollBarExists() ? GetDisplayLine() | (GetNumberLinesDisplayed() + it) << 32 :
+/// GetNumLines() << 32`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_VIEW = 81;
+
+/// A list box's `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_DELETE_ALL = 82;
+
+/// A list box's `AppendLine(UWideString(a: NUL-terminated bytes))`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_APPEND_BYTES = 83;
+
+/// A list box's `GetLineCount()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_LINE_COUNT = 84;
+
+/// A list box's `SetStartingDisplayLine(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_START_LINE = 85;
+
+/// A list box's `ChangeSelectionIndex(a, false, true)` (virtual).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_SELECT_SCROLL = 86;
+
+/// The form's control of id `a`: `GetIsChecked()` (a check box or radio button).
+constexpr static const uint32_t EE_SCREENS_SH_FORM_CHECKED = 87;
+
+/// The form's control of id `a` (its address).
+constexpr static const uint32_t EE_SCREENS_SH_FORM_CONTROL = 88;
+
+/// The kind's op `b >> 32` with the argument `b & 0xffffffff` on the shell control `a` (answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_KIND_OP = 89;
+
+/// `gTechTree.Get(a)`'s string: `b` 0 its unit class's name (`gUnitClassTable[mData->mUnitClass]->mNameStringID`),
+/// 1 its own (`mData->mNameID`) -> the string id.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_NAME_ID = 90;
+
+/// `EETechTreeEpochOf(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_EPOCH = 91;
+
+/// `gTechTree.Get(a)->mData->mID`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_DATA_ID = 92;
+
+/// The edited player's tech tree: `b` 0: `Get(a & 0xffffffff)->DependsOn(a >> 32)`; 1:
+/// `Get(a & 0xffffffff)->DependsOn(Get(a >> 32)->mData->mID)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_DEPENDS = 93;
+
+/// The edited player's tech tree: `Get(a)->SetScenEditorObsoleted(b != 0, true)` -> whether its epoch is reached
+/// (`mEpoch <= mCurrentEpoch`).
+constexpr static const uint32_t EE_SCREENS_SH_TECH_OBSOLETE = 94;
+
+/// The edited player's tech tree: `Get(a)->mScenEditorObsoleted`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_OBSOLETED = 95;
+
+/// The player tab's `MarkPlayerChanged(the edited player's id, false)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_MARK_PLAYER = 96;
+
+/// The list's blue bars: `a` the lines (u32s), `b` their count (`DrawPolygons`' loop) -> the last draw's result.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_BARS = 97;
+
+/// `EEUIFSELBUnitList` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_CLASS_LIST = 80;
+
+/// `EEUIFSELBCargoList` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_CARGO_LIST = 81;
+
+/// `EEUIFSEBUnitType` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_TYPE_BUTTON = 82;
+
+/// `EEUIFSEBRotation` (a button).
+constexpr static const uint32_t EE_SCREENS_SK_ROTATION = 83;
+
+/// `EEUIFSEBRemoveCargo` (a button).
+constexpr static const uint32_t EE_SCREENS_SK_REMOVE_CARGO = 84;
+
+/// The unit class list's `SetSortMode(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_SORT = 80;
+
+/// The unit class list's `mUnitTypes.clear()` and `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_CLEAR = 81;
+
+/// The unit class list's `AddUnitType(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_ADD = 82;
+
+/// The unit class list's `mUnitTypes[a]`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_TYPE_AT = 83;
+
+/// The cargo list's `mCargo.clear()` and `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_CLEAR = 84;
+
+/// The cargo list's `AddCargo((EEUnit*)a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_ADD = 85;
+
+/// The cargo list's `RemoveSelected()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_REMOVE = 86;
+
+/// The rotation button's `GetAngle()` (its `f32` bits).
+constexpr static const uint32_t EE_SCREENS_SKOP_ROTATION_ANGLE = 87;
+
+/// The unit class `a`'s field: `b` 0 `mNameStringID`, 1 `mEpoch`, 2 `mFamily`.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_CLASS = 112;
+
+/// A list box's `InsertLine(UWideString(a bytes), b, UILBNoSort)`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_INSERT_BYTES = 113;
+
+/// A list box's line `a` (`GetData(a)`) copied into the buffer `b` (4500 bytes, NUL-ended).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_LINE = 114;
+
+/// The unit tab's `SelectUnitType(the form's mouse location)`.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_SELECT_TYPE = 115;
+
+/// `UIControl::sEnterKey->GetValue()`.
+constexpr static const uint32_t EE_SCREENS_SH_ENTER_KEY = 116;
+
+/// The unit `a`'s class name string id << 32 | its unit id.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_NAME_AND_ID = 117;
+
+/// `EESEARust(kSEADeleteUnit, NULL, a)`, run and released.
+constexpr static const uint32_t EE_SCREENS_SH_DELETE_UNIT = 118;
+
+/// The bitmap `a`'s `SetRotation(f[0])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_ROTATION = 119;
+
+/// Turns the placement ghosts (`a` 1) or the selected units (0) that can turn to yaw `f[0]`; -> 1 when there are
+/// ghosts (`a` 2: asks only).
+constexpr static const uint32_t EE_SCREENS_SH_ROTATE = 120;
+
+/// The keyboard key `a` (0 comma, 1 period): 1 just pressed, 2 just released, 0 else; `<< 8` `GetEntity`'s result.
+constexpr static const uint32_t EE_SCREENS_SH_KEY = 121;
+
+/// The shell's own virtual `a` (`EE_SCREENS_SV_*`, through its vtable).
+constexpr static const uint32_t EE_SCREENS_SH_SELF = 122;
+
+/// `CaptureKeyboard()` (`a` 1) or `ReleaseCapturedKeyboard()` (0).
+constexpr static const uint32_t EE_SCREENS_SH_KEYBOARD = 123;
+
+/// `SetAlwaysDirty(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SH_ALWAYS_DIRTY = 124;
+
+/// The scenario editor's button texture (`GetButtonTexture()`).
+constexpr static const uint32_t EE_SCREENS_SH_EDITOR_TEXTURE = 125;
+
 /// A slot of the random map's table: the human's, the computer's, or a closed one.
 constexpr static const uint32_t EE_SCREENS_SP_HUMAN = 0;
 
@@ -10189,11 +10673,17 @@ struct EeScreensSeeEvent;
 /// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
 struct EeScreensSewAction;
 
+/// A shell's Rust half (opaque to C++): its control and its kind.
+struct EeScreensShell;
+
 /// The unit hack's record (opaque to C++).
 struct EeScreensUnitHack;
 
 /// Every effect type (`EESETSEffect::mTypes`): no effect, object, player, trigger, media, game, AI.
 struct EffectTypes;
+
+/// `EEUIFSEBRotation`: the placement rotation (left click one step forward, right click back; comma and period).
+struct EeFormationRotation;
 
 /// One tool bar button (0x4c47b0): its id, its location, the normal and pressed corners, its help string.
 struct ToolbarButton;
@@ -12408,6 +12898,58 @@ uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
 
 /// The settings form's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_settings_event_for(unsigned long id);
+
+/// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
+///
+/// # Safety
+/// `args` holds `n` words (or is NULL with `n` 0).
+EeScreensShell *ee_screens_shell_new(uint32_t kind,
+                                     void *ctl,
+                                     const int64_t *args,
+                                     uint32_t n);
+
+/// The kind's override mask (`EE_SCREENS_SV_*` bits).
+///
+/// # Safety
+/// `s` is NULL or a live shell.
+uint64_t ee_screens_shell_overrides(const EeScreensShell *s);
+
+/// The kind's constructor body.
+///
+/// # Safety
+/// `s` is NULL or a live shell.
+void ee_screens_shell_init(const EeScreensShell *s);
+
+/// The kind's override of the virtual `v` (`EE_SCREENS_SV_*`); `f` the virtual's floats (NULL: none).
+///
+/// # Safety
+/// `s` is NULL or a live shell; `f` is NULL or four floats.
+int64_t ee_screens_shell_virtual(const EeScreensShell *s,
+                                 uint32_t v,
+                                 int64_t a,
+                                 int64_t b,
+                                 float *f);
+
+/// The kind's own method `op` (`EE_SCREENS_SKOP_*`).
+///
+/// # Safety
+/// `s` is NULL or a live shell; `f` is NULL or four floats.
+int64_t ee_screens_shell_op(const EeScreensShell *s, uint32_t op, int64_t a, int64_t b, float *f);
+
+/// The deleted class's name (NUL-terminated, static).
+///
+/// # Safety
+/// `s` is NULL or a live shell.
+const char *ee_screens_shell_name(const EeScreensShell *s);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `s` is NULL or a shell made by `ee_screens_shell_new`, not used again.
+void ee_screens_shell_free(EeScreensShell *s);
+
+/// `sUnitTypeMode` (the unit tab's host).
+int32_t ee_screens_shell_unit_type_mode();
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);

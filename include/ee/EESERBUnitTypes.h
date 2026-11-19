@@ -11,32 +11,6 @@ class EEUIFScenarioEditor;
 // 0x5318cc: the world's player count the editor's player tab sets (EESEAChangeWorldPlayerCount; provisional name)
 extern unsigned long& gMaxPlayers;
 
-// RTTI EESERBUnitTypes > UIRadioButton; vtable 0x44303c; sizeof 0x114 (no members). The out-of-line ctor 0x173218
-// (`ret 0x2c`) builds the rectangle (location, width, height; unsigned: fild qword) and passes inScaleBitmap false.
-// ??_G 0x173295 stores the vptr first: a user-declared empty dtor. Check (+0x94) 0x1732b8 refreshes the player tab.
-class EESERBUnitTypes : public UIRadioButton {
-public:
-    EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont, const GE2DPoint& inLocation,
-                    unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex,
-                    unsigned long inBorderThickness, bool inIsPushButton, bool inIsChecked);
-    virtual ~EESERBUnitTypes() {}
-    virtual void Check();                   // +0x94 0x1732b8
-};
-
-// RTTI EESECBMaxPlayer > UIComboBox; vtable 0x443140; ctor 0x175001 (`ret 0x2c`, EESETSAComboBox's shape),
-// ??_G 0x175079 (vptr first: a user-declared empty dtor). ChangeSelection (+0x8c) 0x1732d7: the player tab's player
-// count = the selection + 2.
-class EESECBMaxPlayer : public UIComboBox {
-public:
-    EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType, const std::vector<UWideString>& inStrings,
-                    GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
-                    unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars,
-                    unsigned long inBorderThickness);
-    virtual ~EESECBMaxPlayer() {}
-protected:
-    virtual void ChangeSelection();         // +0x8c 0x1732d7
-};
-
 // RTTI EESEAChangeWorldPlayerCount > EEAction; vtable 0x44310c (??_G EEAction's 0x1e1b69, +0x08 the shared empty
 // slot); sizeof 0x10. Built inline by EESEPlayerScreen::SetPlayerCount 0x173653 and posted to the UI thread.
 class EESEAChangeWorldPlayerCount : public EEAction {
