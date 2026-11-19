@@ -195,7 +195,7 @@ int main(int argc, char** argv)
             std::string aValues;
             aRoot.GetAllKeyValues(aValues);
             printf("%s r=%d error=%s warnings=%08lx children=%d\n", aData.cFileName, r ? 1 : 0,
-                   Escape(aParser.GetAbortText()).c_str(), Crc(aParser.GetWarnings()), (int)aRoot.mChildList.size());
+                   Escape(aParser.GetAbortText()).c_str(), Crc(aParser.GetWarnings()), (int)aRoot.GetChildCount());
         } while (FindNextFileA(h, &aData));
         FindClose(h);
         return 0;

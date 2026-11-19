@@ -1,6 +1,9 @@
-// ConfigObject: a config group with registered key values and child groups, parsed from config files
+// ConfigObject's host: the calls ee_won's config group (rust/crates/ee_won_net/src/cfgobject.rs, the whole class
+// since WON round 21) makes into the C++ object, its typed values, its group pointers and its parsers, and the
+// exceptions a hook lets through. The typed values (ConfigValue.cpp merged here) bind to the subclasses' members.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#include <stddef.h>
 #include <string>
 #include <list>
 #include <map>
@@ -9,399 +12,135 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "platform/PlatString.h"
-#include "rust/won_net/configobj.h"
-// The grammar's decisions (a token's kind, the group header's sequence, the instructions, a condition's branch, the
-// optional suffix, an included file's path) are ee_won's configobj module (rust/crates/ee_won_net/src/configobj.rs);
-// this class keeps the objects, maps, virtual hooks, lexer calls and the error and warning texts.
-namespace {
-const uint8_t* CfgBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
-void CfgSink(void* inContext, const uint8_t* inBytes, size_t inLength)
-{
-    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
-}
-}
+#include "ee/wonapi/WONConfigValue.h"
 namespace WONAPI {
-class ConfigDefineScope {
-    ConfigParser& mParser;
-public:
-    ConfigDefineScope(ConfigParser& parser):mParser(parser) {this->mParser.PushDefineStack();}
-    ~ConfigDefineScope() {this->mParser.PopDefineStack();}
-};
-// Creates an empty config group with no parent
-ConfigObject::ConfigObject() { this->Rewind(); this->mParent=NULL; }
-// Drops the children, optionally the names, resets every key to its default and clears group pointers
-void ConfigObject::Reset(bool resetName)
+static_assert(sizeof(StringParser) == sizeof(EeWonCfgStringParser), "the Rust view of a StringParser");
+static_assert(offsetof(StringParser, mPos) == offsetof(EeWonCfgStringParser, pos), "the cursor");
+static_assert(offsetof(StringParser, mWide) == offsetof(EeWonCfgStringParser, wide), "the unit flag");
+
+bool ConfigObject::Ret(int r, CfgExc& x)
 {
-    this->Clear();
-    if(resetName) {this->mName.erase();this->mBaseName.erase();}
-    KeyValMap::iterator i=this->mKeyMap.begin();
-    while(i!=this->mKeyMap.end()) {
-        ConfigValueBase* value=i->second.get();
-        value->InitializeDefaultHook();
-        value->mIsDefault=true;
-        ++i;
+    if (r == -1) throw ConfigObjectException(x.mText, x.mFlag);
+    if (r == -2) throw FileReaderException(x.mText);
+    return r != 0;
+}
+
+intptr_t ConfigObject::Host(EeWonCfgoOp op, void* o, intptr_t a, intptr_t b, intptr_t c, intptr_t d, void* x)
+{
+    typedef EeWonCfgoOp Op;
+    ConfigObject* obj = static_cast<ConfigObject*>(o);
+    ConfigValueBase* v = static_cast<ConfigValueBase*>(o);
+    CfgExc* e = static_cast<CfgExc*>(x);
+    switch (op) {
+    case Op::ObjAddRef: obj->AddRef(); return 0;
+    case Op::ObjRelease: obj->Release(); return 0;
+    case Op::ObjNew: return (intptr_t)new ConfigObject;
+    case Op::ObjFactory: return (intptr_t)((ConfigObjectFactory)a)();
+    case Op::ObjRust: return (intptr_t)obj->mObj;
+    case Op::ObjSetParent: obj->mParent = (ConfigObject*)a; return 0;
+    case Op::ObjSetName: (a ? obj->mBaseName : obj->mName).assign((const char*)b, (size_t)c); return 0;
+    case Op::ValAddRef: v->AddRef(); return 0;
+    case Op::ValRelease: v->Release(); return 0;
+    case Op::ValInit: v->InitializeDefaultHook(); return 0;
+    case Op::ValRead: return v->ReadValue(*(StringParser*)a);
+    case Op::ValWrite: { std::string s; v->WriteValue(s); ((EeWonByteSink)a)((void*)b, B(s), s.length()); return 0; }
+    case Op::ValCopy: v->CopyValue((ConfigValueBase*)a); return 0;
+    case Op::ValIsDefault: return v->mIsDefault;
+    case Op::ValSetDefault: v->mIsDefault = a != 0; return 0;
+    case Op::GroupSet: *(SmartPtr<ConfigObject>*)a = (ConfigObject*)b; return 0;
+    case Op::ParserNew: return (intptr_t)new ConfigParser;
+    case Op::ParserFree: delete (ConfigParser*)a; return 0;
+    case Op::ParserRust: return (intptr_t)((ConfigParser*)a)->Obj();
+    case Op::SetExc: e->mKind = (int)a; e->mFlag = b != 0; e->mText.assign((const char*)c, (size_t)d); return 0;
+    case Op::TakeExc: {
+        ((EeWonByteSink)a)((void*)b, B(e->mText), e->mText.length());
+        bool f = e->mFlag;
+        e->mKind = 0;
+        e->mText.erase();
+        return f;
     }
-    KeyGroupMap::iterator j=this->mKeyGroupMap.begin();
-    while(j!=this->mKeyGroupMap.end()) {
-        if(j->second.mGroupPtr!=NULL) *j->second.mGroupPtr=NULL;
-        ++j;
+    default: break;
+    }
+    // the hooks: what the original's frames let through is recorded for the Rust caller
+    try {
+        switch (op) {
+        case Op::ObjPreParse: return obj->PreParse((ConfigParser*)a);
+        case Op::ObjPostParse: return obj->PostParse((ConfigParser*)a);
+        case Op::ObjHandleInstruction: return obj->HandleInstruction((ConfigParser*)a, std::string((const char*)b, (size_t)c));
+        case Op::ObjHandleValueInstruction:
+            return obj->HandleValueInstruction((ConfigParser*)a, std::string((const char*)b, (size_t)c), *(StringParser*)d);
+        case Op::ObjReset: obj->Reset(a != 0); return 0;
+        default: return 0;
+        }
+    } catch (ConfigObjectException& ex) {
+        e->mKind = 1; e->mFlag = ex.mFlag; e->mText = ex.mText;
+        return -1;
+    } catch (FileReaderException& ex) {
+        e->mKind = 2; e->mFlag = false; e->mText = ex.mDescription;
+        return -2;
     }
 }
-// Appends the key's value as text, marked "[DEF]" when it is still the default; always true
-bool ConfigObject::QueryValue(KeyValMap::const_iterator itr,std::string& outValue)
+
+// ---- the typed values (ConfigValue.cpp). Instantiations: bool 0x7b3f70, unsigned short 0x7b4000, string 0x7b41a0,
+// wstring 0x7b4480, string list 0x7b47b0
+// Copies the value from another config value of the same type; false when the type differs
+template<class T> bool ConfigValue<T>::CopyValueHook(ConfigValueBase* source)
 {
-    ConfigValueBase* value=itr->second.get();
-    value->WriteValue(outValue);
-    if(value->mIsDefault) outValue+="  [DEF]";
-    return true;
-}
-// Appends the named key's value as text; returns false for an unknown key
-bool ConfigObject::GetKeyValue(const std::string& key,std::string& outValue)
-{
-    KeyValMap::const_iterator itr=this->mKeyMap.find(key);
-    if(itr!=this->mKeyMap.end())
-        return this->QueryValue(itr,outValue);
+    ConfigValue<T>* value=dynamic_cast<ConfigValue<T>*>(source);
+    if(value!=NULL) {
+        this->mVal=value->mVal;
+        return true;
+    }
     return false;
 }
-// Appends one "key: value" line per registered key
-void ConfigObject::GetAllKeyValues(std::string& outValues)
+template<class T> void SimpleConfigValue<T>::InitializeDefaultHook() {this->mVal=this->mDefVal;}
+template<class T> bool SimpleConfigValue<T>::ReadValue(StringParser& parser) {return parser.ReadValue(this->mVal);}
+// The original assigned the int even when the read failed (uninitialised then); the value is kept now, as the
+// parser's sized reads do (PORT_LEARNINGS "R6: ... the chat parser, GUIStringData, ConfigObject's grammar")
+template<> bool SimpleConfigValue<unsigned short>::ReadValue(StringParser& parser)
 {
-    const KeyValMap& aMap=this->mKeyMap;
-    KeyValMap::const_iterator itr=this->mKeyMap.begin();
-    while(true) {
-        if(itr==aMap.end()) break;
-        outValues+=itr->first;
-        outValues+=": ";
-        this->QueryValue(itr,outValues);
-        outValues+="\n";
-        ++itr;
-    }
-}
-// Parses a new value for the named key; returns 0 on success, 2 on a parse error, 1 for an unknown key
-int ConfigObject::SetKeyValue(const std::string& key,StringParser& parser)
-{
-    KeyValMap::iterator itr=this->mKeyMap.find(key);
-    if(itr!=this->mKeyMap.end()) {
-        ConfigValueBase* value=itr->second.get();
-        if(value->ReadValue(parser)) {
-            value->mIsDefault=false;
-            return 0;
-        }
-        return 2;
-    }
-    return 1;
-}
-// Drops every child group
-void ConfigObject::Clear() {this->mChildList.clear();this->Rewind();}
-// Restarts the child iteration
-void ConfigObject::Rewind() {this->mChildItr=this->mChildList.begin();}
-// Appends a child group and makes this group its parent
-void ConfigObject::AddChild(ConfigObject* child)
-{
-    child->mParent=this;
-    this->mChildList.push_back(child);
-}
-// Reads a group header "[name] [: base] {"; sets a parse error unless it ends in '{'
-bool ConfigObject::ReadGroupStart(ConfigParser& parser,std::string& name,std::string& inherited)
-{
-    int32_t state=0;
-    StringParser stringParser("");
-    std::string token,base;
-    while(true) {
-        if(!parser.ReadToken(token,false,false)) return false;
-        switch(ee_won_cfg_group_start(&state,CfgBytes(token),token.length())) {
-        case EeWonCfgStart::Name:
-            base=token; // the parser reads the name from its own copy
-            stringParser.Set(base.c_str());
-            stringParser.ReadString(name,false);
-            break;
-        case EeWonCfgStart::Colon:
-            break;
-        case EeWonCfgStart::Base:
-            base=token;
-            stringParser.Set(base.c_str());
-            stringParser.ReadString(inherited,false);
-            break;
-        case EeWonCfgStart::Open:
-            return true;
-        default:
-            parser.SetError("Expecting '{' but got "+token,false);
-            return false;
-        }
-    }
-}
-// The default parse hooks share one always-true function in the original (0x7099f0)
-bool ConfigObject::PreParse(ConfigParser*) {return true;}
-bool ConfigObject::PostParse(ConfigParser*) {return true;}
-// Opens the config file (if given), resets the group and parses its whole contents; returns success
-bool ConfigObject::ParseTopLevel(ConfigParser& parser,const char* filePath)
-{
-    if(filePath!=NULL && !parser.OpenFile(std::string(filePath))) {
-        std::string error("File not found: ");
-        error+=filePath;
-        parser.SetError(error,false);
-        return false;
-    }
-    ConfigDefineScope scope(parser);
-    this->Reset(true);
-    return this->ParseGroup(parser,false,false,true,true);
-}
-// Parses key values and child groups up to the closing brace (or the end), skipping unknown ones with a warning
-bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bool prePost,bool readStart)
-{
-    try {
-        if(checkBraces && readStart && !this->ReadGroupStart(parser,this->mName,this->mBaseName)) return false;
-        if(prePost && !skip && !this->PreParse(&parser)) return false;
-        while(parser.HasNoError() && !parser.IsStopped()) {
-            std::string token;
-            if(!parser.ReadToken(token,false,false)) {
-                if(checkBraces) {parser.SetError("Expecting '}'",false);return false;}
-                break;
-            }
-            StringToUpperCaseInPlace(token);
-            EeWonCfgToken kind=ee_won_cfg_token_kind(CfgBytes(token),token.length());
-            if(kind==EeWonCfgToken::Close) {
-                if(!checkBraces) {parser.SetError("Unexpected '}'",false);return false;}
-                break;
-            }
-            if(kind==EeWonCfgToken::Key) {
-                token.resize(token.length()-1);
-                std::string value;
-                std::wstring wideValue;
-                StringParser valueParser("");
-                if(parser.IsUnicode()) {
-                    if(!parser.ReadToken(wideValue,true,skip)) return false;
-                    valueParser.Set(wideValue.c_str());
-                } else {
-                    if(!parser.ReadToken(value,true,skip)) return false;
-                    valueParser.Set(value.c_str());
-                }
-                if(!skip && !this->HandleValueInstruction(&parser,token,valueParser))
-                    parser.AddWarning("Unexpected key/val: "+token+" "+value);
-            } else {
-                if(!skip) {
-                    if(!this->HandleInstruction(&parser,token)) {
-                        parser.AddWarning("Unexpected child group: "+token);
-                        this->SkipGroup(parser,true,true);
-                    }
-                } else this->SkipGroup(parser,true,true);
-            }
-        }
-        if(prePost && !skip && !this->PostParse(&parser)) return false;
-    } catch(ConfigObjectException& exception) {
-        if(exception.mFlag) parser.SetError(exception.mText,false);
-        else parser.AddWarning(exception.mText);
-    }
-    return parser.HasNoError();
-}
-// Reads past a group without applying it
-bool ConfigObject::SkipGroup(ConfigParser& parser,bool checkBraces,bool readStart)
-{
-    SmartPtr<ConfigObject> child=new ConfigObject;
-    return child->ParseGroup(parser,checkBraces,true,false,readStart);
-}
-// Parses a group into the given child in its own define scope and optionally adds it as a child
-bool ConfigObject::ParseChild(ConfigParser& parser,ConfigObject* child,bool addChild,bool readStart)
-{
-    ConfigDefineScope scope(parser);
-    child->mParent=this;
-    child->Reset(readStart);
-    if(!child->ParseGroup(parser,true,false,true,readStart)) return false;
-    if(addChild) this->AddChild(child);
-    return true;
-}
-// Parses a registered child group (new from its factory or the fixed object) and stores or adds it
-bool ConfigObject::HandleChildGroup(ConfigParser& parser,KeyGroupMap::iterator& itr)
-{
-    ConfigDefineScope scope(parser);
-    ConfigObjectEntry& group=itr->second;
-    SmartPtr<ConfigObject> child;
-    if(group.mFactory!=NULL) child=group.mFactory();
-    else child=group.mObject.get();
-    child->Reset(true);
-    child->mParent=this;
-    if(!child->ParseGroup(parser,true,false,true,true)) return false;
-    if(group.mGroupPtr!=NULL) *group.mGroupPtr=child;
-    else if(group.mObject.get()==NULL) this->AddChild(child.get());
-    return true;
-}
-// Parses a value for a registered key, warning when it fails; always true
-bool ConfigObject::HandleKeyVal(ConfigParser& parser,StringParser& value,KeyValMap::iterator& itr)
-{
-    ConfigValueBase* config=itr->second.get();
-    config->mIsDefault=false;
-    if(!config->ReadValue(value)) parser.AddWarning("Failed to parse value for key: "+itr->first);
-    return true;
-}
-// Registers a value under a key name; an existing registration is kept
-void ConfigObject::RegisterKeyValue(const char* key,ConfigValueBase* value)
-{
-    if(!this->mKeyMap.insert(KeyValMap::value_type(std::string(key),value)).second) {
-    }
-}
-// Parses another config file (relative to this one) into this group; a missing required file is an error
-bool ConfigObject::IncludeFile(ConfigParser& parser,const std::string& path,bool required)
-{
-    std::string file,base=parser.GetFilePath();
-    ee_won_cfg_include_path(CfgBytes(path),path.length(),parser.GetIgnorePathOnIncludeFile(),CfgBytes(base),
-                            base.length(),CfgSink,&file);
-    ConfigParser included;
-    included.SetParent(&parser);
-    if(included.OpenFile(file)) {
-        bool result=this->ParseGroup(included,false,false,false,true);
-        parser.CopyWarnings(included);
-        if(!result) {parser.SetError(included.GetAbortReason(),false);return false;}
-        if(included.IsStopped()) parser.Stop();
-    } else if(required) {parser.SetError("File not found: "+file,false);return false;}
-    return true;
-}
-// Parses a group recorded by GROUPDEFINE into this group, restoring the parser position afterwards
-bool ConfigObject::IncludeGroup(ConfigParser& parser,const std::string& name,bool required)
-{
-    ConfigParserState defined;
-    if(!parser.GetGroupDefine(name,defined)) {
-        if(required) parser.AddWarning("IncludeGroup not found: "+name);
-        return true;
-    }
-    ConfigParserState saved;
-    parser.GetState(saved);
-    parser.SetState(defined);
-    bool result=this->ParseGroup(parser,true,false,false,false);
-    parser.SetState(saved);
-    if(!parser.HasNoError()) parser.SetError("IncludeGroup Error",true);
+    int value=0;
+    bool result=parser.ReadValue(value);
+    if(result)
+        this->mVal=(unsigned short)value;
     return result;
 }
-
-// Handles GROUPDEFINE, IFDEFINED/IFNOTDEFINED ... else blocks and registered child groups; false when unknown
-bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& instruction)
+template<class T> void SimpleConfigValue<T>::WriteValue(std::string& out) {StringParser::ValueToString(this->mVal,out);}
+// Instantiations: char 0x7b4040, wchar_t 0x7b4320
+// Resets the string to its default text, or empties it when there is none
+template<class T> void ConfigStringValue<T>::InitializeDefaultHook()
 {
-    EeWonCfgInstruction kind=ee_won_cfg_instruction(CfgBytes(instruction),instruction.length(),false);
-    if(kind==EeWonCfgInstruction::GroupDefine) {
-        std::string name,inherited;
-        if(!this->ReadGroupStart(*parser,name,inherited)) return false;
-        parser->AddGroupDefine(name,NULL);
-        return this->SkipGroup(*parser,true,false);
-    }
-    if(kind==EeWonCfgInstruction::IfDefined || kind==EeWonCfgInstruction::IfNotDefined) {
-        std::string name,expected;
-        if(!this->ReadGroupStart(*parser,name,expected)) return true;
-        std::string actual;
-        bool found=parser->GetDefine(name,actual);
-        bool first=ee_won_cfg_condition(kind,found,expected.empty(),found && StringCompareNoCase(expected,actual)==0);
-        if(first) this->ParseGroup(*parser,true,false,false,false);
-        else this->SkipGroup(*parser,true,false);
-        std::string token;
-        parser->ReadToken(token,false,false);
-        if(!ee_won_cfg_is_else(CfgBytes(token),token.length())) {
-            parser->UngetStr(token);
-            return true;
-        }
-        parser->ReadToken(token,false,false);
-        if(token!="{") {
-            parser->SetError("Expecting '{'",false);
-            return true;
-        }
-        if(first) this->SkipGroup(*parser,true,false);
-        else this->ParseGroup(*parser,true,false,false,false);
-        return true;
-    }
-    KeyGroupMap::iterator itr=this->mKeyGroupMap.find(instruction);
-    if(itr!=this->mKeyGroupMap.end()) return this->HandleChildGroup(*parser,itr);
-    else return false;
+    if(this->mDefVal!=NULL) this->mVal=this->mDefVal;
+    else this->mVal.erase();
 }
-// Handles DEFINE/REDEFINE, INCLUDEGROUP, INCLUDEFILE and registered keys; false for an unknown key
-bool ConfigObject::HandleValueInstruction(ConfigParser* parser,const std::string& instruction,StringParser& value)
+template<class T> bool ConfigStringValue<T>::ReadValue(StringParser& parser) {return parser.ReadString(this->mVal,false);}
+template<class T> void ConfigStringValue<T>::WriteValue(std::string& out) {StringParser::ValueToString(this->mVal,out);}
+// Resets the list to the items parsed from its default text
+template<class T> void ConfigListValue<T>::InitializeDefaultHook()
 {
-    EeWonCfgInstruction kind=ee_won_cfg_instruction(CfgBytes(instruction),instruction.length(),true);
-    if(kind==EeWonCfgInstruction::Define || kind==EeWonCfgInstruction::Redefine) {
-        std::string name;
-        if(!value.ReadString(name,true)) {parser->AddWarning("Invalid define.");return true;}
-        value.SkipWhitespace();
-        if(value.GetIsWString()) {
-            std::wstring rest=value.GetWStr()+value.GetPos();
-            parser->AddDefine(name,WStringToString(rest),kind==EeWonCfgInstruction::Redefine);
-        } else {
-            std::string rest=value.GetStr()+value.GetPos();
-            parser->AddDefine(name,rest,kind==EeWonCfgInstruction::Redefine);
-        }
-        return true;
+    this->mVal.clear();
+    if(this->mDefStr!=NULL) {
+        StringParser parser(this->mDefStr);
+        parser.SetIsWString(this->mIsWString);
+        parser.ReadValue(this->mVal);
     }
-    if(kind==EeWonCfgInstruction::IncludeGroup || kind==EeWonCfgInstruction::IncludeFile) {
-        bool group=kind==EeWonCfgInstruction::IncludeGroup;
-        std::string target;
-        value.ReadString(target,false);
-        bool comma=value.CheckNextChar(',');
-        std::string optional;
-        bool read=comma && value.ReadString(optional,false);
-        bool isOptional=read && StringCompareNoCase(optional,std::string("optional"))==0;
-        bool required=true;
-        switch(ee_won_cfg_optional(comma,read,isOptional)) {
-        case EeWonCfgOptional::Optional: required=false; break;
-        case EeWonCfgOptional::WarnNoString:
-            parser->AddWarning(group ? "Expecting string: 'optional' after include group, include is required."
-                                     : "Expecting string: 'optional' after include file, include is required.");
-            break;
-        case EeWonCfgOptional::WarnOtherWord:
-            parser->AddWarning(group ? "Expecting string: optional after include group, include is required."
-                                     : "Expecting string: optional after include file, include is required.");
-            break;
-        default: break;
-        }
-        if(group) this->IncludeGroup(*parser,target,required);
-        else this->IncludeFile(*parser,target,required);
-        return true;
-    }
-    KeyValMap::iterator itr=this->mKeyMap.find(instruction);
-    if(itr!=this->mKeyMap.end()) return this->HandleKeyVal(*parser,value,itr);
-    else return false;
 }
-
-}
-
-namespace WONAPI {
-// No original address identified: WON SDK config copy, iteration and group registration
-void ConfigObject::CopyKeyValsFrom(ConfigObject* theCopyFrom)
+// Parses list items, replacing the list unless the key is additive
+template<class T> bool ConfigListValue<T>::ReadValue(StringParser& parser)
 {
-    KeyValMap& aMap1 = this->mKeyMap;
-    KeyValMap& aMap2 = theCopyFrom->mKeyMap;
-    KeyValMap::iterator anItr1 = aMap1.begin();
-    KeyValMap::iterator anItr2 = aMap2.begin();
-    while(anItr1!=aMap1.end() && anItr2!=aMap2.end())
-    {
-        int aComp = StringCompareNoCase(anItr1->first,anItr2->first);
-        if(aComp<0)
-            ++anItr1;
-        else if(aComp>0)
-            ++anItr2;
-        else
-        {
-            ConfigValueBase* aVal1 = anItr1->second.get();
-            ConfigValueBase* aVal2 = anItr2->second.get();
-            aVal1->CopyValue(aVal2);
-            ++anItr1;
-            ++anItr2;
-        }
-    }
+    if(!this->mAdditive) this->mVal.clear();
+    return parser.ReadValue(this->mVal);
 }
-ConfigObject* ConfigObject::NextChild()
-{
-    if(this->mChildItr==this->mChildList.end())
-        return NULL;
-    return (*this->mChildItr++).get();
-}
-void ConfigObject::RegisterKeyGroup(const char* theKey, ConfigObjectFactory theFactory, SmartPtr<ConfigObject>* theGroup)
-{
-    if(this->mKeyGroupMap.insert(KeyGroupMap::value_type(theKey,ConfigObjectEntry(theFactory,theGroup))).second==false)
-    {
-        // Insert failed: preserve the existing registration, as the original SDK does.
-    }
-}
-void ConfigObject::RegisterKeyGroup(const char* theKey, ConfigObject* theGroup)
-{
-    if(this->mKeyGroupMap.insert(KeyGroupMap::value_type(theKey,ConfigObjectEntry(theGroup))).second==false)
-    {
-        // Insert failed: preserve the existing registration, as the original SDK does.
-    }
-}
+template<class T> void ConfigListValue<T>::WriteValue(std::string& out) {StringParser::ValueToString(this->mVal,out);}
+// Registers a key bound to the given variable with a default (a string list also with an additive flag)
+void ConfigObject::KeyAdd(const char* key,bool& value,bool initial) {this->RegisterKeyValue(key,new SimpleConfigValue<bool>(value,initial));}
+void ConfigObject::KeyAdd(const char* key,unsigned short& value,unsigned short initial) {this->RegisterKeyValue(key,new SimpleConfigValue<unsigned short>(value,initial));}
+void ConfigObject::KeyAdd(const char* key,std::string& value,const char* initial) {this->RegisterKeyValue(key,new ConfigStringValue<char>(value,initial));}
+void ConfigObject::KeyAdd(const char* key,std::wstring& value,const wchar_t* initial) {this->RegisterKeyValue(key,new ConfigStringValue<wchar_t>(value,initial));}
+void ConfigObject::KeyAdd(const char* key,std::list<std::string>& value,const char* initial,bool additive) {this->RegisterKeyValue(key,new ConfigListValue<std::list<std::string> >(value,initial,additive));}
+// No original address identified: WON SDK typed key registration (the two TitleConfig uses)
+void ConfigObject::RegisterIntValue(const char *theKey, int &theInt, int theDefVal)
+{ this->RegisterKeyValue(theKey, new SimpleConfigValue<int>(theInt,theDefVal)); }
+void ConfigObject::RegisterIntListListValue(const char *theKey, std::list<std::list<int> > &theIntListList, const char *theDefVal, bool additive)
+{ this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::list<int> > >(theIntListList, theDefVal, additive)); }
 }

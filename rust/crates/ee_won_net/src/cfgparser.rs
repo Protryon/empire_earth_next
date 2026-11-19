@@ -90,6 +90,34 @@ impl Parser {
         root
     }
 
+    /// `mAbortReason.empty()`
+    pub fn has_no_error(&self) -> bool {
+        self.abort.is_empty()
+    }
+    pub fn is_stopped(&self) -> bool {
+        self.stopped
+    }
+    pub fn stop(&mut self) {
+        self.stopped = true;
+    }
+    pub fn is_unicode(&self) -> bool {
+        self.unicode
+    }
+    pub fn ignore_path_on_include(&self) -> bool {
+        self.ignore_path_on_include
+    }
+    /// `mFilePath`: the open file's directory, with its separator.
+    pub fn file_path(&self) -> &[u8] {
+        &self.file_path
+    }
+    pub fn warnings(&self) -> &[u8] {
+        &self.warnings
+    }
+    /// `CopyWarnings`' append.
+    pub fn append_warnings(&mut self, more: &[u8]) {
+        self.warnings.extend_from_slice(more);
+    }
+
     /// `SetParent`: the parent, and its include-path and warnings-as-errors flags.
     ///
     /// # Safety

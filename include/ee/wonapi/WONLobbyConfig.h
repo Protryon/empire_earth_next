@@ -44,6 +44,7 @@ private:
     EeWonCfgParser* mObj;
     std::string mAbortCopy; // GetAbortReason's answer
 public:
+    EeWonCfgParser* Obj() { return this->mObj; } // the Rust parser (ConfigObject's host)
     ConfigParser() : mObj(ee_won_cfgp_new()) {}
     ~ConfigParser() { ee_won_cfgp_free(this->mObj); }
     // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won_net/src/config.rs)

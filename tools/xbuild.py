@@ -894,7 +894,10 @@ WON_TESTS = {
     # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
-    "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp")]],
+    "won_cfgobj_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
+    # ConfigObject whole in Rust (WON round 21): the original statements (tests/won/won_cfgobject_orig.h) against the
+    # game's class over ee_won_net cfgobject.rs, random config files through one subclass on each
+    "won_cfgobject_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
