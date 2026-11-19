@@ -26,7 +26,7 @@ class LLE_API UITextLabel : public UIControl {
     friend class UICheckBox;                // SetText calls SetText(const UWideString&, bool) (0x1006013e)
     friend class UIRadioButton;             // likewise (0x1007c146)
     friend class UITriStateCheckBox;        // likewise (0x10080b1c)
-    friend struct UITLScrollingRust;        // UITLScrolling.cpp: its forwarders reach mRust
+    friend class UITLScrolling;             // its inline forwarders reach mRust
     friend struct UITextLabelRust;          // UITextLabel.cpp: the Rust object's calls out
 public:
     UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,

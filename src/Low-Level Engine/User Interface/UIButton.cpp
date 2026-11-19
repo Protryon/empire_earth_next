@@ -39,7 +39,7 @@
 #include "lle/UIRadioButton.h"
 #include "lle/TMPoll.h"
 #include "lle/UISlider.h"
-#include "UIButtonRust.h"
+#include "lle/UIButtonRust.h"
 #include "UIObjHost.h"
 
 struct UIButtonHost {

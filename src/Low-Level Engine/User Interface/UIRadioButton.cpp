@@ -42,7 +42,7 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "UIButtonRust.h"
+#include "lle/UIButtonRust.h"
 
 typedef EeUiButtonCall C;
 #define EE_UI_RADIO(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)

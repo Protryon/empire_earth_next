@@ -47,7 +47,11 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "UIButtonRust.h"
+#include "lle/UIButtonRust.h"
+
+// the check boxes' UIButton parts (UIButtonRust.h)
+GEBitmap* UIButtonRust::CheckOff(UIForm* inForm) { return inForm->GetManager()->GetCheckOff(); }
+GEBitmap* UIButtonRust::CheckDownOff(UIForm* inForm) { return inForm->GetManager()->GetCheckDownOff(); }
 
 typedef EeUiButtonCall C;
 #define EE_UI_CHECK(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
