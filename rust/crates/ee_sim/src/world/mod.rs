@@ -8,6 +8,8 @@
 //! token. [`check`] is the TEST ONLY VWCK digest the C++ compares with its own every tick.
 
 pub mod check;
+/// cbindgen:ignore
+pub mod effects;
 pub mod layout;
 pub mod map_fields;
 pub mod player_fields;

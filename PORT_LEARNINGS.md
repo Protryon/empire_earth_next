@@ -33301,3 +33301,57 @@ units was the forwarders themselves. This round made them inline members of thei
 - **Not done: folding.** Folding the 28 small LLE UI units into User Interface.cpp built and the oracle was
   identical, but it was reverted. It only saves include lines and moves no C++ to Rust (the lead's call). For the
   GE and UI clusters as Rust objects, see docs/progress/gfx-lle-cluster.md "What is left".
+
+## Cycle cuts: taking units out of the C++ dependency cycle (branch rust-cuts1, 2026-11-19)
+
+tools/cpp_deps.py measured one cycle of 379 units and 133,985 lines (SCC 1). Most of it is not real coupling: one
+unit names one symbol of another for a reason unrelated to its own job (a shared empty string, a global defined in
+the main unit, a test hook), and the cycle closes through it. Each cut below removes such an edge and is measured
+with the census before and after (a full build first: the census reads the objects).
+
+- **Find the cheap cuts with a what-if over edges.tsv**, not from keystones.txt. The keystones move a whole unit
+  (every outgoing edge at once), which ranks the big hubs first; a cheap cut is ONE edge (or a unit's two or three
+  symbols) whose removal splits the component. Deleting each edge of weight <= 3 inside SCC 1 in turn and recomputing
+  the component (Tarjan over ~250 nodes, seconds) found the edges from WinMain to the test drivers (5,254 lines for
+  two symbols), which no keystone list showed. A unit that is only part of another's implementation (EECalamityUpdate
+  is EECalamityClass's) also shows up as a "cheap" edge; it is not a cut: inverting it would only hide the edge.
+- **A data unit that defines an object depends on its constructor.** Moving Empire Earth.cpp's globals into a
+  data-only unit took 1 unit out at first: `EEWorld gWorld;` names EEWorld::EEWorld and ~EEWorld, so the data unit
+  went into the cycle with EEWorld.cpp and every reader of gWorld stayed there. ee/EEGlobalStorage.h separates the
+  storage from the construction: the data unit defines aligned zero bytes under the object's own symbol (an asm label:
+  MSVC's mangled name on Windows, the plain name on Linux, `_name` on macOS), the headers keep `extern EEWorld
+  gWorld;`, and the unit where the definition was constructs the object in place (`EE_CONSTRUCT_GLOBAL`: placement new
+  then atexit of the destructor, exactly what the compiler's dynamic initializer did), so construction and
+  destruction order are unchanged. The references into members (`gNumPlayers = gWorld.mNumPlayers`) stay plain
+  definitions in the data unit: clang constant-initializes them. EEGlobals.obj defines no function and has no
+  undefined symbol. The labels for POSIX were checked by compiling a toy for x86_64-linux-gnu and arm64-apple-macos
+  (`gW` / `_gW` defined and referenced alike); no POSIX build ran.
+- **Test code called by the game is a cycle.** EE-SIM's main calls WinMain and WinMain called EESimStart: the
+  driver, the scenario editor's and civ builder's steps and their captures were in the game's cycle. Calling the
+  Rust entries the C++ wrappers forwarded to (ee_sim_driver_start, ee_fixture_start), keeping the game's own part
+  (EESimPreferences) in the game's unit, and registering what needs a C++ host through a pointer the test unit sets
+  at static initialization (`gEETestFixtureConfigure`, `gEERenderCaptureFill`) removes the edge with the same calls
+  in the same order. The pointers live in EEGlobals.cpp, so neither side names the other.
+- **The save version moved.** kSaveGameMajorVersion / kSaveGameMinorVersion and their history comment are now
+  EEGlobals.cpp's: a branch that bumps the save version conflicts in Empire Earth.cpp and re-applies the bump in
+  EEGlobals.cpp.
+- **The measure, cut by cut** (SCC 1 units / lines; base origin/rust b3ab7ba2c, 379 / 133,985): gEmptyWideString in
+  a data unit 267 / 122,971; Empire Earth.cpp's globals (EEGlobals.cpp) 248 / 120,016; EECPEngineHelpers a leaf
+  246 / 119,730; WinMain off the test drivers 239 / 113,529; the physics' test hooks 237 / 113,119; EEUnitStore's
+  captures and the render fill's hook 235 / 112,046; EEUnitClass's data and gSeplScreenFont 229 / 111,335. In all
+  150 units and 22,650 lines left the cycle; leaves 62 -> 65. Most of the first cut's 112 units are WONGUI's, which
+  the cycle reached only through GUIStringSingleton's one name.
+- cbindgen exports a module's pub items to its crate's header: a Rust-only module (ee_sim::world::effects, whose
+  `EffectHandle` and `EFFECT_NOT_MADE` appeared in rust/sim/world.h and made the header check fail) takes
+  `/// cbindgen:ignore` on its `pub mod`.
+- **Two oracle runs under one NAME fault, not diverge.** A chain started with `&` inside a background shell kept
+  running after its shell returned (Git Bash's `ps` does not list it); starting the chain again ran two `sim_oracle run
+  cuts1-m` at once, whose shared stage slots made EE-SIM fault 12 s in (GEPhysicalModel::Intersects from
+  EEUnitClass::RefreshSound, a null model). It looked like a merge bug: the same exe and the same source in a scratch
+  worktree both played through. Before suspecting a merge, list the processes from Windows (`Get-CimInstance
+  Win32_Process` by command line) and give every rerun a new NAME.
+- **Storage under a global's symbol must have the global's alignment, not its type's.** clang gives a global object of
+  16 bytes or more 16-byte alignment and assumes it where the object is named: EERenderObject::Fn10C036 reads gWorld's
+  members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
+  oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
+  macros now add `alignas(16)`.

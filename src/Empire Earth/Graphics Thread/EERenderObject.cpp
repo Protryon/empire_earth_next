@@ -1195,7 +1195,8 @@ void EERenderObject::FillRenderLists()
                 && ((theLive = static_cast<EEUnit*>(gWorld.GetUnit(theRenderUnit.mUnitId))) == NULL
                     || theLive->mHitPoints == 1);
         }
-        EERenderCaptureFill(theInfo, sSwayClock, theCount);   // RFIL (TEST ONLY)
+        if (gEERenderCaptureFill != NULL)
+            gEERenderCaptureFill(theInfo, sSwayClock, theCount);   // RFIL (TEST ONLY)
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;

@@ -6,6 +6,7 @@
 // Empire Earth.cpp only for these globals, and that put them all in one dependency cycle (tools/cpp_deps.py).
 #include <windows.h>
 #include <stdint.h>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEViewport.h"
@@ -29,6 +30,7 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
+#include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGlobalStorage.h"
 
@@ -298,3 +300,29 @@ GERasterizer* gRasterizer;
 GEWindow* gGameWindow;
 
 UResourceFile* gResource;
+
+// TEST ONLY: the UI fixture's configure step (EETestFixture.cpp sets it at static initialization; EERun calls it first)
+void (*gEETestFixtureConfigure)();
+// TEST ONLY: the physics' hooks (were EEPhysics.cpp's; ee/EEPhysics.h): the unit being stepped (EE-SIM's random-draw
+// trace), after each tick of RTSPhysics::Main's simulation loop, each executed input's view (the UI fixture's orders)
+class EEComplexUnit;
+class NEMessage;
+EEComplexUnit* gPhysicsSteppingUnit = NULL;
+void (*gPhysicsAfterTickHook)(void) = NULL;
+void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
+// TEST ONLY: the render fill's capture (ee/EERenderCapture.h; EERenderCapture.cpp sets it)
+struct EERenderFrameInfo;
+void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount) = NULL;
+
+// The unit classes by type and the registered unit types (EEUnitClass.cpp constructs them where they were defined;
+// ee/EEUnit.h), and the space units' heights (.data 0x4cc9fc/0x4cca00; ee/EERenderLists.h): were EEUnitClass.cpp's
+EE_GLOBAL_STORAGE_AS(std::vector<EEUnitClass*>, gUnitClassTable,
+                     "?gUnitClassTable@@3V?$vector@PEAVEEUnitClass@@V?$allocator@PEAVEEUnitClass@@@std@@@std@@A",
+                     "gUnitClassTable");
+EE_GLOBAL_STORAGE_AS(std::vector<unsigned long>, EEUnitClassUnitTypes,
+                     "?sUnitTypes@EEUnitClass@@2V?$vector@KV?$allocator@K@std@@@std@@A", "_ZN11EEUnitClass10sUnitTypesE");
+float gSpaceTurretHeight = 0.7f;
+float gSpaceStationHeight = 1.5f;
+// the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
+class GEFont;
+GEFont* gSeplScreenFont;

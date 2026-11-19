@@ -34,4 +34,14 @@
     static const bool name##Constructed = (::new (static_cast<void*>(&name)) Type args, \
         std::is_trivially_destructible<Type>::value ? 0 : atexit([] { name.Type::~Type(); }), true)
 
+// The same for an object whose symbol is not its plain name (a class's static member) or whose type is a
+// template-id: tag names the storage and the constructed flag, itanium is the POSIX symbol (e.g.
+// "_ZN11EEUnitClass10sUnitTypesE"; a global's plain name); the destructor is called through a local alias.
+#define EE_GLOBAL_STORAGE_AS(Type, tag, msvc, itanium) \
+    alignas(Type) alignas(16) unsigned char tag##Storage[sizeof(Type)] EE_GLOBAL_SYMBOL(msvc, itanium)
+
+#define EE_CONSTRUCT_GLOBAL_AS(Type, tag, object, args) \
+    static const bool tag##Constructed = (::new (static_cast<void*>(&(object))) Type args, \
+        std::is_trivially_destructible<Type>::value ? 0 : atexit([] { using T = Type; (object).~T(); }), true)
+
 #endif

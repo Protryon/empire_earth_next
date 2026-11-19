@@ -208,3 +208,6 @@ void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, 
     f.unit_count = inUnitCount;
     ee_gfx_rfil_write(&f);
 }
+
+// the renderer's hook (ee/EERenderCapture.h)
+static const bool sEERenderCaptureRegistered = (gEERenderCaptureFill = EERenderCaptureFill, true);

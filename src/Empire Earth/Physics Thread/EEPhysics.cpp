@@ -749,7 +749,8 @@ void EEPhysics::ProcessUnitSwaps()
 
 // TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called
 // before (0) and after (1) the message executes, under the world's write lock; NULL unless the fixture runs
-void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
+// (EEGlobals.cpp's)
+extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);
 
 // New (port): the game log's human orders (ee/EEGameLog.h, TEST ONLY: training data from playtests). One "order" line per
 // order message a human player's units run, as it executes in the lockstep (the same in multiplayer and replays),
@@ -1334,8 +1335,7 @@ unsigned long EEPhysics::UpdateUnits()
     return theCount;
 }
 
-EEComplexUnit* gPhysicsSteppingUnit = NULL;   // TEST ONLY (ee/EEPhysics.h)
-void (*gPhysicsAfterTickHook)(void) = NULL;   // TEST ONLY (ee/EEPhysics.h; RTSPhysics::Main's simulation loop)
+// (gPhysicsSteppingUnit and gPhysicsAfterTickHook, TEST ONLY, are EEGlobals.cpp's)
 
 static const float kWindDrift = 0.005f;   // 0x442370 (unit-local const: the wind direction random walk step; provisional name)
 
