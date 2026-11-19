@@ -17,6 +17,28 @@ struct EeUnitsPlayerWonders;
 /// The queued improvements: per unit type the running timer (`first`) and the improvements in order.
 struct EeUnitsQueued;
 
+/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
+struct EeUnitsRtsMapFields {
+  /// the constructor's tile size (copied to `gMapTileSize`)
+  float mF1955F4;
+  float mF1955F8;
+  float mF1955FC;
+  long mL195600;
+  long mL195604;
+  long mL195608;
+  long mL19560C;
+  /// saved: `Create`'s height
+  long mL195610;
+  /// saved: `Create`'s width
+  long mL195614;
+  /// tiles per side
+  long mSize;
+  /// saved: the player count
+  unsigned long mU19561C;
+  /// the tiles exist
+  bool mB195620;
+};
+
 /// `RTSUnit`'s plain members (ee/RTSUnit.h; RTSUnit.cpp's `Reset` sets them).
 struct EeUnitsRtsUnitFields {
   /// the unit's tile (-10000: off the map)
@@ -399,28 +421,6 @@ struct EeUnitsUnitClassUpgradeFields {
   bool mConvertsBuildings;
   bool mConvertsPriests;
   bool mIsInitialized;
-};
-
-/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
-struct EeUnitsRtsMapFields {
-  /// the constructor's tile size (copied to `gMapTileSize`)
-  float mF1955F4;
-  float mF1955F8;
-  float mF1955FC;
-  long mL195600;
-  long mL195604;
-  long mL195608;
-  long mL19560C;
-  /// saved: `Create`'s height
-  long mL195610;
-  /// saved: `Create`'s width
-  long mL195614;
-  /// tiles per side
-  long mSize;
-  /// saved: the player count
-  unsigned long mU19561C;
-  /// the tiles exist
-  bool mB195620;
 };
 
 /// `EEMap`'s plain members (ee/EEMap.h), in the class's order.

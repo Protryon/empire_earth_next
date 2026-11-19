@@ -228,16 +228,10 @@ public:
         return inX < this->mSize && inY < this->mSize ? this->mTiles[inY * this->mSize + inX] : 0;
     }
 
-    // RTSMap.cpp's non-virtual members in address order (provisional names unless stated)
-    long SpreadDown(long inX, long inY, long inEnd, float inHeight, float inSlope);  // 0x121e7d (raise-terrain edges)
-    long SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope);
-    long SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope);
-    long SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope);
+    // RTSMap.cpp's non-virtual members in address order (provisional names unless stated); the terrain edits'
+    // spreads (0x121e7d..), UpdateTiles (0x1225fa) and SmoothVertex are ee_ge map_raise.rs'
     long GetNumRaisedCorners(unsigned long inX, unsigned long inY);   // 0x1222ed (EEPlanWall; built without /Og)
     void ClearU1955DC();                    // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
-    void UpdateTiles(long inX, long inY);   // 0x1225fa (the four tiles around vertex (inX, inY))
-    long SmoothVertex(unsigned long inX, unsigned long inY, unsigned long inFromX, unsigned long inFromY,
-                      float inSlope);
     void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles);
     void ApplyVertexColors();
     bool IsTileFlat(unsigned long inX, unsigned long inY);
