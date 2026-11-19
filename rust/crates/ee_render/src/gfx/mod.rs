@@ -135,6 +135,7 @@ pub mod pick;
 pub mod pick_walk;
 pub mod quake;
 pub mod raster;
+pub mod raster_direct;
 pub mod ro_terrain;
 pub mod ro_units;
 pub mod scene;
