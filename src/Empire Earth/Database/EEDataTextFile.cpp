@@ -16,8 +16,6 @@
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatMessage.h"
 #include "lle/GEColor.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 

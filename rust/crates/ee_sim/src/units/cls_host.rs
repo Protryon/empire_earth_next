@@ -40,7 +40,9 @@ pub struct EeUnitsClsIo {
 /// The list a host operation fills (pushed one pair at a time).
 #[derive(Default)]
 pub struct EeUnitsClsListHandle {
-    tiles: Vec<Tile>,
+    pub(crate) tiles: Vec<Tile>,
+    /// the points a movement operation reads and pushes (cls_move_host.rs)
+    pub(crate) points: Vec<Ge3DPoint>,
 }
 
 // ---- the host operations (`ee_units_cls_host`'s `op`)
@@ -139,7 +141,7 @@ pub unsafe extern "C" fn ee_units_cls_push(list: *mut EeUnitsClsListHandle, x: i
 pub struct ClsGame(pub Game);
 
 impl ClsGame {
-    fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
+    pub(crate) fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
         // SAFETY: the C++ switch reads live objects the bodies hand it
         unsafe { ee_units_cls_host(op, a, b, c, d, io) }
     }
