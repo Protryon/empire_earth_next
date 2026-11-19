@@ -6,6 +6,7 @@
 // Requires ee/EEAIArea.h.
 #ifndef EE_EETOWN_H
 #define EE_EETOWN_H
+#include "rust/sim/units.h"
 
 class EEPlayer;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
