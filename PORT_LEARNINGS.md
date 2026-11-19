@@ -33641,3 +33641,126 @@ with the census before and after (a full build first: the census reads the objec
   message classes): docs/progress/game-leaves.md "Left".
 The LAN game (both lobby instances read every WONLobby resource and skin file through ConfigObject and
 ConfigParser: ComponentConfigLoad, ResourceConfig, the lobby's config) and the tour's lobby. The drivers above.
+
+## R6 WONLobby, round 22: TitleConfig whole in Rust, the lobby's dialog subclasses folded, MSMessageBox as a shell kind (ee_won_net titleobj.rs; ee_won_gui shell_msgbox.rs; branch rust-wonlobby22, 2026-11-19)
+
+The round's targets were the WON skin's widgets, MSDialog and MSMessageBox, the lobby's dialog subclasses,
+TitleConfig and the image classes. Three moved; the skin's widgets and the images did not (below: why).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 4ce58e100 | TitleConfig and CommunityConfig whole in Rust (titleobj.rs); TitleConfig.cpp and WONTitleConfig.h deleted, WONTitleConfigMsg.h moved to the drivers (tests/won/won_titlecfg_msg.h) | -396 |
+| d94607e2f | the lobby's 15 dialog and 3 popup subclasses folded into LobbyRustDialog / LobbyRustPopup | -156 |
+| 7e46ceb33 | MSDialog and MSMessageBox as the shell kind MsMessageBox over a new Dialog shell; MSMessageBox.cpp, MSControlConstructors.cpp and two headers deleted | -137 |
+
+Round total: WON C++ 31,559 -> 30,871 (-688). origin/rust was already in the branch's base (3449a04fd): no merge.
+
+### TitleConfig (titleobj.rs): a cfgobject group with a Rust owner and host
+
+- **No game code makes a TitleConfig** (the auth server's title files; round 21 found it): the move needed a way for a
+  `ConfigObject` subclass to be Rust. cfgobject.rs already called its object only through the group's host, so a Rust
+  object is a group whose owner is an `EeWonTitleObj` and whose host is Rust (`title_host`): the hooks (PreParse,
+  PostParse, HandleInstruction, HandleValueInstruction, Reset) dispatch by the object's kind (plain, title,
+  community) to Rust, the base hooks are cfgobject's own functions (made `pub(crate)`: `reset`, `handle_instruction`,
+  `handle_value_instruction`, `parse_top_level`, `parse_child`, `Cx`), references, the name, base name and parent
+  are the object's fields, and `p` is a Rust `EeWonCfgParser` (`ParserRust(a)` answers `a`). The exception record is
+  a Rust struct (a Rust hook never throws; a reader's status still becomes `Exc::File`).
+- **The typed values are Rust** (`ValObj`: bool, unsigned short, int, string, wide string, list of int lists; the
+  default; the additive flag), bound to the object's fields by raw pointers into the boxed object (the group, which
+  holds the values, is freed first in the object's `Drop`). Their reads are ffi_parse.rs's, as the C++ templates'
+  were; `CopyValueHook`'s `dynamic_cast<ConfigValue<T>*>` is a match on the value's type. The wide strings are
+  `wchar_t` units (u16 on Windows); `WStringToString` / `StringToWString` stop at the first NUL, as the C++ did.
+- **The C++ kept for others**: `ConfigObject::RegisterIntValue` / `RegisterIntListListValue` stay (won_cfgobject_test's
+  subclass uses them). LobbyConfig and EELobbyConfig could move the same way (their keys bind to members the lobby
+  reads: accessors first).
+- **Two uninitialised members**: the original left `mNameLogin` until PostParse and the dummy constructor's
+  `mAlreadyInCommunity` unset; the Rust starts them at 0 / false, and the driver's copy of the C++ classes does too.
+  The constructors leave every key's member unset until the first Reset (C++ garbage, Rust zero): the driver resets
+  both sides before a parse that may fail before its own reset (a missing file).
+
+### The dialog subclasses folded
+
+LanNameDialog .. CreditsDialog (15) and ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup were one-line
+forwards over the lobby dialog and popup shells (their decisions lobbydlg.rs / lobbypopup.rs since rounds 1-3). The
+callers' members are `SmartPtr<LobbyRustDialog>`, made by the resource table's `NewLobbyDialog<kind>`, looked up by
+`SafeGetDialog` (SafeGetComponent's type check by the shell's kind), called with `LCall` and `InputText(n)`; the two
+constructor bodies (the status dialog's start tick, the credits' scrolling text) run in the shell's constructor by
+kind; `LobbyOpenRustPopup(kind, a, b, c)` is the three popups' new, Init and open. TOUDialog's `Paint` override called
+`Container::Paint` to skip Dialog's, which this port's Dialog does not have: dropped (the same call). No Rust changed.
+
+### MSMessageBox (shell_msgbox.rs)
+
+- **A Dialog shell**: `WONShellDialog : Dialog` (one more `WON_SHELL_CLASS` line, `EeWonShellBase::Dialog`), the kind
+  `MsMessageBox` overriding nothing: its constructor (MSDialog's background, then MSMessageBox's) is the kind's
+  `init`, its members (the three buttons, the label) are held cells released in reverse order by `free`.
+- **New calls**: the MS button base and the dialog on other components (`Sh::msb_on`, `Sh::dlg_on`: their Rust objects
+  in the game, the `Call` op in a driver); host ops `WrapWidthOf`, `SetWrap` (the label's WrappedText), `SameSize` (a
+  SameSizeLayout executed on the box) and `CenterLayout` (made and added at the AddChildLayout point: the original
+  made it earlier, but a layout instruction does nothing until it is added); the shell op `GetButton1`.
+- **The window stays C++**: `MSMessageBoxMsg` (GuiShell.cpp) is Msg, PrepareWindow and DoDialog (the native window,
+  its title, style, size, the first button's focus, the modal run, the close). The texts cross as `intptr_t[6]` (the
+  title, the message, the three buttons and the C++ "Ok"): a `#[repr(C)]` struct no extern function names gets no
+  cbindgen header.
+- Its only caller is the config loader's parse-time box (`gShowParseTime`, a debug flag): no gate reaches it.
+
+### Tests and mutations
+
+- `won_titleobj_test` (new): the C++ classes as they were (tests/won/won_titlecfg_orig.h, over the game's ConfigObject
+  and the moved won_titlecfg_msg.h) against titleobj.rs: 2,000 random title files (half well formed: titles with
+  communities, lifespans, name logins, nested communities; half random pieces: unknown groups, nesting errors,
+  includes, defines, group defines, wide files, missing files) on a root title or community, nested or not; the
+  parse's result, the parser's error, warnings, line and stop flag and the line count, the whole tree (every member,
+  every key's text and default flag, both texts), then SetKeyValue, CopyKeyValsFrom and Reset and the tree again;
+  and 4 dummy communities: 0 mismatches. Mutations (build/w22/mutate.py, scratch): 8 of 8 caught (a ninth did not
+  compile). The first generator reached a community's lifespans 3 times in 2,000 runs: the well-formed files added.
+- `won_shell_test`: the two constructors' statements (MSControlConstructors.cpp's MSDialog, MSMessageBox.cpp) over
+  its scripted world against the kind, 6,000 random text sets: 57,048 checks in all, 0 failures; 6 of 6 mutations
+  caught, two only after the box's world was widened (text widths past 400, parts past 80 wide: the parts are the
+  same ids each run, so their sizes vary only with a wide salt). `won_cfgtab_test` unchanged.
+- cargo: titleobj_tests.rs (5: a title and its community over real files, the nesting errors, skipped groups and bad
+  values, a missing file and the dummy, the dump), shell_msgbox_tests.rs (2: the constructor's calls written out).
+
+### Behaviour changes
+
+None for the game's data. The two uninitialised TitleConfig members start at zero. MSMessageBox's CenterLayout is
+made where it is added. A lobby dialog looked up under a name whose component is another dialog kind is now a missing
+component (the original's dynamic_cast to the subclass failed the same way).
+
+### What runs it
+
+- The LAN game: the lobby's dialogs made by kind (the status and OK/cancel boxes, the LAN name, port, password and
+  direct-connect dialogs, the create game dialog) and the client options popup; the tour: none of this round's code
+  but the dialogs' construction at the lobby's start.
+- Only the drivers: TitleConfig (no game caller), MSMessageBox (a debug flag), the Internet lobby's dialogs and
+  popups (no WON servers).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 4 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each code commit (the first build of the third failed on link/won/units.txt naming the two deleted units: removed in the commit) |
+| `build.py --test-profile windowed-software` | 0 / 0 (the round's head) |
+| `rust_build.py header` | 277 headers current |
+| `rust_build.py gate` | PASS, 4,918 tests after the first two commits; the third's first run failed clippy only (`manual_split_once` in its test file, fixed in 8722c38de); PASS, 4,920 tests at the head |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after the first two commits; seeds 2-7 identical at the head |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 157 programs exit 0 (156 and won_titleobj_test) under the 2 GB cap, peak 557 MB (won_cfgtab_test); every golden unchanged |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13736` units [4, 43, 43] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2778 joiner=2760`, GATES PASS |
+
+### Left
+
+- **The WON skin's widgets** (WONSimpleButton, WONScrollThumb, WONHeaderButton, WONInputBox, WONScrollbar,
+  WONComboBox, WONScrollContainer, WONListCtrl, WONHeaderControl, WONTabCtrl, WONFrameComponent, WONSkin's
+  prototypes): not moved. They are already thin over Rust (their paints guidraw plans, their layouts skinlay.rs,
+  WONButton wonbtnobj.rs); what keeps them C++ is that each holds `WONFrame`s (four borders and a `SmartPtr<Image>`
+  whose copy duplicates the image) and image arrays, and WONSkin holds them as typed prototypes it duplicates. About
+  300 references in 16 files name the classes. The move needs, first, the frame as a Rust record with image
+  references, duplicate and the frame paint as host ops, then the twelve classes as kinds in one go (moved one at a
+  time each costs as much C++ in host ops as it deletes).
+- **The images** (Image, NativeImage, NativeMask, the raw images, Palette, ImageFilters, ImageDecoder, DelayLoadImage,
+  ~800 lines): every WONGUI draw, skin and config takes one; they are the platform's (PlatNativeImage) base classes.
+  Not started.
+- LobbyConfig / EELobbyConfig over titleobj.rs's Rust values; the remaining WONGUI classes with C++ logic, the widgets'
+  C++ members, the dialogs' rows and ChatLink's segment hook: as round 21 left them.
