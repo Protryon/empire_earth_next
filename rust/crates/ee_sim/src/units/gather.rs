@@ -98,6 +98,16 @@ impl Gather {
 
 static GATHERS: Mutex<BTreeMap<u64, Gather>> = Mutex::new(BTreeMap::new());
 
+/// `GetGatherStorage()` of the gather goal `goal`
+pub fn storage_of(goal: u64) -> u64 {
+    get(goal).storage.object()
+}
+
+/// `GetGatherResource()` of the gather goal `goal`
+pub fn resource_of(goal: u64) -> u64 {
+    get(goal).resource.object()
+}
+
 fn get(goal: u64) -> Gather {
     let goals = GATHERS.lock().unwrap_or_else(|e| e.into_inner());
     goals.get(&goal).copied().unwrap_or_else(Gather::empty)

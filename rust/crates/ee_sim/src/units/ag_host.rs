@@ -309,11 +309,18 @@ impl AgHost for AgGame {
         self.list(EE_UNITS_AG_DESTINATIONS, g, 0, 0, &mut io).into_iter().map(|(id, p, _)| (id as u32, p)).collect()
     }
     fn world_unit_sphere(&mut self, id: u32) -> Option<f32> {
-        let mut io = EeUnitsAgIo::default();
-        (self.io(EE_UNITS_AG_WORLD_SPHERE, 0, 0, id as i64, 0, &mut io) != 0).then_some(io.f)
+        // `gWorld.GetUnit(id)`'s class's inner collision sphere
+        // SAFETY: the group's call runs inside the C++ caller's hold of the world
+        let t = unsafe { WorldRead::begin() };
+        let u = crate::world::view::UnitView::by_id(&t, id)?;
+        Some(crate::world_field!(u.class()?.fields(), mInnerCollisionSphere))
     }
     fn regions_size(&mut self) -> i32 {
-        self.op(EE_UNITS_AG_REGIONS_SIZE, 0, 0, 0, 0) as i32
+        // SAFETY: as above
+        let t = unsafe { WorldRead::begin() };
+        let regions = WorldView::global(&t).and_then(|w| w.map()).map_or(std::ptr::null(), |m| m.unit_regions());
+        // SAFETY: the map's unit regions (`ee_combat_regions_size(gWorld.mMap->mUnitRegions)`)
+        unsafe { crate::combat::regions::ee_combat_regions_size(regions) }
     }
     fn cap_factor(&mut self) -> f32 {
         let mut io = EeUnitsAgIo::default();
@@ -455,7 +462,7 @@ impl AgHost for AgGame {
         [io.p[0], io.p[1]]
     }
     fn goal_kind(&mut self, goal: u64) -> i32 {
-        self.op(EE_UNITS_AG_GOAL_KIND, goal, 0, 0, 0) as i32
+        goal_kind_of(goal)
     }
     fn clone_goal(&mut self, goal: u64) -> u64 {
         self.op(EE_UNITS_AG_CLONE, goal, 0, 0, 0) as u64
@@ -499,10 +506,19 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_CLEAR_PATH_STATE, goal, 0, 0, 0);
     }
     fn gather_storage(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_GATHER_STORAGE, goal, 0, 0, 0) as u64
+        // `GetGatherStorage()`: the gather goal's record (another kind's answer: none)
+        if goal_kind_of(goal) == GOAL_KIND_GATHER {
+            crate::units::gather::storage_of(goal)
+        } else {
+            0
+        }
     }
     fn gather_resource(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_GATHER_RESOURCE, goal, 0, 0, 0) as u64
+        if goal_kind_of(goal) == GOAL_KIND_GATHER {
+            crate::units::gather::resource_of(goal)
+        } else {
+            0
+        }
     }
     fn set_gather_storage(&mut self, goal: u64, storage: u64) {
         self.op(EE_UNITS_AG_SET_GATHER_STORAGE, goal, storage, 0, 0);
@@ -526,7 +542,15 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_SET_EXPLORE_TILE, goal, 0, x as i64, y as i64);
     }
     fn patrol_point(&mut self, goal: u64) -> u64 {
-        self.op(EE_UNITS_AG_PATROL_POINT, goal, 0, 0, 0) as u64
+        // `GetPatrolTarget()`, else `ee_units_pg_last(GetPatrolGroup())` (a patrol goal's)
+        match crate::units::patrol::target(goal) {
+            0 => {
+                let group = crate::units::patrol::group(goal) as usize as *mut crate::units::patrol_group::EeUnitsPatrolGroup;
+                // SAFETY: the goal's live patrol group
+                unsafe { crate::units::patrol_group::ee_units_pg_last(group) as usize as u64 }
+            }
+            t => t,
+        }
     }
     fn new_attack_unit(&mut self, first: u64, target: u64) -> u64 {
         self.op(EE_UNITS_AG_NEW_ATTACK_UNIT, first, target, 0, 0) as u64
@@ -638,6 +662,9 @@ fn with_complex_fields(u: u64, f: impl FnOnce(&mut EeUnitsComplexUnitFields)) {
     // SAFETY: a live EEComplexUnit's record base; the borrow ends inside `f`
     f(unsafe { &mut *((u as usize + layout().complex_unit_fields as usize) as *mut EeUnitsComplexUnitFields) })
 }
+
+/// `kGoalGather`
+const GOAL_KIND_GATHER: i32 = crate::units::gather::GOAL_GATHER as i32;
 
 /// A goal's `mKind` (-1: no goal)
 fn goal_kind_of(goal: u64) -> i32 {

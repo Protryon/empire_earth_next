@@ -509,6 +509,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
+    // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
     case EE_UNITS_AG_REMOVE:
         theGroup->RemoveUnit((EEComplexUnit*)(uintptr_t)inB);
         return 0;
@@ -566,15 +567,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         for (std::map<unsigned int, GE3DPoint>::iterator it = theGroup->mDestinations.begin(); it != theGroup->mDestinations.end(); ++it)
             ee_units_ag_push((EeUnitsAgListHandle*)io->list, it->first, (const float(*)[3])&it->second.mX, 0.0f);
         return 0;
-    case EE_UNITS_AG_WORLD_SPHERE: {
-        EEUnit* theFound = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)inC));
-        if (theFound == NULL)
-            return 0;
-        io->f = theFound->mUnitClass->GetInnerCollisionSphere();
-        return 1;
-    }
-    case EE_UNITS_AG_REGIONS_SIZE:
-        return ee_combat_regions_size(gWorld.mMap->mUnitRegions);
     case EE_UNITS_AG_CAP_FACTOR:
         io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
         return 0;
@@ -676,8 +668,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         io->p[1] = theClosest.mY;
         return 0;
     }
-    case EE_UNITS_AG_GOAL_KIND:
-        return theGoal != NULL ? (int64_t)theGoal->mKind : -1;
     case EE_UNITS_AG_CLONE:
         return EEObj(theGoal->Clone());
     case EE_UNITS_AG_DELETE:
@@ -719,10 +709,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_CLEAR_PATH_STATE:
         theGoal->SetGroupPathState(0);
         return 0;
-    case EE_UNITS_AG_GATHER_STORAGE:
-        return EEObj(theGoal->GetGatherStorage());
-    case EE_UNITS_AG_GATHER_RESOURCE:
-        return EEObj(theGoal->GetGatherResource());
     case EE_UNITS_AG_SET_GATHER_STORAGE:
         theGoal->SetGatherStorage((EEUnit*)(uintptr_t)inB);
         return 0;
@@ -740,8 +726,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_SET_EXPLORE_TILE:
         theGoal->SetExploreTile((long)inC, (long)inD);
         return 0;
-    case EE_UNITS_AG_PATROL_POINT:
-        return EEObj(theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : ee_units_pg_last(theGoal->GetPatrolGroup()));
     case EE_UNITS_AG_NEW_ATTACK_UNIT:
         return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)inA, (EEUnit*)(uintptr_t)inB,
                                                                        true, false)));
