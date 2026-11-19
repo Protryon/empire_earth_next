@@ -11,6 +11,7 @@
 use std::ffi::{c_ulong, c_void};
 
 use crate::ge::bitmap;
+use crate::ge::cppobj;
 use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
 
 /// The calls a bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
@@ -59,6 +60,64 @@ pub enum EeGeBmpOp {
     TexDropLevels,
     /// `obj->CopyFrom(*(const GEVertexArray*)b)` (a rhombus's assignment, `prim.rs`).
     VertexCopyFrom,
+}
+
+/// A vertex array's call (`EeGeBmpOp::VertexGetColor` .. `VertexSetUv`, `VertexCopyFrom`) on the C++ array's Rust
+/// array (`vertarr.rs`), as the C++ class's members make it; None for any other operation or an array without one
+/// (the tests' handles), which the host answers. The bitmaps' and the primitives' (`prim.rs`) calls come here first.
+///
+/// # Safety
+/// `obj` is the operation's array: a live C++ `GEVertexArray` (or a handle of at least [`cppobj::CppArray`]'s size
+/// whose Rust array is NULL); `b` as `EeGeBmpOp` describes.
+#[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+pub(crate) unsafe fn vertex_op(op: EeGeBmpOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    use crate::ge::vertarr::{self as va, EeGeVaField as F};
+    use EeGeBmpOp as O;
+    let vertex = matches!(
+        op,
+        O::VertexGetColor
+            | O::VertexSetColor
+            | O::VertexGetPoint
+            | O::VertexSetPoint
+            | O::VertexSetNormal
+            | O::VertexGetOpacity
+            | O::VertexSetOpacity
+            | O::VertexGetUv
+            | O::VertexSetUv
+            | O::VertexCopyFrom
+    );
+    if !vertex || obj == 0 {
+        return None;
+    }
+    // SAFETY: the caller's contract
+    let rust = unsafe { (*(obj as *const cppobj::CppArray)).rust } as *mut va::EeGeVertexArray;
+    if rust.is_null() {
+        return None;
+    }
+    let (i, value) = (a as c_ulong as u32, b as *mut f32);
+    // SAFETY: the caller's contract: `rust` is the array's, `b` the operation's value
+    unsafe {
+        match op {
+            O::VertexGetColor => va::ee_ge_va_get(rust, F::Color, i, value),
+            O::VertexSetColor => va::ee_ge_va_set(rust, F::Color, i, value),
+            O::VertexGetPoint => va::ee_ge_va_get(rust, F::Point, i, value),
+            O::VertexSetPoint => va::ee_ge_va_set(rust, F::Point, i, value),
+            O::VertexSetNormal => va::ee_ge_va_set(rust, F::Normal, i, value),
+            O::VertexGetOpacity => {
+                let mut opacity = 0.0f32;
+                va::ee_ge_va_get(rust, F::Opacity, i, &mut opacity);
+                return Some(opacity.to_bits() as isize);
+            }
+            O::VertexSetOpacity => va::ee_ge_va_set(rust, F::Opacity, i, &f32::from_bits(b as u32)),
+            O::VertexGetUv => va::ee_ge_va_get(rust, F::Uv, i, value),
+            O::VertexSetUv => va::ee_ge_va_set(rust, F::Uv, i, value),
+            _ => {
+                let from = (*(b as *const cppobj::CppArray)).rust as *const va::EeGeVertexArray;
+                va::ee_ge_va_copy_from(rust, from);
+            }
+        }
+    }
+    Some(0)
 }
 
 /// The host: `owner` is the C++ bitmap of the object calling.
@@ -116,6 +175,10 @@ impl EeGeBitmap {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeBmpOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeBmpOp, obj: usize, a: isize, b: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { vertex_op(op, obj, a, b) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (bm(p).host, bm(p).owner) };
         // SAFETY: the host's contract

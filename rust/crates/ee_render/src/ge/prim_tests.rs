@@ -21,12 +21,11 @@ struct Vertex {
 struct World {
     arrays: BTreeMap<usize, Vec<Vertex>>,
     refs: BTreeMap<usize, i32>,
-    next: usize,
     log: Vec<String>,
 }
 
 thread_local! {
-    static WORLD: RefCell<World> = RefCell::new(World { next: 0x100, ..World::default() });
+    static WORLD: RefCell<World> = RefCell::new(World::default());
 }
 
 fn with<R>(f: impl FnOnce(&mut World) -> R) -> R {
@@ -53,8 +52,8 @@ unsafe extern "C" fn host(_owner: *mut c_void, op: EeGeBmpOp, obj: *mut c_void, 
                 SCREENS
             }
             EeGeBmpOp::RasterVertexArray => with(|w| {
-                w.next += 0x10;
-                let v = w.next;
+                // (an object of a C++ array's size, its Rust array NULL: the calls come to this host)
+                let v = Box::into_raw(Box::new([0u64; 4])) as usize;
                 w.arrays.insert(v, vec![Vertex::default(); b as usize]);
                 w.log.push(format!("new {v:x} type {a} count {b}"));
                 v as isize
