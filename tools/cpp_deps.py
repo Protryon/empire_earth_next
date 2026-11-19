@@ -2,6 +2,7 @@
 
     python -I tools/cpp_deps.py [report] [--build build/clang] [--out build/cpp_deps] [--top N] [--code-only] [--all-refs]
     python -I tools/cpp_deps.py unit FILE [--build ...]      # one unit's outgoing and incoming edges, with symbols
+    python -I tools/cpp_deps.py cuts [--build ...] [--max-weight N] [--top N]   # what-if: the cheapest cuts of SCC 1
     python -I tools/cpp_deps.py selftest                     # compiles tiny objects with clang-cl and checks the graph
 
 Build first (`python -I build.py -j 3 --sim`). The objects are the ones the Windows links name:
@@ -57,6 +58,16 @@ Reports (under --out, default build/cpp_deps; a summary on stdout):
     dirs.txt           a per-directory roll-up
     edges.tsv          every edge: from, to, weight, symbols (demangled)
     summary.json       the numbers
+`cuts` (a what-if over the graph, under --out): for every candidate cut inside SCC 1, the lines SCC 1 would lose if
+it were made (SCC 1 recomputed without it), ranked:
+    edge       one edge A -> B (weight <= --max-weight): A stops naming B;
+    symbol     one symbol S of B: every unit of SCC 1 stops naming S (S moves out of B, e.g. into a data unit, or
+               behind a hook); only the edges S alone made disappear;
+    data       every data symbol of B (its globals' storage moved out of B: the EEGlobalStorage.h pattern);
+    unit-out   every edge out of A inside SCC 1, for an A naming at most --max-weight symbols there.
+Each cut is classified by its symbols: `data` (all are globals' storage), `hook` (a function pointer, a callback or
+registration, a capture or test hook), `vtable` (a vtable or RTTI reference: a construction), `call` (a real call).
+Writes cuts.txt (every cut with its symbols) and cuts.json; prints the top ones.
 Lines are the unit's source file (.cpp/.c) lines; the class view adds the class's header (include/ or src/) once.
 Code only the POSIX builds compile is in none of these objects.
 """
@@ -375,7 +386,7 @@ def analyse(units, rust_defs, code_only=False):
                 edges[u.name].setdefault(target, {})[raw] = dem
             elif cat != "cpp":
                 other[u.name][cat] += 1
-    return {"units": by_name, "edges": edges, "other": other, "home": home, "resolve": resolve}
+    return {"units": by_name, "edges": edges, "other": other, "home": home, "resolve": resolve, "def_kind": def_kind}
 
 
 def tarjan(nodes, succ):
@@ -793,6 +804,141 @@ def show_unit(g, name):
             print(f"       {d}")
 
 
+# ---------------------------------------------------------------- cuts: a what-if over the edges of SCC 1
+
+HOOK_RE = re.compile(r"Hook|Callback|Register|Capture|TestFixture|TEST_?ONLY|Observer|Listener", re.I)
+
+
+def symbol_kind(raw, dem, def_kind):
+    """data | hook | vtable | call, for one symbol an edge names."""
+    if raw.startswith(("??_7", "??_R", "??_8")):
+        return "vtable"
+    func = def_kind.get(raw, "T") in "Tt"
+    if not func:
+        return "hook" if "(__cdecl *" in dem or HOOK_RE.search(qualified_name(dem)) else "data"
+    return "hook" if HOOK_RE.search(qualified_name(dem)) else "call"
+
+
+def cut_kind(kinds):
+    ks = set(kinds)
+    if not ks:
+        return "-"
+    if ks == {"data"}:
+        return "data"
+    if "call" in ks:
+        return "call"
+    if "vtable" in ks:
+        return "vtable"
+    return "hook"
+
+
+def cut_candidates(g, core, max_weight):
+    """[(kind, label, removed edges {(a, b)}, {mangled: demangled})] inside the component `core`."""
+    edges, def_kind = g["edges"], g["def_kind"]
+    inner = {(a, b): edges[a][b] for a in core for b in edges.get(a, {}) if b in core}
+    out = []
+    for (a, b), syms in sorted(inner.items()):
+        if len(syms) <= max_weight:
+            out.append(("edge", f"{a} -> {b}", {(a, b)}, syms))
+    # one symbol: the edges whose every symbol is it
+    by_sym = collections.defaultdict(set)
+    for (a, b), syms in inner.items():
+        if len(syms) == 1:
+            by_sym[next(iter(syms))].add((a, b))
+    for raw, es in sorted(by_sym.items()):
+        if len(es) < 2:
+            continue                # the edge cut already
+        b = next(iter(es))[1]
+        dem = inner[next(iter(es))][raw]
+        # every other edge naming it too (it moves out of B for all of them)
+        users = sorted(a for (a, bb), syms in inner.items() if raw in syms)
+        out.append(("symbol", f"{qualified_name(dem)} (of {b}, named by {len(users)})", es, {raw: dem}))
+    # every data symbol of B
+    for b in sorted(core):
+        gone, syms = set(), {}
+        for (a, bb), ss in inner.items():
+            if bb != b:
+                continue
+            data = {r: d for r, d in ss.items() if symbol_kind(r, d, def_kind) == "data"}
+            syms.update(data)
+            if data and len(data) == len(ss):
+                gone.add((a, b))
+        if gone:
+            out.append(("data", f"the globals of {b}", gone, syms))
+    # every edge out of A
+    for a in sorted(core):
+        es = {(a, b): ss for (aa, b), ss in inner.items() if aa == a}
+        n = sum(len(ss) for ss in es.values())
+        if es and n <= max_weight:
+            merged = {r: d for ss in es.values() for r, d in ss.items()}
+            out.append(("unit-out", f"{a} -> {len(es)} units", set(es), merged))
+    return out
+
+
+def find_cuts(g, max_weight=6):
+    """Returns (core, core lines, [cut dict ranked by lines out of SCC 1])."""
+    units, edges = g["units"], g["edges"]
+    cpp = sorted(n for n, u in units.items() if u.kind == "cpp")
+    succ = {a: set(bs) for a, bs in edges.items()}
+    L = lambda n: units[n].lines   # noqa: E731
+    comps = tarjan(cpp, succ)
+    core = max(comps, key=lambda c: sum(L(n) for n in c))
+    cset = set(core)
+    L0 = sum(L(n) for n in core)
+    sub = {n: {b for b in succ.get(n, ()) if b in cset} for n in core}
+    res, seen = [], {}
+    for kind, label, removed, syms in cut_candidates(g, cset, max_weight):
+        key = frozenset(removed)
+        if key in seen and kind != "data":
+            continue                # the same cut as an earlier one
+        if key not in seen:
+            drop = collections.defaultdict(set)
+            for a, b in removed:
+                drop[a].add(b)
+            cs = tarjan(core, {n: sub[n] - drop.get(n, set()) for n in core})
+            big = max(cs, key=lambda c: sum(L(n) for n in c))
+            seen[key] = (L0 - sum(L(n) for n in big), sorted(cset - set(big)))
+        lost, freed = seen[key]
+        if lost <= 0:
+            continue
+        kinds = [symbol_kind(r, d, g["def_kind"]) for r, d in syms.items()]
+        res.append({"cut": kind, "what": label, "lines": lost, "units": len(freed), "freed": freed,
+                    "class": cut_kind(kinds), "edges": sorted(f"{a} -> {b}" for a, b in removed),
+                    "symbols": sorted(qualified_name(d) + f" [{k}]" for (r, d), k in zip(syms.items(), kinds))})
+    res.sort(key=lambda r: (-r["lines"], len(r["symbols"]), r["cut"], r["what"]))
+    return core, L0, res
+
+
+def report_cuts(g, out, top, max_weight):
+    core, L0, res = find_cuts(g, max_weight)
+    out.mkdir(parents=True, exist_ok=True)
+    with open(out / "cuts.txt", "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"# cuts of SCC 1 ({len(core)} units, {L0} lines), ranked by the lines SCC 1 would lose\n"
+                "# lines units  cut  class  what; its edges, symbols and the units it takes out\n")
+        for r in res:
+            f.write(f"\n{r['lines']:6d} {r['units']:4d}  {r['cut']:8s} {r['class']:6s} {r['what']}\n")
+            for e in r["edges"][:12]:
+                f.write(f"         edge   {e}\n")
+            if len(r["edges"]) > 12:
+                f.write(f"         ... {len(r['edges']) - 12} more edges\n")
+            for s in r["symbols"][:12]:
+                f.write(f"         sym    {s}\n")
+            if len(r["symbols"]) > 12:
+                f.write(f"         ... {len(r['symbols']) - 12} more symbols\n")
+            for n in r["freed"][:10]:
+                f.write(f"         out    {n}\n")
+            if len(r["freed"]) > 10:
+                f.write(f"         ... {len(r['freed']) - 10} more units\n")
+    (out / "cuts.json").write_text(json.dumps({"scc1": [len(core), L0], "cuts": res}, indent=1) + "\n")
+    print(f"SCC 1: {len(core)} units, {L0} lines; {len(res)} cuts that shrink it (max weight {max_weight})")
+    print("  lines units  cut      class  what  [symbols]")
+    for r in res[:top]:
+        syms = ", ".join(r["symbols"][:4]) + (" ..." if len(r["symbols"]) > 4 else "")
+        print(f"  {r['lines']:6d} {r['units']:4d}  {r['cut']:8s} {r['class']:6s} {r['what']}  [{syms}]")
+    print(f"\nall cuts in {out / 'cuts.txt'}")
+    return res
+
+
 # ---------------------------------------------------------------- self test
 
 SELFTEST = {
@@ -870,6 +1016,26 @@ def selftest():
     ks, st = keystones(["p", "q", "r", "z"], sq, pq, lambda n: 10)
     check("keystones: moving the hub q takes p and r out of the cycle",
           [k[0] for k in ks] == ["q"] and ks[0][1] == 20 and len(st) <= 1)
+    # cuts: p -> q (a call), q -> p (a global of p), q -> r (a hook pointer of r), r -> q (a call); 10 lines each
+    cu = {n: Unit(n, "cpp", 10) for n in ("p.cpp", "q.cpp", "r.cpp")}
+    cg = {"units": cu, "def_kind": {"?gP@@3HA": "B", "?gHook@@3P6AXXZEA": "B"},
+          "edges": {"p.cpp": {"q.cpp": {"?f@@YAXXZ": "void __cdecl f(void)"}},
+                    "q.cpp": {"p.cpp": {"?gP@@3HA": "int gP"},
+                              "r.cpp": {"?gHook@@3P6AXXZEA": "void (__cdecl *gHook)(void)"}},
+                    "r.cpp": {"q.cpp": {"?h@@YAXXZ": "void __cdecl h(void)"}}}}
+    core, l0, cr = find_cuts(cg)
+    by = {(r["cut"], r["what"]): r for r in cr}
+    e_qp = by.get(("edge", "q.cpp -> p.cpp"))
+    check("cuts: SCC 1 is p, q, r (30 lines)", sorted(core) == ["p.cpp", "q.cpp", "r.cpp"] and l0 == 30)
+    check("cuts: cutting q -> p takes p out (10 lines), a data cut",
+          e_qp is not None and e_qp["lines"] == 10 and e_qp["freed"] == ["p.cpp"] and e_qp["class"] == "data")
+    e_qr = by.get(("edge", "q.cpp -> r.cpp"))
+    check("cuts: q -> r through a function pointer is a hook cut", e_qr is not None and e_qr["class"] == "hook")
+    e_pq = by.get(("edge", "p.cpp -> q.cpp"))
+    check("cuts: p -> q is a real call", e_pq is not None and e_pq["class"] == "call" and e_pq["lines"] == 10)
+    check("cuts: the globals of p are the same cut as q -> p", by.get(("data", "the globals of p.cpp"), {}).get("lines") == 10)
+    check("cuts: ranked by lines, nothing that frees no line", all(r["lines"] > 0 for r in cr)
+          and [r["lines"] for r in cr] == sorted((r["lines"] for r in cr), reverse=True))
     cw = cluster_waves(["x", "y", "z", "w"], {"x": {"y"}, "y": {"x", "z"}, "w": {"z"}}, [["x", "y"], ["z"], ["w"]])
     check("cluster waves: z, then {x, y} and w together", cw == [[["z"]], [["x", "y"], ["w"]]])
     print("SELFTEST " + ("PASS" if all(checks) else "FAIL"))
@@ -878,11 +1044,13 @@ def selftest():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", nargs="?", default="report", choices=["report", "unit", "selftest"])
+    ap.add_argument("cmd", nargs="?", default="report", choices=["report", "unit", "cuts", "selftest"])
     ap.add_argument("file", nargs="?", help="unit: the unit (path under src/, file name or stem)")
     ap.add_argument("--build", default=str(ROOT / "build" / "clang"))
     ap.add_argument("--out", default=str(ROOT / "build" / "cpp_deps"))
     ap.add_argument("--top", type=int, default=30)
+    ap.add_argument("--max-weight", type=int, default=6,
+                    help="cuts: the most symbols an edge or unit-out cut may name")
     ap.add_argument("--all-refs", action="store_true",
                     help="count every undefined symbol of an object, also those only unreached COMDAT copies make")
     ap.add_argument("--code-only", action="store_true",
@@ -898,6 +1066,9 @@ def main():
         if not a.file:
             sys.exit("unit: name a unit")
         show_unit(g, a.file)
+        return 0
+    if a.cmd == "cuts":
+        report_cuts(g, out, a.top, a.max_weight)
         return 0
     build_reports(g, out, a.top)
     return 0
