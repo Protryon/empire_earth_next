@@ -393,6 +393,39 @@ pub enum EeWonLobbyDlgOp {
     EventButton,
     /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
     ListRefresh,
+    // R6 WONLobby round 17: in the game the strings are resource rows (`string_row`), the C++ switch gone
+    /// `((Label*)a)->SetText(gLobbyResources[b].mString, true)`.
+    LabelSetRes,
+    /// `((Button*)a)->SetText(gLobbyResources[b].mString, true)`.
+    ButtonSetRes,
+    /// `aTitle = gLobbyResources[b].mString; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+    /// ((Label*)a)->SetText(aTitle, true)`.
+    AdminTitleRes,
+}
+
+/// The resource row of a dialog string (LobbyDialogHost.cpp's `AdminString` as it was), `None` for the EE game's
+/// two (`EELobbyResource_Named`) and the empty one.
+pub fn string_row(s: isize) -> Option<crate::resource::EeWonLobbyRes> {
+    use crate::resource::EeWonLobbyRes as R;
+    use EeWonLobbyDlgString as S;
+    Some(match s {
+        x if x == S::Warn as isize => R::AdminActionDialog_Warn_String,
+        x if x == S::Mute as isize => R::AdminActionDialog_Mute_String,
+        x if x == S::UnMute as isize => R::AdminActionDialog_UnMute_String,
+        x if x == S::Kick as isize => R::AdminActionDialog_Kick_String,
+        x if x == S::Ban as isize => R::AdminActionDialog_Ban_String,
+        x if x == S::ExplanationOpt as isize => R::AdminActionDialog_ExplanationOpt_String,
+        x if x == S::ExplanationReq as isize => R::AdminActionDialog_ExplanationReq_String,
+        x if x == S::Ok as isize => R::LobbyGlobal_OK_String,
+        x if x == S::Cancel as isize => R::LobbyGlobal_Cancel_String,
+        _ => return None,
+    })
+}
+
+/// `string_row` for the drivers: the row, or -1.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbydlg_string_row(s: isize) -> i32 {
+    string_row(s).map_or(-1, |r| r as i32)
 }
 
 /// The inward calls (the shells' methods).
@@ -686,6 +719,8 @@ pub struct EeWonLobbyDlg {
     dialog: *mut c_void,
     host: EeWonLobbyDlgHostFn,
     kind: EeWonLobbyDlgKind,
+    /// made by the game (`ee_won_lobbydlg_new_model`): its strings go out as resource rows
+    model: Cell<bool>,
     controls: [Cell<isize>; MAX_SLOTS],
     /// LanPortDialog's `mGamePort`.
     game_port: Cell<u16>,
@@ -718,6 +753,7 @@ impl EeWonLobbyDlg {
             dialog,
             host,
             kind,
+            model: Cell::new(false),
             controls: Default::default(),
             game_port: Cell::new(0),
             game_type: Cell::new(0),
@@ -735,10 +771,25 @@ impl EeWonLobbyDlg {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        let (op, b) = if self.model.get() { Self::game_op(op, b) } else { (op, b) };
         match self.host {
             // SAFETY: the host is the C++ dialog's (or a test's), called with the dialog it was given for
             Some(f) => unsafe { f(self.dialog, op, a, b, c) },
             None => 0,
+        }
+    }
+
+    /// In the game, a string op's string as its resource row (the EE game's two stay strings).
+    fn game_op(op: Op, b: isize) -> (Op, isize) {
+        let res = match op {
+            Op::LabelSetString => Op::LabelSetRes,
+            Op::ButtonSetString => Op::ButtonSetRes,
+            Op::AdminTitle => Op::AdminTitleRes,
+            _ => return (op, b),
+        };
+        match string_row(b) {
+            Some(r) => (res, r as isize),
+            None => (op, b),
         }
     }
 
@@ -1603,6 +1654,18 @@ pub extern "C" fn ee_won_lobbydlg_new(
     host: EeWonLobbyDlgHostFn,
 ) -> *mut EeWonLobbyDlg {
     Box::into_raw(Box::new(EeWonLobbyDlg::new(dialog, kind, host)))
+}
+
+/// A new dialog object made by the game: as `ee_won_lobbydlg_new`, its strings going out as resource rows.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbydlg_new_model(
+    dialog: *mut c_void,
+    kind: EeWonLobbyDlgKind,
+    host: EeWonLobbyDlgHostFn,
+) -> *mut EeWonLobbyDlg {
+    let d = EeWonLobbyDlg::new(dialog, kind, host);
+    d.model.set(true);
+    Box::into_raw(Box::new(d))
 }
 
 /// Releases the controls (reverse member order) and frees the object.

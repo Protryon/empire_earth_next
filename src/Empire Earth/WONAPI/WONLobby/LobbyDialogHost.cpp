@@ -174,7 +174,7 @@ namespace WONAPI {
 static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
 LobbyRustDialog::LobbyRustDialog(EeWonLobbyDlgKind inKind)
-    : mLobbyDlg(ee_won_lobbydlg_new(this, inKind, LobbyDialogHost)) {}
+    : mLobbyDlg(ee_won_lobbydlg_new_model(this, inKind, LobbyDialogHost)) {}
 
 // the controls are released in reverse member order (the original SmartPtr members), before the Dialog base
 LobbyRustDialog::~LobbyRustDialog() { ee_won_lobbydlg_free(this->mLobbyDlg); }
@@ -235,23 +235,14 @@ template <class T> static Component* FindHeld(ComponentConfig* inConfig, const E
     return aComponent;
 }
 
-static const GUIString& AdminString(intptr_t inString)
+// the EE game's strings of the connect dialog (the lobby's are resource rows: lobbydlg.rs string_row)
+static const GUIString& EeString(intptr_t inString)
 {
-    static GUIString sEmpty;
-    switch ((EeWonLobbyDlgString)inString) {
-    case EeWonLobbyDlgString::Warn: return LOBBY_STRING(AdminActionDialog_Warn_String);
-    case EeWonLobbyDlgString::Mute: return LOBBY_STRING(AdminActionDialog_Mute_String);
-    case EeWonLobbyDlgString::UnMute: return LOBBY_STRING(AdminActionDialog_UnMute_String);
-    case EeWonLobbyDlgString::Kick: return LOBBY_STRING(AdminActionDialog_Kick_String);
-    case EeWonLobbyDlgString::Ban: return LOBBY_STRING(AdminActionDialog_Ban_String);
-    case EeWonLobbyDlgString::ExplanationOpt: return LOBBY_STRING(AdminActionDialog_ExplanationOpt_String);
-    case EeWonLobbyDlgString::ExplanationReq: return LOBBY_STRING(AdminActionDialog_ExplanationReq_String);
-    case EeWonLobbyDlgString::Ok: return LOBBY_STRING(LobbyGlobal_OK_String);
-    case EeWonLobbyDlgString::Cancel: return LOBBY_STRING(LobbyGlobal_Cancel_String);
-    case EeWonLobbyDlgString::AbortLaunch: return EE_LOBBY_STRING(gEELobbyConnectDialog_AbortLaunch);
-    case EeWonLobbyDlgString::LeaveGame: return EE_LOBBY_STRING(gEELobbyConnectDialog_LeaveGame);
-    default: return sEmpty;
-    }
+    if ((EeWonLobbyDlgString)inString == EeWonLobbyDlgString::AbortLaunch)
+        return EE_LOBBY_STRING(gEELobbyConnectDialog_AbortLaunch);
+    if ((EeWonLobbyDlgString)inString == EeWonLobbyDlgString::LeaveGame)
+        return EE_LOBBY_STRING(gEELobbyConnectDialog_LeaveGame);
+    return gEmptyGUIString;
 }
 
 // a bad user record into the list (BadUsersInsert)
@@ -314,15 +305,18 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         sprintf(aBuf, "%d", (int)b);
         aLabel->SetText(GUIString(new GUIStringData(aBuf)), true);
         return 0;
-    case Op::LabelSetString: aLabel->SetText(AdminString(b), true); return 0;
-    case Op::ButtonSetString: aButton->SetText(AdminString(b), true); return 0;
-    case Op::AdminTitle: {
-        GUIString aTitle = AdminString(b);
+    // the lobby's strings come as resource rows (lobbydlg.rs string_row), the EE game's two as strings
+    case Op::LabelSetRes: aLabel->SetText(gLobbyResources[b].mString, true); return 0;
+    case Op::ButtonSetRes: aButton->SetText(gLobbyResources[b].mString, true); return 0;
+    case Op::AdminTitleRes: {
+        GUIString aTitle = gLobbyResources[b].mString;
         aTitle.append(GUIString(new GUIStringData(" ")));
         aTitle.append(reinterpret_cast<LobbyClient*>(c)->GetName());
         aLabel->SetText(aTitle, true);
         return 0;
     }
+    case Op::LabelSetString: aLabel->SetText(EeString(b), true); return 0;
+    case Op::ButtonSetString: aButton->SetText(EeString(b), true); return 0;
     case Op::ButtonIsDisabled: return aButton->IsDisabled();
     case Op::ButtonIsChecked: return aButton->IsChecked();
     case Op::ButtonSetCheck: aButton->SetCheck(b != 0, c != 0); return 0;
@@ -532,39 +526,6 @@ void LobbyRustPopup::HandleComponentEvent(ComponentEvent* inEvent)
     this->PCall(EeWonLobbyPopupCall::Event, (intptr_t)inEvent, (intptr_t)aType);
 }
 
-static const GUIString& PopupString(intptr_t inString)
-{
-    typedef EeWonLobbyPopupString S;
-    switch ((S)inString) {
-    case S::Whisper: return LOBBY_STRING(ClientOptionsCtrl_Whisper_String);
-    case S::Invite: return LOBBY_STRING(ClientOptionsCtrl_Invite_String);
-    case S::Uninvite: return LOBBY_STRING(ClientOptionsCtrl_Uninvite_String);
-    case S::Locate: return LOBBY_STRING(FriendOptionsCtrl_Locate_String);
-    case S::AddToFriends: return LOBBY_STRING(ClientOptionsCtrl_AddToFriends_String);
-    case S::RemoveFromFriends: return LOBBY_STRING(ClientOptionsCtrl_RemoveFromFriends_String);
-    case S::ClearAfk: return LOBBY_STRING(ClientOptionsCtrl_ClearAFK_String);
-    case S::SetAfk: return LOBBY_STRING(ClientOptionsCtrl_SetAFK_String);
-    case S::Ignore: return LOBBY_STRING(ClientOptionsCtrl_Ignore_String);
-    case S::Unignore: return LOBBY_STRING(ClientOptionsCtrl_Unignore_String);
-    case S::Block: return LOBBY_STRING(ClientOptionsCtrl_Block_String);
-    case S::Unblock: return LOBBY_STRING(ClientOptionsCtrl_Unblock_String);
-    case S::Warn: return LOBBY_STRING(ClientOptionsCtrl_Warn_String);
-    case S::UnMute: return LOBBY_STRING(ClientOptionsCtrl_UnMute_String);
-    case S::Mute: return LOBBY_STRING(ClientOptionsCtrl_Mute_String);
-    case S::Kick: return LOBBY_STRING(ClientOptionsCtrl_Kick_String);
-    case S::Ban: return LOBBY_STRING(ClientOptionsCtrl_Ban_String);
-    case S::GameJoin: return LOBBY_STRING(GameOptionsPopup_Join_String);
-    case S::GamePing: return LOBBY_STRING(GameOptionsPopup_Ping_String);
-    case S::GameQueryDetails: return LOBBY_STRING(GameOptionsPopup_QueryDetails_String);
-    case S::GameHideDetails: return LOBBY_STRING(GameOptionsPopup_HideDetails_String);
-    case S::GameShowDetails: return LOBBY_STRING(GameOptionsPopup_ShowDetails_String);
-    case S::GameRemove: return LOBBY_STRING(GameOptionsPopup_Remove_String);
-    case S::FriendRefreshList: return LOBBY_STRING(FriendOptionsCtrl_RefreshList_String);
-    case S::FriendRemove: return LOBBY_STRING(FriendOptionsCtrl_RemoveFromFriends_String);
-    }
-    return gEmptyGUIString;
-}
-
 static intptr_t Held(RefCount* inObject)
 {
     if (inObject != NULL)
@@ -600,7 +561,7 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
         aMenu->AddItem(GUIString(aBuffer), 0)->mSelectable = false;
         return 0;
     }
-    case Op::MenuAddItem: aMenu->AddItem(PopupString(b), NULL, NULL, (int)c); return 0;
+    case Op::MenuAddRes: aMenu->AddItem(gLobbyResources[b].mString, NULL, NULL, (int)c); return 0;
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
     case Op::Width: return reinterpret_cast<Component*>(a)->Width();
     case Op::Height: return reinterpret_cast<Component*>(a)->Height();

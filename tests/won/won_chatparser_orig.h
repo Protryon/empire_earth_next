@@ -1,31 +1,52 @@
-// ChatCommandParser: turns a line of lobby chat input into a broadcast, an emote or a slash command
-// UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-// The original's functions run from 0x755750 to 0x757d67; the parser (0x54 bytes, RefCount-derived, vtable
-// 0x851a9c) is allocated at 0x762aed. The LobbyCompletion functions follow. (file name inferred: no __FILE__)
-// Behaviour of the original kept here: a one-character rest of line reads as empty, a name prefix shared by two
-// clients is ambiguous, a duration needs a unit letter (D/H/M/S), and INFINITE keeps the previous duration.
-#include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <cwctype>
-#include <cctype>
-#include <cstdlib>
-#include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyParser.h"
-#include "ee/wonapi/WONLobbyChatCommands.h"
-#include "rust/won_lobby/chatobj.h"
-#include "rust/won_net/chat.h"
-#include <vector>
-extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss)
+// won_chatparser_test's namespace Orig (by tools/won_chatparser_orig.py from 030204242): ChatCommandParser's
+// class and ChatCommandParser.cpp's statements as they were before R6 WONLobby round 17 moved them to chatobj.rs.
+// Do not edit: regenerate.
+#ifndef WON_CHATPARSER_ORIG_H
+#define WON_CHATPARSER_ORIG_H
+extern wchar_t gEmptyWideString[];
+namespace Orig {
 using namespace WONAPI;
-// The parsing (the command word, targets by full name or unique prefix, texts, durations, the input's kind, the help
-// lines a client is shown, the short names) is ee_won's chat module (rust/crates/ee_won_net/src/chat.rs); the parser's
-// state (the command tables, the settings, what a parse leaves) is a Rust object since round 17 (chatobj.rs). This
-// class keeps the client list and the target client and hands the clients' names over.
+class ChatCommandParser : public RefCount {
+public:
+    ChatCommandParser();
+    virtual ~ChatCommandParser();         // 0x3559f0; only virtual slot
+    void InitCommands();
+    void SetClientList(LobbyClientList* inClients, int inMatchThreshold);
+    void AddCommand(const GUIString& inCommand, int inId);
+    GUIString GetCommandString(int inId);
+    const char* GetCommandName(int inId);
+    void AddCommands(const std::wstring& inCommands, int inId);
+    LobbyClient* FindClient(const GUIString& inName, int* outMatch);
+    bool HandleInput(const GUIString& inInput); // with ParseCommand (0x756f40), chatobj.rs's
+    void AddHelpEntry(int inId, const GUIString& inCommand, GUIString& outHelp);
+    GUIString GetHelp(unsigned short inClientId);
+
+    int GetCommand() const;
+    GUIString GetTargetName() const; // the texts are copies (the original returned references to the members)
+    int GetPrefix() const;
+    LobbyClient* GetTarget() const { return this->mTarget.get(); }
+    GUIString GetText() const;
+    unsigned long GetDuration() const;
+    unsigned long GetRoomFlags() const;
+    LobbyClientList* GetClients() const { return this->mClients.get(); }
+    int GetError() const;
+    bool GetInvitation() const;
+    void SetCommand(int inCommand);
+    void SetInput(const GUIString& inInput); // the reply target's name
+    void SetPrefix(int inPrefix);
+    void SetMatchThreshold(int inThreshold);
+    void SetAllowColonEmote(bool inAllow);
+    void SetText(const GUIString& inText);
+    void SetInvitation(bool inInvitation);
+private:
+    ChatCommandParser(const ChatCommandParser&);
+    ChatCommandParser& operator=(const ChatCommandParser&);
+    GUIString Text(EeWonChatParserText inText) const;
+    SmartPtr<LobbyClientList> mClients;    // +0x08
+    SmartPtr<LobbyClient> mTarget;         // +0x38
+    EeWonChatParser* mParser;              // the original's +0x0c..+0x50 but these two
+};
+
 namespace {
 EeWonChatText ChatText(const GUIString& inText)
 {
@@ -205,3 +226,6 @@ GUIString ChatCommandParser::GetHelp(unsigned short clientId)
  for(size_t k=0;k<count;k++) this->AddHelpEntry(commands[k],gLobbyResources[ee_won_chat_help_row(commands[k])].mString,out);
  return out;
 }
+
+} // namespace Orig
+#endif

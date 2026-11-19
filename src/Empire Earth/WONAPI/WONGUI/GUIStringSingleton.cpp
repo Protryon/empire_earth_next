@@ -20,6 +20,8 @@ namespace WONAPI {
 static_assert(offsetof(GUIStringData, mLength) == offsetof(GUIStringData, mText) + offsetof(EeWonGuiStrBuf, length) &&
               offsetof(GUIStringData, mCapacity) == offsetof(GUIStringData, mText) + offsetof(EeWonGuiStrBuf, capacity),
               "guistrobj.rs EeWonGuiStrBuf");
+// ... read in place at this offset (guistrobj.rs data_units, EE_WON_GSTR_DATA_AT)
+static_assert(offsetof(GUIStringData, mText) == 2 * sizeof(void*), "guistrobj.rs EE_WON_GSTR_DATA_AT");
 #pragma clang diagnostic pop
 // Returns the shared empty string data, creating it on first use
 GUIStringData* GetEmptyGUIStringData()

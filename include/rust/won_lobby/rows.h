@@ -19,6 +19,9 @@ void ee_won_lobby_rows_host_world(EeWonLobbyCtlHostFn host);
 /// The game list's rows are the EE game's from now on (the glue's `SetFactories`).
 void ee_won_lobby_rows_ee_details();
 
+/// `icon_res` for the drivers: the picture's resource row.
+int32_t ee_won_lobby_rows_icon_row(ptrdiff_t icon);
+
 /// The controls' row ops from C++ and the drivers (`ctl_op`; `INTPTR_MIN` when the op is not a row op or its row
 /// is not of the op's kind).
 ptrdiff_t ee_won_lobby_rows_ctl_op(EeWonLobbyCtlOp op,

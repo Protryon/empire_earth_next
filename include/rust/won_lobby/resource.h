@@ -514,6 +514,12 @@ bool ee_won_resource_row(size_t index, EeWonResource *out);
 /// The kind of resource `res` (its row's).
 EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
 
+/// Binds the C++ slot array (`gLobbyResources`, `stride` bytes a slot; its `mString` at offset 0).
+///
+/// # Safety
+/// `slots` holds `ee_won_resource_count()` slots and lives for the program.
+void ee_won_lobbyres_bind(const void *slots, size_t stride);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_RESOURCE_H

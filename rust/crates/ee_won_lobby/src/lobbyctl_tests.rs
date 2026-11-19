@@ -434,3 +434,16 @@ fn a_player_row_shows_a_seated_player_and_sends_our_own_changes() {
 fn event_players(p: &EeWonLobbyCtl, e: EeWonLobbyCtlEvent, component: isize) {
     p.call(EeWonLobbyCtlCall::Event, 0xE1, e as isize, component);
 }
+
+/// The controls' strings as resource rows (round 17): every one of the nine named.
+#[test]
+fn string_rows() {
+    use crate::resource::EeWonLobbyRes as R;
+    assert_eq!(string_row(EeWonLobbyCtlString::Ready as isize), Some(R::GameStagingCtrl_Ready_String));
+    assert_eq!(
+        string_row(EeWonLobbyCtlString::AddressUnavailable as isize),
+        Some(R::LobbyOptions_AddressUnavailable_String)
+    );
+    assert_eq!((0..9).filter(|&v| string_row(v).is_some()).count(), 9);
+    assert_eq!(string_row(9), None);
+}

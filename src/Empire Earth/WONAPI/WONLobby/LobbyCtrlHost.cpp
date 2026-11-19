@@ -166,41 +166,6 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     return NULL;
 }
 
-static const GUIString& CtlString(intptr_t inString)
-{
-    typedef EeWonLobbyCtlString S;
-    switch ((S)inString) {
-    case S::Ready: return LOBBY_STRING(GameStagingCtrl_Ready_String);
-    case S::NotReady: return LOBBY_STRING(GameStagingCtrl_NotReady_String);
-    case S::StartGame: return LOBBY_STRING(GameStagingCtrl_StartGame_String);
-    case S::LeaveGame: return LOBBY_STRING(GameStagingCtrl_LeaveGame_String);
-    case S::DissolveGame: return LOBBY_STRING(GameStagingCtrl_DissolveGame_String);
-    case S::Ban: return LOBBY_STRING(GameUserListCtrl_Ban_String);
-    case S::Kick: return LOBBY_STRING(GameUserListCtrl_Kick_String);
-    case S::CheckingAddress: return LOBBY_STRING(LobbyOptions_CheckingAddress_String);
-    case S::AddressUnavailable: return LOBBY_STRING(LobbyOptions_AddressUnavailable_String);
-    }
-    return gEmptyGUIString;
-}
-
-static const SmartPtr<Image>& CtlImage(intptr_t inImage)
-{
-    typedef EeWonLobbyCtlImage I;
-    switch ((I)inImage) {
-    case I::Ignored: return LOBBY_IMAGE(UserListCtrl_Ignored_Image);
-    case I::Blocked: return LOBBY_IMAGE(UserListCtrl_Blocked_Image);
-    case I::Muted: return LOBBY_IMAGE(UserListCtrl_Muted_Image);
-    case I::Away: return LOBBY_IMAGE(UserListCtrl_Away_Image);
-    case I::Admin: return LOBBY_IMAGE(UserListCtrl_Admin_Image);
-    case I::Moderator: return LOBBY_IMAGE(UserListCtrl_Moderator_Image);
-    case I::Captain: return LOBBY_IMAGE(UserListCtrl_Captain_Image);
-    case I::Firewall: return LOBBY_IMAGE(LobbyGlobal_Firewall_Image);
-    case I::Searching: return LOBBY_IMAGE(LobbyGlobal_Searching_Image);
-    case I::Normal: break;
-    }
-    return LOBBY_IMAGE(UserListCtrl_Normal_Image);
-}
-
 static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyCtlOp Op;
@@ -260,8 +225,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         return 0;
     case Op::ButtonIsChecked: return aButton->IsChecked() ? 1 : 0;
     case Op::ButtonSetCheck: aButton->SetCheck(b != 0, c != 0); return 0;
-    case Op::ButtonSetText: aButton->SetText(CtlString(b), true); return 0;
-    case Op::LabelSetText: aLabel->SetText(CtlString(b), true); return 0;
+    // ButtonSetText / LabelSetText: their strings come as resource rows (lobbyctl.rs string_row: ButtonSetRes,
+    // LabelSetRes, LobbyNetCtrlHost.cpp's)
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameCanReady: return aGame->CanReady() ? 1 : 0;
     case Op::GameMatchesSpec: return aGame->MatchesRoomSpec((int)b) ? 1 : 0;
@@ -313,7 +278,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;
     case Op::BehindFirewall: return LobbyIsBehindFirewall() ? 1 : 0;
-    case Op::IconSetImage: reinterpret_cast<ImageComponent*>(a)->SetImage(CtlImage(b).get()); return 0;
+    // IconSetImage: its picture comes as a resource row (rows.rs icon_res)
+    case Op::IconSetRes: reinterpret_cast<ImageComponent*>(a)->SetImage(gLobbyResources[b].mImage.get()); return 0;
     case Op::PublicAddressValid: return LobbyGetPublicAddress().IsValid() ? 1 : 0;
     case Op::LabelSetPublicAddress: aLabel->SetText(LobbyGetPublicAddress().GetHostString(true), true); return 0;
     // EELobbyGameOptionsCtrl

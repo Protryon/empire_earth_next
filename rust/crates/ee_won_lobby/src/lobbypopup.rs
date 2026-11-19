@@ -157,6 +157,57 @@ pub enum EeWonLobbyPopupOp {
     DeliverFriend,
     /// `this->GetRoot()->ClosePopup(this)`.
     ClosePopup,
+    /// `((PopupMenu*)a)->AddItem(gLobbyResources[b].mString, NULL, NULL, c)` (R6 WONLobby round 17: `MenuAddItem`'s
+    /// string as its resource row in the game).
+    MenuAddRes,
+}
+
+/// The resource row of a menu string (LobbyDialogHost.cpp's `PopupString` as it was).
+pub fn string_row(s: isize) -> Option<crate::resource::EeWonLobbyRes> {
+    use crate::resource::EeWonLobbyRes as R;
+    use EeWonLobbyPopupString as S;
+    const T: [(S, R); 25] = [
+        (S::Whisper, R::ClientOptionsCtrl_Whisper_String),
+        (S::Invite, R::ClientOptionsCtrl_Invite_String),
+        (S::Uninvite, R::ClientOptionsCtrl_Uninvite_String),
+        (S::Locate, R::FriendOptionsCtrl_Locate_String),
+        (S::AddToFriends, R::ClientOptionsCtrl_AddToFriends_String),
+        (S::RemoveFromFriends, R::ClientOptionsCtrl_RemoveFromFriends_String),
+        (S::ClearAfk, R::ClientOptionsCtrl_ClearAFK_String),
+        (S::SetAfk, R::ClientOptionsCtrl_SetAFK_String),
+        (S::Ignore, R::ClientOptionsCtrl_Ignore_String),
+        (S::Unignore, R::ClientOptionsCtrl_Unignore_String),
+        (S::Block, R::ClientOptionsCtrl_Block_String),
+        (S::Unblock, R::ClientOptionsCtrl_Unblock_String),
+        (S::Warn, R::ClientOptionsCtrl_Warn_String),
+        (S::UnMute, R::ClientOptionsCtrl_UnMute_String),
+        (S::Mute, R::ClientOptionsCtrl_Mute_String),
+        (S::Kick, R::ClientOptionsCtrl_Kick_String),
+        (S::Ban, R::ClientOptionsCtrl_Ban_String),
+        (S::GameJoin, R::GameOptionsPopup_Join_String),
+        (S::GamePing, R::GameOptionsPopup_Ping_String),
+        (S::GameQueryDetails, R::GameOptionsPopup_QueryDetails_String),
+        (S::GameHideDetails, R::GameOptionsPopup_HideDetails_String),
+        (S::GameShowDetails, R::GameOptionsPopup_ShowDetails_String),
+        (S::GameRemove, R::GameOptionsPopup_Remove_String),
+        (S::FriendRefreshList, R::FriendOptionsCtrl_RefreshList_String),
+        (S::FriendRemove, R::FriendOptionsCtrl_RemoveFromFriends_String),
+    ];
+    T.iter().find(|(k, _)| *k as isize == s).map(|&(_, r)| r)
+}
+
+/// The op that sends a string op's string as its resource row in the game.
+fn game_string_op(op: EeWonLobbyPopupOp) -> Option<EeWonLobbyPopupOp> {
+    match op {
+        EeWonLobbyPopupOp::MenuAddItem => Some(EeWonLobbyPopupOp::MenuAddRes),
+        _ => None,
+    }
+}
+
+/// `string_row` for the drivers: the row, or -1.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbypopup_string_row(s: isize) -> i32 {
+    string_row(s).map_or(-1, |r| r as i32)
 }
 
 /// The inward calls.
@@ -211,9 +262,13 @@ impl EeWonLobbyPopup {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        let (mut op, mut b) = (op, b);
         if self.model.get() {
             if let Some(r) = crate::modelobj::popup_op(op, a, b) {
                 return r;
+            }
+            if let (Some(res), Some(r)) = (game_string_op(op), string_row(b)) {
+                (op, b) = (res, r as isize);
             }
         }
         match self.host {
