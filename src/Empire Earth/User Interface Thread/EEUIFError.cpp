@@ -35,11 +35,12 @@ static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
 static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);
 
 // The message box's buttons: OK/Yes (RTTI EEUIFEBOK > UIButton; vtable 0x44a640) and No/Cancel (EEUIFEBCancel; vtable
-// 0x44a6d8, its close form set by DisplayCancel), one class here: 50x20, tinted (a rhombus on the 2D draw list, ee_ge
-// list2d.rs); a press marks it pressed and closes the box (or the close form)
-class EEUIFEButton : public UIButton {
+// 0x44a6d8, its close form set by DisplayCancel), one class (the second keeps its name: the editor gates print the
+// controls' classes): 50x20, tinted (a rhombus on the 2D draw list, ee_ge list2d.rs); a press marks it pressed and
+// closes the box (or the close form)
+class EEUIFEBOK : public UIButton {
 public:
-    EEUIFEButton(UIForm* inForm, unsigned long inId)
+    EEUIFEBOK(UIForm* inForm, unsigned long inId)
         : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
           mCallback(NULL), mData(NULL), mCloseForm(NULL), mPressed(false)
     {
@@ -68,6 +69,10 @@ protected:
         UIButton::ButtonUp();
         gUserInterface->CloseForm(this->mCloseForm);
     }
+};
+class EEUIFEBCancel : public EEUIFEBOK {
+public:
+    using EEUIFEBOK::EEUIFEBOK;
 };
 
 // Creates the game's message box form: message label, OK, No and Cancel buttons, an edit box and the gold
@@ -129,7 +134,7 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         if ((inB & 3) != 0) {
             EEUIFErrorCallback theCallback = sDialogCallbacks[(inB & 3) == 2 ? 1 : 0];
             void* theData = (inB & 3) == 3 ? (void*)theBox->mEditBox->GetText(0) : sDialogData;
-            static_cast<EEUIFEButton*>(theButton)->SetCallback(theCallback, theData);
+            static_cast<EEUIFEBOK*>(theButton)->SetCallback(theCallback, theData);
         }
         theButton->SetDisplayMode(kDisplayModeShown);
         if (inA == 3 && (inB & 3) != 0)
@@ -205,11 +210,11 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         if (inA == 0)   // (the original's ESVERIFYs after each new: new never returns NULL)
             theBox->mError = new UITextLabel(UWideString(""), sDialogFont, 0, theRectangle, theBox, 1, 0, 0);
         else if (inA == 1)
-            theBox->mOk = new EEUIFEButton(theBox, 1);
+            theBox->mOk = new EEUIFEBOK(theBox, 1);
         else if (inA == 4)
             theBox->mEditBox = new UIEditBox(4, sDialogFont, 0x32, false, theRectangle, theBox, 4, 2, false, false);
         else
-            (inA == 2 ? theBox->mNo : theBox->mCancel) = new EEUIFEButton(theBox, inA);
+            (inA == 2 ? theBox->mNo : theBox->mCancel) = new EEUIFEBCancel(theBox, inA);
         break;
     }
     case EE_SCREENS_DLG_SCROLL_BAR:
@@ -276,7 +281,7 @@ void EEUIFError::Close()
     EEUIFErrorCallbackData* theData = new EEUIFErrorCallbackData;
     theData->mCallback = NULL;
     theData->mData = NULL;
-    for (EEUIFEButton* theButton : {this->mOk, this->mNo, this->mCancel})
+    for (EEUIFEBOK* theButton : std::initializer_list<EEUIFEBOK*>{this->mOk, this->mNo, this->mCancel})
         if (theButton != NULL && theButton->mPressed) {
             theData->mCallback = theButton->mCallback;
             theData->mData = theButton->mData;

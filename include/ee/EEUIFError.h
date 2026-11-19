@@ -6,7 +6,8 @@
 #ifndef EE_EEUIFERROR_H
 #define EE_EEUIFERROR_H
 
-class EEUIFEButton;
+class EEUIFEBOK;
+class EEUIFEBCancel;
 class EEUIBGenericBackground;
 class UITextLabel;
 class UIEditBox;
@@ -37,9 +38,9 @@ protected:
     virtual void Open();                    // 0x261bbc (slot 0x48)
 private:
     friend uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB);   // its host
-    EEUIFEButton* mOk;                      // +0x1a0 (id 1)
-    EEUIFEButton* mNo;                      // +0x1a4 (id 2)
-    EEUIFEButton* mCancel;                  // +0x1a8 (id 3)
+    EEUIFEBOK* mOk;                         // +0x1a0 (id 1)
+    EEUIFEBCancel* mNo;                     // +0x1a4 (id 2)
+    EEUIFEBCancel* mCancel;                 // +0x1a8 (id 3)
     UITextLabel* mError;                    // +0x1ac the message
     long mMode;                             // +0x1b0 0..4 (the Display* members)
     EEUIBGenericBackground* mBackground;    // +0x1b4
