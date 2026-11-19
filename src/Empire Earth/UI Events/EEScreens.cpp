@@ -577,8 +577,6 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
 static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
     switch (inOp) {
-    case EE_SCREENS_GAME_MG_UI_STATE:
-        return (uint32_t)inForm->mUIState;
     case EE_SCREENS_GAME_MG_CLEAR_GHOSTS:
         gWorld.mGhostUnitsLock->Enter();
         gWorld.ClearGhostUnits();
@@ -592,9 +590,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         break;
     case EE_SCREENS_GAME_MG_POINTER:
         gMouse->mPointer = (long)(int32_t)inA;
-        break;
-    case EE_SCREENS_GAME_MG_CURSOR_LOCK:
-        inForm->mIsCursorLocked = inA != 0;
         break;
     case EE_SCREENS_GAME_MG_REFRESH_GROUP:
         if (gUIManager->mMainGameForm)
@@ -619,9 +614,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     }
     case EE_SCREENS_GAME_MG_SHOW_DIALOG:
         return (uint32_t)gPhysics->PostShowDialogMessage();
-    case EE_SCREENS_GAME_MG_CURRENT_GROUP:
-        inForm->mCurrentGroup = inA;
-        break;
     case EE_SCREENS_GAME_MG_ENTITY_GROUP:
         inForm->SetEntityGroup((long)inA);
         break;
@@ -663,10 +655,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         theServer->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theName}),
                                     15000, 12);
         break;
-    }
-    case EE_SCREENS_GAME_MG_DIALOG_SHOWN: {
-        UIControl* theMessage = inForm->GetControl(kMainGameDialogMessage);
-        return (theMessage != NULL && theMessage->GetDisplayMode() == kDisplayModeShown) || gWorld.mInCinematic;
     }
     case EE_SCREENS_GAME_MG_SET_HIDDEN_MODE:
         gHiddenUnitsMode = (long)inA;

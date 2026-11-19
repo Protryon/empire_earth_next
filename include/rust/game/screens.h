@@ -10387,7 +10387,8 @@ struct EeScreensRect {
   float top;
 };
 
-/// `EEUICChatLine`'s members (its protected base) but the texts and the timer.
+/// `EEUICChatLine`'s members (its protected base): the C++ objects it owns by address (the timer a `TMPoll*`,
+/// the texts `GEText*`s, made and deleted by the class's constructor and destructor; the UI cluster lane, round 1).
 struct EeScreensChatLineFields {
   /// The copied draw rectangle moved down by the shadow offset.
   EeScreensRect mTextRectangle;
@@ -10395,6 +10396,12 @@ struct EeScreensChatLineFields {
   float mOpacity;
   uint32_t mShadowOffset;
   bool mShowing;
+  void *mTimer;
+  /// the bold name, the message and the copies `CopyData` makes of them
+  void *mName;
+  void *mMessage;
+  void *mDrawnName;
+  void *mDrawnMessage;
 };
 
 /// `GE2DPoint`.
@@ -10505,6 +10512,56 @@ struct EeScreensBuildGateFields {
   int32_t wall_type;
   int32_t direction;
   int32_t player;
+};
+
+/// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
+/// the box's pointer is the record's): the attributes shown, the main game form's controls it fills (`UIControl*`s),
+/// its form, the counts (the UI cluster lane, round 1).
+struct EeScreensStatusBoxFields {
+  /// (= -1) the icon index of each attribute shown
+  long mAttributes[14];
+  /// the main game form's controls 0x45..0x4d and 0x20..0x28
+  void *mIcons[9];
+  void *mLabels[9];
+  /// the constructor's form
+  void *mForm;
+  /// controls 0x1e, 0x1f, 0x2a (the portrait), 0x2b, 0x64, 0x29
+  void *mC84;
+  void *mC88;
+  void *mC8C;
+  void *mC90;
+  void *mC94;
+  void *mC98;
+  long mAttributeCount;
+  /// the next free icon
+  long mArmorAttributeCount;
+  bool mIsResourceShown;
+  /// controls 0x33, 0x32 (the third and fourth bars)
+  void *mCA8;
+  void *mCAC;
+};
+
+/// `EEUIFMGStatusButton`'s plain members (ee/EEUIFMGStatusButton.h), in the class's order (the UI cluster lane,
+/// round 1); its C++ objects (the button object, the icon, the dither, the queue text, `mU104`) stay members.
+struct EeScreensStatusButtonFields {
+  /// `TMGetTime()` of the last "cannot" chat line
+  unsigned long mLastErrorTime;
+  /// the technology (the main group matches the queued items' key)
+  long mTechnology;
+  unsigned long mUnitType;
+  /// (= 40)
+  float mF134;
+  float mF138;
+  unsigned long mUnitID;
+  /// the main group's queue counts
+  long mCount;
+  /// the `EEButtonObject` index
+  unsigned long mButton;
+  /// an `EEButtonObject` command (else a tech tree node)
+  bool mIsCommand;
+  bool mShowCount;
+  bool mAvailable;
+  bool mDrawIcon;
 };
 
 /// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
@@ -12022,8 +12079,10 @@ int64_t ee_screens_ping_draw(EeScreensPingFields *rec, void *ctl);
 /// `EEUICPing::SetPing`.
 void ee_screens_ping_set(EeScreensPingFields *rec, void *ctl, float value);
 
-/// `EEUICChatLine`'s constructor part.
-void ee_screens_chat_line_init(EeScreensChatLineFields *rec, float opacity);
+/// `EEUICChatLine`'s constructor part (`ctl` the line: its record's place in the class is registered).
+void ee_screens_chat_line_init(EeScreensChatLineFields *rec,
+                               void *ctl,
+                               float opacity);
 
 /// `EEUICChatLine::CopyData`.
 int64_t ee_screens_chat_line_copy_data(EeScreensChatLineFields *rec, void *ctl);
@@ -12186,6 +12245,21 @@ void ee_screens_gate_update(void *call,
                             EeScreensBuildGateFields *gate,
                             float x,
                             float y);
+
+/// `EEUIFMGStatusBox`'s constructor: no control bound, no attribute shown (-1), the form `form`.
+///
+/// # Safety
+/// `record` is the new box's record.
+void ee_screens_status_box_init(EeScreensStatusBoxFields *record, void *form);
+
+/// `EEUIFMGStatusBox::GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names.
+///
+/// # Safety
+/// `record` is a live box's record.
+void *ee_screens_status_box_control(const EeScreensStatusBoxFields *record, int64_t id);
+
+/// `EEUIFMGStatusButton`'s constructor: the button `button` and its record `fields`.
+void ee_screens_status_button_fields(void *button, EeScreensStatusButtonFields *fields);
 
 /// `EEUIFMainGame`'s constructor: the form `form` and its record `fields` (the record's offset is the class's).
 void ee_screens_main_form_fields(void *form,

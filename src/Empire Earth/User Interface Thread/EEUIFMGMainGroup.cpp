@@ -148,10 +148,9 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         return 0;
     }
     case EE_SCREENS_MGR_OP_BOX_BIND: {
-        static UIControl* EEUIFMGStatusBox::* const kSlots[8] = {
-            &EEUIFMGStatusBox::mC8C, &EEUIFMGStatusBox::mC94, &EEUIFMGStatusBox::mC90, &EEUIFMGStatusBox::mC84,
-            &EEUIFMGStatusBox::mC88, &EEUIFMGStatusBox::mC98, &EEUIFMGStatusBox::mCAC, &EEUIFMGStatusBox::mCA8};
-        theBox->*kSlots[inA] = theForm->GetControl((unsigned long)inB);
+        void** const theSlots[8] = {&theBox->mC8C, &theBox->mC94, &theBox->mC90, &theBox->mC84,
+                                    &theBox->mC88, &theBox->mC98, &theBox->mCAC, &theBox->mCA8};
+        *theSlots[inA] = theForm->GetControl((unsigned long)inB);
         return 0;
     }
     case EE_SCREENS_MGR_OP_BOX_PAIR:
@@ -175,12 +174,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         return -1;
     }
     case EE_SCREENS_MGR_OP_FORMATION: return gWorld.GetCurrentPlayer()->GetSelectedGroup()->GetFormation()->GetType();
-    case EE_SCREENS_MGR_OP_COPY_BITMAPS: {
-        UIButton* theSource = static_cast<UIButton*>(theForm->GetControl((unsigned long)inB));
-        Button()->SetNormalBitmap(theSource->GetNormalBitmap());
-        Button()->SetPressedBitmap(theSource->GetPressedBitmap());
-        return 0;
-    }
     case EE_SCREENS_MGR_OP_VERIFY: ESVERIFY_AT(false, (long)inA); return 0;
     case EE_SCREENS_MGR_OP_HAS_HOT_KEY: return EEButtonObject::Get((unsigned long)inA)->GetHotKey() != NULL;
     case EE_SCREENS_MGR_OP_HOT_KEY:
@@ -199,15 +192,9 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
         theTimer->SetText(theText, gU531930);
         return 0;
     }
-    case EE_SCREENS_MGR_OP_RESET_COUNT:
-        Button()->mCount = 0;
-        Button()->SetDirty(true);
-        return 0;
     // (the production queue's size and keys, inB 0, are hud_views.rs'; these are the citizen's build queue's)
     case EE_SCREENS_MGR_OP_QUEUE_SIZE: return theUnit->GetComplexUnit()->mCitizenBuildQueue.size();
     case EE_SCREENS_MGR_OP_QUEUE_KEY: return theUnit->GetComplexUnit()->GetCitizenBuildTarget((unsigned long)inC)->GetClass()->GetTechnology();
-    case EE_SCREENS_MGR_OP_BUTTON_TECH: return Button()->mIsCommand ? EE_SCREENS_MGR_COMMAND : Button()->mTechnology;
-    case EE_SCREENS_MGR_OP_ADD_COUNT: Button()->mCount += (long)inB; return 0;
     }
     return 0;
 }

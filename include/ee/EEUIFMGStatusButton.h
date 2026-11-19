@@ -6,12 +6,14 @@
 #ifndef EE_EEUIFMGSTATUSBUTTON_H
 #define EE_EEUIFMGSTATUSBUTTON_H
 
+#include "rust/game/screens.h"   // EeScreensStatusButtonFields
+
 class EEButtonObject;
 class GEText;
 class UIControlsTable;
 class UIManager;
 
-class EEUIFMGStatusButton : public UIButton {
+class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields {
 public:
     // 0x26de97 (ret 0xc; the user-defined control factory)
     EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable);
@@ -36,23 +38,13 @@ public:
     virtual void TabbedFrom();              // +0x78 0x26fb79
     virtual void TabbedTo();                // +0x74 0x26fb8d
 
+    // the plain members (+0x118 mLastErrorTime, +0x12c mTechnology .. +0x14b mDrawIcon) are the Rust record
+    // EeScreensStatusButtonFields' (ee_screens main_form_fields.rs), under their names
     UWideString mU104;                      // +0x104 (constructed and destroyed only)
-    unsigned long mLastErrorTime;           // +0x118 TMGetTime() of the last "cannot" chat line
     EEButtonObject* mButtonObject;          // +0x11c
     GEBitmap* mDither;                      // +0x120 textures\Dither over a disabled button
     GEBitmap* mIcon;                        // +0x124
     GEText* mBuildQueue;                    // +0x128 the queue count (ESVERIFY(this->mBuildQueue), line 195)
-    long mTechnology;                       // +0x12c the technology (the main group matches the queued items' key)
-    unsigned long mUnitType;                // +0x130
-    float mF134;                            // +0x134 (= 40)
-    float mF138;                            // +0x138 (= 40)
-    unsigned long mUnitID;                  // +0x13c
-    long mCount;                            // +0x140 (the main group's queue counts)
-    unsigned long mButton;                  // +0x144 the EEButtonObject index
-    bool mIsCommand;                        // +0x148 an EEButtonObject command (else a tech tree node)
-    bool mShowCount;                        // +0x149 mAreaEffectStrength != 0 as of the last CopyData
-    bool mAvailable;                        // +0x14a
-    bool mDrawIcon;                         // +0x14b
 };
 
 // RTTI EEUIEndCinematicModeEvent (vtable 0x44ae68; ??_G 0x271265 after its first user EEModeKeyboardCinematic; ProcessEvent

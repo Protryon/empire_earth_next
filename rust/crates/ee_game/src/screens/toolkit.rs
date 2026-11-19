@@ -568,6 +568,9 @@ fn id_of(control: Cpp) -> Option<u32> {
 /// `None` for the ops the C++ host answers.
 pub(crate) fn op(form: *mut c_void, entity: *mut c_void, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
     direct::check_op("op", op);
+    if let Some(r) = crate::screens::hud_direct::main_game(form, op, a) {
+        return Some(r);
+    }
     if let Some(r) = pgs_op(form, op, a, b, c, d) {
         return Some(r);
     }

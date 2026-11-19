@@ -185,6 +185,12 @@ pub unsafe extern "C" fn ee_input_keyboard_entity(
     result
 }
 
+/// The system keyboard's modifier state (`gISKeyboard->GetModifierState()`, for the game's Rust callers): 0
+/// without a keyboard.
+pub fn keyboard_modifiers() -> c_ulong {
+    keyboard_lock().as_ref().map_or(0, |kb| kb.modifiers())
+}
+
 /// `GetModifierState`: the modifiers held (1 Shift, 2 Control, 4 Alt).
 #[no_mangle]
 pub extern "C" fn ee_input_keyboard_modifiers(k: *const EeInputKeyboard) -> c_ulong {
