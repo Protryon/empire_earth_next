@@ -31910,3 +31910,80 @@ ops (their goldens unchanged); the LAN game's dialogs (create game, LAN name, st
   functions. The event makers there are now one C++ call each with no class; making the events from Rust needs a
   host op that wraps a Rust event in its C++ shell (one generic `Deliver/Broadcast(event)` case per host would
   replace ~48 maker cases).
+## AI Thread cluster, round 1: the A* searches whole in Rust: the flood fills, the unit path searches, the graph searches (ee_sim::astar flood.rs, path_search.rs, graph_search.rs, search_note.rs; branch rust-aicluster2, 2026-11-18)
+
+The first round of the cluster lane (docs/progress/ai-thread-cluster.md): the AI Thread's C++ moved by clusters of
+classes that call each other. This round took the A* layer whole: every machine, storage and goal the continent
+manager, the choke point pass and the path manager ran.
+
+| Commit | What | Net C++ (src + include/ee) |
+|---|---|---|
+| 2d3b9e224 | flood.rs: the five flood fills and the continental chains (+450 -1,766) | -1,316 |
+| 6c1636c28 | other clusters' files: the A* storage and path goal includes dropped | -14 |
+| 63124ead6 | path_search.rs: the path manager's tile machines, path and bounded (+221 -2,050) | -1,829 |
+| cb4e1b24d | other clusters' files: the graph search includes dropped | -4 |
+| 18eb88f64 | graph_search.rs: the path manager's graph machines (+165 -1,218); the dead ai/lua_ffi.rs | -1,053 |
+| b0bc8fc5a | rust_includes: the modifiers' header includes rust/sim/astar.h | +1 |
+| | **round** | **-4,215** |
+
+Rust: flood.rs (1,153 lines), path_search.rs (1,114), graph_search.rs (841), search_note.rs (138), with 8 unit
+tests (a continent fill over a map, the hooks' notes, the fill's reset, the chains' kinds, a path around a wall, the
+blocked tiles marked first, a saved search's round trip, a graph search along a row); the tile and graph storages'
+C ABI and the flood and path goals' C entry points deleted with their callers (ffi.rs -862 lines, its C ABI test
+-94) and
+ai/lua_ffi.rs (340 lines: nothing called it).
+
+- **What moved.** (1) The continent manager's flood fills (`EEAIAStarMachine` over the continent, hill, path area,
+  path sector and choke point goals and storages) and the continental chains' graph machine are one Rust object
+  each (`EeAStarFlood`: the machine's members, the node storage, the goal's fill state, the storage's id grid). The
+  passes (`CreateContinents`, `CreateHills`, `CreatePathAreas`, `CreatePathAreaKind`, `CreatePathSectors`,
+  `Rebuild`, `EEAIChokeCreate`) stay C++ loops that make the areas (the objects, their hulls and HULL records) of
+  the tiles a fill collected; `NumberContinentChains` is Rust over a host of the continents. (2) The path manager's
+  tile machines (`EEPathMachine`, the bounded machine) are `PathSearch`: machine, storage and goal with its two
+  bases; the goal's members are a C record (`EeAStarPathGoalRec`) at a fixed address that the C++ modifiers keep as
+  their goal (`EEAIPathGoalModifierBase::mGoal`, the bounded modifiers' `mBoundedGoal`). (3) The graph machines
+  (`EEGraphPathMachine`) are `GraphSearch` likewise (`EeAStarGraphGoalRec`, the route planners' `mGoal`).
+- **How the path manager reaches them.** pm.rs's host (`FnHost`) answers the machine operations itself
+  (`path_search::intercept`, `graph_search::intercept`) before the C++ host: the manager's logic, its fake-host
+  tests and its PMRQ golden are unchanged by construction, and the C++ cases are simply gone. The bounded machine
+  lives in the Rust manager (`EePathManager::bounded`). What only the C++ knows became host operations
+  (`EE_PATH_VIEW_NEW` .. `EE_PATH_TILES_OUT`, `EE_PATH_SS_INFO` .. `EE_PATH_GRAPH_MODIFIER_SAVE`): a map's view, a
+  unit's continent, avoidance and blocked tiles (the blocker collector moved into EEPathManager.cpp), the C++
+  modifiers and route planners made, referenced, attached and asked, a sub sector's facts, the goals a found graph
+  path gives a unit (`RequestUnitPaths`, now over the path's ids).
+- **The capture kept.** The A* records (ASRN, ASGR) carry a digest of every hook's answer and every view query in
+  order. The hooks note their event after the goal answers, as `EEAIAStarHooks` did (search_note.rs over
+  EEAIAStarCapture.cpp's new C interface: a note, a run opened, its bytes, its node lists, its commit); the view's
+  queries stay the C++ view's notes, in between. Every flood, path and graph search of the six oracle games gives
+  the same records as the C++ machines did.
+- **Orders and quirks kept.** `Init` stores the size before `PrepareGrid` compares it, so a flood's id grid is made
+  once and never cleared by a later fill (only the flags and nodes are, from the dirty bounds); the bounded goal's
+  `ReleaseModifier` is not the one a destructor calls (the goal base's dtor runs the base's: the bounded modifier's
+  second reference is never dropped, as before); `IsGoalNode` of the bounded goal asks the modifier's `CheckNode`
+  after its own answer and before the note; the graph machine's `Reset` leaves `mFound`; a graph search's goal ID is
+  `mTo`'s `unsigned short` id.
+- **Lesson.** A goal record that C++ objects hold by address must not move and must not sit behind a Rust `&mut`
+  across a call into the C++: the searches keep it in its own allocation behind a raw pointer, copy it out before
+  each call that can reach a modifier, and write it back through the pointer.
+- **Lesson.** A test fixture's graph that lists a node as its own neighbour makes the graph machine add the node
+  again each expansion (a popped node is neither open nor closed until the expansion ends): the first chain test
+  asked for 60 GB. The game's neighbour lists never hold the continent itself.
+- **Behaviour:** none intended. The path area fill's machine is no longer reset after the pass (its id grid is the
+  only part the sector pass reads; no run follows). `EEAIAStarHillGoal::mLevelSum` starts at 0 (the C++ left it
+  uninitialised; it is summed, never read).
+- **Gates.** Per step: both builds 0/0, the oracle seeds 2-3 identical (after each of the three moves); after the
+  path searches the captures at seeds 2-3 of oracle, transport, placement, groups, late and space PASS. On the tree
+  merged with origin/rust 8d68d2786 (merge a7d739f13: two include-list conflicts, origin/rust's taken): both builds
+  0/0 and the test profile 0/0; the oracle seeds 2-7 identical to the reference; the Rust gate PASS (4,634 tests;
+  its first run found two clippy errors and a rustfmt diff, fixed in 9f4ed704e and the rustfmt commit); seven
+  capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, placement 4, groups 2, transport 185,
+  calamity 222 digests: ASRN, ASGR, PMRQ, PMSP, CNTR, CNTQ, HULL, AREA among them, all from the C++); the plain
+  saveload (seeds 2-7 at 600/1350/2100 s) PASS; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: PASS`; scenario_check 27/27; `gates.sh` GATES PASS on its second run (tour; ai-game time-cap, units [4, 38, 40],
+  alive_computers [2, 3], classic_lua twice; lan-game). Its first run failed the ai-game at the main menu with "the
+  window capture is blank" (the tour and the LAN game passed): a capture of the harness, not the game; the rerun passed.
+- **What runs it.** Every game runs the floods at its start and `Rebuild` while walls go up (the oracle, every
+  profile); the unit path searches and the bounded searches every tick (transport: the sea modifiers; the
+  combat goals' enemy-in-range modifier; the storm's shaper and route planners in calamity); the graph searches
+  for the AI's requests and long unit paths; the saved tile and graph searches in saveload. Only a human player
+  reaches nothing new: no display code changed.

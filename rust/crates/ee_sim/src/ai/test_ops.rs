@@ -127,11 +127,3 @@ unsafe extern "C" fn read_done(owner: *mut c_void) {
 }
 
 pub static OPS: EeAiLuaTreeOps = EeAiLuaTreeOps { node, key, set: set_value, push, field, append, read, read_done };
-
-pub fn ptr(v: &Value) -> *const c_void {
-    v as *const Value as *const c_void
-}
-
-pub fn ptr_mut(v: &mut Value) -> *mut c_void {
-    v as *mut Value as *mut c_void
-}

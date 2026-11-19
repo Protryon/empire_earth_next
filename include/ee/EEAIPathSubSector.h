@@ -52,7 +52,6 @@ public:
         return EEAIHandleView<EEAIPathSubSector>(theNeighbors, theCount);
     }
     unsigned long GetNumNeighbors() const { return (unsigned long)this->GetNeighbors().size(); }
-    U2DPoint<long> GetGraphLocation() const;
     // 0x1a99b (ret 4): whether inOther is a neighbour (inline; its COMDAT follows EEAIAStarPathGraphGoal::IsGoalNode)
     bool IsNeighbor(EEAIPathSubSector* inOther) const
     {

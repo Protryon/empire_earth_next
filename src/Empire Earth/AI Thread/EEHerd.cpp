@@ -41,7 +41,6 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"

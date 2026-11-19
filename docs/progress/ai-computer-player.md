@@ -1,5 +1,7 @@
 # AI Thread, lane B: the computer player and its economy (`ee_sim::cp`)
 
+**Continued by the AI Thread cluster lane** (docs/progress/ai-thread-cluster.md, from 2026-11-18); this file is the state before it.
+
 The lane's state (one file per lane; each round rewrites it; the round's story is in PORT_LEARNINGS.md "AI lane B").
 The owner unlocked the AI Thread's C++ for porting with whole classes moving into Rust. Lane B has the computer
 player and its economy: `EEComputerPlayer.cpp`, `EECPPlacement.cpp`, `EEHerd.cpp`, `EECPResourceCenter.cpp`,

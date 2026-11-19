@@ -26,7 +26,6 @@ pub mod json;
 // Lua's C API, declared by lua.h: not in the headers
 /// cbindgen:ignore
 pub mod lua_api;
-pub mod lua_ffi;
 pub mod lua_host;
 pub mod lua_value;
 pub mod manifest;

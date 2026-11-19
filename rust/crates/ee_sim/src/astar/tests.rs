@@ -2,10 +2,8 @@
 //! quirks the port keeps. The C++ equality is the capture gate's (tools/sim_capture.py); these pin the behaviour
 //! in `cargo test`.
 
-use crate::astar::ffi::{self, EeAStarCallbacks, EeAStarNodeView};
 use crate::astar::machine::{self, Host, MachineState};
 use crate::astar::storage::*;
-use std::ffi::c_void;
 
 fn hashed(w: i32) -> Storage {
     let mut s = Storage::new(StorageKind::Hashed);
@@ -467,98 +465,6 @@ fn flood_without_corners_uses_the_diagonal_tests_first() {
     w.state.check_corners = true;
     run(&mut s, &mut w, GridKind::Dirty);
     assert_eq!(tiles(&s, List::FastClosed).len(), 1);
-}
-
-// ---- the C ABI ----
-
-extern "C" fn cb_accept(ctx: *mut c_void, x: i32, y: i32, flag: bool) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.accept_tile(x, y, flag)
-}
-extern "C" fn cb_cost(ctx: *mut c_void, fx: i32, fy: i32, x: i32, y: i32, hp: bool, px: i32, py: i32) -> i32 {
-    unsafe { &mut *(ctx as *mut World) }.get_cost(fx, fy, x, y, hp.then_some((px, py)))
-}
-extern "C" fn cb_estimate(ctx: *mut c_void, fx: i32, fy: i32, tx: i32, ty: i32) -> i32 {
-    unsafe { &mut *(ctx as *mut World) }.estimate(fx, fy, tx, ty)
-}
-extern "C" fn cb_goal(ctx: *mut c_void, has: bool, x: i32, y: i32) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.is_goal_node(has.then_some((x, y)))
-}
-extern "C" fn cb_done(ctx: *mut c_void, has: bool, x: i32, y: i32, open: bool) {
-    unsafe { &mut *(ctx as *mut World) }.search_done(has.then_some((x, y)), open)
-}
-extern "C" fn cb_failed(ctx: *mut c_void) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.search_failed()
-}
-extern "C" fn cb_nearest(ctx: *mut c_void) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.accept_nearest()
-}
-extern "C" fn cb_step(ctx: *mut c_void, n: i32) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.is_step_limit(n)
-}
-extern "C" fn cb_rev(ctx: *mut c_void, n: i32) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.is_rev_limit(n)
-}
-extern "C" fn cb_cheaper(ctx: *mut c_void, c: u32, o: u32) -> bool {
-    unsafe { &mut *(ctx as *mut World) }.is_cheaper(c, o)
-}
-extern "C" fn cb_tiles(ctx: *mut c_void, out: *mut i32) {
-    let w = unsafe { &mut *(ctx as *mut World) };
-    let t = [w.start.0, w.start.1, w.goal.0, w.goal.1];
-    unsafe { std::ptr::copy_nonoverlapping(t.as_ptr(), out, 4) };
-}
-extern "C" fn cb_get(ctx: *mut c_void, out: *mut MachineState) {
-    unsafe { *out = (*(ctx as *mut World)).state };
-}
-extern "C" fn cb_set(ctx: *mut c_void, s: *const MachineState) {
-    unsafe { (*(ctx as *mut World)).state = *s };
-}
-
-#[test]
-fn c_abi_runs_the_same_search() {
-    let mut w = World::new(MAZE.to_vec(), false, (0, 0), (2, 3));
-    let cb = EeAStarCallbacks {
-        ctx: &mut w as *mut World as *mut c_void,
-        accept_tile: cb_accept,
-        get_cost: cb_cost,
-        estimate: cb_estimate,
-        is_goal_node: cb_goal,
-        search_done: cb_done,
-        search_failed: cb_failed,
-        accept_nearest: cb_nearest,
-        is_step_limit: cb_step,
-        is_rev_limit: cb_rev,
-        is_cheaper: cb_cheaper,
-        tiles: cb_tiles,
-        get_state: cb_get,
-        set_state: cb_set,
-    };
-    unsafe {
-        let s = ffi::ee_astar_new(StorageKind::Hashed);
-        ffi::ee_astar_init_begin(s, 6, 6);
-        ffi::ee_astar_prepare_grid(s, 6, 6, GridKind::Hashed, false);
-        ffi::ee_astar_alloc_tables(s);
-        ffi::ee_astar_start(s, &cb);
-        ffi::ee_astar_expand(s, &cb);
-        let mut out = Vec::new();
-        let (mut x, mut y) = (0, 0);
-        if ffi::ee_astar_first_path_tile(s, &mut x, &mut y) {
-            out.push((x, y));
-            while ffi::ee_astar_next_path_tile(s, &mut x, &mut y) {
-                out.push((x, y));
-            }
-        }
-        assert_eq!(out.first(), Some(&(2, 3)));
-        assert_eq!(out.last(), Some(&(0, 0)));
-        let mut node = EeAStarNodeView::default();
-        assert!(ffi::ee_astar_node(s, 1, &mut node));
-        assert_eq!((node.x, node.y), (2, 3));
-        assert!(node.has_parent);
-        let n = ffi::ee_astar_list(s, List::ClosedTable, std::ptr::null_mut(), 0);
-        let mut views = vec![EeAStarNodeView::default(); n as usize];
-        assert_eq!(ffi::ee_astar_list(s, List::ClosedTable, views.as_mut_ptr(), n), n);
-        assert!(views.iter().any(|v| (v.x, v.y) == (0, 0) && !v.has_parent));
-        ffi::ee_astar_free(s);
-    }
 }
 
 // ---- the flood goals' tile tests (goals.rs) ----
