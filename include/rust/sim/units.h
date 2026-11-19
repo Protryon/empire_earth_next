@@ -1255,7 +1255,7 @@ constexpr static const int32_t EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER = 46;
 /// goal `b`'s `mKind`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_KIND = 47;
 
-/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) into `io.p`
+/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) of `io.p` (both read it as an input) into `io.p`
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL_LOCATION = 48;
 
 /// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
@@ -1329,6 +1329,42 @@ constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
 
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
+
+/// unit `a`'s player's `mNumVitalBuildings < 1`
+constexpr static const int32_t EE_UNITS_CLS_ST_NO_VITAL = 93;
+
+/// `gPhysics`' `mTickTimeMs` into `io.a`, `GetTickTime()` into `io.f`, `mGameTime` into `io.b`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOCK = 94;
+
+/// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
+constexpr static const int32_t EE_UNITS_CLS_ST_CINEMATIC_INTERVAL = 95;
+
+/// `EEIsCloakedEnemyOf(unit a, the current player)`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOAKED_ENEMY = 96;
+
+/// `gMiniMap->MoveUnit(a, ...)` onto its tile (c 1) or off it (c 0)
+constexpr static const int32_t EE_UNITS_CLS_ST_MINI_MAP = 97;
+
+/// unit `a`'s `SetCloakableChain(d)` (c 0), `SetCloakedChain(d)` (c 1), `SetOpacityChain(io.f)` (c 2)
+constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
+
+/// class `b`'s `UpdateCloakDetection(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
+
+/// TEST ONLY: `EESimCaptureRecord::Active()`
+constexpr static const int32_t EE_UNITS_CLS_ST_NOTING = 100;
+
+/// TEST ONLY: `EEUnitStepNote(c, d, the io.a words at io.list)`
+constexpr static const int32_t EE_UNITS_CLS_ST_NOTE = 101;
+
+/// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
+constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
+
+/// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
+
+/// `gPhysics->GetRandom(io.p[0], io.p[1])` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_ST_RANDOM_RANGE = 104;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -5676,6 +5712,18 @@ void ee_units_mv_flee(uint64_t class_, uint64_t unit);
 
 /// `EEUnitClass::FleeAttacker(unit)`.
 void ee_units_mv_flee_attacker(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UpdateCamouflageTimer(unit)`.
+void ee_units_st_camouflage(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::RegeneratePower(unit)`.
+void ee_units_st_power(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UpdateCloakDetection(unit)`.
+void ee_units_st_cloak_detection(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::UnitDamaged(unit, attacker, damage)`.
+void ee_units_st_unit_damaged(uint64_t class_, uint64_t unit);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);

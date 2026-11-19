@@ -1826,6 +1826,31 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_LV_LINK_PART: inUnit->LinkPart(theOther); return 0;
     case EE_UNITS_CLS_LV_SET_FACING: inUnit->SetFacing((unsigned long)inC); return 0;
     case EE_UNITS_CLS_LV_CAMERA_OFF: gCameraFollowing = false; return 0;
+    // the status ticks' (cls_status.rs)
+    case EE_UNITS_CLS_ST_NO_VITAL: return inUnit->mPlayer->mNumVitalBuildings < 1;
+    case EE_UNITS_CLS_ST_CLOCK: io->a = gPhysics->mTickTimeMs; io->f = gPhysics->GetTickTime(); io->b = gPhysics->mGameTime; return 0;
+    case EE_UNITS_CLS_ST_CINEMATIC_INTERVAL:
+        io->a = ::gWorld.mInCinematic ? 1 : 0;
+        io->b = EEGetRules().mCombat.mPowerRegenerationInterval;
+        return 0;
+    case EE_UNITS_CLS_ST_CLOAKED_ENEMY: return EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
+    case EE_UNITS_CLS_ST_MINI_MAP:
+        if (inC != 0)
+            gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
+        else
+            gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
+        return 0;
+    case EE_UNITS_CLS_ST_CHAIN:
+        if (inC == 0)
+            inUnit->SetCloakableChain(inD != 0);
+        else if (inC == 1)
+            inUnit->SetCloakedChain(inD != 0);
+        else
+            inUnit->SetOpacityChain(io->f);
+        return 0;
+    case EE_UNITS_CLS_ST_CLOAK_DETECTION: ((EEUnitClass*)(uintptr_t)inB)->UpdateCloakDetection(inUnit); return 0;
+    case EE_UNITS_CLS_ST_NOTING: return EESimCaptureRecord::Active();
+    case EE_UNITS_CLS_ST_NOTE: EEUnitStepNote((unsigned int)inC, (unsigned long)inD, (const uint32_t*)io->list, (unsigned int)io->a); return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;
@@ -2368,108 +2393,10 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
     this->UpdateDone(inUnit);
 }
 
-// TEST ONLY (USTM): the camouflage timers' call as words (the inputs, each event in order, the outputs)
-struct EECamouflageNote {
-    uint32_t mWords[48];
-    unsigned int mCount;
-    void Add(uint32_t inWord)
-    {
-        if (this->mCount < 48)
-            this->mWords[this->mCount++] = inWord;
-    }
-};
-
-// TEST ONLY (USTM): a float's bits
-static uint32_t CloakBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
 // Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
 void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
 {
-    // TEST ONLY (USTM): the events, in the codes of ee_units step.rs (EE_UNITS_CAMO_*)
-    EECamouflageNote theNote;
-    theNote.mCount = 0;
-    bool theNoting = EESimCaptureRecord::Active()
-                     && ((inUnit->mCamouflageTimer & 0x7fffffff) > 0 || inUnit->mU32C > 0);
-    theNote.Add((uint32_t)inUnit->mCamouflageTimer);
-    theNote.Add((uint32_t)inUnit->mU32C);
-    theNote.Add(inUnit->mPlayer->mNumVitalBuildings < 1 ? 1u : 0u);
-    theNote.Add((uint32_t)gPhysics->mTickTimeMs);
-    // New (R5b.4 leaf 6): the timers' decision is Rust over the unit store (ee_units step.rs camouflage); its events are
-    // applied here in order (a mini map move only when the unit is then a cloaked enemy of the local player, the
-    // original's test). TEST ONLY: while the capture runs, USTM records them
-    EeUnitsCamoEvent theEvents[EE_UNITS_CAMO_MAX_EVENTS];
-    bool theNoVital = inUnit->mPlayer->mNumVitalBuildings < 1;
-    unsigned long theTimerBefore = inUnit->mCamouflageTimer, theSecondBefore = inUnit->mU32C;
-    uint32_t theCount = ee_units_step_camouflage(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
-                                                 (uint32_t)theTimerBefore, (uint32_t)theSecondBefore, theNoVital ? 1 : 0,
-                                                 gPhysics->mTickTimeMs, theEvents);
-    for (uint32_t i = 0; i < theCount; i++) {
-        const EeUnitsCamoEvent& theEvent = theEvents[i];
-        switch (theEvent.code) {
-        case EE_UNITS_CAMO_SHOW:
-        case EE_UNITS_CAMO_HIDE: {
-            bool theMoved = EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
-            if (theMoved && theEvent.code == EE_UNITS_CAMO_SHOW)
-                gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-            else if (theMoved)
-                gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
-            theNote.Add(theEvent.code | (theMoved ? 0x100u : 0u));
-            break;
-        }
-        case EE_UNITS_CAMO_CLOAKABLE_OFF:
-        case EE_UNITS_CAMO_CLOAKABLE_ON:
-            inUnit->SetCloakableChain(theEvent.code == EE_UNITS_CAMO_CLOAKABLE_ON);
-            theNote.Add(theEvent.code);
-            break;
-        case EE_UNITS_CAMO_CLOAKED_OFF:
-        case EE_UNITS_CAMO_CLOAKED_ON:
-            inUnit->SetCloakedChain(theEvent.code == EE_UNITS_CAMO_CLOAKED_ON);
-            theNote.Add(theEvent.code);
-            break;
-        case EE_UNITS_CAMO_CAMOUFLAGED_OFF:
-        case EE_UNITS_CAMO_CAMOUFLAGED_ON:
-            inUnit->SetCamouflaged(theEvent.code == EE_UNITS_CAMO_CAMOUFLAGED_ON);
-            theNote.Add(theEvent.code);
-            break;
-        case EE_UNITS_CAMO_SET_TIMER:
-            inUnit->mCamouflageTimer = theEvent.value;
-            theNote.Add(theEvent.code);
-            theNote.Add(theEvent.value);
-            break;
-        case EE_UNITS_CAMO_SET_SECOND:
-            inUnit->mU32C = theEvent.value;
-            theNote.Add(theEvent.code);
-            theNote.Add(theEvent.value);
-            break;
-        }
-    }
-    if (theNoting) {   // TEST ONLY (USTM)
-        theNote.Add((uint32_t)inUnit->mCamouflageTimer);
-        theNote.Add((uint32_t)inUnit->mU32C);
-        EEUnitStepNote(kUnitStepCamouflage, inUnit->mUnitID, theNote.mWords, theNote.mCount);
-    }
-    if (!inUnit->mIsCloakable)
-        return;
-    this->UpdateCloakDetection(inUnit);
-    float theOpacity = inUnit->mOpacity;
-    float theOpacityBefore = theOpacity;   // TEST ONLY (USTM)
-    bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-    bool thePulse = inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitol && inUnit->mStats->mPower > 0 &&
-                    !EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()) && inUnit->mCloaked != 0;
-    // New (R5b.4 leaf 6): the fade is Rust (ee_units step.rs cloak_fade: the same f32 operations in order)
-    theOpacity = ee_units_step_cloak_fade(theOpacityBefore, theCloaked ? 1 : 0, gPhysics->GetTickTime(), thePulse ? 1 : 0,
-                                          gPhysics->mGameTime);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
-        uint32_t theWords[6] = {CloakBits(theOpacityBefore), theCloaked ? 1u : 0u, CloakBits(gPhysics->GetTickTime()),
-                                thePulse ? 1u : 0u, (uint32_t)gPhysics->mGameTime, CloakBits(theOpacity)};
-        EEUnitStepNote(kUnitStepCloakFade, inUnit->mUnitID, theWords, 6);
-    }
-    inUnit->SetOpacityChain(theOpacity);
+    ee_units_st_camouflage(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
@@ -2484,35 +2411,7 @@ void EEComplexUnit::SetCamouflaged(bool inValue)
 // Restores a unit's power by its regeneration rate every 5 seconds, up to its maximum (not during cinematics)
 void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
-    uint32_t theWords[13] = {(uint32_t)inUnit->mStats->mPowerRegeneration, (uint32_t)inUnit->mStats->mPower,
-                             ::gWorld.mInCinematic ? 1u : 0u, this->IsLandBuilding() ? 1u : 0u, inUnit->mIsBuilt ? 1u : 0u,
-                             (uint32_t)inUnit->mPower, (uint32_t)inUnit->mPowerRegenTimer,
-                             (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
-                             0, 0, 0, 0};
-    // New (R5b.4 leaf 6): the regeneration is Rust over the unit store (ee_units step.rs regenerate_power); the
-    // writes are the holders'. TEST ONLY: while the capture runs, USTM records it
-    EeUnitsPowerIn theIn;
-    theIn.regeneration = inUnit->mStats->mPowerRegeneration;
-    theIn.max_power = inUnit->mStats->mPower;
-    theIn.in_cinematic = ::gWorld.mInCinematic ? 1 : 0;
-    theIn.interval = EEGetRules().mCombat.mPowerRegenerationInterval;
-    theIn.tick_ms = gPhysics->mTickTimeMs;
-    EeUnitsPowerOut theOut;
-    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower,
-                        inUnit->mPowerRegenTimer, inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
-                        &theOut);
-    if (theOut.write) {
-        if (theOut.set_power)
-            inUnit->SetPower((long)theOut.power);
-        inUnit->SetPowerRegenTimer((long)theOut.regen_timer);
-    }
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
-        theWords[9] = theOut.write;
-        theWords[10] = theOut.set_power;
-        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower : 0u;
-        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer : 0u;
-        EEUnitStepNote(kUnitStepPower, inUnit->mUnitID, theWords, 13);
-    }
+    ee_units_st_power(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 extern GEViewport gViewport;

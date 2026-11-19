@@ -47,6 +47,8 @@ pub mod cls_level;
 pub mod cls_level_host;
 pub mod cls_move;
 pub mod cls_move_host;
+pub mod cls_status;
+pub mod cls_status_host;
 pub mod cls_transport;
 pub mod commands;
 pub mod explore;
