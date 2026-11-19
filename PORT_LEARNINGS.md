@@ -32816,3 +32816,8 @@ with the census before and after (a full build first: the census reads the objec
   EEUnitClass::RefreshSound, a null model). It looked like a merge bug: the same exe and the same source in a scratch
   worktree both played through. Before suspecting a merge, list the processes from Windows (`Get-CimInstance
   Win32_Process` by command line) and give every rerun a new NAME.
+- **Storage under a global's symbol must have the global's alignment, not its type's.** clang gives a global object of
+  16 bytes or more 16-byte alignment and assumes it where the object is named: EERenderObject::Fn10C036 reads gWorld's
+  members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
+  oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
+  macros now add `alignas(16)`.
