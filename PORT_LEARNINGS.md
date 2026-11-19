@@ -32732,32 +32732,6 @@ WONCfgTable.inl and won_cfgtab_world.h (its own commit). tests/won/won_gui_test.
   over Rust objects already: about 1,000 lines with their headers and units). The WON skin, the dialogs and the
   logic-bearing widgets are the next ~1,500 and need the frame and image host ops above.
 
-## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
-
-Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
-reads the objects the two Windows links name (link.rsp, link-EE-SIM.rsp), resolves every undefined symbol as
-lld-link would (objects, then ee_game.lib, then the system) and writes the unit graph to build/cpp_deps/: leaves,
-near-leaves, blockers, cycles, a bottom-up move order (waves), greedy keystones of the biggest cycle, a class view
-and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `selftest` compiles four tiny units.
-
-- **An object is not its unit's code.** UString.obj (73 lines) holds 378 COMDAT sections: the inline constructors of
-  GE2DPoint, FSFile, URandom, ... that lle/LowLevelEngine.h makes every object emit. Counting every undefined symbol
-  of the object (`--all-refs`, what llvm-nm alone gives) made UString depend on FSBasicFile and GEValues and put it
-  in the big cycle. Following the relocations from the object's own sections (COMDAT selection none or NoDuplicates)
-  into the COMDAT copies it really uses gives the unit's needs: UString becomes a leaf, the leaves go from 29 units
-  (1,149 lines) to 62 (3,208), the biggest cycle from 409 units to 379.
-- **The web, measured** (origin/rust b3ab7ba2c): 532 C++ units, 154,656 source lines (.cpp only), 5,221 edges.
-  One cycle holds 379 units and 133,985 lines; three more are small (the LLE UI's 28 units, 5,149 lines; the GE
-  core's 5 units, 2,793 lines; two WONGUI config units). Waves peel only 103 units (9,583 lines) before every unit
-  left is in a cycle or calls into one.
-- **The hub is data.** Empire Earth.cpp is named by 213 units, 197 of them only for its globals (gWorld, gPhysics,
-  gUIManager, gUserInterface, gContinentManager, gResource, ...): `--code-only` drops it to 16. Moving those
-  definitions out of the unit (or behind Rust-owned storage) is the first keystone either way: it takes 31 units,
-  9,710 lines out of the cycle.
-- Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
-  "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
-  class view.
-
 ## The app cluster, round 2: the simulation capture's writer and the cluster's TEST ONLY world readers in Rust over the world views (ee_sim app capture.rs, player_capture.rs; ee_sim netmsg decisions.rs; ee_game sim_driver combat_sweep.rs, digest.rs; ee_game app map_capture.rs; branch rust-app2, 2026-11-19)
 
 | Commit | What | C++ (src, include/ee) |
@@ -33433,58 +33407,6 @@ first merge only.
 
 docs/progress/units.md "What is left (behaviour)".
 
-## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
-
-Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
-reads the objects the two Windows links name (link.rsp, link-EE-SIM.rsp), resolves every undefined symbol as
-lld-link would (objects, then ee_game.lib, then the system) and writes the unit graph to build/cpp_deps/: leaves,
-near-leaves, blockers, cycles, a bottom-up move order (waves), greedy keystones of the biggest cycle, a class view
-and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `selftest` compiles four tiny units.
-
-- **An object is not its unit's code.** UString.obj (73 lines) holds 378 COMDAT sections: the inline constructors of
-  GE2DPoint, FSFile, URandom, ... that lle/LowLevelEngine.h makes every object emit. Counting every undefined symbol
-  of the object (`--all-refs`, what llvm-nm alone gives) made UString depend on FSBasicFile and GEValues and put it
-  in the big cycle. Following the relocations from the object's own sections (COMDAT selection none or NoDuplicates)
-  into the COMDAT copies it really uses gives the unit's needs: UString becomes a leaf, the leaves go from 29 units
-  (1,149 lines) to 62 (3,208), the biggest cycle from 409 units to 379.
-- **The web, measured** (origin/rust b3ab7ba2c): 532 C++ units, 154,656 source lines (.cpp only), 5,221 edges.
-  One cycle holds 379 units and 133,985 lines; three more are small (the LLE UI's 28 units, 5,149 lines; the GE
-  core's 5 units, 2,793 lines; two WONGUI config units). Waves peel only 103 units (9,583 lines) before every unit
-  left is in a cycle or calls into one.
-- **The hub is data.** Empire Earth.cpp is named by 213 units, 197 of them only for its globals (gWorld, gPhysics,
-  gUIManager, gUserInterface, gContinentManager, gResource, ...): `--code-only` drops it to 16. Moving those
-  definitions out of the unit (or behind Rust-owned storage) is the first keystone either way: it takes 31 units,
-  9,710 lines out of the cycle.
-- Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
-  "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
-  class view.
-
-## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
-
-Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
-reads the objects the two Windows links name (link.rsp, link-EE-SIM.rsp), resolves every undefined symbol as
-lld-link would (objects, then ee_game.lib, then the system) and writes the unit graph to build/cpp_deps/: leaves,
-near-leaves, blockers, cycles, a bottom-up move order (waves), greedy keystones of the biggest cycle, a class view
-and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `selftest` compiles four tiny units.
-
-- **An object is not its unit's code.** UString.obj (73 lines) holds 378 COMDAT sections: the inline constructors of
-  GE2DPoint, FSFile, URandom, ... that lle/LowLevelEngine.h makes every object emit. Counting every undefined symbol
-  of the object (`--all-refs`, what llvm-nm alone gives) made UString depend on FSBasicFile and GEValues and put it
-  in the big cycle. Following the relocations from the object's own sections (COMDAT selection none or NoDuplicates)
-  into the COMDAT copies it really uses gives the unit's needs: UString becomes a leaf, the leaves go from 29 units
-  (1,149 lines) to 62 (3,208), the biggest cycle from 409 units to 379.
-- **The web, measured** (origin/rust b3ab7ba2c): 532 C++ units, 154,656 source lines (.cpp only), 5,221 edges.
-  One cycle holds 379 units and 133,985 lines; three more are small (the LLE UI's 28 units, 5,149 lines; the GE
-  core's 5 units, 2,793 lines; two WONGUI config units). Waves peel only 103 units (9,583 lines) before every unit
-  left is in a cycle or calls into one.
-- **The hub is data.** Empire Earth.cpp is named by 213 units, 197 of them only for its globals (gWorld, gPhysics,
-  gUIManager, gUserInterface, gContinentManager, gResource, ...): `--code-only` drops it to 16. Moving those
-  definitions out of the unit (or behind Rust-owned storage) is the first keystone either way: it takes 31 units,
-  9,710 lines out of the cycle.
-- Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
-  "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
-  class view.
-
 ## LLE round 8 (branch rust-lle1, 2026-11-19): the leaves as inlines over Rust, GEValues gone, ee_render::geval
 
 The dependency census (tools/cpp_deps.py) showed the LLE's leaves were forwarders already: what kept them C++
@@ -33783,60 +33705,6 @@ round removed the hosts' cases that only went back into Rust and made forwarders
 - **Write and heredocs.** The Write tool wrote CRLF into a Python script whose later string replacements assumed
   LF, and a heredoc turned `r"\b"` into a backspace character in a regex. Normalise a generated script's line
   endings before editing it, and write regex-bearing Python with the Write tool, not through a heredoc.
-
-## Cycle cuts: taking units out of the C++ dependency cycle (branch rust-cuts1, 2026-11-19)
-
-tools/cpp_deps.py measured one cycle of 379 units and 133,985 lines (SCC 1). Most of it is not real coupling: one
-unit names one symbol of another for a reason unrelated to its own job (a shared empty string, a global defined in
-the main unit, a test hook), and the cycle closes through it. Each cut below removes such an edge and is measured
-with the census before and after (a full build first: the census reads the objects).
-
-- **Find the cheap cuts with a what-if over edges.tsv**, not from keystones.txt. The keystones move a whole unit
-  (every outgoing edge at once), which ranks the big hubs first; a cheap cut is ONE edge (or a unit's two or three
-  symbols) whose removal splits the component. Deleting each edge of weight <= 3 inside SCC 1 in turn and recomputing
-  the component (Tarjan over ~250 nodes, seconds) found the edges from WinMain to the test drivers (5,254 lines for
-  two symbols), which no keystone list showed. A unit that is only part of another's implementation (EECalamityUpdate
-  is EECalamityClass's) also shows up as a "cheap" edge; it is not a cut: inverting it would only hide the edge.
-- **A data unit that defines an object depends on its constructor.** Moving Empire Earth.cpp's globals into a
-  data-only unit took 1 unit out at first: `EEWorld gWorld;` names EEWorld::EEWorld and ~EEWorld, so the data unit
-  went into the cycle with EEWorld.cpp and every reader of gWorld stayed there. ee/EEGlobalStorage.h separates the
-  storage from the construction: the data unit defines aligned zero bytes under the object's own symbol (an asm label:
-  MSVC's mangled name on Windows, the plain name on Linux, `_name` on macOS), the headers keep `extern EEWorld
-  gWorld;`, and the unit where the definition was constructs the object in place (`EE_CONSTRUCT_GLOBAL`: placement new
-  then atexit of the destructor, exactly what the compiler's dynamic initializer did), so construction and
-  destruction order are unchanged. The references into members (`gNumPlayers = gWorld.mNumPlayers`) stay plain
-  definitions in the data unit: clang constant-initializes them. EEGlobals.obj defines no function and has no
-  undefined symbol. The labels for POSIX were checked by compiling a toy for x86_64-linux-gnu and arm64-apple-macos
-  (`gW` / `_gW` defined and referenced alike); no POSIX build ran.
-- **Test code called by the game is a cycle.** EE-SIM's main calls WinMain and WinMain called EESimStart: the
-  driver, the scenario editor's and civ builder's steps and their captures were in the game's cycle. Calling the
-  Rust entries the C++ wrappers forwarded to (ee_sim_driver_start, ee_fixture_start), keeping the game's own part
-  (EESimPreferences) in the game's unit, and registering what needs a C++ host through a pointer the test unit sets
-  at static initialization (`gEETestFixtureConfigure`, `gEERenderCaptureFill`) removes the edge with the same calls
-  in the same order. The pointers live in EEGlobals.cpp, so neither side names the other.
-- **The save version moved.** kSaveGameMajorVersion / kSaveGameMinorVersion and their history comment are now
-  EEGlobals.cpp's: a branch that bumps the save version conflicts in Empire Earth.cpp and re-applies the bump in
-  EEGlobals.cpp.
-- **The measure, cut by cut** (SCC 1 units / lines; base origin/rust b3ab7ba2c, 379 / 133,985): gEmptyWideString in
-  a data unit 267 / 122,971; Empire Earth.cpp's globals (EEGlobals.cpp) 248 / 120,016; EECPEngineHelpers a leaf
-  246 / 119,730; WinMain off the test drivers 239 / 113,529; the physics' test hooks 237 / 113,119; EEUnitStore's
-  captures and the render fill's hook 235 / 112,046; EEUnitClass's data and gSeplScreenFont 229 / 111,335. In all
-  150 units and 22,650 lines left the cycle; leaves 62 -> 65. Most of the first cut's 112 units are WONGUI's, which
-  the cycle reached only through GUIStringSingleton's one name.
-- cbindgen exports a module's pub items to its crate's header: a Rust-only module (ee_sim::world::effects, whose
-  `EffectHandle` and `EFFECT_NOT_MADE` appeared in rust/sim/world.h and made the header check fail) takes
-  `/// cbindgen:ignore` on its `pub mod`.
-- **Two oracle runs under one NAME fault, not diverge.** A chain started with `&` inside a background shell kept
-  running after its shell returned (Git Bash's `ps` does not list it); starting the chain again ran two `sim_oracle run
-  cuts1-m` at once, whose shared stage slots made EE-SIM fault 12 s in (GEPhysicalModel::Intersects from
-  EEUnitClass::RefreshSound, a null model). It looked like a merge bug: the same exe and the same source in a scratch
-  worktree both played through. Before suspecting a merge, list the processes from Windows (`Get-CimInstance
-  Win32_Process` by command line) and give every rerun a new NAME.
-- **Storage under a global's symbol must have the global's alignment, not its type's.** clang gives a global object of
-  16 bytes or more 16-byte alignment and assumes it where the object is named: EERenderObject::Fn10C036 reads gWorld's
-  members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
-  oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
-  macros now add `alignas(16)`.
 
 ## The game's leaves, round 2: the placement captures, the area bodies, the db tables' storage, the unit sets and the team's save in Rust (ee_sim cp place_capture.rs, astar area_ops.rs / sub_sector_pass.rs, app unit_sets.rs / team_save.rs; ee_data tables.rs; branch rust-leaves2, 2026-11-19)
 
