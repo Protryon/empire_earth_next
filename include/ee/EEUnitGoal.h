@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "lle/U2DPoint.h"
+#include "rust/sim/units.h"
 
 class EEComplexUnit;
 class EEPlayer;
