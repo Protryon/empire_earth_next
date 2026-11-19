@@ -20,10 +20,6 @@ extern "C" {
     fn ee_units_pm_host_set_location_xy(obj: u64, x: f32, y: f32);
     fn ee_units_pm_host_update_tile(obj: u64, m: *const f32);
     fn ee_units_pm_host_set_scale(obj: u64, s: f32);
-    fn ee_units_pm_host_angular_velocity(obj: u64, out: *mut f32);
-    fn ee_units_pm_host_set_angular_velocity(obj: u64, yaw: f32, pitch: f32, roll: f32);
-    fn ee_units_pm_host_orientation(obj: u64, out: *mut f32);
-    fn ee_units_pm_host_set_orientation(obj: u64, yaw: f32, pitch: f32, roll: f32);
     fn ee_units_pm_host_rate(obj: u64, which: i32) -> f32;
     fn ee_units_pm_host_waypoint_count(obj: u64) -> i32;
     fn ee_units_pm_host_next_waypoint(obj: u64, out: *mut f32) -> i32;
@@ -120,6 +116,18 @@ fn with_unit<R: Default>(obj: u64, f: impl FnOnce(&UnitView<'_>) -> R) -> R {
         Some(u) => f(&u),
         None => R::default(),
     }
+}
+
+/// The unit's `GEOrientation` member at `offset` (`mAngularVelocity`, `mOrientation`): yaw, pitch, roll.
+fn read_orientation(obj: u64, offset: u64) -> [f32; 3] {
+    // SAFETY: a live complex unit's member (the physics' caller holds the world)
+    unsafe { std::ptr::read_unaligned((obj as usize + offset as usize) as *const [f32; 3]) }
+}
+
+/// The member's store (`= GEOrientation(yaw, pitch, roll)`).
+fn write_orientation(obj: u64, offset: u64, o: GeOrientation) {
+    // SAFETY: as above; no reference to the member is held
+    unsafe { std::ptr::write_unaligned((obj as usize + offset as usize) as *mut [f32; 3], [o.yaw, o.pitch, o.roll]) }
 }
 
 fn matrix(m: &[f32; 16]) -> GeTransformation {
@@ -254,20 +262,16 @@ impl PmHost for Game {
         unsafe { ee_units_pm_host_set_scale(obj, s) }
     }
     fn angular_velocity(&mut self, obj: u64) -> GeOrientation {
-        let mut o = [0.0f32; 3];
-        unsafe { ee_units_pm_host_angular_velocity(obj, o.as_mut_ptr()) };
-        orientation(o)
+        orientation(read_orientation(obj, layout().complex_angular_velocity))
     }
     fn set_angular_velocity(&mut self, obj: u64, o: GeOrientation) {
-        unsafe { ee_units_pm_host_set_angular_velocity(obj, o.yaw, o.pitch, o.roll) }
+        write_orientation(obj, layout().complex_angular_velocity, o)
     }
     fn orientation(&mut self, obj: u64) -> GeOrientation {
-        let mut o = [0.0f32; 3];
-        unsafe { ee_units_pm_host_orientation(obj, o.as_mut_ptr()) };
-        orientation(o)
+        orientation(read_orientation(obj, layout().complex_orientation))
     }
     fn set_orientation(&mut self, obj: u64, o: GeOrientation) {
-        unsafe { ee_units_pm_host_set_orientation(obj, o.yaw, o.pitch, o.roll) }
+        write_orientation(obj, layout().complex_orientation, o)
     }
     fn max_velocity(&mut self, obj: u64) -> f32 {
         unsafe { ee_units_pm_host_rate(obj, RATE_MAX_VELOCITY) }

@@ -475,32 +475,6 @@ extern "C" void ee_units_pm_host_set_scale(uint64_t inObject, float inScale)
     PMUnit(inObject)->mPhysicalModel.SetScale(inScale);
 }
 
-extern "C" void ee_units_pm_host_angular_velocity(uint64_t inObject, float* outOrientation)
-{
-    const GEOrientation& theRate = PMUnit(inObject)->mAngularVelocity;
-    outOrientation[0] = theRate.mYaw;
-    outOrientation[1] = theRate.mPitch;
-    outOrientation[2] = theRate.mRoll;
-}
-
-extern "C" void ee_units_pm_host_set_angular_velocity(uint64_t inObject, float inYaw, float inPitch, float inRoll)
-{
-    PMUnit(inObject)->mAngularVelocity = GEOrientation(inYaw, inPitch, inRoll);
-}
-
-extern "C" void ee_units_pm_host_orientation(uint64_t inObject, float* outOrientation)
-{
-    const GEOrientation& theOrientation = PMUnit(inObject)->mOrientation;
-    outOrientation[0] = theOrientation.mYaw;
-    outOrientation[1] = theOrientation.mPitch;
-    outOrientation[2] = theOrientation.mRoll;
-}
-
-extern "C" void ee_units_pm_host_set_orientation(uint64_t inObject, float inYaw, float inPitch, float inRoll)
-{
-    PMUnit(inObject)->mOrientation = GEOrientation(inYaw, inPitch, inRoll);
-}
-
 // the unit's (its active group's) rates: pm_host.rs RATE_*
 extern "C" float ee_units_pm_host_rate(uint64_t inObject, int32_t inWhich)
 {
