@@ -34,8 +34,6 @@ use super::legacy_load;
 use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo};
 
 // ---- the host's operations beyond the file's primitives
-/// `mCombatManager->Load(major, minor, file)`: its result.
-pub const EE_CP_SAVE_COMBAT_LOAD: i32 = 400;
 /// `mPlacement->Load(file)` (the town centre tile): its result.
 pub const EE_CP_SAVE_PLACEMENT_LOAD: i32 = 401;
 /// The placement's town centre tile's x (`index` 0) or y (1) into `io.i`.
@@ -51,8 +49,6 @@ pub const EE_CP_SAVE_HISTORY_FIRST: i32 = 406;
 pub const EE_CP_SAVE_HISTORY_SECOND: i32 = 407;
 pub const EE_CP_SAVE_HISTORY_SET_FIRST: i32 = 408;
 pub const EE_CP_SAVE_HISTORY_SET_SECOND: i32 = 409;
-/// `mCombatManager->Save(major, minor, file)`: its result.
-pub const EE_CP_SAVE_COMBAT_SAVE: i32 = 410;
 /// `mPlacement->Save(file)`: its result.
 pub const EE_CP_SAVE_PLACEMENT_SAVE: i32 = 411;
 /// `mResourceCenters.size()` into `io.i`.
@@ -299,8 +295,10 @@ pub unsafe fn load(
     if r == OK && !legacy && !has_lua_only_computers(major, minor) {
         return FAILED;
     }
-    if r == OK {
-        r = if legacy { legacy_load::skip_combat_manager(f, major, minor) } else { op(f, EE_CP_SAVE_COMBAT_LOAD, 0).0 };
+    // the combat manager's block: a retail file's (skipped); none since stage 6 (the empty EECPCombatManager wrote
+    // nothing; deleted in the AI Thread cluster's round 2)
+    if r == OK && legacy {
+        r = legacy_load::skip_combat_manager(f, major, minor);
     }
     if r == OK && legacy {
         let mut tile = [op(f, EE_CP_SAVE_TOWN_TILE, 0).1 as i32, op(f, EE_CP_SAVE_TOWN_TILE, 1).1 as i32];
@@ -409,9 +407,6 @@ pub unsafe fn save(
     // SAFETY: the caller's contract
     let f = &mut unsafe { SaveFile::new(ctx, host) };
     let mut r = r;
-    if r == OK {
-        r = op(f, EE_CP_SAVE_COMBAT_SAVE, 0).0;
-    }
     if r == OK {
         r = op(f, EE_CP_SAVE_PLACEMENT_SAVE, 0).0;
     }

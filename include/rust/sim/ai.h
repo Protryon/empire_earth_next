@@ -62,9 +62,6 @@ constexpr static const int32_t EE_AI_NEXT_HOST_POPULATION = 17;
 /// `EECPPendingEpoch(player)`
 constexpr static const int32_t EE_AI_NEXT_HOST_PENDING_EPOCH = 18;
 
-/// `mCombatManager != NULL`
-constexpr static const int32_t EE_AI_NEXT_HOST_HAS_COMBAT = 19;
-
 /// `mCanGather`
 constexpr static const int32_t EE_AI_NEXT_HOST_CAN_GATHER = 20;
 

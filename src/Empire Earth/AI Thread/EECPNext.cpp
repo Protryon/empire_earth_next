@@ -415,8 +415,6 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
         }
     case EE_AI_NEXT_HOST_PENDING_EPOCH:
         return EECPPendingEpoch(me);
-    case EE_AI_NEXT_HOST_HAS_COMBAT:
-        return me->mCombatManager != NULL ? 1 : 0;
     case EE_AI_NEXT_HOST_CAN_GATHER:
         return me->mCanGather ? 1 : 0;
     case EE_AI_NEXT_HOST_RC_COUNT:

@@ -43,7 +43,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPResourceCenter.h"
-#include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPReflexes.h"
@@ -179,7 +178,6 @@ EEComputerPlayer::~EEComputerPlayer()
             this->mUnitsToKill[i]->Dereference();
     }
     this->mUnitsToKill.clear();
-    delete this->GetCombatManager();
     delete this->mPlacement;
     DeleteVectorContents(this->mResourceCenters);
     EECPNextDeleteState(this);
@@ -409,7 +407,6 @@ void EEComputerPlayer::Init()
     ee_cp_init(this, reinterpret_cast<const EeCpBehavior*>(gCPBehaviors), EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty),
                this->mPlayerID, EECPCheatOn(this, kAICheatCost));
     this->mPlacement = new EECPPlacement(this);
-    this->mCombatManager = new EECPCombatManager(this);
 }
 
 // The C++ parts of Load and Save (ee_sim::cp::save): the file's primitives (EESavePrimitive), the combat manager's
@@ -427,8 +424,6 @@ static int32_t EECPSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex
     EEComputerPlayer* thePlayer = theContext.mPlayer;
     FSFile& theFile = *theContext.mFile;
     switch (inOp) {
-    case EE_CP_SAVE_COMBAT_LOAD:
-        return thePlayer->mCombatManager->Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
     case EE_CP_SAVE_PLACEMENT_LOAD:
         return thePlayer->mPlacement->Load(theFile);
     case EE_CP_SAVE_TOWN_TILE:
@@ -458,8 +453,6 @@ static int32_t EECPSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex
     case EE_CP_SAVE_HISTORY_SET_SECOND:
         thePlayer->mFavoriteTypeHistory[inIndex].second = (long)io->i;
         return kErrorOK;
-    case EE_CP_SAVE_COMBAT_SAVE:
-        return thePlayer->mCombatManager->Save(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
     case EE_CP_SAVE_PLACEMENT_SAVE:
         return thePlayer->mPlacement->Save(theFile);
     case EE_CP_SAVE_CENTERS:
@@ -622,8 +615,6 @@ void EEComputerPlayer::Clear()
     this->mIsStarted = false;
     this->mPlacement->Reset();
     this->mDangerZones.clear();
-    delete this->mCombatManager;
-    this->mCombatManager = new EECPCombatManager(this);
 }
 
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the

@@ -10,7 +10,6 @@
 #include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
-class EECPCombatManager;                    // ee/EECPCombatManager.h
 class EECPPlacement;                        // ee/EECPPlacement.h
 class EECPResourceCenter;                   // ee/EECPResourceCenter.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
@@ -107,8 +106,7 @@ public:
     std::vector<UWideString> mB90;          // +0xb90 (20-byte polymorphic elements: _Tidy 0x40ee8; unused here) (provisional name)
     std::vector<std::pair<unsigned long, long> > mFavoriteTypeHistory;  // +0xba0 (Load: resize(n, make_pair(0, 0)), then first/second)
     std::vector<EEUnitHandle<EEComplexUnit> > mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills, referenced; the dtor dereferences each; handles since R5a.4)
-    EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
-    EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
+    // (+0xbc0: the combat manager, empty since stage 6 and deleted in the AI Thread cluster's round 2)
     // stage 6 (docs/AI_LUA_VERBS.md): the original civilization manager (+0xbc4) and its unit, build, resource,
     // research and wall managers are gone (the Lua verbs, data/ai/lib/verbs.lua); what the engine and the helper
     // queries still need: the placement searches (with the town centre tile) and the reflexes' danger zones

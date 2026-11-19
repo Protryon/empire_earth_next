@@ -12,7 +12,6 @@ struct Host {
     log: Vec<i32>,
 }
 
-const COMBAT: u32 = 0xc0c0_c0c0;
 const PLACEMENT: u32 = 0x9191_9191;
 
 unsafe extern "C" fn host(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnitsPlayerSaveIo) -> i32 {
@@ -29,13 +28,13 @@ unsafe extern "C" fn host(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnit
         (r, w.i as u32)
     };
     match op {
-        EE_CP_SAVE_COMBAT_SAVE | EE_CP_SAVE_PLACEMENT_SAVE => {
-            h.file.u32(if op == EE_CP_SAVE_COMBAT_SAVE { COMBAT } else { PLACEMENT });
+        EE_CP_SAVE_PLACEMENT_SAVE => {
+            h.file.u32(PLACEMENT);
             OK
         }
-        EE_CP_SAVE_COMBAT_LOAD | EE_CP_SAVE_PLACEMENT_LOAD => {
+        EE_CP_SAVE_PLACEMENT_LOAD => {
             let (r, w) = word(h);
-            assert_eq!(w, if op == EE_CP_SAVE_COMBAT_LOAD { COMBAT } else { PLACEMENT });
+            assert_eq!(w, PLACEMENT);
             r
         }
         EE_CP_SAVE_TOWN_TILE => {
@@ -220,7 +219,7 @@ fn a_save_loads_back_to_the_same_record_with_the_kept_differences() {
     want.mNextPopulationTime = 0;
     want.mLastDamagedTime = 0;
     assert_eq!(g, want);
-    assert_eq!(&h.log[..2], &[EE_CP_SAVE_COMBAT_SAVE, EE_CP_SAVE_PLACEMENT_SAVE]);
+    assert_eq!(h.log[0], EE_CP_SAVE_PLACEMENT_SAVE);
 }
 
 #[test]
@@ -230,18 +229,18 @@ fn the_block_starts_with_the_original_s_fields_in_order() {
     assert_eq!(save_of(&f, &mut h, 283, 0), OK);
     let d = &h.file.data;
     let w = |at: usize| u32::from_le_bytes([d[at], d[at + 1], d[at + 2], d[at + 3]]);
-    assert_eq!((w(0), w(4)), (COMBAT, PLACEMENT));
+    assert_eq!(w(0), PLACEMENT);
     // mLBD4, mFavoriteLandType, mNextEnableTime, then false, then three bools
-    assert_eq!((w(8), w(12), w(16)), (f.mLBD4 as u32, f.mFavoriteLandType as u32, f.mNextEnableTime as u32));
-    assert_eq!(&d[20..24], &[0, u8::from(f.mBuildingDamaged), u8::from(f.mCitizenDamaged), u8::from(f.mIsStarted)]);
-    assert_eq!(w(24), f.mNextAttackTime as u32);
-    assert_eq!(d[28], u8::from(f.mActive));
-    assert_eq!(w(29), 0, "no centres");
-    assert_eq!(d[33], u8::from(f.mUsesFishing));
-    assert_eq!(f32::from_le_bytes([d[34], d[35], d[36], d[37]]), f.mUnitCostMedium);
-    // the whole block: the 2 markers, the shared fields by their file sizes, the enable flag, the two times, the
-    // two counts, the running state's 3 words and 2 bools
-    let mut n = 2 * 4 + 1 + 2 * 4 + 2 * 4 + 3 * 4 + 2;
+    assert_eq!((w(4), w(8), w(12)), (f.mLBD4 as u32, f.mFavoriteLandType as u32, f.mNextEnableTime as u32));
+    assert_eq!(&d[16..20], &[0, u8::from(f.mBuildingDamaged), u8::from(f.mCitizenDamaged), u8::from(f.mIsStarted)]);
+    assert_eq!(w(20), f.mNextAttackTime as u32);
+    assert_eq!(d[24], u8::from(f.mActive));
+    assert_eq!(w(25), 0, "no centres");
+    assert_eq!(d[29], u8::from(f.mUsesFishing));
+    assert_eq!(f32::from_le_bytes([d[30], d[31], d[32], d[33]]), f.mUnitCostMedium);
+    // the whole block: the placement's marker, the shared fields by their file sizes, the enable flag, the two times,
+    // the two counts, the running state's 3 words and 2 bools
+    let mut n = 4 + 1 + 2 * 4 + 2 * 4 + 3 * 4 + 2;
     seg_a!(add_size, f, n);
     seg_b!(add_size, f, n);
     seg_c!(add_size, f, n);
