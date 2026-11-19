@@ -373,7 +373,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false);
         return 0;
     case Op::BrowserTop: reinterpret_cast<BrowserComponent*>(a)->GetHTMLView()->SetOffsets(0, 0); return 0;
-    case Op::HttpDocType: return reinterpret_cast<GotHTTPDocumentEvent*>(a)->mOp->GetNum(EE_WON_HTTPDOC_TYPE);
+    case Op::HttpDocType: return ((RustServerOp*)LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Op))->GetNum(EE_WON_HTTPDOC_TYPE);
     case Op::ListBeginUpdate: aList->BeginUpdate(); return 0;
     case Op::ListEndUpdate: aList->EndUpdate(); return 0;
     case Op::ListClear: aList->Clear(b != 0); return 0;
@@ -573,11 +573,11 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::EventButton: return anEvent->mButton;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
     case Op::DeliverClient:
-        aPopup->DeliverEvent(new ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false);
+        aPopup->DeliverEvent(ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false);
         return 0;
-    case Op::DeliverGame: aPopup->DeliverEvent(new GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
+    case Op::DeliverGame: aPopup->DeliverEvent(GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
     case Op::DeliverFriend:
-        aPopup->DeliverEvent(new FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false);
+        aPopup->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false);
         return 0;
     case Op::ClosePopup: aPopup->GetRoot()->ClosePopup(aPopup); return 0;
     }

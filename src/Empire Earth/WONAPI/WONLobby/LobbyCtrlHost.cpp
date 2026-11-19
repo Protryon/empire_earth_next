@@ -198,13 +198,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::BaseEvent: aCtl->Component::HandleComponentEvent(anEvent); return 0;
     case Op::BasePaint: aCtl->Container::Paint(*reinterpret_cast<Graphics*>(a)); return 0;
     case Op::EventControlId: return anEvent->GetControlId();
-    case Op::EventFlags: return static_cast<SetRoomSpecFlagsEvent*>(anEvent)->mFlags;
-    case Op::EventRoomSpec: return static_cast<ClientChangedEvent*>(anEvent)->mRoomSpec;
-    case Op::EventIsModify: return static_cast<LobbyChangeEvent*>(anEvent)->IsModify() ? 1 : 0;
-    case Op::EventIsAdd: return static_cast<LobbyChangeEvent*>(anEvent)->IsAdd() ? 1 : 0;
-    case Op::EventIsDelete: return static_cast<LobbyChangeEvent*>(anEvent)->IsDelete() ? 1 : 0;
-    case Op::ClientChangedClient: return (intptr_t) static_cast<ClientChangedEvent*>(anEvent)->mClient.get();
-    case Op::PlayerChangedClient: return (intptr_t) static_cast<PlayerChangedEvent*>(anEvent)->mClient.get();
     case Op::EventIsSelectedItem: return static_cast<ListItemClickedEvent*>(anEvent)->IsSelectedItem() ? 1 : 0;
     case Op::EventButton: return static_cast<ListItemClickedEvent*>(anEvent)->mButton;
     case Op::EventDoubleClick: return static_cast<ListItemClickedEvent*>(anEvent)->mDoubleClick ? 1 : 0;
@@ -234,10 +227,10 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ClientsAt: return (intptr_t)reinterpret_cast<LobbyClientList*>(a)->ClientAt((size_t)b);
     case Op::KickClient: LobbyKickClient(aClient, b != 0); return 0;
     case Op::DeliverClientAction:
-        aCtl->DeliverEvent(new ClientActionEvent((int)a, (int)b, reinterpret_cast<LobbyClient*>(c)), false);
+        aCtl->DeliverEvent(ClientActionEvent((int)a, (int)b, reinterpret_cast<LobbyClient*>(c)), false);
         return 0;
     case Op::BroadcastWhisper:
-        LobbyBroadcastEvent(new SetChatInputEvent(2, aClient->GetName(), (int)b, false), true);
+        LobbyBroadcastEvent(SetChatInputEvent(2, aClient->GetName(), (int)b, false), true);
         return 0;
     case Op::ListGetSel: return (intptr_t)aList->GetSelItem();
     case Op::ListNumItems: return aList->GetNumItems();

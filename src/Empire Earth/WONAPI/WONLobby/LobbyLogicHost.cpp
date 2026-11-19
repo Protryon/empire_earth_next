@@ -165,7 +165,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
         return 0;
     case EeWonLobbyOp::StClientModerated:
-        LobbyBroadcastEvent(new ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0,
+        LobbyBroadcastEvent(ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0,
                                                      (inD & 1) != 0, gEmptyGUIString), true);
         return 0;
     // a game
@@ -202,7 +202,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
             LobbyPlayer* aPlayer = anItr.Next(&aClient);
             if (aPlayer != NULL && aClient != NULL) {
                 aPlayer->SetReady(false);
-                LobbyBroadcastEvent(new PlayerChangedEvent(aClient, 2), true);
+                LobbyBroadcastEvent(PlayerChangedEvent(aClient, 2), true);
             }
         }
         return 0;
@@ -225,18 +225,18 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     case EeWonLobbyOp::GamePingAndNotify:
         LobbyPingGame(g, true);
-        LobbyBroadcastEvent(new GameChangedEvent(g, 2), true);
+        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
         return 0;
     case EeWonLobbyOp::GameShowDetails:
         LobbyQueryGameDetails(g);
         g->SetShowDetails(true);
-        LobbyBroadcastEvent(new GameChangedEvent(g, 2), true);
+        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
         return 0;
     case EeWonLobbyOp::GameHideDetails:
         g->SetShowDetails(false);
-        LobbyBroadcastEvent(new GameChangedEvent(g, 2), true);
+        LobbyBroadcastEvent(GameChangedEvent(g, 2), true);
         return 0;
-    case EeWonLobbyOp::GameDirectConnect: LobbyDispatchEvent(new ChangeDirectConnectEvent(1, g)); return 0;
+    case EeWonLobbyOp::GameDirectConnect: LobbyDispatchEvent(ChangeDirectConnectEvent(1, g)); return 0;
     case EeWonLobbyOp::GameShowOptions: {
         SmartPtr<GameOptionsPopup> aPopup = new GameOptionsPopup;
         aPopup->Init(g);
@@ -264,8 +264,8 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         st->BroadcastToGame(aBuffer.ToByteBuffer(true).get());
         return 0;
     }
-    case EeWonLobbyOp::ClientChanged: LobbyBroadcastEvent(new PlayerChangedEvent(cl, (int)inC), true); return 0;
-    case EeWonLobbyOp::ClientTeamChanged: LobbyBroadcastEvent(new PlayerTeamChangedEvent(cl, (int)inC), true); return 0;
+    case EeWonLobbyOp::ClientChanged: LobbyBroadcastEvent(PlayerChangedEvent(cl, (int)inC), true); return 0;
+    case EeWonLobbyOp::ClientTeamChanged: LobbyBroadcastEvent(PlayerTeamChangedEvent(cl, (int)inC), true); return 0;
     // a message, a read buffer, events
     case EeWonLobbyOp::BufSkip: buf->SetPos((int)(buf->pos() + inC)); return 0;
     case EeWonLobbyOp::HandleBytes: {
@@ -281,9 +281,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::NetHostGame: return LobbyNetHostGame(g);
     case EeWonLobbyOp::NetJoinGame: return LobbyNetJoinGame(g);
     case EeWonLobbyOp::NetAdvertiseGame: LobbyNetAdvertiseGame(); return 0;
-    case EeWonLobbyOp::EventJoinGame: return (intptr_t)static_cast<JoinGameEvent*>(inA)->mGame.get();
-    case EeWonLobbyOp::EventActionGame: return (intptr_t)static_cast<GameActionEvent*>(inA)->mGame.get();
-    case EeWonLobbyOp::EventAction: return static_cast<GameActionEvent*>(inA)->mAction;
     // the lobby
     case EeWonLobbyOp::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)inC, true); return 0;
     case EeWonLobbyOp::MessageBox: LobbyMessageBox(aTitle, aDetails); return 0;

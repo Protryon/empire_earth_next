@@ -158,96 +158,12 @@ static intptr_t Held(const GUIString& inText)
     return (intptr_t)aData;
 }
 
+// the lobby events' members are read in Rust (lobbyevt.rs ctl_op); the chat link of a WONGUI event stays here
 static intptr_t EvField(ComponentEvent* e, EeWonLobbyCtlEvField f)
 {
-    typedef EeWonLobbyCtlEvField F;
-    AnnounceClientLocationEvent* acl = static_cast<AnnounceClientLocationEvent*>(e);
-    AnnounceFriendEvent* af = static_cast<AnnounceFriendEvent*>(e);
-    RecvChatEvent* rc = static_cast<RecvChatEvent*>(e);
-    JoinedRoomEvent* jr = static_cast<JoinedRoomEvent*>(e);
-    LeftRoomEvent* lr = static_cast<LeftRoomEvent*>(e);
-    AlertEvent* al = static_cast<AlertEvent*>(e);
-    SetChatInputEvent* sci = static_cast<SetChatInputEvent*>(e);
-    GroupInvitationEvent* gi = static_cast<GroupInvitationEvent*>(e);
-    GroupJoinAttemptEvent* gja = static_cast<GroupJoinAttemptEvent*>(e);
-    ClientModeratedEvent* cm = static_cast<ClientModeratedEvent*>(e);
-    switch (f) {
-    case F::AclHandled: return acl->mHandled ? 1 : 0;
-    case F::AclRoomId: return acl->mRoomId;
-    case F::AclClient: return (intptr_t)acl->mClient.get();
-    case F::AclRoom: return Dat(acl->mRoom);
-    case F::AclServer: return Dat(acl->mServer);
-    case F::AfLocation: return af->mLocation;
-    case F::AfFriend: return (intptr_t)af->mFriend.get();
-    case F::AfHandled: return af->mHandled ? 1 : 0;
-    case F::TlaLink: return (intptr_t)dynamic_cast<ChatLink*>(static_cast<TextLinkActivatedEvent*>(e)->mLink.get());
-    case F::PtcClient: return (intptr_t) static_cast<PlayerTeamChangedEvent*>(e)->mClient.get();
-    case F::RcSender: return (intptr_t)rc->mSender.get();
-    case F::RcTarget: return (intptr_t)rc->mTarget.get();
-    case F::RcRoomSpec: return rc->mRoomSpec;
-    case F::RcText: return Dat(rc->mText);
-    case F::RcIsTeam: return rc->IsTeam() ? 1 : 0;
-    case F::RcIsWhisper: return rc->IsWhisper() ? 1 : 0;
-    case F::RcIsWarning: return rc->IsWarning() ? 1 : 0;
-    case F::RcIsEmote: return rc->IsEmote() ? 1 : 0;
-    case F::JrRoomSpec: return jr->mRoomSpec;
-    case F::JrClientId: return jr->mClientId;
-    case F::JrGroupName: return Dat(jr->mGroupName);
-    case F::JrServerName: return Dat(jr->mServerName);
-    case F::JrClients: return (intptr_t)jr->mClients.get();
-    case F::LrRoomSpec: return lr->mRoomSpec;
-    case F::LrFlag: return lr->mFlag ? 1 : 0;
-    case F::LrForced: return lr->mForced ? 1 : 0;
-    case F::CceText: return Dat(static_cast<ChatCommandErrorEvent*>(e)->mText);
-    case F::AlKind: return al->GetKind();
-    case F::AlValue: return al->GetValue();
-    case F::AlSeverity: return al->mSeverity;
-    case F::AlText: return Dat(al->GetText());
-    case F::SciHandled: return sci->mHandled ? 1 : 0;
-    case F::SciRoomSpec: return sci->mRoomSpec;
-    case F::SciCommand: return sci->mCommand;
-    case F::SciText: return Dat(sci->mText);
-    case F::GiKind: return gi->mKind;
-    case F::GiClient: return (intptr_t)gi->mClient.get();
-    case F::GiGameName: return Dat(gi->mGameName);
-    case F::GiGameId: return gi->mGameId;
-    case F::GiComment: return Dat(gi->mComment);
-    case F::GiFlag: return gi->mFlag ? 1 : 0;
-    case F::GiInvite: return gi->mInvite ? 1 : 0;
-    case F::GjaKind: return gja->mKind;
-    case F::GjaClient: return (intptr_t)gja->mClient.get();
-    case F::GjaComment: return Dat(gja->mComment);
-    case F::CmRoomSpec: return cm->mRoomSpec;
-    case F::CmClient: return (intptr_t)cm->mClient.get();
-    case F::CmFlag: return cm->mFlag ? 1 : 0;
-    case F::CmKind: return cm->mModerationKind;
-    case F::CmDuration: return (intptr_t)cm->mDuration;
-    case F::CmRoomName: return Dat(cm->mRoomName);
-    case F::CmComment: return Dat(cm->mComment);
-    case F::GcGroup: return (intptr_t) static_cast<GroupChangedEvent*>(e)->mGroup.get();
-    case F::GcServer: return (intptr_t) static_cast<GroupChangedEvent*>(e)->mServer.get();
-    case F::ScServer: return (intptr_t) static_cast<ServerChangedEvent*>(e)->mServer.get();
-    case F::FcFriend: return (intptr_t) static_cast<FriendChangedEvent*>(e)->mFriend.get();
-    case F::LisStatus: return Dat(static_cast<LoginInitStatusEvent*>(e)->mStatus);
-    case F::LisDescription: return Dat(static_cast<LoginInitStatusEvent*>(e)->mDescription);
-    case F::LisAllowIgnore: return static_cast<LoginInitStatusEvent*>(e)->mAllowIgnore ? 1 : 0;
-    case F::LisKind: return static_cast<LoginInitStatusEvent*>(e)->mKind;
-    case F::SlfUserName: return Dat(static_cast<SetLoginFieldsEvent*>(e)->mUserName);
-    case F::SlfPassword: return Dat(static_cast<SetLoginFieldsEvent*>(e)->mPassword);
-    case F::QarEmail: return Dat(static_cast<QueryAccountResultEvent*>(e)->mEmail);
-    case F::QarNewsletter: return static_cast<QueryAccountResultEvent*>(e)->mNewsletter ? 1 : 0;
-    case F::GhdOp: return (intptr_t) static_cast<GotHTTPDocumentEvent*>(e)->mOp.get();
-    default: break;
-    }
+    if (f == EeWonLobbyCtlEvField::TlaLink)
+        return (intptr_t)dynamic_cast<ChatLink*>(static_cast<TextLinkActivatedEvent*>(e)->mLink.get());
     return 0;
-}
-
-static void EvSetHandled(ComponentEvent* e, EeWonLobbyCtlEvField f)
-{
-    typedef EeWonLobbyCtlEvField F;
-    if (f == F::AclHandled) static_cast<AnnounceClientLocationEvent*>(e)->mHandled = true;
-    else if (f == F::AfHandled) static_cast<AnnounceFriendEvent*>(e)->mHandled = true;
-    else if (f == F::SciHandled) static_cast<SetChatInputEvent*>(e)->mHandled = true;
 }
 
 static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c);
@@ -262,7 +178,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     ChatCommandParser* aParser = reinterpret_cast<ChatCommandParser*>(a);
     switch (inOp) {
     case Op::EvGet: return EvField(reinterpret_cast<ComponentEvent*>(a), (EeWonLobbyCtlEvField)b);
-    case Op::EvSetHandled: EvSetHandled(reinterpret_cast<ComponentEvent*>(a), (EeWonLobbyCtlEvField)b); return 0;
     case Op::ChatLinkNew: {
         ChatLink* aNew = new ChatLink(*reinterpret_cast<const EeWonLobbyCtlLink*>(a));
         aNew->AddRef();
@@ -342,10 +257,10 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     case Op::TextFind: return Txt(a).find(Txt(b), 0);
     case Op::IgnoredAt: return Held(LobbyGetIgnoredNameAt((size_t)a));
     case Op::FireEvent: inCtl->Fn2F5380((int)a, (int)b); return 0;
-    case Op::DeliverFriendAction: inCtl->DeliverEvent(new FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
-    case Op::DeliverJoinFriendsRoom: inCtl->DeliverEvent(new JoinFriendsRoomEvent(reinterpret_cast<LobbyFriend*>(a)), false); return 0;
-    case Op::DeliverJumpToRoom: inCtl->DeliverEvent(new JumpToRoomEvent(aLink->mText, aLink->mGroupId, aLink->mAddress), false); return 0;
-    case Op::DeliverAcceptClient: inCtl->DeliverEvent(new AcceptClientEvent(reinterpret_cast<LobbyClient*>(a), b != 0), false); return 0;
+    case Op::DeliverFriendAction: inCtl->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
+    case Op::DeliverJoinFriendsRoom: inCtl->DeliverEvent(JoinFriendsRoomEvent(reinterpret_cast<LobbyFriend*>(a)), false); return 0;
+    case Op::DeliverJumpToRoom: inCtl->DeliverEvent(JumpToRoomEvent(aLink->mText, aLink->mGroupId, aLink->mAddress), false); return 0;
+    case Op::DeliverAcceptClient: inCtl->DeliverEvent(AcceptClientEvent(reinterpret_cast<LobbyClient*>(a), b != 0), false); return 0;
     default: return SmallOp(inCtl, inOp, a, b, c);
     }
     return 0;
@@ -382,17 +297,17 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         // the row's address and room id (rows.rs)
         const EeWonIpAddr* anAddress = (const EeWonIpAddr*)ee_won_lobby_rows_ctl_op(Op::RoomItemAddr, a, 0, 0);
         unsigned long anId = (unsigned long)ee_won_lobby_rows_ctl_op(Op::RoomItemGroupId, a, 0, 0);
-        inCtl->DeliverEvent(new JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(anAddress)), anId), false);
+        inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(anAddress)), anId), false);
         return 0;
     }
     case Op::DeliverCreateRoom: {
         IPAddr anAddress;
         if (a != 0) anAddress = IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a));
-        inCtl->DeliverEvent(new CreateRoomEvent(anAddress), false);
+        inCtl->DeliverEvent(CreateRoomEvent(anAddress), false);
         return 0;
     }
     case Op::DeliverQueryGroups:
-        inCtl->DeliverEvent(new QueryServerGroupsEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a))), false);
+        inCtl->DeliverEvent(QueryServerGroupsEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a))), false);
         return 0;
     case Op::ServerListGet: return (intptr_t)LobbyGetServerList();
     case Op::ChatGroup: return (intptr_t)LobbyGetChatGroup();
@@ -402,7 +317,7 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::LabelSetUserWelcome:
         aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), LobbyUserText(reinterpret_cast<LobbyUserInfo*>(b), 0)), true);
         return 0;
-    case Op::DeliverQuickPlay: inCtl->DeliverEvent(new QuickPlayEvent((int)a), false); return 0;
+    case Op::DeliverQuickPlay: inCtl->DeliverEvent(QuickPlayEvent((int)a), false); return 0;
     case Op::DialogBaseEvent: static_cast<Dialog*>(inCtl)->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case Op::ComboAddUserName: return (intptr_t)aCombo->AddString(LobbyGetUserNameAt((size_t)b), -1);
     case Op::ConfigIsPublic: { LobbyConfig* aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mPublic ? 1 : 0; }
@@ -410,20 +325,21 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
     case Op::ComboSetTextFlag: aCombo->SetText(Txt(b), c != 0); return 0;
     case Op::DeliverLogin:
-        inCtl->DeliverEvent(new LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(),
+        inCtl->DeliverEvent(LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(),
                                            reinterpret_cast<ComboBox*>(c)->mEdit.mPtr->GetText()), false);
         return 0;
     case Op::TextToInt: return Txt(a).mData->ToInt(0);
     case Op::DeliverCreateAccount: {
         const intptr_t* f = reinterpret_cast<const intptr_t*>(a);
-        SmartPtr<CreateAccountEvent> event = new CreateAccountEvent;
-        event->mUserName = reinterpret_cast<InputBox*>(f[0])->GetText();
-        event->mPassword = reinterpret_cast<InputBox*>(f[1])->GetText();
-        event->mEmail = reinterpret_cast<InputBox*>(f[2])->GetText();
-        event->mDay = reinterpret_cast<InputBox*>(f[3])->GetText().mData->ToInt(0);
-        event->mMonth = reinterpret_cast<InputBox*>(f[4])->GetText().mData->ToInt(0);
-        event->mYear = reinterpret_cast<InputBox*>(f[5])->GetText().mData->ToInt(0);
-        event->mNewsletter = reinterpret_cast<Button*>(f[6])->IsChecked();
+        typedef LobbyEvtField EF;
+        SmartPtr<LobbyEvent> event = CreateAccountEvent();
+        LobbyEvtSetStr(event.get(), EF::UserName, (std::wstring)reinterpret_cast<InputBox*>(f[0])->GetText());
+        LobbyEvtSetStr(event.get(), EF::Password, (std::wstring)reinterpret_cast<InputBox*>(f[1])->GetText());
+        LobbyEvtSetStr(event.get(), EF::Email, (std::string)reinterpret_cast<InputBox*>(f[2])->GetText());
+        LobbyEvtSet(event.get(), EF::Day, (unsigned char)reinterpret_cast<InputBox*>(f[3])->GetText().mData->ToInt(0));
+        LobbyEvtSet(event.get(), EF::Month, (unsigned char)reinterpret_cast<InputBox*>(f[4])->GetText().mData->ToInt(0));
+        LobbyEvtSet(event.get(), EF::Year, (unsigned short)reinterpret_cast<InputBox*>(f[5])->GetText().mData->ToInt(0));
+        LobbyEvtSet(event.get(), EF::Newsletter, reinterpret_cast<Button*>(f[6])->IsChecked());
         inCtl->DeliverEvent(event.get(), false);
         return 0;
     }
@@ -433,11 +349,11 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         return 0;
     case Op::AuthPassword: return Held(GUIString(new GUIStringData(reinterpret_cast<AuthContext*>(a)->GetPassword())));
     case Op::DeliverUpdateAccount:
-        inCtl->DeliverEvent(new UpdateAccountEvent(anInput->GetText(), reinterpret_cast<InputBox*>(b)->GetText(),
+        inCtl->DeliverEvent(UpdateAccountEvent(anInput->GetText(), reinterpret_cast<InputBox*>(b)->GetText(),
                                                    reinterpret_cast<Button*>(c)->IsChecked()), false);
         return 0;
-    case Op::DeliverLostPassword: inCtl->DeliverEvent(new GetLostPasswordEvent(aCombo->mEdit->GetText()), false); return 0;
-    case Op::DeliverLostUserName: inCtl->DeliverEvent(new GetLostUserNameEvent(anInput->GetText()), false); return 0;
+    case Op::DeliverLostPassword: inCtl->DeliverEvent(GetLostPasswordEvent(aCombo->mEdit->GetText()), false); return 0;
+    case Op::DeliverLostUserName: inCtl->DeliverEvent(GetLostUserNameEvent(anInput->GetText()), false); return 0;
     case Op::BrowserGoLoginHelp:
         reinterpret_cast<BrowserComponent*>(a)->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"), false, 0, -1);
         return 0;
@@ -458,7 +374,7 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     }
     case Op::ScreenShow: reinterpret_cast<ScreenContainer*>(a)->ShowScreen(reinterpret_cast<Component*>(b), c != 0); return 0;
     case Op::ListSelGame: return (intptr_t)reinterpret_cast<ServerListCtrl*>(a)->GetSelGame();
-    case Op::DeliverDirectConnect: inCtl->DeliverEvent(new ChangeDirectConnectEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
+    case Op::DeliverDirectConnect: inCtl->DeliverEvent(ChangeDirectConnectEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
     case Op::LabelSetFormat3: {
         const intptr_t* t = reinterpret_cast<const intptr_t*>(c);
         aLabel->SetText(LobbyFormatString3(Txt(b), Txt(t[0]), Txt(t[1]), Txt(t[2])), true);
@@ -612,7 +528,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ListPaintColumn: return aMulti->GetColumnPaintContext();
     case Op::ListSortColumn: return aMulti->GetSortColumn();
     case Op::ListSortColumnPrev: return aMulti->GetSortColumnPrev();
-    case Op::ListDeliverPing: aList->DeliverEvent(new PingGameEvent(reinterpret_cast<LobbyGame*>(b), true), true); return 0;
+    case Op::ListDeliverPing: aList->DeliverEvent(PingGameEvent(reinterpret_cast<LobbyGame*>(b), true), true); return 0;
     case Op::ListTotalWidth: return aList->GetTotalWidth();
     case Op::ListTextColor: return aList->GetTextColor();
     case Op::ListFlagSet: return aList->ListFlagSet((int)b) ? 1 : 0;
@@ -653,10 +569,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboEditText: return Dat(aCombo->mEdit->GetText());
     case Op::PingsToDo: return LobbyGetNumPingsToDo();
     case Op::KillPings: LobbyKillPings(1); return 0;
-    case Op::DeliverGameAction: inCtl->DeliverEvent(new GameActionEvent(7, reinterpret_cast<LobbyGame*>(a)), false); return 0;
-    case Op::DeliverJoinGame: inCtl->DeliverEvent(new JoinGameEvent(reinterpret_cast<LobbyGame*>(a)), false); return 0;
-    case Op::EventGame: return (intptr_t) static_cast<GameChangedEvent*>(anEvent)->mGame.get();
-    case Op::EventGames: return (intptr_t) static_cast<SyncGameListEvent*>(anEvent)->mGames.get();
+    case Op::DeliverGameAction: inCtl->DeliverEvent(GameActionEvent(7, reinterpret_cast<LobbyGame*>(a)), false); return 0;
+    case Op::DeliverJoinGame: inCtl->DeliverEvent(JoinGameEvent(reinterpret_cast<LobbyGame*>(a)), false); return 0;
     case Op::EventX: return static_cast<ListItemClickedEvent*>(anEvent)->mX;
     case Op::EventY: return static_cast<ListItemClickedEvent*>(anEvent)->mY;
     case Op::EventItem:

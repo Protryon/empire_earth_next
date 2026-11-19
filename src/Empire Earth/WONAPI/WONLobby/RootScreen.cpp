@@ -158,7 +158,7 @@ void RootScreen::InitComponent(ComponentInit& inInit)
         SafeGetComponent(aConfig,this->mNewsTab,"NewsTab",__FILE__,95);
         SafeGetComponent(aConfig,aTab,"LobbyTab",__FILE__,96);
         this->mLobbyTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-        this->BroadcastEventDown(new SetRoomSpecFlagsEvent(4));
+        this->BroadcastEventDown(SetRoomSpecFlagsEvent(4));
     }
     else
     {
@@ -166,7 +166,7 @@ void RootScreen::InitComponent(ComponentInit& inInit)
         this->mLanTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
         SafeGetComponent(aConfig,aTab,"DirectConnectTab",__FILE__,102);
         this->mDirectConnectTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-        this->BroadcastEventDown(new SetRoomSpecFlagsEvent(8));
+        this->BroadcastEventDown(SetRoomSpecFlagsEvent(8));
     }
     this->SubscribeToBroadcast(1);
 }
