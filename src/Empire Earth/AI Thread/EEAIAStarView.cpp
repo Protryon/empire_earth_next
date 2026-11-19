@@ -36,9 +36,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarTerrainStorage.h"
-#include "ee/EEAIAStarPathAreaStorage.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/RTSRegionTable.h"
@@ -175,9 +172,9 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathArea(unsigned short inID)
     return theInfo;
 }
 
-unsigned short EEAIAStarView::GetStoredPathAreaID(const EEAIAStarPathAreaStorage* inStorage, long inX, long inY)
+unsigned short EEAIAStarView::GetStoredPathAreaID(const EeAStarFlood* inFill, long inX, long inY)
 {
-    return (unsigned short)Note(kViewStoredPathAreaID, inX, inY, inStorage->mPathAreaIDs[inStorage->GetHeight() * inX + inY]);
+    return (unsigned short)Note(kViewStoredPathAreaID, inX, inY, ee_astar_flood_id(inFill, inX, inY));
 }
 
 bool EEAIAStarView::IsChokeTile(long inIndex, unsigned long* outSerial)
@@ -652,7 +649,7 @@ static void EEAStarViewPathArea(void* inView, uint16_t inID, EeAStarPathAreaInfo
 
 static uint16_t EEAStarViewStoredPathAreaID(void* inView, const void* inStorage, int32_t inX, int32_t inY)
 {
-    return EEASTAR_VIEW(inView)->GetStoredPathAreaID((const EEAIAStarPathAreaStorage*)inStorage, inX, inY);
+    return EEASTAR_VIEW(inView)->GetStoredPathAreaID((const EeAStarFlood*)inStorage, inX, inY);
 }
 
 static int32_t EEAStarViewResourceKind(void* inView, int32_t inX, int32_t inY)

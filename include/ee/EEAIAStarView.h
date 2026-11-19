@@ -20,7 +20,6 @@
 class EEMap;
 class EEComplexUnit;
 class EEAIPathGoalModifierBase;
-class EEAIAStarPathAreaStorage;
 
 // A continent, by tile (EEAIContinentManager::GetContinentAt, which the goals dereference unchecked)
 struct EEAIAStarContinentInfo {
@@ -70,8 +69,8 @@ public:
     long GetTileValue(long inX, long inY);  // the manager's value grid, GetTileFlag while it is not built
     EEAIAStarPathAreaInfo GetPathAreaAt(long inX, long inY);
     EEAIAStarPathAreaInfo GetPathArea(unsigned short inID);   // dereferenced unchecked, as the sector fill does
-    // the path-area fill's id grid (the sector fill reads the storage of the fill before it)
-    unsigned short GetStoredPathAreaID(const EEAIAStarPathAreaStorage* inStorage, long inX, long inY);
+    // the path-area fill's id grid (the sector fill reads the fill before it: ee_sim::astar flood.rs)
+    unsigned short GetStoredPathAreaID(const EeAStarFlood* inFill, long inX, long inY);
     // the choke point pass's grids at index inIndex (EEAIChokePoint.cpp): a flagged tile that is not an area tile
     // (kind 0x36); *outSerial its area serial when it is
     bool IsChokeTile(long inIndex, unsigned long* outSerial);

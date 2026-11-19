@@ -37,7 +37,6 @@
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIArea.h"

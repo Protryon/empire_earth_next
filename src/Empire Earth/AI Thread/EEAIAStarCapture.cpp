@@ -4,6 +4,7 @@
 
 #include "ee/EESimCapture.h"
 #include "ee/EEAIAStarCapture.h"
+#include "rust/sim/astar.h"   // EeAStarNodeView
 
 thread_local EEAIAStarCaptureRun* gEEAIAStarCaptureRun = NULL;
 
@@ -107,4 +108,50 @@ void EEAIAStarCaptureRun::Commit(unsigned long inTag)
     if (!this->mEvents.empty())
         theRecord.Bytes(this->mEvents.data(), (unsigned int)this->mEvents.size());
     theRecord.Commit();
+}
+
+// The capture's side of the Rust searches (ee_sim::astar search_note.rs): a note, and a run's record (null while the
+// capture is off)
+extern "C" void ee_astar_capture_note(uint8_t inKind, int32_t inA, int32_t inB, int32_t inC, int32_t inD, int32_t inE,
+                                      int32_t inAnswer)
+{
+    EEAIAStarNote(inKind, inA, inB, inC, inD, inE, inAnswer);
+}
+
+extern "C" void* ee_astar_capture_begin()
+{
+    EEAIAStarCaptureRun* theRun = new EEAIAStarCaptureRun;
+    if (theRun->IsOn())
+        return theRun;
+    delete theRun;
+    return NULL;
+}
+
+extern "C" void ee_astar_capture_bytes(void* inRun, const uint8_t* inData, uint32_t inLength)
+{
+    EEAIAStarCaptureRun* theRun = (EEAIAStarCaptureRun*)inRun;
+    theRun->mData.insert(theRun->mData.end(), inData, inData + inLength);
+}
+
+extern "C" void ee_astar_capture_nodes(void* inRun, const EeAStarNodeView* inNodes, uint32_t inCount)
+{
+    std::vector<EEAIAStarNodeView> theNodes(inCount);
+    for (uint32_t i = 0; i < inCount; i++) {
+        theNodes[i].mX = inNodes[i].x;
+        theNodes[i].mY = inNodes[i].y;
+        theNodes[i].mCost = inNodes[i].cost;
+        theNodes[i].mPathCost = inNodes[i].path_cost;
+        theNodes[i].mEstimate = inNodes[i].estimate;
+        theNodes[i].mHasParent = inNodes[i].has_parent;
+        theNodes[i].mParentX = inNodes[i].parent_x;
+        theNodes[i].mParentY = inNodes[i].parent_y;
+    }
+    ((EEAIAStarCaptureRun*)inRun)->Nodes(theNodes);
+}
+
+extern "C" void ee_astar_capture_end(void* inRun, uint32_t inTag)
+{
+    EEAIAStarCaptureRun* theRun = (EEAIAStarCaptureRun*)inRun;
+    theRun->Commit(inTag);
+    delete theRun;
 }

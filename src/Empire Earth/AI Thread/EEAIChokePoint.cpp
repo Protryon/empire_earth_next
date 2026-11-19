@@ -2,8 +2,7 @@
 // vtable 0x439d3c). 0x1c740..0x1d846 (EEAIAStarTerrainStorage.cpp ends at 0x1c740; EEAIContinent's ctor starts at
 // 0x1d846). The dtor, AddAreaSerials, then the choke point pass EEAIBuildChokePoints (EEAIContinentManager's terrain pass):
 // a per-tile area serial grid (continents and big forests are 0x36 "kinds"), smoothed inPasses - 1 times so that the
-// tiles between two areas get a flag (both in Rust: ee_astar choke.rs), then a flood fill (EEAIAStarMachine<EEAIAStarChokePointStorage,
-// EEAIAStarChokePointGoal, EEMap>) that turns each run of flagged tiles into an EEAIChokePoint of gContinentManager.
+// tiles between two areas get a flag (both in Rust: ee_astar choke.rs), then a flood fill (ee_sim::astar flood.rs, the choke point goal's) that turns each run of flagged tiles into an EEAIChokePoint of gContinentManager.
 // The machine's COMDATs follow (ctor, dtor, the inline slots, Run and its steps, EEAIAStarMachineBase's inline ctor).
 // File globals in .bss 0x4e5c44..0x4e5c54 (later definitions get lower addresses).
 #include <windows.h>
@@ -37,21 +36,12 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarTerrainStorage.h"
-#include "ee/EEAIAStarChokePointStorage.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIForest.h"
 #include "ee/EEAIChokePoint.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAIAStarGoalBase.h"
-#include "ee/EEAIAStarChokePointGoal.h"
-#include "ee/EEAIAStarMachine.h"
-#include "ee/EEAIAStarMachineSteps.h"
-
-typedef EEAIAStarMachine<EEAIAStarChokePointStorage, EEAIAStarChokePointGoal, EEMap> EEAIChokePointMachine;
+#include "ee/EEAIAStarView.h"   // the fill's view (ee_sim::astar flood.rs)
 
 // EEAIContinentManager.cpp's inline (out of line here: 0x29ced)
 long EEAIHasResourceUnit(EETile* inTile);
@@ -101,39 +91,56 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
     EEAIChokeDone();
 }
 
-// NEAR: the original calls the storage's Virtual0C through the vtable (an inline helper or a pointer: unknown) and
-// default-constructs the iterator at the top ([ebp-8]); declared there, the slots swap
-// Flood-fills every flagged non-area tile not yet in a choke point into a new choke point, then gives each one
-// a serial and registers it with the continent manager
+// Flood-fills every flagged non-area tile not yet in a choke point into a new choke point (the fill: ee_sim::astar
+// flood.rs), then gives each one a serial and registers it with the continent manager
 static void EEAIChokeCreate(EEMap* inMap)
 {
-    EEAIChokePointMachine theMachine(9, inMap);
     long theSize = inMap->mSize;
-    EEAIChokePointMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(theSize, theSize);
-    theMachine.mCheckCorners = false;
+    EeAStarFlood* theFill = ee_astar_flood_new(EeAStarFloodKind::Choke, 9, theSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    std::map<long, EEAIChokePoint*> theChokePoints;
+    ee_astar_flood_init(theFill, theSize, theSize);
+    ee_astar_flood_set_check_corners(theFill, false);
     for (long x = theSize - 1; x >= 0; x--) {
         for (long y = theSize - 1; y >= 0; y--) {
             long theIndex = x * theSize + y;
-            if (!gEEAIChokeTileFlags[theIndex] || gEEAIChokeTileKinds[theIndex] == 0x36 ||
-                theMachine.mChokePointIDs[theMachine.mHeight * x + y] != 0)
+            if (!gEEAIChokeTileFlags[theIndex] || gEEAIChokeTileKinds[theIndex] == 0x36 || ee_astar_flood_id(theFill, x, y) != 0)
                 continue;
-            theMachine.mGoal.mStartTile.mX = x;
-            theMachine.mGoal.mStartTile.mY = y;
-            theMachine.mGoal.mGoalTile.mX = inMap->mSize;
-            theMachine.mGoal.mGoalTile.mY = inMap->mSize;
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateChokePoint();
+            ee_astar_flood_run(theFill, x, y, inMap->mSize, inMap->mSize, &theCallbacks);
+            // CreateChokePoint: a choke point of the fill's tiles (hull, bounds, unique area serials, continent) under
+            // the next number
+            long theNumber = theState->next_id;
+            size_t theCount = 0;
+            const EePoint* thePoints = ee_astar_flood_collect(theFill, (uint32_t)theNumber, &theCount);
+            std::vector<U2DPoint<long> > theTiles;
+            for (size_t i = 0; i < theCount; i++)
+                theTiles.push_back(U2DPoint<long>(thePoints[i].x, thePoints[i].y));
+            EEAIChokePoint* theChokePoint = new EEAIChokePoint;
+            theChokePoint->SetIndex(theNumber);
+            theChokePoint->SetAreaType(kAIAreaChokePoint);
+            theChokePoint->Create(theTiles);
+            theChokePoint->UpdateBounds(gWorld.mInfluenceTable);
+            size_t theSerialCount = 0;
+            const uint32_t* theSerials = ee_astar_flood_serials(theFill, &theSerialCount);
+            theChokePoint->AddAreaSerials(std::vector<unsigned long>(theSerials, theSerials + theSerialCount));
+            if (theTiles.size() > 0)
+                theChokePoint->SetContinentID(gContinentManager.GetContinentID(theTiles.front().GetX(), theTiles.front().GetY()));
+            EeAStarRect theBounds = EEAIAStarRectOf(theChokePoint->GetHullBounds());
+            ee_astar_flood_finish(theFill, &theBounds);
+            theChokePoints.insert(std::map<long, EEAIChokePoint*>::value_type(theNumber, theChokePoint));
+            theState->next_id++;
         }
     }
-    gContinentManager.ResizeTable(EeAStarCmTable::ChokePoints, theMachine.mGoal.mNextIndex);
-    for (std::map<long, EEAIChokePoint*>::iterator theIt = theMachine.mGoal.mChokePoints.begin();
-         theIt != theMachine.mGoal.mChokePoints.end(); theIt++) {
+    gContinentManager.ResizeTable(EeAStarCmTable::ChokePoints, theState->next_id);
+    for (std::map<long, EEAIChokePoint*>::iterator theIt = theChokePoints.begin(); theIt != theChokePoints.end(); theIt++) {
         EEAIChokePoint* theChokePoint = theIt->second;
         theChokePoint->SetSerial(gContinentManager.NewSerial());
         gContinentManager.AddChokePoint(theChokePoint);
     }
+    ee_astar_flood_free(theFill);
 }
 
 // What EEAIChokeGetTileSerial 0x1ccd0 read of a tile, in its order: nothing of a missing tile; the continent's

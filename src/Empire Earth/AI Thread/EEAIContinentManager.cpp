@@ -36,13 +36,13 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIContinentManager.h"
+#include "ee/EEAIAStarView.h"   // the fills' view (ee_sim::astar flood.rs)
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include <EEAIFunctionObjects.h>
 
@@ -54,26 +54,9 @@
 #include "ee/EEAIHill.h"
 #include "ee/EEAIChokePoint.h"
 #include "ee/EEDeleteVectorContents.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarTerrainStorage.h"
-#include "ee/EEAIAStarContinentStorage.h"
-#include "ee/EEAIAStarGoalBase.h"
-#include "ee/EEAIAStarContinentGoal.h"
-#include "ee/EEAIAStarHillStorage.h"
-#include "ee/EEAIAStarHillGoal.h"
-#include "ee/EEAIAStarPathAreaStorage.h"
-#include "ee/EEAIAStarPathAreaGoal.h"
-#include "ee/EEAIAStarPathSectorStorage.h"
-#include "ee/EEAIAStarPathSectorGoal.h"
-#include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGraphTerrainStorage.h"
-#include "ee/EEAIAStarGraphGoalBase.h"
-#include "ee/EEAIAStarGraphContinentalChainGoal.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMArea.h"
-#include "ee/EEAIAStarMachine.h"
-#include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEAIContinentCapture.h"   // TEST ONLY: the analysis' capture (EE_SIM_CAPTURE)
 #include "ee/EESimCapture.h"
@@ -122,14 +105,6 @@ long EEAIHasResourceUnit(EETile* inTile)
     }
     return theResult;
 }
-
-// The AI's continent flood fill (the EEAIAStarMachine instantiations whose COMDATs close this unit) (provisional names)
-typedef EEAIAStarMachine<EEAIAStarContinentStorage, EEAIAStarContinentGoal, EEMap> EEAIContinentMachine;
-typedef EEAIAStarMachine<EEAIAStarHillStorage, EEAIAStarHillGoal, EEMap> EEAIHillMachine;
-typedef EEAIAStarMachine<EEAIAStarPathAreaStorage, EEAIAStarPathAreaGoal, EEMap> EEAIPathAreaMachine;
-typedef EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap> EEAIPathSectorMachine;
-typedef EEAIAStarGraphMachine<EEAIAStarGraphTerrainStorage, EEAIAStarGraphContinentalChainGoal, EEAIContinent>
-    EEAIContinentChainMachine;
 
 // 0x27604 (COMDAT; declared in ee/EEAIContinentManager.h)
 inline void EEAIContinentManager::SetPathSector(EEAIPathSector* inSector)
@@ -479,35 +454,68 @@ void EEAIContinentManager::Build(EEMap* inMap)
     this->PruneChokePoints();
 }
 
+// The flood fills (EEAIAStarMachine over the continent, hill, path area and path sector goals and storages, and the
+// continental chains' graph machine) are Rust objects (ee_sim::astar flood.rs: the machine, the storage, the goal's
+// fill state and the id grid). These passes drive them: a tile's id, a fill from a start tile, its tiles collected
+// under an id, the area made of them here (the objects and their geometry are C++), the fill finished.
+
+// The tiles a fill collected
+static std::vector<U2DPoint<long> > EEAIFloodTiles(const EePoint* inPoints, size_t inCount)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    theTiles.reserve(inCount);
+    for (size_t i = 0; i < inCount; i++)
+        theTiles.push_back(U2DPoint<long>(inPoints[i].x, inPoints[i].y));
+    return theTiles;
+}
+
+// Ends an area of a fill: the storage's dirty bounds are the area's hull bounds
+static void EEAIFloodFinish(EeAStarFlood* inFill, const EEAIArea* inArea)
+{
+    EeAStarRect theBounds = EEAIAStarRectOf(inArea->GetHullBounds());
+    ee_astar_flood_finish(inFill, &theBounds);
+}
+
 // Floods inMap into continents (one fill per tile not yet in one), registers them by id with fresh serials,
 // counts the land, water and space tiles, then builds the continent grid (CreateContinentGrid)
 void EEAIContinentManager::CreateContinents(EEMap* inMap)
 {
-    EEAIContinentMachine theMachine(6, inMap);
-    EEAIAStarStorage* theStorage = &theMachine;
-    theStorage->Init(inMap->GetSize(), inMap->GetSize());
+    EeAStarFlood* theFill = ee_astar_flood_new(EeAStarFloodKind::Continent, 6, inMap->mSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    std::map<unsigned short, EEAIContinent*> theContinents;
+    ee_astar_flood_init(theFill, inMap->GetSize(), inMap->GetSize());
     for (long x = inMap->GetSize() - 1; x >= 0; x--) {
         for (long y = inMap->GetSize() - 1; y >= 0; y--) {
-            if (theMachine.mTiles60[theMachine.mWidth * x + y].mID != 0)
+            if (ee_astar_flood_id(theFill, x, y) != 0)
                 continue;
             EETile* theTile = inMap->GetTile(x, y);
             if (!theTile)
                 continue;
-            theMachine.mCheckCorners = ee_astar_check_corners((int32_t)theTile->GetTerrainType(), kTerrainCliff, (int32_t)x,
-                                                              (int32_t)y, EEAIMapEdges(inMap));   // Rust: ee_astar path_area_kind.rs
-            theMachine.mGoal.mStartTile.mX = x;
-            theMachine.mGoal.mStartTile.mY = y;
-            theMachine.mGoal.mGoalTile.mX = inMap->GetSize();
-            theMachine.mGoal.mGoalTile.mY = inMap->GetSize();
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateContinent();
+            ee_astar_flood_set_check_corners(theFill, ee_astar_check_corners((int32_t)theTile->GetTerrainType(), kTerrainCliff,
+                                                                             (int32_t)x, (int32_t)y, EEAIMapEdges(inMap)));
+            ee_astar_flood_run(theFill, x, y, inMap->GetSize(), inMap->GetSize(), &theCallbacks);
+            // CreateContinent: a continent of the fill's tiles under the next id
+            unsigned short theID = (unsigned short)theState->next_id;
+            size_t theCount = 0;
+            const EePoint* theTiles = ee_astar_flood_collect(theFill, theID, &theCount);
+            EEAIContinent* theContinent = new EEAIContinent;
+            theContinent->SetID(theID);
+            theContinent->SetCategory(theState->continent.kind);
+            theContinent->SetAreaType(kAIAreaContinent);
+            theContinent->Create(EEAIFloodTiles(theTiles, theCount));
+            theContinent->UpdateBounds(gWorld.mInfluenceTable);
+            EEAIFloodFinish(theFill, theContinent);
+            theContinents.insert(std::make_pair(theID, theContinent));
+            theState->next_id++;
         }
     }
     this->DeleteContinents();
-    this->ResizeTable(EeAStarCmTable::Continents, theMachine.mGoal.mNextID);
-    for (std::map<unsigned short, EEAIContinent*>::const_iterator theIt = theMachine.mGoal.mContinents.begin();
-         theIt != theMachine.mGoal.mContinents.end(); ++theIt) {
+    this->ResizeTable(EeAStarCmTable::Continents, theState->next_id);
+    for (std::map<unsigned short, EEAIContinent*>::const_iterator theIt = theContinents.begin(); theIt != theContinents.end();
+         ++theIt) {
         EEAIContinent* theContinent = theIt->second;
         if (theContinent->GetCategory() == kContinentCategoryWater)
             this->mRecord.num_water_tiles += theContinent->GetNumTiles();
@@ -519,7 +527,8 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
         this->AddArea(theContinent);
         this->SetTable(EeAStarCmTable::Continents, theIt->first, theContinent);
     }
-    this->CreateContinentGrid(theMachine, inMap);
+    this->CreateContinentGrid(theFill, inMap);
+    ee_astar_flood_free(theFill);
 }
 
 // Builds the tile-to-continent id grid, the continent adjacency matrix and neighbour lists from the fill, collects
@@ -527,16 +536,15 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
 // (Rust: ee_astar continent_grid.rs create_continent_grid over the fill's tiles, every tile's terrain and the
 // continents' categories; this stores what it computed. The ice shore list and the continents' shore lists are
 // empty here: Reset cleared the one, the fill made the others)
-void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, EEMap* inMap)
+void EEAIContinentManager::CreateContinentGrid(EeAStarFlood* inFill, EEMap* inMap)
 {
     long x;
     long y;
     size_t i;
-    EEMap* theMap = inMachine.mGoal.mMap;
     this->mRecord.width = inMap->mSize;
     this->mRecord.height = inMap->mSize;
     ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::ContinentIds, true, this->mRecord.width * this->mRecord.height);
-    this->mRecord.flags_width = inMachine.mGoal.mNextID;
+    this->mRecord.flags_width = ee_astar_flood_state(inFill)->next_id;
     ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::TileFlags, true, this->mRecord.flags_width * this->mRecord.flags_width);
     long theSize = inMap->mSize;
     std::vector<uint16_t> theIDs(theSize * theSize);
@@ -544,9 +552,9 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
     std::vector<int32_t> theTerrain(theSize * theSize);
     for (x = 0; x < theSize; x++) {
         for (y = 0; y < theSize; y++) {
-            theIDs[x * theSize + y] = inMachine.mTiles60[inMachine.mWidth * x + y].mID;
-            theKinds[x * theSize + y] = inMachine.mTiles60[inMachine.mWidth * x + y].mKind;
-            EETile* theTile = theMap->GetTile(x, y);   // NULL outside the playable map: -1 in the grid
+            theIDs[x * theSize + y] = (uint16_t)ee_astar_flood_id(inFill, x, y);
+            theKinds[x * theSize + y] = (uint8_t)ee_astar_flood_extra(inFill, x, y);
+            EETile* theTile = inMap->GetTile(x, y);   // NULL outside the playable map: -1 in the grid
             theTerrain[x * theSize + y] = theTile ? (int32_t)theTile->mTerrainType : -1;
         }
     }
@@ -558,51 +566,97 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
     ee_astar_cm_apply_continent_grid(&this->mRecord, theGrid);   // Rust: cm_build.rs (frees the grid)
 }
 
+// The continents as the chain search sees them (ee_astar flood.rs EeAStarChainCallbacks): by their graph handle
+static EEAIContinent* EEAIChainOf(void* inObject)
+{
+    return static_cast<EEAIContinent*>(static_cast<AStarGraphableObjectBase*>(inObject));
+}
+
+static void* EEAIChainHandle(EEAIContinent* inContinent)
+{
+    AStarGraphableObjectBase* theBase = inContinent;
+    return theBase;
+}
+
+static int32_t EEAIChainCount(void* inManager)
+{
+    return (int32_t)((EEAIContinentManager*)inManager)->GetContinents().size();
+}
+
+static void* EEAIChainContinent(void* inManager, int32_t inIndex)
+{
+    return EEAIChainHandle(((EEAIContinentManager*)inManager)->GetContinents()[inIndex]);
+}
+
+static uint8_t EEAIChainCategory(void* inManager, void* inObject)
+{
+    return EEAIChainOf(inObject)->GetCategory();
+}
+
+static int32_t EEAIChainID(void* inManager, void* inObject)
+{
+    return EEAIChainOf(inObject)->GetID();
+}
+
+static uint16_t EEAIChainGetCount(void* inManager, void* inObject, uint32_t inKind)
+{
+    return EEAIChainOf(inObject)->GetCount(inKind);
+}
+
+static void EEAIChainSetCount(void* inManager, void* inObject, uint32_t inKind, uint16_t inID)
+{
+    EEAIChainOf(inObject)->SetCount(inKind, inID);
+}
+
+static void EEAIChainCenter(void* inManager, void* inObject, EePoint* outPoint)
+{
+    const U2DPoint<long>& theCenter = EEAIChainOf(inObject)->GetGraphLocation();
+    outPoint->x = theCenter.mX;
+    outPoint->y = theCenter.mY;
+}
+
+static uint32_t EEAIChainNumNeighbors(void* inManager, void* inObject)
+{
+    return EEAIChainOf(inObject)->GetNumNeighbors();
+}
+
+static void* EEAIChainNeighbor(void* inManager, void* inObject, uint32_t inIndex)
+{
+    return EEAIChainHandle(EEAIChainOf(inObject)->GetNeighbors()[inIndex]);
+}
+
+static uint16_t EEAIChainNextID(void* inManager, uint32_t inKind)
+{
+    return ((EEAIContinentManager*)inManager)->NextChainID(inKind);
+}
+
 // Numbers the continent chains of kind inKind (which of water, cliff and space a chain may cross): one search from
-// every land continent without a chain id of that kind yet (inMap is not read)
+// every land continent without a chain id of that kind yet (inMap is not read; Rust: ee_astar flood.rs)
 void EEAIContinentManager::NumberContinentChains(EEMap* inMap, unsigned long inKind)
 {
-    EEAIContinentChainMachine theMachine(7, this->GetContinents().size());
-    EEAIAStarGraphStorage* theStorage = &theMachine;
-    theStorage->Init(this->GetContinents().size());
-    if (inKind == kAIChainLandCliff || inKind == kAIChainLandWaterCliff || inKind == kAIChainLandCliffSpace)
-        theMachine.mGoal.mKinds[3] = true;
-    if (inKind == kAIChainLandWater || inKind == kAIChainLandWaterCliff || inKind == kAIChainLandWaterSpace)
-        theMachine.mGoal.mKinds[2] = true;
-    if (inKind == kAIChainLandSpace || inKind == kAIChainLandWaterSpace || inKind == kAIChainLandCliffSpace)
-        theMachine.mGoal.mKinds[4] = true;
-    theMachine.mGoal.mKinds[1] = true;
-    for (long i = this->GetContinents().size() - 1; i >= 0; i--) {
-        EEAIContinent* theContinent = this->GetContinents()[i];
-        if (!theContinent || theContinent->GetCategory() != kContinentCategoryLand)
-            continue;
-        unsigned short theCount = inKind < 7 ? theContinent->GetCount(inKind) : 0;
-        if (theCount != 0)
-            continue;
-        unsigned short theID = theContinent->GetID();
-        theMachine.mGoal.mStartTile = theContinent->GetHullCenter();
-        theMachine.mGoal.mGoalSector = theID;
-        theMachine.mGoal.mStartContinent = theContinent;
-        theMachine.mGoal.mStartCategory = theContinent->GetCategory();
-        theMachine.mGoal.mKind = inKind;
-        theMachine.Run();
-        theMachine.mGoal.NumberChain();
-    }
+    EeAStarChainCallbacks theCallbacks = {this, EEAIChainCount, EEAIChainContinent, EEAIChainCategory, EEAIChainID,
+                                          EEAIChainGetCount, EEAIChainSetCount, EEAIChainCenter, EEAIChainNumNeighbors,
+                                          EEAIChainNeighbor, EEAIChainNextID};
+    ee_astar_number_chains((uint32_t)inKind, &theCallbacks);
 }
 
 // Grows the hills of inMap: one fill from every non-cliff land tile at height level 4 or more not yet in a hill,
 // then registers each hill (serial, its continent, the area map)
 void EEAIContinentManager::CreateHills(EEMap* inMap)
 {
-    EEAIHillMachine theMachine(10, inMap);
-    EEAIHillMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(inMap->GetSize(), inMap->GetSize());
-    theMachine.mCheckCorners = false;
+    EeAStarFlood* theFill = ee_astar_flood_new(EeAStarFloodKind::Hill, 10, inMap->mSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    std::map<unsigned short, EEAIHill*> theHills;
+    ee_astar_flood_init(theFill, inMap->GetSize(), inMap->GetSize());
+    ee_astar_flood_set_check_corners(theFill, false);
     for (long x = inMap->GetSize() - 1; x >= 0; x--) {
         for (long y = inMap->GetSize() - 1; y >= 0; y--) {
             EEAIContinent* theContinent = this->GetContinentAt(x, y);
             if (!theContinent || theContinent->GetCategory() == kContinentCategoryWater || theContinent->GetCategory() == kContinentCategorySpace ||
-                theMachine.mTiles60[theMachine.mHeight * x + y].mID != 0)
+                ee_astar_flood_id(theFill, x, y) != 0)
                 continue;
             EETile* theTile = inMap->GetTile(x, y);
             if (!theTile)
@@ -610,18 +664,24 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
             long theLevel = UMFloor(theTile->GetHeight() / (inMap->GetF1955F4() * 0.5f) + 0.00001f);
             if (theTile->GetTerrainType() == kTerrainCliff || theLevel < 4)
                 continue;
-            theMachine.mGoal.mStartTile.SetX(x);
-            theMachine.mGoal.mStartTile.SetY(y);
-            theMachine.mGoal.mGoalTile.SetX(inMap->GetSize());
-            theMachine.mGoal.mGoalTile.SetY(inMap->GetSize());
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateHill();
+            ee_astar_flood_run(theFill, x, y, inMap->GetSize(), inMap->GetSize(), &theCallbacks);
+            // CreateHill: a hill of the fill's tiles under the next id, on the first tile's continent
+            unsigned short theID = (unsigned short)theState->next_id;
+            size_t theCount = 0;
+            const EePoint* theTiles = ee_astar_flood_collect(theFill, theID, &theCount);
+            EEAIHill* theHill = new EEAIHill;
+            theHill->SetID(theID);
+            theHill->SetContinentID(theState->hill.continent_id);
+            theHill->SetAreaType(kAIAreaHill);
+            theHill->Create(EEAIFloodTiles(theTiles, theCount));
+            theHill->UpdateBounds(gWorld.mInfluenceTable);
+            EEAIFloodFinish(theFill, theHill);
+            theHills.insert(std::map<unsigned short, EEAIHill*>::value_type(theID, theHill));
+            theState->next_id++;
         }
     }
-    this->ResizeTable(EeAStarCmTable::Hills, theMachine.mGoal.mNextID);
-    for (std::map<unsigned short, EEAIHill*>::const_iterator theIt = theMachine.mGoal.mHills.begin();
-         theIt != theMachine.mGoal.mHills.end(); ++theIt) {
+    this->ResizeTable(EeAStarCmTable::Hills, theState->next_id);
+    for (std::map<unsigned short, EEAIHill*>::const_iterator theIt = theHills.begin(); theIt != theHills.end(); ++theIt) {
         EEAIHill* theHill = theIt->second;
         theHill->SetSerial(this->NewSerial());
         this->SetTable(EeAStarCmTable::Hills, theHill->GetID(), theHill);
@@ -631,6 +691,96 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
             theContinent->AddHillID(theHill->GetID());
         this->AddArea(theHill);
     }
+    ee_astar_flood_free(theFill);
+}
+
+// A path area fill's areas (EEAIAStarPathAreaGoal's maps) and, in a kind pass, the map's path areas by tile
+struct EEAIPathAreaFill {
+    EeAStarFlood* mFill;
+    std::map<unsigned short, EEAIPathArea*> mPathAreas;
+    std::map<unsigned short, EEAIForest*> mForests;
+    EEAIPathArea** mAreas;                  // x * mAreasSize + y
+    unsigned long mAreasSize;
+};
+
+// The set's insert result is unused; the continents get the id through their kind vectors.
+// Gives every path area under the filled tiles the next water-body, space-region, land-mass or surface-region id
+// (by mode) and adds that id to each touched continent's matching id list
+static void EEAIAssignKindIDs(EEAIPathAreaFill& ioFill, const std::vector<U2DPoint<long> >& inTiles)
+{
+    const EeAStarFloodState* theState = ee_astar_flood_state(ioFill.mFill);
+    long theMode = theState->path_area.mode;
+    unsigned short theKindID = theState->next_kind_id;
+    std::set<EEAIPathArea*> theAreas;   // (address order, as the VC6 set of addresses)
+    for (long i = inTiles.size() - 1; i >= 0; i--) {
+        unsigned long theX = inTiles[i].GetX();
+        unsigned long theY = inTiles[i].GetY();
+        EEAIPathArea* theArea = theX < ioFill.mAreasSize && theY < ioFill.mAreasSize ? ioFill.mAreas[ioFill.mAreasSize * theX + theY] : 0;
+        theAreas.insert(theArea);
+        if (theMode == kAIPathWaterBody)
+            theArea->SetWaterBodyID(theKindID);
+        else if (theMode == kAIPathSpaceRegion)
+            theArea->SetSpaceRegionID(theKindID);
+        else if (theMode == kAIPathLandMass)
+            theArea->SetLandMassID(theKindID);
+        else
+            theArea->SetSurfaceRegionID(theKindID);
+    }
+    for (std::set<EEAIPathArea*>::iterator theIt = theAreas.begin(); theIt != theAreas.end(); theIt++) {
+        EEAIContinent* theContinent = gContinentManager.GetContinentFromID((*theIt)->GetContinentID());
+        if (!theContinent)
+            continue;
+        if (theMode == kAIPathWaterBody)
+            theContinent->AddIDBC(theKindID);
+        else if (theMode == kAIPathSpaceRegion)
+            theContinent->AddIDDC(theKindID);
+        else if (theMode == kAIPathLandMass)
+            theContinent->AddIDCC(theKindID);
+        else
+            theContinent->AddIDEC(theKindID);
+    }
+}
+
+// CreateAreas: turns the filled tiles into a new path area (plus a forest with its resource counts for forest tiles)
+// or, in a kind pass, assigns the next kind id; then the fill is finished (its tile bounds dirty, its state reset)
+static void EEAIPathAreaCreate(EEAIPathAreaFill& ioFill)
+{
+    EeAStarFloodState* theState = ee_astar_flood_state(ioFill.mFill);
+    EeAStarPathAreaFill& theFill = theState->path_area;
+    size_t theCount = 0;
+    const EePoint* thePoints = ee_astar_flood_collect(ioFill.mFill, (uint16_t)theState->next_id, &theCount);
+    std::vector<U2DPoint<long> > theTiles = EEAIFloodTiles(thePoints, theCount);
+    if (theFill.mode == kAIPathNone) {
+        unsigned short theID = (unsigned short)theState->next_id;
+        EEAIPathArea* theArea = new EEAIPathArea;
+        theArea->SetID(theID);
+        theArea->SetContinentID(theFill.continent_id);
+        theArea->SetAreaType(kAIAreaPathArea);
+        theArea->SetKind(theFill.kind);
+        theArea->Create(theTiles);
+        theArea->UpdateBounds(gWorld.mInfluenceTable);
+        ioFill.mPathAreas.insert(std::map<unsigned short, EEAIPathArea*>::value_type(theID, theArea));
+        theState->next_id++;
+        if (theFill.kind == kAITileForest) {
+            EEAIForest* theForest = new EEAIForest;
+            theForest->SetID(theFill.next_forest_id);
+            theForest->SetContinentID(theFill.continent_id);
+            theForest->SetAreaType(kAIAreaForest);
+            theForest->Create(theTiles);
+            theForest->UpdateBounds(gWorld.mInfluenceTable);
+            theForest->SetNumResources1(theFill.resources[0]);
+            theForest->SetNumResources3(theFill.resources[2]);
+            theForest->SetNumResources2(theFill.resources[1]);
+            theForest->UpdateResourceKind();
+            ioFill.mForests.insert(std::map<unsigned short, EEAIForest*>::value_type(theFill.next_forest_id, theForest));
+            theFill.next_forest_id++;
+        } else if (theFill.kind == kAITileUnitObstacle)
+            theArea->SetUnitID(theFill.owner_id);
+    } else {
+        theState->next_kind_id++;
+        EEAIAssignKindIDs(ioFill, theTiles);
+    }
+    ee_astar_flood_finish(ioFill.mFill, NULL);
 }
 
 // Assigns the inKind region ids (water body, land mass, space or surface region) to the path areas: one fill from
@@ -638,17 +788,20 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
 // path_area_kind.rs, the start test and the corner test of each tile)
 void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
 {
-    EEAIPathAreaMachine theMachine(0xe, inMap);
+    EEAIPathAreaFill theFill;
+    theFill.mFill = ee_astar_flood_new(EeAStarFloodKind::PathArea, 0xe, inMap->mSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill.mFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
     long theSize = inMap->GetSize();
-    EEAIPathArea** theAreas = NULL;
     bool theFlag = false;
-    EEAIPathAreaMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(theSize, theSize);
-    theMachine.mCheckCorners = true;
-    theAreas = new EEAIPathArea*[theSize * theSize];
+    ee_astar_flood_init(theFill.mFill, theSize, theSize);
+    ee_astar_flood_set_check_corners(theFill.mFill, true);
+    EEAIPathArea** theAreas = new EEAIPathArea*[theSize * theSize];
     this->GetPathAreas(inMap, theAreas);
-    theMachine.mGoal.mAreas = theAreas;
-    theMachine.mGoal.mAreasSize = theSize;
+    theFill.mAreas = theAreas;
+    theFill.mAreasSize = theSize;
     EeMapEdges theEdges = EEAIMapEdges(inMap);
     std::vector<EeTileUnit> theUnits;
     for (long x = inMap->GetSize() - 1; x >= 0; x--) {
@@ -670,57 +823,52 @@ void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
             if (!ee_astar_path_area_kind_starts((int32_t)inKind, (int32_t)theTile->GetTerrainType(), (int32_t)x, (int32_t)y,
                                                 theEdges, &theIDs, theUnits.data(), theUnits.size(), &theFlag))
                 continue;
-            theMachine.mGoal.mMode = inKind;
-            theMachine.mCheckCorners = ee_astar_check_corners((int32_t)theTile->GetTerrainType(), 3, (int32_t)x, (int32_t)y,
-                                                              theEdges);   // terrain 3 here, as the original
-            theMachine.mGoal.mStartTile.mY = y;
-            theMachine.mGoal.mStartTile.mX = x;
-            theMachine.mGoal.mGoalTile.mX = inMap->GetSize();
-            theMachine.mGoal.mGoalTile.mY = inMap->GetSize();
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateAreas();
+            theState->path_area.mode = inKind;
+            ee_astar_flood_set_check_corners(theFill.mFill, ee_astar_check_corners((int32_t)theTile->GetTerrainType(), 3,
+                                                                                   (int32_t)x, (int32_t)y, theEdges));   // terrain 3 here, as the original
+            ee_astar_flood_run(theFill.mFill, x, y, inMap->GetSize(), inMap->GetSize(), &theCallbacks);
+            EEAIPathAreaCreate(theFill);
         }
     }
     if (inKind == kAIPathLandMass)
-        this->mRecord.next_land_mass = theMachine.mGoal.GetNextKindID();
+        this->mRecord.next_land_mass = theState->next_kind_id;
     else if (inKind == kAIPathWaterBody)
-        this->mRecord.next_water_body = theMachine.mGoal.GetNextKindID();
+        this->mRecord.next_water_body = theState->next_kind_id;
     else if (inKind == kAIPathSpaceRegion)
-        this->mRecord.next_space_region = theMachine.mGoal.GetNextKindID();
+        this->mRecord.next_space_region = theState->next_kind_id;
     else if (inKind == kAIPathNonSpace)
-        this->mRecord.next_surface_region = theMachine.mGoal.GetNextKindID();
+        this->mRecord.next_surface_region = theState->next_kind_id;
     delete[] theAreas;
-    theMachine.SetHasBounds(false);
-    theMachine.Reset();
+    ee_astar_flood_free(theFill.mFill);
 }
 
 // Grows the path areas and forests of inMap and registers them (serials, continents, area map), builds the path
 // sectors, then records each sub-sector's continent as a neighbour of its sector
 void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
 {
-    EEAIPathAreaMachine theMachine(0xe, inMap);
-    EEAIPathAreaMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(inMap->GetSize(), inMap->GetSize());
-    theMachine.mCheckCorners = true;
+    EEAIPathAreaFill theFill;
+    theFill.mFill = ee_astar_flood_new(EeAStarFloodKind::PathArea, 0xe, inMap->mSize);
+    theFill.mAreas = NULL;
+    theFill.mAreasSize = 0;
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill.mFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    ee_astar_flood_init(theFill.mFill, inMap->GetSize(), inMap->GetSize());
+    ee_astar_flood_set_check_corners(theFill.mFill, true);
     for (long x = inMap->GetSize() - 1; x >= 0; x--) {
         for (long y = inMap->GetSize() - 1; y >= 0; y--) {
-            if (!this->GetContinentAt(x, y) || theMachine.mPathAreaIDs[theMachine.GetHeight() * x + y] != 0)
+            if (!this->GetContinentAt(x, y) || ee_astar_flood_id(theFill.mFill, x, y) != 0)
                 continue;
-            theMachine.mGoal.mStartTile.mX = x;
-            theMachine.mGoal.mStartTile.mY = y;
-            theMachine.mGoal.mGoalTile.mX = inMap->GetSize();
-            theMachine.mGoal.mGoalTile.mY = inMap->GetSize();
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateAreas();
+            ee_astar_flood_run(theFill.mFill, x, y, inMap->GetSize(), inMap->GetSize(), &theCallbacks);
+            EEAIPathAreaCreate(theFill);
         }
     }
-    unsigned short theCount = theMachine.mGoal.mNextPathAreaID;
+    unsigned short theCount = (unsigned short)theState->next_id;
     this->ResizeTable(EeAStarCmTable::PathAreas, theCount);
     this->mRecord.next_path_area_id = theCount;
     std::map<unsigned short, EEAIPathArea*>::const_iterator theArea;
-    for (theArea = theMachine.mGoal.mPathAreas.begin(); theArea != theMachine.mGoal.mPathAreas.end(); ++theArea) {
+    for (theArea = theFill.mPathAreas.begin(); theArea != theFill.mPathAreas.end(); ++theArea) {
         EEAIPathArea* thePathArea = theArea->second;
         thePathArea->SetSerial(this->NewSerial());
         this->SetTable(EeAStarCmTable::PathAreas, thePathArea->GetID(), thePathArea);
@@ -729,9 +877,9 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
             theContinent->AddPathAreaID(thePathArea->GetID());
         this->AddArea(thePathArea);
     }
-    this->ResizeTable(EeAStarCmTable::Forests, theMachine.mGoal.mNextForestID);
+    this->ResizeTable(EeAStarCmTable::Forests, theState->path_area.next_forest_id);
     std::map<unsigned short, EEAIForest*>::const_iterator theForest;
-    for (theForest = theMachine.mGoal.mForests.begin(); theForest != theMachine.mGoal.mForests.end(); ++theForest) {
+    for (theForest = theFill.mForests.begin(); theForest != theFill.mForests.end(); ++theForest) {
         EEAIForest* theArea = theForest->second;
         theArea->SetSerial(this->NewSerial());
         this->SetTable(EeAStarCmTable::Forests, theArea->GetID(), theArea);
@@ -740,9 +888,8 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
             theContinent->AddForestID(theArea->GetID());
         this->AddArea(theArea);
     }
-    theMachine.SetHasBounds(false);
-    theMachine.Reset();
-    this->CreatePathSectors(inMap, &theMachine);
+    this->CreatePathSectors(inMap, theFill.mFill);
+    ee_astar_flood_free(theFill.mFill);
     for (long i = this->GetPathSubSectors().size() - 1; i >= 0; i--) {
         EEAIPathSubSector* theSubSector = this->GetPathSubSectorsAt(i);
         EEAIContinent* theContinent = theSubSector ? this->GetContinentsAt(theSubSector->GetContinentID()) : NULL;
@@ -751,19 +898,47 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
     }
 }
 
+// CreateSubSector: a new sub sector of the sorted filled tiles under a new sub sector id, in its sector and in
+// ioSubSectors; then the fill is finished (its tile bounds dirty, its state reset)
+static void EEAIPathSectorCreate(EeAStarFlood* inFill, EEAIPathSector* inSector,
+                                 std::map<unsigned short, EEAIPathSubSector*>& ioSubSectors)
+{
+    const EeAStarPathSectorFill& theFill = ee_astar_flood_state(inFill)->sector;
+    unsigned short theID = gContinentManager.NewSubSectorID();
+    size_t theCount = 0;
+    const EePoint* thePoints = ee_astar_flood_collect(inFill, theID, &theCount);
+    std::vector<U2DPoint<long> > theTiles = EEAIFloodTiles(thePoints, theCount);
+    EEAIPathSubSector* theSubSector = new EEAIPathSubSector;
+    std::sort(theTiles.begin(), theTiles.end());
+    theSubSector->SetSector(inSector);
+    theSubSector->SetID(theID);
+    theSubSector->SetContinentID(theFill.continent_id);
+    theSubSector->SetPathAreaID(theFill.path_area_id);
+    theSubSector->SetNumTiles(theFill.tile_count);
+    theSubSector->CreateTiles(theTiles);
+    theSubSector->SetKind(!theFill.classify_tiles ? theFill.path_area_kind : theFill.kind);
+    inSector->InsertSubSector(theSubSector->GetID(), theSubSector);
+    ioSubSectors.insert(std::map<unsigned short, EEAIPathSubSector*>::value_type(theID, theSubSector));
+    ee_astar_flood_finish(inFill, NULL);
+}
+
 // Builds the path-sector grid of inMap (sector and region size by map size) and the sub-sectors (one fill per tile
 // not yet in one, kept inside its sector), files them with their path areas, then links them (LinkSubSectorGrid)
-void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage)
+void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EeAStarFlood* inAreas)
 {
-    EEAIPathSectorMachine theMachine(0xf, inMap);
+    EeAStarFlood* theFill = ee_astar_flood_new(EeAStarFloodKind::PathSector, 0xf, inMap->mSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill);
+    EEAIAStarView theView;
+    theView.SetMap(inMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    std::map<unsigned short, EEAIPathSubSector*> theSubSectors;
     U2DRectangle<long> theBounds;
     unsigned short theID = 1;
     this->DeletePathSectors();
     EeSectorSizes theSizes = ee_astar_sector_sizes((int32_t)inMap->mL195610);   // Rust: ee_astar sectors.rs
     long theSectorSize = theSizes.sector_size;
     gEEAIRegionSize = theSizes.region_size;
-    EEAIPathSectorMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(inMap->mSize, inMap->mSize);
+    ee_astar_flood_init(theFill, inMap->mSize, inMap->mSize);
     ee_astar_cm_init_sectors(&this->mRecord, inMap->mSize, theSectorSize);
     this->ResizeTable(EeAStarCmTable::PathSectors, this->mRecord.sectors_x * this->mRecord.sectors_y + 1);
     for (long x = 0; x < this->mRecord.sectors_x; x++) {
@@ -784,30 +959,24 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
             this->SetPathSector(thePathSector);
         }
     }
-    theMachine.mCheckCorners = false;
-    theMachine.mGoal.mPathAreaStorage = inStorage;
+    ee_astar_flood_set_check_corners(theFill, false);
+    theState->sector.path_area_storage = inAreas;
     for (long i = inMap->mSize - 1; i >= 0; i--) {
         for (long j = inMap->mSize - 1; j >= 0; j--) {
-            if (theMachine.mSubSectorIDs[theMachine.mHeight * i + j] != 0 || !inMap->GetTile(i, j))
+            if (ee_astar_flood_id(theFill, i, j) != 0 || !inMap->GetTile(i, j))
                 continue;
             EETileCoordinate theTile;
             theTile.mX = i;
             theTile.mY = j;
             EEAIPathSector* thePathSector = this->GetPathSector(theTile);
-            theMachine.mGoal.mSectorBounds = thePathSector->GetBounds();
-            theMachine.mGoal.mSector = thePathSector;
-            theMachine.mGoal.mStartTile.mX = i;
-            theMachine.mGoal.mStartTile.mY = j;
-            theMachine.mGoal.mGoalTile.mX = inMap->mSize;
-            theMachine.mGoal.mGoalTile.mY = inMap->mSize;
-            theMachine.Run();
-            theMachine.mGoal.CollectTiles();
-            theMachine.mGoal.CreateSubSector();
+            theState->sector.sector_bounds = EEAIAStarRectOf(thePathSector->GetBounds());
+            ee_astar_flood_run(theFill, i, j, inMap->mSize, inMap->mSize, &theCallbacks);
+            EEAIPathSectorCreate(theFill, thePathSector, theSubSectors);
         }
     }
     this->ResizeTable(EeAStarCmTable::PathSubSectors, this->mRecord.last_sub_sector_id + 1);
-    for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theMachine.mGoal.mSubSectors.begin();
-         theIt != theMachine.mGoal.mSubSectors.end(); ++theIt) {
+    for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theIt = theSubSectors.begin(); theIt != theSubSectors.end();
+         ++theIt) {
         EEAIPathSubSector* theSubSector = theIt->second;
         theSubSector->UpdateLocation();
         this->SetTable(EeAStarCmTable::PathSubSectors, theIt->first, theSubSector);
@@ -822,21 +991,22 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
             }
         }
     }
-    this->LinkSubSectorGrid(theMachine, inMap);
+    this->LinkSubSectorGrid(theFill, inMap);
+    ee_astar_flood_free(theFill);
 }
 
 // The link walks' view of the sub sectors (ee_astar sub_sector_links.rs): the id at a tile from the fill's grid
 // (LinkSubSectorGrid) or the manager's lookup (RelinkSubSectors), and whether the manager lists an id
 struct EEAISubSectorGridView {
     EEAIContinentManager* mManager;
-    EEAIPathSectorMachine* mMachine;    // NULL: the manager's GetPathSubSectorID
+    EeAStarFlood* mFill;    // NULL: the manager's GetPathSubSectorID
 };
 
 static uint16_t EEAISubSectorIDAt(void* inView, int32_t inX, int32_t inY)
 {
     EEAISubSectorGridView* theView = (EEAISubSectorGridView*)inView;
-    if (theView->mMachine)
-        return theView->mMachine->mSubSectorIDs[theView->mMachine->GetHeight() * inX + inY];
+    if (theView->mFill)
+        return (uint16_t)ee_astar_flood_id(theView->mFill, inX, inY);
     return theView->mManager->GetPathSubSectorID(inX, inY);
 }
 
@@ -854,16 +1024,18 @@ void EEAIContinentManager::ApplySubSectorLinks(EeSubSectorLinks* inLinks)
 // Copies the fill's sub-sector ids into the id grid and links every pair of neighbouring sub-sectors; a diagonal
 // link carries the two corner sub-sectors when both are open (Rust: ee_astar sub_sector_links.rs walks the grid and
 // lists the LinkSubSectors calls; the id grid is filled first, the walk reads the fill's grid)
-void EEAIContinentManager::LinkSubSectorGrid(EEAIPathSectorMachine& inMachine, EEMap* inMap)
+void EEAIContinentManager::LinkSubSectorGrid(EeAStarFlood* inFill, EEMap* inMap)
 {
     ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::SubSectorIds, true, this->GetHeight() * this->GetWidth());
-    long theWidth = inMachine.GetWidth();
-    long theHeight = inMachine.GetHeight();
+    int32_t theSize[2];
+    ee_astar_flood_size(inFill, theSize);
+    long theWidth = theSize[0];
+    long theHeight = theSize[1];
     for (long x = 0; x < theWidth; x++) {
         for (long y = 0; y < theHeight; y++)
-            this->mRecord.sub_sector_ids[this->GetWidth() * x + y] = inMachine.mSubSectorIDs[inMachine.GetHeight() * x + y];
+            this->mRecord.sub_sector_ids[this->GetWidth() * x + y] = (unsigned short)ee_astar_flood_id(inFill, x, y);
     }
-    EEAISubSectorGridView theView = { this, &inMachine };
+    EEAISubSectorGridView theView = { this, inFill };
     EeSubSectorGridCallbacks theCallbacks = { &theView, EEAISubSectorIDAt, EEAISubSectorPresent };
     this->ApplySubSectorLinks(ee_astar_sub_sector_links(0, (int32_t)theWidth, 0, (int32_t)theHeight, &theCallbacks));
 }
@@ -1513,13 +1685,18 @@ bool EEAIContinentManager::Rebuild()
     EEAIPathSubSector* theSubSector;
     long i;
     EEAIPathArea* theArea;
-    EEAIPathSectorMachine theMachine(0xf, gWorld.mMap);
+    EEMap* theMap = gWorld.mMap;
+    EeAStarFlood* theFill = ee_astar_flood_new(EeAStarFloodKind::PathSector, 0xf, theMap->mSize);
+    EeAStarFloodState* theState = ee_astar_flood_state(theFill);
+    EEAIAStarView theView;
+    theView.SetMap(theMap);
+    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
+    std::map<unsigned short, EEAIPathSubSector*> theNewSubSectors;
     std::map<unsigned short, std::vector<EETileCoordinate> > theTiles;
     std::vector<EEAIPathSubSector*> theSubSectors;
     U2DRectangle<long> theBounds;
-    EEMap* theMap = gWorld.mMap;
-    theMachine.mCheckCorners = true;
-    theMachine.mGoal.mClassifyTiles = true;
+    ee_astar_flood_set_check_corners(theFill, true);
+    theState->sector.classify_tiles = true;
     std::map<unsigned short, std::vector<EETileCoordinate> >::iterator theIt;
     for (n = 0; n < (long)ee_astar_cm_sector_tiles_count(&this->mRecord) && n < 1; n++) {   // the first pending sector
         unsigned short theID;
@@ -1547,34 +1724,27 @@ bool EEAIContinentManager::Rebuild()
             theBounds.Extend(theSector->GetBounds().GetBottomRight());
         }
     }
-    theMachine.mGoal.mTileBounds = theBounds;
-    EEAIPathSectorMachine* theStorage = &theMachine;   // the storage's virtual through the machine (no null check)
-    theStorage->Init(theMap->mSize, theMap->mSize);
+    theState->sector.tile_bounds = EEAIAStarRectOf(theBounds);
+    ee_astar_flood_init(theFill, theMap->mSize, theMap->mSize);
     for (theIt = theTiles.begin(); theIt != theTiles.end(); ++theIt) {
         theSector = this->GetPathSectors()[theIt->first];
         for (x = theSector->GetBounds().mRight; x >= theSector->GetBounds().mLeft; x--) {
             for (y = theSector->GetBounds().mBottom; y >= theSector->GetBounds().mTop; y--) {
-                if (theMachine.mSubSectorIDs[theMachine.mHeight * x + y] != 0 || !theMap->GetTile(x, y))
+                if (ee_astar_flood_id(theFill, x, y) != 0 || !theMap->GetTile(x, y))
                     continue;
                 theTile.mX = x;
                 theTile.mY = y;
                 theSector = this->GetPathSector(theTile);
-                theMachine.mGoal.mSector = theSector;
-                theMachine.mGoal.mSectorBounds = theSector->GetBounds();
-                theMachine.mGoal.mStartTile.mX = x;
-                theMachine.mGoal.mStartTile.mY = y;
-                theMachine.mGoal.mGoalTile.mX = theMap->mSize;
-                theMachine.mGoal.mGoalTile.mY = theMap->mSize;
-                theMachine.Run();
-                theMachine.mGoal.CollectTiles();
-                theMachine.mGoal.CreateSubSector();
+                theState->sector.sector_bounds = EEAIAStarRectOf(theSector->GetBounds());
+                ee_astar_flood_run(theFill, x, y, theMap->mSize, theMap->mSize, &theCallbacks);
+                EEAIPathSectorCreate(theFill, theSector, theNewSubSectors);
             }
         }
     }
     if (this->GetPathSubSectors().size() <= this->mRecord.last_sub_sector_id)
         this->ResizeTable(EeAStarCmTable::PathSubSectors, this->mRecord.last_sub_sector_id + 1);
-    for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theNew = theMachine.mGoal.mSubSectors.begin();
-         theNew != theMachine.mGoal.mSubSectors.end(); ++theNew) {
+    for (std::map<unsigned short, EEAIPathSubSector*>::const_iterator theNew = theNewSubSectors.begin();
+         theNew != theNewSubSectors.end(); ++theNew) {
         theSubSector = theNew->second;
         theSubSector->UpdateLocation();
         this->SetTable(EeAStarCmTable::PathSubSectors, theNew->first, theSubSector);
@@ -1583,8 +1753,11 @@ bool EEAIContinentManager::Rebuild()
     }
     this->RelinkSubSectors(theTiles, theSubSectors);
     this->mRecord.state = 2;
-    for (i = theMachine.mGoal.mStaleTiles.size() - 1; i >= 0; i--)
-        this->RepairPathArea(theMachine.mGoal.mStaleTiles[i]);
+    size_t theStaleCount = 0;
+    const EePoint* theStale = ee_astar_flood_stale(theFill, &theStaleCount);
+    for (i = (long)theStaleCount - 1; i >= 0; i--)
+        this->RepairPathArea(U2DPoint<long>(theStale[i].x, theStale[i].y));
+    ee_astar_flood_free(theFill);
     for (i = theSubSectors.size() - 1; i >= 0; i--) {
         (*(theSubSectors.begin() + i))->SetStale(true);
         theArea = this->GetPathAreaAt((*(theSubSectors.begin() + i))->GetLocation());

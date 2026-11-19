@@ -5,11 +5,8 @@
 //! While `ee_astar_start` / `ee_astar_expand` run, the callbacks must not call any `ee_astar_*` function on the same
 //! storage: what the goals read of the storage during a search comes in the callbacks' arguments.
 
-use crate::astar::area_goals::{
-    self, AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaFill, EeAStarPathAreaInfo,
-    EeAStarPathSectorFill,
-};
-use crate::astar::goals::{self, EeAStarChokeFill, EeAStarContinentFill, EeAStarHillFill, View};
+use crate::astar::area_goals::{AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
+use crate::astar::goals::View;
 use crate::astar::graph::{self, GraphHost, GraphKind, GraphList, GraphMachineState, GraphNodeView, GraphStorage, Obj};
 use crate::astar::machine::{self, Host, MachineState};
 use crate::astar::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
@@ -275,7 +272,7 @@ pub unsafe extern "C" fn ee_astar_next_path_tile(s: *mut EeAStarStorage, x: *mut
     r.is_some()
 }
 
-fn view(s: &Storage, node: i32) -> EeAStarNodeView {
+pub(crate) fn view(s: &Storage, node: i32) -> EeAStarNodeView {
     let n = s.node(node);
     let (has_parent, parent_x, parent_y) =
         if n.parent != NIL { (true, s.node(n.parent).x, s.node(n.parent).y) } else { (false, 0, 0) };
@@ -457,7 +454,7 @@ pub struct EeAStarViewCallbacks {
     pub live_space_dock: extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> bool,
 }
 
-struct CView<'a>(&'a EeAStarViewCallbacks);
+pub(crate) struct CView<'a>(pub(crate) &'a EeAStarViewCallbacks);
 
 impl View for CView<'_> {
     fn has_tile(&mut self, x: i32, y: i32) -> bool {
@@ -609,64 +606,6 @@ impl PathView for CView<'_> {
         py: i32,
     ) -> i32 {
         (self.0.modifier_cost)(self.0.ctx, modifier, from_x, from_y, x, y, px, py)
-    }
-}
-
-/// `EEAIAStarContinentGoal::AcceptTile` over the goal's state.
-///
-/// # Safety
-/// `fill` readable and writable; `view` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_continent_accept(
-    fill: *mut EeAStarContinentFill,
-    view: *const EeAStarViewCallbacks,
-    x: i32,
-    y: i32,
-) -> bool {
-    let mut f = unsafe { *fill };
-    let r = goals::continent_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
-    unsafe { *fill = f };
-    r
-}
-
-/// `EEAIAStarHillGoal::AcceptTile` over the goal's state.
-///
-/// # Safety
-/// As `ee_astar_continent_accept`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_hill_accept(
-    fill: *mut EeAStarHillFill,
-    view: *const EeAStarViewCallbacks,
-    x: i32,
-    y: i32,
-) -> bool {
-    let mut f = unsafe { *fill };
-    let r = goals::hill_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
-    unsafe { *fill = f };
-    r
-}
-
-/// `EEAIAStarChokePointGoal::AcceptTile` over the goal's state; `*serial` the tile's area serial when accepted.
-///
-/// # Safety
-/// As `ee_astar_continent_accept`; `serial` writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_choke_accept(
-    fill: *mut EeAStarChokeFill,
-    view: *const EeAStarViewCallbacks,
-    x: i32,
-    y: i32,
-    serial: *mut u32,
-) -> bool {
-    let mut f = unsafe { *fill };
-    let r = goals::choke_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
-    unsafe { *fill = f };
-    match r {
-        Some(s) => {
-            unsafe { *serial = s };
-            true
-        }
-        None => false,
     }
 }
 
@@ -845,40 +784,6 @@ pub unsafe extern "C" fn ee_astar_path_search_done(
     let mut g = unsafe { *goal };
     path_goals::search_done(&mut g, &mut CView(unsafe { &*view }), has_current.then_some((x, y)), has_open);
     unsafe { *goal = g };
-}
-
-/// `EEAIAStarPathAreaGoal::AcceptTile` over the goal's state.
-///
-/// # Safety
-/// `fill` readable and writable; `view` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_path_area_accept(
-    fill: *mut EeAStarPathAreaFill,
-    view: *const EeAStarViewCallbacks,
-    x: i32,
-    y: i32,
-) -> bool {
-    let mut f = unsafe { *fill };
-    let r = area_goals::path_area_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
-    unsafe { *fill = f };
-    r
-}
-
-/// `EEAIAStarPathSectorGoal::AcceptTile` over the goal's state.
-///
-/// # Safety
-/// As `ee_astar_path_area_accept`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_path_sector_accept(
-    fill: *mut EeAStarPathSectorFill,
-    view: *const EeAStarViewCallbacks,
-    x: i32,
-    y: i32,
-) -> bool {
-    let mut f = unsafe { *fill };
-    let r = area_goals::path_sector_accept(&mut f, &mut CView(unsafe { &*view }), x, y);
-    unsafe { *fill = f };
-    r
 }
 
 // ---- the graph searches (graph.rs) ----
@@ -1085,7 +990,7 @@ pub unsafe extern "C" fn ee_astar_graph_next_path_node(
 
 /// A graph node as the capture sees it (`EEAIAStarGraphStorage::CaptureNodes`): the parent's index in `parent_x`
 /// and the node's own index in `parent_y`.
-fn graph_view(s: &GraphStorage, node: i32) -> EeAStarNodeView {
+pub(crate) fn graph_view(s: &GraphStorage, node: i32) -> EeAStarNodeView {
     let n = s.node(node);
     EeAStarNodeView {
         x: n.x,
