@@ -68,7 +68,6 @@ public:
     bool GetIsSpaceMap() const;
     bool GetIsSpaceTile(unsigned long inX, unsigned long inY) const;
     const GE3DPlane& GetLeftPlane() const;
-    void GetMeshNormal(float inX, float inY, GEVector& outNormal) const;
     float GetMeshZ(float inX, float inY) const;
     unsigned long GetNumVisibleTiles() const;
     unsigned long GetNumVisibleTileRows() const;

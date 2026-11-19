@@ -79,6 +79,7 @@ pub mod ffi_mesh;
 pub mod ffi_scene;
 pub mod fill;
 pub mod goal_markers;
+pub mod gobj_media;
 #[cfg(test)]
 mod golden_beam;
 #[cfg(test)]

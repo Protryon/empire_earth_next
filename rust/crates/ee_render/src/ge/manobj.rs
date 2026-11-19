@@ -52,11 +52,12 @@ pub enum EeGeManOp {
     /// `obj->SetSubModel(model, b)`, `model->UReferenceCounter::Dereference()`; the model.
     ModelNewSub,
     /// `GEFindModelFile(obj, UString(a), *b, *c)`: `obj` the path, `a` the name (`const char*`), `b` the shared
-    /// frames (`std::map<unsigned long, long>*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
+    /// frames (`const EeGeSharedFrames*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
     ModelFindFile,
     /// `new GEModel(this)`.
     ModelNewEmpty,
-    /// `obj->StoreLoaded(a, *b)`: `a` the file, `b` the shared frames; the result.
+    /// `ee_ge_mod_store_loaded(obj's model, a, b's frames)`: `a` the file, `b` the shared frames
+    /// (`const EeGeSharedFrames*`); the result.
     ModelStoreLoaded,
     /// `obj->SizeOf()`.
     ModelSizeOf,
@@ -279,7 +280,7 @@ impl EeGeModelManager {
     /// does not store.
     ///
     /// # Safety
-    /// `p` is live; `name` is NUL-terminated; `textures` is the host's.
+    /// `p` is live; `name` is NUL-terminated; `textures` is a live `EeGeSharedFrames` (the host reads it).
     pub unsafe fn load(p: *mut Self, name: *const c_char, textures: *mut c_void) -> usize {
         // SAFETY: the caller's contract
         unsafe {
@@ -501,18 +502,18 @@ pub unsafe extern "C" fn ee_ge_modman_count(p: *mut EeGeModelManager) -> c_ulong
     unsafe { mm(p).models.len() as c_ulong }
 }
 
-/// `LoadModel(name, textures)`.
+/// `LoadModel(name, shared)`: `shared` the frames the model shares (the original's `std::map<unsigned long, long>`).
 ///
 /// # Safety
-/// `p` is live; `name` is NUL-terminated.
+/// `p` is live; `name` is NUL-terminated; `shared` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_modman_load(
     p: *mut EeGeModelManager,
     name: *const c_char,
-    textures: *mut c_void,
+    shared: *const crate::ge::model_ffi::EeGeSharedFrames,
 ) -> *mut c_void {
     // SAFETY: the caller's contract
-    unsafe { EeGeModelManager::load(p, name, textures) as *mut c_void }
+    unsafe { EeGeModelManager::load(p, name, shared as *mut c_void) as *mut c_void }
 }
 
 /// `RemoveAllModels`.
