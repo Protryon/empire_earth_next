@@ -68,9 +68,6 @@ extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpo
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
-// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
-// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced)
-char gEmptyString[4] = "";
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;
 
