@@ -253,7 +253,8 @@ impl GraphHost for Hooks<'_, '_> {
                 r = call(self.raw, EE_PATH_SS_GATE_OPEN, &[neighbor as u64], &[g.player_id.into()]) != 0;
             }
             if r && from != 0 && s.links > 0 {
-                r = call(self.raw, EE_PATH_SS_PASSABLE_LINK, &[neighbor as u64, from as u64, self.goal as u64], &[]) != 0;
+                r = call(self.raw, EE_PATH_SS_PASSABLE_LINK, &[neighbor as u64, from as u64, self.goal as u64], &[])
+                    != 0;
             }
             r
         };

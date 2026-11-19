@@ -635,7 +635,8 @@ pub(crate) fn capture_graph_storage(cap: &mut CaptureRun, st: &GraphStorage) {
             cap.node(&graph_view(st, node));
         }
     }
-    for list in [GraphList::Closed, GraphList::ClosedTable, GraphList::SortedOpen, GraphList::OpenTable, GraphList::FastOpen]
+    for list in
+        [GraphList::Closed, GraphList::ClosedTable, GraphList::SortedOpen, GraphList::OpenTable, GraphList::FastOpen]
     {
         let nodes: Vec<EeAStarNodeView> = st.list(list).into_iter().map(|n| graph_view(st, n)).collect();
         cap.nodes(&nodes);
@@ -842,7 +843,16 @@ pub(crate) mod test_view {
         unreachable!()
     }
     #[allow(clippy::too_many_arguments)]
-    pub(crate) extern "C" fn no_cost(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: i32, _: i32, _: i32, _: i32) -> i32 {
+    pub(crate) extern "C" fn no_cost(
+        _: *mut c_void,
+        _: *mut c_void,
+        _: i32,
+        _: i32,
+        _: i32,
+        _: i32,
+        _: i32,
+        _: i32,
+    ) -> i32 {
         unreachable!()
     }
     pub(crate) extern "C" fn no_cont(_: *mut c_void, _: i32, _: i32, _: *mut EeAStarContinentInfo) {
@@ -914,7 +924,6 @@ pub(crate) mod test_view {
             live_space_dock: no_b,
         }
     }
-
 }
 
 #[cfg(test)]
@@ -1023,7 +1032,10 @@ mod tests {
             for y in 0..4 {
                 let land = MAP.with(|m| m.borrow().as_ref().unwrap().terrain_at(x, y)) == 0;
                 assert_eq!(f.id_at(x, y), if land { 1 } else { 2 }, "tile ({x}, {y})");
-                assert_eq!(f.extra_at(x, y), u16::from(if land { goals::CATEGORY_LAND } else { goals::CATEGORY_WATER }));
+                assert_eq!(
+                    f.extra_at(x, y),
+                    u16::from(if land { goals::CATEGORY_LAND } else { goals::CATEGORY_WATER })
+                );
             }
         }
     }

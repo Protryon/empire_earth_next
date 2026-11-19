@@ -223,7 +223,12 @@ impl Host for PathHost<'_, '_> {
         if self.bounded && !g.modifier.is_null() {
             // the bounded modifier inspects the node (it may move the goal: the enemy-in-range modifier)
             let (x, y) = node.unwrap_or((0, 0));
-            call(self.raw, EE_PATH_CHECK_NODE, &[g.bounded_modifier as u64], &[i64::from(node.is_some()), x.into(), y.into()]);
+            call(
+                self.raw,
+                EE_PATH_CHECK_NODE,
+                &[g.bounded_modifier as u64],
+                &[i64::from(node.is_some()), x.into(), y.into()],
+            );
         }
         let (x, y) = node.unwrap_or((0, 0));
         note_bool(EV_GOAL_NODE, i32::from(node.is_some()), x, y, 0, 0, result)
@@ -553,7 +558,10 @@ impl PathSearch {
     /// The found path as points (`GetPoints`): the tile plus the goal's offsets (the bounded goal's 0.5), height 0.
     pub fn points(&mut self) -> Vec<EePathPoint> {
         let off = if self.bounded { [0.5f32, 0.5] } else { self.goal().offset };
-        self.path().into_iter().map(|p| EePathPoint { x: p.x as f32 + off[0], y: p.y as f32 + off[1], z: 0.0 }).collect()
+        self.path()
+            .into_iter()
+            .map(|p| EePathPoint { x: p.x as f32 + off[0], y: p.y as f32 + off[1], z: 0.0 })
+            .collect()
     }
 
     /// The closed, then the open nodes' tiles (`GetPath`'s visited tiles).
@@ -772,7 +780,8 @@ pub fn intercept(bounded: &mut *mut PathSearch, op: i32, io: &mut EePathIo, raw:
         EE_PATH_PM_SAVE => {
             let s = unsafe { search(h[0]) };
             // SAFETY: the record and the lists are the caller's
-            let (out, lists) = unsafe { (&mut *(h[1] as *mut EePathSavedMachine), &mut *(h[2] as *mut EePathSavedLists)) };
+            let (out, lists) =
+                unsafe { (&mut *(h[1] as *mut EePathSavedMachine), &mut *(h[2] as *mut EePathSavedLists)) };
             i64::from(s.save(out, lists))
         }
         EE_PATH_PM_LOAD => {
@@ -950,7 +959,11 @@ impl PathSearch {
 /// # Safety
 /// `search` a live search; `out` writable.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_path_search_info(search: *const c_void, storage: bool, out: *mut EeAStarPathSearchInfo) {
+pub unsafe extern "C" fn ee_astar_path_search_info(
+    search: *const c_void,
+    storage: bool,
+    out: *mut EeAStarPathSearchInfo,
+) {
     unsafe { *out = (*(search as *const PathSearch)).info(storage) };
 }
 
@@ -985,7 +998,13 @@ mod tests {
     extern "C" fn can_move_on(_: *mut c_void, _: *mut c_void, terrain: i32) -> bool {
         terrain == 0
     }
-    extern "C" fn are_passable(_: *mut c_void, _: *mut c_void, _: i32, _: i32, _: crate::astar::modifiers::Skip) -> bool {
+    extern "C" fn are_passable(
+        _: *mut c_void,
+        _: *mut c_void,
+        _: i32,
+        _: i32,
+        _: crate::astar::modifiers::Skip,
+    ) -> bool {
         true
     }
     extern "C" fn crowd_cost(_: *mut c_void, _: *mut c_void, _: i32, _: i32) -> i32 {
