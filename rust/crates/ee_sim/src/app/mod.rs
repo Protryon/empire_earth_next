@@ -24,6 +24,7 @@ pub mod storm;
 pub mod storm_ffi;
 #[cfg(test)]
 mod storm_tests;
+pub mod team_save;
 pub mod teams;
 pub mod teams_ffi;
 #[cfg(test)]

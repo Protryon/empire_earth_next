@@ -65,7 +65,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1304e4 131b7c Empire Earth/Empire Earth/EEGameState.cpp
 131b7c 13242b Empire Earth/Empire Earth/EEMusicManager.cpp
 13242b 136b6d Empire Earth/Empire Earth/EEPreferences.cpp
-136b6d 136d66 Empire Earth/Empire Earth/EETeam.cpp
 1372a6 137b3f Empire Earth/Empire Earth/EEVCWonder.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
 13e967 13e967 Empire Earth/Empire Earth/EEGlobals.cpp   # the globals of Empire Earth.cpp (data only; same init order)

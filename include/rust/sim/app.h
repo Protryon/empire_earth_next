@@ -429,6 +429,30 @@ long ee_app_storm_route_cost(bool snow,
                              long kind,
                              bool hill);
 
+/// `Load`'s count: the result; `out` the count (0 when the read failed).
+///
+/// # Safety
+/// `file` and `host` are the saved game's (`EESaveFilePrimitive`); `out` is writable.
+int32_t ee_app_team_load_count(void *file, EeUnitsPlayerSaveFn host, uint32_t *out);
+
+/// `Load`'s players, into the team's `count` players (sized by the caller).
+///
+/// # Safety
+/// As [`ee_app_team_load_count`]; `players` holds `count` values.
+int32_t ee_app_team_load_players(void *file,
+                                 EeUnitsPlayerSaveFn host,
+                                 unsigned long *players,
+                                 size_t count);
+
+/// `Save`: the count and the players.
+///
+/// # Safety
+/// As [`ee_app_team_load_players`].
+int32_t ee_app_team_save(void *file,
+                         EeUnitsPlayerSaveFn host,
+                         const unsigned long *players,
+                         size_t count);
+
 /// `EEWorld::AddTeam` of `n` players.
 ///
 /// # Safety
