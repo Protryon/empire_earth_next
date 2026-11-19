@@ -2,41 +2,48 @@
 
 The lane's state. Each round rewrites this file to the current state; each round's story goes in PORT_LEARNINGS.md
 ("The game's leaves, round N"). The census is `python -I tools/cpp_deps.py report` (after a build: it reads the
-objects): `build/cpp_deps/leaves.txt` and `near_leaves.txt`; `cpp_deps.py unit FILE` names one unit's edges.
+objects): `build/cpp_deps/leaves.txt`, `near_leaves.txt` and `waves.txt`; `cpp_deps.py unit FILE` names one unit's
+edges.
 
-## Moved (round 1, branch `rust-leaves1`)
+## Moved
 
 | C++ unit (deleted) | Rust home | What callers keep |
 |---|---|---|
-| (EESimCapture.cpp: moved here and by the app lane at once; the merge kept the app lane's ee_sim app `capture.rs`) | ee_sim app `capture_record.rs` (Rust's records over the writer) | |
-| EEAIAStarCapture.cpp/.h | ee_sim astar `search_note.rs` (the run stack, events, digests) | the view's note: `ee_astar_capture_note` |
-| EEAIContinentCapture.cpp/.h | ee_sim astar `cm_io.rs` `ee_astar_cm_capture`; ee_sim app `capture_record.rs` the HULL/AREA records | lle/U2DPolygon.h's `EEGeomCapture*` inline forwarders |
-| EEWorldViewCheck.cpp | ee_sim world `check.rs` `ee_world_view_check` (VWCK from the views alone) | EEPhysics::Tick's call |
-| EEVoting.cpp | ee_sim app `voting.rs` (the record, Propose) | `EEVoting` header-only over `EeAppVoting` (no vtable) |
-| EEUnitStore.cpp, part | ee_sim units `step_note.rs` (USTM, USST), `store_sweep.rs` (USPK, USFL, their sweeps, the Fill test by objects) | ee/EEUnitStore.h inline forwarders |
-| EECPCombatManager.cpp | (empty saves; IsMilitaryClass had no caller) | header-only here; origin/rust deleted the class |
-| EEStartingResources.cpp, EEUCUpgradeTable.cpp | ee_data's lists (already) | header-only: `Load` a template over `EEDbLoadList` |
-| EEAIUnitTargetingTable.cpp | ee_data `tables.rs` (the 3 x 10 weights) | header-only loader; the target search reads `ee_data_ai_targeting_table` |
-| EECPEngine.cpp | ee_game `cp_engine.rs` (the manifest's files and read, the choices, EE_AI_ENGINE, the resolve, the folder hash, the log) | ee/EECPEngine.h inline forwarders; the seats' six functions in EECPNext.cpp |
+| **Round 2** (branch `rust-leaves2`) | | |
+| EECPPlaceCapture.cpp | ee_sim cp `place_capture.rs` (PLCE, CPEV: the depths, the event thread, the records, the placement's and the player's state through the world layout: `cp_placement`, `placement_town`, `placement_rust`) | ee/EECPPlaceCapture.h: `EECPPlaceScope` inline over `ee_cp_scope_*` |
+| EEAIArea.cpp | ee_sim astar `area_ops.rs` (the hull's queries and rebuilds, the closest points, the tiles; HULL 1/2/6, AREA 1/3/4/5) | ee/EEAIArea.h inline; `GetRandomPoint`, `UpdateHull`, `UpdateBounds` in EEAIRectangleArea.cpp (the random stream, the influence table) |
+| EEColorTable.cpp | ee_data `tables.rs` (`EeDataList::Colors`, `ee_data_player_color`, `_find`) | ee/EEColorTable.h: static readers returning `GEColor` by value; `EEGetPlayerColor` by value |
+| EECPBehaviorTable.cpp | ee_data `tables.rs` (`gCPBehaviors` itself, `ee_data_cp_behavior_load`) | `extern "C" EECPBehavior gCPBehaviors[129]`; `Load` a header template |
+| EEUnitBehavior.cpp | ee_data `tables.rs` (the world constants `ee_data_world_*`, `gWeaponToHitFactors`, `ee_data_to_hit_load`); ee_sim combat `damage_table.rs` (CBDT) | ee/EEDatabaseTables.h: `EEWorldTable`, `EEToHitTable::Load`, `EETerrainTypeTable`'s loads inline; ee/EEUnitBehavior.h header-only |
+| EEDatabase.cpp | ee_data `tables.rs` (`ee_data_objects_*`: dbobjects' records) | ee/EEDatabase.h inline; `EEDbObject` the record's bytes |
+| EEUnitSet.cpp, EEUnitSetManager.cpp | ee_sim app `unit_sets.rs` (the records, the table, the links, `Contains`, the walk) | ee/EEUnitSetManager.h: inline readers; an `EEUnitSet*` is a Rust set |
+| EEGameVariant.cpp | (ee_data's list already) | ee/EEGameVariant.h header-only (`GetFactor` over the unit sets); `gGameVariants` in EEGlobals.cpp |
+| EETeam.cpp | ee_sim app `team_save.rs` (the players' load and save over `EESaveFilePrimitive`) | ee/EETeam.h header-only |
+| EEHumanPlayer.cpp, EECDKeyStrings.cpp | (none: the overrides were EEPlayer's own; the key strings were never read) | ee/EEHumanPlayer.h inline constructors |
+| (EETerrainTypeTable.cpp, part; EEAIPathSubSector.cpp, part) | ee_sim combat `damage_table.rs`; ee_sim astar `sub_sector_pass.rs` (`IsPassable` over the views) | `GetAttackFactor`, `EEFamilyCount`, `EEDamageFactor` stay; `gDamageTable` and its twins went |
+| **Round 1** (branch `rust-leaves1`) | | |
+| EESimCapture.cpp, EEAIAStarCapture, EEAIContinentCapture, EEWorldViewCheck, EEVoting, EECPCombatManager, EEStartingResources, EEUCUpgradeTable, EEAIUnitTargetingTable, EECPEngine; EEUnitStore.cpp part | PORT_LEARNINGS "The game's leaves, round 1" | |
 
 ## Left, and why
 
-- **EERules** (208): `eedata.py cppgate` compiles EERules.cpp into the converter's gate; moving it changes the
-  converter (tools/eedata), which the lane must not touch without the lead.
-- **EEWorldLayout** (218): the layout is `offsetof` and base casts: what only the C++ compiler knows.
-- **EEColorTable**, **EECPBehaviorTable**, **EETeam**, **EEUnitClassImprovement**, **EESoundObject**: C++ object
-  storage (GEColor members and a vector of objects; a global record array read in place; FSFile saves through
-  vtables; UWideString names): each needs its storage as a Rust list first.
-- **EECPPlaceCapture** (183, a leaf after the merge): its lists' digests are Rust's since the AI Thread cluster's
-  round 3; the scope's depth, thread and record can move, but the class's inline constructor needs the computer
-  player's id and `State`/`Player` read C++ members (the town centre tile, EeCpFields' bytes): next round.
-- **EEUnitStore**'s rest (~390): the insert's seed (offsets of the C++ members), the USCK cross-check (virtual
-  `GetChecksum` over the chain), the goal queue reports.
-- **EEAIArea**, **EEMRecord**, **NEMessage**, **NESynchronousClient**: whole C++ classes (vtables, the area
-  hierarchy, the message classes).
-- SEConductor, UITrampolines, UIEPolledEvent: LLE (the LLE lane's).
+- **EERules** (208): `tools/eedata/cppgate.py` compiles `src/Empire Earth/Database/EERules.cpp` into the converter's
+  gate (its line 45, with `cppgate/eedata_gate.cpp`). Moving it needs: the gate's source list changed (a converter
+  change: every lane's data tree is rebuilt), the rules' C++ readers (`EECombatRules::IsElevation*`, the civ
+  builder's and powers' `Find`, `EEAIPersonalityRules::ForPlayer`, `EEDifficultyAI*`, `EERules::Epoch`) as inline
+  readers over `ee_data_rules_*` (rust/crates/ee_data rules.rs holds the data already), and `eedata.py cppgate`
+  passing on the converter's side.
+- **EEWorldLayout** (218): `offsetof` and base casts, what only the C++ compiler knows.
+- **EEUnitStore**'s rest (~390): the insert's `Fill` (the objects' members), `mInUnitStore` (an RTSUnit member), the
+  USCK cross-check (`GetChecksum` virtual over the chain, the goal queues' C++ deques, the update order).
+- **EEUnitClassImprovement**, **EESoundObject**, **EEAnimal**, **EETerrainColorTable**, **EEButtonObject**,
+  **EETerrainTable**: C++ media objects (`EEMedia`, GE textures, the sound manager) or saves through raw `FSFile`
+  reads; each needs its media as a Rust object first.
+- **EEVCWonder**: the wonders (`EEPlayer::mWonders`, a C++ container of complex units) are not in the views.
+- **EEMessageCapture**, **EEMRecord**, **NEMessage**, **NESynchronousClient**: the message classes' vtables (the
+  network engine's C++ calls them); the tree moves whole with the network lane.
+- **EEFormation** (the units' lane's, round 2), the Scenario Editor's and the UI's shells (their lanes').
 
 ## Next
 
-The tables as ee_data lists (EEColorTable, EECPBehavior, EEAnimal, EEUnitBehavior's to-hit and world tables), then
-EETeam over ee_sim app teams.rs, then the captures that call only Rust once their targets move.
+EEUnitStore's `Fill` over the views (the store record from a handle) and the USCK check's walks; the media objects
+as Rust objects (the sound and button tables first); EEVCWonder once the wonders are in the views.
