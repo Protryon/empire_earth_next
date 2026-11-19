@@ -485,7 +485,9 @@ impl Drop for EeWonScrollbar {
 /// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_bar_new(component: *mut c_void, host: EeWonGuiHostFn, vertical: bool) -> *mut EeWonScrollbar {
-    Box::into_raw(Box::new(EeWonScrollbar::new(component, host, vertical)))
+    let made = Box::into_raw(Box::new(EeWonScrollbar::new(component, host, vertical)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Bar, made as *const c_void);
+    made
 }
 
 /// # Safety
@@ -493,6 +495,7 @@ pub extern "C" fn ee_won_bar_new(component: *mut c_void, host: EeWonGuiHostFn, v
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_bar_free(bar: *mut EeWonScrollbar) {
     if !bar.is_null() {
+        crate::registry::unregister(bar as *const c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(bar) });
     }

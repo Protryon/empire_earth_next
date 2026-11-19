@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinTab.h"
-#include "ee/wonapi/WONLobbyMSPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 namespace WONAPI {
 // Sets the tab frame: adds a stretched frame image over the page area and, when opaque, a dialog back inside it
 void WONTabCtrl::SetFrame(const WONFrame &theFrame)
@@ -24,7 +24,7 @@ void WONTabCtrl::SetFrame(const WONFrame &theFrame)
     this->AddChild(aFrame.get());
     if(!this->mIsTransparent)
     {
-        this->mBack = new MSDlgBack;
+        this->mBack = WONShellNew(EeWonShellKind::MsDlgBack);
         this->Fn2F6140(this->mBack.get(),0x5003,aFrame.get(),this->mFrame.mLeft,this->mFrame.mTop,
             -this->mFrame.mRight-this->mFrame.mLeft,-this->mFrame.mTop-this->mFrame.mBottom,0);
         this->AddChild(this->mBack.get());

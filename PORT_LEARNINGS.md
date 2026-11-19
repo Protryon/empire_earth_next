@@ -32905,3 +32905,154 @@ RESULT PASS (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; 
 - Map and random map: the map's plain members are Rust records already (`EeUnitsRtsMapFields`, `EeUnitsMapFields`,
   the effect and unit regions as Rust handles); what is C++ is the terrain mesh and the vertex-colour vectors (the
   graphics lane's) and the random map's generator list. Not started this round.
+
+## R6 WONLobby, round 20: WONGUI's generic widget shells; the Windows skin's widgets and the lobby's one-line controls as their kinds (ee/wonapi/WONGUIShell.h; ee_won_gui shell.rs, shell_ms.rs, shell_mscont.rs; branch rust-wonlobby20, 2026-11-19)
+
+Round 19's "Left" named the move that can reach the target: a generic C++ shell per WONGUI base class whose
+virtuals dispatch to Rust by kind, the concrete widget classes deleted whole. This round built the shells on the UI
+lane's round 3 design and moved the Windows skin's 23 widget classes and the lobby's 15 one-line control subclasses
+over them. The target (-3,000) was not reached (below: what is left and why).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 0590d9e15 | the shells (WONGUIShell.h, GuiShell.cpp; shell.rs), the 16 leaf MS controls (shell_ms.rs) and the 7 composite ones (shell_mscont.rs) as kinds; eight units (MSRemainingPainters.cpp, MSPainters.cpp, MSBorderPainters.cpp, MSComboComposition.cpp, MSScrollComposition.cpp, MSControlPainters.cpp, MSEtchedFrameGroup.cpp, MSTabComposition.cpp; the commit message says six) and three headers deleted | -710 |
+| b67eda7d6 | the lobby's 15 one-line control subclasses as their shells made with their kinds; the resource table's 31 two-line factories one template each | -188 |
+| (merge) | origin/rust a05da1364 (UI cluster round 3 and others): no WON file changed | 0 |
+| 014301255 | rust_includes.py on the merged tree: the inl names the shell header | +1 |
+
+Round total: WON C++ 34,352 -> 33,454 (-898); 33,455 on the merged tree.
+
+### The shells (ee/wonapi/WONGUIShell.h, GuiShell.cpp; ee_won_gui shell.rs)
+
+- **One C++ shell per base, one Rust kind per deleted class.** `WONShellComp : Component`, `WONShellButton :
+  Button`, `WONShellMsButton : MSButtonBase`, `WONShellInput : InputBox`, `WONShellContainer : Container`,
+  `WONShellCombo : ComboBox`, `WONShellBar : Scrollbar`, `WONShellScroller : ScrollbarScroller`, `WONShellHeader :
+  MultiListHeader`, `WONShellTab : TabCtrl`, each one `WON_SHELL_CLASS(Name, Base, BaseArgs)` line. The mixin
+  `WONShell` holds the Rust state and the kind's override mask; every virtual of the list (20: Virtual08,
+  GetDesiredSize, Paint, the mouse and key handlers, the timer, the focus, AddedToParent, HandleComponentEvent,
+  SetEnabled, SetVisible) is `Over(v) ? Virt(v) : Base::Name(..)`, and `BaseCall` is the switch the same list makes
+  (`WON_SHELL_VIRTUALS(B, WSO)` / `(B, WSB)`: one list, two expansions).
+- **The kinds** (`ShellKind`: name, overrides, init, virt, op, free, skin) hold their state in `Cell`s and are used
+  through `&self`: a base call re-enters (a Virtual08 runs the skin layout, which asks the kind its fields).
+- **The constructor's body is `init`, run after the mask is known** (`Make`: new, overrides, init), so a virtual
+  the body calls (MSTabButton's `SetDesiredSize` asks its own GetDesiredSize) reaches the kind as the derived class's
+  constructor body would have. The destructor's body is `free`, run from `~WONShell` (the second base: before the
+  C++ base's destructor).
+- **`WONShellNew(kind, a, b, c)`** makes a kind's widget (the base comes from Rust, `ee_won_shell_base`); every
+  config factory's and constructor's `new MSButton(..)` is one. **`WONShell::Op(c, op, a, b)`** is a deleted class's
+  own method for its callers (the config table's `SetDirection`, `SetLowerAmount`, `SetFrameType`, `SetDrawFrame`,
+  `SetLabelText`, ...; the predefined children's `GetHeader`, `GetLabel`). **`SafeGetShell`** is SafeGetComponent's
+  type check by kind (RootScreen's `LowerDivider` must be an MSSeperator kind).
+- **A kind's calls out go through `Sh`.** In the game the base classes' Rust objects answer the component's,
+  button's, MS button's, list's, container's, label's, scroller's, bar's, header's, tab control's and other shells'
+  calls (compobj.rs; the registry: scroller, bar, header and tab objects and the shells now register too), as the
+  C++ inline forwards did; the C++ host answers the rest: the base call, a draw, the MS button's wrapped text, the
+  list header's sort, a new widget (`New` a kind, `NewBase` a base class), a reference (`Ref`), the shell's own
+  Virtual08, a child layout (`Fn2F6140`), a combo box's part members, the MSButton font, the tab control's page
+  point, a label's text. Without the game (the drivers) every call is a host op, so a driver's scripted host traces
+  them all.
+- **The skin layouts** (skinlay.rs) run with a Rust host for a shell's widget: the kind answers its own fields and
+  parts (draw-frame flags, header height, the list control's header, the etched group's label and component), the
+  C++ skin host the rest (SkinnedContainers.cpp's cases for the MS classes now read only the base classes' members).
+- **No class name is printed.** Nothing in the WON code or the fixture prints a widget's class (the fixture's lobby
+  walk tests Label, Button, ListArea and Container, which stay): `KindName()` is the deleted class's name for a
+  debugger and the tests.
+
+### The kinds
+
+- **The leaf controls (shell_ms.rs):** MSButton, MSHeaderButton, MSCheckbox, MSRadioButton, MSLabel, MSTabButton,
+  MSArrowButton, MaxSplitterButton (from WONLobby's CrossPromotionButton.cpp: an MSArrowButton), MSCloseButton,
+  MS3DFrame, MSSeperator, MSEtchedFrame, MSScrollThumb, MSPopup, MSDlgBack, MSInputBox. Their members
+  (`mUseFrame2`, `mLowerAmount`, `mDirection`, `mType`, `mIsUp`) are the kinds' cells; their paints the mspaint.rs
+  plans the C++ ran, the plan's text call the MS button base's `DrawButtonText` in Rust.
+- **The composite controls (shell_mscont.rs):** MSComboBox, MSScrollbar, MSScrollContainer, MSListCtrl,
+  MSHeaderControl, MSTabCtrl, MSEtchedFrameGroup: their constructors' parts made and held as before (a SmartPtr
+  local or temporary over a call is a `Ref` pair around it; a factory's temporary assigned straight to a member is
+  dropped: an AddRef and a Release with nothing between), their layouts and paints, their flags.
+- **The lobby's one-line controls:** LoginStatusCtrl, InitFailedCtrl, GameStagingCtrl, LoginCtrl, LobbyOptionsCtrl,
+  FriendsListCtrl, LostPasswordCtrl, LostUserNameCtrl, CreateAccountCtrl, UserListCtrl, QuickPlayCtrl,
+  GameUserListCtrl, UpdateAccountCtrl, DirectConnectCtrl and RoomCtrl were LobbyRustCtrl or LobbyRustDialogCtrl
+  (round 4's and 13's lobby shells) with a kind and nothing else: the resource table makes the shells with their
+  kinds (`CtlFactory<kind>`, `DlgCtlFactory<kind>`), its other factories one template each (`New<T>`,
+  `ScreenFactory<lan>`). No caller held these types (the configs' `mUserList` members were never read).
+
+### Tests and mutations
+
+- `won_shell_test` (new, 51,048 checks): the deleted classes' statements (copied from the C++ before the port, each
+  call on a C++ object replaced by the shell host op that makes it, the base classes' inline members written out)
+  over a scripted world, against the kinds, op for op: 30,000 sequences over the 16 leaf kinds (12 random calls
+  each: paints, desired sizes, the classes' setters, world changes) and 21,000 over the 7 composite kinds (14 each:
+  paints, layouts, AddedToParent, desired sizes, the classes' own methods); the override masks and names against
+  the deleted declarations. The world answers a part a function of its id (a stateless world: both sides read the
+  same answers), new widgets by a counter, texts by their lengths.
+- cargo: shell_tests.rs (the FFI, the routing without the game, the MS plan's text call), shell_ms_tests.rs and
+  shell_mscont_tests.rs (each kind's constructor and paints written out as the calls the class made).
+- Mutations (build/r20/mutate.py, a scratch script, each rebuilt and run under `won_shell_test`): leaf kinds 12 of
+  13 caught (the one left, `y < 1` for `y < 0` in MSSeperator's clamp, is equivalent: y = 0 either way), composite
+  kinds 16 of 16 (a size, a list flag, swapped scroll conditions, a missing Release, swapped directions, a paint
+  order, a lost no-change test, the header height, a flag read from the wrong field, the release order, a lost
+  constructor argument, a layout's reference, a skin field, the destructor's order, a desired size's arguments).
+- `won_cfgtab_test`'s world has `WONShell::Op` (each op traced by the deleted method's name and arguments, as the
+  original statements' calls are): its 383,620 checks are unchanged and its golden is not re-recorded.
+
+### Behaviour changes
+
+None for the game's data. Two orders differ where nothing can observe them: MSListCtrl's new MultiListArea is made
+after its ScrollbarScroller base (the original made it as the base constructor's argument, before), and the
+factories' temporaries' AddRef/Release pairs are gone. SafeGetShell keeps the LowerDivider type check. A config
+naming a non-MS control where an MS class's own method is called now does nothing (`WONShell::Op` answers 0 for
+another kind; the original's static_cast would have written into the wrong object).
+
+### What runs it
+
+- The LAN game: the lobby screens' MS widgets drawn in the LAN screen, the create dialog, the staging screen
+  (combo boxes, scroll containers and bars, list controls and headers, tab controls, buttons, labels, check boxes,
+  input boxes, frames, separators), and the one-line lobby controls (staging, options, game user list) made by the
+  resource table. The tour: the settings screens' and menus' WONGUI widgets (the fixture's walk and clicks).
+- Only the drivers: MSMessageBox's buttons and label (the config parse-time box, a debug flag), the Internet
+  lobby's controls made from the table (login, account, room, user lists), the MS header control's columns, the
+  etched frame group, the close button (no lobby config names them in a LAN game).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the round's head and the merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after the first commit; seeds 2-7 identical on the merged tree |
+| `rust_build.py gate` | PASS, 4,786 tests (the first commit; its first run failed rustfmt only, on the new files, fixed before the commit); PASS, 4,799 tests on the merged tree |
+| `won_host_coverage.py` | PASS (EeWonShellHostOp added: the C++ host's cases, the Rust-answered ops allowed with their reason) |
+| `xbuild.py wontest` | all 154 programs exit 0 under the 2 GB cap (peak 558 MB, won_cfgtab_test); every golden unchanged (the second commit touches no file a driver compiles) |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2729 joiner=2728` (the round's exe); the start exe (round 19's merged test-profile build, WON identical to 4d66dc666): 2859 / 2855 |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but `joiner-staging-joiner.bmp` (15 pixels at x 121..122, y 329..344: the staging chat input's caret, shown in one and not the other) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree, merged tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13120` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2759 joiner=2754`, GATES PASS |
+
+The merge of origin/rust a05da1364 (UI cluster round 3, ten commits) needed nothing: no conflict, no WON file
+changed, strip_markers changed 0 files, the headers were current; `rust_includes.py` named the shell header in
+WONCfgTable.inl and won_cfgtab_world.h (its own commit). tests/won/won_gui_test.cpp (built by no tool since round
+22's platform backend; it makes MSButton and friends) was left as it was.
+
+### Left
+
+- **The WON skin's widgets** (WONSimpleButton, WONScrollThumb, WONHeaderButton, WONInputBox, WONScrollbar,
+  WONComboBox, WONScrollContainer, WONListCtrl, WONHeaderControl, WONTabCtrl, WONFrameComponent; about 600 lines
+  with their headers and WONSkin's getters): not moved. They hold WONFrames (an image whose assignment is a deep
+  copy, `Image::Duplicate`) and image arrays, painted through guidraw plans with image slots, and WONSkin holds
+  them as typed prototypes it duplicates; each needs the frame's copy, paint and image draw as host ops and the
+  skin's prototypes as shells. The shells are ready for them (Button, Input, Combo, Scroller, Header, Tab).
+- **MSDialog and MSMessageBox:** MSMessageBox derives from MSDialog and is a whole dialog (Msg's window and modal
+  loop): both stay until a Dialog shell kind takes MSMessageBox's statements.
+- **The lobby's dialog and popup subclasses** (LanNameDialog .. FriendOptionsPopup, about 110 lines): their
+  one-line accessors are called at about 60 sites in seven logic hosts through typed members (`GetName`,
+  `GetPassword` mean different calls on different classes), and SafeGetComponent checks their types: a kind check
+  and each site's call written out. Not started this round.
+- **The remaining WONGUI classes with C++ logic** (ImageComponent, RectangleComponent(3D), ListAreaToolTip,
+  BrowserComponent, ImageButton, CrossPromotionButton, ImageTextButton, RootScreen, LobbyContainer) and **the
+  widgets' C++ members** (WrappedText, fonts, the input filter, frames: they change four goldens' worlds), the
+  dialogs' rows and ChatLink's segment hook: as round 19 left them.
+- **Why -898, not -3,000:** the shells, their host and the Rust-side routing cost about 300 C++ lines (the header,
+  GuiShell.cpp, the kinds' config and caller edits); the 23 MS widgets were small (a constructor and a paint each,
+  over Rust objects already: about 1,000 lines with their headers and units). The WON skin, the dialogs and the
+  logic-bearing widgets are the next ~1,500 and need the frame and image host ops above.

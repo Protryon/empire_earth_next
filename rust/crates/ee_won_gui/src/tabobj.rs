@@ -1059,7 +1059,9 @@ pub unsafe extern "C" fn ee_won_tab_new(
     host: EeWonGuiHostFn,
     ct: *const EeWonContainer,
 ) -> *mut EeWonTabCtrl {
-    Box::into_raw(Box::new(EeWonTabCtrl::new(component, host, ct)))
+    let made = Box::into_raw(Box::new(EeWonTabCtrl::new(component, host, ct)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Tab, made as *const c_void);
+    made
 }
 
 /// The constructor's statements over its made members (`parts`).
@@ -1079,6 +1081,7 @@ pub unsafe extern "C" fn ee_won_tab_init(tab: *const EeWonTabCtrl, parts: *const
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_tab_free(tab: *mut EeWonTabCtrl) {
     if !tab.is_null() {
+        crate::registry::unregister(tab as *const c_void);
         // SAFETY: the contract
         unsafe {
             (*tab).destroy();

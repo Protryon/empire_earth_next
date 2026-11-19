@@ -702,86 +702,8 @@ public:
     static void DrawRadio(Graphics&,int,int,int,int,bool,bool); //2fe3b0
     static void DrawCloseX(Graphics&,int,int,int,int); //2fe5e0
 };
-// MSButton (0x60 bytes)
-// The destructor is out of line.
-class MSButton : public MSButtonBase {
-public:
-    MSButton();
-    MSButton(const GUIString&);
-    virtual ~MSButton(); // 0x2fed10, out of line
-    virtual void Paint(Graphics&); //2fed20
-    void SetUseFrame2(bool useFrame2) { this->mUseFrame2=useFrame2; } // inline
-protected:
-    void Init(); // 0x2febf0: setup helper
-public:
-    bool mUseFrame2; // at +0x5c (written at 0x2fec1e/0x2fed75); the class is 0x60 bytes
-};
-// MS control (0x5c bytes); constructor and destructor out of line.
-class MSCheckbox : public MSButtonBase {
-public:
-    MSCheckbox(); // 0x2ff3e0; no members beyond the base's 0x5c bytes
-protected:
-    void Init();
-public:
-    virtual ~MSCheckbox(); // 0x2ff420, out of line
-    virtual void Paint(Graphics&); // 0x2ff470, vtable +0x18
-    typedef void (*CheckboxPainterFunc)(Graphics&,MSCheckbox*);
-    static CheckboxPainterFunc CheckboxPainter;
-    static int mCheckboxWidth,mCheckboxHeight;
-    static void DefaultCheckboxPainterFunc(Graphics&,MSCheckbox*);
-};
-// MSRadioButton (0x5c bytes, no members of its own); constructor out of line
-class MSRadioButton : public MSButtonBase {
-public:
-protected:
-    void Init(); // inlined into the constructor at 0x2ff530
-public:
-    MSRadioButton();
-    virtual ~MSRadioButton(); // 0x2ff5b0, out of line
-    virtual void Paint(Graphics&); // 0x2ff600, vtable +0x18
-    typedef void (*RadioPainterFunc)(Graphics&,MSRadioButton*);
-    static RadioPainterFunc RadioPainter;
-    static int mRadioWidth,mRadioHeight;
-    static void DefaultRadioPainterFunc(Graphics&,MSRadioButton*);
-};
-
-// MSArrowButton (0x48 bytes): Button (0x44) plus the direction at +0x44; constructor and destructor out of line
-class MSArrowButton : public Button {
-public:
-    MSArrowButton(Direction=Direction_Up);
-    virtual ~MSArrowButton(); // out of line
-    virtual void Paint(Graphics&); // vtable +0x18
-    void SetDirection(Direction d) { this->mDirection=d; }
-    Direction mDirection; //44
-};
-// No members of its own (0x48 bytes); constructor 0x3c9590, Paint 0x3c9620,
-// VT4541f4, RTTI MaxSplitterButton>MSArrowButton>Button>Component>RefCount.
-// The destructor is implicit; 0x3c9610 jumps to MSArrowButton's at 0x2ff140.
-class MaxSplitterButton : public MSArrowButton {
-public:
-    MaxSplitterButton(Direction=Direction_Up);
-    virtual void Paint(Graphics&);
-};
-// MSTabButton (0x60 bytes): MSButtonBase (0x5c) plus mLowerAmount at +0x5c; constructor and destructor out of line
-class MSTabButton : public MSButtonBase {
-public:
-    MSTabButton(const GUIString& = "",bool=true,int=3);
-
-    virtual void Paint(Graphics&); // vtable +0x18
-    virtual void GetDesiredSize(int&,int&); // vtable +0x0c
-    void SetLowerAmount(int n) { this->mLowerAmount=n; }
-    int mLowerAmount; //5c
-};
-// MS3DFrame (0x38 bytes): Component (0x30) plus a bool at +0x30 and an int at +0x34; constructor and destructor out of line
-class MS3DFrame : public Component {
-public:
-    MS3DFrame(int=3,bool=false);
-    virtual void Paint(Graphics&); // 0x3007b0, vtable +0x18
-    void SetIsUp(bool v) { this->mIsUp=v; }
-    void SetFrameType(int t) { this->mType=t; }
-    bool mIsUp; //30
-    int mType; //34
-};
+// The concrete MS controls (MSButton, MSCheckbox, MSRadioButton, MSArrowButton, MaxSplitterButton, MSTabButton,
+// MS3DFrame, ...) are shell kinds (ee/wonapi/WONGUIShell.h, ee_won_gui shell_ms.rs).
 
 // Label (R6 WON round 22): its colour, alignments, padding, fit to text and paint are the Rust Label
 // (rust/crates/ee_won_gui/src/labelobj.rs); the C++ keeps the wrapped text (the fixture and the lobby read it) and the
