@@ -13,7 +13,6 @@
 #include "ee/EEUIShell.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
 #include "lle/UIManager.h"

@@ -28,8 +28,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETSBaseObject.h"
 #include "lle/USingleton.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

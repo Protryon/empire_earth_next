@@ -107,7 +107,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 173218 17acf6 Empire Earth/Scenario Editor/EESERBUnitTypes.cpp
 17b0b7 17ccf3 Empire Earth/Scenario Editor/EESETriggerScreen.cpp
 17ccf3 17daa8 Empire Earth/Scenario Editor/EESETSArea.cpp
-17e49e 17ef10 Empire Earth/Scenario Editor/EESETSCondition.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp

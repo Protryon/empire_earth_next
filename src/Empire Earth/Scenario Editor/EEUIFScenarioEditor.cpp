@@ -40,12 +40,9 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESMEffect.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
@@ -58,7 +55,6 @@
 #include "ee/EESMArea.h"
 #include "ee/EEUnit.h"
 #include "ee/EESMObject.h"
-#include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESMTrigger.h"
@@ -71,15 +67,12 @@
 #include "lle/UIFullBackground.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EEUIFSEElevation.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
-#include "ee/EEUIFSEMap.h"
 #include "ee/EEUIFSETerrain.h"
-#include "ee/EESEInstructions.h"
 #include "rust/game/screens.h"
 #include "ee/EEUIShell.h"
 #include "rust/sim/scenario.h"
@@ -94,6 +87,7 @@ extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;
 void EEPostGraphicsAll();                   // EERenderObject.cpp: every render object
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 // TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
 long EESETestSaveTriggersOnly(UIForm* inForm)
@@ -126,12 +120,6 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
     ee_screens_sefm_free(this->mRust);
 }
 
-// Adds a unit to the editor selection, showing the cargo panel for a placed carrier and the status of a lone unit
-void EEUIFScenarioEditor::SelectUnit(EEUnit* inUnit)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit, NULL);
-}
-
 // Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
 void EEUIFScenarioEditor::Close()
 {
@@ -161,36 +149,6 @@ long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
     return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DRAW_BACKGROUND, 0, NULL, theRectangle);
 }
 
-// Draws the form's polygons (no editor additions)
-long EEUIFScenarioEditor::DrawPolygons()
-{
-    return UIForm::DrawPolygons();
-}
-
-// Switches to a tab: enters or leaves full view as needed, enables its controls, enters and loads its group
-void EEUIFScenarioEditor::SelectTab(unsigned char inFlag, long inTab)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8)), NULL, NULL);
-}
-
-// Leaves the editor through the load thread, to test the scenario or to quit, back on the map tab; suspends the form
-void EEUIFScenarioEditor::ExitEditor(bool inTestScenario)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0, NULL, NULL);
-}
-
-// Resumes the editor after a load and reloads the current tab group
-void EEUIFScenarioEditor::ResumeCurrentGroup()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_RESUME_GROUP, 0, NULL, NULL);
-}
-
-// Suspends the editor and passes an event to the load thread, which posts it to the user interface
-void EEUIFScenarioEditor::PostLoadEvent(UReferenceCounter* inObject)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject, NULL);
-}
-
 // Opens the editor: editor camera, backgrounds, paused music and ambient sound, editor game view and mini map,
 // enters the current tab; posts the exit action if a save asked to exit afterwards (editor_form.rs)
 void EEUIFScenarioEditor::Open()
@@ -198,48 +156,11 @@ void EEUIFScenarioEditor::Open()
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL);
 }
 
-// Suspends the editor and passes a loaded object to the load thread to show
-void EEUIFScenarioEditor::PostShowLoadedObject(UReferenceCounter* inObject)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject, NULL);
-}
-
-// Deselects every selected unit and hides the cargo panel and the unit status
-void EEUIFScenarioEditor::ClearSelection()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, NULL, NULL);
-}
-
-// Removes the first unit from the editor selection, updating the cargo panel and the unit status
-void EEUIFScenarioEditor::DeselectFirstUnit()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_FIRST, 0, NULL, NULL);
-}
-
-// Removes a unit from the editor selection, updating the cargo panel, and the unit status if it was first
-void EEUIFScenarioEditor::DeselectUnit(EEUnit* inUnit)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit, NULL);
-}
-
-// Makes the current tab group store its settings
-void EEUIFScenarioEditor::RefreshCurrentGroup()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_STORE_GROUP, 0, NULL, NULL);
-}
-
 // Sets the editor's game view rectangle and disables the current tab group while the UI is hidden
 void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsUIHidden)
 {
     float theRectangle[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_GAME_VIEW, inIsUIHidden ? 1 : 0, NULL, theRectangle);
-}
-
-// Shows the given loading text in the top label, or hides the label for an empty text
-void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0,
-                         const_cast<UWideString*>(&inText), NULL);
 }
 
 // Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),
@@ -326,23 +247,6 @@ extern "C" int32_t ee_screenscpp_sefm(uint32_t inOp, void* const* p, int32_t* i,
 {
     return EEUIFScenarioEditor::Host(inOp, p, i, f);
 }
-
-// the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25): a press posts the
-// button's action (EEAUndo, EEARedo: the UI thread's undo or redo, ee_screens game_actions.rs)
-class EEUIFSEActionButton : public UIButton {
-public:
-    EEUIFSEActionButton(unsigned long inId, uint32_t inKind, const GE2DPoint& inPosition, UIForm* inForm, unsigned long inIndex)
-        : UIButton(inId, NULL, NULL, NULL, GERectangle(inPosition, 65.0f, 25.0f), inForm, inIndex, 0),
-          mAction(new EEARust(inKind)) {}
-    virtual ~EEUIFSEActionButton() { this->mAction->Dereference(); }
-protected:
-    virtual void ButtonUp()
-    {
-        gUserInterface->PostAction(this->mAction);
-        UIButton::ButtonUp();
-    }
-    EEARust* mAction;
-};
 
 int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
@@ -441,39 +345,24 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         return 0;
     }
     case EE_SCREENS_SEFM_OP_UNDO_REDO: {
-        UIButton* t;
-        if (i[0] == 0) {
-            t = new EEUIFSEActionButton(0, kEEAEditorUndo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
-            gResource->GetString(IDS_UNDO, theText);
-        } else {
-            t = new EEUIFSEActionButton(1, kEEAEditorRedo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
-            gResource->GetString(IDS_REDO, theText);
-        }
+        // the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25: kinds over the
+        // button shell, ee_game shells_editor.rs): a press posts the button's action (EEAUndo, EEARedo)
+        EEAction* theAction = new EEARust(i[0] == 0 ? kEEAEditorUndo : kEEAEditorRedo);
+        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)theAction}, i[0] == 0 ? 0 : 1, NULL, NULL,
+                                          NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm,
+                                          (unsigned long)i[1], 0);
+        gResource->GetString(i[0] == 0 ? IDS_UNDO : IDS_REDO, theText);
         t->SetText(theText, gU531930);
         SefmColor(t->GetGEText(), GEColor(1.0f, 1.0f, 1.0f));
         *theOut = t;
         return 0;
     }
-    case EE_SCREENS_SEFM_OP_TAB_GROUP: {   // CreateTabGroup
-        unsigned long theIndex = *static_cast<uint32_t*>(p[2]);
-        EEUIFSEMainGroup* t = NULL;
-        switch (i[0]) {
-        case kEditorTabMap: t = new EEUIFSEMap(theIndex, theForm, gU531930); break;
-        case kEditorTabElevation:
-            t = new EEUIFSEElevation(theForm->GetEdgeScroll(), theForm->GetBrushGroup(), theIndex, theForm, gU531930);
-            break;
-        case kEditorTabTerrain:
-            t = new EEUIFSETerrain(theForm->GetEdgeScroll(), theForm->GetBrushGroup(), theIndex, theForm, gU531930);
-            break;
-        case kEditorTabUnits: t = new EESEUnit(theIndex, theForm, gU531938, theForm->GetPlayerComboBox()); break;
-        case kEditorTabTriggers: t = new EESETriggerScreen(theIndex, theForm, gU531938); break;
-        case kEditorTabPlayers: t = new EESEPlayerScreen(theIndex, theForm, gU531938, theForm->GetPlayerComboBox()); break;
-        case kEditorTabInstructions: t = new EESEInstructions(theIndex, theForm, gU531938); break;
-        }
-        *static_cast<uint32_t*>(p[2]) = (uint32_t)theIndex;
-        *theOut = t;
+    case EE_SCREENS_SEFM_OP_TAB_GROUP:   // CreateTabGroup (editor_groups_ffi.rs; the unit tab's C++ parts its shell)
+        gSeplScreenFont = i[0] < kEditorTabUnits ? gU531930 : gU531938;
+        *theOut = ee_screens_segr_new((uint32_t)i[0], theForm, theForm->GetEdgeScroll(), theForm->GetBrushGroup(),
+                                      theForm->GetPlayerComboBox(), i[0] == kEditorTabUnits ? new EESEUnit(theForm) : NULL,
+                                      static_cast<uint32_t*>(p[2]));
         return 0;
-    }
     case EE_SCREENS_SEFM_OP_BUTTON: {
         const EeScreensSefmButton& b = *static_cast<const EeScreensSefmButton*>(p[2]);
         UIButton* t;
@@ -586,26 +475,15 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
     case EE_SCREENS_SEFM_OP_DELETE:
         switch (i[0]) {
         case 0: delete static_cast<UIControl*>(p[0]); break;
-        case 1: delete static_cast<EEUIFSEMainGroup*>(p[0]); break;
+        case 1: delete static_cast<EESEUnit*>(ee_screens_segr_free(static_cast<EeScreensSeGroup*>(p[0]))); break;
         case 2: delete static_cast<TMPoll*>(p[0]); break;
         case 3: delete static_cast<EEUIFSEBrushGroup*>(p[0]); break;
         case 4: delete static_cast<UIFullBackground*>(p[0]); break;
         }
         return 0;
-    case EE_SCREENS_SEFM_OP_GROUP_CALL: {
-        EEUIFSEMainGroup* g = static_cast<EEUIFSEMainGroup*>(p[0]);
-        switch (i[0]) {
-        case EE_SCREENS_SEFM_GROUP_UPDATE: g->Update(); break;
-        case EE_SCREENS_SEFM_GROUP_LEAVE: g->Leave(); break;
-        case EE_SCREENS_SEFM_GROUP_DRAW: g->Draw(GERectangle(f[0], f[1], f[2], f[3])); break;
-        case EE_SCREENS_SEFM_GROUP_DISABLE: g->Disable(); break;
-        case EE_SCREENS_SEFM_GROUP_LOAD: g->Load(); break;
-        case EE_SCREENS_SEFM_GROUP_ENTER: g->Enter(); break;
-        case EE_SCREENS_SEFM_GROUP_STORE: g->Store(); break;
-        case EE_SCREENS_SEFM_GROUP_ENABLE: g->Enable(); break;
-        case EE_SCREENS_SEFM_GROUP_MOUSE_MOVE: g->MouseMove(GE2DPoint(f[0], f[1])); break;
-        case EE_SCREENS_SEFM_GROUP_UPDATE_KEYS: g->UpdateKeys(); break;
-        }
+    case EE_SCREENS_SEFM_OP_GROUP_CALL: {   // (Draw's rectangle a GERectangle)
+        GERectangle theRectangle(f[0], f[1], f[2], f[3]);
+        ee_screens_segr_call(static_cast<EeScreensSeGroup*>(p[0]), i[0], f[0], f[1], &theRectangle);
         return 0;
     }
     case EE_SCREENS_SEFM_OP_RENDER_LIST:
@@ -643,8 +521,12 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         return theUnit->GetTileNode() != NULL && (theUnit->GetComplexUnit()->mCargoRoom > 0 ||
                                                   theUnit->GetComplexUnit()->GetNumCargoUnits() > 0);
     }
-    case EE_SCREENS_SEFM_OP_SHOW_CARGO: static_cast<EESEUnit*>(p[0])->ShowCargo(i[0] != 0); return 0;
-    case EE_SCREENS_SEFM_OP_SHOW_STATUS: static_cast<EESEUnit*>(p[0])->ShowUnitStatus(static_cast<EEUnit*>(p[1])); return 0;
+    case EE_SCREENS_SEFM_OP_SHOW_CARGO:
+    case EE_SCREENS_SEFM_OP_SHOW_STATUS:
+        ee_screens_seun_call((EeScreensSeUnit*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
+                             inOp == EE_SCREENS_SEFM_OP_SHOW_CARGO ? EE_SCREENS_SEUN_SHOW_CARGO : EE_SCREENS_SEUN_SHOW_UNIT,
+                             i[0] != 0, 0.0f, 0.0f, p[1]);
+        return 0;
     case EE_SCREENS_SEFM_OP_GAME_VIEW: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SEFM_OP_LOAD_THREAD: {
         EESELoadThread* theThread = static_cast<EESELoadThread*>(p[1]);
@@ -676,7 +558,8 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         return 0;
     case EE_SCREENS_SEFM_OP_OPEN_WORLD: {
         gGraphics->PostFadeIn(0);
-        static_cast<EESEPlayerScreen*>(p[0])->Refresh();
+        ee_screens_sepl_call((EeScreensSePlayers*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
+                             EE_SCREENS_SEPL_REFRESH, 0, 0);
         gMusicManager->Pause();
         gAmbientSoundManager.StopSounds();
         gAmbientSoundManager.Pause();
@@ -743,7 +626,9 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         return 0;
     }
     case EE_SCREENS_SEFM_OP_GRID: static_cast<EEROTerrain*>(gU56535C)->StepGridMode(i[0] != 0); return 0;
-    case EE_SCREENS_SEFM_OP_PLAYER_COUNT: return (int32_t) static_cast<EESEPlayerScreen*>(p[0])->GetPlayerCount();
+    case EE_SCREENS_SEFM_OP_PLAYER_COUNT:
+        return (int32_t)ee_screens_sepl_call((EeScreensSePlayers*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
+                                             EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
     case EE_SCREENS_SEFM_OP_COMBO_SELECT: static_cast<UIComboBox*>(p[0])->SetCurrentSelection((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEFM_OP_LABEL_TEXT: static_cast<UITextLabel*>(p[0])->SetText(*static_cast<const UWideString*>(p[1])); return 0;
     case EE_SCREENS_SEFM_OP_MOUSE: {

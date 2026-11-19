@@ -35,10 +35,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESMEffect.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -52,8 +49,6 @@
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESEARust.h"
-#include "ee/EESEPlayerScreen.h"
-#include "ee/EESETSEffect.h"
 #include "ee/EESMObject.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EECPBehavior.h"
@@ -70,58 +65,6 @@
 // RefreshControls, Show and Hide are its slots; the class forwards.
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
-
-// Creates the effect sub-screen: shared controls, title label, effect-type combo and the seven effect types,
-// starting on the object effect (editor_subscreens.rs)
-EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sefx_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the effect sub-screen with its controls and the seven effect types (editor_subscreens.rs)
-EESETSEffect::~EESETSEffect()
-{
-    ee_screens_sefx_free(this->mRust);
-}
-
-void EESETSEffect::Call(unsigned long inWhat)
-{
-    ee_screens_sefx_call(this->mRust, (uint32_t)inWhat, (int32_t)this->mSelection);
-}
-
-void EESETSEffect::ChangeEffectAction() { this->Call(EE_SCREENS_SESC_CHANGE_ACTION); }
-void EESETSEffect::ChangeEffectType() { this->Call(EE_SCREENS_SESC_CHANGE_TYPE); }
-void EESETSEffect::Sort() { this->Call(EE_SCREENS_SESC_SORT); }
-void EESETSEffect::MoveDown() { this->Call(EE_SCREENS_SESC_MOVE_DOWN); }
-void EESETSEffect::MoveUp() { this->Call(EE_SCREENS_SESC_MOVE_UP); }
-void EESETSEffect::Delete() { this->Call(EE_SCREENS_SESC_DELETE); }
-void EESETSEffect::Duplicate() { this->Call(EE_SCREENS_SESC_DUPLICATE); }
-void EESETSEffect::Activate() { this->Call(EE_SCREENS_SESC_ACTIVATE); }
-void EESETSEffect::Store() { this->Call(EE_SCREENS_SESC_STORE); }
-void EESETSEffect::Load() { this->Call(EE_SCREENS_SESC_LOAD); }
-void EESETSEffect::New() { this->Call(EE_SCREENS_SESC_NEW); }
-void EESETSEffect::RefreshControls() { this->Call(EE_SCREENS_SESC_REFRESH); }
-void EESETSEffect::Show() { this->Call(EE_SCREENS_SESC_SHOW); }
-// (folded with EESETriggerScreen::HideText in the original: the same two member offsets)
-void EESETSEffect::Hide() { this->Call(EE_SCREENS_SESC_HIDE); }
-void EESETSEffect::GetNames(std::vector<UWideString>& outNames) { ee_screens_sefx_names(this->mRust, &outNames); }
-
-EESETSEffectControls* EESETSEffect::GetControls() const
-{
-    return static_cast<EESETSEffectControls*>(ee_screens_sefx_handle(this->mRust, 0));
-}
-
-UIComboBox* EESETSEffect::GetTypeComboBox() const
-{
-    return static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_sefx_handle(this->mRust, 1)));
-}
-
-void EESETSEffect::Deactivate()
-{
-}
 
 // ------------------------------------------------------------------------------------------------ the types' host
 
@@ -562,10 +505,10 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         sprintf(theText, static_cast<const char*>(p[1]), (double)f[0]);
         return SeetWrite(p[2], k, theText);
     case EE_SCREENS_SEET_OP_SET_NAME_BOX:
-        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetNameEditBox()->SetText(SeetBytes(p[2], i[2]));
+        gUIManager->GetScenarioEditorForm()->GetTriggerBox(false)->SetText(SeetBytes(p[2], i[2]));
         return 0;
     case EE_SCREENS_SEET_OP_NAME_BOX:
-        return SeetWrite(p[2], k, gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetName());
+        return SeetWrite(p[2], k, gUIManager->GetScenarioEditorForm()->GetTriggerBox(false)->GetText(0));
     case EE_SCREENS_SEET_OP_NAMES:
         sSeetNames.clear();
         gWorld.mScenarioManager->GetNames((unsigned long)i[2], sSeetNames);
@@ -652,20 +595,20 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
     }
     case EE_SCREENS_SEET_OP_TECH_NAME: return SeetWrite(p[2], k, SeetTechName(i[2]));
     case EE_SCREENS_SEET_OP_TSCREEN: {
-        EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
-        if (i[2] == EE_SCREENS_SEET_TS_HIDE_TEXT) theScreen->HideText();
-        else if (i[2] == EE_SCREENS_SEET_TS_SHOW_ALPHA_SORT) theScreen->ShowAlphaSort();
-        else theScreen->ShowText();
+        EEUIFScenarioEditor* theScreen = gUIManager->GetScenarioEditorForm();
+        theScreen->TriggerCall(i[2] == EE_SCREENS_SEET_TS_HIDE_TEXT          ? EE_SCREENS_SETS_HIDE_TEXT
+                               : i[2] == EE_SCREENS_SEET_TS_SHOW_ALPHA_SORT ? EE_SCREENS_SETS_SHOW_ALPHA_SORT
+                                                                            : EE_SCREENS_SETS_SHOW_TEXT);
         return 0;
     }
     case EE_SCREENS_SEET_OP_TEXT_BOX:
-        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
+        gUIManager->GetScenarioEditorForm()->GetTriggerBox(true)->GetAllText(theText);
         return SeetWrite(p[2], k, theText);
     case EE_SCREENS_SEET_OP_SET_TEXT_BOX:
-        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetTextEditBox()->SetText(SeetBytes(p[2], i[2]));
+        gUIManager->GetScenarioEditorForm()->GetTriggerBox(true)->SetText(SeetBytes(p[2], i[2]));
         return 0;
     case EE_SCREENS_SEET_OP_PLAYER_COUNT:
-        return (int32_t)static_cast<EEUIFScenarioEditor*>(c->mTextEditBox->GetForm())->GetPlayerScreen()->GetPlayerCount();
+        return (int32_t)static_cast<EEUIFScenarioEditor*>(c->mTextEditBox->GetForm())->PlayerCall(EE_SCREENS_SEPL_PLAYER_COUNT);
     case EE_SCREENS_SEET_OP_SET_PLAYER_COUNT:
         EEUIShell::Op(c->mPlayers[k], EE_SCREENS_SKOP_SET_PLAYER_COUNT, (uint32_t)i[2]);
         return 0;

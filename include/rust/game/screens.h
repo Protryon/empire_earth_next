@@ -2593,6 +2593,21 @@ constexpr static const uint32_t EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY = 17;
 
 constexpr static const uint32_t EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL = 8537;
 
+/// The tabs (`kEditorTab*`, ee/EEScenarioEditorIDs.h: `CreateTabGroup`'s cases).
+constexpr static const uint32_t TAB_MAP = 0;
+
+constexpr static const uint32_t TAB_ELEVATION = 1;
+
+constexpr static const uint32_t TAB_TERRAIN = 2;
+
+constexpr static const uint32_t TAB_UNITS = 3;
+
+constexpr static const uint32_t TAB_TRIGGERS = 4;
+
+constexpr static const uint32_t TAB_PLAYERS = 5;
+
+constexpr static const uint32_t TAB_INSTRUCTIONS = 6;
+
 /// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
 /// words / the three paths p0 released.
 constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS = 700;
@@ -4011,6 +4026,19 @@ constexpr static const uint32_t EE_SCREENS_SETS_TAB = 4;
 constexpr static const uint32_t EE_SCREENS_SETS_CURRENT_SCREEN = 5;
 
 constexpr static const uint32_t EE_SCREENS_SETS_CURRENT_GROUP = 6;
+
+/// The sub-screens by index (`kSETriggerScreenTrigger` ..: the factory's order, `EESETriggerScreen::CreateScreen`).
+constexpr static const size_t SUB_TRIGGER = 0;
+
+constexpr static const size_t SUB_CONDITION = 1;
+
+constexpr static const size_t SUB_EFFECT = 2;
+
+constexpr static const size_t SUB_OBJECT = 3;
+
+constexpr static const size_t SUB_AREA = 4;
+
+constexpr static const size_t SUB_COUNT = 5;
 
 /// The sort event (`EESEERust(kSEESortUnitList)`) made -> its handle in p0.
 constexpr static const uint32_t EE_SCREENS_SEUN_OP_SORT_EVENT = 300;
@@ -9107,6 +9135,27 @@ constexpr static const int64_t EE_SCREENS_SG_MSG_CREATE = 2;
 
 constexpr static const int64_t EE_SCREENS_SG_MSG_CLEAR = 3;
 
+/// `EESEUIBDiplomacy`: a diplomacy grid button (allies or enemies; the constructor's state enemies).
+constexpr static const uint32_t EE_SCREENS_SK_DIPLOMACY = 112;
+
+/// `EEUIFSEActionButton`: the Undo or Redo button (args: the button's `EEAction*`, released with the button).
+constexpr static const uint32_t EE_SCREENS_SK_ACTION_BUTTON = 113;
+
+/// The diplomacy button's state (`mState`: 0 allies, 1 enemies) / the state set to a, its bitmaps and help text
+/// shown (`UpdateBitmaps`).
+constexpr static const uint32_t EE_SCREENS_SKOP_DIPLOMACY_STATE = 112;
+
+constexpr static const uint32_t EE_SCREENS_SKOP_DIPLOMACY_SET = 113;
+
+/// The diplomacy button's bitmaps and help text for the state a, then the form's help text when b
+/// (`EESEDiplomacyShow`).
+constexpr static const uint32_t EE_SCREENS_SH_SE_DIPLOMACY = 160;
+
+/// The action a (an `EEAction*`) posted to the user interface / released (`Dereference`).
+constexpr static const uint32_t EE_SCREENS_SH_SE_ACTION_POST = 161;
+
+constexpr static const uint32_t EE_SCREENS_SH_SE_ACTION_RELEASE = 162;
+
 /// `EESEUITechListBox` (a string list box).
 constexpr static const uint32_t EE_SCREENS_SK_TECH_LIST = 64;
 
@@ -10858,6 +10907,10 @@ struct EeScreensSeElevation;
 /// The editor form (opaque to C++).
 struct EeScreensSeForm;
 
+/// A tab group (opaque to C++): its tab (`TAB_*`), the tab's FFI object, and the unit tab's C++ parts (its shell:
+/// the build tools, the rhombus, the panel's rectangle), which the C++ frees.
+struct EeScreensSeGroup;
+
 /// The instructions tab (opaque to C++).
 struct EeScreensSeInstructions;
 
@@ -10876,7 +10929,7 @@ struct EeScreensSeTerrain;
 /// The trigger screen (opaque to C++).
 struct EeScreensSeTrigger;
 
-/// The trigger tab (opaque to C++).
+/// The trigger tab (opaque to C++) and its five sub-screens (its shell).
 struct EeScreensSeTriggerTab;
 
 /// The unit tab (opaque to C++).
@@ -12112,6 +12165,53 @@ int32_t ee_screens_sefm_call(const EeScreensSeForm *form,
                              void *p,
                              const float *r);
 
+/// `CreateTabGroup`: the tab `tab`'s group, its controls made on `form` from the control index `*index` (advanced);
+/// `scroll` and `brushes` the form's edge scroll and brush group (the elevation and terrain tabs'), `players` its
+/// player combo box (the unit and player tabs'), `parts` the unit tab's C++ shell. The screen font is the C++'s
+/// (set before). The map and terrain tabs' shell is the group itself (their events and controls call back through
+/// it: `ee_screens_segr_tab`). Freed by `ee_screens_segr_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index; the pointers are the form's.
+EeScreensSeGroup *ee_screens_segr_new(uint32_t tab,
+                                      void *form,
+                                      void *scroll,
+                                      void *brushes,
+                                      void *players,
+                                      void *parts,
+                                      uint32_t *index);
+
+/// The destructor: the tab freed (its controls deleted), the group freed -> the unit tab's C++ parts, for the C++ to
+/// delete (NULL for the other tabs).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL) and is not used again.
+void *ee_screens_segr_free(EeScreensSeGroup *g);
+
+/// The group's tab's FFI object (an `EeScreensSeMap*` .. `EeScreensSeInstructions*` by its tab; NULL for NULL, and
+/// while the tab is being made).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL).
+void *ee_screens_segr_tab(const EeScreensSeGroup *g);
+
+/// The unit tab's C++ parts (its shell, `EESEUnit`; NULL for the other tabs).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL).
+void *ee_screens_segr_parts(const EeScreensSeGroup *g);
+
+/// The group's slot `slot` (`EE_SCREENS_SEFM_GROUP_*`: `Draw`'s `p` the dirty `GERectangle`, `MouseMove` at `x`,
+/// `y`): the tab's member when its class overrode the slot, else nothing (the base's empty slot).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL); `p` is what the slot takes.
+void ee_screens_segr_call(const EeScreensSeGroup *g,
+                          int32_t slot,
+                          float x,
+                          float y,
+                          void *p);
+
 /// `EESEInstructions`' constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
 /// `ee_screens_sein_free`.
 ///
@@ -12399,20 +12499,59 @@ void ee_screens_setr_call(const EeScreensSeTrigger *screen,
 /// `screen` comes from `ee_screens_setr_new` (or is NULL); `out` is a vector.
 void ee_screens_setr_get_names(const EeScreensSeTrigger *screen, void *out);
 
-/// `EESETriggerScreen`'s constructor up to its sub-screens: the controls made on `form` from the control index
-/// `*index` (advanced); `shell` is the C++ `EESETriggerScreen`. Freed by `ee_screens_sets_free`.
+/// `EESETriggerScreen`'s constructor: the controls made on `form` from the control index `*index` (advanced), then
+/// the five sub-screens (the factory 0x17c1e5: trigger, condition, effect, object, area; the screen's font is the
+/// tab's), then their groups disabled. Freed by `ee_screens_sets_free`.
 ///
 /// # Safety
 /// `index` points at the form's next control index.
-EeScreensSeTriggerTab *ee_screens_sets_new(void *shell,
-                                           void *form,
+EeScreensSeTriggerTab *ee_screens_sets_new(void *form,
                                            uint32_t *index);
 
-/// The object freed (its controls were deleted by `EE_SCREENS_SETS_DESTROY_FIRST` and `_REST`).
+/// The destructor: the list and the sub-tabs deleted, the five sub-screens (in order), the rest of the controls,
+/// the object freed.
 ///
 /// # Safety
 /// `tab` comes from `ee_screens_sets_new` (or is NULL) and is not used again.
 void ee_screens_sets_free(EeScreensSeTriggerTab *tab);
+
+/// The sub-screen `k`'s object (an `EeScreensSeTrigger*` .. `EeScreensSeArea*` by `k`; NULL out of range); its
+/// selection into `selection` and whether it has one into `has`, each unless NULL.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sets_new` (or is NULL); `selection` and `has` are NULL or writable.
+void *ee_screens_sets_sub(const EeScreensSeTriggerTab *tab,
+                          uint32_t k,
+                          int32_t *selection,
+                          bool *has);
+
+/// The sub-screen `k`'s selection set to `selection` (the trigger jump's entry).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sets_new` (or is NULL).
+void ee_screens_sets_sub_select(const EeScreensSeTriggerTab *tab, uint32_t k, int32_t selection);
+
+/// The sub-screen `k`'s own call `what` (`EE_SCREENS_SETR_*`, `_SESC_*`, `_SEOB_*`, `_SEAR_*` by `k`) with `a` and `b`
+/// and its selection where its class passed it (`editor_tsubs.rs` `op_args`) -> the call's answer (the object
+/// screen's; 0 for the others).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sets_new` (or is NULL).
+uint32_t ee_screens_sets_sub_op(const EeScreensSeTriggerTab *tab,
+                                uint32_t k,
+                                uint32_t what,
+                                uint32_t a,
+                                uint32_t b);
+
+/// The sub-screen `k`'s slot `slot` (`EE_SCREENS_SETS_SCREEN_*`; `MouseMove` at `x`, `y`), as the classes did it.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sets_new` (or is NULL).
+void ee_screens_sets_sub_call(const EeScreensSeTriggerTab *tab,
+                              uint32_t k,
+                              int32_t slot,
+                              float x,
+                              float y);
 
 /// One of the tab's members (`EE_SCREENS_SETS_ALPHA_SORT` ...) with its arguments.
 ///
