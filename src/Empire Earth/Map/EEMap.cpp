@@ -34,7 +34,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
-#include "ee/EEEffectsTable.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEDatabaseTables.h"
@@ -44,6 +43,7 @@
 #include "ee/EEAppCapture.h"
 #include "rust/game/app.h"
 #include "rust/sim/app.h"
+#include "rust/render/gfx.h"
 #include "rust/sim/combat.h"
 #include "rust/sim/units.h"
 
@@ -181,7 +181,7 @@ EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTe
 EEMap::~EEMap()
 {
     ee_combat_regions_free(this->mUnitRegions);
-    delete this->mEffectRegions;
+    ee_gfx_effect_regions_free(this->mEffectRegions);
     delete[] this->mTileArray;
     ee_units_map_words_free(this->mVisibilityWords);   // Rust's (ee_units map_words.rs)
     EETerrainTable::Get(this->mTerrainMesh.GetGlobalWaterSetID())->Unload(this->mTerrainMesh);
@@ -258,9 +258,9 @@ void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
     EEAppMapScope theScope(this, kAppMapCreateMap, inWidth, inHeight, (long)inPlayerCount, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
     this->Create(inWidth, inHeight, inPlayerCount, true);
     ee_combat_regions_free(this->mUnitRegions);
-    delete this->mEffectRegions;
+    ee_gfx_effect_regions_free(this->mEffectRegions);
     this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
-    this->mEffectRegions = new EEEffectsTable(this, 10);
+    this->mEffectRegions = ee_gfx_effect_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 10L), 10);
     EEMapEdit(this, 1);
 }
 
@@ -501,9 +501,9 @@ int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUn
         return kErrorOK;
     case EE_UNITS_MAP_SAVE_FINISH:
         ee_combat_regions_free(theEEMap->mUnitRegions);
-        delete theEEMap->mEffectRegions;
+        ee_gfx_effect_regions_free(theEEMap->mEffectRegions);
         theEEMap->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)theEEMap->mSize / 3L), 3);
-        theEEMap->mEffectRegions = new EEEffectsTable(theEEMap, 10);
+        theEEMap->mEffectRegions = ee_gfx_effect_regions_new((uint32_t)UMCeilUnsigned((float)theEEMap->mSize / 10L), 10);
         theEEMap->UpdateCliffs(0, theEEMap->mSize, 0, theEEMap->mSize);
         return kErrorOK;
     }

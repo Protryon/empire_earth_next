@@ -71,6 +71,8 @@ pub struct EeGfxObjectLayout {
     pub complex_turret_angles: u64,
     /// `EEUnitClassUpgrade::mModel` (the stats' graphic)
     pub stats_model: u64,
+    /// `EEGraphicEffect::mLinkedEffect1` (the three follow-on effects, in order)
+    pub geffect_linked: u64,
 }
 
 static LAYOUT: OnceLock<EeGfxObjectLayout> = OnceLock::new();
@@ -139,6 +141,12 @@ pub fn model_box(model: usize, frame: usize) -> GeBoundingBox {
 pub fn model_radius(model: usize, frame: usize) -> f32 {
     // SAFETY: the model's per-frame radii
     unsafe { *(model_ptr(model, EeGeModPtr::BoundingRadii) as *const f32).add(frame) }
+}
+
+/// `GetTagPoint(index, frame)`: the tag point `index` of frame `frame`.
+pub fn model_tag_point(model: usize, index: usize, frame: usize) -> Ge3DPoint {
+    // SAFETY: the model's per-frame tag points
+    unsafe { *(*(model_ptr(model, EeGeModPtr::FrameTagPoints) as *const *const Ge3DPoint).add(frame)).add(index) }
 }
 
 /// `GetCenterPoint()`.
@@ -261,6 +269,19 @@ impl GraphicEffect {
         // SAFETY: a live graphic effect's member
         Gobj::of(unsafe { rd(self.0, l().geffect_object) })
     }
+    /// `mKind` set (TEST ONLY: the effects' sweep borrows another kind's graphic effects for a creation)
+    pub fn set_kind(self, kind: std::os::raw::c_long) {
+        // SAFETY: a live graphic effect's record base; no reference to it lives across this write
+        unsafe {
+            let f = (self.0 + l().geffect_fields as usize) as *mut EeDataGraphicEffectFields;
+            std::ptr::addr_of_mut!((*f).mKind).write(kind);
+        }
+    }
+    /// `mLinkedEffect1` .. `mLinkedEffect3` (`i` 0..2; 0: none)
+    pub fn linked(self, i: usize) -> u64 {
+        // SAFETY: a live graphic effect's members
+        unsafe { rd(self.0, l().geffect_linked + (i * PTR) as u64) }
+    }
 }
 
 // ---- a complex unit's physical model
@@ -292,13 +313,13 @@ pub fn turret_angle(c: &UnitView<'_>, i: usize) -> f32 {
     unsafe { *rd::<*const f32>(c.handle() as usize, l().complex_turret_angles).add(i) }
 }
 
-fn animation(c: &UnitView<'_>) -> usize {
+pub(crate) fn animation(c: &UnitView<'_>) -> usize {
     let a: c_ulong = world_field!(c.complex(), mAnimation);
     a as usize
 }
 
 /// `EEUnit::GetPosition` / `EEComplexUnit::GetPosition`
-fn unit_position(u: &UnitView<'_>) -> Ge3DPoint {
+pub(crate) fn unit_position(u: &UnitView<'_>) -> Ge3DPoint {
     if u.is_complex() {
         return position(&physical(u).location);
     }
@@ -324,7 +345,7 @@ fn identity() -> GeTransformation {
     GeTransformation::IDENTITY
 }
 
-fn tag_point(
+pub(crate) fn tag_point(
     list: &EeGfxTagList,
     i: usize,
     frame: c_ulong,
@@ -1033,4 +1054,4 @@ const EE_GFX_CATEGORY_GATE: u64 = 0x19;
 
 #[cfg(test)]
 #[path = "effect_reads_tests.rs"]
-mod tests;
+pub(crate) mod tests;

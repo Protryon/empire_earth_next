@@ -20,10 +20,10 @@ resources 2..6 and counts), PLEC each economy and improvement decision (CanProdu
 the CanAfford family, Pay, the improvements' queue and costs: the outermost call on the simulation thread, its
 arguments, result and the resources after); their golden lines (seeds 2-3 of the oracle, late, space and calamity
 profiles) come from the C++ player before its members and bodies moved (the player lane, round 1).
-EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
+EFMU is the effect manager's state after every Update (ee_gfx ffi_manager.rs: the last handle, the sizes and an
 FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
 round; the missile profile's golden does not list it).
-EFST is every effect's state after every Update (EEEffectManager.cpp: the effects' random seed, then per effect in
+EFST is every effect's state after every Update (ee_gfx ffi_manager.rs: the effects' random seed, then per effect in
 handle order its handle, kind, player, local-only and saved flags and a saved effect's own Save bytes, folded to a
 count, a length and an FNV-1a 64); its golden lines come from the C++ effects before their state moved (R4.4,
 seventh round), in all five profiles.
@@ -79,7 +79,7 @@ calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_
 and torpedo class (CBMA/CBMH, the missile's flight steps, and its impact tests' CBGI/CBWI); its golden file lists only
 those tags (and CBTC, CBGS), every other tag of it is the oracle profile's (reported as without a golden).
 --profile effects is the oracle's game cut at ten game minutes with EE-SIM --effect-sweep: nothing records during the
-game; when it ends, every swept 3D effect kind (EEEffectManager.cpp's EEEffectCaptureSweep: the blast wave, water
+game; when it ends, every swept 3D effect kind (ee_gfx effect_sweep.rs, EEEffectCaptureSweep: the blast wave, water
 splash, tracers, disease, 3D projectile, shells, additive pass, citizen beam, teleport, virus, pulse cannon ball,
 time warp, shield, screen flash; since the sixteenth round also the hurricane, nuclear explosion, energy wave, goal,
 icon, tracer beam, command confirmation, energy wall, damage vent, farm, the smoke generators, particle emitter,

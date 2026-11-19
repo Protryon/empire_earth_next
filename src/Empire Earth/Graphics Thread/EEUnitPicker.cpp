@@ -86,8 +86,6 @@ void EEROWater::SceneStarting()
 // Draws the water unlit with fog, alpha-blended with z test only, then the effects' pass 6
 void EEROWater::RenderScene()
 {
-    EEEffectQueue::iterator theIterator;
-    std::deque<EEEffect*>::iterator theEffect;
     float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetAlphaTestingRefValue(0.0f, gScreenIndex);
@@ -99,13 +97,7 @@ void EEROWater::RenderScene()
     SetLightingOff();
     SetSceneFog();
     gRasterizer->DrawWater(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView);   // port: the snapshot's
-    for (theIterator = gEffectQueues[4].begin(); theIterator != gEffectQueues[4].end(); theIterator++) {
-        BeginEffectBatches(theIterator->first);
-        for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
-            (*theEffect)->DrawPass6();
-        FlushEffectBatches();
-        EndEffectBatches();
-    }
+    ee_gfx_effect_queues_draw(6);
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
 
