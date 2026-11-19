@@ -31117,7 +31117,8 @@ the table). Short by far: see "Why short".
   with the classes they call (the effects, the path manager, the goals' own objects). The next whole moves need a
   layout member first (`mWaypoints`, `mMine`, `mHomeBase`, `mCitizenBuildQueue`, the class's effect and projectile
   pointers, the physical model's frame and scale, `mInitialContactLocation`) or a host per method (FindContacts,
-  StepAside, FindPath, ProduceUnit), the pattern of hidden.rs.
+  StepAside, FindPath, ProduceUnit), the pattern of hidden.rs.
+
 ## The HUD 2D lane, round 1: the Rust 2D draw list; the toolkit's, the HUD's and the font bitmap's draws and GE object members on it (ee_render ge/list2d.rs, dx7/digest2d.rs; ee_ui draw2d.rs; ee_game hud_draw.rs; branch rust-hud2d1, 2026-11-18)
 
 The brief: build the Rust 2D draw list the UI thread lane named as its blocker, move the HUD's, screens' and
