@@ -1205,7 +1205,9 @@ pub unsafe extern "C" fn ee_won_mrow_call(
 /// A new Rust MultiListHeader for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_mhead_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonMHead {
-    Box::into_raw(Box::new(EeWonMHead::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonMHead::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::MHead, made as *const c_void);
+    made
 }
 
 /// # Safety
@@ -1213,6 +1215,7 @@ pub extern "C" fn ee_won_mhead_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_mhead_free(head: *mut EeWonMHead) {
     if !head.is_null() {
+        crate::registry::unregister(head as *const c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(head) });
     }

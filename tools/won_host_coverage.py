@@ -36,6 +36,11 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_string_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op")],
          allowed={}),
+    # the generic widget shells' calls out (R6 WONLobby round 20): the C++ host answers what the base classes'
+    # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
+    dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"], rust=[],
+         allowed={v: "a base class's Rust object answers it in the game (shell.rs Sh); a driver's host otherwise"
+                  for v in ("Comp", "Btn", "MsBtn", "Call")}),
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],

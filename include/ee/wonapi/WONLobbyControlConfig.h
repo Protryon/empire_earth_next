@@ -10,7 +10,6 @@
 namespace WONAPI {
 class ImageTextButton;
 class CrossPromotionButton;
-class MaxSplitterButton;
 class MultiListHeader;
 class DirectConnectCtrl : public LobbyRustCtrl {
 public:
@@ -99,8 +98,6 @@ public:
     static ComponentConfig* CfgFactory();
     static Component* CompFactory();
     virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007c9680
-    virtual void SetComponent(Component*); // at 0x007658a0
-    MaxSplitterButton* mButton; //80, borrowed
 };
 
 class BrowserComponentConfig : public ContainerConfig {

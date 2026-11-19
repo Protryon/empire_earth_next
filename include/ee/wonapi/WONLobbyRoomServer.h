@@ -14,13 +14,6 @@ public:
 }
 // Widgets used by RootScreen.
 namespace WONAPI {
-// MSSeperator: 0x30 bytes, a Component with no members of its own.
-class MSSeperator : public Component {
-public:
-    MSSeperator(int=6);
-    virtual void GetDesiredSize(int& width,int& height) { width=100; height=6; } // inline as in the SDK (0x700700)
-    virtual void Paint(Graphics&); // 0x700720, slot 0x18
-};
 class RectangleComponent3D : public Component {
 public:
     RectangleComponent3D(bool up=true,int thickness=2); // 0x7068f0; object size 0x44
@@ -61,7 +54,7 @@ public:
     SmartPtr<GameBrowserCtrl> mHelpTab; // 0x90
     SmartPtr<GameBrowserCtrl> mNewsTab; // 0x94
     SmartPtr<Component> mLowerLayoutPoint; // 0x98
-    SmartPtr<MSSeperator> mLowerDivider; // 0x9c
+    SmartPtr<Component> mLowerDivider; // 0x9c (an MSSeperator kind)
     SmartPtr<Component> mSierraLogo; // 0xa0
     SmartPtr<Component> mLowerBanner; // 0xa4
     SmartPtr<RectangleComponent3D> mLowerBannerFrame; // 0xa8

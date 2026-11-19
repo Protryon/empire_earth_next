@@ -139,6 +139,26 @@ static std::string PP(const Component* c)
     if (c && c->id == -1) const_cast<Component*>(c)->id = 9000 + sNextPoint++;
     return c ? "c" + P((long long)c->id) : "null";
 }
+// the deleted classes' own methods as the game's statements make them (ee/wonapi/WONGUIShell.h, R6 WONLobby round 20):
+// traced by the method's name, as the original's calls are
+struct WONShell {
+    static intptr_t Op(Component* c, EeWonShellOp op, intptr_t a = 0, intptr_t b = 0)
+    {
+        static const char* const kName[] = {"", "SetUseFrame2", "SetDirection", "SetLowerAmount", "SetFrameType", "SetIsUp",
+            "SetDrawFrame", "SetDraw3DFrame", "SetTransparent", "SetHeaderHeight", "GetHeader", "SetColumn", "AddStandardTab",
+            "SetLabelText", "AddContainedComponent", "GetLabel"};
+        std::string args;
+        switch (op) {
+        case EeWonShellOp::SetLabelText: args = P(*(const GUIString*)a); break;
+        case EeWonShellOp::AddContainedComponent: args = P((Component*)a); break;
+        case EeWonShellOp::AddStandardTab: args = P(*(const GUIString*)a) + "," + P((Component*)b); break;
+        case EeWonShellOp::SetColumn: args = P((long long)a) + "," + P(*(const GUIString*)b); break;
+        default: args = P((long long)a); break;
+        }
+        tr(P(c) + "." + kName[(int)op] + "(" + args + ")");
+        return 0;
+    }
+};
 typedef Component Container; typedef Component Button; typedef Component Scroller; typedef Component MultiListArea;
 typedef Component ScrollArea; typedef Component ListArea; typedef Component InputBox; typedef Component Splitter;
 typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
