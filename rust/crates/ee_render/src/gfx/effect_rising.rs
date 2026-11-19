@@ -161,8 +161,6 @@ pub struct EeGfxEffect3DHost {
     /// the effect's members the Rust answers read (effect_reads.rs: the graphic objects, tag points and physical
     /// models)
     pub refs: crate::gfx::effect_reads::EeGfxEffectRefs,
-    /// the unit's position (`EEUnit::GetPosition`)
-    pub unit_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// `MoveToTransformation(mTransformation)` (the region)
     pub move_to: extern "C" fn(context: *mut c_void),
     /// `gEffectManager->CreateLineEffect` from `start` along `direction` with linked effect 1 or 2
@@ -179,8 +177,6 @@ pub struct EeGfxEffect3DHost {
     pub shot_hit: extern "C" fn(context: *mut c_void),
     /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
     pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
-    /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
-    pub complex_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
     pub unit_model_media: extern "C" fn(context: *mut c_void) -> i32,
     /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
@@ -199,13 +195,8 @@ pub struct EeGfxEffect3DHost {
     pub wall_gate_posts: extern "C" fn(context: *mut c_void, first: *mut Ge3DPoint, second: *mut Ge3DPoint) -> bool,
     /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
     pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
-    /// the unit's complex unit is a gate: how open it is into `open`
-    pub gate_open: extern "C" fn(context: *mut c_void, open: *mut f32) -> bool,
     /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
     pub reload_media: extern "C" fn(context: *mut c_void) -> i32,
-    /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
-    /// without a unit)
-    pub unit_raised_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
     /// screen (none without an object)
     pub queue_screen: extern "C" fn(context: *mut c_void, index: u32),
@@ -216,15 +207,11 @@ pub struct EeGfxEffect3DHost {
     pub tracer_hit: extern "C" fn(context: *mut c_void),
     /// the tracer beam's target as its saved id (`Load`: `RepairPointers` resolves it)
     pub tracer_saved_target: extern "C" fn(context: *mut c_void, id: u32),
-    /// the tracer beam's target unit's id, 0xffffffff for none (`Save`)
-    pub tracer_target_id: extern "C" fn(context: *mut c_void) -> u32,
     /// the volcano's `BuildModel` (0xfe79d) over the record's mesh lists (`count` points and heights): the image's
     /// colours and cone heights and the mesh (`volcano.rs`), the model made and referenced, the centre's height, the
     /// placement, the radius and the texture; its result
     pub volcano_build:
         extern "C" fn(context: *mut c_void, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32,
-    /// the volcano's model
-    pub volcano_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
     /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
     pub farm_terrain: extern "C" fn(context: *mut c_void) -> EeGfxFarmTerrain,
     /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
@@ -255,8 +242,6 @@ pub struct EeGfxEffect3DHost {
     pub particle_tick: extern "C" fn(context: *mut c_void, position: *const Ge3DPoint) -> EeGfxParticleTick,
     /// the terrain the particles bounce off (`EEParticleGround`)
     pub particle_ground: extern "C" fn(context: *mut c_void) -> EeGfxParticleGround,
-    /// the graphic effect's duration (ms; the particle's load)
-    pub effect_duration: extern "C" fn(context: *mut c_void) -> u32,
     /// the emitter placed on its unit (`EEE3DParticleEmitter`'s unit constructor, 0xf5f23)
     pub emitter_place: extern "C" fn(context: *mut c_void),
     /// the emitter's animation sound at `location` (`first`: its first step)
@@ -267,13 +252,8 @@ pub struct EeGfxEffect3DHost {
     pub effect_queue: extern "C" fn(context: *mut c_void) -> i32,
     /// the marching line's graphic object: its graphic effect's, its media loaded
     pub march_media: extern "C" fn(context: *mut c_void),
-    /// the marching line's ends for the draw (its end units' positions, else `from` and `to`) into `out` (two)
-    pub march_ends:
-        extern "C" fn(context: *mut c_void, from: *const Ge3DPoint, to: *const Ge3DPoint, out: *mut Ge3DPoint),
     /// a loaded end unit's id (0 the start, 1 the end; resolved by `RepairPointers`)
     pub march_set_unit: extern "C" fn(context: *mut c_void, which: u32, id: u32),
-    /// an end unit's id for a save (-1: none)
-    pub march_unit_id: extern "C" fn(context: *mut c_void, which: u32) -> i32,
 }
 
 /// The world as the effects ask it.
@@ -512,7 +492,7 @@ impl EeGfxEffect3DHost {
 
 impl Effect3DHost for &EeGfxEffect3DHost {
     fn unit_position(&mut self) -> Ge3DPoint {
-        (self.unit_position)(self.context)
+        self.ask().unit_position()
     }
     fn model_height(&mut self) -> f32 {
         self.ask().model_height()
@@ -562,7 +542,7 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.place_linked)(self.context, point)
     }
     fn complex_position(&mut self) -> Ge3DPoint {
-        (self.complex_position)(self.context)
+        self.ask().complex_position()
     }
     fn unit_model_media(&mut self) -> i32 {
         (self.unit_model_media)(self.context)
@@ -634,8 +614,7 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.wall_piece)(self.context, x, y, &mut z).then_some(z)
     }
     fn gate_open(&mut self) -> Option<f32> {
-        let mut open = 0.0;
-        (self.gate_open)(self.context, &mut open).then_some(open)
+        self.ask().gate_open()
     }
     fn player_color(&mut self) -> EeGfxColor {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -668,7 +647,7 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.reload_media)(self.context)
     }
     fn unit_raised_position(&mut self) -> Ge3DPoint {
-        (self.unit_raised_position)(self.context)
+        self.ask().unit_raised_position()
     }
     fn market_unbuilt(&mut self) -> bool {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -690,13 +669,13 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.tracer_saved_target)(self.context, id)
     }
     fn tracer_target_id(&mut self) -> u32 {
-        (self.tracer_target_id)(self.context)
+        self.ask().tracer_target_id()
     }
     fn volcano_build(&mut self, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32 {
         (self.volcano_build)(self.context, points, heights, count)
     }
     fn volcano_model(&mut self) -> EeGfxModel {
-        (self.volcano_model)(self.context)
+        self.ask().volcano_model()
     }
     fn farm_unit(&mut self) -> EeGfxFarmUnit {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -768,7 +747,7 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.particle_ground)(self.context)
     }
     fn effect_duration(&mut self) -> u32 {
-        (self.effect_duration)(self.context)
+        self.ask().effect_duration()
     }
     fn emitter_place(&mut self) {
         (self.emitter_place)(self.context)
@@ -789,15 +768,13 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.march_media)(self.context)
     }
     fn march_ends(&mut self, from: &Ge3DPoint, to: &Ge3DPoint) -> [Ge3DPoint; 2] {
-        let mut out = [Ge3DPoint::default(); 2];
-        (self.march_ends)(self.context, from, to, out.as_mut_ptr());
-        out
+        self.ask().march_ends(from, to)
     }
     fn march_set_unit(&mut self, which: u32, id: u32) {
         (self.march_set_unit)(self.context, which, id)
     }
     fn march_unit_id(&mut self, which: u32) -> i32 {
-        (self.march_unit_id)(self.context, which)
+        self.ask().march_unit_id(which)
     }
 }
 

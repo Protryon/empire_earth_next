@@ -25,6 +25,7 @@ use crate::ge::cppobj;
 use crate::ge::modobj::{ee_ge_mod_ptr, EeGeModPtr, EeGeModel};
 use crate::gfx::effect_additive::EeGfxUnitFrame;
 use crate::gfx::effect_beam::EeGfxBeamUnit;
+use crate::gfx::effect_confirm::EeGfxConfirmUnit;
 use crate::gfx::effect_glow::{EeGfxGlowPlace, EeGfxGlowSetUp};
 use crate::gfx::effect_icons::EeGfxIconUnit;
 use crate::gfx::effect_orbit::{EeGfxAnimation, EeGfxOrbital};
@@ -296,6 +297,19 @@ fn animation(c: &UnitView<'_>) -> usize {
     a as usize
 }
 
+/// `EEUnit::GetPosition` / `EEComplexUnit::GetPosition`
+fn unit_position(u: &UnitView<'_>) -> Ge3DPoint {
+    if u.is_complex() {
+        return position(&physical(u).location);
+    }
+    let (x, y) = u.tile_xy();
+    Ge3DPoint {
+        x: x as c_long as f32 + 0.5,
+        y: y as c_long as f32 + 0.5,
+        z: u.tile().expect("the unit's tile").height(),
+    }
+}
+
 fn position(t: &GeTransformation) -> Ge3DPoint {
     Ge3DPoint { x: t.x(), y: t.y(), z: t.z() }
 }
@@ -334,10 +348,15 @@ pub struct EeGfxEffectRefs {
     pub record: *mut EeGfxEffectRecord,
     /// `mGraphicEffect` (an `EEGraphicEffect*`)
     pub graphic_effect: u64,
-    /// `&mGraphicObject`, `&mUnitModel` (`EEGraphicObject**`), `&mTarget` (`EEUnit**`)
+    /// `&mGraphicObject`, `&mUnitModel` (`EEGraphicObject**`), `&mTarget`, `&mFromUnit`, `&mToUnit` (`EEUnit**`),
+    /// `&mModel` (the 2D kinds' plane model) and `&mVolcanoModel` (`GEModel**`)
     pub graphic_object: *const u64,
     pub unit_model: *const u64,
     pub target: *const u64,
+    pub from_unit: *const u64,
+    pub to_unit: *const u64,
+    pub plane_model: *const u64,
+    pub volcano_model: *const u64,
     /// `((EEUnit*)unit)->GetModel()`
     pub unit_graphic: extern "C" fn(context: *mut c_void, unit: u64) -> u64,
 }
@@ -392,6 +411,146 @@ impl Ask<'_> {
             let t = WorldRead::begin();
             f(UnitView::of(&t, handle).expect("a live unit"))
         }
+    }
+
+    fn member(p: *const u64) -> u64 {
+        // SAFETY: the effect's member
+        unsafe { *p }
+    }
+
+    // ---- the members, the graphic effect, the world
+    /// `mModel`, `mVolcanoModel`
+    pub fn plane_model(&self) -> EeGfxModel {
+        Self::member(self.refs.plane_model) as EeGfxModel
+    }
+    pub fn volcano_model(&self) -> EeGfxModel {
+        Self::member(self.refs.volcano_model) as EeGfxModel
+    }
+    /// `mGraphicEffect->mDuration`
+    pub fn effect_duration(&self) -> u32 {
+        self.graphic_effect().fields().mDuration as u32
+    }
+    /// The tracer beam's target's id for a save (0xffffffff: none)
+    pub fn tracer_target_id(&self) -> u32 {
+        match self.target() {
+            0 => 0xffff_ffff,
+            t => self.view(t, |u| world_field!(u.rts(), mUnitID) as u32),
+        }
+    }
+    /// A marching line's end unit's id for a save (-1: none)
+    pub fn march_unit_id(&self, which: u32) -> i32 {
+        match Self::member(if which == 0 { self.refs.from_unit } else { self.refs.to_unit }) {
+            0 => -1,
+            u => self.view(u, |u| world_field!(u.rts(), mUnitID) as i32),
+        }
+    }
+    /// The marching line's ends: its end units' positions, else the points
+    pub fn march_ends(&self, from: &Ge3DPoint, to: &Ge3DPoint) -> [Ge3DPoint; 2] {
+        let units = [Self::member(self.refs.from_unit), Self::member(self.refs.to_unit)];
+        let mut out = [*from, *to];
+        for i in 0..2 {
+            if units[i] != 0 {
+                out[i] = self.view(units[i], |u| unit_position(&u));
+            }
+        }
+        out
+    }
+    /// `gWorld.GetNumGhostUnits()`
+    pub fn ghost_units(&self) -> u32 {
+        // SAFETY: the effect steps with the world held
+        unsafe {
+            let t = WorldRead::begin();
+            ee_sim::world::WorldView::global(&t).map_or(0, |w| w.ghost_units_len() as u32)
+        }
+    }
+    /// `mUnit->GetPosition()` (`EEUnit::GetPosition`, a virtual: a complex unit's location, else its tile's centre on
+    /// its tile's height)
+    pub fn unit_position(&self) -> Ge3DPoint {
+        self.view(self.unit, |u| unit_position(&u))
+    }
+    /// `mUnit->mComplexUnit->GetPosition()`
+    pub fn complex_position(&self) -> Ge3DPoint {
+        self.view(self.complex_handle(), |c| unit_position(&c))
+    }
+    /// `EEEffect::GetUnitLocation` (a complex unit's location, else its tile's centre on its tile's height, 0 off
+    /// a tile; the origin without a unit)
+    pub fn unit_point(&self) -> Ge3DPoint {
+        if self.unit == 0 {
+            return Ge3DPoint::default();
+        }
+        self.view(self.unit, |u| match u.complex_unit() {
+            Some(c) => position(&physical(&c).location),
+            None => {
+                let (x, y) = u.tile_xy();
+                Ge3DPoint {
+                    x: x as c_long as f32 + 0.5,
+                    y: y as c_long as f32 + 0.5,
+                    z: u.tile().map_or(0.0, |t| t.height()),
+                }
+            }
+        })
+    }
+    /// The icon's place (`EEE3DIcon::UpdatePosition`): the unit's position raised by its complex unit's effect
+    /// height while it is on the map and alive (`GetEffectHeight(false)`); the origin without a unit
+    pub fn unit_raised_position(&self) -> Ge3DPoint {
+        if self.unit == 0 {
+            return Ge3DPoint::default();
+        }
+        let mut p = self.unit_position();
+        let (on_map, hp) = self.view(self.unit, |u| (u.has_tile_node(), u.hit_points()));
+        if on_map && hp > 0 {
+            let c = self.complex_handle();
+            let graphic = self.graphic_of(c);
+            let height = self.view(c, |c| {
+                let model = graphic.model(animation(&c));
+                let top = physical(&c).location.apply_point(model_box(model, 0).top_right_back);
+                let stats = c.stats().expect("the unit's stats");
+                let mut h = stats.scale() * top.z;
+                if !c.is_built() {
+                    h *= c.hit_points() as c_long as f32 / stats.max_hit_points() as c_long as f32;
+                }
+                h
+            });
+            p.z += height;
+        }
+        p
+    }
+    /// The energy wall's gate: how open it is (`GetOpenFraction`; None on another category)
+    pub fn gate_open(&self) -> Option<f32> {
+        self.view(self.complex_handle(), |c| {
+            if c.class().expect("the unit's class").category() != EE_GFX_CATEGORY_GATE {
+                return None;
+            }
+            Some(world_field!(c.complex(), mOpenFraction))
+        })
+    }
+    /// The command confirmation's unit: its position; a tree's id, class tile size and tile; a unit without hit points
+    /// with a complex unit and a shared model: its model's top point and scale (`EEE3DCommandConfirmation::Step`)
+    pub fn confirm_unit(&self) -> EeGfxConfirmUnit {
+        let mut facts = EeGfxConfirmUnit { position: self.unit_position(), ..Default::default() };
+        let (tree, hp, complex) = self.view(self.unit, |u| {
+            let class = u.class().expect("the unit's class");
+            (world_field!(class.fields(), mIsTree), u.hit_points(), u.complex_unit_handle())
+        });
+        if tree {
+            self.view(self.unit, |u| {
+                let class = u.class().expect("the unit's class");
+                let (x, y) = u.tile_xy();
+                facts.tree = true;
+                facts.id = world_field!(u.rts(), mUnitID) as i32;
+                facts.tile_size = world_field!(class.fields(), mTileSize) as i32;
+                facts.tile_x = x as i32;
+                facts.tile_y = y as i32;
+            });
+        } else if hp <= 0 && complex != 0 {
+            let graphic = self.graphic_of(self.unit);
+            if graphic.shared_model() != 0 {
+                facts.dead_top = true;
+                facts.top = graphic.top_point();
+                facts.scale = self.view(complex, |c| physical(&c).scale);
+            }
+        }
+        facts
     }
 
     // ---- the graphic objects' reads
@@ -869,6 +1028,8 @@ impl GlowPlace {
 
 /// `kActionDead`
 const EE_GFX_ACTION_DEAD: u32 = 6003;
+/// `kUnitCategoryGate`
+const EE_GFX_CATEGORY_GATE: u64 = 0x19;
 
 #[cfg(test)]
 #[path = "effect_reads_tests.rs"]

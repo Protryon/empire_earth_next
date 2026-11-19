@@ -132,6 +132,8 @@ struct World {
     kept: u64,
     unit_model: u64,
     target: u64,
+    none: u64,
+    plane: u64,
 }
 
 impl Drop for World {
@@ -186,6 +188,7 @@ fn world(kind: i32) -> World {
     let mut effect = Box::new(FGeffect::default());
     effect.fields.mSize = 3.0;
     effect.fields.mFlag1 = true;
+    effect.fields.mDuration = 1500;
     effect.object = addr(&*effect_object);
     let mut units = vec![Box::new(FUnit::default()), Box::new(FUnit::default())];
     for u in units.iter_mut() {
@@ -222,6 +225,8 @@ fn world(kind: i32) -> World {
         kept,
         unit_model: kept,
         target: 0,
+        none: 0,
+        plane: 0x7500,
     }
 }
 
@@ -232,6 +237,10 @@ fn refs(w: &World) -> EeGfxEffectRefs {
         graphic_object: &w.kept,
         unit_model: &w.unit_model,
         target: &w.target,
+        from_unit: &w.none,
+        to_unit: &w.none,
+        plane_model: &w.plane,
+        volcano_model: &w.none,
         unit_graphic,
     }
 }
@@ -331,4 +340,28 @@ fn the_icons_and_glows_read_the_owner_and_the_tile() {
     assert!(!place.show && !place.has_tags);
     assert_eq!(kept.frame, 7);
     assert_eq!(kept.location.m, moved(10.0, 20.0, 1.0), "no list: the location unscaled");
+}
+
+#[test]
+fn the_members_positions_and_ids() {
+    let w = world(0x2d);
+    let r = refs(&w);
+    let a = ask(&w, &r, 0);
+    assert_eq!(a.plane_model() as usize, 0x7500);
+    assert!(a.volcano_model().is_null());
+    assert_eq!(a.effect_duration(), 1500);
+    assert_eq!(a.tracer_target_id(), 0xffff_ffff);
+    assert_eq!(a.march_unit_id(0), -1);
+    let (from, to) = (Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 }, Ge3DPoint { x: 2.0, y: 0.0, z: 0.0 });
+    assert_eq!(a.march_ends(&from, &to), [from, to]);
+    let here = Ge3DPoint { x: 10.0, y: 20.0, z: 1.0 };
+    assert_eq!(a.unit_position(), here);
+    assert_eq!(a.complex_position(), here);
+    assert_eq!(a.unit_point(), here);
+    // the plain unit off a tile: its tile's centre at 0
+    assert_eq!(ask(&w, &r, 1).unit_point(), Ge3DPoint { x: 4.5, y: 6.5, z: 0.0 });
+    assert_eq!(a.gate_open(), None, "not a gate");
+    let c = a.confirm_unit();
+    assert_eq!(c.position, here);
+    assert!(!c.tree && !c.dead_top, "alive");
 }

@@ -1903,10 +1903,15 @@ struct EeGfxEffectRefs {
   EeGfxEffectRecord *record;
   /// `mGraphicEffect` (an `EEGraphicEffect*`)
   uint64_t graphic_effect;
-  /// `&mGraphicObject`, `&mUnitModel` (`EEGraphicObject**`), `&mTarget` (`EEUnit**`)
+  /// `&mGraphicObject`, `&mUnitModel` (`EEGraphicObject**`), `&mTarget`, `&mFromUnit`, `&mToUnit` (`EEUnit**`),
+  /// `&mModel` (the 2D kinds' plane model) and `&mVolcanoModel` (`GEModel**`)
   const uint64_t *graphic_object;
   const uint64_t *unit_model;
   const uint64_t *target;
+  const uint64_t *from_unit;
+  const uint64_t *to_unit;
+  const uint64_t *plane_model;
+  const uint64_t *volcano_model;
   /// `((EEUnit*)unit)->GetModel()`
   uint64_t (*unit_graphic)(void *context, uint64_t unit);
 };
@@ -1932,8 +1937,6 @@ struct EeGfxEffect3DHost {
   /// the effect's members the Rust answers read (effect_reads.rs: the graphic objects, tag points and physical
   /// models)
   EeGfxEffectRefs refs;
-  /// the unit's position (`EEUnit::GetPosition`)
-  EeGe3DPoint (*unit_position)(void *context);
   /// `MoveToTransformation(mTransformation)` (the region)
   void (*move_to)(void *context);
   /// `gEffectManager->CreateLineEffect` from `start` along `direction` with linked effect 1 or 2
@@ -1952,8 +1955,6 @@ struct EeGfxEffect3DHost {
   void (*shot_hit)(void *context);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
   void (*place_linked)(void *context, const EeGe3DPoint *point);
-  /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
-  EeGe3DPoint (*complex_position)(void *context);
   /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
   int32_t (*unit_model_media)(void *context);
   /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
@@ -1972,13 +1973,8 @@ struct EeGfxEffect3DHost {
   bool (*wall_gate_posts)(void *context, EeGe3DPoint *first, EeGe3DPoint *second);
   /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
   bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
-  /// the unit's complex unit is a gate: how open it is into `open`
-  bool (*gate_open)(void *context, float *open);
   /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
   int32_t (*reload_media)(void *context);
-  /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
-  /// without a unit)
-  EeGe3DPoint (*unit_raised_position)(void *context);
   /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
   /// screen (none without an object)
   void (*queue_screen)(void *context, uint32_t index);
@@ -1989,14 +1985,10 @@ struct EeGfxEffect3DHost {
   void (*tracer_hit)(void *context);
   /// the tracer beam's target as its saved id (`Load`: `RepairPointers` resolves it)
   void (*tracer_saved_target)(void *context, uint32_t id);
-  /// the tracer beam's target unit's id, 0xffffffff for none (`Save`)
-  uint32_t (*tracer_target_id)(void *context);
   /// the volcano's `BuildModel` (0xfe79d) over the record's mesh lists (`count` points and heights): the image's
   /// colours and cone heights and the mesh (`volcano.rs`), the model made and referenced, the centre's height, the
   /// placement, the radius and the texture; its result
   int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
-  /// the volcano's model
-  EeGfxModel (*volcano_model)(void *context);
   /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
   EeGfxFarmTerrain (*farm_terrain)(void *context);
   /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
@@ -2027,8 +2019,6 @@ struct EeGfxEffect3DHost {
   EeGfxParticleTick (*particle_tick)(void *context, const EeGe3DPoint *position);
   /// the terrain the particles bounce off (`EEParticleGround`)
   EeGfxParticleGround (*particle_ground)(void *context);
-  /// the graphic effect's duration (ms; the particle's load)
-  uint32_t (*effect_duration)(void *context);
   /// the emitter placed on its unit (`EEE3DParticleEmitter`'s unit constructor, 0xf5f23)
   void (*emitter_place)(void *context);
   /// the emitter's animation sound at `location` (`first`: its first step)
@@ -2039,26 +2029,8 @@ struct EeGfxEffect3DHost {
   int32_t (*effect_queue)(void *context);
   /// the marching line's graphic object: its graphic effect's, its media loaded
   void (*march_media)(void *context);
-  /// the marching line's ends for the draw (its end units' positions, else `from` and `to`) into `out` (two)
-  void (*march_ends)(void *context, const EeGe3DPoint *from, const EeGe3DPoint *to, EeGe3DPoint *out);
   /// a loaded end unit's id (0 the start, 1 the end; resolved by `RepairPointers`)
   void (*march_set_unit)(void *context, uint32_t which, uint32_t id);
-  /// an end unit's id for a save (-1: none)
-  int32_t (*march_unit_id)(void *context, uint32_t which);
-};
-
-/// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
-/// has no hit points, a complex unit and a model (`dead_top`) and then the model's top point and the scale.
-struct EeGfxConfirmUnit {
-  EeGe3DPoint position;
-  bool tree;
-  int32_t id;
-  int32_t tile_size;
-  int32_t tile_x;
-  int32_t tile_y;
-  bool dead_top;
-  EeGe3DPoint top;
-  float scale;
 };
 
 /// `CreateParts`' place: the position and the height (the farthest part plus the effect's size).
@@ -2120,19 +2092,13 @@ struct EeGfxEffect2DHost {
   int32_t (*load_media)(void *context);
   /// `MoveToPoint(mPosition)` (the second half of `SetPosition`)
   void (*move_to_point)(void *context);
-  /// `EEEffect2D::mModel`
-  EeGfxModel (*model)(void *context);
   /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
   EeGfxConfirmGoal (*confirm_goal)(void *context,
                                    uint32_t goal_index,
                                    int32_t tile_x,
                                    int32_t tile_y);
-  /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
-  EeGfxConfirmUnit (*confirm_unit)(void *context);
   /// the terrain mesh's height at a point (`GetMeshZ`)
   float (*terrain_z)(void *context, float x, float y);
-  /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
-  EeGfxModel (*command_texture)(void *context, uint32_t index);
   /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
   int32_t (*object_media)(void *context);
   /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
@@ -2163,8 +2129,6 @@ struct EeGfxEffect2DHost {
   /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
   /// unit's location (not without a complex unit)
   EeGfx2DPoint (*part_follow)(void *context, uint32_t index);
-  /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
-  EeGe3DPoint (*unit_point)(void *context);
   /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
   /// (`gAEManager.HasEffect` with the unit's own list)
   bool (*area_effect)(void *context, int32_t kind, float x, float y, uint32_t player);
@@ -2173,8 +2137,6 @@ struct EeGfxEffect2DHost {
   void (*set_area_effects)(void *context, int32_t count);
   /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
   bool (*icons_selected)(void *context);
-  /// `gWorld.GetNumGhostUnits()`
-  uint32_t (*ghost_units)(void *context);
   /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
   EeGfx2DPoint (*ground_point)(void *context, EeGe3DPoint at);
   /// the visible terrain and the unit's tile; its visible rows

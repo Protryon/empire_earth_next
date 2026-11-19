@@ -57,17 +57,11 @@ pub struct EeGfxEffect2DHost {
     pub load_media: extern "C" fn(context: *mut c_void) -> i32,
     /// `MoveToPoint(mPosition)` (the second half of `SetPosition`)
     pub move_to_point: extern "C" fn(context: *mut c_void),
-    /// `EEEffect2D::mModel`
-    pub model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
     /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
     pub confirm_goal:
         extern "C" fn(context: *mut c_void, goal_index: u32, tile_x: i32, tile_y: i32) -> EeGfxConfirmGoal,
-    /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
-    pub confirm_unit: extern "C" fn(context: *mut c_void) -> EeGfxConfirmUnit,
     /// the terrain mesh's height at a point (`GetMeshZ`)
     pub terrain_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
-    /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
-    pub command_texture: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
     /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
     pub object_media: extern "C" fn(context: *mut c_void) -> i32,
     /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
@@ -95,8 +89,6 @@ pub struct EeGfxEffect2DHost {
     /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
     /// unit's location (not without a complex unit)
     pub part_follow: extern "C" fn(context: *mut c_void, index: u32) -> crate::gfx::effect_sprite::EeGfx2DPoint,
-    /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
-    pub unit_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
     /// (`gAEManager.HasEffect` with the unit's own list)
     pub area_effect: extern "C" fn(context: *mut c_void, kind: i32, x: f32, y: f32, player: u32) -> bool,
@@ -105,8 +97,6 @@ pub struct EeGfxEffect2DHost {
     pub set_area_effects: extern "C" fn(context: *mut c_void, count: i32),
     /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
     pub icons_selected: extern "C" fn(context: *mut c_void) -> bool,
-    /// `gWorld.GetNumGhostUnits()`
-    pub ghost_units: extern "C" fn(context: *mut c_void) -> u32,
     /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
     pub ground_point: extern "C" fn(context: *mut c_void, at: Ge3DPoint) -> EeGfx2DPoint,
     /// the visible terrain and the unit's tile; its visible rows
@@ -295,7 +285,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.move_to_point)(self.context)
     }
     fn model(&mut self) -> EeGfxModel {
-        (self.model)(self.context)
+        self.ask().plane_model()
     }
     fn selection_size(&mut self) -> f32 {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -309,7 +299,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.confirm_goal)(self.context, goal_index, tile_x, tile_y)
     }
     fn confirm_unit(&mut self) -> EeGfxConfirmUnit {
-        (self.confirm_unit)(self.context)
+        self.ask().confirm_unit()
     }
     fn unit_location(&mut self) -> GeTransformation {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -319,7 +309,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.terrain_z)(self.context, x, y)
     }
     fn command_texture(&mut self, index: u32) -> EeGfxModel {
-        (self.command_texture)(self.context, index)
+        crate::gfx::ro_units::ee_gfx_ro_units_command_texture(index)
     }
     fn spawn_point(&mut self, kind: u32) -> Ge3DPoint {
         self.ask().spawn_point(kind)
@@ -391,7 +381,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         unsafe { effect_views::max_hit_points(self.unit) }
     }
     fn unit_point(&mut self) -> Ge3DPoint {
-        (self.unit_point)(self.context)
+        self.ask().unit_point()
     }
     fn object_model(&mut self) -> EeGfxModel {
         self.ask().model()
@@ -422,7 +412,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         unsafe { effect_views::icons_owner(self.unit, self.player) }
     }
     fn ghost_units(&mut self) -> u32 {
-        (self.ghost_units)(self.context)
+        self.ask().ghost_units()
     }
     fn ground_point(&mut self, at: Ge3DPoint) -> EeGfx2DPoint {
         (self.ground_point)(self.context, at)
