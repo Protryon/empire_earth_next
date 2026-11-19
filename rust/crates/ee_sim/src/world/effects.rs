@@ -224,7 +224,8 @@ mod tests {
         assert_eq!(f.state.lock().unwrap().log.len(), 7);
         assert!(f.state.lock().unwrap().log[6].contains("[1, 2], [3, 4]"));
         // no graphic effect: nothing made
-        let none = f.create(&EffectRequest { graphic_effect: 0, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
+        let none =
+            f.create(&EffectRequest { graphic_effect: 0, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
         assert_eq!(none, EffectCreated { result: EFFECT_NOT_MADE, handle: EffectHandle::NONE });
         assert!(f.set_local_to(handles[0], 3));
         assert_eq!(f.state.lock().unwrap().effects[&1].1, Some(3));
@@ -235,8 +236,10 @@ mod tests {
     #[test]
     fn a_body_over_the_interface() {
         let f = Fake::default();
-        let damaged = f.create(&EffectRequest { graphic_effect: 0x3e, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
-        let burning = f.create(&EffectRequest { graphic_effect: 0x40, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
+        let damaged =
+            f.create(&EffectRequest { graphic_effect: 0x3e, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
+        let burning =
+            f.create(&EffectRequest { graphic_effect: 0x40, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
         let mut fire = damaged.handle;
         put_out(&f, &mut fire, 0x3e);
         assert_eq!(fire, EffectHandle::NONE);
@@ -258,7 +261,8 @@ mod tests {
         // the first registration wins (this crate's tests register no other), a second is ignored
         assert!(register(fake));
         assert!(!register(&NoEffects));
-        let r = effects().create(&EffectRequest { graphic_effect: 7, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
+        let r = effects()
+            .create(&EffectRequest { graphic_effect: 7, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
         assert_eq!(r.result, 0);
         assert_eq!(effects().kind(r.handle), Some(7));
     }

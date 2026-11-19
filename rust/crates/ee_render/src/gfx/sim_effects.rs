@@ -65,7 +65,10 @@ pub static RENDER_EFFECTS: RenderEffects = RenderEffects;
 
 impl RenderEffects {
     /// The living effect's record under the handle on the current manager, changed by `f`; `None` without one.
-    fn with_record<R>(handle: EffectHandle, f: impl FnOnce(&mut crate::gfx::effect_state::EeGfxEffectRecord) -> R) -> Option<R> {
+    fn with_record<R>(
+        handle: EffectHandle,
+        f: impl FnOnce(&mut crate::gfx::effect_state::EeGfxEffectRecord) -> R,
+    ) -> Option<R> {
         let e = fm::find(fm::current(), handle.0);
         if e.is_null() {
             return None;

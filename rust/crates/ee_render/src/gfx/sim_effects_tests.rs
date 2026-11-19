@@ -35,7 +35,10 @@ const Q: Ge3DPoint = Ge3DPoint { x: 7.0, y: 8.0, z: 9.0 };
 #[test]
 fn on_a_unit() {
     let a = args(EffectPlace::Unit { unit: 0x10, keeps_unit: true, tag_point: 4, goal_index: 2 });
-    same(&a, &EeGfxEffectArgs { unit: 0x10, keeps_unit: true, tag_point: 4, goal_index: 2, ..base(EeGfxEffectEntry::Unit) });
+    same(
+        &a,
+        &EeGfxEffectArgs { unit: 0x10, keeps_unit: true, tag_point: 4, goal_index: 2, ..base(EeGfxEffectEntry::Unit) },
+    );
 }
 
 #[test]
