@@ -2,6 +2,7 @@
 //! map's tiles and mesh, every player's units, as lines. The editor's selection, paint area and the save's chunks stay
 //! the C++'s (the editor form's and the save's objects). The C library's formats the lines used are kept: `%a` as the
 //! Microsoft library prints it (13 hex digits, a zero as `0x0.0000000000000p+0`), the FNV-1a hashes of the C++.
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use std::ffi::{c_char, c_void, CString};
 
@@ -64,7 +65,7 @@ pub fn msvc_a(value: f64) -> String {
 
 /// The map's lines (`map size=.. tiles=..`, `mesh points=..`) and the units' (`unit ..` per unit, `units N hash`);
 /// false (with `map none`) without a map.
-pub fn world_lines(world: &WorldView, mesh: *const EeGeTerrainMesh, out: &mut Vec<String>) -> bool {
+fn world_lines(world: &WorldView, mesh: *const EeGeTerrainMesh, out: &mut Vec<String>) -> bool {
     let Some(map) = world.map() else {
         out.push("  map none".into());
         return false;
@@ -191,7 +192,9 @@ mod tests {
         assert_eq!(hex(0x14650fb0739d0383), "14650fb0739d0383");
         let mut h = Hash::default();
         h.bytes(b"a");
-        assert_eq!(h.value, 0xaf63dc4c8601ec8c);
+        // the C++'s basis (one digit short of FNV's: the editor gate's golden hashes are over it)
+        assert_eq!(hex(Hash::default().value), "14650fb0739d0383");
+        assert_eq!(h.value, (1469598103934665603u64 ^ 0x61).wrapping_mul(1099511628211));
         let mut l = Hash::default();
         l.long(-1);
         let mut b = Hash::default();

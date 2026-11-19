@@ -2,6 +2,7 @@
 //! tools/sim_capture.py): the player's id and the game time, FNV-1a digests of its statistics, events, queued
 //! improvements and plain members, then its resources and counts. Read through the world views and the Rust objects
 //! the player holds (the statistics, the events, the queue).
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use std::os::raw::{c_long, c_ulong};
 

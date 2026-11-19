@@ -7,6 +7,7 @@
 //!   normals). Nested edits record nothing.
 //! - MAPS: after a sight change (AddSight 0, RemoveSight 1): its arguments and an FNV-1a of the tiles near the point
 //!   (each tile's visibility words and the mesh tile's reference count).
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use std::cell::Cell;
 use std::os::raw::{c_long, c_ulong};
@@ -85,7 +86,7 @@ fn cell(v: i64) -> c_ulong {
 
 /// `MapRectHash`: the map around the tile rectangle x in [left, right], y in [bottom, top] (one tile and point more
 /// on each side); left > right: the whole map.
-pub fn map_rect_hash(map: Option<MapView>, mesh: *const EeGeTerrainMesh, rect: [i64; 4]) -> u64 {
+fn map_rect_hash(map: Option<MapView>, mesh: *const EeGeTerrainMesh, rect: [i64; 4]) -> u64 {
     let mut h = Fnv::default();
     let Some(map) = map else { return h.0 };
     let [mut left, mut right, mut bottom, mut top] = rect;

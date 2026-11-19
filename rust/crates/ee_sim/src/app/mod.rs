@@ -3,18 +3,18 @@
 //! writer and its PLST record (TEST ONLY).
 
 pub mod active;
-pub mod capture;
 pub mod active_ffi;
 #[cfg(test)]
 mod active_tests;
+pub mod capture;
 pub mod cheats;
 pub mod cheats_ffi;
 #[cfg(test)]
 mod cheats_tests;
 pub mod map;
-pub mod player_capture;
 #[cfg(test)]
 mod map_tests;
+pub mod player_capture;
 pub mod statistics;
 pub mod statistics_ffi;
 #[cfg(test)]

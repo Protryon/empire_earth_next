@@ -5,6 +5,7 @@
 //! The tables are recorded once a process; the players' part at every sweep: each resource's market price both ways
 //! (`EEGetTradePrice` over the world table's rates the C++ hands in), the exchange's steps and the take's test from
 //! what the player has, and every unit's disband refund (through the world views).
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -114,7 +115,8 @@ impl Decisions<'_> {
             }
         }
         const RATES: [f32; 11] = [0.0, 0.25, 0.5, 0.666_666_7, 1.0, 1.5, 2.0, 3.0, 10.0, 1000.0, -1.0];
-        const TRADES: [i64; 14] = [-1000000, -100000, -1000, -101, -100, -1, 0, 1, 100, 101, 1000, 7500, 100000, 1000000];
+        const TRADES: [i64; 14] =
+            [-1000000, -100000, -1000, -101, -100, -1, 0, 1, 100, 101, 1000, 7500, 100000, 1000000];
         for r in RATES {
             for t in TRADES {
                 for b in 0..2u8 {
@@ -123,7 +125,8 @@ impl Decisions<'_> {
             }
         }
         const PRICES: [i64; 10] = [1, 2, 3, 50, 99, 100, 101, 333, 999, 1000];
-        const EXCHANGE_HAVES: [i64; 17] = [-5000, -50, -1, 0, 1, 2, 3, 49, 50, 99, 100, 101, 333, 999, 1000, 1001, 5000];
+        const EXCHANGE_HAVES: [i64; 17] =
+            [-5000, -50, -1, 0, 1, 2, 3, 49, 50, 99, 100, 101, 333, 999, 1000, 1001, 5000];
         for s in 0..2u8 {
             for p in PRICES {
                 for h in EXCHANGE_HAVES {
@@ -166,7 +169,14 @@ impl Decisions<'_> {
 
     /// A player's part: `trade[r - 2]` its trade balances, `caps[r]` what it has, `rates[r]` the world table's
     /// rates (`EEGetTradePrice`: 1 for gold), `units` each unit's hit points, maximum and disband flag.
-    pub fn player(&mut self, index: u32, trade: &[i64; 5], caps: &[i64; 7], rates: &[f32; 7], units: &[(i64, i64, u8)]) {
+    pub fn player(
+        &mut self,
+        index: u32,
+        trade: &[i64; 5],
+        caps: &[i64; 7],
+        rates: &[f32; 7],
+        units: &[(i64, i64, u8)],
+    ) {
         for r in FOOD..=IRON {
             for b in 0..2u8 {
                 let price = ee_netmsg_trade_price(rates[r], trade[r - 2], b) as i32 as i64;
@@ -273,6 +283,9 @@ mod tests {
         // the sell's exchange is from the gold (caps[5])
         assert_eq!(got[1].1[2], 400);
         assert_eq!(got.last().unwrap().0, DISBAND_REFUND);
-        assert_eq!(payload(7, &[1, -1]), [7, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255]);
+        assert_eq!(
+            payload(7, &[1, -1]),
+            [7, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255]
+        );
     }
 }

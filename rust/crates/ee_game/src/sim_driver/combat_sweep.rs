@@ -8,6 +8,7 @@
 //! `EECanHeal` (CBCH: no game heals) runs over each pair both ways, a unit and itself, and a unit and the previous
 //! player's newest unit: a host call (the C++ records it). A unit's position (`GetPosition`, virtual) and the
 //! projectile class's acceleration are host reads.
+#![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
 use std::ffi::c_void;
 use std::os::raw::c_long;
