@@ -200,7 +200,6 @@ pub const EE_UNITS_GOAL_HOST_TILE_SCREEN: i32 = 77;
 pub const EE_UNITS_GOAL_HOST_CELL_TAKEN: i32 = 78;
 pub const EE_UNITS_GOAL_HOST_CAN_STAND: i32 = 79;
 pub const EE_UNITS_GOAL_HOST_PATH_REACHABLE: i32 = 80;
-pub const EE_UNITS_GOAL_HOST_PATH_AREA_ID: i32 = 81;
 pub const EE_UNITS_GOAL_HOST_MAP_DIMENSIONS: i32 = 82;
 pub const EE_UNITS_GOAL_HOST_CONTINENT_POINT: i32 = 83;
 pub const EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: i32 = 85;
@@ -211,7 +210,6 @@ pub const EE_UNITS_GOAL_HOST_UNLOAD_RANGE: i32 = 90;
 pub const EE_UNITS_GOAL_HOST_CLASS_TYPE: i32 = 91;
 pub const EE_UNITS_GOAL_HOST_CARGO_COUNT: i32 = 92;
 pub const EE_UNITS_GOAL_HOST_CARGO_CATEGORY: i32 = 93;
-pub const EE_UNITS_GOAL_HOST_TRANSPORT_KIND: i32 = 94;
 pub const EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: i32 = 95;
 /// `i[0..8]`: the destination, unload, first cargo and found tiles in and out
 pub const EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES: i32 = 96;
@@ -532,6 +530,14 @@ fn write_complex(unit: u64, f: impl FnOnce(&mut crate::world::unit_fields::EeUni
         // SAFETY: a live complex unit's record; no other reference to it is held across the store
         f(unsafe { &mut *cx })
     })
+}
+
+/// The unit's class's kinds: 1 a transport, 2 an airplane (`EEUnitClassOfKind`, by its category)
+fn transport_kind(unit: u64) -> i64 {
+    use crate::units::kinds::{class_kinds_of, EE_CLASS_KIND_AIRPLANE, EE_CLASS_KIND_TRANSPORT};
+    let category = read_unit(unit, |u| u.class().map_or(u64::MAX, |c| c.category()));
+    let kinds = u32::try_from(category).map_or(0, class_kinds_of);
+    i64::from(kinds & EE_CLASS_KIND_TRANSPORT != 0) | i64::from(kinds & EE_CLASS_KIND_AIRPLANE != 0) << 1
 }
 
 /// `inUnit->mPlayer->IsHuman()` (a virtual: the unit utilities' host)
@@ -956,7 +962,7 @@ impl ExploreHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_PATH_REACHABLE, unit, 0, &ints) != 0
     }
     fn path_area_id(&mut self, x: i32, y: i32) -> u16 {
-        self.op_ints(EE_UNITS_GOAL_HOST_PATH_AREA_ID, 0, 0, &[i64::from(x), i64::from(y)]) as u16
+        crate::units::uu_direct::with_game(|g| g.path_area_id(x, y))
     }
     fn map_dimensions(&mut self) -> [i32; 4] {
         let mut io = EeUnitsGoalIo::default();
@@ -1118,7 +1124,7 @@ impl UnloadHost for OpHost<'_> {
         })
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+        transport_kind(unit)
     }
     fn can_unload_at(&mut self, unit: u64, tile: (i32, i32)) -> bool {
         self.op_ints(EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT, unit, 0, &[i64::from(tile.0), i64::from(tile.1)]) != 0
@@ -1215,7 +1221,7 @@ impl LoadHost for OpHost<'_> {
         crate::units::uu_direct::line_blocked(from.0, from.1, to.0, to.1)
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+        transport_kind(unit)
     }
     fn can_load(&mut self, container: u64, unit: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_CAN_LOAD, container, unit) != 0

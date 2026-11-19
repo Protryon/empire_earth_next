@@ -543,13 +543,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             thePath->Dereference();
             return theReachable;
         }
-    case EE_UNITS_GOAL_HOST_PATH_AREA_ID: {
-            U2DPoint<long> theTile;
-            theTile.mX = (long)ioArgs->i[0];
-            theTile.mY = (long)ioArgs->i[1];
-            EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theTile);
-            return theArea != NULL ? theArea->GetID() : 0;
-        }
     case EE_UNITS_GOAL_HOST_MAP_DIMENSIONS:
         ioArgs->i[0] = gMapWidth;
         ioArgs->i[1] = gMapHeight;
@@ -579,9 +572,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return 0;
         }
     // the unload transport's
-    case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
-        return (EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
-            | (EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(theComplex->GetUnitClass()) != NULL ? 2 : 0);
     case EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: {
             EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (theTransport != NULL)
