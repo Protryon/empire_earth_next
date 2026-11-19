@@ -33402,3 +33402,110 @@ with the census before and after (a full build first: the census reads the objec
   members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
   oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
   macros now add `alignas(16)`.
+
+## The game's leaves, round 2: the placement captures, the area bodies, the db tables' storage, the unit sets and the team's save in Rust (ee_sim cp place_capture.rs, astar area_ops.rs / sub_sector_pass.rs, app unit_sets.rs / team_save.rs; ee_data tables.rs; branch rust-leaves2, 2026-11-19)
+
+The lane took the census on origin/rust merged with rust-cuts1 (27cebd6c5; the biggest cycle 229 units, 109,073
+lines) and moved what its directories had left as leaves and near-leaves; docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ (src, include/ee, include/lle) |
+|---|---|---|
+| ded438105 | (merge) rust-cuts1 27cebd6c5, as the lead asked (the cycle cuts) | |
+| da3ff3fbf | PLCE and CPEV whole in Rust; EECPPlaceCapture.cpp deleted | +44 -212, net -168 |
+| da3c871ce | EEAIArea's bodies in Rust; EEAIArea.cpp deleted | +78 -316, net -238 |
+| 3804f260a | the db tables' storage in ee_data, the damage tables' load and CBDT in ee_combat; EEColorTable, EECPBehaviorTable, EEUnitBehavior, EEDatabase .cpp deleted | +139 -456, net -317 |
+| 0397b142a | the unit sets whole in Rust; EEUnitSet, EEUnitSetManager, EEGameVariant .cpp deleted | +70 -286, net -216 |
+| 16754ef02 | the two Rust tables the C++ indexes aligned to 16 | Rust only |
+| eeb5f8d15 | EETeam header-only, its save in Rust | +31 -60, net -29 |
+| f8c426c3c | EEHumanPlayer header-only, EECDKeyStrings.cpp deleted | +6 -88, net -82 |
+| 1f39482de | `EEAIPathSubSector::IsPassable` in Rust | +2 -39, net -37 |
+| | **the branch against the merge of rust-cuts1** | **+370 -1,457, net -1,087** |
+
+- **The capture scopes without C++ members.** PLCE's and CPEV's scope (`EECPPlaceScope`) read the computer player's
+  id, the placement's town tile and its Rust data, and the player's record (EeCpFields' bytes) as C++ members. Now the
+  scope is an inline class over `ee_cp_scope_*`: the player passes as its `EEPlayer*` (a template constructor, so the
+  base cast compiles where the class is complete), the id is the player view's, and three new world layout entries
+  (`cp_placement`: `EEComputerPlayer::mPlacement` from the `EEPlayer*`; `placement_town`, `placement_rust` in
+  `EECPPlacement`) give the rest. A scope that does not record is NULL (only the depth counts), so off the capture
+  nothing is allocated; place_game.rs's host calls the Rust directly (the C++ forwarders it imported went).
+- **EEAIArea's bodies.** The hull's queries, rebuilds, the closest points and the tiles are `area_ops.rs`, each with
+  its HULL or AREA record (the geometry scope as the C++ opened it: HullContains after its bounds test). The class's
+  slots are inline; `GetRandomPoint` (the physics' random stream), `UpdateHull` and `UpdateBounds` (the influence
+  table's region size) moved to EEAIRectangleArea.cpp, the one unit of the area kinds that includes those headers.
+  `EEAIPathSubSector::IsPassable` is `sub_sector_pass.rs` over the views (the tiles' units, the gate's parts, command,
+  owner, peace and lock).
+- **The db tables' storage.** The player colours (`EeDataList::Colors`; the readers return `GEColor` by value, so
+  `EEGetPlayerColor` does too), the computer player behaviours (`gCPBehaviors` is ee_data's static, declared
+  `extern "C"` by the C++), the world constants (`ee_data_world_entry`: the 76 `gWorldTable.Get*Value` sites are
+  unchanged inline readers), the to-hit factors (`gWeaponToHitFactors`, likewise) and dbobjects' records
+  (`ee_data_objects_*`; `EEDbObject` is the record's bytes) are ee_data's. The damage tables' load writes its CBDT
+  records in ee_combat (the same bytes as `EECombatCapture`'s); `gDamageTable` and its two twins went (their one
+  reader, the AI's damage test, reads `EEDamageFactor`). The loaders are header templates over `EEDbReadRecords`
+  (the call is dependent, so a header needs no ee/EEDbRecords.h: round 1's include-order lesson).
+- **The unit sets** (`app/unit_sets.rs`): the records, the table (boxed sets: an `EEUnitSet*` is a Rust set), the
+  links, `Contains` (the family through the class view) and `ForEach`'s walk (`ee_unit_set_next`). The readers that
+  touched members changed: the editor's two `mShowInEditor` reads are `ShowInEditor()`, EEComplexUnit's `mSets[99]`
+  is `GetSet(99)`, the contagion manager's out-of-line `EEUnitSetManager::Contains` went (inline now), `GetName`
+  returns the name's bytes. `EEGameVariant::GetFactor` asks the sets by index (a variant naming no set reads false
+  where the C++ dereferenced NULL).
+- **The team's save** (`app/team_save.rs`) over `EESaveFilePrimitive`: the count and players as `FSFile`'s 4-byte
+  reads and writes; EETeam is header-only. EEHumanPlayer's three overrides only called EEPlayer's (they went with
+  the unit); EECDKeyStrings' eight strings had no reader.
+- **Lesson: a Rust static the C++ indexes must be aligned as the C++ compiler aligns a large global.** `gCPBehaviors`
+  as a plain Rust static (align 4) passed the first oracle by luck; the next link moved it and EE-SIM faulted in
+  `EECPUnitsTuning` on a `pshufd` from the table (an SSE load with a memory operand needs 16 bytes of alignment, and
+  clang emits it for a global array it believes 16-aligned, as MSVC aligns any global of 16 bytes or more). The cuts
+  lane met the same in EEGlobalStorage. The wrappers are `#[repr(C, align(16))]` now, with a test.
+- **Lesson: a template's body needs complete types only at instantiation, but non-dependent names at definition.**
+  `UpdateBounds(T*)` as a template still failed in EEAIChokePoint.cpp, whose instantiation saw no EEInfluenceTable
+  (the member access is dependent, but the type was incomplete at the point of instantiation too); and inline bodies
+  calling `U2DHullPointOf` broke the includers without lle/U2DPolygon.h (EESMEffect.cpp). The inline bodies use the
+  class's own point helpers; the influence-table read moved out of line.
+- **Lesson: tools/eedata reads db record layouts from the sources** (overlay.py `STRUCT_SOURCES`, `RUST_STRUCTS`):
+  deleting EEUnitSetManager.cpp, which defined `EEUnitSetRecord`, broke `eedata.py check` (a FileNotFoundError, not
+  a failed table). The record is ee_sim's `DbUnitSet` now (a Rust struct is read as such: its u8 is a one-byte bool,
+  the tail padding implicit) and specs.json was regenerated (only its source and comments changed). Before deleting a
+  unit, grep tools/eedata for its path.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EERules (the converter's cppgate compiles it: what a move
+  takes is listed there), EEWorldLayout, EEUnitStore's rest, the media objects (sound, button, terrain, animal
+  tables), EEUnitClassImprovement, EEVCWonder, the message classes.
+- **Tests**: place_capture 4; area_ops 1; sub_sector_pass 1; tables (colours, CP behaviours, world, objects) 4;
+  unit_sets 2; team_save 1.
+- **Behaviour changes**: an `EECPBehavior` record with an index past 128 is dropped (the C++ wrote past the array);
+  a dbobjects record that fails to read is kept (the C++ left a NULL slot: the load then stops the game either way);
+  `gDamageTable[a][b]` past a row reads 0; a game variant whose set is missing reads factor 0 (the C++ crashed).
+  Nothing else: the oracle and every capture profile are unchanged.
+- **What exercises what**: PLCE and CPEV, HULL and AREA, CBDT (every capture profile); the tables, the unit sets,
+  the damage tables (every game's load: the oracle); `IsPassable` (the AI's bounded path searches: the oracle);
+  the team's save (saveload); `EEGetPlayerColor` and the minimap's colours (the tour only); `GetName` of a set and
+  `ShowInEditor` (the scenario editor's unit type lists: sim_editor and the tour).
+
+- **The census** (tools/cpp_deps.py report). Before (origin/rust 7779d7db1 with rust-leaves1 and rust-cuts1
+  27cebd6c5 merged): 524 units, 150,911 lines; leaves 60 (3,546); near-leaves 130 (13,249); cycles 7 SCCs, 345
+  units, 125,971 lines (the largest 229 units, 109,073). After the round (1f39482de, before the merge of origin/rust):
+  512 units, 149,685 lines; leaves 57 (3,293); near-leaves 122 (12,368); cycles 343 units, 125,802 (the largest 227,
+  108,904). On the tree merged with origin/rust 645799684 (other lanes' rounds count too): 500 units, 147,109 lines;
+  leaves 57 (3,293); near-leaves 119 (12,173); 8 SCCs, 328 units, 122,413 lines (the largest 217 units, 105,693).
+- **Gates, before the merge**: both builds 0/0 at every step; the oracle identical on seeds 2-3 after each batch;
+  every capture profile at seeds 2-3 PASS after the capture units moved (oracle 212, late 214, space 210, calamity
+  222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185 digests: round
+  1's counts); the plain saveload 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: FAIL (1)`: mediterranean-easy seed 2's loaded game at 1900 s
+  faulted at start (`ee_ts_thread_receive` under `RTSGraphics::Main`, before the load: a thread start race), and
+  that case alone again was identical to the end (END, as expected).
+- **Gates, on the tree merged with origin/rust 645799684**: `strip_markers.py --check` clean, the headers current,
+  `rust_includes.py` nothing to add; both builds 0/0 and the test profile 0/0; the Rust gate PASS (after a clippy
+  pass: `c_long` casts on Windows, `#![allow(clippy::unnecessary_cast)]` as the AI modules have); the oracle
+  identical on seeds 2-7; the captures at seeds 2-3 oracle 212, late 214, space 210, calamity 222 digests PASS;
+  scenario_check 27/27; the editor gate (14,448 lines) and the civilization builder gate (4,062) PASS; `eedata.py
+  check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS tour`; gates.sh (EE_GATES_TREE the main
+  checkout's tree): `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13467` units [4, 42, 42] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2728 joiner=2728`, GATES PASS.
+- **The merge needed**: the world layout's new entries on both sides (origin's `active_group_fields`,
+  `active_group_goal` first, this round's three after; rust/sim/world.h regenerated); PORT_LEARNINGS (origin's file,
+  then round 1's and the cycle cuts' sections, which origin's merge of an older rust-cuts1 did not carry); the
+  `strip_markers.py` pass over two new inline bodies' address comments.
+- **Short of the target**: net -1,087 C++ lines this round (against the merge of rust-cuts1; -2,378 against
+  origin/rust 645799684, which holds neither rust-leaves1 nor rust-cuts1's last commits). What the census left in the
+  game's directories is media objects, the converter-gated EERules, the compiler-only EEWorldLayout, EEUnitStore's
+  object reads and the message classes: docs/progress/game-leaves.md "Left".
