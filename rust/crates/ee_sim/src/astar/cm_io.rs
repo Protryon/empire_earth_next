@@ -1559,13 +1559,17 @@ pub unsafe extern "C" fn ee_astar_cm_regions_digest(r: *const EeAStarCmRecord) -
     regions_digest(&*r)
 }
 
-/// `EEAIContinentFill` (TEST ONLY): the CNTR record's bytes.
+/// TEST ONLY: `EEAIContinentCapture(tag)`: one record of the manager's state under `tag` (CNTB, CNTR); nothing
+/// unless the capture is on.
 ///
 /// # Safety
-/// As `ee_astar_cm_write_regions`.
+/// `r` the manager's record; its objects live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_capture_fill(r: *const EeAStarCmRecord) -> *mut EeAStarCmBytes {
-    bytes(capture_fill(&*r))
+pub unsafe extern "C" fn ee_astar_cm_capture(r: *const EeAStarCmRecord, tag: u32) {
+    if !ee_base::sim_capture::active() {
+        return;
+    }
+    ee_base::sim_capture::commit(tag, &capture_fill(&*r));
 }
 
 /// `EEAIContinentDigest` (TEST ONLY).

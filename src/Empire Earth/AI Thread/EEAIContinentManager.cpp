@@ -58,8 +58,17 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMArea.h"
 #include "ee/EEDebugTrace.h"
-#include "ee/EEAIContinentCapture.h"   // TEST ONLY: the analysis' capture (EE_SIM_CAPTURE)
 #include "ee/EESimCapture.h"
+
+// TEST ONLY: the analysis' capture records (EE_SIM_CAPTURE; tools/sim_capture.py): the whole state after BuildRegions
+// (before it frees its work grids) and after every Rebuild (ee_astar cm_io.rs capture_fill), every GetTilesNextTo,
+// the manager's queries and changes
+enum {
+    kContinentCaptureBuild = 0x42544e43,    // "CNTB"
+    kContinentCaptureRebuild = 0x52544e43,  // "CNTR"
+    kContinentCaptureNextTo = 0x4e544e43,   // "CNTN"
+    kContinentCaptureQuery = 0x51544e43,    // "CNTQ"
+};
 
 // Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
 // 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
@@ -245,7 +254,7 @@ public:
     {
         if (!this->mOn)
             return;
-        unsigned long long theDigest = EEAIContinentDigest();
+        unsigned long long theDigest = ee_astar_cm_capture_digest(&gContinentManager.mRecord);
         this->mRecord.U32((unsigned int)theDigest);
         this->mRecord.U32((unsigned int)(theDigest >> 32));
     }
@@ -1774,7 +1783,7 @@ bool EEAIContinentManager::Rebuild()
     }
     this->mRecord.state = 0;
     this->ClearChecksum();
-    EEAIContinentCapture(kContinentCaptureRebuild);   // TEST ONLY
+    ee_astar_cm_capture(&this->mRecord, kContinentCaptureRebuild);   // TEST ONLY
     return ee_astar_cm_sector_tiles_count(&this->mRecord) == 0;
 }
 
@@ -1798,7 +1807,7 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
     this->NumberContinentChains(inMap, kAIChainLandSpace);
     this->NumberContinentChains(inMap, kAIChainLandWaterSpace);
     this->NumberContinentChains(inMap, kAIChainLandCliffSpace);
-    EEAIContinentCapture(kContinentCaptureBuild);   // TEST ONLY: with the work grids still there
+    ee_astar_cm_capture(&this->mRecord, kContinentCaptureBuild);   // TEST ONLY: with the work grids still there
     ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::TileValues, false, 0);
     if (inMap->mL195610 < 0x4b && gWorld.mNumPlayers < 5 && gWorld.mPopulationLimit < 1000) {
         ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::ContinentIds, false, 0);
