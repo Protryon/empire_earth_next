@@ -196,6 +196,11 @@ impl EeWonList {
     // ---- calls out
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -1129,7 +1134,9 @@ impl Drop for EeWonList {
 /// A new Rust ListArea for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_list_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonList {
-    Box::into_raw(Box::new(EeWonList::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonList::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::List, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -1137,6 +1144,7 @@ pub extern "C" fn ee_won_list_new(component: *mut c_void, host: EeWonGuiHostFn) 
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_list_free(list: *mut EeWonList) {
     if !list.is_null() {
+        crate::registry::unregister(list as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(list) });
     }

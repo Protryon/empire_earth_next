@@ -57,6 +57,10 @@ fn h(op: Op, a: isize, b: isize, c: isize) -> isize {
     let f = match WORLD_HOST.with(|h| h.get()) {
         Some(f) => f,
         None => {
+            // the game's: the widget ops are the widgets' Rust objects (no control: a row's ops name their list)
+            if let Some(r) = crate::widgets::ctl_op(0, op, a, b, c) {
+                return r;
+            }
             let p = GAME_HOST.load(Ordering::Acquire);
             if p == 0 {
                 return 0;

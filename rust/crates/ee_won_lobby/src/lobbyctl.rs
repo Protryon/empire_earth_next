@@ -1579,6 +1579,9 @@ impl EeWonLobbyCtl {
             if let Some(r) = crate::modelobj::ctl_op(op, a, b, c) {
                 return r;
             }
+            if let Some(r) = crate::widgets::ctl_op(self.ctl as isize, op, a, b, c) {
+                return r;
+            }
             if let Some(r) = crate::persistobj::game_ctl_op(op, a, b) {
                 return r;
             }

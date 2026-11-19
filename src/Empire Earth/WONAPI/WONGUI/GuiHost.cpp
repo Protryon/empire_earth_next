@@ -109,17 +109,6 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     switch (op) {
     case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
     case Op::Set: t->SetField((Fd)a, (int)b); return 0;
-    case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
-    case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
-    case Op::BaseNotifyRootVisibility: t->ScrollArea::NotifyRootVisibility(a != 0); return 0;
-    case Op::BaseMouseDown: t->ScrollArea::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseUp: t->ScrollArea::MouseUp((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseExit: t->ScrollArea::MouseExit(); return 0;
-    case Op::BaseMouseMove: t->ScrollArea::MouseMove((int)a, (int)b); return 0;
-    case Op::BaseMouseEnter: t->ScrollArea::MouseEnter((int)a, (int)b); return 0;
-    case Op::BaseMouseDrag: t->ScrollArea::MouseDrag((int)a, (int)b); return 0;
-    case Op::BaseKeyDown: return t->ScrollArea::KeyDown((int)a) ? 1 : 0;
-    case Op::BaseKeyChar: return t->ScrollArea::KeyChar((int)a) ? 1 : 0;
     case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
     case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     case Op::LinkActivated:
@@ -229,11 +218,6 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     InputBox* t = (InputBox*)inComp;
     switch (op) {
-    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
-    case Op::BaseGotFocus: t->Component::GotFocus(); return 0;
-    case Op::BaseLostFocus: t->Component::LostFocus(); return 0;
-    case Op::BaseMouseExit: t->Component::MouseExit(); return 0;
-    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
     case Op::FontHeight: return t->mFont->GetHeight();
     case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
     case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
@@ -321,8 +305,6 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     Label* t = (Label*)inComp;
     switch (op) {
-    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
-    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
     case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
     case Op::WrapSetCentered: t->mWrappedText->SetCentered(a != 0); return 0;
     case Op::WrapSetWrap: t->mWrappedText->SetWrap(a != 0); return 0;
@@ -380,11 +362,6 @@ namespace WONAPI {
 intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (op) {
-    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
-    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
-    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
     case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
     case Op::NewDragComponent: {
@@ -430,11 +407,6 @@ extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t
     (void)d;
     Scrollbar* t = (Scrollbar*)inComp;
     switch (op) {
-    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
-    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
-    case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
-    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
     case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
     default: return ContainerOp(t, op, a, b, c);
@@ -457,9 +429,6 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
     Scroller* t = (Scroller*)inComp;
     ScrollArea* area = static_cast<ScrollArea*>(Comp(a));
     switch (op) {
-    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
-    case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::VirtSizeChanged: t->Virtual08(); return 0;
     case Op::VirtNotifyScrollChange: t->NotifyScrollChange(a != 0); return 0;
@@ -491,8 +460,6 @@ extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_
     (void)d;
     ScrollArea* t = (ScrollArea*)inComp;
     switch (op) {
-    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
-    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
     case Op::ContainerPaint: t->Container::Paint(*(Graphics*)a); return 0;
     case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
     case Op::VirtSizeChanged: t->Virtual08(); return 0;
@@ -535,15 +502,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     switch (op) {
     case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
     case Op::Set: t->SetField((Fd)a, (int)b); return 0;
-    case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
-    case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
-    case Op::BaseMouseDown: t->ScrollArea::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseUp: t->ScrollArea::MouseUp((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseExit: t->ScrollArea::MouseExit(); return 0;
-    case Op::BaseMouseMove: t->ScrollArea::MouseMove((int)a, (int)b); return 0;
-    case Op::BaseMouseEnter: t->ScrollArea::MouseEnter((int)a, (int)b); return 0;
-    case Op::BaseMouseDrag: t->ScrollArea::MouseDrag((int)a, (int)b); return 0;
-    case Op::BaseKeyDown: return t->ScrollArea::KeyDown((int)a) ? 1 : 0;
     case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
     case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
     case Op::VirtSort: return t->Sort() ? 1 : 0;
@@ -639,7 +597,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::EventComponentTop: return ((ComponentEvent*)a)->mComponent->Top();
     case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
     case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
-    case Op::BaseHandleEvent: t->ScrollArea::HandleComponentEvent((ComponentEvent*)a); return 0;
     // the popup menu (menuobj.rs)
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
@@ -743,13 +700,6 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     MultiListHeader* t = (MultiListHeader*)inComp;
     switch (op) {
-    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
-    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
-    case Op::BaseMouseMove: t->Container::MouseMove((int)a, (int)b); return 0;
-    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
-    case Op::BaseMouseExit: t->Container::MouseExit(); return 0;
-    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
     case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
     case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;

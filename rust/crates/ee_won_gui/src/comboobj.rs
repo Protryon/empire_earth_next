@@ -139,6 +139,11 @@ impl EeWonComboBox {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::Component, op, a, b, c)
+        {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -550,7 +555,9 @@ pub unsafe extern "C" fn ee_won_combo_new(
     host: EeWonGuiHostFn,
     ct: *const EeWonContainer,
 ) -> *mut EeWonComboBox {
-    Box::into_raw(Box::new(EeWonComboBox::new(component, host, ct)))
+    let made = Box::into_raw(Box::new(EeWonComboBox::new(component, host, ct)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Combo, made as *const std::ffi::c_void);
+    made
 }
 
 /// The destructor's statement (the list box's listener dropped), then the object freed.
@@ -560,6 +567,7 @@ pub unsafe extern "C" fn ee_won_combo_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_combo_free(combo: *mut EeWonComboBox) {
     if !combo.is_null() {
+        crate::registry::unregister(combo as *const std::ffi::c_void);
         // SAFETY: the contract
         unsafe {
             (*combo).destroy();
