@@ -965,35 +965,19 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
         bool the2 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 2, inUnitType, theSide2);
         bool the3 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 3, inUnitType, theSide3);
         bool the4 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 4, inUnitType, theSide4);
-        if (the1 ^ the2 ^ the3 ^ the4) {
-            if (the1) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide1)->mComplexUnit;
+        if (the1 ^ the2 ^ the3 ^ the4) {   // the first fitting direction's middle wall
+            std::vector<EEUnit*>* theSides[4] = {&theSide1, &theSide2, &theSide3, &theSide4};
+            bool theFits[4] = {the1, the2, the3, the4};
+            for (long d = 0; d < 4; d++) {
+                if (!theFits[d])
+                    continue;
+                EEComplexUnit* theWall = EEGetMiddleOf(*theSides[d])->mComplexUnit;
                 if (!theWall->mIsTinted) {
                     theWall->SetColor(sGateHighlight);
                     theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(1);
+                    theWall->SetGateDirection(d + 1);
                 }
-            } else if (the2) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide2)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(2);
-                }
-            } else if (the3) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide3)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(3);
-                }
-            } else if (the4) {
-                EEComplexUnit* theWall = EEGetMiddleOf(theSide4)->mComplexUnit;
-                if (!theWall->mIsTinted) {
-                    theWall->SetColor(sGateHighlight);
-                    theWall->SetIsTinted(true);
-                    theWall->SetGateDirection(4);
-                }
+                break;
             }
         }
         theSide1.clear();
