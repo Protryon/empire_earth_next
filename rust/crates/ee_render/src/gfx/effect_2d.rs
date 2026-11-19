@@ -46,39 +46,24 @@ pub struct EeGfxEffect2DHost {
     /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
     pub unit: u64,
     pub player: u64,
+    /// the effect's members the Rust answers read (effect_reads.rs: the graphic objects, tag points and physical
+    /// models)
+    pub refs: crate::gfx::effect_reads::EeGfxEffectRefs,
     /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
     pub base_queue: extern "C" fn(context: *mut c_void) -> i32,
     /// pushes the effect on render queue `index` under its graphic's texture for the current screen
     pub queue: extern "C" fn(context: *mut c_void, index: u32),
     /// the graphic effect's object (kept as the effect's) loaded; its result
     pub load_media: extern "C" fn(context: *mut c_void) -> i32,
-    /// the kept graphic object's animation `index`
-    pub frames: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxFrames,
     /// `MoveToPoint(mPosition)` (the second half of `SetPosition`)
     pub move_to_point: extern "C" fn(context: *mut c_void),
-    /// `EEEffect2D::mModel`
-    pub model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
     /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
     pub confirm_goal:
         extern "C" fn(context: *mut c_void, goal_index: u32, tile_x: i32, tile_y: i32) -> EeGfxConfirmGoal,
-    /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
-    pub confirm_unit: extern "C" fn(context: *mut c_void) -> EeGfxConfirmUnit,
     /// the terrain mesh's height at a point (`GetMeshZ`)
     pub terrain_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
-    /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
-    pub command_texture: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
-    /// a random one of the unit's tag points of `kind` at its animation and frame (`EEEffect::GetRandom`), the unit's
-    /// position without any (the shockwave's `SetUp`, 0xe6259)
-    pub spawn_point: extern "C" fn(context: *mut c_void, kind: u32) -> Ge3DPoint,
     /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
     pub object_media: extern "C" fn(context: *mut c_void) -> i32,
-    /// the kept graphic object's texture `index`
-    pub object_texture: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
-    /// the unit's tag points of `kind` at its animation: -1 without a complex unit, 0 without a list
-    pub tag_count: extern "C" fn(context: *mut c_void, kind: u32) -> i32,
-    /// the unit's tag point `index` of `kind` at its animation and frame under its scaled location (not without a
-    /// complex unit; the list is not tested, as `EEE2DImpact::UpdatePosition`'s)
-    pub tag_point: extern "C" fn(context: *mut c_void, kind: u32, index: u32) -> EeGfx2DPoint,
     /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
     pub weapon_point: extern "C" fn(context: *mut c_void, site: i32) -> Ge3DPoint,
     /// the kept graphic object's (`part0`: the first part's) animation 0 sound for `frame` at `location`
@@ -87,8 +72,6 @@ pub struct EeGfxEffect2DHost {
         extern "C" fn(context: *mut c_void, location: Ge3DPoint, frame: u32, changed: bool, part0: bool),
     /// `gDrawBlood`
     pub draw_blood: extern "C" fn(context: *mut c_void) -> bool,
-    /// the unit's model's default point, the unit's stats' scale
-    pub default_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// `gWorld.IsTileBlocked`
     pub tile_blocked: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> bool,
     /// `gWorld.mWindDirection`
@@ -106,33 +89,16 @@ pub struct EeGfxEffect2DHost {
     /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
     /// unit's location (not without a complex unit)
     pub part_follow: extern "C" fn(context: *mut c_void, index: u32) -> crate::gfx::effect_sprite::EeGfx2DPoint,
-    /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
-    pub unit_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
-    /// the kept graphic object's model (`mModel`)
-    pub object_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
-    /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
-    pub orbital_count: extern "C" fn(context: *mut c_void) -> u32,
-    pub orbital: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxOrbital,
     /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
     /// (`gAEManager.HasEffect` with the unit's own list)
-    pub icon_unit: extern "C" fn(context: *mut c_void) -> EeGfxIconUnit,
     pub area_effect: extern "C" fn(context: *mut c_void, kind: i32, x: f32, y: f32, player: u32) -> bool,
     /// the unit's pending area effects (`mNumAreaEffects`), and its new count (`FnE123D` at 0)
     pub area_effects: extern "C" fn(context: *mut c_void) -> i32,
     pub set_area_effects: extern "C" fn(context: *mut c_void, count: i32),
     /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
     pub icons_selected: extern "C" fn(context: *mut c_void) -> bool,
-    /// `gWorld.GetNumGhostUnits()`
-    pub ghost_units: extern "C" fn(context: *mut c_void) -> u32,
     /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
     pub ground_point: extern "C" fn(context: *mut c_void, at: Ge3DPoint) -> EeGfx2DPoint,
-    /// the light glow's: the set-up's unit (its light tags kept for the names), tag `index`'s name into `out` (its
-    /// length returned; `capacity` bytes written at most)
-    pub glow_set_up: extern "C" fn(context: *mut c_void) -> EeGfxGlowSetUp,
-    pub glow_tag_name: extern "C" fn(context: *mut c_void, index: u32, out: *mut u8, capacity: u32) -> u32,
-    /// the placing's unit (its tags, frame and scaled location kept), and tag `index`'s point
-    pub glow_place: extern "C" fn(context: *mut c_void) -> EeGfxGlowPlace,
-    pub glow_point: extern "C" fn(context: *mut c_void, index: u32) -> Ge3DPoint,
     /// the visible terrain and the unit's tile; its visible rows
     pub glow_area: extern "C" fn(context: *mut c_void) -> EeGfxGlowArea,
     pub glow_rows: extern "C" fn(context: *mut c_void) -> u32,
@@ -295,6 +261,13 @@ pub trait Effect2DHost {
     }
 }
 
+impl EeGfxEffect2DHost {
+    /// The Rust answers' view of the effect.
+    fn ask(&self) -> crate::gfx::effect_reads::Ask<'_> {
+        crate::gfx::effect_reads::Ask { context: self.context, refs: &self.refs, unit: self.unit, player: self.player }
+    }
+}
+
 impl Effect2DHost for &EeGfxEffect2DHost {
     fn base_queue(&mut self) -> i32 {
         (self.base_queue)(self.context)
@@ -306,13 +279,13 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.load_media)(self.context)
     }
     fn frames(&mut self, index: u32) -> EeGfxFrames {
-        (self.frames)(self.context, index)
+        self.ask().frames(index)
     }
     fn move_to_point(&mut self) {
         (self.move_to_point)(self.context)
     }
     fn model(&mut self) -> EeGfxModel {
-        (self.model)(self.context)
+        self.ask().plane_model()
     }
     fn selection_size(&mut self) -> f32 {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -326,7 +299,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.confirm_goal)(self.context, goal_index, tile_x, tile_y)
     }
     fn confirm_unit(&mut self) -> EeGfxConfirmUnit {
-        (self.confirm_unit)(self.context)
+        self.ask().confirm_unit()
     }
     fn unit_location(&mut self) -> GeTransformation {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -336,22 +309,22 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.terrain_z)(self.context, x, y)
     }
     fn command_texture(&mut self, index: u32) -> EeGfxModel {
-        (self.command_texture)(self.context, index)
+        crate::gfx::ro_units::ee_gfx_ro_units_command_texture(index)
     }
     fn spawn_point(&mut self, kind: u32) -> Ge3DPoint {
-        (self.spawn_point)(self.context, kind)
+        self.ask().spawn_point(kind)
     }
     fn object_media(&mut self) -> i32 {
         (self.object_media)(self.context)
     }
     fn object_texture(&mut self, index: u32) -> EeGfxModel {
-        (self.object_texture)(self.context, index)
+        self.ask().texture_at(index)
     }
     fn tag_count(&mut self, kind: u32) -> i32 {
-        (self.tag_count)(self.context, kind)
+        self.ask().tag_count(kind)
     }
     fn tag_point(&mut self, kind: u32, index: u32) -> EeGfx2DPoint {
-        (self.tag_point)(self.context, kind, index)
+        self.ask().tag_point(kind, index)
     }
     fn weapon_point(&mut self, site: i32) -> Ge3DPoint {
         (self.weapon_point)(self.context, site)
@@ -367,7 +340,7 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         unsafe { effect_views::has_complex(self.unit) }
     }
     fn default_point(&mut self) -> Ge3DPoint {
-        (self.default_point)(self.context)
+        self.ask().default_point()
     }
     fn stats_scale(&mut self) -> f32 {
         // SAFETY: the effect steps with the world held; its unit is live while the effect references it
@@ -408,19 +381,19 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         unsafe { effect_views::max_hit_points(self.unit) }
     }
     fn unit_point(&mut self) -> Ge3DPoint {
-        (self.unit_point)(self.context)
+        self.ask().unit_point()
     }
     fn object_model(&mut self) -> EeGfxModel {
-        (self.object_model)(self.context)
+        self.ask().model()
     }
     fn orbital_count(&mut self) -> u32 {
-        (self.orbital_count)(self.context)
+        self.ask().orbital_count()
     }
     fn orbital(&mut self, index: u32) -> EeGfxOrbital {
-        (self.orbital)(self.context, index)
+        self.ask().orbital(index)
     }
     fn icon_unit(&mut self) -> EeGfxIconUnit {
-        (self.icon_unit)(self.context)
+        self.ask().icon_unit()
     }
     fn area_effect(&mut self, kind: i32, x: f32, y: f32, player: u32) -> bool {
         (self.area_effect)(self.context, kind, x, y, player)
@@ -439,29 +412,26 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         unsafe { effect_views::icons_owner(self.unit, self.player) }
     }
     fn ghost_units(&mut self) -> u32 {
-        (self.ghost_units)(self.context)
+        self.ask().ghost_units()
     }
     fn ground_point(&mut self, at: Ge3DPoint) -> EeGfx2DPoint {
         (self.ground_point)(self.context, at)
     }
     fn glow_set_up(&mut self) -> EeGfxGlowSetUp {
-        (self.glow_set_up)(self.context)
+        let (z, context) = (self.terrain_z, self.context);
+        self.ask().glow_set_up(&|x, y| z(context, x, y))
     }
     fn glow_tag_name(&mut self, index: u32) -> Vec<u8> {
-        let mut out = vec![0u8; 256];
-        let mut n = (self.glow_tag_name)(self.context, index, out.as_mut_ptr(), out.len() as u32) as usize;
-        if n > out.len() {
-            out.resize(n, 0);
-            n = (self.glow_tag_name)(self.context, index, out.as_mut_ptr(), out.len() as u32) as usize;
-        }
-        out.truncate(n.min(out.len()));
-        out
+        let (z, context) = (self.terrain_z, self.context);
+        self.ask().glow_tag_name(index, &|x, y| z(context, x, y))
     }
     fn glow_place(&mut self) -> EeGfxGlowPlace {
-        (self.glow_place)(self.context)
+        let (z, context) = (self.terrain_z, self.context);
+        self.ask().glow_place(&|x, y| z(context, x, y)).0
     }
     fn glow_point(&mut self, index: u32) -> Ge3DPoint {
-        (self.glow_point)(self.context, index)
+        let (z, context) = (self.terrain_z, self.context);
+        self.ask().glow_place(&|x, y| z(context, x, y)).1.point(index)
     }
     fn glow_area(&mut self) -> EeGfxGlowArea {
         (self.glow_area)(self.context)

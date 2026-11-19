@@ -38,6 +38,7 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EEWheel.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
+#include "rust/render/gfx.h"
 
 extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
@@ -65,9 +66,10 @@ EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
     this->mTexture = NULL;
     this->mShadowModel = NULL;
     this->mShadowTexture = NULL;
+    this->mTags = NULL;
 }
 
-// Destroys the graphic object: unloads its media if loaded, frees its file names and colour groups
+// Destroys the graphic object: unloads its media if loaded, frees its file names
 EEGraphicObject::~EEGraphicObject()
 {
     if (this->mMediaCount > 0) {
@@ -82,9 +84,6 @@ EEGraphicObject::~EEGraphicObject()
         delete this->mModelNames[i];
         delete this->mTextureNames[i];
     }
-    for (unsigned long thePart = 0; thePart < 14; thePart++)
-        for (unsigned long j = 0; j < this->mColorGroups[thePart].size(); j++)
-            delete this->mColorGroups[thePart][j];
 }
 
 // Collects the model's turret parts, orbitals and wheels, recursing into its sub-models
@@ -173,28 +172,17 @@ void EEDumpGraphicObjectTable(FSFileSpec& inFile)
     }
 }
 
-// Returns the tag points of a kind on a part's model, or NULL when it has none
+// Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
 EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
 {
-    EETagPointList* theResult = NULL;
-    std::map<long, std::map<const GEModel*, EETagPointList*>*>::iterator theKind = this->mTagPointMaps.find(inKind);
-    if (theKind != this->mTagPointMaps.end()) {
-        std::map<const GEModel*, EETagPointList*>* theLists = theKind->second;
-        const GEModel* theModel = this->mModels[inPart];
-        std::map<const GEModel*, EETagPointList*>::iterator theList = theLists->find(theModel);
-        if (theList != theLists->end())
-            theResult = theList->second;
-    }
-    return theResult;
+    return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind));
 }
 
 // Returns one of the attack points, picked by the game time, or the default point when there are none
 const GE3DPoint& EEGraphicObject::PickPoint()
 {
-    if (this->mPoints.size() == 0)
-        return this->mDefaultPoint;
-    long theTime = gPhysics->mGameTime;
-    return this->mPoints[theTime % this->mPoints.size()];
+    const EeGe3DPoint* thePoint = ee_gfx_tags_pick(this->mTags, gPhysics->mGameTime);
+    return thePoint != NULL ? *reinterpret_cast<const GE3DPoint*>(thePoint) : this->mDefaultPoint;
 }
 
 // Finds the turret part for a model and returns its index; returns 0 when found, else 3
@@ -244,6 +232,8 @@ long EEGraphicObject::LoadMedia()
     long theSlots[14];
     return EEMediaAcquire(this, sDatabaseLock.mLock, [&]() -> long {
         long theResult = 0;
+        if (this->mTags == NULL)
+            this->mTags = ee_gfx_tags_new();
         // the texture-frame maps of the animated parts that share frames, by model (ee_data tables.rs)
         EeDataGraphicFramePart theParts[14];
         for (unsigned long i = 0; i < 14; i++)
@@ -295,8 +285,12 @@ long EEGraphicObject::LoadMedia()
                 this->mModels[thePart] = this->mModel;
             } else
                 this->mModels[thePart] = NULL;
+            // the part's tag points, colour groups and points (ee_gfx tags.rs: CollectTagPoints 0xd8bb2)
             if (this->mModels[thePart] != NULL)
-                this->CollectTagPoints(thePart, this->mModels[thePart], theTransformation);
+                ee_gfx_tags_collect(this->mTags, thePart, this->mModels[thePart], reinterpret_cast<const EeGeTransformation*>(&theTransformation),
+                                    this->mModels[0], this->mLastFrames[5], reinterpret_cast<EeGe3DPoint*>(&this->mDefaultPoint),
+                                    reinterpret_cast<EeGe3DPoint*>(&this->mTopPoint), reinterpret_cast<EeGe3DPoint*>(&this->mBar),
+                                    reinterpret_cast<EeGfxTagList**>(this->mTagPoints));
         }
         for (thePart = 0; thePart < 14; thePart++) {
             if (this->mSounds1[thePart] != NULL)
@@ -329,84 +323,10 @@ void EEGraphicObject::LoadTexture(const UString& inName, GETexture*& ioTexture, 
     }
 }
 
-// Collects a part model's tag points, attack and status bar points and player-colour materials, recursively
-// The tag points and colour groups of model part inPart's model inModel (recursive over the sub-models): each tag point
-// named for a point kind goes into the kind's list for the root model (not for the sub-models of part 0's model when
-// inPart > 0), "weapon_mount" into the part's list, "attack" gives the default point (and the top point at the frame
-// mLastFrames[5]), "status bar" the bar offset (otherwise the top of the bounding box raises it); the materials named
-// "player color" form the part's colour group
-void EEGraphicObject::CollectTagPoints(unsigned long inPart, GEModel* inModel, const GETransformation& inParent)
-{
-    GETransformation theTransformation;
-    GE3DPoint theTop;
-    GE3DPoint theBarPoint;
-    bool theFound = false;
-    unsigned long theSubModelCount = inModel->GetSubModelCount();
-    unsigned long theTagPointCount = inModel->GetTagPointCount();
-    inParent.Apply(inModel->GetInternalTransform(0), theTransformation);
-    GEModel* theRoot = inModel;
-    while (theRoot->GetParentModel() != NULL)
-        theRoot = theRoot->GetParentModel();
-    unsigned long i;
-    for (i = 0; i < theTagPointCount; i++) {
-        if (theRoot != this->mModels[0] || inPart == 0) {
-            long theKinds[0x48];
-            size_t theKindCount = ee_data_tag_point_kinds(inModel->GetTagPointName(i), theKinds);
-            for (size_t k = 0; k < theKindCount; k++) {
-                std::map<const GEModel*, EETagPointList*>*& theLists = this->mTagPointMaps[theKinds[k]];
-                if (theLists == NULL)
-                    theLists = new std::map<const GEModel*, EETagPointList*>;
-                EETagPointList*& theList = (*theLists)[theRoot];
-                if (theList == NULL)
-                    theList = new EETagPointList;
-                theList->Add(inModel, i);
-            }
-        }
-        if (strncmp(inModel->GetTagPointName(i), "weapon_mount", strlen("weapon_mount")) == 0) {
-            if (this->mTagPoints[inPart] == NULL)
-                this->mTagPoints[inPart] = new EETagPointList;
-            this->mTagPoints[inPart]->Add(inModel, i);
-        }
-        if (strncmp(inModel->GetTagPointName(i), "attack", strlen("attack")) == 0) {
-            theTransformation.Apply(inModel->GetTagPoint(i, 0), this->mDefaultPoint);
-            this->mPoints.push_back(this->mDefaultPoint);
-            if (this->mLastFrames[5] < inModel->GetFrameCount())
-                theTransformation.Apply(inModel->GetTagPoint(i, this->mLastFrames[5]), this->mTopPoint);
-        }
-        if (strncmp(inModel->GetTagPointName(i), "status bar", strlen("status bar")) == 0) {
-            theTransformation.Apply(inModel->GetTagPoint(i, 0), this->mBar);
-            theFound = true;
-        }
-    }
-    if (!theFound) {
-        theTop.SetZ(inModel->GetBoundingBox(0).GetTopRightBack().GetZ());
-        theTransformation.Apply(theTop, theBarPoint);
-        this->mBar.SetZ(theBarPoint.GetZ() < this->mBar.GetZ() ? this->mBar.GetZ() : theBarPoint.GetZ());
-    }
-    bool theHasGroup = false;
-    for (long theMaterial = 0; (unsigned long)theMaterial < inModel->GetMaterialCount(); theMaterial++) {
-        if (inModel->GetMaterial(theMaterial)->GetName() == "player color") {
-            if (!theHasGroup) {
-                theHasGroup = true;
-                EEColorGroup* theGroup = new EEColorGroup;
-                theGroup->mModel = inModel;
-                this->mColorGroups[inPart].push_back(theGroup);
-            }
-            this->mColorGroups[inPart][this->mColorGroups[inPart].size() - 1]->mMaterials.push_back(theMaterial);
-        }
-    }
-    for (i = 0; i < theSubModelCount; i++)
-        this->CollectTagPoints(inPart, inModel->GetSubModel(i), theTransformation);
-}
-
 // Sets the colour of every player-colour material of a part
 void EEGraphicObject::SetGroupColor(const GEColor& inColor, unsigned long inPart)
 {
-    for (unsigned long i = 0; i < this->mColorGroups[inPart].size(); i++) {
-        EEColorGroup* theGroup = this->mColorGroups[inPart][i];
-        for (unsigned long j = 0; j < theGroup->mMaterials.size(); j++)
-            theGroup->mModel->GetMaterial(theGroup->mMaterials[j])->SetColor(inColor);
-    }
+    ee_gfx_tags_set_color(this->mTags, inPart, &inColor.mRed);
 }
 
 // Counts one use down; on the last use releases all the object's models, textures, sounds and parts.
@@ -416,8 +336,6 @@ void EEGraphicObject::SetGroupColor(const GEColor& inColor, unsigned long inPart
 // and deletes the orbitals, turret parts, wheels and colour groups; an earlier use only counts down
 long EEGraphicObject::UnloadMedia()
 {
-    std::map<long, std::map<const GEModel*, EETagPointList*>*>::iterator theKind;
-    std::map<const GEModel*, EETagPointList*>::iterator theModel;
     EEMediaRelease(this, sDatabaseLock.mLock, [&] {
         if (this->mShadowModel != NULL) {
             this->mShadowModel->Dereference();
@@ -429,26 +347,16 @@ long EEGraphicObject::UnloadMedia()
                 this->mTextures[i]->Dereference();
                 this->mTextures[i] = NULL;
             }
-            if (this->mTagPoints[i] != NULL) {
-                this->mTagPoints[i]->Clear();
-                delete this->mTagPoints[i];
-                this->mTagPoints[i] = NULL;
-            }
+            ee_gfx_tags_clear_weapon(this->mTags, i);
+            this->mTagPoints[i] = NULL;
             if (this->mModels[i] != NULL) {
                 this->mModels[i]->Dereference();
                 this->mModels[i] = NULL;
             }
         }
-        for (theKind = this->mTagPointMaps.begin(); theKind != this->mTagPointMaps.end(); theKind++) {
-            std::map<const GEModel*, EETagPointList*>* theLists = theKind->second;
-            for (theModel = theLists->begin(); theModel != theLists->end(); theModel++) {
-                theModel->second->Clear();
-                delete theModel->second;
-            }
-            theLists->clear();
-            delete theKind->second;
-        }
-        this->mTagPointMaps.clear();
+        // the kinds' lists (by kind, then by model), the colour groups and the attack points (ee_gfx tags.rs)
+        ee_gfx_tags_free(this->mTags);
+        this->mTags = NULL;
         if (this->mModel != NULL) {
             this->mModel->Dereference();
             this->mModel = NULL;
@@ -476,24 +384,40 @@ long EEGraphicObject::UnloadMedia()
         for (i = 0; i < this->mWheels.size(); i++)
             delete this->mWheels[i];
         this->mWheels.clear();
-        for (unsigned long thePart = 0; thePart < 14; thePart++) {
-            for (i = 0; i < this->mColorGroups[thePart].size(); i++)
-                delete this->mColorGroups[thePart][i];
-            this->mColorGroups[thePart].clear();
-        }
     });
     return 0;
 }
 
-// Creates a tag point referring to tag point inIndex of the model, holding a reference to the model
-inline EETagPoint::EETagPoint(GEModel* inModel, unsigned long inIndex)
+// The tag points' geometry and the scale (ee_gfx tags.rs), over the Rust layouts
+static_assert(sizeof(EETagPoint) == sizeof(EeGfxTagPoint) && sizeof(EETagPointList) == sizeof(EeGfxTagList), "tags.rs");
+static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint), "GE");
+static const EeGeTransformation* GERust(const GETransformation& inValue) { return reinterpret_cast<const EeGeTransformation*>(&inValue); }
+static EeGeTransformation* GERust(GETransformation& inValue) { return reinterpret_cast<EeGeTransformation*>(&inValue); }
+static EeGe3DPoint* GERust(GE3DPoint& inValue) { return reinterpret_cast<EeGe3DPoint*>(&inValue); }
+
+void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint)
 {
-    this->mModel = inModel;
-    inModel->Reference();
-    this->mIndex = inIndex;
+    ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), NULL, GERust(outPoint));
 }
 
-inline void EETagPointList::Add(GEModel* inModel, unsigned long inIndex)
+void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
+                          GE3DPoint& outPoint)
 {
-    this->mPoints.push_back(new EETagPoint(inModel, inIndex));
+    ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), GERust(inPart),
+                     GERust(outPoint));
+}
+
+void EETagPoint::GetOffset(unsigned long inFrame, GE3DPoint& outPoint)
+{
+    ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, NULL, GERust(outPoint));
+}
+
+void EETagPoint::GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint)
+{
+    ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inPart), GERust(outPoint));
+}
+
+void EETagPointList::Scale(GETransformation& ioTransformation, float inScale)
+{
+    ee_gfx_tags_scale(GERust(ioTransformation), inScale);
 }

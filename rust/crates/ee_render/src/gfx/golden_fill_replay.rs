@@ -40,27 +40,32 @@ where
 
 // ---- the fake objects (any layout: the test registers it)
 
+/// (also effect_reads_tests.rs': the test binary has one world layout)
 #[repr(C)]
 #[derive(Default)]
-struct FUnit {
-    rts: EeUnitsRtsUnitFields,
-    fields: EeUnitsUnitFields,
-    complex: EeUnitsComplexUnitFields,
-    kind: u8,
+pub(crate) struct FUnit {
+    pub(crate) rts: EeUnitsRtsUnitFields,
+    pub(crate) fields: EeUnitsUnitFields,
+    pub(crate) complex: EeUnitsComplexUnitFields,
+    pub(crate) kind: u8,
     tile_node: usize,
     next: usize,
     tile: usize,
-    player: usize,
-    class: usize,
-    stats: usize,
-    complex_unit: usize,
-    transform: [[f32; 4]; 4],
-    command: usize,
+    pub(crate) player: usize,
+    pub(crate) class: usize,
+    pub(crate) stats: usize,
+    pub(crate) complex_unit: usize,
+    pub(crate) transform: [[f32; 4]; 4],
+    pub(crate) command: usize,
     goal: usize,
     active_goal: usize,
     cargo: [usize; 3],
     previous: usize,
     next_part: usize,
+    /// the physical model's scale and frame, the turret angles (effect_reads.rs' object layout)
+    pub(crate) phys_scale: f32,
+    pub(crate) phys_frame: c_ulong,
+    pub(crate) turret_angles: usize,
 }
 
 #[repr(C)]
@@ -72,26 +77,28 @@ struct FGoal {
 
 #[repr(C)]
 #[derive(Default)]
-struct FCommand {
-    kind: u32,
+pub(crate) struct FCommand {
+    pub(crate) kind: u32,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FClass {
-    fields: EeUnitsUnitClassFields,
+pub(crate) struct FClass {
+    pub(crate) fields: EeUnitsUnitClassFields,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FStats {
-    fields: EeUnitsUnitClassUpgradeFields,
+pub(crate) struct FStats {
+    pub(crate) fields: EeUnitsUnitClassUpgradeFields,
+    /// `mModel` (effect_reads.rs' object layout)
+    pub(crate) model: usize,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct FPlayer {
-    rts: EeUnitsRtsPlayerFields,
+pub(crate) struct FPlayer {
+    pub(crate) rts: EeUnitsRtsPlayerFields,
     saved: EeUnitsPlayerSaved,
     fields: EeUnitsPlayerFields,
     color: [f32; 3],
@@ -127,7 +134,7 @@ struct FMap {
     tiles: usize,
 }
 
-fn register_layout() {
+pub(crate) fn register_layout() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
         let l = EeWorldLayout {

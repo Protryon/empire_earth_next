@@ -28,6 +28,7 @@ use crate::gfx::raster::{
     EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE, ZBUFFER_TEST_ONLY,
 };
 use ee_base::math::um::lrintf;
+use std::ffi::c_char;
 
 /// `kEffect3DLinearProjectile`.
 pub const EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE: i32 = 0x25;
@@ -562,6 +563,134 @@ fn save_sick<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
         res = f.write_f32(r.orbit.scroll);
     }
     res
+}
+
+// ---- EEOrbital's members (EEOrbital.cpp 0x208c9b..0x208e6b, the Graphics + LLE cluster's round 1)
+
+/// The orbiting parts' name prefixes (`gOrbitalClockwisePrefix`, `gOrbitalCounterClockwisePrefix`).
+const ORBITAL_CW: &[u8] = b"orbital_cw_";
+const ORBITAL_CCW: &[u8] = b"orbital_ccw_";
+
+fn starts_ignoring_case(name: &[u8], prefix: &[u8]) -> bool {
+    name.len() >= prefix.len() && name[..prefix.len()].eq_ignore_ascii_case(prefix)
+}
+
+/// `sscanf(text, "%f", &value)`: white space, a sign, digits with a point and an exponent (or "inf", "nan"), the
+/// longest such prefix; None when nothing converts (the original's value then stayed what the stack held).
+pub fn scan_f32(text: &[u8]) -> Option<f32> {
+    let mut i = 0;
+    while i < text.len() && matches!(text[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    if i < text.len() && (text[i] == b'+' || text[i] == b'-') {
+        i += 1;
+    }
+    let lower: Vec<u8> = text[i..].iter().map(|b| b.to_ascii_lowercase()).collect();
+    for word in [&b"infinity"[..], b"inf", b"nan"] {
+        if lower.starts_with(word) {
+            let negative = text[start] == b'-';
+            let v = if word == b"nan" { f32::NAN } else { f32::INFINITY };
+            return Some(if negative { -v } else { v });
+        }
+    }
+    let digits_from = i;
+    while i < text.len() && text[i].is_ascii_digit() {
+        i += 1;
+    }
+    let mut digits = i - digits_from;
+    if i < text.len() && text[i] == b'.' {
+        i += 1;
+        let f = i;
+        while i < text.len() && text[i].is_ascii_digit() {
+            i += 1;
+        }
+        digits += i - f;
+    }
+    if digits == 0 {
+        return None;
+    }
+    if i < text.len() && (text[i] == b'e' || text[i] == b'E') {
+        let mut j = i + 1;
+        if j < text.len() && (text[j] == b'+' || text[j] == b'-') {
+            j += 1;
+        }
+        let e = j;
+        while j < text.len() && text[j].is_ascii_digit() {
+            j += 1;
+        }
+        if j > e {
+            i = j;
+        }
+    }
+    std::str::from_utf8(&text[start..i]).ok()?.parse::<f32>().ok()
+}
+
+/// `EEOrbital::IsOrbitalModel` (0x208c9b): the model's name starts with "orbital_cw_" or "orbital_ccw_", any case.
+pub fn is_orbital_name(name: &[u8]) -> bool {
+    starts_ignoring_case(name, ORBITAL_CW) || starts_ignoring_case(name, ORBITAL_CCW)
+}
+
+/// `EEOrbital::Init`'s speed (0x208ce6): the degrees between the prefix and the name's last '_' in radians a
+/// second, negative for clockwise; 0 without a number there.
+pub fn orbital_speed(name: &[u8]) -> f32 {
+    let prefix = if starts_ignoring_case(name, ORBITAL_CW) {
+        ORBITAL_CW
+    } else if starts_ignoring_case(name, ORBITAL_CCW) {
+        ORBITAL_CCW
+    } else {
+        return 0.0;
+    };
+    let end = ee_base::ustring::find_backwards(name, b"_", u32::MAX);
+    let count = end.wrapping_sub(prefix.len() as u32);
+    if count == 0 || count >= end {
+        return 0.0;
+    }
+    let field = &name[prefix.len()..prefix.len() + count as usize];
+    let Some(degrees) = scan_f32(field) else { return 0.0 };
+    let magnitude = if degrees < 0.0 { -degrees } else { degrees };
+    let degrees = if prefix == ORBITAL_CW { -magnitude } else { magnitude };
+    degrees * 0.017453292
+}
+
+fn c_name<'a>(name: *const c_char) -> &'a [u8] {
+    if name.is_null() {
+        return &[];
+    }
+    // SAFETY: the caller's NUL-terminated name
+    unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes()
+}
+
+/// `EEOrbital::IsOrbitalModel` of a model named `name`.
+///
+/// # Safety
+/// `name` is NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_orbital_is_model(name: *const c_char) -> bool {
+    is_orbital_name(c_name(name))
+}
+
+/// `EEOrbital::Init`'s speed of a model named `name`.
+///
+/// # Safety
+/// `name` is NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_orbital_speed(name: *const c_char) -> f32 {
+    orbital_speed(c_name(name))
+}
+
+/// `EEOrbital::Update` (0x208e28): `*angle` advanced by `speed` over the tick, wrapped to -pi..pi.
+///
+/// # Safety
+/// `angle` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_orbital_update(angle: *mut f32, speed: f32, tick_seconds: f32) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut o = EeGfxOrbital { model: std::ptr::null_mut(), speed, angle: *angle };
+        o.update(tick_seconds);
+        *angle = o.angle;
+    }
 }
 
 #[cfg(test)]
