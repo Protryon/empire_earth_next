@@ -34,6 +34,7 @@ pub mod effect_aged;
 pub mod effect_batch;
 pub mod effect_beam;
 pub mod effect_confirm;
+pub mod effect_ctor;
 pub mod effect_decal;
 pub mod effect_farm;
 pub mod effect_follow;

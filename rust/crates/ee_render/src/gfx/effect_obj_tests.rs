@@ -151,6 +151,7 @@ fn world_once() {
             in_view,
             tick,
             screen,
+            weapon_point: unused(),
             height,
             mesh,
             // a raster table of answers never called (the tests draw nothing)
@@ -191,7 +192,6 @@ fn world_once() {
             },
             answers2d: EeGfxEffectAnswers2D {
                 confirm_goal: unused(),
-                weapon_point: unused(),
                 animation_sound: unused(),
                 draw_blood: unused(),
                 tile_blocked: unused(),

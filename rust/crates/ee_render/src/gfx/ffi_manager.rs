@@ -4,8 +4,8 @@
 //! `ClearEffects`, `RepairPointers`, `Load`, `Save`, `Update`, the unit swaps and the terrain changes over the
 //! effects as Rust objects (`effect_obj.rs`), and the TEST ONLY captures of every update (EFMU, EFST).
 //!
-//! The constructors' reads of the world are still the C++'s (`EeGfxManagerWorld::construct`), as are the goal
-//! markers' questions and the damage controller's tick facts. No store borrow is held across an effect's call: a
+//! The constructors are `effect_ctor.rs`'; the goal markers' questions and the damage controller's tick facts are
+//! the C++'s. No store borrow is held across an effect's call: a
 //! step, a set-up or a load creates and destroys effects in between.
 
 // the C longs' widths differ by platform (a cast to the same type on Windows)
@@ -50,8 +50,6 @@ pub enum EeGfxCaptureOp {
 /// What the manager asks the C++ besides the effects' world (`EEEffectHost.cpp`).
 #[repr(C)]
 pub struct EeGfxManagerWorld {
-    /// an entry point's effect, made by its constructor (the C++'s reads of the world); null: none
-    pub construct: extern "C" fn(args: *const EeGfxEffectArgs) -> EffectPtr,
     /// the damage controller's tick facts (the unit's damage points, health, cloak)
     pub damaged_tick: extern "C" fn(effect: EffectPtr) -> EeGfxDamagedTick,
     /// `gEffectDetail` (`set` >= 0: set it first)
@@ -412,7 +410,7 @@ fn create(m: *mut EeGfxEffectManager, args: &EeGfxEffectArgs, out_handle: *mut u
     if !plan.create {
         return plan.result;
     }
-    let e = (mworld().construct)(args);
+    let e = crate::gfx::effect_ctor::construct(args);
     let (result, handle) =
         effect_manager::create(&mut Store(m), &mut Objects::of(m), e as effect_store::EffectPtr, plan.saved);
     if let Some(handle) = handle {

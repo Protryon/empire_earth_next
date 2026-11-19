@@ -12,14 +12,6 @@ use crate::gfx::effect_obj::tests::{addr, setup, take, unused};
 
 static CURRENT: AtomicPtr<EeGfxEffectManager> = AtomicPtr::new(std::ptr::null_mut());
 
-extern "C" fn construct(a: *const EeGfxEffectArgs) -> EffectPtr {
-    // SAFETY: the entry's arguments
-    let a = unsafe { &*a };
-    let kind = GraphicEffect(a.graphic_effect as usize).fields().mKind as i32;
-    let e = obj::ee_gfx_effect_new();
-    obj::ee_gfx_effect_attach(e, a.unit, a.graphic_effect, kind, false);
-    e
-}
 extern "C" fn detail(_: i64) -> u32 {
     0xff
 }
@@ -40,7 +32,6 @@ fn world_once() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
         let w = Box::leak(Box::new(EeGfxManagerWorld {
-            construct,
             damaged_tick: unused(),
             effect_detail: detail,
             current: current_manager,

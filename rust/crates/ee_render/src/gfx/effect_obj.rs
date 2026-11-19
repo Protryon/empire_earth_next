@@ -136,6 +136,9 @@ pub struct EeGfxEffectTick {
     pub speed: f32,
     /// `gWorld.GetGameSpeed()`
     pub world_speed: f32,
+    /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
+    pub game_time: i64,
+    pub game_clock: f32,
 }
 
 /// One operation's context for the C++ answers (`EEEffectHost.cpp`'s `Ask`: the effect, the operation, the
@@ -190,6 +193,9 @@ pub struct EeGfxEffectWorld {
     pub tick: extern "C" fn() -> EeGfxEffectTick,
     /// `gScreenIndex` (false) or the preferences' screen (true)
     pub screen: extern "C" fn(preferences: bool) -> u32,
+    /// a shooter's weapon point (`EECombatEffectWeaponPoint` at `site`, with its CBEW capture: with the tag points
+    /// at its animation when `test_list` finds them, else assumed) and whether its model has such points
+    pub weapon_point: extern "C" fn(unit: u64, site: i32, test_list: bool, tagged: *mut bool) -> Ge3DPoint,
     /// the map's height at a point (`gWorld.mMap->GetHeight`)
     pub height: extern "C" fn(point: *const Ge3DPoint) -> f32,
     /// the map's terrain mesh (`gWorld.mMap->mTerrainMesh`'s Rust object)
@@ -241,7 +247,6 @@ pub struct EeGfxEffectAnswers2D {
         tile_x: i32,
         tile_y: i32,
     ) -> crate::gfx::effect_confirm::EeGfxConfirmGoal,
-    pub weapon_point: extern "C" fn(context: *mut c_void, site: i32) -> Ge3DPoint,
     pub animation_sound:
         extern "C" fn(context: *mut c_void, location: Ge3DPoint, frame: u32, changed: bool, part0: bool),
     pub draw_blood: extern "C" fn(context: *mut c_void) -> bool,
@@ -1621,7 +1626,7 @@ fn host2d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         confirm_goal: c.confirm_goal,
         terrain_z: a_terrain_z,
         object_media: a_media,
-        weapon_point: c.weapon_point,
+        weapon_point: a_weapon_point,
         animation_sound: c.animation_sound,
         draw_blood: c.draw_blood,
         tile_blocked: c.tile_blocked,
@@ -1644,6 +1649,12 @@ fn host2d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         particle_tick: c.particle_tick,
         particle_ground: c.particle_ground,
     }
+}
+
+/// the unit's weapon tag point (site 3: the list assumed; sites 1 and 2, the 2D projectile's, test it)
+extern "C" fn a_weapon_point(context: *mut c_void, site: i32) -> Ge3DPoint {
+    let mut tagged = false;
+    (world().weapon_point)(head(e_of(context)).unit, site, site <= 2, &mut tagged)
 }
 
 /// The graphic object of the 2D part `index` (the impact's sound reads the first one's).

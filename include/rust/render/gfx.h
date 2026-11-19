@@ -403,6 +403,20 @@ enum class EeGfxEffect3DOp : uint32_t {
   Rebuild = 16,
 };
 
+/// The capture's calls (`EeGfxManagerWorld::capture`).
+enum class EeGfxCaptureOp {
+  /// `EESimCaptureRecord::Active()`
+  Active = 0,
+  /// `Keeps(tag)`
+  Keeps = 1,
+  /// a record of `tag` with the `len` bytes of `data`, committed
+  Commit = 2,
+  /// `Only(tags, len)` (`data`: the tags' words; 0: all)
+  Only = 3,
+  /// `Exclusive(tag != 0)`
+  Exclusive = 4,
+};
+
 /// The manager's creation entry points (the effects' constructors differ by entry; the C++ keeps them).
 enum class EeGfxEffectEntry {
   /// `CreateUnitEffect`: on a unit
@@ -421,20 +435,6 @@ enum class EeGfxEffectEntry {
   Between = 6,
   /// `CreateWeatherEffect`: over tiles
   Weather = 7,
-};
-
-/// The capture's calls (`EeGfxManagerWorld::capture`).
-enum class EeGfxCaptureOp {
-  /// `EESimCaptureRecord::Active()`
-  Active = 0,
-  /// `Keeps(tag)`
-  Keeps = 1,
-  /// a record of `tag` with the `len` bytes of `data`, committed
-  Commit = 2,
-  /// `Only(tags, len)` (`data`: the tags' words; 0: all)
-  Only = 3,
-  /// `Exclusive(tag != 0)`
-  Exclusive = 4,
 };
 
 /// One rasterizer call (or a change of the shared light) and its arguments.
@@ -522,6 +522,9 @@ struct EeGfxEffectTick {
   float speed;
   /// `gWorld.GetGameSpeed()`
   float world_speed;
+  /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
+  int64_t game_time;
+  float game_clock;
 };
 
 /// `GEColor`'s storage: red, green, blue.
@@ -902,7 +905,6 @@ struct EeGfxEffectAnswers2D {
                                    uint32_t goal_index,
                                    int32_t tile_x,
                                    int32_t tile_y);
-  EeGe3DPoint (*weapon_point)(void *context, int32_t site);
   void (*animation_sound)(void *context,
                           EeGe3DPoint location,
                           uint32_t frame,
@@ -963,6 +965,9 @@ struct EeGfxEffectWorld {
   EeGfxEffectTick (*tick)();
   /// `gScreenIndex` (false) or the preferences' screen (true)
   uint32_t (*screen)(bool preferences);
+  /// a shooter's weapon point (`EECombatEffectWeaponPoint` at `site`, with its CBEW capture: with the tag points
+  /// at its animation when `test_list` finds them, else assumed) and whether its model has such points
+  EeGe3DPoint (*weapon_point)(uint64_t unit, int32_t site, bool test_list, bool *tagged);
   /// the map's height at a point (`gWorld.mMap->GetHeight`)
   float (*height)(const EeGe3DPoint *point);
   /// the map's terrain mesh (`gWorld.mMap->mTerrainMesh`'s Rust object)
@@ -2048,29 +2053,6 @@ struct EeGfxStormDraw {
   bool water;
 };
 
-/// An entry point's arguments (the manager's `Create*` methods): the graphic effect, the units, the points, the
-/// transformation, the line, the tiles (x, y pairs) and the unit effect's flags.
-struct EeGfxEffectArgs {
-  EeGfxEffectEntry entry;
-  /// an `EEGraphicEffect*`
-  uint64_t graphic_effect;
-  /// the unit (`EEUnit*`) and, between units, the other one
-  uint64_t unit;
-  uint64_t to_unit;
-  /// the point, and between points or from a unit, the end
-  EeGe3DPoint at;
-  EeGe3DPoint to;
-  EeGeTransformation transformation;
-  EeGe3DLine line;
-  const int32_t *tiles;
-  uint32_t tile_count;
-  /// `CreateUnitEffect`'s: the light glow keeps its unit, the emitter's tag point, the confirmation's goal queue
-  /// (and `CreateEffect`'s goal queue)
-  bool keeps_unit;
-  int32_t tag_point;
-  uint32_t goal_index;
-};
-
 /// The player `Rebuild` places markers for.
 struct EeGfxGoalPlayer {
   /// its epoch is Atomic - WW2 or later
@@ -2139,8 +2121,6 @@ struct EeGfxGoalHost {
 
 /// What the manager asks the C++ besides the effects' world (`EEEffectHost.cpp`).
 struct EeGfxManagerWorld {
-  /// an entry point's effect, made by its constructor (the C++'s reads of the world); null: none
-  EffectPtr (*construct)(const EeGfxEffectArgs *args);
   /// the damage controller's tick facts (the unit's damage points, health, cloak)
   EeGfxDamagedTick (*damaged_tick)(EffectPtr effect);
   /// `gEffectDetail` (`set` >= 0: set it first)
@@ -2159,6 +2139,29 @@ struct EeGfxManagerWorld {
   /// the save's version (`kSaveGameMajorVersion`, `kSaveGameMinorVersion`)
   uint32_t save_major;
   uint32_t save_minor;
+};
+
+/// An entry point's arguments (the manager's `Create*` methods): the graphic effect, the units, the points, the
+/// transformation, the line, the tiles (x, y pairs) and the unit effect's flags.
+struct EeGfxEffectArgs {
+  EeGfxEffectEntry entry;
+  /// an `EEGraphicEffect*`
+  uint64_t graphic_effect;
+  /// the unit (`EEUnit*`) and, between units, the other one
+  uint64_t unit;
+  uint64_t to_unit;
+  /// the point, and between points or from a unit, the end
+  EeGe3DPoint at;
+  EeGe3DPoint to;
+  EeGeTransformation transformation;
+  EeGe3DLine line;
+  const int32_t *tiles;
+  uint32_t tile_count;
+  /// `CreateUnitEffect`'s: the light glow keeps its unit, the emitter's tag point, the confirmation's goal queue
+  /// (and `CreateEffect`'s goal queue)
+  bool keeps_unit;
+  int32_t tag_point;
+  uint32_t goal_index;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).

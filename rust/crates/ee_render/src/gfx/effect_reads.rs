@@ -203,6 +203,12 @@ impl Gobj {
             last: f.mLastFrames[i] as u32,
         }
     }
+    /// `PickPoint()`'s attack point at game time `time` (None: the default point then)
+    pub fn pick(self, time: c_long) -> Option<Ge3DPoint> {
+        let store: *const EeGfxGraphicTags = self.at(l().gobj_tags);
+        // SAFETY: the object's store, live while the object is loaded
+        unsafe { store.as_ref() }.and_then(|s| s.pick(time).copied())
+    }
     /// `mTagPoints[part]` (the weapon mounts)
     pub fn weapon_tags(self, part: usize) -> Option<&'static EeGfxTagList> {
         let list: *const EeGfxTagList = self.at(l().gobj_tag_points + (part * PTR) as u64);

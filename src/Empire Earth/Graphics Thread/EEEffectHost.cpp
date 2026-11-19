@@ -1,6 +1,6 @@
 // The effects' world (docs/RUST_PLAN.md R4.4; the graphics + LLE cluster's second round): the effects and their
 // manager are Rust objects (ee_gfx effect_obj.rs, ffi_manager.rs); this unit answers what they ask of the C++ world.
-// The effects' constructors by the manager's entry points (their reads of the units: EEEffectConstruct), the C++
+// The effects' constructors' weapon points (the units' EECombatEffectWeaponPoint), the C++
 // objects an effect holds (its unit, graphic effect, models, graphic objects and sounds: their references, loads and
 // releases), the map's tiles and doppelgangers, the answers of the 3D kinds (EeGfxEffectAnswers3D: ee_gfx
 // effect_rising.rs and its kinds' modules) and of the 2D ones (EeGfxEffectAnswers2D: effect_2d.rs) that call the
@@ -547,19 +547,6 @@ struct Ask {
         return theLoadGoal && theLoadGoal->mKind == kGoalUnloadTransport ? EeGfxConfirmGoal::Unloading
                                                                           : EeGfxConfirmGoal::Other;
     }
-    // the unit's weapon tag point (ee_combat's weapon_point; EEE2DMuzzleFlash::SetUp 0xe458e: site 3, the list
-    // assumed; sites 1 and 2 (the 2D projectile) test it)
-    static EeGe3DPoint WeaponPoint(void* inAsk, int32_t inSite)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEModel* theModel = theUnit->GetModel();
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
-        bool theHasList = inSite <= 2 ? theList && theList->mPoints.size() : true;
-        GE3DPoint theStart;
-        EECombatEffectWeaponPoint(inSite, theComplex, theModel, theList, theHasList, theStart);
-        return R(theStart);
-    }
     // the kept object's (inPart0: the first part's) animation sound for the frame at the location, kept as the
     // effect's (EEE2DImpact::Step and SetSound, 0xe166b / 0xe17ed)
     static void PartSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged, bool inPart0)
@@ -629,318 +616,6 @@ struct Ask {
     // the particle's (EEE2DParticle::Update 0xe4c31, Step 0xe520d)
     static EeGfxParticleTick PositionTick(void* inAsk) { return EEParticleTick(E(inAsk)->mGraphicEffect, E(inAsk)->Position()); }
 };
-
-// a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
-// whether the unit's model has tag points at its animation
-bool ShotStart(long inMode, EEUnit* inUnit, EeGe3DPoint& outStart)
-{
-    GE3DPoint theStart;
-    EEModel* theModel = inUnit->GetModel();
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->GetAnimation()];
-    bool theTagged = theList != NULL && theList->GetNumTagPoints() != 0;
-    EECombatEffectWeaponPoint(inMode, theUnit, theModel, theList, theTagged, theStart);
-    outStart = R(theStart);
-    return theTagged;
-}
-
-// the unit's mouth through the transformation, with the offsets of the cavalry archer, chariot archer, bronze spear
-// cavalry and knight (EEE2DWinterBreath::GetMouthPoint)
-GE3DPoint EEMouthPoint(EEUnit* inUnit, const GETransformation& inTransformation)
-{
-    GE3DPoint theOffset(0.0f, 0.4f, 0.405f);
-    GE3DPoint theResult;
-    switch (inUnit->mUnitClass->mUnitType) {
-    case kUnitTypeArch06CavalryArcher:
-        theOffset.SetY(0.465f);
-        theOffset.SetZ(0.385f);
-        break;
-    case kUnitTypeArch04ChariotArcher:
-        theOffset.SetY(0.872f);
-        theOffset.SetZ(0.465f);
-        break;
-    case kUnitTypeCav04BronzeSpearCavalry:
-    case kUnitTypeCav06Knight:
-        theOffset.SetY(0.272f);
-        theOffset.SetZ(0.235f);
-        break;
-    }
-    inTransformation.Apply(theOffset, theResult);
-    return theResult;
-}
-
-// ---- the constructors (the manager's entry points; the original leaves' of the graphic effect's kind)
-
-void Attach(EEEffect* e, EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit)
-{
-    ee_gfx_effect_attach(H(e), U(inUnit), U(inGraphicEffect), (int32_t)inKind, inKeepsUnit);
-}
-
-long Call(EEEffect* e, EeGfxEffect3DOp inOp, void* inArg = NULL) { return ee_gfx_effect_call(H(e), inOp, inArg); }
-
-// the 2D particle's start at a point, moving along inVelocity when given, for its graphic effect's duration from now
-void StartParticle(EEEffect* e, const GE3DPoint& inPosition, const GEVector* inVelocity)
-{
-    ee_gfx_effect_set_position(H(e), R(inPosition));
-    e->mRecord->particle.draw_position = R(inPosition);
-    if (inVelocity)
-        e->mRecord->particle.velocity = EeGe3DPoint{inVelocity->GetX(), inVelocity->GetY(), inVelocity->GetZ()};
-    e->mRecord->particle.last_time = gPhysics->GetGameClock();
-    e->mRecord->particle.duration = e->mGraphicEffect->mDuration;
-}
-
-// at a point: the 2D particle's start (0xe49c7); the battlefield decal's size and corners on the terrain (hidden and
-// over off the map or not level, 0xde74f); the others' point for Rust (a 2D kind's sprite.start, a 3D kind's
-// aged.location)
-void PlaceAt(EEEffect* e, const GE3DPoint& inLocation)
-{
-    if (e->GetKind() == 0x2e) {
-        StartParticle(e, inLocation, NULL);
-        return;
-    }
-    EEGraphicEffect* theEffect = e->mGraphicEffect;
-    if (e->GetKind() == 0x32) {
-        EeGfxAmbientNew theNew = {theEffect->GetStartSize(), theEffect->GetSize(), (int32_t)theEffect->mIntParam1,
-                                  theEffect->mFlag1};
-        EeGfxParticleGround theGround = EEParticleGround();
-        ee_gfx_effect_ambient_new(e->mRecord, reinterpret_cast<const EeGe3DPoint*>(&inLocation), &theNew, &theGround);
-        return;
-    }
-    (e->mIs2D ? e->mRecord->sprite.start : e->mRecord->aged.location) = R(inLocation);
-    Call(e, EeGfxEffect3DOp::CreateAt, const_cast<GE3DPoint*>(&inLocation));
-}
-
-// on a unit: the destruction smoke (0x1e) at its location, spread over half its class's scale (0x4ebbfd); the 2D
-// particle (0x2e) at it or its tile's centre on the ground (0 off the map) (0xe489b); the multi-effect's own unit is
-// none (its linked effects are made on inUnit); the light glow keeps its unit when asked (0xe1a7a), the command
-// confirmation shows goal queue inGoalIndex (0xe9d1e), the emitter follows tag point inTagPoint
-void OnUnit(EEEffect* e, EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit, long inTagPoint,
-            unsigned long inGoalIndex)
-{
-    if (inKind == 0x1e) {
-        const GETransformation& theLocation = inUnit->mComplexUnit->mPhysicalModel.GetLocation();
-        Attach(e, NULL, inGraphicEffect, inKind, false);
-        PlaceAt(e, GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ()));
-        e->mRecord->smoke.radius = inUnit->mUnitClass->mScale * 0.5f;
-        return;
-    }
-    if (inKind == 0x2e) {
-        Attach(e, inUnit, inGraphicEffect, inKind, false);
-        GE3DPoint theLocation;
-        EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-        if (theComplexUnit) {
-            const GETransformation& theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-            theLocation = GE3DPoint(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-        } else {
-            theLocation.SetX(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileX);
-            theLocation.SetY(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileY);
-            if (gWorld.GetMap()->mTerrainMesh.GetIsValidTile(inUnit->mTileX, inUnit->mTileY))
-                theLocation.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
-        }
-        StartParticle(e, theLocation, NULL);
-        return;
-    }
-    Attach(e, inKind == 0x3b ? NULL : inUnit, inGraphicEffect, inKind, inKind == 0xd && inKeepsUnit);
-    if (inKind == 0x41)
-        e->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
-    Call(e, EeGfxEffect3DOp::Create, inUnit);
-    if (inKind == 0x3a)
-        e->mRecord->emitter.tag_point = (uint32_t)inTagPoint;
-}
-
-// from a unit to a point: the command confirmation there (0xe9d91); the smoke muzzle blast and the 2D projectile from
-// the unit's weapon point (0xe6a07, 0xe31dd); the pulse cannon ball from its weapon point (0xf6a26), the citizen beam
-// towards it (0xe94b7), the tracer beam to it (0xfc49d)
-void UnitToPoint(EEEffect* e, EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind,
-                 unsigned long inGoalIndex)
-{
-    EeGe3DPoint theTarget = R(inTarget);
-    if (inKind == 0x14 || inKind == 0x30) {
-        Attach(e, NULL, inGraphicEffect, inKind, false);
-        GE3DPoint theStart;
-        EEModel* theModel = inUnit->GetModel();
-        EEComplexUnit* theUnit = inUnit->mComplexUnit;
-        EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
-        if (inKind == 0x30)
-            EECombatEffectWeaponPoint(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);
-        else
-            EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
-        e->mRecord->sprite.start = R(theStart);
-        e->mRecord->sprite.draw_position = theTarget;
-        Call(e, EeGfxEffect3DOp::CreateBetween);
-        return;
-    }
-    Attach(e, inUnit, inGraphicEffect, inKind, false);
-    if (inKind == 0x41) {
-        e->Position() = inTarget;
-        e->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
-        Call(e, EeGfxEffect3DOp::CreateAt);
-        return;
-    }
-    if (inKind == 0x40) {
-        e->mRecord->tracer.target_point = theTarget;
-        e->mRecord->tracer.weapon_tag_point = inUnit->mComplexUnit->mWeaponTagPoint;
-    } else if (inKind == 0x33) {
-        e->mRecord->shot.end = theTarget;
-    } else {
-        ShotStart(6, inUnit, e->mRecord->shot.path.start);
-        e->mRecord->shot.location = theTarget;
-    }
-    Call(e, EeGfxEffect3DOp::Create);
-}
-
-// between two units: the tracer beam of inFrom on inTo, referenced, aimed at a point picked on its model (0xfc3c5: the
-// original tested the target for null, then used it); the tracers and shells on inTo from inFrom's weapon point to a
-// point of inTo's model in inFrom's player colour (0xfd373); the winter breath at inFrom's mouth tag point (or its
-// mouth by unit type, the breath then inert), its scaled location, whether the tag list was found and whether it moves
-// (0xe819b); the smoke muzzle blast and the 2D projectile from inFrom's weapon tag point to inTo's model point on its
-// scaled location, the blast's 15 higher for a high-arc shooter (0xe6664, 0xe2f58)
-void BetweenUnits(EEEffect* e, EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind)
-{
-    static const float kTargetLift = 15.0f;
-    if (inKind == 0x40) {
-        Attach(e, inFrom, inGraphicEffect, inKind, false);
-        e->mTarget = inTo;
-        if (e->mTarget) {
-            e->mTarget->Reference();
-            e->mRecord->tracer.target_point = R(e->mTarget->GetModel()->PickPoint());
-        }
-        e->mRecord->tracer.weapon_tag_point = inFrom->mComplexUnit->mWeaponTagPoint;
-        Call(e, EeGfxEffect3DOp::Create);
-        return;
-    }
-    if (inKind == 0x21 || inKind == 0x26) {
-        Attach(e, inTo, inGraphicEffect, inKind, false);
-        GE3DPoint theEnd;
-        GETransformation theToTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
-        float theToScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
-        if (ShotStart(7, inFrom, e->mRecord->shot.path.start))
-            EETagPointList::Scale(theToTransformation, theToScale);
-        GE3DPoint theOffset = inTo->GetModel()->PickPoint();
-        theToTransformation.Apply(theOffset, theEnd);
-        const GEColor& theColor = inFrom->mPlayer->mColor;
-        e->mRecord->shot.location = R(theEnd);
-        e->mRecord->shot.color = EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
-        Call(e, EeGfxEffect3DOp::Create);
-        return;
-    }
-    Attach(e, NULL, inGraphicEffect, inKind, false);
-    if (inKind == 0x16) {
-        GE3DPoint thePosition;
-        GETransformation theTransformation(inFrom->mComplexUnit->mPhysicalModel.GetLocation());
-        EEComplexUnit* theBreather = inFrom->mComplexUnit;
-        EETagPointList* theMouths = inFrom->GetModel()->GetTagPoints(theBreather->GetAnimation(), 0x16);
-        float theScale = inFrom->mComplexUnit->mPhysicalModel.GetScale();
-        unsigned long theFrame = theBreather->mPhysicalModel.GetFrame();
-        EETagPointList::Scale(theTransformation, theScale);
-        if (theMouths)
-            theMouths->GetTagPoint(0)->GetPoint(theFrame, theTransformation, thePosition);
-        else
-            thePosition = EEMouthPoint(inFrom, theTransformation);
-        e->mRecord->sprite.start = R(thePosition);
-        e->mRecord->aged.transformation = *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
-        e->mRecord->sprite.flag = theMouths != NULL;
-        e->mRecord->sprite.shrinking = inFrom->mComplexUnit->mVelocity != 0.0f;
-        Call(e, EeGfxEffect3DOp::CreateBetween);
-        return;
-    }
-    bool theProjectile = inKind == 0x30;
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    GE3DPoint theOffset;
-    GETransformation theTargetTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
-    EEModel* theModel = inFrom->GetModel();
-    EEComplexUnit* theUnit = inFrom->mComplexUnit;
-    EETagPointList* theList = inFrom->GetModel()->mTagPoints[theUnit->mAnimation];
-    float theTargetScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
-    // the projectile's target point is on its scaled model whatever the shooter has (the same scaling either way)
-    EECombatEffectWeaponPoint(theProjectile ? 1 : 4, theUnit, theModel, theList,
-                              theProjectile ? theList && theList->mPoints.size() : true, theStart);
-    EETagPointList::Scale(theTargetTransformation, theTargetScale);
-    theOffset = inTo->GetModel()->mDefaultPoint;
-    theTargetTransformation.Apply(theOffset, theEnd);
-    if (!theProjectile
-        && (inFrom->mUnitClass->mShootsHigh || (inFrom->mStats->mCanFireOverWalls && inFrom->mComplexUnit->mIsFiringHigh)))
-        theEnd.SetZ(theEnd.GetZ() + kTargetLift);
-    e->mRecord->sprite.start = R(theStart);
-    e->mRecord->sprite.draw_position = R(theEnd);
-    Call(e, EeGfxEffect3DOp::CreateBetween);
-}
-
-// The effect of an entry point (the original's constructors by the entry and the graphic effect's kind): between two
-// points the marching line (0xf359c: no set-up call), the linear projectile from the start to the end (0xf2dd6), the
-// earthquake's crack (0xec727); along a line the 2D particle at its start with its direction as velocity (0xe4a4a),
-// the velocity particle, the 3D particle (0xf4e27) and the emitter (0xf5e82) at its start moving along it, the
-// multi-effect's linked effects along it (0xf42c3); the rain and the snow over the tiles, centred on them (0xfb0c8;
-// the rain's first thunder, 0xf7394); the water ripple at a transformation (0xe7e50), the battlefield decal at its
-// point
-EeGfxEffectHead* EEEffectConstruct(const EeGfxEffectArgs* a)
-{
-    EEEffect* e = Fx(ee_gfx_effect_new());
-    EEGraphicEffect* g = P<EEGraphicEffect>(a->graphic_effect);
-    long theKind = g->mKind;
-    const GE3DPoint& theAt = *reinterpret_cast<const GE3DPoint*>(&a->at);
-    switch (a->entry) {
-    case EeGfxEffectEntry::Unit:
-        OnUnit(e, P<EEUnit>(a->unit), g, theKind, a->keeps_unit, a->tag_point, a->goal_index);
-        break;
-    case EeGfxEffectEntry::BetweenUnits:
-        BetweenUnits(e, P<EEUnit>(a->unit), P<EEUnit>(a->to_unit), g, theKind);
-        break;
-    case EeGfxEffectEntry::UnitToPoint:
-        UnitToPoint(e, P<EEUnit>(a->unit), theAt, g, theKind, a->goal_index);
-        break;
-    case EeGfxEffectEntry::Placed:
-        Attach(e, NULL, g, theKind, false);
-        PlaceAt(e, theAt);
-        break;
-    case EeGfxEffectEntry::Transformation:
-        Attach(e, NULL, g, theKind, false);
-        if (theKind == kEffect2DBattlefieldAmbient) {
-            PlaceAt(e, GE3DPoint(*reinterpret_cast<const GETransformation*>(&a->transformation)));
-            break;
-        }
-        e->mRecord->aged.transformation = a->transformation;
-        Call(e, EeGfxEffect3DOp::CreateTransformation);
-        break;
-    case EeGfxEffectEntry::Line: {
-        Attach(e, NULL, g, theKind, false);
-        const GE3DLine& theLine = *reinterpret_cast<const GE3DLine*>(&a->line);
-        const GEVector& theDirection = theLine.GetDirection();
-        EeGe3DPoint theVelocity = {theDirection.GetX(), theDirection.GetY(), theDirection.GetZ()};
-        if (theKind == 0x2e) {
-            StartParticle(e, theLine.GetStart(), &theDirection);
-            break;
-        }
-        if (theKind == 0xc) {
-            e->mRecord->sprite.start = R(theLine.GetStart());
-            e->mRecord->sprite.velocity = theVelocity;
-        } else if (theKind == 0x39 || theKind == 0x3a) {
-            e->mRecord->aged.location = R(theLine.GetStart());
-            (theKind == 0x39 ? e->mRecord->particle.velocity : e->mRecord->emitter.velocity) = theVelocity;
-        }
-        Call(e, EeGfxEffect3DOp::CreateLine, const_cast<GE3DLine*>(&theLine));
-        break;
-    }
-    case EeGfxEffectEntry::Between:
-        Attach(e, NULL, g, theKind, false);
-        if (theKind == 0x2d) {
-            e->mRecord->march.from = a->at;
-            e->mRecord->march.to = a->to;
-            break;
-        }
-        e->mRecord->shot.path.start = a->at;
-        e->mRecord->shot.location = a->to;
-        Call(e, EeGfxEffect3DOp::Create);
-        break;
-    case EeGfxEffectEntry::Weather:
-        Attach(e, NULL, g, theKind, false);
-        ee_gfx_storm_new(e->mRecord, a->tiles, a->tile_count);
-        Call(e, EeGfxEffect3DOp::Create);
-        break;
-    }
-    return H(e);
-}
 
 // the damage controller's tick facts (EEEDamagedEffect::Step, 0x10225c): its graphic effect's, then its unit's (the
 // outer part on the map), the damage tag points of linked effect 1's kind, its health, hidden when cloaked to the
@@ -1173,10 +848,23 @@ EeGfxEffectWorld EEMakeWorld()
     };
     w.tick = []() {
         return EeGfxEffectTick{gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)(unsigned long)gPhysics->mGameTime,
-                               gFreeCamera, gPhysics->mSpeed, gWorld.GetGameSpeed()};
+                               gFreeCamera, gPhysics->mSpeed, gWorld.GetGameSpeed(), (int64_t)gPhysics->mGameTime,
+                               gPhysics->GetGameClock()};
     };
     w.screen = [](bool inPreferences) {
         return (uint32_t)(inPreferences ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
+    };
+    // a shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its
+    // animation when inTestList finds them, else assumed
+    w.weapon_point = [](uint64_t inUnit, int32_t inSite, bool inTestList, bool* outTagged) {
+        EEUnit* theUnit = P<EEUnit>(inUnit);
+        EEModel* theModel = theUnit->GetModel();
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
+        *outTagged = theList != NULL && theList->GetNumTagPoints() != 0;
+        GE3DPoint theStart;
+        EECombatEffectWeaponPoint(inSite, theComplex, theModel, theList, inTestList ? *outTagged : true, theStart);
+        return R(theStart);
     };
     w.height = [](const EeGe3DPoint* inPoint) { return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint)); };
     w.mesh = []() { return (const EeGeTerrainMesh*)gWorld.mMap->mTerrainMesh.GetRust(); };
@@ -1189,7 +877,7 @@ EeGfxEffectWorld EEMakeWorld()
                                        Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
                                        Ask::SetScaledModel, Ask::GroundPoint, Ask::RainMedia, Ask::RainSounds,
                                        Ask::ParticleTick, Ask::ParticleGround, Ask::EmitterPlace, Ask::EmitterSound};
-    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::WeaponPoint, Ask::PartSound, Ask::DrawBlood,
+    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::PartSound, Ask::DrawBlood,
                                        Ask::TileBlocked, Ask::Wind, Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects,
                                        Ask::IconsSelected, Ask::GroundAt, Ask::GlowArea, Ask::GlowRows,
                                        Ask::PositionTick, Ask::ParticleGround};
@@ -1199,7 +887,6 @@ EeGfxEffectWorld EEMakeWorld()
 EeGfxManagerWorld EEMakeManagerWorld()
 {
     EeGfxManagerWorld w = {};
-    w.construct = EEEffectConstruct;
     w.damaged_tick = EEDamagedTick;
     w.effect_detail = [](int64_t inSet) {
         if (inSet >= 0)

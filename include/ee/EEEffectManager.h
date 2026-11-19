@@ -4,7 +4,7 @@
 // effects by handle, the list, the destruction queue, the goal markers, the entry points' plans and registrations,
 // Load, Save, RepairPointers, Update and its TEST ONLY captures). This class is its shell: an FSRestorable for the
 // saves, and the effects' one entry point for the game's other code (the Create methods build the entry's
-// arguments; EEEffectHost.cpp's constructors make the effect). The game holds one through `gEffectManager`.
+// arguments; ee_gfx effect_ctor.rs's constructors make the effect). The game holds one through `gEffectManager`.
 #ifndef EE_EEEFFECTMANAGER_H
 #define EE_EEEFFECTMANAGER_H
 
