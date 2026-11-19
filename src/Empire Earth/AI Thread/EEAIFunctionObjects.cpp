@@ -43,7 +43,6 @@
 #include "ee/EECPASGFlags.h"
 #include "ee/EECPUnitRequirement.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EEUnitSetManager.h"

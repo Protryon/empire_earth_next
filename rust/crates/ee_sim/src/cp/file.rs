@@ -11,7 +11,7 @@ use crate::units::player_save::{
     EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, EE_UNITS_PLAYER_SAVE_READ_BOOL, EE_UNITS_PLAYER_SAVE_READ_FLOAT,
     EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_ULONG, EE_UNITS_PLAYER_SAVE_READ_USHORT,
     EE_UNITS_PLAYER_SAVE_WRITE_BOOL, EE_UNITS_PLAYER_SAVE_WRITE_FLOAT, EE_UNITS_PLAYER_SAVE_WRITE_LONG,
-    EE_UNITS_PLAYER_SAVE_WRITE_ULONG,
+    EE_UNITS_PLAYER_SAVE_WRITE_ULONG, EE_UNITS_PLAYER_SAVE_WRITE_USHORT,
 };
 
 /// `kErrorOK`.
@@ -81,6 +81,10 @@ impl SaveFile {
     pub fn write_float(&mut self, v: f32) -> i32 {
         let mut io = EeUnitsPlayerSaveIo { f: v, ..Default::default() };
         self.call(EE_UNITS_PLAYER_SAVE_WRITE_FLOAT, &mut io)
+    }
+    pub fn write_ushort(&mut self, v: u16) -> i32 {
+        let mut io = EeUnitsPlayerSaveIo { i: i64::from(v), ..Default::default() };
+        self.call(EE_UNITS_PLAYER_SAVE_WRITE_USHORT, &mut io)
     }
     pub fn write_bool(&mut self, v: bool) -> i32 {
         let mut io = EeUnitsPlayerSaveIo { b: u8::from(v), ..Default::default() };
@@ -175,6 +179,10 @@ pub mod test_file {
             }
             EE_UNITS_PLAYER_SAVE_WRITE_BOOL => {
                 f.b(io.b != 0);
+                OK
+            }
+            EE_UNITS_PLAYER_SAVE_WRITE_USHORT => {
+                f.u16(io.i as u16);
                 OK
             }
             _ => -1,

@@ -72,7 +72,6 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EETeam.h"
-#include "ee/EECPCombatManager.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"

@@ -1551,7 +1551,8 @@ unsigned long EEGroup::GetNumUnits()
 // Kills every unit of a herd
 void EEPlayer::KillHerdUnits(EEHerd* inHerd, bool inKilled)
 {
-    std::vector<EEComplexUnit*> theUnits(inHerd->mUnits.begin(), inHerd->mUnits.end());
+    std::vector<EEComplexUnit*> theUnits;
+    inHerd->GetUnits(theUnits);
     while (theUnits.size() != 0) {
         theUnits.back()->Kill(inKilled, 0, 0);
         theUnits.pop_back();

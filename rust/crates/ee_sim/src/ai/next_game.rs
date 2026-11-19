@@ -67,8 +67,6 @@ pub const EE_AI_NEXT_HOST_TOWN: i32 = 16;
 pub const EE_AI_NEXT_HOST_POPULATION: i32 = 17;
 /// `EECPPendingEpoch(player)`
 pub const EE_AI_NEXT_HOST_PENDING_EPOCH: i32 = 18;
-/// `mCombatManager != NULL`
-pub const EE_AI_NEXT_HOST_HAS_COMBAT: i32 = 19;
 /// `mCanGather`
 pub const EE_AI_NEXT_HOST_CAN_GATHER: i32 = 20;
 /// `GetNumResourceCenters()`
@@ -1365,7 +1363,6 @@ fn build_view(g: &G<'_>, s: &mut NextState) -> View {
         }
 
         // what the player can make now
-        let has_combat = host(EE_AI_NEXT_HOST_HAS_COMBAT, me, 0, 0, 0) != 0;
         for c in 0..ClassView::count(g.t) {
             let Some(class) = ClassView::by_index(g.t, c) else { continue };
             let Some(node) = tr.node(class.technology()) else { continue };
@@ -1380,10 +1377,9 @@ fn build_view(g: &G<'_>, s: &mut NextState) -> View {
                 cost.cost[i] = node_cost(me, &node, RESOURCE_FOOD + i as c_long, c as c_long);
             }
             cost.building = is_building(&class) as c_long;
-            cost.military = (has_combat
-                // SAFETY: a live class of the table
-                && unsafe { crate::ai::military::ee_ai_military_class(class.handle()) })
-                as c_long;
+            // (the combat manager's IsMilitaryClass: the player always had one, from Init on)
+            // SAFETY: a live class of the table
+            cost.military = unsafe { crate::ai::military::ee_ai_military_class(class.handle()) } as c_long;
             let n = node.unit_classes_len();
             cost.producer = if n > 0 { node.unit_class(0) as c_long } else { -1 };
             for i in 0..n {
