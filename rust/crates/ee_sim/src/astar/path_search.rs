@@ -2,17 +2,18 @@
 //! manager's `EEPathMachine`, and `EEAIAStarMachine<EEAIAStarBoundedStorage, EEAIAStarBoundedPathGoal, EEMap>`, its
 //! bounded machine): the machine's members, the node storage and the goal (with `EEAIAStarGoalBase` and
 //! `EEAIAStarPathfindingGoalBase`) as one Rust object. The goal's members are one C record, `EeAStarPathGoalRec`, at a
-//! fixed address: the C++ modifiers keep it as their goal (`EEAIPathGoalModifierBase::mGoal`) and read and write it
-//! during a search, as they did the C++ goal.
+//! fixed address: the modifiers keep it as their goal (`modifier_obj.rs`, `mGoal`) and read and write it
+//! during a search, as the C++ modifiers did.
 //!
 //! The path manager's machine operations (`EE_PATH_PM_*`, `EE_PATH_TM_*`, `EE_PATH_BM_*`, the saved searches) are
 //! answered here, before its C++ host (`intercept`); what only the C++ knows (the view of a map, a unit's continent
-//! and blocked tiles, the C++ modifiers made, referenced and asked) is the host's (`EE_PATH_VIEW_NEW` and below).
+//! and blocked tiles) is the host's (`EE_PATH_VIEW_NEW` and below).
 //! The hooks note the capture's events as `EEAIAStarHooks` did, and `run` writes the ASRN record.
 
 use crate::astar::continent_grid::EePoint;
 use crate::astar::ffi::{view, CView, EeAStarNodeView, EeAStarViewCallbacks};
 use crate::astar::machine::{self, Host, MachineState};
+use crate::astar::modifier_obj::{self, EeAStarModifier};
 use crate::astar::path_goals::{self, EeAStarPathGoal};
 use crate::astar::path_splice::EePathPoint;
 use crate::astar::pm::*;
@@ -34,17 +35,7 @@ pub const EE_PATH_GOAL_UNIT: i32 = 132;
 pub const EE_PATH_BLOCKED_TILES: i32 = 133;
 /// `CollectUnitTiles`: a sea unit `h0`'s tiles appended to the tile list `h1`
 pub const EE_PATH_UNIT_TILES: i32 = 134;
-/// a new modifier of machine type `i0` (sea 2, space 0x10; `i1` the bounded goal's) over the goal record `h1` (one
-/// reference, the caller's) -> it, 0 for none
-pub const EE_PATH_TILE_MODIFIER_NEW: i32 = 135;
-/// tile modifier `h0` `Reference()`, `Dereference()`
-pub const EE_PATH_TILE_MODIFIER_REFERENCE: i32 = 136;
-pub const EE_PATH_TILE_MODIFIER_DEREFERENCE: i32 = 137;
-/// tile modifier `h0` takes the goal record `h1` (`mGoal`); `i0`: as the bounded goal's (`SetGoal`) -> its bounded
-/// modifier (`dynamic_cast`)
-pub const EE_PATH_TILE_MODIFIER_ATTACH: i32 = 138;
-/// bounded modifier `h0` `CheckNode(the node at (i1, i2), none unless i0)`
-pub const EE_PATH_CHECK_NODE: i32 = 139;
+// (135..139 were the C++ modifiers' operations: the modifiers are Rust objects, modifier_obj.rs)
 /// the tiles `h2[..i0]` appended to the C++ vector `h1` (`std::vector<U2DPoint<long> >`)
 pub const EE_PATH_TILES_OUT: i32 = 140;
 
@@ -90,7 +81,7 @@ pub struct EeAStarPathGoalRec {
 }
 
 impl EeAStarPathGoalRec {
-    fn new() -> EeAStarPathGoalRec {
+    pub(crate) fn new() -> EeAStarPathGoalRec {
         EeAStarPathGoalRec {
             start: EePoint::default(),
             goal: EePoint::default(),
@@ -162,15 +153,14 @@ pub struct PathSearch {
 }
 
 /// The goal and the machine's members as the machine sees them (`EEAIAStarHooks`), with the C++'s notes.
-struct PathHost<'a, 'r> {
+struct PathHost<'a> {
     bounded: bool,
     m: &'a mut MachineState,
     goal: *mut EeAStarPathGoalRec,
     view: CView<'a>,
-    raw: &'a mut Raw<'r>,
 }
 
-impl PathHost<'_, '_> {
+impl PathHost<'_> {
     fn g(&self) -> EeAStarPathGoalRec {
         // SAFETY: the record lives as long as the search; C++ writes it only during the calls below
         unsafe { *self.goal }
@@ -196,7 +186,7 @@ impl PathHost<'_, '_> {
     }
 }
 
-impl Host for PathHost<'_, '_> {
+impl Host for PathHost<'_> {
     fn accept_tile(&mut self, x: i32, y: i32, flag: bool) -> bool {
         let s = self.goal_state();
         let result = path_goals::accept_tile(&s, &mut self.view, x, y, flag);
@@ -222,13 +212,8 @@ impl Host for PathHost<'_, '_> {
         let g = self.g();
         if self.bounded && !g.modifier.is_null() {
             // the bounded modifier inspects the node (it may move the goal: the enemy-in-range modifier)
-            let (x, y) = node.unwrap_or((0, 0));
-            call(
-                self.raw,
-                EE_PATH_CHECK_NODE,
-                &[g.bounded_modifier as u64],
-                &[i64::from(node.is_some()), x.into(), y.into()],
-            );
+            // SAFETY: the goal's referenced bounded modifier, attached to this goal
+            unsafe { modifier_obj::check_node(g.bounded_modifier as *mut EeAStarModifier, node) };
         }
         let (x, y) = node.unwrap_or((0, 0));
         note_bool(EV_GOAL_NODE, i32::from(node.is_some()), x, y, 0, 0, result)
@@ -348,21 +333,17 @@ impl PathSearch {
         g.avoid_units = io.i[1] != 0;
     }
 
-    fn release_base_modifier(&mut self, raw: &mut Raw) {
-        let m = self.goal().modifier as u64;
-        if m != 0 {
-            call(raw, EE_PATH_TILE_MODIFIER_DEREFERENCE, &[m], &[]);
-        }
+    fn release_base_modifier(&mut self, _raw: &mut Raw) {
+        // SAFETY: the goal's reference
+        unsafe { modifier_obj::release(self.goal().modifier as *mut EeAStarModifier) };
         self.goal_mut().modifier = ptr::null_mut();
     }
 
     /// `ReleaseModifier` (the bounded goal's drops its bounded modifier first).
     pub fn release_modifier(&mut self, raw: &mut Raw) {
         if self.bounded {
-            let b = self.goal().bounded_modifier as u64;
-            if b != 0 {
-                call(raw, EE_PATH_TILE_MODIFIER_DEREFERENCE, &[b], &[]);
-            }
+            // SAFETY: the goal's reference
+            unsafe { modifier_obj::release(self.goal().bounded_modifier as *mut EeAStarModifier) };
             self.goal_mut().bounded_modifier = ptr::null_mut();
         }
         self.release_base_modifier(raw);
@@ -375,23 +356,27 @@ impl PathSearch {
         }
         self.release_modifier(raw);
         self.goal_mut().modifier = modifier as *mut c_void;
-        call(raw, EE_PATH_TILE_MODIFIER_REFERENCE, &[modifier], &[]);
-        let rec = self.goal as u64;
-        call(raw, EE_PATH_TILE_MODIFIER_ATTACH, &[modifier, rec], &[0]);
+        let m = modifier as *mut EeAStarModifier;
+        // SAFETY: the caller's live modifier
+        unsafe {
+            modifier_obj::reference(m);
+            modifier_obj::attach(m, self.goal, false);
+        }
         if self.bounded {
-            let b = call(raw, EE_PATH_TILE_MODIFIER_ATTACH, &[modifier, rec], &[1]) as u64;
+            // SAFETY: as above
+            let b = unsafe { modifier_obj::attach(m, self.goal, true) };
             self.goal_mut().bounded_modifier = b as *mut c_void;
-            call(raw, EE_PATH_TILE_MODIFIER_REFERENCE, &[b], &[]);
+            unsafe { modifier_obj::reference(b) };
         }
     }
 
-    /// A new C++ modifier of the machine type for this goal (sea, space), set and its own reference dropped.
+    /// A new modifier of the machine type for this goal (sea, space), set and its own reference dropped.
     fn type_modifier(&mut self, raw: &mut Raw, machine_type: i64) {
-        let rec = self.goal as u64;
-        let m = call(raw, EE_PATH_TILE_MODIFIER_NEW, &[0, rec], &[machine_type, i64::from(self.bounded)]) as u64;
-        if m != 0 {
-            self.set_modifier(raw, m);
-            call(raw, EE_PATH_TILE_MODIFIER_DEREFERENCE, &[m], &[]);
+        let m = modifier_obj::new_for_machine(machine_type, self.bounded, self.goal);
+        if !m.is_null() {
+            self.set_modifier(raw, m as u64);
+            // SAFETY: the maker's reference
+            unsafe { modifier_obj::release(m) };
         }
     }
 
@@ -516,7 +501,7 @@ impl PathSearch {
         let cb = self.view_cb.as_ref().expect("the goal's view");
         {
             let mut host =
-                PathHost { bounded: self.bounded, m: &mut self.m, goal: self.goal, view: CView(cb), raw: &mut *raw };
+                PathHost { bounded: self.bounded, m: &mut self.m, goal: self.goal, view: CView(cb) };
             if fresh {
                 machine::start(&mut self.st, &mut host);
             }

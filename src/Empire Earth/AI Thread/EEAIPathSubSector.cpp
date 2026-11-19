@@ -42,7 +42,6 @@
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIContinentManager.h"
 
-#include "ee/EEUnitClassKinds.h"
 #include "ee/EECPASGFlags.h"
 
 // Appends the sub-sector's links to the sub-sector with the given id; always returns false
@@ -55,43 +54,6 @@ bool EEAIPathSubSector::GetLinks(unsigned short inID,
         outLinks.push_back(std::make_pair((EEAIPathSubSector*)(uintptr_t)theLinks[i].first,
                                           (EEAIPathSubSector*)(uintptr_t)theLinks[i].second));
     return false;
-}
-
-// Returns true when the sub-sector's gate lets the player through (no live gate, open, or own/non-enemy and
-// unlocked); false for side parts and closed enemy or locked gates (the last gate found carries over)
-bool EEAIPathSubSector::IsPassable(long inPlayer)
-{
-    bool thePassable = false;
-    EEComplexUnit* theGate = NULL;
-    EEUnitClass* theGateClass = NULL;
-    U2DPoint<long> theTile;
-    for (long i = this->mTiles.Size() - 1; i >= 0 && !thePassable; i--) {
-        theTile = this->mTiles[i];
-        EETile* theMapTile = gWorld.mMap->GetTile(theTile.mX, theTile.mY);
-        if (!theMapTile)
-            continue;
-        for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode; theNode = theNode->mNext) {
-            EEUnit* theUnit = theNode->mUnit;
-            if (!theUnit || theUnit->GetUnitClass()->mCategory != kUnitCategoryGate)
-                continue;
-            theGate = theUnit->mComplexUnit;
-            theGateClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theGate->GetUnitClass());
-            break;
-        }
-        if (!theGate || theGate->mHitPoints <= 0) {
-            thePassable = true;
-            break;
-        }
-        if (theGateClass->IsSidePart(theGate))
-            thePassable = false;
-        else if ((theGate->mCommand ? theGate->mCommand->mType : 0) != kActionClosed ||
-                 ((gWorld.mPlayers[inPlayer] == theGate->mPlayer ||
-                   theGate->mPlayer->mEnemies[gWorld.mPlayers[inPlayer]->mPlayerID] == 0) && !theGate->mIsLocked))
-            thePassable = true;
-        else
-            thePassable = false;
-    }
-    return thePassable;
 }
 
 // Returns false only when the other sub-sector is a neighbour with links to this one and no link end's kind

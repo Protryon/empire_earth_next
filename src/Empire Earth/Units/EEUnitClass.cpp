@@ -1520,9 +1520,7 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 }
 
 #include "ee/EEPathManager.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIPathGoalModifiers.h"
+#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 // Requests a path from the unit's tile to its goal (cancelling its paths when it already stands there), setting
 // its start heading when unset and an enemy-avoidance modifier for players that avoid enemies; idles when pathless
 // A location goal's group path state and auto-waypoint flag pick the revisions and the graph; a unit without
@@ -1700,14 +1698,13 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
             inUnit->mInitialContactLocation = thePoint;
         return 0;
     case EE_UNITS_CLS_MV_REQUEST_PATH: {
-        EEAIGPModifierEnemyAvoidance* theModifier = NULL;
+        EeAStarModifier* theModifier = NULL;
         if (inUnit->mPlayer->AvoidsEnemies(inUnit))
-            theModifier = new EEAIGPModifierEnemyAvoidance(inUnit->mPlayer->GetPlayerID());
+            theModifier = ee_astar_modifier_new_enemy_avoidance((uint32_t)inUnit->mPlayer->GetPlayerID());
         theGoal->mPathAttempts++;
         gPathManager.RequestUnitPath(inUnit, inUnit->GetTile(), EETileCoordinate((long)io->a, (long)io->b), false,
                                      (long)inC, (inD & 1) != 0, theModifier, (inD & 2) != 0);
-        if (theModifier != NULL)
-            theModifier->Dereference();
+        ee_astar_modifier_release(theModifier);
         return 0;
     }
     case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)

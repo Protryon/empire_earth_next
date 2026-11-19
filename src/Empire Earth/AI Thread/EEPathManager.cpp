@@ -48,11 +48,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIPathGoalModifiers.h"
-#include "ee/EEStormModifiers.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEAIAStarView.h"   // the searches' view (ee_sim::astar path_search.rs)
 #include "ee/AStarGraphableObjectBase.h"
@@ -140,36 +136,7 @@ inline void EEPathManager::ClampTile(EEMap* inMap, EETileCoordinate& ioTile)
     ioTile.mY = theY;
 }
 
-// The path goal's sea and space modifiers (vtables 0x43c458/0x43c448; sizeof 0xc; the ctor is inline: refcount 1, the
-// goal, the vptr). Their slots +0x04 0xaa63b / 0x10b8a and +0x08 0xaa65b forward to the base's shared tests
-// (provisional member names). The goal is the Rust search's record (ee_sim::astar path_search.rs)
-class EEAIPathGoalModifierSea : public EEAIPathGoalModifierBase {
-public:
-    EEAIPathGoalModifierSea(EeAStarPathGoalRec* inGoal) { this->mGoal = inGoal; }
-    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
-    {
-        return this->GetStepCost(true, inFromX, inFromY, inX, inY, inParentX, inParentY);
-    }
-    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-    {
-        return this->IsPassable(this->mGoal, inX, inY, inGoal);
-    }
-};
-
-class EEAIPathGoalModifierSpace : public EEAIPathGoalModifierBase {
-public:
-    EEAIPathGoalModifierSpace(EeAStarPathGoalRec* inGoal) { this->mGoal = inGoal; }
-    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
-    {
-        return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
-    }
-    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-    {
-        return this->IsPassable(this->mGoal, inX, inY, inGoal);
-    }
-};
-
-// The bounded goal's sea/space modifiers EEAIBPGModifierSea/Space: ee/EEAIBoundedPathGoalModifierBase.h
+// (the path goal's sea and space modifiers, vtables 0x43c458/0x43c448, are Rust: ee_sim::astar modifier_obj.rs)
 
 // TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path manager's record PMRQ, one per outermost
 // call of its entry points (the units', the AI's, the storm's, the physics tick's): a u32 kind, the inputs, the
@@ -423,27 +390,6 @@ void EEQueueGraphResolve()
     }
 }
 
-// the graph search's modifier kinds in a saved game (pm.rs EE_PATH_MODIFIER_*; 3..8 were the attack sub groups'
-// route planners, deleted with the C++ combat tree in main's stage 5)
-enum { kGraphModifierNone = 0, kGraphModifierEnemyAvoidance, kGraphModifierWallPlanner, kGraphModifierStormRain = 9,
-       kGraphModifierStormSnow };
-
-long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
-{
-    if (inModifier == NULL)
-        return kGraphModifierNone;
-    const std::type_info& theType = typeid(*inModifier);
-    if (theType == typeid(EEAIGPModifierEnemyAvoidance))
-        return kGraphModifierEnemyAvoidance;
-    if (theType == typeid(EEAIGPGModifierComputerPlayerWallPlanner))
-        return kGraphModifierWallPlanner;
-    if (theType == typeid(EEAIGPGModifierStormRoutePlannerRain))
-        return kGraphModifierStormRain;
-    if (theType == typeid(EEAIGPGModifierStormRoutePlannerSnow))
-        return kGraphModifierStormSnow;
-    return -1;
-}
-
 void* EEGraphObjectOf(void* inContext, int32_t inIndex)
 {
     (void)inContext;
@@ -474,32 +420,6 @@ void EEPathSetBounds(EEAIAStarBounds& outBounds, const int32_t* inValues)
     outBounds.mLeft = inValues[1];
     outBounds.mRight = inValues[2];
     outBounds.mTop = inValues[3];
-}
-
-// the saved modifier, NULL for a kind that cannot be rebuilt (the caller's reference)
-EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EePathSavedGraph& s)
-{
-    EEAIGPGModiferUseInfluenceCostsBase* theInfluence = NULL;
-    switch (s.modifier) {
-    case kGraphModifierEnemyAvoidance:
-        theInfluence = new EEAIGPModifierEnemyAvoidance(s.modifier_player);
-        break;
-    case kGraphModifierWallPlanner:
-        theInfluence = new EEAIGPGModifierComputerPlayerWallPlanner(s.modifier_player, s.modifier_enemy);
-        break;
-    case kGraphModifierStormRain:
-        return new EEAIGPGModifierStormRoutePlannerRain;
-    case kGraphModifierStormSnow:
-        return new EEAIGPGModifierStormRoutePlannerSnow;
-    default:
-        return NULL;   // (the deleted sub groups' route planners)
-    }
-    // the members as saved (the ctors take some of them from the sub group's now)
-    for (int w = 0; w < 15; w++)
-        theInfluence->mWeights.mValues[w] = s.weights[w];
-    theInfluence->mPlayerID = s.modifier_player;
-    theInfluence->mEnemyID = s.modifier_enemy;
-    return theInfluence;
 }
 
 // a request from its saved record (one reference, the caller's)
@@ -664,40 +584,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         EEPathTilesOut(io->h[1], theTiles);
         return 0;
     }
-    case EE_PATH_TILE_MODIFIER_NEW: {   // the machine type's modifier for the goal h1 (i1: the bounded goal's)
-        EeAStarPathGoalRec* theGoal = reinterpret_cast<EeAStarPathGoalRec*>(io->h[1]);
-        EEAIPathGoalModifierBase* theModifier = NULL;
-        if (i[0] == kAIMachineWaterPath)
-            theModifier = i[1] ? (EEAIPathGoalModifierBase*)new EEAIBPGModifierSea(theGoal) : new EEAIPathGoalModifierSea(theGoal);
-        else if (i[0] == kAIMachineSpacePath)
-            theModifier = i[1] ? (EEAIPathGoalModifierBase*)new EEAIBPGModifierSpace(theGoal) : new EEAIPathGoalModifierSpace(theGoal);
-        return (int64_t)EEPathHandle(theModifier);
-    }
-    case EE_PATH_TILE_MODIFIER_REFERENCE:
-        reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0])->Reference();
-        return 0;
-    case EE_PATH_TILE_MODIFIER_DEREFERENCE:
-        reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0])->Dereference();
-        return 0;
-    case EE_PATH_TILE_MODIFIER_ATTACH: {   // SetModifier's: the modifier's goal; the bounded goal's bounded modifier
-        EEAIPathGoalModifierBase* theModifier = reinterpret_cast<EEAIPathGoalModifierBase*>(io->h[0]);
-        EeAStarPathGoalRec* theGoal = reinterpret_cast<EeAStarPathGoalRec*>(io->h[1]);
-        if (!i[0]) {
-            theModifier->mGoal = theGoal;
-            return 0;
-        }
-        EEAIBoundedPathGoalModifierBase* theBounded = dynamic_cast<EEAIBoundedPathGoalModifierBase*>(theModifier);
-        theBounded->SetGoal(theGoal);
-        return (int64_t)EEPathHandle(theBounded);
-    }
-    case EE_PATH_CHECK_NODE: {   // the bounded goal's IsGoalNode
-        EEAIAStarNode theNode;
-        memset(&theNode, 0, sizeof(theNode));
-        theNode.mX = (long)i[1];
-        theNode.mY = (long)i[2];
-        reinterpret_cast<EEAIBoundedPathGoalModifierBase*>(io->h[0])->CheckNode(i[0] ? &theNode : NULL);
-        return 0;
-    }
     // the graph searches' world (graph_search.rs EE_PATH_SS_INFO and below)
     case EE_PATH_SS_INFO: {   // a sub sector's facts
         EEAIPathSubSector* theSector = reinterpret_cast<EEAIPathSubSector*>(io->h[0]);
@@ -714,33 +600,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         return (int64_t)EEPathHandle(reinterpret_cast<EEAIPathSubSector*>(io->h[0])->GetNeighbors()[(size_t)i[0]]);
     case EE_PATH_SS_IS_NEIGHBOR:
         return reinterpret_cast<EEAIPathSubSector*>(io->h[0])->IsNeighbor(reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
-    case EE_PATH_SS_GATE_OPEN:
-        return reinterpret_cast<EEAIPathSubSector*>(io->h[0])->IsPassable((long)i[0]);
-    case EE_PATH_SS_PASSABLE_LINK:
-        return EEAIGraphHasPassableLink(reinterpret_cast<const EeAStarGraphGoalRec*>(io->h[2]),
-                                        reinterpret_cast<EEAIPathSubSector*>(io->h[0]),
-                                        reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
-    case EE_PATH_GRAPH_MODIFIER_ENTER:
-        return reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->CanEnter(
-            reinterpret_cast<EEAIPathSubSector*>(io->h[1]), reinterpret_cast<EEAIPathSubSector*>(io->h[2]));
-    case EE_PATH_GRAPH_MODIFIER_COST: {   // GetCost with the parent node
-        EEAIAStarGraphNode theParent;
-        theParent.mObject = reinterpret_cast<EEAIPathSubSector*>(io->h[2]);
-        theParent.mIndex = (long)i[0];
-        theParent.mTileX = (long)i[1];
-        theParent.mTileY = (long)i[2];
-        theParent.mCost = (unsigned long)i[3];
-        theParent.mPathCost = (long)i[4];
-        theParent.mEstimate = (long)i[5];
-        return reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->GetCost(&theParent,
-                                                                                  reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
-    }
-    case EE_PATH_GRAPH_MODIFIER_REFERENCE:
-        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->Reference();
-        return 0;
-    case EE_PATH_GRAPH_MODIFIER_ATTACH:
-        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0])->mGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
-        return 0;
     case EE_PATH_GRAPH_TERRAIN_FLAGS: {   // SetFlags: the unit class's GetTerrainFlags into the goal's flags
         EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
         EECPASGFlags theFlags;
@@ -787,19 +646,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
     }
     case EE_PATH_GRAPH_OBJECT:
         return (int64_t)EEPathHandle(EEGraphObjectOf(NULL, (int32_t)i[0]));
-    case EE_PATH_GRAPH_MODIFIER_SAVE: {   // the route planner's kind and members into the saved search
-        EEAIGraphPathGoalModifierBase* theModifier = reinterpret_cast<EEAIGraphPathGoalModifierBase*>(io->h[0]);
-        EePathSavedGraph& theSaved = *reinterpret_cast<EePathSavedGraph*>(io->h[1]);
-        long theKind = EEGraphModifierKindOf(theModifier);
-        if (theKind != kGraphModifierEnemyAvoidance && theKind != kGraphModifierWallPlanner)
-            return theKind;
-        EEAIGPGModiferUseInfluenceCostsBase* theInfluence = static_cast<EEAIGPGModiferUseInfluenceCostsBase*>(theModifier);
-        for (int w = 0; w < 15; w++)
-            theSaved.weights[w] = theInfluence->mWeights.mValues[w];
-        theSaved.modifier_player = (uint32_t)theInfluence->mPlayerID;
-        theSaved.modifier_enemy = (uint32_t)theInfluence->mEnemyID;
-        return theKind;
-    }
     case EE_PATH_TILES_OUT: {   // into the C++ vector h1
         const EePoint* theTiles = reinterpret_cast<const EePoint*>(io->h[2]);
         std::vector<U2DPoint<long> >& theOut = *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]);
@@ -891,9 +737,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return 0;
     case EE_PATH_REQUEST_DEREFERENCE:
         reinterpret_cast<EEAutoPathRequest*>(h)->Dereference();
-        return 0;
-    case EE_PATH_MODIFIER_DEREFERENCE:
-        reinterpret_cast<EEAIGraphPathGoalModifierBase*>(h)->Dereference();
         return 0;
     case EE_PATH_GAME_TIME:
         return gPhysics ? (int64_t)(uint32_t)gPhysics->GetGameTime() : 0;
@@ -1001,9 +844,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         ee_path_request_record_set((void*)(uintptr_t)io->h[1], &theRecord, thePath.data(), (uint32_t)(thePath.size() / 2));
         return 0;
     }
-    // the saved game
-    case EE_PATH_GM_MODIFIER:
-        return (int64_t)EEPathHandle(EENewGraphModifier(*reinterpret_cast<const EePathSavedGraph*>(io->h[1])));
     case EE_PATH_AWAIT:
         switch (i[0]) {
         case 0:   // the resolve takes the owners
@@ -1203,7 +1043,7 @@ bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
 
 EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom,
                                               const EETileCoordinate& inTo, EECPASGFlags* inFlags, long inType,
-                                              long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
+                                              long inRevs, EeAStarModifier* inModifier, bool inUnlimitedRevs)
 {
     EEPathRequestCapture theCapture(kPathRequestPath, this);   // TEST ONLY
     if (theCapture.On()) {
@@ -1227,7 +1067,7 @@ EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EE
 }
 
 void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                    bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8)
+                                    bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8)
 {
     EEPathRequestCapture theCapture(kPathRequestUnitPath, this);   // TEST ONLY
     if (theCapture.On()) {
@@ -1432,7 +1272,7 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
 // path (and the visited tiles when asked): ee_sim::astar pm_bounded.rs find_path
 void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
                              const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType,
-                             long inRevs, EEAIPathGoalModifierBase* inModifier, std::vector<U2DPoint<long> >* outVisited)
+                             long inRevs, EeAStarModifier* inModifier, std::vector<U2DPoint<long> >* outVisited)
 {
     EEPathRequestCapture theCapture(kPathRequestFindPath, this);   // TEST ONLY
     if (theCapture.On()) {

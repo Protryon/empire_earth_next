@@ -8,7 +8,7 @@
 use crate::astar::area_goals::{AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
 use crate::astar::goals::View;
 use crate::astar::graph::{self, GraphStorage};
-use crate::astar::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
+use crate::astar::modifiers::{ModView, Skip, Unit};
 use crate::astar::path_goals::PathView;
 use crate::astar::storage::{Storage, NIL};
 pub use ee_base::sparse::EeSparseArray;
@@ -260,110 +260,7 @@ impl PathView for CView<'_> {
     }
 }
 
-/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
-///
-/// # Safety
-/// `view` valid, its functions callable; `goal` readable.
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_astar_mod_step_cost(
-    view: *const EeAStarViewCallbacks,
-    goal: *const EeAStarStepGoal,
-    sea: bool,
-    from_x: i32,
-    from_y: i32,
-    x: i32,
-    y: i32,
-    parent_x: i32,
-    parent_y: i32,
-) -> i32 {
-    let goal = unsafe { *goal };
-    modifiers::step_cost(&mut CView(unsafe { &*view }), &goal, sea, from_x, from_y, x, y, parent_x, parent_y)
-}
-
-/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
-///
-/// # Safety
-/// `view` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_is_passable(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::is_passable(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_attacker_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::attacker_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_walls_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::walls_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_wall_pather_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::wall_pather_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::GetCost`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`; `storm` readable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_cost(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> i32 {
-    modifiers::storm_cost(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
-///
-/// # Safety
-/// As `ee_astar_mod_storm_cost`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_can_enter(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::storm_can_enter(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
+// (the modifiers' slots: modifier_obj.rs, over modifiers.rs)
 
 /// A graph node as the capture sees it (`EEAIAStarGraphStorage::CaptureNodes`): the parent's index in `parent_x`
 /// and the node's own index in `parent_y`.

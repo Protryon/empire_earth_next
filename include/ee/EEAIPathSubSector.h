@@ -28,9 +28,8 @@ public:
     virtual ~EEAIPathSubSector() { ee_astar_sub_sector_free(this); }
     // 0x2c0b9 (ret 8): appends the links listed under inID; always returns false
     bool GetLinks(unsigned short inID, std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >& outLinks);
-    // 0x2c10f (ret 4): whether the gate (unit class category 0x19) on mTiles lets gWorld's player inPlayer through
-    // (setrilo GatePasses; a missing or dead gate passes)
-    bool IsPassable(long inPlayer);
+    // (0x2c10f IsPassable, whether the sub-sector's gate lets a player through: ee_sim::astar modifier_obj.rs
+    // gate_passable)
     // 0x2c219 (ret 8): inOther is a neighbour and none of its links to this sub-sector is open for inIndex (body
     // not written: the links' +0x54 is a pointer there)
     bool AreLinksBlocked(EEAIPathSubSector* inOther, long inIndex);

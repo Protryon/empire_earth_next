@@ -3,10 +3,10 @@
 //! `EeAStarWorldView` (the map and whether the view is quiet), one query per fact of one tile. The searches' capture
 //! (ASRN) notes each answer of a view that is not quiet, as the C++ view did (`Note`, the query numbers below).
 //!
-//! The reads go through the world views (`crate::world`) and the continent manager's Rust record. Three facts stay
+//! The reads go through the world views (`crate::world`) and the continent manager's Rust record. These facts stay
 //! C++ calls: a unit's `IsPassableBy` (a virtual, `ee_units_pm_host_passable_by`), the continent manager's
 //! `GetPathAreaAt` and `GetHillAt` (their CNTQ capture records the outermost call: `ee_astar_view_cm_*`), the
-//! physics stream's draw (`ee_units_pm_host_random`) and the goal modifiers' slots (`ee_astar_modifier_*`).
+//! physics stream's draw (`ee_units_pm_host_random`). The goals' modifiers are Rust objects (`modifier_obj.rs`).
 //!
 //! The decisions are pure functions over the facts read (`blocks_area`, `resource_kind`, `crowd_step`, ...), which
 //! the unit tests check without a world.
@@ -15,6 +15,7 @@ use crate::astar::area_goals::{EeAStarBlocker, EeAStarContinentInfo, EeAStarPath
 use crate::astar::cm::EeAStarCmRecord;
 use crate::astar::cm_io;
 use crate::astar::ffi::EeAStarViewCallbacks;
+use crate::astar::modifier_obj::{self, EeAStarModifier};
 use crate::astar::modifiers::{Skip, Unit};
 use crate::astar::search_note;
 use crate::world::{MapView, TileView, UnitView, WorldRead, WorldView};
@@ -29,14 +30,11 @@ use crate::units::pm_host::{ee_units_pm_host_passable_by, ee_units_pm_host_rando
 #[cfg(not(test))]
 extern "C" {
     fn ee_astar_view_cm_path_area_at(x: i32, y: i32) -> u64;
-    fn ee_astar_view_cm_hill_at(x: i32, y: i32) -> u64;
-    fn ee_astar_modifier_can_enter(modifier: *mut c_void, tile: u64, x: i32, y: i32, at_goal: bool) -> bool;
-    fn ee_astar_modifier_cost(modifier: *mut c_void, fx: i32, fy: i32, x: i32, y: i32, px: i32, py: i32) -> i32;
+    pub(crate) fn ee_astar_view_cm_hill_at(x: i32, y: i32) -> u64;
 }
 
 #[cfg(test)]
-mod cpp {
-    use std::ffi::c_void;
+pub(crate) mod cpp {
     pub(super) unsafe fn ee_units_pm_host_passable_by(_u: u64, _w: u64) -> u8 {
         1
     }
@@ -46,18 +44,12 @@ mod cpp {
     pub(super) unsafe fn ee_astar_view_cm_path_area_at(_x: i32, _y: i32) -> u64 {
         0
     }
-    pub(super) unsafe fn ee_astar_view_cm_hill_at(_x: i32, _y: i32) -> u64 {
+    pub(crate) unsafe fn ee_astar_view_cm_hill_at(_x: i32, _y: i32) -> u64 {
         0
-    }
-    pub(super) unsafe fn ee_astar_modifier_can_enter(_m: *mut c_void, t: u64, _x: i32, _y: i32, _g: bool) -> bool {
-        t != 0
-    }
-    pub(super) unsafe fn ee_astar_modifier_cost(_m: *mut c_void, _a: i32, _b: i32, _x: i32, _y: i32, _c: i32, _d: i32) -> i32 {
-        1
     }
 }
 #[cfg(test)]
-use cpp::*;
+pub(crate) use cpp::*;
 
 /// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
 #[repr(C)]
@@ -754,8 +746,8 @@ extern "C" fn can_enter(ctx: *mut c_void, modifier: *mut c_void, x: i32, y: i32,
         let t = token();
         tile(&t, v, x, y).map_or(0, |tl| tl.handle())
     };
-    // SAFETY: the goal's live modifier (its virtual)
-    let a = unsafe { ee_astar_modifier_can_enter(modifier, tl, x, y, at_goal) };
+    // SAFETY: the goal's live modifier
+    let a = unsafe { modifier_obj::can_enter(modifier as *mut EeAStarModifier, tl, x, y, at_goal) };
     note_bool(v, Q_CAN_ENTER, x, y, a, i32::from(at_goal), 0)
 }
 
@@ -771,8 +763,8 @@ extern "C" fn modifier_cost(
     py: i32,
 ) -> i32 {
     let v = view(ctx);
-    // SAFETY: the goal's live modifier (its virtual)
-    let cost = unsafe { ee_astar_modifier_cost(modifier, fx, fy, x, y, px, py) };
+    // SAFETY: the goal's live modifier
+    let cost = unsafe { modifier_obj::cost(modifier as *mut EeAStarModifier, fx, fy, x, y, px, py) };
     note(v, Q_MODIFIER_COST, x, y, cost, fx, fy);
     note(v, Q_MODIFIER_COST, x, y, cost, px, py)
 }

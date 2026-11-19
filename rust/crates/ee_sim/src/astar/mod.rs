@@ -54,6 +54,7 @@ pub mod graph_search;
 pub mod hull;
 pub mod machine;
 pub mod manager;
+pub mod modifier_obj;
 pub mod modifiers;
 pub mod path_area_kind;
 pub mod path_goals;
