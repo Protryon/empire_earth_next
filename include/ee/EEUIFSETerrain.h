@@ -117,16 +117,6 @@ public:
     EEUIFSETerrain* mTerrain;               // +0x0c
 };
 
-// the paint type radio buttons (200 terrain, 202 mountains; RTTI EEUIFSETRBPaintType > UIRadioButton; vtable
-// 0x445cec; ctor 0x1ac48b in EEUIFSETRBPaintType.cpp)
-class EEUIFSETRBPaintType : public UIRadioButton {
-public:
-    EEUIFSETRBPaintType(unsigned long inId, const UWideString& inText, const GE2DPoint& inLocation,
-                       GEFont* inFont, UIForm* inForm, unsigned long inIndex, bool inChecked);
-    virtual ~EEUIFSETRBPaintType() {}
-    virtual void Check();                   // +0x94 0x1ab2ab (shows the terrain controls for 200, hides them for 202)
-};
-
 struct EeScreensSeTerrain;
 
 // whole in Rust (ee_screens editor_terrain.rs): the class holds its object (the in-editor terrains and colour types,

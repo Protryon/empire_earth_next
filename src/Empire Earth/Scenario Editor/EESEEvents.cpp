@@ -45,7 +45,7 @@
 #include "ee/EESETSObject.h"
 #include "ee/EESETSArea.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
@@ -55,7 +55,7 @@
 #include "ee/EESEUnit.h"
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EESEARust.h"
-void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
 
 // ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
@@ -279,8 +279,8 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 }
 
 // Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
-void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
 {
-    inComboBox->mMode = inAreas ? kSETriggerScreenArea : kSETriggerScreenObject;
+    EEUIShell::Op(inComboBox, EE_SCREENS_SKOP_SET_MODE, inAreas ? kSETriggerScreenArea : kSETriggerScreenObject);
     FillPlaceComboBox(inAreas, inLabel, inComboBox);
 }

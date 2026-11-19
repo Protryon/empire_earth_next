@@ -94,6 +94,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBUIListBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EECivilizationBuilder.h"
 #include "rust/game/screens.h"   // the edited civilization's TEST ONLY queries
 #include "ee/EEARust.h"
@@ -180,7 +181,9 @@ void CivFormDigest(UIForm* inForm, std::vector<std::string>& outLines)
         UIControl* c = inForm->GetControl(i);
         if (c == NULL)
             continue;
-        std::string theLine = "  c" + std::to_string(i) + " " + Name(c, typeid(*c)) + " id=" + std::to_string(c->GetId()) +
+        EEUIShell* theShell = EEUIShell::Of(c);   // a shell prints the class its kind replaces (ee/EEUIShell.h)
+        std::string theLine = "  c" + std::to_string(i) + " " + (theShell ? std::string(theShell->KindName()) : Name(c, typeid(*c))) +
+                              " id=" + std::to_string(c->GetId()) +
                               " m=" + std::to_string(c->GetDisplayMode());
         if (EECBUIListBox* b = dynamic_cast<EECBUIListBox*>(c)) {
             unsigned long theSelection = 0;

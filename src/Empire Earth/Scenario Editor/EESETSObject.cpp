@@ -41,7 +41,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSUICBPlayer.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
@@ -51,9 +51,6 @@
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
-#include "ee/EESETSOUnitList.h"
-#include "ee/EESETSAComboBox.h"
-#include "ee/EESETSAEditBox.h"
 #include "ee/EESETSObject.h"
 
 // Unit action names are the real EEUnitAction::sActionNames table at 0x563668.
@@ -81,37 +78,6 @@ struct EESETSOUnitTypeNameLess {
         return theResult;
     }
 };
-
-// Selects a line of the unit list and always fires its selection-changed event (inFireEvent is ignored)
-void EESETSOUnitList::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
-{
-    UILBString::ChangeSelectionIndex(inIndex, false, inScrollTo);
-    this->FireTriggerEvent(kControlTriggerSelectionChanged);
-}
-
-// Creates an object page combo box, 20 pixels high
-EESETSAComboBox::EESETSAComboBox(unsigned long inID, unsigned long inTextBoxType, const std::vector<UWideString>& inStrings,
-                                 GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inMaxListBoxHeight,
-                                 UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness)
-    : UIComboBox(inID, inTextBoxType, inStrings, inFont, GERectangle(inLocation, (float)inWidth, 20.0f), inMaxListBoxHeight, inForm, inIndex,
-                 inMaxChars, inBorderThickness)
-{
-}
-
-// Changes the selection, then refreshes the object page's generated name
-void EESETSAComboBox::ChangeSelection()
-{
-    UIComboBox::ChangeSelection();
-    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
-}
-
-// Accepts the typed count, stores the object page into its scenario object and refreshes the page
-void EESETSAEditBox::ProcessEnterKey()
-{
-    UIEditBox::ProcessEnterKey();
-    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject)->Store();
-    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
-}
 
 // The object screen whole in Rust (ee_screens editor_object.rs): the constructor (0x58efb7), the destructor
 // (0x591973), Sort, MoveDown, MoveUp, Delete, ClearUnitList, Deactivate, Refresh, Duplicate, Activate (0x591d63),
@@ -366,12 +332,12 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
         gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ShowAlphaSort();
         return 0;
     case EE_SCREENS_SEOB_OP_PLAYER_COMBO: {
-        EESETSUICBPlayer* thePlayer = static_cast<EESETSUICBPlayer*>(p[0]);
+        UIControl* thePlayer = static_cast<UIControl*>(p[0]);
         switch (i[0]) {
-        case EE_SCREENS_SEOB_PC_COUNT: thePlayer->SetPlayerCount((unsigned long)i[1]); break;
-        case EE_SCREENS_SEOB_PC_FLAGS: thePlayer->SetFlags((unsigned long)i[1]); break;
-        case EE_SCREENS_SEOB_PC_GET: return (int32_t)thePlayer->GetSelectedPlayer();
-        default: thePlayer->SetSelectedPlayer((unsigned long)(long)i[1]); break;
+        case EE_SCREENS_SEOB_PC_COUNT: EEUIShell::Op(thePlayer, EE_SCREENS_SKOP_SET_PLAYER_COUNT, (uint32_t)i[1]); break;
+        case EE_SCREENS_SEOB_PC_FLAGS: EEUIShell::Op(thePlayer, EE_SCREENS_SKOP_SET_FLAGS, (uint32_t)i[1]); break;
+        case EE_SCREENS_SEOB_PC_GET: return (int32_t)EEUIShell::Op(thePlayer, EE_SCREENS_SKOP_SELECTED_PLAYER);
+        default: EEUIShell::Op(thePlayer, EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)i[1]); break;
         }
         return 0;
     }

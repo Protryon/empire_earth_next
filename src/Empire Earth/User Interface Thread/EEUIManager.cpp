@@ -73,7 +73,7 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "lle/GELine.h"
 #include "lle/UIBackgroundTable.h"
 #include "ee/EEUIFMGStatusButton.h"
-#include "ee/EEUIFMGErrorLog.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
 #include "ee/EEUIFMGStatusBar.h"
@@ -213,8 +213,8 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
         theControl = new EEUIFMGStatusButton(this, theRectangle, inTable);
         break;
     case kDbControlErrorLog:
-        theControl = new EEUIFMGErrorLog(theRectangle, theForm, inTable.GetFont(), std::vector<UWideString>(),
-                                   inTable.GetFormIndex(), inTable.GetID());
+        theControl = new EEUIShellList(EE_SCREENS_SK_ERROR_LOG, {}, inTable.GetID(), std::vector<UWideString>(),
+                                       inTable.GetFont(), false, theRectangle, theForm, inTable.GetFormIndex(), 0);
         break;
     case kDbControlAttribute:
         theControl = new EEUIFMGAttribute(inTable.GetFont(), theForm, theRectangle, inTable.GetFormIndex(),

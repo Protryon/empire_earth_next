@@ -6,10 +6,8 @@
 #ifndef EE_EESETSCONDITIONCONTROLS_H
 #define EE_EESETSCONDITIONCONTROLS_H
 
-class EESETSCComboBox;
-class EESETSEScenarioComboBox;
-class EESETSUICBPlayer;
 class UICheckBox;
+class UIComboBox;
 class UIRadioButton;
 class UISlider;
 class UITextLabel;
@@ -27,10 +25,10 @@ public:
     UITextLabel* mLabels[5];                // +0x00
     UIEditBox* mEditBoxes[2];               // +0x14
     UIEditBox* mTextEditBox;                // +0x1c (EESETSCTChatMessage: the chat text)
-    EESETSCComboBox* mComboBoxes[3];        // +0x20 (ctor 0x17e33d)
-    EESETSEScenarioComboBox* mScenarioComboBoxes[4];   // +0x2c (ctor 0x17e291)
+    UIComboBox* mComboBoxes[3];             // +0x20 (ctor 0x17e33d)
+    UIComboBox* mScenarioComboBoxes[4];   // +0x2c (ctor 0x17e291)
     UICheckBox* mCheckBoxes[3];             // +0x3c
-    EESETSUICBPlayer* mPlayers[2];          // +0x48 (ctor 0x196ebe; EESETSCondition::Virtual20 sets their +0xe4)
+    UIComboBox* mPlayers[2];                // +0x48 (ctor 0x196ebe; EESETSCondition::Virtual20 sets their +0xe4)
     UIRadioButton* mRadioButtons[2];        // +0x50
     UISlider* mSlider;                      // +0x58
 };

@@ -16,36 +16,6 @@ class UIComboBox;
 class UIEditBox;
 class UITextLabel;
 
-// the "create map" button (id 0x65): ButtonUp creates the map
-class UIBMap : public UIButton {
-public:
-    UIBMap(unsigned long inId, const GE2DPoint& inLocation, float inWidth, unsigned long inHeight, UIForm* inForm,
-           unsigned long inIndex, EEUIFSEMap* inMap)
-        : UIButton(inId, NULL, NULL, NULL, GERectangle(inLocation, inWidth, (float)inHeight), inForm, inIndex, 2),
-          mMap(inMap)
-    {
-    }
-    virtual ~UIBMap() {}                    // ??_G 0x1a3a9a
-protected:
-    virtual void ButtonUp();                // slot 0x8c 0x1a18f1
-public:
-    EEUIFSEMap* mMap;                       // +0x104
-};
-
-// a map-kind radio button (ids 0x6e blank, 0x6f random, 0x6d random with a typed seed): Check shows the controls of
-// its kind
-class UIRBMap : public UIRadioButton {
-public:
-    UIRBMap(unsigned long inId, const UWideString& inText, GEFont* inFont, const GE2DPoint& inLocation, float inWidth,
-            unsigned long inHeight, UIForm* inForm, unsigned long inIndex, bool inIsChecked)
-        : UIRadioButton(inId, inText, inFont, GERectangle(inLocation, inWidth, (float)inHeight), inForm, inIndex, 0,
-                        false, inIsChecked, false)
-    {
-    }
-    virtual ~UIRBMap() {}                   // ??_G 0x1a3abd
-    virtual void Check();                   // slot 0x94 0x1a1907
-};
-
 // (the elevation file combo box's selection event (0x3eb), EEUIFSEEMapType, is an EESEERust: ee/EESEARust.h)
 
 class EEUIFSEMap : public EEUIFSEMainGroup {

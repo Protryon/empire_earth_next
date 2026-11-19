@@ -79,6 +79,11 @@ impl EeWonMenu {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -343,7 +348,9 @@ pub extern "C" fn ee_won_menu_new(
     host: EeWonGuiHostFn,
     list: *const EeWonList,
 ) -> *mut EeWonMenu {
-    Box::into_raw(Box::new(EeWonMenu::new(component, host, list)))
+    let made = Box::into_raw(Box::new(EeWonMenu::new(component, host, list)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Menu, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -351,6 +358,7 @@ pub extern "C" fn ee_won_menu_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_menu_free(menu: *mut EeWonMenu) {
     if !menu.is_null() {
+        crate::registry::unregister(menu as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(menu) });
     }

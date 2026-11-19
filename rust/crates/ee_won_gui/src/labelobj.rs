@@ -85,6 +85,11 @@ impl EeWonLabel {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::Component, op, a, b, c)
+        {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, 0) },
@@ -230,7 +235,9 @@ impl EeWonLabel {
 /// A new Rust Label for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_label_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonLabel {
-    Box::into_raw(Box::new(EeWonLabel::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonLabel::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Label, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -238,6 +245,7 @@ pub extern "C" fn ee_won_label_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_label_free(label: *mut EeWonLabel) {
     if !label.is_null() {
+        crate::registry::unregister(label as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(label) });
     }

@@ -24,7 +24,7 @@ class GEBitmap;
 class EESEUnit;
 class EESETriggerScreen;
 class EEUIFSEBrushGroup;
-class EEUIFSEMainButton;
+class UIRadioButton;
 class EEUIFSEMainGroup;
 class EEUnit;
 class GETexture;
@@ -99,7 +99,7 @@ public:
     GEBitmap* GetPanelBackground() const { return (GEBitmap*)this->GetSlot(kSlotPanelBackground); }
     UIComboBox* GetPlayerComboBox() const { return (UIComboBox*)this->GetSlot(kSlotPlayerComboBox); }
     UIButton* GetQuickSaveButton() const { return (UIButton*)this->GetSlot(kSlotQuickSaveButton); }
-    EEUIFSEMainButton* GetTabButton(long inTab) const { return (EEUIFSEMainButton*)this->GetSlot(kSlotTabButton + inTab); }
+    UIRadioButton* GetTabButton(long inTab) const { return (UIRadioButton*)this->GetSlot(kSlotTabButton + inTab); }   // shells (EEUIFSEMainButton)
     bool GetIsUIHidden() const { return this->GetSlot(kSlotUIHidden) != 0; }
     bool GetWasUIHidden() const { return this->GetSlot(kSlotWasUIHidden) != 0; }
     void SetExitAfterSave(bool inExit) { ee_screens_sefm_set(this->mRust, kSlotExitAfterSave, inExit ? 1 : 0); }

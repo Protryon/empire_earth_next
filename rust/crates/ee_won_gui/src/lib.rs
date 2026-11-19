@@ -53,6 +53,7 @@ pub mod platgfx;
 pub mod platimg;
 pub mod platwin;
 pub mod platwm;
+pub mod registry;
 pub mod rootobj;
 pub mod rowobj;
 pub mod scrollerobj;

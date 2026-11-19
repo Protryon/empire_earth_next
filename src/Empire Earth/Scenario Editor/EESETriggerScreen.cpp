@@ -30,6 +30,7 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
+#include "ee/EEUIShell.h"
 #include "lle/USingleton.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
@@ -295,10 +296,11 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SETS_OP_SHOW_IDS: {
         UIManager* theManager = theForm->GetManager();
-        EESETSShowIDsCheckBox* t = new EESETSShowIDsCheckBox(0x7de, gEmptyString, gU531930, GE2DPoint(305.0f, f[0]),
-                                                             theManager->GetCheckOn()->GetWidth(),
-                                                             theManager->GetCheckOn()->GetHeight(), theForm,
-                                                             (unsigned long)i[0]);
+        UICheckBox* t = new EEUIShellCheck(EE_SCREENS_SK_SHOW_IDS, {}, 0x7de, gEmptyString, gU531930,
+                                           GERectangle(GE2DPoint(305.0f, f[0]),
+                                                       (float)(unsigned long)theManager->GetCheckOn()->GetWidth(),
+                                                       (float)(unsigned long)theManager->GetCheckOn()->GetHeight()),
+                                           theForm, (unsigned long)i[0], 0, false);
         SetsEvent(t, kControlTriggerButtonUp, EE_SCREENS_SE_SHOW_DEBUG_IDS);
         theForm->AddControl(t, 14);
         *theOut = t;
