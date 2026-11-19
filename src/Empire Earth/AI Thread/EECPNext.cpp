@@ -95,19 +95,7 @@ void EECPNextDeleteState(EEComputerPlayer* inPlayer)
     inPlayer->mNextState = NULL;
 }
 
-std::string EECPNextAI(const EEComputerPlayer* inPlayer)
-{
-    if (inPlayer == NULL || inPlayer->mNextState == NULL)
-        return std::string();
-    size_t theLength = 0;
-    const uint8_t* theAI = ee_ai_next_state_ai(inPlayer->mNextState, &theLength);
-    return std::string((const char*)theAI, theLength);
-}
-
-void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
-{
-    ee_ai_next_state_set_ai(EECPNextGetState(inPlayer), (const uint8_t*)inAI.data(), inAI.size());
-}
+// (EECPNextAI and EECPNextSetAI: EECPEngine.cpp, their one caller)
 
 // EEComputerPlayer::CanAfford: the plain check (EEPlayer::CanAfford), an epoch free with the epochs cheat (stage 6: the
 // strategy's reserve is the Lua verbs' own check, data/ai/lib/verbs.lua)

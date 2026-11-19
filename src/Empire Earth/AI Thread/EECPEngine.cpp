@@ -323,6 +323,25 @@ long EECPEngine(const EEComputerPlayer* inPlayer)
     return inPlayer != NULL && inPlayer->mEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
 }
 
+// The next engine's AI id in its state (were EECPNext.cpp's: the engine choice named the next engine's unit only for
+// them; PORT_LEARNINGS "Cycle cuts")
+std::string EECPNextAI(const EEComputerPlayer* inPlayer)
+{
+    if (inPlayer == NULL || inPlayer->mNextState == NULL)
+        return std::string();
+    size_t theLength = 0;
+    const uint8_t* theAI = ee_ai_next_state_ai(inPlayer->mNextState, &theLength);
+    return std::string((const char*)theAI, theLength);
+}
+
+void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
+{
+    // the state made on first use, as EECPNextGetState
+    if (inPlayer->mNextState == NULL)
+        inPlayer->mNextState = (EECPNextState*)ee_ai_next_state_new();
+    ee_ai_next_state_set_ai(inPlayer->mNextState, (const uint8_t*)inAI.data(), inAI.size());
+}
+
 std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
 {
     if (EECPEngine(inPlayer) != kEECPEngineNext)
