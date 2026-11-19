@@ -31480,3 +31480,46 @@ current).
   combo's FilterListItem as rows.rs kinds; ChatLink's segment hook.
 - The lobby's events in Rust (the shared blocker), then LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp and
   RoutingLogic.cpp's remaining cases.
+## App core, round 2: the active unit lists and the teams as Rust objects, the editor script's runner in Rust (ee_sim app active.rs, teams.rs; ee_game sim_driver editor.rs; branch rust-appcore2, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 11aab5682 | (merge) origin/rust 030204242 | |
+| a768b17c3 | the active unit lists and the teams as Rust objects | +101 -293, net -192 |
+| e108a783c | the editor script's runner and language in Rust | +25 -164, net -139 |
+| 86bac3d64 | (merge) origin/rust 173931330 (round 1 merged) | |
+
+- **The active unit lists.** EEWorld's `mActiveUnits`, `mUpdateUnits`, `mActivateQueue` and `mDeactivateQueue`
+  became one Rust object. Its stepped list is `units::order`'s list itself, so the mirror and its count check are gone.
+  The lists hold handle ids (a unit's handle id is its `mUnitID`). The C++ keeps the reference counts: Rust reports
+  each change and the C++ applies it at once (`EEActiveRefs`), with no Rust lock held over the call, so a unit freed
+  by its last reference is freed where the C++'s loops freed it. Clear and RebuildActiveUnits drop the references in
+  the C++'s order: the activation queue's, the deactivation queue's, the unborn deactivations, the stepped list's,
+  then the set's by id. The units with no id yet (the unborn deactivations) stay a C++ vector of pointers. The tick
+  steps the unit of each id it is handed. The save's step-list operations and EE-SIM's dump read the Rust lists.
+  EEUnitStore.cpp (the Units lane's) needed two one-line edits.
+- **The teams.** Rust owns them: AddTeam, AddAlliance, BreakAlliance, RemovePlayerFromTeams, RebuildTeams' teams,
+  and EETeam's Merge, AddPlayer, RemovePlayer and Contains. A team's victory condition (EEVCWonder) holds only its
+  team's address, so `EEWorld::mTeams` is rebuilt from the Rust lists after every change. That mirror keeps the
+  interface the AI thread, the server, the save and the game-over check read. The world's other writers (the game
+  over's clear, the world's Clear, StartGame's state teams) set the Rust teams too.
+- **The editor script.** The lines, words and comments, the steps' order and output, the errors and the language's
+  documentation are now Rust. `EESimEditorStep` runs one line's command as a step for the driver's host. The output
+  file is written in binary as before ("wb"); stdout still goes through the C library's stream.
+- **The bash tool and escapes.** A Python heredoc run through the Bash tool lost its backslashes twice (`'\n'`
+  arrived as a new line). Escapes in generated sources are written with the editor tool.
+- **The test drivers, measured.** Their commands are UI and editor calls. Moving only their dispatch moves each body
+  into a host function of the same size, about zero net lines. The reductions the round asked for need the reads in
+  Rust: the world digests over the views, and the UI controls over ee_ui's records for the fixture's ui-state writer.
+  Those were not done.
+- **Not done this round**: StartGame/CreatePlayers/Clear and EEGameState::Create (object wiring), the civilization
+  builder's and the fixture's drivers.
+- **Tests.** app::active 2, app::teams 3, sim_driver's editor runner 1.
+- **Behaviour:** none.
+- **Gates on the merged tree:** both builds 0/0 (the test profile too), the Rust gate PASS, the oracle identical on
+  seeds 2-7. Captures at seeds 2-3: oracle 212, late 214, space 210, calamity 222, app 26 and scenario 43 digests
+  PASS (the scenario games play teams). Saveload plain 18/18, the matrix `saveload expect: PASS`. The editor gate
+  (14,448 lines) and the civilization builder gate (4,062) PASS. scenario_check 27/27. `--games` (3 games) equals
+  single runs. gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12971` with units [4, 40, 40],
+  alive [2, 3] and engines classic_lua x 2, `RESULT PASS lan-game PT host=2778 joiner=2781`, GATES PASS.
+- **Short of the target**: net -331 C++ against the 3,000 asked.

@@ -3,11 +3,11 @@
 #ifndef EE_EESIMEDITOR_H
 #define EE_EESIMEDITOR_H
 
-#include <stdio.h>
 #include <string>
+#include <vector>
 
-// Runs the script inScript in the open scenario editor (the editor form on top, its map made), printing each step
-// and its digests to inOut. -> 0, or nonzero with outError (an unknown command, a step that did not finish).
-int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outError);
+// One script line's command (its words) run as a step in the open scenario editor -> 0, 1 not a command, 2 not
+// finished within a minute; its output lines into outLines (the script's runner: ee_game sim_driver editor.rs)
+int EESimEditorStep(const std::vector<std::string>& inWords, std::vector<std::string>& outLines);
 
 #endif

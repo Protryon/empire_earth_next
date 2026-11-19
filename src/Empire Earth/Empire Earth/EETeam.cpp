@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\Empire Earth\EETeam.cpp (name from RTTI EETeam; no __FILE__). 0x136b6d..0x136d66: a team's
-// players (Merge, AddPlayer, RemovePlayer, Contains, Load, Save, GetVictoryState). The ctor 0x13d013 and dtor 0x131b02
+// players (Load, Save, GetVictoryState; Merge, AddPlayer, RemovePlayer and Contains are ee_sim app teams.rs). The ctor 0x13d013 and dtor 0x131b02
 // are COMDATs in other units' ranges (inline in the real header); GetChecksum 0x156dd8 is an ICF-folded empty body.
 // EEPreferences.cpp ends at 0x136b6d, EEUnitSet.cpp starts at 0x136d66 (provisional names).
 #include <windows.h>
@@ -12,52 +12,6 @@
 #include "ee/EETeam.h"
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
-
-// Adds every player of another team to this team
-void EETeam::Merge(const EETeam& inTeam)
-{
-    for (unsigned long i = 0; i < inTeam.mPlayers.size(); i++)
-        this->AddPlayer(inTeam.mPlayers[i]);
-}
-
-// Adds a player to the team unless already a member
-void EETeam::AddPlayer(unsigned long inPlayer)
-{
-    if (std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayer) == this->mPlayers.end())
-        this->mPlayers.push_back(inPlayer);
-}
-
-// Returns a copy of the team's players without the given player
-void EETeam::RemovePlayer(long inPlayer, std::vector<unsigned long>& outPlayers)
-{
-    outPlayers = this->mPlayers;
-    std::vector<unsigned long>::iterator it = std::find(outPlayers.begin(), outPlayers.end(), inPlayer);
-    if (it != outPlayers.end())
-        outPlayers.erase(it);
-}
-
-// Returns whether both players belong to the team
-bool EETeam::Contains(long inPlayer1, long inPlayer2)
-{
-    std::vector<unsigned long>::iterator theEnd = this->mPlayers.end();
-    std::vector<unsigned long>::iterator it = this->mPlayers.begin();
-    while (true) {
-        if (it == theEnd || *it == inPlayer1)
-            break;
-        it++;
-    }
-    bool theFound = it != theEnd;
-    if (!theFound)
-        return theFound;
-    it = this->mPlayers.begin();
-    while (true) {
-        if (it == theEnd || *it == inPlayer2)
-            break;
-        it++;
-    }
-    theFound = it != theEnd;
-    return theFound;
-}
 
 // Reads the team's players and its victory condition from a saved game; returns the first read error
 long EETeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)

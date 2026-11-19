@@ -1050,8 +1050,24 @@ impl Driver {
             let o = self.opt();
             (o.editor_script.clone(), o.editor_out.clone())
         };
-        if let Err(e) = self.game.run_editor(&script, &out) {
-            self.fail(&e); // ("--editor-out: cannot write ..." or "--editor-script: ...")
+        let mut file = if out.is_empty() {
+            None
+        } else {
+            match File::create(&out) {
+                Ok(f) => Some(f),
+                Err(_) => self.fail(&format!("--editor-out: cannot write {out}")),
+            }
+        };
+        let result = super::editor::run(&script, &mut |w| self.game.editor_step(w), &mut |bytes| match file.as_mut() {
+            Some(f) => {
+                let _ = f.write_all(bytes);
+                let _ = f.flush();
+            }
+            None => self.game.write(1, bytes, true),
+        });
+        drop(file);
+        if let Err((_, e)) = result {
+            self.fail(&format!("--editor-script: {e}"));
         }
         self.note("EDITOR script done");
         lock(&self.run).outcome = "editor-script".into();
