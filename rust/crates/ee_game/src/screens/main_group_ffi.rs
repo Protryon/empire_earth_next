@@ -44,6 +44,9 @@ impl GroupHost for Host {
         if let Some(r) = crate::screens::hud_views::main_group_toolkit(|| self.form(0), || self.form(1), op, a, b) {
             return r;
         }
+        if let Some(r) = crate::screens::hud_direct::main_group(|| self.form(0), op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_main_group(self.0, op, a, b, c) }
     }
 }

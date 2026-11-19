@@ -487,12 +487,13 @@ void DumpState(const std::string& inPath)
     fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
             (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
     {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
-        const std::deque<EEUnitHandle<EEComplexUnit> >* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
         const char* theNames[3] = {"UPDATE", "ACTIVATE", "DEACTIVATE"};
-        for (int l = 0; l < 3; l++) {
-            fprintf(f, "%s %zu:", theNames[l], theLists[l]->size());
-            for (size_t i = 0; i < theLists[l]->size(); i++)
-                fprintf(f, " %lu", (*theLists[l])[i]->mUnitID);
+        for (uint32_t l = 0; l < 3; l++) {   // (ee_sim app active.rs)
+            std::vector<uint32_t> theIDs(ee_app_active_list(l, NULL, 0));
+            ee_app_active_list(l, theIDs.data(), theIDs.size());
+            fprintf(f, "%s %zu:", theNames[l], theIDs.size());
+            for (size_t i = 0; i < theIDs.size(); i++)
+                fprintf(f, " %lu", EEUnitHandle<EEComplexUnit>::FromSavedID(theIDs[i])->mUnitID);
             fprintf(f, "\n");
         }
     }
@@ -953,22 +954,14 @@ void HostCancelGame()
     gUserInterface->PostCancelGame();
 }
 
-int HostRunEditor(const char* inScript, const char* inOut, char* outError, size_t inCapacity)
+int HostEditorStep(const char* const* inWords, size_t inCount, void* inSink, EeSimDriverPushFn inPush)
 {
-    FILE* theOut = inOut == NULL ? stdout : fopen(inOut, "wb");
-    if (theOut == NULL) {
-        PutText(std::string("--editor-out: cannot write ") + inOut, outError, inCapacity);
-        return 1;
-    }
-    std::string theError;
-    int theCode = EESimEditorRun(inScript, theOut, theError);
-    if (theOut != stdout)
-        fclose(theOut);
-    if (theCode != 0)
-        PutText("--editor-script: " + theError, outError, inCapacity);
-    else
-        fflush(stdout);
-    return theCode != 0 ? 1 : 0;
+    std::vector<std::string> theWords(inWords, inWords + inCount);
+    std::vector<std::string> theLines;
+    int theCode = EESimEditorStep(theWords, theLines);
+    for (const std::string& l : theLines)
+        inPush(inSink, l.c_str());
+    return theCode;
 }
 
 // the player's first living building (NULL: none)
@@ -1331,7 +1324,7 @@ int EESimMain(int argc, char** argv)
         HostTopForm, HostTopFormClass, HostClick, HostComboLines, HostComboSelect, HostListLines, HostListSelect,
         HostControlWithEvent, HostPhysics, HostEditorUp, HostLock, HostPrepareHuman, HostDumpAfterLoad,
         HostChecksumFields, HostDumpState, HostRequestSave, HostExtension, HostSetRun, HostSetAfterTick,
-        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostRunEditor, HostFlare, HostVolcano,
+        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostEditorStep, HostFlare, HostVolcano,
         HostVolcanoBoulders, HostCaptureActive, HostSweep, HostRulesAdd, HostRulesProblems, HostEngineChoice,
         HostEngineIDs, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite, HostRngTrace, HostTickHook, HostQuit,
         HostWonders, HostUnitValue};

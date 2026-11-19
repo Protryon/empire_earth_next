@@ -31480,3 +31480,208 @@ current).
   combo's FilterListItem as rows.rs kinds; ChatLink's segment hook.
 - The lobby's events in Rust (the shared blocker), then LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp and
   RoutingLogic.cpp's remaining cases.
+## App core, round 2: the active unit lists and the teams as Rust objects, the editor script's runner in Rust (ee_sim app active.rs, teams.rs; ee_game sim_driver editor.rs; branch rust-appcore2, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 11aab5682 | (merge) origin/rust 030204242 | |
+| a768b17c3 | the active unit lists and the teams as Rust objects | +101 -293, net -192 |
+| e108a783c | the editor script's runner and language in Rust | +25 -164, net -139 |
+| 86bac3d64 | (merge) origin/rust 173931330 (round 1 merged) | |
+
+- **The active unit lists.** EEWorld's `mActiveUnits`, `mUpdateUnits`, `mActivateQueue` and `mDeactivateQueue`
+  became one Rust object. Its stepped list is `units::order`'s list itself, so the mirror and its count check are gone.
+  The lists hold handle ids (a unit's handle id is its `mUnitID`). The C++ keeps the reference counts: Rust reports
+  each change and the C++ applies it at once (`EEActiveRefs`), with no Rust lock held over the call, so a unit freed
+  by its last reference is freed where the C++'s loops freed it. Clear and RebuildActiveUnits drop the references in
+  the C++'s order: the activation queue's, the deactivation queue's, the unborn deactivations, the stepped list's,
+  then the set's by id. The units with no id yet (the unborn deactivations) stay a C++ vector of pointers. The tick
+  steps the unit of each id it is handed. The save's step-list operations and EE-SIM's dump read the Rust lists.
+  EEUnitStore.cpp (the Units lane's) needed two one-line edits.
+- **The teams.** Rust owns them: AddTeam, AddAlliance, BreakAlliance, RemovePlayerFromTeams, RebuildTeams' teams,
+  and EETeam's Merge, AddPlayer, RemovePlayer and Contains. A team's victory condition (EEVCWonder) holds only its
+  team's address, so `EEWorld::mTeams` is rebuilt from the Rust lists after every change. That mirror keeps the
+  interface the AI thread, the server, the save and the game-over check read. The world's other writers (the game
+  over's clear, the world's Clear, StartGame's state teams) set the Rust teams too.
+- **The editor script.** The lines, words and comments, the steps' order and output, the errors and the language's
+  documentation are now Rust. `EESimEditorStep` runs one line's command as a step for the driver's host. The output
+  file is written in binary as before ("wb"); stdout still goes through the C library's stream.
+- **The bash tool and escapes.** A Python heredoc run through the Bash tool lost its backslashes twice (`'\n'`
+  arrived as a new line). Escapes in generated sources are written with the editor tool.
+- **The test drivers, measured.** Their commands are UI and editor calls. Moving only their dispatch moves each body
+  into a host function of the same size, about zero net lines. The reductions the round asked for need the reads in
+  Rust: the world digests over the views, and the UI controls over ee_ui's records for the fixture's ui-state writer.
+  Those were not done.
+- **Not done this round**: StartGame/CreatePlayers/Clear and EEGameState::Create (object wiring), the civilization
+  builder's and the fixture's drivers.
+- **Tests.** app::active 2, app::teams 3, sim_driver's editor runner 1.
+- **Behaviour:** none.
+- **Gates on the merged tree:** both builds 0/0 (the test profile too), the Rust gate PASS, the oracle identical on
+  seeds 2-7. Captures at seeds 2-3: oracle 212, late 214, space 210, calamity 222, app 26 and scenario 43 digests
+  PASS (the scenario games play teams). Saveload plain 18/18, the matrix `saveload expect: PASS`. The editor gate
+  (14,448 lines) and the civilization builder gate (4,062) PASS. scenario_check 27/27. `--games` (3 games) equals
+  single runs. gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12971` with units [4, 40, 40],
+  alive [2, 3] and engines classic_lua x 2, `RESULT PASS lan-game PT host=2778 joiner=2781`, GATES PASS.
+- **Short of the target**: net -331 C++ against the 3,000 asked.
+## Calamities and scenario manager, round 1: the contagion manager and its helpers whole in Rust, the calamity class bases folded, the hosts' plain reads on the world views (ee_sim::tech contagion_store.rs, calamity_views.rs; ee_sim::scenario unit_views.rs; branch rust-calscen1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b322ca1ae | The contagion manager and its helpers whole in Rust (contagion_store.rs; `EEContagionHelper.cpp`/`.h` gone) | +219 -650, net -431 |
+| d617a079e | `EEGlobalCalamityClass`, `EELocationCalamityClass`, `EEUnitCalamityClass` folded into `EECalamityClass` (3 units, 3 headers gone) | +124 -330, net -206 |
+| 16d46415f | The scenario host's player, class and unit-field reads on the world views (unit_views.rs) | +13 -99, net -86 |
+| 7180d7ff9 | The calamity hosts' target, caster and tile reads on the world views (calamity_views.rs) | +8 -55, net -47 |
+| 6a5f97083 | The two directories' unneeded project includes (compile- and link-checked; objdiff: 58,641 functions identical) | +1 -197, net -196 |
+
+Round: -966 net C++ lines (-770 for the moves and the views, -196 includes), far under the 3,000 asked (see "The measure" for why).
+
+- **The measure.** At the start the two directories held 8,960 lines (headers 2,243). After the calamities lane's
+  three rounds and the scenario lane's nine, what is left in both is world glue: one host `case` per world
+  statement (an effect, a sound, a unit created, moved, ordered or killed, a group's goal, the camera, a cinematic's
+  UI), the I/O and list hosts the Rust saves and editor lists run over, and the TEST ONLY captures (1,037 lines).
+  The world views made the hosts' *reads* movable (this round moved the plain ones); their *writes* are calls into
+  C++ units, players, groups, goals, effects and the camera, which stay until those classes are Rust's. The class
+  that was whole-movable was the contagion manager with its helpers (data: ids, timers, unit handles; every world
+  effect a functor call); the three calamity bases were only a target kind and a cast mode each. The scenario
+  elements (`EESMCondition`, `EESMArea`, `EESMObject`, `EESMTrigger`, `EESMEffect`) cannot move whole yet: the editor
+  gate's dump (EESimEditor.cpp, the app-core lane's) reads their strings and the triggers' wrapper vectors in place.
+  docs/progress/calamities-scenario.md has the table by file.
+- **The contagion store.** The manager's helpers are Rust boxes listed by pointer, as the C++'s were: the persistent
+  chunk's `operator=` copies the list, not the helpers (both managers then name the same helpers), and the manager's
+  destructor deletes none (the original's leak-by-design kept: `DestroyContagionHelper` and `Load`'s clear delete
+  them). A helper's units are `EEUnit*` handles, each referenced (`Reference`/`Dereference` through the host). The
+  update reuses `contagion::update` over a host on the Rust helper; the near units, the immunity effect, the random
+  draw, the distance and every functor call are `ee_contagion_world` ops; the alive, complex, id, player and enemy
+  reads are the views'. The capture's CONT events are sent from the same places (the immunity's from inside the
+  C++ op, as before). `EEContagionManager` stays a C++ name (the persistent chunk, `EEWorld::GetContagionManager`,
+  EEPhysics's dump and swap call it unchanged): each member one call; its copy constructor deleted (a copy would
+  double-free the Rust box). The TEST ONLY CALK reload probes a fresh Rust helper (`ee_contagion_helper_load_probe`).
+- **The bases.** `GetTargetKind` is ee_tech's `target_kind` table (1 global, 2 location, 3 unit, the values the
+  three overrides returned); `CanCastAt` takes the base's mode by it (the special attack's own); `GetDefaultTarget`
+  picks the unit under the mouse for a unit class. The manager's `GetCalamityClass<T>` (a `dynamic_cast`) is a
+  target-kind test, the three `CreateCalamity` one creation; the volcano's `EruptVolcano` (the units lane's
+  EEUnitClassBuildings.cpp: two single-line edits, the include and the class's type) asks `GetCalamityClass(9,
+  EECalamityClass*&)`.
+- **The views' reads.** The Rust FFI hosts intercept the ops the views can answer before they reach the C++: the
+  scenario host (`impl Host for EeScenarioHost::read4`: players, classes, the context unit's fields) and the
+  calamity host (`FfiCalamityHost::call`: target, caster, tiles). The C++ answers the handles (`READ_CONTEXT_UNIT`,
+  `READ_WORLD`; `TargetHandle`, `CasterHandle`, `WorldHandle`). Each answer is the C++'s `int64_t` conversion (a
+  `long` sign-extended, an `unsigned long` zero-extended, `(long)` of an `unsigned long` from 32 bits, a `bool` 0/1, a
+  float's bits). Where the original read through a missing object (a NULL complex unit, a player slot past the
+  array), the view answers nothing and the C++ reads as it did: no new behaviour on a crash path.
+- **Includes.** A scratch tool (not committed) dropped every project `#include` a unit compiles without (clang-cl
+  `/Zs`, one removal at a time from the last up, kept only when the unit still compiles; `/Zs` does not see a missing
+  inline definition, so the link is part of the check: EESMEffect.cpp lost `EEActiveGroup.h`, whose inline
+  `ClearGoal` then had no definition, and keeps it; `tools/objdiff.py` of the objects before and after: 58,641
+  functions identical, 0 changed; `windows.h`, `lle/
+  LowLevelEngine.h` and every system header kept: the STLs' transitive includes differ on the POSIX builds). The
+  macOS and Linux builds were not compiled here (no SDK, no sysroot on this machine): a POSIX build should confirm.
+- **Not reached by the gates:** the contagion dumps (`DumpOutOfSynch`, only on a network out-of-sync), the
+  persistent chunk's `operator=` (shallow copy), a unit class's `GetDefaultTarget` (the mouse; a tour casts through
+  the fixture's own command).
+- **Dead members:** `tools/dead_members.py report` names none in the two directories' headers.
+
+### Gates
+
+On the result merged with origin/rust 030204242 (a clean merge; strip_markers, `rust_build.py header` and
+`rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 626, EE-SIM 627 inputs) and the test profile 0/0; the
+oracle seeds 2-7 identical to the reference; captures at seeds 2-3: oracle 212, late 214, space 210, calamity 222
+digests PASS; the scenario profile at seeds 2-7 PASS (113 digests); the plain saveload (seeds 2-7 at 600/1350/2100 s)
+18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`)
+`saveload expect: PASS` (oracle, plains, islands, highlands, mediterranean, medium, late, space 4/4, calamity 3/4,
+next 2/4: the expect file's rows); `scenario_check.py` 27/27; the editor gate PASS (14,448 lines); the Rust gate PASS
+(4,609 tests, clippy, rustfmt, headers). Per commit before the merge: build `--sim` 0/0, oracle seeds 2-3 identical,
+the calamity profile at seeds 2-3 (and the scenario profile at 2-3 for the views) PASS. gates.sh: GATES PASS (`RESULT PASS tour`; ai-game time-cap, units [4, 42, 42], alive [2, 3], engines classic_lua x2; `RESULT PASS lan-game`).
+
+### What is left
+
+docs/progress/calamities-scenario.md "Next": `SMEUnitValue`'s, `EEChangeUnit`'s and the object reads' plain reads
+on the views; the event tables as Rust data; `EECalamity`'s C++ members into its record; the scenario elements whole
+once the editor gate reads them through accessors.
+
+## The UI cluster lane, round 1: the main game HUD's hosts answered by the toolkit's, the strings' and the views' Rust; the command buttons', the status box's and the chat lines' members as Rust records (ee_game hud_direct.rs; branch rust-uicluster1, 2026-11-18)
+
+The brief: the UI cluster (the main game form and its HUD controls, the UI events, the scenario editor, the
+civilization builder) by whole classes, starting with the main game's forms, at least 3,000 net C++ lines.
+**Net C++ -353** (commits below): far short of the target. Why under "The measure".
+
+### The measure
+
+Every class of the cluster already had its logic in Rust (game screens 1-31, screens B, the UI thread and HUD 2D
+lanes); the C++ left is about 24k lines of host code, one case per call the Rust makes into a C++ object. The UI
+thread lane classed most of those cases as calls into "a C++ object no Rust object stands for". That was true of
+the game's objects but no longer of the low-level engine's: the toolkit (`UIForm`, `UIControl`, `UIButton`,
+`UITextLabel`, `UIManager`), `UWideString`, `GEText`, `TMPoll`, the language strings and the keyboard are whole
+Rust objects behind C++ shells. A case that calls one of them is the same inward Rust call made from the adapter,
+and a class's own members can be a Rust record the class derives from. This round took that path for the main game
+form and the controls it drives most (about 120 cases). What stays is the calls into the game's C++ (world, units,
+picker, ghosts, communications, the tech tree's nodes and buttons, calamities, media, the scenario's messages) and a
+few toolkit C++ helpers (`UIGetStringCutOffIndex`, `GERectangle::Contains` are out-of-line C++).
+
+A whole-class move of a form (its C++ class deleted) needs every such game call to be a narrow host function: the
+forms then shrink to their constructors and virtual overrides. The cases are small (one to five lines each), so the
+yield is about 3 lines a case: the 3,000 lines are roughly a thousand cases across the cluster.
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 0d39710e1 | `ee_base::input::ffi::keyboard_modifiers()`: the system keyboard's modifiers for Rust callers (the HUD controls' `MODIFIERS`) | 0 |
+| 44c415f70 | `hud_direct.rs`: the main form's host (labels, held text, strings, the dialog message, the form's and manager's calls, the chat lines), the HUD controls' base ops, 25 cursor reads, the command buttons' and the main group's button ops, the status box's host, the main game events' form record ops; the command buttons', the status box's and the chat lines' records; the buttons' form ops through the form's adapter | +54 -407, net -353 |
+
+- **Below the traits.** As the UI thread lane's views, every answer is in an FFI adapter (`Host::op` before the
+  C++ hop), never in a host trait: the replay goldens are unchanged by construction.
+- **Call records read in place.** The main form's call record (`EEUIFMGFormCall`) and the status box's
+  (`EEUIFMGStatusBoxCall`) hold C++ `UWideString`s; Rust reads and assigns them through `CppWide` (the vtable
+  pointer, then the `EeUWideString` the class holds by value), with the records' layouts asserted in the C++
+  (`offsetof` against pointer and `UWideString` sizes, so LP64 holds too).
+- **Records.** `EEUIFMGStatusButton : UIButton, EeScreensStatusButtonFields` (its plain members; the offset
+  registered by the constructor, as the main form's); `EEUIFMGStatusBox : EeScreensStatusBoxFields` (its only
+  base: the box's pointer is the record's, its constructor and `GetBoxControl` are Rust's); the chat line's record
+  holds its `TMPoll*` and four `GEText*`s, and its host `ChatCpp` works them on their Rust objects (a `TMPoll` is its
+  `EeTimePoll`, a `GEText` one pointer to its `EeGeText`): the class's `RustOp` keeps only the cut
+  (`UIGetStringCutOffIndex`), and the main form scrolls its lines Rust to Rust (the original's `Copy`).
+- **Rectangles.** The form's and the manager's calls take a `GERectangle` in its member order (bottom, left, right,
+  top: `UIFormPutRect`, `UIManagerPutRect`); the HUD ops carry left, top, right, bottom. The first version of the
+  dirty rectangle passed the op's order through; the C++ forwarders' put functions name the order.
+- **Lesson: a second path to the C++ host.** The command buttons' form ops (`status_button_ffi.rs`) called
+  `ee_screenscpp_main_form` directly, past the form's Rust adapter. Since the UI thread lane's round 1 moved the
+  form's resource reads and record fields to that adapter, the buttons' trade affordability read 0 for every
+  resource and the cursor lock of a press set nothing (only a person reaches either: the market's trade buttons).
+  The buttons' form ops now go through the adapter (`main_form_ffi::op`). Grep every Rust caller of a C++ host when a
+  case moves to an adapter.
+- **cbindgen and clippy.** A record with raw pointers cannot derive `Default` (the chat line's has a hand-written
+  one); clippy wants `c"..."` for a NUL-terminated literal.
+
+### Checks
+
+- The pre-round test-profile exe (`build/uc1/pre`), the tour `--input-check --view-check --seed 7` and the orders
+  game `--box-select --orders --seed 7` with the 2D draw digest. After each step the same runs on the new exe: every
+  text command equal but the build label (the status box's, the resource bar's, the chat line's and the labels'
+  texts), the bitmaps differing in fading alpha only (one more timing bitmap), the orders game's map rhombi and lines
+  different between any two live games; `VIEW CHECK PASS`, `BOX SELECT PASS`, `ORDERS PASS`, F3 ok.
+- Unit tests (`hud_direct_tests.rs`): the strings (the table's, the 16-bit id, the missing string's fall through),
+  `atoi`, `PlatMbsCmp`'s difference, the held text both ways, the chat rest, the records' offsets and slots, the
+  status box's fields and formats, the null paths of every adapter.
+
+### Gates
+
+On the result merged with origin/rust 8d68d2786 (merge 41dd3c702: clean; strip_markers, `rust_build.py header`
+and `rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 625, EE-SIM 626 inputs) and the test profile 0/0;
+the Rust gate PASS (4,644 tests, clippy, rustfmt, headers); the oracle seeds 2-7 identical to the reference; the
+editor gate PASS 14,448; the civilization gate PASS 4,062; scenario_check 27/27; the tour (`RESULT PASS tour`,
+`VIEW CHECK PASS`, F3 ok); the orders game with box select and the scroll check (`BOX SELECT PASS`, `ORDERS PASS`,
+`SCROLL CHECK PASS`, `RESULT PASS random-game`); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 41, 40],
+alive [2, 3], classic_lua x 2; lan-game). Before the merge: build `--sim` 0/0, the Rust gate PASS (4,625 tests), the
+oracle seeds 2-3 identical, a tour or orders game per step. Not run: the sim_capture profiles (no simulation code
+changed: every move is UI-thread code EE-SIM never builds).
+
+### What only a person reaches
+
+The command buttons' presses (the fixture clicks none: `ORDERS` skips patrol and attack ground), the market's trade
+buttons, the dialog message's scrolling text (a scenario's dialog), the chat line's scroll (more than seven lines).
+EE-SIM builds no form: the oracle is unchanged by construction.
+
+### Left
+
+docs/progress/ui-cluster.md ("Left").

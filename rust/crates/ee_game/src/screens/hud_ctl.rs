@@ -203,6 +203,9 @@ mod sys {
 #[cfg(not(test))]
 impl HudHost for Cpp {
     fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        if let Some(r) = crate::screens::hud_direct::control(self.0, op, a, f) {
+            return r;
+        }
         // SAFETY: the control is live while its member runs; f's length covers the op's floats
         unsafe { sys::ee_screenscpp_hud_ctl(self.0, op, a, b, f.as_mut_ptr()) }
     }

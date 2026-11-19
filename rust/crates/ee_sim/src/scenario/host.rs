@@ -117,6 +117,10 @@ pub const EE_SCENARIO_READ_SHARE_BONUS: u32 = 50;
 pub const EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: u32 = 51;
 /// `gWorld.mPlayers[a]->mPlayerID`.
 pub const EE_SCENARIO_READ_PLAYER_ID: u32 = 52;
+/// The context's unit (`EESMHostContext::mUnit`, its address) for the world views' reads (unit_views.rs).
+pub const EE_SCENARIO_READ_CONTEXT_UNIT: u32 = 87;
+/// `&gWorld` for the world views' reads (unit_views.rs).
+pub const EE_SCENARIO_READ_WORLD: u32 = 88;
 
 /// The world's reads, and the writes of the logic that plans them (`EE_SCENARIO_WRITE_*`, player.rs).
 pub trait Host {
@@ -186,9 +190,19 @@ pub struct EeScenarioHost {
 
 impl Host for EeScenarioHost {
     fn read4(&mut self, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64 {
+        let (read, ctx) = (self.read, self.ctx);
         // SAFETY: the table's contract: `ctx` is live for the call that handed the table over and `read` is callable
         // with it
-        unsafe { (self.read)(self.ctx, op, a, b, c, d) }
+        let mut cpp = |op: u32| unsafe { read(ctx, op, 0, 0, 0, 0) };
+        // the members the world views hold (unit_views.rs); the C++ answers the rest
+        #[cfg(not(test))]
+        // SAFETY: the C++ hands the table over inside its call on the simulation thread
+        if let Some(value) = unsafe { crate::scenario::unit_views::read(&mut cpp, op, a, b) } {
+            return value;
+        }
+        let _ = &mut cpp;
+        // SAFETY: as above
+        unsafe { read(ctx, op, a, b, c, d) }
     }
     fn players(&mut self, kind: i32, single: bool, result: i32, players: Option<&[i32]>, seed: u32) {
         let (listed, at, count) = match players {

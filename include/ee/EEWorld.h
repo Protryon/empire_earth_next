@@ -22,6 +22,7 @@ class EEComplexUnit;
 #include "ee/EEGameOptions.h"          // held by value (+0x110, +0x51c)
 #include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
 #include "ee/EEVoting.h"               // held by value (+0xb5c)
+#include "rust/sim/app.h"              // the active unit lists (ee_app_active_*)
 
 class EEContagionManager;
 class EEEffectManager;
@@ -159,11 +160,11 @@ public:
     std::vector<EETeam> mTeams;             // +0x9b0 ("TheTeams"; dtor 0x13dc94, element dtor 0x131b02)
     std::vector<EEGhostUnit*> mGhostUnits;  // +0x9c0 the ghost units (EERenderObject 0x10c952; vector<long>'s _Buy/_Tidy are the ICF twins)
     EECameraControl mCameraControl;         // +0x9d0 (0x531710; wheel zoom, hot-key selection)
-    // the stepped units (handles since R5a.4; each referenced; the deques keep their order, the map is keyed by id)
-    std::map<long, EEUnitHandle<EEComplexUnit> > mActiveUnits;  // +0xad0 (unit id -> referenced unit: UpdateActiveUnits/RebuildActiveUnits; dtor 0x88750)
-    std::deque<EEUnitHandle<EEComplexUnit> > mUpdateUnits;  // +0xadc (EEPhysics 0x15401e calls EEComplexUnit::Step on each; dtor 0x2003a4 for all three)
-    std::deque<EEUnitHandle<EEComplexUnit> > mActivateQueue;  // +0xaf0 (units pushed and Reference()d by ActivateUnit)
-    std::deque<EEUnitHandle<EEComplexUnit> > mDeactivateQueue;  // +0xb04 (DeactivateUnit)
+    // +0xad0 .. +0xb17 (mActiveUnits, mUpdateUnits, mActivateQueue, mDeactivateQueue): the active unit lists are one
+    // Rust object (ee_sim app active.rs; rust/sim/app.h ee_app_active_*): the stepped units' ids in their order, the
+    // queues, the stepped set; the units' references stay C++ (EEWorld.cpp's EEActiveRefs)
+    size_t GetNumUpdateUnits() const { return ee_app_active_list(0, NULL, 0); }
+    uint32_t GetUpdateUnitID(size_t inIndex) const { return ee_app_active_at(0, inIndex); }
     TSCriticalSection* mGhostUnitsLock;     // +0xb18 (CreateCriticalSection in the ctor)
     EEEffectManager* GetEffectManager() { return this->mEffectManager; }  // inline (callers load it before the arguments)
     EEEffectManager* mEffectManager;        // +0xb1c (0x53185c: what ee/EEEffectManager.h calls gEffectManager)
