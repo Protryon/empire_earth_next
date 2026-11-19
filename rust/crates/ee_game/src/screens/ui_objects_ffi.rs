@@ -293,6 +293,11 @@ pub(crate) fn ui_event(op: u32, a: i64) -> Option<i64> {
     })
 }
 
+/// `gUserInterface`'s post of `message` with no parameters, when there is the UI object.
+pub(crate) fn post_if_ui(message: u32) {
+    ui_post(message, core::ptr::null_mut(), core::ptr::null_mut());
+}
+
 /// `gUserInterface`'s post of `message` -> Post's result (0 without the UI object).
 fn ui_post(message: u32, p1: *mut c_void, p2: *mut c_void) -> c_long {
     // SAFETY: the registered live UI object's record

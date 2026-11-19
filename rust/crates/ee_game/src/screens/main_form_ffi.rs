@@ -42,6 +42,9 @@ impl FormHost for Host {
         if let Some(r) = crate::screens::hud_views::main_form(op, a) {
             return r;
         }
+        if let Some(r) = crate::screens::ui_direct::main_form(op, a, b) {
+            return r;
+        }
         if let Some(r) = crate::screens::hud_views::main_form_toolkit(self.form(), op, a, b) {
             return r;
         }

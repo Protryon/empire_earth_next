@@ -145,17 +145,6 @@ void EEUserInterface::ResizeGameScreen(unsigned long inWidth, unsigned long inHe
     gWorld.mLock->WriteUnlock();
 }
 
-// Shows the local player's epoch name in the main game form's status text
-void EEUserInterface::ShowEpochName()
-{
-    UWideString theText;
-    EEPlayer* thePlayer = gWorld.mPlayers[gWorld.mCurrentPlayer];
-    if (thePlayer != NULL && thePlayer->mTechnologies != NULL) {
-        gResource->GetString(thePlayer->mTechnologies->mEpochNameID, theText);
-        gUIManager->GetMainGameForm()->SetStatusText(theText);
-    }
-}
-
 // Shows the WON game and system messages of the day on the multiplayer form when it is visible
 void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem)
 {
@@ -481,7 +470,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); break;
     case EE_SCREENS_UI_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
     case EE_SCREENS_UI_OP_POST_LOAD_GAME: gDataPreLoading->PostLoadGame(false, false); break;
-    case EE_SCREENS_UI_OP_SHOW_EPOCH_NAME: theUI->ShowEpochName(); break;
     case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->Rust(EE_SCREENS_MF_DO_UPDATE_MEDIA, 1); break;
     case EE_SCREENS_UI_OP_PROCESS_EVENT:
         reinterpret_cast<UIEvent*>(inA)->ProcessEvent(NULL, reinterpret_cast<UIEntity*>(inB));
@@ -497,7 +485,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         theAction->Dereference();
         break;
     }
-    case EE_SCREENS_UI_OP_LOADING_TEXT: theUI->ShowLoadingText(inA); break;
     case EE_SCREENS_UI_OP_RESET_GFX_VALUES: EEResetGraphicsValues(); break;
     case EE_SCREENS_UI_OP_SCREEN_CAPTURE: {
         EEScreenCapture* theCapture = reinterpret_cast<EEScreenCapture*>(inA);
@@ -770,17 +757,6 @@ int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, i
 }
 #endif
 
-// Shows a loading text on the splash form
-void EEUserInterface::ShowLoadingText(long inStringID)
-{
-    UWideString theText;
-    gUIManager->LockUIForCopyData();
-    if (gUIManager != NULL && gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormSplash)) {
-        gResource->GetString(inStringID, theText);
-        static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormSplash)->GetControl(kSplashLoadLabel))->SetText(theText);
-    }
-    gUIManager->UnlockUIForCopyData();
-}
 
 // the number of humans in the session (SetLoadProgress's test: ee_screens ui_objects_ffi.rs)
 extern "C" int64_t ee_screenscpp_ui_humans()

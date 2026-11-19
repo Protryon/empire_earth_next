@@ -328,6 +328,8 @@ mod ui_game_ffi;
 pub mod ui_manager;
 #[cfg(not(test))]
 mod ui_manager_ffi;
+#[cfg(not(test))]
+mod ui_direct;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;

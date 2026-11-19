@@ -81,7 +81,6 @@ void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity
 void EEPostGraphicsAll();                   // 0x10fc0c (Open) (provisional name)
 class EEMiniMap;
 EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; .bss between this unit's statics and EEUIFMGStatusBox's)
-bool gUnitSelected;                         // 0x56488c (a unit is selected: the main form draws backgrounds 0x6f..0x71)
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
 extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
@@ -407,15 +406,6 @@ void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
     this->mBuild->BuildWall(inStart, inEnd);
 }
 
-
-// Shows a text in the main game form's title label
-void EEUIFMainGame::SetStatusText(const UWideString& inText)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(this->GetControl(kMainGameTitle));
-
-    if (theLabel != NULL)
-        theLabel->SetText(inText);
-}
 
 // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
 // background media
@@ -834,7 +824,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_ERROR_LOCK:
         inA != 0 ? theForm->mErrorCriticalSection->Enter() : theForm->mErrorCriticalSection->Leave();
         return 0;
-    case EE_SCREENS_MF_OP_SET_UNIT_SELECTED: gUnitSelected = inA != 0; return 0;
     case EE_SCREENS_MF_OP_FIELD:   // (the fields of EeScreensMainFormFields are main_form_fields.rs')
     case EE_SCREENS_MF_OP_SET_FIELD: {
         bool theSet = inOp == EE_SCREENS_MF_OP_SET_FIELD;
@@ -947,8 +936,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_HAS_COMMS: return gCommunications != NULL;
     case EE_SCREENS_MF_OP_COMMS_PAUSED: return gCommunications->GetIsGamePaused();
     case EE_SCREENS_MF_OP_HAS_TEAMS: return gWorld.mTeams.size() > 0;
-    case EE_SCREENS_MF_OP_SET_MUTED: gSoundManager->SetIsMuted(inA != 0); return 0;
-    case EE_SCREENS_MF_OP_MUTED: return gSoundManager->GetIsMuted();
     case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->Rust(EE_SCREENS_MF_DO_PAUSE_TEXT, inA); return 0;
     case EE_SCREENS_MF_OP_LAG_STATUS: return gWorld.mLagStatus;
     case EE_SCREENS_MF_OP_LAG_COLOR:
@@ -986,7 +973,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->n[0] = theSampleID, ioIo->n[1] = theLength;
         return 0;
     }
-    case EE_SCREENS_MF_OP_PLAY_TIME: return gSoundManager->GetTotalPlayTimeInMilli((unsigned long)inA);
     case EE_SCREENS_MF_OP_INFO_DURATION: return theCall.mMessage->mDuration;
     case EE_SCREENS_MF_OP_CHAT_TOP: theForm->Rust(EE_SCREENS_MF_DO_CHAT_TOP, inA); return 0;
     case EE_SCREENS_MF_OP_HIDE_MESSAGES: theForm->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); return 0;
@@ -1036,10 +1022,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
                            theEvents[1], theEvents[2], theEvents[3], (unsigned long)(uint32_t)inB, (inB >> 32) != 0);
         return 0;
     }
-    case EE_SCREENS_MF_OP_UPDATE_JIT:
-        if (gUserInterface != NULL)
-            gUserInterface->UpdateJITManufacturing();
-        return 0;
     case EE_SCREENS_MF_OP_BUILD_TERMINATE:
         inA == 0 ? ((EEUIBuildWall&)theForm->mBuildWall).Terminate() : ((EEUIBuildGate&)theForm->mBuildGate).Terminate();
         return 0;
@@ -1091,10 +1073,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         theForm->mCalamity->SetCasterID(theCall.mCaster->mUnitID);
         return theCall.mCalamity->GetTargetKind();
     case EE_SCREENS_MF_OP_CALAMITY_CAST: theForm->mCalamity->Cast(theForm->GetMouseLocation()); return 0;
-    case EE_SCREENS_MF_OP_REFRESH_MAIN_FORM:
-        if (gUIManager->GetMainGameForm() != NULL)
-            gUIManager->GetMainGameForm()->mRefreshGroup = true;
-        return 0;
     case EE_SCREENS_MF_OP_MOUSE_FREEZE: gMouse->mIsFrozen = inA != 0; return 0;
     case EE_SCREENS_MF_OP_MOUSE_RESET:
         gMouse->mShiftMode = false;
@@ -1116,7 +1094,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             gGraphics->PostPushRenderObject(gU56534C);
         }
         return 0;
-    case EE_SCREENS_MF_OP_LATENCY: gSoundManager->SetLatency((unsigned long)inA); return 0;
     case EE_SCREENS_MF_OP_MASTER_VOLUME: gSoundManager->SetMasterVolume(gMasterVolume); return 0;
     case EE_SCREENS_MF_OP_MOUSE_POSITION: gMouse->SetPosition(GE2DPoint(ioIo->f[0], ioIo->f[1])); return 0;
     case EE_SCREENS_MF_OP_CANCEL_EVENT: {
@@ -1145,13 +1122,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         return 0;
     case EE_SCREENS_MF_OP_UNIT_INFO_BACKGROUND: theForm->mUnitInfoBackground = theForm->GetBackgroundByID(0x64); return 0;
     case EE_SCREENS_MF_OP_POST_GRAPHICS: EEPostGraphicsAll(); gGraphics->PostFadeIn(0); return 0;
-    case EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP:
-        inB != 0 ? gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Enable()
-                 : gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Disable();
-        return 0;
-    case EE_SCREENS_MF_OP_MAIN_BACKGROUND:
-        gUIManager->GetMainGameForm()->GetBackgroundByID((unsigned long)inA)->SetVisibility(inB != 0);
-        return 0;
     case EE_SCREENS_MF_OP_MEDIA_OLD: return (theCall.mOldMedia = EEMedia::Get(theForm->mMediaID)) != NULL;
     case EE_SCREENS_MF_OP_PLAYER_MEDIA_ID: return gWorld.GetCurrentPlayer()->mTechnologies->mMediaID;
     case EE_SCREENS_MF_OP_USING_CARBON: return gWorld.mUsingCarbon;
@@ -1178,8 +1148,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         theBackground->DrawBackground(theBackground->GetRectangle());
         return 0;
     }
-    case EE_SCREENS_MF_OP_MAIN_UI_STATE: return gUIManager->GetMainGameForm()->mUIState;
-    case EE_SCREENS_MF_OP_UNIT_SELECTED: return gUnitSelected;
     default:
         if (inOp >= EE_SCREENS_MF_OP_SB)
             return EEStatusButtonOp(theCall.mButton, theCall.mFirst, theCall.mText, theCall.mOut, inOp - EE_SCREENS_MF_OP_SB,

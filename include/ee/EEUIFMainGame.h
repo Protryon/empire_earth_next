@@ -57,7 +57,6 @@ public:
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
-    void SetStatusText(const UWideString& inText);  // 0x264cd5 (control 0x19)
     void CreateGroup(unsigned long inIndex);
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);

@@ -22,6 +22,9 @@ impl UiHost for MessageHost {
         if let Some(r) = crate::screens::ui_objects_ffi::ui_message(self.0, op, a, b, c) {
             return r;
         }
+        if let Some(r) = crate::screens::ui_direct::ui_message(op, a) {
+            return r;
+        }
         if let Some(r) = crate::screens::hud_views::ui_message_manager(op, a) {
             return r;
         }

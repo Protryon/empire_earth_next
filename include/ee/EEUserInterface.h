@@ -94,13 +94,11 @@ public:
     static void HandleEvent(const PlatInputEvent& inEvent);   // the game window's events (ui_thread.rs)
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (message 0x41e)
     void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);   // 0x2768fe
-    void ShowEpochName();                   // 0x2769da (message 0x404)
     void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem);  // 0x276a38 (message 0x440)
     void OpenSelectServer();                // 0x27783c (message 0x441)
     void PauseGraphics();                   // 0x277e63
     void ResumeGraphics();
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
-    void ShowLoadingText(long inStringID);  // 0x279fbc (message 0x40b)
 };
 
 // 0x27fa40 (no arguments; returns a status): what EEUIEProcessTimerExpired's event does (provisional name)
