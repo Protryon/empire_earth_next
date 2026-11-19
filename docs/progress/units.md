@@ -12,6 +12,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 |---|---|---|---|
 | 1 | `rust-units1` | -546 | `UpdateHidden` whole in Rust; the update, combat query, goal, unit, active group and citizens hosts' plain reads on the views |
 | 2 | `rust-units2` | -1,833 | the formations one class over Rust shapes (9 units, 12 headers gone); the group command sweep's dry host whole in Rust (units/dry.rs); the unit host's and the combat goals' plain reads on the views; `EEUnitOrderPush/Erase/Clear` deleted |
+| behaviour 1 | `rust-unitsbeh1` | -456 | the goal, combat-goal, citizen, class and group hosts' plain reads, stores and duplicate world calls answered in Rust (units/unit_geom.rs, `uu_direct::with_game`); the gather and build goals' farm and resource searches in Rust (units/gather_world.rs) |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -55,7 +56,43 @@ Only a tour exercises the renderer's direct UpdateHidden call (ee_render fill.rs
 
 Round 2 total: -1,833 net C++ lines (target 4,000).
 
-## What is left (next)
+## Behaviour round 1 (branch `rust-unitsbeh1`, from origin/rust 00c2f7673, 2026-11-19)
+
+The lane is now cut by layer: this lane moves bodies (goals, actions, class methods), the units STATE lane turns
+the members into records. This round took the hosts' operations that no longer need C++: every case whose answer
+the world views read, whose store is a record member, or whose world call another host already makes (the unit
+utilities' game host, `uu_host::Game`, reached through `uu_direct::with_game`), and the goals' C++ helpers whose
+callees are all Rust or one existing host operation.
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 27120b195 | GoalOp (23 cases), the combat goals' host (22), the citizens' host (16), the active group's position, the uu host's position and distance: answered by the views (units/unit_geom.rs), the records, the noted uu entry points or GoalOp's own cases | -275 |
+| fdcb51128 | EETendNextFarm, EEGatherNearBuilding, IsAtResourceSpot, SendToNextFarm, HasGatherRoom (and the utilities' EEWorkFarm) in Rust (units/gather_world.rs); FIND_FISH folded into RESOURCE_OF_KIND | -139 |
+| aca0c079f | GoalOp RING_TILES, FARM_TILE, AT_RESOURCE; the class host's line of sight, random draws, vital-building and clock reads; the combat goals' attack part | -32 |
+| 8c05cd9ba | GoalOp PATH_AREA_ID, TRANSPORT_KIND | -10 |
+
+New Rust: `units::unit_geom` (GetPosition, DistanceSquaredToUnit/To/2D, GetLineOfSight over the views),
+`units::gather_world` (the five searches over `GatherWorldHost`, with tests over build.rs's mock world),
+`uu_direct::with_game`, `square_ring`, `ring_corners`, `square_ring_tiles`, `farm_drop_sites`, `find_free_farm`,
+`resource_spots`, `place_on_tile`, `within_reach`, `ai_random_shuffle` (Dinkum's random_shuffle over the AI's draws).
+
+## What is left (behaviour)
+
+- GoalOp (~85 cases) is world calls into classes that are still C++: the patrol groups (their points are C++
+  vectors), the calamity classes and manager, the transport and gate class virtuals, the path manager and the
+  continent manager (AI lane), the effects, sounds and UI notices, the goals' own C++ fields (`mB1C`, `mPathAttempts`,
+  `mIsActive`: no layout entry), the goal queues (C++ deques). Each needs its callee in Rust or a layout entry from
+  the state lane first.
+- The remaining gather helpers (`EEGatherFindSpot`, `EEGatherNextTree`, `EEGatherAccessible`) need the continent
+  manager's path subsectors, forests and terrain flags (AI lane, C++) and `CanGather`/`HasGatherPoint` (UCBD-noted
+  class calls): about eight new host operations for ~120 lines.
+- The class bodies (`ProduceUnit`, `Animate`, `Heal`, the creation family) call the effects manager (ee_render's,
+  which ee_sim may not call), sounds, the UI and goal clones: each needs a host op per statement (the 3:1 yield the
+  earlier rounds met).
+- `EECombatCondition`/`EECombatStep` have C++ callers in the class kinds (torpedo, projectile, missile): a Rust
+  read host for them waits for those class bodies.
+
+## What is left (from round 2)
 
 - `EEComplexUnit`'s remaining bodies (Kill, CopyFrom, SetGroupPathGoals, StepAside, FindContacts, the cargo
   calls) are world-call sequences (effects, sounds, the path manager, goals, the unit classes' virtuals): each moves

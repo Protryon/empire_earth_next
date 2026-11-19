@@ -3,7 +3,8 @@
 // ??_G, dtor and slots). After the form's unit (0x1a0315..: EEUIFSEBrushGroup), before EEUIFSEESElevation.cpp
 // (0x1a1397). Unit flags: the exe module set.
 //
-// The tab whole in Rust (ee_screens editor_elevation.rs): EEUIFSEElevation holds its object and forwards. This unit
+// The tab whole in Rust (ee_screens editor_elevation.rs): its group editor_groups_ffi.rs holds it (the class
+// EEUIFSEElevation is gone). This unit
 // is the tab's host (ee_screenscpp_seel): the controls only the tab makes and the world it reads.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
@@ -23,7 +24,6 @@
 #include "ee/EEAction.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEMessage.h"
@@ -31,41 +31,10 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEUIFSEPaintElevation.h"
-#include "ee/EEUIFSEElevation.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
-
-// Builds the elevation tab: the paint area, the hills / cliffs / cliff paths radio buttons, the titles,
-// the elevation and strength sliders and their value label (the strength slider starts hidden) (editor_elevation.rs)
-EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
-                                   EEUIFScenarioEditor* inForm, GEFont* inFont)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_seel_new(inForm, inScroll, inBrushes, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the elevation tab, deleting its paint area, radio buttons, labels and sliders (editor_elevation.rs)
-EEUIFSEElevation::~EEUIFSEElevation()
-{
-    ee_screens_seel_free(this->mRust);
-}
-
-// Refreshes the brush highlight at the mouse position while the editor form is the current form
-void EEUIFSEElevation::Update()
-{
-    ee_screens_seel_call(this->mRust, EE_SCREENS_SEEL_UPDATE, 0.0f, 0.0f);
-}
-
-// Shows the brush highlight on the tile under the mouse while it is inside the game view, else hides it
-void EEUIFSEElevation::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_seel_call(this->mRust, EE_SCREENS_SEEL_MOUSE_MOVE, inLocation.GetX(), inLocation.GetY());
-}
 
 // ---- the tab's host (editor_elevation.rs: the ops from 900)
 
@@ -81,11 +50,11 @@ extern "C" int32_t ee_screenscpp_seel(uint32_t inOp, void* const* p, int32_t* i,
     switch (inOp) {
     case EE_SCREENS_SEEL_OP_PAINT: {
         void* const* thePair = static_cast<void* const*>(p[2]);
-        EEUIFSEPaintElevation* t = new EEUIFSEPaintElevation(static_cast<EEAScroll*>(thePair[0]),
-                                                             static_cast<EEUIFSEBrushGroup*>(thePair[1]), kSEElevationPaint,
-                                                             GE2DPoint(0.0f, 0.0f), 0x400, 0x25e, theForm, (unsigned long)i[0]);
-        theForm->AddControl(static_cast<UIControl*>(t), 2);
-        *theOut = static_cast<UIControl*>(t);
+        UIControl* t = new EEUIShellControl(EE_SCREENS_SK_PAINT_ELEVATION, {(int64_t)thePair[0], (int64_t)thePair[1]},
+                                            kSEElevationPaint, GERectangle(GE2DPoint(0.0f, 0.0f), 1024.0f, 606.0f),
+                                            theForm, (unsigned long)i[0], 0);
+        theForm->AddControl(t, 2);
+        *theOut = t;
         return 0;
     }
     case EE_SCREENS_SEEL_OP_ELEVATION_SLIDER: {

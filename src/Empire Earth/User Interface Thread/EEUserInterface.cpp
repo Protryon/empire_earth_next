@@ -47,7 +47,8 @@ unsigned long EEMenuHeight();
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAction.h"
-#include "ee/EEUIBSavedGroup.h"
+#include "lle/GEText.h"
+#include "ee/EEUIShell.h"
 #include "ee/EESMMediaStrings.h"
 #include <locale.h>
 #include "lle/UICheckBox.h"
@@ -547,7 +548,7 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
     case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
     case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->GetScenarioEditorForm()->SelectTab((unsigned char)inA, inB); break;
-    case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
+    case EE_SCREENS_UI_OP_SAVED_GROUP: EEUIShell::Op(theMain->GetControl(inA), EE_SCREENS_SKOP_SG_REFRESH); break;
     case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;
     case EE_SCREENS_UI_OP_MOTD:
         theUI->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB));

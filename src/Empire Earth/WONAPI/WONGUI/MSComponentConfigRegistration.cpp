@@ -11,29 +11,29 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyMSConfig.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
-#include "ee/wonapi/WONLobbyMSBorderPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 // Factories for the Windows-style controls and their configs, and the table that registers them (file name inferred)
 namespace WONAPI {
 // Creates a Windows-style push button
-Component* MSButtonConfig::ButtonFactory() { return new MSButton; }
+Component* MSButtonConfig::ButtonFactory() { return WONShellNew(EeWonShellKind::MsButton); }
 // Creates a Windows-style radio button
-Component* MSButtonConfig::RadioFactory() { return new MSRadioButton; }
+Component* MSButtonConfig::RadioFactory() { return WONShellNew(EeWonShellKind::MsRadioButton); }
 // Creates a Windows-style input box
-Component* MSInputBoxConfig::CompFactory() { return new MSInputBox; }
+Component* MSInputBoxConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsInputBox); }
 // Creates a Windows-style combo box
-Component* MSComboBoxConfig::CompFactory() { return new MSComboBox; }
+Component* MSComboBoxConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsComboBox); }
 // Creates a Windows-style arrow button
-Component* MSArrowButtonConfig::CompFactory() { return new MSArrowButton; }
+Component* MSArrowButtonConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsArrowButton,Direction_Up); }
 // Creates a Windows-style scrollbar
-Component* MSScrollbarConfig::CompFactory() { return new MSScrollbar; }
+Component* MSScrollbarConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsScrollbar,true); }
 // Creates a dialog background
-Component* MSDlgBackConfig::CompFactory() { return new MSDlgBack; }
+Component* MSDlgBackConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsDlgBack); }
 // Creates a 3D frame
-Component* MS3DFrameConfig::CompFactory() { return new MS3DFrame; }
+Component* MS3DFrameConfig::CompFactory() { return WONShellNew(EeWonShellKind::Ms3DFrame,3,false); }
 // Creates a Windows-style tab control
-Component* MSTabCtrlConfig::CompFactory() { return new MSTabCtrl; }
+Component* MSTabCtrlConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsTabCtrl); }
 // Creates a Windows-style scroll container
-Component* MSScrollContainerConfig::CompFactory() { return new MSScrollContainer; }
+Component* MSScrollContainerConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsScrollContainer); }
 
 // Creates the config for an etched frame group
 ComponentConfig* MSEtchedFrameGroupConfig::CfgFactory() { return new MSEtchedFrameGroupConfig; }
@@ -103,31 +103,31 @@ void MSComponentConfig_Init(ResourceConfigTable *theTable)
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSConfig.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
-#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 namespace WONAPI {
 // Creates a list header button
-Component* MSHeaderButtonConfig::CompFactory() { return new MSHeaderButton; }
+Component* MSHeaderButtonConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsHeaderButton); }
 // Creates a list header control
-Component* MSHeaderControlConfig::CompFactory() { return new MSHeaderControl; }
+Component* MSHeaderControlConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsHeaderControl); }
 // Creates a Windows-style list control
-Component* MSListCtrlConfig::CompFactory() { return new MSListCtrl; }
+Component* MSListCtrlConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsListCtrl); }
 }
 
 namespace WONAPI {
 // Creates an etched frame group
-Component* MSEtchedFrameGroupConfig::CompFactory() { return new MSEtchedFrameGroup; }
+Component* MSEtchedFrameGroupConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsEtchedFrameGroup); }
 }
 
 namespace WONAPI {
 // Creates the config for a Windows-style button, check box, radio button or label
 ComponentConfig* MSButtonConfig::CfgFactory() { return new MSButtonConfig; }
 // Creates a Windows-style check box
-Component* MSButtonConfig::CheckboxFactory() { return new MSCheckbox; }
+Component* MSButtonConfig::CheckboxFactory() { return WONShellNew(EeWonShellKind::MsCheckbox); }
 }
 
 namespace WONAPI {
 // Creates a tab button
-Component* MSTabButtonConfig::CompFactory() { return new MSTabButton; }
+Component* MSTabButtonConfig::CompFactory() { return WONShellNew(EeWonShellKind::MsTabButton,0,true,3); }
 // Creates a Windows-style label
-Component* MSButtonConfig::LabelFactory() { return new MSLabel; }
+Component* MSButtonConfig::LabelFactory() { return WONShellNew(EeWonShellKind::MsLabel); }
 }

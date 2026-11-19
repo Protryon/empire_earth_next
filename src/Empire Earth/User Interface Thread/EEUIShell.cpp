@@ -24,12 +24,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETriggerScreen.h"
-#include "ee/EESETSObject.h"
-#include "ee/EESEPlayerScreen.h"
 #include "lle/GEBitmap.h"
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
@@ -46,10 +41,33 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EESEARust.h"
-#include "ee/EEUIFSEMap.h"
 #include "lle/Input System.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EESEUnit.h"
+#include "GEWindow.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEAction.h"
+#include "ee/EEARust.h"
+#include "ee/EEMap.h"
+#include "ee/EEMouse.h"
+#include "ee/EEGraphics.h"
+#include "ee/EEUIManager.h"
+#include "lle/UIBitmap.h"
+#include "ee/EEUIFSETerrain.h"
+#include "rust/render/ge.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
+#include "ee/EEButtonObject.h"
+#include "lle/NEMessage.h"
+#include "lle/NESynchronousCommunications.h"
+#include "ee/EEMessage.h"
+#include "ee/EEMessageID.h"
+#include "ee/EECommunications.h"
+#include "ee/EEUnitVectorItem.h"
+#include "lle/GELine.h"
+#include "lle/UIControlsTable.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -59,6 +77,120 @@ int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, 
     EE_SHELL_BUTTON_BASE(UIButton)
     }
     return 0;
+}
+
+int64_t EEUIShellControl::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
+{
+    switch (inVirtual) {
+    EE_SHELL_COMMON_BASE(EEUIRustControl)
+    }
+    return 0;
+}
+
+int64_t EEUIShellForm::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
+{
+    GERectangle r = ioF != NULL ? GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]) : GERectangle();
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: UIForm::Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: UIForm::Deactivate(); return 0;
+    case EE_SCREENS_SV_HELP_POPUP: UIForm::SetHelpTextPopupLocation(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return UIForm::UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return UIForm::UpdateMouse();
+    case EE_SCREENS_SV_RELAYOUT: UIForm::RelayoutForm(r); return 0;
+    case EE_SCREENS_SV_TRANSLATED_KEY: return UIForm::UpdateTranslatedKey(reinterpret_cast<const char*>(inA), (short)inB);
+    case EE_SCREENS_SV_DRAW_BACKGROUND: return UIForm::DrawBackground(r);
+    case EE_SCREENS_SV_CLOSE: UIForm::Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return UIForm::CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return UIForm::DrawPolygons();
+    case EE_SCREENS_SV_DRAW_TEXT: return UIForm::DrawTextA();
+    case EE_SCREENS_SV_OPEN: UIForm::Open(); return 0;
+    case EE_SCREENS_SV_SET_RECTANGLE: UIForm::SetRectangle(r); return 0;
+    }
+    return 0;
+}
+
+// the form's own virtual inVirtual through its vtable (a kind's override runs)
+int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
+{
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: this->Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: this->Deactivate(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return this->UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return this->UpdateMouse();
+    case EE_SCREENS_SV_CLOSE: this->Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return this->CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return this->DrawPolygons();
+    case EE_SCREENS_SV_OPEN: this->Open(); return 0;
+    }
+    return 0;
+}
+
+// The kinds' class ops (EEUIRustControl's host passes them on): the icon bar's (icon_bar.rs EE_SCREENS_IB_OP_*; once
+// EEUICUnitIconBar::RustOp), its slots 0 the icon, 1 the frame, 2 and 3 the press and release samples
+int64_t EEUIShellControl::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    if (this->mKind != EE_SCREENS_SK_ICON_BAR)
+        return 0;
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
+    EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
+    GEBitmap* theIcon = static_cast<GEBitmap*>(this->mSlots[0]);
+    GEBitmap* theFrame = static_cast<GEBitmap*>(this->mSlots[1]);
+    NEMessage* theMessage = NULL;
+    switch (inOp - EE_SCREENS_HC_CLASS) {
+    case EE_SCREENS_IB_OP_CLASS: {
+        EEUnitClass* theClass = theUnit->GetUnitClass();
+        return (theClass->IsTransport() ? EE_SCREENS_IB_CLASS_TRANSPORT : 0) |
+               (theClass->IsAirBase() ? EE_SCREENS_IB_CLASS_AIR_BASE : 0) |
+               (theClass->mIsParatrooperBomber ? EE_SCREENS_IB_CLASS_PARATROOPER_BOMBER : 0) | (int64_t)theClass->mFamily << 8;
+    }
+    case EE_SCREENS_IB_OP_QUEUED_GOAL: return theUnit->GetQueuedGoal((unsigned long)inB) != NULL;
+    case EE_SCREENS_IB_OP_NO_GOALS: return theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL;
+    case EE_SCREENS_IB_OP_SELECT_THESE: {
+        const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
+        std::vector<long> theList(theIDs, theIDs + inB);
+        theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
+        break;
+    }
+    case EE_SCREENS_IB_OP_SOUND:
+        gSoundManager->Play((unsigned long)(uintptr_t)this->mSlots[inA == 0 ? 2 : 3], 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    case EE_SCREENS_IB_OP_CTRL: return UIControl::ControlKeyPressed();
+    case EE_SCREENS_IB_OP_SHIFT: return UIControl::ShiftKeyPressed();
+    case EE_SCREENS_IB_OP_MOUSE: ioF[0] = this->GetMouseLocation().GetX(); break;
+    case EE_SCREENS_IB_OP_CONTAINS: return this->GetRectangle().Contains(this->GetMouseLocation());
+    case EE_SCREENS_IB_OP_ACQUIRE: theButton->Acquire(); break;
+    case EE_SCREENS_IB_OP_RELEASE: theButton->Release(); break;
+    case EE_SCREENS_IB_OP_ICON:
+        theIcon->SetTexture(theButton->GetTexture(), this->GetScreenIndex());
+        theButton->SetFaceBitmap(theIcon, GERectangle(ioF[2], ioF[3], ioF[4], ioF[5]), gScreenIndex);
+        theIcon->SetLocation(GE2DPoint(ioF[0], ioF[1]));
+        this->GetRasterizer()->Draw(theIcon, this->GetScreenIndex());
+        break;
+    case EE_SCREENS_IB_OP_FRAME:
+        theFrame->SetLocation(GE2DPoint(ioF[0], ioF[1]));
+        return this->GetRasterizer()->Draw(theFrame, this->GetScreenIndex());
+    }
+    if (theMessage != NULL)
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+    return 0;
+}
+
+// A new selected-units icon bar (EEUICUnitIconBar: the user-defined control factory's): the icon bitmap, the
+// table's normal bitmap at one icon's rectangle as its frame, the two button sounds loaded
+UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
+{
+    EEUIShellControl* theBar = new EEUIShellControl(EE_SCREENS_SK_ICON_BAR, {}, inTable.GetID(), inRectangle, inForm,
+                                                    inTable.GetFormIndex(), 0);
+    float theIcon[4];
+    EEUIShell::Op(theBar, EE_SCREENS_SKOP_IB_ICON_RECT, 0, 0, theIcon);
+    theBar->mSlots[0] = new GEBitmap;
+    theBar->mSlots[1] = inTable.CreateNormalBitmap(inForm->GetManager(), GERectangle(theIcon[0], theIcon[1], theIcon[2], theIcon[3]));
+    for (int i = 0; i < 2; i++)
+        if (EESoundObject* theSound = EESoundObject::Get(i == 0 ? kSoundButton1 : kSoundButton2)) {
+            theSound->LoadMedia();
+            theBar->mSlots[2 + i] = (void*)(uintptr_t)theSound->GetSampleID();
+        }
+    return theBar;
 }
 
 int64_t EEUIShellRadio::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -141,7 +273,9 @@ long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
 // the edited player's tech tree (the player tab's player)
 static EETechTree* EEShellTree()
 {
-    return gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
+    unsigned long theSelection;   // (the player combo box's selection + 1 indexes gWorld.mPlayers)
+    gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(theSelection);
+    return gWorld.mPlayers[theSelection + 1]->GetTechTree();
 }
 
 // Turns every placement ghost (inGhosts) or selected unit whose class can turn to the yaw inAngle (once
@@ -192,15 +326,21 @@ static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
     return static_cast<UIEditBox*>(inControl)->GetGEText();
 }
 
-static EESETriggerScreen* EEShellTriggers()
+void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp);   // EESERBUnitTypes.cpp
+
+static EEUIFScenarioEditor* EEShellTriggers()
 {
-    return gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+    return gUIManager->GetScenarioEditorForm();
 }
 
 extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a, int64_t b, float* f)
 {
     UIControl* c = static_cast<UIControl*>(inControl);
     UWideString theText;
+    if (inOp >= EE_SCREENS_SH_FORM_BASE)   // a form shell's (its host object is the UIForm*)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->BaseCall(inOp - EE_SCREENS_SH_FORM_BASE, a, b, f);
+    if (inOp == EE_SCREENS_SH_FORM_SELF)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->SelfCall((uint32_t)a);
     if (inOp >= EE_SCREENS_SH_BASE)
         return EEUIShell::Of(c)->BaseCall(inOp - EE_SCREENS_SH_BASE, a, b, f);
     switch (inOp) {
@@ -273,19 +413,21 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
                        (b >> 32) != 0))->Dereference();
         break;
     case EE_SCREENS_SH_PLAYER_PAGE:
-        static_cast<EESEPlayerScreen*>(static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))
-            ->SelectPage(a);
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)a);
         break;
-    case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists(); break;
+    case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_FILL_TECH_LISTS); break;
     case EE_SCREENS_SH_SET_PLAYER_COUNT:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetPlayerScreen()->SetPlayerCount((unsigned long)a);
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)a);
         break;
     case EE_SCREENS_SH_LIST_OF_COMBO_SELECTION: {
         unsigned long s;
         const_cast<UILBString*>(static_cast<UIComboBox*>(c)->GetListBox())->GetCurrentSelection(s);
         return (int64_t)s;
     }
-    case EE_SCREENS_SH_MAP_CREATE: reinterpret_cast<EEUIFSEMap*>(a)->CreateMap(); break;
+    case EE_SCREENS_SH_MAP_CREATE:   // a the map tab's group
+        ee_screens_semp_call((EeScreensSeMap*)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a)),
+                             EE_SCREENS_SEMP_CREATE_MAP, 0);
+        break;
     case EE_SCREENS_SH_NEW_BITMAP: {
         GEBitmap* theBitmap = new GEBitmap;
         theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), b != 0 ? c->GetForm()->GetManager()->GetScreen() : gScreenIndex);
@@ -353,7 +495,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     }
     case EE_SCREENS_SH_TECH_OBSOLETED: return EEShellTree()->Get((long)a)->mScenEditorObsoleted;
     case EE_SCREENS_SH_TECH_MARK_PLAYER:
-        gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->MarkPlayerChanged(EEShellTree()->GetPlayer()->mPlayerID, false);
+        gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_MARK_CHANGED, EEShellTree()->GetPlayer()->mPlayerID, false);
         break;
     case EE_SCREENS_SH_TECH_BARS:
         return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
@@ -374,7 +516,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         break;
     }
     case EE_SCREENS_SH_UNIT_SELECT_TYPE:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetUnitScreen()->SelectUnitType(c->GetForm()->GetMouseLocation());
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
     case EE_SCREENS_SH_UNIT_NAME_AND_ID: {
@@ -397,16 +539,163 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
     case EE_SCREENS_SH_ALWAYS_DIRTY: c->SetAlwaysDirty(a != 0); break;
     case EE_SCREENS_SH_EDITOR_TEXTURE: return (int64_t) static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetButtonTexture();
+    // the message box's buttons' (shells_dialog.rs)
+    case EE_SCREENS_SH_FOCUSED_TEXT_COLOR: static_cast<UIButton*>(c)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); break;
+    case EE_SCREENS_SH_FILL:
+        return ee_ge_draw2d_fill(c->GetRasterizer(), c->GetScreenIndex(),
+                                 reinterpret_cast<const EeGeRectangle*>(&c->GetCopiedDrawRectangle()), f, f[3]);
+    case EE_SCREENS_SH_CLOSE_FORM: gUserInterface->CloseForm(reinterpret_cast<UIForm*>(a)); break;
+    // the saved-group buttons' (shells_saved.rs)
+    case EE_SCREENS_SH_SG_NEW_PORTRAIT: return (int64_t) new GEBitmap;
+    case EE_SCREENS_SH_SG_SOUND: {
+        EESoundObject* theSound = EESoundObject::Get(a == 0 ? kSoundButton1 : kSoundButton2);
+        if (theSound == NULL)
+            return 0;
+        if (b != 0) {
+            theSound->UnloadMedia();
+            return 0;
+        }
+        theSound->LoadMedia();
+        return (int64_t)theSound->GetSampleID();
+    }
+    case EE_SCREENS_SH_SG_PLAY: gSoundManager->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL); break;
+    case EE_SCREENS_SH_SG_PLAYER: return (int64_t)gWorld.GetCurrentPlayer();
+    case EE_SCREENS_SH_SG_FIRST_UNIT: {
+        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+        if (b == 0)
+            return (int64_t)thePlayer->mSelectedGroup->GetFirstUnit();
+        EEGroup* theGroup = thePlayer->mGroups[a];
+        return theGroup && theGroup->GetNumUnits() > 0 ? (int64_t)theGroup->GetFirstUnit() : 0;
+    }
+    case EE_SCREENS_SH_SG_SEND: {
+        unsigned long theGroup = (unsigned long)(b & 0xff);
+        EEMessage* theMessage = a == 0   ? new EEMRecord(kMessageSavedGroupSelect, {theGroup, (b >> 8) != 0})
+                              : a == 1   ? new EEMRecord(kMessageSavedGroupAddSelection, {theGroup})
+                              : a == 2   ? new EEMRecord(kMessageSavedGroupCreate, {theGroup})
+                                         : new EEMRecord(kMessageSavedGroupClear, {theGroup});
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        break;
+    }
+    case EE_SCREENS_SH_SG_SHIFT: return UIControl::ShiftKeyPressed();
+    case EE_SCREENS_SH_SG_INDEX: return (int64_t)c->GetIndex();
+    case EE_SCREENS_SH_SG_FACE: {
+        EEButtonObject* theButton = reinterpret_cast<EEComplexUnit*>(a)->mStats->mButton;
+        theButton->SetFaceBitmap(reinterpret_cast<GEBitmap*>(b), c->GetRectangle(), gScreenIndex);
+        f[0] = theButton->GetCellU();
+        f[1] = theButton->GetCellV();
+        return (int64_t)theButton->GetTexture();
+    }
+    case EE_SCREENS_SH_SG_TEXTURE_REF:
+        if (a != 0) {
+            if (b != 0) reinterpret_cast<GETexture*>(a)->Reference();
+            else reinterpret_cast<GETexture*>(a)->Dereference();
+        }
+        break;
+    case EE_SCREENS_SH_SG_SET_TEXTURE: reinterpret_cast<GEBitmap*>(a)->SetTexture(reinterpret_cast<GETexture*>(b), c->GetScreenIndex()); break;
+    case EE_SCREENS_SH_SG_DRAW:
+        reinterpret_cast<GEBitmap*>(a)->SetLocation(static_cast<UIButton*>(c)->GetBitmapLocation());
+        c->GetRasterizer()->Draw(reinterpret_cast<GEBitmap*>(a), c->GetScreenIndex());
+        break;
+    // the icon bar's (shells_icon_bar.rs): the slots let go as its destructor did
+    case EE_SCREENS_SH_IB_FREE: {
+        EEUIShellControl* theBar = static_cast<EEUIShellControl*>(c);
+        for (int i = 0; i < 2; i++)
+            if (EESoundObject* theSound = EESoundObject::Get(i == 0 ? kSoundButton1 : kSoundButton2))
+                theSound->UnloadMedia();
+        if (theBar->mSlots[0]) static_cast<GEBitmap*>(theBar->mSlots[0])->Dereference();
+        if (theBar->mSlots[1]) static_cast<GEBitmap*>(theBar->mSlots[1])->Dereference();
+        theBar->mSlots[0] = theBar->mSlots[1] = NULL;
+        break;
+    }
+    case EE_SCREENS_SH_SIZE:
+        f[0] = c->GetRectangle().GetWidth();
+        f[1] = c->GetRectangle().GetHeight();
+        break;
+    // the paint areas' (shells_paint.rs)
+    case EE_SCREENS_SH_PICK: {
+        EETile* theTile = NULL;
+        GE3DPoint thePoint;
+        long theX = 0, theY = 0;
+        if (a == 1) {
+            bool theResult = EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), theTile, theX, theY, false);
+            f[0] = (float)theX;
+            f[1] = (float)theY;
+            f[2] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+            return theResult;
+        }
+        if (a == 2)
+            theTile = gWorld.GetMap()->GetLocationAt(GE2DPoint(f[0], f[1]), thePoint, false);
+        else
+            EEPointUnitOrTile(GE2DPoint(f[0], f[1]), theTile, thePoint, false);
+        f[0] = thePoint.GetX();
+        f[1] = thePoint.GetY();
+        f[2] = thePoint.GetZ();
+        f[3] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+        return theTile != NULL;
+    }
+    case EE_SCREENS_SH_MAP_TILE: {
+        EEMapTile* theTile = gWorld.mMap->GetTile((unsigned long)a, (unsigned long)b);
+        f[0] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+        return theTile != NULL;
+    }
+    case EE_SCREENS_SH_MAP_HALF: f[0] = gWorld.GetMap()->GetF1955F4(); break;
+    case EE_SCREENS_SH_SCREEN_LINE: {
+        GE3DLine theLine;
+        gWorld.mMap->GetScreenLine(GE2DPoint(f[0], f[1]), theLine);
+        float* o = reinterpret_cast<float*>(a);
+        o[0] = theLine.GetStart().GetX(); o[1] = theLine.GetStart().GetY(); o[2] = theLine.GetStart().GetZ();
+        o[3] = theLine.GetDirection().GetX(); o[4] = theLine.GetDirection().GetY(); o[5] = theLine.GetDirection().GetZ();
+        break;
+    }
+    case EE_SCREENS_SH_MOUSE_AT: {
+        GE2DPoint thePoint = a != 0 ? gMouse->mPosition : static_cast<EEUIShellControl*>(c)->MouseLocation();
+        f[0] = thePoint.GetX();
+        f[1] = thePoint.GetY();
+        break;
+    }
+    case EE_SCREENS_SH_VIEW_RECT: {
+        const GERectangle& r = gViewport.GetViewRectangle();
+        f[0] = r.GetLeft(); f[1] = r.GetTop(); f[2] = r.GetRight(); f[3] = r.GetBottom();
+        break;
+    }
+    case EE_SCREENS_SH_WINDOW_SIZE: return (int64_t)gGameWindow->GetWidth() | (int64_t)gGameWindow->GetHeight() << 32;
+    case EE_SCREENS_SH_MOUSE_BOUNDS: gMouse->SetBounds(GERectangle(f[0], f[1], f[2], f[3])); break;
+    case EE_SCREENS_SH_SCROLL_EDGES: reinterpret_cast<EEAScroll*>(a)->mEdges = GERectangle(f[0], f[1], f[2], f[3]); break;
+    case EE_SCREENS_SH_CAPTURE_MOUSE: static_cast<EEUIShellControl*>(c)->Capture(); break;
+    case EE_SCREENS_SH_MOUSE_BUTTONS:
+        return (c->GetRightMouseButtonDown() ? 1 : 0) | (c->GetLeftMouseButtonDown() ? 2 : 0) | (c->GetHasMouseCapture() ? 4 : 0);
+    case EE_SCREENS_SH_PAINT_NEW: return (int64_t) static_cast<EESEAPaint*>(new EESEAPaintRust((uint32_t)a, (char)b));
+    case EE_SCREENS_SH_PAINT_AREA: {
+        const int32_t* r = reinterpret_cast<const int32_t*>(b);
+        return reinterpret_cast<EESEAPaint*>(a)->SetArea(r[0], r[1], r[2], r[3]);
+    }
+    case EE_SCREENS_SH_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EESEAPaint*>(a)); break;
+    case EE_SCREENS_SH_ACTION_RELEASE: reinterpret_cast<EESEAPaint*>(a)->Dereference(); break;
+    // the scenario editor lane's (0xa0..): the diplomacy buttons' state, an action's post and release
+    case EE_SCREENS_SH_SE_DIPLOMACY: EESEDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
+    case EE_SCREENS_SH_SE_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EEAction*>(a)); break;
+    case EE_SCREENS_SH_SE_ACTION_RELEASE: reinterpret_cast<EEAction*>(a)->Dereference(); break;
+    case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;
+    case EE_SCREENS_SH_BRUSH_GROUP_SIZE: return reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize;
+    case EE_SCREENS_SH_SPACE: {
+        ISEntity* theKey;
+        return gISKeyboard->GetEntity(kKeySpace, theKey) == 0 && theKey->GetValue() > 0;
+    }
+    case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a));
+    case EE_SCREENS_SH_SLIDER_OF: {
+        UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));
+        return (int64_t)theSlider->GetMaxRange() << 32 | (uint32_t)theSlider->GetCurrentRangeValue();
+    }
     // the game's
-    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->mScreens[a]->RefreshControls(); break;
-    case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;
+    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->TriggerSubSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
+    case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        static_cast<EESETSObject*>(EEShellTriggers()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
+        EEShellTriggers()->TriggerSubOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
-    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->GetScreen(kSETriggerScreenObject)->Store(); break;
+    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
-        ((EESEPlayerScreen*)static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))->CopyFirstPlayerToAll();
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL);
         break;
     case EE_SCREENS_SH_BRUSH_SIZE: reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize = (long)b; break;
     }

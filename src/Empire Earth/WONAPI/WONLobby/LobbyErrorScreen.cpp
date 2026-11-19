@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyScreens.h"
-#include "ee/wonapi/WONLobbyMSPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 namespace WONAPI {
 extern SmartPtr<Dialog> gLobbyFailureDialog;
 extern GUIString gLobbyInitError;
@@ -26,7 +26,7 @@ Container* LobbyGetContainer()
     if(gLobbyFailureDialog.get()==NULL) {
         SmartPtr<Dialog> dialog=new Dialog;
         dialog->SetEndOnEscape(0);
-        SmartPtr<MSDlgBack> background=new MSDlgBack;
+        SmartPtr<Component> background=WONShellNew(EeWonShellKind::MsDlgBack);
         SmartPtr<Label> label=new Label;
         label->SetWrap(true);
         label->SetHorzAlign(HorzAlign_Center);
@@ -34,7 +34,8 @@ Container* LobbyGetContainer()
         GUIString text("Lobby Error\n\n");
         text.append(gLobbyInitError);
         label->SetText(text,true);
-        SmartPtr<MSButton> button=new MSButton(GUIString("Ok"));
+        GUIString okText("Ok");
+        SmartPtr<Button> button=static_cast<Button*>(WONShellNew(EeWonShellKind::MsButton,(intptr_t)&okText));
         button->SetButtonFlags(0x100,true);
         button->SetSizeAtLeast(100,0);
         button->RequestFocus();

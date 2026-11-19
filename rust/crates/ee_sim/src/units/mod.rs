@@ -25,6 +25,7 @@
 
 pub mod actions;
 pub mod ag;
+pub mod ag_fields;
 pub mod ag_host;
 pub mod ai;
 pub mod animate;
@@ -58,6 +59,7 @@ pub mod ffi;
 pub mod game_over;
 pub mod game_over_host;
 pub mod gather;
+pub mod gather_world;
 pub mod goals;
 pub mod group;
 pub mod group_save;
@@ -116,6 +118,7 @@ pub mod turret;
 pub mod unit_bulk;
 pub mod unit_class_fields;
 pub mod unit_fields;
+pub mod unit_geom;
 pub mod unit_load;
 pub mod unit_save;
 pub mod unit_save_views;

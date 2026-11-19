@@ -960,6 +960,24 @@ fn selection_of<H: SeplHost + ?Sized>(h: &mut H, combo: usize) -> u32 {
 const SCREEN_OBJECT: i32 = 3;
 const SCREEN_AREA: u32 = 4;
 
+/// `Refresh`, `Show`, `Hide`, `CheckChanged(a: id, b: state)`, `ClearUnitList`, `Deactivate`, a list operation
+/// (`a`: `EE_SCREENS_SEOB_SM_*`, `b`: the selection), `Activate`, `Store(a)`, `Load(a)`, `UpdateSelection(a)`,
+/// `GetIsSelectOnMap` (answered), the mode set (`a`), the picked units' ids cleared.
+pub const EE_SCREENS_SEOB_REFRESH: u32 = 1;
+pub const EE_SCREENS_SEOB_SHOW: u32 = 2;
+pub const EE_SCREENS_SEOB_HIDE: u32 = 3;
+pub const EE_SCREENS_SEOB_CHECK_CHANGED: u32 = 4;
+pub const EE_SCREENS_SEOB_CLEAR_UNIT_LIST: u32 = 5;
+pub const EE_SCREENS_SEOB_DEACTIVATE: u32 = 6;
+pub const EE_SCREENS_SEOB_LIST_OP: u32 = 7;
+pub const EE_SCREENS_SEOB_ACTIVATE: u32 = 8;
+pub const EE_SCREENS_SEOB_STORE: u32 = 9;
+pub const EE_SCREENS_SEOB_LOAD: u32 = 10;
+pub const EE_SCREENS_SEOB_UPDATE_SELECTION: u32 = 11;
+pub const EE_SCREENS_SEOB_IS_SELECT_ON_MAP: u32 = 12;
+pub const EE_SCREENS_SEOB_SET_SELECT_ON_MAP: u32 = 13;
+pub const EE_SCREENS_SEOB_CLEAR_UNIT_IDS: u32 = 14;
+
 #[cfg(test)]
 mod tests {
     use super::*;

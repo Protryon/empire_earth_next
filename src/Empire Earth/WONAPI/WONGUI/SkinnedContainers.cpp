@@ -107,10 +107,9 @@ template <class C> static intptr_t SkinScrollPart(C* t, intptr_t which)
 static intptr_t SkinPartOrField(Component* c, SK k, intptr_t which, bool part)
 {
     switch (k) {
-    case SK::MsCombo: {
-        MSComboBox* t = static_cast<MSComboBox*>(c);
-        if (part) return (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get()) : (intptr_t)static_cast<Component*>(t->mEdit.get());
-        return t->mDrawFrame ? 1 : 0;
+    case SK::MsCombo: { // (the MS kinds answer their own fields and parts first: shell.rs skin_layout)
+        ComboBox* t = static_cast<ComboBox*>(c);
+        return !part ? 0 : (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get()) : (intptr_t)static_cast<Component*>(t->mEdit.get());
     }
     case SK::WonCombo: case SK::WonComboSize: {
         WONComboBox* t = static_cast<WONComboBox*>(c);
@@ -118,19 +117,11 @@ static intptr_t SkinPartOrField(Component* c, SK k, intptr_t which, bool part)
                        : (SP)which == SP::Edit ? (intptr_t)static_cast<Component*>(t->mEdit.get()) : (intptr_t)static_cast<Component*>(t->mListArea.get());
         return (SF)which == SF::DrawFrame ? t->mDrawFrame : (SF)which == SF::ButtonInFrame ? t->mButtonInFrame : SkinFrameField(t->mFrame, which);
     }
-    case SK::MsScroll: case SK::MsList: {
-        MSScrollContainer* t = static_cast<MSScrollContainer*>(c);
-        if (part) return (SP)which == SP::Header ? (intptr_t)static_cast<Component*>(static_cast<MSListCtrl*>(t)->mHeader.get()) : SkinScrollPart(t, which);
-        return (SF)which == SF::DrawFrame ? t->mDrawFrame : (SF)which == SF::Draw3DFrame ? t->mDraw3DFrame : t->mHeaderHeight;
-    }
+    case SK::MsScroll: case SK::MsList: return part ? SkinScrollPart(static_cast<ScrollbarScroller*>(c), which) : 0;
     case SK::WonScroll: case SK::WonList: case SK::WonListTextHeader: case SK::WonListHeader: {
         WONScrollContainer* t = static_cast<WONScrollContainer*>(c);
         if (part) return (SP)which == SP::Header ? (intptr_t)static_cast<Component*>(static_cast<WONListCtrl*>(t)->mHeader.get()) : SkinScrollPart(t, which);
         return (SF)which == SF::HeaderHeight ? t->mHeaderHeight : SkinFrameField(t->mFrame, which);
-    }
-    case SK::EtchedSize: {
-        MSEtchedFrameGroup* t = static_cast<MSEtchedFrameGroup*>(c);
-        return !part ? 0 : (SP)which == SP::Label ? (intptr_t)static_cast<Component*>(t->mLabel.get()) : (intptr_t)t->mComponent.get();
     }
     default: return 0;
     }

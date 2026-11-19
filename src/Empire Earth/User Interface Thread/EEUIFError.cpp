@@ -1,7 +1,7 @@
-// C:\EEX\Empire Earth\User Interface Thread\EEUIFError.cpp (__FILE__ 0x4cd490). The game's message box form and its two
-// button classes: 0x260c27..0x2624a6 (the init chains of the seven colours, EEUIFEBOK, EEUIFEBCancel, EEUIFError;
-// EEUIFileComboBox's ctor at 0x2624a6). Unit flags: the exe module set. The colours, constants and button members
-// have provisional names.
+// C:\EEX\Empire Earth\User Interface Thread\EEUIFError.cpp (__FILE__ 0x4cd490). The game's message box:
+// 0x260c27..0x2624a6 (EEUIFEBOK, EEUIFEBCancel, EEUIFError; EEUIFileComboBox's ctor at 0x2624a6). The form and its
+// buttons are kinds over the shells (ee_game shells_dialog.rs); this unit keeps the box's host. Unit flags: the exe
+// module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -28,72 +28,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIFError.h"
-#include "rust/game/screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
-static const float kMessageButtonOpacity = 0.4f;
-static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);
-static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
-static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);
-
-// The message box's buttons: OK/Yes (RTTI EEUIFEBOK > UIButton; vtable 0x44a640) and No/Cancel (EEUIFEBCancel; vtable
-// 0x44a6d8, its close form set by DisplayCancel), one class (the second keeps its name: the editor gates print the
-// controls' classes): 50x20, tinted (a rhombus on the 2D draw list, ee_ge list2d.rs); a press marks it pressed and
-// closes the box (or the close form)
-class EEUIFEBOK : public UIButton {
-public:
-    EEUIFEBOK(UIForm* inForm, unsigned long inId)
-        : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
-          mCallback(NULL), mData(NULL), mCloseForm(NULL), mPressed(false)
-    {
-        this->SetFocusedTextColor(kMessageFocusedColor);
-    }
-    virtual long DrawPolygons()
-    {
-        ee_ge_draw2d_fill(this->GetRasterizer(), this->GetScreenIndex(),
-                          reinterpret_cast<const EeGeRectangle*>(&this->GetCopiedDrawRectangle()),
-                          reinterpret_cast<const float*>(&kMessageButtonColor), kMessageButtonOpacity);
-        return UIButton::DrawPolygons();
-    }
-    void SetCallback(EEUIFErrorCallback inCallback, void* inData)
-    {
-        this->mCallback = inCallback;
-        this->mData = inData;
-    }
-    EEUIFErrorCallback mCallback;
-    void* mData;
-    UIForm* mCloseForm;
-    bool mPressed;
-protected:
-    virtual void ButtonUp()
-    {
-        this->mPressed = true;
-        UIButton::ButtonUp();
-        gUserInterface->CloseForm(this->mCloseForm);
-    }
-};
-class EEUIFEBCancel : public EEUIFEBOK {
-public:
-    using EEUIFEBOK::EEUIFEBOK;
-};
-
-// Creates the game's message box form: message label, OK, No and Cancel buttons, an edit box and the gold
-// framed background, laid out for a 1024x768 design (ee_screens dialog.rs construct: the order, sizes, colours and
-// layout; each step one op of the host below)
-EEUIFError::EEUIFError(UIManager* inManager)
-    : UIForm(7, 1, inManager, -1, true), mOk(NULL), mNo(NULL), mCancel(NULL), mError(NULL), mEditBox(NULL)
-{
-    ee_screens_dialog_construct(this);
-}
-
-// Destroys the message box and its controls
-EEUIFError::~EEUIFError()
-{
-    delete this->mError;
-    delete this->mOk;
-    delete this->mNo;
-    delete this->mCancel;
-    delete this->mEditBox;
-}
-
+#include "ee/EEUIShell.h"
 // the box's Display inputs while Rust shows it, and the layout's registers (the UI thread's)
 static const UWideString* sDialogMessage;
 static void* sDialogData;
@@ -103,25 +38,30 @@ static GERectangle sDialogRectangle;
 static GEFont* sDialogFont;
 static float sDialogFloats[9];   // the constructor's sizes, colours and layout (EE_SCREENS_DLG_FLOAT)
 
-// Shows the box as a message, question, Yes/No/Cancel, text prompt or Cancel box (the original's DisplayMessage,
-// DisplayQuestion, DisplayYesNoCancel, DisplayPassword and DisplayCancel: ee_screens dialog.rs)
-void EEUIFError::Display(unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment, void* inData,
-                         EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag)
+// A new box (7 controls, 1 group, no id; its constructor ee_screens dialog.rs construct) shown as inKind
+void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment,
+                       void* inData, EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm,
+                       bool inFlag)
 {
+    UIForm* theBox = new EEUIShellForm(EE_SCREENS_SK_DIALOG, {}, 7, 1, inManager, (unsigned long)-1, true);
     sDialogMessage = &inMessage;
     sDialogData = inData;
     sDialogCallbacks[0] = inFirst;
     sDialogCallbacks[1] = inSecond;
     sDialogCloseForm = inCloseForm;
-    ee_screens_dialog_show(this, inKind, inAlignment, inFlag);
+    EEUIShell::Op(theBox, EE_SCREENS_SKOP_DIALOG_SHOW, (int64_t)inKind, (int64_t)(uint32_t)inAlignment | (int64_t)inFlag << 32);
 }
 
-// The box's host (dialog.rs: EE_SCREENS_DLG_*): each op one toolkit call on its controls (0 the message, 1 OK/Yes,
-// 2 No, 3 Cancel, 4 the edit box)
-extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB)
+static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
+
+// The box's host (dialog.rs: EE_SCREENS_DLG_*; shells_dialog.rs the box's own): each op one toolkit call on its
+// controls, the kind's slots (0 the message, 1 OK/Yes, 2 No, 3 Cancel, 4 the edit box, 5 the background)
+extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
-    EEUIFError* theBox = static_cast<EEUIFError*>(inDialog);
-    UIControl* theControls[5] = {theBox->mError, theBox->mOk, theBox->mNo, theBox->mCancel, theBox->mEditBox};
+    UIForm* theBox = static_cast<UIForm*>(inDialog);
+    UIControl** theControls = reinterpret_cast<UIControl**>(ioSlots);
+    UITextLabel* theError = static_cast<UITextLabel*>(theControls[0]);
+    UIEditBox* theEditBox = static_cast<UIEditBox*>(theControls[4]);
     UIButton* theButton = inA >= 1 && inA <= 3 ? static_cast<UIButton*>(theControls[inA]) : NULL;
     float* theSides[4] = {&sDialogRectangle.mLeft, &sDialogRectangle.mTop, &sDialogRectangle.mRight,
                           &sDialogRectangle.mBottom};
@@ -133,12 +73,12 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         theButton->SetText(theText, gFontTahoma12);
         if ((inB & 3) != 0) {
             EEUIFErrorCallback theCallback = sDialogCallbacks[(inB & 3) == 2 ? 1 : 0];
-            void* theData = (inB & 3) == 3 ? (void*)theBox->mEditBox->GetText(0) : sDialogData;
-            static_cast<EEUIFEBOK*>(theButton)->SetCallback(theCallback, theData);
+            void* theData = (inB & 3) == 3 ? (void*)theEditBox->GetText(0) : sDialogData;
+            EEUIShell::Op(theButton, EE_SCREENS_SKOP_DIALOG_SET_CALLBACK, (int64_t)theCallback, (int64_t)theData);
         }
         theButton->SetDisplayMode(kDisplayModeShown);
         if (inA == 3 && (inB & 3) != 0)
-            theBox->mCancel->mCloseForm = sDialogCloseForm;
+            EEUIShell::Op(theControls[3], EE_SCREENS_SKOP_DIALOG_SET_CLOSE, (int64_t)sDialogCloseForm);
         theButton->GetGEText()->SetFgColor(kMessageTextColor);
         theButton->GetGEText()->SetIsTransparent(true);
         break;
@@ -147,21 +87,18 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         theControls[inA]->SetDisplayMode(inB);
         break;
     case EE_SCREENS_DLG_MESSAGE:
-        theBox->mError->SetAlignment(inA);
-        theBox->mError->SetText(*sDialogMessage);
+        theError->SetAlignment(inA);
+        theError->SetText(*sDialogMessage);
         break;
     case EE_SCREENS_DLG_MESSAGE_SIZE:
-        theBox->mError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
+        theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
         break;
     case EE_SCREENS_DLG_TABBING:
         theBox->SetTabbing(true);
-        theBox->SetTabStop(theBox->mEditBox->GetIndex());
+        theBox->SetTabStop(theEditBox->GetIndex());
         break;
     case EE_SCREENS_DLG_PASSWORD:
-        theBox->mEditBox->SetIsPasswordBox(inA != 0);
-        break;
-    case EE_SCREENS_DLG_MODE:
-        theBox->mMode = inA;
+        theEditBox->SetIsPasswordBox(inA != 0);
         break;
     case EE_SCREENS_DLG_SWITCH:
         gUserInterface->SwitchToForm(theBox);
@@ -201,31 +138,31 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
     case EE_SCREENS_DLG_LINE_HEIGHT:
         return (uint32_t)gFontTahoma12->GetHeight();
     case EE_SCREENS_DLG_LINES:
-        return (uint32_t)theBox->mError->GetLineCount();
+        return (uint32_t)theError->GetLineCount();
     case EE_SCREENS_DLG_FLOAT:
         memcpy(&sDialogFloats[inA], &inB, 4);
         break;
     case EE_SCREENS_DLG_NEW: {
         GERectangle theRectangle(GE2DPoint(0.0f, 0.0f), f[0], f[1]);
         if (inA == 0)   // (the original's ESVERIFYs after each new: new never returns NULL)
-            theBox->mError = new UITextLabel(UWideString(""), sDialogFont, 0, theRectangle, theBox, 1, 0, 0);
-        else if (inA == 1)
-            theBox->mOk = new EEUIFEBOK(theBox, 1);
+            theControls[0] = new UITextLabel(UWideString(""), sDialogFont, 0, theRectangle, theBox, 1, 0, 0);
         else if (inA == 4)
-            theBox->mEditBox = new UIEditBox(4, sDialogFont, 0x32, false, theRectangle, theBox, 4, 2, false, false);
-        else
-            (inA == 2 ? theBox->mNo : theBox->mCancel) = new EEUIFEBCancel(theBox, inA);
+            theControls[4] = new UIEditBox(4, sDialogFont, 0x32, false, theRectangle, theBox, 4, 2, false, false);
+        else   // OK/Yes (EEUIFEBOK), No and Cancel (EEUIFEBCancel): 50x20, a one-pixel border, the index the id
+            theControls[inA] = new EEUIShellButton(inA == 1 ? EE_SCREENS_SK_DIALOG_OK : EE_SCREENS_SK_DIALOG_CANCEL, {}, inA,
+                                                   NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f),
+                                                   theBox, inA, 1);
         break;
     }
     case EE_SCREENS_DLG_SCROLL_BAR:
-        theBox->mError->SetScrollBarBgColor(GEColor(f[0], f[1], f[2]));
-        theBox->mError->SetScrollBarBgOpacity(f[3]);
+        theError->SetScrollBarBgColor(GEColor(f[0], f[1], f[2]));
+        theError->SetScrollBarBgOpacity(f[3]);
         break;
     case EE_SCREENS_DLG_ALIGN:
-        theBox->mError->SetAlignment(inA);
+        theError->SetAlignment(inA);
         break;
     case EE_SCREENS_DLG_TEXT_COLOR: {
-        GEText* theText = inA == 0 ? theBox->mError->GetGEText() : theBox->mEditBox->GetGEText();
+        GEText* theText = inA == 0 ? theError->GetGEText() : theEditBox->GetGEText();
         theText->SetIsTransparent(true);
         theText->SetFgColor(GEColor(f[0], f[1], f[2]));
         break;
@@ -234,9 +171,9 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         theBox->AddControl(theControls[inA], 0);
         break;
     case EE_SCREENS_DLG_EDIT_COLORS:
-        theBox->mEditBox->SetSelectedBgColor(GEColor(f[0], f[1], f[2]));
-        theBox->mEditBox->SetBgColor(GEColor(f[3], f[4], f[5]));
-        theBox->mEditBox->SetCursorColor(GEColor(f[6], f[7], f[8]));
+        theEditBox->SetSelectedBgColor(GEColor(f[0], f[1], f[2]));
+        theEditBox->SetBgColor(GEColor(f[3], f[4], f[5]));
+        theEditBox->SetCursorColor(GEColor(f[6], f[7], f[8]));
         break;
     case EE_SCREENS_DLG_ENABLE:
         theBox->GetEntityGroup(0)->Enable();
@@ -257,36 +194,32 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         theDescription.mFrameFormat = 0;
         theDescription.mHasAlpha = true;
         theDescription.mCreateMIPMaps = true;
-        theBox->mBackground = new EEUIBGenericBackground(0, "textures\\EEGenericBack_Gold", theDescription, theLayout, theBox,
+        ioSlots[5] = new EEUIBGenericBackground(0, "textures\\EEGenericBack_Gold", theDescription, theLayout, theBox,
                                                          0, GEColor(f[4], f[5], f[6]), true, 1.0f, 1.0f, 1.0f, 3);
+        break;
+    }
+    // the box's own (shells_dialog.rs): the destructor's deletes, Open's background scale, Close's callback posted
+    case EE_SCREENS_DLG_DELETE:
+        for (int i = 0; i < 5; i++)
+            delete theControls[i];
+        break;
+    case EE_SCREENS_DLG_SCALE_BACKGROUND:
+        static_cast<EEUIBGenericBackground*>(ioSlots[5])->SetScale((float)gGameWindow->GetWidth() * (1.0f / 1024.0f),
+                                                                   (float)gGameWindow->GetHeight() * (1.0f / 768.0f));
+        break;
+    case EE_SCREENS_DLG_POST_CLOSED: {
+        EEUIFErrorCallbackData* theData = new EEUIFErrorCallbackData;
+        theData->mCallback = NULL;
+        theData->mData = NULL;
+        for (int i = 1; i <= 3; i++)
+            if (theControls[i] != NULL && EEUIShell::Op(theControls[i], EE_SCREENS_SKOP_DIALOG_PRESSED)) {
+                theData->mCallback = (EEUIFErrorCallback)EEUIShell::Op(theControls[i], EE_SCREENS_SKOP_DIALOG_CALLBACK);
+                theData->mData = (void*)EEUIShell::Op(theControls[i], EE_SCREENS_SKOP_DIALOG_DATA);
+                break;
+            }
+        gUserInterface->PostErrorClosed(theBox, theData);
         break;
     }
     }
     return 0;
-}
-
-// Opens the message box, scales its background to the window and lays out the buttons for its mode (the original's
-// LayoutCancel, LayoutPassword, LayoutQuestion, LayoutYesNoCancel and LayoutMessage: ee_screens dialog.rs)
-void EEUIFError::Open()
-{
-    UIForm::Open();
-    this->mBackground->SetScale((float)gGameWindow->GetWidth() * (1.0f / 1024.0f),
-                          (float)gGameWindow->GetHeight() * (1.0f / 768.0f));
-    ee_screens_dialog_open(this, this->mMode);
-}
-
-// Closes the message box and posts the pressed button's callback and data (OK first, then No, then Cancel)
-void EEUIFError::Close()
-{
-    EEUIFErrorCallbackData* theData = new EEUIFErrorCallbackData;
-    theData->mCallback = NULL;
-    theData->mData = NULL;
-    for (EEUIFEBOK* theButton : std::initializer_list<EEUIFEBOK*>{this->mOk, this->mNo, this->mCancel})
-        if (theButton != NULL && theButton->mPressed) {
-            theData->mCallback = theButton->mCallback;
-            theData->mData = theButton->mData;
-            break;
-        }
-    gUserInterface->PostErrorClosed(this, theData);
-    UIForm::Close();
 }

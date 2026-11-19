@@ -48,6 +48,16 @@ pub enum EeWonGuiKind {
     Pane,
     /// treeobj.rs `EeWonTNode` (a tree row, by its `TreeItem`)
     TreeNode,
+    /// scrollerobj.rs `EeWonScroller`
+    Scroller,
+    /// barobj.rs `EeWonScrollbar`
+    Bar,
+    /// multiobj.rs `EeWonMHead`
+    MHead,
+    /// tabobj.rs `EeWonTabCtrl`
+    Tab,
+    /// shell.rs `EeWonShell` (a generic widget shell's kind)
+    Shell,
 }
 
 struct Maps {

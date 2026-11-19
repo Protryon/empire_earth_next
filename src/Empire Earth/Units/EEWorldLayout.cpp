@@ -211,6 +211,8 @@ void EEWorldLayoutRegister()
     theLayout.herd_id = offsetof(EEHerd, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
     theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    theLayout.active_group_fields = BaseOffset<EEActiveGroup, EeUnitsActiveGroupFields>();
+    theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
     theLayout.placement_town = offsetof(EECPPlacement, mTownCenterTile);
     theLayout.placement_rust = offsetof(EECPPlacement, mRust);

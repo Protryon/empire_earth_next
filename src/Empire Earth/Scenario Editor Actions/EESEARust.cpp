@@ -41,7 +41,8 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEPaint.h"
+#include "lle/GEText.h"
+#include "ee/EEUIShell.h"
 #include "lle/UIRadioButton.h"
 #include "rust/game/screens.h"
 #include "lle/GEText.h"
@@ -51,7 +52,6 @@
 #include "ee/EEScreenEvent.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEMouse.h"
@@ -60,9 +60,6 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EESEARust.h"
 #include "lle/UICheckBox.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETriggerScreen.h"
-#include "ee/EESETSObject.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
 
@@ -71,8 +68,8 @@
 // selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
 void EESEAObjectSelection()
 {
-    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
-        ->UpdateSelection();
+    gUIManager->GetScenarioEditorForm()->TriggerSubOp(kSETriggerScreenObject,
+                                                                      EE_SCREENS_SEOB_UPDATE_SELECTION);
 }
 
 void EESEAChangeLoadText::Post(const UWideString& inText)
@@ -112,8 +109,8 @@ int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, flo
 // The paint actions' world-edit host (ee_screens editor_actions.rs: EE_SCREENS_SEA_*): the terrain, elevation and
 // bulldozer paints call it from their runs, under the UI copy lock and the world's write lock (the action queue's)
 
-// 0x445618: the height of one elevation level (EEUIFSEPaintElevation.cpp)
-extern const float kSEPELevelHeight;
+// 0x445618: the height of one elevation level (once EEUIFSEPaintElevation.cpp's; ee_game shells_paint.rs)
+static const float kSEPELevelHeight = 0.20412414f;
 
 extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
 {
@@ -179,7 +176,7 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
         theMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]);
         return 0;
     case EE_SCREENS_SEA_STORE_MOUSE_TILE:
-        static_cast<EEUIFSEPaint*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationPaint))->StoreMouseTile();
+        EEUIShell::Op(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationPaint), EE_SCREENS_SKOP_PAINT_STORE_TILE);
         return 0;
     case EE_SCREENS_SEA_ELEVATION_CHANGED:
         gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
@@ -479,7 +476,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         return 1;
     }
     case EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
-        static_cast<EESEUnit*>(theEditor->GetTabGroup(kEditorTabUnits))->SelectUnitType(GE2DPoint(0.0f, 0.0f));
+        theEditor->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     }
     return 0;
@@ -602,7 +599,7 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
         return 1;
     }
     case EE_SCREENS_SEP_UNDER_MOUSE:
-        return (int32_t)theEditor->GetUnitScreen()->GetUnitUnderMouse();
+        return (int32_t)theEditor->GetUnitUnderMouse();
     case EE_SCREENS_SEP_BOARD: {
         EEUnit* theUnit = EESEPUnit(i[0]);
         if (theUnit == NULL)
@@ -665,7 +662,7 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
             theContainer->LoadCargo(theUnit->GetComplexUnit(), false, 0);
             if (!theContainer->mIsEditorSelected)
                 theEditor->SelectUnit(theContainer);
-            theEditor->GetUnitScreen()->UpdateSelection();
+            theEditor->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION);
             theContainer->Dereference();
         }
         break;
@@ -732,7 +729,7 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
         theContainer->LoadCargo(EESEPUnit(i[0])->mComplexUnit, false, 0);
         if (!theContainer->mIsEditorSelected)
             theEditor->SelectUnit(theContainer);
-        theEditor->GetUnitScreen()->UpdateSelection();
+        theEditor->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION);
         theContainer->Dereference();
         break;
     }
@@ -804,7 +801,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
         theEditor->DeselectUnit(theUnit);
         return 0;
     case EE_SCREENS_SEU_UPDATE_SELECTION:
-        static_cast<EESEUnit*>(theEditor->GetTabGroup(kEditorTabUnits))->UpdateSelection();
+        theEditor->UnitCall(EE_SCREENS_SEUN_UPDATE_SELECTION);
         return 0;
     case EE_SCREENS_SEU_UNIT:
         return (uintptr_t)gWorld.GetUnit((unsigned long)inA);

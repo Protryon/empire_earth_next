@@ -6,17 +6,7 @@ namespace WONAPI {
 class JoinedRoomEvent;
 class LeftRoomEvent;
 class ClientChangedEvent;
-// UserListCtrl (0xa0 bytes, constructor 0x7ca8f0): the room's user list with Whisper and Ignore buttons.
-class UserListCtrl : public LobbyRustCtrl {
-public:
-    UserListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Users) {}
-};
-// QuickPlayCtrl (0xb0 bytes, constructor 0x7c14e0, vtable 0x853bf0 with 51 slots): pick a skill level and
-// play; six owned widgets at 0x98..0xac, destructor 0x7c1540.
-class QuickPlayCtrl : public LobbyRustDialogCtrl {
-public:
-    QuickPlayCtrl() : LobbyRustDialogCtrl(EeWonLobbyCtlKind::QuickPlay) {}
-};
+// (UserListCtrl, QuickPlayCtrl, GameUserListCtrl and UpdateAccountCtrl are their shells made with their kinds)
 // GameBrowserCtrl (R6 WONLobby round 4): the help and news browser tabs, a lobbyctl.rs object; the home location
 // (assigned by the constructor and the config's HOMELOCATION) and the Paint override stay here.
 class GameBrowserCtrl : public LobbyRustCtrl {
@@ -29,17 +19,7 @@ public:
 };
 class QueryAccountResultEvent;
 void DrawLobbyPing(Graphics*,unsigned short,int,int,int); // 0x7c12b0; draws a ping indicator
-// GameUserListCtrl (R6 WONLobby round 4): the game room's players and Kick/Ban button, a lobbyctl.rs object
-class GameUserListCtrl : public LobbyRustCtrl {
-public:
-    GameUserListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::UserList) {}
-};
 
-// UpdateAccountCtrl (0xbc bytes): Container (0x84), 13 owned controls and the old password at 0xb8.
-class UpdateAccountCtrl : public LobbyRustCtrl {
-public:
-    UpdateAccountCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::UpdateAccount) {}
-};
 // Login screen and its panels.
 class RustServerOp;
 class LoginScreen : public LobbyRustCtrl {

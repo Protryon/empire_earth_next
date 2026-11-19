@@ -24,6 +24,12 @@ macro_rules! game {
     }};
 }
 
+/// Runs `f` over the unit utilities' game host (`uu_host::Game`: the C++ world calls one host serves for every
+/// Rust body); a unit test never calls it.
+pub fn with_game<R>(f: impl FnOnce(&mut dyn crate::units::uu::UuHost) -> R) -> R {
+    game!(f(&mut crate::units::uu_host::Game))
+}
+
 /// `EECanStandOn`.
 pub fn can_stand_on(x: i32, y: i32, unit: u64) -> bool {
     game!(ffi::ee_units_uu_can_stand_on(x, y, unit) != 0)
@@ -58,6 +64,12 @@ pub fn spot(which: i32, unit: u64, target: u64, io: &mut [f32; 3]) -> bool {
 pub fn within_reach_of(point: [f32; 3], unit: u64, target: u64) -> bool {
     // SAFETY: a live point
     game!(unsafe { ffi::ee_units_uu_within_reach(unit, target, &point) != 0 })
+}
+
+/// `EEIsWithinReach(unit, target)` (from the unit's own position).
+pub fn within_reach(unit: u64, target: u64) -> bool {
+    // SAFETY: no point
+    game!(unsafe { ffi::ee_units_uu_within_reach(unit, target, std::ptr::null()) != 0 })
 }
 
 /// `EEGetPathLengthTo(unit, tile, limit, walls)` (the tile's update dropped).
@@ -114,6 +126,68 @@ pub fn player_units_of_type(unit_type: i32, index: i32) -> Vec<u64> {
         ffi::player_units_of_type(unit_type, index, &mut units);
         units
     })
+}
+
+/// `EEGetSquareRing` (`sides` false) and `EEGetSideTiles` (true, a square of `width`).
+pub fn square_ring(x: i32, y: i32, width: i32, height: i32, sides: bool) -> Vec<Tile> {
+    game!(ffi::square_ring(x, y, width, height, sides))
+}
+
+/// `EEGetRingCorners` (`square` false) and `EEGetCornerTiles` (true, a square of `width`).
+pub fn ring_corners(corners: i32, x: i32, y: i32, width: i32, height: i32, square: bool) -> Vec<Tile> {
+    game!(ffi::ring_corners(corners, x, y, width, height, square))
+}
+
+/// `EEGetSquareRingTiles`.
+pub fn square_ring_tiles(x: i32, y: i32, radius: i32) -> Vec<Tile> {
+    game!(ffi::square_ring_tiles(x, y, radius))
+}
+
+/// `EEGetFarmDropSites(farm, sites)` into an empty list: whether any, the sites.
+pub fn farm_drop_sites(farm: u64) -> (bool, Vec<u64>) {
+    game!(ffi::farm_drop_sites(farm))
+}
+
+/// `EEFindFreeFarm(unit, free_only, ring)`: the farm's complex unit (0: none), the ring reached in `ring`.
+pub fn find_free_farm(unit: u64, free_only: bool, ring: &mut i32) -> u64 {
+    // SAFETY: a live ring
+    game!(unsafe { ffi::ee_units_uu_find_free_farm(unit, u8::from(free_only), ring) })
+}
+
+/// `EEAIRandomShuffle(first, last)`: Dinkum's `random_shuffle` with the AI's generator (`GetRandom(0, count - 1)`
+/// for the counts 2, 3, ... up to the length), its draws and swaps in order.
+pub fn ai_random_shuffle<T>(items: &mut [T], mut random: impl FnMut(i32, i32) -> i32) {
+    for at in 1..items.len() {
+        let count = at as i32 + 1;
+        let j = random(0, (count - 1).max(0));
+        items.swap(at, j as usize);
+    }
+}
+
+/// `EEGetResourceSpots(resource, tiles)` (into an empty list).
+pub fn resource_spots(resource: u64) -> Vec<Tile> {
+    game!({
+        let mut tiles = Vec::new();
+        ffi::unit_tiles(1, resource, &mut tiles);
+        tiles
+    })
+}
+
+/// `EEFindPlaceOnTile(unit, class, x, y, size, to_x, to_y, square, io)`: `io` in and out.
+#[allow(clippy::too_many_arguments)]
+pub fn place_on_tile(
+    unit: u64,
+    class: u64,
+    x: i32,
+    y: i32,
+    size: i32,
+    to_x: i32,
+    to_y: i32,
+    square: i32,
+    io: &mut [f32; 3],
+) -> bool {
+    // SAFETY: a live point
+    game!(unsafe { ffi::ee_units_uu_find_place_on_tile(unit, class, x, y, size, to_x, to_y, square, io) != 0 })
 }
 
 /// `EEGetUnitsInRadius`.

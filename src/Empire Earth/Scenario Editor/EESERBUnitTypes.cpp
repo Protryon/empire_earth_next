@@ -1,8 +1,8 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESERBUnitTypes.cpp (file name inferred): the class family of the scenario
 // editor's player tab, EESEPlayerScreen (vtable 0x4430dc), its controls EESERBUnitTypes/EESECBMaxPlayer/
 // EESEUIBDiplomacy and the player-count action: 0x573218..0x57acf6. The player tab, its player rows and its game
-// options page are whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds the object, and this unit
-// is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
+// options page are whole in Rust (ee_screens editor_players.rs; the class EESEPlayerScreen is gone: its group,
+// editor_groups_ffi.rs, holds the object), and this unit is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -36,11 +36,9 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEARust.h"
@@ -56,9 +54,9 @@
 #include "lle/UITriStateCheckBox.h"
 #include "ee/EEUnitSetManager.h"
 
-GEBitmap* EESEUIBDiplomacy::sNormalBitmaps[2];
-GEBitmap* EESEUIBDiplomacy::sFocusedBitmaps[2];
-GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
+// the diplomacy buttons' shared bitmaps (once EESEUIBDiplomacy's statics 0x531fc0/0x531fc8/0x531fd0): normal,
+// focused, pressed, each for allies (0) and enemies (1)
+static GEBitmap* sSeplDiplomacy[3][2];
 
 #include "ee/EECivilizationManager.h"
 #include "ee/EEComputerPlayer.h"
@@ -72,8 +70,7 @@ UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit g
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
 static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTechnologyTechs;
 
-// The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds its object; the members
-// forward. Its constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
+// The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen's constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
 // destructor (0x5733bf), SetPlayerCount (0x573653), Leave (0x5737ac), GetPlayerCount (0x575a1f), Refresh
 // (0x575a3e), Load (0x575c0b), Enter (0x575c48), MarkPlayerChanged (0x575d58), Store (0x575d7e),
 // CopyFirstPlayerToAll (0x575eb2), ApplyPlayerSettings (0x575ee5), BuildTechTypeLists (0x575f38), FillTechLists
@@ -86,89 +83,17 @@ extern GEFont* gSeplScreenFont;   // EEGlobals.cpp
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
-// Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
-EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
-                                   UIComboBox* inPlayerSelection)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sepl_new(inForm, inPlayerSelection, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the player tab, deleting every control it created (editor_players.rs)
-EESEPlayerScreen::~EESEPlayerScreen()
-{
-    ee_screens_sepl_free(this->mRust);
-}
-
-// Returns the player chosen in the player tab's player combo box (its selection + 1 indexes gWorld.mPlayers; once
-// EESEUITechListBox.cpp's COMDAT)
-EEPlayer* EESEPlayerScreen::GetCurrentPlayer()
-{
-    unsigned long theSelection;
-    this->GetPlayerSelection()->GetCurrentSelection(theSelection);
-    return gWorld.mPlayers[theSelection + 1];
-}
-
-void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)inCount, 0);
-}
-
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
 {
     gMaxPlayers = this->mCount;
 }
 
-void EESEPlayerScreen::Leave() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LEAVE, 0, 0); }
-void EESEPlayerScreen::Load() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LOAD, 0, 0); }
-void EESEPlayerScreen::Enter() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_ENTER, 0, 0); }
-void EESEPlayerScreen::Store() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_STORE, 0, 0); }
-void EESEPlayerScreen::Refresh() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REFRESH, 0, 0); }
-void EESEPlayerScreen::SelectPage(unsigned long inPage)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)inPage, 0);
-}
-void EESEPlayerScreen::FillTechLists() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_FILL_TECH_LISTS, 0, 0); }
-void EESEPlayerScreen::RebuildTechLists()
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REBUILD_TECH_LISTS, 0, 0);
-}
-void EESEPlayerScreen::CopyFirstPlayerToAll()
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_COPY_FIRST_TO_ALL, 0, 0);
-}
-unsigned long EESEPlayerScreen::GetPlayerCount()
-{
-    return ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
-}
-void EESEPlayerScreen::MarkPlayerChanged(unsigned long inPlayer, bool inFlag)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_MARK_CHANGED, (uint32_t)inPlayer, inFlag);
-}
-UIComboBox* EESEPlayerScreen::GetPlayerSelection()
-{
-    return static_cast<UIComboBox*>(ee_screens_sepl_control(this->mRust, 0xffffffffu, 0));
-}
-UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
-{
-    return static_cast<UIComboBox*>(ee_screens_sepl_control(
-        this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
-}
-
-// Creates a 23x23 diplomacy grid button, starting as enemies (state 1)
-EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocation, UIForm* inForm,
-                                   unsigned long inIndex, unsigned long inBorderThickness)
-    : UIButton(inID, sNormalBitmaps[1], sFocusedBitmaps[1], sPressedBitmaps[1], GERectangle(inLocation, 23.0f, 23.0f),
-               inForm, inIndex, inBorderThickness)
-{
-    this->mState = kButtonStateFocused;
-}
-
-// Cuts the diplomacy buttons' normal, focused and pressed bitmaps (allies, enemies) from the editor's button texture
-void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
+// The diplomacy buttons (once EESEUIBDiplomacy > UIButton, vtable 0x443298: a kind over the button shell, ee_game
+// shells_editor.rs; its state 0 allies, 1 enemies, toggled by ButtonUp): their normal, focused and pressed bitmaps
+// cut from the editor's button texture (0x1768a6), released (0x176b18), and a button's bitmaps and help text for its
+// state (UpdateBitmaps), then the form's help text when inHelp (ButtonUp)
+static void SeplDiplomacyLoad(EEUIFScenarioEditor* inEditor)
 {
     GETexture* theTexture = inEditor->GetButtonTexture();
     float theWidth = (float)theTexture->GetWidth();
@@ -177,76 +102,45 @@ void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
     float theScale = 23.0f / theWidth;
     for (unsigned long i = 0; i < 2; i++) {
         float theX = i * 46.0f;
-        EESEUIBDiplomacy::sNormalBitmaps[i] = new GEBitmap;
-        EESEUIBDiplomacy::sNormalBitmaps[i]->SetTexture(theTexture, inEditor->GetManager()->GetScreen());
         float theLeft = theX / theWidth;
         float theRight = (theX + 23.0f) / theWidth;
-        GETextureCoordinate theNormalTL(theLeft, theTop);
-        GETextureCoordinate theNormalTR(theRight, theTop);
-        GETextureCoordinate theNormalBL(theLeft, theBottom);
-        GETextureCoordinate theNormalBR(theRight, theBottom);
-        EESEUIBDiplomacy::sNormalBitmaps[i]->SetTextureCoordinates(theNormalTL, theNormalTR, theNormalBL, theNormalBR);
-        EESEUIBDiplomacy::sNormalBitmaps[i]->SetXYScale(theScale, theScale);
-
-        EESEUIBDiplomacy::sPressedBitmaps[i] = new GEBitmap;
-        EESEUIBDiplomacy::sPressedBitmaps[i]->SetTexture(theTexture, inEditor->GetManager()->GetScreen());
         float thePressedRight = (theX + 46.0f) / theWidth;
-        GETextureCoordinate thePressedTL(theRight, theTop);
-        GETextureCoordinate thePressedTR(thePressedRight, theTop);
-        GETextureCoordinate thePressedBL(theRight, theBottom);
-        GETextureCoordinate thePressedBR(thePressedRight, theBottom);
-        EESEUIBDiplomacy::sPressedBitmaps[i]->SetTextureCoordinates(thePressedTL, thePressedTR, thePressedBL, thePressedBR);
-        EESEUIBDiplomacy::sPressedBitmaps[i]->SetXYScale(theScale, theScale);
-
-        EESEUIBDiplomacy::sFocusedBitmaps[i] = new GEBitmap;
-        EESEUIBDiplomacy::sFocusedBitmaps[i]->SetTexture(theTexture, inEditor->GetManager()->GetScreen());
-        GETextureCoordinate theFocusedTL(theLeft, theTop);
-        GETextureCoordinate theFocusedTR(theRight, theTop);
-        GETextureCoordinate theFocusedBL(theLeft, theBottom);
-        GETextureCoordinate theFocusedBR(theRight, theBottom);
-        EESEUIBDiplomacy::sFocusedBitmaps[i]->SetTextureCoordinates(theFocusedTL, theFocusedTR, theFocusedBL, theFocusedBR);
-        EESEUIBDiplomacy::sFocusedBitmaps[i]->SetXYScale(theScale, theScale);
+        // normal, pressed, focused (the original's order): the pressed cell is the one right of the normal
+        const float theCells[3][2] = {{theLeft, theRight}, {theRight, thePressedRight}, {theLeft, theRight}};
+        GEBitmap** theSlots[3] = {&sSeplDiplomacy[0][i], &sSeplDiplomacy[2][i], &sSeplDiplomacy[1][i]};
+        for (int k = 0; k < 3; k++) {
+            GEBitmap* theBitmap = new GEBitmap;
+            theBitmap->SetTexture(theTexture, inEditor->GetManager()->GetScreen());
+            theBitmap->SetTextureCoordinates(GETextureCoordinate(theCells[k][0], theTop), GETextureCoordinate(theCells[k][1], theTop),
+                                             GETextureCoordinate(theCells[k][0], theBottom),
+                                             GETextureCoordinate(theCells[k][1], theBottom));
+            theBitmap->SetXYScale(theScale, theScale);
+            *theSlots[k] = theBitmap;
+        }
     }
 }
 
-
-// Releases the diplomacy buttons' shared bitmaps
-void EESEUIBDiplomacy::ReleaseBitmaps()
+static void SeplDiplomacyRelease()
 {
     for (long i = 0; i < 2; i++) {
-        EESEUIBDiplomacy::sNormalBitmaps[i]->Dereference();
-        EESEUIBDiplomacy::sPressedBitmaps[i]->Dereference();
-        EESEUIBDiplomacy::sFocusedBitmaps[i]->Dereference();
+        sSeplDiplomacy[0][i]->Dereference();
+        sSeplDiplomacy[2][i]->Dereference();
+        sSeplDiplomacy[1][i]->Dereference();
     }
 }
 
-// Shows the bitmaps and help text (players currently allies / enemies) of the button's state
-void EESEUIBDiplomacy::UpdateBitmaps()
+void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp)
 {
-    this->SetPressedBitmap(EESEUIBDiplomacy::sPressedBitmaps[this->mState]);
-    this->SetFocusedBitmap(EESEUIBDiplomacy::sFocusedBitmaps[this->mState]);
-    this->SetNormalBitmap(EESEUIBDiplomacy::sNormalBitmaps[this->mState]);
-    switch (this->mState) {
-    case kButtonStateNormal:
-        this->SetStringTableID(IDS_PLAYERS_CURRENTLY_ALLIES);
-        break;
-    case kButtonStateFocused:
-        this->SetStringTableID(IDS_PLAYERS_CURRENTLY_ENEMIES);
-        break;
-    }
+    inButton->SetPressedBitmap(sSeplDiplomacy[2][inState]);
+    inButton->SetFocusedBitmap(sSeplDiplomacy[1][inState]);
+    inButton->SetNormalBitmap(sSeplDiplomacy[0][inState]);
+    if (inState == kButtonStateNormal)
+        inButton->SetStringTableID(IDS_PLAYERS_CURRENTLY_ALLIES);
+    else if (inState == kButtonStateFocused)
+        inButton->SetStringTableID(IDS_PLAYERS_CURRENTLY_ENEMIES);
+    if (inHelp)
+        inButton->GetForm()->UpdateHelpString();
 }
-
-// Toggles the button between allies and enemies, updating its bitmaps and the form's help text
-void EESEUIBDiplomacy::ButtonUp()
-{
-    this->mState++;
-    if (this->mState == kButtonStatePressed)
-        this->mState = kButtonStateNormal;
-    this->UpdateBitmaps();
-    this->GetForm()->UpdateHelpString();
-    UIButton::ButtonUp();
-}
-
 
 // ---- the player tab's host (editor_players.rs; EE_SCREENS_SEPL_OP_*): the controls it makes and drives, the
 // players and the world it loads from and stores to
@@ -457,8 +351,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         theControl = new EEUIShellButton(EE_SCREENS_SK_COLOR, {c.extra[0]}, c.id, NULL, NULL, NULL,
                                          GERectangle(theLocation, 25.0f, 25.0f), inForm, c.index, 3);
         break;
-    case EE_SCREENS_SEPL_DIPLOMACY:
-        theControl = new EESEUIBDiplomacy(c.id, theLocation, inForm, c.index, 0);
+    case EE_SCREENS_SEPL_DIPLOMACY:   // 23x23, starting as enemies
+        theControl = new EEUIShellButton(EE_SCREENS_SK_DIPLOMACY, {}, c.id, sSeplDiplomacy[0][1], sSeplDiplomacy[1][1],
+                                         sSeplDiplomacy[2][1], GERectangle(theLocation, 23.0f, 23.0f), inForm, c.index, 0);
         break;
     case EE_SCREENS_SEPL_RADIO: {
         UIRadioButton* t = new UIRadioButton(c.id, theText, theFont, theRect, inForm, c.index, 0, false, c.extra[0] != 0,
@@ -880,13 +775,10 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         theEvent->Dereference();
         return 0;
     }
-    case EE_SCREENS_SEPL_OP_LOAD_BITMAPS: EESEUIBDiplomacy::LoadBitmaps(static_cast<EEUIFScenarioEditor*>(p[0])); return 0;
-    case EE_SCREENS_SEPL_OP_RELEASE_BITMAPS: EESEUIBDiplomacy::ReleaseBitmaps(); return 0;
-    case EE_SCREENS_SEPL_OP_DIPLOMACY: return (int32_t)static_cast<EESEUIBDiplomacy*>(c)->mState;
-    case EE_SCREENS_SEPL_OP_SET_DIPLOMACY:
-        static_cast<EESEUIBDiplomacy*>(c)->mState = i[0];
-        static_cast<EESEUIBDiplomacy*>(c)->UpdateBitmaps();
-        return 0;
+    case EE_SCREENS_SEPL_OP_LOAD_BITMAPS: SeplDiplomacyLoad(static_cast<EEUIFScenarioEditor*>(p[0])); return 0;
+    case EE_SCREENS_SEPL_OP_RELEASE_BITMAPS: SeplDiplomacyRelease(); return 0;
+    case EE_SCREENS_SEPL_OP_DIPLOMACY: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_DIPLOMACY_STATE);
+    case EE_SCREENS_SEPL_OP_SET_DIPLOMACY: EEUIShell::Op(c, EE_SCREENS_SKOP_DIPLOMACY_SET, i[0]); return 0;
     case EE_SCREENS_SEPL_OP_UNIT_LIMIT_RULES:   // gameoptions.yaml
         i[0] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum);
         i[1] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum);
