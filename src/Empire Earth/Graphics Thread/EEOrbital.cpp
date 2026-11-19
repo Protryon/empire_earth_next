@@ -25,60 +25,28 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 
-// degrees to radians: written as a literal (0x446094 is its __real constant; a named const float loads first)
+#include "rust/render/gfx.h"
 
-UString gOrbitalClockwisePrefix("orbital_cw_");
-UString gOrbitalCounterClockwisePrefix("orbital_ccw_");
+// The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",
+// any case; the degrees between the prefix and the name's last '_')
 
 // Returns whether a model's name starts with orbital_cw_ or orbital_ccw_ (ignoring case)
 bool EEOrbital::IsOrbitalModel(GEModel* inModel)
 {
-    const UString& theName = inModel->GetName();
-    if (theName.EqualsIgnoreCase(gOrbitalClockwisePrefix, gOrbitalClockwisePrefix.GetLength()) ||
-        theName.EqualsIgnoreCase(gOrbitalCounterClockwisePrefix, gOrbitalCounterClockwisePrefix.GetLength()))
-        return true;
-    return false;
+    return ee_gfx_orbital_is_model(inModel->GetName());
 }
 
 // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
-// orbital_ccw_ counterclockwise); the prefix test ignores case
+// orbital_ccw_ counterclockwise)
 void EEOrbital::Init(GEModel* inModel)
 {
-    UString theField(0x40);
-    float theDegrees;
     this->mSpeed = 0.0f;
     this->mModel = inModel;
-    // Match the prefixes ignoring case, as IsOrbitalModel does.
-    if (inModel->GetName().EqualsIgnoreCase(gOrbitalClockwisePrefix, gOrbitalClockwisePrefix.GetLength())) {
-        unsigned long theEnd = inModel->GetName().FindBackwards("_", (unsigned long)-1);
-        unsigned long theCount = theEnd - gOrbitalClockwisePrefix.GetLength();
-        if (theCount != 0 && theCount < theEnd) {
-            theField.Copy(inModel->GetName(), gOrbitalClockwisePrefix.GetLength(), theCount, 0, false);
-            sscanf(theField, "%f", &theDegrees);
-            theDegrees = -(theDegrees < 0.0f ? -theDegrees : theDegrees);
-            this->mSpeed = theDegrees * 0.017453292f;
-        }
-    } else if (inModel->GetName().EqualsIgnoreCase(gOrbitalCounterClockwisePrefix,
-                                                   gOrbitalCounterClockwisePrefix.GetLength())) {
-        unsigned long theEnd = inModel->GetName().FindBackwards("_", (unsigned long)-1);
-        unsigned long theCount = theEnd - gOrbitalCounterClockwisePrefix.GetLength();
-        if (theCount != 0 && theCount < theEnd) {
-            theField.Copy(inModel->GetName(), gOrbitalCounterClockwisePrefix.GetLength(), theCount, 0, false);
-            sscanf(theField, "%f", &theDegrees);
-            if (theDegrees < 0.0f)
-                theDegrees = -theDegrees;
-            this->mSpeed = theDegrees * 0.017453292f;
-        }
-    }
+    this->mSpeed = ee_gfx_orbital_speed(inModel->GetName());
 }
 
 // Advances the orbiting part's angle by its speed over the tick, wrapped to -pi..pi
 void EEOrbital::Update()
 {
-    float theAngle = gPhysics->GetTickSeconds() * this->mSpeed + this->mAngle;
-    while (theAngle < -3.1415927f)
-        theAngle += 6.2831855f;
-    while (theAngle > 3.1415927f)
-        theAngle -= 6.2831855f;
-    this->mAngle = theAngle;
+    ee_gfx_orbital_update(&this->mAngle, this->mSpeed, gPhysics->GetTickSeconds());
 }

@@ -57,6 +57,7 @@ public:
     }
     void SetModel(GEModel* inModel);
     void SetScale(float inScale) { this->mScale = inScale; }
+    friend void EEGfxObjectLayoutRegister();   // the effects' reads of the scale and the frame (ee_gfx effect_reads.rs)
 private:
     bool Intersects(const GETransformation& inLocation, const GEModel* inModel, unsigned long inFrame,
                     const GE3DLine& inLine, unsigned long inLOD, float& outDistance, bool inExact) const;

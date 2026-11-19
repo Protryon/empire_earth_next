@@ -57,6 +57,7 @@ pub mod manager_ffi;
 /// cbindgen:ignore
 pub mod managers;
 pub mod manobj;
+pub mod map_raise;
 pub mod model_ffi;
 pub mod model_geom;
 pub mod model_store;
