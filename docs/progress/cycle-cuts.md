@@ -22,7 +22,9 @@ See PORT_LEARNINGS "Cycle cuts" for the reasons. Each is its own commit; numbers
 | 9 | EEUnitClass.cpp's globals (gUnitClassTable, sUnitTypes, the heights) stored in EEGlobals.cpp | (with 10) |
 | 10 | `gSeplScreenFont` in EEGlobals.cpp | 229, 111,335 |
 
-In all 150 units and 22,650 lines out of SCC 1.
+In all 150 units and 22,650 lines out of SCC 1. On the tree merged with origin/rust 7779d7db1 (whose own
+changes move SCC 1 too): SCC 1 230 units, 109,421 lines; leaves 65 (3,846 lines), near-leaves 133 (14,286);
+`--code-only` 223 units, 108,815 lines, leaves 79 (5,645).
 
 ## What to cut next
 
