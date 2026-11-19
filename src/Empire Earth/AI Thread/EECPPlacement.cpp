@@ -192,13 +192,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
             EECPPush(io, (int64_t)EECPHandle(theUnit), 0);
         return 0;
-    case EE_CP_PLACE_UNITS_OF_TYPE: {
-        std::vector<EEUnit*> theUnits = EECPInputObjects<EEUnit>(io);
-        EEGetPlayerUnitsOfType((long)v[0], (long)v[1], theUnits);
-        for (size_t i = 0; i < theUnits.size(); i++)
-            EECPPush(io, (int64_t)EECPHandle(theUnits[i]), 0);
-        return 0;
-    }
     case EE_CP_PLACE_NATURE_UNITS:
         if (gWorld.mPlayers[0] == NULL)
             return 0;
@@ -356,29 +349,12 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
         EECPPushTiles(io, theTiles);
         return 0;
     }
-    case EE_CP_PLACE_BLOCK_TAKES:
-        return EEPlayerBlockTakes(thePlayer, (long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[4], 0) ? 1 : 0;
     case EE_CP_PLACE_FACING_QUARTER:
         return EEGetFacingQuarter((long)v[0], (long)v[1]);
     case EE_CP_PLACE_SITE_THREAT:
         return EECPNextSiteThreat(thePlayer, (long)v[0], (long)v[1], false, NULL) != 0 ? 1 : 0;
-    case EE_CP_PLACE_TILE_UNIT_OF_TYPE:
-        return EEGetTileUnitOfType(EETileCoordinate((long)v[0], (long)v[1]), (unsigned long)v[2]) != NULL ? 1 : 0;
-    case EE_CP_PLACE_UNITS_IN_RECT: {
-        if (v[4] != 0)   // the houses' filters are the centres'
-            return ee_cp_center_host(inContext, inOp, inA, inB, io);
-        U2DRectangle<long> theArea;
-        theArea.mLeft = (long)v[0];
-        theArea.mTop = (long)v[1];
-        theArea.mRight = (long)v[2];
-        theArea.mBottom = (long)v[3];
-        std::vector<EEComplexUnit*> theUnits = EECPInputObjects<EEComplexUnit>(io);
-        EEAnyUnit theFilter;
-        EEGetUnitsInRectangle(theArea, theUnits, theFilter, true);
-        for (size_t i = 0; i < theUnits.size(); i++)
-            EECPPush(io, (int64_t)EECPHandle(static_cast<EEUnit*>(theUnits[i])), 0);
-        return 0;
-    }
+    case EE_CP_PLACE_UNITS_IN_RECT:   // the houses' filters (the centres'; any unit: ee_units uu_ffi.rs collect_units)
+        return ee_cp_center_host(inContext, inOp, inA, inB, io);
     case EE_CP_PLACE_RANDOM:
         return gPhysics->GetRandom(0L, (long)v[0]);
     case EE_CP_PLACE_SPACE_DOCK_OPEN:
@@ -394,43 +370,6 @@ extern "C" int64_t ee_cp_place_host(const EeCpPlaceCtx* inContext, int32_t inOp,
             });
         for (size_t i = 0; i < theKeys.size(); i++)
             io->order[i] = theKeys[i].second;
-        return 0;
-    }
-    // the tile lists through their wrappers while the capture records (their TEST ONLY UUTL notes)
-    case EE_CP_PLACE_SQUARE_RING_TILES: {
-        std::vector<U2DPoint<long> > theTiles;
-        EEGetSquareRingTiles((long)v[0], (long)v[1], (long)v[2], theTiles);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_SQUARE_BLOCK_RING: {
-        std::vector<EETileCoordinate> theTiles = EECPInputTiles(io);
-        EEGetSquareBlockRing(1, (long)v[0], (long)v[1], (long)v[2], theTiles, 0);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_SQUARE_RING: {
-        std::vector<U2DPoint<long> > theTiles;
-        EEGetSquareRing((long)v[0], (long)v[1], (long)v[2], (long)v[3], theTiles);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_SIDE_TILES: {
-        std::vector<U2DPoint<long> > theTiles;
-        EEGetSideTiles((long)v[0], (long)v[1], (long)v[2], theTiles);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_CORNER_TILES: {
-        std::vector<U2DPoint<long> > theTiles;
-        EEGetCornerTiles(1, (long)v[0], (long)v[1], (long)v[2], theTiles);
-        EECPPushTiles(io, theTiles);
-        return 0;
-    }
-    case EE_CP_PLACE_TILES_IN_RADIUS: {
-        std::vector<EETileCoordinate> theTiles = EECPInputTiles(io);
-        EEGetTilesInRadius((long)v[0], (long)v[1], (unsigned long)v[2], v[3] != 0, theTiles);
-        EECPPushTiles(io, theTiles);
         return 0;
     }
     }

@@ -31,7 +31,7 @@ pub struct EeCpPlaceCtx {
     pub town: *mut c_long,
     /// `mPlacement->mRust` (null: no placement)
     pub placement: *mut EeCpPlacement,
-    /// `EESimCaptureRecord::Active()`: the tile lists go through the C++ wrappers (their TEST ONLY notes)
+    /// `EESimCaptureRecord::Active()`: the tile lists go through the noted entry points (their TEST ONLY notes)
     pub capture: u8,
 }
 
@@ -65,8 +65,6 @@ pub const EE_CP_PLACE_CLAIM_RANGE_ON: i32 = 6;
 pub const EE_CP_PLACE_CLAIM_RANGE: i32 = 7;
 /// the player's units from `mFirstUnit` (pushed)
 pub const EE_CP_PLACE_OWN_UNITS: i32 = 8;
-/// `EEGetPlayerUnitsOfType(v0, v1, units)` on the input list (the result pushed)
-pub const EE_CP_PLACE_UNITS_OF_TYPE: i32 = 9;
 /// player 0's units (pushed); 0 returned without a player 0
 pub const EE_CP_PLACE_NATURE_UNITS: i32 = 10;
 /// `mTowns`: (continent or -1 for a null town, the hull centre packed x << 32 | y) pushed
@@ -116,23 +114,14 @@ pub const EE_CP_PLACE_CHOKE_POINTS: i32 = 45;
 pub const EE_CP_PLACE_HULL_BOUNDS: i32 = 46;
 /// choke point `a`'s `GetTileSet().BuildPointList(tiles, 1)` on the input tiles
 pub const EE_CP_PLACE_CHOKE_TILES: i32 = 47;
-pub const EE_CP_PLACE_BLOCK_TAKES: i32 = 48;
 pub const EE_CP_PLACE_FACING_QUARTER: i32 = 49;
 pub const EE_CP_PLACE_SITE_THREAT: i32 = 50;
-pub const EE_CP_PLACE_TILE_UNIT_OF_TYPE: i32 = 51;
 /// `EEGetUnitsInRectangle(rect v0..v3, units, filter v4, true)` on the input units
 pub const EE_CP_PLACE_UNITS_IN_RECT: i32 = 52;
 pub const EE_CP_PLACE_RANDOM: i32 = 53;
 pub const EE_CP_PLACE_SPACE_DOCK_OPEN: i32 = 54;
 /// `std::sort` of the input keys: the order into `io.order`
 pub const EE_CP_PLACE_SORT: i32 = 55;
-/// the tile lists through their C++ wrappers (the capture's notes)
-pub const EE_CP_PLACE_SQUARE_RING_TILES: i32 = 56;
-pub const EE_CP_PLACE_SQUARE_BLOCK_RING: i32 = 57;
-pub const EE_CP_PLACE_SQUARE_RING: i32 = 58;
-pub const EE_CP_PLACE_SIDE_TILES: i32 = 59;
-pub const EE_CP_PLACE_CORNER_TILES: i32 = 60;
-pub const EE_CP_PLACE_TILES_IN_RADIUS: i32 = 61;
 // the centres' (EECPResourceCenter.cpp; `a` the centre)
 /// `mUnits`' saved ids (pushed)
 pub const EE_CP_CENTER_UNITS: i32 = 100;
@@ -342,7 +331,7 @@ impl PlaceHost for Game {
         self.handles(EE_CP_PLACE_OWN_UNITS, 0, &[], &[]).1
     }
     fn units_of_type(&mut self, unit_type: i32, player_id: u32, units: &mut Vec<u64>) {
-        *units = self.handles(EE_CP_PLACE_UNITS_OF_TYPE, 0, &[unit_type as i64, player_id as i64], units).1;
+        crate::units::uu_ffi::player_units_of_type(unit_type, player_id as i32, units);
     }
     fn nature_units(&mut self) -> Option<Vec<u64>> {
         let (r, units) = self.handles(EE_CP_PLACE_NATURE_UNITS, 0, &[], &[]);
@@ -503,7 +492,7 @@ impl PlaceHost for Game {
         *tiles = self.tiles(EE_CP_PLACE_CHOKE_TILES, choke, &[], tiles);
     }
     fn block_takes(&mut self, unit_type: i32, x: i32, y: i32, w: i32, h: i32) -> bool {
-        self.q(EE_CP_PLACE_BLOCK_TAKES, 0, &[unit_type as i64, x as i64, y as i64, w as i64, h as i64]) != 0
+        crate::units::uu_ffi::ee_units_uu_block_takes(self.ctx().player, unit_type, x, y, w, h, 0) != 0
     }
     fn facing_quarter(&mut self, t: Tile) -> i32 {
         self.q(EE_CP_PLACE_FACING_QUARTER, 0, &xy(t)) as i32
@@ -512,9 +501,13 @@ impl PlaceHost for Game {
         self.q(EE_CP_PLACE_SITE_THREAT, 0, &xy(t)) != 0
     }
     fn tile_unit_of_type(&mut self, t: Tile, unit_type: i32) -> bool {
-        self.q(EE_CP_PLACE_TILE_UNIT_OF_TYPE, 0, &[t[0] as i64, t[1] as i64, unit_type as i64]) != 0
+        crate::units::uu_ffi::ee_units_uu_tile_unit_of_type(t[0], t[1], unit_type as u32) != 0
     }
     fn units_in_rect(&mut self, rect: Rect, filter: RectFilter, units: &mut Vec<u64>) {
+        if filter == RectFilter::Any {
+            crate::units::uu_ffi::collect_units((rect.left, rect.top, rect.right, rect.bottom), |_| true, units);
+            return;
+        }
         let v = [rect.left as i64, rect.top as i64, rect.right as i64, rect.bottom as i64, filter as i64];
         *units = self.handles(EE_CP_PLACE_UNITS_IN_RECT, 0, &v, units).1;
     }
@@ -551,42 +544,41 @@ impl PlaceHost for Game {
     fn template_radius(&mut self, template: u32) -> f32 {
         self.qf(EE_CP_CENTER_TEMPLATE_RADIUS, 0, 0, &[template as i64]).1.f[0]
     }
-    // the tile lists: the pure math, or the C++ wrappers (which call the same Rust) while the capture records
+    // the tile lists: the pure math, or the noted entry points (the same Rust) while the capture records
     fn square_ring_tiles(&mut self, t: Tile, radius: i32) -> Vec<Tile> {
         if self.capture() {
-            return self.tiles(EE_CP_PLACE_SQUARE_RING_TILES, 0, &[t[0] as i64, t[1] as i64, radius as i64], &[]);
+            return crate::units::uu_ffi::square_ring_tiles(t[0], t[1], radius);
         }
         crate::units::uu_tiles::square_ring_tiles(t[0], t[1], radius)
     }
     fn square_block_ring(&mut self, t: Tile, size: i32, tiles: &mut Vec<Tile>) {
         if self.capture() {
-            *tiles = self.tiles(EE_CP_PLACE_SQUARE_BLOCK_RING, 0, &[t[0] as i64, t[1] as i64, size as i64], tiles);
+            crate::units::uu_ffi::block_ring(1, t[0], t[1], size, size, tiles, false, true);
             return;
         }
         *tiles = super::place_host::square_block_ring_all(t[0], t[1], size);
     }
     fn square_ring(&mut self, t: Tile, w: i32, h: i32) -> Vec<Tile> {
         if self.capture() {
-            return self.tiles(EE_CP_PLACE_SQUARE_RING, 0, &[t[0] as i64, t[1] as i64, w as i64, h as i64], &[]);
+            return crate::units::uu_ffi::square_ring(t[0], t[1], w, h, false);
         }
         crate::units::uu_tiles::square_ring(t[0], t[1], w, h)
     }
     fn side_tiles(&mut self, t: Tile, size: i32) -> Vec<Tile> {
         if self.capture() {
-            return self.tiles(EE_CP_PLACE_SIDE_TILES, 0, &[t[0] as i64, t[1] as i64, size as i64], &[]);
+            return crate::units::uu_ffi::square_ring(t[0], t[1], size, size, true);
         }
         crate::units::uu_tiles::square_ring(t[0], t[1], size, size)
     }
     fn corner_tiles(&mut self, t: Tile, size: i32) -> Vec<Tile> {
         if self.capture() {
-            return self.tiles(EE_CP_PLACE_CORNER_TILES, 0, &[t[0] as i64, t[1] as i64, size as i64], &[]);
+            return crate::units::uu_ffi::ring_corners(1, t[0], t[1], size, size, true);
         }
         super::place_host::corner_tiles_all(t[0], t[1], size)
     }
     fn tiles_in_radius(&mut self, t: Tile, radius: u32, inclusive: bool, tiles: &mut Vec<Tile>) {
         if self.capture() {
-            let v = [t[0] as i64, t[1] as i64, radius as i64, inclusive as i64];
-            *tiles = self.tiles(EE_CP_PLACE_TILES_IN_RADIUS, 0, &v, tiles);
+            crate::units::uu_ffi::tiles_in_radius(t[0], t[1], radius, inclusive, tiles);
             return;
         }
         crate::units::uu_tiles::tiles_in_radius(t[0], t[1], radius, inclusive, tiles)

@@ -107,6 +107,7 @@ pub mod unit_save;
 pub mod unload;
 pub mod update;
 pub mod uu;
+pub mod uu_direct;
 pub mod uu_ffi;
 pub mod uu_host;
 pub mod uu_note;

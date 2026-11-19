@@ -690,12 +690,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             GE3DPoint theCell((float)(long)ioArgs->i[0] + 0.5f, (float)(long)ioArgs->i[1] + 0.5f, 0.0f);
             return theComplex->mActiveGroup != NULL && theComplex->mActiveGroup->IsCellTaken(theCell);
         }
-    case EE_UNITS_GOAL_HOST_CAN_STAND: {
-            EETileCoordinate theTile;
-            theTile.mX = (long)ioArgs->i[0];
-            theTile.mY = (long)ioArgs->i[1];
-            return EECanStandOn(theTile, theComplex);
-        }
     case EE_UNITS_GOAL_HOST_PATH_REACHABLE: {
             EECPASGFlags theFlags;
             theComplex->mUnitClass->GetTerrainFlags(theComplex, theFlags);
@@ -756,12 +750,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 theComplex->mPlayer->NoticeForeignUnit(theTarget);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: {
-            std::vector<EEUnit*> theUnits;
-            EEGetPlayerUnitsOfType(kUnitTypeLighthouseAtAlexandria, theComplex->mPlayer->GetPlayerID(), theUnits);
-            return theUnits.size() > 0;
-        }
-
     // the unload transport's
     case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
         return (EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
@@ -839,13 +827,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_UNIT_LOCATION:
         PointOut(ioArgs, GE3DPoint(theComplex->mPhysicalModel.GetLocation()));
         return 0;
-    case EE_UNITS_GOAL_HOST_LINE_BLOCKED: {
-            EEUnit* theBlocker;
-            long theX = 0;
-            long theY = 0;
-            return EEIsLineBlocked((long)ioArgs->i[0], (long)ioArgs->i[1], (long)ioArgs->i[2], (long)ioArgs->i[3],
-                                   &theBlocker, &theX, &theY);
-        }
     case EE_UNITS_GOAL_HOST_CAN_LOAD: {
             EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             return theTransport != NULL && theTransport->CanLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
@@ -859,13 +840,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->f[4] = theOut.GetY();
             ioArgs->f[5] = theOut.GetZ();
             return 0;
-        }
-    case EE_UNITS_GOAL_HOST_PICK_TILE_NEAR: {
-            std::vector<EETileCoordinate> theTiles;
-            EEGetTilesAroundUnit(theComplex, ObjectOf<EEComplexUnit>(inB), 1, 0, 0, theTiles);
-            bool theFound = EEPickTileNear(theTiles, theComplex, ObjectOf<EEComplexUnit>(inB), 0, thePoint);
-            PointOut(ioArgs, thePoint);
-            return theFound;
         }
     case EE_UNITS_GOAL_HOST_RENDEZVOUS: {
             std::vector<EEComplexUnit*> theUnits;
@@ -1009,8 +983,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_BUILDERS_ADD:
         EEUnitCast<EEComplexUnit>(theUnit)->mNumBuilders += (long)ioArgs->i[0];
         return 0;
-    case EE_UNITS_GOAL_HOST_ATTACK_PART:
-        return Handle(EEGetAttackPart(theComplex, ObjectOf<EEComplexUnit>(inB)));
     case EE_UNITS_GOAL_HOST_IN_WORK_REACH:
         return EEIsInWorkReach(theComplex, ObjectOf<EEComplexUnit>(inB));
     case EE_UNITS_GOAL_HOST_SURROUNDING_TILES: {
@@ -1056,11 +1028,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         for (EEComplexUnit* thePart = theComplex->mNextPart; thePart != NULL; thePart = thePart->mNextPart)
             thePart->SetHitPoints(thePart->mStats->mMaxHitPoints);
         return 0;
-    case EE_UNITS_GOAL_HOST_NEXT_FREE_TILE: {
-            bool theFound = EEFindNextFreeTile(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
-            PointOut(ioArgs, thePoint);
-            return theFound;
-        }
     case EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION: {
             // CancelFoundation: the foundation killed, its cost refunded to the worker's player
             EEComplexUnit* theWorker = ObjectOf<EEComplexUnit>(inB);
@@ -1120,11 +1087,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_NEAREST_SITE:
         return Handle(theComplex->mPlayer->GetNearestConstructionSite(theComplex));
-    case EE_UNITS_GOAL_HOST_CLEAR_SITE: {
-            EETileCoordinate theTile(theUnit->mTileX, theUnit->mTileY);
-            EEStepAsideFromSite(theUnit, theUnit->mUnitClass, theUnit->GetPlayer(), theTile, 0);
-            return 0;
-        }
     case EE_UNITS_GOAL_HOST_CAN_PRODUCE:
         return theUnit->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
     case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR:
@@ -1187,11 +1149,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[1] = theTiles[0].GetY();
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_RESOURCE_SPOT: {
-            bool theFound = EEFindResourceSpot(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
-            PointOut(ioArgs, thePoint);
-            return theFound;
-        }
     case EE_UNITS_GOAL_HOST_NEXT_RESOURCE: {
             std::vector<EEUnit*> thePassed;
             for (size_t k = 0; k < ioArgs->list_len; k++)
@@ -1201,11 +1158,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_FIND_STORAGE:
         return Handle(theComplex->mUnitClass->FindStorage(theComplex, ioArgs->i[0] != 0));
-    case EE_UNITS_GOAL_HOST_FREE_TILE: {
-            bool theFound = EEFindNextFreeTile(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
-            PointOut(ioArgs, thePoint);
-            return theFound;
-        }
     case EE_UNITS_GOAL_HOST_TILE_HEIGHT:
         ioArgs->f[0] = theUnit->mTile->GetHeight();
         return 0;
@@ -1234,9 +1186,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             PointOut(ioArgs, thePoint);
             return theFound;
         }
-    case EE_UNITS_GOAL_HOST_DEPOSIT_LOAD:
-        EEDepositLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_NEXT_TREE:
         return Handle(EEGatherNextTree(theComplex, ObjectOf<EEUnit>(inB)));
     case EE_UNITS_GOAL_HOST_HUNT: {
@@ -1257,8 +1206,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
         PointOut(ioArgs, GE3DPoint(theComplex->mWaypoints.back().mLocation));
         return 0;
-    case EE_UNITS_GOAL_HOST_RESOURCE_REACH:
-        return EEIsWithinReachOf(thePoint, theComplex, ObjectOf<EEUnit>(inB));
     case EE_UNITS_GOAL_HOST_STORAGE_REACH: {
             GE2DPoint the2D;
             the2D.SetX(thePoint.GetX());
@@ -1300,13 +1247,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_ACCESSIBLE:
         return EEGatherAccessible(theComplex, ObjectOf<EEUnit>(inB));
-    case EE_UNITS_GOAL_HOST_PATH_LENGTH: {
-            EETileCoordinate theTile;
-            theTile.mX = (long)ioArgs->i[0];
-            theTile.mY = (long)ioArgs->i[1];
-            ioArgs->f[0] = EEGetPathLengthTo(theComplex, theTile, 0x10, false);
-            return 0;
-        }
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
     case EE_UNITS_GOAL_HOST_TAKE_HIT:
         theUnit->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1);
@@ -1370,40 +1310,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         theComplex->mActiveGoal->SetPathAttempts(0);
         return 0;
     // the world searches' queries (world.rs): unit lists into the sink, tiles as ee_units_goal_push_tile
-    case EE_UNITS_GOAL_HOST_UNITS_IN_RADIUS: {
-            std::vector<EEUnit*> theUnits;
-            EEGetUnitsInRadius(GE2DPoint(ioArgs->f[0], ioArgs->f[1]), ioArgs->f[2], theUnits);
-            for (size_t i = 0; i < theUnits.size(); i++)
-                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
-            return 0;
-        }
-    case EE_UNITS_GOAL_HOST_FOOTPRINT_TILES:
-    case EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS: {
-            std::vector<U2DPoint<long> > theTiles;
-            std::vector<EEUnit*> theUnits;
-            EEGetFootprintTiles(theUnit, theTiles);
-            if (inOp == EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS)
-                EEGetUnitsOn(theTiles, theUnits);
-            for (size_t i = 0; inOp == EE_UNITS_GOAL_HOST_FOOTPRINT_TILES && i < theTiles.size(); i++)
-                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
-            for (size_t i = 0; i < theUnits.size(); i++)
-                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
-            return 0;
-        }
-    case EE_UNITS_GOAL_HOST_BLOCKING_UNITS:
-    case EE_UNITS_GOAL_HOST_MOVABLE_UNITS: {
-            std::vector<EEUnit*> theUnits;
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile((long)ioArgs->i[1], (long)ioArgs->i[2]);
-            if (inOp == EE_UNITS_GOAL_HOST_BLOCKING_UNITS)
-                EEGetBlockingUnits(ObjectOf<EEPlayer>(inA), (long)ioArgs->i[0], theTile, 0, theUnits);
-            else
-                EEGetMovableTileUnits(ObjectOf<EEPlayer>(inA), (long)ioArgs->i[0], theTile, 0, theUnits);
-            for (size_t i = 0; i < theUnits.size(); i++)
-                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
-            return 0;
-        }
-    case EE_UNITS_GOAL_HOST_TILE_STANDING:
-        return EEGetTileUnitStanding(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0], false);
     case EE_UNITS_GOAL_HOST_ACTION_CHANGED:
         theComplex->mUnitClass->ActionChanged(theComplex);
         return 0;

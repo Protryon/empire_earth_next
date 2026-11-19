@@ -555,6 +555,9 @@ fn read_unit<R>(unit: u64, f: impl FnOnce(&crate::world::UnitView) -> R) -> R {
     f(&view)
 }
 
+/// `kUnitTypeLighthouseAtAlexandria` (the owns-lighthouse test)
+const LIGHTHOUSE_AT_ALEXANDRIA: i32 = 0x3b;
+
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
@@ -821,7 +824,7 @@ impl ExploreHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_CELL_TAKEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
     }
     fn can_stand(&mut self, unit: u64, x: i32, y: i32) -> bool {
-        self.op_ints(EE_UNITS_GOAL_HOST_CAN_STAND, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+        crate::units::uu_direct::can_stand_on(x, y, unit)
     }
     fn path_reachable(&mut self, unit: u64, from: (i32, i32), to: (i32, i32)) -> bool {
         let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
@@ -852,7 +855,8 @@ impl ExploreHost for OpHost<'_> {
         read_unit(unit, |u| u.class().expect("a unit's class").family() as i64)
     }
     fn owns_lighthouse(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE, unit, 0) != 0
+        let owner = read_unit(unit, |u| u.player().map_or(0, |p| p.id()));
+        !crate::units::uu_direct::player_units_of_type(LIGHTHOUSE_AT_ALEXANDRIA, owner as i32).is_empty()
     }
 }
 
@@ -878,40 +882,24 @@ pub unsafe extern "C" fn ee_units_goal_push_unit(sink: *mut c_void, unit: u64) {
     units.push(unit);
 }
 
-impl OpHost<'_> {
-    fn units(&mut self, op: i32, a: u64, b: u64, ints: &[i64], floats: &[f32]) -> Vec<u64> {
-        let mut units: Vec<u64> = Vec::new();
-        let mut io = EeUnitsGoalIo { sink: (&mut units as *mut Vec<u64>).cast(), ..Default::default() };
-        io.i[..ints.len()].copy_from_slice(ints);
-        io.f[..floats.len()].copy_from_slice(floats);
-        self.call(op, a, b, &mut io);
-        units
-    }
-}
-
 impl crate::units::world::WorldHost for OpHost<'_> {
     fn units_in_radius(&mut self, center: [f32; 2], radius: f32) -> Vec<u64> {
-        self.units(EE_UNITS_GOAL_HOST_UNITS_IN_RADIUS, 0, 0, &[], &[center[0], center[1], radius])
+        crate::units::uu_direct::units_in_radius(center[0], center[1], radius)
     }
     fn footprint_tiles(&mut self, unit: u64) -> Vec<(i32, i32)> {
-        let mut tiles: Vec<(i32, i32)> = Vec::new();
-        let mut io = EeUnitsGoalIo { sink: (&mut tiles as *mut Vec<(i32, i32)>).cast(), ..Default::default() };
-        self.call(EE_UNITS_GOAL_HOST_FOOTPRINT_TILES, unit, 0, &mut io);
-        tiles
+        crate::units::uu_direct::footprint_tiles(unit).into_iter().map(|t| (t[0], t[1])).collect()
     }
     fn footprint_units(&mut self, unit: u64) -> Vec<u64> {
-        self.units(EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS, unit, 0, &[], &[])
+        crate::units::uu_direct::units_on(&crate::units::uu_direct::footprint_tiles(unit))
     }
     fn blocking_units(&mut self, player: u64, unit_type: i32, x: i32, y: i32) -> Vec<u64> {
-        let ints = [i64::from(unit_type), i64::from(x), i64::from(y)];
-        self.units(EE_UNITS_GOAL_HOST_BLOCKING_UNITS, player, 0, &ints, &[])
+        crate::units::uu_direct::tile_units_standing(player, unit_type, crate::units::uu_direct::map_tile(x, y), 2)
     }
     fn movable_units(&mut self, player: u64, unit_type: i32, x: i32, y: i32) -> Vec<u64> {
-        let ints = [i64::from(unit_type), i64::from(x), i64::from(y)];
-        self.units(EE_UNITS_GOAL_HOST_MOVABLE_UNITS, player, 0, &ints, &[])
+        crate::units::uu_direct::tile_units_standing(player, unit_type, crate::units::uu_direct::map_tile(x, y), 1)
     }
     fn tile_standing(&mut self, unit: u64, player: u64, unit_type: i32) -> i32 {
-        self.op_ints(EE_UNITS_GOAL_HOST_TILE_STANDING, unit, player, &[i64::from(unit_type)]) as i32
+        crate::units::uu_direct::tile_unit_standing(unit, player, unit_type, false)
     }
     fn action_changed(&mut self, unit: u64) {
         self.op(EE_UNITS_GOAL_HOST_ACTION_CHANGED, unit, 0);
@@ -1074,8 +1062,7 @@ impl LoadHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_UNIT_LOCATION, unit, 0, &[])
     }
     fn line_blocked(&mut self, from: (i32, i32), to: (i32, i32)) -> bool {
-        let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
-        self.op_ints(EE_UNITS_GOAL_HOST_LINE_BLOCKED, 0, 0, &ints) != 0
+        crate::units::uu_direct::line_blocked(from.0, from.1, to.0, to.1)
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
@@ -1091,11 +1078,8 @@ impl LoadHost for OpHost<'_> {
         out.copy_from_slice(&io.f[3..6]);
     }
     fn pick_tile_near(&mut self, unit: u64, container: u64, out: &mut [f32; 3]) -> bool {
-        let mut io = EeUnitsGoalIo::default();
-        io.f[..3].copy_from_slice(out);
-        let found = self.call(EE_UNITS_GOAL_HOST_PICK_TILE_NEAR, unit, container, &mut io) != 0;
-        out.copy_from_slice(&io.f[..3]);
-        found
+        let tiles = crate::units::uu_direct::tiles_around(unit, container, 1, 0, false);
+        crate::units::uu_direct::pick_tile_near(&tiles, unit, container, false, out)
     }
     fn rendezvous_tiles(&mut self, container: u64, units: &[u64], base: bool, tiles: &mut [(i32, i32); 2]) {
         let mut io = EeUnitsGoalIo { list: units.as_ptr(), list_len: units.len(), ..Default::default() };
@@ -1208,7 +1192,7 @@ impl BuildHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_BUILDERS_ADD, unit, 0, &[i64::from(delta)]);
     }
     fn attack_part(&mut self, unit: u64, target: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_ATTACK_PART, unit, target) as u64
+        crate::units::uu_direct::attack_part(unit, target)
     }
     fn in_work_reach(&mut self, unit: u64, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_IN_WORK_REACH, unit, target) != 0
@@ -1238,11 +1222,8 @@ impl BuildHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_FILL_PARTS, outer, 0);
     }
     fn next_free_tile(&mut self, unit: u64, target: u64) -> Option<[f32; 3]> {
-        let mut io = EeUnitsGoalIo::default();
-        if self.call(EE_UNITS_GOAL_HOST_NEXT_FREE_TILE, unit, target, &mut io) == 0 {
-            return None;
-        }
-        Some([io.f[0], io.f[1], io.f[2]])
+        let mut p = [0.0; 3];
+        crate::units::uu_direct::spot(2, unit, target, &mut p).then_some(p)
     }
     fn cancel_foundation(&mut self, outer: u64, worker: u64, node: u64) {
         self.op_ints(EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION, outer, worker, &[node as i64]);
@@ -1296,7 +1277,7 @@ impl BuildHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_NEAREST_SITE, unit, 0) as u64
     }
     fn clear_site(&mut self, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_CLEAR_SITE, target, 0);
+        crate::units::uu_direct::clear_site(target);
     }
     fn can_produce(&mut self, target: u64, outer: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_CAN_PRODUCE, target, outer) != 0
@@ -1397,7 +1378,7 @@ impl GatherHost for OpHost<'_> {
         (io.i[0] as i32, io.i[1] as i32)
     }
     fn resource_spot(&mut self, unit: u64, resource: u64, out: &mut [f32; 3]) -> bool {
-        self.op_point_io(EE_UNITS_GOAL_HOST_RESOURCE_SPOT, unit, resource, out)
+        crate::units::uu_direct::spot(1, unit, resource, out)
     }
     fn next_resource(&mut self, unit: u64, resource: u64, kind: i32, passed: &[u64]) -> u64 {
         let mut io = EeUnitsGoalIo { list: passed.as_ptr(), list_len: passed.len(), ..Default::default() };
@@ -1408,7 +1389,7 @@ impl GatherHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_FIND_STORAGE, unit, 0, &[i64::from(new)]) as u64
     }
     fn free_tile(&mut self, unit: u64, storage: u64, out: &mut [f32; 3]) -> bool {
-        self.op_point_io(EE_UNITS_GOAL_HOST_FREE_TILE, unit, storage, out)
+        crate::units::uu_direct::spot(2, unit, storage, out)
     }
     fn tile_height(&mut self, unit: u64) -> f32 {
         self.op_point(EE_UNITS_GOAL_HOST_TILE_HEIGHT, unit, 0, &[])[0]
@@ -1435,7 +1416,7 @@ impl GatherHost for OpHost<'_> {
         crate::units::world::begin_gathering(self, unit, resource);
     }
     fn deposit_load(&mut self, unit: u64, storage: u64) {
-        self.op(EE_UNITS_GOAL_HOST_DEPOSIT_LOAD, unit, storage);
+        crate::units::uu_direct::deposit_load(unit, storage);
     }
     fn next_tree(&mut self, unit: u64, resource: u64) -> u64 {
         self.op(EE_UNITS_GOAL_HOST_NEXT_TREE, unit, resource) as u64
@@ -1456,7 +1437,7 @@ impl GatherHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_LAST_WAYPOINT, unit, 0, &[])
     }
     fn resource_reach(&mut self, unit: u64, resource: u64, point: [f32; 3]) -> bool {
-        self.op_with_point(EE_UNITS_GOAL_HOST_RESOURCE_REACH, unit, resource, point) != 0
+        crate::units::uu_direct::within_reach_of(point, unit, resource)
     }
     fn storage_reach(&mut self, storage: u64, point: [f32; 3]) -> bool {
         self.op_with_point(EE_UNITS_GOAL_HOST_STORAGE_REACH, storage, 0, point) != 0
@@ -1480,7 +1461,7 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_ACCESSIBLE, unit, resource) != 0
     }
     fn path_length(&mut self, unit: u64, tile: (i32, i32)) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_PATH_LENGTH, unit, 0, &[i64::from(tile.0), i64::from(tile.1)])[0]
+        crate::units::uu_direct::path_length_to(unit, [tile.0, tile.1], 0x10, false)
     }
     fn gather_work(&mut self, unit: u64, resource: u64) {
         crate::units::world::gather_work(self, unit, resource);

@@ -141,6 +141,9 @@
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
 
+// EEContagionHelper.cpp's collector over complex units (its only instantiation was EECPPlacement.cpp's)
+template long EEGetUnitsInRectangle<EEAnyUnit, std::vector<EEComplexUnit*> >(const U2DRectangle<long>&, std::vector<EEComplexUnit*>&,
+                                                                           const EEAnyUnit&, bool);
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -295,13 +298,6 @@ bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, boo
                std::vector<EEUnit*>& outUnits)
 {
     return ee_units_uu_tile_units_standing(UUHandle(inPlayer), inUnitType, UUHandle(inTile), inIgnoreOwner, 2, &outUnits) != 0;
-}
-
-// Collects the units on a tile that can move out of the way of a unit type; true when there are any
-bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
-               std::vector<EEUnit*>& outUnits)
-{
-    return ee_units_uu_tile_units_standing(UUHandle(inPlayer), inUnitType, UUHandle(inTile), inIgnoreOwner, 1, &outUnits) != 0;
 }
 
 
@@ -647,13 +643,6 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
     return ee_units_uu_find_placement((const float(*)[3])&inPoint->mX, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inClass), inX, inY,
                                       inSize, inRings, inCorners, inIncludeCenter, inFacePoint, inArg11,
                                       (float(*)[4][4])&outTransformation->mMatrix[0][0], UUHandle(static_cast<EEUnit*>(inTarget))) != 0;
-}
-
-// Classifies a unit on a tile for a placement: 0 ignored, 1 movable, 2 blocking
-// How inPlayer sees inUnit as a candidate of unit type inUnitType: 0 not at all, 1 a target, 2 otherwise (inferred)
-char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner)
-{
-    return (char)ee_units_uu_tile_unit_standing(UUHandle(inUnit), UUHandle(inPlayer), inUnitType, inIgnoreOwner);
 }
 
 // Turns wall pieces with three or more neighbours into plain junction pieces
@@ -1606,12 +1595,6 @@ bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget)
     return ee_units_uu_within_reach(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inTarget), NULL) != 0;   // uu_world.rs
 }
 
-// Tells whether a location is within a unit's reach of a target
-bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget)
-{
-    return ee_units_uu_within_reach(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inTarget), (const float(*)[3])&inLocation.mX) != 0;
-}
-
 // Tells whether a unit can hit a target from its attach point (a clear line to the drop location)
 bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -1684,12 +1667,6 @@ bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther)
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
 {
     return ee_units_uu_spot(1, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inTarget)), (float(*)[3])&outLocation.mX) != 0;
-}
-
-// Finds a free spot next to a target (or the nearest piece of its group) for a unit
-bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
-{
-    return ee_units_uu_spot(2, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inTarget)), (float(*)[3])&outLocation.mX) != 0;
 }
 
 // Finds a place for a unit to attack a target from (around a wall it stands in, or next to it)
@@ -1908,12 +1885,6 @@ long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>&
 long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>& outUnits)
 {
     return ee_units_uu_units_in_radius(inCenter.mX, inCenter.mY, inRadius, &outUnits);   // ee_units uu_reads.rs
-}
-
-// Returns the living unit of a type on a tile, or NULL
-EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType)
-{
-    return UUUnit(ee_units_uu_tile_unit_of_type(inTile.mX, inTile.mY, (uint32_t)inUnitType));
 }
 
 // Collects a player's units of a type; their number
