@@ -260,8 +260,8 @@ use ee_sim as _;
 // the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes
 // (the menus' FFI imports the C++ host's calls, absent from a test binary)
 // the computer player's leaves (ee_ai/src/ffi.rs): the next engine's save blocks, the AI manifest and the seat choice,
-// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp; the Lua runtime
-// (lua_ffi.rs), called by EECPLua.cpp (it imports the vendored Lua the C++ build compiles, absent from a test binary)
+// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp (the Lua runtime
+// imports the vendored Lua the C++ build compiles, absent from a test binary)
 #[cfg(not(test))]
 use ee_sim as _;
 
@@ -440,3 +440,7 @@ pub mod app;
 pub mod screens;
 // EE-SIM's driver (TEST ONLY): the headless simulation's options, menus, run, samples and report
 pub mod sim_driver;
+// the in-process UI fixture (TEST ONLY, EE_TEST_UI): the fixture driver's ui-state file and commands
+pub mod fixture;
+// the game log (ee/EEGameLog.h): Logs/game-<time>.log's lines
+pub mod game_log;

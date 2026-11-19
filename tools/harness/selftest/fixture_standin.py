@@ -152,7 +152,7 @@ while True:
         if a == form == 11 and 0 <= b <= 5:
             print(f'TEST UI order-started order control {b} value 0 on form {a} (seq {seq}, top form {form})',
                   file=sys.stderr, flush=True)
-            if b == 0:   # gather: scouting first (EETestFixtureOrders.cpp Scout), the verdict later
+            if b == 0:   # gather: scouting first (rust/crates/ee_game/src/fixture/orders.rs Scout), the verdict later
                 gathers += 1
                 order = dict(seq=seq, kind=b, phase=1, note='scouting', units=[])
                 scout = dict(due=time.monotonic() + 1.5, refused=gathers > 1)

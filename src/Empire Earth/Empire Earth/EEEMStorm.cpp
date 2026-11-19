@@ -41,15 +41,9 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarBoundedStorage.h"
-#include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarView.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIAStarPathfindingGoalBase.h"
-#include "ee/EEAIAStarBoundedPathGoal.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
@@ -63,7 +57,6 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
-#include "ee/EEEffect.h"
 #include "rust/sim/app.h"
 #include "rust/sim/astar.h"
 #include "ee/EEEffectManager.h"
@@ -72,8 +65,6 @@
 #include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
 #include "ee/EEAppCapture.h"
-#include "rust/sim/app.h"
-#include "rust/sim/astar.h"
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
@@ -236,8 +227,8 @@ EeAStarStorm EEAIBPGModifierStormShaper::StormState() const
     theStorm.distance_squared = this->mDistanceSquared;
     theStorm.snow = this->mSnow;
     theStorm.rain = this->mRain;
-    theStorm.start_x = this->mBoundedGoal->mStartTile.mX;
-    theStorm.start_y = this->mBoundedGoal->mStartTile.mY;
+    theStorm.start_x = this->mBoundedGoal->start.x;
+    theStorm.start_y = this->mBoundedGoal->start.y;
     return theStorm;
 }
 

@@ -46,7 +46,6 @@
 #include "ee/EEUnitCollector.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitUtilities.h"

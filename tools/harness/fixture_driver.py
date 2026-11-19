@@ -681,7 +681,7 @@ ORDER_REQUIRED = ('gather', 'repair', 'repair-queued')
 
 
 def order_state(text):
-    """The fixture's order lines (EETestFixtureOrders.cpp) -> dict(order=dict(seq, kind, phase, type, target, point,
+    """The fixture's order lines (rust/crates/ee_game/src/fixture/orders.rs) -> dict(order=dict(seq, kind, phase, type, target, point,
     queued, units, ok, bad, skip, note) or None, units=[dict(seq, id, verdict, expected, found)])."""
     out = dict(order=None, units=[])
     for line in text.splitlines():
@@ -699,7 +699,7 @@ def order_state(text):
 
 
 def order_step(g, form, name, timeout=None):
-    """One order through the fixture's order command (EETestFixtureOrders.cpp: the group selected, the order given
+    """One order through the fixture's order command (rust/crates/ee_game/src/fixture/orders.rs: the group selected, the order given
     through the real input path, every unit judged by the original's rule after the message executed) -> the step's
     evidence (skipped: the refusal when the start does not give the case); raises on a bad unit, no message or no
     verdict."""
@@ -742,7 +742,7 @@ def order_step(g, form, name, timeout=None):
 
 
 def orders(g, form, names=tuple(ORDER_KINDS)):
-    """The orders exercise on the game form (EETestFixtureOrders.cpp): gather, repair, repair queued (Shift), patrol,
+    """The orders exercise on the game form (rust/crates/ee_game/src/fixture/orders.rs): gather, repair, repair queued (Shift), patrol,
     attack ground and move, each on a group of the local player's units, each unit judged after the message executed.
     The steps in ORDER_REQUIRED must run; the others may be skipped when the start does not give them (no siege unit,
     no Patrol button for the group) -> evidence; raises on a failure."""
@@ -911,7 +911,7 @@ CALAMITIES = dict(earthquake=3, hurricane=4, plague=7, leprosy=8, volcano=9, fir
 
 def cast_calamities(g, form, names, offset=4, capture_every=2.0, captures=6, linger=60):
     """--cast: each calamity of names cast by the local player at the camera's focus moved offset tiles east through
-    the fixture's cast command (EETestFixture.cpp CastRun: TEST ONLY, straight into the calamity manager under the
+    the fixture's cast command (ee_game fixture/cast.rs: TEST ONLY, straight into the calamity manager under the
     world's write lock, as EE-SIM --calamities does), a capture before it (cast-<name>-before) and every capture_every
     seconds while it lives (cast-<name>-<k>, at most captures), then up to linger seconds for its end ->
     {name: {enum, result, at, alive_ms, ended, frames}}; raises when the fixture refuses the command."""

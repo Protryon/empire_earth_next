@@ -187,7 +187,7 @@ bool EEUISCIFormManager::HasMedia()
 // Starts or stops the main game's briefing button blinking, showing the large briefing alert while it blinks
 void EEUISCIFormManager::SetBlinking(bool inBlinking)
 {
-    EEUIFMainGame* theForm = gUIManager->mMainGameForm;
+    EEUIFMainGame* theForm = gUIManager->GetMainGameForm();
     UIBlinkingButton* theButton = static_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameGameInfoBriefing));
     UIBlinkingButton* theOther = static_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameLargeScenBriefingAlert));
     theForm->mInfoBlinking = inBlinking;

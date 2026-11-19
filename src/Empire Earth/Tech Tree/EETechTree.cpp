@@ -110,8 +110,8 @@ int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io)
     case EE_TECH_HOST_SHOW_EPOCH_NAME:
         theTree->mEpochNameID = EEEpochTitleID(v[0]);
         gUserInterface->PostShowEpochName();
-        if (gUIManager->mMainGameForm != NULL)
-            gUIManager->mMainGameForm->mRefreshGroup = true;
+        if (gUIManager->GetMainGameForm() != NULL)
+            gUIManager->GetMainGameForm()->mRefreshGroup = true;
         return 0;
     case EE_TECH_HOST_ASSERT: ESVERIFY_AT(false, v[0]); return 0;
     case EE_TECH_HOST_WALK_BEGIN: EETechCaptureWalkBegin(); return 0;
@@ -466,8 +466,8 @@ void EETechTree::UpdateInterface(bool inEpochChanged)
         this->mEpochNameID = EEEpochTitleID(this->mCurrentEpoch);
         gUserInterface->PostShowEpochName();
     }
-    if (gUIManager->mMainGameForm != NULL)
-        gUIManager->mMainGameForm->mRefreshGroup = true;
+    if (gUIManager->GetMainGameForm() != NULL)
+        gUIManager->GetMainGameForm()->mRefreshGroup = true;
 }
 
 // Copies another tree's epochs, epoch range and player; the copy is not marked loaded

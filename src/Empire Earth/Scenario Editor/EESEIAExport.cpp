@@ -53,7 +53,7 @@ void EESEIAExport::Virtual4()
     UWideString theMessage;
 
     if (this->mFile.FOpen("w") == 0) {
-        gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
+        gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup();
         if ((unsigned long)fprintf((FILE*)this->mFile, "{Version_%ld}\n\n", gSETextVersion) > 0) {
             if (gWorld.mScenarioManager->ExportText(this->mFile) != 0) {
                 gResource->GetString(IDS_FILE_ERROR, theError);
@@ -156,7 +156,7 @@ void EESEIAImport::Virtual4()
                         gResource->GetString(IDS_FILE_IMPORTED_SUCCESSFULLY, theMessage);
                         gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
                     }
-                    gUIManager->mScenarioEditorForm->ResumeCurrentGroup();
+                    gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
                     this->mFile.Close();
                     return;
                 }

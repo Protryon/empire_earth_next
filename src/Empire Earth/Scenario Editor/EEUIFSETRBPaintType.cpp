@@ -95,15 +95,15 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         return (int32_t)theResult;
     }
     case EE_SCREENS_SEE_OP_HAS_EDITOR:
-        return gUIManager->mScenarioEditorForm != NULL;
+        return gUIManager->GetScenarioEditorForm() != NULL;
     case EE_SCREENS_SEE_OP_SET_GAME_VIEW:
-        gUIManager->mScenarioEditorForm->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), i[0] != 0);
+        gUIManager->GetScenarioEditorForm()->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), i[0] != 0);
         break;
     case EE_SCREENS_SEE_OP_REDRAW_ALL:
         gUIManager->RedrawAll();
         break;
     case EE_SCREENS_SEE_OP_SHOW_LOADED:
-        gUIManager->mScenarioEditorForm->PostShowLoadedObject(static_cast<EEAction*>(p));
+        gUIManager->GetScenarioEditorForm()->PostShowLoadedObject(static_cast<EEAction*>(p));
         break;
     case EE_SCREENS_SEE_OP_QUICK_SAVE: {
         EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p));

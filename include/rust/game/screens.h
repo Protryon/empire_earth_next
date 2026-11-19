@@ -4589,6 +4589,12 @@ constexpr static const uint32_t EE_SCREENS_GA_EDITOR_PAINT = 25;
 /// `EESEARust`: the editor's whole actions (`mAction`).
 constexpr static const uint32_t EE_SCREENS_GA_EDITOR_WHOLE = 26;
 
+/// `EEAUndo`, `EEARedo` (the editor's Undo and Redo buttons' actions, round 2 of the UI cluster): the UI thread's
+/// undo or redo list's last action undone or run again (`EEUserInterface::Undo`, `Redo`; actions.rs).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_UNDO = 27;
+
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_REDO = 28;
+
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_INT = 0;
 
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_FLOAT = 1;
@@ -9562,6 +9568,15 @@ constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
 
 constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
 
+/// The thread messages' ids the posts use (the UI thread's, `ui_thread.rs`' switch).
+constexpr static const uint32_t EE_SCREENS_UI_POST_START_LOADING = 1031;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_START_LOADING_EDITOR = 1043;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_ICON_BAR = 1060;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_LOAD_PERCENT = 1034;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -10656,6 +10671,38 @@ struct EeScreensMiniMapUpdate {
   float bounds[4];
 };
 
+/// `EEUIManager`'s own members (ee/EEUIManager.h), in the class's order (the original's +0x12c..+0x13d).
+struct EeScreensUiManagerFields {
+  /// `EEUIFMainGame*`: `GetFormByID(11)` in the constructor
+  void *mMainGameForm;
+  /// `EEUIFScenarioEditor*`: made by `CreateScenarioEditor`, deleted by `DeleteScenarioEditor`
+  void *mScenarioEditorForm;
+  unsigned long mU134;
+  unsigned long mU138;
+  /// set by `StartScenarioEditor`, cleared by the main menu's events
+  bool mInScenarioEditor;
+  bool mB13D;
+};
+
+/// `EEUserInterface`'s members (ee/EEUserInterface.h), in the class's order (the original's +0x40..+0x5f).
+struct EeScreensUserInterfaceFields {
+  /// `TSThread*`: the constructing thread; every post goes to it
+  void *mThread;
+  /// `TSEvent*`: set by the thread message 0x?? (`EE_SCREENS_UI_OP_QUEUE_DONE`)
+  void *mMessageQueueDone;
+  /// `TMGetTime()` at construction; the game's start and saved games set it
+  unsigned long mRandomSeed;
+  /// the load percentage's player (`EEMLoadPercent`)
+  long mLocalPlayer;
+  bool mB05C;
+  /// a byte: the message handler truncates a long into it
+  uint8_t mIsUpdating;
+  /// `PostMessage424Once`'s guard (the handler clears it)
+  bool mIconBarUpdatePosted;
+  /// set by the handler; the loop exits on it
+  bool mIsQuitting;
+};
+
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
@@ -11622,6 +11669,12 @@ void ee_screens_sebr_highlight(float x,
                                bool centred,
                                float *out);
 
+/// `EESETriggerJump`'s decision ([`trigger_jump`]): -1 for none, else the screen << 32 | the entry.
+int64_t ee_screens_trigger_jump(unsigned long kind,
+                                unsigned long selection,
+                                unsigned long first_object,
+                                unsigned long count);
+
 /// `EESETSTrigger`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_setr_free`.
 ///
@@ -12424,6 +12477,45 @@ int64_t ee_screens_ui_manager_update_keyboard(void *call);
 
 /// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
 int64_t ee_screens_ui_manager_update_mouse(void *call);
+
+/// `EEUIManager`'s constructor: its members zeroed (the constructor's own stores come in `EE_SCREENS_UM_OP_FORMS`)
+/// and the record registered.
+///
+/// # Safety
+/// `rec` is the new manager's record; it lives until `ee_screens_ui_manager_fields_drop`.
+void ee_screens_ui_manager_fields(EeScreensUiManagerFields *rec);
+
+/// `EEUIManager`'s destructor: the record forgotten (the main game form's pointer cleared, as the original's).
+///
+/// # Safety
+/// `rec` is the manager's live record.
+void ee_screens_ui_manager_fields_drop(EeScreensUiManagerFields *rec);
+
+/// `EEUserInterface::EEUserInterface` (0x276631): the current thread, the flags, `TMGetTime()` as the seed and the
+/// message-done event; the record registered as `gUserInterface`'s.
+void ee_screens_ui_construct(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::~EEUserInterface` (0x276740): every queued, undoable and redoable action released, the event
+/// destroyed.
+void ee_screens_ui_destroy(EeScreensUserInterfaceFields *rec);
+
+/// One of `EEUserInterface`'s posts: `mThread->Post(message, p1, p2, true)` -> Post's result.
+long ee_screens_ui_post(const EeScreensUserInterfaceFields *rec,
+                        uint32_t message,
+                        void *p1,
+                        void *p2);
+
+/// `EEUserInterface::PostStartLoading` (0x2792c3): 0x407, 0x413 from the scenario editor.
+void ee_screens_ui_post_start_loading(const EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::PostMessage424Once` (0x279756): the icon bar's update, once until it is handled (nothing on a
+/// NULL object, as the original's `this != NULL` test).
+void ee_screens_ui_post_icon_bar_once(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::SetLoadProgress(fraction)` (0x27965e): the percentage to the UI thread (0x40a); in a game of
+/// several humans also `EEMLoadPercent(mLocalPlayer, percent)` at every new 20 percent step.
+void ee_screens_ui_set_load_progress(const EeScreensUserInterfaceFields *rec,
+                                     float fraction);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,

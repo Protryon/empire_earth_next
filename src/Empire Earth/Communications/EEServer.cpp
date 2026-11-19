@@ -62,8 +62,6 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
-#include "rust/game/screens.h"   // ee_netmsg session.rs
-#include "rust/sim/netmsg.h"
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
@@ -353,7 +351,7 @@ void EEServer::ServerSlot48()
 {
     long theParameter1 = 0;
     long theParameter2 = 0;
-    gUserInterface->mThread->Post(0x12, &theParameter1, &theParameter2, true);
+    gUserInterface->GetThread()->Post(0x12, &theParameter1, &theParameter2, true);
 }
 
 // Returns the debug out-of-sync handling preference
@@ -862,7 +860,7 @@ static int64_t EESessionHost(uint32_t inOp, EeNetSessCall* inCall)
             gPhysics->mThread->Post(0x404, NULL, NULL, true);
             while (!gPhysics->mTimerRunning)
                 PlatSleep(1);
-            gUIManager->mMainGameForm->SetUIState(0);
+            gUIManager->GetMainGameForm()->SetUIState(0);
         }
         return 0;
     }

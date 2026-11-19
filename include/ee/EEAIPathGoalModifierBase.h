@@ -7,9 +7,8 @@
 #ifndef EE_EEAIPATHGOALMODIFIERBASE_H
 #define EE_EEAIPATHGOALMODIFIERBASE_H
 
-class EEAIAStarPathfindingGoalBase;
-class EEAIAStarBoundedPathGoal;
 class EETile;
+struct EeAStarPathGoalRec;                // rust/sim/astar.h (the search's goal: ee_sim::astar path_search.rs)
 
 class EEComplexUnit;
 
@@ -18,10 +17,10 @@ public:
     // the bounded modifier base's ctors store +0x08 before their vptr (the base's init list: 0xfb57 the goal,
     // 0xfbe4/0xfdab zero); EEPathManager's sea/space modifiers assign it in their body
     EEAIPathGoalModifierBase() {}
-    EEAIPathGoalModifierBase(EEAIAStarPathfindingGoalBase* inGoal) : mGoal(inGoal) {}
+    EEAIPathGoalModifierBase(EeAStarPathGoalRec* inGoal) : mGoal(inGoal) {}
     // inline: EEAIBoundedPathGoalModifierBase::SetGoal 0xfb80 converts its goal with a test/jmp (an argument) where
     // its ctor's init list uses neg/sbb (provisional name)
-    void SetGoal(EEAIAStarPathfindingGoalBase* inGoal) { this->mGoal = inGoal; }
+    void SetGoal(EeAStarPathGoalRec* inGoal) { this->mGoal = inGoal; }
     // ??_G 0x10b24 stores its own vptr first: a user-declared empty dtor
     virtual ~EEAIPathGoalModifierBase() {}
     // +0x04 0x10b12: the cost of the step (inFromX, inFromY) -> (inX, inY); the parent tile (-10000 when none)
@@ -31,20 +30,35 @@ public:
 
     // 0xf53b / 0xf9bb: the land/sea/space modifiers' shared tests (called on this; provisional name)
     long GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);
-    // (the walker: inGoal's unit, else inBoundedGoal's; the original also took the tile)
-    bool IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal, long inX, long inY,
-                    bool inAtGoal);
+    // (the walker: inGoal's unit; the original took the goal or the bounded goal, and the tile)
+    bool IsPassable(const EeAStarPathGoalRec* inGoal, long inX, long inY, bool inAtGoal);
     // 0xfa75 / 0xfb08 (whether a unit blocks the walker at sea / in space): EEAIAStarView::HasStepBlocker
 
-    EEAIAStarPathfindingGoalBase* mGoal;    // +0x08 (the goal using it)
+    EeAStarPathGoalRec* mGoal;              // +0x08 (the goal using it: the Rust search's record, path_search.rs)
 };
 
 // RTTI EEAIGraphPathGoalModifierBase > UReferenceCounter; vtable 0x439c4c (3 slots: ??_G 0x10b5a, 0x10b48, 0x10b4e).
 // The sub sector graph goal's modifier (EEAIAStarPathGraphGoal::SetModifier 0x1a91e stores the goal at +0x08); its
 // route planners (EEAIBoundedPathGoalModifierBase.h) weigh the steps by the influence table. Slot types inferred.
-class EEAIAStarPathGraphGoal;
 class EEAIPathSubSector;
-struct EEAIAStarGraphNode;
+class AStarGraphableObjectBase;
+struct EeAStarGraphGoalRec;               // rust/sim/astar.h (the graph search's goal: ee_sim::astar graph_search.rs)
+
+// A graph search node as the route planners see one (GetCost's parent: its object, the sub sector; the costs as the
+// Rust node had them). Names are provisional.
+struct EEAIAStarGraphNode {
+    AStarGraphableObjectBase* mObject;      // +0x00 (the graph object: the sub sector)
+    long mIndex;                            // +0x10 (its id)
+    unsigned long mCost;                    // +0x14
+    long mPathCost;                         // +0x18
+    long mEstimate;                         // +0x1c
+    long mTileX;                            // +0x20 (the node's tile)
+    long mTileY;
+};
+
+// Whether a sub sector has no link to inFrom or one of them has an end of a kind the goal's flags pass (the path
+// graph goal's HasPassableLink; its route planners ask it too)
+bool EEAIGraphHasPassableLink(const EeAStarGraphGoalRec* inGoal, EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
 
 class EEAIGraphPathGoalModifierBase : public UReferenceCounter {
 public:
@@ -56,7 +70,7 @@ public:
     // +0x08 0x10b4e: whether inSector may be entered
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom) { return inSector != NULL; }
 
-    EEAIAStarPathGraphGoal* mGoal;          // +0x08
+    EeAStarGraphGoalRec* mGoal;             // +0x08 (the Rust search's goal record)
 };
 
 #endif

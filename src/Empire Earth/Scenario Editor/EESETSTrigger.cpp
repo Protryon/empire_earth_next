@@ -43,101 +43,33 @@
 #include "rust/game/screens.h"
 #include "rust/sim/scenario.h"
 
-// NEAR: register choice (the original keeps this in edi and the selection in a stack slot) and the screen via the refused vector operator[]
-// Opens the tab of the entry picked in the combo box on a right click and selects it there: triggers,
-// conditions (object conditions go to the object tab), effects, objects or areas
+// Opens the trigger screen's tab of the entry right-clicked in a combo box (this one and the effects' scenario combo
+// boxes, EESETSEScenarioComboBox): which tab and entry is ee_screens editor_trigger.rs' (the condition list's first
+// object condition sends the object conditions to the object tab); the tab is checked without its event
+void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
+{
+    EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+    unsigned long theCount = gWorld.mScenarioManager->mConditions.size();
+    unsigned long theObject = 0;
+    while (theObject < theCount && gWorld.mScenarioManager->GetCondition(theObject)->GetType() != kSMConditionObject)
+        theObject++;
+    int64_t theJump = ee_screens_trigger_jump(inKind, inSelection, theObject, theCount);
+    if (theJump < 0)
+        return;
+    long theTab = (long)(theJump >> 32);
+    UIEvent* theEvent = theScreen->GetTab(theTab)->GetTriggerEvent(kControlTriggerChecked);
+    if (theEvent != NULL)
+        theEvent->Reference();
+    theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, NULL);
+    theScreen->GetTab(theTab)->Check();
+    theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, theEvent);
+    theScreen->mScreens[theTab]->mSelection = (unsigned long)(uint32_t)theJump;
+    theScreen->ShowTab(kSETriggerTabTrigger + theTab);
+}
+
 long EESETSTriggerUIComboBox::MouseRButtonUp()
 {
-    EESETriggerScreen* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen();
-    unsigned long theSelection;
-    unsigned long theIndex;
-    UIEvent* theEvent;
-    switch (this->mKind) {
-    case kSETriggerScreenTrigger:
-        theSelection = this->GetSelectionIndex();
-        if (!UIsNone32(theSelection)) {
-            theEvent = theScreen->GetTab(kSETriggerScreenTrigger)->GetTriggerEvent(kControlTriggerChecked);
-            if (theEvent != NULL)
-                theEvent->Reference();
-            theScreen->GetTab(kSETriggerScreenTrigger)->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->GetTab(kSETriggerScreenTrigger)->Check();
-            theScreen->GetTab(kSETriggerScreenTrigger)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-            theScreen->mScreens[kSETriggerScreenTrigger]->mSelection = theSelection;
-            theScreen->ShowTab(kSETriggerTabTrigger);
-        }
-        break;
-    case kSETriggerScreenCondition:
-        theSelection = this->GetSelectionIndex();
-        if (!UIsNone32(theSelection)) {
-            unsigned long theCount = gWorld.mScenarioManager->mConditions.size();
-            for (theIndex = 0; theIndex < theCount; theIndex++) {
-                if (gWorld.mScenarioManager->GetCondition(theIndex)->GetType() != kSMConditionObject)
-                    continue;
-                if (theIndex != 0 && theSelection >= theIndex) {
-                    theEvent = theScreen->GetTab(kSETriggerScreenObject)->GetTriggerEvent(kControlTriggerChecked);
-                    if (theEvent != NULL)
-                        theEvent->Reference();
-                    theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, NULL);
-                    theScreen->GetTab(kSETriggerScreenObject)->Check();
-                    theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-                    theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - theIndex;
-                    theScreen->ShowTab(kSETriggerTabObject);
-                    return 0;
-                }
-                break;
-            }
-            if (theSelection > 0) {
-                theEvent = theScreen->GetTab(kSETriggerScreenCondition)->GetTriggerEvent(kControlTriggerChecked);
-                if (theEvent != NULL)
-                    theEvent->Reference();
-                theScreen->GetTab(kSETriggerScreenCondition)->SetTriggerEvent(kControlTriggerChecked, NULL);
-                theScreen->GetTab(kSETriggerScreenCondition)->Check();
-                theScreen->GetTab(kSETriggerScreenCondition)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-                theScreen->mScreens[kSETriggerScreenCondition]->mSelection = theSelection - 1;
-                theScreen->ShowTab(kSETriggerTabCondition);
-            }
-        }
-        break;
-    case kSETriggerScreenEffect:
-        theSelection = this->GetSelectionIndex();
-        if (!UIsNone32(theSelection) && theSelection > 0) {
-            theEvent = theScreen->GetTab(kSETriggerScreenEffect)->GetTriggerEvent(kControlTriggerChecked);
-            if (theEvent != NULL)
-                theEvent->Reference();
-            theScreen->GetTab(kSETriggerScreenEffect)->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->GetTab(kSETriggerScreenEffect)->Check();
-            theScreen->GetTab(kSETriggerScreenEffect)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-            theScreen->mScreens[kSETriggerScreenEffect]->mSelection = theSelection - 1;
-            theScreen->ShowTab(kSETriggerTabEffect);
-        }
-        break;
-    case kSETriggerScreenObject:
-        theSelection = this->GetSelectionIndex();
-        if (!UIsNone32(theSelection) && theSelection > 0) {
-            theEvent = theScreen->GetTab(kSETriggerScreenObject)->GetTriggerEvent(kControlTriggerChecked);
-            if (theEvent != NULL)
-                theEvent->Reference();
-            theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->GetTab(kSETriggerScreenObject)->Check();
-            theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-            theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - 1;
-            theScreen->ShowTab(kSETriggerTabObject);
-        }
-        break;
-    case kSETriggerScreenArea:
-        theSelection = this->GetSelectionIndex();
-        if (!UIsNone32(theSelection) && theSelection > 1) {
-            theEvent = theScreen->GetTab(kSETriggerScreenArea)->GetTriggerEvent(kControlTriggerChecked);
-            if (theEvent != NULL)
-                theEvent->Reference();
-            theScreen->GetTab(kSETriggerScreenArea)->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->GetTab(kSETriggerScreenArea)->Check();
-            theScreen->GetTab(kSETriggerScreenArea)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-            theScreen->mScreens[kSETriggerScreenArea]->mSelection = theSelection - 2;
-            theScreen->ShowTab(kSETriggerTabArea);
-        }
-        break;
-    }
+    EESETriggerJump(this->mKind, this->GetSelectionIndex());
     return 0;
 }
 
@@ -217,7 +149,7 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         if (t == NULL)
             return 0;
     }
-    auto theScreen = [] { return gUIManager->mScenarioEditorForm->GetTriggerScreen(); };
+    auto theScreen = [] { return gUIManager->GetScenarioEditorForm()->GetTriggerScreen(); };
     switch (inOp) {
     case EE_SCREENS_SETR_OP_SM:
         switch (i[0]) {

@@ -35,14 +35,8 @@ class EEAIPathSector;
 class EEAIPathSubSector;
 class EEAIRectangleArea;
 class EEMap;
-class EEAIAStarContinentStorage;
-class EEAIAStarContinentGoal;
-class EEAIAStarPathAreaStorage;
-class EEAIAStarPathSectorStorage;
-class EEAIAStarPathSectorGoal;
 class EEComplexUnit;
 class URandom;
-template <class S, class G, class M> class EEAIAStarMachine;
 
 struct EeSubSectorLinks;
 
@@ -191,15 +185,14 @@ public:
     void FreePathAreaID(unsigned short inID) { ee_astar_cm_add_free_ids(&this->mRecord, EeAStarCmFree::PathAreas, &inID, 1, false); }
     void Build(EEMap* inMap);
     void CreateContinents(EEMap* inMap);
-    void CreateContinentGrid(EEAIAStarMachine<EEAIAStarContinentStorage, EEAIAStarContinentGoal, EEMap>& inMachine,
-        EEMap* inMap);                      // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
+    void CreateContinentGrid(EeAStarFlood* inFill, EEMap* inMap);   // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
     void PruneChokePoints();
     void NumberContinentChains(EEMap* inMap, unsigned long inKind);   // 0x201f7 (ret 8; inMap not read)
     void CreateHills(EEMap* inMap);
     void CreatePathAreaKind(EEMap* inMap, long inKind);
     void CreatePathAreas(EEMap* inMap);
-    void CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage);
-    void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
+    void CreatePathSectors(EEMap* inMap, EeAStarFlood* inAreas);   // inAreas: the path area fill (its id grid)
+    void LinkSubSectorGrid(EeAStarFlood* inFill, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
     void ApplySubSectorLinks(EeSubSectorLinks* inLinks);   // new (port): the walk's LinkSubSectors calls, then frees it
     // inline (COMDAT 0x27604 in this unit's range; defined inline in EEAIContinentManager.cpp): mPathSectors[its id]
     void SetPathSector(EEAIPathSector* inSector);

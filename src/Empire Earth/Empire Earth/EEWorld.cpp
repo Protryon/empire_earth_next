@@ -337,8 +337,8 @@ void EEWorld::Clear()
         gUnitPicker.Reset();
         gUnitPicker.GetLock()->Leave();
     }
-    if (gUIManager != NULL && gUIManager->mScenarioEditorForm != NULL)
-        gUIManager->mScenarioEditorForm->ClearSelection();
+    if (gUIManager != NULL && gUIManager->GetScenarioEditorForm() != NULL)
+        gUIManager->GetScenarioEditorForm()->ClearSelection();
     if (this->mGameOptions.mCampaignName.GetLength() > 0 && this->mGameOptions.mCampaignChecksum > 0 && !this->mLoadingSavedGame)
         EEShowSinglePlayerScreen();
     this->UnloadMedia();

@@ -66,7 +66,6 @@
 #include "lle/U2DRectangle.h"
 #include "lle/SESMInstanceNode.h"
 #include "ee/EETileCoordinate.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEUnitAction.h"
 #include "ee/RTSRegionTable.h"

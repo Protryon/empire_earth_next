@@ -79,9 +79,9 @@ void EETakeTerrainSnapshot()
         theMap->mCriticalSectionForColoredRectangles->Leave();
     }
     gRenderSnapshot.mBrushHighlightShown = false;
-    if (gUIManager->mScenarioEditorForm != NULL) {
-        const GERectangle& theRectangle = gUIManager->mScenarioEditorForm->GetBrushGroup()->mRectangle;
-        if (gUIManager->mScenarioEditorForm->GetBrushGroup()->mIsHighlightShown) {
+    if (gUIManager->GetScenarioEditorForm() != NULL) {
+        const GERectangle& theRectangle = gUIManager->GetScenarioEditorForm()->GetBrushGroup()->mRectangle;
+        if (gUIManager->GetScenarioEditorForm()->GetBrushGroup()->mIsHighlightShown) {
             gRenderSnapshot.mBrushHighlightShown = true;
             gRenderSnapshot.mBrushTiles.mLeft = UMFloor(theRectangle.GetLeft());
             gRenderSnapshot.mBrushTiles.mTop = UMFloor(theRectangle.GetTop());

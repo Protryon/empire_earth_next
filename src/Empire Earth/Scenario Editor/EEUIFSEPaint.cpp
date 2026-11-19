@@ -162,7 +162,7 @@ long EEUIFSEPaint::MouseMove(const GE2DPoint& inLocation)
     }
     this->mLastTileX = theX;
     this->mLastTileY = theY;
-    gUIManager->mScenarioEditorForm->GetBrushGroup()->SetHighlight(thePointX, thePointY, this->mIsCentered);
+    gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(thePointX, thePointY, this->mIsCentered);
     return 0;
 }
 

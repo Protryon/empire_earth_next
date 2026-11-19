@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Scenario Editor\EEUIFScenarioEditor.h (RECONSTRUCTION; file name inferred).
 // The scenario editor's main form: RTTI EEUIFScenarioEditor > UIForm, vtable 0x445084, sizeof 0x2b8 (`new` at
 // 0x273e8e, EEUIManager::CreateScenarioEditor), ctor 0x19d615. The game reaches it as
-// gUIManager->mScenarioEditorForm (+0x130), and the editor's UI events get it as their ProcessEvent's inForm
+// gUIManager->GetScenarioEditorForm() (+0x130), and the editor's UI events get it as their ProcessEvent's inForm
 // (`(EEUIFScenarioEditor*)inForm`). EEUIFScenarioEditor.cpp is about 0x19cc39..0x1a0315 (its events' handlers, the
 // ctor, the members, then the inline event classes).
 // Layout: the ctor 0x19d615 (member ctors in order: EECivilization +0x1a0, three floats +0x1e0, +0x1ec, four floats
@@ -17,8 +17,6 @@
 class EEUIMiniMap;
 class UIFullBackground;
 class UIButton;
-class EEUIFSEUndo;
-class EEUIFSERedo;
 class EEAScroll;
 class EESELoadThread;
 class EESEPlayerScreen;
@@ -75,7 +73,6 @@ public:
     void SelectUnit(EEUnit* inUnit);
     void DeselectUnit(EEUnit* inUnit);
     void SelectTab(unsigned char inFlag, long inTab);   // 0x19f615 (EEUIFSEMainButton::Check)
-    void FnE123D();                         // (ICF-folded into 0xe123d: an empty body)
     // 0x17d597 (the brush group's rectangle; EESEAPaintArea; defined in EESETSArea.cpp)
     void SetPaintArea(const GERectangle& inRectangle);
     void SetLoadText(const UWideString& inText);   // 0x19fd09 (EESEAChangeLoadText)

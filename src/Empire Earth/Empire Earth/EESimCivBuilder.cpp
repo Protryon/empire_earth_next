@@ -286,9 +286,9 @@ bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::str
 {
     const std::string c = w.size() > 1 ? w[1] : std::string();
     if (c == "open") {
-        UIControl* theButton = gUIManager->mScenarioEditorForm->GetControlById(17);
+        UIControl* theButton = gUIManager->GetScenarioEditorForm()->GetControlById(17);
         if (UIEvent* theEvent = theButton->GetTriggerEvent(kControlTriggerButtonUp))
-            theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theButton);
+            theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theButton);
     } else if (c == "edit") {
         outLines.push_back("  edit -> " + std::to_string(CivBuilderEditCivilization()));
     } else if (c == "timer") {
@@ -374,8 +374,8 @@ bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::str
             theStack += " " + (f == NULL ? std::string("null") : std::to_string(f->GetFormID()));
         }
         outLines.push_back(theStack);
-        outLines.push_back(CivDigest("editor", gUIManager->mScenarioEditorForm != NULL
-                                                   ? &gUIManager->mScenarioEditorForm->mC1A0 : NULL));
+        outLines.push_back(CivDigest("editor", gUIManager->GetScenarioEditorForm() != NULL
+                                                   ? &gUIManager->GetScenarioEditorForm()->mC1A0 : NULL));
         EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
         outLines.push_back(CivDigest("player", thePlayer != NULL ? &thePlayer->mCivilization : NULL));
         if (thePlayer != NULL)

@@ -20,13 +20,13 @@
 // Asks the main game form to build a wall from the start to the end point
 void EEUIBuildWall::Build()
 {
-    gUIManager->mMainGameForm->BuildWall(this->mStart, this->mEnd);
+    gUIManager->GetMainGameForm()->BuildWall(this->mStart, this->mEnd);
 }
 
 // Leaves the placement mode (ICF-folded into EEUIBuildGate::Cancel 0x2561b6)
 void EEUIBuildWall::Cancel()
 {
-    gUIManager->mMainGameForm->SetUIState(0);
+    gUIManager->GetMainGameForm()->SetUIState(0);
 }
 
 // Starts wall placement for a player: no points yet, the wall class's media loaded
@@ -47,7 +47,7 @@ void EEUIBuildWall::Initialize(long inPlayer)
 void EEUIBuildWall::Terminate()
 {
     EEPlayer* thePlayer = gWorld.GetPlayer(this->mPlayer);
-    gUIManager->mMainGameForm->mIsCursorLocked = false;
+    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
     EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
     thePlayer->UnloadUnitClassMedia(theNode->mData->mUnitClass);
 }

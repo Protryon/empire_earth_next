@@ -675,7 +675,7 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         ee_units_world_load_live(&theContext, &EEPWorldHost);
     }
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
-    return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
+    return gUIManager->GetMainGameForm()->Load(inMajorVersion, inMinorVersion, inFile);
 }
 
 // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
@@ -722,7 +722,7 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
         ee_units_world_save_live(&theContext, &EEPWorldHost);
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
-    return gUIManager->mMainGameForm->Save(inMajorVersion, inMinorVersion, outFile);
+    return gUIManager->GetMainGameForm()->Save(inMajorVersion, inMinorVersion, outFile);
 }
 
 // Reads the team count and that many teams; returns the first read error

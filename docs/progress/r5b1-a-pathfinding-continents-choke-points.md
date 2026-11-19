@@ -1,5 +1,7 @@
 # R5b.1 A* pathfinding, continents, choke points
 
+**Continued by the AI Thread cluster lane** (docs/progress/ai-thread-cluster.md, from 2026-11-18): its round 1 moved the A* goals, storages and machines whole into Rust (flood.rs, path_search.rs, graph_search.rs); this file is the state before it.
+
 The lane's state, moved from RUST_PLAN's Progress table. Each round rewrites this file to the
 current state; the round's story goes in PORT_LEARNINGS.md.
 

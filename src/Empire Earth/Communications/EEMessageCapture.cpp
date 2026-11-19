@@ -93,7 +93,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIArea.h"

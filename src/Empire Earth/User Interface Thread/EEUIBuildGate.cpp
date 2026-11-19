@@ -23,13 +23,13 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType);  // 0x211957: hi
 // Asks the main game form to build a gate at a location facing a direction
 void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    gUIManager->mMainGameForm->BuildGate(inLocation, inDirection);
+    gUIManager->GetMainGameForm()->BuildGate(inLocation, inDirection);
 }
 
 // Leaves the placement mode (back to the normal interface state)
 void EEUIBuildGate::Cancel()
 {
-    gUIManager->mMainGameForm->SetUIState(0);
+    gUIManager->GetMainGameForm()->SetUIState(0);
 }
 
 // Restores the player's wall colours and removes the gate ghost
@@ -57,6 +57,6 @@ void EEUIBuildGate::Terminate()
 {
     EEPlayer* thePlayer = gWorld.GetPlayer(this->mPlayer);
     this->ClearGhostUnits();
-    gUIManager->mMainGameForm->mIsCursorLocked = false;
+    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }

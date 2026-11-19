@@ -46,18 +46,10 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
-#include "ee/EEAIAStarFastStorage.h"
-#include "ee/EEAIAStarBoundedStorage.h"
-#include "ee/EEAIAStarGraphStorage.h"
-#include "ee/EEAIAStarGoalBase.h"
-#include "ee/EEAIAStarGraphGoalBase.h"
+#include "ee/EEAIAStarView.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIAStarPathfindingGoalBase.h"
-#include "ee/EEAIAStarBoundedPathGoal.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEAIPathSubSector.h"
@@ -87,46 +79,45 @@ long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFrom
     EEAIAStarView theView(gWorld.mMap, true);
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
     EeAStarStepGoal theGoal;
-    theGoal.walker = this->mGoal->mUnit;
-    theGoal.avoid_units = this->mGoal->mAvoidUnits;
-    theGoal.is_bounded = this->mGoal->mIsBounded;
-    theGoal.goal_bounds = EEAIAStarRectOf(this->mGoal->mGoalBounds);
+    theGoal.walker = this->mGoal->unit;
+    theGoal.avoid_units = this->mGoal->avoid_units;
+    theGoal.is_bounded = this->mGoal->is_bounded;
+    theGoal.goal_bounds = this->mGoal->goal_bounds;
     return ee_astar_mod_step_cost(&theCallbacks, &theGoal, inSea, inFromX, inFromY, inX, inY, inParentX, inParentY);
 }
 
-// Returns whether the walker (inGoal's unit, else inBoundedGoal's) may enter a tile (ee_astar modifiers::is_passable)
-bool EEAIPathGoalModifierBase::IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal,
-                                       long inX, long inY, bool inAtGoal)
+// Returns whether the goal's walker may enter a tile (ee_astar modifiers::is_passable)
+bool EEAIPathGoalModifierBase::IsPassable(const EeAStarPathGoalRec* inGoal, long inX, long inY, bool inAtGoal)
 {
     EEAIAStarView theView(gWorld.GetMap(), true);
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_is_passable(&theCallbacks, inGoal != NULL ? inGoal->mUnit : inBoundedGoal->mUnit, inX, inY);
+    return ee_astar_mod_is_passable(&theCallbacks, inGoal->unit, inX, inY);
 }
 
 // (0x40fa75 IsSeaBlocker and 0x40fb08 IsLandBlocker: EEAIAStarView::HasStepBlocker, with the walker as an argument)
 
 // Creates a bounded-goal modifier attached to the given bounded path goal
-EEAIBoundedPathGoalModifierBase::EEAIBoundedPathGoalModifierBase(EEAIAStarBoundedPathGoal* inGoal)
+EEAIBoundedPathGoalModifierBase::EEAIBoundedPathGoalModifierBase(EeAStarPathGoalRec* inGoal)
     : EEAIPathGoalModifierBase(inGoal)
 {
     this->mBoundedGoal = inGoal;
 }
 
 // Attaches the modifier to a bounded path goal (also as its plain goal)
-void EEAIBoundedPathGoalModifierBase::SetGoal(EEAIAStarBoundedPathGoal* inGoal)
+void EEAIBoundedPathGoalModifierBase::SetGoal(EeAStarPathGoalRec* inGoal)
 {
     this->mBoundedGoal = inGoal;
     this->mGoal = this->mBoundedGoal;
 }
 
 // Creates the space walker's modifier for a bounded path goal
-EEAIBPGModifierSpace::EEAIBPGModifierSpace(EEAIAStarBoundedPathGoal* inGoal)
+EEAIBPGModifierSpace::EEAIBPGModifierSpace(EeAStarPathGoalRec* inGoal)
     : EEAIBoundedPathGoalModifierBase(inGoal)
 {
 }
 
 // Creates the sea walker's modifier for a bounded path goal
-EEAIBPGModifierSea::EEAIBPGModifierSea(EEAIAStarBoundedPathGoal* inGoal)
+EEAIBPGModifierSea::EEAIBPGModifierSea(EeAStarPathGoalRec* inGoal)
     : EEAIBoundedPathGoalModifierBase(inGoal)
 {
 }
@@ -157,9 +148,11 @@ bool EEAIBPGModifierEnemyIsAttackableByUnit::CheckNode(EEAIAStarNode* inNode)
     bool theResult = inNode == NULL;
     if (!theResult) {
         thePoint = U2DPoint<long>(inNode->mX, inNode->mY);
-        if (thePoint.DistanceToSquaredF(this->mBoundedGoal->mDestination) <= this->mRangeSquared) {
-            this->mBoundedGoal->mDestination = thePoint;
-            this->mBoundedGoal->mGoalTile = thePoint;
+        U2DPoint<long> theDestination(this->mBoundedGoal->destination.x, this->mBoundedGoal->destination.y);
+        if (thePoint.DistanceToSquaredF(theDestination) <= this->mRangeSquared) {
+            this->mBoundedGoal->destination.x = (int32_t)thePoint.mX;
+            this->mBoundedGoal->destination.y = (int32_t)thePoint.mY;
+            this->mBoundedGoal->goal = this->mBoundedGoal->destination;
             theResult = true;
         }
     }
@@ -198,7 +191,21 @@ bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY
 {
     EEAIAStarView theView(gWorld.GetMap(), true);
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_walls_can_enter(&theCallbacks, this->mBoundedGoal->mUnit, inX, inY);
+    return ee_astar_mod_walls_can_enter(&theCallbacks, this->mBoundedGoal->unit, inX, inY);
+}
+
+// Returns true when the sub-sector has no links to inFrom or any such link has a passable end (the path graph goal's
+// HasPassableLink 0x1a845)
+bool EEAIGraphHasPassableLink(const EeAStarGraphGoalRec* inGoal, EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
+{
+    std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> > theLinks;
+    inSector->GetLinks(inFrom->GetID(), theLinks);
+    bool theResult = theLinks.size() == 0;
+    for (long i = theLinks.size() - 1; i >= 0 && !theResult; i--) {
+        if (inGoal->path_flags[theLinks[i].first->GetKind()] == true || inGoal->path_flags[theLinks[i].second->GetKind()] == true)
+            theResult = true;
+    }
+    return theResult;
 }
 
 // Creates an influence-cost modifier for the player against an enemy, with the given weights
@@ -252,14 +259,14 @@ long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathS
 // +0x08 (no address: ICF-folded into EEAIGPGModifierSpaceRoutePlanner's identical 0x10aa1)
 bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
+    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
     if (!theResult) {
         if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = inSector->IsPassable(this->mPlayerID);
     }
     if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = this->mGoal->HasPassableLink(inSector, inFrom);
+        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
     return theResult;
 }
 
@@ -332,14 +339,14 @@ long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFro
 // link from inFrom
 bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
-    bool theResult = this->mGoal->mPathFlags.mFlags[inSector->GetKind()];
+    bool theResult = this->mGoal->path_flags[inSector->GetKind()];
     if (!theResult) {
         if (inSector->GetKind() != kAITileGate)
             return theResult;
         theResult = this->IsGateOpen(inSector, this->mPlayerID);
     }
     if (theResult && inFrom != NULL && inSector->GetAllLinks().size() > 0)
-        theResult = this->mGoal->HasPassableLink(inSector, inFrom);
+        theResult = EEAIGraphHasPassableLink(this->mGoal, inSector, inFrom);
     return theResult;
 }
 
@@ -356,5 +363,5 @@ bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX,
 {
     EEAIAStarView theView(gWorld.GetMap(), true);
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    return ee_astar_mod_wall_pather_can_enter(&theCallbacks, this->mBoundedGoal->mUnit, inX, inY);
+    return ee_astar_mod_wall_pather_can_enter(&theCallbacks, this->mBoundedGoal->unit, inX, inY);
 }

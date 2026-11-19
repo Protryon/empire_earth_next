@@ -31726,6 +31726,97 @@ EE-SIM builds no form: the oracle is unchanged by construction.
 
 docs/progress/ui-cluster.md ("Left").
 
+## The UI cluster lane, round 2: EEUserInterface and EEUIManager's members as Rust records, the UI hosts' cases on them and on the toolkit, the editor's undo, redo and trigger jumps in Rust (ee_game ui_objects.rs, ui_direct.rs; branch rust-uicluster2, 2026-11-18)
+
+The brief: the UI cluster by whole classes (the UI manager, the main game form, the UI thread object, the HUD's forms
+and controls, the UI events, the scenario editor), 3,000 net C++ lines. **Net C++ -1,024** (-1,030 and +6 for the button class name) (commits below): short
+of the target again. What moved, and why the rest did not, under "The measure".
+
+### The measure
+
+The lane's C++ (about 37k lines) has three parts. The host cases (about a thousand `case`s, one per call the Rust
+makes into C++): their share that calls Rust objects (the toolkit, the strings, the sound manager, the threads)
+went in round 1 and this round. The class shells: every game form and control is a C++ subclass of a toolkit class
+for its virtual overrides, its constructor and its C++ sub-objects. The C++ logic never ported (about 9k lines in
+functions that call no Rust: the paint areas, the tech lists, the saved groups, the map backgrounds, the status
+bar, the editor's control factories, the area effects).
+
+A whole-class delete of a form or control needs what the lane does not have yet: a generic C++ shell per toolkit
+base (its virtuals calling one Rust dispatcher by kind), the classes' C++ sub-objects made from Rust, and the game
+calls of their hosts either Rust (other lanes' objects: the units, the graphics thread, gMouse and gViewport, the
+communications, the scenario manager) or narrow host functions. The yield of a case answered in Rust is two to four
+lines; a file deleted whole also takes its includes and header (the undo and redo buttons: 151 lines for 23).
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 565f42ac3 | the readers of `gUIManager->mMainGameForm` / `mScenarioEditorForm` through the typed accessors (192 sites, 46 files; 17 of other lanes) | 0 |
+| 9b00fdd04 | `EEUserInterface` the record `EeScreensUserInterfaceFields` alone (constructor, destructor, posts in Rust; the forwarding members gone), `EEUIManager : EeScreensUiManagerFields`; the UI hosts' cases on the records, the queue, the waits, the editor members and 15 of `EEScreens.cpp`'s in Rust (`ui_objects.rs`, `ui_objects_ffi.rs`) | -501 |
+| 07dbd18fe | dead declarations: 59 unused control and form index enumerators (ee/EEUIManager.h), the editor form's empty `FnE123D` | -64 |
+| 7d6c9c414 | the editor's Undo and Redo: their actions `EEARust` kinds (`game_actions.rs`), the two button classes one local class; `EEUIFSEUndo`/`Redo` .cpp and .h gone | -136 |
+| 169f3f5c2 | the main form's and the UI messages' cases on the records, the toolkit, the sound manager and the strings (`ui_direct.rs`): `gUnitSelected` a Rust static, `ShowEpochName` and `ShowLoadingText` whole, `SetStatusText` gone | -59 |
+| fe8fc173f | the trigger screen's combo boxes' right-click jump decided in Rust (`editor_trigger.rs trigger_jump`), one C++ helper for both combo classes | -153 |
+| 895575c61 | four main game events' cases on the main form's toolkit objects (`ui_direct.rs screens`) | -18 |
+| 6b9f63d8a | the message box's two button classes one; its empty `DrawBackground` override gone (a later commit keeps the No/Cancel class's name as an empty subclass: the civilization gate prints it) | -72 |
+| 7d4aa977d | the editor's three area-or-object combo fills one | -27 |
+| 90d2508a9 | strip_markers on the merged tree | 0 |
+
+- **Records with untyped form pointers.** `EeScreensUiManagerFields` holds the main game and editor forms as
+  `void*` (cbindgen cannot name the C++ classes), so the 192 readers of `gUIManager->mMainGameForm` /
+  `mScenarioEditorForm` read through the typed `GetMainGameForm()` / `GetScenarioEditorForm()` first (a separate,
+  mechanical commit; 17 files of other lanes). The two other lanes' readers of `gUserInterface->mThread` post
+  through `GetThread()`.
+- **A class with no vtable.** `EEUserInterface` derives from its record alone; `new EEUserInterface` (Empire
+  Earth.cpp) and `delete` still work, the constructor and destructor are inline calls into Rust. Its posts are one
+  inline line each over `ee_screens_ui_post`; a TSThread* is its Rust thread (`ee_ts_thread_post`).
+- **Mixed line endings.** EEUIFMainGame.cpp has CRLF and LF lines; a case spanning both did not match a pattern
+  written with `\n`. Edits of these files go through `\r?\n` patterns (or normalise and restore).
+- **units.txt.** A deleted unit must leave `link/exe/units.txt` (the exe's unit list by address), or the build
+  stops with "unit ... does not exist".
+- **clippy.** A `#[cfg(not(test))]` adapter's helpers in a tested module need `cfg_attr(test, allow(dead_code))`;
+  `fraction.clamp` for a manual clamp; `1..=3` for an OR of three literals; `i64::from(unsafe { .. })` where a
+  cast of an `unsafe` block needs parentheses.
+
+### Checks
+
+- The round's start test-profile exe (`build/uc2/pre`) and its three harness runs with the 2D draw digest: the tour
+  (`--input-check --view-check --seed 7`), the orders game (`--box-select --orders --scroll-check --seed 7`), the
+  editor exercise. After each step the same runs (`build/uc2/step.sh`) and `masked.py` (the commands one digest has
+  with the vertex alpha masked): the build label, the loading screen's texts and progress bars at other moments, the
+  live game's resource counts, map rhombi and lines; in one orders run of three the chat's "running out of time to
+  choose a Civilization" warning (game time ~90 s) fell after the run's end (its last sample 81 s).
+- Window captures read: the HUD with the epoch title ("Prehistoric Age", ShowEpochName's Rust), the selection's
+  panels, the main menu.
+
+### Gates
+
+On the round's final tree (origin/rust 2bccb3e94 merged: already up to date; strip_markers removed two trailing
+address comments, committed; `rust_build.py header` and `rust_includes.py` changed nothing): both builds `--sim` 0/0
+(EE-AOC 623, EE-SIM 624 inputs) and the test profile 0/0; the oracle seeds 2-7 identical to the reference; the
+editor gate PASS 14,448; scenario_check 27/27; the tour (`RESULT PASS tour`, `VIEW CHECK PASS`, F3 ok), the orders
+game (`BOX SELECT PASS`, `ORDERS PASS`, `SCROLL CHECK PASS`, `RESULT PASS random-game`), the editor exercise (`RESULT
+PASS editor`), each digest against the round's start's: the build label, the loading screen's texts at other
+moments, a resource count; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 43, 43], alive [2, 3],
+classic_lua x 2; lan-game). The civilization gate failed there once: it prints the controls' classes, and the message
+box's buttons had become one class; the second keeps its name now (`EEUIFEBCancel : EEUIFEBOK`), and on that tree
+the builds 0/0, the civilization gate PASS 4,062, the editor gate PASS 14,448, the Rust gate PASS (4,651 tests, clippy, rustfmt, headers). The Rust
+gate's first run on the final tree failed in `ee_base fs::golden_spec_replays` (an `rmdir` the system refused once:
+not this lane's code; it passed on the next runs). Per step: the build, the Rust gate (4,649..4,651 tests), the
+oracle seeds 2-3 identical, the three harness runs with digests. Not run: the sim_capture profiles (no simulation
+code changed: every move is UI-thread code EE-SIM never builds; the oracle confirms).
+
+### What only a person reaches
+
+The trigger screen's combo boxes' right click (the jump), the Undo and Redo buttons (the editor exercise opens the
+editor; sim_editor drives the undo list through EESimEditor, not the buttons), the message box's buttons (a
+question), the IME composition (an input method), the lag status (a multiplayer game), the load percentage message
+(several humans). EE-SIM builds no form: the oracle is unchanged by construction.
+
+### Left
+
+docs/progress/ui-cluster.md ("Left").
+
 ## The Graphics + LLE cluster, round 1: the tag points whole in Rust, the effects' reads of the graphic objects and physical models, RTSMap's terrain edits and outlines, EEOrbital, EFMU (ee_gfx tags.rs, effect_reads.rs; ee_ge map_raise.rs; branch rust-gfx-cluster1, 2026-11-18)
 
 The first round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
@@ -31910,3 +32001,144 @@ ops (their goldens unchanged); the LAN game's dialogs (create game, LAN name, st
   functions. The event makers there are now one C++ call each with no class; making the events from Rust needs a
   host op that wraps a Rust event in its C++ shell (one generic `Deliver/Broadcast(event)` case per host would
   replace ~48 maker cases).
+## AI Thread cluster, round 1: the A* searches whole in Rust: the flood fills, the unit path searches, the graph searches (ee_sim::astar flood.rs, path_search.rs, graph_search.rs, search_note.rs; branch rust-aicluster2, 2026-11-18)
+
+The first round of the cluster lane (docs/progress/ai-thread-cluster.md): the AI Thread's C++ moved by clusters of
+classes that call each other. This round took the A* layer whole: every machine, storage and goal the continent
+manager, the choke point pass and the path manager ran.
+
+| Commit | What | Net C++ (src + include/ee) |
+|---|---|---|
+| 2d3b9e224 | flood.rs: the five flood fills and the continental chains (+450 -1,766) | -1,316 |
+| 6c1636c28 | other clusters' files: the A* storage and path goal includes dropped | -14 |
+| 63124ead6 | path_search.rs: the path manager's tile machines, path and bounded (+221 -2,050) | -1,829 |
+| cb4e1b24d | other clusters' files: the graph search includes dropped | -4 |
+| 18eb88f64 | graph_search.rs: the path manager's graph machines (+165 -1,218); the dead ai/lua_ffi.rs | -1,053 |
+| b0bc8fc5a | rust_includes: the modifiers' header includes rust/sim/astar.h | +1 |
+| | **round** | **-4,215** |
+
+Rust: flood.rs (1,153 lines), path_search.rs (1,114), graph_search.rs (841), search_note.rs (138), with 8 unit
+tests (a continent fill over a map, the hooks' notes, the fill's reset, the chains' kinds, a path around a wall, the
+blocked tiles marked first, a saved search's round trip, a graph search along a row); the tile and graph storages'
+C ABI and the flood and path goals' C entry points deleted with their callers (ffi.rs -862 lines, its C ABI test
+-94) and
+ai/lua_ffi.rs (340 lines: nothing called it).
+
+- **What moved.** (1) The continent manager's flood fills (`EEAIAStarMachine` over the continent, hill, path area,
+  path sector and choke point goals and storages) and the continental chains' graph machine are one Rust object
+  each (`EeAStarFlood`: the machine's members, the node storage, the goal's fill state, the storage's id grid). The
+  passes (`CreateContinents`, `CreateHills`, `CreatePathAreas`, `CreatePathAreaKind`, `CreatePathSectors`,
+  `Rebuild`, `EEAIChokeCreate`) stay C++ loops that make the areas (the objects, their hulls and HULL records) of
+  the tiles a fill collected; `NumberContinentChains` is Rust over a host of the continents. (2) The path manager's
+  tile machines (`EEPathMachine`, the bounded machine) are `PathSearch`: machine, storage and goal with its two
+  bases; the goal's members are a C record (`EeAStarPathGoalRec`) at a fixed address that the C++ modifiers keep as
+  their goal (`EEAIPathGoalModifierBase::mGoal`, the bounded modifiers' `mBoundedGoal`). (3) The graph machines
+  (`EEGraphPathMachine`) are `GraphSearch` likewise (`EeAStarGraphGoalRec`, the route planners' `mGoal`).
+- **How the path manager reaches them.** pm.rs's host (`FnHost`) answers the machine operations itself
+  (`path_search::intercept`, `graph_search::intercept`) before the C++ host: the manager's logic, its fake-host
+  tests and its PMRQ golden are unchanged by construction, and the C++ cases are simply gone. The bounded machine
+  lives in the Rust manager (`EePathManager::bounded`). What only the C++ knows became host operations
+  (`EE_PATH_VIEW_NEW` .. `EE_PATH_TILES_OUT`, `EE_PATH_SS_INFO` .. `EE_PATH_GRAPH_MODIFIER_SAVE`): a map's view, a
+  unit's continent, avoidance and blocked tiles (the blocker collector moved into EEPathManager.cpp), the C++
+  modifiers and route planners made, referenced, attached and asked, a sub sector's facts, the goals a found graph
+  path gives a unit (`RequestUnitPaths`, now over the path's ids).
+- **The capture kept.** The A* records (ASRN, ASGR) carry a digest of every hook's answer and every view query in
+  order. The hooks note their event after the goal answers, as `EEAIAStarHooks` did (search_note.rs over
+  EEAIAStarCapture.cpp's new C interface: a note, a run opened, its bytes, its node lists, its commit); the view's
+  queries stay the C++ view's notes, in between. Every flood, path and graph search of the six oracle games gives
+  the same records as the C++ machines did.
+- **Orders and quirks kept.** `Init` stores the size before `PrepareGrid` compares it, so a flood's id grid is made
+  once and never cleared by a later fill (only the flags and nodes are, from the dirty bounds); the bounded goal's
+  `ReleaseModifier` is not the one a destructor calls (the goal base's dtor runs the base's: the bounded modifier's
+  second reference is never dropped, as before); `IsGoalNode` of the bounded goal asks the modifier's `CheckNode`
+  after its own answer and before the note; the graph machine's `Reset` leaves `mFound`; a graph search's goal ID is
+  `mTo`'s `unsigned short` id.
+- **Lesson.** A goal record that C++ objects hold by address must not move and must not sit behind a Rust `&mut`
+  across a call into the C++: the searches keep it in its own allocation behind a raw pointer, copy it out before
+  each call that can reach a modifier, and write it back through the pointer.
+- **Lesson.** A test fixture's graph that lists a node as its own neighbour makes the graph machine add the node
+  again each expansion (a popped node is neither open nor closed until the expansion ends): the first chain test
+  asked for 60 GB. The game's neighbour lists never hold the continent itself.
+- **Behaviour:** none intended. The path area fill's machine is no longer reset after the pass (its id grid is the
+  only part the sector pass reads; no run follows). `EEAIAStarHillGoal::mLevelSum` starts at 0 (the C++ left it
+  uninitialised; it is summed, never read).
+- **Gates.** Per step: both builds 0/0, the oracle seeds 2-3 identical (after each of the three moves); after the
+  path searches the captures at seeds 2-3 of oracle, transport, placement, groups, late and space PASS. On the tree
+  merged with origin/rust 8d68d2786 (merge a7d739f13: two include-list conflicts, origin/rust's taken): both builds
+  0/0 and the test profile 0/0; the oracle seeds 2-7 identical to the reference; the Rust gate PASS (4,634 tests;
+  its first run found two clippy errors and a rustfmt diff, fixed in 9f4ed704e and the rustfmt commit); seven
+  capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, placement 4, groups 2, transport 185,
+  calamity 222 digests: ASRN, ASGR, PMRQ, PMSP, CNTR, CNTQ, HULL, AREA among them, all from the C++); the plain
+  saveload (seeds 2-7 at 600/1350/2100 s) PASS; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: PASS`; scenario_check 27/27; `gates.sh` GATES PASS on its second run (tour; ai-game time-cap, units [4, 38, 40],
+  alive_computers [2, 3], classic_lua twice; lan-game). Its first run failed the ai-game at the main menu with "the
+  window capture is blank" (the tour and the LAN game passed): a capture of the harness, not the game; the rerun passed.
+- **What runs it.** Every game runs the floods at its start and `Rebuild` while walls go up (the oracle, every
+  profile); the unit path searches and the bounded searches every tick (transport: the sea modifiers; the
+  combat goals' enemy-in-range modifier; the storm's shaper and route planners in calamity); the graph searches
+  for the AI's requests and long unit paths; the saved tile and graph searches in saveload. Only a human player
+  reaches nothing new: no display code changed.
+## The app cluster, round 1: the UI fixture whole in Rust, the game log whole in Rust (ee_game fixture, game_log.rs; branch rust-app1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 74aefb2d8 | the UI fixture whole in Rust; EETestFixture.cpp its host, EETestFixtureOrders.cpp deleted | +551 -2479, net -1,928 |
+| 45d4633dd | EEInitializeDatabase's finds and loads as tables of loaders | +67 -156, net -89 |
+| 5e6e50fd5 | the game log whole in Rust; EEGameLog.cpp its host | +85 -234, net -149 |
+| 18906985d | repeated #include lines in the cluster's units removed | -62 |
+| b9218898c | harness comments (the orders and casts are Rust) | tools only |
+| 1ae8c40cb | (merge) origin/rust 2bccb3e94 | |
+
+- **The fixture, whole.** Everything the fixture decides is Rust (ee_game fixture): the test switches and their C
+  library numbers (`sscanf`'s `%lu/%lu` and `%lu.%7[0-9]`, `strtoull(.., 0)`, `strtol`), the poll thread, the
+  ui-state file (its lines, the escaped texts, written in the C library's text mode: CR LF on Windows, as the C++'s
+  `fopen(.., "w")`), the telemetry (the players' fields through the world views), the frame request and its BMP (the
+  renderer's `GXTestReadFrame`, called from Rust directly), the command line's scan (`"%lu %31s %lu %lu %lu %lu"`:
+  the first failed conversion ends it, a minus wraps), every command's checks and verdict, the pointer hold, the
+  box selection's stages and expected set, the casts, and the orders (the plan, the grid scan, the click order, the
+  verified click, the scout, the home, the retry, the message hook's judges). The C++ is one host function
+  (`EEFixtureHost`, one `EeFixtureOp` per call: the controls by RTTI kind, the input lock and `SetPosition`, the
+  platform's events, the game's messages posted as UI actions, the picker, `CanGather`, `CanGetTo`, `EEIsSeenBy`, a
+  goal's targets, the build queue, the calamity manager), the two hooks' trampolines, the WON lobby's walk (it runs on
+  the lobby's own message loop over the WON GUI's component classes: left to the WON lane), the debug handler, the
+  fault handler and the legacy harness's communications mirror (read by its map name).
+- **Lesson: cbindgen reads every module's items.** The fixture's private `const`s (`PATROL`, `ATTACK_GROUND`, the
+  unit categories) and its `extern "C"` block (`GXTestReadFrame`) went into the generated headers: `PATROL` and
+  `ATTACK_GROUND` collided with netmsg.h's message names (cbindgen moved both into common.h), and the extern block
+  made a new `render/gx.h`. `/// cbindgen:ignore` on the modules that export nothing (`boxsel`, `cast`, `orders`,
+  `poll`, `text`) keeps them out; the exported modules' constants carry the `EE_FIXTURE_` prefix.
+- **Lesson: the civilization timer ends long tours.** A tour with `--box-select --orders --scroll-check
+  --zoom-captures` runs past 240 game seconds, where the civilization builder (form 7) comes on top: the zoom command
+  was then "rejected" (top form 7), as the fixture must answer. The same exercises in two shorter tours pass. Not a
+  change of this round (PORT_LEARNINGS "Harness, not x64").
+- **The game log, whole.** `EEGameLog`'s state (the open file's flags, the epochs, the civilization names, the
+  sample clock) is a Rust record under a lock; the income and the losses, added by the physics thread outside the
+  log's lock as before, are atomics. The counts read the units through the views (the class, the complex unit, the
+  active goal's kind); a gather goal's resource, a killer's owner, a player's texts, the lobby options and the file
+  (PlatFOpen's text mode, the game's `C:\` path form on POSIX) are host calls.
+- **EEInitializeDatabase.** The 26 tables' find, check and load triples are four tables of
+  (name, loader, the original's ESVerify line) in the same order around the events and the terrain colours.
+- **Tests.** fixture 10 (the command scan, the signed fields, `fgets`, the switches' numbers, the escaped texts, lines
+  and ids, the BMP header, the text mode, the click order, the order lines, `%.3f`/`%.0f`), game_log 2 (the words,
+  the counts by kind and work).
+- **Behaviour:** none. The fixture's stderr lines go through the C library's stream as before (the host's
+  `Stderr`); the pointer hold's clock is Rust's monotonic clock.
+- **Only the harness reaches** the fixture (TEST ONLY) and the game log (EE-SIM never opens it): the tours below, the
+  editor exercise, the lan game.
+- **Gates, on the tree merged with origin/rust 2bccb3e94** (a clean merge; `strip_markers.py --check` and the
+  headers current): both builds 0/0 (the test profile too), the Rust gate PASS (a first run failed once in ee_base's
+  `fs::golden_spec_replays` rmdir line under the chain's load; alone and in the rerun it passes), the oracle identical
+  on seeds 2-7, every capture profile at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, app 26,
+  scenario 43, effects 6, groups 2, missile 22, placement 4, transport 185, units 175 digests), the plain saveload
+  18/18 identical, the matrix `saveload expect: PASS`, scenario_check 27/27, the editor gate (14,448 lines) and the
+  civilization builder gate (4,062) PASS, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT
+  13303` units [4, 41, 41] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2726 joiner=2725`,
+  GATES PASS. Before the merge, the fixture sessions through slot.py: the tour with `--input-check --box-select
+  --orders` (box select 4 steps, orders gather, repair, repair-queued and move ok 4/4 each, patrol and attack-ground
+  skipped as in the unmodified exe's run), the tour with `--scroll-check --zoom-captures 100 --cast earthquake,plague
+  --seed 7` (scroll, zoom, both casts), the tour with `--view-check --seed 2`, the editor exercise: all `RESULT PASS`;
+  their ui-state files and game logs line for line like the unmodified exe's; the harness self test ALL PASS.
+- **Short of the target**: net -2,228 C++ against the 3,000 asked. What is left in the cluster is object wiring
+  (EEWorld's StartGame/CreatePlayers/Clear, EEGameState::Create, the player, Persistent, Communications) or test
+  drivers made of editor and UI calls (EESimEditor, EESimCivBuilder: their command bodies are calls of other
+  lanes' classes); docs/progress/app-core.md "Next".
