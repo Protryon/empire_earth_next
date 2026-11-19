@@ -321,6 +321,8 @@ pub unsafe extern "C" fn ee_data_to_hit_from_record(bytes: *const u8, out: *mut 
 
 /// `gWeaponToHitFactors[6][6]` (the C++ declares it `extern "C" float gWeaponToHitFactors[6][6]`): zero until the
 /// table loads.
+/// Aligned to 16, as [`EeDataCpBehaviorTable`].
+#[repr(C, align(16))]
 pub struct EeDataToHitTable(std::cell::UnsafeCell<[[f32; 6]; 6]>);
 
 // SAFETY: as the C++ global it is: the database loads it before the games that read it start
@@ -2541,6 +2543,10 @@ const MAXIMUM_ATTACK_RESPONSE_RANGE: usize = 48;
 
 /// `gCPBehaviors` (the C++ declares it `extern "C" EECPBehavior gCPBehaviors[129]`, the same record): zeroed, as
 /// the record's constructor left it, until the table loads.
+///
+/// Aligned to 16: the C++ compiler aligns a large global so, and its vector loads of the records assume it (a
+/// `pshufd` from an unaligned table faulted: PORT_LEARNINGS "The game's leaves, round 2").
+#[repr(C, align(16))]
 pub struct EeDataCpBehaviorTable(std::cell::UnsafeCell<[EeDataCpBehavior; EE_DATA_CP_BEHAVIORS]>);
 
 // SAFETY: as the C++ global it is: the database loads it before the games that read it start
@@ -2653,6 +2659,8 @@ mod cp_behavior_tests {
             assert_eq!(t, before);
         }
         assert_eq!(core::mem::offset_of!(EeDataCpBehavior, mFloatValue), 0x30);
+        assert_eq!(gCPBehaviors.0.get() as usize % 16, 0, "the C++ reads the table with aligned vector loads");
+        assert_eq!(gWeaponToHitFactors.0.get() as usize % 16, 0);
         assert_eq!(core::mem::offset_of!(EeDataCpBehavior, mIsSettable), 0x34);
     }
 }
