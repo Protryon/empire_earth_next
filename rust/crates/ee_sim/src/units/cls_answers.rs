@@ -139,7 +139,10 @@ pub fn passable_flags(c: &EeUnitsUnitClassFields, stats: Option<&EeUnitsUnitClas
 /// # Safety
 /// Both are live classes' records.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_cls_can_enter(c: *const EeUnitsUnitClassFields, other: *const EeUnitsUnitClassFields) -> u8 {
+pub unsafe extern "C" fn ee_units_cls_can_enter(
+    c: *const EeUnitsUnitClassFields,
+    other: *const EeUnitsUnitClassFields,
+) -> u8 {
     // SAFETY: the caller's contract
     u8::from(unsafe { can_enter(&*c, &*other) })
 }

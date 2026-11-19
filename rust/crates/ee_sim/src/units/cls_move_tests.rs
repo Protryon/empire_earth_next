@@ -68,7 +68,8 @@ impl Mock {
         m
     }
     fn class(&mut self, f: impl FnOnce(&mut EeUnitsUnitClassFields)) -> u64 {
-        let mut c = EeUnitsUnitClassFields { mInnerCollisionSphere: 0.5, mDomains: MV_MOVEMENT_LAND, ..Default::default() };
+        let mut c =
+            EeUnitsUnitClassFields { mInnerCollisionSphere: 0.5, mDomains: MV_MOVEMENT_LAND, ..Default::default() };
         f(&mut c);
         self.classes.push(Box::new(c));
         CLASS + self.classes.len() as u64 - 1
@@ -348,7 +349,11 @@ fn find_path_on_the_goal_tile_arrives() {
     let mut m = Mock::map(10, 10);
     let c = m.class(|_| {});
     let u = m.add(2.5, 2.5, c);
-    let g = m.goal(MockGoal { kind: MV_GOAL_LOCATION, location: Ge3DPoint { x: 2.2, y: 2.8, z: 0.0 }, ..Default::default() });
+    let g = m.goal(MockGoal {
+        kind: MV_GOAL_LOCATION,
+        location: Ge3DPoint { x: 2.2, y: 2.8, z: 0.0 },
+        ..Default::default()
+    });
     m.u(u).goal = g;
     m.u(u).cx.mCollisionResolutionCount = 3.0;
     find_path(&mut m, c, u);
@@ -363,7 +368,11 @@ fn find_path_takes_a_bounded_path_ending_at_the_tile() {
     let mut m = Mock::map(10, 10);
     let c = m.class(|_| {});
     let u = m.add(2.5, 2.5, c);
-    let g = m.goal(MockGoal { kind: MV_GOAL_LOCATION, location: Ge3DPoint { x: 5.5, y: 2.5, z: 0.0 }, ..Default::default() });
+    let g = m.goal(MockGoal {
+        kind: MV_GOAL_LOCATION,
+        location: Ge3DPoint { x: 5.5, y: 2.5, z: 0.0 },
+        ..Default::default()
+    });
     m.u(u).goal = g;
     m.path = vec![
         Ge3DPoint { x: 2.5, y: 2.5, z: 0.0 },
@@ -440,7 +449,12 @@ fn melee_sidestep_takes_the_freer_side() {
     let wall_class = m.class(|_| {});
     let u = m.add(5.5, 5.5, c);
     let target = m.add(7.5, 5.5, wall_class);
-    let g = m.goal(MockGoal { kind: MV_GOAL_LOCATION, location: Ge3DPoint { x: 7.5, y: 5.5, z: 0.0 }, b1c: true, ..Default::default() });
+    let g = m.goal(MockGoal {
+        kind: MV_GOAL_LOCATION,
+        location: Ge3DPoint { x: 7.5, y: 5.5, z: 0.0 },
+        b1c: true,
+        ..Default::default()
+    });
     let a = m.goal(MockGoal { kind: MV_GOAL_ATTACK_UNIT, target, ..Default::default() });
     m.u(u).goal = g;
     m.u(u).active_goal = a;
@@ -461,7 +475,11 @@ fn melee_sidestep_retargets_first() {
     let other = m.class(|_| {});
     let u = m.add(5.5, 5.5, c);
     let target = m.add(6.5, 5.5, other);
-    let g = m.goal(MockGoal { kind: MV_GOAL_LOCATION, location: Ge3DPoint { x: 6.5, y: 5.5, z: 0.0 }, ..Default::default() });
+    let g = m.goal(MockGoal {
+        kind: MV_GOAL_LOCATION,
+        location: Ge3DPoint { x: 6.5, y: 5.5, z: 0.0 },
+        ..Default::default()
+    });
     let a = m.goal(MockGoal { kind: MV_GOAL_ATTACK_UNIT, target, sidestep: 0, ..Default::default() });
     m.u(u).goal = g;
     m.u(u).active_goal = a;
@@ -558,7 +576,12 @@ fn path_to_goal_requests_or_cancels() {
     let mut m = Mock::map(20, 20);
     let c = m.class(|_| {});
     let u = m.add(1.5, 1.5, c);
-    let g = m.goal(MockGoal { kind: MV_GOAL_LOCATION, location: Ge3DPoint { x: 1.5, y: 1.5, z: 0.0 }, group_path_state: 1, ..Default::default() });
+    let g = m.goal(MockGoal {
+        kind: MV_GOAL_LOCATION,
+        location: Ge3DPoint { x: 1.5, y: 1.5, z: 0.0 },
+        group_path_state: 1,
+        ..Default::default()
+    });
     m.u(u).goal = g;
     path_to_goal(&mut m, c, u);
     assert_eq!(m.log, ["drop_path", "cancel"]);
@@ -588,12 +611,15 @@ fn flee_runs_or_idles() {
     m.log.clear();
     flee(&mut m, c, u);
     // distance lrintf(3 * 1.5) = 4 (half to even), direction 6 turned to 2: x 5.5 + 8 = 13.5
-    assert_eq!(m.log, [
-        "turn_away 6 true".to_string(),
-        "flee 13.5 5.5 false".to_string(),
-        "action 8000".to_string(),
-        format!("changed {c:#x}")
-    ]);
+    assert_eq!(
+        m.log,
+        [
+            "turn_away 6 true".to_string(),
+            "flee 13.5 5.5 false".to_string(),
+            "action 8000".to_string(),
+            format!("changed {c:#x}")
+        ]
+    );
     // a computer animal (player 0) draws its distance first
     m.u(u).player_id = 0;
     m.log.clear();

@@ -219,8 +219,7 @@ pub fn find_path<H: MoveHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     if goal != 0 {
         let goal_point = h.goal_location(goal);
         let u = U::of(h, unit);
-        if u.class().mIsMelee && u.cx().mVelocity > 0.0 && attack != 0 && h.goal_kind(attack) == MV_GOAL_ATTACK_UNIT
-        {
+        if u.class().mIsMelee && u.cx().mVelocity > 0.0 && attack != 0 && h.goal_kind(attack) == MV_GOAL_ATTACK_UNIT {
             let sphere = u.class().mInnerCollisionSphere;
             let range = sphere + sphere + 5.0;
             let first = if goal_point.x > 0.1 && position.distance_to_squared(goal_point) < range * range {
