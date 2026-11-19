@@ -156,11 +156,6 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     }
 }
 
-extern "C" uint8_t ee_units_host_goal_kind(void* inGoal)
-{
-    return static_cast<EEUnitGoal*>(inGoal)->mKind;
-}
-
 extern "C" void ee_units_host_goal_release(void* inGoal)
 {
     delete static_cast<EEUnitGoal*>(inGoal);
@@ -205,11 +200,6 @@ extern "C" void ee_units_host_group_clear_goal(void* inGroup)
 extern "C" void ee_units_host_group_set_goal(void* inGroup, void* inGoal, uint8_t inQueued)
 {
     ActiveOf(inGroup)->SetGoal(static_cast<EEUnitGoal*>(inGoal), inQueued != 0);
-}
-
-extern "C" void ee_units_host_group_set_action(void* inGroup, int32_t inAction)
-{
-    ActiveOf(inGroup)->mAction = inAction;
 }
 
 extern "C" void ee_units_host_group_plan(void* inGroup)
@@ -268,25 +258,6 @@ extern "C" uint32_t ee_units_host_town_patrol_point(uint32_t inUnit, uint8_t* ou
     return thePoint;
 }
 
-extern "C" void ee_units_host_patrol_add_unit_tile(uint32_t inUnit, uint32_t inTarget, void* inPlayer)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    EEComplexUnit* theTarget = ComplexOf(inTarget);
-    ee_units_pg_add_point(theUnit->mPatrolGroup, (float)theTarget->mTileX, (float)theTarget->mTileY,
-                          (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID);
-}
-
-extern "C" void* ee_units_host_unit_patrol_group(uint32_t inUnit)
-{
-    EEPPatrolGroup* theRoute = ComplexOf(inUnit)->mPatrolGroup;
-    return theRoute;
-}
-
-extern "C" void ee_units_host_group_set_queued(void* inGroup, uint8_t inQueued)
-{
-    ActiveOf(inGroup)->mIsQueued = inQueued != 0;
-}
-
 extern "C" void ee_units_host_group_spread_around_resource(void* inGroup, uint32_t inTarget)
 {
     ActiveOf(inGroup)->SpreadAroundResource(UnitOf(inTarget));
@@ -334,24 +305,12 @@ extern "C" void ee_units_host_patrol_new_lone(void* inPlayer, float inX, float i
     ee_units_pg_dereference(thePatrolGroup);
 }
 
-// a selected path point: the point into its route after it
-extern "C" void ee_units_host_patrol_insert_point_at(uint32_t inUnit, float inX, float inY, void* inPlayer)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    ee_units_pg_insert_at(theUnit->mPatrolGroup, inX, inY, (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID, theUnit);
-}
-
 // the route of the unit's current goal when it is a patrol (EEGoalCast<EEUGPatrol>(GetGoal())), else NULL; a read
 extern "C" void* ee_units_host_unit_goal_patrol_route(uint32_t inUnit)
 {
     EEUGRust* theGoal = EEPatrolGoalCast(ComplexOf(inUnit)->GetGoal());
     EEPPatrolGroup* theRoute = theGoal != NULL ? theGoal->GetPatrolGroup() : NULL;
     return theRoute;
-}
-
-extern "C" void ee_units_host_patrol_add_point(void* inRoute, float inX, float inY, void* inPlayer)
-{
-    ee_units_pg_add_point(static_cast<EEPPatrolGroup*>(inRoute), inX, inY, (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID);
 }
 
 // a new patrol goal's route: the point added, the route registered with the player
@@ -436,15 +395,6 @@ extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX
     ActiveOf(inGroup)->SpreadForUnload((long)inX, (long)inY);
 }
 
-// a transport (or paratrooper bomber) with cargo; a read
-extern "C" uint8_t ee_units_host_unit_can_unload(uint32_t inUnit)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    bool theResult = (theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
-        && theUnit->mComplexUnit->GetNumCargoUnits() > 0;
-    return theResult ? 1 : 0;
-}
-
 extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
 {
     static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->SetUnloadTransport(ComplexOf(inUnit)->mComplexUnit);
@@ -473,15 +423,6 @@ extern "C" void ee_units_host_wall_release(void* inPieces)
 static EETechTreeNode* NodeOf(void* inPlayer, int32_t inTechnology)
 {
     return static_cast<EEPlayer*>(inPlayer)->mTechnologies->Get(inTechnology);
-}
-
-// a read
-extern "C" int64_t ee_units_host_technology_unit_class(void* inPlayer, int32_t inTechnology, uint8_t* outFound)
-{
-    EETechTreeNode* theNode = NodeOf(inPlayer, inTechnology);
-    *outFound = theNode != NULL ? 1 : 0;
-    int64_t theClass = theNode != NULL ? (int64_t)theNode->mData->mUnitClass : -1;
-    return theClass;
 }
 
 extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnology)
