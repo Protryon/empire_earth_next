@@ -54,6 +54,7 @@ pub mod platimg;
 pub mod platwin;
 pub mod platwm;
 pub mod rootobj;
+pub mod rowobj;
 pub mod scrollerobj;
 pub mod skinlay;
 pub mod splitobj;

@@ -196,3 +196,16 @@ fn a_click_delivers_the_subjects_action_then_closes() {
     let released: Vec<isize> = LOG.with(|l| l.borrow().iter().map(|x| x.1).collect());
     assert_eq!(released, [0x51, 0x44]);
 }
+
+/// The menus' strings as resource rows (round 17): every one of the 25 named.
+#[test]
+fn string_rows() {
+    use crate::resource::EeWonLobbyRes as R;
+    assert_eq!(string_row(EeWonLobbyPopupString::Whisper as isize), Some(R::ClientOptionsCtrl_Whisper_String));
+    assert_eq!(
+        string_row(EeWonLobbyPopupString::FriendRemove as isize),
+        Some(R::FriendOptionsCtrl_RemoveFromFriends_String)
+    );
+    assert_eq!((0..25).filter(|&v| string_row(v).is_some()).count(), 25);
+    assert_eq!(string_row(25), None);
+}

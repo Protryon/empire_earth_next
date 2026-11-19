@@ -147,6 +147,92 @@ const EMPTY_CELL: GeFbCharacter = GeFbCharacter {
 
 /// # Safety
 /// `p` is a live object from `ee_ge_fb_new`.
+/// The operations a font bitmap the C++ made answers on the objects' Rust (the HUD 2D lane): the working text's
+/// and the drawing bitmap's members (`GEText`, `GEBitmap`: Rust objects, `cppobj.rs`) and the two draws (the 2D
+/// draw list, `list2d.rs`), each as the C++ host's case made it. None: the host's.
+///
+/// # Safety
+/// The operation's objects are live C++ GE objects (a `GEText*`, `GEBitmap*`, `GERasterizer*`); its pointers are
+/// as `EeGeFbOp` describes.
+unsafe fn direct_op(op: EeGeFbOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    use crate::ge::bmpobj::{
+        ee_ge_bmp_getf, ee_ge_bmp_set_colors, ee_ge_bmp_set_location, ee_ge_bmp_set_texture, ee_ge_bmp_set_uvs,
+        ee_ge_bmp_set_xy_scale, ee_ge_bmp_stretch, ee_ge_bmp_uvs, EeGeBitmap, EeGeBmpFloat,
+    };
+    use crate::ge::cppobj;
+    use crate::ge::list2d::{self, Cmd, Target};
+    use crate::ge::smallobj::{
+        ee_ge_text_color, ee_ge_text_extent_of, ee_ge_text_location, ee_ge_text_set_transparent, ee_ge_text_string,
+        EeGeText,
+    };
+    if !list2d::ready() {
+        return None;
+    }
+    let text = || -> *mut EeGeText { unsafe { cppobj::plain(obj) } };
+    let bitmap = || -> *mut EeGeBitmap { unsafe { cppobj::counted(obj) } };
+    let floats = a as *mut f32;
+    // SAFETY: the caller's contract
+    unsafe {
+        match op {
+            EeGeFbOp::TextPrepare => {
+                // SetFgColor(GEColor()): white; SetIsTransparent(true)
+                let c = ee_ge_text_color(text(), true);
+                *c = 1.0;
+                *c.add(1) = 1.0;
+                *c.add(2) = 1.0;
+                ee_ge_text_set_transparent(text(), true);
+            }
+            EeGeFbOp::TextExtent => {
+                let e = *ee_ge_text_extent_of(text());
+                *floats = e.right - e.left;
+                *floats.add(1) = e.bottom - e.top;
+            }
+            EeGeFbOp::TextSetLocation => *ee_ge_text_location(text()) = *(a as *const Ge2DPoint),
+            EeGeFbOp::TextString => return Some(cppobj::wstr_text(ee_ge_text_string(text()) as usize) as isize),
+            EeGeFbOp::TextLocation => return Some(ee_ge_text_location(text()) as isize),
+            EeGeFbOp::TextColor => return Some(ee_ge_text_color(text(), true) as isize),
+            EeGeFbOp::RasterDrawText => {
+                let cmd = Cmd::Text { text: a as usize, surface: b as usize };
+                return Some(list2d::draw(Target { rasterizer: obj, screen: 0 }, &cmd) as isize);
+            }
+            EeGeFbOp::RasterDrawBitmap => {
+                let t = Target { rasterizer: obj, screen: b as c_ulong };
+                return Some(list2d::draw(t, &Cmd::Bitmap(a as usize)) as isize);
+            }
+            EeGeFbOp::BmpSetTexture => ee_ge_bmp_set_texture(bitmap(), a as *mut c_void, b as c_ulong),
+            EeGeFbOp::BmpStretch => {
+                let r = a as *const GeRectangle;
+                ee_ge_bmp_stretch(bitmap(), r, r, r.add(1), b as c_ulong);
+            }
+            EeGeFbOp::BmpUvsPerVertex => {
+                // GetTextureCoordinatesPerVertex(c[0], unused, unused, c[1])
+                let c = a as *mut [f32; 2];
+                let mut unused = [0.0f32; 2];
+                let u = unused.as_mut_ptr() as *mut c_void;
+                ee_ge_bmp_uvs(bitmap(), &[c as *mut c_void, u, u, c.add(1) as *mut c_void]);
+            }
+            EeGeFbOp::BmpScales => {
+                *floats = ee_ge_bmp_getf(bitmap(), EeGeBmpFloat::XScale);
+                *floats.add(1) = ee_ge_bmp_getf(bitmap(), EeGeBmpFloat::YScale);
+            }
+            EeGeFbOp::BmpSetColor => {
+                let c = a as *mut c_void;
+                ee_ge_bmp_set_colors(bitmap(), &[c, c, c, c]);
+            }
+            EeGeFbOp::BmpSetUvs => {
+                let c = a as *mut [f32; 2];
+                ee_ge_bmp_set_uvs(bitmap(), &[c.cast(), c.add(1).cast(), c.add(2).cast(), c.add(3).cast()]);
+            }
+            EeGeFbOp::BmpSetXyScale => {
+                ee_ge_bmp_set_xy_scale(bitmap(), f32::from_bits(a as u32), f32::from_bits(b as u32))
+            }
+            EeGeFbOp::BmpSetLocation => ee_ge_bmp_set_location(bitmap(), a as *const Ge2DPoint),
+            _ => return None,
+        }
+    }
+    Some(0)
+}
+
 unsafe fn fb<'a>(p: *mut EeGeFontBitmap) -> &'a mut EeGeFontBitmap {
     // SAFETY: the caller's contract; the reference is not held across a host call
     unsafe { &mut *p }
@@ -173,6 +259,10 @@ impl EeGeFontBitmap {
                     return 0;
                 }
                 _ => {}
+            }
+            // SAFETY: the objects are the C++'s live GE objects the operation names
+            if let Some(r) = unsafe { direct_op(op, obj, a, b) } {
+                return r;
             }
         }
         // SAFETY: the host's contract

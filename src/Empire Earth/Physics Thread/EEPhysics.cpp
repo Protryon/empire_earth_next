@@ -217,6 +217,7 @@ void EEPhysics::EndGame(bool inIsVictory)
             (static_cast<UIBlinkingButton*>(gUIManager->mMainGameForm->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
     }
     gWorld.mTeams.clear();
+    ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)
     if (gCommunications->IsServer() == true)
         (static_cast<NESynchronousServer*>(gCommunications))->PauseGame();
     this->mGameOver = true;
@@ -1312,22 +1313,14 @@ static void TickUpdatePlayer(void* inContext, uint32_t inIndex)
 
 static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
 {
-    if (EEUnitStepNoting() && (inIndex >= gWorld.mUpdateUnits.size() || gWorld.mUpdateUnits[inIndex].GetSavedID() != inID))
-        EEUnitStepDiffers("UpdateUnits (the stepped unit's id)", inID, (long)inIndex,
-                          inIndex < gWorld.mUpdateUnits.size() ? (long)gWorld.mUpdateUnits[inIndex].GetSavedID() : -1);
-    gPhysicsSteppingUnit = gWorld.mUpdateUnits[inIndex];   // TEST ONLY: named by EE-SIM's random-draw trace
-    gWorld.mUpdateUnits[inIndex]->Step();
+    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);   // the stepped list's inIndex-th
+    gPhysicsSteppingUnit = theUnit;   // TEST ONLY: named by EE-SIM's random-draw trace
+    theUnit->Step();
     EEUnitUpdateCommit(inID);   // TEST ONLY (USST kind 12)
 }
 
 unsigned long EEPhysics::UpdateUnits()
 {
-    if ((size_t)ee_units_order_count() != gWorld.mUpdateUnits.size()) {
-        if (EEUnitStepNoting())   // TEST ONLY: never seen (USCK compares the two at every check)
-            EEUnitStepDiffers("UpdateUnits (the stepped units' count)", 0, (long)ee_units_order_count(),
-                              (long)gWorld.mUpdateUnits.size());
-        EEUnitOrderReset();   // a played game's safety net: the steps index the deque by the list's count
-    }
     EeUnitsTickHost theHost;
     theHost.ctx = NULL;
     theHost.num_players = (uint32_t)gWorld.mNumPlayers;

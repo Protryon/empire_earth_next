@@ -29,23 +29,38 @@ CHECKS = [
          hosts=[LOBBY / "LobbyCtrlHost.cpp", LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "EELobbyGameHost.cpp",
                 LOBBY / "EELobbyGlueHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "ctl_op"),
-               (RS / "ee_won_lobby" / "src" / "persistobj.rs", "ctl_op")],
+               (RS / "ee_won_lobby" / "src" / "persistobj.rs", "ctl_op"),
+               (RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op"),
+               (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_string_op"),
+               (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op")],
          allowed={}),
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonLobbyCtlItemField", header="won_lobby/lobbyctl.h",
-         hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
+         rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op")], allowed={}),
     # the C++ makes these (CtlEventOf maps a ComponentEvent's type to one): each must be made somewhere
     dict(enum="EeWonLobbyCtlEvent", header="won_lobby/lobbyctl.h", mentions=True,
          hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
     dict(enum="EeWonLobbyCtlType", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+    # the strings go out as resource rows (R6 WONLobby round 17): each named in its table
     dict(enum="EeWonLobbyCtlString", header="won_lobby/lobbyctl.h",
-         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "string_row", True)],
+         allowed={}),
+    dict(enum="EeWonLobbyPopupString", header="won_lobby/lobbypopup.h",
+         hosts=[LOBBY / "LobbyDialogHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "lobbypopup.rs", "string_row", True)],
+         allowed={}),
+    # the dialogs' strings: the lobby's as rows, the EE game's two by the host (EeString); Empty is the original's
+    # empty default
+    dict(enum="EeWonLobbyDlgString", header="won_lobby/lobbydlg.h", mentions=True,
+         hosts=[LOBBY / "LobbyDialogHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "string_row", True)],
+         allowed={"Empty": "the original switch's empty default (string_row None, EeString's empty answer)"}),
     dict(enum="EeWonLobbyCtlImage", header="won_lobby/lobbyctl.h",
-         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "icon_res", True)],
+         allowed={}),
     dict(enum="EeWonLobbyCtlClientTest", header="won_lobby/lobbyctl.h",
-         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "client_is")], allowed={}),
     dict(enum="EeWonLobbyCtlPref", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "persistobj.rs", "pref_flag")],
          allowed={}),
@@ -60,10 +75,11 @@ CHECKS = [
          allowed={}),
     dict(enum="EeWonLobbyDlgOp", header="won_lobby/lobbydlg.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "EELobbyGameHost.cpp", LOBBY / "EELobbyGlueHost.cpp"],
-         rust=[], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "game_op")], allowed={}),
     dict(enum="EeWonLobbyPopupOp", header="won_lobby/lobbypopup.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "popup_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "popup_op"),
+               (RS / "ee_won_lobby" / "src" / "lobbypopup.rs", "game_string_op")], allowed={}),
     dict(enum="EeWonLobbyOp", header="won_lobby/lobbyhost.h",
          hosts=[LOBBY / "LobbyLogicHost.cpp", LOBBY / "LanLogicHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "lobby_op"),
@@ -103,7 +119,7 @@ def host_cases(paths, mentions=False):
     return found
 
 
-def rust_arms(path, fn):
+def rust_arms(path, fn, mentions=False):
     """The `X::Value` names in the arms of the first `match` in `fn` (up to the function's end)."""
     if not path.exists():
         return set()
@@ -122,6 +138,8 @@ def rust_arms(path, fn):
             if depth == 0:
                 break
     body = text[i:j]
+    if mentions:  # a table's entries (`S::Value` anywhere in the function)
+        return set(re.findall(r"\b\w+::(\w+)\b", body))
     return set(re.findall(r"\b\w+::(\w+)\s*(?:\|[^=]*)?(?:\{[^}]*\})?\s*=>", body)) | \
         set(re.findall(r"\|\s*\w+::(\w+)", body))
 
@@ -139,8 +157,8 @@ def main():
             continue
         cases = host_cases(c["hosts"], c.get("mentions", False))
         rust = set()
-        for path, fn in c["rust"]:
-            arms = rust_arms(path, fn)
+        for path, fn, *flag in c["rust"]:
+            arms = rust_arms(path, fn, bool(flag and flag[0]))
             if arms is None:
                 print(f"{c['enum']}: no fn {fn} in {path.relative_to(ROOT)}")
                 bad += 1

@@ -56,7 +56,6 @@ public:
 
     void CopyKeyValsFrom(ConfigObject*); //SDK ordered case-insensitive merge/copy; no original address identified
     ConfigObject* NextChild();
-    bool HasMoreChildren();
     void RegisterKeyGroup(const char*,ConfigObjectFactory,SmartPtr<ConfigObject>* =NULL);
     void RegisterKeyGroup(const char*,ConfigObject*);
     void Clear(); //3af310

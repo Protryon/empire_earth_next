@@ -4,14 +4,8 @@
 
 use core::ffi::c_ulong;
 
-use crate::draw::{self, BorderLine};
+use crate::draw;
 use crate::rect::UiRect;
-
-/// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
-#[no_mangle]
-pub extern "C" fn ee_ui_border_line(r: UiRect, side: u32, i: c_ulong, border_type: c_ulong) -> BorderLine {
-    draw::border_line(&r, side, i, border_type)
-}
 
 /// `UILBString::DrawTextA`'s row `i`.
 #[no_mangle]

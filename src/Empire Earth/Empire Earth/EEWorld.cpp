@@ -125,6 +125,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
+#include "rust/sim/app.h"   // EeAppStats* (ee_sim app statistics.rs)
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -222,62 +223,48 @@ void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
     this->mGhostUnits.push_back(inGhost);
 }
 
+// The teams are Rust's (ee_sim app teams.rs): the stances it reads, and the C++ mirror (mTeams: the AI thread's, the
+// server's and the save's) rebuilt after every change (a team's victory condition keeps only its team's address)
+static bool EETeamsPresent(void*, uint32_t inPlayer)
+{
+    return inPlayer < 17 && gWorld.mPlayers[inPlayer] != NULL;
+}
+
+static bool EETeamsObserver(void*, uint32_t inPlayer)
+{
+    return gWorld.mPlayers[inPlayer]->mObserverMode;
+}
+
+static bool EETeamsEnemy(void*, uint32_t inPlayer, uint32_t inOther)
+{
+    return gWorld.mPlayers[inPlayer]->mEnemies[inOther] != 0;
+}
+
+static const EeAppTeamsWorld kTeamsWorld = {NULL, EETeamsPresent, EETeamsObserver, EETeamsEnemy};
+
+static void EEMirrorTeams(std::vector<EETeam>& outTeams)
+{
+    outTeams.resize(ee_app_teams_get(SIZE_MAX, NULL, 0));
+    for (size_t k = 0; k < outTeams.size(); k++) {
+        std::vector<uint32_t> thePlayers(ee_app_teams_get(k, NULL, 0));
+        ee_app_teams_get(k, thePlayers.data(), thePlayers.size());
+        outTeams[k].mPlayers.assign(thePlayers.begin(), thePlayers.end());
+    }
+}
+
 // Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
 void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
 {
-    EETeam theTeam(inPlayers);
-    for (unsigned long i = 0; i < this->mTeams.size(); i++) {
-        bool theDisjoint = true;
-        for (unsigned long j = 0; j < this->mTeams[i].mPlayers.size() && theDisjoint; j++) {
-            EEPlayer* thePlayer = this->mPlayers[this->mTeams[i].mPlayers[j]];
-            if (thePlayer == NULL)
-                continue;
-            for (unsigned long k = 0; k < theTeam.GetNumPlayers(); k++) {
-                if (this->mPlayers[theTeam.mPlayers[k]] != NULL) {
-                    unsigned long theID = thePlayer->GetPlayerID();
-                    if (this->mPlayers[theTeam.mPlayers[k]]->mEnemies[theID] != 0) {
-                        theDisjoint = false;
-                        break;
-                    }
-                }
-                if (thePlayer->mEnemies[theTeam.mPlayers[k]] != 0) {
-                    theDisjoint = false;
-                    break;
-                }
-            }
-        }
-        if (!theDisjoint)
-            continue;
-        theTeam.Merge(this->mTeams[i]);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    this->mTeams.push_back(theTeam);
+    std::vector<uint32_t> thePlayers(inPlayers.begin(), inPlayers.end());
+    ee_app_teams_add(thePlayers.data(), thePlayers.size(), &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
 }
 
 // Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
 void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
 {
-    EETeam theTeam(inPlayer1, inPlayer2);
-    EETeam theOther;
-    for (unsigned long i = 0; i < this->mTeams.size(); i++) {
-        theOther.mPlayers = this->mTeams[i].mPlayers;
-        EEPlayer* thePlayer1 = this->mPlayers[inPlayer1];
-        EEPlayer* thePlayer2 = this->mPlayers[inPlayer2];
-        unsigned long j;
-        for (j = 0; j < theOther.GetNumPlayers(); j++) {
-            EEPlayer* thePlayer = this->mPlayers[theOther.mPlayers[j]];
-            if (thePlayer1->mEnemies[thePlayer->GetPlayerID()] != 0 || thePlayer->mEnemies[inPlayer1] != 0
-                || thePlayer2->mEnemies[thePlayer->GetPlayerID()] != 0 || thePlayer->mEnemies[inPlayer2] != 0)
-                break;
-        }
-        if (!(j >= theOther.GetNumPlayers()))
-            continue;
-        theTeam.Merge(this->mTeams[i]);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    this->mTeams.push_back(theTeam);
+    ee_app_teams_ally((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
 }
 
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
@@ -314,6 +301,16 @@ static void EEDropUnbornDeactivations()
     sUnbornDeactivations.clear();
 }
 
+// the active lists' reference changes (ee_sim app active.rs), applied as each is made
+static void EEActiveRefs(uint32_t inID, int32_t inDelta)
+{
+    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);
+    for (; inDelta > 0; inDelta--)
+        theUnit->Reference();
+    for (; inDelta < 0; inDelta++)
+        theUnit->Dereference();
+}
+
 // port: the waiting deactivations whose units have an id now join the queue (one entry per unit, as the original's
 // pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
 void EEWorld::QueueBornDeactivations()
@@ -324,11 +321,8 @@ void EEWorld::QueueBornDeactivations()
     theWaiting.swap(sUnbornDeactivations);
     for (size_t i = 0; i < theWaiting.size(); i++) {
         EEComplexUnit* theUnit = theWaiting[i];
-        if (!UIsNone32(theUnit->mUnitID)
-            && std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), theUnit) == this->mDeactivateQueue.end())
-            this->mDeactivateQueue.push_back(theUnit);   // the reference DeactivateUnit took goes with it
-        else
-            theUnit->Dereference();
+        if (UIsNone32(theUnit->mUnitID) || !ee_app_active_deactivate((uint32_t)theUnit->mUnitID))
+            theUnit->Dereference();   // (queued: the reference DeactivateUnit took goes with it)
     }
 }
 
@@ -364,6 +358,7 @@ void EEWorld::Clear()
     delete this->mScenarioManager;
     this->mScenarioManager = NULL;
     this->mTeams.clear();
+    ee_app_teams_clear();
     USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
     for (unsigned long i = 1; i < this->mNumPlayers; i++) {
         if (this->mPlayers[i] == NULL || !(this->mPlayers[i]->mHackUnitClass < EEUnitClassCount()))
@@ -384,23 +379,7 @@ void EEWorld::Clear()
     gMiniMap = NULL;
     gPathManager.Reset();
     gLocalPlayerOut = false;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
-    for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
-        (*it)->Dereference();
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
-        (*it)->Dereference();
-    EEDropUnbornDeactivations();
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
-    for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
-        (*ct)->Dereference();
-    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
-    for (mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
-        mt->second->Dereference();
-    this->mActivateQueue.clear();
-    this->mDeactivateQueue.clear();
-    this->mUpdateUnits.clear();
-    EEUnitOrderClear();   // New (R5b.4): the Rust list of the stepped units follows (ee/EEUnitStore.h)
-    this->mActiveUnits.clear();
+    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
     EEPPatrolGroup::ResetIDs();
     gCollisionDetectionUnit = 2000;
     delete this->mCalamityHelper;
@@ -516,28 +495,9 @@ void EEComplexUnit::ClearCollisionState()
 // player at war with each other
 void EEWorld::RebuildTeams()
 {
-    EETeam theTeam;
     EEPlayer* theGaia = this->mPlayers[0];
-    std::vector<long> theUnused;
-    this->mTeams.clear();
-    if (this->mTeams.size() == 0) {
-        for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-            if (this->mPlayers[i]->mObserverMode)
-                continue;
-            theTeam.AddPlayer(i);
-            this->mTeams.push_back(theTeam);
-            theTeam.mPlayers.clear();
-        }
-    }
-    for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i]->mObserverMode)
-            continue;
-        for (unsigned long j = i + 1; j < this->mNumPlayers; j++) {
-            if (!this->mPlayers[j]->mObserverMode
-                && (this->mPlayers[j] == this->mPlayers[i] || this->mPlayers[i]->mEnemies[this->mPlayers[j]->GetPlayerID()] == 0))
-                this->AddAlliance(i, j);
-        }
-    }
+    ee_app_teams_rebuild((uint32_t)this->mNumPlayers, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     for (unsigned long k = 1; k < this->mNumPlayers; k++)
         theGaia->SetDiplomaticStance(this->mPlayers[k], 1, this->mMap);
     for (unsigned long m = 1; m < this->mNumPlayers; m++) {
@@ -860,8 +820,12 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gArtificialIntelligence->CollectComputerPlayers();
     gUserInterface->SetLoadProgress(kWorldLoadProgress22);
     if (inState->GetNumTeams() > 0) {
-        for (i = 0; i < inState->GetNumTeams(); i++)
-            this->mTeams.push_back(inState->mTeams[i]);
+        for (i = 0; i < inState->GetNumTeams(); i++) {
+            const std::vector<unsigned long>& theTeam = inState->mTeams[i].mPlayers;
+            std::vector<uint32_t> thePlayers(theTeam.begin(), theTeam.end());
+            ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), thePlayers.data(), thePlayers.size());
+        }
+        EEMirrorTeams(this->mTeams);
         for (i = this->mNumPlayers; i <= 16; i++) {
             if (this->mPlayers[i] == NULL)
                 this->RemovePlayerFromTeams(i);
@@ -1158,19 +1122,32 @@ long EEWorld::PauseGame()
     return theResult;
 }
 
-// Builds the post-game statistics: tops up computer players' resources against the best human, scores every player,
-// sorts them by score and fills the records (computer play times scaled from the longest human one)
+// RecordStatistics' C++ calls (ee_sim app statistics.rs): the physics random draw, a player's statistics Set (its
+// gate and the game time) and resources
+static float EEStatsRandom(void*, float inLow, float inHigh)
+{
+    return gPhysics->GetRandom(inLow, inHigh);
+}
+
+static void EEStatsSet(void*, uint32_t inSlot, long inSeries, long inValue)
+{
+    gWorld.mPlayers[inSlot]->mSavedGroups.Set(inSeries, inValue);
+}
+
+static long EEStatsCap(void*, uint32_t inSlot, uint32_t inResource)
+{
+    return gWorld.mPlayers[inSlot]->mResourceCaps[inResource];
+}
+
+static void EEStatsSetCap(void*, uint32_t inSlot, uint32_t inResource, long inValue)
+{
+    gWorld.mPlayers[inSlot]->mResourceCaps[inResource] = inValue;
+}
+
+// Builds the post-game statistics: the history's fields here, the scores, the computers' top-ups, the records' order
+// and flags and the computers' play times in Rust (ee_sim app statistics.rs), then the records filled
 void EEWorld::RecordStatistics()
 {
-    EEStatisticsRecord* theRecordPtr = NULL;
-    std::multimap<long, long, std::greater<long> > theScores;
-    std::map<unsigned long, EEStatisticsRecord> theRecords;
-    EEStatisticsRecord theRecord;
-    UWideString theName;
-    UWideString theDefault;
-    std::vector<long> thePlayers;
-    bool theLocalPending = false;
-    unsigned long theHumans = 0;
     this->mStatistics.mStartTime = this->mStartTime;
     this->mStatistics.mTileCount = this->mMap->GetTileCount();
     this->mStatistics.mVictoryEnabled = this->mVictoryEnabled;
@@ -1180,260 +1157,62 @@ void EEWorld::RecordStatistics()
     this->mStatistics.mEndTime = gPhysics->mGameTime;
     if (this->mStatistics.mIsCampaign)
         this->mStatistics.mCampaignName = this->mGameOptions.mCampaignName;
-    thePlayers.clear();
-    unsigned long i;
-    for (i = 0; i < this->mNumPlayers; i++) {
-        EEPlayer* thePlayer = this->mPlayers[i];
-        if (!thePlayer->mObserverMode || thePlayer->mGameResult != 0) {
-            thePlayers.push_back(i);
-        } else {
-            if (this->mPlayers[this->mCurrentPlayer] == thePlayer)
-                theLocalPending = true;
-            if (thePlayer->mDisconnected)
-                thePlayers.push_back(i);
-        }
+    UWideString theDefault;
+    gResource->GetString(IDS_COMPUTER, theDefault);
+    std::vector<EeAppStatsPlayer> thePlayers(this->mNumPlayers);
+    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
+        EEPlayer* p = this->mPlayers[i];
+        thePlayers[i] = {p->GetPlayerID(), p->IsHuman(),
+                         PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)p->mName),
+                                    reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0,
+                         p->mObserverMode, p->mDisconnected, p->mGameResult, p->mSavedGroups.mStats};
     }
-    long theComputerCount = 0;
-    theScores.clear();
-    for (i = 0; i < thePlayers.size(); i++) {
-        EEPlayer* thePlayer = this->mPlayers[thePlayers[i]];
-        if (!thePlayer->IsHuman()) {
-            gResource->GetString(IDS_COMPUTER, theDefault);
-            if (PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer->mName), reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0) {
-                theComputerCount++;
-                sprintf(theRecord.mNameSuffix, " #%ld", theComputerCount);
-            } else {
-                theRecord.mNameSuffix = gEmptyString;
-            }
-            for (unsigned long r = 2; r < 7; r++) {
-                long theBase = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r - 2];
-                long theSeries;
-                if (r == 2)
-                    theSeries = 7;
-                else if (r == 3)
-                    theSeries = 8;
-                else if (r == 4)
-                    theSeries = 10;
-                else if (r == 5)
-                    theSeries = 9;
-                else if (r == 6)
-                    theSeries = 11;
-                else
-                    continue;
-                EEPlayer* theBest = NULL;
-                for (unsigned long j = 0; j < thePlayers.size(); j++) {
-                    EEPlayer* theOther = this->mPlayers[thePlayers[j]];
-                    if (theOther->IsHuman()) {
-                        if (theBest == NULL || theBest->mSavedGroups.GetValue(theSeries) < theOther->mSavedGroups.GetValue(theSeries))
-                            theBest = theOther;
-                    }
-                }
-                // no human among the recorded players: there is no one to top up against (theBest used to be
-                // read through NULL)
-                if (theBest == NULL)
-                    continue;
-                long theBestValue = theBest->mSavedGroups.GetValue(theSeries);
-                long theGathered = theBestValue - theBest->mResourceCaps[r] + theBase;
-                if (thePlayer != theBest)
-                    theBest->mEnemies[thePlayer->GetPlayerID()];
-                float theFactor = gPhysics->GetRandom(0.5f, 1.5f);
-                unsigned long theValue;
-                unsigned long theTarget;
-                if (theBestValue < 1) {
-                    theValue = thePlayer->mSavedGroups.GetValue(theSeries);
-                    theTarget = theValue;
-                } else {
-                    theValue = UMFloatToLong(theBestValue * theFactor);
-                    theTarget = UMFloatToLong(theGathered * theFactor);
-                }
-                long theExcess = theTarget - theBase - theValue;
-                if (theExcess > 0)
-                    theValue += theExcess;
-                long theSpent = theTarget - UMFloatToLong(gPhysics->GetRandom(0.03f, 0.06f) * theTarget);
-                if (thePlayer->mSavedGroups.GetValue(theSeries) < theValue)
-                    thePlayer->mSavedGroups.Set(theSeries, theValue);
-                else
-                    theValue = thePlayer->mSavedGroups.GetValue(theSeries);
-                thePlayer->mResourceCaps[r] = theBase - theSpent + theValue;
-            }
-        } else {
-            theRecord.mNameSuffix = gEmptyString;
-        }
-        unsigned long theScore = 0;
-        long theMilitary = 0;
-        long theUnits = 0;
-        long theEconomy = 0;
-        long theTech = 0;
-        long theGathered = 0;
-        long theStart = 0;
-        if (thePlayer->GetPlayerID() == 0) {
-            theScore = 0x7fffffff;
-        } else {
-            thePlayer->mSavedGroups.CompactEpochHistory();
-            for (long s = 0; s < 31; s++) {
-                unsigned long theValue = thePlayer->mSavedGroups.GetValue(s);
-                unsigned long thePoints = thePlayer->mSavedGroups.GetSeries(s).mPoints.size();
-                switch (s) {
-                case 1:
-                    theEconomy += theValue * -15;
-                    break;
-                case 2:
-                    theEconomy += theValue * 50;
-                    break;
-                case 3:
-                case 5:
-                    theEconomy += theValue * 20;
-                    break;
-                case 4:
-                    theEconomy += theValue * -5;
-                    break;
-                case 7:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceFood];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[0];
-                    break;
-                case 8:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceWood];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[1];
-                    break;
-                case 9:
-                    theGathered += theValue;
-                    theMilitary += theValue >> 3;
-                    theScore += thePlayer->mResourceCaps[kResourceGold];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[3];
-                    break;
-                case 10:
-                    theGathered += theValue;
-                    theMilitary += theValue / 10;
-                    theScore += thePlayer->mResourceCaps[kResourceStone];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[2];
-                    break;
-                case 11:
-                    theGathered += theValue;
-                    theMilitary += theValue >> 3;
-                    theScore += thePlayer->mResourceCaps[kResourceIron];
-                    theStart += EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[4];
-                    break;
-                case 12: {
-                    unsigned long theCount = thePlayer->mSavedGroups.GetSeries(s).mPoints.size();
-                    unsigned long theFirst;
-                    if (theCount <= 1)
-                        theFirst = 0;
-                    else
-                        theFirst = (thePlayer->mSavedGroups.GetSeries(s).mPoints.begin() + 1)->mValue;
-                    for (unsigned long p = 0; p < thePoints; p++) {
-                        unsigned long theEpoch = thePlayer->mSavedGroups.GetSeries(s).mPoints[p].mTime + 1;
-                        unsigned long theTime = (thePlayer->mSavedGroups.GetSeries(s).mPoints.begin() + p)->mValue;
-                        if (theTime < theFirst)
-                            theTime = theFirst;
-                        theUnits += (long)((double)(unsigned long)this->mStatistics.mEndTime / theEpoch * (theTime - theFirst) * 100.0 + 0.5);
-                    }
-                    break;
-                }
-                case 13:
-                    theEconomy += theValue * 10;
-                    break;
-                case 14:
-                    theTech += theValue * 10;
-                    break;
-                case 15:
-                    theTech += thePlayer->mSavedGroups.CountIncreases(s) * 100;
-                    break;
-                case 16:
-                    theTech += theValue * 500;
-                    break;
-                case 18:
-                    theGathered += theValue;
-                    break;
-                case 19:
-                    theTech += theValue * 2;
-                    break;
-                }
-            }
-            long theBonus = (long)(theGathered - theScore + theStart) / 4;
-            long theFloor = this->mStatistics.mIsScenario ? theScore : 0;
-            if (theBonus <= theFloor)
-                theBonus = theFloor;
-            theMilitary += theBonus;
-            theScore = theTech + theEconomy + theUnits + theMilitary;
-        }
-        theRecord.mScore = theScore;
-        theRecord.mEconomyScore = theMilitary;
-        theRecord.mEpochScore = theUnits;
-        theRecord.mMilitaryScore = theEconomy;
-        theRecord.mTechScore = theTech;
-        theScores.insert(std::multimap<long, long, std::greater<long> >::value_type(theScore, thePlayers[i]));
-        theRecords.insert(std::make_pair(*(thePlayers.begin() + i), theRecord));
+    EeAppStatsWorld theWorld = {};
+    theWorld.current = this->mCurrentPlayer;
+    theWorld.is_scenario = this->mStatistics.mIsScenario;
+    theWorld.end_time = this->mStatistics.mEndTime;
+    for (long r = 0; r < 5; r++) {
+        theWorld.base[r] = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r];
+        theWorld.level[r] = EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[r];
     }
+    const EeAppStatsHost theHost = {NULL, EEStatsRandom, EEStatsSet, EEStatsCap, EEStatsSetCap};
+    std::vector<EeAppStatsRecord> theOrder(thePlayers.size());
+    long theCurrent = -1;
+    bool theScenario = this->mStatistics.mIsScenario;
+    size_t n = ee_app_record_statistics(&theWorld, thePlayers.data(), thePlayers.size(), &theHost, theOrder.data(),
+                                             theOrder.size(), &theCurrent, &theScenario);
     this->mStatistics.mRecords.clear();
-    this->mStatistics.mRecords.resize(theScores.size());
-    unsigned long theIndex = 0;
-    unsigned long theMaxTime = 0;
-    std::multimap<long, long, std::greater<long> >::iterator it;
-    for (it = theScores.begin(); it != theScores.end(); ++it, theIndex++) {
-        EEPlayer* thePlayer = this->mPlayers[it->second];
-        EEStatisticsRecord& theSource = (*theRecords.find(it->second)).second;
-        thePlayer->mSavedGroups.Set(14, thePlayer->mSavedGroups.GetLastValue(14));
-        thePlayer->mSavedGroups.Set(13, thePlayer->mSavedGroups.GetLastValue(13));
-        (this->mStatistics.mRecords.begin() + theIndex)->mScore = theSource.mScore;
-        (this->mStatistics.mRecords.begin() + theIndex)->mEconomyScore = theSource.mEconomyScore;
-        this->mStatistics.mRecords[theIndex].mEpochScore = theSource.mEpochScore;
-        this->mStatistics.mRecords[theIndex].mMilitaryScore = theSource.mMilitaryScore;
-        this->mStatistics.mRecords[theIndex].mTechScore = theSource.mTechScore;
-        this->mStatistics.mRecords[theIndex].mColor = thePlayer->mColor;
-        this->mStatistics.mRecords[theIndex].mName = thePlayer->mName + theSource.mNameSuffix;
-        this->mStatistics.mRecords[theIndex].mStatistics = thePlayer->mSavedGroups;
-        this->mStatistics.mRecords[theIndex].mSlot = thePlayer->mSlot;
-        this->mStatistics.mRecords[theIndex].mResult = thePlayer->mGameResult;
-        long theTime = thePlayer->mSavedGroups.mEndTime;
-        if (theTime == 0)
-            theTime = this->mStatistics.mEndTime;
-        this->mStatistics.mRecords[theIndex].mEndTime = theTime;
-        if (thePlayer->GetPlayerID() > 0)
-            this->mStatistics.mRecords[theIndex].mTeam = this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam;
-        else
-            this->mStatistics.mRecords[theIndex].mTeam = 0;
+    this->mStatistics.mRecords.resize(n);
+    for (size_t k = 0; k < n; k++) {
+        const EeAppStatsRecord& o = theOrder[k];
+        EEStatisticsRecord& e = this->mStatistics.mRecords[k];
+        EEPlayer* thePlayer = this->mPlayers[o.slot];
+        UWideString theSuffix;
+        if (o.suffix != 0)
+            sprintf(theSuffix, " #%ld", o.suffix);
+        e.mScore = o.score;
+        e.mEconomyScore = o.economy_score;
+        e.mEpochScore = o.epoch_score;
+        e.mMilitaryScore = o.military_score;
+        e.mTechScore = o.tech_score;
+        e.mColor = thePlayer->mColor;
+        e.mName = thePlayer->mName + theSuffix;
+        e.mStatistics = thePlayer->mSavedGroups;
+        e.mSlot = thePlayer->mSlot;
+        e.mResult = thePlayer->mGameResult;
+        e.mEndTime = thePlayer->mSavedGroups.mEndTime != 0 ? thePlayer->mSavedGroups.mEndTime : this->mStatistics.mEndTime;
+        e.mTeam = thePlayer->GetPlayerID() > 0 ? this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam : 0;
         for (unsigned long r = 2; r < 7; r++)
-            this->mStatistics.mRecords[theIndex].mResources[r] = thePlayer->mResourceCaps[r];
-        if (thePlayer->GetPlayerID() == (unsigned long)this->mCurrentPlayer) {
-            this->mStatistics.mRecords[theIndex].mIsLocal = true;
-            this->mStatistics.mCurrentRecordIndex = theIndex;
-        } else if (theLocalPending) {
-            theLocalPending = false;
-            this->mStatistics.mRecords[theIndex].mIsLocal = true;
-            this->mStatistics.mCurrentRecordIndex = theIndex;
-        } else {
-            this->mStatistics.mRecords[theIndex].mIsLocal = false;
-        }
-        if (thePlayer->IsHuman()) {
-            this->mStatistics.mRecords[theIndex].mIsHuman = true;
-            if (theIndex > 0)
-                theHumans++;
-            if (theMaxTime < this->mStatistics.mRecords[theIndex].mStatistics.GetValue(0x18))
-                theMaxTime = this->mStatistics.mRecords[theIndex].mStatistics.GetValue(0x18);
-        } else {
-            this->mStatistics.mRecords[theIndex].mIsHuman = false;
-        }
+            e.mResources[r] = thePlayer->mResourceCaps[r];
+        e.mIsLocal = o.is_local;
+        e.mIsHuman = o.is_human;
     }
-    theIndex = 0;
-    for (it = theScores.begin(); it != theScores.end(); ++it, theIndex++) {
-        EEPlayer* thePlayer = this->mPlayers[it->second];
-        if (thePlayer->IsHuman())
-            continue;
-        float theFactor;
-        if (thePlayer->mGameResult == 1)
-            theFactor = gPhysics->GetRandom(0.75f, 0.9f);
-        else if (thePlayer->mGameResult == 2)
-            theFactor = gPhysics->GetRandom(0.6f, 0.75f);
-        else
-            theFactor = gPhysics->GetRandom(0.6f, 0.9f);
-        this->mStatistics.mRecords[theIndex].mStatistics.Set(0x18, (long)(theFactor * theMaxTime + 0.5f));
-    }
-    if (theHumans > 1 && this->mStatistics.mIsScenario == true)
-        this->mStatistics.mIsScenario = false;
+    if (theCurrent >= 0)
+        this->mStatistics.mCurrentRecordIndex = theCurrent;
+    for (size_t k = 0; k < n; k++)
+        if (theOrder[k].has_play_time)
+            this->mStatistics.mRecords[k].mStatistics.Set(0x18, theOrder[k].play_time);
+    this->mStatistics.mIsScenario = theScenario;
 }
 
 // Creates an empty statistics record
@@ -1451,44 +1230,8 @@ void EEWorld::ClearContinents()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator theFound;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
-    std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
     this->QueueBornDeactivations();
-    if (this->mActivateQueue.size() != 0) {
-        for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it) {
-            long theID = (*it)->GetUnitID();
-            mt = this->mActiveUnits.find(theID);
-            if (mt == this->mActiveUnits.end()) {
-                this->mUpdateUnits.push_back(*it);
-                EEUnitOrderPush(it->GetSavedID());   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
-                (*it)->Reference();
-                (*it)->Reference();
-                long theKey = (*it)->GetUnitID();
-                this->mActiveUnits[theKey] = *it;
-            }
-            (*it)->Dereference();
-        }
-        this->mActivateQueue.clear();
-    }
-    if (this->mDeactivateQueue.size() == 0)
-        return;
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it) {
-        long theID = (*it)->GetUnitID();
-        mt = this->mActiveUnits.find(theID);
-        if (mt != this->mActiveUnits.end()) {
-            theFound = std::find(this->mUpdateUnits.begin(), this->mUpdateUnits.end(), *it);
-            if (theFound != this->mUpdateUnits.end()) {
-                (*it)->Dereference();
-                (*it)->Dereference();
-                EEUnitOrderErase(theFound->GetSavedID());   // New (R5b.4): the Rust list follows
-                this->mUpdateUnits.erase(theFound);
-                this->mActiveUnits.erase(mt);
-            }
-        }
-        (*it)->Dereference();
-    }
-    this->mDeactivateQueue.clear();
+    ee_app_active_update(EEActiveRefs);
 }
 
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
@@ -1496,11 +1239,8 @@ void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
     if (inUnit == NULL || UIsNone32(inUnit->mUnitID) || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mActivateQueue.begin(), this->mActivateQueue.end(), inUnit);
-    if (it == this->mActivateQueue.end()) {
+    if (ee_app_active_activate((uint32_t)inUnit->mUnitID))
         inUnit->Reference();
-        this->mActivateQueue.push_back(inUnit);
-    }
 }
 
 // Queues a unit for deactivation unless it is a path point or is already queued
@@ -1518,45 +1258,22 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
         return;
     }
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), inUnit);
-    if (it == this->mDeactivateQueue.end()) {
-        this->mDeactivateQueue.push_back(inUnit);
+    if (ee_app_active_deactivate((uint32_t)inUnit->mUnitID))
         inUnit->Reference();
-    }
 }
 
 // Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
 // dropping the pending activation queues
 void EEWorld::RebuildActiveUnits()
 {
-    EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst;
-
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator it; for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it)
-        (*it)->Dereference();
-    for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
-        (*it)->Dereference();
-    EEDropUnbornDeactivations();
-    std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
-    for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
-        (*ct)->Dereference();
-
-    for (std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt = this->mActiveUnits.begin(); mt != this->mActiveUnits.end(); ++mt)
-        mt->second->Dereference();
-    this->mActivateQueue.clear();
-    this->mDeactivateQueue.clear();
-    this->mUpdateUnits.clear();
-    EEUnitOrderClear();   // New (R5b.4): the Rust list follows (ee/EEUnitStore.h)
-    this->mActiveUnits.clear();
-    for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
+    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);
+    for (EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
         if (theComplex == NULL || theComplex->mPreviousPart != NULL || theComplex->mTileX == -10000
             || theComplex->mUnitClass->mUnitType == kUnitTypePathPoint
             || (theUnit->mUnitClass->mIsInactive && !(theComplex->mHitPoints <= 0)))
             continue;
-        this->mUpdateUnits.push_back(theComplex);
-        EEUnitOrderPush(theComplex->mUnitID);   // New (R5b.4): the Rust list follows
-        long theKey = theComplex->mUnitID;
-        this->mActiveUnits[theKey] = theComplex;
+        ee_app_active_start((uint32_t)theComplex->mUnitID);
         theComplex->Reference();
         theComplex->Reference();
     }
@@ -1600,19 +1317,8 @@ void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
 // Removes a player from every team, re-adding each team's remaining players as a new team
 void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
 {
-    std::vector<std::vector<unsigned long> > theTeams;
-    std::vector<unsigned long> thePlayers;
-    unsigned long i;
-    for (i = 0; i < this->mTeams.size(); i++) {
-        if (!this->mTeams[i].ContainsPlayer(inPlayer))
-            continue;
-        this->mTeams[i].RemovePlayer(inPlayer, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    for (i = 0; i < theTeams.size(); i++)
-        this->AddTeam(theTeams[i]);
+    ee_app_teams_remove((uint32_t)inPlayer, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     this->TeamsChanged();
 }
 
@@ -1625,21 +1331,8 @@ void EEWorld::RemoveShareBonus()
 // Splits every team holding both players into new teams without each of them
 void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
 {
-    std::vector<std::vector<unsigned long> > theTeams;
-    std::vector<unsigned long> thePlayers;
-    unsigned long i;
-    for (i = 0; i < this->mTeams.size(); i++) {
-        if (!this->mTeams[i].Contains(inPlayer1, inPlayer2))
-            continue;
-        this->mTeams[i].RemovePlayer(inPlayer1, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams[i].RemovePlayer(inPlayer2, thePlayers);
-        theTeams.push_back(thePlayers);
-        this->mTeams.erase(this->mTeams.begin() + i);
-        i--;
-    }
-    for (i = 0; i < theTeams.size(); i++)
-        this->AddTeam(theTeams[i]);
+    ee_app_teams_break((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
+    EEMirrorTeams(this->mTeams);
     this->TeamsChanged();
 }
 
@@ -1970,21 +1663,6 @@ void EEWorld::GameSpeedChanged()
 // Creates an empty team with a wonder victory condition
 EETeam::EETeam()
 {
-    this->mVictoryCondition = new EEVCWonder(this);
-}
-
-// Creates a team of two players with a wonder victory condition
-EETeam::EETeam(long inPlayer1, long inPlayer2)
-{
-    this->AddPlayer(inPlayer1);
-    this->AddPlayer(inPlayer2);
-    this->mVictoryCondition = new EEVCWonder(this);
-}
-
-// Creates a team of the given players with a wonder victory condition
-EETeam::EETeam(const std::vector<unsigned long>& inPlayers)
-{
-    this->mPlayers = inPlayers;
     this->mVictoryCondition = new EEVCWonder(this);
 }
 

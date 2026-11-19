@@ -629,6 +629,8 @@ struct EeWorldLayout {
   /// lane P: `EEMap::mTileArray` (the `EETile` array), `mVisibilityWords` (the tiles' visibility words)
   uint64_t map_tile_array;
   uint64_t map_visibility_words;
+  /// the unit utilities lane: `EEMap::mUnitRegions` (the `EeCombatUnitRegions*`)
+  uint64_t map_unit_regions;
   /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)
   uint64_t tile_stride;
   /// `mTerrainType` (a `long`), `mUnits` (the first node), `mVisibility` (`uint32_t*`), `mHeight`, `mAIValue` (a

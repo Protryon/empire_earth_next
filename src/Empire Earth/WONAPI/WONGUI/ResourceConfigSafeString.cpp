@@ -42,26 +42,3 @@ Sound* ResourceConfig::SafeGetSound(const std::string& key)
 {
     return ResourceConfig_SafeGetRes("Sound",key,this->mSoundMap,this).get();
 }
-
-// Font, color, background and int lookups that throw when missing (not identified in the original exe)
-Font* ResourceConfig::SafeGetFont(const std::string &theKey)
-{
-	return ResourceConfig_SafeGetRes("Font",theKey,this->mFontMap,this);
-}
-
-DWORD ResourceConfig::SafeGetColor(const std::string &theKey)
-{
-	return ResourceConfig_SafeGetRes("Color",theKey,this->mColorMap,this);
-
-}
-
-const Background& ResourceConfig::SafeGetBackground(const std::string &theKey)
-{
-	return ResourceConfig_SafeGetRes("Background",theKey,this->mBackgroundMap,this);
-
-}
-
-int ResourceConfig::SafeGetInt(const std::string &theKey)
-{
-	return ResourceConfig_SafeGetRes("Int",theKey,this->mIntMap,this);
-}

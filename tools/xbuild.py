@@ -729,6 +729,10 @@ WON_TESTS = {
     # the other Internet controls as lobbyctl.rs kinds (netctl.rs), the same way (golden:
     # rust/crates/ee_won_lobby/src/golden_netctl.txt)
     "won_netctl_test": [],
+    # the lobby's rows (RoomListItem, FriendsListItem, UserListItem, GameUserListItem) as Rust rows (rows.rs over
+    # rowobj.rs's shells): the original statements over a stand-in world of lists, graphics, fonts, images and model
+    # objects (golden: rust/crates/ee_won_lobby/src/golden_rowobj.txt)
+    "won_rowobj_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
     # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)
@@ -865,8 +869,13 @@ WON_TESTS = {
     # recorded over RegAuth.cpp before its port in net round 27)
     "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
-    "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    "won_chat_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # ChatCommandParser whole in Rust (chatobj.rs, R6 WONLobby round 17): ChatCommandParser.cpp's statements as they
+    # were (tests/won/won_chatparser_orig.h) against the game's forwards, each over real model shells
+    "won_chatparser_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # the lobby dialogs', popups' and controls' strings as resource rows (string_row, R6 WONLobby round 17) against
+    # the switches they replaced (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString)
+    "won_restext_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)

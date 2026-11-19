@@ -12055,6 +12055,18 @@ int64_t ee_screens_command_units(EeScreensCommandUnitsFields *rec,
                                  float x,
                                  float y);
 
+/// `EEUIRustControl`'s destructor: the control's draw objects freed (nothing for a control with none).
+void ee_screens_hud_draw_free(void *control);
+
+/// `EEUICPortrait`'s constructor's draw objects: its bitmap (`mPortrait`, the class's), the research bar (green),
+/// the improvement bar (yellow) and the background (red, over the portrait's rectangle), all half opaque.
+///
+/// # Safety
+/// `bitmap` is the portrait's live `GEBitmap*`; `rect` four floats (left, top, right, bottom).
+void ee_screens_portrait_draw_init(void *portrait,
+                                   void *bitmap,
+                                   const float *rect);
+
 /// The state of a bar `width` x `height`; `icon` (four floats: left, top, right, bottom) gets one icon's rectangle.
 void *ee_screens_icon_bar_new(float width,
                               float height,

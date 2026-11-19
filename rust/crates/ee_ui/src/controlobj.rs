@@ -240,9 +240,10 @@ impl Ctl {
             r.mHasBgOpacity = false;
         });
         let h = self.host();
-        h.op_f(Op::RhombusSetColor, BG, 0, 0, 0, &mut [0.0; 4]);
-        h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [0.0; 4]);
-        h.op_rect(Op::RhombusSetRect, BG, 0, grown(rect));
+        let bg = self.get(|r| r.mBgRhombus) as isize;
+        crate::draw2d::rhombus_set_color(bg, [0.0; 3], || h.op_f(Op::RhombusSetColor, BG, 0, 0, 0, &mut [0.0; 4]));
+        crate::draw2d::rhombus_set_opacity(bg, 0.0, || h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [0.0; 4]));
+        crate::draw2d::rhombus_set_rect(bg, grown(rect), || h.op_rect(Op::RhombusSetRect, BG, 0, grown(rect)));
     }
 
     /// The destructor: every trigger event uninitialized and released, in id order; the map freed.
@@ -278,7 +279,8 @@ impl Ctl {
     pub fn copy_data(&self) -> isize {
         if self.get(|r| r.mHasBgOpacity) {
             self.set(|r| r.mCopiedHasBgOpacity = true);
-            self.op(Op::RhombusCopy, 0, 0);
+            let (bg, copied) = self.get(|r| (r.mBgRhombus as isize, r.mCopiedBgRhombus as isize));
+            crate::draw2d::rhombus_assign(copied, bg, || self.op(Op::RhombusCopy, 0, 0));
         } else {
             self.set(|r| r.mCopiedHasBgOpacity = false);
         }
@@ -398,7 +400,8 @@ impl Ctl {
 
     /// `SetBgRectangle`: the background, half a pixel outside `r`.
     pub fn set_bg_rectangle(&self, r: UiRect) {
-        self.host().op_rect(Op::RhombusSetRect, BG, 0, grown(r));
+        let bg = self.get(|s| s.mBgRhombus) as isize;
+        crate::draw2d::rhombus_set_rect(bg, grown(r), || self.host().op_rect(Op::RhombusSetRect, BG, 0, grown(r)));
     }
 
     /// `SetDirty`: dirtying goes to the control owning the form slot when that is another one.
@@ -449,7 +452,10 @@ impl Ctl {
         let rect = self.get(|r| r.mRectangle);
         let moved = UiRect::new(rect.left + dx, rect.top + dy, rect.right + dx, rect.bottom + dy);
         self.set(|r| r.mRectangle = moved);
-        self.host().op_rect(Op::RhombusSetRect, BG, 0, grown(moved));
+        let bg = self.get(|r| r.mBgRhombus) as isize;
+        crate::draw2d::rhombus_set_rect(bg, grown(moved), || {
+            self.host().op_rect(Op::RhombusSetRect, BG, 0, grown(moved))
+        });
         self.op(Op::SetDirty, 1, 0);
     }
 
@@ -465,7 +471,8 @@ impl Ctl {
         let h = self.host();
         h.op_f(Op::VirtSetLocation, 0, 0, 0, 0, &mut [r.left, r.top, 0.0, 0.0]);
         let now = self.get(|r| r.mRectangle);
-        h.op_rect(Op::RhombusSetRect, BG, 0, grown(now));
+        let bg = self.get(|r| r.mBgRhombus) as isize;
+        crate::draw2d::rhombus_set_rect(bg, grown(now), || h.op_rect(Op::RhombusSetRect, BG, 0, grown(now)));
     }
 
     /// One inward call; `f` points at four floats (or is NULL for the calls without).

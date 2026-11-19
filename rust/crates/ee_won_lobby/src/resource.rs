@@ -1164,6 +1164,40 @@ pub extern "C" fn ee_won_lobbyres_kind(res: EeWonLobbyRes) -> EeWonResKind {
     RESOURCES[res as usize].kind
 }
 
+// ---- the slots' texts (R6 WONLobby round 17): the C++ array of `LobbyResourceSlot`s (WONLobbyResourceGlobals.h:
+// the `GUIString` first, one `GUIStringData*`), bound once by WONLobbyResource.cpp, so the Rust objects read a
+// resource string without a host op
+
+static SLOTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+static SLOT_SIZE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Binds the C++ slot array (`gLobbyResources`, `stride` bytes a slot; its `mString` at offset 0).
+///
+/// # Safety
+/// `slots` holds `ee_won_resource_count()` slots and lives for the program.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobbyres_bind(slots: *const std::ffi::c_void, stride: usize) {
+    SLOT_SIZE.store(stride, std::sync::atomic::Ordering::Relaxed);
+    SLOTS.store(slots as usize, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Resource string `row`'s `GUIStringData*` (0 unbound or out of the table).
+pub fn string_data(row: usize) -> isize {
+    let base = SLOTS.load(std::sync::atomic::Ordering::Relaxed);
+    if base == 0 || row >= RESOURCES.len() {
+        return 0;
+    }
+    let at = base + row * SLOT_SIZE.load(std::sync::atomic::Ordering::Relaxed);
+    // SAFETY: a bound slot (the binding's contract): its first word is the string's data pointer
+    unsafe { *(at as *const isize) }
+}
+
+/// Resource string `row`'s units (none when unbound).
+pub fn text(row: usize) -> Vec<u32> {
+    // SAFETY: a slot's string is a live `GUIStringData` (or NULL)
+    unsafe { ee_won_gui::guistrobj::data_units(string_data(row) as *const std::ffi::c_void) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -9,6 +9,7 @@
 
 #include "rust/ui/controlobj.h"
 #include "rust/ui/draw.h"
+#include "rust/ui/draw2d.h"
 #include "rust/ui/draw_ffi.h"
 #include "rust/ui/mouse_ffi.h"
 #include "rust/ui/obj.h"
@@ -75,7 +76,6 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
 {
     UIControl* c = static_cast<UIControl*>(inControl);
     UIForm* theForm = c->GetForm();
-    GERhombus* theRhombus = a == 0 ? c->BgRhombus() : c->CopiedBgRhombus();
     switch (inOp) {
     case EeUiOp::CtlFormControl: return (intptr_t)theForm->GetControl((unsigned long)a);
     case EeUiOp::CtlSlotLeftDown: return theForm->GetControl((unsigned long)a)->mLeftButtonDown;
@@ -118,10 +118,6 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
             theEvent->Initialize();
         break;
     }
-    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
-    case EeUiOp::RhombusCopy: *c->CopiedBgRhombus() = *c->BgRhombus(); break;
-    case EeUiOp::RhombusSetOpacity: theRhombus->SetOpacity(f[0]); break;
-    case EeUiOp::RhombusSetColor: theRhombus->SetColor(GEColor(f[0], f[1], f[2])); break;
     default: break;
     }
     return 0;
@@ -233,24 +229,13 @@ bool UIControl::DownKeyPressed()
 }
 
 // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
-// the rows on top, then the bottom, left and right ones, each line placed by Rust (ee_ui draw.rs)
+// Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
 {
-    long theResult = kErrorOK;
-    GELine theLine;
-    if (inThickness > 0) {
-        theLine.SetOpacity(this->mCopiedBorderOpacity);
-        EeUiRect theRectangle = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-        for (unsigned int theSide = 0; theSide < 4; theSide++)
-            for (unsigned long i = 0; i < inThickness; i++) {
-                EeUiBorderLine thePlan = ee_ui_border_line(theRectangle, theSide, i, this->mCopiedBorderType);
-                theLine.SetColor(thePlan.light ? UIControl::sLightBorder : UIControl::sDarkBorder);
-                theLine.SetStartPoint(GE2DPoint(thePlan.start.x, thePlan.start.y));
-                theLine.SetEndPoint(GE2DPoint(thePlan.end.x, thePlan.end.y));
-                theResult = this->GetRasterizer()->Draw(&theLine, 1, this->GetScreenIndex());
-            }
-    }
-    return theResult;
+    EeUiRect theRectangle = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    return ee_ui_draw_border(this->GetRasterizer(), this->GetScreenIndex(), theRectangle, inThickness,
+                             this->mCopiedBorderOpacity, this->mCopiedBorderType, reinterpret_cast<const float*>(&UIControl::sLightBorder),
+                             reinterpret_cast<const float*>(&UIControl::sDarkBorder));
 }
 
 // Draws the copied background and the border
@@ -399,14 +384,6 @@ bool UIObjHost::Media(UIControl* c, EeUiOp inOp, intptr_t a, intptr_t b, float* 
     switch (inOp) {
     case EeUiOp::BitmapReference: theBitmap->Reference(); break;
     case EeUiOp::BitmapRelease: theBitmap->Dereference(); break;
-    case EeUiOp::BitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); break;
-    case EeUiOp::BitmapDraw: r = c->GetRasterizer()->Draw(theBitmap, c->GetScreenIndex()); break;
-    case EeUiOp::BitmapScale:
-        f[0] = theBitmap->GetXScale();
-        f[1] = theBitmap->GetYScale();
-        break;
-    case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); break;
-    case EeUiOp::BitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
     case EeUiOp::BitmapTextureWidth: r = theBitmap->GetTexture(c->GetScreenIndex())->GetWidth(); break;
     case EeUiOp::StringLength: r = reinterpret_cast<const UWideString*>(a)->GetLength(); break;
     case EeUiOp::TextCreate: r = (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); break;

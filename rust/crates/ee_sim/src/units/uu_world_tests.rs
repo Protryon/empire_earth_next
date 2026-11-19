@@ -682,3 +682,11 @@ fn the_editor_places_away_from_the_edges_and_other_units() {
     assert!(!editor_can_place(&mut w, 1, 0x50, [20.5, 5.5, 0.0], 20, 5));
     assert!(editor_can_place(&mut w, 1, 0x167, [5.5, 5.5, 0.0], 5, 5));
 }
+
+#[test]
+fn the_heading_between_two_points_is_the_arctangent_of_the_ground_step() {
+    assert_eq!(heading_between([1.0, 1.0, 5.0], [1.0, 4.0, 0.0]), 0.0);
+    let west = heading_between([0.0, 0.0, 0.0], [-2.0, 0.0, 0.0]);
+    assert!((west - std::f32::consts::FRAC_PI_2).abs() < 1e-4, "{west}");
+    assert_eq!(heading_between([0.0, 0.0, 0.0], [3.0, -1.0, 0.0]), ee_base::math::um::um_arctan2(-3.0, -1.0));
+}

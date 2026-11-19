@@ -34,6 +34,9 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPlayer.h"
+#include "ee/EEStatisticsHistory.h"
+#include "ee/EEStatisticsRecord.h"
+#include "ee/EEPhysics.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
@@ -439,4 +442,81 @@ void EEAppCaptureStormSweep()
         EEAppCaptureStorm(*theStorm, 0, 0);
         theManager->mStorms.push_back(theStorm);
     }
+}
+
+namespace {
+
+// a wide string's bytes, counted (UWideString holds UTF-8 bytes: D6)
+void Text(EESimCaptureRecord& ioRecord, const UWideString& inText)
+{
+    const char* theBytes = (const char*)inText;
+    unsigned int n = theBytes != NULL ? (unsigned int)strlen(theBytes) : 0;
+    ioRecord.U32(n);
+    ioRecord.Bytes(theBytes, n);
+}
+
+// a player's statistics: each series' largest and last value, its count of increases and of points, the end time
+void Statistics(EESimCaptureRecord& ioRecord, EEPlayerStatistics& inStatistics)
+{
+    for (unsigned long s = 0; s < 31; s++) {
+        ioRecord.U32((unsigned int)inStatistics.GetValue(s));
+        ioRecord.U32((unsigned int)inStatistics.GetLastValue(s));
+        ioRecord.U32((unsigned int)inStatistics.CountIncreases(s));
+        ioRecord.U32((unsigned int)inStatistics.GetSeries(s).mPoints.size());
+    }
+    ioRecord.U32((unsigned int)inStatistics.mEndTime);
+}
+
+}   // namespace
+
+// WSTA (the app profile's end, after EEMap's sight sweep): EEWorld::RecordStatistics, the end-of-game scores (EEWorld::Clear
+// runs it when a game is left: no capture game reaches it). One record: the history's fields (but the start time, a wall clock), every record (scores,
+// colour, name and suffix, slot, result, end time, team, resources, flags, statistics), then every player's resources
+// and statistics after it (the top-ups of the computers' gathered totals) and the physics random seed (its draws)
+void EEAppCaptureStatisticsSweep()
+{
+    if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
+        return;
+    gWorld.RecordStatistics();
+    EEStatisticsHistory& h = gWorld.mStatistics;
+    EESimCaptureRecord r(EECaptureTag("WSTA"));
+    // (not mStartTime: the wall clock at the game's start)
+    r.I32((int)h.mCurrentRecordIndex);
+    r.I32((int)h.mEndTime);
+    r.I32((int)h.mTileCount);
+    r.U32((h.mTeamsLocked ? 1u : 0u) | (h.mVictoryEnabled ? 2u : 0u) | (h.mIsScenario ? 4u : 0u) | (h.mIsCampaign ? 8u : 0u));
+    Text(r, h.mCampaignName);
+    r.U32((unsigned int)h.mRecords.size());
+    for (EEStatisticsRecord& e : h.mRecords) {
+        r.U32((unsigned int)e.mScore);
+        r.U32((unsigned int)e.mEconomyScore);
+        r.U32((unsigned int)e.mEpochScore);
+        r.U32((unsigned int)e.mMilitaryScore);
+        r.U32((unsigned int)e.mTechScore);
+        r.Bytes(&e.mColor, sizeof(e.mColor));
+        Text(r, e.mName);
+        Text(r, e.mNameSuffix);
+        r.U32(e.mSlot);
+        r.I32((int)e.mResult);
+        r.U32((unsigned int)e.mEndTime);
+        r.U32((unsigned int)e.mTeam);
+        for (unsigned long k = 2; k < 7; k++)
+            r.U32((unsigned int)e.mResources[k]);
+        r.U32((e.mIsLocal ? 1u : 0u) | (e.mIsHuman ? 2u : 0u));
+        Statistics(r, e.mStatistics);
+    }
+    r.U32((unsigned int)gWorld.mNumPlayers);
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
+        EEPlayer* p = gWorld.mPlayers[i];
+        if (p == NULL) {
+            r.U32(0);
+            continue;
+        }
+        r.U32(1);
+        for (unsigned long k = 2; k < 7; k++)
+            r.I32((int)p->mResourceCaps[k]);
+        Statistics(r, p->mSavedGroups);
+    }
+    r.U32((unsigned int)gPhysics->mRandom.GetSeed());
+    r.Commit();
 }

@@ -10,6 +10,14 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+constexpr static const uint32_t FORM_LOBBY = 26;
+
+constexpr static const uint32_t FORM_PLAY_CAMPAIGN = 8;
+
+constexpr static const uint32_t FORM_CAMPAIGN_SELECT = 33;
+
+constexpr static const uint64_t GATE = 25;
+
 constexpr static const int32_t OK = 0;
 
 constexpr static const int32_t NOT_FOUND = 3;

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/sim/units.h"
 
 /// id -> text, len: the string resource
 constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
@@ -112,6 +113,12 @@ struct EeAppMapDims {
   unsigned long players;
 };
 
+/// A unit's reference count changed by `delta` (the C++'s `Reference` / `Dereference`, applied at once).
+using EeAppActiveRefsFn = void(*)(uint32_t, int32_t);
+
+/// The C++'s own step between the queues' and the lists' references (`Clear`'s unborn deactivations).
+using EeAppActiveBetweenFn = void(*)();
+
 /// One host operation's arguments and answers.
 struct EeAppCheatIo {
   /// `STRING`'s resource id; `ACTION`'s action
@@ -131,6 +138,54 @@ struct EeAppCheatIo {
 
 /// The host: `(ctx, op, io)`.
 using EeAppCheatFn = void(*)(void*, int32_t, EeAppCheatIo*);
+
+/// The world's part (see `StatsWorld`).
+struct EeAppStatsWorld {
+  long current;
+  bool is_scenario;
+  long end_time;
+  long base[5];
+  long level[5];
+};
+
+/// A player of the world (`mPlayers[slot]`).
+struct EeAppStatsPlayer {
+  unsigned long id;
+  bool human;
+  /// a computer named as the resource's "Computer"
+  bool default_name;
+  bool observer;
+  bool disconnected;
+  unsigned long result;
+  /// `mSavedGroups.mStats`
+  EeUnitsPlayerStats *stats;
+};
+
+/// The C++ calls: the physics random draw, `mSavedGroups.Set`, `mResourceCaps` read and written.
+struct EeAppStatsHost {
+  void *ctx;
+  float (*random)(void*, float, float);
+  void (*set)(void*, uint32_t, long, long);
+  long (*cap)(void*, uint32_t, uint32_t);
+  void (*set_cap)(void*, uint32_t, uint32_t, long);
+};
+
+/// A record in the history's order.
+struct EeAppStatsRecord {
+  uint32_t slot;
+  unsigned long score;
+  unsigned long economy_score;
+  unsigned long epoch_score;
+  unsigned long military_score;
+  unsigned long tech_score;
+  /// the name's suffix number (" #n"); 0 none
+  long suffix;
+  bool is_local;
+  bool is_human;
+  /// the record's play time (series 0x18) set after its copy
+  bool has_play_time;
+  long play_time;
+};
 
 /// The storm's plain members (names and order the C++ class's).
 struct EeAppStormFields {
@@ -164,7 +219,59 @@ struct EeAppStormIo {
 /// The host: `(ctx, op, io)`.
 using EeAppStormFn = void(*)(void*, int32_t, EeAppStormIo*);
 
+/// The world's players as the teams read them.
+struct EeAppTeamsWorld {
+  void *ctx;
+  /// `mPlayers[i] != NULL`
+  bool (*present)(void*, uint32_t);
+  /// `mPlayers[i]->mObserverMode`
+  bool (*observer)(void*, uint32_t);
+  /// `mPlayers[a]->mEnemies[b] != 0`
+  bool (*enemy)(void*, uint32_t, uint32_t);
+};
+
 extern "C" {
+
+/// `ActivateUnit` after its checks -> true when queued (take a reference).
+bool ee_app_active_activate(uint32_t id);
+
+/// `DeactivateUnit` for a unit with an id -> true when queued (take a reference; a born unit's reference moves).
+bool ee_app_active_deactivate(uint32_t id);
+
+/// `UpdateActiveUnits`' moves, the references changed through `refs`.
+///
+/// # Safety
+/// `refs` is callable with any queued unit's id.
+void ee_app_active_update(EeAppActiveRefsFn refs);
+
+/// Every list emptied, the references dropped through `refs` (`between` after the queues').
+///
+/// # Safety
+/// As [`ee_app_active_update`]; `between` callable.
+void ee_app_active_clear(EeAppActiveRefsFn refs, EeAppActiveBetweenFn between);
+
+/// A unit stepped from now (two references taken by the caller).
+void ee_app_active_start(uint32_t id);
+
+/// The list `which` (0 stepped, 1 activation, 2 deactivation) into `out` (at most `cap`) -> its length.
+///
+/// # Safety
+/// `out` holds `cap` ids (NULL with 0).
+size_t ee_app_active_list(uint32_t which,
+                          uint32_t *out,
+                          size_t cap);
+
+/// The list `which` replaced by `n` ids.
+///
+/// # Safety
+/// `ids` holds `n` ids (NULL with 0).
+void ee_app_active_set_list(uint32_t which, const uint32_t *ids, size_t n);
+
+/// A unit put in the stepped set or taken out of it.
+void ee_app_active_set(uint32_t id, bool on);
+
+/// The list `which`'s id at `index` (0xffffffff past its end: the tick's step by index).
+uint32_t ee_app_active_at(uint32_t which, size_t index);
 
 /// `Init`: the table from the string resources.
 ///
@@ -199,6 +306,20 @@ void ee_app_cheats_apply(const EeAppCheats *p,
                          long player,
                          long parameter);
 
+/// `EEWorld::RecordStatistics`' decisions over the world's players: the records in their order into `out` (at most
+/// `cap`) -> their count; `current_index` the local record's (-1: kept), `is_scenario` the history's flag after.
+///
+/// # Safety
+/// `world`, `players` (`count` of them, each with a live statistics object), `host` and the out values are valid.
+size_t ee_app_record_statistics(const EeAppStatsWorld *world,
+                                const EeAppStatsPlayer *players,
+                                size_t count,
+                                const EeAppStatsHost *host,
+                                EeAppStatsRecord *out,
+                                size_t cap,
+                                long *current_index,
+                                bool *is_scenario);
+
 /// `EEEMStorm(kind)`'s plain members.
 ///
 /// # Safety
@@ -221,6 +342,55 @@ long ee_app_storm_route_cost(bool snow,
                              bool straight,
                              long kind,
                              bool hill);
+
+/// `EEWorld::AddTeam` of `n` players.
+///
+/// # Safety
+/// `players` holds `n` ids; `w` as [`calls`].
+void ee_app_teams_add(const uint32_t *players, size_t n, const EeAppTeamsWorld *w);
+
+/// `EEWorld::AddAlliance`.
+///
+/// # Safety
+/// As [`calls`].
+void ee_app_teams_ally(uint32_t a, uint32_t b, const EeAppTeamsWorld *w);
+
+/// `EEWorld::BreakAlliance`.
+///
+/// # Safety
+/// As [`calls`].
+void ee_app_teams_break(uint32_t a, uint32_t b, const EeAppTeamsWorld *w);
+
+/// `EEWorld::RemovePlayerFromTeams`.
+///
+/// # Safety
+/// As [`calls`].
+void ee_app_teams_remove(uint32_t player, const EeAppTeamsWorld *w);
+
+/// `EEWorld::RebuildTeams`' teams over `count` players.
+///
+/// # Safety
+/// As [`calls`].
+void ee_app_teams_rebuild(uint32_t count, const EeAppTeamsWorld *w);
+
+/// The teams emptied (a new game, a world cleared).
+void ee_app_teams_clear();
+
+/// Team `team` (`team` = its count: a new team at the end) set to `n` players (a load's teams, in order).
+///
+/// # Safety
+/// `players` holds `n` ids.
+void ee_app_teams_set(size_t team,
+                      const uint32_t *players,
+                      size_t n);
+
+/// The team count (`team` = -1 as usize) or team `team`'s players into `out` (at most `cap`) -> the length.
+///
+/// # Safety
+/// `out` holds `cap` ids (NULL with 0).
+size_t ee_app_teams_get(size_t team,
+                        uint32_t *out,
+                        size_t cap);
 
 }  // extern "C"
 

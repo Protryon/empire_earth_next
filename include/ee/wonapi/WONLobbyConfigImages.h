@@ -59,8 +59,6 @@ public:
     bool mUseSample; //10 naturalpad,total14
     TransparentImageFilter(DWORD color) { this->mUseSample=false;this->mTransparentColor=color; }
     TransparentImageFilter(PixelSample sample) { this->mUseSample=true;this->mPixelSample=sample; }
-    void SetPixelSample(PixelSample theSample) { this->mUseSample = true; this->mPixelSample = theSample; }
-    void SetTransparentColor(DWORD theColor) { this->mUseSample = false; this->mTransparentColor = theColor; }
     virtual SmartPtr<RawImage> Filter(RawImage*); // at 0x00749110
 };
 

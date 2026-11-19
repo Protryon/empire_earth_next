@@ -14,6 +14,7 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
+#include "rust/render/ge.h"   // ee_ge_draw2d_fill (ee_ge list2d.rs)
 #include "lle/GEBitmap.h"
 #include "lle/FSArchive.h"
 #include "lle/UIForm.h"
@@ -72,12 +73,10 @@ long EEUIBGenericBackground::DrawBackground(const GERectangle& inRectangle)
 extern "C" long ee_screenscpp_frame_fill(void* inBackground, const float* inInner)
 {
     EEUIBGenericBackground* theBackground = static_cast<EEUIBGenericBackground*>(inBackground);
-    GERhombus theRhombus;
-    theRhombus.SetOpacity(theBackground->mOpacity);
-    theRhombus.SetColor(theBackground->mColor);
-    theRhombus.SetRectangle(GERectangle(inInner[0], inInner[1], inInner[2], inInner[3]));
     UIManager* theManager = theBackground->GetForm()->GetManager();
-    return theManager->GetRasterizer()->Draw(&theRhombus, theManager->GetScreen());
+    GERectangle theRectangle(inInner[0], inInner[1], inInner[2], inInner[3]);
+    return ee_ge_draw2d_fill(theManager->GetRasterizer(), theManager->GetScreen(), reinterpret_cast<const EeGeRectangle*>(&theRectangle),
+                             reinterpret_cast<const float*>(&theBackground->mColor), theBackground->mOpacity);
 }
 
 // One frame piece: the bitmap stretched from the piece's rectangle onto its visible part with the cell, its texture

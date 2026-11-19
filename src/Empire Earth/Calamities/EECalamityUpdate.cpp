@@ -10,14 +10,10 @@
 #include <math.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/FSRestorable.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/USingleton.h"
 #include "lle/GEModel.h"
@@ -25,31 +21,24 @@
 
 #include "ee/EEUnitKind.h"
 #include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityUpdate.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAreaEffect.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEMap.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESoundObject.h"
-#include "ee/EETileLocation.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
@@ -218,16 +207,16 @@ void ApplyEffect(EECalamityClass* inClass, EECalamity* inCalamity)
                 if (theEffect != NULL)
                     gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, 0, 0, 0);
             } else
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         } else if (inCalamity->GetCasterUnit() != NULL) {
             EEPlayer* theCasterPlayer = inCalamity->mCasterUnit->mPlayer;
             if ((theUnit->GetPlayer() != theCasterPlayer && theCasterPlayer->mEnemies[theUnit->GetPlayer()->mPlayerID] != 0) ||
                 inClass->mClassEnum == kCalamityAEMindControl)
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         } else {
             EEPlayer* theGaia = ::gWorld.mPlayers[0];
             if (theUnit->GetPlayer() != theGaia && theGaia->mEnemies[theUnit->GetPlayer()->mPlayerID] != 0)
-                theHelper->AddUnit(theUnit, true);
+                EEContagionHelperAddUnit(theHelper, theUnit, true);
         }
     }
 }
@@ -870,6 +859,11 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
     EECalamity* theCalamity = ioHost.mCalamity;
     EECalamityClass* theClass = ioHost.mClass;
     switch (inCall.op) {
+    // the handles the world views read through (calamity_views.rs: the target's, the caster's and the tiles' plain
+    // members never reach this host)
+    case EeCalamityOp::TargetHandle: outReply.key = (uint64_t)(uintptr_t)TargetUnit(theCalamity); return true;
+    case EeCalamityOp::CasterHandle: outReply.key = (uint64_t)(uintptr_t)theCalamity->mCasterUnit; return true;
+    case EeCalamityOp::WorldHandle: outReply.key = (uint64_t)(uintptr_t)&::gWorld; return true;
     case EeCalamityOp::HelperUpdate: {
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCall.index);
         EECalamityCaptureEvent(kCalamityOpHelperUpdate, inCall.index, theHelper != NULL);   // CALW (TEST ONLY)
@@ -975,14 +969,8 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
         outReply.x = theRandom;
         return true;
     }
-    case EeCalamityOp::TargetExists:
-        outReply.ok = TargetUnit(theCalamity) != NULL;
-        return true;
     case EeCalamityOp::PlayClassSound:
         theClass->PlaySound(theCalamity);
-        return true;
-    case EeCalamityOp::TargetHitPoints:
-        outReply.value = (int32_t)TargetUnit(theCalamity)->mComplexUnit->mHitPoints;
         return true;
     case EeCalamityOp::DestroyEffect: {
         EEEffectHandle theHandle;
@@ -991,29 +979,9 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
         gEffectManager->DestroyEffect(theHandle);
         return true;
     }
-    case EeCalamityOp::TargetTinted:
-        outReply.ok = TargetUnit(theCalamity)->mComplexUnit->mIsTinted;
-        return true;
-    case EeCalamityOp::CasterHitPoints:
-        outReply.value = (int32_t)theCalamity->mCasterUnit->mHitPoints;
-        return true;
-    case EeCalamityOp::CasterExists:
-        outReply.ok = theCalamity->mCasterUnit != NULL;
-        return true;
-    case EeCalamityOp::TargetDead: {
-        EEUnit* theTarget = NULL;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && theTarget->GetComplexUnit() != NULL &&
-                      theTarget->GetComplexUnit()->GetHitPoints() <= 0;
-        return true;
-    }
     case EeCalamityOp::MeshZ:
         outReply.x = ::gWorld.mMap->mTerrainMesh.GetMeshZ(inCall.x, inCall.y);
         return true;
-    case EeCalamityOp::TargetAlive: {
-        EEUnit* theTarget = NULL;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && theTarget->mHitPoints > 0;
-        return true;
-    }
     // the starts' and stops' (calamity_start.rs)
     case EeCalamityOp::StopSound:
         if (inCall.index == 0)
@@ -1071,20 +1039,6 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
     case EeCalamityOp::TargetProtected:
         outReply.ok = TargetUnit(theCalamity)->mComplexUnit->IsProtected();
         return true;
-    case EeCalamityOp::TileTerrain: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(inCall.index, inCall.index2);
-        if (theTile != NULL) {
-            outReply.ok = true;
-            outReply.value = (int32_t)theTile->mTerrainType;
-        }
-        return true;
-    }
-    case EeCalamityOp::TargetComplexAlive: {
-        EEUnit* theTarget = NULL;
-        EEComplexUnit* theUnit;
-        outReply.ok = theCalamity->GetTargetUnit(theTarget) && (theUnit = theTarget->mComplexUnit) != 0 && theUnit->mHitPoints > 0;
-        return true;
-    }
     // the classes' own (each answered for the classes whose runs send it)
     case EeCalamityOp::ClassStep:
         return ClassStep(ioHost, inCall, outReply);

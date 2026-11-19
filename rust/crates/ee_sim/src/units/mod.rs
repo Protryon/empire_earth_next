@@ -111,7 +111,9 @@ pub mod update_views;
 pub mod uu;
 pub mod uu_ffi;
 pub mod uu_host;
+pub mod uu_note;
 pub mod uu_place;
+pub mod uu_reads;
 pub mod uu_spots;
 #[cfg(test)]
 mod uu_tests;

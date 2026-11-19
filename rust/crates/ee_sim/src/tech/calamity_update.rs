@@ -212,6 +212,12 @@ pub enum EeCalamityOp {
     TargetComplexAlive = 79,
     /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
     ClassStep = 80,
+    /// The target unit's address in key (0: none), for the world views' reads (calamity_views.rs).
+    TargetHandle = 81,
+    /// The caster's address in key (0: none): the calamity's caster, or the cast test's unit.
+    CasterHandle = 82,
+    /// `&gWorld` in key.
+    WorldHandle = 83,
 }
 
 /// The calamity's members an update reads and writes (`EECalamity`).

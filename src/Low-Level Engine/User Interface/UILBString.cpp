@@ -66,20 +66,10 @@ intptr_t UIObjHost::List(UIControl* l, EeUiOp inOp, intptr_t a, intptr_t b, floa
     case EeUiOp::PollStop: thePoll->Stop(); break;
     case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
     case EeUiOp::RhombusDelete: delete theRhombus; break;
-    case EeUiOp::RhombusRect: UIObjHost::PutRect(f, theRhombus->GetRectangle()); break;
-    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
-    case EeUiOp::RhombusAssign: *theRhombus = *reinterpret_cast<GERhombus*>(b); break;
-    case EeUiOp::RhombusDraw: return l->GetRasterizer()->Draw(theRhombus, l->GetScreenIndex());
     case EeUiOp::LineCreate:
         return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f),
                                      GEColor(0.0f, 0.0f, 0.0f), 1.0f);
     case EeUiOp::LineDelete: delete theLine; break;
-    case EeUiOp::LineSetPoints:
-        theLine->SetStartPoint(GE2DPoint(f[0], f[1]));
-        theLine->SetEndPoint(GE2DPoint(f[2], f[3]));
-        break;
-    case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
-    case EeUiOp::LineDraw: return l->GetRasterizer()->Draw(theLine, l->GetScreenIndex());
     case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
     case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
     case EeUiOp::BaseMouseDoublePressed: return l->UIControl::MouseLButtonDoublePressed();

@@ -127,11 +127,13 @@ DX7Rasterizer::DX7Rasterizer(const UString& inName, bool inTnL)
     : GERasterizer(inName)
 {
     this->mDX7 = ee_dx7r_new(&DX7RasterizerHost::Call, this, this->mRust, inTnL);
+    ee_ge_draw2d_direct(static_cast<GERasterizer*>(this), this->mDX7);   // the 2D draw list draws on it in Rust
 }
 
 // Destroys the rasterizer (the DX7 records; the base's in the base)
 DX7Rasterizer::~DX7Rasterizer()
 {
+    ee_ge_draw2d_direct(static_cast<GERasterizer*>(this), NULL);
     ee_dx7r_destroy(this->mDX7);
 }
 
