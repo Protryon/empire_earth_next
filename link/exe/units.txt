@@ -24,7 +24,6 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0ca90f 0cd4ee Empire Earth/Communications/EEServer.cpp
 0cd4ee d3ff4 Empire Earth/Communications/EEWonNet.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
-d47a1 d490f Empire Earth/Database/EEAIUnitTargetingTable.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
 d5d08 d5f7e Empire Earth/Database/EEColorTable.cpp
