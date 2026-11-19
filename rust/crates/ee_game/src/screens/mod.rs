@@ -319,6 +319,7 @@ pub(crate) mod sgvw;
 pub mod shells;
 pub mod shells_dialog;
 pub mod shells_editor;
+pub mod shells_files;
 #[cfg(not(test))]
 mod shells_ffi;
 pub mod shells_icon_bar;

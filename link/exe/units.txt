@@ -170,7 +170,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 25cead 25e2f8 Empire Earth/User Interface Thread/EEUICWonNetRoomsBox.cpp
 25e2f8 25fdb3 Empire Earth/User Interface Thread/EEUICWonNetStatBox.cpp
 260c27 2624a6 Empire Earth/User Interface Thread/EEUIFError.cpp
-2624a6 26272b Empire Earth/User Interface Thread/EEUIFileComboBox.cpp
 26272b 26783d Empire Earth/User Interface Thread/EEUIFMainGame.cpp
 26783d 267ad9 Empire Earth/User Interface Thread/EEUIFMGAttribute.cpp
 267ec8 2691b2 Empire Earth/User Interface Thread/EEUIFMGMainGroup.cpp
