@@ -1098,3 +1098,29 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     }
     return 0;
 }
+
+// the editor's gate and wall placement modes (once EESETSUICBPlayer.cpp): the unit tab places or ends them
+void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
+{
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceGate();
+}
+
+void EESEUIBuildGate::Cancel()
+{
+    EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndGate();
+    thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
+}
+
+void EESEUIBuildWall::Build()
+{
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceWall();
+}
+
+void EESEUIBuildWall::Cancel()
+{
+    EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndWall();
+    long theTechnology = this->mTechnology;
+    thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
+}

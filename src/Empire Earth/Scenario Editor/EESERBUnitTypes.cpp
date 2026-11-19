@@ -44,28 +44,19 @@
 #include "ee/EEMessage.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEARust.h"
-#include "ee/EESETSCComboBox.h"
-#include "ee/EESETSEComboBox.h"
 #include "ee/EESERBUnitTypes.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EESEARust.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EEUIFSEMainButton.h"
-#include "ee/EEUIBColor.h"
 #include "ee/EESEBSelect.h"
-#include "ee/EESEPSSetPlayers.h"
 #include "ee/EESEUITechListBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EESELoadThread.h"
 #include "lle/UITriStateCheckBox.h"
-#include "ee/EESETSUICBPlayer.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSOUnitList.h"
-#include "ee/EESETSAEditBox.h"
-#include "ee/EESETSAComboBox.h"
-#include "ee/EESETSTriggerUIComboBox.h"
 #include "ee/EEUnitSetManager.h"
 
 GEBitmap* EESEUIBDiplomacy::sNormalBitmaps[2];
@@ -79,7 +70,9 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
 extern FSPath* gCivilizationDataPath;
-extern UString gSECivilizationExtension;
+UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
+// the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
+static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTechnologyTechs;
 
 // Creates one of the tech tree page's unit-type radio buttons (Units, Buildings, Heroes, Technologies)
 EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont,
@@ -480,12 +473,14 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         theControl = new EESETab(c.id, theLocation, theFont, inForm, c.index, c.extra[0] != 0);
         theControl->SetBgOpacity(c.bg);
         break;
-    case EE_SCREENS_SEPL_SET_PLAYERS:
-        theControl = new EESEPSSetPlayers(theLocation, theFont, inForm, c.index);
+    case EE_SCREENS_SEPL_SET_PLAYERS:   // 100x25, its text the font's
+        theControl = new EEUIShellButton(EE_SCREENS_SK_SET_PLAYERS, {(int64_t)theFont}, 0x144, NULL, NULL, NULL,
+                                         GERectangle(theLocation, 100.0f, 25.0f), inForm, c.index, 3);
         theControl->SetBgOpacity(c.bg);
         break;
-    case EE_SCREENS_SEPL_COLOR:
-        theControl = new EEUIBColor((unsigned long)c.extra[0], c.id, theLocation, inForm, c.index);
+    case EE_SCREENS_SEPL_COLOR:   // 25x25
+        theControl = new EEUIShellButton(EE_SCREENS_SK_COLOR, {c.extra[0]}, c.id, NULL, NULL, NULL,
+                                         GERectangle(theLocation, 25.0f, 25.0f), inForm, c.index, 3);
         break;
     case EE_SCREENS_SEPL_DIPLOMACY:
         theControl = new EESEUIBDiplomacy(c.id, theLocation, inForm, c.index, 0);
@@ -507,8 +502,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         break;
     }
     case EE_SCREENS_SEPL_OBJ_EDIT: {
-        EESETSAEditBox* t = new EESETSAEditBox(c.id, theFont, c.extra[0], c.extra[1] != 0, theLocation, c.w,
-                                               (unsigned long)theHeight, inForm, c.index, 2, false, false);
+        UIEditBox* t = new EEUIShellEdit(EE_SCREENS_SK_OBJECT_EDIT, {}, c.id, theFont, c.extra[0], c.extra[1] != 0,
+                                         GERectangle(theLocation, c.w, (float)(unsigned long)theHeight), inForm, c.index,
+                                         2, false, false);
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         if (theFg) SeplYellow(t->GetGEText());
         theControl = t;
@@ -540,36 +536,30 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         unsigned long theBorder = (unsigned long)c.extra[2];
         unsigned long theListHeight = (unsigned long)c.list_height;
         unsigned long theChars = (unsigned long)c.max_chars;
-        UIComboBox* t = NULL;
+        // the trigger screens' classes: 20 high, the width whole but for the trigger and scenario lists'
+        GERectangle theShellRect(theLocation, (float)(unsigned long)c.w, 20.0f);
+        uint32_t theKind = 0;
+        std::vector<int64_t> theArgs;
         switch (c.extra[0]) {
-        case EE_SCREENS_SEPL_COMBO_OBJECT:
-            t = new EESETSAComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, theListHeight, inForm, c.index, theChars,
-                                    theBorder);
-            break;
-        case EE_SCREENS_SEPL_COMBO_PLAYER:
-            t = new EESETSUICBPlayer(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, theListHeight, inForm, c.index,
-                                     theChars, theBorder);
-            break;
+        case EE_SCREENS_SEPL_COMBO_OBJECT: theKind = EE_SCREENS_SK_OBJECT_COMBO; break;
+        case EE_SCREENS_SEPL_COMBO_PLAYER: theKind = EE_SCREENS_SK_PLAYER_COMBO; break;
         case EE_SCREENS_SEPL_COMBO_TRIGGER:   // its kind in number
-            t = new EESETSTriggerUIComboBox((unsigned long)c.number, c.id, 1, theLines, theFont, theLocation, c.w, theListHeight,
-                                            inForm, c.index, theChars, theBorder);
+            theKind = EE_SCREENS_SK_TRIGGER_COMBO;
+            theArgs = {(int64_t)(unsigned long)c.number};
+            theShellRect = GERectangle(theLocation, c.w, 20.0f);
             break;
         case EE_SCREENS_SEPL_COMBO_SCENARIO:   // its screen and mode in number and string
-            t = new EESETSEScenarioComboBox(c.number, c.string, c.id, 1, theLines, theFont, theLocation, c.w, theListHeight,
-                                            inForm, c.index, theChars, theBorder);
+            theKind = EE_SCREENS_SK_SCENARIO_COMBO;
+            theArgs = {(int64_t)c.number, (int64_t)(unsigned long)c.string};
+            theShellRect = GERectangle(theLocation, c.w, 20.0f);
             break;
-        case EE_SCREENS_SEPL_COMBO_CONDITION:
-            t = new EESETSCComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, theListHeight, inForm, c.index, theChars,
-                                    theBorder);
-            break;
-        case EE_SCREENS_SEPL_COMBO_EFFECT:
-            t = new EESETSEComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, theListHeight, inForm, c.index, theChars,
-                                    theBorder);
-            break;
-        default:
-            t = new UIComboBox(c.id, 1, theLines, theFont, theRect, theListHeight, inForm, c.index, theChars, theBorder);
-            break;
+        case EE_SCREENS_SEPL_COMBO_CONDITION: theKind = EE_SCREENS_SK_CONDITION_COMBO; break;
+        case EE_SCREENS_SEPL_COMBO_EFFECT: theKind = EE_SCREENS_SK_EFFECT_COMBO; break;
         }
+        UIComboBox* t = theKind != 0 ? new EEUIShellCombo(theKind, theArgs, c.id, 1, theLines, theFont, theShellRect,
+                                                          theListHeight, inForm, c.index, theChars, theBorder)
+                                     : new UIComboBox(c.id, 1, theLines, theFont, theRect, theListHeight, inForm, c.index,
+                                                      theChars, theBorder);
         if (c.bg2 >= 0.0f) t->SetTextBoxBgOpacity(c.bg2);
         if (c.extra[3] != 0) t->SetListBoxAlwaysDirty(true);
         SeplColor(t->GetGEText(), c.flags);
@@ -601,8 +591,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
                             : c.extra[0] == EE_SCREENS_SEPL_LIST_EFFECT
                             ? new UILBString(c.id, theNone, theFont, true, theRect, inForm, c.index, 2)
                             : c.extra[0] == EE_SCREENS_SEPL_LIST_OBJECT
-                            ? new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
-                                                  inForm, c.index, 3)
+                            ? new EEUIShellList(EE_SCREENS_SK_UNIT_LIST, {}, c.id, theNone, theFont, false,
+                                                GERectangle(theLocation, c.w, (float)(unsigned long)c.h), inForm, c.index, 3)
                             : EESEUnitNewList(c.extra[0], c.id, theFont, theLocation, (unsigned long)c.w,
                                               (unsigned long)c.h, inForm, c.index);
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
@@ -794,21 +784,21 @@ void SeplTechTypes()
     std::vector<long> theIDs;
     gTechTree.GetNodeIDs(theIDs);
     unsigned long theCount = theIDs.size();
-    EESEPSSetPlayers::sV531FB0.clear();
-    EESEPSSetPlayers::sBuildingTechs.clear();
-    EESEPSSetPlayers::sTechnologyTechs.clear();
-    EESEPSSetPlayers::sV531F88.clear();
+    sSeplV531FB0.clear();
+    sSeplBuildingTechs.clear();
+    sSeplTechnologyTechs.clear();
+    sSeplV531F88.clear();
     for (unsigned long i = 0; i < theCount; ++i) {
         long theClassIndex = gTechTree.Get(theIDs[i])->mData->mUnitClass;
         EEUnitClass* theClass = theClassIndex >= 0 ? gUnitClassTable[theClassIndex] : NULL;
         if (theClass == NULL)
-            EESEPSSetPlayers::sTechnologyTechs.push_back(theIDs[i]);
+            sSeplTechnologyTechs.push_back(theIDs[i]);
         else if (theClass->IsLandBuilding())
-            EESEPSSetPlayers::sBuildingTechs.push_back(theIDs[i]);
+            sSeplBuildingTechs.push_back(theIDs[i]);
         else if (theClass->mAIKind == kAIKindHero)
-            EESEPSSetPlayers::sV531F88.push_back(theIDs[i]);
+            sSeplV531F88.push_back(theIDs[i]);
         else
-            EESEPSSetPlayers::sV531FB0.push_back(theIDs[i]);
+            sSeplV531FB0.push_back(theIDs[i]);
     }
 }
 
@@ -819,8 +809,8 @@ void SeplFillTechs(EESEUITechListBox* inList, EESEUITechListBox* inOther, UIComb
     unsigned long theSelection;
     inPlayer->GetCurrentSelection(theSelection);
     EETechTree* theTree = gWorld.mPlayers[theSelection + 1]->GetTechTree();
-    std::vector<long>* theLists[4] = {&EESEPSSetPlayers::sV531FB0, &EESEPSSetPlayers::sBuildingTechs,
-                                      &EESEPSSetPlayers::sV531F88, &EESEPSSetPlayers::sTechnologyTechs};
+    std::vector<long>* theLists[4] = {&sSeplV531FB0, &sSeplBuildingTechs,
+                                      &sSeplV531F88, &sSeplTechnologyTechs};
     std::vector<long>* theTechs = theLists[inWhich];
     inOther->Clear();
     inList->Clear();
@@ -895,8 +885,8 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_LABEL_NUMBER:   // both overloads the original called print "%ld"
         static_cast<UITextLabel*>(c)->SetText((long)i[0]);
         return 0;
-    case EE_SCREENS_SEPL_OP_COLOR: return static_cast<EEUIBColor*>(c)->GetColor();
-    case EE_SCREENS_SEPL_OP_SET_COLOR: static_cast<EEUIBColor*>(c)->SetColor((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_COLOR: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR);
+    case EE_SCREENS_SEPL_OP_SET_COLOR: EEUIShell::Op(c, EE_SCREENS_SKOP_SET_COLOR, i[0]); return 0;
     case EE_SCREENS_SEPL_OP_GROUP:
         if (i[1]) c->GetForm()->GetEntityGroup(i[0])->Enable();
         else c->GetForm()->GetEntityGroup(i[0])->Disable();
@@ -971,8 +961,9 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_EPOCH_RANGE: gWorld.mPlayers[i[0]]->GetTechTree()->ResetEpochRange(i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_APPLY_COLOR: {
         EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
-        bool theDiffers = thePlayer->mColor != EEGetPlayerColor(static_cast<EEUIBColor*>(c)->GetColor());
-        thePlayer->SetColor(EEGetPlayerColor(static_cast<EEUIBColor*>(c)->GetColor()));
+        GEColor theColor = EEGetPlayerColor((unsigned long)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR));
+        bool theDiffers = thePlayer->mColor != theColor;
+        thePlayer->SetColor(theColor);
         return theDiffers;
     }
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;

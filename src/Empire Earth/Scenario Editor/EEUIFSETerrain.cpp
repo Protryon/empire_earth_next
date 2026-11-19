@@ -41,7 +41,7 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EESETSConditionControls.h" // declares the gU531934 font
 #include "ee/EEButtonObject.h"
-#include "ee/EEUIFSERBBrush.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
 
@@ -481,9 +481,9 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SETN_OP_BRUSH: {   // the brush group's (editor_brush.rs)
         UWideString theText;
         gResource->GetString(i[2], theText);
-        EEUIFSERBBrush* t = new EEUIFSERBBrush(static_cast<EEUIFSEBrushGroup*>(p[2]), i[0], (unsigned long)i[1], theText,
-                                               gSeplScreenFont, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[3],
-                                               i[0] == 0);
+        UIRadioButton* t = new EEUIShellRadio(EE_SCREENS_SK_BRUSH, {(int64_t)p[2], i[0]}, (unsigned long)i[1], theText,
+                                              gSeplScreenFont, GERectangle(GE2DPoint(f[0], f[1]), 100.0f, 20.0f), theForm,
+                                              (unsigned long)i[3], 0, false, i[0] == 0, false);
         SetnYellow(t->GetTextLabel()->GetGEText());
         *theOut = static_cast<UIControl*>(t);
         return 0;
