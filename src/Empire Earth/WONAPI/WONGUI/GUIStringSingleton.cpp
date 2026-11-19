@@ -11,7 +11,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-// Empty wide string defined in EEWonNet.cpp
+// The empty wide string (WONGUI/GUIEmptyWideString.cpp)
 extern wchar_t gEmptyWideString[];
 namespace WONAPI {
 // guistrobj.rs edits the three members as one block (EeWonGuiStrBuf: the text, the length, the capacity)

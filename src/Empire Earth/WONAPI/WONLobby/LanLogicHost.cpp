@@ -33,7 +33,7 @@
 #include "rust/won_lobby/lobbyhost.h"
 #include "rust/won_net/ipobj.h"
 #include "rust/won_net/qsock.h"
-extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
+extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
 namespace WONAPI {
 AuthContext* GetLobbyAuthContext(); // the lobby's authentication context (cdecl)
 }
