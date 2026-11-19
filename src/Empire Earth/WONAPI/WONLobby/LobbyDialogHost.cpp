@@ -286,10 +286,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::Release: aComp->Release(); return 0;
     case Op::BaseEvent: aDialog->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case Op::Relayout: aDialog->Relayout(); return 0;
-    case Op::RequestFocus: aComp->RequestFocus(); return 0;
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
-    case Op::IsVisible: return aComp->IsVisible();
     case Op::InputClear: anInput->Clear(b != 0); return 0;
     case Op::InputTextLength: return (intptr_t)anInput->GetText().length();
     case Op::InputShownLength: return (intptr_t)anInput->mText.length();
@@ -332,16 +330,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::GameSetAskToJoin: aGame->SetAskToJoin(b != 0); return 0;
     case Op::GameSetInviteOnly: aGame->SetInviteOnly(b != 0); return 0;
     case Op::GameSetSkill: aGame->SetSkill((long)b); return 0;
-    // round 2: the status and OK/Cancel boxes' sizing
-    case Op::Width: return aComp->Width();
-    case Op::Height: return aComp->Height();
-    case Op::Left: return aComp->Left();
-    case Op::Top: return aComp->Top();
-    case Op::SetSize: aComp->SetSize((int)b, (int)c); return 0;
-    case Op::SetSizeAtLeast: aComp->SetSizeAtLeast((int)b, (int)c); return 0;
-    case Op::SetDesiredSize: aComp->SetDesiredSize((int)b, (int)c); return 0;
-    case Op::SetDesiredWidth: aComp->SetDesiredWidth((int)b); return 0;
-    case Op::SetPos: aComp->SetPos((int)b, (int)c); return 0;
+    // round 2: the status and OK/Cancel boxes' sizing (the Component base's reads and calls: lobbydlg.rs comp_op)
     case Op::SetVertPad: aLabel->SetVertPad((int)b, (int)c); return 0;
     case Op::LabelSetText:
         aLabel->SetText(b != 0 ? *reinterpret_cast<const GUIString*>(b) : gEmptyGUIString, true);
@@ -367,7 +356,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
     // round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
     case Op::ButtonSetControlId: aButton->mControlId = (int)b; return 0;
-    case Op::SubscribeBroadcast: aComp->SubscribeToBroadcast(b != 0); return 0;
     case Op::BrowserShowTou:
         // as text (WON's HTML rendering is not ported)
         reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false);

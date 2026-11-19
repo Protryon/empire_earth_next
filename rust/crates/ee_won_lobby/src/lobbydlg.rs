@@ -36,6 +36,53 @@ unsafe fn cstr_bytes(p: isize) -> Vec<u8> {
     unsafe { CStr::from_ptr(p as *const c_char) }.to_bytes().to_vec()
 }
 
+/// The dialog host's ops on a control's `Component` base (R6 WONLobby round 18), answered in Rust for a game dialog:
+/// the original's `aComp->Width()` .. `SetPos(b, c)` are the members' block (compmem.rs) and Component's non-virtual
+/// calls, which the C++ made as `ee_won_comp_call(this, the registered component host, ...)` (WONLobbyGUI.h `KCall`).
+/// `a` is the control or the dialog itself (single inheritance: its `Component*` is the same address). `None`: not one.
+pub(crate) fn comp_op(op: EeWonLobbyDlgOp, a: isize, b: isize, c: isize) -> Option<isize> {
+    use ee_won_gui::compmem as m;
+    use ee_won_gui::compobj::{host, Comp, EeWonCompCall as K};
+    use EeWonLobbyDlgOp as O;
+    let call = |k: K, x: isize, y: isize| Comp::new(host()).call(a, k, x, y, 0);
+    Some(match op {
+        O::Width => m::width(a) as isize,
+        O::Height => m::height(a) as isize,
+        O::Left => m::left(a) as isize,
+        O::Top => m::top(a) as isize,
+        O::IsVisible => m::is_visible(a) as isize,
+        O::RequestFocus => {
+            call(K::RequestFocus, 0, 0);
+            0
+        }
+        O::SetSize => {
+            call(K::SetSize, b as i32 as isize, c as i32 as isize);
+            0
+        }
+        O::SetSizeAtLeast => {
+            call(K::SetSizeAtLeast, b as i32 as isize, c as i32 as isize);
+            0
+        }
+        O::SetDesiredSize => {
+            call(K::SetDesiredSize, b as i32 as isize, c as i32 as isize);
+            0
+        }
+        O::SetDesiredWidth => {
+            call(K::SetDesiredWidth, b as i32 as isize, 0);
+            0
+        }
+        O::SetPos => {
+            call(K::SetPos, b as i32 as isize, c as i32 as isize);
+            0
+        }
+        O::SubscribeBroadcast => {
+            call(K::Subscribe, (b != 0) as isize, 0);
+            0
+        }
+        _ => return None,
+    })
+}
+
 /// The dialog kinds (each one of the original classes).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -772,6 +819,11 @@ impl EeWonLobbyDlg {
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
         let (op, b) = if self.model.get() { Self::game_op(op, b) } else { (op, b) };
+        if self.model.get() {
+            if let Some(r) = comp_op(op, a, b, c) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host is the C++ dialog's (or a test's), called with the dialog it was given for
             Some(f) => unsafe { f(self.dialog, op, a, b, c) },
