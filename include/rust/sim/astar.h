@@ -1646,6 +1646,75 @@ void ee_astar_forest_update_resource_kind(EeAStarForestRecord *r);
 /// `r` a forest's record.
 void ee_astar_forest_remove_resource(EeAStarForestRecord *r, long kind);
 
+/// `HullContains(point)`: the hull's bounds, then the outline (HULL 6).
+///
+/// # Safety
+/// `r` a live record.
+bool ee_astar_area_hull_contains(const EeAStarAreaRecord *r, EeHullPoint p);
+
+/// `GetHullClosestOutlinePoint(point)` (HULL 2).
+///
+/// # Safety
+/// `r` a live record.
+EeHullPoint ee_astar_area_hull_closest_outline_point(const EeAStarAreaRecord *r, EeHullPoint p);
+
+/// `SetHullPoints(points)`: `SetPoints(points, false)` (HULL 1).
+///
+/// # Safety
+/// `r` a live record, `p` holds `count` points (NULL when 0).
+void ee_astar_area_set_hull_points(EeAStarAreaRecord *r, const EeHullPoint *p, size_t count);
+
+/// `UpdateHull`: the hull of the tiles' extreme edge points, then the region bounds (HULL 1 of those points).
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+void ee_astar_area_update_hull_captured(EeAStarAreaRecord *r,
+                                        const EeSparseArray *tiles,
+                                        long region_size);
+
+/// `RemoveTile(tile)`: whether it was there (then the hull is rebuilt: HULL 1 of the extreme points).
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+bool ee_astar_area_remove_tile_captured(EeAStarAreaRecord *r,
+                                        EeSparseArray *tiles,
+                                        EeHullPoint p);
+
+/// `GetHullDistanceSquared(other)`: between the hulls' closest points (AREA 4).
+///
+/// # Safety
+/// `r`, `other` live records.
+float ee_astar_area_hull_distance_squared(const EeAStarAreaRecord *r,
+                                          const EeAStarAreaRecord *other);
+
+/// `GetClosestHullPoint(point)`: the point inside the hull, else the closest outline point (AREA 3).
+///
+/// # Safety
+/// `r` a live record.
+EeHullPoint ee_astar_area_closest_hull_point(const EeAStarAreaRecord *r,
+                                             EeHullPoint p);
+
+/// `GetClosestPoints(other, outThis, outOther)`: this area's tile and the other's hull outline point closest to each
+/// other; false (both (0, 0)) when either area has no tiles (AREA 1).
+///
+/// # Safety
+/// `r`, `other` live records; `tiles`, `other_tiles` their live sets; the outputs writable.
+bool ee_astar_area_closest_points(const EeAStarAreaRecord *r,
+                                  const EeSparseArray *tiles,
+                                  const EeAStarAreaRecord *other,
+                                  const EeSparseArray *other_tiles,
+                                  EeHullPoint *out_this,
+                                  EeHullPoint *out_other);
+
+/// `GetTiles(outTiles)`: appends every tile of the hull's scan lines through `push` (AREA 5: the tiles appended).
+///
+/// # Safety
+/// `r` a live record; `push` accepts `ctx`.
+void ee_astar_area_get_tiles(const EeAStarAreaRecord *r,
+                             size_t first,
+                             void *ctx,
+                             void (*push)(void*, long, long));
+
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
 void ee_astar_cm_init(EeAStarCmRecord *r);
