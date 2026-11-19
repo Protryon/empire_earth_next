@@ -70,15 +70,11 @@ public:
 };
 }
 
-// RoomCtrl: the room list (servers and their chat rooms) with Join and Create buttons.
+// RoomCtrl (the room list with Join and Create buttons) is its shell made with its kind (Room).
 namespace WONAPI {
 class ServerChangedEvent;
 class GroupChangedEvent;
 // TreeItem and TreeArea are declared in WONLobbyGUI.h.
-class RoomCtrl : public LobbyRustCtrl {
-public:
-    RoomCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Room) {}
-}; // 0x90 bytes; Container is 0x84 bytes with 51 vtable slots
 }
 
 // ServerListCtrl (R6 WONLobby round 13): the game list with filter combos and sortable columns, a lobbyctl.rs

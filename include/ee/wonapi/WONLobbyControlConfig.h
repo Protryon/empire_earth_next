@@ -11,10 +11,6 @@ namespace WONAPI {
 class ImageTextButton;
 class CrossPromotionButton;
 class MultiListHeader;
-class DirectConnectCtrl : public LobbyRustCtrl {
-public:
-    DirectConnectCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::DirectConnect) {}
-};
 
 class ChatCtrlConfig : public ContainerConfig {
 public:
@@ -78,19 +74,15 @@ public:
 class GameUserListCtrlConfig : public ContainerConfig {
 public:
     static ComponentConfig* CfgFactory();
-    static Component* CompFactory() { return new GameUserListCtrl; }
+    static Component* CompFactory() { return new LobbyRustCtrl(EeWonLobbyCtlKind::UserList); } // GameUserListCtrl
     virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007bda70
-    virtual void SetComponent(Component* component) { ContainerConfig::SetComponent(component); this->mUserList=static_cast<GameUserListCtrl*>(component); } // inline
-    GameUserListCtrl* mUserList; //98, borrowed
 };
 
 class UserListCtrlConfig : public ContainerConfig {
 public:
     static ComponentConfig* CfgFactory();
-    static Component* CompFactory() { return new UserListCtrl; }
+    static Component* CompFactory() { return new LobbyRustCtrl(EeWonLobbyCtlKind::Users); } // UserListCtrl
     virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007cb770
-    virtual void SetComponent(Component* component) { ContainerConfig::SetComponent(component); this->mUserList=static_cast<UserListCtrl*>(component); } // inline
-    UserListCtrl* mUserList; //98, borrowed
 };
 
 class MaxSplitterButtonConfig : public MSArrowButtonConfig {
