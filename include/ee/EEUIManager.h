@@ -128,44 +128,25 @@ enum EEChatLogControl {
 // UI database form ids (dbuiforms form id field +0xcc: UIManager::GetFormByID, the controls' form field); names from
 // the form names.
 enum EEFormID {
-    kFormTestForm = 2,               // dbuiforms form id 2 'Test form'
     kFormSaveGame = 3,               // dbuiforms form id 3 'In Game Scenario & Save Game Screen'
-    kFormLoadGame = 4,               // dbuiforms form id 4 'In Game Scenario & Load Game Screen'
-    kFormGameSettings = 5,           // dbuiforms form id 5 'Game Settings Screen'
-    kFormSinglePlayer = 6,           // dbuiforms form id 6 'Single Player Menu'
     kFormCivBuilder = 7,             // dbuiforms form id 7 'CivBuilder Main Form'
-    kFormPlayCampaign = 8,           // dbuiforms form id 8 'Play Campaign Form'
-    kFormGameTools = 9,              // dbuiforms form id 9 'Game Tools Menu'
-    kFormChooseCampaign = 10,        // dbuiforms form id 10 'Choose Campaign Screen'
     kFormMainGame = 11,              // dbuiforms form id 11 'Scott Main Game Form'
     kFormMainMenu = 12,              // dbuiforms form id 12 'Main Menu Screen'
-    kFormSinglePlayerLoadGame = 13,  // dbuiforms form id 13 'Single Player Load Game Screen'
-    kFormCampaign = 14,              // dbuiforms form id 14 'Campaign Screen'
-    kFormCivBuilderNewCiv = 15,      // dbuiforms form id 15 'CivBuilder New Civilization Form'
-    kFormCivBuilderSaveCiv = 16,     // dbuiforms form id 16 'CivBuilder Save Civilization Form'
-    kFormCivBuilderLoadCiv = 17,     // dbuiforms form id 17 'CivBuilder Load Civilization Form'
-    kFormChat = 18,                  // dbuiforms form id 18 'Chat In Game pop-up dialog'
     kFormScenarioIntro = 19,         // dbuiforms form id 19 'Scenario Intro Screen(Briefing Screen)'
     kFormScenarioLoad = 20,          // dbuiforms form id 20 'Scenario Load Screen'
-    kFormWonNetStats = 21,           // dbuiforms form id 21 'WON.net Stat Screen'
     kFormDebugSound = 22,            // dbuiforms form id 22 'DS Debug Sound Screen'
     kFormSplash = 23,                // dbuiforms form id 23 'Splash Screen'
-    kFormCampaignEditor = 24,        // dbuiforms form id 24 'Campaign Editor Form'
     kFormPostGameSummary = 25,       // dbuiforms form id 25 'Post Game Summary Screen'
     kFormLobby = 26,                 // dbuiforms form id 26 'Multi/Single Setup Screen(Lobby)'
-    kFormDiplomacy = 27,             // dbuiforms form id 27 'Diplomacy Screen'
     kFormGameOptions = 28,           // dbuiforms form id 28 'In-game Options form'
     kFormChatLog = 29,               // dbuiforms form id 29 'Chat Log Form'
     kFormMultiplayer = 30,           // dbuiforms form id 30 'Multiplayer Menu Form'
     kFormAvailableRooms = 31,        // dbuiforms form id 31 'Available Rooms (Sierra) Form'
     kFormAvailableGames = 32,        // dbuiforms form id 32 'Available Games (Sierra) Form'
     kFormCampaignScenarioSelect = 33,  // dbuiforms form id 33 'Campaign Scenario Select Form'
-    kFormChooseCustomCampaign = 34,  // dbuiforms form id 34 'Choose Custom Campaign Form'
     kFormPredefinedCiv = 35,         // dbuiforms form id 35 'Predefined Civ Form'
-    kFormCreateSierraAccount = 36,   // dbuiforms form id 36 'Create Sierra Account Form'
     kFormUpdateSierraAccount = 37,   // dbuiforms form id 37 'Update Sierra Account Form'
     kFormSelectServer = 38,          // dbuiforms form id 38 'Select Server Form'
-    kFormDemoOutro = 39,             // dbuiforms form id 39 'Demo Outro Form'
 };
 
 // Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 5 'Game Settings
@@ -227,20 +208,9 @@ enum EEMainGameControl {
     kMainGameErrorLog = 27,               // dbuicontrols form 11 index 27 id 266 'SRMError Log*' (type 1003); site form via this
     kMainGameSelectUnits = 28,            // dbuicontrols form 11 index 28 id 267 'SRMSelect Units*' (type 1007); site form via ((EEUICSelectUnits*)theForm
     kMainGameCommandUnits = 29,           // dbuicontrols form 11 index 29 id 268 'SRMCommand Units*' (type 1008); site form via ((EEUICCommandUnits*)theForm
-    kMainGameStatusBarLeftStatus = 30,    // dbuicontrols form 11 index 30 id 269 'SRMSB: Left Status*' (type 1006); site form via mStatusBox->mC84 = inForm
-    kMainGameStatusBarMiddleStatus = 31,  // dbuicontrols form 11 index 31 id 270 'SRMSB: Middle Status*' (type 1006); site form via mStatusBox->mC88 = inForm
-    kMainGameArmorDisplayTitle = 41,      // dbuicontrols form 11 index 41 id 311 'SRMArmor Display Title*' (type 15); site form via mStatusBox->mC98 = inForm
-    kMainGameStatusBarPortrait = 42,      // dbuicontrols form 11 index 42 id 271 'SRMSB: Portrait*' (type 1009); site form via mStatusBox->mC8C = inForm
-    kMainGameStatusBarCivUnitName = 43,   // dbuicontrols form 11 index 43 id 272 'SRMSB: Civ Unit Name*' (type 15); site form via mStatusBox->mC90 = inForm
-    kMainGameSmallStatusBar = 50,         // dbuicontrols form 11 index 50 id 273 'SRM Small Status Bar' (type 1006); site form via mStatusBox->mCAC = inForm
-    kMainGameMiddleStatusBar = 51,        // dbuicontrols form 11 index 51 id 274 'SRM Middle Status Bar' (type 1006); site form via mStatusBox->mCA8 = inForm
     kMainGameActionButton1 = 78,          // dbuicontrols form 11 index 78 id 321 'SRMAction Button 1*' (type 1000); site form via ((EEUIFMGStatusButton*)mOwner
-    kMainGameConversions = 95,            // dbuicontrols form 11 index 95 id 297 'SRMConversions*' (type 15); site form via if (((UITextLabel*)mOwner
-    kMainGameWondersToWin = 96,           // dbuicontrols form 11 index 96 id 298 'SRMWonders To Win*' (type 15); site form via ((UITextLabel*)mOwner
-    kMainGameWondersAvailable = 97,       // dbuicontrols form 11 index 97 id 299 'SRMWonders Available*' (type 15); site form via ((UITextLabel*)mOwner
     kMainGameTempObjectList = 98,         // dbuicontrols form 11 index 98 id 300 'SRMTemp Object List*' (type 4); site form via ((UIComboBox*)mForm
     kMainGameTempPlayerList = 99,         // dbuicontrols form 11 index 99 id 301 'SRMTemp Player List*' (type 4); site form via ((UIComboBox*)mForm
-    kMainGameStatusBarCivName = 100,      // dbuicontrols form 11 index 100 id 330 'SRMSB: Civ Name*' (type 15); site form via mStatusBox->mC94 = inForm
     kMainGameChatLine1 = 101,             // dbuicontrols form 11 index 101 id 429 'SRMChat Line 1*' (type 1010); site form via this
     kMainGameChatLine7 = 107,             // dbuicontrols form 11 index 107 id 435 'SRMChat Line 7*' (type 1010); site form via this
     kMainGameGameClock = 108,             // dbuicontrols form 11 index 108 id 797 'SRM Game Clock' (type 20); site form via this
@@ -251,20 +221,8 @@ enum EEMainGameControl {
     kMainGameDialogMessage = 211,         // dbuicontrols form 11 index 211 id 832 'SRMDialogMessage' (type 26); site form via this
     kMainGameUnitIconBar = 222,           // dbuicontrols form 11 index 222 id 891 'SRMUnit Icon Bar' (type 1014); site form via UIControl* theIconBar = mOwner
     kMainGameDialogPortrait = 223,        // dbuicontrols form 11 index 223 id 892 'SRMDialog Portrait' (type 0); site form via this
-    kMainGameBehaviorStandGround = 228,   // dbuicontrols form 11 index 228 id 3005 'SRM Behavior Stand Ground' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameBehaviorAggressive = 229,    // dbuicontrols form 11 index 229 id 3004 'SRM Behavior Aggressive' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameBehaviorScout = 232,         // dbuicontrols form 11 index 232 id 3006 'SRM Behavior Scout' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameBehaviorGuard = 233,         // dbuicontrols form 11 index 233 id 3007 'SRM Behavior Guard' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
     kMainGameLargeCivBuilderAlert = 234,  // dbuicontrols form 11 index 234 id 3066 'SRM Large Civ Builder Alert*' (type 27); site form via _cast<UIBlinkingButton*>(gUIManager->mMa
     kMainGameLargeScenBriefingAlert = 235,  // dbuicontrols form 11 index 235 id 3067 'SRM Large Scen Briefing Alert*' (type 27); site form via this
-    kMainGameFormationShortLine = 236,    // dbuicontrols form 11 index 236 id 3108 'SRM Formation Short Line' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationLongLine = 237,     // dbuicontrols form 11 index 237 id 3109 'SRM Formation Long Line' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationLooseLine = 238,    // dbuicontrols form 11 index 238 id 3110 'SRM Formation Loose Line' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationStaggeredLine = 239,  // dbuicontrols form 11 index 239 id 3111 'SRM Formation Staggered Line' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationDeepWedge = 240,    // dbuicontrols form 11 index 240 id 3112 'SRM Formation Deep Wedge' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationShallowWedge = 241,  // dbuicontrols form 11 index 241 id 3113 'SRM Formation Shallow Wedge' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationInwardCircle = 242,  // dbuicontrols form 11 index 242 id 3114 'SRM Formation Inward Circle' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
-    kMainGameFormationOutwardCircle = 243,  // dbuicontrols form 11 index 243 id 3115 'SRM Formation Outward Circle' (type 1); site form via NormalBitmap(((UIButton*)gUIManager->mMa
     kMainGameCancelUIMode = 244,          // dbuicontrols form 11 index 244 id 3226 'SRM Cancel UI Mode' (type 31); site form via theForm
     kMainGamePreviousMessages = 253,      // dbuicontrols form 11 index 253 id 3270 'SRMPrevious Messages*' (type 1); site form via this
 };
@@ -272,24 +230,7 @@ enum EEMainGameControl {
 // Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 30 'Multiplayer
 // Menu Form'; names from the dbuicontrols control names (form prefix dropped).
 enum EEMultiplayerControl {
-    kMultiplayerMultiplayerTitleLabel = 0,       // dbuicontrols form 30 index 0 id 2926 'MPS Multiplayer Title Label' (type 15); site form via inForm
-    kMultiplayerPlayerNameLabel = 1,             // dbuicontrols form 30 index 1 id 2927 'MPS Player Name Label' (type 15); site form via inForm
-    kMultiplayerPlayerNameEditBox = 2,           // dbuicontrols form 30 index 2 id 2928 'MPS Player Name Edit Box' (type 8); site form via inForm
-    kMultiplayerJoinNetworkGameTab = 3,          // dbuicontrols form 30 index 3 id 2929 'MPS Join Network Game Tab' (type 12); site form via inForm
-    kMultiplayerJoinByIPTab = 4,                 // dbuicontrols form 30 index 4 id 2930 'MPS Join By IP Tab' (type 12); site form via inForm
-    kMultiplayerHostNetworkGameTab = 5,          // dbuicontrols form 30 index 5 id 2931 'MPS Host Network Game Tab' (type 12); site form via inForm
-    kMultiplayerPlayOnSierraTab = 6,             // dbuicontrols form 30 index 6 id 2932 'MPS Play on Sierra Tab' (type 12); site form via inForm
-    kMultiplayerAvailGamesLabel = 7,             // dbuicontrols form 30 index 7 id 2933 'MPS Avail. Games Label' (type 15); site form via inForm
-    kMultiplayerAvailGamesListBox = 9,           // dbuicontrols form 30 index 9 id 2935 'MPS Avail. Games List Box' (type 9); site form via inForm
-    kMultiplayerJoinHostButton = 10,             // dbuicontrols form 30 index 10 id 2936 'MPS Join/Host Button' (type 28); site form via inForm
-    kMultiplayerMainMenuButton = 11,             // dbuicontrols form 30 index 11 id 2937 'MPS Main Menu Button' (type 28); site form via inForm
-    kMultiplayerHostGameNameEditBox = 13,        // dbuicontrols form 30 index 13 id 2939 'MPS Host Game Name Edit Box' (type 8); site form via inForm
-    kMultiplayerShowIPButton = 16,               // dbuicontrols form 30 index 16 id 2942 'MPS Show IP Button' (type 1); site form via inForm
-    kMultiplayerSierraUserIDEditBox = 20,        // dbuicontrols form 30 index 20 id 2946 'MPS Sierra User ID Edit Box' (type 8); site form via inForm
     kMultiplayerSierraPasswordEditBox = 22,      // dbuicontrols form 30 index 22 id 2948 'MPS Sierra Password Edit Box' (type 8); site form via inForm
-    kMultiplayerCreateSierraAccountButton = 23,  // dbuicontrols form 30 index 23 id 2949 'MPS Create Sierra Account Button' (type 1); site form via inForm
-    kMultiplayerSierraEmailMyPasswordButton = 26,  // dbuicontrols form 30 index 26 id 3237 'MPS Sierra Email My Password Button' (type 1); site form via inForm
-    kMultiplayerMultiPlayerOOSWarningLabel = 27,  // dbuicontrols form 30 index 27 id 3288 'MPS MultiPlayer OOS Warning Label' (type 16); site form via inForm
     kMultiplayerRememberPasswordCheckbox = 28,   // dbuicontrols form 30 index 28 id 3368 'MPS Remember Password Checkbox' (type 2); site form via if (((UICheckBox*)theForm
     kMultiplayerMessageOfTheDayTextLabel = 29,   // dbuicontrols form 30 index 29 id 3369 'MPS Message Of the Day Text Label' (type 16); site form via UITextLabel* theLabel = (UITextLabel*)th
 };

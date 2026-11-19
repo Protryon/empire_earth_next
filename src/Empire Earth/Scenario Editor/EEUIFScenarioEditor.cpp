@@ -262,10 +262,6 @@ long EEUIFScenarioEditor::UpdateMouse()
     return UIForm::UpdateMouse();
 }
 
-void EEUIFScenarioEditor::FnE123D()
-{
-}
-
 // ---- the form's host (editor_form.rs: the ops from 800)
 
 static_assert(EEUIFScenarioEditor::kSlotButtonTexture == EE_SCREENS_SEFM_BUTTON_TEXTURE &&

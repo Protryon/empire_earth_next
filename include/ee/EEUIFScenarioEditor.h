@@ -75,7 +75,6 @@ public:
     void SelectUnit(EEUnit* inUnit);
     void DeselectUnit(EEUnit* inUnit);
     void SelectTab(unsigned char inFlag, long inTab);   // 0x19f615 (EEUIFSEMainButton::Check)
-    void FnE123D();                         // (ICF-folded into 0xe123d: an empty body)
     // 0x17d597 (the brush group's rectangle; EESEAPaintArea; defined in EESETSArea.cpp)
     void SetPaintArea(const GERectangle& inRectangle);
     void SetLoadText(const UWideString& inText);   // 0x19fd09 (EESEAChangeLoadText)
