@@ -102,7 +102,7 @@ template <class Derived, class Base> static uint64_t EEBaseOffset()
 }
 
 // The members ee_gfx effect_reads.rs reads in place (the graphic objects, the graphic effects' records and links, the
-// complex units' physical models and turret angles)
+// complex units' physical models and turret angles) and gobj_media.rs loads and releases (the graphic objects' media)
 void EEGfxObjectLayoutRegister()
 {
     static_assert(sizeof(std::vector<EETurretPart*>) == 3 * sizeof(void*), "a vector is three words");
@@ -131,6 +131,20 @@ void EEGfxObjectLayoutRegister()
     theLayout.complex_frame = offsetof(EEComplexUnit, mPhysicalModel) + offsetof(GEPhysicalModel, mFrame);
     theLayout.complex_turret_angles = offsetof(EEComplexUnit, mTurretAngles);
     theLayout.stats_model = offsetof(EEUnitClassUpgrade, mModel);
+    theLayout.gobj_file_name = offsetof(EEGraphicObject, mFileName);
+    theLayout.gobj_texture_name = offsetof(EEGraphicObject, mTextureName);
+    theLayout.gobj_shadow_model_name = offsetof(EEGraphicObject, mShadowModelName);
+    theLayout.gobj_shadow_texture_name = offsetof(EEGraphicObject, mShadowTextureName);
+    theLayout.gobj_model_names = offsetof(EEGraphicObject, mModelNames);
+    theLayout.gobj_texture_names = offsetof(EEGraphicObject, mTextureNames);
+    theLayout.gobj_texture = offsetof(EEGraphicObject, mTexture);
+    theLayout.gobj_shadow_model = offsetof(EEGraphicObject, mShadowModel);
+    theLayout.gobj_shadow_texture = offsetof(EEGraphicObject, mShadowTexture);
+    theLayout.gobj_sounds1 = offsetof(EEGraphicObject, mSounds1);
+    theLayout.gobj_sounds2 = offsetof(EEGraphicObject, mSounds2);
+    theLayout.gobj_bar = offsetof(EEGraphicObject, mBar);
+    theLayout.gobj_media_use = EEBaseOffset<EEGraphicObject, EeDataMediaUse>();
+    theLayout.geffect_num_loads = offsetof(EEGraphicEffect, mNumLoads);
     ee_gfx_object_layout_set(&theLayout);
 }
 

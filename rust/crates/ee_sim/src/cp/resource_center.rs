@@ -24,18 +24,9 @@ use super::placement::{
 pub(crate) const CP_EFFECT_MORALE_FROM_BUILDINGS: i32 = 5;
 /// The save version (minor) from which a centre saves its active flag.
 /// cbindgen:ignore
-pub(crate) const CP_ACTIVE_FLAG_VERSION: u32 = 0x8d;
+pub const CP_ACTIVE_FLAG_VERSION: u32 = 0x8d;
 
 // ---- the centre operations of a saved game's file host (beyond the primitives; `index` 0)
-/// `mUnits.clear()`
-pub const EE_CP_CENTER_FILE_CLEAR: i32 = 200;
-/// `mUnits.push_back(EEUnitHandle<EEUnit>::FromSavedID(io.i))`
-pub const EE_CP_CENTER_FILE_PUSH_ID: i32 = 201;
-/// `mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(io.i)`
-pub const EE_CP_CENTER_FILE_SET_MAIN: i32 = 202;
-/// `mIsActive = io.b`; `io.b` in: `mIsActive` (the read's old value)
-pub const EE_CP_CENTER_FILE_SET_ACTIVE: i32 = 203;
-pub const EE_CP_CENTER_FILE_ACTIVE: i32 = 204;
 
 /// The centre's resource units' handles (`mUnits`, resolved in order).
 fn units<H: PlaceHost + ?Sized>(h: &mut H, c: u64) -> Vec<u64> {
@@ -482,37 +473,32 @@ fn find_effect_site<H: PlaceHost + ?Sized>(h: &mut H, c: u64, class: i32, size: 
 
 // ---- the saved game
 
-/// `Load`: the resource units' ids and the main building's (resolved by [`restore`]) and, from version 0.141, the
-/// active flag; the first read error.
-pub fn load(f: &mut SaveFile, minor: u32) -> i32 {
+/// `Load` into a centre: the resource units' ids and the main building's (resolved by [`restore`]) and, from version
+/// 0.141, the active flag; the first read error.
+pub fn load_into(f: &mut SaveFile, minor: u32, c: &mut super::lists::CpCenter) -> i32 {
     let (mut r, count) = f.read_ulong(0);
     if r != OK {
         return r;
     }
-    f.call(EE_CP_CENTER_FILE_CLEAR, &mut Default::default());
+    c.units.clear();
     let mut id = 0u32;
     for _ in 0..count {
         let (read, value) = f.read_ulong(id);
         r = read;
         id = value;
         if r == OK {
-            let mut io = crate::units::player_save::EeUnitsPlayerSaveIo { i: i64::from(id), ..Default::default() };
-            f.call(EE_CP_CENTER_FILE_PUSH_ID, &mut io);
+            c.units.push(id);
         }
     }
     if r == OK {
         let (read, value) = f.read_ulong(id);
         r = read;
         if r == OK {
-            let mut io = crate::units::player_save::EeUnitsPlayerSaveIo { i: i64::from(value), ..Default::default() };
-            f.call(EE_CP_CENTER_FILE_SET_MAIN, &mut io);
+            c.main = value;
             if minor >= CP_ACTIVE_FLAG_VERSION {
-                let mut io = crate::units::player_save::EeUnitsPlayerSaveIo::default();
-                f.call(EE_CP_CENTER_FILE_ACTIVE, &mut io);
-                let (read, b) = f.read_bool(io.b != 0);
+                let (read, b) = f.read_bool(c.active);
                 r = read;
-                let mut io = crate::units::player_save::EeUnitsPlayerSaveIo { b: u8::from(b), ..Default::default() };
-                f.call(EE_CP_CENTER_FILE_SET_ACTIVE, &mut io);
+                c.active = b;
             }
         }
     }

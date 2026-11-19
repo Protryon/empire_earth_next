@@ -35,6 +35,7 @@
 #include "lle/GEPolygonArray.h"
 #include "lle/GELine.h"
 #include "lle/GERasterizer.h"
+#include "dx7/DX7Rasterizer.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
@@ -1349,11 +1350,6 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 
 // the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
 extern const EeGfxRaster gEERustRaster;
-static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
-static std::vector<float> sKeptU;      // the texture coordinates' u that model_scroll_u changed
-static std::vector<EeGfxBeamVertex> sKeptBeam;   // the vertices model_stretch changed
-static std::vector<float> sKeptBeamYs;           // the sub-models' internal ys model_stretch changed
-
 // the raster table's models (ee_gfx raster.rs; the farm's and the ground shadows'): made through the model manager
 static void* EERasterCreateModel(uint32_t inPolygons, uint32_t inVertices, uint32_t inSubModels, const uint8_t* inName,
                                  uint32_t inFlags)
@@ -1370,30 +1366,6 @@ static void EERasterStoreMesh(void* inModel, const EeGfxMeshVertex* inVertices, 
 {
     EEStoreMesh(static_cast<GEModel*>(inModel), inVertices, inVertexCount, inTriangles, inTriangleCount);
 }
-static void EERasterMaterialRanges(void* inModel, uint32_t inPolygons, uint32_t inVertices)
-{
-    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(0);
-    theMaterial->SetPolygonStartingIndex(0, 0);
-    theMaterial->SetPolygonRangeLength(inPolygons, 0);
-    theMaterial->SetVertexStartingIndex(0);
-    theMaterial->SetVertexRangeLength(inVertices);
-}
-static void EERasterCopyVertices(void* inFrom, void* inTo, bool inNormals)
-{
-    GEVertexArray* theFrom = static_cast<GEModel*>(inFrom)->GetVertexArray(0);
-    GEVertexArray* theTo = static_cast<GEModel*>(inTo)->GetVertexArray(0);
-    GE3DPoint thePoint;
-    GEVector theNormal;
-    for (unsigned long i = 0; i < theFrom->GetSize(); i++) {
-        theFrom->GetPoint(thePoint, i);
-        theTo->SetPoint(thePoint, i);
-        if (inNormals) {
-            theFrom->GetNormal(theNormal, i);
-            theTo->SetNormal(theNormal, i);
-        }
-    }
-}
-
 // a texture loaded with its stage settings (ee_gfx raster.rs load_texture: the effects' and render objects' media)
 static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* inLoad)
 {
@@ -1419,40 +1391,6 @@ static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* 
     return theTexture;
 }
 
-// a unit model's frame textures (EEROUnits::DrawUnitModel 0x515cc7: past the frame count, frame 0 (0x115e53 jae))
-static void EERasterFrameTextures(void* inModel, void* inTexture)
-{
-    GEModel* theModel = static_cast<GEModel*>(inModel);
-    GETexture* theTexture = static_cast<GETexture*>(inTexture);
-    for (unsigned long theMaterial = 1; theMaterial < theModel->GetMaterialCount(); theMaterial++) {
-        if (theTexture == NULL)
-            continue;
-        GEMaterial* theFirst = theModel->GetMaterial(theMaterial);
-        theFirst->SetTexture(theFirst->GetTextureIndex() < theTexture->GetFrameCount()
-                                 ? theTexture->GetFrameTexture(theFirst->GetTextureIndex())
-                                 : theTexture->GetFrameTexture(0),
-                             gScreenIndex);
-        for (unsigned long theSub = 0; theSub < theModel->GetSubModelCount(); theSub++) {
-            GEModel* theSubModel = theModel->GetSubModel(theSub);
-            for (unsigned long j = 0; j < theSubModel->GetMaterialCount(); j++) {
-                GEMaterial* theOther = theSubModel->GetMaterial(j);
-                if (theOther->GetTextureIndex() < theTexture->GetFrameCount())
-                    theOther->SetTexture(theTexture->GetFrameTexture(theOther->GetTextureIndex()), gScreenIndex);
-            }
-        }
-    }
-}
-// a gate side's sub-model 0 placed against its internal offset (EEROUnits::DrawUnitModel); the transform set
-static EeGeTransformation EERasterSubModelOffset(void* inModel, float inScale)
-{
-    GEModel* theSubModel = static_cast<GEModel*>(inModel)->GetSubModel(0);
-    GETransformation theTransformation = theSubModel->GetGraphicsPostModelTransform();
-    theTransformation.SetPosition(theSubModel->GetInternalTransform(0).GetX() * inScale * -1.0f,
-                                  theSubModel->GetInternalTransform(0).GetY() * inScale * -1.0f,
-                                  theSubModel->GetInternalTransform(0).GetZ() * inScale * -1.0f);
-    theSubModel->SetGraphicsPostModelTransform(theTransformation);
-    return *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
-}
 // EEEffect.cpp's quad batches' quad and draw
 void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex);
 int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture);
@@ -1463,126 +1401,23 @@ int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, f
 void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
                     const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
 
-// a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
-static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
-{
-    for (unsigned long i = 0; i < inValues.size(); i++) {
-        inVertices->SetPoint(*reinterpret_cast<const GE3DPoint*>(&inValues[i].point), i);
-        inVertices->SetTextureCoordinate(*reinterpret_cast<const GETextureCoordinate*>(&inValues[i].coord), i);
-    }
-}
 const EeGfxRaster gEERustRaster = {
-    [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
-    []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
-    [](uint32_t inState) { gRasterizer->SetFog(inState, gScreenIndex); },
-    []() { const GEColor& theColor = gRasterizer->GetAmbientColor(); return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue}; },
-    [](EeGfxColor inColor) { gRasterizer->SetAmbientColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
-    [](uint32_t inMode) { gRasterizer->SetZBuffer(inMode, gScreenIndex); },
-    [](uint32_t inSource, uint32_t inDestination) { gRasterizer->SetBlending(inSource, inDestination, gScreenIndex); },
-    [](uint32_t inSource) { gRasterizer->SetShadingColorSource(inSource, gScreenIndex); },
-    [](uint32_t inState) { gRasterizer->SetAlphaTesting(inState, gScreenIndex); },
     [](EeGfxLighting inKind) { ApplyLighting(inKind); },
     [](const EeGe3DPoint* inLocation, uint32_t inFog) {
         float theValue;
         GetFogFactor(GE3DPoint(inLocation->x, inLocation->y, inLocation->z), inFog, theValue);
         return theValue;
     },
-    [](void* inModel, float inOpacity) { static_cast<GEModel*>(inModel)->SetOpacity(inOpacity); },
-    [](void* inModel, const EeGeTransformation* inTransformation) {
-        static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
-    },
-    [](void* inModel, float inScale) { static_cast<GEModel*>(inModel)->SetGraphicsScale(inScale); },
-    [](void* inModel) { static_cast<GEModel*>(inModel)->PrepareTransforms(); },
     [](void* inModel, float inOpacity) -> int32_t {
         bool theSorted = gOrthographicView;
         return gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, theSorted);
     },
-    [](void* inModel, void* inTexture) {
-        static_cast<GEModel*>(inModel)->GetMaterial(0)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex);
-    },
-    [](void* inModel, float inDelta) {
-        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
-        GETextureCoordinate theCoordinate;
-        sKeptV.clear();
-        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
-            theArray->GetTextureCoordinate(theCoordinate, i);
-            float theV = theCoordinate.GetV();
-            sKeptV.push_back(theV);
-            theV += inDelta;
-            theCoordinate.SetV(theV);
-            theArray->SetTextureCoordinate(theCoordinate, i);
-        }
-    },
-    [](void* inModel) {
-        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
-        GETextureCoordinate theCoordinate;
-        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
-            theArray->GetTextureCoordinate(theCoordinate, i);
-            theCoordinate.SetV(sKeptV[i]);
-            theArray->SetTextureCoordinate(theCoordinate, i);
-        }
-    },
-    [](void* inModel, EeGfxColor inColor) {
-        static_cast<GEModel*>(inModel)->GetMaterial(0)->SetColor(GEColor(inColor.red, inColor.green, inColor.blue));
-    },
-    [](void* inModel, void* inTexture) { static_cast<GEModel*>(inModel)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex); },
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
     [](float inNear, float inFar) {
         gU4E8F08.SetDepthRange(inNear, inFar);
         gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
     },
-    [](uint32_t inMode) { gRasterizer->SetZCompare(inMode, gScreenIndex); },
-    [](void* inModel, float inOpacity) { static_cast<GEModel*>(inModel)->GetMaterial(0)->SetOpacity(inOpacity); },
-    [](void* inModel, const EeGeTransformation* inTransformation, float inX, float inY, float inZ) {
-        GETransformation theTransformation(*reinterpret_cast<const GETransformation*>(inTransformation));
-        theTransformation.Scale(inX, inY, inZ);
-        static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(theTransformation);
-    },
-    [](void* inModel, uint32_t inFrame) { static_cast<GEModel*>(inModel)->SetGraphicsCurrentFrame(inFrame); },
-    [](void* inModel, const EeGeTransformation* inTransformation) {
-        static_cast<GEModel*>(inModel)->SetGraphicsPreModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
-    },
-    [](void* inModel, float inDelta) {
-        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
-        GETextureCoordinate theCoordinate;
-        sKeptU.clear();
-        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
-            theArray->GetTextureCoordinate(theCoordinate, i);
-            float theU = theCoordinate.GetU();
-            sKeptU.push_back(theU);
-            theU += inDelta;
-            theCoordinate.SetU(theU);
-            theArray->SetTextureCoordinate(theCoordinate, i);
-        }
-    },
-    [](void* inModel) {
-        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
-        GETextureCoordinate theCoordinate;
-        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
-            theArray->GetTextureCoordinate(theCoordinate, i);
-            theCoordinate.SetU(sKeptU[i]);
-            theArray->SetTextureCoordinate(theCoordinate, i);
-        }
-    },
-    []() -> uint32_t { return (uint32_t)gRasterizer->GetCulling(); },
-    [](uint32_t inMode) { gRasterizer->SetCulling(inMode); },
-    [](void* inModel, float inDelta) {
-        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
-        GETextureCoordinate theCoordinate;
-        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
-            theArray->GetTextureCoordinate(theCoordinate, i);
-            theCoordinate.SetV(theCoordinate.GetV() + inDelta);
-            theArray->SetTextureCoordinate(theCoordinate, i);
-        }
-    },
-    [](void* inTexture, uint32_t inFrame) { static_cast<GETexture*>(inTexture)->SetFrame(inFrame); },
     []() -> float { return gRenderSnapshot.mCameraYaw; },
-    []() -> uint32_t { return gRasterizer->GetZBuffer(gScreenIndex); },
-    []() -> uint32_t { return gRasterizer->GetZCompare(gScreenIndex); },
-    [](void* inModel, uint32_t inNext, float inFraction) {
-        static_cast<GEModel*>(inModel)->SetGraphicsNextFrame(inNext);
-        static_cast<GEModel*>(inModel)->SetFractionalFramePosition(inFraction);
-    },
     [](const EeGe3DPoint* inPoint, float* outX, float* outY) {
         GE2DPoint theScreenPoint;
         GetScreenPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theScreenPoint);
@@ -1606,70 +1441,9 @@ const EeGfxRaster gEERustRaster = {
         else
             gUIManager->GetScenarioEditorForm()->DrawClippedText(theRectangle, &theText, NULL);
     },
-    // EEE3DTracerBeam::DrawPass6's stretch (0xfca9b): vertex array 0 kept and stretched (ee_gfx beam.rs), the
-    // sub-models' internal ys kept and stretched, the bounding volumes
-    [](void* inModel, float inLength, float inWidth, float inScroll) {
-        GEModel* theModel = static_cast<GEModel*>(inModel);
-        GEVertexArray* theVertices = theModel->GetVertexArray(0);
-        sKeptBeam.assign(theVertices->GetSize(), EeGfxBeamVertex{});
-        for (unsigned long i = 0; i < sKeptBeam.size(); i++) {
-            theVertices->GetPoint(*reinterpret_cast<GE3DPoint*>(&sKeptBeam[i].point), i);
-            theVertices->GetTextureCoordinate(*reinterpret_cast<GETextureCoordinate*>(&sKeptBeam[i].coord), i);
-        }
-        std::vector<EeGfxBeamVertex> theStretched(sKeptBeam);
-        ee_gfx_beam_stretch(theStretched.empty() ? NULL : &theStretched[0], theStretched.size(), inLength, inWidth, inScroll);
-        EEBeamSetVertices(theVertices, theStretched);
-        sKeptBeamYs.clear();
-        for (long j = 0; j < (long)theModel->GetSubModelCount(); j++) {
-            GEModel* theSubModel = theModel->GetSubModel(j);
-            GETransformation theModelTransform = theSubModel->GetInternalTransform(0);
-            sKeptBeamYs.push_back(theModelTransform.GetY());
-            theModelTransform.SetY(ee_gfx_beam_stretch_y(theModelTransform.GetY(), inLength));
-            theSubModel->SetInternalTransform(0, theModelTransform);
-        }
-        theModel->ComputeBoundingVolumes();
-    },
-    [](void* inModel) {
-        GEModel* theModel = static_cast<GEModel*>(inModel);
-        EEBeamSetVertices(theModel->GetVertexArray(0), sKeptBeam);
-        for (long j = 0; j < (long)theModel->GetSubModelCount(); j++) {
-            GEModel* theSubModel = theModel->GetSubModel(j);
-            GETransformation theModelTransform = theSubModel->GetInternalTransform(0);
-            theModelTransform.SetY(sKeptBeamYs[j]);
-            theSubModel->SetInternalTransform(0, theModelTransform);
-        }
-    },
-    // the volcano's morph (EEE3DVolcano::Queue, 0x10068a): vertex array 0's points, the bounds and normals
-    [](void* inModel) -> uint32_t { return (uint32_t)static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetSize(); },
-    [](void* inModel, uint32_t inIndex) {
-        GE3DPoint thePoint;
-        static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetPoint(thePoint, inIndex);
-        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
-    },
-    [](void* inModel, uint32_t inIndex, const EeGe3DPoint* inPoint) {
-        static_cast<GEModel*>(inModel)->GetVertexArray(0)->SetPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), inIndex);
-    },
-    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeBoundingVolumes(); },
-    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); },
-    // the farm's and the ground shadows' (ee_gfx effect_farm.rs, shadows.rs): the state they keep, their models
-    []() -> float { return gRasterizer->GetAlphaTestingRefValue(gScreenIndex); },
-    [](uint32_t* outSource, uint32_t* outDestination) {
-        unsigned long theSource;
-        unsigned long theDestination;
-        gRasterizer->GetBlending(theSource, theDestination, gScreenIndex);
-        *outSource = (uint32_t)theSource;
-        *outDestination = (uint32_t)theDestination;
-    },
     EERasterCreateModel,
     EERasterCreateSubModel,
-    [](void* inModel) { static_cast<GEModel*>(inModel)->Reference(); },
-    [](void* inModel) { static_cast<GEModel*>(inModel)->Dereference(); },
-    [](void* inModel, uint32_t inIndex) -> void* { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); },
     EERasterStoreMesh,
-    EERasterMaterialRanges,
-    [](void* inModel) -> float { return static_cast<GEModel*>(inModel)->GetBoundingRadius(0); },
-    EERasterCopyVertices,
-    [](void* inTexture) { static_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); },
     EERasterLoadTexture,
     // EEE3DMarchingLine::DrawPass4's line (0xf3c68): a GELine between two screen points, its opacity per vertex
     [](float inX0, float inY0, float inX1, float inY1, float inOpacity0, float inOpacity1) -> int32_t {
@@ -1684,8 +1458,6 @@ const EeGfxRaster gEERustRaster = {
         theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
         return gRasterizer->Draw(&theLine, 1, gScreenIndex);
     },
-    // the terrain's and the units' render objects (ee_gfx ro_terrain.rs, ro_units.rs)
-    []() -> uint32_t { return gRasterizer->GetAlphaTesting(gScreenIndex); },
     [](float inDistance) -> float {
         float theOld = gU4E8F08.GetRearClippingDistance();
         gU4E8F08.SetRearClippingDistance(inDistance);
@@ -1695,33 +1467,19 @@ const EeGfxRaster gEERustRaster = {
         return gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted);
     },
     []() -> bool { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
-    []() -> bool { return gRasterizer->GetCanModulateTextureAlpha(gScreenIndex); },
-    [](float inValue) { gRasterizer->SetAmbientIntensity(inValue, gScreenIndex); },
-    []() {
-        GERFogAttributes theFog;
-        gRasterizer->GetFogAttributes(theFog, gScreenIndex);
-        return EeGfxFogAttributes{(uint32_t)theFog.mType, {theFog.mColor.mRed, theFog.mColor.mGreen, theFog.mColor.mBlue},
-                                  theFog.mStart, theFog.mEnd, theFog.mScale};
-    },
-    [](uint32_t inType) { gRasterizer->SetFogType(inType, gScreenIndex); },
-    [](EeGfxColor inColor) { gRasterizer->SetFogColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
-    [](float inStart, float inEnd) { gRasterizer->SetFogRange(inStart, inEnd, gScreenIndex); },
-    EERasterFrameTextures,
-    [](void* inObject, EeGfxColor inColor, uint32_t inPart) {
-        static_cast<EEGraphicObject*>(inObject)->SetGroupColor(GEColor(inColor.red, inColor.green, inColor.blue), inPart);
-    },
-    EERasterSubModelOffset,
     EEROUnitsBarSet,
     EEROUnitsBarDraw,
     EEROUnitsScreenLines,
     EEROUnitsLabel,
-    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); },
     // the effects' quad batches (ee_gfx effect_batch.rs; EEEffect.cpp's arrays)
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()); },
     []() -> float { return gRenderSnapshot.mCameraPitch; },
-    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Reference(); },
     EEEffectBatchQuad,
     EEEffectBatchDraw,
+    // the screen the models' textures are set for (raster_direct.rs: the model, material and texture calls are Rust's)
+    []() -> uint32_t { return (uint32_t)gScreenIndex; },
+    // gRasterizer's Rust objects (raster_direct.rs: the state calls the lambdas made on it)
+    [](void** outBase) -> void* { return DX7Rasterizer::RustObjects(gRasterizer, outBase); },
 };
 
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance

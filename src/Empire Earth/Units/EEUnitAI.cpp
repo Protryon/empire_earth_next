@@ -285,8 +285,8 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         EEHerd* theHerd = theUnit->mHerd;
         if (theHerd == NULL)
             return 0;
-        return 1 | (theHerd->mAnimal->mHasGroupAttack ? 2 : 0) | (theHerd->mAnimal->mHasParentalVengeance ? 4 : 0) |
-               (theHerd->mAnimal->mHasGroupFlee ? 8 : 0);
+        return 1 | (theHerd->GetAnimal()->mHasGroupAttack ? 2 : 0) | (theHerd->GetAnimal()->mHasParentalVengeance ? 4 : 0) |
+               (theHerd->GetAnimal()->mHasGroupFlee ? 8 : 0);
     }
     case EE_UNITS_COND_ATTACK_NEARBY:
         return ((EEUnitClass*)(uintptr_t)inB)->AttackNearby(theUnit, CondGoal((uint64_t)inC));

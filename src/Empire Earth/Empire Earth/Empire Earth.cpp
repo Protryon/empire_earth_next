@@ -82,7 +82,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEGameSound.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EECPCombatManager.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECPNextUnits.h"
 

@@ -12,10 +12,13 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use ee_base::math::types::{Ge3DLine, Ge3DPoint};
 use ee_base::math::um;
 use ee_sim::world::map_fields::EeUnitsRtsMapFields;
 
-use crate::ge::tmobj::{ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_point_edit, ee_ge_tm_tile_edit, EeGeTerrainMesh};
+use crate::ge::tmobj::{
+    ee_ge_tm_intersects, ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_point_edit, ee_ge_tm_tile_edit, EeGeTerrainMesh,
+};
 
 /// `kNegativeHeightEpsilon` (0x441dbc) and `kHeightEpsilon` (EEGlobalConstants): a smoothed height this close to 0
 /// is 0.
@@ -543,6 +546,8 @@ pub struct EeGeMapHost {
     pub settle_tile: extern "C" fn(map: *mut c_void, x: c_ulong, y: c_ulong, height: f32),
     /// `UpdateWater(x, y)`
     pub update_water: extern "C" fn(map: *mut c_void, x: c_long, y: c_long),
+    /// `GetTile(x, y)` (NULL off the map)
+    pub tile: extern "C" fn(map: *mut c_void, x: c_ulong, y: c_ulong) -> *mut c_void,
 }
 
 struct Cpp<'a>(&'a EeGeMapHost);
@@ -649,6 +654,114 @@ pub unsafe extern "C" fn ee_ge_map_area_outlines(
     let (areas, continents) =
         unsafe { (std::slice::from_raw_parts(areas, count), std::slice::from_raw_parts(continents, count)) };
     area_outlines(areas, continents, space, &mut |x, y| continent(context, x, y), &mut |r| run(context, r.as_ptr()));
+}
+
+// ---- the line picks (GetTileOnLine 0x122ee8, GetLocationOnLine)
+
+/// What a line pick asks of the map: its tiles and where the line meets the terrain.
+pub trait LinePicks {
+    /// `GetTile(x, y)` of a floored coordinate (a negative one wraps, off the map): 0 off the map
+    fn tile(&self, x: c_long, y: c_long) -> usize;
+    /// `mTerrainMesh.Intersects(line, distance)`
+    fn terrain_hit(&self, line: &Ge3DLine) -> Option<f32>;
+}
+
+/// The water surface's hit (z = 0 between the line's start and its end) on a tile: the parameter and the point.
+fn water_hit(map: &impl LinePicks, line: &Ge3DLine) -> Option<(f32, Ge3DPoint, usize)> {
+    let t = line.solve_for_z(0.0).filter(|t| *t >= 0.0 && *t <= 1.0)?;
+    let point = line.point_at(t);
+    let tile = map.tile(um::floor(point.x) as c_long, um::floor(point.y) as c_long);
+    (tile != 0).then_some((t, point, tile))
+}
+
+/// `GetTileOnLine(line, x, y, water)`: the tile the line meets the terrain on, or the water surface first when
+/// asked; the tile (0: none) and the coordinates written (the water's when it found a tile, else the terrain hit's,
+/// written before its tile is looked up; None when neither wrote them).
+pub fn tile_on_line(map: &impl LinePicks, line: &Ge3DLine, hit_water: bool) -> (usize, Option<(c_long, c_long)>) {
+    let water = if hit_water { water_hit(map, line) } else { None };
+    let (mut tile, mut at) = match water {
+        Some((_, point, tile)) => (tile, Some((um::floor(point.x) as c_long, um::floor(point.y) as c_long))),
+        None => (0, None),
+    };
+    let Some(distance) = map.terrain_hit(line) else { return (tile, at) };
+    if water.is_none_or(|(t, _, _)| distance < t) {
+        let point = line.point_at(distance);
+        let (x, y) = (um::floor(point.x) as c_long, um::floor(point.y) as c_long);
+        at = Some((x, y));
+        tile = map.tile(x, y);
+    }
+    (tile, at)
+}
+
+/// `GetLocationOnLine(line, location, water)`: as [`tile_on_line`] with the hit point written instead.
+pub fn location_on_line(map: &impl LinePicks, line: &Ge3DLine, hit_water: bool) -> (usize, Option<Ge3DPoint>) {
+    let water = if hit_water { water_hit(map, line) } else { None };
+    let (mut tile, mut at) = match water {
+        Some((_, point, tile)) => (tile, Some(point)),
+        None => (0, None),
+    };
+    let Some(distance) = map.terrain_hit(line) else { return (tile, at) };
+    if water.is_none_or(|(t, _, _)| distance < t) {
+        let point = line.point_at(distance);
+        at = Some(point);
+        tile = map.tile(um::floor(point.x) as c_long, um::floor(point.y) as c_long);
+    }
+    (tile, at)
+}
+
+impl LinePicks for Cpp<'_> {
+    fn tile(&self, x: c_long, y: c_long) -> usize {
+        (self.0.tile)(self.0.map, x as c_ulong, y as c_ulong) as usize
+    }
+    fn terrain_hit(&self, line: &Ge3DLine) -> Option<f32> {
+        let mut distance = 0.0;
+        // SAFETY: the map's live mesh
+        unsafe { ee_ge_tm_intersects(self.0.mesh, line, &mut distance) }.then_some(distance)
+    }
+}
+
+/// `RTSMap::GetTileOnLine`: the tile (NULL: none); `x` and `y` written as the C++ wrote them.
+///
+/// # Safety
+/// The host's map and mesh are live; the pointers valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_map_tile_on_line(
+    host: *const EeGeMapHost,
+    line: *const Ge3DLine,
+    x: *mut c_long,
+    y: *mut c_long,
+    hit_water: bool,
+) -> *mut c_void {
+    // SAFETY: the caller's contract
+    let (tile, at) = unsafe { tile_on_line(&Cpp(&*host), &*line, hit_water) };
+    if let Some((ax, ay)) = at {
+        // SAFETY: the caller's pointers
+        unsafe {
+            *x = ax;
+            *y = ay;
+        }
+    }
+    tile as *mut c_void
+}
+
+/// `RTSMap::GetLocationOnLine`: the tile (NULL: none); `location` written as the C++ wrote it.
+///
+/// # Safety
+/// As [`ee_ge_map_tile_on_line`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_map_location_on_line(
+    host: *const EeGeMapHost,
+    line: *const Ge3DLine,
+    location: *mut Ge3DPoint,
+    hit_water: bool,
+) -> *mut c_void {
+    // SAFETY: the caller's contract
+    let (tile, at) = unsafe { location_on_line(&Cpp(&*host), &*line, hit_water) };
+    if let Some(point) = at {
+        // SAFETY: the caller's pointer
+        unsafe { *location = point };
+    }
+    tile as *mut c_void
 }
 
 #[cfg(test)]

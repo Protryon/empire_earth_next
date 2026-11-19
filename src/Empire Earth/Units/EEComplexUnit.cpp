@@ -82,7 +82,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EECPCombatManager.h"
 
 // Existing cdecl helper defined in EEWheel.cpp; original 0x23cd32 fills a real GE2DPoint.
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);

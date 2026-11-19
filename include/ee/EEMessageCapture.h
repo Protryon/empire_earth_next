@@ -15,22 +15,7 @@ void EEMessageCaptureExecuted(NEMessage* inMessage);
 // every game message type over edge payloads, and the box selection's packing (NMSW, NMCU); once per game
 void EEMessageCaptureSweep();
 
-// the Execute decisions' kinds (ee_netmsg execute.rs, bodies.rs): one NMDC record per call, the kind and the call's values
-// (inputs, then outputs) as 64-bit integers (a float's bits)
-enum EEMessageDecisionKind {
-    kDecisionSelectionMarksLocal = 1,
-    kDecisionSelectionCopies,
-    kDecisionCommandRuns,
-    kDecisionSelectionPasses,
-    kDecisionAddRemove,
-    kDecisionTradePrice,
-    kDecisionExchangeStep,
-    kDecisionTributeOrder,
-    kDecisionTributeViewer,
-    kDecisionDisbandRefund
-};
-void EEMessageCaptureDecision(unsigned int inKind, const long long* inValues, unsigned int inCount);
-// the decisions over plain edge values (once) and over the real players and units (every call): NMDC records
-void EEMessageCaptureDecisionSweep();
+// NMDC, the Execute decisions' records, are Rust (ee_sim netmsg decisions.rs: ee_netmsg_capture_decision, and
+// ee_netmsg_capture_decision_sweep over the world table's trade rates)
 
 #endif

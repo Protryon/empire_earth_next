@@ -35,8 +35,7 @@ int EffectIndex(EEGraphicEffect* inEffect)
 {
     if (inEffect == NULL)
         return -1;
-    return (int)(std::find(EEGraphicEffect::sEffects.begin(), EEGraphicEffect::sEffects.end(), inEffect) -
-                 EEGraphicEffect::sEffects.begin());
+    return (int)EEGraphicEffect::IndexOf(inEffect);
 }
 
 int MediaIndex(EEMedia* inMedia)

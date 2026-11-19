@@ -105,7 +105,6 @@ GEVector* GEVector::GetQuantizedVersion() const
 // Destroys the file-static zero vector at shutdown (an empty body)
 
 float GEVector::GetMagnitude() const { return ee_ge_vector_magnitude(GERust(*this)); }
-float GEVector::GetMagnitudeSquared() const { return ee_ge_vector_magnitude_squared(GERust(*this)); }
 
 // ---- Exported members with no address of their own (ICF-folded: Load 0xdc23, Save 0x20dc6)
 long GEVector::Load(FSFile& inFile)

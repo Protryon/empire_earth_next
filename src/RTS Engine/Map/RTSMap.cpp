@@ -88,9 +88,10 @@ struct EEMapRaiseOps {
             theMap->PlaceUnitOnGround(theNode->mUnit);
     }
     static void UpdateWater(void* inMap, long inX, long inY) { static_cast<RTSMap*>(inMap)->UpdateWater(inX, inY); }
+    static void* Tile(void* inMap, unsigned long inX, unsigned long inY) { return static_cast<RTSMap*>(inMap)->GetTile(inX, inY); }
     static EeGeMapHost Of(RTSMap* inMap)
     {
-        EeGeMapHost theHost = {inMap, inMap->mTerrainMesh.GetRust(), HasTile, SettleTile, UpdateWater};
+        EeGeMapHost theHost = {inMap, inMap->mTerrainMesh.GetRust(), HasTile, SettleTile, UpdateWater, Tile};
         return theHost;
     }
 };
@@ -214,69 +215,23 @@ bool EEMap::IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRa
     return theResult;
 }
 
-// Returns the tile where a line meets the terrain, or the water surface if asked and it comes first,
-// and stores its coordinates; NULL if nothing is hit
+// Returns the tile where a line meets the terrain, or the water surface if asked and it comes first, and stores its
+// coordinates; NULL if nothing is hit (ee_ge map_raise.rs)
 EEMapTile* RTSMap::GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface)
 {
-    bool theFound = false;
-    GE3DPoint thePoint;
-    float theT = 1.0f;
-    EEMapTile* theTile = NULL;
-    if (inHitWaterSurface) {
-        if (inLine.SolveForZ(0.0f, theT) && theT >= 0.0f && theT <= 1.0f) {
-            theFound = true;
-            inLine.GetPointAt(theT, thePoint);
-            long theX = UMFloor(thePoint.GetX());
-            long theY = UMFloor(thePoint.GetY());
-            theTile = this->GetTile(theX, theY);
-            if (theTile != NULL) {
-                outX = theX;
-                outY = theY;
-            } else
-                theFound = false;
-        } else
-            theFound = false;
-    }
-    float theDistance;
-    if (!this->mTerrainMesh.Intersects(inLine, theDistance))
-        return theTile;
-    if (!inHitWaterSurface || !theFound || theDistance < theT) {
-        inLine.GetPointAt(theDistance, thePoint);
-        outX = UMFloor(thePoint.GetX());
-        outY = UMFloor(thePoint.GetY());
-        theTile = this->GetTile(outX, outY);
-    }
-    return theTile;
+    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
+    return static_cast<EEMapTile*>(ee_ge_map_tile_on_line(&theHost, reinterpret_cast<const EeGe3DLine*>(&inLine), &outX,
+                                                          &outY, inHitWaterSurface));
 }
 
-// Returns the tile where a line meets the terrain, or the water surface if asked and it comes first,
-// and stores the hit point; NULL if nothing is hit
+// Returns the tile where a line meets the terrain, or the water surface if asked and it comes first, and stores the
+// hit point; NULL if nothing is hit (ee_ge map_raise.rs)
 EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface)
 {
-    GE3DPoint thePoint;
-    EEMapTile* theTile = NULL;
-    float theT = 1.0f;
-    bool theFound = false;
-    if (inHitWaterSurface) {
-        if (inLine.SolveForZ(0.0f, theT) && theT >= 0.0f && theT <= 1.0f) {
-            theFound = true;
-            inLine.GetPointAt(theT, thePoint);
-            theTile = this->GetTile(UMFloor(thePoint.GetX()), UMFloor(thePoint.GetY()));
-            if (theTile != NULL)
-                outLocation = thePoint;
-            else
-                theFound = false;
-        } else
-            theFound = false;
-    }
-    float theDistance;
-    if (!this->mTerrainMesh.Intersects(inLine, theDistance))
-        return theTile;
-    if (!inHitWaterSurface || !theFound || theDistance < theT) {
-        inLine.GetPointAt(theDistance, outLocation);
-        theTile = this->GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY()));
-    }
-    return theTile;
+    EeGeMapHost theHost = EEMapRaiseOps::Of(this);
+    return static_cast<EEMapTile*>(ee_ge_map_location_on_line(&theHost, reinterpret_cast<const EeGe3DLine*>(&inLine),
+                                                              reinterpret_cast<EeGe3DPoint*>(&outLocation),
+                                                              inHitWaterSurface));
 }
 
 // Returns the color of one of a tile's four corner vertices

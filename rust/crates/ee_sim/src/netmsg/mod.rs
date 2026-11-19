@@ -18,12 +18,14 @@
 //! - `bodies`: the record types' `Execute` bodies and the physics' two ways to run a message over the C++ host's world
 //!   calls (round 5), the unit orders through the units lane's bodies;
 //! - `capture`: the simulation capture's sweep payloads (round 6; the capture records what the C++ builds);
+//! - `decisions`: the capture's NMDC records, the decisions over edge values and the real players (TEST ONLY);
 //! - `ffi`: the C ABI.
 
 pub mod bodies;
 pub mod capture;
 pub mod classes;
 pub mod codec;
+pub mod decisions;
 pub mod engine;
 pub mod execute;
 pub mod ffi;
