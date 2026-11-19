@@ -8,13 +8,6 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 
 #include "ee/EEPlayer.h"

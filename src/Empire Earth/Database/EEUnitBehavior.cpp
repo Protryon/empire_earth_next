@@ -9,10 +9,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/FSFileSpec.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEGlobalConstants.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitBehavior.h"

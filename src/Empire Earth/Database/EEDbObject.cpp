@@ -4,7 +4,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEDbObject.h"
 

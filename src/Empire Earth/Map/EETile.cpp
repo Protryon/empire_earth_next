@@ -12,12 +12,8 @@
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/UMemoryPool.h"
 
-#include "ee/EETileLocation.h"
 #include "ee/EEUnit.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"

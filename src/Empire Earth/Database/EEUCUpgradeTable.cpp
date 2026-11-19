@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEUCUpgradeTable.h"
 #include "ee/EEDbRecords.h"

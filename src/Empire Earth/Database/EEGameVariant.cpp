@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEGameVariant.h"
 #include "ee/EEDbRecords.h"

@@ -10,24 +10,12 @@
 #include <utility>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
-#include "lle/GE3DLine.h"
 #include "lle/GEViewport.h"
-#include "lle/GEPhysicalModel.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
-#include "lle/URandom.h"
-#include "lle/FSFile.h"
 
-#include "ee/EETileLocation.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -40,12 +28,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEPersistentTag.h"
-#include "ee/EEUnitRegions.h"
 #include "ee/EEAppCapture.h"
-#include "rust/game/app.h"
-#include "rust/sim/app.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)

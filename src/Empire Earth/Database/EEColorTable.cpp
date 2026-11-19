@@ -6,11 +6,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEColorTable.h"
 #include "ee/EEDbRecords.h"
-#include "rust/data/tables.h"
 
 std::vector<EEColorTable*> EEColorTable::sTable;
 GEColor EEColorTable::sColor;

@@ -10,9 +10,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/TSScheduler.h"
-#include "lle/FSFileSpec.h"
-#include "lle/Graphics Engine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"

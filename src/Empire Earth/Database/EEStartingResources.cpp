@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEStartingResources.h"
 #include "ee/EEDbRecords.h"
@@ -34,9 +33,7 @@ void EEStartingResources::Unload()
 // The tag-point helpers (EETagPointList / EETagPoint, ee/EEGraphicObject.h), defined in this unit's range: included
 // after the table's code so the init chain above keeps its numbering
 #include <map>
-#include "lle/GEColor.h"
 #include "lle/GEModel.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 
 // Releases every tag point's model reference, frees the points and empties the list

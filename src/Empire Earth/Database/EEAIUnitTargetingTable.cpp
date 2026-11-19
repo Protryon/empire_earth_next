@@ -5,11 +5,9 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EEAIUnitTargetingTable.h"
 #include "ee/EEDbRecords.h"
-#include "rust/data/tables.h"
 
 long** EEAIUnitTargetingTable::sTable;      // 0x4e60c0: three rows of ten values (provisional name)
 
