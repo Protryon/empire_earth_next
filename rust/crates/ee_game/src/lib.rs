@@ -440,3 +440,7 @@ pub mod app;
 pub mod screens;
 // EE-SIM's driver (TEST ONLY): the headless simulation's options, menus, run, samples and report
 pub mod sim_driver;
+// the in-process UI fixture (TEST ONLY, EE_TEST_UI): the fixture driver's ui-state file and commands
+pub mod fixture;
+// the game log (ee/EEGameLog.h): Logs/game-<time>.log's lines
+pub mod game_log;

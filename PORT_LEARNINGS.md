@@ -32078,3 +32078,67 @@ ai/lua_ffi.rs (340 lines: nothing called it).
   combat goals' enemy-in-range modifier; the storm's shaper and route planners in calamity); the graph searches
   for the AI's requests and long unit paths; the saved tile and graph searches in saveload. Only a human player
   reaches nothing new: no display code changed.
+## The app cluster, round 1: the UI fixture whole in Rust, the game log whole in Rust (ee_game fixture, game_log.rs; branch rust-app1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 74aefb2d8 | the UI fixture whole in Rust; EETestFixture.cpp its host, EETestFixtureOrders.cpp deleted | +551 -2479, net -1,928 |
+| 45d4633dd | EEInitializeDatabase's finds and loads as tables of loaders | +67 -156, net -89 |
+| 5e6e50fd5 | the game log whole in Rust; EEGameLog.cpp its host | +85 -234, net -149 |
+| 18906985d | repeated #include lines in the cluster's units removed | -62 |
+| b9218898c | harness comments (the orders and casts are Rust) | tools only |
+| 1ae8c40cb | (merge) origin/rust 2bccb3e94 | |
+
+- **The fixture, whole.** Everything the fixture decides is Rust (ee_game fixture): the test switches and their C
+  library numbers (`sscanf`'s `%lu/%lu` and `%lu.%7[0-9]`, `strtoull(.., 0)`, `strtol`), the poll thread, the
+  ui-state file (its lines, the escaped texts, written in the C library's text mode: CR LF on Windows, as the C++'s
+  `fopen(.., "w")`), the telemetry (the players' fields through the world views), the frame request and its BMP (the
+  renderer's `GXTestReadFrame`, called from Rust directly), the command line's scan (`"%lu %31s %lu %lu %lu %lu"`:
+  the first failed conversion ends it, a minus wraps), every command's checks and verdict, the pointer hold, the
+  box selection's stages and expected set, the casts, and the orders (the plan, the grid scan, the click order, the
+  verified click, the scout, the home, the retry, the message hook's judges). The C++ is one host function
+  (`EEFixtureHost`, one `EeFixtureOp` per call: the controls by RTTI kind, the input lock and `SetPosition`, the
+  platform's events, the game's messages posted as UI actions, the picker, `CanGather`, `CanGetTo`, `EEIsSeenBy`, a
+  goal's targets, the build queue, the calamity manager), the two hooks' trampolines, the WON lobby's walk (it runs on
+  the lobby's own message loop over the WON GUI's component classes: left to the WON lane), the debug handler, the
+  fault handler and the legacy harness's communications mirror (read by its map name).
+- **Lesson: cbindgen reads every module's items.** The fixture's private `const`s (`PATROL`, `ATTACK_GROUND`, the
+  unit categories) and its `extern "C"` block (`GXTestReadFrame`) went into the generated headers: `PATROL` and
+  `ATTACK_GROUND` collided with netmsg.h's message names (cbindgen moved both into common.h), and the extern block
+  made a new `render/gx.h`. `/// cbindgen:ignore` on the modules that export nothing (`boxsel`, `cast`, `orders`,
+  `poll`, `text`) keeps them out; the exported modules' constants carry the `EE_FIXTURE_` prefix.
+- **Lesson: the civilization timer ends long tours.** A tour with `--box-select --orders --scroll-check
+  --zoom-captures` runs past 240 game seconds, where the civilization builder (form 7) comes on top: the zoom command
+  was then "rejected" (top form 7), as the fixture must answer. The same exercises in two shorter tours pass. Not a
+  change of this round (PORT_LEARNINGS "Harness, not x64").
+- **The game log, whole.** `EEGameLog`'s state (the open file's flags, the epochs, the civilization names, the
+  sample clock) is a Rust record under a lock; the income and the losses, added by the physics thread outside the
+  log's lock as before, are atomics. The counts read the units through the views (the class, the complex unit, the
+  active goal's kind); a gather goal's resource, a killer's owner, a player's texts, the lobby options and the file
+  (PlatFOpen's text mode, the game's `C:\` path form on POSIX) are host calls.
+- **EEInitializeDatabase.** The 26 tables' find, check and load triples are four tables of
+  (name, loader, the original's ESVerify line) in the same order around the events and the terrain colours.
+- **Tests.** fixture 10 (the command scan, the signed fields, `fgets`, the switches' numbers, the escaped texts, lines
+  and ids, the BMP header, the text mode, the click order, the order lines, `%.3f`/`%.0f`), game_log 2 (the words,
+  the counts by kind and work).
+- **Behaviour:** none. The fixture's stderr lines go through the C library's stream as before (the host's
+  `Stderr`); the pointer hold's clock is Rust's monotonic clock.
+- **Only the harness reaches** the fixture (TEST ONLY) and the game log (EE-SIM never opens it): the tours below, the
+  editor exercise, the lan game.
+- **Gates, on the tree merged with origin/rust 2bccb3e94** (a clean merge; `strip_markers.py --check` and the
+  headers current): both builds 0/0 (the test profile too), the Rust gate PASS (a first run failed once in ee_base's
+  `fs::golden_spec_replays` rmdir line under the chain's load; alone and in the rerun it passes), the oracle identical
+  on seeds 2-7, every capture profile at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, app 26,
+  scenario 43, effects 6, groups 2, missile 22, placement 4, transport 185, units 175 digests), the plain saveload
+  18/18 identical, the matrix `saveload expect: PASS`, scenario_check 27/27, the editor gate (14,448 lines) and the
+  civilization builder gate (4,062) PASS, and gates.sh: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT
+  13303` units [4, 41, 41] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2726 joiner=2725`,
+  GATES PASS. Before the merge, the fixture sessions through slot.py: the tour with `--input-check --box-select
+  --orders` (box select 4 steps, orders gather, repair, repair-queued and move ok 4/4 each, patrol and attack-ground
+  skipped as in the unmodified exe's run), the tour with `--scroll-check --zoom-captures 100 --cast earthquake,plague
+  --seed 7` (scroll, zoom, both casts), the tour with `--view-check --seed 2`, the editor exercise: all `RESULT PASS`;
+  their ui-state files and game logs line for line like the unmodified exe's; the harness self test ALL PASS.
+- **Short of the target**: net -2,228 C++ against the 3,000 asked. What is left in the cluster is object wiring
+  (EEWorld's StartGame/CreatePlayers/Clear, EEGameState::Create, the player, Persistent, Communications) or test
+  drivers made of editor and UI calls (EESimEditor, EESimCivBuilder: their command bodies are calls of other
+  lanes' classes); docs/progress/app-core.md "Next".
