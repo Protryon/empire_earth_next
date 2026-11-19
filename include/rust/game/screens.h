@@ -6230,7 +6230,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_SET = 108;
 /// `mCalamity->Cast(GetMouseLocation())`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_CAST = 109;
 
-/// `gUIManager->GetMainGameForm()->mRefreshGroup = true` when there is a main game form.
+/// `gUIManager->mMainGameForm->mRefreshGroup = true` when there is a main game form.
 constexpr static const uint32_t EE_SCREENS_MF_OP_REFRESH_MAIN_FORM = 110;
 
 /// `mStringsChanged`.
@@ -6479,7 +6479,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_ICON_BAR_UPDATE = 148;
 /// The background a's `DrawBackground(its rectangle)`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_DRAW_BACKGROUND = 149;
 
-/// `gUIManager->GetMainGameForm()->mUIState`.
+/// `gUIManager->mMainGameForm->mUIState`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_MAIN_UI_STATE = 150;
 
 /// `gUnitSelected`.
@@ -6830,7 +6830,7 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_IN_CINEMATIC = 4;
 /// The form's control a's `SetDisplayMode(b)`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_SET_MODE = 5;
 
-/// The main game form's (`gUIManager->GetMainGameForm()`) unit panels off: entity group 9, background 0x97, entity
+/// The main game form's (`gUIManager->mMainGameForm`) unit panels off: entity group 9, background 0x97, entity
 /// group 8, background 0x98.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_PANELS_OFF = 6;
 
@@ -6950,7 +6950,7 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_BUTTON_TECH = 42;
 /// The status button a's `mCount += b`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_ADD_COUNT = 43;
 
-/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->GetMainGameForm()`, a = 1): the
+/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->mMainGameForm`, a = 1): the
 /// toolkit's ops on them are `hud_views`' (the FFI adapter's, below the trait).
 constexpr static const uint32_t EE_SCREENS_MGR_OP_FORMS = 44;
 
@@ -9181,7 +9181,7 @@ constexpr static const uint32_t EE_SCREENS_UG_OP_LAND_CONTINENTS = 10;
 /// `ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, a != 0, b != 0)`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_RESIZE_GAME = 11;
 
-/// `gUIManager->SwapForm(gUIManager->GetMainGameForm())`.
+/// `gUIManager->SwapForm(gUIManager->mMainGameForm)`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_MAIN = 12;
 
 /// `gMiniMap->Redraw()`, `Refresh()`.
@@ -9399,7 +9399,7 @@ constexpr static const uint32_t EE_SCREENS_UG_OP_LOAD_SCENDEFAULT = 77;
 /// `gSoundManager->StopAllOneShotSounds()`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_STOP_ONE_SHOTS = 78;
 
-/// `gUIManager->SwapForm(gUIManager->GetScenarioEditorForm())`.
+/// `gUIManager->SwapForm(gUIManager->mScenarioEditorForm)`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_EDITOR = 79;
 
 /// `IDS_THERE_WAS_ERROR_TRYING_TO_LOAD` shown by `gUIManager->DisplayMessage(text, true, NULL, NULL, true)`.
@@ -9562,6 +9562,15 @@ constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
 
 constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
 
+/// The thread messages' ids the posts use (the UI thread's, `ui_thread.rs`' switch).
+constexpr static const uint32_t EE_SCREENS_UI_POST_START_LOADING = 1031;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_START_LOADING_EDITOR = 1043;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_ICON_BAR = 1060;
+
+constexpr static const uint32_t EE_SCREENS_UI_POST_LOAD_PERCENT = 1034;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -9577,10 +9586,10 @@ constexpr static const uint32_t EE_SCREENS_UI_OP_UNLOCK = 4;
 /// `gUIManager != NULL`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_HAS_MANAGER = 5;
 
-/// `gUIManager->GetMainGameForm()` (a pointer, 0 when none).
+/// `gUIManager->mMainGameForm` (a pointer, 0 when none).
 constexpr static const uint32_t EE_SCREENS_UI_OP_MAIN_FORM = 6;
 
-/// `gUIManager->GetScenarioEditorForm()` (a pointer, 0 when none).
+/// `gUIManager->mScenarioEditorForm` (a pointer, 0 when none).
 constexpr static const uint32_t EE_SCREENS_UI_OP_EDITOR_FORM = 7;
 
 /// `gUIManager->GetCurrentForm()`.
@@ -10654,6 +10663,38 @@ struct EeScreensMiniMapUpdate {
   float map_to_pixel[6];
   float extent;
   float bounds[4];
+};
+
+/// `EEUIManager`'s own members (ee/EEUIManager.h), in the class's order (the original's +0x12c..+0x13d).
+struct EeScreensUiManagerFields {
+  /// `EEUIFMainGame*`: `GetFormByID(11)` in the constructor
+  void *mMainGameForm;
+  /// `EEUIFScenarioEditor*`: made by `CreateScenarioEditor`, deleted by `DeleteScenarioEditor`
+  void *mScenarioEditorForm;
+  unsigned long mU134;
+  unsigned long mU138;
+  /// set by `StartScenarioEditor`, cleared by the main menu's events
+  bool mInScenarioEditor;
+  bool mB13D;
+};
+
+/// `EEUserInterface`'s members (ee/EEUserInterface.h), in the class's order (the original's +0x40..+0x5f).
+struct EeScreensUserInterfaceFields {
+  /// `TSThread*`: the constructing thread; every post goes to it
+  void *mThread;
+  /// `TSEvent*`: set by the thread message 0x?? (`EE_SCREENS_UI_OP_QUEUE_DONE`)
+  void *mMessageQueueDone;
+  /// `TMGetTime()` at construction; the game's start and saved games set it
+  unsigned long mRandomSeed;
+  /// the load percentage's player (`EEMLoadPercent`)
+  long mLocalPlayer;
+  bool mB05C;
+  /// a byte: the message handler truncates a long into it
+  uint8_t mIsUpdating;
+  /// `PostMessage424Once`'s guard (the handler clears it)
+  bool mIconBarUpdatePosted;
+  /// set by the handler; the loop exits on it
+  bool mIsQuitting;
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
@@ -12424,6 +12465,45 @@ int64_t ee_screens_ui_manager_update_keyboard(void *call);
 
 /// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
 int64_t ee_screens_ui_manager_update_mouse(void *call);
+
+/// `EEUIManager`'s constructor: its members zeroed (the constructor's own stores come in `EE_SCREENS_UM_OP_FORMS`)
+/// and the record registered.
+///
+/// # Safety
+/// `rec` is the new manager's record; it lives until `ee_screens_ui_manager_fields_drop`.
+void ee_screens_ui_manager_fields(EeScreensUiManagerFields *rec);
+
+/// `EEUIManager`'s destructor: the record forgotten (the main game form's pointer cleared, as the original's).
+///
+/// # Safety
+/// `rec` is the manager's live record.
+void ee_screens_ui_manager_fields_drop(EeScreensUiManagerFields *rec);
+
+/// `EEUserInterface::EEUserInterface` (0x276631): the current thread, the flags, `TMGetTime()` as the seed and the
+/// message-done event; the record registered as `gUserInterface`'s.
+void ee_screens_ui_construct(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::~EEUserInterface` (0x276740): every queued, undoable and redoable action released, the event
+/// destroyed.
+void ee_screens_ui_destroy(EeScreensUserInterfaceFields *rec);
+
+/// One of `EEUserInterface`'s posts: `mThread->Post(message, p1, p2, true)` -> Post's result.
+long ee_screens_ui_post(const EeScreensUserInterfaceFields *rec,
+                        uint32_t message,
+                        void *p1,
+                        void *p2);
+
+/// `EEUserInterface::PostStartLoading` (0x2792c3): 0x407, 0x413 from the scenario editor.
+void ee_screens_ui_post_start_loading(const EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::PostMessage424Once` (0x279756): the icon bar's update, once until it is handled (nothing on a
+/// NULL object, as the original's `this != NULL` test).
+void ee_screens_ui_post_icon_bar_once(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::SetLoadProgress(fraction)` (0x27965e): the percentage to the UI thread (0x40a); in a game of
+/// several humans also `EEMLoadPercent(mLocalPlayer, percent)` at every new 20 percent step.
+void ee_screens_ui_set_load_progress(const EeScreensUserInterfaceFields *rec,
+                                     float fraction);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,

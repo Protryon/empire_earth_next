@@ -60,6 +60,9 @@ pub(crate) struct Form(pub(crate) *mut c_void, pub(crate) *mut c_void);
 
 impl Form {
     pub(crate) fn op(&mut self, op: u32, a: u32, b: u32, c: u32, d: u32) -> u32 {
+        if let Some(r) = crate::screens::ui_objects_ffi::screens(op, a, b) {
+            return r;
+        }
         if let Some(r) = crate::screens::toolkit::op(self.0, self.1, op, a, b, c, d) {
             return r;
         }

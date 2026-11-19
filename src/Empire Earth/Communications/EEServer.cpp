@@ -353,7 +353,7 @@ void EEServer::ServerSlot48()
 {
     long theParameter1 = 0;
     long theParameter2 = 0;
-    gUserInterface->mThread->Post(0x12, &theParameter1, &theParameter2, true);
+    gUserInterface->GetThread()->Post(0x12, &theParameter1, &theParameter2, true);
 }
 
 // Returns the debug out-of-sync handling preference

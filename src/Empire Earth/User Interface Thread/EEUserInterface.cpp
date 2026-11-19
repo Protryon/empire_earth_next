@@ -94,46 +94,13 @@ void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture
 void EEPostGraphicsAll();
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();
-// the lobby's LobbyUpdatePlayer, LobbyUpdateGameOptions, LobbyUpdateForm and LobbyShowTransferProgress: Rust's
-// (rust/ee_screens.h, ee_screens lobby_form.rs)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
 RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; .bss among this unit's 0x565334..0x56536c)
-extern UString gUserInterfaceThreadName;   // 0x52a220 (Empire Earth.cpp)
 void EEStopAllSounds();                     // 0x140ceb (Empire Earth.cpp)
 #include "ee/EEStringIDs.h"
-// one queued thread message (Run collects them under the queue lock, then handles them; 12 bytes)
-struct EEUIThreadMessage {
-    unsigned long mMessage;
-    void* mParameter1;
-    void* mParameter2;
-};
 
 static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game view below the top bar (.rdata
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
-
-// the IME strings' buffer (0x56536c, its size 0x565368; grown in 0x100-byte steps)
-static unsigned long sLastLoadPercent;      // 0x565370 (SetLoadProgress)
-// Creates the UI thread object: its thread and the message-done event (the action, undo and redo queues and their
-// locks are Rust's: ee_screens actions.rs)
-EEUserInterface::EEUserInterface()
-{
-    this->mThread = TSScheduler::GetCurrentThread();
-    this->mB05C = false;
-    this->mIsUpdating = true;
-    this->mIsQuitting = false;
-    this->mRandomSeed = TMGetTime();
-    this->mIconBarUpdatePosted = false;
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 177);
-}
-
-// Destroys the UI thread object, releasing every queued, undoable and redoable action
-EEUserInterface::~EEUserInterface()
-{
-    ee_screens_actions_clear(0);
-    ee_screens_actions_clear(1);
-    ee_screens_actions_clear(2);
-    TSScheduler::DestroyEvent(this->mMessageQueueDone);
-}
 
 // Switches to another rasterizer: hides the cursor, releases the screens, deactivates the old rasterizer and
 // resizes the game screen to 1024x768
@@ -204,12 +171,6 @@ void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWide
     gUIManager->UnlockUIForCopyData();
 }
 
-// DEAD-IN-AOC: base exe 0x661aef. The WON login-done poster (message 0x441); dead in AoC like PostMOTD (no marker).
-void EEUserInterface::PostLoginDone()
-{
-    this->mThread->Post(0x441, NULL, NULL, true);
-}
-
 // LeaveMap, CancelGame, CloseScenarioEditor, EnterScenarioEditor, StartLoadingFromEditor, ShowCivilizationBuilder and
 // RestartGame are Rust's whole (ee_screens ui_game.rs; the thread's messages run them by ee_screens_ui_member).
 // The game starts' and the loop's calls (EE_SCREENS_UG_OP_*) on the UI object inUI (ee_screens ui_game.rs)
@@ -241,7 +202,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UG_OP_RESTART_UNITS: gWorld.RestartUnits(); break;
     case EE_SCREENS_UG_OP_LAND_CONTINENTS: EEUpdateLandContinents(); break;
     case EE_SCREENS_UG_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_SWAP_MAIN: gUIManager->SwapForm(gUIManager->GetMainGameForm()); break;
     case EE_SCREENS_UG_OP_MINI_MAP: gMiniMap->Redraw(); gMiniMap->Refresh(); break;
     case EE_SCREENS_UG_OP_GAME_VIEW: {
         GERectangle theRectangle;
@@ -278,14 +238,12 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         return theHeader.LoadFromFile(*theFile) == kErrorOK;
     }
     case EE_SCREENS_UG_OP_TIMER_RUNNING: return gPhysics->mTimerRunning;
-    case EE_SCREENS_UG_OP_SLEEP: PlatSleep((unsigned long)inA); break;
     case EE_SCREENS_UG_OP_NEW_SERVER:
         if (gCommunications != NULL)
             delete gCommunications;
         gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
         static_cast<EEServer*>(gCommunications)->StartThreads();
         break;
-    case EE_SCREENS_UG_OP_B13D_OFF: gUIManager->mB13D = false; break;
     case EE_SCREENS_UG_OP_STATE_CLEAR: gGameState.Clear(); break;
     case EE_SCREENS_UG_OP_STOP_SOUNDS: EEStopAllSounds(); break;
     case EE_SCREENS_UG_OP_SERVER_LOAD:
@@ -317,7 +275,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     }
     case EE_SCREENS_UG_OP_DELETE_FILE: delete theFile; break;
     case EE_SCREENS_UG_OP_INPUT_RESUME: gISMouse->Resume(); gISKeyboard->Resume(); break;
-    case EE_SCREENS_UG_OP_THREAD_NAME: TSThread::SetThreadName(PlatCurrentThreadId(), gUserInterfaceThreadName); break;
     case EE_SCREENS_UG_OP_LOCALE: {
         UWideString theLocale;
         gResource->GetString(IDS_ENGLISH, theLocale);
@@ -329,7 +286,10 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         setlocale(LC_ALL, NULL);
         break;
     }
-    case EE_SCREENS_UG_OP_CREATE_RENDER_OBJECT: return theUI->CreateRenderObject();
+    case EE_SCREENS_UG_OP_CREATE_RENDER_OBJECT:   // the UI's render object to the graphics thread
+        gU56534C = new EEROUserInterface(gUIManager);
+        gGraphics->PostPushRenderObject(gU56534C);
+        break;
     case EE_SCREENS_UG_OP_POINTER_POST:
         gMousePointer->mThread->Post((unsigned long)inA, inA == 0x405 ? gRasterizer->GetPrimarySurface(gScreenIndex) : NULL,
                                      NULL, true);
@@ -345,24 +305,8 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
         break;
-    case EE_SCREENS_UG_OP_QUITTING: return theUI->mIsQuitting;
-    case EE_SCREENS_UG_OP_QUEUE_LOCK:
-        inA != 0 ? theUI->mThread->LockMessageQueue() : theUI->mThread->UnlockMessageQueue();
-        break;
-    case EE_SCREENS_UG_OP_RECEIVE: {
-        EEUIThreadMessage theMessage;
-        long theResult = theUI->mThread->Receive(theMessage.mMessage, theMessage.mParameter1, theMessage.mParameter2);
-        int64_t* theOut = reinterpret_cast<int64_t*>(inC);
-        theOut[0] = theMessage.mMessage;
-        theOut[1] = reinterpret_cast<int64_t>(theMessage.mParameter1);
-        theOut[2] = reinterpret_cast<int64_t>(theMessage.mParameter2);
-        return theResult;
-    }
-    case EE_SCREENS_UG_OP_HANDLE: theUI->HandleMessage((unsigned long)inA, (LONG_PTR)inB, (LONG_PTR)inC); break;
-    case EE_SCREENS_UG_OP_UPDATING: return theUI->mIsUpdating != 0;
     case EE_SCREENS_UG_OP_UPDATE_INTERFACE: theUI->UpdateInterface(); break;
     case EE_SCREENS_UG_OP_FREE_CAMERA: return gFreeCamera;
-    case EE_SCREENS_UG_OP_TIME: return TMGetTime();
     case EE_SCREENS_UG_OP_CAMERA: {
         uint32_t theBits = (uint32_t)inA;
         float theSeconds;
@@ -372,7 +316,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     }
     case EE_SCREENS_UG_OP_SIM_RUN: return gPlatSimRun;
     case EE_SCREENS_UG_OP_RELEASE_SCENE: gGraphics->PostReleaseScene(); gGraphics->PostMessage50AAndWait(); break;
-    case EE_SCREENS_UG_OP_ACTIONS_CLEAR: ee_screens_actions_clear((uint32_t)inA); break;
     case EE_SCREENS_UG_OP_WAIT_PRELOAD: gDataPreLoading->WaitForMessageQueue(); break;
     case EE_SCREENS_UG_OP_WORLD_CLEAR: gWorld.Clear(); break;
     case EE_SCREENS_UG_OP_PHYSICS_INIT:
@@ -385,7 +328,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         break;
     case EE_SCREENS_UG_OP_SCREEN_INACTIVE: gGameScreenActive = false; break;
     case EE_SCREENS_UG_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_NOT_MAIN: return gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm();
     case EE_SCREENS_UG_OP_ONE_RECORD: return gWorld.mStatistics.GetRecords().size() == 1;
     case EE_SCREENS_UG_OP_SERVER_LOST:
         return gCommunications != NULL && gCommunications->IsClient() &&
@@ -411,7 +353,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true,
                                    UString("data\\") + UString("Scenarios\\"), 0);
     case EE_SCREENS_UG_OP_STOP_ONE_SHOTS: gSoundManager->StopAllOneShotSounds(); break;
-    case EE_SCREENS_UG_OP_SWAP_EDITOR: gUIManager->SwapForm(gUIManager->GetScenarioEditorForm()); break;
     case EE_SCREENS_UG_OP_LOAD_ERROR: {
         UWideString theMessage;
         gResource->GetString(IDS_THERE_WAS_ERROR_TRYING_TO_LOAD, theMessage);
@@ -457,41 +398,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     return 0;
 }
 
-// Starts a test of the edited scenario: rebuilds continents, herds, towns and AI centres, restarts units and
-// switches to the main game form (ee_screens ui_game.rs)
-void EEUserInterface::TestScenario()
-{
-    ee_screens_ui_test_scenario(this);
-}
-
-// Closes the IME composition string
-void EEUserInterface::CloseIMECompositionString()
-{
-    gUIManager->CloseIMECompositionString();
-}
-
-// Saves the edited scenario as ScenDefault and starts testing it like a game (reporting a save error; ee_screens
-// ui_game.rs)
-void EEUserInterface::SaveAndTestScenario()
-{
-    ee_screens_ui_save_and_test_scenario(this);
-}
-
-// Creates the UI's render object and pushes it on the graphics thread
-long EEUserInterface::CreateRenderObject()
-{
-    gU56534C = new EEROUserInterface(gUIManager);
-    gGraphics->PostPushRenderObject(gU56534C);
-    return kErrorOK;
-}
-
-// Loads a saved game or scenario file: checks its header, starts a local server and posts the load; reports
-// an invalid file (ee_screens ui_game.rs)
-void EEUserInterface::LoadSavedGame(FSFile* inFile)
-{
-    ee_screens_ui_load_saved_game(this, inFile);
-}
-
 // Opens the WON server selection, remembering the password when asked
 void EEUserInterface::OpenSelectServer()
 {
@@ -513,27 +419,12 @@ void EEUserInterface::OpenSelectServer()
     gUIManager->UnlockUIForCopyData();
 }
 
-// Runs the UI thread: collects and handles its messages, keeps the FPU in 53-bit mode, updates the interface
-// and the free camera each pass until quitting (ee_screens ui_game.rs)
-long EEUserInterface::Run(void* inParameter)
-{
-    return (long)ee_screens_ui_run(this);
-}
-
 // Pauses the graphics thread and waits until it is paused
 void EEUserInterface::PauseGraphics()
 {
     gGraphics->PostPause();
     for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
         PlatSleep(1);
-}
-
-// Runs the queued actions under the UI copy lock and the world's write lock; undoable ones go on the undo list (at
-// most 100) and clear the redo list (the original's queue helpers ClearQueue, GetQueueSize, PeekBack, PopFront,
-// PopBack and PushBack with it: ee_screens actions.rs)
-void EEUserInterface::ProcessActions()
-{
-    ee_screens_actions_process();
 }
 
 // The action queues' host (actions.rs): an action's reference, release, run, undo and undoable flag; the locks
@@ -567,33 +458,6 @@ extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
     return 0;
 }
 
-// Passes the input method's composition string (PLAT_EVENT_TEXT_EDITING; the original read it with
-// ImmGetCompositionStringA), its attributes (the edited part as the target clause, the rest as input: IMM's
-// ATTR_TARGET_CONVERTED / ATTR_INPUT) and the cursor to the UI
-void EEUserInterface::UpdateIMECompositionString(const char* inText, long inCursor, long inLength)
-{
-    UWideString theString(inText);
-    unsigned long theCount = (unsigned long)strlen(inText);
-    std::string theAttributes(theCount, '\2');   // ATTR_CONVERTED (non-zero: the attribute string ends at a 0)
-    for (unsigned long i = 0; i < theCount; i++)
-        if ((long)i >= inCursor && (long)i < inCursor + inLength)
-            theAttributes[i] = 1;
-    gUIManager->ChangeIMECompositionString(theString, UString(theAttributes.c_str()),
-                                          (unsigned long)(inCursor < 0 ? 0 : inCursor));
-}
-
-// Passes the input method's result string to the UI (the committed composition)
-void EEUserInterface::AddIMEResultString(const char* inText)
-{
-    gUIManager->AddIMEResultString(inText);
-}
-
-// Handles one UI thread message (0x401..0x443): the switch is Rust's (ee_screens ui_thread.rs), over the host below
-void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParameter1, LONG_PTR inParameter2)
-{
-    ee_screens_ui_message(this, (uint32_t)inMessage, inParameter1, inParameter2);
-}
-
 // The thread messages' calls (EE_SCREENS_UI_OP_*) on the UI object inUI: the UI manager and its forms, the locks,
 // the graphics thread, the thread object's handlers; the pointers are the messages' parameters
 extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
@@ -610,8 +474,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_UNLOCK:
         inA == 1 ? gWorld.mLock->ReadUnlock() : gWorld.mLock->WriteUnlock();
         break;
-    case EE_SCREENS_UI_OP_MAIN_FORM: return (int64_t)theMain;
-    case EE_SCREENS_UI_OP_EDITOR_FORM: return (int64_t)gUIManager->GetScenarioEditorForm();
     case EE_SCREENS_UI_OP_STATUS_VALUE:
         static_cast<UIStatusBar*>(theForm->GetControl(inB))->SetCurrentRangeValue(inC);
         break;
@@ -621,16 +483,12 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_POST_LOAD_GAME: gDataPreLoading->PostLoadGame(false, false); break;
     case EE_SCREENS_UI_OP_SHOW_EPOCH_NAME: theUI->ShowEpochName(); break;
     case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->Rust(EE_SCREENS_MF_DO_UPDATE_MEDIA, 1); break;
-    case EE_SCREENS_UI_OP_SET_UPDATING: theUI->mIsUpdating = inA; break;
-    case EE_SCREENS_UI_OP_SET_QUITTING: theUI->mIsQuitting = true; break;
-    case EE_SCREENS_UI_OP_LOAD_SAVED_GAME: theUI->LoadSavedGame(reinterpret_cast<FSFile*>(inA)); break;
     case EE_SCREENS_UI_OP_PROCESS_EVENT:
         reinterpret_cast<UIEvent*>(inA)->ProcessEvent(NULL, reinterpret_cast<UIEntity*>(inB));
         reinterpret_cast<UIEvent*>(inA)->Dereference();
         break;
     case EE_SCREENS_UI_OP_GFX_POST_PAUSE: return gGraphics->PostPause() == kErrorOK;
     case EE_SCREENS_UI_OP_GFX_PAUSED: return gGraphics->mIsPaused;
-    case EE_SCREENS_UI_OP_SLEEP: PlatSleep(1); break;
     case EE_SCREENS_UI_OP_GFX_POST_RESUME: gGraphics->PostResume(); break;
     case EE_SCREENS_UI_OP_QUICK_LOAD: {
         EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inA);
@@ -640,7 +498,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         break;
     }
     case EE_SCREENS_UI_OP_LOADING_TEXT: theUI->ShowLoadingText(inA); break;
-    case EE_SCREENS_UI_OP_SAVE_AND_TEST: theUI->SaveAndTestScenario(); break;
     case EE_SCREENS_UI_OP_RESET_GFX_VALUES: EEResetGraphicsValues(); break;
     case EE_SCREENS_UI_OP_SCREEN_CAPTURE: {
         EEScreenCapture* theCapture = reinterpret_cast<EEScreenCapture*>(inA);
@@ -654,12 +511,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         break;
     }
     case EE_SCREENS_UI_OP_POST_GFX_ALL: EEPostGraphicsAll(); break;
-    case EE_SCREENS_UI_OP_CLOSE_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CLOSE_EDITOR, 0, 0, 0); break;
-    case EE_SCREENS_UI_OP_ENTER_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_ENTER_EDITOR, inA != 0, 0, 0); break;
-    case EE_SCREENS_UI_OP_CANCEL_GAME: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CANCEL_GAME, 0, 0, 0); break;
-    case EE_SCREENS_UI_OP_LOAD_FROM_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_LOAD_FROM_EDITOR, 0, 0, 0); break;
-    case EE_SCREENS_UI_OP_TEST_SCENARIO: theUI->TestScenario(); break;
-    case EE_SCREENS_UI_OP_REFRESH_GROUP: theMain->mRefreshGroup = true; break;
     case EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK: return reinterpret_cast<EEUIFErrorCallbackData*>(inA)->mCallback != NULL;
     case EE_SCREENS_UI_OP_ERROR_CALLBACK: {
         EEUIFErrorCallbackData* theData = reinterpret_cast<EEUIFErrorCallbackData*>(inA);
@@ -706,28 +557,15 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_INFORMATION:
         theMain->Rust(EE_SCREENS_MF_DO_INFO_PAUSE, inA != 0);
         break;
-    case EE_SCREENS_UI_OP_CIV_BUILDER:
-        // (STAND-IN, owner 2026-11-01: the flag is the low byte of the raw dword 0x278b46 pushes)
-        ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CIV_BUILDER, inC != 0 ? 0 : inA, inC != 0 ? 0 : (uint8_t)inB, inC != 0);
-        break;
     case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
     case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
     case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->GetScenarioEditorForm()->SelectTab((unsigned char)inA, inB); break;
-    case EE_SCREENS_UI_OP_RESTART: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_RESTART, 0, 0, 0); break;
     case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
     case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;
     case EE_SCREENS_UI_OP_MOTD:
         theUI->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB));
         break;
     case EE_SCREENS_UI_OP_DELETE_WSTRING: delete reinterpret_cast<UWideString*>(inA); break;
-    case EE_SCREENS_UI_OP_LOBBY:
-        if (inA == 0) ee_screens_lobby_update_player(inB, inC);
-        else if (inA == 1) ee_screens_lobby_update_game_options();
-        else if (inA == 2) ee_screens_lobby_show_transfer_progress((uint8_t)inB, (uint8_t)inC);
-        else ee_screens_lobby_update_form();
-        break;
-    case EE_SCREENS_UI_OP_LAG: theUI->ShowLagStatus(inA, inB != 0); break;
-    case EE_SCREENS_UI_OP_QUEUE_DONE: theUI->mMessageQueueDone->Set(); break;
     }
     return 0;
 }
@@ -744,25 +582,7 @@ void EEUserInterface::UpdateInterface()
     if (!EELobbyIsShown())
         gUIManager->UpdateUI(gMouse->mPosition);
     gWorld.mLock->ReadUnlock();
-    this->ProcessActions();
-}
-
-// Queues an action for the UI thread (taking a reference; ee_screens actions.rs)
-void EEUserInterface::PostAction(EEAction* inAction)
-{
-    ee_screens_actions_post(inAction);
-}
-
-// Opens the IME composition string
-void EEUserInterface::OpenIMECompositionString()
-{
-    gUIManager->OpenIMECompositionString();
-}
-
-// Redoes the last undone action; returns 7 when there is none (ee_screens actions.rs)
-long EEUserInterface::Redo()
-{
-    return ee_screens_actions_redo();
+    ee_screens_actions_process();
 }
 
 // Posts a screenshot request (message 0x41b)
@@ -773,174 +593,33 @@ void EEUserInterface::PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     theCapture->mSurface = NULL;
     theCapture->mIsPostGame = inFlag2;
     theCapture->mWidth = inX;
-    this->mThread->Post(0x41b, theCapture, (void*)inFlag1, true);
-}
-
-// Posts a background media update (message 0x403)
-void EEUserInterface::PostUpdateBackgroundMedia()
-{
-    this->mThread->Post(0x403, NULL, NULL, true);
-}
-
-// Posts showing the epoch name (message 0x404)
-void EEUserInterface::PostShowEpochName()
-{
-    this->mThread->Post(0x404, NULL, NULL, true);
+    this->Post(0x41b, theCapture, (void*)inFlag1);
 }
 
 // Posts a scenario dialog message (message 0x422)
 void EEUserInterface::PostDialogMessage(const EESMDialogMessage& inMessage)
 {
-    this->mThread->Post(0x422, new EESMDialogMessage(inMessage), NULL, true);
-}
-
-// Posts selecting a scenario editor tab (message 0x421)
-void EEUserInterface::PostSelectEditorTab(long inX, long inY)
-{
-    this->mThread->Post(0x421, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
-}
-
-// Posts starting the scenario test (message 0x40f)
-void EEUserInterface::StartScenarioTest()
-{
-    this->mThread->Post(0x40f, NULL, NULL, true);
-}
-
-// Posts a display change (message 0x429)
-void EEUserInterface::PostDisplayChanged(bool inFlag)
-{
-    this->mThread->Post(0x429, (void*)inFlag, NULL, true);
-}
-
-// Posts cancelling the game (message 0x412)
-void EEUserInterface::PostCancelGame()
-{
-    this->mThread->Post(0x412, NULL, NULL, true);
-}
-
-// Posts that loading the game failed (message 0x430)
-void EEUserInterface::PostLoadGameFailed(bool inFlag)
-{
-    this->mThread->Post(0x430, NULL, (void*)inFlag, true);
-}
-
-// Posts leaving the scenario editor (message 0x410)
-void EEUserInterface::LeaveScenarioEditor()
-{
-    this->mThread->Post(0x410, NULL, NULL, true);
-}
-
-// Posts entering the scenario editor (message 0x411)
-long EEUserInterface::PostEnterScenarioEditor(bool inFlag)
-{
-    return this->mThread->Post(0x411, (void*)inFlag, NULL, true);
-}
-
-// Posts quitting the UI thread
-void EEUserInterface::PostQuit()
-{
-    this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-}
-
-// Posts showing or hiding the pause information (message 0x427)
-void EEUserInterface::PostPauseInformation(bool inFlag)
-{
-    this->mThread->Post(0x427, (void*)inFlag, NULL, true);
-}
-
-// Posts that the host migrated (message 0x426)
-void EEUserInterface::PostHostMigrated()
-{
-    this->mThread->Post(0x426, NULL, NULL, true);
-}
-
-// Posts starting to load the game (0x407; 0x413 from the scenario editor)
-void EEUserInterface::PostStartLoading()
-{
-    if (!gUIManager->mInScenarioEditor)
-        this->mThread->Post(0x407, NULL, NULL, true);
-    else
-        this->mThread->Post(0x413, NULL, NULL, true);
+    this->Post(0x422, new EESMDialogMessage(inMessage), NULL);
 }
 
 // Posts loading a saved game file (message 0x408)
 void EEUserInterface::PostLoadSavedGame(const FSFileSpec& inSpec)
 {
-    this->mThread->Post(0x408, new FSFileSpec(inSpec), NULL, true);
+    this->Post(0x408, new FSFileSpec(inSpec), NULL);
 }
 
 // Posts a UI event for a form (message 0x40e)
 long EEUserInterface::PostEvent(UIEvent* inEvent, UIForm* inForm)
 {
     inEvent->Reference();
-    return this->mThread->Post(0x40e, inEvent, inForm, true);
-}
-
-// Posts hiding the messages (message 0x432)
-void EEUserInterface::PostHideMessages()
-{
-    this->mThread->Post(0x432, NULL, NULL, true);
-}
-
-// Posts opening the civilization builder (message 0x420)
-long EEUserInterface::OpenCivilizationBuilder(EECivilization* inCivilization, bool inFlag)
-{
-    return this->mThread->Post(0x420, inCivilization, (void*)inFlag, true);
-}
-
-// Posts closing a form (message 0x419)
-long EEUserInterface::CloseForm(UIForm* inForm)
-{
-    return this->mThread->Post(0x419, inForm, NULL, true);
-}
-
-// Posts switching to a form (message 0x414)
-long EEUserInterface::SwitchToForm(UIForm* inForm)
-{
-    return this->mThread->Post(0x414, inForm, NULL, true);
+    return this->Post(0x40e, inEvent, inForm);
 }
 
 // Posts showing a loaded object (message 0x40c)
 void EEUserInterface::ShowLoadedObject(UReferenceCounter* inObject)
 {
     inObject->Reference();
-    this->mThread->Post(0x40c, inObject, NULL, true);
-}
-
-// Posts that a message box closed, with its callback data (message 0x417)
-void EEUserInterface::PostErrorClosed(UIForm* inForm, EEUIFErrorCallbackData* inData)
-{
-    this->mThread->Post(0x417, inForm, inData, true);
-}
-
-// Posts restarting the game (message 0x428)
-void EEUserInterface::PostRestartGame()
-{
-    this->mThread->Post(0x428, NULL, NULL, true);
-}
-
-// Posts starting the scenario test the second way (message 0x415)
-void EEUserInterface::StartScenarioTest2()
-{
-    this->mThread->Post(0x415, NULL, NULL, true);
-}
-
-// Posts showing the civilization builder (message 0x41f)
-long EEUserInterface::PostDisplayCivBuilder()
-{
-    return this->mThread->Post(0x41f, NULL, NULL, true);
-}
-
-// Posts opening a form (message 0x40d)
-long EEUserInterface::OpenForm(UIForm* inForm)
-{
-    return this->mThread->Post(0x40d, inForm, NULL, true);
-}
-
-// Posts changing the rasterizer (message 0x41e)
-void EEUserInterface::PostChangeRasterizer(long inX, long inY)
-{
-    this->mThread->Post(0x41e, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
+    this->Post(0x40c, inObject, NULL);
 }
 
 // Posts a chat log entry with a name, colour, text, display time and type (message 0x418)
@@ -953,7 +632,7 @@ long EEUserInterface::AddChatLogEntry(const GEColor& inColor, const UWideString&
     theEntry->mText = inText;
     theEntry->mTime = inTime;
     theEntry->mType = inType;
-    return this->mThread->Post(0x418, theEntry, NULL, true);
+    return this->Post(0x418, theEntry, NULL);
 }
 
 // Posts a white system line to the chat log, shown three times the usual time
@@ -963,91 +642,6 @@ long EEUserInterface::AddChatLogEntry(const UWideString& inText, long inY)
     return this->AddChatLogEntry(theColor, " > ", inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2);
 }
 
-// Posts a just-in-time manufacturing update (message 0x416)
-void EEUserInterface::UpdateJITManufacturing()
-{
-    this->mThread->Post(0x416, NULL, NULL, true);
-}
-
-// Posts a lobby player update (message 0x436)
-void EEUserInterface::PostLobbyUpdatePlayer(long inX, long inY)
-{
-    this->mThread->Post(0x436, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
-}
-
-// Posts a lobby game options update (message 0x437)
-void EEUserInterface::PostLobbyUpdateGameOptions()
-{
-    this->mThread->Post(0x437, NULL, NULL, true);
-}
-
-// Posts a player's lag status (message 0x442)
-void EEUserInterface::SetLagStatus(unsigned short inLag, unsigned char inStatus)
-{
-    this->mThread->Post(0x442, reinterpret_cast<void*>(inLag), (void*)(inStatus == 1), true);
-}
-
-// Posts a player's load percentage (message 0x443)
-void EEUserInterface::SetLoadPercent(long inPlayer, unsigned long inPercent)
-{
-    this->mThread->Post(0x443, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inPercent), true);
-}
-
-// Posts the lobby's transfer progress (message 0x439)
-void EEUserInterface::PostLobbyShowTransferProgress(long inX, long inY)
-{
-    this->mThread->Post(0x439, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
-}
-
-// Posts a lobby form update (message 0x438)
-void EEUserInterface::PostLobbyUpdateForm()
-{
-    this->mThread->Post(0x438, NULL, NULL, true);
-}
-
-// Posts refreshing a saved group button (message 0x435)
-void EEUserInterface::PostRefreshSavedGroup(long inX)
-{
-    this->mThread->Post(0x435, reinterpret_cast<void*>(inX), NULL, true);
-}
-
-// Posts the load progress percentage; in multiplayer also tells the others at every 20 percent step
-void EEUserInterface::SetLoadProgress(float inFraction)
-{
-    if (inFraction < 0.0f)
-        inFraction = 0.0f;
-    else if (inFraction > 1.0f)
-        inFraction = 1.0f;
-    unsigned long thePercent = (unsigned long)(inFraction * 100.0f);
-    if (sLastLoadPercent / 20 < thePercent / 20 && gCommunications != NULL && gCommunications->GetNumHumanPlayers() > 1)
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadPercent, {this->mLocalPlayer, thePercent}), kSlotNone);
-    sLastLoadPercent = thePercent;
-    this->mThread->Post(0x40a, reinterpret_cast<void*>(thePercent), NULL, true);
-}
-
-// Posts a loading text (message 0x40b)
-void EEUserInterface::SetLoadingText(long inX)
-{
-    this->mThread->Post(0x40b, reinterpret_cast<void*>(inX), NULL, true);
-}
-
-// Posts the icon bar update (message 0x424) once until it is handled
-void EEUserInterface::PostMessage424Once()
-{
-    if (this != NULL && !this->mIconBarUpdatePosted) {
-        this->mThread->Post(0x424, NULL, NULL, true);
-        this->mIconBarUpdatePosted = true;
-    }
-}
-
-// Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby (ee_screens ui_game.rs)
-void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging) { ee_screens_ui_show_lag_status(inPlayer, inLagging); }
-
-// Undoes the last action; returns 7 when there is none (ee_screens actions.rs)
-long EEUserInterface::Undo()
-{
-    return ee_screens_actions_undo();
-}
 
 // Resumes the graphics thread and waits until it runs
 void EEUserInterface::ResumeGraphics()
@@ -1080,8 +674,6 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
     switch (inOp) {
     case EE_SCREENS_UI_EV_HAS:
         switch (inA) {
-        case EE_SCREENS_UI_GLOBAL_USER_INTERFACE: return gUserInterface != NULL;
-        case EE_SCREENS_UI_GLOBAL_MANAGER: return gUIManager != NULL;
         case EE_SCREENS_UI_GLOBAL_CONDUCTOR: return gConductor != NULL;
         case EE_SCREENS_UI_GLOBAL_SOUND: return gSoundManager != NULL;
         case EE_SCREENS_UI_GLOBAL_KEYBOARD: return gISKeyboard != NULL;
@@ -1093,7 +685,6 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
     case EE_SCREENS_UI_EV_LOBBY_SHOWN: return EELobbyIsShown();
     case EE_SCREENS_UI_EV_LOBBY_OPEN: return EEIsLobbyOpen();
     case EE_SCREENS_UI_EV_LOBBY_SHUTDOWN: EELobbyShutdown(); break;
-    case EE_SCREENS_UI_EV_POST_QUIT: gUserInterface->mThread->Post(0x12, NULL, NULL, false); break;   // WM_QUIT
     case EE_SCREENS_UI_EV_MUSIC_VOLUME:
         theVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
         memcpy(&theBits, &theVolume, 4);
@@ -1118,15 +709,22 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
         break;
     case EE_SCREENS_UI_EV_POINTER_POST: gMousePointer->mThread->Post(inA, NULL, NULL, true); break;
     case EE_SCREENS_UI_EV_POINTER_SHOWN: return gMousePointer->mIsShown;
-    case EE_SCREENS_UI_EV_SLEEP: PlatSleep(1); break;
     case EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND: return gGamePreferences.mSettings.mMuteInBackground;   // port
-    case EE_SCREENS_UI_EV_QUITTING: return gUserInterface->mIsQuitting;
     case EE_SCREENS_UI_EV_FULL_SCREEN: return gGamePreferences.mSettings.GetFullScreen();
     case EE_SCREENS_UI_EV_MINIMIZE: PlatWindowMinimize(gGameWindow->GetOSRepresentation()); break;   // CloseWindow
-    case EE_SCREENS_UI_EV_IME_OPEN: gUserInterface->OpenIMECompositionString(); break;
-    case EE_SCREENS_UI_EV_IME_UPDATE: gUserInterface->UpdateIMECompositionString(theText, inB, inC); break;
-    case EE_SCREENS_UI_EV_IME_RESULT: gUserInterface->AddIMEResultString(theText); break;
-    case EE_SCREENS_UI_EV_IME_CLOSE: gUserInterface->CloseIMECompositionString(); break;
+    case EE_SCREENS_UI_EV_IME_UPDATE: {
+        // the input method's composition (PLAT_EVENT_TEXT_EDITING; the original read it with ImmGetCompositionStringA),
+        // its attributes (the edited part as the target clause, the rest as input: IMM's ATTR_TARGET_CONVERTED /
+        // ATTR_INPUT) and the cursor
+        std::string theAttributes(strlen(theText), '');   // ATTR_CONVERTED (non-zero: the attribute string ends at a 0)
+        for (int64_t i = 0; i < (int64_t)theAttributes.size(); i++)
+            if (i >= inB && i < inB + inC)
+                theAttributes[(size_t)i] = 1;
+        gUIManager->ChangeIMECompositionString(UWideString(theText), UString(theAttributes.c_str()),
+                                              (unsigned long)(inB < 0 ? 0 : inB));
+        break;
+    }
+    case EE_SCREENS_UI_EV_IME_RESULT: gUIManager->AddIMEResultString(theText); break;   // the committed composition
     case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(theText, 1); break;
     }
     return 0;
@@ -1182,4 +780,10 @@ void EEUserInterface::ShowLoadingText(long inStringID)
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormSplash)->GetControl(kSplashLoadLabel))->SetText(theText);
     }
     gUIManager->UnlockUIForCopyData();
+}
+
+// the number of humans in the session (SetLoadProgress's test: ee_screens ui_objects_ffi.rs)
+extern "C" int64_t ee_screenscpp_ui_humans()
+{
+    return gCommunications != NULL ? gCommunications->GetNumHumanPlayers() : 0;
 }

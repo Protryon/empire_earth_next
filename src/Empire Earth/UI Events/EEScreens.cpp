@@ -559,8 +559,6 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         inForm->AddHotKey(theHotKey, 0);
         break;
     }
-    case EE_SCREENS_GAME_CH_CLOSE:
-        return (uint32_t)gUserInterface->CloseForm(gUIManager->GetMainGameForm());
     case EE_SCREENS_OP_CH_MOUSE_INSIDE:
         return inForm->GetRectangle().Contains(inForm->GetMouseLocation());
     case EE_SCREENS_GAME_CL_UNPAUSE:
@@ -617,11 +615,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     case EE_SCREENS_GAME_MG_ENTITY_GROUP:
         inForm->SetEntityGroup((long)inA);
         break;
-    case EE_SCREENS_GAME_MG_REFRESH_FORM:
-        inForm->FnE123D();
-        break;
-    case EE_SCREENS_GAME_MG_CIV_BUILDER:
-        return (uint32_t)gUserInterface->PostDisplayCivBuilder();
     case EE_SCREENS_GAME_MG_SHIFT:
         if (inA)
             gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEnterShiftMode, {gPhysics->mGameTime}), kSlotNone);
@@ -1040,9 +1033,6 @@ static uint32_t EEScreensSplashCall(UIForm* inForm, UIEntity* inEntity, uint32_t
         else
             gWorld.GetLobbyOptions().mLock->ReadUnlock();
         break;
-    case EE_SCREENS_GAME_SS_LOCAL:
-        gUserInterface->mLocalPlayer = (long)inA;
-        break;
     case EE_SCREENS_OP_SS_BACKGROUND: {
         UIBackground* theBackground = inForm->GetBackgroundByID(0x84);
         GERectangle theRectangle = theBackground->GetRectangle();
@@ -1408,11 +1398,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     EEUIManager* theManager = theForm ? static_cast<EEUIManager*>(theForm->GetManager()) : gUIManager;
     auto Ctl = [&]() { return theForm->GetControl(inA); };   // a control op's control
     switch (inOp) {
-    case EE_SCREENS_OP_SWITCH:
-        gUserInterface->SwitchToForm(theManager->GetFormByID(inA));
-        break;
-    case EE_SCREENS_OP_OPEN_FORM:
-        return (uint32_t)gUserInterface->OpenForm(theManager->GetFormByID(inA));
     case EE_SCREENS_OP_SLIDER_LABEL: {
         UIESliderChange* theEvent = new UIESliderChange(static_cast<UITextLabel*>(theForm->GetControl(inB)), 1.0f, 0);
         Ctl()->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
@@ -1424,11 +1409,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         theEvent->Dereference();
         break;
     }
-    case EE_SCREENS_OP_CLOSE_FORM:
-        return (uint32_t)gUserInterface->CloseForm(NULL);
-    case EE_SCREENS_OP_DISPLAY_CHANGED:
-        gUserInterface->PostDisplayChanged(false);
-        break;
     case EE_SCREENS_OP_RESIZE_MENU:
         gUserInterface->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
         break;
@@ -1454,9 +1434,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_PAUSE:
         gWorld.PauseGame();
-        break;
-    case EE_SCREENS_GAME_CHANGE_RASTERIZER:
-        gUserInterface->PostChangeRasterizer(inA, inB);
         break;
     case EE_SCREENS_GAME_APPLY_PORT:
         EEApplyPortSettings(gGamePreferences.GetSettings());
@@ -1509,14 +1486,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     // the custom campaign form's (custom_campaign.rs): a list box of form inA
     case EE_SCREENS_GAME_SCREEN_COUNT:
         return inA < gDisplayRasterizers.size() ? (uint32_t)gDisplayRasterizers[inA].mScreens.size() : 0;
-    case EE_SCREENS_GAME_QUIT:
-        gUserInterface->PostQuit();
-        break;
     case EE_SCREENS_GAME_EXTERNAL_LOBBY:
         EEStartExternalLobby();
-        break;
-    case EE_SCREENS_GAME_EDITOR_MODE_OFF:
-        theManager->mInScenarioEditor = false;
         break;
     case EE_SCREENS_GAME_SINGLE:
     case EE_SCREENS_GAME_MULTI:
@@ -1567,8 +1538,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         theEvent->Dereference();
         break;
     }
-    case EE_SCREENS_GAME_IN_EDITOR:
-        return theManager->mInScenarioEditor;
     case EE_SCREENS_GAME_PAUSE_SERVER: {
         // (the save screen's original did not check the cast: a client crashed there)
         EEServer* theServer = dynamic_cast<EEServer*>(gCommunications);
@@ -1588,12 +1557,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gUserInterface->OpenForm(gSavedMainGameForm);
         break;
     // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
-    case EE_SCREENS_OP_SLEEP:
-        PlatSleep(inA);
-        break;
-    case EE_SCREENS_OP_OPEN_MAIN_GAME_FORM:
-        gUserInterface->OpenForm(gUIManager->GetMainGameForm());
-        break;
     case EE_SCREENS_GAME_SI_SET_FLAG: {
         EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
         bool* const theFlags[4] = {&theIntro->mIsInGame, &theIntro->mIsLoadingFromGame, &theIntro->mIsCampaign,
@@ -1914,9 +1877,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gGameOptions = *sLobbyCopy;
         break;
     // the in-game options menu's (main_game_options.rs)
-    case EE_SCREENS_GAME_GO_RESTART:
-        gUserInterface->PostRestartGame();
-        break;
     case EE_SCREENS_GAME_GO_TO_EDITOR:
         // back to the scenario editor from its single player test game: the simulation stopped, the editor posted
         gPhysics->mThread->Post(0x402, NULL, NULL, true);

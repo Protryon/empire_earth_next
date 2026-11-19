@@ -7,6 +7,8 @@
 #ifndef EE_EEUIMANAGER_H
 #define EE_EEUIMANAGER_H
 
+#include "rust/game/screens.h"   // EeScreensUiManagerFields (ee_screens ui_objects.rs)
+
 class EEUIFMainGame;
 class EEUIFScenarioEditor;
 
@@ -18,7 +20,9 @@ typedef void (*EEUIFPasswordCallback)(const char* inPassword);
 
 struct EEUIManagerCall;                     // (EEUIManager.cpp: the host's record of one ui_manager.rs call)
 
-class EEUIManager : public UIManager {
+// the own members (the main game and scenario editor forms, the editor flags) are the Rust record
+// EeScreensUiManagerFields (ee_screens ui_objects.rs), under their names
+class EEUIManager : public UIManager, public EeScreensUiManagerFields {
 public:
     // the ee_screens ui_manager.rs host (EE_SCREENS_UM_OP_*; a member: UIManager's updates are protected)
     static int64_t HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
@@ -55,22 +59,15 @@ public:
                          EEUIFErrorCallback inNo);
     void StartScenarioEditor();             // 0x274e69 (sets +0x13c, starts a local server)
     void DeleteScenarioEditor();            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
-    void FnE123D();                         // (ICF-folded into 0xe123d: an empty body; message 0x407)
     // 0x26fa55 / 0x26fa6a: the main group's mL1C = 0 / 1 and its mB25 (EEUIFMGStatusButton::Command's buttons 1 and
     // 0; defined in EEUIFMGStatusButton.cpp's range; provisional names)
     void Fn26FA55();
     void Fn26FA6A();
 
-    // ctor store order (0x2714ad..0x2714e5): +0x12c, +0x13c, +0x130, +0x13d, SetMusicVolume, +0x138
-    EEUIFScenarioEditor* GetScenarioEditorForm() const { return this->mScenarioEditorForm; }
-    EEUIFMainGame* GetMainGameForm() const { return this->mMainGameForm; }  // (EEUserInterface 0x277023/0x277315 load it before GetCurrentForm)
-    EEUIFMainGame* mMainGameForm;           // +0x12c GetFormByID(0xb) in the ctor; cleared at 0x271587
-    EEUIFScenarioEditor* mScenarioEditorForm;   // +0x130 new(0x2b8) EEUIFScenarioEditor at 0x273e8e; 0 in the ctor
-    unsigned long mU134;                    // +0x134 (no game access found)
-    unsigned long mU138;                    // +0x138 0 in the ctor (no other access found)
-    bool GetInScenarioEditor() const { return this->mInScenarioEditor; }  // (MGOE OpenOptionsScreen's inline budget)
-    bool mInScenarioEditor;                 // +0x13c (cleared by the main-menu events; set by StartScenarioEditor)
-    bool mB13D;                             // +0x13d 0 in the ctor
+    // the record's forms as their classes (+0x12c GetFormByID(0xb) in the ctor; +0x130 CreateScenarioEditor's)
+    EEUIFScenarioEditor* GetScenarioEditorForm() const { return (EEUIFScenarioEditor*)this->mScenarioEditorForm; }
+    EEUIFMainGame* GetMainGameForm() const { return (EEUIFMainGame*)this->mMainGameForm; }
+    bool GetInScenarioEditor() const { return this->mInScenarioEditor; }
 };
 
 extern EEUIManager* gUIManager;

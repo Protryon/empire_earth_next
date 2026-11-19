@@ -1322,7 +1322,3 @@ long EEUIFMainGame::UpdateMouse()
     return (long)this->Rust(EE_SCREENS_MF_DO_MOUSE);
 }
 
-// ICF-folded empty members (no address of their own: 0x157269 / 0xe123d are their twins)
-void EEUIFMainGame::FnE123D()
-{
-}
