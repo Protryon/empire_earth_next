@@ -7,12 +7,14 @@
 //! - [`options`]: the options and their parsing (the C library's `atol`, `atof`, `strtoul`).
 //! - [`report`]: the samples and the report's text.
 //! - [`lobby`]: the lobby's choices and a combo's line by name.
+//! - [`digest`]: the editor gate's world digest (the map, the mesh, the units) over the world views.
 //! - [`driver`]: the driver: its state, the after-tick, the menus, a game, the batch.
 //! - [`editor`]: the scenario editor script's runner and language (--editor-script).
 //! - [`combat_sweep`]: the combat formulas' capture sweep over the world views (TEST ONLY).
 //! - [`ffi`]: the C ABI EESim.cpp calls.
 
 pub mod combat_sweep;
+pub mod digest;
 pub mod driver;
 pub mod editor;
 pub mod ffi;
