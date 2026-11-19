@@ -264,7 +264,7 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
             // port: the next engine's AI id (Load: from 0.253)
             std::string theAI = EECPEngineAI(thePlayer->mComputerPlayer);
             if (theAI.empty())
-                theAI = EECPClassicAI() != NULL ? EECPClassicAI()->mID : std::string("none");
+                theAI = EECPClassicAI() != NULL ? EECPAIID(EECPClassicAI()) : std::string("none");
             unsigned long theLength = (unsigned long)theAI.size();
             unsigned long theWritten = 0;
             theResult = outFile.Write(theLength);

@@ -87,7 +87,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
-#include "ee/EEWorldLayout.h"
+#include "rust/sim/world.h"
 #include "rust/sim/units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 #include "ee/EEGameLog.h"
@@ -590,7 +590,8 @@ void EEPhysics::Tick()
 {
     if (EESimCaptureRecord::Active()) {   // TEST ONLY: the unit store equals the objects (ee/EEUnitStore.h)
         EEUnitStoreCheck(0);
-        EEWorldViewCheck();   // TEST ONLY: the world views' check (VWCK, ee/EEWorldLayout.h)
+        // TEST ONLY: the world views' check (VWCK; ee_sim world check.rs)
+        ee_world_view_check(reinterpret_cast<uintptr_t>(&gWorld), gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
     }
     if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
         sLoadedSeedPending = false;
@@ -1331,7 +1332,8 @@ unsigned long EEPhysics::UpdateUnits()
     theHost.step = TickStep;
     unsigned long theCount = ee_units_update_units(&theHost);
     gPhysicsSteppingUnit = NULL;
-    EEUnitStepCommit();   // TEST ONLY: the step leaves' record (USTM, ee/EEUnitStore.h)
+    // TEST ONLY: the step leaves' records (USTM, USST; ee/EEUnitStore.h)
+    ee_units_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
     return theCount;
 }
 

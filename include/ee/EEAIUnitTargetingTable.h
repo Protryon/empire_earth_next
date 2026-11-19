@@ -6,17 +6,26 @@
 #ifndef EE_EEAIUNITTARGETINGTABLE_H
 #define EE_EEAIUNITTARGETINGTABLE_H
 
-class FSFileSpec;
+#include "ee/EEDbRecords.h"
+#include "rust/data/tables.h"
 
+// The table is Rust's (ee_data tables.rs: three rows of ten weights, read by EEFOFindNewTargetNearOldTarget's target
+// search); EEAIUnitTargetingTable.cpp went in the game's leaves round 1.
 class EEAIUnitTargetingTable {
 public:
     virtual ~EEAIUnitTargetingTable() {}
 
-    static long Load(FSFileSpec* inFile);   // 0xd47a1 (three records)
-    static void Unload();
-
-    static long** sTable;                   // 0x4e60c0: three rows of ten values (provisional name; read by
-                                            // EECPAttackSubGroupUnit.cpp and two UI units, so a class static)
+    // 0xd47a1: the weights from the file (the record and its copy: ee_data tables.rs); the table stays empty unless
+    // it has 3 records; the last read status
+    template <class F> static long Load(F* inFile)
+    {
+        return EEDbReadRecords(inFile, ee_data_ai_targeting_record_size(),
+                               [](unsigned long inCount) { return ee_data_ai_targeting_begin(inCount); },
+                               [](unsigned long inIndex, const unsigned char* inRecord) {
+                                   ee_data_ai_targeting_load(inIndex, inRecord);
+                               });
+    }
+    static void Unload() { ee_data_ai_targeting_unload(); }
 };
 
 #endif

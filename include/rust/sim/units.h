@@ -7337,6 +7337,85 @@ float ee_units_step_cloak_fade(float opacity,
                                uint8_t pulse,
                                int64_t game_time);
 
+/// `EEUnitStepNote`: one step leaf's call into USTM's digest.
+///
+/// # Safety
+/// `words` readable for `count` words.
+void ee_units_step_note(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitStateNote`: one call into USST's digest.
+///
+/// # Safety
+/// `words` readable for `count` words.
+void ee_units_state_note(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitUpdateNote`: one leaf call of a class Update (three words: the operation, its two arguments' low words).
+void ee_units_update_note(int32_t operation,
+                          int64_t a,
+                          int64_t b);
+
+/// `EEUnitUpdateCommit`: the unit's Update calls as one USST note (kind 12).
+void ee_units_update_commit(uint32_t id);
+
+/// `EEUnitActionNote`: one operation of a class ActionChanged.
+void ee_units_action_note(int32_t operation, int64_t a, int64_t b);
+
+/// `EEUnitActionScope`'s constructor: the outermost call names the unit.
+void ee_units_action_enter(uint32_t id);
+
+/// `EEUnitActionScope`'s destructor: the outermost call writes the operations as one USST note (kind 13).
+void ee_units_action_leave();
+
+/// `EEUnitStepCommit` (the end of `EEPhysics::UpdateUnits`, `ticks` the physics' ticks done): the leaves' store
+/// reads that differed from the members stop EE-SIM (exit 3, a USCK mismatch); then the USTM and USST records.
+void ee_units_step_commit(uint32_t ticks);
+
+/// `EESelectPickCapture`: a USPK record of one pick (case 100: `EEPlayer::SelectUnits`).
+///
+/// # Safety
+/// The caller holds the world; `player` is a player object; the id lists are readable for their counts.
+void ee_units_select_pick_capture(uint32_t case_,
+                                  uint64_t player,
+                                  const uint32_t *ids,
+                                  size_t count,
+                                  const uint32_t *picked,
+                                  size_t picked_count);
+
+/// `EEFillCapture`: a USFL record of one Fill test (case 100: `EEActiveGroup::Fill`); `units` the selection's
+/// complex unit objects.
+///
+/// # Safety
+/// The caller holds the world; `units` holds `count` live unit objects; `taken` is readable for `taken_count`.
+void ee_units_fill_capture(uint32_t case_,
+                           uint64_t player,
+                           const void *const *units,
+                           size_t count,
+                           int64_t slot,
+                           const uint32_t *taken,
+                           size_t taken_count);
+
+/// `EEFillMembers`: `EEActiveGroup::Fill`'s test over the store for the selection's complex unit objects `units`:
+/// the indices (in order) of those an active group takes for formation slot `slot`; `out` has room for `count`.
+///
+/// # Safety
+/// The caller holds the world; `units` holds `count` live unit objects; `out` is writable for `count`.
+size_t ee_units_fill_members_of(const void *const *units,
+                                size_t count,
+                                int64_t slot,
+                                uint32_t *out);
+
+/// `EESelectPickSweep`: the pick over every player's units (USPK cases 1..4).
+///
+/// # Safety
+/// The caller holds the world (EE-SIM's physics thread).
+void ee_units_select_pick_sweep();
+
+/// `EEFillSweep`: the Fill test over every player's complex units for every slot (USFL cases 1, 2).
+///
+/// # Safety
+/// The caller holds the world (EE-SIM's physics thread).
+void ee_units_fill_sweep();
+
 /// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
 ///
 /// # Safety

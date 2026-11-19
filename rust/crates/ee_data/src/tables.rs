@@ -638,17 +638,55 @@ pub extern "C" fn ee_data_ai_targeting_record_size() -> usize {
     core::mem::size_of::<DbAiTargeting>()
 }
 
-/// `EEAIUnitTargetingTable::Load`'s row from one record.
+/// `EEAIUnitTargetingTable::sTable`: the three rows of ten weights, held here since the game's leaves round 1 (None:
+/// not loaded, or the file had another count of records).
+static AI_TARGETING: std::sync::Mutex<Option<[[c_long; 10]; 3]>> = std::sync::Mutex::new(None);
+
+fn ai_targeting() -> std::sync::MutexGuard<'static, Option<[[c_long; 10]; 3]>> {
+    AI_TARGETING.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// `EEAIUnitTargetingTable::Load`'s start: the table is emptied; it is read only from three records (false: not read).
+#[no_mangle]
+pub extern "C" fn ee_data_ai_targeting_begin(count: usize) -> bool {
+    let mut t = ai_targeting();
+    *t = (count == 3).then_some([[0; 10]; 3]);
+    t.is_some()
+}
+
+/// `EEAIUnitTargetingTable::Load`'s row `index` (0..2) from one record.
 ///
 /// # Safety
-/// `bytes` holds `ee_data_ai_targeting_record_size()` bytes; `out` has room for ten `long`s.
+/// `bytes` holds `ee_data_ai_targeting_record_size()` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_ai_targeting_from_record(bytes: *const u8, out: *mut c_long) {
+pub unsafe extern "C" fn ee_data_ai_targeting_load(index: usize, bytes: *const u8) {
     // SAFETY: the caller's guarantee
-    unsafe {
-        let row = ai_targeting_row(&record::<DbAiTargeting>(bytes));
-        std::ptr::copy_nonoverlapping(row.as_ptr(), out, 10);
+    let row = ai_targeting_row(&unsafe { record::<DbAiTargeting>(bytes) });
+    if let Some(t) = ai_targeting().as_mut() {
+        if let Some(r) = t.get_mut(index) {
+            *r = row;
+        }
     }
+}
+
+/// `EEAIUnitTargetingTable::Unload`
+#[no_mangle]
+pub extern "C" fn ee_data_ai_targeting_unload() {
+    *ai_targeting() = None;
+}
+
+/// The table's 30 weights, row by row, as 32-bit values into `out` (false, `out` untouched: not loaded).
+///
+/// # Safety
+/// `out` has room for 30 values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_ai_targeting_table(out: *mut i32) -> bool {
+    let Some(t) = *ai_targeting() else { return false };
+    for (k, v) in t.iter().flatten().enumerate() {
+        // SAFETY: the caller's room
+        unsafe { *out.add(k) = i64::from(*v) as i32 };
+    }
+    true
 }
 
 // ---- EETerrainTypeTable (db\dbterraintype)
@@ -2569,6 +2607,30 @@ mod tests_more {
     }
 
     #[test]
+    fn the_targeting_table_holds_three_rows_or_nothing() {
+        let mut r: DbAiTargeting = zeroed();
+        r.mAttackerBonus = 5;
+        r.mMaxValue = -7;
+        // SAFETY: a plain record's bytes
+        let bytes =
+            unsafe { std::slice::from_raw_parts(&r as *const DbAiTargeting as *const u8, size_of::<DbAiTargeting>()) };
+        let mut out = [9i32; 30];
+        assert!(!ee_data_ai_targeting_begin(2));
+        // SAFETY: room for 30
+        assert!(!unsafe { ee_data_ai_targeting_table(out.as_mut_ptr()) });
+        assert_eq!(out, [9; 30]);
+        assert!(ee_data_ai_targeting_begin(3));
+        // SAFETY: one record's bytes
+        unsafe { ee_data_ai_targeting_load(1, bytes.as_ptr()) };
+        // SAFETY: room for 30
+        assert!(unsafe { ee_data_ai_targeting_table(out.as_mut_ptr()) });
+        assert_eq!((out[0], out[10], out[19], out[20]), (0, 5, -7, 0));
+        ee_data_ai_targeting_unload();
+        // SAFETY: room for 30
+        assert!(!unsafe { ee_data_ai_targeting_table(out.as_mut_ptr()) });
+    }
+
+    #[test]
     fn upgrades_pair_cost_and_step_and_leave_factor_13() {
         let mut r: DbUpgrade = zeroed();
         r.mIndex = 0;
@@ -2606,10 +2668,7 @@ mod tests_more {
     fn targeting_rows_skip_the_unused_values() {
         let mut r: DbAiTargeting = zeroed();
         (r.mAttackerBonus, r.mImmobileTargetBonus, r.mUnused1, r.mMaxValue) = (1, 9, 77, 10);
-        let mut out = [0 as c_long; 10];
-        // SAFETY: a whole record, room for ten
-        unsafe { ee_data_ai_targeting_from_record(&r as *const DbAiTargeting as *const u8, out.as_mut_ptr()) };
-        assert_eq!(out, [1, 0, 0, 0, 0, 0, 0, 0, 9, 10]);
+        assert_eq!(ai_targeting_row(&r), [1, 0, 0, 0, 0, 0, 0, 0, 9, 10]);
         assert_eq!(core::mem::offset_of!(DbAiTargeting, mMaxValue), 0x9c);
     }
 }

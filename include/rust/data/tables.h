@@ -401,11 +401,23 @@ void ee_data_color_from_record(const uint8_t *bytes, EeDataPlayerColors *out);
 /// The size of a dbaiunittargeting record.
 size_t ee_data_ai_targeting_record_size();
 
-/// `EEAIUnitTargetingTable::Load`'s row from one record.
+/// `EEAIUnitTargetingTable::Load`'s start: the table is emptied; it is read only from three records (false: not read).
+bool ee_data_ai_targeting_begin(size_t count);
+
+/// `EEAIUnitTargetingTable::Load`'s row `index` (0..2) from one record.
 ///
 /// # Safety
-/// `bytes` holds `ee_data_ai_targeting_record_size()` bytes; `out` has room for ten `long`s.
-void ee_data_ai_targeting_from_record(const uint8_t *bytes, long *out);
+/// `bytes` holds `ee_data_ai_targeting_record_size()` bytes.
+void ee_data_ai_targeting_load(size_t index, const uint8_t *bytes);
+
+/// `EEAIUnitTargetingTable::Unload`
+void ee_data_ai_targeting_unload();
+
+/// The table's 30 weights, row by row, as 32-bit values into `out` (false, `out` untouched: not loaded).
+///
+/// # Safety
+/// `out` has room for 30 values.
+bool ee_data_ai_targeting_table(int32_t *out);
 
 /// The size of a dbterraintype record.
 size_t ee_data_terrain_type_record_size();

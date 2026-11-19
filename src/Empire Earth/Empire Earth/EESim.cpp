@@ -948,8 +948,8 @@ void HostSweep(int inKind, long inArg)
                                        gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
             ee_netmsg_capture_decision_sweep(theRates);
         }
-        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
-        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
+        ee_units_select_pick_sweep();   // the box selection's pick over every player's units (ee_sim units store_sweep.rs)
+        ee_units_fill_sweep();   // the active groups' Fill test over every player's units (likewise)
         EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
         break;
     case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)
@@ -1035,8 +1035,8 @@ long HostEngineChoice(const char* inName)
 
 void HostEngineIDs(void* inSink, EeSimDriverPushFn inPush)
 {
-    for (const EECPAIEntry& e : EECPAIManifest())
-        inPush(inSink, e.mID.c_str());
+    for (size_t k = 0; k < ee_cp_engine_ai_count(); k++)
+        inPush(inSink, EECPAIID(ee_cp_engine_ai_at(k)).c_str());
 }
 
 void HostSetEnv(const char* inName, const char* inValue)
