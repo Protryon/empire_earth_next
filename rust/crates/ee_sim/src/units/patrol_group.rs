@@ -388,20 +388,72 @@ pub const EE_UNITS_PG_WRITE_BOOL: i32 = 1;
 pub const EE_UNITS_PG_READ_U32: i32 = 2;
 pub const EE_UNITS_PG_READ_BOOL: i32 = 3;
 
-/// The fields' record (`mID`, `mIsLoop`, `mIsTownPatrol`) across the C ABI.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EeUnitsPgFields {
-    pub id: u32,
-    pub is_loop: u8,
-    pub is_town_patrol: u8,
+// ---- the group's state (the units' state lane, round 1: the C++ class is gone; a group is this object)
+
+/// A patrol group: its reference count (`UReferenceCounter`'s, 1 when made), its points (unit handles; between a
+/// load and `RepairPointers` the saved ids in their place) and its fields. Its handle is the box's address; the C++
+/// holders keep `EEPPatrolGroup*` (ee/EEPPatrolGroup.h: a name for this type).
+#[derive(Debug)]
+pub struct EeUnitsPatrolGroup {
+    refs: u64,
+    points: Vec<u64>,
+    fields: GroupFields,
+}
+
+/// The group behind a handle, for one access (no borrow outlives the closure, so a host call may come back).
+fn with_group<R>(group: u64, f: impl FnOnce(&mut EeUnitsPatrolGroup) -> R) -> R {
+    // SAFETY: a live group's handle (the C++ holders' contract); the borrow ends inside `f`
+    f(unsafe { &mut *(group as usize as *mut EeUnitsPatrolGroup) })
+}
+
+/// `new EEPPatrolGroup`: an empty, open group with the counter's next id and one reference.
+pub fn new_group() -> u64 {
+    let g = Box::new(EeUnitsPatrolGroup {
+        refs: 1,
+        points: Vec::new(),
+        fields: GroupFields { id: next_id(), is_loop: false, is_town_patrol: false },
+    });
+    Box::into_raw(g) as usize as u64
+}
+
+/// `Reference()`
+pub fn reference(group: u64) {
+    with_group(group, |g| g.refs = g.refs.wrapping_add(1));
+}
+
+/// `Dereference()`: at 0 the destructor's body (`~EEPPatrolGroup`), then the object freed; true when freed. A
+/// reference given back while the body runs (a point's `SetPatrolGroup(NULL)`) wraps the count past 0, as the
+/// original's `unsigned long` did, and frees nothing.
+pub fn dereference(group: u64, host: &mut dyn PatrolGroupHost) -> bool {
+    let left = with_group(group, |g| {
+        g.refs = g.refs.wrapping_sub(1);
+        g.refs
+    });
+    if left != 0 {
+        return false;
+    }
+    destroy(group, host);
+    // SAFETY: the box made by new_group, no longer held by anyone
+    drop(unsafe { Box::from_raw(group as usize as *mut EeUnitsPatrolGroup) });
+    true
+}
+
+/// The state's side of a host: a group's points and fields are the object's own.
+pub fn group_points(group: u64) -> Vec<u64> {
+    with_group(group, |g| g.points.clone())
+}
+pub fn set_group_points(group: u64, points: &[u64]) {
+    with_group(group, |g| g.points = points.to_vec());
+}
+pub fn group_fields(group: u64) -> GroupFields {
+    with_group(group, |g| g.fields)
+}
+pub fn set_group_fields(group: u64, fields: GroupFields) {
+    with_group(group, |g| g.fields = fields);
 }
 
 #[cfg(not(test))]
 extern "C" {
-    fn ee_units_pg_host_points(group: u64, out: *mut u64, capacity: u32) -> u32;
-    fn ee_units_pg_host_set_points(group: u64, points: *const u64, count: u32);
-    fn ee_units_pg_host_fields(group: u64, set: u8, io: *mut EeUnitsPgFields);
     fn ee_units_pg_host_unit_tile(unit: u64, out_x: *mut i32, out_y: *mut i32);
     fn ee_units_pg_host_distance(unit: u64, x: i32, y: i32) -> f32;
     fn ee_units_pg_host_tile_at(x: f32, y: f32, probe: u64, out_height: *mut f32) -> u8;
@@ -414,7 +466,7 @@ extern "C" {
 /// A route's points (`mPatrolPoints`, unit handles; the dry host's route words, dry.rs).
 #[cfg(not(test))]
 pub(crate) fn host_points(group: u64) -> Vec<u64> {
-    Ffi { file: 0 }.points(group)
+    group_points(group)
 }
 
 /// The FFI adapter: the C++ calls, the file the call was handed (an `FSFile*`, 0 when none).
@@ -426,28 +478,16 @@ struct Ffi {
 #[cfg(not(test))]
 impl PatrolGroupHost for Ffi {
     fn points(&mut self, group: u64) -> Vec<u64> {
-        let n = unsafe { ee_units_pg_host_points(group, std::ptr::null_mut(), 0) };
-        let mut v = vec![0u64; n as usize];
-        if n != 0 {
-            unsafe { ee_units_pg_host_points(group, v.as_mut_ptr(), n) };
-        }
-        v
+        group_points(group)
     }
     fn set_points(&mut self, group: u64, points: &[u64]) {
-        unsafe { ee_units_pg_host_set_points(group, points.as_ptr(), points.len() as u32) }
+        set_group_points(group, points)
     }
     fn fields(&mut self, group: u64) -> GroupFields {
-        let mut f = EeUnitsPgFields::default();
-        unsafe { ee_units_pg_host_fields(group, 0, &mut f) };
-        GroupFields { id: f.id, is_loop: f.is_loop != 0, is_town_patrol: f.is_town_patrol != 0 }
+        group_fields(group)
     }
     fn set_fields(&mut self, group: u64, fields: GroupFields) {
-        let mut f = EeUnitsPgFields {
-            id: fields.id,
-            is_loop: fields.is_loop as u8,
-            is_town_patrol: fields.is_town_patrol as u8,
-        };
-        unsafe { ee_units_pg_host_fields(group, 1, &mut f) }
+        set_group_fields(group, fields)
     }
     fn unit_tile(&mut self, unit: u64) -> (i64, i64) {
         let (mut x, mut y) = (0i32, 0i32);
@@ -510,7 +550,7 @@ impl PatrolGroupHost for Ffi {
     }
 }
 
-/// The members' operations of [`ee_units_patrol_group`].
+/// The members' operations of [`run`].
 pub const EE_UNITS_PG_OP_NEW_ID: i32 = 0;
 pub const EE_UNITS_PG_OP_RESET_IDS: i32 = 1;
 pub const EE_UNITS_PG_OP_DESTROY: i32 = 2;
@@ -541,16 +581,7 @@ pub struct EeUnitsPgArgs {
     pub b: i32,
 }
 
-/// Every `EEPPatrolGroup` member's body by its operation (`EE_UNITS_PG_OP_*`) on the group object; the result is a
-/// unit handle, an index, an id or an error code as the member returns it.
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn ee_units_patrol_group(op: i32, group: u64, args: EeUnitsPgArgs) -> u64 {
-    let mut host = Ffi { file: args.file };
-    run(op, group, args, &mut host)
-}
-
-/// The dispatch of [`ee_units_patrol_group`] over a host (the tests drive it with their mock).
+/// Every member's body by its operation (`EE_UNITS_PG_OP_*`) over a host (the tests drive it with their mock).
 pub fn run(op: i32, group: u64, args: EeUnitsPgArgs, host: &mut dyn PatrolGroupHost) -> u64 {
     let [x, y, z] = args.point;
     match op {
@@ -605,7 +636,12 @@ pub fn run(op: i32, group: u64, args: EeUnitsPgArgs, host: &mut dyn PatrolGroupH
 /// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
 #[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_patrol_group_set_points(group: u64, tiles: *const i32, count: u32, player: u32) {
+pub unsafe extern "C" fn ee_units_pg_set_points(
+    group: *mut EeUnitsPatrolGroup,
+    tiles: *const i32,
+    count: u32,
+    player: u32,
+) {
     let pairs: Vec<(i64, i64)> = if tiles.is_null() || count == 0 {
         Vec::new()
     } else {
@@ -613,7 +649,225 @@ pub unsafe extern "C" fn ee_units_patrol_group_set_points(group: u64, tiles: *co
         let raw = unsafe { std::slice::from_raw_parts(tiles, count as usize * 2) };
         raw.chunks(2).map(|c| (i64::from(c[0]), i64::from(c[1]))).collect()
     };
-    set_points(group, &pairs, player, &mut Ffi { file: 0 });
+    set_points(group as usize as u64, &pairs, player, &mut Ffi { file: 0 });
+}
+
+// ---- the class's members as entry points (the C++ class is gone; every holder calls these). For each: `group` is a
+// live group's handle (`EEPPatrolGroup*`), the units live complex units, a file a live `FSFile*`.
+
+#[cfg(not(test))]
+fn g(group: *mut EeUnitsPatrolGroup) -> u64 {
+    group as usize as u64
+}
+
+#[cfg(not(test))]
+fn ptr(unit: u64) -> *mut std::ffi::c_void {
+    unit as usize as *mut std::ffi::c_void
+}
+
+#[cfg(not(test))]
+fn h(unit: *mut std::ffi::c_void) -> u64 {
+    unit as usize as u64
+}
+
+/// `new EEPPatrolGroup` (one reference)
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_pg_new() -> *mut EeUnitsPatrolGroup {
+    new_group() as usize as *mut EeUnitsPatrolGroup
+}
+/// `Reference()`
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_reference(group: *mut EeUnitsPatrolGroup) {
+    reference(g(group));
+}
+/// `Dereference()` (the last one detaches and kills the points and frees the group)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_dereference(group: *mut EeUnitsPatrolGroup) {
+    dereference(g(group), &mut Ffi { file: 0 });
+}
+/// `mID`, `mIsLoop`, `mIsTownPatrol`, `mPatrolPoints.size()`, `mPatrolPoints[i]` (null past the end)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_id(group: *const EeUnitsPatrolGroup) -> std::os::raw::c_ulong {
+    group_fields(g(group as *mut _)).id as std::os::raw::c_ulong
+}
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_is_loop(group: *const EeUnitsPatrolGroup) -> bool {
+    group_fields(g(group as *mut _)).is_loop
+}
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_is_town_patrol(group: *const EeUnitsPatrolGroup) -> bool {
+    group_fields(g(group as *mut _)).is_town_patrol
+}
+/// `mIsTownPatrol = value` (EETown's patrols)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_set_town_patrol(group: *mut EeUnitsPatrolGroup, value: bool) {
+    let mut f = group_fields(g(group));
+    f.is_town_patrol = value;
+    set_group_fields(g(group), f);
+}
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_point_count(group: *const EeUnitsPatrolGroup) -> std::os::raw::c_ulong {
+    with_group(g(group as *mut _), |p| p.points.len()) as std::os::raw::c_ulong
+}
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_point(group: *const EeUnitsPatrolGroup, index: usize) -> *mut std::ffi::c_void {
+    ptr(with_group(g(group as *mut _), |p| p.points.get(index).copied().unwrap_or(0)))
+}
+/// `ResetIDs()`
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_pg_reset_ids() {
+    reset_ids();
+}
+/// `AddPoint(point, player)`
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_add_point(group: *mut EeUnitsPatrolGroup, x: f32, y: f32, player: u32) {
+    add_point(g(group), x, y, player, &mut Ffi { file: 0 });
+}
+/// `InsertPatrolPointAt(point, player, after)`
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_insert_at(
+    group: *mut EeUnitsPatrolGroup,
+    x: f32,
+    y: f32,
+    player: u32,
+    after: *mut std::ffi::c_void,
+) {
+    insert_point_at(g(group), x, y, player, h(after), &mut Ffi { file: 0 });
+}
+/// `GetNearest(x, y)` (null: no point)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_nearest(group: *mut EeUnitsPatrolGroup, x: i32, y: i32) -> *mut std::ffi::c_void {
+    ptr(nearest(g(group), i64::from(x), i64::from(y), &mut Ffi { file: 0 }))
+}
+/// `GetNext(unit)` (null: past the end)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_next(
+    group: *mut EeUnitsPatrolGroup,
+    unit: *mut std::ffi::c_void,
+) -> *mut std::ffi::c_void {
+    ptr(next(g(group), h(unit), &mut Ffi { file: 0 }))
+}
+/// `GetPrevious(unit)` (null: before the start)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_previous(
+    group: *mut EeUnitsPatrolGroup,
+    unit: *mut std::ffi::c_void,
+) -> *mut std::ffi::c_void {
+    ptr(previous(g(group), h(unit), &mut Ffi { file: 0 }))
+}
+/// `GetLast()` (null: none)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_last(group: *mut EeUnitsPatrolGroup) -> *mut std::ffi::c_void {
+    ptr(last(g(group), &mut Ffi { file: 0 }))
+}
+/// `RemoveUnit(unit)` (the last point gone releases the group from its player)
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_remove(group: *mut EeUnitsPatrolGroup, unit: *mut std::ffi::c_void) {
+    remove_unit(g(group), h(unit), &mut Ffi { file: 0 });
+}
+/// `Select(player, flag)` (stops at the first point the player cannot select)
+///
+/// # Safety
+/// See above; `player` is a live `EEPlayer*`.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_select(group: *mut EeUnitsPatrolGroup, player: *mut std::ffi::c_void, flag: bool) {
+    select(g(group), h(player), flag, &mut Ffi { file: 0 });
+}
+/// `Load(major, minor, file)`: the first read error
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_load(
+    group: *mut EeUnitsPatrolGroup,
+    major: u32,
+    minor: u32,
+    file: *mut std::ffi::c_void,
+) -> i32 {
+    load(g(group), major, minor, &mut Ffi { file: h(file) })
+}
+/// `Save(major, minor, file)`: the first write error
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_save(
+    group: *mut EeUnitsPatrolGroup,
+    major: u32,
+    minor: u32,
+    file: *mut std::ffi::c_void,
+) -> i32 {
+    save(g(group), major, minor, &mut Ffi { file: h(file) })
+}
+/// `RepairPointers()`: 3 at the first id with no unit
+///
+/// # Safety
+/// See above.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_pg_repair(group: *mut EeUnitsPatrolGroup) -> i32 {
+    repair_pointers(g(group), &mut Ffi { file: 0 })
 }
 
 #[cfg(test)]

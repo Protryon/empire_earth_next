@@ -39,7 +39,7 @@ class EEGroupPathRequest;                   // ee/EEGroupPathRequest.h
 struct EEGroupCluster;                      // ee/EEGroupCluster.h
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h
 class EEUnitGoal;
-class EEPPatrolGroup;
+typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 class SESMInstanceNode;                     // lle/SESMInstanceNode.h (EEPPlayerEventList::mSound)
 class EESoundObject;
 class EEComputerPlayer;
@@ -62,7 +62,7 @@ class EESoundObject;                        // (EEUnitClassUpgrade's sounds: Set
 class EEGraphicObject;
 class EEHerd;                               // ee/EEHerd.h (mHerds's elements)
 class EEUnitSet;                            // ee/EEUnitSetManager.h (mHealedUnitSet)
-class EEPPatrolGroup;
+typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 template <class T> class UReferenceContainer;
 class EEButtonObject;
 class EEMap;
@@ -993,7 +993,7 @@ public:
     EESelectedGroup* mSelectedGroup;        // +0x9b0
     EESelectedGroup* mL9B4;                 // +0x9b4 (Reset news a third EESelectedGroup)
     EEUnitSet* mHealedUnitSet;              // +0x9b8 (ComputeLoadDistance: Contains(unit type) heals those units)
-    class EEAirTrafficControl* mAirTraffic[4];   // +0x9bc (Reset: each a new 0x20-byte object, ctor 0x14e87c(this)); indexed by an airport class's mAirTrafficType - 1 (EEMClearAirportCommands 0xbd588)
+    struct EeUnitsAtc* mAirTraffic[4];   // +0x9bc (Reset: each EEATCNew(), Rust's state: ee/EEAirTrafficControl.h); indexed by an airport class's mAirTrafficType - 1 (EEMClearAirportCommands 0xbd588)
     // inline: the garrison goal's ComputeUpgrade (0x226c08) loads its argument before `this` (provisional name)
     EETechTree* GetTechTree() const { return this->mTechnologies; }
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)

@@ -30,7 +30,7 @@ class EEPlayer;
 class EETechTreeNode;
 class EEUnitClass;
 class EEUnit;
-class EEPPatrolGroup;
+typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 class FSFile;
 class GE2DPoint;
 class GE3DPoint;

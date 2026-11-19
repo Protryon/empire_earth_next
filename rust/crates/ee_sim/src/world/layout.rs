@@ -167,6 +167,48 @@ pub struct EeWorldLayout {
     /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
     pub physics_pointer: u64,
     pub physics_saved: u64,
+    // ---- the units' saves (the units' state lane, round 1: unit_save_views.rs)
+    /// `EEComplexUnit`'s pointer members `mLauncherClass` (an `EEUnitClass*`), `mPatrolGroup` (an
+    /// `EEPPatrolGroup*`), `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`, `mHolder`,
+    /// `mBehavior` (an `EEUnitBehavior*`), `mLastResource` (units: `RTSUnit*` addresses)
+    pub complex_launcher_class: u64,
+    pub complex_patrol_group: u64,
+    pub complex_home_base: u64,
+    pub complex_gathered_resource: u64,
+    pub complex_last_attacker: u64,
+    pub complex_owner: u64,
+    pub complex_mine: u64,
+    pub complex_holder: u64,
+    pub complex_behavior: u64,
+    pub complex_last_resource: u64,
+    /// the vectors `mHeldUnits` (`EEComplexUnit*`), `mUnitVariables` (`long`), `mBoundedPathTiles`
+    /// (`U2DPoint<long>`: two `long`s); begin and end their first two words
+    pub complex_held_units: u64,
+    pub complex_unit_variables: u64,
+    pub complex_bounded_path_tiles: u64,
+    /// `mContacts` (a `UList<EEComplexUnit*>`): its `mHead` and `mCount` (an `unsigned long`); a node's `mData` and
+    /// `mNext`
+    pub complex_contacts_head: u64,
+    pub complex_contacts_count: u64,
+    pub contact_node_data: u64,
+    pub contact_node_next: u64,
+    /// `mCollisionTile` (two `long`s), `mInitialContactLocation` (three floats)
+    pub complex_collision_tile: u64,
+    pub complex_contact_location: u64,
+    /// `mPhysicalModel`'s scale (a float) and frame (an `unsigned long`)
+    pub complex_scale: u64,
+    pub complex_frame: u64,
+    /// the effect handles `mConversionEffect`, `mHealEffect` (`uint32_t` values)
+    pub complex_conversion_effect: u64,
+    pub complex_heal_effect: u64,
+    /// `EEProductionEntry::mFlag` (a `long`)
+    pub build_entry_flag: u64,
+    /// `EEHerd::mID` (an `unsigned short`)
+    pub herd_id: u64,
+    /// `EEUnitClass::mProjectileClass` (an `EEUnitClass*`) and `mAttachedEffect` (the first of the class's 29
+    /// `EEGraphicEffect*` members, `GetEffects()`)
+    pub class_projectile_class: u64,
+    pub class_effects: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();
