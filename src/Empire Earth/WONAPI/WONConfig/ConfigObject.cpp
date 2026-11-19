@@ -138,7 +138,7 @@ void ConfigObject::KeyAdd(const char* key,unsigned short& value,unsigned short i
 void ConfigObject::KeyAdd(const char* key,std::string& value,const char* initial) {this->RegisterKeyValue(key,new ConfigStringValue<char>(value,initial));}
 void ConfigObject::KeyAdd(const char* key,std::wstring& value,const wchar_t* initial) {this->RegisterKeyValue(key,new ConfigStringValue<wchar_t>(value,initial));}
 void ConfigObject::KeyAdd(const char* key,std::list<std::string>& value,const char* initial,bool additive) {this->RegisterKeyValue(key,new ConfigListValue<std::list<std::string> >(value,initial,additive));}
-// No original address identified: WON SDK typed key registration (the two TitleConfig uses)
+// No original address identified: WON SDK typed key registration (TitleConfig's two, before WON round 22; the drivers')
 void ConfigObject::RegisterIntValue(const char *theKey, int &theInt, int theDefVal)
 { this->RegisterKeyValue(theKey, new SimpleConfigValue<int>(theInt,theDefVal)); }
 void ConfigObject::RegisterIntListListValue(const char *theKey, std::list<std::list<int> > &theIntListList, const char *theDefVal, bool additive)

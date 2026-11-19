@@ -5,7 +5,7 @@
 //! The grammar's decisions are `configobj`'s, the parser `cfgparser`'s.
 //!
 //! The C++ class (ee/wonapi/WONConfigObject.h) keeps its vtable (WONGUI's resource and component configs, the
-//! lobby's config and TitleConfig override the hooks), its name, base name and parent (read by the subclasses) and
+//! lobby's config override the hooks; TitleConfig is titleobj.rs's Rust owner and host), its name, base name and parent (read by the subclasses) and
 //! the typed values (`ConfigValueBase`, bound to the subclasses' members): those are host ops. A host op that runs
 //! a virtual catches what the original's frames let through: a `ConfigObjectException` (caught by the innermost
 //! `ParseGroup`, here as [`Exc::Config`]) and a `FileReaderException` (never caught: [`Exc::File`] goes back to the
@@ -144,9 +144,9 @@ pub struct EeWonCfgObject {
 
 /// One C++ entry's context: the host and its exception record.
 #[derive(Clone, Copy)]
-struct Cx {
-    host: EeWonCfgoHost,
-    x: *mut c_void,
+pub(crate) struct Cx {
+    pub(crate) host: EeWonCfgoHost,
+    pub(crate) x: *mut c_void,
 }
 
 unsafe extern "C" fn sink_vec(context: *mut c_void, bytes: *const u8, length: usize) {
@@ -182,11 +182,11 @@ fn up_to_nul(b: &[u8]) -> &[u8] {
 }
 
 impl Cx {
-    fn op(&self, op: EeWonCfgoOp, o: *mut c_void, a: isize, b: isize, c: isize, d: isize) -> isize {
+    pub(crate) fn op(&self, op: EeWonCfgoOp, o: *mut c_void, a: isize, b: isize, c: isize, d: isize) -> isize {
         // SAFETY: the C++ host (its contract: every op on live objects)
         unsafe { (self.host)(op, o, a, b, c, d, self.x) }
     }
-    fn hook(&self, op: EeWonCfgoOp, o: *mut c_void, a: isize, b: isize, c: isize, d: isize) -> R<bool> {
+    pub(crate) fn hook(&self, op: EeWonCfgoOp, o: *mut c_void, a: isize, b: isize, c: isize, d: isize) -> R<bool> {
         match self.op(op, o, a, b, c, d) {
             -1 => Err(Exc::Config),
             -2 => Err(Exc::File),
@@ -196,7 +196,7 @@ impl Cx {
     fn rust(&self, o: *mut c_void) -> *mut EeWonCfgObject {
         self.op(EeWonCfgoOp::ObjRust, o, 0, 0, 0, 0) as *mut EeWonCfgObject
     }
-    fn parser<'a>(self, p: *mut c_void) -> &'a mut EeWonCfgParser {
+    pub(crate) fn parser<'a>(self, p: *mut c_void) -> &'a mut EeWonCfgParser {
         // SAFETY: a live C++ parser's Rust parser; used only between host ops
         unsafe {
             &mut *(self.op(EeWonCfgoOp::ParserRust, std::ptr::null_mut(), p as isize, 0, 0, 0) as *mut EeWonCfgParser)
@@ -260,7 +260,7 @@ fn add_child(cx: Cx, o: *mut EeWonCfgObject, child: *mut c_void) {
 
 /// The base `Reset`: the children dropped, the names too when asked, every key back to its default, every group
 /// pointer cleared.
-fn reset(cx: Cx, o: *mut EeWonCfgObject, reset_name: bool) {
+pub(crate) fn reset(cx: Cx, o: *mut EeWonCfgObject, reset_name: bool) {
     clear(cx, o);
     let owner = EeWonCfgObject::me(o).owner;
     if reset_name {
@@ -358,7 +358,7 @@ fn scope(cx: Cx, p: *mut c_void) -> Scope {
 }
 
 /// `ParseTopLevel`: the file opened (when given), the group reset and its whole contents parsed.
-fn parse_top_level(cx: Cx, o: *mut EeWonCfgObject, p: *mut c_void, path: Option<&[u8]>) -> R<bool> {
+pub(crate) fn parse_top_level(cx: Cx, o: *mut EeWonCfgObject, p: *mut c_void, path: Option<&[u8]>) -> R<bool> {
     if let Some(path) = path {
         let (open, status) = cx.parser(p).open_file(path);
         if status != 0 {
@@ -519,7 +519,7 @@ fn skip_group(cx: Cx, p: *mut c_void, check: bool, read_start: bool) -> R<bool> 
 }
 
 /// `ParseChild`: the child parsed in its own define scope, then added when asked.
-fn parse_child(
+pub(crate) fn parse_child(
     cx: Cx,
     o: *mut EeWonCfgObject,
     p: *mut c_void,
@@ -638,7 +638,7 @@ fn include_group(cx: Cx, o: *mut EeWonCfgObject, p: *mut c_void, name: &[u8], re
 
 /// The base `HandleInstruction`: GROUPDEFINE, IFDEFINED / IFNOTDEFINED .. else, a registered child group; false
 /// when unknown.
-fn handle_instruction(cx: Cx, o: *mut EeWonCfgObject, p: *mut c_void, instruction: &[u8]) -> R<bool> {
+pub(crate) fn handle_instruction(cx: Cx, o: *mut EeWonCfgObject, p: *mut c_void, instruction: &[u8]) -> R<bool> {
     let kind = group_instruction(instruction);
     if kind == EeWonCfgInstruction::GroupDefine {
         let (mut name, mut inherited) = (None, None);
@@ -755,7 +755,7 @@ fn sp_rest(sp: &EeWonCfgStringParser) -> Vec<u8> {
 
 /// The base `HandleValueInstruction`: DEFINE / REDEFINE, INCLUDEGROUP, INCLUDEFILE and the registered keys; false
 /// for an unknown key.
-fn handle_value_instruction(
+pub(crate) fn handle_value_instruction(
     cx: Cx,
     o: *mut EeWonCfgObject,
     p: *mut c_void,

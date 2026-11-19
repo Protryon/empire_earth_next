@@ -1,7 +1,7 @@
 // WONInternal's TitleConfig and CommunityConfig (HandleInstruction's children and errors, CommunityConfig::PostParse's
 // name-login mode, image path, hash string, lifespan map and community name, both ToString texts): the original's
 // statements (copied from TitleConfig.cpp before the port, over stand-ins) against
-// include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module, on generated configs. The exit code is the
+// tests/won/won_titlecfg_msg.h over ee_won's titlecfg module, on generated configs. The exit code is the
 // number of failed checks.
 // `--print N` prints N cases in the golden's format (rust/crates/ee_won_net/src/golden_titlecfg.txt: the inputs and the
 // original's results in hex; `titlecfg::tests::golden` replays them).
@@ -16,7 +16,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "ee/wonapi/WONTitleConfigMsg.h"
+#include "won_titlecfg_msg.h"
 #include "rust/won_net/strcase.h"
 
 using namespace WONAPI;
