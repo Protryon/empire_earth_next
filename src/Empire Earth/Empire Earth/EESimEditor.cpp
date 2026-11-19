@@ -113,8 +113,6 @@
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEUIFSEPaintElevation.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "lle/URandom.h"
@@ -1150,7 +1148,7 @@ void TerrainDigest(std::vector<std::string>& outLines)
     s += std::string(" radios ") +
          (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainTerrainButton))->GetIsChecked() ? "1" : "0") +
          (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainMountainsButton))->GetIsChecked() ? "1" : "0");
-    s += std::string(" centered=") + (static_cast<EEUIFSEPaint*>(e->GetControlById(205))->mIsCentered ? "1" : "0");
+    s += std::string(" centered=") + (EEUIShell::Op(e->GetControlById(205), EE_SCREENS_SKOP_PAINT_CENTERED) ? "1" : "0");
     EEUIFSEBrushGroup* b = e->GetBrushGroup();
     char theText[160];
     snprintf(theText, sizeof(theText), " brush size=%lu shown=%d centered=%d rect=%g,%g,%g,%g", b->mBrushSize,
@@ -2059,10 +2057,10 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "terrainpaint")   // terrainpaint L T R B: the paint area's CreatePaintAction over an area, posted
             theCode = [=, &theOutput] {
-                EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(gUIManager->GetScenarioEditorForm()->GetControlById(205));
-                EESEAPaint* a = thePaint->CreatePaintAction();
+                UIControl* thePaint = gUIManager->GetScenarioEditorForm()->GetControlById(205);
+                EESEAPaint* a = reinterpret_cast<EESEAPaint*>(EEUIShell::Op(thePaint, EE_SCREENS_SKOP_PAINT_CREATE));
                 theOutput.push_back(std::string("  paint ") + (a != NULL ? "action" : "none") +
-                                    " centered=" + (thePaint->mIsCentered ? "1" : "0"));
+                                    " centered=" + (EEUIShell::Op(thePaint, EE_SCREENS_SKOP_PAINT_CENTERED) ? "1" : "0"));
                 if (a == NULL)
                     return;
                 if (a->SetArea(L(1), L(2), L(3), L(4)))

@@ -41,7 +41,6 @@
 #include "lle/UIRadioButton.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEMap.h"
 #include "ee/EESEUnit.h"
 #include "lle/UIEditBox.h"

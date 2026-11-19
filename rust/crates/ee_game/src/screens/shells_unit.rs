@@ -94,7 +94,7 @@ pub extern "C" fn ee_screens_shell_unit_type_mode() -> i32 {
     UNIT_TYPE_MODE.load(Ordering::Relaxed)
 }
 
-pub(crate) fn make(kind: u32, _args: &[i64]) -> Option<Box<dyn Kind>> {
+pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
     Some(match kind {
         EE_SCREENS_SK_UNIT_CLASS_LIST => {
             Box::new(UnitClassList { types: RefCell::new(Vec::new()), mode: Cell::new(SORT_ALPHA) })
@@ -105,7 +105,7 @@ pub(crate) fn make(kind: u32, _args: &[i64]) -> Option<Box<dyn Kind>> {
             Box::new(Rotation { bitmaps: Cell::new([0; 4]), rotation: Cell::new(0), direction: Cell::new(0) })
         }
         EE_SCREENS_SK_REMOVE_CARGO => Box::new(RemoveCargo),
-        _ => return None,
+        _ => return crate::screens::shells_paint::make(kind, args),
     })
 }
 

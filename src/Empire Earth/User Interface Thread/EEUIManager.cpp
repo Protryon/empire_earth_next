@@ -40,7 +40,6 @@
 #include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEUIBSavedGroup.h"
 #include <locale.h>
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
@@ -82,7 +81,6 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEUICPortrait.h"
 #include "ee/EEUICChatLine.h"
-#include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUICPing.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetGamesBox.h"
@@ -261,10 +259,20 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
             theForm, inTable.GetFormIndex(), inTable.GetBorderThickness());
         break;
     case kDbControlSavedGroup:
-        theControl = new EEUIBSavedGroup(inTable, theRectangle, theForm);
+    {   // EEUIBSavedGroup (ee_game shells_saved.rs): the table's bitmaps
+        UIButton* theButton = new EEUIShellButton(EE_SCREENS_SK_SAVED_GROUP, {}, inTable.GetID(), NULL, NULL, NULL,
+                                                  theRectangle, theForm, inTable.GetFormIndex(), 0);
+        GEBitmap* theBitmap = inTable.CreateNormalBitmap(theForm->GetManager(), theRectangle);
+        theButton->SetNormalBitmap(theBitmap);
+        theBitmap->Dereference();
+        theBitmap = inTable.CreatePressedBitmap(theForm->GetManager(), theRectangle);
+        theButton->SetPressedBitmap(theBitmap);
+        theBitmap->Dereference();
+        theControl = theButton;
         break;
+    }
     case kDbControlUnitIconBar:
-        theControl = new EEUICUnitIconBar(inTable, theRectangle, theForm);
+        theControl = EEUIShellNewIconBar(inTable, theRectangle, theForm);
         break;
     case kDbControlPGSLineGraph:
         // the post-game summary's line graph (EEUIPGSLineGraph): its values formatted by ee_screens post_game.rs
@@ -314,7 +322,7 @@ void EEUIManager::DeleteScenarioEditor()
 void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment, EEUIFPasswordCallback inCallback,
                                         bool inFlag)
 {
-    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback,
+    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback,
                                    NULL, NULL, inFlag);
 }
 
@@ -322,28 +330,28 @@ void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned l
 void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                 EEUIFErrorCallback inCallback, UIForm* inCancel)
 {
-    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
+    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
 }
 
 // Shows a new message box with an optional OK button
 void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                  EEUIFErrorCallback inCallback, bool inFlag)
 {
-    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
+    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
 }
 
 // Shows a new Yes/No message box
 void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
                                   EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
+    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
 }
 
 // Shows a new Yes/No/Cancel message box
 void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                      EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL,
+    EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL,
                                    false);
 }
 

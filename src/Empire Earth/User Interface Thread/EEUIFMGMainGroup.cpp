@@ -33,7 +33,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUICUnitIconBar.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUIEMGHotKeyStatusButton.h"
@@ -159,7 +159,7 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
     case EE_SCREENS_MGR_OP_ICON_BAR: {
         UIControl* theIconBar = theForm->GetControl(kMainGameUnitIconBar);
         if (theIconBar)
-            dynamic_cast<EEUICUnitIconBar*>(theIconBar)->Update();
+            EEUIShell::Op(theIconBar, EE_SCREENS_SKOP_IB_UPDATE);
         return 0;
     }
     case EE_SCREENS_MGR_OP_SHOW_COMMANDS: theGroup->ShowCommands(theUnit); return 0;

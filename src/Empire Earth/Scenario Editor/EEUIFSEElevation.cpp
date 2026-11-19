@@ -31,8 +31,7 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEUIFSEPaintElevation.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEUIFSEElevation.h"
 #include "ee/EEStringIDs.h"
 #include "rust/game/screens.h"
@@ -81,11 +80,11 @@ extern "C" int32_t ee_screenscpp_seel(uint32_t inOp, void* const* p, int32_t* i,
     switch (inOp) {
     case EE_SCREENS_SEEL_OP_PAINT: {
         void* const* thePair = static_cast<void* const*>(p[2]);
-        EEUIFSEPaintElevation* t = new EEUIFSEPaintElevation(static_cast<EEAScroll*>(thePair[0]),
-                                                             static_cast<EEUIFSEBrushGroup*>(thePair[1]), kSEElevationPaint,
-                                                             GE2DPoint(0.0f, 0.0f), 0x400, 0x25e, theForm, (unsigned long)i[0]);
-        theForm->AddControl(static_cast<UIControl*>(t), 2);
-        *theOut = static_cast<UIControl*>(t);
+        UIControl* t = new EEUIShellControl(EE_SCREENS_SK_PAINT_ELEVATION, {(int64_t)thePair[0], (int64_t)thePair[1]},
+                                            kSEElevationPaint, GERectangle(GE2DPoint(0.0f, 0.0f), 1024.0f, 606.0f),
+                                            theForm, (unsigned long)i[0], 0);
+        theForm->AddControl(t, 2);
+        *theOut = t;
         return 0;
     }
     case EE_SCREENS_SEEL_OP_ELEVATION_SLIDER: {

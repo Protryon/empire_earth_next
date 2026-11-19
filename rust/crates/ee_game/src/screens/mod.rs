@@ -167,8 +167,6 @@ pub mod debug_sound;
 #[cfg(not(test))]
 mod debug_sound_ffi;
 pub mod dialog;
-#[cfg(not(test))]
-mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
@@ -311,9 +309,13 @@ mod settings_form_ffi;
 pub(crate) mod sgvw;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
+pub mod shells_dialog;
 pub mod shells_editor;
 #[cfg(not(test))]
 mod shells_ffi;
+pub mod shells_icon_bar;
+pub mod shells_paint;
+pub mod shells_saved;
 pub mod shells_tech;
 pub mod shells_unit;
 pub mod single_player;

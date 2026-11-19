@@ -116,8 +116,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1a0315 1a098e Empire Earth/Scenario Editor/EEUIEOpenCivBuilder.cpp
 1a098e 1a1397 Empire Earth/Scenario Editor/EEUIFSEElevation.cpp
 1a18f1 1a3f10 Empire Earth/Scenario Editor/EEUIFSEMap.cpp
-1a3f10 1a4470 Empire Earth/Scenario Editor/EEUIFSEPaint.cpp
-1a4470 1a4c00 Empire Earth/Scenario Editor/EEUIFSEPaintElevation.cpp
 1a4e99 1a5529 Empire Earth/Scenario Editor/EEUIFSEUpgradePanel.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
@@ -160,7 +158,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
-255c2a 25619b Empire Earth/User Interface Thread/EEUIBSavedGroup.cpp
 25619b 25643d Empire Earth/User Interface Thread/EEUIBuildGate.cpp
 25643d 256845 Empire Earth/User Interface Thread/EEUIBuildWall.cpp
 256845 257223 Empire Earth/User Interface Thread/EEUIBUpgrade.cpp
@@ -169,7 +166,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 258464 25861c Empire Earth/User Interface Thread/EEUICPing.cpp
 25861c 25952f Empire Earth/User Interface Thread/EEUICPortrait.cpp
 25952f 259f7f Empire Earth/User Interface Thread/EEUICSelectUnits.cpp
-259f7f 25b2ce Empire Earth/User Interface Thread/EEUICUnitIconBar.cpp
 25b2ce 25cead Empire Earth/User Interface Thread/EEUICWonNetGamesBox.cpp
 25cead 25e2f8 Empire Earth/User Interface Thread/EEUICWonNetRoomsBox.cpp
 25e2f8 25fdb3 Empire Earth/User Interface Thread/EEUICWonNetStatBox.cpp

@@ -77,7 +77,6 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
-#include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEMap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "ee/EESEInstructions.h"

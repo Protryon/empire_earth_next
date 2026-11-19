@@ -62,8 +62,6 @@
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEUIBSavedGroup.h"
-#include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIFMGStatusButton.h"
@@ -1138,9 +1136,9 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         if (theControl == NULL)
             return 0;
         if (inOp == EE_SCREENS_MF_OP_SAVED_GROUP_REFRESH)
-            dynamic_cast<EEUIBSavedGroup*>(theControl)->Refresh();
+            EEUIShell::Op(theControl, EE_SCREENS_SKOP_SG_REFRESH);
         else
-            dynamic_cast<EEUICUnitIconBar*>(theControl)->Update();
+            EEUIShell::Op(theControl, EE_SCREENS_SKOP_IB_UPDATE);
         return 1;
     }
     case EE_SCREENS_MF_OP_DRAW_BACKGROUND: {
