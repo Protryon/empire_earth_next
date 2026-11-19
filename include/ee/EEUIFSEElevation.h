@@ -10,7 +10,6 @@ class EEAScroll;
 class EEUIFSEBrushGroup;
 class EEUIFScenarioEditor;
 class EEUIFSEESElevation;
-class EEUIFSEPaintElevation;
 class GEFont;
 class UIRadioButton;
 class UISlider;

@@ -31,7 +31,6 @@
 #include "lle/GEText.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUIFSEPaint.h"
 #include "ee/EEARust.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
@@ -193,13 +192,6 @@ long EESEUITerrainTypeLB::DrawTextA()
 
 // Checks the paint type button and shows (terrain) or hides (bulldozer) the terrain type, color and preview controls
 // (editor_terrain.rs)
-
-// Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer
-// (editor_terrain.rs)
-EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
-{
-    return static_cast<EESEAPaint*>(ee_screens_setn_paint(this->mTerrain->mRust, static_cast<UIControl*>(this)));
-}
 
 // Tints the preview bitmap's corners with the selected color set's colors (editor_terrain.rs)
 long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -394,12 +386,12 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SETN_OP_PAINT: {
-        EEUIFSETerrainPaint* t = new EEUIFSETerrainPaint(static_cast<EEAScroll*>(q[0]),
-                                                         static_cast<EEUIFSEBrushGroup*>(q[1]), 205, GE2DPoint(0.0f, 0.0f),
-                                                         1024, 606, theForm, (unsigned long)i[0],
-                                                         static_cast<EEUIFSETerrain*>(q[2]));
+        UIControl* t = new EEUIShellControl(EE_SCREENS_SK_TERRAIN_PAINT,
+                                            {(int64_t)q[0], (int64_t)q[1], (int64_t)q[2]},
+                                            205, GERectangle(GE2DPoint(0.0f, 0.0f), 1024.0f, 606.0f), theForm,
+                                            (unsigned long)i[0], 0);
         theForm->AddControl(t, 3);
-        *theOut = static_cast<UIControl*>(t);
+        *theOut = t;
         return 0;
     }
     case EE_SCREENS_SETN_OP_BITMAP: {
@@ -457,9 +449,8 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SETN_OP_PAINT_ACTION: {
-        EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(c);
         if (i[3] >= 0)
-            thePaint->mIsCentered = i[3] != 0;
+            EEUIShell::Op(c, EE_SCREENS_SKOP_PAINT_SET_CENTERED, i[3] != 0);
         EESEAPaint* theAction = NULL;
         if (i[0] == 0)
             theAction = new EESEAPaintRust(kSEAPaintTerrain, i[1], i[2]);

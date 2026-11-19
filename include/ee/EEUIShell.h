@@ -19,6 +19,7 @@
 #include "lle/UIEditBox.h"
 #include "lle/UIComboBox.h"
 #include "lle/UISlider.h"
+#include "ee/EEUIRustControl.h"
 
 class EEUIShell {
 public:
@@ -255,6 +256,22 @@ public:
     }
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
     EE_SHELL_SELF
+};
+
+// a plain control (UIControl, its pure virtuals EEUIRustControl's: nothing, 0): the paint areas
+class EEUIShellControl : public EEUIRustControl, public EEUIShell {
+public:
+    EEUIShellControl(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inId,
+                     const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
+    {
+        this->Make(inKind, this, inArgs);
+    }
+    EE_SHELL_COMMON(EEUIRustControl)
+    virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF
+    const GE2DPoint& MouseLocation() const { return this->GetMouseLocation(); }
+    void Capture() { this->CaptureMouse(); }
 };
 
 #endif

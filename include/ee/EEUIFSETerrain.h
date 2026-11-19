@@ -3,7 +3,7 @@
 // its controls: the terrain type and colour list boxes, the paint control, the colour/type change events and the paint
 // type radio button (its ctor/??_G live in EEUIFSETRBPaintType.cpp). Names are provisional (RTTI names where there is
 // one).
-// Requires lle/UIListBox.h, lle/UIRadioButton.h, lle/GEText.h, lle/GEBitmap.h, ee/EEUIFSEPaint.h,
+// Requires lle/UIListBox.h, lle/UIRadioButton.h, lle/GEText.h, lle/GEBitmap.h,
 // ee/EEUIFSEMainGroup.h, ee/EESEAPaint.h, <vector>.
 #ifndef EE_EEUIFSETERRAIN_H
 #define EE_EEUIFSETERRAIN_H
@@ -75,26 +75,6 @@ public:
     GEText* mCopyText;                      // +0x138
     GEBitmap* mBitmap;                      // +0x13c
     bool mIsSelectionFramed;                // +0x140 (CopyData: the copied selection is drawn)
-};
-
-// the tab's paint control (RTTI EEUIFSETerrainPaint > EEUIFSEPaint; vtable 0x445a80, sizeof 0xc0; ??_G 0x1ac539)
-class EEUIFSETerrainPaint : public EEUIFSEPaint {
-public:
-    EEUIFSETerrainPaint(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long inId,
-                        const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                        unsigned long inIndex, EEUIFSETerrain* inTerrain)
-        : EEUIFSEPaint(inScroll, inBrushes, inId, inLocation, inWidth, inHeight, inForm, inIndex), mTerrain(inTerrain)
-    {
-        this->mIsCentered = true;
-    }
-    virtual ~EEUIFSETerrainPaint() {}       // user-declared (??_G 0x1ac539 stores this vtable first)
-    virtual EESEAPaint* CreatePaintAction();  // +0x88 0x1ab344 (a new terrain or mountain paint action)
-    // Actual TerrainPaint vtable445a80 slots44/48 both target1ad67e (xor eax,eax; ret).
-    // Original declaration placement is provisional; scope is this proved derived type.
-    virtual long MouseRButtonDown() { return 0; }
-    virtual long MouseRButtonUp() { return 0; }
-
-    EEUIFSETerrain* mTerrain;               // +0xbc
 };
 
 // the colour list's selection event (RTTI EEUIETerrainColorChange > UIEvent; vtable 0x445b10; ??_G 0x1ac55b)
