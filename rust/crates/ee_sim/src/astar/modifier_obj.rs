@@ -14,6 +14,8 @@
 //! (`ee_astar_mod_host_*`, EEAIAStarBoundedPathGoalModifiers.cpp); the snow planner's hill is the continent manager's
 //! `GetHillAt` (its CNTQ record).
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use crate::astar::cm_io;
 use crate::astar::ffi::CView;
 use crate::astar::graph_search::EeAStarGraphGoalRec;
@@ -80,7 +82,11 @@ pub(crate) enum Kind {
     BoundedSea,
     BoundedSpace,
     /// `EEAIBPGModifierEnemyIsAttackableByUnit`: the walker and its target (both referenced), the range squared
-    Attackable { unit: u64, target: u64, range_squared: f32 },
+    Attackable {
+        unit: u64,
+        target: u64,
+        range_squared: f32,
+    },
     /// `EEAIBPGModifierWallsDoNotBlock`
     WallsDoNotBlock,
     /// `EEAIGPGModifierComputerPlayerWallPather`
@@ -100,7 +106,11 @@ impl Kind {
     fn bounded(&self) -> bool {
         matches!(
             self,
-            Kind::BoundedSea | Kind::BoundedSpace | Kind::Attackable { .. } | Kind::WallsDoNotBlock | Kind::WallPather
+            Kind::BoundedSea
+                | Kind::BoundedSpace
+                | Kind::Attackable { .. }
+                | Kind::WallsDoNotBlock
+                | Kind::WallPather
                 | Kind::Storm(_)
         )
     }
@@ -204,7 +214,11 @@ pub(crate) fn new_for_machine(machine_type: i64, bounded: bool, goal: *mut EeASt
 ///
 /// # Safety
 /// `m` a live modifier.
-pub(crate) unsafe fn attach(m: *mut EeAStarModifier, goal: *mut EeAStarPathGoalRec, as_bounded: bool) -> *mut EeAStarModifier {
+pub(crate) unsafe fn attach(
+    m: *mut EeAStarModifier,
+    goal: *mut EeAStarPathGoalRec,
+    as_bounded: bool,
+) -> *mut EeAStarModifier {
     let r = unsafe { &mut *m };
     if !as_bounded {
         r.goal = goal;
@@ -494,11 +508,7 @@ pub(crate) fn gate_passable(h: u64, player: u32) -> bool {
             passable = true;
             return Some(true);
         };
-        passable = if g.side_part {
-            false
-        } else {
-            !g.closed || (friendly(me, g.player) && !g.locked)
-        };
+        passable = if g.side_part { false } else { !g.closed || (friendly(me, g.player) && !g.locked) };
         passable.then_some(true)
     });
     passable

@@ -1825,7 +1825,9 @@ impl PathManager {
                 self.release_graph_machine(host, machine);
             }
             // SAFETY: the maker's reference
-            unsafe { crate::astar::modifier_obj::release(modifier as *mut crate::astar::modifier_obj::EeAStarModifier) };
+            unsafe {
+                crate::astar::modifier_obj::release(modifier as *mut crate::astar::modifier_obj::EeAStarModifier)
+            };
             if unit != 0 && !ok {
                 // (as the load did before 0.278)
                 self.request_pending_path(host, unit, (s.node[1], s.node[2]));

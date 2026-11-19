@@ -500,8 +500,7 @@ impl PathSearch {
         }
         let cb = self.view_cb.as_ref().expect("the goal's view");
         {
-            let mut host =
-                PathHost { bounded: self.bounded, m: &mut self.m, goal: self.goal, view: CView(cb) };
+            let mut host = PathHost { bounded: self.bounded, m: &mut self.m, goal: self.goal, view: CView(cb) };
             if fresh {
                 machine::start(&mut self.st, &mut host);
             }

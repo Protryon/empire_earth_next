@@ -11,6 +11,8 @@
 //! The decisions are pure functions over the facts read (`blocks_area`, `resource_kind`, `crowd_step`, ...), which
 //! the unit tests check without a world.
 
+#![allow(clippy::unnecessary_cast)] // c_long is i32 on Windows, i64 on LP64
+
 use crate::astar::area_goals::{EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
 use crate::astar::cm::EeAStarCmRecord;
 use crate::astar::cm_io;
@@ -224,15 +226,10 @@ pub(crate) fn sea_blocker(u: &Mover, walker: u64, walker_group: u64, walker_cate
     if u.domains & MOVEMENT_SEA == 0 || !u.collidable {
         return false;
     }
-    if u.active_group == 0
+    (u.active_group == 0
         || u.active_group != walker_group
-        || (u.category == CATEGORY_NAVAL_BUILDING && u.air_traffic_type != 0)
-    {
-        if submerged(u.category) == submerged(walker_category) {
-            return true;
-        }
-    }
-    false
+        || (u.category == CATEGORY_NAVAL_BUILDING && u.air_traffic_type != 0))
+        && submerged(u.category) == submerged(walker_category)
 }
 
 /// `EEAStarIsLandBlocker` (the space walkers' step blocker).
@@ -345,9 +342,7 @@ fn can_move_on_terrain(w: &UnitView<'_>, terrain: i32) -> bool {
     let Some(c) = w.class() else { return false };
     let stats = w.stats().map(|s| s.fields());
     // SAFETY: live records of the walker's class and stats
-    unsafe {
-        crate::units::cls_answers::can_move_on_terrain(&*c.fields().ptr(), stats.map(|s| &*s.ptr()), terrain)
-    }
+    unsafe { crate::units::cls_answers::can_move_on_terrain(&*c.fields().ptr(), stats.map(|s| &*s.ptr()), terrain) }
 }
 
 /// `EEAIHasResourceUnit`: the wood kind of the first wood unit on a tile not in deep water, 0 if none.
@@ -639,7 +634,9 @@ extern "C" fn live_space_dock(ctx: *mut c_void, x: i32, y: i32) -> bool {
     let v = view(ctx);
     let t = token();
     let a = tile_units(&t, v, x, y).iter().any(|u| {
-        (u.unit_type == TYPE_SPACE_DOCK || u.unit_type == TYPE_SPACE_TURRET || u.unit_type == TYPE_ORBITAL_SPACE_STATION)
+        (u.unit_type == TYPE_SPACE_DOCK
+            || u.unit_type == TYPE_SPACE_TURRET
+            || u.unit_type == TYPE_ORBITAL_SPACE_STATION)
             && u.hit_points > 0
             && !u.foundation
     });

@@ -418,7 +418,7 @@ mod tests {
     fn the_held_grids_answer_the_choke_tiles_until_freed() {
         // a 3 x 3 map: every tile land but the corners' area tiles
         let land = EeChokeTileInfo { tile: true, category: 1, continent_serial: 3, ..Default::default() };
-        let mut infos = vec![land; 9];
+        let mut infos = [land; 9];
         infos[0] = EeChokeTileInfo { tile: true, category: 2, continent_serial: 4, ..Default::default() };
         infos[8] = EeChokeTileInfo { tile: true, category: 2, continent_serial: 6, ..Default::default() };
         unsafe { ee_astar_choke_grids_build(3, 1, infos.as_ptr()) };

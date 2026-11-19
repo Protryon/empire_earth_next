@@ -1,7 +1,16 @@
 use super::*;
 
 fn unit() -> TileUnit {
-    TileUnit { id: 7, hit_points: 10, category: 3, unit_type: 0, blocks_tile: true, is_wall: false, foundation: false, player_id: 2 }
+    TileUnit {
+        id: 7,
+        hit_points: 10,
+        category: 3,
+        unit_type: 0,
+        blocks_tile: true,
+        is_wall: false,
+        foundation: false,
+        player_id: 2,
+    }
 }
 
 #[test]
