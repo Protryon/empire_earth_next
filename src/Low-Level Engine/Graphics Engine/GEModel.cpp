@@ -156,37 +156,6 @@ GEModel::~GEModel()
     ee_ge_mod_destroy(this->mRust);
 }
 
-void GEModel::ComputeBoundingVolumes()
-{
-    ee_ge_mod_compute_bounding_volumes(this->mRust);
-}
-
-void GEModel::ComputeModelNormals()
-{
-    ee_ge_mod_compute_normals(this->mRust);
-}
-
-// Releases a reference; when only the manager's (and one caller's) reference is left, removes it from the manager
-void GEModel::Dereference()
-{
-    ee_ge_mod_dereference(this->mRust);
-}
-
-unsigned long GEModel::GetPolygonCount(unsigned long inLOD) const
-{
-    return ee_ge_mod_polygon_count(this->mRust, inLOD);
-}
-
-void GEModel::PrepareTransforms()
-{
-    ee_ge_mod_prepare_transforms(this->mRust);
-}
-
-void GEModel::SetGraphicsCurrentFrame(unsigned long inFrame)
-{
-    ee_ge_mod_set_current_frame(this->mRust, inFrame);
-}
-
 void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 {
     ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex);
@@ -195,16 +164,6 @@ void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 void GEModel::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
     ee_ge_mod_set_texture(this->mRust, inTexture, inScreen);
-}
-
-unsigned long GEModel::SizeOf()
-{
-    return ee_ge_mod_size_of(this->mRust);
-}
-
-bool GEModel::Verify() const
-{
-    return ee_ge_mod_verify(this->mRust);
 }
 
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
@@ -347,12 +306,6 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
     return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
 
-// Writes the list of loaded models and their reference counts to a file
-void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
-{
-    ee_ge_modman_dump(this->mRust, &inFile);
-}
-
 unsigned long GEModelManager::GetMemoryFootprint()
 {
     return ee_ge_modman_footprint(this->mRust);
@@ -364,24 +317,6 @@ unsigned long GEModelManager::GetMemoryFootprint()
 GEModel* GEModelManager::LoadModel(const UString& inName, const EeGeSharedFrames& inShared)
 {
     return (GEModel*)ee_ge_modman_load(this->mRust, inName, &inShared);
-}
-
-// Releases every model nobody else references; returns 5 when some are still in use
-long GEModelManager::RemoveAllModels()
-{
-    return ee_ge_modman_remove_all(this->mRust);
-}
-
-// Releases a model if nobody else references it; 3 when it is unknown, 5 when it is still in use
-long GEModelManager::RemoveModel(GEModel* inModel)
-{
-    return ee_ge_modman_remove(this->mRust, inModel);
-}
-
-// Replaces the model search path, keeping a reference to the new one
-void GEModelManager::SetModelPath(FSPath* inPath)
-{
-    ee_ge_modman_set_path(this->mRust, inPath);
 }
 
 // ---- GEPhysicalModel (GEPhysicalModel.cpp, folded here in R4.3 part 16)
