@@ -196,7 +196,6 @@ pub const EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL: i32 = 71;
 pub const EE_UNITS_GOAL_HOST_CONTAINER: i32 = 72;
 pub const EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: i32 = 74;
 pub const EE_UNITS_GOAL_HOST_LINE_OF_SIGHT: i32 = 75;
-pub const EE_UNITS_GOAL_HOST_RING_TILES: i32 = 76;
 pub const EE_UNITS_GOAL_HOST_TILE_SCREEN: i32 = 77;
 pub const EE_UNITS_GOAL_HOST_CELL_TAKEN: i32 = 78;
 pub const EE_UNITS_GOAL_HOST_CAN_STAND: i32 = 79;
@@ -288,7 +287,6 @@ pub const EE_UNITS_GOAL_HOST_SET_HIT_POINTS: i32 = 440;
 pub const EE_UNITS_GOAL_HOST_FOUNDATION_STARTED: i32 = 441;
 pub const EE_UNITS_GOAL_HOST_GOAL_ARG: i32 = 442;
 // the gather goal's
-pub const EE_UNITS_GOAL_HOST_FARM_TILE: i32 = 450;
 pub const EE_UNITS_GOAL_HOST_RESOURCE_SPOT: i32 = 451;
 pub const EE_UNITS_GOAL_HOST_NEXT_RESOURCE: i32 = 452;
 pub const EE_UNITS_GOAL_HOST_FIND_STORAGE: i32 = 453;
@@ -303,7 +301,6 @@ pub const EE_UNITS_GOAL_HOST_LAST_WAYPOINT: i32 = 467;
 pub const EE_UNITS_GOAL_HOST_RESOURCE_REACH: i32 = 468;
 pub const EE_UNITS_GOAL_HOST_SET_ACTIVE: i32 = 470;
 pub const EE_UNITS_GOAL_HOST_FIND_GHOST: i32 = 471;
-pub const EE_UNITS_GOAL_HOST_AT_RESOURCE: i32 = 472;
 pub const EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: i32 = 474;
 pub const EE_UNITS_GOAL_HOST_ACCESSIBLE: i32 = 475;
 pub const EE_UNITS_GOAL_HOST_PATH_LENGTH: i32 = 476;
@@ -558,6 +555,8 @@ fn inner_sphere(u: &crate::world::UnitView) -> f32 {
 const TECH_NONE: i32 = 100_000;
 const UNIT_TYPE_MECH_ZEUS_PROTOTYPE: u64 = 0xc2;
 const UNIT_TYPE_FARM: u64 = 0x2a;
+/// `kUnitCategoryNavalCitizen`
+const CATEGORY_NAVAL_CITIZEN: u64 = 0x16;
 const UNIT_TYPE_DOCK: u64 = 0x24;
 const UNIT_TYPE_NAVY_YARD: u64 = 0x41;
 
@@ -935,12 +934,12 @@ impl ExploreHost for OpHost<'_> {
         read_unit(unit, unit_line_of_sight)
     }
     fn ring_tiles(&mut self, x: i32, y: i32, ring: i32) -> Vec<(i32, i32)> {
-        let mut tiles: Vec<(i32, i32)> = Vec::new();
-        let mut io = EeUnitsGoalIo { sink: (&mut tiles as *mut Vec<(i32, i32)>).cast(), ..Default::default() };
-        io.i[0] = i64::from(x);
-        io.i[1] = i64::from(y);
-        io.i[2] = i64::from(ring);
-        self.call(EE_UNITS_GOAL_HOST_RING_TILES, 0, 0, &mut io);
+        // EEGetSquareRingTiles (noted), then EEAIRandomShuffle over the physics' draws
+        let mut tiles: Vec<(i32, i32)> =
+            crate::units::uu_direct::square_ring_tiles(x, y, ring).into_iter().map(|t| (t[0], t[1])).collect();
+        crate::units::uu_direct::ai_random_shuffle(&mut tiles, |lo, hi| {
+            crate::units::uu_direct::with_game(|g| g.random_long(lo, hi))
+        });
         tiles
     }
     fn tile_screen(&mut self, unit: u64, x: i32, y: i32) -> bool {
@@ -1531,9 +1530,16 @@ impl OpHost<'_> {
 
 impl GatherHost for OpHost<'_> {
     fn farm_tile(&mut self, farm: u64, near: u64) -> (i32, i32) {
-        let mut io = EeUnitsGoalIo::default();
-        self.call(EE_UNITS_GOAL_HOST_FARM_TILE, farm, near, &mut io);
-        (io.i[0] as i32, io.i[1] as i32)
+        // the farm's footprint (noted) sorted the MSVC way by EETileDistanceLess(near's tile): the nearest first
+        let mut tiles = crate::units::uu_direct::footprint_tiles(farm);
+        let (cx, cy) = read_unit(near, |n| n.tile_xy());
+        let d = |t: &[i32; 2]| {
+            let dy = (cy as i32).wrapping_sub(t[1]);
+            let dx = (cx as i32).wrapping_sub(t[0]);
+            dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy))
+        };
+        crate::units::msvc_sort::sort_by(&mut tiles, |a, b| d(a) < d(b));
+        (tiles[0][0], tiles[0][1])
     }
     fn resource_spot(&mut self, unit: u64, resource: u64, out: &mut [f32; 3]) -> bool {
         crate::units::uu_direct::spot(1, unit, resource, out)
@@ -1612,7 +1618,22 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_FIND_GHOST, u64::from(id), u64::from(complex)) as u64
     }
     fn at_resource(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE, unit, resource) != 0
+        // IsAtResource: on its farm's tile or within reach of another resource; a land gatherer faces it
+        let (x, y) = read_unit(unit, |u| u.tile_xy());
+        let tile = crate::units::uu_direct::map_tile(x as i32, y as i32);
+        // SAFETY: the goal's caller holds the world; the unit's live tile
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let on_tile = unsafe { crate::world::TileView::of(&t, tile) }
+            .expect("the gatherer's tile")
+            .units()
+            .any(|u| u.is_some_and(|u| u.handle() == resource));
+        let farm = read_unit(resource, |r| r.class().map_or(0, |c| c.unit_type())) == UNIT_TYPE_FARM;
+        let result = if farm { on_tile } else { crate::units::uu_direct::within_reach(unit, resource) };
+        let naval = read_unit(unit, |u| u.class().map_or(0, |c| c.category())) == CATEGORY_NAVAL_CITIZEN;
+        if result && !naval {
+            self.op(EE_UNITS_GOAL_HOST_FACE_TARGET, unit, resource);
+        }
+        result
     }
     fn at_storage(&mut self, unit: u64, storage: u64) -> bool {
         // IsAtStorage: within the storage's inner radius squared times sqrt 2 (DistanceSquaredTo: y first)
@@ -1858,6 +1879,7 @@ impl crate::units::gather_world::GatherWorldHost for OpHost<'_> {
     fn find_free_farm(&mut self, unit: u64, ring: &mut i32) -> u64 {
         crate::units::uu_direct::find_free_farm(unit, true, ring)
     }
+    #[allow(clippy::too_many_arguments)]
     fn resource_of_kind(
         &mut self,
         unit: u64,

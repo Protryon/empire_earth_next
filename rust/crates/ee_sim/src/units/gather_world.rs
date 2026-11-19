@@ -32,6 +32,7 @@ pub trait GatherWorldHost: WorldHost {
     /// `EEFindFreeFarm(unit, true, &ring)`: the farm's complex unit (0: none)
     fn find_free_farm(&mut self, unit: u64, ring: &mut i32) -> u64;
     /// the unit's class's `FindResourceOfKind(unit, center, resource, range, kind, &taken, farms)`
+    #[allow(clippy::too_many_arguments)]
     fn resource_of_kind(
         &mut self,
         unit: u64,
@@ -239,6 +240,7 @@ pub fn has_gather_room(h: &mut dyn GatherWorldHost, unit: u64, resource: u64) ->
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
     use crate::units::build::tests::World;

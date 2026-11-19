@@ -1186,14 +1186,8 @@ constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
 /// `EEGetDirectionTo(a, b)`
 constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
 
-/// unit `a`'s `GetLineOfSight()` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_MV_LINE_OF_SIGHT = 42;
-
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
-
-/// `gPhysics->GetRandom(1L, 2L)`
-constexpr static const int32_t EE_UNITS_CLS_MV_RANDOM_1_2 = 44;
 
 /// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL = 45;
@@ -1279,12 +1273,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
 
-/// unit `a`'s player's `mNumVitalBuildings < 1`
-constexpr static const int32_t EE_UNITS_CLS_ST_NO_VITAL = 93;
-
-/// `gPhysics`' `mTickTimeMs` into `io.a`, `GetTickTime()` into `io.f`, `mGameTime` into `io.b`
-constexpr static const int32_t EE_UNITS_CLS_ST_CLOCK = 94;
-
 /// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
 constexpr static const int32_t EE_UNITS_CLS_ST_CINEMATIC_INTERVAL = 95;
 
@@ -1311,9 +1299,6 @@ constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
-
-/// `gPhysics->GetRandom(io.p[0], io.p[1])` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_ST_RANDOM_RANGE = 104;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -2568,8 +2553,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS = 74;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_OF_SIGHT = 75;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_RING_TILES = 76;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_SCREEN = 77;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CELL_TAKEN = 78;
@@ -2730,8 +2713,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FOUNDATION_STARTED = 441;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_ARG = 442;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_FARM_TILE = 450;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_SPOT = 451;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_RESOURCE = 452;
@@ -2759,8 +2740,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_REACH = 468;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ACTIVE = 470;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_GHOST = 471;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE = 472;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED = 474;
 

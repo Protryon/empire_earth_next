@@ -506,14 +506,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[3] = theBounds.mRight;
             return 1;
         }
-    case EE_UNITS_GOAL_HOST_RING_TILES: {
-            std::vector<U2DPoint<long> > theTiles;
-            EEGetSquareRingTiles((long)ioArgs->i[0], (long)ioArgs->i[1], (long)ioArgs->i[2], theTiles);
-            EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-            for (size_t i = 0; i < theTiles.size(); i++)
-                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
-            return 0;
-        }
     case EE_UNITS_GOAL_HOST_TILE_SCREEN: {
             EEMap* theMap = ::gWorld.mMap;
             long theX = (long)ioArgs->i[0];
@@ -858,14 +850,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_GOAL_ARG:
         return ObjectOf<EEUnitGoal>(inA)->GetB1C();
     // the gather goal's
-    case EE_UNITS_GOAL_HOST_FARM_TILE: {
-            std::vector<EETileCoordinate> theTiles;
-            EEGetFootprintTiles(theUnit, theTiles);
-            std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(ObjectOf<EEUnit>(inB)->GetTile()));
-            ioArgs->i[0] = theTiles[0].GetX();
-            ioArgs->i[1] = theTiles[0].GetY();
-            return 0;
-        }
     case EE_UNITS_GOAL_HOST_NEXT_RESOURCE: {
             std::vector<EEUnit*> thePassed;
             for (size_t k = 0; k < ioArgs->list_len; k++)
@@ -920,16 +904,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         if (inB != 0)
             return Handle(EEFindLoadedGhost((unsigned long)inA));
         return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
-    case EE_UNITS_GOAL_HOST_AT_RESOURCE: {
-            // IsAtResource: on its farm or within reach of another resource; a land gatherer faces it
-            EEUnit* theResource = ObjectOf<EEUnit>(inB);
-            bool theResult = ::gWorld.GetMap()->GetTile(theComplex->mTileX, theComplex->GetTileY())->HasUnit(theResource);
-            if (theResource->mUnitClass->mUnitType != kUnitTypeFarm)
-                theResult = EEIsWithinReach(theComplex, theResource);
-            if (theResult && theComplex->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
-                theComplex->FaceTarget(theResource);
-            return theResult;
-        }
     case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: {
             EEUnit* theBlocker;
             long theArg4;

@@ -86,7 +86,6 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
             return 0;
         theUnit->mActiveGroup->TellGroup(theUnit, GE3DPoint(Float(a[0]), Float(a[1]), Float(a[2])));
         return 1;
-    case EE_COMBAT_G_ATTACK_PART: return (int64_t)Handle(EEGetAttackPart(theUnit, UnitOf((uint64_t)a[0])));
     case EE_COMBAT_G_VERIFY_TARGET: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
         ESVERIFY_AT(::EEUUGetIsUnitClassTargetable(theUnit, theTarget->GetClass()) == true, 729);

@@ -1612,9 +1612,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     }
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
     case EE_UNITS_CLS_MV_DIRECTION_TO: return EEGetDirectionTo(inUnit, theOther);
-    case EE_UNITS_CLS_MV_LINE_OF_SIGHT: io->f = inUnit->GetLineOfSight(); return 0;
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
-    case EE_UNITS_CLS_MV_RANDOM_1_2: return gPhysics->GetRandom(1L, 2L);
     case EE_UNITS_CLS_MV_GOAL: {
         const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
         return EEObj(theMembers[inC]);
@@ -1773,8 +1771,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_LV_SET_FACING: inUnit->SetFacing((unsigned long)inC); return 0;
     case EE_UNITS_CLS_LV_CAMERA_OFF: gCameraFollowing = false; return 0;
     // the status ticks' (cls_status.rs)
-    case EE_UNITS_CLS_ST_NO_VITAL: return inUnit->mPlayer->mNumVitalBuildings < 1;
-    case EE_UNITS_CLS_ST_CLOCK: io->a = gPhysics->mTickTimeMs; io->f = gPhysics->GetTickTime(); io->b = gPhysics->mGameTime; return 0;
     case EE_UNITS_CLS_ST_CINEMATIC_INTERVAL:
         io->a = ::gWorld.mInCinematic ? 1 : 0;
         io->b = EEGetRules().mCombat.mPowerRegenerationInterval;
@@ -1807,7 +1803,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         return 1;
     }
     case EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: io->f = gWorldTable.GetFloatValue(kWorldCamouflageTiming); return 0;
-    case EE_UNITS_CLS_ST_RANDOM_RANGE: io->f = gPhysics->GetRandom(io->p[0], io->p[1]); return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;

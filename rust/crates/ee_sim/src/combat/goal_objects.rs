@@ -325,6 +325,10 @@ impl TableHost<'_> {
             EE_COMBAT_G_FIND_UNIT => (g::EE_UNITS_GOAL_HOST_FIND_UNIT, a[0] as u64, u64::from(a[1] != 0)),
             EE_COMBAT_G_FIND_GHOST => (g::EE_UNITS_GOAL_HOST_FIND_GHOST, a[0] as u64, 0),
             EE_COMBAT_G_SET_HIT_POINTS => (g::EE_UNITS_GOAL_HOST_SET_HIT_POINTS, unit, 0),
+            // EEGetAttackPart: the unit utilities' noted entry point
+            crate::combat::goal_attack::EE_COMBAT_G_ATTACK_PART => {
+                return Some(crate::units::uu_direct::attack_part(unit, a[0] as u64) as i64)
+            }
             _ => return None,
         };
         io.i[0] = a[0];

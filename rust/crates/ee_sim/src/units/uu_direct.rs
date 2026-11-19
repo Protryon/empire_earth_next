@@ -66,6 +66,12 @@ pub fn within_reach_of(point: [f32; 3], unit: u64, target: u64) -> bool {
     game!(unsafe { ffi::ee_units_uu_within_reach(unit, target, &point) != 0 })
 }
 
+/// `EEIsWithinReach(unit, target)` (from the unit's own position).
+pub fn within_reach(unit: u64, target: u64) -> bool {
+    // SAFETY: no point
+    game!(unsafe { ffi::ee_units_uu_within_reach(unit, target, std::ptr::null()) != 0 })
+}
+
 /// `EEGetPathLengthTo(unit, tile, limit, walls)` (the tile's update dropped).
 pub fn path_length_to(unit: u64, tile: Tile, limit: u32, walls: bool) -> f32 {
     game!({

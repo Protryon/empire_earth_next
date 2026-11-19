@@ -62,6 +62,12 @@ pub fn with_unit<R>(unit: u64, f: impl FnOnce(&UnitView) -> R) -> Option<R> {
     unsafe { UnitView::of(&token, unit) }.map(|u| f(&u))
 }
 
+/// `GetLineOfSight()`: the stats' sight and the unit's own.
+pub fn line_of_sight(u: &UnitView) -> f32 {
+    let base: f32 = u.stats().map_or(0.0, |s| crate::world_field!(s.fields(), mLineOfSight));
+    base + u.sight()
+}
+
 /// [`position`] of a unit handle.
 pub fn position_of(unit: u64) -> [f32; 3] {
     with_unit(unit, position).expect("a live unit")
