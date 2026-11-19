@@ -57,7 +57,7 @@ pub const EE_SCREENS_SH_MAP_CREATE: u32 = 0x2a;
 pub const EE_SCREENS_SH_MAP_KIND: u32 = 0x2b;
 /// The terrain tab's paint type check of the shell (`ee_screens_setn_check(form, id)`; answered in Rust).
 pub const EE_SCREENS_SH_TERRAIN_CHECK: u32 = 0x2c;
-/// A new `GEBitmap` of texture `a` on the screen (`gScreenIndex`) -> the bitmap.
+/// A new `GEBitmap` of texture `a` on the screen (`b` 0: `gScreenIndex`, 1: the form's manager's) -> the bitmap.
 pub const EE_SCREENS_SH_NEW_BITMAP: u32 = 0x2d;
 /// The bitmap `a`'s texture coordinates (left, top, right, bottom in `f`).
 pub const EE_SCREENS_SH_BITMAP_COORDS: u32 = 0x2e;
@@ -109,7 +109,7 @@ pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
             normal: Cell::new(0),
             pressed: Cell::new(0),
         }),
-        _ => return None,
+        _ => return crate::screens::shells_tech::make(kind, args),
     })
 }
 

@@ -8767,6 +8767,9 @@ constexpr static const uint32_t EE_SCREENS_SH_SLIDER_MAX = 17;
 /// The form's label of id `a`: `SetText((long)b)`.
 constexpr static const uint32_t EE_SCREENS_SH_LABEL_NUMBER = 18;
 
+/// `GetId()`.
+constexpr static const uint32_t EE_SCREENS_SH_ID = 19;
+
 /// The trigger screen's sub-screen `a`: `RefreshControls()`.
 constexpr static const uint32_t EE_SCREENS_SH_TRIGGER_REFRESH = 64;
 
@@ -8787,6 +8790,189 @@ constexpr static const uint32_t EE_SCREENS_SH_COPY_FIRST_TO_ALL = 69;
 
 /// The brush group `a`'s `mBrushSize = b`.
 constexpr static const uint32_t EE_SCREENS_SH_BRUSH_SIZE = 70;
+
+/// `EESETSShowIDsCheckBox` (a check box with no override).
+constexpr static const uint32_t EE_SCREENS_SK_SHOW_IDS = 32;
+
+/// `EESEBSelect` (a button; args: the font).
+constexpr static const uint32_t EE_SCREENS_SK_SELECT = 33;
+
+/// `EESETab` (a radio button; args: the font).
+constexpr static const uint32_t EE_SCREENS_SK_TAB = 34;
+
+/// `EESERBUnitTypes` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_TYPES = 35;
+
+/// `EESECBMaxPlayer` (a combo box).
+constexpr static const uint32_t EE_SCREENS_SK_MAX_PLAYER = 36;
+
+/// `UIBMap` (a button; args: the map tab).
+constexpr static const uint32_t EE_SCREENS_SK_MAP_BUTTON = 37;
+
+/// `UIRBMap` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_MAP_RADIO = 38;
+
+/// `EEUIFSETRBPaintType` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_PAINT_TYPE = 39;
+
+/// `EEUIFSEMainButton` (a radio button; args: the flag, the texture, the tab, the normal and pressed cells' x, y
+/// as `f32` bits).
+constexpr static const uint32_t EE_SCREENS_SK_MAIN_BUTTON = 40;
+
+/// `EEUIFSEMainButton::CheckDirect()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CHECK_DIRECT = 32;
+
+/// A button's `SetText(UWideString(a: NUL-terminated bytes), (GEFont*)b)` (`UIButton::SetText`, a radio button's too).
+constexpr static const uint32_t EE_SCREENS_SH_BUTTON_TEXT_BYTES = 32;
+
+/// A radio button's four checked and unchecked bitmaps NULL.
+constexpr static const uint32_t EE_SCREENS_SH_CLEAR_RADIO_BITMAPS = 33;
+
+/// The form's string list box of id `a`: `GetLineCount()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_COUNT = 34;
+
+/// The form's string list box of id `a`: `GetCurrentSelection` (-1 when it has none).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_SELECTION = 35;
+
+/// The scenario editor's player combo box's current selection.
+constexpr static const uint32_t EE_SCREENS_SH_EDITOR_PLAYER = 36;
+
+/// `EESEARust(kSEATechTree, NULL, a & 0xffffffff, a >> 32, b & 0xffffffff, b >> 32 != 0)`, run and released.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_TREE_MOVE = 37;
+
+/// The player tab's `SelectPage(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_PLAYER_PAGE = 38;
+
+/// The player tab's `FillTechLists()`.
+constexpr static const uint32_t EE_SCREENS_SH_FILL_TECH_LISTS = 39;
+
+/// The player tab's `SetPlayerCount(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_PLAYER_COUNT = 40;
+
+/// A combo box's list's `GetCurrentSelection` (the value it leaves).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_OF_COMBO_SELECTION = 41;
+
+/// The map tab `a`'s `CreateMap()`.
+constexpr static const uint32_t EE_SCREENS_SH_MAP_CREATE = 42;
+
+/// The map tab's kind check of the shell (`ee_screens_semp_kind(form, id)`; answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_MAP_KIND = 43;
+
+/// The terrain tab's paint type check of the shell (`ee_screens_setn_check(form, id)`; answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_CHECK = 44;
+
+/// A new `GEBitmap` of texture `a` on the screen (`gScreenIndex`) -> the bitmap.
+constexpr static const uint32_t EE_SCREENS_SH_NEW_BITMAP = 45;
+
+/// The bitmap `a`'s texture coordinates (left, top, right, bottom in `f`).
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_COORDS = 46;
+
+/// The bitmap `a`'s `SetXYScale(f[0], f[1])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_SCALE = 47;
+
+/// The bitmap `a`'s `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_RELEASE = 48;
+
+/// The texture `a`'s width and height (`f[0]`, `f[1]`, as floats).
+constexpr static const uint32_t EE_SCREENS_SH_TEXTURE_SIZE = 49;
+
+/// A button's `SetNormalBitmap(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_NORMAL = 50;
+
+/// A button's `SetPressedBitmap(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_SET_PRESSED = 51;
+
+/// A button's `SetBitmapDrawOffset(f[0], f[1])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_OFFSET = 52;
+
+/// The editor's tab selection: `a` 0 posted (`PostSelectEditorTab` with a UI thread, else `SelectTab`), 1 direct
+/// (`SelectTab`); `b` the flag << 32 | the tab.
+constexpr static const uint32_t EE_SCREENS_SH_SELECT_TAB = 53;
+
+/// `EESEUITechListBox` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_TECH_LIST = 64;
+
+/// `AddTech(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_ADD = 64;
+
+/// `Clear()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_CLEAR = 65;
+
+/// `Rebuild()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_REBUILD = 66;
+
+/// `Fill(a, b)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_FILL = 67;
+
+/// `mTechs.size()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_COUNT = 68;
+
+/// `mTechs[a]` (100000 past the end).
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_AT = 69;
+
+/// `mDependents.size()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_MARKED_COUNT = 70;
+
+/// `mDependents[a]`.
+constexpr static const uint32_t EE_SCREENS_SKOP_TECH_MARKED_AT = 71;
+
+/// A list box's `GetCurrentSelection` (-1 when it reports none).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_CURRENT = 80;
+
+/// A list box's visible lines: `ScrollBarExists() ? GetDisplayLine() | (GetNumberLinesDisplayed() + it) << 32 :
+/// GetNumLines() << 32`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_VIEW = 81;
+
+/// A list box's `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_DELETE_ALL = 82;
+
+/// A list box's `AppendLine(UWideString(a: NUL-terminated bytes))`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_APPEND_BYTES = 83;
+
+/// A list box's `GetLineCount()`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_LINE_COUNT = 84;
+
+/// A list box's `SetStartingDisplayLine(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_START_LINE = 85;
+
+/// A list box's `ChangeSelectionIndex(a, false, true)` (virtual).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_SELECT_SCROLL = 86;
+
+/// The form's control of id `a`: `GetIsChecked()` (a check box or radio button).
+constexpr static const uint32_t EE_SCREENS_SH_FORM_CHECKED = 87;
+
+/// The form's control of id `a` (its address).
+constexpr static const uint32_t EE_SCREENS_SH_FORM_CONTROL = 88;
+
+/// The kind's op `b >> 32` with the argument `b & 0xffffffff` on the shell control `a` (answered in Rust).
+constexpr static const uint32_t EE_SCREENS_SH_KIND_OP = 89;
+
+/// `gTechTree.Get(a)`'s string: `b` 0 its unit class's name (`gUnitClassTable[mData->mUnitClass]->mNameStringID`),
+/// 1 its own (`mData->mNameID`) -> the string id.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_NAME_ID = 90;
+
+/// `EETechTreeEpochOf(a)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_EPOCH = 91;
+
+/// `gTechTree.Get(a)->mData->mID`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_DATA_ID = 92;
+
+/// The edited player's tech tree: `b` 0: `Get(a & 0xffffffff)->DependsOn(a >> 32)`; 1:
+/// `Get(a & 0xffffffff)->DependsOn(Get(a >> 32)->mData->mID)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_DEPENDS = 93;
+
+/// The edited player's tech tree: `Get(a)->SetScenEditorObsoleted(b != 0, true)` -> whether its epoch is reached
+/// (`mEpoch <= mCurrentEpoch`).
+constexpr static const uint32_t EE_SCREENS_SH_TECH_OBSOLETE = 94;
+
+/// The edited player's tech tree: `Get(a)->mScenEditorObsoleted`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_OBSOLETED = 95;
+
+/// The player tab's `MarkPlayerChanged(the edited player's id, false)`.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_MARK_PLAYER = 96;
+
+/// The list's blue bars: `a` the lines (u32s), `b` their count (`DrawPolygons`' loop) -> the last draw's result.
+constexpr static const uint32_t EE_SCREENS_SH_TECH_BARS = 97;
 
 /// A slot of the random map's table: the human's, the computer's, or a closed one.
 constexpr static const uint32_t EE_SCREENS_SP_HUMAN = 0;

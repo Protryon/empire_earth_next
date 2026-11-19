@@ -49,9 +49,6 @@
 #include "ee/EESEARust.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERulesWorld.h"
-#include "ee/EEUIFSEMainButton.h"
-#include "ee/EESEBSelect.h"
-#include "ee/EESEUITechListBox.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMiniMap.h"
@@ -70,36 +67,10 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
 extern FSPath* gCivilizationDataPath;
+extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth.cpp's globals)
 UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
 static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTechnologyTechs;
-
-// Creates one of the tech tree page's unit-type radio buttons (Units, Buildings, Heroes, Technologies)
-EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont,
-                                 const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
-                                 UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness,
-                                 bool inIsPushButton, bool inIsChecked)
-    : UIRadioButton(inID, inText, inFont, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
-                    inBorderThickness, inIsPushButton, inIsChecked, false)
-{
-}
-
-// Checks the unit-type button and refills the tech tree page's two tech lists for that type
-void EESERBUnitTypes::Check()
-{
-    UIRadioButton::Check();
-    gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists();
-}
-
-// Applies a new max-players choice: sets the player tab's player count to the selection + 2, then selects it
-void EESECBMaxPlayer::ChangeSelection()
-{
-    unsigned long theSelection;
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->GetForm());
-    this->GetList()->GetCurrentSelection(theSelection);
-    theEditor->GetPlayerScreen()->SetPlayerCount(theSelection + 2);
-    UIComboBox::ChangeSelection();
-}
 
 // The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds its object; the members
 // forward. Its constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
@@ -129,6 +100,15 @@ EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFon
 EESEPlayerScreen::~EESEPlayerScreen()
 {
     ee_screens_sepl_free(this->mRust);
+}
+
+// Returns the player chosen in the player tab's player combo box (its selection + 1 indexes gWorld.mPlayers; once
+// EESEUITechListBox.cpp's COMDAT)
+EEPlayer* EESEPlayerScreen::GetCurrentPlayer()
+{
+    unsigned long theSelection;
+    this->GetPlayerSelection()->GetCurrentSelection(theSelection);
+    return gWorld.mPlayers[theSelection + 1];
 }
 
 void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
@@ -176,17 +156,6 @@ UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
 {
     return static_cast<UIComboBox*>(ee_screens_sepl_control(
         this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
-}
-
-// Creates the max-players combo box, 20 pixels high
-EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType,
-                                 const std::vector<UWideString>& inStrings, GEFont* inFont,
-                                 const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inMaxListBoxHeight,
-                                 UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars,
-                                 unsigned long inBorderThickness)
-    : UIComboBox(inID, inTextBoxType, inStrings, inFont, GERectangle(inLocation, (float)inWidth, 20.0f),
-                 inMaxListBoxHeight, inForm, inIndex, inMaxChars, inBorderThickness)
-{
 }
 
 // Creates a 23x23 diplomacy grid button, starting as enemies (state 1)
@@ -416,8 +385,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         std::vector<UWideString> theLines(15);
         for (long i = 2; i <= 16; ++i)
             theLines[i - 2] = SeplText(c.text, c.string, i);
-        EESECBMaxPlayer* t = new EESECBMaxPlayer(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w,
-                                                 theFont->GetHeight() << 4, inForm, c.index, 0, 2);
+        UIComboBox* t = new EEUIShellCombo(EE_SCREENS_SK_MAX_PLAYER, {}, c.id, 1, theLines, theFont,
+                                           GERectangle(theLocation, (float)(unsigned long)c.w, 20.0f),
+                                           theFont->GetHeight() << 4, inForm, c.index, 0, 2);
         if (theFg) SeplYellow(t->GetGEText());
         t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
         if (c.bg2 >= 0.0f) t->SetTextBoxBgOpacity(c.bg2);
@@ -448,8 +418,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         break;
     }
     case EE_SCREENS_SEPL_UNIT_TYPE: {
-        EESERBUnitTypes* t = new EESERBUnitTypes(c.id, theText, theFont, theLocation, (unsigned long)c.w,
-                                                 (unsigned long)c.h, inForm, c.index, 0, false, c.extra[0] != 0);
+        UIRadioButton* t = new EEUIShellRadio(EE_SCREENS_SK_UNIT_TYPES, {}, c.id, theText, theFont,
+                                              GERectangle(theLocation, (float)(unsigned long)c.w, (float)(unsigned long)c.h),
+                                              inForm, c.index, 0, false, c.extra[0] != 0, false);
         if (c.bg >= 0.0f) t->GetTextLabel()->SetBgOpacity(c.bg);
         if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
         theControl = t;
@@ -457,8 +428,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     }
     case EE_SCREENS_SEPL_TECH_LIST: {
         std::vector<UWideString> theNone;
-        EESEUITechListBox* t = new EESEUITechListBox(c.id, theNone, theFont, false, theLocation, (unsigned long)c.w,
-                                                     (unsigned long)c.h, inForm, c.index, 3);
+        UILBString* t = new EEUIShellList(EE_SCREENS_SK_TECH_LIST, {}, c.id, theNone, theFont, false,
+                                          GERectangle(theLocation, (float)(unsigned long)c.w, (float)(unsigned long)c.h),
+                                          inForm, c.index, 3);
         if (theFg) SeplYellow(t->GetGEText());
         t->SetScrollBarBgOpacity(c.bg2);
         t->SetBgOpacity(c.bg);
@@ -466,11 +438,14 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         break;
     }
     case EE_SCREENS_SEPL_SELECT:
-        theControl = new EESEBSelect(c.id, theLocation, inForm, theFont, c.index);
+        theControl = new EEUIShellButton(EE_SCREENS_SK_SELECT, {(int64_t)theFont}, c.id, NULL, NULL, NULL,
+                                         GERectangle(theLocation, 40.0f, 25.0f), inForm, c.index, 3);
         theControl->SetBgOpacity(c.bg);
         break;
     case EE_SCREENS_SEPL_TAB:
-        theControl = new EESETab(c.id, theLocation, theFont, inForm, c.index, c.extra[0] != 0);
+        theControl = new EEUIShellRadio(EE_SCREENS_SK_TAB, {(int64_t)theFont}, c.id, UWideString(""), theFont,
+                                        GERectangle(theLocation, 150.0f, 25.0f), inForm, c.index, 3, true,
+                                        c.extra[0] != 0, false);
         theControl->SetBgOpacity(c.bg);
         break;
     case EE_SCREENS_SEPL_SET_PLAYERS:   // 100x25, its text the font's
@@ -804,7 +779,7 @@ void SeplTechTypes()
 
 // both tech lists for the player combo's player and the list inWhich (FillTechLists 0x5760ad): editor-visible
 // techs go to the enabled list, or to the disabled one when obsoleted in the editor
-void SeplFillTechs(EESEUITechListBox* inList, EESEUITechListBox* inOther, UIComboBox* inPlayer, int32_t inWhich)
+void SeplFillTechs(UIControl* inList, UIControl* inOther, UIComboBox* inPlayer, int32_t inWhich)
 {
     unsigned long theSelection;
     inPlayer->GetCurrentSelection(theSelection);
@@ -812,20 +787,16 @@ void SeplFillTechs(EESEUITechListBox* inList, EESEUITechListBox* inOther, UIComb
     std::vector<long>* theLists[4] = {&sSeplV531FB0, &sSeplBuildingTechs,
                                       &sSeplV531F88, &sSeplTechnologyTechs};
     std::vector<long>* theTechs = theLists[inWhich];
-    inOther->Clear();
-    inList->Clear();
+    EEUIShell::Op(inOther, EE_SCREENS_SKOP_TECH_CLEAR);
+    EEUIShell::Op(inList, EE_SCREENS_SKOP_TECH_CLEAR);
     unsigned long theCount = theTechs->size();
-    inOther->mTechs.reserve(theCount);
-    inList->mTechs.reserve(theCount);
     for (unsigned long i = 0; i < theCount; i++) {
         EETechTreeNode* theNode = theTree->Get((*theTechs)[i]);
-        if (theNode->mData->mShowInEditor == true) {
-            if (theNode->mScenEditorObsoleted) inOther->AddTech((*theTechs)[i]);
-            else inList->AddTech((*theTechs)[i]);
-        }
+        if (theNode->mData->mShowInEditor == true)
+            EEUIShell::Op(theNode->mScenEditorObsoleted ? inOther : inList, EE_SCREENS_SKOP_TECH_ADD, (*theTechs)[i]);
     }
-    inList->Rebuild();
-    inOther->Rebuild();
+    EEUIShell::Op(inList, EE_SCREENS_SKOP_TECH_REBUILD);
+    EEUIShell::Op(inOther, EE_SCREENS_SKOP_TECH_REBUILD);
 }
 
 }   // namespace
@@ -893,7 +864,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPL_OP_SET_LOCATION: c->SetLocation(GE2DPoint(f[0], f[1])); return 0;
     case EE_SCREENS_SEPL_OP_RADIO_CHECK: static_cast<UIRadioButton*>(c)->Check(); return 0;
-    case EE_SCREENS_SEPL_OP_RADIO_CHECKED: return static_cast<EESERBUnitTypes*>(c)->GetIsChecked();
+    case EE_SCREENS_SEPL_OP_RADIO_CHECKED: return static_cast<UIRadioButton*>(c)->GetIsChecked();
     case EE_SCREENS_SEPL_OP_EVENT: {
         UIEvent* theEvent = NULL;
         switch (i[1]) {
@@ -930,12 +901,12 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SEPL_OP_TECH_TYPES: SeplTechTypes(); return 0;
     case EE_SCREENS_SEPL_OP_FILL_TECHS:
-        SeplFillTechs(static_cast<EESEUITechListBox*>(p[0]), static_cast<EESEUITechListBox*>(p[1]),
+        SeplFillTechs(static_cast<UIControl*>(p[0]), static_cast<UIControl*>(p[1]),
                       static_cast<UIComboBox*>(p[2]), i[0]);
         return 0;
     case EE_SCREENS_SEPL_OP_REBUILD_TECHS:
-        static_cast<EESEUITechListBox*>(p[0])->Rebuild();
-        static_cast<EESEUITechListBox*>(p[1])->Rebuild();
+        EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_TECH_REBUILD);
+        EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_TECH_REBUILD);
         return 0;
     case EE_SCREENS_SEPL_OP_PLAYER_GET: return SeplPlayer(false, i, f);
     case EE_SCREENS_SEPL_OP_PLAYER_SET: return SeplPlayer(true, i, f);

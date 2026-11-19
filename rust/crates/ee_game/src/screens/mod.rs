@@ -314,6 +314,7 @@ pub mod shells;
 #[cfg(not(test))]
 mod shells_ffi;
 pub mod shells_editor;
+pub mod shells_tech;
 pub mod single_player;
 mod single_player_ffi;
 pub mod splash;

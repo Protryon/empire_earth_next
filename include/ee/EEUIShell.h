@@ -188,6 +188,14 @@ public:
     }
     // EEUIFMGErrorLog's (the main form's error strings)
     void SetLine(unsigned long inIndex, const UWideString& inLine) { this->mData[inIndex] = inLine; this->SetDirty(true); }
+    // the visible lines (first | end << 32: EESEUITechListBox::CopyData's range)
+    int64_t View()
+    {
+        if (this->ScrollBarExists())
+            return (int64_t)this->GetDisplayLine() | (int64_t)(this->GetNumberLinesDisplayed() + this->GetDisplayLine()) << 32;
+        return (int64_t)this->GetNumLines() << 32;
+    }
+    long DrawBars(const uint32_t* inLines, size_t inCount);   // EESEUITechListBox::DrawPolygons' blue bars
     EE_SHELL_COMMON(UILBString)
     EE_SHELL_VOID(UILBString, ButtonUp, EE_SCREENS_SV_BUTTON_UP)
     virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)

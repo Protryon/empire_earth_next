@@ -193,11 +193,6 @@ long EESEUITerrainTypeLB::DrawTextA()
 
 // Checks the paint type button and shows (terrain) or hides (bulldozer) the terrain type, color and preview controls
 // (editor_terrain.rs)
-void EEUIFSETRBPaintType::Check()
-{
-    UIRadioButton::Check();
-    ee_screens_setn_check(this->GetForm(), (uint32_t)this->GetId());
-}
 
 // Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer
 // (editor_terrain.rs)
@@ -236,15 +231,6 @@ EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes
 }
 
 // Creates a paint type radio button 125 wide and as tall as the larger of its font and the radio button image
-EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& inText,
-    const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm, unsigned long inIndex, bool inChecked)
-    : UIRadioButton(inID, inText, inFont,
-        GERectangle(inLocation, 125.0f,
-            (float)inFont->GetHeight() < inForm->GetManager()->GetRadioOn()->GetHeight()
-                ? inForm->GetManager()->GetRadioOn()->GetHeight() : (float)inFont->GetHeight()),
-        inForm, inIndex, 0, false, inChecked, false)
-{
-}
 
 // Destroys the terrain tab and its controls and releases the terrain previews (editor_terrain.rs)
 EEUIFSETerrain::~EEUIFSETerrain()
@@ -357,8 +343,12 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SETN_OP_RADIO: {
         UWideString theText;
         gResource->GetString(i[1], theText);
-        EEUIFSETRBPaintType* t = new EEUIFSETRBPaintType((unsigned long)i[0], theText, GE2DPoint(f[0], f[1]),
-                                                         gSeplScreenFont, theForm, (unsigned long)i[2], i[3] != 0);
+        UIRadioButton* t = new EEUIShellRadio(
+            EE_SCREENS_SK_PAINT_TYPE, {}, (unsigned long)i[0], theText, gSeplScreenFont,
+            GERectangle(GE2DPoint(f[0], f[1]), 125.0f,
+                        (float)gSeplScreenFont->GetHeight() < theForm->GetManager()->GetRadioOn()->GetHeight()
+                            ? theForm->GetManager()->GetRadioOn()->GetHeight() : (float)gSeplScreenFont->GetHeight()),
+            theForm, (unsigned long)i[2], 0, false, i[3] != 0, false);
         t->GetTextLabel()->SetBgOpacity(0.4f);
         SetnYellow(t->GetTextLabel()->GetGEText());
         *theOut = static_cast<UIControl*>(t);

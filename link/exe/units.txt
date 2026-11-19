@@ -117,7 +117,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 16ff5f 1705a2 Empire Earth/Scenario Editor/EESEIAExport.cpp
 1705a2 172125 Empire Earth/Scenario Editor/EESEInstructions.cpp
 172125 172b0f Empire Earth/Scenario Editor/EESELoadThread.cpp
-172d2c 173218 Empire Earth/Scenario Editor/EESEBSelect.cpp
 173218 17acf6 Empire Earth/Scenario Editor/EESERBUnitTypes.cpp
 17b0b7 17ccf3 Empire Earth/Scenario Editor/EESETriggerScreen.cpp
 17ccf3 17daa8 Empire Earth/Scenario Editor/EESETSArea.cpp
@@ -125,12 +124,10 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
-19764b 199afd Empire Earth/Scenario Editor/EESEUITechListBox.cpp
 199afd 19cc39 Empire Earth/Scenario Editor/EESEUnit.cpp
 19cc39 1a0315 Empire Earth/Scenario Editor/EEUIFScenarioEditor.cpp
 1a0315 1a098e Empire Earth/Scenario Editor/EEUIEOpenCivBuilder.cpp
 1a098e 1a1397 Empire Earth/Scenario Editor/EEUIFSEElevation.cpp
-1a147f 1a18f1 Empire Earth/Scenario Editor/EEUIFSEMainButton.cpp
 1a18f1 1a3f10 Empire Earth/Scenario Editor/EEUIFSEMap.cpp
 1a3f10 1a4470 Empire Earth/Scenario Editor/EEUIFSEPaint.cpp
 1a4470 1a4c00 Empire Earth/Scenario Editor/EEUIFSEPaintElevation.cpp

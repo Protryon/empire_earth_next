@@ -38,6 +38,9 @@ impl ShellHost for CppHost {
                 crate::screens::editor_terrain_ffi::ee_screens_setn_check(form(), a as u32);
                 0
             },
+            crate::screens::shells_tech::EE_SCREENS_SH_KIND_OP => {
+                op_of(a as Cpp, (b >> 32) as u32, b & 0xffff_ffff, 0).unwrap_or(0)
+            }
             // SAFETY: the shell's live control; the host's float buffer is four floats
             _ => unsafe { sys::ee_screenscpp_shell(ctl, op, a, b, f.as_mut_ptr()) },
         }

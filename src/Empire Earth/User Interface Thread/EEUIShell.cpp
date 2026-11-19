@@ -30,6 +30,23 @@
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESETSObject.h"
 #include "ee/EESEPlayerScreen.h"
+#include "lle/GEBitmap.h"
+#include "lle/GESurface.h"
+#include "lle/GETexture.h"
+#include "lle/GETextureCoordinate.h"
+#include "lle/GEScreen.h"
+#include "lle/GEViewport.h"
+#include "lle/GEVertexArray.h"
+#include "lle/GERasterizer.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
+#include "ee/EEPlayer.h"
+#include "ee/EEUnit.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EETechTreeTechID.h"
+#include "ee/EEUserInterface.h"
+#include "ee/EESEARust.h"
+#include "ee/EEUIFSEMap.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -98,6 +115,30 @@ int64_t EEUIShellSlider::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, 
     case EE_SCREENS_SV_CHANGE_RANGE: UISlider::ChangeRange((unsigned long)inA); return 0;
     }
     return 0;
+}
+
+// a blue bar behind each line inLines names (EESEUITechListBox::DrawPolygons) -> the last draw's result
+long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
+{
+    GERhombus theRhombus;
+    GERectangle theRectangle;
+    long theResult = kErrorOK;
+    theRhombus.SetColor(GEColor(0.0f, 0.0f, 1.0f));
+    theRectangle.SetLeft(this->GetCopyTextRectangle().GetLeft());
+    theRectangle.SetRight(this->GetCopyTextRectangle().GetRight());
+    for (size_t i = 0; i < inCount; i++) {
+        theRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(inLines[i] * this->GetLineHeight()));
+        theRectangle.SetBottom(theRectangle.GetTop() + (float)this->GetLineHeight());
+        theRhombus.SetRectangle(theRectangle);
+        theResult = this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
+    }
+    return theResult;
+}
+
+// the edited player's tech tree (the player tab's player)
+static EETechTree* EEShellTree()
+{
+    return gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
 }
 
 // the control's text (inWhich 0: its own GEText, 1: its label's)
@@ -169,6 +210,118 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_LABEL_NUMBER:
         static_cast<UITextLabel*>(c->GetForm()->GetControlById((unsigned long)a))->SetText((long)b);
         break;
+    case EE_SCREENS_SH_BUTTON_TEXT_BYTES:
+        static_cast<UIButton*>(c)->SetText(UWideString(reinterpret_cast<const char*>(a)), reinterpret_cast<GEFont*>(b));
+        break;
+    case EE_SCREENS_SH_CLEAR_RADIO_BITMAPS: {
+        UIRadioButton* r = static_cast<UIRadioButton*>(c);
+        r->SetDownCheckedBitmap(NULL);
+        r->SetUpCheckedBitmap(NULL);
+        r->SetDownUncheckedBitmap(NULL);
+        r->SetUpUncheckedBitmap(NULL);
+        break;
+    }
+    case EE_SCREENS_SH_LIST_COUNT:
+        return static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a))->GetLineCount();
+    case EE_SCREENS_SH_LIST_SELECTION: {
+        unsigned long s;
+        UIListBox<UWideString>* l = static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a));
+        return l->GetCurrentSelection(s) != 0 ? -1 : (int64_t)s;
+    }
+    case EE_SCREENS_SH_EDITOR_PLAYER: {
+        unsigned long s;
+        gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(s);
+        return (int64_t)s;
+    }
+    case EE_SCREENS_SH_TECH_TREE_MOVE:
+        (new EESEARust(kSEATechTree, NULL, (int32_t)(uint32_t)a, (int32_t)(uint32_t)(a >> 32), (int32_t)(uint32_t)b,
+                       (b >> 32) != 0))->Dereference();
+        break;
+    case EE_SCREENS_SH_PLAYER_PAGE:
+        static_cast<EESEPlayerScreen*>(static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))
+            ->SelectPage(a);
+        break;
+    case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists(); break;
+    case EE_SCREENS_SH_SET_PLAYER_COUNT:
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetPlayerScreen()->SetPlayerCount((unsigned long)a);
+        break;
+    case EE_SCREENS_SH_LIST_OF_COMBO_SELECTION: {
+        unsigned long s;
+        const_cast<UILBString*>(static_cast<UIComboBox*>(c)->GetListBox())->GetCurrentSelection(s);
+        return (int64_t)s;
+    }
+    case EE_SCREENS_SH_MAP_CREATE: reinterpret_cast<EEUIFSEMap*>(a)->CreateMap(); break;
+    case EE_SCREENS_SH_NEW_BITMAP: {
+        GEBitmap* theBitmap = new GEBitmap;
+        theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), gScreenIndex);
+        return (int64_t)theBitmap;
+    }
+    case EE_SCREENS_SH_BITMAP_COORDS:
+        reinterpret_cast<GEBitmap*>(a)->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]),
+                                                               GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
+        break;
+    case EE_SCREENS_SH_BITMAP_SCALE: reinterpret_cast<GEBitmap*>(a)->SetXYScale(f[0], f[1]); break;
+    case EE_SCREENS_SH_BITMAP_RELEASE: reinterpret_cast<GEBitmap*>(a)->Dereference(); break;
+    case EE_SCREENS_SH_TEXTURE_SIZE:
+        f[0] = (float)reinterpret_cast<GETexture*>(a)->GetWidth();
+        f[1] = (float)reinterpret_cast<GETexture*>(a)->GetHeight();
+        break;
+    case EE_SCREENS_SH_SET_NORMAL: static_cast<UIButton*>(c)->SetNormalBitmap(reinterpret_cast<GEBitmap*>(a)); break;
+    case EE_SCREENS_SH_SET_PRESSED: static_cast<UIButton*>(c)->SetPressedBitmap(reinterpret_cast<GEBitmap*>(a)); break;
+    case EE_SCREENS_SH_BITMAP_OFFSET: static_cast<UIButton*>(c)->SetBitmapDrawOffset(GE2DPoint(f[0], f[1])); break;
+    case EE_SCREENS_SH_SELECT_TAB: {
+        EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(c->GetForm());
+        if (a == 0 && gUserInterface)
+            gUserInterface->PostSelectEditorTab((unsigned char)(b >> 32), (long)(int32_t)b);
+        else
+            theEditor->SelectTab((unsigned char)(b >> 32), (long)(int32_t)b);
+        break;
+    }
+    // the tech lists' (EESEUITechListBox)
+    case EE_SCREENS_SH_LIST_CURRENT: {
+        unsigned long s;
+        long r = static_cast<UILBString*>(c)->GetCurrentSelection(s);
+        return a != 0 || r == kErrorOK ? (int64_t)s : -1;
+    }
+    case EE_SCREENS_SH_LIST_VIEW: return static_cast<EEUIShellList*>(c)->View();
+    case EE_SCREENS_SH_LIST_DELETE_ALL: static_cast<UILBString*>(c)->DeleteAllEntries(); break;
+    case EE_SCREENS_SH_LIST_APPEND_BYTES:
+        static_cast<UILBString*>(c)->AppendLine(UWideString(reinterpret_cast<const char*>(a)));
+        break;
+    case EE_SCREENS_SH_LIST_LINE_COUNT: return static_cast<UILBString*>(c)->GetLineCount();
+    case EE_SCREENS_SH_LIST_START_LINE: static_cast<UILBString*>(c)->SetStartingDisplayLine((unsigned long)a); break;
+    case EE_SCREENS_SH_LIST_SELECT_SCROLL: static_cast<UILBString*>(c)->ChangeSelectionIndex((unsigned long)a, false, true); break;
+    case EE_SCREENS_SH_FORM_CHECKED: {
+        UIControl* theControl = c->GetForm()->GetControlById((unsigned long)a);
+        if (UIRadioButton* r = dynamic_cast<UIRadioButton*>(theControl))
+            return r->GetIsChecked();
+        return static_cast<UICheckBox*>(theControl)->GetIsChecked();
+    }
+    case EE_SCREENS_SH_FORM_CONTROL: return (int64_t)c->GetForm()->GetControlById((unsigned long)a);
+    case EE_SCREENS_SH_TECH_NAME_ID: {
+        EETechTreeNode* theNode = gTechTree.Get((long)a);
+        return b != 0 ? theNode->mData->mNameID : gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID;
+    }
+    case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
+    case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
+    case EE_SCREENS_SH_TECH_DEPENDS: {
+        EETechTree* theTree = EEShellTree();
+        long theOn = (long)(int32_t)(a >> 32);
+        if (b != 0)
+            theOn = theTree->Get(theOn)->mData->mID;
+        return theTree->Get((long)(int32_t)(uint32_t)a)->DependsOn(theOn);
+    }
+    case EE_SCREENS_SH_TECH_OBSOLETE: {
+        EETechTree* theTree = EEShellTree();
+        theTree->Get((long)a)->SetScenEditorObsoleted(b != 0, true);
+        return theTree->Get((long)a)->mEpoch <= theTree->mCurrentEpoch;
+    }
+    case EE_SCREENS_SH_TECH_OBSOLETED: return EEShellTree()->Get((long)a)->mScenEditorObsoleted;
+    case EE_SCREENS_SH_TECH_MARK_PLAYER:
+        gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->MarkPlayerChanged(EEShellTree()->GetPlayer()->mPlayerID, false);
+        break;
+    case EE_SCREENS_SH_TECH_BARS:
+        return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
     // the game's
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->mScreens[a]->RefreshControls(); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;
