@@ -4,6 +4,16 @@
 //! arrays (`vertarr.rs`). A module of its own so that its header (rust/render/geval.h) is small and names only
 //! ee_base's math: every C++ unit includes it. `ge` re-exports the modules under their old paths.
 
+// the C++'s shapes are kept on purpose (as in `ge`): its comparisons, its operand order, its index loops
+#![allow(
+    clippy::approx_constant,
+    clippy::excessive_precision,
+    clippy::neg_cmp_op_on_partial_ord,
+    clippy::manual_range_contains,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop
+)]
+
 pub mod io;
 pub mod values;
 pub mod vertarr;
