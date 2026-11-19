@@ -236,6 +236,39 @@ static bool EEHerdGiveGoal(EEComplexUnit* inUnit, EEUGRust* inGoal, bool inKeepC
     return false;
 }
 
+// The area operations of the random point (EETown::GetRandomPoint 0xac203, the herd's by ICF; ee_sim::cp herd.rs
+// random_area_point) and of the herd: an area's hull, the map, the draws
+extern "C" int64_t ee_cp_area_host(void* inArea, int32_t inOp, EeHerdIo* io)
+{
+    EEAIArea* me = static_cast<EEAIArea*>(inArea);
+    const int64_t* v = io->v;
+    switch (inOp) {
+    case EE_CP_HERD_RANDOM_LONG:
+        return gPhysics->GetRandom((long)v[0], (long)v[1]);
+    case EE_CP_HERD_HULL_CONTAINS:
+        return me->HullContains(U2DPoint<long>((long)v[0], (long)v[1])) ? 1 : 0;
+    case EE_CP_HERD_HULL_BOUNDS: {
+        const U2DRectangle<long>& theBounds = me->GetHullBounds();
+        io->v[0] = theBounds.mBottom;
+        io->v[1] = theBounds.mLeft;
+        io->v[2] = theBounds.mRight;
+        io->v[3] = theBounds.mTop;
+        return 0;
+    }
+    case EE_CP_HERD_BASE_POINT: {
+        U2DPoint<long> thePoint = me->EEAIArea::GetRandomPoint();
+        io->v[0] = thePoint.mX;
+        io->v[1] = thePoint.mY;
+        return 0;
+    }
+    case EE_CP_HERD_MAP_TILE_AT:
+        return gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])) != NULL ? 1 : 0;
+    case EE_CP_HERD_HAS_MAP:
+        return gWorld.mMap != NULL ? 1 : 0;
+    }
+    return 0;
+}
+
 extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uint64_t inB, EeHerdIo* io)
 {
     EEHerd* me = static_cast<EEHerd*>(inHerd);
@@ -295,8 +328,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_SET_GROW_TIME:
         theUnit->SetGrowTime((unsigned long)v[0]);
         return 0;
-    case EE_CP_HERD_RANDOM_LONG:
-        return gPhysics->GetRandom((long)v[0], (long)v[1]);
     case EE_CP_HERD_RANDOM_FLOAT:
         io->f[0] = gPhysics->GetRandom(io->f[0], io->f[1]);
         return 0;
@@ -346,31 +377,15 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     }
     case EE_CP_HERD_NUM_TILES:
         return me->GetNumTiles();
-    case EE_CP_HERD_HULL_CONTAINS:
-        return me->HullContains(U2DPoint<long>((long)v[0], (long)v[1])) ? 1 : 0;
     case EE_CP_HERD_CLOSEST_HULL: {
         U2DPoint<long> thePoint = me->GetClosestHullPoint(U2DPoint<long>((long)v[0], (long)v[1]));
         io->v[0] = thePoint.mX;
         io->v[1] = thePoint.mY;
         return 0;
     }
-    case EE_CP_HERD_HULL_BOUNDS: {
-        const U2DRectangle<long>& theBounds = me->GetHullBounds();
-        io->v[0] = theBounds.mBottom;
-        io->v[1] = theBounds.mLeft;
-        io->v[2] = theBounds.mRight;
-        io->v[3] = theBounds.mTop;
-        return 0;
-    }
     case EE_CP_HERD_HULL_DISTANCE:
         io->f[0] = reinterpret_cast<EEHerd*>((uintptr_t)inA)->GetHullDistanceSquared(reinterpret_cast<EEHerd*>((uintptr_t)inB));
         return 0;
-    case EE_CP_HERD_BASE_POINT: {
-        U2DPoint<long> thePoint = me->EEAIArea::GetRandomPoint();
-        io->v[0] = thePoint.mX;
-        io->v[1] = thePoint.mY;
-        return 0;
-    }
     case EE_CP_HERD_TILES: {
         std::vector<U2DPoint<long> > theTiles;
         me->GetTileSet().BuildPointList(theTiles, 1);
@@ -493,10 +508,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_MAP_TILE:
         return gWorld.mMap->GetTile((long)v[0], (long)v[1]) != NULL ? 1 : 0;
-    case EE_CP_HERD_MAP_TILE_AT:
-        return gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])) != NULL ? 1 : 0;
-    case EE_CP_HERD_HAS_MAP:
-        return gWorld.mMap != NULL ? 1 : 0;
     case EE_CP_HERD_MAP_Z:
         io->f[0] = gWorld.mMap->mTerrainMesh.GetZ((long)v[0], (long)v[1]);
         return 0;
@@ -570,5 +581,5 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     case EE_CP_HERD_ANIMAL_ON_MAP:
         return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
     }
-    return 0;
+    return ee_cp_area_host(static_cast<EEAIArea*>(me), inOp, io);
 }

@@ -517,6 +517,75 @@ constexpr static const int32_t EE_CP_STATE_PUSH_ZONE = 422;
 /// A loaded player `index` with no zones yet (the original's `push_back` of an empty list).
 constexpr static const int32_t EE_CP_STATE_PUSH_PLAYER = 423;
 
+/// unit `a` into `io.v` (the fields of [`EeTownUnit`] in order: influence, wonder, wall, type, area x, area y, player)
+constexpr static const int32_t EE_CP_TOWN_UNIT = 101;
+
+/// `EETown::IsTownUnit(a)`
+constexpr static const int32_t EE_CP_TOWN_IS_TOWN_UNIT = 102;
+
+/// the town's `mPlayer`
+constexpr static const int32_t EE_CP_TOWN_PLAYER = 103;
+
+/// `GetNumTiles()`
+constexpr static const int32_t EE_CP_TOWN_NUM_TILES = 104;
+
+/// `HullContains((v0, v1))`
+constexpr static const int32_t EE_CP_TOWN_HULL_CONTAINS = 105;
+
+/// the hull's points (pushed)
+constexpr static const int32_t EE_CP_TOWN_HULL_POINTS = 106;
+
+/// `GetTileSet().Insert((v0, v1))`
+constexpr static const int32_t EE_CP_TOWN_TILE_INSERT = 107;
+
+/// `GetTileSet().Contains((v0, v1))`
+constexpr static const int32_t EE_CP_TOWN_TILE_CONTAINS = 108;
+
+/// `GetTileSet().Remove((v0, v1))`
+constexpr static const int32_t EE_CP_TOWN_TILE_REMOVE = 109;
+
+/// `GetTileSet().BuildPointList(points, 1)` of town `a` (0: this one), pushed
+constexpr static const int32_t EE_CP_TOWN_TILES = 110;
+
+/// `Create` (the area's) over the input points
+constexpr static const int32_t EE_CP_TOWN_CREATE = 111;
+
+/// `SetHullPoints` over the input points
+constexpr static const int32_t EE_CP_TOWN_SET_HULL = 112;
+
+constexpr static const int32_t EE_CP_TOWN_CLEAR_HULL = 113;
+
+/// `GetClosestHullPoint((v0, v1))` into `v0`, `v1`
+constexpr static const int32_t EE_CP_TOWN_CLOSEST_HULL = 114;
+
+/// `gContinentManager.GetContinentID(v0, v1)`
+constexpr static const int32_t EE_CP_TOWN_CONTINENT_AT = 115;
+
+/// `gContinentManager.GetConnectedIDs(ids, v0)` (pushed)
+constexpr static const int32_t EE_CP_TOWN_CONNECTED = 116;
+
+/// continent `v0` (`GetContinentFromID`): -1 none, else its category, and when `v1` its `GetClosestPoints(this
+/// town)`: found into `v2`, the points into `v3..v6`
+constexpr static const int32_t EE_CP_TOWN_CONTINENT = 117;
+
+/// whether the town has a patrol group
+constexpr static const int32_t EE_CP_TOWN_HAS_PATROL = 118;
+
+/// `FindPatrolGroup` (0xac116: a group of an own path point on a hull vertex, referenced)
+constexpr static const int32_t EE_CP_TOWN_FIND_PATROL = 119;
+
+/// a new town patrol group (`mIsTownPatrol`), added to the owner
+constexpr static const int32_t EE_CP_TOWN_NEW_PATROL = 120;
+
+/// the patrol group's points set to the input points for the owner
+constexpr static const int32_t EE_CP_TOWN_SET_PATROL = 121;
+
+/// the patrol group dereferenced and cleared
+constexpr static const int32_t EE_CP_TOWN_DROP_PATROL = 122;
+
+/// `gLoadingSavedGame` (bit 0), `gWorldClearing` (bit 1)
+constexpr static const int32_t EE_CP_TOWN_FLAGS = 123;
+
 /// The table (the C++ shim's `mTable`).
 struct EeCpInfluence;
 
@@ -1065,6 +1134,37 @@ struct EeCpPlaceResult {
   int32_t x;
   int32_t y;
   int32_t gap;
+};
+
+/// One host operation's values.
+struct TownIo {
+  int64_t v[8];
+  /// the points an operation reads (x, y pairs)
+  const int64_t *input;
+  size_t input_len;
+  /// the list an operation pushes onto (`ee_cp_herd_push`: four values a row)
+  void *list;
+};
+
+/// `EETown`'s counters, continent, reach and flags (+0x70 .. +0x99 in the original).
+struct EeTownFields {
+  /// +0x70 the town's continent (the first tile's)
+  uint16_t mContinent;
+  /// +0x74 the town id (the constructor's)
+  long mTownID;
+  /// +0x78 the buildings' influence (walls a tenth)
+  unsigned long mValue;
+  long mNumWalls;
+  /// +0x80 the buildings that count (not walls or wonders)
+  long mL80;
+  long mNumWonders;
+  long mNumDocks;
+  long mNumAirports;
+  long mNumUnits;
+  /// +0x94 the reach (squared tiles) a building may stand from the hull and join
+  long mReach;
+  bool mNearWater;
+  bool mNearMapEdge;
 };
 
 extern "C" {
@@ -1831,6 +1931,76 @@ int32_t ee_cp_pending_epoch(const EeCpPlaceCtx *ctx);
 /// # Safety
 /// As [`ee_cp_work_out_population`].
 bool ee_cp_avoids_enemies(const EeCpPlaceCtx *ctx, uint64_t unit);
+
+/// The town's world (EETown.cpp): `town` the `EETown*`.
+extern int64_t ee_cp_town_host(void *town, int32_t op, uint64_t a, uint64_t b, TownIo *io);
+
+/// An area's operations the random point asks (EEHerd.cpp): `area` the `EEAIArea*`.
+extern int64_t ee_cp_area_host(void *area, int32_t op, EeHerdIo *io);
+
+/// `EETown::AddUnit`.
+///
+/// # Safety
+/// As `with`; `unit` a live `EEUnit*`.
+bool ee_cp_town_add_unit(void *town, void *area, EeTownFields *f, uint64_t unit);
+
+/// `EETown::RemoveUnit`.
+///
+/// # Safety
+/// As [`ee_cp_town_add_unit`].
+bool ee_cp_town_remove_unit(void *town, void *area, EeTownFields *f, uint64_t unit);
+
+/// `EETown::CanTake`.
+///
+/// # Safety
+/// As [`ee_cp_town_add_unit`].
+bool ee_cp_town_can_take(void *town, void *area, EeTownFields *f, uint64_t unit);
+
+/// `EETown::AddTile`.
+///
+/// # Safety
+/// As `with`.
+bool ee_cp_town_add_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
+
+/// `EETown::RemoveHullTile`.
+///
+/// # Safety
+/// As `with`.
+bool ee_cp_town_remove_hull_tile(void *town, void *area, EeTownFields *f, int64_t x, int64_t y);
+
+/// `EETown::Merge` of the town `other` (its record `o`).
+///
+/// # Safety
+/// As `with`; `other` a live `EETown*` with its record `o`.
+void ee_cp_town_merge(void *town,
+                      void *area,
+                      EeTownFields *f,
+                      uint64_t other,
+                      const EeTownFields *o);
+
+/// `EETown::Reset`.
+///
+/// # Safety
+/// As `with`.
+void ee_cp_town_reset(void *town, void *area, EeTownFields *f);
+
+/// `EETown::UpdateNearWater`.
+///
+/// # Safety
+/// As `with`.
+bool ee_cp_town_update_near_water(void *town, void *area, EeTownFields *f);
+
+/// `EETown::RefreshPatrolGroup`.
+///
+/// # Safety
+/// As `with`.
+void ee_cp_town_refresh_patrol_group(void *town, void *area, EeTownFields *f);
+
+/// `EETown::GetRandomPoint` into `out`.
+///
+/// # Safety
+/// As `with`; `out` a live point.
+void ee_cp_town_random_point(void *town, void *area, EeTownFields *f, EeHerdPoint *out);
 
 }  // extern "C"
 

@@ -16,6 +16,8 @@
 //! - `legacy_load`: the readers that step over a retail file's deleted C++ manager blocks (`EECPLegacyLoad.cpp`);
 //! - `herd`: `EEHerd` whole (its members as the record the class derives from, its lists, every body) over
 //!   [`herd::HerdHost`]; `herd_game`: its game host and C ABI;
+//! - `town`: `EETown`'s bodies (its counters as the record the class derives from) over [`town::TownHost`];
+//!   `town_game`: its game host and C ABI;
 //! - `ffi`: the C ABI the C++ calls (`rust/sim/cp.h`).
 
 pub mod events;
@@ -42,3 +44,7 @@ pub mod resource_center;
 mod resource_center_tests;
 pub mod save;
 pub mod timers;
+pub mod town;
+pub mod town_game;
+#[cfg(test)]
+mod town_tests;
