@@ -987,3 +987,13 @@ extern "C" void ee_units_host_hack_create_building(int32_t inUnitType, int64_t i
             gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
     }
 }
+
+// TEST ONLY: the group command sweep (USGC records; ee_sim units/group_sweep.rs), its towns' hull reads inside a
+// geometry capture scope (they are the sweep's, not the game's: the HULL/AREA records skip them)
+extern "C" void ee_units_group_command_sweep();
+
+void EEGroupCommandSweep()
+{
+    EEGeomCaptureScope theScope;
+    ee_units_group_command_sweep();
+}

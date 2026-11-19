@@ -62,6 +62,8 @@ pub mod gather;
 pub mod gather_world;
 pub mod goals;
 pub mod group;
+/// cbindgen:ignore
+pub mod group_sweep;
 pub mod group_save;
 pub mod hack;
 mod header_consts;
