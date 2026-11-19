@@ -5414,6 +5414,25 @@ int32_t ee_units_cls_condition(uint64_t class_,
 /// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
 int32_t ee_units_cls_base_condition(uint64_t class_, uint64_t unit, uint32_t event);
 
+/// TEST ONLY: begins a dry run of this thread over the selection's units (`count` ids); its reference, which the
+/// bodies take as the sender's selection.
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null for 0).
+void *ee_units_dry_begin(const uint32_t *ids,
+                         size_t count);
+
+/// TEST ONLY: the length of this thread's dry log so far.
+size_t ee_units_dry_log_len();
+
+/// TEST ONLY: ends the dry run: its log into `out` (room for `ee_units_dry_log_len()` words), the keeps'
+/// disagreements into `mismatches`; the number of words.
+///
+/// # Safety
+/// `out` has room for the log; `mismatches` is valid.
+size_t ee_units_dry_end(uint32_t *out,
+                        uint32_t *mismatches);
+
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
 
@@ -5459,15 +5478,6 @@ bool ee_units_store_set_location(uint32_t id,
 
 /// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
 uint64_t ee_units_store_checksum_flag2();
-
-/// `EEWorld::mUpdateUnits.push_back` (`order`).
-void ee_units_order_push(uint32_t id);
-
-/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
-bool ee_units_order_erase(uint32_t id);
-
-/// `EEWorld::mUpdateUnits.clear()`.
-void ee_units_order_clear();
 
 /// The number of stepped units listed.
 uint32_t ee_units_order_count();
@@ -5862,8 +5872,6 @@ extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, v
 
 extern void *ee_units_host_unit_patrol_group(uint32_t unit);
 
-extern int64_t ee_units_host_object_unit_type(uint32_t unit);
-
 extern void ee_units_host_group_set_queued(void *group, uint8_t queued);
 
 extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
@@ -5892,8 +5900,6 @@ extern void ee_units_host_group_spread_around_unit(void *group,
                                                    uint32_t target,
                                                    int64_t x,
                                                    int64_t y);
-
-extern uint32_t ee_units_host_unit_complex_id(uint32_t unit);
 
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
 
@@ -5926,8 +5932,6 @@ extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 extern int64_t ee_units_host_technology_unit_class(void *player,
                                                    int32_t technology,
                                                    uint8_t *found);
-
-extern int64_t ee_units_host_player_num_capitols(void *player);
 
 extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
 
@@ -5984,8 +5988,6 @@ extern uint8_t ee_units_host_technology_contains(void *player,
                                                  int32_t technology,
                                                  int64_t unit_type);
 
-extern int64_t ee_units_host_unit_power(uint32_t unit);
-
 extern int64_t ee_units_host_calamity_cost(void *class_);
 
 extern void *ee_units_host_unit_player(uint32_t unit);
@@ -6009,8 +6011,6 @@ extern uint8_t ee_units_host_unit_seen_by(uint32_t unit, void *player);
 extern uint8_t ee_units_host_unit_ghost_seen(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index);
-
-extern uint8_t ee_units_host_unit_class_targetable(uint32_t unit);
 
 extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
 
@@ -6071,8 +6071,6 @@ extern int64_t ee_units_host_unit_research_state(uint32_t unit,
                                                  uint8_t *disabled);
 
 extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
-
-extern int32_t ee_units_host_player_hack_class(void *player);
 
 extern float ee_units_host_player_class_scale(int64_t player_id, int32_t unit_type);
 

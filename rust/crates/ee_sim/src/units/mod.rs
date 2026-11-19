@@ -42,6 +42,7 @@ pub mod cls_dispatch;
 pub mod cls_host;
 pub mod cls_transport;
 pub mod commands;
+pub mod dry;
 pub mod explore;
 pub mod ffi;
 pub mod game_over;

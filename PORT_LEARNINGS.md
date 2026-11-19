@@ -32142,3 +32142,91 @@ ai/lua_ffi.rs (340 lines: nothing called it).
   (EEWorld's StartGame/CreatePlayers/Clear, EEGameState::Create, the player, Persistent, Communications) or test
   drivers made of editor and UI calls (EESimEditor, EESimCivBuilder: their command bodies are calls of other
   lanes' classes); docs/progress/app-core.md "Next".
+
+## The units' lane, round 2: the formations one class over Rust shapes; the dry host whole in Rust; the hosts' plain reads on the views (ee_sim::formations, ee_sim::units dry.rs; branch rust-units2, 2026-11-18)
+
+Asked: 4,000 net C++ lines from the Units cluster (the units, actions, formations, physics thread, unit utilities),
+whole classes, beyond merging round 1. Done: -1,833 net C++ lines (table below). Step 0 merged round 1 (rust-units1)
+with origin/rust 8d68d2786 (PORT_LEARNINGS only) and the parked unit utilities round 4 (rust-unitutil-r4: rust_goal.rs
+kept both sides' constants; EEUGRust.cpp's `UNIT_LOCATION` and `LINE_BLOCKED` cases are both gone, each side had
+removed one); its gates are below.
+
+| Commit | What | Net C++ (src, include/ee) |
+|---|---|---|
+| 873399560 | the formations one class (with EEHerd.cpp's cast and includes, AI Thread) | -949 |
+| fe3ac7dff | `EEUnitOrderPush`/`Erase`/`Clear` and their Rust entry points deleted | -18 |
+| c9fe4de05 | the dry host whole in Rust (units/dry.rs, dry_tests.rs) | -814 |
+| cf8e9f9d1 | the unit host's plain reads on the views | -40 |
+| f14f017a9 | the combat goals' plain reads on the views | -12 |
+
+- **The formations are one class.** The original's nine classes (`EEFormation` > `EEFLine` > 4 presets, `EEFWedge` > 2,
+  `EEFCircle` > `EEFInwardCircle`/`EEFOutwardCircle`) differed only in their constructors' members: a line's
+  offsets, a wedge's arms, a circle's mode and arc. `EEFormation` is now concrete (type, frame, `mB5C`, a circle's
+  `mMinRadius`); `Place` is one Rust call by type (`ee_formation_place`: `capture::shape_of` builds the preset's shape
+  each call, the same functions the constructors called once, so the slots are bit-equal) and the capture record's
+  members come from Rust (`ee_formation_shape_words`), so FMLN/FMWG/FMCI are unchanged. Nine units and twelve headers
+  went (units.txt lost their lines). The callers keep `Create(type)`; EEHerd (AI Thread) lost its
+  `dynamic_cast<EEFInwardCircle*>` and two includes (the one edit outside the cluster, in the same commit: the
+  headers it included are gone). A circle's half arc is always pi: no caller sets it (capture.rs's note that
+  EECPAttackFormationNode sets pi/2 describes a node no longer in the tree).
+- **The dry host is Rust.** The group command sweep's dry host (TEST ONLY: every call logged, nothing changed) was
+  ~135 `sDry` branches through EEUnitHost.cpp plus its groups, goals and log (~400 lines). It is now
+  `units::dry::DryHost<GameHost>`: a `Host` that logs and answers for the writes and delegates the reads to the game
+  host, logging them where the C++ did. Every body's entry point (ffi.rs) runs over it while the thread is in a dry run
+  (`with_host!`); the sweep calls `ee_units_dry_begin`/`_end`. Groups are tag + 1 as references, goals index + 1:
+  nothing dry reaches C++. The words are the C++'s in its order (USGC unchanged in every profile); the C++ host
+  functions are now the game's only. What the dry branches read on the objects is on the views (commandable, hit
+  points, class flags, stats, `mGoalState`'s kind, a route's points through `ee_units_pg_host_points`).
+- **Plain reads on the views:** the unit host's `object_unit_type`, `unit_complex_id`, `player_num_capitols`,
+  `unit_power`, `player_hack_class`, `unit_class_targetable` (`ee_units_uu_targetable` directly); the combat goals'
+  `ON_TILE`, `COMPLEX`, `PARTS`, `FAMILY`, `CATEGORY`, `ID`, `HIT_POINTS`, `VELOCITY`, `PLAYER`, `AMMO_TYPE`,
+  `MAX_HIT_POINTS`, `HAS_GROUP` (combat goal_objects.rs `view_read`, ahead of the C++ table).
+- **Deleted unused:** `EEUnitOrderPush`/`Erase`/`Clear` and their Rust entry points.
+
+### Gates
+
+Step 0 (rust-units1 a58905711, reported to the lead mid-round): both builds 0/0 (EE-AOC 625, EE-SIM 626 inputs), the
+test profile 0/0, the Rust gate PASS, the oracle seeds 2-7 identical, the twelve capture profiles at seeds 2-3 PASS
+(oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app 26, units 175, groups 2,
+placement 4, transport 185 digests), the plain saveload 18/18 identical, the matrix `--expect` PASS, scenario_check
+27/27, the editor gate PASS (14,448 lines), gates.sh GATES PASS (tour; ai-game time-cap, units [4, 41, 42], alive
+[2, 3], classic_lua x2; lan-game), the tour with `--box-select --orders` RESULT PASS (ORDERS PASS: gather, repair,
+repair-queued, move; patrol and attack-ground skipped: no button, no unit).
+
+Round 2, per commit before the merge (built together): both builds 0/0 (616/617 inputs: the nine formation units
+gone), the oracle seeds 2-3 identical, the oracle, units and calamity captures at seeds 2-3 PASS, the Rust gate's
+tests PASS (4,646). On the result merged with origin/rust 5e7fdb413 (PORT_LEARNINGS only; strip_markers,
+`rust_build.py header` and `rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 616, EE-SIM 617 inputs) and the test profile 0/0;
+the Rust gate PASS (4,689 tests, clippy, rustfmt, headers); the oracle seeds 2-7 identical; the twelve capture
+profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app
+26, units 175, groups 2, placement 4, transport 185 digests: FMLN/FMWG/FMCI and USGC among them); the plain saveload
+18/18 identical; the matrix `--expect` PASS; scenario_check 27/27; the editor gate PASS (14,448 lines); gates.sh
+GATES PASS (`RESULT PASS tour`; ai-game time-cap, units [4, 41, 41], alive [2, 3], classic_lua x2; `RESULT PASS
+lan-game`); the tour with `--box-select --orders` RESULT PASS (ORDERS PASS: gather, repair, repair-queued, move;
+patrol and attack-ground skipped: no button, no unit).
+
+Merged again with origin/rust c9d7de90c (the lead's merge of rust-units1 and WONLobby round 18; PORT_LEARNINGS only:
+origin/rust's file with this section after it): both builds 0/0 (614/615 inputs), the test profile 0/0, the Rust
+gate PASS (4,696 tests), the oracle seeds 2-7 identical.
+
+Two Rust gate notes: `header_consts` checks every Rust constant named like a C++ one (`GOAL_*`, `ACTION_*`) against
+include/ee, so the dry log's event codes that look like goal kinds carry a `LOG_` prefix; and ee_base's
+`fs::golden_spec_replays` (an `rmdir` the replay expects to succeed returned access denied) failed twice inside the
+whole gate under load and passed alone and in the next whole run: a file system timing flake, not this round's.
+
+### What exercises what
+
+- Formations: the oracle capture's FMLN/FMWG/FMCI (the capture sweep places every type over each player's units) and
+  every game an active group forms; a tour with `--box-select --orders` for the human's formations (EEScreens'
+  formation menu, EEMessage's change).
+- The dry host: USGC in every capture profile (the sweep runs every five game minutes in each).
+- The plain reads: the oracle and the captures (CB* for the combat goals, USGC/UUTL for the unit host).
+
+### What is left
+
+docs/progress/units.md "What is left". In short: the remaining hosts (`GoalOp`, the unit host, the active group's)
+are world calls into classes that are still C++ (actions, goal objects, the unit classes' virtuals, effects, sounds,
+the path manager, the patrol groups); the group classes' and the patrol groups' bodies are Rust already, but their
+state is C++ members that the app, UI and scenario clusters read; the save operation needs the pointer members in
+the layout. Round 2 took what moved whole without those: the formations (state and all), the dry host, and the
+reads the views answer.

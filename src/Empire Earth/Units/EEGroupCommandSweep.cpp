@@ -1,6 +1,6 @@
 // New (port), TEST ONLY: the group command sweep (docs/RUST_PLAN.md R5b.4 leaf 4 (c)). No capture game sends a group
 // command (EE-SIM's human idles; the computer players send only walls), so the Rust bodies of the group commands
-// (rust/crates/ee_sim/src/units/group.rs) are run here over the live world through the dry host (ee/EEUnitHost.h: every
+// (rust/crates/ee_sim/src/units/group.rs) are run here over the live world through the dry host (ee_sim units/dry.rs: every
 // world call logged, nothing changed), every five game minutes, for every player and a set of selections and
 // arguments. The USGC record holds the Rust body's log, so the capture's digest gates it like the others; a dry host
 // mismatch stops EE-SIM (exit code 3). (R5b.4 round 31: the original bodies' statements, which ran next to the Rust
@@ -185,11 +185,16 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection)
 
 void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inPlayer, const std::vector<EEComplexUnit*>& inUnits)
 {
-    std::vector<uint32_t> theLogs[1];
-    unsigned long theMismatches[1];
-    void* theSelection = EEUnitHostDryBegin(inUnits);
+    // the dry host (ee_sim units/dry.rs): the selection a dry group of the units
+    std::vector<uint32_t> theIDs(inUnits.size());
+    for (size_t i = 0; i < inUnits.size(); i++)
+        theIDs[i] = static_cast<uint32_t>(inUnits[i]->mUnitID);
+    void* theSelection = ee_units_dry_begin(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
     RunBody(inCase, inPlayer, theSelection);
-    EEUnitHostDryEnd(theLogs[0], theMismatches[0]);
+    std::vector<uint32_t> theLogs[1];
+    uint32_t theMismatches[1];
+    theLogs[0].resize(ee_units_dry_log_len());
+    theLogs[0].resize(ee_units_dry_end(theLogs[0].empty() ? NULL : &theLogs[0][0], &theMismatches[0]));
     EESimCaptureRecord theRecord(0x43475355u);   // "USGC"
     theRecord.U32((unsigned int)inCase.mBody);
     theRecord.I32((int)inPlayerIndex);
@@ -237,7 +242,7 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     theRecord.Commit();
     if (theMismatches[0] != 0) {
         fprintf(stderr, "EE-GROUP-COMMAND: body %lu player %lu selection %lu target %d: %lu dry host mismatches\n",
-                inCase.mBody, inPlayerIndex, inCase.mSelection, inCase.mTarget, theMismatches[0]);
+                inCase.mBody, inPlayerIndex, inCase.mSelection, inCase.mTarget, (unsigned long)theMismatches[0]);
         EESimCaptureRecord::Flush();
         exit(3);
     }
