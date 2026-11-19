@@ -32555,3 +32555,77 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+
+## The units' behaviour lane, round 1: the hosts' operations that need no C++ any more, and the gather goals' farm and resource searches in Rust (ee_sim::units unit_geom.rs, gather_world.rs; branch rust-unitsbeh1, 2026-11-19)
+
+Asked: -4,000 net C++ lines by moving the goal objects, actions and class bodies into Rust together. Done: -456 (the
+table in docs/progress/units.md), far short. What was learnt about why:
+
+- **The hosts are the world calls themselves.** After the earlier rounds GoalOp (EEUGRust.cpp), the combat goals'
+  host, the class bodies' `EEUnitClassMoveOp` and the citizens' host hold almost only calls into C++ objects whose
+  classes are not Rust: the patrol groups, the calamity classes and manager, the path and continent managers (AI
+  lane), the transport and gate class virtuals, effects (ee_render, which ee_sim may not call), sounds, UI notices.
+  A body moved to Rust keeps every one of those calls as a host case, so a whole-family move yields about a third
+  of its lines; the cases that could go at once were those whose answer is already Rust's.
+- **Three kinds of case go without new C++.** (1) A plain read the views answer or a member store on a record (the
+  setters' "when it differs" test changes nothing observable): GoalOp's timers, power, builders, paid flag,
+  resource type, goal handles, transformation, tile height, group count; the combat goals' location, tiles,
+  attackers count, the players' enemy table and attack count, flare flag, the heal clock, the save's version flags.
+  (2) A duplicate: the same world call another host already makes. The unit utilities' game host (`uu_host::Game`,
+  one C++ function per world call) is now reachable from any body through `uu_direct::with_game` (unreachable in
+  a test binary), so GoalOp's position, tile location, animation, IsHuman, random, resource users, centre offset,
+  transformation and path area are gone, as are the combat goals' typed file calls, references, StartAction,
+  FindUnit, FindGhost and SetHitPoints (they call GoalOp's own cases through the same table). (3) A C++ forwarder to
+  a noted unit utility: the Rust caller calls the noted entry point (uu_ffi's `pub(crate)` functions behind the
+  C++ vector adapters) so the UUTL note is written exactly as before: the tile rings, the farm drop sites, free
+  farms, resource spots, the place on a tile, within reach, the attack part.
+- **Shared geometry, one copy.** `units::unit_geom` is `GetPosition` (the virtual: a complex unit's location, a
+  simple unit's tile centre at its tile's height), `DistanceSquaredToUnit`, `DistanceSquaredTo`,
+  `DistanceSquared2D` and `GetLineOfSight` over the views, in the members' float order; five hosts' cases use it.
+- **The gather goals' world helpers.** `EETendNextFarm`, `EEGatherNearBuilding`, `IsAtResourceSpot`,
+  `SendToNextFarm`, `HasGatherRoom` and the utilities' `EEWorkFarm` are Rust (gather_world.rs over
+  `GatherWorldHost`). The class's `FindResourceOfKind` keeps its UCBD note as one GoalOp case (`RESOURCE_OF_KIND`,
+  which replaced the naval citizen's `FIND_FISH`); the sorts are msvc_sort's (sorting indices by a key equals sorting
+  the elements: the algorithm sees the same comparisons); `EEAIRandomShuffle` is `uu_direct::ai_random_shuffle`
+  over the physics' `GetRandom(0, count - 1)` draws. `EEGatherFindSpot`, `EEGatherNextTree` and `EEGatherAccessible`
+  stay: they need the continent manager's subsectors, forests and terrain flags.
+- **Capture checks take the run's seeds.** `sim_capture.py check NAME --profile P` without `--seeds` checks 2-7 and
+  fails ("got ''") on a run of seeds 2-3: pass `--seeds 2-3` to both.
+- **rmcases.** A script that deletes `case` blocks must end a block at the next line indented no deeper than the
+  `case` (and take a `}` at that indent after `case X: {`): ending at the first `return` left a multi-line
+  return's tail behind once, which compiled (dead code after a return) and was caught only by reading the diff.
+
+### Gates
+
+Per commit before the merge: build `--sim` 0/0, oracle seeds 2-3 identical, the oracle and units capture profiles
+at seeds 2-3 PASS (the space profile too after aca0c079f), the Rust gate PASS (27120b195, aca0c079f; fdcb51128's
+clippy was fixed in aca0c079f's gate run); 8c05cd9ba (two cases) was gated only on the merge below.
+
+Merged origin/rust a05da1364 (UI cluster round 3, WON round 19): clean, strip_markers, `rust_build.py header` and
+`rust_includes.py` changed nothing but units.h's two constants (4c39790d0). On the merged result: both builds 0/0
+(EE-AOC 577, EE-SIM 578 inputs) and the test profile 0/0; the oracle seeds 2-7 identical; the twelve capture profiles
+at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app 26, units
+175, groups 2, placement 4, transport 185 digests); the plain saveload (seeds 2-7 at 600/1350/2100 s) PASS; the
+matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS`;
+scenario_check 27/27; the editor gate PASS (14,448 lines); the Rust gate PASS (4,795 tests, clippy, rustfmt, headers);
+gates.sh GATES PASS (`RESULT PASS tour`; ai-game time-cap, units [4, 39, 40], alive [2, 3], classic_lua x2;
+`RESULT PASS lan-game`); the tour with `--box-select --orders` RESULT PASS (ORDERS PASS: gather, repair,
+repair-queued, move; patrol and attack-ground skipped: no button, no unit).
+
+Two Rust gate flakes, neither this lane's: ee_base's `com_is_initialised_on_platform_threads` (failed twice inside
+the whole gate under load, passes alone) and ee_won_lobby's `eecolor` tests (`the_palette_is_the_originals...` and
+`golden_replay` failed once each inside the whole gate; seven passes alone and with one thread: a shared palette
+between tests run in parallel). The third whole run passed.
+
+### What exercises what
+
+- The goal host's reads, stores and duplicates: every oracle game (gathering, building, the AI's attacks, the
+  explore and load goals); the oracle capture profile's CBGO (the combat goals' records) and UUTL (the noted
+  utilities) digests, the units profile's USGC/UCBD.
+- gather_world.rs: the oracle games' farmers and miners (every seed builds farms and mines), UUTL (the farm drop
+  sites, free farms, rings, spots), UCBD (FindResourceOfKind).
+- Nothing in this round is reached by the renderer only; no network code changed.
+
+### What is left
+
+docs/progress/units.md "What is left (behaviour)".
