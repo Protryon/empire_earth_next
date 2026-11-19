@@ -664,12 +664,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return (int64_t)theUnit->GetCommandType();
     case EE_UNITS_AG_NUM_CARGO:
         return (int64_t)theUnit->GetComplexUnit()->GetNumCargoUnits();
-    case EE_UNITS_AG_POSITION: {
-        GE3DPoint thePosition;
-        theUnit->GetPosition(thePosition);
-        io->p[0] = thePosition.mX; io->p[1] = thePosition.mY; io->p[2] = thePosition.mZ;
-        return 0;
-    }
     case EE_UNITS_AG_ANGLE: {
         GE3DPoint theFrom(io->p[0], io->p[1], io->p[2]);
         GE3DPoint theTo(io->q[0], io->q[1], io->q[2]);

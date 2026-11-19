@@ -119,6 +119,13 @@ fn get(goal: u64) -> Build {
     goals.get(&goal).copied().unwrap_or_else(Build::empty)
 }
 
+/// `GetBuildTargetType()` and `GetBuildTargetClass()` (its handle) of a build/repair goal (zeros for another goal)
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn target_type_and_class(goal: u64) -> (i32, u64) {
+    let s = get(goal);
+    (s.target_type, s.class)
+}
+
 fn put(goal: u64, state: Build) {
     let mut goals = BUILDS.lock().unwrap_or_else(|e| e.into_inner());
     goals.insert(goal, state);

@@ -120,6 +120,13 @@ fn forget(goal: u64) -> Gather {
     goals.remove(&goal).unwrap_or_else(Gather::empty)
 }
 
+/// `GetGatherResource()`, `GetGatherStorage()`, `IsGathering()` of a gather goal (zeros for another goal)
+#[cfg_attr(test, allow(dead_code))]
+pub(crate) fn fields_of(goal: u64) -> (u64, u64, bool) {
+    let g = get(goal);
+    (g.resource.object(), g.storage.object(), g.gathering)
+}
+
 fn resource(goal: u64) -> u64 {
     get(goal).resource.object()
 }

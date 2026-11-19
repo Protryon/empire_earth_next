@@ -113,6 +113,7 @@ pub mod turret;
 pub mod unit_bulk;
 pub mod unit_class_fields;
 pub mod unit_fields;
+pub mod unit_geom;
 pub mod unit_load;
 pub mod unit_save;
 pub mod unload;

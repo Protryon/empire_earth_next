@@ -20,7 +20,7 @@ typedef EEUnitGoal EEUGRust;
 int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0,
                      EeUnitsGoalIo* ioArgs = NULL, FSFile* inFile = NULL);
 // the combat goals' host operations (EE_COMBAT_G_*, from 1000; EEUGRustCombat.cpp), the host's other cases
-int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
+int64_t EECombatGoalHostOp(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
 
 // the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>,
 // <EEUGUnloadTransport>), NULL for another or none

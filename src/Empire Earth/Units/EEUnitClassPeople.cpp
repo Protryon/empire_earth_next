@@ -226,56 +226,16 @@ bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
 }
 
 // The citizens' searches' host (ee_units citizen.rs, citizen_host.rs; EE_UNITS_CZ_*): the units' reads, the noted
-// unit utilities, the AI's shuffle and the world tests, each as the original called it
-static void EECzTilesIn(const EeUnitsCzIo* inIo, std::vector<U2DPoint<long> >& outTiles)
-{
-    for (size_t i = 0; i < inIo->tiles_len; i++)
-        outTiles.push_back(U2DPoint<long>(inIo->tiles[i][0], inIo->tiles[i][1]));
-}
-
-static void EECzTilesOut(EeUnitsCzIo* ioIo, const std::vector<U2DPoint<long> >& inTiles)
-{
-    for (size_t i = 0; i < inTiles.size(); i++)
-        ee_units_cz_push_tile((EeUnitsCzList*)ioIo->list, (int32_t)inTiles[i].mX, (int32_t)inTiles[i].mY);
-}
-
+// world tests, each as the original called it (the tile rings, the shuffle and the plain reads are Rust's)
 // (the plain reads, EE_UNITS_CZ_UNIT and the tiles' and players' lists, are Rust's views: citizen_host.rs)
 extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsCzIo* io)
 {
     EEUnit* theUnit = (EEUnit*)(uintptr_t)inA;
-    EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     const int64_t* v = io->v;
-    std::vector<U2DPoint<long> > theTiles;
     switch (inOp) {
     case EE_UNITS_CZ_MAP_SIZE:
         io->v[0] = gMapWidth;
         io->v[1] = gMapHeight;
-        return 0;
-    case EE_UNITS_CZ_SQUARE_RING_TILES: {
-        std::vector<EETileCoordinate> theRing;
-        EEGetSquareRingTiles((long)v[0], (long)v[1], (long)v[2], theRing);
-        EECzTilesOut(io, theRing);
-        return 0;
-    }
-    case EE_UNITS_CZ_SIDE_TILES:
-        EECzTilesIn(io, theTiles);
-        EEGetSideTiles((long)v[0], (long)v[1], (long)v[2], theTiles);
-        EECzTilesOut(io, theTiles);
-        return 0;
-    case EE_UNITS_CZ_RING_CORNERS:
-        EECzTilesIn(io, theTiles);
-        EEGetRingCorners((long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[4], theTiles);
-        EECzTilesOut(io, theTiles);
-        return 0;
-    case EE_UNITS_CZ_SQUARE_RING:
-        EECzTilesIn(io, theTiles);
-        EEGetSquareRing((long)v[0], (long)v[1], (long)v[2], (long)v[3], theTiles);
-        EECzTilesOut(io, theTiles);
-        return 0;
-    case EE_UNITS_CZ_SHUFFLE:
-        EECzTilesIn(io, theTiles);
-        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-        EECzTilesOut(io, theTiles);
         return 0;
     case EE_UNITS_CZ_TILE_CONTINENT:
         return gContinentManager.GetContinent(EETileCoordinate((long)v[0], (long)v[1]), kAIPathLandMass);
@@ -287,43 +247,10 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
         return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
     case EE_UNITS_CZ_CAN_GET_TO_UNIT:
         return gContinentManager.CanGetToUnit(theUnit, (EEUnit*)(uintptr_t)inB);
-    case EE_UNITS_CZ_DISTANCE_2D:
-        io->f[0] = theUnit->mComplexUnit->DistanceSquared2D(GE2DPoint(io->f[0], io->f[1]));
-        return 0;
-    case EE_UNITS_CZ_TILE_DISTANCE:
-        io->f[0] = theUnit->GetTileDistanceSquared((EEUnit*)(uintptr_t)inB);
-        return 0;
     case EE_UNITS_CZ_PATH_AREA:
         return gContinentManager.GetPathAreaIDAt(EETileLocation((long)v[0], (long)v[1]));
-    case EE_UNITS_CZ_GATHER_STORAGE:
-        return EEObj(theGoal->GetGatherStorage());
-    case EE_UNITS_CZ_GATHER_RESOURCE:
-        return EEObj(theGoal->GetGatherResource());
-    case EE_UNITS_CZ_IS_GATHERING:
-        return theGoal->IsGathering();
-    case EE_UNITS_CZ_BUILD_IS_WALL:
-        return theGoal->GetBuildTargetClass()->mIsWall;
-    case EE_UNITS_CZ_BUILD_TYPE:
-        return (int64_t)theGoal->GetBuildTargetType();
-    case EE_UNITS_CZ_FARM_DROP_SITES: {
-        std::vector<EEUnit*> theSites;
-        EEGetFarmDropSites((EEComplexUnit*)theUnit, theSites);
-        for (size_t i = 0; i < theSites.size(); i++)
-            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(theSites[i]));
-        return 0;
-    }
     case EE_UNITS_CZ_CAN_TAKE:
         return ((EEComplexUnit*)theUnit)->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)v[0]);
-    case EE_UNITS_CZ_EMPTY_LOAD:
-        theUnit->SetResourceAmount(0);
-        theUnit->SetResourceType((unsigned long)v[0]);
-        return 0;
-    case EE_UNITS_CZ_DISTANCE_TO_UNIT:
-        io->f[0] = ((EEComplexUnit*)theUnit)->DistanceSquaredToUnit((EEUnit*)(uintptr_t)inB);
-        return 0;
-    case EE_UNITS_CZ_DISTANCE_TO:
-        io->f[0] = ((EEComplexUnit*)theUnit)->DistanceSquaredTo((EEComplexUnit*)(uintptr_t)inB);
-        return 0;
     }
     return 0;
 }
