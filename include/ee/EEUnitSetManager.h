@@ -52,7 +52,7 @@ public:
         return theResult;
     }
     EEUnitSetManager() {}
-    ~EEUnitSetManager() { ee_unit_sets_clear(); }   // 0x136f4c
+    ~EEUnitSetManager() { ee_unit_sets_clear(); }
     // 0xd150: set inSet (NULL past the end or for an unused record)
     EEUnitSet* GetSet(unsigned long inSet) const
         { return reinterpret_cast<EEUnitSet*>(const_cast<EeUnitSet*>(ee_unit_sets_get((size_t)inSet))); }

@@ -83,7 +83,7 @@ public:
         gGameStateGameSpeed = this->GetFloatValue(kWorldGameSpeedDefault);
         return theResult;
     }
-    void Clear() { ee_data_world_clear(); }   // 0xdcc2b
+    void Clear() { ee_data_world_clear(); }
 
     // Inline accessors (const: the out-of-line copies compute the element address before the load). Where VC6
     // refused them they are COMDATs called with ecx = &gWorldTable; inlined elsewhere (begin() folds to [0x52fca8]).
