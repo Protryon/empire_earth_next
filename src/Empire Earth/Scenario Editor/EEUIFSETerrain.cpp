@@ -30,7 +30,6 @@
 #include "lle/UIRadioButton.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEARust.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
@@ -196,7 +195,7 @@ long EESEUITerrainTypeLB::DrawTextA()
 // Tints the preview bitmap's corners with the selected color set's colors (editor_terrain.rs)
 long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    ee_screens_setn_call(this->mTerrain->mRust, EE_SCREENS_SETN_COLOR_CHANGE,
+    ee_screens_setn_call((EeScreensSeTerrain*)ee_screens_segr_tab(this->mTerrain), EE_SCREENS_SETN_COLOR_CHANGE,
                          static_cast<UIControl*>(static_cast<EESEUITerrainColorLB*>(inEntity)), 0.0f, 0.0f);
     return kErrorOK;
 }
@@ -205,76 +204,9 @@ long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // (editor_terrain.rs)
 long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    ee_screens_setn_call(this->mTerrain->mRust, EE_SCREENS_SETN_TYPE_CHANGE,
+    ee_screens_setn_call((EeScreensSeTerrain*)ee_screens_segr_tab(this->mTerrain), EE_SCREENS_SETN_TYPE_CHANGE,
                          static_cast<UIControl*>(static_cast<EESEUITerrainTypeLB*>(inEntity)), 0.0f, 0.0f);
     return kErrorOK;
-}
-
-// Creates the terrain tab: terrain/bulldozer buttons, the name-sorted terrain type list, color set list, paint control
-// and preview bitmap; loads the terrain previews (editor_terrain.rs)
-EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
-                               unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = NULL;
-    this->mRust = ee_screens_setn_new(this, inForm, inScroll, inBrushes, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Creates a paint type radio button 125 wide and as tall as the larger of its font and the radio button image
-
-// Destroys the terrain tab and its controls and releases the terrain previews (editor_terrain.rs)
-EEUIFSETerrain::~EEUIFSETerrain()
-{
-    ee_screens_setn_free(this->mRust);
-}
-
-// Leaves the tab: asks the load thread to unload the selected terrain and drops every preview texture
-void EEUIFSETerrain::Leave()
-{
-    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_LEAVE, NULL, 0.0f, 0.0f);
-}
-
-// Moves the brush highlight to the mouse while the editor is the current form
-void EEUIFSETerrain::Update()
-{
-    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_UPDATE, NULL, 0.0f, 0.0f);
-}
-
-// Enters the tab: sets the previews (an ambient-only terrain shows its first unit's button), shows the selected one
-// and asks the load thread to load the selected terrain
-void EEUIFSETerrain::Enter()
-{
-    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_ENTER, NULL, 0.0f, 0.0f);
-}
-
-// Puts the brush highlight on the map point under the mouse inside the game view, else hides it
-void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_MOUSE_MOVE, NULL, inLocation.GetX(), inLocation.GetY());
-}
-
-// the editor gate's (EESimEditor.cpp: terrainstate)
-unsigned long EEUIFSETerrain::GetSelectedTerrain() const
-{
-    return (unsigned long)(uint32_t)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_SELECTED, 0);
-}
-unsigned long EEUIFSETerrain::GetTerrainCount() const
-{
-    return (unsigned long)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_TERRAIN_COUNT, 0);
-}
-long EEUIFSETerrain::GetTerrainID(unsigned long inIndex) const
-{
-    return ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_TERRAIN_ID, (uint32_t)inIndex);
-}
-unsigned long EEUIFSETerrain::GetColorTypeCount() const
-{
-    return (unsigned long)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_COLOR_COUNT, 0);
-}
-long EEUIFSETerrain::GetColorTypeID(unsigned long inIndex) const
-{
-    return ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_COLOR_ID, (uint32_t)inIndex);
 }
 
 // ---- the tab's host (editor_terrain.rs: the ops from 1000)
@@ -356,7 +288,7 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
         EESEUITerrainTypeLB* t = new EESEUITerrainTypeLB(kSETerrainTerrainType, gU531934, theLines,
                                                          GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm,
                                                          (unsigned long)i[1], 2);
-        UIEvent* theEvent = new EEUIETerrainTypeChange(static_cast<EEUIFSETerrain*>(q[0]));
+        UIEvent* theEvent = new EEUIETerrainTypeChange(static_cast<EeScreensSeGroup*>(q[0]));
         t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
         theEvent->Dereference();
         SetnYellow(t->mText);
@@ -375,7 +307,7 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
         EESEUITerrainColorLB* t = new EESEUITerrainColorLB(kSETerrainTerrainColorType, theLines, 16, false,
                                                            GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm,
                                                            (unsigned long)i[1], 2);
-        UIEvent* theEvent = new EEUIETerrainColorChange(static_cast<EEUIFSETerrain*>(q[0]));
+        UIEvent* theEvent = new EEUIETerrainColorChange(static_cast<EeScreensSeGroup*>(q[0]));
         t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
         theEvent->Dereference();
         t->ChangeSelectionIndex((unsigned long)i[2], false, true);

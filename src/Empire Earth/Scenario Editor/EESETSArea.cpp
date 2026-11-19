@@ -33,8 +33,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETriggerScreen.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -111,17 +109,16 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->GetIsUIHidden();
     case EE_SCREENS_SEAR_OP_ACTIVATE:
-        SearEditor()->GetTriggerScreen()->HideText();
-        SearEditor()->GetTriggerScreen()->ShowAlphaSort();
+        SearEditor()->TriggerCall(EE_SCREENS_SETS_HIDE_TEXT);
+        SearEditor()->TriggerCall(EE_SCREENS_SETS_SHOW_ALPHA_SORT);
         return 0;
     case EE_SCREENS_SEAR_OP_LOAD: {
         EESMArea* theArea = theManager->GetArea((unsigned long)i[0]);
         if (theArea == NULL)
             return 0;
-        EESETriggerScreen* theScreen = SearEditor()->GetTriggerScreen();
-        theScreen->ShowText();
-        theScreen->GetNameEditBox()->SetText(theArea->GetName());
-        theScreen->GetTextEditBox()->SetText(theArea->GetText());
+        SearEditor()->TriggerCall(EE_SCREENS_SETS_SHOW_TEXT);
+        SearEditor()->GetTriggerBox(false)->SetText(theArea->GetName());
+        SearEditor()->GetTriggerBox(true)->SetText(theArea->GetText());
         const GERectangle& r = theArea->GetRect();
         f[0] = r.GetLeft();
         f[1] = r.GetTop();
@@ -139,8 +136,8 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
         if (theArea == NULL)
             return 0;
         UWideString theText;
-        theArea->mName = UWideString(SearEditor()->GetTriggerScreen()->GetName());
-        SearEditor()->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
+        theArea->mName = UWideString(SearEditor()->GetTriggerBox(false)->GetText(0));
+        SearEditor()->GetTriggerBox(true)->GetAllText(theText);
         theArea->mText = theText;
         static_cast<UIComboBox*>(p[0])->GetCurrentSelection(theArea->mSelectMode);
         return 0;

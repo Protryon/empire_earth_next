@@ -13,20 +13,19 @@
 #define EE_EEUIFSCENARIOEDITOR_H
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EEUnitHandle.h"
+#include "rust/game/screens.h"
 
 class EEUIMiniMap;
 class UIFullBackground;
 class UIButton;
 class EEAScroll;
 class EESELoadThread;
-class EESEPlayerScreen;
 class GEBitmap;
-class EESEUnit;
-class EESETriggerScreen;
 class EEUIFSEBrushGroup;
 class UIRadioButton;
-class EEUIFSEMainGroup;
 class EEUnit;
+class EEUICSelectUnits;
+class UIEditBox;
 class GETexture;
 class TMPoll;
 class TSThread;
@@ -36,11 +35,10 @@ class UICheckBox;
 class UIComboBox;
 class UITextLabel;
 
-// the form's object (rust/ee_screens.h declares these too; EEUIFScenarioEditor.cpp asserts the slots)
-extern "C" size_t ee_screens_sefm_get(const EeScreensSeForm* form, uint32_t slot);
-extern "C" void ee_screens_sefm_set(const EeScreensSeForm* form, uint32_t slot, size_t value);
-extern "C" uint32_t ee_screens_sefm_selected(const EeScreensSeForm* form, ptrdiff_t index);
-extern "C" int32_t ee_screens_sefm_call(const EeScreensSeForm* form, uint32_t what, int32_t a, void* p, const float* r);
+// the form's trigger tab: the jump to a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
+// and the writing-back flag (0x4c3220, = true; set while an entry is written back; provisional name)
+void EESETriggerJump(unsigned long inKind, unsigned long inSelection);
+extern bool gB4C3220;
 
 class EEUIFScenarioEditor : public UIForm {
 public:
@@ -88,10 +86,52 @@ public:
     }
     EEUnit* GetFirstSelectedUnit() const { return this->GetSelectedUnitCount() == 0 ? NULL : this->GetSelectedUnit(0); }
     size_t GetSlot(uint32_t inSlot) const { return ee_screens_sefm_get(this->mRust, inSlot); }
-    EEUIFSEMainGroup* GetTabGroup(long inGroup) const { return (EEUIFSEMainGroup*)this->GetSlot(kSlotGroup + inGroup); }
-    EESETriggerScreen* GetTriggerScreen() const { return (EESETriggerScreen*)this->GetTabGroup(kEditorTabTriggers); }
-    EESEUnit* GetUnitScreen() const { return (EESEUnit*)this->GetTabGroup(kEditorTabUnits); }
-    EESEPlayerScreen* GetPlayerScreen() const { return (EESEPlayerScreen*)this->GetTabGroup(kEditorTabPlayers); }
+    // the tab groups (ee_screens editor_groups_ffi.rs; once EEUIFSEMainGroup and its seven subclasses) and their tabs'
+    // Rust objects (kEditorTab*: an EeScreensSeMap* .. EeScreensSeInstructions*)
+    EeScreensSeGroup* GetTabGroup(long inGroup) const { return (EeScreensSeGroup*)this->GetSlot(kSlotGroup + inGroup); }
+    void* GetTab(long inGroup) const { return ee_screens_segr_tab(this->GetTabGroup(inGroup)); }
+    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(kEditorTabTriggers); }
+    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(kEditorTabUnits); }
+    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(kEditorTabPlayers); }
+    // the trigger tab's members (EE_SCREENS_SETS_*), its name or description box, its sub-screens' own calls with
+    // their selections where their classes passed them (EE_SCREENS_SETR_*, _SESC_*, _SEOB_*, _SEAR_*) and slots
+    void TriggerCall(uint32_t inWhat, uint32_t inA = 0) const
+    {
+        ee_screens_sets_call(this->GetTriggerTab(), inWhat, inA, 0.0f, 0.0f, NULL);
+    }
+    UIEditBox* GetTriggerBox(bool inText) const
+    {
+        return (UIEditBox*)ee_screens_sets_control(this->GetTriggerTab(),
+                                                   inText ? EE_SCREENS_SETS_TEXT_EDIT : EE_SCREENS_SETS_NAME_EDIT, 0);
+    }
+    void* GetTriggerSub(long inScreen) const
+    {
+        return ee_screens_sets_sub(this->GetTriggerTab(), (uint32_t)inScreen, NULL, NULL);
+    }
+    uint32_t TriggerSubOp(long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
+    {
+        return ee_screens_sets_sub_op(this->GetTriggerTab(), (uint32_t)inScreen, inWhat, inA, inB);
+    }
+    void TriggerSubSlot(long inScreen, int32_t inSlot) const
+    {
+        ee_screens_sets_sub_call(this->GetTriggerTab(), (uint32_t)inScreen, inSlot, 0.0f, 0.0f);
+    }
+    // the unit tab's members (EE_SCREENS_SEUN_*) and the state read from outside it (the move and placement actions,
+    // the boarding finder, the render's lasso: the unit under the mouse while placing, -1 none; the selection tool)
+    void UnitCall(uint32_t inWhat, int32_t inA = 0, void* inP = NULL) const
+    {
+        ee_screens_seun_call(this->GetUnitTab(), inWhat, inA, 0.0f, 0.0f, inP);
+    }
+    long GetUnitUnderMouse() const { return ee_screens_seun_get(this->GetUnitTab(), EE_SCREENS_SEUN_GET_UNDER_MOUSE); }
+    EEUICSelectUnits* GetSelectUnits() const
+    {
+        return (EEUICSelectUnits*)ee_screens_seun_handle(this->GetUnitTab(), EE_SCREENS_SEUN_GET_SELECT_UNITS);
+    }
+    // the player tab's members (EE_SCREENS_SEPL_*)
+    uint32_t PlayerCall(uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
+    {
+        return ee_screens_sepl_call(this->GetPlayerTab(), inWhat, inA, inB);
+    }
     EEUIFSEBrushGroup* GetBrushGroup() const { return (EEUIFSEBrushGroup*)this->GetSlot(kSlotBrushGroup); }
     EESELoadThread* GetLoadThread() const { return (EESELoadThread*)this->GetSlot(kSlotLoadThread); }
     GETexture* GetButtonTexture() const { return (GETexture*)this->GetSlot(kSlotButtonTexture); }

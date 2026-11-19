@@ -25,8 +25,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
@@ -45,7 +43,7 @@
 // object condition sends the object conditions to the object tab); the tab is checked without its event
 void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
 {
-    EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+    EeScreensSeTriggerTab* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerTab();
     unsigned long theCount = gWorld.mScenarioManager->mConditions.size();
     unsigned long theObject = 0;
     while (theObject < theCount && gWorld.mScenarioManager->GetCondition(theObject)->GetType() != kSMConditionObject)
@@ -54,14 +52,15 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
     if (theJump < 0)
         return;
     long theTab = (long)(theJump >> 32);
-    UIEvent* theEvent = theScreen->GetTab(theTab)->GetTriggerEvent(kControlTriggerChecked);
+    UIRadioButton* theButton = static_cast<UIRadioButton*>(ee_screens_sets_control(theScreen, EE_SCREENS_SETS_TAB, (uint32_t)theTab));
+    UIEvent* theEvent = theButton->GetTriggerEvent(kControlTriggerChecked);
     if (theEvent != NULL)
         theEvent->Reference();
-    theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, NULL);
-    theScreen->GetTab(theTab)->Check();
-    theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-    ee_screens_sets_sub_select(theScreen->mRust, (uint32_t)theTab, (int32_t)(uint32_t)theJump);
-    theScreen->ShowTab(kSETriggerTabTrigger + theTab);
+    theButton->SetTriggerEvent(kControlTriggerChecked, NULL);
+    theButton->Check();
+    theButton->SetTriggerEvent(kControlTriggerChecked, theEvent);
+    ee_screens_sets_sub_select(theScreen, (uint32_t)theTab, (int32_t)(uint32_t)theJump);
+    ee_screens_sets_call(theScreen, EE_SCREENS_SETS_SHOW_TAB, (uint32_t)(kSETriggerTabTrigger + theTab), 0.0f, 0.0f, NULL);
 }
 
 // The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor
@@ -96,7 +95,7 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         if (t == NULL)
             return 0;
     }
-    auto theScreen = [] { return gUIManager->GetScenarioEditorForm()->GetTriggerScreen(); };
+    auto theScreen = [] { return gUIManager->GetScenarioEditorForm(); };
     switch (inOp) {
     case EE_SCREENS_SETR_OP_SM:
         switch (i[0]) {
@@ -121,10 +120,10 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
         return 0;
     case EE_SCREENS_SETR_OP_HIDE_TEXT:
-        theScreen()->HideText();
-        theScreen()->HideAlphaSort();
+        theScreen()->TriggerCall(EE_SCREENS_SETS_HIDE_TEXT);
+        theScreen()->TriggerCall(EE_SCREENS_SETS_HIDE_ALPHA_SORT);
         return 0;
-    case EE_SCREENS_SETR_OP_SHOW_TEXT: theScreen()->ShowText(); return 0;
+    case EE_SCREENS_SETR_OP_SHOW_TEXT: theScreen()->TriggerCall(EE_SCREENS_SETS_SHOW_TEXT); return 0;
     case EE_SCREENS_SETR_OP_EXISTS: return 1;
     case EE_SCREENS_SETR_OP_GET:
         switch (i[1]) {
@@ -145,14 +144,14 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SETR_OP_TEXTS_FROM_SCREEN: {
         UWideString theText;
-        t->SetName(UWideString(theScreen()->GetName()));
-        theScreen()->GetTextEditBox()->GetAllText(theText);
+        t->SetName(UWideString(theScreen()->GetTriggerBox(false)->GetText(0)));
+        theScreen()->GetTriggerBox(true)->GetAllText(theText);
         t->SetText(theText);
         return 0;
     }
     case EE_SCREENS_SETR_OP_TEXTS_TO_SCREEN:
-        theScreen()->GetNameEditBox()->SetText(t->mName);
-        theScreen()->GetTextEditBox()->SetText(t->mText);
+        theScreen()->GetTriggerBox(false)->SetText(t->mName);
+        theScreen()->GetTriggerBox(true)->SetText(t->mText);
         return 0;
     case EE_SCREENS_SETR_OP_ENTRY:
         if (i[1] == 0) {

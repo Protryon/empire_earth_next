@@ -2593,6 +2593,21 @@ constexpr static const uint32_t EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY = 17;
 
 constexpr static const uint32_t EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL = 8537;
 
+/// The tabs (`kEditorTab*`, ee/EEScenarioEditorIDs.h: `CreateTabGroup`'s cases).
+constexpr static const uint32_t TAB_MAP = 0;
+
+constexpr static const uint32_t TAB_ELEVATION = 1;
+
+constexpr static const uint32_t TAB_TERRAIN = 2;
+
+constexpr static const uint32_t TAB_UNITS = 3;
+
+constexpr static const uint32_t TAB_TRIGGERS = 4;
+
+constexpr static const uint32_t TAB_PLAYERS = 5;
+
+constexpr static const uint32_t TAB_INSTRUCTIONS = 6;
+
 /// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
 /// words / the three paths p0 released.
 constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS = 700;
@@ -10762,6 +10777,10 @@ struct EeScreensSeElevation;
 /// The editor form (opaque to C++).
 struct EeScreensSeForm;
 
+/// A tab group (opaque to C++): its tab (`TAB_*`), the tab's FFI object, and the unit tab's C++ parts (its shell:
+/// the build tools, the rhombus, the panel's rectangle), which the C++ frees.
+struct EeScreensSeGroup;
+
 /// The instructions tab (opaque to C++).
 struct EeScreensSeInstructions;
 
@@ -12028,6 +12047,53 @@ int32_t ee_screens_sefm_call(const EeScreensSeForm *form,
                              int32_t a,
                              void *p,
                              const float *r);
+
+/// `CreateTabGroup`: the tab `tab`'s group, its controls made on `form` from the control index `*index` (advanced);
+/// `scroll` and `brushes` the form's edge scroll and brush group (the elevation and terrain tabs'), `players` its
+/// player combo box (the unit and player tabs'), `parts` the unit tab's C++ shell. The screen font is the C++'s
+/// (set before). The map and terrain tabs' shell is the group itself (their events and controls call back through
+/// it: `ee_screens_segr_tab`). Freed by `ee_screens_segr_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index; the pointers are the form's.
+EeScreensSeGroup *ee_screens_segr_new(uint32_t tab,
+                                      void *form,
+                                      void *scroll,
+                                      void *brushes,
+                                      void *players,
+                                      void *parts,
+                                      uint32_t *index);
+
+/// The destructor: the tab freed (its controls deleted), the group freed -> the unit tab's C++ parts, for the C++ to
+/// delete (NULL for the other tabs).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL) and is not used again.
+void *ee_screens_segr_free(EeScreensSeGroup *g);
+
+/// The group's tab's FFI object (an `EeScreensSeMap*` .. `EeScreensSeInstructions*` by its tab; NULL for NULL, and
+/// while the tab is being made).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL).
+void *ee_screens_segr_tab(const EeScreensSeGroup *g);
+
+/// The unit tab's C++ parts (its shell, `EESEUnit`; NULL for the other tabs).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL).
+void *ee_screens_segr_parts(const EeScreensSeGroup *g);
+
+/// The group's slot `slot` (`EE_SCREENS_SEFM_GROUP_*`: `Draw`'s `p` the dirty `GERectangle`, `MouseMove` at `x`,
+/// `y`): the tab's member when its class overrode the slot, else nothing (the base's empty slot).
+///
+/// # Safety
+/// `g` comes from `ee_screens_segr_new` (or is NULL); `p` is what the slot takes.
+void ee_screens_segr_call(const EeScreensSeGroup *g,
+                          int32_t slot,
+                          float x,
+                          float y,
+                          void *p);
 
 /// `EESEInstructions`' constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
 /// `ee_screens_sein_free`.

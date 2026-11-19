@@ -37,7 +37,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/USingleton.h"
@@ -91,79 +90,6 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its c
 // The unit type buttons' cell width: a plain (non-folded) .rdata float in the original (0x444e7c), read by the ctor
 // only (provisional name)
 static const float kSEUButtonWidth = 35.0f;
-
-// Builds the unit tab (ee_screens editor_unit.rs: the owner and sort radio buttons, the six unit type buttons, the
-// unit and cargo lists, the remove and rotate buttons, the editor actions, the panel background and the upgrade
-// panel); the shell keeps the rhombus, the build tools and the panel rectangle
-EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* inFont, UIComboBox* inPlayers)
-    : mForm(inForm)
-{
-    this->mRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f));
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_seun_new(this, inForm, inPlayers, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the unit tab: deletes its controls, releases its actions, bitmaps and sort event (editor_unit.rs)
-EESEUnit::~EESEUnit()
-{
-    ee_screens_seun_free(this->mRust);
-}
-
-// The members (editor_unit.rs): 0x59bcd5 PlaceWall, 0x59bd2d EndWall, 0x59bd4a Update, 0x59bfdc PlaceGate, 0x59c026
-// EndGate, 0x59c05d ReselectUnitType, 0x59c07b Leave, 0x59c141 ShowCargo, 0x59c1a1 ShowUnitStatus, 0x59c1b3 Draw,
-// 0x59c221 GetLayer, 0x59c246 GetRotationAngle, 0x59c251 GetSortMode, 0x59c287 GetUnitTypeMode (the host's
-// EE_SCREENS_SEUN_OP_TYPE_MODE), 0x59c28d Enter, 0x59c37b SelectUnitType (inLocation unused, as the original),
-// 0x59c535 UpdateSelection, 0x59c64b RefreshUnitList, 0x59c84b MouseMove, 0x59cada UpdateKeys
-void EESEUnit::PlaceWall() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_PLACE_WALL, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::EndWall() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_END_WALL, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::Update() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_UPDATE, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::PlaceGate() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_PLACE_GATE, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::EndGate() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_END_GATE, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::ReselectUnitType() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_RESELECT, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::Leave() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_LEAVE, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::ShowCargo(bool inShow)
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_SHOW_CARGO, inShow, 0.0f, 0.0f, NULL);
-}
-void EESEUnit::ShowUnitStatus(EEUnit* inUnit)
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_SHOW_UNIT, 0, 0.0f, 0.0f, inUnit);
-}
-void EESEUnit::Draw(const GERectangle& inRectangle)
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_DRAW, 0, 0.0f, 0.0f, const_cast<GERectangle*>(&inRectangle));
-}
-float EESEUnit::GetRotationAngle() { return ee_screens_seun_angle(this->mRust); }
-void EESEUnit::Enter() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_ENTER, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::SelectUnitType(const GE2DPoint& inLocation)
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_SELECT, 0, 0.0f, 0.0f, NULL);
-}
-void EESEUnit::UpdateSelection()
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_UPDATE_SELECTION, 0, 0.0f, 0.0f, NULL);
-}
-void EESEUnit::RefreshUnitList() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_REFRESH, 0, 0.0f, 0.0f, NULL); }
-void EESEUnit::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_MOUSE_MOVE, 0, inLocation.GetX(), inLocation.GetY(), NULL);
-}
-void EESEUnit::UpdateKeys() { ee_screens_seun_call(this->mRust, EE_SCREENS_SEUN_UPDATE_KEYS, 0, 0.0f, 0.0f, NULL); }
-long EESEUnit::GetUnitUnderMouse() const { return ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_UNDER_MOUSE); }
-void EESEUnit::SetUnitUnderMouse(long inUnit) { ee_screens_seun_set_under_mouse(this->mRust, (int32_t)inUnit); }
-EEUICSelectUnits* EESEUnit::GetSelectUnits() const
-{
-    return static_cast<EEUICSelectUnits*>(ee_screens_seun_handle(this->mRust, EE_SCREENS_SEUN_GET_SELECT_UNITS));
-}
-long EESEUnit::GetPlacingFlags() const { return ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_FLAGS); }
-void EESEUnit::GetListState(long& outMode, long& outSort, long& outLayer) const
-{
-    outMode = ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_LISTED_MODE);
-    outSort = ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_LISTED_SORT);
-    outLayer = ee_screens_seun_get(this->mRust, EE_SCREENS_SEUN_GET_LISTED_LAYER);
-}
 
 // The shared control maker's unit tab lists (EESERBUnitTypes.cpp SeplMake)
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
@@ -640,25 +566,25 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
 // the editor's gate and wall placement modes (once EESETSUICBPlayer.cpp): the unit tab places or ends them
 void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceGate();
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_GATE);
 }
 
 void EESEUIBuildGate::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndGate();
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_END_GATE);
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }
 
 void EESEUIBuildWall::Build()
 {
-    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceWall();
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_WALL);
 }
 
 void EESEUIBuildWall::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndWall();
+    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_END_WALL);
     long theTechnology = this->mTechnology;
     thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
 }

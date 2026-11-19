@@ -74,7 +74,6 @@
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEPhysics.h"
@@ -1080,9 +1079,8 @@ void EERenderObject::FillRenderLists()
             else
                 gU4E9230.clear();
         } else {
-            EESEUnit* theScreen = gUIManager->GetScenarioEditorForm() != NULL ?
-                gUIManager->GetScenarioEditorForm()->GetUnitScreen() : NULL;
-            EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->GetSelectUnits() : NULL;
+            EEUICSelectUnits* theEditorSelection = gUIManager->GetScenarioEditorForm() != NULL ?
+                gUIManager->GetScenarioEditorForm()->GetSelectUnits() : NULL;
             EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
                 gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits));
             if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())

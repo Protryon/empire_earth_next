@@ -33,8 +33,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
@@ -45,7 +43,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EESMObject.h"
-#include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
@@ -208,7 +205,7 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
             return 0;
     }
     // (the trigger screen: not there yet while the editor makes its tabs)
-    auto theScreen = [] { return gUIManager->GetScenarioEditorForm()->GetTriggerScreen(); };
+    auto theScreen = [] { return gUIManager->GetScenarioEditorForm(); };
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_SELECT_UNITS: {
         UIForm* theForm = static_cast<UIForm*>(p[2]);
@@ -274,10 +271,10 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
         }
         return 0;
     case EE_SCREENS_SEOB_OP_CLEAR_SELECTION: SeobEditor(p[0])->ClearSelection(); return 0;
-    case EE_SCREENS_SEOB_OP_PLAYER_COUNT: return (int32_t)SeobEditor(p[0])->GetPlayerScreen()->GetPlayerCount();
+    case EE_SCREENS_SEOB_OP_PLAYER_COUNT: return (int32_t)SeobEditor(p[0])->PlayerCall(EE_SCREENS_SEPL_PLAYER_COUNT);
     case EE_SCREENS_SEOB_OP_TRIGGER_TEXT:
-        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->HideText();
-        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ShowAlphaSort();
+        gUIManager->GetScenarioEditorForm()->TriggerCall(EE_SCREENS_SETS_HIDE_TEXT);
+        gUIManager->GetScenarioEditorForm()->TriggerCall(EE_SCREENS_SETS_SHOW_ALPHA_SORT);
         return 0;
     case EE_SCREENS_SEOB_OP_PLAYER_COMBO: {
         UIControl* thePlayer = static_cast<UIControl*>(p[0]);
@@ -317,14 +314,14 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
         else   // (a none selection is all ones, as the original's unsigned long)
             *SeobField(o, i[1]) = (unsigned long)(long)i[2];
         return 0;
-    case EE_SCREENS_SEOB_OP_OBJ_NAME_FROM_SCREEN: o->SetName(UWideString(theScreen()->GetName())); return 0;
+    case EE_SCREENS_SEOB_OP_OBJ_NAME_FROM_SCREEN: o->SetName(UWideString(theScreen()->GetTriggerBox(false)->GetText(0))); return 0;
     case EE_SCREENS_SEOB_OP_OBJ_SET_UNITS: {
         const uint32_t* theIDs = static_cast<const uint32_t*>(p[0]);
         o->SetUnits(std::vector<unsigned long>(theIDs, theIDs + i[1]));
         return 0;
     }
     case EE_SCREENS_SEOB_OP_OBJ_EXISTS: return o != NULL;
-    case EE_SCREENS_SEOB_OP_NAME_TO_EDIT: theScreen()->GetNameEditBox()->SetText(o->mName); return 0;
+    case EE_SCREENS_SEOB_OP_NAME_TO_EDIT: theScreen()->GetTriggerBox(false)->SetText(o->mName); return 0;
     case EE_SCREENS_SEOB_OP_SELECT_OBJECT_UNITS: {
         std::vector<unsigned long> theUnits;
         o->GetUnits(theUnits);
@@ -377,7 +374,7 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SEOB_OP_OBJ_SET_NAME:
         o->SetName(UWideString(std::string(static_cast<const char*>(p[0]), (size_t)i[1]).c_str()));
-        theScreen()->GetNameEditBox()->SetText(o->mName);
+        theScreen()->GetTriggerBox(false)->SetText(o->mName);
         return 0;
     case EE_SCREENS_SEOB_OP_VIEW_PRESS: {
         GE2DPoint theLocation(f[0], f[1]);

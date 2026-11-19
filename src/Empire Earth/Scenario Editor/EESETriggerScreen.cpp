@@ -27,8 +27,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETriggerScreen.h"
 #include "ee/EEUIShell.h"
 #include "lle/USingleton.h"
 #include "ee/EEScenarioManager.h"
@@ -45,88 +43,6 @@ extern char gEmptyString[]; // 0x4e5b98: the shared empty string
 extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 
 bool gB4C3220 = true;
-
-// Builds the trigger tab (ee_screens editor_tscreen.rs: the entry list, the five sub-tab buttons, new/duplicate/
-// delete, the sort and priority buttons, the debug-id check box, the name and description boxes), then the five
-// sub-screens, then disables their groups
-EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sets_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons (the
-// original's order: the sub-screens between the tabs and the name box)
-EESETriggerScreen::~EESETriggerScreen()
-{
-    ee_screens_sets_free(this->mRust);
-}
-
-// The members (editor_tscreen.rs): 0x57c057 AlphaSort, 0x57c0ad SelectEntry, 0x57c130 Leave, 0x57c1d9 Update,
-// 0x57c2ae DecPriority, 0x57c31b DeleteEntry, 0x57c399 Draw, 0x57c411 DuplicateEntry, 0x57c467 ShowTab, 0x57c599
-// StoreEntry, 0x57c5b3 Disable, 0x57c5d9 HideText, 0x582d69 ShowText (ICF-folded), 0x57c5f2 HideAlphaSort, 0x57c5fd
-// ShowSelection, 0x57c6e0 IncPriority, 0x57c743 HideGroups, 0x57c78b Load (ShowSelection), 0x57c790 NewEntry,
-// 0x57c7d0 Enter, 0x57c92e SelectName, 0x57c99f FillList, 0x57ca30 Enable, 0x57ca56 ShowAlphaSort, 0x57ca61 Store
-// (StoreEntry), 0x57ca66 UpdateKeys, 0x57ca79 MouseMove, 0x57ca92 RefreshScreen
-#define EE_SETS_CALL(inWhat) ee_screens_sets_call(this->mRust, (inWhat), 0, 0.0f, 0.0f, NULL)
-void EESETriggerScreen::AlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_ALPHA_SORT); }
-void EESETriggerScreen::SelectEntry() { EE_SETS_CALL(EE_SCREENS_SETS_SELECT_ENTRY); }
-void EESETriggerScreen::Leave() { EE_SETS_CALL(EE_SCREENS_SETS_LEAVE); }
-void EESETriggerScreen::Update() { EE_SETS_CALL(EE_SCREENS_SETS_UPDATE); }
-void EESETriggerScreen::DecPriority() { EE_SETS_CALL(EE_SCREENS_SETS_DEC_PRIORITY); }
-void EESETriggerScreen::DeleteEntry() { EE_SETS_CALL(EE_SCREENS_SETS_DELETE_ENTRY); }
-void EESETriggerScreen::Draw(const GERectangle& inRectangle)
-{
-    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_DRAW, 0, 0.0f, 0.0f, const_cast<GERectangle*>(&inRectangle));
-}
-void EESETriggerScreen::DuplicateEntry() { EE_SETS_CALL(EE_SCREENS_SETS_DUPLICATE_ENTRY); }
-void EESETriggerScreen::ShowTab(unsigned long inControlID)
-{
-    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_SHOW_TAB, (uint32_t)inControlID, 0.0f, 0.0f, NULL);
-}
-void EESETriggerScreen::Disable() { EE_SETS_CALL(EE_SCREENS_SETS_DISABLE); }
-void EESETriggerScreen::HideText() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_TEXT); }
-void EESETriggerScreen::ShowText() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_TEXT); }
-void EESETriggerScreen::HideAlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_ALPHA_SORT); }
-void EESETriggerScreen::IncPriority() { EE_SETS_CALL(EE_SCREENS_SETS_INC_PRIORITY); }
-void EESETriggerScreen::Load() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_SELECTION); }
-void EESETriggerScreen::NewEntry() { EE_SETS_CALL(EE_SCREENS_SETS_NEW_ENTRY); }
-void EESETriggerScreen::Enter() { EE_SETS_CALL(EE_SCREENS_SETS_ENTER); }
-void EESETriggerScreen::SelectName() { EE_SETS_CALL(EE_SCREENS_SETS_SELECT_NAME); }
-void EESETriggerScreen::FillList() { EE_SETS_CALL(EE_SCREENS_SETS_FILL_LIST); }
-void EESETriggerScreen::Enable() { EE_SETS_CALL(EE_SCREENS_SETS_ENABLE); }
-void EESETriggerScreen::ShowAlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_ALPHA_SORT); }
-void EESETriggerScreen::Store() { EE_SETS_CALL(EE_SCREENS_SETS_STORE_ENTRY); }
-void EESETriggerScreen::UpdateKeys() { EE_SETS_CALL(EE_SCREENS_SETS_UPDATE_KEYS); }
-void EESETriggerScreen::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_MOUSE_MOVE, 0, inLocation.GetX(), inLocation.GetY(), NULL);
-}
-void EESETriggerScreen::RefreshScreen() { EE_SETS_CALL(EE_SCREENS_SETS_REFRESH_SCREEN); }
-#undef EE_SETS_CALL
-
-UIEditBox* EESETriggerScreen::GetNameEditBox() const
-{
-    return static_cast<UIEditBox*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_NAME_EDIT, 0));
-}
-UIEditBox* EESETriggerScreen::GetTextEditBox() const
-{
-    return static_cast<UIEditBox*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_TEXT_EDIT, 0));
-}
-UILBString* EESETriggerScreen::GetList() const
-{
-    return static_cast<UILBString*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_LIST, 0));
-}
-UIRadioButton* EESETriggerScreen::GetTab(long inScreen) const
-{
-    return static_cast<UIRadioButton*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_TAB, (uint32_t)inScreen));
-}
-long EESETriggerScreen::GetCurrentScreen() const
-{
-    return (long)(intptr_t)ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_CURRENT_SCREEN, 0);
-}
 
 // ---- the trigger tab's host (editor_tscreen.rs; EE_SCREENS_SETS_OP_*): its tab and bitmap buttons, the sub-screens,
 // the views, the list

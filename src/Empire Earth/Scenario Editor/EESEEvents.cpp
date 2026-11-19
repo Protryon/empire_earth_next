@@ -34,12 +34,10 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEARust.h"
-#include "ee/EESETriggerScreen.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
@@ -48,7 +46,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESEUnit.h"
-#include "ee/EESEPlayerScreen.h"
 #include "ee/EESEARust.h"
 void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
@@ -94,7 +91,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     UIEntity* theEntity = static_cast<UIEntity*>(inEntity);
     // a sub-screen's own call with its selection where its class passed it
     auto Sub = [&](long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) {
-        return theEditor->GetTriggerScreen()->ScreenOp(inScreen, inWhat, inA, inB);
+        return theEditor->TriggerSubOp(inScreen, inWhat, inA, inB);
     };
     auto Object = [&](uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) {
         return Sub(kSETriggerScreenObject, inWhat, inA, inB);
@@ -104,17 +101,16 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     case EE_SCREENS_SE_OP_ENTITY_ID:
         return static_cast<UIControl*>(theEntity)->GetId();
     case EE_SCREENS_SE_OP_TAB: {
-        EESETriggerScreen* theScreen = theEditor->GetTriggerScreen();
         switch (inA) {
-        case EE_SCREENS_SE_TAB_SHOW: theScreen->ShowTab(inB); break;
-        case EE_SCREENS_SE_TAB_SELECT_ENTRY: theScreen->SelectEntry(); break;
-        case EE_SCREENS_SE_TAB_NEW_ENTRY: theScreen->NewEntry(); break;
-        case EE_SCREENS_SE_TAB_DUPLICATE_ENTRY: theScreen->DuplicateEntry(); break;
-        case EE_SCREENS_SE_TAB_DELETE_ENTRY: theScreen->DeleteEntry(); break;
-        case EE_SCREENS_SE_TAB_INC_PRIORITY: theScreen->IncPriority(); break;
-        case EE_SCREENS_SE_TAB_DEC_PRIORITY: theScreen->DecPriority(); break;
-        case EE_SCREENS_SE_TAB_ALPHA_SORT: theScreen->AlphaSort(); break;
-        default: theScreen->SelectName(); break;
+        case EE_SCREENS_SE_TAB_SHOW: theEditor->TriggerCall(EE_SCREENS_SETS_SHOW_TAB, inB); break;
+        case EE_SCREENS_SE_TAB_SELECT_ENTRY: theEditor->TriggerCall(EE_SCREENS_SETS_SELECT_ENTRY); break;
+        case EE_SCREENS_SE_TAB_NEW_ENTRY: theEditor->TriggerCall(EE_SCREENS_SETS_NEW_ENTRY); break;
+        case EE_SCREENS_SE_TAB_DUPLICATE_ENTRY: theEditor->TriggerCall(EE_SCREENS_SETS_DUPLICATE_ENTRY); break;
+        case EE_SCREENS_SE_TAB_DELETE_ENTRY: theEditor->TriggerCall(EE_SCREENS_SETS_DELETE_ENTRY); break;
+        case EE_SCREENS_SE_TAB_INC_PRIORITY: theEditor->TriggerCall(EE_SCREENS_SETS_INC_PRIORITY); break;
+        case EE_SCREENS_SE_TAB_DEC_PRIORITY: theEditor->TriggerCall(EE_SCREENS_SETS_DEC_PRIORITY); break;
+        case EE_SCREENS_SE_TAB_ALPHA_SORT: theEditor->TriggerCall(EE_SCREENS_SETS_ALPHA_SORT); break;
+        default: theEditor->TriggerCall(EE_SCREENS_SETS_SELECT_NAME); break;
         }
         break;
     }
@@ -172,7 +168,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     case EE_SCREENS_SE_OP_AREA_CENTER: {
         float theCenter[2];
-        if (!ee_screens_sear_center(static_cast<EeScreensSeArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea)),
+        if (!ee_screens_sear_center(static_cast<EeScreensSeArea*>(theEditor->GetTriggerSub(kSETriggerScreenArea)),
                                     theCenter))
             return 0;
         sAreaCenter = GE2DPoint(theCenter[0], theCenter[1]);
@@ -210,10 +206,10 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     // the editor form's and its tabs' (group 2)
     case EE_SCREENS_SE_OP_UNIT_RESELECT:
-        theEditor->GetUnitScreen()->ReselectUnitType();
+        theEditor->UnitCall(EE_SCREENS_SEUN_RESELECT);
         break;
     case EE_SCREENS_SE_OP_PLAYER_FILL_TECH:
-        theEditor->GetPlayerScreen()->FillTechLists();
+        theEditor->PlayerCall(EE_SCREENS_SEPL_FILL_TECH_LISTS);
         break;
     case EE_SCREENS_SE_OP_HOME_ROTATION: {
         GETransformation theTransformation;
@@ -241,7 +237,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         static_cast<UITextLabel*>(theEditor->GetControlById(inA))->SetText((long)(int32_t)inB);
         break;
     case EE_SCREENS_SE_OP_PLAYER_REBUILD_TECH:
-        theEditor->GetPlayerScreen()->RebuildTechLists();
+        theEditor->PlayerCall(EE_SCREENS_SEPL_REBUILD_TECH_LISTS);
         break;
     case EE_SCREENS_SE_OP_PLACE_FILL: {
         UIComboBox* theComboBox = static_cast<UIComboBox*>(theEditor->GetControlById(0x999));

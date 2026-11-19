@@ -1,8 +1,8 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESERBUnitTypes.cpp (file name inferred): the class family of the scenario
 // editor's player tab, EESEPlayerScreen (vtable 0x4430dc), its controls EESERBUnitTypes/EESECBMaxPlayer/
 // EESEUIBDiplomacy and the player-count action: 0x573218..0x57acf6. The player tab, its player rows and its game
-// options page are whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds the object, and this unit
-// is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
+// options page are whole in Rust (ee_screens editor_players.rs; the class EESEPlayerScreen is gone: its group,
+// editor_groups_ffi.rs, holds the object), and this unit is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -36,11 +36,9 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEARust.h"
@@ -72,8 +70,7 @@ UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit g
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)
 static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTechnologyTechs;
 
-// The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds its object; the members
-// forward. Its constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
+// The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen's constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
 // destructor (0x5733bf), SetPlayerCount (0x573653), Leave (0x5737ac), GetPlayerCount (0x575a1f), Refresh
 // (0x575a3e), Load (0x575c0b), Enter (0x575c48), MarkPlayerChanged (0x575d58), Store (0x575d7e),
 // CopyFirstPlayerToAll (0x575eb2), ApplyPlayerSettings (0x575ee5), BuildTechTypeLists (0x575f38), FillTechLists
@@ -86,76 +83,10 @@ GEFont* gSeplScreenFont;
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
-// Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
-EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
-                                   UIComboBox* inPlayerSelection)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sepl_new(inForm, inPlayerSelection, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the player tab, deleting every control it created (editor_players.rs)
-EESEPlayerScreen::~EESEPlayerScreen()
-{
-    ee_screens_sepl_free(this->mRust);
-}
-
-// Returns the player chosen in the player tab's player combo box (its selection + 1 indexes gWorld.mPlayers; once
-// EESEUITechListBox.cpp's COMDAT)
-EEPlayer* EESEPlayerScreen::GetCurrentPlayer()
-{
-    unsigned long theSelection;
-    this->GetPlayerSelection()->GetCurrentSelection(theSelection);
-    return gWorld.mPlayers[theSelection + 1];
-}
-
-void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)inCount, 0);
-}
-
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
 {
     gMaxPlayers = this->mCount;
-}
-
-void EESEPlayerScreen::Leave() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LEAVE, 0, 0); }
-void EESEPlayerScreen::Load() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LOAD, 0, 0); }
-void EESEPlayerScreen::Enter() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_ENTER, 0, 0); }
-void EESEPlayerScreen::Store() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_STORE, 0, 0); }
-void EESEPlayerScreen::Refresh() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REFRESH, 0, 0); }
-void EESEPlayerScreen::SelectPage(unsigned long inPage)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)inPage, 0);
-}
-void EESEPlayerScreen::FillTechLists() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_FILL_TECH_LISTS, 0, 0); }
-void EESEPlayerScreen::RebuildTechLists()
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REBUILD_TECH_LISTS, 0, 0);
-}
-void EESEPlayerScreen::CopyFirstPlayerToAll()
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_COPY_FIRST_TO_ALL, 0, 0);
-}
-unsigned long EESEPlayerScreen::GetPlayerCount()
-{
-    return ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
-}
-void EESEPlayerScreen::MarkPlayerChanged(unsigned long inPlayer, bool inFlag)
-{
-    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_MARK_CHANGED, (uint32_t)inPlayer, inFlag);
-}
-UIComboBox* EESEPlayerScreen::GetPlayerSelection()
-{
-    return static_cast<UIComboBox*>(ee_screens_sepl_control(this->mRust, 0xffffffffu, 0));
-}
-UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
-{
-    return static_cast<UIComboBox*>(ee_screens_sepl_control(
-        this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
 }
 
 // Creates a 23x23 diplomacy grid button, starting as enemies (state 1)

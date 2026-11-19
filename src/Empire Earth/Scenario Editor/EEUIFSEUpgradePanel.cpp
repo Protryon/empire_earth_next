@@ -26,7 +26,6 @@
 #include "ee/EEAction.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "lle/USingleton.h"
 #include "ee/EEMessage.h"
 #include "ee/EEARust.h"

@@ -24,10 +24,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESETriggerScreen.h"
-#include "ee/EESEPlayerScreen.h"
 #include "lle/GEBitmap.h"
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
@@ -44,7 +41,6 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EESEARust.h"
-#include "ee/EEUIFSEMap.h"
 #include "lle/Input System.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EESEUnit.h"
@@ -195,7 +191,9 @@ long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
 // the edited player's tech tree (the player tab's player)
 static EETechTree* EEShellTree()
 {
-    return gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
+    unsigned long theSelection;   // (the player combo box's selection + 1 indexes gWorld.mPlayers)
+    gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(theSelection);
+    return gWorld.mPlayers[theSelection + 1]->GetTechTree();
 }
 
 // Turns every placement ghost (inGhosts) or selected unit whose class can turn to the yaw inAngle (once
@@ -246,9 +244,9 @@ static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
     return static_cast<UIEditBox*>(inControl)->GetGEText();
 }
 
-static EESETriggerScreen* EEShellTriggers()
+static EEUIFScenarioEditor* EEShellTriggers()
 {
-    return gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+    return gUIManager->GetScenarioEditorForm();
 }
 
 extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a, int64_t b, float* f)
@@ -331,19 +329,21 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
                        (b >> 32) != 0))->Dereference();
         break;
     case EE_SCREENS_SH_PLAYER_PAGE:
-        static_cast<EESEPlayerScreen*>(static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))
-            ->SelectPage(a);
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)a);
         break;
-    case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists(); break;
+    case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_FILL_TECH_LISTS); break;
     case EE_SCREENS_SH_SET_PLAYER_COUNT:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetPlayerScreen()->SetPlayerCount((unsigned long)a);
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)a);
         break;
     case EE_SCREENS_SH_LIST_OF_COMBO_SELECTION: {
         unsigned long s;
         const_cast<UILBString*>(static_cast<UIComboBox*>(c)->GetListBox())->GetCurrentSelection(s);
         return (int64_t)s;
     }
-    case EE_SCREENS_SH_MAP_CREATE: reinterpret_cast<EEUIFSEMap*>(a)->CreateMap(); break;
+    case EE_SCREENS_SH_MAP_CREATE:   // a the map tab's group
+        ee_screens_semp_call((EeScreensSeMap*)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a)),
+                             EE_SCREENS_SEMP_CREATE_MAP, 0);
+        break;
     case EE_SCREENS_SH_NEW_BITMAP: {
         GEBitmap* theBitmap = new GEBitmap;
         theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), b != 0 ? c->GetForm()->GetManager()->GetScreen() : gScreenIndex);
@@ -411,7 +411,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     }
     case EE_SCREENS_SH_TECH_OBSOLETED: return EEShellTree()->Get((long)a)->mScenEditorObsoleted;
     case EE_SCREENS_SH_TECH_MARK_PLAYER:
-        gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->MarkPlayerChanged(EEShellTree()->GetPlayer()->mPlayerID, false);
+        gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_MARK_CHANGED, EEShellTree()->GetPlayer()->mPlayerID, false);
         break;
     case EE_SCREENS_SH_TECH_BARS:
         return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
@@ -432,7 +432,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         break;
     }
     case EE_SCREENS_SH_UNIT_SELECT_TYPE:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetUnitScreen()->SelectUnitType(c->GetForm()->GetMouseLocation());
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
         break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
     case EE_SCREENS_SH_UNIT_NAME_AND_ID: {
@@ -521,21 +521,21 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         ISEntity* theKey;
         return gISKeyboard->GetEntity(kKeySpace, theKey) == 0 && theKey->GetValue() > 0;
     }
-    case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)reinterpret_cast<EEUIFSETerrain*>(a)->mRust;
+    case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)ee_screens_segr_tab(reinterpret_cast<EeScreensSeGroup*>(a));
     case EE_SCREENS_SH_SLIDER_OF: {
         UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));
         return (int64_t)theSlider->GetMaxRange() << 32 | (uint32_t)theSlider->GetCurrentRangeValue();
     }
     // the game's
-    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->ScreenSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
-    case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;
+    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->TriggerSubSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
+    case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        EEShellTriggers()->ScreenOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
+        EEShellTriggers()->TriggerSubOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
-    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->ScreenSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
+    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
-        ((EESEPlayerScreen*)static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))->CopyFirstPlayerToAll();
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL);
         break;
     case EE_SCREENS_SH_BRUSH_SIZE: reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize = (long)b; break;
     }
