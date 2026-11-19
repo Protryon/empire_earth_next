@@ -703,6 +703,9 @@ struct EeWorldLayout {
   /// the effect handles `mConversionEffect`, `mHealEffect` (`uint32_t` values)
   uint64_t complex_conversion_effect;
   uint64_t complex_heal_effect;
+  /// `mAngularVelocity`, `mOrientation` (`GEOrientation`s: yaw, pitch, roll)
+  uint64_t complex_angular_velocity;
+  uint64_t complex_orientation;
   /// `EEProductionEntry::mFlag` (a `long`)
   uint64_t build_entry_flag;
   /// `EEHerd::mID` (an `unsigned short`)

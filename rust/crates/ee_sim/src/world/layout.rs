@@ -201,6 +201,9 @@ pub struct EeWorldLayout {
     /// the effect handles `mConversionEffect`, `mHealEffect` (`uint32_t` values)
     pub complex_conversion_effect: u64,
     pub complex_heal_effect: u64,
+    /// `mAngularVelocity`, `mOrientation` (`GEOrientation`s: yaw, pitch, roll)
+    pub complex_angular_velocity: u64,
+    pub complex_orientation: u64,
     /// `EEProductionEntry::mFlag` (a `long`)
     pub build_entry_flag: u64,
     /// `EEHerd::mID` (an `unsigned short`)
