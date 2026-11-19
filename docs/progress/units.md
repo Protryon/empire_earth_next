@@ -104,6 +104,17 @@ store or one plain read.
 
 Round total: -1,568 net C++ lines (target 4,000).
 
+Verified on the final tree (origin/rust 7779d7db1 is contained: the merge before the report was a no-op): both
+builds and the test profile 0/0; the Rust gate PASS (4,895 tests); the oracle seeds 2-7 identical; the twelve capture
+profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, scenario
+43, transport 185, groups 2, placement 4, app 26 digests); the plain saveload 18/18 identical; the matrix
+`--expect` PASS; scenario_check 27/27; the editor gate PASS; `gates.sh` GATES PASS (tour; ai-game time-cap, units
+[4, 41, 41], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game); the tour with
+`--box-select --orders` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture).
+Only a game draws what the moved effect calls make (EE-SIM makes the effects, the captures' EFST/EFMU/CB* records
+check them, but nothing renders them): the tours cover the muzzle flashes, shots and death effects of the fights
+they reach.
+
 New Rust: `units::group_sweep` (the sweep's cases as plain facts, `player_cases`, `record`; its tests),
 `units::pick_sweep`, `units::notes`, `combat::world_views` (`world_op`), `combat::capture_fold`,
 `update_views::view_act` and `halt`, `cls_host::cls_view` and `cond_view`, the sight host's and the unit host's
