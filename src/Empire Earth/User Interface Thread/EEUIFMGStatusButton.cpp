@@ -59,8 +59,10 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy); 
 // Creates a main game command button with its icon, dither and queue count text
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
-               inTable.GetFormIndex(), 0)
+               inTable.GetFormIndex(), 0),
+      EeScreensStatusButtonFields()
 {
+    ee_screens_status_button_fields(this, static_cast<EeScreensStatusButtonFields*>(this));
     GETextureDescription theDescription;
     theDescription.mPixelDepth = 0x10;
     theDescription.mNumMipLevelsToDrop = 0;
@@ -165,8 +167,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
                                 ? gUnitClassTable[inA]
                                 : NULL;
     switch (inOp) {
-    case EE_SCREENS_SB_OP_IS_COMMAND: return theButton->mIsCommand;
-    case EE_SCREENS_SB_OP_BUTTON: return theButton->mButton;
     case EE_SCREENS_SB_OP_MAIN_GROUP:
         if (inA == 0) gUIManager->Fn26FA6A();
         else gUIManager->Fn26FA55();
@@ -191,7 +191,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
     }
-    case EE_SCREENS_SB_OP_SHOW_CANCEL: theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown); break;
     case EE_SCREENS_SB_OP_START_PATROL: theForm->StartPatrol(); break;
     case EE_SCREENS_SB_OP_START_FLARE: theForm->StartFlare(); break;
     case EE_SCREENS_SB_OP_GAME_RESOURCES: return gGameResources;
@@ -218,9 +217,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_START_GATE: theForm->StartGate(theButton->mTechnology); break;
     case EE_SCREENS_SB_OP_CAN_PRODUCE:
         return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, inA, true, 3, &ioText) == true;
-    case EE_SCREENS_SB_OP_TIME: return (uint32_t)TMGetTime();
-    case EE_SCREENS_SB_OP_LAST_ERROR: return (uint32_t)theButton->mLastErrorTime;
-    case EE_SCREENS_SB_OP_SET_LAST_ERROR: theButton->mLastErrorTime = (unsigned long)inA; break;
     case EE_SCREENS_SB_OP_CALAMITY_COST: {
         EECalamityClass* theCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(
             (EECalamityEnum)theNode->mData->mCalamity);
@@ -228,12 +224,8 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     }
     case EE_SCREENS_SB_OP_NODE_CONTAINS: return theNode->Contains(inA);
     case EE_SCREENS_SB_OP_START_CALAMITY: theForm->StartCalamity(theButton->mTechnology); break;
-    case EE_SCREENS_SB_OP_BASE_BUTTON_UP: theButton->BaseButtonUp(); break;
-    case EE_SCREENS_SB_OP_RELEASE_MOUSE: theButton->ReleaseCapturedMouse(); break;
     case EE_SCREENS_SB_OP_BUTTON_UP: theButton->ButtonUp(); break;
     case EE_SCREENS_SB_OP_MOUSE_INSIDE: return theButton->IsMouseInside();
-    case EE_SCREENS_SB_OP_SET_SHOW_COUNT: theButton->mShowCount = inA != 0; break;
-    case EE_SCREENS_SB_OP_COUNT: return theButton->mCount;
     case EE_SCREENS_SB_OP_COUNT_TEXT: {
         UWideString theString;
         sprintf(theString, "%ld", (long)inA);
@@ -245,7 +237,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)inA)->GetCost();
     case EE_SCREENS_SB_OP_IN_FANATIC_SET: return gUnitSetManager.GetSet(0x2f)->Contains((unsigned long)inA);
     case EE_SCREENS_SB_OP_UNIT_CLOAKED: return theGroup->GetUnit(inA)->IsCloaked();
-    case EE_SCREENS_SB_OP_SET_AVAILABLE: theButton->mAvailable = inA != 0; break;
     case EE_SCREENS_SB_OP_HELP_TEXT: {
         UIHotKey* theHotKey = NULL;
         switch (inA) {
@@ -269,12 +260,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         }
         return (int64_t)strlen(ioText);
     }
-    case EE_SCREENS_SB_OP_HELP_OUT: {
-        std::vector<char> theBytes(reinterpret_cast<const char*>(inA), reinterpret_cast<const char*>(inA) + inB);
-        theBytes.push_back(0);
-        *outString = &theBytes[0];
-        break;
-    }
     case EE_SCREENS_SB_OP_TRADE_PRICE: return EEGetTradePrice(thePlayer, (long)inA, inB != 0);
     case EE_SCREENS_SB_OP_UNIT_PRIEST: return theUnit != NULL && theUnit->GetUnitClass()->IsPriest();
     case EE_SCREENS_SB_OP_CONVERSION_COST: return EEGetConversionCost(theUnit->mComplexUnit);
@@ -283,10 +268,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
     case EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED: return thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
     case EE_SCREENS_SB_OP_CLASS_POPULATION: return theClass->GetPopulationCost();
     case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
-    case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
-    case EE_SCREENS_SB_OP_BITMAPS:
-        return (theButton->GetNormalBitmap() == theButton->GetPressedBitmap() ? 1 : 0) |
-               (theButton->GetFocusedBitmap() == theButton->GetPressedBitmap() ? 2 : 0) | (theButton->GetPressedBitmap() == NULL ? 4 : 0);
     case EE_SCREENS_SB_OP_ICON:
         if (inA == EE_SCREENS_BUTTON_ICON_NONE) {
             theButton->mDrawIcon = false;
@@ -298,7 +279,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
             theButton->mDrawIcon = true;
         }
         break;
-    case EE_SCREENS_SB_OP_BASE_COPY_DATA: return theButton->UIButton::CopyData();
     case EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET:
         return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, 1, true, 3, NULL) == true;
     }

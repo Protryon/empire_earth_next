@@ -46,10 +46,11 @@ pub const EE_SCREENS_CHL_DRAWN_MESSAGE: i64 = 3;
 /// The gap between the name and the message.
 const MESSAGE_SPACING: f32 = 5.0;
 
-/// `EEUICChatLine`'s members (its protected base) but the texts and the timer.
+/// `EEUICChatLine`'s members (its protected base): the C++ objects it owns by address (the timer a `TMPoll*`,
+/// the texts `GEText*`s, made and deleted by the class's constructor and destructor; the UI cluster lane, round 1).
 #[repr(C)]
 #[allow(non_snake_case)]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct EeScreensChatLineFields {
     /// The copied draw rectangle moved down by the shadow offset.
     pub mTextRectangle: EeScreensRect,
@@ -57,6 +58,29 @@ pub struct EeScreensChatLineFields {
     pub mOpacity: f32,
     pub mShadowOffset: u32,
     pub mShowing: bool,
+    pub mTimer: *mut c_void,
+    /// the bold name, the message and the copies `CopyData` makes of them
+    pub mName: *mut c_void,
+    pub mMessage: *mut c_void,
+    pub mDrawnName: *mut c_void,
+    pub mDrawnMessage: *mut c_void,
+}
+
+impl Default for EeScreensChatLineFields {
+    fn default() -> Self {
+        let null = core::ptr::null_mut();
+        EeScreensChatLineFields {
+            mTextRectangle: EeScreensRect::default(),
+            mOpacity: 0.0,
+            mShadowOffset: 0,
+            mShowing: false,
+            mTimer: null,
+            mName: null,
+            mMessage: null,
+            mDrawnName: null,
+            mDrawnMessage: null,
+        }
+    }
 }
 
 /// A text's length, extent and location ([`EE_SCREENS_CHL_TEXT`]).
