@@ -29,6 +29,8 @@ enum class EeWonShellBase : uint32_t {
   Header,
   /// `WONShellTab : TabCtrl`.
   Tab,
+  /// `WONShellDialog : Dialog`.
+  Dialog,
 };
 
 /// A deleted widget class: the kind a shell runs.
@@ -79,6 +81,8 @@ enum class EeWonShellKind : uint32_t {
   MsTabCtrl,
   /// `MSEtchedFrameGroup`.
   MsEtchedFrameGroup,
+  /// `MSMessageBox` over `MSDialog` (`a` its texts, an `EeWonMsgBoxTexts*`, or 0 for the dialog alone).
+  MsMessageBox,
 };
 
 /// A call out of a kind (the C++ host's op).
@@ -122,6 +126,14 @@ enum class EeWonShellHostOp : uint32_t {
   NamedFont,
   /// a combo box's part `a` (`EeWonShellComboPart`) = `(Component*)b`.
   ComboPart,
+  /// `((MSButtonBase*)a)->mText->GetWidth()`.
+  WrapWidthOf,
+  /// `((MSButtonBase*)a)->SetWrap(b != 0)`.
+  SetWrap,
+  /// `(new SameSizeLayout(a, true, true))->Add(b)->Add(c)`, executed on the shell's container.
+  SameSize,
+  /// `CenterLayout(this, a, true, false)` with `b` and `c` (when not 0) added, added to the shell's child layouts.
+  CenterLayout,
 };
 
 /// A virtual a shell overrides (its bit in the kind's mask). The arguments are the C++ ones as `isize` (a pointer
@@ -201,6 +213,8 @@ enum class EeWonShellOp : uint32_t {
   AddContainedComponent,
   /// `MSEtchedFrameGroup::GetLabel()` (a `Component*`).
   GetLabel,
+  /// `MSMessageBox`'s `mButton1` (a `Component*`).
+  GetButton1,
 };
 
 /// A base class's widget a kind makes (the host's `NewBase`).

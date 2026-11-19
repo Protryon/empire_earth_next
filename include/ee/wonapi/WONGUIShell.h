@@ -94,5 +94,10 @@ WON_SHELL_CLASS(WONShellBar,Scrollbar,(a != 0))
 WON_SHELL_CLASS(WONShellScroller,ScrollbarScroller,())
 WON_SHELL_CLASS(WONShellHeader,MultiListHeader,((MultiListArea*)a))
 WON_SHELL_CLASS(WONShellTab,TabCtrl,())
+WON_SHELL_CLASS(WONShellDialog,Dialog,())
+// MSMessageBox::Msg (R6 WONLobby round 22: the box is the kind MsMessageBox, shell_msgbox.rs): a modal message box over
+// the parent window; the id (1-3) of the button pressed
+int MSMessageBoxMsg(Window* inParent, const GUIString& inTitle, const GUIString& inMessage, const GUIString& inButton1,
+                    const GUIString& inButton2, const GUIString& inButton3);
 }
 #endif

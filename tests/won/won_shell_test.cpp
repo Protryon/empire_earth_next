@@ -35,6 +35,7 @@
 #include "rust/won_gui/mspaint.h"
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinlay.h"
+#include "rust/won_gui/dialogobj.h"
 
 using namespace WONAPI;
 
@@ -78,6 +79,7 @@ static void T(const char* f, ...)
 }
 static const intptr_t kComp = 0x5e7700;
 static EeWonCompMembers sBlock;
+static bool sWide; // the message box's world: wider parts (its buttons' 80 floor)
 static EeWonCompMembers* Resolve(intptr_t c)
 {
     memset(&sBlock, 0, sizeof sBlock);
@@ -91,7 +93,7 @@ static EeWonCompMembers* Resolve(intptr_t c)
     unsigned h = (unsigned)c * 2654435761u + sW.salt;
     sBlock.bounds.x = (int)(h % 17);
     sBlock.bounds.y = (int)((h >> 5) % 13);
-    sBlock.bounds.width = (h >> 9) % 4 == 0 ? 0 : (int)((h >> 11) % 40);
+    sBlock.bounds.width = (h >> 9) % 4 == 0 ? 0 : (int)((h >> 11) % (sWide ? 160 : 40));
     sBlock.bounds.height = (h >> 13) % 5 == 0 ? 0 : (int)((h >> 15) % 30);
     sBlock.bits = (h >> 17) % 3 == 0 ? 1 : 0; // invisible
     sBlock.invalid = (char)((h >> 19) % 2);
@@ -151,6 +153,10 @@ static intptr_t World(H op, intptr_t a, intptr_t b = 0, intptr_t c = 0, intptr_t
     case H::LabelSetText: T("labeltext %lx %d", (long)a, (int)((const GUIString*)b)->length()); return 0;
     case H::NamedFont: T("font %lx %ld", (long)a, (long)b); return 0;
     case H::ComboPart: T("part %ld %lx", (long)a, (long)b); return 0;
+    case H::WrapWidthOf: T("wrapwidthof %lx", (long)a); return sW.textWidth;
+    case H::SetWrap: T("setwrap %lx %ld", (long)a, (long)b); return 0;
+    case H::SameSize: T("samesize %lx %lx %lx", (long)a, (long)b, (long)c); return 0;
+    case H::CenterLayout: T("center %lx %lx %lx", (long)a, (long)b, (long)c); return 0;
     default: T("op %d", (int)op); return 0;
     }
 }
@@ -832,6 +838,96 @@ static std::vector<std::string> RunC(bool rust, unsigned seed, K kind)
     return sTrace;
 }
 
+// ---- MSDialog::MSDialog (MSControlConstructors.cpp) and MSMessageBox::MSMessageBox (MSMessageBox.cpp), as they were
+// before WON round 22, each call on a C++ object the host op that makes it (a SameSizeLayout executed on the box,
+// the CenterLayout added to its child layouts: one op each)
+enum { GButton = 3, GMsButton = 4, GDialog = 10 };
+struct OrigBox {
+    intptr_t mButton1, mButton2, mButton3, mLabel;
+    void New(const GUIString& title, const GUIString& message, const GUIString& button1, const GUIString& button2,
+             const GUIString& button3, const GUIString& ok)
+    {
+        intptr_t back = NewKind(K::MsDlgBack);
+        Ref(back, 1);
+        Lay(back, 3, kComp, 0, 0, 0, 0, 0);
+        On(GCt, kComp, (int)EeWonCtCall::AddChild, back);
+        Ref(back, -1);
+        const GUIString* text = &message;
+        if (text->length() == 0) text = &title;
+        this->mLabel = NewKind(K::MsLabel, (intptr_t)text);
+        Ref(this->mLabel, 1);
+        On(GMsButton, this->mLabel, (int)M::SetHorzAlign, 1);
+        On(GMsButton, this->mLabel, (int)M::SetAdjustHeightToFitText, 1);
+        World(H::SetWrap, this->mLabel, 1);
+        text = &button1;
+        if (text->length() == 0) text = &ok;
+        this->mButton1 = NewKind(K::MsButton, (intptr_t)text);
+        Ref(this->mButton1, 1);
+        this->mButton2 = NewKind(K::MsButton, (intptr_t)&button2);
+        Ref(this->mButton2, 1);
+        this->mButton3 = NewKind(K::MsButton, (intptr_t)&button3);
+        Ref(this->mButton3, 1);
+        bool doButton2 = button2.length() != 0;
+        bool doButton3 = doButton2 && button3.length() != 0;
+        World(H::SameSize, this->mButton1, this->mButton2, this->mButton3);
+        int width1 = (int)World(H::WrapWidthOf, this->mLabel);
+        if (width1 < 140) width1 = 140;
+        if (width1 > 400) width1 = 400;
+        int buttonWidth = W(this->mButton1);
+        if (buttonWidth < 80) {
+            buttonWidth = 80;
+            World(H::Call, this->mButton1, (intptr_t)Cc::SetSize, buttonWidth, Hh(this->mButton1));
+        }
+        int width2 = buttonWidth;
+        if (doButton2) width2 += 20 + buttonWidth;
+        if (doButton3) width2 += 20 + buttonWidth;
+        if (width2 > width1) width1 = width2;
+        On(GDialog, kComp, (int)EeWonDlgCall::SetDefaultButton, this->mButton1);
+        On(GButton, this->mButton1, (int)Bc::SetButtonFlags, 0x100, 1);
+        On(GButton, this->mButton2, (int)Bc::SetButtonFlags, 0x100, 1);
+        On(GButton, this->mButton3, (int)Bc::SetButtonFlags, 0x100, 1);
+        On(GDialog, kComp, (int)EeWonDlgCall::SetEndOnEscape, doButton3 ? 3 : doButton2 ? 2 : 1);
+        KCall(Cc::SetSize, width1 + 20, sW.h);
+        World(H::Call, this->mLabel, (intptr_t)Cc::SetPos, 10, 10);
+        Lay(this->mLabel, 1, kComp, 0, 0, -20, 0, 0);
+        Lay(this->mButton1, 0x200, this->mLabel, 0, 20, 0, 0, 0);
+        if (doButton2) Lay(this->mButton2, 0x4403, this->mButton1, 10, 0, 0, 0, 0);
+        if (doButton3) Lay(this->mButton3, 0x4403, this->mButton2, 10, 0, 0, 0, 0);
+        World(H::CenterLayout, this->mButton1, doButton2 ? this->mButton2 : 0, doButton3 ? this->mButton3 : 0);
+        int aHeight = Hh(this->mButton1) + Tp(this->mButton1) + 10;
+        KCall(Cc::SetSize, sW.w, aHeight);
+        On(GCt, kComp, (int)EeWonCtCall::AddChild, this->mLabel);
+        On(GCt, kComp, (int)EeWonCtCall::AddChild, this->mButton1);
+        if (doButton2) On(GCt, kComp, (int)EeWonCtCall::AddChild, this->mButton2);
+        if (doButton3) On(GCt, kComp, (int)EeWonCtCall::AddChild, this->mButton3);
+    }
+    void Free() { Ref(this->mLabel, -1); Ref(this->mButton3, -1); Ref(this->mButton2, -1); Ref(this->mButton1, -1); }
+};
+static std::vector<std::string> RunBox(bool rust, unsigned seed, const GUIString* texts)
+{
+    sSeed = seed;
+    sTrace.clear();
+    sNext = 0;
+    RandomWorld();
+    sW.textWidth = (int)R(520); // past the box's 400 ceiling
+    sW.salt = (R(0x7fff) << 15) | R(0x7fff); // (the parts are the same ids each run: a wide salt varies their sizes)
+    sWide = true;
+    if (rust) {
+        intptr_t t[6] = {(intptr_t)&texts[0], (intptr_t)&texts[1], (intptr_t)&texts[2], (intptr_t)&texts[3], (intptr_t)&texts[4], (intptr_t)&texts[5]};
+        EeWonShell* s = ee_won_shell_new(K::MsMessageBox, (void*)kComp, NULL, Host);
+        ee_won_shell_init(s, (intptr_t)t, 0, 0);
+        T("button1 %lx name %s", (long)ee_won_shell_op(s, EeWonShellOp::GetButton1, 0, 0), ee_won_shell_name(s));
+        ee_won_shell_free(s);
+    } else {
+        OrigBox o;
+        o.New(texts[0], texts[1], texts[2], texts[3], texts[4], texts[5]);
+        T("button1 %lx name %s", (long)o.mButton1, "MSMessageBox");
+        o.Free();
+    }
+    sWide = false;
+    return sTrace;
+}
+
 int main(int argc, char** argv)
 {
     bool print = argc > 1 && strcmp(argv[1], "--print") == 0;
@@ -873,6 +969,25 @@ int main(int argc, char** argv)
         CHECK(a == b);
         if (a != b && sFailures < 6) {
             printf("sequence %u (%s) differs:\n", seq, kContNames[seq % 7]);
+            for (size_t i = 0; i < a.size() || i < b.size(); i++)
+                printf("  %-60s | %s\n", i < a.size() ? a[i].c_str() : "", i < b.size() ? b[i].c_str() : "");
+        }
+    }
+    // the message box: random texts (empty ones choose the title and "Ok", and the buttons shown)
+    for (unsigned seq = 0; seq < 6000; seq++) {
+        sSeed = 0xb0c5u + seq * 31337u;
+        GUIString texts[6];
+        for (int i = 0; i < 5; i++) {
+            std::wstring w;
+            for (unsigned n = R(4) == 0 ? 0 : R(3); n > 0; n--) w.push_back((wchar_t)('a' + R(26)));
+            texts[i] = GUIString(w);
+        }
+        texts[5] = GUIString("Ok");
+        unsigned seed = sSeed;
+        std::vector<std::string> a = RunBox(false, seed, texts), b = RunBox(true, seed, texts);
+        CHECK(a == b);
+        if (a != b && sFailures < 6) {
+            printf("message box sequence %u differs:\n", seq);
             for (size_t i = 0; i < a.size() || i < b.size(); i++)
                 printf("  %-60s | %s\n", i < a.size() ? a[i].c_str() : "", i < b.size() ? b[i].c_str() : "");
         }

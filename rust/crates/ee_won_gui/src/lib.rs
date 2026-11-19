@@ -60,6 +60,7 @@ pub mod scrollerobj;
 pub mod shell;
 pub mod shell_ms;
 pub mod shell_mscont;
+pub mod shell_msgbox;
 pub mod skinlay;
 pub mod splitobj;
 pub mod stretchobj;
