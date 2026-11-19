@@ -78,6 +78,7 @@ pub mod ffi_manager;
 pub mod ffi_mesh;
 pub mod ffi_scene;
 pub mod fill;
+pub mod geffect_table;
 pub mod goal_markers;
 pub mod gobj_media;
 #[cfg(test)]
