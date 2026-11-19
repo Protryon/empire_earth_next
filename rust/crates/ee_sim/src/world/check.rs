@@ -1,9 +1,10 @@
-//! TEST ONLY: the world views' check (the simulation capture's VWCK record; `EEWorldViewCheck.cpp`). Every physics
-//! tick while the capture runs, the C++ folds a fixed list of the world's, every player's, every listed unit's and
-//! every map tile's fields, read through its members, into an FNV-1a 64 of 32-bit words; [`digest`] folds the same
-//! list read through the views. The C++ stops EE-SIM (exit 3) when the two differ. The list and its order are the
-//! C++'s, word for word (a `long` as its low 32 bits, a `bool` as 0 or 1, a float as its bits, a missing object
-//! as 0xffffffff where the C++ writes it).
+//! TEST ONLY: the world views' check (the simulation capture's VWCK record). Every physics tick while the capture
+//! runs, [`digest`] folds a fixed list of the world's, every player's, every listed unit's and every map tile's
+//! fields, read through the views, into an FNV-1a 64 of 32-bit words, and `ee_world_view_check` writes it. The list
+//! and its order are those of the C++ fold over the members that checked the views every tick until the game's
+//! leaves round 1 (`EEWorldViewCheck.cpp`, deleted; it stopped EE-SIM when the two differed, and they never did): a
+//! `long` as its low 32 bits, a `bool` as 0 or 1, a float as its bits, a missing object as 0xffffffff. The record
+//! keeps the capture gate's baseline, so a view that changes what it reads still shows there.
 
 // `c_ulong` and `c_long` are 32 bits on Windows and 64 elsewhere: the casts are needed there
 #![allow(clippy::unnecessary_cast)]
@@ -222,16 +223,26 @@ pub fn digest(w: &WorldView) -> EeWorldViewDigest {
     out
 }
 
-/// TEST ONLY: the VWCK digest of the world `world` (`&gWorld`) through the views (`EEWorldViewCheck`).
+/// The record's tag ("VWCK").
+const EE_WORLD_VIEW_CHECK_TAG: u32 = 0x4b43_5756;
+
+/// TEST ONLY: the VWCK record of this tick (`ticks`: the physics' ticks done), a no-op unless the capture runs and
+/// keeps VWCK: the tick, the players', units' and tiles' counts, the digest's low and high words.
 ///
 /// # Safety
-/// `world` is the live world; the caller holds it (the physics thread at its tick); `out` is writable.
+/// `world` is the live world (`&gWorld`); the caller holds it (the physics thread at its tick).
 #[no_mangle]
-pub unsafe extern "C" fn ee_world_view_digest(world: u64, out: *mut EeWorldViewDigest) {
+pub unsafe extern "C" fn ee_world_view_check(world: u64, ticks: u32) {
+    if !ee_base::sim_capture::active() || !ee_base::sim_capture::keeps(EE_WORLD_VIEW_CHECK_TAG) {
+        return;
+    }
     // SAFETY: the caller holds the world
     let token = unsafe { WorldRead::begin() };
     // SAFETY: the caller's contract
     let d = unsafe { WorldView::of(&token, world) }.map_or_else(EeWorldViewDigest::default, |w| digest(&w));
-    // SAFETY: as above
-    unsafe { *out = d };
+    let mut rec = ee_base::sim_capture::Record::new(EE_WORLD_VIEW_CHECK_TAG);
+    for v in [ticks, d.players, d.units, d.tiles, d.digest as u32, (d.digest >> 32) as u32] {
+        rec.u32(v);
+    }
+    rec.commit();
 }

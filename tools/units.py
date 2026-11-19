@@ -108,8 +108,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world's layout for Rust's views (ee/EEWorldLayout.h; ee_sim world layout.rs)
                        "Empire Earth/Units/EEWorldLayout.cpp",
-                       # TEST ONLY: the world views' check (ee/EEWorldLayout.h: VWCK)
-                       "Empire Earth/Units/EEWorldViewCheck.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
                        # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)

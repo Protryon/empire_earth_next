@@ -713,14 +713,6 @@ struct EeWorldLayout {
   uint64_t class_effects;
 };
 
-/// The check's counts and digest.
-struct EeWorldViewDigest {
-  uint32_t players;
-  uint32_t units;
-  uint32_t tiles;
-  uint64_t digest;
-};
-
 extern "C" {
 
 /// The C++ registers the build's layout (`EEWorldLayoutRegister`, once at start-up). False for a layout of another
@@ -737,12 +729,13 @@ void ee_world_read_begin();
 /// The read `ee_world_read_begin` opened ends.
 void ee_world_read_end();
 
-/// TEST ONLY: the VWCK digest of the world `world` (`&gWorld`) through the views (`EEWorldViewCheck`).
+/// TEST ONLY: the VWCK record of this tick (`ticks`: the physics' ticks done), a no-op unless the capture runs and
+/// keeps VWCK: the tick, the players', units' and tiles' counts, the digest's low and high words.
 ///
 /// # Safety
-/// `world` is the live world; the caller holds it (the physics thread at its tick); `out` is writable.
-void ee_world_view_digest(uint64_t world,
-                          EeWorldViewDigest *out);
+/// `world` is the live world (`&gWorld`); the caller holds it (the physics thread at its tick).
+void ee_world_view_check(uint64_t world,
+                         uint32_t ticks);
 
 }  // extern "C"
 
