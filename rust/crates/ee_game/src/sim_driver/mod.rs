@@ -9,8 +9,10 @@
 //! - [`lobby`]: the lobby's choices and a combo's line by name.
 //! - [`driver`]: the driver: its state, the after-tick, the menus, a game, the batch.
 //! - [`editor`]: the scenario editor script's runner and language (--editor-script).
+//! - [`combat_sweep`]: the combat formulas' capture sweep over the world views (TEST ONLY).
 //! - [`ffi`]: the C ABI EESim.cpp calls.
 
+pub mod combat_sweep;
 pub mod driver;
 pub mod editor;
 pub mod ffi;
