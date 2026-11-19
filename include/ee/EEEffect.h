@@ -135,6 +135,15 @@ public:
     void SetIsLocalOnly(bool inValue) { this->mIsLocalOnly = inValue; }
     void SetPlayer(long inValue) { this->mPlayer = inValue; }
     void SetIsSaved(bool inValue) { this->mIsSaved = inValue; }
+    long GetKind() const { return this->mKind; }
+    EEEffectHandle GetHandle() const { return this->mHandle; }
+    // shown only to inPlayer, not saved (a player's confirmations, flares and goal markers)
+    void SetLocalTo(long inPlayer)
+    {
+        this->mIsSaved = false;
+        this->mIsLocalOnly = true;
+        this->mPlayer = inPlayer;
+    }
     EEUnit* GetUnit() const { return this->mUnit; }
     EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }
     EEGraphicObject* GetGraphicObject();    // 0x102f96: the graphic effect's object (0 without one)

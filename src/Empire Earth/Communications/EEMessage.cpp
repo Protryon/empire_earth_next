@@ -1107,9 +1107,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
                     theGround.SetZ(0.0f);
                 gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
                 EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
-                theEffect->mIsLocalOnly = true;
-                theEffect->mPlayer = inPlayerID;
-                theEffect->mIsSaved = false;
+                theEffect->SetLocalTo(inPlayerID);
                 theDone = true;
             }
             continue;
@@ -1121,9 +1119,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
                 theGoal->GetGoalLocation(theGround);
                 gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theAttackEffect, &theHandle, theIndex);
                 EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
-                theEffect->mIsLocalOnly = true;
-                theEffect->mPlayer = inPlayerID;
-                theEffect->mIsSaved = false;
+                theEffect->SetLocalTo(inPlayerID);
                 return;
             }
         }
@@ -1138,9 +1134,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
             EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
             theMarkers++;
-            theEffect->mIsLocalOnly = true;
-            theEffect->mPlayer = inPlayerID;
-            theEffect->mIsSaved = false;
+            theEffect->SetLocalTo(inPlayerID);
             theDone = true;
             if (theMarkers == 10)
                 return;
@@ -1156,9 +1150,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theTargetEffect, &theHandle, theIndex);
         }
         EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
-        theEffect->mIsLocalOnly = true;
-        theEffect->mPlayer = inPlayerID;
-        theEffect->mIsSaved = false;
+        theEffect->SetLocalTo(inPlayerID);
         theDone = true;
         break;
     }
@@ -1179,9 +1171,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         theUnit->mUnitClass->GroundLocation(theGround);
         gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
         EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
-        theEffect->mIsLocalOnly = true;
-        theEffect->mPlayer = inPlayerID;
-        theEffect->mIsSaved = false;
+        theEffect->SetLocalTo(inPlayerID);
         return;
     }
 }
