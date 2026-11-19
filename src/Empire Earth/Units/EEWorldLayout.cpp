@@ -33,6 +33,7 @@
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
@@ -210,6 +211,9 @@ void EEWorldLayoutRegister()
     theLayout.herd_id = offsetof(EEHerd, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
     theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
+    theLayout.placement_town = offsetof(EECPPlacement, mTownCenterTile);
+    theLayout.placement_rust = offsetof(EECPPlacement, mRust);
     if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
         Fail("the class's 29 effect pointers are not contiguous");
     if (!ee_world_set_layout(&theLayout))

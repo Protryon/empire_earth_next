@@ -711,6 +711,11 @@ struct EeWorldLayout {
   /// `EEGraphicEffect*` members, `GetEffects()`)
   uint64_t class_projectile_class;
   uint64_t class_effects;
+  /// `EEComputerPlayer::mPlacement` (an `EECPPlacement*`) from the `EEPlayer*`; `EECPPlacement::mTownCenterTile`
+  /// (a `U2DPoint<long>`) and `mRust` (an `EeCpPlacement*`)
+  uint64_t cp_placement;
+  uint64_t placement_town;
+  uint64_t placement_rust;
 };
 
 extern "C" {

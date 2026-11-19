@@ -14,6 +14,7 @@ use super::events::{self as ev, PlayerHost};
 use super::fields::EeCpFields;
 use super::file::SaveFile;
 use super::lists;
+use super::place_capture as pc;
 use super::place_host::{EeCpUnitInfo, PlaceHost, Rect, RectFilter, Tile};
 use super::placement::{self as pl, EeCpPlaceResult, EeCpPlacement};
 use crate::units::player_save::EeUnitsPlayerSaveFn;
@@ -174,14 +175,6 @@ extern "C" {
     fn ee_cp_center_host(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: *mut EeCpPlaceIo) -> i64;
 }
 
-// the PLCE scopes (TEST ONLY; EECPPlaceCapture.cpp: an `EECPPlaceScope` of the player, `player` its `EEPlayer*`)
-extern "C" {
-    fn ee_cp_scope_open(player: u64, method: u32) -> *mut c_void;
-    fn ee_cp_scope_on(scope: *mut c_void) -> bool;
-    fn ee_cp_scope_word(scope: *mut c_void, word: u32);
-    fn ee_cp_scope_unit(scope: *mut c_void, unit: u64);
-    fn ee_cp_scope_close(scope: *mut c_void);
-}
 
 /// Pushes a pair onto a host operation's list.
 ///
@@ -398,24 +391,23 @@ impl PlaceHost for Game {
         self.q(EE_CP_CENTER_WORLD_COMPLEX, 0, &[id as i64]) as u64
     }
     fn scope_open(&mut self, method: u32) -> u64 {
-        // SAFETY: the capture's C interface
-        unsafe { ee_cp_scope_open(self.ctx().player, method) as u64 }
+        // SAFETY: the context's player is the live computer player
+        unsafe { pc::ee_cp_scope_begin(self.ctx().player, method, false) as u64 }
     }
     fn scope_on(&mut self, scope: u64) -> bool {
-        // SAFETY: a scope this host opened
-        unsafe { ee_cp_scope_on(scope as *mut c_void) }
+        scope != 0
     }
     fn scope_word(&mut self, scope: u64, word: u32) {
-        // SAFETY: as above
-        unsafe { ee_cp_scope_word(scope as *mut c_void, word) }
+        // SAFETY: a scope this host opened
+        unsafe { pc::ee_cp_scope_word(scope as *mut pc::EeCpPlaceScope, word) }
     }
     fn scope_unit(&mut self, scope: u64, unit: u64) {
-        // SAFETY: as above
-        unsafe { ee_cp_scope_unit(scope as *mut c_void, unit) }
+        // SAFETY: as above; the host's units are live
+        unsafe { pc::ee_cp_scope_unit(scope as *mut pc::EeCpPlaceScope, unit) }
     }
     fn scope_close(&mut self, scope: u64) {
         // SAFETY: as above
-        unsafe { ee_cp_scope_close(scope as *mut c_void) }
+        unsafe { pc::ee_cp_scope_end(scope as *mut pc::EeCpPlaceScope, false) }
     }
     fn has_player0(&mut self) -> bool {
         self.q(EE_CP_PLACE_HAS_PLAYER0, 0, &[]) != 0
@@ -795,31 +787,6 @@ pub unsafe extern "C" fn ee_cp_placement_free(p: *mut EeCpPlacement) {
     }
 }
 
-/// TEST ONLY (PLCE): the data's digest into `out[8]`: the water sites' count and FNV-1a 64 (low, high words), the
-/// space sites' the same, whether the tiles were collected, the classes seen's count.
-///
-/// # Safety
-/// `p` is a live placement's data; `out` has 8 words.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_placement_digest(p: *const EeCpPlacement, out: *mut u32) {
-    // SAFETY: the caller's contract
-    let (p, out) = unsafe { (&*p, std::slice::from_raw_parts_mut(out, 8)) };
-    for (k, list) in [&p.water_sites, &p.space_sites].into_iter().enumerate() {
-        let mut h: u64 = 0xcbf29ce484222325;
-        for t in list {
-            for w in [t[0] as u32, t[1] as u32] {
-                for b in w.to_le_bytes() {
-                    h = (h ^ b as u64).wrapping_mul(0x100000001b3);
-                }
-            }
-        }
-        out[k * 3] = list.len() as u32;
-        out[k * 3 + 1] = h as u32;
-        out[k * 3 + 2] = (h >> 32) as u32;
-    }
-    out[6] = p.site_tiles_collected as u32;
-    out[7] = p.types_seen.len() as u32;
-}
 
 // ---- EECPPlacement's members
 

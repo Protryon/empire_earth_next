@@ -209,6 +209,12 @@ pub struct EeWorldLayout {
     /// `EEGraphicEffect*` members, `GetEffects()`)
     pub class_projectile_class: u64,
     pub class_effects: u64,
+    // ---- the computer player's placement (the game's leaves, round 2: cp place_capture.rs)
+    /// `EEComputerPlayer::mPlacement` (an `EECPPlacement*`) from the `EEPlayer*`; `EECPPlacement::mTownCenterTile`
+    /// (a `U2DPoint<long>`) and `mRust` (an `EeCpPlacement*`)
+    pub cp_placement: u64,
+    pub placement_town: u64,
+    pub placement_rust: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();
