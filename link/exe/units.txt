@@ -81,6 +81,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1372a6 137b3f Empire Earth/Empire Earth/EEVCWonder.cpp
 137b3f 137ba3 Empire Earth/Empire Earth/EEVoting.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
+13e967 13e967 Empire Earth/Empire Earth/EEGlobals.cpp   # the globals of Empire Earth.cpp (data only; same init order)
 13e967 147dfd Empire Earth/Empire Earth/Empire Earth.cpp
 147dfd 148291 RTS Engine/RTS Engine/RTSWorld.cpp
 1482e4 1497f4 Empire Earth/Empire Earth/EEGameUtilities.cpp
