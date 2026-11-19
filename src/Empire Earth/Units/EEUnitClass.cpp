@@ -548,116 +548,75 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     return theSuccess;
 }
 
-// Creates a unit of the class for a player at a tile's centre with a heading, grounded when a map is given, and
-// queues it in the player's pending units
-EEUnit* EEUnitClass::CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EEMap* inMap, float inHeading)
+// CreateUnitAtTile's and CreateUnitAtPoint's body: a unit of the class for a player at a map point (its tile the
+// simple unit's and the levelled ground's) with a heading, grounded when a map is given, queued in the player's
+// pending units
+static EEUnit* EECreateUnitAt(EEUnitClass* inClass, EEPlayer* inPlayer, const GE3DPoint& thePoint, unsigned long theX,
+                              unsigned long theY, EEMap* inMap, float inHeading)
 {
     GETransformation theTransformation;
-    GE3DPoint thePoint((float)(unsigned long)inX + 0.5f, (float)(unsigned long)inY + 0.5f, 0.0f);
     GE3DPoint theGround;
     float thePitch = 0.0f;
     float theRoll = 0.0f;
     float theZ = 0.0f;
     EEUnit* theUnit;
-    if (this->mIsComplex == 0 && this->mUnitType != kUnitTypePathPoint) {
-        theUnit = EEUnit::Create(this, inX, inY, inPlayer);
+    if (inClass->mIsComplex == 0 && inClass->mUnitType != kUnitTypePathPoint) {
+        theUnit = EEUnit::Create(inClass, theX, theY, inPlayer);
         if (inMap != NULL)
-            this->SimpleUnitCreated(theUnit);
-    } else {
-        theTransformation.SetX(thePoint.GetX());
-        theTransformation.SetY(thePoint.GetY());
-        theTransformation.SetZ(0.0f);
-        if (inMap != NULL) {
-            inMap->GetGroundPoint(thePoint, theGround);
-            this->GroundLocation(theGround);
-            theTransformation.SetX(theGround.GetX());
-            theTransformation.SetY(theGround.GetY());
-            theTransformation.SetZ(theGround.GetZ());
-            if (this->mCategory != kUnitCategoryBuilding && this->mCategory != kUnitCategoryMiningBuilding && this->mCategory != kUnitCategoryGate && this->mCategory != kUnitCategoryFortress) {
-                theTransformation.SetOrientationYPR(inHeading, 0.0f, 0.0f);
-                if (this->mPitchesWithTerrain)
-                    thePitch = inMap->GetTerrainPitch(theTransformation);
-                if (this->mRollsWithTerrain)
-                    theRoll = inMap->GetTerrainRoll(theTransformation);
-                theTransformation.SetOrientationYPR(inHeading, thePitch, theRoll);
-            }
-        }
-        unsigned long theGoalCount = this->GetNumGoalQueues();
-        if (inMap != NULL) {
-            theZ = theTransformation.GetZ();
-            this->LevelGround(&inMap->mTerrainMesh, inX, inY, &theZ);
-            theTransformation.SetZ(theZ);
-        }
-        EEComplexUnit* theComplexUnit = EEComplexUnit::Create(this, theTransformation, inPlayer, theGoalCount);
-        theUnit = theComplexUnit;
-        if (inMap != NULL)
-            this->UnitCreated(theComplexUnit);
-    }
-    {
-        RTSUnit* theEntry = theUnit;
-        inPlayer->mPendingUnits.push_back(theEntry);
-        theEntry->Reference();
-    }
-    ++this->mNumUnits;
-    theUnit->Dereference();
-    return theUnit;
-}
-
-// Creates a unit of the class for a player at a map point with a heading, grounded when a map is given, and queues it
-// in the player's pending units
-EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading)
-{
-    GETransformation theTransformation;
-    GE3DPoint thePoint(inX, inY, 0.0f);
-    GE3DPoint theGround;
-    float thePitch = 0.0f;
-    float theRoll = 0.0f;
-    float theZ = 0.0f;
-    unsigned long theX = UMFloorUnsigned(inX);
-    unsigned long theY = UMFloorUnsigned(inY);
-    EEUnit* theUnit;
-    if (this->mIsComplex == 0 && this->mUnitType != kUnitTypePathPoint) {
-        theUnit = EEUnit::Create(this, theX, theY, inPlayer);
-        if (inMap != NULL)
-            this->SimpleUnitCreated(theUnit);
+            inClass->SimpleUnitCreated(theUnit);
     } else {
         theTransformation.SetX(thePoint.GetX());
         theTransformation.SetY(thePoint.GetY());
         theTransformation.SetZ(thePoint.GetZ());
         if (inMap != NULL) {
             inMap->GetGroundPoint(thePoint, theGround);
-            this->GroundLocation(theGround);
+            inClass->GroundLocation(theGround);
             theTransformation.SetX(theGround.GetX());
             theTransformation.SetY(theGround.GetY());
             theTransformation.SetZ(theGround.GetZ());
-            if (this->mCategory != kUnitCategoryBuilding && this->mCategory != kUnitCategoryMiningBuilding && this->mCategory != kUnitCategoryGate && this->mCategory != kUnitCategoryFortress) {
+            if (inClass->mCategory != kUnitCategoryBuilding && inClass->mCategory != kUnitCategoryMiningBuilding && inClass->mCategory != kUnitCategoryGate && inClass->mCategory != kUnitCategoryFortress) {
                 theTransformation.SetOrientationYPR(inHeading, 0.0f, 0.0f);
-                if (this->mPitchesWithTerrain)
+                if (inClass->mPitchesWithTerrain)
                     thePitch = inMap->GetTerrainPitch(theTransformation);
-                if (this->mRollsWithTerrain)
+                if (inClass->mRollsWithTerrain)
                     theRoll = inMap->GetTerrainRoll(theTransformation);
                 theTransformation.SetOrientationYPR(inHeading, thePitch, theRoll);
             }
         }
-        unsigned long theGoalCount = this->GetNumGoalQueues();
+        unsigned long theGoalCount = inClass->GetNumGoalQueues();
         if (inMap != NULL) {
             theZ = theTransformation.GetZ();
-            this->LevelGround(&inMap->mTerrainMesh, theX, theY, &theZ);
+            inClass->LevelGround(&inMap->mTerrainMesh, theX, theY, &theZ);
             theTransformation.SetZ(theZ);
         }
-        EEComplexUnit* theComplexUnit = EEComplexUnit::Create(this, theTransformation, inPlayer, theGoalCount);
+        EEComplexUnit* theComplexUnit = EEComplexUnit::Create(inClass, theTransformation, inPlayer, theGoalCount);
         theUnit = theComplexUnit;
         if (inMap != NULL)
-            this->UnitCreated(theComplexUnit);
+            inClass->UnitCreated(theComplexUnit);
     }
     {
         RTSUnit* theEntry = theUnit;
         inPlayer->mPendingUnits.push_back(theEntry);
         theEntry->Reference();
     }
-    ++this->mNumUnits;
+    ++inClass->mNumUnits;
     theUnit->Dereference();
     return theUnit;
+}
+
+// Creates a unit of the class for a player at a tile's centre with a heading, grounded when a map is given, and
+// queues it in the player's pending units
+EEUnit* EEUnitClass::CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EEMap* inMap, float inHeading)
+{
+    return EECreateUnitAt(this, inPlayer, GE3DPoint((float)(unsigned long)inX + 0.5f, (float)(unsigned long)inY + 0.5f, 0.0f),
+                          inX, inY, inMap, inHeading);
+}
+
+// Creates a unit of the class for a player at a map point with a heading, grounded when a map is given, and queues it
+// in the player's pending units
+EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading)
+{
+    return EECreateUnitAt(this, inPlayer, GE3DPoint(inX, inY, 0.0f), UMFloorUnsigned(inX), UMFloorUnsigned(inY), inMap, inHeading);
 }
 
 // Creates a unit of the class at a transformation for a player and adds it to the world (an airport gets its runways)
