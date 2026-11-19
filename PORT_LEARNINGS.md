@@ -31983,6 +31983,8 @@ before the merge: build `--sim` 0/0 and oracle seeds 2-3 identical (the carrier 
 the status and dedupe commits together); the space profile at seeds 2-3 after the carrier and levelling commits; the
 oracle and units profiles at seeds 2-3 after the status and dedupe commits and the GetDestination fix.
 
+Then merged again with origin/rust c9d7de90c (units round 1, the graphics + LLE cluster round 1 with the tag points whole in Rust, WONLobby round 18): conflicts only in PORT_LEARNINGS (both sections kept), the generated include/rust/sim/world.h (regenerated) and EEStartingResources.cpp (the gfx lane moved its tag-point helpers out: theirs taken, so this unit's 3 include removals are dropped). On that result: both builds 0/0 (EE-AOC 623, EE-SIM 624 inputs) and the test profile 0/0; the oracle seeds 2-7 identical; captures at seeds 2-3: oracle 212, space 210, calamity 222, units 175 digests PASS (the carrier plans' tag points now reach the gfx lane's Rust tag points through the same C++ calls); the Rust gate PASS (4,721 tests). gates.sh, the saveload runs, scenario_check and the editor gate ran on the first merge only.
+
 ### What is left
 
 docs/progress/unit-classes.md "Next": `ProduceUnit`, `Animate`'s sounds, the creation family, `ReleaseUnit` and the
