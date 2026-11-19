@@ -323,3 +323,6 @@ EE_GLOBAL_STORAGE_AS(std::vector<unsigned long>, EEUnitClassUnitTypes,
                      "?sUnitTypes@EEUnitClass@@2V?$vector@KV?$allocator@K@std@@@std@@A", "_ZN11EEUnitClass10sUnitTypesE");
 float gSpaceTurretHeight = 0.7f;
 float gSpaceStationHeight = 1.5f;
+// the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
+class GEFont;
+GEFont* gSeplScreenFont;
