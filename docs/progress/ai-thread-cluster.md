@@ -12,39 +12,54 @@ lane A (the Lua AI host).
 Round 1 (rust-aicluster2): the A* layer whole in `rust/crates/ee_sim/src/astar/` (flood.rs, path_search.rs,
 graph_search.rs, search_note.rs; C interface `rust/sim/astar.h`).
 
-Round 2 (rust-aicluster3), in `rust/crates/ee_sim/src/cp/` (C interface `rust/sim/cp.h`):
+Round 2 (rust-aicluster3), in `rust/crates/ee_sim/src/cp/` (C interface `rust/sim/cp.h`): `herd.rs` (**EEHerd
+whole**), `town.rs` (**EETown's bodies**), `lists.rs` (**the resource centres whole**, the favourite history, the
+units to kill, the danger zones); EECPCombatManager deleted.
 
-- `herd.rs`: **EEHerd whole**: its members are the record `EeHerdFields` the class derives from (the original's
-  names), its units, looks and a loaded game's tiles are Rust lists, every body (AddUnit .. UpdateSurrounding,
-  Load, Save, RepairPointers) is Rust over `HerdHost`. `herd_game.rs`: the game host (EEHerd.cpp
-  `ee_cp_herd_host`, `ee_cp_area_host`) and the entry points. EEHerd keeps its vtable slots and its callers'
-  members as forwarders.
-- `town.rs`: **EETown's bodies**: its counters, continent, reach and flags are the record `EeTownFields`; the owner
-  and the patrol group stay typed C++ members; `town_game.rs` its host (EETown.cpp `ee_cp_town_host`). The random
-  point is shared with the herd (one body in the original, by ICF).
-- `lists.rs`: **the computer player's lists**: the resource centres whole (EECPResourceCenter deleted: its members
-  a Rust record `CpCenter`, its forwarders with their PLCE records), the favourite types' history, the units to
-  kill, the danger zones; held by `EeCpFields::mLists`. The C++ keeps the centres' world (EECPResourceCenter.cpp
-  `ee_cp_center_host`: references, area effects), the centres' `std::sort` (each comparison's GetCenter records
-  PLCE) and the capture's scopes (`ee_cp_scope_*`).
-- EECPCombatManager deleted (empty since stage 6).
+Round 4 (rust-aicluster4), in `rust/crates/ee_sim/src/astar/`:
+
+- `world_view.rs`: **EEAIAStarView whole**. The A* searches' view of the world is a Rust record
+  (`EeAStarWorldView`: the map, quiet or not) and its callbacks (`ee_astar_world_view_callbacks`): every tile,
+  unit and class fact through the world views (`crate::world`), the continent manager's facts from its Rust record
+  (registered once: `ee_astar_world_view_set_manager`), the ASRN note of each answer of a loud view. Still C++
+  calls: a unit's `IsPassableBy` (`ee_units_pm_host_passable_by`), the manager's `GetPathAreaAt` and `GetHillAt`
+  (`ee_astar_view_cm_*` in EEAIContinentManager.cpp: they write CNTQ records) and the physics stream's draw. The C++
+  class is a header record (ee/EEAIAStarView.h); EEAIAStarView.cpp deleted. `EEAIHasResourceUnit` is an inline over
+  `ee_astar_tile_resource_kind`.
+- `choke.rs`: the choke point pass's grids are Rust's (`ee_astar_choke_grids_build/_tile/_free`; the three C++
+  globals gone).
+- `modifier_obj.rs`: **the path goals' modifiers and route planners whole** (EEAIPathGoalModifierBase,
+  EEAIBoundedPathGoalModifierBase, the sea and space modifiers of both goals, EnemyIsAttackableByUnit,
+  WallsDoNotBlock, the wall pather, the storm shaper; EEAIGraphPathGoalModifierBase, the enemy avoidance, the wall
+  planner, the storms' rain and snow planners): one Rust object `EeAStarModifier` (a reference count, the goal
+  records it was attached to, its kind and members), made by `ee_astar_modifier_new_*` and dropped by
+  `ee_astar_modifier_release`; the searches (path_search.rs, graph_search.rs, pm.rs's saved searches) call it
+  directly. The sub sectors' gate tests (`IsPassable`, the wall planner's `IsGateOpen`), `EEAIGraphHasPassableLink`
+  and `AreLinksBlocked` read the sub sectors' records and the tiles' units. Still C++: a unit's reference count and
+  the world's influence table (`ee_astar_mod_host_*`, what is left of EEAIAStarBoundedPathGoalModifiers.cpp, with
+  the gates' `IsSidePart`). Deleted: EEAIPathGoalModifierBase.h, EEAIBoundedPathGoalModifierBase.h,
+  EEAIPathGoalModifiers.h, EEStormModifiers.h, EEAIPathSubSector.cpp.
 
 ## Goldens and gates
 
-The oracle's sim hash (unit checksums and the random seed every 10 s) is the herd's and the town's golden; AREA
-(the areas' geometry calls) caught a wrong continent category in the town; PLCE and CPEV are the centres' and the
-lists'; saveload the herd's, centres' and history's saved blocks. Results: PORT_LEARNINGS "AI Thread cluster,
-round 2".
+ASRN (every tile search: the machine's questions, the view's answers in order, the storage) is the view's and the
+tile modifiers' golden; ASGR (the graph searches) the route planners'; CNTQ the manager's queries the view still asks
+through the C++; STRM (the app profile's storms) the storm shaper's and planners'; saveload the saved route planner.
+Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 ## Left (next rounds)
 
-- **The computer player's class itself.** What remains of EEComputerPlayer.cpp is its EEPlayer overrides (they call
-  EEPlayer's C++ bodies and the units' methods), the save host and the player host: it can only go when EEPlayer
-  (the app cluster) is Rust's. EECPPlacement (the town tile and the placement host), EECPNext.cpp and
-  EECPNextUnits.cpp are hosts of Rust bodies: they shrink as the world views cover the units', the tech tree's and
-  the continent manager's reads.
-- **Herd paths no game reaches**: a predator's strike back, the herd's attack back, Surround, FollowNearestHerd with
-  a target, the hunt's ring (MoveTo) and the attack and surround states: no gate game hits an animal or has a
-  predator herd find prey (unit tests only; see PORT_LEARNINGS).
-- The continent manager's passes as Rust over an area-making host; the areas as Rust records behind handles; the
-  path manager's last C++ host operations; EEAIAStarView (as round 1 left them).
+- **The census** (`tools/cpp_deps.py report`): before the round 27 AI Thread units, 12,153 lines, 11,184 of them
+  in cycles; after it 25 units, 10,774 lines, 9,732 in cycles. Leaves: the two capture units and EECPEngineHelpers;
+  near-leaves: EECPEngine, EEAIArea, EEAIChokePoint (new), EEAIContinentCapture, EEAIRectangleArea, the modifiers'
+  remains (new), EEAIPathSector, EEHumanPlayer. The biggest cycle went from 236 units and 114,201 lines to 233 and
+  112,645; EEAIContinentManager.cpp is now its third keystone (603 lines out of the cycle with it).
+- **The continent manager's build passes** (CreateContinents, CreateHills, CreatePathAreas, CreatePathSectors,
+  Rebuild, the choke point pass's CreateChokePoint) still make the C++ area objects; the areas as Rust records behind
+  handles would let them and the area classes (EEAIArea, EEAIContinent, EEAIChokePoint, EEAIPathSector,
+  EEAIRectangleArea) move (R5b.1's plan).
+- **The path manager's host** (EEPathManager.cpp, 1,260 lines): the units' and requests' operations the Rust manager
+  asks. The view operations 130/131 could go (the search could make its Rust view itself) once the path search
+  tests' fake views take another seam.
+- **The computer player's class** (EEComputerPlayer.cpp): it can only go when EEPlayer is Rust's.
+- **The herd paths no game reaches** (round 2's list) stay unit-tested only.

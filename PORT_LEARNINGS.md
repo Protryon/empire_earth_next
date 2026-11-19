@@ -33324,3 +33324,64 @@ round removed the hosts' cases that only went back into Rust and made forwarders
 - **Write and heredocs.** The Write tool wrote CRLF into a Python script whose later string replacements assumed
   LF, and a heredoc turned `r"\b"` into a backspace character in a regex. Normalise a generated script's line
   endings before editing it, and write regex-bearing Python with the Write tool, not through a heredoc.
+
+## AI Thread cluster, round 4: the A* view whole in Rust, the path goals' modifiers and route planners whole in Rust, the choke pass's grids, AreLinksBlocked (ee_sim::astar world_view.rs, modifier_obj.rs, choke.rs; branch rust-aicluster4, 2026-11-19)
+
+The fourth round of the cluster lane (docs/progress/ai-thread-cluster.md), from 3ddeab31f (rust with the LLE's round 9).
+The census (`tools/cpp_deps.py report` after a build of the base) put the AI Thread at 27 units and 12,153 lines,
+11,184 of them in cycles; its only near-leaves were small (EEAIArea, EEAIPathSubSector, EEAIRectangleArea,
+EEAIPathSector, EEAIContinentCapture, EECPEngine, EEHumanPlayer). The round took the A* searches' world instead:
+the view every tile goal and modifier reads (EEAIAStarView, 900 lines with its header), the modifiers that the
+searches asked through eight host operations and C++ vtables, and what they pulled after them.
+
+| Commit | What | Net C++ (src + include/ee) |
+|---|---|---|
+| ee38be433 | world_view.rs: EEAIAStarView whole; the choke pass's grids in Rust; EEAIHasResourceUnit inline (+49 -955) | -906 |
+| a1dfbb41c | modifier_obj.rs: the path goals' modifiers and route planners whole; four headers deleted (+59 -947) | -888 |
+| 0a62c645b | AreLinksBlocked in Rust, GetLinks gone: EEAIPathSubSector.cpp deleted (+7 -78) | -71 |
+| | **round** | **-1,865** |
+
+- **What moved.** (1) The view: `EeAStarWorldView` (the map, quiet or not) is the record the C++ class holds; the
+  callbacks the Rust goals call are Rust functions over the world views (tiles, their unit lists, the units' and
+  classes' records), the continent manager's record (registered once from EEAIRegisterContinentState) and the
+  combat lane's unit regions. Each answer of a view that is not quiet is noted for ASRN in the C++ view's order
+  (the query number, the tile, the extra arguments, the answer), one `ee_astar_capture_note` call each. (2) The
+  modifiers: every class of the two modifier hierarchies is one Rust object, `EeAStarModifier` (a reference count,
+  the goal records it was attached to, its kind); its address is the handle the makers get
+  (`ee_astar_modifier_new_*`) and the searches keep in their goal records. The slots' bodies were already Rust
+  (modifiers.rs, round 1); now the dispatch, the reference counting, the bounded goal's `dynamic_cast` (an
+  attach that returns null for a modifier that is not bounded), CheckNode, the saved route planner's kind and
+  members and its making on a load are too. (3) The route planners' world: the sub sectors' gate tests (`IsPassable`,
+  the wall planner's `IsGateOpen`, with the C++'s gate variable that carries over a tile without a gate),
+  `EEAIGraphHasPassableLink` and `AreLinksBlocked` read the sub sector records and the tiles' units.
+- **Lesson: a C++ call can be a capture scope.** The view's path area and hill queries called the continent
+  manager's `GetPathAreaAt` and `GetHillAt`, which open a CNTQ scope and record the outermost call of a thread. A
+  search's query is such an outermost call, so reading the manager's record directly would have dropped CNTQ records
+  by the thousand. The two stay C++ calls (`ee_astar_view_cm_*`); every other C++ call the view made was checked
+  for a capture scope before it became a record read.
+- **Lesson: cbindgen emits a Rust module's C imports.** An `extern "C"` block's function lands in the module's
+  generated header as an `extern` declaration; the same import declared in two modules makes the header step stop
+  ("declared twice"). The view takes the physics models' host's two declarations (`pub(crate)` in
+  ee_sim::units::pm_host, the Units lane's Rust: two words) and the modifiers the view's hill query; a name two
+  modules' headers need is moved to rust/common.h.
+- **Lesson: a removed host field is a warning the gate fails on.** Taking the bounded CheckNode out of the path
+  search left its host's `raw` field unread; the field and its lifetime went with it.
+- **What runs it.** The view: every A* search of every game (ASRN: 30,444 search records in the oracle's seed 2
+  alone, each with every answer the view gave). The modifiers: every search that has one (their answers are the
+  view's noted CanEnter and cost facts, ASRN; the route planners' are ASGR's), the storms' shaper and planners in the
+  app profile (STRM), the saved route planners in the saveload runs. Which modifier kinds the gate games reach was
+  not counted this round: the wall pather and planner only run where classic_lua plans walls, the attackable
+  modifier where a unit paths into weapon range.
+- **Behaviour.** None intended. A modifier's members and order of calls are the C++'s; the storm's shaper is made
+  after its rectangles and step draw instead of before (it made no draw).
+- **Not moved.** The continent manager's build passes and area objects, the path manager's host, the computer
+  player's class (docs/progress/ai-thread-cluster.md "Left").
+- **Gates** (on the final tree, b6c99e4fc; origin/rust 645799684 was already merged, so the merge needed nothing):
+  both builds 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (4,892 tests); the oracle at seeds
+  2-7 identical to the reference; the captures at seeds 2-3 PASS: oracle 212 digests, late 214, transport 185 (and,
+  per commit, app 26 with the storms' STRM); the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical;
+  `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 43, 43], alive_computers [2, 3],
+  `engines ['classic_lua', 'classic_lua']`; lan-game). Per commit: the `--sim` build 0/0 and the oracle at seeds 2-3
+  identical; the view's commit and the modifiers' commit the oracle capture at seeds 2-3 (and the app profile's for
+  the modifiers).
+- **Nothing only a tour reaches.** The view and the modifiers are simulation code, all of it run by EE-SIM.
