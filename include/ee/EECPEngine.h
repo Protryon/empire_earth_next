@@ -1,5 +1,6 @@
 // The computer player's engine, chosen per computer seat (docs/AI_LUA_PLAN.md §5 S0, "AI manifest"). New in this
-// port (no original address).
+// port (no original address). The manifest, the choices, the resolve, the folder's hash and the log are Rust's
+// (ee_game cp_engine.rs, since the game's leaves round 1); the seats' functions are EECPNext.cpp's.
 //
 // The lobby's choices for a computer slot (EEGameOptionsPlayer::mEngine, an index; the EEMPlayerInformation field
 // kPlayerInfoEngine carries it to every peer): 0 Classic (the manifest's "classic" AI), 1 random, 2 + k the AI
@@ -19,9 +20,12 @@
 #ifndef EE_EECPENGINE_H
 #define EE_EECPENGINE_H
 
+#include <cstdarg>
 #include <cstdint>
+#include <cstdio>
 #include <string>
-#include <vector>
+
+#include "rust/game/cp_engine.h"
 
 class EEComputerPlayer;
 
@@ -37,35 +41,39 @@ enum EECPEngineChoice {
     kEECPChoiceRandom = 1,
     kEECPChoiceFirstAI = 2,         // + k: the manifest's entry k
 };
-const unsigned long kEECPMaxAIs = 64;   // the manifest's entries past this are skipped
 
-// an AI of the manifest (Data/ai/ais.json "ais")
-struct EECPAIEntry {
-    std::string mID;                // [a-z0-9_]+, unique; not classic, random or next
-    std::string mName;              // the lobby's text (UTF-8, a malformed byte as U+FFFD)
-    std::string mScript;            // the Lua module (require's name: dots are folders under Data/ai)
-    std::string mDescription;
-    bool mRandom;                   // the lobby's Random may pick it
-    bool mSeesAll;                  // "sees_all": its queries may read through the fog (ai.enemy_near; the classic's
-                                    // information cheat, docs/AI_LUA_UNITS.md §11); false for every other AI
-    bool mFillsGarrison;            // "fills_garrison": ai.garrison_fill may top a building's garrison up with no
-                                    // citizens (the classic's FillGarrison cheat, docs/AI_LUA_UNITS.md §11)
-    bool mClassic;                  // "classic": the lobby's Classic (choice 0) plays this AI (the first so marked)
-};
+// an AI of the manifest (Data/ai/ais.json "ais"; its texts live as long as the process): id ([a-z0-9_]+, unique),
+// name (the lobby's text, UTF-8), script (the Lua module: dots are folders under Data/ai), random (the lobby's
+// Random may pick it), sees_all, fills_garrison (the classic's cheats, docs/AI_LUA_UNITS.md §11), classic (the
+// lobby's Classic plays it)
+typedef EeCpAiEntry EECPAIEntry;
+inline std::string EECPAIText(const uint8_t* inText, size_t inLength) { return std::string((const char*)inText, inLength); }
+inline std::string EECPAIID(const EECPAIEntry* inAI) { return EECPAIText(inAI->id, inAI->id_len); }
 
-const std::vector<EECPAIEntry>& EECPAIManifest();   // read at the first call
-unsigned long EECPEngineChoiceCount();              // 2 + the manifest's entries
-const EECPAIEntry* EECPAIByChoice(unsigned long inChoice);   // NULL: random or out of range (choice 0: the "classic"
-                                                             // AI, NULL when the manifest marks none)
-const EECPAIEntry* EECPClassicAI();                 // the manifest's "classic" AI, NULL: none
-const EECPAIEntry* EECPAIByID(const std::string& inID);      // NULL: not in the manifest
-long EECPChoiceByName(const std::string& inName);    // classic, random, next (the first AI) or an id -> -1
+inline unsigned long EECPEngineChoiceCount() { return (unsigned long)ee_cp_engine_choice_count(); }   // 2 + the AIs
+// NULL: random or out of range (choice 0: the "classic" AI, NULL when the manifest marks none)
+inline const EECPAIEntry* EECPAIByChoice(unsigned long inChoice) { return ee_cp_engine_by_choice(inChoice); }
+inline const EECPAIEntry* EECPClassicAI() { return ee_cp_engine_classic(); }   // NULL: none
+inline const EECPAIEntry* EECPAIByID(const std::string& inID)                  // NULL: not in the manifest
+{
+    return ee_cp_engine_by_id((const uint8_t*)inID.data(), inID.size());
+}
+// classic, random, next (the first AI) or an id -> -1
+inline long EECPChoiceByName(const std::string& inName) { return (long)ee_cp_engine_choice_by_name(inName.c_str()); }
 // a hash of the AI folder's content (ais.json and every .lua by relative path; FNV-1a 32): part of the checksum a
 // joiner must match (EEInitializeNetwork), and logged at the start
-uint32_t EECPAIFolderHash();
+inline uint32_t EECPAIFolderHash() { return ee_cp_engine_folder_hash(); }
 
 // a log line "EE-AI engine <text>" (the debug output, the game log when open, EE-SIM's stderr)
-void EECPEngineLog(const char* inFormat, ...);
+inline void EECPEngineLog(const char* inFormat, ...)
+{
+    char theText[900];
+    va_list theArguments;
+    va_start(theArguments, inFormat);
+    vsnprintf(theText, sizeof(theText), inFormat, theArguments);
+    va_end(theArguments);
+    ee_cp_engine_log(theText);
+}
 
 // the computer player's engine: kEECPEngineClassic or kEECPEngineNext
 long EECPEngine(const EEComputerPlayer* inPlayer);
@@ -83,8 +91,11 @@ void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice);
 // the choice a computer player of the lobby slot inSlot (0..15) plays with: the lobby's choice after EE_AI_ENGINE's
 // override for the player id, random resolved from the game's random seed and the slot (identical on every peer,
 // and independent of the game's other draws) uniformly among classic and the AIs marked random -> classic or 2 + k
-unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, unsigned long inSlot,
-                                unsigned long inPlayerID);
+inline unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, unsigned long inSlot,
+                                       unsigned long inPlayerID)
+{
+    return (unsigned long)ee_cp_engine_resolve(inChoice, inSeed, inSlot, inPlayerID);
+}
 
 // the next engine's tick (EEComputerPlayer::Update calls it instead of the managers' decisions)
 void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime);

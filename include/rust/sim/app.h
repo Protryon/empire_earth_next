@@ -230,6 +230,16 @@ struct EeAppTeamsWorld {
   bool (*enemy)(void*, uint32_t, uint32_t);
 };
 
+/// `EEVoting`'s members (the class's base; zero when made).
+struct EeAppVoting {
+  /// the proposed edict (0: none)
+  int16_t mEdict;
+  int16_t mU06;
+  bool mB08;
+  bool mB09;
+  bool mB0A;
+};
+
 extern "C" {
 
 /// `ActivateUnit` after its checks -> true when queued (take a reference).
@@ -303,6 +313,37 @@ void ee_app_capture_commit(uint32_t tag, const uint8_t *data, size_t size);
 
 /// `Flush()`: the stream's buffer written out (EE-SIM's Quit, before the process ends).
 void ee_app_capture_flush();
+
+/// `EEGeomCaptureScope`'s constructor: whether this scope is the outer one (the capture is on and no other scope is
+/// alive on this thread).
+bool ee_sim_capture_geom_enter();
+
+/// `EEGeomCaptureScope`'s destructor.
+void ee_sim_capture_geom_leave();
+
+/// `EEGeomCaptureBegin`: a new record of `tag` (an open one is dropped), its first word `kind`.
+void ee_sim_capture_geom_begin(uint32_t tag, uint32_t kind);
+
+/// `EEGeomCaptureValue`
+void ee_sim_capture_geom_value(int32_t value);
+
+/// `EEGeomCaptureFloat`
+void ee_sim_capture_geom_float(float value);
+
+/// `EEGeomCapturePoint`
+void ee_sim_capture_geom_point(int32_t x, int32_t y);
+
+/// `EEGeomCapturePoints`: the count, then (`whole`) every point or the FNV-1a 32 of the points. `xy` holds `count`
+/// points as two C `long`s each (`U2DPoint<long>`).
+///
+/// # Safety
+/// `xy` is readable for `2 * count` longs (or null with `count` 0).
+void ee_sim_capture_geom_points(const long *xy,
+                                size_t count,
+                                bool whole);
+
+/// `EEGeomCaptureCommit`: writes the open record and closes it.
+void ee_sim_capture_geom_commit();
 
 /// `Init`: the table from the string resources.
 ///
@@ -433,6 +474,12 @@ void ee_app_teams_set(size_t team,
 size_t ee_app_teams_get(size_t team,
                         uint32_t *out,
                         size_t cap);
+
+/// `EEVoting::Propose`
+///
+/// # Safety
+/// `v` is the world's live vote.
+long ee_app_voting_propose(EeAppVoting *v, uint16_t edict, long arg);
 
 }  // extern "C"
 

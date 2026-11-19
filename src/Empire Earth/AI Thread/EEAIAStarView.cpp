@@ -45,7 +45,6 @@
 #include "ee/EEAIChokePoint.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarView.h"
-#include "ee/EEAIAStarCapture.h"
 #include "rust/sim/astar.h"
 #include "rust/sim/combat.h"
 
@@ -55,7 +54,7 @@ long EEAIHasResourceUnit(EETile* inTile);
 // the path goals' full hit point fraction (.rdata 0x439ff4 / 0x439b5c)
 static const float kEEAStarViewFull = 1.0f;
 
-// The capture's note of a query (ee/EEAIAStarCapture.h; a no-op unless a search is being captured): the query's
+// The capture's note of a query (ee_sim astar search_note.rs; a no-op unless a search is being captured): the query's
 // number, the tile, up to two more arguments, the answer
 enum {
     kViewHasTile = 1, kViewTerrain, kViewEdge, kViewHasUnits, kViewAIValue, kViewHeightLevel, kViewContinentID,
@@ -70,7 +69,9 @@ long EEAIAStarView::Note(long inQuery, long inX, long inY, long inAnswer, long i
 {
     if (this->mQuiet)
         return inAnswer;
-    return EEAIAStarNote(kAStarEventView, inQuery, inX, inY, inArg, inArg2, inAnswer);
+    ee_astar_capture_note('V', (int32_t)inQuery, (int32_t)inX, (int32_t)inY, (int32_t)inArg, (int32_t)inArg2,
+                          (int32_t)inAnswer);   // TEST ONLY: the A* capture's view event (ee_sim astar search_note.rs)
+    return inAnswer;
 }
 
 // the walker as the capture names it (its unit id)
