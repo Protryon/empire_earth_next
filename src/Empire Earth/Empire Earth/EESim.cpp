@@ -129,6 +129,7 @@
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
 #include "rust/sim/combat.h"
 #include "rust/sim/netmsg.h"   // the decisions' sweep
+#include "rust/sim/units.h"   // the pick and Fill sweeps (ee_sim units/pick_sweep.rs)
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -948,8 +949,8 @@ void HostSweep(int inKind, long inArg)
                                        gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
             ee_netmsg_capture_decision_sweep(theRates);
         }
-        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
-        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
+        ee_units_select_pick_sweep();   // the box selection's pick over every player's units (ee_sim units/pick_sweep.rs)
+        ee_units_fill_sweep();   // the active groups' Fill test over every player's units (likewise)
         EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
         break;
     case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)

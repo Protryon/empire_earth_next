@@ -2635,7 +2635,7 @@ void EEPlayer::SelectUnits(std::vector<long>& inUnitIDs)
         theIDs[i] = static_cast<uint32_t>(inUnitIDs[i]);
     std::vector<uint32_t> thePicked(inUnitIDs.size() + 1);
     size_t thePickedCount = EESelectPick(this, &theIDs[0], inUnitIDs.size(), &thePicked[0]);
-    EESelectPickCapture(100, this, &theIDs[0], inUnitIDs.size(), &thePicked[0], thePickedCount);   // TEST ONLY (off by default)
+    ee_units_select_pick_capture(100, (uint64_t)(uintptr_t)this, &theIDs[0], inUnitIDs.size(), &thePicked[0], thePickedCount);   // TEST ONLY (off by default)
     for (size_t i = 0; i < thePickedCount; i++) {
         EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(this->GetUnit(thePicked[i]))->mComplexUnit;
         theGroup->Add(theComplexUnit);
