@@ -269,8 +269,6 @@ pub const EE_UNITS_GOAL_HOST_FILL_PARTS: i32 = 412;
 pub const EE_UNITS_GOAL_HOST_NEXT_FREE_TILE: i32 = 413;
 pub const EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION: i32 = 414;
 pub const EE_UNITS_GOAL_HOST_LOCATION_GOAL: i32 = 415;
-pub const EE_UNITS_GOAL_HOST_TEND_FARM: i32 = 417;
-pub const EE_UNITS_GOAL_HOST_GATHER_NEAR: i32 = 418;
 pub const EE_UNITS_GOAL_HOST_GATE_SIDE_PART: i32 = 419;
 pub const EE_UNITS_GOAL_HOST_BUILD_EVENT: i32 = 420;
 pub const EE_UNITS_GOAL_HOST_ABANDON_BUILDING: i32 = 421;
@@ -295,15 +293,12 @@ pub const EE_UNITS_GOAL_HOST_RESOURCE_SPOT: i32 = 451;
 pub const EE_UNITS_GOAL_HOST_NEXT_RESOURCE: i32 = 452;
 pub const EE_UNITS_GOAL_HOST_FIND_STORAGE: i32 = 453;
 pub const EE_UNITS_GOAL_HOST_FREE_TILE: i32 = 454;
-pub const EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT: i32 = 456;
-pub const EE_UNITS_GOAL_HOST_NEXT_FARM: i32 = 457;
 pub const EE_UNITS_GOAL_HOST_STORAGE_SEARCH: i32 = 458;
 pub const EE_UNITS_GOAL_HOST_GATHER_SPOT: i32 = 459;
 pub const EE_UNITS_GOAL_HOST_DEPOSIT_LOAD: i32 = 461;
 pub const EE_UNITS_GOAL_HOST_NEXT_TREE: i32 = 462;
 pub const EE_UNITS_GOAL_HOST_HUNT: i32 = 464;
 pub const EE_UNITS_GOAL_HOST_SET_GATHERED: i32 = 465;
-pub const EE_UNITS_GOAL_HOST_GATHER_ROOM: i32 = 466;
 pub const EE_UNITS_GOAL_HOST_LAST_WAYPOINT: i32 = 467;
 pub const EE_UNITS_GOAL_HOST_RESOURCE_REACH: i32 = 468;
 pub const EE_UNITS_GOAL_HOST_SET_ACTIVE: i32 = 470;
@@ -350,8 +345,8 @@ pub const EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: i32 = 507;
 pub const EE_UNITS_GOAL_HOST_RELEASE_FIRE: i32 = 508;
 /// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
 pub const EE_UNITS_GOAL_HOST_MINING_BEAM: i32 = 509;
-/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
-pub const EE_UNITS_GOAL_HOST_FIND_FISH: i32 = 511;
+/// `a`: the gatherer, `b`: the centre: its class's `FindResourceOfKind(a, b, i[3], i[0], i[1], &list, i[2])`
+pub const EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND: i32 = 511;
 
 /// The base goal's saved fields (`EEUnitGoal`'s `mAction`, `mB1C`, `mID`, `mB1D`, `mStartTime`, `mCreationTime`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -1081,7 +1076,10 @@ impl crate::units::world::GatheringHost for OpHost<'_> {
         });
     }
     fn find_fish(&mut self, unit: u64, fish: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_FIND_FISH, unit, fish) as u64
+        // the naval citizen's FindResourceOfKind around the fish: five times its sight, the fish's type
+        let range = read_unit(unit, |u| crate::units::physics::lrintf(unit_line_of_sight(u) * 5.0));
+        let kind = read_unit(fish, |f| f.resource_type()) as i32;
+        crate::units::gather_world::GatherWorldHost::resource_of_kind(self, unit, fish, fish, range, kind, &[], true)
     }
     fn random_draw(&mut self) -> f32 {
         self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
@@ -1397,10 +1395,10 @@ impl BuildHost for OpHost<'_> {
         crate::units::world::help_build_nearby(self, unit, target);
     }
     fn tend_next_farm(&mut self, unit: u64, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_TEND_FARM, unit, target);
+        crate::units::gather_world::tend_next_farm(self, unit, target);
     }
     fn gather_near(&mut self, unit: u64, target: u64) {
-        self.op(EE_UNITS_GOAL_HOST_GATHER_NEAR, unit, target);
+        crate::units::gather_world::gather_near_building(self, unit, target);
     }
     fn gate_side_part(&mut self, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_GATE_SIDE_PART, target, 0) != 0
@@ -1555,10 +1553,10 @@ impl GatherHost for OpHost<'_> {
         read_unit(unit, |u| u.tile().expect("a unit's tile").height())
     }
     fn at_resource_spot(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT, unit, resource) != 0
+        crate::units::gather_world::at_resource_spot(self, unit, resource)
     }
     fn next_farm(&mut self, unit: u64, resource: u64) {
-        self.op(EE_UNITS_GOAL_HOST_NEXT_FARM, unit, resource);
+        crate::units::gather_world::next_farm(self, unit, resource);
     }
     fn storage_search(&mut self, unit: u64) -> Option<u64> {
         let found = self.op(EE_UNITS_GOAL_HOST_STORAGE_SEARCH, unit, 0);
@@ -1591,7 +1589,7 @@ impl GatherHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_SET_GATHERED, unit, resource);
     }
     fn gather_room(&mut self, unit: u64, resource: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_GATHER_ROOM, unit, resource) != 0
+        crate::units::gather_world::has_gather_room(self, unit, resource)
     }
     fn last_waypoint(&mut self, unit: u64) -> [f32; 3] {
         self.op_point(EE_UNITS_GOAL_HOST_LAST_WAYPOINT, unit, 0, &[])
@@ -1848,4 +1846,84 @@ pub fn register_other_goal_kinds(f: unsafe fn(i32, u8, u64, u64, u64, *mut c_voi
 /// `%08lx` of an `unsigned long`
 pub fn hex8(value: u32) -> String {
     format!("{value:08x}")
+}
+
+impl crate::units::gather_world::GatherWorldHost for OpHost<'_> {
+    fn start_only(&mut self, unit: u64, action: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_START_ACTION, unit, 0, &[action, 1]);
+    }
+    fn farm_drop_sites(&mut self, farm: u64) -> (bool, Vec<u64>) {
+        crate::units::uu_direct::farm_drop_sites(farm)
+    }
+    fn find_free_farm(&mut self, unit: u64, ring: &mut i32) -> u64 {
+        crate::units::uu_direct::find_free_farm(unit, true, ring)
+    }
+    fn resource_of_kind(
+        &mut self,
+        unit: u64,
+        center: u64,
+        resource: u64,
+        range: i32,
+        kind: i32,
+        taken: &[u64],
+        farms: bool,
+    ) -> u64 {
+        let mut io = EeUnitsGoalIo { list: taken.as_ptr(), list_len: taken.len(), ..Default::default() };
+        io.i[0] = i64::from(range);
+        io.i[1] = i64::from(kind);
+        io.i[2] = i64::from(farms);
+        io.i[3] = resource as i64;
+        self.call(EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND, unit, center, &mut io) as u64
+    }
+    fn resource_class(&mut self, class: u64) -> (bool, i32) {
+        // SAFETY: the goal's caller holds the world; a live class
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let c = unsafe { crate::world::ClassView::of(&t, class) }.expect("a resource's class");
+        let animal: std::ffi::c_long = crate::world_field!(c.fields(), mAnimalID);
+        (c.tree(), animal as i32)
+    }
+    fn mining_limit(&mut self, player: u64) -> i32 {
+        // SAFETY: as above; a live player
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let p = unsafe { crate::world::PlayerView::of(&t, player) }.expect("a player");
+        let limit: std::ffi::c_long = crate::world_field!(p.fields(), mMiningLimit);
+        limit as i32
+    }
+    fn users_of(&mut self, resource: u64) -> u32 {
+        crate::units::uu_direct::with_game(|g| g.resource_users(resource)) as u32
+    }
+    fn shuffle_units(&mut self, units: &mut [u64]) {
+        crate::units::uu_direct::ai_random_shuffle(units, |lo, hi| {
+            crate::units::uu_direct::with_game(|g| g.random_long(lo, hi))
+        });
+    }
+    fn squared_distance_to_unit(&mut self, complex: u64, other: u64) -> f32 {
+        crate::units::unit_geom::distance_squared_to_unit_of(complex, other)
+    }
+    fn resource_spots(&mut self, resource: u64) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::resource_spots(resource).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn place_on_tile(&mut self, unit: u64, class: u64, x: i32, y: i32) -> bool {
+        let mut p = [0.0f32; 3];
+        crate::units::uu_direct::place_on_tile(unit, class, x, y, 1, x, y, 1, &mut p)
+    }
+    fn side_tiles(&mut self, x: i32, y: i32, size: i32) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::square_ring(x, y, size, size, true).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn corner_tiles(&mut self, x: i32, y: i32, size: i32) -> Vec<(i32, i32)> {
+        crate::units::uu_direct::ring_corners(0, x, y, size, size, true).into_iter().map(|t| (t[0], t[1])).collect()
+    }
+    fn map_tile_units(&mut self, x: i32, y: i32) -> Option<Vec<u64>> {
+        let tile = crate::units::uu_direct::map_tile(x, y);
+        if tile == 0 {
+            return None;
+        }
+        // SAFETY: as above; a live tile
+        let t = unsafe { crate::world::WorldRead::begin() };
+        let v = unsafe { crate::world::TileView::of(&t, tile) }?;
+        Some(v.units().map(|u| u.map_or(0, |u| u.handle())).collect())
+    }
+    fn passable_by(&mut self, unit: u64, by: u64) -> bool {
+        crate::units::uu_direct::with_game(|g| g.passable_by(unit, by))
+    }
 }

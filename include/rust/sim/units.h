@@ -2694,10 +2694,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION = 414;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LOCATION_GOAL = 415;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TEND_FARM = 417;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_NEAR = 418;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATE_SIDE_PART = 419;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_EVENT = 420;
@@ -2744,10 +2740,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_STORAGE = 453;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FREE_TILE = 454;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT = 456;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FARM = 457;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_SPOT = 459;
@@ -2759,8 +2751,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_TREE = 462;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_HUNT = 464;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_GATHERED = 465;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_ROOM = 466;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LAST_WAYPOINT = 467;
 
@@ -2829,8 +2819,8 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_RELEASE_FIRE = 508;
 /// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MINING_BEAM = 509;
 
-/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
-constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_FISH = 511;
+/// `a`: the gatherer, `b`: the centre: its class's `FindResourceOfKind(a, b, i[3], i[0], i[1], &list, i[2])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND = 511;
 
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 

@@ -158,6 +158,32 @@ pub fn ai_random_shuffle<T>(items: &mut [T], mut random: impl FnMut(i32, i32) ->
     }
 }
 
+/// `EEGetResourceSpots(resource, tiles)` (into an empty list).
+pub fn resource_spots(resource: u64) -> Vec<Tile> {
+    game!({
+        let mut tiles = Vec::new();
+        ffi::unit_tiles(1, resource, &mut tiles);
+        tiles
+    })
+}
+
+/// `EEFindPlaceOnTile(unit, class, x, y, size, to_x, to_y, square, io)`: `io` in and out.
+#[allow(clippy::too_many_arguments)]
+pub fn place_on_tile(
+    unit: u64,
+    class: u64,
+    x: i32,
+    y: i32,
+    size: i32,
+    to_x: i32,
+    to_y: i32,
+    square: i32,
+    io: &mut [f32; 3],
+) -> bool {
+    // SAFETY: a live point
+    game!(unsafe { ffi::ee_units_uu_find_place_on_tile(unit, class, x, y, size, to_x, to_y, square, io) != 0 })
+}
+
 /// `EEGetUnitsInRadius`.
 pub fn units_in_radius(x: f32, y: f32, radius: f32) -> Vec<u64> {
     game!(ffi::units_in_radius(x, y, radius))

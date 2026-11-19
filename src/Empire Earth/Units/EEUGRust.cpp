@@ -109,60 +109,6 @@ bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
     return theResult;
 }
 
-namespace {
-
-// 0x61ec58: the unit works the nearest free farm around the farm's drop sites
-void EETendNextFarm(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    std::vector<EEUnit*> theFreeUnits;
-    std::vector<EEUnit*> theUnits;
-    long theCount = 1;
-    if (EEGetFarmDropSites(inTarget, theUnits)) {
-        for (std::vector<EEUnit*>::iterator i = theUnits.begin(); i != theUnits.end(); ++i) {
-            while ((inTarget = EEFindFreeFarm((*i)->GetComplexUnit(), 1, &theCount)) != 0) {
-                EEUnit* theFree = inTarget;
-                theFreeUnits.push_back(theFree);
-            }
-        }
-        if (theFreeUnits.size() > 0) {
-            std::sort(theFreeUnits.begin(), theFreeUnits.end(), EETileDistanceLess(inUnit->GetTile()));
-            EEWorkFarm(theFreeUnits.back()->mComplexUnit, inUnit);
-        }
-    }
-}
-
-// 0x61ed5e: the unit gathers a resource near a drop site, passing over mines at the player's worker limit (else a
-// random one of those). The original repeats the identical first search when it returns null: both calls are kept.
-void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    std::vector<EEUnit*> theRejected;
-    bool theResult = false;
-    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
-    EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-    if (theResource == NULL)
-        theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-    while (!theResult && theResource != NULL) {
-        if (!theResource->mUnitClass->mIsTree && theResource->mUnitClass->mAnimalID == 1000
-            && ::gWorld.GetResourceUsers(theResource) >= inUnit->mPlayer->GetMiningLimit()) {
-            theRejected.push_back(theResource);
-            theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-        } else {
-            inUnit->SetGoal(EEUGRust::NewGather(theResource, inTarget, false), 0, 0);
-            inUnit->StartAction(kActionMoveToWaitingArea);
-            inUnit->mUnitClass->ActionChanged(inUnit);
-            theResult = true;
-        }
-    }
-    if (!theResult && theRejected.size() > 0) {
-        EEAIRandomShuffle(theRejected.begin(), theRejected.end());
-        inUnit->SetGoal(EEUGRust::NewGather(theRejected[0], inTarget, false), 0, 0);
-        inUnit->StartAction(kActionMoveToWaitingArea);
-        inUnit->mUnitClass->ActionChanged(inUnit);
-    }
-}
-
-}  // namespace
-
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
 
 // EEAIContinentManager's inline forest id (ee/EEAIContinentManager.h declares it; EEAIForest is complete here). Its
@@ -174,9 +120,6 @@ inline unsigned short EEAIContinentManager::GetForestIDAt(const EETileLocation& 
 }
 
 namespace {
-
-// the squared distance within which a gatherer checks the resource's tiles (0x44759c; provisional name)
-const float kGatherRangeSquared = 16.0f;
 
 // The order FindGatherSpot sorts the tiles around the resource in: the farther from the gatherer first (0x18 bytes:
 // the gatherer's position, the resource's tile, its path sector's id, the gatherer) (provisional name)
@@ -201,40 +144,6 @@ struct EEGatherTileFarther {
     unsigned short mSector;                 // +0x10
     EEComplexUnit* mUnit;                   // +0x14
 };
-
-// 0x622271 IsAtResourceSpot: within 4 tiles of the resource, on one of its gather spots with room to stand
-bool EEGatherAtResourceSpot(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    GE3DPoint theLocation;
-    std::vector<U2DPoint<long> > theTiles;
-    bool theResult = false;
-    if (inResource != NULL && !(inUnit->DistanceSquaredToUnit(inResource) > kGatherRangeSquared)) {
-        EEGetResourceSpots(inResource, theTiles);
-        U2DPoint<long> theTile(inUnit->mTileX, inUnit->GetTileY());
-        if (std::find(theTiles.begin(), theTiles.end(), theTile) != theTiles.end())
-            theResult = EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), inUnit->mTileX, inUnit->GetTileY(), 1, inUnit->mTileX,
-                                   inUnit->GetTileY(), 1, &theLocation);
-    }
-    return theResult;
-}
-
-// 0x622593 SendToNextFarm: the first free farm around the drop sites of the gatherer's farm worked
-void EEGatherNextFarm(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    EEComplexUnit* theTarget = NULL;
-    std::vector<EEUnit*> theUnits;
-    long theCount = 1;
-    if (!EEGetFarmDropSites(inResource->GetComplexUnit(), theUnits))
-        return;
-    for (std::vector<EEUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
-         ++theIterator) {
-        if (theTarget != NULL)
-            break;
-        theTarget = EEFindFreeFarm((*theIterator)->GetComplexUnit(), 1, &theCount);
-    }
-    if (theTarget != NULL)
-        EEWorkFarm(theTarget, inUnit);
-}
 
 // 0x6226cf FindGatherSpot's search: the resource's nearest spot in its path subsector, under the gatherer or in a
 // neighbouring subsector the gatherer can enter, else any spot with room (the waiting area, at the tile's height)
@@ -349,42 +258,6 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     } else if (inResource->GetUnitClass()->mFamily != kUnitFamilyAnimal)
         inUnit->SetGatheredResource(inResource);
     return theFound;
-}
-
-// 0x623757 HasGatherRoom: a farm takes one gatherer, others their unblocked side tiles (counted twice) and corner
-// tiles, capped by the player's mining limit
-bool EEGatherHasRoom(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theEdges;
-    EEMap* theMap = ::gWorld.GetMap();
-    unsigned long theLimit;
-    if (inResource->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
-        theLimit = 1;
-    else {
-        EEGetSideTiles(inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theTiles);
-        EEGetCornerTiles(0, inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theEdges);
-        unsigned long theCount = theTiles.size() * 2 + theEdges.size();
-        for (int thePass = 0; thePass < 2; thePass++) {
-            std::vector<U2DPoint<long> >& theList = thePass == 0 ? theTiles : theEdges;
-            for (unsigned long theIndex = 0; theIndex < theList.size(); theIndex++) {
-                EEMapTile* theTile = theMap->GetTile(theList[theIndex].mX, theList[theIndex].mY);
-                if (theTile == NULL)
-                    theCount--;
-                else
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == NULL)
-                            continue;
-                        long theCategory = theUnit->GetUnitClass()->GetCategory();
-                        if (theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen && !theUnit->IsPassableBy(inUnit))
-                            theCount--;
-                    }
-            }
-        }
-        theLimit = theCount < inUnit->GetPlayer()->mMiningLimit ? theCount : inUnit->GetPlayer()->mMiningLimit;
-    }
-    return ::gWorld.GetResourceUsers(inResource) < theLimit;
 }
 
 // the resource-accessible trigger: a land gatherer's resource on land, a naval one's on deep water, in its continent
@@ -904,12 +777,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
         theComplex->SetGoal(EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
         return 0;
-    case EE_UNITS_GOAL_HOST_TEND_FARM:
-        EETendNextFarm(theComplex, ObjectOf<EEComplexUnit>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_GATHER_NEAR:
-        EEGatherNearBuilding(theComplex, ObjectOf<EEComplexUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
         return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
     case EE_UNITS_GOAL_HOST_BUILD_EVENT: {
@@ -1008,11 +875,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_FIND_STORAGE:
         return Handle(theComplex->mUnitClass->FindStorage(theComplex, ioArgs->i[0] != 0));
-    case EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT:
-        return EEGatherAtResourceSpot(theComplex, ObjectOf<EEUnit>(inB));
-    case EE_UNITS_GOAL_HOST_NEXT_FARM:
-        EEGatherNextFarm(theComplex, ObjectOf<EEUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_STORAGE_SEARCH: {
             // FindStorage's search (an AI may order a settlement for the gatherer instead: -1)
             unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
@@ -1048,8 +910,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_SET_GATHERED:
         theComplex->SetGatheredResource(ObjectOf<EEUnit>(inB));
         return 0;
-    case EE_UNITS_GOAL_HOST_GATHER_ROOM:
-        return EEGatherHasRoom(theComplex, ObjectOf<EEUnit>(inB));
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
         PointOut(ioArgs, GE3DPoint(theComplex->mWaypoints.back().mLocation));
         return 0;
@@ -1111,11 +971,12 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theComplex->mFireEffect = theHandle;
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_FIND_FISH: {
-            std::vector<EEUnit*> theRejected;
-            EEUnit* theFish = ObjectOf<EEUnit>(inB);
-            return Handle(EEUnitClassOfKind<EE_CLASS_KIND_NAVAL_CITIZEN>(theComplex->GetUnitClass())->FindResourceOfKind(theComplex, theFish, theFish,
-                UMFloatToLong(theComplex->GetLineOfSight() * 5.0f), theFish->GetResourceType(), &theRejected, true));
+    case EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND: {   // the class's search (its UCBD note): the gather world's, gather_world.rs
+            std::vector<EEUnit*> theTaken;
+            for (size_t k = 0; k < ioArgs->list_len; k++)
+                theTaken.push_back(ObjectOf<EEUnit>(ioArgs->list[k]));
+            return Handle(theComplex->mUnitClass->FindResourceOfKind(theComplex, ObjectOf<EEUnit>(inB), ObjectOf<EEUnit>((uint64_t)ioArgs->i[3]),
+                (long)ioArgs->i[0], (unsigned long)ioArgs->i[1], &theTaken, ioArgs->i[2] != 0));
         }
     // the location goal's
     case EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN:
