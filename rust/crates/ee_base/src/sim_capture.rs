@@ -371,10 +371,7 @@ mod tests {
         r.i32(-2);
         r.f32(1.0);
         r.u64(0x0102_0304_0506_0708);
-        assert_eq!(
-            r.data,
-            [1, 0, 0, 0, 0xfe, 0xff, 0xff, 0xff, 0, 0, 0x80, 0x3f, 8, 7, 6, 5, 4, 3, 2, 1]
-        );
+        assert_eq!(r.data, [1, 0, 0, 0, 0xfe, 0xff, 0xff, 0xff, 0, 0, 0x80, 0x3f, 8, 7, 6, 5, 4, 3, 2, 1]);
     }
 
     #[test]

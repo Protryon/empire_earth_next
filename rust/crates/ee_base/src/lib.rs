@@ -34,11 +34,11 @@ pub mod plat_sys;
 /// cbindgen:ignore
 pub mod plat_ui;
 pub mod png;
-/// TEST ONLY: the simulation capture's file (ee/EESimCapture.h).
-pub mod sim_capture;
 /// The crate ee_random before the restructure.
 /// cbindgen:ignore
 pub mod random;
+/// TEST ONLY: the simulation capture's file (ee/EESimCapture.h).
+pub mod sim_capture;
 /// The crate ee_time before the restructure.
 pub mod time;
 /// The crate ee_ts before the restructure.
