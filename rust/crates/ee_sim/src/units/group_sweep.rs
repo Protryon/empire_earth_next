@@ -40,8 +40,6 @@ pub const SWEEP_TAG: u32 = 0x4347_5355;
 pub const SWEEP_NO_UNIT: i32 = 0x7e00_0001;
 
 const NONE: i32 = -1;
-const UNIT_TYPE_HOUSE: u64 = 0x25;
-const UNIT_TYPE_CAPITOL: u64 = 0x29;
 const UNIT_TYPE_FARM: u64 = 0x2a;
 const UNIT_TYPE_GRANARY: u64 = 0x34;
 const UNIT_TYPE_NAVY_YARD: u64 = 0x41;
@@ -555,6 +553,8 @@ mod game {
     use crate::world::view::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
 
     const AI_KIND_HERO: u64 = 0x1b;
+    const UNIT_TYPE_HOUSE: u64 = 0x25;
+    const UNIT_TYPE_CAPITOL: u64 = 0x29;
     const TECH_TELEPORT: i64 = 1916;
     const CALAMITY_GROUP_CAST: i32 = 0x12;
 
