@@ -14,6 +14,14 @@ The lane's state. Each round rewrites this file to the current state; each round
   `Game` trait), `ffi.rs`.
 - `ee_sim::app::statistics` (round 1): `EEWorld::RecordStatistics`' decisions (the recorded players, the computers'
   top-ups, the scores, the order, the local and human flags, the computers' play times) over a host.
+- `ee_sim::app::active` (round 2): the world's active unit lists as one object (the activation and deactivation
+  queues, the stepped set; the stepped list is `units::order`'s list itself); the C++ applies each reference change
+  as it is reported.
+- `ee_sim::app::teams` (round 2): the teams (EEWorld's AddTeam, AddAlliance, BreakAlliance, RemovePlayerFromTeams,
+  RebuildTeams; EETeam's Merge, AddPlayer, RemovePlayer, Contains); `EEWorld::mTeams` is the C++ mirror the AI
+  thread, the server and the save read.
+- `ee_game::sim_driver::editor` (round 2): the editor script's runner and language (lines, words, comments, the
+  steps' order and output, the errors); `EESimEditorStep` runs one line's command.
 
 **C++ left**:
 - `EESim.cpp` (1,393 lines, was 2,986): the host (the UI's controls under the UI lock, the world lock, the platform
@@ -23,6 +31,8 @@ The lane's state. Each round rewrites this file to the current state; each round
   fault handler.
 - `EEWorld::RecordStatistics`: the history's fields, the players gathered, the records filled (names, colours, the
   statistics' copies, teams, resources).
+- `EESimEditor.cpp` (2,151): every command's body (editor actions, UI controls) and the digests (UI and world reads);
+  `EESimCivBuilder.cpp` (437) and `EETestFixture*.cpp` (2,900): unchanged in round 2.
 
 **Gates**: the oracle (EE-AI lines), the reports (wall fields aside), the per-CT checksum lines and the traces
 (EE-AIPROF lines aside) byte-identical to the unmodified exe at seeds 2-3; `--games` (three games, one with
@@ -41,5 +51,11 @@ C++ (without the history's start time: a wall clock).
   reaches them; the tick already Rust).
 - Persistent: `EEPWorldHelper.cpp` (already over ee_units world_save.rs), `EESaveLoad.cpp`.
 
-**Next**: the active unit lists as a Rust object (with the unit store's order list they mirror), the teams' logic
-over the views, `EEGameState::Create`'s decisions.
+**Round 2 measure of the test drivers**: their commands are UI and editor calls; moving the dispatch alone moves
+each body into a host function of the same size (net about zero). Real reductions need the reads in Rust: the world
+digests over the views, the UI controls' state over ee_ui's records (`EeUiControlFields` and the list, combo and
+check records), the fixture's ui-state writer and command parser over those (verified only by the harness's fixture
+sessions).
+
+**Next**: the fixture's ui-state writer and command parser over ee_ui's records; the editor's world digests
+(units, map tiles) over the views; `EEGameState::Create`'s decisions.
