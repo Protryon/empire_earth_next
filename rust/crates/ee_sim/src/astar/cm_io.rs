@@ -1679,7 +1679,7 @@ mod tests {
 
     fn set() -> EeSparseArray {
         // SAFETY: a fresh handle from the C interface
-        unsafe { *Box::from_raw(crate::astar::ffi::ee_sparse_new()) }
+        unsafe { *Box::from_raw(ee_base::sparse::ee_sparse_new()) }
     }
 
     #[test]
