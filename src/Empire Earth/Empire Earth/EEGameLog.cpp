@@ -141,10 +141,7 @@ extern "C" int64_t ee_game_log_host(EeGameLogCall* c)
     return 0;
 }
 
-bool EEGameLogOn() { return ee_game_log_on(); }
-void EEGameLogTick(unsigned long inGameTime) { ee_game_log_tick(inGameTime); }
-void EEGameLogLine(const char* inText) { ee_game_log_line(inText); }
-void EEGameLogChat(unsigned long inPlayer, const char* inText) { ee_game_log_chat(inPlayer, inText); }
+// (EEGameLogOn, EEGameLogTick, EEGameLogLine and EEGameLogChat: inline in ee/EEGameLog.h)
 
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount)
 {
