@@ -2982,6 +2982,24 @@ bool ee_gfx_effect_is_2d(int32_t kind);
 /// `loadable` for the C++ (the manager's load-time effects).
 bool ee_gfx_effect_loadable(int32_t kind);
 
+/// `EEOrbital::IsOrbitalModel` of a model named `name`.
+///
+/// # Safety
+/// `name` is NULL or NUL-terminated.
+bool ee_gfx_orbital_is_model(const char *name);
+
+/// `EEOrbital::Init`'s speed of a model named `name`.
+///
+/// # Safety
+/// `name` is NULL or NUL-terminated.
+float ee_gfx_orbital_speed(const char *name);
+
+/// `EEOrbital::Update` (0x208e28): `*angle` advanced by `speed` over the tick, wrapped to -pi..pi.
+///
+/// # Safety
+/// `angle` is valid.
+void ee_gfx_orbital_update(float *angle, float speed, float tick_seconds);
+
 /// `impact` for the C++.
 ///
 /// # Safety
@@ -4078,6 +4096,14 @@ size_t ee_gfx_effects_destroyed_len(const EeGfxEffectStore *s);
 
 /// The destruction queue's `i`th handle.
 uint32_t ee_gfx_effects_destroyed_at(const EeGfxEffectStore *s, size_t i);
+
+/// EFMU's six words into `out` (`record`: an effect's record, as the manager's host answers it).
+///
+/// # Safety
+/// `s` is a live store whose effects are live; `out` holds six words.
+void ee_gfx_effects_capture(const EeGfxEffectStore *s,
+                            EeGfxEffectRecord *(*record)(void *context, void *effect),
+                            uint32_t *out);
 
 /// `EEInitialiseScene`'s reset of the fade and letterbox.
 ///
