@@ -25,9 +25,6 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
-d5d08 d5f7e Empire Earth/Database/EEColorTable.cpp
-d5f7e d6035 Empire Earth/Database/EECPBehaviorTable.cpp
-d6035 d61f7 Empire Earth/Database/EEDatabase.cpp
 d61f7 d68c7 Empire Earth/Database/EEDbObject.cpp
 d68c7 d6bed Empire Earth/Database/EEGameVariant.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
@@ -37,7 +34,6 @@ da56d da984 Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp
 dae63 db169 Empire Earth/Database/EETerrainColorTable.cpp
 db169 dbcc8 Empire Earth/Database/EETerrainTable.cpp
 dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
-dc8e7 dd160 Empire Earth/Database/EEUnitBehavior.cpp
 ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp
 10a9b0 10aa88 Empire Earth/Graphics Thread/EEMouse.cpp

@@ -319,6 +319,31 @@ pub unsafe extern "C" fn ee_data_to_hit_from_record(bytes: *const u8, out: *mut 
     }
 }
 
+/// `gWeaponToHitFactors[6][6]` (the C++ declares it `extern "C" float gWeaponToHitFactors[6][6]`): zero until the
+/// table loads.
+pub struct EeDataToHitTable(std::cell::UnsafeCell<[[f32; 6]; 6]>);
+
+// SAFETY: as the C++ global it is: the database loads it before the games that read it start
+unsafe impl Sync for EeDataToHitTable {}
+
+/// cbindgen:ignore
+#[no_mangle]
+#[allow(non_upper_case_globals)]
+pub static gWeaponToHitFactors: EeDataToHitTable = EeDataToHitTable(std::cell::UnsafeCell::new([[0.0; 6]; 6]));
+
+/// `EEToHitTable::Load`'s row `index` (below 6) of `gWeaponToHitFactors` from one record.
+///
+/// # Safety
+/// `bytes` holds `ee_data_to_hit_record_size()` bytes; no other thread reads the table while it loads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_to_hit_load(index: usize, bytes: *const u8) {
+    if index >= 6 {
+        return;
+    }
+    // SAFETY: the caller's guarantee
+    unsafe { ee_data_to_hit_from_record(bytes, (*gWeaponToHitFactors.0.get())[index].as_mut_ptr()) };
+}
+
 // ---- EEStartingResources (db\dbstartingresources)
 
 /// One record of dbstartingresources (`EEStartingResourcesRecord`, 132 bytes).
@@ -570,20 +595,33 @@ pub fn player_colors(r: &DbColor) -> EeDataPlayerColors {
     }
 }
 
-/// The size of a dbcolortable record.
-#[no_mangle]
-pub extern "C" fn ee_data_color_record_size() -> usize {
-    core::mem::size_of::<DbColor>()
-}
-
-/// `EEColorTable::Load`'s copy of one record.
+/// `EEColorTable`'s colour `which` (0 the main, 1 the second, 2 the dark shade, 3 the fourth) of player colour
+/// `index` into `out[3]`; white (`GEColor()`, the class's `sColor`) past the table or for a row not loaded.
 ///
 /// # Safety
-/// `bytes` holds `ee_data_color_record_size()` bytes; `out` is writable.
+/// `out` has three writable floats.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_color_from_record(bytes: *const u8, out: *mut EeDataPlayerColors) {
+pub unsafe extern "C" fn ee_data_player_color(index: usize, which: u32, out: *mut f32) {
+    let mut t = tables();
+    let rgb = match t[EeDataList::Colors as usize].get_mut(index) {
+        Some(Some(e)) => match **e {
+            Entry::Color(c) => c.colors[(which as usize).min(3)],
+            _ => [1.0; 3],
+        },
+        _ => [1.0; 3],
+    };
     // SAFETY: the caller's guarantee
-    unsafe { *out = player_colors(&record::<DbColor>(bytes)) };
+    unsafe { std::slice::from_raw_parts_mut(out, 3).copy_from_slice(&rgb) };
+}
+
+/// `EEColorTable::FindIndex`: the first player colour whose main colour equals (red, green, blue), else 0.
+#[no_mangle]
+pub extern "C" fn ee_data_player_color_find(red: f32, green: f32, blue: f32) -> usize {
+    let t = tables();
+    t[EeDataList::Colors as usize]
+        .iter()
+        .position(|e| matches!(e.as_deref(), Some(Entry::Color(c)) if c.colors[0] == [red, green, blue]))
+        .unwrap_or(0)
 }
 
 // ---- EEAIUnitTargetingTable (db\dbaiunittargeting)
@@ -2312,6 +2350,313 @@ pub struct DbTerrainGrayTexture {
 
 const _: () = assert!(core::mem::size_of::<DbTerrainGrayTexture>() == 120);
 
+// ---- EEDatabase (db\dbobjects): the unit classes' raw records
+
+/// The size of a dbobjects record (`EEDbObject::mRecord`: the unit class record, ee/EEUnitClassRecord.h).
+pub const EE_DATA_OBJECT_RECORD: usize = 0x7a8;
+
+/// `gDatabaseObjects`' records (boxed: a record's address is the C++'s `EEDbObject*` until the table is cleared).
+static OBJECTS: std::sync::RwLock<Vec<Option<Box<[u8; EE_DATA_OBJECT_RECORD]>>>> = std::sync::RwLock::new(Vec::new());
+
+/// The size of a dbobjects record.
+#[no_mangle]
+pub extern "C" fn ee_data_object_record_size() -> usize {
+    EE_DATA_OBJECT_RECORD
+}
+
+/// `EEDatabase::Clear`: no records.
+#[no_mangle]
+pub extern "C" fn ee_data_objects_clear() {
+    OBJECTS.write().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+/// A load's start: `count` empty slots.
+#[no_mangle]
+pub extern "C" fn ee_data_objects_begin(count: usize) {
+    let mut o = OBJECTS.write().unwrap_or_else(|e| e.into_inner());
+    o.clear();
+    o.resize_with(count, || None);
+}
+
+/// Record `index` (past the slots it is dropped).
+///
+/// # Safety
+/// `bytes` holds a whole record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_objects_load(index: usize, bytes: *const u8) {
+    // SAFETY: the caller's guarantee
+    let r: [u8; EE_DATA_OBJECT_RECORD] = unsafe { std::ptr::read_unaligned(bytes as *const [u8; EE_DATA_OBJECT_RECORD]) };
+    if let Some(slot) = OBJECTS.write().unwrap_or_else(|e| e.into_inner()).get_mut(index) {
+        *slot = Some(Box::new(r));
+    }
+}
+
+/// The record count (`GetCount`).
+#[no_mangle]
+pub extern "C" fn ee_data_objects_count() -> usize {
+    OBJECTS.read().unwrap_or_else(|e| e.into_inner()).len()
+}
+
+/// Record `index`'s bytes (`GetEntry`: NULL past the end or for a slot not loaded).
+#[no_mangle]
+pub extern "C" fn ee_data_objects_get(index: usize) -> *mut u8 {
+    match OBJECTS.write().unwrap_or_else(|e| e.into_inner()).get_mut(index) {
+        Some(Some(r)) => r.as_mut_ptr(),
+        _ => std::ptr::null_mut(),
+    }
+}
+
+#[cfg(test)]
+mod object_tests {
+    use super::*;
+
+    #[test]
+    fn records_load_into_their_slots() {
+        // (the only test of the objects)
+        ee_data_objects_begin(2);
+        let r = [7u8; EE_DATA_OBJECT_RECORD];
+        // SAFETY: one record's bytes
+        unsafe { ee_data_objects_load(1, r.as_ptr()) };
+        assert_eq!(ee_data_objects_count(), 2);
+        assert!(ee_data_objects_get(0).is_null() && ee_data_objects_get(2).is_null());
+        // SAFETY: a loaded record
+        assert_eq!(unsafe { *ee_data_objects_get(1).add(0x7a7) }, 7);
+        ee_data_objects_clear();
+        assert_eq!(ee_data_objects_count(), 0);
+    }
+}
+
+// ---- EEWorldTable (db\dbworld): the world constants
+
+/// One row of dbworld (`EEWorldTableEntry`, 28 bytes): a world constant's four values (docs/DATA_FORMATS.md 8.3).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeDataWorldEntry {
+    pub mFloatValue: f32,
+    pub mFloatValue2: f32,
+    pub mUnusedDatabaseID: i32,
+    pub mUnusedIndex: i32,
+    pub mLongValue: i32,
+    pub mLongValue2: u32,
+    pub mUnused: i32,
+}
+
+const _: () = assert!(core::mem::size_of::<EeDataWorldEntry>() == 28);
+
+/// `gWorldTable`'s rows (the C++ class is its inline readers since the game's leaves round 2).
+static WORLD: std::sync::RwLock<Vec<EeDataWorldEntry>> = std::sync::RwLock::new(Vec::new());
+
+/// The size of a dbworld record.
+#[no_mangle]
+pub extern "C" fn ee_data_world_record_size() -> usize {
+    core::mem::size_of::<EeDataWorldEntry>()
+}
+
+/// `EEWorldTable::Clear`: no rows.
+#[no_mangle]
+pub extern "C" fn ee_data_world_clear() {
+    WORLD.write().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+/// A load's start: `count` zeroed rows.
+#[no_mangle]
+pub extern "C" fn ee_data_world_begin(count: usize) {
+    let mut w = WORLD.write().unwrap_or_else(|e| e.into_inner());
+    w.clear();
+    w.resize(count, EeDataWorldEntry::default());
+}
+
+/// Row `index` from its record (`ee_data_world_record_size()` bytes); past the rows it is dropped.
+///
+/// # Safety
+/// `bytes` holds a whole record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_world_load(index: usize, bytes: *const u8) {
+    // SAFETY: the caller's guarantee (the record is plain 4-byte fields)
+    let e: EeDataWorldEntry = unsafe { std::ptr::read_unaligned(bytes as *const EeDataWorldEntry) };
+    if let Some(slot) = WORLD.write().unwrap_or_else(|e| e.into_inner()).get_mut(index) {
+        *slot = e;
+    }
+}
+
+/// Row `id` (`EEWorldConstant`); zero past the table (where the C++ read past its vector).
+#[no_mangle]
+pub extern "C" fn ee_data_world_entry(id: u32) -> EeDataWorldEntry {
+    WORLD.read().unwrap_or_else(|e| e.into_inner()).get(id as usize).copied().unwrap_or_default()
+}
+
+#[cfg(test)]
+mod world_tests {
+    use super::*;
+
+    #[test]
+    fn rows_load_in_place_and_read_zero_past_the_table() {
+        // (the only test of the world table)
+        ee_data_world_begin(2);
+        let e = EeDataWorldEntry { mFloatValue: 1.5, mLongValue: -3, mLongValue2: 7, ..Default::default() };
+        // SAFETY: one record's bytes
+        unsafe { ee_data_world_load(1, &e as *const EeDataWorldEntry as *const u8) };
+        // SAFETY: as above
+        unsafe { ee_data_world_load(5, &e as *const EeDataWorldEntry as *const u8) };
+        assert_eq!(ee_data_world_entry(1), e);
+        assert_eq!(ee_data_world_entry(0), EeDataWorldEntry::default());
+        assert_eq!(ee_data_world_entry(5), EeDataWorldEntry::default());
+        ee_data_world_clear();
+        assert_eq!(ee_data_world_entry(1), EeDataWorldEntry::default());
+        assert_eq!(ee_data_world_record_size(), 28);
+    }
+}
+
+// ---- EECPBehavior (db\dbcpbehavior): the computer player behaviour table
+
+/// One record of dbcpbehavior (`EECPBehavior`, ee/EECPBehavior.h, 56 bytes): an AI attribute's values and the
+/// scenario editor's slider ranges.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeDataCpBehavior {
+    pub mUnused1: i32,
+    /// The slot (records with an index of 0 or less are skipped).
+    pub mIndex: i32,
+    pub mIntValue1Min: i32,
+    pub mIntValue1Max: i32,
+    pub mIntValue1: i32,
+    pub mIntValue2Min: i32,
+    pub mIntValue2Max: i32,
+    pub mIntValue2: i32,
+    pub mUnused2: i32,
+    pub mFloatSliderMin: i32,
+    pub mFloatSliderMax: i32,
+    pub mFloatSliderScale: i32,
+    /// Squared after loading, for record 48 (the maximum attack response range) only.
+    pub mFloatValue: f32,
+    pub mIsSettable: bool,
+}
+
+const _: () = assert!(core::mem::size_of::<EeDataCpBehavior>() == 56);
+
+/// The slots of the behaviour table.
+pub const EE_DATA_CP_BEHAVIORS: usize = 129;
+/// The record whose float value is kept squared (`kCPBehaviorMaximumAttackResponseRange`).
+const MAXIMUM_ATTACK_RESPONSE_RANGE: usize = 48;
+
+/// `gCPBehaviors` (the C++ declares it `extern "C" EECPBehavior gCPBehaviors[129]`, the same record): zeroed, as
+/// the record's constructor left it, until the table loads.
+pub struct EeDataCpBehaviorTable(std::cell::UnsafeCell<[EeDataCpBehavior; EE_DATA_CP_BEHAVIORS]>);
+
+// SAFETY: as the C++ global it is: the database loads it before the games that read it start
+unsafe impl Sync for EeDataCpBehaviorTable {}
+
+/// cbindgen:ignore
+#[no_mangle]
+#[allow(non_upper_case_globals)]
+pub static gCPBehaviors: EeDataCpBehaviorTable = EeDataCpBehaviorTable(std::cell::UnsafeCell::new(
+    [EeDataCpBehavior {
+        mUnused1: 0,
+        mIndex: 0,
+        mIntValue1Min: 0,
+        mIntValue1Max: 0,
+        mIntValue1: 0,
+        mIntValue2Min: 0,
+        mIntValue2Max: 0,
+        mIntValue2: 0,
+        mUnused2: 0,
+        mFloatSliderMin: 0,
+        mFloatSliderMax: 0,
+        mFloatSliderScale: 0,
+        mFloatValue: 0.0,
+        mIsSettable: false,
+    }; EE_DATA_CP_BEHAVIORS],
+));
+
+/// `EECPBehavior::Load`'s copy of one record into its slot of `table`: a record whose index is 0 or less, or past
+/// the table (new: the original wrote past the array), is skipped; record 48's float value is squared.
+pub fn cp_behavior_store(table: &mut [EeDataCpBehavior; EE_DATA_CP_BEHAVIORS], r: &EeDataCpBehavior) {
+    if r.mIndex <= 0 || r.mIndex as usize >= EE_DATA_CP_BEHAVIORS {
+        return;
+    }
+    let i = r.mIndex as usize;
+    table[i] = *r;
+    if i == MAXIMUM_ATTACK_RESPONSE_RANGE {
+        table[i].mFloatValue *= table[i].mFloatValue;
+    }
+}
+
+/// `EECPBehavior::Load`'s copy of one record (`ee_data_cp_behavior_record_size()` bytes) into `gCPBehaviors`.
+///
+/// # Safety
+/// `bytes` holds a whole record; no other thread reads the table while it loads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_cp_behavior_load(bytes: *const u8) {
+    // (the bool member from its byte: any non-zero byte is true)
+    // SAFETY: the caller's guarantee
+    let r: EeDataCpBehavior = unsafe { std::ptr::read_unaligned(bytes as *const [u8; 56]) }.into_record();
+    // SAFETY: the caller's guarantee: the load is the table's only user
+    cp_behavior_store(unsafe { &mut *gCPBehaviors.0.get() }, &r);
+}
+
+/// The size of a dbcpbehavior record.
+#[no_mangle]
+pub extern "C" fn ee_data_cp_behavior_record_size() -> usize {
+    core::mem::size_of::<EeDataCpBehavior>()
+}
+
+trait IntoCpBehavior {
+    fn into_record(self) -> EeDataCpBehavior;
+}
+
+impl IntoCpBehavior for [u8; 56] {
+    /// The record's fields from its little-endian bytes (the bool from its byte at +0x34: non-zero is true).
+    fn into_record(self) -> EeDataCpBehavior {
+        let w = |k: usize| i32::from_le_bytes(self[k * 4..k * 4 + 4].try_into().unwrap());
+        EeDataCpBehavior {
+            mUnused1: w(0),
+            mIndex: w(1),
+            mIntValue1Min: w(2),
+            mIntValue1Max: w(3),
+            mIntValue1: w(4),
+            mIntValue2Min: w(5),
+            mIntValue2Max: w(6),
+            mIntValue2: w(7),
+            mUnused2: w(8),
+            mFloatSliderMin: w(9),
+            mFloatSliderMax: w(10),
+            mFloatSliderScale: w(11),
+            mFloatValue: f32::from_bits(w(12) as u32),
+            mIsSettable: self[0x34] != 0,
+        }
+    }
+}
+
+#[cfg(test)]
+mod cp_behavior_tests {
+    use super::*;
+
+    #[test]
+    fn records_go_to_their_slots_and_48_is_squared() {
+        let mut t = [EeDataCpBehavior::default(); EE_DATA_CP_BEHAVIORS];
+        let mut b = [0u8; 56];
+        b[4..8].copy_from_slice(&48i32.to_le_bytes());
+        b[48..52].copy_from_slice(&3.0f32.to_bits().to_le_bytes());
+        b[0x34] = 1;
+        let r = b.into_record();
+        assert!(r.mIsSettable);
+        cp_behavior_store(&mut t, &r);
+        assert_eq!(t[48].mFloatValue, 9.0);
+        assert_eq!(t[48].mIndex, 48);
+        b[4..8].copy_from_slice(&5i32.to_le_bytes());
+        cp_behavior_store(&mut t, &b.into_record());
+        assert_eq!(t[5].mFloatValue, 3.0, "only record 48 is squared");
+        for skipped in [0, -1, 129, 1000] {
+            b[4..8].copy_from_slice(&(skipped as i32).to_le_bytes());
+            let before = t;
+            cp_behavior_store(&mut t, &b.into_record());
+            assert_eq!(t, before);
+        }
+        assert_eq!(core::mem::offset_of!(EeDataCpBehavior, mFloatValue), 0x30);
+        assert_eq!(core::mem::offset_of!(EeDataCpBehavior, mIsSettable), 0x34);
+    }
+}
+
 // ---- the tables as Rust lists
 
 /// The db tables whose entries are only their records' members, held here (`ee/EEDbRecords.h` `EEDbList`: the
@@ -2329,6 +2674,8 @@ pub enum EeDataList {
     Upgrades = 3,
     /// `EETerrainTypeTable::sTable` (every row).
     TerrainTypes = 4,
+    /// `EEColorTable::sTable`: the player colours (every row; [`EeDataPlayerColors`]).
+    Colors = 5,
 }
 
 /// One entry of a list (boxed: its address is the C++'s object pointer until the list is cleared).
@@ -2338,6 +2685,7 @@ enum Entry {
     UnitBehavior(EeDataUnitBehaviorFields),
     Upgrade(EeDataUpgradeFields),
     TerrainType(EeDataTerrainTypeFields),
+    Color(EeDataPlayerColors),
 }
 
 impl Entry {
@@ -2348,14 +2696,15 @@ impl Entry {
             Entry::UnitBehavior(f) => f as *mut _ as *mut c_void,
             Entry::Upgrade(f) => f as *mut _ as *mut c_void,
             Entry::TerrainType(f) => f as *mut _ as *mut c_void,
+            Entry::Color(f) => f as *mut _ as *mut c_void,
         }
     }
 }
 
-const LISTS: usize = 5;
+const LISTS: usize = 6;
 type Lists = [Vec<Option<Box<Entry>>>; LISTS];
 static TABLES: std::sync::Mutex<Lists> =
-    std::sync::Mutex::new([Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()]);
+    std::sync::Mutex::new([Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()]);
 
 fn tables() -> std::sync::MutexGuard<'static, Lists> {
     TABLES.lock().unwrap_or_else(|e| e.into_inner())
@@ -2374,13 +2723,14 @@ unsafe fn entry_of(list: EeDataList, bytes: *const u8) -> Option<Entry> {
             EeDataList::UnitBehaviors => unit_behavior_fields(&record(bytes)).map(Entry::UnitBehavior),
             EeDataList::Upgrades => upgrade_fields(&record(bytes)).map(Entry::Upgrade),
             EeDataList::TerrainTypes => Some(Entry::TerrainType(terrain_type_fields(&record(bytes)))),
+            EeDataList::Colors => Some(Entry::Color(player_colors(&record(bytes)))),
         }
     }
 }
 
 /// Whether a list keeps a slot (NULL) for a row without an entry, rather than skipping it.
 fn slotted(list: EeDataList) -> bool {
-    matches!(list, EeDataList::UnitBehaviors | EeDataList::Upgrades | EeDataList::TerrainTypes)
+    matches!(list, EeDataList::UnitBehaviors | EeDataList::Upgrades | EeDataList::TerrainTypes | EeDataList::Colors)
 }
 
 /// The size of a record of `list`'s table.
@@ -2392,6 +2742,7 @@ pub extern "C" fn ee_data_list_record_size(list: EeDataList) -> usize {
         EeDataList::UnitBehaviors => core::mem::size_of::<DbUnitBehavior>(),
         EeDataList::Upgrades => core::mem::size_of::<DbUpgrade>(),
         EeDataList::TerrainTypes => core::mem::size_of::<DbTerrainType>(),
+        EeDataList::Colors => core::mem::size_of::<DbColor>(),
     }
 }
 
@@ -2453,6 +2804,32 @@ mod list_tests {
     fn bytes_of<T: Copy>(r: &T) -> Vec<u8> {
         // SAFETY: a record is `size_of::<T>()` plain bytes
         unsafe { std::slice::from_raw_parts(r as *const T as *const u8, std::mem::size_of::<T>()) }.to_vec()
+    }
+
+    #[test]
+    fn the_player_colours_list_reads_and_finds() {
+        // (the only test of the Colors list)
+        ee_data_list_clear(EeDataList::Colors);
+        ee_data_list_begin(EeDataList::Colors, 2);
+        // SAFETY: a plain record
+        let mut r: DbColor = unsafe { std::mem::zeroed() };
+        (r.mColorRed, r.mColorGreen, r.mColor2Red) = (0.5, 0.25, 1.0);
+        // SAFETY: one record's bytes
+        unsafe { ee_data_list_load(EeDataList::Colors, 1, bytes_of(&r).as_ptr()) };
+        let mut out = [0.0f32; 3];
+        // SAFETY: room for three
+        unsafe { ee_data_player_color(1, 2, out.as_mut_ptr()) };
+        assert_eq!(out, [0.6, 0.0, 0.0]);
+        // SAFETY: as above
+        unsafe { ee_data_player_color(0, 0, out.as_mut_ptr()) };
+        assert_eq!(out, [1.0; 3], "a row not loaded reads white");
+        // SAFETY: as above
+        unsafe { ee_data_player_color(5, 0, out.as_mut_ptr()) };
+        assert_eq!(out, [1.0; 3], "past the table reads white");
+        assert_eq!(ee_data_player_color_find(0.5, 0.25, 0.0), 1);
+        assert_eq!(ee_data_player_color_find(0.5, 0.25, 0.1), 0);
+        assert_eq!(ee_data_list_record_size(EeDataList::Colors), 168);
+        ee_data_list_clear(EeDataList::Colors);
     }
 
     #[test]
