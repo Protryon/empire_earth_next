@@ -98,7 +98,8 @@ pub trait MoveHost {
     /// `GetIsAutoWaypoint`, `GetGroupPathState`/`SetGroupPathState`; a gather goal on wood (`EEGatherGoalCast`)
     fn goal_kind(&mut self, goal: u64) -> i32;
     fn goal_location(&mut self, goal: u64) -> Ge3DPoint;
-    fn goal_destination(&mut self, goal: u64, unit: u64) -> Ge3DPoint;
+    /// `GetDestination` reads its out point as an input too (EEUGRust's `PointOut`): `from` is the point it is given
+    fn goal_destination(&mut self, goal: u64, unit: u64, from: Ge3DPoint) -> Ge3DPoint;
     fn goal_flag(&mut self, goal: u64, b1d: bool) -> bool;
     fn add_path_attempts(&mut self, goal: u64, n: i32);
     fn sidestep_count(&mut self, goal: u64) -> u32;
@@ -216,8 +217,11 @@ pub fn find_path<H: MoveHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let goal = h.goal(unit);
     let attack = h.active_goal(unit);
     let position = h.position(unit);
+    // the C++'s one point: the goal's location, later the destination's input
+    let mut located = Ge3DPoint::default();
     if goal != 0 {
         let goal_point = h.goal_location(goal);
+        located = goal_point;
         let u = U::of(h, unit);
         if u.class().mIsMelee && u.cx().mVelocity > 0.0 && attack != 0 && h.goal_kind(attack) == MV_GOAL_ATTACK_UNIT {
             let sphere = u.class().mInnerCollisionSphere;
@@ -244,7 +248,7 @@ pub fn find_path<H: MoveHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let mut goal_point = if count != 0 && (domains & MV_MOVEMENT_SEA == 0 || count >= 3) {
         h.waypoint(unit, 0)
     } else if goal != 0 {
-        h.goal_destination(goal, unit)
+        h.goal_destination(goal, unit, located)
     } else {
         h.position(unit)
     };
@@ -547,7 +551,7 @@ pub fn path_toward<H: MoveHost + ?Sized>(h: &mut H, unit: u64, from: Ge3DPoint, 
 pub fn path_to_goal<H: MoveHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
     let goal = h.goal(unit);
     h.drop_path(unit);
-    let goal_point = h.goal_destination(goal, unit);
+    let goal_point = h.goal_destination(goal, unit, Ge3DPoint::default());
     if class_rec(h, class).mDomains & (MV_MOVEMENT_SEA | MV_MOVEMENT_SPACE) != 0 {
         h.update_water_state(unit);
     }

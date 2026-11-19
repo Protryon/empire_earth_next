@@ -237,7 +237,7 @@ impl MoveHost for Mock {
     fn goal_location(&mut self, goal: u64) -> Ge3DPoint {
         self.g(goal).location
     }
-    fn goal_destination(&mut self, goal: u64, _unit: u64) -> Ge3DPoint {
+    fn goal_destination(&mut self, goal: u64, _unit: u64, _from: Ge3DPoint) -> Ge3DPoint {
         self.g(goal).location
     }
     fn goal_flag(&mut self, goal: u64, b1d: bool) -> bool {

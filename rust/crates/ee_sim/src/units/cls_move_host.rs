@@ -37,7 +37,7 @@ pub const EE_UNITS_CLS_MV_GOAL: i32 = 45;
 pub const EE_UNITS_CLS_MV_CLEAR_LAST_ATTACKER: i32 = 46;
 /// goal `b`'s `mKind`
 pub const EE_UNITS_CLS_MV_GOAL_KIND: i32 = 47;
-/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) into `io.p`
+/// goal `b`'s `GetGoalLocation` (c 0) or `GetDestination(unit a)` (1) of `io.p` (both read it as an input) into `io.p`
 pub const EE_UNITS_CLS_MV_GOAL_LOCATION: i32 = 48;
 /// goal `b`'s `mB1C` (c 0), `mB1D` (1), `GetIsAutoWaypoint()` (2), `GetGroupPathState()` (3), a gather goal on wood (4)
 pub const EE_UNITS_CLS_MV_GOAL_FLAG: i32 = 49;
@@ -240,8 +240,8 @@ impl MoveHost for ClsGame {
     fn goal_location(&mut self, goal: u64) -> Ge3DPoint {
         point(self.mv(EE_UNITS_CLS_MV_GOAL_LOCATION, 0, goal, 0).1.p)
     }
-    fn goal_destination(&mut self, goal: u64, unit: u64) -> Ge3DPoint {
-        point(self.mv(EE_UNITS_CLS_MV_GOAL_LOCATION, unit, goal, 1).1.p)
+    fn goal_destination(&mut self, goal: u64, unit: u64, from: Ge3DPoint) -> Ge3DPoint {
+        point(self.mv_p(EE_UNITS_CLS_MV_GOAL_LOCATION, unit, goal, 1, from).1.p)
     }
     fn goal_flag(&mut self, goal: u64, b1d: bool) -> bool {
         self.mv(EE_UNITS_CLS_MV_GOAL_FLAG, 0, goal, i64::from(b1d)).0 != 0
