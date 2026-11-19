@@ -14,6 +14,9 @@ struct World {
     patrol: bool,
     patrol_points: usize,
     created: usize,
+    /// the connected continents: (id, category, the closest points' squared distance)
+    continents: Vec<(i64, i64, i64)>,
+    closest_asked: usize,
 }
 
 impl World {
@@ -84,6 +87,19 @@ impl TownHost for World {
                 0
             }
             EE_CP_TOWN_CONTINENT_AT => 1,
+            EE_CP_TOWN_CONNECTED => {
+                let ids: Vec<(i64, i64)> = self.continents.iter().map(|c| (c.0, 0)).collect();
+                World::push(io, &ids);
+                0
+            }
+            EE_CP_TOWN_CONTINENT => {
+                let Some(&(_, category, d)) = self.continents.iter().find(|c| c.0 == io.v[0]) else { return -1 };
+                if io.v[1] != 0 {
+                    self.closest_asked += 1;
+                    io.v[2..7].copy_from_slice(&[1, 0, 0, d, 0]);
+                }
+                category
+            }
             EE_CP_TOWN_HAS_PATROL => i64::from(self.patrol),
             EE_CP_TOWN_NEW_PATROL => {
                 self.patrol = true;
@@ -154,4 +170,14 @@ fn a_merge_adds_the_counters_and_tiles() {
     // SAFETY: f outlives the town value
     unsafe { Town::new(&mut w, &mut f) }.merge(0x900, &o);
     assert_eq!((f.mNumUnits, f.mValue, f.mNumDocks), (5, 15, 1));
+}
+
+#[test]
+fn near_water_asks_the_water_and_space_continents_only() {
+    // from the last: a cliff (3: not asked), a space continent 9 tiles off, a water continent 11 tiles off
+    let mut w = World { tiles: vec![(1, 1)], continents: vec![(2, 2, 11), (3, 4, 9), (4, 3, 1)], ..Default::default() };
+    let mut f = EeTownFields { mContinent: 1, ..Default::default() };
+    // SAFETY: f outlives the town value
+    assert!(!unsafe { Town::new(&mut w, &mut f) }.update_near_water());
+    assert_eq!((f.mNearWater, f.mNearMapEdge, w.closest_asked), (false, true, 2));
 }

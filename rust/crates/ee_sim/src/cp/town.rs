@@ -104,7 +104,7 @@ pub const EE_CP_TOWN_FLAGS: i32 = 123;
 
 /// `kContinentCategoryWater`, `kContinentCategorySpace`.
 const CONTINENT_WATER: i64 = 2;
-const CONTINENT_SPACE: i64 = 3;
+const CONTINENT_SPACE: i64 = 4;
 
 /// The world the town asks: its own operations, and the area ones the herd's random point shares
 /// ([`random_area_point`]'s codes, through `area`).
