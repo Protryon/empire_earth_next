@@ -19,7 +19,7 @@ bool MSEtchedFrameGroupConfig::GetPredefinedComponent(const std::string& name,Co
 {
     if(name=="LABEL") {
         config=LabelConfig::CfgFactory();
-        component=this->mFrame->GetLabel();
+        component=(Component*)WONShell::Op(this->mFrame,EeWonShellOp::GetLabel);
     } else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }

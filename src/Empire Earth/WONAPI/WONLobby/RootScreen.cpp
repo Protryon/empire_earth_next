@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
+#include "ee/wonapi/WONGUIShell.h"
 namespace WONAPI {
 // The original reloads mTabCtrl and its bottom tab bar for every call
 // Enables the game tab and switches to it, or switches back to the previous tab and disables the game tab
@@ -143,7 +144,7 @@ void RootScreen::InitComponent(ComponentInit& inInit)
     this->mIsSwat=aConfig->Fn386860("SWATUJDEF")!=NULL;
     SafeGetComponent(aConfig,this->mTabCtrl,"TabCtrl",__FILE__,79);
     SafeGetComponent(aConfig,this->mLowerLayoutPoint,"LowerLayoutPoint",__FILE__,80);
-    SafeGetComponent(aConfig,this->mLowerDivider,"LowerDivider",__FILE__,81);
+    SafeGetShell(aConfig,this->mLowerDivider,EeWonShellKind::MsSeperator,"LowerDivider",__FILE__,81);
     SafeGetComponent(aConfig,this->mSierraLogo,"SierraLogo",__FILE__,82);
     SafeGetComponent(aConfig,this->mLowerBanner,"LowerBanner",__FILE__,83);
     SafeGetComponent(aConfig,this->mLowerBannerFrame,"LowerBannerFrame",__FILE__,84);
