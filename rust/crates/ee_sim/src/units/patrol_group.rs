@@ -411,6 +411,12 @@ extern "C" {
     fn ee_units_pg_host_file(file: u64, which: i32, io: *mut u32) -> i32;
 }
 
+/// A route's points (`mPatrolPoints`, unit handles; the dry host's route words, dry.rs).
+#[cfg(not(test))]
+pub(crate) fn host_points(group: u64) -> Vec<u64> {
+    Ffi { file: 0 }.points(group)
+}
+
 /// The FFI adapter: the C++ calls, the file the call was handed (an `FSFile*`, 0 when none).
 #[cfg(not(test))]
 struct Ffi {
