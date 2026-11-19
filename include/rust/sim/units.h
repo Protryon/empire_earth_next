@@ -5357,6 +5357,34 @@ void ee_units_cz_find_gather_point(uint64_t unit,
 /// `EEUnitClass::HasGatherPoint(unit, resource)`.
 uint8_t ee_units_cz_has_gather_point(uint64_t unit, uint64_t resource);
 
+/// # Safety
+/// Both are live classes' records.
+uint8_t ee_units_cls_can_enter(const EeUnitsUnitClassFields *c,
+                               const EeUnitsUnitClassFields *other);
+
+/// # Safety
+/// A live class's record.
+int32_t ee_units_cls_num_goal_queues(const EeUnitsUnitClassFields *c);
+
+/// # Safety
+/// A live class's record.
+uint8_t ee_units_cls_shares_rally_point(const EeUnitsUnitClassFields *c, uint64_t other);
+
+/// # Safety
+/// A live class's record.
+uint8_t ee_units_cls_shares_research(const EeUnitsUnitClassFields *c, int64_t other);
+
+/// # Safety
+/// A live class's record; `stats` a live stats record or null.
+int32_t ee_units_cls_passable_flags(const EeUnitsUnitClassFields *c,
+                                    const EeUnitsUnitClassUpgradeFields *stats);
+
+/// # Safety
+/// As [`ee_units_cls_passable_flags`].
+uint8_t ee_units_cls_can_move_on_terrain(const EeUnitsUnitClassFields *c,
+                                         const EeUnitsUnitClassUpgradeFields *stats,
+                                         int32_t terrain);
+
 extern int64_t ee_units_cls_host(int32_t op,
                                  uint64_t a,
                                  uint64_t b,

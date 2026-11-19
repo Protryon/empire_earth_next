@@ -323,11 +323,7 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 // Returns whether units of this class may board a container of inClass (transport, fortress, carrier, airport ...)
 bool EEUnitClass::CanEnter(EEUnitClass* inClass)
 {
-    return (this->mCanEnterAirTransports && inClass->mCategory == kUnitCategoryHelicopterTransport) || (this->mCanEnterLandTransports && inClass->mCategory == kUnitCategoryLandTransport) ||
-           (this->mCanEnterSeaTransports && inClass->mCategory == kUnitCategoryNavalTransport) || (this->mCanEnterSpaceTransports && inClass->mCategory == kUnitCategorySpaceTransport) ||
-           (this->mCanEnterFortresses && inClass->mCategory == kUnitCategoryFortress) || (this->mCanEnterCarriers && inClass->mAIKind == kAIKindAircraftCarrier) ||
-           (this->mCanEnterAirports && inClass->mUnitType == kUnitTypeAirport) || (this->mCanEnterNavyYards && inClass->mUnitType == kUnitTypeNavyYard) ||
-           (this->mUnitType == kUnitTypeSp15SpaceFighter && inClass->mUnitType == kUnitTypeSp15SpaceCarrier);
+    return ee_units_cls_can_enter(this, inClass) != 0;   // ee_units cls_answers.rs
 }
 
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
@@ -1251,16 +1247,7 @@ void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
 // Returns the unit's passable terrain as bits: cliff 1, water 2, land 4, space 8
 long EEUnitClass::GetPassableFlags(EEUnit* inUnit)
 {
-    long theResult = 0;
-    if (this->CanMoveOnTerrain(inUnit, 0))
-        theResult = 4;
-    if (this->CanMoveOnTerrain(inUnit, 9))
-        theResult |= 1;
-    if (this->CanMoveOnTerrain(inUnit, 1))
-        theResult |= 2;
-    if (this->CanMoveOnTerrain(inUnit, 0xc))
-        theResult |= 8;
-    return theResult;
+    return ee_units_cls_passable_flags(this, inUnit != NULL ? inUnit->mStats : NULL);   // ee_units cls_answers.rs
 }
 
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
@@ -1288,12 +1275,7 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
 // Returns whether the unit (by its stats) or the class may move on a terrain type
 bool EEUnitClass::CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType)
 {
-    bool theResult;
-    if (inUnit != NULL)
-        theResult = (inUnit->mStats->mTerrainMask & (1 << inTerrainType)) != 0;
-    else
-        theResult = this->mTerrainTypes[inTerrainType];
-    return theResult;
+    return ee_units_cls_can_move_on_terrain(this, inUnit != NULL ? inUnit->mStats : NULL, (int32_t)inTerrainType) != 0;   // cls_answers.rs
 }
 
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
@@ -1330,14 +1312,7 @@ void EEUnitClass::NextWaypoint(EEComplexUnit* inUnit)
 // Returns the number of goal queues: airport 5, navy yard 3, buildings, airfields, airplanes and spaceships 2, else 1
 long EEUnitClass::GetNumGoalQueues()
 {
-    if (this->mUnitType == kUnitTypeAirport)
-        return 5;
-    if (this->mUnitType == kUnitTypeNavyYard)
-        return 3;
-    if (((this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding) && this->mAirTrafficType != 0) || this->mCategory == kUnitCategoryBuilding || this->mCategory == kUnitCategoryAirplane ||
-        this->mCategory == kUnitCategoryPlanetSpaceship)
-        return 2;
-    return 1;
+    return ee_units_cls_num_goal_queues(this);   // ee_units cls_answers.rs
 }
 
 // Lists every unit class whose unit type is in a unit set
@@ -1354,58 +1329,13 @@ void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>
 // Returns whether a building of another unit type shares this one's rally point (military, town centre, dock)
 bool EEUnitClass::SharesRallyPoint(unsigned long inUnitType)
 {
-    bool theResult = false;
-    switch (this->mUnitType) {
-    case kUnitTypeBarracks:
-    case kUnitTypeArcheryRange:
-    case kUnitTypeSiegeFactory:
-    case kUnitTypeStable:
-    case kUnitTypeTankFactory:
-    case kUnitTypeCyberFactory:
-    case kUnitTypeCyberLaboratory:
-        switch (inUnitType) {
-        case kUnitTypeBarracks:
-        case kUnitTypeArcheryRange:
-        case kUnitTypeSiegeFactory:
-        case kUnitTypeStable:
-        case kUnitTypeTankFactory:
-        case kUnitTypeCyberFactory:
-        case kUnitTypeCyberLaboratory:
-            theResult = true;
-            break;
-        }
-        break;
-    case kUnitTypeTownCenter:
-    case kUnitTypeCapitol:
-        if (inUnitType == kUnitTypeTownCenter || inUnitType == kUnitTypeCapitol)
-            theResult = true;
-        break;
-    case kUnitTypeDock:
-    case kUnitTypeNavyYard:
-        if (inUnitType == kUnitTypeDock || inUnitType == kUnitTypeNavyYard)
-            theResult = true;
-        break;
-    }
-    return theResult;
+    return ee_units_cls_shares_rally_point(this, inUnitType) != 0;   // ee_units cls_answers.rs
 }
 
 // Returns whether another unit type shares this one's research (town centre and capitol, male and female citizens)
 bool EEUnitClass::SharesResearch(long inUnitType)
 {
-    bool theResult = false;
-    switch (this->mUnitType) {
-    case kUnitTypeTownCenter:
-    case kUnitTypeCapitol:
-        if (inUnitType == kUnitTypeTownCenter || inUnitType == kUnitTypeCapitol)
-            theResult = true;
-        break;
-    case kUnitTypeCitizen:
-    case kUnitTypeFemaleCitizen:
-        if (inUnitType == kUnitTypeCitizen || inUnitType == kUnitTypeFemaleCitizen)
-            theResult = true;
-        break;
-    }
-    return theResult;
+    return ee_units_cls_shares_research(this, inUnitType) != 0;   // ee_units cls_answers.rs
 }
 
 // IsImportantUnit reads the heal goal (included here, after the unit's init chains: its class static would renumber them)

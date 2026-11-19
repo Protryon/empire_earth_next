@@ -36,6 +36,7 @@ pub mod calamity;
 pub mod citizen;
 pub mod citizen_host;
 pub mod cls_air;
+pub mod cls_answers;
 pub mod cls_building;
 pub mod cls_condition;
 pub mod cls_dispatch;
