@@ -517,7 +517,7 @@ void SMETakeOffMap(EESMEffectRun* inRun, EEUnit* theUnit)
             theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
         }
         if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-            theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
+            ee_units_atc_remove_airport(theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theComplex);
         if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer() && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
             gUserInterface->PostMessage424Once();
         theComplex->TakeOffMap();
@@ -530,7 +530,7 @@ void SMETakeOffMap(EESMEffectRun* inRun, EEUnit* theUnit)
         theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
     }
     if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-        theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
+        ee_units_atc_remove_airport(theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theComplex);
     if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer() && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
         gUserInterface->PostMessage424Once();
 }
@@ -594,7 +594,7 @@ void SMEPlaceInArea(EESMEffectRun* inRun, EEUnit* theUnit)
                 theComplex->mPhysicalModel.SetLocation(theTransformation);
             }
             if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-                theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->AddAirport(theComplex);
+                ee_units_atc_add_airport(theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1], theComplex);
             if ((theUnit->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
                 && (theUnit->GetComplexUnit()->mFlightTime != 0 || theUnit->GetComplexUnit()->mHomeBase != NULL))
                 theComplex->StartAction(kActionCircle);
@@ -757,8 +757,8 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
         EEUGRust* theGoal = EEUGRust::NewPatrol(true);
         EEComplexUnit* theFirst = theGroup->GetFirstUnit();
         if (theFirst != NULL && (a[3] == 0 || (theFirst->GetTileX() != -10000 && theFirst->GetTileY() != -10000))) {
-            theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), (unsigned long)a[0]);
-            theGoal->GetPatrolGroup()->AddPoint(GE2DPoint(SMEFloat(a[1]), SMEFloat(a[2])), (unsigned long)a[0]);
+            ee_units_pg_add_point(theGoal->GetPatrolGroup(), (float)theFirst->GetTileX(), (float)theFirst->GetTileY(), (uint32_t)a[0]);
+            ee_units_pg_add_point(theGoal->GetPatrolGroup(), SMEFloat(a[1]), SMEFloat(a[2]), (uint32_t)a[0]);
             theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
         }
         theGroup->ClearGoal();
@@ -1145,7 +1145,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         EEComplexUnit* theUnit = SMEComplex(a[0]);
         EETown* theTown = theUnit->FindNearestTown();
         EEPPatrolGroup* thePatrolGroup = theTown != NULL ? theTown->mPatrolGroup : NULL;
-        EEComplexUnit* theTarget = thePatrolGroup != NULL ? thePatrolGroup->GetNearest(theUnit->GetTileX(), theUnit->GetTileY()) : NULL;
+        EEComplexUnit* theTarget = thePatrolGroup != NULL ? static_cast<EEComplexUnit*>(ee_units_pg_nearest(thePatrolGroup, theUnit->GetTileX(), theUnit->GetTileY())) : NULL;
         if (theTarget == NULL)
             return 0;
         EEActiveGroup* theGroup = new EEActiveGroup(theUnit->mPlayer);

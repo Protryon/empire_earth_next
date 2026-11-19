@@ -38,7 +38,7 @@ class EEFleeFromLocationScreenBase;         // ee/EEFleeFromLocationScreenBase.h
 struct EEPlayerUnitInfo;
 class EETechTreeNode;
 class EEUnit;
-class EEPPatrolGroup;
+typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 class EETown;
 #include "ee/EEUnitAction.h"             // EEComplexUnit::mCommand (+0x1e8; GetCommandType reads its mType inline)
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)

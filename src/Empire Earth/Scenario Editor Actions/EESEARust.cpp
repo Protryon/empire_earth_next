@@ -838,7 +838,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
         return (uintptr_t)theComplex->mPlayer;
     case EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC:
         if (theComplex->mUnitClass->IsLandBuilding() && theComplex->mUnitClass->mAirTrafficType != 0)
-            theComplex->mPlayer->mAirTraffic[theComplex->mUnitClass->mAirTrafficType - 1]->RemoveAirport(theComplex);
+            ee_units_atc_remove_airport(theComplex->mPlayer->mAirTraffic[theComplex->mUnitClass->mAirTrafficType - 1], theComplex);
         return 0;
     case EE_SCREENS_SEU_CARGO_COUNT:
         return theComplex->GetNumCargoUnits();

@@ -380,7 +380,7 @@ void EEWorld::Clear()
     gPathManager.Reset();
     gLocalPlayerOut = false;
     ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
-    EEPPatrolGroup::ResetIDs();
+    ee_units_pg_reset_ids();
     gCollisionDetectionUnit = 2000;
     delete this->mCalamityHelper;
     this->mCalamityHelper = NULL;

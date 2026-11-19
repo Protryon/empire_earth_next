@@ -582,20 +582,47 @@ pub unsafe extern "C" fn ee_units_unit_save(
     complex: *const EeUnitsComplexUnitFields,
     inp: *const EeUnitsUnitSaveIn,
 ) -> i32 {
-    let mut host = CallbackHost { ctx, f };
+    let mut callback = CallbackHost { ctx, f };
+    // the views answer the plain reads once the layout is registered (unit_save_views.rs); the unit's handle is its
+    // RTSUnit*, the record's address less the record's base
+    let unit_handle = match crate::world::layout::get() {
+        Some(l) if !rts.is_null() => (rts as usize as u64).wrapping_sub(l.rts_unit_fields),
+        _ => 0,
+    };
+    if unit_handle == 0 {
+        // SAFETY: the caller's contract
+        return unsafe { save_with(&mut callback, rts, unit, complex, inp) };
+    }
+    let mut host = crate::units::unit_save_views::ViewSaveHost { inner: &mut callback, unit: unit_handle };
+    // SAFETY: the caller's contract
+    unsafe { save_with(&mut host, rts, unit, complex, inp) }
+}
+
+/// [`ee_units_unit_save`] over a host.
+///
+/// # Safety
+/// As `ee_units_unit_save`.
+unsafe fn save_with<H: SaveHost>(
+    host: &mut H,
+    rts: *const EeUnitsRtsUnitFields,
+    unit: *const EeUnitsUnitFields,
+    complex: *const EeUnitsComplexUnitFields,
+    inp: *const EeUnitsUnitSaveIn,
+) -> i32 {
+    let host = &mut *host;
     // SAFETY: the caller's contract
     let inp = unsafe { *inp };
     if unit.is_null() {
         // SAFETY: the caller's contract
-        return unsafe { rts_save(&mut host, rts, &inp) };
+        return unsafe { rts_save(host, rts, &inp) };
     }
     // SAFETY: the caller's contract
-    let r = unsafe { unit_save(&mut host, rts, unit, &inp) };
+    let r = unsafe { unit_save(host, rts, unit, &inp) };
     if r != 0 || complex.is_null() {
         return r;
     }
     // SAFETY: the caller's contract
-    unsafe { complex_save_rest(&mut host, complex, &inp) }
+    unsafe { complex_save_rest(host, complex, &inp) }
 }
 
 #[cfg(test)]
