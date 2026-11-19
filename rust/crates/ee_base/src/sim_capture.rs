@@ -39,6 +39,7 @@ thread_local! {
 
 type Sink = Mutex<BufWriter<File>>;
 
+#[cfg(not(test))]
 extern "C" fn flush_at_exit() {
     flush();
 }
@@ -316,7 +317,8 @@ pub unsafe extern "C" fn ee_sim_capture_geom_points(xy: *const std::ffi::c_long,
         // SAFETY: the caller's points
         unsafe { std::slice::from_raw_parts(xy, count * 2) }
     };
-    let points = values.chunks_exact(2).map(|p| (p[0] as i32, p[1] as i32));
+    // (a long as its low 32 bits, as the C++ `(int)` casts)
+    let points = (0..values.len() / 2).map(|k| (values[2 * k] as i64 as i32, values[2 * k + 1] as i64 as i32));
     geom(|r| {
         r.i32(count as i32);
         if whole {
