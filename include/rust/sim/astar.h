@@ -2568,6 +2568,15 @@ extern void ee_astar_mod_host_unit_reference(uint64_t unit, bool add);
 
 extern const void *ee_astar_mod_host_influence(int32_t *region_size);
 
+/// `EEAIPathSubSector::AreLinksBlocked(other, flags)` (0x2c219's flags form): true unless `other` is a neighbour
+/// (not `this`) with links to `this` and none of them has an end of a kind `flags` passes.
+///
+/// # Safety
+/// `this` a live sub sector; `other` null or one; `flags` the 17 flags of an `EECPASGFlags`.
+bool ee_astar_sub_sector_links_blocked(uint64_t this_,
+                                       uint64_t other,
+                                       const bool *flags);
+
 /// `new EEAIBPGModifierEnemyIsAttackableByUnit(unit, target)`: both units referenced, the range the walker's
 /// stats' squared.
 ///

@@ -6,7 +6,6 @@
 1ed2c 29f57 Empire Earth/AI Thread/EEAIContinentManager.cpp
 29f57 2bb72 Empire Earth/AI Thread/EEAIFunctionObjects.cpp
 2bbd3 2be88 Empire Earth/AI Thread/EEAIPathSector.cpp
-2be88 2c79f Empire Earth/AI Thread/EEAIPathSubSector.cpp
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
 2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp

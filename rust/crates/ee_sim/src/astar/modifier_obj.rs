@@ -644,6 +644,35 @@ pub(crate) fn from_saved(s: &EePathSavedGraph) -> *mut EeAStarModifier {
     }
 }
 
+/// `EEAIPathSubSector::AreLinksBlocked(other, flags)` (0x2c219's flags form): true unless `other` is a neighbour
+/// (not `this`) with links to `this` and none of them has an end of a kind `flags` passes.
+///
+/// # Safety
+/// `this` a live sub sector; `other` null or one; `flags` the 17 flags of an `EECPASGFlags`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_sub_sector_links_blocked(this: u64, other: u64, flags: *const bool) -> bool {
+    let flags = unsafe { std::slice::from_raw_parts(flags, 17) };
+    // SAFETY: a sub sector's lists
+    let neighbor = unsafe { sub(this).lists.as_ref() }.is_some_and(|l| l.neighbors.contains(&other));
+    if other == 0 || !neighbor || other == this {
+        return true;
+    }
+    let id = sub(this).id;
+    // SAFETY: as above
+    let links: Vec<_> = unsafe { sub(other).lists.as_ref() }.map_or_else(Vec::new, |l| l.links_of(id).to_vec());
+    let mut result = links.is_empty();
+    for l in links.iter().rev() {
+        if result {
+            break;
+        }
+        let pass = |h: u64| flags.get(sub(h).kind as usize).copied().unwrap_or(false);
+        if pass(l.first) || pass(l.second) {
+            result = true;
+        }
+    }
+    result
+}
+
 // ---- the C makers
 
 /// `new EEAIBPGModifierEnemyIsAttackableByUnit(unit, target)`: both units referenced, the range the walker's
