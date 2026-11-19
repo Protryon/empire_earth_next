@@ -1331,7 +1331,8 @@ unsigned long EEPhysics::UpdateUnits()
     theHost.step = TickStep;
     unsigned long theCount = ee_units_update_units(&theHost);
     gPhysicsSteppingUnit = NULL;
-    EEUnitStepCommit();   // TEST ONLY: the step leaves' record (USTM, ee/EEUnitStore.h)
+    // TEST ONLY: the step leaves' records (USTM, USST; ee/EEUnitStore.h)
+    ee_units_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
     return theCount;
 }
 
