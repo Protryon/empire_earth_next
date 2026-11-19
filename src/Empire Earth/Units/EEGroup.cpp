@@ -32,7 +32,6 @@
 #include "ee/EEFormation.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEPathManager.h"

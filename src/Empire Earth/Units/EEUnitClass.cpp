@@ -1991,7 +1991,6 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 
 #include "ee/EEPathManager.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"

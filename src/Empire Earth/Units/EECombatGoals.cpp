@@ -40,7 +40,6 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEAIContinentManager.h"

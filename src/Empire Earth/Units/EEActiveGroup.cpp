@@ -37,7 +37,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEAIAStarStorage.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEGroupCluster.h"
 #include "ee/EEActiveGroup.h"
