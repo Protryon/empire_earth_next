@@ -911,7 +911,7 @@ void EELobbyRunSierraUpdate()
             theFile.GetVolume() + theFile.GetDirectory(), SW_SHOWNORMAL);
         if ((INT_PTR)theResult > 32) {
             if (gUserInterface != NULL)   // PostQuitMessage: WM_QUIT to the UI thread's queue
-                gUserInterface->mThread->Post(0x12, NULL, NULL, false);
+                gUserInterface->GetThread()->Post(0x12, NULL, NULL, false);
             return;
         }
     }

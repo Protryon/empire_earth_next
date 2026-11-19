@@ -3162,14 +3162,14 @@ void EEPlayer::ResetWonderTimers(EEPlayer* inPlayer)
 void EEPlayer::ApplyMapRestrictions()
 {
     if (gWorld.mPlayers[gWorld.mCurrentPlayer] == this)
-        gUIManager->mMainGameForm->RemoveHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, 0);
+        gUIManager->GetMainGameForm()->RemoveHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, 0);
     if ((gWorld.mMap->mMapCharacteristics & kRMMapWaterlessMap) == kRMMapWaterlessMap) {
         this->GetTechTree()->Get(kTechDock)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechNavyYard)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechLighthouseOfAlexandria)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechHurricane)->mIsAllowed = false;
     } else if (gWorld.mPlayers[gWorld.mCurrentPlayer] == this)
-        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeDock, false, false, false)),
+        gUIManager->GetMainGameForm()->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeDock, false, false, false)),
                                              NULL, NULL, NULL, 0, false);
     if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
         this->GetTechTree()->Get(kTechSpaceDock)->mIsAllowed = false;
@@ -3177,7 +3177,7 @@ void EEPlayer::ApplyMapRestrictions()
         this->GetTechTree()->Get(kTechMeteorStorm)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechOrbitalSpaceStation)->mIsAllowed = false;
     } else if (gWorld.mPlayers[gWorld.mCurrentPlayer] == this)
-        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSpaceDock, false, false, false)),
+        gUIManager->GetMainGameForm()->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSpaceDock, false, false, false)),
                                              NULL, NULL, NULL, 0, false);
 }
 

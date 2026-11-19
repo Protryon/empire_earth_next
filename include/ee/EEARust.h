@@ -26,7 +26,8 @@ enum {
     kEEAPlayerEvent, kEEARemovePlayer, kEEAResetPlayers, kEEASaveGame, kEEAScroll, kEEAMigration, kEEAUpgrade, kEEAPause,
     kEEAQuick, kEEAEditorQuick,
     // the scenario editor's
-    kEEAEditorClick, kEEAEditorLasso, kEEATriggerClick, kEEATriggerLasso, kEEALoadText, kEEAEditorPaint, kEEAEditorWhole
+    kEEAEditorClick, kEEAEditorLasso, kEEATriggerClick, kEEATriggerLasso, kEEALoadText, kEEAEditorPaint, kEEAEditorWhole,
+    kEEAEditorUndo, kEEAEditorRedo   // the Undo and Redo buttons' (EEUIFScenarioEditor.cpp)
 };
 
 class EEARust : public EEAction, public EeScreensGaFields {

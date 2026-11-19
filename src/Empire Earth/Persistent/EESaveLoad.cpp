@@ -401,7 +401,7 @@ long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet)
     gSoundManager->SetMasterVolume(sMasterVolume);
     gConductor->GetConductor().SetVolume(sMusicVolume);
     if (!inQuiet && gCommunications->IsServer() && inLoading == true) {
-        gUserInterface->OpenForm(gUIManager->mMainGameForm);
+        gUserInterface->OpenForm(gUIManager->GetMainGameForm());
         gGraphics->mRenderNow->Wait(kTSWaitInfinite);
     }
     return 0;
@@ -474,8 +474,8 @@ long ReloadSavedGame(FSFile& inFile)
     gGameState.Clear();
     long theResult = LoadGameState(gGameState, inFile);
     if (gGameState.mIsLoadedGame && theResult == kErrorOK) {
-        if (gUIManager->mScenarioEditorForm != NULL)
-            gUIManager->mScenarioEditorForm->ClearSelection();
+        if (gUIManager->GetScenarioEditorForm() != NULL)
+            gUIManager->GetScenarioEditorForm()->ClearSelection();
         gDataPreLoading->WaitForMessageQueue();
         gWorld.Clear();
         gWorld.StartGame(&gGameState, true);

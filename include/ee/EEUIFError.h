@@ -35,7 +35,6 @@ public:
                  EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag);
 protected:
     virtual void Close();                   // 0x261c4c (slot 0x38)
-    virtual long DrawBackground(const GERectangle& inRectangle);   // 0x261baf (slot 0x18)
     virtual void Open();                    // 0x261bbc (slot 0x48)
 private:
     friend uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB);   // its host

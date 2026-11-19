@@ -647,8 +647,66 @@ fn make_operator<H: SeplHost + ?Sized>(m: &mut Maker<'_, H>, c: EeScreensSeplCtl
     b
 }
 
+// ---- the combo boxes' right click (`EESETSTriggerUIComboBox::MouseRButtonUp`, EESETSEScenarioComboBox's)
+
+/// The tab a combo box of the trigger screen opens on a right click and the entry it selects there: `kind` the
+/// combo's screen (0 trigger .. 4 area), `selection` its selected line (`u32::MAX`: none), `first_object` the index
+/// of the scenario's first object condition (`count` when there is none). The condition list starts with a
+/// leading line, the area list with two; object conditions (from the first object condition on) open the object tab.
+/// None when nothing opens.
+pub fn trigger_jump(kind: u64, selection: u64, first_object: u64, count: u64) -> Option<(u64, u64)> {
+    if selection as u32 == u32::MAX {
+        return None;
+    }
+    match kind {
+        0 => Some((0, selection)),
+        1 if first_object != count && first_object != 0 && selection >= first_object => {
+            Some((3, selection - first_object))
+        }
+        1..=3 if selection > 0 => Some((kind, selection - 1)),
+        4 if selection > 1 => Some((4, selection - 2)),
+        _ => None,
+    }
+}
+
+/// `EESETriggerJump`'s decision ([`trigger_jump`]): -1 for none, else the screen << 32 | the entry.
+#[no_mangle]
+pub extern "C" fn ee_screens_trigger_jump(
+    kind: core::ffi::c_ulong,
+    selection: core::ffi::c_ulong,
+    first_object: core::ffi::c_ulong,
+    count: core::ffi::c_ulong,
+) -> i64 {
+    trigger_jump(kind as u64, selection as u64, first_object as u64, count as u64)
+        .map_or(-1, |(screen, entry)| ((screen as i64) << 32) | (entry as u32 as i64))
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_combo_boxes_right_click_opens_the_entrys_tab() {
+        use super::{ee_screens_trigger_jump, trigger_jump};
+        let none = u32::MAX as u64;
+        assert_eq!(trigger_jump(0, none, 0, 0), None);
+        assert_eq!(trigger_jump(0, 0, 0, 0), Some((0, 0)));
+        assert_eq!(trigger_jump(0, 7, 0, 0), Some((0, 7)));
+        // conditions: the leading line, then the object conditions from the first one on
+        assert_eq!(trigger_jump(1, 0, 3, 5), None);
+        assert_eq!(trigger_jump(1, 2, 3, 5), Some((1, 1)));
+        assert_eq!(trigger_jump(1, 3, 3, 5), Some((3, 0)));
+        assert_eq!(trigger_jump(1, 4, 3, 5), Some((3, 1)));
+        assert_eq!(trigger_jump(1, 4, 0, 5), Some((1, 3)));
+        assert_eq!(trigger_jump(1, 4, 5, 5), Some((1, 3)));
+        assert_eq!(trigger_jump(2, 0, 0, 0), None);
+        assert_eq!(trigger_jump(2, 1, 0, 0), Some((2, 0)));
+        assert_eq!(trigger_jump(3, 2, 0, 0), Some((3, 1)));
+        assert_eq!(trigger_jump(4, 1, 0, 0), None);
+        assert_eq!(trigger_jump(4, 3, 0, 0), Some((4, 1)));
+        assert_eq!(trigger_jump(9, 3, 0, 0), None);
+        assert_eq!(ee_screens_trigger_jump(4, 3, 0, 0), (4 << 32) | 1);
+        assert_eq!(ee_screens_trigger_jump(4, 1, 0, 0), -1);
+    }
+
     use super::*;
     use std::collections::HashMap;
 

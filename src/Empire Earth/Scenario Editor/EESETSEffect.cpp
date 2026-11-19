@@ -134,21 +134,7 @@ void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLa
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)
 void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas)
 {
-    std::vector<UWideString> theNames;
-    UWideString theText;
-    if (inAreas) {
-        inComboBox->mMode = kSETriggerScreenArea;
-        gResource->GetString(IDS_AREA, theText);
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
-    } else {
-        inComboBox->mMode = kSETriggerScreenObject;
-        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theText);
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
-    }
-    inLabel->SetText(theText);
-    inComboBox->DeleteAllEntries();
-    for (unsigned long i = 0; i < theNames.size(); i++)
-        inComboBox->AppendLine(theNames[i]);
+    FillScenarioComboBox(inComboBox, inLabel, inAreas);
     UIEvent* theAction = inComboBox->GetTriggerEvent(kControlTriggerSelectionChanged);
     if (theAction)
         theAction->Reference();
@@ -465,7 +451,7 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         EESEEPushControl(static_cast<EESEERust*>(static_cast<UIEvent*>(p[1])), SeetControl(c, a, k));
         return 0;
     case EE_SCREENS_SEET_OP_EVENT_PROCESS:
-        static_cast<UIEvent*>(p[1])->ProcessEvent(gUIManager->mScenarioEditorForm, SeetControl(c, a, k));
+        static_cast<UIEvent*>(p[1])->ProcessEvent(gUIManager->GetScenarioEditorForm(), SeetControl(c, a, k));
         return 0;
     case EE_SCREENS_SEET_OP_CHECKED:
         if (a == EE_SCREENS_SEET_A_RADIO) return c->mRadioButtons[k]->GetIsChecked() ? 1 : 0;
@@ -575,10 +561,10 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         sprintf(theText, static_cast<const char*>(p[1]), (double)f[0]);
         return SeetWrite(p[2], k, theText);
     case EE_SCREENS_SEET_OP_SET_NAME_BOX:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(SeetBytes(p[2], i[2]));
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetNameEditBox()->SetText(SeetBytes(p[2], i[2]));
         return 0;
     case EE_SCREENS_SEET_OP_NAME_BOX:
-        return SeetWrite(p[2], k, gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName());
+        return SeetWrite(p[2], k, gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetName());
     case EE_SCREENS_SEET_OP_NAMES:
         sSeetNames.clear();
         gWorld.mScenarioManager->GetNames((unsigned long)i[2], sSeetNames);
@@ -665,17 +651,17 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
     }
     case EE_SCREENS_SEET_OP_TECH_NAME: return SeetWrite(p[2], k, SeetTechName(i[2]));
     case EE_SCREENS_SEET_OP_TSCREEN: {
-        EESETriggerScreen* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+        EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
         if (i[2] == EE_SCREENS_SEET_TS_HIDE_TEXT) theScreen->HideText();
         else if (i[2] == EE_SCREENS_SEET_TS_SHOW_ALPHA_SORT) theScreen->ShowAlphaSort();
         else theScreen->ShowText();
         return 0;
     }
     case EE_SCREENS_SEET_OP_TEXT_BOX:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
         return SeetWrite(p[2], k, theText);
     case EE_SCREENS_SEET_OP_SET_TEXT_BOX:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->SetText(SeetBytes(p[2], i[2]));
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetTextEditBox()->SetText(SeetBytes(p[2], i[2]));
         return 0;
     case EE_SCREENS_SEET_OP_PLAYER_COUNT:
         return (int32_t)static_cast<EEUIFScenarioEditor*>(c->mTextEditBox->GetForm())->GetPlayerScreen()->GetPlayerCount();

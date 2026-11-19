@@ -130,7 +130,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     case EE_SCREENS_SE_OP_OBJECT_IS_MAP:
         return Object()->GetIsSelectOnMap();
     case EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION:
-        gUIManager->mScenarioEditorForm->ClearSelection();
+        gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
     case EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST:
         Object()->ClearUnitList();
@@ -270,7 +270,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     }
     case EE_SCREENS_SE_OP_EXIT_AFTER_SAVE:
-        gUIManager->mScenarioEditorForm->SetExitAfterSave(true);
+        gUIManager->GetScenarioEditorForm()->SetExitAfterSave(true);
         break;
     case EE_SCREENS_SE_OP_EDIT_LINES:
         return static_cast<UIEditBox*>(theEntity)->GetLineCount();
@@ -281,19 +281,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 // Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
 {
-    UWideString theTitle;
-    std::vector<UWideString> theNames;
-    if (inAreas == true) {
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
-        gResource->GetString(IDS_AREA, theTitle);
-        inComboBox->mMode = kSETriggerScreenArea;
-    } else {
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
-        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theTitle);
-        inComboBox->mMode = kSETriggerScreenObject;
-    }
-    inLabel->SetText(theTitle);
-    inComboBox->DeleteAllEntries();
-    for (unsigned long i = 0; i < theNames.size(); i++)
-        inComboBox->AppendLine(theNames[i]);
+    inComboBox->mMode = inAreas ? kSETriggerScreenArea : kSETriggerScreenObject;
+    FillPlaceComboBox(inAreas, inLabel, inComboBox);
 }

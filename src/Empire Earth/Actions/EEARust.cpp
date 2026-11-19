@@ -78,7 +78,8 @@ static_assert(kEEAChat == EE_SCREENS_GA_CHAT && kEEABoot == EE_SCREENS_GA_BOOT &
                   kEEAEditorClick == EE_SCREENS_GA_EDITOR_CLICK && kEEAEditorLasso == EE_SCREENS_GA_EDITOR_LASSO &&
                   kEEATriggerClick == EE_SCREENS_GA_TRIGGER_CLICK && kEEATriggerLasso == EE_SCREENS_GA_TRIGGER_LASSO &&
                   kEEALoadText == EE_SCREENS_GA_LOAD_TEXT && kEEAEditorPaint == EE_SCREENS_GA_EDITOR_PAINT &&
-                  kEEAEditorWhole == EE_SCREENS_GA_EDITOR_WHOLE,
+                  kEEAEditorWhole == EE_SCREENS_GA_EDITOR_WHOLE && kEEAEditorUndo == EE_SCREENS_GA_EDITOR_UNDO &&
+                  kEEAEditorRedo == EE_SCREENS_GA_EDITOR_REDO,
               "ee/EEARust.h's kinds are game_actions.rs's");
 static_assert(kMessageSelectUnit == EE_SCREENS_GA_MSG_SELECT_UNIT && kMessageAddUnitToSelectedGroup == EE_SCREENS_GA_MSG_ADD_UNIT &&
                   kMessageUnselectAllUnits == EE_SCREENS_GA_MSG_UNSELECT_ALL && kMessageAttackUnit == EE_SCREENS_GA_MSG_ATTACK &&
@@ -508,10 +509,10 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         EEUnit* theUnit = static_cast<EEUnit*>(p);
         theUnit->GetPlayer()->ApplyImprovement(theUnit->GetUnitClass()->GetUnitType(), a->mImprovement, i[1] != 0);
         if (i[1] == 0)
-            gUIManager->mScenarioEditorForm->GetUnitScreen()->ShowUnitStatus(theUnit);
+            gUIManager->GetScenarioEditorForm()->GetUnitScreen()->ShowUnitStatus(theUnit);
         else
-            static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->ShowUnitStatus(theUnit);
-        gUIManager->mScenarioEditorForm->UpdateHelpString();
+            static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->ShowUnitStatus(theUnit);
+        gUIManager->GetScenarioEditorForm()->UpdateHelpString();
         return 0;
     }
     case EE_SCREENS_GA_E_SOUND:
@@ -522,7 +523,7 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         EEPlayer* thePlayer = gWorld.mPlayers[a->mPlayers[i[1]]];
         EEApplyCivilizationFile(gWorld.mPlayers[a->mPlayers[i[1]]]->mCivilizationFile, thePlayer);
         long theCivilization = gWorld.mPlayers[a->mPlayers[i[1]]]->GetTechTree()->mStartEpoch;
-        gUIManager->mScenarioEditorForm->GetLoadThread()->Post406(reinterpret_cast<void*>(a->mPlayers[i[1]]), reinterpret_cast<void*>(theCivilization));
+        gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post406(reinterpret_cast<void*>(a->mPlayers[i[1]]), reinterpret_cast<void*>(theCivilization));
         return 0;
     }
     case EE_SCREENS_GA_E_RESET_POST403:
@@ -577,10 +578,10 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         gConductor->GetConductor().SetVolume(f[1]);
         gPhysics->mTicksOwed = 0;
         return 0;
-    case EE_SCREENS_GA_E_RESUME_GROUP: gUIManager->mScenarioEditorForm->ResumeCurrentGroup(); return 0;
+    case EE_SCREENS_GA_E_RESUME_GROUP: gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup(); return 0;
     case EE_SCREENS_GA_E_DELETE_FILE: delete static_cast<FSMemoryFile*>(p); return 0;
     case EE_SCREENS_GA_E_OBJECT_SELECTION: EESEAObjectSelection(); return 0;
-    case EE_SCREENS_GA_E_LOAD_TEXT: gUIManager->mScenarioEditorForm->SetLoadText(a->mText); return 0;
+    case EE_SCREENS_GA_E_LOAD_TEXT: gUIManager->GetScenarioEditorForm()->SetLoadText(a->mText); return 0;
     }
     return 0;
 }

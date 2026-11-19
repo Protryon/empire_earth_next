@@ -111,6 +111,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // save/load, main game, main screen, post-game summary, scenario intro, scenario load, single player load, game
     // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own;
     // the port's controls, the forms, the music and the save form's event: ee_screens ui_manager.rs)
+    ee_screens_ui_manager_fields(this);
     EEUIManagerCall theCall(this);
     ee_screens_ui_manager_construct(&theCall);
 }
@@ -118,9 +119,8 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
 // Destroys the UI manager and its scenario editor form
 EEUIManager::~EEUIManager()
 {
-    if (this->mScenarioEditorForm != NULL)
-        delete this->mScenarioEditorForm;
-    this->mMainGameForm = NULL;
+    delete this->GetScenarioEditorForm();
+    ee_screens_ui_manager_fields_drop(this);
 }
 
 // Creates a game form's event for a control id; NULL for an id no factory knows. The original's factories per form
@@ -135,8 +135,8 @@ UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
     EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
     uint32_t theCode = ee_screens_control_event_for(inID, gGameScreenActive, theManager->mInScenarioEditor);
     if (theCode == EE_SCREENS_CPP_CANCEL_LOAD)
-        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->mScenarioEditorForm)
-                                                  : theManager->mMainGameForm);
+        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->GetScenarioEditorForm())
+                                                  : theManager->GetMainGameForm());
     if (theCode == EE_SCREENS_CPP_LOAD_UNIT)
         return new EEUIELoadUnit;
     return EECreateScreenEvent(theCode);
@@ -228,10 +228,10 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
         break;
     case kDbControlSelectUnits:
         theControl = new EEUICSelectUnits(theForm, inTable.GetID(), inTable.GetFormIndex(),
-                                    this->mMainGameForm->mMouseClick, this->mMainGameForm->mLasso);
+                                    this->GetMainGameForm()->mMouseClick, this->GetMainGameForm()->mLasso);
         break;
     case kDbControlCommandUnits:
-        theControl = new EEUICCommandUnits(theForm, inTable.GetID(), inTable.GetFormIndex(), this->mMainGameForm->mMouseClick);
+        theControl = new EEUICCommandUnits(theForm, inTable.GetID(), inTable.GetFormIndex(), this->GetMainGameForm()->mMouseClick);
         break;
     case kDbControlPortrait:
         theControl = new EEUICPortrait(theForm, theRectangle, inTable.GetID(), inTable.GetFormIndex(), false);
@@ -306,10 +306,8 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 // Deletes the scenario editor form
 void EEUIManager::DeleteScenarioEditor()
 {
-    if (this->mScenarioEditorForm != NULL) {
-        delete this->mScenarioEditorForm;
-        this->mScenarioEditorForm = NULL;
-    }
+    delete this->GetScenarioEditorForm();
+    this->mScenarioEditorForm = NULL;
 }
 
 // Shows a new message box asking for a text or password
@@ -415,12 +413,6 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
         return UIControlsTable::MoveControlsHorizontally(m.form, m.first, m.last, m.left_delta, m.right_delta);
     }
     case EE_SCREENS_UM_OP_ENGINE_COUNT: return EECPEngineChoiceCount();
-    case EE_SCREENS_UM_OP_FORMS:
-        theManager->mMainGameForm = static_cast<EEUIFMainGame*>(theManager->GetFormByID(kFormMainGame));
-        theManager->mInScenarioEditor = false;
-        theManager->mScenarioEditorForm = NULL;
-        theManager->mB13D = false;
-        break;
     case EE_SCREENS_UM_OP_MUSIC:
         theManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
         break;
@@ -482,6 +474,3 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     return 0;
 }
 
-void EEUIManager::FnE123D()
-{
-}

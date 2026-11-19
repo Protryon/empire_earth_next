@@ -57,7 +57,6 @@ public:
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
-    void SetStatusText(const UWideString& inText);  // 0x264cd5 (control 0x19)
     void CreateGroup(unsigned long inIndex);
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);
@@ -74,7 +73,6 @@ public:
     void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
-    void FnE123D();                         // (ICF-folded into 0xe123d: an empty body; provisional name)
     // the members that are Rust's whole (EE_SCREENS_MF_DO_*, with their argument: the original's
     // UpdateBackgroundMedia 0x264b4b, SetPauseText 0x26572f, PauseInformation 0x2662d7,
     // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,

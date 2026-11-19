@@ -151,11 +151,11 @@ void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inCo
     float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
     uint32_t theTargets = ee_gfx_units_label_targets(inY, theTextHeight, inBottom, gFreeCamera);
     if (theTargets & 1)
-        gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
+        gUIManager->GetMainGameForm()->DrawClippedText(theView, &theText, NULL);
     if (theTargets & 2)
-        gUIManager->mMainGameForm->DrawClippedText(*reinterpret_cast<const GERectangle*>(inStrip), &theText, NULL);
+        gUIManager->GetMainGameForm()->DrawClippedText(*reinterpret_cast<const GERectangle*>(inStrip), &theText, NULL);
     if (theTargets & 4)
-        gUIManager->mScenarioEditorForm->DrawClippedText(theView, &theText, NULL);
+        gUIManager->GetScenarioEditorForm()->DrawClippedText(theView, &theText, NULL);
 }
 
 namespace {

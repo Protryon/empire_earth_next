@@ -95,7 +95,7 @@ EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, 
 void EESERBUnitTypes::Check()
 {
     UIRadioButton::Check();
-    gUIManager->mScenarioEditorForm->GetPlayerScreen()->FillTechLists();
+    gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists();
 }
 
 // Applies a new max-players choice: sets the player tab's player count to the selection + 2, then selects it
@@ -980,7 +980,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_WORLD_SET: SeplWorld(i[0], true, i[1]); return 0;
     case EE_SCREENS_SEPL_OP_LOAD_THREAD: {
         // the existing queue API carries the original scalar message words as void*
-        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
+        EESELoadThread* theThread = gUIManager->GetScenarioEditorForm()->GetLoadThread();
         void* thePlayer = reinterpret_cast<void*>((uintptr_t)i[1]);
         void* theEpoch = reinterpret_cast<void*>((intptr_t)gWorld.GetPlayer(i[1])->GetTechTree()->mStartEpoch);
         if (i[0] == 406) theThread->Post406(thePlayer, theEpoch);

@@ -34,98 +34,46 @@ static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);
 static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
 static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);
 
-// The OK button (RTTI EEUIFEBOK > UIButton; vtable 0x44a640; sizeof 0x110). The in-class virtuals follow the ctor
-// with the ??_G in declaration order.
-// The message buttons' tinted face (a rhombus on the 2D draw list, ee_ge list2d.rs)
-static void EEUIFErrorFill(UIButton* inButton)
-{
-    ee_ge_draw2d_fill(inButton->GetRasterizer(), inButton->GetScreenIndex(),
-                      reinterpret_cast<const EeGeRectangle*>(&inButton->GetCopiedDrawRectangle()),
-                      reinterpret_cast<const float*>(&kMessageButtonColor), kMessageButtonOpacity);
-}
-
+// The message box's buttons: OK/Yes (RTTI EEUIFEBOK > UIButton; vtable 0x44a640) and No/Cancel (EEUIFEBCancel; vtable
+// 0x44a6d8, its close form set by DisplayCancel), one class (the second keeps its name: the editor gates print the
+// controls' classes): 50x20, tinted (a rhombus on the 2D draw list, ee_ge list2d.rs); a press marks it pressed and
+// closes the box (or the close form)
 class EEUIFEBOK : public UIButton {
-    friend class EEUIFError;
 public:
-    EEUIFEBOK(UIForm* inForm, unsigned long inId);
+    EEUIFEBOK(UIForm* inForm, unsigned long inId)
+        : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
+          mCallback(NULL), mData(NULL), mCloseForm(NULL), mPressed(false)
+    {
+        this->SetFocusedTextColor(kMessageFocusedColor);
+    }
     virtual long DrawPolygons()
     {
-        EEUIFErrorFill(this);
+        ee_ge_draw2d_fill(this->GetRasterizer(), this->GetScreenIndex(),
+                          reinterpret_cast<const EeGeRectangle*>(&this->GetCopiedDrawRectangle()),
+                          reinterpret_cast<const float*>(&kMessageButtonColor), kMessageButtonOpacity);
         return UIButton::DrawPolygons();
     }
-    virtual ~EEUIFEBOK() {}
     void SetCallback(EEUIFErrorCallback inCallback, void* inData)
     {
         this->mCallback = inCallback;
         this->mData = inData;
     }
+    EEUIFErrorCallback mCallback;
+    void* mData;
+    UIForm* mCloseForm;
+    bool mPressed;
 protected:
-    virtual void ButtonUp();
-
-    EEUIFErrorCallback mCallback;           // +0x104
-    void* mData;                            // +0x108
-    bool mPressed;                          // +0x10c
+    virtual void ButtonUp()
+    {
+        this->mPressed = true;
+        UIButton::ButtonUp();
+        gUserInterface->CloseForm(this->mCloseForm);
+    }
 };
-
-// The No and Cancel buttons (RTTI EEUIFEBCancel > UIButton; vtable 0x44a6d8; sizeof 0x114).
-class EEUIFEBCancel : public UIButton {
-    friend class EEUIFError;
-    friend uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB);
+class EEUIFEBCancel : public EEUIFEBOK {
 public:
-    EEUIFEBCancel(UIForm* inForm, unsigned long inId);
-    virtual long DrawPolygons()
-    {
-        EEUIFErrorFill(this);
-        return UIButton::DrawPolygons();
-    }
-    virtual ~EEUIFEBCancel() {}
-    void SetCallback(EEUIFErrorCallback inCallback, void* inData)
-    {
-        this->mCallback = inCallback;
-        this->mData = inData;
-    }
-protected:
-    virtual void ButtonUp();
-
-    EEUIFErrorCallback mCallback;           // +0x104
-    void* mData;                            // +0x108
-    UIForm* mCloseForm;                     // +0x10c (DisplayCancel)
-    bool mPressed;                          // +0x110
+    using EEUIFEBOK::EEUIFEBOK;
 };
-
-// Creates the message box's OK/Yes button (50x20) with its callback unset
-EEUIFEBOK::EEUIFEBOK(UIForm* inForm, unsigned long inId)
-    : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
-      mCallback(NULL), mData(NULL)
-{
-    this->SetFocusedTextColor(kMessageFocusedColor);
-    this->mPressed = false;
-}
-
-// Marks the OK/Yes button pressed and closes the message box
-void EEUIFEBOK::ButtonUp()
-{
-    this->mPressed = true;
-    UIButton::ButtonUp();
-    gUserInterface->CloseForm(NULL);
-}
-
-// Creates a No or Cancel button (50x20) with its callback and close form unset
-EEUIFEBCancel::EEUIFEBCancel(UIForm* inForm, unsigned long inId)
-    : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
-      mCallback(NULL), mData(NULL), mCloseForm(NULL)
-{
-    this->SetFocusedTextColor(kMessageFocusedColor);
-    this->mPressed = false;
-}
-
-// Marks the No/Cancel button pressed and closes the message box (or its close form)
-void EEUIFEBCancel::ButtonUp()
-{
-    this->mPressed = true;
-    UIButton::ButtonUp();
-    gUserInterface->CloseForm(this->mCloseForm);
-}
 
 // Creates the game's message box form: message label, OK, No and Cancel buttons, an edit box and the gold
 // framed background, laid out for a 1024x768 design (ee_screens dialog.rs construct: the order, sizes, colours and
@@ -186,10 +134,7 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         if ((inB & 3) != 0) {
             EEUIFErrorCallback theCallback = sDialogCallbacks[(inB & 3) == 2 ? 1 : 0];
             void* theData = (inB & 3) == 3 ? (void*)theBox->mEditBox->GetText(0) : sDialogData;
-            if (inA == 1)
-                theBox->mOk->SetCallback(theCallback, theData);
-            else
-                static_cast<EEUIFEBCancel*>(theButton)->SetCallback(theCallback, theData);
+            static_cast<EEUIFEBOK*>(theButton)->SetCallback(theCallback, theData);
         }
         theButton->SetDisplayMode(kDisplayModeShown);
         if (inA == 3 && (inB & 3) != 0)
@@ -320,12 +265,6 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
     return 0;
 }
 
-// Draws the message box background
-long EEUIFError::DrawBackground(const GERectangle& inRectangle)
-{
-    return UIForm::DrawBackground(inRectangle);
-}
-
 // Opens the message box, scales its background to the window and lays out the buttons for its mode (the original's
 // LayoutCancel, LayoutPassword, LayoutQuestion, LayoutYesNoCancel and LayoutMessage: ee_screens dialog.rs)
 void EEUIFError::Open()
@@ -342,16 +281,12 @@ void EEUIFError::Close()
     EEUIFErrorCallbackData* theData = new EEUIFErrorCallbackData;
     theData->mCallback = NULL;
     theData->mData = NULL;
-    if (this->mOk != NULL && this->mOk->mPressed) {
-        theData->mCallback = this->mOk->mCallback;
-        theData->mData = this->mOk->mData;
-    } else if (this->mNo != NULL && this->mNo->mPressed) {
-        theData->mCallback = this->mNo->mCallback;
-        theData->mData = this->mNo->mData;
-    } else if (this->mCancel != NULL && this->mCancel->mPressed) {
-        theData->mCallback = this->mCancel->mCallback;
-        theData->mData = this->mCancel->mData;
-    }
+    for (EEUIFEBOK* theButton : std::initializer_list<EEUIFEBOK*>{this->mOk, this->mNo, this->mCancel})
+        if (theButton != NULL && theButton->mPressed) {
+            theData->mCallback = theButton->mCallback;
+            theData->mData = theButton->mData;
+            break;
+        }
     gUserInterface->PostErrorClosed(this, theData);
     UIForm::Close();
 }

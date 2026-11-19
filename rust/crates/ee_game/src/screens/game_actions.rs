@@ -60,6 +60,10 @@ pub const EE_SCREENS_GA_LOAD_TEXT: u32 = 24;
 pub const EE_SCREENS_GA_EDITOR_PAINT: u32 = 25;
 /// `EESEARust`: the editor's whole actions (`mAction`).
 pub const EE_SCREENS_GA_EDITOR_WHOLE: u32 = 26;
+/// `EEAUndo`, `EEARedo` (the editor's Undo and Redo buttons' actions, round 2 of the UI cluster): the UI thread's
+/// undo or redo list's last action undone or run again (`EEUserInterface::Undo`, `Redo`; actions.rs).
+pub const EE_SCREENS_GA_EDITOR_UNDO: u32 = 27;
+pub const EE_SCREENS_GA_EDITOR_REDO: u32 = 28;
 
 /// An action's plain members (the C++ class's second base; the names are the original members').
 #[repr(C)]
@@ -641,6 +645,8 @@ pub enum GaEditorCall {
     PaintFree(*mut crate::screens::editor_actions::EeScreensSeaPaint),
     /// The whole action's run and its release.
     WholeRun(*mut crate::screens::editor_whole::EeScreensSewAction),
+    /// The UI thread's undo (true) or redo of its lists' last action.
+    UndoRedo(bool),
     WholeFree(*mut crate::screens::editor_whole::EeScreensSewAction),
 }
 
@@ -914,6 +920,9 @@ impl<'a, H: GaHost> Ga<'a, H> {
                 if !action.is_null() {
                     self.h.editor_call(GaEditorCall::WholeRun(action));
                 }
+            }
+            kind @ (EE_SCREENS_GA_EDITOR_UNDO | EE_SCREENS_GA_EDITOR_REDO) => {
+                self.h.editor_call(GaEditorCall::UndoRedo(kind == EE_SCREENS_GA_EDITOR_UNDO));
             }
             _ => {}
         }

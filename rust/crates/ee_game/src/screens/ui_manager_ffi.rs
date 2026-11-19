@@ -19,6 +19,10 @@ struct ManagerHost(*mut c_void);
 
 impl UiHost for ManagerHost {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        if op == ui_manager::EE_SCREENS_UM_OP_FORMS {
+            crate::screens::ui_objects_ffi::manager_forms();
+            return 0;
+        }
         unsafe { sys::ee_screenscpp_ui_manager(self.0, op, a, b, c) }
     }
 }

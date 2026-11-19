@@ -268,12 +268,12 @@ static void ExecuteLoadMainScreen(EEMRecord* m)
         for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
             PlatSleep(1);
         if (gWorld.mGameScreenActive == true) {
-            gUIManager->SwapForm(gUIManager->mMainGameForm);
-            gUIManager->mMainGameForm->mInfoBlinking = false;
-            gUIManager->mMainGameForm->mIsButtonBlinking = false;
-            gUIManager->mMainGameForm->SetUIState(0x11);
+            gUIManager->SwapForm(gUIManager->GetMainGameForm());
+            gUIManager->GetMainGameForm()->mInfoBlinking = false;
+            gUIManager->GetMainGameForm()->mIsButtonBlinking = false;
+            gUIManager->GetMainGameForm()->SetUIState(0x11);
         } else
-            gUIManager->SwapForm(gUIManager->mScenarioEditorForm);
+            gUIManager->SwapForm(gUIManager->GetScenarioEditorForm());
         gWorld.mCameraControl.Update(1.0f);
         gCommunications->ProcessLocalUserInput(
             new EEMRecord(kMessageLoadMainScreenResponse, {gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer}), kSlotServer);
@@ -397,7 +397,7 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
 {
     GE3DPoint theLocation;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEUIFMGMainGroup* theMainGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->mMainGameForm->mGroups[0]);
+    EEUIFMGMainGroup* theMainGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0]);
     unsigned char theSlot = m->GetOriginatingSlot();
     unsigned char theLocalSlot = gWorld.GetCurrentPlayer()->GetSlot();
     thePlayer->mActiveGroup->SelectSavedGroup(thePlayer->mGroups[m->Get<unsigned char>(1)], true);
@@ -405,8 +405,8 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
         gMouse->mPointer = 0;
         theMainGroup->ShowCommands(theMainGroup->GetSelectedUnit());
         theMainGroup->Reset();
-        gUIManager->mMainGameForm->SetUIState(0);
-        gUIManager->mMainGameForm->mIsCursorLocked = false;
+        gUIManager->GetMainGameForm()->SetUIState(0);
+        gUIManager->GetMainGameForm()->mIsCursorLocked = false;
         EEComplexUnit* theUnit = thePlayer->mSelectedGroup->GetFirstUnit();
         if (theUnit) {
             if (m->Get<bool>(2)) {
@@ -964,7 +964,7 @@ static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
         case EE_NETMSG_PACT_REMOVE_IMPROVEMENT: p->RemoveQueuedImprovement(i[1], i[2], p->CountQueuedImprovements(i[1], i[2]) != 0); break;
         case EE_NETMSG_PACT_UPDATE_HELP:
             if (gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID == p->mPlayerID)
-                gUIManager->mMainGameForm->UpdateHelpString();
+                gUIManager->GetMainGameForm()->UpdateHelpString();
             break;
         case EE_NETMSG_PACT_PATROL_GROUP:
             if (EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(i[1])))

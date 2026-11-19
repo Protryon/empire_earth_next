@@ -124,7 +124,7 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
     EEUIFMGStatusBox* theBox = theGroup->mStatusBox;
     auto Button = [&]() { return static_cast<EEUIFMGStatusButton*>(theForm->GetControl((unsigned long)inA)); };
     switch (inOp) {
-    case EE_SCREENS_MGR_OP_FORMS: return inA == 0 ? (int64_t)theForm : (int64_t)gUIManager->mMainGameForm;
+    case EE_SCREENS_MGR_OP_FORMS: return inA == 0 ? (int64_t)theForm : (int64_t)gUIManager->GetMainGameForm();
     case EE_SCREENS_MGR_OP_WORLD_UNIT: return reinterpret_cast<int64_t>(gWorld.GetUnit((unsigned long)inA));
     case EE_SCREENS_MGR_OP_PLAYER_UNIT:
         return reinterpret_cast<int64_t>(gWorld.GetCurrentPlayer()->GetUnit((unsigned long)inA));

@@ -353,7 +353,7 @@ void EEServer::ServerSlot48()
 {
     long theParameter1 = 0;
     long theParameter2 = 0;
-    gUserInterface->mThread->Post(0x12, &theParameter1, &theParameter2, true);
+    gUserInterface->GetThread()->Post(0x12, &theParameter1, &theParameter2, true);
 }
 
 // Returns the debug out-of-sync handling preference
@@ -862,7 +862,7 @@ static int64_t EESessionHost(uint32_t inOp, EeNetSessCall* inCall)
             gPhysics->mThread->Post(0x404, NULL, NULL, true);
             while (!gPhysics->mTimerRunning)
                 PlatSleep(1);
-            gUIManager->mMainGameForm->SetUIState(0);
+            gUIManager->GetMainGameForm()->SetUIState(0);
         }
         return 0;
     }
