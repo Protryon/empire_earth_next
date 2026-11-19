@@ -50,6 +50,16 @@
 #include "lle/Input System.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EESEUnit.h"
+#include "GEWindow.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEAction.h"
+#include "ee/EEARust.h"
+#include "ee/EEMap.h"
+#include "ee/EEMouse.h"
+#include "ee/EEGraphics.h"
+#include "ee/EEUIManager.h"
+#include "lle/UIBitmap.h"
+#include "ee/EEUIFSETerrain.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -57,6 +67,52 @@ int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, 
     switch (inVirtual) {
     EE_SHELL_COMMON_BASE(UIButton)
     EE_SHELL_BUTTON_BASE(UIButton)
+    }
+    return 0;
+}
+
+int64_t EEUIShellControl::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
+{
+    switch (inVirtual) {
+    EE_SHELL_COMMON_BASE(EEUIRustControl)
+    }
+    return 0;
+}
+
+int64_t EEUIShellForm::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
+{
+    GERectangle r = ioF != NULL ? GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]) : GERectangle();
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: UIForm::Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: UIForm::Deactivate(); return 0;
+    case EE_SCREENS_SV_HELP_POPUP: UIForm::SetHelpTextPopupLocation(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return UIForm::UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return UIForm::UpdateMouse();
+    case EE_SCREENS_SV_RELAYOUT: UIForm::RelayoutForm(r); return 0;
+    case EE_SCREENS_SV_TRANSLATED_KEY: return UIForm::UpdateTranslatedKey(reinterpret_cast<const char*>(inA), (short)inB);
+    case EE_SCREENS_SV_DRAW_BACKGROUND: return UIForm::DrawBackground(r);
+    case EE_SCREENS_SV_CLOSE: UIForm::Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return UIForm::CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return UIForm::DrawPolygons();
+    case EE_SCREENS_SV_DRAW_TEXT: return UIForm::DrawTextA();
+    case EE_SCREENS_SV_OPEN: UIForm::Open(); return 0;
+    case EE_SCREENS_SV_SET_RECTANGLE: UIForm::SetRectangle(r); return 0;
+    }
+    return 0;
+}
+
+// the form's own virtual inVirtual through its vtable (a kind's override runs)
+int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
+{
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: this->Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: this->Deactivate(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return this->UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return this->UpdateMouse();
+    case EE_SCREENS_SV_CLOSE: this->Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return this->CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return this->DrawPolygons();
+    case EE_SCREENS_SV_OPEN: this->Open(); return 0;
     }
     return 0;
 }
@@ -201,6 +257,10 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
 {
     UIControl* c = static_cast<UIControl*>(inControl);
     UWideString theText;
+    if (inOp >= EE_SCREENS_SH_FORM_BASE)   // a form shell's (its host object is the UIForm*)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->BaseCall(inOp - EE_SCREENS_SH_FORM_BASE, a, b, f);
+    if (inOp == EE_SCREENS_SH_FORM_SELF)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->SelfCall((uint32_t)a);
     if (inOp >= EE_SCREENS_SH_BASE)
         return EEUIShell::Of(c)->BaseCall(inOp - EE_SCREENS_SH_BASE, a, b, f);
     switch (inOp) {
@@ -397,6 +457,77 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
     case EE_SCREENS_SH_ALWAYS_DIRTY: c->SetAlwaysDirty(a != 0); break;
     case EE_SCREENS_SH_EDITOR_TEXTURE: return (int64_t) static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetButtonTexture();
+    // the paint areas' (shells_paint.rs)
+    case EE_SCREENS_SH_PICK: {
+        EETile* theTile = NULL;
+        GE3DPoint thePoint;
+        long theX = 0, theY = 0;
+        if (a == 1) {
+            bool theResult = EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), theTile, theX, theY, false);
+            f[0] = (float)theX;
+            f[1] = (float)theY;
+            f[2] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+            return theResult;
+        }
+        if (a == 2)
+            theTile = gWorld.GetMap()->GetLocationAt(GE2DPoint(f[0], f[1]), thePoint, false);
+        else
+            EEPointUnitOrTile(GE2DPoint(f[0], f[1]), theTile, thePoint, false);
+        f[0] = thePoint.GetX();
+        f[1] = thePoint.GetY();
+        f[2] = thePoint.GetZ();
+        f[3] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+        return theTile != NULL;
+    }
+    case EE_SCREENS_SH_MAP_TILE: {
+        EEMapTile* theTile = gWorld.mMap->GetTile((unsigned long)a, (unsigned long)b);
+        f[0] = theTile != NULL ? theTile->GetHeight() : 0.0f;
+        return theTile != NULL;
+    }
+    case EE_SCREENS_SH_MAP_HALF: f[0] = gWorld.GetMap()->GetF1955F4(); break;
+    case EE_SCREENS_SH_SCREEN_LINE: {
+        GE3DLine theLine;
+        gWorld.mMap->GetScreenLine(GE2DPoint(f[0], f[1]), theLine);
+        float* o = reinterpret_cast<float*>(a);
+        o[0] = theLine.GetStart().GetX(); o[1] = theLine.GetStart().GetY(); o[2] = theLine.GetStart().GetZ();
+        o[3] = theLine.GetDirection().GetX(); o[4] = theLine.GetDirection().GetY(); o[5] = theLine.GetDirection().GetZ();
+        break;
+    }
+    case EE_SCREENS_SH_MOUSE_AT: {
+        GE2DPoint thePoint = a != 0 ? gMouse->mPosition : static_cast<EEUIShellControl*>(c)->MouseLocation();
+        f[0] = thePoint.GetX();
+        f[1] = thePoint.GetY();
+        break;
+    }
+    case EE_SCREENS_SH_VIEW_RECT: {
+        const GERectangle& r = gViewport.GetViewRectangle();
+        f[0] = r.GetLeft(); f[1] = r.GetTop(); f[2] = r.GetRight(); f[3] = r.GetBottom();
+        break;
+    }
+    case EE_SCREENS_SH_WINDOW_SIZE: return (int64_t)gGameWindow->GetWidth() | (int64_t)gGameWindow->GetHeight() << 32;
+    case EE_SCREENS_SH_MOUSE_BOUNDS: gMouse->SetBounds(GERectangle(f[0], f[1], f[2], f[3])); break;
+    case EE_SCREENS_SH_SCROLL_EDGES: reinterpret_cast<EEAScroll*>(a)->mEdges = GERectangle(f[0], f[1], f[2], f[3]); break;
+    case EE_SCREENS_SH_CAPTURE_MOUSE: static_cast<EEUIShellControl*>(c)->Capture(); break;
+    case EE_SCREENS_SH_MOUSE_BUTTONS:
+        return (c->GetRightMouseButtonDown() ? 1 : 0) | (c->GetLeftMouseButtonDown() ? 2 : 0) | (c->GetHasMouseCapture() ? 4 : 0);
+    case EE_SCREENS_SH_PAINT_NEW: return (int64_t) static_cast<EESEAPaint*>(new EESEAPaintRust((uint32_t)a, (char)b));
+    case EE_SCREENS_SH_PAINT_AREA: {
+        const int32_t* r = reinterpret_cast<const int32_t*>(b);
+        return reinterpret_cast<EESEAPaint*>(a)->SetArea(r[0], r[1], r[2], r[3]);
+    }
+    case EE_SCREENS_SH_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EESEAPaint*>(a)); break;
+    case EE_SCREENS_SH_ACTION_RELEASE: reinterpret_cast<EESEAPaint*>(a)->Dereference(); break;
+    case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;
+    case EE_SCREENS_SH_BRUSH_GROUP_SIZE: return reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize;
+    case EE_SCREENS_SH_SPACE: {
+        ISEntity* theKey;
+        return gISKeyboard->GetEntity(kKeySpace, theKey) == 0 && theKey->GetValue() > 0;
+    }
+    case EE_SCREENS_SH_TERRAIN_RUST: return (int64_t)reinterpret_cast<EEUIFSETerrain*>(a)->mRust;
+    case EE_SCREENS_SH_SLIDER_OF: {
+        UISlider* theSlider = static_cast<UISlider*>(c->GetForm()->GetControlById((unsigned long)a));
+        return (int64_t)theSlider->GetMaxRange() << 32 | (uint32_t)theSlider->GetCurrentRangeValue();
+    }
     // the game's
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->mScreens[a]->RefreshControls(); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;

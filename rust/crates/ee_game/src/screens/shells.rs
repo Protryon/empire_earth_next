@@ -68,6 +68,20 @@ pub const EE_SCREENS_SV_CHANGE_SELECTION_INDEX: u32 = 21;
 pub const EE_SCREENS_SV_CHANGE_RANGE: u32 = 22;
 /// An edit box's `ProcessEnterKey()`.
 pub const EE_SCREENS_SV_PROCESS_ENTER: u32 = 23;
+/// A form's (`EEUIShellForm`): `Activate()`, `Deactivate()`, `DrawBackground(f[0..4])`, `RelayoutForm(f[0..4])`,
+/// `SetHelpTextPopupLocation()`, `UpdateMouse()`, `UpdateTranslatedKey((const char*)a, b)`, `Close()`, `Open()`,
+/// `SetRectangle(f[0..4])` (and the common `CopyData`, `DrawPolygons`, `DrawTextA`, `UpdateKeyboard`); rectangles as
+/// left, top, right, bottom.
+pub const EE_SCREENS_SV_ACTIVATE: u32 = 24;
+pub const EE_SCREENS_SV_DEACTIVATE: u32 = 25;
+pub const EE_SCREENS_SV_DRAW_BACKGROUND: u32 = 26;
+pub const EE_SCREENS_SV_RELAYOUT: u32 = 27;
+pub const EE_SCREENS_SV_HELP_POPUP: u32 = 28;
+pub const EE_SCREENS_SV_UPDATE_MOUSE: u32 = 29;
+pub const EE_SCREENS_SV_TRANSLATED_KEY: u32 = 30;
+pub const EE_SCREENS_SV_CLOSE: u32 = 31;
+pub const EE_SCREENS_SV_OPEN: u32 = 32;
+pub const EE_SCREENS_SV_SET_RECTANGLE: u32 = 33;
 
 const fn bit(v: u32) -> u64 {
     1 << v
@@ -127,6 +141,10 @@ pub const EE_SCREENS_SKOP_SET_PLAYER_COUNT: u32 = 8;
 
 /// `EE_SCREENS_SH_BASE + v`: the base class's virtual `v` (`EE_SCREENS_SV_*`) on the shell.
 pub const EE_SCREENS_SH_BASE: u32 = 0x100;
+/// `EE_SCREENS_SH_FORM_BASE + v`: a form shell's `UIForm` virtual `v` (the host's object is the `UIForm*`).
+pub const EE_SCREENS_SH_FORM_BASE: u32 = 0x200;
+/// A form shell's own virtual `a` (through its vtable).
+pub const EE_SCREENS_SH_FORM_SELF: u32 = 0xff;
 /// `SetBgOpacity(f[0])`.
 pub const EE_SCREENS_SH_BG_OPACITY: u32 = 1;
 /// `SetBgColor(GEColor(f[0], f[1], f[2]))`.
@@ -215,6 +233,14 @@ impl Ctx<'_> {
     }
     pub fn base0(&self, v: u32) -> i64 {
         self.base(v, 0, 0, &mut [0.0; 4])
+    }
+    /// A form shell's `UIForm` virtual `v`.
+    pub fn form_base(&self, v: u32, a: i64, b: i64, f: &mut [f32; 4]) -> i64 {
+        self.host.call(self.ctl, EE_SCREENS_SH_FORM_BASE + v, a, b, f)
+    }
+    /// A form shell's own virtual `v` (a kind's override runs).
+    pub fn form_self(&self, v: u32) -> i64 {
+        self.call(EE_SCREENS_SH_FORM_SELF, i64::from(v), 0)
     }
 }
 
