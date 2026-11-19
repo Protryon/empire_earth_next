@@ -31,7 +31,7 @@ public:
     bool RemoveHullTile(const U2DPoint<long>& inTile);   // 0xac573: a tile leaves (the hull made again if a vertex)
     bool CanTake(EEUnit* inUnit);               // 0xac6f7: whether inUnit belongs to this town
     void RefreshPatrolGroup();                  // 0xac4b6: mPatrolGroup found or made, its points the hull's
-    static bool IsTownUnit(EEUnit* inUnit);     // 0xac2b6
+    static bool IsTownUnit(EEUnit* inUnit);
 
     EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0x68 (ctor argument 1)
