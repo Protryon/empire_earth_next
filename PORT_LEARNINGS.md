@@ -33459,6 +33459,32 @@ and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `
   "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
   class view.
 
+## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
+
+Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
+reads the objects the two Windows links name (link.rsp, link-EE-SIM.rsp), resolves every undefined symbol as
+lld-link would (objects, then ee_game.lib, then the system) and writes the unit graph to build/cpp_deps/: leaves,
+near-leaves, blockers, cycles, a bottom-up move order (waves), greedy keystones of the biggest cycle, a class view
+and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `selftest` compiles four tiny units.
+
+- **An object is not its unit's code.** UString.obj (73 lines) holds 378 COMDAT sections: the inline constructors of
+  GE2DPoint, FSFile, URandom, ... that lle/LowLevelEngine.h makes every object emit. Counting every undefined symbol
+  of the object (`--all-refs`, what llvm-nm alone gives) made UString depend on FSBasicFile and GEValues and put it
+  in the big cycle. Following the relocations from the object's own sections (COMDAT selection none or NoDuplicates)
+  into the COMDAT copies it really uses gives the unit's needs: UString becomes a leaf, the leaves go from 29 units
+  (1,149 lines) to 62 (3,208), the biggest cycle from 409 units to 379.
+- **The web, measured** (origin/rust b3ab7ba2c): 532 C++ units, 154,656 source lines (.cpp only), 5,221 edges.
+  One cycle holds 379 units and 133,985 lines; three more are small (the LLE UI's 28 units, 5,149 lines; the GE
+  core's 5 units, 2,793 lines; two WONGUI config units). Waves peel only 103 units (9,583 lines) before every unit
+  left is in a cycle or calls into one.
+- **The hub is data.** Empire Earth.cpp is named by 213 units, 197 of them only for its globals (gWorld, gPhysics,
+  gUIManager, gUserInterface, gContinentManager, gResource, ...): `--code-only` drops it to 16. Moving those
+  definitions out of the unit (or behind Rust-owned storage) is the first keystone either way: it takes 31 units,
+  9,710 lines out of the cycle.
+- Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
+  "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
+  class view.
+
 ## LLE round 8 (branch rust-lle1, 2026-11-19): the leaves as inlines over Rust, GEValues gone, ee_render::geval
 
 The dependency census (tools/cpp_deps.py) showed the LLE's leaves were forwarders already: what kept them C++
@@ -33757,3 +33783,164 @@ round removed the hosts' cases that only went back into Rust and made forwarders
 - **Write and heredocs.** The Write tool wrote CRLF into a Python script whose later string replacements assumed
   LF, and a heredoc turned `r"\b"` into a backspace character in a regex. Normalise a generated script's line
   endings before editing it, and write regex-bearing Python with the Write tool, not through a heredoc.
+
+## Cycle cuts: taking units out of the C++ dependency cycle (branch rust-cuts1, 2026-11-19)
+
+tools/cpp_deps.py measured one cycle of 379 units and 133,985 lines (SCC 1). Most of it is not real coupling: one
+unit names one symbol of another for a reason unrelated to its own job (a shared empty string, a global defined in
+the main unit, a test hook), and the cycle closes through it. Each cut below removes such an edge and is measured
+with the census before and after (a full build first: the census reads the objects).
+
+- **Find the cheap cuts with a what-if over edges.tsv**, not from keystones.txt. The keystones move a whole unit
+  (every outgoing edge at once), which ranks the big hubs first; a cheap cut is ONE edge (or a unit's two or three
+  symbols) whose removal splits the component. Deleting each edge of weight <= 3 inside SCC 1 in turn and recomputing
+  the component (Tarjan over ~250 nodes, seconds) found the edges from WinMain to the test drivers (5,254 lines for
+  two symbols), which no keystone list showed. A unit that is only part of another's implementation (EECalamityUpdate
+  is EECalamityClass's) also shows up as a "cheap" edge; it is not a cut: inverting it would only hide the edge.
+- **A data unit that defines an object depends on its constructor.** Moving Empire Earth.cpp's globals into a
+  data-only unit took 1 unit out at first: `EEWorld gWorld;` names EEWorld::EEWorld and ~EEWorld, so the data unit
+  went into the cycle with EEWorld.cpp and every reader of gWorld stayed there. ee/EEGlobalStorage.h separates the
+  storage from the construction: the data unit defines aligned zero bytes under the object's own symbol (an asm label:
+  MSVC's mangled name on Windows, the plain name on Linux, `_name` on macOS), the headers keep `extern EEWorld
+  gWorld;`, and the unit where the definition was constructs the object in place (`EE_CONSTRUCT_GLOBAL`: placement new
+  then atexit of the destructor, exactly what the compiler's dynamic initializer did), so construction and
+  destruction order are unchanged. The references into members (`gNumPlayers = gWorld.mNumPlayers`) stay plain
+  definitions in the data unit: clang constant-initializes them. EEGlobals.obj defines no function and has no
+  undefined symbol. The labels for POSIX were checked by compiling a toy for x86_64-linux-gnu and arm64-apple-macos
+  (`gW` / `_gW` defined and referenced alike); no POSIX build ran.
+- **Test code called by the game is a cycle.** EE-SIM's main calls WinMain and WinMain called EESimStart: the
+  driver, the scenario editor's and civ builder's steps and their captures were in the game's cycle. Calling the
+  Rust entries the C++ wrappers forwarded to (ee_sim_driver_start, ee_fixture_start), keeping the game's own part
+  (EESimPreferences) in the game's unit, and registering what needs a C++ host through a pointer the test unit sets
+  at static initialization (`gEETestFixtureConfigure`, `gEERenderCaptureFill`) removes the edge with the same calls
+  in the same order. The pointers live in EEGlobals.cpp, so neither side names the other.
+- **The save version moved.** kSaveGameMajorVersion / kSaveGameMinorVersion and their history comment are now
+  EEGlobals.cpp's: a branch that bumps the save version conflicts in Empire Earth.cpp and re-applies the bump in
+  EEGlobals.cpp.
+- **The measure, cut by cut** (SCC 1 units / lines; base origin/rust b3ab7ba2c, 379 / 133,985): gEmptyWideString in
+  a data unit 267 / 122,971; Empire Earth.cpp's globals (EEGlobals.cpp) 248 / 120,016; EECPEngineHelpers a leaf
+  246 / 119,730; WinMain off the test drivers 239 / 113,529; the physics' test hooks 237 / 113,119; EEUnitStore's
+  captures and the render fill's hook 235 / 112,046; EEUnitClass's data and gSeplScreenFont 229 / 111,335. In all
+  150 units and 22,650 lines left the cycle; leaves 62 -> 65. Most of the first cut's 112 units are WONGUI's, which
+  the cycle reached only through GUIStringSingleton's one name.
+- cbindgen exports a module's pub items to its crate's header: a Rust-only module (ee_sim::world::effects, whose
+  `EffectHandle` and `EFFECT_NOT_MADE` appeared in rust/sim/world.h and made the header check fail) takes
+  `/// cbindgen:ignore` on its `pub mod`.
+- **Two oracle runs under one NAME fault, not diverge.** A chain started with `&` inside a background shell kept
+  running after its shell returned (Git Bash's `ps` does not list it); starting the chain again ran two `sim_oracle run
+  cuts1-m` at once, whose shared stage slots made EE-SIM fault 12 s in (GEPhysicalModel::Intersects from
+  EEUnitClass::RefreshSound, a null model). It looked like a merge bug: the same exe and the same source in a scratch
+  worktree both played through. Before suspecting a merge, list the processes from Windows (`Get-CimInstance
+  Win32_Process` by command line) and give every rerun a new NAME.
+- **Storage under a global's symbol must have the global's alignment, not its type's.** clang gives a global object of
+  16 bytes or more 16-byte alignment and assumes it where the object is named: EERenderObject::Fn10C036 reads gWorld's
+  members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
+  oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
+  macros now add `alignas(16)`.
+
+## The game's leaves, round 2: the placement captures, the area bodies, the db tables' storage, the unit sets and the team's save in Rust (ee_sim cp place_capture.rs, astar area_ops.rs / sub_sector_pass.rs, app unit_sets.rs / team_save.rs; ee_data tables.rs; branch rust-leaves2, 2026-11-19)
+
+The lane took the census on origin/rust merged with rust-cuts1 (27cebd6c5; the biggest cycle 229 units, 109,073
+lines) and moved what its directories had left as leaves and near-leaves; docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ (src, include/ee, include/lle) |
+|---|---|---|
+| ded438105 | (merge) rust-cuts1 27cebd6c5, as the lead asked (the cycle cuts) | |
+| da3ff3fbf | PLCE and CPEV whole in Rust; EECPPlaceCapture.cpp deleted | +44 -212, net -168 |
+| da3c871ce | EEAIArea's bodies in Rust; EEAIArea.cpp deleted | +78 -316, net -238 |
+| 3804f260a | the db tables' storage in ee_data, the damage tables' load and CBDT in ee_combat; EEColorTable, EECPBehaviorTable, EEUnitBehavior, EEDatabase .cpp deleted | +139 -456, net -317 |
+| 0397b142a | the unit sets whole in Rust; EEUnitSet, EEUnitSetManager, EEGameVariant .cpp deleted | +70 -286, net -216 |
+| 16754ef02 | the two Rust tables the C++ indexes aligned to 16 | Rust only |
+| eeb5f8d15 | EETeam header-only, its save in Rust | +31 -60, net -29 |
+| f8c426c3c | EEHumanPlayer header-only, EECDKeyStrings.cpp deleted | +6 -88, net -82 |
+| 1f39482de | `EEAIPathSubSector::IsPassable` in Rust | +2 -39, net -37 |
+| | **the branch against the merge of rust-cuts1** | **+370 -1,457, net -1,087** |
+
+- **The capture scopes without C++ members.** PLCE's and CPEV's scope (`EECPPlaceScope`) read the computer player's
+  id, the placement's town tile and its Rust data, and the player's record (EeCpFields' bytes) as C++ members. Now the
+  scope is an inline class over `ee_cp_scope_*`: the player passes as its `EEPlayer*` (a template constructor, so the
+  base cast compiles where the class is complete), the id is the player view's, and three new world layout entries
+  (`cp_placement`: `EEComputerPlayer::mPlacement` from the `EEPlayer*`; `placement_town`, `placement_rust` in
+  `EECPPlacement`) give the rest. A scope that does not record is NULL (only the depth counts), so off the capture
+  nothing is allocated; place_game.rs's host calls the Rust directly (the C++ forwarders it imported went).
+- **EEAIArea's bodies.** The hull's queries, rebuilds, the closest points and the tiles are `area_ops.rs`, each with
+  its HULL or AREA record (the geometry scope as the C++ opened it: HullContains after its bounds test). The class's
+  slots are inline; `GetRandomPoint` (the physics' random stream), `UpdateHull` and `UpdateBounds` (the influence
+  table's region size) moved to EEAIRectangleArea.cpp, the one unit of the area kinds that includes those headers.
+  `EEAIPathSubSector::IsPassable` is `sub_sector_pass.rs` over the views (the tiles' units, the gate's parts, command,
+  owner, peace and lock).
+- **The db tables' storage.** The player colours (`EeDataList::Colors`; the readers return `GEColor` by value, so
+  `EEGetPlayerColor` does too), the computer player behaviours (`gCPBehaviors` is ee_data's static, declared
+  `extern "C"` by the C++), the world constants (`ee_data_world_entry`: the 76 `gWorldTable.Get*Value` sites are
+  unchanged inline readers), the to-hit factors (`gWeaponToHitFactors`, likewise) and dbobjects' records
+  (`ee_data_objects_*`; `EEDbObject` is the record's bytes) are ee_data's. The damage tables' load writes its CBDT
+  records in ee_combat (the same bytes as `EECombatCapture`'s); `gDamageTable` and its two twins went (their one
+  reader, the AI's damage test, reads `EEDamageFactor`). The loaders are header templates over `EEDbReadRecords`
+  (the call is dependent, so a header needs no ee/EEDbRecords.h: round 1's include-order lesson).
+- **The unit sets** (`app/unit_sets.rs`): the records, the table (boxed sets: an `EEUnitSet*` is a Rust set), the
+  links, `Contains` (the family through the class view) and `ForEach`'s walk (`ee_unit_set_next`). The readers that
+  touched members changed: the editor's two `mShowInEditor` reads are `ShowInEditor()`, EEComplexUnit's `mSets[99]`
+  is `GetSet(99)`, the contagion manager's out-of-line `EEUnitSetManager::Contains` went (inline now), `GetName`
+  returns the name's bytes. `EEGameVariant::GetFactor` asks the sets by index (a variant naming no set reads false
+  where the C++ dereferenced NULL).
+- **The team's save** (`app/team_save.rs`) over `EESaveFilePrimitive`: the count and players as `FSFile`'s 4-byte
+  reads and writes; EETeam is header-only. EEHumanPlayer's three overrides only called EEPlayer's (they went with
+  the unit); EECDKeyStrings' eight strings had no reader.
+- **Lesson: a Rust static the C++ indexes must be aligned as the C++ compiler aligns a large global.** `gCPBehaviors`
+  as a plain Rust static (align 4) passed the first oracle by luck; the next link moved it and EE-SIM faulted in
+  `EECPUnitsTuning` on a `pshufd` from the table (an SSE load with a memory operand needs 16 bytes of alignment, and
+  clang emits it for a global array it believes 16-aligned, as MSVC aligns any global of 16 bytes or more). The cuts
+  lane met the same in EEGlobalStorage. The wrappers are `#[repr(C, align(16))]` now, with a test.
+- **Lesson: a template's body needs complete types only at instantiation, but non-dependent names at definition.**
+  `UpdateBounds(T*)` as a template still failed in EEAIChokePoint.cpp, whose instantiation saw no EEInfluenceTable
+  (the member access is dependent, but the type was incomplete at the point of instantiation too); and inline bodies
+  calling `U2DHullPointOf` broke the includers without lle/U2DPolygon.h (EESMEffect.cpp). The inline bodies use the
+  class's own point helpers; the influence-table read moved out of line.
+- **Lesson: tools/eedata reads db record layouts from the sources** (overlay.py `STRUCT_SOURCES`, `RUST_STRUCTS`):
+  deleting EEUnitSetManager.cpp, which defined `EEUnitSetRecord`, broke `eedata.py check` (a FileNotFoundError, not
+  a failed table). The record is ee_sim's `DbUnitSet` now (a Rust struct is read as such: its u8 is a one-byte bool,
+  the tail padding implicit) and specs.json was regenerated (only its source and comments changed). Before deleting a
+  unit, grep tools/eedata for its path.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EERules (the converter's cppgate compiles it: what a move
+  takes is listed there), EEWorldLayout, EEUnitStore's rest, the media objects (sound, button, terrain, animal
+  tables), EEUnitClassImprovement, EEVCWonder, the message classes.
+- **Tests**: place_capture 4; area_ops 1; sub_sector_pass 1; tables (colours, CP behaviours, world, objects) 4;
+  unit_sets 2; team_save 1.
+- **Behaviour changes**: an `EECPBehavior` record with an index past 128 is dropped (the C++ wrote past the array);
+  a dbobjects record that fails to read is kept (the C++ left a NULL slot: the load then stops the game either way);
+  `gDamageTable[a][b]` past a row reads 0; a game variant whose set is missing reads factor 0 (the C++ crashed).
+  Nothing else: the oracle and every capture profile are unchanged.
+- **What exercises what**: PLCE and CPEV, HULL and AREA, CBDT (every capture profile); the tables, the unit sets,
+  the damage tables (every game's load: the oracle); `IsPassable` (the AI's bounded path searches: the oracle);
+  the team's save (saveload); `EEGetPlayerColor` and the minimap's colours (the tour only); `GetName` of a set and
+  `ShowInEditor` (the scenario editor's unit type lists: sim_editor and the tour).
+
+- **The census** (tools/cpp_deps.py report). Before (origin/rust 7779d7db1 with rust-leaves1 and rust-cuts1
+  27cebd6c5 merged): 524 units, 150,911 lines; leaves 60 (3,546); near-leaves 130 (13,249); cycles 7 SCCs, 345
+  units, 125,971 lines (the largest 229 units, 109,073). After the round (1f39482de, before the merge of origin/rust):
+  512 units, 149,685 lines; leaves 57 (3,293); near-leaves 122 (12,368); cycles 343 units, 125,802 (the largest 227,
+  108,904). On the tree merged with origin/rust 645799684 (other lanes' rounds count too): 500 units, 147,109 lines;
+  leaves 57 (3,293); near-leaves 119 (12,173); 8 SCCs, 328 units, 122,413 lines (the largest 217 units, 105,693).
+- **Gates, before the merge**: both builds 0/0 at every step; the oracle identical on seeds 2-3 after each batch;
+  every capture profile at seeds 2-3 PASS after the capture units moved (oracle 212, late 214, space 210, calamity
+  222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185 digests: round
+  1's counts); the plain saveload 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: FAIL (1)`: mediterranean-easy seed 2's loaded game at 1900 s
+  faulted at start (`ee_ts_thread_receive` under `RTSGraphics::Main`, before the load: a thread start race), and
+  that case alone again was identical to the end (END, as expected).
+- **Gates, on the tree merged with origin/rust 645799684**: `strip_markers.py --check` clean, the headers current,
+  `rust_includes.py` nothing to add; both builds 0/0 and the test profile 0/0; the Rust gate PASS (after a clippy
+  pass: `c_long` casts on Windows, `#![allow(clippy::unnecessary_cast)]` as the AI modules have); the oracle
+  identical on seeds 2-7; the captures at seeds 2-3 oracle 212, late 214, space 210, calamity 222 digests PASS;
+  scenario_check 27/27; the editor gate (14,448 lines) and the civilization builder gate (4,062) PASS; `eedata.py
+  check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS tour`; gates.sh (EE_GATES_TREE the main
+  checkout's tree): `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13467` units [4, 42, 42] alive
+  [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2728 joiner=2728`, GATES PASS.
+- **The merge needed**: the world layout's new entries on both sides (origin's `active_group_fields`,
+  `active_group_goal` first, this round's three after; rust/sim/world.h regenerated); PORT_LEARNINGS (origin's file,
+  then round 1's and the cycle cuts' sections, which origin's merge of an older rust-cuts1 did not carry); the
+  `strip_markers.py` pass over two new inline bodies' address comments.
+- **Short of the target**: net -1,087 C++ lines this round (against the merge of rust-cuts1; -2,378 against
+  origin/rust 645799684, which holds neither rust-leaves1 nor rust-cuts1's last commits). What the census left in the
+  game's directories is media objects, the converter-gated EERules, the compiler-only EEWorldLayout, EEUnitStore's
+  object reads and the message classes: docs/progress/game-leaves.md "Left".

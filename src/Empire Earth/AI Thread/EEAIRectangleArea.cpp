@@ -79,3 +79,28 @@ U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
     }
     return theResult;
 }
+
+// EEAIArea's two slots that read the game's objects (the rest are inline over ee_sim::astar area_ops.rs; EEAIArea.cpp
+// went in the game's leaves round 2)
+
+// Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty
+U2DPoint<long> EEAIArea::GetRandomPoint()
+{
+    U2DPoint<long> theResult(0, 0);
+    if (this->mTiles.Size() > 0)
+        theResult = this->mTiles.GetRandomPoint(gPhysics->mRandom);
+    return theResult;
+}
+
+// Rebuilds the area's hull from its edge tiles and updates its influence-region bounds (HULL 1 of the edge tiles)
+void EEAIArea::UpdateHull()
+{
+    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
+    ee_astar_area_update_hull_captured(this, this->mTiles.GetHandle(), theTable != NULL ? theTable->mRegionSize : 0);
+}
+
+// Sets the area's bounds in influence-table regions from its hull's bounding box (no table: unchanged)
+void EEAIArea::UpdateBounds(EEInfluenceTable* inTable)
+{
+    ee_astar_area_update_bounds(this, inTable != NULL ? inTable->mRegionSize : 0);
+}

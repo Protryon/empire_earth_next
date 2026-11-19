@@ -97,6 +97,9 @@ constexpr static const int32_t EE_APP_STORM_OP_RESET_COLOR = 14;
 /// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
 struct EeAppCheats;
 
+/// A unit set.
+struct EeUnitSet;
+
 /// The map's numbers the bodies read (`RTSMap`'s and `EEMap`'s plain members, names kept).
 struct EeAppMapDims {
   /// `mSize`: the square's side in tiles
@@ -426,6 +429,30 @@ long ee_app_storm_route_cost(bool snow,
                              long kind,
                              bool hill);
 
+/// `Load`'s count: the result; `out` the count (0 when the read failed).
+///
+/// # Safety
+/// `file` and `host` are the saved game's (`EESaveFilePrimitive`); `out` is writable.
+int32_t ee_app_team_load_count(void *file, EeUnitsPlayerSaveFn host, uint32_t *out);
+
+/// `Load`'s players, into the team's `count` players (sized by the caller).
+///
+/// # Safety
+/// As [`ee_app_team_load_count`]; `players` holds `count` values.
+int32_t ee_app_team_load_players(void *file,
+                                 EeUnitsPlayerSaveFn host,
+                                 unsigned long *players,
+                                 size_t count);
+
+/// `Save`: the count and the players.
+///
+/// # Safety
+/// As [`ee_app_team_load_players`].
+int32_t ee_app_team_save(void *file,
+                         EeUnitsPlayerSaveFn host,
+                         const unsigned long *players,
+                         size_t count);
+
 /// `EEWorld::AddTeam` of `n` players.
 ///
 /// # Safety
@@ -474,6 +501,61 @@ void ee_app_teams_set(size_t team,
 size_t ee_app_teams_get(size_t team,
                         uint32_t *out,
                         size_t cap);
+
+/// The size of a dbunitset record.
+size_t ee_unit_sets_record_size();
+
+/// Every set deleted (the manager's dtor; a load's start).
+void ee_unit_sets_clear();
+
+/// Record `index`'s set (an empty slot for an unused record), appended; linked by [`ee_unit_sets_link`].
+///
+/// # Safety
+/// `bytes` holds a whole record.
+void ee_unit_sets_load(const uint8_t *bytes);
+
+/// `Load`'s end: the sets' included and excluded sets.
+void ee_unit_sets_link();
+
+/// The set count (`GetSize`).
+size_t ee_unit_sets_count();
+
+/// Set `index` (`GetSet`: NULL past the end or for an unused record).
+const EeUnitSet *ee_unit_sets_get(size_t index);
+
+/// `EEUnitSet::Contains(type)`.
+///
+/// # Safety
+/// `set` is one of [`ee_unit_sets_get`]'s, the table not cleared since.
+bool ee_unit_set_contains(const EeUnitSet *set, uint32_t unit_type);
+
+/// `EEUnitSetManager::Contains(type, set)`: false for no set at `index`.
+bool ee_unit_sets_contains(size_t index, uint32_t unit_type);
+
+/// `IsEmpty`.
+///
+/// # Safety
+/// As [`ee_unit_set_contains`].
+bool ee_unit_set_is_empty(const EeUnitSet *set);
+
+/// `mShowInEditor`.
+///
+/// # Safety
+/// As [`ee_unit_set_contains`].
+bool ee_unit_set_show_in_editor(const EeUnitSet *set);
+
+/// `GetName`: the name's bytes, NUL-terminated (valid until the table is cleared).
+///
+/// # Safety
+/// As [`ee_unit_set_contains`].
+const char *ee_unit_set_name(const EeUnitSet *set);
+
+/// `ForEach`'s walk: the first unit type above `after` (1 .. `EEUnitClassCount()` - 1) the set holds, 0 when none.
+///
+/// # Safety
+/// As [`ee_unit_set_contains`].
+uint32_t ee_unit_set_next(const EeUnitSet *set,
+                          uint32_t after);
 
 /// `EEVoting::Propose`
 ///

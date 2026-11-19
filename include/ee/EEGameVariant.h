@@ -6,8 +6,7 @@
 #define EE_EEGAMEVARIANT_H
 
 #include "ee/EEDbList.h"
-
-class FSFileSpec;
+#include "rust/sim/app.h"   // the unit sets
 
 // The record (EEGameVariantData) and its copy are Rust's: rust/crates/ee_data tables.rs (DbGameVariant).
 
@@ -18,9 +17,19 @@ class FSFileSpec;
 class EEGameVariant : public EeDataGameVariantFields {
 public:
     static EEGameVariant* GetGameVariant(long inIndex);
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
-    float GetFactor(long inUnitType);       // 0xd6b74: the float of the first (set, factor) pair whose set holds it
+    // db\dbGameVariant.dat into the Rust list (rows with a negative index skipped); the last read status (requires
+    // ee/EEDbRecords.h). Header-only since the game's leaves round 2 (EEGameVariant.cpp went).
+    template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::GameVariants); }
+    static void Unload() { ee_data_list_clear(EeDataList::GameVariants); }
+    // 0xd6b74: the float of the first (set, factor) pair whose unit set holds the type, else 0
+    float GetFactor(long inUnitType) const
+    {
+        for (unsigned long i = 0; i < 10; i++) {
+            if (this->mSets[i] > 0 && ee_unit_sets_contains((size_t)this->mSets[i], (uint32_t)inUnitType))
+                return this->mFactors[i];
+        }
+        return 0.0f;
+    }
     // inline: the earthquake's Update loads it as an FP value before its fimul (provisional name)
     float GetEarthquakeDamageFactor() const { return this->mEarthquakeDamageFactor; }
     // inline: the tech tree's cost factors load first, before the other operands (provisional names)

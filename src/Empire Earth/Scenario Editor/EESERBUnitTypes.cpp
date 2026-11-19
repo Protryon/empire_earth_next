@@ -390,7 +390,7 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
                 gResource->GetString(k + IDS_UNIT_FAMILY_FIRST, theLines[k]);
             gResource->GetString(IDS_SET, theFormat);
             for (long j = 0; j < gUnitSetManager.GetSize(); j++) {
-                if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->mShowInEditor != true)
+                if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->ShowInEditor() != true)
                     continue;
                 theLines.push_back(UWideString());
                 sprintf(theLines.back(), theFormat, (const char*)gUnitSetManager.GetSet(j)->GetName());

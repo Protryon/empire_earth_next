@@ -101,6 +101,6 @@ extern EEGameOptions& gGameOptions;
 class GEColor;
 // 0x1318bd (another unit; provisional name): the colour of player colour inIndex (a vector<...*> at 0x4e610c, the
 // colour at +4 of each entry), or the default colour 0x4e60f8 when out of range
-const GEColor& EEGetPlayerColor(unsigned long inIndex);
+GEColor EEGetPlayerColor(unsigned long inIndex);
 
 #endif

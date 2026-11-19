@@ -36,6 +36,7 @@ pub mod area;
 pub mod area_geom;
 pub mod area_goals;
 pub mod area_kinds;
+pub mod area_ops;
 pub mod choke;
 pub mod cm;
 pub mod cm_build;
@@ -71,6 +72,7 @@ pub use ee_base::sparse::set as sparse;
 pub mod storage;
 pub mod storage_save;
 pub mod sub_sector_links;
+pub mod sub_sector_pass;
 pub mod tile_kind;
 pub mod tile_values;
 

@@ -715,6 +715,11 @@ struct EeWorldLayout {
   /// `EEUnitGoal*`)
   uint64_t active_group_fields;
   uint64_t active_group_goal;
+  /// `EEComputerPlayer::mPlacement` (an `EECPPlacement*`) from the `EEPlayer*`; `EECPPlacement::mTownCenterTile`
+  /// (a `U2DPoint<long>`) and `mRust` (an `EeCpPlacement*`)
+  uint64_t cp_placement;
+  uint64_t placement_town;
+  uint64_t placement_rust;
 };
 
 extern "C" {
