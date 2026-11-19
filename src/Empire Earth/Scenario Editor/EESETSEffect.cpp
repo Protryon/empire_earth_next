@@ -47,12 +47,9 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
+#include "ee/EEUIShell.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESETSEComboBox.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESETSCComboBox.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESEARust.h"
 #include "ee/EESEPlayerScreen.h"
@@ -128,11 +125,11 @@ void EESETSEffect::Deactivate()
 
 // ------------------------------------------------------------------------------------------------ the types' host
 
-void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
 
 // Switches a scenario combo to areas or objects: sets its label, fills it with the names and selects the first silently
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)
-void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas)
+void FillAreaObjectComboBox(UITextLabel* inLabel, UIComboBox* inComboBox, bool inAreas)
 {
     FillScenarioComboBox(inComboBox, inLabel, inAreas);
     UIEvent* theAction = inComboBox->GetTriggerEvent(kControlTriggerSelectionChanged);
@@ -485,10 +482,14 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
                 SeetCombo(c, a, k)->GetListBox()->GetGEText()->SetFont(gU531930);
         }
         return 0;
-    case EE_SCREENS_SEET_OP_PLAYER: return (int32_t)c->mPlayers[k]->GetSelectedPlayer();
-    case EE_SCREENS_SEET_OP_SET_PLAYER: c->mPlayers[k]->SetSelectedPlayer((unsigned long)(uint32_t)i[2]); return 0;
-    case EE_SCREENS_SEET_OP_PLAYER_FLAGS: c->mPlayers[k]->SetFlags((unsigned long)i[2]); return 0;
-    case EE_SCREENS_SEET_OP_SCEN_MODE: c->mScenarioComboBoxes[k]->mMode = (unsigned long)i[2]; return 0;
+    case EE_SCREENS_SEET_OP_PLAYER: return (int32_t)EEUIShell::Op(c->mPlayers[k], EE_SCREENS_SKOP_SELECTED_PLAYER);
+    case EE_SCREENS_SEET_OP_SET_PLAYER:
+        EEUIShell::Op(c->mPlayers[k], EE_SCREENS_SKOP_SET_SELECTED_PLAYER, (uint32_t)i[2]);
+        return 0;
+    case EE_SCREENS_SEET_OP_PLAYER_FLAGS: EEUIShell::Op(c->mPlayers[k], EE_SCREENS_SKOP_SET_FLAGS, i[2]); return 0;
+    case EE_SCREENS_SEET_OP_SCEN_MODE:
+        EEUIShell::Op(c->mScenarioComboBoxes[k], EE_SCREENS_SKOP_SET_MODE, i[2]);
+        return 0;
     case EE_SCREENS_SEET_OP_FILL_NAMES: {
         std::vector<UWideString> theNames;
         UIComboBox* theCombo = SeetCombo(c, a, k);
@@ -665,7 +666,9 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         return 0;
     case EE_SCREENS_SEET_OP_PLAYER_COUNT:
         return (int32_t)static_cast<EEUIFScenarioEditor*>(c->mTextEditBox->GetForm())->GetPlayerScreen()->GetPlayerCount();
-    case EE_SCREENS_SEET_OP_SET_PLAYER_COUNT: c->mPlayers[k]->mPlayerCount = (unsigned long)i[2]; return 0;
+    case EE_SCREENS_SEET_OP_SET_PLAYER_COUNT:
+        EEUIShell::Op(c->mPlayers[k], EE_SCREENS_SKOP_SET_PLAYER_COUNT, (uint32_t)i[2]);
+        return 0;
     case EE_SCREENS_SEET_OP_HANDLE_SELECTION: {
         unsigned long theSelection;
         UIComboBox* theCombo = static_cast<UIComboBox*>(static_cast<UIControl*>(p[1]));

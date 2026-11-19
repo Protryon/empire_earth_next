@@ -5,7 +5,7 @@
 #ifndef EE_EEUIFSEBRUSHGROUP_H
 #define EE_EEUIFSEBRUSHGROUP_H
 
-class EEUIFSERBBrush;
+class UIControl;
 class UITextLabel;
 class GEFont;
 class GE2DPoint;
@@ -19,7 +19,7 @@ public:
     void SetHighlight(float inX, float inY, bool inIsCentered);
     void SetIsHighlightShown(bool inValue) { this->mIsHighlightShown = inValue; }
     GERectangle mRectangle;                 // +0x00
-    EEUIFSERBBrush* mButtons[5];            // +0x10
+    UIControl* mButtons[5];                 // +0x10 (the brush radio buttons: shells, ee_game shells.rs)
     UITextLabel* mTitle;                    // +0x24
     unsigned long mBrushSize;                        // +0x28 (EEUIFSERBBrush::Check)
     bool mIsHighlightShown;                 // +0x2c

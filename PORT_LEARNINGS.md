@@ -32474,3 +32474,84 @@ current; no file includes rust/all.h).
   that can reach the target: the concrete classes' constructors, vtables and hosts (GuiHost.cpp 963 lines,
   MSControlConstructors.cpp, the skins) are where WONGUI's lines are. It needs the virtuals' dispatch by kind in
   Rust and every config's `new X` replaced by a kind, a multi-round move.
+## The UI cluster lane, round 3: the generic C++ shells of the game's control classes; 28 classes deleted as Rust kinds, the tech lists and the unit tab's controls whole in Rust (ee/EEUIShell.h; ee_game shells.rs, shells_editor.rs, shells_tech.rs, shells_unit.rs; branch rust-uicluster3, 2026-11-19)
+
+The brief: the generic shells round 2 found missing, then the concrete form, control and button classes as Rust
+kinds over them (each class's .cpp and .h gone), and the unported C++ logic; 3,000 net C++ lines. **Net C++ about
+-1,500** (commits below): half the target. The shells are in and carry 28 classes; what is left and why under
+docs/progress/ui-cluster.md ("The measure").
+
+### The shells
+
+- **One C++ shell per toolkit base, one Rust kind per deleted class.** `EEUIShellButton`, `EEUIShellRadio`,
+  `EEUIShellCheck`, `EEUIShellCombo`, `EEUIShellList` (over `UILBString`), `EEUIShellEdit`, `EEUIShellSlider`
+  (`ee/EEUIShell.h`) derive from the toolkit class and from `EEUIShell` (the Rust state, the kind's override mask).
+  Every virtual a game class overrode is one macro line: `Over(v) ? Virt(v) : Base::Name()`. The kind (a Rust trait
+  object: `name`, `overrides`, `init`, `virt`, `op`, `free`) calls the base's back through `BaseCall` (`EE_SCREENS_SH_BASE
+  + v`, a `switch` the same macros make) and its own virtuals through the vtable (`SelfCall`).
+- **The kinds hold their state in `Cell`/`RefCell`s and are used through `&self`.** A base call re-enters: a base
+  `ButtonUp` fires an event that reads the control, `Fill` refills the tech lists, which calls back into the same
+  list's `Clear`/`AddTech`/`Rebuild`. Copy a `RefCell` vector out before a host call (`techs()`), never hold a borrow.
+- **The constructor's body runs after the mask is known** (`Make`: new, overrides, init), so a virtual the body calls
+  reaches the kind, as the derived class's own constructor body would have. The destructor's body is `Kind::free`,
+  run from `EEUIShell`'s destructor (the second base: destroyed before the toolkit base).
+- **Class names the gates print.** The editor and civilization gates print `typeid(*c).name()` per control; a shell
+  prints `EEUIShell::KindName()` (the deleted class's name), so neither expected output changed. The two gate drivers
+  (EESimEditor.cpp, EESimCivBuilder.cpp) look the shell up with `dynamic_cast<EEUIShell*>` (a cross cast from
+  `UIControl*`; RTTI is on).
+- **Members other code read become kind ops.** `mMode`, `mPlayerCount`, `mFlags`, `mBrushSize`, `mTechs`,
+  `mDependents`, `mUnitTypes`, `GetColor`, `CheckDirect`, `GetAngle`: `EEUIShell::Op(control, EE_SCREENS_SKOP_*)`.
+  The controls' structs (`EESETSConditionControls`, `EESETSEffectControls`, the brush group) hold plain toolkit
+  pointers now. A kind that needs another shell's op (the tech list's other list) asks the host
+  (`EE_SCREENS_SH_KIND_OP`), which the Rust adapter answers from its shells-by-control map.
+- **C++ objects the kinds own** (the main tab buttons' and the rotation button's cell bitmaps) are made, cut and
+  released by host ops; the texture coordinates are computed in Rust in the original's float order.
+- **Class bodies with an address range** leave `link/exe/units.txt` with their file; a class defined beside other
+  code (EESEUITechListBox.cpp also held `EESEPlayerScreen::GetCurrentPlayer`'s COMDAT, EESETSUICBPlayer.cpp the editor's
+  wall and gate modes, EESESCComboBox.cpp a unit global) leaves those definitions behind: the first link of the tech
+  list step failed with one unresolved symbol.
+
+### Ported logic
+
+- `EESEUITechListBox` whole (shells_tech.rs): the techs and marked lines, `Rebuild`'s four orders (by epoch then name,
+  by name; names in `PlatMbsCmp` byte order) with `ee_sim::units::msvc_sort` (MSVC 14.44's introsort, already pinned
+  against the C++'s permutations), `Fill`'s move between the lists, `CopyData`'s marks; the tree's questions and the
+  bars' draw are host ops. The keys are computed once per tech before the sort (the original fetched them in every
+  comparison; the same values, the same permutation). The editor gate's `techs` digest (ids, lines, marks) is
+  unchanged.
+- The unit tab's lists and buttons (shells_unit.rs): the sorted inserts (by name, epoch or family), the cargo by name
+  (the units kept by id: the only read was `GetUnitID`), the palette mode, the rotation's steps, arrows and keys.
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 61c08ec7f | the shells, the host, 13 classes (the colour button, set players, brush, the trigger screens' six combo boxes, the error log, the elevation slider, the object edit box and unit list) | -456 |
+| beca466f1 | EESimEditor, EESimCivBuilder (other lanes' gate drivers): a shell prints its kind's name; the deleted classes' reads as ops | +9 |
+| 5f2d93058 | the select buttons, page tabs, unit-type radios, max players combo, main tab buttons, map buttons, paint types, show-ids box; the tech lists whole | -673 |
+| 84110ca05 | EESimEditor: the tab buttons and the tech lists through their ops | -1 |
+| 4a879c7cf | the unit tab's lists, palette buttons, rotation and remove cargo buttons | -370 |
+
+### Checks
+
+Per step (`build/uc3/step.sh`): the build `--sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS 14,448,
+the civilization gate PASS 4,062, scenario_check 27/27, the test-profile build 0/0, the tour (`VIEW CHECK PASS`, F3
+ok), the orders game (`BOX SELECT`, `ORDERS`, `SCROLL CHECK PASS`), the editor exercise, and the 2D digests against
+the round's start: the build label, the loading screen's progress at other moments, the fades' alpha, the live
+game's map rhombi and lines (timing; the same classes of difference as rounds 1 and 2). The editor exercise's digest
+equals the start's but for the build label: it draws the main tab buttons (their cell bitmaps from Rust). The Rust
+gate's tests passed at every step; clippy failed twice on new code (a private type in a crate fn, approximate
+constants: the original's float literals, now allowed) and was fixed before the next step.
+
+### What exercises what
+
+- The editor gate: the player tab (colours, set players, the tech lists' fill, rebuild and moves, the select buttons'
+  actions through EESimEditor's `techfill`), the trigger screens' combo boxes and player lists (their ops), the unit
+  tab's class list and placement, the main tab buttons (`CheckDirect`). The civilization gate: the class names.
+- Only a person reaches: the combo boxes' right-click jumps, the select buttons' key repeat, the rotation button's
+  clicks and keys and its ghost turn, the cargo list (a carrier's cargo), the brush radios' clicks, the error log's
+  click, the elevation slider's drag label. EE-SIM builds no form: the oracle is unchanged by construction.
+
+### Left
+
+docs/progress/ui-cluster.md ("The measure").
