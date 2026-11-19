@@ -29,7 +29,7 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UITextLabelRust {
     static intptr_t Op(void* inLabel, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
@@ -106,7 +106,6 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
 }
 
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }
-void UITextLabel::AppendText(const UWideString& inText) { this->SetText(inText, false); }
 void UITextLabel::ChangeFont(GEFont* inFont) { UITextLabelRust::Call(this, C::ChangeFont, (intptr_t)inFont); }
 void UITextLabel::CheckScrollBar() { UITextLabelRust::Call(this, C::CheckScrollBar); }
 long UITextLabel::CopyData() { return (long)UITextLabelRust::Call(this, C::CopyData); }

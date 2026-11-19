@@ -341,15 +341,6 @@ void UIManager::ChangeRasterizer(GERasterizer* inRasterizer)
     this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer);
 }
 
-// Tells the top form the IME composition string closed, under the UI lock; returns its result
-long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
-
-// Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
-long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
-
-// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
-void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
-
 // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
 GEBitmap* UIManager::CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle)
 {
@@ -371,14 +362,6 @@ UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
     return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
 }
 
-// Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
-long UIManager::DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
-
-// Draws the GDI text of the snapshotted forms and the candidate window, under the draw lock
-long UIManager::DrawTextA() { return (long)this->Call(EeUiManagerCall::DrawText); }
-
-// The header's getters and setters (the original's inline members, 0x10059fdb..0x1005a269)
-void UIManager::ForceUIUpdate() { this->Call(EeUiManagerCall::ForceUiUpdate); }
 #define UI_MANAGER_BITMAP(Name, Index) \
     GEBitmap* UIManager::Name() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, Index)); }
 UI_MANAGER_BITMAP(GetAlphaSortUpBitmap, 0)
@@ -403,27 +386,19 @@ UI_MANAGER_BITMAP(GetRadioDownOff, 18)
 UI_MANAGER_BITMAP(GetRadioOn, 19)
 UI_MANAGER_BITMAP(GetRadioDownOn, 20)
 #undef UI_MANAGER_BITMAP
-UIForm* UIManager::GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
 GEFont* UIManager::GetFont(unsigned long inIndex) const
 {
     return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex));
 }
-unsigned long UIManager::GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
 UIForm* UIManager::GetStackedForm(unsigned long inIndex) const
 {
     return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex));
 }
 TSCriticalSection* UIManager::GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); }
-GESurface* UIManager::GetDrawingSurface() const { return this->GetRasterizer()->GetSecondarySurface(this->GetScreen()); }
-unsigned long UIManager::GetNumberOfSurfaces() const
-{
-    return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces);
-}
 GERasterizer* UIManager::GetRasterizer() const
 {
     return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer));
 }
-unsigned long UIManager::GetScreen() const { return (unsigned long)this->Call(EeUiManagerCall::Screen); }
 SESoundManager* UIManager::GetSoundManager() const
 {
     return reinterpret_cast<SESoundManager*>(this->Call(EeUiManagerCall::SoundManager));
@@ -432,14 +407,6 @@ UResourceFile* UIManager::GetStringTable() const
 {
     return reinterpret_cast<UResourceFile*>(this->Call(EeUiManagerCall::StringTable));
 }
-unsigned long UIManager::GetUITextureBitDepth() const
-{
-    return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth);
-}
-bool UIManager::IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
-bool UIManager::IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
-void UIManager::LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }
-void UIManager::UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
 void UIManager::RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long))
 {
     this->Call(EeUiManagerCall::RegisterControlCallback, (intptr_t)inCallback);
@@ -519,24 +486,6 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     delete theDbFile;
 }
 
-// Tells the top form an IME composition string opened, under the UI lock; returns its result
-long UIManager::OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
-
-// Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
-long UIManager::Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
-
-// Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
-long UIManager::PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
-
-// Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
-long UIManager::Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
-
-// Marks every visible form and all its controls dirty
-void UIManager::RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
-
-// Re-lays out every stacked form to the window size and rebuilds the clip rectangles
-void UIManager::RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
-
 // Runs and releases the queued events of one form; the other forms' events stay queued in order
 void UIManager::ProcessAllEventsForForm(UIForm* inForm)
 {
@@ -550,9 +499,6 @@ void UIManager::RemoveDatabase()
     UIBackgroundTable::DeleteAll();
     UIFontTable::DeleteAll();
 }
-
-// Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
-long UIManager::SwapForm(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::SwapForm, (intptr_t)inForm); }
 
 // Swaps the left and right mouse buttons when the left-handed setting changes
 void UIManager::SetMouseLeftHanded(bool inLeftHanded)
@@ -577,12 +523,6 @@ void UIManager::StartMusic(const UWideString& inFileName)
 {
     this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName);
 }
-
-// Stops the music and unloads the track
-void UIManager::StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
-
-// Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
-long UIManager::UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
 
 // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
 long UIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
@@ -665,3 +605,8 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 #pragma comment(linker, "/include:EETestUIFormControlCount")
 #pragma comment(linker, "/include:EETestUIFormControl")
 #endif
+
+// (their bodies need the form's, the manager's or the background table's class)
+// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
+void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
+GESurface* UIManager::GetDrawingSurface() const { return this->GetRasterizer()->GetSecondarySurface(this->GetScreen()); }

@@ -304,10 +304,86 @@ impl EeGeModel {
     /// # Safety
     /// `p` is live; the operation's arguments are as `EeGeModOp` describes.
     unsafe fn op(p: *mut Self, op: EeGeModOp, obj: usize, a: isize, b: isize, c: isize) -> isize {
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { Self::array_op(op, obj, a, b, c) } {
+            return r;
+        }
         // SAFETY: the caller's contract (host and owner are copied out before the call)
         let (host, owner) = unsafe { (md(p).host, md(p).owner) };
         // SAFETY: the host's contract
         unsafe { host(owner as *mut c_void, op, obj as *mut c_void, a, b, c) }
+    }
+
+    /// A vertex or polygon array's call (`EeGeModOp::VertexGather` .. `PolygonSizeOf`, but the deletes) on the C++
+    /// array's Rust array (`vertarr.rs`), as the C++ class's members make it; None for any other operation or an array
+    /// without one (the tests' handles), which the host answers. Every C++ array has one: the store gate's capture
+    /// is on them (`vertarr_capture.rs`).
+    ///
+    /// # Safety
+    /// `obj` is the operation's array: a live C++ `GEVertexArray` or `GEPolygonArray` (or a handle of at least
+    /// [`cppobj::CppArray`]'s size whose Rust array is NULL); the arguments are as `EeGeModOp` describes.
+    #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+    unsafe fn array_op(op: EeGeModOp, obj: usize, a: isize, b: isize, c: isize) -> Option<isize> {
+        use crate::ge::vertarr::{self as va, EeGeVaField as F};
+        use EeGeModOp as O;
+        let array = matches!(
+            op,
+            O::VertexGather
+                | O::VertexGetPoint
+                | O::VertexSetPoint
+                | O::VertexGetNormal
+                | O::VertexSetNormal
+                | O::VertexSetUv
+                | O::VertexSize
+                | O::VertexSizeOf
+                | O::PolygonGather
+                | O::PolygonSetIndex
+                | O::PolygonSizeOf
+        );
+        if !array || obj == 0 {
+            return None;
+        }
+        // SAFETY: the caller's contract
+        let rust = unsafe { (*(obj as *const cppobj::CppArray)).rust };
+        if rust.is_null() {
+            return None;
+        }
+        let (v, pa) = (rust as *mut va::EeGeVertexArray, rust as *mut va::EeGePolygonArray);
+        let (index, value) = (a as c_ulong as u32, b as *mut f32);
+        // SAFETY: the caller's contract: `rust` is the array's, `b` the operation's floats or out array
+        unsafe {
+            match op {
+                O::VertexGather => {
+                    for i in 0..a as c_ulong {
+                        va::ee_ge_va_get(v, F::Point, i as u32, (b as *mut Ge3DPoint).add(i as usize) as *mut f32);
+                    }
+                }
+                O::VertexGetPoint => va::ee_ge_va_get(v, F::Point, index, value),
+                O::VertexSetPoint => va::ee_ge_va_set(v, F::Point, index, value),
+                O::VertexGetNormal => va::ee_ge_va_get(v, F::Normal, index, value),
+                O::VertexSetNormal => va::ee_ge_va_set(v, F::Normal, index, value),
+                O::VertexSetUv => va::ee_ge_va_set(v, F::Uv, index, value),
+                O::VertexSize => return Some(va::ee_ge_va_size(v, false) as isize),
+                O::VertexSizeOf => return Some(va::ee_ge_va_size(v, true) as isize),
+                O::PolygonGather => {
+                    for i in 0..a as c_ulong as u32 {
+                        for k in 0..3 {
+                            *(b as *mut u32).add(i as usize * 3 + k as usize) = va::ee_ge_pa_index(pa, i, k) as u32;
+                        }
+                    }
+                }
+                O::PolygonSetIndex => {
+                    let corner = match c {
+                        1 => 0,
+                        2 => 1,
+                        _ => 2,
+                    };
+                    va::ee_ge_pa_set_index(pa, index, corner, b as c_ulong);
+                }
+                _ => return Some(va::ee_ge_pa_size(pa, true) as isize),
+            }
+        }
+        Some(0)
     }
 
     /// The Rust object of model `model` (`p`'s own for `p`'s owner).
@@ -1318,6 +1394,38 @@ impl EeGeModel {
 }
 
 // ---- the C++ forwarders' entry points
+
+/// The physical walks' triangle (`EeGePhysicalModels::triangle`, physical_walk.rs): the three corners of polygon
+/// `polygon` of LOD `lod`'s array at frame `frame`'s vertices, each index plus the material's first vertex
+/// `vertex_start` (`unsigned long` arithmetic), as `GetVertexArray(frame)->GetPoint(GetPolygonArray(lod)->
+/// GetVertexIndex1..3(polygon) + vertex_start)` read them.
+///
+/// # Safety
+/// `model` is a live C++ `GEModel*` with arrays at `frame` and `lod`; `out` holds three points.
+#[no_mangle]
+#[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+pub unsafe extern "C" fn ee_ge_mod_triangle(
+    model: *const c_void,
+    frame: c_ulong,
+    lod: c_ulong,
+    polygon: c_ulong,
+    vertex_start: c_ulong,
+    out: *mut Ge3DPoint,
+) {
+    use crate::ge::vertarr::{ee_ge_pa_index, ee_ge_va_get, EeGePolygonArray, EeGeVaField, EeGeVertexArray};
+    // SAFETY: the caller's contract (the model's Rust object; its arrays are C++ arrays over Rust ones)
+    unsafe {
+        let m = &*cppobj::counted::<EeGeModel>(model as usize);
+        let vertices = m.vertices.as_ref().expect("a model's vertex arrays")[frame as usize];
+        let polygons = m.polygons.as_ref().expect("a model's polygon arrays")[lod as usize];
+        let v = (*(vertices as *const cppobj::CppArray)).rust as *const EeGeVertexArray;
+        let p = (*(polygons as *const cppobj::CppArray)).rust as *const EeGePolygonArray;
+        for corner in 0..3 {
+            let index = ee_ge_pa_index(p, polygon as u32, corner).wrapping_add(vertex_start);
+            ee_ge_va_get(v, EeGeVaField::Point, index as u32, out.add(corner as usize) as *mut f32);
+        }
+    }
+}
 
 /// `GEModel(manager)`.
 ///

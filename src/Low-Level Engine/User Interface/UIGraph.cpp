@@ -33,7 +33,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIGraph.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UIGraphHost {
     static intptr_t Op(void* inGraph, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)

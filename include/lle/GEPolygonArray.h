@@ -2,7 +2,8 @@
 // DX7PolygonArray gives the slot order).
 //
 // port (R4.3 part 17): concrete over ee_render geval vertarr.rs (the renderer's DX7PolygonArray, 16-bit triangle
-// indices, merged in); the draws read the indices in place (mIndices). Virtual for the store gate's subclass.
+// indices, merged in); the draws read the indices in place (mIndices); the model's calls are on the Rust array (ee_ge
+// modobj.rs array_op).
 #ifndef LLE_GEPOLYGONARRAY_H
 #define LLE_GEPOLYGONARRAY_H
 
@@ -11,11 +12,7 @@
 class LLE_API GEPolygonArray {
 public:
     explicit GEPolygonArray(unsigned long inCount) : mRust(ee_ge_pa_new(inCount)) { this->mIndices = ee_ge_pa_indices(this->mRust); }
-    virtual ~GEPolygonArray()
-    {
-        if (this->mRust)
-            ee_ge_pa_destroy(this->mRust);
-    }
+    virtual ~GEPolygonArray() { ee_ge_pa_destroy(this->mRust); }
     virtual unsigned long GetSize() const { return ee_ge_pa_size(this->mRust, false); }
     virtual unsigned long GetVertexIndex1(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 0); }
     virtual unsigned long GetVertexIndex2(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 1); }
@@ -32,9 +29,6 @@ public:
     }
     virtual unsigned long SizeOf() const { return ee_ge_pa_size(this->mRust, true); }
     const unsigned short* GetIndices() const { return this->mIndices; }   // three per triangle
-
-protected:
-    GEPolygonArray() : mIndices(NULL), mRust(NULL) {}   // a subclass with its own storage
 
 private:
     unsigned short* mIndices;               // the Rust array's indices

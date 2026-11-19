@@ -47,7 +47,11 @@
 #include "lle/UIFormManager.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "UIButtonRust.h"
+#include "lle/UIButtonRust.h"
+
+// the check boxes' UIButton parts (UIButtonRust.h)
+GEBitmap* UIButtonRust::CheckOff(UIForm* inForm) { return inForm->GetManager()->GetCheckOff(); }
+GEBitmap* UIButtonRust::CheckDownOff(UIForm* inForm) { return inForm->GetManager()->GetCheckDownOff(); }
 
 typedef EeUiButtonCall C;
 #define EE_UI_CHECK(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
@@ -101,5 +105,3 @@ long UICheckBox::MouseMove(const GE2DPoint& inLocation)
 {
     return (long)EE_UI_CHECK(CheckMouseMove, 0, 0, inLocation.GetX(), inLocation.GetY());
 }
-// Shows the box pressed
-void UICheckBox::MouseOver() { UIButton::MouseOver(); }

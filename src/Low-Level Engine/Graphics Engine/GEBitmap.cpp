@@ -83,19 +83,10 @@ static intptr_t GEBitmapFloatBits(float inValue)
     return (intptr_t)theBits;
 }
 
-static float GEBitmapBitsFloat(intptr_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, 4);
-    return theValue;
-}
-
 intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
-    unsigned long i = (unsigned long)a;
     switch (inOp) {
     case EeGeBmpOp::RasterActive:
         return (intptr_t)GERasterizer::GetActiveRasterizer();
@@ -103,34 +94,9 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
         return (intptr_t)((GERasterizer*)inObj)->GetScreenCount();
     case EeGeBmpOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
+    // (the vertex arrays' other calls are on their Rust arrays: ee_ge bmpobj.rs vertex_op)
     case EeGeBmpOp::VertexDelete:
         delete theVertices;
-        return 0;
-    case EeGeBmpOp::VertexGetColor:
-        theVertices->GetColor(*(GEColor*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetColor:
-        theVertices->SetColor(*(const GEColor*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexGetPoint:
-        theVertices->GetPoint(*(GE3DPoint*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetPoint:
-        theVertices->SetPoint(*(const GE3DPoint*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetNormal:
-        theVertices->SetNormal(*(const GEVector*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexGetOpacity:
-        return GEBitmapFloatBits(theVertices->GetOpacity(i));
-    case EeGeBmpOp::VertexSetOpacity:
-        theVertices->SetOpacity(GEBitmapBitsFloat(b), i);
-        return 0;
-    case EeGeBmpOp::VertexGetUv:
-        theVertices->GetTextureCoordinate(*(GETextureCoordinate*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetUv:
-        theVertices->SetTextureCoordinate(*(const GETextureCoordinate*)b, i);
         return 0;
     case EeGeBmpOp::TexReference:
         theTexture->Reference();
@@ -148,9 +114,6 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
         return (intptr_t)theTexture->GetHeight();
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)theTexture->GetNumMipLevelsToDrop();
-    case EeGeBmpOp::VertexCopyFrom:
-        theVertices->CopyFrom(*(const GEVertexArray*)b);
-        return 0;
     }
     (void)inOwner;
     return 0;

@@ -39,8 +39,8 @@
 #include "lle/UIRadioButton.h"
 #include "lle/TMPoll.h"
 #include "lle/UISlider.h"
-#include "UIButtonRust.h"
-#include "UIObjHost.h"
+#include "lle/UIButtonRust.h"
+#include "lle/UIObjHost.h"
 
 struct UIButtonHost {
     static intptr_t Op(void* inButton, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)

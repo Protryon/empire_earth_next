@@ -336,12 +336,6 @@ UIForm::~UIForm()
     this->mRust = NULL;
 }
 
-// Starts the form's music (or stops the music for "none"), restores the tab stop and fires the activate event
-void UIForm::Activate() { this->Call(EeUiFormCall::Activate); }
-
-// Inserts a background before the first one with an equal or higher draw priority
-void UIForm::AddBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::AddBackground, (intptr_t)inBackground); }
-
 // Adds a rectangle that text drawing must keep out of
 void UIForm::AddClipRectangle(const GERectangle& inRectangle)
 {
@@ -418,12 +412,6 @@ long UIForm::ChangeIMECompositionString(const UWideString& inString, const UStri
     return theControl ? theControl->ChangeIMECompositionString(inString, inAttributes, inCursor) : kErrorOK;
 }
 
-void UIForm::ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
-
-// Closes the form: fires the close event, clears the draw list and popup, closes the backgrounds, flushes its events
-// and deletes the controls created from the database
-void UIForm::Close() { this->Call(EeUiFormCall::Close); }
-
 // Closes the IME composition string of the control holding the keyboard; kErrorOK when none does
 long UIForm::CloseIMECompositionString()
 {
@@ -453,13 +441,6 @@ long UIForm::Create(FSFileSpec& inFile, UIManager* inManager)
     inFile.Close();
     return theResult;
 }
-
-// Fires the deactivate event, hides the popup and help text, and releases the captured mouse and keyboard
-void UIForm::Deactivate() { this->Call(EeUiFormCall::Deactivate); }
-
-// Snapshots the form for drawing: fires the update event, copies every dirty shown control, lists the controls to draw,
-// ages the dirty rectangles and updates the help text
-long UIForm::CopyData() { return (long)this->Call(EeUiFormCall::CopyData); }
 
 // Redraws every visible background that overlaps the rectangle; returns the last draw result
 long UIForm::DrawBackground(const GERectangle& inRectangle)
@@ -503,12 +484,6 @@ long UIForm::DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIC
     return (long)this->Call(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, f);
 }
 
-// Redraws the queued background rectangles, then every listed control and the popup (with a shadow under a tool tip)
-long UIForm::DrawPolygons() { return (long)this->Call(EeUiFormCall::DrawPolygons); }
-
-// Draws the text of every listed control, then the popup's, and empties the draw list
-long UIForm::DrawTextA() { return (long)this->Call(EeUiFormCall::DrawText); }
-
 // Returns the background with the given ID, or NULL
 UIBackground* UIForm::GetBackgroundByID(unsigned long inID) const
 {
@@ -526,10 +501,6 @@ UIEntityGroup* UIForm::GetEntityGroupById(unsigned long inId) const
 {
     return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId));
 }
-
-// Opens the form: lays it out on the screen, opens the backgrounds, creates the database controls and their events,
-// fires the open event and marks every control dirty
-void UIForm::Open() { this->Call(EeUiFormCall::Open); }
 
 // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
 long UIForm::OpenIMECompositionString()
@@ -585,18 +556,8 @@ void UIForm::RelayoutForm(const GERectangle& inRectangle)
     this->Call(EeUiFormCall::RelayoutForm, 0, 0, f);
 }
 
-// Marks every control of the form dirty
-void UIForm::SetAllControlsDirty() { this->Call(EeUiFormCall::SetAllControlsDirty); }
-
-// one (the event's index in the Rust form: formobj.rs EV_*)
-void UIForm::SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
-void UIForm::SetFormCloseEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 1, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
-void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
-void UIForm::SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
-void UIForm::SetFormActivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 14, (intptr_t)inEvent); }
-void UIForm::SetFormDeactivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 15, (intptr_t)inEvent); }
 
 // Replaces the form manager, deleting the old one
 void UIForm::SetFormManager(UIFormManager* inFormManager)
@@ -615,33 +576,6 @@ void UIForm::SetKeyboardCaptured(UIControl* inControl)
 {
     this->Call(EeUiFormCall::SetKeyboardCaptured, (intptr_t)inControl);
 }
-
-void UIForm::SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
-
-// Replaces the popup control, hiding the old one and redrawing what it (and a tool-tip shadow) covered
-void UIForm::SetPopup(UIControl* inControl) { this->Call(EeUiFormCall::SetPopup, (intptr_t)inControl); }
-
-// Turns keyboard tabbing on or off; turning it on moves the tab stop to the first tabbable control
-void UIForm::SetTabbing(bool inTabbing) { this->Call(EeUiFormCall::SetTabbing, inTabbing); }
-
-// Moves the tab stop to a control if it exists and is tabbable; otherwise keeps the old stop and returns false
-bool UIForm::SetTabStop(unsigned long inTabStop) { return this->Call(EeUiFormCall::SetTabStop, (intptr_t)inTabStop) != 0; }
-
-// Moves the tab stop on to the next shown, enabled, tabbable control, skipping radio-button runs, wrapping round
-void UIForm::Tab() { this->Call(EeUiFormCall::Tab); }
-
-// Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
-void UIForm::UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
-
-// Places the tool tip by the mouse inside the form: shifted left at the right edge, above the cursor near the bottom
-void UIForm::SetHelpTextPopupLocation() { this->Call(EeUiFormCall::SetHelpTextPopupLocation); }
-
-// Fires hot keys (higher groups first; one non-always-fire key per frame), then Tab/Shift+Tab, else passes the
-// keyboard to the capturing control or the tab stop
-long UIForm::UpdateKeyboard() { return (long)this->Call(EeUiFormCall::UpdateKeyboard); }
-
-// Passes the mouse to the captured or mouse-over control (wheel included), then fires the form's own mouse events
-long UIForm::UpdateMouse() { return (long)this->Call(EeUiFormCall::UpdateMouse); }
 
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
 void UIForm::UpdateMouseLocation(const GE2DPoint& inLocation)
@@ -668,10 +602,6 @@ UIControl* UIForm::GetControl(unsigned long inIndex) const
 {
     return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::Control, (intptr_t)inIndex));
 }
-unsigned long UIForm::GetControlCount() const { return (unsigned long)this->Call(EeUiFormCall::ControlCount); }
-unsigned long UIForm::GetControlGroupCount() const { return (unsigned long)this->Call(EeUiFormCall::ControlGroupCount); }
-unsigned long UIForm::GetDesignedHeight() const { return (unsigned long)this->Call(EeUiFormCall::DesignedHeight); }
-unsigned long UIForm::GetDesignedWidth() const { return (unsigned long)this->Call(EeUiFormCall::DesignedWidth); }
 UIEntityGroup* UIForm::GetEntityGroup(unsigned long inIndex) const
 {
     return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex));
@@ -682,15 +612,11 @@ float UIForm::GetFadeOpacity()
     this->Call(EeUiFormCall::FadeOpacity, 0, 0, f);
     return f[0];
 }
-UIEvent* UIForm::GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
-unsigned long UIForm::GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
 UIFormManager* UIForm::GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
 UITextLabel* UIForm::GetHelpTextLabel() const
 {
     return static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::HelpTextLabel)));
 }
-bool UIForm::GetUseExclusiveCoords() const { return this->Call(EeUiFormCall::UseExclusiveCoords) != 0; }
-UIManager* UIForm::GetManager() const { return reinterpret_cast<UIManager*>(this->Call(EeUiFormCall::Manager)); }
 const GE2DPoint& UIForm::GetMouseLocation() const
 {
     return *reinterpret_cast<const GE2DPoint*>(this->Call(EeUiFormCall::MouseLocation));
@@ -704,11 +630,6 @@ const GERectangle& UIForm::GetRectangle() const
 {
     return *reinterpret_cast<const GERectangle*>(this->Call(EeUiFormCall::Rectangle));
 }
-bool UIForm::GetTabbingOn() const { return this->Call(EeUiFormCall::TabbingOn) != 0; }
-unsigned long UIForm::GetTabStop() const { return (unsigned long)this->Call(EeUiFormCall::TabStop); }
-bool UIForm::GetUseGDIForText() const { return this->Call(EeUiFormCall::UseGdiForText) != 0; }
-void UIForm::LockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 1); }
-void UIForm::UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
 void UIForm::SetHelpTextLabel(UITextLabel* inLabel)
 {
     this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t) static_cast<UIControl*>(inLabel));
@@ -725,9 +646,6 @@ void UIForm::SetLayout(UILayoutUtility& inLayout)
     this->Call(EeUiFormCall::SetLayout, (intptr_t)thePacked, 0, f);
 }
 void UIForm::SetMusicFileName(const UWideString& inName) { this->Call(EeUiFormCall::SetMusicFileName, (intptr_t)(const char*)inName); }
-void UIForm::SetUseToolTips(bool inUseToolTips) { this->Call(EeUiFormCall::SetUseToolTips, inUseToolTips); }
-bool UIForm::GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
-void UIForm::SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
 UIControl* UIForm::GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
 UIControl* UIForm::GetMouseCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseCaptured)); }
 

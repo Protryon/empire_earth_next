@@ -10,19 +10,41 @@
 #ifndef LLE_UITLSCROLLING_H
 #define LLE_UITLSCROLLING_H
 
+#include <string.h>
+
 #include "lle/UITextLabel.h"
+#include "rust/ui/labelobj.h"
 
 class LLE_API UITLScrolling : public UITextLabel {
 public:
     UITLScrolling(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
-                  UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
+                  UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : UITextLabel(inText, inFont, inId, inRectangle, inForm, 1, inIndex, inBorderThickness)
+    {
+        Call(EeUiLabelCall::ScrollInit, (intptr_t)inFont);
+    }
     UITLScrolling(const UITLScrolling&) = delete;
     UITLScrolling& operator=(const UITLScrolling&) = delete;
-    void PauseScrolling();
-    void ResumeScrolling();
-    void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset);
-    void ScrollText(unsigned long inTime, unsigned long inEndDelay);
-    void StopScrolling();
+    void PauseScrolling() { Call(EeUiLabelCall::PauseScrolling); }
+    void ResumeScrolling() { Call(EeUiLabelCall::ResumeScrolling); }
+    void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset)
+    {
+        int theStart = (int)inStartOffset, theEnd = (int)inEndOffset;
+        float f[4] = {inSpeed, 0.0f, 0.0f, 0.0f};
+        memcpy(&f[1], &theStart, 4);
+        memcpy(&f[2], &theEnd, 4);
+        Call(EeUiLabelCall::ScrollText, inStartDelay, inEndDelay, f);
+    }
+    void ScrollText(unsigned long inTime, unsigned long inEndDelay)
+    {
+        Call(EeUiLabelCall::ScrollTextFor, inTime, inEndDelay);
+    }
+    void StopScrolling() { Call(EeUiLabelCall::StopScrolling); }
+private:
+    intptr_t Call(EeUiLabelCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
+    {
+        return ee_ui_label_call(this->mRust, inCall, a, b, f);
+    }
 };
 
 #endif

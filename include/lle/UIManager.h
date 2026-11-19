@@ -71,8 +71,10 @@ public:
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor);
     void ChangeRasterizer(GERasterizer* inRasterizer);
-    virtual long CloseIMECompositionString();
-    long CopyData();
+    // Tells the top form the IME composition string closed, under the UI lock; returns its result
+    virtual long CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
+    // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
+    long CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
     void CreateBackgrounds();
     GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle);
     UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID);
@@ -81,9 +83,12 @@ public:
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
     virtual UIForm* CreateForm(const UIDbDataForms& inData) { return new UIForm(this, inData, true); }
-    long DrawPolygons();
-    long DrawTextA();
-    void ForceUIUpdate();
+    // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
+    long DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
+    // Draws the GDI text of the snapshotted forms and the candidate window, under the draw lock
+    long DrawTextA() { return (long)this->Call(EeUiManagerCall::DrawText); }
+    // The header's getters and setters (the original's inline members, 0x10059fdb..0x1005a269)
+    void ForceUIUpdate() { this->Call(EeUiManagerCall::ForceUiUpdate); }
     GEBitmap* GetAlphaSortDownBitmap() const;
     GEBitmap* GetAlphaSortUpBitmap() const;
     GEBitmap* GetCheckDownNot() const;
@@ -92,10 +97,10 @@ public:
     GEBitmap* GetCheckNot() const;
     GEBitmap* GetCheckOff() const;
     GEBitmap* GetCheckOn() const;
-    UIForm* GetCurrentForm() const;
+    UIForm* GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
     GEFont* GetFont(unsigned long inIndex) const;
     UIForm* GetFormByID(unsigned long inID) const;
-    unsigned long GetFormCount() const;
+    unsigned long GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
     UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
     TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const;
@@ -109,7 +114,7 @@ public:
 #endif
 #endif
     static long GetMouseWheelScrollAmount();
-    unsigned long GetNumberOfSurfaces() const;
+    unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
     GEBitmap* GetRadioDownOff() const;
     GEBitmap* GetRadioOff() const;
     GEBitmap* GetRadioDownOn() const;
@@ -126,35 +131,44 @@ public:
     GEBitmap* GetSBBitmapRightPressed() const;
     GEBitmap* GetSBBitmapUpNormal() const;
     GEBitmap* GetSBBitmapUpPressed() const;
-    unsigned long GetScreen() const;
+    unsigned long GetScreen() const { return (unsigned long)this->Call(EeUiManagerCall::Screen); }
     SESoundManager* GetSoundManager() const;
     UResourceFile* GetStringTable() const;
-    unsigned long GetUITextureBitDepth() const;
-    bool IsFormOnStack(UIForm* inForm);
-    bool IsFormVisible(UIForm* inForm);
+    unsigned long GetUITextureBitDepth() const { return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth); }
+    bool IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
+    bool IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
     void LoadDatabase(FSPath* inPath, const UString& inDirectory);
-    void LockUIForCopyData();
-    virtual long OpenIMECompositionString();
-    long Pop();
-    long PopTo(UIForm* inForm);
+    void LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }
+    // Tells the top form an IME composition string opened, under the UI lock; returns its result
+    virtual long OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
+    // Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
+    long Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
+    // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
+    long PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
     void ProcessAllEventsForForm(UIForm* inForm);
-    long Push(UIForm* inForm);
-    void RedrawAll();
+    // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
+    long Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
+    // Marks every visible form and all its controls dirty
+    void RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
     void RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long));
     void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long));
-    void RelayoutAllForms();
+    // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
+    void RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
     void RemoveDatabase();
     void SetFont(unsigned long inIndex, GEFont* inFont);
     static void SetMouseLeftHanded(bool inLeftHanded);
-    long SwapForm(UIForm* inForm);
+    // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
+    long SwapForm(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::SwapForm, (intptr_t)inForm); }
     void SetMusicVolume(float inVolume);
     void StartMusic(const UWideString& inFileName);
-    void StopMusic();
-    void UnlockUIForCopyData();
+    // Stops the music and unloads the track
+    void StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
+    void UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
     virtual long UpdateUI(const GE2DPoint& inMouseLocation);   // slot 0x28
     long UpdateTranslatedKey(const char* inKey, short inRepeat);
 protected:
-    virtual long UpdateKeyboard();
+    // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
+    virtual long UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);   // slot 0x30
 private:
     // the forwarders' one call into the Rust manager, and the Rust manager's calls out

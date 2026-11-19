@@ -210,18 +210,6 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-// Drops a reference; at the last outside reference a managed texture removes itself from its manager
-void GETexture::Dereference()
-{
-    ee_ge_tex_dereference(this->mRust);
-}
-
-// Returns the surface's allocated size, times the frame count when each frame has its own texture
-unsigned long GETexture::GetAllocatedSize()
-{
-    return ee_ge_tex_allocated_size(this->mRust);
-}
-
 // Loads the texture (and its animation frames) from its decoded PNG frames (port, D9: the original read a texture or
 // .tga file), building or dropping MIP levels as asked; frames become separate textures (format 0) or cells of one
 // grid surface (format 1)
@@ -236,12 +224,6 @@ long GETexture::Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescr
 long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
 {
     return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
-}
-
-// port: see the header
-void GETexture::SetLogicalShift(unsigned long inShift)
-{
-    ee_ge_tex_set_logical_shift(this->mRust, inShift);
 }
 
 // Sets the alpha blend mode on every frame (or on the texture), marking changed ones
@@ -271,32 +253,9 @@ void GETexture::SetStageMipFilterMode(unsigned long inMode, unsigned long inStag
     ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MipFilterMode, inMode);
 }
 
-void GETexture::SetStageMipMapBias(float inBias, unsigned long inStage)
-{
-    ee_ge_tex_set_stage_bias(this->mRust, inBias);
-}
-
 void GETexture::SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage)
 {
     ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::TextureAddressingMode, inMode);
-}
-
-// Shows the given animation frame: picks the frame texture, or moves the UV corner to its grid cell
-void GETexture::SetFrame(unsigned long inFrame)
-{
-    ee_ge_tex_set_frame(this->mRust, inFrame);
-}
-
-// Replaces the texture's surface (new rasterizer handle, promotion cleared); already-exists error if unchanged
-long GETexture::SetSurface(GESurface* inSurface)
-{
-    return ee_ge_tex_set_surface(this->mRust, inSurface);
-}
-
-// Unlocks the texture's surface
-long GETexture::Unlock()
-{
-    return ee_ge_tex_unlock(this->mRust);
 }
 
 // ---- GETextureManager (GETextureManager.cpp, folded here in R4.3 part 16)
@@ -422,35 +381,9 @@ GETextureManager::~GETextureManager()
     ee_ge_texman_free(this->mRust);
 }
 
-// Prints every loaded texture file and its reference count to a dump file
-void GETextureManager::DumpAllLoadedMedia(FSFileSpec& inFile)
-{
-    ee_ge_texman_dump(this->mRust, &inFile);
-}
-
 unsigned long GETextureManager::GetMemoryFootprint()
 {
     return ee_ge_texman_footprint(this->mRust);
-}
-
-GEScreen* GETextureManager::GetScreen() const
-{
-    return (GEScreen*)ee_ge_texman_screen(this->mRust);
-}
-
-unsigned long GETextureManager::GetTextureCount()
-{
-    return ee_ge_texman_count(this->mRust);
-}
-
-FSPath* GETextureManager::GetTexturePath()
-{
-    return (FSPath*)ee_ge_texman_path(this->mRust);
-}
-
-void GETextureManager::SetScreen(GEScreen* inScreen)
-{
-    ee_ge_texman_set_screen(this->mRust, inScreen);
 }
 
 // Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
@@ -460,54 +393,11 @@ GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureD
     return (GETexture*)ee_ge_texman_load(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
 }
 
-// Wraps a surface in a new managed texture, named by a running counter, with modulate blending
-GETexture* GETextureManager::MakeTexture(GESurface* inSurface)
-{
-    return (GETexture*)ee_ge_texman_make(this->mRust, inSurface);
-}
-
-// Marks the texture as promoted; always succeeds
-long GETextureManager::PromoteTexture(GETexture* inTexture)
-{
-    return ee_ge_texman_promote(this->mRust, inTexture);
-}
-
 // Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
 // looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
 long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
 {
     return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
-}
-
-// Reloads every cached texture from its files (or recreates its surface when they are gone),
-// then reapplies the frames' saved stage settings to the whole texture; returns the last result
-long GETextureManager::RefreshAllTextures()
-{
-    return ee_ge_texman_refresh_all(this->mRust);
-}
-
-// Removes and releases every texture nobody else references; returns 5 if any are still in use
-long GETextureManager::RemoveAllTextures()
-{
-    return ee_ge_texman_remove_all(this->mRust);
-}
-
-// Removes and releases one texture if nobody else references it; 5 if still in use, 3 if not managed here
-long GETextureManager::RemoveTexture(GETexture* inTexture)
-{
-    return ee_ge_texman_remove(this->mRust, inTexture);
-}
-
-// Replaces the texture search path, moving the reference
-void GETextureManager::SetTexturePath(FSPath* inTexturePath)
-{
-    ee_ge_texman_set_path(this->mRust, inTexturePath);
-}
-
-// Sets the MIP filter mode of every cached texture that uses MIP filtering
-void GETextureManager::UpdateMIPFilterMode(unsigned long inMode)
-{
-    ee_ge_texman_update_mip_filter(this->mRust, inMode);
 }
 
 // ---- GETextureSet (GETextureSet.cpp, folded here in R4.3 part 16)

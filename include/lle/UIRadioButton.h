@@ -39,7 +39,8 @@ public:
 protected:
     virtual void ButtonUp();                // 0x1005fc98: the virtual Check, then UIButton's
     virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
+    // Releases the button (plain button behaviour)
+    virtual long MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
     virtual void TabbedTo() { UIButton::TabbedTo(); }
     virtual void TabbedFrom() { UIButton::TabbedFrom(); }
     virtual void UnCheck();                 // slot 0x98

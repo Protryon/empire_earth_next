@@ -2,14 +2,14 @@
 //! LLE 0x100549b6..0x10056369), line by line: one sorted run list per x column, the columns in an array starting
 //! at `offset`. The AI's areas (continents, path areas, hills, forests, choke points), the path sub sectors and the
 //! explore goal's bad tiles hold their tiles in one. The C++ class keeps its name and vtable and owns a handle to
-//! this (`ffi::EeSparseArray`); its column lists and their node pool are gone.
+//! this (`sparse::EeSparseArray`); its column lists and their node pool are gone.
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): every list keeps the C++'s order (the point lists walk the
 //! columns from the last to the first, each column's runs from the lowest), `long` is `i32` (wrapping, as the
 //! Windows build's), and the random picks draw from the caller's `URandom` in the C++'s order and number, with
 //! the C++'s float expression `(long)(Generate() * (max + 1 - min) + min)`.
 
-use crate::astar::continent_grid::EePoint;
+use crate::sparse::EePoint;
 
 /// One run of a column: the y values `start..=end` (`U2DSparseArrayPointContainerNode`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
