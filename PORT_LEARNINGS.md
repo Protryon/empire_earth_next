@@ -31973,6 +31973,10 @@ GATES PASS (`RESULT PASS tour`; ai-game time-cap, units [4, 41, 41], alive [2, 3
 lan-game`); the tour with `--box-select --orders` RESULT PASS (ORDERS PASS: gather, repair, repair-queued, move;
 patrol and attack-ground skipped: no button, no unit).
 
+Merged again with origin/rust c9d7de90c (the lead's merge of rust-units1 and WONLobby round 18; PORT_LEARNINGS only:
+origin/rust's file with this section after it): both builds 0/0 (614/615 inputs), the test profile 0/0, the Rust
+gate PASS (4,696 tests), the oracle seeds 2-7 identical.
+
 Two Rust gate notes: `header_consts` checks every Rust constant named like a C++ one (`GOAL_*`, `ACTION_*`) against
 include/ee, so the dry log's event codes that look like goal kinds carry a `LOG_` prefix; and ee_base's
 `fs::golden_spec_replays` (an `rmdir` the replay expects to succeed returned access denied) failed twice inside the
