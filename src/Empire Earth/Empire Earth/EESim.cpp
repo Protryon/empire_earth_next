@@ -179,6 +179,7 @@ void EEActiveGroupCaptureSweep();          // the active groups' sweep (Units/EE
 #include "ee/EECalamityManager.h"
 #include "ee/EESimEditor.h"
 #include "ee/EEUIFScenarioEditor.h"
+#include "ee/EEUIShell.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -697,7 +698,9 @@ size_t HostTopFormClass(char* outBuffer, size_t inCapacity)
     if (gUIManager) {
         UILock theLock;
         UIForm* theForm = gUIManager->GetCurrentForm();
-        if (theForm)
+        if (EEUIShell* theShell = theForm ? EEUIShell::Of(theForm) : NULL)
+            theClass = theShell->KindName();   // a form shell: the class its kind replaces
+        else if (theForm)
             theClass = typeid(*theForm).name();
     }
     return PutText(theClass, outBuffer, inCapacity);
