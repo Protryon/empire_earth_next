@@ -16,8 +16,9 @@ class UReferenceCounter;
 class EEMouse : public RTSMouse {
 public:
     EEMouse();                              // 0x10a9b0: RTSMouse(), the vptr, +0xa8..+0xe0 zeroed
-    // inline: no out-of-line dtor in EEMouse.cpp's range; ??_G 0x10aa66 stores the vptr and calls ~RTSMouse
-    virtual ~EEMouse() {}                   // +0x00 (??_G 0x10aa66)
+    // no out-of-line dtor in EEMouse.cpp's range in the original (??_G 0x10aa66 stored the vptr and called ~RTSMouse);
+    // port: it drops the members' registration for the Rust readers (ee_gfx input_views.rs)
+    virtual ~EEMouse();                     // +0x00 (??_G 0x10aa66)
     virtual long Load(GEScreen* inScreen);        // +0x04 0x10a9f1 (loads the 14 extra pointers, then RTSMouse's)
     virtual long Release();                 // +0x08 0x10aa38 (dereferences them)
     // +0x0c 0x10a9d1 (10..23: its own pointers) is RTSMouse's since R4.4's twenty-sixth round: the pointers are ee_gfx

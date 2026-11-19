@@ -10,8 +10,15 @@
 #define EE_EERENDERCAPTURE_H
 
 #include <stdint.h>
+#include <vector>
+
+#include "rust/render/gfx.h"
 
 struct EERenderFrameInfo;
+
+// The render lists as ee_gfx reads them in place (rfil.rs, units_lists.rs: EEROUnits draws from them): the pools
+// and vectors, the multimaps flattened into ioPairs, which must outlive the frame's use; the keys are left 0
+void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&ioPairs)[6]);
 
 // FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock
 void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);

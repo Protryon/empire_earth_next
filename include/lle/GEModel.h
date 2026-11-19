@@ -60,26 +60,20 @@ public:
     unsigned long GetPolygonCount() const { return this->Val(EeGeModVal::PolygonCount); }
     unsigned long GetPolygonCount(unsigned long inLOD) const;
     GEVertexArray* GetVertexArray(unsigned long inFrame) { return this->GetVertexArrays()[inFrame]; }
-    GEModel* GetSubModel(unsigned long inIndex) const { return this->GetSubModels()[inIndex]; }
     unsigned long GetSubModelCount() const { return this->Val(EeGeModVal::SubModelCount); }
     const GE3DPoint& GetTagPoint(unsigned long inIndex) const { return this->GetTagPointList()[inIndex]; }
     const GE3DPoint& GetTagPoint(unsigned long inIndex, unsigned long inFrame) const
         { return this->GetFrameTagPoints()[inFrame][inIndex]; }
     unsigned long GetTagPointCount() const { return this->Val(EeGeModVal::TagPointCount); }
     GE3DPoint* GetTagPointList() const { return (GE3DPoint*)this->Ptr(EeGeModPtr::TagPoints); }
-    const UString& GetTagPointName(unsigned long inIndex) const { return this->GetTagPointNames()[inIndex]; }
     void SetClipToPlane(unsigned long inPlane, bool inClip) { ee_ge_mod_set_clip(this->mRust, inPlane, inClip); }
-    void SetGraphicsPreModelTransform(const GETransformation& inTransform)
-        { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Pre, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsPostModelTransform(const GETransformation& inTransform)
         { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Post, 0, (const EeGeTransformation*)&inTransform); }
     void SetGraphicsScale(float inScale) { ee_ge_mod_set_graphics_scale(this->mRust, inScale); }
-    void SetInternalTransform(unsigned long inFrame, GETransformation& inTransform) const
-        { ee_ge_mod_set_transform(this->mRust, EeGeModXf::Internal, inFrame, (const EeGeTransformation*)&inTransform); }
     void SetOpacity(float inOpacity) { ee_ge_mod_set_opacity(this->mRust, inOpacity); }
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
-    // retired under D9; GEModelManager::LoadModel stores a glTF's model with StoreLoaded)
+    // retired under D9; GEModelManager::LoadModel stores a glTF's model with ee_ge_mod_store_loaded)
     void ComputeBoundingVolumes();
     // (ComputeLODReduction 0x1001ce5b, 'GEModel LOD.cpp', and the vertex cache optimiser of 'GEModel Caching.cpp'
     // (ComputeOptimalDataOrdering 0x10017523, ComputeVertexCacheEfficiency 0x10017580,
@@ -90,9 +84,7 @@ public:
     void Dereference();
     void PrepareTransforms();
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
-    void SetFractionalFramePosition(float inPosition);
     void SetGraphicsCurrentFrame(unsigned long inFrame);
-    void SetGraphicsNextFrame(unsigned long inFrame);
     void SetTexture(GETexture* inTexture, unsigned long inIndex);
     unsigned long SizeOf();
     bool Verify() const;
@@ -106,9 +98,6 @@ protected:
 private:
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
-    // Stores a model decoded by Rust (a glTF: ee_of_gltf_to_model) as the original's .cem chunk readers stored it
-    // ('GEModel Load.cpp')
-    long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
     void SetSubModel(GEModel* inModel, unsigned long inIndex);
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }

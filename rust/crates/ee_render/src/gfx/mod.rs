@@ -78,7 +78,9 @@ pub mod ffi_manager;
 pub mod ffi_mesh;
 pub mod ffi_scene;
 pub mod fill;
+pub mod geffect_table;
 pub mod goal_markers;
+pub mod gobj_media;
 #[cfg(test)]
 mod golden_beam;
 #[cfg(test)]
@@ -125,6 +127,7 @@ mod golden_view;
 mod golden_volcano;
 #[cfg(test)]
 mod golden_walk;
+pub mod input_views;
 pub mod lighting;
 pub mod mesh;
 pub mod minimap;
@@ -135,6 +138,8 @@ pub mod pick;
 pub mod pick_walk;
 pub mod quake;
 pub mod raster;
+pub mod raster_direct;
+pub mod rfil;
 pub mod ro_terrain;
 pub mod ro_units;
 pub mod scene;
@@ -143,6 +148,7 @@ pub mod shadows;
 pub mod tags;
 pub mod terrain;
 pub mod units;
+pub mod units_lists;
 pub mod view;
 pub mod volcano;
 pub mod walk;

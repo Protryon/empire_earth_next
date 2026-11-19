@@ -73,6 +73,24 @@ pub struct EeGfxObjectLayout {
     pub stats_model: u64,
     /// `EEGraphicEffect::mLinkedEffect1` (the three follow-on effects, in order)
     pub geffect_linked: u64,
+    /// `EEGraphicObject`'s media (gobj_media.rs, the load and unload): the names (`UString*`: `mFileName`,
+    /// `mTextureName`, `mShadowModelName`, `mShadowTextureName`, `mModelNames[14]`, `mTextureNames[14]`), the shared
+    /// texture, the shadow model and texture, the sounds (`EESoundObject*[14]` twice) and the bars' point (`mBar`)
+    pub gobj_file_name: u64,
+    pub gobj_texture_name: u64,
+    pub gobj_shadow_model_name: u64,
+    pub gobj_shadow_texture_name: u64,
+    pub gobj_model_names: u64,
+    pub gobj_texture_names: u64,
+    pub gobj_texture: u64,
+    pub gobj_shadow_model: u64,
+    pub gobj_shadow_texture: u64,
+    pub gobj_sounds1: u64,
+    pub gobj_sounds2: u64,
+    pub gobj_bar: u64,
+    /// `EEGraphicObject`'s use count base (`EeDataMediaUse`); `EEGraphicEffect::mNumLoads` (geffect_table.rs)
+    pub gobj_media_use: u64,
+    pub geffect_num_loads: u64,
 }
 
 static LAYOUT: OnceLock<EeGfxObjectLayout> = OnceLock::new();
@@ -94,6 +112,11 @@ pub unsafe extern "C" fn ee_gfx_object_layout_set(layout: *const EeGfxObjectLayo
 #[cfg(test)]
 pub(crate) fn set_test_layout(l: EeGfxObjectLayout) {
     let _ = LAYOUT.set(l);
+}
+
+/// The registered layout (gobj_media.rs' reads and writes).
+pub(crate) fn layout() -> &'static EeGfxObjectLayout {
+    l()
 }
 
 fn l() -> &'static EeGfxObjectLayout {

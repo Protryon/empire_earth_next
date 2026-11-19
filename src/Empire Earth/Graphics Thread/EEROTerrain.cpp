@@ -170,7 +170,3 @@ void EEROTerrain::FrameDone()
 void EEROTerrain::SceneStarting()
 {
 }
-
-void EEROTerrain::Virtual14(long)
-{
-}

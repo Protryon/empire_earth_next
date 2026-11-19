@@ -38,8 +38,6 @@ public:
     bool GetCreateMIPMaps() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::CreateMipMaps) != 0; }
     float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->GetFrameUVSize(); }
     GESurface* GetFrameSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameSurface); }
-    GETexture* GetFrameTexture(unsigned long inFrame) const
-        { return (GETexture*)ee_ge_tex_frame_texture(this->mRust, inFrame); }
     const GETextureCoordinate& GetFrameTopLeftCorner() const
         { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }

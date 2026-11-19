@@ -56,6 +56,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
 #include "ee/EERenderLists.h"
+#include "ee/EERenderCapture.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -70,8 +71,6 @@ extern GEFont* gU531994;                    // 0x531994 (the labels' default fon
 // 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
 // Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced)
 char gEmptyString[4] = "";
-extern EERenderUnit* gU529044;              // 0x529044 (the unit with the debug label; EERenderObject.cpp; provisional name)
-extern UWideString gU529030;                // 0x529030 (that label; EERenderObject.cpp; provisional name)
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;
 
@@ -159,175 +158,36 @@ void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inCo
 }
 
 namespace {
-// one render unit as its passes read it (its graphic objects' models, textures and flags, its class's)
-EeGfxRenderUnit UnitRecord(EERenderUnit& inUnit)
-{
-    EeGfxRenderUnit r = {};
-    r.transformation = *reinterpret_cast<const EeGeTransformation*>(&inUnit.mTransformation);
-    r.player_color = {inUnit.mPlayerColor.mRed, inUnit.mPlayerColor.mGreen, inUnit.mPlayerColor.mBlue};
-    r.tint_color = {inUnit.mTintColor.mRed, inUnit.mTintColor.mGreen, inUnit.mTintColor.mBlue};
-    EEGraphicObject* theObject = inUnit.mSource;
-    GEModel* theModel = theObject->mModels[inUnit.mAnimation];
-    r.object = theObject;
-    r.model = theModel;
-    r.texture = theObject->mTextures[inUnit.mAnimation];
-    if (theModel != NULL)
-        r.center = *reinterpret_cast<const EeGe3DPoint*>(&theModel->GetCenterPoint());
-    r.bar = *reinterpret_cast<const EeGe3DPoint*>(&theObject->mBar);
-    r.drawn = theObject->mIsDrawn;
-    r.alpha_ref = theObject->mAlphaReference;
-    r.object_opacity = theObject->mOpacity;
-    if (inUnit.mSource2 != NULL) {
-        r.object2 = inUnit.mSource2;
-        r.model2 = inUnit.mSource2->mModel;
-        r.texture2 = inUnit.mSource2->mTexture;
-        r.drawn2 = inUnit.mSource2->mIsDrawn;
-    }
-    r.health_bars = inUnit.mHealthBars.empty() ? NULL : &inUnit.mHealthBars[0];
-    r.health_bar_count = inUnit.mHealthBars.size();
-    r.turret_angles = inUnit.mTurretAngles.empty() ? NULL : &inUnit.mTurretAngles[0];
-    r.turret_models = inUnit.mTurretModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mTurretModels[0]);
-    r.turret_count = min(inUnit.mTurretAngles.size(), inUnit.mTurretModels.size());
-    r.orbital_angles = inUnit.mOrbitalAngles.empty() ? NULL : &inUnit.mOrbitalAngles[0];
-    r.orbital_models = inUnit.mOrbitalModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mOrbitalModels[0]);
-    r.orbital_count = min(inUnit.mOrbitalAngles.size(), inUnit.mOrbitalModels.size());
-    r.wheel_angles = inUnit.mWheelAngles.empty() ? NULL : &inUnit.mWheelAngles[0];
-    r.wheel_models = inUnit.mWheelModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mWheelModels[0]);
-    r.wheel_count = min(inUnit.mWheelAngles.size(), inUnit.mWheelModels.size());
-    r.name = reinterpret_cast<const uint8_t*>((const char*)inUnit.mName);
-    r.scale = inUnit.mScale;
-    r.selection_size = inUnit.mSelectionSize;
-    r.opacity = inUnit.mOpacity;
-    r.health = inUnit.mHealth;
-    r.fraction = inUnit.mFraction;
-    r.sub_model_offset_scale = inUnit.mSubModelOffsetScale;
-    r.fog_scale = inUnit.mFogScale;
-    r.inner_collision_sphere = inUnit.mInfo->GetInnerCollisionSphere();
-    r.category = (int32_t)inUnit.mCategory;
-    r.command_type = (int32_t)inUnit.mCommandType;
-    r.animation = (int32_t)inUnit.mAnimation;
-    r.current_frame = (uint32_t)inUnit.mCurrentFrame;
-    r.next_frame = (uint32_t)inUnit.mNextFrame;
-    r.area_effect_strength = (uint32_t)inUnit.mAreaEffectStrength;
-    r.air = (inUnit.mInfo->mDomains & kMovementAir) != 0;
-    r.waypoint = inUnit.mUnitClassIndex == kUnitTypeWaypoint;
-    r.fogged = inUnit.mIsFogged;
-    r.tinted = inUnit.mIsTinted;
-    r.has_sub_model_offset = inUnit.mHasSubModelOffset;
-    r.second_full_opacity = inUnit.mSecondFullOpacity;
-    return r;
-}
-
-// one placed map object as its passes read it
-EeGfxRenderObject ObjectRecord(const EERenderShadow& inObject)
-{
-    EeGfxRenderObject r = {};
-    r.location = *reinterpret_cast<const EeGe3DPoint*>(&inObject.mLocation);
-    r.model = inObject.mObject->mModels[inObject.mModelIndex];
-    r.texture = inObject.mObject->mTextures[inObject.mModelIndex];
-    r.bar = *reinterpret_cast<const EeGe3DPoint*>(&inObject.mObject->mBar);
-    r.alpha_ref = inObject.mObject->mAlphaReference;
-    r.object_opacity = inObject.mObject->mOpacity;
-    r.model_scale = inObject.mModelScale;
-    r.selection_size = inObject.mSelectionSize;
-    r.health = inObject.mHealth;
-    r.opacity = inObject.mOpacity;
-    r.fraction = inObject.mFraction;
-    r.current_frame = (uint32_t)inObject.mCurrentFrame;
-    r.next_frame = (uint32_t)inObject.mNextFrame;
-    r.fogged = inObject.mIsFogged;
-    return r;
-}
-
 // the effects' units pass: queue 3, batched per texture
 void UnitsEffects(void*)
 {
     ee_gfx_effect_queues_draw(5);
 }
 
-// the frame's render lists as records and indices (ee_gfx ro_units.rs)
-struct UnitsFrame {
-    std::vector<EeGfxRenderUnit> mUnits;
-    std::vector<EeGfxRenderObject> mObjects;
-    std::vector<uint32_t> mLists[6];
-    std::vector<EeGfxGhostRecord> mGhosts;
-    EeGfxUnitsScene mScene;
-
-    template <class M> void Units(M& inMap, std::vector<uint32_t>& outList)
-    {
-        for (typename M::iterator i = inMap.begin(); i != inMap.end(); i++)
-            outList.push_back((uint32_t)(i->second - EERenderLists::sInstance.mRenderUnits));
-    }
-    template <class M> void Objects(M& inMap, std::vector<uint32_t>& outList)
-    {
-        for (typename M::iterator i = inMap.begin(); i != inMap.end(); i++)
-            outList.push_back((uint32_t)(i->second - EERenderLists::sInstance.mRenderShadows));
-    }
-    UnitsFrame()
-    {
-        EERenderLists& l = EERenderLists::sInstance;
-        for (unsigned long i = 0; i < l.mRenderUnitCount; i++)
-            this->mUnits.push_back(UnitRecord(l.mRenderUnits[i]));
-        for (unsigned long i = 0; i < l.mRenderShadowCount; i++)
-            this->mObjects.push_back(ObjectRecord(l.mRenderShadows[i]));
-        this->Units(l.mUnits0, this->mLists[0]);
-        this->Units(l.mUnits1, this->mLists[1]);
-        for (unsigned long i = 0; i < l.mSelectedUnits.size(); i++)
-            this->mLists[2].push_back((uint32_t)(l.mSelectedUnits[i] - l.mRenderUnits));
-        this->Objects(l.mShadows0, this->mLists[3]);
-        this->Objects(l.mShadows1, this->mLists[4]);
-        for (unsigned long i = 0; i < l.mSelectedObjects.size(); i++)
-            this->mLists[5].push_back((uint32_t)(l.mSelectedObjects[i] - l.mRenderShadows));
-        for (unsigned long i = 0; i < l.mGhostRecords.size(); i++) {
-            EERenderUnitRecord& theRecord = l.mGhostRecords[i];
-            EeGfxGhostRecord g;
-            g.unit = UnitRecord(theRecord.mUnit);
-            static_assert(sizeof(g.heights) == sizeof(theRecord.mHeights) && sizeof(g.cells) == sizeof(theRecord.mCells),
-                          "the grid");
-            memcpy(g.heights, theRecord.mHeights, sizeof(g.heights));
-            memcpy(g.cells, theRecord.mCells, sizeof(g.cells));
-            g.tile_x = (int32_t)theRecord.mTileX;
-            g.tile_y = (int32_t)theRecord.mTileY;
-            g.grid_size = (int32_t)theRecord.mUnit.mGridSize;
-            g.can_place = theRecord.mUnit.mCanPlace;
-            g.land_building = theRecord.mUnit.mInfo->IsLandBuilding();
-            this->mGhosts.push_back(g);
-        }
-        EeGfxUnitsScene& s = this->mScene;
-        s.context = NULL;
-        s.viewport = reinterpret_cast<const EeGeViewport*>(&gU4E8F08);
-        s.orthographic = gOrthographicView;
-        s.cinematic = gRenderSnapshot.mInCinematic;
-        s.collision_spheres = gShowCollisionSpheres;
-        s.interpolate_frames = gInterpolateFrames;
-        s.model_detail = (int32_t)gModelDetail;
-        s.free_camera = gFreeCamera;
-        s.panel_active = gUnitPanelActive;
-        s.grid_phase = gU4E9330;
-        s.camera_yaw = gRenderEnvironment.mCameraYaw;
-        s.window_width = (uint32_t)gGameWindow->GetWidth();
-        s.window_height = (uint32_t)gGameWindow->GetHeight();
-        s.units = this->mUnits.empty() ? NULL : &this->mUnits[0];
-        s.unit_count = this->mUnits.size();
-        s.objects = this->mObjects.empty() ? NULL : &this->mObjects[0];
-        s.object_count = this->mObjects.size();
-        const uint32_t** theLists[6] = {&s.units0, &s.units1, &s.selected_units, &s.objects0, &s.objects1,
-                                        &s.selected_objects};
-        uintptr_t* theCounts[6] = {&s.units0_count, &s.units1_count, &s.selected_unit_count, &s.objects0_count,
-                                   &s.objects1_count, &s.selected_object_count};
-        for (int i = 0; i < 6; i++) {
-            *theLists[i] = this->mLists[i].empty() ? NULL : &this->mLists[i][0];
-            *theCounts[i] = this->mLists[i].size();
-        }
-        s.selected_unit = l.mSelectedUnit != NULL ? (int32_t)(l.mSelectedUnit - l.mRenderUnits) : -1;
-        s.selected_object = l.mSelectedObject != NULL ? (int32_t)(l.mSelectedObject - l.mRenderShadows) : -1;
-        s.ghosts = this->mGhosts.empty() ? NULL : &this->mGhosts[0];
-        s.ghost_count = this->mGhosts.size();
-        s.debug_unit = gU529044 != NULL ? (int32_t)(gU529044 - l.mRenderUnits) : -1;
-        s.debug_text = reinterpret_cast<const uint8_t*>((const char*)gU529030);
-        s.draw_effects = UnitsEffects;
-    }
-};
+// the frame's render lists drawn by ee_gfx ro_units.rs (the records and indices: units_lists.rs, over the lists'
+// view) with the scene's settings
+void DrawUnits(bool inLabels)
+{
+    std::vector<EeGfxRfilPair> thePairs[6];
+    EeGfxRfilFrame theFrame = {};
+    EERenderListsView(theFrame, thePairs);
+    EeGfxUnitsScene s = {};
+    s.context = NULL;
+    s.viewport = reinterpret_cast<const EeGeViewport*>(&gU4E8F08);
+    s.orthographic = gOrthographicView;
+    s.cinematic = gRenderSnapshot.mInCinematic;
+    s.collision_spheres = gShowCollisionSpheres;
+    s.interpolate_frames = gInterpolateFrames;
+    s.model_detail = (int32_t)gModelDetail;
+    s.free_camera = gFreeCamera;
+    s.panel_active = gUnitPanelActive;
+    s.grid_phase = gU4E9330;
+    s.camera_yaw = gRenderEnvironment.mCameraYaw;
+    s.window_width = (uint32_t)gGameWindow->GetWidth();
+    s.window_height = (uint32_t)gGameWindow->GetHeight();
+    s.draw_effects = UnitsEffects;
+    ee_gfx_ro_units_draw_lists(&gEERustRaster, &theFrame, &s, inLabels);
+}
 }
 
 // Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
@@ -353,16 +213,14 @@ void EEROUnits::LoadMedia()
 // placed, the air selection rings and bars, then the effects' pass 5 (ee_gfx ro_units.rs)
 void EEROUnits::RenderScene()
 {
-    UnitsFrame theFrame;
-    ee_gfx_ro_units_render(&gEERustRaster, &theFrame.mScene);
+    DrawUnits(false);
 }
 
 // Draws the unit labels (not in cinematics; ee_gfx ro_units.rs) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
     if (!gRenderSnapshot.mInCinematic) {
-        UnitsFrame theFrame;
-        ee_gfx_ro_units_labels(&gEERustRaster, &theFrame.mScene);
+        DrawUnits(true);
     }
     ee_gfx_effect_queues_draw(3);
 }

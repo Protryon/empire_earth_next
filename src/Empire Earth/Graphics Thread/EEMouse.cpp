@@ -8,6 +8,7 @@
 #include "lle/GESurface.h"
 
 #include "ee/EEMouse.h"
+#include "rust/render/gfx.h"
 
 // the extra mouse pointers, loaded in this order into mLA8 (0x4be124: 14 pointers in .data) (provisional name)
 static const char* sPointerFiles[14] = {
@@ -27,9 +28,19 @@ static const char* sPointerFiles[14] = {
     "Textures\\Attack Ground Pointer.png",
 };
 
-// Creates the game's mouse with none of its 14 extra pointer images loaded (the frame's slots 10..23)
+// Creates the game's mouse with none of its 14 extra pointer images loaded (the frame's slots 10..23); port: its
+// members are registered for the Rust readers (ee_gfx input_views.rs: the UI's)
 EEMouse::EEMouse()
 {
+    EeGfxMouseView theView = {reinterpret_cast<EeGe2DPoint*>(&this->mPosition), reinterpret_cast<EeGeRectangle*>(&this->mBounds),
+                              &this->mWheel, const_cast<long*>(&this->mPointer), const_cast<long*>(&this->mOverlay),
+                              &this->mIsFrozen, const_cast<bool*>(&this->mShiftMode), &this->mSensitivity};
+    ee_gfx_input_mouse_set(&theView);
+}
+
+EEMouse::~EEMouse()
+{
+    ee_gfx_input_mouse_set(NULL);
 }
 
 // The frame's slots and calls (RTSMouse.cpp)

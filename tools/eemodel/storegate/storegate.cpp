@@ -284,12 +284,12 @@ static const char* const kSharingNames[] = {"none", "odd", "all"};
 
 // The frames a model shares (EEGraphicObject's maps): none, every odd frame with the one before (offset -1), every
 // frame but the first with the one before
-static std::map<unsigned long, long> StoreSharing(int inMode)
+static std::vector<EeGeSharedFrame> StoreSharing(int inMode)
 {
-    std::map<unsigned long, long> theFrames;
+    std::vector<EeGeSharedFrame> theFrames;
     for (unsigned long f = 1; f < 512 && inMode > 0; f++)
         if (inMode == 2 || f % 2 == 1)
-            theFrames[f] = -1;
+            theFrames.push_back({(uint32_t)f, -1});
     return theFrames;
 }
 
@@ -345,9 +345,10 @@ int main(int argc, char** argv)
         for (int theMode = 0; theMode < 3; theMode++) {
             GEModelManager* theManager = new GEModelManager(thePath);
             for (size_t i = 0; i < theStems.size(); i += theSubset) {
-                std::map<unsigned long, long> theShared = StoreSharing(theMode);
+                std::vector<EeGeSharedFrame> theShared = StoreSharing(theMode);
                 StoreTrace(theStems[i]);
-                GEModel* theModel = theManager->LoadModel(UString(("models\\" + theStems[i]).c_str()), theShared);
+                GEModel* theModel = theManager->LoadModel(UString(("models\\" + theStems[i]).c_str()),
+                                                          EeGeSharedFrames{theShared.data(), theShared.size()});
                 if (theModel)
                     StoreLine(theOut, "model %s %s %016llx", theStems[i].c_str(), kSharingNames[theMode],
                               StoreDigestModel(theModel));

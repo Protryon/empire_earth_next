@@ -32610,3 +32610,56 @@ docs/progress/ui-cluster.md ("The measure").
   outcome time-cap PT 13072` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT
   host=2755 joiner=2758`, GATES PASS. No fixture or start-up code changed: no separate fixture session.
 - **Short of the target**: net -510 C++ against the 3,000 asked.
+
+## The Graphics + LLE cluster, round 3: the graphic objects' media and the effects' tables in Rust, RFIL and the units' frame over one view of the render lists, the raster table's model and texture calls Rust to Rust, the line picks, the mouse and viewport readers (ee_gfx gobj_media.rs, geffect_table.rs, rfil.rs, units_lists.rs, raster_direct.rs, input_views.rs; ee_ge map_raise.rs; branch rust-gfx-cluster3, 2026-11-19)
+
+The third round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
+
+- **A load in Rust, the lock and the C++ part lists in C++.** `EEGraphicObject::LoadMedia` / `UnloadMedia` are
+  `ee_gfx_gobj_load` / `ee_gfx_gobj_unload` inside the C++'s `EEMediaAcquire` / `EEMediaRelease` (the lock and the
+  use count stay `EEMediaUse.h`'s). The Rust reaches the model manager, the texture manager, the textures' stages and
+  the references directly (the managers are their Rust object alone: `cppobj::plain`; a model or texture is
+  `CppCounted`), and asks one host table (`EeGfxGobjHost`) for what is C++: the sounds' virtual `LoadMedia`, and the
+  part scan's `new EETurretPart / EEOrbital / EEWheel` pushes (other lanes read those vectors). The scan itself
+  (`CollectParts`) walks the models in Rust over a `PartModels` trait, tested on fakes.
+  - **The shared-frames map is a slice.** `GEModelManager::LoadModel(name, std::map&)` became
+    `LoadModel(name, const EeGeSharedFrames&)` (frame order, as both of its consumers converted the map before):
+    the Rust builds the maps with `BTreeMap::entry().or_insert` (a `std::map::insert` keeps the first value). The
+    store gate's caller (tools/eemodel/storegate) passes a vector.
+  - **Mixed line endings.** EEARust.cpp is CRLF with one LF line: a Python edit that normalised the file and wrote it
+    back as CRLF changed that line. Edit such files with byte replacements, and check `git diff --stat` for lines
+    the edit did not mean to touch.
+- **The effects' tables as Rust statics.** `sEffects`, `sMediaByKind[0x48]` and `sIDs` are geffect_table.rs's
+  (`RwLock`/`Mutex`, never held across a call into C++: each walk copies its list first). `Load` / `Unload` recurse in
+  Rust and ask the `EEMedia` virtuals of a host; `GetMedia` keeps its draw in C++ (`gPhysics->GetRandom(0, n - 1)`,
+  the same call, then `ee_gfx_geffect_kind_at`). Other lanes' `std::find` over `sEffects` became
+  `EEGraphicEffect::IndexOf` (the count when absent, as `find - begin` was).
+- **One view of the render lists, two readers.** `EERenderListsView` (EERenderCapture.cpp) hands Rust the pools and
+  vectors in place (`EeGfxRfilLayout`: strides and member offsets) and the six multimaps flattened in their order;
+  RFIL (rfil.rs: the record byte for byte as the C++ wrote it) and the units' render object (units_lists.rs: the
+  records and indices ro_units.rs draws; `UnitRecord`, `ObjectRecord` and `UnitsFrame` are gone) both read it. The
+  world's key (the visible tiles' units) stays C++.
+  - **Trap (cbindgen):** a struct only reached through a `*const c_void` span is not emitted; give it a typed span
+    (`EeGfxRfilPairs`).
+  - **Trap (constants):** the C++ names (`kMovementAir`, `kUnitTypeWaypoint`) must be looked up, not recalled: a
+    first version had both wrong (EEUnitClassIDs.h: 1 and 0x104).
+- **The raster table loses its model, material, vertex, texture and state entries.** 60 of `gEERustRaster`'s lambdas
+  called the C++ shells' forwarders over Rust objects; `impl Raster for &EeGfxRaster` now makes those calls itself
+  (raster_direct.rs; the scroll and stretch scratch is Rust's). The rasterizer's state goes to the DX7 rasterizer's and
+  its base's Rust objects (`DX7Rasterizer::RustObjects`: the game's only rasterizer), the getters read the base's
+  screen record as the header's inline getters did; `SetFogType` is the base's (not overridden). The table keeps the
+  draws, the managers, the camera, the effect batches and the bars, and gains the screen and the rasterizer. The
+  `Raster` trait's mocks did not change: only the table's implementation did.
+  - **Trap (test builds):** dx7 rastobj.rs is `#[cfg(not(test))]` (it imports the C++); code the tests compile that
+    names it needs a stub module under `#[cfg(test)]` (never called there).
+- **The line picks** (`GetTileOnLine`, `GetLocationOnLine`) are map_raise.rs's over `LinePicks` (the tile, the mesh's
+  hit), writing the out-parameters exactly where the C++ did (a terrain hit's coordinates before its tile is looked up).
+- **Readers for the UI lane.** `EEMouse`'s constructor registers its members' addresses (`ee_gfx_input_mouse_set`)
+  and `EEGraphics` the main viewport: `ee_gfx::input_views::{mouse_position, set_mouse_position, mouse_pointer,
+  set_mouse_pointer, mouse_bounds, mouse_frozen, ..., main_viewport}` read and write them in place.
+
+What exercises what: the oracle (seeds 2-7) reaches the graphic objects' loads and the effects' tables (the units'
+graphics, the tag points and parts, the kind-only effects' random draw); the effects capture the effects' loads;
+only a tour reaches the textures' stages, the render lists' view, RFIL, the units' draw over units_lists.rs, the raster
+table's direct calls (every model, effect and shadow draw) and the line picks (the mouse over the map); nothing yet
+reads input_views.rs.

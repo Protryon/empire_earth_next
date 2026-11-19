@@ -80,7 +80,6 @@ public:
     virtual long EndScene(unsigned long inScreen);
     virtual long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes);
     virtual unsigned long GetCaps(unsigned long inCap, unsigned long inScreen);
-    virtual bool GetCanModulateTextureAlpha(unsigned long inScreen);
     virtual bool GetDirtyRectangleSupport(unsigned long inScreen);
     virtual void Light(GETerrainMesh& inMesh, unsigned long inScreen);
     virtual long RemoveAllLights(unsigned long inScreen);
@@ -119,6 +118,11 @@ protected:
     EeDx7Rasterizer* mDX7;                  // the rasterizer (ee_dx7 rastobj.rs)
 
     friend struct DX7RasterizerHost;
+public:
+    // port: a rasterizer's Rust objects, the DX7 one returned, the base's in *outBase (ee_gfx raster_direct.rs; the
+    // game's only rasterizer is this class)
+    static void* RustObjects(GERasterizer* inRasterizer, void** outBase);
+private:
     DX7Rasterizer(const DX7Rasterizer&) = delete;
     DX7Rasterizer& operator=(const DX7Rasterizer&) = delete;
 };

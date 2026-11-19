@@ -857,11 +857,3 @@ bool EETile::IsVisibleTo(EEPlayer* inPlayer)
     return (this->mVisibility[inPlayer->mPlayerID >> 1] >> ((inPlayer->mPlayerID & 1) << 4) & 0xff) > 0 ||
            inPlayer->mSeesAll;
 }
-
-// Returns the graphic effect at an index, or NULL past the end of the table
-EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)
-{
-    if (inIndex < EEGraphicEffect::sEffects.size())
-        return EEGraphicEffect::sEffects[inIndex];
-    return NULL;
-}
