@@ -18,7 +18,6 @@ extern "C" {
     fn ee_units_uu_host_raised_corners(map: u64, x: i32, y: i32) -> i32;
     fn ee_units_uu_host_mesh_z(map: u64, x: i32, y: i32) -> f32;
     fn ee_units_uu_host_mesh_ground(x: f32, y: f32) -> f32;
-    fn ee_units_uu_host_position(obj: u64, out: *mut f32);
     fn ee_units_uu_host_passable_by(obj: u64, by: u64) -> u8;
     fn ee_units_uu_host_is_foundation(obj: u64) -> u8;
     fn ee_units_uu_host_can_move_on_terrain(class_obj: u64, unit: u64, terrain: i32) -> u8;
@@ -88,7 +87,6 @@ const WORLD_EDITOR_TRANSPORT: i32 = 17;
 /// `ee_units_uu_host_world_f`'s.
 const WORLD_F_GATHER_REACH: i32 = 1;
 const WORLD_F_WALL_RISE: i32 = 2;
-const WORLD_F_DISTANCE_TO_UNIT: i32 = 3;
 const WORLD_F_DEPOSIT_FACTOR: i32 = 4;
 
 /// `ee_units_uu_host_continent`'s questions (one C++ switch).
@@ -258,10 +256,7 @@ impl UuHost for Game {
         read(|t| unsafe { ClassView::of(t, class_obj) }.map(|c| class_record(&c)).unwrap_or_default())
     }
     fn position(&mut self, obj: u64) -> [f32; 3] {
-        let mut out = [0.0; 3];
-        // SAFETY: a live unit; three floats
-        unsafe { ee_units_uu_host_position(obj, out.as_mut_ptr()) };
-        out
+        crate::units::unit_geom::position_of(obj)
     }
     fn passable_by(&mut self, obj: u64, by: u64) -> bool {
         // SAFETY: live units the C++ gave
@@ -619,7 +614,7 @@ impl UuWorld for Game {
         world(WORLD_LAST_RESOURCE, unit, 0, 0, 0, 0, 0.0)
     }
     fn distance_squared_to_unit(&mut self, complex: u64, other: u64) -> f32 {
-        world_f(WORLD_F_DISTANCE_TO_UNIT, complex, other, 0.0)
+        crate::units::unit_geom::distance_squared_to_unit_of(complex, other)
     }
     fn deposit_effect(&mut self, unit: u64) {
         world(WORLD_DEPOSIT_EFFECT, unit, 0, 0, 0, 0, 0.0);

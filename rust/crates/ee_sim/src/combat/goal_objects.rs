@@ -146,9 +146,205 @@ fn view_read(_code: i32, _unit: u64) -> Option<i64> {
     None
 }
 
+/// The plain reads and stores with arguments over the world views (the units behaviour lane, round 1: they were
+/// `EECombatGoalHostOp`'s cases): the location, the tiles, the attackers' count, the players' reads and attack count,
+/// the class's flare flag, the heal's clock, the save's version flags. None for another operation.
+#[cfg(not(test))]
+fn view_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
+    use crate::combat::goal_attack::{
+        EE_COMBAT_G_ATTACKER_FLAGS, EE_COMBAT_G_CAN_BE_ATTACKED, EE_COMBAT_G_HUMAN, EE_COMBAT_G_NUM_ATTACKERS,
+        EE_COMBAT_G_PLAYER_ATTACK, EE_COMBAT_G_PLAYER_READ, EE_COMBAT_G_PRIEST, EE_COMBAT_G_PROJECTILE,
+        EE_COMBAT_G_TILE,
+    };
+    use crate::combat::goal_dispatch::EE_COMBAT_G_SAVE_FLAGS;
+    use crate::combat::goal_heal::EE_COMBAT_G_HEAL_ENV;
+    use crate::world::{PlayerView, UnitView, WorldRead, WorldView};
+    if code == EE_COMBAT_G_SAVE_FLAGS {
+        let (major, minor) = (a[0] as u32, a[1] as u32);
+        return Some(
+            i64::from(crate::units::build::save_has_live_state(major, minor))
+                | i64::from(major > 0 || minor >= SAVE_GOAL_GHOSTS) << 1,
+        );
+    }
+    if !matches!(
+        code,
+        EE_COMBAT_G_UNIT_LOCATION
+            | EE_COMBAT_G_TILE
+            | EE_COMBAT_G_NUM_ATTACKERS
+            | EE_COMBAT_G_PLAYER_READ
+            | EE_COMBAT_G_PLAYER_ATTACK
+            | EE_COMBAT_G_CAN_BE_ATTACKED
+            | EE_COMBAT_G_HEAL_ENV
+            | EE_COMBAT_G_ATTACKER_FLAGS
+    ) {
+        return None;
+    }
+    if code == EE_COMBAT_G_ATTACKER_FLAGS && unit == 0 {
+        return Some(0);
+    }
+    // SAFETY: a goal's operation runs inside the C++ call that holds the world; its objects are live
+    let t = unsafe { WorldRead::begin() };
+    if code == EE_COMBAT_G_HEAL_ENV {
+        let w = WorldView::global(&t)?;
+        a[0] = i64::from(w.in_cinematic());
+        a[1] = w.tick_ms();
+        return Some(0);
+    }
+    if code == EE_COMBAT_G_PLAYER_READ {
+        // SAFETY: as above (the handle is a player's: EE_COMBAT_G_PLAYER's answer)
+        let p = unsafe { PlayerView::of(&t, unit) }?;
+        return Some(if a[0] == 1 { p.enemy(a[1] as usize) as i64 } else { i64::from(p.id()) });
+    }
+    // SAFETY: as above
+    let u = unsafe { UnitView::of(&t, unit) }?;
+    match code {
+        EE_COMBAT_G_UNIT_LOCATION => {
+            let l = u.location();
+            a[0] = i64::from(l[0].to_bits());
+            a[1] = i64::from(l[1].to_bits());
+            a[2] = i64::from(l[2].to_bits());
+            Some(0)
+        }
+        EE_COMBAT_G_TILE => {
+            let (x, y) = u.tile_xy();
+            a[0] = x;
+            a[1] = y;
+            a[2] = x;
+            a[3] = y;
+            Some(0)
+        }
+        EE_COMBAT_G_NUM_ATTACKERS => {
+            // the record is the C++ object's: the store is its member store
+            let cx = u.complex().ptr() as *mut crate::world::unit_fields::EeUnitsComplexUnitFields;
+            // SAFETY: a live complex unit's record, no other reference held
+            unsafe {
+                (*cx).mNumAttackers = ((*cx).mNumAttackers as i64).wrapping_add(a[0]) as _;
+                Some((*cx).mNumAttackers as i64)
+            }
+        }
+        EE_COMBAT_G_ATTACKER_FLAGS => {
+            // the player's IsHuman() (a virtual: the unit utilities' host), the class's projectile flag, IsPriest()
+            let player = u.player().map_or(0, |p| p.handle());
+            let human = crate::units::uu::UuHost::is_human(&mut crate::units::uu_host::Game, player);
+            let class = u.class()?;
+            let projectile: bool = crate::world_field!(class.fields(), mIsProjectile);
+            // IsPriest: the land, naval, helicopter and building priests (0xd, 0xe, 0x1a, 0x1e)
+            let priest = matches!(class.category(), 0xd | 0xe | 0x1a | 0x1e);
+            Some(
+                if human { EE_COMBAT_G_HUMAN } else { 0 }
+                    | if projectile { EE_COMBAT_G_PROJECTILE } else { 0 }
+                    | if priest { EE_COMBAT_G_PRIEST } else { 0 },
+            )
+        }
+        EE_COMBAT_G_CAN_BE_ATTACKED => {
+            let flare: bool = crate::world_field!(u.class()?.fields(), mIsFlare);
+            Some(i64::from(!flare))
+        }
+        _ => {
+            // the attacker's player's attack count and combat state
+            let p = u.player()?;
+            let fields = p.fields().ptr() as *mut crate::world::player_fields::EeUnitsPlayerFields;
+            let saved = p.saved().ptr() as *mut crate::world::player_fields::EeUnitsPlayerSaved;
+            // SAFETY: a live player's records, no other reference held
+            unsafe {
+                let attacks = (*fields).mNumAttacks;
+                if a[0] == 1 {
+                    if attacks == 0 {
+                        (*saved).mCombatState = 2;
+                    }
+                    (*fields).mNumAttacks = attacks.wrapping_add(1);
+                } else if a[0] == -1 {
+                    (*fields).mNumAttacks = attacks.wrapping_sub(1);
+                    if (*fields).mNumAttacks == 0 {
+                        (*saved).mCombatState = 1;
+                    }
+                } else {
+                    if attacks == 0 && a[1] == 0 {
+                        (*saved).mCombatState = 2;
+                    }
+                    (*fields).mNumAttacks = attacks.wrapping_add(1);
+                }
+            }
+            Some(0)
+        }
+    }
+}
+
+#[cfg(test)]
+fn view_op(_code: i32, _unit: u64, _args: &mut EeCombatGoalArgs) -> Option<i64> {
+    None
+}
+
+/// `EESaveHasGoalGhosts`' first version (0.275)
+#[cfg(not(test))]
+const SAVE_GOAL_GHOSTS: u32 = 275;
+
+impl TableHost<'_> {
+    /// The operations the goals' common host answers (the units' `GoalOp`): the typed file calls, the references,
+    /// the action started, the unit and ghost found, the hit points set. None for another.
+    fn common_op(&mut self, code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
+        use crate::combat::goal_attack::{
+            EE_COMBAT_G_DEREFERENCE, EE_COMBAT_G_FIND_GHOST, EE_COMBAT_G_FIND_UNIT, EE_COMBAT_G_READ_BOOL,
+            EE_COMBAT_G_READ_I32, EE_COMBAT_G_READ_U32, EE_COMBAT_G_REFERENCE, EE_COMBAT_G_WRITE_BOOL,
+            EE_COMBAT_G_WRITE_I32, EE_COMBAT_G_WRITE_U32,
+        };
+        use crate::combat::goal_heal::EE_COMBAT_G_SET_HIT_POINTS;
+        use crate::units::rust_goal as g;
+        let mut io = EeCombatGoalIo::default();
+        // the typed file calls: GoalOp's kind 0 u32, 1 i32, 2 bool, 3 float bits, the value in i[1]
+        let kind = match code {
+            EE_COMBAT_G_WRITE_U32 | EE_COMBAT_G_READ_U32 => Some(0),
+            EE_COMBAT_G_WRITE_I32 | EE_COMBAT_G_READ_I32 => Some(1),
+            EE_COMBAT_G_WRITE_BOOL | EE_COMBAT_G_READ_BOOL => Some(2),
+            EE_COMBAT_G_WRITE_F32 | EE_COMBAT_G_READ_F32 => Some(3),
+            _ => None,
+        };
+        if let Some(kind) = kind {
+            // GE3DPoint's Save and Load: 4 on a closed file
+            if kind == 3 && self.call(g::EE_UNITS_GOAL_HOST_FILE_OPEN, 0, 0, &mut io) == 0 {
+                return Some(4);
+            }
+            io.i[0] = kind;
+            io.i[1] = a[0];
+            let write = matches!(
+                code,
+                EE_COMBAT_G_WRITE_U32 | EE_COMBAT_G_WRITE_I32 | EE_COMBAT_G_WRITE_BOOL | EE_COMBAT_G_WRITE_F32
+            );
+            if write {
+                return Some(self.call(g::EE_UNITS_GOAL_HOST_WRITE, 0, 0, &mut io));
+            }
+            let r = self.call(g::EE_UNITS_GOAL_HOST_READ, 0, 0, &mut io);
+            a[0] = io.i[1];
+            return Some(r);
+        }
+        let (op, ha, hb) = match code {
+            EE_COMBAT_G_REFERENCE => (g::EE_UNITS_GOAL_HOST_REFERENCE, unit, 0),
+            EE_COMBAT_G_DEREFERENCE => (g::EE_UNITS_GOAL_HOST_DEREFERENCE, unit, 0),
+            // StartAction, then the class's ActionChanged (i[1] 0)
+            EE_COMBAT_G_START_ACTION => (g::EE_UNITS_GOAL_HOST_START_ACTION, unit, 0),
+            EE_COMBAT_G_FIND_UNIT => (g::EE_UNITS_GOAL_HOST_FIND_UNIT, a[0] as u64, u64::from(a[1] != 0)),
+            EE_COMBAT_G_FIND_GHOST => (g::EE_UNITS_GOAL_HOST_FIND_GHOST, a[0] as u64, 0),
+            EE_COMBAT_G_SET_HIT_POINTS => (g::EE_UNITS_GOAL_HOST_SET_HIT_POINTS, unit, 0),
+            // EEGetAttackPart: the unit utilities' noted entry point
+            crate::combat::goal_attack::EE_COMBAT_G_ATTACK_PART => {
+                return Some(crate::units::uu_direct::attack_part(unit, a[0] as u64) as i64)
+            }
+            _ => return None,
+        };
+        io.i[0] = a[0];
+        Some(self.call(op, ha, hb, &mut io))
+    }
+}
+
 impl GoalHost for TableHost<'_> {
     fn op(&mut self, code: i32, unit: u64, args: &mut EeCombatGoalArgs) -> i64 {
         if let Some(r) = view_read(code, unit) {
+            return r;
+        }
+        if let Some(r) = view_op(code, unit, args) {
+            return r;
+        }
+        if let Some(r) = self.common_op(code, unit, args) {
             return r;
         }
         let mut io = EeCombatGoalIo { i: *args, ..Default::default() };

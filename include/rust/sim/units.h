@@ -484,9 +484,6 @@ constexpr static const int32_t EE_UNITS_AG_COMMAND_TYPE = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 constexpr static const int32_t EE_UNITS_AG_NUM_CARGO = 42;
 
-/// unit `a`'s `GetPosition(io.p)`
-constexpr static const int32_t EE_UNITS_AG_POSITION = 43;
-
 /// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
 constexpr static const int32_t EE_UNITS_AG_ANGLE = 44;
 
@@ -678,21 +675,6 @@ constexpr static const int32_t EE_UNITS_CZ_CLASS_TILE_SIZE = 2;
 /// `gMapWidth` into `v0`, `gMapHeight` into `v1`
 constexpr static const int32_t EE_UNITS_CZ_MAP_SIZE = 3;
 
-/// `EEGetSquareRingTiles(v0, v1, v2, tiles)` (pushed)
-constexpr static const int32_t EE_UNITS_CZ_SQUARE_RING_TILES = 4;
-
-/// `EEGetSideTiles(v0, v1, v2, tiles)` from `io.tiles` (the result pushed)
-constexpr static const int32_t EE_UNITS_CZ_SIDE_TILES = 5;
-
-/// `EEGetRingCorners(v0, v1, v2, v3, v4, tiles)` from `io.tiles`
-constexpr static const int32_t EE_UNITS_CZ_RING_CORNERS = 6;
-
-/// `EEGetSquareRing(v0, v1, v2, v3, tiles)` from `io.tiles`
-constexpr static const int32_t EE_UNITS_CZ_SQUARE_RING = 7;
-
-/// `EEAIRandomShuffle` over `io.tiles`
-constexpr static const int32_t EE_UNITS_CZ_SHUFFLE = 8;
-
 /// `gContinentManager.GetContinent(U2DPoint(v0, v1), kAIPathLandMass)`
 constexpr static const int32_t EE_UNITS_CZ_TILE_CONTINENT = 9;
 
@@ -720,44 +702,11 @@ constexpr static const int32_t EE_UNITS_CZ_CAN_GATHER = 16;
 /// `gContinentManager.CanGetToUnit(a, b)`
 constexpr static const int32_t EE_UNITS_CZ_CAN_GET_TO_UNIT = 17;
 
-/// unit `a`'s `mComplexUnit->DistanceSquared2D(GE2DPoint(f[0], f[1]))` into `f[0]`
-constexpr static const int32_t EE_UNITS_CZ_DISTANCE_2D = 18;
-
-/// unit `a`'s `GetTileDistanceSquared(b)` into `f[0]`
-constexpr static const int32_t EE_UNITS_CZ_TILE_DISTANCE = 19;
-
 /// `gContinentManager.GetPathAreaIDAt(EETileLocation(v0, v1))`
 constexpr static const int32_t EE_UNITS_CZ_PATH_AREA = 20;
 
-/// gather goal `a`'s `GetGatherStorage()`
-constexpr static const int32_t EE_UNITS_CZ_GATHER_STORAGE = 21;
-
-/// gather goal `a`'s `GetGatherResource()`
-constexpr static const int32_t EE_UNITS_CZ_GATHER_RESOURCE = 22;
-
-/// gather goal `a`'s `IsGathering()`
-constexpr static const int32_t EE_UNITS_CZ_IS_GATHERING = 23;
-
-/// build goal `a`'s `GetBuildTargetClass()->mIsWall`
-constexpr static const int32_t EE_UNITS_CZ_BUILD_IS_WALL = 24;
-
-/// build goal `a`'s `GetBuildTargetType()`
-constexpr static const int32_t EE_UNITS_CZ_BUILD_TYPE = 25;
-
-/// `EEGetFarmDropSites(a, sites)` (pushed)
-constexpr static const int32_t EE_UNITS_CZ_FARM_DROP_SITES = 26;
-
 /// complex unit `a`'s `CanTake(b, v0)`
 constexpr static const int32_t EE_UNITS_CZ_CAN_TAKE = 27;
-
-/// unit `a`'s `SetResourceAmount(0)`, `SetResourceType(v0)`
-constexpr static const int32_t EE_UNITS_CZ_EMPTY_LOAD = 28;
-
-/// unit `a`'s `DistanceSquaredToUnit(b)` into `f[0]`
-constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO_UNIT = 29;
-
-/// unit `a`'s `DistanceSquaredTo(b)` into `f[0]`
-constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO = 30;
 
 /// player `a`'s units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
@@ -1206,14 +1155,8 @@ constexpr static const int32_t EE_UNITS_CLS_MV_PURSUER = 40;
 /// `EEGetDirectionTo(a, b)`
 constexpr static const int32_t EE_UNITS_CLS_MV_DIRECTION_TO = 41;
 
-/// unit `a`'s `GetLineOfSight()` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_MV_LINE_OF_SIGHT = 42;
-
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 constexpr static const int32_t EE_UNITS_CLS_MV_MAX_VELOCITY = 43;
-
-/// `gPhysics->GetRandom(1L, 2L)`
-constexpr static const int32_t EE_UNITS_CLS_MV_RANDOM_1_2 = 44;
 
 /// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
 constexpr static const int32_t EE_UNITS_CLS_MV_GOAL = 45;
@@ -1299,12 +1242,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_REQUEST_PATH = 71;
 /// unit `a`'s flight goal to `(io.p[0], io.p[1])`, keeping the current goal when `c`
 constexpr static const int32_t EE_UNITS_CLS_MV_FLEE_GOAL = 72;
 
-/// unit `a`'s player's `mNumVitalBuildings < 1`
-constexpr static const int32_t EE_UNITS_CLS_ST_NO_VITAL = 93;
-
-/// `gPhysics`' `mTickTimeMs` into `io.a`, `GetTickTime()` into `io.f`, `mGameTime` into `io.b`
-constexpr static const int32_t EE_UNITS_CLS_ST_CLOCK = 94;
-
 /// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
 constexpr static const int32_t EE_UNITS_CLS_ST_CINEMATIC_INTERVAL = 95;
 
@@ -1331,9 +1268,6 @@ constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING = 103;
-
-/// `gPhysics->GetRandom(io.p[0], io.p[1])` into `io.f`
-constexpr static const int32_t EE_UNITS_CLS_ST_RANDOM_RANGE = 104;
 
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
@@ -2514,15 +2448,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_START_ACTION = 8;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_UNIT = 9;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_POSITION = 10;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_LOCATION = 11;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_TELL_GROUP = 12;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION = 13;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ANIMATION = 14;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_DROP_PATH = 15;
 
@@ -2568,8 +2494,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CREATE_CALAMITY = 53;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP = 54;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SPEND_POWER = 55;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_CAST_AT = 56;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FACES_TARGET = 57;
@@ -2582,8 +2506,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_STATS_RANGE = 60;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTACT_RANGE = 61;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT = 62;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_HEIGHT = 63;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_HIT_POINTS = 64;
@@ -2592,19 +2514,13 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_UNDETECTABLE = 65;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_COMPLEX_UNIT = 66;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_HUMAN = 70;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL = 71;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTAINER = 72;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_UNITS = 73;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS = 74;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_OF_SIGHT = 75;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_RING_TILES = 76;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_SCREEN = 77;
 
@@ -2614,13 +2530,9 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_STAND = 79;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_REACHABLE = 80;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_ID = 81;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MAP_DIMENSIONS = 82;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTINENT_POINT = 83;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_RANDOM = 84;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NOTICE_FOREIGN = 85;
 
@@ -2635,8 +2547,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CLASS_TYPE = 91;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_COUNT = 92;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_CATEGORY = 93;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TRANSPORT_KIND = 94;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT = 95;
 
@@ -2678,13 +2588,8 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_PICK_TILE_NEAR = 116;
 /// `list`: the units, `i[4]` the base class's rule; `i[0..4]` the tiles in and out
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RENDEZVOUS = 117;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_CENTER_OFFSET = 118;
-
 /// `i[0]`: the technology; out: the node, the class, available
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GARRISON_UPGRADE = 119;
-
-/// `b` 1: `GetGoal()`, 0: `GetLoadGoal()`; `i[0]` its kind
-constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_GOAL = 120;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND = 121;
 
@@ -2719,8 +2624,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_ID = 403;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE = 404;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILDERS_ADD = 405;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_ATTACK_PART = 406;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_IN_WORK_REACH = 407;
@@ -2731,8 +2634,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_COMPLETE_BUILDING = 409;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAY_EFFECT = 410;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME = 411;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FILL_PARTS = 412;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FREE_TILE = 413;
@@ -2740,10 +2641,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FREE_TILE = 413;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION = 414;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LOCATION_GOAL = 415;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TEND_FARM = 417;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_NEAR = 418;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATE_SIDE_PART = 419;
 
@@ -2753,13 +2650,9 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_ABANDON_BUILDING = 421;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FACE_TARGET = 422;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_WORK_TIMER = 423;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_HALT = 424;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED = 428;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_USERS = 429;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEW_GATHER = 430;
 
@@ -2777,8 +2670,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FRIENDLY = 436;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_IN_CINEMATIC = 437;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PAID = 438;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PAY = 439;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_HIT_POINTS = 440;
@@ -2787,8 +2678,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FOUNDATION_STARTED = 441;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_ARG = 442;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_FARM_TILE = 450;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_SPOT = 451;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_RESOURCE = 452;
@@ -2796,12 +2685,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_RESOURCE = 452;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_STORAGE = 453;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FREE_TILE = 454;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_HEIGHT = 455;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT = 456;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FARM = 457;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
 
@@ -2815,21 +2698,13 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_HUNT = 464;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_GATHERED = 465;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_ROOM = 466;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LAST_WAYPOINT = 467;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_REACH = 468;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_REACH = 469;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ACTIVE = 470;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_GHOST = 471;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE = 472;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_STORAGE = 473;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED = 474;
 
@@ -2841,15 +2716,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
 
 /// `a`: the unit; its class's `mCategory`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_CATEGORY = 490;
-
-/// `a`: the unit, `sink`: a `GETransformation` it fills (`mPhysicalModel.GetLocation()`)
-constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION = 491;
-
-/// `a`: the unit, `sink`: the `GETransformation` it is given (`SetTransformation(t, true)`)
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TRANSFORMATION = 492;
-
-/// `a`: the unit, `i[0]`: `SetTargetSearchTimer`'s value
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER = 493;
 
 /// `a`: the unit; `mGoalQueues[0].mGoals.size()`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN = 494;
@@ -2897,11 +2763,8 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_RELEASE_FIRE = 508;
 /// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MINING_BEAM = 509;
 
-/// `a`: the gatherer, `i[0]`: `SetResourceType`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE = 510;
-
-/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
-constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_FISH = 511;
+/// `a`: the gatherer, `b`: the centre: its class's `FindResourceOfKind(a, b, i[3], i[0], i[1], &list, i[2])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND = 511;
 
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
@@ -8240,8 +8103,6 @@ extern int32_t ee_units_uu_host_raised_corners(uint64_t map, int32_t x, int32_t 
 extern float ee_units_uu_host_mesh_z(uint64_t map, int32_t x, int32_t y);
 
 extern float ee_units_uu_host_mesh_ground(float x, float y);
-
-extern void ee_units_uu_host_position(uint64_t obj, float *out);
 
 extern uint8_t ee_units_uu_host_passable_by(uint64_t obj, uint64_t by);
 

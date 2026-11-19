@@ -135,8 +135,6 @@ pub const EE_UNITS_AG_HAS_ACTION: i32 = 40;
 pub const EE_UNITS_AG_COMMAND_TYPE: i32 = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 pub const EE_UNITS_AG_NUM_CARGO: i32 = 42;
-/// unit `a`'s `GetPosition(io.p)`
-pub const EE_UNITS_AG_POSITION: i32 = 43;
 /// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
 pub const EE_UNITS_AG_ANGLE: i32 = 44;
 /// the units of tile (c, d) (pushed)
@@ -419,9 +417,7 @@ impl AgHost for AgGame {
         unsafe { UnitView::of(&t, u) }.and_then(|v| v.complex_unit()).map_or(0, |c| c.cargo_len() as u32)
     }
     fn position(&mut self, u: u64) -> [f32; 3] {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_POSITION, u, 0, 0, 0, &mut io);
-        io.p
+        crate::units::unit_geom::position_of(u)
     }
     fn angle_from_north(&mut self, from: [f32; 3], to: [f32; 3]) -> f32 {
         let mut io = EeUnitsAgIo { p: from, q: to, ..Default::default() };

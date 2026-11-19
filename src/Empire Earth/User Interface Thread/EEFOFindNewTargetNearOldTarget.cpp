@@ -2485,14 +2485,6 @@ extern "C" float ee_units_uu_host_mesh_z(uint64_t inMap, int32_t inX, int32_t in
 extern "C" float ee_units_uu_host_mesh_ground(float inX, float inY) { return ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(inX, inY); }
 
 
-extern "C" void ee_units_uu_host_position(uint64_t inUnit, float* outPoint)
-{
-    GE3DPoint thePoint;
-    UUUnit(inUnit)->GetPosition(thePoint);
-    outPoint[0] = thePoint.mX;
-    outPoint[1] = thePoint.mY;
-    outPoint[2] = thePoint.mZ;
-}
 extern "C" uint8_t ee_units_uu_host_passable_by(uint64_t inUnit, uint64_t inBy)
 {
     return UUUnit(inUnit)->IsPassableBy(inBy != 0 ? static_cast<EEComplexUnit*>(UUUnit(inBy)) : NULL);
@@ -2791,7 +2783,6 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
             theRise = ((float)theUnit->mComplexUnit->mHitPoints / (float)theUnit->mComplexUnit->mStats->mMaxHitPoints) * theRise;
         return theRise;
     }
-    case 3: return theComplex->DistanceSquaredToUnit(UUUnit(inB));
     case 4: return ::gWorld.GetGameVariant()->mDepositFactor;
     }
     return 0.0f;
