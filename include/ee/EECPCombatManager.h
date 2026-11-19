@@ -8,20 +8,18 @@
 #define EE_EECPCOMBATMANAGER_H
 
 class FSFile;
-class EEUnit;
-class EEComplexUnit;
 class EEComputerPlayer;
-class EEUnitClass;
 
+// (header-only since the game's leaves round 1: its one test, IsMilitaryClass, is ee_ai military.rs's
+// ee_ai_military_class, which every caller asks directly; EECPCombatManager.cpp went)
 class EECPCombatManager {
 public:
-    EECPCombatManager(EEComputerPlayer* inPlayer);
-    virtual ~EECPCombatManager();           // +0x00 (??_G 0x71e8a, dtor 0x71ea6)
+    EECPCombatManager(EEComputerPlayer* inPlayer) : mPlayer(inPlayer) {}
+    virtual ~EECPCombatManager() {}         // +0x00 (??_G 0x71e8a, dtor 0x71ea6)
 
-    bool IsMilitaryClass(EEUnitClass* inClass);  // 0x737c9 (ret 4; this unused)
     // the saved game's block (stage 5: empty; the original's commanders, tasks and threat counts are gone)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long Load(unsigned long, unsigned long, FSFile&) { return 0; }
+    long Save(unsigned long, unsigned long, FSFile&) { return 0; }
 
     EEComputerPlayer* mPlayer;              // +0x44
 };

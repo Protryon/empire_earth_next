@@ -10,7 +10,6 @@
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
 2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
-71c7f 77084 Empire Earth/AI Thread/EECPCombatManager.cpp
 8bbbf 8e702 Empire Earth/AI Thread/EECPResourceCenter.cpp
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
