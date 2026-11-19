@@ -2561,8 +2561,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_STAND = 79;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_REACHABLE = 80;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_ID = 81;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_MAP_DIMENSIONS = 82;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTINENT_POINT = 83;
@@ -2580,8 +2578,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CLASS_TYPE = 91;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_COUNT = 92;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_CATEGORY = 93;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_TRANSPORT_KIND = 94;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT = 95;
 
