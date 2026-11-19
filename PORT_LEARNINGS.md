@@ -31685,3 +31685,81 @@ EE-SIM builds no form: the oracle is unchanged by construction.
 ### Left
 
 docs/progress/ui-cluster.md ("Left").
+
+## Unit classes, data and calamities cluster, round 1: EEUnitClass's movement, carrier flight, levelling and status bodies and its record-only answers in Rust (ee_sim::units cls_move.rs, cls_carrier.rs, cls_level.rs, cls_status.rs, cls_answers.rs; branch rust-classes1, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 227402aa9 | the unit-class, database, tech tree, map and random map units' unneeded project includes (objdiff: 23,918 functions identical, 2 changed: `__LINE__`) | +2 -414, net -412 |
+| a73787a21 | `FindPath`, `NextWaypoint`, `PathToGoal`, `PathToward`, `AddWaypointAt`, `BaseHasArrived`, `Flee`, `FleeAttacker` in Rust (cls_move.rs) | +132 -505, net -373 |
+| 99833a51c | `CanEnter`, `GetNumGoalQueues`, `SharesRallyPoint`, `SharesResearch`, `CanMoveOnTerrain`, `GetPassableFlags` (cls_answers.rs) | +6 -76, net -70 |
+| 7e66144f2 | the landing aircraft's flight plans (cls_carrier.rs) | +54 -246, net -192 |
+| 2b1f26047 | `LevelGround`, `CreateRunways`, the four `LevelRunway*` (cls_level.rs) | +64 -217, net -153 |
+| 51e095001 | fix: `FindPath`'s `GetDestination` given the goal's location as its input point | Rust only |
+| 96bf1d264 | `UpdateCamouflageTimer`, `RegeneratePower` (cls_status.rs) | +27 -128, net -101 |
+| 7f2f2fd20 | `CreateUnitAtTile`/`CreateUnitAtPoint` one body | +27 -68, net -41 |
+| 17a594961 | `UpdateCloakDetection`, `UnitDamaged` (cls_status.rs) | +13 -52, net -39 |
+| 6198ea9d6 | `EEHighlightGateWalls`' four branches as one loop | +9 -25, net -16 |
+
+Round: -1,397 net C++ lines (-985 for the moves, -412 includes), short of the 3,000 asked (below).
+
+- **The measure.** The cluster's record-only parts were already Rust before this round (the class's fields, the
+  dispatch table, the trigger answers, the transports' and buildings' searches; the tech nodes' fields and walks;
+  the db records; the calamity and scenario decisions). What is left in the 24k lines is world glue: one call into a
+  C++ unit, goal, player, effect, sound or the path manager per statement, and four large hosts. A whole class cannot
+  move while its ~300 callers in the units, AI, UI and app lanes use its members (`inUnit->mUnitClass->mIsWall`
+  etc. are record reads already). A body moves by becoming Rust over one-line host operations; the yield is its
+  lines minus its host's (about 3:1). docs/progress/unit-classes.md has the table.
+- **One host.** The new bodies' operations (`EE_UNITS_CLS_MV_*`, `_CR_*`, `_LV_*`, `_ST_*`, 39..104) extend the
+  class bodies' existing switch `ee_units_cls_host` (EEUnitClassTransports.cpp), which passes them to
+  `EEUnitClassMoveOp` in EEUnitClass.cpp (where the path manager's, the screens' and the goals' headers are). The
+  Rust side is `ClsGame` (cls_host.rs) implementing each body's trait; tests implement the same traits over a mock
+  world (cls_move_tests.rs' `Mock`, shared by the carrier tests).
+- **The unit utilities directly.** Where the C++ called a unit utility that is a forward to its Rust entry point
+  (`EECanStandOn`, `EEIsTileTopAbove`, `EEMoveInDirection`, `EETurnAway`), the Rust body calls the same
+  `ee_units_uu_*` entry point, so the UUTL note is written as before; `EEGetUnitTiles` (a C++ vector in its entry
+  point) is the entry point's note and body over a Rust vector; `EEGetTileLine` stays the C++ leaf (its CBTL record).
+- **Records in place.** Plain member stores the C++ made inline (`SetHasArrived`, `SetCurrentPhysicsAction`,
+  `mCollisionState`, `mCollisionResolutionCount`, `SetCamouflaged`'s top bit, the camouflage timers, `SetPower`,
+  `SetHeight`, `SetIsCommandable`, `SetCurrentPhysicsOrder`, `mRoll`) are stores on the unit's record, each with
+  the setter's "when it differs" test; everything else is a host statement in the C++'s order.
+- **Out points are inputs.** `EEUGRust::GetDestination` and `GetGoalLocation` read their out point (`PointOut`)
+  before the goal writes it. The C++ `FindPath` handed `GetDestination` the point `GetGoalLocation` had just
+  written; the first Rust body handed it zeros. Oracle traces and the oracle seeds were identical, the space and
+  units profiles passed, but the oracle capture profile's seed 2 CBGO (GetDestination's records) and UUTL digests
+  differed with the same counts, deterministically. A bisect (the movement commit alone failed) and reading
+  `EEUGRust::GetDestination` found it; the trait now takes the input point. Every host op that fills a C++ out
+  parameter was checked for the same: the others start from the zero point the C++ declared.
+- **UCBD notes stay C++.** The members with UCBD notes (the carrier plans, `RouteDockWaypoint`,
+  `IsAwayFromGoal`) keep the note around one call; a Rust body that calls another noted member (`RouteDockWaypoint`
+  from the take-off, `FlyToGoal`) calls it through the host, so nested notes are unchanged.
+- **USTM from Rust.** The status ticks write their USTM words from Rust through one op (`EEUnitStepNote`), in the
+  C++'s word order; the decisions are step.rs' entry points, called as the C++ called them.
+- **Tour only (not reached by EE-SIM):** the mini map moves of the cloak and camouflage events (gMiniMap's draw),
+  `EEHighlightGateWalls` (the editor's and the gate command's highlight).
+- **Not done (the lead's list):** `EECalamity`'s members into its record, the scenario elements whole, the map and
+  the random map's state: not started; the unit classes took the round.
+- **Dead members:** none added; `tools/dead_census.py` lists a few candidates in these units (`Virtual4C`,
+  `Virtual50`, `TurnTurretsBack`, `ReleaseUnitClass`), not deleted: most are inlined into live callers (the census
+  sees no out-of-line copy) and needed a per-name check this round did not make.
+
+### Gates
+
+On the result merged with origin/rust 2bccb3e94 (a clean merge; strip_markers, `rust_build.py header` and
+`rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 625, EE-SIM 626 inputs) and the test profile 0/0; the
+oracle seeds 2-7 identical to the reference; every capture profile PASS: oracle 212, late 214, space 210, calamity
+222, units 175, app 26, effects 6, groups 2, missile 22, placement 4, transport 185 digests (seeds 2-3), scenario 113
+(seeds 2-7); the plain saveload (seeds 2-7 at 600/1350/2100 s) 18/18 identical; the matrix (`--settings all --seeds
+2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` (oracle, plains, islands, highlands,
+mediterranean, medium, late, space 4/4, calamity 3/4, next 2/4); `scenario_check.py` 27/27; the editor gate PASS
+(14,448 lines); gates.sh GATES PASS (`RESULT PASS tour`; ai-game time-cap, units [4, 39, 40], alive [2, 3], engines
+classic_lua x2; `RESULT PASS lan-game`); the Rust gate PASS after the clippy fix aadc4cb0b (4,678 tests, clippy, rustfmt, headers). Per commit
+before the merge: build `--sim` 0/0 and oracle seeds 2-3 identical (the carrier and levelling commits built together,
+the status and dedupe commits together); the space profile at seeds 2-3 after the carrier and levelling commits; the
+oracle and units profiles at seeds 2-3 after the status and dedupe commits and the GetDestination fix.
+
+### What is left
+
+docs/progress/unit-classes.md "Next": `ProduceUnit`, `Animate`'s sounds, the creation family, `ReleaseUnit` and the
+gate builders, `FlyToGoal` and `IsBombOnTarget`; the lead's other targets for the cluster (`EECalamity`'s members,
+the scenario elements whole, the map and random map state) were not started.
