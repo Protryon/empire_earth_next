@@ -91,12 +91,12 @@ long IndexOf(EESMArea* inArea)
 
 }   // namespace
 
-unsigned int EESMCaptureSeed()
+static unsigned int EESMCaptureSeedImpl()
 {
     return gPhysics != NULL ? (unsigned int)gPhysics->mRandom.GetSeed() : 0u;
 }
 
-void EESMCaptureCondition(EESMCondition* inCondition, bool inResult, unsigned int inSeed)
+static void EESMCaptureConditionImpl(EESMCondition* inCondition, bool inResult, unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMCE"));
     r.U32((unsigned int)inCondition->mID);
@@ -128,7 +128,7 @@ void EESMCaptureCondition(EESMCondition* inCondition, bool inResult, unsigned in
     r.Commit();
 }
 
-EESMCaptureTriggerState EESMCaptureTriggerBefore(EESMTrigger* inTrigger)
+static EESMCaptureTriggerState EESMCaptureTriggerBeforeImpl(EESMTrigger* inTrigger)
 {
     EESMCaptureTriggerState theState;
     theState.mIsOn = inTrigger->mIsOn;
@@ -137,7 +137,8 @@ EESMCaptureTriggerState EESMCaptureTriggerBefore(EESMTrigger* inTrigger)
     return theState;
 }
 
-void EESMCaptureTrigger(EESMTrigger* inTrigger, const EESMCaptureTriggerState& inBefore, float inTime, unsigned int inSeed)
+static void EESMCaptureTriggerImpl(EESMTrigger* inTrigger, const EESMCaptureTriggerState& inBefore, float inTime,
+                                   unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMTE"));
     r.U32((unsigned int)inTrigger->mID);
@@ -157,7 +158,7 @@ void EESMCaptureTrigger(EESMTrigger* inTrigger, const EESMCaptureTriggerState& i
     r.Commit();
 }
 
-EESMCaptureObjectState EESMCaptureObjectBegin(EESMObject* inObject)
+static EESMCaptureObjectState EESMCaptureObjectBeginImpl(EESMObject* inObject)
 {
     EESMCaptureObjectState theState;
     theState.mCount = (unsigned int)inObject->mUnits.size();
@@ -171,7 +172,8 @@ EESMCaptureObjectState EESMCaptureObjectBegin(EESMObject* inObject)
     return theState;
 }
 
-void EESMCaptureObjectEnd(EESMObject* inObject, bool inIncludeDead, bool inResult, const EESMCaptureObjectState& inBefore)
+static void EESMCaptureObjectEndImpl(EESMObject* inObject, bool inIncludeDead, bool inResult,
+                                     const EESMCaptureObjectState& inBefore)
 {
     sObjectDepth--;
     EESimCaptureRecord r(EECaptureTag("SMOB"));
@@ -209,7 +211,8 @@ void EESMCaptureObjectEnd(EESMObject* inObject, bool inIncludeDead, bool inResul
     r.Commit();
 }
 
-void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* inPlayers, unsigned int inSeed)
+static void EESMCapturePlayersImpl(long inType, bool inSingle, long inResult, const void* inPlayers,
+                                   unsigned int inSeed)
 {
     if (sObjectDepth > 0)
         return;
@@ -228,7 +231,8 @@ void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* i
     r.Commit();
 }
 
-void EESMCaptureArea(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY, unsigned long long inHash)
+static void EESMCaptureAreaImpl(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY,
+                                unsigned long long inHash)
 {
     if (sObjectDepth > 0)
         return;
@@ -251,7 +255,7 @@ void EESMCaptureArea(EESMArea* inArea, long inKind, long inA, long inB, long inX
     r.Commit();
 }
 
-void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed)
+static void EESMCaptureEffectImpl(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMEX"));
     r.U32((unsigned int)inEffect->mID);
@@ -430,8 +434,8 @@ template<class T> void SavedList(EESimCaptureRecord& ioRecord, const std::vector
 
 }   // namespace
 
-void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
-                      unsigned long inMinorVersion)
+static void EESMCaptureSavedImpl(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
+                                 unsigned long inMinorVersion)
 {
     EESimCaptureRecord r(EECaptureTag("SMSV"));
     r.I32((int)inKind);
@@ -448,7 +452,7 @@ void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, 
     r.Commit();
 }
 
-void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying)
+static void EESMCaptureUpdateImpl(EEScenarioManager* inManager, bool inHumanPlaying)
 {
     static unsigned long sRounds = 0;
     if (++sRounds % 120 == 0)
@@ -468,7 +472,8 @@ void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying)
     r.Commit();
 }
 
-void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount, unsigned int inSeed)
+static void EESMCapturePlayerAttributeImpl(long inPlayer, unsigned long inAttribute, long inMode, long inAmount,
+                                           unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMPA"));
     r.I32((int)inPlayer);
@@ -500,7 +505,7 @@ void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long i
     r.Commit();
 }
 
-void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, unsigned int inSeed)
+static void EESMCaptureTokensImpl(const UWideString& inText, const UWideString& outText, unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMTK"));
     U64(r, TextHash(inText));
@@ -510,8 +515,8 @@ void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, un
     r.Commit();
 }
 
-void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult, float inX,
-                          float inY, unsigned int inSeed)
+static void EESMCapturePlacementImpl(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult,
+                                     float inX, float inY, unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMFP"));
     r.I32((int)IndexOf(inObject));
@@ -524,8 +529,8 @@ void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool i
     r.Commit();
 }
 
-void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
-                           EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
+static void EESMCaptureUnitChangeImpl(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
+                                      EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
 {
     EESimCaptureRecord r(EECaptureTag("SMCU"));
     r.I32((int)inKind);
@@ -590,3 +595,21 @@ void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPl
         SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
     r.Commit();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EESMCaptureArea = EESMCaptureAreaImpl,
+                                      EESMCaptureCondition = EESMCaptureConditionImpl,
+                                      EESMCaptureEffect = EESMCaptureEffectImpl,
+                                      EESMCaptureObjectBegin = EESMCaptureObjectBeginImpl,
+                                      EESMCaptureObjectEnd = EESMCaptureObjectEndImpl,
+                                      EESMCapturePlacement = EESMCapturePlacementImpl,
+                                      EESMCapturePlayerAttribute = EESMCapturePlayerAttributeImpl,
+                                      EESMCapturePlayers = EESMCapturePlayersImpl,
+                                      EESMCaptureSaved = EESMCaptureSavedImpl,
+                                      EESMCaptureSeed = EESMCaptureSeedImpl,
+                                      EESMCaptureTokens = EESMCaptureTokensImpl,
+                                      EESMCaptureTrigger = EESMCaptureTriggerImpl,
+                                      EESMCaptureTriggerBefore = EESMCaptureTriggerBeforeImpl,
+                                      EESMCaptureUnitChange = EESMCaptureUnitChangeImpl,
+                                      EESMCaptureUpdate = EESMCaptureUpdateImpl, true);
