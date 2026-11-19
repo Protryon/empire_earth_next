@@ -21,6 +21,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EECalamityCapture.h"
 
 namespace {
 
@@ -333,7 +334,7 @@ void EECalamityCaptureClasses()
     }
 }
 
-void EECalamityCaptureSave(EECalamity* k, unsigned long inIndex)
+static void EECalamityCaptureSaveImpl(EECalamity* k, unsigned long inIndex)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -414,7 +415,7 @@ void EECalamityCaptureSaves()
     EECalamityCaptureContagionSave();
 }
 
-void EECalamityCaptureAged(EECalamity* inCalamity, unsigned long inIndex, float inBefore)
+static void EECalamityCaptureAgedImpl(EECalamity* inCalamity, unsigned long inIndex, float inBefore)
 {
     // every five seconds of a calamity's life (its time alive crossing a multiple of 5000)
     if (!EESimCaptureRecord::Active() || (long)(inBefore / 5000.0f) == (long)(inCalamity->mTimeAlive / 5000.0f))
@@ -422,3 +423,8 @@ void EECalamityCaptureAged(EECalamity* inCalamity, unsigned long inIndex, float 
     EECalamityCaptureSave(inCalamity, inIndex);
     EECalamityCaptureContagionSave();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EECalamityCaptureAged = EECalamityCaptureAgedImpl,
+                                      EECalamityCaptureSave = EECalamityCaptureSaveImpl, true);

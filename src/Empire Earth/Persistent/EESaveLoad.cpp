@@ -250,13 +250,6 @@ long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, 
     return theResult;
 }
 
-// Finds a save file by name in a directory on the data path; returns the find error
-long EEOpenSaveGameFile(const UString& inName, const UString& inDirectory, FSFileSpec*& outFile)
-{
-    UString thePath = inDirectory + inName;
-    return gDataPath->FindFile(thePath, outFile);
-}
-
 // Returns the current date and time as text (asctime), or "Date/time failed."
 UString GetDateText()
 {
