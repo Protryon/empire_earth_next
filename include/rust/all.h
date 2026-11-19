@@ -22,6 +22,7 @@
 #include "rust/data/media.h"
 #include "rust/data/tables.h"
 #include "rust/game/app.h"
+#include "rust/game/cp_engine.h"
 #include "rust/game/fixture.h"
 #include "rust/game/game_log.h"
 #include "rust/game/screens.h"

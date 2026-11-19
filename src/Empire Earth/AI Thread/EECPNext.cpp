@@ -110,6 +110,55 @@ void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
     ee_ai_next_state_set_ai(EECPNextGetState(inPlayer), (const uint8_t*)inAI.data(), inAI.size());
 }
 
+// The seats (ee/EECPEngine.h; the manifest and the choices are ee_game cp_engine.rs)
+long EECPEngine(const EEComputerPlayer* inPlayer)
+{
+    return inPlayer != NULL && inPlayer->mEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
+}
+
+std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
+{
+    return EECPEngine(inPlayer) != kEECPEngineNext ? std::string() : EECPNextAI(inPlayer);
+}
+
+static const EECPAIEntry* EECPEngineEntry(const EEComputerPlayer* inPlayer)
+{
+    std::string theID = EECPEngineAI(inPlayer);
+    return theID.empty() ? NULL : EECPAIByID(theID);
+}
+
+bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer)
+{
+    const EECPAIEntry* theAI = EECPEngineEntry(inPlayer);
+    return theAI != NULL && theAI->sees_all;
+}
+
+bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
+{
+    const EECPAIEntry* theAI = EECPEngineEntry(inPlayer);
+    return theAI != NULL && theAI->fills_garrison;
+}
+
+std::string EECPEngineName(const EEComputerPlayer* inPlayer)
+{
+    std::string theAI = EECPEngineAI(inPlayer);
+    return theAI.empty() ? "none" : theAI;
+}
+
+void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
+{
+    // no AI (a manifest without a "classic" AI): the seat stands idle (EECPNextPrepare logs it)
+    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
+    inPlayer->mEngine = kEECPEngineNext;
+    EECPNextSetAI(inPlayer, theAI != NULL ? EECPAIID(theAI) : std::string("none"));
+}
+
+// the engine log's debug output (ee_game cp_engine.rs)
+extern "C" void ee_cp_engine_debug_out(const char* inText)
+{
+    ESDebugOut("%s", inText);
+}
+
 // EEComputerPlayer::CanAfford: the plain check (EEPlayer::CanAfford), an epoch free with the epochs cheat (stage 6: the
 // strategy's reserve is the Lua verbs' own check, data/ai/lib/verbs.lua)
 bool EECPNextCanAfford(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, long inCount)
@@ -387,13 +436,13 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     case EE_AI_NEXT_HOST_CLASSIC_AI:
         if (EECPClassicAI() == NULL)
             return 0;
-        EECPNextAppend(outRecord, EECPClassicAI()->mID);
+        EECPNextAppend(outRecord, EECPAIID(EECPClassicAI()));
         return 1;
     case EE_AI_NEXT_HOST_AI_SCRIPT: {
         const EECPAIEntry* theAI = EECPAIByID((const char*)(uintptr_t)a);
         if (theAI == NULL)
             return 0;
-        EECPNextAppend(outRecord, theAI->mScript);
+        EECPNextAppend(outRecord, EECPAIText(theAI->script, theAI->script_len));
         return 1;
     }
     case EE_AI_NEXT_HOST_UNITS_STATE:

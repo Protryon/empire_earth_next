@@ -1095,8 +1095,8 @@ long HostEngineChoice(const char* inName)
 
 void HostEngineIDs(void* inSink, EeSimDriverPushFn inPush)
 {
-    for (const EECPAIEntry& e : EECPAIManifest())
-        inPush(inSink, e.mID.c_str());
+    for (size_t k = 0; k < ee_cp_engine_ai_count(); k++)
+        inPush(inSink, EECPAIID(ee_cp_engine_ai_at(k)).c_str());
 }
 
 void HostSetEnv(const char* inName, const char* inValue)
