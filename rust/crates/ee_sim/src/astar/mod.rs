@@ -73,6 +73,7 @@ pub mod storage_save;
 pub mod sub_sector_links;
 pub mod tile_kind;
 pub mod tile_values;
+pub mod world_view;
 
 #[cfg(test)]
 mod tests;

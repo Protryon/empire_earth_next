@@ -43,14 +43,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIAStarView.h"   // the fill's view (ee_sim::astar flood.rs)
 
-// EEAIContinentManager.cpp's inline (out of line here: 0x29ced)
-long EEAIHasResourceUnit(EETile* inTile);
-
-long gEEAIChokeHeight;
-long gEEAIChokeWidth;
-unsigned char* gEEAIChokeTileFlags;
-uint32_t* gEEAIChokeTileSerials;   // (the pass's grids are fixed-width: the Rust smoothing reads them)
-int32_t* gEEAIChokeTileKinds;
 
 static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTileInfo* outInfo);
 static void EEAIChokeCreate(EEMap* inMap);
@@ -66,28 +58,14 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
 {
     long theSize = inMap->mSize;
     long theCount = theSize * theSize;
-    delete[] gEEAIChokeTileKinds;
-    gEEAIChokeTileKinds = new int32_t[theCount];
-    delete[] gEEAIChokeTileSerials;
-    gEEAIChokeTileSerials = new uint32_t[theCount];
-    delete[] gEEAIChokeTileFlags;
-    gEEAIChokeTileFlags = new unsigned char[theCount];
     std::vector<EeChokeTileInfo> theInfos(theCount);
     for (long x = theSize - 1; x >= 0; x--) {
         for (long y = theSize - 1; y >= 0; y--)
             EEAIChokeGetTileInfo(inMap->GetTile(x, y), x, y, &theInfos[x * theSize + y]);
     }
-    ee_astar_choke_build_grids((int32_t)theSize, (int32_t)inPasses, theInfos.data(), gEEAIChokeTileKinds,
-                               gEEAIChokeTileSerials, gEEAIChokeTileFlags);
-    gEEAIChokeWidth = theSize;
-    gEEAIChokeHeight = theSize;
+    ee_astar_choke_grids_build((int32_t)theSize, (int32_t)inPasses, theInfos.data());   // the grids: Rust's
     EEAIChokeCreate(inMap);
-    delete[] gEEAIChokeTileKinds;
-    gEEAIChokeTileKinds = NULL;
-    delete[] gEEAIChokeTileSerials;
-    gEEAIChokeTileSerials = NULL;
-    delete[] gEEAIChokeTileFlags;
-    gEEAIChokeTileFlags = NULL;
+    ee_astar_choke_grids_free();
     EEAIChokeDone();
 }
 
@@ -106,8 +84,8 @@ static void EEAIChokeCreate(EEMap* inMap)
     ee_astar_flood_set_check_corners(theFill, false);
     for (long x = theSize - 1; x >= 0; x--) {
         for (long y = theSize - 1; y >= 0; y--) {
-            long theIndex = x * theSize + y;
-            if (!gEEAIChokeTileFlags[theIndex] || gEEAIChokeTileKinds[theIndex] == 0x36 || ee_astar_flood_id(theFill, x, y) != 0)
+            uint32_t theSerial;
+            if (!ee_astar_choke_grids_tile((int32_t)(x * theSize + y), &theSerial) || ee_astar_flood_id(theFill, x, y) != 0)
                 continue;
             ee_astar_flood_run(theFill, x, y, inMap->mSize, inMap->mSize, &theCallbacks);
             // CreateChokePoint: a choke point of the fill's tiles (hull, bounds, unique area serials, continent) under

@@ -72,6 +72,18 @@ inline BOOL EEIsStraightStep(long inFromX, long inFromY, long inX, long inY)
     return inFromX == inX || inFromY == inY;
 }
 
+// The A* view's calls of a goal's modifier (ee_sim::astar world_view.rs: its CanEnter and GetModifierCost queries)
+extern "C" bool ee_astar_modifier_can_enter(void* inModifier, uint64_t inTile, int32_t inX, int32_t inY, bool inGoal)
+{
+    return ((EEAIPathGoalModifierBase*)inModifier)->CanEnter((EETile*)(uintptr_t)inTile, inX, inY, inGoal);
+}
+
+extern "C" int32_t ee_astar_modifier_cost(void* inModifier, int32_t inFromX, int32_t inFromY, int32_t inX, int32_t inY,
+                                          int32_t inParentX, int32_t inParentY)
+{
+    return (int32_t)((EEAIPathGoalModifierBase*)inModifier)->GetCost(inFromX, inFromY, inX, inY, inParentX, inParentY);
+}
+
 // Returns a sea (inSea) or space walker's step cost (ee_astar modifiers::step_cost over a quiet view of the world map)
 long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX,
                                        long inParentY)

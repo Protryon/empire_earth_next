@@ -7033,8 +7033,6 @@ float ee_units_pm_compute_roll(int32_t kind, EeUnitsPmUnit unit, float value);
 
 extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
 
-extern float ee_units_pm_host_random();
-
 extern uint8_t ee_units_pm_host_noting();
 
 extern void ee_units_pm_host_note(uint32_t kind,

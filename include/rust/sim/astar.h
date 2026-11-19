@@ -722,6 +722,20 @@ struct EeAStarForestRecord {
   uint16_t id;
 };
 
+/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
+/// tile (outside the playable rhombus it has none), its continent's category
+/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
+/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
+struct EeChokeTileInfo {
+  bool tile;
+  uint8_t category;
+  uint32_t continent_serial;
+  bool resource;
+  bool forest;
+  uint32_t forest_serial;
+  int32_t forest_tiles;
+};
+
 /// `EEAIContinentManager`'s members (`ee_astar_cm_init` / `ee_astar_cm_free` in its ctor and dtor). The grid
 /// pointers are the tables' grids (NULL: none), kept here for the C++'s inline lookups.
 struct EeAStarCmRecord {
@@ -966,20 +980,6 @@ struct EeContinentNeighbor {
 struct EeContinentShore {
   uint16_t id;
   EePoint tile;
-};
-
-/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
-/// tile (outside the playable rhombus it has none), its continent's category
-/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
-/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
-struct EeChokeTileInfo {
-  bool tile;
-  uint8_t category;
-  uint32_t continent_serial;
-  bool resource;
-  bool forest;
-  uint32_t forest_serial;
-  int32_t forest_tiles;
 };
 
 /// The sub sectors as the link walk sees them: C function pointers over `ctx`.
@@ -1400,6 +1400,12 @@ struct EeAStarSubSectorLink {
   uint64_t second;
 };
 
+/// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
+struct EeAStarWorldView {
+  void *map;
+  bool quiet;
+};
+
 /// A tile search's machine and goal as the saved game holds them (save 0.276; the C++ fills and applies it).
 struct EePathSavedMachine {
   int32_t tile[2];
@@ -1649,6 +1655,26 @@ void ee_astar_forest_update_resource_kind(EeAStarForestRecord *r);
 /// # Safety
 /// `r` a forest's record.
 void ee_astar_forest_remove_resource(EeAStarForestRecord *r, long kind);
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) and smooths
+/// `passes - 1` times into the pass's grids, which stay until `ee_astar_choke_grids_free`.
+///
+/// # Safety
+/// `infos` valid for `size * size` records.
+void ee_astar_choke_grids_build(int32_t size,
+                                int32_t passes,
+                                const EeChokeTileInfo *infos);
+
+/// `IsChokeTile(index)` of the pass's grids: a flagged tile that is not an area's own; `*serial` its area serial
+/// (0 when it is not one).
+///
+/// # Safety
+/// `serial` a valid pointer.
+bool ee_astar_choke_grids_tile(int32_t index,
+                               uint32_t *serial);
+
+/// Frees the pass's grids.
+void ee_astar_choke_grids_free();
 
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
@@ -2292,18 +2318,6 @@ void ee_astar_update_tile_values(int32_t size,
                                  const int32_t *weights,
                                  int32_t *values,
                                  int8_t *bytes);
-
-/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
-/// `serials` and smooths `passes - 1` times into the `flags`.
-///
-/// # Safety
-/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
-void ee_astar_choke_build_grids(int32_t size,
-                                int32_t passes,
-                                const EeChokeTileInfo *infos,
-                                int32_t *kinds,
-                                uint32_t *serials,
-                                uint8_t *flags);
 
 /// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
 /// grown sector): the `LinkSubSectors` calls to make, in order.
@@ -2987,6 +3001,42 @@ const uint64_t *ee_astar_sub_sector_neighbors(const EeAStarSubSectorRecord *r, s
 /// # Safety
 /// `r` from `ee_astar_sub_sector_init`.
 void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other);
+
+extern uint64_t ee_astar_view_cm_path_area_at(int32_t x, int32_t y);
+
+extern uint64_t ee_astar_view_cm_hill_at(int32_t x, int32_t y);
+
+extern bool ee_astar_modifier_can_enter(void *modifier,
+                                        uint64_t tile,
+                                        int32_t x,
+                                        int32_t y,
+                                        bool at_goal);
+
+extern int32_t ee_astar_modifier_cost(void *modifier,
+                                      int32_t fx,
+                                      int32_t fy,
+                                      int32_t x,
+                                      int32_t y,
+                                      int32_t px,
+                                      int32_t py);
+
+/// Registers the continent manager's record the views read (EEAIRegisterContinentState).
+///
+/// # Safety
+/// `r` the global manager's record, live for the program.
+void ee_astar_world_view_set_manager(EeAStarCmRecord *r);
+
+/// `EEAIHasResourceUnit(tile)` for the C++ (the continent manager's forests, the choke point pass).
+///
+/// # Safety
+/// `tile` 0 or a live `EETile*`.
+int32_t ee_astar_tile_resource_kind(uint64_t tile);
+
+/// The callbacks over `view` (`EEAIAStarView::Callbacks`).
+///
+/// # Safety
+/// `view` outlives every call of the callbacks.
+EeAStarViewCallbacks ee_astar_world_view_callbacks(EeAStarWorldView *view);
 
 }  // extern "C"
 
