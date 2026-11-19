@@ -5,16 +5,42 @@
 #ifndef LLE_URESOURCEFILE_H
 #define LLE_URESOURCEFILE_H
 
-class FSFileSpec;
-class UWideString;
+#include <string.h>
+#include "lle/UWideString.h"
 
+// The strings come from a Rust table generated from Language.rc (tools/lang_strings.py; ee_util strings.rs), on
+// every system: the original enumerated the module's RT_STRING resources for their language (the first table's,
+// else UGetOSLanguage) and read each string with LoadStringA. The table holds what LoadStringA returned, its
+// language is the script's; an id it lacks fails as LoadStringA did (ERROR_RESOURCE_NAME_NOT_FOUND, 1814).
 class LLE_API UResourceFile {
 public:
-    UResourceFile(HINSTANCE inModule);
-    virtual ~UResourceFile();
+    // records the table's language (the module is kept for GetModule; nothing is read from it)
+    UResourceFile(HINSTANCE inModule) : mModule(inModule), mOwnsModule(false)
+    {
+        uint16_t theLanguage = ee_util_resource_strings_language();
+        this->mLanguage = theLanguage != 0 ? theLanguage : UGetOSLanguage();
+    }
+    virtual ~UResourceFile() {}
     unsigned short GetLanguage() { return this->mLanguage; }
     HINSTANCE GetModule() const { return this->mModule; }
-    long GetString(long inID, UWideString& outString);
+    // a string by id (up to 4499 bytes, as LoadStringA's buffer); a native error when it is missing
+    long GetString(long inID, UWideString& outString)
+    {
+        const char* theText = (const char*)ee_util_resource_string((uint16_t)inID);
+        if (theText == NULL) {
+            ESRecordNativeError(1814);
+            return kErrorNativeError;
+        }
+        if (strlen(theText) < 4499) {
+            outString = theText;
+        } else {
+            char theString[4500];
+            memcpy(theString, theText, 4499);
+            theString[4499] = 0;
+            outString = theString;
+        }
+        return kErrorOK;
+    }
 private:
     HINSTANCE mModule;                      // +0x04
     unsigned short mLanguage;               // +0x08

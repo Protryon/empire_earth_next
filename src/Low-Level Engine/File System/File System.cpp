@@ -4,7 +4,7 @@
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
 
-// Not the umbrella: the inline block holds UDataCompression, FSArchive, FSChunk, UReferenceCounter,
+// Not the umbrella: the inline block holds FSArchive, FSChunk, UReferenceCounter,
 // FSPersistent, TSLockable, FSPersistentList and FSMemoryFile, in that order.
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UWideString.h"
@@ -13,7 +13,6 @@
 #include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TSScheduler.h"
-#include "lle/UDataCompression.h"
 #include "lle/FSArchive.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSChunk.h"

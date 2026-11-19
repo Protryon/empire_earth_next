@@ -6,7 +6,7 @@
 
 class LLE_API UMFastMath {
 public:
-    static void BuildSqrtTable();           // exported 0x10080c07
+    static void BuildSqrtTable() {}         // exported 0x10080c07: empty (the square root table is not built)
 };
 
 #endif

@@ -134,6 +134,31 @@ pub unsafe extern "C" fn ee_error_filter_passes(text: *const c_char) -> bool {
     filters().passes(CStr::from_ptr(text).to_bytes())
 }
 
+/// `ESDebugOut` after its `printf` formatting (lle/LowLevelEngineCore.h): `Filter.txt` read from the startup
+/// directory on the first message that has a startup path (`volume`, `directory`: `gStartupVolume`,
+/// `gStartupDirectory`), then the message sent to the debugger if the filters let it through (a leading '!' always
+/// passes and is not shown).
+///
+/// # Safety
+/// `text` is a NUL-terminated string; `volume` and `directory` are live `UString`s (`EeFsString`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_error_debug_out(
+    text: *const c_char,
+    volume: *const std::ffi::c_void,
+    directory: *const std::ffi::c_void,
+) {
+    let volume = &*volume.cast::<crate::fs::spec::EeFsString>();
+    let directory = &*directory.cast::<crate::fs::spec::EeFsString>();
+    if !ee_error_filters_loaded() && volume.length != 0 && directory.length != 0 {
+        let found = crate::fs::spec::read_text_file(volume, directory, b"Filter.txt");
+        filters().load(found.as_deref());
+    }
+    let message = CStr::from_ptr(text).to_bytes();
+    if filters().passes(message) {
+        crate::plat_core::message::PlatDebugOutput(if message.first() == Some(&b'!') { text.add(1) } else { text });
+    }
+}
+
 /// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).
 #[no_mangle]
 pub extern "C" fn ee_error_initialize() {
