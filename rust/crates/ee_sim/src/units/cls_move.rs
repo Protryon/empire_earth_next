@@ -667,4 +667,4 @@ pub fn flee_attacker<H: MoveHost + ?Sized>(h: &mut H, class: u64, unit: u64) {
 
 #[cfg(test)]
 #[path = "cls_move_tests.rs"]
-mod tests;
+pub(crate) mod tests;

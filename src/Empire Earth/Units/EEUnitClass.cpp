@@ -1932,6 +1932,53 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
             theModifier->Dereference();
         return 0;
     }
+    case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
+    EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
+    if (theTags == NULL || theTags->mPoints.size() == 0)
+        return 0;
+    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+    EETagPointList::Scale(theTransformation, inUnit->GetStats()->GetScale());
+    theTags->mPoints[(size_t)inC]->GetPoint(theOther->mPhysicalModel.GetFrame(), theTransformation, thePoint);
+    io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
+    return 1;
+}
+case EE_UNITS_CLS_CR_SET_ORIENTATION: inUnit->mOrientation = GEOrientation(io->p[0], io->p[1], io->p[2]); return 0;
+case EE_UNITS_CLS_CR_SET_POSITION: {
+    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+    theTransformation.SetPosition(thePoint);
+    inUnit->SetTransformation(theTransformation, true);
+    return 0;
+}
+case EE_UNITS_CLS_CR_SET_SCALE: inUnit->mPhysicalModel.SetScale(io->f); return 0;
+case EE_UNITS_CLS_CR_ROUTE_DOCK: ((EEUnitClass*)(uintptr_t)inB)->RouteDockWaypoint(inUnit); return 0;
+case EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC: return inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] != 0;
+case EE_UNITS_CLS_CR_DECK_GOAL: {
+    EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
+    if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
+        theLocation = inUnit->GetGoal();
+    if (theLocation == NULL) {
+        EEUGRust* theMove = EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false);
+        inUnit->ClearGoalQueue(0);
+        inUnit->SetGoal(theMove, 0, 0);
+    } else
+        EESetLocationGoalPoint(theLocation, thePoint);
+    return 0;
+}
+case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT:
+    thePoint = EELocationGoalPoint(inUnit->GetGoal());
+    io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
+    return 0;
+case EE_UNITS_CLS_CR_HOME_FIRST_SLOT: {
+    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    if (theControl->GetNumSlots() > 0)
+        inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+    else
+        inUnit->Kill(true, false, false);
+    return EEObj(inUnit->mHomeBase);
+}
+case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
+case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, thePoint); return 0;
+case EE_UNITS_CLS_CR_CAN_GET_TO: return gContinentManager.CanGetTo(inUnit, (long)inC, (long)inD);
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;

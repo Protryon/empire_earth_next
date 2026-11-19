@@ -3,62 +3,72 @@
 
 use super::*;
 use crate::units::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields};
+use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use std::collections::BTreeMap;
 
-struct MockUnit {
-    rts: Box<EeUnitsRtsUnitFields>,
-    cx: Box<EeUnitsComplexUnitFields>,
-    class: u64,
-    location: [f32; 3],
-    player_id: i32,
-    max_velocity: f32,
-    waypoints: Vec<Ge3DPoint>,
-    goal: u64,
-    active_goal: u64,
-    blocking: u64,
-    last_attacker: u64,
-    passable: bool,
+pub(crate) struct MockUnit {
+    pub(crate) rts: Box<EeUnitsRtsUnitFields>,
+    pub(crate) cx: Box<EeUnitsComplexUnitFields>,
+    pub(crate) class: u64,
+    pub(crate) location: [f32; 3],
+    pub(crate) player_id: i32,
+    pub(crate) max_velocity: f32,
+    pub(crate) waypoints: Vec<Ge3DPoint>,
+    pub(crate) goal: u64,
+    pub(crate) active_goal: u64,
+    pub(crate) blocking: u64,
+    pub(crate) last_attacker: u64,
+    pub(crate) passable: bool,
+    pub(crate) stats: Box<EeUnitsUnitClassUpgradeFields>,
 }
 
 #[derive(Default, Clone)]
-struct MockGoal {
-    kind: i32,
-    location: Ge3DPoint,
-    b1c: bool,
-    b1d: bool,
-    auto_waypoint: bool,
-    group_path_state: u8,
-    path_attempts: i32,
-    sidestep: u32,
-    target: u64,
+pub(crate) struct MockGoal {
+    pub(crate) kind: i32,
+    pub(crate) location: Ge3DPoint,
+    pub(crate) b1c: bool,
+    pub(crate) b1d: bool,
+    pub(crate) auto_waypoint: bool,
+    pub(crate) group_path_state: u8,
+    pub(crate) path_attempts: i32,
+    pub(crate) sidestep: u32,
+    pub(crate) target: u64,
 }
 
 #[derive(Default)]
-struct Mock {
+pub(crate) struct Mock {
     /// boxed: the records' addresses stay put while the list grows
     #[allow(clippy::vec_box)]
-    classes: Vec<Box<EeUnitsUnitClassFields>>,
-    units: Vec<MockUnit>,
-    goals: Vec<MockGoal>,
+    pub(crate) classes: Vec<Box<EeUnitsUnitClassFields>>,
+    pub(crate) units: Vec<MockUnit>,
+    pub(crate) goals: Vec<MockGoal>,
     /// tile heights (absent: off the map)
-    tiles: BTreeMap<(i32, i32), f32>,
+    pub(crate) tiles: BTreeMap<(i32, i32), f32>,
     /// units standing on a tile
-    on_tile: BTreeMap<(i32, i32), Vec<u64>>,
+    pub(crate) on_tile: BTreeMap<(i32, i32), Vec<u64>>,
     /// tiles nobody can stand on
-    walls: Vec<Tile>,
+    pub(crate) walls: Vec<Tile>,
     /// the bounded path the path manager answers
-    path: Vec<Ge3DPoint>,
-    pursuer: u64,
-    retarget: bool,
+    pub(crate) path: Vec<Ge3DPoint>,
+    pub(crate) pursuer: u64,
+    pub(crate) retarget: bool,
     /// the statements, in order
-    log: Vec<String>,
+    pub(crate) log: Vec<String>,
+    /// cls_carrier.rs': the home bases (0: the first slot's airport), the carriers' tag points, the command, the
+    /// random draw, a space map, the tiles the plane can get to
+    pub(crate) home: BTreeMap<u64, u64>,
+    pub(crate) tags: BTreeMap<(u64, i32), Ge3DPoint>,
+    pub(crate) command: i32,
+    pub(crate) draw: f32,
+    pub(crate) space: bool,
+    pub(crate) reach: Vec<Tile>,
 }
 
 const CLASS: u64 = 0x100;
 const GOAL: u64 = 0x200;
 
 impl Mock {
-    fn map(w: i32, h: i32) -> Mock {
+    pub(crate) fn map(w: i32, h: i32) -> Mock {
         let mut m = Mock::default();
         for x in 0..w {
             for y in 0..h {
@@ -67,14 +77,14 @@ impl Mock {
         }
         m
     }
-    fn class(&mut self, f: impl FnOnce(&mut EeUnitsUnitClassFields)) -> u64 {
+    pub(crate) fn class(&mut self, f: impl FnOnce(&mut EeUnitsUnitClassFields)) -> u64 {
         let mut c =
             EeUnitsUnitClassFields { mInnerCollisionSphere: 0.5, mDomains: MV_MOVEMENT_LAND, ..Default::default() };
         f(&mut c);
         self.classes.push(Box::new(c));
         CLASS + self.classes.len() as u64 - 1
     }
-    fn add(&mut self, x: f32, y: f32, class: u64) -> u64 {
+    pub(crate) fn add(&mut self, x: f32, y: f32, class: u64) -> u64 {
         self.units.push(MockUnit {
             rts: Box::new(EeUnitsRtsUnitFields { mTileX: floor(x) as _, mTileY: floor(y) as _, ..Default::default() }),
             cx: Box::default(),
@@ -88,20 +98,21 @@ impl Mock {
             blocking: 0,
             last_attacker: 0,
             passable: true,
+            stats: Box::default(),
         });
         self.units.len() as u64
     }
-    fn goal(&mut self, g: MockGoal) -> u64 {
+    pub(crate) fn goal(&mut self, g: MockGoal) -> u64 {
         self.goals.push(g);
         GOAL + self.goals.len() as u64 - 1
     }
-    fn u(&mut self, unit: u64) -> &mut MockUnit {
+    pub(crate) fn u(&mut self, unit: u64) -> &mut MockUnit {
         &mut self.units[unit as usize - 1]
     }
-    fn g(&mut self, goal: u64) -> &mut MockGoal {
+    pub(crate) fn g(&mut self, goal: u64) -> &mut MockGoal {
         &mut self.goals[(goal - GOAL) as usize]
     }
-    fn say(&mut self, s: String) {
+    pub(crate) fn say(&mut self, s: String) {
         self.log.push(s);
     }
 }

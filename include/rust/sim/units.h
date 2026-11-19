@@ -793,6 +793,42 @@ constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO = 30;
 /// player `a`'s units from `mFirstUnit` (pushed)
 constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
 
+/// the carrier `a`'s tag point `c` at plane `b`'s frame in its scaled location into `io.p` (0: no tag points)
+constexpr static const int32_t EE_UNITS_CLS_CR_TAG = 73;
+
+/// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_ORIENTATION = 74;
+
+/// unit `a`'s `SetTransformation(its location at io.p, true)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_POSITION = 75;
+
+/// unit `a`'s `mPhysicalModel.SetScale(io.f)`
+constexpr static const int32_t EE_UNITS_CLS_CR_SET_SCALE = 76;
+
+/// class `b`'s `RouteDockWaypoint(unit a)`
+constexpr static const int32_t EE_UNITS_CLS_CR_ROUTE_DOCK = 77;
+
+/// unit `a`'s player's air traffic control of its class is not NULL
+constexpr static const int32_t EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC = 78;
+
+/// unit `a`'s approach goal at `io.p` (the location goal's point, else a new location goal)
+constexpr static const int32_t EE_UNITS_CLS_CR_DECK_GOAL = 79;
+
+/// `EELocationGoalPoint(unit a's goal)` into `io.p`
+constexpr static const int32_t EE_UNITS_CLS_CR_LOCATION_GOAL_POINT = 80;
+
+/// unit `a` without a home base: the first slot's airport, else killed; the home base after
+constexpr static const int32_t EE_UNITS_CLS_CR_HOME_FIRST_SLOT = 81;
+
+/// `gPhysics->mRandom.Generate()` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
+
+/// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
+
+/// `gContinentManager.CanGetTo(unit a, c, d)`
+constexpr static const int32_t EE_UNITS_CLS_CR_CAN_GET_TO = 84;
+
 /// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
 constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
 
@@ -5384,6 +5420,27 @@ int32_t ee_units_cls_passable_flags(const EeUnitsUnitClassFields *c,
 uint8_t ee_units_cls_can_move_on_terrain(const EeUnitsUnitClassFields *c,
                                          const EeUnitsUnitClassUpgradeFields *stats,
                                          int32_t terrain);
+
+/// `EEUnitClass::LandableReturnToAirport(unit)`.
+uint8_t ee_units_cr_return_to_airport(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::RouteDockWaypoint(unit)`.
+void ee_units_cr_route_dock_waypoint(uint64_t unit);
+
+/// `EEUnitClass::ApproachCarrier(unit, steep)`.
+void ee_units_cr_approach_carrier(uint64_t class_, uint64_t unit, uint8_t steep);
+
+/// `EEUnitClass::TakeOffFromCarrier(unit)`.
+void ee_units_cr_take_off_from_carrier(uint64_t class_, uint64_t unit);
+
+/// `EEUnitClass::IsAwayFromGoal(unit)`.
+uint8_t ee_units_cr_is_away_from_goal(uint64_t unit);
+
+/// `EEAirplaneCircleSide(class, unit)`.
+void ee_units_cr_circle_side(uint64_t unit);
+
+/// `EEAirplaneHoldingPattern(class, unit)`.
+void ee_units_cr_holding_pattern(uint64_t class_, uint64_t unit);
 
 extern int64_t ee_units_cls_host(int32_t op,
                                  uint64_t a,
