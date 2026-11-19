@@ -680,6 +680,11 @@ impl EeWonRouteLogic {
             if let Some(r) = crate::persistobj::game_route_op(op, g(0)) {
                 return r;
             }
+            if op == Op::EventNum {
+                if let Some(r) = crate::lobbyevt::route_event_num(g(0), g(1)) {
+                    return r;
+                }
+            }
             if let Some((kind, values)) = conn_request(op, [g(0), g(1), g(2), g(3), g(4)], &|p| self.text_utf16(p)) {
                 ee_won_net::routecpp::request(g(0) as *mut c_void, kind, &values, std::ptr::null_mut());
                 return 0;

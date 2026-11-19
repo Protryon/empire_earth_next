@@ -394,3 +394,33 @@ fn the_disease_and_the_virus_save_and_load_time_frame_age_and_scroll() {
         );
     }
 }
+
+#[test]
+fn the_orbital_names_give_their_speeds() {
+    assert!(is_orbital_name(b"Orbital_CW_30_ring") && is_orbital_name(b"orbital_ccw_45_x"));
+    assert!(!is_orbital_name(b"orbital_c") && !is_orbital_name(b"turret_1"));
+    assert_eq!(orbital_speed(b"orbital_cw_30_ring"), -30.0 * 0.017453292);
+    assert_eq!(orbital_speed(b"ORBITAL_CCW_-45_x"), 45.0 * 0.017453292);
+    // the last '_' bounds the number; none after the prefix: no speed
+    assert_eq!(orbital_speed(b"orbital_ccw_12_a_b"), scan_f32(b"12_a").unwrap() * 0.017453292);
+    assert_eq!(orbital_speed(b"orbital_cw_90"), 0.0);
+    assert_eq!(orbital_speed(b"orbital_cw__x"), 0.0);
+    assert_eq!(orbital_speed(b"wheel_1"), 0.0);
+}
+
+#[test]
+fn the_scanner_reads_as_percent_f() {
+    assert_eq!(scan_f32(b"  2.5e1xyz"), Some(25.0));
+    assert_eq!(scan_f32(b"-.5"), Some(-0.5));
+    assert_eq!(scan_f32(b"7e"), Some(7.0));
+    assert_eq!(scan_f32(b"x1"), None);
+    assert_eq!(scan_f32(b"inf"), Some(f32::INFINITY));
+}
+
+#[test]
+fn the_update_wraps_the_angle() {
+    let mut angle = 3.0f32;
+    // SAFETY: a local angle
+    unsafe { ee_gfx_orbital_update(&mut angle, 1.0, 0.5) };
+    assert!((angle - (3.5 - 6.2831855)).abs() < 1e-6);
+}

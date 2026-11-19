@@ -141,6 +141,9 @@
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
 
+// EEContagionHelper.cpp's collector over complex units (its only instantiation was EECPPlacement.cpp's)
+template long EEGetUnitsInRectangle<EEAnyUnit, std::vector<EEComplexUnit*> >(const U2DRectangle<long>&, std::vector<EEComplexUnit*>&,
+                                                                           const EEAnyUnit&, bool);
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -295,13 +298,6 @@ bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, boo
                std::vector<EEUnit*>& outUnits)
 {
     return ee_units_uu_tile_units_standing(UUHandle(inPlayer), inUnitType, UUHandle(inTile), inIgnoreOwner, 2, &outUnits) != 0;
-}
-
-// Collects the units on a tile that can move out of the way of a unit type; true when there are any
-bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
-               std::vector<EEUnit*>& outUnits)
-{
-    return ee_units_uu_tile_units_standing(UUHandle(inPlayer), inUnitType, UUHandle(inTile), inIgnoreOwner, 1, &outUnits) != 0;
 }
 
 
@@ -649,13 +645,6 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
                                       (float(*)[4][4])&outTransformation->mMatrix[0][0], UUHandle(static_cast<EEUnit*>(inTarget))) != 0;
 }
 
-// Classifies a unit on a tile for a placement: 0 ignored, 1 movable, 2 blocking
-// How inPlayer sees inUnit as a candidate of unit type inUnitType: 0 not at all, 1 a target, 2 otherwise (inferred)
-char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner)
-{
-    return (char)ee_units_uu_tile_unit_standing(UUHandle(inUnit), UUHandle(inPlayer), inUnitType, inIgnoreOwner);
-}
-
 // Turns wall pieces with three or more neighbours into plain junction pieces
 void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer,
                     EEMap* inMap)
@@ -709,13 +698,6 @@ static EEComplexUnit* EESearchComplex(EESearchContext* inContext, uint64_t inHan
     return EESearchUnit(inHandle)->mComplexUnit;
 }
 
-static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
-{
-    EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
-    (*outPosition)[0] = theUnit->mPhysicalModel.GetLocation().GetX();
-    (*outPosition)[1] = theUnit->mPhysicalModel.GetLocation().GetY();
-}
-
 static uint64_t EESearchListNext(void* inContext, uint64_t inUnit, int32_t inPrevious)
 {
     EEUnit* theUnit = EESearchUnit(inUnit);
@@ -738,12 +720,8 @@ static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, E
     case EE_COMBAT_SEARCH_TEST_CANDIDATE:
         return inTarget->mPlayer != thePlayer && thePlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0
             && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
-    case EE_COMBAT_SEARCH_TEST_NATURE:
-        return inTarget->mPlayer->GetPlayerID() == 0;
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
         return EEIsAttackedBy(theUnit, inTarget);
-    case EE_COMBAT_SEARCH_TEST_WALL:
-        return theClass->mIsWall && !theClass->mIsTower;
     case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
         return EECanTargetClass(theUnit, theClass);
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
@@ -780,8 +758,6 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
     switch (inTest) {
     case EE_COMBAT_SEARCH_TEST_NOT_ENEMY:
         return !(theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0);
-    case EE_COMBAT_SEARCH_TEST_NATURE:
-        return theOwner->GetPlayerID() == 0;
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
         return EEIsAttackedBy(theUnit, inTarget);
     case EE_COMBAT_SEARCH_TEST_TECH_KIND_6: {
@@ -792,8 +768,6 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
         return EECanTargetClass(theUnit, inTarget->GetUnitClass());
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
         return theTarget != NULL && theTarget->IsFoundation();
-    case EE_COMBAT_SEARCH_TEST_ALIVE:
-        return inTarget->mHitPoints > 0;
     case EE_COMBAT_SEARCH_TEST_SEEN:
         return EEIsSeenBy(theTarget, theUnit->GetPlayer(), true);
     case EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT:
@@ -830,24 +804,6 @@ static int32_t EESearchTest(void* inContext, uint32_t inTest, uint64_t inUnit)
     if (theContext->mKind == kSearchRegions)
         return EESearchRegionTest(theContext, inTest, (EEComplexUnit*)(uintptr_t)inUnit);
     return EESearchListTest(theContext, inTest, EESearchUnit(inUnit));
-}
-
-static void EESearchTargetValues(void* inContext, uint64_t inUnit, EeCombatSearchTarget* outTarget)
-{
-    EESearchContext* theContext = (EESearchContext*)inContext;
-    if (theContext->mKind == kSearchRegions) {
-        EEComplexUnit* theTarget = (EEComplexUnit*)(uintptr_t)inUnit;
-        outTarget->multiple = theTarget->mUnitClass->mTileSize > 1;
-        outTarget->unit_type = (int32_t)theTarget->mUnitClass->mUnitType;
-        outTarget->attack = theTarget->mStats->GetAttack();
-        outTarget->max_velocity = theTarget->mStats->mMaxVelocity;
-    } else {
-        EEUnit* theTarget = EESearchUnit(inUnit);
-        outTarget->multiple = theTarget->GetUnitClass()->mTileSize > 1;
-        outTarget->unit_type = (int32_t)theTarget->GetUnitClass()->mUnitType;
-        outTarget->attack = theTarget->mStats->GetAttack();
-        outTarget->max_velocity = theTarget->mStats->GetMaxVelocity();
-    }
 }
 
 static float EESearchHitDistance(void* inContext, uint64_t inUnit, float inX, float inY)
@@ -918,8 +874,8 @@ static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int3
 static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
 {
     EeCombatSearchHost theHost = {inContext, gWorld.mMap->mUnitRegions,
-                                  EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
-                                  EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
+                                  EESearchListNext, EESearchDummyHead, EESearchTest, EESearchHitDistance,
+                                  EESearchAttackFactor, EESearchLineBlocked,
                                   EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
     return theHost;
 }
@@ -1308,11 +1264,6 @@ static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
     return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
 }
 
-static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
-{
-    return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
-}
-
 static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
 {
     EENewTargetHost* theHost = (EENewTargetHost*)inContext;
@@ -1329,8 +1280,6 @@ static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHand
         return theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0;
     case EE_COMBAT_TARGET_TEST_DISABLED:
         return theUnit->mIsDisabled && !theUnit->IsProtected();
-    case EE_COMBAT_TARGET_TEST_NATURE:
-        return theOwner->GetPlayerID() == 0;
     case EE_COMBAT_TARGET_TEST_ATTACKED_BY:
         return EEIsAttackedBy(inUnit, theUnit);
     case EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS:
@@ -1361,8 +1310,8 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
 {
     EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
     // (the units' tiles and ids: ee_combat's reads of the unit store)
-    EeCombatTargetHost theHost = {&theContext, gWorld.mMap->mUnitRegions, EENewTargetScreen, EENewTargetMultiple,
-                                  EENewTargetTest, EENewTargetPush};
+    EeCombatTargetHost theHost = {&theContext, gWorld.mMap->mUnitRegions, EENewTargetScreen, EENewTargetTest,
+                                  EENewTargetPush};
     EeCombatFindTargetIn in = {};
     in.left = (int32_t)(inTile->GetX() - inRadius);
     in.top = (int32_t)(inTile->GetY() - inRadius);
@@ -1606,12 +1555,6 @@ bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget)
     return ee_units_uu_within_reach(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inTarget), NULL) != 0;   // uu_world.rs
 }
 
-// Tells whether a location is within a unit's reach of a target
-bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget)
-{
-    return ee_units_uu_within_reach(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inTarget), (const float(*)[3])&inLocation.mX) != 0;
-}
-
 // Tells whether a unit can hit a target from its attach point (a clear line to the drop location)
 bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -1684,12 +1627,6 @@ bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther)
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
 {
     return ee_units_uu_spot(1, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inTarget)), (float(*)[3])&outLocation.mX) != 0;
-}
-
-// Finds a free spot next to a target (or the nearest piece of its group) for a unit
-bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
-{
-    return ee_units_uu_spot(2, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inTarget)), (float(*)[3])&outLocation.mX) != 0;
 }
 
 // Finds a place for a unit to attack a target from (around a wall it stands in, or next to it)
@@ -1908,12 +1845,6 @@ long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>&
 long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>& outUnits)
 {
     return ee_units_uu_units_in_radius(inCenter.mX, inCenter.mY, inRadius, &outUnits);   // ee_units uu_reads.rs
-}
-
-// Returns the living unit of a type on a tile, or NULL
-EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType)
-{
-    return UUUnit(ee_units_uu_tile_unit_of_type(inTile.mX, inTile.mY, (uint32_t)inUnitType));
 }
 
 // Collects a player's units of a type; their number

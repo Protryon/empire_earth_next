@@ -89,7 +89,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::Root: return (intptr_t)GetLobbyRoot();
     case O::InitStatus: {
         const GUIString& aDescription = b != 0 ? *T(b) : c >= 0 ? gLobbyResources[c].mString : gEmptyGUIString;
-        LobbyBroadcastEvent(new LoginInitStatusEvent(gLobbyResources[a].mString, aDescription, (d & 1) != 0, (int)(d >> 8)), true);
+        LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, aDescription, (d & 1) != 0, (int)(d >> 8)), true);
         return 0;
     }
     case O::SetVersionStatus: LobbySetVersionStatus((WONStatus)a); return 0;
@@ -144,7 +144,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::ResetRoomDir: LobbyResetRoomDirServers(); return 0;
     case O::PromotionImage: {
         SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(R(a)->GetBytes(EE_WON_HTTPGET_LOCAL_PATH).c_str());
-        LobbyBroadcastEvent(new SetCrossPromotionEvent(image.get(), aLogic->mCrossPromotion), true);
+        LobbyBroadcastEvent(SetCrossPromotionEvent(image.get(), aLogic->mCrossPromotion), true);
         return 0;
     }
     case O::SetPromotionLink: aLogic->mCrossPromotion.assign(reinterpret_cast<const char*>(a), (size_t)b); return 0;
@@ -167,13 +167,13 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     }
     case O::OpNum: return (intptr_t)R(a)->GetNum((int)b, c);
     case O::SaveTOU: return InitSaveTOU(R(a), (int)b);
-    case O::BroadcastDocument: LobbyBroadcastEvent(new GotHTTPDocumentEvent(R(a)), true); return 0;
+    case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
     case O::DocBytes: {
         ByteBufferPtr document = R(a)->GetHttpDocument((int)b);
         *reinterpret_cast<size_t*>(c) = document.get() != NULL ? (size_t)document->length() : (size_t)-1;
         return (intptr_t)(document.get() != NULL ? document->data() : NULL); // the op keeps the document
     }
-    case O::BroadcastNoPromotion: LobbyBroadcastEvent(new SetCrossPromotionEvent(NULL, std::string("")), true); return 0;
+    case O::BroadcastNoPromotion: LobbyBroadcastEvent(SetCrossPromotionEvent(NULL, std::string("")), true); return 0;
     case O::DirReady:
         return config != NULL && LobbyGetAccountServers() != NULL && LobbyGetAuthServers() != NULL &&
                LobbyGetFirewallDetectServers() != NULL && LobbyGetDirServers() != NULL;

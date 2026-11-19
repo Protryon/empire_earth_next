@@ -17,6 +17,28 @@ struct EeUnitsPlayerWonders;
 /// The queued improvements: per unit type the running timer (`first`) and the improvements in order.
 struct EeUnitsQueued;
 
+/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
+struct EeUnitsRtsMapFields {
+  /// the constructor's tile size (copied to `gMapTileSize`)
+  float mF1955F4;
+  float mF1955F8;
+  float mF1955FC;
+  long mL195600;
+  long mL195604;
+  long mL195608;
+  long mL19560C;
+  /// saved: `Create`'s height
+  long mL195610;
+  /// saved: `Create`'s width
+  long mL195614;
+  /// tiles per side
+  long mSize;
+  /// saved: the player count
+  unsigned long mU19561C;
+  /// the tiles exist
+  bool mB195620;
+};
+
 /// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
 struct EeUnitsUnitClassFields {
   long mAirTrafficType;
@@ -401,28 +423,6 @@ struct EeUnitsComplexUnitFields {
   bool mHasShiftQueuedBuild;
 };
 
-/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
-struct EeUnitsRtsMapFields {
-  /// the constructor's tile size (copied to `gMapTileSize`)
-  float mF1955F4;
-  float mF1955F8;
-  float mF1955FC;
-  long mL195600;
-  long mL195604;
-  long mL195608;
-  long mL19560C;
-  /// saved: `Create`'s height
-  long mL195610;
-  /// saved: `Create`'s width
-  long mL195614;
-  /// tiles per side
-  long mSize;
-  /// saved: the player count
-  unsigned long mU19561C;
-  /// the tiles exist
-  bool mB195620;
-};
-
 /// `EEMap`'s plain members (ee/EEMap.h), in the class's order.
 struct EeUnitsMapFields {
   /// saved
@@ -667,6 +667,9 @@ struct EeWorldLayout {
   /// `EEButtonObject*`)
   uint64_t stats_unit_class;
   uint64_t stats_button;
+  /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
+  uint64_t physics_pointer;
+  uint64_t physics_saved;
 };
 
 /// The check's counts and digest.

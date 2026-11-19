@@ -92,8 +92,6 @@
 358e50 35b9be WONLobby/LobbyServiceSupport.cpp
 358f70 3590f7 WONLobby/LobbyEventHooks.cpp
 359120 3610a8 WONLobby/LobbyDispatch.cpp
-3593a0 35b0ed WONLobby/LobbyEvents.cpp
-35b0f0 35b1ed WONLobby/LobbySyncGameEvent.cpp
 35b1f0 361417 WONLobby/LobbySingletonAccess.cpp
 35b490 35b4fe WONLobby/LobbyAuthContextAccess.cpp
 35b730 361201 WONLobby/LobbyScreenAccess.cpp

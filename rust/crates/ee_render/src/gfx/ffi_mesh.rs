@@ -8,6 +8,7 @@ use std::ffi::c_void;
 use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::beam::{self, EeGfxBeamVertex};
+use crate::gfx::effect_state::EeGfxEffectRecord;
 use crate::gfx::effect_store::EffectStore;
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::farm::{self, EeGfxFarmField, FarmTerrain};
@@ -364,4 +365,76 @@ pub extern "C" fn ee_gfx_effects_destroyed_len(s: *const EeGfxEffectStore) -> us
 #[no_mangle]
 pub extern "C" fn ee_gfx_effects_destroyed_at(s: *const EeGfxEffectStore, i: usize) -> u32 {
     store(s).destroyed_at(i)
+}
+
+/// TEST ONLY (tools/sim_capture.py EFMU): the manager's state folded into six words: the last handle, the index's,
+/// the list's and the destruction queue's sizes, and an FNV-1a 64 (low, high) of the index (handle, the effect's
+/// kind and own handle, in handle order), the list (own handle and kind from the head) and the queue.
+pub fn capture_words(s: &EffectStore, record: &dyn Fn(usize) -> (u32, u32)) -> [u32; 6] {
+    fn word(hash: &mut u64, value: u32) {
+        for i in 0..4 {
+            *hash ^= u64::from((value >> (i * 8)) & 0xff);
+            *hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    let mut hash = 0xcbf29ce484222325u64;
+    let mut cursor = 0u64;
+    while let Some((handle, effect)) = s.at_or_after(cursor) {
+        let (kind, own) = record(effect);
+        word(&mut hash, handle);
+        word(&mut hash, kind);
+        word(&mut hash, own);
+        cursor = u64::from(handle) + 1;
+    }
+    let mut listed = 0u32;
+    let mut effect = s.head();
+    while effect != 0 {
+        let (kind, own) = record(effect);
+        word(&mut hash, own);
+        word(&mut hash, kind);
+        listed += 1;
+        effect = s.next(effect);
+    }
+    for i in 0..s.destroyed_len() {
+        word(&mut hash, s.destroyed_at(i));
+    }
+    [s.last_handle(), s.count() as u32, listed, s.destroyed_len() as u32, hash as u32, (hash >> 32) as u32]
+}
+
+/// EFMU's six words into `out` (`record`: an effect's record, as the manager's host answers it).
+///
+/// # Safety
+/// `s` is a live store whose effects are live; `out` holds six words.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effects_capture(
+    s: *const EeGfxEffectStore,
+    record: extern "C" fn(context: *mut c_void, effect: *mut c_void) -> *mut EeGfxEffectRecord,
+    out: *mut u32,
+) {
+    let words = capture_words(store(s), &|e| {
+        // SAFETY: a live effect's record
+        let r = unsafe { &*record(std::ptr::null_mut(), e as *mut c_void) };
+        (r.kind as u32, r.handle)
+    });
+    // SAFETY: the caller's contract
+    unsafe { std::ptr::copy_nonoverlapping(words.as_ptr(), out, 6) };
+}
+
+#[cfg(test)]
+mod capture_tests {
+    use super::*;
+
+    #[test]
+    fn efmu_folds_the_index_the_list_and_the_queue() {
+        let mut s = EffectStore::new();
+        let a = s.add(0x100, true, 0);
+        let b = s.add(0x200, true, 0);
+        s.queue_destroy(a);
+        let words = capture_words(&s, &|e| ((e / 0x100) as u32, if e == 0x100 { a } else { b }));
+        assert_eq!(words[0], s.last_handle());
+        assert_eq!(words[1..4], [2, 2, 1]);
+        let empty = capture_words(&EffectStore::new(), &|_| (0, 0));
+        assert_eq!(empty[4..], [0x84222325, 0xcbf29ce4]);
+        assert_ne!(words[4..], empty[4..]);
+    }
 }

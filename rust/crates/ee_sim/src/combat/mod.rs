@@ -28,6 +28,7 @@ pub mod impact;
 pub mod launch;
 pub mod leaves;
 pub mod pursuer;
+pub mod query_views;
 pub mod reads;
 pub mod regions;
 pub mod screen;
