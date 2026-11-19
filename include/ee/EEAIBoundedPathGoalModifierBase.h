@@ -8,6 +8,7 @@
 // Requires lle/UReferenceCounter.h, ee/EEAIPathGoalModifierBase.h.
 #ifndef EE_EEAIBOUNDEDPATHGOALMODIFIERBASE_H
 #define EE_EEAIBOUNDEDPATHGOALMODIFIERBASE_H
+#include "rust/sim/astar.h"
 
 // A search node as the bounded modifiers see one (CheckNode: the tile; the links and costs are the Rust search's and
 // zero here). Names are provisional.
