@@ -827,7 +827,7 @@ static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
         case EE_NETMSG_WORLD_HUMANS: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
         }
         return 0;
-    case EE_NETMSG_OP_DECISION: EEMessageCaptureDecision((unsigned int)i[0], (const long long*)&i[2], (unsigned int)i[1]); return 0;
+    case EE_NETMSG_OP_DECISION: ee_netmsg_capture_decision((uint32_t)i[0], &i[2], (uint32_t)i[1]); return 0;
     case EE_NETMSG_OP_CHAT_TEXT: {
         UWideString theText;
         gResource->GetString(kNetMsgTexts[i[0]], theText);

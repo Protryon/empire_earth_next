@@ -1855,6 +1855,19 @@ void ee_netmsg_execute(EeNetMsgHostFn host,
 /// `sink` is the capture's C++ function.
 void ee_netmsg_capture_sweep(void (*sink)(uint8_t kind, const uint8_t *data, size_t size));
 
+/// One decision's record (the Rust bodies' `EE_NETMSG_OP_DECISION`).
+///
+/// # Safety
+/// `values` points to `count` values.
+void ee_netmsg_capture_decision(uint32_t kind, const int64_t *values, uint32_t count);
+
+/// The decisions' sweep (EE-SIM's capture, under the world): the tables once a process, then every player's.
+/// `rates` holds the world table's trade rates by resource (7 of them; `EEGetTradePrice`'s, 1 for gold).
+///
+/// # Safety
+/// `rates` points to 7 values; the caller holds the world.
+void ee_netmsg_capture_decision_sweep(const float *rates);
+
 uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
 
 uint8_t ee_netmsg_selection_copies(uint8_t is_local, uint8_t message_id, uint8_t current_id);

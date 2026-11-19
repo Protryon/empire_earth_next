@@ -128,6 +128,7 @@
 #include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
 #include "rust/sim/combat.h"
+#include "rust/sim/netmsg.h"   // the decisions' sweep
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -1007,7 +1008,13 @@ void HostSweep(int inKind, long inArg)
         EECombatCaptureSweep();
         EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
         EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
-        EEMessageCaptureDecisionSweep();   // the Execute decisions' sweep (ee/EEMessageCapture.h)
+        {   // the Execute decisions' sweep (ee_sim netmsg decisions.rs): EEGetTradePrice's rates by resource
+            const float theRates[7] = {1.0f, 1.0f, gWorldTable.GetFloatValue(kWorldTradeRateFoodWood),
+                                       gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood),
+                                       gWorldTable.GetFloatValue(kWorldTradeRateStoneIron), 1.0f,
+                                       gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
+            ee_netmsg_capture_decision_sweep(theRates);
+        }
         EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
         EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
         EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
