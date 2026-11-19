@@ -10,18 +10,6 @@ use core::ffi::c_void;
 
 use crate::screens::status_button::*;
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    use crate::screens::main_form::EeScreensMainFormIo;
-
-    extern "C" {
-        pub fn ee_screenscpp_main_form(call: *mut c_void, op: u32, a: i64, b: i64, io: *mut EeScreensMainFormIo)
-            -> i64;
-    }
-}
-
 struct Host(*mut c_void);
 
 impl ButtonHost for Host {
@@ -42,8 +30,9 @@ pub extern "C" fn ee_screens_status_button_op(call: *mut c_void, op: u32, a: i64
             return 0;
         }
     }
-    // SAFETY: call is the form's live call record
-    form_op(&mut |op, a, b, io| unsafe { sys::ee_screenscpp_main_form(call, op, a, b, io) }, op, a, b, c)
+    // the form's ops through the form's host adapter (its Rust answers first: the field records, the views,
+    // the strings), as the form's own calls
+    form_op(&mut |op, a, b, io| crate::screens::main_form_ffi::op(call, op, a, b, io), op, a, b, c)
 }
 
 /// `EEUIFMGStatusButton`'s member `which` (`EE_SCREENS_SB_DO_*`) over the form's call record: `CopyData`'s
