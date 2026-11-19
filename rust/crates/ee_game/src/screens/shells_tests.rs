@@ -165,3 +165,19 @@ fn the_error_log_releases_the_mouse_unless_the_scroll_bar_holds_it() {
     k.virt(&ctx(&h), EE_SCREENS_SV_MOUSE_L_DOWN, 0, 0, &mut f);
     assert_eq!(h.ops().last(), Some(&(EE_SCREENS_SH_SCROLL_CAPTURED, 0, 0)));
 }
+
+#[test]
+fn a_form_kind_reaches_the_form_base_and_its_own_virtuals() {
+    let h = Rec::new(&[(EE_SCREENS_SH_FORM_BASE + EE_SCREENS_SV_UPDATE_MOUSE, 7)]);
+    let c = ctx(&h);
+    let mut f = [1.0, 2.0, 3.0, 4.0];
+    assert_eq!(c.form_base(EE_SCREENS_SV_UPDATE_MOUSE, 0, 0, &mut f), 7);
+    c.form_self(EE_SCREENS_SV_OPEN);
+    assert_eq!(
+        h.ops(),
+        vec![(EE_SCREENS_SH_FORM_BASE + EE_SCREENS_SV_UPDATE_MOUSE, 0, 0), (EE_SCREENS_SH_FORM_SELF, 32, 0)]
+    );
+    // the form ops sit above every control base call
+    const { assert!(EE_SCREENS_SH_FORM_BASE > EE_SCREENS_SH_BASE + EE_SCREENS_SV_SET_RECTANGLE) };
+    const { assert!(EE_SCREENS_SH_FORM_SELF < EE_SCREENS_SH_BASE) };
+}

@@ -19,16 +19,23 @@
 #include "lle/UIEditBox.h"
 #include "lle/UIComboBox.h"
 #include "lle/UISlider.h"
+#include "lle/UIForm.h"
 #include "ee/EEUIRustControl.h"
 
 class EEUIShell {
 public:
-    // the shell of inControl, NULL for another control
+    // the shell of inControl (inForm), NULL for another control (form)
     static EEUIShell* Of(UIControl* inControl) { return dynamic_cast<EEUIShell*>(inControl); }
+    static EEUIShell* Of(UIForm* inForm) { return dynamic_cast<EEUIShell*>(inForm); }
     // the kind's op on inControl (0 for a control that is not a shell)
     static int64_t Op(UIControl* inControl, uint32_t inOp, int64_t inA = 0, int64_t inB = 0, float* ioF = NULL)
     {
         EEUIShell* theShell = Of(inControl);
+        return theShell ? ee_screens_shell_op(theShell->mState, inOp, inA, inB, ioF) : 0;
+    }
+    static int64_t Op(UIForm* inForm, uint32_t inOp, int64_t inA = 0, int64_t inB = 0, float* ioF = NULL)
+    {
+        EEUIShell* theShell = Of(inForm);
         return theShell ? ee_screens_shell_op(theShell->mState, inOp, inA, inB, ioF) : 0;
     }
     const char* KindName() const { return ee_screens_shell_name(this->mState); }
@@ -39,7 +46,7 @@ public:
     virtual void Keyboard(bool inCapture) = 0;
     virtual ~EEUIShell() { ee_screens_shell_free(this->mState); }
 protected:
-    void Make(uint32_t inKind, UIControl* inControl, const std::vector<int64_t>& inArgs)
+    void Make(uint32_t inKind, void* inControl, const std::vector<int64_t>& inArgs)
     {
         this->mState = ee_screens_shell_new(inKind, inControl, inArgs.data(), (uint32_t)inArgs.size());
         this->mOver = ee_screens_shell_overrides(this->mState);
@@ -272,6 +279,53 @@ public:
     EE_SHELL_SELF
     const GE2DPoint& MouseLocation() const { return this->GetMouseLocation(); }
     void Capture() { this->CaptureMouse(); }
+};
+
+// a form (UIForm): its virtuals the kind's when it overrides them; a kind reaches the form's base calls and its own
+// virtuals through EE_SCREENS_SH_FORM_BASE + v and EE_SCREENS_SH_FORM_SELF (the host's object is the UIForm*)
+#define EE_SHELL_RECT(Base, Name, V, Ret, Back) \
+    virtual Ret Name(const GERectangle& inRectangle) \
+    { \
+        float f[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()}; \
+        if (this->Over(V)) return (Ret)this->Virt(V, 0, 0, f); \
+        Back Base::Name(inRectangle); \
+    }
+class EEUIShellForm : public UIForm, public EEUIShell {
+public:
+    EEUIShellForm(uint32_t inKind, const std::vector<int64_t>& inArgs, UIManager* inManager, const UIDbDataForms& inData,
+                  bool inUseGDIForText)
+        : UIForm(inManager, inData, inUseGDIForText)
+    {
+        this->Make(inKind, static_cast<UIForm*>(this), inArgs);
+    }
+    EEUIShellForm(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inControlCount,
+                  unsigned long inControlGroupCount, UIManager* inManager, unsigned long inFormID, bool inUseGDIForText)
+        : UIForm(inControlCount, inControlGroupCount, inManager, inFormID, inUseGDIForText)
+    {
+        this->Make(inKind, static_cast<UIForm*>(this), inArgs);
+    }
+    EE_SHELL_VOID(UIForm, Activate, EE_SCREENS_SV_ACTIVATE)
+    EE_SHELL_VOID(UIForm, Deactivate, EE_SCREENS_SV_DEACTIVATE)
+    EE_SHELL_VOID(UIForm, SetHelpTextPopupLocation, EE_SCREENS_SV_HELP_POPUP)
+    EE_SHELL_LONG(UIForm, UpdateKeyboard, EE_SCREENS_SV_UPDATE_KEYBOARD)
+    EE_SHELL_LONG(UIForm, UpdateMouse, EE_SCREENS_SV_UPDATE_MOUSE)
+    EE_SHELL_RECT(UIForm, RelayoutForm, EE_SCREENS_SV_RELAYOUT, void, return)
+    virtual long UpdateTranslatedKey(const char* inKey, short inRepeat)
+    {
+        return this->Over(EE_SCREENS_SV_TRANSLATED_KEY) ? (long)this->Virt(EE_SCREENS_SV_TRANSLATED_KEY, (int64_t)inKey, inRepeat)
+                                                        : UIForm::UpdateTranslatedKey(inKey, inRepeat);
+    }
+    virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    virtual int64_t SelfCall(uint32_t inVirtual);
+    virtual void Keyboard(bool inCapture) {}
+protected:
+    EE_SHELL_RECT(UIForm, DrawBackground, EE_SCREENS_SV_DRAW_BACKGROUND, long, return)
+    EE_SHELL_VOID(UIForm, Close, EE_SCREENS_SV_CLOSE)
+    EE_SHELL_LONG(UIForm, CopyData, EE_SCREENS_SV_COPY_DATA)
+    EE_SHELL_LONG(UIForm, DrawPolygons, EE_SCREENS_SV_DRAW_POLYGONS)
+    EE_SHELL_LONG(UIForm, DrawTextA, EE_SCREENS_SV_DRAW_TEXT)
+    EE_SHELL_VOID(UIForm, Open, EE_SCREENS_SV_OPEN)
+    EE_SHELL_RECT(UIForm, SetRectangle, EE_SCREENS_SV_SET_RECTANGLE, void, return)
 };
 
 #endif

@@ -79,6 +79,44 @@ int64_t EEUIShellControl::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB,
     return 0;
 }
 
+int64_t EEUIShellForm::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
+{
+    GERectangle r = ioF != NULL ? GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]) : GERectangle();
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: UIForm::Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: UIForm::Deactivate(); return 0;
+    case EE_SCREENS_SV_HELP_POPUP: UIForm::SetHelpTextPopupLocation(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return UIForm::UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return UIForm::UpdateMouse();
+    case EE_SCREENS_SV_RELAYOUT: UIForm::RelayoutForm(r); return 0;
+    case EE_SCREENS_SV_TRANSLATED_KEY: return UIForm::UpdateTranslatedKey(reinterpret_cast<const char*>(inA), (short)inB);
+    case EE_SCREENS_SV_DRAW_BACKGROUND: return UIForm::DrawBackground(r);
+    case EE_SCREENS_SV_CLOSE: UIForm::Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return UIForm::CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return UIForm::DrawPolygons();
+    case EE_SCREENS_SV_DRAW_TEXT: return UIForm::DrawTextA();
+    case EE_SCREENS_SV_OPEN: UIForm::Open(); return 0;
+    case EE_SCREENS_SV_SET_RECTANGLE: UIForm::SetRectangle(r); return 0;
+    }
+    return 0;
+}
+
+// the form's own virtual inVirtual through its vtable (a kind's override runs)
+int64_t EEUIShellForm::SelfCall(uint32_t inVirtual)
+{
+    switch (inVirtual) {
+    case EE_SCREENS_SV_ACTIVATE: this->Activate(); return 0;
+    case EE_SCREENS_SV_DEACTIVATE: this->Deactivate(); return 0;
+    case EE_SCREENS_SV_UPDATE_KEYBOARD: return this->UpdateKeyboard();
+    case EE_SCREENS_SV_UPDATE_MOUSE: return this->UpdateMouse();
+    case EE_SCREENS_SV_CLOSE: this->Close(); return 0;
+    case EE_SCREENS_SV_COPY_DATA: return this->CopyData();
+    case EE_SCREENS_SV_DRAW_POLYGONS: return this->DrawPolygons();
+    case EE_SCREENS_SV_OPEN: this->Open(); return 0;
+    }
+    return 0;
+}
+
 int64_t EEUIShellRadio::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
 {
     switch (inVirtual) {
@@ -219,6 +257,10 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
 {
     UIControl* c = static_cast<UIControl*>(inControl);
     UWideString theText;
+    if (inOp >= EE_SCREENS_SH_FORM_BASE)   // a form shell's (its host object is the UIForm*)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->BaseCall(inOp - EE_SCREENS_SH_FORM_BASE, a, b, f);
+    if (inOp == EE_SCREENS_SH_FORM_SELF)
+        return static_cast<EEUIShellForm*>(static_cast<UIForm*>(inControl))->SelfCall((uint32_t)a);
     if (inOp >= EE_SCREENS_SH_BASE)
         return EEUIShell::Of(c)->BaseCall(inOp - EE_SCREENS_SH_BASE, a, b, f);
     switch (inOp) {
