@@ -230,6 +230,16 @@ struct EeAppTeamsWorld {
   bool (*enemy)(void*, uint32_t, uint32_t);
 };
 
+/// `EEVoting`'s members (the class's base; zero when made).
+struct EeAppVoting {
+  /// the proposed edict (0: none)
+  int16_t mEdict;
+  int16_t mU06;
+  bool mB08;
+  bool mB09;
+  bool mB0A;
+};
+
 extern "C" {
 
 /// `ActivateUnit` after its checks -> true when queued (take a reference).
@@ -391,6 +401,12 @@ void ee_app_teams_set(size_t team,
 size_t ee_app_teams_get(size_t team,
                         uint32_t *out,
                         size_t cap);
+
+/// `EEVoting::Propose`
+///
+/// # Safety
+/// `v` is the world's live vote.
+long ee_app_voting_propose(EeAppVoting *v, uint16_t edict, long arg);
 
 }  // extern "C"
 
