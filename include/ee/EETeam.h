@@ -24,13 +24,7 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x136d03
     // 0x3fe37 (ret 4): whether player inPlayerID belongs to the team (EECPIntelligence 0x8123d) (provisional name)
     bool ContainsPlayer(unsigned long inPlayerID);
-    // (provisional names)
-    EETeam(const std::vector<unsigned long>& inPlayers);   // 0x13d0d3 (mU04 = inPlayers, then the victory condition)
-    EETeam(long inPlayer1, long inPlayer2);       // 0x13d076 (AddPlayer both)
-    void Merge(const EETeam& inTeam);       // 0x136b6d (AddPlayer for each of inTeam's players)
-    void AddPlayer(unsigned long inPlayer); // 0x136ba1 (push_back unless present; pushes &inPlayer itself: the element type)
-    void RemovePlayer(long inPlayer, std::vector<unsigned long>& outPlayers);   // 0x136bfc (outPlayers = the players without inPlayer)
-    bool Contains(long inPlayer1, long inPlayer2);
+    // (the team bodies: Merge, AddPlayer, RemovePlayer, Contains, the two-player and list ctors: ee_sim app teams.rs)
     long GetVictoryState();                 // 0x136d5e (mVictoryCondition's slot +0x04)
     // inline (out of line through the ICF-folded COMDAT 0x91f11)
     unsigned long GetNumPlayers() const { return this->mPlayers.size(); }

@@ -4,19 +4,14 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/FSFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EESMObject.h"
-#include "ee/EESMTConditionWrapper.h"
-#include "ee/EESMTEffectWrapper.h"
 #include <algorithm>
 #include "ee/EESMTrigger.h"
-#include "ee/EESMCondition.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
@@ -25,13 +20,8 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
@@ -268,85 +258,20 @@ long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEU
     return ee_scenario_unit_attribute(&theHost, (uint32_t)inAttribute, inPercent);
 }
 
-// a unit's member for GetUnitAttribute (ee_scenario attribute.rs EE_SCENARIO_UNIT_*, _STATS_*, _CLASS_*): integers and
-// bools as they are, floats as their bits; a class field + EE_SCENARIO_OF_STATS reads the upgrade's class
+// a unit's member for GetUnitAttribute that no record holds (ee_scenario attribute.rs; unit_views.rs reads the others
+// from the world views): the unit variables (mUnitVariables[inField - EE_SCENARIO_UNIT_VARIABLE]) and the physical
+// model's scale (EE_SCENARIO_UNIT_SCALE, its bits)
 int64_t EESMUnitField(EEUnit* inUnit, int32_t inField)
 {
     EEComplexUnit* theComplex = inUnit->GetComplexUnit();
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    EEUnitClass* theClass = inField >= EE_SCENARIO_OF_STATS ? theStats->mUnitClass : inUnit->GetUnitClass();
-    auto Bits = [](float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; };
     int32_t theField = inField >= EE_SCENARIO_OF_STATS ? inField - EE_SCENARIO_OF_STATS : inField;
     if (theField >= EE_SCENARIO_UNIT_VARIABLE && theField < EE_SCENARIO_UNIT_VARIABLE + 3)
         return theComplex->mUnitVariables[theField - EE_SCENARIO_UNIT_VARIABLE];
-    if (theField >= EE_SCENARIO_STATS_ARMOR && theField < EE_SCENARIO_STATS_ARMOR + 6)
-        return Bits(theStats->mArmor[theField - EE_SCENARIO_STATS_ARMOR]);
-    if (theField >= EE_SCENARIO_CLASS_ARMOR && theField < EE_SCENARIO_CLASS_ARMOR + 6)
-        return theClass->mArmor[theField - EE_SCENARIO_CLASS_ARMOR];
-    switch (theField) {
-    case EE_SCENARIO_UNIT_HAS_COMPLEX: return theComplex != NULL;
-    case EE_SCENARIO_UNIT_HAS_STATS: return theStats != NULL;
-    case EE_SCENARIO_UNIT_HAS_CLASS: return theClass != NULL;
-    case EE_SCENARIO_UNIT_HIT_POINTS: return inUnit->GetHitPoints();
-    case EE_SCENARIO_UNIT_RESOURCE_TYPE: return inUnit->mResourceType;
-    case EE_SCENARIO_UNIT_RESOURCE_AMOUNT: return (long)inUnit->mResourceAmount;
-    case EE_SCENARIO_UNIT_FLIGHT_TIME: return (long)theComplex->mFlightTime;
-    case EE_SCENARIO_UNIT_CARGO: return (long)theComplex->GetNumCargoUnits();
-    case EE_SCENARIO_UNIT_GARRISON: return theComplex->mGarrisonCount;
-    case EE_SCENARIO_UNIT_AMMUNITION: return (long)theComplex->mAmmunition;
-    case EE_SCENARIO_UNIT_PAUSED: return theComplex->mIsAnimationPaused;
-    case EE_SCENARIO_UNIT_RELOAD_TIMER: return (long)theComplex->mReloadTimer;
-    case EE_SCENARIO_UNIT_SCALE: return Bits(theComplex->mPhysicalModel.GetScale());
-    case EE_SCENARIO_UNIT_POWER: return theComplex->GetPower();
-    case EE_SCENARIO_UNIT_ROTTING: return (long)theComplex->mRottingAwayTime;
-    case EE_SCENARIO_UNIT_BUILT: return theComplex->mIsBuilt;
-    case EE_SCENARIO_STATS_MAX_HIT_POINTS: return theStats->mMaxHitPoints;
-    case EE_SCENARIO_STATS_CARRY: return theStats->mCarryAmount;
-    case EE_SCENARIO_STATS_FLIGHT_TIME: return theStats->mFlightTime;
-    case EE_SCENARIO_STATS_MAX_CARRY: return theStats->mMaxObjectCarry;
-    case EE_SCENARIO_STATS_RELOAD: return theStats->mReloadTime;
-    case EE_SCENARIO_STATS_SCALE: return Bits(theStats->mScale);
-    case EE_SCENARIO_STATS_POWER: return theStats->mPower;
-    case EE_SCENARIO_STATS_ATTACK: return Bits(theStats->mAttack);
-    case EE_SCENARIO_STATS_WORK_RATE: return theStats->mWorkRate;
-    case EE_SCENARIO_STATS_LEADERSHIP: return Bits(theStats->mLeadership);
-    case EE_SCENARIO_STATS_REPAIR: return theStats->mRepairRate;
-    case EE_SCENARIO_STATS_HEALING: return theStats->mHealingPoints;
-    case EE_SCENARIO_STATS_RANGE: return Bits(theStats->mRange);
-    case EE_SCENARIO_STATS_LINE_OF_SIGHT: return Bits(theStats->mLineOfSight);
-    case EE_SCENARIO_STATS_VELOCITY: return Bits(theStats->mMaxVelocity);
-    case EE_SCENARIO_STATS_INITIALIZED: return theStats->mIsInitialized;
-    case EE_SCENARIO_STATS_CAMERA_FOCUS: return Bits(theStats->mCameraFocus);
-    case EE_SCENARIO_CLASS_GARRISON: return theClass->mGarrisonCapacity;
-    case EE_SCENARIO_CLASS_AMMUNITION: return theClass->mAmmunition;
-    case EE_SCENARIO_CLASS_ROTTING: return theClass->mRottingTime;
-    case EE_SCENARIO_CLASS_POWER: return theClass->mPower;
-    case EE_SCENARIO_CLASS_RELOAD: return theClass->mReloadTime;
-    case EE_SCENARIO_CLASS_ATTACK: return theClass->mAttack;
-    case EE_SCENARIO_CLASS_WORK_RATE: return theClass->mWorkRate;
-    case EE_SCENARIO_CLASS_FLIGHT_TIME: return theClass->mFlightTime;
-    case EE_SCENARIO_CLASS_LEADERSHIP: return theClass->mLeadership;
-    case EE_SCENARIO_CLASS_MAX_CARRY: return theClass->mMaxObjectCarry;
-    case EE_SCENARIO_CLASS_REPAIR: return theClass->mRepairRate;
-    case EE_SCENARIO_CLASS_HIT_POINTS: return theClass->mHitPoints;
-    case EE_SCENARIO_CLASS_CARRY: return theClass->mCarryAmount;
-    case EE_SCENARIO_CLASS_HEALING: return theClass->mHealingPoints;
-    case EE_SCENARIO_CLASS_RANGE: return Bits(theClass->mRange);
-    case EE_SCENARIO_CLASS_LINE_OF_SIGHT: return Bits(theClass->mLineOfSight);
-    case EE_SCENARIO_CLASS_VELOCITY: return Bits(theClass->mMaxVelocity);
-    case EE_SCENARIO_CLASS_TRANSPORT: return theClass->mTransportCapacity;
-    case EE_SCENARIO_CLASS_WEIGHT: return theClass->mWeight;
-    case EE_SCENARIO_CLASS_TILE_SIZE: return theClass->mTileSize;
-    case EE_SCENARIO_CLASS_CRUISE: return Bits(theClass->GetCruiseAltitude());
-    case EE_SCENARIO_CLASS_MIN_RANGE: return Bits(theClass->mMinRange);
-    case EE_SCENARIO_CLASS_AIR: return theClass->mCanEnterAirTransports;
-    case EE_SCENARIO_CLASS_LAND: return theClass->mCanEnterLandTransports;
-    case EE_SCENARIO_CLASS_SEA: return theClass->mCanEnterSeaTransports;
-    case EE_SCENARIO_CLASS_FORTRESS: return theClass->mCanEnterFortresses;
-    }
-    return 0;
+    float theScale = theComplex->mPhysicalModel.GetScale();
+    uint32_t theBits;
+    memcpy(&theBits, &theScale, 4);
+    return theBits;
 }
-
 
 // Copies the object's unit ids out
 void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const

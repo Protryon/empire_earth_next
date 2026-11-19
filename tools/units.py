@@ -153,9 +153,7 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls
                        # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
                        # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)
-                       "Empire Earth/UI Events/EEScreens.cpp",
-                       # a unit with no code range of its own (every member was ICF-folded into another unit's)
-                       "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
+                       "Empire Earth/UI Events/EEScreens.cpp"]}
 
 
 def _won_extra_units():

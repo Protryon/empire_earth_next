@@ -1,17 +1,17 @@
 // New (port): the scenario logic's host (ee_scenario, docs/RUST_PLAN.md R5b.5; ee/EEScenarioHost.h). The Rust
 // conditions, player choices and triggers read the world through one callback by operation code
 // (EE_SCENARIO_READ_*, rust/crates/ee_sim/src/scenario/host.rs); each case is the original's expression at its place.
+// The players' and the unit classes' plain members and the context unit's fields are the world views' (ee_scenario
+// unit_views.rs: they never reach this host).
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPhysics.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMObject.h"
@@ -20,8 +20,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EEUnit.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
@@ -43,12 +41,6 @@ int64_t Pack(long inX, long inY)
     return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32);
 }
 
-// the unit class inA (NULL past the table)
-EEUnitClass* Class(int32_t inA)
-{
-    return inA >= 0 && (unsigned long)inA < EEUnitClassCount() ? gUnitClassTable[inA] : NULL;
-}
-
 int64_t FloatBits(float inValue)
 {
     uint32_t theBits;
@@ -63,22 +55,18 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     EEScenarioManager* theManager = gWorld.mScenarioManager;
     EEPlayer* thePlayer = Player(inA);
     switch (inOp) {
-    case EE_SCENARIO_READ_NUM_PLAYERS: return gWorld.mNumPlayers;
-    case EE_SCENARIO_READ_PLAYER_EXISTS: return thePlayer != NULL;
+    case EE_SCENARIO_READ_CONTEXT_UNIT: return (int64_t)(uintptr_t)theContext->mUnit;
+    case EE_SCENARIO_READ_WORLD: return (int64_t)(uintptr_t)&gWorld;
+    // the unit variables and the model's scale (the unit fields no record holds)
+    case EE_SCENARIO_READ_UNIT_FIELD: return EESMUnitField(theContext->mUnit, inA);
     case EE_SCENARIO_READ_PLAYER_HUMAN: return thePlayer != NULL && thePlayer->mHumanPlayer != NULL;
     case EE_SCENARIO_READ_PLAYER_COMPUTER: return thePlayer != NULL && thePlayer->mComputerPlayer != NULL;
     case EE_SCENARIO_READ_RANDOM: return gPhysics->GetRandom((long)inA, (long)inB);
-    case EE_SCENARIO_READ_ENEMY: return thePlayer->mEnemies[inB];
-    case EE_SCENARIO_READ_RESOURCE: return thePlayer->mResourceCaps[inB];
     case EE_SCENARIO_READ_POPULATION: return thePlayer->GetTotalPopulation(false, false);
     case EE_SCENARIO_READ_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
-    case EE_SCENARIO_READ_UNIT_COUNT: return thePlayer->mUnitCount;
     case EE_SCENARIO_READ_COMPUTER_DIFFICULTY:
         return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
-    case EE_SCENARIO_READ_VARIABLE: return thePlayer->mScenarioVariables[inB];
-    case EE_SCENARIO_READ_TRIBUTE: return thePlayer->mTributes[inB];
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
-    case EE_SCENARIO_READ_MINING_LIMIT: return thePlayer->mMiningLimit;
     case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
     case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
     case EE_SCENARIO_READ_TECH_NODE: {
@@ -124,20 +112,10 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         U2DPoint<long> theCenter = gWorld.GetPlayer(inA)->mTowns[inB]->GetHullCenter();
         return Pack(theCenter.mX, theCenter.mY);
     }
-    case EE_SCENARIO_READ_UNIT_TILE: return Pack(theContext->mUnit->GetTileX(), theContext->mUnit->GetTileY());
-    case EE_SCENARIO_READ_UNIT_HAS_COMPLEX: return theContext->mUnit->GetComplexUnit() != NULL;
     case EE_SCENARIO_READ_UNIT_PREVIOUS_TILE: {
         EEComplexUnit* theUnit = theContext->mUnit->GetComplexUnit();
         return Pack(theUnit->mU0DC.GetX(), theUnit->mU0DC.GetY());
     }
-    case EE_SCENARIO_READ_CLASS_COUNT: return EEUnitClassCount();
-    case EE_SCENARIO_READ_CLASS_EXISTS: return Class(inA) != NULL;
-    case EE_SCENARIO_READ_CLASS_SELECTABLE: return Class(inA) != NULL && Class(inA)->mIsScenarioSelectable;
-    case EE_SCENARIO_READ_CLASS_CATEGORY: return Class(inA)->mCategory;
-    case EE_SCENARIO_READ_CLASS_EPOCH: return Class(inA)->mEpoch;
-    case EE_SCENARIO_READ_CLASS_FAMILY: return Class(inA)->mFamily;
-    case EE_SCENARIO_READ_CLASS_AI_KIND: return Class(inA)->mAIKind;
-    case EE_SCENARIO_READ_CLASS_TYPE: return Class(inA)->GetUnitType();
     case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
     case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
     case EE_SCENARIO_READ_UNIT_SET_HAS: {
@@ -153,10 +131,7 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         return theUnit != NULL ? theUnit->mUnitClass->GetUnitType() : -1;
     }
     case EE_SCENARIO_READ_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
-    case EE_SCENARIO_READ_SHARE_BONUS: return thePlayer->mShareBonus;
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
-    case EE_SCENARIO_READ_PLAYER_ID: return thePlayer->mPlayerID;
-    case EE_SCENARIO_READ_UNIT_FIELD: return EESMUnitField(theContext->mUnit, inA);
     case EE_SCENARIO_READ_TOKEN_OBJECT: {
         EESMObject* theObject = theManager->FindObjectByID(inA);
         if (theObject == NULL || (inB != 0 && theObject->mHasAttributeCheck == 0))

@@ -1,85 +1,10 @@
-// TEST ONLY: the scripted scenario editor of the headless simulation (EE-SIM.exe --editor-script; ee/EESimEditor.h).
-// Port addition, no original address.
-//
-// EE-SIM opens the scenario editor as a person does (main menu -> Editors -> Scenario Editor: a local server, load
-// type 3, the editor form over a default map), then this unit runs a script: one editor action per line, built
-// and posted as the editor's tabs build and post them, and digests of the world in between. Each line is a step: an
-// action of its own in the UI thread's action queue (so under the UI copy lock and the world's write lock, as every
-// editor action runs) that posts the line's actions, then a marker that posts itself again three times (an action
-// posted by an action, such as the blank map's terrain paint, runs before it) and wakes the driver. The physics never
-// runs (gPlatSimRun stays clear): the editor's actions are its only writes to the world. The physics thread still
-// flushes the world (EEPhysics::FlushWorld: the placed units' pending lists, the killed units' removal) on its own
-// clock, so a digest flushes it first. While a step runs, TMGetTime
-// answers a pinned time on the UI thread (gTMPinnedTime: 2000, 3000, ... by step), so the terrain paint's ambient
-// units (EESEAPaintTerrain::PlantTerrainUnits seeds its random from the clock) are the same on every run.
-//
-// Script lines ('#' starts a comment; tiles and units are the world's; a unit is its id or "@X,Y", the last
-// player's unit on that tile):
-//   tab N                                 the editor's tab N (the tab button's CheckDirect)
-//   blank WIDTH HEIGHT TERRAIN            EESEACreateBlankMap (the map tab's elevation file: none)
-//   random SIZE STYLE                     EESEACreateRandomMap
-//   terrain TERRAIN LEFT TOP RIGHT BOTTOM EESEAPaintTerrain (the terrain's own colour type) over an area
-//   bulldoze LEFT TOP RIGHT BOTTOM        EESEAPaintMoutains (the terrain tab's bulldozer: the units there removed)
-//   elevation raise|hills|level LEVEL LEFT TOP RIGHT BOTTOM   EESEAPaintElevation, the elevation tab's radio checked
-//   area X0 Y0 X1 Y1                      EESEAPaintArea (the trigger areas' rectangle)
-//   place PLAYER TYPE X Y YAW [ANIMATION] EESEAPlaceUnit with one entry (what Place makes of a placeable ghost)
-//   select|toggle|add UNIT, clear         EESEAMouseClick with the select, toggle, always-add, unselect-all message
-//   mouseclick X Y [ROTATING]             EESEAMouseClick::Execute with the mouse at the screen point (X, Y)
-//   lasso select|add|addremove L T R B [TYPE]   EESEALasso with that EEMSelectUnits over the screen rectangle
-//   lassorect L T R B                     EESEALasso::SelectInRectangle (EE-SIM draws nothing: no unit is picked)
-//   selection                             the editor's selected units
-//   units                                 every unit's id, type, player and tile (the world flushed)
-//   rotate YAW                            EESEARotateUnits (the selection)
-//   delete UNIT | delete PLAYER group|first   EESEADeleteUnit
-//   pickup UNIT, putdown X Y YAW          EESEAMoveUnit: PickUp, then PutDown over its ghosts put on the tile, turned
-//   wall PLAYER TECHNOLOGY X0 Y0 X1 Y1    EESEAPlaceWall::Place
-//   gate PLAYER TECHNOLOGY X Y DIRECTION  EESEAPlaceGate::Place (no ghosts: placed)
-//   quicksave NAME, savefile NAME         EESEAQuickSaveScenario over EESEAQuickSaveLoad; the written file's chunks
-//   elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT   an elevation file pair NAME.dat and NAME.txt (W x H heights, a
-//                                         fixed pattern of land and water) written to data\Scenarios\Elevation Maps,
-//                                         the map tab's list refilled and NAME picked, its four boxes set (the next
-//                                         blank map is made from it); "elevfile -" picks none
-//   ghost PLAYER TYPE X Y YAW             the placement ghosts (EEGhostUnit::Create) put on the tile (X, Y) as
-//                                         EEPreviewPlacement puts them under the mouse (FillSquare: placeable or not)
-//   ghostat X Y                           the ghosts there are moved to the tile (X, Y) (a picked-up unit's ghost)
-//   placeghost PLAYER [UNIT]              EESEAPlaceUnit::Place over the ghosts (UNIT: the unit tab's unit under the
-//                                         mouse, a transport to board)
-//   drop [UNIT]                           EESEAMoveUnit::PutDown over the ghosts (UNIT as placeghost's)
-//   cancelmove                            EESEAMoveUnit::Cancel (the picked-up unit deleted)
-//   check ID 0|1                          the editor's check box ID set (UICheckBox::SetChecked: its trigger events
-//                                         fire, e.g. the hide-UI box's EESEEHideUI)
-//   view                                  the game view's rectangle, the editor's UI hidden flag
-//   click quicksave                       the toolbar's quick save button released (its EESEEQuickSave), then the
-//                                         written file's chunks (data\Scenarios\EEQuickSave.scn's)
-//   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
-//                                         the game's save chunks (the header, which holds the date, left out;
-//                                         four chunks differ by run: ChunkByRun)
-//   sm OP LIST [INDEX] | sm fill | sm state  the scenario manager's lists: an editor list operation (new, sort, up,
-//                                         down, delete, dup), index references set on every element, every element's
-//                                         references and the name lists (ScenarioListStep)
-//   sm text | sm export | sm import FILE KIND VALIDATE   the trigger text file (EESEIAExport, EESEIAImport): the
-//                                         effects' and conditions' texts set, ExportText's file, ImportTriggerText
-//                                         over a fixed file (ScenarioTextStep)
-//   enter ID                              an edit box's Enter key (its ProcessEnterKey); an ID "%N" anywhere is the
-//                                         form's control N (the trigger screens repeat ids)
-//   tscreen select N|new|dup|delete|up|down|sort|name   the trigger tab's list and its buttons (EESETriggerScreen)
-//   tsclick select|add UNIT               the object screen's click (EESETSAMouseClick: the selection, then its list)
-//   object                                the trigger tab's open scenario object (ObjectDigest)
-//   triggerstate                          the trigger tab's open trigger (TriggerDigest)
-//   fire ID                               a control's button-up event processed
-//   areaset AREA L T R B | areapoint AREA X Y   a scenario area's rectangle or anchor set (as the area screen's Store)
-//   areastate                             the area screen's state and centre, the paint area, the scenario's areas
-//   align c|e                             the condition's or effect's labels' alignments (- never set)
-//   seed                                  the user interface's random seed (the map tab's CreateMap)
-//   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
-//   terrainstate | terrainpick LINE | terraincolor LINE   round 8: the terrain tab (TerrainDigest), a list's line
-//                                         clicked (its event fires)
-//   terrainpaint L T R B                  the terrain paint area's CreatePaintAction over an area, posted
-//   terrainmouse X Y | terrainmouse update   the terrain tab's MouseMove / Update; brushhl X Y CENTERED SetHighlight
-//   techfill ID FIRST LAST | techstate    a tech list's Fill; the two tech lists (TechDigest: ids, lines, CopyData's marks)
-// Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
-// the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
-// lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
+// TEST ONLY: the scripted scenario editor's steps of the headless simulation (EE-SIM.exe --editor-script;
+// ee/EESimEditor.h). Port addition, no original address. The script's runner and its language are Rust (ee_game
+// sim_editor: the lines, the words, the steps' order and output; its module documentation lists the commands); a
+// step here is one line's command: an action of its own in the UI thread's action queue (so under the UI copy lock
+// and the world's write lock, as every editor action runs) that posts the line's actions, then a marker that posts
+// itself again three times (an action posted by an action, such as the blank map's terrain paint, runs before it)
+// and wakes the driver. While a step runs, TMGetTime answers a pinned time on the UI thread (2000, 3000, ... by step).
 #include <windows.h>
 #include <mbstring.h>
 #include <stdio.h>
@@ -834,23 +759,6 @@ void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string
 
 // ------------------------------------------------------------------------------------------------ the script
 
-std::vector<std::string> Split(const std::string& inLine)
-{
-    std::vector<std::string> theWords;
-    size_t a = 0;
-    while (true) {
-        a = inLine.find_first_not_of(" \t\r", a);
-        if (a == std::string::npos)
-            break;
-        size_t b = inLine.find_first_of(" \t\r", a);
-        theWords.push_back(inLine.substr(a, b == std::string::npos ? std::string::npos : b - a));
-        if (b == std::string::npos)
-            break;
-        a = b;
-    }
-    return theWords;
-}
-
 // a unit by its id, or "@X,Y": the last unit (a player's, not the world's) on that tile
 unsigned long UnitRef(const std::string& inWord)
 {
@@ -1507,37 +1415,11 @@ void ObjectDigest(std::vector<std::string>& outLines)
 
 }   // namespace
 
-int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outError)
+// One script line's command (its words; the Rust runner's step) -> 0, 1 an unknown command, 2 the step did not finish
+// within a minute; its output lines into outLines
+int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>& theOutput)
 {
-    FILE* theFile = fopen(inScript.c_str(), "rb");
-    if (theFile == NULL) {
-        outError = "cannot read " + inScript;
-        return 2;
-    }
-    std::vector<std::string> theLines;
     {
-        std::string theLine;
-        int c;
-        while ((c = fgetc(theFile)) != EOF) {
-            if (c == '\n') {
-                theLines.push_back(theLine);
-                theLine.clear();
-            } else
-                theLine += (char)c;
-        }
-        if (!theLine.empty())
-            theLines.push_back(theLine);
-        fclose(theFile);
-    }
-    std::vector<std::string> theOutput;
-    for (size_t k = 0; k < theLines.size(); k++) {
-        std::string theLine = theLines[k];
-        size_t theHash = theLine.find('#');
-        if (theHash != std::string::npos)
-            theLine.erase(theHash);
-        std::vector<std::string> w = Split(theLine);
-        if (w.empty())
-            continue;
         auto L = [&](size_t i) { return i < w.size() ? atol(w[i].c_str()) : 0L; };
         auto F = [&](size_t i) { return i < w.size() ? (float)atof(w[i].c_str()) : 0.0f; };
         const std::string& c = w[0];
@@ -2265,27 +2147,14 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gPhysics->FlushWorld();
                 Digest(w.size() > 1 ? w[1] : std::string(), theOutput);
             };
-        else {
-            outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
-            return 2;
-        }
+        else
+            return 1;
         // the load thread drained before the step is queued: its texts reach the UI thread as actions
         // (EESEAChangeLoadText, one object posted again with each text), so a sync inside the step (FormState's) leaves
         // the ones posted meanwhile queued behind the step, and the load text read was whichever ran first (the
         // editor gate's flake under load); drained here, every one runs before the step
         if (c == "form" || c == "players" || c == "unittab" || c == "formstate")
             SyncLoadThread();
-        size_t theBefore = theOutput.size();
-        if (!RunStep(theCode)) {
-            outError = inScript + ":" + std::to_string(k + 1) + ": '" + c + "' did not finish";
-            return 3;
-        }
-        if (inOut != NULL) {
-            fprintf(inOut, "step %zu %s\n", k + 1, theLines[k].c_str());
-            for (size_t i = theBefore; i < theOutput.size(); i++)
-                fprintf(inOut, "%s\n", theOutput[i].c_str());
-            fflush(inOut);
-        }
+        return RunStep(theCode) ? 0 : 2;
     }
-    return 0;
 }

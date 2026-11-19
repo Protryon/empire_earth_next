@@ -6,25 +6,12 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
 
-#include "ee/EEEffectManager.h"
-#include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EECalamityUpdate.h"
-#include "ee/EELocationCalamityClass.h"
-#include "ee/EEUnitCalamityClass.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAreaEffect.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
@@ -55,17 +42,11 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
     unsigned long theX = (unsigned long)(long)c.index;
     unsigned long theY = (unsigned long)(long)c.index2;
     switch (c.op) {
+    // the handles the world views read through (calamity_views.rs: the caster's hit points and power, the tiles)
+    case EeCalamityOp::CasterHandle: r.key = (uint64_t)(uintptr_t)theUnit; break;
+    case EeCalamityOp::WorldHandle: r.key = (uint64_t)(uintptr_t)&::gWorld; break;
     case EeCalamityOp::CasterPlayerIndex:
         r.value = (int32_t)::gWorld.GetPlayerIndex(theUnit->mPlayer);
-        break;
-    case EeCalamityOp::CasterHitPoints:
-        r.value = (int32_t)theUnit->mHitPoints;
-        break;
-    case EeCalamityOp::CasterPower:
-        r.value = (int32_t)theUnit->GetPower();
-        break;
-    case EeCalamityOp::TileExists:
-        r.ok = ::gWorld.mMap->GetTile(theX, theY) != NULL;
         break;
     case EeCalamityOp::TileVisible:
         r.ok = ::gWorld.mMap->GetTile(theX, theY)->IsVisibleTo(theUnit->mPlayer);
@@ -82,10 +63,10 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
         break;
     }
     case EeCalamityOp::ValidLocation:
-        r.ok = static_cast<EELocationCalamityClass*>(theHost.mClass)->IsValidLocation(theUnit, theX, theY);
+        r.ok = theHost.mClass->IsValidLocation(theUnit, theX, theY);
         break;
     case EeCalamityOp::ValidTarget:
-        r.ok = static_cast<EEUnitCalamityClass*>(theHost.mClass)->IsValidTarget(theUnit, theHost.mTarget);
+        r.ok = theHost.mClass->IsValidTarget(theUnit, theHost.mTarget);
         break;
     case EeCalamityOp::TargetView: {
         EEUnit* theTarget = theHost.mTargetUnit;
@@ -123,12 +104,6 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
     case EeCalamityOp::TileBlocked:
         r.ok = ::gWorld.IsTileBlocked(theX, theY);
         break;
-    case EeCalamityOp::TerrainType: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(theX, theY);
-        r.ok = theTile != NULL;
-        r.value = theTile != NULL ? (int32_t)theTile->mTerrainType : 0;
-        break;
-    }
     case EeCalamityOp::InnerSphere:
         r.x = gUnitClassTable[theHost.mUnitClassIndex]->GetInnerCollisionSphere();
         break;

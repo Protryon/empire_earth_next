@@ -2,14 +2,8 @@
 // effects, 0x1bb5a5..0x1c1ca9 plus the inline and template COMDATs after them. Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
-#include "ee/EEUnitKind.h"
-#include "ee/EESMDialogMessage.h"
-#include "lle/FSFile.h"
 #include <vector>
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEScenarioManager.h"
-#include "ee/EESMCondition.h"
 #include <algorithm>
 #include <mbstring.h>
 #include <stdlib.h>
@@ -19,43 +13,19 @@
 #include "ee/EESMTrigger.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"   // (also defines DeleteVectorContents: ee/EEDeleteVectorContents.h)
-#include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
 #include "lle/SESoundManager.h"
-#include "GEWindow.h"
-#include "ee/EECameraControl.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "lle/GEBitmap.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERhombus.h"
-#include "lle/ISEntity.h"
-#include "lle/UIEntity.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
@@ -63,6 +33,7 @@
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
+#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Creates a scenario effect with the default settings (see Reset)
 EESMEffect::EESMEffect()
@@ -92,15 +63,8 @@ void EESMEffect::Reset()
 }
 
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
-#include "ee/EEAIContinentManager.h"
-#include "ee/EEAIContinent.h"
-#include "ee/EEAIRectangleArea.h"
-#include "ee/EECPCombatManager.h"
 #include "ee/EETown.h"
-#include "ee/EECPUnitRequirement.h"
-#include "ee/EECPEngine.h"
 
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
@@ -140,7 +104,6 @@ void EESMEffect::SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAtt
     ee_scenario_set_player_attribute(&theHost, inPlayer, inAttribute, inMode, inAmount);
 }
 
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
@@ -223,7 +186,6 @@ void EESMCreateUnit(EESMHostContext* inContext, long inPlayerID, long inUnitType
 }
 
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEMiniMap.h"
 #include "lle/UIFormManager.h"
@@ -346,12 +308,9 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 
 #include "ee/EEHerd.h"
 
-#include "ee/EELocationCalamityClass.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
-#include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // what one effect's run keeps between its world calls (ee_scenario effect.rs, effect_ai.rs, task.rs): the
 // calamity point and class, the units a calamity found in an area, the graphic effect, the expanded message, the
@@ -845,12 +804,14 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
         inRun->mCalamity = EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
         return inRun->mCalamity != NULL ? (int64_t)inRun->mCalamity->GetTargetKind() : -1;
     case EE_SCENARIO_WORLD_CAL_VALID_TARGET: {
-        EEUnitCalamityClass* theClass = dynamic_cast<EEUnitCalamityClass*>(inRun->mCalamity);
-        return theClass != NULL && theClass->IsValidTarget(SMEComplex(a[0]), SMEUnit(a[1]));
+        EECalamityClass* theClass = inRun->mCalamity;
+        return theClass != NULL && theClass->GetTargetKind() == EE_CALAMITY_TARGET_UNIT &&
+               theClass->IsValidTarget(SMEComplex(a[0]), SMEUnit(a[1]));
     }
     case EE_SCENARIO_WORLD_CAL_VALID_LOCATION: {
-        EELocationCalamityClass* theClass = dynamic_cast<EELocationCalamityClass*>(inRun->mCalamity);
-        return theClass != NULL && theClass->IsValidLocation(SMEComplex(a[0]), (long)a[1], (long)a[2]);
+        EECalamityClass* theClass = inRun->mCalamity;
+        return theClass != NULL && theClass->GetTargetKind() == EE_CALAMITY_TARGET_LOCATION &&
+               theClass->IsValidLocation(SMEComplex(a[0]), (long)a[1], (long)a[2]);
     }
     case EE_SCENARIO_WORLD_CAST: {
         EEComplexUnit* theUnit = SMEComplex(a[0]);

@@ -193,8 +193,9 @@ struct EeSimDriverHost {
   long (*no_human_defeat_hits)(long);
   /// `gUserInterface->PostCancelGame()`
   void (*cancel_game)();
-  /// `EESimEditorRun(script, out or stdout)`: 0, else the error into the buffer
-  int32_t (*run_editor)(const char*, const char*, char*, size_t);
+  /// `EESimEditorStep`: one editor script line's command (its words) run as a step; its output lines pushed -> 0,
+  /// 1 not a command, 2 not finished within a minute
+  int32_t (*editor_step)(const char*const *, size_t, void*, EeSimDriverPushFn);
   /// --flare: the human's flare at the player's first building, told to its allies
   void (*flare)(unsigned long, EeSimDriverSpot*);
   /// --volcano: a volcano cast 6 tiles off the player's first building
