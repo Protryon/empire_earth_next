@@ -126,11 +126,6 @@ UIBackground::UIBackground(unsigned long inBackgroundID, const UILayoutUtility& 
 
 UIBackground::~UIBackground() { ee_ui_bg_free(this); }
 intptr_t UIBackground::CallRect(C inCall, const GERectangle& inRectangle) { return UIBackgroundHost::CallRect(this, inCall, inRectangle); }
-void UIBackground::Close() { this->Call(C::Close); }
-void UIBackground::Open() { this->Call(C::Open); }
-void UIBackground::RelayoutBackground() { this->Call(C::Relayout); }
-void UIBackground::SetRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetRectangle, inRectangle); }
-void UIBackground::SetVisibility(bool inVisible) { this->Call(C::SetVisibility, inVisible); }
 
 UIBitmapBackground::UIBitmapBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                                        const GETextureDescription& inDescription,

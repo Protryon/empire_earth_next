@@ -37,7 +37,8 @@ protected:
     virtual long MouseLButtonDown();
     virtual long MouseLButtonUp();
     virtual long MouseMove(const GE2DPoint& inLocation);
-    virtual void MouseOver();
+    // Shows the box pressed
+    virtual void MouseOver() { UIButton::MouseOver(); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo() { UIButton::TabbedTo(); }

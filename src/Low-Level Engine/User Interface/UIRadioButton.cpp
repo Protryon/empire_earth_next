@@ -75,8 +75,6 @@ bool UIRadioButton::GetTabable() const { return EE_UI_RADIO(RadioTabable) != 0; 
 void UIRadioButton::ButtonUp() { EE_UI_RADIO(RadioButtonUp); }
 // Presses the button, except a checked push button
 long UIRadioButton::MouseLButtonDown() { return (long)EE_UI_RADIO(RadioMouseLButtonDown); }
-// Releases the button (plain button behaviour)
-long UIRadioButton::MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
 // Sets the pressed bitmap shown while checked
 void UIRadioButton::SetDownCheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetDownChecked, (intptr_t)inBitmap); }
 // Sets the pressed bitmap shown while unchecked

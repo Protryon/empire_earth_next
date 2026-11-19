@@ -34,7 +34,7 @@ public:
     UITextLabel(const UITextLabel&) = delete;
     UITextLabel& operator=(const UITextLabel&) = delete;
     virtual ~UITextLabel();
-    virtual void AppendText(const UWideString& inText);   // slot 0x88
+    virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual void ChangeFont(GEFont* inFont);
     virtual long CopyData();
     void DeleteArray();

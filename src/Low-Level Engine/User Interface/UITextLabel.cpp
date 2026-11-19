@@ -106,7 +106,6 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
 }
 
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }
-void UITextLabel::AppendText(const UWideString& inText) { this->SetText(inText, false); }
 void UITextLabel::ChangeFont(GEFont* inFont) { UITextLabelRust::Call(this, C::ChangeFont, (intptr_t)inFont); }
 void UITextLabel::CheckScrollBar() { UITextLabelRust::Call(this, C::CheckScrollBar); }
 long UITextLabel::CopyData() { return (long)UITextLabelRust::Call(this, C::CopyData); }

@@ -105,5 +105,3 @@ long UICheckBox::MouseMove(const GE2DPoint& inLocation)
 {
     return (long)EE_UI_CHECK(CheckMouseMove, 0, 0, inLocation.GetX(), inLocation.GetY());
 }
-// Shows the box pressed
-void UICheckBox::MouseOver() { UIButton::MouseOver(); }
