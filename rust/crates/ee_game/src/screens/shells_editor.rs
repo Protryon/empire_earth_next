@@ -100,7 +100,9 @@ pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
         EE_SCREENS_SK_MAX_PLAYER => Box::new(MaxPlayer),
         EE_SCREENS_SK_MAP_BUTTON => Box::new(MapButton { map: a(0) }),
         EE_SCREENS_SK_MAP_RADIO => Box::new(CheckThen { name: c"UIRBMap", op: EE_SCREENS_SH_MAP_KIND }),
-        EE_SCREENS_SK_PAINT_TYPE => Box::new(CheckThen { name: c"EEUIFSETRBPaintType", op: EE_SCREENS_SH_TERRAIN_CHECK }),
+        EE_SCREENS_SK_PAINT_TYPE => {
+            Box::new(CheckThen { name: c"EEUIFSETRBPaintType", op: EE_SCREENS_SH_TERRAIN_CHECK })
+        }
         EE_SCREENS_SK_MAIN_BUTTON => Box::new(MainButton {
             flag: a(0) as u8,
             texture: a(1),
@@ -205,9 +207,17 @@ impl Kind for Select {
                 // SAFETY (each poll call): the shared polls, live
                 let step = with_polls(|p| unsafe {
                     if ee_time_poll_is_running(&p[0]) {
-                        if ee_time_poll_poll(&mut p[0]) > 0 { 1 } else { 0 }
+                        if ee_time_poll_poll(&mut p[0]) > 0 {
+                            1
+                        } else {
+                            0
+                        }
                     } else if ee_time_poll_is_running(&p[1]) {
-                        if ee_time_poll_poll(&mut p[1]) > 0 { 2 } else { 0 }
+                        if ee_time_poll_poll(&mut p[1]) > 0 {
+                            2
+                        } else {
+                            0
+                        }
                     } else {
                         3
                     }
@@ -467,10 +477,7 @@ mod tests {
         let h = rec(0x158, &[(EE_SCREENS_SH_LIST_COUNT, 5), (EE_SCREENS_SH_EDITOR_PLAYER, 2)]);
         let c = Ctx { ctl: core::ptr::null_mut(), host: &h };
         Select { font: 0 }.select(&c);
-        assert_eq!(
-            h.calls.borrow().last(),
-            Some(&(EE_SCREENS_SH_TECH_TREE_MOVE, 4 << 32, 3 | 1 << 32))
-        );
+        assert_eq!(h.calls.borrow().last(), Some(&(EE_SCREENS_SH_TECH_TREE_MOVE, 4 << 32, 3 | 1 << 32)));
         // remove with no selection: nothing
         let h = rec(0x157, &[(EE_SCREENS_SH_LIST_SELECTION, -1)]);
         Select { font: 0 }.select(&Ctx { ctl: core::ptr::null_mut(), host: &h });

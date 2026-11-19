@@ -262,10 +262,9 @@ pub fn make_kind(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
         EE_SCREENS_SK_EFFECT_COMBO => {
             Box::new(RefreshCombo { name: c"EESETSEComboBox", screen: SCREEN_EFFECT, refresh_screen: false })
         }
-        EE_SCREENS_SK_SCENARIO_COMBO => Box::new(ScenarioCombo {
-            screen: arg(args, 0) as i32,
-            mode: Cell::new(arg(args, 1) as u32),
-        }),
+        EE_SCREENS_SK_SCENARIO_COMBO => {
+            Box::new(ScenarioCombo { screen: arg(args, 0) as i32, mode: Cell::new(arg(args, 1) as u32) })
+        }
         EE_SCREENS_SK_TRIGGER_COMBO => Box::new(TriggerCombo { kind: arg(args, 0) as u32 }),
         EE_SCREENS_SK_OBJECT_COMBO => Box::new(ObjectCombo),
         EE_SCREENS_SK_PLAYER_COMBO => Box::new(PlayerCombo { flags: Cell::new(0), count: Cell::new(0) }),

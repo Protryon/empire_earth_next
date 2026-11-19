@@ -301,7 +301,8 @@ struct Rotation {
 
 /// The yaw by step (`GetAngle`; step 1 is 0): the original's float literals.
 #[allow(clippy::approx_constant)]
-const ANGLES: [f32; 8] = [0.785_398_2, 0.0, -0.785_398_2, -1.570_796_4, -2.356_194_5, 3.141_592_7, 2.356_194_5, 1.570_796_4];
+const ANGLES: [f32; 8] =
+    [0.785_398_2, 0.0, -0.785_398_2, -1.570_796_4, -2.356_194_5, 3.141_592_7, 2.356_194_5, 1.570_796_4];
 
 impl Rotation {
     fn update_bitmaps(&self, c: &Ctx) {
@@ -340,7 +341,11 @@ impl Kind for Rotation {
             let x0 = if i & 1 != 0 { 100.0f32 } else { 0.0 };
             for k in 0..2 {
                 let l = x0 + 50.0 * k as f32;
-                c.call_f(EE_SCREENS_SH_BITMAP_COORDS, b[i * 2 + k], [l / size, 0.0 / size, (l + 50.0) / size, 50.0 / size]);
+                c.call_f(
+                    EE_SCREENS_SH_BITMAP_COORDS,
+                    b[i * 2 + k],
+                    [l / size, 0.0 / size, (l + 50.0) / size, 50.0 / size],
+                );
             }
             for k in 0..2 {
                 c.call_f(EE_SCREENS_SH_BITMAP_SCALE, b[i * 2 + k], [50.0 / size, 50.0 / size, 0.0, 0.0]);
@@ -457,7 +462,17 @@ mod tests {
         // class k's name is "s<k>" (the test strings), its epoch 9 - k
         let h = Rec {
             calls: RefCell::new(Vec::new()),
-            answer: |op, a, b| if op == EE_SCREENS_SH_UNIT_CLASS { if b == 0 { a } else { 9 - a } } else { 0 },
+            answer: |op, a, b| {
+                if op == EE_SCREENS_SH_UNIT_CLASS {
+                    if b == 0 {
+                        a
+                    } else {
+                        9 - a
+                    }
+                } else {
+                    0
+                }
+            },
         };
         let c = Ctx { ctl: core::ptr::null_mut(), host: &h };
         let l = UnitClassList { types: RefCell::new(Vec::new()), mode: Cell::new(SORT_ALPHA) };

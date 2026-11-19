@@ -69,7 +69,12 @@ pub(crate) fn op_of(ctl: Cpp, op: u32, a: i64, b: i64) -> Option<i64> {
 /// # Safety
 /// `args` holds `n` words (or is NULL with `n` 0).
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_shell_new(kind: u32, ctl: *mut c_void, args: *const i64, n: u32) -> *mut EeScreensShell {
+pub unsafe extern "C" fn ee_screens_shell_new(
+    kind: u32,
+    ctl: *mut c_void,
+    args: *const i64,
+    n: u32,
+) -> *mut EeScreensShell {
     let args = if args.is_null() || n == 0 {
         &[][..]
     } else {
@@ -111,7 +116,13 @@ pub unsafe extern "C" fn ee_screens_shell_init(s: *const EeScreensShell) {
 /// # Safety
 /// `s` is NULL or a live shell; `f` is NULL or four floats.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_shell_virtual(s: *const EeScreensShell, v: u32, a: i64, b: i64, f: *mut f32) -> i64 {
+pub unsafe extern "C" fn ee_screens_shell_virtual(
+    s: *const EeScreensShell,
+    v: u32,
+    a: i64,
+    b: i64,
+    f: *mut f32,
+) -> i64 {
     // SAFETY: the contract
     let Some(s) = (unsafe { s.as_ref() }) else {
         return 0;

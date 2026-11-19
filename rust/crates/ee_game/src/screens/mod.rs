@@ -311,9 +311,9 @@ mod settings_form_ffi;
 pub(crate) mod sgvw;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
 pub mod shells;
+pub mod shells_editor;
 #[cfg(not(test))]
 mod shells_ffi;
-pub mod shells_editor;
 pub mod shells_tech;
 pub mod shells_unit;
 pub mod single_player;

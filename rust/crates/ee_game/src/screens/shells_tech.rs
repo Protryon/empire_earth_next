@@ -183,7 +183,8 @@ impl TechList {
     fn fill(&self, c: &Ctx, first: i32, last: i32) {
         let enabled = self.id(c) == TECH_LIST;
         let other = c.call(EE_SCREENS_SH_FORM_CONTROL, i64::from(if enabled { OTHER_LIST } else { TECH_LIST }), 0);
-        let other_op = |op: u32, arg: i64| c.call(EE_SCREENS_SH_KIND_OP, other, (i64::from(op) << 32) | (arg & 0xffff_ffff));
+        let other_op =
+            |op: u32, arg: i64| c.call(EE_SCREENS_SH_KIND_OP, other, (i64::from(op) << 32) | (arg & 0xffff_ffff));
         let other_selection = c.host.call(other as Cpp, EE_SCREENS_SH_LIST_CURRENT, 0, 0, &mut [0.0; 4]);
         let other_tech = if other_selection >= 0 { other_op(EE_SCREENS_SKOP_TECH_AT, other_selection) } else { NONE };
         let techs = self.techs();
@@ -287,7 +288,9 @@ impl Kind for TechList {
             EE_SCREENS_SKOP_TECH_FILL => self.fill(c, a as i32, b as i32),
             EE_SCREENS_SKOP_TECH_COUNT => return self.techs.borrow().len() as i64,
             EE_SCREENS_SKOP_TECH_MARKED_COUNT => return self.dependents.borrow().len() as i64,
-            EE_SCREENS_SKOP_TECH_MARKED_AT => return self.dependents.borrow().get(a as usize).map_or(0, |&d| i64::from(d)),
+            EE_SCREENS_SKOP_TECH_MARKED_AT => {
+                return self.dependents.borrow().get(a as usize).map_or(0, |&d| i64::from(d))
+            }
             EE_SCREENS_SKOP_TECH_AT => {
                 return self.techs.borrow().get(a as usize).map_or(NONE, |&t| i64::from(t));
             }

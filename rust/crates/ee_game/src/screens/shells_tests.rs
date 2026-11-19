@@ -142,10 +142,7 @@ fn the_unit_list_always_fires_and_the_elevation_slider_shows_its_level() {
     let h = Rec::new(&[]);
     let mut f = [0.0; 4];
     make_kind(EE_SCREENS_SK_UNIT_LIST, &[]).unwrap().virt(&ctx(&h), EE_SCREENS_SV_CHANGE_SELECTION_INDEX, 5, 3, &mut f);
-    assert_eq!(
-        h.ops(),
-        vec![(BASE + EE_SCREENS_SV_CHANGE_SELECTION_INDEX, 5, 2), (EE_SCREENS_SH_FIRE, 0x3eb, 0)]
-    );
+    assert_eq!(h.ops(), vec![(BASE + EE_SCREENS_SV_CHANGE_SELECTION_INDEX, 5, 2), (EE_SCREENS_SH_FIRE, 0x3eb, 0)]);
     let h = Rec::new(&[(EE_SCREENS_SH_SLIDER_VALUE, 10), (EE_SCREENS_SH_SLIDER_MAX, 300)]);
     make_kind(EE_SCREENS_SK_ELEVATION_SLIDER, &[]).unwrap().virt(&ctx(&h), EE_SCREENS_SV_CHANGE_RANGE, 20, 0, &mut f);
     // 300 - 20 - 24 = 256: 0 as a char
