@@ -346,124 +346,26 @@ long RTSMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return ee_units_rts_map_save(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this));
 }
 
-// NEAR: inline budget (begin() refused in the prologue, Contains/operator+ out of line) and the
-// by-value point copies: the original copies the points with the out-of-line copy ctor 0x4d28b (479 callers in
-// the exe), so the exe's U2DPoint<long> probably has the user-declared copy ctor that U2DPoint.h keeps engine-only.
 // Rebuilds the outline runs of continent areas: every rectangle edge not covered by another area of the same
-// continent
+// continent, split on space maps into the runs on the continent (ee_ge map_raise.rs area_outlines)
 void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents)
 {
-    U2DPoint<long> theStart;
-    U2DPoint<long> theEnd;
-    unsigned long theCount = inAreas.size();
+    struct Ops {
+        static unsigned short Continent(void*, long inX, long inY)
+        {
+            EETileCoordinate theTile;
+            theTile.mX = inX;
+            theTile.mY = inY;
+            return gContinentManager.GetContinent(theTile, kAIPathNonSpace);
+        }
+        static void Run(void* inMap, const long* inRun)
+        {
+            static_cast<RTSMap*>(inMap)->mU1955DC.push_back(
+                RTSMapTileRun(U2DPoint<long>(inRun[0], inRun[1]), U2DPoint<long>(inRun[2], inRun[3])));
+        }
+    };
+    static_assert(sizeof(U2DRectangle<long>) == sizeof(EeGeAreaRect), "an area is its four longs");
     this->ClearU1955DC();
-    for (unsigned long i = 0; i < theCount; i++) {
-        long theLeft = inAreas[i].mLeft;
-        long theRight = inAreas[i].mRight;
-        long theTop = inAreas[i].mTop;
-        long theBottom = inAreas[i].mBottom;
-        unsigned short theContinent = inContinents[i];
-        unsigned long j;
-        theStart.mY = theTop;
-        theEnd.mY = theTop;
-        long theX; for (theX = theLeft; theX < theRight; theX++) {
-            theStart.mX = theX;
-            theEnd.mX = theX + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mTop != theTop)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mY = theBottom;
-        theEnd.mY = theBottom;
-        for (theX = theLeft; theX < theRight; theX++) {
-            theStart.mX = theX;
-            theEnd.mX = theX + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mBottom != theBottom)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mX = theLeft;
-        theEnd.mX = theLeft;
-        long theY; for (theY = theTop; theY < theBottom; theY++) {
-            theStart.mY = theY;
-            theEnd.mY = theY + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mLeft != theLeft)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-        theStart.mX = theRight;
-        theEnd.mX = theRight;
-        for (theY = theTop; theY < theBottom; theY++) {
-            theStart.mY = theY;
-            theEnd.mY = theY + 1;
-            for (j = 0; j < theCount; j++) {
-                if (j != i && inContinents[j] == theContinent && inAreas[j].Contains(theStart) &&
-                    inAreas[j].Contains(theEnd) && inAreas[j].mRight != theRight)
-                    break;
-            }
-            if (j == theCount)
-                this->AddOutlineEdge(theStart, theEnd, inContinents[i]);
-        }
-    }
-}
-
-// NEAR: which of the run start's coordinates sits in ebx (the original: y, from inStart.mY directly).
-// Adds an outline edge as one tile run; on space maps splits it into the runs whose tiles lie on the continent
-void RTSMap::AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent)
-{
-    if (!this->mTerrainMesh.GetIsSpaceMap()) {
-        RTSMapTileRun theRun(inStart, inEnd);
-        this->mU1955DC.push_back(theRun);
-        return;
-    }
-    long theX = inStart.mX;
-    long theY = inStart.mY;
-    long theRunY = theY;
-    long theRunX = theX;
-    long theDX = 0;
-    long theDY = 0;
-    long theCount;
-    if (inStart.mX == inEnd.mX) {
-        theCount = inEnd.mY - inStart.mY;
-        theDY = 1;
-    } else {
-        theCount = inEnd.mX - inStart.mX;
-        theDX = 1;
-    }
-    bool theInRun = false;
-    for (long i = 0; i <= theCount; i++) {
-        EETileCoordinate theTile;
-        theTile.mX = theX;
-        theTile.mY = theY;
-        unsigned short theContinent = gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-        if (!theInRun) {
-            if (theContinent == inContinent) {
-                theRunX = theX;
-                theRunY = theY;
-                theInRun = true;
-            }
-        } else if (theContinent != inContinent) {
-            RTSMapTileRun theRun(U2DPoint<long>(theRunX, theRunY), U2DPoint<long>(theX, theY));
-            this->mU1955DC.push_back(theRun);
-            theInRun = false;
-        }
-        theX += theDX;
-        theY += theDY;
-    }
-    if (theInRun) {
-        RTSMapTileRun theRun(U2DPoint<long>(theRunX, theRunY), U2DPoint<long>(theX - theDX, theY - theDY));
-        this->mU1955DC.push_back(theRun);
-    }
+    ee_ge_map_area_outlines(this, reinterpret_cast<const EeGeAreaRect*>(inAreas.data()), inContinents.data(),
+                            inAreas.size(), this->mTerrainMesh.GetIsSpaceMap(), Ops::Continent, Ops::Run);
 }

@@ -1,8 +1,9 @@
 //! The map's terrain edits whole in Rust (the Graphics + LLE cluster, round 1; `RTSMap.cpp` 0x121e7d..0x123389): the
 //! scenario editor's raise and smooth of a rectangle (`Raise`) with its ring spreads (`SpreadUp`, `SpreadDown`,
 //! `SpreadLeft`, `SpreadRight`), the vertex smoothing (`SmoothVertex`) and the four tiles' upkeep around a changed
-//! vertex (`UpdateTiles`), and the two tile tests the random map, the ghost units and the wall planner ask
-//! (`GetNumRaisedCorners`, `IsTileFlat`).
+//! vertex (`UpdateTiles`), the two tile tests the random map, the ghost units and the wall planner ask
+//! (`GetNumRaisedCorners`, `IsTileFlat`), and the selected group's continent outlines (`BuildAreaOutlines`,
+//! `AddOutlineEdge`: the tile runs the terrain draws).
 //!
 //! The terrain mesh is its Rust object (tmobj.rs, through the C entry points the C++ accessors called); what stays
 //! the C++'s is the map's tiles (their height member, their units put back on the ground: `PlaceUnitOnGround`) and its
@@ -425,6 +426,110 @@ pub fn tile_flat<T: Terrain>(t: &T, tile_size: f32, x: c_ulong, y: c_ulong) -> b
     high - low <= FLAT_SLOPE * tile_size
 }
 
+/// A `U2DRectangle<long>` in the C++'s member order.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeGeAreaRect {
+    pub bottom: c_long,
+    pub left: c_long,
+    pub right: c_long,
+    pub top: c_long,
+}
+
+impl EeGeAreaRect {
+    /// `Contains(point)`: inside, the edges included
+    fn contains(&self, x: c_long, y: c_long) -> bool {
+        x >= self.left && x <= self.right && y >= self.top && y <= self.bottom
+    }
+}
+
+/// `AddOutlineEdge(start, end, continent)`: one run; on a space map the runs of the edge's tiles on the continent.
+fn outline_edge(
+    start: (c_long, c_long),
+    end: (c_long, c_long),
+    continent: u16,
+    space: bool,
+    continent_at: &mut dyn FnMut(c_long, c_long) -> u16,
+    run: &mut dyn FnMut([c_long; 4]),
+) {
+    if !space {
+        run([start.0, start.1, end.0, end.1]);
+        return;
+    }
+    let (mut x, mut y) = start;
+    let (mut run_x, mut run_y) = (x, y);
+    let (dx, dy, count) = if start.0 == end.0 { (0, 1, end.1 - start.1) } else { (1, 0, end.0 - start.0) };
+    let mut in_run = false;
+    for _ in 0..=count {
+        let here = continent_at(x, y);
+        if !in_run {
+            if here == continent {
+                run_x = x;
+                run_y = y;
+                in_run = true;
+            }
+        } else if here != continent {
+            run([run_x, run_y, x, y]);
+            in_run = false;
+        }
+        x += dx;
+        y += dy;
+    }
+    if in_run {
+        run([run_x, run_y, x - dx, y - dy]);
+    }
+}
+
+/// `BuildAreaOutlines(areas, continents)`: every unit edge of each area not inside another area of its continent
+/// that does not share the edge's line, as runs (the top edges, the bottom, the left, the right, area by area).
+pub fn area_outlines(
+    areas: &[EeGeAreaRect],
+    continents: &[u16],
+    space: bool,
+    continent_at: &mut dyn FnMut(c_long, c_long) -> u16,
+    run: &mut dyn FnMut([c_long; 4]),
+) {
+    let n = areas.len();
+    for i in 0..n {
+        let a = areas[i];
+        let c = continents[i];
+        // the edge from `s` to `e` is covered by another area of the continent whose `side` differs
+        let covered = |s: (c_long, c_long), e: (c_long, c_long), other: &dyn Fn(&EeGeAreaRect) -> bool| {
+            (0..n).any(|j| {
+                j != i
+                    && continents[j] == c
+                    && areas[j].contains(s.0, s.1)
+                    && areas[j].contains(e.0, e.1)
+                    && other(&areas[j])
+            })
+        };
+        for x in a.left..a.right {
+            let (s, e) = ((x, a.top), (x + 1, a.top));
+            if !covered(s, e, &|o| o.top != a.top) {
+                outline_edge(s, e, c, space, continent_at, run);
+            }
+        }
+        for x in a.left..a.right {
+            let (s, e) = ((x, a.bottom), (x + 1, a.bottom));
+            if !covered(s, e, &|o| o.bottom != a.bottom) {
+                outline_edge(s, e, c, space, continent_at, run);
+            }
+        }
+        for y in a.top..a.bottom {
+            let (s, e) = ((a.left, y), (a.left, y + 1));
+            if !covered(s, e, &|o| o.left != a.left) {
+                outline_edge(s, e, c, space, continent_at, run);
+            }
+        }
+        for y in a.top..a.bottom {
+            let (s, e) = ((a.right, y), (a.right, y + 1));
+            if !covered(s, e, &|o| o.right != a.right) {
+                outline_edge(s, e, c, space, continent_at, run);
+            }
+        }
+    }
+}
+
 // ---- the C interface (RTSMap.cpp)
 
 /// The map's tiles and water for the edits: the map (`EEMap*`) and its mesh's Rust object, then the C++'s calls.
@@ -520,6 +625,30 @@ pub unsafe extern "C" fn ee_ge_map_raised_corners(host: *const EeGeMapHost, x: c
 pub unsafe extern "C" fn ee_ge_map_tile_flat(host: *const EeGeMapHost, tile_size: f32, x: c_ulong, y: c_ulong) -> bool {
     // SAFETY: the caller's contract
     tile_flat(&Cpp(unsafe { &*host }), tile_size, x, y)
+}
+
+/// `BuildAreaOutlines`: `count` areas and their continents; `space` is `GetIsSpaceMap()`; each run (start x, y, end
+/// x, y) handed to `run`, a tile's continent asked of `continent` (`gContinentManager.GetContinent`, non-space).
+///
+/// # Safety
+/// The arrays hold `count` entries.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_map_area_outlines(
+    context: *mut c_void,
+    areas: *const EeGeAreaRect,
+    continents: *const u16,
+    count: usize,
+    space: bool,
+    continent: extern "C" fn(context: *mut c_void, x: c_long, y: c_long) -> u16,
+    run: extern "C" fn(context: *mut c_void, run: *const c_long),
+) {
+    if count == 0 {
+        return;
+    }
+    // SAFETY: the caller's contract
+    let (areas, continents) =
+        unsafe { (std::slice::from_raw_parts(areas, count), std::slice::from_raw_parts(continents, count)) };
+    area_outlines(areas, continents, space, &mut |x, y| continent(context, x, y), &mut |r| run(context, r.as_ptr()));
 }
 
 #[cfg(test)]

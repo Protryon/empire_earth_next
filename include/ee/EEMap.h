@@ -247,7 +247,6 @@ public:
     // inline (refused in EEROTerrain::RenderScene's erase; its copy is ICF-folded with the `lea eax, [ecx+4]` 0x1d99fb;
     // provisional name)
     std::vector<RTSColoredRectangle>& GetColoredRectangles() { return this->mColoredRectangles; }
-    void AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent);
 
     static const UString sMapWidth;         // "RTSMap-MapWidth" (0x529840; key names are provisional)
     static const UString sMapHeight;        // "RTSMap-MapHeight" (0x529828)

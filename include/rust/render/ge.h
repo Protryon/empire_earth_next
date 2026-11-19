@@ -955,6 +955,14 @@ using EeGeDraw2DVertexHost = ptrdiff_t(*)(void *owner,
                                           ptrdiff_t a,
                                           ptrdiff_t b);
 
+/// The C++ host: `owner` is the C++ manager the object belongs to.
+using EeGeManHostFn = ptrdiff_t(*)(void *owner,
+                                   EeGeManOp op,
+                                   void *obj,
+                                   ptrdiff_t a,
+                                   ptrdiff_t b,
+                                   ptrdiff_t c);
+
 /// The map's tiles and water for the edits: the map (`EEMap*`) and its mesh's Rust object, then the C++'s calls.
 struct EeGeMapHost {
   void *map;
@@ -967,13 +975,13 @@ struct EeGeMapHost {
   void (*update_water)(void *map, long x, long y);
 };
 
-/// The C++ host: `owner` is the C++ manager the object belongs to.
-using EeGeManHostFn = ptrdiff_t(*)(void *owner,
-                                   EeGeManOp op,
-                                   void *obj,
-                                   ptrdiff_t a,
-                                   ptrdiff_t b,
-                                   ptrdiff_t c);
+/// A `U2DRectangle<long>` in the C++'s member order.
+struct EeGeAreaRect {
+  long bottom;
+  long left;
+  long right;
+  long top;
+};
 
 /// The host: `owner` is the C++ model of the object calling.
 using EeGeModHostFn = ptrdiff_t(*)(void *owner,
@@ -1620,34 +1628,6 @@ size_t ee_ge_texman_made_name(char *out, size_t capacity);
 /// `name` is NUL-terminated; `out` holds `capacity` bytes.
 size_t ee_ge_modman_created_name(const char *name, char *out, size_t capacity);
 
-/// `RTSMap::Raise`; `bounds` is left, right, top, bottom (read and written), `fields` the map's record.
-///
-/// # Safety
-/// The host's map and mesh are live; the pointers valid.
-void ee_ge_map_raise(const EeGeMapHost *host,
-                     EeUnitsRtsMapFields *fields,
-                     long (*bounds)[4],
-                     float height,
-                     float slope,
-                     float edge_height,
-                     float edge_slope,
-                     bool raise_first);
-
-/// `RTSMap::GetNumRaisedCorners`.
-///
-/// # Safety
-/// As [`ee_ge_map_raise`].
-long ee_ge_map_raised_corners(const EeGeMapHost *host, unsigned long x, unsigned long y);
-
-/// `RTSMap::IsTileFlat` (`tile_size` is `mF1955F4`).
-///
-/// # Safety
-/// As [`ee_ge_map_raise`].
-bool ee_ge_map_tile_flat(const EeGeMapHost *host,
-                         float tile_size,
-                         unsigned long x,
-                         unsigned long y);
-
 /// `GEModelManager::GEModelManager(path)`: the object of the C++ manager `owner`.
 ///
 /// # Safety
@@ -1722,6 +1702,47 @@ void ee_ge_modman_set_path(EeGeModelManager *p, void *path);
 /// # Safety
 /// `p` is live.
 void ee_ge_modman_verify(EeGeModelManager *p);
+
+/// `RTSMap::Raise`; `bounds` is left, right, top, bottom (read and written), `fields` the map's record.
+///
+/// # Safety
+/// The host's map and mesh are live; the pointers valid.
+void ee_ge_map_raise(const EeGeMapHost *host,
+                     EeUnitsRtsMapFields *fields,
+                     long (*bounds)[4],
+                     float height,
+                     float slope,
+                     float edge_height,
+                     float edge_slope,
+                     bool raise_first);
+
+/// `RTSMap::GetNumRaisedCorners`.
+///
+/// # Safety
+/// As [`ee_ge_map_raise`].
+long ee_ge_map_raised_corners(const EeGeMapHost *host, unsigned long x, unsigned long y);
+
+/// `RTSMap::IsTileFlat` (`tile_size` is `mF1955F4`).
+///
+/// # Safety
+/// As [`ee_ge_map_raise`].
+bool ee_ge_map_tile_flat(const EeGeMapHost *host,
+                         float tile_size,
+                         unsigned long x,
+                         unsigned long y);
+
+/// `BuildAreaOutlines`: `count` areas and their continents; `space` is `GetIsSpaceMap()`; each run (start x, y, end
+/// x, y) handed to `run`, a tile's continent asked of `continent` (`gContinentManager.GetContinent`, non-space).
+///
+/// # Safety
+/// The arrays hold `count` entries.
+void ee_ge_map_area_outlines(void *context,
+                             const EeGeAreaRect *areas,
+                             const uint16_t *continents,
+                             size_t count,
+                             bool space,
+                             uint16_t (*continent)(void *context, long x, long y),
+                             void (*run)(void *context, const long *run));
 
 /// Frees a model (`ee_of_find_model`'s; not a sub-model's handle).
 ///

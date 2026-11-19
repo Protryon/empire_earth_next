@@ -169,3 +169,34 @@ fn the_spreads_keep_the_corner_rings() {
     let left = spread_left(&mut g, &f, 10, 15, 10, 3.0, 0.5);
     assert!(left <= 10 - f.mL195600);
 }
+
+fn rect(left: c_long, top: c_long, right: c_long, bottom: c_long) -> EeGeAreaRect {
+    EeGeAreaRect { bottom, left, right, top }
+}
+
+#[test]
+fn the_outlines_skip_the_edges_another_area_of_the_continent_covers() {
+    let mut runs = vec![];
+    // two touching areas of continent 1 side by side, one of continent 2 over them
+    let areas = [rect(0, 0, 2, 1), rect(2, 0, 4, 1), rect(0, 0, 4, 1)];
+    area_outlines(&areas, &[1, 1, 2], false, &mut |_, _| 0, &mut |r| runs.push(r));
+    // area 0's right edge (x 2) lies in area 1, whose left differs: covered; area 1's left edge likewise; area 2 is
+    // alone on its continent: its 4 + 4 + 1 + 1 edges
+    assert!(!runs.contains(&[2, 0, 2, 1]));
+    assert_eq!(runs.iter().filter(|r| r[0] == 0 && r[2] == 0).count(), 2, "the two left edges at x 0");
+    assert_eq!(runs.len(), (2 + 2 + 1) * 2 + 4 + 4 + 1 + 1);
+}
+
+#[test]
+fn on_a_space_map_an_edge_splits_into_the_runs_on_its_continent() {
+    let mut runs = vec![];
+    // a unit edge has two tiles: the second off the continent
+    outline_edge((3, 5), (4, 5), 7, true, &mut |x, _| if x == 3 { 7 } else { 0 }, &mut |r| runs.push(r));
+    assert_eq!(runs, vec![[3, 5, 4, 5]]);
+    runs.clear();
+    outline_edge((3, 5), (3, 6), 7, true, &mut |_, _| 7, &mut |r| runs.push(r));
+    assert_eq!(runs, vec![[3, 5, 3, 6]]);
+    runs.clear();
+    outline_edge((3, 5), (3, 6), 7, true, &mut |_, _| 1, &mut |r| runs.push(r));
+    assert!(runs.is_empty());
+}
