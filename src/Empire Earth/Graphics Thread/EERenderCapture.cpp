@@ -425,3 +425,6 @@ void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, 
     std::fwrite(w.mData.data(), 1, w.mData.size(), theFile);
     std::fflush(theFile);
 }
+
+// the renderer's hook (ee/EERenderCapture.h)
+static const bool sEERenderCaptureRegistered = (gEERenderCaptureFill = EERenderCaptureFill, true);

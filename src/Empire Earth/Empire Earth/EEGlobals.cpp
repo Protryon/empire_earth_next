@@ -308,3 +308,7 @@ class NEMessage;
 EEComplexUnit* gPhysicsSteppingUnit = NULL;
 void (*gPhysicsAfterTickHook)(void) = NULL;
 void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
+// TEST ONLY: the render fill's capture (ee/EERenderCapture.h; EERenderCapture.cpp sets it)
+struct EERenderFrameInfo;
+void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount) = NULL;
+

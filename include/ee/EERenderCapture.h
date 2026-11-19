@@ -13,7 +13,10 @@
 
 struct EERenderFrameInfo;
 
-// FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock
+// FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock.
+// The renderer calls it through gEERenderCaptureFill (EEGlobals.cpp), which EERenderCapture.cpp sets at static
+// initialization: the renderer names no symbol of the capture
 void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);
+extern void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);
 
 #endif
