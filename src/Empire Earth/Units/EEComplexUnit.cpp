@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <math.h>
 #include <typeinfo>
+#include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EETechCapture.h"
 
@@ -3330,7 +3331,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 {
     ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
     ioWords[8] = (uint32_t)inUnit->mNextTriggerTime;
-    EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
+    ee_units_note_state(kUnitStateAIStep, (uint32_t)inUnit->mUnitID, ioWords, 9);
 }
 
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
@@ -3339,7 +3340,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 // changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
+    bool theNoting = ee_units_note_noting();   // TEST ONLY (USST)
     uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime,
                             (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
     EeUnitsAIHost theHost;

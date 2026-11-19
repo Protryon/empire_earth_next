@@ -112,9 +112,9 @@ static int64_t AICondition(void* inContext, int64_t inTrigger)
 {
     EEComplexUnit* theUnit = AIUnit(inContext);
     long theEvent = theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inTrigger);
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+    if (ee_units_note_noting()) {   // TEST ONLY (USST)
         uint32_t theWords[2] = {(uint32_t)inTrigger, (uint32_t)theEvent};
-        EEUnitStateNote(kUnitStateCondition, theUnit->mUnitID, theWords, 2);
+        ee_units_note_state(kUnitStateCondition, (uint32_t)theUnit->mUnitID, theWords, 2);
     }
     return theEvent;
 }

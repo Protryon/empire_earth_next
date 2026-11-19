@@ -1791,8 +1791,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
             inUnit->SetOpacityChain(io->f);
         return 0;
     case EE_UNITS_CLS_ST_CLOAK_DETECTION: ((EEUnitClass*)(uintptr_t)inB)->UpdateCloakDetection(inUnit); return 0;
-    case EE_UNITS_CLS_ST_NOTING: return EESimCaptureRecord::Active();
-    case EE_UNITS_CLS_ST_NOTE: EEUnitStepNote((unsigned int)inC, (unsigned long)inD, (const uint32_t*)io->list, (unsigned int)io->a); return 0;
     case EE_UNITS_CLS_ST_AREA_CLOAK: {
         if (!inUnit->HasEffect(8))
             return 0;

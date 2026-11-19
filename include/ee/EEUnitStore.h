@@ -103,12 +103,8 @@ enum EEUnitStepKind {
     kUnitStepCamouflage = 7,    // EEUnitClass::UpdateCamouflageTimer's timers
     kUnitStepCloakFade = 8      // EEUnitClass::UpdateCamouflageTimer's cloak opacity
 };
-void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
-void EEUnitStepCommit();
-// TEST ONLY: whether the step's records are noted (the capture runs)
-bool EEUnitStepNoting();
-// TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): EEUnitStateNote adds one call
-// (its kind, the unit's id, its words) to the tick's second digest, written by EEUnitStepCommit as a USST record (the
+// TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): ee_units_note_state adds one call
+// (its kind, the unit's id, its words) to the tick's second digest, written by ee_units_note_step_commit as a USST record (the
 // tick, the calls, their FNV-1a). Words: AIStep [command type, next trigger time, game time, path (1 the gather goal
 // restarted its action, 2 no command, 3 an idle unit waiting, 4 evaluated), the gather's action, the first and the
 // second evaluation's results (0xffffffff: none), command type after, next trigger time after]; a trigger's
@@ -140,26 +136,14 @@ enum EEUnitStateKind {
     kUnitStateApproachPitch = 11,  // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
     // the thirteenth round's: a class Update's leaf calls in order, three words each [operation (ee_units update.rs
     // EE_UNITS_UPD_*), its two arguments], noted by the Update host (EEUnitUpdate.cpp) and written once the unit's
-    // step is done (EEUnitUpdateCommit)
+    // step is done (ee_units_note_update_commit)
     kUnitStateUpdate = 12,
     // a class ActionChanged's operations in order, three words each [operation (ee_units actions.rs
     // EE_UNITS_ACT_*), its two arguments], the nested calls (another part's, the idle restart) with them, written once
-    // the outermost call returns (EEUnitActionScope)
+    // the outermost call returns (ee_units_note_action_begin/end)
     kUnitStateActionChanged = 13
 };
-void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
-// TEST ONLY (USST kind 12): one leaf call of a class Update; the step's calls as one note (TickStep, after the step)
-void EEUnitUpdateNote(int inOperation, int64_t inA, int64_t inB);
-void EEUnitUpdateCommit(unsigned long inID);
-// TEST ONLY (USST kind 13): one operation of a class ActionChanged; the scope of a call (the outermost writes the note)
-void EEUnitActionNote(int inOperation, int64_t inA, int64_t inB);
-struct EEUnitActionScope {
-    explicit EEUnitActionScope(unsigned long inID);
-    ~EEUnitActionScope();
-};
-// TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
-// the unit and exits 3 (the capture's USTM gate; the leaves compare only while the capture runs)
-void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal);
+// (the notes and their records: ee_sim units/notes.rs, ee_units_note_*)
 
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
 // on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'

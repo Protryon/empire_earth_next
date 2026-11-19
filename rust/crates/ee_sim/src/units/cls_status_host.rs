@@ -25,10 +25,6 @@ pub const EE_UNITS_CLS_ST_MINI_MAP: i32 = 97;
 pub const EE_UNITS_CLS_ST_CHAIN: i32 = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 pub const EE_UNITS_CLS_ST_CLOAK_DETECTION: i32 = 99;
-/// TEST ONLY: `EESimCaptureRecord::Active()`
-pub const EE_UNITS_CLS_ST_NOTING: i32 = 100;
-/// TEST ONLY: `EEUnitStepNote(c, d, the io.a words at io.list)`
-pub const EE_UNITS_CLS_ST_NOTE: i32 = 101;
 
 /// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
 pub const EE_UNITS_CLS_ST_AREA_CLOAK: i32 = 102;
@@ -126,12 +122,10 @@ impl StatusHost for ClsGame {
         self.st(EE_UNITS_CLS_ST_CLOAK_DETECTION, unit, class, 0, 0, 0.0);
     }
     fn noting(&mut self) -> bool {
-        self.st(EE_UNITS_CLS_ST_NOTING, 0, 0, 0, 0, 0.0).0 != 0
+        crate::units::notes::noting()
     }
     fn note(&mut self, kind: u32, id: u32, words: &[u32]) {
-        let mut io =
-            EeUnitsClsIo { a: words.len() as i64, list: words.as_ptr() as *mut std::ffi::c_void, ..Default::default() };
-        self.call(EE_UNITS_CLS_ST_NOTE, 0, 0, i64::from(kind), i64::from(id), &mut io);
+        crate::units::notes::step(kind, id, words);
     }
     fn step_camouflage(
         &mut self,

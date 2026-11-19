@@ -171,9 +171,9 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     EEComplexUnit* theUnit = theContext->mUnit;
     EEUnitClass* theClass = theContext->mClass;
     if (inCode >= EE_UNITS_ACT_RELEASE_HEAL_EFFECT)
-        EEUnitActionNote(inCode, inA, inB);   // TEST ONLY (USST kind 13)
+        ee_units_note_action(inCode, inA, inB);   // TEST ONLY (USST kind 13)
     else
-        EEUnitUpdateNote(inCode, inA, inB);   // TEST ONLY (USST kind 12)
+        ee_units_note_update(inCode, inA, inB);   // TEST ONLY (USST kind 12)
     switch (inCode) {
     case EE_UNITS_UPD_LAST_HIT_POINTS:
         theUnit->SetLastHitPoints(theUnit->mHitPoints);
@@ -643,9 +643,10 @@ void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 
 void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theScope(inUnit->mUnitID);   // TEST ONLY (USST kind 13)
+    ee_units_note_action_begin((uint32_t)inUnit->mUnitID);   // TEST ONLY (USST kind 13)
     EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
     EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
     ee_units_action_changed(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
                             &theHost);
+    ee_units_note_action_end();
 }

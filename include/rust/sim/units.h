@@ -1257,12 +1257,6 @@ constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
 
-/// TEST ONLY: `EESimCaptureRecord::Active()`
-constexpr static const int32_t EE_UNITS_CLS_ST_NOTING = 100;
-
-/// TEST ONLY: `EEUnitStepNote(c, d, the io.a words at io.list)`
-constexpr static const int32_t EE_UNITS_CLS_ST_NOTE = 101;
-
 /// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
 constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
@@ -4616,44 +4610,6 @@ struct EeUnitsPmTick {
   float height_epsilon;
 };
 
-/// A unit class's values the models read (`EEUnitClass`'s getters and members; the three effects: set or not).
-struct EeUnitsPmClass {
-  uint32_t category;
-  uint32_t unit_type;
-  int32_t air_traffic_type;
-  int32_t tile_size;
-  uint8_t pitches_with_terrain;
-  uint8_t rolls_with_terrain;
-  uint8_t fires_broadside;
-  uint8_t is_melee;
-  uint8_t has_splash_effect;
-  uint8_t has_death_effect;
-  uint8_t has_shell_hole_effect;
-  /// `GetCruiseAltitude()`, `mSlopeSpeedPenalty`, `GetBobPitch()`, `GetBobHeight()`, `GetScale()`, `mMaxVelocity`
-  /// (`GetMaxVelocity()`), `mMaxRoll`, `mInnerCollisionSphere`, `GetFacingOffset()`, `GetAngularAcceleration()`,
-  /// `GetMaxAngularVelocity()`
-  float cruise_altitude;
-  float slope_penalty;
-  float bob_pitch;
-  float bob_height;
-  float scale;
-  float max_velocity;
-  float max_roll;
-  float inner_collision_sphere;
-  float facing_offset;
-  float angular_acceleration;
-  float max_angular_velocity;
-};
-
-/// A unit's statistics (`mStats`: `EEUnitClassUpgrade`'s getters).
-struct EeUnitsPmStats {
-  float max_velocity;
-  float acceleration;
-  float angular_acceleration;
-  float max_angular_velocity;
-  float scale;
-};
-
 /// A tile's values (`RTSTile`'s; zeros for no tile).
 struct EeUnitsPmTile {
   int32_t terrain_type;
@@ -5007,6 +4963,44 @@ struct EeUnitsBuildUnit {
   bool land_building;
   /// the complex unit's `mAnimation` (the gathering)
   int32_t animation;
+};
+
+/// A unit class's values the models read (`EEUnitClass`'s getters and members; the three effects: set or not).
+struct EeUnitsPmClass {
+  uint32_t category;
+  uint32_t unit_type;
+  int32_t air_traffic_type;
+  int32_t tile_size;
+  uint8_t pitches_with_terrain;
+  uint8_t rolls_with_terrain;
+  uint8_t fires_broadside;
+  uint8_t is_melee;
+  uint8_t has_splash_effect;
+  uint8_t has_death_effect;
+  uint8_t has_shell_hole_effect;
+  /// `GetCruiseAltitude()`, `mSlopeSpeedPenalty`, `GetBobPitch()`, `GetBobHeight()`, `GetScale()`, `mMaxVelocity`
+  /// (`GetMaxVelocity()`), `mMaxRoll`, `mInnerCollisionSphere`, `GetFacingOffset()`, `GetAngularAcceleration()`,
+  /// `GetMaxAngularVelocity()`
+  float cruise_altitude;
+  float slope_penalty;
+  float bob_pitch;
+  float bob_height;
+  float scale;
+  float max_velocity;
+  float max_roll;
+  float inner_collision_sphere;
+  float facing_offset;
+  float angular_acceleration;
+  float max_angular_velocity;
+};
+
+/// A unit's statistics (`mStats`: `EEUnitClassUpgrade`'s getters).
+struct EeUnitsPmStats {
+  float max_velocity;
+  float acceleration;
+  float angular_acceleration;
+  float max_angular_velocity;
+  float scale;
 };
 
 /// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
@@ -6446,6 +6440,40 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
+/// `EEUnitStepNoting()`
+bool ee_units_note_noting();
+
+/// `EEUnitStepNote(kind, id, words, count)`
+///
+/// # Safety
+/// `words` points to `count` words (or `count` is 0).
+void ee_units_note_step(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitStateNote(kind, id, words, count)`
+///
+/// # Safety
+/// `words` points to `count` words (or `count` is 0).
+void ee_units_note_state(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitUpdateNote(op, a, b)`
+void ee_units_note_update(int32_t op, int64_t a, int64_t b);
+
+/// `EEUnitUpdateCommit(id)`: after a unit's step
+void ee_units_note_update_commit(uint32_t id);
+
+/// `EEUnitActionNote(op, a, b)`
+void ee_units_note_action(int32_t op, int64_t a, int64_t b);
+
+/// `EEUnitActionScope(id)`: an `ActionChanged` begins
+void ee_units_note_action_begin(uint32_t id);
+
+/// `~EEUnitActionScope`: the `ActionChanged` returns
+void ee_units_note_action_end();
+
+/// `EEUnitStepCommit()`: the tick's USTM and USST records (`ticks`: the physics' ticks done). A leaf's store read
+/// that differed from the members stops EE-SIM (exit 3).
+void ee_units_note_step_commit(uint32_t ticks);
+
 extern void ee_units_pg_host_unit_tile(uint64_t unit, int32_t *out_x, int32_t *out_y);
 
 extern float ee_units_pg_host_distance(uint64_t unit, int32_t x, int32_t y);
@@ -7035,21 +7063,6 @@ extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
 
 extern float ee_units_pm_host_random();
 
-extern uint8_t ee_units_pm_host_noting();
-
-extern void ee_units_pm_host_note(uint32_t kind,
-                                  uint32_t id,
-                                  const uint32_t *words,
-                                  uint32_t count);
-
-extern void ee_units_pm_host_view(uint64_t obj, EeUnitsPmUnit *out);
-
-extern void ee_units_pm_host_class(uint64_t obj, EeUnitsPmClass *out);
-
-extern void ee_units_pm_host_stats(uint64_t obj, EeUnitsPmStats *out);
-
-extern void ee_units_pm_host_location(uint64_t obj, float *out);
-
 extern void ee_units_pm_host_set_transformation(uint64_t obj, const float *m);
 
 extern void ee_units_pm_host_refresh_transformation(uint64_t obj);
@@ -7082,15 +7095,11 @@ extern float ee_units_pm_host_first_waypoint_z(uint64_t obj);
 
 extern void ee_units_pm_host_path_length(uint64_t obj, float *io);
 
-extern uint32_t ee_units_pm_host_command_type(uint64_t obj);
-
 extern int32_t ee_units_pm_host_model_parts(uint64_t obj);
 
 extern uint32_t ee_units_pm_host_frame_time(uint64_t obj, uint32_t animation);
 
 extern uint64_t ee_units_pm_host_tile_of(uint64_t obj);
-
-extern uint8_t ee_units_pm_host_goal_kind(uint64_t obj);
 
 extern uint64_t ee_units_pm_host_goal_unit(uint64_t obj, int32_t which);
 
@@ -7098,7 +7107,7 @@ extern void ee_units_pm_host_goal_point(uint64_t obj, int32_t which, float *out)
 
 extern uint8_t ee_units_pm_host_goal_facing(uint64_t obj, float *yaw);
 
-extern uint64_t ee_units_pm_host_unit_value(uint64_t unit, int32_t which);
+extern uint8_t ee_units_pm_host_flies_over(uint64_t unit);
 
 extern uint8_t ee_units_pm_host_has_arrived(uint64_t obj, float distance);
 

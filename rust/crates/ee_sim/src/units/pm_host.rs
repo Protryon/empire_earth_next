@@ -5,17 +5,14 @@
 
 use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation};
 
+use crate::world::layout::layout;
+use crate::world::view::{UnitView, WorldRead};
+use crate::world_field;
 use crate::units::pm::{EeUnitsPmClass, EeUnitsPmStats, EeUnitsPmTick, EeUnitsPmTile, EeUnitsPmUnit, PmHost};
 
 extern "C" {
     fn ee_units_pm_host_tick(out: *mut EeUnitsPmTick);
     fn ee_units_pm_host_random() -> f32;
-    fn ee_units_pm_host_noting() -> u8;
-    fn ee_units_pm_host_note(kind: u32, id: u32, words: *const u32, count: u32);
-    fn ee_units_pm_host_view(obj: u64, out: *mut EeUnitsPmUnit);
-    fn ee_units_pm_host_class(obj: u64, out: *mut EeUnitsPmClass);
-    fn ee_units_pm_host_stats(obj: u64, out: *mut EeUnitsPmStats);
-    fn ee_units_pm_host_location(obj: u64, out: *mut f32);
     fn ee_units_pm_host_set_transformation(obj: u64, m: *const f32);
     fn ee_units_pm_host_refresh_transformation(obj: u64);
     fn ee_units_pm_host_set_location(obj: u64, m: *const f32);
@@ -32,15 +29,13 @@ extern "C" {
     fn ee_units_pm_host_next_waypoint(obj: u64, out: *mut f32) -> i32;
     fn ee_units_pm_host_first_waypoint_z(obj: u64) -> f32;
     fn ee_units_pm_host_path_length(obj: u64, io: *mut f32);
-    fn ee_units_pm_host_command_type(obj: u64) -> u32;
     fn ee_units_pm_host_model_parts(obj: u64) -> i32;
     fn ee_units_pm_host_frame_time(obj: u64, animation: u32) -> u32;
     fn ee_units_pm_host_tile_of(obj: u64) -> u64;
-    fn ee_units_pm_host_goal_kind(obj: u64) -> u8;
     fn ee_units_pm_host_goal_unit(obj: u64, which: i32) -> u64;
     fn ee_units_pm_host_goal_point(obj: u64, which: i32, out: *mut f32);
     fn ee_units_pm_host_goal_facing(obj: u64, yaw: *mut f32) -> u8;
-    fn ee_units_pm_host_unit_value(unit: u64, which: i32) -> u64;
+    fn ee_units_pm_host_flies_over(unit: u64) -> u8;
     fn ee_units_pm_host_has_arrived(obj: u64, distance: f32) -> u8;
     fn ee_units_pm_host_is_swimming(obj: u64) -> u8;
     fn ee_units_pm_host_place_on_ground(obj: u64, x: f32, y: f32, z: f32);
@@ -93,14 +88,6 @@ const WHICH_GOAL_HOME: i32 = 5;
 const POINT_GOAL: i32 = 0;
 const POINT_CALAMITY: i32 = 1;
 const POINT_PATH_START: i32 = 2;
-/// `ee_units_pm_host_unit_value`'s (of an `EEUnit*`): the resource type, the complex unit, the tile x, the tile y,
-/// the class category, the class flies over
-const UNIT_RESOURCE_TYPE: i32 = 0;
-const UNIT_COMPLEX: i32 = 1;
-const UNIT_TILE_X: i32 = 2;
-const UNIT_TILE_Y: i32 = 3;
-const UNIT_CATEGORY: i32 = 4;
-const UNIT_FLIES_OVER: i32 = 5;
 /// `ee_units_pm_host_list`'s: the contacts' head node, a contact node's next and unit, a tile's units' head node, a
 /// tile node's next and unit
 const LIST_CONTACT_FIRST: i32 = 0;
@@ -118,6 +105,22 @@ const EFFECT_RIPPLE: i32 = 3;
 const KIND_PROJECTILE_STEP0: i32 = 0;
 const KIND_PROJECTILE_STEP2: i32 = 1;
 const KIND_MISSILE_STEP0: i32 = 2;
+
+/// The class's effects (`GetEffects()` indexes): the death, splash and shell hole effects
+const CLASS_EFFECT_DEATH: usize = 1;
+const CLASS_EFFECT_SPLASH: usize = 8;
+const CLASS_EFFECT_SHELL_HOLE: usize = 26;
+
+/// `f` over the view of the live unit `obj` (the physics model's caller holds the world).
+fn with_unit<R: Default>(obj: u64, f: impl FnOnce(&UnitView<'_>) -> R) -> R {
+    // SAFETY: the physics' call runs on the simulation thread inside the C++ caller's hold of the world; `obj` is
+    // the live unit it hands in
+    let t = unsafe { WorldRead::begin() };
+    match unsafe { UnitView::of(&t, obj) } {
+        Some(u) => f(&u),
+        None => R::default(),
+    }
+}
 
 fn matrix(m: &[f32; 16]) -> GeTransformation {
     let mut t = GeTransformation::default();
@@ -158,30 +161,72 @@ impl PmHost for Game {
         unsafe { ee_units_pm_host_random() }
     }
     fn noting(&mut self) -> bool {
-        unsafe { ee_units_pm_host_noting() != 0 }
+        crate::units::notes::noting()
     }
     fn note(&mut self, kind: u32, id: u32, words: &[u32]) {
-        unsafe { ee_units_pm_host_note(kind, id, words.as_ptr(), words.len() as u32) }
+        crate::units::notes::state(kind, id, words)
     }
     fn view(&mut self, obj: u64) -> EeUnitsPmUnit {
-        let mut u =
-            EeUnitsPmUnit { obj, rts: std::ptr::null_mut(), unit: std::ptr::null_mut(), cx: std::ptr::null_mut() };
-        unsafe { ee_units_pm_host_view(obj, &mut u) };
-        u
+        // the records' places in the object (the C++ `PMView`'s base casts)
+        let l = layout();
+        let at = |offset: u64| (obj as usize + offset as usize) as *mut u8;
+        EeUnitsPmUnit {
+            obj,
+            rts: at(l.rts_unit_fields).cast(),
+            unit: at(l.unit_fields).cast(),
+            cx: at(l.complex_unit_fields).cast(),
+        }
     }
     fn class(&mut self, obj: u64) -> EeUnitsPmClass {
-        let mut c = EeUnitsPmClass::default();
-        unsafe { ee_units_pm_host_class(obj, &mut c) };
-        c
+        with_unit(obj, |u| {
+            let Some(class) = u.class() else { return EeUnitsPmClass::default() };
+            let f = class.fields();
+            let b = |v: bool| u8::from(v);
+            EeUnitsPmClass {
+                category: class.category() as u32,
+                unit_type: class.unit_type() as u32,
+                air_traffic_type: world_field!(f, mAirTrafficType) as i32,
+                tile_size: class.tile_size() as i32,
+                pitches_with_terrain: b(world_field!(f, mPitchesWithTerrain)),
+                rolls_with_terrain: b(world_field!(f, mRollsWithTerrain)),
+                fires_broadside: b(world_field!(f, mFiresBroadside)),
+                is_melee: b(world_field!(f, mIsMelee)),
+                has_splash_effect: b(class.effect_handle(CLASS_EFFECT_SPLASH) != 0),
+                has_death_effect: b(class.effect_handle(CLASS_EFFECT_DEATH) != 0),
+                has_shell_hole_effect: b(class.effect_handle(CLASS_EFFECT_SHELL_HOLE) != 0),
+                cruise_altitude: world_field!(f, mCruiseAltitude),
+                slope_penalty: world_field!(f, mSlopeSpeedPenalty),
+                bob_pitch: world_field!(f, mBobPitch),
+                bob_height: world_field!(f, mBobHeight),
+                scale: world_field!(f, mScale),
+                max_velocity: world_field!(f, mMaxVelocity),
+                max_roll: world_field!(f, mMaxRoll),
+                inner_collision_sphere: world_field!(f, mInnerCollisionSphere),
+                facing_offset: world_field!(f, mFacingOffset),
+                angular_acceleration: world_field!(f, mAngularAcceleration),
+                max_angular_velocity: world_field!(f, mMaxAngularVelocity),
+            }
+        })
     }
     fn stats(&mut self, obj: u64) -> EeUnitsPmStats {
-        let mut s = EeUnitsPmStats::default();
-        unsafe { ee_units_pm_host_stats(obj, &mut s) };
-        s
+        with_unit(obj, |u| {
+            let Some(stats) = u.stats() else { return EeUnitsPmStats::default() };
+            let f = stats.fields();
+            EeUnitsPmStats {
+                max_velocity: world_field!(f, mMaxVelocity),
+                acceleration: world_field!(f, mAcceleration),
+                angular_acceleration: world_field!(f, mAngularAcceleration),
+                max_angular_velocity: world_field!(f, mMaxAngularVelocity),
+                scale: world_field!(f, mScale),
+            }
+        })
     }
     fn location(&mut self, obj: u64) -> GeTransformation {
+        let rows = with_unit(obj, |u| u.transform());
         let mut m = [0.0f32; 16];
-        unsafe { ee_units_pm_host_location(obj, m.as_mut_ptr()) };
+        for (r, row) in rows.iter().enumerate() {
+            m[r * 4..r * 4 + 4].copy_from_slice(row);
+        }
         matrix(&m)
     }
     fn set_transformation(&mut self, obj: u64, t: &GeTransformation) {
@@ -263,7 +308,7 @@ impl PmHost for Game {
         point(p)
     }
     fn command_type(&mut self, obj: u64) -> u32 {
-        unsafe { ee_units_pm_host_command_type(obj) }
+        with_unit(obj, |u| u.command_type())
     }
     fn model_parts(&mut self, obj: u64) -> i32 {
         unsafe { ee_units_pm_host_model_parts(obj) }
@@ -275,7 +320,7 @@ impl PmHost for Game {
         unsafe { ee_units_pm_host_tile_of(obj) }
     }
     fn goal_kind(&mut self, obj: u64) -> u8 {
-        unsafe { ee_units_pm_host_goal_kind(obj) }
+        with_unit(obj, |u| u.goal().map_or(0, |g| g.0))
     }
     fn attack_target(&mut self, obj: u64) -> u64 {
         unsafe { ee_units_pm_host_goal_unit(obj, WHICH_GOAL_ATTACK) }
@@ -306,24 +351,22 @@ impl PmHost for Game {
         unsafe { ee_units_pm_host_goal_unit(obj, WHICH_GOAL_BUILD) }
     }
     fn resource_type(&mut self, unit: u64) -> u32 {
-        unsafe { ee_units_pm_host_unit_value(unit, UNIT_RESOURCE_TYPE) as u32 }
+        with_unit(unit, |u| u.resource_type() as u32)
     }
     fn unit_complex(&mut self, unit: u64) -> u64 {
-        unsafe { ee_units_pm_host_unit_value(unit, UNIT_COMPLEX) }
+        with_unit(unit, |u| u.complex_unit_handle())
     }
     fn unit_tile(&mut self, unit: u64) -> (i32, i32) {
-        unsafe {
-            (
-                ee_units_pm_host_unit_value(unit, UNIT_TILE_X) as i32,
-                ee_units_pm_host_unit_value(unit, UNIT_TILE_Y) as i32,
-            )
-        }
+        with_unit(unit, |u| {
+            let (x, y) = u.tile_xy();
+            (x as i32, y as i32)
+        })
     }
     fn unit_category(&mut self, unit: u64) -> u32 {
-        unsafe { ee_units_pm_host_unit_value(unit, UNIT_CATEGORY) as u32 }
+        with_unit(unit, |u| u.class().map_or(0, |c| c.category() as u32))
     }
     fn flies_over(&mut self, unit: u64) -> bool {
-        unsafe { ee_units_pm_host_unit_value(unit, UNIT_FLIES_OVER) != 0 }
+        unsafe { ee_units_pm_host_flies_over(unit) != 0 }
     }
     fn has_arrived(&mut self, obj: u64, distance: f32) -> bool {
         unsafe { ee_units_pm_host_has_arrived(obj, distance) != 0 }
