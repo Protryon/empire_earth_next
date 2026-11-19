@@ -134,21 +134,7 @@ void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLa
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)
 void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas)
 {
-    std::vector<UWideString> theNames;
-    UWideString theText;
-    if (inAreas) {
-        inComboBox->mMode = kSETriggerScreenArea;
-        gResource->GetString(IDS_AREA, theText);
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
-    } else {
-        inComboBox->mMode = kSETriggerScreenObject;
-        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theText);
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
-    }
-    inLabel->SetText(theText);
-    inComboBox->DeleteAllEntries();
-    for (unsigned long i = 0; i < theNames.size(); i++)
-        inComboBox->AppendLine(theNames[i]);
+    FillScenarioComboBox(inComboBox, inLabel, inAreas);
     UIEvent* theAction = inComboBox->GetTriggerEvent(kControlTriggerSelectionChanged);
     if (theAction)
         theAction->Reference();

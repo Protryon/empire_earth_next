@@ -281,19 +281,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 // Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
 {
-    UWideString theTitle;
-    std::vector<UWideString> theNames;
-    if (inAreas == true) {
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
-        gResource->GetString(IDS_AREA, theTitle);
-        inComboBox->mMode = kSETriggerScreenArea;
-    } else {
-        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
-        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theTitle);
-        inComboBox->mMode = kSETriggerScreenObject;
-    }
-    inLabel->SetText(theTitle);
-    inComboBox->DeleteAllEntries();
-    for (unsigned long i = 0; i < theNames.size(); i++)
-        inComboBox->AppendLine(theNames[i]);
+    inComboBox->mMode = inAreas ? kSETriggerScreenArea : kSETriggerScreenObject;
+    FillPlaceComboBox(inAreas, inLabel, inComboBox);
 }
