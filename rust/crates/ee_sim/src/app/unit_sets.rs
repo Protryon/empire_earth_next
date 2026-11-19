@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use std::ffi::c_char;
 use std::sync::RwLock;
 
-/// One record of dbunitset (`EEUnitSetRecord`, 184 bytes).
+/// One record of dbunitset (`EEUnitSetRecord`, 184 bytes: tools/eedata reads its layout here, overlay.py).
 #[repr(C)]
 #[derive(Clone, Copy)]
 #[allow(non_snake_case)]
@@ -24,7 +24,6 @@ pub struct DbUnitSet {
     pub mIncludedSet: i32,
     pub mExcludedSet: i32,
     pub mShowInEditor: u8,
-    pub _pad: [u8; 3],
 }
 
 const _: () = assert!(std::mem::size_of::<DbUnitSet>() == 184);
