@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESETriggerScreen.h (RECONSTRUCTION; file name inferred). The editor's
 // trigger tab (RTTI EESETriggerScreen > EEUIFSEMainGroup; vtable 0x44379c, sizeof 0x74, ctor 0x17b0b7, ??_G
 // 0x17bf7b, dtor 0x17bf97; EESETriggerScreen.cpp 0x17b0b7..0x17ccf3): the editor's group 4
-// (EEUIFScenarioEditor::GetTriggerScreen). Its ctor fills mScreens[0..4] from the factory 0x17c1e5 (see
-// ee/EESETSBaseObject.h). Only what matched code uses; provisional names. Requires ee/EEUIFSEMainGroup.h,
-// ee/EESETSBaseObject.h, lle/UIEditBox.h.
+// (EEUIFScenarioEditor::GetTriggerScreen). Its ctor made the five sub-screens (the factory 0x17c1e5;
+// now the tab's Rust record, ee_game editor_tsubs.rs). Only what matched code uses; provisional names. Requires
+// ee/EEUIFSEMainGroup.h, lle/UIEditBox.h, rust/game/screens.h.
 #ifndef EE_EESETRIGGERSCREEN_H
 #define EE_EESETRIGGERSCREEN_H
 
@@ -19,7 +19,7 @@ class UITextLabel;
 extern bool gB4C3220;                       // 0x4c3220 (= true; set while an entry is written back; provisional name)
 
 // Whole in Rust (ee_screens editor_tscreen.rs: its controls, the entry list and its buttons, the sub-tabs, the
-// store and load of the open entry, entering and leaving); the class keeps the five sub-screens and forwards.
+// store and load of the open entry, entering and leaving, the five sub-screens); the class forwards.
 struct EeScreensSeTriggerTab;
 
 // opens the tab of a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
@@ -56,9 +56,18 @@ public:
     void NewEntry();
     void SelectName();
 
-    EESETSBaseObject* GetScreen(long inIndex) const { return this->mScreens[inIndex]; }
-    // 0x17c1e5: the factory (0 trigger, 1 condition, 2 effect, 3 object, 4 area; ret 0x10, `this` unused)
-    EESETSBaseObject* CreateScreen(unsigned long inType, GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
+    // the sub-screen inScreen's Rust object (kSETriggerScreen*: an EeScreensSeTrigger*, EeScreensSeConditionScreen*,
+    // EeScreensSeEffectScreen*, EeScreensSeObject* or EeScreensSeArea*), one of its base slots (EE_SCREENS_SETS_SCREEN_*)
+    // and its own calls with its selection where its class passed it (ee_screens_sets_sub_op)
+    void* GetScreen(long inScreen) const { return ee_screens_sets_sub(this->mRust, (uint32_t)inScreen, NULL, NULL); }
+    void ScreenSlot(long inScreen, int32_t inSlot) const
+    {
+        ee_screens_sets_sub_call(this->mRust, (uint32_t)inScreen, inSlot, 0.0f, 0.0f);
+    }
+    uint32_t ScreenOp(long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
+    {
+        return ee_screens_sets_sub_op(this->mRust, (uint32_t)inScreen, inWhat, inA, inB);
+    }
     void FillList();                        // 0x17c99f: refills the list from the current screen's names
 
     // inline (COMDAT 0x17eaab, called out of line by EESETSCondition::Store): the name edit box's first line
@@ -71,9 +80,8 @@ public:
     UIRadioButton* GetTab(long inScreen) const;
     long GetCurrentScreen() const;
 
-    EESETSBaseObject* mScreens[5];          // +0x04 (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
-    GERectangle mR18;                       // +0x18 (the panel's rectangle)
-    // the tab (ee_screens editor_tscreen.rs: its controls, the open sub-screen and its control group)
+    // the tab (ee_screens editor_tscreen.rs: its controls, the open sub-screen and its control group, the five
+    // sub-screens; the panel's rectangle +0x18 is the host's constant)
     EeScreensSeTriggerTab* mRust;
     // sizeof 0x74 (its `new`)
 };

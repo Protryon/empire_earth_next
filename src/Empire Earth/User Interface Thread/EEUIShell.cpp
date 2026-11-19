@@ -26,9 +26,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESETSObject.h"
 #include "ee/EESEPlayerScreen.h"
 #include "lle/GEBitmap.h"
 #include "lle/GESurface.h"
@@ -529,13 +527,13 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         return (int64_t)theSlider->GetMaxRange() << 32 | (uint32_t)theSlider->GetCurrentRangeValue();
     }
     // the game's
-    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->mScreens[a]->RefreshControls(); break;
+    case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->ScreenSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
     case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        static_cast<EESETSObject*>(EEShellTriggers()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
+        EEShellTriggers()->ScreenOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
-    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->GetScreen(kSETriggerScreenObject)->Store(); break;
+    case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->ScreenSlot(kSETriggerScreenObject, EE_SCREENS_SETS_SCREEN_STORE); break;
     case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
         ((EESEPlayerScreen*)static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetTabGroup(kEditorTabPlayers))->CopyFirstPlayerToAll();
         break;

@@ -26,7 +26,6 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
@@ -36,7 +35,6 @@
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
-#include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
@@ -62,7 +60,7 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
     theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, NULL);
     theScreen->GetTab(theTab)->Check();
     theScreen->GetTab(theTab)->SetTriggerEvent(kControlTriggerChecked, theEvent);
-    theScreen->mScreens[theTab]->mSelection = (unsigned long)(uint32_t)theJump;
+    ee_screens_sets_sub_select(theScreen->mRust, (uint32_t)theTab, (int32_t)(uint32_t)theJump);
     theScreen->ShowTab(kSETriggerTabTrigger + theTab);
 }
 
@@ -73,50 +71,6 @@ void EESETriggerJump(unsigned long inKind, unsigned long inSelection)
 // screen's host (ee_screenscpp_setr).
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
-
-// Builds the trigger sub-screen: if/then labels, two condition and two effect rows (not, combo, and/or,
-// delay, remove), scroll buttons and the is-on, condition timer, looping and cinematic check boxes (editor_trigger.rs)
-EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_setr_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the trigger sub-screen's controls and releases its operator event (editor_trigger.rs)
-EESETSTrigger::~EESETSTrigger()
-{
-    ee_screens_setr_free(this->mRust);
-}
-
-static void EESETSTriggerCall(EESETSTrigger* inScreen, uint32_t inWhat, uint32_t inA = 0)
-{
-    ee_screens_setr_call(inScreen->mRust, inWhat, (uint32_t)inScreen->mSelection, inA);
-}
-
-void EESETSTrigger::Sort() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_SORT); }
-void EESETSTrigger::MoveDown() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DOWN); }
-void EESETSTrigger::MoveUp() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_UP); }
-void EESETSTrigger::Delete() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DELETE); }
-void EESETSTrigger::Duplicate() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DUPLICATE); }
-void EESETSTrigger::New() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_NEW); }
-void EESETSTrigger::Activate() { EESETSTriggerCall(this, EE_SCREENS_SETR_ACTIVATE); }
-void EESETSTrigger::Store() { EESETSTriggerCall(this, EE_SCREENS_SETR_STORE); }
-void EESETSTrigger::Load() { EESETSTriggerCall(this, EE_SCREENS_SETR_LOAD); }
-void EESETSTrigger::Hide() { EESETSTriggerCall(this, EE_SCREENS_SETR_HIDE); }
-void EESETSTrigger::Show() { EESETSTriggerCall(this, EE_SCREENS_SETR_SHOW); }
-void EESETSTrigger::ChangeOperator(unsigned long inControlID) { EESETSTriggerCall(this, EE_SCREENS_SETR_CHANGE_OPERATOR, (uint32_t)inControlID); }
-void EESETSTrigger::RemoveEntry(unsigned long inControlID) { EESETSTriggerCall(this, EE_SCREENS_SETR_REMOVE_ENTRY, (uint32_t)inControlID); }
-void EESETSTrigger::DecrementA4() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 0); }
-void EESETSTrigger::IncrementA4() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 1); }
-void EESETSTrigger::DecrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 2); }
-void EESETSTrigger::IncrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 3); }
-void EESETSTrigger::GetNames(std::vector<UWideString>& outNames) { ee_screens_setr_get_names(this->mRust, &outNames); }
-
-void EESETSTrigger::Deactivate()
-{
-}
 
 // ---- the host (editor_trigger.rs: the ops from 200)
 

@@ -28,6 +28,7 @@
 #include "lle/UResourceFile.h"
 
 #include "lle/UICheckBox.h"
+#include "lle/UITriStateCheckBox.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
@@ -38,12 +39,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEARust.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETSTrigger.h"
-#include "ee/EESETSCondition.h"
-#include "ee/EESETSEffect.h"
-#include "ee/EESETSObject.h"
-#include "ee/EESETSArea.h"
 #include "ee/EESETriggerScreen.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEStringIDs.h"
@@ -97,9 +92,14 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(inForm));
     UIEntity* theEntity = static_cast<UIEntity*>(inEntity);
-    auto Screen = [&](long inIndex) { return theEditor->GetTriggerScreen()->GetScreen(inIndex); };
-    auto Object = [&]() { return static_cast<EESETSObject*>(Screen(kSETriggerScreenObject)); };
-    auto Trigger = [&]() { return static_cast<EESETSTrigger*>(Screen(kSETriggerScreenTrigger)); };
+    // a sub-screen's own call with its selection where its class passed it
+    auto Sub = [&](long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) {
+        return theEditor->GetTriggerScreen()->ScreenOp(inScreen, inWhat, inA, inB);
+    };
+    auto Object = [&](uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) {
+        return Sub(kSETriggerScreenObject, inWhat, inA, inB);
+    };
+    auto Trigger = [&](uint32_t inWhat, uint32_t inA = 0) { return Sub(kSETriggerScreenTrigger, inWhat, inA); };
     switch (inOp) {
     case EE_SCREENS_SE_OP_ENTITY_ID:
         return static_cast<UIControl*>(theEntity)->GetId();
@@ -122,30 +122,31 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         gWorld.mScenarioManager->mShowDebugIDs = !gWorld.mScenarioManager->mShowDebugIDs;
         break;
     case EE_SCREENS_SE_OP_OBJECT_SET_MAP:
-        Object()->SetIsSelectOnMap(inA != 0);
+        Object(EE_SCREENS_SEOB_SET_SELECT_ON_MAP, inA != 0);
         break;
     case EE_SCREENS_SE_OP_OBJECT_REFRESH:
-        Object()->Refresh();
+        Object(EE_SCREENS_SEOB_REFRESH);
         break;
     case EE_SCREENS_SE_OP_OBJECT_IS_MAP:
-        return Object()->GetIsSelectOnMap();
+        return Object(EE_SCREENS_SEOB_IS_SELECT_ON_MAP) != 0;
     case EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION:
         gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
     case EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST:
-        Object()->ClearUnitList();
+        Object(EE_SCREENS_SEOB_CLEAR_UNIT_LIST);
         break;
     case EE_SCREENS_SE_OP_FORM_CLEAR_SELECTION:
         theEditor->ClearSelection();
         break;
     case EE_SCREENS_SE_OP_OBJECT_CLEAR_IDS:
-        Object()->ClearUnitIDs();
+        Object(EE_SCREENS_SEOB_CLEAR_UNIT_IDS);
         break;
     case EE_SCREENS_SE_OP_OBJECT_UPDATE_SELECTION:
-        Object()->UpdateSelection();
+        Object(EE_SCREENS_SEOB_UPDATE_SELECTION);
         break;
     case EE_SCREENS_SE_OP_OBJECT_CHECK_CHANGED:
-        Object()->CheckChanged(theEntity);
+        Object(EE_SCREENS_SEOB_CHECK_CHANGED, (uint32_t) static_cast<UIControl*>(theEntity)->GetId(),
+               (uint32_t) static_cast<UITriStateCheckBox*>(theEntity)->GetCheckState());
         break;
     case EE_SCREENS_SE_OP_LIST_SELECTION: {
         unsigned long theSelection;
@@ -167,10 +168,16 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
                                                                                                     : 0xffffffffu;
     }
     case EE_SCREENS_SE_OP_AREA_MODE:
-        static_cast<EESETSArea*>(Screen(kSETriggerScreenArea))->SetAreaMode(inA != 0);
+        Sub(kSETriggerScreenArea, EE_SCREENS_SEAR_SET_MODE, inA != 0 ? 1 : 0);
         break;
-    case EE_SCREENS_SE_OP_AREA_CENTER:
-        return static_cast<EESETSArea*>(Screen(kSETriggerScreenArea))->GetCenter(sAreaCenter);
+    case EE_SCREENS_SE_OP_AREA_CENTER: {
+        float theCenter[2];
+        if (!ee_screens_sear_center(static_cast<EeScreensSeArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea)),
+                                    theCenter))
+            return 0;
+        sAreaCenter = GE2DPoint(theCenter[0], theCenter[1]);
+        return 1;
+    }
     case EE_SCREENS_SE_OP_CENTER_ON_AREA: {
         EEACenterCamera* theAction = new EEACenterCamera;
         theAction->SetLocation((long)sAreaCenter.GetX(), (long)sAreaCenter.GetY());
@@ -178,27 +185,22 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     }
     case EE_SCREENS_SE_OP_CONDITION_TYPE:
-        static_cast<EESETSCondition*>(Screen(kSETriggerScreenCondition))->ChangeConditionType();
+        Sub(kSETriggerScreenCondition, EE_SCREENS_SESC_CHANGE_TYPE);
         break;
     case EE_SCREENS_SE_OP_EFFECT_TYPE:
-        static_cast<EESETSEffect*>(Screen(kSETriggerScreenEffect))->ChangeEffectType();
+        Sub(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_TYPE);
         break;
     case EE_SCREENS_SE_OP_EFFECT_ACTION:
-        static_cast<EESETSEffect*>(Screen(kSETriggerScreenEffect))->ChangeEffectAction();
+        Sub(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_ACTION);
         break;
     case EE_SCREENS_SE_OP_TRIGGER_OPERATOR:
-        Trigger()->ChangeOperator(inA);
+        Trigger(EE_SCREENS_SETR_CHANGE_OPERATOR, inA);
         break;
     case EE_SCREENS_SE_OP_TRIGGER_STEP:
-        switch (inA) {
-        case 0: Trigger()->DecrementA4(); break;
-        case 1: Trigger()->IncrementA4(); break;
-        case 2: Trigger()->DecrementA8(); break;
-        default: Trigger()->IncrementA8(); break;
-        }
+        Trigger(EE_SCREENS_SETR_STEP, inA < 3 ? inA : 3);
         break;
     case EE_SCREENS_SE_OP_TRIGGER_REMOVE:
-        Trigger()->RemoveEntry(inA);
+        Trigger(EE_SCREENS_SETR_REMOVE_ENTRY, inA);
         break;
     case EE_SCREENS_SE_OP_CHECKED:
         return static_cast<UICheckBox*>(theEntity)->GetIsChecked();

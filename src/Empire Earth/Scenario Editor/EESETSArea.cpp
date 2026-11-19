@@ -34,7 +34,6 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
@@ -46,84 +45,11 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESEARust.h"
 #include "ee/EESMArea.h"
-#include "ee/EESETSArea.h"
 #include "rust/game/screens.h"
 #include "rust/sim/scenario.h"
 
 extern GEViewport gViewport;
 extern GEFont* gSeplScreenFont;   // the screen's font while a screen makes its controls (EESERBUnitTypes.cpp)
-
-// Creates the area sub-screen: the red 'no area selected' label, the area selection mode combo and the center
-// camera button, in rectangle mode with no area drawn (editor_area.rs)
-EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sear_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the area sub-screen's controls and releases a rectangle still being drawn (editor_area.rs)
-EESETSArea::~EESETSArea()
-{
-    ee_screens_sear_free(this->mRust);
-}
-
-// The slots (editor_area.rs), each with the base's selection: 0x57d0e0 Sort, 0x57d0eb Update, 0x57d1d5 MoveDown,
-// 0x57d1e7 MoveUp, 0x57d1f9 Delete, 0x57d21d Deactivate, 0x57d22e Duplicate, 0x57d240 Activate, 0x57d272 Store,
-// 0x57d3f8 Hide, 0x57d41b Load, 0x57d5ba New, 0x57d5c5 SetAreaMode, 0x57d667 Show
-void EESETSArea::Call(uint32_t inWhat, int32_t inArgument)
-{
-    ee_screens_sear_call(this->mRust, inWhat, (int32_t)this->mSelection, inArgument);
-}
-
-void EESETSArea::Sort() { this->Call(EE_SCREENS_SEAR_SORT); }
-void EESETSArea::Update() { this->Call(EE_SCREENS_SEAR_UPDATE); }
-void EESETSArea::MoveDown() { this->Call(EE_SCREENS_SEAR_MOVE_DOWN); }
-void EESETSArea::MoveUp() { this->Call(EE_SCREENS_SEAR_MOVE_UP); }
-void EESETSArea::Delete() { this->Call(EE_SCREENS_SEAR_DELETE); }
-void EESETSArea::Deactivate() { this->Call(EE_SCREENS_SEAR_DEACTIVATE); }
-void EESETSArea::Duplicate() { this->Call(EE_SCREENS_SEAR_DUPLICATE); }
-void EESETSArea::Activate() { this->Call(EE_SCREENS_SEAR_ACTIVATE); }
-void EESETSArea::Store() { this->Call(EE_SCREENS_SEAR_STORE); }
-void EESETSArea::Hide() { this->Call(EE_SCREENS_SEAR_HIDE); }
-void EESETSArea::Load() { this->Call(EE_SCREENS_SEAR_LOAD); }
-void EESETSArea::New() { this->Call(EE_SCREENS_SEAR_NEW); }
-void EESETSArea::Show() { this->Call(EE_SCREENS_SEAR_SHOW); }
-void EESETSArea::SetAreaMode(bool inRectangle) { this->Call(EE_SCREENS_SEAR_SET_MODE, inRectangle ? 1 : 0); }
-
-// Draws the area with the left button: drags a rectangle (mouse confined to the view) or sets the anchor point on
-// release, then highlights it (editor_area.rs)
-void EESETSArea::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_sear_mouse_move(this->mRust, inLocation.GetX(), inLocation.GetY());
-}
-
-// Returns the center of the drawn rectangle (or the anchor point in point mode), false if none (editor_area.rs)
-bool EESETSArea::GetCenter(GE2DPoint& outCenter)
-{
-    float theCenter[2];
-    if (!ee_screens_sear_center(this->mRust, theCenter))
-        return false;
-    outCenter = GE2DPoint(theCenter[0], theCenter[1]);
-    return true;
-}
-
-// the screen's state (the editor gate; no original address)
-void EESETSArea::GetState(GERectangle& outRectangle, GE2DPoint& outPoint, unsigned long& outFlags) const
-{
-    float theRectangle[4];
-    float thePoint[2];
-    outFlags = ee_screens_sear_state(this->mRust, theRectangle, thePoint);
-    outRectangle = GERectangle(theRectangle[0], theRectangle[1], theRectangle[2], theRectangle[3]);
-    outPoint = GE2DPoint(thePoint[0], thePoint[1]);
-}
-
-// Returns the names of the scenario's user areas (editor_area.rs)
-void EESETSArea::GetNames(std::vector<UWideString>& outNames)
-{
-    ee_screens_sear_names(this->mRust, &outNames);
-}
 
 // Sets the map rectangle the editor highlights
 // (defined in this unit: every caller calls it out of line)

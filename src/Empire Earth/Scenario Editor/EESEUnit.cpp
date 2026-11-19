@@ -40,7 +40,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESETSBaseObject.h"
 #include "lle/USingleton.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

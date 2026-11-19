@@ -34,7 +34,6 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
@@ -51,7 +50,6 @@
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
-#include "ee/EESETSObject.h"
 
 // Unit action names are the real EEUnitAction::sActionNames table at 0x563668.
 
@@ -86,56 +84,6 @@ struct EESETSOUnitTypeNameLess {
 // this unit is the screen's host (ee_screenscpp_seob).
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
-
-// Builds the trigger editor's object page: pick mode radios, count, owner, family, class and parent fields,
-// the selected unit list and the area, near, attribute, visible-by, state and selected-by filters (editor_object.rs)
-EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_seob_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the object page, deleting its controls and releasing its click and lasso actions (editor_object.rs)
-EESETSObject::~EESETSObject()
-{
-    ee_screens_seob_free(this->mRust);
-}
-
-static uint32_t EESETSObjectCall(EeScreensSeObject* inRust, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0)
-{
-    return ee_screens_seob_call(inRust, inWhat, inA, inB);
-}
-
-void EESETSObject::Sort() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_SORT, (uint32_t)this->mSelection); }
-void EESETSObject::MoveDown() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_DOWN, (uint32_t)this->mSelection); }
-void EESETSObject::MoveUp() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_UP, (uint32_t)this->mSelection); }
-void EESETSObject::Delete() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_DELETE, (uint32_t)this->mSelection); }
-void EESETSObject::Duplicate() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_DUPLICATE, (uint32_t)this->mSelection); }
-void EESETSObject::New() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LIST_OP, EE_SCREENS_SEOB_SM_NEW, (uint32_t)this->mSelection); }
-void EESETSObject::ClearUnitList() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_CLEAR_UNIT_LIST); }
-void EESETSObject::Deactivate() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_DEACTIVATE); }
-void EESETSObject::Refresh() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_REFRESH); }
-void EESETSObject::Activate() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_ACTIVATE); }
-void EESETSObject::Store() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_STORE, (uint32_t)this->mSelection); }
-void EESETSObject::Hide() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_HIDE); }
-void EESETSObject::Load() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_LOAD, (uint32_t)this->mSelection); }
-void EESETSObject::Show() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_SHOW); }
-void EESETSObject::UpdateSelection() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_UPDATE_SELECTION, (uint32_t)this->mSelection); }
-bool EESETSObject::GetIsSelectOnMap() { return EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_IS_SELECT_ON_MAP) != 0; }
-void EESETSObject::SetIsSelectOnMap(bool inMap) { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_SET_SELECT_ON_MAP, inMap); }
-void EESETSObject::ClearUnitIDs() { EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_CLEAR_UNIT_IDS); }
-void EESETSObject::GetNames(std::vector<UWideString>& outNames) { ee_screens_seob_get_names(this->mRust, &outNames); }
-void EESETSObject::MouseMove(const GE2DPoint& inLocation)
-{
-    ee_screens_seob_mouse_move(this->mRust, inLocation.GetX(), inLocation.GetY());
-}
-void EESETSObject::CheckChanged(UIEntity* inCheckBox)
-{
-    EESETSObjectCall(this->mRust, EE_SCREENS_SEOB_CHECK_CHANGED, (uint32_t) static_cast<UIControl*>(inCheckBox)->GetId(),
-                     (uint32_t) static_cast<UITriStateCheckBox*>(inCheckBox)->GetCheckState());
-}
 
 // ---- the host (editor_object.rs: the ops from 100)
 

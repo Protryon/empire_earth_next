@@ -89,6 +89,8 @@
 //!   controls, condition and effect rows, operators, store and load.
 //! - [`editor_tscreen`]: the scenario editor's trigger tab whole in Rust (`EESETriggerScreen`): its controls, entry
 //!   list and buttons, sub-tabs, the open entry's store and load.
+//! - [`editor_tsubs`]: the trigger tab's five sub-screens as one Rust record (once `EESETSBaseObject` and its five
+//!   subclasses): their selections and the table of their slots.
 //! - [`editor_unit`]: the scenario editor's unit tab whole in Rust (`EESEUnit`): its controls, palettes, sorts and
 //!   owners and the class list they fill, the cargo, the unit, wall and gate placement state, the mouse and keys.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
@@ -222,6 +224,7 @@ mod editor_trigger_ffi;
 pub mod editor_tscreen;
 #[cfg(not(test))]
 mod editor_tscreen_ffi;
+pub mod editor_tsubs;
 pub mod editor_unit;
 #[cfg(not(test))]
 mod editor_unit_ffi;

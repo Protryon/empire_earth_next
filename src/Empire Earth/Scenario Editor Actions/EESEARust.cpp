@@ -61,9 +61,7 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EESEARust.h"
 #include "lle/UICheckBox.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESETSObject.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
 
@@ -72,8 +70,8 @@
 // selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
 void EESEAObjectSelection()
 {
-    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
-        ->UpdateSelection();
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ScreenOp(kSETriggerScreenObject,
+                                                                      EE_SCREENS_SEOB_UPDATE_SELECTION);
 }
 
 void EESEAChangeLoadText::Post(const UWideString& inText)

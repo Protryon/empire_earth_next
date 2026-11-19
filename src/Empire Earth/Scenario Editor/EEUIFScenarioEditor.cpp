@@ -44,7 +44,6 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESMEffect.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
 #include "ee/EEMedia.h"
