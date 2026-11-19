@@ -16,6 +16,7 @@ use ee_won_gui::comboobj::{EeWonComboBox, EeWonComboCall};
 use ee_won_gui::compmem as m;
 use ee_won_gui::compobj::{host, Comp, EeWonCompCall as K};
 use ee_won_gui::ctobj::{EeWonContainer, EeWonCtCall};
+use ee_won_gui::dialogobj::{EeWonDialog, EeWonDlgCall, EeWonDlgField};
 use ee_won_gui::guihost::EeWonGuiField;
 use ee_won_gui::inputobj::EeWonInput;
 use ee_won_gui::listobj::{EeWonList, EeWonListCall as L};
@@ -26,6 +27,7 @@ use ee_won_gui::treeobj::{EeWonTNode, EeWonTNodeCall, EeWonTree, EeWonTreeCall};
 
 use crate::lobbyctl::EeWonLobbyCtlOp as COp;
 use crate::lobbydlg::EeWonLobbyDlgOp as DOp;
+use crate::lobbypopup::EeWonLobbyPopupOp as POp;
 
 fn input<'a>(a: isize) -> Option<&'a EeWonInput> {
     // SAFETY: the kind's type; the caller holds the control for the call
@@ -59,6 +61,10 @@ fn node<'a>(a: isize) -> Option<&'a EeWonTNode> {
     // SAFETY: as `input`
     unsafe { get(a, Kind::TreeNode) }
 }
+fn dialog_obj<'a>(a: isize) -> Option<&'a EeWonDialog> {
+    // SAFETY: as `input`
+    unsafe { get(a, Kind::Dialog) }
+}
 fn container<'a>(a: isize) -> Option<&'a EeWonContainer> {
     // SAFETY: as `input`
     unsafe { get(a, Kind::Container) }
@@ -91,9 +97,23 @@ fn list_call(a: isize, call: L, x: isize, y: isize) -> Option<isize> {
 }
 
 /// The dialog host's widget ops (lobbydlg.rs's game mode); `None`: not one, or no object.
-pub(crate) fn dlg_op(op: DOp, a: isize, b: isize, c: isize) -> Option<isize> {
+pub(crate) fn dlg_op(dialog: isize, op: DOp, a: isize, b: isize, c: isize) -> Option<isize> {
     let bi = b as i32 as isize;
     match op {
+        // the dialog itself: `aDialog->Dialog::HandleComponentEvent(e)`, `AddChild(c)`, the drag flag, its roots
+        DOp::BaseEvent => Some(zero(dialog_obj(dialog)?.call(EeWonDlgCall::HandleComponentEvent, a, 0, 0))),
+        DOp::AddChild => Some(zero(container(dialog)?.call(EeWonCtCall::AddChild, a, 0, 0))),
+        DOp::IsDragging => Some(
+            (dialog_obj(dialog)?.call(EeWonDlgCall::GetField, EeWonDlgField::Dragging as isize, 0, 0) != 0) as isize,
+        ),
+        DOp::SetDragging => Some(zero(dialog_obj(dialog)?.call(
+            EeWonDlgCall::SetField,
+            EeWonDlgField::Dragging as isize,
+            (b != 0) as isize,
+            0,
+        ))),
+        DOp::Root => Some(comp(dialog, K::Root, 0, 0)),
+        DOp::RootWindow => Some(comp(dialog, K::RootWindow, 0, 0)),
         // InputBox
         DOp::InputClear | DOp::InputSetEmpty => {
             input(a)?.set_text(&[], b != 0);
@@ -156,6 +176,9 @@ pub(crate) fn ctl_op(ctl: isize, op: COp, a: isize, b: isize, c: isize) -> Optio
             | COp::FireEvent
             | COp::ClearTimerFlag
             | COp::BaseTimer
+            | COp::BaseEvent
+            | COp::BasePaint
+            | COp::DialogBaseEvent
     );
     if on_ctl && ctl == 0 {
         return None; // a row's op has no control
@@ -177,6 +200,9 @@ pub(crate) fn ctl_op(ctl: isize, op: COp, a: isize, b: isize, c: isize) -> Optio
             m::set_timer(ctl, m::timer(ctl) & !2);
             Some(0)
         }
+        COp::BaseEvent => Some(zero(comp(ctl, K::HandleEvent, a, 0))),
+        COp::BasePaint => Some(zero(container(ctl)?.call(EeWonCtCall::Paint, a, 0, 0))),
+        COp::DialogBaseEvent => Some(zero(dialog_obj(ctl)?.call(EeWonDlgCall::HandleComponentEvent, a, 0, 0))),
         COp::BaseTimer => Some((container(ctl)?.call(EeWonCtCall::TimerEvent, a as i32 as isize, 0, 0) != 0) as isize),
         // Button
         COp::ButtonIsChecked => {
@@ -257,6 +283,21 @@ pub(crate) fn ctl_op(ctl: isize, op: COp, a: isize, b: isize, c: isize) -> Optio
             (node(a)?.call(None, EeWonTNodeCall::ContainsPoint, b as i32 as isize, (b >> 32) as i32 as isize, 0) != 0)
                 as isize,
         ),
+        _ => None,
+    }
+}
+
+/// The options popups' widget ops (lobbypopup.rs's game mode; `popup` the C++ popup); `None`: not one, or no object.
+pub(crate) fn popup_op(popup: isize, op: POp, a: isize, b: isize) -> Option<isize> {
+    match op {
+        // `aPopup->AddChild(a)`, `aPopup->Container::HandleComponentEvent(e)` (Component's), `aPopup->SetSize(a, b)`
+        POp::AddChild => Some(zero(container(popup)?.call(EeWonCtCall::AddChild, a, 0, 0))),
+        POp::BaseEvent => Some(zero(comp(popup, K::HandleEvent, a, 0))),
+        POp::SetSize => Some(zero(comp(popup, K::SetSize, a as i32 as isize, b as i32 as isize))),
+        POp::Width => Some(m::width(a) as isize),
+        POp::Height => Some(m::height(a) as isize),
+        // `aMenu->Clear(false)`: ListArea's
+        POp::MenuClear => list_call(a, L::Clear, 0, 0).map(|_| 0),
         _ => None,
     }
 }

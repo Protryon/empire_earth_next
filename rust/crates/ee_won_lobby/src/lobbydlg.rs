@@ -823,7 +823,7 @@ impl EeWonLobbyDlg {
             if let Some(r) = comp_op(op, a, b, c) {
                 return r;
             }
-            if let Some(r) = crate::widgets::dlg_op(op, a, b, c) {
+            if let Some(r) = crate::widgets::dlg_op(self.dialog as isize, op, a, b, c) {
                 return r;
             }
         }

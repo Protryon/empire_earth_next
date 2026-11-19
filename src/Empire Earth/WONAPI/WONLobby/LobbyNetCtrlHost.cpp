@@ -295,7 +295,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         aLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String), LobbyUserText(reinterpret_cast<LobbyUserInfo*>(b), 0)), true);
         return 0;
     case Op::DeliverQuickPlay: inCtl->DeliverEvent(QuickPlayEvent((int)a), false); return 0;
-    case Op::DialogBaseEvent: static_cast<Dialog*>(inCtl)->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case Op::ComboAddUserName: return (intptr_t)aCombo->AddString(LobbyGetUserNameAt((size_t)b), -1);
     case Op::ConfigIsPublic: { LobbyConfig* aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mPublic ? 1 : 0; }
     case Op::UserPassword: return Held(LobbyGetUserPassword(Txt(a)));

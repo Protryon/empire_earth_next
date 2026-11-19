@@ -193,8 +193,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::BaseEvent: aCtl->Component::HandleComponentEvent(anEvent); return 0;
-    case Op::BasePaint: aCtl->Container::Paint(*reinterpret_cast<Graphics*>(a)); return 0;
     case Op::EventControlId: return anEvent->GetControlId();
     case Op::EventIsSelectedItem: return static_cast<ListItemClickedEvent*>(anEvent)->IsSelectedItem() ? 1 : 0;
     case Op::EventButton: return static_cast<ListItemClickedEvent*>(anEvent)->mButton;

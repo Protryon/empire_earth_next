@@ -87,6 +87,7 @@ CHECKS = [
     dict(enum="EeWonLobbyPopupOp", header="won_lobby/lobbypopup.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "popup_op"),
+               (RS / "ee_won_lobby" / "src" / "widgets.rs", "popup_op"),
                (RS / "ee_won_lobby" / "src" / "lobbypopup.rs", "game_string_op")], allowed={}),
     dict(enum="EeWonLobbyOp", header="won_lobby/lobbyhost.h",
          hosts=[LOBBY / "LobbyLogicHost.cpp", LOBBY / "LanLogicHost.cpp"],

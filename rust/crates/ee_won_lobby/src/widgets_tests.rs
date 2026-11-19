@@ -86,7 +86,7 @@ fn input_ops_are_the_forwards() {
         (DOp::InputToInt, 0, 0, Box::new(|_| 7)),
     ];
     for (op, b, c, fwd) in cases {
-        let r1 = dlg_op(op, w1 as isize, b, c).expect("registered");
+        let r1 = dlg_op(0, op, w1 as isize, b, c).expect("registered");
         let t1 = take();
         let r2 = fwd(i2);
         let t2 = take();
@@ -98,7 +98,7 @@ fn input_ops_are_the_forwards() {
         ee_won_input_free(i2);
     }
     // freed: no answer (the op would go to the C++ host)
-    assert!(dlg_op(DOp::InputClear, w1 as isize, 0, 0).is_none());
+    assert!(dlg_op(0, DOp::InputClear, w1 as isize, 0, 0).is_none());
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn button_and_list_ops_are_the_forwards() {
         assert_eq!((r1, t1), (0, take()));
         let checked =
             unsafe { ee_won_btn_call(b2, EeWonBtnCall::GetField, EeWonBtnField::Flags as isize, 0, 0) } & 4 != 0;
-        assert_eq!(dlg_op(DOp::ButtonIsChecked, w1 as isize, 0, 0), Some(checked as isize));
+        assert_eq!(dlg_op(0, DOp::ButtonIsChecked, w1 as isize, 0, 0), Some(checked as isize));
         assert_eq!(ctl_op(0, COp::ButtonIsChecked, w1 as isize, 0, 0), Some(checked as isize));
     }
     unsafe {
@@ -154,10 +154,10 @@ fn members_and_texts() {
     let w = c1.as_ptr() as isize;
     assert_eq!(ctl_op(0, COp::SetControlId, w, 1234, 0), Some(0));
     assert_eq!(ctl_op(0, COp::ControlId, w, 0, 0), Some(1234));
-    assert_eq!(dlg_op(DOp::ButtonSetControlId, w, 77, 0), Some(0));
+    assert_eq!(dlg_op(0, DOp::ButtonSetControlId, w, 77, 0), Some(0));
     assert_eq!(m::control_id(w), 77);
     m::set_bits(w, 0x80);
-    assert_eq!(dlg_op(DOp::ButtonIsDisabled, w, 0, 0), Some(1));
+    assert_eq!(dlg_op(0, DOp::ButtonIsDisabled, w, 0, 0), Some(1));
     assert_eq!(ctl_op(0, COp::IsDisabled, w, 0, 0), Some(1));
     m::set_timer(w, 3);
     assert_eq!(ctl_op(w, COp::ClearTimerFlag, 0, 0, 0), Some(0));
@@ -165,5 +165,42 @@ fn members_and_texts() {
     assert_eq!(number_units(-40), vec![u32::from(b'-'), u32::from(b'4'), u32::from(b'0')]);
     // a widget the registry does not know: the C++ host answers
     assert!(ctl_op(0, COp::ListNumItems, w, 0, 0).is_none());
-    assert!(dlg_op(DOp::ComboGetSel, w, 0, 0).is_none());
+    assert!(dlg_op(0, DOp::ComboGetSel, w, 0, 0).is_none());
+}
+
+#[test]
+fn the_dialogs_and_popups_own_calls() {
+    use ee_won_gui::ctobj::{ee_won_ct_call, ee_won_ct_free, ee_won_ct_new};
+    use ee_won_gui::dialogobj::{ee_won_dlg_call, ee_won_dlg_free, ee_won_dlg_new};
+    let (c1, c2, child, child2) = (block(), block(), block(), block());
+    let (w1, w2) = (c1.as_ptr() as *mut c_void, c2.as_ptr() as *mut c_void);
+    let ch = child.as_ptr() as isize;
+    let ch2 = child2.as_ptr() as isize;
+    let ct1 = ee_won_ct_new(w1, Some(rec), false);
+    let ct2 = ee_won_ct_new(w2, Some(rec), false);
+    let d1 = unsafe { ee_won_dlg_new(w1, Some(rec), ct1) };
+    let d2 = unsafe { ee_won_dlg_new(w2, Some(rec), ct2) };
+    for v in [1, 0, 1] {
+        assert_eq!(dlg_op(w1 as isize, DOp::SetDragging, 0, v, 0), Some(0));
+        let t1 = take();
+        unsafe { ee_won_dlg_call(d2, EeWonDlgCall::SetField, EeWonDlgField::Dragging as isize, v, 0) };
+        assert_eq!(t1, take());
+        assert_eq!(dlg_op(w1 as isize, DOp::IsDragging, 0, 0, 0), Some(v));
+    }
+    // the dialog's AddChild and the popup's: its container's
+    assert_eq!(dlg_op(w1 as isize, DOp::AddChild, ch, 0, 0), Some(0));
+    let t1 = take();
+    unsafe { ee_won_ct_call(ct2, EeWonCtCall::AddChild, ch2, 0, 0) };
+    let t2 = take();
+    assert_eq!(t1.len(), t2.len());
+    assert_eq!(m::parent(ch), w1 as isize);
+    assert_eq!(popup_op(w1 as isize, POp::Width, ch, 0), Some(m::width(ch) as isize));
+    // no dialog object: the C++ host answers
+    assert!(dlg_op(ch, DOp::AddChild, w1 as isize, 0, 0).is_none());
+    unsafe {
+        ee_won_dlg_free(d1);
+        ee_won_dlg_free(d2);
+        ee_won_ct_free(ct1);
+        ee_won_ct_free(ct2);
+    }
 }

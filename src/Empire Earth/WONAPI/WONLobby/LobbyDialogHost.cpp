@@ -284,7 +284,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     }
     // a held control (the end of the original's SmartPtr)
     case Op::Release: aComp->Release(); return 0;
-    case Op::BaseEvent: aDialog->Dialog::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case Op::Relayout: aDialog->Relayout(); return 0;
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
@@ -336,8 +335,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::FontHeight: return aLabel->mWrappedText->mFont->GetHeight();
     case Op::TickCount: return (intptr_t)(uint32_t)WONTickCount();
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::IsDragging: return aDialog->IsDragging() ? 1 : 0;
-    case Op::SetDragging: aDialog->SetDragging(b != 0); return 0;
     case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
     // round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
     case Op::BrowserShowTou:
@@ -393,7 +390,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         aDialog->Fn2F6140(reinterpret_cast<Component*>(a), 0x5003, aButton, aParent->Left(), aParent->Top(), 0, 0, 0);
         return 0;
     }
-    case Op::AddChild: aDialog->AddChild(reinterpret_cast<Component*>(a)); return 0;
     case Op::ScrollStart: reinterpret_cast<ScrollingTextComponent*>(a)->Start(); return 0;
     case Op::ScrollStop: reinterpret_cast<ScrollingTextComponent*>(a)->Stop(); return 0;
     case Op::ScrollReset: reinterpret_cast<ScrollingTextComponent*>(a)->Reset(); return 0;
@@ -415,7 +411,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         return theImage != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     }
     case Op::DoDialog: return LobbyDoDialog(aDialog);
-    case Op::RootWindow: return (intptr_t)aDialog->GetRootWindow();
     case Op::EndDialog: reinterpret_cast<Window*>(a)->EndDialog((int)b, aDialog); return 0;
     case Op::ConnectItemSlot: return reinterpret_cast<ConnectListItem*>(a)->mSlot;
     case Op::ConnectItemSetImage:
@@ -452,7 +447,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         return (intptr_t)sText.c_str();
     }
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
-    case Op::Root: return (intptr_t)aDialog->GetRoot();
     case Op::FileAskDelete:
         return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle),
                                     EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
@@ -505,8 +499,6 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::MenuNew: return (intptr_t) new PopupMenu;
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::AddChild: aPopup->AddChild(reinterpret_cast<Component*>(a)); return 0;
-    case Op::MenuClear: aMenu->Clear(false); return 0;
     case Op::MenuFont: return Held(aMenu->mFont.get());
     case Op::PopupFontMod: return Held(aPopup->GetFontMod(reinterpret_cast<Font*>(a), 1, 0));
     case Op::MenuFontMod: return Held(aMenu->GetFontMod(reinterpret_cast<Font*>(b), 1, 0));
@@ -523,12 +515,8 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     }
     case Op::MenuAddRes: aMenu->AddItem(gLobbyResources[b].mString, NULL, NULL, (int)c); return 0;
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
-    case Op::Width: return reinterpret_cast<Component*>(a)->Width();
-    case Op::Height: return reinterpret_cast<Component*>(a)->Height();
-    case Op::SetSize: aPopup->SetSize((int)a, (int)b); return 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
     case Op::ConfigNoPingInProgress: return reinterpret_cast<LobbyConfig*>(a)->GetNoPingInProgress() ? 1 : 0;
-    case Op::BaseEvent: aPopup->Container::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
     case Op::EventItem: return (intptr_t)anEvent->mItem.get();
     case Op::EventButton: return anEvent->mButton;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
