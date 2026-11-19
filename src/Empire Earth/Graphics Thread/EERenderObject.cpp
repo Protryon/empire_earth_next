@@ -291,7 +291,7 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     gAreaEffectTexture->Reference();
     // the 50 points on the ground and the first again, the strip's width: ee_gfx capture.rs
     EeGe3DPoint thePoints[0x33];
-    EeGfxParticleGround theGround = EEParticleGround();
+    EeGfxParticleGround theGround = ee_gfx_particle_ground();
     theVertex.second = ee_gfx_capture_ground_circle(&theGround, inLocation.GetX(), inLocation.GetY(), inRadius, thePoints);
     theBack.mPoints.resize(0x33, std::pair<GE3DPoint, float>());
     for (unsigned long i = 0; i < 0x33; i++) {

@@ -245,18 +245,6 @@ struct Ask {
     static EEEffect* E(void* inAsk) { return Fx(static_cast<EeGfxEffectAsk*>(inAsk)->effect); }
     // a unit's graphic (a virtual: a foundation shows its player's class graphic)
     static uint64_t UnitGraphic(void*, uint64_t inUnit) { return U(P<EEUnit>(inUnit)->GetModel()); }
-    // a tracer's end: its impact effect at its position, then the target's hit (EEE3DTracers::Step, 0xfdad4)
-    static void ShotHit(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEGraphicEffect* theImpact = theEffect->mGraphicEffect->mLinkedEffect1;
-        if (theImpact) {
-            GE3DPoint theLocation(theEffect->Transformation());
-            gEffectManager->CreatePlacedEffect(theLocation, theImpact, NULL);
-        }
-        if (theEffect->mUnit)
-            theEffect->mUnit->mUnitClass->UnitDamaged(theEffect->mUnit->mComplexUnit, NULL, 0);
-    }
     // the frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd)
     static void AnimationSound(void* inAsk, uint32_t inFrame, bool inChanged)
     {
@@ -318,11 +306,6 @@ struct Ask {
             }
         }
         return theFound;
-    }
-    static void TracerHit(void* inAsk)
-    {
-        EEUnit* theTarget = E(inAsk)->mTarget;
-        theTarget->mUnitClass->UnitDamaged(theTarget->mComplexUnit, NULL, 0);
     }
     // the volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area
     // split 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near
@@ -458,15 +441,6 @@ struct Ask {
         gWorld.mMap->GetGroundPoint(theGround, theGround);
         return R(theGround);
     }
-    // the rain's (EEE3DRain::Virtual64, 0xf7792): its three sound objects' media
-    static void RainMedia(void* inAsk)
-    {
-        for (int i = 0; i < 3; i++) {
-            EESoundObject* theSound = EESoundObject::Get(E(inAsk)->mRecord->storm.sounds[i]);
-            if (theSound)
-                theSound->LoadMedia();
-        }
-    }
     // the rain's sounds (EEE3DRain::StartSounds, 0xf8195, after its thunder timer): the loop at the start or after a
     // load, the thunder inRumble (1 or 2), both levels
     static void RainSounds(void* inAsk, bool inStart, int32_t inRumble)
@@ -482,38 +456,6 @@ struct Ask {
                 theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3D Rain Rumble"));
         EESetRainSoundLevel(theRain, theRain->mSound, 0.5f);
         EESetRainSoundLevel(theRain, theRain->mRumble, 1.0f);
-    }
-    // the particles' tick and ground (EEE3DParticle::Update 0xf50b2, EEE3DParticleEmitter::Move 0xf60f5), the graphic
-    // effect's duration (EEE3DParticle::Load 0xf53bc)
-    static EeGfxParticleTick ParticleTick(void* inAsk, const EeGe3DPoint* inPosition)
-    {
-        return EEParticleTick(E(inAsk)->mGraphicEffect, *reinterpret_cast<const GE3DPoint*>(inPosition));
-    }
-    static EeGfxParticleGround ParticleGround(void*) { return EEParticleGround(); }
-    // the emitter on a unit (0xf5f23): at its location unless it follows the tag point; a unit without a complex unit
-    // at its tile's centre on the terrain
-    static void EmitterPlace(void* inAsk)
-    {
-        EEEffect* theEffect = E(inAsk);
-        EEUnit* theOwner = theEffect->mUnit;
-        GETransformation theTransformation;
-        EEComplexUnit* theUnit = theOwner->GetComplexUnit();
-        if (theUnit) {
-            if (!theEffect->mGraphicEffect->mFlag1)
-                theTransformation = theUnit->mPhysicalModel.GetLocation();
-        } else {
-            GE3DPoint theLocation;
-            float theHalf = theOwner->mUnitClass->mTileSize * 0.5f;
-            theLocation.SetX(theOwner->mTileX + theHalf);
-            theLocation.SetY(theOwner->mTileY + theHalf);
-            if (::gWorld.mMap->mTerrainMesh.GetIsValidTile(theOwner->mTileX, theOwner->mTileY))
-                theLocation.SetZ(::gWorld.mMap->GetHeight(theLocation));
-            else
-                theLocation.SetZ(0.0f);
-            theTransformation.MakeIdentity();
-            theTransformation.SetPosition(theLocation);
-        }
-        theEffect->SetTransformation(theTransformation);
     }
     // the emitter's animation sound at its place (its graphic effect's object, if any)
     static void EmitterSound(void* inAsk, const EeGe3DPoint* inLocation, bool inFirst)
@@ -559,11 +501,6 @@ struct Ask {
     }
     static bool DrawBlood(void*) { return gDrawBlood; }
     static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
-    static EeGe3DPoint Wind(void*)
-    {
-        const GEVector& theWind = gWorld.mWindDirection;
-        return EeGe3DPoint{theWind.mX, theWind.mY, theWind.mZ};
-    }
     static bool AreaEffect(void* inAsk, int32_t inKind, float inX, float inY, uint32_t inPlayer)
     {
         return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
@@ -613,8 +550,6 @@ struct Ask {
                              (int32_t)theUnit->mTileX, (int32_t)theUnit->mTileY};
     }
     static uint32_t GlowRows(void*) { return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows(); }
-    // the particle's (EEE2DParticle::Update 0xe4c31, Step 0xe520d)
-    static EeGfxParticleTick PositionTick(void* inAsk) { return EEParticleTick(E(inAsk)->mGraphicEffect, E(inAsk)->Position()); }
 };
 
 // the damage controller's tick facts (EEEDamagedEffect::Step, 0x10225c): its graphic effect's, then its unit's (the
@@ -831,6 +766,12 @@ EeGfxEffectWorld EEMakeWorld()
         if (theSound)
             theSound->UnloadMedia();
     };
+    w.sound_object_load = [](uint32_t inID) {
+        EESoundObject* theSound = EESoundObject::Get(inID);
+        if (theSound)
+            theSound->LoadMedia();
+    };
+    w.unit_damaged = [](uint64_t inUnit) { P<EEUnit>(inUnit)->mUnitClass->UnitDamaged(P<EEUnit>(inUnit)->mComplexUnit, NULL, 0); };
     w.loading_saved_game = []() { return (bool)gLoadingSavedGame; };
     w.regions = []() { return gWorld.mMap != NULL ? gWorld.mMap->mEffectRegions : (EeGfxEffectRegions*)NULL; };
     w.tile_seen = [](int64_t inX, int64_t inY) {
@@ -849,7 +790,8 @@ EeGfxEffectWorld EEMakeWorld()
     w.tick = []() {
         return EeGfxEffectTick{gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)(unsigned long)gPhysics->mGameTime,
                                gFreeCamera, gPhysics->mSpeed, gWorld.GetGameSpeed(), (int64_t)gPhysics->mGameTime,
-                               gPhysics->GetGameClock()};
+                               gPhysics->GetGameClock(), gPhysics->mGameOver,
+                               EeGe3DPoint{gWorld.mWindDirection.mX, gWorld.mWindDirection.mY, gWorld.mWindDirection.mZ}};
     };
     w.screen = [](bool inPreferences) {
         return (uint32_t)(inPreferences ? gGamePreferences.mSettings.GetScreenID() : gScreenIndex);
@@ -872,15 +814,13 @@ EeGfxEffectWorld EEMakeWorld()
     w.unit_graphic = Ask::UnitGraphic;
     w.storm = EeGfxStormHost{NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
                              EEStormHostOps::StepToward, EEStormHostOps::Ripple};
-    w.answers3d = EeGfxEffectAnswers3D{Ask::ShotHit, Ask::AnimationSound, Ask::WallGatePosts, Ask::WallPiece, Ask::TracerHit,
-                                       Ask::VolcanoBuild, Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant,
+    w.answers3d = EeGfxEffectAnswers3D{Ask::AnimationSound, Ask::WallGatePosts, Ask::WallPiece, Ask::VolcanoBuild,
+                                       Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant,
                                        Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity,
-                                       Ask::SetScaledModel, Ask::GroundPoint, Ask::RainMedia, Ask::RainSounds,
-                                       Ask::ParticleTick, Ask::ParticleGround, Ask::EmitterPlace, Ask::EmitterSound};
-    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::PartSound, Ask::DrawBlood,
-                                       Ask::TileBlocked, Ask::Wind, Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects,
-                                       Ask::IconsSelected, Ask::GroundAt, Ask::GlowArea, Ask::GlowRows,
-                                       Ask::PositionTick, Ask::ParticleGround};
+                                       Ask::SetScaledModel, Ask::GroundPoint, Ask::RainSounds, Ask::EmitterSound};
+    w.answers2d = EeGfxEffectAnswers2D{Ask::ConfirmGoal, Ask::PartSound, Ask::DrawBlood, Ask::TileBlocked,
+                                       Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects, Ask::IconsSelected,
+                                       Ask::GroundAt, Ask::GlowArea, Ask::GlowRows};
     return w;
 }
 
@@ -918,46 +858,6 @@ EeGfxEffectFile EEEffectFile(FSFile& inFile)
                                EEFileOps::ReadBool, EEFileOps::WriteU32, EEFileOps::WriteI32, EEFileOps::WriteF32,
                                EEFileOps::WriteBool};
     return theFile;
-}
-
-// The terrain mesh as the particles' move asks it
-EeGfxParticleGround EEParticleGround()
-{
-    struct Ops {
-        static GETerrainMesh& Mesh() { return gWorld.mMap->mTerrainMesh; }
-        static bool IsValidTile(void*, uint32_t inX, uint32_t inY) { return Mesh().GetIsValidTile(inX, inY); }
-        static bool IsSpaceTile(void*, uint32_t inX, uint32_t inY) { return Mesh().GetIsSpaceTile(inX, inY); }
-        static float MeshZ(void*, float inX, float inY) { return Mesh().GetMeshZ(inX, inY); }
-        static void MeshNormal(void*, float inX, float inY, EeGe3DPoint* outNormal)
-        {
-            GEVector theNormal;
-            Mesh().GetMeshNormal(inX, inY, theNormal);
-            *outNormal = EeGe3DPoint{theNormal.mX, theNormal.mY, theNormal.mZ};
-        }
-    };
-    EeGfxParticleGround theGround = {NULL, Ops::IsValidTile, Ops::IsSpaceTile, Ops::MeshZ, Ops::MeshNormal};
-    return theGround;
-}
-
-// The move's world reads (both particles) (provisional name; from the deleted EEE2DParticle.cpp)
-EeGfxParticleTick EEParticleTick(EEGraphicEffect* inEffect, const GE3DPoint& inPosition)
-{
-    EeGfxParticleTick theTick;
-    const GEVector& theWind = gWorld.mWindDirection;
-    theTick.now = gPhysics->mGameClock;
-    theTick.game_over = gPhysics->mGameOver;
-    theTick.wind.x = theWind.GetX();
-    theTick.wind.y = theWind.GetY();
-    theTick.wind.z = theWind.GetZ();
-    theTick.position = R(inPosition);
-    theTick.duration = (uint32_t)inEffect->mDuration;
-    theTick.param4 = inEffect->mParam4;
-    theTick.param8 = inEffect->mParam8;
-    theTick.param9 = inEffect->GetParam9();
-    theTick.param10 = inEffect->GetParam10();
-    theTick.param11 = inEffect->mParam11;
-    theTick.flag2 = inEffect->mFlag2;
-    return theTick;
 }
 
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm

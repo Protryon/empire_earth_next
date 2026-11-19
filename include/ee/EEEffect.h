@@ -35,10 +35,6 @@ static const EEEffectHandle kNoEffectHandle = {0};
 
 // An FSFile as ee_gfx effect_state.rs's typed reads and writes (EEEffectHost.cpp)
 EeGfxEffectFile EEEffectFile(FSFile& inFile);
-// The terrain mesh as the particles' move asks it (EEEffectHost.cpp)
-EeGfxParticleGround EEParticleGround();
-// The particles' move reads: the clock, the wind, the graphic effect's parameters, the effect's position
-EeGfxParticleTick EEParticleTick(EEGraphicEffect* inEffect, const GE3DPoint& inPosition);
 // 0x1487a3 (cdecl): the graphic's sound for the animation frame inFrame at inLocation (inStart: the frame changed);
 // takes a reference to inSound, returns a referenced node (provisional name)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,

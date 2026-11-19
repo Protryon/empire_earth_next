@@ -139,6 +139,9 @@ pub struct EeGfxEffectTick {
     /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
     pub game_time: i64,
     pub game_clock: f32,
+    /// `gPhysics->mGameOver`, `gWorld.mWindDirection`
+    pub game_over: bool,
+    pub wind: Ge3DPoint,
 }
 
 /// One operation's context for the C++ answers (`EEEffectHost.cpp`'s `Ask`: the effect, the operation, the
@@ -177,8 +180,11 @@ pub struct EeGfxEffectWorld {
     pub media_unload: extern "C" fn(object: u64),
     /// a sound node stopped (`gSoundManager->Stop(node, false)`) and dereferenced
     pub sound_release: extern "C" fn(node: u64),
-    /// `EESoundObject::Get(id)`'s `UnloadMedia` (none: nothing)
+    /// `EESoundObject::Get(id)`'s `UnloadMedia` / `LoadMedia` (none: nothing)
     pub sound_object_unload: extern "C" fn(id: u32),
+    pub sound_object_load: extern "C" fn(id: u32),
+    /// a hit on the unit: its class's `UnitDamaged(complex unit, NULL, 0)`
+    pub unit_damaged: extern "C" fn(unit: u64),
     /// `gLoadingSavedGame`
     pub loading_saved_game: extern "C" fn() -> bool,
     /// the map's effect regions (`gWorld.mMap->mEffectRegions`; null without a map)
@@ -214,11 +220,9 @@ pub struct EeGfxEffectWorld {
 /// The 3D kinds' answers the C++ gives (`EeGfxEffect3DHost`'s entries of the same names).
 #[repr(C)]
 pub struct EeGfxEffectAnswers3D {
-    pub shot_hit: extern "C" fn(context: *mut c_void),
     pub animation_sound: extern "C" fn(context: *mut c_void, frame: u32, changed: bool),
     pub wall_gate_posts: extern "C" fn(context: *mut c_void, first: *mut Ge3DPoint, second: *mut Ge3DPoint) -> bool,
     pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
-    pub tracer_hit: extern "C" fn(context: *mut c_void),
     pub volcano_build:
         extern "C" fn(context: *mut c_void, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32,
     pub farm_terrain: extern "C" fn(context: *mut c_void) -> crate::gfx::ffi_mesh::EeGfxFarmTerrain,
@@ -229,12 +233,7 @@ pub struct EeGfxEffectAnswers3D {
     pub farm_opacity: extern "C" fn(context: *mut c_void, opacity: f32) -> f32,
     pub set_scaled_model: extern "C" fn(context: *mut c_void, model: EeGfxModel),
     pub ground_point: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> Ge3DPoint,
-    pub rain_media: extern "C" fn(context: *mut c_void),
     pub rain_sounds: extern "C" fn(context: *mut c_void, start: bool, rumble: i32),
-    pub particle_tick:
-        extern "C" fn(context: *mut c_void, position: *const Ge3DPoint) -> effect_state::EeGfxParticleTick,
-    pub particle_ground: extern "C" fn(context: *mut c_void) -> crate::gfx::ffi_effect::EeGfxParticleGround,
-    pub emitter_place: extern "C" fn(context: *mut c_void),
     pub emitter_sound: extern "C" fn(context: *mut c_void, location: *const Ge3DPoint, first: bool),
 }
 
@@ -251,7 +250,6 @@ pub struct EeGfxEffectAnswers2D {
         extern "C" fn(context: *mut c_void, location: Ge3DPoint, frame: u32, changed: bool, part0: bool),
     pub draw_blood: extern "C" fn(context: *mut c_void) -> bool,
     pub tile_blocked: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> bool,
-    pub wind: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     pub area_effect: extern "C" fn(context: *mut c_void, kind: i32, x: f32, y: f32, player: u32) -> bool,
     pub area_effects: extern "C" fn(context: *mut c_void) -> i32,
     pub set_area_effects: extern "C" fn(context: *mut c_void, count: i32),
@@ -259,8 +257,6 @@ pub struct EeGfxEffectAnswers2D {
     pub ground_point: extern "C" fn(context: *mut c_void, at: Ge3DPoint) -> EeGfx2DPoint,
     pub glow_area: extern "C" fn(context: *mut c_void) -> crate::gfx::effect_glow::EeGfxGlowArea,
     pub glow_rows: extern "C" fn(context: *mut c_void) -> u32,
-    pub particle_tick: extern "C" fn(context: *mut c_void) -> effect_state::EeGfxParticleTick,
-    pub particle_ground: extern "C" fn(context: *mut c_void) -> crate::gfx::ffi_effect::EeGfxParticleGround,
 }
 
 static WORLD: AtomicPtr<EeGfxEffectWorld> = AtomicPtr::new(std::ptr::null_mut());
@@ -1557,6 +1553,137 @@ extern "C" fn a_space_tile(_: *mut c_void, x: u32, y: u32) -> bool {
     unsafe { crate::ge::tmobj::ee_ge_tm_is_space_tile((world().mesh)(), x as _, y as _) }
 }
 
+/// a tracer's end: its linked effect 1 placed at its position, then its unit's hit (`EEE3DTracers::Step`)
+extern "C" fn a_shot_hit(context: *mut c_void) {
+    let e = e_of(context);
+    let g = linked(e, 0);
+    if g != 0 {
+        let t = rec(e).transformation;
+        place(g, Ge3DPoint { x: t.x(), y: t.y(), z: t.z() });
+    }
+    if head(e).unit != 0 {
+        (world().unit_damaged)(head(e).unit);
+    }
+}
+/// the tracer beam's hit on its target
+extern "C" fn a_tracer_hit(context: *mut c_void) {
+    (world().unit_damaged)(head(e_of(context)).target);
+}
+/// the rain's three sound objects' media (`EEE3DRain::Virtual64`)
+extern "C" fn a_rain_media(context: *mut c_void) {
+    let sounds = rec(e_of(context)).storm.sounds;
+    for id in sounds {
+        (world().sound_object_load)(id);
+    }
+}
+/// The particles' move facts at `position` (`EEParticleTick`: the game clock, the wind, the graphic effect's).
+fn particle_tick(e: EffectPtr, position: Ge3DPoint) -> effect_state::EeGfxParticleTick {
+    let tick = (world().tick)();
+    let f = GraphicEffect(head(e).graphic_effect as usize).fields();
+    effect_state::EeGfxParticleTick {
+        now: tick.game_clock,
+        game_over: tick.game_over,
+        wind: tick.wind,
+        position,
+        duration: f.mDuration as u32,
+        param4: f.mParam4,
+        param8: f.mParam8,
+        param9: f.mParam9,
+        param10: f.mParam10,
+        param11: f.mParam11,
+        flag2: f.mFlag2,
+    }
+}
+extern "C" fn a_particle_tick_3d(context: *mut c_void, position: *const Ge3DPoint) -> effect_state::EeGfxParticleTick {
+    // SAFETY: the caller's point
+    particle_tick(e_of(context), unsafe { *position })
+}
+extern "C" fn a_particle_tick_2d(context: *mut c_void) -> effect_state::EeGfxParticleTick {
+    let e = e_of(context);
+    particle_tick(e, rec(e).position)
+}
+extern "C" fn a_wind(_: *mut c_void) -> Ge3DPoint {
+    (world().tick)().wind
+}
+
+// the terrain the particles bounce off (the map's mesh)
+extern "C" fn g_valid_tile(_: *mut c_void, x: u32, y: u32) -> bool {
+    // SAFETY: the map's live terrain mesh
+    unsafe { crate::ge::tmobj::ee_ge_tm_is_valid((world().mesh)(), x as _, y as _, true) }
+}
+extern "C" fn g_space_tile(_: *mut c_void, x: u32, y: u32) -> bool {
+    // SAFETY: as above
+    unsafe { crate::ge::tmobj::ee_ge_tm_is_space_tile((world().mesh)(), x as _, y as _) }
+}
+extern "C" fn g_mesh_z(_: *mut c_void, x: f32, y: f32) -> f32 {
+    // SAFETY: as above
+    unsafe { crate::ge::tmobj::ee_ge_tm_mesh_z((world().mesh)(), x, y) }
+}
+extern "C" fn g_mesh_normal(_: *mut c_void, x: f32, y: f32, out: *mut Ge3DPoint) {
+    let mut n = GeVector::default();
+    // SAFETY: as above; the caller's point
+    unsafe {
+        crate::ge::tmobj::ee_ge_tm_mesh_normal((world().mesh)(), x, y, &mut n);
+        *out = Ge3DPoint { x: n.x, y: n.y, z: n.z };
+    }
+}
+
+/// The terrain mesh as the particles' move asks it (`EEParticleGround`).
+#[no_mangle]
+pub extern "C" fn ee_gfx_particle_ground() -> crate::gfx::ffi_effect::EeGfxParticleGround {
+    crate::gfx::ffi_effect::EeGfxParticleGround {
+        context: std::ptr::null_mut(),
+        is_valid_tile: g_valid_tile,
+        is_space_tile: g_space_tile,
+        mesh_z: g_mesh_z,
+        mesh_normal: g_mesh_normal,
+    }
+}
+extern "C" fn a_particle_ground(_: *mut c_void) -> crate::gfx::ffi_effect::EeGfxParticleGround {
+    ee_gfx_particle_ground()
+}
+
+/// the emitter on a unit (`EEE3DParticleEmitter`'s unit constructor): at its complex unit's location unless it follows
+/// the tag point (the identity then); a unit without a complex unit at its tile's centre on the map (0 off it)
+extern "C" fn a_emitter_place(context: *mut c_void) {
+    let e = e_of(context);
+    let flag1 = GraphicEffect(head(e).graphic_effect as usize).fields().mFlag1;
+    // SAFETY: the effect's unit is live while referenced
+    let (location, size, (tx, ty)) = unsafe {
+        let t = WorldRead::begin();
+        let u = UnitView::of(&t, head(e).unit).expect("the emitter's unit");
+        let size: std::os::raw::c_long = ee_sim::world_field!(u.class().expect("a unit's class").fields(), mTileSize);
+        (u.complex_unit().map(|c| effect_reads::physical(&c).location), size, u.tile_xy())
+    };
+    let t = match location {
+        Some(l) => {
+            if flag1 {
+                GeTransformation::IDENTITY
+            } else {
+                l
+            }
+        }
+        None => {
+            let half = size as f32 * 0.5;
+            let mut at = Ge3DPoint {
+                x: tx as std::os::raw::c_long as f32 + half,
+                y: ty as std::os::raw::c_long as f32 + half,
+                z: 0.0,
+            };
+            // SAFETY: the map's live terrain mesh
+            if unsafe { crate::ge::tmobj::ee_ge_tm_is_valid((world().mesh)(), tx as _, ty as _, true) } {
+                at.z = (world().height)(&at);
+            }
+            let mut t = GeTransformation::IDENTITY;
+            t.m[0][3] = at.x;
+            t.m[1][3] = at.y;
+            t.m[2][3] = at.z;
+            t
+        }
+    };
+    ee_gfx_effect_set_transformation(e, t);
+}
+
 /// The 3D kinds' answers for one call: this module's and the C++'s.
 fn host3d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEffect3DHost {
     let w = world();
@@ -1571,7 +1698,7 @@ fn host3d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         base_queue: a_base_queue_3d,
         queue: a_queue,
         load_media: a_media,
-        shot_hit: c.shot_hit,
+        shot_hit: a_shot_hit,
         place_linked: a_place_linked,
         unit_model_media: a_unit_model_media,
         animation_sound: c.animation_sound,
@@ -1584,7 +1711,7 @@ fn host3d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         reload_media: a_reload_media,
         queue_screen: a_queue_screen,
         tracer_impact: a_tracer_impact,
-        tracer_hit: c.tracer_hit,
+        tracer_hit: a_tracer_hit,
         tracer_saved_target: a_tracer_saved_target,
         volcano_build: c.volcano_build,
         farm_terrain: c.farm_terrain,
@@ -1598,11 +1725,11 @@ fn host3d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         smoke_place: a_spawn,
         // SAFETY: a bitwise copy of the registered storm host (function pointers)
         storm: unsafe { std::ptr::read(&w.storm) },
-        rain_media: c.rain_media,
+        rain_media: a_rain_media,
         rain_sounds: c.rain_sounds,
-        particle_tick: c.particle_tick,
-        particle_ground: c.particle_ground,
-        emitter_place: c.emitter_place,
+        particle_tick: a_particle_tick_3d,
+        particle_ground: a_particle_ground,
+        emitter_place: a_emitter_place,
         emitter_sound: c.emitter_sound,
         emitter_line: a_emitter_line,
         effect_queue: a_effect_queue,
@@ -1630,7 +1757,7 @@ fn host2d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         animation_sound: c.animation_sound,
         draw_blood: c.draw_blood,
         tile_blocked: c.tile_blocked,
-        wind: c.wind,
+        wind: a_wind,
         create_parts: a_create_parts,
         part_count: a_part_count,
         part: a_part,
@@ -1646,8 +1773,8 @@ fn host2d(e: EffectPtr, ask: &EeGfxEffectAsk, unit: u64, player: u64) -> EeGfxEf
         ground_point: c.ground_point,
         glow_area: c.glow_area,
         glow_rows: c.glow_rows,
-        particle_tick: c.particle_tick,
-        particle_ground: c.particle_ground,
+        particle_tick: a_particle_tick_2d,
+        particle_ground: a_particle_ground,
     }
 }
 

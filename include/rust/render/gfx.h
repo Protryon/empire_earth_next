@@ -525,6 +525,9 @@ struct EeGfxEffectTick {
   /// `gPhysics->mGameTime`, `gPhysics->GetGameClock()`
   int64_t game_time;
   float game_clock;
+  /// `gPhysics->mGameOver`, `gWorld.mWindDirection`
+  bool game_over;
+  EeGe3DPoint wind;
 };
 
 /// `GEColor`'s storage: red, green, blue.
@@ -831,41 +834,11 @@ struct EeGfxFarmTerrain {
   float (*mesh_z)(void *context, float x, float y);
 };
 
-/// What a particle's move reads (the C++ fills it per call).
-struct EeGfxParticleTick {
-  /// `gPhysics->mGameClock`, `mGameOver`
-  float now;
-  bool game_over;
-  /// `gWorld.mWindDirection`
-  EeGe3DPoint wind;
-  /// the effect's position (2D: `mPosition`; 3D: the transformation's)
-  EeGe3DPoint position;
-  /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
-  uint32_t duration;
-  float param4;
-  float param8;
-  float param9;
-  float param10;
-  float param11;
-  bool flag2;
-};
-
-/// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
-struct EeGfxParticleGround {
-  void *context;
-  bool (*is_valid_tile)(void *context, uint32_t x, uint32_t y);
-  bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
-  float (*mesh_z)(void *context, float x, float y);
-  void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
-};
-
 /// The 3D kinds' answers the C++ gives (`EeGfxEffect3DHost`'s entries of the same names).
 struct EeGfxEffectAnswers3D {
-  void (*shot_hit)(void *context);
   void (*animation_sound)(void *context, uint32_t frame, bool changed);
   bool (*wall_gate_posts)(void *context, EeGe3DPoint *first, EeGe3DPoint *second);
   bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
-  void (*tracer_hit)(void *context);
   int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
   EeGfxFarmTerrain (*farm_terrain)(void *context);
   bool (*farm_drop_site)(void *context, int32_t *x, int32_t *y);
@@ -875,11 +848,7 @@ struct EeGfxEffectAnswers3D {
   float (*farm_opacity)(void *context, float opacity);
   void (*set_scaled_model)(void *context, EeGfxModel model);
   EeGe3DPoint (*ground_point)(void *context, const EeGe3DPoint *point);
-  void (*rain_media)(void *context);
   void (*rain_sounds)(void *context, bool start, int32_t rumble);
-  EeGfxParticleTick (*particle_tick)(void *context, const EeGe3DPoint *position);
-  EeGfxParticleGround (*particle_ground)(void *context);
-  void (*emitter_place)(void *context);
   void (*emitter_sound)(void *context, const EeGe3DPoint *location, bool first);
 };
 
@@ -912,7 +881,6 @@ struct EeGfxEffectAnswers2D {
                           bool part0);
   bool (*draw_blood)(void *context);
   bool (*tile_blocked)(void *context, int32_t x, int32_t y);
-  EeGe3DPoint (*wind)(void *context);
   bool (*area_effect)(void *context, int32_t kind, float x, float y, uint32_t player);
   int32_t (*area_effects)(void *context);
   void (*set_area_effects)(void *context, int32_t count);
@@ -920,8 +888,6 @@ struct EeGfxEffectAnswers2D {
   EeGfx2DPoint (*ground_point)(void *context, EeGe3DPoint at);
   EeGfxGlowArea (*glow_area)(void *context);
   uint32_t (*glow_rows)(void *context);
-  EeGfxParticleTick (*particle_tick)(void *context);
-  EeGfxParticleGround (*particle_ground)(void *context);
 };
 
 /// The C++ world the effects call into, registered once (`EEEffectHost.cpp`).
@@ -949,8 +915,11 @@ struct EeGfxEffectWorld {
   void (*media_unload)(uint64_t object);
   /// a sound node stopped (`gSoundManager->Stop(node, false)`) and dereferenced
   void (*sound_release)(uint64_t node);
-  /// `EESoundObject::Get(id)`'s `UnloadMedia` (none: nothing)
+  /// `EESoundObject::Get(id)`'s `UnloadMedia` / `LoadMedia` (none: nothing)
   void (*sound_object_unload)(uint32_t id);
+  void (*sound_object_load)(uint32_t id);
+  /// a hit on the unit: its class's `UnitDamaged(complex unit, NULL, 0)`
+  void (*unit_damaged)(uint64_t unit);
   /// `gLoadingSavedGame`
   bool (*loading_saved_game)();
   /// the map's effect regions (`gWorld.mMap->mEffectRegions`; null without a map)
@@ -1614,6 +1583,15 @@ struct EeGfxEffectFile {
   int32_t (*write_bool)(void *context, bool value);
 };
 
+/// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
+struct EeGfxParticleGround {
+  void *context;
+  bool (*is_valid_tile)(void *context, uint32_t x, uint32_t y);
+  bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
+  float (*mesh_z)(void *context, float x, float y);
+  void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
+};
+
 /// A graphic effect's numbers the placement reads (`EEGraphicEffect`: `GetParam2` .. `GetParam5`, `mIntParam2`, the
 /// linked effects 1-3).
 struct EeGfxDecalEffect {
@@ -1951,6 +1929,25 @@ struct EeGfxParticleSetUp {
   int32_t int_param1;
   float param2;
   float param3;
+};
+
+/// What a particle's move reads (the C++ fills it per call).
+struct EeGfxParticleTick {
+  /// `gPhysics->mGameClock`, `mGameOver`
+  float now;
+  bool game_over;
+  /// `gWorld.mWindDirection`
+  EeGe3DPoint wind;
+  /// the effect's position (2D: `mPosition`; 3D: the transformation's)
+  EeGe3DPoint position;
+  /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
+  uint32_t duration;
+  float param4;
+  float param8;
+  float param9;
+  float param10;
+  float param11;
+  bool flag2;
 };
 
 /// One glow (`EEE2DLightGlowSpot`).
@@ -3044,6 +3041,9 @@ void ee_gfx_effects_decal_track(uint64_t graphic_effect,
                                 uint32_t kind,
                                 float m00,
                                 float m10);
+
+/// The terrain mesh as the particles' move asks it (`EEParticleGround`).
+EeGfxParticleGround ee_gfx_particle_ground();
 
 /// The graphic object of the 2D part `index` (the impact's sound reads the first one's).
 uint64_t ee_gfx_effect_part_object(EffectPtr e, uint32_t index);

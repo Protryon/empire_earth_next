@@ -164,7 +164,7 @@ fn place_at(e: EffectPtr, at: Ge3DPoint) {
             int_param1: f.mIntParam1 as i32,
             flag1: f.mFlag1,
         };
-        let ground = (world().answers3d.particle_ground)(std::ptr::null_mut());
+        let ground = obj::ee_gfx_particle_ground();
         // SAFETY: the effect's live record; the C++'s ground
         unsafe { crate::gfx::ffi_effect::ee_gfx_effect_ambient_new((*e).record, &at, &n, &ground) };
         return;
