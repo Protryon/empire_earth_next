@@ -109,7 +109,7 @@ bool WONLobbyPrv::Init(ResourceConfigTable* input,void (*initFunc)(ComponentConf
 {
     this->mInitError=GetEmptyGUIStringData();
     ConfigParser parser;
-    parser.mWarningsAsErrors=true;
+    parser.SetWarningsAsErrors(true);
     if(!parser.OpenFile(WONAPICore::GetDefaultFileDirectory()+LobbyConfig::mDefaultFileName)) {
         this->mInitError=GUIString("Couldn't find "+LobbyConfig::mDefaultFileName);
         return false;

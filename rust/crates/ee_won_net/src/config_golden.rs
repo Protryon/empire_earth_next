@@ -15,7 +15,7 @@ const GOLDEN: &str = include_str!("golden_config.txt");
 const SOURCE: &str = include_str!("../../../../tests/won/won_config_test.cpp");
 
 /// The line count is process-wide: the tests that read characters take turns.
-pub(super) static LOCK: Mutex<()> = Mutex::new(());
+pub(crate) static LOCK: Mutex<()> = Mutex::new(());
 
 /// The C string literals of `kInputs`, unescaped.
 fn inputs() -> Vec<Vec<u8>> {

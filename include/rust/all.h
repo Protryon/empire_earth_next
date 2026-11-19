@@ -206,6 +206,8 @@
 #include "rust/won_net/cdkeystore.h"
 #include "rust/won_net/cert.h"
 #include "rust/won_net/certhost.h"
+#include "rust/won_net/cfgobject.h"
+#include "rust/won_net/cfgparser.h"
 #include "rust/won_net/chat.h"
 #include "rust/won_net/config.h"
 #include "rust/won_net/configobj.h"

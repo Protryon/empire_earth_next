@@ -130,17 +130,17 @@ static void Defines(ConfigParser& ioParser)
 
 static std::string End(ConfigParser& ioParser, bool inResult)
 {
-    return "end " + std::string(inResult ? "true" : "false") + " line " + Int(ioParser.mLineNum) + " count " +
+    return "end " + std::string(inResult ? "true" : "false") + " line " + Int(ioParser.GetLineNum()) + " count " +
            Int(ConfigParser::GetLineCount()) + " eof " + (ioParser.EndOfFile() ? "1" : "0") + " abort " +
-           Esc(ioParser.mAbortReason) + " warn " + Esc(ioParser.mWarnings);
+           Esc(ioParser.GetAbortText()) + " warn " + Esc(ioParser.GetWarnings());
 }
 
 static void Open(ConfigParser& ioParser, int inCase, bool inUnicode)
 {
     ConfigParser::ResetLineCount();
     bool anOk = ioParser.OpenFile(FileName(inCase, inUnicode));
-    Line("open " + std::string(anOk ? "true" : "false") + " unicode " + (ioParser.mIsUnicode ? "1" : "0") +
-         " path " + Esc(ioParser.mFilePath) + " line " + Int(ioParser.mLineNum));
+    Line("open " + std::string(anOk ? "true" : "false") + " unicode " + (ioParser.IsUnicode() ? "1" : "0") +
+         " path " + Esc(ioParser.GetFilePath()) + " line " + Int(ioParser.GetLineNum()));
 }
 
 static void RunCase(const char* inLocale, int inCase, bool inUnicode)
@@ -160,7 +160,7 @@ static void RunCase(const char* inLocale, int inCase, bool inUnicode)
                 aResult = aParser.ReadToken(aToken, aToEnd, aPass == 4);
                 if (!aResult)
                     break;
-                Line(aHead + "p" + Int(aPass) + " tok " + Esc(aToken) + " line " + Int(aParser.mLineNum));
+                Line(aHead + "p" + Int(aPass) + " tok " + Esc(aToken) + " line " + Int(aParser.GetLineNum()));
                 aCount++;
             }
         } else if (aPass == 2 || aPass == 3) {
@@ -170,7 +170,7 @@ static void RunCase(const char* inLocale, int inCase, bool inUnicode)
                 aResult = aParser.ReadToken(aToken, aPass == 3 && (aCount & 1) != 0, false);
                 if (!aResult)
                     break;
-                Line(aHead + "p" + Int(aPass) + " wtok " + Units(aToken) + " line " + Int(aParser.mLineNum));
+                Line(aHead + "p" + Int(aPass) + " wtok " + Units(aToken) + " line " + Int(aParser.GetLineNum()));
                 aCount++;
             }
         } else {
@@ -188,7 +188,7 @@ static void RunCase(const char* inLocale, int inCase, bool inUnicode)
                     aParser.UngetChar(aChar);
                     aParser.UngetChar(-1);
                     anUnget = true;
-                    aChars += "u" + Int(aParser.mLineNum) + " ";
+                    aChars += "u" + Int(aParser.GetLineNum()) + " ";
                 }
                 aCount++;
             }
@@ -249,21 +249,21 @@ static void RunScenarios(const char* inLocale)
         aParser.PopDefineStack();
         aParser.PopDefineStack();
         f = aParser.GetDefine("A", aValue);
-        Line(aHead + "popped " + Found(f, aValue) + " warn " + Esc(aParser.mWarnings));
+        Line(aHead + "popped " + Found(f, aValue) + " warn " + Esc(aParser.GetWarnings()));
     }
     // a child's defines and warnings go to the root
     {
         ConfigParser aRoot, aChild, aGrandChild;
-        aRoot.mWarningsAsErrors = true;
+        aRoot.SetWarningsAsErrors(true);
         aChild.SetParent(&aRoot);
         aGrandChild.SetParent(&aChild);
         aGrandChild.AddDefine("G", "vg", false);
         aGrandChild.AddDefine("g", "dup", false);
         std::string aValue;
         bool f = aRoot.GetDefine("g", aValue);
-        Line(aHead + "root-g " + Found(f, aValue) + " root-warn " + Esc(aRoot.mWarnings) + " root-abort " +
-             Esc(aRoot.mAbortReason) + " child-warn " + Esc(aGrandChild.mWarnings) + " child-flags " +
-             B(aGrandChild.mWarningsAsErrors));
+        Line(aHead + "root-g " + Found(f, aValue) + " root-warn " + Esc(aRoot.GetWarnings()) + " root-abort " +
+             Esc(aRoot.GetAbortText()) + " child-warn " + Esc(aGrandChild.GetWarnings()) + " child-flags " +
+             B(aGrandChild.GetWarningsAsErrors()));
         aChild.PushDefineStack();
         aGrandChild.AddDefine("H", "vh", false);
         aChild.PopDefineStack();
@@ -280,11 +280,11 @@ static void RunScenarios(const char* inLocale)
         bool a1 = aParser.AddGroupDefine("G", NULL);
         bool a2 = aParser.AddGroupDefine("g", NULL);
         bool a3 = aParser.AddGroupDefine("s p", NULL);
-        Line(aHead + "group-add " + B(a1) + " " + B(a2) + " " + B(a3) + " warn " + Esc(aParser.mWarnings));
+        Line(aHead + "group-add " + B(a1) + " " + B(a2) + " " + B(a3) + " warn " + Esc(aParser.GetWarnings()));
         std::string aRead;
         for (int i = 0; i < 4 && aParser.ReadToken(aToken, false, false); i++)
             aRead += Esc(aToken) + " ";
-        Line(aHead + "group-read " + aRead + "line " + Int(aParser.mLineNum));
+        Line(aHead + "group-read " + aRead + "line " + Int(aParser.GetLineNum()));
         ConfigParserState aState;
         bool f = aParser.GetGroupDefine("g", aState);
         Line(aHead + "group-get " + B(f) + " pos " + Int(aState.mFilePos) + " line " + Int(aState.mLineNum) +
@@ -296,7 +296,7 @@ static void RunScenarios(const char* inLocale)
         aRead = "";
         for (int i = 0; i < 4 && aParser.ReadToken(aToken, false, false); i++)
             aRead += Esc(aToken) + " ";
-        Line(aHead + "group-again " + aRead + "line " + Int(aParser.mLineNum));
+        Line(aHead + "group-again " + aRead + "line " + Int(aParser.GetLineNum()));
         ConfigParserState anOther;
         Open(aParser, 0, false);
         aParser.ReadToken(aToken, false, false);
@@ -304,16 +304,16 @@ static void RunScenarios(const char* inLocale)
         Line(aHead + "state-0 pos " + Int(anOther.mFilePos) + " line " + Int(anOther.mLineNum) + " back " +
              Units(anOther.mBackStr));
         f = aParser.SetState(aState);
-        Line(aHead + "set-1 " + B(f) + " path " + Esc(aParser.mFileNameAndPath));
+        Line(aHead + "set-1 " + B(f) + " path " + Esc(aParser.GetFileNameAndPath()));
         aRead = "";
         for (int i = 0; i < 4 && aParser.ReadToken(aToken, false, false); i++)
             aRead += Esc(aToken) + " ";
-        Line(aHead + "set-1-read " + aRead + "line " + Int(aParser.mLineNum));
+        Line(aHead + "set-1-read " + aRead + "line " + Int(aParser.GetLineNum()));
         ConfigParserState aMissing = aState;
         aMissing.mFileNameAndPath = "won_cfg_none.cfg";
         f = aParser.SetState(aMissing);
-        Line(aHead + "set-missing " + B(f) + " open " + B(aParser.mFileReader.IsOpen()) + " line " +
-             Int(aParser.mLineNum));
+        Line(aHead + "set-missing " + B(f) + " open " + B(aParser.IsFileOpen()) + " line " +
+             Int(aParser.GetLineNum()));
         ConfigParser aChild;
         aChild.SetParent(&aParser);
         Open(aChild, 2, false);
@@ -336,17 +336,17 @@ static void RunScenarios(const char* inLocale)
         aParser.SetError("e3", true);
         aParser.AddWarning("w2");
         anAbort = aParser.GetAbortReason();
-        Line(aHead + "errors " + Esc(anAbort) + " warn " + Esc(aParser.mWarnings));
+        Line(aHead + "errors " + Esc(anAbort) + " warn " + Esc(aParser.GetWarnings()));
         std::string aToken;
         aParser.ReadToken(aToken, false, false);
         aParser.ReadToken(aToken, false, false);
         aParser.ReadToken(aToken, false, false);
         aParser.Reset();
         bool anEof = aParser.EndOfFile();
-        Line(aHead + "reset abort " + Esc(aParser.mAbortReason) + " line " + Int(aParser.mLineNum) + " eof " +
+        Line(aHead + "reset abort " + Esc(aParser.GetAbortText()) + " line " + Int(aParser.GetLineNum()) + " eof " +
              B(anEof));
         aParser.ReadToken(aToken, false, false);
-        Line(aHead + "reset-read " + Esc(aToken) + " line " + Int(aParser.mLineNum));
+        Line(aHead + "reset-read " + Esc(aToken) + " line " + Int(aParser.GetLineNum()));
         aParser.CloseFile();
         anEof = aParser.EndOfFile();
         int aPeek = aParser.PeekChar();
@@ -361,10 +361,10 @@ static void RunScenarios(const char* inLocale)
              B(aRead));
         ConfigParser aMissing;
         bool anOpen = aMissing.OpenFile("won_cfg_dir/none.cfg");
-        Line(aHead + "open-missing " + B(anOpen) + " path " + Esc(aMissing.mFilePath) + " line " +
-             Int(aMissing.mLineNum));
+        Line(aHead + "open-missing " + B(anOpen) + " path " + Esc(aMissing.GetFilePath()) + " line " +
+             Int(aMissing.GetLineNum()));
         anOpen = aMissing.OpenFile("a\\b\\won_cfg_0.cfg");
-        Line(aHead + "open-backslash " + B(anOpen) + " path " + Esc(aMissing.mFilePath));
+        Line(aHead + "open-backslash " + B(anOpen) + " path " + Esc(aMissing.GetFilePath()));
     }
 }
 
@@ -425,7 +425,7 @@ static void RunFiles(const std::string& inDir)
             std::wstring aWide;
             while (aCount < 200000) {
                 bool anOk;
-                if (aParser.mIsUnicode) {
+                if (aParser.IsUnicode()) {
                     anOk = aParser.ReadToken(aWide, aToEnd, false);
                     aToken = Units(aWide);
                 } else
@@ -436,8 +436,8 @@ static void RunFiles(const std::string& inDir)
                 aToEnd = !aToEnd && !aToken.empty() && aToken[aToken.size() - 1] == ':';
                 aCount++;
             }
-            printf("%s crc %04x tokens %d line %d abort %s\n", aPath.c_str(), aCrc, aCount, aParser.mLineNum,
-                   Esc(aParser.mAbortReason).c_str());
+            printf("%s crc %04x tokens %d line %d abort %s\n", aPath.c_str(), aCrc, aCount, aParser.GetLineNum(),
+                   Esc(aParser.GetAbortText()).c_str());
         } while (PlatFindNext(aFind, &aData) == PLAT_FILE_OK);
         PlatFindClose(aFind);
     }

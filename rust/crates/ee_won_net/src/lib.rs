@@ -28,6 +28,8 @@ pub mod cdkey;
 pub mod cdkeystore;
 pub mod cert;
 pub mod certhost;
+pub mod cfgobject;
+pub mod cfgparser;
 pub mod chat;
 pub mod config;
 pub mod configobj;
