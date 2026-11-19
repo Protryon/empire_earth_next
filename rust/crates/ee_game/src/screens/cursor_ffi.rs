@@ -18,6 +18,10 @@ struct Host(*mut c_void);
 
 impl CursorHost for Host {
     fn op(&mut self, op: u32, a: u32, b: u32, f: &mut [f32; 3]) -> i32 {
+        // SAFETY: the host's live read state (its layout asserted in EEUIFMainGame.cpp)
+        if let Some(r) = unsafe { crate::screens::hud_direct::cursor(self.0.cast(), op, a, b, f) } {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_cursor(self.0, op, a, b, f.as_mut_ptr()) }
     }
 }
