@@ -32555,3 +32555,87 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+
+## The scenario editor lane, round 1: the tab groups and the trigger tab's sub-screens as Rust objects; the diplomacy and Undo/Redo buttons as kinds (ee_game editor_groups.rs, editor_tsubs.rs, shells_seditor.rs; branch rust-seditor1, 2026-11-19)
+
+The brief: the editor's forms and controls as Rust kinds over the shells, each C++ class deleted, 3,000 net C++ lines.
+**Net C++ about -1,480** (commits below). The editor's C++ classes were already thin holders of Rust objects; what is
+left is mostly host cases (docs/progress/scenario-editor.md "Left").
+
+### What moved
+
+- **The trigger tab's five sub-screens** (`EESETSBaseObject` and `EESETSTrigger`, `EESETSCondition`, `EESETSEffect`,
+  `EESETSObject`, `EESETSArea`: each held its Rust object and forwarded the base's 14 pure and four empty slots with
+  its selection). The trigger tab's FFI (`editor_tscreen_ffi.rs`) makes and frees the five in the factory's order
+  between the tab's controls and its `finish`, and keeps the base's two fields (`editor_tsubs.rs` `Subs`). The tab's
+  shell is now that record: its host's sub-screen ops (`SETS_OP_SCREEN`, `_SELECTION`, `_SET_SELECTION`) are answered
+  in Rust; `_NAMES` goes to the C++ with the sub-screen's object. `route` is the forwarders' table (which own call each
+  slot was, where the selection went: the trigger and area screens' calls take it first, the object screen's list ops
+  second); `op_args` the same for the calls from outside the slots (the events, the controls, the gate).
+- **The seven tab groups** (`EEUIFSEMainGroup`, vtable 0x442e14, and `EEUIFSEMap`, `EEUIFSEElevation`,
+  `EEUIFSETerrain`, `EESEUnit`, `EESETriggerScreen`, `EESEPlayerScreen`, `EESEInstructions`). A group
+  (`editor_groups_ffi.rs`, `ee_screens_segr_*`) holds its tab's FFI object, makes and frees it by kind, and answers the
+  slots its class overrode (`editor_groups.rs` `overrides`: the vtables; an empty slot does nothing, as the base's).
+  The form's slots hold the groups; the form's host keeps three one-line cases (make, free, slot call). The screen
+  font the C++ constructors set (`gSeplScreenFont`) is set by the host before the group is made (gU531930 for the map,
+  elevation and terrain tabs, gU531938 for the others).
+  - The map and terrain tabs' "shell" (the C++ object their kinds and events call back through) is the group:
+    `ee_screens_segr_tab` resolves the tab at call time (NULL while it is being made, as the old `mRust = NULL`).
+  - The unit tab's C++ parts stay C++ (the build tools by value: their `Build`/`Cancel` call the tab back; the
+    rhombus; the panel rectangle): `struct EESEUnit`, made by the host, owned by the group (`ee_screens_segr_free`
+    returns it for the C++ to delete, after the tab: the old destructor's order).
+  - C++ callers of a tab's own member go through the form's accessors (`GetTab`, `GetTriggerTab`, `TriggerCall`,
+    `GetTriggerBox`, `TriggerSubOp`, `UnitCall`, `GetUnitUnderMouse`, `GetSelectUnits`, `PlayerCall`); the player
+    tab's `GetCurrentPlayer` was the player combo's selection + 1 (EEUIShell.cpp's `EEShellTree` reads it so).
+  - `EESMMediaStrings`' friend is `struct EESEInstructionsHost` (the instructions tab's host).
+- **`EESEUIBDiplomacy` and `EEUIFSEActionButton`** as kinds over the button shell (`shells_seditor.rs`): the diplomacy
+  state and its toggle are Rust, its bitmaps and help text one C++ function (`EESEDiplomacyShow`, the shell host's
+  `SH_SE_DIPLOMACY`); the Undo/Redo button posts and releases its `EEARust` through `SH_SE_ACTION_POST`/`_RELEASE`.
+  The six shared bitmaps are a static array in EESERBUnitTypes.cpp (loaded and released in the original's order).
+- **The form's members** are one-line inline calls (`EEUIFScenarioEditor::Call`); its `DrawPolygons` override (the
+  base's alone) is gone.
+
+### Numbers (the lanes' ranges)
+
+Shell kinds 0x70-0x7f, kind ops 0x70-0x7f, shell host ops 0xa0-0xaf (`EE_SCREENS_SH_SE_*`). The kinds are chained from
+`shells_unit.rs`'s `make` (this lane's file), not `shells.rs`.
+
+### Lessons
+
+- **A class whose only job is to hold a Rust object and forward goes whole when its owner is Rust**: the form's Rust
+  already made and called the groups through host ops; making the group itself Rust turned eight classes into three
+  host cases. The same held one level down (the trigger tab owned the sub-screens through its shell).
+- **Mechanical call-site rewrites by regex** (the trigger tab's 14 no-argument members to `TriggerCall(EE_SCREENS_SETS_*)`
+  by camel-to-snake case) worked, but a later fixed-string rewrite of a line the regex had already changed failed
+  loudly: run the generic pass last, or make each replacement script check for its pattern (`edlib.py` raises).
+- Sources edited while `build.py` runs reach the build (the start exe of this round was rebuilt from a clean
+  checkout of the base after the first try): keep the start build and edits apart.
+
+### What moved (commits)
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 03bc8eb33 | the trigger tab's five sub-screens as one Rust record (6 classes, EESETSCondition.cpp) | -640 |
+| 6481134d0 | EESimEditor: the sub-screens through their objects | +9 |
+| eac4e2a82 | the seven tab groups as Rust objects (8 classes, 6 headers) | -720 |
+| 204829022 | EESimEditor: the tabs through their objects | +5 |
+| e38ec6bde | the diplomacy and Undo/Redo buttons as kinds; the form's members inline | -131 |
+
+### Checks
+
+Per step (`build/sed/step.sh`): the build `--sim` 0/0, the Rust gate PASS, the editor gate PASS 14,448, the
+civilization gate PASS 4,062, scenario_check 27/27, the oracle seeds 2-3 identical. At the end, on the tree merged with
+origin/rust (b3ab7ba2c): both builds 0/0, the Rust gate PASS, the editor and civilization gates PASS, scenario_check
+27/27, the oracle seeds 2-7 identical, the editor exercise PASS against the round's start exe (2D digests: the build
+label, the loading text and bar at other moments only; the captures equal but for the terrain's noise), the tour PASS
+(VIEW CHECK PASS, F3 ok), `gates.sh` GATES PASS.
+
+### What exercises what
+
+- The editor gate: every tab's construction, slots and destruction through the groups (its script enters every tab,
+  paints, places, the trigger tab's five sub-screens' new/duplicate/delete/sort and their selections via
+  `tscreenstate`), the diplomacy grid's state (`SET_DIPLOMACY` through the kind op), the class names the controls print
+  (the kinds' names). EE-SIM builds no form in a game: the oracle is unchanged by construction.
+- Only a person (or the harness's editor exercise) reaches: the diplomacy button's click (its toggle and help text),
+  the Undo/Redo buttons' clicks, the terrain tab's list events through the group, the map tab's Create Map button and
+  elevation file event through the group, the tabs' `Draw` (the panel backgrounds).
