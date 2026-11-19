@@ -32555,3 +32555,76 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+
+## The UI cluster lane, round 4: the control and form shells; the paint areas, the message box, the saved-group buttons and the icon bar as Rust kinds (ee/EEUIShell.h; ee_game shells_paint.rs, shells_dialog.rs, shells_saved.rs, shells_icon_bar.rs; branch rust-uicluster4, 2026-11-19)
+
+The brief: a `UIControl` shell and a form shell, then the remaining HUD classes, buttons and forms as kinds; 3,000 net
+C++ lines. Mid-round the scenario editor became a lane of its own (the editor's controls, forms and factories:
+`SeplMake`, the effect slots); the paint areas were already done and stayed in this round. **Net C++ -601**
+(commits below). What is left and why: docs/progress/ui-cluster.md ("What is left").
+
+### The shells
+
+- **`EEUIShellControl`**: a plain `UIControl` over `EEUIRustControl` (its pure virtuals' defaults: nothing, 0), so
+  `EEUIRustControl`'s host (`ee_screenscpp_hud_ctl`) serves a shell too: the HUD's Rust (`icon_bar.rs` and the
+  others) runs over a shell unchanged. The class ops that host passes to `RustOp` are one host case per kind
+  (`EEUIShellControl::RustOp`, by `mKind`); the C++ objects those cases draw (the icon bar's bitmaps, its sound
+  samples) are the shell's `mSlots`, filled by the control factory.
+- **A kind's release can need its shell's own members**: `EEUIShell`'s destructor runs after the most derived
+  class's members and vtable are gone. `EEUIShellControl`'s destructor frees the kind first (`EEUIShell::Free`), so
+  the icon bar's release (its buttons' `Release`, through `RustOp`) and the slots' release still reach a whole object.
+- **`EEUIShellForm`**: a `UIForm` whose 14 virtuals a kind may override; the kind calls `UIForm`'s back through
+  `EE_SCREENS_SH_FORM_BASE + v` and its own through `EE_SCREENS_SH_FORM_SELF`. The host's object is then the
+  `UIForm*`, not a `UIControl*`: the host tests those two ops before it casts (the dynamic cast from a `UIControl*`
+  of a form would be wrong). `EEUIShell::Of`/`Op` take a form.
+- **Class names**: the civilization gate prints each form's class (`typeid`): a form shell prints its kind's name
+  (`EESimCivBuilder`), as controls did in round 3; `EESim`'s top-form class (the sim driver's timeout message) too.
+  The first civilization gate run printed `EEUIShellForm` for the message box: the gate does exercise it.
+- `EEUIShell.h` now includes `lle/GEText.h` (`UILBString.h`'s inline copies need it complete): a unit that included
+  the shells' header with fewer toolkit headers failed.
+
+### What moved
+
+- The paint areas (`EEUIFSEPaint`, `EEUIFSEPaintElevation`, `EEUIFSETerrainPaint`): the brush square along the
+  mouse's path (`GE2DPoint::InterpolateTo` is `ee_base`'s), the centred terrain tile, the elevation level (the
+  right-button drag, Space, the sliders), the right-button height drag (the screen line against the vertical plane:
+  `ee_base`'s line math). The world's reads, the paint actions, the bounds and the highlight are host ops. The terrain
+  tab's Rust is made after its paint area: the kind keeps the tab and asks for its Rust at each press.
+- The message box (`EEUIFError`, `EEUIFEBOK`, `EEUIFEBCancel`): the controls are the kind's six slots, which the box's
+  host fills and drives (its op set unchanged but the mode, now the kind's); Open, Close (the pressed button's
+  callback posted), the destructor and the buttons' callback, data, close form and pressed flag are the kinds'.
+- The saved-group buttons (`EEUIBSavedGroup`): the portrait, the click (save, add with Shift, select), the double
+  click, the right click's clear, `Refresh` and `SetUnit`. `SetUnit` keeps the original's comparison: the held
+  texture is released before it is compared, so a held group's portrait is marked dirty at every refresh.
+- The icon bar (`EEUICUnitIconBar`): the kind holds `icon_bar.rs`' state; the factory makes the icon bitmap, the frame
+  (the controls table's normal bitmap at one icon's rectangle) and loads the sounds into the shell's slots.
+
+| Commit | What | Net C++ |
+|---|---|---|
+| cd438355f | the control shell; the paint areas as kinds | -364 |
+| facf0b15c | EESimEditor (the editor gate's driver): the paint area through its kind's ops | -2 |
+| cc20f61a8 | the form shell | +96 |
+| 25176ee35 | the message box as kinds | -86 |
+| f9ed4864a | the saved-group buttons as a kind | -162 |
+| 53e59fc2e | EESimCivBuilder, EESim (gate drivers): a form shell prints its kind's name | +5 |
+| 34e09f001 | the saved-group kind's numbers off the editor lane's ranges (Rust only) | 0 |
+| 090ab08e9 | the icon bar as a kind | -88 |
+
+### Checks
+
+Per step (`build/uc4/step.sh`): the build `--sim` 0/0, the Rust gate, the oracle seeds 2-3 identical, the editor
+gate PASS 14,448, the civilization gate PASS 4,062, scenario_check 27/27, the test-profile build 0/0, the tour
+(`VIEW CHECK PASS`, F3 ok), the orders game (`BOX SELECT`, `ORDERS`, `SCROLL CHECK PASS`), the editor exercise; the 2D
+digests against the round's start differ by the build label, the loading screen's progress at other moments and the
+live game's map rhombi and lines (timing; the classes of difference of rounds 1-3). The captures (gameplay, the
+editor) look as before. The Rust gate failed twice on rustfmt and once on clippy (constant assertions in a test) and
+was fixed before the commit.
+
+### What exercises what
+
+- The editor gate: the terrain paint area's action and centring (`terrainpaint`, `terrainstate`); the elevation
+  area is made and listed. The civilization gate: the message box (made, shown, its controls and class printed).
+  The orders game: the icon bar (the box selection fills it). The tour: the HUD's draw.
+- Only a person reaches: the paint areas' drags (the brush path, the elevation's right-button drag, Space), the
+  message box's button presses and callbacks, the saved-group buttons' clicks, the icon bar's clicks. EE-SIM builds
+  no form: the oracle is unchanged by construction.
