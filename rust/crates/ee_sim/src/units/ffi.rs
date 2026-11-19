@@ -97,24 +97,6 @@ pub extern "C" fn ee_units_store_checksum_flag2() -> u64 {
     with_store(|s| s.checksum_flag2())
 }
 
-/// `EEWorld::mUpdateUnits.push_back` (`order`).
-#[no_mangle]
-pub extern "C" fn ee_units_order_push(id: u32) {
-    with_order(|o| o.push(id));
-}
-
-/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
-#[no_mangle]
-pub extern "C" fn ee_units_order_erase(id: u32) -> bool {
-    with_order(|o| o.erase(id))
-}
-
-/// `EEWorld::mUpdateUnits.clear()`.
-#[no_mangle]
-pub extern "C" fn ee_units_order_clear() {
-    with_order(|o| o.clear());
-}
-
 /// The number of stepped units listed.
 #[no_mangle]
 pub extern "C" fn ee_units_order_count() -> u32 {
