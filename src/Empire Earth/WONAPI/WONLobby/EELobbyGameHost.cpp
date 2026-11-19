@@ -312,7 +312,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::ResetReadyFlags: LobbyResetReadyFlags(); return 0;
     case Op::SyncPlayer: LobbyBroadcastEvent(new EELobbySyncPlayerEvent((int)a), true); return 0;
     case Op::SyncOption: LobbyBroadcastEvent(new EELobbySyncOptionEvent((int)a), true); return 0;
-    case Op::TeamChanged: LobbyBroadcastEvent(new PlayerTeamChangedEvent(aClient, b != 0), true); return 0;
+    case Op::TeamChanged: LobbyBroadcastEvent(PlayerTeamChangedEvent(aClient, b != 0), true); return 0;
     case Op::LobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case Op::KickClient: LobbyKickClient(aClient, false); return 0;
     case Op::SameTeamBox:

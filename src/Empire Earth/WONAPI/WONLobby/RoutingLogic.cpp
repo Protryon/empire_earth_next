@@ -251,35 +251,21 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
     case O::EventNum: {
         ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
-        switch (b) {
-        case 1: return (intptr_t) static_cast<AcceptClientEvent*>(anEvent)->mClient.get();
-        case 2: return static_cast<AcceptClientEvent*>(anEvent)->mAccepted;
-        case 3: return (intptr_t) static_cast<FriendActionEvent*>(anEvent)->mFriend.get();
-        case 4: return static_cast<FriendActionEvent*>(anEvent)->mAction;
-        case 5: return static_cast<FriendActionEvent*>(anEvent)->mValue;
-        case 6: return static_cast<JumpToRoomEvent*>(anEvent)->mGroupId;
-        case 7: return static_cast<QuickPlayEvent*>(anEvent)->mGameType;
-        case 8: return static_cast<ClientActionEvent*>(anEvent)->GetRoomSpec();
-        case 9: return (intptr_t) static_cast<ClientActionEvent*>(anEvent)->GetClient();
-        case 10: return static_cast<ClientActionEvent*>(anEvent)->GetAction();
-        case 11: return (intptr_t) static_cast<JoinRoomEvent*>(anEvent)->mGroupId;
-        case 12: return (intptr_t) static_cast<JoinFriendsRoomEvent*>(anEvent)->mFriend.get();
-        case 13: return (intptr_t)anEvent->mComponent;
-        }
-        return 0;
+        // 1..12, the members, are read in Rust (lobbyevt.rs route_event_num)
+        return b == 13 ? (intptr_t)anEvent->mComponent : 0;
     }
     case O::EventServer: {
         ComponentEvent* anEvent = reinterpret_cast<ComponentEvent*>(a);
         switch (anEvent->mType) {
-        case LobbyEvent_CreateRoom: return (intptr_t)L->mServerList->FindServer(static_cast<CreateRoomEvent*>(anEvent)->mAddress);
-        case LobbyEvent_JoinRoom: return (intptr_t)L->mServerList->FindServer(static_cast<JoinRoomEvent*>(anEvent)->mAddress);
+        case LobbyEvent_CreateRoom:
+        case LobbyEvent_JoinRoom:
         case LobbyEvent_QueryServerGroups:
-            return (intptr_t)L->mServerList->FindServer(static_cast<QueryServerGroupsEvent*>(anEvent)->mAddress);
+            return (intptr_t)L->mServerList->FindServer(LobbyEvtAddr(anEvent, LobbyEvtField::Address));
         }
         return 0;
     }
-    case O::EventAddressIs: return S(b)->GetAddress() == reinterpret_cast<JumpToRoomEvent*>(a)->mAddress;
-    case O::GameNameIsEvent: return GM(a)->GetName() == reinterpret_cast<JumpToRoomEvent*>(b)->mRoomName;
+    case O::EventAddressIs: return S(b)->GetAddress() == LobbyEvtAddr(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Address);
+    case O::GameNameIsEvent: return GM(a)->GetName() == LobbyEvtText(reinterpret_cast<ComponentEvent*>(b), LobbyEvtField::RoomName);
     case O::FriendAddressValid: return F(a)->GetAddress().IsValid();
     case O::FriendServer: { IPAddr anAddress = F(a)->GetAddress(); return (intptr_t)L->mServerList->FindServer(anAddress); }
     case O::DialogDo:
@@ -326,47 +312,47 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     }
     // ---- the events
-    case O::EvClientChanged: Broadcast(new ClientChangedEvent(C(a), (unsigned int)b, (int)c)); return 0;
-    case O::EvGroupChanged: Broadcast(new GroupChangedEvent(G(a), S(b), (int)c)); return 0;
-    case O::EvFriendChanged: Broadcast(new FriendChangedEvent(F(a), (int)b)); return 0;
-    case O::EvAnnounceFriend: Broadcast(new AnnounceFriendEvent(F(a), (int)b, (int)c)); return 0;
+    case O::EvClientChanged: Broadcast(ClientChangedEvent(C(a), (unsigned int)b, (int)c)); return 0;
+    case O::EvGroupChanged: Broadcast(GroupChangedEvent(G(a), S(b), (int)c)); return 0;
+    case O::EvFriendChanged: Broadcast(FriendChangedEvent(F(a), (int)b)); return 0;
+    case O::EvAnnounceFriend: Broadcast(AnnounceFriendEvent(F(a), (int)b, (int)c)); return 0;
     case O::EvAnnounceClient:
-        Broadcast(new AnnounceClientLocationEvent(C(a), b != 0 ? G(b)->GetName() : gEmptyGUIString,
+        Broadcast(AnnounceClientLocationEvent(C(a), b != 0 ? G(b)->GetName() : gEmptyGUIString,
                                                   c != 0 ? G(c)->GetName() : gEmptyGUIString, (int)d));
         return 0;
-    case O::EvGameChanged: Broadcast(new GameChangedEvent(GM(a), (int)b)); return 0;
+    case O::EvGameChanged: Broadcast(GameChangedEvent(GM(a), (int)b)); return 0;
     case O::EvInvitationRecv:
-        Broadcast(new GroupInvitationEvent(4, GM(a)->GetName(), GM(a)->GetGroupId(), C(b), c != 0,
+        Broadcast(GroupInvitationEvent(4, GM(a)->GetName(), GM(a)->GetGroupId(), C(b), c != 0,
                                            GUIString(new GUIStringData(RO(d)->Text(EE_WON_RTT_COMMENT))), false));
         return 0;
     case O::EvInvitationSent:
-        Broadcast(new GroupInvitationEvent(4, G(a)->GetName(), G(a)->GetId(), C(b), c != 0, TX(d), true));
+        Broadcast(GroupInvitationEvent(4, G(a)->GetName(), G(a)->GetId(), C(b), c != 0, TX(d), true));
         return 0;
     case O::EvJoinAttempt:
-        Broadcast(new GroupJoinAttemptEvent(6, C(a), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_COMMENT)))));
+        Broadcast(GroupJoinAttemptEvent(6, C(a), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_COMMENT)))));
         return 0;
     case O::EvRecvChat:
-        Broadcast(new RecvChatEvent((unsigned int)a, (unsigned short)b, C(c), GUIString(RO(d)->Text(EE_WON_RTT_TEXT)), C(e)));
+        Broadcast(RecvChatEvent((unsigned int)a, (unsigned short)b, C(c), GUIString(RO(d)->Text(EE_WON_RTT_TEXT)), C(e)));
         return 0;
     case O::EvAlert:
-        Broadcast(new AlertEvent(4, (int)a, a == 1 ? (unsigned long)RO(b)->Num(EE_WON_RTF_TIME) : 0,
+        Broadcast(AlertEvent(4, (int)a, a == 1 ? (unsigned long)RO(b)->Num(EE_WON_RTF_TIME) : 0,
                                  GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT)))));
         return 0;
     case O::EvModerated:
-        Broadcast(new ClientModeratedEvent(C(a), (int)b, (d & 0x100) ? G(c)->GetName() : S(c)->GetName(), (int)(d & 0xff),
+        Broadcast(ClientModeratedEvent(C(a), (int)b, (d & 0x100) ? G(c)->GetName() : S(c)->GetName(), (int)(d & 0xff),
                                            (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true,
                                            GUIString(RO(e)->Text(EE_WON_RTT_COMMENT))));
         return 0;
-    case O::EvLeftRoom: Broadcast(new LeftRoomEvent((int)a, b != 0, c != 0)); return 0;
-    case O::EvSyncGameList: Broadcast(new SyncGameListEvent(L->mGameList.get())); return 0;
+    case O::EvLeftRoom: Broadcast(LeftRoomEvent((int)a, b != 0, c != 0)); return 0;
+    case O::EvSyncGameList: Broadcast(SyncGameListEvent(L->mGameList.get())); return 0;
     case O::EvJoinedRoom:
-        Broadcast(new JoinedRoomEvent(S(a)->GetName(), G(b)->GetName(), (unsigned int)c, S(a)->GetMyClientId(),
+        Broadcast(JoinedRoomEvent(S(a)->GetName(), G(b)->GetName(), (unsigned int)c, S(a)->GetMyClientId(),
                                       G(b)->GetClients().get()));
         return 0;
-    case O::EvServerChanged: Broadcast(new ServerChangedEvent(S(a), (int)b)); return 0;
-    case O::EvSetChatInput: Broadcast(new SetChatInputEvent(2, C(a)->GetName(), (int)b, false)); return 0;
+    case O::EvServerChanged: Broadcast(ServerChangedEvent(S(a), (int)b)); return 0;
+    case O::EvSetChatInput: Broadcast(SetChatInputEvent(2, C(a)->GetName(), (int)b, false)); return 0;
     case O::EvNotCaptain:
-        LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_NotCaptain_String)), reinterpret_cast<Component*>(a));
+        LobbySendEventTo(ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_NotCaptain_String)), reinterpret_cast<Component*>(a));
         return 0;
     // ---- the friends' searches, the server and room lists
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();

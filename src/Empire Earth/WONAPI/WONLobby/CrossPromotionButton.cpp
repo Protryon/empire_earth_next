@@ -38,10 +38,10 @@ bool ImageTextButton::HandleActivate() {
     return false;
 }
 // Shows the cross-promotion image and link from the event, or the default image and link when it has none
-void CrossPromotionButton::HandleSetCrossPromotion(SetCrossPromotionEvent* event) {
-    if(event->mImage) {
-        this->mImages[ImageButtonType_Normal]=event->mImage;
-        this->mBrowse=GUIString(event->mLink);
+void CrossPromotionButton::HandleSetCrossPromotion(ComponentEvent* event) {
+    if(Image* anImage=(Image*)LobbyEvtGet(event,LobbyEvtField::Image)) {
+        this->mImages[ImageButtonType_Normal]=anImage;
+        this->mBrowse=GUIString(LobbyEvtStr<std::string>(event,LobbyEvtField::Link));
     } else {
         this->mImages[ImageButtonType_Normal]=this->mDefaultImage;
         this->mBrowse=this->mDefaultBrowse;
@@ -56,7 +56,7 @@ void CrossPromotionButton::SetDefaultImage(Image* image) {
 }
 // Handles set-cross-promotion broadcasts; passes every other event to the base component
 void CrossPromotionButton::HandleComponentEvent(ComponentEvent* event) {
-    if(event->mType==LobbyEvent_SetCrossPromotion) this->HandleSetCrossPromotion(static_cast<SetCrossPromotionEvent*>(event));
+    if(event->mType==LobbyEvent_SetCrossPromotion) this->HandleSetCrossPromotion(event);
     else Component::HandleComponentEvent(event);
 }
 // Reads the DEFAULTIMAGE and DEFAULTBROWSE layout keys; passes other keys to the image button config

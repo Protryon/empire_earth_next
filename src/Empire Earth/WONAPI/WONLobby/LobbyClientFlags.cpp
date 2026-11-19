@@ -23,7 +23,7 @@ void LobbySetClientBlocked(LobbyClient* client,bool inBlocked,unsigned int roomS
     if(data==NULL || !data->mConfig->mCDKeyCheck) return;
     if(client->IsBlocked()==inBlocked) return;
     client->SetBlocked(inBlocked);
-    LobbyBroadcastEvent(new ClientChangedEvent(client,roomSpec,2),true);
+    LobbyBroadcastEvent(ClientChangedEvent(client,roomSpec,2),true);
 }
 // Ignores or unignores a player, remembers the name in the settings and refreshes the player lists
 void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomSpec)
@@ -32,7 +32,7 @@ void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomS
     if(client->IsIgnored()==inIgnored) return;
     client->SetIgnored(inIgnored);
     LobbySetNameIgnored(client->GetName(),inIgnored);
-    LobbyBroadcastEvent(new ClientChangedEvent(client,roomSpec,2),true);
+    LobbyBroadcastEvent(ClientChangedEvent(client,roomSpec,2),true);
 }
 
 }

@@ -208,7 +208,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::ClientRelease: cl->Release(); return 0;
     case EeWonLobbyOp::ClientNameTake: Take(inB, LanUtf16(cl->GetName())); return 0;
     case EeWonLobbyOp::LanClientChanged:
-        LobbyBroadcastEvent(new ClientChangedEvent(cl, l->GetRoomSpec(), (int)inC), true);
+        LobbyBroadcastEvent(ClientChangedEvent(cl, l->GetRoomSpec(), (int)inC), true);
         return 0;
     case EeWonLobbyOp::ClientLeftGame: LobbyClientLeftGame(cl); return 0;
     case EeWonLobbyOp::LanRecvOk: return op->GetStatus() == WS_Success && !op->IsKilled();
@@ -232,7 +232,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 0;
     }
     case EeWonLobbyOp::LanRecvChat:
-        LobbyBroadcastEvent(new RecvChatEvent(8, (unsigned long)(inD >> 32), cl, LanWide(inC, inD & 0xffffffff),
+        LobbyBroadcastEvent(RecvChatEvent(8, (unsigned long)(inD >> 32), cl, LanWide(inC, inD & 0xffffffff),
                                               static_cast<LobbyClient*>(inB)), true);
         return 0;
     case EeWonLobbyOp::LanStagingRead: {
@@ -262,15 +262,9 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         LobbyBroadcastLobbyEvent(0x186d2, true);
         return 0;
     case EeWonLobbyOp::EventComponent: return (intptr_t)static_cast<ComponentEvent*>(inA)->mComponent;
-    case EeWonLobbyOp::EventDirectIsDelete: return static_cast<ChangeDirectConnectEvent*>(inA)->IsDelete();
-    case EeWonLobbyOp::EventDirectIsAdd: return static_cast<ChangeDirectConnectEvent*>(inA)->IsAdd();
-    case EeWonLobbyOp::EventDirectGame: return (intptr_t)static_cast<ChangeDirectConnectEvent*>(inA)->mGame.get();
-    case EeWonLobbyOp::EventClientActionClient: return (intptr_t)static_cast<ClientActionEvent*>(inA)->mClient.get();
-    case EeWonLobbyOp::EventClientActionRoomSpec: return static_cast<ClientActionEvent*>(inA)->mRoomSpec;
-    case EeWonLobbyOp::EventClientActionAction: return static_cast<ClientActionEvent*>(inA)->mAction;
     case EeWonLobbyOp::SetClientIgnored: LobbySetClientIgnored(cl, inC != 0, (int)inD); return 0;
     case EeWonLobbyOp::LanSetChatInput:
-        LobbyBroadcastEvent(new SetChatInputEvent(2, cl->GetName(), (int)inC, false), true);
+        LobbyBroadcastEvent(SetChatInputEvent(2, cl->GetName(), (int)inC, false), true);
         return 0;
     case EeWonLobbyOp::KickClientFromLobby: LobbyKickClient(cl, false); return 0;
     case EeWonLobbyOp::ChatParser: return (intptr_t)LobbyGetChatCommandParser();
@@ -279,7 +273,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::ParserCommand: return parser->GetCommand();
     case EeWonLobbyOp::ParserTextTake: Take(inB, LanUtf16(parser->GetText())); return 0;
     case EeWonLobbyOp::LanChatCommandError:
-        LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_InvalidCommand_String)), static_cast<Component*>(inA));
+        LobbySendEventTo(ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_InvalidCommand_String)), static_cast<Component*>(inA));
         return 0;
     case EeWonLobbyOp::ShowLanScreen: LobbyShowLanScreen(); return 0;
     case EeWonLobbyOp::DoCDKeyCheck: return LobbyDoCDKeyCheck();
@@ -332,8 +326,8 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     }
     case EeWonLobbyOp::LanRunTimer: op->RunAsTimer((DWORD)inC); return 0;
     case EeWonLobbyOp::LanGameDisconnected: LobbyGameDisconnected(true); return 0;
-    case EeWonLobbyOp::LanSyncGameList: LobbyBroadcastEvent(new SyncGameListEvent(static_cast<LobbyGameList*>(inA)), true); return 0;
-    case EeWonLobbyOp::LanGameChanged: LobbyBroadcastEvent(new GameChangedEvent(g, (int)inC), true); return 0;
+    case EeWonLobbyOp::LanSyncGameList: LobbyBroadcastEvent(SyncGameListEvent(static_cast<LobbyGameList*>(inA)), true); return 0;
+    case EeWonLobbyOp::LanGameChanged: LobbyBroadcastEvent(GameChangedEvent(g, (int)inC), true); return 0;
     case EeWonLobbyOp::LanNewSocket: return Held(new LobbyLanSocket);
     case EeWonLobbyOp::LanListen: {
         WONStatus aStatus = sock->Fn2B0D90(LobbyGetLobbyPort(), 0);
@@ -351,7 +345,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 1;
     }
     case EeWonLobbyOp::LanJoinedRoom:
-        LobbyBroadcastEvent(new JoinedRoomEvent("", g->GetName(), 10, (unsigned short)inC, g->GetClients().get()), true);
+        LobbyBroadcastEvent(JoinedRoomEvent("", g->GetName(), 10, (unsigned short)inC, g->GetClients().get()), true);
         return 0;
     case EeWonLobbyOp::LanNewDiscovery: {
         // port: the discovery port is bound with address reuse (the original bound it exclusively), so that two
