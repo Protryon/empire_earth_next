@@ -115,6 +115,7 @@ pub mod unit_class_fields;
 pub mod unit_fields;
 pub mod unit_load;
 pub mod unit_save;
+pub mod unit_save_views;
 pub mod unload;
 pub mod update;
 pub mod update_views;

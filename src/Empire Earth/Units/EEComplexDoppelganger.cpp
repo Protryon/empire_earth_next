@@ -889,8 +889,9 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
 }
 
 // The C++ parts of the units' saves (ee_units unit_save.rs): the file's primitives with the overload the original
-// called, the containers' sections with the original's loops, the composite members' Save, the ids it wrote for
-// pointers and the maxima of the fractions
+// called, the deques' and goal queues' sections with the original's loops, the composite members' Save and Load, and
+// the loads' sets that call a method. The ids, maxima, floats, the vectors' and the contacts' sections and the loads'
+// plain stores are read and written in place (ee_units unit_save_views.rs)
 int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io)
 {
     EEUnitSaveContext& theContext = *static_cast<EEUnitSaveContext*>(inContext);
@@ -902,76 +903,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     if (EESaveIsPrimitive(inOp))
         return EESavePrimitive(outFile, inOp, io);
     switch (inOp) {
-    case EE_UNITS_UNIT_SAVE_MAX:
-        io->i = inIndex == EE_UNITS_UNIT_SAVE_MAX_HIT_POINTS ? (int64_t)theUnit->mStats->mMaxHitPoints
-              : inIndex == EE_UNITS_UNIT_SAVE_MAX_FLIGHT_TIME ? (int64_t)theUnit->mStats->mFlightTime
-              : inIndex == EE_UNITS_UNIT_SAVE_MAX_POWER ? (int64_t)theUnit->mStats->mPower
-              : (int64_t)theUnit->GetUnitClass()->mGarrisonCapacity;
-        return 0;
-    case EE_UNITS_UNIT_SAVE_FLOAT:
-        io->f = inIndex == EE_UNITS_UNIT_SAVE_FLOAT_SCALE ? theComplex->mPhysicalModel.GetScale()
-              : inIndex == EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_X ? theComplex->mInitialContactLocation.GetX()
-              : inIndex == EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Y ? theComplex->mInitialContactLocation.GetY()
-              : theComplex->mInitialContactLocation.GetZ();
-        return 0;
-    case EE_UNITS_UNIT_SAVE_COLLISION_TILE:
-        io->i = (int64_t)(inIndex == 0 ? theComplex->mCollisionTile.mX : theComplex->mCollisionTile.mY);
-        return 0;
-    case EE_UNITS_UNIT_SAVE_ID: {
-        unsigned long theID = (unsigned long)-1;
-        switch (inIndex) {
-        case EE_UNITS_UNIT_SAVE_ID_FRAME: theID = theComplex->mPhysicalModel.GetFrame(); break;
-        case EE_UNITS_UNIT_SAVE_ID_LAUNCHER_CLASS:
-            theID = theComplex->mLauncherClass == NULL ? 0 : theComplex->mLauncherClass->GetUnitType();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_PATROL_GROUP:
-            if (theComplex->mPatrolGroup != NULL) theID = theComplex->mPatrolGroup->mID;
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_PREVIOUS_PART:
-            if (theComplex->mPreviousPart != NULL) theID = theComplex->mPreviousPart->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_NEXT_PART:
-            if (theComplex->mNextPart != NULL) theID = theComplex->mNextPart->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_HOME_BASE:
-            if (theComplex->mHomeBase != NULL) theID = theComplex->mHomeBase->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_CONTAINER:
-            if (theComplex->mContainer != NULL && theComplex->mContainer->mUnitClass->mTransportCapacity != 0)
-                theID = theComplex->mContainer->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_COMMAND: theID = theComplex->mCommand == NULL ? 0 : theComplex->mCommand->mType; break;
-        case EE_UNITS_UNIT_SAVE_ID_GATHERED_RESOURCE:
-            if (theComplex->mGatheredResource != NULL) theID = theComplex->mGatheredResource->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_LAST_ATTACKER:
-            if (theComplex->mLastAttacker != NULL) theID = theComplex->mLastAttacker->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_OWNER:
-            if (theComplex->mOwner != NULL) theID = theComplex->mOwner->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_MINE:
-            if (theComplex->mMine != NULL) theID = theComplex->mMine->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_HERD: theID = theComplex->mHerd == NULL ? 0 : theComplex->mHerd->mID; break;
-        case EE_UNITS_UNIT_SAVE_ID_HOLDER:
-            if (theComplex->mHolder != NULL) theID = theComplex->mHolder->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_BEHAVIOR:
-            for (theID = 0; theID < 8; theID++)
-                if (EEUnitBehavior::sTable[theID] == theComplex->mBehavior)
-                    break;
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_LAST_RESOURCE:
-            if (theComplex->mLastResource != NULL) theID = theComplex->mLastResource->GetUnitID();
-            break;
-        case EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT: io->i = (int64_t)(long)theComplex->mConversionEffect.mValue; return 0;
-        case EE_UNITS_UNIT_SAVE_ID_HEAL_EFFECT: io->i = (int64_t)(long)theComplex->mHealEffect.mValue; return 0;
-        default: break;
-        }
-        io->i = (int64_t)theID;
-        return 0;
-    }
     case EE_UNITS_UNIT_SAVE_PART:
         switch (inIndex) {
         case EE_UNITS_UNIT_SAVE_PART_PROJECTILE_START: return theComplex->mProjectileStart.Save(outFile);
@@ -997,19 +928,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         }
     case EE_UNITS_UNIT_SAVE_SECTION:
         switch (inIndex) {
-        case EE_UNITS_UNIT_SAVE_SECTION_BUILD_QUEUE: {
-            long theLength = theComplex->mBuildQueue.size();
-            theResult = outFile.Write(theLength);
-            for (long i = 0; i < theLength && theResult == 0; i++) {
-                long theFirst = theComplex->mBuildQueue[i].mTechnology;
-                theResult = outFile.Write(theFirst);
-                if (theResult == 0) {
-                    unsigned long theSecond = theComplex->mBuildQueue[i].mFlag;
-                    theResult = outFile.Write(theSecond);
-                }
-            }
-            return theResult;
-        }
         case EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE: {
             long theLength = 0;
             long theQueued = theComplex->mCitizenBuildQueue.size();
@@ -1022,15 +940,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
                     unsigned long theID = theComplex->mCitizenBuildQueue[j]->mUnitID;
                     theResult = outFile.Write(theID);
                 }
-            }
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_CARGO: {
-            long theLength = theComplex->mCargo.size();
-            theResult = outFile.Write(theLength);
-            for (long k = 0; k < theLength && theResult == 0; k++) {
-                unsigned long theID = theComplex->mCargo[k]->mUnitID;
-                theResult = outFile.Write(theID);
             }
             return theResult;
         }
@@ -1063,24 +972,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
                     theResult = theComplex->mGoalQueues[item].Save(theContext.mMajorVersion, theContext.mMinorVersion, outFile);
             return theResult;
         }
-        case EE_UNITS_UNIT_SAVE_SECTION_HELD_UNITS: {
-            long theLength = theComplex->mHeldUnits.size();
-            theResult = outFile.Write(theLength);
-            for (long n = 0; n < theLength && theResult == 0; n++) {
-                unsigned long theID = theComplex->mHeldUnits[n]->mUnitID;
-                theResult = outFile.Write(theID);
-            }
-            return theResult;
-        }
-        case EE_UNITS_UNIT_SAVE_SECTION_UNIT_VARIABLES: {
-            long theLength = theComplex->mUnitVariables.size();
-            theResult = outFile.Write(theLength);
-            for (long r = 0; r < theLength && theResult == 0; r++) {
-                long theValue = theComplex->mUnitVariables[r];
-                theResult = outFile.Write(theValue);
-            }
-            return theResult;
-        }
         case EE_UNITS_UNIT_SAVE_SECTION_IGNORED_TARGETS:
             theResult = outFile.Write((unsigned long)theComplex->mIgnoredTargets.size());
             for (size_t k = 0; k < theComplex->mIgnoredTargets.size() && theResult == 0; k++) {
@@ -1090,18 +981,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
                     && (theResult = outFile.Write(theAttacker.mUnitID)) == 0)
                     theResult = outFile.Write(theAttacker.mTime);
             }
-            return theResult;
-        case EE_UNITS_UNIT_SAVE_SECTION_BOUNDED_PATH_TILES:
-            theResult = outFile.Write((unsigned long)theComplex->mBoundedPathTiles.size());
-            for (size_t k = 0; k < theComplex->mBoundedPathTiles.size() && theResult == 0; k++) {
-                if ((theResult = outFile.Write(theComplex->mBoundedPathTiles[k].mX)) == 0)
-                    theResult = outFile.Write(theComplex->mBoundedPathTiles[k].mY);
-            }
-            return theResult;
-        case EE_UNITS_UNIT_SAVE_SECTION_CONTACTS:
-            theResult = outFile.Write((unsigned long)theComplex->mContacts.mCount);
-            for (UListNode<EEComplexUnit*>* theNode = theComplex->mContacts.mHead; theNode != NULL && theResult == 0; theNode = theNode->mNext)
-                theResult = outFile.Write(theNode->mData->mUnitID);
             return theResult;
         default: return 0;
         }
@@ -1143,7 +1022,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     case EE_UNITS_UNIT_LOAD_SET: {
         unsigned long theValue = (unsigned long)io->i;
         switch (inIndex) {
-        case EE_UNITS_UNIT_LOAD_SET_DEFAULT_BEHAVIOR: theComplex->mBehavior = EEUnitBehavior::sTable[5]; break;
         case EE_UNITS_UNIT_LOAD_SET_SCALE: {
             float theScale = io->f;
             if (GetIsLoadingScenario() || theScale == 0.0f) {
@@ -1156,17 +1034,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
             theComplex->mPhysicalModel.SetScale(theScale);
             break;
         }
-        case EE_UNITS_UNIT_LOAD_SET_FRAME: theComplex->mPhysicalModel.SetFrame(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_X: theComplex->mCollisionTile.mX = (long)io->i; break;
-        case EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y: theComplex->mCollisionTile.mY = (long)io->i; break;
-        case EE_UNITS_UNIT_LOAD_SET_LAUNCHER_CLASS:
-            theComplex->mLauncherClass = theValue == 0 || UIsNone32(theValue) ? NULL : gUnitClassTable[theValue];
-            break;
-        case EE_UNITS_UNIT_LOAD_SET_PATROL_GROUP: theComplex->mPatrolGroup = USavedPointer<EEPPatrolGroup>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_PREVIOUS_PART: theComplex->mPreviousPart = reinterpret_cast<EEComplexUnit*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_NEXT_PART: theComplex->mNextPart = reinterpret_cast<EEComplexUnit*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_HOME_BASE: theComplex->mHomeBase = reinterpret_cast<EEComplexUnit*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_CONTAINER: theComplex->mContainer = reinterpret_cast<EEComplexUnit*>(theValue); break;
         case EE_UNITS_UNIT_LOAD_SET_ACTION:
             if (theComplex->GetUnitClass() != NULL && theComplex->GetUnitClass()->FindAction(theValue) != NULL) {
                 if (theValue == 0)
@@ -1175,25 +1042,16 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
             }
             break;
         case EE_UNITS_UNIT_LOAD_SET_TURRETS: theComplex->ResizeTurretAngles((long)io->i); break;
-        case EE_UNITS_UNIT_LOAD_SET_GATHERED_RESOURCE: theComplex->mGatheredResource = reinterpret_cast<EEUnit*>(theValue); break;
         case EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER_CLEAR:
             if (theComplex->mLastAttacker != NULL)
                 theComplex->mLastAttacker->Dereference();
             theComplex->mLastAttacker = NULL;
             break;
-        case EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER: theComplex->mLastAttacker = reinterpret_cast<EEComplexUnit*>(theValue); break;
         case EE_UNITS_UNIT_LOAD_SET_OWNER_CLEAR:
             if (theComplex->mOwner != NULL)
                 theComplex->mOwner->Dereference();
             theComplex->mOwner = NULL;
             break;
-        case EE_UNITS_UNIT_LOAD_SET_OWNER: theComplex->mOwner = USavedPointer<EEComplexUnit>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_MINE: theComplex->mMine = USavedPointer<EEUnit>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_MINE_UNSET: theComplex->mMine = (EEUnit*)-1; break;
-        case EE_UNITS_UNIT_LOAD_SET_HERD: theComplex->mHerd = reinterpret_cast<EEHerd*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_HOLDER: theComplex->mHolder = USavedPointer<EEComplexUnit>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_BEHAVIOR: theComplex->mBehavior = reinterpret_cast<EEUnitBehavior*>(theValue); break;
-        case EE_UNITS_UNIT_LOAD_SET_LAST_RESOURCE: theComplex->mLastResource = reinterpret_cast<EEUnit*>(theValue); break;
         default: break;
         }
         return 0;

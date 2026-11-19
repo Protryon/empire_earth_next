@@ -563,6 +563,175 @@ impl<'t> UnitView<'t> {
     }
 }
 
+/// The members the units' saves read (the units' state lane, round 1: unit_save_views.rs).
+impl<'t> UnitView<'t> {
+    /// A pointer member's value at `offset` of this `EEComplexUnit` (one of the layout's `complex_*` pointers).
+    fn complex_pointer(&self, offset: u64) -> usize {
+        self.need_complex();
+        // SAFETY: an EEComplexUnit's pointer member (the layout's offset of one)
+        unsafe { pointer(self.object, offset) }
+    }
+    /// A `std::vector<T>` member's begin and end (its first two words) at `offset`.
+    fn complex_vector(&self, offset: u64) -> (usize, usize) {
+        let w = std::mem::size_of::<usize>() as u64;
+        (self.complex_pointer(offset), self.complex_pointer(offset + w))
+    }
+    /// `mLauncherClass`, `mPatrolGroup`, `mHomeBase`, `mGatheredResource`, `mLastAttacker`, `mOwner`, `mMine`,
+    /// `mHolder`, `mBehavior`, `mLastResource` (0: none)
+    pub fn launcher_class_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_launcher_class) as u64
+    }
+    pub fn patrol_group_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_patrol_group) as u64
+    }
+    pub fn home_base_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_home_base) as u64
+    }
+    pub fn gathered_resource_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_gathered_resource) as u64
+    }
+    pub fn last_attacker_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_last_attacker) as u64
+    }
+    pub fn owner_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_owner) as u64
+    }
+    pub fn mine_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_mine) as u64
+    }
+    pub fn holder_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_holder) as u64
+    }
+    pub fn behavior_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_behavior) as u64
+    }
+    pub fn last_resource_handle(&self) -> u64 {
+        self.complex_pointer(self.l().complex_last_resource) as u64
+    }
+    /// A unit pointer member as a view (`home_base_handle` etc.; the C++ dereferenced it as a live unit).
+    pub fn unit_at(&self, handle: u64) -> Option<UnitView<'t>> {
+        self.other(handle as usize)
+    }
+    /// `mHeldUnits`' handles
+    pub fn held_unit_handles(&self) -> Vec<u64> {
+        let (begin, end) = self.complex_vector(self.l().complex_held_units);
+        let w = std::mem::size_of::<usize>();
+        // SAFETY: the vector's elements
+        (begin..end).step_by(w).map(|e| unsafe { pointer(e, 0) as u64 }).collect()
+    }
+    /// `mUnitVariables` (`long`s)
+    pub fn unit_variables(&self) -> Vec<i64> {
+        let (begin, end) = self.complex_vector(self.l().complex_unit_variables);
+        let w = std::mem::size_of::<c_long>();
+        // SAFETY: the vector's elements
+        (begin..end).step_by(w).map(|e| unsafe { member::<c_long>(e, 0) as i64 }).collect()
+    }
+    /// `mBoundedPathTiles` (`U2DPoint<long>`s: x, y)
+    pub fn bounded_path_tiles(&self) -> Vec<(i64, i64)> {
+        let (begin, end) = self.complex_vector(self.l().complex_bounded_path_tiles);
+        let w = std::mem::size_of::<c_long>();
+        (begin..end)
+            .step_by(2 * w)
+            // SAFETY: the vector's elements, two longs each
+            .map(|e| unsafe { (member::<c_long>(e, 0) as i64, member::<c_long>(e, w as u64) as i64) })
+            .collect()
+    }
+    /// `mContacts.mCount` and the nodes' `mData` handles in list order
+    pub fn contacts(&self) -> (u64, Vec<u64>) {
+        let l = self.l();
+        self.need_complex();
+        // SAFETY: the list's members and its nodes (each live while listed)
+        unsafe {
+            let count: c_ulong = member(self.object, l.complex_contacts_count);
+            let mut out = Vec::new();
+            let mut node = pointer(self.object, l.complex_contacts_head);
+            while node != 0 {
+                out.push(pointer(node, l.contact_node_data) as u64);
+                node = pointer(node, l.contact_node_next);
+            }
+            (count as u64, out)
+        }
+    }
+    /// `mCollisionTile`'s x and y
+    pub fn collision_tile(&self) -> (i64, i64) {
+        self.need_complex();
+        let at = self.l().complex_collision_tile;
+        // SAFETY: an EEComplexUnit's U2DPoint<long> member
+        unsafe {
+            let x: c_long = member(self.object, at);
+            let y: c_long = member(self.object, at + std::mem::size_of::<c_long>() as u64);
+            (x as i64, y as i64)
+        }
+    }
+    /// `mInitialContactLocation`'s x, y, z
+    pub fn contact_location(&self) -> [f32; 3] {
+        self.need_complex();
+        let at = self.l().complex_contact_location;
+        // SAFETY: an EEComplexUnit's GE3DPoint member (three floats)
+        unsafe { [member(self.object, at), member(self.object, at + 4), member(self.object, at + 8)] }
+    }
+    /// `mPhysicalModel.GetScale()`
+    pub fn model_scale(&self) -> f32 {
+        self.need_complex();
+        // SAFETY: the physical model's float member
+        unsafe { member(self.object, self.l().complex_scale) }
+    }
+    /// `mPhysicalModel.GetFrame()`
+    pub fn model_frame(&self) -> u64 {
+        self.need_complex();
+        // SAFETY: the physical model's unsigned long member
+        let v: c_ulong = unsafe { member(self.object, self.l().complex_frame) };
+        v as u64
+    }
+    /// `mConversionEffect.mValue`
+    pub fn conversion_effect(&self) -> u32 {
+        self.need_complex();
+        // SAFETY: an EEComplexUnit's uint32_t member
+        unsafe { member(self.object, self.l().complex_conversion_effect) }
+    }
+    /// `mHealEffect.mValue`
+    pub fn heal_effect(&self) -> u32 {
+        self.need_complex();
+        // SAFETY: as above
+        unsafe { member(self.object, self.l().complex_heal_effect) }
+    }
+    /// `mBuildQueue[i]`'s `mTechnology` and `mFlag`, in order
+    pub fn build_queue(&self) -> Vec<(i64, i64)> {
+        let l = self.l();
+        let begin = self.build_queue_range().0;
+        (0..self.build_queue_len())
+            .map(|i| {
+                let entry = begin + i * l.build_entry_stride as usize;
+                // SAFETY: an entry of the vector
+                unsafe {
+                    let t: c_long = member(entry, l.build_entry_technology);
+                    let f: c_long = member(entry, l.build_entry_flag);
+                    (t as i64, f as i64)
+                }
+            })
+            .collect()
+    }
+}
+
+/// `EEHerd::mID` of a live herd (`UnitView::herd_handle`).
+///
+/// # Safety
+/// `herd` is a live `EEHerd*`.
+pub unsafe fn herd_id(herd: u64) -> u16 {
+    // SAFETY: the caller's contract
+    unsafe { member(herd as usize, layout().herd_id) }
+}
+
+/// `EEPPatrolGroup::mID` of a live patrol group (`UnitView::patrol_group_handle`).
+///
+/// # Safety
+/// `group` is a live `EEPPatrolGroup*`.
+pub unsafe fn patrol_group_id(group: u64) -> u64 {
+    // SAFETY: the caller's contract
+    let v: c_ulong = unsafe { member(group as usize, layout().patrol_group_id) };
+    v as u64
+}
+
 /// A goal's `mKind` and `mID` (None for 0).
 fn goal_kind_id(goal: usize) -> Option<(u8, u32)> {
     if goal == 0 {
@@ -613,6 +782,20 @@ impl<'t> ClassView<'t> {
     /// The class's record (`EeUnitsUnitClassFields`).
     pub fn fields(&self) -> Record<'t, EeUnitsUnitClassFields> {
         Record::at(self.object, layout().unit_class_fields)
+    }
+    /// `mProjectileClass` (0: none)
+    pub fn projectile_class_handle(&self) -> u64 {
+        // SAFETY: a live class's pointer member
+        unsafe { pointer(self.object, layout().class_projectile_class) as u64 }
+    }
+    /// `GetEffects()[i]` (the class's i-th `EEGraphicEffect*`, i < 29; 0: none)
+    pub fn effect_handle(&self, i: usize) -> u64 {
+        if i >= 29 {
+            return 0;
+        }
+        let at = layout().class_effects + (i * std::mem::size_of::<usize>()) as u64;
+        // SAFETY: a live class's effect pointer members (contiguous: EEWorldLayout.cpp checks it)
+        unsafe { pointer(self.object, at) as u64 }
     }
     pub fn category(&self) -> u64 {
         let v: c_ulong = crate::world_field!(self.fields(), mCategory);

@@ -4,6 +4,8 @@
 #ifndef LLE_GEPHYSICALMODEL_H
 #define LLE_GEPHYSICALMODEL_H
 
+#include <stddef.h>
+
 class GEModel;
 
 class LLE_API GEPhysicalModel {             // sizeof 0x4c
@@ -21,6 +23,9 @@ public:
     const GETransformation& GetLocation() const { return this->mLocation; }
     GEModel* GetModel() const { return this->mModel; }
     float GetScale() const { return this->mScale; }
+    // New (port): where the scale and the frame sit (the world views' layout, Units/EEWorldLayout.cpp)
+    static size_t ScaleOffset() { return offsetof(GEPhysicalModel, mScale); }
+    static size_t FrameOffset() { return offsetof(GEPhysicalModel, mFrame); }
     bool Intersects(const GE3DLine& inLine, unsigned long inLOD, float& outDistance, bool inExact) const
         { return this->Intersects(this->mLocation, this->mModel, this->mFrame, inLine, inLOD, outDistance, inExact); }
     bool Intersects(const GEPhysicalModel* inModel, const GE3DLine& inLine, bool inExact, unsigned long inLOD,

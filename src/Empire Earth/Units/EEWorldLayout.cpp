@@ -28,6 +28,12 @@
 #include "ee/EEWorldLayout.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPhysics.h"
+#include <algorithm>
+#include "lle/U2DSparseArray.h"
+#include "lle/U2DPolygon.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEHerd.h"
+#include "ee/EEPPatrolGroup.h"
 #include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
@@ -47,6 +53,9 @@ static_assert(sizeof(GEColor) == 3 * sizeof(float), "a colour is red, green, blu
 static_assert(sizeof(GETransformation) >= 16 * sizeof(float) && offsetof(GETransformation, mMatrix) == 0,
               "a transformation starts with its 4 x 4 matrix");
 static_assert(sizeof(std::vector<EEComplexUnit*>) == 3 * sizeof(void*), "a vector is three words");
+static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a tile point is two longs");
+static_assert(sizeof(EEEffectHandle) == 4, "an effect handle is its uint32_t");
+static_assert(sizeof(((EEHerd*)0)->mID) == 2, "a herd's id is an unsigned short");
 
 namespace {
 
@@ -173,6 +182,38 @@ void EEWorldLayoutRegister()
     theLayout.stats_button = offsetof(EEUnitClassUpgrade, mButton);
     theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
     theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
+    // the units' saves (the units' state lane: unit_save_views.rs)
+    const size_t theModelAt = offsetof(EEComplexUnit, mPhysicalModel);
+    theLayout.complex_launcher_class = offsetof(EEComplexUnit, mLauncherClass);
+    theLayout.complex_patrol_group = offsetof(EEComplexUnit, mPatrolGroup);
+    theLayout.complex_home_base = offsetof(EEComplexUnit, mHomeBase);
+    theLayout.complex_gathered_resource = offsetof(EEComplexUnit, mGatheredResource);
+    theLayout.complex_last_attacker = offsetof(EEComplexUnit, mLastAttacker);
+    theLayout.complex_owner = offsetof(EEComplexUnit, mOwner);
+    theLayout.complex_mine = offsetof(EEComplexUnit, mMine);
+    theLayout.complex_holder = offsetof(EEComplexUnit, mHolder);
+    theLayout.complex_behavior = offsetof(EEComplexUnit, mBehavior);
+    theLayout.complex_last_resource = offsetof(EEComplexUnit, mLastResource);
+    theLayout.complex_held_units = offsetof(EEComplexUnit, mHeldUnits);
+    theLayout.complex_unit_variables = offsetof(EEComplexUnit, mUnitVariables);
+    theLayout.complex_bounded_path_tiles = offsetof(EEComplexUnit, mBoundedPathTiles);
+    theLayout.complex_contacts_head = offsetof(EEComplexUnit, mContacts) + offsetof(UList<EEComplexUnit*>, mHead);
+    theLayout.complex_contacts_count = offsetof(EEComplexUnit, mContacts) + offsetof(UList<EEComplexUnit*>, mCount);
+    theLayout.contact_node_data = offsetof(UListNode<EEComplexUnit*>, mData);
+    theLayout.contact_node_next = offsetof(UListNode<EEComplexUnit*>, mNext);
+    theLayout.complex_collision_tile = offsetof(EEComplexUnit, mCollisionTile);
+    theLayout.complex_contact_location = offsetof(EEComplexUnit, mInitialContactLocation);
+    theLayout.complex_scale = theModelAt + GEPhysicalModel::ScaleOffset();
+    theLayout.complex_frame = theModelAt + GEPhysicalModel::FrameOffset();
+    theLayout.complex_conversion_effect = offsetof(EEComplexUnit, mConversionEffect);
+    theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
+    theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
+    theLayout.herd_id = offsetof(EEHerd, mID);
+    theLayout.patrol_group_id = offsetof(EEPPatrolGroup, mID);
+    theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
+    theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
+        Fail("the class's 29 effect pointers are not contiguous");
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }
