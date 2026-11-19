@@ -7,17 +7,17 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `EEFCircle`'s half arc (`3.14159265f`; no caller changes it).
+constexpr static const float CIRCLE_HALF_ARC = 3.14159265;
+
+/// The most words a shape's capture has (a long line: 4 + 10 offsets).
+constexpr static const uint32_t EE_FORMATION_SHAPE_WORDS = 16;
+
+/// A `GETransformation`'s rotation part.
+struct EeFormationRotation;
+
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
-
-/// An `EEFWedge`'s members.
-struct EeFormationWedge {
-  EeFormationVec3 left_arm;
-  EeFormationVec3 right_arm;
-  float spacing;
-  float row_depth;
-  uint32_t count;
-};
 
 /// The formation's frame: `mOrientation`'s rotation (rows of `GETransformation::mMatrix`; `Apply(GEVector)` reads
 /// nothing else), `mCenter` and `mHeading`.
@@ -27,15 +27,6 @@ struct EeFormationFrame {
   float heading;
 };
 
-/// An `EEFLine`'s members besides its offsets.
-struct EeFormationLine {
-  int32_t count;
-  /// `inRows + 1`
-  int32_t rows;
-  float spacing;
-  float depth;
-};
-
 /// One slot: the position, the heading and the index of its unit in the input.
 struct EeFormationSlot {
   EeFormationVec3 position;
@@ -43,56 +34,29 @@ struct EeFormationSlot {
   uint32_t unit;
 };
 
-/// An `EEFCircle`'s members that `Place` reads.
-struct EeFormationCircle {
-  /// 0: the formation heading, 1: facing the centre, 2: facing out
-  int32_t mode;
-  float half_arc;
-  float min_radius;
-};
-
 extern "C" {
 
-/// `EEFLine`'s constructor: `count` column offsets into `out`.
+/// `EEFormation::Place` of the formation type `kind` (0-7) over the units' outer collision radii (`count` of them,
+/// in input order); 0 slots for a type `Create` does not make.
 ///
 /// # Safety
-/// `out` must be valid for `count` writes.
-void ee_formation_line_offsets(float spacing, int32_t count, float *out);
+/// `frame` must be valid; `radii` valid for `count` reads and `out` for `count` writes when `count` is not 0.
+uint32_t ee_formation_place(int32_t kind,
+                            float min_radius,
+                            const EeFormationFrame *frame,
+                            const float *radii,
+                            uint32_t count,
+                            EeFormationSlot *out);
 
-/// `EEFWedge`'s constructor.
-EeFormationWedge ee_formation_wedge_geometry(float spacing, float angle, uint32_t count);
-
-/// `EEFLine::Place` over `count` units' collision radii; returns the slots written to `out`.
+/// The capture record of a `Place` of `kind`: its tag (0 for no type) and the shape's words after the frame (at most
+/// `EE_FORMATION_SHAPE_WORDS`), their count returned.
 ///
 /// # Safety
-/// `frame` and `line` must be valid; `offsets` valid for `line.count` reads; `radii` for `count` reads and `out` for
-/// `count` writes.
-uint32_t ee_formation_line_place(const EeFormationFrame *frame,
-                                 const EeFormationLine *line,
-                                 const float *offsets,
-                                 const float *radii,
-                                 uint32_t count,
-                                 EeFormationSlot *out);
-
-/// `EEFWedge::Place`, as `ee_formation_line_place`.
-///
-/// # Safety
-/// `frame` and `wedge` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
-uint32_t ee_formation_wedge_place(const EeFormationFrame *frame,
-                                  const EeFormationWedge *wedge,
-                                  const float *radii,
-                                  uint32_t count,
-                                  EeFormationSlot *out);
-
-/// `EEFCircle::Place`, as `ee_formation_line_place` (0 slots for no units).
-///
-/// # Safety
-/// `frame` and `circle` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
-uint32_t ee_formation_circle_place(const EeFormationFrame *frame,
-                                   const EeFormationCircle *circle,
-                                   const float *radii,
-                                   uint32_t count,
-                                   EeFormationSlot *out);
+/// `tag` must be valid; `words` valid for `EE_FORMATION_SHAPE_WORDS` writes.
+uint32_t ee_formation_shape_words(int32_t kind,
+                                  float min_radius,
+                                  uint32_t *tag,
+                                  uint32_t *words);
 
 }  // extern "C"
 

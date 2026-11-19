@@ -47,8 +47,6 @@
 #include "ee/EEAIRandom.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEFormation.h"
-#include "ee/EEFCircle.h"
-#include "ee/EEFInwardCircle.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
@@ -263,7 +261,7 @@ bool EEHerd::Chase()
     }
     if (this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0) {
         theResult = true;
-        EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
+        EEFormation* theFormation = EEFormation::Create(6);
         theUnits.assign(this->mUnits.begin(), this->mUnits.end());
         this->mTarget->GetPosition(thePosition);
         theFormation->mCenter.mX = thePosition.mX;
@@ -312,7 +310,7 @@ bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
     bool theResult = false;
     std::vector<EEComplexUnit*> theUnits;
     std::vector<EEFormationSlot> theSlots;
-    EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
+    EEFormation* theFormation = EEFormation::Create(6);
     GE3DPoint theCenter((float)inTile.mX + 0.5f, (float)inTile.GetY() + 0.5f, 0.0f);
     if (gWorld.mMap->GetTile(inTile.mX, inTile.GetY())) {
         float theZ = gWorld.mMap->mTerrainMesh.GetZ(inTile.mX, inTile.GetY());
@@ -1113,7 +1111,7 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
 {
     std::vector<EEComplexUnit*> theUnits;
     std::vector<EEFormationSlot> theSlots;
-    EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
+    EEFormation* theFormation = EEFormation::Create(6);
     GE3DPoint thePosition;
     GE3DPoint theUnitPosition;
     inTarget->GetPosition(thePosition);

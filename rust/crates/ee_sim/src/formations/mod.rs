@@ -1,6 +1,6 @@
-//! Formations (`src/Empire Earth/Formations`): where a group's units stand. Geometry in, slots out: the C++ classes
-//! (`EEFLine`, `EEFWedge`, `EEFCircle` and their presets) keep their members, and their constructors and `Place`
-//! call this crate through `ffi` with plain data.
+//! Formations (`src/Empire Earth/Formations`): where a group's units stand. Geometry in, slots out: the one C++ class
+//! (`EEFormation`: its type, frame and a circle's minimum radius) calls `ffi`; the eight original classes (`EEFLine`,
+//! `EEFWedge`, `EEFCircle` and their presets) are the shapes of `capture::shape_of`.
 //!
 //! Part of the deterministic game (RUST_PLAN 2.1): every operation is `f32` in the C++'s order, with the engine's
 //! lookup-table trigonometry (`ee_rmap::math`, `UMCos`/`UMSin`/`UMArcTan2`), so the slots are bit-equal to the C++'s.

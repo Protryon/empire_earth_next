@@ -8,9 +8,9 @@ use std::ffi::c_void;
 use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effect_state::{
-    self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
-    EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxSmokeSetUp,
-    EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
+    self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectRecord, EeGfxEmitterBurst,
+    EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EmitterHost,
+    ParticleGround, SmokeHost,
 };
 use crate::gfx::effect_storm::{self, EeGfxStormDraw, EeGfxStormLists, StormHost};
 
@@ -59,32 +59,6 @@ impl EffectFile for File<'_> {
     }
     fn write_bool(&mut self, v: bool) -> i32 {
         (self.0.write_bool)(self.0.context, v)
-    }
-}
-
-/// `EEEffect2D::mParts` for Load and Save (`context`: the effect).
-#[repr(C)]
-pub struct EeGfxEffectParts {
-    pub context: *mut c_void,
-    /// a loaded part: the C++ gives it the graphic object, loads its media, keeps it on success; the result
-    pub push: extern "C" fn(context: *mut c_void, part: *const EeGfxEffectPart) -> i32,
-    pub count: extern "C" fn(context: *mut c_void) -> u32,
-    pub get: extern "C" fn(context: *mut c_void, index: u32, part: *mut EeGfxEffectPart),
-}
-
-struct Parts<'a>(&'a EeGfxEffectParts);
-
-impl EffectParts for Parts<'_> {
-    fn push(&mut self, part: &EeGfxEffectPart) -> i32 {
-        (self.0.push)(self.0.context, part)
-    }
-    fn count(&mut self) -> u32 {
-        (self.0.count)(self.0.context)
-    }
-    fn get(&mut self, i: u32) -> EeGfxEffectPart {
-        let mut p = EeGfxEffectPart::default();
-        (self.0.get)(self.0.context, i, &mut p);
-        p
     }
 }
 
@@ -205,150 +179,6 @@ unsafe fn put_lists(r: *mut EeGfxEffectRecord, lists: EeGfxEffectLists) {
         } else {
             *p = lists;
         }
-    }
-}
-
-/// `EEEffect::Init`'s part of the record.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_init(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| r.init()) }
-}
-
-/// `EEEffect3D::InitTransformation`.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_init_transformation(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| r.init_transformation()) }
-}
-
-/// `EEEffect2D::Clear`'s part of the record.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_clear_2d(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| r.clear_2d()) }
-}
-
-/// The effect region under (x, y), regions of `size` tiles (`MoveToPoint`, `MoveToTransformation`): whether it is
-/// not the record's; `out_x`/`out_y` get it.
-///
-/// # Safety
-/// `r` is a live record; the outputs are writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_region_changed(
-    r: *const EeGfxEffectRecord,
-    x: f32,
-    y: f32,
-    size: i32,
-    out_x: *mut i32,
-    out_y: *mut i32,
-) -> bool {
-    let (rx, ry) = EeGfxEffectRecord::region_of(x, y, size);
-    // SAFETY: the function's contract
-    unsafe {
-        *out_x = rx;
-        *out_y = ry;
-        rx != (*r).tile_x || ry != (*r).tile_y
-    }
-}
-
-/// `EEEffect::Load`'s reads (the C++ resolves what `out` names).
-///
-/// # Safety
-/// `r` is a live record; `file` and `out` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load(
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    out: *mut EeGfxEffectLoaded,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut loaded = EeGfxEffectLoaded::default();
-        let res = on_copy(r, |r| effect_state::load_base(r, &mut File(&*file), &mut loaded));
-        *out = loaded;
-        res
-    }
-}
-
-/// `EEEffect::Save`'s writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save(
-    r: *const EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    graphic_effect_id: i32,
-    unit_id: u32,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_base(&local, &mut File(&*file), graphic_effect_id, unit_id)
-    }
-}
-
-/// `EEEffect3D::Load`'s own reads.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load_3d(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::load_3d(r, &mut File(&*file))) }
-}
-
-/// `EEEffect3D::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save_3d(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_3d(&local, &mut File(&*file))
-    }
-}
-
-/// `EEEffect2D::Load`'s own reads.
-///
-/// # Safety
-/// `r` is a live record; `file` and `parts` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load_2d(
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    parts: *const EeGfxEffectParts,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::load_2d(r, &mut File(&*file), &mut Parts(&*parts))) }
-}
-
-/// `EEEffect2D::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` and `parts` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save_2d(
-    r: *const EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    parts: *const EeGfxEffectParts,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_2d(&local, &mut File(&*file), &mut Parts(&*parts))
     }
 }
 
@@ -474,16 +304,6 @@ pub unsafe extern "C" fn ee_gfx_effect_particle_set_up(r: *mut EeGfxEffectRecord
         let s = *setup;
         on_copy(r, |r| effect_state::particle_set_up(r, &s))
     }
-}
-
-/// The particles' `Clear` state.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_particle_clear(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, effect_state::particle_clear) }
 }
 
 /// The particles' `Update` (the renderer's move): 7 when it ends.
@@ -1138,89 +958,6 @@ pub unsafe extern "C" fn ee_gfx_storm_save(r: *mut EeGfxEffectRecord, file: *con
     unsafe { on_storm(r, |r, l| effect_storm::save_storm(r, l, &mut File(&*file))) }
 }
 
-/// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
-///
-/// # Safety
-/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect3d(
-    op: crate::gfx::effect_rising::EeGfxEffect3DOp,
-    r: *mut EeGfxEffectRecord,
-    g: *const crate::gfx::effect_rising::EeGfxGraphicFacts,
-    host: *const crate::gfx::effect_rising::EeGfxEffect3DHost,
-    raster: *const crate::gfx::raster::EeGfxRaster,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut h = &*host;
-        let mut x = &*raster;
-        crate::gfx::effect_rising::effect3d(op, r, &*g, &mut h, &mut x)
-    }
-}
-
-/// One virtual of an `EEE2DRust` (`effect_2d.rs`).
-///
-/// # Safety
-/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect2d(
-    op: crate::gfx::effect_rising::EeGfxEffect3DOp,
-    r: *mut EeGfxEffectRecord,
-    g: *const crate::gfx::effect_rising::EeGfxGraphicFacts,
-    host: *const crate::gfx::effect_2d::EeGfxEffect2DHost,
-    raster: *const crate::gfx::raster::EeGfxRaster,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut h = &*host;
-        let mut x = &*raster;
-        crate::gfx::effect_2d::effect2d(op, r, &*g, &mut h, &mut x)
-    }
-}
-
-/// `Load` (`op` Load) or `Save` of an `EEE2DRust` after `EEEffect2D`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect2d_file(
-    op: crate::gfx::effect_rising::EeGfxEffect3DOp,
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    major: u32,
-    minor: u32,
-    host: *const crate::gfx::effect_2d::EeGfxEffect2DHost,
-) -> i32 {
-    // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
-    // does not read it)
-    unsafe {
-        let mut h = &*host;
-        on_copy(r, |r| crate::gfx::effect_2d::effect2d_file(op, r, &mut File(&*file), major, minor, &mut h))
-    }
-}
-
-/// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect3d_file(
-    op: crate::gfx::effect_rising::EeGfxEffect3DOp,
-    base: i32,
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    major: u32,
-    minor: u32,
-    host: *const crate::gfx::effect_rising::EeGfxEffect3DHost,
-) -> i32 {
-    // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
-    // does not read it)
-    unsafe {
-        let mut h = &*host;
-        on_copy(r, |r| crate::gfx::effect_rising::effect3d_file(op, base, r, &mut File(&*file), major, minor, &mut h))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1276,16 +1013,12 @@ mod tests {
         unsafe {
             (*r).tile_x = 4;
             (*r).handle = 9;
-            let (mut x, mut y) = (0, 0);
-            assert!(ee_gfx_effect_region_changed(r, 40.5, 3.0, 8, &mut x, &mut y));
-            assert_eq!((x, y), (5, 0));
-            (*r).tile_x = 5;
-            (*r).tile_y = 0;
-            assert!(!ee_gfx_effect_region_changed(r, 47.9, 7.9, 8, &mut x, &mut y));
+            assert_eq!(EeGfxEffectRecord::region_of(40.5, 3.0, 8), (5, 0));
+            assert_eq!(EeGfxEffectRecord::region_of(47.9, 7.9, 8), (5, 0));
             (*r).transformation.m[0][0] = 3.0;
-            ee_gfx_effect_init(r);
+            (*r).init();
             assert_eq!(((*r).handle, (*r).tile_x, (*r).transformation.m[0][0]), (0, -1, 3.0));
-            ee_gfx_effect_init_transformation(r);
+            (*r).init_transformation();
             assert_eq!((*r).transformation.m[0][0], 1.0);
             ee_gfx_effect_record_free(r);
             ee_gfx_effect_record_free(std::ptr::null_mut());

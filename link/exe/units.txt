@@ -43,19 +43,7 @@ db169 dbcc8 Empire Earth/Database/EETerrainTable.cpp
 dbcc8 dc682 Empire Earth/Database/EETerrainTypeTable.cpp
 dc682 dc8e7 Empire Earth/Database/EEUCUpgradeTable.cpp
 dc8e7 dd160 Empire Earth/Database/EEUnitBehavior.cpp
-dd160 dd861 Empire Earth/Formations/EEFCircle.cpp
-dd861 dd8b2 Empire Earth/Formations/EEFDeepWedge.cpp
-dd8b2 ddc20 Empire Earth/Formations/EEFLine.cpp
-ddc20 ddc73 Empire Earth/Formations/EEFLongLine.cpp
-ddc73 ddcc6 Empire Earth/Formations/EEFLooseLine.cpp
 ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
-dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
-dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
-ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
-ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
-1054ec 107616 Empire Earth/Graphics Thread/EEEffectManager.cpp
-107616 10972b Empire Earth/Graphics Thread/EEGraphicalGoalManager.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp
 10a9b0 10aa88 Empire Earth/Graphics Thread/EEMouse.cpp
 10aa88 111d3d Empire Earth/Graphics Thread/EERenderObject.cpp

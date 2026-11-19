@@ -134,13 +134,7 @@ void TerrainLines(void*)
 // the effects' terrain pass: queue 2, batched per texture
 void TerrainEffects(void*)
 {
-    for (EEEffectQueue::iterator i = gEffectQueues[2].begin(); i != gEffectQueues[2].end(); i++) {
-        BeginEffectBatches(i->first);
-        for (std::deque<EEEffect*>::iterator theEffect = i->second.begin(); theEffect != i->second.end(); theEffect++)
-            (*theEffect)->DrawPass4();
-        FlushEffectBatches();
-        EndEffectBatches();
-    }
+    ee_gfx_effect_queues_draw(4);
 }
 }
 

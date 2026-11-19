@@ -173,9 +173,7 @@ void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
     gEffectManager->CreateEffect(inUnit, theLocation, theEffect, &theHandle, 0);
     EEEffect* theFlare = gEffectManager->GetEffect(theHandle);
     unsigned long thePlayerID = ::gWorld.GetCurrentPlayer()->mPlayerID;
-    theFlare->mIsSaved = false;
-    theFlare->mIsLocalOnly = true;
-    theFlare->mPlayer = thePlayerID;
+    theFlare->SetLocalTo(thePlayerID);
 }
 
 // Returns the local player's first selected unit; false when nothing is selected

@@ -128,10 +128,48 @@ fn decode_formation(record: &Record) -> Result<FormationCall, String> {
 
 /// The slots of a captured call recomputed by this crate.
 pub fn replay(call: &FormationCall) -> Vec<EeFormationSlot> {
-    match &call.shape {
-        Shape::Line(line, offsets) => line_place(&call.frame, line, offsets, &call.radii),
-        Shape::Wedge(wedge) => wedge_place(&call.frame, wedge, &call.radii),
-        Shape::Circle(circle) => circle_place(&call.frame, circle, &call.radii),
+    replay_shape(&call.shape, &call.frame, &call.radii)
+}
+
+/// The slots of a shape's `Place` in a frame over the units' radii.
+pub fn replay_shape(shape: &Shape, frame: &EeFormationFrame, radii: &[f32]) -> Vec<EeFormationSlot> {
+    match shape {
+        Shape::Line(line, offsets) => line_place(frame, line, offsets, radii),
+        Shape::Wedge(wedge) => wedge_place(frame, wedge, radii),
+        Shape::Circle(circle) => circle_place(frame, circle, radii),
+    }
+}
+
+/// `EEFCircle`'s half arc (`3.14159265f`; no caller changes it).
+pub const CIRCLE_HALF_ARC: f32 = 3.14159265;
+
+/// The members a formation type's constructor gave it (`EEFormation::Create`'s classes, now one record): the
+/// preset's line offsets or wedge arms, a circle's mode, arc and the caller's minimum radius. `None` for a type
+/// `Create` does not make.
+pub fn shape_of(kind: i32, min_radius: f32) -> Option<Shape> {
+    Some(match preset(kind)? {
+        Preset::Line(spacing, depth, count, rows) => {
+            Shape::Line(EeFormationLine { count, rows: rows + 1, spacing, depth }, line_offsets(spacing, count))
+        }
+        Preset::Wedge(spacing, angle, count) => Shape::Wedge(wedge_geometry(spacing, angle, count)),
+        Preset::Circle(mode) => Shape::Circle(EeFormationCircle { mode, half_arc: CIRCLE_HALF_ARC, min_radius }),
+    })
+}
+
+/// The shape's capture tag and words (the record's members after the common frame, as the C++ wrote them).
+pub fn shape_words(shape: &Shape) -> (u32, Vec<u32>) {
+    match shape {
+        Shape::Line(line, offsets) => {
+            let mut w = vec![line.count as u32, line.rows as u32, line.spacing.to_bits(), line.depth.to_bits()];
+            w.extend(offsets.iter().map(|o| o.to_bits()));
+            (TAG_LINE, w)
+        }
+        Shape::Wedge(wedge) => {
+            let mut w: Vec<u32> = wedge.left_arm.iter().chain(&wedge.right_arm).map(|v| v.to_bits()).collect();
+            w.extend([wedge.spacing.to_bits(), wedge.row_depth.to_bits(), wedge.count]);
+            (TAG_WEDGE, w)
+        }
+        Shape::Circle(c) => (TAG_CIRCLE, vec![c.mode as u32, c.half_arc.to_bits(), c.min_radius.to_bits()]),
     }
 }
 

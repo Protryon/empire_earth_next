@@ -189,21 +189,6 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer)
                         theEnemies);
 }
 
-void EEUnitOrderPush(unsigned long inID)
-{
-    ee_units_order_push(static_cast<uint32_t>(inID));
-}
-
-void EEUnitOrderErase(unsigned long inID)
-{
-    ee_units_order_erase(static_cast<uint32_t>(inID));
-}
-
-void EEUnitOrderClear()
-{
-    ee_units_order_clear();
-}
-
 // the deque's ids (the handles' own: a freed unit's handle resolves to NULL but keeps its id)
 static void OrderIDs(std::vector<uint32_t>& outIDs)
 {

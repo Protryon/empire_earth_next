@@ -464,7 +464,6 @@ pub mod game {
         fn ee_units_host_town_patrol_point(unit: u32, found: *mut u8) -> u32;
         fn ee_units_host_patrol_add_unit_tile(unit: u32, target: u32, player: *mut c_void);
         fn ee_units_host_unit_patrol_group(unit: u32) -> *mut c_void;
-        fn ee_units_host_object_unit_type(unit: u32) -> i64;
         fn ee_units_host_group_set_queued(group: *mut c_void, queued: u8);
         fn ee_units_host_group_spread_around_resource(group: *mut c_void, target: u32);
         fn ee_units_host_group_spread_around_tile(group: *mut c_void, x: i64, y: i64);
@@ -478,7 +477,6 @@ pub mod game {
         fn ee_units_host_patrol_add_point(route: *mut c_void, x: f32, y: f32, player: *mut c_void);
         fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
         fn ee_units_host_group_spread_around_unit(group: *mut c_void, target: u32, x: i64, y: i64);
-        fn ee_units_host_unit_complex_id(unit: u32) -> u32;
         fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
         fn ee_units_host_group_reset_paths(group: *mut c_void);
         fn ee_units_host_group_keep_citizens(group: *mut c_void);
@@ -499,7 +497,6 @@ pub mod game {
         fn ee_units_host_goal_can_unload(goal: *mut c_void) -> u8;
         fn ee_units_host_unload_warning(player: *mut c_void, x: i64, y: i64);
         fn ee_units_host_technology_unit_class(player: *mut c_void, technology: i32, found: *mut u8) -> i64;
-        fn ee_units_host_player_num_capitols(player: *mut c_void) -> i64;
         fn ee_units_host_can_produce(player: *mut c_void, technology: i32) -> u8;
         fn ee_units_host_can_place_on_tile(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u8;
         fn ee_units_host_make_building(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u32;
@@ -523,7 +520,6 @@ pub mod game {
         ) -> *mut c_void;
         fn ee_units_host_calamity_can_cast_at(class: *mut c_void, unit: u32, x: i32, y: i32, target: u32) -> i64;
         fn ee_units_host_technology_contains(player: *mut c_void, technology: i32, unit_type: i64) -> u8;
-        fn ee_units_host_unit_power(unit: u32) -> i64;
         fn ee_units_host_calamity_cost(class: *mut c_void) -> i64;
         fn ee_units_host_unit_player(unit: u32) -> *mut c_void;
         fn ee_units_host_group_split_calamity_casters(
@@ -540,7 +536,6 @@ pub mod game {
         fn ee_units_host_unit_seen_by(unit: u32, player: *mut c_void) -> u8;
         fn ee_units_host_unit_ghost_seen(unit: u32) -> u8;
         fn ee_units_host_unit_attackable(unit: u32, damage_index: i64) -> u8;
-        fn ee_units_host_unit_class_targetable(unit: u32) -> u8;
         fn ee_units_host_unit_can_attack_class(unit: u32, target: u32) -> u8;
         fn ee_units_host_unit_shares_rally_point(unit: u32, unit_type: i64) -> u8;
         fn ee_units_host_unit_num_goal_queues(unit: u32) -> i64;
@@ -574,7 +569,6 @@ pub mod game {
         fn ee_units_host_unit_shares_research(unit: u32, unit_type: i64) -> u8;
         fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
-        fn ee_units_host_player_hack_class(player: *mut c_void) -> i32;
         fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
         fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
         fn ee_units_host_hack_create_building(unit_type: i32, x: i64, y: i64, player_id: i64);
@@ -683,7 +677,7 @@ pub mod game {
             HostRef(unsafe { ee_units_host_unit_patrol_group(unit) })
         }
         fn object_unit_type(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_object_unit_type(unit) }
+            view_of(unit, |u| u.class().map_or(-1, |c| c.unit_type() as i64)).unwrap_or(-1)
         }
         fn group_set_queued(&mut self, group: HostRef, queued: bool) {
             unsafe { ee_units_host_group_set_queued(group.0, queued as u8) }
@@ -726,7 +720,8 @@ pub mod game {
             unsafe { ee_units_host_group_spread_around_unit(group.0, target, x, y) }
         }
         fn unit_complex_id(&mut self, unit: u32) -> u32 {
-            unsafe { ee_units_host_unit_complex_id(unit) }
+            // `GetComplexUnit()`: `mComplexUnit`
+            view_of(unit, |u| u.complex_unit().map_or(EE_UNIT_ID_NONE, |c| c.id())).unwrap_or(EE_UNIT_ID_NONE)
         }
         fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32) {
             let (mut x, mut y) = (x, y);
@@ -783,7 +778,11 @@ pub mod game {
             (found != 0).then_some(class)
         }
         fn player_num_capitols(&mut self, player: HostRef) -> i64 {
-            unsafe { ee_units_host_player_num_capitols(player.0) }
+            // SAFETY: a body runs inside the C++ call that holds the world; its players are live
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            unsafe { crate::world::PlayerView::of(&t, player.0 as u64) }
+                .map_or(0, |p| crate::world_field!(p.saved(), mNumCapitols) as i64)
         }
         fn can_produce(&mut self, player: HostRef, technology: i32) -> bool {
             unsafe { ee_units_host_can_produce(player.0, technology) != 0 }
@@ -849,7 +848,7 @@ pub mod game {
             unsafe { ee_units_host_technology_contains(player.0, technology, unit_type) != 0 }
         }
         fn unit_power(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_unit_power(unit) }
+            view_of(unit, |u| crate::world_field!(u.complex(), mPower) as i64).unwrap_or(0)
         }
         fn calamity_cost(&mut self, class: HostRef) -> i64 {
             unsafe { ee_units_host_calamity_cost(class.0) }
@@ -896,7 +895,9 @@ pub mod game {
             unsafe { ee_units_host_unit_attackable(unit, damage_index) != 0 }
         }
         fn unit_class_targetable(&mut self, unit: u32) -> bool {
-            unsafe { ee_units_host_unit_class_targetable(unit) != 0 }
+            // `EEUUGetIsUnitClassTargetable(NULL, unit->mUnitClass)`
+            let class = view_of(unit, |u| u.class().map_or(0, |c| c.handle())).unwrap_or(0);
+            crate::units::uu_ffi::ee_units_uu_targetable(0, class, 0) != 0
         }
         fn unit_can_attack_class(&mut self, unit: u32, target: u32) -> bool {
             unsafe { ee_units_host_unit_can_attack_class(unit, target) != 0 }
@@ -1048,7 +1049,11 @@ pub mod game {
             unsafe { ee_units_host_unit_queue_research(unit, technology, front as u8) }
         }
         fn player_hack_class(&mut self, player: HostRef) -> i32 {
-            unsafe { ee_units_host_player_hack_class(player.0) }
+            // SAFETY: as player_num_capitols
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            unsafe { crate::world::PlayerView::of(&t, player.0 as u64) }
+                .map_or(0, |p| crate::world_field!(p.fields(), mHackUnitClass) as i32)
         }
         fn unit_class_count(&mut self) -> i64 {
             // SAFETY: a decision runs inside the C++ call that holds the world
