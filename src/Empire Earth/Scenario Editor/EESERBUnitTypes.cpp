@@ -81,7 +81,7 @@ static std::vector<long> sSeplV531FB0, sSeplBuildingTechs, sSeplV531F88, sSeplTe
 // 0x578342) and the player rows EESEPlayerRow (0x578a29 .. 0x57a53e) are the object's records.
 
 // the screen's font while a screen's object makes its controls (the player tab, the trigger screens' objects)
-GEFont* gSeplScreenFont;
+extern GEFont* gSeplScreenFont;   // EEGlobals.cpp
 // the unit tab's lists (EESEUnit.cpp; declared in ee/EESEUnit.h)
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);

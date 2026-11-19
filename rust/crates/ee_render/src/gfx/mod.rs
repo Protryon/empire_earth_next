@@ -145,6 +145,10 @@ pub mod ro_units;
 pub mod scene;
 pub mod select;
 pub mod shadows;
+/// cbindgen:ignore
+pub mod sim_effects;
+#[cfg(test)]
+mod sim_effects_tests;
 pub mod tags;
 pub mod terrain;
 pub mod units;

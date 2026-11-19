@@ -1,6 +1,8 @@
 // Engine helpers the original emitted out of line in the computer player's combat units (EECPASG*, EECPAttackSubGroup,
 // the prophet sub group units) after their first user there. Stage 5 deleted those units (docs/AI_RESEARCH.md
 // §8.90); the rest of the game still calls these, so they live here. New unit (tools/units.py EXTRA_UNITS).
+// EEUnit::GetTechTreeNode is EETechTree.cpp's and EEComplexUnit::GetMaxVelocity EEActiveGroup.cpp's: the only two
+// that called other units (tools/cpp_deps.py), so the rest is a leaf.
 #include <windows.h>
 #include <algorithm>
 #include <deque>
@@ -71,12 +73,6 @@ bool EEUnitClass::IsPriest()
     return theCategory == kUnitCategoryLandPriest || theCategory == kUnitCategoryNavalPriest || theCategory == kUnitCategoryHelicopterPriest || theCategory == kUnitCategoryBuildingPriest;
 }
 
-// Returns the owner's tech tree node of the technology that makes the unit's class
-EETechTreeNode* EEUnit::GetTechTreeNode()
-{
-    return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
-}
-
 // Returns the map tile at a tile location
 EETile* EEMap::GetTileAtLocation(const EETileLocation& inLocation)
 {
@@ -89,15 +85,6 @@ float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
     float theDX = this->mPhysicalModel.GetLocation().GetX() - inTileX;
     float theDY = this->mPhysicalModel.GetLocation().GetY() - inTileY;
     return theDY * theDY + theDX * theDX;
-}
-
-// Returns the unit's top speed: its active group's value when it is in one, else its stats'
-// Out of line after its first user here
-float EEComplexUnit::GetMaxVelocity()
-{
-    if (this->mActiveGroup)
-        return this->mActiveGroup->GetMaxVelocity(this);
-    return this->mStats->mMaxVelocity;
 }
 
 // Returns the squared tile distance from the stored centre tile to a given tile
