@@ -1048,8 +1048,7 @@ def cmd_wontest(a):
 
 SESSION_STAND = ROOT / "tests" / "net" / "ee_stand"
 SESSION_UNITS = [ROOT / "src" / p for p in (
-    "Low-Level Engine/Network Engine/NEMessage.cpp", "Low-Level Engine/File System/FSBasicFile.cpp",
-    "Low-Level Engine/File System/FSFileSpec.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
+    "Low-Level Engine/Network Engine/NEMessage.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
 
 # program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
 # stand-in headers)

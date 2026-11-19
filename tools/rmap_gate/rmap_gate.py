@@ -37,7 +37,7 @@ DEFAULT = ROOT / "src" / "Empire Earth" / "Random Map" / "Random Map Generators"
 UTIL = ROOT / "src" / "Low-Level Engine"
 READER = []   # the .rmv reader is Rust now (ee_rmap rmv.rs); Unit10.cpp was compiled here
 # engine units the dump tool compiles for real: the geometry math, the random stream, the strings and the fractal
-LLE_UNITS = ["File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp"]
+LLE_UNITS = []   # (the strings, files and GE values are header classes over Rust since LLE round 8)
 OPT = "-O1"
 DEFAULT_GENERATOR = "rust"
 

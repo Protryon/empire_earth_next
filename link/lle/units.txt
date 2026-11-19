@@ -1,9 +1,7 @@
 028ca 036c5 Error System/ESChecksum.cpp
 04020 04e29 File System/File System.cpp
 04e29 07af6 File System/FSArchive.cpp
-07af6 07cb5 File System/FSBasicFile.cpp
 07cb5 080b9 File System/FSChunk.cpp
-08d15 09ec5 File System/FSFileSpec.cpp
 09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
 0dd9e 10550 Graphics Engine/GEBitmap.cpp
