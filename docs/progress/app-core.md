@@ -18,6 +18,11 @@ The lane's state. Each round rewrites this file to the current state; each round
   epochs, the samples, the income and losses, the chat; a host for the file and the objects' methods.
 - `ee_sim::app::statistics` (round 1): `EEWorld::RecordStatistics`' decisions over a host.
 - `ee_sim::app::active`, `ee_sim::app::teams` (round 2): the active unit lists and the teams as Rust objects.
+- The simulation capture, TEST ONLY (app cluster round 2): `ee_sim::app::capture` (the writer whole: the file, the
+  filters, the records; ee/EESimCapture.h's class forwards), `ee_sim::app::player_capture` (PLST),
+  `ee_sim::netmsg::decisions` (NMDC: the tables and the players' part), `ee_game::app::map_capture` (MAPC, MAPS),
+  `ee_game::sim_driver::combat_sweep` (the combat formulas' sweep), `ee_game::sim_driver::digest` (the editor gate's
+  map, mesh and unit lines; MSVC's `%a`), all over the world views and the terrain mesh's Rust object.
 
 **C++ left**:
 - `EETestFixture.cpp` (970 lines, was 1,460 + EETestFixtureOrders.cpp's 1,440): `EEFixtureHost` (about 65 operations:
@@ -27,10 +32,14 @@ The lane's state. Each round rewrites this file to the current state; each round
   handler and the legacy harness's communications mirror. About 140 of its lines are includes.
 - `EEGameLog.cpp` (162, was 311): the log's host (PlatFOpen, the lobby options, a player's texts, a goal's
   resource, a killer's owner) and the header's six forwards.
-- `EESim.cpp` (1,360): EE-SIM's host table and the TEST ONLY readers of C++ objects (combat, list search and missile
-  sweeps, the checksum fields, the state dump, the random trace), the fault handler.
-- `EESimEditor.cpp` (2,150), `EESimCivBuilder.cpp` (437): every command's body (editor actions, UI controls) and
-  the digests (the editor's forms and the world).
+- `EESim.cpp` (1,300): EE-SIM's host table and the TEST ONLY readers of C++ objects (the list search and missile
+  sweeps, which call the units' methods; the combat sweep's host: EECanHeal, GetPosition, the projectile class; the
+  checksum fields, the state dump, the random trace), the fault handler.
+- `EESimEditor.cpp` (2,100), `EESimCivBuilder.cpp` (437): every command's body (editor actions, UI controls) and
+  the digests of the editor's forms, the selection, the paint area, the players (`PlayersDigest`: names, civilization
+  files, the computer players' switches are C++ objects' members) and the save's chunks.
+- `EEAppCaptureWorld.cpp` (445), `EEMessageCapture.cpp` (330): the capture records of C++ objects (CHEF's upgrade
+  levels and camera, the storms, the mini map, WSTA's records; the messages' members).
 - `EEWorld.cpp` (StartGame, CreatePlayers, Clear, ReplacePlayer, PlaceQueuedUnits), `EEGameState.cpp` (Create),
   `Empire Earth.cpp` (the start-up and shut-down wiring; `EEInitializeDatabase`'s tables are now tables of loaders),
   Player, Persistent, Communications, Campaign: object wiring over C++ objects (measured in rounds 1 and 2).
@@ -40,6 +49,7 @@ with `--input-check --box-select --orders`, with `--scroll-check --zoom-captures
 `--view-check`, the editor exercise, the lan game (gates.sh), the harness self test; the ui-state file compared line
 for line with the unmodified exe's (the same lines but the run's values).
 
-**Next**: the editor's world digests (`Digest`'s tiles, mesh and units: the terrain mesh's Rust object and `%a`) and
-`PlayersDigest` over the views; the combat capture sweep over the views and ee_sim's combat; the fixture's WON lobby
-walk over the WON lane's component records once they are Rust; `EEGameState::Create`'s decisions.
+**Next**: EEWorld, EEPlayer and Persistent whole, Communications over ee_net and Empire Earth.cpp (the round's items
+2 to 5: not started; PORT_LEARNINGS "The app cluster, round 2" says why); `PlayersDigest` and CHEF once the
+players' names and upgrades and the computer players' switches are Rust records; the fixture's WON lobby walk over
+the WON lane's component records once they are Rust; `EEGameState::Create`'s decisions.

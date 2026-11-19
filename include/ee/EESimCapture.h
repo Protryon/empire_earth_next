@@ -4,35 +4,35 @@
 // compare the outputs (tools/sim_capture.py). Off (the default), Active() is one cached test.
 //
 // A record: u32 tag, u32 payload size, the payload (little-endian u32/i32/f32 fields, the tag's layout). Records are
-// written whole under a lock.
+// written whole under a lock (the writer is Rust: ee_sim app capture.rs).
 #ifndef EE_EESIMCAPTURE_H
 #define EE_EESIMCAPTURE_H
 
+#include <stdint.h>
 #include <vector>
 
-#include "rust/base/sim_capture.h"
+#include "rust/sim/app.h"   // the writer (ee_sim app capture.rs)
 
-// The file and its filters are Rust's (ee_base sim_capture.rs); this class builds a record and hands it over.
 class EESimCaptureRecord {
 public:
-    static bool Active() { return ee_sim_capture_active(); }   // EE_SIM_CAPTURE is set and the file opened
-    static void Flush() { ee_sim_capture_flush(); }            // before the process ends (EE-SIM's Quit)
+    static bool Active() { return ee_app_capture_active(); }   // EE_SIM_CAPTURE is set and the file opened
+    static void Flush() { ee_app_capture_flush(); }            // before the process ends (EE-SIM's Quit)
     // While set (not 0), this thread's records of any other tag are dropped: a sweep that calls a leaf records only
     // that leaf, not the leaves it reaches (Only(0) clears it)
-    static void Only(unsigned int inTag) { ee_sim_capture_only(&inTag, inTag != 0 ? 1 : 0); }
+    static void Only(unsigned int inTag) { ee_app_capture_only(&inTag, inTag != 0 ? 1 : 0); }
     // the same for up to four tags (a sweep over leaves that call each other; inCount 0 clears it)
-    static void Only(const unsigned int* inTags, unsigned int inCount) { ee_sim_capture_only(inTags, inCount); }
+    static void Only(const unsigned int* inTags, unsigned int inCount) { ee_app_capture_only(inTags, inCount); }
     // While on, every other thread's records are dropped (a sweep at the game's end that takes wall time: the UI
     // thread's GetCost calls, TCST, would otherwise add records by how long it runs)
-    static void Exclusive(bool inOn) { ee_sim_capture_exclusive(inOn); }
+    static void Exclusive(bool inOn) { ee_app_capture_exclusive(inOn); }
     // No record of any thread after it (the game's end, after its sweeps: the units a sweep made must not add any)
-    static void Close() { ee_sim_capture_close(); }
+    static void Close() { ee_app_capture_close(); }
     // While on, no record of any thread is written (a profile that records only its end sweep: on from the start,
     // off when the sweep begins)
-    static void Hold(bool inOn) { ee_sim_capture_hold(inOn); }
+    static void Hold(bool inOn) { ee_app_capture_hold(inOn); }
     // Whether a record of inTag committed now on this thread would be written (a caller that folds many records into
     // one checks each before folding it in)
-    static bool Keeps(unsigned int inTag) { return ee_sim_capture_keeps(inTag); }
+    static bool Keeps(unsigned int inTag) { return ee_app_capture_keeps(inTag); }
 
     explicit EESimCaptureRecord(unsigned int inTag) : mTag(inTag) {}
     void U32(unsigned int inValue) { this->Bytes(&inValue, 4); }
@@ -45,7 +45,7 @@ public:
         this->mData.insert(this->mData.end(), theBytes, theBytes + inSize);
     }
     // appends the record to the capture file
-    void Commit() { ee_sim_capture_commit(this->mTag, this->mData.data(), this->mData.size()); }
+    void Commit() { ee_app_capture_commit(this->mTag, this->mData.data(), this->mData.size()); }
     const std::vector<unsigned char>& Data() const { return this->mData; }   // the payload so far
 
 private:

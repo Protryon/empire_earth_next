@@ -303,4 +303,8 @@ pub struct EeCpFields {
     pub mReplaceOnLoad: bool,
     pub mRegroupPending: bool,
     pub mAttackStarted: bool,
+    /// new (the AI Thread cluster, round 2): the lists (`cp::lists::EeCpLists`: the resource centres, the favourite
+    /// types' history, the units to kill, the danger zones), made after `Init`; after the original's members, so the
+    /// record's digests (CPEV: up to `mAttackStarted`) and its saved fields are as they were
+    pub mLists: u64,
 }

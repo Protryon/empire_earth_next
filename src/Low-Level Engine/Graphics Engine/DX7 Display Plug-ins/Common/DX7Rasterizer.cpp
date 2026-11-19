@@ -140,6 +140,13 @@ DX7Rasterizer::~DX7Rasterizer()
 // Enumerates the DirectDraw devices into screens (Ex enumeration on 98/2000) and makes this the active rasterizer
 long DX7Rasterizer::ActivateRasterizer() { return ee_dx7r_activate_rasterizer(this->mDX7); }
 
+void* DX7Rasterizer::RustObjects(GERasterizer* inRasterizer, void** outBase)
+{
+    DX7Rasterizer* theRasterizer = static_cast<DX7Rasterizer*>(inRasterizer);
+    *outBase = theRasterizer->mRust;
+    return theRasterizer->mDX7;
+}
+
 // Sets up a screen's primary, back buffer and optional Z-buffer (flipping chain full screen, offscreen buffer
 // windowed), activates Direct3D on them and forces every render state to its default
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
@@ -210,9 +217,6 @@ void DX7Rasterizer::DestroyTextureHandle(GETexture* inTexture)
 
 // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
-
-// Returns whether the screen's card can modulate texture alpha
-bool DX7Rasterizer::GetCanModulateTextureAlpha(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, false); }
 
 // Returns 0 for any capability
 unsigned long DX7Rasterizer::GetCaps(unsigned long inCap, unsigned long inScreen)

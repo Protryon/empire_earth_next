@@ -233,14 +233,14 @@ const EE_WORLD_VIEW_CHECK_TAG: u32 = 0x4b43_5756;
 /// `world` is the live world (`&gWorld`); the caller holds it (the physics thread at its tick).
 #[no_mangle]
 pub unsafe extern "C" fn ee_world_view_check(world: u64, ticks: u32) {
-    if !ee_base::sim_capture::active() || !ee_base::sim_capture::keeps(EE_WORLD_VIEW_CHECK_TAG) {
+    if !crate::app::capture_record::active() || !crate::app::capture_record::keeps(EE_WORLD_VIEW_CHECK_TAG) {
         return;
     }
     // SAFETY: the caller holds the world
     let token = unsafe { WorldRead::begin() };
     // SAFETY: the caller's contract
     let d = unsafe { WorldView::of(&token, world) }.map_or_else(EeWorldViewDigest::default, |w| digest(&w));
-    let mut rec = ee_base::sim_capture::Record::new(EE_WORLD_VIEW_CHECK_TAG);
+    let mut rec = crate::app::capture_record::Record::new(EE_WORLD_VIEW_CHECK_TAG);
     for v in [ticks, d.players, d.units, d.tiles, d.digest as u32, (d.digest >> 32) as u32] {
         rec.u32(v);
     }

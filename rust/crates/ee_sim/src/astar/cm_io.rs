@@ -1566,10 +1566,10 @@ pub unsafe extern "C" fn ee_astar_cm_regions_digest(r: *const EeAStarCmRecord) -
 /// `r` the manager's record; its objects live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_astar_cm_capture(r: *const EeAStarCmRecord, tag: u32) {
-    if !ee_base::sim_capture::active() {
+    if !crate::app::capture_record::active() {
         return;
     }
-    ee_base::sim_capture::commit(tag, &capture_fill(&*r));
+    crate::app::capture_record::commit(tag, &capture_fill(&*r));
 }
 
 /// `EEAIContinentDigest` (TEST ONLY).

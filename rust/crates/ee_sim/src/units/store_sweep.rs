@@ -3,9 +3,9 @@
 //! The players and their unit lists are read through the world views; the picks and the Fill tests are the store's
 //! (select.rs, group.rs), as the C++ called them.
 
+use crate::app::capture_record as sim_capture;
 use crate::units::store::with_store;
 use crate::world::view::{UnitView, WorldRead, WorldView};
-use ee_base::sim_capture;
 use std::ffi::c_void;
 
 const TAG_PICK: u32 = 0x4b50_5355; // "USPK"

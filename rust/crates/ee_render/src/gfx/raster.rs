@@ -12,6 +12,7 @@ use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 use crate::gfx::effects::{EeGfxColor, EeGfxEffectQuad};
 use crate::gfx::lighting::EeGfxLighting;
 use crate::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
+use crate::gfx::raster_direct;
 
 /// `kZBufferTestOnly`, `kZBufferTestAndWrite` (GERenderState.h).
 pub(crate) const ZBUFFER_TEST_ONLY: u32 = 2;
@@ -95,103 +96,30 @@ impl EeGfxTextureLoad {
 /// The C++'s rasterizer calls, each on the current screen.
 #[repr(C)]
 pub struct EeGfxRaster {
-    pub set_alpha_ref: extern "C" fn(value: f32),
-    pub get_fog: extern "C" fn() -> u32,
-    pub set_fog: extern "C" fn(state: u32),
-    pub get_ambient: extern "C" fn() -> EeGfxColor,
-    pub set_ambient: extern "C" fn(color: EeGfxColor),
-    pub set_zbuffer: extern "C" fn(mode: u32),
-    pub set_blending: extern "C" fn(source: u32, destination: u32),
-    pub set_shading_source: extern "C" fn(source: u32),
-    pub set_alpha_testing: extern "C" fn(state: u32),
     /// one of the capture's lighting set-ups (`SetWhiteLighting` ...)
     pub lighting: extern "C" fn(kind: EeGfxLighting),
     /// `GetFogFactor` (it reads the fog's attributes and turns the fog off when it is on)
     pub fog_factor: extern "C" fn(location: *const Ge3DPoint, fog: u32) -> f32,
-    pub model_opacity: extern "C" fn(model: EeGfxModel, opacity: f32),
-    pub model_transform: extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation),
-    pub model_scale: extern "C" fn(model: EeGfxModel, scale: f32),
-    pub model_prepare: extern "C" fn(model: EeGfxModel),
     /// `Draw(model, screen, opacity, gOrthographicView)`
     pub model_draw: extern "C" fn(model: EeGfxModel, opacity: f32) -> i32,
-    /// `GetMaterial(0)->SetTexture(texture, screen)`
-    pub model_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
-    /// adds `delta` to the v of every texture coordinate of vertex array 0, keeping the old ones
-    pub model_scroll_v: extern "C" fn(model: EeGfxModel, delta: f32),
-    /// puts back the texture coordinates `model_scroll_v` kept
-    pub model_restore_v: extern "C" fn(model: EeGfxModel),
-    /// `GetMaterial(0)->SetColor(color)`
-    pub model_color: extern "C" fn(model: EeGfxModel, color: EeGfxColor),
-    /// the model's own `SetTexture(texture, screen)` (not its material's)
-    pub model_own_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
     /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
     pub camera: extern "C" fn() -> GeTransformation,
     /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
     pub depth_range: extern "C" fn(near: f32, far: f32),
-    pub set_zcompare: extern "C" fn(mode: u32),
-    /// `GetMaterial(0)->SetOpacity(opacity)`
-    pub model_material_opacity: extern "C" fn(model: EeGfxModel, opacity: f32),
-    /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
-    pub model_transform_scaled:
-        extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation, x: f32, y: f32, z: f32),
-    /// `SetGraphicsCurrentFrame(frame)`
-    pub model_frame: extern "C" fn(model: EeGfxModel, frame: u32),
-    /// `SetGraphicsPreModelTransform(transformation)`
-    pub model_pre_transform: extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation),
-    /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
-    pub model_scroll_u: extern "C" fn(model: EeGfxModel, delta: f32),
-    /// puts back the texture coordinates `model_scroll_u` kept
-    pub model_restore_u: extern "C" fn(model: EeGfxModel),
-    /// `GetCulling()`, `SetCulling(mode)`
-    pub get_culling: extern "C" fn() -> u32,
-    pub set_culling: extern "C" fn(mode: u32),
-    /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
-    pub model_shift_v: extern "C" fn(model: EeGfxModel, delta: f32),
-    /// `SetFrame(frame)` of a texture (`GETexture*`)
-    pub texture_frame: extern "C" fn(texture: EeGfxModel, frame: u32),
     /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
     pub camera_yaw: extern "C" fn() -> f32,
-    /// `GetZBuffer`, `GetZCompare`
-    pub get_zbuffer: extern "C" fn() -> u32,
-    pub get_zcompare: extern "C" fn() -> u32,
-    /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
-    pub model_tween: extern "C" fn(model: EeGfxModel, next: u32, fraction: f32),
     /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
     pub screen_point: extern "C" fn(point: *const Ge3DPoint, x: *mut f32, y: *mut f32),
     /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
     /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
     /// editor's under a free camera)
     pub draw_text: extern "C" fn(x: f32, y: f32, text: *const u8, color: EeGfxColor),
-    /// the tracer beam's stretch (`EEE3DTracerBeam::DrawPass6`, 0xfca9b): vertex array 0's points and texture
-    /// coordinates kept, then y stretched to `length` and x to `width`, u scrolled by `scroll` (`beam.rs`); each
-    /// sub-model's internal y kept and stretched; `ComputeBoundingVolumes`
-    pub model_stretch: extern "C" fn(model: EeGfxModel, length: f32, width: f32, scroll: f32),
-    /// puts back the vertices and sub-model ys `model_stretch` kept
-    pub model_unstretch: extern "C" fn(model: EeGfxModel),
-    /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
-    pub vertex_count: extern "C" fn(model: EeGfxModel) -> u32,
-    /// vertex array 0's point `index` (`GetPoint`)
-    pub vertex_point: extern "C" fn(model: EeGfxModel, index: u32) -> Ge3DPoint,
-    /// vertex array 0's point `index` set (`SetPoint`)
-    pub set_vertex_point: extern "C" fn(model: EeGfxModel, index: u32, point: *const Ge3DPoint),
-    /// `ComputeBoundingVolumes`, `ComputeModelNormals`
-    pub model_bounds: extern "C" fn(model: EeGfxModel),
-    pub model_normals: extern "C" fn(model: EeGfxModel),
-    /// `GetAlphaTestingRefValue`
-    pub get_alpha_ref: extern "C" fn() -> f32,
-    /// `GetBlending(source, destination)`
-    pub get_blending: extern "C" fn(source: *mut u32, destination: *mut u32),
     /// `gModelManager->CreateModel(polygons, vertices, 1, 0, 1, sub_models, name, flags)`, its name NUL-terminated
     /// UTF-8 (not referenced)
     pub create_model:
         extern "C" fn(polygons: u32, vertices: u32, sub_models: u32, name: *const u8, flags: u32) -> EeGfxModel,
     /// `gModelManager->CreateSubModel(polygons, vertices, 1, 0, 1, 0, 0, 0, parent)` (not referenced)
     pub create_sub_model: extern "C" fn(polygons: u32, vertices: u32, parent: EeGfxModel) -> EeGfxModel,
-    /// `Reference`, `Dereference`
-    pub model_reference: extern "C" fn(model: EeGfxModel),
-    pub model_dereference: extern "C" fn(model: EeGfxModel),
-    /// `GetSubModel(index)`
-    pub sub_model: extern "C" fn(model: EeGfxModel, index: u32) -> EeGfxModel,
     /// a built mesh's set values into vertex array 0 and polygon array 0 (`EEEffectMesh::Store`)
     pub store_mesh: extern "C" fn(
         model: EeGfxModel,
@@ -200,15 +128,6 @@ pub struct EeGfxRaster {
         triangles: *const EeGfxMeshTriangle,
         triangle_count: usize,
     ),
-    /// material 0's ranges: polygons from 0 (`SetPolygonStartingIndex(0, 0)`, `SetPolygonRangeLength(polygons, 0)`),
-    /// vertices from 0 (`SetVertexStartingIndex(0)`, `SetVertexRangeLength(vertices)`)
-    pub material_ranges: extern "C" fn(model: EeGfxModel, polygons: u32, vertices: u32),
-    /// `GetBoundingRadius(0)`
-    pub bounding_radius: extern "C" fn(model: EeGfxModel) -> f32,
-    /// vertex array 0's points (and normals) of `from` copied into `to`'s, over `from`'s size
-    pub copy_vertices: extern "C" fn(from: EeGfxModel, to: EeGfxModel, normals: bool),
-    /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
-    pub texture_wrap: extern "C" fn(texture: EeGfxModel),
     /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
     /// the reference `load` asks for; the texture (`GETexture*`)
     pub load_texture: extern "C" fn(name: *const u8, load: *const EeGfxTextureLoad) -> EeGfxModel,
@@ -216,8 +135,6 @@ pub struct EeGfxRaster {
     /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
     pub screen_line: extern "C" fn(x0: f32, y0: f32, x1: f32, y1: f32, opacity0: f32, opacity1: f32) -> i32,
 
-    /// `GetAlphaTesting`
-    pub get_alpha_testing: extern "C" fn() -> u32,
     /// the main viewport's rear clipping distance set to `distance` (`gU4E8F08.SetRearClippingDistance`; not set on the
     /// rasterizer); the old one
     pub rear_clipping: extern "C" fn(distance: f32) -> f32,
@@ -225,25 +142,6 @@ pub struct EeGfxRaster {
     pub draw_sky: extern "C" fn(model: EeGfxModel, sorted: bool) -> i32,
     /// the screen's `Get32BitTextureSupport`
     pub texture_32bit: extern "C" fn() -> bool,
-    /// `GetCanModulateTextureAlpha`
-    pub can_modulate_alpha: extern "C" fn() -> bool,
-    /// `SetAmbientIntensity(value)`
-    pub set_ambient_intensity: extern "C" fn(value: f32),
-    /// `GetFogAttributes`
-    pub get_fog_attributes: extern "C" fn() -> EeGfxFogAttributes,
-    /// `SetFogType`, `SetFogColor`, `SetFogRange`
-    pub set_fog_type: extern "C" fn(kind: u32),
-    pub set_fog_color: extern "C" fn(color: EeGfxColor),
-    pub set_fog_range: extern "C" fn(start: f32, end: f32),
-    /// a unit model's frame textures (`EEROUnits::DrawUnitModel`, 0x515cc7): each material past the first takes
-    /// `texture`'s frame by its texture index (frame 0 past the count) and then every sub-model's materials theirs
-    /// (within the count); nothing for a null texture
-    pub frame_textures: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
-    /// a graphic object's (`EEGraphicObject*`) `SetGroupColor(color, part)`
-    pub group_color: extern "C" fn(object: EeGfxModel, color: EeGfxColor, part: u32),
-    /// sub-model 0's post-model transform placed at its internal transform's position times `-scale` (a gate's side);
-    /// that transform
-    pub sub_model_offset: extern "C" fn(model: EeGfxModel, scale: f32) -> GeTransformation,
     /// the bar rhombus `which` (0 the fill, 1 its back): its rectangle (null: kept) and four vertex colours
     /// (`SetColorPerVertex`; null: kept)
     pub bar_set: extern "C" fn(which: u32, rect: *const GeRectangle, colors: *const EeGfxColor),
@@ -265,19 +163,28 @@ pub struct EeGfxRaster {
         strip: *const GeRectangle,
         bottom: f32,
     ),
-    /// a texture's `Dereference` (`GETexture*`)
-    pub texture_dereference: extern "C" fn(texture: EeGfxModel),
     /// the main viewport's camera inverse (`gU4E8F08.GetCameraInverse()`), the render snapshot's camera pitch
     pub camera_inverse: extern "C" fn() -> GeTransformation,
     pub camera_pitch: extern "C" fn() -> f32,
-    /// a texture's `Reference`
-    pub texture_reference: extern "C" fn(texture: EeGfxModel),
     /// an effect batch's (`effect_batch.rs`: 0 the camera batch, 1 the ground batch) four vertices from `index` on
     /// (`SetVertex(color, point, normal, coordinate, opacity, index)` each)
     pub batch_quad: extern "C" fn(which: u32, quad: *const EeGfxEffectQuad, index: u32),
     /// an effect batch drawn: `count` vertices, `count / 2` polygons of the batches' polygon array, in `texture`
     /// (`Draw(polygons, n, vertices, count, texture, screen, gOrthographicView)`)
     pub batch_draw: extern "C" fn(which: u32, count: u32, texture: EeGfxModel) -> i32,
+    /// `gScreenIndex` (the screen the models' and materials' textures are set for: raster_direct.rs)
+    pub screen: extern "C" fn() -> u32,
+    /// `gRasterizer`'s Rust objects: the DX7 rasterizer's (returned) and its base's (`*base`) (raster_direct.rs makes
+    /// the state calls on them)
+    pub rasterizer: extern "C" fn(base: *mut *mut c_void) -> *mut c_void,
+}
+
+impl EeGfxRaster {
+    fn rast(&self) -> raster_direct::Rast {
+        let mut ge = std::ptr::null_mut();
+        let dx7 = (self.rasterizer)(&mut ge);
+        raster_direct::Rast { dx7: dx7 as _, ge: ge as _, screen: (self.screen)() as std::ffi::c_ulong }
+    }
 }
 
 /// The rasterizer's fog (`GERFogAttributes`).
@@ -442,31 +349,31 @@ pub trait Raster {
 
 impl Raster for &EeGfxRaster {
     fn set_alpha_ref(&mut self, value: f32) {
-        (self.set_alpha_ref)(value)
+        self.rast().set_alpha_ref(value)
     }
     fn get_fog(&mut self) -> u32 {
-        (self.get_fog)()
+        self.rast().fog()
     }
     fn set_fog(&mut self, state: u32) {
-        (self.set_fog)(state)
+        self.rast().set_fog(state)
     }
     fn get_ambient(&mut self) -> EeGfxColor {
-        (self.get_ambient)()
+        self.rast().ambient()
     }
     fn set_ambient(&mut self, color: EeGfxColor) {
-        (self.set_ambient)(color)
+        self.rast().set_ambient(color)
     }
     fn set_zbuffer(&mut self, mode: u32) {
-        (self.set_zbuffer)(mode)
+        self.rast().set_zbuffer(mode)
     }
     fn set_blending(&mut self, source: u32, destination: u32) {
-        (self.set_blending)(source, destination)
+        self.rast().set_blending(source, destination)
     }
     fn set_shading_source(&mut self, source: u32) {
-        (self.set_shading_source)(source)
+        self.rast().set_shading_source(source)
     }
     fn set_alpha_testing(&mut self, state: u32) {
-        (self.set_alpha_testing)(state)
+        self.rast().set_alpha_testing(state)
     }
     fn lighting(&mut self, kind: EeGfxLighting) {
         (self.lighting)(kind)
@@ -475,34 +382,34 @@ impl Raster for &EeGfxRaster {
         (self.fog_factor)(location, fog)
     }
     fn model_opacity(&mut self, model: EeGfxModel, opacity: f32) {
-        (self.model_opacity)(model, opacity)
+        raster_direct::opacity(model, opacity)
     }
     fn model_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation) {
-        (self.model_transform)(model, transformation)
+        raster_direct::transform(model, transformation)
     }
     fn model_scale(&mut self, model: EeGfxModel, scale: f32) {
-        (self.model_scale)(model, scale)
+        raster_direct::scale(model, scale)
     }
     fn model_prepare(&mut self, model: EeGfxModel) {
-        (self.model_prepare)(model)
+        raster_direct::prepare(model)
     }
     fn model_draw(&mut self, model: EeGfxModel, opacity: f32) -> i32 {
         (self.model_draw)(model, opacity)
     }
     fn model_texture(&mut self, model: EeGfxModel, texture: EeGfxModel) {
-        (self.model_texture)(model, texture)
+        raster_direct::material_texture(model, texture, (self.screen)())
     }
     fn model_scroll_v(&mut self, model: EeGfxModel, delta: f32) {
-        (self.model_scroll_v)(model, delta)
+        raster_direct::scroll_v(model, delta)
     }
     fn model_restore_v(&mut self, model: EeGfxModel) {
-        (self.model_restore_v)(model)
+        raster_direct::restore_v(model)
     }
     fn model_color(&mut self, model: EeGfxModel, color: EeGfxColor) {
-        (self.model_color)(model, color)
+        raster_direct::color(model, color)
     }
     fn model_own_texture(&mut self, model: EeGfxModel, texture: EeGfxModel) {
-        (self.model_own_texture)(model, texture)
+        raster_direct::own_texture(model, texture, (self.screen)())
     }
     fn camera(&mut self) -> GeTransformation {
         (self.camera)()
@@ -514,34 +421,34 @@ impl Raster for &EeGfxRaster {
         (self.depth_range)(near, far)
     }
     fn set_zcompare(&mut self, mode: u32) {
-        (self.set_zcompare)(mode)
+        self.rast().set_zcompare(mode)
     }
     fn model_material_opacity(&mut self, model: EeGfxModel, opacity: f32) {
-        (self.model_material_opacity)(model, opacity)
+        raster_direct::material_opacity(model, opacity)
     }
     fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32) {
-        (self.model_transform_scaled)(model, transformation, x, y, z)
+        raster_direct::transform_scaled(model, transformation, x, y, z)
     }
     fn model_frame(&mut self, model: EeGfxModel, frame: u32) {
-        (self.model_frame)(model, frame)
+        raster_direct::frame(model, frame)
     }
     fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation) {
-        (self.model_pre_transform)(model, transformation)
+        raster_direct::pre_transform(model, transformation)
     }
     fn model_scroll_u(&mut self, model: EeGfxModel, delta: f32) {
-        (self.model_scroll_u)(model, delta)
+        raster_direct::scroll_u(model, delta)
     }
     fn model_restore_u(&mut self, model: EeGfxModel) {
-        (self.model_restore_u)(model)
+        raster_direct::restore_u(model)
     }
     fn get_culling(&mut self) -> u32 {
-        (self.get_culling)()
+        self.rast().culling()
     }
     fn set_culling(&mut self, mode: u32) {
-        (self.set_culling)(mode)
+        self.rast().set_culling(mode)
     }
     fn model_shift_v(&mut self, model: EeGfxModel, delta: f32) {
-        (self.model_shift_v)(model, delta)
+        raster_direct::shift_v(model, delta)
     }
     fn ground_quad(
         &mut self,
@@ -570,19 +477,19 @@ impl Raster for &EeGfxRaster {
         crate::gfx::effect_batch::ground_strip(self, from, to, width, color, offset, size, alpha, brightness, alpha_ref)
     }
     fn texture_frame(&mut self, texture: EeGfxModel, frame: u32) {
-        (self.texture_frame)(texture, frame)
+        raster_direct::texture_frame(texture, frame)
     }
     fn camera_yaw(&mut self) -> f32 {
         (self.camera_yaw)()
     }
     fn get_zbuffer(&mut self) -> u32 {
-        (self.get_zbuffer)()
+        self.rast().zbuffer()
     }
     fn get_zcompare(&mut self) -> u32 {
-        (self.get_zcompare)()
+        self.rast().zcompare()
     }
     fn model_tween(&mut self, model: EeGfxModel, next: u32, fraction: f32) {
-        (self.model_tween)(model, next, fraction)
+        raster_direct::tween(model, next, fraction)
     }
     fn screen_point(&mut self, point: &Ge3DPoint) -> (f32, f32) {
         let (mut x, mut y) = (0.0, 0.0);
@@ -596,25 +503,25 @@ impl Raster for &EeGfxRaster {
         (self.draw_text)(x, y, bytes.as_ptr(), color)
     }
     fn model_stretch(&mut self, model: EeGfxModel, length: f32, width: f32, scroll: f32) {
-        (self.model_stretch)(model, length, width, scroll)
+        raster_direct::stretch(model, length, width, scroll)
     }
     fn model_unstretch(&mut self, model: EeGfxModel) {
-        (self.model_unstretch)(model)
+        raster_direct::unstretch(model)
     }
     fn vertex_count(&mut self, model: EeGfxModel) -> u32 {
-        (self.vertex_count)(model)
+        raster_direct::vertex_count(model)
     }
     fn vertex_point(&mut self, model: EeGfxModel, index: u32) -> Ge3DPoint {
-        (self.vertex_point)(model, index)
+        raster_direct::vertex_point(model, index)
     }
     fn set_vertex_point(&mut self, model: EeGfxModel, index: u32, point: &Ge3DPoint) {
-        (self.set_vertex_point)(model, index, point)
+        raster_direct::set_vertex_point(model, index, point)
     }
     fn model_bounds(&mut self, model: EeGfxModel) {
-        (self.model_bounds)(model)
+        raster_direct::bounds(model)
     }
     fn model_normals(&mut self, model: EeGfxModel) {
-        (self.model_normals)(model)
+        raster_direct::normals(model)
     }
     fn sprite(
         &mut self,
@@ -630,12 +537,10 @@ impl Raster for &EeGfxRaster {
         crate::gfx::effect_batch::sprite(self, kind, position, color, rotation, size, alpha, brightness, alpha_ref)
     }
     fn get_alpha_ref(&mut self) -> f32 {
-        (self.get_alpha_ref)()
+        self.rast().alpha_ref()
     }
     fn get_blending(&mut self) -> (u32, u32) {
-        let (mut source, mut destination) = (0, 0);
-        (self.get_blending)(&mut source, &mut destination);
-        (source, destination)
+        self.rast().blending()
     }
     fn create_model(&mut self, polygons: u32, vertices: u32, sub_models: u32, name: &str, flags: u32) -> EeGfxModel {
         let mut bytes = Vec::with_capacity(name.len() + 1);
@@ -647,28 +552,28 @@ impl Raster for &EeGfxRaster {
         (self.create_sub_model)(polygons, vertices, parent)
     }
     fn model_reference(&mut self, model: EeGfxModel) {
-        (self.model_reference)(model)
+        raster_direct::reference(model)
     }
     fn model_dereference(&mut self, model: EeGfxModel) {
-        (self.model_dereference)(model)
+        raster_direct::dereference(model)
     }
     fn sub_model(&mut self, model: EeGfxModel, index: u32) -> EeGfxModel {
-        (self.sub_model)(model, index)
+        raster_direct::sub_model(model, index)
     }
     fn store_mesh(&mut self, model: EeGfxModel, vertices: &[EeGfxMeshVertex], triangles: &[EeGfxMeshTriangle]) {
         (self.store_mesh)(model, vertices.as_ptr(), vertices.len(), triangles.as_ptr(), triangles.len())
     }
     fn material_ranges(&mut self, model: EeGfxModel, polygons: u32, vertices: u32) {
-        (self.material_ranges)(model, polygons, vertices)
+        raster_direct::material_ranges(model, polygons, vertices)
     }
     fn bounding_radius(&mut self, model: EeGfxModel) -> f32 {
-        (self.bounding_radius)(model)
+        raster_direct::bounding_radius(model)
     }
     fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool) {
-        (self.copy_vertices)(from, to, normals)
+        raster_direct::copy_vertices(from, to, normals)
     }
     fn texture_wrap(&mut self, texture: EeGfxModel) {
-        (self.texture_wrap)(texture)
+        raster_direct::texture_wrap(texture)
     }
     fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel {
         let mut bytes = Vec::with_capacity(name.len() + 1);
@@ -681,7 +586,7 @@ impl Raster for &EeGfxRaster {
     }
 
     fn get_alpha_testing(&mut self) -> u32 {
-        (self.get_alpha_testing)()
+        self.rast().alpha_testing()
     }
     fn rear_clipping(&mut self, distance: f32) -> f32 {
         (self.rear_clipping)(distance)
@@ -693,31 +598,31 @@ impl Raster for &EeGfxRaster {
         (self.texture_32bit)()
     }
     fn can_modulate_alpha(&mut self) -> bool {
-        (self.can_modulate_alpha)()
+        self.rast().can_modulate_alpha()
     }
     fn set_ambient_intensity(&mut self, value: f32) {
-        (self.set_ambient_intensity)(value)
+        self.rast().set_ambient_intensity(value)
     }
     fn get_fog_attributes(&mut self) -> EeGfxFogAttributes {
-        (self.get_fog_attributes)()
+        self.rast().fog_attributes()
     }
     fn set_fog_type(&mut self, kind: u32) {
-        (self.set_fog_type)(kind)
+        self.rast().set_fog_type(kind)
     }
     fn set_fog_color(&mut self, color: EeGfxColor) {
-        (self.set_fog_color)(color)
+        self.rast().set_fog_color(color)
     }
     fn set_fog_range(&mut self, start: f32, end: f32) {
-        (self.set_fog_range)(start, end)
+        self.rast().set_fog_range(start, end)
     }
     fn frame_textures(&mut self, model: EeGfxModel, texture: EeGfxModel) {
-        (self.frame_textures)(model, texture)
+        raster_direct::frame_textures(model, texture, (self.screen)())
     }
     fn group_color(&mut self, object: EeGfxModel, color: EeGfxColor, part: u32) {
-        (self.group_color)(object, color, part)
+        raster_direct::group_color(object, color, part)
     }
     fn sub_model_offset(&mut self, model: EeGfxModel, scale: f32) -> GeTransformation {
-        (self.sub_model_offset)(model, scale)
+        raster_direct::sub_model_offset(model, scale)
     }
     fn bar_set(&mut self, which: u32, rect: Option<&GeRectangle>, colors: Option<&[EeGfxColor; 4]>) {
         let r = rect.map_or(std::ptr::null(), |r| r as *const GeRectangle);
@@ -747,7 +652,7 @@ impl Raster for &EeGfxRaster {
         (self.label)(bytes.as_ptr(), x, y, color, font, view, strip, bottom)
     }
     fn texture_dereference(&mut self, texture: EeGfxModel) {
-        (self.texture_dereference)(texture)
+        raster_direct::texture_dereference(texture)
     }
     fn camera_inverse(&mut self) -> GeTransformation {
         (self.camera_inverse)()
@@ -756,7 +661,7 @@ impl Raster for &EeGfxRaster {
         (self.camera_pitch)()
     }
     fn texture_reference(&mut self, texture: EeGfxModel) {
-        (self.texture_reference)(texture)
+        raster_direct::reference(texture)
     }
     fn batch_quad(&mut self, which: u32, quad: &EeGfxEffectQuad, index: u32) {
         (self.batch_quad)(which, quad, index)

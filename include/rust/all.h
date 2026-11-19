@@ -12,7 +12,6 @@
 #include "rust/base/input.h"
 #include "rust/base/math.h"
 #include "rust/base/png.h"
-#include "rust/base/sim_capture.h"
 #include "rust/base/time.h"
 #include "rust/base/ts.h"
 #include "rust/base/ustring.h"

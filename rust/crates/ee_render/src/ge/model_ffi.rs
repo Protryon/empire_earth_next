@@ -13,6 +13,28 @@ pub struct EeGeSharedFrame {
     pub offset: i32,
 }
 
+/// The shared frames a model load hands its file and its store (`GEModelManager::LoadModel`): `count` entries in the
+/// frames' order (the original's `std::map<unsigned long, long>`; `frames` NULL when there are none).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct EeGeSharedFrames {
+    pub frames: *const EeGeSharedFrame,
+    pub count: usize,
+}
+
+impl EeGeSharedFrames {
+    /// None shared.
+    pub const NONE: EeGeSharedFrames = EeGeSharedFrames { frames: std::ptr::null(), count: 0 };
+
+    /// The entries of `frames` (which must outlive the load).
+    pub fn of(frames: &[EeGeSharedFrame]) -> EeGeSharedFrames {
+        if frames.is_empty() {
+            return Self::NONE;
+        }
+        EeGeSharedFrames { frames: frames.as_ptr(), count: frames.len() }
+    }
+}
+
 /// Frees a model (`ee_of_find_model`'s; not a sub-model's handle).
 ///
 /// # Safety

@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "rust/base/sim_capture.h"
+#include "rust/sim/app.h"
 #include "rust/sim/units.h"
 
 class RTSUnit;
@@ -124,7 +124,7 @@ inline void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32
     ee_units_step_note(inKind, (uint32_t)inID, inWords, inCount);
 }
 // TEST ONLY: whether the step's records are noted (the capture runs)
-inline bool EEUnitStepNoting() { return ee_sim_capture_active(); }
+inline bool EEUnitStepNoting() { return ee_app_capture_active(); }
 // TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): EEUnitStateNote adds one call
 // (its kind, the unit's id, its words) to the tick's second digest, written by ee_units_step_commit as a USST record (the
 // tick, the calls, their FNV-1a). Words: AIStep [command type, next trigger time, game time, path (1 the gather goal

@@ -5,7 +5,7 @@
 //! A class Update's leaf calls (USST kind 12) and a class ActionChanged's operations (kind 13, the outermost call's)
 //! gather as one note each. Nothing is noted unless the capture runs.
 
-use ee_base::sim_capture::{self, FNV_BASIS, FNV_PRIME};
+use crate::app::capture_record::{self as sim_capture, FNV_BASIS, FNV_PRIME};
 use std::sync::Mutex;
 
 /// USST kind 12: a class Update's calls (`kUnitStateUpdate`).

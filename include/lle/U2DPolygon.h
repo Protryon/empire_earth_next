@@ -14,10 +14,10 @@
 // What is left is the seam: the point type and the geometry capture records.
 #ifdef LLE_EXE_HEADERS
 #include <vector>
-#include "rust/base/sim_capture.h"
+#include "rust/sim/app.h"
 #include "rust/sim/astar.h"
 
-// New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; the records are Rust's: ee_base sim_capture.rs): the
+// New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; the records are Rust's: ee_sim app capture_record.rs): the
 // records of the hulls' geometry (HULL: kind 1 SetPoints, 2 GetClosestOutlinePoint, 4 GetClosestPoint, 6 Contains;
 // ee/EEAIArea.h now records them; kinds 3 GetClosestPoints and 7 GetScanLines had no caller) and of the areas' (AREA).
 // Only the outermost captured call of a thread is recorded: a scope made while another is alive is not outer, so the

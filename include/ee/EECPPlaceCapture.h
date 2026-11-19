@@ -12,7 +12,6 @@
 
 class EEComputerPlayer;
 class EECPPlacement;
-class EECPResourceCenter;
 class EEUnit;
 class EEComplexUnit;
 
@@ -124,12 +123,11 @@ public:
         return *this;
     }
     EECPPlaceScope& F(float inValue);
+    bool On() const { return this->mOn; }   // whether it records (the Rust forwarders' words: ee_cp_scope_on)
     EECPPlaceScope& U(const EEUnit* inUnit);            // its id (0xfffffffe: none)
     EECPPlaceScope& CU(const EEComplexUnit* inUnit);
     // the placement's state: the town centre tile, the site lists (sizes and an FNV-1a of their tiles), the classes seen
     EECPPlaceScope& State(const EECPPlacement* inPlacement);
-    // a centre's state: its units' ids, its main unit's id
-    EECPPlaceScope& State(const EECPResourceCenter* inCenter);
     // every resource centre of the player: their number and an FNV-1a of their states
     EECPPlaceScope& Centers(const EEComputerPlayer* inPlayer);
     // CPEV: the computer player's state (appended by the destructor)

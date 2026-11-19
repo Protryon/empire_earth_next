@@ -5,8 +5,8 @@
 //! The C++ view's queries are noted through `ee_astar_capture_note`, in between. Nothing is noted unless a run is
 //! being captured on the thread (the innermost run gets the notes).
 
+use crate::app::capture_record::{self as sim_capture, fnv, FNV_BASIS};
 use crate::astar::ffi::EeAStarNodeView;
-use ee_base::sim_capture::{self, fnv, FNV_BASIS};
 use std::cell::RefCell;
 
 // the event kinds (`EEAIAStarEventKind`)

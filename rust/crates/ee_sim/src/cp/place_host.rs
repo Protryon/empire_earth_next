@@ -318,6 +318,33 @@ pub trait PlaceHost {
 
     // ---- the tile lists (`units::uu_tiles`)
     /// `EEGetSquareRingTiles(x, y, radius, tiles)`
+    // ---- the centres' forwarders (cp::lists): the unit references and handles, the PLCE scopes (TEST ONLY; the
+    // defaults: no game, no record)
+    /// `unit->Reference()`
+    fn unit_reference(&mut self, _unit: u64) {}
+    /// `unit->Dereference()`
+    fn unit_dereference(&mut self, _unit: u64) {}
+    /// `EEUnitHandleID(unit)` (the unit's id: what a handle to it holds)
+    fn unit_handle(&mut self, unit: u64) -> u32 {
+        self.unit(unit).id
+    }
+    /// `dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(id))` as its `EEUnit*` (0 none)
+    fn world_complex_unit(&mut self, id: u32) -> u64 {
+        self.world_unit(id)
+    }
+    /// an `EECPPlaceScope(method, player)` opened (0: none)
+    fn scope_open(&mut self, _method: u32) -> u64 {
+        0
+    }
+    /// whether the scope records
+    fn scope_on(&mut self, _scope: u64) -> bool {
+        false
+    }
+    fn scope_word(&mut self, _scope: u64, _word: u32) {}
+    /// `U(unit)`: its id (0xfffffffe none)
+    fn scope_unit(&mut self, _scope: u64, _unit: u64) {}
+    fn scope_close(&mut self, _scope: u64) {}
+
     fn square_ring_tiles(&mut self, t: Tile, radius: i32) -> Vec<Tile> {
         uu_tiles::square_ring_tiles(t[0], t[1], radius)
     }

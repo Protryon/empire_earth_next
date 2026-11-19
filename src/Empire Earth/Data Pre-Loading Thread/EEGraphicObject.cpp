@@ -86,32 +86,6 @@ EEGraphicObject::~EEGraphicObject()
     }
 }
 
-// Collects the model's turret parts, orbitals and wheels, recursing into its sub-models
-// The part scan of inModel under inParent: a "turret_" model becomes a turret part at its transformed origin, an
-// orbiting model an EEOrbital, a wheel model an EEWheel; then the sub-models under the combined transformation
-void EEGraphicObject::CollectParts(GEModel* inModel, const GETransformation& inParent)
-{
-    GE3DPoint theOrigin;
-    GE3DPoint thePosition;
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    if (inModel == NULL)
-        return;
-    GETransformation theTransformation(false);
-    inParent.Apply(inModel->GetInternalTransform(0), theTransformation);
-    theTransformation.Apply(theUp, theDirection);
-    if (strncmp(inModel->GetName(), "turret_", strlen("turret_")) == 0) {
-        theTransformation.Apply(theOrigin, thePosition);
-        this->mTurretParts.push_back(new EETurretPart(thePosition, theTransformation, inModel));
-    } else if (EEOrbital::IsOrbitalModel(inModel)) {
-        this->mOrbitals.push_back(new EEOrbital(inModel));
-    } else if (EEIsWheelModel(inModel)) {
-        this->mWheels.push_back(new EEWheel(inModel));
-    }
-    for (unsigned long i = 0; i < inModel->GetSubModelCount(); i++)
-        this->CollectParts(inModel->GetSubModel(i), theTransformation);
-}
-
 // Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
 // tables.rs': the animation states, the sounds by id, alpha and mip settings); entries with media index 0 are dropped.
 // Returns the last read result
@@ -178,13 +152,6 @@ EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
     return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind));
 }
 
-// Returns one of the attack points, picked by the game time, or the default point when there are none
-const GE3DPoint& EEGraphicObject::PickPoint()
-{
-    const EeGe3DPoint* thePoint = ee_gfx_tags_pick(this->mTags, gPhysics->mGameTime);
-    return thePoint != NULL ? *reinterpret_cast<const GE3DPoint*>(thePoint) : this->mDefaultPoint;
-}
-
 // Finds the turret part for a model and returns its index; returns 0 when found, else 3
 long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
 {
@@ -200,191 +167,56 @@ long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
     return theResult;
 }
 
-// Loads the object's models, textures, sounds and parts on first use (counting later uses); returns 9 if a
-// model failed
-// The load (vtable 0x43f788 +0x04): on the first use, under the database lock, the frame ranges of each animated part
-// into a per-model texture-frame map (the model names numbered in first-seen order; 14: no model), then the shared
-// model, the shadow model and texture, each part's texture and model (and its part scan), the sounds, and the part
-// scan of the shared model; a later use waits until the first load is done
+// The calls ee_gfx gobj_media.rs makes back into the C++: the sounds' loads (the EEMedia virtuals) and the part
+// lists (C++ objects other code reads)
+static const EeGfxGobjHost kGobjHost = {
+    [](void* inSound) { static_cast<EESoundObject*>(inSound)->LoadMedia(); },
+    [](void* inSound) { static_cast<EESoundObject*>(inSound)->UnloadMedia(); },
+    [](void* inObject, const EeGe3DPoint* inPosition, const EeGeTransformation* inAt, void* inModel) {
+        static_cast<EEGraphicObject*>(inObject)->mTurretParts.push_back(new EETurretPart(
+            *reinterpret_cast<const GE3DPoint*>(inPosition), *reinterpret_cast<const GETransformation*>(inAt),
+            static_cast<GEModel*>(inModel)));
+    },
+    [](void* inObject, void* inModel) {
+        static_cast<EEGraphicObject*>(inObject)->mOrbitals.push_back(new EEOrbital(static_cast<GEModel*>(inModel)));
+    },
+    [](void* inObject, void* inModel) -> bool {
+        if (!EEIsWheelModel(static_cast<GEModel*>(inModel)))
+            return false;
+        static_cast<EEGraphicObject*>(inObject)->mWheels.push_back(new EEWheel(static_cast<GEModel*>(inModel)));
+        return true;
+    },
+    [](void* inObject) {
+        EEGraphicObject* theObject = static_cast<EEGraphicObject*>(inObject);
+        for (unsigned long i = 0; i < theObject->mOrbitals.size(); i++)
+            delete theObject->mOrbitals[i];
+        theObject->mOrbitals.clear();
+        for (unsigned long i = 0; i < theObject->mTurretParts.size(); i++)
+            delete theObject->mTurretParts[i];
+        theObject->mTurretParts.clear();
+        for (unsigned long i = 0; i < theObject->mWheels.size(); i++)
+            delete theObject->mWheels[i];
+        theObject->mWheels.clear();
+    },
+};
+static_assert(sizeof(GEModelManager) == sizeof(void*) && sizeof(GETextureManager) == sizeof(void*),
+              "the managers are their Rust objects (gobj_media.rs reads them in place)");
+
+// Loads the object's models, textures, sounds and parts on its first use (a later use waits for the first load);
+// 9 when a model failed. The load is ee_gfx gobj_media.rs' (0xd85ed: the shared-frame maps, the models, the
+// textures and their stages, the tag points, the sounds, the part scan) under the database lock
 long EEGraphicObject::LoadMedia()
 {
-    GETransformation theTransformation;
-    GETextureDescription theShadowDescription;
-    theShadowDescription.mPixelDepth = gTexturePixelDepth;
-    theShadowDescription.mNumMipLevelsToDrop = 0;
-    theShadowDescription.mSurfaceVolatility = 1;
-    theShadowDescription.mFrameFormat = 0;
-    theShadowDescription.mIs3DRenderable = false;
-    theShadowDescription.mIsTransparencyEnabled = false;
-    theShadowDescription.mHasAlpha = true;
-    theShadowDescription.mCreateMIPMaps = true;
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = this->mHasAlpha;
-    theDescription.mCreateMIPMaps = true;
-    std::map<unsigned long, long> theFrames[15];
-    std::map<unsigned long, long> theNoFrames;
-    long theSlots[14];
-    return EEMediaAcquire(this, sDatabaseLock.mLock, [&]() -> long {
-        long theResult = 0;
-        if (this->mTags == NULL)
-            this->mTags = ee_gfx_tags_new();
-        // the texture-frame maps of the animated parts that share frames, by model (ee_data tables.rs)
-        EeDataGraphicFramePart theParts[14];
-        for (unsigned long i = 0; i < 14; i++)
-            theParts[i] = {this->mFrameCounts[i], this->mStartFrames[i], this->mLastFrames[i],
-                           this->mModelNames[i] != NULL ? (const char*)*this->mModelNames[i] : NULL, this->mSharesFrames[i]};
-        ee_data_graphic_frame_maps(theParts, 14, theSlots,
-            [](void* inFrames, long inSlot, unsigned long inFrame, long inValue) {
-                static_cast<std::map<unsigned long, long>*>(inFrames)[inSlot].insert(std::make_pair(inFrame, inValue));
-            }, theFrames);
-        if (this->mModel == NULL && this->mFileName != NULL && this->mFileName->GetLength() > 0) {
-            this->mModel = gModelManager->LoadModel(*this->mFileName, theFrames[14]);
-            if (this->mModel != NULL)
-                this->mModel->Reference();
-        }
-        if (this->mShadowModel == NULL && this->mShadowModelName != NULL && this->mShadowModelName->GetLength() > 0) {
-            this->mShadowModel = gModelManager->LoadModel(*this->mShadowModelName, theNoFrames);
-            if (this->mShadowModel != NULL)
-                this->mShadowModel->Reference();
-            else
-                theResult = 9;
-        }
-        theDescription.mCreateMIPMaps = this->mCreateMipMaps;
-        theDescription.mNumMipLevelsToDrop = (this->mNumMipLevelsToDrop + gTextureMipLevelsToDrop < this->mMaxMipLevelsToDrop) ? this->mNumMipLevelsToDrop + gTextureMipLevelsToDrop : this->mMaxMipLevelsToDrop;
-        theShadowDescription.mNumMipLevelsToDrop = 0;
-        theShadowDescription.mCreateMIPMaps = true;
-        if (this->mTextureName != NULL)
-            this->LoadTexture(*this->mTextureName, this->mTexture, theDescription, this->mIsDrawn);
-        if (this->mShadowTextureName != NULL)
-            this->LoadTexture(*this->mShadowTextureName, this->mShadowTexture, theShadowDescription, this->mIsDrawn);
-        unsigned long thePart;
-        for (thePart = 0; thePart < 14; thePart++) {
-            if (this->mTextureNames[thePart] != NULL && this->mTextureNames[thePart]->GetLength() > 0)
-                this->LoadTexture(*this->mTextureNames[thePart], this->mTextures[thePart], theDescription, this->mIsDrawn);
-            else if (this->mTexture != NULL) {
-                this->mTexture->Reference();
-                this->mTextures[thePart] = this->mTexture;
-            }
-            if (this->mModelNames[thePart] != NULL && this->mModelNames[thePart]->GetLength() > 0) {
-                if (this->mFrameCounts[thePart] > 4 && this->mSharesFrames[thePart])
-                    this->mModels[thePart] = gModelManager->LoadModel(*this->mModelNames[thePart], theFrames[theSlots[thePart]]);
-                else
-                    this->mModels[thePart] = gModelManager->LoadModel(*this->mModelNames[thePart], theNoFrames);
-                if (this->mModels[thePart] != NULL)
-                    this->mModels[thePart]->Reference();
-                else
-                    theResult = 9;
-            } else if (this->mModel != NULL) {
-                this->mModel->Reference();
-                this->mModels[thePart] = this->mModel;
-            } else
-                this->mModels[thePart] = NULL;
-            // the part's tag points, colour groups and points (ee_gfx tags.rs: CollectTagPoints 0xd8bb2)
-            if (this->mModels[thePart] != NULL)
-                ee_gfx_tags_collect(this->mTags, thePart, this->mModels[thePart], reinterpret_cast<const EeGeTransformation*>(&theTransformation),
-                                    this->mModels[0], this->mLastFrames[5], reinterpret_cast<EeGe3DPoint*>(&this->mDefaultPoint),
-                                    reinterpret_cast<EeGe3DPoint*>(&this->mTopPoint), reinterpret_cast<EeGe3DPoint*>(&this->mBar),
-                                    reinterpret_cast<EeGfxTagList**>(this->mTagPoints));
-        }
-        for (thePart = 0; thePart < 14; thePart++) {
-            if (this->mSounds1[thePart] != NULL)
-                this->mSounds1[thePart]->LoadMedia();
-            if (this->mSounds2[thePart] != NULL)
-                this->mSounds2[thePart]->LoadMedia();
-        }
-        if (this->mModel != NULL)
-            this->CollectParts(this->mModel, theTransformation);
-        return theResult;
-    });
+    EeGfxGobjLoad theLoad = {gModelManager, gTextureManager, gTexturePixelDepth, gTextureMipLevelsToDrop,
+                             gTrilinearFilter, &kGobjHost};
+    return EEMediaAcquire(this, sDatabaseLock.mLock, [&]() -> long { return ee_gfx_gobj_load(this, &theLoad); });
 }
 
-// Loads a texture by name into the slot if it is empty, with modulate, wrap and the object's mip settings
-void EEGraphicObject::LoadTexture(const UString& inName, GETexture*& ioTexture, const GETextureDescription& inDescription,
-                              bool inUnused)
-{
-    if (ioTexture == NULL && inName.GetLength() > 0) {
-        ioTexture = gTextureManager->LoadTexture(inName, inDescription);
-        if (ioTexture != NULL) {
-            ioTexture->Reference();
-            ioTexture->SetStageAlphaMode(kStageOpModulate, -1);
-            ioTexture->SetStageColorMode(kStageOpModulate, -1);
-            ioTexture->SetStageMinFilterMode(1, -1);
-            ioTexture->SetStageMagFilterMode(1, -1);
-            ioTexture->SetStageMipMapBias(this->mMipMapBias, -1);
-            ioTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-            if (gTrilinearFilter) ioTexture->SetStageMipFilterMode(kMipFilterLinear, -1); else ioTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-        }
-    }
-}
-
-// Sets the colour of every player-colour material of a part
-void EEGraphicObject::SetGroupColor(const GEColor& inColor, unsigned long inPart)
-{
-    ee_gfx_tags_set_color(this->mTags, inPart, &inColor.mRed);
-}
-
-// Counts one use down; on the last use releases all the object's models, textures, sounds and parts.
-// Returns 0
-// The unload: waits while the object is being loaded (mIsLoading), then under the database lock, on the last use, releases
-// the shadow model, each part's texture, tag points and model, the tag-point maps, the models, textures and sounds,
-// and deletes the orbitals, turret parts, wheels and colour groups; an earlier use only counts down
+// Counts one use down; on the last use (under the database lock, once any load is done) releases the models,
+// textures, tag points, sounds and parts (ee_gfx gobj_media.rs, 0xd907e). Returns 0
 long EEGraphicObject::UnloadMedia()
 {
-    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
-        if (this->mShadowModel != NULL) {
-            this->mShadowModel->Dereference();
-            this->mShadowModel = NULL;
-        }
-        unsigned long i;
-        for (i = 0; i < 14; i++) {
-            if (this->mTextures[i] != NULL) {
-                this->mTextures[i]->Dereference();
-                this->mTextures[i] = NULL;
-            }
-            ee_gfx_tags_clear_weapon(this->mTags, i);
-            this->mTagPoints[i] = NULL;
-            if (this->mModels[i] != NULL) {
-                this->mModels[i]->Dereference();
-                this->mModels[i] = NULL;
-            }
-        }
-        // the kinds' lists (by kind, then by model), the colour groups and the attack points (ee_gfx tags.rs)
-        ee_gfx_tags_free(this->mTags);
-        this->mTags = NULL;
-        if (this->mModel != NULL) {
-            this->mModel->Dereference();
-            this->mModel = NULL;
-        }
-        if (this->mTexture != NULL) {
-            this->mTexture->Dereference();
-            this->mTexture = NULL;
-        }
-        if (this->mShadowTexture != NULL) {
-            this->mShadowTexture->Dereference();
-            this->mShadowTexture = NULL;
-        }
-        for (i = 0; i < 14; i++) {
-            if (this->mSounds1[i] != NULL)
-                this->mSounds1[i]->UnloadMedia();
-            if (this->mSounds2[i] != NULL)
-                this->mSounds2[i]->UnloadMedia();
-        }
-        for (i = 0; i < this->mOrbitals.size(); i++)
-            delete this->mOrbitals[i];
-        this->mOrbitals.clear();
-        for (i = 0; i < this->mTurretParts.size(); i++)
-            delete this->mTurretParts[i];
-        this->mTurretParts.clear();
-        for (i = 0; i < this->mWheels.size(); i++)
-            delete this->mWheels[i];
-        this->mWheels.clear();
-    });
+    EEMediaRelease(this, sDatabaseLock.mLock, [&] { ee_gfx_gobj_unload(this, &kGobjHost); });
     return 0;
 }
 

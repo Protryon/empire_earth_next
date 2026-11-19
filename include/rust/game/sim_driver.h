@@ -6,6 +6,16 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/render/ge.h"
+
+/// `EECanHeal(a, b)` (the C++ records CBCH)
+constexpr static const uint32_t EE_SIM_DRIVER_COMBAT_CAN_HEAL = 1;
+
+/// `a->GetPosition` into `out[0..3]`
+constexpr static const uint32_t EE_SIM_DRIVER_COMBAT_POSITION = 2;
+
+/// The projectile class of the stats `a`'s class: 1 and its `GetAcceleration()` in `out[0]`, or 0 without one
+constexpr static const uint32_t EE_SIM_DRIVER_COMBAT_PROJECTILE = 3;
 
 /// The forms the driver goes through (their ids) and the screen events of their buttons (ee_screens' codes).
 constexpr static const uint32_t FORM_MAIN = 12;
@@ -114,6 +124,21 @@ constexpr static const long CITIZENS = 126;
 constexpr static const long ENGINE = 275;
 
 constexpr static const long VISIBLE_SLOTS = 8;
+
+/// The sweep's inputs from the C++: the physics' tick, the rules' and the world table's numbers, the host.
+struct EeSimDriverCombatSweep {
+  /// `gPhysics->mTickTimeMs`
+  int32_t tick_ms;
+  /// `gPhysics->mTickSeconds`
+  float tick_seconds;
+  /// `EEGetRules().mCombat.mRegenerationInterval`
+  int32_t regeneration_interval;
+  /// `gWorldTable.GetLongValue(kWorldConversionFaithCost)`
+  int32_t conversion_faith_cost;
+  void *ctx;
+  /// one `EE_SIM_DRIVER_COMBAT_*` call over two handles; its answer
+  int32_t (*host)(void *ctx, uint32_t op, uint64_t a, uint64_t b, float *out);
+};
 
 /// A sink for lines: `push(sink, text)` per line.
 using EeSimDriverPushFn = void(*)(void*, const char*);
@@ -255,6 +280,21 @@ struct EeSimDriverEvents {
 };
 
 extern "C" {
+
+/// The sweep (EE-SIM's capture, every five game minutes, under the world).
+///
+/// # Safety
+/// `input` points to a valid record whose host answers for the world the caller holds.
+void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
+
+/// The world's digest lines through `push` (the editor's `Digest`, under the world's write lock: a step); false
+/// without a map. `mesh` is the map's terrain mesh (`GETerrainMesh::GetRust`).
+///
+/// # Safety
+/// The caller holds the world; `mesh` is the map's live mesh (or null); `push` takes a C string.
+bool ee_sim_driver_world_digest(const EeGeTerrainMesh *mesh,
+                                void *sink,
+                                EeSimDriverPushFn push);
 
 /// EE-SIM's entry: the command line parsed, the driver made over the host, the output files opened, the switches
 /// and the environment set -> [`EE_SIM_DRIVER_CONTINUE`], or the exit code (0 after --help, 64 a bad command

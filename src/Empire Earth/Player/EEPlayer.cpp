@@ -141,19 +141,6 @@ static const unsigned long sPlayerEffects[3] = {271, 274, 275};
 static uint32_t sPlayerCaptureThread = 0;
 static thread_local int sPlayerCaptureDepth = 0;
 
-struct EEPlayerDigest {
-    uint64_t mHash = 0xcbf29ce484222325ull;
-    void Bytes(const void* inData, size_t inSize)
-    {
-        const unsigned char* theBytes = (const unsigned char*)inData;
-        for (size_t i = 0; i < inSize; i++)
-            this->mHash = (this->mHash ^ theBytes[i]) * 0x100000001b3ull;
-    }
-    void U32(uint32_t inValue) { this->Bytes(&inValue, 4); }
-    void F32(float inValue) { this->Bytes(&inValue, 4); }
-    void Into(EESimCaptureRecord& ioRecord) { ioRecord.U32((uint32_t)this->mHash); ioRecord.U32((uint32_t)(this->mHash >> 32)); }
-};
-
 static int32_t EEPlayerFloatBits(float inValue)
 {
     int32_t theBits;
@@ -166,59 +153,14 @@ static int32_t EEPlayerNodeID(EETechTreeNode* inNode)
     return inNode != NULL && inNode->mData != NULL ? (int32_t)inNode->mData->mID : -1;
 }
 
+// PLST (TEST ONLY): the player's state after its tick (ee_sim app player_capture.rs)
 static void EEPlayerCaptureState(EEPlayer* inPlayer)
 {
     if (!EESimCaptureRecord::Active())
         return;
     sPlayerCaptureThread = PlatCurrentThreadId();
-    EESimCaptureRecord theRecord(EECaptureTag("PLST"));
-    theRecord.I32((int32_t)inPlayer->mPlayerID);
-    theRecord.U32(gPhysics != NULL ? (uint32_t)gPhysics->mGameTime : 0);
-    EEPlayerDigest theStats;
-    theStats.U32((uint32_t)inPlayer->mSavedGroups.mEndTime);
-    for (unsigned long s = 0; s < 31; s++) {
-        if (s == 0x14 || s == 0x15)
-            continue;   // the local player's reports (EEPhysics::ReportStatistics: by the wall clock)
-        EEStatisticsSeries theSeries = inPlayer->mSavedGroups.GetSeries(s);
-        theStats.U32((uint32_t)theSeries.mMaxValue);
-        theStats.U32(theSeries.mKeepHistory ? 1 : 0);
-        theStats.U32((uint32_t)theSeries.mPoints.size());
-        for (size_t p = 0; p < theSeries.mPoints.size(); p++) {
-            theStats.U32((uint32_t)theSeries.mPoints[p].mValue);
-            theStats.U32((uint32_t)theSeries.mPoints[p].mTime);
-        }
-    }
-    theStats.Into(theRecord);
-    EEPlayerDigest theEvents;
-    theEvents.mHash = ee_units_events_digest(inPlayer->mEvents.mList);
-    theEvents.Into(theRecord);
-    EEPlayerDigest theQueued;
-    theQueued.mHash = ee_units_queued_digest(inPlayer->mQueued);
-    theQueued.Into(theRecord);
-    EEPlayerDigest theFields;
-    theFields.U32((uint32_t)inPlayer->mHackUnitClass);
-    theFields.F32(inPlayer->mConversionFactor);
-    theFields.F32(inPlayer->mTributeFee);
-    theFields.U32((uint32_t)inPlayer->mMaxStartingCitizens);
-    for (long d = 0; d < 17; d++)
-        theFields.U32((uint32_t)inPlayer->mDamageFrom[d]);
-    long theLongs[] = {inPlayer->mNumAttacks, inPlayer->mHeroLimit, inPlayer->mMiningLimit, inPlayer->mLAF0, inPlayer->mShareBonus,
-                       inPlayer->mPopulationLimitBonus, inPlayer->mNumHeroes, inPlayer->mNumHeroesInProduction, inPlayer->mNumTeleporters};
-    for (long l = 0; l < 9; l++)
-        theFields.U32((uint32_t)theLongs[l]);
-    bool theBools[] = {inPlayer->mAreaConversion, inPlayer->mBB42, inPlayer->mBB44, inPlayer->mInstantBuild, inPlayer->mHealsUnits,
-                       inPlayer->mBehindFirewall, inPlayer->mEarthquakeShaken, inPlayer->mShiftMode, inPlayer->mJITManufacturing};
-    for (long b = 0; b < 9; b++)
-        theFields.U32(theBools[b] ? 1 : 0);
-    theFields.Into(theRecord);
-    for (long r = 2; r < 7; r++)   // (0 and 1 are never set but by Reset, to 0: kept out as recorded)
-        theRecord.I32((int32_t)inPlayer->mResourceCaps[r]);
-    theRecord.I32((int32_t)inPlayer->mPopulationCount);
-    theRecord.I32((int32_t)inPlayer->mEndOfGameCount);
-    theRecord.I32((int32_t)inPlayer->mNumVitalBuildings);
-    theRecord.I32((int32_t)inPlayer->mNumCapitols);
-    theRecord.I32((int32_t)inPlayer->mPopLimit);
-    theRecord.Commit();
+    ee_app_capture_player_state((uint64_t)(uintptr_t)inPlayer, gPhysics != NULL ? (uint32_t)gPhysics->mGameTime : 0,
+                                inPlayer->mSavedGroups.mStats, inPlayer->mSavedGroups.mEndTime, inPlayer->mEvents.mList);
 }
 
 // one decision's scope: the outermost on the simulation thread records it
@@ -1609,7 +1551,8 @@ unsigned long EEGroup::GetNumUnits()
 // Kills every unit of a herd
 void EEPlayer::KillHerdUnits(EEHerd* inHerd, bool inKilled)
 {
-    std::vector<EEComplexUnit*> theUnits(inHerd->mUnits.begin(), inHerd->mUnits.end());
+    std::vector<EEComplexUnit*> theUnits;
+    inHerd->GetUnits(theUnits);
     while (theUnits.size() != 0) {
         theUnits.back()->Kill(inKilled, 0, 0);
         theUnits.pop_back();
