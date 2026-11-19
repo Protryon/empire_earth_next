@@ -22,6 +22,7 @@ pub mod combo;
 pub mod comboobj;
 pub mod controlobj;
 pub mod controls_table;
+pub mod cutoff;
 pub mod direct;
 pub mod draw;
 pub mod draw2d;
