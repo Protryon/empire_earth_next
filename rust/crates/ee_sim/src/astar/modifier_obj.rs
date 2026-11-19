@@ -143,8 +143,6 @@ const MACHINE_SPACE: i64 = 0x10;
 const TILE_LAND: c_long = 1;
 const TILE_WALL: c_long = 0xd;
 const TILE_GATE: c_long = 0xe;
-/// `kActionClosed`
-const ACTION_CLOSED: u32 = 15001;
 
 pub(crate) fn new(kind: Kind) -> *mut EeAStarModifier {
     Box::into_raw(Box::new(EeAStarModifier {
@@ -430,7 +428,6 @@ pub(crate) unsafe fn has_passable_link(goal: *const EeAStarGraphGoalRec, sector:
 struct Gate {
     alive: bool,
     side_part: bool,
-    closed: bool,
     locked: bool,
     player: u64,
 }
@@ -445,7 +442,6 @@ fn gate_of(t: &WorldRead, u: &UnitView<'_>) -> Gate {
     Gate {
         alive: u.hit_points() > 0,
         side_part: (next == 0 && prev != 0) || middle,
-        closed: u.command_type() == ACTION_CLOSED,
         locked: crate::world_field!(u.complex(), mIsLocked),
         player: u.player().map_or(0, |p| p.handle()),
     }
