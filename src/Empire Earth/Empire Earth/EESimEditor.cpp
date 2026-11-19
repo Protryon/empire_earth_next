@@ -140,16 +140,12 @@
 #include "lle/UICheckBox.h"
 #include "ee/EESimEditor.h"
 #include "ee/EEScenarioEditorIDs.h"
-#include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESETSCondition.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESETSArea.h"
 #include <map>
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
 long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
-#include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESEPlayerScreen.h"
 #include <typeinfo>
@@ -858,14 +854,14 @@ UIControl* EditorControl(const std::string& inId)
 // the trigger tab's condition and effect screens' shared controls
 EESETSConditionControls* ConditionControls()
 {
-    return static_cast<EESETSCondition*>(
-               gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->GetControls();
+    return static_cast<EESETSConditionControls*>(ee_screens_secd_handle(static_cast<EeScreensSeConditionScreen*>(
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition)), 0));
 }
 
 EESETSEffectControls* EffectControls()
 {
-    return static_cast<EESETSEffect*>(
-               gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
+    return static_cast<EESETSEffectControls*>(ee_screens_sefx_handle(static_cast<EeScreensSeEffectScreen*>(
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)), 0));
 }
 
 // the area screen (TEST ONLY): its state and centre, the brush group's highlight and paint area, every scenario area's
@@ -873,13 +869,15 @@ EESETSEffectControls* EffectControls()
 void AreaDigest(std::vector<std::string>& outLines)
 {
     EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-    EESETSArea* s = static_cast<EESETSArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea));
-    GERectangle r;
-    GE2DPoint p;
-    unsigned long theFlags = 0;
-    s->GetState(r, p, theFlags);
-    GE2DPoint c;
-    bool theCenter = s->GetCenter(c);
+    EeScreensSeArea* s = static_cast<EeScreensSeArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea));
+    float theRectangle[4];
+    float thePoint[2];
+    float theMiddle[2];
+    unsigned long theFlags = ee_screens_sear_state(s, theRectangle, thePoint);
+    GERectangle r(theRectangle[0], theRectangle[1], theRectangle[2], theRectangle[3]);
+    GE2DPoint p(thePoint[0], thePoint[1]);
+    bool theCenter = ee_screens_sear_center(s, theMiddle);
+    GE2DPoint c(theCenter ? theMiddle[0] : 0.0f, theCenter ? theMiddle[1] : 0.0f);
     EEUIFSEBrushGroup* b = theEditor->GetBrushGroup();
     char theText[512];
     snprintf(theText, sizeof(theText),
@@ -1354,11 +1352,13 @@ struct EditAccess : UIEditBox {
 // (not, condition, operator) and effects (delay, effect, operator)
 void TriggerDigest(std::vector<std::string>& outLines)
 {
-    EESETSBaseObject* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger);
-    EESMTrigger* t = gWorld.mScenarioManager->GetTrigger(theScreen->mSelection);
+    int32_t theSelection = 0;
+    bool theHas = false;
+    ee_screens_sets_sub(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mRust, kSETriggerScreenTrigger,
+                        &theSelection, &theHas);
+    EESMTrigger* t = gWorld.mScenarioManager->GetTrigger(theSelection);
     char theText[256];
-    snprintf(theText, sizeof(theText), "  trigger selection=%ld has=%d", (long)theScreen->mSelection,
-             theScreen->mHasSelection ? 1 : 0);
+    snprintf(theText, sizeof(theText), "  trigger selection=%ld has=%d", (long)theSelection, theHas ? 1 : 0);
     outLines.push_back(theText);
     if (t == NULL) {
         outLines.push_back("  trigger none");
@@ -1384,11 +1384,13 @@ void TriggerDigest(std::vector<std::string>& outLines)
 // the trigger tab's open object (TEST ONLY): the sub-screen's selection, then the scenario object's fields
 void ObjectDigest(std::vector<std::string>& outLines)
 {
-    EESETSBaseObject* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject);
-    EESMObject* o = gWorld.mScenarioManager->GetScenarioObject(theScreen->mSelection + 1);
+    int32_t theSelection = 0;
+    bool theHas = false;
+    ee_screens_sets_sub(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mRust, kSETriggerScreenObject,
+                        &theSelection, &theHas);
+    EESMObject* o = gWorld.mScenarioManager->GetScenarioObject(theSelection + 1);
     char theText[512];
-    snprintf(theText, sizeof(theText), "  object selection=%ld has=%d", (long)theScreen->mSelection,
-             theScreen->mHasSelection ? 1 : 0);
+    snprintf(theText, sizeof(theText), "  object selection=%ld has=%d", (long)theSelection, theHas ? 1 : 0);
     outLines.push_back(theText);
     if (o == NULL) {
         outLines.push_back("  object none");
@@ -1678,19 +1680,21 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->NewEntry(); };
         else if (c == "ctype")   // ctype TYPE: the condition's type combo box (types from 2), as a person picks it
             theCode = [=] {
-                EESETSCondition* theScreen = static_cast<EESETSCondition*>(
-                    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
-                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 2);
-                theScreen->ChangeConditionType();
+                EESETriggerScreen* s = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+                static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_secd_handle(
+                    static_cast<EeScreensSeConditionScreen*>(s->GetScreen(kSETriggerScreenCondition)), 1)))
+                    ->SetCurrentSelection(L(1) - 2);
+                s->ScreenOp(kSETriggerScreenCondition, EE_SCREENS_SESC_CHANGE_TYPE);
             };
         else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
             theCode = [=] {
-                EESETSEffect* theScreen = static_cast<EESETSEffect*>(
-                    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
-                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 1);
-                theScreen->ChangeEffectType();
-                theScreen->GetControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
-                theScreen->ChangeEffectAction();
+                EESETriggerScreen* s = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
+                static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_sefx_handle(
+                    static_cast<EeScreensSeEffectScreen*>(s->GetScreen(kSETriggerScreenEffect)), 1)))
+                    ->SetCurrentSelection(L(1) - 1);
+                s->ScreenOp(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_TYPE);
+                EffectControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
+                s->ScreenOp(kSETriggerScreenEffect, EE_SCREENS_SESC_CHANGE_ACTION);
             };
         else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))
             // ctl e list|combo INDEX LINE: an effect list box's line clicked (its selection, then its button-up
@@ -1778,7 +1782,8 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "crefresh")   // the condition screen's RefreshControls (a condition combo box's change)
             theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition)->RefreshControls();
+                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ScreenSlot(kSETriggerScreenCondition,
+                                                                                    EE_SCREENS_SETS_SCREEN_REFRESH);
             };
         else if (c == "conditionstate")   // every condition: its numbers (EeScenarioConditionFields' words) and texts
             theCode = [=, &theOutput] {
@@ -1847,7 +1852,8 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
         else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
             theCode = [=] {
-                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
+                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ScreenSlot(kSETriggerScreenEffect,
+                                                                                    EE_SCREENS_SETS_SCREEN_REFRESH);
             };
         else if (c == "effectstate")   // every effect: its numbers (EeScenarioEffectFields' words), texts and objects
             theCode = [=, &theOutput] {
@@ -2049,9 +2055,12 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                     theLine += " selected " + std::to_string(theSelected);
                 else
                     theLine += " none";
-                for (long k = 0; k < 5; k++)
-                    theLine += " s" + std::to_string(k) + "=" + std::to_string(s->GetScreen(k)->mSelection) +
-                               (s->GetScreen(k)->mHasSelection ? "+" : "-");
+                for (long k = 0; k < 5; k++) {
+                    int32_t theSelection = 0;
+                    bool theHas = false;
+                    ee_screens_sets_sub(s->mRust, (uint32_t)k, &theSelection, &theHas);
+                    theLine += " s" + std::to_string(k) + "=" + std::to_string((long)theSelection) + (theHas ? "+" : "-");
+                }
                 theOutput.push_back(theLine);
             };
         else if (c == "triggerstate")   // the trigger tab's open trigger (TriggerDigest)
