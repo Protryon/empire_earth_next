@@ -31689,3 +31689,137 @@ The round: net **-229** C++ (EEUGRust.cpp -94, EECPPlacement.cpp -61, EEFOFindNe
   the cluster reorganization: the other capture profiles, saveload, scenario_check, the test-profile build and the
   harness runs were not run, and the branch is not for merging as it stands (it edits the units and AI clusters'
   files: EEUGRust.cpp, EECPPlacement.cpp, EEFOFindNewTargetNearOldTarget.cpp).
+
+## The UI cluster lane, round 1: the main game HUD's hosts answered by the toolkit's, the strings' and the views' Rust; the command buttons', the status box's and the chat lines' members as Rust records (ee_game hud_direct.rs; branch rust-uicluster1, 2026-11-18)
+
+The brief: the UI cluster (the main game form and its HUD controls, the UI events, the scenario editor, the
+civilization builder) by whole classes, starting with the main game's forms, at least 3,000 net C++ lines.
+**Net C++ -353** (commits below): far short of the target. Why under "The measure".
+
+### The measure
+
+Every class of the cluster already had its logic in Rust (game screens 1-31, screens B, the UI thread and HUD 2D
+lanes); the C++ left is about 24k lines of host code, one case per call the Rust makes into a C++ object. The UI
+thread lane classed most of those cases as calls into "a C++ object no Rust object stands for". That was true of
+the game's objects but no longer of the low-level engine's: the toolkit (`UIForm`, `UIControl`, `UIButton`,
+`UITextLabel`, `UIManager`), `UWideString`, `GEText`, `TMPoll`, the language strings and the keyboard are whole
+Rust objects behind C++ shells. A case that calls one of them is the same inward Rust call made from the adapter,
+and a class's own members can be a Rust record the class derives from. This round took that path for the main game
+form and the controls it drives most (about 120 cases). What stays is the calls into the game's C++ (world, units,
+picker, ghosts, communications, the tech tree's nodes and buttons, calamities, media, the scenario's messages) and a
+few toolkit C++ helpers (`UIGetStringCutOffIndex`, `GERectangle::Contains` are out-of-line C++).
+
+A whole-class move of a form (its C++ class deleted) needs every such game call to be a narrow host function: the
+forms then shrink to their constructors and virtual overrides. The cases are small (one to five lines each), so the
+yield is about 3 lines a case: the 3,000 lines are roughly a thousand cases across the cluster.
+
+### What moved
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 0d39710e1 | `ee_base::input::ffi::keyboard_modifiers()`: the system keyboard's modifiers for Rust callers (the HUD controls' `MODIFIERS`) | 0 |
+| 44c415f70 | `hud_direct.rs`: the main form's host (labels, held text, strings, the dialog message, the form's and manager's calls, the chat lines), the HUD controls' base ops, 25 cursor reads, the command buttons' and the main group's button ops, the status box's host, the main game events' form record ops; the command buttons', the status box's and the chat lines' records; the buttons' form ops through the form's adapter | +54 -407, net -353 |
+
+- **Below the traits.** As the UI thread lane's views, every answer is in an FFI adapter (`Host::op` before the
+  C++ hop), never in a host trait: the replay goldens are unchanged by construction.
+- **Call records read in place.** The main form's call record (`EEUIFMGFormCall`) and the status box's
+  (`EEUIFMGStatusBoxCall`) hold C++ `UWideString`s; Rust reads and assigns them through `CppWide` (the vtable
+  pointer, then the `EeUWideString` the class holds by value), with the records' layouts asserted in the C++
+  (`offsetof` against pointer and `UWideString` sizes, so LP64 holds too).
+- **Records.** `EEUIFMGStatusButton : UIButton, EeScreensStatusButtonFields` (its plain members; the offset
+  registered by the constructor, as the main form's); `EEUIFMGStatusBox : EeScreensStatusBoxFields` (its only
+  base: the box's pointer is the record's, its constructor and `GetBoxControl` are Rust's); the chat line's record
+  holds its `TMPoll*` and four `GEText*`s, and its host `ChatCpp` works them on their Rust objects (a `TMPoll` is its
+  `EeTimePoll`, a `GEText` one pointer to its `EeGeText`): the class's `RustOp` keeps only the cut
+  (`UIGetStringCutOffIndex`), and the main form scrolls its lines Rust to Rust (the original's `Copy`).
+- **Rectangles.** The form's and the manager's calls take a `GERectangle` in its member order (bottom, left, right,
+  top: `UIFormPutRect`, `UIManagerPutRect`); the HUD ops carry left, top, right, bottom. The first version of the
+  dirty rectangle passed the op's order through; the C++ forwarders' put functions name the order.
+- **Lesson: a second path to the C++ host.** The command buttons' form ops (`status_button_ffi.rs`) called
+  `ee_screenscpp_main_form` directly, past the form's Rust adapter. Since the UI thread lane's round 1 moved the
+  form's resource reads and record fields to that adapter, the buttons' trade affordability read 0 for every
+  resource and the cursor lock of a press set nothing (only a person reaches either: the market's trade buttons).
+  The buttons' form ops now go through the adapter (`main_form_ffi::op`). Grep every Rust caller of a C++ host when a
+  case moves to an adapter.
+- **cbindgen and clippy.** A record with raw pointers cannot derive `Default` (the chat line's has a hand-written
+  one); clippy wants `c"..."` for a NUL-terminated literal.
+
+### Checks
+
+- The pre-round test-profile exe (`build/uc1/pre`), the tour `--input-check --view-check --seed 7` and the orders
+  game `--box-select --orders --seed 7` with the 2D draw digest. After each step the same runs on the new exe: every
+  text command equal but the build label (the status box's, the resource bar's, the chat line's and the labels'
+  texts), the bitmaps differing in fading alpha only (one more timing bitmap), the orders game's map rhombi and lines
+  different between any two live games; `VIEW CHECK PASS`, `BOX SELECT PASS`, `ORDERS PASS`, F3 ok.
+- Unit tests (`hud_direct_tests.rs`): the strings (the table's, the 16-bit id, the missing string's fall through),
+  `atoi`, `PlatMbsCmp`'s difference, the held text both ways, the chat rest, the records' offsets and slots, the
+  status box's fields and formats, the null paths of every adapter.
+
+### Gates
+
+On the result merged with origin/rust 8d68d2786 (merge 41dd3c702: clean; strip_markers, `rust_build.py header`
+and `rust_includes.py` changed nothing): both builds 0/0 (EE-AOC 625, EE-SIM 626 inputs) and the test profile 0/0;
+the Rust gate PASS (4,644 tests, clippy, rustfmt, headers); the oracle seeds 2-7 identical to the reference; the
+editor gate PASS 14,448; the civilization gate PASS 4,062; scenario_check 27/27; the tour (`RESULT PASS tour`,
+`VIEW CHECK PASS`, F3 ok); the orders game with box select and the scroll check (`BOX SELECT PASS`, `ORDERS PASS`,
+`SCROLL CHECK PASS`, `RESULT PASS random-game`); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 41, 40],
+alive [2, 3], classic_lua x 2; lan-game). Before the merge: build `--sim` 0/0, the Rust gate PASS (4,625 tests), the
+oracle seeds 2-3 identical, a tour or orders game per step. Not run: the sim_capture profiles (no simulation code
+changed: every move is UI-thread code EE-SIM never builds).
+
+### What only a person reaches
+
+The command buttons' presses (the fixture clicks none: `ORDERS` skips patrol and attack ground), the market's trade
+buttons, the dialog message's scrolling text (a scenario's dialog), the chat line's scroll (more than seven lines).
+EE-SIM builds no form: the oracle is unchanged by construction.
+
+### Left
+
+docs/progress/ui-cluster.md ("Left").
+
+## The Graphics + LLE cluster, round 1: the tag points whole in Rust, the effects' reads of the graphic objects and physical models, RTSMap's terrain edits and outlines, EEOrbital, EFMU (ee_gfx tags.rs, effect_reads.rs; ee_ge map_raise.rs; branch rust-gfx-cluster1, 2026-11-18)
+
+The first round of the cluster lane (docs/progress/gfx-lle-cluster.md has the commits and the numbers).
+
+- **The tag points as a Rust store, the C++ types as views.** `EEGraphicObject`'s tag-point lists (by kind, then by
+  root model: two nested `std::map`s), its weapon-mount lists, colour groups and attack points became one Rust store
+  per loaded object (`EeGfxGraphicTags`). The units', physics' and effects' readers (a dozen sites in other lanes'
+  files) did not change: `EETagPointList` is now a view of the Rust list's raw `Vec` parts (data, size, capacity:
+  `mPoints.size()`, `mPoints[i]`, `front()`, `begin()` keep working) and `EETagPoint` mirrors `EeGfxTagPoint` (a
+  model and an index). A list read as a vector of *pointers* kept `mPoints[i]->GetPoint(...)` valid. Prefer such a
+  view over editing every caller when the callers belong to other lanes.
+  - **Trap (release order):** `GEModel::Dereference` removes a model from its manager when the count falls to 2, so
+    the order the tag points drop their model references could matter. The store keeps the original's order exactly:
+    each part's weapon list with its part (`ee_gfx_tags_clear_weapon` at the same place in `UnloadMedia`), then the
+    kinds' lists by kind and model (`BTreeMap`s iterate as the `std::map`s did).
+- **A render-side layout.** The effect readers needed members no world view had: the graphic objects' models,
+  textures, frames, orbitals, turret parts and store, the graphic effects' records, the complex units' physical-model
+  scale and frame and turret angles, the stats' model. `EeGfxObjectLayout` (offsetof and base casts, registered on the
+  first effect call; `GEPhysicalModel` befriends the registration for its private members) gives Rust those reads; the
+  units' records and pointers stay `ee_sim::world`'s. With it 49 `Ask` answers of EEEffectHost.cpp became Rust over
+  the views (effect_reads.rs). Two things stayed calls: a unit's graphic (`EEUnit::GetModel`, a virtual: a foundation
+  shows its player's class graphic), asked through one host entry, and everything that loads media, plays sounds or
+  makes effects.
+  - The hosts' answers that kept scratch between calls (the hurricane's spawn list, the vent lists, the smoke's
+    location, the glows' list, frame and scaled location) look their lists up again on each call: the same lists
+    while a call lasts (nothing in between loads or unloads the unit's graphic).
+  - The effect's members a C++ answer may change during a call (`mGraphicObject` after a media load, `mUnitModel`,
+    the tracer's target, the marching line's ends, the plane and volcano models) pass by address
+    (`EeGfxEffectRefs`), so the Rust reads what the call left there.
+  - `EEUnit::GetPosition` has two bodies only (`EEUnit`'s tile centre on the tile's height, `EEComplexUnit`'s
+    location); the Rust answers it from the views.
+- **RTSMap's terrain edits** (`Raise`, the four spreads, `SmoothVertex`, `UpdateTiles`, `GetNumRaisedCorners`,
+  `IsTileFlat`) and the continent outlines (`BuildAreaOutlines`, `AddOutlineEdge`) are ee_ge map_raise.rs over the
+  mesh's C entry points (the same ones the C++ accessors called); the tiles' height and units (`PlaceUnitOnGround`)
+  and `UpdateWater` stay the map's virtuals. The C++ converts `long` coordinates to `unsigned long` at each call (a
+  negative coordinate wraps and is off the map); the Rust keeps that with `as c_ulong` on both widths.
+  `tools/sim_editor.py` (elevation paint) passed unchanged, as did the oracle (the random map's raised-corner test).
+- **EEOrbital** (the name test, the speed from the name's degrees, the update) is effect_orbit.rs'. `sscanf("%f")`
+  is a small scanner (white space, sign, digits, point, exponent, inf, nan); a name with no number there kept an
+  uninitialised float in the original, the Rust gives 0.
+- **EFMU** (the effect manager's capture) folds in Rust over the store; the C++ commits the six words.
+
+What exercises what: the oracle (seeds 2-7) and the missile capture reach the tag points through the units' and the
+physics' readers (weapon points, decks, launches); the effects capture (EE-SIM steps every effect kind, seeds 2-7,
+18 digests) reaches the effect readers; the editor gate reaches the terrain raise; only a tour reaches the colour
+groups (the player colour on the buildings), the light glows, the icons and the outlines' draw.

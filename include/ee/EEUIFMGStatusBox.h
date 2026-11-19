@@ -3,6 +3,8 @@
 // is ICF-folded into the empty 0xe123d; no vtable seen). Only what EEUIFMGMainGroup.cpp uses; (provisional names)
 #ifndef EE_EEUIFMGSTATUSBOX_H
 #define EE_EEUIFMGSTATUSBOX_H
+
+#include "rust/game/screens.h"   // EeScreensStatusBoxFields
 #include <stdint.h>
 #include "ee/EEImprovementIDs.h"
 
@@ -15,7 +17,9 @@ class UWideString;
 
 struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes)
 
-class EEUIFMGStatusBox {
+// the members are the Rust record EeScreensStatusBoxFields' (ee_screens main_form_fields.rs), the class's only base:
+// the box's pointer is the record's (status_box.rs reads it through the call record)
+class EEUIFMGStatusBox : public EeScreensStatusBoxFields {
 public:
     EEUIFMGStatusBox(UIForm* inForm);
     ~EEUIFMGStatusBox();                    // (ICF-folded into the empty 0xe123d)
@@ -40,22 +44,6 @@ public:
         this->mIcons[inIndex] = inIcon;
         this->mLabels[inIndex] = inLabel;
     }
-
-    long mAttributes[14];                   // +0x00 (= -1) the icon index of each attribute shown
-    UIControl* mIcons[9];                   // +0x38 the main game form's controls 0x45..0x4d
-    UIControl* mLabels[9];                  // +0x5c controls 0x20..0x28
-    UIForm* mForm;                   // +0x80 (the ctor argument)
-    UIControl* mC84;                        // +0x84 control 0x1e
-    UIControl* mC88;                        // +0x88 control 0x1f
-    UIControl* mC8C;                        // +0x8c control 0x2a
-    UIControl* mC90;                        // +0x90 control 0x2b
-    UIControl* mC94;                        // +0x94 control 0x64
-    UIControl* mC98;                        // +0x98 control 0x29
-    long mAttributeCount;                   // +0x9c
-    long mArmorAttributeCount;              // +0xa0 the next free icon
-    bool mIsResourceShown;                  // +0xa4
-    UIControl* mCA8;                        // +0xa8 control 0x33
-    UIControl* mCAC;                        // +0xac control 0x32
 };
 
 #endif

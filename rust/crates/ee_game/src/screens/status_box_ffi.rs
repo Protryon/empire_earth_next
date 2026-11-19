@@ -21,6 +21,10 @@ struct Host(*mut c_void);
 
 impl BoxHost for Host {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
+        // SAFETY: the host's live call record (its head asserted in EEUIFMGStatusBox.cpp)
+        if let Some(r) = unsafe { crate::screens::hud_direct::status_box(self.0.cast(), op, a, b, c) } {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_status_box(self.0, op, a, b, c) }
     }
     fn view(&mut self, fill: bool) -> EeScreensHudUnit {

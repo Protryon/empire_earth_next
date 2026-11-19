@@ -42,6 +42,136 @@ pub struct EeScreensMainFormFields {
     pub mIsButtonBlinking: bool,
 }
 
+/// `EEUIFMGStatusButton`'s plain members (ee/EEUIFMGStatusButton.h), in the class's order (the UI cluster lane,
+/// round 1); its C++ objects (the button object, the icon, the dither, the queue text, `mU104`) stay members.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeScreensStatusButtonFields {
+    /// `TMGetTime()` of the last "cannot" chat line
+    pub mLastErrorTime: c_ulong,
+    /// the technology (the main group matches the queued items' key)
+    pub mTechnology: c_long,
+    pub mUnitType: c_ulong,
+    /// (= 40)
+    pub mF134: f32,
+    pub mF138: f32,
+    pub mUnitID: c_ulong,
+    /// the main group's queue counts
+    pub mCount: c_long,
+    /// the `EEButtonObject` index
+    pub mButton: c_ulong,
+    /// an `EEButtonObject` command (else a tech tree node)
+    pub mIsCommand: bool,
+    pub mShowCount: bool,
+    pub mAvailable: bool,
+    pub mDrawIcon: bool,
+}
+
+/// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
+/// the box's pointer is the record's): the attributes shown, the main game form's controls it fills (`UIControl*`s),
+/// its form, the counts (the UI cluster lane, round 1).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeScreensStatusBoxFields {
+    /// (= -1) the icon index of each attribute shown
+    pub mAttributes: [c_long; 14],
+    /// the main game form's controls 0x45..0x4d and 0x20..0x28
+    pub mIcons: [*mut c_void; 9],
+    pub mLabels: [*mut c_void; 9],
+    /// the constructor's form
+    pub mForm: *mut c_void,
+    /// controls 0x1e, 0x1f, 0x2a (the portrait), 0x2b, 0x64, 0x29
+    pub mC84: *mut c_void,
+    pub mC88: *mut c_void,
+    pub mC8C: *mut c_void,
+    pub mC90: *mut c_void,
+    pub mC94: *mut c_void,
+    pub mC98: *mut c_void,
+    pub mAttributeCount: c_long,
+    /// the next free icon
+    pub mArmorAttributeCount: c_long,
+    pub mIsResourceShown: bool,
+    /// controls 0x33, 0x32 (the third and fourth bars)
+    pub mCA8: *mut c_void,
+    pub mCAC: *mut c_void,
+}
+
+impl EeScreensStatusBoxFields {
+    /// `GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names (NULL past the slots).
+    pub(crate) fn control(&self, id: i64) -> *mut c_void {
+        use crate::screens::status_box::{EE_SCREENS_BOX_CTL_LABEL, EE_SCREENS_BOX_CTL_LEFT_BAR};
+        let others = [self.mC84, self.mC88, self.mC8C, self.mC90, self.mC94, self.mC98, self.mCA8, self.mCAC];
+        let slot = |v: &[*mut c_void], i: i64| v.get(i as usize).copied().unwrap_or(core::ptr::null_mut());
+        if id < 0 {
+            core::ptr::null_mut()
+        } else if id < EE_SCREENS_BOX_CTL_LABEL {
+            slot(&self.mIcons, id)
+        } else if id < EE_SCREENS_BOX_CTL_LEFT_BAR {
+            slot(&self.mLabels, id - EE_SCREENS_BOX_CTL_LABEL)
+        } else {
+            slot(&others, id - EE_SCREENS_BOX_CTL_LEFT_BAR)
+        }
+    }
+}
+
+/// `EEUIFMGStatusBox`'s constructor: no control bound, no attribute shown (-1), the form `form`.
+///
+/// # Safety
+/// `record` is the new box's record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_status_box_init(record: *mut EeScreensStatusBoxFields, form: *mut c_void) {
+    let null = core::ptr::null_mut();
+    // SAFETY: the contract
+    unsafe {
+        record.write(EeScreensStatusBoxFields {
+            mAttributes: [-1; 14],
+            mIcons: [null; 9],
+            mLabels: [null; 9],
+            mForm: form,
+            mC84: null,
+            mC88: null,
+            mC8C: null,
+            mC90: null,
+            mC94: null,
+            mC98: null,
+            mAttributeCount: 0,
+            mArmorAttributeCount: 0,
+            mIsResourceShown: false,
+            mCA8: null,
+            mCAC: null,
+        })
+    };
+}
+
+/// `EEUIFMGStatusBox::GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names.
+///
+/// # Safety
+/// `record` is a live box's record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_status_box_control(
+    record: *const EeScreensStatusBoxFields,
+    id: i64,
+) -> *mut c_void {
+    // SAFETY: the contract
+    unsafe { (*record).control(id) }
+}
+
+/// The button record's offset in `EEUIFMGStatusButton` (one class, one offset).
+static BUTTON_OFFSET: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+/// `EEUIFMGStatusButton`'s constructor: the button `button` and its record `fields`.
+#[no_mangle]
+pub extern "C" fn ee_screens_status_button_fields(button: *mut c_void, fields: *mut EeScreensStatusButtonFields) {
+    BUTTON_OFFSET.store(fields as usize - button as usize, Ordering::Relaxed);
+}
+
+/// The record of the command button `button` (an `EEUIFMGStatusButton*`); None before a button registered the
+/// offset or for NULL.
+pub(crate) fn button_record(button: *mut c_void) -> Option<*mut EeScreensStatusButtonFields> {
+    let offset = BUTTON_OFFSET.load(Ordering::Relaxed);
+    (!button.is_null() && offset != usize::MAX).then(|| (button as usize + offset) as *mut EeScreensStatusButtonFields)
+}
+
 /// The record's offset in `EEUIFMainGame` (the C++ registers it; one class, one offset).
 static OFFSET: AtomicUsize = AtomicUsize::new(usize::MAX);
 

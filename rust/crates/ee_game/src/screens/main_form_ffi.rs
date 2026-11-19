@@ -45,6 +45,10 @@ impl FormHost for Host {
         if let Some(r) = crate::screens::hud_views::main_form_toolkit(self.form(), op, a, b) {
             return r;
         }
+        // SAFETY: the host's live call record (its head's layout asserted in EEUIFMainGame.cpp)
+        if let Some(r) = unsafe { crate::screens::hud_direct::main_form(self.0.cast(), op, a, b, io) } {
+            return r;
+        }
         if op == crate::screens::mouse_modes::EE_SCREENS_MF_OP_MD_SEND {
             if let Some(m) = crate::screens::hud_sends::mouse_mode(a, b, io) {
                 crate::screens::hud_sends::send(&m);
@@ -68,6 +72,12 @@ impl FormHost for Host {
         let mut io = EeScreensMainFormIo::default();
         self.op(EE_SCREENS_MF_OP_PREVIEW_WALL, tiles.len() as i64, tiles.as_ptr() as i64, &mut io);
     }
+}
+
+/// One of the form's host ops (`EE_SCREENS_MF_OP_*`) over the host's call record `call`, answered as the form's
+/// own calls are (the Rust answers first, then the C++ host): the command buttons' form ops go here.
+pub(crate) fn op(call: *mut c_void, op: u32, a: i64, b: i64, io: &mut EeScreensMainFormIo) -> i64 {
+    Host(call).op(op, a, b, io)
 }
 
 /// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
