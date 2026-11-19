@@ -8,8 +8,9 @@
 //! cloaked unit and the mini map, the chained setters (`SetCloakableChain`, `SetCloakedChain`, `SetOpacityChain`),
 //! the physics' clock, the rules and the USTM notes (TEST ONLY: only while the capture runs).
 
-// `c_long` casts are needed on LP64.
-#![allow(clippy::unnecessary_cast)]
+// `c_long` casts are needed on LP64. The C++'s negated float comparisons and its clamp's if-chain are kept as
+// written (they differ from the flipped comparison and `clamp` for a NaN).
+#![allow(clippy::unnecessary_cast, clippy::neg_cmp_op_on_partial_ord, clippy::manual_clamp)]
 
 use crate::units::step::{
     EeUnitsCamoEvent, EeUnitsPowerIn, EeUnitsPowerOut, EE_UNITS_CAMO_CAMOUFLAGED_OFF, EE_UNITS_CAMO_CAMOUFLAGED_ON,
