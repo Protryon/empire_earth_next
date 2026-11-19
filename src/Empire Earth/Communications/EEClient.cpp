@@ -43,7 +43,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEClient.h"
-#include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
 

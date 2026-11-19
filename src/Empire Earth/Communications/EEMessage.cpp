@@ -83,7 +83,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIArea.h"
@@ -109,8 +108,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEMessageCapture.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg
-#include "rust/sim/units.h"
-#include "rust/sim/netmsg.h"
 #include "rust/sim/units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
 

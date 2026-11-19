@@ -130,7 +130,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAIContinentManager.h"
@@ -145,9 +144,6 @@
 #include "rust/game/screens.h"
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
-#include <atomic>
-#include <mutex>
-#include <vector>
 #include "rust/game/fixture.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open

@@ -159,18 +159,11 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESEPlayerScreen.h"
 #include <typeinfo>
-#include <map>
-#include "lle/UICheckBox.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESERBUnitTypes.h"
 #include "lle/TSThread.h"
 #include "lle/TSEvent.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EEScenarioEditorIDs.h"
-#include "rust/base/time.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
-#include <vector>
 // the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
 bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
 

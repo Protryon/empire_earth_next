@@ -2538,7 +2538,6 @@ void EEPlayer::ResetTechTree()
 }
 
 #include "lle/FSMemoryFile.h"
-#include "ee/EESaveGameFiles.h"
 
 // Rebuilds the player's tech tree and upgrades from scratch, keeping its state and epoch range, and unloads the
 // unit media its nodes had loaded

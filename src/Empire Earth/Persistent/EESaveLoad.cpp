@@ -33,13 +33,10 @@ UString GetSaveTextName(const UString& inName, bool inKeep)
     return theName;
 }
 
-#include <windows.h>
 #include <stdio.h>
 #include <string.h>
 #include <deque>
 #include <map>
-#include <vector>
-#include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GERectangle.h"
@@ -85,7 +82,6 @@ UString GetSaveTextName(const UString& inName, bool inKeep)
 #include "lle/FSPersistent.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -116,7 +112,6 @@ UString GetSaveTextName(const UString& inName, bool inKeep)
 #include "ee/EECommunications.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEUIFMainGame.h"
-#include "lle/FSMemoryFile.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"

@@ -49,10 +49,6 @@
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EEAppCapture.h"
-#include "rust/render/ge.h"
-#include "rust/sim/units.h"
-#include "rust/render/ge.h"
-#include "rust/sim/units.h"
 
 namespace {
 

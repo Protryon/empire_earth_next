@@ -641,7 +641,6 @@ static const float kWaterRipplePeriod = 3.1415927f;
 static const float kWaterRippleSpeed = 0.025f;
 static const float kWaterRippleAmplitude = 0.05f;
 #include "ee/EESaveGameFiles.h"
-#include "ee/EECPEngine.h"
 // the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
 // next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
@@ -1050,15 +1049,8 @@ void EECreateGameTimer()
 #include "lle/GE3DLine.h"
 #include "lle/GELine.h"
 #include "lle/GEBitmap.h"
-#include "lle/GERhombus.h"
-#include "lle/UIControl.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIMiniMap.h"
-#include "ee/EERenderObject.h"
-#include "ee/EERenderLists.h"
-#include "ee/EEROUnits.h"
-#include "ee/EEROTerrain.h"
-#include "ee/EEROGroundShadows.h"
 #include "ee/EEEffect.h"
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
@@ -1150,7 +1142,6 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     gB529068 = false;
 }
 
-#include "GEWindow.h"
 
 // Creates the music manager, mouse pointer, graphics, data preloading and physics threads; registers their shutdown
 void EEInitializeThreads()
@@ -1475,7 +1466,6 @@ void EEDeleteSoundManager(bool inShutdown)
 }
 
 #include "ee/EEWonNet.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEUnitPicker.h"
 
 // Stops physics, deletes the communications and WON connection, then shuts down and deletes the physics, data
@@ -1640,7 +1630,6 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 }
 
 #include "lle/Graphics Engine.h"
-#include "ee/EEUserInterface.h"
 
 void EEEnumerateDisplayDevices();
 void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
@@ -1993,7 +1982,6 @@ int main(int argc, char** argv)
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
 
 #include "lle/UMFastMath.h"
-#include <string.h>
 
 // Loads and starts a .wav or .mp3 sound (a bare name tries .wav, then .mp3), registering it as a one-shot when
 // asked; returns the sample and instance, -1 on failure
@@ -2038,10 +2026,8 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
 #include "ee/EEUnitBehavior.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEMusicObject.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEButtonObject.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEUCUpgradeTable.h"

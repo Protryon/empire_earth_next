@@ -37,7 +37,6 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include <math.h>
 #include <mutex>
