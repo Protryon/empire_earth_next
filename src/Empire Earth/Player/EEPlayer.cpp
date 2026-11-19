@@ -116,7 +116,7 @@ template <class V> long EEDeletePointers(V& ioVector)
 
 // std::for_each's functor in the dtor: dereferences each patrol group of mPatrolGroups (0x16d2f9) (provisional name)
 struct EEPDereferencer {
-    void operator()(EEPPatrolGroup* inGroup) { inGroup->Dereference(); }
+    void operator()(EEPPatrolGroup* inGroup) { ee_units_pg_dereference(inGroup); }
 };
 
 // the interval of the healing units' hit-point bonus (0x4429b8, just before kTributeFee; ComputeLoadDistance)
@@ -402,7 +402,7 @@ EEPlayer::~EEPlayer()
     delete this->mTechnologies;
     this->mTechnologies = NULL;
     for (long theAirport = 0; theAirport < 4; theAirport++) {
-        delete mAirTraffic[theAirport];
+        ee_units_atc_delete(mAirTraffic[theAirport]);
         mAirTraffic[theAirport] = NULL;
     }
     for (unsigned long theClass = 0; theClass < EEUnitClassCount(); theClass++)
@@ -738,13 +738,13 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         EEPPatrolGroup* theGroup = theOld->mPatrolGroup;
         if (theGroup != NULL) {
             EEComplexUnit* thePoint;
-            while ((thePoint = theGroup->GetLast()) != NULL) {
-                theGroup->RemoveUnit(thePoint);
+            while ((thePoint = static_cast<EEComplexUnit*>(ee_units_pg_last(theGroup))) != NULL) {
+                ee_units_pg_remove(theGroup, thePoint);
                 thePoint->SetPatrolGroup(NULL);
                 thePoint->Kill(true, false, false);
                 thePoint->mPlayer->KillUnit(thePoint, false);
             }
-            theGroup->Reference();
+            ee_units_pg_reference(theGroup);
         }
         delete theOld;
         return (int64_t)reinterpret_cast<uintptr_t>(theGroup);
@@ -848,7 +848,7 @@ void EEPlayer::AddPendingUnits(bool inKeepID, bool inReleasePending)
 // Adds a patrol group to the player, keeping a reference to it
 void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
 {
-    inGroup->Reference();
+    ee_units_pg_reference(inGroup);
     this->mPatrolGroups.push_back(inGroup);
 }
 
@@ -1020,14 +1020,6 @@ void EEPlayer::RemoveTownID(long inID)
     std::map<long, EETown*>::iterator theIterator = this->mTownsByID.find(inID);
     if (theIterator != this->mTownsByID.end())
         this->mTownsByID.erase(theIterator);
-}
-
-// Returns the last unit of the patrol route, or NULL when it is empty
-EEComplexUnit* EEPPatrolGroup::GetLast()
-{
-    if (this->mPatrolPoints.size() > 0)
-        return this->mPatrolPoints.back();
-    return NULL;
 }
 
 // (0x563659: EEUGPatrol::SetPatrolGroup, defined after ee/EEUGPatrol.h's include below)
@@ -1450,7 +1442,7 @@ EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
 {
     EEPPatrolGroup* theResult = NULL;
     for (unsigned long i = 0; i < this->mPatrolGroups.size(); i++) {
-        if (this->mPatrolGroups[i]->mID == inID) {
+        if (ee_units_pg_id(this->mPatrolGroups[i]) == inID) {
             theResult = this->mPatrolGroups[i];
             break;
         }
@@ -1592,7 +1584,7 @@ void EEPlayer::Reset()
     this->mTechnologies = new EETechTree;
     *this->mTechnologies = gTechTree;
     for (long theAirport = 0; theAirport < 4; theAirport++)
-        mAirTraffic[theAirport] = new EEAirTrafficControl(this);
+        mAirTraffic[theAirport] = EEATCNew();
     ee_units_player_fields_reset(this, gWorldTable.GetLongValue(kWorldStartingCitizensDefault),
                                  gWorldTable.GetLongValue(kWorldGatherersPerResourceMax));   // (ee_units player.rs)
     this->mHealedUnitSet = NULL;
@@ -1780,11 +1772,11 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         thePlayer->mPatrolGroups.clear();
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_PATROL_LOAD: {
-        EEPPatrolGroup* theGroup = new EEPPatrolGroup;
-        long theResult = theGroup->Load(theMajor, theMinor, &theFile);
+        EEPPatrolGroup* theGroup = ee_units_pg_new();
+        long theResult = ee_units_pg_load(theGroup, (uint32_t)theMajor, (uint32_t)theMinor, &theFile);
         if (theResult == kErrorOK)
             thePlayer->AddPatrolGroup(theGroup);
-        theGroup->Dereference();
+        ee_units_pg_dereference(theGroup);
         return theResult;
     }
     case EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_LOAD:
@@ -1794,7 +1786,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         EEUnitStorePlayerTable(thePlayer);   // New (R5b.4): the store's diplomacy table
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_AIR_LOAD:
-        return thePlayer->mAirTraffic[inIndex]->Load(theMajor, theMinor, &theFile);
+        return EEATCLoad(thePlayer->mAirTraffic[inIndex], &theFile);
     case EE_UNITS_PLAYER_SAVE_ACTIVE_LOAD:
         return thePlayer->mActiveGroup->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIV_LOAD:
@@ -1852,15 +1844,15 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_PATROL_KIND: {
         EEPPatrolGroup* theGroup = thePlayer->mPatrolGroups[inIndex];
-        return theGroup == NULL ? 0 : theGroup->mIsTownPatrol ? 1 : 2;
+        return theGroup == NULL ? 0 : ee_units_pg_is_town_patrol(theGroup) ? 1 : 2;
     }
     case EE_UNITS_PLAYER_SAVE_PATROL_SAVE:
-        return thePlayer->mPatrolGroups[inIndex]->Save(theMajor, theMinor, &theFile);
+        return ee_units_pg_save(thePlayer->mPatrolGroups[inIndex], (uint32_t)theMajor, (uint32_t)theMinor, &theFile);
     case EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_SAVE:
         thePlayer->mSavedGroups.Save(theMajor, theMinor, theFile);
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_AIR_SAVE:
-        return thePlayer->mAirTraffic[inIndex]->Save(theMajor, theMinor, &theFile);
+        return EEATCSave(thePlayer->mAirTraffic[inIndex], &theFile);
     case EE_UNITS_PLAYER_SAVE_ACTIVE_SAVE:
         return thePlayer->mActiveGroup->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIV_SAVE:
@@ -2028,7 +2020,7 @@ void EEPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     for (EEComplexUnit* theUnit = this->GetNextComplexUnit(NULL); theUnit != NULL; theUnit = this->GetNextComplexUnit(theUnit))
         theUnit->ReplaceUnits(ioSwaps);
     for (long a = 0; a < 4; a++)
-        mAirTraffic[a]->ReplaceUnits(ioSwaps);
+        EEATCReplaceUnits(mAirTraffic[a], ioSwaps);
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
         theOld = it->mOld;
         theNew = it->mNew;
@@ -2161,7 +2153,7 @@ void EEPlayer::RemovePatrolGroup(EEPPatrolGroup* inGroup)
 {
     std::vector<EEPPatrolGroup*>::iterator theIterator = std::find(this->mPatrolGroups.begin(), this->mPatrolGroups.end(), inGroup);
     this->mPatrolGroups.erase(theIterator);
-    inGroup->Dereference();
+    ee_units_pg_dereference(inGroup);
 }
 
 // Deselects the unit with the given ID, if it exists
@@ -2406,20 +2398,20 @@ bool EEPlayer::AdoptTownPatrol(EETown* inTown)
 {
     for (unsigned long g = 0; g < this->mPatrolGroups.size(); g++) {
         EEPPatrolGroup* theGroup = this->mPatrolGroups[g];
-        if (theGroup == NULL || !theGroup->mIsTownPatrol)
+        if (theGroup == NULL || !ee_units_pg_is_town_patrol(theGroup))
             continue;
         bool theTaken = false;
         for (unsigned long t = 0; t < this->mTowns.size() && !theTaken; t++)
             theTaken = this->mTowns[t] != NULL && this->mTowns[t]->mPatrolGroup == theGroup;
         if (theTaken)
             continue;
-        for (unsigned long i = 0; i < theGroup->mPatrolPoints.size(); i++) {
-            EEComplexUnit* thePoint = theGroup->mPatrolPoints[i];
+        for (unsigned long i = 0; i < ee_units_pg_point_count(theGroup); i++) {
+            EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_point(theGroup, i));
             for (unsigned long v = 0; v < inTown->GetHullPointCount(); v++) {
                 if (thePoint->GetTileX() == inTown->GetHullPoint(v).GetX()
                     && thePoint->GetTileY() == inTown->GetHullPoint(v).GetY()) {
                     inTown->mPatrolGroup = theGroup;
-                    theGroup->Reference();
+                    ee_units_pg_reference(theGroup);
                     return true;
                 }
             }
@@ -2439,9 +2431,9 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     this->mCivilization.Reapply(this, inFirst, inSecond);
     RTSPlayer::RepairPointers(inFirst, inSecond);
     for (i = 0; i < this->mPatrolGroups.size(); i++)
-        this->mPatrolGroups[i]->RepairPointers(inFirst, inSecond);
+        ee_units_pg_repair(this->mPatrolGroups[i]);
     for (long theAirport = 0; theAirport < 4; theAirport++)
-        theResult = mAirTraffic[theAirport]->RepairPointers(inFirst, inSecond);
+        theResult = ee_units_atc_repair_pointers(mAirTraffic[theAirport]);
     this->mLoadedUnitIDs.clear();
     // port (0.268): the towns as saved (EEMakeSavedTowns), else rebuilt from the buildings
     if (this->GetPlayerID() >= 1 && !EEMakeSavedTowns(this)) {
@@ -2962,7 +2954,7 @@ void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
 void EEPlayer::UpdateAirTraffic()
 {
     for (long i = 0; i < 4; i++)
-        mAirTraffic[i]->Update();
+        ee_units_atc_update(mAirTraffic[i]);
 }
 
 // Raises (or with inFlag lowers) a unit class improvement and rescales existing units' power, hit points or sight
@@ -3031,7 +3023,7 @@ void EEPlayer::RestorePatrols()
         EETown* theTown = this->mUnitsToRepatrol[i]->FindNearestTown();
         if (theTown == NULL || theTown->mPatrolGroup == NULL)
             continue;
-        EEComplexUnit* thePoint = theTown->mPatrolGroup->GetNearest(this->mUnitsToRepatrol[i]->mTileX, (*(this->mUnitsToRepatrol.begin() + i))->mTileY);
+        EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_nearest(theTown->mPatrolGroup, this->mUnitsToRepatrol[i]->mTileX, (*(this->mUnitsToRepatrol.begin() + i))->mTileY));
         if (thePoint == NULL || thePoint->mPatrolGroup == NULL)
             continue;
         EEPPatrolGroup* thePatrol = thePoint->mPatrolGroup;

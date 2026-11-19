@@ -790,7 +790,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::NearestRoute: {   // EEMPatrol(-1): the first unit's nearest town's route (EEUnitHost town point)
         EETown* theTown = u->FindNearestTown();
         EEComplexUnit* thePoint = theTown != NULL && theTown->mPatrolGroup != NULL
-            ? theTown->mPatrolGroup->GetNearest(u->GetTileX(), u->GetTileY()) : NULL;
+            ? static_cast<EEComplexUnit*>(ee_units_pg_nearest(theTown->mPatrolGroup, u->GetTileX(), u->GetTileY())) : NULL;
         if (thePoint == NULL)
             return -1;
         c->h2 = (uint64_t)Handle(thePoint->mPatrolGroup);

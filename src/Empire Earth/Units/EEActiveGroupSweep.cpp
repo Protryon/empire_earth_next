@@ -244,11 +244,11 @@ void EEActiveGroupCaptureSweep()
         // patrol along the player's first town patrol
         for (unsigned long t = 0; t < thePlayer->mTowns.size(); t++) {
             EETown* theTown = thePlayer->mTowns[t];
-            if (theTown == NULL || theTown->mPatrolGroup == NULL || theTown->mPatrolGroup->GetLast() == NULL)
+            if (theTown == NULL || theTown->mPatrolGroup == NULL || ee_units_pg_last(theTown->mPatrolGroup) == NULL)
                 continue;
             EEPPatrolGroup* thePatrol = theTown->mPatrolGroup;
             EEActiveGroup* g = NewGroup(thePlayer, theAll, 5);
-            Run(thePlayer, g, EEUGRust::NewPatrol(thePatrol, thePatrol->GetLast(), true), kActionMoveToNextPatrolPoint, false);
+            Run(thePlayer, g, EEUGRust::NewPatrol(thePatrol, static_cast<EEComplexUnit*>(ee_units_pg_last(thePatrol)), true), kActionMoveToNextPatrolPoint, false);
             Record(theCase++, thePlayer, g, theAll, 0);
             break;
         }

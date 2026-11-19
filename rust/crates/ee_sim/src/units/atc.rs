@@ -801,29 +801,196 @@ struct FfiHost {
 
 impl AtcHost for FfiHost {
     fn call(&mut self, op: i32, unit: Unit, other: Unit, io: &mut EeUnitsAtcIo) -> i64 {
+        // the plain reads in place (atc_views.rs), the rest the C++ callback's
+        if let Some(v) = crate::units::atc_views::view_call(op, unit, other, io) {
+            return v;
+        }
         // SAFETY: the C++ callback with its own context; io lives for the call
         unsafe { (self.f)(self.ctx, op, unit, other, io) }
     }
 }
 
-/// A new, empty air traffic control.
+/// The C++ host every control calls (Physics Thread/EEAirTrafficControl.cpp), given by the first `ee_units_atc_new`.
+static HOST: std::sync::OnceLock<EeUnitsAtcFn> = std::sync::OnceLock::new();
+
+/// The registered host with a null context.
+fn host() -> FfiHost {
+    FfiHost { ctx: std::ptr::null_mut(), f: *HOST.get().expect("ee_units_atc: no host (ee_units_atc_new)") }
+}
+
+/// A new, empty air traffic control; `f` is the C++ host all controls call (the first one given is kept).
 #[no_mangle]
-pub extern "C" fn ee_units_atc_new() -> *mut EeUnitsAtc {
+pub extern "C" fn ee_units_atc_new(f: EeUnitsAtcFn) -> *mut EeUnitsAtc {
+    let _ = HOST.set(f);
     Box::into_raw(Box::default())
 }
 
-/// The destructor's body over the host, then the state freed. Null does nothing.
+/// The destructor's body over the registered host (every queued plane and airport released), then the state
+/// freed. Null does nothing.
 ///
 /// # Safety
-/// `p` came from [`ee_units_atc_new`] and is not used again; `f` is valid with `ctx`.
+/// `p` came from [`ee_units_atc_new`] and is not used again.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_atc_free(p: *mut EeUnitsAtc, ctx: *mut c_void, f: EeUnitsAtcFn) {
+pub unsafe extern "C" fn ee_units_atc_delete(p: *mut EeUnitsAtc) {
     if p.is_null() {
         return;
     }
-    destroy(AtcRef(p), &mut FfiHost { ctx, f });
+    destroy(AtcRef(p), &mut host());
     // SAFETY: the box made by ee_units_atc_new
     drop(unsafe { Box::from_raw(p) });
+}
+
+// ---- the class's methods over the registered host (the C++ class is gone: its holders call these). For every
+// entry point: `p` is a live state and the units are live complex units.
+
+/// `AddCargoWeight(unit)` (used cargo += the unit's weight)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_add_cargo_weight(p: *mut EeUnitsAtc, unit: Unit) {
+    add_cargo_weight(AtcRef(p), &mut host(), unit);
+}
+/// `RemoveCargoWeight(unit)` (used cargo -= the unit's weight)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_remove_cargo_weight(p: *mut EeUnitsAtc, unit: Unit) {
+    remove_cargo_weight(AtcRef(p), &mut host(), unit);
+}
+/// `AddAirport(airport)`
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_add_airport(p: *mut EeUnitsAtc, airport: Unit) {
+    add_airport(AtcRef(p), &mut host(), airport);
+}
+/// `RemoveAirport(airport)` (the airport is gone)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_remove_airport(p: *mut EeUnitsAtc, airport: Unit) {
+    remove_airport(AtcRef(p), &mut host(), airport);
+}
+/// `QueueRequest(airport, unit, kind)`: 0 queued, 3 no such airport, 7 no room
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_queue_request(
+    p: *mut EeUnitsAtc,
+    airport: Unit,
+    unit: Unit,
+    kind: c_long,
+) -> c_long {
+    queue_request(AtcRef(p), &mut host(), airport, unit, kind) as c_long
+}
+/// `GetFreeCargoWeight(airport)` (-1 when unknown)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_free_cargo_weight(p: *mut EeUnitsAtc, airport: Unit) -> c_long {
+    free_cargo_weight(AtcRef(p), &mut host(), airport) as c_long
+}
+/// `RemoveFromTakeoffQueues(unit)`
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_remove_from_takeoff_queues(p: *mut EeUnitsAtc, unit: Unit) -> bool {
+    remove_from_takeoff_queues(AtcRef(p), &mut host(), unit)
+}
+/// `ClearAirportQueue(airport, kind)` (drops the idle takeoffs of a kind)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_clear_airport_queue(p: *mut EeUnitsAtc, airport: Unit, kind: c_long) -> bool {
+    clear_airport_queue(AtcRef(p), &mut host(), airport, kind)
+}
+/// `GetChecksum()` (the out-of-sync checksum)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_checksum(p: *mut EeUnitsAtc) -> c_long {
+    checksum(AtcRef(p), &mut host()) as c_long
+}
+/// `GetQueueLength(airport)` (its takeoff queue's length)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_queue_length(p: *mut EeUnitsAtc, airport: Unit) -> c_ulong {
+    queue_length(AtcRef(p), airport) as c_ulong
+}
+/// `GetQueuePosition(unit, which)` (-1: not queued)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_queue_position(p: *mut EeUnitsAtc, unit: Unit, which: c_long) -> c_long {
+    queue_position(AtcRef(p), &mut host(), unit, which) as c_long
+}
+/// `RemovePlane(airport, unit)`
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_remove_plane(p: *mut EeUnitsAtc, airport: Unit, unit: Unit) {
+    remove_plane(AtcRef(p), &mut host(), airport, unit);
+}
+/// `RepairPointers()`: the saved ids back to units (3 at the first id with no unit)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_repair_pointers(p: *mut EeUnitsAtc) -> c_long {
+    repair_pointers(AtcRef(p), &mut host()) as c_long
+}
+/// `FindNearestAirport(unit)` (null: none)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_find_nearest_airport(p: *mut EeUnitsAtc, unit: Unit) -> Unit {
+    find_nearest_airport(AtcRef(p), &mut host(), unit)
+}
+/// `Update()` (the landings, then the takeoffs)
+///
+/// # Safety
+/// See above.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_update(p: *mut EeUnitsAtc) {
+    update(AtcRef(p), &mut host());
+}
+/// `Dump(file)`: the lines go to the host's `DUMP_LINE` with `file` as its context
+///
+/// # Safety
+/// See above; `file` is the host's `FILE*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_dump(p: *mut EeUnitsAtc, file: *mut c_void) {
+    let mut h = host();
+    h.ctx = file;
+    dump(AtcRef(p), &mut h);
+}
+/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`
+///
+/// # Safety
+/// See above; `olds` and `news` hold `count` units each.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_atc_replace(p: *mut EeUnitsAtc, olds: *const Unit, news: *const Unit, count: usize) {
+    let swaps: Vec<(Unit, Unit)> = if count == 0 {
+        Vec::new()
+    } else {
+        // SAFETY: the contract
+        unsafe { (0..count).map(|i| (*olds.add(i), *news.add(i))).collect() }
+    };
+    replace_units(AtcRef(p), &mut host(), &swaps);
 }
 
 /// The maximum (0) or the used (1) air cargo.
@@ -862,84 +1029,6 @@ pub unsafe extern "C" fn ee_units_atc_slot_airport(p: *const EeUnitsAtc, index: 
     let a = unsafe { &*p };
     a.slots.get(index as usize).map_or(std::ptr::null_mut(), |s| s.airport)
 }
-
-/// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.
-///
-/// # Safety
-/// `p` is a live state; `f` is valid with `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_atc_call(
-    p: *mut EeUnitsAtc,
-    ctx: *mut c_void,
-    f: EeUnitsAtcFn,
-    call: i32,
-    unit: *mut c_void,
-    other: *mut c_void,
-    value: c_long,
-) -> i64 {
-    let p = AtcRef(p);
-    let h = &mut FfiHost { ctx, f };
-    match call {
-        EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT => add_cargo_weight(p, h, unit),
-        EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT => remove_cargo_weight(p, h, unit),
-        EE_UNITS_ATC_CALL_ADD_AIRPORT => add_airport(p, h, unit),
-        EE_UNITS_ATC_CALL_QUEUE_REQUEST => return queue_request(p, h, unit, other, value) as i64,
-        EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT => return free_cargo_weight(p, h, unit) as i64,
-        EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES => return remove_from_takeoff_queues(p, h, unit) as i64,
-        EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE => return clear_airport_queue(p, h, unit, value) as i64,
-        EE_UNITS_ATC_CALL_DUMP => dump(p, h),
-        EE_UNITS_ATC_CALL_CHECKSUM => return checksum(p, h) as i64,
-        EE_UNITS_ATC_CALL_QUEUE_LENGTH => return queue_length(p, unit) as i64,
-        EE_UNITS_ATC_CALL_QUEUE_POSITION => return queue_position(p, h, unit, value) as i64,
-        EE_UNITS_ATC_CALL_REMOVE_AIRPORT => remove_airport(p, h, unit),
-        EE_UNITS_ATC_CALL_REMOVE_PLANE => remove_plane(p, h, unit, other),
-        EE_UNITS_ATC_CALL_REPAIR_POINTERS => return repair_pointers(p, h) as i64,
-        EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT => return find_nearest_airport(p, h, unit) as usize as i64,
-        EE_UNITS_ATC_CALL_UPDATE => update(p, h),
-        _ => {}
-    }
-    0
-}
-
-/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`.
-///
-/// # Safety
-/// `p` is a live state; `f` is valid with `ctx`; `olds` and `news` hold `count` units each.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_atc_replace_units(
-    p: *mut EeUnitsAtc,
-    ctx: *mut c_void,
-    f: EeUnitsAtcFn,
-    olds: *const *mut c_void,
-    news: *const *mut c_void,
-    count: usize,
-) {
-    let swaps: Vec<(Unit, Unit)> = if count == 0 {
-        Vec::new()
-    } else {
-        // SAFETY: the contract
-        unsafe { (0..count).map(|i| (*olds.add(i), *news.add(i))).collect() }
-    };
-    replace_units(AtcRef(p), &mut FfiHost { ctx, f }, &swaps);
-}
-
-// the methods (`ee_units_atc_call`'s `call`)
-pub const EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT: i32 = 1;
-pub const EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT: i32 = 2;
-pub const EE_UNITS_ATC_CALL_ADD_AIRPORT: i32 = 3;
-pub const EE_UNITS_ATC_CALL_QUEUE_REQUEST: i32 = 4;
-pub const EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT: i32 = 5;
-pub const EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES: i32 = 6;
-pub const EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE: i32 = 7;
-pub const EE_UNITS_ATC_CALL_DUMP: i32 = 8;
-pub const EE_UNITS_ATC_CALL_CHECKSUM: i32 = 9;
-pub const EE_UNITS_ATC_CALL_QUEUE_LENGTH: i32 = 10;
-pub const EE_UNITS_ATC_CALL_QUEUE_POSITION: i32 = 11;
-pub const EE_UNITS_ATC_CALL_REMOVE_AIRPORT: i32 = 12;
-pub const EE_UNITS_ATC_CALL_REMOVE_PLANE: i32 = 13;
-pub const EE_UNITS_ATC_CALL_REPAIR_POINTERS: i32 = 14;
-pub const EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT: i32 = 15;
-pub const EE_UNITS_ATC_CALL_UPDATE: i32 = 16;
 
 #[cfg(test)]
 #[path = "atc_tests.rs"]

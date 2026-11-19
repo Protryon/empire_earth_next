@@ -774,7 +774,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         theGoal->SetExploreTile((long)inC, (long)inD);
         return 0;
     case EE_UNITS_AG_PATROL_POINT:
-        return EEObj(theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : theGoal->GetPatrolGroup()->GetLast());
+        return EEObj(theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : ee_units_pg_last(theGoal->GetPatrolGroup()));
     case EE_UNITS_AG_NEW_ATTACK_UNIT:
         return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)inA, (EEUnit*)(uintptr_t)inB,
                                                                        true, false)));
