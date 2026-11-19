@@ -33944,3 +33944,88 @@ lines) and moved what its directories had left as leaves and near-leaves; docs/p
   origin/rust 645799684, which holds neither rust-leaves1 nor rust-cuts1's last commits). What the census left in the
   game's directories is media objects, the converter-gated EERules, the compiler-only EEWorldLayout, EEUnitStore's
   object reads and the message classes: docs/progress/game-leaves.md "Left".
+## The UI cluster lane, round 5: UIGetStringCutOffIndex and EEUIFileComboBox in Rust, the LLE UI's wheel event and the ping meter inline, the message box calls inline, the view rectangle's reads (ee_ui cutoff.rs; ee_game shells_files.rs; branch rust-uicluster5, 2026-11-19)
+
+The brief: the UI thread, the UI events and the LLE UI's hosts as whole classes, after the cycle cuts; net C++ lines
+deleted. **Net C++ -251** (+121 -372; four units and two headers gone). Short of a real round: the census found no
+UI unit outside the big cycle, and what is left in this lane is host code whose callees are C++ (docs/progress/
+ui-cluster.md "What is left").
+
+### The census first
+
+- `tools/cpp_deps.py report` after a full build (the `cuts` mode was only on rust-cuts2: a copy of its cpp_deps.py,
+  run from this tree's tools/ and not committed, reads this tree's objects). On this branch (cycle cuts round 1, not
+  round 2) SCC 1 is 236 units, 114,201 lines; every User Interface Thread and UI Events unit is in it, none a leaf or
+  near-leaf. The LLE UI is a 22-unit cycle of its own whose near-leaves (UIScrollBar, UIStatusBar, UISlider,
+  UIGraph, UIBackgroundTable, UIFontTable, UIHotKey) are each a forwarder per member and a host switch of the
+  control's own virtuals and GE objects. So the census frees nothing here by itself: a UI unit leaves the cycle only
+  when its host cases' callees are Rust.
+- `tools/dead_members.py report` over the lane's headers found little (EEUICChatLine::Display, which went; the
+  EEUserInterface Post* members are other code's API and were left).
+
+### What moved
+
+- **`UIGetStringCutOffIndex`** (User Interface.cpp) is ee_ui `cutoff.rs`: the characters of a text that fit a width,
+  measured one character at a time (a tab four spaces after a free set-up step, a carriage return nothing), the
+  `f32` sum compared with the width as `f32`, cut back to after the last space, stopped after a newline, and the
+  whole length when the first character already overflows. Its one caller was the chat line's Rust, which reached it
+  through `EEUICChatLine::RustOp`; the cut is now answered in hud_ctl_ffi.rs, each character measured as a fresh
+  `GEText` of the message's font would measure it (ee_render smallobj.rs `text_measure`, factored out of
+  `SetText`'s extent: a font without its OS font keeps the last extent, as the fresh text kept its zero one).
+- **`EEUIFileComboBox`** is a kind over the combo box shell (shells_files.rs, kind 0x82): "none", the path's
+  matching files without their extensions, the first line selected (the constructor's body, the kind's init),
+  `CreateEntries` and `SelectFile` as kind ops behind two inline helpers in ee/EEUIShell.h, the path referenced by
+  the factory (`EEUIShellNewFileCombo`) and released by the kind's free. The listing (`FSPath::ListFiles` into a
+  `std::set<UString>`, its order), the line search and the release are host ops 0xc0..0xc2. The editor gate
+  exercises all of it (the map tab's elevation list, the instructions tab's three lists, `elevfile`'s refill and
+  select) and prints the kind's name: PASS 14,448 unchanged.
+- **Inline**: `UIEMouseWheelScroll` (its unit gone; UIForm.cpp, its one maker, includes the header after UIForm.h and
+  UIManager.h), `EEUICPing`'s constructor (its unit gone), `EEUIManager`'s five `Display*` members over
+  `EEUIFErrorDisplay` (ee/EEUIFError.h folded into ee/EEUIManager.h with `EEUIFErrorCallbackData`).
+- **Reads answered in Rust**: the main form's and the HUD controls' view rectangle (`gViewport` through ee_gfx
+  input_views.rs, which the graphics lane added for this lane; zeros before the graphics registered it) and the
+  main form's chat log count (chat_log_ffi.rs's own count, out of the cargo test build as the module is).
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 98c450b86 | UIGetStringCutOffIndex in Rust; EEUICChatLine::RustOp and Display deleted | -73 |
+| a1169cb3f | UIEMouseWheelScroll inline, its unit deleted | -48 |
+| 1bfca8840 | EEUIFileComboBox as a kind; its unit and header deleted (one-line edits in the editor lane's EESEInstructions.cpp, EEUIFSEMap.cpp and the editor gate's EESimEditor.cpp) | -66 |
+| d5bba71ae | the main form's view rectangle and chat log count in Rust | -7 |
+| 20f073a19 | EEUIManager's message box members inline; ee/EEUIFError.h folded | -32 |
+| 9c3496610 | EEUICPing's constructor inline, its unit deleted | -16 |
+| 419265407 | the HUD controls' view rectangle in Rust; the chat log case cfg'd out of the test build; rustfmt's module order | -9 |
+
+### Lessons
+
+- **`git rm` stages at once**: a deletion made for the next piece rode along in the previous commit twice (a
+  `git commit` with nothing named commits the whole index). Each time the commit was split again before going on;
+  name the paths (`git commit -- paths`) or stage a piece's deletions only when committing it.
+- **An `ee_game` module that is `#[cfg(not(test))]`** (chat_log_ffi.rs, the FFI adapters) cannot be named from code
+  the cargo tests build: the game linked, the Rust gate's test build failed (E0433). Gate the match arm too.
+- **cbindgen**: a kind's private constants (a string id) must not be `pub`: a `pub const IDS_...` would go into
+  rust/game/screens.h beside the C++ macro of the same name.
+
+### Gates (on 419265407, origin/rust 645799684 already merged: nothing new to merge)
+
+- Both builds 0/0 (EE-AOC 535 inputs, EE-SIM 536), the test profile 0/0; `rust_build.py header` current;
+  the Rust gate PASS (4,885 tests; the first run failed rustfmt on mod.rs's module order and the test build on the chat log arm, both fixed in 419265407); the oracle seeds 2-7 identical (twice: on 20f073a19's exe and the final one).
+- sim_editor PASS (14,448 lines), the civilization builder gate PASS (4,062), scenario_check 27/27.
+- Tours (test profile, EE_GATES_TREE the main checkout's tree, through slot.py): the random game with
+  `--box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS,
+  no GX errors); the editor exercise (RESULT PASS, no GX errors); the tour `--input-check --view-check --seed 7`
+  (F3 ok, VIEW CHECK PASS, RESULT PASS, no GX errors). Captures looked at: the box selection (the status box, the
+  icon bar, the command buttons, the minimap), the editor's map tab (the elevation file list shows "<NONE>"), the
+  video settings (check boxes, radio buttons, combo boxes), the in-game chat line.
+- `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 12050, units [4, 36, 37], alive [2, 3], classic_lua
+  x 2: fewer PTs than other rounds' 13,400 under the machine's load, so fewer units; lan-game PT 2786/2787).
+- Not run: the sim_capture profiles (no simulation code changed), the POSIX builds.
+
+### What only the tours (or a person) exercise
+
+- The chat line's cut (the tour's chat line, which fits: the cut answers its whole length; no tour sends a line long
+  enough to be cut), the wheel event (no tour turns the wheel over a list), the ping meter (the WON lobby, which no
+  gate opens), the message boxes' `Display*` entry points (the box itself is the civilization gate's; which screens reach which
+  entry point no gate checks), the view
+  rectangle reads (every game frame of the tours: the HUD controls' and the main form's). The file combo box is the
+  editor gate's. EE-SIM builds no form: the oracle is unchanged by construction.

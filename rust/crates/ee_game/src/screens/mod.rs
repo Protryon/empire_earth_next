@@ -321,6 +321,7 @@ pub mod shells_dialog;
 pub mod shells_editor;
 #[cfg(not(test))]
 mod shells_ffi;
+pub mod shells_files;
 pub mod shells_icon_bar;
 pub mod shells_paint;
 pub mod shells_saved;

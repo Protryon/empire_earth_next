@@ -17,6 +17,22 @@ typedef void (*EEUIFErrorCallback)(UIForm* inForm);
 // the password prompt's callback: gets the typed text (EEUIFError 0x26151a stores it with the edit box's text;
 // provisional name)
 typedef void (*EEUIFPasswordCallback)(const char* inPassword);
+// what a button hands to the UI thread when the box closes (8 bytes, no ctor; provisional name)
+struct EEUIFErrorCallbackData {
+    EEUIFErrorCallback mCallback;           // +0x00
+    void* mData;                            // +0x04
+};
+
+// The game's message box (once the form class EEUIFError, RTTI EEUIFError > UIForm, vtable 0x44a770, and its buttons
+// EEUIFEBOK and EEUIFEBCancel; now kinds over the form and button shells: ee_game shells_dialog.rs, the plans and
+// layouts ee_screens dialog.rs'; EEUIFError.cpp keeps the box's host): a new box shown as inKind
+// (EE_SCREENS_DIALOG_*: 0 a message with OK, shown when inFlag; 1 Yes/No; 2 Yes/No/Cancel; 3 a text, or a password
+// when inFlag, which OK hands to inFirst; 4 Cancel only, closing inCloseForm); inFirst is OK's or Yes' or Cancel's
+// callback, inSecond No's, each given inData (the original's DisplayMessage 0x261788, DisplayQuestion 0x261894,
+// DisplayYesNoCancel 0x2619f9, DisplayPassword 0x26151a and DisplayCancel 0x26167f)
+void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment,
+                       void* inData, EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm,
+                       bool inFlag);
 
 struct EEUIManagerCall;                     // (EEUIManager.cpp: the host's record of one ui_manager.rs call)
 
@@ -39,24 +55,40 @@ public:
     virtual UIForm* CreateForm(const UIDbDataForms& inData);
     virtual long UpdateKeyboard();
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);
-    // 0x274d79 / 0x274e2d: a new EEUIFError with the cancel / yes-no-cancel buttons (provisional names).
+    // 0x274d79 / 0x274e2d: a new message box with the cancel / yes-no-cancel buttons (provisional names).
     // inAlignment: EEUIFError::Display*'s (pushed as a dword)
     void DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inCallback,
-                       UIForm* inCancel);
+                       UIForm* inCancel)
+    {
+        EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
+    }
     void DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
-                            EEUIFErrorCallback inNo);
+                            EEUIFErrorCallback inNo)
+    {
+        EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
+    }
     void CreateScenarioEditor();            // 0x273e7d (creates the editor form at +0x130 once)
     // 0x274db5: a new EEUIFError (0x1bc bytes) showing inMessage with one button (0x261788). Parameter names are
     // provisional
     void DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inCallback,
-                        bool inFlag);
+                        bool inFlag)
+    {
+        EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
+    }
     // 0x274d40: a new EEUIFError (0x1bc bytes) with a password edit box (0x26151a); inCallback gets the text
     // (the WON game room's join, 0x1ea544). Parameter names are provisional
     void DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment,
-                               EEUIFPasswordCallback inCallback, bool inFlag);
+                               EEUIFPasswordCallback inCallback, bool inFlag)
+    {
+        EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback, NULL,
+                          NULL, inFlag);
+    }
     // 0x274df1: the same with two buttons (0x261894)
     void DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
-                         EEUIFErrorCallback inNo);
+                         EEUIFErrorCallback inNo)
+    {
+        EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
+    }
     void StartScenarioEditor();             // 0x274e69 (sets +0x13c, starts a local server)
     void DeleteScenarioEditor();            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
     // 0x26fa55 / 0x26fa6a: the main group's mL1C = 0 / 1 and its mB25 (EEUIFMGStatusButton::Command's buttons 1 and

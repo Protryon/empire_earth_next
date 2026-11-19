@@ -9,8 +9,6 @@
 class GEFont;
 
 LLE_API long UIInitialize();
-LLE_API unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
-                                             bool inBreakAtSpace, bool inStopAtNewline);
 
 // UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString
 #include "lle/UIMultiByte.h"

@@ -540,18 +540,36 @@ pub unsafe extern "C" fn ee_ge_text_destroy(p: *mut EeGeText) {
 unsafe fn compute_extent(p: *mut EeGeText) {
     // SAFETY: the caller's contract; no reference is held across a host call
     unsafe {
-        let (host, font, text) = ((*p).host, (*p).font, (*p).text);
+        let text = (*p).text;
+        if let Some(extent) = text_measure(p, cppobj::wstr_text(text), cppobj::wstr_length(text)) {
+            (*p).extent = extent;
+        }
+    }
+}
+
+/// The extent `SetText` would give `p` for `bytes` (NUL-terminated, `characters` characters) in `p`'s font, through
+/// `p`'s host; None (the text keeps its extent) for a font without its OS font. `p` itself is unchanged: a fresh
+/// `GEText` of the same font measuring the same string.
+///
+/// # Safety
+/// `p` is live; `bytes` is NUL-terminated.
+pub unsafe fn text_measure(
+    p: *const EeGeText,
+    bytes: *const std::ffi::c_char,
+    characters: c_ulong,
+) -> Option<GeRectangle> {
+    // SAFETY: the caller's contract; no reference is held across a host call
+    unsafe {
+        let (host, font) = ((*p).host, (*p).font);
         let os = (*cppobj::counted::<EeGeFont>(font)).font;
         if os == 0 {
-            return;
+            return None;
         }
         let height = host.op(EeGeObjOp::PlatFontHeight, os, 0, 0) as i32;
         let ops = host.op(EeGeObjOp::TextOps, 0, 0, 0) as *const GeTextOps;
-        let bytes = cppobj::wstr_text(text);
-        let characters = cppobj::wstr_length(text);
         let mut extent = GeRectangle::default();
         ee_ge_text_extent(ops, os as *const c_void, bytes, characters, height, &mut extent);
-        (*p).extent = extent;
+        Some(extent)
     }
 }
 
