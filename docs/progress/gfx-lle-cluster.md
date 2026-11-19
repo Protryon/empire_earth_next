@@ -5,6 +5,92 @@ round 1", "... round 2", "... round 3"). Earlier lanes over the same code: [obj-
 readers over the world views), [lle-rest.md](lle-rest.md), [r4-4-graphics-thread-27-8k.md](r4-4-graphics-thread-27-8k.md),
 [r4-3-graphics-engine-17k.md](r4-3-graphics-engine-17k.md).
 
+## LLE round 9 (branch `rust-lle2b`, 2026-11-19): small FFI modules, the GE arrays on Rust, the LLE UI's forwarders inline
+
+(The lead named the branch `rust-lle2`; that name was an older, merged branch, so this round's is `rust-lle2b`.)
+
+| Commit | What | Net C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 5ff5933ab | U2DSparseArray inline over ee_base::sparse (the set and its C ABI out of ee_sim::astar; rust/base/sparse.h); U2DSparseArray.cpp deleted | -88 |
+| c7e6c0682 | SEConductor inline over rust/audio/sound.h; SEConductor.cpp deleted | -10 |
+| 5434a27b2 | UILayoutUtility and UIEPolledEvent inline; UITrampolines.cpp, UIEPolledEvent.cpp deleted | -32 |
+| 9343d1634 | ee_base::sparse in rustfmt's order, cm_io.rs's test path | 0 |
+| 8c04e48da | UIScrollButton, UIDualButton, UIScalableButton, UIBlinkingButton, UITriStateCheckBox, UITLScrolling inline (UIButtonRust.h to include/lle); six units deleted | -271 |
+| 518ea0918 | The model's array calls and the physical walks' triangles on the Rust arrays (modobj.rs array_op, ee_ge_mod_triangle); the store gate on the game's own arrays with a Rust-side capture (geval vertarr_capture.rs, ge store_capture.rs) | -67 |
+| 140c85103 | The bitmaps' and primitives' vertex calls on the Rust arrays (bmpobj.rs vertex_op) | -37 |
+| 1f5d2b4d7 | UIBitmap and UIESliderChange inline (UIObjHost.h to include/lle); two units deleted | -62 |
+| 5d0c05d87 | UIForm, UIManager, UIControl: one-line forwarders inline | -133 |
+| 59dad8a99 | UICheckBox, UIRadioButton, UITextLabel, UIHotKey, UIBackground, UIFileListBox: one-line forwarders inline | -11 |
+| fbf4f5156 | GEModel, GEModelManager, GETexture, GETextureManager: forwarders inline | -156 |
+
+Round total: **-867** net C++ lines (target 4,000; see "What is left"). Twelve units deleted. Rust added: ee_base
+sparse/ (moved from ee_sim::astar, +1 module), ee_render geval vertarr_capture.rs (+2 tests) and the capture hooks in
+vertarr.rs (+1 test), ge store_capture.rs, modobj.rs array_op and ee_ge_mod_triangle (+1 test), bmpobj.rs vertex_op
+(+1 test). Other lanes' files: none (the store gate, tools/eemodel/storegate, is this lane's).
+
+The census (tools/cpp_deps.py): at the round's start 515 units, 149,975 lines (origin/rust 7779d7db1 with rust-lle1);
+after the merge of origin/rust 645799684, 493 units, 146,363 lines. The LLE UI's cycle went from 28 units (5,149
+lines) to 22 (4,632); the GE core's one cycle of 5 units (2,793 lines) is two now: DX7Rasterizer, GERasterizer and
+GEBitmap (3 units, 1,304 lines) and GEModel with GETexture (2 units, 1,108 lines).
+
+## Gates (LLE round 9)
+
+- Per step on the unmerged branch: `build.py --sim` 0/0, the oracle seeds 2-3 identical, the Rust gate PASS (the
+  first gate after the sparse move failed on a test's path and rustfmt's module order: 9343d1634). The store gate
+  (`tools/eemodel/storegate.py`) PASS, 25,140 digests, before the GE steps, after the arrays' step and after the
+  forwarders' step.
+- Tours (test profile, seed 7) on 1f5d2b4d7 against the round's start exe (origin/rust 7779d7db1 with rust-lle1):
+  the 1/20-clock tour PASS, RFIL 388 matched frames, all equal; the box-select/orders tour PASS (BOX SELECT PASS,
+  ORDERS PASS: gather, repair, repair-queued, move), RFIL 10 matched, 8 different (the normal clock is not
+  repeatable: two runs of one exe differed as much in round 8); the editor exercise PASS; no GX errors. Captures
+  looked at: the game view (the town centre, the citizens, the HUD, the minimap), the box selection's status box and
+  command buttons, the video settings (check boxes, radio buttons, combo boxes).
+- On the merge of origin/rust 645799684 (51 commits; PORT_LEARNINGS conflicts only, resolved as origin/rust's text
+  plus round 8's section; strip_markers, the headers and rust_includes had nothing to do): both builds 0/0 (EE-AOC
+  538 inputs, EE-SIM 539), the test profile 0/0, the oracle seeds 2-7 identical, the Rust gate PASS, the captures at
+  seeds 2-3: oracle PASS (212 digests, 6 without a golden), effects PASS (6), missile PASS (22, 200 without a
+  golden); sim_editor PASS (14,448 lines), the civ builder gate PASS (4,062 lines), scenario_check 27/27, the store
+  gate PASS (25,140).
+- Tours on the merged tree (test profile, seed 7) against the round's start exe: the 1/20-clock tour PASS, RFIL 388
+  matched frames, all equal; the box-select/orders tour PASS (BOX SELECT PASS, ORDERS PASS: gather, repair,
+  repair-queued, move), RFIL 36 matched, 24 different (the normal clock); the editor exercise PASS; no GX errors.
+  Captures looked at: the box selection, the interface settings (sliders, radio buttons, the combo box), the editor
+  (its radio buttons, combo boxes, the minimap).
+- `bash tools/gates.sh` (EE_GATES_TREE = the main checkout's open tree) on the merged tree: GATES PASS (tour; ai-game
+  time-cap PT 13430, units [4, 41, 42], alive [2, 3], classic_lua x 2; lan-game).
+- Not run: the POSIX builds (tools/xbuild.py; its unit lists come from tools/units.py and link/*/units.txt, which this
+  round updated), the save/load matrix (the sparse set's raw form is unchanged code, moved).
+
+## What is left in the LLE, and why (round 9)
+
+- **What the C++ is.** Every unit left in the LLE UI and the GE core is forwarders (one call into Rust) and hosts
+  (the Rust object's calls on C++ objects: the controls' and forms' virtuals, the rasterizer's, the surfaces', the
+  game's subclasses). A forwarder moved into a header saves one or two lines; a whole unit made inline 30 to 60 %.
+  The rest moves only when the hosts' C++ callees are Rust: the controls the game subclasses (the UI lane's shells),
+  the DX7 surfaces and rasterizer, the texture manager's surfaces.
+- **Kept out of line on purpose**: the members the harness's bridge finds by name (UICheckBox::SetChecked,
+  GetIsChecked, UIRadioButton::Check, UIControl::GetTriggerEvent, FireTriggerEvent, UIEditBox::SetText, GetText,
+  GetLineCount, UIComboBox::SetCurrentSelection, GetListBox, GetCurrentSelection, UIManager::UpdateTranslatedKey),
+  and the inline candidates whose bodies need another class complete (UIControl::GetScreenIndex, GetSoundManager,
+  GetDrawingSurface, GetRasterizer, GetMouseLocation, UpdateMouse; UIManager::CreateBackgrounds, GetDrawingSurface):
+  UIControl.h cannot include UIForm.h or UIManager.h (they include it).
+- **The UI units with hosts** (UISlider, UIStatusBar, UIScrollBar, UITextLabel, UIButton, UIGraph, UIFontTable,
+  UIHotKey, UIBackground, UIFileListBox, UIComboBox, UIEditBox, UILBString): their forwarders call a unit-local
+  `XHost::Call`; turning those into private members so the forwarders could move cost as many lines as it saved.
+  The host cases go when the Rust can answer them (the Base and Media ops already shared in UIControl.cpp).
+- **GE**: GERasterizer's 30 setters forward to ee_ge_rast_* in rust/render/ge.h (3,248 lines), which
+  GERasterizer.h (103 includers) does not include; a rastobj module of its own, as geval, would let them inline.
+  The rasterizer host's model and placed-model reads (ModelCenter, ModelBoundingRadius, PlacedScale, ...) could be
+  Rust over cppobj.rs, but rastobj_tests' host uses integer handles: they must become C++-sized objects first, as
+  this round did for the model and bitmap tests. GETerrainMesh's forwarders (134 includers, no ge.h) likewise.
+  GEVertexHost's texture ops call GESurface virtuals (DX7's surfaces).
+- **RTSTile, RTSMiniMap**: RTSTile's unit list is C++ nodes in EETile's pool (FreeUnitNode is EETile's virtual);
+  RTSMiniMap makes C++ surface and texture calls. Their plain parts (GetChecksum, HasUnit, the battle-flag grid)
+  are a few lines each; not moved.
+- **RTSPhysics, RTSPlayer, RTSWorld, RTSGraphics, RTSMouse**: real C++ logic (the physics thread's timer and queue,
+  the players' unit buckets, the world's players and placements, the graphics thread base), each calling C++
+  virtuals of the game's classes. Moving them is the next real reduction in this lane, behind host tables.
+
 ## LLE round 8 (branch `rust-lle1`, 2026-11-19): the leaves as inlines, GEValues gone
 
 | Commit | What | Net C++ (src, include/ee, include/lle) |
@@ -43,24 +129,6 @@ from 532 units / 154,656 lines to 517 / 152,634 before the merge of origin/rust;
 - The census after the merge: 515 units, 149,975 lines; leaves 63 units (3,812 lines).
 - Not run: the POSIX builds (tools/xbuild.py). The changes are portable C++17 (`if constexpr`, templates) and
   Rust, but no macOS or Linux build was made.
-
-## What is left in the LLE, and why (round 8)
-
-- **SCC 3, the GE core** (GEModel, GETexture, GEBitmap, GERasterizer, DX7Rasterizer): what is left is mostly host
-  ops, where Rust objects call C++ virtuals of rasterizers, vertex and polygon arrays, surfaces and textures. The
-  store gate's fakes (tools/eemodel/storegate/fakes.h) subclass GEVertexArray, GEPolygonArray and GERasterizer, so
-  the virtual seam is the gate's design. Next: give the store gate a Rust seam, a capture of the arrays' values on
-  the Rust side, before the model's host can call ee_render::geval directly. The terrain mesh's Time, Fractal and
-  Quantize ops can call ee_base now, but its tests fake the clock and the fractal through them.
-- **SCC 2, the LLE UI** (UIForm 735, UIManager 667, UIControl 492, and 28 small forwarder units): the hosts call
-  UIControl's virtuals, which the game's controls override, so they stay C++ until the controls they reach are
-  Rust kinds (the UI lane's shells, ee/EEUIShell.h). The small units' forwarders could become header inlines. Their
-  constructors need UIForm and UIManager, which keeps a unit for them. A fold into User Interface.cpp was tried and
-  reverted: it moves nothing to Rust.
-- **U2DSparseArray** (162): an inline would include rust/sim/astar.h (3,100 lines, the AI lane's) in 62 units.
-  Moving the sparse array's C ABI to a module of its own first, as with geval, would avoid that.
-- **RTSTile, RTSMiniMap**: RTSTile's unit list is C++ nodes in EETile's pool. RTSMiniMap makes C++ surface and
-  texture calls.
 
 ## Round 3 (branch `rust-gfx-cluster3`, 2026-11-19)
 

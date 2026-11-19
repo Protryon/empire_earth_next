@@ -33284,3 +33284,43 @@ units was the forwarders themselves. This round made them inline members of thei
 - **Not done: folding.** Folding the 28 small LLE UI units into User Interface.cpp built and the oracle was
   identical, but it was reverted. It only saves include lines and moves no C++ to Rust (the lead's call). For the
   GE and UI clusters as Rust objects, see docs/progress/gfx-lle-cluster.md "What is left".
+
+## LLE round 9 (branch rust-lle2b, 2026-11-19): small FFI modules, the GE arrays on Rust, the store gate's Rust-side capture, the LLE UI's forwarders inline
+
+The census's leaves and the GE and UI cycles hold almost no C++ logic any more: what is left are forwarders (a
+member that makes one call into Rust) and hosts (a switch that makes the Rust object's calls on C++ objects). This
+round removed the hosts' cases that only went back into Rust and made forwarders header inlines.
+
+- **A module of its own for a C ABI a header needs.** U2DSparseArray's inlines would have included the AI's
+  3,100-line rust/sim/astar.h in 60 units. The sparse set and its C ABI moved to ee_base::sparse (rust/base/sparse.h:
+  the set, EePoint, EeSparseArray); ee_sim::astar re-exports them (`pub use ee_base::sparse::set as sparse`). A test
+  that named `crate::astar::ffi::ee_sparse_new` needed the new path: a re-export of the type does not bring the
+  functions.
+- **The store gate's fakes moved to a Rust-side capture.** The gate (tools/eemodel/storegate) subclassed
+  GEVertexArray and GEPolygonArray with memory arrays, so the model's array calls had to stay C++ virtuals. Now the
+  gate makes the game's own arrays and turns on ee_render geval vertarr_capture.rs: each array made while it is on
+  keeps a shadow with the old fakes' semantics (every field as floats, a standard array's colours too; 32-bit
+  indices; sets past the end counted and dropped; reads, sizes and copies from the shadow, including the fakes'
+  quirk that GetSize returned the point floats' count, 3 n, and SizeOf 48 bytes each). The 25,140 digests did not
+  change. The switch is thread-local: cargo runs the tests side by side, and a global switch would have turned the
+  capture on under another test's arrays.
+- **Fake handles must be real memory once Rust reads the C++ object.** modobj.rs's array_op, bmpobj.rs's vertex_op
+  and ee_ge_mod_triangle read the C++ array's Rust array (cppobj::CppArray) and fall back to the host only when it
+  is NULL. The tests' hosts used integers (serial x 0x10) as array handles; they are now zeroed allocations of the
+  C++ array's size, and the bitmap replay walks its objects by serial (a BTreeMap keyed by address is no longer in
+  construction order).
+- **Header inlines save little.** A forwarder's comment and body move with it; only the second signature, the
+  unit's includes and its file comment go. A unit made wholly inline saved 30 to 60 % of its lines (UIScrollButton
+  and five more button variants: -271); one-line forwarders moved out of a unit that stays save one or two lines
+  each (build/lle2/inline_oneliners.py did UIForm, UIManager, UIControl, the GE model and texture classes). Turning
+  a unit's static `Host::Call(this, ...)` helpers into private members so that more forwarders could move cost as
+  many lines as it saved and was reverted.
+- **Symbols the harness finds by name stay out of line.** tools/harness/selftest/selftest_inproc.py and the
+  presentation bridge name UICheckBox::SetChecked and GetIsChecked, UIControl::GetTriggerEvent and FireTriggerEvent,
+  UIRadioButton::Check, UIEditBox::SetText, GetText and GetLineCount, UIComboBox::SetCurrentSelection, GetListBox
+  and GetCurrentSelection and UIManager::UpdateTranslatedKey (and UICheckBox's vtable).
+- **git rm stages at once.** Twice a later `git add <paths> && git commit` took the deletions a script's `git rm`
+  had staged into the wrong commit. Check `git status --short` before each commit, or commit with explicit paths.
+- **Write and heredocs.** The Write tool wrote CRLF into a Python script whose later string replacements assumed
+  LF, and a heredoc turned `r"\b"` into a backspace character in a regex. Normalise a generated script's line
+  endings before editing it, and write regex-bearing Python with the Write tool, not through a heredoc.
