@@ -86,6 +86,12 @@ pub trait Effects: Sync {
     fn exists(&self, handle: EffectHandle) -> bool {
         self.kind(handle).is_some()
     }
+    /// `EEGraphicEffect::Get(index)`: the graphic effects table's entry (an `EEGraphicEffect*`; 0 past the table and
+    /// before it is loaded)
+    fn graphic_effect(&self, index: u32) -> u64 {
+        let _ = index;
+        0
+    }
 }
 
 /// The effects before any are registered (and in the tests that register none): every entry point makes nothing
@@ -196,6 +202,7 @@ mod tests {
     #[test]
     fn no_effects_make_nothing() {
         let e = NoEffects;
+        assert_eq!(e.graphic_effect(15), 0);
         let r = e.create(&EffectRequest { graphic_effect: 5, place: EffectPlace::Placed { at: Ge3DPoint::default() } });
         assert_eq!(r, EffectCreated { result: EFFECT_NOT_MADE, handle: EffectHandle::NONE });
         assert_eq!(e.kind(EffectHandle(1)), None);

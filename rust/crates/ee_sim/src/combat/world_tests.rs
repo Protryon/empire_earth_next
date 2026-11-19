@@ -791,6 +791,7 @@ fn the_world_entry_point_dispatches_and_writes_the_tile_only_when_set() {
             footprint_tile: footprint,
         },
         op,
+        class: 0,
     };
     W.with(|w| *w.borrow_mut() = reachable_world());
     let mut tile = [7, 7];
