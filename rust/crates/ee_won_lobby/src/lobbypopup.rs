@@ -267,6 +267,9 @@ impl EeWonLobbyPopup {
             if let Some(r) = crate::modelobj::popup_op(op, a, b) {
                 return r;
             }
+            if let Some(r) = crate::widgets::popup_op(self.popup as isize, op, a, b) {
+                return r;
+            }
             if let (Some(res), Some(r)) = (game_string_op(op), string_row(b)) {
                 (op, b) = (res, r as isize);
             }

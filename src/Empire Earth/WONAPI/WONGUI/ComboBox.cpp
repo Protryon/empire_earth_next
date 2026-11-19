@@ -90,7 +90,6 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
     case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
     case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::BaseSetEnabled: t->Component::SetEnabled(a != 0); return 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
     case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;

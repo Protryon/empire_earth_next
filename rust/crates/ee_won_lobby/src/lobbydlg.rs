@@ -823,6 +823,9 @@ impl EeWonLobbyDlg {
             if let Some(r) = comp_op(op, a, b, c) {
                 return r;
             }
+            if let Some(r) = crate::widgets::dlg_op(self.dialog as isize, op, a, b, c) {
+                return r;
+            }
         }
         match self.host {
             // SAFETY: the host is the C++ dialog's (or a test's), called with the dialog it was given for
