@@ -684,7 +684,7 @@ pub unsafe extern "C" fn ee_data_ai_targeting_table(out: *mut i32) -> bool {
     let Some(t) = *ai_targeting() else { return false };
     for (k, v) in t.iter().flatten().enumerate() {
         // SAFETY: the caller's room
-        unsafe { *out.add(k) = *v as i32 };
+        unsafe { *out.add(k) = i64::from(*v) as i32 };
     }
     true
 }
