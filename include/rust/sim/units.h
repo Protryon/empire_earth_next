@@ -1204,6 +1204,30 @@ constexpr static const int32_t EE_UNITS_CLS_GOAL_HAS_LOCATION = 37;
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 constexpr static const int32_t EE_UNITS_CLS_REQUEST_QUEUED = 38;
 
+/// the mesh `a`'s `GetZ(c, d)` into `io.f`
+constexpr static const int32_t EE_UNITS_CLS_LV_MESH_Z = 85;
+
+/// the mesh `a`'s `SetZ(c, d, io.f)`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_MESH_Z = 86;
+
+/// the tile `a`'s `mHeight = io.f`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_TILE_HEIGHT = 87;
+
+/// `&gWorld.mMap->mTerrainMesh`
+constexpr static const int32_t EE_UNITS_CLS_LV_MAP_MESH = 88;
+
+/// class `b`'s `CreateUnit(c, d, player io.a, foundation io.b, creator a)->mComplexUnit`
+constexpr static const int32_t EE_UNITS_CLS_LV_CREATE_UNIT = 89;
+
+/// unit `a`'s `LinkPart(b)`
+constexpr static const int32_t EE_UNITS_CLS_LV_LINK_PART = 90;
+
+/// unit `a`'s `SetFacing(c)`
+constexpr static const int32_t EE_UNITS_CLS_LV_SET_FACING = 91;
+
+/// `gCameraFollowing = false`
+constexpr static const int32_t EE_UNITS_CLS_LV_CAMERA_OFF = 92;
+
 /// `gWorld.mMap->GetClosestTile(io.p, ...)`'s `mHeight` into `io.f` (0: no tile)
 constexpr static const int32_t EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT = 39;
 
@@ -5591,6 +5615,18 @@ int32_t ee_units_cls_condition(uint64_t class_,
 
 /// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
 int32_t ee_units_cls_base_condition(uint64_t class_, uint64_t unit, uint32_t event);
+
+/// `EEUnitClass::LevelGround(mesh, x, y, z)`.
+///
+/// # Safety
+/// `z` is a writable float.
+void ee_units_lv_level_ground(uint64_t class_, uint64_t mesh, uint64_t x, uint64_t y, float *z);
+
+/// `EEUnitClass::LevelRunway*(airport)` by the direction's facing (0 +y, 1 -y, 2 +x, else -x).
+void ee_units_lv_level_runway(uint64_t unit, uint64_t facing);
+
+/// `EEUnitClass::CreateRunways(airport, player, foundation)`.
+void ee_units_lv_create_runways(uint64_t class_, uint64_t unit, int64_t player, uint8_t foundation);
 
 /// Pushes a point onto a host operation's list.
 ///

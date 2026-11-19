@@ -251,56 +251,7 @@ void EEUnitClass::AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, flo
 // NEAR: the original calls the map's GetTile out of line (0x2f85) at the top; loop counters in swapped slots
 void EEUnitClass::LevelGround(GETerrainMesh* inMesh, unsigned long inX, unsigned long inY, float* outZ)
 {
-    static const float kWallHeight = 0.7f;      // 0x4cc9fc (unit type 0x302)
-    static const float kTowerHeight = 1.5f;     // 0x4cca00 (unit type 0x31f)
-    EEMap* theMap = ::gWorld.GetMap();
-    float theMinimum = 3.4028235e38f;
-    if (theMap == NULL || theMap->GetTile(inX, inY) == NULL)
-        return;
-    unsigned long y;
-    unsigned long x;
-    if (this->GetUnitType() == kUnitTypeGranaryImproved || this->GetUnitType() == kUnitTypeGranary) {
-        float theSum = 0.0f;
-        unsigned long theCount = 0;
-        for (x = inX; x <= inX + this->GetTileSize(); x++) {
-            for (y = inY; y <= inY + this->GetTileSize(); y++) {
-                theSum += inMesh->GetZ(x, y);
-                theCount++;
-            }
-        }
-        *outZ = theSum / theCount + kBuildingZOffset;
-    } else if (this->IsLandBuilding() && this->GetTileSize() > 1 && this->GetUnitType() != kUnitTypeFarm && this->GetUnitType() != kUnitTypeVolcano) {
-        for (x = inX; x <= inX + this->GetTileSize(); x++) {
-            for (y = inY; y <= inY + this->GetTileSize(); y++) {
-                float theZ = inMesh->GetZ(x, y);
-                if (theZ < theMinimum && theZ >= 0.0f)
-                    theMinimum = theZ;
-            }
-        }
-        if (theMinimum == 3.4028235e38f)
-            theMinimum = 0.0f;
-        for (x = inX; x <= inX + this->GetTileSize(); x++) {
-            for (y = inY; y <= inY + this->GetTileSize(); y++) {
-                if (inMesh->GetZ(x, y) >= 0.0f)
-                    inMesh->SetZ(x, y, theMinimum);
-            }
-        }
-        for (x = inX; x < inX + this->GetTileSize(); x++) {
-            for (y = inY; y < inY + this->GetTileSize(); y++) {
-                EEMapTile* theTile = theMap->GetTile(x, y);
-                if (theTile != NULL && theTile->mHeight >= 0.0f)
-                    theTile->mHeight = theMinimum;
-            }
-        }
-        *outZ = kBuildingZOffset + theMinimum;
-        gCameraFollowing = false;
-    } else if (this->IsLandBuilding() && this->GetTileSize() == 1 && this->GetUnitType() != kUnitTypeFarm && this->GetUnitType() != kUnitTypeVolcano && this->GetUnitType() != kUnitTypeCameraObject) {
-        *outZ = inMesh->GetZ(inX, inY);
-    }
-    if (this->GetUnitType() == kUnitTypeSpaceTurret)
-        *outZ = kWallHeight + *outZ;
-    else if (this->GetUnitType() == kUnitTypeOrbitalSpaceStation)
-        *outZ = kTowerHeight + *outZ;
+    ee_units_lv_level_ground(EEObj(this), EEObj(inMesh), inX, inY, outZ);   // ee_units cls_level.rs
 }
 
 // (0x630c55 ApplyAreaDamage, 0x630fd2 ApplyHit and the damage of one hit: ee_combat damage.rs since the tenth
@@ -871,148 +822,31 @@ void EEUnitClass::ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer)
 // Builds the airport's three runway pieces in its facing direction on levelled ground and links them to it
 void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation)
 {
-    // Original 0x563a6c is entry 0xf0 of the genuine complete unit-class table.
-    long theHeading = inUnit->mFacing;
-    long theX = inUnit->GetTileX();
-    long theY = inUnit->GetTileY();
-    long theSize = this->GetTileSize();
-    EEUnitClass* theClass = gUnitClassTable[kUnitTypeAirportRunway];
-    long thePlayer = inPlayer->GetPlayerID();
-    EEComplexUnit* theFirst;
-    EEComplexUnit* theSecond;
-    EEComplexUnit* theThird;
-    switch (theHeading) {
-    case 0:
-        EEUnitClass::LevelRunwayPosY(inUnit);
-        theY += theSize;
-        theFirst = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, inUnit)->mComplexUnit;
-        theY += theSize;
-        theSecond = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, theFirst)->mComplexUnit;
-        theThird = theClass->CreateUnit(theX, theY + theSize, thePlayer, inIsFoundation, theSecond)->mComplexUnit;
-        break;
-    case 1:
-        EEUnitClass::LevelRunwayNegY(inUnit);
-        theY -= theSize;
-        theFirst = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, inUnit)->mComplexUnit;
-        theY -= theSize;
-        theSecond = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, theFirst)->mComplexUnit;
-        theThird = theClass->CreateUnit(theX, theY - theSize, thePlayer, inIsFoundation, theSecond)->mComplexUnit;
-        break;
-    case 2:
-        EEUnitClass::LevelRunwayPosX(inUnit);
-        theX += theSize;
-        theFirst = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, inUnit)->mComplexUnit;
-        theX += theSize;
-        theSecond = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, theFirst)->mComplexUnit;
-        theThird = theClass->CreateUnit(theX + theSize, theY, thePlayer, inIsFoundation, theSecond)->mComplexUnit;
-        break;
-    default:
-        EEUnitClass::LevelRunwayNegX(inUnit);
-        theX -= theSize;
-        theFirst = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, inUnit)->mComplexUnit;
-        theX -= theSize;
-        theSecond = theClass->CreateUnit(theX, theY, thePlayer, inIsFoundation, theFirst)->mComplexUnit;
-        theThird = theClass->CreateUnit(theX - theSize, theY, thePlayer, inIsFoundation, theSecond)->mComplexUnit;
-        break;
-    }
-    theThird->LinkPart(theSecond);
-    theSecond->LinkPart(theFirst);
-    theFirst->LinkPart(inUnit);
-    theFirst->SetFacing(theHeading);
-    theSecond->SetFacing(theHeading);
-    theThird->SetFacing(theHeading);
-    gCameraFollowing = false;
+    ee_units_lv_create_runways(EEObj(this), EEObj(inUnit), inPlayer->GetPlayerID(), inIsFoundation);   // cls_level.rs
 }
 
 // Flattens the ground on the +X side of the airport (four airport lengths) to the airport tile's height
 void EEUnitClass::LevelRunwayPosX(EEComplexUnit* inUnit)
 {
-    long theSize = inUnit->mUnitClass->mTileSize;
-    long theY = inUnit->GetTileY();
-    EEMap* theMap = ::gWorld.mMap;
-    long theLength = theSize * 4;
-    long theX = inUnit->GetTileX();
-    if (theMap == NULL)
-        return;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile == NULL)
-        return;
-    float theHeight = theTile->mHeight;
-    long y;
-    for (y = theY; y <= theY + theSize; y++)
-        for (long x = theX; x <= theX + theLength; x++)
-            theMap->mTerrainMesh.SetZ(x, y, theHeight);
-    for (y = theY; y < theY + theSize; y++)
-        for (long x = theX; x < theX + theLength; x++)
-            theMap->GetTile(x, y)->mHeight = theHeight;
+    ee_units_lv_level_runway(EEObj(inUnit), 2);   // ee_units cls_level.rs
 }
 
 // Flattens the ground on the +Y side of the airport (four airport lengths) to the airport tile's height
 void EEUnitClass::LevelRunwayPosY(EEComplexUnit* inUnit)
 {
-    long theSize = inUnit->mUnitClass->mTileSize;
-    long theX = inUnit->GetTileX();
-    EEMap* theMap = ::gWorld.mMap;
-    long theY = inUnit->GetTileY();
-    if (theMap == NULL)
-        return;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile == NULL)
-        return;
-    float theHeight = theTile->mHeight;
-    long y;
-    for (y = theY; y <= theY + theSize * 4; y++)
-        for (long x = theX; x <= theX + theSize; x++)
-            theMap->mTerrainMesh.SetZ(x, y, theHeight);
-    for (y = theY; y < theY + theSize * 4; y++)
-        for (long x = theX; x < theX + theSize; x++)
-            theMap->GetTile(x, y)->mHeight = theHeight;
+    ee_units_lv_level_runway(EEObj(inUnit), 0);   // ee_units cls_level.rs
 }
 
 // Flattens the ground on the -Y side of the airport (three lengths, to its first row) to the airport's height
 void EEUnitClass::LevelRunwayNegY(EEComplexUnit* inUnit)
 {
-    long theX = inUnit->GetTileX();
-    EEMap* theMap = ::gWorld.mMap;
-    long theSize = inUnit->mUnitClass->mTileSize;
-    long theY = inUnit->GetTileY();
-    if (theMap == NULL)
-        return;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile == NULL)
-        return;
-    float theHeight = theTile->mHeight;
-    long theStart = theY - theSize * 3;
-    long y;
-    for (y = theStart; y <= theY + 1; y++)
-        for (long x = theX; x <= theX + theSize; x++)
-            theMap->mTerrainMesh.SetZ(x, y, theHeight);
-    for (y = theStart; y < theY + 1; y++)
-        for (long x = theX; x < theX + theSize; x++)
-            theMap->GetTile(x, y)->mHeight = theHeight;
+    ee_units_lv_level_runway(EEObj(inUnit), 1);   // ee_units cls_level.rs
 }
 
 // Flattens the ground on the -X side of the airport (three lengths, to its first column) to the airport's height
 void EEUnitClass::LevelRunwayNegX(EEComplexUnit* inUnit)
 {
-    long theSize = inUnit->mUnitClass->mTileSize;
-    long theY = inUnit->GetTileY();
-    EEMap* theMap = ::gWorld.mMap;
-    long theLength = theSize * 3;
-    long theX = inUnit->GetTileX();
-    if (theMap == NULL)
-        return;
-    EEMapTile* theTile = theMap->GetTile(theX, theY);
-    if (theTile == NULL)
-        return;
-    float theHeight = theTile->mHeight;
-    long y;
-    for (y = theY; y <= theY + theSize; y++)
-        for (long x = theX - theLength; x <= theX + 1; x++)
-            theMap->mTerrainMesh.SetZ(x, y, theHeight);
-    for (y = theY; y < theY + theSize; y++)
-        for (long x = theX - theLength; x < theX + 1; x++)
-            theMap->GetTile(x, y)->mHeight = theHeight;
+    ee_units_lv_level_runway(EEObj(inUnit), 3);   // ee_units cls_level.rs
 }
 
 // Releases every unit class in the class table
@@ -1933,52 +1767,65 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         return 0;
     }
     case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
-    EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    if (theTags == NULL || theTags->mPoints.size() == 0)
+        EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
+        if (theTags == NULL || theTags->mPoints.size() == 0)
+            return 0;
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        EETagPointList::Scale(theTransformation, inUnit->GetStats()->GetScale());
+        theTags->mPoints[(size_t)inC]->GetPoint(theOther->mPhysicalModel.GetFrame(), theTransformation, thePoint);
+        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
+        return 1;
+    }
+    case EE_UNITS_CLS_CR_SET_ORIENTATION: inUnit->mOrientation = GEOrientation(io->p[0], io->p[1], io->p[2]); return 0;
+    case EE_UNITS_CLS_CR_SET_POSITION: {
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        theTransformation.SetPosition(thePoint);
+        inUnit->SetTransformation(theTransformation, true);
         return 0;
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    EETagPointList::Scale(theTransformation, inUnit->GetStats()->GetScale());
-    theTags->mPoints[(size_t)inC]->GetPoint(theOther->mPhysicalModel.GetFrame(), theTransformation, thePoint);
-    io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-    return 1;
-}
-case EE_UNITS_CLS_CR_SET_ORIENTATION: inUnit->mOrientation = GEOrientation(io->p[0], io->p[1], io->p[2]); return 0;
-case EE_UNITS_CLS_CR_SET_POSITION: {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    theTransformation.SetPosition(thePoint);
-    inUnit->SetTransformation(theTransformation, true);
-    return 0;
-}
-case EE_UNITS_CLS_CR_SET_SCALE: inUnit->mPhysicalModel.SetScale(io->f); return 0;
-case EE_UNITS_CLS_CR_ROUTE_DOCK: ((EEUnitClass*)(uintptr_t)inB)->RouteDockWaypoint(inUnit); return 0;
-case EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC: return inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] != 0;
-case EE_UNITS_CLS_CR_DECK_GOAL: {
-    EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
-    if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
-        theLocation = inUnit->GetGoal();
-    if (theLocation == NULL) {
-        EEUGRust* theMove = EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false);
-        inUnit->ClearGoalQueue(0);
-        inUnit->SetGoal(theMove, 0, 0);
-    } else
-        EESetLocationGoalPoint(theLocation, thePoint);
-    return 0;
-}
-case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT:
-    thePoint = EELocationGoalPoint(inUnit->GetGoal());
-    io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
-    return 0;
-case EE_UNITS_CLS_CR_HOME_FIRST_SLOT: {
-    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
-    if (theControl->GetNumSlots() > 0)
-        inUnit->SetHomeBase(theControl->GetSlotAirport(0));
-    else
-        inUnit->Kill(true, false, false);
-    return EEObj(inUnit->mHomeBase);
-}
-case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
-case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, thePoint); return 0;
-case EE_UNITS_CLS_CR_CAN_GET_TO: return gContinentManager.CanGetTo(inUnit, (long)inC, (long)inD);
+    }
+    case EE_UNITS_CLS_CR_SET_SCALE: inUnit->mPhysicalModel.SetScale(io->f); return 0;
+    case EE_UNITS_CLS_CR_ROUTE_DOCK: ((EEUnitClass*)(uintptr_t)inB)->RouteDockWaypoint(inUnit); return 0;
+    case EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC: return inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] != 0;
+    case EE_UNITS_CLS_CR_DECK_GOAL: {
+        EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
+        if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
+            theLocation = inUnit->GetGoal();
+        if (theLocation == NULL) {
+            EEUGRust* theMove = EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false);
+            inUnit->ClearGoalQueue(0);
+            inUnit->SetGoal(theMove, 0, 0);
+        } else
+            EESetLocationGoalPoint(theLocation, thePoint);
+        return 0;
+    }
+    case EE_UNITS_CLS_CR_LOCATION_GOAL_POINT:
+        thePoint = EELocationGoalPoint(inUnit->GetGoal());
+        io->p[0] = thePoint.mX; io->p[1] = thePoint.mY; io->p[2] = thePoint.mZ;
+        return 0;
+    case EE_UNITS_CLS_CR_HOME_FIRST_SLOT: {
+        EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+        if (theControl->GetNumSlots() > 0)
+            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+        else
+            inUnit->Kill(true, false, false);
+        return EEObj(inUnit->mHomeBase);
+    }
+    case EE_UNITS_CLS_CR_RANDOM: io->f = gPhysics->mRandom.Generate(); return 0;
+    case EE_UNITS_CLS_CR_HEIGHT_AT: io->f = ((EEUnitClass*)(uintptr_t)inB)->GetHeightAt(inUnit, thePoint); return 0;
+    case EE_UNITS_CLS_CR_CAN_GET_TO: return gContinentManager.CanGetTo(inUnit, (long)inC, (long)inD);
+    // the ground levelling's (cls_level.rs): the mesh and the tile are the handle a
+    case EE_UNITS_CLS_LV_MESH_Z: io->f = ((GETerrainMesh*)(uintptr_t)inUnit)->GetZ((unsigned long)inC, (unsigned long)inD); return 0;
+    case EE_UNITS_CLS_LV_SET_MESH_Z: ((GETerrainMesh*)(uintptr_t)inUnit)->SetZ((unsigned long)inC, (unsigned long)inD, io->f); return 0;
+    case EE_UNITS_CLS_LV_SET_TILE_HEIGHT:
+        if (inUnit != NULL)
+            ((EEMapTile*)(uintptr_t)inUnit)->mHeight = io->f;
+        return 0;
+    case EE_UNITS_CLS_LV_MAP_MESH: return EEObj(&::gWorld.mMap->mTerrainMesh);
+    case EE_UNITS_CLS_LV_CREATE_UNIT:
+        return EEObj(((EEUnitClass*)(uintptr_t)inB)->CreateUnit((long)inC, (long)inD, (long)io->a, io->b != 0, inUnit)->mComplexUnit);
+    case EE_UNITS_CLS_LV_LINK_PART: inUnit->LinkPart(theOther); return 0;
+    case EE_UNITS_CLS_LV_SET_FACING: inUnit->SetFacing((unsigned long)inC); return 0;
+    case EE_UNITS_CLS_LV_CAMERA_OFF: gCameraFollowing = false; return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;
