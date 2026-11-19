@@ -16,7 +16,7 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::units::unit_load::*;
 use crate::units::unit_save::*;
-use crate::world::view::{herd_id, patrol_group_id, UnitView, WorldRead};
+use crate::world::view::{herd_id, UnitView, WorldRead};
 use crate::world_field;
 
 /// `(unsigned long)-1`, the original's "no unit" id
@@ -91,8 +91,8 @@ fn query(t: &WorldRead, unit: u64, op: i32, index: u32) -> Option<EeUnitsUnitSav
                 }
                 EE_UNITS_UNIT_SAVE_ID_PATROL_GROUP => match u.patrol_group_handle() {
                     0 => NONE,
-                    // SAFETY: a live unit's patrol group is live while it points to it
-                    g => (unsafe { patrol_group_id(g) }) as c_ulong,
+                    // a live unit's patrol group is live while it points to it (patrol_group.rs' object)
+                    g => crate::units::patrol_group::group_fields(g).id as c_ulong,
                 },
                 EE_UNITS_UNIT_SAVE_ID_PREVIOUS_PART => unit_id_or_none(&u, u.previous_part_handle()),
                 EE_UNITS_UNIT_SAVE_ID_NEXT_PART => unit_id_or_none(&u, u.next_part_handle()),
@@ -243,7 +243,10 @@ impl<H: SaveHost> ViewSaveHost<'_, H> {
 impl<H: SaveHost> SaveHost for ViewSaveHost<'_, H> {
     fn op(&mut self, op: i32, index: u32, io: &mut EeUnitsUnitSaveIo) -> i32 {
         match op {
-            EE_UNITS_UNIT_SAVE_MAX | EE_UNITS_UNIT_SAVE_FLOAT | EE_UNITS_UNIT_SAVE_COLLISION_TILE | EE_UNITS_UNIT_SAVE_ID => {
+            EE_UNITS_UNIT_SAVE_MAX
+            | EE_UNITS_UNIT_SAVE_FLOAT
+            | EE_UNITS_UNIT_SAVE_COLLISION_TILE
+            | EE_UNITS_UNIT_SAVE_ID => {
                 // SAFETY: the save runs on the thread that holds the world (the saved game's writer)
                 let answer = query(&unsafe { WorldRead::begin() }, self.unit, op, index);
                 if let Some(a) = answer {
@@ -305,7 +308,11 @@ fn load_set(unit: u64, index: u32, io: &EeUnitsUnitSaveIo) -> bool {
         }
         EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_X | EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y => {
             let at = l.complex_collision_tile
-                + if index == EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y { std::mem::size_of::<c_long>() as u64 } else { 0 };
+                + if index == EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y {
+                    std::mem::size_of::<c_long>() as u64
+                } else {
+                    0
+                };
             // SAFETY: `mCollisionTile`'s long members
             unsafe { store::<c_long>(unit, at, io.i as c_long) };
             return true;

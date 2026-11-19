@@ -205,8 +205,6 @@ pub struct EeWorldLayout {
     pub build_entry_flag: u64,
     /// `EEHerd::mID` (an `unsigned short`)
     pub herd_id: u64,
-    /// `EEPPatrolGroup::mID` (an `unsigned long`)
-    pub patrol_group_id: u64,
     /// `EEUnitClass::mProjectileClass` (an `EEUnitClass*`) and `mAttachedEffect` (the first of the class's 29
     /// `EEGraphicEffect*` members, `GetEffects()`)
     pub class_projectile_class: u64,

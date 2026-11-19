@@ -176,7 +176,10 @@ fn ids_from_pointer_members() {
     assert_eq!(ask(&u, EE_UNITS_UNIT_SAVE_ID, EE_UNITS_UNIT_SAVE_ID_COMMAND).0, 0);
     assert_eq!(ask(&u, EE_UNITS_UNIT_SAVE_ID, EE_UNITS_UNIT_SAVE_ID_LAUNCHER_CLASS).0, 0);
     // `(long)` of the uint32_t value: -1 where long is 32 bits
-    assert_eq!(ask(&u, EE_UNITS_UNIT_SAVE_ID, EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT).0, 0xffff_ffffu32 as c_long as i64);
+    assert_eq!(
+        ask(&u, EE_UNITS_UNIT_SAVE_ID, EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT).0,
+        0xffff_ffffu32 as c_long as i64
+    );
     assert_eq!(ask(&u, EE_UNITS_UNIT_SAVE_ID, EE_UNITS_UNIT_SAVE_ID_HEAL_EFFECT).0, 3);
     // no behaviour table registered: no entry matches a set pointer
     u.ptrs[8] = 0x1234;
@@ -294,5 +297,8 @@ fn load_stores_in_place() {
     assert_eq!(u.ptrs[5], usize::MAX);
     assert_eq!(u.ptrs[6], usize::MAX);
     assert_eq!((u.collision[1], u.frame, u.herd), (-7, 4, 12));
-    assert_eq!(rec.ops.iter().map(|o| o.1).collect::<Vec<_>>(), vec![EE_UNITS_UNIT_LOAD_SET_SCALE, EE_UNITS_UNIT_LOAD_SET_ACTION]);
+    assert_eq!(
+        rec.ops.iter().map(|o| o.1).collect::<Vec<_>>(),
+        vec![EE_UNITS_UNIT_LOAD_SET_SCALE, EE_UNITS_UNIT_LOAD_SET_ACTION]
+    );
 }

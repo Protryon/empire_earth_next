@@ -30,6 +30,7 @@ pub mod ai;
 pub mod animate;
 pub mod atc;
 pub mod atc_save;
+pub mod atc_views;
 pub mod boarding;
 pub mod build;
 pub mod calamity;

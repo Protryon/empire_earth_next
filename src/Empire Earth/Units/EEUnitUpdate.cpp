@@ -518,7 +518,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_QUEUE_TAKEOFF: {
         EEComplexUnit* theCargo = theUnit->FindPassenger(theUnit->mExitingUnitID);
         if (theCargo != NULL)
-            theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1]->QueueRequest(theUnit, theCargo, 0);
+            ee_units_atc_queue_request(theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1], theUnit, theCargo, 0);
         break;
     }
     case EE_UNITS_ACT_RELEASE_UNIT:

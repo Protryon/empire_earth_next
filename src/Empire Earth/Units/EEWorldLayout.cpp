@@ -33,7 +33,6 @@
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
-#include "ee/EEPPatrolGroup.h"
 #include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
@@ -209,7 +208,6 @@ void EEWorldLayoutRegister()
     theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
     theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
     theLayout.herd_id = offsetof(EEHerd, mID);
-    theLayout.patrol_group_id = offsetof(EEPPatrolGroup, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
     theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
     if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))

@@ -274,10 +274,10 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
                     fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%ld has an id of %ld(%08lx)\n", m, theID, theID);
                 }
             }
-            thePlayer->mAirTraffic[0]->Dump(theFile);
-            thePlayer->mAirTraffic[1]->Dump(theFile);
-            thePlayer->mAirTraffic[2]->Dump(theFile);
-            thePlayer->mAirTraffic[3]->Dump(theFile);
+            ee_units_atc_dump(thePlayer->mAirTraffic[0], theFile);
+            ee_units_atc_dump(thePlayer->mAirTraffic[1], theFile);
+            ee_units_atc_dump(thePlayer->mAirTraffic[2], theFile);
+            ee_units_atc_dump(thePlayer->mAirTraffic[3], theFile);
         }
         gPathManager.DumpOutOfSynch(theFile);
         if (inFlags & 4)
@@ -327,10 +327,10 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         }
         if (!(inFlags & 0x40))
             continue;
-        theChecksum += thePlayer->mAirTraffic[0]->GetChecksum();
-        theChecksum += thePlayer->mAirTraffic[1]->GetChecksum();
-        theChecksum += thePlayer->mAirTraffic[2]->GetChecksum();
-        theChecksum += thePlayer->mAirTraffic[3]->GetChecksum();
+        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[0]);
+        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[1]);
+        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[2]);
+        theChecksum += ee_units_atc_checksum(thePlayer->mAirTraffic[3]);
     }
     theChecksum += this->mCurrentTick + this->mRandom.GetSeed() + this->mInputMessagesProcessed;
     theChecksum += EECPOutOfSynchChecksum();   // new: the players' resources and the AI's state (ee/EECPTrace.h)

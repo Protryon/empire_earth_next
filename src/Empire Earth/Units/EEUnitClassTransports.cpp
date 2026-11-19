@@ -151,8 +151,8 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     case EE_UNITS_CLS_GOAL_HAS_LOCATION:
         return EEGoalHasLocation(theUnit->GetGoal());
     case EE_UNITS_CLS_REQUEST_QUEUED: {
-        EEAirTrafficControl* theControl = theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1];
-        return theControl->GetQueuePosition(theUnit, 1) >= 0 || theControl->GetQueuePosition(theUnit, 0) >= 0;
+        EeUnitsAtc* theControl = theUnit->mPlayer->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1];
+        return ee_units_atc_queue_position(theControl, theUnit, 1) >= 0 || ee_units_atc_queue_position(theControl, theUnit, 0) >= 0;
     }
     case EE_UNITS_CLS_QUEUE_GOALS:
         return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();

@@ -581,9 +581,9 @@ void EEComplexUnit::Invalidate()
         this->mLastAttacker->Dereference();
     this->mLastAttacker = NULL;
     if (this->mPatrolGroup) {
-        this->mPatrolGroup->RemoveUnit(this);
+        ee_units_pg_remove(this->mPatrolGroup, this);
         if (this->mPatrolGroup) {
-            this->mPatrolGroup->UReferenceCounter::Dereference();
+            ee_units_pg_dereference(this->mPatrolGroup);
             this->mPatrolGroup = NULL;
         }
     }
@@ -739,7 +739,7 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
     this->SetGatheredResource(NULL);
     if (this->GetUnitClass() != NULL) {
         if (this->GetUnitClass()->IsAirBase() && this->GetUnitClass()->mAirTrafficType != 0)
-            this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1]->ClearAirportQueue(this, inIndex);
+            ee_units_atc_clear_airport_queue(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this, inIndex);
         this->RefreshGoals();
         this->RefreshActiveGoal();
     }
@@ -1865,9 +1865,9 @@ void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
     this->DropPath();
     if (this->GetUnitClass()->mAirTrafficType != 0) {
         if (this->GetUnitClass()->IsAirBase())
-            this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(this);
+            ee_units_atc_remove_airport(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this);
         else
-            this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1]->RemoveCargoWeight(this);
+            ee_units_atc_remove_cargo_weight(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this);
     }
     this->ClearCollisionState();
     this->StartAction(inKilled ? 6000 : 6003);
@@ -2723,8 +2723,8 @@ void EEComplexUnit::StartProduction()
                 EEUnitClass* theClass = gUnitClassTable[theType];
                 theTimeScale = this->GetPlayer()->GetUpgrade(theType)->mBuildTimeScale;
                 if (theClass->IsAircraft()) {
-                    EEAirTrafficControl* theTraffic = this->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1];
-                    theAllowed = theClass->mWeight <= theTraffic->GetMaxCargo() - theTraffic->GetUsedCargo();
+                    EeUnitsAtc* theTraffic = this->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1];
+                    theAllowed = theClass->mWeight <= ee_units_atc_cargo(theTraffic, 0) - ee_units_atc_cargo(theTraffic, 1);
                 }
             }
             if (!theAllowed)
@@ -2896,7 +2896,7 @@ void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButt
                 theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY());
             if (thePlayer) {
                 if (theUnit->mUnitClass->mAirTrafficType != 0)
-                    thePlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1]->AddAirport(theUnit);
+                    ee_units_atc_add_airport(thePlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1], theUnit);
                 thePlayer->UnitCompleted(theUnit);
                 long theType = theUnit->mUnitClass->GetUnitType();
                 if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
@@ -2984,9 +2984,9 @@ void EEComplexUnit::SetDisabled(bool inAway, long inReason)
     this->mDisabledReason = inReason;
     if (theAirport != 0 && this->GetUnitClass()->IsAirBase()) {
         if (this->mIsDisabled)
-            this->mPlayer->mAirTraffic[theAirport - 1]->RemoveAirport(this);
+            ee_units_atc_remove_airport(this->mPlayer->mAirTraffic[theAirport - 1], this);
         else
-            this->mPlayer->mAirTraffic[theAirport - 1]->AddAirport(this);
+            ee_units_atc_add_airport(this->mPlayer->mAirTraffic[theAirport - 1], this);
     }
     if (inAway) {
         if (inReason == 0x1a || inReason == 0x1c) {
@@ -3077,10 +3077,10 @@ void EEComplexUnit::LinkPart(EEComplexUnit* inUnit)
 void EEComplexUnit::SetPatrolGroup(EEPPatrolGroup* inGroup)
 {
     if (this->mPatrolGroup)
-        this->mPatrolGroup->Dereference();
+        ee_units_pg_dereference(this->mPatrolGroup);
     this->mPatrolGroup = inGroup;
     if (inGroup)
-        inGroup->Reference();
+        ee_units_pg_reference(inGroup);
 }
 
 inline void EEUnitVectorItem::AddFront(EEUnitGoal* inGoal)
@@ -3272,7 +3272,7 @@ void EEComplexUnit::Halt()
     this->ClearGoalQueue(0);
     this->ClearGoals(0);
     if (this->GetUnitClass()->IsAirBase())
-        this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1]->ClearAirportQueue(this, 0);
+        ee_units_atc_clear_airport_queue(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this, 0);
     if (this->GetUnitClass()->mCategory == kUnitCategoryAirplane || this->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship)
         this->StartAction(kActionCircle);
     else

@@ -693,7 +693,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     else {
         this->mPatrolGroup = this->GetPlayer()->GetPatrolGroup(USavedID(this->mPatrolGroup));
         if (this->mPatrolGroup != NULL)
-            this->mPatrolGroup->Reference();
+            ee_units_pg_reference(this->mPatrolGroup);
         else
             theResult = 3;
     }

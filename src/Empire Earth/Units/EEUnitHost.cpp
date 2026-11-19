@@ -262,7 +262,7 @@ extern "C" uint32_t ee_units_host_town_patrol_point(uint32_t inUnit, uint8_t* ou
     *outFound = 0;
     if (theSite && theSite->mPatrolGroup) {
         *outFound = 1;
-        EEComplexUnit* theNearest = theSite->mPatrolGroup->GetNearest(theUnit->GetTileX(), theUnit->GetTileY());
+        EEComplexUnit* theNearest = static_cast<EEComplexUnit*>(ee_units_pg_nearest(theSite->mPatrolGroup, theUnit->GetTileX(), theUnit->GetTileY()));
         thePoint = theNearest != NULL ? static_cast<uint32_t>(theNearest->mUnitID) : 0xffffffffu;
     }
     return thePoint;
@@ -272,10 +272,8 @@ extern "C" void ee_units_host_patrol_add_unit_tile(uint32_t inUnit, uint32_t inT
 {
     EEComplexUnit* theUnit = ComplexOf(inUnit);
     EEComplexUnit* theTarget = ComplexOf(inTarget);
-    GE2DPoint thePoint;
-    thePoint.SetX((float)theTarget->mTileX);
-    thePoint.SetY((float)theTarget->mTileY);
-    theUnit->mPatrolGroup->AddPoint(thePoint, static_cast<EEPlayer*>(inPlayer)->mPlayerID);
+    ee_units_pg_add_point(theUnit->mPatrolGroup, (float)theTarget->mTileX, (float)theTarget->mTileY,
+                          (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID);
 }
 
 extern "C" void* ee_units_host_unit_patrol_group(uint32_t inUnit)
@@ -330,17 +328,17 @@ extern "C" void ee_units_host_group_keep_non_citizens(void* inGroup)
 extern "C" void ee_units_host_patrol_new_lone(void* inPlayer, float inX, float inY)
 {
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
-    EEPPatrolGroup* thePatrolGroup = new EEPPatrolGroup();
-    thePatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    EEPPatrolGroup* thePatrolGroup = ee_units_pg_new();
+    ee_units_pg_add_point(thePatrolGroup, inX, inY, (uint32_t)thePlayer->mPlayerID);
     thePlayer->AddPatrolGroup(thePatrolGroup);
-    thePatrolGroup->Dereference();
+    ee_units_pg_dereference(thePatrolGroup);
 }
 
 // a selected path point: the point into its route after it
 extern "C" void ee_units_host_patrol_insert_point_at(uint32_t inUnit, float inX, float inY, void* inPlayer)
 {
     EEComplexUnit* theUnit = ComplexOf(inUnit);
-    theUnit->mPatrolGroup->InsertPatrolPointAt(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID, theUnit);
+    ee_units_pg_insert_at(theUnit->mPatrolGroup, inX, inY, (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID, theUnit);
 }
 
 // the route of the unit's current goal when it is a patrol (EEGoalCast<EEUGPatrol>(GetGoal())), else NULL; a read
@@ -353,7 +351,7 @@ extern "C" void* ee_units_host_unit_goal_patrol_route(uint32_t inUnit)
 
 extern "C" void ee_units_host_patrol_add_point(void* inRoute, float inX, float inY, void* inPlayer)
 {
-    static_cast<EEPPatrolGroup*>(inRoute)->AddPoint(GE2DPoint(inX, inY), static_cast<EEPlayer*>(inPlayer)->mPlayerID);
+    ee_units_pg_add_point(static_cast<EEPPatrolGroup*>(inRoute), inX, inY, (uint32_t)static_cast<EEPlayer*>(inPlayer)->mPlayerID);
 }
 
 // a new patrol goal's route: the point added, the route registered with the player
@@ -361,7 +359,7 @@ extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, flo
 {
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
     EEUGRust* theGoal = static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal));
-    theGoal->GetPatrolGroup()->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    ee_units_pg_add_point(theGoal->GetPatrolGroup(), inX, inY, (uint32_t)thePlayer->mPlayerID);
     thePlayer->AddPatrolGroup(theGoal->GetPatrolGroup());
 }
 
@@ -776,7 +774,7 @@ extern "C" void ee_units_host_unit_clear_air_traffic(uint32_t inUnit)
 {
     EEComplexUnit* theUnit = ComplexOf(inUnit);
     EEUnitClass* theClass = theUnit->GetUnitClass();
-    theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
+    ee_units_atc_clear_airport_queue(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], theUnit, 0);
 }
 
 extern "C" void ee_units_host_unit_refresh_goals(uint32_t inUnit)

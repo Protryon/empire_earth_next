@@ -722,16 +722,6 @@ pub unsafe fn herd_id(herd: u64) -> u16 {
     unsafe { member(herd as usize, layout().herd_id) }
 }
 
-/// `EEPPatrolGroup::mID` of a live patrol group (`UnitView::patrol_group_handle`).
-///
-/// # Safety
-/// `group` is a live `EEPPatrolGroup*`.
-pub unsafe fn patrol_group_id(group: u64) -> u64 {
-    // SAFETY: the caller's contract
-    let v: c_ulong = unsafe { member(group as usize, layout().patrol_group_id) };
-    v as u64
-}
-
 /// A goal's `mKind` and `mID` (None for 0).
 fn goal_kind_id(goal: usize) -> Option<(u8, u32)> {
     if goal == 0 {

@@ -707,8 +707,6 @@ struct EeWorldLayout {
   uint64_t build_entry_flag;
   /// `EEHerd::mID` (an `unsigned short`)
   uint64_t herd_id;
-  /// `EEPPatrolGroup::mID` (an `unsigned long`)
-  uint64_t patrol_group_id;
   /// `EEUnitClass::mProjectileClass` (an `EEUnitClass*`) and `mAttachedEffect` (the first of the class's 29
   /// `EEGraphicEffect*` members, `GetEffects()`)
   uint64_t class_projectile_class;

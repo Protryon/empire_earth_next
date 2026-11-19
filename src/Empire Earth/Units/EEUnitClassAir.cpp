@@ -185,7 +185,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     GE3DPoint theTarget;
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
-    EEAirTrafficControl* theAirTraffic = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    EeUnitsAtc* theAirTraffic = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     EEUnitGoal* theGoal = inUnit->mGoalState;
     EEUnit* theEnemy;
     switch (inOperation) {
@@ -193,7 +193,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         theClass->ApproachCarrier(inUnit, inA != 0);
         break;
     case EE_UNITS_ACT_BOARD_CARRIER:
-        theAirTraffic->RemovePlane(inUnit->mHomeBase, inUnit);
+        ee_units_atc_remove_plane(theAirTraffic, inUnit->mHomeBase, inUnit);
         inUnit->mHomeBase->LoadCargo(inUnit, 1, 0);   // the carrier takes the plane aboard
         inUnit->SetHomeBase(NULL);
         inUnit->SetIsCommandable(true);
@@ -215,7 +215,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         break;
     }
     case EE_UNITS_ACT_FIND_NEAREST_AIRPORT:
-        *inoutAirport = theAirTraffic->FindNearestAirport(inUnit);
+        *inoutAirport = static_cast<EEComplexUnit*>(ee_units_atc_find_nearest_airport(theAirTraffic, inUnit));
         return *inoutAirport != NULL ? 1 : 0;
     case EE_UNITS_ACT_SET_HOME_BASE_FOUND:
         inUnit->SetHomeBase(*inoutAirport);
@@ -265,15 +265,15 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     case EE_UNITS_ACT_TAKEOFF:
         {
             if (inUnit->mHomeBase == NULL) {
-                if (theAirTraffic->GetNumSlots() == 0)
+                if (ee_units_atc_slot_count(theAirTraffic) == 0)
                     inUnit->Kill(true, false, false);
                 else {
                     if (inUnit->mContainer == NULL)
-                        inUnit->SetHomeBase(theAirTraffic->GetSlotAirport(0));
+                        inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theAirTraffic, 0)));
                     else {
-                        for (unsigned long i = 0; i < theAirTraffic->GetNumSlots(); i++) {
-                            if (inUnit->mContainer == theAirTraffic->GetSlotAirport(i))
-                                inUnit->SetHomeBase(theAirTraffic->GetSlotAirport(i));
+                        for (unsigned long i = 0; i < ee_units_atc_slot_count(theAirTraffic); i++) {
+                            if (inUnit->mContainer == static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theAirTraffic, i)))
+                                inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theAirTraffic, i)));
                         }
                     }
                     theClass->LandableReturnToAirport(inUnit);
@@ -297,7 +297,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         }
         break;
     case EE_UNITS_ACT_QUEUE_LANDING:
-        return (int64_t)theAirTraffic->QueueRequest(inUnit->mHomeBase, inUnit, 1);
+        return (int64_t)ee_units_atc_queue_request(theAirTraffic, inUnit->mHomeBase, inUnit, 1);
     case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
         EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
         inUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
@@ -356,7 +356,7 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
 {
     this->BaseUnitCreated(inUnit);
-    inUnit->GetPlayer()->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1]->AddCargoWeight(inUnit);
+    ee_units_atc_add_cargo_weight(inUnit->GetPlayer()->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1], inUnit);
     inUnit->SetHeight(0.0f);
 }
 
@@ -703,12 +703,12 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 {
     EEUnitClass* theClass = inClass;
     GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    EeUnitsAtc* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     if (inUnit->mHomeBase == NULL) {
-        if (theControl->GetNumSlots() > 0)
-            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+        if (ee_units_atc_slot_count(theControl) > 0)
+            inUnit->SetHomeBase(static_cast<EEComplexUnit*>(ee_units_atc_slot_airport(theControl, 0)));
         else
             inUnit->Kill(true, false, false);
     }
