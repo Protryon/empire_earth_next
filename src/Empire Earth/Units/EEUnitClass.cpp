@@ -1535,20 +1535,7 @@ void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
 // Rocks a moving, living space unit that takes damage by a random roll to either side, clamped to the maximum roll
 void EEUnitClass::UnitDamaged(EEComplexUnit* inUnit, EEComplexUnit* inAttacker, long inDamage)
 {
-    EEComplexUnit* theUnit = inUnit;
-    if ((!(this->mDomains & kMovementSpace)) || theUnit == NULL || !(theUnit->GetMaxVelocity() > 0.0f) || !(theUnit->mHitPoints > 0))
-        return;
-    float theDelta;
-    if (gPhysics->mRandom.Generate() < 0.5f)
-        theDelta = gPhysics->GetRandom(kMinDamageRoll, kMaxDamageRoll);
-    else
-        theDelta = gPhysics->GetRandom(-kMaxDamageRoll, -kMinDamageRoll);
-    float theValue = theUnit->mRoll; theValue += theDelta;
-    if (theValue > kMaxDamageRoll)
-        theValue = kMaxDamageRoll;
-    else if (theValue < -kMaxDamageRoll)
-        theValue = -kMaxDamageRoll;
-    theUnit->mRoll = theValue;
+    ee_units_st_unit_damaged(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 // Counts one unit of the class gone and records the time when the last one goes
@@ -1810,6 +1797,17 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     case EE_UNITS_CLS_ST_CLOAK_DETECTION: ((EEUnitClass*)(uintptr_t)inB)->UpdateCloakDetection(inUnit); return 0;
     case EE_UNITS_CLS_ST_NOTING: return EESimCaptureRecord::Active();
     case EE_UNITS_CLS_ST_NOTE: EEUnitStepNote((unsigned int)inC, (unsigned long)inD, (const uint32_t*)io->list, (unsigned int)io->a); return 0;
+    case EE_UNITS_CLS_ST_AREA_CLOAK: {
+        if (!inUnit->HasEffect(8))
+            return 0;
+        long theInput = 0;
+        long theRadius = 0;
+        inUnit->mAffectingAreaEffects.ApplyModifiers(3, theInput, theRadius, inUnit);
+        io->a = theRadius;
+        return 1;
+    }
+    case EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: io->f = gWorldTable.GetFloatValue(kWorldCamouflageTiming); return 0;
+    case EE_UNITS_CLS_ST_RANDOM_RANGE: io->f = gPhysics->GetRandom(io->p[0], io->p[1]); return 0;
     case EE_UNITS_CLS_MV_FLEE_GOAL:
         inUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint(io->p[0], io->p[1]), true, true, false, 0.0f, false, 0), inC != 0, 0);
         return 0;
@@ -2061,44 +2059,7 @@ void EEUnitClass::FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFr
 // Uncloaks a unit while an enemy is within its cloak radius and moves it on the minimap when that changes
 void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
 {
-    std::vector<EEUnit*> theUnits;
-    GE3DPoint thePosition;
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    long theRadius = 0;
-    bool theOldConcealed = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-    bool theConcealed = true;
-    if (!(inUnit->mHitPoints > 0))
-        return;
-    inUnit->GetPosition(thePosition);
-    bool theOldVisible = EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
-    inUnit->SetCloakedChain(true);
-    if (inUnit->HasEffect(8)) {
-        long theInput = theRadius;
-        inUnit->mAffectingAreaEffects.ApplyModifiers(3, theInput, theRadius, inUnit);
-        theRadius = max(theRadius, this->mCloakRadius);
-    } else if (inUnit->mU32C != 0)
-        theRadius = UMFloatToLong(gWorldTable.GetFloatValue(kWorldCamouflageTiming) * inUnit->mStats->mRange);
-    else
-        theRadius = this->mCloakRadius;
-    if ((float)theRadius > 0.0f && EEGetUnitsNear(thePosition, (float)theRadius + 0.5f, theUnits) > 0) {
-        for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
-            EEUnit* theOther = *it;
-            if (theOther == inUnit || !(theOther->mHitPoints > 0) || theOther->mPlayer->GetPlayerID() == 0 ||
-                theOther->mUnitClass->mIsProjectile || theOther->mPlayer == thePlayer ||
-                thePlayer->mEnemies[theOther->mPlayer->GetPlayerID()] == 0)
-                continue;
-            inUnit->SetCloakedChain(false);
-            theConcealed = false;
-            break;
-        }
-    }
-    bool theVisible = EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
-    if (theOldConcealed == theConcealed)
-        return;
-    if (theOldConcealed && theOldVisible && !theVisible)
-        gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-    else if (theConcealed && !theOldVisible && theVisible)
-        gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
+    ee_units_st_cloak_detection(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 // Turns each turret toward the unit's attack, heal or calamity target by its turn rate; else turns them back
