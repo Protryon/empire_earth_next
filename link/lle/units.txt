@@ -1,13 +1,9 @@
-01000 01b8d Error System/Error System.cpp
 028ca 036c5 Error System/ESChecksum.cpp
 04020 04e29 File System/File System.cpp
 04e29 07af6 File System/FSArchive.cpp
-07af6 07cb5 File System/FSBasicFile.cpp
 07cb5 080b9 File System/FSChunk.cpp
-08d15 09ec5 File System/FSFileSpec.cpp
 09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
-0bdb4 0c129 File System/FSPersistentList.cpp
 0dd9e 10550 Graphics Engine/GEBitmap.cpp
 1eb9f 206c7 Graphics Engine/GEModel.cpp
 23655 246a7 Graphics Engine/GERasterizer.cpp
@@ -23,10 +19,7 @@
 4eef6 4f08e Sound Engine/SEScore.cpp
 4f08e 532d9 Sound Engine/SESoundManager.cpp
 532d9 53675 Sound Engine/Sound Engine.cpp
-53701 53819 Time Manager/Time Manager.cpp
 549b6 56369 Utilities/U2DSparseArray.cpp
-56369 5662f Utilities/UDataCompression.cpp
-5662f 57218 Utilities/UEncryption.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp
 5d3a1 5d72a User Interface/UIBitmap.cpp
@@ -57,11 +50,4 @@
 7e579 7fb46 User Interface/UITextLabel.cpp
 7fd7d 805c4 User Interface/UITLScrolling.cpp
 805c4 80c07 User Interface/UITriStateCheckBox.cpp
-80c07 8104b Utilities/UMath.cpp
-8104b 81d93 Utilities/UReferenceCounter.cpp
-81d93 8268d Utilities/UConfig.cpp
-8268d 82871 Utilities/UResourceFile.cpp
 82871 82c43 User Interface/User Interface.cpp
-82c43 837ad Utilities/UString.cpp
-837ad 838f7 Utilities/Utilities.cpp
-838f7 847e1 Utilities/UWideString.cpp

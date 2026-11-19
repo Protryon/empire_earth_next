@@ -581,7 +581,7 @@ void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
     gModelManager->DumpAllLoadedMedia(inFile);
     if (inLeaks == true) {
         EEDumpLeakedUnits(inFile);
-        UReferenceCounter::DumpAllLeakedReferences(inFile);
+        fprintf(inFile, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
     }
 }
 

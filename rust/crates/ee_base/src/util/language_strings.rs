@@ -2,7 +2,7 @@
 // The language strings UResourceFile::GetString returns (UTF-8, decision D6), sorted by id; each ends in a NUL.
 
 /// The strings' Windows LANGID (the script's LANGUAGE statement).
-pub const LANGUAGE: u16 = 0x409;
+pub(crate) const LANGUAGE: u16 = 0x409;
 
 /// Every non-empty string by id, ascending.
 #[rustfmt::skip]

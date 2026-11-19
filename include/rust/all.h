@@ -29,6 +29,7 @@
 #include "rust/net/net_tcp.h"
 #include "rust/render/dx7.h"
 #include "rust/render/ge.h"
+#include "rust/render/geval.h"
 #include "rust/render/gfx.h"
 #include "rust/render/openformats.h"
 #include "rust/sim/ai.h"

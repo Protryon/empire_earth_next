@@ -27,6 +27,7 @@ pub use memfile::EeFsMemFile;
 
 /// The `kError*` codes (`include/lle/LowLevelEngineCore.h`) that this crate returns; the C++ facades take them through
 /// as `long`.
+/// cbindgen:ignore
 pub mod status {
     pub const OK: i32 = 0;
     pub const NOT_SUSPENDED: i32 = 2;

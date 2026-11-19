@@ -27,6 +27,14 @@
 #include <stdint.h>   // uintptr_t (USavedID)
 #include <vector>   // UString::Tokenize
 #include "platform/Platform.h"   // the platform layer (time, threads, ...): every engine and game unit sees it
+#include <stdarg.h>   // ESDebugOut
+#include <stdio.h>    // vsnprintf (ESDebugOut)
+// The free functions below are one-line inlines over Rust (LLE lane round 8): the Error System, the Time Manager, the
+// shutdown list and the UM math (rust/crates/ee_base: error, time, util, math)
+#include "rust/base/error.h"
+#include "rust/base/time.h"
+#include "rust/base/util.h"
+#include "rust/base/math.h"
 
 // ---- Error system (ES)
 // proven: "theResult == keseOK" assert text. Other values: codes returned by the Thread/Time System units;
@@ -58,14 +66,32 @@ enum ESError {
     kErrorEndOfFile = 0x12                    // FSMemoryFile::Read past the end
 };
 
-LLE_API void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression);
-LLE_API unsigned long ESRecordNativeError(unsigned long inError);
-LLE_API unsigned long ESGetNativeError();
-LLE_API void ESDebugOut(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);   // proven ?ESDebugOut@@YAXPBDZZ (Default.dll)
-class FSFileSpec;
-LLE_API void ESInitialize(HINSTANCE inInstance);      // proven ?ESInitialize@@YAXPAUHINSTANCE__@@@Z (exe import)
-
 class UString;
+LLE_API extern UString gStartupVolume;    // (below)
+LLE_API extern UString gStartupDirectory;
+
+// The Error System is Rust's (rust/crates/ee_base/src/error): ESVerify reports a failed verification (file, line,
+// expression) on stderr, breaks into the debugger and aborts (a nested failure is ignored); ESRecordNativeError
+// records a nonzero native error and returns it; ESInitialize registers the shutdown hook (the filters freed).
+inline void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression)
+{
+    ee_error_verify(inFile, inLine, inExpression);
+}
+inline unsigned long ESRecordNativeError(unsigned long inError) { return ee_error_record_native(inError); }
+inline unsigned long ESGetNativeError() { return ee_error_native(); }
+inline void ESInitialize(HINSTANCE) { ee_error_initialize(); }
+// Formats a debug message (cut at 1023 characters: the original's vsprintf overran its buffer) and sends it to the
+// debugger when the startup directory's Filter.txt lets it through (ee_error_debug_out)
+inline void ESDebugOut(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);
+inline void ESDebugOut(const char* inFormat, ...)
+{
+    char theText[1024];
+    va_list theArguments;
+    va_start(theArguments, inFormat);
+    vsnprintf(theText, sizeof(theText), inFormat, theArguments);
+    va_end(theArguments);
+    ee_error_debug_out(theText, &gStartupVolume, &gStartupDirectory);
+}
 
 // inferred: release-build verify macro; the call passes __FILE__, __LINE__ and the expression text
 #define ESVERIFY(expr) if (!(expr)) ESVerify(__FILE__, __LINE__, #expr)
@@ -82,29 +108,46 @@ struct TMTime {                             // filled from the local time by TMG
     unsigned long mMinute;                  // +0x10
     unsigned long mSecond;                  // +0x14
 };
-LLE_API long TMInitialize();
-LLE_API unsigned long TMGetTime();
-LLE_API int64_t TMGetMicroTime();
-LLE_API void TMGetTimeOfDay(TMTime& outTime);
+// The Time Manager is Rust's (rust/crates/ee_base/src/time): TMInitialize sets 1 ms timer resolution and registers
+// the shutdown; TMGetTime is milliseconds (a time pinned on this thread instead: EE-SIM's scripted editor,
+// ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local clock (month counted from 0)
+inline long TMInitialize() { return ee_time_system_initialize(); }
+inline unsigned long TMGetTime() { return ee_time_get(); }
+inline int64_t TMGetMicroTime() { return ee_time_get_micro(); }
+inline void TMGetTimeOfDay(TMTime& outTime)
+{
+    EeTimeOfDay theTime;
+    ee_time_of_day(&theTime);
+    outTime.mMonth = theTime.mMonth;
+    outTime.mDay = theTime.mDay;
+    outTime.mYear = theTime.mYear;
+    outTime.mHour = theTime.mHour;
+    outTime.mMinute = theTime.mMinute;
+    outTime.mSecond = theTime.mSecond;
+}
 // TMPoll.h / TMTimer.h are NOT included here: every static data member of a class a unit sees consumes a VC6
 // `$E` number (probe: one per member; extern objects consume none), and the plug-ins' $E numbering proves they
 // saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.
 
 // ---- Shutdown registry (Utilities): engine subsystems register cleanup functions
-LLE_API long URegisterShutdown(void (*inFunction)(bool));
-LLE_API void UShutdown(bool inForced, bool inTerminate);    // Utilities.cpp 0x83838; provisional parameter names
-LLE_API bool UShutdownInProgress();
-LLE_API unsigned short UGetOSLanguage();
+// (rust/crates/ee_base/src/util system.rs) URegisterShutdown: always kErrorOK; UShutdown calls every registered
+// function, last first, and with inTerminate ends the platform's services and exits (inForced: exit(0), else abort)
+inline long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }
+inline void UShutdown(bool inForced, bool inTerminate) { ee_util_shutdown(inForced, inTerminate); }
+inline bool UShutdownInProgress() { return ee_util_shutdown_in_progress(); }
+inline unsigned short UGetOSLanguage() { return ee_util_os_language(); }   // the user's default language id
 
 // ---- Utility math (UM)
-LLE_API void UMSetFloatingPointPrecision(unsigned long inPrecision);
-LLE_API unsigned long UMGetFloatingPointPrecision();
-LLE_API void UMSetFloatingPointRoundingMode(unsigned long inMode);
-LLE_API unsigned long UMGetFloatingPointRoundingMode();
-LLE_API float UMArcTan2(float inY, float inX);  // proven ?UMArcTan2@@YAMMM@Z (Default.dll CMUSpreadTeams 0x3aa3)
-LLE_API float UMCos(float inAngle);             // proven ?UMCos@@YAMM@Z (Default.dll import)
-LLE_API float UMArcCos(float inValue);          // proven ?UMArcCos@@YAMM@Z (GETransformation::GetPitch 0xd7dd)
-LLE_API float UMTan(float inAngle);             // proven ?UMTan@@YAMM@Z (GEViewport ctor 0x36aba)
+// The FPU control (ee_util fp.rs: 53-bit precision without an x87) and the table trigonometry (ee_render um.rs:
+// UMCos wraps into -pi..pi; UMArcCos clamps below -1 and is 0 above 1; UMTan is +-FLT_MAX where the cosine is 0)
+inline void UMSetFloatingPointPrecision(unsigned long inPrecision) { ee_util_fp_set_precision(inPrecision); }
+inline unsigned long UMGetFloatingPointPrecision() { return ee_util_fp_precision(); }
+inline void UMSetFloatingPointRoundingMode(unsigned long inMode) { ee_util_fp_set_rounding(inMode); }
+inline unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_rounding(); }
+inline float UMArcTan2(float inY, float inX) { return ee_ge_um_arctan2(inY, inX); }
+inline float UMCos(float inAngle) { return ee_ge_um_cos(inAngle); }
+inline float UMArcCos(float inValue) { return ee_ge_um_arccos(inValue); }
+inline float UMTan(float inAngle) { return ee_ge_um_tan(inAngle); }
 // Provisional name: no UMSin export; GEQuaternion::Slerp (0x23526) computes sines as UMCos(pi/2 - x) inline
 // pi/2 is 1.5707964f (0x3fc90fdb) in every module: the engine's word 0x10097808, the exe's 0x43c008
 // (1.5707963f would be 0x3fc90fda, one ulp lower)
@@ -204,10 +247,7 @@ inline unsigned long UMCeilUnsigned(float inValue)
 }
 #endif
 
-// ---- Startup paths (mixer: volume + directory + "redist\win32" is the Miles redist directory)
-// (an extern object of the forward-declared UString; defined in File System.cpp's range)
-LLE_API extern UString gStartupVolume;
-LLE_API extern UString gStartupDirectory;
+// ---- Startup paths gStartupVolume, gStartupDirectory (above; File System.cpp defines them)
 
 // UMSetFloatingPointPrecision / UMGetFloatingPointPrecision: the float.h _PC_* precision-control value (_controlfp(x, _MCW_PC), UMath.cpp)
 enum UMFloatingPointPrecision {

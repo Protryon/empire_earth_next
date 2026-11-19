@@ -200,6 +200,14 @@ void ee_ge_vector_quantized_table(EeGeVector *out, size_t count);
 /// `v` is valid.
 int32_t ee_ge_vector_quantized_index(const EeGeVector *v);
 
+/// `GEVector::GetQuantizedVersion`: the nearest entry of the quantized direction table (the cube face the vector's
+/// ray hits, then the grid cell there), the shared zero vector for (0, 0, 0), NULL when no face is hit. The entries
+/// live as long as the process (the C++ kept them in a static array).
+///
+/// # Safety
+/// `v` is valid.
+const EeGeVector *ee_ge_vector_quantized(const EeGeVector *v);
+
 /// `GE3DLine::Intersects(point, tolerance, t)`: `t` written only on a hit.
 ///
 /// # Safety

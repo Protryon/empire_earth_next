@@ -18,16 +18,6 @@ constexpr static const uint32_t FORM_CAMPAIGN_SELECT = 33;
 
 constexpr static const uint64_t GATE = 25;
 
-constexpr static const int32_t OK = 0;
-
-constexpr static const int32_t NOT_FOUND = 3;
-
-constexpr static const int32_t NOT_OPEN = 4;
-
-constexpr static const int32_t FAILED = 9;
-
-constexpr static const int32_t END_OF_FILE = 18;
-
 constexpr static const uint32_t ALIGN_CENTER = 1;
 
 constexpr static const uint32_t ALIGN_RIGHT = 2;
@@ -45,6 +35,12 @@ constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
 constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
 constexpr static const uint8_t GOAL_ATTACK_GROUND = 3;
+
+/// `kErrorOK`.
+constexpr static const int32_t OK = 0;
+
+/// `kErrorFailed`.
+constexpr static const int32_t FAILED = 9;
 
 constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
 

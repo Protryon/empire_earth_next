@@ -133,7 +133,7 @@ def generate():
              "// The language strings UResourceFile::GetString returns (UTF-8, decision D6), sorted by id; each ends in a NUL.",
              "",
              "/// The strings' Windows LANGID (the script's LANGUAGE statement).",
-             f"pub const LANGUAGE: u16 = 0x{language:x};",
+             f"pub(crate) const LANGUAGE: u16 = 0x{language:x};",
              "",
              "/// Every non-empty string by id, ascending.",
              "#[rustfmt::skip]",

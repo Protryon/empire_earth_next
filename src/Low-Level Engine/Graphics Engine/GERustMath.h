@@ -1,13 +1,12 @@
-// The Graphics Engine's math in Rust (rust/crates/ee_render/src/ge, docs/RUST_PLAN.md R4.3): the C++ value classes stay the
-// types every caller uses, and their algorithms forward to ee_ge's C ABI with the objects themselves as arguments.
-// Each class has a #[repr(C)] mirror (EeGe*, include/rust/ee_rust.h); the layouts are pinned here.
+// The layouts of the Graphics Engine's value classes and their Rust mirrors (EeGe*: rust/base/math.h,
+// rust/render/geval.h), pinned here; the mirrors and the forwarders are lle/GERust.h.
 #ifndef GERUSTMATH_H
 #define GERUSTMATH_H
 
 #include <stddef.h>
 #include <vector>
 
-#include "rust/base/math.h"
+#include "lle/GERust.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
@@ -18,6 +17,9 @@
 #include "lle/GEQuaternion.h"
 #include "lle/GEBoundingBox.h"
 #include "lle/GERectangle.h"
+#include "lle/GEViewport.h"
+#include "lle/GEColor.h"
+#include "lle/GETextureCoordinate.h"
 
 // the classes' private members are reached by this friend (declared in GE3DLine.h, GE3DPlane.h, GEQuaternion.h,
 // GEBoundingBox.h)
@@ -41,36 +43,28 @@ struct GERustLayout {
                   offsetof(GERectangle, mTop) == offsetof(EeGeRectangle, top), "GERectangle");
 };
 
-// The C++ object as its mirror (the same storage).
-inline const EeGe2DPoint* GERust(const GE2DPoint& in) { return reinterpret_cast<const EeGe2DPoint*>(&in); }
-inline EeGe2DPoint* GERust(GE2DPoint& in) { return reinterpret_cast<EeGe2DPoint*>(&in); }
-inline const EeGe3DPoint* GERust(const GE3DPoint& in) { return reinterpret_cast<const EeGe3DPoint*>(&in); }
-inline EeGe3DPoint* GERust(GE3DPoint& in) { return reinterpret_cast<EeGe3DPoint*>(&in); }
-inline const EeGeVector* GERust(const GEVector& in) { return reinterpret_cast<const EeGeVector*>(&in); }
-inline EeGeVector* GERust(GEVector& in) { return reinterpret_cast<EeGeVector*>(&in); }
-inline const EeGe3DLine* GERust(const GE3DLine& in) { return reinterpret_cast<const EeGe3DLine*>(&in); }
-inline EeGe3DLine* GERust(GE3DLine& in) { return reinterpret_cast<EeGe3DLine*>(&in); }
-inline const EeGe3DPlane* GERust(const GE3DPlane& in) { return reinterpret_cast<const EeGe3DPlane*>(&in); }
-inline EeGe3DPlane* GERust(GE3DPlane& in) { return reinterpret_cast<EeGe3DPlane*>(&in); }
-inline const EeGeTransformation* GERust(const GETransformation& in) { return reinterpret_cast<const EeGeTransformation*>(&in); }
-inline EeGeTransformation* GERust(GETransformation& in) { return reinterpret_cast<EeGeTransformation*>(&in); }
-inline const EeGeOrientation* GERust(const GEOrientation& in) { return reinterpret_cast<const EeGeOrientation*>(&in); }
-inline EeGeOrientation* GERust(GEOrientation& in) { return reinterpret_cast<EeGeOrientation*>(&in); }
-inline const EeGeQuaternion* GERust(const GEQuaternion& in) { return reinterpret_cast<const EeGeQuaternion*>(&in); }
-inline EeGeQuaternion* GERust(GEQuaternion& in) { return reinterpret_cast<EeGeQuaternion*>(&in); }
-inline const EeGeBoundingBox* GERust(const GEBoundingBox& in) { return reinterpret_cast<const EeGeBoundingBox*>(&in); }
-inline EeGeBoundingBox* GERust(GEBoundingBox& in) { return reinterpret_cast<EeGeBoundingBox*>(&in); }
-inline const EeGeRectangle* GERust(const GERectangle& in) { return reinterpret_cast<const EeGeRectangle*>(&in); }
-inline EeGeRectangle* GERust(GERectangle& in) { return reinterpret_cast<EeGeRectangle*>(&in); }
+// the private members are reached by this friend (declared in GEViewport.h)
+struct GERustViewportLayout {
+    static_assert(sizeof(GEViewport) == sizeof(EeGeViewport), "GEViewport");
+    static_assert(offsetof(GEViewport, mViewRectangle) == offsetof(EeGeViewport, view_rectangle) &&
+                  offsetof(GEViewport, mFrontPlane) == offsetof(EeGeViewport, front_plane) &&
+                  offsetof(GEViewport, mBottomPlane) == offsetof(EeGeViewport, bottom_plane) &&
+                  offsetof(GEViewport, mCamera) == offsetof(EeGeViewport, camera) &&
+                  offsetof(GEViewport, mCameraInverse) == offsetof(EeGeViewport, camera_inverse) &&
+                  offsetof(GEViewport, mOrthographicDenormalization) == offsetof(EeGeViewport, orthographic_denormalization) &&
+                  offsetof(GEViewport, mPerspectiveProjection) == offsetof(EeGeViewport, perspective_projection) &&
+                  offsetof(GEViewport, mCameraLookAtVector) == offsetof(EeGeViewport, camera_look_at_vector) &&
+                  offsetof(GEViewport, mOrthographicScale) == offsetof(EeGeViewport, orthographic_scale) &&
+                  offsetof(GEViewport, mAspectRatio) == offsetof(EeGeViewport, aspect_ratio) &&
+                  offsetof(GEViewport, mFrontClippingDistance) == offsetof(EeGeViewport, front_clipping_distance) &&
+                  offsetof(GEViewport, mRearClippingDistance) == offsetof(EeGeViewport, rear_clipping_distance) &&
+                  offsetof(GEViewport, mYClippingPlane) == offsetof(EeGeViewport, y_clipping_plane) &&
+                  offsetof(GEViewport, mFarDepth) == offsetof(EeGeViewport, far_depth),
+                  "GEViewport's members");
+};
 
-// std::vector::push_back for the interpolations and the rectangle split (the context is the vector)
-inline void GERustPush2D(void* inContext, const EeGe2DPoint* inPoint)
-{
-    static_cast<std::vector<GE2DPoint>*>(inContext)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint));
-}
-inline void GERustPush3D(void* inContext, const EeGe3DPoint* inPoint)
-{
-    static_cast<std::vector<GE3DPoint>*>(inContext)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint));
-}
+// the vertex arrays' values as floats (ee_ge_va_get/set; lle/GEVertexArray.h)
+static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPoint) == 3 * sizeof(float) &&
+              sizeof(GEVector) == 3 * sizeof(float) && sizeof(GETextureCoordinate) == 2 * sizeof(float), "vertarr.rs");
 
 #endif
