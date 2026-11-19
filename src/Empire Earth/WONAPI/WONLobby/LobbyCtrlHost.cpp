@@ -190,11 +190,9 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     }
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::SetControlId: aComp->mControlId = (int)b; return 0;
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::Invalidate: aComp->Invalidate(); return 0;
-    case Op::SubscribeBroadcast: aCtl->SubscribeToBroadcast(a != 0); return 0;
     case Op::BaseEvent: aCtl->Component::HandleComponentEvent(anEvent); return 0;
     case Op::BasePaint: aCtl->Container::Paint(*reinterpret_cast<Graphics*>(a)); return 0;
     case Op::EventControlId: return anEvent->GetControlId();
@@ -216,8 +214,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::LabelSetBrowserStatus:
         aLabel->SetText(reinterpret_cast<BrowserComponent*>(b)->GetCurStatus(), true);
         return 0;
-    case Op::ButtonIsChecked: return aButton->IsChecked() ? 1 : 0;
-    case Op::ButtonSetCheck: aButton->SetCheck(b != 0, c != 0); return 0;
     // ButtonSetText / LabelSetText: their strings come as resource rows (lobbyctl.rs string_row: ButtonSetRes,
     // LabelSetRes, LobbyNetCtrlHost.cpp's)
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
@@ -232,20 +228,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::BroadcastWhisper:
         LobbyBroadcastEvent(SetChatInputEvent(2, aClient->GetName(), (int)b, false), true);
         return 0;
-    case Op::ListGetSel: return (intptr_t)aList->GetSelItem();
-    case Op::ListNumItems: return aList->GetNumItems();
-    case Op::ListItem: return (intptr_t)aList->GetItem((int)b);
-    case Op::ListRefresh: aList->RefreshItem(reinterpret_cast<ListItem*>(b)); return 0;
-    case Op::ListInsert: aList->ListArea::InsertItem(reinterpret_cast<ListItem*>(b), -1); return 0;
-    case Op::ListRemove: aList->RemoveItem(reinterpret_cast<ListItem*>(b)); return 0;
-    case Op::ListClear: aList->Clear(b != 0); return 0;
-    case Op::ListBeginUpdate: aList->BeginUpdate(); return 0;
-    case Op::ListEndUpdate: aList->EndUpdate(); return 0;
     case Op::ButtonOf: return (intptr_t)dynamic_cast<Button*>(aComp);
-    case Op::ControlId: return aComp->mControlId;
-    case Op::ComboGetSel: return aCombo->GetSelItem();
-    case Op::ComboSetSel: aCombo->SetSelItem((int)b, c != 0); return 0;
-    case Op::ComboClear: aCombo->Clear(b != 0); return 0;
     case Op::ComboShowTabSelect: aCombo->SetTextAndSel(LobbyGetTabSelect(), false); return 0;
     case Op::SaveTabSelect: LobbySetTabSelect(aCombo->mEdit->GetText()); return 0;
     case Op::SaveLanName: LobbySetLanName(aCombo->mEdit->GetText()); return 0;

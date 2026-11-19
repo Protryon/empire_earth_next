@@ -484,7 +484,9 @@ fn field_of(v: i32) -> Option<EeWonMsBtnField> {
 /// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_msbtn_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonMsButton {
-    Box::into_raw(Box::new(EeWonMsButton::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonMsButton::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::MsButton, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -492,6 +494,7 @@ pub extern "C" fn ee_won_msbtn_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_msbtn_free(btn: *mut EeWonMsButton) {
     if !btn.is_null() {
+        crate::registry::unregister(btn as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(btn) });
     }

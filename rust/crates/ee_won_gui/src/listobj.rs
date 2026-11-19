@@ -1129,7 +1129,9 @@ impl Drop for EeWonList {
 /// A new Rust ListArea for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_list_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonList {
-    Box::into_raw(Box::new(EeWonList::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonList::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::List, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -1137,6 +1139,7 @@ pub extern "C" fn ee_won_list_new(component: *mut c_void, host: EeWonGuiHostFn) 
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_list_free(list: *mut EeWonList) {
     if !list.is_null() {
+        crate::registry::unregister(list as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(list) });
     }

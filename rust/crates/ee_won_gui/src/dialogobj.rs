@@ -359,7 +359,9 @@ pub unsafe extern "C" fn ee_won_dlg_new(
     host: EeWonGuiHostFn,
     ct: *const EeWonContainer,
 ) -> *mut EeWonDialog {
-    Box::into_raw(Box::new(EeWonDialog::new(component, host, ct)))
+    let made = Box::into_raw(Box::new(EeWonDialog::new(component, host, ct)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Dialog, made as *const std::ffi::c_void);
+    made
 }
 
 /// The destructor's statement (the default button released), then the object freed.
@@ -369,6 +371,7 @@ pub unsafe extern "C" fn ee_won_dlg_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_dlg_free(dlg: *mut EeWonDialog) {
     if !dlg.is_null() {
+        crate::registry::unregister(dlg as *const std::ffi::c_void);
         // SAFETY: the contract
         unsafe {
             (*dlg).destroy();

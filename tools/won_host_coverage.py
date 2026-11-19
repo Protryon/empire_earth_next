@@ -32,6 +32,7 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "ctl_op"),
                (RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "ctl_op"),
+               (RS / "ee_won_lobby" / "src" / "widgets.rs", "ctl_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_string_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op")],
          allowed={}),
@@ -80,7 +81,9 @@ CHECKS = [
     dict(enum="EeWonLobbyDlgOp", header="won_lobby/lobbydlg.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "EELobbyGameHost.cpp", LOBBY / "EELobbyGlueHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "game_op"),
-               (RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "comp_op")], allowed={}),
+               (RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "comp_op"),
+               # the widget ops through the widget registry (R6 WONLobby round 19)
+               (RS / "ee_won_lobby" / "src" / "widgets.rs", "dlg_op")], allowed={}),
     dict(enum="EeWonLobbyPopupOp", header="won_lobby/lobbypopup.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "popup_op"),

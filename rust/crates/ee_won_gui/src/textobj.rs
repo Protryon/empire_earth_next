@@ -1458,7 +1458,9 @@ unsafe extern "C" fn measure_char(ctx: *mut c_void, index: i32) -> i32 {
 /// A new Rust TextArea for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_text_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonText {
-    Box::into_raw(Box::new(EeWonText::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonText::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Text, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -1466,6 +1468,7 @@ pub extern "C" fn ee_won_text_new(component: *mut c_void, host: EeWonGuiHostFn) 
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_text_free(text: *mut EeWonText) {
     if !text.is_null() {
+        crate::registry::unregister(text as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(text) });
     }

@@ -550,7 +550,9 @@ pub unsafe extern "C" fn ee_won_combo_new(
     host: EeWonGuiHostFn,
     ct: *const EeWonContainer,
 ) -> *mut EeWonComboBox {
-    Box::into_raw(Box::new(EeWonComboBox::new(component, host, ct)))
+    let made = Box::into_raw(Box::new(EeWonComboBox::new(component, host, ct)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Combo, made as *const std::ffi::c_void);
+    made
 }
 
 /// The destructor's statement (the list box's listener dropped), then the object freed.
@@ -560,6 +562,7 @@ pub unsafe extern "C" fn ee_won_combo_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_combo_free(combo: *mut EeWonComboBox) {
     if !combo.is_null() {
+        crate::registry::unregister(combo as *const std::ffi::c_void);
         // SAFETY: the contract
         unsafe {
             (*combo).destroy();

@@ -1126,7 +1126,9 @@ pub extern "C" fn ee_won_multi_new(
     host: EeWonGuiHostFn,
     list: *const EeWonList,
 ) -> *mut EeWonMulti {
-    Box::into_raw(Box::new(EeWonMulti::new(component, host, list)))
+    let made = Box::into_raw(Box::new(EeWonMulti::new(component, host, list)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Multi, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -1134,6 +1136,7 @@ pub extern "C" fn ee_won_multi_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_multi_free(multi: *mut EeWonMulti) {
     if !multi.is_null() {
+        crate::registry::unregister(multi as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(multi) });
     }

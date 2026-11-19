@@ -220,13 +220,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     case Op::TextAreaLineBreak: anOutput->LineBreak((int)b); return 0;
     case Op::TextAreaReset: anOutput->Reset(b != 0); return 0;
     case Op::InputText: return Dat(anInput->GetText());
-    case Op::InputAddHistory: anInput->AddInputHistory(Txt(b), true); return 0;
-    case Op::InputClear: anInput->Clear(b != 0); return 0;
-    case Op::InputSetText: anInput->SetText(Txt(b), c != 0); return 0;
-    case Op::InputSelectRange: anInput->SelectRange((int)b, (int)c); return 0;
-    case Op::RequestFocus: reinterpret_cast<Component*>(a)->RequestFocus(); return 0;
-    case Op::IsDisabled: return reinterpret_cast<Component*>(a)->IsDisabled() ? 1 : 0;
-    case Op::IsRootVisible: return inCtl->IsRootVisible() ? 1 : 0;
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
     case Op::MyClient: return (intptr_t)GetMyLobbyClient();
     case Op::ChatParser: return (intptr_t)LobbyGetChatCommandParser();
@@ -256,7 +249,6 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     }
     case Op::TextFind: return Txt(a).find(Txt(b), 0);
     case Op::IgnoredAt: return Held(LobbyGetIgnoredNameAt((size_t)a));
-    case Op::FireEvent: inCtl->Fn2F5380((int)a, (int)b); return 0;
     case Op::DeliverFriendAction: inCtl->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
     case Op::DeliverJoinFriendsRoom: inCtl->DeliverEvent(JoinFriendsRoomEvent(reinterpret_cast<LobbyFriend*>(a)), false); return 0;
     case Op::DeliverJumpToRoom: inCtl->DeliverEvent(JumpToRoomEvent(aLink->mText, aLink->mGroupId, aLink->mAddress), false); return 0;
@@ -278,21 +270,6 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     InputBox* anInput = reinterpret_cast<InputBox*>(a);
     Label* aLabel = reinterpret_cast<Label*>(a);
     switch (inOp) {
-    case Op::ListInsert2: reinterpret_cast<ListArea*>(a)->InsertItem(reinterpret_cast<ListItem*>(b), -1); return 0;
-    case Op::TreeInsertChild: return (intptr_t)aTree->InsertTreeItem(reinterpret_cast<TreeItem*>(b), reinterpret_cast<ListItem*>(c), -1);
-    case Op::TreeInsertServer: return (intptr_t)aTree->InsertTreeItem(NULL, reinterpret_cast<ListItem*>(b), (int)c);
-    case Op::TreeInsertLoading: return (intptr_t)aTree->InsertTreeItem(reinterpret_cast<TreeItem*>(b), reinterpret_cast<ListItem*>(c), 0);
-    case Op::TreeWrapped: return (intptr_t)aNode->GetWrappedItem();
-    case Op::TreeChildCount: return aNode->GetNumChildren();
-    case Op::TreeChild: return (intptr_t)aNode->GetChild((int)b);
-    case Op::TreeParent: return (intptr_t)aNode->GetParentItem();
-    case Op::TreeIndex: return aNode->GetIndex();
-    case Op::TreeIsOpen: return aNode->IsOpen() ? 1 : 0;
-    case Op::TreeOpen: aTree->OpenItem(reinterpret_cast<TreeItem*>(b), c != 0); return 0;
-    case Op::TreeRemoveAll: aTree->RemoveAllItems(reinterpret_cast<TreeItem*>(b)); return 0;
-    case Op::TreeRemove: aTree->RemoveTreeItem(reinterpret_cast<TreeItem*>(b)); return 0;
-    case Op::TreeClear: aTree->ClearTree(b != 0); return 0;
-    case Op::TreeContainsPoint: return aNode->ContainsPoint(Lo(b), Hi(b)) ? 1 : 0;
     case Op::DeliverJoinRoom: {
         // the row's address and room id (rows.rs)
         const EeWonIpAddr* anAddress = (const EeWonIpAddr*)ee_won_lobby_rows_ctl_op(Op::RoomItemAddr, a, 0, 0);
@@ -516,22 +493,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ListFont: return (intptr_t)aList->mFont.get();
     case Op::FontHeight: return reinterpret_cast<Font*>(a)->GetHeight();
     case Op::ResImageHeight: return gLobbyResources[a].mImage->mHeight;
-    case Op::ColumnWidth: return aMulti->GetColumnWidth((int)b);
-    case Op::ListEnsureVisible: aList->EnsureVisible(reinterpret_cast<ListItem*>(b)); return 0;
-    case Op::ListItemPos: return aList->GetItemPos(reinterpret_cast<ListItem*>(b));
-    case Op::ListSetSel: aList->SetSelItem((int)b, c != 0); return 0;
-    case Op::ListVertOffset: return aList->GetVertOffset();
-    case Op::ListSetVertOffset: aList->SetVertOffset((int)b); return 0;
-    case Op::ListViewHeight: return aList->GetViewHeight();
-    case Op::ListItemAtY: return aList->GetItemPosAtYPos((int)b);
-    case Op::ListPaintWidth: return aList->GetPaintWidth();
-    case Op::ListPaintColumn: return aMulti->GetColumnPaintContext();
-    case Op::ListSortColumn: return aMulti->GetSortColumn();
-    case Op::ListSortColumnPrev: return aMulti->GetSortColumnPrev();
     case Op::ListDeliverPing: aList->DeliverEvent(PingGameEvent(reinterpret_cast<LobbyGame*>(b), true), true); return 0;
-    case Op::ListTotalWidth: return aList->GetTotalWidth();
     case Op::ListTextColor: return aList->GetTextColor();
-    case Op::ListFlagSet: return aList->ListFlagSet((int)b) ? 1 : 0;
     case Op::GfxStandardColor: return g->GetStandardColor((StandardColor)b);
     case Op::GfxSelFore:
         return reinterpret_cast<ListArea*>(b)->GetSelColor().GetForegroundColor(*g, (unsigned long)c);
@@ -595,9 +558,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     }
     case Op::ButtonSetRes: reinterpret_cast<Button*>(a)->SetText(ResText(b), true); return 0;
     case Op::LabelSetRes: reinterpret_cast<Label*>(a)->SetText(ResText(b), true); return 0;
-    case Op::RequestTimer: inCtl->RequestTimer(a != 0); return 0;
-    case Op::ClearTimerFlag: inCtl->mTimerFlags &= ~2; return 0;
-    case Op::BaseTimer: return inCtl->Container::TimerEvent((int)a) ? 1 : 0;
     case Op::ComboInsertNoFilter:
         aCombo->InsertItem(new TextListItem(LOBBY_STRING(ServerListCtrl_NoFilter_String), reinterpret_cast<Font*>(b)), -1);
         return 0;
@@ -614,7 +574,6 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ComboUpdateItem: aCombo->UpdateItem(reinterpret_cast<TextListItem*>(b)); return 0;
     case Op::ComboSetText: aCombo->SetText(Txt(b), true); return 0;
     case Op::ComboAddString: return (intptr_t)aCombo->AddString(Txt(b), -1);
-    case Op::ComboDeleteItem: aCombo->DeleteItem((int)b); return 0;
     case Op::ComboSelectEnd: aCombo->mEdit->SelectRange(-1, 0); return 0;
     case Op::FilterIsAdd: return aFilter->mIsAdd ? 1 : 0;
     case Op::FilterSelPos: return aFilter->mSelPos;

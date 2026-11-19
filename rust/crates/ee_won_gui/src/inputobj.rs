@@ -633,6 +633,16 @@ impl EeWonInput {
         self.set_text(&t, false);
     }
 
+    /// `GetText()`: the real text (the C++ `mRealText` is its copy, stored by every change).
+    pub fn real_text(&self) -> Vec<u32> {
+        self.st.borrow().get_text().clone()
+    }
+
+    /// `mText.length()`: the shown text's length (password characters for a password box).
+    pub fn shown_len(&self) -> usize {
+        self.st.borrow().text.len()
+    }
+
     pub fn set_text(&self, text: &[u32], send: bool) {
         self.set_text_prv(text, send);
         {
@@ -813,7 +823,9 @@ unsafe extern "C" fn measure_char(ctx: *mut c_void, index: i32) -> i32 {
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_input_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonInput {
-    Box::into_raw(Box::new(EeWonInput::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonInput::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Input, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -821,6 +833,7 @@ pub extern "C" fn ee_won_input_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_input_free(input: *mut EeWonInput) {
     if !input.is_null() {
+        crate::registry::unregister(input as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(input) });
     }

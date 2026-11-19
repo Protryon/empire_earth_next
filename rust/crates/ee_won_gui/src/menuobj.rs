@@ -343,7 +343,9 @@ pub extern "C" fn ee_won_menu_new(
     host: EeWonGuiHostFn,
     list: *const EeWonList,
 ) -> *mut EeWonMenu {
-    Box::into_raw(Box::new(EeWonMenu::new(component, host, list)))
+    let made = Box::into_raw(Box::new(EeWonMenu::new(component, host, list)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Menu, made as *const std::ffi::c_void);
+    made
 }
 
 /// # Safety
@@ -351,6 +353,7 @@ pub extern "C" fn ee_won_menu_new(
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_menu_free(menu: *mut EeWonMenu) {
     if !menu.is_null() {
+        crate::registry::unregister(menu as *const std::ffi::c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(menu) });
     }

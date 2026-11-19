@@ -45,3 +45,4 @@ pub mod srvlistctl;
 pub mod staging;
 pub mod stagingobj;
 pub mod statusstr;
+pub mod widgets;
