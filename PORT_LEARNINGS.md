@@ -32767,3 +32767,41 @@ tests (herd_tests.rs, town_tests.rs, lists_tests.rs); the centres' and the save'
   (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS`;
   scenario_check 27/27; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 38, 40],
   alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+
+## LLE round 8 (branch rust-lle1, 2026-11-19): the leaves as inlines over Rust, GEValues gone, ee_render::geval
+
+The dependency census (tools/cpp_deps.py) showed the LLE's leaves were forwarders already: what kept them C++
+units was the forwarders themselves. This round made them inline members of their headers and deleted the units.
+
+- **What went.** Error System.cpp, Time Manager.cpp, UMath.cpp, Utilities.cpp, UConfig.cpp, UString.cpp,
+  UWideString.cpp, UResourceFile.cpp, UEncryption.cpp, FSPersistentList.cpp, UReferenceCounter.cpp,
+  UDataCompression.cpp (no caller: the archive's codec is Rust's), GEValues.cpp (1,013 lines, the fifteen GE value
+  classes), FSBasicFile.cpp and FSFileSpec.cpp. ESDebugOut keeps its printf formatting inline and hands the text to
+  `ee_error_debug_out`, which reads Filter.txt itself (`fs::spec::read_text_file`: PlatFOpen "r" and fread, as the
+  C++ did).
+- **Generated headers in every unit.** lle/LowLevelEngineCore.h now includes rust/base error, time, util and math,
+  so every C++ unit sees them, and a bare `pub const` in those modules lands in every unit. `LANGUAGE` (the
+  generated strings table) became `pub(crate)`. The fs status codes and the archive identifiers are marked
+  `cbindgen:ignore`, and the bare constants the split had put in common.h and audio/sound.h moved with them. Keep
+  these four modules free of bare exported constants. An FFI change in them rebuilds every unit.
+- **ee_render::geval.** The value classes' inlines call functions that lived in ee_render::ge. Its header,
+  rust/render/ge.h, is 3,500 lines and includes rust/sim/world.h, which is too much for headers 165 units
+  include. The header split cuts by the first path component under src/, so the C ABI the inlines need moved to a
+  module of its own: io.rs, values.rs, vertarr.rs, viewport.rs and viewport_ffi.rs, with `ge` re-exporting the old
+  paths. Its header, rust/render/geval.h, includes only base/math.h. The moved files need `ge`'s crate-level
+  clippy allows; the first gate failed on `assign_op_pattern`.
+- **FSFile need not be complete.** A non-template inline body that calls a template, such as
+  `GERustFields(inFile, ...)` with `inFile` an `FSFile&`, instantiates it in every unit that includes the header,
+  even when nothing calls the inline. A dllexport class does the same for every inline member. So the value classes
+  without a vtable lost LLE_API (they never needed it: the dllexport rule is about ??_E). Their Load and Save, the
+  3-argument GE3DPoint overloads included, became member templates on the file's type, and lle/GERust.h's field
+  stream is a template on it too. With `if constexpr (is_base_of<FSFileSpec, F>)`, an FSFileSpec (or FSMemoryFile)
+  adds the position functions, as the old FSFileSpec& overload did. Only GETextureCoordinate's restore reads them.
+- **The quantized vector table** is Rust's now (`ee_ge_vector_quantized`, built on first use). The 121 KB C++
+  static and the dead string-id statics (GEVector, GE3DPoint, GETransformation, GERectangle) went.
+  GetQuantizedVersion returns `const GEVector*`.
+- **Heredocs.** Through this machine's Bash tool, a Python heredoc lost a level of backslashes: `"\\n"` became a
+  newline in a C++ string literal. Write any Python that edits text with backslashes to a file first.
+- **Not done: folding.** Folding the 28 small LLE UI units into User Interface.cpp built and the oracle was
+  identical, but it was reverted. It only saves include lines and moves no C++ to Rust (the lead's call). For the
+  GE and UI clusters as Rust objects, see docs/progress/gfx-lle-cluster.md "What is left".
