@@ -21,7 +21,7 @@ fn call(p: isize, kind: G, k: isize, a: isize, b: isize) -> String {
 /// A layout's line without its rectangle's address.
 fn norm(t: Vec<String>) -> Vec<String> {
     t.into_iter()
-        .map(|l| if l.starts_with("Layout ") { l.rsplitn(2, ' ').nth(1).unwrap().to_string() } else { l })
+        .map(|l| if l.starts_with("Layout ") { l.rsplit_once(' ').unwrap().0.to_string() } else { l })
         .collect()
 }
 
