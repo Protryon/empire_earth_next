@@ -1,12 +1,16 @@
 # Lane: cycle cuts (the C++ dependency cycle)
 
-Lane state (one file per lane). Branch `rust-cuts1`, from `origin/rust` b3ab7ba2c plus `rust-cppdeps` (the census,
-`tools/cpp_deps.py`). The measure: lines taken out of SCC 1, the biggest strongly connected component of the C++
-units' graph (`python -I tools/cpp_deps.py report`, its `sccs.txt` and `summary.json`), after a full build.
+Lane state (one file per lane). Round 2: branch `rust-cuts2` (round 1: `rust-cuts1`, from `origin/rust` b3ab7ba2c
+plus `rust-cppdeps`, the census `tools/cpp_deps.py`). The measure: lines taken out of SCC 1, the biggest strongly
+connected component of the C++ units' graph (`python -I tools/cpp_deps.py report`, its `sccs.txt` and
+`summary.json`), after a full build.
 
 ## The cuts
 
-See PORT_LEARNINGS "Cycle cuts" for the reasons. Each is its own commit; numbers are SCC 1's units and lines after it.
+See PORT_LEARNINGS "Cycle cuts" and "Cycle cuts, round 2" for the reasons. Each is its own commit; numbers are SCC 1's
+units and lines after it.
+
+Round 1 (branch `rust-cuts1`):
 
 | cut | what | SCC 1 after |
 |---|---|---|
@@ -22,27 +26,57 @@ See PORT_LEARNINGS "Cycle cuts" for the reasons. Each is its own commit; numbers
 | 9 | EEUnitClass.cpp's globals (gUnitClassTable, sUnitTypes, the heights) stored in EEGlobals.cpp | (with 10) |
 | 10 | `gSeplScreenFont` in EEGlobals.cpp | 229, 111,335 |
 
-In all 150 units and 22,650 lines out of SCC 1. On the tree merged with origin/rust 7779d7db1 (whose own
-changes move SCC 1 too): SCC 1 230 units, 109,421 lines; leaves 65 (3,846 lines), near-leaves 133 (14,286);
-`--code-only` 223 units, 108,815 lines, leaves 79 (5,645).
+Round 2 (branch `rust-cuts2`, from origin/rust 7779d7db1 + rust-cuts1 27cebd6c5: SCC 1 230 units, 109,421 lines):
+
+| cut | commit | what | lines changed | SCC 1 after |
+|---|---|---|---|---|
+| 11 | f1b11b923 | EEWonNet's six UI calls through `ee/EEWonNetUI.h`, a table EEUIEWonNetArenaRoomEvents.cpp fills at static initialization (storage in EEGlobals.cpp); its own `""` for gEmptyString | +80 -29 | 226, 107,107 (-2,314) |
+| 12 | a0521c0f7 | EEScenarioCapture: the 15 functions the game calls are header hook pointers (`inline R (*N)(...) = nullptr;`), set by the capture unit before main | +68 -37 | 225, 106,514 (-593) |
+| 13 | 1b4264903 | EERenderListsView (the renderer's view of the render lists) moved from EERenderCapture.cpp to EEROUnits.cpp | +77 -70 | 224, 106,374 (-140) |
+| 14 | df4ffd66c | EEMessageCapture hooks (3) | +14 -6 | 223, 106,045 (-329) |
+| 15 | 3eb36c0ae | EECivCapture hooks (4) | +19 -10 | 222, 105,748 (-297) |
+| 16 | 18090b59a | EEAECapture hook (1) | +8 -2 | 221, 105,555 (-193) |
+| 17 | 4bdfe4761 | gEmptyString in EEGlobals.cpp (was the renderer's EEROUnits.cpp; 21 units name it) | +4 -3 | 221, 105,552 (-3; needed by 18) |
+| 18 | ab406d597 | EEOpenSaveGameFile in a leaf unit of its own (`Persistent/EEOpenSaveGameFile.cpp`, units.EXTRA_UNITS) | +21 -7 | 218, 104,814 (-738) |
+| 19 | 8088ac505 | EEWheel's constructors, destructor and EEIsWheelModel in EEGraphicObject.cpp, which makes the wheels (Update stays in EEWheel.cpp) | +32 -28 | 215, 104,252 (-562) |
+| 20 | 5592b54d4 | EECalamityCapture hooks (2) | +12 -4 | 215, 104,258 (+6; needed by 21) |
+| 21 | 40cffaef6 | EETechCapture hooks (27; default arguments through inline forwarders over `NHook`; EECalamityCanCastScope inline over three hooks) | +137 -68 | 213, 103,041 (-1,217) |
+| 22 | f67dc5abc | EEAppCaptureWorld hooks (10; EEAppMapScope inline over two hooks) | +57 -32 | 212, 102,595 (-446) |
+| 23 | 8377ce9e7 | EEGameLogOn/Tick/Line/Chat, one-line forwarders to ee_game_log, inline in ee/EEGameLog.h | +11 -8 | 210, 102,260 (-335) |
+| 24 | 9729f0bb0 | EECPNextAI / EECPNextSetAI in EECPEngine.cpp, their one caller | +20 -13 | 209, 101,841 (-419) |
+| 25 | 58166cf4b | EECombatGoals calls `ee_units_cls_base_condition` directly (EEUnitClass::BaseEvaluateCondition is its one-line forwarder) | +5 -1 | 208, 101,447 (-394) |
+
+Round 2 in all: 22 units and 7,974 lines out of SCC 1. Also in the round: `tools/cpp_deps.py cuts` (7f316b38c) and
+the fix of the Rust gate's `fs::golden_spec_replays` flake (51c6b499f).
 
 ## What to cut next
 
-From the what-if over `build/cpp_deps_*/edges.tsv` after cut 10 (lines that would leave SCC 1):
+From `tools/cpp_deps.py cuts` after cut 25 (SCC 1: 208 units, 101,447 lines). The cheap kinds (a global's storage,
+a TEST ONLY hook, a one-line forwarder, a helper in the wrong unit) are mostly used up; what is left ranks as real
+calls:
 
-- EEWonNet.cpp's six UI calls (EEGamePreferences::Save, the two arena screens' ProcessEvent, EEUIManager's
-  DisplayMessage/DisplayCancel, gEmptyString): about 2,300 lines (EEWonNet and the WON net glue). Not cheap: the
-  network code drives the screens; it wants a UI-callback table.
-- EEWheel.cpp, EEMessage.cpp, EEPlayer.cpp: the new top keystones (about 700 lines each), whole-unit moves.
-- EECalamityClass -> EECalamityUpdate (1,292) and the A* view's callbacks are one implementation split over
-  units: not cuts.
+- EECalamityClass -> EECalamityUpdate (1,292) and EEAIAStarView::Callbacks (1,238): one implementation split over
+  units, not cuts (round 1).
+- EECalamityManager -> 4 units (705): the manager constructs calamities and units (EECalamity::EECalamity,
+  EECalamityClass::EECalamityClass, EEUnitClass::CreateUnitAt). A factory registration would hide a real call.
+- RTSPlayer -> 2 units (485): EESavePrimitive, RTSRegisterUnit, RTSUnit's list. The save primitives
+  (EESavePrimitive) are named from several units: a leaf unit for them may be the next cheap cut.
+- EEWonNetAvailableGameFormManager -> 2 units (456): the unit is the WON form's manager plus free UI helpers (map
+  picks, screenshots); splitting the helpers out is a unit split, not an edge.
+- EESEInstructions (413), EEUIFMGStatusBox (385), EEUIMiniMap (376), EEUnitClassUpgrade (372), EEMiniMap (371):
+  units whose few out-edges are real calls into the units and UI.
+- The WON lobby (LobbyLifecycle's globals 327, gLobbyData 269, LobbyModelHost 337, InitLogic 318): left to the WON
+  lanes, which are moving those classes to Rust.
+- EESightCapture: the capture unit also defines EESightScope, the game's sight bookkeeping: a move, not a hook.
 
 ## Tools of the lane
 
 - `tools/cpp_deps.py report [--code-only]`, `unit FILE`.
-- What-if analysis over a report's `edges.tsv` (not committed: scratch scripts): delete one edge (or every outgoing
-  edge of a unit with few symbols) and recompute SCC 1. This found the cheap cuts after the first three: the edges
-  from WinMain to the test drivers, the TEST ONLY hooks in EEPhysics.cpp.
+- `tools/cpp_deps.py cuts [--max-weight N] [--top N]` (round 2): the what-if over SCC 1, ranked by the lines SCC 1
+  would lose: one edge, one symbol (every edge it alone makes), a unit's globals, a unit's out-edges; each classed
+  `data`, `hook`, `vtable` or `call` by its symbols. Writes `cuts.txt` and `cuts.json` under `--out`. It reads the
+  objects: run it after a build, never during one. It weighs single cuts: a cut that pays only with another (17 with
+  18, 20 with 21) shows up after the first is made, or in a scratch what-if over `edges.tsv` with both removed.
 
 ## The effect interface (cut 4)
 

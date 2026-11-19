@@ -32821,3 +32821,54 @@ with the census before and after (a full build first: the census reads the objec
   members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
   oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
   macros now add `alignas(16)`.
+
+## Cycle cuts, round 2: the cuts what-if in cpp_deps, TEST ONLY captures behind hook pointers, the golden_spec flake (tools/cpp_deps.py cuts; branch rust-cuts2, 2026-11-19)
+
+Fifteen cuts took SCC 1 from 230 units and 109,421 lines to 208 and 101,447 (docs/progress/cycle-cuts.md has each
+commit with its numbers). The what-if that round 1 ran from scratch scripts is now `tools/cpp_deps.py cuts`.
+
+- **`cpp_deps.py cuts` ranks cuts by the lines SCC 1 would lose.** It tries four kinds of cut: one edge, one symbol
+  (every edge that symbol alone makes), a unit's globals, and a unit's out-edges. After each it recomputes SCC 1
+  (Tarjan over about 230 nodes: the whole run takes 5 s). Each cut is classed by its symbols: `data`, `hook` (a
+  function pointer, a registration, a capture or test hook), `vtable` or `call`. It reads the objects, so run it
+  after a build: run during one, it stops on an object the build has just deleted. It weighs cuts one at a time. Two
+  cuts here paid only together, and each first half showed nothing alone (gEmptyString's storage before
+  EEOpenSaveGameFile's unit, -3 then -738; the calamity capture's hooks before the tech capture's, +6 then -1,217).
+  For such a pair, a scratch what-if over edges.tsv with both edges removed shows the gain.
+- **A TEST ONLY capture called by the game: the header declares hook pointers.** `R N(params);` becomes
+  `inline R (*N)(params) = nullptr;` (C++17 inline variables), so the call sites do not change. The capture unit
+  renames its definitions to `static R NImpl(...)` and sets the pointers in one static initializer. A function with a
+  default argument gets a pointer `NHook` and an inline forwarder `N(...)` that keeps the defaults. A scope class
+  (EECalamityCanCastScope, EEAppMapScope) becomes inline over two or three hooks. Each including object defines the
+  inline variable as a COMDAT, and the census counts a free inline as no edge, so the game's units name no symbol of
+  the capture. The captures' records are unchanged: the oracle, scenario and app captures at seeds 2-3 equal their
+  goldens. One trap: a capture unit that never included its own header (EECalamityCapture.cpp) declared its
+  functions only by defining them. With the header's names turned into variables it no longer compiled until it
+  included the header.
+- **Code in the wrong unit is the cheapest real cut.** EERenderListsView, the renderer's view of its lists, lived in
+  the render capture. EEWheel's constructors lived with the units' Update, although only the graphic object makes
+  wheels. EECPNextAI/EECPNextSetAI's only caller was EECPEngine. EEOpenSaveGameFile, a data-path lookup the UI's
+  backgrounds use, lived in EESaveLoad. When a function moves, its class's home can move with it: the census
+  attributes a class's COMDATs (its vtable among them) to the unit that defines most of its out-of-line members.
+  EEWheel's vtable followed its constructor and destructor to EEGraphicObject.cpp, and Update, a plain member, stayed.
+- **A one-line forwarder to Rust is an edge for nothing.** EEGameLogOn/Line/Tick/Chat and
+  EEUnitClass::BaseEvaluateCondition each named a C++ unit only to call one ee_* function. Inline in the header
+  (EEGameLog.h now includes rust/game/game_log.h), or a direct call where the one caller is, removes the edge. The
+  calls and their order are unchanged.
+- **A UI table for the network code.** EEWonNet called EEGamePreferences::Save, EEUIManager::DisplayMessage /
+  DisplayCancel and the two arena screens' open events. They now go through `gEEWonNetUI` (ee/EEWonNetUI.h, storage
+  in EEGlobals.cpp), which EEUIEWonNetArenaRoomEvents.cpp fills at static initialization: 2,314 lines, the network
+  unit and both arena event units. Only the LAN game exercises it.
+- **The `fs::golden_spec_replays` flake was a leftover directory, not timing.** Every run left its replay root
+  (`%TEMP%\eefsga<pid>xxx...`) behind, read-only: golden line 281 locks the root itself (`lock` on a spec with no
+  file name sets the directory's read-only attribute), and the cleanup's rmdir then failed. 615 of them had piled up
+  on this machine. A later test process that got a recycled pid found its root already read-only, and line 31's
+  `rmdir` of the root failed with native error 5 (`rmdir 3 = 0` replayed `= 1 ... ne 5`). It looked like load because
+  busy machines run many gates. The replay now makes its root writable once at the start, as the C++ driver's fresh
+  root was, and removes it (writable, emptied) at the end. The attribute still carries over between the sequences of
+  one run, as line 518 expects. A new test replays over a root left read-only; without the fix it fails at line 31
+  exactly like the gate. An antivirus-style holder (a process holding the root open) reproduced the failure only
+  through the leftovers it caused: with the root kept open, RemoveDirectory answers ERROR_SHARING_VIOLATION (32),
+  not 5. 5 here was the read-only attribute (FILE_ATTRIBUTE_READONLY on the directory, attributes 17).
+- Gates per cut: build `--sim` 0/0 and the oracle at seeds 2-3 identical. On the stacks: the test-profile link, the
+  tour (`fixture_game.py --exercise random-game` RESULT PASS), the Rust gate, and the oracle/scenario/app captures.
