@@ -7,14 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
-
-constexpr static const uint32_t ARCHIVE_VERSION = 1;
-
-constexpr static const uint32_t ARCHIVE_RESERVED = 0;
-
-constexpr static const int32_t NOT_SUSPENDED = 2;
-
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 

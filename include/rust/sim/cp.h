@@ -546,6 +546,9 @@ constexpr static const int32_t EE_CP_TOWN_FLAGS = 123;
 /// The table (the C++ shim's `mTable`).
 struct EeCpInfluence;
 
+/// An open scope that records (one exists only while the capture is on and the scope is its thread's outermost).
+struct EeCpPlaceScope;
+
 /// The class's own data (the C++ object owns it: `EECPPlacement::mRust`).
 struct EeCpPlacement;
 
@@ -1565,17 +1568,50 @@ void ee_cp_zone_erase(const EeCpFields *p, size_t i);
 /// As [`lists`]; `zones` holds `count` zones (or is null with 0).
 void ee_cp_zones_set(const EeCpFields *p, const EeCpDangerZone *zones, size_t count);
 
-/// TEST ONLY (PLCE): [`centers_digest`] into `out[3]`.
+/// Opens a scope of `method` for the computer player `player` (its `EEPlayer*`; 0: none), CPEV when `events`.
+/// Null when it does not record; close it with [`ee_cp_scope_end`] and the same `events` either way.
 ///
 /// # Safety
-/// As [`lists`]; `out` three words.
-void ee_cp_centers_digest(const EeCpFields *p, uint32_t *out);
+/// `player` is 0 or a live `EEComputerPlayer`'s `EEPlayer*`.
+EeCpPlaceScope *ee_cp_scope_begin(uint64_t player,
+                                  uint32_t method,
+                                  bool events);
 
-/// TEST ONLY (CPEV): [`lists_digest`] into `out[6]`.
+/// Closes a scope: a recording one appends the player's state (CPEV) and commits its record.
 ///
 /// # Safety
-/// As [`lists`]; `out` six words.
-void ee_cp_lists_digest(const EeCpFields *p, uint32_t *out);
+/// `scope` is null or [`ee_cp_scope_begin`]'s, not closed yet; `events` is the one it was opened with.
+void ee_cp_scope_end(EeCpPlaceScope *scope,
+                     bool events);
+
+/// A word (an input, an output, a flag).
+///
+/// # Safety
+/// `scope` is null or an open scope.
+void ee_cp_scope_word(EeCpPlaceScope *scope, uint32_t word);
+
+/// A unit's id (`unit` its `RTSUnit*`; 0: none, recorded as 0xfffffffe).
+///
+/// # Safety
+/// `scope` is null or an open scope; `unit` is 0 or a live unit.
+void ee_cp_scope_unit(EeCpPlaceScope *scope, uint64_t unit);
+
+/// The placement's state (`placement` an `EECPPlacement*`; 0: nothing).
+///
+/// # Safety
+/// `scope` is null or an open scope; `placement` is 0 or a live placement.
+void ee_cp_scope_state(EeCpPlaceScope *scope, uint64_t placement);
+
+/// Every resource centre of the computer player `player` (its `EEPlayer*`): their count and FNV-1a 64.
+///
+/// # Safety
+/// `scope` is null or an open scope; `player` is 0 or a live computer player.
+void ee_cp_scope_centers(EeCpPlaceScope *scope,
+                         uint64_t player);
+
+/// Notes the thread that runs the computer players' Update (CPEV records only there): its first call while the
+/// capture is on.
+void ee_cp_capture_thread();
 
 extern int64_t ee_cp_player_host(const EeCpPlaceCtx *ctx,
                                  int32_t op,
@@ -1595,16 +1631,6 @@ extern int64_t ee_cp_center_host(const EeCpPlaceCtx *ctx,
                                  uint64_t b,
                                  EeCpPlaceIo *io);
 
-extern void *ee_cp_scope_open(uint64_t player, uint32_t method);
-
-extern bool ee_cp_scope_on(void *scope);
-
-extern void ee_cp_scope_word(void *scope, uint32_t word);
-
-extern void ee_cp_scope_unit(void *scope, uint64_t unit);
-
-extern void ee_cp_scope_close(void *scope);
-
 /// Pushes a pair onto a host operation's list.
 ///
 /// # Safety
@@ -1617,14 +1643,6 @@ EeCpPlacement *ee_cp_placement_new();
 /// # Safety
 /// `p` is null or came from [`ee_cp_placement_new`] and is not used after.
 void ee_cp_placement_free(EeCpPlacement *p);
-
-/// TEST ONLY (PLCE): the data's digest into `out[8]`: the water sites' count and FNV-1a 64 (low, high words), the
-/// space sites' the same, whether the tiles were collected, the classes seen's count.
-///
-/// # Safety
-/// `p` is a live placement's data; `out` has 8 words.
-void ee_cp_placement_digest(const EeCpPlacement *p,
-                            uint32_t *out);
 
 /// `HasUnitNear`
 ///

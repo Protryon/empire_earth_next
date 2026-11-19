@@ -7,15 +7,11 @@
 
 class FSFileSpec;
 
+// Since the game's leaves round 2 a record is ee_data's bytes (tables.rs ee_data_objects_*; ee/EEDatabase.h): the
+// class is their layout (the original's vtable, its unread +0x7ac name and its Load went).
 class EEDbObject {
 public:
-    EEDbObject() {}
-    virtual ~EEDbObject() {}
-
-    long Load(FSFileSpec* inFile);          // 0xd689b: the 0x7a8-byte record, read whole
-
     char mRecord[0x7a8];                    // +0x004 (undecoded)
-    UString mName;                          // +0x7ac (not touched by Load)
 };
 
 // The db file names (EEDbObject.cpp, in definition order; Empire Earth.cpp reads them). Names are provisional.

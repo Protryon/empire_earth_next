@@ -34,7 +34,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIStatusBar.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UIStatusBarHost {
     static intptr_t Op(void* inBar, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)

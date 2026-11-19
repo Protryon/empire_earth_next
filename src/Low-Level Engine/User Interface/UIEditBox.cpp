@@ -41,7 +41,7 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UIEditBoxRust {
     // EditKey (ee_ui edit_keys.rs): UIControl's key predicates and the keyboard's A, L and Return entities

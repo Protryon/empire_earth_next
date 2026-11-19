@@ -5,9 +5,25 @@
 #ifndef LLE_UENCRYPTION_H
 #define LLE_UENCRYPTION_H
 
-class UString;
+// The encryption is Rust's (rust/crates/ee_base/src/codec encryption.rs): these convert the UStrings.
+#include <string>
+#include "lle/UString.h"
+#include "rust/base/codec.h"
 
-LLE_API void UEEncryptUString(const UString& inString, UString& outString);
-LLE_API bool UEDecryptUString(const UString& inString, UString& outString);
+// sink: the bytes become the UString's text (no embedded NULs: the Rust side drops them as the C++ did)
+inline void UESink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    *static_cast<UString*>(inContext) = std::string(reinterpret_cast<const char*>(inBytes), inLength).c_str();
+}
+inline void UEEncryptUString(const UString& inString, UString& outString)
+{
+    ee_ue_encrypt_ustring(reinterpret_cast<const uint8_t*>(static_cast<const char*>(inString)), inString.GetLength(),
+                          inString.GetAllocatedLength(), UESink, &outString);
+}
+inline bool UEDecryptUString(const UString& inString, UString& outString)
+{
+    return ee_ue_decrypt_ustring(reinterpret_cast<const uint8_t*>(static_cast<const char*>(inString)),
+                                 inString.GetLength(), UESink, &outString);
+}
 
 #endif

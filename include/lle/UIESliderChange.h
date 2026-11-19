@@ -9,6 +9,8 @@
 #include <map>
 
 #include "lle/UIEvent.h"
+#include "lle/UITextLabel.h"
+#include "lle/UISlider.h"
 
 class UITextLabel;
 
@@ -23,7 +25,19 @@ public:
     }
     virtual ~UIESliderChange() { this->mLabel = NULL; }
     void AddString(float inValue, UWideString inString) { this->mStrings.insert(std::make_pair(inValue, inString)); }
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+    // Shows the slider's value (scaled by the modifier, plus the offset) in the label: its string when one was
+    // added for that value, else the number
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        UWideString theText;
+        float theValue = static_cast<UISlider*>(inEntity)->GetCurrentRangeValue() * this->mModifier + this->mOffset;
+        if (this->mStrings.find(theValue) != this->mStrings.end())
+            sprintf(theText, "%s", (const char*)this->mStrings[theValue]);
+        else
+            sprintf(theText, "%g", theValue);
+        this->mLabel->SetText(theText, true);
+        return kErrorOK;
+    }
     void SetModifier(float inModifier) { this->mModifier = inModifier; }
     void SetOffset(long inOffset) { this->mOffset = inOffset; }
 private:

@@ -1,6 +1,9 @@
-// storegate: the engine's abstract classes the model and texture loaders call (GERasterizer, GEScreen, GESurface,
-// GEVertexArray, GEPolygonArray) as plain memory objects, so the game's own GEModelManager, GEModel, GETextureManager
-// and GETexture code runs without a renderer. tools/eemodel/storegate.py generates the members not written here
+// storegate: the engine's abstract classes the model and texture loaders call (GERasterizer, GEScreen, GESurface)
+// as plain memory objects, so the game's own GEModelManager, GEModel, GETextureManager and GETexture code runs
+// without a renderer. The vertex and polygon arrays are the game's own (GEVertexArray, GEPolygonArray, Rust arrays):
+// with the capture on (ee_ge_store_capture; ee_render geval vertarr_capture.rs) each keeps a shadow of what was set,
+// as the gate's own memory arrays kept it before (every field as floats, 32-bit indices, the sets past the end
+// counted), and the digests read the shadows. tools/eemodel/storegate.py generates the members not written here
 // (fakes_generated.h: every other pure virtual, returning a zero value).
 #ifndef STOREGATE_FAKES_H
 #define STOREGATE_FAKES_H
@@ -91,79 +94,13 @@ public:
 #include "fakes_generated_screen.h"
 };
 
-// The vertex and polygon arrays keep what was set; a set past the end is counted, not stored.
-class StoreVertexArray : public GEVertexArray {
-public:
-    StoreVertexArray(unsigned long inType, unsigned long inCount);
-    void CopyFrom(const GEVertexArray& inArray) override;
-    void GetColor(GEColor& outColor, unsigned long inIndex) const override;
-    void GetNormal(GEVector& outNormal, unsigned long inIndex) const override;
-    float GetOpacity(unsigned long inIndex) const override;
-    void GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const override;
-    unsigned long GetSize() const override { return (unsigned long)mPoints.size(); }
-    void GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inIndex) const override;
-    unsigned long GetType() const override { return mType; }
-    void SetColor(const GEColor& inColor, unsigned long inIndex) override;
-    void SetNormal(const GEVector& inNormal, unsigned long inIndex) override;
-    void SetOpacity(float inOpacity, unsigned long inIndex) override;
-    void SetPoint(const GE3DPoint& inPoint, unsigned long inIndex) override;
-    void SetTextureCoordinate(const GETextureCoordinate& inCoordinate, unsigned long inIndex) override;
-    void SetVertex(const GEColor& inColor, const GE3DPoint& inPoint, const GEVector& inNormal,
-                   const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex) override;
-    unsigned long SizeOf() const override { return (unsigned long)(mPoints.size() * 48); }
-
-    unsigned long mType;
-    std::vector<float> mPoints;     // x, y, z
-    std::vector<float> mNormals;
-    std::vector<float> mUVs;        // u, v
-    std::vector<float> mColors;     // r, g, b
-    std::vector<float> mOpacities;
-    unsigned long mOutOfRange;
-};
-
-class StorePolygonArray : public GEPolygonArray {
-public:
-    StorePolygonArray(unsigned long inCount) : mIndices(3 * (size_t)inCount, 0), mOutOfRange(0) {}
-    unsigned long GetSize() const override { return (unsigned long)(mIndices.size() / 3); }
-    unsigned long GetVertexIndex1(unsigned long inPolygon) const override { return Get(inPolygon, 0); }
-    unsigned long GetVertexIndex2(unsigned long inPolygon) const override { return Get(inPolygon, 1); }
-    unsigned long GetVertexIndex3(unsigned long inPolygon) const override { return Get(inPolygon, 2); }
-    void SetVertexIndex1(unsigned long inPolygon, unsigned long inIndex) override { Set(inPolygon, 0, inIndex); }
-    void SetVertexIndex2(unsigned long inPolygon, unsigned long inIndex) override { Set(inPolygon, 1, inIndex); }
-    void SetVertexIndex3(unsigned long inPolygon, unsigned long inIndex) override { Set(inPolygon, 2, inIndex); }
-    void SetVertexIndices(unsigned long inPolygon, unsigned long inIndex1, unsigned long inIndex2,
-                          unsigned long inIndex3) override
-    {
-        Set(inPolygon, 0, inIndex1);
-        Set(inPolygon, 1, inIndex2);
-        Set(inPolygon, 2, inIndex3);
-    }
-    unsigned long SizeOf() const override { return (unsigned long)(mIndices.size() * 4); }
-
-    unsigned long Get(unsigned long inPolygon, int inCorner) const
-    {
-        size_t i = 3 * (size_t)inPolygon + inCorner;
-        return i < mIndices.size() ? mIndices[i] : 0;
-    }
-    void Set(unsigned long inPolygon, int inCorner, unsigned long inIndex)
-    {
-        size_t i = 3 * (size_t)inPolygon + inCorner;
-        if (i < mIndices.size())
-            mIndices[i] = inIndex;
-        else
-            mOutOfRange++;
-    }
-
-    std::vector<unsigned long> mIndices;
-    unsigned long mOutOfRange;
-};
-
 class StoreRasterizer : public GERasterizer {
 public:
     StoreRasterizer() : GERasterizer(UString("storegate")) {}
-    GEPolygonArray* CreatePolygonArray(unsigned long inCount) override { return new StorePolygonArray(inCount); }
+    // the game's own arrays: what is set on them is the capture's (ee_ge_store_capture, digest.cpp)
+    GEPolygonArray* CreatePolygonArray(unsigned long inCount) override { return new GEPolygonArray(inCount); }
     GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount) override
-        { return new StoreVertexArray(inType, inCount); }
+        { return new GEVertexArray(inType, inCount); }
     long ActivateRasterizer() override { return kErrorOK; }
     long CreateTextureHandle(GETexture* inTexture) override { return kErrorOK; }
     void DestroyTextureHandle(GETexture* inTexture) override {}

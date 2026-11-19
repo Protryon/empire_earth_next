@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSArchive.h: an archive file ("ssar" header, a FAT of compressed files, a
 // tag table) read through a file mapping. FSArchive.cpp 0x4e29..0x7af6; vtable 0x10097530 (dtor only).
-// Requires <map>, <set>, <vector>, lle/FSFileSpec.h, lle/UDataCompression.h.
+// Requires <map>, <set>, <vector>, lle/FSFileSpec.h.
 #ifndef LLE_FSARCHIVE_H
 #define LLE_FSARCHIVE_H
 

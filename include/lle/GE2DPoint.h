@@ -1,13 +1,13 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GE2DPoint.h (RECONSTRUCTION). Requires <vector>.
-// port (R4.3, fifteenth part): GE2DPoint.cpp is gone: the component-wise members are inline here, the distances,
-// the side test and the interpolation forward to Rust from GEValues.cpp (ee_ge point.rs).
+// The distances, the side test and the interpolation forward to Rust (ee_base point.rs; lle/GERust.h).
 #ifndef LLE_GE2DPOINT_H
 #define LLE_GE2DPOINT_H
 
-class UString;
+#include "lle/GERust.h"
+
 class FSFile;
 
-class LLE_API GE2DPoint {                   // proven sizeof 8 (Default.dll vector<GE2DPoint>: index * 8)
+class GE2DPoint {                   // proven sizeof 8 (Default.dll vector<GE2DPoint>: index * 8)
 public:
     GE2DPoint() : mX(0.0f), mY(0.0f) {}
     GE2DPoint(long inX, long inY) : mX((float)inX), mY((float)inY) {}
@@ -21,7 +21,8 @@ public:
     GE2DPoint& operator-=(const GE2DPoint& inPoint) { this->mX -= inPoint.mX; this->mY -= inPoint.mY; return *this; }
     void Clear() { this->mX = 0.0f; this->mY = 0.0f; }
     // cross product of (inFrom - inTo) and (inTo - this): the side of the line inFrom-inTo this point lies on
-    float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const;
+    float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const
+        { return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo)); }
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     void SetX(float inX) { this->mX = inX; }
@@ -29,11 +30,22 @@ public:
     void SetX(long inX) { this->mX = (float)inX; }
     void SetY(long inY) { this->mY = (float)inY; }
     void SetXY(float inX, float inY) { this->mX = inX; this->mY = inY; }
-    float DistanceTo(const GE2DPoint& inPoint) const;
-    float DistanceToSquared(const GE2DPoint& inPoint) const;
-    void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const;
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile);
+    float DistanceTo(const GE2DPoint& inPoint) const { return ee_ge_2d_distance(GERust(*this), GERust(inPoint)); }
+    float DistanceToSquared(const GE2DPoint& inPoint) const
+        { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
+    // points every inStep along the segment to inPoint, always ending with inPoint itself
+    void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const
+    {
+        GE2DPoint theFrom(*this);
+        GE2DPoint theTo(inPoint);   // copies: either may be an element of outPoints
+        outPoints.clear();
+        ee_ge_2d_interpolate(GERust(theFrom), GERust(theTo), inStep, Push, &outPoints);
+    }
+    // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
+    template <class F> long Load(F& inFile) { const float* f[] = {&mX, &mY}; return GERustFields(inFile, f, 2, true, false); }
+    template <class F> long Save(F& inFile) { const float* f[] = {&mX, &mY}; return GERustFields(inFile, f, 2, true, true); }
+    static void Push(void* inPoints, const EeGe2DPoint* inPoint)
+        { static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint)); }
 
     float mX;                               // +0x00
     float mY;                               // +0x04

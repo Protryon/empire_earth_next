@@ -14,13 +14,8 @@ use crate::astar::goals::{
 use crate::astar::modifiers::TERRAIN_SHALLOW_WATER;
 use std::cmp::Ordering;
 
-/// A tile (`U2DPoint<long>`).
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct EePoint {
-    pub x: i32,
-    pub y: i32,
-}
+/// A tile (`U2DPoint<long>`; ee_base::sparse's, the sparse point set's).
+pub use ee_base::sparse::EePoint;
 
 /// `U2DPoint<long>::operator<`: the lower y first, then the larger x.
 pub fn point_less(a: EePoint, b: EePoint) -> bool {

@@ -13,13 +13,6 @@
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
-/// A parser's members the C++ keeps, for one call.
-struct EeWonConfigIo {
-  EeWonFileReader *reader;
-  int32_t *line;
-  bool unicode;
-};
-
 /// A saved state across the C ABI: the file position, name and line, and the pushback's units.
 struct EeWonConfigState {
   long pos;
@@ -32,6 +25,13 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// A parser's members the C++ keeps, for one call.
+struct EeWonConfigIo {
+  EeWonFileReader *reader;
+  int32_t *line;
+  bool unicode;
+};
 
 extern "C" {
 

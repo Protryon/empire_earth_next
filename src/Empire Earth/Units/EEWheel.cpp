@@ -33,35 +33,8 @@
 float EEJitterHeading(float inAngle, float inMin, float inMax);
 
 
-const UString kWheelName("wheel");
 const float kMinimumWheelDistance = 0.1f;
-
-// Creates a wheel for a model part, its radius half the part's bounding-box height, unturned
-EEWheel::EEWheel(GEModel* inModel)
-{
-    this->mModel = inModel;
-    this->mRadius = inModel->GetBoundingBox(0).GetHeight() * 0.5f;
-    this->mAngle = 0.0f;
-}
-
-// Creates a copy of a wheel (model part, radius and angle)
-EEWheel::EEWheel(const EEWheel& inWheel)
-{
-    this->mModel = inWheel.mModel;
-    this->mRadius = inWheel.mRadius;
-    this->mAngle = inWheel.mAngle;
-}
-
-// Destroys the wheel (nothing to release)
-EEWheel::~EEWheel()
-{
-}
-
-// Returns whether a model part is a wheel (its name starts with "wheel", any case)
-bool EEIsWheelModel(GEModel* inModel)
-{
-    return inModel->GetName().EqualsIgnoreCase(kWheelName, kWheelName.GetLength());
-}
+// (the wheel's construction, destruction and EEIsWheelModel: EEGraphicObject.cpp, which makes the wheels)
 
 // Rolls the wheel back by the unit's travel this tick (speed or turn rate, whichever is the larger share of its top)
 // over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by a full turn

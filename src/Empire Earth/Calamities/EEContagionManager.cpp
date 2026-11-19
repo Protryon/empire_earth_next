@@ -220,16 +220,6 @@ void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* 
         theComplexUnit->SetIsDeletable(false);
 }
 
-// Returns whether a unit type is in the given unit set (false for an unused set)
-// (declared out of line in ee/EEUnitSetManager.h; the original's COMDAT sat in EEAreaEffectFunctor.cpp, after its
-// first user)
-bool EEUnitSetManager::Contains(long inUnitType, unsigned long inSet)
-{
-    if (this->mSets[inSet] != NULL)
-        return this->mSets[inSet]->Contains(inUnitType);
-    return false;
-}
-
 // Reads the helpers and their calamity indexes from a saved game (the last helper id from 0.273 on: ee/
 // EESaveGameFiles.h EESaveHasContagionCounter); the first read error (contagion_store.rs EeContagionManager::load)
 long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)

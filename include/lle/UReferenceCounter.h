@@ -5,10 +5,9 @@
 #ifndef LLE_UREFERENCECOUNTER_H
 #define LLE_UREFERENCECOUNTER_H
 
-// Every member below is inline except the reference-tracking ones (UReferenceCounter.cpp, 0x1008104b..); the inline
+// Every member below is inline (UReferenceCounter.cpp, 0x1008104b.., is gone); the inline
 // block is emitted first by File System.cpp (0x1000436c..0x100043dd, declaration order; the dtor is ICF-folded at
 // 0x1003bf2f).
-class FSFileSpec;
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS)
 #include <map>      // sReferenceDebugInfo's maps (engine view); GetBucketMap's result (the game's view)
 #endif
@@ -20,10 +19,8 @@ public:
     // every engine and plug-in caller calls it out of line (probe: a lone call inlines)
     void Dereference() { if (--this->mReferenceCount == 0) delete this; }
     unsigned long GetReferenceCount() const { return this->mReferenceCount; }  // ICF-folded (0x4380)
-    // the reference-leak report (UReferenceCounter.cpp): only its title. The original's per-caller tracking
-    // (Reference/Dereference with a line and file into a debug map) had no caller, so the map was always empty;
-    // it is gone (LLE lane round 6)
-    static void DumpAllLeakedReferences(FSFileSpec& inFile);
+    // (the reference-leak report, DumpAllLeakedReferences, was only its title: the original's per-caller tracking had
+    // no caller, so its map was always empty; EEWorld::DumpAllLoadedMedia writes the title)
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS)
     // Engine and game views (the exe calls __imp_?GetBucketMap@UReferenceCounter@@SAPAV?$map@... at 0x1f8df4, a
     // reference-leak dump that walks the returned map). Typedef provisional names: line -> counter -> file -> count.

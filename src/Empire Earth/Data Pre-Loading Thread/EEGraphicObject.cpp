@@ -40,6 +40,37 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EEGlobalConstants.h"
 #include "rust/render/gfx.h"
 
+// The wheels of a unit model, as the graphic object makes them from its model's parts (were EEWheel.cpp's, which
+// keeps their Update: the graphic object named no unit code for them; PORT_LEARNINGS "Cycle cuts")
+const UString kWheelName("wheel");
+
+// Creates a wheel for a model part, its radius half the part's bounding-box height, unturned
+EEWheel::EEWheel(GEModel* inModel)
+{
+    this->mModel = inModel;
+    this->mRadius = inModel->GetBoundingBox(0).GetHeight() * 0.5f;
+    this->mAngle = 0.0f;
+}
+
+// Creates a copy of a wheel (model part, radius and angle)
+EEWheel::EEWheel(const EEWheel& inWheel)
+{
+    this->mModel = inWheel.mModel;
+    this->mRadius = inWheel.mRadius;
+    this->mAngle = inWheel.mAngle;
+}
+
+// Destroys the wheel (nothing to release)
+EEWheel::~EEWheel()
+{
+}
+
+// Returns whether a model part is a wheel (its name starts with "wheel", any case)
+bool EEIsWheelModel(GEModel* inModel)
+{
+    return inModel->GetName().EqualsIgnoreCase(kWheelName, kWheelName.GetLength());
+}
+
 extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gTrilinearFilter;
@@ -223,9 +254,6 @@ long EEGraphicObject::UnloadMedia()
 // The tag points' geometry and the scale (ee_gfx tags.rs), over the Rust layouts
 static_assert(sizeof(EETagPoint) == sizeof(EeGfxTagPoint) && sizeof(EETagPointList) == sizeof(EeGfxTagList), "tags.rs");
 static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint), "GE");
-static const EeGeTransformation* GERust(const GETransformation& inValue) { return reinterpret_cast<const EeGeTransformation*>(&inValue); }
-static EeGeTransformation* GERust(GETransformation& inValue) { return reinterpret_cast<EeGeTransformation*>(&inValue); }
-static EeGe3DPoint* GERust(GE3DPoint& inValue) { return reinterpret_cast<EeGe3DPoint*>(&inValue); }
 
 void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint)
 {

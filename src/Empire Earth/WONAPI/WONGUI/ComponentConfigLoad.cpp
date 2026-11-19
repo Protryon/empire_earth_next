@@ -36,7 +36,7 @@ bool ComponentConfig::ReadConfig_Unsafe(Component* component,const char* fileNam
     std::string path=ComponentConfig::GetResourceFile(fileName);
     ConfigParser localParser;
     ConfigParser& activeParser=parser?*parser:localParser;
-    activeParser.mWarningsAsErrors=true;
+    activeParser.SetWarningsAsErrors(true);
     if(!this->ParseTopLevel(activeParser,path.c_str())) {
         activeParser.CloseFile();
         this->mConfigError=activeParser.GetAbortReason();

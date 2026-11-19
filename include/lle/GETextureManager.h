@@ -39,21 +39,29 @@ public:
     ~GETextureManager();
     GETextureManager(const GETextureManager&) = delete;   // port: one Rust object per manager
     GETextureManager& operator=(const GETextureManager&) = delete;
-    void DumpAllLoadedMedia(FSFileSpec& inFile);
+    // Prints every loaded texture file and its reference count to a dump file
+    void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_texman_dump(this->mRust, &inFile); }
     unsigned long GetMemoryFootprint();     // the sum of the cached textures' GetAllocatedSize()
-    GEScreen* GetScreen() const;
-    unsigned long GetTextureCount();
+    GEScreen* GetScreen() const { return (GEScreen*)ee_ge_texman_screen(this->mRust); }
+    unsigned long GetTextureCount() { return ee_ge_texman_count(this->mRust); }
     GETexture* GetTextureAt(unsigned long inIndex);   // port: the cache's textures in name order (the store gate)
-    FSPath* GetTexturePath();
+    FSPath* GetTexturePath() { return (FSPath*)ee_ge_texman_path(this->mRust); }
     GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription);
-    GETexture* MakeTexture(GESurface* inSurface);
-    long RefreshAllTextures();
+    // Wraps a surface in a new managed texture, named by a running counter, with modulate blending
+    GETexture* MakeTexture(GESurface* inSurface) { return (GETexture*)ee_ge_texman_make(this->mRust, inSurface); }
+    // Reloads every cached texture from its files (or recreates its surface when they are gone),
+    // then reapplies the frames' saved stage settings to the whole texture; returns the last result
+    long RefreshAllTextures() { return ee_ge_texman_refresh_all(this->mRust); }
     long ReloadTexture(const UString& inName, const GETextureDescription& inDescription);
-    long RemoveAllTextures();
-    long RemoveTexture(GETexture* inTexture);
-    void SetScreen(GEScreen* inScreen);
-    void SetTexturePath(FSPath* inTexturePath);
-    void UpdateMIPFilterMode(unsigned long inMode);
+    // Removes and releases every texture nobody else references; returns 5 if any are still in use
+    long RemoveAllTextures() { return ee_ge_texman_remove_all(this->mRust); }
+    // Removes and releases one texture if nobody else references it; 5 if still in use, 3 if not managed here
+    long RemoveTexture(GETexture* inTexture) { return ee_ge_texman_remove(this->mRust, inTexture); }
+    void SetScreen(GEScreen* inScreen) { ee_ge_texman_set_screen(this->mRust, inScreen); }
+    // Replaces the texture search path, moving the reference
+    void SetTexturePath(FSPath* inTexturePath) { ee_ge_texman_set_path(this->mRust, inTexturePath); }
+    // Sets the MIP filter mode of every cached texture that uses MIP filtering
+    void UpdateMIPFilterMode(unsigned long inMode) { ee_ge_texman_update_mip_filter(this->mRust, inMode); }
     // port: the optional texture pack (docs/DATA_FORMATS.md "Texture packs"). inDirectory (e.g. "textures-4x")
     // stands in for a texture's "textures" directory and holds files 1 << inScaleShift times the originals' size: a
     // description with mUseTexturePack loads the pack's file of the same name when the path has one (else the
@@ -69,7 +77,8 @@ public:
     static long GetTexturePackMipLevelsToDrop();
 private:
     friend class GETexture;
-    long PromoteTexture(GETexture* inTexture);
+    // Marks the texture as promoted; always succeeds
+    long PromoteTexture(GETexture* inTexture) { return ee_ge_texman_promote(this->mRust, inTexture); }
     // the calls the Rust object makes on other objects (GETexture.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 

@@ -1,13 +1,9 @@
-01000 01b8d Error System/Error System.cpp
 028ca 036c5 Error System/ESChecksum.cpp
 04020 04e29 File System/File System.cpp
 04e29 07af6 File System/FSArchive.cpp
-07af6 07cb5 File System/FSBasicFile.cpp
 07cb5 080b9 File System/FSChunk.cpp
-08d15 09ec5 File System/FSFileSpec.cpp
 09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
-0bdb4 0c129 File System/FSPersistentList.cpp
 0dd9e 10550 Graphics Engine/GEBitmap.cpp
 1eb9f 206c7 Graphics Engine/GEModel.cpp
 23655 246a7 Graphics Engine/GERasterizer.cpp
@@ -18,29 +14,18 @@
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp
 4b190 4b275 Network Engine/Network Engine.cpp
-4bbce 4e8aa Sound Engine/SEConductor.cpp
 4e8aa 4eef6 Sound Engine/SEMixer.cpp
 4eef6 4f08e Sound Engine/SEScore.cpp
 4f08e 532d9 Sound Engine/SESoundManager.cpp
 532d9 53675 Sound Engine/Sound Engine.cpp
-53701 53819 Time Manager/Time Manager.cpp
-549b6 56369 Utilities/U2DSparseArray.cpp
-56369 5662f Utilities/UDataCompression.cpp
-5662f 57218 Utilities/UEncryption.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp
-5d3a1 5d72a User Interface/UIBitmap.cpp
-5db0f 5e47c User Interface/UIBlinkingButton.cpp
 5e47c 5ef4b User Interface/UIButton.cpp
 5ef4b 602e4 User Interface/UICheckBox.cpp
 602e4 64ed6 User Interface/UIComboBox.cpp
 64ed6 65f69 User Interface/UIControl.cpp
 65f69 69cc7 User Interface/UIControlsTable.cpp
-69cc7 69d6b User Interface/UIDualButton.cpp
 69d6b 6de9d User Interface/UIEditBox.cpp
-6de9d 6e304 User Interface/UIEMouseWheelScroll.cpp
-6e5a8 6e6de User Interface/UIEPolledEvent.cpp
-6e6de 6f278 User Interface/UIESliderChange.cpp
 6fae7 6ff58 User Interface/UIFileListBox.cpp
 6ff58 7042f User Interface/UIFontTable.cpp
 7042f 75330 User Interface/UIForm.cpp
@@ -49,19 +34,8 @@
 78251 785cd User Interface/UILBString.cpp
 78c81 7ba37 User Interface/UIManager.cpp
 7badf 7c38e User Interface/UIRadioButton.cpp
-7c38e 7c901 User Interface/UIScalableButton.cpp
 7c901 7d013 User Interface/UIScrollBar.cpp
-7d013 7d139 User Interface/UIScrollButton.cpp
 7d139 7db5b User Interface/UISlider.cpp
 7db5b 7e312 User Interface/UIStatusBar.cpp
 7e579 7fb46 User Interface/UITextLabel.cpp
-7fd7d 805c4 User Interface/UITLScrolling.cpp
-805c4 80c07 User Interface/UITriStateCheckBox.cpp
-80c07 8104b Utilities/UMath.cpp
-8104b 81d93 Utilities/UReferenceCounter.cpp
-81d93 8268d Utilities/UConfig.cpp
-8268d 82871 Utilities/UResourceFile.cpp
 82871 82c43 User Interface/User Interface.cpp
-82c43 837ad Utilities/UString.cpp
-837ad 838f7 Utilities/Utilities.cpp
-838f7 847e1 Utilities/UWideString.cpp

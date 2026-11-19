@@ -11,7 +11,6 @@
 #include "lle/UIForm.h"
 #include "lle/GEText.h"
 #include "lle/UIControlsTable.h"
-#include "lle/User Interface.h"
 #include "ee/EEUICChatLine.h"
 
 // Creates a chat display line from its controls table entry: bold name and message texts, a hidden timer (the
@@ -47,14 +46,4 @@ EEUICChatLine::~EEUICChatLine()
     delete static_cast<GEText*>(this->mMessage);
     delete static_cast<GEText*>(this->mDrawnMessage);
     delete static_cast<TMPoll*>(this->mTimer);
-}
-
-// CopyData, Display, DrawPolygons, DrawTextA: ee_screens chat_line.rs over hud_ctl_ffi.rs ChatCpp (the timer and the
-// texts); the message's cut is the toolkit's
-int64_t EEUICChatLine::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    if (inOp != EE_SCREENS_CHL_CUT)
-        return 0;
-    return UIGetStringCutOffIndex(*reinterpret_cast<const UWideString*>(inA), static_cast<GEText*>(this->mMessage)->GetFont(),
-                                  (unsigned long)inB, true, true);
 }

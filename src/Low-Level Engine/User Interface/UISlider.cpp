@@ -33,7 +33,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UISlider.h"
-#include "UIObjHost.h"
+#include "lle/UIObjHost.h"
 
 struct UISliderHost {
     static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)

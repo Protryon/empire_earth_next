@@ -101,6 +101,7 @@ mod sys {
         pub fn PlatFindClose(find: *mut c_void);
         pub fn PlatGetCurrentDirectory(path: *mut c_char, size: u32) -> u32;
         pub fn fclose(stream: *mut c_void) -> c_int;
+        pub fn fread(buffer: *mut c_void, size: usize, count: usize, stream: *mut c_void) -> usize;
     }
 }
 use sys::*;
@@ -571,6 +572,37 @@ pub unsafe extern "C" fn ee_fs_spec_delete_directory(s: *const EeFsSpec) -> c_lo
         return code::NATIVE_ERROR as c_long;
     }
     status::OK as c_long
+}
+
+/// A file of a directory read whole as `FOpen("r")` and `fread` read it (text mode: CR LF comes back as LF), or
+/// `None` when it does not open (the Error System's `Filter.txt`; its native error is not recorded, as before).
+///
+/// # Safety
+/// `volume` and `directory` are live strings.
+pub(crate) unsafe fn read_text_file(volume: &EeFsString, directory: &EeFsString, file: &[u8]) -> Option<Vec<u8>> {
+    let mut name = EeFsString::blank();
+    let mut text = file.to_vec();
+    text.push(0);
+    ee_ustring_init_capacity(name.us(), 0);
+    ee_ustring_assign_text(name.us(), text.as_ptr().cast());
+    let opened = fits(&[volume, directory, &name]);
+    let p = path(&[volume, directory, &name]);
+    ee_ustring_free(name.us());
+    let stream = if opened { PlatFOpen(cp(&p), c"r".as_ptr()) } else { ptr::null_mut() };
+    if stream.is_null() {
+        return None;
+    }
+    let mut out = Vec::new();
+    let mut buffer = [0u8; 4096];
+    loop {
+        let n = fread(buffer.as_mut_ptr().cast(), 1, buffer.len(), stream);
+        if n == 0 {
+            break;
+        }
+        out.extend_from_slice(&buffer[..n]);
+    }
+    fclose(stream);
+    Some(out)
 }
 
 /// `FOpen`: the file as a stdio stream (`PlatFOpen` with `mode`); open meanwhile, closed again on failure.

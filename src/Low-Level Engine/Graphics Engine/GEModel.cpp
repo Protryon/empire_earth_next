@@ -53,7 +53,6 @@
 #include "lle/FSPath.h"
 #include "GEOpenFormats.h"   // the data path's host for ee_of_find_model (a model's .glb/.gltf)
 #include "lle/GEPhysicalModel.h"
-#include "GERustViewport.h"
 #include <stddef.h>
 #include "lle/URandom.h"       // U2DFractal.h
 #include "lle/FSFile.h"
@@ -61,7 +60,6 @@
 #include "lle/U2DFractal.h"
 #include "lle/GETextureSet.h"
 #include "lle/GETerrainMesh.h"
-#include "GERustIO.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -87,53 +85,13 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
         return (intptr_t)((GERasterizer*)inObj)->GetScreenID();
     case EeGeModOp::RasterTextureManager:
         return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
+    // (the arrays' other calls are on their Rust arrays: ee_ge modobj.rs array_op)
     case EeGeModOp::VertexDelete:
         delete theVertices;
         return 0;
-    case EeGeModOp::VertexGather:
-        for (unsigned long i = 0; i < (unsigned long)a; i++)
-            theVertices->GetPoint(((GE3DPoint*)b)[i], i);
-        return 0;
-    case EeGeModOp::VertexGetPoint:
-        theVertices->GetPoint(*(GE3DPoint*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetPoint:
-        theVertices->SetPoint(*(const GE3DPoint*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexGetNormal:
-        theVertices->GetNormal(*(GEVector*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetNormal:
-        theVertices->SetNormal(*(const GEVector*)b, (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSetUv:
-        theVertices->SetTextureCoordinate(GETextureCoordinate(((const float*)b)[0], ((const float*)b)[1]),
-                                          (unsigned long)a);
-        return 0;
-    case EeGeModOp::VertexSize:
-        return (intptr_t)theVertices->GetSize();
-    case EeGeModOp::VertexSizeOf:
-        return (intptr_t)theVertices->SizeOf();
     case EeGeModOp::PolygonDelete:
         delete thePolygons;
         return 0;
-    case EeGeModOp::PolygonGather:
-        for (unsigned long i = 0; i < (unsigned long)a; i++) {
-            ((uint32_t*)b)[i * 3] = (uint32_t)thePolygons->GetVertexIndex1(i);
-            ((uint32_t*)b)[i * 3 + 1] = (uint32_t)thePolygons->GetVertexIndex2(i);
-            ((uint32_t*)b)[i * 3 + 2] = (uint32_t)thePolygons->GetVertexIndex3(i);
-        }
-        return 0;
-    case EeGeModOp::PolygonSetIndex:
-        if (c == 1)
-            thePolygons->SetVertexIndex1((unsigned long)a, (unsigned long)b);
-        else if (c == 2)
-            thePolygons->SetVertexIndex2((unsigned long)a, (unsigned long)b);
-        else
-            thePolygons->SetVertexIndex3((unsigned long)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::PolygonSizeOf:
-        return (intptr_t)thePolygons->SizeOf();
     case EeGeModOp::MaterialNew:
         return (intptr_t)new GEMaterial((unsigned long)a, (unsigned long)b);
     case EeGeModOp::MaterialDereference:
@@ -198,37 +156,6 @@ GEModel::~GEModel()
     ee_ge_mod_destroy(this->mRust);
 }
 
-void GEModel::ComputeBoundingVolumes()
-{
-    ee_ge_mod_compute_bounding_volumes(this->mRust);
-}
-
-void GEModel::ComputeModelNormals()
-{
-    ee_ge_mod_compute_normals(this->mRust);
-}
-
-// Releases a reference; when only the manager's (and one caller's) reference is left, removes it from the manager
-void GEModel::Dereference()
-{
-    ee_ge_mod_dereference(this->mRust);
-}
-
-unsigned long GEModel::GetPolygonCount(unsigned long inLOD) const
-{
-    return ee_ge_mod_polygon_count(this->mRust, inLOD);
-}
-
-void GEModel::PrepareTransforms()
-{
-    ee_ge_mod_prepare_transforms(this->mRust);
-}
-
-void GEModel::SetGraphicsCurrentFrame(unsigned long inFrame)
-{
-    ee_ge_mod_set_current_frame(this->mRust, inFrame);
-}
-
 void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 {
     ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex);
@@ -237,16 +164,6 @@ void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 void GEModel::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
     ee_ge_mod_set_texture(this->mRust, inTexture, inScreen);
-}
-
-unsigned long GEModel::SizeOf()
-{
-    return ee_ge_mod_size_of(this->mRust);
-}
-
-bool GEModel::Verify() const
-{
-    return ee_ge_mod_verify(this->mRust);
 }
 
 // ---- GEModel Load (GEModel Load.cpp, folded here in R4.3 part 16)
@@ -389,12 +306,6 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
     return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
 
-// Writes the list of loaded models and their reference counts to a file
-void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
-{
-    ee_ge_modman_dump(this->mRust, &inFile);
-}
-
 unsigned long GEModelManager::GetMemoryFootprint()
 {
     return ee_ge_modman_footprint(this->mRust);
@@ -408,48 +319,15 @@ GEModel* GEModelManager::LoadModel(const UString& inName, const EeGeSharedFrames
     return (GEModel*)ee_ge_modman_load(this->mRust, inName, &inShared);
 }
 
-// Releases every model nobody else references; returns 5 when some are still in use
-long GEModelManager::RemoveAllModels()
-{
-    return ee_ge_modman_remove_all(this->mRust);
-}
-
-// Releases a model if nobody else references it; 3 when it is unknown, 5 when it is still in use
-long GEModelManager::RemoveModel(GEModel* inModel)
-{
-    return ee_ge_modman_remove(this->mRust, inModel);
-}
-
-// Replaces the model search path, keeping a reference to the new one
-void GEModelManager::SetModelPath(FSPath* inPath)
-{
-    ee_ge_modman_set_path(this->mRust, inPath);
-}
-
 // ---- GEPhysicalModel (GEPhysicalModel.cpp, folded here in R4.3 part 16)
 
 // kLODFraction (0x10097b78) and ComputeTriangleBox (0x10021ebc), the model against model walk's, are Rust
 // (ee_ge physical_walk.rs, physical.rs)
 
 // The walks read the models through a table (ee_ge physical_walk.rs, EeGePhysicalModels): the handles are the GEModel*
-// the walks were given, read in place (R4.3 part 17: their Rust objects, ee_ge_physical_models), but for the two calls
-// that stay C++: a triangle's corners behind GEVertexArray's and GEPolygonArray's virtuals (the index arithmetic, a
-// polygon's vertex index plus the material's first vertex, is the C++'s unsigned long) and the exact retry.
+// the walks were given, read in place (R4.3 part 17: their Rust objects, ee_ge_physical_models; a triangle's corners
+// from the model's Rust arrays, ee_ge_mod_triangle), but for the exact retry, which stays C++.
 namespace {
-void PMTriangle(const void* inModel, unsigned long inFrame, unsigned long inLOD, unsigned long inPolygon,
-                unsigned long inVertexStart, EeGe3DPoint* outPoints)
-{
-    GEModel* theModel = const_cast<GEModel*>(static_cast<const GEModel*>(inModel));
-    GEVertexArray* theVertices = theModel->GetVertexArray(inFrame);
-    GEPolygonArray* thePolygons = theModel->GetPolygonArray(inLOD);
-    GE3DPoint thePoint;
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex1(inPolygon) + inVertexStart);
-    outPoints[0] = *GERust(thePoint);
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex2(inPolygon) + inVertexStart);
-    outPoints[1] = *GERust(thePoint);
-    theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex3(inPolygon) + inVertexStart);
-    outPoints[2] = *GERust(thePoint);
-}
 // the scaled walk's exact retry: a placed model of its own (it references and releases the model)
 bool PMRetryLine(const void* inModel, const EeGeTransformation* inLocation, unsigned long inFrame, float inScale,
                  const EeGe3DLine* inLine, unsigned long inLOD)
@@ -463,7 +341,7 @@ bool PMRetryLine(const void* inModel, const EeGeTransformation* inLocation, unsi
 EeGePhysicalModels PMTable()
 {
     EeGePhysicalModels theTable;
-    ee_ge_physical_models(PMTriangle, PMRetryLine, &theTable);
+    ee_ge_physical_models(ee_ge_mod_triangle, PMRetryLine, &theTable);
     return theTable;
 }
 const EeGePhysicalModels kPMModels = PMTable();

@@ -17,7 +17,9 @@
 struct EERenderFrameInfo;
 
 // The render lists as ee_gfx reads them in place (rfil.rs, units_lists.rs: EEROUnits draws from them): the pools
-// and vectors, the multimaps flattened into ioPairs, which must outlive the frame's use; the keys are left 0
+// and vectors, the multimaps flattened into ioPairs, which must outlive the frame's use; the keys are left 0.
+// Defined in EEROUnits.cpp, the renderer's (the capture reads the lists through it; the renderer names no symbol of
+// the capture)
 void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&ioPairs)[6]);
 
 // FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock.

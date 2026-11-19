@@ -447,3 +447,5 @@ pub mod sim_driver;
 pub mod fixture;
 // the game log (ee/EEGameLog.h): Logs/game-<time>.log's lines
 pub mod game_log;
+// the computer player's engine per seat and the AI manifest (ee/EECPEngine.h)
+pub mod cp_engine;

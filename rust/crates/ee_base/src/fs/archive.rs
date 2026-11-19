@@ -11,8 +11,11 @@ use crate::fs::file::{FsFile, FsWrite};
 use crate::fs::memfile::EeFsMemFile;
 use crate::fs::status;
 
+/// cbindgen:ignore
 pub const ARCHIVE_IDENTIFIER: u32 = 0x7373_6172; // 'ssar'
+/// cbindgen:ignore
 pub const ARCHIVE_VERSION: u32 = 1;
+/// cbindgen:ignore
 pub const ARCHIVE_RESERVED: u32 = 0;
 
 /// An `FSArchive::ArchivedFile` (`mStart`, `mEnd`, `mLength`).

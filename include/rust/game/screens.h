@@ -8986,6 +8986,25 @@ constexpr static const uint32_t EE_SCREENS_SH_BITMAP_OFFSET = 52;
 /// (`SelectTab`); `b` the flag << 32 | the tab.
 constexpr static const uint32_t EE_SCREENS_SH_SELECT_TAB = 53;
 
+/// `EEUIFileComboBox` (a combo box; args: the `FSPath*` (referenced by the maker), the pattern (a C string, copied)).
+constexpr static const uint32_t EE_SCREENS_SK_FILE_COMBO = 130;
+
+/// `CreateEntries()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_FILE_ENTRIES = 130;
+
+/// `SelectFile(*(const UWideString*)a)` -> `kErrorOK` (0) when a line is the name, else `kErrorNotFound` (3).
+constexpr static const uint32_t EE_SCREENS_SKOP_FILE_SELECT = 131;
+
+/// The files of the path `a` matching the pattern `b` (a C string), each appended without its last four
+/// characters (`FSPath::ListFiles` into a `std::set<UString>`: their order).
+constexpr static const uint32_t EE_SCREENS_SH_FILE_APPEND_LISTED = 192;
+
+/// -> the first line of the combo box's list equal to `*(const UWideString*)a`, or -1.
+constexpr static const uint32_t EE_SCREENS_SH_FILE_FIND_LINE = 193;
+
+/// The path `a` dereferenced.
+constexpr static const uint32_t EE_SCREENS_SH_FILE_PATH_RELEASE = 194;
+
 /// `EEUICUnitIconBar` (a control; no args).
 constexpr static const uint32_t EE_SCREENS_SK_ICON_BAR = 129;
 

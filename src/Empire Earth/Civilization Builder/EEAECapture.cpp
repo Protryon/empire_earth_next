@@ -145,7 +145,7 @@ void Templates()
 
 }   // namespace
 
-void EEAECaptureTick(float inElapsed)
+static void EEAECaptureTickImpl(float inElapsed)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -190,3 +190,7 @@ void EEAECaptureTick(float inElapsed)
         r.Bytes(theFile.GetData(), (unsigned int)theLength);
     r.Commit();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EEAECaptureTick = EEAECaptureTickImpl, true);

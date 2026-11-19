@@ -51,7 +51,6 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
-pub mod io;
 pub mod list2d;
 pub mod manager_ffi;
 /// cbindgen:ignore
@@ -70,6 +69,8 @@ pub mod pixel;
 pub mod prim;
 pub mod rastobj;
 pub mod smallobj;
+/// TEST ONLY: the store gate's reads of the arrays' capture.
+pub mod store_capture;
 pub mod surface_px;
 pub mod terrain;
 pub mod terrain_mesh;
@@ -82,7 +83,6 @@ pub mod texobj_tex;
 pub mod texture;
 pub mod texture_ffi;
 pub mod tmobj;
-pub mod values;
-pub mod vertarr;
-pub mod viewport;
 pub mod visible_ffi;
+// the value types' modules (lle/GERust.h's C ABI), under their old paths
+pub use crate::geval::{io, values, vertarr, viewport};

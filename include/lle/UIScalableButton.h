@@ -10,6 +10,7 @@
 #define LLE_UISCALABLEBUTTON_H
 
 #include "lle/UIButton.h"
+#include "lle/UIButtonRust.h"
 
 class UIScalableButton : public UIButton {
 public:
@@ -17,11 +18,19 @@ public:
                      GEBitmap* inPressedBitmap, const GERectangle& inNormalRectangle,
                      const GERectangle& inFocusedRectangle, const GERectangle& inPressedRectangle,
                      const GERectangle& inTextRectangle, const GERectangle& inRectangle, UIForm* inForm,
-                     unsigned long inIndex);
+                     unsigned long inIndex)
+        : UIButton(inId, inNormalBitmap, inFocusedBitmap, inPressedBitmap, inRectangle, inForm, inIndex, 0)
+    {
+        const GERectangle* theRectangles[3] = {&inNormalRectangle, &inFocusedRectangle, &inPressedRectangle};
+        for (int i = 0; i < 3; i++)
+            UIButtonRust::Call(this, EeUiButtonCall::ScalableInit, i, 0, theRectangles[i]->mBottom,
+                               theRectangles[i]->mLeft, theRectangles[i]->mRight, theRectangles[i]->mTop);
+        this->SetTextRectangle(inTextRectangle);
+    }
     virtual ~UIScalableButton() {}
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual void SetLocation(const GE2DPoint& inLocation);
+    virtual long CopyData() { return (long)UIButtonRust::Call(this, EeUiButtonCall::ScalableCopyData); }
+    virtual long DrawPolygons() { return (long)UIButtonRust::Call(this, EeUiButtonCall::ScalableDrawPolygons); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { UIButton::SetLocation(inLocation); }
     // the original's members (+0x104 mNormalRectangle, +0x114 mFocusedRectangle, +0x124 mPressedRectangle: each
     // bitmap's slice rectangle; +0x134 mCopiedRectangle, the current state's as of the last CopyData; sizeof 0x144)
     // are the Rust button's (variantobj.rs)

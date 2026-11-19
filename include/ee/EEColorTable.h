@@ -1,38 +1,33 @@
 // C:\EEX\Empire Earth\Database\EEColorTable.h (RECONSTRUCTION; file name inferred; provisional names).
-// The player colour table of db\dbcolortable.dat (RTTI EEColorTable, no base; vtable 0x43e504, one slot: ??_G
-// 0xd5f61; sizeof 0x34 from Load's new: four GEColors). EEColorTable.cpp 0xd5d08..0xd5f7e.
+// The player colour table of db\dbcolortable (the original: RTTI EEColorTable, a vector of objects of four GEColors).
+// Since the game's leaves round 2 the table is ee_data's list (EeDataList::Colors, tables.rs: the record's copy, the
+// colours, FindIndex); the class is its static readers. Requires ee/EEDbRecords.h for Load.
 #ifndef EE_EECOLORTABLE_H
 #define EE_EECOLORTABLE_H
 
-#include <vector>
-
 #include "lle/GEColor.h"
-
-class FSFileSpec;
+#include "rust/data/tables.h"
 
 class EEColorTable {
 public:
-    EEColorTable() {}                       // 0xd5f1c (out of line: four GEColor default ctors)
-    virtual ~EEColorTable() {}              // +0x00 (??_G 0xd5f61)
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
-    static unsigned long FindIndex(const GEColor& inColor);   // 0xd5ec8 (0 when not found)
-
-    GEColor mColor;                         // +0x04 (record +0x6c)
-    GEColor mColor2;                        // +0x10 (record +0x78)
-    GEColor mDarkColor;                     // +0x1c (record +0x78 * 0.6)
-    GEColor mColor4;                        // +0x28 (record +0x84)
-
-    // inline (out-of-line COMDATs 0x12113f / 0x121168 after their first users in EEMiniMap.cpp, cdecl): entry
-    // inIndex's mDarkColor / mColor2, sColor past the table (provisional names)
-    static const GEColor& GetDarkColor(unsigned long inIndex)
-        { return inIndex < EEColorTable::sTable.size() ? EEColorTable::sTable[inIndex]->mDarkColor : EEColorTable::sColor; }
-    static const GEColor& GetColor2(unsigned long inIndex)
-        { return inIndex < EEColorTable::sTable.size() ? EEColorTable::sTable[inIndex]->mColor2 : EEColorTable::sColor; }
-
-    // only EEColorTable.cpp sees the statics (their $E numbers would renumber the includers' chains; provisional name)
-    static std::vector<EEColorTable*> sTable;   // 0x8e6108 (guard byte 0x8e6104 bit 1)
-    static GEColor sColor;                      // 0x8e60f8 (guard bit 2; unread here)
+    // the colours of a player colour: the main, the second, its 60% dark shade, the fourth
+    enum { kMain = 0, kSecond, kDark, kFourth };
+    // Loads the player colours from db\dbcolortable; returns the last read status
+    template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::Colors); }
+    static void Unload() { ee_data_list_clear(EeDataList::Colors); }
+    // the index of the player colour whose main colour equals inColor, else 0
+    static unsigned long FindIndex(const GEColor& inColor)
+        { return (unsigned long)ee_data_player_color_find(inColor.mRed, inColor.mGreen, inColor.mBlue); }
+    // colour inWhich of player colour inIndex (white, GEColor(), past the table)
+    static GEColor Get(unsigned long inIndex, unsigned int inWhich)
+    {
+        float theColor[3];
+        ee_data_player_color(inIndex, inWhich, theColor);
+        return GEColor(theColor[0], theColor[1], theColor[2]);
+    }
+    static GEColor GetColor(unsigned long inIndex) { return EEColorTable::Get(inIndex, kMain); }
+    static GEColor GetDarkColor(unsigned long inIndex) { return EEColorTable::Get(inIndex, kDark); }
+    static GEColor GetColor2(unsigned long inIndex) { return EEColorTable::Get(inIndex, kSecond); }
 };
 
 #endif

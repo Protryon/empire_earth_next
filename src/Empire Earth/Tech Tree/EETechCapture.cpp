@@ -24,7 +24,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEContagionManager.h"
 
-void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
+static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
 {
     ioRecord.I32(inNode->mData != NULL ? inNode->mData->mID : -1);
     ioRecord.I32(inNode->mEpoch);
@@ -51,7 +51,7 @@ void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
     ioRecord.I32(d != NULL ? d->mPrerequisite4 : -1);
 }
 
-void EETechCaptureEpoch(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
+static void EETechCaptureEpochImpl(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
 {
     EETechCaptureNode(ioRecord, inEpoch);
     ioRecord.I32(inEpoch->mRequiredSOL);
@@ -59,7 +59,7 @@ void EETechCaptureEpoch(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
     ioRecord.U32(inEpoch->mIsCountingSOL ? 1 : 0);
 }
 
-void EETechCaptureTree(EESimCaptureRecord& ioRecord, EETechTree* inTree)
+static void EETechCaptureTreeImpl(EESimCaptureRecord& ioRecord, EETechTree* inTree)
 {
     ioRecord.I32(inTree->mPlayerIndex);
     ioRecord.I32(inTree->mCurrentEpoch);
@@ -68,12 +68,12 @@ void EETechCaptureTree(EESimCaptureRecord& ioRecord, EETechTree* inTree)
     ioRecord.I32(inTree->mEpochsBeforeWonders);
 }
 
-long EETechCapturePlayerIndex(EETechTree* inTree)
+static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
 {
     return inTree != NULL ? inTree->mPlayerIndex : -1;
 }
 
-void EETechCaptureUpgrade(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade)
+static void EETechCaptureUpgradeImpl(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade)
 {
     if (inUpgrade == NULL) {
         ioRecord.U32(0);
@@ -94,7 +94,7 @@ void EETechCaptureUpgrade(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUp
     ioRecord.Bytes(theBytes.data(), theSize);
 }
 
-void EETechCapturePlayer(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
+static void EETechCapturePlayerImpl(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
 {
     if (inPlayer == NULL) {
         ioRecord.I32(-1);
@@ -106,7 +106,8 @@ void EETechCapturePlayer(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
     ioRecord.U32(inPlayer->mBB44 ? 1 : 0);
 }
 
-void EETechCaptureCost(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass, float inScale, long inCost)
+static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
+                                  float inScale, long inCost)
 {
     EESimCaptureRecord theRecord(EECaptureTag("TCST"));
     theRecord.I32(inKind);
@@ -120,8 +121,8 @@ void EETechCaptureCost(EETechTreeNode* inNode, long inKind, long inResource, lon
     theRecord.Commit();
 }
 
-void EETechCaptureRescale(long inWhat, unsigned long inUnitID, long inValue, unsigned long inOldMaximum, long inNewMaximum,
-                          float inAmount)
+static void EETechCaptureRescaleImpl(long inWhat, unsigned long inUnitID, long inValue, unsigned long inOldMaximum,
+                                     long inNewMaximum, float inAmount)
 {
     EESimCaptureRecord theRecord(EECaptureTag("EVHP"));
     theRecord.I32(inWhat);
@@ -133,8 +134,8 @@ void EETechCaptureRescale(long inWhat, unsigned long inUnitID, long inValue, uns
     theRecord.Commit();
 }
 
-void EECalamityCapture(long inKind, unsigned long inClassEnum, unsigned long inCaster, unsigned long inTarget, long inX,
-                       long inY, unsigned long inPlayer, bool inResult)
+static void EECalamityCaptureImpl(long inKind, unsigned long inClassEnum, unsigned long inCaster,
+                                  unsigned long inTarget, long inX, long inY, unsigned long inPlayer, bool inResult)
 {
     EESimCaptureRecord theRecord(EECaptureTag("CALC"));
     theRecord.I32(inKind);
@@ -197,7 +198,7 @@ EEUnit* FirstLivingUnit(EEPlayer* inPlayer)
 
 }   // namespace
 
-void EETechCaptureCastCalamities(long inCall)
+static void EETechCaptureCastCalamitiesImpl(long inCall)
 {
     if (inCall == 0)
         EECalamityCaptureClasses();   // CALI (ee/EECalamityCapture.h)
@@ -231,7 +232,7 @@ void EETechCaptureCastCalamities(long inCall)
     }
 }
 
-void EETechCaptureSweep()
+static void EETechCaptureSweepImpl()
 {
     for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(p);
@@ -348,7 +349,7 @@ void CalamityState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
 
 }   // namespace
 
-void EECalamityCaptureEvent(long inOp, long inA, long inB, float inC, float inD)
+static void EECalamityCaptureEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
     if (sCalamityCollecting == 0)
         return;
@@ -359,7 +360,7 @@ void EECalamityCaptureEvent(long inOp, long inA, long inB, float inC, float inD)
     sCalamityEventCount++;
 }
 
-long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime)
+static long EECalamityCaptureUpdateImpl(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime)
 {
     if (!EESimCaptureRecord::Active())
         return inClass->Update(inCalamity, inElapsedTime);
@@ -385,12 +386,13 @@ long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCalamity, f
 
 // ---- CCAS: CanCastAt ----------------------------------------------------------------------------------------------
 
-EECalamityCanCastScope::EECalamityCanCastScope() : mOutermost(sCanCastDepth == 0)
+// EECalamityCanCastScope's construction: whether it is the outermost
+static bool CanCastEnter()
 {
-    sCanCastDepth++;
+    return sCanCastDepth++ == 0;
 }
 
-EECalamityCanCastScope::~EECalamityCanCastScope()
+static void CanCastLeave()
 {
     sCanCastDepth--;
 }
@@ -425,16 +427,16 @@ EEUnit* LivingUnit(EEPlayer* inPlayer, long inSkip)
 
 }   // namespace
 
-long EECalamityCanCastScope::Record(EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation,
-                                    unsigned long inX, unsigned long inY, bool inCheck, EEUnit* inTargetUnit,
-                                    long inResult)
+static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
+                              const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
+                              EEUnit* inTargetUnit, long inResult)
 {
-    if (this->mOutermost && EESimCaptureRecord::Active())
+    if (inOutermost && EESimCaptureRecord::Active())
         CanCastRecord(0, inClass, inUnit, inLocation, inX, inY, inCheck, inTargetUnit, inResult);
     return inResult;
 }
 
-void EECalamityCaptureSweep()
+static void EECalamityCaptureSweepImpl()
 {
     EECalamityManager* theManager = EECalamityManager::GetInstance();
     unsigned long n = gWorld.GetNumPlayers();
@@ -487,7 +489,7 @@ void EECalamityCaptureSweep()
 
 // ---- TRTE: ResearchToEpoch's steps --------------------------------------------------------------------------------
 
-void EETechCaptureEpochStep(long inStep, long inEpoch)
+static void EETechCaptureEpochStepImpl(long inStep, long inEpoch)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -499,7 +501,7 @@ void EETechCaptureEpochStep(long inStep, long inEpoch)
     sEpochSteps.push_back(inEpoch);
 }
 
-void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal)
+static void EETechCaptureResearchToEpochImpl(EETechTree* inTree, long inEpoch, bool inLocal)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -519,7 +521,7 @@ void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal
 
 // ---- EVUN: the units an effect walks ------------------------------------------------------------------------------
 
-void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue)
+static void EETechCaptureUnitStepImpl(EEUnit* inUnit, bool inApplies, long inValue)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -533,7 +535,7 @@ void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue)
     sUnitStepCount++;
 }
 
-void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA, long inB)
+static void EETechCaptureUnitWalkImpl(long inLoop, long inEffect, long inUnitType, long inA, long inB)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -636,14 +638,14 @@ void StartCommit(EECalamity* inCalamity, EESimCaptureRecord& ioRecord, long inRe
 
 }   // namespace
 
-void EECalamityCaptureStartEvent(long inOp, long inA, long inB, float inC, float inD)
+static void EECalamityCaptureStartEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
     if (sStartCollecting == 0)
         return;
     Event(sStartEvents, sStartEventCount, inOp, inA, inB, inC, inD);
 }
 
-void EECalamityCaptureStartPoint(long inWhich, float inX, float inY, float inZ)
+static void EECalamityCaptureStartPointImpl(long inWhich, float inX, float inY, float inZ)
 {
     if (sStartCollecting == 0)
         return;
@@ -652,7 +654,7 @@ void EECalamityCaptureStartPoint(long inWhich, float inX, float inY, float inZ)
     Event(sStartEvents, sStartEventCount, kCalamityStartEffect, inWhich, theZ, inX, inY);
 }
 
-bool EECalamityCaptureStart(EECalamityClass* inClass, EECalamity* inCalamity)
+static bool EECalamityCaptureStartImpl(EECalamityClass* inClass, EECalamity* inCalamity)
 {
     if (!EESimCaptureRecord::Active() || sStartCollecting != 0)
         return inClass->Start(inCalamity);
@@ -665,7 +667,7 @@ bool EECalamityCaptureStart(EECalamityClass* inClass, EECalamity* inCalamity)
     return theResult;
 }
 
-void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity)
+static void EECalamityCaptureStopImpl(EECalamityClass* inClass, EECalamity* inCalamity)
 {
     if (!EESimCaptureRecord::Active() || sStartCollecting != 0) {
         inClass->Stop(inCalamity);
@@ -708,14 +710,14 @@ void HelperState(EESimCaptureRecord& ioRecord, EeContagionHelper* inHelper)
 
 }   // namespace
 
-void EECalamityCaptureContagionEvent(long inOp, long inA, long inB, float inC, float inD)
+static void EECalamityCaptureContagionEventImpl(long inOp, long inA, long inB, float inC, float inD)
 {
     if (sContagionCollecting == 0)
         return;
     Event(sContagionEvents, sContagionEventCount, inOp, inA, inB, inC, inD);
 }
 
-void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime)
+static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float inElapsedTime)
 {
     if (!EESimCaptureRecord::Active() || sContagionCollecting != 0) {
         EEContagionHelperUpdate(inHelper, inElapsedTime);
@@ -741,14 +743,14 @@ void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime
 
 // ---- TNWK: the tech tree's walks ------------------------------------------------------------------------------------
 
-void EETechCaptureWalkBegin()
+static void EETechCaptureWalkBeginImpl()
 {
     if (!EESimCaptureRecord::Active())
         return;
     sWalks.push_back(std::vector<long>());
 }
 
-void EETechCaptureWalkStep(long inID, long inAction)
+static void EETechCaptureWalkStepImpl(long inID, long inAction)
 {
     if (!EESimCaptureRecord::Active() || sWalks.empty())
         return;
@@ -756,7 +758,8 @@ void EETechCaptureWalkStep(long inID, long inAction)
     sWalks.back().push_back(inAction);
 }
 
-void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB, long inResult)
+static void EETechCaptureWalkImpl(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB,
+                                  long inResult)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -783,3 +786,35 @@ void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, 
         EETechCaptureTree(theRecord, inTree);
     theRecord.Commit();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EECalamityCanCastLeave = CanCastLeave,
+                                      EECalamityCanCastRecord = CanCastRecordImpl,
+                                      EECalamityCaptureStart = EECalamityCaptureStartImpl,
+                                      EECalamityCaptureUpdate = EECalamityCaptureUpdateImpl,
+                                      EETechCapturePlayerIndex = EETechCapturePlayerIndexImpl,
+                                      EECalamityCapture = EECalamityCaptureImpl,
+                                      EECalamityCaptureContagion = EECalamityCaptureContagionImpl,
+                                      EECalamityCaptureContagionEventHook = EECalamityCaptureContagionEventImpl,
+                                      EECalamityCaptureEventHook = EECalamityCaptureEventImpl,
+                                      EECalamityCaptureStartEventHook = EECalamityCaptureStartEventImpl,
+                                      EECalamityCaptureStartPoint = EECalamityCaptureStartPointImpl,
+                                      EECalamityCaptureStop = EECalamityCaptureStopImpl,
+                                      EECalamityCaptureSweep = EECalamityCaptureSweepImpl,
+                                      EETechCaptureCastCalamities = EETechCaptureCastCalamitiesImpl,
+                                      EETechCaptureCost = EETechCaptureCostImpl,
+                                      EETechCaptureEpoch = EETechCaptureEpochImpl,
+                                      EETechCaptureEpochStep = EETechCaptureEpochStepImpl,
+                                      EETechCaptureNode = EETechCaptureNodeImpl,
+                                      EETechCapturePlayer = EETechCapturePlayerImpl,
+                                      EETechCaptureRescale = EETechCaptureRescaleImpl,
+                                      EETechCaptureResearchToEpoch = EETechCaptureResearchToEpochImpl,
+                                      EETechCaptureSweep = EETechCaptureSweepImpl,
+                                      EETechCaptureTree = EETechCaptureTreeImpl,
+                                      EETechCaptureUnitStep = EETechCaptureUnitStepImpl,
+                                      EETechCaptureUnitWalkHook = EETechCaptureUnitWalkImpl,
+                                      EETechCaptureUpgrade = EETechCaptureUpgradeImpl,
+                                      EETechCaptureWalk = EETechCaptureWalkImpl,
+                                      EETechCaptureWalkBegin = EETechCaptureWalkBeginImpl,
+                                      EETechCaptureWalkStep = EETechCaptureWalkStepImpl, true);

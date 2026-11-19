@@ -77,7 +77,6 @@ unsigned long EEMenuHeight();
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
-#include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEARust.h"
 #include "ee/EEDatabaseTables.h"

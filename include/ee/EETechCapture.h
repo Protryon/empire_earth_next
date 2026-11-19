@@ -45,30 +45,37 @@ constexpr unsigned int EECaptureTag(const char (&inName)[5])
            (unsigned int)(unsigned char)inName[2] << 16 | (unsigned int)(unsigned char)inName[3] << 24;
 }
 
+// The hooks the game calls are pointers that EETechCapture.cpp sets before main (a function with a default argument:
+// an inline forwarder over its NHook), so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle
+// cuts")
+
 // a node's state: id, epoch, obsolete epoch, the flags (researched, obsolete, available, editor-obsoleted, allowed),
 // the research delay, the prerequisite flags, the tree's current/start/end epoch; an epoch adds its SOL counters
-void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode);
-void EETechCaptureEpoch(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch);
-void EETechCaptureTree(EESimCaptureRecord& ioRecord, EETechTree* inTree);
+inline void (*EETechCaptureNode)(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode) = nullptr;
+inline void (*EETechCaptureEpoch)(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch) = nullptr;
+inline void (*EETechCaptureTree)(EESimCaptureRecord& ioRecord, EETechTree* inTree) = nullptr;
 // the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers)
-void EETechCaptureUpgrade(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade);
+inline void (*EETechCaptureUpgrade)(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade) = nullptr;
 // the player's fields the effects change (population bonus, tribute fee, mBB44)
-void EETechCapturePlayer(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer);
-long EETechCapturePlayerIndex(EETechTree* inTree);
+inline void (*EETechCapturePlayer)(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer) = nullptr;
+inline long (*EETechCapturePlayerIndex)(EETechTree* inTree) = nullptr;
 // one TCST record (inKind 0: a node's GetCost, 1: an epoch's)
-void EETechCaptureCost(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass, float inScale, long inCost);
+inline void (*EETechCaptureCost)(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
+                                 float inScale, long inCost) = nullptr;
 // one EVHP record: what (0 hit points, 1 flight time), the unit, its value, the old and new maximum, the new value
-void EETechCaptureRescale(long inWhat, unsigned long inUnitID, long inValue, unsigned long inOldMaximum, long inNewMaximum,
-                          float inAmount);
+inline void (*EETechCaptureRescale)(long inWhat, unsigned long inUnitID, long inValue, unsigned long inOldMaximum,
+                                    long inNewMaximum,
+                                    float inAmount) = nullptr;
 // one CALC record: the create call (0 global, 1 location, 2 unit), class, caster, target, x, y, player, result
-void EECalamityCapture(long inKind, unsigned long inClassEnum, unsigned long inCaster, unsigned long inTarget, long inX,
-                       long inY, unsigned long inPlayer, bool inResult);
-void EETechCaptureSweep();
+inline void (*EECalamityCapture)(long inKind, unsigned long inClassEnum, unsigned long inCaster,
+                                 unsigned long inTarget, long inX,
+                                 long inY, unsigned long inPlayer, bool inResult) = nullptr;
+inline void (*EETechCaptureSweep)() = nullptr;
 // TEST ONLY (EE-SIM --calamities): the calamities' game. At its k-th call every calamity class whose row is k modulo
 // 8 is cast by each computer player through EECalamityManager (as EEUGCastCalamity casts: the player's first living
 // unit the caster; a unit class at the next player's first living unit, a location class at its tile), so that
 // every class runs in a game the computer players alone never cast one in
-void EETechCaptureCastCalamities(long inCall);
+inline void (*EETechCaptureCastCalamities)(long inCall) = nullptr;
 
 class EECalamity;
 class EECalamityClass;
@@ -105,27 +112,45 @@ enum EECalamityCaptureOp {
     kCalamityOpSpecialLocation,
     kCalamityOpDestroyEffect,       // (the handle)
 };
-void EECalamityCaptureEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
+inline void (*EECalamityCaptureEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
+inline void EECalamityCaptureEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
+{
+    EECalamityCaptureEventHook(inOp, inA, inB, inC, inD);
+}
 // runs inClass->Update(inCalamity, inElapsedTime) and, capturing, writes its CALW record
-long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime);
+inline long (*EECalamityCaptureUpdate)(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime) = nullptr;
 // CCAS kind 0: records an outermost CanCastAt's result (the scope counts the nesting of the overrides' calls)
+// (the scope's hooks: Enter answers whether it is the outermost, Record writes its record when outermost)
+inline bool (*EECalamityCanCastEnter)() = nullptr;
+inline void (*EECalamityCanCastLeave)() = nullptr;
+inline long (*EECalamityCanCastRecord)(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
+                                       const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
+                                       EEUnit* inTargetUnit, long inResult) = nullptr;
 struct EECalamityCanCastScope {
-    EECalamityCanCastScope();
-    ~EECalamityCanCastScope();
+    EECalamityCanCastScope() : mOutermost(EECalamityCanCastEnter()) {}
+    ~EECalamityCanCastScope() { EECalamityCanCastLeave(); }
     long Record(EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, unsigned long inX,
-                unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult);
+                unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult)
+    {
+        return EECalamityCanCastRecord(this->mOutermost, inClass, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
+                                       inResult);
+    }
     bool mOutermost;
 };
 // CCAS kind 1: the sweep (every five game minutes)
-void EECalamityCaptureSweep();
+inline void (*EECalamityCaptureSweep)() = nullptr;
 // TRTE: one step of ResearchToEpoch (0 unlock, 1 research all, 2 research self, 3 research kind 7, 4 show the name)
-void EETechCaptureEpochStep(long inStep, long inEpoch);
+inline void (*EETechCaptureEpochStep)(long inStep, long inEpoch) = nullptr;
 // TRTE: the record of the ResearchToEpoch whose steps were collected
-void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal);
+inline void (*EETechCaptureResearchToEpoch)(EETechTree* inTree, long inEpoch, bool inLocal) = nullptr;
 // EVUN: one unit an effect walks (collected), and the walk's record (inLoop: 0 sight off, 1 sight on, 2 hit points,
 // 3 pending hit points, 4 flight time, 5 pending flight time, 6 area effects, 7 conversion)
-void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue);
-void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA = 0, long inB = 0);
+inline void (*EETechCaptureUnitStep)(EEUnit* inUnit, bool inApplies, long inValue) = nullptr;
+inline void (*EETechCaptureUnitWalkHook)(long inLoop, long inEffect, long inUnitType, long inA, long inB) = nullptr;
+inline void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA = 0, long inB = 0)
+{
+    EETechCaptureUnitWalkHook(inLoop, inEffect, inUnitType, inA, inB);
+}
 
 // CALT: a calamity's Start (kind 0) or Stop (kind 1): the class, the calamity's state, its target's and caster's
 // unit state and the contagion manager's before, the world calls of the start or stop in order
@@ -140,11 +165,15 @@ enum EECalamityStartOp {
     kCalamityStartKill,             // the target unit killed (id)
     kCalamityStartStep,             // a class's own world step (its number)
 };
-void EECalamityCaptureStartEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
+inline void (*EECalamityCaptureStartEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
+inline void EECalamityCaptureStartEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
+{
+    EECalamityCaptureStartEventHook(inOp, inA, inB, inC, inD);
+}
 // a kCalamityStartEffect event: which effect of the class, the location (z as the int's bits)
-void EECalamityCaptureStartPoint(long inWhich, float inX, float inY, float inZ);
-bool EECalamityCaptureStart(EECalamityClass* inClass, EECalamity* inCalamity);
-void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity);
+inline void (*EECalamityCaptureStartPoint)(long inWhich, float inX, float inY, float inZ) = nullptr;
+inline bool (*EECalamityCaptureStart)(EECalamityClass* inClass, EECalamity* inCalamity) = nullptr;
+inline void (*EECalamityCaptureStop)(EECalamityClass* inClass, EECalamity* inCalamity) = nullptr;
 
 // CONT: one contagion helper's Update: the helper's id, class, timers and units before, the elapsed time, the
 // update's world calls in order (EECalamityCaptureContagionEvent: spread candidates with their answers and draws,
@@ -162,8 +191,12 @@ enum EEContagionCaptureOp {
     kContagionCure,             // a functor's Cure (unit id)
     kContagionFunctorUpdate,    // the functor's Update (its update count)
 };
-void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
-void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime);
+inline void (*EECalamityCaptureContagionEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
+inline void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
+{
+    EECalamityCaptureContagionEventHook(inOp, inA, inB, inC, inD);
+}
+inline void (*EECalamityCaptureContagion)(EeContagionHelper* inHelper, float inElapsedTime) = nullptr;
 
 // TNWK: one walk over an epoch's nodes or one tree decision (kind: 0 Unlock, 1 ResearchAll, 2 ResearchKind,
 // 3 the epoch's ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's
@@ -171,7 +204,8 @@ void EECalamityCaptureContagion(EeContagionHelper* inHelper, float inElapsedTime
 // the step (id, action), the node (or the tree's epoch) after, the result. Kinds 6 and 10 (asked from the media
 // loader's thread too) are TNMT records: their order against the game thread's depends on timing. Walks nest (an event a step fires may
 // walk again): Begin opens one, the steps go to the innermost, Walk writes and closes it
-void EETechCaptureWalkBegin();
-void EETechCaptureWalkStep(long inID, long inAction);
-void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB, long inResult);
+inline void (*EETechCaptureWalkBegin)() = nullptr;
+inline void (*EETechCaptureWalkStep)(long inID, long inAction) = nullptr;
+inline void (*EETechCaptureWalk)(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB,
+                                 long inResult) = nullptr;
 #endif

@@ -2479,7 +2479,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
 {
     GETransformation theTransformation;
     GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EEUnitSet* theSet = gUnitSetManager.mSets.size() > 99 ? gUnitSetManager.mSets[99] : 0;
+    EEUnitSet* theSet = gUnitSetManager.GetSet(99);
     bool theResult = false;
     EEUnitClass* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())

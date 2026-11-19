@@ -22,14 +22,20 @@
 #ifndef EE_EEGAMELOG_H
 #define EE_EEGAMELOG_H
 
+#include "rust/game/game_log.h"
+
 class EEPlayer;
 class EEUnit;
 
-bool EEGameLogOn();                                         // a game log is open
-void EEGameLogTick(unsigned long inGameTime);               // every physics tick (EEArtificialIntelligence::Update)
-void EEGameLogLine(const char* inText);                     // a whole line, newline included (the AI trace)
+// (the plain forwarders are inline: their callers name ee_game_log, not EEGameLog.cpp; PORT_LEARNINGS "Cycle cuts")
+inline bool EEGameLogOn() { return ee_game_log_on(); }      // a game log is open
+// every physics tick (EEArtificialIntelligence::Update)
+inline void EEGameLogTick(unsigned long inGameTime) { ee_game_log_tick(inGameTime); }
+// a whole line, newline included (the AI trace)
+inline void EEGameLogLine(const char* inText) { ee_game_log_line(inText); }
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // EEPlayer::AddResource
 void EEGameLogUnitLost(EEPlayer* inPlayer, EEUnit* inUnit);  // EEPlayer::UnitTaken (not swapped)
-void EEGameLogChat(unsigned long inPlayer, const char* inText);   // EEMInGameChat::Execute: a chat line (notes while playing)
+// EEMInGameChat::Execute: a chat line (notes while playing)
+inline void EEGameLogChat(unsigned long inPlayer, const char* inText) { ee_game_log_chat(inPlayer, inText); }
 
 #endif

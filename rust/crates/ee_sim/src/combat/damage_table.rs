@@ -65,6 +65,29 @@ fn with<T>(f: impl FnOnce(&DamageTables) -> T, none: T) -> T {
     }
 }
 
+/// TEST ONLY: CBDT, a record per row (its input and its three rows; `EECombatCapture`'s bytes), while the capture is
+/// on (was EETerrainTypeTable::LoadDamageTables', the game's leaves round 2).
+fn capture(t: &DamageTables, rows: &[[i32; DAMAGE_COLUMNS]], scale: f32, twin1: f32, twin2: f32) {
+    if !crate::app::capture_record::active() {
+        return;
+    }
+    for (r, percent) in rows.iter().enumerate() {
+        let mut rec = crate::app::capture_record::Record::new(u32::from_le_bytes(*b"CBDT"));
+        for v in percent {
+            rec.i32(*v);
+        }
+        for v in [scale, twin1, twin2] {
+            rec.f32(v);
+        }
+        for table in [EE_COMBAT_DAMAGE_BASE, EE_COMBAT_DAMAGE_SCALED1, EE_COMBAT_DAMAGE_SCALED2] {
+            for v in t.row(table, r).into_iter().flatten() {
+                rec.f32(*v);
+            }
+        }
+        rec.commit();
+    }
+}
+
 /// Loads the tables from `count` rows of percentages (replacing any loaded ones); returns the row count.
 ///
 /// # Safety
@@ -84,6 +107,7 @@ pub unsafe extern "C" fn ee_combat_damage_table_load(
         unsafe { std::slice::from_raw_parts(percent, count as usize) }
     };
     let tables = DamageTables::build(rows, scale, twin1, twin2);
+    capture(&tables, rows, scale, twin1, twin2);
     let n = tables.rows() as u32;
     *TABLES.write().unwrap_or_else(|e| e.into_inner()) = Some(tables);
     n

@@ -1559,13 +1559,17 @@ pub unsafe extern "C" fn ee_astar_cm_regions_digest(r: *const EeAStarCmRecord) -
     regions_digest(&*r)
 }
 
-/// `EEAIContinentFill` (TEST ONLY): the CNTR record's bytes.
+/// TEST ONLY: `EEAIContinentCapture(tag)`: one record of the manager's state under `tag` (CNTB, CNTR); nothing
+/// unless the capture is on.
 ///
 /// # Safety
-/// As `ee_astar_cm_write_regions`.
+/// `r` the manager's record; its objects live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_capture_fill(r: *const EeAStarCmRecord) -> *mut EeAStarCmBytes {
-    bytes(capture_fill(&*r))
+pub unsafe extern "C" fn ee_astar_cm_capture(r: *const EeAStarCmRecord, tag: u32) {
+    if !crate::app::capture_record::active() {
+        return;
+    }
+    crate::app::capture_record::commit(tag, &capture_fill(&*r));
 }
 
 /// `EEAIContinentDigest` (TEST ONLY).
@@ -1679,7 +1683,7 @@ mod tests {
 
     fn set() -> EeSparseArray {
         // SAFETY: a fresh handle from the C interface
-        unsafe { *Box::from_raw(crate::astar::ffi::ee_sparse_new()) }
+        unsafe { *Box::from_raw(ee_base::sparse::ee_sparse_new()) }
     }
 
     #[test]

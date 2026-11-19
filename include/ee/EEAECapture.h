@@ -10,6 +10,8 @@
 #ifndef EE_EEAECAPTURE_H
 #define EE_EEAECAPTURE_H
 
-void EEAECaptureTick(float inElapsed);
+// the hooks the game calls: pointers EEAECapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY
+// unit (PORT_LEARNINGS "Cycle cuts")
+inline void (*EEAECaptureTick)(float inElapsed) = nullptr;
 
 #endif

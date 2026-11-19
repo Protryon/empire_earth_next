@@ -67,92 +67,6 @@ unsigned long URandom::NextInSeries()
     return this->mSeed;
 }
 
-// ---- GERectangle members this unit emits (0x1000e39e..0x1000e78f)
-
-//
-//
-//
-//
-//
-
-// Creates a zero-size rectangle at the given point
-GERectangle::GERectangle(const GE2DPoint& inPoint)
-{
-    this->mTop = inPoint.GetY();
-    this->mLeft = inPoint.GetX();
-    this->mBottom = inPoint.GetY();
-    this->mRight = inPoint.GetX();
-}
-
-// Creates a rectangle from a Windows RECT
-GERectangle::GERectangle(const tagRECT& inRect)
-{
-    this->mTop = (float)inRect.top;
-    this->mLeft = (float)inRect.left;
-    this->mBottom = (float)inRect.bottom;
-    this->mRight = (float)inRect.right;
-}
-
-//
-//
-//
-//
-//
-
-// Returns whether both rectangles have the same four edges
-bool GERectangle::operator==(const GERectangle& inRectangle) const
-{
-    return this->mTop == inRectangle.mTop && this->mLeft == inRectangle.mLeft && this->mRight == inRectangle.mRight &&
-           this->mBottom == inRectangle.mBottom;
-}
-
-// Returns whether the point lies inside the rectangle, edges included
-bool GERectangle::Contains(const GE2DPoint& inPoint) const
-{
-    return inPoint.mX >= this->mLeft && inPoint.mX <= this->mRight && inPoint.mY >= this->mTop && inPoint.mY <= this->mBottom;
-}
-
-// Grows the rectangle just enough to contain the point
-void GERectangle::Extend(const GE2DPoint& inPoint)
-{
-    this->mLeft = min(this->mLeft, inPoint.GetX());
-    this->mRight = max(this->mRight, inPoint.GetX());
-    this->mTop = min(this->mTop, inPoint.mY);
-    this->mBottom = max(this->mBottom, inPoint.mY);
-}
-
-//
-//
-//
-
-//
-//
-//
-
-// Returns the rectangle's centre point in outCenter
-void GERectangle::GetCenter(GE2DPoint& outCenter) const
-{
-    outCenter.mX = (this->mRight - this->mLeft) * 0.5f + this->mLeft;
-    outCenter.mY = (this->mBottom - this->mTop) * 0.5f + this->mTop;
-}
-
-//
-//
-//
-
-//
-//
-//
-
-// Rounds each edge of the rectangle to the nearest whole number
-void GERectangle::RoundToNearest()
-{
-    this->mTop = (float)UMFloor(this->mTop + 0.5f);
-    this->mLeft = (float)UMFloor(this->mLeft + 0.5f);
-    this->mRight = (float)UMFloor(this->mRight + 0.5f);
-    this->mBottom = (float)UMFloor(this->mBottom + 0.5f);
-}
-
 // ---- GEBitmap (0x1000f3a4..). Vertex order: 0 top left, 1 top right, 2 bottom left, 3 bottom right.
 //
 // port (R4.3, ninth part): the bitmap is a whole Rust object (ee_ge bmpobj.rs): the constructor's quad, the
@@ -169,19 +83,10 @@ static intptr_t GEBitmapFloatBits(float inValue)
     return (intptr_t)theBits;
 }
 
-static float GEBitmapBitsFloat(intptr_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, 4);
-    return theValue;
-}
-
 intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
-    unsigned long i = (unsigned long)a;
     switch (inOp) {
     case EeGeBmpOp::RasterActive:
         return (intptr_t)GERasterizer::GetActiveRasterizer();
@@ -189,34 +94,9 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
         return (intptr_t)((GERasterizer*)inObj)->GetScreenCount();
     case EeGeBmpOp::RasterVertexArray:
         return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
+    // (the vertex arrays' other calls are on their Rust arrays: ee_ge bmpobj.rs vertex_op)
     case EeGeBmpOp::VertexDelete:
         delete theVertices;
-        return 0;
-    case EeGeBmpOp::VertexGetColor:
-        theVertices->GetColor(*(GEColor*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetColor:
-        theVertices->SetColor(*(const GEColor*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexGetPoint:
-        theVertices->GetPoint(*(GE3DPoint*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetPoint:
-        theVertices->SetPoint(*(const GE3DPoint*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetNormal:
-        theVertices->SetNormal(*(const GEVector*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexGetOpacity:
-        return GEBitmapFloatBits(theVertices->GetOpacity(i));
-    case EeGeBmpOp::VertexSetOpacity:
-        theVertices->SetOpacity(GEBitmapBitsFloat(b), i);
-        return 0;
-    case EeGeBmpOp::VertexGetUv:
-        theVertices->GetTextureCoordinate(*(GETextureCoordinate*)b, i);
-        return 0;
-    case EeGeBmpOp::VertexSetUv:
-        theVertices->SetTextureCoordinate(*(const GETextureCoordinate*)b, i);
         return 0;
     case EeGeBmpOp::TexReference:
         theTexture->Reference();
@@ -234,9 +114,6 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
         return (intptr_t)theTexture->GetHeight();
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)theTexture->GetNumMipLevelsToDrop();
-    case EeGeBmpOp::VertexCopyFrom:
-        theVertices->CopyFrom(*(const GEVertexArray*)b);
-        return 0;
     }
     (void)inOwner;
     return 0;

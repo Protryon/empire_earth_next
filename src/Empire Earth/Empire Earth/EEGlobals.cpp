@@ -25,6 +25,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEGameState.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EEGameVariant.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECivilizationManager.h"
@@ -146,6 +147,7 @@ float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
 EE_GLOBAL_STORAGE(EEComputerPlayerBehaviorTable, gComputerPlayerBehaviorTable, "?gComputerPlayerBehaviorTable@@3VEEComputerPlayerBehaviorTable@@A");
 
 EE_GLOBAL_STORAGE(EEUnitSetManager, gUnitSetManager, "?gUnitSetManager@@3VEEUnitSetManager@@A");
+EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // the game variants: ee_data's list (ee/EEDbList.h)
 EE_GLOBAL_STORAGE(EEAEManager, gAEManager, "?gAEManager@@3VEEAEManager@@A");
 EE_GLOBAL_STORAGE(EEAmbientSoundManager, gAmbientSoundManager, "?gAmbientSoundManager@@3VEEAmbientSoundManager@@A");
 EE_GLOBAL_STORAGE(EECivilizationManager, gCivilizationManager, "?gCivilizationManager@@3VEECivilizationManager@@A");
@@ -326,3 +328,10 @@ float gSpaceStationHeight = 1.5f;
 // the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
 class GEFont;
 GEFont* gSeplScreenFont;
+// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
+// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced). Was
+// EEROUnits.cpp's: 21 units named the renderer's unit for it
+char gEmptyString[4] = "";
+// the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
+#include "ee/EEWonNetUI.h"
+EEWonNetUI gEEWonNetUI;

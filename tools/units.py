@@ -24,11 +24,7 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 PLATFORM_UNITS = [
                   # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
                   "Platform/Common/PlatFontData.c"]
-# the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
-UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
-# the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
-GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
+EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were
@@ -43,18 +39,12 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
-                       # TEST ONLY: the placement and resource centres' capture (PLCE; ee/EECPPlaceCapture.h)
-                       "Empire Earth/AI Thread/EECPPlaceCapture.cpp",
-                       # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
-                       "Empire Earth/AI Thread/EECPEngine.cpp",
                        # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
                        # the tile A* searches' view of the world (docs/RUST_PLAN.md R5b.1; ee/EEAIAStarView.h)
                        "Empire Earth/AI Thread/EEAIAStarView.cpp",
-                       # TEST ONLY: the capture of the tile A* searches (EE_SIM_CAPTURE; ee/EEAIAStarCapture.h)
-                       "Empire Earth/AI Thread/EEAIAStarCapture.cpp",
-                       # TEST ONLY: the capture of the continent manager's analysis (ee/EEAIContinentCapture.h)
-                       "Empire Earth/AI Thread/EEAIContinentCapture.cpp",
+                       # EESaveLoad.cpp's data path lookup, a leaf (PORT_LEARNINGS "Cycle cuts"; ee/EESaveGameFiles.h)
+                       "Empire Earth/Persistent/EEOpenSaveGameFile.cpp",
                        # the continent manager's regions in a saved game (save version 0.263; ee/EESaveGameFiles.h)
                        "Empire Earth/AI Thread/EEAIContinentSave.cpp",
                        # the start of the Rust library (ee_rust_init)
@@ -112,8 +102,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world's layout for Rust's views (ee/EEWorldLayout.h; ee_sim world layout.rs)
                        "Empire Earth/Units/EEWorldLayout.cpp",
-                       # TEST ONLY: the world views' check (ee/EEWorldLayout.h: VWCK)
-                       "Empire Earth/Units/EEWorldViewCheck.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
                        # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)

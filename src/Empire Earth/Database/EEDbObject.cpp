@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\Database\EEDbObject.cpp (name from RTTI EEDbObject; no __FILE__). 0xd61f7..0xd68c7: the 34 db
-// file name keys (one init chain each, in definition order), then EEDbObject::Load. EEDatabase.cpp ends at 0xd61f7
+// file name keys (one init chain each, in definition order; EEDbObject::Load went: the records are ee_data's). EEDatabase.cpp ends at 0xd61f7
 // (EEDbObject's ??_G), EEGameVariant.cpp starts at 0xd68c7. Unit flags: the exe's module set.
 #include <windows.h>
 
@@ -39,13 +39,3 @@ const UString kDbGameVariantFile("db\\dbGameVariant.dat");
 const UString kDbPremadeCivsFile("db\\dbpremadecivs.dat");
 const UString kDbCliffTerrainFile("db\\dbcliffterrain.dat");
 const UString kDbCivPowersFile("db\\dbcivpowers.dat");
-
-// Reads the record's raw bytes from a file; returns 9 when there is no file
-long EEDbObject::Load(FSFileSpec* inFile)
-{
-    unsigned long theRead = 0;
-    long theResult = 9;
-    if (inFile != NULL)
-        theResult = inFile->Read(this->mRecord, sizeof(this->mRecord), theRead);
-    return theResult;
-}

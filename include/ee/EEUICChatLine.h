@@ -14,16 +14,8 @@ public:
     EEUICChatLine(const GERectangle& inRectangle, UIControlsTable& inTable, UIForm* inForm);
     virtual ~EEUICChatLine();
     virtual long CopyData() { return ee_screens_chat_line_copy_data(this, this->Host()); }
-    // 0x2576f5: shows a line for inTime; returns the index the message was cut at to fit the control
-    unsigned long Display(const GEColor& inColor, const UWideString& inName, const UWideString& inMessage,
-                          unsigned long inTime)
-    {
-        return ee_screens_chat_line_display(this->Host(), &inColor, &inName, &inMessage, inTime);
-    }
     virtual long DrawPolygons() { return ee_screens_chat_line_draw(this, this->Host()); }
     virtual long DrawTextA() { return ee_screens_chat_line_draw_text(this, this->Host()); }
-protected:
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);   // the message's cut
 };
 
 #endif

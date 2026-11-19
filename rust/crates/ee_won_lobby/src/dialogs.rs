@@ -75,8 +75,9 @@ pub fn status_body_width(text_width: i32, m_width: i32, root_width: i32) -> i32 
 }
 
 /// `StatusDialog::SetText`: the padding above and below a message of fewer than 5 lines (`None` for longer).
+/// A font of no height (a build without its fonts) gives `None` where the original divided by zero.
 pub fn status_pad(label_height: i32, line_height: i32) -> Option<i32> {
-    let lines = label_height / line_height;
+    let lines = label_height.checked_div(line_height)?;
     (lines < 5).then(|| (5 - lines).wrapping_mul(line_height) / 2)
 }
 
