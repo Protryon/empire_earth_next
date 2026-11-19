@@ -32810,3 +32810,9 @@ with the census before and after (a full build first: the census reads the objec
 - cbindgen exports a module's pub items to its crate's header: a Rust-only module (ee_sim::world::effects, whose
   `EffectHandle` and `EFFECT_NOT_MADE` appeared in rust/sim/world.h and made the header check fail) takes
   `/// cbindgen:ignore` on its `pub mod`.
+- **Two oracle runs under one NAME fault, not diverge.** A chain started with `&` inside a background shell kept
+  running after its shell returned (Git Bash's `ps` does not list it); starting the chain again ran two `sim_oracle run
+  cuts1-m` at once, whose shared stage slots made EE-SIM fault 12 s in (GEPhysicalModel::Intersects from
+  EEUnitClass::RefreshSound, a null model). It looked like a merge bug: the same exe and the same source in a scratch
+  worktree both played through. Before suspecting a merge, list the processes from Windows (`Get-CimInstance
+  Win32_Process` by command line) and give every rerun a new NAME.
