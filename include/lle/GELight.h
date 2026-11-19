@@ -31,13 +31,7 @@ public:
         this->mStyle = inLight.mStyle;
         return *this;
     }
-#if defined(LLE_CURRENT_HEADERS) && !defined(LOWLEVELENGINE_EXPORTS)
-    // Inferred: the renderers saw a newer header with this getter inline (DX7HRDisplay.dll imports no GELight
-    // member, and DX7Rasterizer::UpdateLight 0x1000cbe5 reads +0x48 directly)
     float GetAttenuation0() const { return this->mAttenuation0; }
-#else
-    float GetAttenuation0() const;
-#endif
     float GetAttenuation1() const { return this->mAttenuation1; }
     float GetAttenuation2() const { return this->mAttenuation2; }
     const GEColor& GetColor() const { return this->mColor; }
@@ -46,12 +40,7 @@ public:
     const GE3DPoint& GetLocation() const { return this->mLocation; }
     float GetRange() const { return this->mRange; }
     unsigned long GetStyle() const { return this->mStyle; }
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports it and stores +0x48 directly (EERenderObject 0x10ae74)
     void SetAttenuation0(float inAttenuation) { this->mAttenuation0 = inAttenuation; }
-#else
-    void SetAttenuation0(float inAttenuation);
-#endif
     void SetAttenuation1(float inAttenuation) { this->mAttenuation1 = inAttenuation; }
     void SetAttenuation2(float inAttenuation) { this->mAttenuation2 = inAttenuation; }
     void SetColor(const GEColor& inColor)

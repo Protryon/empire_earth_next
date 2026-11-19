@@ -1,8 +1,9 @@
 //! The Low-Level Engine's Error System (`src/Low-Level Engine/Error System/Error System.cpp` before; LLE lane round
 //! 2): the debug-output filter read from `Filter.txt`, the verification failure (`ESVerify`), the last native
-//! error and the checksum sets (`checksum.rs`). C++ keeps `ESDebugOut`'s `printf` formatting and the platform's
-//! debug output, `ESVerify`'s and the native error's exported names as one-line forwarders, and reading
-//! `Filter.txt` through the File System (text mode).
+//! error and the checksum sets (`checksum.rs`). The C++ names are inline forwarders (lle/LowLevelEngineCore.h, LLE
+//! round 8: the unit is gone); `ESDebugOut` keeps its `printf` formatting there and hands the text to
+//! [`ee_error_debug_out`], which reads `Filter.txt` (text mode, through `PlatFOpen`) and sends what passes to the
+//! platform's debug output.
 //!
 //! `Filter.txt` (in the startup directory, read on the first debug message): one filter per line, read as `fgets`
 //! with a 1024-byte buffer read it (a longer line is several filters; a line ends at its first NUL). The first
@@ -115,23 +116,29 @@ pub extern "C" fn ee_error_filters_loaded() -> bool {
     filters().loaded
 }
 
-/// Loads `Filter.txt`'s text as text mode read it (`found` false: the file was not found; `text` may then be NULL).
+/// `ESDebugOut` after its `printf` formatting (lle/LowLevelEngineCore.h): `Filter.txt` read from the startup
+/// directory on the first message that has a startup path (`volume`, `directory`: `gStartupVolume`,
+/// `gStartupDirectory`), then the message sent to the debugger if the filters let it through (a leading '!' always
+/// passes and is not shown).
 ///
 /// # Safety
-/// `text` holds `len` bytes, or is NULL with `len` 0.
+/// `text` is a NUL-terminated string; `volume` and `directory` are live `UString`s (`EeFsString`).
 #[no_mangle]
-pub unsafe extern "C" fn ee_error_filters_load(found: bool, text: *const u8, len: usize) {
-    let bytes = if text.is_null() { &[][..] } else { std::slice::from_raw_parts(text, len) };
-    filters().load(found.then_some(bytes));
-}
-
-/// Whether a debug message passes the filters (`ESFilterDebugOutput`).
-///
-/// # Safety
-/// `text` is a NUL-terminated string.
-#[no_mangle]
-pub unsafe extern "C" fn ee_error_filter_passes(text: *const c_char) -> bool {
-    filters().passes(CStr::from_ptr(text).to_bytes())
+pub unsafe extern "C" fn ee_error_debug_out(
+    text: *const c_char,
+    volume: *const std::ffi::c_void,
+    directory: *const std::ffi::c_void,
+) {
+    let volume = &*volume.cast::<crate::fs::spec::EeFsString>();
+    let directory = &*directory.cast::<crate::fs::spec::EeFsString>();
+    if !ee_error_filters_loaded() && volume.length != 0 && directory.length != 0 {
+        let found = crate::fs::spec::read_text_file(volume, directory, b"Filter.txt");
+        filters().load(found.as_deref());
+    }
+    let message = CStr::from_ptr(text).to_bytes();
+    if filters().passes(message) {
+        crate::plat_core::message::PlatDebugOutput(if message.first() == Some(&b'!') { text.add(1) } else { text });
+    }
 }
 
 /// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).

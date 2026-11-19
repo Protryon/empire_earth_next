@@ -51,7 +51,6 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
-pub mod io;
 pub mod list2d;
 pub mod manager_ffi;
 /// cbindgen:ignore
@@ -82,7 +81,6 @@ pub mod texobj_tex;
 pub mod texture;
 pub mod texture_ffi;
 pub mod tmobj;
-pub mod values;
-pub mod vertarr;
-pub mod viewport;
 pub mod visible_ffi;
+// the value types' modules (lle/GERust.h's C ABI), under their old paths
+pub use crate::geval::{io, values, vertarr, viewport};

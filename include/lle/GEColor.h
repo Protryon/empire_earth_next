@@ -1,12 +1,12 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GEColor.h (RECONSTRUCTION). GEColor.cpp (0x10015151..) holds Load/Save;
-// the inline members are emitted by the first includer (GEBitmap.cpp 0x1000deb3; ICF folds most of them with the
-// GEVector/GE3DPoint twins). Not included by the plug-in umbrella.
+// C:\EEX\Low-Level Engine\Graphics Engine\GEColor.h (RECONSTRUCTION). Not included by the plug-in umbrella.
 #ifndef LLE_GECOLOR_H
 #define LLE_GECOLOR_H
 
+#include "lle/GERust.h"
+
 class FSFile;
 
-class LLE_API GEColor {                     // sizeof 0xc: red, green, blue (GetRed +0, GetGreen +4, GetBlue +8)
+class GEColor {                     // sizeof 0xc: red, green, blue (GetRed +0, GetGreen +4, GetBlue +8)
 public:
     GEColor() : mRed(1.0f), mGreen(1.0f), mBlue(1.0f) {}   // 0xdeb3: three fld1
     GEColor(float inRed, float inGreen, float inBlue) : mRed(inRed), mGreen(inGreen), mBlue(inBlue) {}
@@ -30,8 +30,9 @@ public:
         this->mGreen = this->mGreen > 1.0f ? 1.0f : (this->mGreen < 0.0f ? 0.0f : this->mGreen);
         this->mBlue = this->mBlue > 1.0f ? 1.0f : (this->mBlue < 0.0f ? 0.0f : this->mBlue);
     }
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile);
+    // red, green and blue from (to) the file (open or not); the first error
+    template <class F> long Load(F& inFile) { const float* f[] = {&mRed, &mGreen, &mBlue}; return GERustFields(inFile, f, 3, false, false); }
+    template <class F> long Save(F& inFile) { const float* f[] = {&mRed, &mGreen, &mBlue}; return GERustFields(inFile, f, 3, false, true); }
 
     float mRed;                             // +0x00
     float mGreen;                           // +0x04

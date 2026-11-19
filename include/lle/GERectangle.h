@@ -4,13 +4,11 @@
 #define LLE_GERECTANGLE_H
 
 #include <vector>
+#include "lle/GERust.h"
 
 class FSFile;
 
-class UString;
-struct tagRECT;
-
-class LLE_API GERectangle {                 // proven layout by LLE's corner getters (GetTopLeft 0xe63d = (+4, +0xc),
+class GERectangle {                 // proven layout by LLE's corner getters (GetTopLeft 0xe63d = (+4, +0xc),
 public:                                     // GetBottomLeft 0xe5e4 = (+4, +0)); sizeof 0x10
     // inline (exported bodies ICF-folded with GE2DPoint::GetX/GetY): values, not memory operands
     // (Default.dll EEFlatClumps 0x90ca: `fld rect; fld point; faddp`)
@@ -53,8 +51,10 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
         this->mBottom = inBottomRight.GetY();
         this->mRight = inBottomRight.GetX();
     }
-    GERectangle(const GE2DPoint& inPoint);
-    GERectangle(const tagRECT& inRect);
+    GERectangle(const GE2DPoint& inPoint)
+        : mBottom(inPoint.GetY()), mLeft(inPoint.GetX()), mRight(inPoint.GetX()), mTop(inPoint.GetY()) {}
+    GERectangle(const tagRECT& inRect)   // a Windows RECT
+        : mBottom((float)inRect.bottom), mLeft((float)inRect.left), mRight((float)inRect.right), mTop((float)inRect.top) {}
     GERectangle(long inLeft, long inTop, long inRight, long inBottom)   // 0xe413; UIBackgroundTable expands it
     {
         this->mLeft = (float)inLeft;
@@ -89,19 +89,30 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
         this->mRight = inRectangle.mRight;
         return *this;
     }
-    bool operator==(const GERectangle& inRectangle) const;
+    bool operator==(const GERectangle& inRectangle) const
+    {
+        return this->mTop == inRectangle.mTop && this->mLeft == inRectangle.mLeft && this->mRight == inRectangle.mRight &&
+               this->mBottom == inRectangle.mBottom;
+    }
     bool operator!=(const GERectangle& inRectangle) const   // 0xe4c0; UITextLabel::ComputeTextLabelRect expands it
     {
         return this->mTop != inRectangle.mTop || this->mLeft != inRectangle.mLeft || this->mRight != inRectangle.mRight ||
                this->mBottom != inRectangle.mBottom;
     }
-    bool Contains(const GE2DPoint& inPoint) const;
+    bool Contains(const GE2DPoint& inPoint) const   // edges included
+        { return inPoint.mX >= this->mLeft && inPoint.mX <= this->mRight && inPoint.mY >= this->mTop && inPoint.mY <= this->mBottom; }
     bool Contains(const GERectangle& inRectangle) const
     {
         return inRectangle.mLeft >= this->mLeft && inRectangle.mRight <= this->mRight && inRectangle.mTop >= this->mTop &&
                inRectangle.mBottom <= this->mBottom;
     }
-    void Extend(const GE2DPoint& inPoint);
+    void Extend(const GE2DPoint& inPoint)   // just enough to contain the point
+    {
+        this->mLeft = this->mLeft < inPoint.mX ? this->mLeft : inPoint.mX;
+        this->mRight = this->mRight > inPoint.mX ? this->mRight : inPoint.mX;
+        this->mTop = this->mTop < inPoint.mY ? this->mTop : inPoint.mY;
+        this->mBottom = this->mBottom > inPoint.mY ? this->mBottom : inPoint.mY;
+    }
     GE2DPoint GetBottomLeft() const
     {
 #ifdef LLE_EXE_HEADERS
@@ -120,7 +131,11 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
 #endif
         return thePoint;
     }
-    void GetCenter(GE2DPoint& outCenter) const;
+    void GetCenter(GE2DPoint& outCenter) const
+    {
+        outCenter.mX = (this->mRight - this->mLeft) * 0.5f + this->mLeft;
+        outCenter.mY = (this->mBottom - this->mTop) * 0.5f + this->mTop;
+    }
     GE2DPoint GetTopLeft() const
     {
 #ifdef LLE_EXE_HEADERS
@@ -144,7 +159,13 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
         return this->mLeft <= inRectangle.mRight && this->mRight >= inRectangle.mLeft && this->mTop <= inRectangle.mBottom &&
                this->mBottom >= inRectangle.mTop;
     }
-    void RoundToNearest();
+    void RoundToNearest()
+    {
+        this->mTop = (float)UMFloor(this->mTop + 0.5f);
+        this->mLeft = (float)UMFloor(this->mLeft + 0.5f);
+        this->mRight = (float)UMFloor(this->mRight + 0.5f);
+        this->mBottom = (float)UMFloor(this->mBottom + 0.5f);
+    }
     void SetBottomRight(const GE2DPoint& inPoint)
     {
         this->mBottom = inPoint.GetY();
@@ -155,24 +176,20 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
         this->mTop = inPoint.GetY();
         this->mLeft = inPoint.GetX();
     }
-    // GERectangle.cpp (0x100247ab..0x10024ad4)
-    bool And(const GERectangle& inRectangle);
-    bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const;
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    // clipped to another rectangle (or the overlap into outRectangle); false, nothing changed, when they do not overlap
+    bool And(const GERectangle& inRectangle) { return ee_ge_rect_and_in_place(GERust(*this), GERust(inRectangle)); }
+    bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const
+        { return ee_ge_rect_and(GERust(*this), GERust(inRectangle), GERust(outRectangle)); }
+    // left, top, right and bottom from (to) an open file; kErrorNotOpen when it is not open, else the first error
+    template <class F> long Load(F& inFile)
+        { const float* f[] = {&mLeft, &mTop, &mRight, &mBottom}; return GERustFields(inFile, f, 4, true, false); }
+    template <class F> long Save(F& inFile) const
+        { const float* f[] = {&mLeft, &mTop, &mRight, &mBottom}; return GERustFields(inFile, f, 4, true, true); }
 
     float mBottom;                          // +0x00
     float mLeft;                            // +0x04
     float mRight;                           // +0x08
     float mTop;                             // +0x0c
-#ifdef LOWLEVELENGINE_EXPORTS
-    // Inferred guard (class members, exported ?s..ID@GERectangle@@0VUString@@B): keeps the plug-ins' $E numbering
-private:
-    static const UString sLeftID;
-    static const UString sTopID;
-    static const UString sRightID;
-    static const UString sBottomID;
-#endif
 };
 
 #endif

@@ -10,6 +10,8 @@
 pub mod dx7;
 /// The crate ee_ge before the restructure.
 pub mod ge;
+// the value types' C ABI under lle/GERust.h (a small header every C++ unit includes)
+pub mod geval;
 /// The crate ee_gfx before the restructure.
 pub mod gfx;
 /// The crate ee_gx before the restructure.

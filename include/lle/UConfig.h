@@ -7,18 +7,45 @@
 #ifndef LLE_UCONFIG_H
 #define LLE_UCONFIG_H
 
-class UWideString;
+#include "platform/PlatConfig.h"
+#include "lle/UWideString.h"
 
 class LLE_API UConfig {                     // no data
 public:
-    long GetValue(const char* inBlock, const char* inKey, long& outValue);
-    long GetValue(const char* inBlock, const char* inKey, UWideString& outValue);
-    long SetValue(const char* inBlock, const char* inKey, long inValue);
-    long SetValue(const char* inBlock, const char* inKey, const UWideString& inValue);
+    long GetValue(const char* inBlock, const char* inKey, long& outValue)
+    {
+        int32_t theValue;
+        if (!PlatConfigGetInt(inBlock, inKey, &theValue))
+            return kErrorNotFound;
+        outValue = theValue;
+        return kErrorOK;
+    }
+    // a string of at most 1023 bytes
+    long GetValue(const char* inBlock, const char* inKey, UWideString& outValue)
+    {
+        char theData[1024];
+        if (!PlatConfigGetString(inBlock, inKey, theData, sizeof(theData)))
+            return kErrorNotFound;
+        outValue = theData;
+        return kErrorOK;
+    }
+    long SetValue(const char* inBlock, const char* inKey, long inValue)
+        { return PlatConfigSetInt(inBlock, inKey, (int32_t)inValue) ? kErrorOK : kErrorNotFound; }
+    long SetValue(const char* inBlock, const char* inKey, const UWideString& inValue)
+        { return PlatConfigSetString(inBlock, inKey, (const char*)inValue) ? kErrorOK : kErrorNotFound; }
     // port: a boolean (true/false; an integer reads as nonzero)
-    long GetFlag(const char* inBlock, const char* inKey, bool& outValue);
-    long SetFlag(const char* inBlock, const char* inKey, bool inValue);
-    long DeleteValue(const char* inBlock, const char* inKey);
+    long GetFlag(const char* inBlock, const char* inKey, bool& outValue)
+    {
+        int32_t theValue;
+        if (!PlatConfigGetInt(inBlock, inKey, &theValue))
+            return kErrorNotFound;
+        outValue = theValue != 0;
+        return kErrorOK;
+    }
+    long SetFlag(const char* inBlock, const char* inKey, bool inValue)
+        { return PlatConfigSetBool(inBlock, inKey, inValue ? 1 : 0) ? kErrorOK : kErrorNotFound; }
+    long DeleteValue(const char* inBlock, const char* inKey)
+        { return PlatConfigDelete(inBlock, inKey) ? kErrorOK : kErrorNotFound; }
 };
 
 #endif

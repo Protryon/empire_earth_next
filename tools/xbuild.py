@@ -411,9 +411,8 @@ def cmd_fonttest(a):
 
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
-TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (NEProtocol is ee_net's; TSEvent and
-# TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
+TCP_ENGINE_UNITS = []   # (the strings are header classes over ee_base since LLE round 8, NEProtocol is ee_net's;
+# TSEvent and TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
 def cmd_tcptest(a):
@@ -1049,9 +1048,7 @@ def cmd_wontest(a):
 
 SESSION_STAND = ROOT / "tests" / "net" / "ee_stand"
 SESSION_UNITS = [ROOT / "src" / p for p in (
-    "Low-Level Engine/Network Engine/NEMessage.cpp", "Low-Level Engine/Utilities/UString.cpp",
-    "Low-Level Engine/Utilities/UWideString.cpp", "Low-Level Engine/File System/FSBasicFile.cpp",
-    "Low-Level Engine/File System/FSFileSpec.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
+    "Low-Level Engine/Network Engine/NEMessage.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
 
 # program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
 # stand-in headers)
@@ -1072,12 +1069,11 @@ NET_TESTS = {
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp, `--print
     # FILE`; since round 7 the class is ee_net's Rust, driven through tests/net/ne_protocol_members.h)
-    "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+    "ne_protocol_test": [],
     # the engine messages as their senders and the factory see them (golden: tests/net/golden_message.txt, made over
     # the original 28 classes)
     "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEMessage.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+        "Network Engine/NEMessage.cpp",)],
     # the game's server and client (EEServer.cpp, EEClient.cpp) over a stand-in world (tests/net/ee_stand: every game
     # header they include; golden: tests/net/golden_session.txt, made by the original units, tests/net/orig_ee)
     "ee_session_test": (SESSION_UNITS + [ROOT / "src" / "Empire Earth" / "Communications" / u

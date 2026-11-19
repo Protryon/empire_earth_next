@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <vector>
+#include "lle/UString.h"
+#include "lle/UWideString.h"
 
 struct EeErrorChecksum;
 
@@ -29,5 +31,12 @@ protected:
 
     EeErrorChecksum* mRust;                 // owned
 };
+
+inline void UWideString::GetChecksum(ESChecksum& ioChecksum)
+{
+    UString theName;
+    sprintf(theName, "UWideString (%s)", (const char*)*this);
+    ioChecksum.AddChecksum(theName, ee_uwstring_checksum(&this->mState));
+}
 
 #endif

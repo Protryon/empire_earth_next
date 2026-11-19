@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/render/geval.h"
 #include "rust/sim/world.h"
 
 /// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
@@ -803,15 +804,6 @@ enum class EeGeTmVal : uint32_t {
   VisibleSpacePercentage,
 };
 
-/// A vertex field of `ee_ge_va_get` / `ee_ge_va_set` (three floats, two for `Uv`, one for `Opacity`).
-enum class EeGeVaField : uint32_t {
-  Color = 1,
-  Normal,
-  Opacity,
-  Point,
-  Uv,
-};
-
 /// A texture's field (`EeGeManOp::TexGet` / `TexSet`'s `a`).
 enum class EeGeTexField : uint32_t {
   /// `mIsFromTexturePack` (0 or 1).
@@ -865,9 +857,6 @@ struct EeGeModel;
 /// The model manager.
 struct EeGeModelManager;
 
-/// A `GEPolygonArray`'s Rust array.
-struct EeGePolygonArray;
-
 /// The primitive.
 struct EeGePrim;
 
@@ -885,9 +874,6 @@ struct EeGeTexture;
 
 /// The texture manager.
 struct EeGeTextureManager;
-
-/// A `GEVertexArray`'s Rust array: type 0 standard (`GXVERTEX`), 1 coloured (`GXVERTEX_STD_COLOR`).
-struct EeGeVertexArray;
 
 /// The window.
 struct EeGeWin;
@@ -1050,44 +1036,6 @@ struct EeGePhysicalModels {
 /// The host: `owner` is the C++ rasterizer of the object calling.
 using EeGeRastHostFn = ptrdiff_t(*)(void *owner, EeGeRastOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
-/// `GEViewport` (sizeof 0x288), in the C++'s member order.
-struct EeGeViewport {
-  EeGeRectangle orthographic_rectangle;
-  EeGeRectangle view_rectangle;
-  EeGe3DPlane front_plane;
-  EeGe3DPlane rear_plane;
-  EeGe3DPlane left_plane;
-  EeGe3DPlane right_plane;
-  EeGe3DPlane top_plane;
-  EeGe3DPlane bottom_plane;
-  EeGeTransformation camera;
-  EeGeTransformation camera_inverse;
-  EeGeTransformation orthographic_denormalization;
-  EeGeTransformation perspective_denormalization;
-  EeGeTransformation orthographic_projection;
-  EeGeTransformation perspective_projection;
-  EeGeVector camera_look_at_vector;
-  float orthographic_scale;
-  float orthographic_depth_scale;
-  float orthographic_depth_offset;
-  float perspective_scale;
-  float perspective_depth_scale;
-  float perspective_depth_offset;
-  float aspect_ratio;
-  float aspect_ratio_multiplier;
-  float field_of_view;
-  float field_of_view_multiplier;
-  float front_clipping_distance;
-  float half_height;
-  float half_width;
-  float rear_clipping_distance;
-  float x_center;
-  float y_center;
-  float y_clipping_plane;
-  float near_depth;
-  float far_depth;
-};
-
 /// `GERFogAttributes` (sizeof 0x20 on Windows).
 struct EeGeRastFog {
   EeGeRastColor color;
@@ -1229,27 +1177,6 @@ struct EeGeTmTile {
   uint16_t reference_count;
   uint8_t texture_set_id;
   uint8_t water_info;
-};
-
-/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
-struct EeGeFieldIo {
-  void *file;
-  long (*read_u8)(void *file, uint8_t *out);
-  long (*read_u16)(void *file, uint16_t *out);
-  long (*read_u32)(void *file, uint32_t *out);
-  long (*read_f32)(void *file, float *out);
-  long (*write_u8)(void *file, uint8_t value);
-  long (*write_u16)(void *file, uint16_t value);
-  long (*write_u32)(void *file, uint32_t value);
-  long (*write_f32)(void *file, float value);
-  /// `Read(char*, length, read)`.
-  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
-  /// `Write(const char*, length, written)`.
-  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
-  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
-  long (*get_position)(void *file, long *out);
-  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
-  long (*set_position)(void *file, long offset);
 };
 
 /// `GETerrainMesh::GETMRenderVertex` (sizeof 0x28 on the original's 32 bits): the rasterizer fills the point and
@@ -3253,247 +3180,6 @@ EeGeTmRenderVertex *const *ee_ge_tm_edge_vertices(const EeGeTerrainMesh *p, bool
 /// # Safety
 /// `p` is live.
 const EeGe3DPoint *ee_ge_tm_edge_points(const EeGeTerrainMesh *p, bool cliff);
-
-/// `GETransformation()` and `MakeIdentity()`: the identity.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_identity(EeGeTransformation *t);
-
-/// The copy constructor, `operator=` and `GETransformation(const float[4][4])`: the sixteen elements.
-///
-/// # Safety
-/// `t` and `m` are valid (they may be the same matrix).
-void ee_ge_t_copy(EeGeTransformation *t,
-                  const float (*m)[4][4]);
-
-/// `operator==(GETransformation)`: every element equal (a NaN never is).
-///
-/// # Safety
-/// `a` and `b` are valid.
-bool ee_ge_t_equal(const EeGeTransformation *a, const EeGeTransformation *b);
-
-/// `operator==(GE3DPoint)`: the position equals the point.
-///
-/// # Safety
-/// `t` and `p` are valid.
-bool ee_ge_t_at_point(const EeGeTransformation *t, const EeGe3DPoint *p);
-
-/// `SetScale(x, y, z)`: a pure scale, the position kept.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_set_scale(EeGeTransformation *t, float x, float y, float z);
-
-/// `ZeroOrientation(out)` (and `ZeroOrientation()` with `out` = `t`): the identity rotation at `t`'s position.
-///
-/// # Safety
-/// `t` and `out` are valid (they may be the same matrix).
-void ee_ge_t_zero_orientation(const EeGeTransformation *t,
-                              EeGeTransformation *out);
-
-/// `Load(FSFile&)` (`write` false) or `Save(FSFile&)`: the sixteen elements row by row through the file's own
-/// float reads or writes, stopping at the first error (a load leaves the elements read so far).
-///
-/// # Safety
-/// `t` is valid; `io` is a live field stream.
-long ee_ge_t_io(EeGeTransformation *t,
-                const EeGeFieldIo *io,
-                bool write);
-
-/// The value types' file codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
-/// `GETextureCoordinate` `Load`/`Save`): the fields in the order given through the file's own float reads or writes,
-/// stopping at the first error. `open` is the file's `GetIsOpen()` (false: `kErrorNotOpen` with no access), or -1 for
-/// the codecs that do not ask (`GEColor`). `restore` (`GETextureCoordinate`): the position is read first (its error
-/// returned as is) and set back after a failed field.
-///
-/// # Safety
-/// `fields` holds `count` valid float pointers; `io` is a live field stream.
-long ee_ge_fields_io(float *const *fields,
-                     uint32_t count,
-                     const EeGeFieldIo *io,
-                     int32_t open,
-                     bool write,
-                     bool restore);
-
-/// `GEViewport::operator=`: every field.
-///
-/// # Safety
-/// `out` and `v` are valid (they may be the same viewport).
-void ee_ge_viewport_copy(EeGeViewport *out, const EeGeViewport *v);
-
-/// `new GEVertexArray(type, count)`: type 1 coloured, any other standard (the rasterizer makes only 0 and 1).
-EeGeVertexArray *ee_ge_va_new(uint32_t kind,
-                              uint32_t size);
-
-/// # Safety
-/// `a` is from `ee_ge_va_new` and not used again.
-void ee_ge_va_destroy(EeGeVertexArray *a);
-
-/// The vertex memory (GX and the draws read it in place).
-///
-/// # Safety
-/// `a` is live.
-void *ee_ge_va_vertices(EeGeVertexArray *a);
-
-/// `GetType()`.
-///
-/// # Safety
-/// `a` is live.
-unsigned long ee_ge_va_type(const EeGeVertexArray *a);
-
-/// `GetSize()`, or with `size_of` `SizeOf()`.
-///
-/// # Safety
-/// `a` is live.
-unsigned long ee_ge_va_size(const EeGeVertexArray *a, bool size_of);
-
-/// `CopyFrom(b)`: as many vertices as both hold (the original cast `b` to its own class: arrays of two types
-/// copy nothing here, where the original misread the other's vertices).
-///
-/// # Safety
-/// Both are live.
-void ee_ge_va_copy_from(EeGeVertexArray *a,
-                        const EeGeVertexArray *b);
-
-/// `Get<field>(out, index)` into `out` (its floats).
-///
-/// # Safety
-/// `a` is live, `index` one of its vertices; `out` holds the field's floats.
-void ee_ge_va_get(const EeGeVertexArray *a, EeGeVaField field, uint32_t index, float *out);
-
-/// `Set<field>(value, index)` from `value` (its floats); a standard array ignores colour and opacity.
-///
-/// # Safety
-/// `a` is live, `index` one of its vertices; `value` holds the field's floats.
-void ee_ge_va_set(EeGeVertexArray *a,
-                  EeGeVaField field,
-                  uint32_t index,
-                  const float *value);
-
-/// `SetVertex(colour, point, normal, uv, opacity, index)` (three, three, three and two floats).
-///
-/// # Safety
-/// `a` is live, `index` one of its vertices; the pointers hold their floats.
-void ee_ge_va_set_vertex(EeGeVertexArray *a,
-                         const float *c,
-                         const float *p,
-                         const float *n,
-                         const float *uv,
-                         float opacity,
-                         uint32_t index);
-
-/// `new GEPolygonArray(count)`.
-EeGePolygonArray *ee_ge_pa_new(uint32_t size);
-
-/// # Safety
-/// `p` is from `ee_ge_pa_new` and not used again.
-void ee_ge_pa_destroy(EeGePolygonArray *p);
-
-/// The 16-bit index memory (GX and the draws read it in place).
-///
-/// # Safety
-/// `p` is live.
-uint16_t *ee_ge_pa_indices(EeGePolygonArray *p);
-
-/// `GetSize()`, or with `size_of` `SizeOf()`.
-///
-/// # Safety
-/// `p` is live.
-unsigned long ee_ge_pa_size(const EeGePolygonArray *p, bool size_of);
-
-/// `GetVertexIndex{corner + 1}(polygon)`.
-///
-/// # Safety
-/// `p` is live; `polygon` one of its triangles.
-unsigned long ee_ge_pa_index(const EeGePolygonArray *p, uint32_t polygon, uint32_t corner);
-
-/// `SetVertexIndex{corner + 1}(polygon, index)` (16 bits kept).
-///
-/// # Safety
-/// `p` is live; `polygon` one of its triangles.
-void ee_ge_pa_set_index(EeGePolygonArray *p,
-                        uint32_t polygon,
-                        uint32_t corner,
-                        unsigned long index);
-
-/// `GEViewport()`.
-///
-/// # Safety
-/// `out` is valid for a write.
-void ee_ge_viewport_default(EeGeViewport *out);
-
-/// `GEViewport(view, orthographic, camera, front, rear, fov)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_viewport_init(EeGeViewport *out,
-                         const EeGeRectangle *view,
-                         const EeGeRectangle *orthographic,
-                         const EeGeTransformation *camera,
-                         float front,
-                         float rear,
-                         float field_of_view);
-
-/// `GEViewport::ComputeOrthographicMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_orthographic_matrix(EeGeViewport *v);
-
-/// `GEViewport::ComputePerspectiveMatrix`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_perspective_matrix(EeGeViewport *v);
-
-/// `GEViewport::ComputePlanes`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_planes(EeGeViewport *v);
-
-/// `GEViewport::GetFrustrumWorldPoints(rectangle, points, orthographic)`: the eight corners into `out`.
-///
-/// # Safety
-/// `v` and `rectangle` are valid; `out` holds eight points.
-void ee_ge_viewport_frustum_points(const EeGeViewport *v,
-                                   const EeGeRectangle *rectangle,
-                                   bool orthographic,
-                                   EeGe3DPoint *out);
-
-/// `GEViewport::GetFrustrumWorldPlanes(rectangle, planes, orthographic)`: the six planes into `out`.
-///
-/// # Safety
-/// `v` and `rectangle` are valid; `out` holds six planes.
-void ee_ge_viewport_frustum_planes(const EeGeViewport *v,
-                                   const EeGeRectangle *rectangle,
-                                   bool orthographic,
-                                   EeGe3DPlane *out);
-
-/// `GEViewport::SetFieldOfView`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_set_field_of_view(EeGeViewport *v, float field_of_view);
-
-/// `GEViewport::SetFrontClippingDistance`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_set_front(EeGeViewport *v, float distance);
-
-/// `GEViewport::SetRearClippingDistance`.
-///
-/// # Safety
-/// `v` is a live viewport.
-void ee_ge_viewport_set_rear(EeGeViewport *v, float distance);
-
-/// `GEViewport::SetViewRectangle`.
-///
-/// # Safety
-/// `v` is a live viewport; `rectangle` is valid.
-void ee_ge_viewport_set_view_rectangle(EeGeViewport *v, const EeGeRectangle *rectangle);
 
 /// `GEPhysicalModel::Intersects(viewport, orthographic)` with the placed model's values.
 ///

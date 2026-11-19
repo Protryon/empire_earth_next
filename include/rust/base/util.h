@@ -7,9 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// The strings' Windows LANGID (the script's LANGUAGE statement).
-constexpr static const uint16_t LANGUAGE = 1033;
-
 /// A `U2DFractal`: `dimension` x `dimension` values, column `x` first as the C++'s `mValues[x][y]`.
 struct EeUtilFractal;
 

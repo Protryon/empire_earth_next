@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "rust/base/math.h"
 #include "rust/render/ge.h"
+#include "rust/render/geval.h"
 
 /// The free camera mode (`mMode == 3`).
 constexpr static const int32_t MODE_FREE = 3;

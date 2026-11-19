@@ -3,8 +3,9 @@
 // inline members (0x4020..0x4789) in include order, then its globals, FSGetVolumeAndDirectory and FSInitialize.
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
+#include <stddef.h>
 
-// Not the umbrella: the inline block holds UDataCompression, FSArchive, FSChunk, UReferenceCounter,
+// Not the umbrella: the inline block holds FSArchive, FSChunk, UReferenceCounter,
 // FSPersistent, TSLockable, FSPersistentList and FSMemoryFile, in that order.
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UWideString.h"
@@ -13,7 +14,6 @@
 #include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TSScheduler.h"
-#include "lle/UDataCompression.h"
 #include "lle/FSArchive.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSChunk.h"
@@ -28,6 +28,20 @@
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);
+
+// FSBasicFile and FSFileSpec are their Rust records from the vtable pointer on (lle/FSFileSpec.h; fs spec.rs)
+static_assert(sizeof(UString) == sizeof(EeFsString), "a UString member is an EeFsString");
+static_assert(sizeof(FSFileSpec) == sizeof(EeFsSpec), "FSFileSpec is an EeFsSpec");
+struct FSSpecLayout : FSFileSpec {   // (the members are protected)
+    static void Check()
+    {
+        static_assert(offsetof(FSSpecLayout, mVolume) == offsetof(EeFsSpec, volume), "layout");
+        static_assert(offsetof(FSSpecLayout, mFileAccess) == offsetof(EeFsSpec, file_access), "layout");
+        static_assert(offsetof(FSSpecLayout, mIsOpen) == offsetof(EeFsSpec, is_open), "layout");
+        static_assert(offsetof(FSSpecLayout, mHandle) == offsetof(EeFsSpec, handle), "layout");
+        static_assert(offsetof(FSSpecLayout, mStream) == offsetof(EeFsSpec, stream), "layout");
+    }
+};
 
 // Splits a path into its volume (drive or UNC server share) and its directory (with a trailing backslash) into outSpec
 // (rust/crates/ee_base/src/fs spec.rs, LLE lane round 6)
