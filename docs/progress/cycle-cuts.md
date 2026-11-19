@@ -49,6 +49,15 @@ Round 2 (branch `rust-cuts2`, from origin/rust 7779d7db1 + rust-cuts1 27cebd6c5:
 Round 2 in all: 22 units and 7,974 lines out of SCC 1. Also in the round: `tools/cpp_deps.py cuts` (7f316b38c) and
 the fix of the Rust gate's `fs::golden_spec_replays` flake (51c6b499f).
 
+On the tree merged with origin/rust 645799684 (whose own changes move SCC 1 too): 521 C++ units, 149,764 lines; SCC 1
+199 units, 98,529 lines; leaves 66 (3,878 lines), near-leaves 132 (14,615).
+
+Gates on the merged tree (2ca079a6d): build `--sim` 0/0 and the test profile 0/0; the oracle at seeds 2-7 identical;
+the Rust gate PASS (4,881 tests); sim_capture oracle (212 digests), late (214) and app (26) at seeds 2-3 PASS;
+scenario_check 27/27; sim_editor PASS (14,448 lines); `gates.sh` GATES PASS (tour; ai-game time-cap, units
+[4, 39, 40], alive [2, 3], classic_lua x 2; lan-game). Per cut: build `--sim` 0/0 and the oracle at seeds 2-3; on the
+first stack (cuts 11-19) also the tour, the Rust gate and the oracle, scenario and app captures.
+
 ## What to cut next
 
 From `tools/cpp_deps.py cuts` after cut 25 (SCC 1: 208 units, 101,447 lines). The cheap kinds (a global's storage,
@@ -57,6 +66,10 @@ calls:
 
 - EECalamityClass -> EECalamityUpdate (1,292) and EEAIAStarView::Callbacks (1,238): one implementation split over
   units, not cuts (round 1).
+- New on the merged tree: EEUIShell.cpp -> EESERBUnitTypes.cpp, `EESEDiplomacyShow` (877 lines, one symbol): the
+  shells' op dispatch (`EE_SCREENS_SH_SE_DIPLOMACY`) calls the editor's diplomacy button. A handler the editor unit
+  registers would cut it; it is the scenario editor lane's code of this round, so it is left to that lane or the
+  next round. EEUIFSETerrain -> 2 units (749): its shell calls and the load thread's posts.
 - EECalamityManager -> 4 units (705): the manager constructs calamities and units (EECalamity::EECalamity,
   EECalamityClass::EECalamityClass, EEUnitClass::CreateUnitAt). A factory registration would hide a real call.
 - RTSPlayer -> 2 units (485): EESavePrimitive, RTSRegisterUnit, RTSUnit's list. The save primitives
