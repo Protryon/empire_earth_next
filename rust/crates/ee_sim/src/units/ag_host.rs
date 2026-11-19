@@ -507,14 +507,14 @@ impl AgHost for AgGame {
     }
     fn gather_storage(&mut self, goal: u64) -> u64 {
         // `GetGatherStorage()`: the gather goal's record (another kind's answer: none)
-        if goal_kind_of(goal) == GOAL_KIND_GATHER {
+        if goal_kind_of(goal) == GOAL_GATHER {
             crate::units::gather::storage_of(goal)
         } else {
             0
         }
     }
     fn gather_resource(&mut self, goal: u64) -> u64 {
-        if goal_kind_of(goal) == GOAL_KIND_GATHER {
+        if goal_kind_of(goal) == GOAL_GATHER {
             crate::units::gather::resource_of(goal)
         } else {
             0
@@ -664,7 +664,7 @@ fn with_complex_fields(u: u64, f: impl FnOnce(&mut EeUnitsComplexUnitFields)) {
 }
 
 /// `kGoalGather`
-const GOAL_KIND_GATHER: i32 = crate::units::gather::GOAL_GATHER as i32;
+const GOAL_GATHER: i32 = 6;
 
 /// A goal's `mKind` (-1: no goal)
 fn goal_kind_of(goal: u64) -> i32 {
