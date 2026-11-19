@@ -298,3 +298,6 @@ GERasterizer* gRasterizer;
 GEWindow* gGameWindow;
 
 UResourceFile* gResource;
+
+// TEST ONLY: the UI fixture's configure step (EETestFixture.cpp sets it at static initialization; EERun calls it first)
+void (*gEETestFixtureConfigure)();

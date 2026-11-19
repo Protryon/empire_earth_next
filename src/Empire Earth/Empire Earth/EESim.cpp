@@ -1217,29 +1217,8 @@ void DebugTrampoline(const char* inText)
 
 }   // namespace
 
-// EESimPreferences: the settings the simulation runs with, over config.yaml (EERun, after gGamePreferences.Load): a
-// window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max PTs per Second), no autosave, no music
-void EESimPreferences()
-{
-    long thePTRate = 40, theAutoSave = 0;
-    ee_sim_driver_preferences(&thePTRate, &theAutoSave);
-    gGamePreferences.mSettings.mFullScreen = false;
-    gGamePreferences.mSettings.mGameBitDepth = 32;
-    gGamePreferences.mSettings.mTextureBitDepth = 32;
-    gGamePreferences.mSettings.mGameWindowWidth = 800;
-    gGamePreferences.mSettings.mGameWindowHeight = 600;
-    gGamePreferences.mSettings.mMinPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mMaxPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)theAutoSave;
-    gGamePreferences.mSettings.mMusicEnabled = false;
-    gGamePreferences.mSettings.mWaitForVSync = false;
-}
-
-// EESimStart: the driver's thread (EERun, after the engine and the threads are up, before the UI loop)
-void EESimStart()
-{
-    ee_sim_driver_start();
-}
+// (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
+// game's start-up names no symbol of this driver)
 
 #ifdef _WIN32
 // a fault in the simulation: the code, the place and the return addresses (exe addresses: EE-SIM.map) on stderr

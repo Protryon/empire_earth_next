@@ -916,16 +916,14 @@ int64_t EEFixtureHost(EeFixtureCall* c)
 // The test switches, when EE_TEST_UI names a directory (EERun, first, before the engine starts its clocks and
 // threads): EE_TEST_TIME_FACTOR, EE_TEST_SEED, EE_TEST_NO_HUMAN_DEFEAT, EE_TEST_PORT_OFFSET (the Rust fixture's
 // poll.rs); the debug output goes to stderr ("debugstring <text>")
-void EETestFixtureConfigure()
+// (EERun calls it through gEETestFixtureConfigure, which this unit sets at static initialization, and starts the
+// fixture's thread itself: ee_fixture_start)
+static void EETestFixtureConfigure()
 {
     ee_fixture_configure(EEFixtureHost);
 }
-
-// Starts the fixture's thread when EE_TEST_UI names a directory (EERun, after the engine is initialised)
-void EETestFixtureStart()
-{
-    ee_fixture_start();
-}
+extern void (*gEETestFixtureConfigure)();   // EEGlobals.cpp
+static const bool sEETestFixtureRegistered = (gEETestFixtureConfigure = EETestFixtureConfigure, true);
 
 // TEST ONLY: the legacy debugger harness (tools/harness/game_state_probe.py) reads the communications' numbers from
 // this mirror, by its map name: their state is Rust's (ee_net), at no offset of the C++ object. The presentation
