@@ -2,6 +2,7 @@
 // ctors, operator=, Define and the setters are inline (emitted first by GEBoundingBox.cpp itself, 0x10010550).
 #ifndef LLE_GEBOUNDINGBOX_H
 #define LLE_GEBOUNDINGBOX_H
+#include "lle/GERust.h"
 
 class FSFileSpec;
 

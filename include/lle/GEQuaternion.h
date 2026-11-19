@@ -2,6 +2,7 @@
 // conversions, Normalize and Slerp; the rest is inline (GEBoundingBox.cpp emits it first, 0x10011ddf..).
 #ifndef LLE_GEQUATERNION_H
 #define LLE_GEQUATERNION_H
+#include "lle/GERust.h"
 
 class GEQuaternion {                // sizeof 0x10: x, y, z, w
 public:

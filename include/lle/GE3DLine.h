@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GE3DLine.h (RECONSTRUCTION). Requires GE3DPoint.h, GEVector.h.
 #ifndef LLE_GE3DLINE_H
 #define LLE_GE3DLINE_H
+#include "lle/GERust.h"
 
 class FSFile;
 class GE3DPlane;
