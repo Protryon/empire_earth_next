@@ -63,6 +63,9 @@ impl Form {
         if let Some(r) = crate::screens::ui_objects_ffi::screens(op, a, b) {
             return r;
         }
+        if let Some(r) = crate::screens::ui_direct::screens(op, a, b) {
+            return r;
+        }
         if let Some(r) = crate::screens::toolkit::op(self.0, self.1, op, a, b, c, d) {
             return r;
         }

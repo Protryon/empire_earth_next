@@ -589,10 +589,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     case EE_SCREENS_GAME_MG_POINTER:
         gMouse->mPointer = (long)(int32_t)inA;
         break;
-    case EE_SCREENS_GAME_MG_REFRESH_GROUP:
-        if (gUIManager->GetMainGameForm())
-            gUIManager->GetMainGameForm()->mRefreshGroup = true;
-        break;
     case EE_SCREENS_GAME_MG_DUMP_MEDIA: {
         // Media Dump.txt in the startup folder (replaced when inA), the loaded media (and leaks when inB) appended
         FSFileSpec theFile;
@@ -678,17 +674,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         if (!theUnit || !theUnit->mComplexUnit || !theUnit->mUnitClass)
             return 0;
         return theUnit->mUnitClass->mCommands[inA];
-    }
-    case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
-        gUIManager->GetMainGameForm()->GetEntityGroup(9)->Disable();
-        gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(false);
-        break;
-    case EE_SCREENS_GAME_MG_COPY_BITMAPS: {
-        UIButton* theButton = static_cast<UIButton*>(gUIManager->GetMainGameForm()->GetControl(inA));
-        UIButton* theSource = static_cast<UIButton*>(gUIManager->GetMainGameForm()->GetControl(inB));
-        theButton->SetNormalBitmap(theSource->GetNormalBitmap());
-        theButton->SetPressedBitmap(theSource->GetPressedBitmap());
-        break;
     }
     default:
         return EEScreensChatCall(inForm, inOp, inA, inB, inC);
@@ -1916,9 +1901,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_GO_EXIT:
         EEExitGame();
-        break;
-    case EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF:
-        static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions))->SetIsBlinking(false);
         break;
     default:
         return EEScreensCampaignEditorCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);

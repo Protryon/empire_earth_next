@@ -120,3 +120,47 @@ pub(crate) fn ui_message(op: u32, a: i64) -> Option<i64> {
     }
     Some(0)
 }
+
+/// `kMainGameIngameOptions` (ee/EEUIManager.h): the main game form's options button.
+const MAIN_GAME_OPTIONS: c_ulong = 3;
+
+/// The screens' ops (`EEScreens.cpp`'s `ee_screenscpp_call`) on the main game form's toolkit objects and record.
+pub(crate) fn screens(op: u32, a: u32, b: u32) -> Option<u32> {
+    use crate::screens::main_game::*;
+    use crate::screens::main_game_options::EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF;
+    use ee_ui::buttonobj::EeUiButtonCall;
+    let main = ui_objects::main_game_form;
+    match op {
+        EE_SCREENS_GAME_MG_REFRESH_GROUP => {
+            if let Some(r) = crate::screens::main_form_fields::record(main()) {
+                // SAFETY: the main game form's live record
+                unsafe { (*r).mRefreshGroup = true };
+            }
+        }
+        EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS => {
+            // the behaviours' panel (entity group 9, background 0x97) closed
+            let form = main();
+            let g = direct::form_call(form, EeUiFormCall::EntityGroup, 9, 0) as direct::Cpp;
+            direct::group_call(g, EeUiEntityGroupCall::Disable, 0);
+            let bg = direct::form_call(form, EeUiFormCall::BackgroundById, 0x97, 0) as direct::Cpp;
+            direct::background_call(bg, EeUiBgCall::SetVisibility, 0, 0);
+        }
+        EE_SCREENS_GAME_MG_COPY_BITMAPS => {
+            // the button a takes the button b's normal and pressed bitmaps
+            let (to, from) = (direct::control(main(), a as c_ulong), direct::control(main(), b as c_ulong));
+            for (get, set) in [
+                (EeUiButtonCall::NormalBitmap, EeUiButtonCall::SetNormalBitmap),
+                (EeUiButtonCall::PressedBitmap, EeUiButtonCall::SetPressedBitmap),
+            ] {
+                let bitmap = direct::button_call(from, get, 0, 0).unwrap_or(0);
+                direct::button_call(to, set, bitmap, 0);
+            }
+        }
+        EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF => {
+            let button = direct::control(main(), MAIN_GAME_OPTIONS);
+            direct::button_call(button, EeUiButtonCall::BlinkSetIsBlinking, 0, 0);
+        }
+        _ => return None,
+    }
+    Some(0)
+}
