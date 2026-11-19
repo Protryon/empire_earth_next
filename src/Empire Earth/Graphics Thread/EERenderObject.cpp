@@ -1121,11 +1121,11 @@ void EERenderObject::FillRenderLists()
             else
                 gU4E9230.clear();
         } else {
-            EESEUnit* theScreen = gUIManager->mScenarioEditorForm != NULL ?
-                gUIManager->mScenarioEditorForm->GetUnitScreen() : NULL;
+            EESEUnit* theScreen = gUIManager->GetScenarioEditorForm() != NULL ?
+                gUIManager->GetScenarioEditorForm()->GetUnitScreen() : NULL;
             EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->GetSelectUnits() : NULL;
             EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
-                gUIManager->mScenarioEditorForm->GetControlById(kSETSObjectSelectUnits));
+                gUIManager->GetScenarioEditorForm()->GetControlById(kSETSObjectSelectUnits));
             if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())
                 gUnitPicker.PickUnitsInRectangle(theEditorSelection->GetSelectionRectangle(), 0, gU4E9230);
             else if (theTriggerSelection != NULL && theTriggerSelection->GetIsDrawn())
@@ -1654,9 +1654,9 @@ const EeGfxRaster gEERustRaster = {
         thePoint.SetY(inY);
         theText.SetLocation(thePoint);
         if (!gFreeCamera)
-            gUIManager->mMainGameForm->DrawClippedText(theRectangle, &theText, NULL);
+            gUIManager->GetMainGameForm()->DrawClippedText(theRectangle, &theText, NULL);
         else
-            gUIManager->mScenarioEditorForm->DrawClippedText(theRectangle, &theText, NULL);
+            gUIManager->GetScenarioEditorForm()->DrawClippedText(theRectangle, &theText, NULL);
     },
     // EEE3DTracerBeam::DrawPass6's stretch (0xfca9b): vertex array 0 kept and stretched (ee_gfx beam.rs), the
     // sub-models' internal ys kept and stretched, the bounding volumes

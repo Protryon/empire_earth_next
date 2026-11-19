@@ -78,7 +78,7 @@ void EEROUserInterface::SceneStarting()
 {
     GERectangle theZero = gU4E8F08.GetViewRectangle();
     GERectangle theRectangle;
-    if (gFreeCamera || gUIManager->mMainGameForm->mUIState == 0x11)
+    if (gFreeCamera || gUIManager->GetMainGameForm()->mUIState == 0x11)
         return;
     theRectangle.SetLeft(gGameWindowWidth * kRightPanelLeft);
     theRectangle.SetTop(gGameWindowHeight * kPanelTop);

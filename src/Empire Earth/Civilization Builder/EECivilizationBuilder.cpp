@@ -166,7 +166,7 @@ static UIControl* EECBMainButton(int64_t inWhich)
         UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
         return theForm == NULL ? NULL : dynamic_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameCivSelectorBuilder));
     }
-    return gUIManager->mMainGameForm->GetControl(kMainGameLargeCivBuilderAlert);
+    return gUIManager->GetMainGameForm()->GetControl(kMainGameLargeCivBuilderAlert);
 }
 
 extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, int64_t inB, int64_t inC,
@@ -433,7 +433,7 @@ extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, i
                                     NULL);
         return 0;
     case EE_SCREENS_CBW_BLINK_FLAG:
-        gUIManager->mMainGameForm->mIsButtonBlinking = inA != 0;
+        gUIManager->GetMainGameForm()->mIsButtonBlinking = inA != 0;
         return 0;
     case EE_SCREENS_CBW_MAIN_BUTTON:
         return EECBMainButton(inA) != NULL;

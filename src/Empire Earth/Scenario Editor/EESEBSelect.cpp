@@ -141,7 +141,7 @@ void EESEBSelect::Select()
         return;
     }
     unsigned long thePlayer;
-    gUIManager->mScenarioEditorForm->GetPlayerComboBox()->GetCurrentSelection(thePlayer);
+    gUIManager->GetScenarioEditorForm()->GetPlayerComboBox()->GetCurrentSelection(thePlayer);
     (new EESEARust(kSEATechTree, NULL, theFirst, theLast, (int32_t)thePlayer + 1, theLeft))->Dereference();
 }
 

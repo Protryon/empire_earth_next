@@ -214,7 +214,7 @@ void EEPhysics::EndGame(bool inIsVictory)
     if (gWorld.GetCurrentPlayer()->mGameResult != 0) {
         EESetCivBuilderButtonBlinking(false);
         if (dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL)
-            (static_cast<UIBlinkingButton*>(gUIManager->mMainGameForm->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
+            (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
     }
     gWorld.mTeams.clear();
     ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)

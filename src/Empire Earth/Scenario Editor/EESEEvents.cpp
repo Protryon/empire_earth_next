@@ -130,7 +130,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     case EE_SCREENS_SE_OP_OBJECT_IS_MAP:
         return Object()->GetIsSelectOnMap();
     case EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION:
-        gUIManager->mScenarioEditorForm->ClearSelection();
+        gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
     case EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST:
         Object()->ClearUnitList();
@@ -270,7 +270,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     }
     case EE_SCREENS_SE_OP_EXIT_AFTER_SAVE:
-        gUIManager->mScenarioEditorForm->SetExitAfterSave(true);
+        gUIManager->GetScenarioEditorForm()->SetExitAfterSave(true);
         break;
     case EE_SCREENS_SE_OP_EDIT_LINES:
         return static_cast<UIEditBox*>(theEntity)->GetLineCount();

@@ -326,7 +326,7 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SETS_OP_DRAW: {
         GERectangle theClip;
-        EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+        EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
         if (!theEditor->GetWasUIHidden() && static_cast<const GERectangle*>(p[1])->And(theTab->mR18, theClip))
             theEditor->UIForm::DrawBackground(theEditor->GetPanelBackground(), theClip,
                                               GERectangle(0.0f, 0.0f, 256.0f, 256.0f), theTab->mR18);

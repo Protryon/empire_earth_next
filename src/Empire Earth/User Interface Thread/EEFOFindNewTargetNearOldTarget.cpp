@@ -2841,7 +2841,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     case 15: theComplex->mPlayer->mSavedGroups.Reset(inX, inY); return 0;
     case 17: {   // EEEditorCanPlace's transport under the mouse (inA the player, inX the unit type)
         EEUnitClass* theClass = gUnitClassTable[inX];
-        long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->GetUnitUnderMouse();
+        long theID = gUIManager->GetScenarioEditorForm()->GetUnitScreen()->GetUnitUnderMouse();
         EEUnit* theCarrier = theID != -1 ? static_cast<EEUnit*>(::gWorld.GetUnit(theID)) : NULL;
         EEComplexUnit* theTransport = theCarrier != NULL ? theCarrier->GetComplexUnit() : NULL;
         return theTransport != NULL && theTransport->GetPlayer() == (EEPlayer*)(uintptr_t)inA && theCarrier->mUnitClass->mTransportCapacity > 0

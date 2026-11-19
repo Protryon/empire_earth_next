@@ -133,7 +133,7 @@ void EESEUITechListBox::AddTech(long inID)
 // techs that depend on it, in the disabled list the techs it depends on; returns the base copy result
 long EESEUITechListBox::CopyData()
 {
-    EETechTree* theTree = gUIManager->mScenarioEditorForm->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
+    EETechTree* theTree = gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
     long theResult = UILBString::CopyData();
     this->mDependents.clear();
     if (theResult == kErrorOK) {
@@ -201,7 +201,7 @@ void EESEUITechListBox::Fill(long inFirst, long inLast)
     long theTech = 100000;
     EESEUITechListBox* theOther =
         static_cast<EESEUITechListBox*>(gUIManager->GetScenarioEditorForm()->GetControlById(this->GetId() == kSERBUnitTypesTechList ? 0x155 : 0x154));
-    EETechTree* theTree = gUIManager->mScenarioEditorForm->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
+    EETechTree* theTree = gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
     bool theEpochReached = false;
     unsigned long theSelection;
     long theOtherTech;
@@ -219,7 +219,7 @@ void EESEUITechListBox::Fill(long inFirst, long inLast)
     }
     if (theEpochReached == true) {
         unsigned long thePlayer = theTree->GetPlayer()->mPlayerID;
-        gUIManager->mScenarioEditorForm->GetPlayerScreen()->MarkPlayerChanged(thePlayer, false);
+        gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->MarkPlayerChanged(thePlayer, false);
     }
 
     for (it = this->mTechs.begin() + inLast; it != this->mTechs.end(); it++) {
@@ -236,7 +236,7 @@ void EESEUITechListBox::Fill(long inFirst, long inLast)
             }
         }
     }
-    gUIManager->mScenarioEditorForm->GetPlayerScreen()->FillTechLists();
+    gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->FillTechLists();
 
     if (theTech < 100000) {
         it = std::find(this->mTechs.begin(), this->mTechs.end(), theTech);

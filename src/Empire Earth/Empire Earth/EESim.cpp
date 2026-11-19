@@ -843,7 +843,7 @@ void HostPhysics(EeSimDriverPhysics* outPhysics)
 bool HostEditorUp()
 {
     UILock theLock;
-    return gUIManager->mScenarioEditorForm != NULL && gUIManager->GetCurrentForm() == gUIManager->mScenarioEditorForm &&
+    return gUIManager->GetScenarioEditorForm() != NULL && gUIManager->GetCurrentForm() == gUIManager->GetScenarioEditorForm() &&
            gWorld.GetMap() != NULL;
 }
 

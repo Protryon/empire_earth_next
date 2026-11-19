@@ -48,7 +48,7 @@
 // conditions (object conditions go to the object tab), effects, objects or areas
 long EESETSTriggerUIComboBox::MouseRButtonUp()
 {
-    EESETriggerScreen* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+    EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
     unsigned long theSelection;
     unsigned long theIndex;
     UIEvent* theEvent;
@@ -217,7 +217,7 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         if (t == NULL)
             return 0;
     }
-    auto theScreen = [] { return gUIManager->mScenarioEditorForm->GetTriggerScreen(); };
+    auto theScreen = [] { return gUIManager->GetScenarioEditorForm()->GetTriggerScreen(); };
     switch (inOp) {
     case EE_SCREENS_SETR_OP_SM:
         switch (i[0]) {

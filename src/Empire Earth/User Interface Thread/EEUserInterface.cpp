@@ -185,7 +185,7 @@ void EEUserInterface::ShowEpochName()
     EEPlayer* thePlayer = gWorld.mPlayers[gWorld.mCurrentPlayer];
     if (thePlayer != NULL && thePlayer->mTechnologies != NULL) {
         gResource->GetString(thePlayer->mTechnologies->mEpochNameID, theText);
-        gUIManager->mMainGameForm->SetStatusText(theText);
+        gUIManager->GetMainGameForm()->SetStatusText(theText);
     }
 }
 
@@ -241,7 +241,7 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UG_OP_RESTART_UNITS: gWorld.RestartUnits(); break;
     case EE_SCREENS_UG_OP_LAND_CONTINENTS: EEUpdateLandContinents(); break;
     case EE_SCREENS_UG_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA != 0, inB != 0); break;
-    case EE_SCREENS_UG_OP_SWAP_MAIN: gUIManager->SwapForm(gUIManager->mMainGameForm); break;
+    case EE_SCREENS_UG_OP_SWAP_MAIN: gUIManager->SwapForm(gUIManager->GetMainGameForm()); break;
     case EE_SCREENS_UG_OP_MINI_MAP: gMiniMap->Redraw(); gMiniMap->Refresh(); break;
     case EE_SCREENS_UG_OP_GAME_VIEW: {
         GERectangle theRectangle;
@@ -411,7 +411,7 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true,
                                    UString("data\\") + UString("Scenarios\\"), 0);
     case EE_SCREENS_UG_OP_STOP_ONE_SHOTS: gSoundManager->StopAllOneShotSounds(); break;
-    case EE_SCREENS_UG_OP_SWAP_EDITOR: gUIManager->SwapForm(gUIManager->mScenarioEditorForm); break;
+    case EE_SCREENS_UG_OP_SWAP_EDITOR: gUIManager->SwapForm(gUIManager->GetScenarioEditorForm()); break;
     case EE_SCREENS_UG_OP_LOAD_ERROR: {
         UWideString theMessage;
         gResource->GetString(IDS_THERE_WAS_ERROR_TRYING_TO_LOAD, theMessage);
@@ -599,7 +599,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
 extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
     EEUserInterface* theUI = static_cast<EEUserInterface*>(inUI);
-    EEUIFMainGame* theMain = gUIManager != NULL ? gUIManager->mMainGameForm : NULL;
+    EEUIFMainGame* theMain = gUIManager != NULL ? gUIManager->GetMainGameForm() : NULL;
     UIForm* theForm = reinterpret_cast<UIForm*>(inA);
     switch (inOp) {
     case EE_SCREENS_UI_OP_PAUSE: theUI->PauseGraphics(); break;
@@ -611,7 +611,7 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         inA == 1 ? gWorld.mLock->ReadUnlock() : gWorld.mLock->WriteUnlock();
         break;
     case EE_SCREENS_UI_OP_MAIN_FORM: return (int64_t)theMain;
-    case EE_SCREENS_UI_OP_EDITOR_FORM: return (int64_t)gUIManager->mScenarioEditorForm;
+    case EE_SCREENS_UI_OP_EDITOR_FORM: return (int64_t)gUIManager->GetScenarioEditorForm();
     case EE_SCREENS_UI_OP_STATUS_VALUE:
         static_cast<UIStatusBar*>(theForm->GetControl(inB))->SetCurrentRangeValue(inC);
         break;
@@ -712,7 +712,7 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         break;
     case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
     case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
-    case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->mScenarioEditorForm->SelectTab((unsigned char)inA, inB); break;
+    case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->GetScenarioEditorForm()->SelectTab((unsigned char)inA, inB); break;
     case EE_SCREENS_UI_OP_RESTART: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_RESTART, 0, 0, 0); break;
     case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
     case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;

@@ -377,7 +377,7 @@ long EEUIFMGStatusButton::MouseRButtonUp()
 // Asks the main panel to refill its unit (clearing its flag)
 void EEUIManager::Fn26FA55()
 {
-    EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(this->mMainGameForm->mGroups[0]);
+    EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(this->GetMainGameForm()->mGroups[0]);
     theGroup->mL1C = 0;
     theGroup->mReset = true;
 }
@@ -385,7 +385,7 @@ void EEUIManager::Fn26FA55()
 // Asks the main panel to refill its unit (setting its flag)
 void EEUIManager::Fn26FA6A()
 {
-    EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(this->mMainGameForm->mGroups[0]);
+    EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(this->GetMainGameForm()->mGroups[0]);
     theGroup->mL1C = 1;
     theGroup->mReset = true;
 }

@@ -138,7 +138,7 @@ namespace {
 
 EEUIFScenarioEditor* SearEditor()
 {
-    return gUIManager->mScenarioEditorForm;
+    return gUIManager->GetScenarioEditorForm();
 }
 
 // the tile under the point (the mouse's if inMouse): whether the map picks one, its coordinates

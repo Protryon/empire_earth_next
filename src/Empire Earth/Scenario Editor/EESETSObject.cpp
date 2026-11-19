@@ -102,15 +102,15 @@ EESETSAComboBox::EESETSAComboBox(unsigned long inID, unsigned long inTextBoxType
 void EESETSAComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
-    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
+    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
 // Accepts the typed count, stores the object page into its scenario object and refreshes the page
 void EESETSAEditBox::ProcessEnterKey()
 {
     UIEditBox::ProcessEnterKey();
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject)->Store();
-    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject)->Store();
+    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
 // The object screen whole in Rust (ee_screens editor_object.rs): the constructor (0x58efb7), the destructor
@@ -294,7 +294,7 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
             return 0;
     }
     // (the trigger screen: not there yet while the editor makes its tabs)
-    auto theScreen = [] { return gUIManager->mScenarioEditorForm->GetTriggerScreen(); };
+    auto theScreen = [] { return gUIManager->GetScenarioEditorForm()->GetTriggerScreen(); };
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_SELECT_UNITS: {
         UIForm* theForm = static_cast<UIForm*>(p[2]);

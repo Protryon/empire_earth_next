@@ -452,7 +452,7 @@ void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
         }
     }
     outLines.push_back("  units " + std::to_string(theAll.mCount) + " " + Hex(theAll.mValue));
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     std::string theSelection = "  selection";
     for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
         theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
@@ -864,28 +864,28 @@ void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
 UIControl* EditorControl(const std::string& inId)
 {
     if (!inId.empty() && inId[0] == '%')   // %N: the form's control N (ids repeat on the trigger screens)
-        return gUIManager->mScenarioEditorForm->GetControl(strtoul(inId.c_str() + 1, NULL, 0));
-    return gUIManager->mScenarioEditorForm->GetControlById(strtoul(inId.c_str(), NULL, 0));
+        return gUIManager->GetScenarioEditorForm()->GetControl(strtoul(inId.c_str() + 1, NULL, 0));
+    return gUIManager->GetScenarioEditorForm()->GetControlById(strtoul(inId.c_str(), NULL, 0));
 }
 
 // the trigger tab's condition and effect screens' shared controls
 EESETSConditionControls* ConditionControls()
 {
     return static_cast<EESETSCondition*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->GetControls();
+               gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->GetControls();
 }
 
 EESETSEffectControls* EffectControls()
 {
     return static_cast<EESETSEffect*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
+               gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
 }
 
 // the area screen (TEST ONLY): its state and centre, the brush group's highlight and paint area, every scenario area's
 // name, text, select mode, rectangle and anchor
 void AreaDigest(std::vector<std::string>& outLines)
 {
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     EESETSArea* s = static_cast<EESETSArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea));
     GERectangle r;
     GE2DPoint p;
@@ -1033,7 +1033,7 @@ std::string ListText(const UILBString* inList)
 
 void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::vector<std::string>& outLines)
 {
-    UIForm* theForm = gUIManager->mScenarioEditorForm;
+    UIForm* theForm = gUIManager->GetScenarioEditorForm();
     std::map<UIControl*, std::string> theGroups;
     for (unsigned long g = 0; g < theForm->GetControlGroupCount(); g++) {
         UIEntityGroup* theGroup = theForm->GetEntityGroup(g);
@@ -1149,7 +1149,7 @@ void PlayersDigest(std::vector<std::string>& outLines)
 // (epochs, tech trees, the load text) run after it, so they do not depend on its timing
 void SyncLoadThread()
 {
-    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
+    EESELoadThread* theThread = gUIManager->GetScenarioEditorForm()->GetLoadThread();
     if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
         theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
         theThread->mMessageQueueDone->Clear();
@@ -1165,7 +1165,7 @@ void SyncLoadThread()
 // paint area's centring, the brush group's size, highlight and rectangle
 void TerrainDigest(std::vector<std::string>& outLines)
 {
-    EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
     EEUIFSETerrain* t = static_cast<EEUIFSETerrain*>(e->GetTabGroup(kEditorTabTerrain));
     std::string s = "  terrain selected=" + std::to_string((long)t->GetSelectedTerrain()) + " terrains";
     for (unsigned long k = 0; k < t->GetTerrainCount(); k++)
@@ -1219,7 +1219,7 @@ void TerrainDigest(std::vector<std::string>& outLines)
 void TechDigest(std::vector<std::string>& outLines)
 {
     for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
-        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->mScenarioEditorForm->GetControlById(theID));
+        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->GetScenarioEditorForm()->GetControlById(theID));
         l->CopyData();
         unsigned long theSelection = 0;
         bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
@@ -1242,7 +1242,7 @@ void TechDigest(std::vector<std::string>& outLines)
 void FormState(std::vector<std::string>& outLines)
 {
     SyncLoadThread();
-    EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
     char theText[600];
     std::string theUnits;
     for (unsigned long i = 0; i < e->GetSelectedUnitCount(); i++) {
@@ -1319,7 +1319,7 @@ void TriggerReport(bool inSetup, std::vector<std::string>& outLines)
             m->mEffects[2]->mTaskArea = 3;
         }
     }
-    long theResult = EESETestSaveTriggersOnly(gUIManager->mScenarioEditorForm);
+    long theResult = EESETestSaveTriggersOnly(gUIManager->GetScenarioEditorForm());
     outLines.push_back("  result " + std::to_string(theResult));
     UString thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
     FILE* theFile = fopen((const char*)thePath, "rb");
@@ -1358,7 +1358,7 @@ struct EditAccess : UIEditBox {
 // (not, condition, operator) and effects (delay, effect, operator)
 void TriggerDigest(std::vector<std::string>& outLines)
 {
-    EESETSBaseObject* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger);
+    EESETSBaseObject* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger);
     EESMTrigger* t = gWorld.mScenarioManager->GetTrigger(theScreen->mSelection);
     char theText[256];
     snprintf(theText, sizeof(theText), "  trigger selection=%ld has=%d", (long)theScreen->mSelection,
@@ -1388,7 +1388,7 @@ void TriggerDigest(std::vector<std::string>& outLines)
 // the trigger tab's open object (TEST ONLY): the sub-screen's selection, then the scenario object's fields
 void ObjectDigest(std::vector<std::string>& outLines)
 {
-    EESETSBaseObject* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject);
+    EESETSBaseObject* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject);
     EESMObject* o = gWorld.mScenarioManager->GetScenarioObject(theScreen->mSelection + 1);
     char theText[512];
     snprintf(theText, sizeof(theText), "  object selection=%ld has=%d", (long)theScreen->mSelection,
@@ -1426,7 +1426,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         std::function<void()> theCode;
         std::string theProblem;
         if (c == "tab")
-            theCode = [=] { gUIManager->mScenarioEditorForm->GetTabButton(L(1))->CheckDirect(); };
+            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTabButton(L(1))->CheckDirect(); };
         else if (c == "blank")
             theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
@@ -1449,7 +1449,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=] {
                 long theButton = w[1] == "raise" ? kSEElevationRaiseButton
                                  : w[1] == "hills" ? kSEElevationLowerButton : kSEElevationLevelButton;
-                static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(theButton))->Check();
+                static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(theButton))->Check();
                 EESEAPaint* a = new EESEAPaintRust(kSEAPaintElevation, (char)L(2));
                 if (a->SetArea(L(3), L(4), L(5), L(6)))
                     gUserInterface->PostAction(a);
@@ -1523,7 +1523,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "selection")   // the editor's selected units' ids
             theCode = [=, &theOutput] {
-                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
                 std::string theSelection = "  selection";
                 for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
                     theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
@@ -1564,7 +1564,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                     theGhost->mCanPlace = true;
                 }
                 gWorld.mGhostUnitsLock->Leave();
-                gUIManager->mScenarioEditorForm->GetUnitScreen()->SetUnitUnderMouse(-1);
+                gUIManager->GetScenarioEditorForm()->GetUnitScreen()->SetUnitUnderMouse(-1);
                 ee_screens_sew_put_down(sMove->mAction);
             };
         else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
@@ -1595,7 +1595,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "elevfile")   // elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT | elevfile -
             theCode = [=, &theOutput] {
-                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
                 EEUIFileComboBox* theList = static_cast<EEUIFileComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
                 if (w[1] == "-") {
                     theList->SetCurrentSelection(0);
@@ -1623,7 +1623,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         else if (c == "placeghost" || c == "drop")   // placeghost PLAYER [UNIT] | drop [UNIT]
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();   // the units placed before are in the world, as a person finds them
-                EESEUnit* theScreen = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                EESEUnit* theScreen = gUIManager->GetScenarioEditorForm()->GetUnitScreen();
                 size_t theUnitWord = c == "drop" ? 1 : 2;
                 theScreen->SetUnitUnderMouse(w.size() > theUnitWord ? (long)UnitRef(w[theUnitWord]) : -1);
                 bool thePlaced = true;
@@ -1662,12 +1662,12 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                 const GERectangle& r = gViewport.GetViewRectangle();
                 char theText[160];
                 snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
-                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->GetIsUIHidden() ? 1 : 0);
+                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->GetScenarioEditorForm()->GetIsUIHidden() ? 1 : 0);
                 theOutput.push_back(theText);
             };
         else if (c == "click")   // click quicksave
             theCode = [=] {
-                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
                 UIControl* theButton = theEditor->GetQuickSaveButton();
                 theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
             };
@@ -1677,20 +1677,20 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                 FileDigest(GetSaveTextName(UString("EEQuickSave") + gScenarioExtension, true), theOutput);
             };
         else if (c == "trigger")   // trigger SCREEN: the trigger tab's sub-screen (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
-            theCode = [=] { gUIManager->mScenarioEditorForm->GetTriggerScreen()->ShowTab(kSETriggerTabTrigger + L(1)); };
+            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ShowTab(kSETriggerTabTrigger + L(1)); };
         else if (c == "newentry")   // the open sub-screen's New button
-            theCode = [=] { gUIManager->mScenarioEditorForm->GetTriggerScreen()->NewEntry(); };
+            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->NewEntry(); };
         else if (c == "ctype")   // ctype TYPE: the condition's type combo box (types from 2), as a person picks it
             theCode = [=] {
                 EESETSCondition* theScreen = static_cast<EESETSCondition*>(
-                    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
+                    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
                 theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 2);
                 theScreen->ChangeConditionType();
             };
         else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
             theCode = [=] {
                 EESETSEffect* theScreen = static_cast<EESETSEffect*>(
-                    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
+                    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
                 theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 1);
                 theScreen->ChangeEffectType();
                 theScreen->GetControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
@@ -1713,7 +1713,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                     theTrigger = kControlTriggerSelectionChanged;
                 }
                 if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
             };
         else if (c == "ctl")   // ctl c|e check|slide|radio INDEX [VALUE]: a condition (c) or effect (e) control
             theCode = [=] {
@@ -1738,7 +1738,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                     // a person's drag: the value set, then the range-changed event the slider fires
                     theSlider->SetCurrentRangeValue(L(4));
                     if (UIEvent* theEvent = theSlider->GetTriggerEvent(kControlTriggerRangeChanged))
-                        theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theSlider);
+                        theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theSlider);
                 } else if (theRadio != NULL)
                     theRadio->Check();   // fires the checked event unless it was checked
             };
@@ -1782,7 +1782,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "crefresh")   // the condition screen's RefreshControls (a condition combo box's change)
             theCode = [=] {
-                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition)->RefreshControls();
+                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition)->RefreshControls();
             };
         else if (c == "conditionstate")   // every condition: its numbers (EeScenarioConditionFields' words) and texts
             theCode = [=, &theOutput] {
@@ -1851,7 +1851,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
         else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
             theCode = [=] {
-                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
+                gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
             };
         else if (c == "effectstate")   // every effect: its numbers (EeScenarioEffectFields' words), texts and objects
             theCode = [=, &theOutput] {
@@ -1897,7 +1897,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
                     theTrigger = kControlTriggerRangeChanged;
                 }
                 if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
             };
         else if (c == "controls")   // controls ID...: editor controls' display modes (and a label's first line)
             theCode = [=, &theOutput] {
@@ -1923,7 +1923,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "unittab")   // the unit tab's placement state, its list state, rotation, cargo and ghosts
             theCode = [=, &theOutput] {
-                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                EESEUnit* s = gUIManager->GetScenarioEditorForm()->GetUnitScreen();
                 long theMode, theSort, theLayer;
                 s->GetListState(theMode, theSort, theLayer);
                 char theText[160];
@@ -1942,7 +1942,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "unitpick")   // unitpick NAME: the unit list's first line starting with NAME ('_' a space) picked
             theCode = [=, &theOutput] {
-                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                EESEUnit* s = gUIManager->GetScenarioEditorForm()->GetUnitScreen();
                 UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
                 std::string theName = w[1];
                 std::replace(theName.begin(), theName.end(), '_', ' ');
@@ -1959,7 +1959,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "unitbuild")   // unitbuild wall X0 Y0 X1 Y1 | gate X Y DIRECTION | cancel: the tab's build tools
             theCode = [=] {
-                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                EESEUnit* s = gUIManager->GetScenarioEditorForm()->GetUnitScreen();
                 if (w[1] == "wall") {
                     s->mBuildWall.mStart.SetXY(F(2), F(3));
                     s->mBuildWall.mEnd.SetXY(F(4), F(5));
@@ -1978,13 +1978,13 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
             theCode = [=, &theOutput] {
-                EESEPlayerScreen* theScreen = gUIManager->mScenarioEditorForm->GetPlayerScreen();
+                EESEPlayerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetPlayerScreen();
                 UIComboBox* theStart = theScreen->GetRowEpochs(L(1), false);
                 UIComboBox* theEndBox = theScreen->GetRowEpochs(L(1), true);
                 theEndBox->SetCurrentSelection((unsigned long)L(3));
                 theStart->SetCurrentSelection((unsigned long)L(2));
                 if (UIEvent* theEvent = theStart->GetTriggerEvent(kControlTriggerSelectionChanged))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theStart);
+                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theStart);
                 unsigned long theEnd = 0;
                 bool theSelected = theEndBox->GetCurrentSelection(theEnd) == kErrorOK;
                 theOutput.push_back("  end epochs " + std::to_string(theEndBox->GetListBox()->GetLineCount()) +
@@ -2012,7 +2012,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=] { EditAccess::Enter(static_cast<UIEditBox*>(EditorControl(w[1]))); };
         else if (c == "tscreen")   // tscreen select N|new|dup|delete|up|down|sort|name: the trigger tab's list buttons
             theCode = [=] {
-                EESETriggerScreen* s = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+                EESETriggerScreen* s = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
                 if (w[1] == "select") {
                     s->GetList()->ChangeSelectionIndex((unsigned long)L(2), false, false);
                     s->SelectEntry();
@@ -2037,11 +2037,11 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=] {
                 UIControl* theControl = EditorControl(w[1]);
                 if (UIEvent* theEvent = theControl->GetTriggerEvent(kControlTriggerButtonUp))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+                    theEvent->ProcessEvent(gUIManager->GetScenarioEditorForm(), theControl);
             };
         else if (c == "tscreenstate")   // the trigger tab's list, open sub-screen and the sub-screens' selections
             theCode = [=, &theOutput] {
-                EESETriggerScreen* s = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+                EESETriggerScreen* s = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
                 UILBString* theList = s->GetList();
                 std::string theLine = "  tscreen screen=" + std::to_string(s->GetCurrentScreen()) +
                                       " storing=" + std::to_string(gB4C3220 ? 1 : 0) + " list " +
@@ -2070,11 +2070,11 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=] {
                 std::string theText = w[1] == "-" ? std::string() : w[1];
                 std::replace(theText.begin(), theText.end(), '_', ' ');
-                gUIManager->mScenarioEditorForm->SetLoadText(UWideString(theText.c_str()));
+                gUIManager->GetScenarioEditorForm()->SetLoadText(UWideString(theText.c_str()));
             };
         else if (c == "fsel")   // fsel add|remove UNIT | fsel first | fsel clear: the form's selection members
             theCode = [=] {
-                EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+                EEUIFScenarioEditor* e = gUIManager->GetScenarioEditorForm();
                 if (w[1] == "first")
                     e->DeselectFirstUnit();
                 else if (w[1] == "clear")
@@ -2090,13 +2090,13 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         else if (c == "formcall")   // formcall store|resume: the form's RefreshCurrentGroup / ResumeCurrentGroup
             theCode = [=] {
                 if (w[1] == "store")
-                    gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
+                    gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup();
                 else
-                    gUIManager->mScenarioEditorForm->ResumeCurrentGroup();
+                    gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
             };
         else if (c == "gameview")   // gameview L T R B HIDDEN: the form's SetGameView
             theCode = [=] {
-                gUIManager->mScenarioEditorForm->SetGameView(GERectangle(F(1), F(2), F(3), F(4)), L(5) != 0);
+                gUIManager->GetScenarioEditorForm()->SetGameView(GERectangle(F(1), F(2), F(3), F(4)), L(5) != 0);
             };
         else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
             theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
@@ -2104,7 +2104,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             theCode = [=, &theOutput] { TerrainDigest(theOutput); };
         else if (c == "terrainpick" || c == "terraincolor")   // terrainpick|terraincolor LINE: a list's line clicked
             theCode = [=] {
-                UIControl* theList = gUIManager->mScenarioEditorForm->GetControlById(
+                UIControl* theList = gUIManager->GetScenarioEditorForm()->GetControlById(
                     c == "terrainpick" ? kSETerrainTerrainType : kSETerrainTerrainColorType);
                 if (c == "terrainpick")
                     static_cast<EESEUITerrainTypeLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
@@ -2113,7 +2113,7 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "terrainpaint")   // terrainpaint L T R B: the paint area's CreatePaintAction over an area, posted
             theCode = [=, &theOutput] {
-                EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(gUIManager->mScenarioEditorForm->GetControlById(205));
+                EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(gUIManager->GetScenarioEditorForm()->GetControlById(205));
                 EESEAPaint* a = thePaint->CreatePaintAction();
                 theOutput.push_back(std::string("  paint ") + (a != NULL ? "action" : "none") +
                                     " centered=" + (thePaint->mIsCentered ? "1" : "0"));
@@ -2125,14 +2125,14 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
             };
         else if (c == "terrainmouse")   // terrainmouse X Y | terrainmouse update: the tab's MouseMove or Update
             theCode = [=] {
-                EEUIFSEMainGroup* t = gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTerrain);
+                EEUIFSEMainGroup* t = gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabTerrain);
                 if (w[1] == "update")
                     t->Update();
                 else
                     t->MouseMove(GE2DPoint(F(1), F(2)));
             };
         else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
-            theCode = [=] { gUIManager->mScenarioEditorForm->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
+            theCode = [=] { gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
         else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
             theCode = [=] { static_cast<EESEUITechListBox*>(EditorControl(w[1]))->Fill(L(2), L(3)); };
         else if (c == "techstate")   // the two tech lists (TechDigest)

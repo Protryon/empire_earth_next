@@ -1092,8 +1092,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         return theCall.mCalamity->GetTargetKind();
     case EE_SCREENS_MF_OP_CALAMITY_CAST: theForm->mCalamity->Cast(theForm->GetMouseLocation()); return 0;
     case EE_SCREENS_MF_OP_REFRESH_MAIN_FORM:
-        if (gUIManager->mMainGameForm != NULL)
-            gUIManager->mMainGameForm->mRefreshGroup = true;
+        if (gUIManager->GetMainGameForm() != NULL)
+            gUIManager->GetMainGameForm()->mRefreshGroup = true;
         return 0;
     case EE_SCREENS_MF_OP_MOUSE_FREEZE: gMouse->mIsFrozen = inA != 0; return 0;
     case EE_SCREENS_MF_OP_MOUSE_RESET:
@@ -1178,7 +1178,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         theBackground->DrawBackground(theBackground->GetRectangle());
         return 0;
     }
-    case EE_SCREENS_MF_OP_MAIN_UI_STATE: return gUIManager->mMainGameForm->mUIState;
+    case EE_SCREENS_MF_OP_MAIN_UI_STATE: return gUIManager->GetMainGameForm()->mUIState;
     case EE_SCREENS_MF_OP_UNIT_SELECTED: return gUnitSelected;
     default:
         if (inOp >= EE_SCREENS_MF_OP_SB)
@@ -1299,7 +1299,7 @@ static_assert(offsetof(EEUIBuildWall, mPlayer) - offsetof(EEUIBuildWall, mState)
 // builds each segment and chains from its end; a right click cancels; moving previews the wall ghosts
 void EEUIBuildWall::Update(const GE2DPoint& inLocation)
 {
-    EEUIFMGFormCall theCall(gUIManager->mMainGameForm);
+    EEUIFMGFormCall theCall(gUIManager->GetMainGameForm());
     theCall.mWall = this;
     ee_screens_wall_update(&theCall, reinterpret_cast<EeScreensBuildWallFields*>(&this->mState), inLocation.GetX(),
                            inLocation.GetY());
@@ -1309,7 +1309,7 @@ void EEUIBuildWall::Update(const GE2DPoint& inLocation)
 // mouse, built on a left click, cancelled on a right click
 void EEUIBuildGate::Update(const GE2DPoint& inLocation)
 {
-    EEUIFMGFormCall theCall(gUIManager->mMainGameForm);
+    EEUIFMGFormCall theCall(gUIManager->GetMainGameForm());
     theCall.mGate = this;
     ee_screens_gate_update(&theCall, reinterpret_cast<EeScreensBuildGateFields*>(&this->mUnitClass), inLocation.GetX(),
                            inLocation.GetY());

@@ -77,9 +77,9 @@ EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
     long theResult = gISKeyboard->GetEntity(kKeySpace, theSpaceKey);
 
     if (this->GetRightMouseButtonDown() == true) {
-        if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
             theLevel = (char)UMFloor(gWorld.GetMap()->GetTile(this->mTileX, this->mTileY)->GetHeight() * 4.8989797f + 0.00001f);
-        else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
+        else if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
             theLevel = (char)UMFloor(gWorld.GetMap()->GetTile(this->mTileX, this->mTileY)->GetHeight() * 1.2247449f + 0.00001f);
     } else if (theResult == 0 && theSpaceKey->GetValue() > 0) {
         EEPointUnitOrTileXY(this->GetMouseLocation(), theTile, theX, theY, false);
@@ -122,13 +122,13 @@ long EEUIFSEPaintElevation::MouseMove(const GE2DPoint& inLocation)
         theLine.Intersects(this->mPlane, theT);
         theLine.GetPointAt(theT, thePoint);
         theT = (float)this->mLevel * kSEPELevelHeight + thePoint.GetZ() - this->mPlane.GetPoint().GetZ();
-        if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true) {
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true) {
             theNewLevel = (long)(float)UMFloor(theT * 4.8989797f + 0.00001f);
             theCheck = theNewLevel;
             // the grabbed tile's current level on the same scale as the new one
             theOldLevel =
                 (long)(float)UMFloor(gWorld.mMap->GetTile(this->mTileX, this->mTileY)->GetHeight() * 4.8989797f + 0.00001f);
-        } else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true) {
+        } else if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true) {
             theNewLevel = (long)(float)UMFloor(theT * 1.2247449f + 0.00001f);
             theCheck = theNewLevel * 4;
             theOldLevel =

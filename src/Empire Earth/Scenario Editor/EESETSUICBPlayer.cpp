@@ -148,34 +148,34 @@ void EESETSUICBPlayer::FillList()
 void EESETSUICBPlayer::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->RefreshScreen();
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->RefreshScreen();
 }
 
 // Places the gate being built in the scenario editor (the location and direction are ignored)
 void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceGate();
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceGate();
 }
 
 // Ends gate placement in the scenario editor and unloads the gate class's media for its player
 void EESEUIBuildGate::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndGate();
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndGate();
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }
 
 // Places the wall being built in the scenario editor
 void EESEUIBuildWall::Build()
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceWall();
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->PlaceWall();
 }
 
 // Ends wall placement in the scenario editor and unloads the wall technology's unit media for its player
 void EESEUIBuildWall::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndWall();
+    static_cast<EESEUnit*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabUnits))->EndWall();
     long theTechnology = this->mTechnology;
     thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
 }

@@ -49,19 +49,19 @@ void EESETSEScenarioComboBox::ChangeSelection()
     UIComboBox::ChangeSelection();
     switch (this->mScreen) {
     case kSETriggerScreenTrigger:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenTrigger]->RefreshControls();
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mScreens[kSETriggerScreenTrigger]->RefreshControls();
         break;
     case kSETriggerScreenCondition:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenCondition]->RefreshControls();
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mScreens[kSETriggerScreenCondition]->RefreshControls();
         break;
     case kSETriggerScreenEffect:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenEffect]->RefreshControls();
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mScreens[kSETriggerScreenEffect]->RefreshControls();
         break;
     case kSETriggerScreenObject:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenObject]->RefreshControls();
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mScreens[kSETriggerScreenObject]->RefreshControls();
         break;
     case kSETriggerScreenArea:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenArea]->RefreshControls();
+        gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->mScreens[kSETriggerScreenArea]->RefreshControls();
         break;
     }
 }
@@ -70,7 +70,7 @@ void EESETSEScenarioComboBox::ChangeSelection()
 // list's leading built-in entries)
 long EESETSEScenarioComboBox::MouseRButtonUp()
 {
-    EESETriggerScreen* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+    EESETriggerScreen* theScreen = gUIManager->GetScenarioEditorForm()->GetTriggerScreen();
     unsigned long theSelection;
     switch (this->mMode) {
     case kSETriggerScreenTrigger:

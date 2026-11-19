@@ -187,8 +187,8 @@ void EEScenarioManager::ExitCinematic()
 {
     gWorld.mInCinematic = false;
     gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
-    gUIManager->mMainGameForm->SetUIState(0);
-    gUIManager->mMainGameForm->mIsCursorLocked = false;
+    gUIManager->GetMainGameForm()->SetUIState(0);
+    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
     gMouse->mPointer = 0;
     gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2)));
     gGraphics->PostFadeIn(0);
@@ -205,7 +205,7 @@ void EEScenarioManager::StartCinematic()
     this->mCinematicStartTime = this->mTime;
     gWorld.mInCinematic = true;
     gWorld.mSavedGameSpeed = gWorld.GetGameSpeed();
-    gUserInterface->CloseForm(gUIManager->mMainGameForm);
+    gUserInterface->CloseForm(gUIManager->GetMainGameForm());
     gSoundManager->StopAllOneShotSounds();
     gWorld.mCameraControl.GetOffset(gWorld.mCameraControl.mFraction, this->mK008.mOffset);
     gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, this->mK008.mFocus);
@@ -216,8 +216,8 @@ void EEScenarioManager::StartCinematic()
     gWorld.mCameraControl.ResetPath();
     gWorld.mCameraControl.ClearUnitB();
     gWorld.mCameraControl.ClearUnitA();
-    gUIManager->mMainGameForm->SetUIState(0x11);
-    gUIManager->mMainGameForm->mIsCursorLocked = true;
+    gUIManager->GetMainGameForm()->SetUIState(0x11);
+    gUIManager->GetMainGameForm()->mIsCursorLocked = true;
     gMouse->mPointer = 6;
     for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
         gWorld.GetPlayer(i)->UnselectAllUnits();

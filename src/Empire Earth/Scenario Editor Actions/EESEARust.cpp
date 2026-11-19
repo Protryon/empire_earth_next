@@ -71,7 +71,7 @@
 // selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
 void EESEAObjectSelection()
 {
-    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
+    static_cast<EESETSObject*>(gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
         ->UpdateSelection();
 }
 
@@ -161,9 +161,9 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
         return 0;
     }
     case EE_SCREENS_SEA_ELEVATION_MODE:
-        if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
             return 0;
-        if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
+        if (static_cast<UIRadioButton*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
             return 1;
         return 2;
     case EE_SCREENS_SEA_RAISE: {
@@ -179,7 +179,7 @@ extern "C" int32_t ee_screenscpp_sea(uint32_t inOp, int32_t* i, float* f)
         theMap->RemoveFlatCliffs((long)i[0], (long)i[1], (long)i[2], (long)i[3]);
         return 0;
     case EE_SCREENS_SEA_STORE_MOUSE_TILE:
-        static_cast<EEUIFSEPaint*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationPaint))->StoreMouseTile();
+        static_cast<EEUIFSEPaint*>(gUIManager->GetScenarioEditorForm()->GetControlById(kSEElevationPaint))->StoreMouseTile();
         return 0;
     case EE_SCREENS_SEA_ELEVATION_CHANGED:
         gEffectManager->ElevationChanged(i[0], i[1], i[2], i[3]);
@@ -245,7 +245,7 @@ extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 
 extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* f)
 {
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     EEMap* theMap = gWorld.mMap;
     // a mesh coordinate as the original's unsigned long (x - 1 at 0 wraps)
     unsigned long x = (unsigned long)(long)i[0], y = (unsigned long)(long)i[1];
@@ -491,7 +491,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
 // do not read whole); out: the width, the height and the tab's water cutoff and depth, land height and cutoff
 extern "C" size_t ee_screenscpp_sew_elevation(int16_t* outData, size_t inCapacity, int32_t* out)
 {
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
     unsigned long theSelection;
     theList->GetCurrentSelection(theSelection);
@@ -556,7 +556,7 @@ static EEComplexUnit* EESEPComplexUnit(int32_t inID)
 extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* i, float* f)
 {
     GETransformation& theT = *reinterpret_cast<GETransformation*>(t);
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     switch (inOp) {
     case EE_SCREENS_SEP_GHOST_LOCK:
         if (i[0] != 0)
@@ -782,7 +782,7 @@ static_assert(kMessageSelectUnit == 0x48 && kMessageAddUnitToSelectedGroup == 0x
 
 extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA, float inF)
 {
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
     EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(inUnit);   // the ops on a complex unit's part
     switch (inOp) {

@@ -52,5 +52,5 @@ EESETSCComboBox::EESETSCComboBox(unsigned long inId, unsigned long inTextBoxType
 void EESETSCComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
-    static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTriggers))->GetScreen(kSETriggerScreenCondition)->RefreshControls();
+    static_cast<EESETriggerScreen*>(gUIManager->GetScenarioEditorForm()->GetTabGroup(kEditorTabTriggers))->GetScreen(kSETriggerScreenCondition)->RefreshControls();
 }

@@ -6230,7 +6230,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_SET = 108;
 /// `mCalamity->Cast(GetMouseLocation())`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_CAST = 109;
 
-/// `gUIManager->mMainGameForm->mRefreshGroup = true` when there is a main game form.
+/// `gUIManager->GetMainGameForm()->mRefreshGroup = true` when there is a main game form.
 constexpr static const uint32_t EE_SCREENS_MF_OP_REFRESH_MAIN_FORM = 110;
 
 /// `mStringsChanged`.
@@ -6479,7 +6479,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_ICON_BAR_UPDATE = 148;
 /// The background a's `DrawBackground(its rectangle)`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_DRAW_BACKGROUND = 149;
 
-/// `gUIManager->mMainGameForm->mUIState`.
+/// `gUIManager->GetMainGameForm()->mUIState`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_MAIN_UI_STATE = 150;
 
 /// `gUnitSelected`.
@@ -6830,7 +6830,7 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_IN_CINEMATIC = 4;
 /// The form's control a's `SetDisplayMode(b)`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_SET_MODE = 5;
 
-/// The main game form's (`gUIManager->mMainGameForm`) unit panels off: entity group 9, background 0x97, entity
+/// The main game form's (`gUIManager->GetMainGameForm()`) unit panels off: entity group 9, background 0x97, entity
 /// group 8, background 0x98.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_PANELS_OFF = 6;
 
@@ -6950,7 +6950,7 @@ constexpr static const uint32_t EE_SCREENS_MGR_OP_BUTTON_TECH = 42;
 /// The status button a's `mCount += b`.
 constexpr static const uint32_t EE_SCREENS_MGR_OP_ADD_COUNT = 43;
 
-/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->mMainGameForm`, a = 1): the
+/// The group's form (`mOwner`, a = 0) or the UI manager's main game form (`gUIManager->GetMainGameForm()`, a = 1): the
 /// toolkit's ops on them are `hud_views`' (the FFI adapter's, below the trait).
 constexpr static const uint32_t EE_SCREENS_MGR_OP_FORMS = 44;
 
@@ -9181,7 +9181,7 @@ constexpr static const uint32_t EE_SCREENS_UG_OP_LAND_CONTINENTS = 10;
 /// `ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, a != 0, b != 0)`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_RESIZE_GAME = 11;
 
-/// `gUIManager->SwapForm(gUIManager->mMainGameForm)`.
+/// `gUIManager->SwapForm(gUIManager->GetMainGameForm())`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_MAIN = 12;
 
 /// `gMiniMap->Redraw()`, `Refresh()`.
@@ -9399,7 +9399,7 @@ constexpr static const uint32_t EE_SCREENS_UG_OP_LOAD_SCENDEFAULT = 77;
 /// `gSoundManager->StopAllOneShotSounds()`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_STOP_ONE_SHOTS = 78;
 
-/// `gUIManager->SwapForm(gUIManager->mScenarioEditorForm)`.
+/// `gUIManager->SwapForm(gUIManager->GetScenarioEditorForm())`.
 constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_EDITOR = 79;
 
 /// `IDS_THERE_WAS_ERROR_TRYING_TO_LOAD` shown by `gUIManager->DisplayMessage(text, true, NULL, NULL, true)`.
@@ -9577,10 +9577,10 @@ constexpr static const uint32_t EE_SCREENS_UI_OP_UNLOCK = 4;
 /// `gUIManager != NULL`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_HAS_MANAGER = 5;
 
-/// `gUIManager->mMainGameForm` (a pointer, 0 when none).
+/// `gUIManager->GetMainGameForm()` (a pointer, 0 when none).
 constexpr static const uint32_t EE_SCREENS_UI_OP_MAIN_FORM = 6;
 
-/// `gUIManager->mScenarioEditorForm` (a pointer, 0 when none).
+/// `gUIManager->GetScenarioEditorForm()` (a pointer, 0 when none).
 constexpr static const uint32_t EE_SCREENS_UI_OP_EDITOR_FORM = 7;
 
 /// `gUIManager->GetCurrentForm()`.

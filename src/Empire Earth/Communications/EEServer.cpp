@@ -862,7 +862,7 @@ static int64_t EESessionHost(uint32_t inOp, EeNetSessCall* inCall)
             gPhysics->mThread->Post(0x404, NULL, NULL, true);
             while (!gPhysics->mTimerRunning)
                 PlatSleep(1);
-            gUIManager->mMainGameForm->SetUIState(0);
+            gUIManager->GetMainGameForm()->SetUIState(0);
         }
         return 0;
     }

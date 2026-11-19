@@ -560,7 +560,7 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         break;
     }
     case EE_SCREENS_GAME_CH_CLOSE:
-        return (uint32_t)gUserInterface->CloseForm(gUIManager->mMainGameForm);
+        return (uint32_t)gUserInterface->CloseForm(gUIManager->GetMainGameForm());
     case EE_SCREENS_OP_CH_MOUSE_INSIDE:
         return inForm->GetRectangle().Contains(inForm->GetMouseLocation());
     case EE_SCREENS_GAME_CL_UNPAUSE:
@@ -592,8 +592,8 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         gMouse->mPointer = (long)(int32_t)inA;
         break;
     case EE_SCREENS_GAME_MG_REFRESH_GROUP:
-        if (gUIManager->mMainGameForm)
-            gUIManager->mMainGameForm->mRefreshGroup = true;
+        if (gUIManager->GetMainGameForm())
+            gUIManager->GetMainGameForm()->mRefreshGroup = true;
         break;
     case EE_SCREENS_GAME_MG_DUMP_MEDIA: {
         // Media Dump.txt in the startup folder (replaced when inA), the loaded media (and leaks when inB) appended
@@ -680,19 +680,19 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         gGamePreferences.mSettings.mZoomStyle = gWorld.mCameraControl.mMode;
         break;
     case EE_SCREENS_GAME_MG_SELECTED_COMMAND: {
-        EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->mMainGameForm->mGroups[0]);
+        EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0]);
         EEUnit* theUnit = theGroup->GetSelectedUnit();
         if (!theUnit || !theUnit->mComplexUnit || !theUnit->mUnitClass)
             return 0;
         return theUnit->mUnitClass->mCommands[inA];
     }
     case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
-        gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
-        gUIManager->mMainGameForm->GetBackgroundByID(0x97)->SetVisibility(false);
+        gUIManager->GetMainGameForm()->GetEntityGroup(9)->Disable();
+        gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(false);
         break;
     case EE_SCREENS_GAME_MG_COPY_BITMAPS: {
-        UIButton* theButton = static_cast<UIButton*>(gUIManager->mMainGameForm->GetControl(inA));
-        UIButton* theSource = static_cast<UIButton*>(gUIManager->mMainGameForm->GetControl(inB));
+        UIButton* theButton = static_cast<UIButton*>(gUIManager->GetMainGameForm()->GetControl(inA));
+        UIButton* theSource = static_cast<UIButton*>(gUIManager->GetMainGameForm()->GetControl(inB));
         theButton->SetNormalBitmap(theSource->GetNormalBitmap());
         theButton->SetPressedBitmap(theSource->GetPressedBitmap());
         break;
@@ -763,8 +763,8 @@ static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         // the selected group's formation, posted; the formation menu closed
         EEFormation* theFormation = EEFormation::Create((long)inA);
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageChangeFormation, {(long)inA, true}), kSlotNone);
-        gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
-        gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
+        gUIManager->GetMainGameForm()->GetEntityGroup(8)->Disable();
+        gUIManager->GetMainGameForm()->GetBackgroundByID(0x98)->SetVisibility(false);
         theFormation->mB5C = true;
         gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup->SetFormation(theFormation);
         theFormation->Dereference();
@@ -1592,7 +1592,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         PlatSleep(inA);
         break;
     case EE_SCREENS_OP_OPEN_MAIN_GAME_FORM:
-        gUserInterface->OpenForm(gUIManager->mMainGameForm);
+        gUserInterface->OpenForm(gUIManager->GetMainGameForm());
         break;
     case EE_SCREENS_GAME_SI_SET_FLAG: {
         EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
@@ -1948,7 +1948,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gUserInterface->PostPauseInformation(true);
         theIntro->mIsInGame = false;
         theIntro->mIsLoadingFromGame = true;
-        gSavedMainGameForm = gUIManager->mMainGameForm;
+        gSavedMainGameForm = gUIManager->GetMainGameForm();
         break;
     }
     case EE_SCREENS_GAME_GO_BRIEFING:
@@ -1958,7 +1958,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         EEExitGame();
         break;
     case EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF:
-        static_cast<UIBlinkingButton*>(gUIManager->mMainGameForm->GetControl(kMainGameIngameOptions))->SetIsBlinking(false);
+        static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions))->SetIsBlinking(false);
         break;
     default:
         return EEScreensCampaignEditorCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
@@ -2780,7 +2780,7 @@ extern "C" void ee_screenscpp_game_view(uint32_t inGroup, uint32_t inArg, EeScre
         v->speed_step = gWorldTable.GetFloatValue(kWorldGameSpeedStep);
         v->speed_low = gWorldTable.GetFloatValue(kWorldGameSpeedRange);
         v->speed_high = gWorldTable.GetFloatValue2(kWorldGameSpeedRange);
-        v->hot_key_mode = gUIManager->mMainGameForm ? gUIManager->mMainGameForm->mHotKeyMode : 0;
+        v->hot_key_mode = gUIManager->GetMainGameForm() ? gUIManager->GetMainGameForm()->mHotKeyMode : 0;
         break;
     // (EE_SCREENS_VIEW_PLAYER: the player's members are the views': game_view_ffi.rs world_view, hud_views.rs)
     case EE_SCREENS_VIEW_COLOUR: {
