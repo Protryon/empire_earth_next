@@ -10,38 +10,38 @@ use crate::screens::shells::*;
 use crate::screens::shells_editor::EE_SCREENS_SH_BITMAP_RELEASE;
 
 /// `EEUIBSavedGroup` (a button; no args).
-pub const EE_SCREENS_SK_SAVED_GROUP: u32 = 0x70;
+pub const EE_SCREENS_SK_SAVED_GROUP: u32 = 0x80;
 
 /// `Refresh()` / `SetUnit((EEComplexUnit*)a)`.
-pub const EE_SCREENS_SKOP_SG_REFRESH: u32 = 0x70;
-pub const EE_SCREENS_SKOP_SG_SET_UNIT: u32 = 0x71;
+pub const EE_SCREENS_SKOP_SG_REFRESH: u32 = 0x80;
+pub const EE_SCREENS_SKOP_SG_SET_UNIT: u32 = 0x81;
 
 /// -> a new empty `GEBitmap`.
-pub const EE_SCREENS_SH_SG_NEW_PORTRAIT: u32 = 0xa0;
+pub const EE_SCREENS_SH_SG_NEW_PORTRAIT: u32 = 0xb0;
 /// The sound `a` (0 `kSoundButton1`, 1 `kSoundButton2`) loaded -> its sample id (0: none) / unloaded (`b` 1).
-pub const EE_SCREENS_SH_SG_SOUND: u32 = 0xa1;
+pub const EE_SCREENS_SH_SG_SOUND: u32 = 0xb1;
 /// `gSoundManager->Play(a, 1, 0, 1, false, NULL)`.
-pub const EE_SCREENS_SH_SG_PLAY: u32 = 0xa2;
+pub const EE_SCREENS_SH_SG_PLAY: u32 = 0xb2;
 /// -> the local player (0: none).
-pub const EE_SCREENS_SH_SG_PLAYER: u32 = 0xa3;
+pub const EE_SCREENS_SH_SG_PLAYER: u32 = 0xb3;
 /// -> the local player's selected group's first unit / its saved group `a`'s first unit when it has units (b 1; 0
 /// else).
-pub const EE_SCREENS_SH_SG_FIRST_UNIT: u32 = 0xa4;
+pub const EE_SCREENS_SH_SG_FIRST_UNIT: u32 = 0xb4;
 /// The message `a` sent for the group `b & 0xff` (`EE_SCREENS_SG_MSG_*`; `b >> 8` the select's double-click flag).
-pub const EE_SCREENS_SH_SG_SEND: u32 = 0xa5;
+pub const EE_SCREENS_SH_SG_SEND: u32 = 0xb5;
 /// -> `UIControl::ShiftKeyPressed()`.
-pub const EE_SCREENS_SH_SG_SHIFT: u32 = 0xa6;
+pub const EE_SCREENS_SH_SG_SHIFT: u32 = 0xb6;
 /// -> `GetIndex()`.
-pub const EE_SCREENS_SH_SG_INDEX: u32 = 0xa7;
+pub const EE_SCREENS_SH_SG_INDEX: u32 = 0xb7;
 /// The unit `a`'s portrait button cut into the bitmap `b` for the control's rectangle -> its texture, `f[0..2]` its
 /// cell.
-pub const EE_SCREENS_SH_SG_FACE: u32 = 0xa8;
+pub const EE_SCREENS_SH_SG_FACE: u32 = 0xb8;
 /// The texture `a` referenced (`b` 1) or released (0).
-pub const EE_SCREENS_SH_SG_TEXTURE_REF: u32 = 0xa9;
+pub const EE_SCREENS_SH_SG_TEXTURE_REF: u32 = 0xb9;
 /// The bitmap `a`'s texture set to `b` on the control's screen.
-pub const EE_SCREENS_SH_SG_SET_TEXTURE: u32 = 0xaa;
+pub const EE_SCREENS_SH_SG_SET_TEXTURE: u32 = 0xba;
 /// The bitmap `a` drawn at the button's bitmap location.
-pub const EE_SCREENS_SH_SG_DRAW: u32 = 0xab;
+pub const EE_SCREENS_SH_SG_DRAW: u32 = 0xbb;
 
 /// The messages: select (with the double click flag), add the selection, create, clear.
 pub const EE_SCREENS_SG_MSG_SELECT: i64 = 0;
@@ -52,10 +52,10 @@ pub const EE_SCREENS_SG_MSG_CLEAR: i64 = 3;
 /// The first saved group's control index.
 const FIRST_INDEX: i64 = 0xd4;
 
-pub(crate) fn make(kind: u32, _args: &[i64]) -> Option<Box<dyn Kind>> {
+pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
     Some(match kind {
         EE_SCREENS_SK_SAVED_GROUP => Box::new(SavedGroup::default()),
-        _ => return None,
+        _ => return crate::screens::shells_icon_bar::make(kind, args),
     })
 }
 
