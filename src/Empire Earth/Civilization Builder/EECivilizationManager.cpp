@@ -64,7 +64,6 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUIEMGHotKeyStatusButton.h"

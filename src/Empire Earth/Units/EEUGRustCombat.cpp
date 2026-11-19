@@ -73,77 +73,25 @@ EEUnitGoal* UnitGoalOf(uint64_t inHandle)
 }  // namespace
 
 // the combat goals' operations of the goals' host (ee_combat EE_COMBAT_G_*, from 1000: EEUGRust.cpp's GoalOp
-// default case), each the original's statement; inFile the call's file
-int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnitsGoalIo* ioArgs)
+// default case), each the original's statement
+int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnitsGoalIo* ioArgs)
 {
     int64_t* a = ioArgs->i;
     EEComplexUnit* theUnit = UnitOf(inUnit);
-    FSFile* theFile = inFile;
     switch (inCode) {
     case EE_COMBAT_G_CAN_REACH_TILE:
         return theUnit->CanReachTile((long)a[0], (long)a[1]);
-    case EE_COMBAT_G_UNIT_LOCATION: {
-        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
-        a[0] = Bits(theLocation.GetX());
-        a[1] = Bits(theLocation.GetY());
-        a[2] = Bits(theLocation.GetZ());
-        return 0;
-    }
     case EE_COMBAT_G_TELL_GROUP:
         if (theUnit->mActiveGroup == NULL)
             return 0;
         theUnit->mActiveGroup->TellGroup(theUnit, GE3DPoint(Float(a[0]), Float(a[1]), Float(a[2])));
         return 1;
-    case EE_COMBAT_G_START_ACTION:
-        theUnit->StartAction((unsigned long)a[0]);
-        theUnit->mUnitClass->ActionChanged(theUnit);
-        return 0;
-    case EE_COMBAT_G_ATTACKER_FLAGS:
-        if (theUnit == NULL)
-            return 0;
-        return (theUnit->mPlayer->IsHuman() ? EE_COMBAT_G_HUMAN : 0) | (theUnit->mUnitClass->mIsProjectile ? EE_COMBAT_G_PROJECTILE : 0)
-            | (theUnit->mUnitClass->IsPriest() ? EE_COMBAT_G_PRIEST : 0);
-    case EE_COMBAT_G_NUM_ATTACKERS:
-        theUnit->mNumAttackers += (long)a[0];
-        return theUnit->mNumAttackers;
-    case EE_COMBAT_G_ATTACK_PART: return (int64_t)Handle(EEGetAttackPart(theUnit, UnitOf((uint64_t)a[0])));
-    case EE_COMBAT_G_REFERENCE: reinterpret_cast<EEUnit*>(theUnit)->Reference(); return 0;
-    case EE_COMBAT_G_DEREFERENCE: reinterpret_cast<EEUnit*>(theUnit)->Dereference(); return 0;
-    case EE_COMBAT_G_TILE: {
-        EEUnit* theTarget = reinterpret_cast<EEUnit*>(theUnit);
-        a[0] = theTarget->mTileX;
-        a[1] = theTarget->mTileY;
-        a[2] = theTarget->GetTileX();
-        a[3] = theTarget->GetTileY();
-        return 0;
-    }
-    case EE_COMBAT_G_PLAYER_ATTACK: {
-        EEPlayer* thePlayer = theUnit->mPlayer;
-        if (a[0] == 1) {
-            if (thePlayer->mNumAttacks == 0)
-                thePlayer->mCombatState = 2;
-            thePlayer->mNumAttacks++;
-        } else if (a[0] == -1) {
-            if (--thePlayer->mNumAttacks == 0)
-                thePlayer->mCombatState = 1;
-        } else {
-            if (thePlayer->mNumAttacks == 0 && !a[1])
-                thePlayer->mCombatState = 2;
-            thePlayer->mNumAttacks++;
-        }
-        return 0;
-    }
     case EE_COMBAT_G_VERIFY_TARGET: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
         ESVERIFY_AT(::EEUUGetIsUnitClassTargetable(theUnit, theTarget->GetClass()) == true, 729);
         ESVERIFY_AT(theTarget->GetClass()->GetWeapon() >= 0 && theTarget->GetClass()->GetWeapon() < keeucwTotal, 730);
         return 0;
     }
-    case EE_COMBAT_G_FIND_UNIT: {
-        RTSUnit* theFound = ::gWorld.GetUnit((unsigned long)a[0]);
-        return a[1] ? (int64_t)Handle(EEUnitCast<EEComplexUnit>(theFound)) : (int64_t)Handle(static_cast<EEUnit*>(theFound));
-    }
-    case EE_COMBAT_G_FIND_GHOST: return (int64_t)Handle(EEFindLoadedGhostUnit((unsigned long)a[0]));
     case EE_COMBAT_G_POSITION: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
         GE3DPoint thePoint(Float(a[2]), Float(a[3]), Float(a[4]));
@@ -155,51 +103,6 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         a[1] = Bits(thePoint.GetY());
         a[2] = Bits(thePoint.GetZ());
         return 0;
-    }
-    case EE_COMBAT_G_PLAYER_READ: {
-        EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inUnit));
-        return a[0] == 1 ? (int64_t)thePlayer->mEnemies[a[1]] : (int64_t)thePlayer->mPlayerID;
-    }
-    case EE_COMBAT_G_CAN_BE_ATTACKED: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->CanBeAttacked();
-    case EE_COMBAT_G_WRITE_U32: {
-        unsigned long theValue = (unsigned long)(uint32_t)a[0];
-        return theFile->Write(theValue);
-    }
-    case EE_COMBAT_G_READ_U32: {
-        unsigned long theValue = (unsigned long)(uint32_t)a[0];
-        long theResult = theFile->Read(theValue);
-        a[0] = (uint32_t)theValue;
-        return theResult;
-    }
-    case EE_COMBAT_G_WRITE_I32: {
-        long theValue = (long)a[0];
-        return theFile->Write(theValue);
-    }
-    case EE_COMBAT_G_READ_I32: {
-        long theValue = (long)a[0];
-        long theResult = theFile->Read(theValue);
-        a[0] = theValue;
-        return theResult;
-    }
-    case EE_COMBAT_G_WRITE_BOOL: {
-        bool theValue = a[0] != 0;
-        return theFile->Write(theValue);
-    }
-    case EE_COMBAT_G_READ_BOOL: {
-        bool theValue = a[0] != 0;
-        long theResult = theFile->Read(theValue);
-        a[0] = theValue;
-        return theResult;
-    }
-    case EE_COMBAT_G_WRITE_F32:   // GE3DPoint::Save's: 4 on a closed file
-        return theFile->GetIsOpen() ? theFile->Write(Float(a[0])) : 4;
-    case EE_COMBAT_G_READ_F32: {
-        if (!theFile->GetIsOpen())
-            return 4;
-        float theValue = Float(a[0]);
-        long theResult = theFile->Read(theValue);
-        a[0] = Bits(theValue);
-        return theResult;
     }
     // the dispatch's (ee_combat goal_dispatch.rs)
     case EE_COMBAT_G_STEP:
@@ -217,19 +120,11 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
         return 0;
     }
     case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
-    case EE_COMBAT_G_SAVE_FLAGS:
-        return (EESaveHasLiveState((unsigned long)a[0], (unsigned long)a[1]) ? 1 : 0)
-            | (EESaveHasGoalGhosts((unsigned long)a[0], (unsigned long)a[1]) ? 2 : 0);
     case EE_COMBAT_G_CLASS_NAME: {
         EEUnitClass* theClass = reinterpret_cast<EEUnit*>(theUnit)->mUnitClass;
         return theClass != NULL ? (int64_t)(uintptr_t)(const char*)theClass->mName : 0;
     }
     // the heal goal's (ee_combat goal_heal.rs)
-    case EE_COMBAT_G_HEAL_ENV:
-        a[0] = ::gWorld.mInCinematic;
-        a[1] = gPhysics->mTickTimeMs;
-        return 0;
-    case EE_COMBAT_G_SET_HIT_POINTS: theUnit->SetHitPoints((long)a[0]); return 0;
     case EE_COMBAT_G_RELEASE_HEAL_EFFECT: theUnit->ReleaseHealEffect(); return 0;
     case EE_COMBAT_G_CAN_HEAL: return EECanHeal(reinterpret_cast<EEUnit*>(theUnit), UnitOf((uint64_t)a[0]));
     case EE_COMBAT_G_CAPTURE_HEAL_WORK:   // TEST ONLY: CBSO

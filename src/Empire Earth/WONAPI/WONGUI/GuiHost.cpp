@@ -42,7 +42,7 @@
 #include "rust/won_gui/wrapobj.h"
 #include "ee/wonapi/WONGUIDraw.h"
 #include "ee/wonapi/WONLobbyPopupEvent.h"
-#include "ee/wonapi/WONLobbyMSPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONLobbySimpleConfig.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
@@ -675,7 +675,7 @@ bool ListItemClickedEvent::IsSelectedItem()
 // Adds a separator line to the popup menu and resizes the menu to fit (at least 100 pixels wide)
 void PopupMenu::AddSeperator()
 {
-    this->InsertItem(new ComponentListItem(new MSSeperator(6),true,false));
+    this->InsertItem(new ComponentListItem(WONShellNew(EeWonShellKind::MsSeperator,6),true,false));
     this->SetSizeEqualToTotal(100,-1);
 }
 }
@@ -829,7 +829,7 @@ PopupMenu::PopupMenu()
     this->mMenu=ee_won_menu_new(this,ee_won_guicpp_list_call,this->mRust);
     this->SetFont(this->GetNamedFont("Menu"));
     this->SetListFlags(0x806,true);
-    this->SetBackground(new MSPopup);
+    this->SetBackground(WONShellNew(EeWonShellKind::MsPopup));
     this->mTextColor=0x8000000c;
     this->SetBorderPadding(4,4,4,4);
 }

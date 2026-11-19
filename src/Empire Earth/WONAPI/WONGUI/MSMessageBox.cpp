@@ -22,16 +22,16 @@ MSMessageBox::MSMessageBox(const GUIString& title,const GUIString& message,
     this->mTitle=title.mData.get();
     GUIString text=message;
     if(text.empty()) text=title;
-    this->mLabel=new MSLabel(text);
+    this->mLabel=static_cast<MSButtonBase*>(WONShellNew(EeWonShellKind::MsLabel,(intptr_t)&text));
     this->mLabel->SetHorzAlign(HorzAlign_Center);
     this->mLabel->SetAdjustHeightToFitText(true);
     this->mLabel->SetWrap(true);
 
     text=button1;
     if(text.empty()) text=GUIString("Ok");
-    this->mButton1=new MSButton(text);
-    this->mButton2=new MSButton(button2);
-    this->mButton3=new MSButton(button3);
+    this->mButton1=static_cast<MSButtonBase*>(WONShellNew(EeWonShellKind::MsButton,(intptr_t)&text));
+    this->mButton2=static_cast<MSButtonBase*>(WONShellNew(EeWonShellKind::MsButton,(intptr_t)&button2));
+    this->mButton3=static_cast<MSButtonBase*>(WONShellNew(EeWonShellKind::MsButton,(intptr_t)&button3));
     bool doButton2=button2.length()!=0;
     bool doButton3=doButton2 && button3.length()!=0;
     SmartPtr<SameSizeLayout> sameSize=(new SameSizeLayout(this->mButton1.get(),true,true))->Add(this->mButton2.get())->Add(this->mButton3.get());

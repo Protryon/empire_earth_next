@@ -25,12 +25,8 @@ pub const EE_UNITS_CLS_MV_CLOSEST_TILE_HEIGHT: i32 = 39;
 pub const EE_UNITS_CLS_MV_PURSUER: i32 = 40;
 /// `EEGetDirectionTo(a, b)`
 pub const EE_UNITS_CLS_MV_DIRECTION_TO: i32 = 41;
-/// unit `a`'s `GetLineOfSight()` into `io.f`
-pub const EE_UNITS_CLS_MV_LINE_OF_SIGHT: i32 = 42;
 /// unit `a`'s `GetMaxVelocity()` into `io.p[0]` (c 0) or `GetMaxAngularVelocity()` (c 1)
 pub const EE_UNITS_CLS_MV_MAX_VELOCITY: i32 = 43;
-/// `gPhysics->GetRandom(1L, 2L)`
-pub const EE_UNITS_CLS_MV_RANDOM_1_2: i32 = 44;
 /// unit `a`'s `mGoalState` (c 0), `mActiveGoal` (1), `mBlockingUnit` (2), `mLastAttacker` (3)
 pub const EE_UNITS_CLS_MV_GOAL: i32 = 45;
 /// unit `a`'s `mLastAttacker` dereferenced and cleared
@@ -208,7 +204,7 @@ impl MoveHost for ClsGame {
         self.mv(EE_UNITS_CLS_MV_DIRECTION_TO, from, to, 0).0 as i32
     }
     fn line_of_sight(&mut self, unit: u64) -> f32 {
-        self.mv(EE_UNITS_CLS_MV_LINE_OF_SIGHT, unit, 0, 0).1.f
+        crate::units::unit_geom::with_unit(unit, crate::units::unit_geom::line_of_sight).expect("a live unit")
     }
     fn max_velocity(&mut self, unit: u64) -> f32 {
         self.mv(EE_UNITS_CLS_MV_MAX_VELOCITY, unit, 0, 0).1.p[0]
@@ -217,7 +213,7 @@ impl MoveHost for ClsGame {
         self.mv(EE_UNITS_CLS_MV_MAX_VELOCITY, unit, 0, 1).1.p[0]
     }
     fn random_1_2(&mut self) -> i32 {
-        self.mv(EE_UNITS_CLS_MV_RANDOM_1_2, 0, 0, 0).0 as i32
+        crate::units::uu_direct::with_game(|g| g.random_long(1, 2))
     }
     fn goal(&mut self, unit: u64) -> u64 {
         self.mv(EE_UNITS_CLS_MV_GOAL, unit, 0, 0).0 as u64

@@ -141,6 +141,7 @@
 #include "rust/won_gui/rootobj.h"
 #include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
+#include "rust/won_gui/shell.h"
 #include "rust/won_gui/skinlay.h"
 #include "rust/won_gui/splitobj.h"
 #include "rust/won_gui/stretchobj.h"

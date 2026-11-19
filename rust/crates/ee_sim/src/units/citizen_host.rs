@@ -50,16 +50,6 @@ pub const EE_UNITS_CZ_UNIT: i32 = 1;
 pub const EE_UNITS_CZ_CLASS_TILE_SIZE: i32 = 2;
 /// `gMapWidth` into `v0`, `gMapHeight` into `v1`
 pub const EE_UNITS_CZ_MAP_SIZE: i32 = 3;
-/// `EEGetSquareRingTiles(v0, v1, v2, tiles)` (pushed)
-pub const EE_UNITS_CZ_SQUARE_RING_TILES: i32 = 4;
-/// `EEGetSideTiles(v0, v1, v2, tiles)` from `io.tiles` (the result pushed)
-pub const EE_UNITS_CZ_SIDE_TILES: i32 = 5;
-/// `EEGetRingCorners(v0, v1, v2, v3, v4, tiles)` from `io.tiles`
-pub const EE_UNITS_CZ_RING_CORNERS: i32 = 6;
-/// `EEGetSquareRing(v0, v1, v2, v3, tiles)` from `io.tiles`
-pub const EE_UNITS_CZ_SQUARE_RING: i32 = 7;
-/// `EEAIRandomShuffle` over `io.tiles`
-pub const EE_UNITS_CZ_SHUFFLE: i32 = 8;
 /// `gContinentManager.GetContinent(U2DPoint(v0, v1), kAIPathLandMass)`
 pub const EE_UNITS_CZ_TILE_CONTINENT: i32 = 9;
 /// `gContinentManager.GetContinent(unit a, kAIPathLandMass)`
@@ -78,32 +68,10 @@ pub const EE_UNITS_CZ_HEIGHT: i32 = 15;
 pub const EE_UNITS_CZ_CAN_GATHER: i32 = 16;
 /// `gContinentManager.CanGetToUnit(a, b)`
 pub const EE_UNITS_CZ_CAN_GET_TO_UNIT: i32 = 17;
-/// unit `a`'s `mComplexUnit->DistanceSquared2D(GE2DPoint(f[0], f[1]))` into `f[0]`
-pub const EE_UNITS_CZ_DISTANCE_2D: i32 = 18;
-/// unit `a`'s `GetTileDistanceSquared(b)` into `f[0]`
-pub const EE_UNITS_CZ_TILE_DISTANCE: i32 = 19;
 /// `gContinentManager.GetPathAreaIDAt(EETileLocation(v0, v1))`
 pub const EE_UNITS_CZ_PATH_AREA: i32 = 20;
-/// gather goal `a`'s `GetGatherStorage()`
-pub const EE_UNITS_CZ_GATHER_STORAGE: i32 = 21;
-/// gather goal `a`'s `GetGatherResource()`
-pub const EE_UNITS_CZ_GATHER_RESOURCE: i32 = 22;
-/// gather goal `a`'s `IsGathering()`
-pub const EE_UNITS_CZ_IS_GATHERING: i32 = 23;
-/// build goal `a`'s `GetBuildTargetClass()->mIsWall`
-pub const EE_UNITS_CZ_BUILD_IS_WALL: i32 = 24;
-/// build goal `a`'s `GetBuildTargetType()`
-pub const EE_UNITS_CZ_BUILD_TYPE: i32 = 25;
-/// `EEGetFarmDropSites(a, sites)` (pushed)
-pub const EE_UNITS_CZ_FARM_DROP_SITES: i32 = 26;
 /// complex unit `a`'s `CanTake(b, v0)`
 pub const EE_UNITS_CZ_CAN_TAKE: i32 = 27;
-/// unit `a`'s `SetResourceAmount(0)`, `SetResourceType(v0)`
-pub const EE_UNITS_CZ_EMPTY_LOAD: i32 = 28;
-/// unit `a`'s `DistanceSquaredToUnit(b)` into `f[0]`
-pub const EE_UNITS_CZ_DISTANCE_TO_UNIT: i32 = 29;
-/// unit `a`'s `DistanceSquaredTo(b)` into `f[0]`
-pub const EE_UNITS_CZ_DISTANCE_TO: i32 = 30;
 /// player `a`'s units from `mFirstUnit` (pushed)
 pub const EE_UNITS_CZ_PLAYER_UNITS: i32 = 31;
 
@@ -131,6 +99,14 @@ pub unsafe extern "C" fn ee_units_cz_push_unit(list: *mut EeUnitsCzList, unit: u
     unsafe { (*list).units.push(unit) }
 }
 
+use crate::units::{unit_geom, uu_direct};
+
+/// A unit's tile (`mTileX`, `mTileY`, 32-bit longs)
+fn tile_of(u: u64) -> (i32, i32) {
+    let (x, y) = unit_geom::with_unit(u, |v| v.tile_xy()).expect("a live unit");
+    (x as i32, y as i32)
+}
+
 struct Game;
 
 impl Game {
@@ -149,16 +125,6 @@ impl Game {
     }
     fn q(&mut self, op: i32, a: u64, b: u64, v: [i64; 5]) -> i64 {
         self.run(op, a, b, v, &[]).0
-    }
-    fn f(&mut self, op: i32, a: u64, b: u64, f: [f32; 3]) -> f32 {
-        let mut io = EeUnitsCzIo { f, ..Default::default() };
-        // SAFETY: as `run`
-        unsafe { ee_units_cz_host(op, a, b, &mut io) };
-        io.f[0]
-    }
-    fn tiles(&mut self, op: i32, v: [i64; 5], tiles: &mut Vec<CzTile>) {
-        let list = self.run(op, 0, 0, v, tiles).2;
-        *tiles = list.tiles;
     }
 }
 
@@ -181,21 +147,21 @@ impl CzHost for Game {
         let io = self.run(EE_UNITS_CZ_MAP_SIZE, 0, 0, [0; 5], &[]).1;
         (io.v[0] as u32, io.v[1] as u32)
     }
+    // the tile rings: the unit utilities' noted entry points (the C++ forwarders' replaced the list)
     fn square_ring_tiles(&mut self, x: i32, y: i32, radius: i32) -> Vec<CzTile> {
-        self.run(EE_UNITS_CZ_SQUARE_RING_TILES, 0, 0, [x as i64, y as i64, radius as i64, 0, 0], &[]).2.tiles
+        uu_direct::square_ring_tiles(x, y, radius)
     }
     fn side_tiles(&mut self, x: i32, y: i32, size: i32, tiles: &mut Vec<CzTile>) {
-        self.tiles(EE_UNITS_CZ_SIDE_TILES, [x as i64, y as i64, size as i64, 0, 0], tiles)
+        *tiles = uu_direct::square_ring(x, y, size, size, true);
     }
     fn ring_corners(&mut self, corners: i32, x: i32, y: i32, width: i32, height: i32, tiles: &mut Vec<CzTile>) {
-        let v = [corners as i64, x as i64, y as i64, width as i64, height as i64];
-        self.tiles(EE_UNITS_CZ_RING_CORNERS, v, tiles)
+        *tiles = uu_direct::ring_corners(corners, x, y, width, height, false);
     }
     fn square_ring(&mut self, x: i32, y: i32, width: i32, height: i32, tiles: &mut Vec<CzTile>) {
-        self.tiles(EE_UNITS_CZ_SQUARE_RING, [x as i64, y as i64, width as i64, height as i64, 0], tiles)
+        *tiles = uu_direct::square_ring(x, y, width, height, false);
     }
     fn shuffle(&mut self, tiles: &mut Vec<CzTile>) {
-        self.tiles(EE_UNITS_CZ_SHUFFLE, [0; 5], tiles)
+        uu_direct::ai_random_shuffle(tiles, |lo, hi| uu_direct::with_game(|g| g.random_long(lo, hi)));
     }
     fn tile_continent(&mut self, x: i32, y: i32) -> u16 {
         self.q(EE_UNITS_CZ_TILE_CONTINENT, 0, 0, v2(x, y)) as u16
@@ -237,43 +203,66 @@ impl CzHost for Game {
         self.q(EE_UNITS_CZ_CAN_GET_TO_UNIT, a, b, [0; 5]) != 0
     }
     fn distance_2d(&mut self, u: u64, x: f32, y: f32) -> f32 {
-        self.f(EE_UNITS_CZ_DISTANCE_2D, u, 0, [x, y, 0.0])
+        // the unit's complex unit's DistanceSquared2D
+        unit_geom::with_unit(u, |v| {
+            let l = v.complex_unit().expect("a complex unit").location();
+            unit_geom::distance_squared_2d([l[0], l[1]], [x, y])
+        })
+        .expect("a live unit")
     }
     fn tile_distance(&mut self, u: u64, center: u64) -> f32 {
-        self.f(EE_UNITS_CZ_TILE_DISTANCE, u, center, [0.0; 3])
+        // GetTileDistanceSquared: the tiles' long differences, y first, squared and summed, then a float
+        let (a, b) = (tile_of(u), tile_of(center));
+        let dy = a.1.wrapping_sub(b.1);
+        let dx = a.0.wrapping_sub(b.0);
+        dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy)) as f32
     }
     fn path_area(&mut self, x: i32, y: i32) -> u16 {
         self.q(EE_UNITS_CZ_PATH_AREA, 0, 0, v2(x, y)) as u16
     }
+    // the goals' fields: their Rust records (the C++ accessors' answers)
     fn gather_storage(&mut self, goal: u64) -> u64 {
-        self.q(EE_UNITS_CZ_GATHER_STORAGE, goal, 0, [0; 5]) as u64
+        crate::units::gather::fields_of(goal).1
     }
     fn gather_resource(&mut self, goal: u64) -> u64 {
-        self.q(EE_UNITS_CZ_GATHER_RESOURCE, goal, 0, [0; 5]) as u64
+        crate::units::gather::fields_of(goal).0
     }
     fn is_gathering(&mut self, goal: u64) -> bool {
-        self.q(EE_UNITS_CZ_IS_GATHERING, goal, 0, [0; 5]) != 0
+        crate::units::gather::fields_of(goal).2
     }
     fn build_target_is_wall(&mut self, goal: u64) -> bool {
-        self.q(EE_UNITS_CZ_BUILD_IS_WALL, goal, 0, [0; 5]) != 0
+        let class = crate::units::build::target_type_and_class(goal).1;
+        // SAFETY: the goal's live class (GetBuildTargetClass()->mIsWall)
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::ClassView::of(&t, class) }.expect("a build target's class").wall()
     }
     fn build_target_type(&mut self, goal: u64) -> u32 {
-        self.q(EE_UNITS_CZ_BUILD_TYPE, goal, 0, [0; 5]) as u32
+        crate::units::build::target_type_and_class(goal).0 as u32
     }
     fn farm_drop_sites(&mut self, farm: u64) -> Vec<u64> {
-        self.run(EE_UNITS_CZ_FARM_DROP_SITES, farm, 0, [0; 5], &[]).2.units
+        uu_direct::farm_drop_sites(farm).1
     }
     fn can_take(&mut self, storage: u64, u: u64, resource_type: u32) -> bool {
         self.q(EE_UNITS_CZ_CAN_TAKE, storage, u, [resource_type as i64, 0, 0, 0, 0]) != 0
     }
     fn empty_load(&mut self, u: u64, resource_type: u32) {
-        self.q(EE_UNITS_CZ_EMPTY_LOAD, u, 0, [resource_type as i64, 0, 0, 0, 0]);
+        // SetResourceAmount(0), SetResourceType(type): the unit record's member stores
+        unit_geom::with_unit(u, |v| {
+            let r = v.fields().ptr() as *mut crate::world::unit_fields::EeUnitsUnitFields;
+            // SAFETY: a live unit's record, no other reference held
+            unsafe {
+                (*r).mResourceAmount = 0;
+                (*r).mResourceType = resource_type as _;
+            }
+        });
     }
     fn distance_to_unit(&mut self, a: u64, b: u64) -> f32 {
-        self.f(EE_UNITS_CZ_DISTANCE_TO_UNIT, a, b, [0.0; 3])
+        unit_geom::distance_squared_to_unit_of(a, b)
     }
     fn distance_to(&mut self, a: u64, b: u64) -> f32 {
-        self.f(EE_UNITS_CZ_DISTANCE_TO, a, b, [0.0; 3])
+        unit_geom::with_unit(a, |x| unit_geom::with_unit(b, |y| unit_geom::distance_squared_to(x, y)))
+            .flatten()
+            .expect("live units")
     }
     fn player_units(&mut self, player: u64) -> Vec<u64> {
         // SAFETY: as above; the player handle is a live player

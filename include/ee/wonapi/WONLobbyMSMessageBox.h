@@ -1,6 +1,6 @@
 #ifndef EE_WONAPI_WONLOBBYMSMESSAGEBOX_H
 #define EE_WONAPI_WONLOBBYMSMESSAGEBOX_H
-#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 namespace WONAPI {
 // MSDialog: fieldless Dialog (0x98 bytes), constructor at 0x00700550, RTTI 0x0084ea4c; implicit destructor.
@@ -12,8 +12,8 @@ public:
 // mCreateFlags (+0xac) is left uninitialized.
 class MSMessageBox : public MSDialog {
 protected:
-    SmartPtr<MSButton> mButton1,mButton2,mButton3; // offsets 0x98, 0x9c, 0xa0 (0x60-byte buttons)
-    SmartPtr<MSLabel> mLabel; //a4, real complete fieldless5c child
+    SmartPtr<MSButtonBase> mButton1,mButton2,mButton3; // offsets 0x98, 0x9c, 0xa0 (MSButton kinds)
+    SmartPtr<MSButtonBase> mLabel; //a4, an MSLabel kind
     GUIString mTitle; //a8
     int mCreateFlags; // offset 0xac; not read by 0x007016f0
 public:

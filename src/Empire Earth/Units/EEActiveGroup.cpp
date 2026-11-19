@@ -268,6 +268,15 @@ float EEActiveGroup::GetMaxVelocity(EEComplexUnit* inUnit)
     return this->mMovesTogether ? this->mSpeed : inUnit->mStats->GetMaxVelocity();
 }
 
+// Returns the unit's top speed: its active group's value when it is in one, else its stats'
+// (was EECPEngineHelpers.cpp's, out of line after its first user there)
+float EEComplexUnit::GetMaxVelocity()
+{
+    if (this->mActiveGroup)
+        return this->mActiveGroup->GetMaxVelocity(this);
+    return this->mStats->mMaxVelocity;
+}
+
 // Returns the group's acceleration when it moves together, else the unit's own
 float EEActiveGroup::GetAcceleration(EEComplexUnit* inUnit)
 {
@@ -496,28 +505,11 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
-    case EE_UNITS_AG_GROUP: {
-        EeUnitsAgGroup& g = io->group;
-        g.goal = EEObj(theGroup->mGoal);
-        g.goal_kind = theGroup->mGoal != NULL ? (int32_t)theGroup->mGoal->mKind : -1;
-        g.action = (int32_t)theGroup->mAction;
-        g.count = (uint32_t)theGroup->GetNumUnits();
-        g.speed = theGroup->mSpeed;
-        g.queued = theGroup->mIsQueued;
-        g.moves_together = theGroup->mMovesTogether;
-        g.special_attack = theGroup->mIsSpecialAttack;
-        return 0;
-    }
-    case EE_UNITS_AG_GROUP_UNIT:
-        return EEObj(theGroup->GetUnit((long)inC));
     case EE_UNITS_AG_REMOVE:
         theGroup->RemoveUnit((EEComplexUnit*)(uintptr_t)inB);
         return 0;
     case EE_UNITS_AG_FINISH:
         theGroup->Finish();
-        return 0;
-    case EE_UNITS_AG_MOVES_TOGETHER:
-        theGroup->mMovesTogether = true;
         return 0;
     case EE_UNITS_AG_REQUEST_ALL:
         theGroup->RequestAllPaths();
@@ -582,10 +574,8 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_CAP_FACTOR:
         io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
         return 0;
-    case EE_UNITS_AG_SET_VALUES:
-        memcpy(&theGroup->mSpeed, io->list, 17 * sizeof(float));   // mSpeed .. mCapFactor, in their order
-        return 0;
-    // (EE_UNITS_AG_UNIT's reads are Rust's views: ag_host.rs ag_unit_fields)
+    // (EE_UNITS_AG_UNIT's reads, the group's record and members, the units' formation places and special attack,
+    // the command type, the cargo count, the map's tiles and their units are Rust's in place: ag_host.rs)
     case EE_UNITS_AG_QUEUED_GOAL:
         return EEObj(theUnit->GetQueuedGoal((unsigned long)inC));
     case EE_UNITS_AG_CLEAR_QUEUE:
@@ -621,14 +611,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_CLEAR_GATHERED:
         theUnit->SetGatheredResource(NULL);
         return 0;
-    case EE_UNITS_AG_SET_SPECIAL:
-        theUnit->mIsSpecialAttack = inC != 0;
-        return 0;
-    case EE_UNITS_AG_SET_PLACE:
-        if (inC >= 0)
-            theUnit->mFormationSlot = (unsigned long)inC;
-        theUnit->mFormationRank = (long)inD;
-        return 0;
     case EE_UNITS_AG_CAN_TAKE:
         return theUnit->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)inC);
     case EE_UNITS_AG_FOOTPRINT: {
@@ -638,8 +620,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         io->b = theY;
         return 0;
     }
-    case EE_UNITS_AG_HAS_TILE:
-        return gWorld.mMap->GetTile((long)inC, (long)inD) != NULL;
     case EE_UNITS_AG_TILE_AT: {
         EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]));
         if (theTile == NULL)
@@ -660,27 +640,10 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return theUnit->CanAttackClass((EEUnitClass*)(uintptr_t)inB);
     case EE_UNITS_AG_HAS_ACTION:
         return ((EEUnitClass*)(uintptr_t)inA)->FindAction((long)inC) != NULL;
-    case EE_UNITS_AG_COMMAND_TYPE:
-        return (int64_t)theUnit->GetCommandType();
-    case EE_UNITS_AG_NUM_CARGO:
-        return (int64_t)theUnit->GetComplexUnit()->GetNumCargoUnits();
-    case EE_UNITS_AG_POSITION: {
-        GE3DPoint thePosition;
-        theUnit->GetPosition(thePosition);
-        io->p[0] = thePosition.mX; io->p[1] = thePosition.mY; io->p[2] = thePosition.mZ;
-        return 0;
-    }
     case EE_UNITS_AG_ANGLE: {
         GE3DPoint theFrom(io->p[0], io->p[1], io->p[2]);
         GE3DPoint theTo(io->q[0], io->q[1], io->q[2]);
         io->f = EEGetAngleFromNorth(&theFrom, &theTo);
-        return 0;
-    }
-    case EE_UNITS_AG_TILE_UNITS: {
-        EEMapTile* theTile = gWorld.mMap->GetTile((long)inC, (long)inD);
-        float theNone[3] = {0.0f, 0.0f, 0.0f};
-        for (RTSTileUnitNode* theNode = theTile != NULL ? theTile->mUnits : NULL; theNode; theNode = theNode->mNext)
-            ee_units_ag_push((EeUnitsAgListHandle*)io->list, EEObj(theNode->mUnit), &theNone, 0.0f);
         return 0;
     }
     case EE_UNITS_AG_PASSABLE:

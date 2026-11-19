@@ -875,6 +875,9 @@ WON_TESTS = {
     # the lobby dialogs', popups' and controls' strings as resource rows (string_row, R6 WONLobby round 17) against
     # the switches they replaced (LobbyDialogHost.cpp's AdminString and PopupString, LobbyCtrlHost.cpp's CtlString)
     "won_restext_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # the Windows skin's concrete widgets as shell kinds (shell_ms.rs, R6 WONLobby round 20): the deleted classes'
+    # statements over a scripted world against the kinds, op for op
+    "won_shell_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the lobby's events as Rust objects (lobbyevt.rs, R6 WONLobby round 18): the original 43 classes
     # (tests/won/won_lobbyevt_orig.h) against the makers and readers of WONLobbyEvents.h, members and references
     "won_lobbyevt_test": [],

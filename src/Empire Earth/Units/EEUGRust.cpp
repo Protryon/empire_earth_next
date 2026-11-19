@@ -109,60 +109,6 @@ bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
     return theResult;
 }
 
-namespace {
-
-// 0x61ec58: the unit works the nearest free farm around the farm's drop sites
-void EETendNextFarm(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    std::vector<EEUnit*> theFreeUnits;
-    std::vector<EEUnit*> theUnits;
-    long theCount = 1;
-    if (EEGetFarmDropSites(inTarget, theUnits)) {
-        for (std::vector<EEUnit*>::iterator i = theUnits.begin(); i != theUnits.end(); ++i) {
-            while ((inTarget = EEFindFreeFarm((*i)->GetComplexUnit(), 1, &theCount)) != 0) {
-                EEUnit* theFree = inTarget;
-                theFreeUnits.push_back(theFree);
-            }
-        }
-        if (theFreeUnits.size() > 0) {
-            std::sort(theFreeUnits.begin(), theFreeUnits.end(), EETileDistanceLess(inUnit->GetTile()));
-            EEWorkFarm(theFreeUnits.back()->mComplexUnit, inUnit);
-        }
-    }
-}
-
-// 0x61ed5e: the unit gathers a resource near a drop site, passing over mines at the player's worker limit (else a
-// random one of those). The original repeats the identical first search when it returns null: both calls are kept.
-void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    std::vector<EEUnit*> theRejected;
-    bool theResult = false;
-    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
-    EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-    if (theResource == NULL)
-        theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-    while (!theResult && theResource != NULL) {
-        if (!theResource->mUnitClass->mIsTree && theResource->mUnitClass->mAnimalID == 1000
-            && ::gWorld.GetResourceUsers(theResource) >= inUnit->mPlayer->GetMiningLimit()) {
-            theRejected.push_back(theResource);
-            theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
-        } else {
-            inUnit->SetGoal(EEUGRust::NewGather(theResource, inTarget, false), 0, 0);
-            inUnit->StartAction(kActionMoveToWaitingArea);
-            inUnit->mUnitClass->ActionChanged(inUnit);
-            theResult = true;
-        }
-    }
-    if (!theResult && theRejected.size() > 0) {
-        EEAIRandomShuffle(theRejected.begin(), theRejected.end());
-        inUnit->SetGoal(EEUGRust::NewGather(theRejected[0], inTarget, false), 0, 0);
-        inUnit->StartAction(kActionMoveToWaitingArea);
-        inUnit->mUnitClass->ActionChanged(inUnit);
-    }
-}
-
-}  // namespace
-
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
 
 // EEAIContinentManager's inline forest id (ee/EEAIContinentManager.h declares it; EEAIForest is complete here). Its
@@ -174,9 +120,6 @@ inline unsigned short EEAIContinentManager::GetForestIDAt(const EETileLocation& 
 }
 
 namespace {
-
-// the squared distance within which a gatherer checks the resource's tiles (0x44759c; provisional name)
-const float kGatherRangeSquared = 16.0f;
 
 // The order FindGatherSpot sorts the tiles around the resource in: the farther from the gatherer first (0x18 bytes:
 // the gatherer's position, the resource's tile, its path sector's id, the gatherer) (provisional name)
@@ -201,40 +144,6 @@ struct EEGatherTileFarther {
     unsigned short mSector;                 // +0x10
     EEComplexUnit* mUnit;                   // +0x14
 };
-
-// 0x622271 IsAtResourceSpot: within 4 tiles of the resource, on one of its gather spots with room to stand
-bool EEGatherAtResourceSpot(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    GE3DPoint theLocation;
-    std::vector<U2DPoint<long> > theTiles;
-    bool theResult = false;
-    if (inResource != NULL && !(inUnit->DistanceSquaredToUnit(inResource) > kGatherRangeSquared)) {
-        EEGetResourceSpots(inResource, theTiles);
-        U2DPoint<long> theTile(inUnit->mTileX, inUnit->GetTileY());
-        if (std::find(theTiles.begin(), theTiles.end(), theTile) != theTiles.end())
-            theResult = EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), inUnit->mTileX, inUnit->GetTileY(), 1, inUnit->mTileX,
-                                   inUnit->GetTileY(), 1, &theLocation);
-    }
-    return theResult;
-}
-
-// 0x622593 SendToNextFarm: the first free farm around the drop sites of the gatherer's farm worked
-void EEGatherNextFarm(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    EEComplexUnit* theTarget = NULL;
-    std::vector<EEUnit*> theUnits;
-    long theCount = 1;
-    if (!EEGetFarmDropSites(inResource->GetComplexUnit(), theUnits))
-        return;
-    for (std::vector<EEUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
-         ++theIterator) {
-        if (theTarget != NULL)
-            break;
-        theTarget = EEFindFreeFarm((*theIterator)->GetComplexUnit(), 1, &theCount);
-    }
-    if (theTarget != NULL)
-        EEWorkFarm(theTarget, inUnit);
-}
 
 // 0x6226cf FindGatherSpot's search: the resource's nearest spot in its path subsector, under the gatherer or in a
 // neighbouring subsector the gatherer can enter, else any spot with room (the waiting area, at the tile's height)
@@ -351,42 +260,6 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     return theFound;
 }
 
-// 0x623757 HasGatherRoom: a farm takes one gatherer, others their unblocked side tiles (counted twice) and corner
-// tiles, capped by the player's mining limit
-bool EEGatherHasRoom(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theEdges;
-    EEMap* theMap = ::gWorld.GetMap();
-    unsigned long theLimit;
-    if (inResource->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
-        theLimit = 1;
-    else {
-        EEGetSideTiles(inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theTiles);
-        EEGetCornerTiles(0, inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theEdges);
-        unsigned long theCount = theTiles.size() * 2 + theEdges.size();
-        for (int thePass = 0; thePass < 2; thePass++) {
-            std::vector<U2DPoint<long> >& theList = thePass == 0 ? theTiles : theEdges;
-            for (unsigned long theIndex = 0; theIndex < theList.size(); theIndex++) {
-                EEMapTile* theTile = theMap->GetTile(theList[theIndex].mX, theList[theIndex].mY);
-                if (theTile == NULL)
-                    theCount--;
-                else
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == NULL)
-                            continue;
-                        long theCategory = theUnit->GetUnitClass()->GetCategory();
-                        if (theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen && !theUnit->IsPassableBy(inUnit))
-                            theCount--;
-                    }
-            }
-        }
-        theLimit = theCount < inUnit->GetPlayer()->mMiningLimit ? theCount : inUnit->GetPlayer()->mMiningLimit;
-    }
-    return ::gWorld.GetResourceUsers(inResource) < theLimit;
-}
-
 // the resource-accessible trigger: a land gatherer's resource on land, a naval one's on deep water, in its continent
 // with a gather point
 bool EEGatherAccessible(EEComplexUnit* inUnit, EEUnit* inResource)
@@ -489,23 +362,9 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         if (inB != 0)
             return Handle(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((unsigned long)inA)));
         return Handle(static_cast<EEUnit*>(::gWorld.GetUnit((unsigned long)inA)));
-    case EE_UNITS_GOAL_HOST_UNIT_POSITION:
-        theUnit->GetPosition(thePoint);
-        PointOut(ioArgs, thePoint);
-        return 0;
-    case EE_UNITS_GOAL_HOST_TILE_LOCATION:
-        ::gWorld.mMap->GetTileLocation((long)ioArgs->i[0], (long)ioArgs->i[1], thePoint);
-        PointOut(ioArgs, thePoint);
-        return 0;
     case EE_UNITS_GOAL_HOST_TELL_GROUP:
         if (theComplex->mActiveGroup != NULL)
             theComplex->mActiveGroup->TellGroup(theComplex, thePoint);
-        return 0;
-    case EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION:
-        theComplex->SetCurrentPhysicsAction((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_SET_ANIMATION:
-        theComplex->SetAnimation((long)ioArgs->i[0], -1, 0);
         return 0;
     case EE_UNITS_GOAL_HOST_DROP_PATH:
         theComplex->DropPath();
@@ -615,9 +474,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP:
         theComplex->mPlayer->mSavedGroups.Reset(6, 1);
         return 0;
-    case EE_UNITS_GOAL_HOST_SPEND_POWER:
-        theComplex->SetPower(theComplex->GetPower() - (long)ioArgs->i[0]);
-        return 0;
     case EE_UNITS_GOAL_HOST_CAN_CAST_AT: {
             GE3DPoint theLocation;
             return theClass->EECalamityClass::CanCastAt(ObjectOf<EEComplexUnit>(inB), theLocation,
@@ -638,15 +494,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theComplex->GetPosition(thePoint);
             return EEIsInContactRange(theComplex, ObjectOf<EEUnit>(inB), thePoint.DistanceToSquared(theTarget));
         }
-    case EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT:
-        ioArgs->f[0] = theComplex->DistanceSquaredToUnit(ObjectOf<EEUnit>(inB));
-        return 0;
-
     // the explore goal's
-    case EE_UNITS_GOAL_HOST_PLAYER_HUMAN:
-        return theComplex->mPlayer->IsHuman() ? 1 : 0;
-    case EE_UNITS_GOAL_HOST_GROUP_UNITS:
-        return theComplex->mActiveGroup == NULL ? -1 : (int64_t)theComplex->mActiveGroup->GetNumUnits();
     case EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: {
             EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theComplex);
             if (theArea == NULL)
@@ -657,14 +505,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[2] = theBounds.mLeft;
             ioArgs->i[3] = theBounds.mRight;
             return 1;
-        }
-    case EE_UNITS_GOAL_HOST_RING_TILES: {
-            std::vector<U2DPoint<long> > theTiles;
-            EEGetSquareRingTiles((long)ioArgs->i[0], (long)ioArgs->i[1], (long)ioArgs->i[2], theTiles);
-            EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-            for (size_t i = 0; i < theTiles.size(); i++)
-                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
-            return 0;
         }
     case EE_UNITS_GOAL_HOST_TILE_SCREEN: {
             EEMap* theMap = ::gWorld.mMap;
@@ -703,13 +543,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             thePath->Dereference();
             return theReachable;
         }
-    case EE_UNITS_GOAL_HOST_PATH_AREA_ID: {
-            U2DPoint<long> theTile;
-            theTile.mX = (long)ioArgs->i[0];
-            theTile.mY = (long)ioArgs->i[1];
-            EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theTile);
-            return theArea != NULL ? theArea->GetID() : 0;
-        }
     case EE_UNITS_GOAL_HOST_MAP_DIMENSIONS:
         ioArgs->i[0] = gMapWidth;
         ioArgs->i[1] = gMapHeight;
@@ -732,8 +565,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[1] = thePoint.mY;
             return 1;
         }
-    case EE_UNITS_GOAL_HOST_RANDOM:
-        return gPhysics->GetRandom((long)ioArgs->i[0], (long)ioArgs->i[1]);
     case EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: {
             EEUnit* theTarget = EEFindNearbyTarget(theComplex);
             if (theTarget != NULL)
@@ -741,9 +572,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return 0;
         }
     // the unload transport's
-    case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
-        return (EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
-            | (EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(theComplex->GetUnitClass()) != NULL ? 2 : 0);
     case EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: {
             EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (theTransport != NULL)
@@ -829,9 +657,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             TilesOut(ioArgs, theTiles, 2);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_CENTER_OFFSET:
-        theComplex->AddCenterOffset(ioArgs->f[0], ioArgs->f[1]);
-        return 0;
     case EE_UNITS_GOAL_HOST_GARRISON_UPGRADE: {
             EETechTreeNode* theNode = theComplex->mPlayer->GetTechTree()->Get((long)ioArgs->i[0]);
             ioArgs->i[0] = theNode != NULL;
@@ -843,11 +668,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[1] = theUpgrade;
             ioArgs->i[2] = theAvailable != NULL && theAvailable->GetIsAvailable();
             return 0;
-        }
-    case EE_UNITS_GOAL_HOST_UNIT_GOAL: {
-            EEUnitGoal* theGoal = inB != 0 ? theComplex->GetGoal() : theComplex->GetLoadGoal();
-            ioArgs->i[0] = theGoal != NULL ? theGoal->mKind : -1;
-            return Handle(theGoal);
         }
     case EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND: {
             EEUnitGoal* theGoal = theComplex != NULL ? theComplex->GetQueuedGoal((long)inB) : NULL;
@@ -886,9 +706,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             }
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_BUILDERS_ADD:
-        EEUnitCast<EEComplexUnit>(theUnit)->mNumBuilders += (long)ioArgs->i[0];
-        return 0;
     case EE_UNITS_GOAL_HOST_IN_WORK_REACH:
         return EEIsInWorkReach(theComplex, ObjectOf<EEComplexUnit>(inB));
     case EE_UNITS_GOAL_HOST_SURROUNDING_TILES: {
@@ -921,12 +738,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_PLAY_EFFECT:
         theComplex->PlayEffect((long)ioArgs->i[0]);
         return 0;
-    case EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME:
-        theComplex->SetProductionTime((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_SET_WORK_TIMER:
-        theComplex->SetWorkTimer((long)ioArgs->i[0]);
-        return 0;
     case EE_UNITS_GOAL_HOST_FACE_TARGET:
         theComplex->FaceTarget(ObjectOf<EEUnit>(inB));
         return 0;
@@ -947,12 +758,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
         theComplex->SetGoal(EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
-        return 0;
-    case EE_UNITS_GOAL_HOST_TEND_FARM:
-        EETendNextFarm(theComplex, ObjectOf<EEComplexUnit>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_GATHER_NEAR:
-        EEGatherNearBuilding(theComplex, ObjectOf<EEComplexUnit>(inB));
         return 0;
     case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
         return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
@@ -984,8 +789,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             }
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_RESOURCE_USERS:
-        return ::gWorld.GetResourceUsers(theUnit);
     case EE_UNITS_GOAL_HOST_NEW_GATHER:
         return Handle(EEUGRust::NewGather(theUnit, ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0));
     case EE_UNITS_GOAL_HOST_SET_GOAL:
@@ -997,9 +800,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return theUnit->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
     case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR:
         return theComplex->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), theComplex, (unsigned long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_SET_PAID:
-        theComplex->mIsPaidFor = true;
-        return 0;
     case EE_UNITS_GOAL_HOST_PAY:
         ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]);
         return 0;
@@ -1040,14 +840,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_GOAL_ARG:
         return ObjectOf<EEUnitGoal>(inA)->GetB1C();
     // the gather goal's
-    case EE_UNITS_GOAL_HOST_FARM_TILE: {
-            std::vector<EETileCoordinate> theTiles;
-            EEGetFootprintTiles(theUnit, theTiles);
-            std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(ObjectOf<EEUnit>(inB)->GetTile()));
-            ioArgs->i[0] = theTiles[0].GetX();
-            ioArgs->i[1] = theTiles[0].GetY();
-            return 0;
-        }
     case EE_UNITS_GOAL_HOST_NEXT_RESOURCE: {
             std::vector<EEUnit*> thePassed;
             for (size_t k = 0; k < ioArgs->list_len; k++)
@@ -1057,14 +849,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_FIND_STORAGE:
         return Handle(theComplex->mUnitClass->FindStorage(theComplex, ioArgs->i[0] != 0));
-    case EE_UNITS_GOAL_HOST_TILE_HEIGHT:
-        ioArgs->f[0] = theUnit->mTile->GetHeight();
-        return 0;
-    case EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT:
-        return EEGatherAtResourceSpot(theComplex, ObjectOf<EEUnit>(inB));
-    case EE_UNITS_GOAL_HOST_NEXT_FARM:
-        EEGatherNextFarm(theComplex, ObjectOf<EEUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_STORAGE_SEARCH: {
             // FindStorage's search (an AI may order a settlement for the gatherer instead: -1)
             unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
@@ -1100,19 +884,9 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_SET_GATHERED:
         theComplex->SetGatheredResource(ObjectOf<EEUnit>(inB));
         return 0;
-    case EE_UNITS_GOAL_HOST_GATHER_ROOM:
-        return EEGatherHasRoom(theComplex, ObjectOf<EEUnit>(inB));
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
         PointOut(ioArgs, GE3DPoint(theComplex->mWaypoints.back().mLocation));
         return 0;
-    case EE_UNITS_GOAL_HOST_STORAGE_REACH: {
-            GE2DPoint the2D;
-            the2D.SetX(thePoint.GetX());
-            the2D.SetY(thePoint.GetY());
-            float theDistance = theUnit->mComplexUnit->DistanceSquared2D(the2D);
-            float theRange = theUnit->mUnitClass->mInnerCollisionSphere * 1.4142135f;
-            return theDistance <= theRange * theRange;
-        }
     case EE_UNITS_GOAL_HOST_SET_ACTIVE:
         ObjectOf<EEUnitGoal>(inA)->mIsActive = ioArgs->i[0] != 0;
         return 0;
@@ -1120,24 +894,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         if (inB != 0)
             return Handle(EEFindLoadedGhost((unsigned long)inA));
         return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
-    case EE_UNITS_GOAL_HOST_AT_RESOURCE: {
-            // IsAtResource: on its farm or within reach of another resource; a land gatherer faces it
-            EEUnit* theResource = ObjectOf<EEUnit>(inB);
-            bool theResult = ::gWorld.GetMap()->GetTile(theComplex->mTileX, theComplex->GetTileY())->HasUnit(theResource);
-            if (theResource->mUnitClass->mUnitType != kUnitTypeFarm)
-                theResult = EEIsWithinReach(theComplex, theResource);
-            if (theResult && theComplex->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
-                theComplex->FaceTarget(theResource);
-            return theResult;
-        }
-    case EE_UNITS_GOAL_HOST_AT_STORAGE: {
-            // IsAtStorage: within the storage's inner radius squared times sqrt 2
-            EEUnit* theStorage = ObjectOf<EEUnit>(inB);
-            float theDistance = theStorage->mComplexUnit->DistanceSquaredTo(theComplex);
-            float theRange = theStorage->mUnitClass->mInnerCollisionSphere;
-            float theRangeSquared = theRange * theRange;
-            return theDistance <= theRangeSquared * 1.4142135f;
-        }
     case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: {
             EEUnit* theBlocker;
             long theArg4;
@@ -1179,28 +935,14 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theComplex->mFireEffect = theHandle;
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE:
-        theComplex->SetResourceType((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_FIND_FISH: {
-            std::vector<EEUnit*> theRejected;
-            EEUnit* theFish = ObjectOf<EEUnit>(inB);
-            return Handle(EEUnitClassOfKind<EE_CLASS_KIND_NAVAL_CITIZEN>(theComplex->GetUnitClass())->FindResourceOfKind(theComplex, theFish, theFish,
-                UMFloatToLong(theComplex->GetLineOfSight() * 5.0f), theFish->GetResourceType(), &theRejected, true));
+    case EE_UNITS_GOAL_HOST_RESOURCE_OF_KIND: {   // the class's search (its UCBD note): the gather world's, gather_world.rs
+            std::vector<EEUnit*> theTaken;
+            for (size_t k = 0; k < ioArgs->list_len; k++)
+                theTaken.push_back(ObjectOf<EEUnit>(ioArgs->list[k]));
+            return Handle(theComplex->mUnitClass->FindResourceOfKind(theComplex, ObjectOf<EEUnit>(inB), ObjectOf<EEUnit>((uint64_t)ioArgs->i[3]),
+                (long)ioArgs->i[0], (unsigned long)ioArgs->i[1], &theTaken, ioArgs->i[2] != 0));
         }
     // the location goal's
-    case EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION:
-        memcpy(ioArgs->sink, &theComplex->mPhysicalModel.GetLocation(), sizeof(GETransformation));
-        return 0;
-    case EE_UNITS_GOAL_HOST_SET_TRANSFORMATION: {
-            GETransformation theTransformation;
-            memcpy(&theTransformation, ioArgs->sink, sizeof(GETransformation));
-            theComplex->SetTransformation(theTransformation, true);
-            return 0;
-        }
-    case EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER:
-        theComplex->SetTargetSearchTimer((long)ioArgs->i[0]);
-        return 0;
     case EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN:
         return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
     case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
@@ -1227,7 +969,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     }
     default:   // the combat goals' operations (EEUGRustCombat.cpp)
-        return EECombatGoalHostOp(theContext->mFile, inOp, inA, inB, ioArgs);
+        return EECombatGoalHostOp(inOp, inA, inB, ioArgs);
     }
     return 0;
 }

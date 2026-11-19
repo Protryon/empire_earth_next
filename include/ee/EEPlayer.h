@@ -220,7 +220,10 @@ class EETechTreeNode;
 // A group the commands act on (RTTI EEActiveGroup > EEGroup; vtable 0x446cf8; ctor 0x1ebc86(EEPlayer*); sizeof 0xb8:
 // `new 0xb8` in EEMessage.cpp's Executes). The unit-command messages build one per formation slot (1..5) from the
 // selected group and push it into EEPlayer +0x854. Names are provisional.
-class EEActiveGroup : public EEGroup {
+// port (the units' state lane, round 1): the plain members (mAction, the 17 speeds mSpeed .. mCapFactor in their
+// order, the four flags) are the Rust record EeUnitsActiveGroupFields (ee_units ag_fields.rs), the second base; the
+// group bodies (ag.rs) read and write them in place.
+class EEActiveGroup : public EEGroup, public EeUnitsActiveGroupFields {
 public:
     EEActiveGroup(EEPlayer* inPlayer);
     virtual ~EEActiveGroup();               // +0x00 0x1ebd27 (??_G 0x1ebd0b)
@@ -274,28 +277,6 @@ public:
     std::vector<GE3DPoint> mU48;            // +0x48 (12-byte elements: _Buy 0x150afb)
     std::vector<GE3DPoint> mU58;            // +0x58
     EEUnitGoal* mGoal;                      // +0x68 (SetGoal; deleted through its virtual dtor)
-    long mAction;                           // +0x6c (= 5000; the messages store a goal id: 0x1f4d, 0x7d2, ...)
-    float mSpeed;                           // +0x70 +0x70..+0xac: Virtual4C 0x1ed692: per stat (units' mStats +0xac, +0xa8, +0xb4, +0xb0) the mean, max, min
-    float mMaxSpeed;                        // +0x74
-    float mMinSpeed;                        // +0x78
-    float mAcceleration;                    // +0x7c
-    float mMaxAcceleration;                 // +0x80
-    float mMinAcceleration;                 // +0x84
-    float mTurnSpeed;                       // +0x88
-    float mMaxTurnSpeed;                    // +0x8c
-    float mMinTurnSpeed;                    // +0x90
-    float mTurnAcceleration;                // +0x94
-    float mMaxTurnAcceleration;             // +0x98
-    float mMinTurnAcceleration;             // +0x9c
-    float mInverseSpeed;                    // +0xa0 +0xa0..+0xac: 1 / the means (0 when not > 0)
-    float mInverseAcceleration;             // +0xa4
-    float mInverseTurnSpeed;                // +0xa8
-    float mInverseTurnAcceleration;         // +0xac
-    float mCapFactor;                       // +0xb0 (world table entry 0x31; the means are capped at the min times it)
-    bool mIsFinished;                       // +0xb4
-    bool mIsQueued;                         // +0xb5
-    bool mMovesTogether;                    // +0xb6
-    bool mIsSpecialAttack;                  // +0xb7
 };
 
 // A player's tech tree (RTTI EETechTree > RTSTechTree, vtable 0x446114, sizeof 0x554, ctor 0x1cbcc2: the player's
