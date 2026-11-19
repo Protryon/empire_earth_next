@@ -267,43 +267,14 @@ static void EECzTilesOut(EeUnitsCzIo* ioIo, const std::vector<U2DPoint<long> >& 
         ee_units_cz_push_tile((EeUnitsCzList*)ioIo->list, (int32_t)inTiles[i].mX, (int32_t)inTiles[i].mY);
 }
 
+// (the plain reads, EE_UNITS_CZ_UNIT and the tiles' and players' lists, are Rust's views: citizen_host.rs)
 extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsCzIo* io)
 {
     EEUnit* theUnit = (EEUnit*)(uintptr_t)inA;
-    EEMapTile* theTile = (EEMapTile*)(uintptr_t)inA;
     EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     const int64_t* v = io->v;
     std::vector<U2DPoint<long> > theTiles;
     switch (inOp) {
-    case EE_UNITS_CZ_UNIT: {
-        EeUnitsCzUnit& o = io->unit;
-        EEUnitClass* c = theUnit->mUnitClass;
-        EEComplexUnit* x = theUnit->mComplexUnit;
-        o.obj = inA;
-        o.class_obj = EEObj(c);
-        o.complex = EEObj(x);
-        o.player = EEObj(theUnit->mPlayer);
-        o.goal_state = x != NULL ? EEObj(x->mGoalState) : 0;
-        o.goal_kind = x != NULL && x->mGoalState != NULL ? (int32_t)x->mGoalState->mKind : -1;
-        o.tile_x = (int32_t)theUnit->mTileX;
-        o.tile_y = (int32_t)theUnit->mTileY;
-        o.hit_points = (int32_t)theUnit->GetHitPoints();
-        o.resource_type = (uint32_t)theUnit->mResourceType;
-        o.on_map = theUnit->mTileNode != NULL;
-        o.disabled = x != NULL && x->mIsDisabled;
-        o.built = x != NULL && x->mIsBuilt;
-        o.foundation = x != NULL && x->IsFoundation();
-        if (c != NULL) {
-            o.category = (uint32_t)c->mCategory;
-            o.unit_type = (uint32_t)c->mUnitType;
-            o.family = (uint32_t)c->mFamily;
-            o.tile_size = (int32_t)c->GetTileSize();
-            o.drop_site = c->IsDropSite();
-        }
-        return 0;
-    }
-    case EE_UNITS_CZ_CLASS_TILE_SIZE:
-        return gUnitClassTable[(size_t)v[0]]->GetTileSize();
     case EE_UNITS_CZ_MAP_SIZE:
         io->v[0] = gMapWidth;
         io->v[1] = gMapHeight;
@@ -340,17 +311,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
         return gContinentManager.GetContinent(theUnit, kAIPathLandMass);
     case EE_UNITS_CZ_BLOCK_TAKES:
         return EEBlockTakes(theUnit, (long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[3], 0);
-    case EE_UNITS_CZ_TILE:
-        return EEObj(gWorld.mMap->GetTile((long)v[0], (long)v[1]));
-    case EE_UNITS_CZ_TILE_UNITS:
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
-            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(theNode->mUnit));
-        return 0;
-    case EE_UNITS_CZ_TERRAIN:
-        return theTile->mTerrainType;
-    case EE_UNITS_CZ_HEIGHT:
-        io->f[0] = theTile->GetHeight();
-        return 0;
     case EE_UNITS_CZ_CAN_GATHER:
         return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
     case EE_UNITS_CZ_CAN_GET_TO_UNIT:
@@ -391,10 +351,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
         return 0;
     case EE_UNITS_CZ_DISTANCE_TO:
         io->f[0] = ((EEComplexUnit*)theUnit)->DistanceSquaredTo((EEComplexUnit*)(uintptr_t)inB);
-        return 0;
-    case EE_UNITS_CZ_PLAYER_UNITS:
-        for (EEUnit* u = ((EEPlayer*)(uintptr_t)inA)->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
-            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(u));
         return 0;
     }
     return 0;

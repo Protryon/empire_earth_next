@@ -5,7 +5,7 @@ The lane's state. Each round rewrites this file to the current state; the rounds
 
 The file is the original's "EEUnitUtilities.cpp": some 200 free functions the units, goals, AI, calamities, random
 map and screens call, and the `EEFOFindNewTargetNearOldTarget` screen. 6,380 lines before round 1; 4,725 after it;
-3,996 after round 2; 3,496 at the start of round 3; 2,945 now.
+3,996 after round 2; 3,496 at the start of round 3; 2,945 after it; 2,876 now.
 
 **In Rust** (`ee_sim::units` uu.rs, uu_tiles.rs, uu_place.rs, uu_spots.rs, uu_world.rs, uu_reads.rs over uu_host.rs;
 entry points uu_ffi.rs; the record uu_note.rs; msvc_sort.rs):
@@ -36,17 +36,41 @@ EEWorldLayout.cpp +1).
 step of round 3 in oracle, late, space and calamity, seeds 2-3). Mutations: a note's two words swapped (EECanStandOn)
 fails UUTL only; the radius rectangle's far side changed fails 41 tags of the oracle capture.
 
-**Left** (C++, 2,945 lines):
-- the forwarders the C++ callers need (about 95, one Rust call each; most callers are in src/Empire Earth/Units and
-  the Rust hosts EEUGRust.cpp, EEUnitHost.cpp, EEEffectHost.cpp, EEARust.cpp, EECPPlacement.cpp: a Rust caller could
-  call the Rust body directly and its host case and forwarder would go, now that the note is Rust's);
-- the ee_combat search, new-target and line-of-fire hosts (~550 lines: virtual and goal reads, the CB* capture
-  records);
+- Round 4 (branch `rust-unitutil-r4`):
+  - `uu_direct.rs`: the goals' host (rust_goal.rs `OpHost`) and the AI placement's host (cp/place_game.rs) call the
+    noted Rust entry points (natives in uu_ffi.rs: `tile_units_standing`, `tiles_around`, `pick_tile_near`,
+    `unit_tiles`, `units_on`, `player_units_of_type`, `units_in_radius`, `square_ring`, `square_ring_tiles`,
+    `tiles_in_radius`, `block_ring`, `ring_corners`, `collect_units`). 18 goal host cases (EEUGRust.cpp: can stand,
+    line blocked, attack part, deposit load, next free tile, resource spot, free tile, resource reach, path length,
+    tile standing, blocking/movable units, pick tile near, units in radius, footprint tiles/units, owns lighthouse,
+    clear site) and 10 placement cases (EECPPlacement.cpp: units of type, block takes, tile unit of type, units in a
+    rectangle with no filter, the six tile lists) are gone, with the forwarders no C++ calls any more
+    (`EEFindNextFreeTile`, `EEGetTileUnitStanding`, `EEGetMovableTileUnits`, `EEIsWithinReachOf`,
+    `EEGetTileUnitOfType`).
+  - The target searches' plain reads: the candidate's position and values, the tests NATURE, WALL, ALIVE and the
+    new-target walk's NATURE and multiple-tile test (combat search_ffi.rs, walks_ffi.rs).
+
+**C++**: round 1 net -1,684; round 2 net -741; round 3 net -553; round 4 net -229 (EEUGRust.cpp -94,
+EECPPlacement.cpp -61, this file 2,945 -> 2,876, the headers -5).
+
+**Left** (C++, 2,876 lines):
+- the forwarders the C++ callers need (about 90, one Rust call each). The ones the Units lane could free (their
+  callers are Rust hosts in its files): EEUnitHost.cpp's `EEPlanWall`, `EEBuildWall`, `EECanPlaceOnTile`,
+  `EEMakeBuilding`, `EEFindFreeFarm`, `EEGetFarmDropSites`, `EEWorkFarm`, `EEIsSeenBy`, `EEUUGetIsUnitClassTargetable`
+  cases, and EEUGRustCombat.cpp's `EEGetAttackPart`, `EEUUGetIsUnitClassTargetable`, `EECanHeal`,
+  `EEGetFiringPosition`, `EEGetLeadPosition` cases: their Rust callers can call `units::uu_direct` / `uu_ffi`
+  (or ee_combat) directly; `EEGetAttackPart`'s forwarder goes with the last;
+- EEEffectHost.cpp (`StepToward`, `WallPiece`, `FarmDropSite`, the confirm goal's stand test) and EEARust.cpp (seen,
+  footprint visible, targetable, farm drop sites, can heal): left, their Rust sides (ee_render effects, ee_game
+  screens) run over fake hosts in their tests;
+- the ee_combat search, new-target and line-of-fire hosts' tests that call C++ (virtuals, goals, ignore lists, the
+  model's tag points and boxes, the CB* capture records);
 - the hosts that call C++ objects (continents, terrain mesh, path manager, goals, effects, class virtuals, writes);
 - the lifetime sequences (`EEReplaceUnit`, `EEMakeUnitCopy`, `EEConvertUnit`, `EEMakeBuilding`, `EEMovePassengers`,
   `EEReplaceQueuedTechnology`, `EEUpgradeHitPoints`), `EEFindNewTargetNearOld` and the screen virtuals,
-  `EEUpdateUnitTile`, `EEGetHelicopterPriestDestination`, `EEGetWaitingGatherer`, `EEFindTargetNear`, the sound's camera
-  view, `EEWorkFarm`, `EEPreviewWall`, the civilization upgrade text.
+  `EEUpdateUnitTile`, `EEGetHelicopterPriestDestination`, `EEGetWaitingGatherer` (a Rust goal's gather resource, the
+  physics random, `PermuteValues`), `EEFindTargetNear` (the influence table, `EESearchTarget`), `EEWorkFarm` (C++
+  goal construction and actions), the sound's camera view, `EEPreviewWall`, the civilization upgrade text.
 
-**Next**: the Rust hosts' callers (goals, actions, effects, the AI's placement) call the Rust bodies directly (their
-host cases and ~25 forwarders go); the target searches' tests once the goals and class virtuals they ask are Rust.
+**Next**: the Units lane's host cases above; `EEIsInWorkReach`/`EEIsInGatherReach` once the CB* capture records can be
+written from Rust; the remaining search tests once the goals and class virtuals they read are Rust.
