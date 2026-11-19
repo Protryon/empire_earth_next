@@ -72,8 +72,6 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
         if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
         return 0;
     case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
-    case Op::BaseSizeChanged: t->Button::Virtual08(); return 0;
-    case Op::BasePaint: t->Button::Paint(*(Graphics*)a); return 0;
     case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
     case Op::SkinBtn:
         switch ((EeWonSkinBtn)a) {

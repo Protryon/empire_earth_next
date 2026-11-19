@@ -166,6 +166,11 @@ impl EeWonMulti {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         call_host(self.host, self.comp, op, a, b, c, d)
     }
     fn op1(&self, op: Op, a: isize) -> isize {
@@ -871,6 +876,11 @@ impl EeWonMHead {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::Container, op, a, b, c)
+        {
+            return r;
+        }
         call_host(self.host, self.comp, op, a, b, c, 0)
     }
     fn op1(&self, op: Op, a: isize) -> isize {

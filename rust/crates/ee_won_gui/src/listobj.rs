@@ -196,6 +196,11 @@ impl EeWonList {
     // ---- calls out
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) =
+            crate::registry::base_op(self.comp as isize, crate::registry::EeWonGuiBase::ScrollArea, op, a, b, c)
+        {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
