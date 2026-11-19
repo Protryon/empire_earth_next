@@ -31639,57 +31639,6 @@ docs/progress/calamities-scenario.md "Next": `SMEUnitValue`'s, `EEChangeUnit`'s 
 on the views; the event tables as Rust data; `EECalamity`'s C++ members into its record; the scenario elements whole
 once the editor gate reads them through accessors.
 
-
-## The unit utilities, round 4: the goals' and the AI placement's Rust call the unit utilities directly; the target searches' plain reads (ee_sim::units uu_direct.rs; branch rust-unitutil-r4, 2026-11-18)
-
-| Commit | What | C++ (src, include/ee) |
-|---|---|---|
-| 4c169ab4d | the goal host (18 cases) and the AI placement host (10 cases) call the noted Rust entry points; 5 forwarders gone | +5 -194, net **-189** |
-| b4425f1f7 | the target searches' candidate position and values, NATURE/WALL/ALIVE and the walk's NATURE and size test through the views | +4 -44, net **-40** |
-| (merge) | origin/rust 104a6603d (WONLobby round 17): clean | |
-
-The round: net **-229** C++ (EEUGRust.cpp -94, EECPPlacement.cpp -61, EEFOFindNewTargetNearOldTarget.cpp 2,945 ->
-2,876, the headers -5).
-
-- **Why it was possible now.** Round 3 moved the UUTL note into each Rust entry point, so a Rust caller that calls the
-  entry point directly is noted exactly as the C++ forwarder's call was: the goal host's chain Rust -> `GoalOp` case ->
-  C++ forwarder -> Rust entry point became Rust -> entry point, with the same outermost-note depth (the goal ops are not
-  noted). The UUTL digests (and every other tag) of all twelve profiles held unchanged.
-- **Natives beside the C ABI.** Entry points over C++ vectors got a Rust-native twin in uu_ffi.rs that holds the note
-  (`tile_units_standing`, `tiles_around`, `pick_tile_near`, `unit_tiles`, `units_on`, `player_units_of_type`,
-  `units_in_radius`, `square_ring`, `square_ring_tiles`, `tiles_in_radius`, `block_ring`, `ring_corners`); the C ABI
-  function converts the vectors and calls it. `uu_direct.rs` is what other modules call: the game's body, and
-  `unreachable!` in a unit-test build (uu_ffi.rs is absent there and no fake host reaches the game's paths), since
-  rust_goal.rs's `OpHost` compiles in the tests too.
-- **The AI placement keeps its two paths.** With the capture off its tile lists stay the pure math; with it on they
-  now take the noted entry points instead of the C++ wrappers (the same math), so the placement's results and the
-  record are as before.
-- **A template instantiation that lived in a deleted case.** `EEGetUnitsInRectangle<EEAnyUnit,
-  std::vector<EEComplexUnit*> >` was instantiated only by EECPPlacement.cpp's rectangle case; EEContagionHelper.cpp
-  calls it with the declaration alone (ee/EEAreaUtilities.h) and the link failed with one unresolved symbol. The unit
-  utilities file now instantiates it explicitly.
-- **The search hosts' plain reads.** `unit_position` and `target` of `EeCombatSearchHost` and `multiple` of
-  `EeCombatTargetHost` are view reads in search_ffi.rs / walks_ffi.rs (a region's candidate is its own complex unit:
-  `mComplexUnit` is `this` for a complex unit, EEUnit.cpp), so the callbacks left the structs. The tests that read only
-  the candidate (NATURE, WALL, ALIVE; the walk's NATURE) are answered in Rust before the C++ callback; the others ask
-  the searching unit, a virtual, a goal or an ignore list and stay C++.
-- **Not done, and why.** EEARust.cpp and EEEffectHost.cpp: their Rust callers (ee_game's game actions, ee_render's
-  effects) run over fake hosts in their unit tests, so a direct call would need those tests reworked for a few lines.
-  `EEFindTargetNear` (the influence table and `EESearchTarget` are C++), `EEGetWaitingGatherer` (a Rust goal's gather
-  resource through the C++ goal object, the physics random, `PermuteValues`) and `EEWorkFarm` (C++ goal construction
-  and actions) have nothing a view can answer. `EEIsInWorkReach` and the other reach tests write CB* capture records
-  from C++ inlines.
-- **For the Units lane** (its files, not edited here): EEUnitHost.cpp's cases calling `EEPlanWall`, `EEBuildWall`,
-  `EECanPlaceOnTile`, `EEFindFreeFarm`, `EEGetFarmDropSites`, `EEIsSeenBy`, `EEUUGetIsUnitClassTargetable`, and
-  EEUGRustCombat.cpp's `EEGetAttackPart`, `EEUUGetIsUnitClassTargetable`, `EECanHeal` cases can call `units::uu_direct`
-  / `uu_ffi` (or ee_combat) from their Rust callers; `EEGetAttackPart`'s forwarder goes with the last of them.
-- **Gates (merged with origin/rust 104a6603d):** build `--sim` 0/0; the Rust gate PASS (4,609 tests); oracle seeds 2-7
-  identical; the captures at seeds 2-3 of oracle (212 digests) and late (214) PASS on the merged tree, and of oracle,
-  late, space, calamity, placement, units and transport PASS on the commits before the merge. The round stopped at
-  the cluster reorganization: the other capture profiles, saveload, scenario_check, the test-profile build and the
-  harness runs were not run, and the branch is not for merging as it stands (it edits the units and AI clusters'
-  files: EEUGRust.cpp, EECPPlacement.cpp, EEFOFindNewTargetNearOldTarget.cpp).
-
 ## The UI cluster lane, round 1: the main game HUD's hosts answered by the toolkit's, the strings' and the views' Rust; the command buttons', the status box's and the chat lines' members as Rust records (ee_game hud_direct.rs; branch rust-uicluster1, 2026-11-18)
 
 The brief: the UI cluster (the main game form and its HUD controls, the UI events, the scenario editor, the
@@ -31823,6 +31772,144 @@ What exercises what: the oracle (seeds 2-7) and the missile capture reach the ta
 physics' readers (weapon points, decks, launches); the effects capture (EE-SIM steps every effect kind, seeds 2-7,
 18 digests) reaches the effect readers; the editor gate reaches the terrain raise; only a tour reaches the colour
 groups (the player colour on the buildings), the light glows, the icons and the outlines' draw.
+
+## The unit utilities, round 4: the goals' and the AI placement's Rust call the unit utilities directly; the target searches' plain reads (ee_sim::units uu_direct.rs; branch rust-unitutil-r4, 2026-11-18)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 4c169ab4d | the goal host (18 cases) and the AI placement host (10 cases) call the noted Rust entry points; 5 forwarders gone | +5 -194, net **-189** |
+| b4425f1f7 | the target searches' candidate position and values, NATURE/WALL/ALIVE and the walk's NATURE and size test through the views | +4 -44, net **-40** |
+| (merge) | origin/rust 104a6603d (WONLobby round 17): clean | |
+
+The round: net **-229** C++ (EEUGRust.cpp -94, EECPPlacement.cpp -61, EEFOFindNewTargetNearOldTarget.cpp 2,945 ->
+2,876, the headers -5).
+
+- **Why it was possible now.** Round 3 moved the UUTL note into each Rust entry point, so a Rust caller that calls the
+  entry point directly is noted exactly as the C++ forwarder's call was: the goal host's chain Rust -> `GoalOp` case ->
+  C++ forwarder -> Rust entry point became Rust -> entry point, with the same outermost-note depth (the goal ops are not
+  noted). The UUTL digests (and every other tag) of all twelve profiles held unchanged.
+- **Natives beside the C ABI.** Entry points over C++ vectors got a Rust-native twin in uu_ffi.rs that holds the note
+  (`tile_units_standing`, `tiles_around`, `pick_tile_near`, `unit_tiles`, `units_on`, `player_units_of_type`,
+  `units_in_radius`, `square_ring`, `square_ring_tiles`, `tiles_in_radius`, `block_ring`, `ring_corners`); the C ABI
+  function converts the vectors and calls it. `uu_direct.rs` is what other modules call: the game's body, and
+  `unreachable!` in a unit-test build (uu_ffi.rs is absent there and no fake host reaches the game's paths), since
+  rust_goal.rs's `OpHost` compiles in the tests too.
+- **The AI placement keeps its two paths.** With the capture off its tile lists stay the pure math; with it on they
+  now take the noted entry points instead of the C++ wrappers (the same math), so the placement's results and the
+  record are as before.
+- **A template instantiation that lived in a deleted case.** `EEGetUnitsInRectangle<EEAnyUnit,
+  std::vector<EEComplexUnit*> >` was instantiated only by EECPPlacement.cpp's rectangle case; EEContagionHelper.cpp
+  calls it with the declaration alone (ee/EEAreaUtilities.h) and the link failed with one unresolved symbol. The unit
+  utilities file now instantiates it explicitly.
+- **The search hosts' plain reads.** `unit_position` and `target` of `EeCombatSearchHost` and `multiple` of
+  `EeCombatTargetHost` are view reads in search_ffi.rs / walks_ffi.rs (a region's candidate is its own complex unit:
+  `mComplexUnit` is `this` for a complex unit, EEUnit.cpp), so the callbacks left the structs. The tests that read only
+  the candidate (NATURE, WALL, ALIVE; the walk's NATURE) are answered in Rust before the C++ callback; the others ask
+  the searching unit, a virtual, a goal or an ignore list and stay C++.
+- **Not done, and why.** EEARust.cpp and EEEffectHost.cpp: their Rust callers (ee_game's game actions, ee_render's
+  effects) run over fake hosts in their unit tests, so a direct call would need those tests reworked for a few lines.
+  `EEFindTargetNear` (the influence table and `EESearchTarget` are C++), `EEGetWaitingGatherer` (a Rust goal's gather
+  resource through the C++ goal object, the physics random, `PermuteValues`) and `EEWorkFarm` (C++ goal construction
+  and actions) have nothing a view can answer. `EEIsInWorkReach` and the other reach tests write CB* capture records
+  from C++ inlines.
+- **For the Units lane** (its files, not edited here): EEUnitHost.cpp's cases calling `EEPlanWall`, `EEBuildWall`,
+  `EECanPlaceOnTile`, `EEFindFreeFarm`, `EEGetFarmDropSites`, `EEIsSeenBy`, `EEUUGetIsUnitClassTargetable`, and
+  EEUGRustCombat.cpp's `EEGetAttackPart`, `EEUUGetIsUnitClassTargetable`, `EECanHeal` cases can call `units::uu_direct`
+  / `uu_ffi` (or ee_combat) from their Rust callers; `EEGetAttackPart`'s forwarder goes with the last of them.
+- **Gates (merged with origin/rust 104a6603d):** build `--sim` 0/0; the Rust gate PASS (4,609 tests); oracle seeds 2-7
+  identical; the captures at seeds 2-3 of oracle (212 digests) and late (214) PASS on the merged tree, and of oracle,
+  late, space, calamity, placement, units and transport PASS on the commits before the merge. The round stopped at
+  the cluster reorganization: the other capture profiles, saveload, scenario_check, the test-profile build and the
+  harness runs were not run, and the branch is not for merging as it stands (it edits the units and AI clusters'
+  files: EEUGRust.cpp, EECPPlacement.cpp, EEFOFindNewTargetNearOldTarget.cpp).
+## R6 WONLobby, round 18: the lobby's events as Rust objects, their reads in Rust; the dialog host's Component ops (ee_won_lobby lobbyevt.rs, lobbydlg.rs comp_op; branch rust-wonlobby18, 2026-11-18)
+
+Round 17's "Left" named three blockers: the dialog host (a widget registry, the widgets' C++ members), the lobby
+events (shared by every logic host) and the dialogs' rows. This round moved the events whole and the dialog host's
+Component ops; the target (-3,000) was not reached (below).
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c493f43e1 | the 43 lobby event classes one shell over a Rust event; LobbyEvents.cpp and LobbySyncGameEvent.cpp deleted; the receivers' reads in Rust | +242 -762 (-520) |
+| e77d318f4 | LobbyDialogHost.cpp's Component ops answered in lobbydlg.rs's game mode | -12 |
+
+Round total: -532. The merge of origin/rust 2bccb3e94 (UI cluster round 1) touched no WON file.
+
+### The events (lobbyevt.rs)
+
+- **One object, the classes' members as data.** An event is a kind (one per original class) and its members in the
+  class's declaration order (`layout`; a `LobbyChangeEvent`'s change kind first): a number (the maker converts
+  to the member's type: `bool` 0/1, `unsigned short`, `unsigned long`), a referenced object (every `SmartPtr`
+  and every `GUIString` member: a model object, an operation, a `GUIStringData`; `AddRef` when made, `Release` at
+  the end in reverse member order, through the event's host, the C++ `RefCount`), an address (a copy,
+  `ee_won_ipaddr_clone`), or a `std::wstring` / `std::string` copy (its bytes). Holding the `GUIStringData` is
+  exactly the original member: `GUIString` is copy-on-write.
+- **The C++.** WONLobbyEvents.h is the shell `LobbyRustEvent : LobbyEvent` (its constructor binds the shell to
+  the event, its destructor frees it), the readers (`LobbyEvtGet`, `LobbyEvtText`, `LobbyEvtAddr`,
+  `LobbyEvtStr<S>`, `LobbyEvtSet`, `LobbyEvtSetStr`) and one maker per class with the original constructor's
+  signature (a macro line each): the call sites only lost `new`. CreateAccountEvent's members are written after
+  it is made, as before (`LobbyEvtSet*`); its month, day and year read 0 until then (the original's were
+  uninitialised; the host writes them first).
+- **The reads in Rust.** For the game's objects (game mode, as round 17's resource rows) the events' member ops
+  are answered in lobbyevt.rs from the shell's address (`of`): the controls' `EvGet` / `EvSetHandled` and
+  `EventFlags`, `EventRoomSpec`, `EventIs{Add,Delete,Modify}`, `ClientChangedClient`, `PlayerChangedClient`,
+  `EventGame(s)` (`ctl_op`), the logics' `EventDirect*`, `EventClientAction*`, `EventJoinGame`, `EventAction*`
+  (`lobby_op`) and RoutingLogic's `EventNum` 1..12 (`route_event_num`). LobbyNetCtrlHost.cpp's 70-line `EvField`
+  is one test (a WONGUI event's chat link). The drivers' objects still send the ops to their scripted hosts:
+  every earlier golden is unchanged. A text read gives the `GUIStringData*` with no reference added, as the
+  hosts' `Dat` did (a first draft added one, like the controls' `Held`: the golden of the old `EvField` caught it
+  before any build).
+- **The golden** (`won_lobbyevt_test`, `won_lobbyevt_orig.h`: the classes, `EvField` and the deleted cases at
+  8d68d2786, unchanged): each of 60,000 sequences makes one event of a random class with random values on both
+  sides, compares the type and every member the receivers read (the change kind's and the chat flags' tests
+  too), applies the hosts' writes to both (`mHandled`, CreateAccountEvent's members, LoginEvent's user name cut),
+  checks every referenced object's count after the event is made and the order of the releases at its end, and
+  runs the receivers' reads (164,627) against the old cases; 2.3 million checks, 0 failures. Mutations
+  (a scratch script): 14 of 14 caught (two members swapped in a layout, the end's order, no reference
+  taken, a string cut short, writes ignored, a maker's arguments swapped, a default changed, a flag masked, and
+  five read mappings). Two were caught by a crash (a number read as an address), not a failure line.
+- **What runs it.** The LAN game makes and reads ClientChanged, RecvChat, JoinedRoom, GameChanged,
+  SyncGameList, ChangeDirectConnect, PlayerChanged, SetChatInput, ClientAction and GameAction events; the
+  Internet ones (routing, account, login, invitation, moderation) only the golden.
+
+### The dialog host's Component ops (lobbydlg.rs `comp_op`)
+
+Width, Height, Left, Top and IsVisible are the members' block (compmem.rs); RequestFocus, SetSize,
+SetSizeAtLeast, SetDesiredSize, SetDesiredWidth, SetPos and SubscribeToBroadcast are Component's non-virtual
+calls, which the C++ inline `KCall` made as `ee_won_comp_call(this, ee_won_guicpp_comp_call, ...)` (the host
+compobj.rs's `host()` returns in the game). The same calls by construction; the drivers' dialogs still send the
+ops (their goldens unchanged); the LAN game's dialogs (create game, LAN name, status boxes) run them.
+
+### Gates (the round's head merged with origin/rust 2bccb3e94)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (merged tree) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (merged tree) |
+| `rust_build.py gate` | PASS after each commit (the first run failed rustfmt only, fixed before the commit); PASS, 4,651 tests on the merged tree |
+| `won_host_coverage.py` | PASS (lobbyevt.rs `ctl_op` / `lobby_op` and lobbydlg.rs `comp_op` read; TlaLink allowed: a WONGUI event's link, one test in EvField) |
+| `xbuild.py wontest` | all 153 programs exit 0 under the 2 GB cap (peak 557 MB, won_cfgtab_test) on the events commit; the dialog drivers and won_lobbyevt_test again after the Component ops |
+| `lan_game.py` (slot.py) | `RESULT PASS lan-game PT host=2868 joiner=2858` (the round's start exe, a test-profile build of 8d68d2786: 2773 / 2773) |
+| `lan_capture_compare.py` | every lobby capture identical to the start exe's but two carets: the staging screen's (15 pixels at x 121, as in rounds 15-17) and the create-game dialog's name box (15 pixels at x 575; the caret shown in one run, blinked off in the other: checked on the crops) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12794` units [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2750 joiner=2752`, GATES PASS |
+
+### Why short of the target, and what is left
+
+- **The widget registry and the widgets' C++ members** (the dialog host's other ~100 ops, the ~260 repeated
+  forward lines over the hosts): not started. The virtual Component calls (SetEnabled, SetVisible, Invalidate)
+  must still dispatch through the C++ vtable (ComboBox and others override them), so only the non-virtual half
+  answers in Rust without moving the widget classes.
+- **The dialogs' rows** (BadUserItem, ConnectListItem, NetworkAdapterListItem with a `RustMultiRow` shell,
+  FilterListItem) and ChatLink's segment hook: not started (about -120 lines; each needs won_rowobj_test's
+  world extended).
+- **The logic hosts** (LanLogicHost.cpp, LobbyLogicHost.cpp, InitLogic.cpp, RoutingLogic.cpp): the events no
+  longer block them, but their remaining ops are calls on C++ sockets, servers, dialogs and the lobby's free
+  functions. The event makers there are now one C++ call each with no class; making the events from Rust needs a
+  host op that wraps a Rust event in its C++ shell (one generic `Deliver/Broadcast(event)` case per host would
+  replace ~48 maker cases).
 
 ## The units' lane, round 2: the formations one class over Rust shapes; the dry host whole in Rust; the hosts' plain reads on the views (ee_sim::formations, ee_sim::units dry.rs; branch rust-units2, 2026-11-18)
 

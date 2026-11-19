@@ -4,7 +4,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 namespace WONAPI {
-class SetCrossPromotionEvent;
 class ImageTextButton : public ImageButton {
 public:
     ImageTextButton(const GUIString& = "");
@@ -17,7 +16,7 @@ public:
 class CrossPromotionButton : public ImageTextButton {
 public:
     CrossPromotionButton(); // 0x7c96a0; object size 0x70
-    void HandleSetCrossPromotion(SetCrossPromotionEvent*);
+    void HandleSetCrossPromotion(ComponentEvent*);
     void SetDefaultImage(Image*);
     virtual void HandleComponentEvent(ComponentEvent*);
     SmartPtr<Image> mDefaultImage; // 0x68

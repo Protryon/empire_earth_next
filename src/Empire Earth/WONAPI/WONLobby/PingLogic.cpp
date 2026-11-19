@@ -77,8 +77,8 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
         reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(
             new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, aLogic));
         return 0;
-    case O::EventGame: return (intptr_t)reinterpret_cast<PingGameEvent*>(a)->mGame.get();
-    case O::EventFlag: return reinterpret_cast<PingGameEvent*>(a)->mFlag;
+    case O::EventGame: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Game);
+    case O::EventFlag: return LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Flag);
     case O::RecvMsg: {
         const ByteBuffer* aBuffer = reinterpret_cast<UDPManagerRecvOp*>(a)->GetMsg();
         *reinterpret_cast<size_t*>(b) = aBuffer != NULL ? aBuffer->length() : 0;
@@ -124,7 +124,7 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
         return 0;
     case O::ReadSummary: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { return G(a)->ReadSummary(r) ? 1 : 0; });
     case O::ReadDetails: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { G(a)->ReadDetails(r); return 0; });
-    case O::BroadcastGameChanged: LobbyBroadcastEvent(new GameChangedEvent(G(a), 2), true); return 0;
+    case O::BroadcastGameChanged: LobbyBroadcastEvent(GameChangedEvent(G(a), 2), true); return 0;
     case O::NotifyPing: LobbyNotifyPingChange(G(a)); return 0;
     case O::NumTracked: return aLogic->mTracker.GetNumTrack();
     case O::TrackedGame: {
