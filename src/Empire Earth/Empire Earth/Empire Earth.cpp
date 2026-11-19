@@ -2107,6 +2107,27 @@ bool EEInitializeSounds()
 
 // Loads every database table in start-up order, creates the user folders (campaigns, saved games, scenarios,
 // users), loads the ambient sounds, sizes the game pools and registers the database shutdown
+// One db table to load: its text form found (EEDbFindFile), then loaded; a failure stops the game (ESVerify at the
+// original's lines: mLine the find, + 1 the file, + 3 the load)
+struct EEDbTableLoad {
+    const UString* mName;
+    long (*mLoad)(FSFileSpec* inFile);
+    unsigned long mLine;
+};
+
+static void EELoadDbTables(const EEDbTableLoad* inTables, size_t inCount)
+{
+    for (size_t k = 0; k < inCount; k++) {
+        FSFileSpec* theDbFile = NULL;
+        long theResult = EEDbFindFile(gDataPath, *inTables[k].mName, theDbFile);
+        if (theResult != kErrorOK) ESVerify(__FILE__, inTables[k].mLine, "theResult == keseOK");
+        if (theDbFile == NULL) ESVerify(__FILE__, inTables[k].mLine + 1, "theDbFile != NULL");
+        theResult = inTables[k].mLoad(theDbFile);
+        if (theResult != kErrorOK) ESVerify(__FILE__, inTables[k].mLine + 3, "theResult == keseOK");
+        delete theDbFile;
+    }
+}
+
 void EEInitializeDatabase()
 {
     FSFileSpec theDirectory;
@@ -2115,66 +2136,21 @@ void EEInitializeDatabase()
     FSFileSpec* theDbFile;
     long theResult;
     EELoadRules(gDataPath);   // the rules documents (ee/EERules.h), before the tables that use them
-    theResult = EEDbFindFile(gDataPath, kDbStartingResourcesFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 909, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 910, "theDbFile != NULL");
-    theResult = EEStartingResources::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 912, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbUnitBehaviorFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 917, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 918, "theDbFile != NULL");
-    theResult = EEUnitBehavior::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 920, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbSoundsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 925, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 926, "theDbFile != NULL");
-    theResult = EESoundObject::LoadTable(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 928, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbGraphicsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 933, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 934, "theDbFile != NULL");
-    theResult = EEGraphicObject::LoadTable(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 936, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbGfxEffectsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 941, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 942, "theDbFile != NULL");
-    theResult = EEGraphicEffect::LoadTable(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 944, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbMusicFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 949, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 950, "theDbFile != NULL");
-    theResult = EEMusicObject::LoadTable(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 952, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbWorldFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 962, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 963, "theDbFile != NULL");
-    theResult = gWorldTable.Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 965, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbFamilyFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 970, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 971, "theDbFile != NULL");
-    theResult = EETerrainTypeTable::LoadDamageTables(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 973, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbButtonsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 978, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 979, "theDbFile != NULL");
-    theResult = EEButtonObject::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 981, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbTechTreeFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 986, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 987, "theDbFile != NULL");
-    theResult = gTechTree.Load(*theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 989, "theResult == keseOK");
-    delete theDbFile;
+    {
+        static const EEDbTableLoad kTables[] = {
+            {&kDbStartingResourcesFile, [](FSFileSpec* f) { return (long)EEStartingResources::Load(f); }, 909},
+            {&kDbUnitBehaviorFile, [](FSFileSpec* f) { return (long)EEUnitBehavior::Load(f); }, 917},
+            {&kDbSoundsFile, [](FSFileSpec* f) { return (long)EESoundObject::LoadTable(f); }, 925},
+            {&kDbGraphicsFile, [](FSFileSpec* f) { return (long)EEGraphicObject::LoadTable(f); }, 933},
+            {&kDbGfxEffectsFile, [](FSFileSpec* f) { return (long)EEGraphicEffect::LoadTable(f); }, 941},
+            {&kDbMusicFile, [](FSFileSpec* f) { return (long)EEMusicObject::LoadTable(f); }, 949},
+            {&kDbWorldFile, [](FSFileSpec* f) { return (long)gWorldTable.Load(f); }, 962},
+            {&kDbFamilyFile, [](FSFileSpec* f) { return (long)EETerrainTypeTable::LoadDamageTables(f); }, 970},
+            {&kDbButtonsFile, [](FSFileSpec* f) { return (long)EEButtonObject::Load(f); }, 978},
+            {&kDbTechTreeFile, [](FSFileSpec* f) { return (long)gTechTree.Load(*f); }, 986},
+        };
+        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
+    }
     FSFileSpec* theEvents;
     FSFileSpec* theEffects;
     theResult = EEDbFindFile(gDataPath, kDbEventsFile, theEvents);
@@ -2187,106 +2163,41 @@ void EEInitializeDatabase()
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x3e8, "theResult == keseOK");
     delete theEvents;
     delete theEffects;
-    theResult = EEDbFindFile(gDataPath, kDbAnimalsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1006, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1007, "theDbFile != NULL");
-    theResult = EEAnimal::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1009, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbColorTableFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1014, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1015, "theDbFile != NULL");
-    theResult = EEColorTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1017, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbAIUnitTargetingFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1022, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1023, "theDbFile != NULL");
-    theResult = EEAIUnitTargetingTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1025, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbTerrainFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1030, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1031, "theDbFile != NULL");
-    theResult = EETerrainTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1033, "theResult == keseOK");
-    delete theDbFile;
+    {
+        static const EEDbTableLoad kTables[] = {
+            {&kDbAnimalsFile, [](FSFileSpec* f) { return (long)EEAnimal::Load(f); }, 1006},
+            {&kDbColorTableFile, [](FSFileSpec* f) { return (long)EEColorTable::Load(f); }, 1014},
+            {&kDbAIUnitTargetingFile, [](FSFileSpec* f) { return (long)EEAIUnitTargetingTable::Load(f); }, 1022},
+            {&kDbTerrainFile, [](FSFileSpec* f) { return (long)EETerrainTable::Load(f); }, 1030},
+        };
+        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
+    }
     theResult = EETerrainColorTable::Load();
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x40e, "theResult == keseOK");
-    theResult = EEDbFindFile(gDataPath, kDbTerrainTypeFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1042, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1043, "theDbFile != NULL");
-    theResult = EETerrainTypeTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1045, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbCliffTerrainFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1050, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1051, "theDbFile != NULL");
-    theResult = EECliffTerrainTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1053, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbCivPowersFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1058, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1059, "theDbFile != NULL");
-    theResult = gCivPowersManager.Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1061, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbCivilizationFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1066, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1067, "theDbFile != NULL");
-    theResult = gCivilizationManager.Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1069, "theResult == keseOK");
-    delete theDbFile;
+    {
+        static const EEDbTableLoad kTables[] = {
+            {&kDbTerrainTypeFile, [](FSFileSpec* f) { return (long)EETerrainTypeTable::Load(f); }, 1042},
+            {&kDbCliffTerrainFile, [](FSFileSpec* f) { return (long)EECliffTerrainTable::Load(f); }, 1050},
+            {&kDbCivPowersFile, [](FSFileSpec* f) { return (long)gCivPowersManager.Load(f); }, 1058},
+            {&kDbCivilizationFile, [](FSFileSpec* f) { return (long)gCivilizationManager.Load(f); }, 1066},
+        };
+        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
+    }
     // (the original read db\dbrandommap.dat here into EERandomMapTable, dropping every record's contents and reading
     // nothing of the table afterwards; the file has no text form and is not loaded: RUST_PLAN D9)
-    theResult = EEDbFindFile(gDataPath, kDbWeaponToHitFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1082, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1083, "theDbFile != NULL");
-    theResult = EEToHitTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1085, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbCalamityFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1090, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1091, "theDbFile != NULL");
-    theResult = EECalamityManager::GetInstance()->LoadCalamityClasses(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1093, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbUnitSetFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1098, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1099, "theDbFile != NULL");
-    theResult = gUnitSetManager.Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1101, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbAreaEffectFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1106, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1107, "theDbFile != NULL");
-    theResult = gAEManager.Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1109, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbUpgradeFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1114, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1115, "theDbFile != NULL");
-    theResult = EEUCUpgradeTable::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1117, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbCPBehaviorFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1122, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1123, "theDbFile != NULL");
-    theResult = EECPBehavior::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1125, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbGameVariantFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1130, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1131, "theDbFile != NULL");
-    theResult = EEGameVariant::Load(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1133, "theResult == keseOK");
-    delete theDbFile;
-    theResult = EEDbFindFile(gDataPath, kDbPremadeCivsFile, theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1138, "theResult == keseOK");
-    if (theDbFile == NULL) ESVerify(__FILE__, 1139, "theDbFile != NULL");
-    theResult = gCivilizationManager.LoadPremadeCivilizations(theDbFile);
-    if (theResult != kErrorOK) ESVerify(__FILE__, 1141, "theResult == keseOK");
-    delete theDbFile;
+    {
+        static const EEDbTableLoad kTables[] = {
+            {&kDbWeaponToHitFile, [](FSFileSpec* f) { return (long)EEToHitTable::Load(f); }, 1082},
+            {&kDbCalamityFile, [](FSFileSpec* f) { return (long)EECalamityManager::GetInstance()->LoadCalamityClasses(f); }, 1090},
+            {&kDbUnitSetFile, [](FSFileSpec* f) { return (long)gUnitSetManager.Load(f); }, 1098},
+            {&kDbAreaEffectFile, [](FSFileSpec* f) { return (long)gAEManager.Load(f); }, 1106},
+            {&kDbUpgradeFile, [](FSFileSpec* f) { return (long)EEUCUpgradeTable::Load(f); }, 1114},
+            {&kDbCPBehaviorFile, [](FSFileSpec* f) { return (long)EECPBehavior::Load(f); }, 1122},
+            {&kDbGameVariantFile, [](FSFileSpec* f) { return (long)EEGameVariant::Load(f); }, 1130},
+            {&kDbPremadeCivsFile, [](FSFileSpec* f) { return (long)gCivilizationManager.LoadPremadeCivilizations(f); }, 1138},
+        };
+        EELoadDbTables(kTables, sizeof(kTables) / sizeof(kTables[0]));
+    }
     theResult = UIInitialize();
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x47a, "theResult == keseOK");
     theDirectory.SetVolume(gStartupVolume);
