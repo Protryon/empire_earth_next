@@ -1712,6 +1712,12 @@ constexpr static const int32_t EE_UNITS_PG_OP_REPAIR = 15;
 
 constexpr static const int32_t EE_UNITS_PG_OP_SAVE = 16;
 
+/// "USPK"
+constexpr static const uint32_t PICK_TAG = 1263555413;
+
+/// "USFL"
+constexpr static const uint32_t FILL_TAG = 1279677269;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -6076,8 +6082,6 @@ extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacit
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
 
-extern uint8_t ee_units_host_goal_kind(void *goal);
-
 extern void ee_units_host_goal_release(void *goal);
 
 extern void *ee_units_host_active_group_new(void *player);
@@ -6093,8 +6097,6 @@ extern void ee_units_host_group_keep_mobile(void *group);
 extern void ee_units_host_group_clear_goal(void *group);
 
 extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
-
-extern void ee_units_host_group_set_action(void *group, int32_t action);
 
 extern void ee_units_host_group_plan(void *group);
 
@@ -6116,12 +6118,6 @@ extern void ee_units_host_acknowledge_unit(void *player, uint32_t unit);
 
 extern uint32_t ee_units_host_town_patrol_point(uint32_t unit, uint8_t *found);
 
-extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, void *player);
-
-extern void *ee_units_host_unit_patrol_group(uint32_t unit);
-
-extern void ee_units_host_group_set_queued(void *group, uint8_t queued);
-
 extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
 
 extern void ee_units_host_group_spread_around_tile(void *group, int64_t x, int64_t y);
@@ -6136,11 +6132,7 @@ extern void ee_units_host_group_keep_non_citizens(void *group);
 
 extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
 
-extern void ee_units_host_patrol_insert_point_at(uint32_t unit, float x, float y, void *player);
-
 extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
-
-extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
 
 extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
 
@@ -6169,17 +6161,11 @@ extern void ee_units_host_wall_release(void *pieces);
 
 extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
 
-extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
-
 extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
 
 extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
-
-extern int64_t ee_units_host_technology_unit_class(void *player,
-                                                   int32_t technology,
-                                                   uint8_t *found);
 
 extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
 
@@ -6612,6 +6598,35 @@ int32_t ee_units_pg_save(EeUnitsPatrolGroup *group, uint32_t major, uint32_t min
 /// # Safety
 /// See above.
 int32_t ee_units_pg_repair(EeUnitsPatrolGroup *group);
+
+/// TEST ONLY: the USPK record of a pick (`EESelectPickCapture`; `player` an `EEPlayer*`).
+///
+/// # Safety
+/// `ids` points to `count` ids and `picked` to `picked_count`.
+void ee_units_select_pick_capture(uint32_t case_,
+                                  uint64_t player,
+                                  const uint32_t *ids,
+                                  size_t count,
+                                  const uint32_t *picked,
+                                  size_t picked_count);
+
+/// TEST ONLY: the USFL record of a fill (`EEFillCapture`; the units as their ids).
+///
+/// # Safety
+/// `ids` points to `count` ids and `taken` to `taken_count`.
+void ee_units_fill_capture(uint32_t case_,
+                           uint64_t player,
+                           const uint32_t *ids,
+                           size_t count,
+                           int64_t slot,
+                           const uint32_t *taken,
+                           size_t taken_count);
+
+/// TEST ONLY: the pick sweep (`EESelectPickSweep`).
+void ee_units_select_pick_sweep();
+
+/// TEST ONLY: the fill sweep (`EEFillSweep`).
+void ee_units_fill_sweep();
 
 /// `TurnTowardAngle` over the C++'s values.
 ///
@@ -7076,14 +7091,6 @@ extern void ee_units_pm_host_set_location_xy(uint64_t obj, float x, float y);
 extern void ee_units_pm_host_update_tile(uint64_t obj, const float *m);
 
 extern void ee_units_pm_host_set_scale(uint64_t obj, float s);
-
-extern void ee_units_pm_host_angular_velocity(uint64_t obj, float *out);
-
-extern void ee_units_pm_host_set_angular_velocity(uint64_t obj, float yaw, float pitch, float roll);
-
-extern void ee_units_pm_host_orientation(uint64_t obj, float *out);
-
-extern void ee_units_pm_host_set_orientation(uint64_t obj, float yaw, float pitch, float roll);
 
 extern float ee_units_pm_host_rate(uint64_t obj, int32_t which);
 
