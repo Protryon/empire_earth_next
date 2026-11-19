@@ -698,13 +698,6 @@ static EEComplexUnit* EESearchComplex(EESearchContext* inContext, uint64_t inHan
     return EESearchUnit(inHandle)->mComplexUnit;
 }
 
-static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
-{
-    EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
-    (*outPosition)[0] = theUnit->mPhysicalModel.GetLocation().GetX();
-    (*outPosition)[1] = theUnit->mPhysicalModel.GetLocation().GetY();
-}
-
 static uint64_t EESearchListNext(void* inContext, uint64_t inUnit, int32_t inPrevious)
 {
     EEUnit* theUnit = EESearchUnit(inUnit);
@@ -727,12 +720,8 @@ static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, E
     case EE_COMBAT_SEARCH_TEST_CANDIDATE:
         return inTarget->mPlayer != thePlayer && thePlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0
             && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
-    case EE_COMBAT_SEARCH_TEST_NATURE:
-        return inTarget->mPlayer->GetPlayerID() == 0;
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
         return EEIsAttackedBy(theUnit, inTarget);
-    case EE_COMBAT_SEARCH_TEST_WALL:
-        return theClass->mIsWall && !theClass->mIsTower;
     case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
         return EECanTargetClass(theUnit, theClass);
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
@@ -769,8 +758,6 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
     switch (inTest) {
     case EE_COMBAT_SEARCH_TEST_NOT_ENEMY:
         return !(theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0);
-    case EE_COMBAT_SEARCH_TEST_NATURE:
-        return theOwner->GetPlayerID() == 0;
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
         return EEIsAttackedBy(theUnit, inTarget);
     case EE_COMBAT_SEARCH_TEST_TECH_KIND_6: {
@@ -781,8 +768,6 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
         return EECanTargetClass(theUnit, inTarget->GetUnitClass());
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
         return theTarget != NULL && theTarget->IsFoundation();
-    case EE_COMBAT_SEARCH_TEST_ALIVE:
-        return inTarget->mHitPoints > 0;
     case EE_COMBAT_SEARCH_TEST_SEEN:
         return EEIsSeenBy(theTarget, theUnit->GetPlayer(), true);
     case EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT:
@@ -819,24 +804,6 @@ static int32_t EESearchTest(void* inContext, uint32_t inTest, uint64_t inUnit)
     if (theContext->mKind == kSearchRegions)
         return EESearchRegionTest(theContext, inTest, (EEComplexUnit*)(uintptr_t)inUnit);
     return EESearchListTest(theContext, inTest, EESearchUnit(inUnit));
-}
-
-static void EESearchTargetValues(void* inContext, uint64_t inUnit, EeCombatSearchTarget* outTarget)
-{
-    EESearchContext* theContext = (EESearchContext*)inContext;
-    if (theContext->mKind == kSearchRegions) {
-        EEComplexUnit* theTarget = (EEComplexUnit*)(uintptr_t)inUnit;
-        outTarget->multiple = theTarget->mUnitClass->mTileSize > 1;
-        outTarget->unit_type = (int32_t)theTarget->mUnitClass->mUnitType;
-        outTarget->attack = theTarget->mStats->GetAttack();
-        outTarget->max_velocity = theTarget->mStats->mMaxVelocity;
-    } else {
-        EEUnit* theTarget = EESearchUnit(inUnit);
-        outTarget->multiple = theTarget->GetUnitClass()->mTileSize > 1;
-        outTarget->unit_type = (int32_t)theTarget->GetUnitClass()->mUnitType;
-        outTarget->attack = theTarget->mStats->GetAttack();
-        outTarget->max_velocity = theTarget->mStats->GetMaxVelocity();
-    }
 }
 
 static float EESearchHitDistance(void* inContext, uint64_t inUnit, float inX, float inY)
@@ -907,8 +874,8 @@ static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int3
 static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
 {
     EeCombatSearchHost theHost = {inContext, gWorld.mMap->mUnitRegions,
-                                  EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
-                                  EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
+                                  EESearchListNext, EESearchDummyHead, EESearchTest, EESearchHitDistance,
+                                  EESearchAttackFactor, EESearchLineBlocked,
                                   EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
     return theHost;
 }
@@ -1297,11 +1264,6 @@ static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
     return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
 }
 
-static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
-{
-    return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
-}
-
 static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
 {
     EENewTargetHost* theHost = (EENewTargetHost*)inContext;
@@ -1318,8 +1280,6 @@ static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHand
         return theOwner == thePlayer || thePlayer->mEnemies[theOwner->GetPlayerID()] == 0;
     case EE_COMBAT_TARGET_TEST_DISABLED:
         return theUnit->mIsDisabled && !theUnit->IsProtected();
-    case EE_COMBAT_TARGET_TEST_NATURE:
-        return theOwner->GetPlayerID() == 0;
     case EE_COMBAT_TARGET_TEST_ATTACKED_BY:
         return EEIsAttackedBy(inUnit, theUnit);
     case EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS:
@@ -1350,8 +1310,8 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
 {
     EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
     // (the units' tiles and ids: ee_combat's reads of the unit store)
-    EeCombatTargetHost theHost = {&theContext, gWorld.mMap->mUnitRegions, EENewTargetScreen, EENewTargetMultiple,
-                                  EENewTargetTest, EENewTargetPush};
+    EeCombatTargetHost theHost = {&theContext, gWorld.mMap->mUnitRegions, EENewTargetScreen, EENewTargetTest,
+                                  EENewTargetPush};
     EeCombatFindTargetIn in = {};
     in.left = (int32_t)(inTile->GetX() - inRadius);
     in.top = (int32_t)(inTile->GetY() - inRadius);

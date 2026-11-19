@@ -107,7 +107,6 @@ pub struct EeCombatTargetHost {
     /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
     pub unit_regions: *const crate::combat::regions::EeCombatUnitRegions,
     pub screen: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub multiple: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
     pub test: unsafe extern "C" fn(ctx: *mut c_void, test: u32, unit: u64) -> i32,
     /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
     pub push: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
@@ -139,13 +138,27 @@ impl TargetHost for EeCombatTargetHost {
         unsafe { (self.screen)(self.ctx, unit) != 0 }
     }
     fn multiple(&mut self, unit: EeCombatHandle) -> bool {
+        // its class's `mTileSize > 1` (a region's complex unit, read in place)
+        // SAFETY: a walk runs inside the C++ call that holds the world; the handle is a live unit
+        let t = unsafe { crate::world::WorldRead::begin() };
         // SAFETY: as above
-        unsafe { (self.multiple)(self.ctx, unit) != 0 }
+        let class =
+            unsafe { crate::world::UnitView::of(&t, unit) }.and_then(|u| u.class()).expect("a candidate's class");
+        let size: std::os::raw::c_long = crate::world_field!(class.fields(), mTileSize);
+        size > 1
     }
     fn unit_id(&mut self, unit: EeCombatHandle) -> u32 {
         store::unit_of(unit).map_or(0, |r| r.id)
     }
     fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
+        if test == TARGET_TEST_NATURE {
+            // the owner is nature (read in place)
+            // SAFETY: a walk runs inside the C++ call that holds the world; the handle is a live unit
+            let t = unsafe { crate::world::WorldRead::begin() };
+            // SAFETY: as above
+            let owner = unsafe { crate::world::UnitView::of(&t, unit) }.and_then(|u| u.player()).expect("an owner");
+            return owner.id() == 0;
+        }
         // SAFETY: as above
         unsafe { (self.test)(self.ctx, test, unit) != 0 }
     }
