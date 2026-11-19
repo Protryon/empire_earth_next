@@ -2668,10 +2668,7 @@ mod tests_more {
     fn targeting_rows_skip_the_unused_values() {
         let mut r: DbAiTargeting = zeroed();
         (r.mAttackerBonus, r.mImmobileTargetBonus, r.mUnused1, r.mMaxValue) = (1, 9, 77, 10);
-        let mut out = [0 as c_long; 10];
-        // SAFETY: a whole record, room for ten
-        unsafe { ee_data_ai_targeting_from_record(&r as *const DbAiTargeting as *const u8, out.as_mut_ptr()) };
-        assert_eq!(out, [1, 0, 0, 0, 0, 0, 0, 0, 9, 10]);
+        assert_eq!(ai_targeting_row(&r), [1, 0, 0, 0, 0, 0, 0, 0, 9, 10]);
         assert_eq!(core::mem::offset_of!(DbAiTargeting, mMaxValue), 0x9c);
     }
 }
