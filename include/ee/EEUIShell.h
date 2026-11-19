@@ -33,6 +33,9 @@ public:
     const char* KindName() const { return ee_screens_shell_name(this->mState); }
     // the base class's virtual inVirtual (EE_SCREENS_SV_*), for the kind
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF) = 0;
+    // the shell's own virtual inVirtual (through its vtable: a kind's override runs), and its keyboard capture
+    virtual int64_t SelfCall(uint32_t inVirtual) = 0;
+    virtual void Keyboard(bool inCapture) = 0;
     virtual ~EEUIShell() { ee_screens_shell_free(this->mState); }
 protected:
     void Make(uint32_t inKind, UIControl* inControl, const std::vector<int64_t>& inArgs)
@@ -115,6 +118,11 @@ protected:
     case EE_SCREENS_SV_BUTTON_UP: Base::ButtonUp(); return 0; \
     case EE_SCREENS_SV_MOUSE_OVER: Base::MouseOver(); return 0;
 
+// the shell's own virtuals (SelfCall: UpdateKeyboard, and a button's ButtonDown and ButtonUp) and its keyboard capture
+#define EE_SHELL_SELF_BODY(Extra)     virtual int64_t SelfCall(uint32_t inVirtual)     {         switch (inVirtual) {         case EE_SCREENS_SV_UPDATE_KEYBOARD: return this->UpdateKeyboard();         Extra         }         return 0;     }     virtual void Keyboard(bool inCapture)     {         if (inCapture) this->CaptureKeyboard();         else this->ReleaseCapturedKeyboard();     }
+#define EE_SHELL_SELF EE_SHELL_SELF_BODY()
+#define EE_SHELL_SELF_BUTTON     EE_SHELL_SELF_BODY(case EE_SCREENS_SV_BUTTON_DOWN: this->ButtonDown(); return 0;                        case EE_SCREENS_SV_BUTTON_UP: this->ButtonUp(); return 0;)
+
 class EEUIShellButton : public UIButton, public EEUIShell {
 public:
     EEUIShellButton(uint32_t inKind, const std::vector<int64_t>& inArgs, unsigned long inId, GEBitmap* inNormal,
@@ -127,6 +135,7 @@ public:
     EE_SHELL_COMMON(UIButton)
     EE_SHELL_BUTTON(UIButton)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF_BUTTON
 };
 
 class EEUIShellRadio : public UIRadioButton, public EEUIShell {
@@ -144,6 +153,7 @@ public:
     EE_SHELL_VOID(UIRadioButton, Check, EE_SCREENS_SV_CHECK)
     EE_SHELL_VOID(UIRadioButton, UnCheck, EE_SCREENS_SV_UNCHECK)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF_BUTTON
 };
 
 class EEUIShellCheck : public UICheckBox, public EEUIShell {
@@ -158,6 +168,7 @@ public:
     EE_SHELL_COMMON(UICheckBox)
     EE_SHELL_BUTTON(UICheckBox)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF_BUTTON
 };
 
 class EEUIShellCombo : public UIComboBox, public EEUIShell {
@@ -175,6 +186,7 @@ public:
     EE_SHELL_COMMON(UIComboBox)
     EE_SHELL_VOID(UIComboBox, ChangeSelection, EE_SCREENS_SV_CHANGE_SELECTION)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF
 };
 
 class EEUIShellList : public UILBString, public EEUIShell {
@@ -206,6 +218,8 @@ public:
             UILBString::ChangeSelectionIndex(inIndex, inFireEvent, inScrollTo);
     }
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF
+    static bool EnterKey() { return UIControl::sEnterKey->GetValue() != 0; }
 };
 
 class EEUIShellEdit : public UIEditBox, public EEUIShell {
@@ -221,6 +235,7 @@ public:
     EE_SHELL_COMMON(UIEditBox)
     EE_SHELL_VOID(UIEditBox, ProcessEnterKey, EE_SCREENS_SV_PROCESS_ENTER)
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF
 };
 
 class EEUIShellSlider : public UISlider, public EEUIShell {
@@ -239,6 +254,7 @@ public:
         else UISlider::ChangeRange(inValue);
     }
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
+    EE_SHELL_SELF
 };
 
 #endif

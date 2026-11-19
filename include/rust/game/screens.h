@@ -8861,7 +8861,7 @@ constexpr static const uint32_t EE_SCREENS_SH_MAP_KIND = 43;
 /// The terrain tab's paint type check of the shell (`ee_screens_setn_check(form, id)`; answered in Rust).
 constexpr static const uint32_t EE_SCREENS_SH_TERRAIN_CHECK = 44;
 
-/// A new `GEBitmap` of texture `a` on the screen (`gScreenIndex`) -> the bitmap.
+/// A new `GEBitmap` of texture `a` on the screen (`b` 0: `gScreenIndex`, 1: the form's manager's) -> the bitmap.
 constexpr static const uint32_t EE_SCREENS_SH_NEW_BITMAP = 45;
 
 /// The bitmap `a`'s texture coordinates (left, top, right, bottom in `f`).
@@ -8973,6 +8973,88 @@ constexpr static const uint32_t EE_SCREENS_SH_TECH_MARK_PLAYER = 96;
 
 /// The list's blue bars: `a` the lines (u32s), `b` their count (`DrawPolygons`' loop) -> the last draw's result.
 constexpr static const uint32_t EE_SCREENS_SH_TECH_BARS = 97;
+
+/// `EEUIFSELBUnitList` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_CLASS_LIST = 80;
+
+/// `EEUIFSELBCargoList` (a string list box).
+constexpr static const uint32_t EE_SCREENS_SK_CARGO_LIST = 81;
+
+/// `EEUIFSEBUnitType` (a radio button).
+constexpr static const uint32_t EE_SCREENS_SK_UNIT_TYPE_BUTTON = 82;
+
+/// `EEUIFSEBRotation` (a button).
+constexpr static const uint32_t EE_SCREENS_SK_ROTATION = 83;
+
+/// `EEUIFSEBRemoveCargo` (a button).
+constexpr static const uint32_t EE_SCREENS_SK_REMOVE_CARGO = 84;
+
+/// The unit class list's `SetSortMode(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_SORT = 80;
+
+/// The unit class list's `mUnitTypes.clear()` and `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_CLEAR = 81;
+
+/// The unit class list's `AddUnitType(a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_ADD = 82;
+
+/// The unit class list's `mUnitTypes[a]`.
+constexpr static const uint32_t EE_SCREENS_SKOP_UL_TYPE_AT = 83;
+
+/// The cargo list's `mCargo.clear()` and `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_CLEAR = 84;
+
+/// The cargo list's `AddCargo((EEUnit*)a)`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_ADD = 85;
+
+/// The cargo list's `RemoveSelected()`.
+constexpr static const uint32_t EE_SCREENS_SKOP_CARGO_REMOVE = 86;
+
+/// The rotation button's `GetAngle()` (its `f32` bits).
+constexpr static const uint32_t EE_SCREENS_SKOP_ROTATION_ANGLE = 87;
+
+/// The unit class `a`'s field: `b` 0 `mNameStringID`, 1 `mEpoch`, 2 `mFamily`.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_CLASS = 112;
+
+/// A list box's `InsertLine(UWideString(a bytes), b, UILBNoSort)`.
+constexpr static const uint32_t EE_SCREENS_SH_LIST_INSERT_BYTES = 113;
+
+/// A list box's line `a` (`GetData(a)`) copied into the buffer `b` (4500 bytes, NUL-ended).
+constexpr static const uint32_t EE_SCREENS_SH_LIST_LINE = 114;
+
+/// The unit tab's `SelectUnitType(the form's mouse location)`.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_SELECT_TYPE = 115;
+
+/// `UIControl::sEnterKey->GetValue()`.
+constexpr static const uint32_t EE_SCREENS_SH_ENTER_KEY = 116;
+
+/// The unit `a`'s class name string id << 32 | its unit id.
+constexpr static const uint32_t EE_SCREENS_SH_UNIT_NAME_AND_ID = 117;
+
+/// `EESEARust(kSEADeleteUnit, NULL, a)`, run and released.
+constexpr static const uint32_t EE_SCREENS_SH_DELETE_UNIT = 118;
+
+/// The bitmap `a`'s `SetRotation(f[0])`.
+constexpr static const uint32_t EE_SCREENS_SH_BITMAP_ROTATION = 119;
+
+/// Turns the placement ghosts (`a` 1) or the selected units (0) that can turn to yaw `f[0]`; -> 1 when there are
+/// ghosts (`a` 2: asks only).
+constexpr static const uint32_t EE_SCREENS_SH_ROTATE = 120;
+
+/// The keyboard key `a` (0 comma, 1 period): 1 just pressed, 2 just released, 0 else; `<< 8` `GetEntity`'s result.
+constexpr static const uint32_t EE_SCREENS_SH_KEY = 121;
+
+/// The shell's own virtual `a` (`EE_SCREENS_SV_*`, through its vtable).
+constexpr static const uint32_t EE_SCREENS_SH_SELF = 122;
+
+/// `CaptureKeyboard()` (`a` 1) or `ReleaseCapturedKeyboard()` (0).
+constexpr static const uint32_t EE_SCREENS_SH_KEYBOARD = 123;
+
+/// `SetAlwaysDirty(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SH_ALWAYS_DIRTY = 124;
+
+/// The scenario editor's button texture (`GetButtonTexture()`).
+constexpr static const uint32_t EE_SCREENS_SH_EDITOR_TEXTURE = 125;
 
 /// A slot of the random map's table: the human's, the computer's, or a closed one.
 constexpr static const uint32_t EE_SCREENS_SP_HUMAN = 0;
@@ -10599,6 +10681,9 @@ struct EeScreensUnitHack;
 
 /// Every effect type (`EESETSEffect::mTypes`): no effect, object, player, trigger, media, game, AI.
 struct EffectTypes;
+
+/// `EEUIFSEBRotation`: the placement rotation (left click one step forward, right click back; comma and period).
+struct EeFormationRotation;
 
 /// One tool bar button (0x4c47b0): its id, its location, the normal and pressed corners, its help string.
 struct ToolbarButton;
@@ -12862,6 +12947,9 @@ const char *ee_screens_shell_name(const EeScreensShell *s);
 /// # Safety
 /// `s` is NULL or a shell made by `ee_screens_shell_new`, not used again.
 void ee_screens_shell_free(EeScreensShell *s);
+
+/// `sUnitTypeMode` (the unit tab's host).
+int32_t ee_screens_shell_unit_type_mode();
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);

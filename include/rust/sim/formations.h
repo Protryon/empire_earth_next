@@ -7,9 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// A `GETransformation`'s rotation part.
-struct EeFormationRotation;
-
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
 

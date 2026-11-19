@@ -47,6 +47,9 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EESEARust.h"
 #include "ee/EEUIFSEMap.h"
+#include "lle/Input System.h"
+#include "ee/EEGhostUnit.h"
+#include "ee/EESEUnit.h"
 #include "ee/EEUIShell.h"
 
 int64_t EEUIShellButton::BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF)
@@ -139,6 +142,38 @@ long EEUIShellList::DrawBars(const uint32_t* inLines, size_t inCount)
 static EETechTree* EEShellTree()
 {
     return gUIManager->GetScenarioEditorForm()->GetPlayerScreen()->GetCurrentPlayer()->GetTechTree();
+}
+
+// Turns every placement ghost (inGhosts) or selected unit whose class can turn to the yaw inAngle (once
+// EEUIFSEBRotation's RotateGhosts and RotateSelection)
+static void EEShellRotate(UIControl* inControl, bool inGhosts, float inAngle)
+{
+    GETransformation theTransformation;
+    if (inGhosts) {
+        gWorld.mGhostUnitsLock->Enter();
+        unsigned long theCount = gWorld.GetNumGhostUnits();
+        for (unsigned long i = 0; i < theCount; i++) {
+            EEGhostUnit* theGhost = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[i]);
+            if (!(gUnitClassTable[theGhost->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f))
+                continue;
+            theTransformation = theGhost->mTransformation;
+            theTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f);
+            theGhost->mTransformation = theTransformation;
+        }
+        gWorld.mGhostUnitsLock->Leave();
+        return;
+    }
+    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inControl->GetForm());
+    unsigned long theCount = theEditor->GetSelectedUnitCount();
+    for (unsigned long i = 0; i < theCount; i++) {
+        EEUnit* theUnit = theEditor->GetSelectedUnit(i);
+        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
+        if (theComplexUnit == NULL || !(theUnit->mUnitClass->mAngularAcceleration > 0.0f))
+            continue;
+        theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
+        theTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f);
+        theComplexUnit->SetTransformation(theTransformation, true);
+    }
 }
 
 // the control's text (inWhich 0: its own GEText, 1: its label's)
@@ -253,7 +288,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_MAP_CREATE: reinterpret_cast<EEUIFSEMap*>(a)->CreateMap(); break;
     case EE_SCREENS_SH_NEW_BITMAP: {
         GEBitmap* theBitmap = new GEBitmap;
-        theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), gScreenIndex);
+        theBitmap->SetTexture(reinterpret_cast<GETexture*>(a), b != 0 ? c->GetForm()->GetManager()->GetScreen() : gScreenIndex);
         return (int64_t)theBitmap;
     }
     case EE_SCREENS_SH_BITMAP_COORDS:
@@ -322,6 +357,46 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         break;
     case EE_SCREENS_SH_TECH_BARS:
         return static_cast<EEUIShellList*>(c)->DrawBars(reinterpret_cast<const uint32_t*>(a), (size_t)b);
+    // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
+    case EE_SCREENS_SH_UNIT_CLASS: {
+        EEUnitClass* theClass = gUnitClassTable[(long)a];
+        return b == 0 ? theClass->mNameStringID : b == 1 ? theClass->mEpoch : theClass->mFamily;
+    }
+    case EE_SCREENS_SH_LIST_INSERT_BYTES: {
+        UILBNoSort<UWideString> theNoSort;
+        static_cast<UILBString*>(c)->InsertLine(UWideString(reinterpret_cast<const char*>(a)), (unsigned long)b, theNoSort);
+        break;
+    }
+    case EE_SCREENS_SH_LIST_LINE: {
+        const char* theLine = static_cast<UILBString*>(c)->GetData((unsigned long)a);
+        strncpy(reinterpret_cast<char*>(b), theLine, 4499);
+        reinterpret_cast<char*>(b)[4499] = 0;
+        break;
+    }
+    case EE_SCREENS_SH_UNIT_SELECT_TYPE:
+        static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetUnitScreen()->SelectUnitType(c->GetForm()->GetMouseLocation());
+        break;
+    case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
+    case EE_SCREENS_SH_UNIT_NAME_AND_ID: {
+        EEUnit* theUnit = reinterpret_cast<EEUnit*>(a);
+        return (int64_t)theUnit->mUnitClass->mNameStringID << 32 | (uint32_t)theUnit->GetUnitID();
+    }
+    case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(kSEADeleteUnit, NULL, (int32_t)a))->Dereference(); break;
+    case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
+    case EE_SCREENS_SH_ROTATE:
+        if (a == 2)
+            return gWorld.GetNumGhostUnits() > 0;
+        EEShellRotate(c, a != 0, f[0]);
+        break;
+    case EE_SCREENS_SH_KEY: {
+        ISEntity* theKey;
+        long theResult = gISKeyboard->GetEntity(a == 0 ? kKeyComma : kKeyPeriod, theKey);
+        return (int64_t)theResult << 8 | (theKey->JustPressed() ? 1 : theKey->JustUnpressed() ? 2 : 0);
+    }
+    case EE_SCREENS_SH_SELF: return EEUIShell::Of(c)->SelfCall((uint32_t)a);
+    case EE_SCREENS_SH_KEYBOARD: EEUIShell::Of(c)->Keyboard(a != 0); break;
+    case EE_SCREENS_SH_ALWAYS_DIRTY: c->SetAlwaysDirty(a != 0); break;
+    case EE_SCREENS_SH_EDITOR_TEXTURE: return (int64_t) static_cast<EEUIFScenarioEditor*>(c->GetForm())->GetButtonTexture();
     // the game's
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->mScreens[a]->RefreshControls(); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->RefreshScreen(); break;

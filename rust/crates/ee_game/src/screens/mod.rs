@@ -315,6 +315,7 @@ pub mod shells;
 mod shells_ffi;
 pub mod shells_editor;
 pub mod shells_tech;
+pub mod shells_unit;
 pub mod single_player;
 mod single_player_ffi;
 pub mod splash;

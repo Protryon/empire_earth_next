@@ -61,6 +61,7 @@
 #include "ee/EESELoadThread.h"
 #include "ee/EEMiniMap.h"
 #include "rust/game/screens.h"
+#include "ee/EEUIShell.h"
 
 
 // cdecl helpers of other units (provisional names; types inferred)
@@ -81,486 +82,12 @@ extern unsigned long& gTexturePixelDepth;
 
 
 
-// The unit tab's list of unit classes (RTTI EEUIFSELBUnitList > UILBString; vtable 0x444b30; sizeof 0x154):
-// mUnitTypes holds the class index of each line, sorted by mCompare (by name, by epoch, by layer)
-// (provisional names)
-class EEUIFSELBUnitList : public UILBString {
-public:
-    EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont, bool inAutoSelect,
-                      const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                      unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUIFSELBUnitList() {}
-    virtual long UpdateKeyboard();          // +0x7c 0x199e81
-    virtual void ButtonUp();                // +0xa4 0x199bc9
-    void AddUnitType(long inUnitType);
-    void SetSortMode(long inMode);
-
-    std::vector<long> mUnitTypes;           // +0x13c
-    long mSortMode;                         // +0x14c 0 name, 1 epoch, 2 layer
-    bool (*mCompare)(long inLeft, long inRight);   // +0x150
-};
-
-// The cargo of the selected units (RTTI EEUIFSELBCargoList > UILBString; vtable 0x444bf0; sizeof 0x14c)
-class EEUIFSELBCargoList : public UILBString {
-public:
-    EEUIFSELBCargoList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont, bool inAutoSelect,
-                       const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                       unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUIFSELBCargoList() {}
-    void AddCargo(EEUnit* inUnit);          // 0x199f74 (sorted by name)
-    void RemoveSelected();
-
-    std::vector<EEUnitHandle<EEUnit> > mCargo;   // +0x13c (the carried units shown; handles since R5a.4, the vector's order kept)
-};
-
-// One of the six unit type buttons (RTTI EEUIFSEBUnitType > UIRadioButton; vtable 0x444cb0; id 0x406..0x40b)
-class EEUIFSEBUnitType : public UIRadioButton {
-public:
-    EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap* inFocused, GEBitmap* inDown,
-                     const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                     unsigned long inIndex, unsigned long inBorderThickness, bool inIsChecked);
-    virtual ~EEUIFSEBUnitType() {}
-    virtual void Check();                   // +0x94 0x19a1ae (sets the global unit type mode)
-};
-
-// The rotation button (RTTI EEUIFSEBRotation > UIButton; vtable 0x444d50; sizeof 0x11c; id 0x3f5): left click turns
-// one way, right click the other; eight steps of 45 degrees
-class EEUIFSEBRotation : public UIButton {
-public:
-    EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
-                     const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                     unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUIFSEBRotation();
-    virtual long UpdateKeyboard();          // +0x7c 0x19a728
-    virtual void ButtonUp();                // +0x8c 0x19a515
-    virtual long MouseLButtonDown();        // +0x34 0x19a5ba
-    virtual long MouseRButtonDown();        // +0x44 0x19a5ca
-    // +0x48 (ICF-folded into EEUIBUpgrade::MouseLButtonUp 0x256949)
-    virtual long MouseRButtonUp() { return UIButton::MouseLButtonUp(); }
-    float GetAngle();
-    void UpdateBitmaps();
-    void RotateGhosts();
-    void RotateSelection();
-
-    GEBitmap* mBitmaps[4];                  // +0x104 (straight, diagonal) x (normal, pressed), flat
-    long mRotation;                         // +0x114 0..7
-    long mDirection;                        // +0x118 +1/-1 while a button is down
-};
-
-// The remove cargo button (RTTI EEUIFSEBRemoveCargo > UIButton; vtable 0x444de8; id 0x3f4)
-class EEUIFSEBRemoveCargo : public UIButton {
-public:
-    EEUIFSEBRemoveCargo(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
-                        const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                        unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUIFSEBRemoveCargo() {}
-    virtual void ButtonUp();                // +0x8c 0x19a880
-};
-
 // The sort radio buttons' event (RTTI EEUIFSEESortUnitList > UIEvent; vtable 0x444e88; new 0xc): an EESEERust
 // (ee_screens editor_events.rs)
 
-// the unit type mode the six buttons select (EEUIFSEBUnitType::Check; 0x531ff0) (provisional name)
-static long sUnitTypeMode;
-
 extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 
-static bool EESEUnitNameLess(long inLeft, long inRight);
-static bool EESEUnitEpochLess(long inLeft, long inRight);
-static bool EESEUnitLayerLess(long inLeft, long inRight);
-
-// Creates the unit tab's unit class list, sorted by name
-EEUIFSELBUnitList::EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont,
-                                     bool inAutoSelect, const GE2DPoint& inLocation, unsigned long inWidth,
-                                     unsigned long inHeight, UIForm* inForm, unsigned long inIndex,
-                                     unsigned long inBorderThickness)
-    : UILBString(inID, inStrings, inFont, inAutoSelect, GERectangle(inLocation, (float)inWidth, (float)inHeight),
-                 inForm, inIndex, inBorderThickness),
-      mSortMode(kUnitSortAlpha)
-{
-    this->mCompare = EESEUnitNameLess;
-}
-
-// Picks the clicked unit class for placement on the map, then fires the list's button-up event
-void EEUIFSELBUnitList::ButtonUp()
-{
-    EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->GetForm()))->GetUnitScreen();
-    theScreen->SelectUnitType(this->GetForm()->GetMouseLocation());
-    this->FireTriggerEvent(kControlTriggerButtonUp);
-}
-
-// Inserts a unit class at its sorted place, prefixed with its family or epoch number unless sorted by name
-void EEUIFSELBUnitList::AddUnitType(long inUnitType)
-{
-    UWideString theText;
-    UWideString theName;
-    unsigned long theCount = this->mUnitTypes.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++) {
-        if (this->mCompare(inUnitType, this->mUnitTypes[i]))
-            break;
-    }
-    if (this->mSortMode == kUnitSortAlpha)
-        gResource->GetString(gUnitClassTable[inUnitType]->mNameStringID, theText);
-    else {
-        long theValue;
-        if (this->mSortMode == kUnitSortFamily)
-            theValue = gUnitClassTable[inUnitType]->mFamily;
-        else
-            theValue = gUnitClassTable[inUnitType]->mEpoch + 1;
-        sprintf(theText, "%ld: ", theValue);
-        gResource->GetString(gUnitClassTable[inUnitType]->mNameStringID, theName);
-        theText += theName;
-    }
-    UILBNoSort<UWideString> theTemp1;
-    this->InsertLine(theText, i, theTemp1);
-    this->mUnitTypes.insert(this->mUnitTypes.begin() + i, inUnitType);
-}
-
-// Picks the comparator for later inserts (by epoch, by family, else by name); lines already listed stay
-void EEUIFSELBUnitList::SetSortMode(long inMode)
-{
-    if (this->mSortMode == inMode)
-        return;
-    switch (inMode) {
-    case kUnitSortEpoch:
-        this->mCompare = EESEUnitEpochLess;
-        break;
-    case kUnitSortFamily:
-        this->mCompare = EESEUnitLayerLess;
-        break;
-    default:
-        this->mCompare = EESEUnitNameLess;
-        break;
-    }
-    this->mSortMode = inMode;
-}
-
-// Orders two unit classes by epoch, then by name
-static bool EESEUnitEpochLess(long inLeft, long inRight)
-{
-    if (gUnitClassTable[inLeft]->mEpoch > gUnitClassTable[inRight]->mEpoch)
-        return false;
-    if (gUnitClassTable[inLeft]->mEpoch < gUnitClassTable[inRight]->mEpoch)
-        return true;
-    return EESEUnitNameLess(inLeft, inRight);
-}
-
-// Orders two unit classes by their displayed names
-static bool EESEUnitNameLess(long inLeft, long inRight)
-{
-    UWideString theLeft;
-    UWideString theRight;
-    gResource->GetString(gUnitClassTable[inLeft]->mNameStringID, theLeft);
-    gResource->GetString(gUnitClassTable[inRight]->mNameStringID, theRight);
-    return theLeft < theRight ? true : false;
-}
-
-// Orders two unit classes by family, then by name
-static bool EESEUnitLayerLess(long inLeft, long inRight)
-{
-    if (gUnitClassTable[inLeft]->mFamily > gUnitClassTable[inRight]->mFamily)
-        return false;
-    if (gUnitClassTable[inLeft]->mFamily < gUnitClassTable[inRight]->mFamily)
-        return true;
-    return EESEUnitNameLess(inLeft, inRight);
-}
-
-// Handles the list's keys; Enter picks the selected unit class for placement
-long EEUIFSELBUnitList::UpdateKeyboard()
-{
-    long theResult = UILBString::UpdateKeyboard();
-    if (UIControl::sEnterKey->GetValue()) {
-        EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->GetForm()))->GetUnitScreen();
-        theScreen->SelectUnitType(this->GetForm()->GetMouseLocation());
-    }
-    return theResult;
-}
-
-// Creates the unit tab's (empty) cargo list
-EEUIFSELBCargoList::EEUIFSELBCargoList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont,
-                                       bool inAutoSelect, const GE2DPoint& inLocation, unsigned long inWidth,
-                                       unsigned long inHeight, UIForm* inForm, unsigned long inIndex,
-                                       unsigned long inBorderThickness)
-    : UILBString(inID, inStrings, inFont, inAutoSelect, GERectangle(inLocation, (float)inWidth, (float)inHeight),
-                 inForm, inIndex, inBorderThickness)
-{
-}
-
-// Inserts a carried unit into the cargo list, keeping the lines sorted by unit name
-void EEUIFSELBCargoList::AddCargo(EEUnit* inUnit)
-{
-    UWideString theName;
-    gResource->GetString(inUnit->mUnitClass->mNameStringID, theName);
-    unsigned long theIndex = 0;
-    if (this->GetLineCount() == 0)
-        this->mCargo.insert(this->mCargo.begin(), inUnit);
-    else {
-        std::vector<EEUnitHandle<EEUnit> >::iterator it;
-        for (it = this->mCargo.begin(); it != this->mCargo.end(); it++) {
-            if (theName < this->mData[theIndex])
-                break;
-            theIndex++;
-        }
-        this->mCargo.insert(it, inUnit);
-    }
-    UILBNoSort<UWideString> theTemp2;
-    this->InsertLine(theName, theIndex, theTemp2);
-}
-
-// Deletes the unit on the selected cargo line from the map (posts a delete-unit action)
-void EEUIFSELBCargoList::RemoveSelected()
-{
-    unsigned long theSelection;
-    if (this->GetLineCount() > 0 && this->GetCurrentSelection(theSelection) == kErrorOK) {
-        EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, this->mCargo[theSelection]->GetUnitID());
-        theAction->Dereference();
-    }
-}
-
-// Creates one of the six unit type buttons from its normal and pressed bitmaps
-EEUIFSEBUnitType::EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap* inFocused, GEBitmap* inDown,
-                                   const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
-                                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness,
-                                   bool inIsChecked)
-    : UIRadioButton(inID, UWideString(""), gU531930, GERectangle(inLocation, (float)inWidth, (float)inHeight),
-                    inForm, inIndex, inBorderThickness, true, inIsChecked, false)
-{
-    this->SetUpCheckedBitmap(inDown);
-    this->SetDownCheckedBitmap(inDown);
-    this->SetDownUncheckedBitmap(inDown);
-    this->SetUpUncheckedBitmap(inUp);
-    this->SetFocusedBitmap(inFocused);
-    this->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
-}
-
-// Sets the unit palette (land, air, naval, structures, heroes or resources) from the button's id, then checks it
-void EEUIFSEBUnitType::Check()
-{
-    switch (this->GetId()) {
-    case 0x406:
-        sUnitTypeMode = kUnitPaletteLandUnits;
-        break;
-    case 0x407:
-        sUnitTypeMode = kUnitPaletteAirUnits;
-        break;
-    case 0x408:
-        sUnitTypeMode = kUnitPaletteNavalUnits;
-        break;
-    case 0x409:
-        sUnitTypeMode = kUnitPaletteStructures;
-        break;
-    case 0x40a:
-        sUnitTypeMode = kUnitPaletteHeroes;
-        break;
-    case 0x40b:
-        sUnitTypeMode = kUnitPaletteResources;
-        break;
-    }
-    UIRadioButton::Check();
-}
-
-// NEAR: differs in the texture coordinate block
-// Creates the rotation button with its straight and diagonal arrow bitmaps (normal and pressed), at step 0
-EEUIFSEBRotation::EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
-                                   const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
-                                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-    : UIButton(inID, inNormal, inFocused, inPressed, GERectangle(inLocation, (float)inWidth, (float)inHeight),
-               inForm, inIndex, inBorderThickness)
-{
-    GETexture* theTexture = static_cast<EEUIFScenarioEditor*>(inForm)->GetButtonTexture();
-    float theSize = (float)theTexture->GetWidth();
-    unsigned long i;
-    long j;
-
-    this->mRotation = 0;
-    this->mDirection = 0;
-    for (j = 0; j < 4; j++)
-        this->mBitmaps[j] = new GEBitmap;
-    for (i = 0; i < 2; i++) {
-        this->mBitmaps[i * 2]->SetTexture(theTexture, inForm->GetManager()->GetScreen());
-        this->mBitmaps[i * 2 + 1]->SetTexture(theTexture, inForm->GetManager()->GetScreen());
-        if (i & 1) {
-            this->mBitmaps[i * 2]->SetTextureCoordinates(
-                GETextureCoordinate(100.0f / theSize, 0.0f / theSize), GETextureCoordinate(150.0f / theSize, 0.0f / theSize),
-                GETextureCoordinate(100.0f / theSize, 50.0f / theSize), GETextureCoordinate(150.0f / theSize, 50.0f / theSize));
-            this->mBitmaps[i * 2 + 1]->SetTextureCoordinates(
-                GETextureCoordinate(150.0f / theSize, 0.0f / theSize), GETextureCoordinate(200.0f / theSize, 0.0f / theSize),
-                GETextureCoordinate(150.0f / theSize, 50.0f / theSize), GETextureCoordinate(200.0f / theSize, 50.0f / theSize));
-        } else {
-            this->mBitmaps[i * 2]->SetTextureCoordinates(
-                GETextureCoordinate(0.0f / theSize, 0.0f / theSize), GETextureCoordinate(50.0f / theSize, 0.0f / theSize),
-                GETextureCoordinate(0.0f / theSize, 50.0f / theSize), GETextureCoordinate(50.0f / theSize, 50.0f / theSize));
-            this->mBitmaps[i * 2 + 1]->SetTextureCoordinates(
-                GETextureCoordinate(50.0f / theSize, 0.0f / theSize), GETextureCoordinate(100.0f / theSize, 0.0f / theSize),
-                GETextureCoordinate(50.0f / theSize, 50.0f / theSize), GETextureCoordinate(100.0f / theSize, 50.0f / theSize));
-        }
-        this->mBitmaps[i * 2]->SetXYScale(50.0f / theSize, 50.0f / theSize);
-        this->mBitmaps[i * 2 + 1]->SetXYScale(50.0f / theSize, 50.0f / theSize);
-    }
-    this->UpdateBitmaps();
-    this->SetAlwaysDirty(true);
-}
-
-// Destroys the rotation button, releasing its four arrow bitmaps
-EEUIFSEBRotation::~EEUIFSEBRotation()
-{
-    this->mBitmaps[0]->Dereference();
-    this->mBitmaps[1]->Dereference();
-    this->mBitmaps[2]->Dereference();
-    this->mBitmaps[3]->Dereference();
-}
-
-// Turns the placement one 45-degree step (wrapping 0..7) and rotates the ghosts if any, else the
-// selected units; then turns the arrow bitmaps to match
-void EEUIFSEBRotation::ButtonUp()
-{
-    this->mRotation += this->mDirection;
-    if (this->mRotation > 7)
-        this->mRotation = 0;
-    else if (this->mRotation < 0)
-        this->mRotation = 7;
-    float theAngle = (float)(unsigned long)(this->mRotation >> 1) * 1.5707964f;
-    for (long i = 0; i < 4; i++) {
-        this->mBitmaps[i]->SetRotation(theAngle);
-    }
-    if (gWorld.GetNumGhostUnits() > 0)
-        this->RotateGhosts();
-    else
-        this->RotateSelection();
-    this->UpdateBitmaps();
-    this->mDirection = 0;
-    UIButton::ButtonUp();
-}
-
-// Presses the button so its release turns one step forward
-long EEUIFSEBRotation::MouseLButtonDown()
-{
-    this->mDirection = 1;
-    return UIButton::MouseLButtonDown();
-}
-
-// Presses the button (as a left press) so its release turns one step back
-long EEUIFSEBRotation::MouseRButtonDown()
-{
-    this->mDirection = -1;
-    return UIButton::MouseLButtonDown();
-}
-
-// Returns the placement yaw in radians: 45 degrees at step 0, 45 degrees less per step (step 1 is 0)
-float EEUIFSEBRotation::GetAngle()
-{
-    float theAngle = 0.0f;
-    switch (this->mRotation) {
-    case 0:
-        theAngle = 0.78539819f;
-        break;
-    case 2:
-        theAngle = -0.78539819f;
-        break;
-    case 3:
-        theAngle = -1.5707964f;
-        break;
-    case 4:
-        theAngle = -2.3561945f;
-        break;
-    case 5:
-        theAngle = 3.1415927f;
-        break;
-    case 6:
-        theAngle = 2.3561945f;
-        break;
-    case 7:
-        theAngle = 1.5707964f;
-        break;
-    }
-    return theAngle;
-}
-
-// Shows the straight (even step) or diagonal (odd step) arrow bitmaps
-void EEUIFSEBRotation::UpdateBitmaps()
-{
-    unsigned long theKind = (this->mRotation & 1) * 2;
-    this->SetNormalBitmap(this->mBitmaps[theKind]);
-    this->SetPressedBitmap(this->mBitmaps[theKind + 1]);
-}
-
-// Turns every placement ghost whose class can turn to the button's angle
-void EEUIFSEBRotation::RotateGhosts()
-{
-    GETransformation theTransformation;
-    float theAngle = this->GetAngle();
-    gWorld.mGhostUnitsLock->Enter();
-    unsigned long theCount = gWorld.GetNumGhostUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEGhostUnit* theGhost = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[i]);
-        if (!(gUnitClassTable[theGhost->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f))
-            continue;
-        theTransformation = theGhost->mTransformation;
-        theTransformation.SetOrientationYPR(theAngle, 0.0f, 0.0f);
-        theGhost->mTransformation = theTransformation;
-    }
-    gWorld.mGhostUnitsLock->Leave();
-}
-
-// Lets the comma and period keys turn the placement back and forward like presses of the button
-long EEUIFSEBRotation::UpdateKeyboard()
-{
-    ISEntity* theKey;
-    gISKeyboard->GetEntity(kKeyComma, theKey);
-    if (theKey->JustPressed()) {
-        this->mDirection = -1;
-        this->ButtonDown();
-        this->CaptureKeyboard();
-    } else if (theKey->JustUnpressed()) {
-        this->ButtonUp();
-        this->ReleaseCapturedKeyboard();
-    }
-    long theResult = gISKeyboard->GetEntity(kKeyPeriod, theKey);
-    if (theKey->JustPressed()) {
-        this->mDirection = 1;
-        this->ButtonDown();
-        this->CaptureKeyboard();
-    } else if (theKey->JustUnpressed()) {
-        this->ButtonUp();
-        this->ReleaseCapturedKeyboard();
-    }
-    return theResult;
-}
-
-// Turns every selected unit whose class can turn to the button's angle
-void EEUIFSEBRotation::RotateSelection()
-{
-    GETransformation theTransformation;
-    float theAngle = this->GetAngle();
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->GetForm());
-    unsigned long theCount = theEditor->GetSelectedUnitCount();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theUnit = theEditor->GetSelectedUnit(i);
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit == NULL || !(theUnit->mUnitClass->mAngularAcceleration > 0.0f))
-            continue;
-        theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-        theTransformation.SetOrientationYPR(theAngle, 0.0f, 0.0f);
-        theComplexUnit->SetTransformation(theTransformation, true);
-    }
-}
-
-// Deletes the unit on the cargo list's selected line, then releases the button
-void EEUIFSEBRemoveCargo::ButtonUp()
-{
-    static_cast<EEUIFSELBCargoList*>(this->GetForm()->GetControlById(0x3f2))->RemoveSelected();
-    UIButton::ButtonUp();
-}
-
-// Creates the remove cargo button
-EEUIFSEBRemoveCargo::EEUIFSEBRemoveCargo(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused,
-    GEBitmap* inPressed, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-    unsigned long inIndex, unsigned long inBorderThickness)
-    : UIButton(inID, inNormal, inFocused, inPressed, GERectangle(inLocation, (float)inWidth, (float)inHeight),
-               inForm, inIndex, inBorderThickness)
-{
-}
+// (the unit tab's controls are shell kinds: ee_game shells_unit.rs)
 
 // The unit type buttons' cell width: a plain (non-folded) .rdata float in the original (0x444e7c), read by the ctor
 // only (provisional name)
@@ -645,8 +172,10 @@ UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, con
 {
     std::vector<UWideString> theNone;
     if (inKind == EE_SCREENS_SEPL_LIST_UNIT_TYPES)
-        return new EEUIFSELBUnitList(inID, theNone, inFont, false, inLocation, inWidth, inHeight, inForm, inIndex, 3);
-    return new EEUIFSELBCargoList(inID, theNone, inFont, false, inLocation, inWidth, inHeight, inForm, inIndex, 3);
+        return new EEUIShellList(EE_SCREENS_SK_UNIT_CLASS_LIST, {}, inID, theNone, inFont, false,
+                                 GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, 3);
+    return new EEUIShellList(EE_SCREENS_SK_CARGO_LIST, {}, inID, theNone, inFont, false,
+                             GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, 3);
 }
 
 
@@ -701,8 +230,15 @@ void SeunTypeButton(void** outMade, EEUIFScenarioEditor* inForm, UIEvent* inEven
     theNormal->SetXYScale(theXScale, theYScale);
     thePressed->SetXYScale(theXScale, theYScale);
     long theIndex = i[1];
-    EEUIFSEBUnitType* theButton = new EEUIFSEBUnitType(theIndex + 0x406, theNormal, NULL, thePressed, thePosition, 0x23,
-                                                       0x19, inForm, (unsigned long)i[0], 0, theIndex == 0);
+    UIRadioButton* theButton = new EEUIShellRadio(EE_SCREENS_SK_UNIT_TYPE_BUTTON, {}, theIndex + 0x406, UWideString(""),
+                                                  gU531930, GERectangle(thePosition, 35.0f, 25.0f), inForm,
+                                                  (unsigned long)i[0], 0, true, theIndex == 0, false);
+    theButton->SetUpCheckedBitmap(thePressed);
+    theButton->SetDownCheckedBitmap(thePressed);
+    theButton->SetDownUncheckedBitmap(thePressed);
+    theButton->SetUpUncheckedBitmap(theNormal);
+    theButton->SetFocusedBitmap(NULL);
+    theButton->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
     theButton->SetTriggerEvent(kControlTriggerButtonUp, inEvent);
     theButton->SetStringTableID((unsigned long)i[2]);
     inForm->AddControl(theButton, 6);
@@ -773,18 +309,19 @@ struct SeunPick {
     EETechTreeNode* mNode;
 };
 
-SeunPick SeunPickClass(EEUIFSELBUnitList* inList, long inPlayer, unsigned long inLine)
+SeunPick SeunPickClass(UIControl* inList, long inPlayer, unsigned long inLine)
 {
     SeunPick thePick;
     thePick.mPlayer = gWorld.GetPlayer(inPlayer);
-    EEUnitClass* theTypeClass = gUnitClassTable[inList->mUnitTypes[inLine]];
+    long theType = (long)EEUIShell::Op(inList, EE_SCREENS_SKOP_UL_TYPE_AT, inLine);
+    EEUnitClass* theTypeClass = gUnitClassTable[theType];
     long theTech;
     if (theTypeClass != NULL)
         theTech = theTypeClass->mTechnology;
     else
         theTech = 100000;
     thePick.mNode = thePick.mPlayer->GetTechTree()->Get(theTech);
-    thePick.mClass = gUnitClassTable[inList->mUnitTypes[inLine]];
+    thePick.mClass = gUnitClassTable[theType];
     return thePick;
 }
 
@@ -802,8 +339,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     EESEUnit* theTab = static_cast<EESEUnit*>(p[0]);
     UIForm* theForm = static_cast<UIForm*>(p[1]);
     UILBString* theList = static_cast<UILBString*>(p[0]);
-    EEUIFSELBUnitList* theUnitList = static_cast<EEUIFSELBUnitList*>(p[0]);
-    EEUIFSELBCargoList* theCargo = static_cast<EEUIFSELBCargoList*>(p[0]);
+    UIControl* theShell = static_cast<UIControl*>(p[0]);
     void** theOut = static_cast<void**>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEUN_OP_SORT_EVENT: *theOut = static_cast<UIEvent*>(new EESEERust(kSEESortUnitList)); return 0;
@@ -816,8 +352,8 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEUN_OP_REMOVE_CARGO: {
         UWideString theText;
         gResource->GetString(IDS_SE_REMOVE, theText);
-        EEUIFSEBRemoveCargo* t = new EEUIFSEBRemoveCargo(0x3f4, NULL, NULL, NULL, GE2DPoint(f[0], 707.0f), 100, 0x19,
-                                                         theForm, (unsigned long)i[0], 2);
+        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_REMOVE_CARGO, {}, 0x3f4, NULL, NULL, NULL,
+                                          GERectangle(GE2DPoint(f[0], 707.0f), 100.0f, 25.0f), theForm, (unsigned long)i[0], 2);
         t->SetText(theText, gSeplScreenFont);
         t->SetBgOpacity(1.0f);
         GEText* theGEText = t->GetGEText();
@@ -828,8 +364,8 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SEUN_OP_ROTATION: {
-        EEUIFSEBRotation* t = new EEUIFSEBRotation(0x3f5, NULL, NULL, NULL, GE2DPoint(500.0f, 633.0f), 0x32, 0x32,
-                                                   theForm, (unsigned long)i[0], 0);
+        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_ROTATION, {}, 0x3f5, NULL, NULL, NULL,
+                                          GERectangle(GE2DPoint(500.0f, 633.0f), 50.0f, 50.0f), theForm, (unsigned long)i[0], 0);
         t->SetStringTableID(IDS_ROTATE);
         theForm->AddControl(t, 6);
         *theOut = t;
@@ -955,8 +491,12 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
                                           GERectangle(0.0f, 0.0f, 255.0f, 255.0f), theTab->mPanelRectangle);
         return 0;
     }
-    case EE_SCREENS_SEUN_OP_ANGLE: f[0] = static_cast<EEUIFSEBRotation*>(p[0])->GetAngle(); return 0;
-    case EE_SCREENS_SEUN_OP_TYPE_MODE: return (int32_t)sUnitTypeMode;
+    case EE_SCREENS_SEUN_OP_ANGLE: {
+        uint32_t theBits = (uint32_t)EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_ROTATION_ANGLE);
+        memcpy(&f[0], &theBits, 4);
+        return 0;
+    }
+    case EE_SCREENS_SEUN_OP_TYPE_MODE: return ee_screens_shell_unit_type_mode();
     case EE_SCREENS_SEUN_OP_DIRTY: {
         EESEUnit* theShell = static_cast<EESEUnit*>(p[1]);
         theShell->mPanelRectangle.SetLeft(0.0f);
@@ -981,7 +521,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
             theTab->mBuildWall.Cancel();
         return 0;
     case EE_SCREENS_SEUN_OP_PLACE_INFO: {
-        SeunPick thePick = SeunPickClass(theUnitList, i[0], (unsigned long)i[1]);
+        SeunPick thePick = SeunPickClass(theShell, i[0], (unsigned long)i[1]);
         long theID = thePick.mPlayer->GetPlayerID();
         i[1] = !((theID != 0 || !thePick.mClass->mIsGaiaPlaceable) &&
                  (!(theID > 0) || !thePick.mClass->mIsPlayerPlaceable));
@@ -994,7 +534,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         return (int32_t)theID;
     }
     case EE_SCREENS_SEUN_OP_START_BUILD: {
-        SeunPick thePick = SeunPickClass(static_cast<EEUIFSELBUnitList*>(p[1]), i[0], (unsigned long)i[1]);
+        SeunPick thePick = SeunPickClass(static_cast<UIControl*>(p[1]), i[0], (unsigned long)i[1]);
         if (i[2] == 0) {
             theTab->mBuildWall.mTechnology = thePick.mNode->mData->mID;
             theTab->mBuildWall.Initialize(thePick.mPlayer->GetPlayerID());
@@ -1007,14 +547,13 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SEUN_OP_POST_GHOST: {
-        EEUIFSELBUnitList* theTypes = static_cast<EEUIFSELBUnitList*>(p[1]);
-        SeunEditor(p[0])->GetLoadThread()->Post402(reinterpret_cast<void*>(theTypes->mUnitTypes[(unsigned long)i[0]]),
+        long theType = (long)EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_UL_TYPE_AT, (uint32_t)i[0]);
+        SeunEditor(p[0])->GetLoadThread()->Post402(reinterpret_cast<void*>(theType),
                                                reinterpret_cast<void*>((long)i[1]));
         return 0;
     }
     case EE_SCREENS_SEUN_OP_CARGO_CLEAR:
-        theCargo->mCargo.clear();
-        theCargo->DeleteAllEntries();
+        EEUIShell::Op(theShell, EE_SCREENS_SKOP_CARGO_CLEAR);
         return 0;
     case EE_SCREENS_SEUN_OP_SELECTED_COUNT: return (int32_t)SeunEditor(p[1])->GetSelectedUnitCount();
     case EE_SCREENS_SEUN_OP_CARGO_COUNT: {
@@ -1022,14 +561,14 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         return theUnit != NULL ? (int32_t)theUnit->GetNumCargoUnits() : 0;
     }
     case EE_SCREENS_SEUN_OP_CARGO_ADD:
-        theCargo->AddCargo(SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]]);
+    {
+        EEUnit* theUnit = SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]];
+        EEUIShell::Op(theShell, EE_SCREENS_SKOP_CARGO_ADD, (int64_t)theUnit);
+    }
         return 0;
-    case EE_SCREENS_SEUN_OP_LIST_SORT: theUnitList->SetSortMode(i[0]); return 0;
-    case EE_SCREENS_SEUN_OP_LIST_EMPTY:
-        theUnitList->mUnitTypes.clear();
-        theUnitList->DeleteAllEntries();
-        return 0;
-    case EE_SCREENS_SEUN_OP_LIST_ADD: theUnitList->AddUnitType(i[0]); return 0;
+    case EE_SCREENS_SEUN_OP_LIST_SORT: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_SORT, i[0]); return 0;
+    case EE_SCREENS_SEUN_OP_LIST_EMPTY: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_CLEAR); return 0;
+    case EE_SCREENS_SEUN_OP_LIST_ADD: EEUIShell::Op(theShell, EE_SCREENS_SKOP_UL_ADD, i[0]); return 0;
     case EE_SCREENS_SEUN_OP_IN_VIEW: return gViewport.GetViewRectangle().Contains(GE2DPoint(f[0], f[1])) ? 1 : 0;
     case EE_SCREENS_SEUN_OP_MOUSE: {
         int32_t theButtons = 0;
@@ -1094,7 +633,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         theAction->Dereference();
         return 0;
     }
-    case EE_SCREENS_SEUN_OP_ROTATION_KEYS: static_cast<EEUIFSEBRotation*>(p[0])->UpdateKeyboard(); return 0;
+    case EE_SCREENS_SEUN_OP_ROTATION_KEYS: static_cast<UIControl*>(p[0])->UpdateKeyboard(); return 0;
     }
     return 0;
 }

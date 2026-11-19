@@ -80,11 +80,11 @@ const BY_TECH: i64 = 0x14d;
 /// "no tech".
 const NONE: i64 = 100_000;
 
-pub(crate) fn make(kind: u32, _args: &[i64]) -> Option<Box<dyn Kind>> {
-    (kind == EE_SCREENS_SK_TECH_LIST).then(|| {
-        Box::new(TechList { techs: RefCell::new(Vec::new()), dependents: RefCell::new(Vec::new()), id: Cell::new(0) })
-            as Box<dyn Kind>
-    })
+pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
+    if kind != EE_SCREENS_SK_TECH_LIST {
+        return crate::screens::shells_unit::make(kind, args);
+    }
+    Some(Box::new(TechList { techs: RefCell::new(Vec::new()), dependents: RefCell::new(Vec::new()), id: Cell::new(0) }))
 }
 
 pub(crate) struct TechList {
