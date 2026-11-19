@@ -4589,6 +4589,12 @@ constexpr static const uint32_t EE_SCREENS_GA_EDITOR_PAINT = 25;
 /// `EESEARust`: the editor's whole actions (`mAction`).
 constexpr static const uint32_t EE_SCREENS_GA_EDITOR_WHOLE = 26;
 
+/// `EEAUndo`, `EEARedo` (the editor's Undo and Redo buttons' actions, round 2 of the UI cluster): the UI thread's
+/// undo or redo list's last action undone or run again (`EEUserInterface::Undo`, `Redo`; actions.rs).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_UNDO = 27;
+
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_REDO = 28;
+
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_INT = 0;
 
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_FLOAT = 1;

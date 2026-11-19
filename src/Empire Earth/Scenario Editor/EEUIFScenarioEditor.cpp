@@ -70,8 +70,6 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EESEARust.h"
 #include "lle/UIFullBackground.h"
-#include "ee/EEUIFSEUndo.h"
-#include "ee/EEUIFSERedo.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEUIFSEElevation.h"
@@ -330,6 +328,23 @@ extern "C" int32_t ee_screenscpp_sefm(uint32_t inOp, void* const* p, int32_t* i,
     return EEUIFScenarioEditor::Host(inOp, p, i, f);
 }
 
+// the Undo and Redo buttons (the original EEUIFSEUndo 0x1a4dbe and EEUIFSERedo 0x1a4cbb, 65x25): a press posts the
+// button's action (EEAUndo, EEARedo: the UI thread's undo or redo, ee_screens game_actions.rs)
+class EEUIFSEActionButton : public UIButton {
+public:
+    EEUIFSEActionButton(unsigned long inId, uint32_t inKind, const GE2DPoint& inPosition, UIForm* inForm, unsigned long inIndex)
+        : UIButton(inId, NULL, NULL, NULL, GERectangle(inPosition, 65.0f, 25.0f), inForm, inIndex, 0),
+          mAction(new EEARust(inKind)) {}
+    virtual ~EEUIFSEActionButton() { this->mAction->Dereference(); }
+protected:
+    virtual void ButtonUp()
+    {
+        gUserInterface->PostAction(this->mAction);
+        UIButton::ButtonUp();
+    }
+    EEARust* mAction;
+};
+
 int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(p[1]);
@@ -429,10 +444,10 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
     case EE_SCREENS_SEFM_OP_UNDO_REDO: {
         UIButton* t;
         if (i[0] == 0) {
-            t = new EEUIFSEUndo(0, 0, 0, 0, GE2DPoint(f[0], f[1]), 65, 25, theForm, (unsigned long)i[1]);
+            t = new EEUIFSEActionButton(0, kEEAEditorUndo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
             gResource->GetString(IDS_UNDO, theText);
         } else {
-            t = new EEUIFSERedo(1, 0, 0, 0, GE2DPoint(f[0], f[1]), 65, 25, theForm, (unsigned long)i[1]);
+            t = new EEUIFSEActionButton(1, kEEAEditorRedo, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[1]);
             gResource->GetString(IDS_REDO, theText);
         }
         t->SetText(theText, gU531930);

@@ -17,8 +17,6 @@
 class EEUIMiniMap;
 class UIFullBackground;
 class UIButton;
-class EEUIFSEUndo;
-class EEUIFSERedo;
 class EEAScroll;
 class EESELoadThread;
 class EESEPlayerScreen;

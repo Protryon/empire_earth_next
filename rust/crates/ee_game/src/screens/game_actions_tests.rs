@@ -282,3 +282,15 @@ fn the_load_text_the_paint_and_the_whole_action_run_their_parts() {
     assert_eq!(h.calls, vec![GaEditorCall::WholeRun(action), GaEditorCall::WholeFree(action)]);
     assert!(r.mAction.is_null() && h.log.is_empty());
 }
+
+#[test]
+fn the_editor_undo_and_redo_run_the_lists_and_free_nothing() {
+    for (kind, undo) in [(EE_SCREENS_GA_EDITOR_UNDO, true), (EE_SCREENS_GA_EDITOR_REDO, false)] {
+        let mut r = EeScreensGaFields::zeroed(kind);
+        let mut h = editor_script();
+        unsafe { Ga::new(&mut r, &mut h) }.run();
+        unsafe { Ga::new(&mut r, &mut h) }.free();
+        assert_eq!(h.calls, vec![GaEditorCall::UndoRedo(undo)]);
+        assert!(h.log.is_empty());
+    }
+}

@@ -161,8 +161,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 1a3f10 1a4470 Empire Earth/Scenario Editor/EEUIFSEPaint.cpp
 1a4470 1a4c00 Empire Earth/Scenario Editor/EEUIFSEPaintElevation.cpp
 1a4c00 1a4cbb Empire Earth/Scenario Editor/EEUIFSERBBrush.cpp
-1a4cbb 1a4dbe Empire Earth/Scenario Editor/EEUIFSERedo.cpp
-1a4dbe 1a4e99 Empire Earth/Scenario Editor/EEUIFSEUndo.cpp
 1a4e99 1a5529 Empire Earth/Scenario Editor/EEUIFSEUpgradePanel.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp

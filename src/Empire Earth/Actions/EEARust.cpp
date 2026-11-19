@@ -78,7 +78,8 @@ static_assert(kEEAChat == EE_SCREENS_GA_CHAT && kEEABoot == EE_SCREENS_GA_BOOT &
                   kEEAEditorClick == EE_SCREENS_GA_EDITOR_CLICK && kEEAEditorLasso == EE_SCREENS_GA_EDITOR_LASSO &&
                   kEEATriggerClick == EE_SCREENS_GA_TRIGGER_CLICK && kEEATriggerLasso == EE_SCREENS_GA_TRIGGER_LASSO &&
                   kEEALoadText == EE_SCREENS_GA_LOAD_TEXT && kEEAEditorPaint == EE_SCREENS_GA_EDITOR_PAINT &&
-                  kEEAEditorWhole == EE_SCREENS_GA_EDITOR_WHOLE,
+                  kEEAEditorWhole == EE_SCREENS_GA_EDITOR_WHOLE && kEEAEditorUndo == EE_SCREENS_GA_EDITOR_UNDO &&
+                  kEEAEditorRedo == EE_SCREENS_GA_EDITOR_REDO,
               "ee/EEARust.h's kinds are game_actions.rs's");
 static_assert(kMessageSelectUnit == EE_SCREENS_GA_MSG_SELECT_UNIT && kMessageAddUnitToSelectedGroup == EE_SCREENS_GA_MSG_ADD_UNIT &&
                   kMessageUnselectAllUnits == EE_SCREENS_GA_MSG_UNSELECT_ALL && kMessageAttackUnit == EE_SCREENS_GA_MSG_ATTACK &&

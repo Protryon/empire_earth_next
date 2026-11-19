@@ -50,6 +50,10 @@ impl GaHost for Host {
             GaEditorCall::PaintFree(paint) => unsafe { sea::ee_screens_sea_paint_free(paint) },
             GaEditorCall::WholeRun(action) => unsafe { sew::ee_screens_sew_run(action) },
             GaEditorCall::WholeFree(action) => unsafe { sew::ee_screens_sew_free(action) },
+            GaEditorCall::UndoRedo(undo) => {
+                use crate::screens::actions_ffi as actions;
+                return (if undo { actions::ee_screens_actions_undo() } else { actions::ee_screens_actions_redo() }) as i64;
+            }
         }
         0
     }
