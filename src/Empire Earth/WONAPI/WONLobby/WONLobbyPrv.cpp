@@ -29,73 +29,13 @@
 using namespace WONAPI;
 
 
-// Creates a CreateAccountCtrl for the lobby's resource config table
-static Component* CreateAccountCtrlFactory()				{ return new CreateAccountCtrl; }
-// Creates a DirectConnectCtrl for the lobby's resource config table
-static Component* DirectConnectCtrlFactory()				{ return new DirectConnectCtrl; }
-// Creates a GameStagingCtrl for the lobby's resource config table
-static Component* GameStagingCtrlFactory()					{ return new GameStagingCtrl; }
-// Creates an InitFailedCtrl for the lobby's resource config table
-static Component* InitFailedCtrlFactory()					{ return new InitFailedCtrl; }
-// Creates a LobbyOptionsCtrl for the internet options for the lobby's resource config table
-static Component* InternetOptionsCtrlFactory()				{ return new LobbyOptionsCtrl(false); }
-// Creates a RootScreen for the internet lobby for the lobby's resource config table
-static Component* InternetScreenFactory()					{ return new RootScreen(false); }
-// Creates a LobbyOptionsCtrl for the LAN options for the lobby's resource config table
-static Component* LanOptionsCtrlFactory()					{ return new LobbyOptionsCtrl(true); }
-// Creates a RootScreen for the LAN lobby for the lobby's resource config table
-static Component* LanScreenFactory()						{ return new RootScreen(true); }
-// Creates a LoginCtrl for the lobby's resource config table
-static Component* LoginCtrlFactory()						{ return new LoginCtrl; }
-// Creates a LoginHelpCtrl for the lobby's resource config table
-static Component* LoginHelpCtrlFactory()					{ return new LoginHelpCtrl; }
-// Creates a LoginScreen for the lobby's resource config table
-static Component* LoginScreenFactory()						{ return new LoginScreen; }
-// Creates a LoginStatusCtrl for the lobby's resource config table
-static Component* LoginStatusCtrlFactory()					{ return new LoginStatusCtrl; }
-// Creates a LostPasswordCtrl for the lobby's resource config table
-static Component* LostPasswordCtrlFactory()				{ return new LostPasswordCtrl; }
-// Creates a LostUserNameCtrl for the lobby's resource config table
-static Component* LostUserNameCtrlFactory()				{ return new LostUserNameCtrl; }
-// Creates a MOTDCtrl for the lobby's resource config table
-static Component* MOTDCtrlFactory()						{ return new MOTDCtrl; }
-// Creates a QuickPlayCtrl for the lobby's resource config table
-static Component* QuickPlayCtrlFactory()					{ return new QuickPlayCtrl; }
-// Creates a RoomCtrl for the lobby's resource config table
-static Component* RoomCtrlFactory()						{ return new RoomCtrl; }
-// Creates an UpdateAccountCtrl for the lobby's resource config table
-static Component* UpdateAccountCtrlFactory()				{ return new UpdateAccountCtrl; }
-
-// Creates an AddFriendDialog for the lobby's resource config table
-static Component* AddFriendDialogFactory()					{ return new AddFriendDialog; }
-// Creates an AdminActionDialog for the lobby's resource config table
-static Component* AdminActionDialogFactory()				{ return new AdminActionDialog; }
-// Creates a BadUserDialog for the lobby's resource config table
-static Component* BadUserDialogFactory()					{ return new BadUserDialog; }
-// Creates a ChooseNetworkAdapterDialog for the lobby's resource config table
-static Component* ChooseNetworkAdapterDialogFactory()		{ return new ChooseNetworkAdapterDialog; }
-// Creates a CreateGameDialog for the lobby's resource config table
-static Component* CreateGameDialogFactory()				{ return new CreateGameDialog; }
-// Creates a CreateRoomDialog for the lobby's resource config table
-static Component* CreateRoomDialogFactory()				{ return new CreateRoomDialog; }
-// Creates a CreditsDialog for the lobby's resource config table
-static Component* CreditsDialogFactory()					{ return new CreditsDialog; }
-// Creates a DirectConnectDialog for the lobby's resource config table
-static Component* DirectConnectDialogFactory()				{ return new DirectConnectDialog; }
-// Creates a LanNameDialog for the lobby's resource config table
-static Component* LanNameDialogFactory()					{ return new LanNameDialog; }
-// Creates a LanPortDialog for the lobby's resource config table
-static Component* LanPortDialogFactory()					{ return new LanPortDialog; }
-// Creates an OkCancelDialog for the lobby's resource config table
-static Component* OkCancelDialogFactory()					{ return new OkCancelDialog; }
-// Creates a PasswordDialog for the lobby's resource config table
-static Component* PasswordDialogFactory()					{ return new PasswordDialog; }
-// Creates a RoomDialog for the lobby's resource config table
-static Component* RoomDialogFactory()						{ return new RoomDialog; }
-// Creates a StatusDialog for the lobby's resource config table
-static Component* StatusDialogFactory()					{ return new StatusDialog; }
-// Creates a TOUDialog for the lobby's resource config table
-static Component* TOUDialogFactory()						{ return new TOUDialog; }
+// The resource table's factories: a lobby control kind (the one-line subclasses LoginStatusCtrl, CreateAccountCtrl,
+// ... were these shells made with their kinds), a root screen, a dialog class
+template <EeWonLobbyCtlKind K> static Component* CtlFactory() { return new LobbyRustCtrl(K); }
+template <EeWonLobbyCtlKind K> static Component* DlgCtlFactory() { return new LobbyRustDialogCtrl(K); }
+template <bool Lan> static Component* ScreenFactory() { return new RootScreen(Lan); }
+template <class T> static Component* New() { return new T; }
+typedef EeWonLobbyCtlKind Ck;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -108,46 +48,46 @@ static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *t
 	BrowserComponentConfig::Init(aTable.get());
 
 	aTable->AddAllocator("ChatCtrl",ChatCtrlConfig::CfgFactory,ChatCtrlConfig::CompFactory);
-	aTable->AddAllocator("CreateAccountCtrl",ContainerConfig::CfgFactory,CreateAccountCtrlFactory);
-	aTable->AddAllocator("DirectConnectCtrl",ContainerConfig::CfgFactory,DirectConnectCtrlFactory);
-	aTable->AddAllocator("FriendsListCtrl",FriendsListCtrl::CfgFactory,FriendsListCtrl::CompFactory);
+	aTable->AddAllocator("CreateAccountCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::CreateAccount>);
+	aTable->AddAllocator("DirectConnectCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::DirectConnect>);
+	aTable->AddAllocator("FriendsListCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Friends>);
 	aTable->AddAllocator("GameBrowserCtrl",GameBrowserCtrlConfig::CfgFactory,GameBrowserCtrlConfig::CompFactory);
-	aTable->AddAllocator("GameStagingCtrl",ContainerConfig::CfgFactory,GameStagingCtrlFactory);
+	aTable->AddAllocator("GameStagingCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Staging>);
 	aTable->AddAllocator("GameUserListCtrl",GameUserListCtrlConfig::CfgFactory,GameUserListCtrlConfig::CompFactory);
-	aTable->AddAllocator("InitFailedCtrl",ContainerConfig::CfgFactory,InitFailedCtrlFactory);
-	aTable->AddAllocator("InternetOptionsCtrl",ContainerConfig::CfgFactory,InternetOptionsCtrlFactory);
-	aTable->AddAllocator("InternetScreen",ContainerConfig::CfgFactory,InternetScreenFactory);
-	aTable->AddAllocator("LanOptionsCtrl",ContainerConfig::CfgFactory,LanOptionsCtrlFactory);
-	aTable->AddAllocator("LanScreen",ContainerConfig::CfgFactory,LanScreenFactory);
-	aTable->AddAllocator("LoginCtrl",DialogConfig::CfgFactory,LoginCtrlFactory);
-	aTable->AddAllocator("LoginHelpCtrl",ContainerConfig::CfgFactory,LoginHelpCtrlFactory);	
-	aTable->AddAllocator("LoginScreen",ContainerConfig::CfgFactory,LoginScreenFactory);
-	aTable->AddAllocator("LoginStatusCtrl",ContainerConfig::CfgFactory,LoginStatusCtrlFactory);
-	aTable->AddAllocator("LostPasswordCtrl",ContainerConfig::CfgFactory,LostPasswordCtrlFactory);
-	aTable->AddAllocator("LostUserNameCtrl",ContainerConfig::CfgFactory,LostUserNameCtrlFactory);
-	aTable->AddAllocator("MOTDCtrl",ContainerConfig::CfgFactory,MOTDCtrlFactory);
-	aTable->AddAllocator("QuickPlayCtrl",DialogConfig::CfgFactory,QuickPlayCtrlFactory);
-	aTable->AddAllocator("RoomCtrl",ContainerConfig::CfgFactory,RoomCtrlFactory);
+	aTable->AddAllocator("InitFailedCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::InitFailed>);
+	aTable->AddAllocator("InternetOptionsCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::NetOptions>);
+	aTable->AddAllocator("InternetScreen",ContainerConfig::CfgFactory,ScreenFactory<false>);
+	aTable->AddAllocator("LanOptionsCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LanOptions>);
+	aTable->AddAllocator("LanScreen",ContainerConfig::CfgFactory,ScreenFactory<true>);
+	aTable->AddAllocator("LoginCtrl",DialogConfig::CfgFactory,DlgCtlFactory<Ck::Login>);
+	aTable->AddAllocator("LoginHelpCtrl",ContainerConfig::CfgFactory,New<LoginHelpCtrl>);	
+	aTable->AddAllocator("LoginScreen",ContainerConfig::CfgFactory,New<LoginScreen>);
+	aTable->AddAllocator("LoginStatusCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LoginStatus>);
+	aTable->AddAllocator("LostPasswordCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LostPassword>);
+	aTable->AddAllocator("LostUserNameCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LostUserName>);
+	aTable->AddAllocator("MOTDCtrl",ContainerConfig::CfgFactory,New<MOTDCtrl>);
+	aTable->AddAllocator("QuickPlayCtrl",DialogConfig::CfgFactory,DlgCtlFactory<Ck::QuickPlay>);
+	aTable->AddAllocator("RoomCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Room>);
 	aTable->AddAllocator("RoomLabelCtrl",RoomLabelCtrlConfig::CfgFactory,RoomLabelCtrlConfig::CompFactory);
 	aTable->AddAllocator("ServerListCtrl",ServerListCtrlConfig::CfgFactory,ServerListCtrlConfig::CompFactory);
-	aTable->AddAllocator("UpdateAccountCtrl",ContainerConfig::CfgFactory,UpdateAccountCtrlFactory);
+	aTable->AddAllocator("UpdateAccountCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::UpdateAccount>);
 	aTable->AddAllocator("UserListCtrl",UserListCtrlConfig::CfgFactory,UserListCtrlConfig::CompFactory);
 
-	aTable->AddAllocator("AddFriendDialog",DialogConfig::CfgFactory,AddFriendDialogFactory);
-	aTable->AddAllocator("AdminActionDialog",DialogConfig::CfgFactory,AdminActionDialogFactory);
-	aTable->AddAllocator("BadUserDialog",DialogConfig::CfgFactory,BadUserDialogFactory);
-	aTable->AddAllocator("ChooseNetworkAdapterDialog",DialogConfig::CfgFactory,ChooseNetworkAdapterDialogFactory);
-	aTable->AddAllocator("CreditsDialog",CreditsDialogConfig::CfgFactory,CreditsDialogFactory);
-	aTable->AddAllocator("CreateGameDialog",DialogConfig::CfgFactory,CreateGameDialogFactory);
-	aTable->AddAllocator("CreateRoomDialog",DialogConfig::CfgFactory,CreateRoomDialogFactory);
-	aTable->AddAllocator("DirectConnectDialog",DialogConfig::CfgFactory,DirectConnectDialogFactory);
-	aTable->AddAllocator("LanNameDialog",DialogConfig::CfgFactory,LanNameDialogFactory);
-	aTable->AddAllocator("LanPortDialog",DialogConfig::CfgFactory,LanPortDialogFactory);
-	aTable->AddAllocator("OkCancelDialog",DialogConfig::CfgFactory,OkCancelDialogFactory);
-	aTable->AddAllocator("PasswordDialog",DialogConfig::CfgFactory,PasswordDialogFactory);
-	aTable->AddAllocator("RoomDialog",DialogConfig::CfgFactory,RoomDialogFactory);
-	aTable->AddAllocator("StatusDialog",DialogConfig::CfgFactory,StatusDialogFactory);
-	aTable->AddAllocator("TOUDialog",DialogConfig::CfgFactory,TOUDialogFactory);
+	aTable->AddAllocator("AddFriendDialog",DialogConfig::CfgFactory,New<AddFriendDialog>);
+	aTable->AddAllocator("AdminActionDialog",DialogConfig::CfgFactory,New<AdminActionDialog>);
+	aTable->AddAllocator("BadUserDialog",DialogConfig::CfgFactory,New<BadUserDialog>);
+	aTable->AddAllocator("ChooseNetworkAdapterDialog",DialogConfig::CfgFactory,New<ChooseNetworkAdapterDialog>);
+	aTable->AddAllocator("CreditsDialog",CreditsDialogConfig::CfgFactory,New<CreditsDialog>);
+	aTable->AddAllocator("CreateGameDialog",DialogConfig::CfgFactory,New<CreateGameDialog>);
+	aTable->AddAllocator("CreateRoomDialog",DialogConfig::CfgFactory,New<CreateRoomDialog>);
+	aTable->AddAllocator("DirectConnectDialog",DialogConfig::CfgFactory,New<DirectConnectDialog>);
+	aTable->AddAllocator("LanNameDialog",DialogConfig::CfgFactory,New<LanNameDialog>);
+	aTable->AddAllocator("LanPortDialog",DialogConfig::CfgFactory,New<LanPortDialog>);
+	aTable->AddAllocator("OkCancelDialog",DialogConfig::CfgFactory,New<OkCancelDialog>);
+	aTable->AddAllocator("PasswordDialog",DialogConfig::CfgFactory,New<PasswordDialog>);
+	aTable->AddAllocator("RoomDialog",DialogConfig::CfgFactory,New<RoomDialog>);
+	aTable->AddAllocator("StatusDialog",DialogConfig::CfgFactory,New<StatusDialog>);
+	aTable->AddAllocator("TOUDialog",DialogConfig::CfgFactory,New<TOUDialog>);
 
 
 	aTable->AddAllocator("CrossPromotionButton",CrossPromotionButtonConfig::CfgFactory,CrossPromotionButtonConfig::CompFactory);
@@ -300,16 +240,3 @@ WONLobbyPrv::WONLobbyPrv()
 
 }
 
-namespace WONAPI {
-// Creates a friends list control
-Component* FriendsListCtrl::CompFactory()
-{
-    return new FriendsListCtrl;
-}
-
-// Creates the plain container config used for a friends list control
-ComponentConfig* FriendsListCtrl::CfgFactory()
-{
-    return new ContainerConfig;
-}
-}

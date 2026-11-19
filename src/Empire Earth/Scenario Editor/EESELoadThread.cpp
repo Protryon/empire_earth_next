@@ -31,7 +31,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
@@ -148,7 +147,7 @@ void EESELoadThread::Handle402(unsigned long inUnitClass, unsigned long inPlayer
         this->mChangeLoadText->Post(theText);
         thePlayer->SetUnitClassMedia(theClass->mUnitType, 0x7f);
         EEGhostUnit::Create(this->mEditor->GetMouseLocation(), theClass->mUnitType, thePlayer,
-                            !theClass->IsLandBuilding() ? static_cast<EESEUnit*>(this->mEditor->GetTabGroup(kEditorTabUnits))->GetRotationAngle() : 0.0f, false);
+                            !theClass->IsLandBuilding() ? ee_screens_seun_angle(this->mEditor->GetUnitTab()) : 0.0f, false);
         thePlayer->UnloadUnitClassMedia(theClass->mUnitType);
         this->mChangeLoadText->Post(UWideString(""));
     }

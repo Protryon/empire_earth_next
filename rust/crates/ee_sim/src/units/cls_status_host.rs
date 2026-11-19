@@ -15,10 +15,6 @@ use crate::units::uu_host::Game;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::{UnitView, WorldRead};
 
-/// unit `a`'s player's `mNumVitalBuildings < 1`
-pub const EE_UNITS_CLS_ST_NO_VITAL: i32 = 93;
-/// `gPhysics`' `mTickTimeMs` into `io.a`, `GetTickTime()` into `io.f`, `mGameTime` into `io.b`
-pub const EE_UNITS_CLS_ST_CLOCK: i32 = 94;
 /// `gWorld.mInCinematic` into `io.a`, the rules' power regeneration interval into `io.b`
 pub const EE_UNITS_CLS_ST_CINEMATIC_INTERVAL: i32 = 95;
 /// `EEIsCloakedEnemyOf(unit a, the current player)`
@@ -38,8 +34,6 @@ pub const EE_UNITS_CLS_ST_NOTE: i32 = 101;
 pub const EE_UNITS_CLS_ST_AREA_CLOAK: i32 = 102;
 /// `gWorldTable.GetFloatValue(kWorldCamouflageTiming)` into `io.f`
 pub const EE_UNITS_CLS_ST_CAMOUFLAGE_TIMING: i32 = 103;
-/// `gPhysics->GetRandom(io.p[0], io.p[1])` into `io.f`
-pub const EE_UNITS_CLS_ST_RANDOM_RANGE: i32 = 104;
 
 impl ClsGame {
     fn st(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, f: f32) -> (i64, EeUnitsClsIo) {
@@ -88,16 +82,24 @@ impl StatusHost for ClsGame {
         self.st(crate::units::cls_carrier_host::EE_UNITS_CLS_CR_RANDOM, 0, 0, 0, 0, 0.0).1.f
     }
     fn random_range(&mut self, min: f32, max: f32) -> f32 {
-        let mut io = EeUnitsClsIo { p: [min, max, 0.0], ..Default::default() };
-        self.call(EE_UNITS_CLS_ST_RANDOM_RANGE, 0, 0, 0, 0, &mut io);
-        io.f
+        crate::units::uu_direct::with_game(|g| g.random_float(min, max))
     }
     fn no_vital_buildings(&mut self, unit: u64) -> bool {
-        self.st(EE_UNITS_CLS_ST_NO_VITAL, unit, 0, 0, 0, 0.0).0 != 0
+        // mNumVitalBuildings < 1
+        crate::units::unit_geom::with_unit(unit, |u| {
+            let n: std::ffi::c_long =
+                crate::world_field!(u.player().expect("a unit's player").saved(), mNumVitalBuildings);
+            n < 1
+        })
+        .expect("a live unit")
     }
     fn clock(&mut self) -> Clock {
-        let io = self.st(EE_UNITS_CLS_ST_CLOCK, 0, 0, 0, 0, 0.0).1;
-        Clock { tick_ms: io.a, tick_time: io.f, game_time: io.b }
+        // gPhysics' mTickTimeMs, GetTickTime(), mGameTime
+        // SAFETY: the bodies' caller holds the world
+        let t = unsafe { WorldRead::begin() };
+        let w = crate::world::WorldView::global(&t).expect("the world");
+        let tick_time: f32 = w.physics().map_or(0.0, |p| crate::world_field!(p, mTickTime));
+        Clock { tick_ms: w.tick_ms(), tick_time, game_time: w.game_time() }
     }
     fn in_cinematic(&mut self) -> bool {
         self.st(EE_UNITS_CLS_ST_CINEMATIC_INTERVAL, 0, 0, 0, 0, 0.0).1.a != 0

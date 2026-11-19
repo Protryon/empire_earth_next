@@ -4,8 +4,8 @@
 // COMDATs). After EEUIFSEMainButton.cpp (0x1a147f), before EEUIFSEPaint.cpp (0x1a3f10). Unit flags: the exe module
 // set.
 //
-// The tab whole in Rust (ee_screens editor_map.rs): EEUIFSEMap holds its object and forwards; UIBMap and UIRBMap
-// stay C++ classes (controls the form owns) whose slots call into it. This unit is the tab's host
+// The tab whole in Rust (ee_screens editor_map.rs; its group editor_groups_ffi.rs holds it: the class EEUIFSEMap is
+// gone). This unit is the tab's host
 // (ee_screenscpp_semp): the controls only the tab makes and the world it reads and posts to.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
@@ -26,12 +26,10 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEUIFileComboBox.h"
 #include "ee/EESEARust.h"
-#include "ee/EEUIFSEMap.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
 #include "ee/EEScenarioEditorIDs.h"
@@ -40,47 +38,6 @@
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)
-
-// Releases the Create Map button and creates the map from the tab's settings
-
-// Selects a map kind (blank, random or seeded) and shows only that kind's controls; blank re-runs the elevation
-// file's selection event (editor_map.rs)
-
-// Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the kind radio buttons, the
-// Create Map button and the elevation file controls (editor_map.rs)
-EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_semp_new(this, inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the map tab, deleting all of its controls (editor_map.rs)
-EEUIFSEMap::~EEUIFSEMap()
-{
-    ee_screens_semp_free(this->mRust);
-}
-
-// Creates a blank map of the chosen size and terrain (then draws a new random seed), or a random map of the chosen
-// size and style with a fresh seed (shown in the seed label) or the seed typed in the edit box (editor_map.rs)
-void EEUIFSEMap::CreateMap()
-{
-    ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_CREATE_MAP, 0);
-}
-
-// In blank mode shows or hides the water/land elevation controls (the height box does the opposite); else hides all
-// (editor_map.rs)
-void EEUIFSEMap::ShowElevationControls(bool inShow)
-{
-    ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_SHOW_ELEVATION, inShow ? 1 : 0);
-}
-
-// Refreshes the elevation file list when the tab is entered (editor_map.rs)
-void EEUIFSEMap::Enter()
-{
-    ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_ENTER, 0);
-}
 
 // ---- the tab's host (editor_map.rs: the ops from 500)
 

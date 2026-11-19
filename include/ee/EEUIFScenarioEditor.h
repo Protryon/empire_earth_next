@@ -13,20 +13,19 @@
 #define EE_EEUIFSCENARIOEDITOR_H
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EEUnitHandle.h"
+#include "rust/game/screens.h"
 
 class EEUIMiniMap;
 class UIFullBackground;
 class UIButton;
 class EEAScroll;
 class EESELoadThread;
-class EESEPlayerScreen;
 class GEBitmap;
-class EESEUnit;
-class EESETriggerScreen;
 class EEUIFSEBrushGroup;
 class UIRadioButton;
-class EEUIFSEMainGroup;
 class EEUnit;
+class EEUICSelectUnits;
+class UIEditBox;
 class GETexture;
 class TMPoll;
 class TSThread;
@@ -36,11 +35,10 @@ class UICheckBox;
 class UIComboBox;
 class UITextLabel;
 
-// the form's object (rust/ee_screens.h declares these too; EEUIFScenarioEditor.cpp asserts the slots)
-extern "C" size_t ee_screens_sefm_get(const EeScreensSeForm* form, uint32_t slot);
-extern "C" void ee_screens_sefm_set(const EeScreensSeForm* form, uint32_t slot, size_t value);
-extern "C" uint32_t ee_screens_sefm_selected(const EeScreensSeForm* form, ptrdiff_t index);
-extern "C" int32_t ee_screens_sefm_call(const EeScreensSeForm* form, uint32_t what, int32_t a, void* p, const float* r);
+// the form's trigger tab: the jump to a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
+// and the writing-back flag (0x4c3220, = true; set while an entry is written back; provisional name)
+void EESETriggerJump(unsigned long inKind, unsigned long inSelection);
+extern bool gB4C3220;
 
 class EEUIFScenarioEditor : public UIForm {
 public:
@@ -59,23 +57,34 @@ public:
     virtual void Close();                   // slot 0x38 0x19e68a
     virtual long CopyData();                // slot 0x3c 0x19e72c
     virtual long UpdateMouse();             // slot 0x30 0x1a0083
-protected:
-    virtual long DrawPolygons();            // slot 0x40 0x19f5b3 (UIForm's, protected)
-public:
-    void PostLoadEvent(UReferenceCounter* inObject);
-    void PostShowLoadedObject(UReferenceCounter* inObject);
+    // (DrawPolygons, slot 0x40 0x19f5b3, was UIForm's alone: no override)
+    // the form's members (editor_form.rs EE_SCREENS_SEFM_*): one call each
+    int32_t Call(uint32_t inWhat, int32_t inA = 0, void* inP = NULL, const float* inR = NULL) const
+    {
+        return ee_screens_sefm_call(this->mRust, inWhat, inA, inP, inR);
+    }
+    // suspended, the object passed to the load thread, which posts it to the user interface (an event) or shows it
+    void PostLoadEvent(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject); }
+    void PostShowLoadedObject(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject); }
     // 0x19f6e9: leaves the editor through the load thread (EESEATestScenario passes true, EESEAExitScenario false)
-    void ExitEditor(bool inTestScenario);
-    void RefreshCurrentGroup();             // 0x19fc97: the current group's Store (EESEAQuickSaveScenario)
-    void ResumeCurrentGroup();              // 0x19f757: resumed, the current group's Load (after a quick save/load)
-    void ClearSelection();
-    void DeselectFirstUnit();               // 0x19fab9 (EESEADeleteUnit)
-    void SelectUnit(EEUnit* inUnit);
-    void DeselectUnit(EEUnit* inUnit);
-    void SelectTab(unsigned char inFlag, long inTab);   // 0x19f615 (EEUIFSEMainButton::Check)
+    void ExitEditor(bool inTestScenario) { this->Call(EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0); }
+    void RefreshCurrentGroup() { this->Call(EE_SCREENS_SEFM_STORE_GROUP); }   // 0x19fc97: the current group's Store
+    void ResumeCurrentGroup() { this->Call(EE_SCREENS_SEFM_RESUME_GROUP); }   // 0x19f757: resumed, its Load
+    // the selection: cleared (the cargo panel and the unit status hidden), its first unit or inUnit removed, inUnit
+    // added (the cargo panel for a placed carrier, the status of a lone unit)
+    void ClearSelection() { this->Call(EE_SCREENS_SEFM_CLEAR_SELECTION); }
+    void DeselectFirstUnit() { this->Call(EE_SCREENS_SEFM_DESELECT_FIRST); }   // 0x19fab9 (EESEADeleteUnit)
+    void SelectUnit(EEUnit* inUnit) { this->Call(EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit); }
+    void DeselectUnit(EEUnit* inUnit) { this->Call(EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit); }
+    // 0x19f615 (EEUIFSEMainButton::Check): full view entered or left, the tab's controls enabled, its group entered
+    void SelectTab(unsigned char inFlag, long inTab) { this->Call(EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8))); }
     // 0x17d597 (the brush group's rectangle; EESEAPaintArea; defined in EESETSArea.cpp)
     void SetPaintArea(const GERectangle& inRectangle);
-    void SetLoadText(const UWideString& inText);   // 0x19fd09 (EESEAChangeLoadText)
+    // 0x19fd09 (EESEAChangeLoadText): the top label's text, hidden for an empty one
+    void SetLoadText(const UWideString& inText)
+    {
+        this->Call(EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0, const_cast<UWideString*>(&inText));
+    }
     // 0x19fcb4: the game view rectangle, the current group disabled while the UI is hidden (EESETriggerScreen)
     void SetGameView(const GERectangle& inRectangle, bool inIsUIHidden);
 
@@ -88,10 +97,52 @@ public:
     }
     EEUnit* GetFirstSelectedUnit() const { return this->GetSelectedUnitCount() == 0 ? NULL : this->GetSelectedUnit(0); }
     size_t GetSlot(uint32_t inSlot) const { return ee_screens_sefm_get(this->mRust, inSlot); }
-    EEUIFSEMainGroup* GetTabGroup(long inGroup) const { return (EEUIFSEMainGroup*)this->GetSlot(kSlotGroup + inGroup); }
-    EESETriggerScreen* GetTriggerScreen() const { return (EESETriggerScreen*)this->GetTabGroup(kEditorTabTriggers); }
-    EESEUnit* GetUnitScreen() const { return (EESEUnit*)this->GetTabGroup(kEditorTabUnits); }
-    EESEPlayerScreen* GetPlayerScreen() const { return (EESEPlayerScreen*)this->GetTabGroup(kEditorTabPlayers); }
+    // the tab groups (ee_screens editor_groups_ffi.rs; once EEUIFSEMainGroup and its seven subclasses) and their tabs'
+    // Rust objects (kEditorTab*: an EeScreensSeMap* .. EeScreensSeInstructions*)
+    EeScreensSeGroup* GetTabGroup(long inGroup) const { return (EeScreensSeGroup*)this->GetSlot(kSlotGroup + inGroup); }
+    void* GetTab(long inGroup) const { return ee_screens_segr_tab(this->GetTabGroup(inGroup)); }
+    EeScreensSeTriggerTab* GetTriggerTab() const { return (EeScreensSeTriggerTab*)this->GetTab(kEditorTabTriggers); }
+    EeScreensSeUnit* GetUnitTab() const { return (EeScreensSeUnit*)this->GetTab(kEditorTabUnits); }
+    EeScreensSePlayers* GetPlayerTab() const { return (EeScreensSePlayers*)this->GetTab(kEditorTabPlayers); }
+    // the trigger tab's members (EE_SCREENS_SETS_*), its name or description box, its sub-screens' own calls with
+    // their selections where their classes passed them (EE_SCREENS_SETR_*, _SESC_*, _SEOB_*, _SEAR_*) and slots
+    void TriggerCall(uint32_t inWhat, uint32_t inA = 0) const
+    {
+        ee_screens_sets_call(this->GetTriggerTab(), inWhat, inA, 0.0f, 0.0f, NULL);
+    }
+    UIEditBox* GetTriggerBox(bool inText) const
+    {
+        return (UIEditBox*)ee_screens_sets_control(this->GetTriggerTab(),
+                                                   inText ? EE_SCREENS_SETS_TEXT_EDIT : EE_SCREENS_SETS_NAME_EDIT, 0);
+    }
+    void* GetTriggerSub(long inScreen) const
+    {
+        return ee_screens_sets_sub(this->GetTriggerTab(), (uint32_t)inScreen, NULL, NULL);
+    }
+    uint32_t TriggerSubOp(long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
+    {
+        return ee_screens_sets_sub_op(this->GetTriggerTab(), (uint32_t)inScreen, inWhat, inA, inB);
+    }
+    void TriggerSubSlot(long inScreen, int32_t inSlot) const
+    {
+        ee_screens_sets_sub_call(this->GetTriggerTab(), (uint32_t)inScreen, inSlot, 0.0f, 0.0f);
+    }
+    // the unit tab's members (EE_SCREENS_SEUN_*) and the state read from outside it (the move and placement actions,
+    // the boarding finder, the render's lasso: the unit under the mouse while placing, -1 none; the selection tool)
+    void UnitCall(uint32_t inWhat, int32_t inA = 0, void* inP = NULL) const
+    {
+        ee_screens_seun_call(this->GetUnitTab(), inWhat, inA, 0.0f, 0.0f, inP);
+    }
+    long GetUnitUnderMouse() const { return ee_screens_seun_get(this->GetUnitTab(), EE_SCREENS_SEUN_GET_UNDER_MOUSE); }
+    EEUICSelectUnits* GetSelectUnits() const
+    {
+        return (EEUICSelectUnits*)ee_screens_seun_handle(this->GetUnitTab(), EE_SCREENS_SEUN_GET_SELECT_UNITS);
+    }
+    // the player tab's members (EE_SCREENS_SEPL_*)
+    uint32_t PlayerCall(uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
+    {
+        return ee_screens_sepl_call(this->GetPlayerTab(), inWhat, inA, inB);
+    }
     EEUIFSEBrushGroup* GetBrushGroup() const { return (EEUIFSEBrushGroup*)this->GetSlot(kSlotBrushGroup); }
     EESELoadThread* GetLoadThread() const { return (EESELoadThread*)this->GetSlot(kSlotLoadThread); }
     GETexture* GetButtonTexture() const { return (GETexture*)this->GetSlot(kSlotButtonTexture); }

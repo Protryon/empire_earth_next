@@ -18,10 +18,10 @@ namespace WONAPI {
 bool MSListCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
     if(name=="HEADER") {
-        component=this->mListCtrl->GetHeader();
+        component=(Component*)WONShell::Op(this->mListCtrl,EeWonShellOp::GetHeader);
         config=new MSHeaderControlConfig;
     } else if(name=="MULTILISTAREA") {
-        component=this->mListCtrl->GetListArea();
+        component=this->mListCtrl->GetScrollArea();
         config=new MultiListAreaConfig;
     } else return MSScrollContainerConfig::GetPredefinedComponent(name,config,component);
     return true;

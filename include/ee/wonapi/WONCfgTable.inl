@@ -1,5 +1,6 @@
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/guiconf.h"
+#include "rust/won_gui/shell.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
 // handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
@@ -158,21 +159,21 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kMSButton,6) EE_CFG(MSButtonConfig)->mMSButton->SetWrap(i[0]!=0); break;
     EE_CFG_SET(kMSButton,7) EE_CFG(MSButtonConfig)->mMSButton->IncrementHorzTextPad(i[0],i[1]); break;
     EE_CFG_SET(kMSButton,8) EE_CFG(MSButtonConfig)->mMSButton->IncrementVertTextPad(i[0],i[1]); break;
-    EE_CFG_SET(kMSArrow,0) EE_CFG(MSArrowButtonConfig)->mMSArrowButton->SetDirection((Direction)i[0]); break;
-    EE_CFG_SET(kMSTabButton,0) EE_CFG(MSTabButtonConfig)->mMSTabButton->SetLowerAmount(i[0]); break;
-    EE_CFG_SET(kMS3DFrame,0) EE_CFG(MS3DFrameConfig)->mMS3DFrame->SetFrameType(i[0]); break;
-    EE_CFG_SET(kMS3DFrame,1) EE_CFG(MS3DFrameConfig)->mMS3DFrame->SetIsUp(i[0]!=0); break;
-    EE_CFG_SET(kMSCombo,0) EE_CFG(MSComboBoxConfig)->mMSComboBox->SetDrawFrame(i[0]!=0); break;
-    EE_CFG_SET(kMSScrollbar,0) EE_CFG(MSScrollbarConfig)->mMSScrollbar->SetTransparent(i[0]!=0); break;
-    EE_CFG_SET(kMSEtched,0) EE_CFG(MSEtchedFrameGroupConfig)->mFrame->SetLabelText(s[0]); break;
-    EE_CFG_SET(kMSEtched,1) EE_CFG(MSEtchedFrameGroupConfig)->mFrame->AddContainedComponent(c[0]); break;
-    EE_CFG_SET(kMSTabCtrl,0) EE_CFG(MSTabCtrlConfig)->mMSTabCtrl->SetTransparent(i[0]!=0); break;
-    EE_CFG_SET(kMSTabCtrl,1) EE_CFG(MSTabCtrlConfig)->mMSTabCtrl->AddStandardTab(s[0],static_cast<Container*>(c[0])); break;
-    EE_CFG_SET(kMSScrollCont,0) EE_CFG(MSScrollContainerConfig)->mScrollContainer->SetDrawFrame(i[0]!=0); break;
-    EE_CFG_SET(kMSScrollCont,1) EE_CFG(MSScrollContainerConfig)->mScrollContainer->SetDraw3DFrame(i[0]!=0); break;
-    EE_CFG_SET(kMSScrollCont,2) EE_CFG(MSScrollContainerConfig)->mScrollContainer->SetTransparent(i[0]!=0); break;
-    EE_CFG_SET(kMSHeader,0) EE_CFG(MSHeaderControlConfig)->mMSHeader->SetColumn(i[0],s[0]); break;
-    EE_CFG_SET(kMSListCtrl,0) EE_CFG(MSListCtrlConfig)->mListCtrl->SetHeaderHeight(i[0]); break;
+    EE_CFG_SET(kMSArrow,0) WONShell::Op(EE_CFG(MSArrowButtonConfig)->mMSArrowButton,EeWonShellOp::SetDirection,i[0]); break;
+    EE_CFG_SET(kMSTabButton,0) WONShell::Op(EE_CFG(MSTabButtonConfig)->mMSTabButton,EeWonShellOp::SetLowerAmount,i[0]); break;
+    EE_CFG_SET(kMS3DFrame,0) WONShell::Op(EE_CFG(MS3DFrameConfig)->mMS3DFrame,EeWonShellOp::SetFrameType,i[0]); break;
+    EE_CFG_SET(kMS3DFrame,1) WONShell::Op(EE_CFG(MS3DFrameConfig)->mMS3DFrame,EeWonShellOp::SetIsUp,i[0]!=0); break;
+    EE_CFG_SET(kMSCombo,0) WONShell::Op(EE_CFG(MSComboBoxConfig)->mMSComboBox,EeWonShellOp::SetDrawFrame,i[0]!=0); break;
+    EE_CFG_SET(kMSScrollbar,0) WONShell::Op(EE_CFG(MSScrollbarConfig)->mMSScrollbar,EeWonShellOp::SetTransparent,i[0]!=0); break;
+    EE_CFG_SET(kMSEtched,0) WONShell::Op(EE_CFG(MSEtchedFrameGroupConfig)->mFrame,EeWonShellOp::SetLabelText,(intptr_t)&s[0]); break;
+    EE_CFG_SET(kMSEtched,1) WONShell::Op(EE_CFG(MSEtchedFrameGroupConfig)->mFrame,EeWonShellOp::AddContainedComponent,(intptr_t)c[0]); break;
+    EE_CFG_SET(kMSTabCtrl,0) WONShell::Op(EE_CFG(MSTabCtrlConfig)->mMSTabCtrl,EeWonShellOp::SetTransparent,i[0]!=0); break;
+    EE_CFG_SET(kMSTabCtrl,1) WONShell::Op(EE_CFG(MSTabCtrlConfig)->mMSTabCtrl,EeWonShellOp::AddStandardTab,(intptr_t)&s[0],(intptr_t)static_cast<Container*>(c[0])); break;
+    EE_CFG_SET(kMSScrollCont,0) WONShell::Op(EE_CFG(MSScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetDrawFrame,i[0]!=0); break;
+    EE_CFG_SET(kMSScrollCont,1) WONShell::Op(EE_CFG(MSScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetDraw3DFrame,i[0]!=0); break;
+    EE_CFG_SET(kMSScrollCont,2) WONShell::Op(EE_CFG(MSScrollContainerConfig)->mScrollContainer,EeWonShellOp::SetTransparent,i[0]!=0); break;
+    EE_CFG_SET(kMSHeader,0) WONShell::Op(EE_CFG(MSHeaderControlConfig)->mMSHeader,EeWonShellOp::SetColumn,i[0],(intptr_t)&s[0]); break;
+    EE_CFG_SET(kMSListCtrl,0) WONShell::Op(EE_CFG(MSListCtrlConfig)->mListCtrl,EeWonShellOp::SetHeaderHeight,i[0]); break;
     EE_CFG_SET(kPercent,0) EE_CFG(PercentLayoutConfig)->refs[i[0]]=c[0]; break;
     EE_CFG_SET(kPercent,1) EE_CFG(PercentLayoutConfig)->params[i[0]]=i[1]; break;
     EE_CFG_SET(kScheme,0) EE_CFG(ColorSchemeConfig)->mColorScheme.get()->SetStandardColor(i[0],(DWORD)i[1]); break;

@@ -23,13 +23,12 @@
 #include "lle/UIComboBox.h"
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFileComboBox.h"
+#include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESEIAExport.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESEInstructions.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEStringIDs.h"
@@ -83,45 +82,14 @@ long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
-// Creates the instructions tab: map/movie/sound file combos (directories created when missing), the text boxes and
-// labels, and the text import/export buttons. History reuses the hints label/box ids (editor_instructions.rs)
-EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
-{
-    gSeplScreenFont = inFont;
-    uint32_t theIndex = (uint32_t)ioIndex;
-    this->mRust = ee_screens_sein_new(inForm, &theIndex);
-    ioIndex = theIndex;
-}
-
-// Destroys the instructions tab and every control it created (editor_instructions.rs)
-EESEInstructions::~EESEInstructions()
-{
-    ee_screens_sein_free(this->mRust);
-}
-
-// Fills the tab from the scenario's media strings (a file missing from a list goes into its combo's label) and shows
-// the .lcl name in the import box when that file exists (editor_instructions.rs; the transfers are the host's)
-void EESEInstructions::Load()
-{
-    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_LOAD);
-}
-
-// Rescans the movie, sound and map file lists when the tab is entered (editor_instructions.rs)
-void EESEInstructions::Enter()
-{
-    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_ENTER);
-}
-
-// Stores the chosen map, movie and sound files and the four texts into the scenario's media strings
-// (editor_instructions.rs; the transfers are the host's)
-void EESEInstructions::Store()
-{
-    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_STORE);
-}
-
 // ---- the tab's host (editor_instructions.rs: the ops from 700)
 
-int32_t EESEInstructions::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
+// (a struct for EESMMediaStrings' friendship: Load's and Store's transfers)
+struct EESEInstructionsHost {
+    static int32_t Host(uint32_t inOp, void* const* p, int32_t* i, float* f);
+};
+
+int32_t EESEInstructionsHost::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     switch (inOp) {
     case EE_SCREENS_SEIN_OP_PATHS: {
@@ -233,9 +201,5 @@ int32_t EESEInstructions::Host(uint32_t inOp, void* const* p, int32_t* i, float*
 
 extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    return EESEInstructions::Host(inOp, p, i, f);
-}
-
-void EESEInstructions::MouseMove(class GE2DPoint const &)
-{
+    return EESEInstructionsHost::Host(inOp, p, i, f);
 }

@@ -7,6 +7,7 @@ use core::ffi::c_void;
 
 use crate::screens::editor_players::SeplHost;
 use crate::screens::editor_trigger::Trigger;
+use crate::screens::editor_trigger::*;
 
 /// cbindgen:ignore
 mod sys {
@@ -37,19 +38,6 @@ impl SeplHost for Host {
 
 /// The trigger screen (opaque to C++).
 pub struct EeScreensSeTrigger(Trigger);
-
-/// A list operation (`a`: `EE_SCREENS_SEOB_SM_*`), `Activate`, `Store`, `Load`, `Hide`, `Show`,
-/// `ChangeOperator(a: the combo box's id)`, `RemoveEntry(a: the button's id)`, a rows' step (`a`: 0 conditions back,
-/// 1 on, 2 effects back, 3 on).
-pub const EE_SCREENS_SETR_LIST_OP: u32 = 1;
-pub const EE_SCREENS_SETR_ACTIVATE: u32 = 2;
-pub const EE_SCREENS_SETR_STORE: u32 = 3;
-pub const EE_SCREENS_SETR_LOAD: u32 = 4;
-pub const EE_SCREENS_SETR_HIDE: u32 = 5;
-pub const EE_SCREENS_SETR_SHOW: u32 = 6;
-pub const EE_SCREENS_SETR_CHANGE_OPERATOR: u32 = 7;
-pub const EE_SCREENS_SETR_REMOVE_ENTRY: u32 = 8;
-pub const EE_SCREENS_SETR_STEP: u32 = 9;
 
 /// `EESETSTrigger`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_setr_free`.
