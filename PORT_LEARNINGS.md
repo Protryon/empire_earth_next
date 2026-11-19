@@ -32555,3 +32555,29 @@ constants: the original's float literals, now allowed) and was fixed before the 
 ### Left
 
 docs/progress/ui-cluster.md ("The measure").
+
+## Which C++ can move whole: the dependency census (tools/cpp_deps.py; branch rust-cppdeps, 2026-11-19)
+
+Every lane hit the same wall: moving a function turns each of its C++ calls into a host case. `tools/cpp_deps.py`
+reads the objects the two Windows links name (link.rsp, link-EE-SIM.rsp), resolves every undefined symbol as
+lld-link would (objects, then ee_game.lib, then the system) and writes the unit graph to build/cpp_deps/: leaves,
+near-leaves, blockers, cycles, a bottom-up move order (waves), greedy keystones of the biggest cycle, a class view
+and a per-directory roll-up. `unit FILE` prints one unit's edges with symbols; `selftest` compiles four tiny units.
+
+- **An object is not its unit's code.** UString.obj (73 lines) holds 378 COMDAT sections: the inline constructors of
+  GE2DPoint, FSFile, URandom, ... that lle/LowLevelEngine.h makes every object emit. Counting every undefined symbol
+  of the object (`--all-refs`, what llvm-nm alone gives) made UString depend on FSBasicFile and GEValues and put it
+  in the big cycle. Following the relocations from the object's own sections (COMDAT selection none or NoDuplicates)
+  into the COMDAT copies it really uses gives the unit's needs: UString becomes a leaf, the leaves go from 29 units
+  (1,149 lines) to 62 (3,208), the biggest cycle from 409 units to 379.
+- **The web, measured** (origin/rust b3ab7ba2c): 532 C++ units, 154,656 source lines (.cpp only), 5,221 edges.
+  One cycle holds 379 units and 133,985 lines; three more are small (the LLE UI's 28 units, 5,149 lines; the GE
+  core's 5 units, 2,793 lines; two WONGUI config units). Waves peel only 103 units (9,583 lines) before every unit
+  left is in a cycle or calls into one.
+- **The hub is data.** Empire Earth.cpp is named by 213 units, 197 of them only for its globals (gWorld, gPhysics,
+  gUIManager, gUserInterface, gContinentManager, gResource, ...): `--code-only` drops it to 16. Moving those
+  definitions out of the unit (or behind Rust-owned storage) is the first keystone either way: it takes 31 units,
+  9,710 lines out of the cycle.
+- Calls through vtables and function pointers do not show (only a vtable's reference at construction does), so a
+  "leaf" can still call C++ virtually through an argument. Lines are .cpp lines; headers are counted only in the
+  class view.
