@@ -1,28 +1,28 @@
-// C:\EEX\Empire Earth\Database\EEDatabase.h (RECONSTRUCTION). The game database reached
-// through the pointer at 0x52fca8 (never stored by code: set elsewhere; provisional class and global names). The real
-// header has a header static (TSScheduler::CreateCriticalSection assert, constructed in each of 7 includers) that is
-// not modelled here.
+// C:\EEX\Empire Earth\Database\EEDatabase.h (RECONSTRUCTION). The database of db\dbobjects.dat's records (the
+// original: RTTI EEDatabase, vtable 0x43e50c, sizeof 8; its only instance gDatabaseObjects at 0x5302f0). Since the
+// game's leaves round 2 the records are ee_data's (tables.rs: ee_data_objects_*); the class is their readers.
 #ifndef EE_EEDATABASE_H
 #define EE_EEDATABASE_H
 
-#include <vector>
+#include "rust/data/tables.h"
+class EEDbObject;   // ee/EEDbObject.h: the record's bytes
 
-class EEDbObject;
-class FSFileSpec;
-
-// The RTTI class EEDatabase (vtable 0x43e50c, sizeof 8): the database's loaded objects. Its only
-// instance is the global at 0x5302f0 (name unknown; built by `mov ecx, 0x9302f0; jmp 0xd6035`). ctor 0xd6035
-// (vptr, +4 = 0), ??_G 0xd6042, dtor 0xd605e (vptr, then a tail jump to Clear). Member names are provisional.
 class EEDatabase {
 public:
-    EEDatabase();
-    virtual ~EEDatabase();                  // +0x00 (??_G 0xd6042; dtor 0xd605e)
-    void Clear();                           // 0xd6179: deletes every object (slot 0 ??_G(1)), then the vector
-    long Load(FSFileSpec* inFile);          // 0xd60ae: a count, then one EEDbObject per record
-    EEDbObject* GetEntry(unsigned long inIndex);    // 0xd6069 (NULL past the end; provisional name)
-    unsigned long GetCount();
-
-    std::vector<EEDbObject*>* mObjects;     // +0x04
+    // 0xd6179: no records
+    void Clear() { ee_data_objects_clear(); }
+    // 0xd60ae: a count, then one record each (the reads stop at the first error); its status (requires
+    // ee/EEDbRecords.h)
+    template <class F> long Load(F* inFile)
+    {
+        ee_data_objects_clear();
+        return EEDbReadRecords(inFile, ee_data_object_record_size(),
+            [](unsigned long inCount) { ee_data_objects_begin(inCount); return true; },
+            [](unsigned long inIndex, const unsigned char* inRecord) { ee_data_objects_load(inIndex, inRecord); }, true);
+    }
+    // 0xd6069: record inIndex (NULL past the end or nothing loaded; provisional name)
+    EEDbObject* GetEntry(unsigned long inIndex) { return reinterpret_cast<EEDbObject*>(ee_data_objects_get(inIndex)); }
+    unsigned long GetCount() { return (unsigned long)ee_data_objects_count(); }
 };
 
 // 0x5302f0: the database objects (dbobjects.dat; Empire Earth.cpp defines it; the unit class factory 0x2358b1 reads it)

@@ -23,7 +23,7 @@
 #include "lle/UIComboBox.h"
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEUIFileComboBox.h"
+#include "ee/EEUIShell.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESEIAExport.h"
 #include "ee/EEScenarioManager.h"
@@ -119,10 +119,8 @@ int32_t EESEInstructionsHost::Host(uint32_t inOp, void* const* p, int32_t* i, fl
         UString thePattern = i[0] == EE_SCREENS_SEIN_FILES_MAP     ? UString("*") + ".jpg"
                              : i[0] == EE_SCREENS_SEIN_FILES_MOVIE ? UString("*") + ".mpg"
                                                                    : UString("*.mp3");
-        EEUIFileComboBox* t = new EEUIFileComboBox(thePath, thePattern, kIDs[i[0]], 1, std::vector<UWideString>(),
-                                                   gSeplScreenFont, GE2DPoint(f[0], f[1]), 150, 400,
-                                                   static_cast<UIForm*>(p[2]), (unsigned long)i[1], 0, 2,
-                                                   i[0] != EE_SCREENS_SEIN_FILES_MAP);
+        UIComboBox* t = EEUIShellNewFileCombo(thePath, thePattern, kIDs[i[0]], gSeplScreenFont, GE2DPoint(f[0], f[1]), 150,
+                                              static_cast<UIForm*>(p[2]), (unsigned long)i[1]);
         GEText* theGEText = t->GetGEText();
         theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
         theGEText->SetIsTransparent(true);
@@ -138,26 +136,26 @@ int32_t EESEInstructionsHost::Host(uint32_t inOp, void* const* p, int32_t* i, fl
         theEvent->Dereference();
         return 0;
     }
-    case EE_SCREENS_SEIN_OP_FILE_ENTRIES: static_cast<EEUIFileComboBox*>(p[0])->CreateEntries(); return 0;
+    case EE_SCREENS_SEIN_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
     case EE_SCREENS_SEIN_OP_LOAD: {
         UIControl* const* c = static_cast<UIControl* const*>(p[0]);
-        EEUIFileComboBox* theMap = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_MAP]);
-        EEUIFileComboBox* theMovie = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_MOVIE]);
-        EEUIFileComboBox* theSound = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_SOUND]);
+        UIComboBox* theMap = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_MAP]);
+        UIComboBox* theMovie = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_MOVIE]);
+        UIComboBox* theSound = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_SOUND]);
         UIEditBox* theLocalization = static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_LOCALIZATION]);
         FSFileSpec theFile;
         UWideString theText;
         UWideString theName;
         EEScenarioManager* theManager = ::gWorld.mScenarioManager;
         theText = theManager->mMediaStrings.mMapFile;
-        if (theMap->SelectFile(theText) && theText.GetLength() != 0)
+        if (EEUIFileComboSelect(theMap, theText) && theText.GetLength() != 0)
             theMap->GetTextLabel()->SetText(theText);
         theText = theManager->mMediaStrings.mMovieFile;
-        theMovie->SelectFile(theText);
-        if (theMovie->SelectFile(theText) && theText.GetLength() != 0)
+        EEUIFileComboSelect(theMovie, theText);
+        if (EEUIFileComboSelect(theMovie, theText) && theText.GetLength() != 0)
             theMovie->GetTextLabel()->SetText(theText);
         theText = theManager->mMediaStrings.mSoundFile;
-        if (theSound->SelectFile(theText) && theText.GetLength() != 0)
+        if (EEUIFileComboSelect(theSound, theText) && theText.GetLength() != 0)
             theSound->GetTextLabel()->SetText(theText);
         static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_INSTRUCTIONS])->SetText(theManager->mMediaStrings.mInstructions);
         static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_AFTERMATH])->SetText(theManager->mMediaStrings.mAftermath);

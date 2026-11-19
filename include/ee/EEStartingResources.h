@@ -5,6 +5,7 @@
 #define EE_EESTARTINGRESOURCES_H
 
 #include "ee/EEDbList.h"
+#include "ee/EEDbRecords.h"
 
 class FSFileSpec;
 
@@ -12,13 +13,16 @@ class FSFileSpec;
 // table is Rust's list (ee/EEDbList.h)
 class EEStartingResources : public EeDataStartingResourcesFields {
 public:
-    static long Load(FSFileSpec* inFile);   // 0xdaa05 (records with a negative +0x68 are skipped)
-    static void Unload();
+    // 0xdaa05: db\dbStartingResources.dat into the Rust list (the record, its copy and the list: ee_data tables.rs;
+    // records with a negative +0x68 are skipped); the last read status. (EEStartingResources.cpp went in the game's
+    // leaves round 1: the class is its record and the list.)
+    template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::StartingResources); }
+    static void Unload() { EEStartingResources::sTable.clear(); }
 
     // inline (the lobby's LobbyOpen 0x1df5ef loads it before GetString's other argument; was EEU1318E6Entry::GetU18)
     long GetNameID() const { return this->mNameID; }
 
-    static EEDbList<EEStartingResources, EeDataList::StartingResources> sTable;
+    static constexpr EEDbList<EEStartingResources, EeDataList::StartingResources> sTable{};
     static EEStartingResources* Get(unsigned long inIndex) { return EEStartingResources::sTable[inIndex]; }  // inline (lobby 0x5dde02) (provisional name)
 };
 

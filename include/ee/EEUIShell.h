@@ -346,4 +346,15 @@ protected:
 class UIControlsTable;
 UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
 
+// the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
+// extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)
+class FSPath;
+UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsigned long inId, GEFont* inFont,
+                                  const GE2DPoint& inLocation, unsigned long inWidth, UIForm* inForm, unsigned long inIndex);
+inline void EEUIFileComboEntries(UIControl* inList) { EEUIShell::Op(inList, EE_SCREENS_SKOP_FILE_ENTRIES); }
+inline long EEUIFileComboSelect(UIControl* inList, const UWideString& inName)
+{
+    return (long)EEUIShell::Op(inList, EE_SCREENS_SKOP_FILE_SELECT, (int64_t)&inName);
+}
+
 #endif

@@ -868,4 +868,4 @@ pub unsafe extern "C" fn ee_won_config_open(io: *mut EeWonConfigIo, path: *const
 
 #[cfg(test)]
 #[path = "config_golden.rs"]
-mod config_golden;
+pub(crate) mod config_golden;

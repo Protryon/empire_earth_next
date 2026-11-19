@@ -1273,18 +1273,6 @@ struct EePathRequestRecord {
   bool flags[17];
 };
 
-/// A node as the goals and the capture see it.
-struct EeAStarNodeView {
-  int32_t x;
-  int32_t y;
-  uint32_t cost;
-  int32_t path_cost;
-  int32_t estimate;
-  bool has_parent;
-  int32_t parent_x;
-  int32_t parent_y;
-};
-
 /// `EEAIPathSector`'s members.
 struct EeAStarSectorRecord {
   /// the lists (`ee_astar_sector_*`)
@@ -1589,6 +1577,75 @@ void ee_astar_forest_update_resource_kind(EeAStarForestRecord *r);
 /// `r` a forest's record.
 void ee_astar_forest_remove_resource(EeAStarForestRecord *r, long kind);
 
+/// `HullContains(point)`: the hull's bounds, then the outline (HULL 6).
+///
+/// # Safety
+/// `r` a live record.
+bool ee_astar_area_hull_contains(const EeAStarAreaRecord *r, EeHullPoint p);
+
+/// `GetHullClosestOutlinePoint(point)` (HULL 2).
+///
+/// # Safety
+/// `r` a live record.
+EeHullPoint ee_astar_area_hull_closest_outline_point(const EeAStarAreaRecord *r, EeHullPoint p);
+
+/// `SetHullPoints(points)`: `SetPoints(points, false)` (HULL 1).
+///
+/// # Safety
+/// `r` a live record, `p` holds `count` points (NULL when 0).
+void ee_astar_area_set_hull_points(EeAStarAreaRecord *r, const EeHullPoint *p, size_t count);
+
+/// `UpdateHull`: the hull of the tiles' extreme edge points, then the region bounds (HULL 1 of those points).
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+void ee_astar_area_update_hull_captured(EeAStarAreaRecord *r,
+                                        const EeSparseArray *tiles,
+                                        long region_size);
+
+/// `RemoveTile(tile)`: whether it was there (then the hull is rebuilt: HULL 1 of the extreme points).
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+bool ee_astar_area_remove_tile_captured(EeAStarAreaRecord *r,
+                                        EeSparseArray *tiles,
+                                        EeHullPoint p);
+
+/// `GetHullDistanceSquared(other)`: between the hulls' closest points (AREA 4).
+///
+/// # Safety
+/// `r`, `other` live records.
+float ee_astar_area_hull_distance_squared(const EeAStarAreaRecord *r,
+                                          const EeAStarAreaRecord *other);
+
+/// `GetClosestHullPoint(point)`: the point inside the hull, else the closest outline point (AREA 3).
+///
+/// # Safety
+/// `r` a live record.
+EeHullPoint ee_astar_area_closest_hull_point(const EeAStarAreaRecord *r,
+                                             EeHullPoint p);
+
+/// `GetClosestPoints(other, outThis, outOther)`: this area's tile and the other's hull outline point closest to each
+/// other; false (both (0, 0)) when either area has no tiles (AREA 1).
+///
+/// # Safety
+/// `r`, `other` live records; `tiles`, `other_tiles` their live sets; the outputs writable.
+bool ee_astar_area_closest_points(const EeAStarAreaRecord *r,
+                                  const EeSparseArray *tiles,
+                                  const EeAStarAreaRecord *other,
+                                  const EeSparseArray *other_tiles,
+                                  EeHullPoint *out_this,
+                                  EeHullPoint *out_other);
+
+/// `GetTiles(outTiles)`: appends every tile of the hull's scan lines through `push` (AREA 5: the tiles appended).
+///
+/// # Safety
+/// `r` a live record; `push` accepts `ctx`.
+void ee_astar_area_get_tiles(const EeAStarAreaRecord *r,
+                             size_t first,
+                             void *ctx,
+                             void (*push)(void*, long, long));
+
 /// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) and smooths
 /// `passes - 1` times into the pass's grids, which stay until `ee_astar_choke_grids_free`.
 ///
@@ -1857,11 +1914,13 @@ EeAStarCmBytes *ee_astar_cm_write_regions(const EeAStarCmRecord *r);
 /// As `ee_astar_cm_write_regions`.
 unsigned long ee_astar_cm_regions_digest(const EeAStarCmRecord *r);
 
-/// `EEAIContinentFill` (TEST ONLY): the CNTR record's bytes.
+/// TEST ONLY: `EEAIContinentCapture(tag)`: one record of the manager's state under `tag` (CNTB, CNTR); nothing
+/// unless the capture is on.
 ///
 /// # Safety
-/// As `ee_astar_cm_write_regions`.
-EeAStarCmBytes *ee_astar_cm_capture_fill(const EeAStarCmRecord *r);
+/// `r` the manager's record; its objects live.
+void ee_astar_cm_capture(const EeAStarCmRecord *r,
+                         uint32_t tag);
 
 /// `EEAIContinentDigest` (TEST ONLY).
 ///
@@ -2780,21 +2839,14 @@ uint32_t ee_path_manager_dump(EePathManager *p,
 /// `list` a live `Vec<EePathPoint>` from this module, `points` readable for `count` points.
 void ee_path_points_append(void *list, const EePathPoint *points, uint32_t count);
 
-extern void ee_astar_capture_note(uint8_t kind,
-                                  int32_t a,
-                                  int32_t b,
-                                  int32_t c,
-                                  int32_t d,
-                                  int32_t e,
-                                  int32_t answer);
-
-extern void *ee_astar_capture_begin();
-
-extern void ee_astar_capture_bytes(void *run, const uint8_t *data, uint32_t length);
-
-extern void ee_astar_capture_nodes(void *run, const EeAStarNodeView *nodes, uint32_t count);
-
-extern void ee_astar_capture_end(void *run, uint32_t tag);
+/// The C++ view's notes (`EEAIAStarView::Note`): a no-op unless a run is captured on this thread.
+void ee_astar_capture_note(uint8_t kind,
+                           int32_t a,
+                           int32_t b,
+                           int32_t c,
+                           int32_t d,
+                           int32_t e,
+                           int32_t answer);
 
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
@@ -2915,6 +2967,12 @@ const uint64_t *ee_astar_sub_sector_neighbors(const EeAStarSubSectorRecord *r, s
 /// # Safety
 /// `r` from `ee_astar_sub_sector_init`.
 void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other);
+
+/// `IsPassable(player)` of the sub-sector whose tile set is `tiles`.
+///
+/// # Safety
+/// `tiles` is a live set; the caller holds the world (the AI's path searches).
+bool ee_astar_sub_sector_is_passable(const EeSparseArray *tiles, long player);
 
 extern uint64_t ee_astar_view_cm_path_area_at(int32_t x, int32_t y);
 

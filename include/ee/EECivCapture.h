@@ -22,12 +22,14 @@ class UWideString;
 
 // CVAP around one ApplyUpgrade: Begin before it (the state before; NULL when off), End after it with its result
 struct EECivCaptureApply;
-EECivCaptureApply* EECivCaptureApplyBegin(EECivUpgrade inUpgrade, long inPlayer);
-void EECivCaptureApplyEnd(EECivCaptureApply* inCapture, bool inResult);
+// the hooks the game calls: pointers EECivCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY
+// unit (PORT_LEARNINGS "Cycle cuts")
+inline EECivCaptureApply* (*EECivCaptureApplyBegin)(EECivUpgrade inUpgrade, long inPlayer) = nullptr;
+inline void (*EECivCaptureApplyEnd)(EECivCaptureApply* inCapture, bool inResult) = nullptr;
 // CVLD after one EELoadCivilization
-void EECivCaptureLoad(const UString& inName, const UString& inDirectory, long inResult, const UWideString& inCivName,
-                      const std::vector<EECivUpgrade>& inUpgrades);
+inline void (*EECivCaptureLoad)(const UString& inName, const UString& inDirectory, long inResult,
+                                const UWideString& inCivName, const std::vector<EECivUpgrade>& inUpgrades) = nullptr;
 // CVAF after one EEApplyCivilizationFile
-void EECivCaptureApplyFile(const UString& inName, EEPlayer* inPlayer, long inResult);
+inline void (*EECivCaptureApplyFile)(const UString& inName, EEPlayer* inPlayer, long inResult) = nullptr;
 
 #endif

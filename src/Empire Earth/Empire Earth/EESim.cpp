@@ -948,8 +948,8 @@ void HostSweep(int inKind, long inArg)
                                        gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
             ee_netmsg_capture_decision_sweep(theRates);
         }
-        EESelectPickSweep();   // the box selection's pick over every player's units (ee/EEUnitStore.h)
-        EEFillSweep();   // the active groups' Fill test over every player's units (ee/EEUnitStore.h)
+        ee_units_select_pick_sweep();   // the box selection's pick over every player's units (ee_sim units store_sweep.rs)
+        ee_units_fill_sweep();   // the active groups' Fill test over every player's units (likewise)
         EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
         break;
     case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)
@@ -1035,8 +1035,8 @@ long HostEngineChoice(const char* inName)
 
 void HostEngineIDs(void* inSink, EeSimDriverPushFn inPush)
 {
-    for (const EECPAIEntry& e : EECPAIManifest())
-        inPush(inSink, e.mID.c_str());
+    for (size_t k = 0; k < ee_cp_engine_ai_count(); k++)
+        inPush(inSink, EECPAIID(ee_cp_engine_ai_at(k)).c_str());
 }
 
 void HostSetEnv(const char* inName, const char* inValue)
@@ -1157,29 +1157,8 @@ void DebugTrampoline(const char* inText)
 
 }   // namespace
 
-// EESimPreferences: the settings the simulation runs with, over config.yaml (EERun, after gGamePreferences.Load): a
-// window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max PTs per Second), no autosave, no music
-void EESimPreferences()
-{
-    long thePTRate = 40, theAutoSave = 0;
-    ee_sim_driver_preferences(&thePTRate, &theAutoSave);
-    gGamePreferences.mSettings.mFullScreen = false;
-    gGamePreferences.mSettings.mGameBitDepth = 32;
-    gGamePreferences.mSettings.mTextureBitDepth = 32;
-    gGamePreferences.mSettings.mGameWindowWidth = 800;
-    gGamePreferences.mSettings.mGameWindowHeight = 600;
-    gGamePreferences.mSettings.mMinPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mMaxPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)theAutoSave;
-    gGamePreferences.mSettings.mMusicEnabled = false;
-    gGamePreferences.mSettings.mWaitForVSync = false;
-}
-
-// EESimStart: the driver's thread (EERun, after the engine and the threads are up, before the UI loop)
-void EESimStart()
-{
-    ee_sim_driver_start();
-}
+// (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
+// game's start-up names no symbol of this driver)
 
 #ifdef _WIN32
 // a fault in the simulation: the code, the place and the return addresses (exe addresses: EE-SIM.map) on stderr

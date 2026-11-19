@@ -8,8 +8,8 @@
 #include <cstddef>
 #include <string.h>
 #include "ee/EEUnitUpdate.h"
-#include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
+#include "ee/EEUCUpgradeTable.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
@@ -20,6 +20,7 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEGlobalStorage.h"
 #include "ee/EEUnitVectorItem.h"
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
@@ -102,14 +103,13 @@ static float sUnusedFourInverseSqrt6 = k447ADC * 4.0f;
 
 // the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
 // (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
-std::vector<EEUnitClass*> gUnitClassTable(EEUnitClassCount());
-// .data 0x4cc9fc/0x4cca00 (= 0.7, 1.5; this unit's data follows: ee/EERenderLists.h, EERenderObject.cpp reads them)
-float gSpaceTurretHeight = 0.7f;
-float gSpaceStationHeight = 1.5f;
+// (constructed here, its storage EEGlobals.cpp's: ee/EEGlobalStorage.h)
+EE_CONSTRUCT_GLOBAL_AS(std::vector<EEUnitClass*>, gUnitClassTable, gUnitClassTable, (EEUnitClassCount()));
+// (gSpaceTurretHeight, gSpaceStationHeight: EEGlobals.cpp's)
 
 // 0x564448: the unit types registered in gUnitClassTable (Register 0x236a9c push_backs; the vector right after the
 // table, guarded dtor bit 1 of 0x563698: a class static).
-std::vector<unsigned long> EEUnitClass::sUnitTypes;
+EE_CONSTRUCT_GLOBAL_AS(std::vector<unsigned long>, EEUnitClassUnitTypes, EEUnitClass::sUnitTypes, );
 
 // Creates a unit class from its dbunits record: stats, sounds and effects (referenced), terrain table, movement
 // domains and kind flags. Port (R5b.4 round 27): the plain stores are ee_units unit_class_fields.rs's fill of the

@@ -473,9 +473,9 @@ void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
 }
 
 // Returns the colour of a player colour index (the default colour past the table's end)
-const GEColor& EEGetPlayerColor(unsigned long inIndex)
+GEColor EEGetPlayerColor(unsigned long inIndex)
 {
-    return inIndex < EEColorTable::sTable.size() ? EEColorTable::sTable[inIndex]->mColor : EEColorTable::sColor;
+    return EEColorTable::GetColor(inIndex);
 }
 
 // Returns a starting resource level by index

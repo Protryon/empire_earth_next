@@ -135,7 +135,6 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "lle/FSChunk.h"
 #include "lle/FSPersistent.h"
-#include "ee/EEUIFileComboBox.h"
 #include "ee/EEUnitClassIDs.h"
 #include "lle/UICheckBox.h"
 #include "ee/EESimEditor.h"
@@ -1541,14 +1540,14 @@ int EESimEditorStep(const std::vector<std::string>& w, std::vector<std::string>&
         else if (c == "elevfile")   // elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT | elevfile -
             theCode = [=, &theOutput] {
                 EEUIFScenarioEditor* theEditor = gUIManager->GetScenarioEditorForm();
-                EEUIFileComboBox* theList = static_cast<EEUIFileComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
+                UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
                 if (w[1] == "-") {
                     theList->SetCurrentSelection(0);
                     return;
                 }
                 WriteElevationFile(w[1], L(2), L(3));
-                theList->CreateEntries();
-                long theFound = theList->SelectFile(UWideString(w[1].c_str()));
+                EEUIFileComboEntries(theList);
+                long theFound = EEUIFileComboSelect(theList, UWideString(w[1].c_str()));
                 const long theBoxes[4] = {kSEMapWaterCutoff, kSEMapWaterDepth, kSEMapLandHeight, kSEMapLandCutoff};
                 for (int i = 0; i < 4; i++)
                     static_cast<UIEditBox*>(theEditor->GetControlById(theBoxes[i]))->SetText((unsigned long)L(4 + i));

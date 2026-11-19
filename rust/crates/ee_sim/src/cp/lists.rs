@@ -558,27 +558,3 @@ pub unsafe extern "C" fn ee_cp_zones_set(p: *const EeCpFields, zones: *const EeC
     // SAFETY: the caller's contract
     unsafe { lists(p) }.zones = list.to_vec();
 }
-
-/// TEST ONLY (PLCE): [`centers_digest`] into `out[3]`.
-///
-/// # Safety
-/// As [`lists`]; `out` three words.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_centers_digest(p: *const EeCpFields, out: *mut u32) {
-    // SAFETY: the caller's contract
-    let d = centers_digest(unsafe { lists(p) });
-    // SAFETY: as above
-    unsafe { std::slice::from_raw_parts_mut(out, 3).copy_from_slice(&d) };
-}
-
-/// TEST ONLY (CPEV): [`lists_digest`] into `out[6]`.
-///
-/// # Safety
-/// As [`lists`]; `out` six words.
-#[no_mangle]
-pub unsafe extern "C" fn ee_cp_lists_digest(p: *const EeCpFields, out: *mut u32) {
-    // SAFETY: the caller's contract
-    let d = lists_digest(unsafe { lists(p) });
-    // SAFETY: as above
-    unsafe { std::slice::from_raw_parts_mut(out, 6).copy_from_slice(&d) };
-}

@@ -1,4 +1,5 @@
-// C:\EEX\Empire Earth\Empire Earth\EETeam.h (RECONSTRUCTION; provisional names). A team of players (RTTI EETeam >
+// C:\EEX\Empire Earth\Empire Earth\EETeam.h (RECONSTRUCTION; provisional names; header-only since the game's leaves
+// round 2). A team of players (RTTI EETeam >
 // FSRestorable; vtable 0x441fa0). sizeof 0x18 (vector<EETeam> strides 0x18 in EEPWorldHelper). The ctor
 // 0x13d013 and the dtor 0x131b02 are out of line (vector<EETeam>::resize 0x14c5d9 builds its default argument with
 // the ctor and destroys its by-value argument with the dtor). Slots: GetChecksum +0x00 0x156dd8, Load +0x04
@@ -7,7 +8,12 @@
 #ifndef EE_EETEAM_H
 #define EE_EETEAM_H
 
+#include "rust/sim/app.h"   // the players' load and save
+#include "rust/sim/units.h"   // EeUnitsPlayerSaveIo
+
 class EEVCWonder;                          // RTTI EEVCWonder > EEVictoryCondition (vtable 0x442064)
+// the saved game's primitives over an FSFile (EEPlayer.cpp; ee/EEPlayer.h)
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 
 class EETeam : public FSRestorable {
 public:
@@ -19,13 +25,16 @@ public:
     // user-defined: copies the players only (vector<EETeam> fill 0x13e8e3 / copy 0x13e2a7 expand it: one vector
     // operator=, mVictoryCondition untouched)
     EETeam& operator=(const EETeam& inTeam) { this->mPlayers = inTeam.mPlayers; return *this; }
-    virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 0x156dd8
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x136ca3
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x136d03
+    virtual void GetChecksum(ESChecksum& ioChecksum) const {}                   // +0x00 0x156dd8 (empty)
+    // +0x04 0x136ca3: the players (ee_sim app team_save.rs), then the victory condition's own; the first read error
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    // +0x0c 0x136d03: the players; the first write error
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+        { return ee_app_team_save(&outFile, &EESaveFilePrimitive, this->mPlayers.data(), this->mPlayers.size()); }
     // 0x3fe37 (ret 4): whether player inPlayerID belongs to the team (EECPIntelligence 0x8123d) (provisional name)
     bool ContainsPlayer(unsigned long inPlayerID);
     // (the team bodies: Merge, AddPlayer, RemovePlayer, Contains, the two-player and list ctors: ee_sim app teams.rs)
-    long GetVictoryState();                 // 0x136d5e (mVictoryCondition's slot +0x04)
+    long GetVictoryState();                 // 0x136d5e (mVictoryCondition's slot +0x04; inline below)
     // inline (out of line through the ICF-folded COMDAT 0x91f11)
     unsigned long GetNumPlayers() const { return this->mPlayers.size(); }
 
@@ -45,5 +54,22 @@ inline EETeam::EETeam(const EETeam& inTeam)
     this->mPlayers = inTeam.mPlayers;
     this->mVictoryCondition = new EEVCWonder(this);
 }
+
+// (EETeam.cpp went in the game's leaves round 2: its bodies are these and ee_sim app team_save.rs)
+inline long EETeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    uint32_t theCount = 0;
+    long theResult = ee_app_team_load_count(&inFile, &EESaveFilePrimitive, &theCount);
+    // a failed count read leaves no count to size the player list by
+    if (theResult != kErrorOK)
+        return theResult;
+    this->mPlayers.resize(theCount, 0);
+    theResult = ee_app_team_load_players(&inFile, &EESaveFilePrimitive, this->mPlayers.data(), this->mPlayers.size());
+    if (theResult != kErrorOK)
+        return theResult;
+    return this->mVictoryCondition->Load(inMajorVersion, inMinorVersion, inFile);
+}
+
+inline long EETeam::GetVictoryState() { return this->mVictoryCondition->GetVictoryState(); }
 
 #endif

@@ -146,7 +146,7 @@ static void RunSnippet(int inIndex, const char* inText, bool inIgnorePath)
     fflush(stderr);
     TestGroup aRoot;
     ConfigParser aParser;
-    aParser.mIgnorePathOnIncludeFile = inIgnorePath;
+    aParser.SetIgnorePathOnIncludeFile(inIgnorePath);
     bool r = false;
     std::string aThrown;
     try {
@@ -156,8 +156,8 @@ static void RunSnippet(int inIndex, const char* inText, bool inIgnorePath)
     }
     char aCase[32];
     snprintf(aCase, sizeof(aCase), "s%02d%s", inIndex, inIgnorePath ? "i" : "");
-    sLines.push_back(std::string(aCase) + " r=" + (r ? "1" : "0") + aThrown + " error=" + Escape(aParser.mAbortReason) +
-                     " warnings=" + Escape(aParser.mWarnings));
+    sLines.push_back(std::string(aCase) + " r=" + (r ? "1" : "0") + aThrown + " error=" + Escape(aParser.GetAbortText()) +
+                     " warnings=" + Escape(aParser.GetWarnings()));
     Dump(std::string(aCase) + " root", &aRoot);
 }
 
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
             std::string aValues;
             aRoot.GetAllKeyValues(aValues);
             printf("%s r=%d error=%s warnings=%08lx children=%d\n", aData.cFileName, r ? 1 : 0,
-                   Escape(aParser.mAbortReason).c_str(), Crc(aParser.mWarnings), (int)aRoot.mChildList.size());
+                   Escape(aParser.GetAbortText()).c_str(), Crc(aParser.GetWarnings()), (int)aRoot.GetChildCount());
         } while (FindNextFileA(h, &aData));
         FindClose(h);
         return 0;

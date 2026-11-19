@@ -5,6 +5,7 @@
 #define EE_EEUCUPGRADETABLE_H
 
 #include "ee/EEDbList.h"
+#include "ee/EEDbRecords.h"
 
 class FSFileSpec;
 
@@ -14,10 +15,13 @@ typedef EeDataUpgradeFactor EEUCUpgradeFactor;
 // mFactors (16) and mMaxLevel are EeDataUpgradeFields (ee_data tables.rs: the record, its copy and the defaults)
 class EEUCUpgradeTable : public EeDataUpgradeFields {
 public:
-    static long Load(FSFileSpec* inFile);   // 0xdc6f0 (records with a negative +0xe0 stay NULL)
-    static void Unload();
+    // 0xdc6f0: db\dbupgrade.dat into the Rust list (ee_data tables.rs: the repair step as a 0/1 flag, factor 13 never
+    // set; a record with a negative +0xe0 stays NULL); the last read status. (EEUCUpgradeTable.cpp went in the game's
+    // leaves round 1: the class is its record and the list.)
+    template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::Upgrades); }
+    static void Unload() { EEUCUpgradeTable::sTable.clear(); }
 
-    static EEDbList<EEUCUpgradeTable, EeDataList::Upgrades> sTable;   // Rust's list (ee/EEDbList.h)
+    static constexpr EEDbList<EEUCUpgradeTable, EeDataList::Upgrades> sTable{};   // Rust's list (ee/EEDbList.h)
 };
 
 #endif

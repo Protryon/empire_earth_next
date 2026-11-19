@@ -2049,7 +2049,7 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         // an engine choice (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name
         const EECPAIEntry* theAI = inArg == kEECPChoiceClassic ? NULL : EECPAIByChoice(inArg);
         if (theAI != NULL)
-            theText = UWideString(theAI->mName.c_str());
+            theText = UWideString(EECPAIText(theAI->name, theAI->name_len).c_str());
         else
             gResource->GetString(kLobbyEngineClassicString + (inArg == kEECPChoiceRandom ? 1 : 0), theText);
         break;

@@ -4,16 +4,18 @@
 // returns, one record holds the method id, the player id, the inputs (classes, tiles, sizes, flags, distances as f32
 // bits) and the outputs (the result, out tiles, counts; for the state-changing calls the placement's town centre tile
 // and site lists, or the centre's units and main unit, after the call). Calls made from inside another
-// record nothing. Off (no EE_SIM_CAPTURE), a scope is a thread-local count and a cached test.
+// record nothing. Off (no EE_SIM_CAPTURE), a scope is a thread-local count. Whole in Rust (ee_sim::cp
+// place_capture.rs) since the game's leaves round 2.
 #ifndef EE_EECPPLACECAPTURE_H
 #define EE_EECPPLACECAPTURE_H
 
-#include <vector>
+#include <stdint.h>
 
-class EEComputerPlayer;
+#include "rust/sim/cp.h"
+
+class EEPlayer;
 class EECPPlacement;
-class EEUnit;
-class EEComplexUnit;
+class RTSUnit;
 
 enum {
     // EECPPlacement
@@ -106,42 +108,50 @@ enum {
     kCpevUnitsSwapped,
 };
 
-// CPEV records the calls of the thread that runs the computer players' Update (noted at its first call)
-void EECPPlaceCaptureThread();
-
+// The scope of one call: forwarders over ee_sim::cp place_capture.rs (the depths, the thread, the record). The
+// player is the computer player (NULL: none); a unit an EEUnit or EEComplexUnit (its id; NULL: 0xfffffffe); the
+// state reads the placement and the player through the world layout. Requires ee/EEComputerPlayer.h and ee/EEUnit.h
+// where it is used (the casts to the bases).
 class EECPPlaceScope {
 public:
-    // inPlayer: the computer player (NULL: none)
-    EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer);
-    // a CPEV record (inEvents: true)
-    EECPPlaceScope(unsigned int inMethod, const EEComputerPlayer* inPlayer, bool inEvents);
-    ~EECPPlaceScope();
+    // a PLCE record, or a CPEV record (inEvents: true)
+    template <class P> EECPPlaceScope(unsigned int inMethod, const P* inPlayer, bool inEvents = false)
+        : mEvents(inEvents), mScope(ee_cp_scope_begin(EECPPlaceScope::Player(inPlayer), inMethod, inEvents)) {}
+    ~EECPPlaceScope() { ee_cp_scope_end(this->mScope, this->mEvents); }
+    EECPPlaceScope(const EECPPlaceScope&) = delete;
+    EECPPlaceScope& operator=(const EECPPlaceScope&) = delete;
     EECPPlaceScope& I(long inValue)
     {
-        if (this->mOn)
-            this->mWords.push_back((unsigned int)inValue);
+        ee_cp_scope_word(this->mScope, (uint32_t)inValue);
         return *this;
     }
-    EECPPlaceScope& F(float inValue);
-    bool On() const { return this->mOn; }   // whether it records (the Rust forwarders' words: ee_cp_scope_on)
-    EECPPlaceScope& U(const EEUnit* inUnit);            // its id (0xfffffffe: none)
-    EECPPlaceScope& CU(const EEComplexUnit* inUnit);
+    template <class T> EECPPlaceScope& U(const T* inUnit)
+    {
+        ee_cp_scope_unit(this->mScope, (uint64_t)(uintptr_t)static_cast<const RTSUnit*>(inUnit));
+        return *this;
+    }
+    template <class T> EECPPlaceScope& CU(const T* inUnit) { return this->U(inUnit); }
     // the placement's state: the town centre tile, the site lists (sizes and an FNV-1a of their tiles), the classes seen
-    EECPPlaceScope& State(const EECPPlacement* inPlacement);
+    EECPPlaceScope& State(const EECPPlacement* inPlacement)
+    {
+        ee_cp_scope_state(this->mScope, (uint64_t)(uintptr_t)inPlacement);
+        return *this;
+    }
     // every resource centre of the player: their number and an FNV-1a of their states
-    EECPPlaceScope& Centers(const EEComputerPlayer* inPlayer);
-    // CPEV: the computer player's state (appended by the destructor)
-    EECPPlaceScope& Player(const EEComputerPlayer* inPlayer);
+    template <class P> EECPPlaceScope& Centers(const P* inPlayer)
+    {
+        ee_cp_scope_centers(this->mScope, EECPPlaceScope::Player(inPlayer));
+        return *this;
+    }
 
 private:
-    void Begin(unsigned int inMethod, const EEComputerPlayer* inPlayer);
-    const EEComputerPlayer* mSelf;
+    template <class P> static uint64_t Player(const P* inPlayer)
+        { return (uint64_t)(uintptr_t)static_cast<const EEPlayer*>(inPlayer); }
     bool mEvents;
-    bool mOuter;
-    bool mOn;
-    unsigned int mMethod;
-    unsigned int mPlayer;
-    std::vector<unsigned int> mWords;
+    EeCpPlaceScope* mScope;   // NULL: it does not record
 };
+
+// CPEV records the calls of the thread that runs the computer players' Update (noted at its first call)
+inline void EECPPlaceCaptureThread() { ee_cp_capture_thread(); }
 
 #endif

@@ -76,28 +76,27 @@ void Hash64(EESimCaptureRecord& ioRecord, uint64_t inHash)
 }   // namespace
 
 // MAPS, MAPC: Rust (ee_game app map_capture.rs)
-void EEAppCaptureSight(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
+static void EEAppCaptureSightImpl(unsigned int inKind, EEPlayer* inPlayer, float inX, float inY, float inRadius,
+                                  bool inShared)
 {
     if (EESimCaptureRecord::Active() && gWorld.mMap != NULL)
         ee_app_capture_sight(inKind, inPlayer != NULL ? (uint32_t)inPlayer->mPlayerID : 0xffffffffu, inX, inY, inRadius,
                              inShared, gWorld.mMap->mTerrainMesh.GetRust());
 }
 
-EEAppMapScope::EEAppMapScope(EEMap* inMap, unsigned int inKind, long inA, long inB, long inC, long inD, long inE,
-                             long inF, long inLeft, long inRight, long inBottom, long inTop)
-    : mMap(inMap), mOuter(ee_app_capture_map_enter()), mKind(inKind), mArgs{inA, inB, inC, inD, inE, inF},
-      mRect{inLeft, inRight, inBottom, inTop}
+// EEAppMapScope's construction (whether it is the outermost) and destruction (the record)
+static bool AppMapScopeEnter()
 {
+    return ee_app_capture_map_enter();
 }
 
-EEAppMapScope::~EEAppMapScope()
+static void AppMapScopeLeave(EEMap* inMap, bool inOuter, unsigned int inKind, const long* inArgs, const long* inRect)
 {
-    ee_app_capture_map_leave(this->mOuter, (uint64_t)(uintptr_t)this->mMap,
-                             this->mMap != NULL ? this->mMap->mTerrainMesh.GetRust() : NULL, this->mKind, this->mArgs,
-                             this->mRect);
+    ee_app_capture_map_leave(inOuter, (uint64_t)(uintptr_t)inMap, inMap != NULL ? inMap->mTerrainMesh.GetRust() : NULL,
+                             inKind, inArgs, inRect);
 }
 
-void EEAppCaptureChecksum(unsigned long inCursorBefore, long inResult, unsigned long inCursorAfter)
+static void EEAppCaptureChecksumImpl(unsigned long inCursorBefore, long inResult, unsigned long inCursorAfter)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -108,7 +107,7 @@ void EEAppCaptureChecksum(unsigned long inCursorBefore, long inResult, unsigned 
     r.Commit();
 }
 
-void EEAppCaptureSlope(unsigned int inKind, const GETransformation& inLocation, float inResult)
+static void EEAppCaptureSlopeImpl(unsigned int inKind, const GETransformation& inLocation, float inResult)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -119,8 +118,8 @@ void EEAppCaptureSlope(unsigned int inKind, const GETransformation& inLocation, 
     r.Commit();
 }
 
-void EEAppCaptureMiniMapPixels(long inLeft, long inRight, long inBottom, long inTop, const unsigned short* inBits,
-                               unsigned long inPitch)
+static void EEAppCaptureMiniMapPixelsImpl(long inLeft, long inRight, long inBottom, long inTop,
+                                          const unsigned short* inBits, unsigned long inPitch)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -136,7 +135,7 @@ void EEAppCaptureMiniMapPixels(long inLeft, long inRight, long inBottom, long in
     r.Commit();
 }
 
-void EEAppCaptureMiniMapSnapshot()
+static void EEAppCaptureMiniMapSnapshotImpl()
 {
     if (!EESimCaptureRecord::Active() || gMiniMap == NULL)
         return;
@@ -167,7 +166,7 @@ void EEAppCaptureMiniMapSnapshot()
     r.Commit();
 }
 
-void EEAppCaptureStorm(const EEEMStorm& inStorm, unsigned int inPhase, unsigned long inTime)
+static void EEAppCaptureStormImpl(const EEEMStorm& inStorm, unsigned int inPhase, unsigned long inTime)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -206,7 +205,7 @@ void EEAppCaptureStorm(const EEEMStorm& inStorm, unsigned int inPhase, unsigned 
     r.Commit();
 }
 
-void EEAppCaptureCheatList(const UWideString& inLine)
+static void EEAppCaptureCheatListImpl(const UWideString& inLine)
 {
     if (!EESimCaptureRecord::Active())
         return;
@@ -321,7 +320,7 @@ const CheatLine kCheatLines[] = {
 
 }   // namespace
 
-void EEAppCaptureCheatSweep()
+static void EEAppCaptureCheatSweepImpl()
 {
     if (!EESimCaptureRecord::Active() || gCheatCodes == NULL)
         return;
@@ -353,7 +352,7 @@ void EEAppCaptureCheatSweep()
     gWorld.mCheatsEnabled = theEnabled;
 }
 
-void EEAppCaptureStormSweep()
+static void EEAppCaptureStormSweepImpl()
 {
     EEEnvironmentManager* theManager = gWorld.mEnvironmentManager;
     if (!EESimCaptureRecord::Active() || theManager == NULL)
@@ -396,7 +395,7 @@ void Statistics(EESimCaptureRecord& ioRecord, EEPlayerStatistics& inStatistics)
 // runs it when a game is left: no capture game reaches it). One record: the history's fields (but the start time, a wall clock), every record (scores,
 // colour, name and suffix, slot, result, end time, team, resources, flags, statistics), then every player's resources
 // and statistics after it (the top-ups of the computers' gathered totals) and the physics random seed (its draws)
-void EEAppCaptureStatisticsSweep()
+static void EEAppCaptureStatisticsSweepImpl()
 {
     if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
         return;
@@ -443,3 +442,17 @@ void EEAppCaptureStatisticsSweep()
     r.U32((unsigned int)gPhysics->mRandom.GetSeed());
     r.Commit();
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EEAppMapScopeEnter = AppMapScopeEnter, EEAppMapScopeLeave = AppMapScopeLeave,
+                                      EEAppCaptureCheatList = EEAppCaptureCheatListImpl,
+                                      EEAppCaptureCheatSweep = EEAppCaptureCheatSweepImpl,
+                                      EEAppCaptureChecksum = EEAppCaptureChecksumImpl,
+                                      EEAppCaptureMiniMapPixels = EEAppCaptureMiniMapPixelsImpl,
+                                      EEAppCaptureMiniMapSnapshot = EEAppCaptureMiniMapSnapshotImpl,
+                                      EEAppCaptureSight = EEAppCaptureSightImpl,
+                                      EEAppCaptureSlope = EEAppCaptureSlopeImpl,
+                                      EEAppCaptureStatisticsSweep = EEAppCaptureStatisticsSweepImpl,
+                                      EEAppCaptureStorm = EEAppCaptureStormImpl,
+                                      EEAppCaptureStormSweep = EEAppCaptureStormSweepImpl, true);

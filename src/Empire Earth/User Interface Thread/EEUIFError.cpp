@@ -27,7 +27,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIBGenericBackground.h"
-#include "ee/EEUIFError.h"
 #include "ee/EEUIShell.h"
 // the box's Display inputs while Rust shows it, and the layout's registers (the UI thread's)
 static const UWideString* sDialogMessage;

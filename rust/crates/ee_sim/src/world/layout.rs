@@ -213,6 +213,12 @@ pub struct EeWorldLayout {
     /// `EEUnitGoal*`)
     pub active_group_fields: u64,
     pub active_group_goal: u64,
+    // ---- the computer player's placement (the game's leaves, round 2: cp place_capture.rs)
+    /// `EEComputerPlayer::mPlacement` (an `EECPPlacement*`) from the `EEPlayer*`; `EECPPlacement::mTownCenterTile`
+    /// (a `U2DPoint<long>`) and `mRust` (an `EeCpPlacement*`)
+    pub cp_placement: u64,
+    pub placement_town: u64,
+    pub placement_rust: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

@@ -157,8 +157,10 @@ fn the_controls_base_ops_answer_without_a_control() {
     assert_eq!(control(core::ptr::null_mut(), EE_SCREENS_HC_SET_DIRTY, 1, &mut f), Some(0));
     // a missing control's rectangle goes on to the C++ (which never sees one)
     assert_eq!(control(core::ptr::null_mut(), EE_SCREENS_HC_RECT, 0, &mut f), None);
-    assert_eq!(control(core::ptr::null_mut(), EE_SCREENS_HC_VIEW_RECT, 0, &mut f), None);
     assert_eq!(f, [9.0; 6]);
+    // the view rectangle is gViewport's, zeros before one is registered
+    assert_eq!(control(core::ptr::null_mut(), EE_SCREENS_HC_VIEW_RECT, 0, &mut f), Some(0));
+    assert_eq!(f[..4], [0.0; 4]);
 }
 
 #[test]

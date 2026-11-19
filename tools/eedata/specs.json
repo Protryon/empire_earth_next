@@ -11640,7 +11640,7 @@
   "EEUnitSetRecord": {
    "name": "EEUnitSetRecord",
    "size": 184,
-   "source": "src/Empire Earth/Empire Earth/EEUnitSetManager.cpp",
+   "source": "rust/crates/ee_sim/src/app/unit_sets.rs",
    "size_check": [
     184,
     "static_assert"
@@ -11653,7 +11653,7 @@
      "type": "str",
      "count": 104,
      "cls": "named",
-     "comment": "+0x00"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -11662,7 +11662,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 (0 or less: no set at this index)"
+     "comment": "0 or less: no set at this index"
     },
     {
      "name": "mFamilies",
@@ -11671,7 +11671,7 @@
      "type": "u32",
      "count": 8,
      "cls": "named",
-     "comment": "+0x6c (unit classes; all eight are added)"
+     "comment": "unit families (all eight are added; the valid ones kept)"
     },
     {
      "name": "mUnitTypes",
@@ -11680,7 +11680,7 @@
      "type": "s32",
      "count": 8,
      "cls": "named",
-     "comment": "+0x8c (only the positive ones are added)"
+     "comment": "unit types (only the positive ones are added)"
     },
     {
      "name": "mIncludedSet",
@@ -11689,7 +11689,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac (index of the set's mL30)"
+     "comment": "the index of the included set, of the excluded set (0: none)"
     },
     {
      "name": "mExcludedSet",
@@ -11698,7 +11698,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0 (index of the set's mL34)"
+     "comment": ""
     },
     {
      "name": "mShowInEditor",
@@ -11707,7 +11707,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4 (the set's mKilled)"
+     "comment": ""
     },
     {
      "name": "pad_0x0b5",

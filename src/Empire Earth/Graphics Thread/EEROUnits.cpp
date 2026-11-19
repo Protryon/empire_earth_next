@@ -68,9 +68,6 @@ extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpo
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
-// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
-// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced)
-char gEmptyString[4] = "";
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;
 
@@ -155,6 +152,80 @@ void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inCo
         gUIManager->GetMainGameForm()->DrawClippedText(*reinterpret_cast<const GERectangle*>(inStrip), &theText, NULL);
     if (theTargets & 4)
         gUIManager->GetScenarioEditorForm()->DrawClippedText(theView, &theText, NULL);
+}
+
+extern std::vector<unsigned long> gU4E9230;   // EERenderObject.cpp: the rectangle's picked unit ids
+extern EERenderUnit* gU529044;               // the picked enemy's render unit
+extern UWideString gU529030;                 // its owner's name
+
+namespace {
+
+// a texture map in its order, as rfil.rs reads it
+template <class Map> EeGfxRfilPairs Flatten(const Map& inMap, std::vector<EeGfxRfilPair>& outPairs)
+{
+    for (typename Map::const_iterator it = inMap.begin(); it != inMap.end(); ++it)
+        outPairs.push_back({it->first, it->second});
+    return {outPairs.data(), outPairs.size()};
+}
+
+template <class T> EeGfxRfilSpan Span(const std::vector<T>& inValues) { return {inValues.data(), inValues.size()}; }
+
+EeGfxRfilLayout MakeLayout()
+{
+    static_assert(sizeof(EERenderShadow) == sizeof(EeGfxFillObject) && offsetof(EERenderUnitRecord, mUnit) == 0,
+                  "rfil.rs reads the shadows as EeGfxFillObject, a record's unit first");
+    EeGfxRfilLayout l = {};
+    l.size = sizeof(EeGfxRfilLayout);
+    l.unit_stride = sizeof(EERenderUnit);
+    l.unit_health_bars = offsetof(EERenderUnit, mHealthBars);
+    l.unit_turret_angles = offsetof(EERenderUnit, mTurretAngles);
+    l.unit_turret_models = offsetof(EERenderUnit, mTurretModels);
+    l.unit_orbital_angles = offsetof(EERenderUnit, mOrbitalAngles);
+    l.unit_orbital_models = offsetof(EERenderUnit, mOrbitalModels);
+    l.unit_wheel_angles = offsetof(EERenderUnit, mWheelAngles);
+    l.unit_wheel_models = offsetof(EERenderUnit, mWheelModels);
+    l.unit_name = offsetof(EERenderUnit, mName);
+    l.record_stride = sizeof(EERenderUnitRecord);
+    l.record_heights = offsetof(EERenderUnitRecord, mHeights);
+    l.record_cells = offsetof(EERenderUnitRecord, mCells);
+    l.record_tile_x = offsetof(EERenderUnitRecord, mTileX);
+    l.record_tile_y = offsetof(EERenderUnitRecord, mTileY);
+    l.line_stride = sizeof(EERenderLine);
+    l.line_points = offsetof(EERenderLine, mPoints);
+    l.line_texture = offsetof(EERenderLine, mTexture);
+    l.line_width = offsetof(EERenderLine, mWidth);
+    return l;
+}
+
+}   // namespace
+
+// The render lists as ee_gfx reads them in place (rfil.rs, units_lists.rs): the pools and vectors, the multimaps
+// flattened into ioPairs (which must outlive the frame's use)
+void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&ioPairs)[6])
+{
+    static const EeGfxRfilLayout kLayout = MakeLayout();
+    const EERenderLists& l = EERenderLists::sInstance;
+    EeGfxRfilFrame& f = outFrame;
+    f.layout = &kLayout;
+    f.units = l.mRenderUnits;
+    f.units_used = l.mRenderUnitCount;
+    f.shadows = reinterpret_cast<const EeGfxFillObject*>(l.mRenderShadows);
+    f.shadows_used = l.mRenderShadowCount;
+    f.maps[0] = Flatten(l.mUnits0, ioPairs[0]);
+    f.maps[1] = Flatten(l.mUnits1, ioPairs[1]);
+    f.maps[2] = Flatten(l.mUnits2, ioPairs[2]);
+    f.maps[3] = Flatten(l.mShadows0, ioPairs[3]);
+    f.maps[4] = Flatten(l.mShadows1, ioPairs[4]);
+    f.maps[5] = Flatten(l.mShadows2, ioPairs[5]);
+    f.selected_units = Span(l.mSelectedUnits);
+    f.selected_objects = Span(l.mSelectedObjects);
+    f.selected_unit = l.mSelectedUnit;
+    f.selected_object = l.mSelectedObject;
+    f.label_unit = gU529044;
+    f.label_name = (const char*)gU529030;
+    f.picked_ids = Span(gU4E9230);
+    f.ghosts = Span(l.mGhostRecords);
+    f.lines = Span(gU529050);
 }
 
 namespace {

@@ -163,10 +163,9 @@ void EESetDataPaths();                     // 0x140d3c (SetTexturePath/SetModelP
 extern UWideString gU52A280;               // 0x52a280 "een1ve1s_" (prefixed to campaign scenario and media file names)
 extern UWideString gU530BC8;               // 0x530bc8 (Empire Earth.cpp; EEUIESSEOpen appends it to label 0's text)
 
-// 0x4e8708: a float table indexed [unit class +0x1c8][other unit class +0x1cc] (19 readers, e.g. the AI Hero unit;
-// two stores). Name is provisional. The rows are ee_combat's (damage_table.rs); EEDamageFactor is the checked read
-// (0 off the table, where an index of -1 read before the array)
-extern float** gDamageTable;
+// 0x4e8708 gDamageTable: a float table indexed [unit class +0x1c8][other unit class +0x1cc]. The rows are
+// ee_combat's (damage_table.rs); EEDamageFactor is the checked read (0 off the table, where an index of -1 read before
+// the array)
 float EEDamageFactor(long inRow, long inColumn);
 
 // (provisional name for the window; the font names are Empire Earth.cpp's assert strings, e.g. "gFontTahoma12"): the

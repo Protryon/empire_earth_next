@@ -12,7 +12,7 @@
 
 class EEAction;
 class EESMDialogMessage;
-struct EEUIFErrorCallbackData;               // ee/EEUIFError.h
+struct EEUIFErrorCallbackData;               // ee/EEUIManager.h
 class EECivilization;
 class FSFileSpec;
 class TSThread;

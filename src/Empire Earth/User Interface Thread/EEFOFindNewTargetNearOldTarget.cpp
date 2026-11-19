@@ -885,9 +885,7 @@ static EeCombatSearchIn EESearchInput(EEComplexUnit* inUnit, long inX, long inY,
     in.unit_y = (int32_t)inUnit->mTileY;
     in.x = (int32_t)inX;
     in.y = (int32_t)inY;
-    for (long i = 0; i < 3; i++)
-        for (long j = 0; j < 10; j++)
-            in.table[i * 10 + j] = (int32_t)EEAIUnitTargetingTable::sTable[i][j];
+    ee_data_ai_targeting_table(in.table);   // the AI's targeting weights (ee_data tables.rs; zero when not loaded)
     return in;
 }
 

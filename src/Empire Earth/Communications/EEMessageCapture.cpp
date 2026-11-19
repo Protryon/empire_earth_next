@@ -176,7 +176,7 @@ static void Members(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
 
 static bool sEngineSweep = false;   // the engine sweep: the nested game inputs are in its NMNE records
 
-void EEMessageCaptureImport(NEMessage* inMessage, const unsigned char* inData)
+static void EEMessageCaptureImportImpl(NEMessage* inMessage, const unsigned char* inData)
 {
     if (inMessage == NULL || !EESimCaptureRecord::Active() || sEngineSweep)
         return;
@@ -197,7 +197,7 @@ void EEMessageCaptureImport(NEMessage* inMessage, const unsigned char* inData)
     theRecord.Commit();
 }
 
-void EEMessageCaptureExecuted(NEMessage* inMessage)
+static void EEMessageCaptureExecutedImpl(NEMessage* inMessage)
 {
     if (inMessage == NULL || !EESimCaptureRecord::Active() || inMessage->GetType() < 0x41 || inMessage->GetType() > 0xfd)
         return;
@@ -320,9 +320,15 @@ static void SweepItem(uint8_t inKind, const uint8_t* inData, size_t inSize)
 
 // NMSW, NMCU and NMNE: the sweep's payloads (ee_netmsg capture.rs: the game types by their codec shapes over edge
 // patterns, the box selections' lists, the engine types and the communications ticks' nested inputs)
-void EEMessageCaptureSweep()
+static void EEMessageCaptureSweepImpl()
 {
     if (!EESimCaptureRecord::Active())
         return;
     ee_netmsg_capture_sweep(SweepItem);
 }
+
+// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
+static const bool sCaptureHooksSet = (EEMessageCaptureImport = EEMessageCaptureImportImpl,
+                                      EEMessageCaptureExecuted = EEMessageCaptureExecutedImpl,
+                                      EEMessageCaptureSweep = EEMessageCaptureSweepImpl, true);

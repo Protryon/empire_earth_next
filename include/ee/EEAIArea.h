@@ -28,28 +28,54 @@ class EEAIArea : private EeAStarAreaRecord {
 public:
     EEAIArea() { ee_astar_area_init(this); this->area_type = kAIAreaNone; }  // 0x110cb (inline COMDAT; first user EEAIChokePoint's ctor)
     virtual ~EEAIArea() { ee_astar_area_free(this); }   // +0x00 dtor 0x11123 (inline COMDAT)
-    // +0x04 0xd6e3 (ret 8): mTiles.Insert(inTiles); then Virtual24() if inUpdate
-    virtual void AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate);
-    // +0x08 0xd705 (ret 4): mTiles.Create(inTiles); the hull from the extreme edge points; 0xd763(DAT_531860)
-    virtual void Create(const std::vector<U2DPoint<long> >& inTiles);
-    // +0x14 0xd8e6 (ret 8, hidden result): mTiles.GetClosestPoint(inPoint)
-    virtual U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint);
-    // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it (0xd16e), else the hull's slot +0x14
-    virtual U2DPoint<long> GetClosestHullPoint(const U2DPoint<long>& inPoint);
-    // +0x1c 0xd8fe (ret 0xc): the closest pair of points of this and inOther (both cleared first); EEAIContinent 0x1da61
-    virtual bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
-    // +0x20 0xda77 (ret 4, hidden result): mTiles.GetRandomPoint(gPhysics +0x18), (0, 0) when empty
+    // The bodies are ee_sim::astar area_ops.rs (the hull's queries and rebuilds with their TEST ONLY HULL and AREA
+    // records) since the game's leaves round 2; GetRandomPoint and UpdateHull read the physics' random stream and the
+    // world's influence table (EEAIRectangleArea.cpp).
+    // +0x04 0xd6e3 (ret 8): the tiles added; the hull rebuilt (UpdateHull) if inUpdate
+    virtual void AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate)
+    {
+        this->mTiles.Insert(inTiles);
+        if (inUpdate)
+            this->UpdateHull();
+    }
+    // +0x08 0xd705 (ret 4): the area made of the tiles; its hull and influence-region bounds built
+    virtual void Create(const std::vector<U2DPoint<long> >& inTiles)
+    {
+        this->mTiles.Create(inTiles);
+        this->UpdateHull();
+    }
+    // +0x14 0xd8e6 (ret 8, hidden result): the area tile closest to inPoint
+    virtual U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint) { return this->mTiles.GetClosestPoint(inPoint); }
+    // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it, else the hull outline's closest point
+    virtual U2DPoint<long> GetClosestHullPoint(const U2DPoint<long>& inPoint)
+        { return EEAIArea::PointOf(ee_astar_area_closest_hull_point(this, EEAIArea::HullPoint(inPoint))); }
+    // +0x1c 0xd8fe (ret 0xc): this area's tile and inOther's hull outline point closest to each other; false (both
+    // (0, 0)) when either area is empty
+    virtual bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
+    {
+        return ee_astar_area_closest_points(this, this->mTiles.GetHandle(), inOther, inOther->mTiles.GetHandle(),
+                                            reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther));
+    }
+    // +0x20 0xda77 (ret 4, hidden result): a random tile from the game's random stream, (0, 0) when empty
     virtual U2DPoint<long> GetRandomPoint();
-    virtual void UpdateHull();              // +0x24 0xdb32 (the hull from mTiles' extreme edge points; 0xd763)
-    // +0x28 0xdb7f (ret 4): mTiles.Remove(inPoint); on success the hull is rebuilt; returns whether it was removed
-    virtual bool RemoveTile(const U2DPoint<long>& inPoint);
+    virtual void UpdateHull();              // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds)
+    // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed
+    virtual bool RemoveTile(const U2DPoint<long>& inPoint)
+        { return ee_astar_area_remove_tile_captured(this, this->mTiles.GetHandle(), EEAIArea::HullPoint(inPoint)); }
 
     // inline COMDAT 0xc6fd (emitted at its first user in EECPASGU*'s range): the hull (bounds first), then the tiles
     // Provisional name
     bool Contains(const U2DPoint<long>& inPoint) { bool theResult = this->HullContains(inPoint); if (theResult) theResult = this->mTiles.Contains(inPoint); return theResult; }
-    float GetHullDistanceSquared(EEAIArea* inOther);   // 0xd81e (the hulls' closest points) (provisional name)
-    void UpdateBounds(EEInfluenceTable* inTable);       // 0xd763 (mBounds = the hull's bounds in inTable's cells) (provisional name)
-    void GetTiles(std::vector<U2DPoint<long> >& outTiles);   // 0xdaae (every tile of the hull's scan lines) (provisional name)
+    // 0xd81e: the squared distance of the hulls' closest points (provisional name)
+    float GetHullDistanceSquared(EEAIArea* inOther) { return ee_astar_area_hull_distance_squared(this, inOther); }
+    void UpdateBounds(EEInfluenceTable* inTable);   // 0xd763: the hull's bounds in the table's regions (EEAIRectangleArea.cpp)
+    // 0xdaae: appends every tile of the hull's scan lines (provisional name)
+    void GetTiles(std::vector<U2DPoint<long> >& outTiles)
+    {
+        ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, [](void* inTiles, long inX, long inY) {
+            static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY));
+        });
+    }
 
     // New (port): the members behind accessors (R5b.1 blocker (b): the AI and the units read an area only
     // through these, so the record can live elsewhere)
@@ -61,14 +87,18 @@ public:
     const U2DPoint<long>& GetHullCenter() const { return reinterpret_cast<const U2DPoint<long>&>(this->hull_center); }
     const U2DRectangle<long>& GetHullBounds() const
         { return reinterpret_cast<const U2DRectangle<long>&>(this->hull_bounds); }
-    bool HullContains(const U2DPoint<long>& inPoint);   // BoundedContains: the bounds, then the outline (HULL 6)
+    // BoundedContains: the bounds, then the outline (HULL 6)
+    bool HullContains(const U2DPoint<long>& inPoint) { return ee_astar_area_hull_contains(this, EEAIArea::HullPoint(inPoint)); }
     unsigned long GetHullPointCount() const { size_t theCount; ee_astar_area_hull_points(this, &theCount); return (unsigned long)theCount; }
     const U2DPoint<long>* GetHullPointData() const
         { size_t theCount; return reinterpret_cast<const U2DPoint<long>*>(ee_astar_area_hull_points(this, &theCount)); }
     const U2DPoint<long>& GetHullPoint(long inIndex) const { return this->GetHullPointData()[inIndex]; }
-    std::vector<U2DPoint<long> > GetHullPoints() const;   // a copy
-    U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint);   // (HULL 2)
-    void SetHullPoints(const std::vector<U2DPoint<long> >& inPoints);   // SetPoints(points, false) (HULL 1)
+    std::vector<U2DPoint<long> > GetHullPoints() const   // a copy
+        { return std::vector<U2DPoint<long> >(this->GetHullPointData(), this->GetHullPointData() + this->GetHullPointCount()); }
+    U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint)   // (HULL 2)
+        { return EEAIArea::PointOf(ee_astar_area_hull_closest_outline_point(this, EEAIArea::HullPoint(inPoint))); }
+    void SetHullPoints(const std::vector<U2DPoint<long> >& inPoints)   // SetPoints(points, false) (HULL 1)
+        { ee_astar_area_set_hull_points(this, inPoints.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&inPoints[0]), inPoints.size()); }
     void ClearHull() { ee_astar_area_clear_hull(this); }
     // the hull in a saved game (save 0.263): the points, the bounds, the center and the area, as they are
     template <class W> void WriteHull(W& ioWriter) const
@@ -101,9 +131,10 @@ public:
     void SetAreaType(long inType) { this->area_type = inType; }
 
 private:
+    static EeHullPoint HullPoint(const U2DPoint<long>& inPoint) { EeHullPoint thePoint = {inPoint.mX, inPoint.mY}; return thePoint; }
+    static U2DPoint<long> PointOf(const EeHullPoint& inPoint) { return U2DPoint<long>(inPoint.x, inPoint.y); }
     EEAIArea(const EEAIArea&);              // the record owns its hull: no copies
     EEAIArea& operator=(const EEAIArea&);
-    void CaptureSetPoints(const std::vector<U2DPoint<long> >& inPoints);   // TEST ONLY: HULL 1
 
     U2DSparseArrayPointContainer mTiles;    // +0x04 (0x1c; imported ctor, inline dtor: vptr + Clear + _Tidy)
 };

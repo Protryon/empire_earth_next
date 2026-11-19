@@ -499,19 +499,11 @@ fn friendly(player: u64, owner: u64) -> bool {
     o.enemy(p.id() as usize) == 0
 }
 
-/// `EEAIPathSubSector::IsPassable(player)`: whether the sub sector's gate lets the player (an index) through.
+/// `EEAIPathSubSector::IsPassable(player)`: whether the sub sector's gate lets the player (an index) through
+/// (sub_sector_pass.rs's walk over the sub sector's tiles).
 pub(crate) fn gate_passable(h: u64, player: u32) -> bool {
-    let me = player_at(player);
-    let mut passable = false;
-    walk_gates(h, |g| {
-        let Some(g) = g.filter(|g| g.alive) else {
-            passable = true;
-            return Some(true);
-        };
-        passable = if g.side_part { false } else { !g.closed || (friendly(me, g.player) && !g.locked) };
-        passable.then_some(true)
-    });
-    passable
+    // SAFETY: a live sub sector's tile set; a search holds the world
+    unsafe { crate::astar::sub_sector_pass::ee_astar_sub_sector_is_passable(cm_io::sub_tiles(h), player as c_long) }
 }
 
 /// `EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(sector, player)`: true when its gate is missing or

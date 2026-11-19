@@ -53,6 +53,7 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEPathManager.h"
 #include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
+#include "rust/sim/units.h"   // ee_units_cls_base_condition
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -457,7 +458,10 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         case EE_COMBAT_GOAL_TORPEDO:
             return (uint32_t)theContext->mClass->MissileEvaluateCondition(theUnit, theContext->mEvent);
         default:
-            return (uint32_t)theContext->mClass->BaseEvaluateCondition(theUnit, theContext->mEvent);
+            // EEUnitClass::BaseEvaluateCondition, the Rust's answer called directly (it is EEUnitAI.cpp's one-line
+            // forwarder: the combat goals named the units' AI unit only for it; PORT_LEARNINGS "Cycle cuts")
+            return (uint32_t)ee_units_cls_base_condition(EEObj(theContext->mClass), EEObj(theUnit),
+                                                         (uint32_t)theContext->mEvent);
         }
     case EE_COMBAT_READ_CAN_REACH_TILE: {
         const GE3DPoint& theTarget = static_cast<EEUGRust*>(theContext->mGoal)->GetGroundTarget();

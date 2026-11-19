@@ -1,18 +1,24 @@
 // C:\EEX\Empire Earth\Database\EECPBehavior.h (RECONSTRUCTION; file name inferred; provisional class and member
-// names). The computer player behaviour table of db\dbcpbehavior.dat: a file-scope array of 129 records of
-// 0x38 bytes at 0x4e6118, indexed by the record's own index (EECPBehaviorTable.cpp 0xd5f7e..0xd6035; the AI reads
-// it at 0x18c53d..). The struct's inline ctor clears the byte at +0x34; no dtor (the array's chain has no atexit).
+// names). The computer player behaviour table of db\dbcpbehavior.dat: an array of 129 records of 0x38 bytes,
+// indexed by the record's own index (the AI reads it at 0x18c53d..). Since the game's leaves round 2 the array and
+// its load are ee_data's (tables.rs gCPBehaviors, ee_data_cp_behavior_load: the record EeDataCpBehavior).
 #ifndef EE_EECPBEHAVIOR_H
 #define EE_EECPBEHAVIOR_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
-class FSFileSpec;
+#include "rust/data/tables.h"
 
 struct EECPBehavior {
     EECPBehavior() { this->mIsSettable = false; }
 
-    static long Load(FSFileSpec* inFile);
+    // Loads the records into their slots of the table, squaring the maximum attack response range's float value;
+    // returns the last read status (requires ee/EEDbRecords.h)
+    template <class F> static long Load(F* inFile)
+    {
+        return EEDbReadRecords(inFile, ee_data_cp_behavior_record_size(), [](unsigned long) { return true; },
+            [](unsigned long, const unsigned char* inRecord) { ee_data_cp_behavior_load(inRecord); });
+    }
 
     int32_t mUnused1;                       // +0x00
     int32_t mIndex;                         // +0x04 (the slot; records with index <= 0 are skipped)
@@ -35,7 +41,7 @@ struct EECPBehavior {
 
 static_assert(sizeof(EECPBehavior) == 56, "on-disk record: 56 bytes on every target");
 
-extern EECPBehavior gCPBehaviors[129];
+extern "C" EECPBehavior gCPBehaviors[129];   // ee_data tables.rs
 
 // Computer player behaviour record ids (db\dbcpbehavior.dat; the gCPBehaviors index = EECPBehavior::mIndex). Names: Language.rc 28000 + id (EESETSETSetAIAttribute::Show 0x58c96c), else the Init member the record fills.
 enum EECPBehaviorID {

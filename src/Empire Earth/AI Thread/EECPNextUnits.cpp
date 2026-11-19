@@ -944,7 +944,7 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_POP_COST:
         return ((EEUnitClass*)(uintptr_t)a)->GetPopulationCost();
     case EE_AI_UNITS_HOST_DAMAGES:
-        return gDamageTable != NULL && gDamageTable[(long)a][(long)b] != 0.0f ? 1 : 0;
+        return EEDamageFactor((long)a, (long)b) != 0.0f ? 1 : 0;
     case EE_AI_UNITS_HOST_TEAM_INDEX:
         return (int64_t)((EEPlayer*)(uintptr_t)a)->GetTeamIndex();
     case EE_AI_UNITS_HOST_WONDER_COUNT:

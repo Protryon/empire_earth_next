@@ -6,6 +6,7 @@
 // Empire Earth.cpp only for these globals, and that put them all in one dependency cycle (tools/cpp_deps.py).
 #include <windows.h>
 #include <stdint.h>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEViewport.h"
@@ -24,11 +25,13 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEGameState.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EEGameVariant.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
+#include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGlobalStorage.h"
 
@@ -144,6 +147,7 @@ float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
 EE_GLOBAL_STORAGE(EEComputerPlayerBehaviorTable, gComputerPlayerBehaviorTable, "?gComputerPlayerBehaviorTable@@3VEEComputerPlayerBehaviorTable@@A");
 
 EE_GLOBAL_STORAGE(EEUnitSetManager, gUnitSetManager, "?gUnitSetManager@@3VEEUnitSetManager@@A");
+EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // the game variants: ee_data's list (ee/EEDbList.h)
 EE_GLOBAL_STORAGE(EEAEManager, gAEManager, "?gAEManager@@3VEEAEManager@@A");
 EE_GLOBAL_STORAGE(EEAmbientSoundManager, gAmbientSoundManager, "?gAmbientSoundManager@@3VEEAmbientSoundManager@@A");
 EE_GLOBAL_STORAGE(EECivilizationManager, gCivilizationManager, "?gCivilizationManager@@3VEECivilizationManager@@A");
@@ -298,3 +302,36 @@ GERasterizer* gRasterizer;
 GEWindow* gGameWindow;
 
 UResourceFile* gResource;
+
+// TEST ONLY: the UI fixture's configure step (EETestFixture.cpp sets it at static initialization; EERun calls it first)
+void (*gEETestFixtureConfigure)();
+// TEST ONLY: the physics' hooks (were EEPhysics.cpp's; ee/EEPhysics.h): the unit being stepped (EE-SIM's random-draw
+// trace), after each tick of RTSPhysics::Main's simulation loop, each executed input's view (the UI fixture's orders)
+class EEComplexUnit;
+class NEMessage;
+EEComplexUnit* gPhysicsSteppingUnit = NULL;
+void (*gPhysicsAfterTickHook)(void) = NULL;
+void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
+// TEST ONLY: the render fill's capture (ee/EERenderCapture.h; EERenderCapture.cpp sets it)
+struct EERenderFrameInfo;
+void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount) = NULL;
+
+// The unit classes by type and the registered unit types (EEUnitClass.cpp constructs them where they were defined;
+// ee/EEUnit.h), and the space units' heights (.data 0x4cc9fc/0x4cca00; ee/EERenderLists.h): were EEUnitClass.cpp's
+EE_GLOBAL_STORAGE_AS(std::vector<EEUnitClass*>, gUnitClassTable,
+                     "?gUnitClassTable@@3V?$vector@PEAVEEUnitClass@@V?$allocator@PEAVEEUnitClass@@@std@@@std@@A",
+                     "gUnitClassTable");
+EE_GLOBAL_STORAGE_AS(std::vector<unsigned long>, EEUnitClassUnitTypes,
+                     "?sUnitTypes@EEUnitClass@@2V?$vector@KV?$allocator@K@std@@@std@@A", "_ZN11EEUnitClass10sUnitTypesE");
+float gSpaceTurretHeight = 0.7f;
+float gSpaceStationHeight = 1.5f;
+// the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
+class GEFont;
+GEFont* gSeplScreenFont;
+// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
+// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced). Was
+// EEROUnits.cpp's: 21 units named the renderer's unit for it
+char gEmptyString[4] = "";
+// the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
+#include "ee/EEWonNetUI.h"
+EEWonNetUI gEEWonNetUI;
