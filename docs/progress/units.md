@@ -13,6 +13,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | 1 | `rust-units1` | -546 | `UpdateHidden` whole in Rust; the update, combat query, goal, unit, active group and citizens hosts' plain reads on the views |
 | 2 | `rust-units2` | -1,833 | the formations one class over Rust shapes (9 units, 12 headers gone); the group command sweep's dry host whole in Rust (units/dry.rs); the unit host's and the combat goals' plain reads on the views; `EEUnitOrderPush/Erase/Clear` deleted |
 | behaviour 1 | `rust-unitsbeh1` | -456 | the goal, combat-goal, citizen, class and group hosts' plain reads, stores and duplicate world calls answered in Rust (units/unit_geom.rs, `uu_direct::with_game`); the gather and build goals' farm and resource searches in Rust (units/gather_world.rs) |
+| behaviour 2 | `rust-unitsbeh2` | -1,568 | the group command, pick and Fill sweeps, the step's notes and the combat records' batches whole in Rust (TEST ONLY); the update, combat world, goal, unit, sight, active group, trigger, class and physics hosts' effects, stores and plain reads in Rust |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -76,21 +77,59 @@ New Rust: `units::unit_geom` (GetPosition, DistanceSquaredToUnit/To/2D, GetLineO
 `uu_direct::with_game`, `square_ring`, `ring_corners`, `square_ring_tiles`, `farm_drop_sites`, `find_free_farm`,
 `resource_spots`, `place_on_tile`, `within_reach`, `ai_random_shuffle` (Dinkum's random_shuffle over the AI's draws).
 
+## Behaviour round 2 (branch `rust-unitsbeh2`, from origin/rust 7779d7db1 with rust-cuts1 27cebd6c5 and local rust 645799684, 2026-11-19)
+
+The three blockers the round started from: effects from ee_sim (`world::effects`), the patrol groups and the air
+traffic as Rust objects, a smaller cycle (SCC 1 220 units, 106,210 lines at the start). What moved whole is the TEST
+ONLY C++ that only reads the world and calls Rust bodies (the group command sweep, the pick and Fill sweeps, the
+step's notes, the combat records' batches); what moved from the hosts are the cases that are one effect, one member
+store or one plain read.
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 0047691e2 | the group command sweep in Rust (units/group_sweep.rs: its cases from the views and the tech tree's views, its USGC records); EEGroupCommandSweep.cpp deleted | -741 |
+| 4f1f3d51d | the unit step's notes in Rust (units/notes.rs: USTM, USST, the update and ActionChanged operations); the physics host's unit, class, stats, location, command, goal kind and unit reads on the views | -227 |
+| 9a999753d | the update and ActionChanged hosts' one-member stores, the stop and the death effect (update_views.rs `view_act`, `halt`; the layout's angular velocity and orientation) | -86 |
+| 86e042cb0 | the combat world host's effects, one-member stores and plain reads (combat/world_views.rs; `Effects::graphic_effect`; the host carries its call's class) | -46 |
+| 25b0909ad | GoalOp's patrol group calls, its halt and the abandoned building's no-op (rust_goal.rs) | -32 |
+| 5c67c4bf5 | the unit host's goal kind, group action and queued flag, patrol points and group, unload test, technology class (host.rs) | -59 |
+| 4d7ab0160 | the pick and Fill sweeps and their USPK and USFL records (units/pick_sweep.rs); EEFillMembers deleted | -141 |
+| bdaaa0f1f | other lanes' files: EEPlayer.cpp's pick record and EESim.cpp's two sweeps by their Rust names | +1 |
+| 8509ab808 | the sight host's current player, shared sight, sharers, tiles and players (sight_host.rs) | -13 |
+| dea90fb2d | the active group host's goal kind, gather and patrol goals' units, unit sphere, regions' size (ag_host.rs) | -16 |
+| 14b449799 | the trigger host's and the class host's plain reads (cls_host.rs `cond_view`, `cls_view`) | -31 |
+| 2af15cb4a | the physics host's angular velocity and orientation on the layout (pm_host.rs) | -26 |
+| 70b7d887f | the combat records' batches (combat/capture_fold.rs: CBTC .. CBGO); the goal host's projectile test and its CBGO and CBSO records (goal_objects.rs) | -151 |
+| be16e258f, 6fe00632a | group_sweep.rs's test-build dead code; include/rust regenerated | 0 |
+
+Round total: -1,568 net C++ lines (target 4,000).
+
+New Rust: `units::group_sweep` (the sweep's cases as plain facts, `player_cases`, `record`; its tests),
+`units::pick_sweep`, `units::notes`, `combat::world_views` (`world_op`), `combat::capture_fold`,
+`update_views::view_act` and `halt`, `cls_host::cls_view` and `cond_view`, the sight host's and the unit host's
+reads, `Effects::graphic_effect`, the layout's `complex_angular_velocity` and `complex_orientation`.
+
 ## What is left (behaviour)
 
-- GoalOp (~85 cases) is world calls into classes that are still C++: the patrol groups (their points are C++
-  vectors), the calamity classes and manager, the transport and gate class virtuals, the path manager and the
-  continent manager (AI lane), the effects, sounds and UI notices, the goals' own C++ fields (`mB1C`, `mPathAttempts`,
-  `mIsActive`: no layout entry), the goal queues (C++ deques). Each needs its callee in Rust or a layout entry from
-  the state lane first.
-- The remaining gather helpers (`EEGatherFindSpot`, `EEGatherNextTree`, `EEGatherAccessible`) need the continent
-  manager's path subsectors, forests and terrain flags (AI lane, C++) and `CanGather`/`HasGatherPoint` (UCBD-noted
-  class calls): about eight new host operations for ~120 lines.
-- The class bodies (`ProduceUnit`, `Animate`, `Heal`, the creation family) call the effects manager (ee_render's,
-  which ee_sim may not call), sounds, the UI and goal clones: each needs a host op per statement (the 3:1 yield the
-  earlier rounds met).
-- `EECombatCondition`/`EECombatStep` have C++ callers in the class kinds (torpedo, projectile, missile): a Rust
-  read host for them waits for those class bodies.
+- The class bodies the brief named (`ProduceUnit`, `Heal`, `Animate`'s effects, the gate builders, `FlyToGoal`,
+  `IsBombOnTarget`, `ReleaseUnit`) can create their effects from Rust now, but each still calls C++ that is not Rust
+  (the goal queues and `Clone`, `CreateUnitAt`, `LoadCargo`, the placement searches, `SetAnimation`, `DropPath`, the
+  combat query host behind `EECombatHealInRange`, the sounds): moving one is a body in Rust over new host
+  operations, the 3:1 yield. They want the goal queues and the unit creation in Rust first.
+- The calamity classes' world steps (EECalamityUpdate.cpp `ClassStep`, `Call`; 29 effect calls) need the class's
+  handle and its effects' pointers in the layout (`EECalamityClass` keeps a vtable before its record) and the
+  graphic effect's kind (`mKind`) through the effect interface: then the fire, morale and cloak steps and the
+  placed effects are Rust.
+- The capture writers that read C++ objects the views do not cover: EECalamityCapture.cpp (the calamities' Save
+  and Load, the effects' durations), EEScenarioCapture.cpp (the scenario objects' text and unit vectors), the
+  combat records' builders (`EECombatCaptureShot`, `XAction`, `Ignored`: the ignored targets' deque, the attack and
+  ground goals' records), the active groups' and the physics units' sweeps (they call the groups' and the classes'
+  C++).
+- The goal base's fields (`mAction`, `mB1C`, `mB1D`, `mStartTime`, `mCreationTime`, `mPathAttempts`, `mIsActive`)
+  have no layout entries: with them GoalOp's `BASE_FIELDS`, `GOAL_ARG`, `SET_ACTIVE`, the path attempts' cases and
+  the ag host's `GOAL_B1C`/`SET_B1D` are Rust.
+- `mWaypoints`, `mFireEffect`, `mGoalQueues` (C++ containers) keep their hosts' cases (`WAYPOINTS`, `MINING_BEAM`,
+  `QUEUED_GOAL_KIND`, the load goal's fields).
 
 ## What is left (from round 2)
 

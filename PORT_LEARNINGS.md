@@ -33300,3 +33300,41 @@ with the census before and after (a full build first: the census reads the objec
   members with movaps, so `alignas(EEWorld)` storage (8) faulted at a game's first frame. EE-SIM never draws: the
   oracle, the captures, scenario_check and sim_editor all passed, and only the gates' tour caught it. The storage
   macros now add `alignas(16)`.
+
+## The units' behaviour lane, round 2: the group command, pick and Fill sweeps and the step's notes in Rust; the hosts' effects, stores and plain reads answered in Rust (ee_sim units group_sweep.rs, pick_sweep.rs, notes.rs; combat world_views.rs, capture_fold.rs; branch rust-unitsbeh2, 2026-11-19)
+
+The brief: with ee_sim's effect interface (cuts lane, cut 4), the patrol groups and air traffic as Rust objects and a
+smaller cycle, move the class, goal and combat bodies whose callees are now Rust. What could move whole was the
+TEST ONLY C++ that only reads the world and calls Rust bodies, and the hosts' cases that are one effect, one member
+store or one plain read. Numbers: docs/progress/units.md ("Behaviour round 2").
+
+- **A TEST ONLY driver that reads the world and calls Rust moves whole.** The group command sweep (751 lines) built
+  its cases from the players' lists, the map, the tech trees and the calamity classes and ran the Rust bodies over
+  the dry host; every input is a view now (`UnitView`, `MapView`, `TechTreeView::epoch_node_ids`/`node`/`data`), the
+  calamity class's kind is the existing unit host call (`calamity_of`). Its USGC records are the units profile's
+  digests, so the port is checked byte for byte. Keep the C++ sweep's field carry-over between cases exactly (a case
+  struct mutated in order, each record writing the fields its body reads): the Patrol cases' point is 0, the Build
+  Unit cases' target the Unload cases' 0. The geometry capture scope (a C++ RAII) stays in a five-line C++ wrapper.
+  The pick and Fill sweeps (USPK, USFL) went the same way, and their record writers, which the game's own
+  `SelectUnits` and `Fill` call, take ids instead of objects.
+- **Move the notes before the host cases that note.** The update and `ActionChanged` hosts note every operation
+  (USST kinds 12 and 13) before doing it. A Rust intercept of a host case must note it in the same order, so the
+  notes (USTM, USST, the update and action gathering, the action scope) moved to Rust first (units/notes.rs); the
+  C++ callers name `ee_units_note_*`, the physics and class hosts' noting cases went.
+- **A float setter's "when it differs" test is observable.** `SetF220(0.0f)` on a member that holds -0.0 leaves
+  -0.0 (`-0.0 != 0.0` is false); a plain Rust store of 0.0 changes the bits that the checksums and captures fold.
+  For integer members the test changes nothing; for float members keep it (`if v != x { v = x }`). `SetVelocity`
+  also writes `mF21C = max(v, mStats->mBC)` (windows.h's `max`: `a > b ? a : b`).
+- **A host's context is part of the call.** The combat world host's `EEWorldOp` reads `theContext->mClass` (the
+  class of Attacked or FireShot, not always the unit's); the Rust answers need it, so `EeCombatWorldHost` carries
+  `class`, filled where the context is built (after its `mClass` is set).
+- **`EEGraphicEffect::Get(index)` for ee_sim**: `Effects::graphic_effect(index)` (ee_render answers with its table,
+  `NoEffects` with 0). The class's effect pointers are `ClassView::effect_handle(i)` (`GetEffects()` order: 1 death,
+  6 muzzle flash, 8 splash, 9 impact sparks, 18 special attack, 20 shot, 26 shell hole).
+- **A module whose pub items must stay out of the generated header** takes `/// cbindgen:ignore` on its `pub mod`;
+  its one entry point is declared by hand where C++ calls it (group_sweep.rs, EEUnitHost.cpp).
+- **Test builds compile the FFI adapters.** `OpHost` (rust_goal.rs) is built into the test binary, where the patrol
+  groups' `#[cfg(not(test))]` entry points are absent; its patrol calls are `#[cfg(not(test))]` with the host's
+  calls kept for the test build.
+- The mid-round merge of local `rust` (645799684, not yet on origin/rust) brought this lane's round 1 and the units'
+  state lane; PORT_LEARNINGS.md was the only conflict (two sections appended at the end; both kept).
