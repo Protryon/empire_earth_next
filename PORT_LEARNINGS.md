@@ -34916,3 +34916,118 @@ capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; del
 - Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
   rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
   the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
+
+## R6 WONLobby, round 26: the component config classes as kinds (ee_won_gui cfgkind.rs; branch rust-wonlobby26, 2026-11-20)
+
+Round 25 moved ComponentConfig's readers and instructions; its 45 subclasses (one per configured widget type: ButtonConfig,
+DialogConfig, ListAreaConfig, ..., the Windows skin's MSButtonConfig .. MSListCtrlConfig, the WON skin's
+WONSimpleButtonConfig .. WONSkinConfig) stayed C++: each a class with its own copy of the component under its type
+(`SetComponent`), a `Virtual24` that ran its cfgtab.rs table and then (or first) its base's, and for some a
+`GetPredefinedComponent` (the named parts a resource file may configure), a `GetNamedValue` (the WON frame's paddings)
+or a `PreParse` (the WON skin's default skin). This round made them kinds of one ComponentConfig.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 3ec4bab54 | the config classes as kinds (cfgkind.rs); 14 units and 9 headers deleted, the registrations one table by kind; goldens `won_cfgtab_test` (the chains) and `won_compcfg_test` (the predefined children, paddings, the skin's PreParse) | -1,209 |
+| b42d1bf0f | origin/rust (fa7e8674a) merged (PORT_LEARNINGS only: both sides kept) | 0 |
+| 6637f6f3b | strip_markers on the merged tree (four trailing address comments in the AI and units lanes' headers) | 0 |
+| 2dfffc4d0 | `rust_includes.py`'s module headers (cfgkind.h, shell.h) | +4 |
+| the docs commit | this section, the progress file | 0 |
+
+Round total: WON C++ 26,470 -> 25,265 (-1,205; short of the -1,500 aim: the lobby's control configs and the table
+setters, the next pieces, were not started, below).
+
+### The kinds (cfgkind.rs)
+
+- `EeWonCfgKind` names the original class (52 kinds: the 45 deleted classes and the seven that keep members, FontConfig,
+  ImageConfig, StretchImageConfig, StretchCenterImageConfig, ImageFilterConfig, PercentLayoutConfig, ColorSchemeConfig).
+  `class(k)` is the class: its base, its cfgtab table, how its `Virtual24` used them (`Own`: ComponentConfig's MODIFY,
+  MAPCOMPONENT, then its table; `TableThenBase`; `BaseThenTable`: WONHeaderControlConfig; `TableOnly`: the skin, font,
+  image, percent-layout and colour-scheme configs), and its own predefined children (the name, compared exactly as
+  each original did, with a guiconf key table or `name == "..."`; the child config's kind; the component part).
+- The hooks are walks of that hierarchy: `v24_steps` (the tables in the order the chain of `||` ran them), `predefined`
+  (the first class up the bases whose list names the child), `named_borders` (LEFTPAD .. VERTPAD: the frame borders
+  summed, in the original's evaluation order), `is_a` (the original `dynamic_cast`s).
+- The C++ end: `ComponentConfig(EeWonCfgKind)` keeps the kind (`mKind`); its `Virtual24` (WONCfgTable.inl) runs the
+  steps; `GetPredefinedComponent`, `GetNamedValue`'s paddings and the WON skin's `PreParse` (WONCompCfg.inl) ask
+  cfgkind.rs and read the part (`CcPart`: a combo box's list area and edit box, a scrollbar's thumb, arrows and track,
+  a tab control's page layout point, the page view's text area, a scroller's bars and area, a list control's header,
+  an etched frame's label). `ContainerConfig(kind)` keeps the layout state for the container kinds (and, as the
+  original's ScreenContainerConfig did, no container pointer for a screen container); `CfgNewOfKind` makes the class
+  of a kind. The typed component pointers were all the component itself: the table setters read
+  `static_cast<T*>(mComponent)` (`EE_C(T)`).
+- Deleted: ConfigComponentBindings.cpp, ConfigBaseComponentBindings.cpp, SimpleComponentConfig.cpp,
+  ScrollbarConfigConstructor.cpp, ButtonConfigConstructor.cpp, MSEtchedPredefinedComponent.cpp,
+  MSListPredefinedComponents.cpp, MSPredefinedComponents.cpp, BrowserComponentConfig.cpp, ValueConfigConstructors.cpp,
+  ImageConfigConstructors.cpp, StretchImageConfig.cpp, MSComponentConfigRegistration.cpp and
+  WONControlsConfigRegistration.cpp (their tables now WONGUIConfig.cpp's, by kind, the shells' factories one template
+  `NewShellOf<kind, args>`); the headers WONLobbyMSConfig.h, WONLobbyMSExtraConfig.h, WONLobbyResourceConfig.h,
+  WONLobbyComboBoxConfig.h, WONLobbyTabCtrlConfig.h, WONLobbyWONListConfig.h, WONLobbyWONFrameValueConfig.h,
+  WONLobbyWONButtonConfig.h, WONLobbyWONFrameConfig.h; the classes' declarations in WONLobbyGUI.h and six other
+  headers.
+- The lobby's control configs (ChatCtrlConfig, ServerListCtrlConfig, RoomLabelCtrlConfig, ...) stay C++ subclasses of
+  ComponentConfig or ContainerConfig with their base's kind; MaxSplitterButtonConfig, whose only override called its
+  base, is the MSArrowButton kind with its factory.
+
+### Tests and mutations
+
+- `won_cfgtab_test` (round 39's golden of the table programs) now checks the chains too: its world's classes carry
+  their kinds (a member that sets the base's kind after the bases', so the most derived class's wins), and on the
+  port's side every class uses ComponentConfig's `Virtual24` over the kind's steps; the original side keeps each
+  class's own `Virtual24` with its explicit base calls (won_cfgtab_orig.h). The resource files' 2,185 instructions and
+  5,000 random ones on all 52 configs, the layout and image sequences: 383,620 checks, 0 mismatches;
+  `golden_cfgtab.txt` regenerated byte for byte the same.
+- `won_compcfg_test` (round 25's golden) adds the deleted classes' statements (tests/won/won_cfgkind_orig.h: their
+  declarations and SetComponent bindings, the predefined children, the frame paddings, the skin's PreParse, copied
+  with build/wl26/gen_orig.py from bcea46987) on the original side, and on the port's side the kinds: every class is
+  an allocator type (its class or its kind), the world's components have the parts, a shell op stand-in and the
+  skin's stand-in; the generator makes configs of every type, reads `child._THUMB`-style paths and `child.LEFTPAD`
+  values, and a new step probes a config directly: every predefined name (the child's class, its part, and two
+  levels of its own children) and every padding name. 3,000 runs, 0 mismatching; every predefined child and padding
+  is reached.
+- Mutations (build/wl26/mutate.py, each a Rust rebuild and both goldens): 7 of 8 caught (a predefined child's kind, a
+  part, HORZPAD's evaluation order, StretchImageConfig's base, TabCtrlConfig's base, the exact name compare,
+  MSTabButtonConfig's base); the eighth, WONHeaderControlConfig's base-first order, is equivalent: its keys and its
+  bases' are disjoint (only the reader's "passed on" count changed, 717,786 against 717,035).
+- cargo: cfgkind_tests.rs (4: the chains, the derivations, the predefined walks, the paddings).
+
+### Behaviour changes
+
+- A ScreenContainer config's container pointer is NULL (the original's was never set, so a container instruction on
+  one read garbage; the game's files have none).
+- The lobby's control configs call their base kind's hooks (`ComponentConfig::Virtual24` with the base's kind) where
+  they called the deleted base class's; the same chain.
+
+### What runs it
+
+- Every lobby screen's configs go through the kinds (the tour, the LAN game); the goldens' worlds are stand-ins, so
+  only the LAN capture comparison and the tour see the game's host statements on the real widgets.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at the move's commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| `rust_build.py header` | 283 headers current |
+| `rust_build.py gate` | PASS, 5,005 tests, on the merged tree (the first run there failed `gamespy::tests::a_failed_start_leaves_the_current_record`, a UDP port another program held: passed alone three times and in the rerun of the whole gate; the first run at the move's commit failed rustfmt on cfgkind_tests.rs, fixed before the commit) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical at the move's commit; seeds 2-7 identical on the merged tree |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 160 programs exit 0, peak 559 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13487` units [4, 42, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2739 joiner=2736`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe, 0a17fc666) | every lobby capture identical, no caret differences (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's own frames differ. Both runs `RESULT PASS lan-game` (PT 2762/2758 this round, 2725/2725 the start exe) |
+
+### Left
+
+- The lobby's control configs (ChatCtrlConfig, UserListCtrlConfig, GameUserListCtrlConfig, GameBrowserCtrlConfig,
+  ImageTextButtonConfig, CrossPromotionButtonConfig, CreditsDialogConfig) could be kinds with cfgtab tables (their
+  setters a case each); RoomLabelCtrlConfig needs a guiconf name table for its CHAT / GAME compares,
+  ServerListCtrlConfig's ADDCOLUMN stays a C++ setter. About -120 lines.
+- The table setters (WONCfgTable.inl, ~330 lines) are mostly calls of the widgets' inline forwards: they could be the
+  widgets' Rust objects through the widget registry, with a golden that checks the forwarders' mapping.
+- FontConfig's, ImageConfig's and the percent and colour-scheme configs' members could be the Rust config's (the
+  font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
+- The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
+- Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
