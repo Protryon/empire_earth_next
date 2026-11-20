@@ -17,7 +17,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_seel(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_setn(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -31,7 +30,7 @@ impl SeplHost for Host {
         unsafe {
             match op {
                 1000.. => sys::ee_screenscpp_setn(op, p, i, f),
-                900.. => sys::ee_screenscpp_seel(op, p, i, f),
+                900.. => crate::screens::editor_tabsx::seel_host(op, p, i, f),
                 500.. => crate::screens::editor_direct::semp(op, p, i, f),
                 _ => crate::screens::editor_world::host(
                     op,
