@@ -51,8 +51,8 @@ static intptr_t ImageOp(intptr_t which, intptr_t b)
     switch ((EeWonWbImage)which) {
     case EeWonWbImage::Hold: Img(b)->AddRef(); return 0;
     case EeWonWbImage::Release: Img(b)->Release(); return 0;
-    case EeWonWbImage::Width: return Img(b)->mWidth;
-    case EeWonWbImage::Height: return Img(b)->mHeight;
+    case EeWonWbImage::Width: return Img(b)->GetWidth();
+    case EeWonWbImage::Height: return Img(b)->GetHeight();
     case EeWonWbImage::Duplicate: { // the SmartPtr temporary's reference goes to the Rust
         SmartPtr<Image> aCopy = Img(b)->Duplicate();
         Image* p = aCopy.get();

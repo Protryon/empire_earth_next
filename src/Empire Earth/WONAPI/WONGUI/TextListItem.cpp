@@ -16,8 +16,8 @@ void TextListItem::CalcDimensions(ListArea* inList)
     if(this->mFont.get()==NULL) this->mFont=inList->mFont;
     if(this->mColor==-1) this->mColor=inList->GetTextColor();
     Image* i=this->mImage.get(); // the sizes are guidraw.rs text_item_size
-    ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->mWidth:0,
-                              i?i->mHeight:0,false,&this->mWidth,&this->mHeight);
+    ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->GetWidth():0,
+                              i?i->GetHeight():0,false,&this->mWidth,&this->mHeight);
 }
 // Orders two text items by their text, ignoring case
 int TextListItem::Compare(const ListItem* inOther,ListArea* inList) const
@@ -40,8 +40,8 @@ void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
     r.paint_width=inList->GetPaintWidth();
     r.width=this->mWidth;
     r.height=this->mHeight;
-    r.image_width=anImage ? anImage->mWidth : 0;
-    r.image_height=anImage ? anImage->mHeight : 0;
+    r.image_width=anImage ? anImage->GetWidth() : 0;
+    r.image_height=anImage ? anImage->GetHeight() : 0;
     r.font_height=this->mFont->GetHeight();
     WONDrawSlots aSlots;
     aSlots.mImages[0]=anImage;

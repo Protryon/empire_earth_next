@@ -197,47 +197,9 @@ inline int PlatGUIPixels(int inLogical, float inScale)
     return inScale == 1.0f ? inLogical : (int)floorf((float)inLogical * inScale + 0.5f);
 }
 
-// a 1-bit mask (RawImage1's rows: MSB first, rows padded to 4 bytes); a set bit is a transparent pixel
-class PlatNativeMask : public NativeMask {
-public:
-    PlatNativeMask(DisplayContext* inContext, int inWidth, int inHeight, int inBytesPerRow, const unsigned char* inBits);
-    virtual ~PlatNativeMask();
-    bool IsTransparent(int x, int y) const
-    { return (this->mBits[(size_t)y * this->mBytesPerRow + (x >> 3)] & (0x80 >> (x & 7))) != 0; }
-    EeWonPlatMask Rust() const
-    {
-        EeWonPlatMask m = {this->mBits.data(), this->mWidth, this->mHeight, this->mBytesPerRow};
-        return m;
-    }
-    int mWidth, mHeight, mBytesPerRow;
-    std::vector<unsigned char> mBits;
-};
-
-// a 32-bit image in a software surface (MSNativeImage's replacement: a device-dependent bitmap)
-class PlatNativeImage : public NativeImage {
-public:
-    // cleared to black; inWidth x inHeight logical pixels, inScale times as many pixels (DisplayContext::mPixelScale)
-    PlatNativeImage(DisplayContext* inContext, int inWidth, int inHeight, float inScale = 1.0f);
-    virtual ~PlatNativeImage();
-    virtual Graphics* PlatformGetGraphics();
-    virtual void Draw(DisplayContext* inContext, int x, int y, int left, int top, int width, int height);
-    virtual SmartPtr<RawImage32> GetRaw();
-    virtual SmartPtr<Image> Duplicate();
-    uint32_t* GetPixels();
-    int GetPitchPixels();
-    int GetPixelWidth() { return this->mSurface->GetWidth(); }
-    int GetPixelHeight() { return this->mSurface->GetHeight(); }
-    float GetScale() const { return this->mScale; }
-    SmartPtr<SurfaceBase> mSurface;
-    float mScale;
-};
-
-// An image decoded from inPath with the texture pack's copy when there is one: with the pack on (the Texture
-// Resolution setting, GETextureManager::GetTexturePackLogicalShift), Data/Textures-4x/WONLobby Resources/<the
-// file's path under WONLobby Resources> (the same name, or .png) at an integer multiple of inImage's size becomes
-// an image of inImage's logical size and transparency mask at that pixel scale (halved at the 2x setting). Else
-// inImage itself.
-SmartPtr<NativeImage> PlatGUIPackImage(DisplayContext* inContext, NativeImage* inImage, const char* inPath);
+// MSNativeImage's replacement: a 32-bit image in a software surface (WONLobbyGUI.h NativeImage, imgobj.rs; the
+// texture pack's copies of the lobby's images are its decoder's)
+typedef NativeImage PlatNativeImage;
 
 class PlatNativeIcon : public NativeIcon {
 public:

@@ -49,8 +49,8 @@ static intptr_t ImageOp(intptr_t which, intptr_t b)
     switch ((EeWonWbImage)which) {
     case EeWonWbImage::Hold: i->AddRef(); return 0;
     case EeWonWbImage::Release: i->Release(); return 0;
-    case EeWonWbImage::Width: return i->mWidth;
-    case EeWonWbImage::Height: return i->mHeight;
+    case EeWonWbImage::Width: return i->GetWidth();
+    case EeWonWbImage::Height: return i->GetHeight();
     case EeWonWbImage::Duplicate: { SmartPtr<Image> d = i->Duplicate(); Image* p = d.get(); if (p) p->AddRef(); return (intptr_t)p; }
     default: return 0;
     }
@@ -118,7 +118,7 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     case H::TextWidth: return ((WrappedText*)a)->GetWidth();
     case H::VDesiredSize: { int* wh = (int*)b; ((Component*)a)->GetDesiredSize(wh[0], wh[1]); return 0; }
     case H::NewStretchImage: { ImageComponent* i = new ImageComponent; i->mStretch = true; i->SetImage((Image*)a); return (intptr_t)static_cast<Component*>(i); }
-    case H::NewMsImage: return (intptr_t)static_cast<Image*>(new WONMSSkin::MSImage((unsigned char)a, (unsigned char)b, (int)c, (int)d));
+    case H::NewMsImage: return (intptr_t)WONNewMsImage((unsigned char)a, (unsigned char)b, (int)c, (int)d);
     case H::GetNamedFont: {
         Font* f = WindowManager::GetDefaultWindowManager()->GetNamedFont(std::string((const char*)a));
         if (f) f->AddRef();

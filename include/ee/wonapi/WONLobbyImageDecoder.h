@@ -1,76 +1,44 @@
-// ImageDecoder (8 bytes) and MultiImageDecoder (the original's 0x34 bytes: its map, set and extension are ee_won's
-// imgdec.rs EeWonImgDec now, R6 WON round 41).
+// The image decoders (R6 WONLobby round 24): MultiImageDecoder's decoders by extension, its decodes and the PNG and
+// JPEG decoders are ee_won_gui's imgobj.rs (the decodes imgdec.rs); a FileReader status comes back to be thrown here,
+// where the original's reads threw.
 #ifndef EE_WONAPI_WONLOBBYIMAGEDECODER_H
 #define EE_WONAPI_WONLOBBYIMAGEDECODER_H
-#include "rust/won_gui/imgdec.h"
+#include "rust/won_gui/imgobj.h"
 namespace WONAPI {
-class FileReader;
 class DisplayContext;
 class NativeImage;
 class RawImage;
 class ImageAttributes {
 public:
     int mWidth,mHeight;
-    ImageAttributes(); // at 0x007478f0
+    ImageAttributes() : mWidth(0),mHeight(0) {}
 };
-class ImageDecoder {
-protected:
-    FileReader* mFileReader; // offset 0x04; class size 0x08, no RefCount base
-    virtual SmartPtr<NativeImage> DoDecode(DisplayContext*); //slot00 347940
-    virtual SmartPtr<RawImage> DoDecodeRaw()=0; //04
-    virtual bool DoGetAttrib(ImageAttributes&)=0; //08
-public:
-    ImageDecoder(); //347900
-    virtual ~ImageDecoder(); // slot 0x0c; complete 0x00747930, deleting 0x00747910
-    SmartPtr<NativeImage> Decode(DisplayContext*,const char*); //3479f0
-    SmartPtr<NativeImage> Decode(DisplayContext*,FileReader&); //347a70
-    SmartPtr<RawImage> DecodeRaw(const char*); //347ab0
-    SmartPtr<RawImage> DecodeRaw(FileReader&); //347b30
-    bool GetImageAttributes(const char*,ImageAttributes&); //347b70
-    bool GetImageAttributes(FileReader&,ImageAttributes&); //347be0
-    virtual ImageDecoder* Duplicate()=0; //slot14
-protected:
-    // the decoder inKind (EeWonImgKind) on mFileReader, through imgdec.rs
-    bool RustAttrib(int inKind,ImageAttributes& outAttributes);
-    SmartPtr<RawImage> RustDecodeRaw(int inKind);
-};
-class MultiImageDecoder : public ImageDecoder {
-protected:
-    EeWonImgDec* mRust; // the decoders by extension, the set it owns, the current extension (imgdec.rs)
-    uintptr_t Call(EeWonImgDecCall inCall,uintptr_t a=0,const char* b=NULL,size_t c=0);
+void WONImageThrow(int inStatus); // throws the FileReaderException of a FileReader status (PlatNativeImage.cpp)
+intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+class MultiImageDecoder {
+    EeWonImgDecoder* mRust;
+    intptr_t Run(EeWonImgDecoderRun r,DisplayContext* c,const char* p,int* wh=NULL)
+    {
+        int32_t t=0, w[2];
+        intptr_t i=ee_won_img_decoder_run(this->mRust,r,(intptr_t)c,p,wh!=NULL?wh:w,&t);
+        if(t!=0) WONImageThrow(t);
+        return i;
+    }
     MultiImageDecoder(const MultiImageDecoder&);
     MultiImageDecoder& operator=(const MultiImageDecoder&);
-    virtual SmartPtr<NativeImage> DoDecode(DisplayContext*); //00 3484e0
-    virtual SmartPtr<RawImage> DoDecodeRaw(); //04 348670
-    virtual bool DoGetAttrib(ImageAttributes&); //08 3487f0
 public:
-    MultiImageDecoder(); //347c50
-    virtual ~MultiImageDecoder(); // slot 0x0c; complete 0x00747eb0, deleting 0x00747d20
-    void AddDecoder(ImageDecoder*,const char*); // at 0x00748080; takes ownership
-    void SetCurExtension(const char* s); // inline in the original
-    void SetFileName(const char*); //348270
-    SmartPtr<NativeImage> Decode(DisplayContext*,const char*); //348450
-    SmartPtr<RawImage> DecodeRaw(const char*); //348490
-    bool GetImageAttributes(const char*,ImageAttributes&); //3484c0
-    virtual ImageDecoder* Duplicate(); //14 3488e0
+    MultiImageDecoder() : mRust(ee_won_img_decoder_new(WONImageHost)) {}
+    ~MultiImageDecoder() { ee_won_img_decoder_free(this->mRust); }
+    void AddDecoder(EeWonImgKind k,const char* ext) { ee_won_img_decoder_add(this->mRust,k,ext); } // replaces one there
+    SmartPtr<NativeImage> Decode(DisplayContext*,const char*); // with the texture pack's copy when there is one
+    SmartPtr<RawImage> DecodeRaw(const char*);
+    bool GetImageAttributes(const char* p,ImageAttributes& a)
+    { int wh[2]; if(!this->Run(EeWonImgDecoderRun::Attributes,NULL,p,wh)) return false; a.mWidth=wh[0]; a.mHeight=wh[1]; return true; }
 };
-// Fieldless PNG/JPG decoders: ImageDecoder (8 bytes), six slots; vtables 0x008547c8 and 0x008547e4.
-// The inherited slots 0x00/0x0c/0x10 are unchanged.
-class PNGDecoder : public ImageDecoder {
-protected:
-    virtual SmartPtr<RawImage> DoDecodeRaw(); // slot 0x04, 0x007d2660
-    virtual bool DoGetAttrib(ImageAttributes&); // slot 0x08, 0x007d2550
-public:
-    static void Add(MultiImageDecoder*); // at 0x007d24e0
-    virtual ImageDecoder* Duplicate(); // slot 0x14, 0x007d29d0
-};
-class JPGDecoder : public ImageDecoder {
-protected:
-    virtual SmartPtr<RawImage> DoDecodeRaw(); // slot 0x04, 0x007d2cd0
-    virtual bool DoGetAttrib(ImageAttributes&); // slot 0x08, 0x007d2bf0
-public:
-    static void Add(MultiImageDecoder*); //3d2a20
-    virtual ImageDecoder* Duplicate(); // slot 0x14, 0x007d2f50
+struct PNGDecoder { static void Add(MultiImageDecoder* d) { d->AddDecoder(EeWonImgKind::Png,"png"); } };
+struct JPGDecoder {
+    static void Add(MultiImageDecoder* d)
+    { static const char* const kExt[4]={"jpg","jpe","jpeg","pjpeg"}; for(int i=0;i<4;i++) d->AddDecoder(EeWonImgKind::Jpg,kExt[i]); }
 };
 }
 #endif

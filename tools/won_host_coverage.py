@@ -41,6 +41,8 @@ CHECKS = [
     dict(enum="EeWonShellHostOp", header="won_gui/shell.h", hosts=[GUI / "GuiShell.cpp"], rust=[],
          allowed={v: "a base class's Rust object answers it in the game (shell.rs Sh); a driver's host otherwise"
                   for v in ("Comp", "Btn", "MsBtn", "Call")}),
+    # the images' calls out (R6 WONLobby round 24: imgobj.rs): every one the images' host answers
+    dict(enum="EeWonImageHost", header="won_gui/imgobj.h", hosts=[GUI / "PlatNativeImage.cpp"], rust=[], allowed={}),
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],

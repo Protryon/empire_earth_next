@@ -27,6 +27,7 @@
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
 #include "rust/won_gui/grabobj.h"
+#include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guilayout.h"
 #include "rust/won_gui/inputobj.h"
@@ -1844,7 +1845,6 @@ void LobbyKickClient(LobbyClient* inClient, bool inFlag);
 
 // 0x361250: default GUI manager (global 0x566270, assigned by WindowManager constructor).
 
-// Font, Image and NativeImage are declared for their callers; nothing here allocates them.
 
 class Font : public RefCount {
 public:
@@ -1882,19 +1882,30 @@ public:
     // Implicit destructor; 0x38a250 has no own vptr store.
 };
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
+// The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
+// original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and
+// their palettes, MSImage, DelayLoadImage, StretchImage, StretchCenterImage; the filters and the decoders too). These
+// classes are its handles: one owned pointer and the reference count; each method a forward. A call that makes an
+// image returns a new handle (WONImageHost's Wrap picks the class by the kind) with one reference the SmartPtr adopts.
+// The host is PlatNativeImage.cpp's.
+intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Image : public RefCount {
 public:
-    void DrawEntire(DisplayContext*,int,int); // 0x3285a0: draws the whole image
-    virtual ~Image();
-    virtual void Draw(DisplayContext*, int, int, int, int, int, int);
-    virtual void SetSize(int, int);
-    virtual SmartPtr<Image> Duplicate();
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*);
-    unsigned short GetWidth() const { return this->mWidth; }
-    unsigned short GetHeight() const { return this->mHeight; }
-    unsigned short mWidth;                  // +08
-    unsigned short mHeight;                 // +0a
+    EeWonImage* mRust; // owned
+    explicit Image(EeWonImage* inRust) : mRust(inRust) { ee_won_image_bind(inRust,(intptr_t)this); }
+    virtual ~Image() { ee_won_image_free(this->mRust); }
+    void Draw(DisplayContext* c,int x,int y,int l,int t,int w,int h) { ee_won_image_draw(this->mRust,(intptr_t)c,x,y,l,t,w,h); }
+    void DrawEntire(DisplayContext* c,int x,int y) { this->Draw(c,x,y,0,0,this->GetWidth(),this->GetHeight()); }
+    void SetSize(int w,int h) { this->Call(EeWonImageCall::SetSize,w,h); }
+    SmartPtr<Image> Duplicate();
+    SmartPtr<NativeImage> GetNative(DisplayContext* c);
+    unsigned short GetWidth() const { return (unsigned short)this->Get(EeWonImageField::Width); }
+    unsigned short GetHeight() const { return (unsigned short)this->Get(EeWonImageField::Height); }
+    EeWonImageKind GetKind() const { return ee_won_image_kind(this->mRust); }
+    intptr_t Get(EeWonImageField f) const { return ee_won_image_get(this->mRust,f); }
+    intptr_t Call(EeWonImageCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0) { return ee_won_image_call(this->mRust,c,a,b,cc,d); }
 };
+template <class T> inline SmartPtr<T> WONImageAdopt(intptr_t p) { SmartPtr<T> s; s.mPtr=static_cast<T*>((Image*)p); return s; }
 // a private duplicate of the other frame's image (none when it has none), then its borders
 inline void WONFrame::Copy(const WONFrame& f)
 {
@@ -1905,133 +1916,56 @@ inline void WONFrame::Copy(const WONFrame& f)
 // ImageComponent's image setters (the component sized to a non-null image) and its desired size (the image's, or
 // 10 x 10 without one)
 inline ImageComponent::ImageComponent(Image* i,bool t) { this->SetImageAndTile(i,t); this->mStretch=false; }
-inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->mWidth; h=this->mImage->mHeight; } else w=h=10; }
-inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
-inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
-// NativeMask (0x0c bytes): constructor 0x3288b0, RTTI 0x4d6e80.
-class NativeMask : public RefCount {
-public:
-    NativeMask(DisplayContext*); //3288b0
-    virtual ~NativeMask(); //328920
-    SmartPtr<DisplayContext> mDisplayContext; //08
-};
-// NativeImage (abstract, 0x18 bytes); 0x328a70/0x328b20.
+inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->GetWidth(); h=this->mImage->GetHeight(); } else w=h=10; }
+inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
+inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
+// PlatNativeImage (the one native image; PlatNativeImage is its other name, WONLobbyPlatform.h): a logical size, a
+// surface of PlatGUIPixels(size, scale) pixels and its own display context, a transparency mask, its Graphics
 class NativeImage : public Image {
 public:
-    NativeImage(DisplayContext*); //328a70
-    Graphics& GetGraphics(); //328c20
-    void SetTransparentMask(NativeMask* mask) { this->mTransparentMask=mask; }
-    virtual ~NativeImage(); //328b20
-    virtual void Draw(DisplayContext*,int,int,int,int,int,int) = 0;
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //328bf0
-    virtual Graphics* PlatformGetGraphics() = 0;
-    virtual SmartPtr<RawImage32> GetRaw();
-    Graphics* mGraphics; // at +0x0c, owned
-    SmartPtr<DisplayContext> mDisplayContext; //10
-    SmartPtr<NativeMask> mTransparentMask; //14
+    explicit NativeImage(EeWonImage* r) : Image(r) {}
+    // black, inWidth x inHeight logical pixels at the pixel scale (at least 1); the context is not kept
+    NativeImage(DisplayContext*,int inWidth,int inHeight,float inScale=1.0f) : Image(ee_won_image_new_native(WONImageHost,inWidth,inHeight,inScale)) {}
+    Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
+    SmartPtr<RawImage32> GetRaw();
+    uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
+    int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
+    int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
+    int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
+    float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
+    SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
 };
-
-
-// Target classes merge platform behavior into the concrete RawImage classes.
-// Six vtable slots (tables at 0x4510a8/0x4510c4/0x4510e0); the later SDK's platform
-// virtuals and GetRawImage32 virtual are absent from this binary.
-class Palette : public RefCount {
-public:
-    Palette(int n) : mNumColors(n) { this->mColors=new DWORD[n]; } // inline; allocates n colors (used at 0x336828)
-    SmartPtr<Palette> Duplicate(); // 0x349040: copies the palette
-    void SetColor(int thePos, unsigned long theVal) { this->mColors[thePos] = theVal; }
-    unsigned long GetColor(int thePos) { return this->mColors[thePos]; }
-    int GetNumColors() { return this->mNumColors; }
-    virtual ~Palette(); // out of line
-    DWORD* mColors; //08
-    int mNumColors; //0c
-}; // 0x10 bytes, two owned members; destructor out of line
-class NativeMask;
 class RawImage : public Image {
 public:
-    RawImage(int type) : mType(type) {}
-    virtual void Draw(DisplayContext*,int,int,int,int,int,int); //328c50
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*) = 0;
-    virtual bool HasTransparency() { return false; }
-    int mType; //0c; 0=1bit,1=8bit,2=32bit
+    explicit RawImage(EeWonImage* r) : Image(r) {}
+    int GetType() const { return (int)this->Get(EeWonImageField::RawType); } // 0 1-bit, 1 8-bit, 2 32-bit
+    bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
 };
 class RawImage32 : public RawImage {
 public:
-    RawImage32(int,int); // 0x328cf0; 0x24 bytes
-    virtual ~RawImage32(); //328da0
-    virtual SmartPtr<Image> Duplicate(); //328df0
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //328f30
-    virtual bool HasTransparency() { return this->mDoTransparency; }
-    SmartPtr<NativeImage> CreateNativeImage(DisplayContext*); // creates the platform image
-    DWORD GetPixel(int,int); //328ee0
-    DWORD* StartRowTraversal(int); //328f00
-
-    void SetDoTransparency(bool value) { this->mDoTransparency=value; }
-    void SetRowPixel(DWORD value) { *this->mRowPtr=value; }
-    bool HasMoreRows() { return this->mRowEnd<=this->mImageEnd; }
-    bool HasMoreRowPixels() { return this->mRowPtr<this->mRowEnd; }
-    DWORD* GetImageData() { return this->mImageData; }
-    DWORD GetRowPixel() { return *this->mRowPtr; }
-    void NextRowPixel() { ++this->mRowPtr; }
-    void NextRowPixel(int theAmount) { this->mRowPtr+=theAmount; }
-    void NextRow() { this->mRowPtr=this->mRowEnd; this->mRowEnd+=this->mWidth; }
-    DWORD* mImageData; //10
-    DWORD* mImageEnd; //14
-    DWORD* mRowPtr; //18
-    DWORD* mRowEnd; //1c
-    bool mDoTransparency; //20
+    explicit RawImage32(EeWonImage* r) : RawImage(r) {}
+    RawImage32(int w,int h) : RawImage(ee_won_image_new_raw32(WONImageHost,w,h)) {}
+    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); }
+    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); }
 };
 class RawImage8 : public RawImage {
 public:
-    RawImage8(int,int,Palette* =NULL); // 0x329170; 0x30 bytes
-    virtual ~RawImage8(); //329280
-    virtual SmartPtr<Image> Duplicate(); //329300
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //329460
-    virtual bool HasTransparency() { return this->mTransparentColor>=0; }
-    void CalcBytesPerRow(); //real nonvirtual platform row initialization
-    SmartPtr<NativeImage> CreateNativeImage(DisplayContext*);
-    unsigned char GetPixel(int,int); //329420
-    unsigned char* StartRowTraversal(int); //329440
-    unsigned char GetRowPixel() { return *this->mRowPtr; }
-    void SetRowPixel(unsigned char value) { *this->mRowPtr=value; }
-    void NextRowPixel() { ++this->mRowPtr; }
-    void NextRowPixel(int theAmount) { this->mRowPtr+=theAmount; }
-    unsigned char* mImageData; //10
-    unsigned char* mImageEnd; //14
-    unsigned char* mRowPtr; //18
-    unsigned char* mRowEnd; //1c
-    int mRowPad; //20
-    int mBytesPerRow; //24
-    SmartPtr<Palette> mPalette; //28
-    int mTransparentColor; //2c
+    explicit RawImage8(EeWonImage* r) : RawImage(r) {}
+    RawImage8(int w,int h) : RawImage(ee_won_image_new_raw8(WONImageHost,w,h)) {} // no palette
 };
-class RawImage1 : public RawImage {
-public:
-    RawImage1(int,int); // 0x329690; 0x3c bytes
-    virtual ~RawImage1(); //329790
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //3d07e0
-    void CalcBytesPerRow(); //real nonvirtual platform row initialization
-    SmartPtr<NativeMask> GetMask(DisplayContext*); //3d06b0, nonvirtual
-    unsigned char* StartRowTraversal(int); //3297e0
-    void NextRow() { this->mRowPtr=this->mRowEnd+this->mRowPad; this->mRowEnd+=this->mBytesPerRow; this->mRowMask=128; }
-    int GetBytesPerRow() { return this->mBytesPerRow; }
-    unsigned char* GetImageData() { return this->mImageData; }
-    void NextRowPixel() { this->mRowMask>>=1; if(this->mRowMask==0) { this->mRowPtr++; this->mRowMask = 128; } }
-    void NextRowPixel(int theAmount) { for(int i=0; i<theAmount; i++) this->NextRowPixel(); }
-    void SetRowPixel(bool on) { if(on) *this->mRowPtr |= this->mRowMask; else *this->mRowPtr &= ~mRowMask; }
-    bool GetRowPixel() { return (*this->mRowPtr)&this->mRowMask?true:false; }
-    unsigned char* mImageData; //10
-    unsigned char* mImageEnd; //14
-    unsigned char* mRowPtr; //18
-    unsigned char* mRowEnd; //1c
-    int mRowMask; //20
-    int mRowPad; //24
-    int mEndRowMask; //28
-    int mBytesPerRow; //2c
-    int mBytesPerRowMinusPad; //30
-    int mCompleteBytesPerRow; //34
-    int mWidthMod8; //38
-};
+inline SmartPtr<Image> Image::Duplicate() { return WONImageAdopt<Image>(this->Call(EeWonImageCall::Duplicate)); }
+inline SmartPtr<NativeImage> Image::GetNative(DisplayContext* c) { return WONImageAdopt<NativeImage>(this->Call(EeWonImageCall::Native,(intptr_t)c)); }
+inline SmartPtr<RawImage32> NativeImage::GetRaw() { return WONImageAdopt<RawImage32>(this->Call(EeWonImageCall::Raw)); }
+// the filters (ImageFilters.cpp's crop, scale and tint and the transparent colour; imgobj.rs): a new image, or the
+// image itself (NULL for an image of a type the filter has none for)
+inline SmartPtr<RawImage> ImageCrop(RawImage* i,int x,int y,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Crop,x,y,w,h)); }
+inline SmartPtr<RawImage> ImageScalePercent(RawImage* i,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::ScalePercent,w,h)); }
+inline SmartPtr<RawImage> ImageScaleTo(RawImage* i,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::ScaleTo,w,h)); }
+inline SmartPtr<RawImage> ImageTint(RawImage* i,int r,int g,int b) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Tint,r,g,b)); }
+inline SmartPtr<RawImage> ImageTransparent(RawImage* i,DWORD c) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Transparent,(intptr_t)c)); }
+// the decoders' decodes (WONLobbyImageDecoder.h)
+inline SmartPtr<NativeImage> MultiImageDecoder::Decode(DisplayContext* c,const char* p) { return WONImageAdopt<NativeImage>(this->Run(EeWonImgDecoderRun::Decode,c,p)); }
+inline SmartPtr<RawImage> MultiImageDecoder::DecodeRaw(const char* p) { return WONImageAdopt<RawImage>(this->Run(EeWonImgDecoderRun::DecodeRaw,NULL,p)); }
 
 class TextListItem : public ListItem {
 public:
