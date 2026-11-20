@@ -6,6 +6,7 @@
     python -I tools/cpp_deps.py cuts --focus 'User Interface Thread/,UI Events/'   # rank by the focus units freed
     python -I tools/cpp_deps.py why FILE [--focus ...]       # why a unit is in SCC 1: its shortest cycle, who names it
     python -I tools/cpp_deps.py layer --focus ...            # the focus units as a layer: every edge into it to cut
+    python -I tools/cpp_deps.py cuts --of FILE               # the cuts of the cycle holding FILE (not SCC 1)
     python -I tools/cpp_deps.py selftest                     # compiles tiny objects with clang-cl and checks the graph
 
 Build first (`python -I build.py -j 3 --sim`). The objects are the ones the Windows links name:
@@ -911,15 +912,14 @@ def focus_match(name, focus):
             and not any(f[1:] in name for f in focus if f.startswith("!")))
 
 
-def find_cuts(g, max_weight=6, focus=()):
+def find_cuts(g, max_weight=6, focus=(), of=None):
     """Returns (core, core lines, [cut dict ranked by lines out of SCC 1]). With `focus` (unit name substrings) the
-    cuts are ranked first by the focus units they take out of SCC 1, and only cuts freeing one are kept."""
+    cuts are ranked first by the focus units they take out of SCC 1, and only cuts freeing one are kept. With `of` (a
+    unit name), the component is the one holding that unit instead of SCC 1 (e.g. the UI's own cycle)."""
     units, edges = g["units"], g["edges"]
-    cpp = sorted(n for n, u in units.items() if u.kind == "cpp")
     succ = {a: set(bs) for a, bs in edges.items()}
     L = lambda n: units[n].lines   # noqa: E731
-    comps = tarjan(cpp, succ)
-    core = max(comps, key=lambda c: sum(L(n) for n in c))
+    core = sorted(core_of(g, of))
     cset = set(core)
     L0 = sum(L(n) for n in core)
     sub = {n: {b for b in succ.get(n, ()) if b in cset} for n in core}
@@ -949,8 +949,8 @@ def find_cuts(g, max_weight=6, focus=()):
     return core, L0, res
 
 
-def report_cuts(g, out, top, max_weight, focus=()):
-    core, L0, res = find_cuts(g, max_weight, focus)
+def report_cuts(g, out, top, max_weight, focus=(), of=None):
+    core, L0, res = find_cuts(g, max_weight, focus, of)
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "cuts.txt", "w", encoding="utf-8", newline="\n") as f:
         f.write(f"# cuts of SCC 1 ({len(core)} units, {L0} lines), ranked by the lines SCC 1 would lose\n"
@@ -982,10 +982,14 @@ def report_cuts(g, out, top, max_weight, focus=()):
     return res
 
 
-def core_of(g):
+def core_of(g, of=None):
+    """SCC 1 (the component with the most lines), or with `of` (a unit name) the component holding that unit."""
     units, edges = g["units"], g["edges"]
     cpp = sorted(n for n, u in units.items() if u.kind == "cpp")
     comps = tarjan(cpp, {a: set(bs) for a, bs in edges.items()})
+    if of:
+        n = find_unit(units, of)
+        return set(next(c for c in comps if n in c))
     return set(max(comps, key=lambda c: sum(units[n].lines for n in c)))
 
 
@@ -1042,11 +1046,11 @@ def show_why(g, name, focus=()):
         print(f"  <- {a}  [{', '.join(syms[:6])}{' ...' if len(syms) > 6 else ''}]")
 
 
-def show_layer(g, focus):
+def show_layer(g, focus, of=None):
     """The focus units of SCC 1 as a layer above the rest: every edge into the layer from the rest of SCC 1 (the
     back edges), grouped by symbol, and SCC 1 with all of them cut."""
     units, edges = g["units"], g["edges"]
-    core = core_of(g)
+    core = core_of(g, of)
     layer = {n for n in core if focus_match(n, focus)}
     by_sym = collections.defaultdict(set)
     drop = set()
@@ -1203,6 +1207,7 @@ def main():
     ap.add_argument("--top", type=int, default=30)
     ap.add_argument("--max-weight", type=int, default=6,
                     help="cuts: the most symbols an edge or unit-out cut may name")
+    ap.add_argument("--of", default=None, help="cuts, layer: the component holding this unit instead of SCC 1")
     ap.add_argument("--focus", default="", help="cuts, why, layer: comma-separated unit name substrings (e.g. "
                     "'User Interface Thread/,UI Events/'); cuts ranks by the focus units a cut frees")
     ap.add_argument("--all-refs", action="store_true",
@@ -1223,7 +1228,7 @@ def main():
         return 0
     focus = tuple(f for f in a.focus.split(",") if f)
     if a.cmd == "cuts":
-        report_cuts(g, out, a.top, a.max_weight, focus)
+        report_cuts(g, out, a.top, a.max_weight, focus, a.of)
         return 0
     if a.cmd == "why":
         if not a.file:
@@ -1233,7 +1238,7 @@ def main():
     if a.cmd == "layer":
         if not focus:
             sys.exit("layer: give --focus")
-        show_layer(g, focus)
+        show_layer(g, focus, a.of)
         return 0
     build_reports(g, out, a.top)
     return 0
