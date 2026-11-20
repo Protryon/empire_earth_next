@@ -110,6 +110,7 @@
 #include "rust/won_gui/guicfg.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guictor.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guiedit.h"
 #include "rust/won_gui/guievent.h"
