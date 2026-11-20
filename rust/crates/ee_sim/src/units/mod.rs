@@ -64,6 +64,7 @@ pub mod gather_spot;
 pub mod gather_world;
 pub mod goal_obj;
 pub mod goal_spec;
+pub mod goal_split;
 pub mod goals;
 pub mod group;
 pub mod group_host;

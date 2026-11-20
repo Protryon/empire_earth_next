@@ -1281,6 +1281,336 @@ constexpr static const int32_t EE_UNITS_GAME_OVER_CAN_TRAIN = 10;
 /// `kGoalGather`
 constexpr static const uint8_t GOAL_GATHER = 6;
 
+/// `a->StartAction(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_START_ACTION = 600;
+
+/// `EEUnitCast<EEComplexUnit>(gWorld.GetUnit(a))`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_COMPLEX = 601;
+
+/// `gWorld.GetUnit(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_PLAIN = 602;
+
+/// `a->mActiveGroup->TellGroup(a, f[0..3])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TELL_GROUP = 603;
+
+/// the file's `Write((uint32_t)i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_U32 = 604;
+
+/// the file's `Write((int32_t)i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_I32 = 605;
+
+/// the file's `Write(float of the bits i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_F32 = 606;
+
+/// the file's `Write(i[1] != 0)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_BOOL = 607;
+
+/// the file's `Read` of a `uint32_t` from and into `i[1]`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_U32 = 608;
+
+/// the file's `Read` of an `int32_t`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_I32 = 609;
+
+/// the file's `Read` of a float (its bits)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_F32 = 610;
+
+/// the file's `Read` of a `bool`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_BOOL = 611;
+
+/// the context's `mText != NULL`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_HAS_TEXT = 612;
+
+/// `*mText += text`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_APPEND_TEXT = 613;
+
+/// `fputs(text, mDump)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_APPEND_DUMP = 614;
+
+/// `a->mPlayer->mTechnologies->Get(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PLAYER_TECH = 615;
+
+/// node `a`'s `mData->mCalamity`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_CALAMITY = 616;
+
+/// `EECalamityManager::GetInstance()->GetCalamityClass(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CALAMITY_CLASS_OF = 617;
+
+/// calamity class `a`'s `GetTargetKind()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CALAMITY_TARGET_KIND = 618;
+
+/// calamity class `a`'s `GetCost()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CALAMITY_COST = 619;
+
+/// calamity class `a`'s `mRange`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CALAMITY_RANGE = 620;
+
+/// `a->mPlayer->GetPlayerID()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_UNIT_PLAYER_ID = 621;
+
+/// `CreateUnitCalamity(i[0], i[1], i[2], i[3])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CREATE_UNIT_CALAMITY = 622;
+
+/// `CreateLocationCalamity(i[0], i[1], i[2], i[3], i[4])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CREATE_LOCATION_CALAMITY = 623;
+
+/// `CreateGlobalCalamity(i[0], i[1], i[3])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CREATE_GLOBAL_CALAMITY = 624;
+
+/// `EEIsInContactRange(a, b, f[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_IN_CONTACT_RANGE = 625;
+
+/// `gContinentManager.GetPathAreaAt(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PATH_AREA_AT = 626;
+
+/// path area `a`'s `GetHullBounds().mTop`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AREA_TOP = 627;
+
+/// `.mBottom`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AREA_BOTTOM = 628;
+
+/// `.mLeft`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AREA_LEFT = 629;
+
+/// `.mRight`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AREA_RIGHT = 630;
+
+/// `gWorld.mMap->GetTile(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAP_TILE = 631;
+
+/// `gWorld.mMap->IsEdgeTile(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_EDGE_TILE = 632;
+
+/// tile `b`'s `IsVisibleTo(a->mPlayer)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TILE_VISIBLE = 633;
+
+/// `a->mUnitClass->mDomains`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CLASS_DOMAINS = 634;
+
+/// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SPACE_MAP = 635;
+
+/// `a->mUnitClass->CanMoveOnTerrain(a, i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CAN_MOVE_ON_TERRAIN = 636;
+
+/// `gMapWidth`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAP_WIDTH = 637;
+
+/// `gMapHeight`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAP_HEIGHT = 638;
+
+/// `gWorld.mMap->mL195614`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAP_L195614 = 639;
+
+/// `gWorld.mMap->mL195610`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAP_L195610 = 640;
+
+/// `a->mUnitClass->mUnitType`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CLASS_UNIT_TYPE = 641;
+
+/// `gContinentManager.GetContinentAt(a)` (as an `EEAIArea*`)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CONTINENT_AT = 642;
+
+/// `gContinentManager.GetRandomContinent(kContinentCategoryNone, gPhysics->mRandom)` (a draw)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_RANDOM_CONTINENT = 643;
+
+/// area `a`'s `GetRandomPoint()` into `i[0]`, `i[1]`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AREA_RANDOM_POINT = 644;
+
+/// `EEFindNearbyTarget(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_NEARBY_TARGET = 645;
+
+/// `a->mPlayer->NoticeForeignUnit(b)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NOTICE_FOREIGN_UNIT = 646;
+
+/// `a`'s class is a transport (`EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>` not NULL)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_IS_TRANSPORT = 647;
+
+/// the transport class's `CanUnloadAt(a, i[0], i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TRANSPORT_CAN_UNLOAD_AT = 648;
+
+/// `EEIsTileFree(a, i[0], i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TILE_FREE = 649;
+
+/// the transport class's `FindUnloadTiles(a, the four tiles of `text`)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TRANSPORT_UNLOAD_TILES = 650;
+
+/// the airplane class's `FindUnloadTiles`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_AIRPLANE_UNLOAD_TILES = 651;
+
+/// the transport class's `CanUnloadNear(a, a->GetCargo(0), the three tiles of `text`)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CAN_UNLOAD_NEAR = 652;
+
+/// `gSpaceUnloadSoundID`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SPACE_UNLOAD_SOUND = 653;
+
+/// `EESoundObject::Get(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SOUND_GET = 654;
+
+/// `a->mUnitClass->GetSoundParameters(a, b, &f[0], &f[1], &f[2])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SOUND_PARAMETERS = 655;
+
+/// sound `a`'s `Play(f[0], f[1], f[2])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SOUND_PLAY = 656;
+
+/// sound `a`'s `Play()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SOUND_PLAY_PLAIN = 657;
+
+/// `a->mWaypoints.empty()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NO_WAYPOINTS = 658;
+
+/// the transport class's `CanLoad(a, b)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TRANSPORT_CAN_LOAD = 659;
+
+/// the transport class's `FindRendezvousTiles(list, a, the two tiles of `text`)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS = 660;
+
+/// `a->mPlayer->GetTechTree()->Get(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TECH_TREE_GET = 661;
+
+/// node `a`'s researched event's first effect's `mNewUnitClass`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_NEW_CLASS = 662;
+
+/// `gUnitClassTable[i[0]]`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CLASS_TABLE = 663;
+
+/// class `a`'s `GetTechnology()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CLASS_TECHNOLOGY = 664;
+
+/// node `a`'s `GetIsAvailable()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_AVAILABLE = 665;
+
+/// `b->CanTake(a, i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CAN_TAKE = 666;
+
+/// `EEReplaceUnit(a, a->mPlayer->mPlayerID, class b)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_REPLACE_UNIT = 667;
+
+/// node `a`'s `mData->mID`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_ID = 668;
+
+/// node `a`'s `mData->mKind`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_KIND = 669;
+
+/// node `a`'s `GetBuildTime()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NODE_BUILD_TIME = 670;
+
+/// `a->mPlayer`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_UNIT_PLAYER = 671;
+
+/// player `a`'s `mTechnologies != NULL`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH = 672;
+
+/// player `a`'s `mTechnologies->Research(b->mUnitClass->GetTechnology(), NULL)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS = 673;
+
+/// player `a`'s `CheckButtonsPreloaded(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS = 674;
+
+/// `a->SetBuilt(1, 1, 1)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_BUILT = 675;
+
+/// player `a`'s `mTechnologies->Get(i[0])->GetIsAvailable()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE = 676;
+
+/// `EECreateSpaceWallEnergyWall(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SPACE_WALL = 677;
+
+/// `gWorld.GetCurrentPlayer()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CURRENT_PLAYER = 678;
+
+/// `a->mStats->mCreationSound`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CREATION_SOUND = 679;
+
+/// `gSoundManager->Play(sound a's sample, its volume, 0, 1, false, NULL)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PLAY_SAMPLE = 680;
+
+/// `gUIManager->GetMainGameForm()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_MAIN_GAME_FORM = 681;
+
+/// `gUIManager->GetMainGameForm()->mRefreshGroup = true`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_REFRESH_GROUP = 682;
+
+/// `a->mNextPart`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_NEXT_PART = 683;
+
+/// `a->SetHitPoints(a->mStats->mMaxHitPoints)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FULL_HIT_POINTS = 684;
+
+/// `a->Kill(0, 0, 0)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_KILL = 685;
+
+/// `a->GetPlayer()->ScaleCost(node b's GetCost(i[0], 0x20, 1.0f))`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SCALED_COST = 686;
+
+/// `a->GetPlayer()->AddResource(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_ADD_RESOURCE = 687;
+
+/// player `a`'s `mEvents.AddEvent(b's tile, 2, a, i[0], false)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_ADD_EVENT = 688;
+
+/// the wonder's chat line (another player's `a` started `b`)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WONDER_CHAT = 689;
+
+/// `a->mPlayer->LoadUnitClassMedia(b->mUnitClass->GetUnitType())`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA = 690;
+
+/// `a->LoadMedia(false)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_LOAD_MEDIA = 691;
+
+/// `gDataPreLoading->PostUnloadUnitClass(a's player id, a's unit type)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_POST_UNLOAD_CLASS = 692;
+
+/// `a->PartFinished()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_PART_FINISHED = 693;
+
+/// `a->mPlayer->IsHuman()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_IS_HUMAN = 694;
+
+/// `a->mPlayer->mComputerPlayer`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_COMPUTER_PLAYER = 695;
+
+/// computer player `a`'s `mActiveGroup`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CP_ACTIVE_GROUP = 696;
+
+/// selected group `a`'s `GetNumUnits()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_GROUP_NUM_UNITS = 697;
+
+/// selected group `a`'s `Clear()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_GROUP_CLEAR = 698;
+
+/// the basic citizen class's `FindStorage(a, i[0] != 0)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_CITIZEN_FIND_STORAGE = 699;
+
+/// `a->mUnitClass->FindAction(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_ACTION = 700;
+
+/// `a->SetGoal(EEUGRust::NewAttackUnit(a, b, i[0] != 0, false), 1, 0)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_ATTACK_GOAL = 701;
+
+/// `EEFindLoadedGhost(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST = 702;
+
+/// `EEFindLoadedGhostUnit(a)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT = 703;
+
+/// `a->DepleteResource(1)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_DEPLETE_ONE = 704;
+
+/// `a->AddResourceAmount(1)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_ADD_RESOURCE_AMOUNT = 705;
+
+/// `a->SetLastResource(b)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_LAST_RESOURCE = 706;
+
+/// `a->mStats->mGatherTimes[i[0]]`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_GATHER_TIME = 707;
+
+/// the game variant's `mWorkTimeFactor` into `f[0]`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WORK_TIME_FACTOR = 708;
+
+/// `a->SetWorkTimer(i[0])`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_X_SET_WORK_TIMER = 709;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
