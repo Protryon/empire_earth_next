@@ -49,6 +49,8 @@ pub mod condition;
 pub mod create;
 pub mod effect;
 pub mod effect_ai;
+pub mod effect_copy;
+pub mod effect_text;
 pub mod event;
 pub mod ffi;
 pub mod fields;
