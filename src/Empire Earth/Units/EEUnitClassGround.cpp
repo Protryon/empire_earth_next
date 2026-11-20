@@ -418,3 +418,14 @@ void EEUnitClass::SeaAnimalAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoi
     }
 }
 
+// the sea animals' AdjustPath body for ee_sim::units waypoints.rs (the depths in place)
+extern "C" void ee_units_wp_host_sea_animal_path(uint64_t inClass, uint64_t inUnit, float (*ioPoints)[3], uint32_t inCount)
+{
+    std::vector<GE3DPoint> thePath;
+    for (uint32_t i = 0; i < inCount; i++)
+        thePath.push_back(GE3DPoint(ioPoints[i][0], ioPoints[i][1], ioPoints[i][2]));
+    ((EEUnitClass*)(uintptr_t)inClass)->SeaAnimalAdjustPath((EEComplexUnit*)(uintptr_t)inUnit, thePath, false);
+    for (uint32_t i = 0; i < inCount; i++)
+        ioPoints[i][2] = thePath[i].mZ;
+}
+

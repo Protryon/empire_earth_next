@@ -64,17 +64,6 @@ void EEUnitClass::AddToTile(EEUnit* inUnit)
     this->BaseAddToTile(inUnit);
 }
 
-void EEUnitClass::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    switch (EEClassBody(this, EE_UNITS_BODY_ADJUST_PATH)) {
-    case 1: this->NavalCitizenAdjustPath(inUnit, ioPath, inSmooth); return;
-    case 2: this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth); return;
-    case 3: EEAdjustNavalPath(inUnit, ioPath, inSmooth); return;
-    case 4: this->SeaAnimalAdjustPath(inUnit, ioPath, inSmooth); return;
-    case 5: this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth); return;
-    }
-}
-
 void EEUnitClass::BadlyHurt(EEUnit* inUnit)
 {
     switch (EEClassBody(this, EE_UNITS_BODY_BADLY_HURT)) {

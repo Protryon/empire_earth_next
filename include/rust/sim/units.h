@@ -764,9 +764,6 @@ constexpr static const int32_t EE_UNITS_CLS_CR_RANDOM = 82;
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_CR_HEIGHT_AT = 83;
 
-/// `gContinentManager.CanGetTo(unit a, c, d)`
-constexpr static const int32_t EE_UNITS_CLS_CR_CAN_GET_TO = 84;
-
 /// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
 constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
 
@@ -1232,12 +1229,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_DISTANCE_3D = 61;
 /// unit `a`'s `mBoundedPathTiles.clear()` (c 0) or `push_back((io.a, io.b))` (1)
 constexpr static const int32_t EE_UNITS_CLS_MV_BOUNDED = 62;
 
-/// `gPathManager.FindBoundedPath(a, map, c, a's tile, (io.a, io.b), path, 50, true, &reached)`: the path pushed
-constexpr static const int32_t EE_UNITS_CLS_MV_FIND_BOUNDED_PATH = 63;
-
-/// `EEPathManager::MergeWaypoints(the list's points, a's mWaypoints, 0)`: the list replaced
-constexpr static const int32_t EE_UNITS_CLS_MV_MERGE_WAYPOINTS = 64;
-
 /// unit `a`'s `SetVelocity(io.f)`
 constexpr static const int32_t EE_UNITS_CLS_MV_SET_VELOCITY = 65;
 
@@ -1249,9 +1240,6 @@ constexpr static const int32_t EE_UNITS_CLS_MV_ACTION_CHANGED = 67;
 
 /// unit `a`'s `UpdateWaterState(true)`
 constexpr static const int32_t EE_UNITS_CLS_MV_UPDATE_WATER_STATE = 68;
-
-/// `gPathManager.CancelPaths(a, true)`
-constexpr static const int32_t EE_UNITS_CLS_MV_CANCEL_PATHS = 69;
 
 /// unit `a`'s `mInitialContactLocation = io.p` (when it differs)
 constexpr static const int32_t EE_UNITS_CLS_MV_INITIAL_CONTACT = 70;
@@ -3777,6 +3765,42 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// `GetPathStart`'s and the others' "no path" answer.
+constexpr static const int32_t EE_UNITS_WAYPOINTS_NONE = 7;
+
+/// `SetGoal(arg, 1, 0)`, `mGoalQueues[0].Insert(1, arg)`, `RefreshGoals()`, `RefreshActiveGoal()`
+constexpr static const int32_t EE_UNITS_WP_SET_GOAL = 0;
+
+constexpr static const int32_t EE_UNITS_WP_INSERT_GOAL = 1;
+
+constexpr static const int32_t EE_UNITS_WP_REFRESH_GOALS = 2;
+
+constexpr static const int32_t EE_UNITS_WP_REFRESH_ACTIVE_GOAL = 3;
+
+/// `StartAction(arg)`, the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_WP_START_ACTION = 4;
+
+constexpr static const int32_t EE_UNITS_WP_ACTION_CHANGED = 5;
+
+/// the first goal queue's length and last goal
+constexpr static const int32_t EE_UNITS_WP_QUEUE_LENGTH = 6;
+
+constexpr static const int32_t EE_UNITS_WP_QUEUE_BACK = 7;
+
+/// the player's `IsHuman()`; `mBoundedPathTiles.clear()`; `RefreshPath()`; `gEEAIRegionSize`
+constexpr static const int32_t EE_UNITS_WP_IS_HUMAN = 8;
+
+constexpr static const int32_t EE_UNITS_WP_CLEAR_BOUNDED = 9;
+
+constexpr static const int32_t EE_UNITS_WP_REFRESH_PATH = 10;
+
+constexpr static const int32_t EE_UNITS_WP_REGION_SIZE = 11;
+
+/// `EELocationGoalPoint(arg)` into the point; the world map's closest tile to the point (x | y << 32)
+constexpr static const int32_t EE_UNITS_WP_GOAL_POINT = 12;
+
+constexpr static const int32_t EE_UNITS_WP_CLOSEST_TILE = 13;
+
 /// `a` = whether the save has the part `HAS_*` (ee/EESaveGameFiles.h's predicates of the file's version)
 constexpr static const int32_t EE_UNITS_WORLD_HAS = 20;
 
@@ -3979,6 +4003,9 @@ struct EeUnitsPlayerEvents;
 
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
+
+/// The deque (`std::deque<EEComplexUnitWaypoint>` until this round).
+struct EeUnitsWaypoints;
 
 /// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
 struct EeUnitsPlayerSaveIo {
@@ -4916,6 +4943,16 @@ struct EeUnitsUuSoundView {
   float zoom;
 };
 
+/// One waypoint (`EEComplexUnitWaypoint`, 20 bytes).
+struct EeUnitsWaypoint {
+  /// `mLocation`
+  float location[3];
+  /// `mDistance`: the path's length up to this waypoint
+  float distance;
+  /// `mStartDistance`: the path's length up to the waypoint before
+  float start_distance;
+};
+
 /// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
 /// count) or reads (`cap` entries).
 struct EeUnitsWorldIo {
@@ -5666,24 +5703,6 @@ void ee_units_lv_level_runway(uint64_t unit, uint64_t facing);
 /// `EEUnitClass::CreateRunways(airport, player, foundation)`.
 void ee_units_lv_create_runways(uint64_t class_, uint64_t unit, int64_t player, uint8_t foundation);
 
-/// Pushes a point onto a host operation's list.
-///
-/// # Safety
-/// `list` is the `EeUnitsClsIo::list` of a running operation.
-void ee_units_cls_push_point(EeUnitsClsListHandle *list, float x, float y, float z);
-
-/// A host operation's points (x, y, z each), `*count` of them.
-///
-/// # Safety
-/// `list` is the `EeUnitsClsIo::list` of a running operation; `count` is writable.
-const float *ee_units_cls_points(EeUnitsClsListHandle *list, size_t *count);
-
-/// Empties a host operation's points (before the C++ pushes their replacement).
-///
-/// # Safety
-/// As [`ee_units_cls_points`].
-void ee_units_cls_clear_points(EeUnitsClsListHandle *list);
-
 /// `EEUnitClass::FindPath(unit)`.
 void ee_units_mv_find_path(uint64_t class_, uint64_t unit);
 
@@ -6058,6 +6077,12 @@ extern int64_t ee_units_game_over_host(int32_t op, int64_t a, int64_t b);
 
 /// `EEWorld::CheckGameOver` of the world `world` (`&gWorld`)
 int64_t ee_units_check_game_over(uint64_t world);
+
+/// `EEUnitClass::GetTerrainFlags(unit, flags)`: `out` the 17 flags (`EECPASGFlags::mFlags`).
+///
+/// # Safety
+/// `class` a live class, `unit` 0 or a live unit, `out` 17 writable flags.
+void ee_units_terrain_flags(uint64_t class_, uint64_t unit, bool *out);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
@@ -7231,14 +7256,6 @@ extern void ee_units_pm_host_set_scale(uint64_t obj, float s);
 
 extern float ee_units_pm_host_rate(uint64_t obj, int32_t which);
 
-extern int32_t ee_units_pm_host_waypoint_count(uint64_t obj);
-
-extern int32_t ee_units_pm_host_next_waypoint(uint64_t obj, float *out);
-
-extern float ee_units_pm_host_first_waypoint_z(uint64_t obj);
-
-extern void ee_units_pm_host_path_length(uint64_t obj, float *io);
-
 extern int32_t ee_units_pm_host_model_parts(uint64_t obj);
 
 extern uint32_t ee_units_pm_host_frame_time(uint64_t obj, uint32_t animation);
@@ -8284,8 +8301,6 @@ extern uint32_t ee_units_uu_host_surrounding_tiles(uint64_t target,
 
 extern uint64_t ee_units_uu_host_container_continent(uint64_t container, uint64_t unit);
 
-extern uint64_t ee_units_uu_host_continent(int32_t which, uint64_t a, uint64_t b, uint64_t c);
-
 extern uint32_t ee_units_uu_host_tile_line(int32_t x1,
                                            int32_t y1,
                                            int32_t x2,
@@ -8356,14 +8371,6 @@ extern uint64_t ee_units_uu_host_world(int32_t which,
 
 extern float ee_units_uu_host_world_f(int32_t which, uint64_t a, uint64_t b, float f);
 
-extern uint8_t ee_units_uu_host_find_path(uint64_t unit,
-                                          const int32_t *from,
-                                          const int32_t *to,
-                                          const int32_t *bounds,
-                                          uint32_t limit,
-                                          uint8_t walls,
-                                          int32_t *first);
-
 /// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
 /// the digest's halves) written (2).
 extern uint32_t ee_units_uu_host_note(int32_t which,
@@ -8383,6 +8390,121 @@ void ee_units_uu_note_end();
 
 /// An event of the thread's recording note (the C++ host's writes: `UUEvent`).
 void ee_units_uu_note_event(int32_t a, int32_t b, int32_t c);
+
+/// A new empty list.
+EeUnitsWaypoints *ee_units_waypoints_new();
+
+/// Frees a list.
+///
+/// # Safety
+/// `list` was made by [`ee_units_waypoints_new`] (or is null) and is not used afterwards.
+void ee_units_waypoints_free(EeUnitsWaypoints *list);
+
+/// `*to = *from` (the deque's assignment).
+///
+/// # Safety
+/// Both are live lists.
+void ee_units_waypoints_assign(EeUnitsWaypoints *to, const EeUnitsWaypoints *from);
+
+/// The waypoints' count.
+///
+/// # Safety
+/// A live list.
+size_t ee_units_waypoints_len(const EeUnitsWaypoints *list);
+
+/// Waypoint `i` in place (null past the end): valid until the list changes.
+///
+/// # Safety
+/// A live list.
+const EeUnitsWaypoint *ee_units_waypoints_at(const EeUnitsWaypoints *list, size_t i);
+
+/// Appends a waypoint as it is (a load's).
+///
+/// # Safety
+/// A live list and waypoint.
+void ee_units_waypoints_push(EeUnitsWaypoints *list, const EeUnitsWaypoint *w);
+
+/// Empties the list (the unit's reset; `DropPath` is [`ee_units_waypoints_drop`]).
+///
+/// # Safety
+/// A live list.
+void ee_units_waypoints_clear(EeUnitsWaypoints *list);
+
+/// `GetPathStart(out, length)` (`length` null: `GetPathLength`'s; `out` null: only the length), 0, or 7 without a
+/// path (the outputs untouched).
+///
+/// # Safety
+/// A live list; `out` null or three floats, `length` null or one.
+int32_t ee_units_waypoints_start(const EeUnitsWaypoints *list,
+                                 float *out,
+                                 float *length);
+
+/// `GetSecondWaypoint(out)`: 0, or 7 with fewer than two (`out` untouched).
+///
+/// # Safety
+/// A live list; `out` three floats.
+int32_t ee_units_waypoints_second(const EeUnitsWaypoints *list, float *out);
+
+/// `AddWaypoint(at, snap)` of the complex unit `unit`.
+///
+/// # Safety
+/// `unit` is a live complex unit, `at` three floats.
+void ee_units_waypoints_add(uint64_t unit, const float *at, bool snap);
+
+/// `NextWaypoint()` of the complex unit `unit`: 0, or 7 without one.
+///
+/// # Safety
+/// `unit` is a live complex unit.
+int32_t ee_units_waypoints_next(uint64_t unit);
+
+/// `DropPath()` of the complex unit `unit`.
+///
+/// # Safety
+/// `unit` is a live complex unit.
+void ee_units_waypoints_drop(uint64_t unit);
+
+/// `SnapLastWaypoint()` of the complex unit `unit`.
+///
+/// # Safety
+/// `unit` is a live complex unit.
+void ee_units_waypoints_snap(uint64_t unit);
+
+/// `TakePath(path, smooth)` of the complex unit `unit` (`points` the path, changed in place to the adjusted one:
+/// its new count returned; room for `count`).
+///
+/// # Safety
+/// `unit` is a live complex unit, `points` `count` points.
+uint32_t ee_units_waypoints_take_path(uint64_t unit,
+                                      float (*points)[3],
+                                      uint32_t count,
+                                      bool smooth);
+
+/// `ShouldMoveToNextAutoWaypoint()` of complex unit `unit`.
+///
+/// # Safety
+/// `unit` is a live complex unit.
+bool ee_units_waypoints_next_auto(uint64_t unit);
+
+/// `SetGroupPathGoals(path)` of complex unit `unit` (`points` `count` x, y, z points).
+///
+/// # Safety
+/// `unit` is a live complex unit; `points` holds `count` points (or is null with none).
+void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, size_t count);
+
+/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, its index in `index`.
+///
+/// # Safety
+/// `unit` is a live complex unit; `index` writable.
+bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
+
+/// `SeaAnimalAdjustPath(unit, path)`: the points' depths (EEUnitClassGround.cpp: the physics' random stream)
+extern void ee_units_wp_host_sea_animal_path(uint64_t class_,
+                                             uint64_t unit,
+                                             float (*points)[3],
+                                             uint32_t count);
+
+/// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
+extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);
 
 /// `EEPWorldHelper::Load`'s running state over the host.
 ///

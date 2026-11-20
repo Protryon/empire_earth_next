@@ -148,6 +148,7 @@ pub mod uu_tiles;
 pub mod uu_world;
 #[cfg(test)]
 mod uu_world_tests;
+pub mod waypoints;
 pub mod world;
 pub mod world_save;
 

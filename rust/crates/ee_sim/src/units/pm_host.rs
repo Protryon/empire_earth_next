@@ -23,10 +23,6 @@ extern "C" {
     fn ee_units_pm_host_update_tile(obj: u64, m: *const f32);
     fn ee_units_pm_host_set_scale(obj: u64, s: f32);
     fn ee_units_pm_host_rate(obj: u64, which: i32) -> f32;
-    fn ee_units_pm_host_waypoint_count(obj: u64) -> i32;
-    fn ee_units_pm_host_next_waypoint(obj: u64, out: *mut f32) -> i32;
-    fn ee_units_pm_host_first_waypoint_z(obj: u64) -> f32;
-    fn ee_units_pm_host_path_length(obj: u64, io: *mut f32);
     fn ee_units_pm_host_model_parts(obj: u64) -> i32;
     fn ee_units_pm_host_frame_time(obj: u64, animation: u32) -> u32;
     fn ee_units_pm_host_tile_of(obj: u64) -> u64;
@@ -293,20 +289,26 @@ impl PmHost for Game {
     fn inverse_angular_acceleration(&mut self, obj: u64) -> f32 {
         unsafe { ee_units_pm_host_rate(obj, RATE_INVERSE_ANGULAR_ACCELERATION) }
     }
+    // the waypoints: Rust's list (waypoints.rs); `obj` is the model's live complex unit
     fn waypoint_count(&mut self, obj: u64) -> i32 {
-        unsafe { ee_units_pm_host_waypoint_count(obj) }
+        unsafe { crate::units::waypoints::list(obj) }.len() as i32
     }
     fn next_waypoint(&mut self, obj: u64, out: &mut Ge3DPoint) -> i32 {
-        let mut p = [out.x, out.y, out.z];
-        let code = unsafe { ee_units_pm_host_next_waypoint(obj, p.as_mut_ptr()) };
-        *out = point(p);
-        code
+        match unsafe { crate::units::waypoints::list(obj) }.front() {
+            Some(w) => {
+                *out = point(w.location);
+                0
+            }
+            None => crate::units::waypoints::EE_UNITS_WAYPOINTS_NONE,
+        }
     }
     fn first_waypoint_z(&mut self, obj: u64) -> f32 {
-        unsafe { ee_units_pm_host_first_waypoint_z(obj) }
+        unsafe { crate::units::waypoints::list(obj) }.front().map_or(0.0, |w| w.location[2])
     }
     fn path_length(&mut self, obj: u64, io: &mut f32) {
-        unsafe { ee_units_pm_host_path_length(obj, io) }
+        if let Some((_, l)) = unsafe { crate::units::waypoints::list(obj) }.path_start() {
+            *io = l;
+        }
     }
     fn path_start(&mut self, obj: u64) -> Ge3DPoint {
         let mut p = [0.0f32; 3];
