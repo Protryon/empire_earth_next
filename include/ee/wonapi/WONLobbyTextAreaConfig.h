@@ -79,13 +79,9 @@ public:
     void Clear() { this->Reset(); }
     void SetFont(Font* font) { this->mFont=font; }
     void SetLinkFont(Font* font) { this->mLinkFont=font; }
-    void SetWrapIndentSize(int size) { this->Call(EeWonTextCall::SetWrapIndentSize,size); }
     int GetNumLines() { return (int)this->Call(EeWonTextCall::GetNumLines); }
     void AddFormatedText(const GUIString&,bool=false); // at 0x00713ec0 (SDK spelling)
     void SetTextFlags(int flags,bool on) { this->Call(EeWonTextCall::SetTextFlags,flags,on); }
-    void SetMaxChars(int chars) { this->Call(EeWonTextCall::SetMaxChars,chars); }
-    void SetMaxLines(int lines) { this->Call(EeWonTextCall::SetMaxLines,lines); }
-    void SetLineAlignment(HorzAlign a) { this->Call(EeWonTextCall::SetLineAlignment,(intptr_t)a); }
     bool TextFlagSet(int theFlag) { return (this->Call(EeWonTextCall::TextFlags)&theFlag)!=0; }
     SmartPtr<Font> mFont,mLinkFont; // retained
     int mTextColor,mLinkColor;

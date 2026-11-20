@@ -1,6 +1,7 @@
 // The table setters that call a widget's Rust object (R6 WONLobby round 27; rust/crates/ee_won_gui/src/cfgset.rs):
 // the forward golden. WONCfgTable.inl's cases as they were (tests/won/won_cfgset_orig.h, copied before the move)
-// run over the game's own classes (WONLobbyGUI.h, WONGUIShell.h, ...) whose inline forwards' Rust calls are renamed
+// run over the game's own classes (WONLobbyGUI.h, WONGUIShell.h, ...; the forwards the move left without a caller
+// as they were, tests/won/won_cfgset_fwd.h) whose inline forwards' Rust calls are renamed
 // to tracers here, against cfgset.rs's descriptions of the same setters (its trace hook) over the same frame. For
 // each setter the calls must be the same: the function, the object (each class's own Rust-object member), the op and
 // every argument (a pointer argument to a local array by its contents). The method level (which method, its
@@ -41,6 +42,15 @@
 #include <list>
 #include <map>
 #include <set>
+#include <exception>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <utility>
+// the forwards the move left without a caller are copied into subclasses (won_cfgset_fwd.h): their private call
+// helpers are opened
+#define _ALLOW_KEYWORD_MACROS
+#define private public
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -51,6 +61,7 @@
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/guiconf.h"
+#undef private
 
 using namespace WONAPI;
 
@@ -138,7 +149,10 @@ template<class T> struct Ptr { T* p; T* get() const { return p; } };
 struct CfgSetFrame {
     int i[12]; int ni; GUIString s[2]; Ptr<Font> f[1]; int nf; Ptr<Image> m[1]; Component* c[2]; int nc;
 };
-#define EE_C(T) Fake<T>()
+// the class the original statement called: the game's, or its subclass with the forwards the move deleted
+template<class T> struct OrigOf { typedef T type; };
+#include "won_cfgset_fwd.h"
+#define EE_C(T) Fake<OrigOf<T>::type>()
 // the shell kinds' own methods: WONShell::Op traced (the configured component a shell of the kind)
 namespace OrigNs {
 struct WONShell {
