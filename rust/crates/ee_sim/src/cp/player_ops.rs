@@ -60,7 +60,7 @@ pub(crate) const CATEGORY_SPACE_TRANSPORT: c_ulong = 0x21;
 pub(crate) const FAMILY_MINES: c_ulong = 0x16;
 pub(crate) const TYPE_DOCK: i32 = 0x24;
 pub(crate) const TYPE_AIRPORT: i32 = 0x42;
-pub(crate) const TYPE_PATH_POINT: c_ulong = 0xdf;
+pub(crate) const PL_TYPE_PATH_POINT: c_ulong = 0xdf;
 pub(crate) const TYPE_SPACE_DOCK: i32 = 0x2d8;
 pub(crate) const MOVEMENT_AIR: u8 = 1;
 pub(crate) const MOVEMENT_SEA: u8 = 4;
@@ -211,7 +211,7 @@ pub(crate) fn hero_walk_counts(complex: bool, hit_points: c_long, category: c_ul
         && category != CATEGORY_PROJECTILE
         && category != CATEGORY_BOMB
         && category != CATEGORY_MISSILE
-        && unit_type != TYPE_PATH_POINT
+        && unit_type != PL_TYPE_PATH_POINT
 }
 
 /// What a payment buys (`Pay`'s spending trace): 4 an epoch, 0 a citizen, 5 a fishing boat, 2 a building, 1 an
@@ -250,7 +250,7 @@ pub(crate) fn stranded(
     tile_x != -10000
         && complex
         && terrain == Some(TERRAIN_CLIFF)
-        && unit_type != TYPE_PATH_POINT
+        && unit_type != PL_TYPE_PATH_POINT
         && domains & (MOVEMENT_AIR | MOVEMENT_SEA) == 0
         && !projectile
         && !can_move()
@@ -324,7 +324,7 @@ mod tests {
         assert!(hero_walk_counts(true, 1, 1, 2));
         assert!(!hero_walk_counts(true, 0, 1, 2));
         assert!(!hero_walk_counts(true, 1, CATEGORY_MISSILE, 2));
-        assert!(!hero_walk_counts(true, 1, 1, TYPE_PATH_POINT));
+        assert!(!hero_walk_counts(true, 1, 1, PL_TYPE_PATH_POINT));
         assert_eq!(pay_kind(true, None), 4);
         assert_eq!(pay_kind(false, None), 3);
         assert_eq!(pay_kind(false, Some((CATEGORY_NAVAL_CITIZEN, true, true))), 5);

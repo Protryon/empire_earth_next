@@ -33,6 +33,7 @@ pub mod fields;
 pub mod file;
 pub mod herd;
 pub mod herd_game;
+pub mod herd_world;
 #[cfg(test)]
 mod herd_tests;
 pub mod influence;
@@ -44,6 +45,7 @@ mod lists_tests;
 pub mod place_capture;
 pub mod place_game;
 pub mod place_host;
+pub mod place_world;
 pub mod placement;
 #[cfg(test)]
 mod placement_tests;
@@ -58,5 +60,6 @@ pub mod save;
 pub mod timers;
 pub mod town;
 pub mod town_game;
+pub mod town_world;
 #[cfg(test)]
 mod town_tests;

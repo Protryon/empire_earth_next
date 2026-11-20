@@ -14,7 +14,7 @@ use crate::units::player_save::EeUnitsPlayerSaveFn;
 
 extern "C" {
     /// The herd's world (EEHerd.cpp): `herd` the `EEHerd*`.
-    fn ee_cp_herd_host(herd: *mut c_void, op: i32, a: u64, b: u64, io: *mut EeHerdIo) -> i64;
+    pub(crate) fn ee_cp_herd_host(herd: *mut c_void, op: i32, a: u64, b: u64, io: *mut EeHerdIo) -> i64;
 }
 
 struct Game {
@@ -141,7 +141,10 @@ unsafe fn world_op(herd: u64, op: i32, a: u64, b: u64, io: &mut EeHerdIo) -> Opt
             i64::from(crate::world::WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)).is_some())
         }
         EE_CP_HERD_PLAYER_ID => crate::world::PlayerView::of(&t, a).map_or(0, |p| i64::from(p.id())),
-        _ => return None,
+        _ => {
+            drop(t);
+            return super::herd_world::herd_op(herd, op, a, b, io);
+        }
     })
 }
 

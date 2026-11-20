@@ -211,6 +211,8 @@ impl Cp {
     fn me(&self) -> u64 {
         self.ctx.player
     }
+    // the record is the C++ object's, not this context's: a short-lived `&mut` per access
+    #[allow(clippy::mut_from_ref)]
     fn fields(&self) -> &mut EeCpFields {
         // SAFETY: the player's record; never held across a call that could reach it again
         unsafe { &mut *self.ctx.fields }

@@ -216,6 +216,86 @@ constexpr static const int32_t EE_CP_HERD_ANIMAL_ON_MAP = 62;
 /// whether the world has a map (`gWorld.mMap`)
 constexpr static const int32_t EE_CP_HERD_HAS_MAP = 63;
 
+/// unit `a`'s `mWaypoints.size()`; `mStats->mModel` (its `EEMedia`)
+constexpr static const int32_t EE_CP_HERD_UNIT_WAYPOINTS = 64;
+
+constexpr static const int32_t EE_CP_HERD_UNIT_MODEL = 65;
+
+/// `EEFormation::Create(6)`; the formation `b`'s `mCenter = (f0, f1, f2)`, `SetCenter(..)`, `SetMinRadius(f0)`,
+/// `mMinRadius = f0`, `Place` of the `input` units (the units after it into `list2`, the slots into `list`),
+/// `Dereference()`
+constexpr static const int32_t EE_CP_HERD_FORM_NEW = 66;
+
+constexpr static const int32_t EE_CP_HERD_FORM_CENTER = 67;
+
+constexpr static const int32_t EE_CP_HERD_FORM_SET_CENTER = 68;
+
+constexpr static const int32_t EE_CP_HERD_FORM_SET_MIN_RADIUS = 69;
+
+constexpr static const int32_t EE_CP_HERD_FORM_MIN_RADIUS = 70;
+
+constexpr static const int32_t EE_CP_HERD_FORM_PLACE = 71;
+
+constexpr static const int32_t EE_CP_HERD_FORM_DEREF = 72;
+
+/// the tile unit `b`'s `IsPassableBy(a)`; unit `a`'s class `CanMoveOnTerrain(a, v0)`; `GetTileAtLocation((v0, v1))`
+constexpr static const int32_t EE_CP_HERD_PASSABLE_BY = 73;
+
+constexpr static const int32_t EE_CP_HERD_CAN_MOVE_ON = 74;
+
+constexpr static const int32_t EE_CP_HERD_TILE_AT = 75;
+
+/// unit `a`'s `mLastAttacker = NULL`; `mHolder->ReleaseHeld(a)`; `mHolder = NULL`
+constexpr static const int32_t EE_CP_HERD_ATTACKER_NULL = 76;
+
+constexpr static const int32_t EE_CP_HERD_RELEASE_HELD = 77;
+
+constexpr static const int32_t EE_CP_HERD_HOLDER_NULL = 78;
+
+/// unit `a`'s goal queue 0's goal `v0`; whether the goal `b` is a location goal; its `GetLocation()` into `f0..f2`
+constexpr static const int32_t EE_CP_HERD_GOAL_AT = 79;
+
+constexpr static const int32_t EE_CP_HERD_GOAL_IS_LOCATION = 80;
+
+constexpr static const int32_t EE_CP_HERD_GOAL_POINT = 81;
+
+/// the goals: `NewLocation(f0, f1, f2, v0, v1, v2, f3, false, false)`, `NewLocation(&(f0, f1, f2), v0, v1, v2, f3,
+/// false, false)`, `NewAttackUnit(a, b, true, false)`
+constexpr static const int32_t EE_CP_HERD_NEW_LOCATION = 82;
+
+constexpr static const int32_t EE_CP_HERD_NEW_LOCATION_AT = 83;
+
+constexpr static const int32_t EE_CP_HERD_NEW_ATTACK = 84;
+
+/// unit `a`'s `SetGoal(b, v0, 0)`, `StartAction(v0)`, `mUnitClass->ActionChanged(a)`; `delete b`
+constexpr static const int32_t EE_CP_HERD_SET_GOAL = 85;
+
+constexpr static const int32_t EE_CP_HERD_START_ACTION = 86;
+
+constexpr static const int32_t EE_CP_HERD_ACTION_CHANGED = 87;
+
+constexpr static const int32_t EE_CP_HERD_DELETE_GOAL = 88;
+
+/// animal `a`'s `GetUnitClass()`, `GetNewbornGrowth()` into `f0`; class `a`'s `CreateUnit(v0, v1, v2, 0, NULL)`;
+/// `dynamic_cast<EEComplexUnit*>` of unit `a`
+constexpr static const int32_t EE_CP_HERD_ANIMAL_CLASS = 89;
+
+constexpr static const int32_t EE_CP_HERD_NEWBORN_GROWTH = 90;
+
+constexpr static const int32_t EE_CP_HERD_CREATE_UNIT = 91;
+
+constexpr static const int32_t EE_CP_HERD_TO_COMPLEX = 92;
+
+/// unit `a`'s `SetTargetSearchTimer(v0)`, `HoldUnit(b)`
+constexpr static const int32_t EE_CP_HERD_SET_TARGET_SEARCH = 93;
+
+constexpr static const int32_t EE_CP_HERD_HOLD_UNIT = 94;
+
+/// `gPathManager.CancelAutoPathRequest(a)`; the request `a`'s `Dereference()`
+constexpr static const int32_t EE_CP_HERD_CANCEL_REQUEST = 95;
+
+constexpr static const int32_t EE_CP_HERD_REQUEST_DEREF = 96;
+
 /// The table's records (`gCPBehaviors[129]`).
 constexpr static const size_t EE_CP_BEHAVIORS = 129;
 
@@ -420,6 +500,26 @@ constexpr static const int32_t EE_CP_PLAYER_SEEN_BY = 329;
 constexpr static const int32_t EE_CP_PLAYER_KILL = 330;
 
 constexpr static const int32_t EE_CP_PLAYER_IS_TRANSPORT = 331;
+
+/// the town `a`'s `EeTownFields` (`static_cast<EeTownFields*>(town)`)
+constexpr static const int32_t EE_CP_PLACE_TOWN_FIELDS = 60;
+
+/// unit `a`'s morale-from-buildings effect (0: none); the effect `b`'s `GetRadius()` into `f0`, `MarkDirty()`,
+/// `Recount(0)`, `GetLevel()`, `mTemplate->mMaxLevel`
+constexpr static const int32_t EE_CP_CENTER_MORALE_EFFECT = 116;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_RADIUS = 117;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_DIRTY = 118;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_RECOUNT = 119;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_LEVEL = 120;
+
+constexpr static const int32_t EE_CP_CENTER_EFFECT_MAX_LEVEL = 121;
+
+/// the player's `mUnitClassUpgrades[v0]`
+constexpr static const int32_t EE_CP_CENTER_UPGRADE = 122;
 
 constexpr static const unsigned long EASY = 0;
 
@@ -741,6 +841,23 @@ constexpr static const int32_t EE_CP_TOWN_DROP_PATROL = 122;
 
 /// `gLoadingSavedGame` (bit 0), `gWorldClearing` (bit 1)
 constexpr static const int32_t EE_CP_TOWN_FLAGS = 123;
+
+/// unit `a`'s `GetTechTreeNode()`'s `mData->mKind` (-1: no node); `FindAreaTile(true, 1)` (x high, y low words)
+constexpr static const int32_t EE_CP_TOWN_NODE_KIND = 124;
+
+constexpr static const int32_t EE_CP_TOWN_AREA_TILE = 125;
+
+/// `mPatrolGroup = a`; `mPlayer->AddPatrolGroup(mPatrolGroup)`; `mPatrolGroup`
+constexpr static const int32_t EE_CP_TOWN_SET_PATROL_GROUP = 126;
+
+constexpr static const int32_t EE_CP_TOWN_ADD_PATROL_GROUP = 127;
+
+constexpr static const int32_t EE_CP_TOWN_PATROL_GROUP = 128;
+
+/// unit `a`'s `mPlayer->mHumanPlayer != NULL`; `gMapWidth` (low word) and `gMapHeight` (high word)
+constexpr static const int32_t EE_CP_TOWN_HUMAN_OWNER = 129;
+
+constexpr static const int32_t EE_CP_TOWN_MAP_SIZE = 130;
 
 /// The table (the C++ shim's `mTable`).
 struct EeCpInfluence;
@@ -2219,6 +2336,12 @@ int32_t ee_cp_pending_epoch(const EeCpPlaceCtx *ctx);
 /// As [`ee_cp_work_out_population`].
 bool ee_cp_avoids_enemies(const EeCpPlaceCtx *ctx, uint64_t unit);
 
+/// `EEComplexUnit::DistanceSquaredToUnit`.
+///
+/// # Safety
+/// `unit` a live complex unit, `other` a live unit.
+float ee_cp_distance_squared_to_unit(uint64_t unit, uint64_t other);
+
 /// `Init` (both constructors): the record's tuning values, the lists, the placement, `mComputerPlayer`.
 ///
 /// # Safety
@@ -2587,6 +2710,21 @@ void ee_cp_town_refresh_patrol_group(void *town, void *area, EeTownFields *f);
 /// # Safety
 /// As `with`; `out` a live point.
 void ee_cp_town_random_point(void *town, void *area, EeTownFields *f, EeHerdPoint *out);
+
+/// `EETown(player, id)`'s body after its members (`mPlayer`, `mPatrolGroup` NULL): the id, the area's kind, `Reset`.
+///
+/// # Safety
+/// `town` the `EETown*` being made, `area` its `EEAIArea*`, `f` its record.
+void ee_cp_town_construct(void *town,
+                          void *area,
+                          EeTownFields *f,
+                          long id);
+
+/// `EETown::IsTownUnit`.
+///
+/// # Safety
+/// `unit` a live `EEUnit*`.
+bool ee_cp_town_is_town_unit(uint64_t unit);
 
 }  // extern "C"
 

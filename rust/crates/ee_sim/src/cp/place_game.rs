@@ -172,6 +172,20 @@ extern "C" {
 /// # Safety
 /// `ctx` is a call's context; the operation's objects are live.
 pub(crate) unsafe fn host_call(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> i64 {
+    // SAFETY: the caller's contract (the operations the world views and records answer: place_world.rs)
+    if let Some(r) = unsafe { super::place_world::place_op(ctx, op, a, b, io) } {
+        return r;
+    }
+    // SAFETY: as above
+    unsafe { host_cpp(ctx, op, a, b, io) }
+}
+
+/// One C++ host operation (no Rust answer first): [`host_call`]'s, and the one-statement cases `place_world.rs`
+/// asks.
+///
+/// # Safety
+/// As [`host_call`].
+pub(crate) unsafe fn host_cpp(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> i64 {
     // SAFETY: the caller's contract
     unsafe {
         if op >= 300 {
@@ -182,6 +196,11 @@ pub(crate) unsafe fn host_call(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64
             ee_cp_place_host(ctx, op, a, b, io)
         }
     }
+}
+
+/// An operation's empty values.
+pub(crate) fn place_io() -> EeCpPlaceIo {
+    Game::io()
 }
 
 /// Pushes a pair onto a host operation's list.
