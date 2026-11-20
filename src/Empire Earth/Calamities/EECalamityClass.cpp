@@ -32,6 +32,7 @@
 #include "ee/EEMouse.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitPicker.h"
+#include "rust/sim/units.h"
 
 static_assert(sizeof(EECalamityData) == sizeof(EeCalamityData), "the db record as ee_tech reads it");
 
@@ -342,7 +343,7 @@ void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY
     if (this->mClassEnum != kCalamityVolcano)
         return;
     EETileCoordinate theTile(inX, inY);
-    EEStepAsideFromSite(NULL, gUnitClassTable[this->mUnitClassIndex], inUnit->mPlayer, theTile, 1);
+    ee_units_uu_step_aside(0, (uint64_t)(uintptr_t)(gUnitClassTable[this->mUnitClassIndex]), (uint64_t)(uintptr_t)inUnit->mPlayer, theTile.mX, theTile.mY, 1);
 }
 
 // Returns the game variant with the given index

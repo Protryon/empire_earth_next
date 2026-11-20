@@ -73,6 +73,7 @@
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
 #include "rust/game/fixture.h"
+#include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
 extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
@@ -712,7 +713,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::CanGetTo:
         return gContinentManager.CanGetTo(u, i[0], i[1]) ? 1 : 0;
     case EeFixtureOp::SeenBy:
-        return EEIsSeenBy(As<EEUnit>(c->h), As<EEPlayer>(c->h2), true) ? 1 : 0;
+        return EECombatIsSeenBy(As<EEUnit>(c->h), As<EEPlayer>(c->h2), true) ? 1 : 0;
     case EeFixtureOp::PatrolAction:
         return u->mUnitClass->FindAction(kActionGetNextPatrolPoint) != NULL ? 1 : 0;
     case EeFixtureOp::NearestRoute: {   // EEMPatrol(-1): the first unit's nearest town's route (EEUnitHost town point)

@@ -766,6 +766,10 @@ WON_TESTS = {
     # the image classes whole in Rust (R6 WONLobby round 24: imgobj.rs, the images, filters and decoders) against the
     # original statements (tests/won/won_imgobj_orig.h) over one world: random sequences, the decoders and the pack
     "won_imgobj_test": [],
+    # ComponentConfig's readers, look-ups, map and instructions, ResourceConfig and ResourceConfigTable whole in Rust
+    # (R6 WONLobby round 25: compcfg.rs) against the deleted units' statements (tests/won/won_compcfg_orig.h) over one
+    # world: random runs of the tree's steps, traces and censuses
+    "won_compcfg_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)

@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
-#include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONSkinLayout.h"
 // ---- the skins' layouts' host (skinlay.rs EeWonSkinLay): the receiver's parts and fields by the layout's kind, and the
 // calls each layout makes

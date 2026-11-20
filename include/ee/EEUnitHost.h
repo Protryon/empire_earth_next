@@ -14,9 +14,6 @@ class EEComplexUnit;
 
 extern "C" {
 size_t ee_units_host_group_ids(void* inGroup, uint32_t* outIDs, size_t inCapacity);
-void* ee_units_host_goal_new(const EeGoalSpec* inSpec);
-uint8_t ee_units_host_goal_kind(void* inGoal);
-void ee_units_host_goal_release(void* inGoal);
 void* ee_units_host_active_group_new(void* inPlayer);
 void ee_units_host_group_fill(void* inGroup, void* inSelection, int32_t inSort, int32_t inSlot);
 void ee_units_host_group_release(void* inGroup);
@@ -49,17 +46,11 @@ uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t inTarget);
 int64_t ee_units_host_unit_max_hit_points(uint32_t inUnit);
 int64_t ee_units_host_unit_garrison_capacity(uint32_t inUnit);
 uint8_t ee_units_host_unit_has_tile_node(uint32_t inUnit);
-uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType);
-int64_t ee_units_host_unit_num_goal_queues(uint32_t inUnit);
 void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQueue);
 void ee_units_host_unit_clear_all_goal_queues(uint32_t inUnit);
 void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int64_t inQueue);
-void ee_units_host_unit_queue_timer(uint32_t inUnit, int64_t inQueue, int64_t inMs);
-void* ee_units_host_unit_goal_clone(uint32_t inUnit);
 void* ee_units_host_garrison_rally_load(uint32_t inGarrison);
-void ee_units_host_unit_queue_clear(uint32_t inUnit, int64_t inQueue);
 void ee_units_host_unit_clear_air_traffic(uint32_t inUnit);
-void ee_units_host_unit_refresh_goals(uint32_t inUnit);
 void ee_units_host_unit_clear_build_targets(uint32_t inUnit);
 void ee_units_host_unit_action_changed(uint32_t inUnit);
 void ee_units_host_unit_halt(uint32_t inUnit);

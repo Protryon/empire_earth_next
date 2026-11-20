@@ -5,11 +5,11 @@
 #ifndef LLE_GERHOMBUS_H
 #define LLE_GERHOMBUS_H
 
-#include "lle/GELine.h"   // ee_ge prim.rs, GEVertexHost
+#include "lle/GELine.h"   // ee_ge prim.rs
 
 class LLE_API GERhombus {
 public:
-    GERhombus() : mRust(ee_ge_prim_new(&GEVertexHost, this, EeGePrimKind::Rhombus)) {}
+    GERhombus() : mRust(ee_ge_game_prim_new(this, EeGePrimKind::Rhombus)) {}
     ~GERhombus() { ee_ge_prim_destroy(this->mRust); }
     GERhombus(const GERhombus&) = delete;
     const GERectangle& GetRectangle() const { return *(const GERectangle*)ee_ge_prim_rectangle(this->mRust); }

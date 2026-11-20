@@ -309,11 +309,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
 
 // ---- the config readers (GameBrowserCtrl.cpp's and GameUserListCtrl.cpp's)
 
-// Creates a config for a browser tab in the layout file
-ComponentConfig* GameBrowserCtrlConfig::CfgFactory()
-{
-    return new GameBrowserCtrlConfig;
-}
 
 // The instruction keys and the flag and value names these readers compare are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
@@ -336,11 +331,6 @@ bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
     return true;
 }
 
-// Creates the layout reader for a game player list
-ComponentConfig* GameUserListCtrlConfig::CfgFactory()
-{
-    return new GameUserListCtrlConfig;
-}
 
 // Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
 bool GameUserListCtrlConfig::Virtual24(const std::string& instruction)

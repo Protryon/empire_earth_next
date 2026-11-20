@@ -483,7 +483,7 @@ void EEUnitClass::LaunchStoredMissile(EEComplexUnit* inUnit)
         return;
     GE3DPoint theLocation;
     EEUnit* theTarget;
-    EEFindDropLocation(inUnit, &theTarget, &theLocation, NULL);
+    theTarget = EECombatFindDropLocation(inUnit, NULL, theLocation);
     EEComplexUnit* theCargo = inUnit->mCargo[0];
     inUnit->UnloadCargoNow(theCargo);
     this->LaunchShot(inUnit, theTarget, theLocation, theCargo);

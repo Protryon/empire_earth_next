@@ -45,6 +45,8 @@ protected:
 };
 // a new widget of kind k (its constructor's arguments a, b, c)
 Component* WONShellNew(EeWonShellKind k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0);
+// a new widget of a kind, for the resource table's allocators (the skins' configs' CompFactory statics)
+template<EeWonShellKind K, intptr_t A = 0, intptr_t B = 0, intptr_t C = 0> Component* NewShellOf() { return WONShellNew(K, A, B, C); }
 // SafeGetComponent of a deleted class: the named component must be a shell of kind k
 inline void SafeGetShell(ComponentConfig* cfg, SmartPtr<Component>& out, EeWonShellKind k, const char* name, const char* file, int line)
 {

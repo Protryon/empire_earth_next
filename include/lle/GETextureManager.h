@@ -6,6 +6,7 @@
 #include <map>   // (the original's cache; kept for the units that rely on it)
 #include <stdint.h>
 #include "rust/render/ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
+#include "lle/UString.h"   // LoadTexture's name
 
 class FSFileSpec;
 class FSPath;
@@ -46,7 +47,10 @@ public:
     unsigned long GetTextureCount() { return ee_ge_texman_count(this->mRust); }
     GETexture* GetTextureAt(unsigned long inIndex);   // port: the cache's textures in name order (the store gate)
     FSPath* GetTexturePath() { return (FSPath*)ee_ge_texman_path(this->mRust); }
-    GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription);
+    GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription)
+    {
+        return (GETexture*)ee_ge_texman_load(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
+    }
     // Wraps a surface in a new managed texture, named by a running counter, with modulate blending
     GETexture* MakeTexture(GESurface* inSurface) { return (GETexture*)ee_ge_texman_make(this->mRust, inSurface); }
     // Reloads every cached texture from its files (or recreates its surface when they are gone),

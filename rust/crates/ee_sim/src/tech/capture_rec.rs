@@ -26,23 +26,23 @@ pub const EE_TECH_CAPTURE_EPOCH_SIZE: u32 = 3 * 4;
 /// The bytes of a tree's state ([`ee_tech_capture_tree`])
 pub const EE_TECH_CAPTURE_TREE_SIZE: u32 = 5 * 4;
 
-fn tag(name: &[u8; 4]) -> u32 {
+pub(crate) fn tag(name: &[u8; 4]) -> u32 {
     u32::from_le_bytes(*name)
 }
 
 #[derive(Default)]
-struct Bytes(Vec<u8>);
+pub(crate) struct Bytes(pub(crate) Vec<u8>);
 
 impl Bytes {
-    fn i32(&mut self, v: i64) -> &mut Self {
+    pub(crate) fn i32(&mut self, v: i64) -> &mut Self {
         self.0.extend_from_slice(&(v as i32).to_le_bytes());
         self
     }
-    fn u32(&mut self, v: u32) -> &mut Self {
+    pub(crate) fn u32(&mut self, v: u32) -> &mut Self {
         self.0.extend_from_slice(&v.to_le_bytes());
         self
     }
-    fn f32(&mut self, v: f32) -> &mut Self {
+    pub(crate) fn f32(&mut self, v: f32) -> &mut Self {
         self.0.extend_from_slice(&v.to_le_bytes());
         self
     }
@@ -53,7 +53,7 @@ impl Bytes {
 /// current/start/end epoch and epochs before wonders (-1 without a tree), the epoch count, the record's kind, its
 /// flags (makes a unit, counts toward the epoch, available with the epoch, researched with it) and the four
 /// prerequisites (-1 without a record).
-fn node_bytes(
+pub(crate) fn node_bytes(
     node: &EeTechNodeFields,
     data: Option<&EeTechNodeDataFields>,
     tree: Option<&EeTechTreeFields>,
@@ -98,7 +98,7 @@ fn node_bytes(
     r
 }
 
-fn tree_bytes(tree: &EeTechTreeFields, player_index: c_long) -> Bytes {
+pub(crate) fn tree_bytes(tree: &EeTechTreeFields, player_index: c_long) -> Bytes {
     let mut r = Bytes::default();
     r.i32(player_index as i64)
         .i32(tree.mCurrentEpoch as i64)
@@ -606,7 +606,9 @@ mod tests {
     #[test]
     fn the_civ_manager_head() {
         // whatever tables the tests loaded: the head starts with the category count, and each category's known
-        // flag; it always ends with the 0x23 powers' records (a flag and 152 bytes each)
+        // flag; it always ends with the 0x23 powers' records (a flag and 152 bytes each); under civ_tests.rs's lock (they
+        // load and clear the tables)
+        let _g = crate::tech::civ_tests::locked();
         let r = civ_manager_bytes();
         assert_eq!(words(&r.0[..4])[0] as u32, ee_tech_civ_category_count());
         assert!(r.0.len() >= 4 + 0x51 * 20 + 4 + 0x23 * (4 + std::mem::size_of::<EeTechCivPower>()));

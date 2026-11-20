@@ -32,6 +32,7 @@
 #include "ee/EEGameUI.h"
 #include "lle/GERenderState.h"
 #include "ee/EEAppCapture.h"
+#include "rust/sim/units.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
@@ -142,7 +143,7 @@ static void EEMiniMapHostOp(void* inContext, int32_t inOp, EeAppMiniMapIo* io)
             for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
                 EEUnit* theUnit = theNode->mUnit;
                 if (theUnit->mHitPoints != 0 && theUnit->mTileX == io->x && theUnit->mTileY == io->y &&
-                    !EEIsCloakedEnemyOf(theUnit, thePlayer))
+                    !ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)thePlayer))
                     theContext.mItems.push_back(EEMiniMapUnit(theUnit));
             }
         }
@@ -340,7 +341,7 @@ void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTo
     EEMiniMapHostContext theContext;
     EeAppMiniMapHost theHost = EEMiniMapHost(theContext);
     ee_app_minimap_redraw_pixels(this->mRust, &theHost, theBits, thePitch, inLeft, inRight, inBottom, inTop);
-    EEAppCaptureMiniMapPixels(inLeft, inRight, inBottom, inTop, theBits, thePitch);   // MMPX (TEST ONLY)
+    ee_app_capture_minimap_pixels(inLeft, inRight, inBottom, inTop, theBits, thePitch);   // MMPX (TEST ONLY)
     this->mTerrainTexture->GetSurface()->Unlock();
 }
 
@@ -352,17 +353,3 @@ void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, lon
     EEMiniMapCall(this->mRust, 6, &theItem, inOldX, inOldY, inX, inY);
 }
 
-// New (port): one cell's sight count, unit layer pixel and dots in list order (the capture's read,
-// ee/EEAppCapture.h)
-void EEMiniMap::GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel,
-                        std::vector<MMPlayerUnit>& outDots, std::vector<MMMapUnit>& outUnits) const
-{
-    const EeAppMiniMapDot* theDots;
-    const EeAppMiniMapUnitDot* theUnits;
-    long theDotCount;
-    long theUnitCount;
-    ee_app_minimap_cell(this->mRust, inIndex, &outCount, &theDots, &theDotCount, &theUnits, &theUnitCount);
-    outPixel = this->mPixels != NULL ? this->mPixels[this->mPixelsPerRow * (inIndex & 0x3f) + (inIndex >> 6)] : 0;
-    outDots.assign(reinterpret_cast<const MMPlayerUnit*>(theDots), reinterpret_cast<const MMPlayerUnit*>(theDots) + theDotCount);
-    outUnits.assign(reinterpret_cast<const MMMapUnit*>(theUnits), reinterpret_cast<const MMMapUnit*>(theUnits) + theUnitCount);
-}

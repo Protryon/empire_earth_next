@@ -217,37 +217,7 @@ long GETexture::Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow)
     return ee_ge_tex_lock(this->mRust, &outMemory, &outBytesPerRow);
 }
 
-// Sets the alpha blend mode on every frame (or on the texture), marking changed ones
-void GETexture::SetStageAlphaMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::AlphaMode, inMode);
-}
-
-void GETexture::SetStageColorMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::ColorMode, inMode);
-}
-
-void GETexture::SetStageMagFilterMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MagFilterMode, inMode);
-}
-
-void GETexture::SetStageMinFilterMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MinFilterMode, inMode);
-}
-
-// (port: a texture pack's texture keeps MIP filtering where none is asked for: texobj_tex.rs)
-void GETexture::SetStageMipFilterMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MipFilterMode, inMode);
-}
-
-void GETexture::SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage)
-{
-    ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::TextureAddressingMode, inMode);
-}
+// (the SetStage* setters: inline in lle/GETexture.h)
 
 // ---- GETextureManager (GETextureManager.cpp, folded here in R4.3 part 16)
 
@@ -379,11 +349,6 @@ unsigned long GETextureManager::GetMemoryFootprint()
 
 // Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
 // name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
-GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureDescription& inDescription)
-{
-    return (GETexture*)ee_ge_texman_load(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
-}
-
 // Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
 // looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
 long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)

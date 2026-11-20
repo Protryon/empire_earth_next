@@ -46,6 +46,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEAirTrafficControl.h"
+#include "ee/EECombatGoals.h"
 #include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
@@ -115,14 +116,6 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
     return theResult;
 }
 
-// Tests one AI-script trigger for inUnit (its active goal may answer first); returns 0 for false, 1 for true, 2 for
-// true from an active goal that is not the current one
-// New (R5b.4, the thirty-fourth round): the answers are Rust (ee_units cls_condition.rs base, over the host below)
-long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    return ee_units_cls_base_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
-}
-
 // New (R5b.4, the thirty-fourth round): the trigger answers are Rust (ee_units cls_condition.rs: every kind's body and
 // the common one, golden USST kind 2); this switch is their host, each case the original's expression or statement
 static EEUnitGoal* CondGoal(uint64_t inGoal) { return (EEUnitGoal*)(uintptr_t)inGoal; }
@@ -162,12 +155,12 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_DROP_LOCATION: {
         GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
         EEUnit* theTarget;
-        EEFindDropLocation(theUnit, &theTarget, &theLocation, NULL);
+        theTarget = EECombatFindDropLocation(theUnit, NULL, theLocation);
         CondPoint(ioIo, theLocation);
         return EEObj(theTarget);
     }
     case EE_UNITS_COND_HIT_DISTANCE:
-        ioIo->f = EEGetHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
+        ioIo->f = EECombatHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
         return 0;
     case EE_UNITS_COND_DISTANCE_3D:
         ioIo->f = theUnit->DistanceSquared3D(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]));

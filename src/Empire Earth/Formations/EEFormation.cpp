@@ -16,6 +16,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
 #include "rust/sim/formations.h"
+#include "rust/sim/units.h"
 
 // Creates the formation of a type (0-7; ee/EEFormation.h), NULL for any other type
 EEFormation* EEFormation::Create(long inType)
@@ -128,7 +129,7 @@ void EEFormationCaptureSweep()
             GE3DPoint theLast;
             theUnits.front()->GetPosition(theFirst);
             theUnits.back()->GetPosition(theLast);
-            float theYaw = EEGetHeadingBetween(&theFirst, &theLast);
+            float theYaw = ee_units_uu_heading_between((const float(*)[3])&theFirst.mX, (const float(*)[3])&theLast.mX);
             for (long theType = 0; theType < 8; theType++) {
                 EEFormation* theFormation = EEFormation::Create(theType);
                 theFormation->SetCenter(theFirst);

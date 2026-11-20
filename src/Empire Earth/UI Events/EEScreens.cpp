@@ -120,6 +120,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEScenarioEditorIDs.h"
+#include "rust/sim/units.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
@@ -621,7 +622,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         }
         break;
     case EE_SCREENS_GAME_MG_FOLLOW_LEAD: {
-        EEUnit* theUnit = gWorld.GetUnit(EEGetLeadUnitID(gWorld.GetCurrentPlayer()));
+        EEUnit* theUnit = gWorld.GetUnit((unsigned long)ee_units_uu_lead_unit_id((uint64_t)(uintptr_t)gWorld.GetCurrentPlayer()));
         gWorld.mCameraControl.Follow(theUnit, inA != 0, 1.0f, 0.0f, 0.0f);
         if (inA == 0)
             gWorld.mCameraControl.SetChanged();

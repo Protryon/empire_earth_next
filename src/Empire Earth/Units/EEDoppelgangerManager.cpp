@@ -28,6 +28,7 @@
 #include "ee/EEGameState.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EECombatGoals.h"
 
 // Creates the manager with empty simple and complex doppelganger pools
 EEDoppelgangerManager::EEDoppelgangerManager()
@@ -280,7 +281,7 @@ void EEDoppelgangerManager::AddForUnseenUnit(EEComplexUnit* inUnit)
 {
     RTSTile* theTile = inUnit->mTile;
     EEPlayer* thePlayer = inUnit->mPlayer;
-    if (theTile == NULL || thePlayer->mSaveVisMap != true || EEIsSeenBy(inUnit, thePlayer, true))
+    if (theTile == NULL || thePlayer->mSaveVisMap != true || EECombatIsSeenBy(inUnit, thePlayer, true))
         return;
     EEUnitClass* theClass = inUnit->mUnitClass;
     long theKind = theClass->mFamily;

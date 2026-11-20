@@ -62,7 +62,7 @@ pub fn get(goal: u64) -> EeUnitsLocationGoal {
     LOCATIONS.lock().unwrap_or_else(|e| e.into_inner()).get(&goal).copied().unwrap_or_default()
 }
 
-fn put(goal: u64, x: EeUnitsLocationGoal) {
+pub(crate) fn put(goal: u64, x: EeUnitsLocationGoal) {
     LOCATIONS.lock().unwrap_or_else(|e| e.into_inner()).insert(goal, x);
 }
 

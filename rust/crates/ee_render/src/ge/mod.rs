@@ -35,6 +35,7 @@ pub mod fbobj;
 pub mod ffi;
 pub mod font;
 pub mod font_ffi;
+pub mod game_hosts;
 #[cfg(test)]
 mod golden;
 #[cfg(test)]

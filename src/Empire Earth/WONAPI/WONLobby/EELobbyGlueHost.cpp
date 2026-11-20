@@ -268,9 +268,9 @@ static void EELobbyLocks(bool inRelease)
 
 static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
 static LobbyGame* EELobbyNewGame() { return new EELobbyGame; }
-static ComponentConfig* EELobbyNewButtonConfig() { return new ButtonConfig; }
+static ComponentConfig* EELobbyNewButtonConfig() { return CfgNewOfKind(EeWonCfgKind::Button); }
 static ComponentConfig* EELobbyNewContainerConfig() { return new ContainerConfig; }
-static ComponentConfig* EELobbyNewDialogConfig() { return new DialogConfig; }
+static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgKind::Dialog); }
 static Component* EELobbyNewGameOptionsCtrl() { return new EELobbyGameOptionsCtrl; }
 static Component* EELobbyNewPlayerOptionsCtrl() { return new EELobbyPlayerOptionsCtrl; }
 static Component* EELobbyNewColorButton() { return new EELobbyColorButton; }

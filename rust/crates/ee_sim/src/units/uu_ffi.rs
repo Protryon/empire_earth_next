@@ -924,7 +924,7 @@ pub extern "C" fn ee_units_uu_jitter_heading(angle: f32, min: f32, max: f32) -> 
 /// `EECanPlaceUnitOnTile` (49): `flag` written as the C++ wrote it (only when the tile's blockers were asked).
 ///
 /// # Safety
-/// `flag` a live byte.
+/// `flag` a live byte or null (the tile's blockers' answer not wanted).
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_units_uu_can_place_unit_on_tile(
@@ -954,7 +954,7 @@ pub unsafe extern "C" fn ee_units_uu_can_place_unit_on_tile(
             ignore_owner != 0,
             &mut f,
         );
-        if let Some(f) = f {
+        if let (Some(f), false) = (f, flag.is_null()) {
             *flag = u8::from(f);
         }
         n.b(ok);

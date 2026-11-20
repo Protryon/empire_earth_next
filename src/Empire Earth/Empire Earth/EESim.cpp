@@ -67,6 +67,8 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
+#include "rust/game/app.h"   // the mini map's MMSN (world_capture.rs)
+#include "ee/EEMiniMap.h"
 #include "rust/sim/combat.h"
 #include "rust/sim/netmsg.h"   // the decisions' sweep
 #include "rust/sim/units.h"   // the pick and Fill sweeps (ee_sim units/pick_sweep.rs)
@@ -871,7 +873,8 @@ void HostSweep(int inKind, long inArg)
     case EE_SIM_DRIVER_SWEEP_CALAMITIES: EETechCaptureCastCalamities(inArg); break;   // --calamities
     case EE_SIM_DRIVER_SWEEP_UNITS: EEPhysicsUnitSweep(inArg); break;   // --unit-sweep (EEPhysicsSweep.cpp)
     case EE_SIM_DRIVER_SWEEP_MINUTE:   // every game minute: the mini map's cells (MMSN), the tile sight (TSGT)
-        EEAppCaptureMiniMapSnapshot();
+        if (gMiniMap != NULL)   // MMSN (ee_game app world_capture.rs)
+            ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
         EESightCaptureSnapshot();
         break;
     case EE_SIM_DRIVER_SWEEP_CHEATS: EEAppCaptureCheatSweep(); break;   // --app-sweep at five game minutes
