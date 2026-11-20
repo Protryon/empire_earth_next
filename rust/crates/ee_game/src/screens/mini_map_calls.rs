@@ -159,7 +159,12 @@ fn mm_point(c: &mut impl Cpp, map: usize, press: bool) -> Ge2DPoint {
     let origin = Ge2DPoint { x: c.mm_origin_x(map), y: c.mm_origin_y(map) };
     let (width, height) = (c.mm_window_width(), c.mm_window_height());
     let b = c.mm_bounds();
-    let bounds = GeRectangle { left: c.mm_rect_left(b), top: c.mm_rect_top(b), right: c.mm_rect_right(b), bottom: c.mm_rect_bottom(b) };
+    let bounds = GeRectangle {
+        left: c.mm_rect_left(b),
+        top: c.mm_rect_top(b),
+        right: c.mm_rect_right(b),
+        bottom: c.mm_rect_bottom(b),
+    };
     if press {
         ee_render::gfx::minimap::press_point(mouse, origin, width, height, &bounds)
     } else {
@@ -201,7 +206,12 @@ pub(crate) fn update_map(c: &mut impl Cpp, minimap: usize) {
     if minimap == 0 {
         return;
     }
-    let mut u = EeScreensMiniMapUpdate { width: c.mm_map_width(), height: c.mm_map_height(), size: c.mm_map_size(), ..Default::default() };
+    let mut u = EeScreensMiniMapUpdate {
+        width: c.mm_map_width(),
+        height: c.mm_map_height(),
+        size: c.mm_map_size(),
+        ..Default::default()
+    };
     for (k, (row, column)) in MM_ENTRIES.into_iter().enumerate() {
         u.map_to_pixel[k] = c.mm_update_map_to_pixel(minimap, row, column);
     }
@@ -220,7 +230,14 @@ pub(crate) fn update_map(c: &mut impl Cpp, minimap: usize) {
 }
 
 /// The `RustOp` cases moved (`op` without `EE_SCREENS_HC_CLASS`; `mouse` the read's record): `None` for the others.
-pub(crate) fn rust_op(c: &mut impl Cpp, map: usize, op: u32, a: i64, b: i64, mouse: Option<&mut EeScreensMiniMapMouse>) -> Option<i64> {
+pub(crate) fn rust_op(
+    c: &mut impl Cpp,
+    map: usize,
+    op: u32,
+    a: i64,
+    b: i64,
+    mouse: Option<&mut EeScreensMiniMapMouse>,
+) -> Option<i64> {
     match op {
         EE_SCREENS_MM_OP_CENTER => center_camera(c, map),
         EE_SCREENS_MM_OP_READ_MOUSE => {

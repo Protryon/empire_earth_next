@@ -26,7 +26,13 @@ pub(crate) fn fill(c: &mut impl Cpp, bg: usize, inner: [f32; 4]) -> c_long {
     {
         // SAFETY: the background's live rasterizer and colour (three f32s)
         unsafe {
-            ee_render::ge::list2d::ee_ge_draw2d_fill(rasterizer as *mut _, screen as _, &rect, color as *const f32, opacity)
+            ee_render::ge::list2d::ee_ge_draw2d_fill(
+                rasterizer as *mut _,
+                screen as _,
+                &rect,
+                color as *const f32,
+                opacity,
+            )
         }
     }
     #[cfg(test)]

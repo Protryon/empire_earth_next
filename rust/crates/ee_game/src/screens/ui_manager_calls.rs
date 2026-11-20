@@ -188,7 +188,8 @@ pub(crate) fn create_background(c: &mut impl Cpp, m: usize, table: usize) -> usi
     if form == 0 {
         return 0;
     }
-    let flags = c.bt_attribute1(table) as u32 | (c.bt_attribute2(table) as u32) << 1 | (c.bt_attribute3(table) as u32) << 2;
+    let flags =
+        c.bt_attribute1(table) as u32 | (c.bt_attribute2(table) as u32) << 1 | (c.bt_attribute3(table) as u32) << 2;
     c.um_new_generic_background(m, table, form, flags)
 }
 

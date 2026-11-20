@@ -24,10 +24,7 @@ fn the_host_cases() {
     let mut f = Fake::default();
     f.out("mg_minutes_seconds", 3).out("mg_minutes_seconds", 7);
     call(&mut f, GROUP, EE_SCREENS_MGR_OP_TIMER_TEXT, 208, 1000, 0);
-    assert_eq!(
-        f.calls(),
-        "mg_minutes_seconds(1000, out, out)\nmg_show(128, 208)\nmg_timer_text(128, 208, \"3:07\")"
-    );
+    assert_eq!(f.calls(), "mg_minutes_seconds(1000, out, out)\nmg_show(128, 208)\nmg_timer_text(128, 208, \"3:07\")");
 }
 
 #[test]

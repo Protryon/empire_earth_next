@@ -49,7 +49,9 @@ pub(crate) fn call(c: &mut impl Cpp, group: usize, op: u32, a: i64, b: i64, cc: 
                 c.mg_icon_bar_update(bar);
             }
         }
-        EE_SCREENS_MGR_OP_SHOW_COMMANDS => show_commands(c, group, a as usize, |which, unit, b| member(group, which, unit, b)),
+        EE_SCREENS_MGR_OP_SHOW_COMMANDS => {
+            show_commands(c, group, a as usize, |which, unit, b| member(group, which, unit, b))
+        }
         EE_SCREENS_MGR_OP_BUTTON_OBJECT => return (c.mg_button_object(a as u32) != 0) as i64,
         EE_SCREENS_MGR_OP_SET_COMMAND => {
             let button = c.mg_button(group, a as u32);

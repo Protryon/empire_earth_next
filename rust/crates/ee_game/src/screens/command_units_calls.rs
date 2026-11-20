@@ -85,15 +85,20 @@ mod tests {
         f.answer("texture_load", &[9]);
         construct(&mut f, 0x10, 0x20);
         let calls = f.calls();
-        assert!(calls.starts_with("cu_set_listener(16, 32)\ncu_listener_reference(16)\ncu_always_dirty(16)\ncu_model_new(16)"));
+        assert!(calls
+            .starts_with("cu_set_listener(16, 32)\ncu_listener_reference(16)\ncu_always_dirty(16)\ncu_model_new(16)"));
         assert!(calls.contains("cu_point(16, 3, -0.25, 0.0, 0.0)\ncu_normal(16, 0)"));
-        assert!(calls.contains("cu_vertex1(16, 1, 0)\ncu_vertex2(16, 1, 2)\ncu_vertex3(16, 1, 3)\ncu_polygon_start(16)"));
+        assert!(
+            calls.contains("cu_vertex1(16, 1, 0)\ncu_vertex2(16, 1, 2)\ncu_vertex3(16, 1, 3)\ncu_polygon_start(16)")
+        );
         assert!(calls.contains("cu_set_texture(16, 9)\ntexture_reference(9)\ntexture_alpha_texture(9)"));
         assert!(calls.ends_with("texture_mip_bias(9, -1.0)\ntexture_clamp(9)\ncu_material_texture(16)"));
         let mut f = Fake::default();
         construct(&mut f, 0x10, 0x20);
         assert!(f.calls().ends_with("cu_set_texture(16, 0)\ncu_material_texture(16)"));
         destroy(&mut f, 0x10);
-        assert!(f.calls().ends_with("cu_listener_dereference(16)\ncu_model_dereference(16)\ncu_texture_dereference(16)"));
+        assert!(f
+            .calls()
+            .ends_with("cu_listener_dereference(16)\ncu_model_dereference(16)\ncu_texture_dereference(16)"));
     }
 }

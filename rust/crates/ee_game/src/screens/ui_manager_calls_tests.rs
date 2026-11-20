@@ -106,7 +106,10 @@ fn the_editor_form_and_forms() {
     create_editor(&mut f, 1);
     create_editor(&mut f, 1);
     delete_editor(&mut f, 1);
-    assert_eq!(f.calls(), "um_editor_form(1)\num_new_editor(1)\num_editor_form(1)\num_delete_editor(1)\num_clear_editor(1)");
+    assert_eq!(
+        f.calls(),
+        "um_editor_form(1)\num_new_editor(1)\num_editor_form(1)\num_delete_editor(1)\num_clear_editor(1)"
+    );
     let mut f = Fake::default();
     f.answer("um_form_data_id", &[EE_SCREENS_UMC_FORM_MAIN_GAME as i64, 3]);
     create_form(&mut f, 1, 2);
@@ -147,7 +150,9 @@ fn the_user_defined_controls() {
     f.answer("ct_new_pgs_graph", &[30]);
     assert_eq!(create_control(&mut f, 1, 2), 30);
     assert!(f.calls().contains("um_parent_set(0.0, 0.0, 0.0, 0.0)\n"));
-    assert!(f.calls().contains("ct_new_pgs_graph(2, 0)\nct_graph_font(30, 2)\nct_graph_font_color(30, 2)\num_strings_clear()"));
+    assert!(f
+        .calls()
+        .contains("ct_new_pgs_graph(2, 0)\nct_graph_font(30, 2)\nct_graph_font_color(30, 2)\num_strings_clear()"));
     let mut f = Fake::default();
     f.answer("ct_type", &[EE_SCREENS_UMC_CB_LIST_BOX as i64]);
     create_control(&mut f, 1, 2);

@@ -36,7 +36,9 @@ fn the_check_sums_the_archived_copy() {
     assert_eq!(call(&mut f, EE_SCREENS_CEM_CHECK, 0, b"s"), 1);
     let calls = f.calls();
     assert!(calls.contains("cem_differs_format()\ncem_differs_print(\"s\")\ncem_differs_show()"));
-    assert!(calls.ends_with("cem_file_close()\ncem_file_delete()\ncem_file_clear()\ncem_archive_close(0)\ncem_archive_delete(0)"));
+    assert!(calls.ends_with(
+        "cem_file_close()\ncem_file_delete()\ncem_file_clear()\ncem_archive_close(0)\ncem_archive_delete(0)"
+    ));
     let mut f = Fake::default();
     f.out("cem_file_length", 2).answer("cem_file_byte", &[3, 4]).answer("cem_file_checksum", &[7]);
     assert_eq!(call(&mut f, EE_SCREENS_CEM_CHECK, 0, b"s"), 0);

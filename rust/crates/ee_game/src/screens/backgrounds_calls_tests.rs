@@ -46,9 +46,11 @@ fn the_map_cut_into_cells() {
     assert!(calls.contains("mb_attributes_png()\nmb_create_image(0)\nmb_load_png()\nmb_width()\nmb_height()"));
     assert!(calls.contains("mb_columns_rows(160, 2, 1)"));
     assert!(calls.contains("mb_texture_rectangle(160, 299.0, 255.0)"));
-    assert!(calls.contains("mb_source(256.0, 0.0, 300.0, 256.0)
+    assert!(calls.contains(
+        "mb_source(256.0, 0.0, 300.0, 256.0)
 mb_destination(44.0, 256.0)
-mb_copy()"));
+mb_copy()"
+    ));
     assert!(calls.contains("mb_cell_texture_set(160, 7, 0, 0)"));
     assert!(calls.ends_with("mb_image()\nmb_image_dereference()\nmb_file()\nmb_file_delete()"));
     // a file found on neither path: its error, nothing loaded or released
@@ -73,8 +75,11 @@ fn construct_and_fill() {
     );
     let mut f = Fake::default();
     assert_eq!(fill(&mut f, BG, [1.0, 2.0, 3.0, 4.0]), 0);
-    assert_eq!(f.calls(), "gb_rasterizer(160)
+    assert_eq!(
+        f.calls(),
+        "gb_rasterizer(160)
 gb_screen(160)
 gb_color(160)
-gb_opacity(160)");
+gb_opacity(160)"
+    );
 }

@@ -33,7 +33,8 @@ fn sba_value_style(c: &mut impl Cpp, bar: usize, which: u32) {
 /// The constructor's body (`rect` its `GERectangle*`, `form` its `UIForm*`): the icon, the green bar and the two
 /// value labels laid out for the main game (`large_icon`: the icon as high as the inset) or the scenario editor.
 pub(crate) fn construct(c: &mut impl Cpp, bar: usize, rect: usize, form: usize, editor: bool, large_icon: bool) {
-    let (left, top, right, bottom) = (c.sba_rect_left(rect), c.sba_rect_top(rect), c.sba_rect_right(rect), c.sba_rect_bottom(rect));
+    let (left, top, right, bottom) =
+        (c.sba_rect_left(rect), c.sba_rect_top(rect), c.sba_rect_right(rect), c.sba_rect_bottom(rect));
     let height = c.sba_rect_height(rect);
     c.sba_set_pressed(bar, false);
     let (inset, icon, bar_left);
@@ -196,7 +197,9 @@ mod tests {
         let calls = f.calls();
         assert!(calls.contains("sba_icon_new(176, 2, 11.0, 21.0, 58.875, 68.875)"));
         assert!(calls.contains("sba_bar_new(176, 2, 57.875, 43.0, 107.0, 47.0)"));
-        assert!(calls.contains("sba_closest_font(17)\nsba_font_has_bitmap(5)\nsba_form_gdi(2)\nsba_font_bitmap_new(5, 2)"));
+        assert!(
+            calls.contains("sba_closest_font(17)\nsba_font_has_bitmap(5)\nsba_form_gdi(2)\nsba_font_bitmap_new(5, 2)")
+        );
         assert!(calls.contains("sba_value_new(176, 0, 5, 2, 11.0, 52.0, 109.0, 69.0)"));
         assert!(calls.contains("sba_value_new(176, 1, 6, 2, 11.0, 23.0, 109.0, 43.0)\nsba_font_dereference(6)"));
         assert!(calls.contains("sba_count_new(176, 6)\nsba_left(176)\nsba_top(176)\nsba_count_at(176, 12.0, 22.0)"));

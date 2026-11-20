@@ -252,11 +252,11 @@ pub(crate) mod backgrounds_calls;
 pub(crate) mod campaign_model_calls;
 pub(crate) mod command_units_calls;
 pub(crate) mod game_calls;
-pub(crate) mod game_view_calls;
 pub(crate) mod game_calls_more;
 pub(crate) mod game_cpp;
 pub(crate) mod game_texts;
 pub mod game_view;
+pub(crate) mod game_view_calls;
 #[cfg(not(test))]
 mod game_view_ffi;
 pub mod hot_keys;
@@ -280,8 +280,6 @@ mod lobby_form_ffi;
 pub mod lobby_options;
 pub mod main_form;
 pub(crate) mod main_form_calls;
-pub(crate) mod main_group_calls;
-pub(crate) mod mini_map_calls;
 #[cfg(not(test))]
 mod main_form_ffi;
 pub mod main_form_fields;
@@ -292,9 +290,11 @@ pub mod main_game_options;
 #[cfg(not(test))]
 mod main_game_options_ffi;
 pub mod main_group;
+pub(crate) mod main_group_calls;
 #[cfg(not(test))]
 mod main_group_ffi;
 pub mod menus;
+pub(crate) mod mini_map_calls;
 pub mod mouse_modes;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
@@ -356,12 +356,11 @@ pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
-mod toolkit;
-pub(crate) mod ui_calls;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
-pub(crate) mod ui_manager_calls;
+mod toolkit;
+pub(crate) mod ui_calls;
 #[cfg(not(test))]
 mod ui_calls_ffi;
 #[cfg(not(test))]
@@ -370,6 +369,7 @@ pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;
 pub mod ui_manager;
+pub(crate) mod ui_manager_calls;
 #[cfg(not(test))]
 mod ui_manager_ffi;
 pub mod ui_objects;

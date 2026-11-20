@@ -9,7 +9,6 @@ use crate::screens::campaign_model::{CampaignModel, CampaignModelHost};
 use crate::screens::menus::EE_SCREENS_TEXT_EDIT;
 use crate::screens::menus_ffi::Form;
 
-
 /// The model (the original's `gCampaignEditor` but its campaign). No host op re-enters the editor's events, so the
 /// lock is held across the model's host calls.
 static MODEL: Mutex<CampaignModel> = Mutex::new(CampaignModel {

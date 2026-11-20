@@ -12,10 +12,7 @@ fn the_node_ops_skip_a_command_button() {
     f.answer("sbt_is_command", &[1, 0]).answer("sbt_node", &[9]).answer("sbt_node_kind", &[0, 4]);
     assert_eq!(call(&mut f, REC, EE_SCREENS_SB_OP_NODE_KIND, 0, 0, 0), 0);
     assert_eq!(call(&mut f, REC, EE_SCREENS_SB_OP_NODE_KIND, 0, 0, 0), 4);
-    assert_eq!(
-        f.calls(),
-        "sbt_is_command(96)\nsbt_node_kind(0)\nsbt_is_command(96)\nsbt_node(96)\nsbt_node_kind(9)"
-    );
+    assert_eq!(f.calls(), "sbt_is_command(96)\nsbt_node_kind(0)\nsbt_is_command(96)\nsbt_node(96)\nsbt_node_kind(9)");
     let mut f = Fake::default();
     f.answer("sbt_is_command", &[1]);
     assert_eq!(call(&mut f, REC, EE_SCREENS_SB_OP_NODE_PRESENT, 0, 0, 0), 0);
@@ -39,10 +36,7 @@ fn the_texts() {
     let mut f = Fake::default();
     call(&mut f, REC, EE_SCREENS_SB_OP_CHAT_STRING, 33, 0, 0);
     call(&mut f, REC, EE_SCREENS_SB_OP_COUNT_TEXT, -5, 0, 0);
-    assert_eq!(
-        f.calls(),
-        "sbt_string_clear()\nsbt_string_load(33)\nsbt_chat_add_string()\nsbt_count_text(96, \"-5\")"
-    );
+    assert_eq!(f.calls(), "sbt_string_clear()\nsbt_string_load(33)\nsbt_chat_add_string()\nsbt_count_text(96, \"-5\")");
     let mut f = Fake::default();
     f.answer("sbt_button_object_of", &[0, 4]).answer("sbt_object_hot_key", &[7]).answer("sbt_text_length", &[2]);
     assert_eq!(call(&mut f, REC, EE_SCREENS_SB_OP_HELP_TEXT, EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY, 0, 0), -1);
@@ -59,10 +53,7 @@ fn the_icon_and_the_units() {
     let mut f = Fake::default();
     call(&mut f, REC, EE_SCREENS_SB_OP_ICON, EE_SCREENS_BUTTON_ICON_NONE as i64, 0, 0);
     call(&mut f, REC, EE_SCREENS_SB_OP_ICON, EE_SCREENS_BUTTON_ICON_PRESSED as i64, 0, 0);
-    assert_eq!(
-        f.calls(),
-        "sbt_set_draw_icon(96, false)\nsbt_object_pressed_icon(96)\nsbt_set_draw_icon(96, true)"
-    );
+    assert_eq!(f.calls(), "sbt_set_draw_icon(96, false)\nsbt_object_pressed_icon(96)\nsbt_set_draw_icon(96, true)");
     let mut f = Fake::default();
     f.answer("sbt_unit", &[0, 5]).answer("sbt_unit_is_priest", &[1]);
     assert_eq!(call(&mut f, REC, EE_SCREENS_SB_OP_UNIT_PRIEST, 2, 0, 0), 0);
