@@ -104,6 +104,7 @@ const CONTINENT_CONNECTED_BY_ID: i32 = 9;
 const CONTINENT_OF: i32 = 10;
 const CONTINENT_SHORE: i32 = 11;
 const CONTINENT_FOOTPRINT: i32 = 12;
+const CONTINENT_CAN_GET_TO: i32 = 13;
 /// `ee_units_uu_host_player`'s questions.
 const PLAYER_HUMAN: i32 = 1;
 const PLAYER_UNIT_SET: i32 = 2;
@@ -512,6 +513,12 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_spot(3, gate, 0, 0, out.as_mut_ptr().cast()) };
         out
     }
+}
+
+/// `gContinentManager.CanGetTo(unit, x, y)` (the AI lane's C++: landing.rs).
+pub(crate) fn can_get_to(unit: u64, x: i32, y: i32) -> bool {
+    // SAFETY: a C++ read of the continent manager; a live unit
+    unsafe { ee_units_uu_host_continent(CONTINENT_CAN_GET_TO, x as u32 as u64, y as u32 as u64, unit) != 0 }
 }
 
 /// The citizen class's `HasGatherPoint(unit, resource)` (its UCBD note: gather_spot.rs's accessibility test).

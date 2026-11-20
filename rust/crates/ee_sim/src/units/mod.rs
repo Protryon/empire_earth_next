@@ -75,6 +75,7 @@ pub mod hidden;
 pub mod host;
 pub mod improve;
 pub mod kinds;
+pub mod landing;
 pub mod load;
 pub mod location;
 pub mod map_save;

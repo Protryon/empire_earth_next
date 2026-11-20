@@ -2004,6 +2004,7 @@ extern "C" uint64_t ee_units_uu_host_continent(int32_t inWhich, uint64_t inA, ui
     case 10: return gContinentManager.GetContinent(U2DPoint<long>(theX, theY), (long)(int32_t)inC);
     case 11: return gContinentManager.IsShoreTile(theX, theY);
     case 12: return static_cast<EEComplexUnit*>(UUUnit(inA))->GetFootprintContinent((long)(int32_t)inC);
+    case 13: return gContinentManager.CanGetTo(UUUnit(inC), theX, theY);
     }
     return 0;
 }

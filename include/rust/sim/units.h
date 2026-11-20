@@ -1611,6 +1611,9 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// `kAIPathLandMass`
+constexpr static const int32_t LAND_MASS = 2;
+
 /// `kGoalLocation`
 constexpr static const uint8_t GOAL_LOCATION = 1;
 
@@ -6471,6 +6474,18 @@ int32_t ee_units_improve_gain_records(const EeUnitsUnitClassFields *class_,
                                       const int32_t *levels,
                                       int32_t level,
                                       int32_t improvement);
+
+/// `EEFindLandingPoint(unit, ioTarget)` (EEWheel.cpp's forwarder).
+///
+/// # Safety
+/// `unit` a live complex unit, `target` three floats.
+void ee_units_find_landing_point(uint64_t unit, float (*target)[3]);
+
+/// `EEGetRandomPointAhead(unit, outPoint)` (EEWheel.cpp's forwarder) -> found.
+///
+/// # Safety
+/// `unit` a live complex unit, `out` two floats.
+bool ee_units_random_point_ahead(uint64_t unit, float (*out)[2]);
 
 /// The goal's record into `out` (zeros for a goal that has none).
 ///
