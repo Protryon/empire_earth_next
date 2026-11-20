@@ -34200,3 +34200,18 @@ numbers and the UI units' targets now.
   repair-queued, move; RESULT PASS, no GX errors; the box selection's capture shows the command buttons, the status
   box's icons and the mini map), the editor exercise (RESULT PASS, no GX errors); `gates.sh`: GATES PASS (tour;
   ai-game time-cap PT 13271, units [4, 41, 41], alive [2, 3], classic_lua x 2; lan-game PT 2695/2691).
+
+## Empty fonts in a worktree (branch rust-batch6, 2026-11-19)
+
+- Symptom: in one worktree, sim_editor's forms had every font height 0 (`fh=0`), so every text-sized rectangle shrank.
+  Each merged branch passed alone, and two other merges on the same tree passed, which looked like a link-order bug.
+- Cause: `toolchain/` is not in git, so a worktree has none. tools/ee.py's TOOLCHAIN was `<checkout>/toolchain`, and
+  verify.py passes `--embed-dir=<TOOLCHAIN>/fonts` to PlatFontData.c. With the directory missing, that one build's
+  `#embed` gave empty arrays (a 3 KB object instead of 4.4 MB): PlatFontRegister refused every face and GEFont's
+  height stayed 0. Every other worktree had taken a good PlatFontData.obj from the shared object cache, so only a
+  worktree that compiled the unit itself (after a change to its source, or a cache miss) went wrong.
+- Fixes: PlatFontData.c asserts each embedded font is over 64 KB (an empty font is a compile error naming
+  `tools/fetch_posix.py fonts`); GEInitialize checks PlatFontRegisterBuiltIn's result; tools/ee.py falls back to the
+  main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
+- Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
+  missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
