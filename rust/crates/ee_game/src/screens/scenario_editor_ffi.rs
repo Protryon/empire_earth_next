@@ -23,6 +23,13 @@ impl SeHost for Editor<'_> {
         if let Some(r) = crate::screens::editor_direct::se(self.0 .0, self.0 .1, op, a, b) {
             return r;
         }
+        use crate::screens::editor_tabsx as tabsx;
+        let (form, entity) = (self.0 .0 as usize, self.0 .1 as usize);
+        if let Some(r) =
+            unsafe { tabsx::se(&mut crate::screens::editor_sefmx::cpp, &mut tabsx::sex, form, entity, op, a, b) }
+        {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_se(self.0 .0, self.0 .1, op, a, b) }
     }
     fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {

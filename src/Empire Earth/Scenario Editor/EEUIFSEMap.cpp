@@ -44,116 +44,78 @@ static_assert(kSEMapElevationFile == 0x75 && kSEMapWidth == 0x6b && kSEMapLandCu
                   kSEMapDefaultTerrainLabel == 0x64 && kSEMapWaterCutoff == 0x7d,
               "editor_map.rs's ids");
 
+extern UWideString gSefxText;   // the editor's statements' text (EEUIFScenarioEditor.cpp)
+
 namespace {
 
-void SempColor(GEText* inText, const GEColor& inColor)
+int32_t SempxOut(int32_t* i, const void* inObject)
 {
-    inText->SetIsTransparent(true);
-    inText->SetFgColor(inColor);
+    i[0] = (int32_t)(uint32_t)(uintptr_t)inObject;
+    i[1] = (int32_t)(uint32_t)((uint64_t)(uintptr_t)inObject >> 32);
+    return 0;
 }
 
 }   // namespace
 
 extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    UIForm* theForm = static_cast<UIForm*>(p[1]);
-    GE2DPoint theLocation(f[0], f[1]);
-    UWideString theText;
     switch (inOp) {
     case EE_SCREENS_SEMP_OP_TERRAIN_COUNT: return (int32_t)EETerrainTable::GetNumTables();
-    case EE_SCREENS_SEMP_OP_TERRAIN: {
-        EETerrainTable* theTable = EETerrainTable::Get((unsigned long)i[0]);
-        if (theTable == NULL || !theTable->mIsInEditor)
-            return 0;
-        i[1] = (int32_t)theTable->mID;
-        i[2] = (int32_t)theTable->mNameID;
-        return 1;
     }
-    case EE_SCREENS_SEMP_OP_LINES_GENERATORS:
-        for (unsigned long k = 0; k < EERMGetNumberOfGenerators(); k++)
-            SeplLinePush(EERMGetGeneratorDisplayName(k));
+    return 0;
+}
+
+// the tab's single statements (ee_screens editor_tabsx.rs EE_SCREENS_SEMPX_*: the Rust composes the host's ops)
+extern "C" int32_t ee_screenscpp_sempx(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    UIForm* theForm = static_cast<UIForm*>(p[1]);
+    switch (inOp) {
+    case EE_SCREENS_SEMPX_TERRAIN_EXISTS: return EETerrainTable::Get((unsigned long)i[0]) != NULL;
+    case EE_SCREENS_SEMPX_TERRAIN_IN_EDITOR: return EETerrainTable::Get((unsigned long)i[0])->mIsInEditor;
+    case EE_SCREENS_SEMPX_TERRAIN_ID: return (int32_t)EETerrainTable::Get((unsigned long)i[0])->mID;
+    case EE_SCREENS_SEMPX_TERRAIN_NAME: return (int32_t)EETerrainTable::Get((unsigned long)i[0])->mNameID;
+    case EE_SCREENS_SEMPX_GENERATORS: return (int32_t)EERMGetNumberOfGenerators();
+    case EE_SCREENS_SEMPX_PUSH_GENERATOR: SeplLinePush(EERMGetGeneratorDisplayName((unsigned long)i[0]));
         return 0;
-    case EE_SCREENS_SEMP_OP_LINES_MAP_SIZES:   // gameoptions.yaml map_sizes
-        for (size_t k = 0; k < EEGetRules().mGameOptions.mMapSizes.size(); k++) {
-            gResource->GetString(EEGetRules().mGameOptions.mMapSizes[k].mNameID, theText);
-            SeplLinePush(theText);
-        }
+    case EE_SCREENS_SEMPX_MAP_SIZES: return (int32_t)EEGetRules().mGameOptions.mMapSizes.size();
+    case EE_SCREENS_SEMPX_MAP_SIZE_NAME: gResource->GetString(EEGetRules().mGameOptions.mMapSizes[(size_t)i[0]].mNameID, gSefxText);
         return 0;
-    case EE_SCREENS_SEMP_OP_RADIO_HEIGHT: {
-        unsigned long theHeight = (unsigned long)theForm->GetManager()->GetRadioOn()->GetHeight();
-        if (theHeight < (unsigned long)gSeplScreenFont->GetHeight())
-            theHeight = gSeplScreenFont->GetHeight();
-        return (int32_t)theHeight;
-    }
-    case EE_SCREENS_SEMP_OP_MAKE_RADIO: {
-        gResource->GetString((unsigned long)i[1], theText);
-        UIRadioButton* t = new EEUIShellRadio(EE_SCREENS_SK_MAP_RADIO, {}, (unsigned long)i[0], theText, gSeplScreenFont,
-                                              GERectangle(theLocation, 100.0f, (float)(unsigned long)f[2]), theForm,
-                                              (unsigned long)i[2], 0, false, i[3] != 0, false);
-        t->GetTextLabel()->SetBgOpacity(0.4f);
-        SempColor(t->GetTextLabel()->GetGEText(), GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-        theForm->AddControl(t, 1);
-        *static_cast<UIControl**>(p[0]) = t;
+    case EE_SCREENS_SEMPX_PUSH_TEXT: SeplLinePush(gSefxText);
         return 0;
-    }
-    case EE_SCREENS_SEMP_OP_MAKE_BUTTON: {
-        UIButton* t = new EEUIShellButton(EE_SCREENS_SK_MAP_BUTTON, {(int64_t)p[2]}, 0x65, NULL, NULL, NULL,
-                                          GERectangle(theLocation, 260.0f,
-                                                      (float)(unsigned long)(gSeplScreenFont->GetHeight() + 10.0f)),
-                                          theForm, (unsigned long)i[2], 2);
-        t->SetBgOpacity(1.0f);
-        theForm->AddControl(t, 1);
-        *static_cast<UIControl**>(p[0]) = t;
+    case EE_SCREENS_SEMPX_RADIO_HEIGHT: return (int32_t)(unsigned long)theForm->GetManager()->GetRadioOn()->GetHeight();
+    case EE_SCREENS_SEMPX_FONT_HEIGHT: return (int32_t)(unsigned long)gSeplScreenFont->GetHeight();
+    case EE_SCREENS_SEMPX_NEW_RADIO: return SempxOut(i, static_cast<UIControl*>(new EEUIShellRadio(EE_SCREENS_SK_MAP_RADIO, {}, (unsigned long)i[0], gSefxText, gSeplScreenFont, GERectangle(GE2DPoint(f[0], f[1]), 100.0f, (float)(unsigned long)f[2]), theForm, (unsigned long)i[2], 0, false, i[3] != 0, false)));
+    case EE_SCREENS_SEMPX_RADIO_LABEL: return SempxOut(i, static_cast<UIControl*>(static_cast<UIRadioButton*>(static_cast<UIControl*>(p[0]))->GetTextLabel()));
+    case EE_SCREENS_SEMPX_NEW_BUTTON: return SempxOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_MAP_BUTTON, {(int64_t)p[2]}, 0x65, NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 260.0f, (float)(unsigned long)(gSeplScreenFont->GetHeight() + 10.0f)), theForm, (unsigned long)i[2], 2)));
+    case EE_SCREENS_SEMPX_BUTTON_TEXT: static_cast<UIButton*>(static_cast<UIControl*>(p[0]))->SetText(gSefxText, gSeplScreenFont);
         return 0;
-    }
-    case EE_SCREENS_SEMP_OP_BUTTON_TEXT: {
-        UIButton* t = static_cast<UIButton*>(p[0]);
-        gResource->GetString(IDS_CREATE_MAP, theText);
-        t->SetText(theText, gSeplScreenFont);
-        SempColor(t->GetGEText(), GEColor(1.0f, 1.0f, 1.0f));
+    case EE_SCREENS_SEMPX_ELEVATION_DIRECTORY: static_cast<FSFileSpec*>(p[0])->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
         return 0;
-    }
-    case EE_SCREENS_SEMP_OP_MAKE_FILE_COMBO: {
-        FSFileSpec theSpec;
-        theSpec.SetVolume(gStartupVolume);
-        theSpec.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
-        FSPath* thePath = new FSPath;
-        thePath->AddDirectory(theSpec, true);
-        UIComboBox* t = EEUIShellNewFileCombo(thePath, UString("*") + ".dat", kSEMapElevationFile, gSeplScreenFont,
-                                              theLocation, 200, theForm, (unsigned long)i[2]);
-        GEText* theGEText = t->GetGEText();
-        theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-        theGEText->SetIsTransparent(true);
-        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-        t->SetTextBoxBgOpacity(0.4f);
-        UIEvent* theEvent = new EESEERust(kSEEMapType, p[2]);
-        t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-        theEvent->Dereference();
-        t->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);
-        theForm->AddControl(t, 1);
-        thePath->Dereference();
-        *static_cast<UIControl**>(p[0]) = t;
+    case EE_SCREENS_SEMPX_NEW_PATH: return SempxOut(i, new FSPath);
+    case EE_SCREENS_SEMPX_PATH_ADD: static_cast<FSPath*>(p[0])->AddDirectory(*static_cast<FSFileSpec*>(p[2]), true);
         return 0;
-    }
-    case EE_SCREENS_SEMP_OP_BLANK_MAP:
-        (new EESEARust(kSEABlankMap, NULL, i[0], i[1], i[2]))->Dereference();
+    case EE_SCREENS_SEMPX_PATH_RELEASE: static_cast<FSPath*>(p[0])->Dereference();
         return 0;
-    case EE_SCREENS_SEMP_OP_RANDOM_MAP:
-        (new EESEARust(kSEARandomMap, NULL, i[0], i[1]))->Dereference();
+    case EE_SCREENS_SEMPX_NEW_FILE_COMBO: return SempxOut(i, static_cast<UIControl*>(EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), UString("*") + ".dat", kSEMapElevationFile, gSeplScreenFont, GE2DPoint(f[0], f[1]), 200, theForm, (unsigned long)i[2])));
+    case EE_SCREENS_SEMPX_FILE_COMBO_HELP: static_cast<UIControl*>(p[0])->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);
         return 0;
-    case EE_SCREENS_SEMP_OP_SEED_DRAW: {
-        URandomIntegers theRandom;
-        theRandom.SetSeed(TMGetTime());
-        gUserInterface->mRandomSeed = theRandom.Generate(0, 1000000);
-        return (int32_t)gUserInterface->mRandomSeed;
-    }
-    case EE_SCREENS_SEMP_OP_SEED_SET: gUserInterface->mRandomSeed = i[0]; return 0;
-    case EE_SCREENS_SEMP_OP_PROCESS_SELECTION: {
-        UIControl* c = static_cast<UIControl*>(p[0]);
-        c->GetTriggerEvent(kControlTriggerSelectionChanged)->ProcessEvent(NULL, c);
+    case EE_SCREENS_SEMPX_BLANK_MAP: (new EESEARust(kSEABlankMap, NULL, i[0], i[1], i[2]))->Dereference();
         return 0;
-    }
-    case EE_SCREENS_SEMP_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
+    case EE_SCREENS_SEMPX_RANDOM_MAP: (new EESEARust(kSEARandomMap, NULL, i[0], i[1]))->Dereference();
+        return 0;
+    case EE_SCREENS_SEMPX_RANDOM_NEW: return SempxOut(i, new URandomIntegers);
+    case EE_SCREENS_SEMPX_RANDOM_SEED: static_cast<URandomIntegers*>(p[0])->SetSeed(TMGetTime());
+        return 0;
+    case EE_SCREENS_SEMPX_RANDOM_DRAW: return (int32_t)static_cast<URandomIntegers*>(p[0])->Generate(0, 1000000);
+    case EE_SCREENS_SEMPX_RANDOM_DELETE: delete static_cast<URandomIntegers*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEMPX_SEED_SET: gUserInterface->mRandomSeed = i[0];
+        return 0;
+    case EE_SCREENS_SEMPX_SEED: return (int32_t)gUserInterface->mRandomSeed;
+    case EE_SCREENS_SEMPX_PROCESS_SELECTION: static_cast<UIControl*>(p[0])->GetTriggerEvent(kControlTriggerSelectionChanged)->ProcessEvent(NULL, static_cast<UIControl*>(p[0]));
+        return 0;
+    case EE_SCREENS_SEMPX_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0]));
+        return 0;
     }
     return 0;
 }

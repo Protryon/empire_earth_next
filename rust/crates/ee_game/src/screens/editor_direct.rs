@@ -865,6 +865,18 @@ pub(crate) unsafe fn semp(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f
         if let Some(r) = semp_direct(op, q, &*(i as *const [i32; 4]), &mut *(f as *mut [f32; 4])) {
             return r;
         }
+        use crate::screens::editor_tabsx as tabsx;
+        let composed = tabsx::semp(
+            &mut crate::screens::editor_sefmx::cpp,
+            &mut tabsx::sempx,
+            op,
+            q,
+            &mut *(i as *mut [i32; 4]),
+            &*(f as *const [f32; 4]),
+        );
+        if let Some(r) = composed {
+            return r;
+        }
         sys::ee_screenscpp_semp(op, p, i, f)
     }
 }
