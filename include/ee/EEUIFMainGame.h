@@ -112,10 +112,8 @@ public:
         EEUIFMGFormCall theCall(this);
         ee_screens_main_form_ui_state(&theCall, inUIState);
     }
-    // 0x264b1f / 0x264b35: the build action (+0x514, EEABuild) BuildGate / BuildWall
-    // (EEUIBuildGate/EEUIBuildWall::Build; provisional names)
-    void BuildGate(const GE2DPoint& inLocation, long inDirection);
-    void BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd);
+    // (0x264b1f / 0x264b35, BuildGate / BuildWall over the build action +0x514: EEUIBuildGate/EEUIBuildWall::Build
+    // call mBuild's own, ee/EEARust.h)
 
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
@@ -133,12 +131,26 @@ public:
         this->mErrorCriticalSection->Leave();
     }
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
-    void BuildUnit(unsigned long inUnitID, long inTechnology);  // 0x266384 (the build mode for a unit's technology)
-    void StartGate(long inTechnology);      // 0x2664b4 (state 0xb)
-    void StartWall(long inTechnology);      // 0x266594 (state 6)
-    void StartCalamity(long inTechnology);  // 0x26662d (state 5)
-    void StartFlare();                      // 0x26679a (state 0x15)
-    void StartPatrol();                     // 0x26681d (state 0x10)
+    // 0x266384: starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
+    // the chat log (ee_screens main_form.rs, as the other start modes)
+    void BuildUnit(unsigned long inUnitID, long inTechnology)
+    {
+        EEUIFMGFormCall theCall(this);
+        ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
+    }
+    // the start modes (ee_screens main_form.rs): 0x2664b4 a gate for a tech (state 0xb), 0x266594 a wall (state 6),
+    // 0x26662d a calamity cast with the first selected unit (state 5; at once for a self-targeted one), 0x26679a the
+    // flare (state 0x15), 0x26681d patrol when units are selected (state 0x10)
+    void StartGate(long inTechnology) { this->StartMode(0, inTechnology); }
+    void StartWall(long inTechnology) { this->StartMode(1, inTechnology); }
+    void StartCalamity(long inTechnology) { this->StartMode(2, inTechnology); }
+    void StartFlare() { this->StartMode(3, 0); }
+    void StartPatrol() { this->StartMode(4, 0); }
+    void StartMode(uint32_t inMode, long inTechnology)
+    {
+        EEUIFMGFormCall theCall(this);
+        ee_screens_main_form_start(&theCall, inMode, inTechnology);
+    }
     void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
@@ -152,7 +164,13 @@ public:
         return ee_screens_main_form_member(&theCall, inWhich, inA);
     }
     // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
-    int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL);
+    int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL)
+    {
+        EEUIFMGFormCall theCall(this);
+        theCall.mButton = inButton;
+        theCall.mOut = outString;
+        return ee_screens_status_button_member(&theCall, inWhich);
+    }
     void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
     // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,

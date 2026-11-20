@@ -15,15 +15,16 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIBuildGate.h"
+#include "ee/EEARust.h"
 
 // cdecl helpers (the units range 0x21048f..0x216d57; types inferred) (provisional names)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType);  // 0x211957: highlights them
 
-// Asks the main game form to build a gate at a location facing a direction
+// Asks the main game form's build action to build a gate at a location facing a direction
 void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    gUIManager->GetMainGameForm()->BuildGate(inLocation, inDirection);
+    gUIManager->GetMainGameForm()->mBuild->BuildGate(inLocation, inDirection);
 }
 
 // Leaves the placement mode (back to the normal interface state)

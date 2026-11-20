@@ -279,15 +279,6 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mOut) == 16 * sizeof(void*) + 3 * sizeof(UWideString),
               "hud_direct.rs FormCallHead: the held text, the chat line's name and text, the button, the help");
 
-// A command button's member in Rust (EE_SCREENS_SB_DO_*: ButtonUp, MouseRButtonUp, CopyData, GetHelpString into
-// outString; ee_screens status_button.rs over this host)
-int64_t EEUIFMainGame::ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString)
-{
-    EEUIFMGFormCall theCall(this);
-    theCall.mButton = inButton;
-    theCall.mOut = outString;
-    return ee_screens_status_button_member(&theCall, inWhich);
-}
 
 // Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
 long EEUIFMainGame::UpdateKeyboard()
@@ -346,17 +337,7 @@ void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& i
     ee_screens_main_form_chat_line(&theCall);
 }
 
-// Builds a gate at a location facing a direction
-void EEUIFMainGame::BuildGate(const GE2DPoint& inLocation, long inDirection)
-{
-    this->mBuild->BuildGate(inLocation, inDirection);
-}
-
-// Builds a wall between two points
-void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
-{
-    this->mBuild->BuildWall(inStart, inEnd);
-}
+// (BuildGate and BuildWall: the placements call the build action, ee/EEARust.h)
 
 
 // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
@@ -451,50 +432,8 @@ void EEUIFMainGame::Open()
 
 
 
-// Starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
-// the chat log (ee_screens main_form.rs, as the other start modes)
-void EEUIFMainGame::BuildUnit(unsigned long inUnitID, long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
-}
-
-// Starts placing a gate for a tech (gate placement mode)
-void EEUIFMainGame::StartGate(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 0, inTechnology);
-}
-
-// Starts placing a wall for a tech (wall placement mode)
-void EEUIFMainGame::StartWall(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 1, inTechnology);
-}
-
-// Starts casting the calamity of a tech with the first selected unit: at once for self-targeted ones,
-// otherwise in calamity mode (with a volcano ghost for tech 0x3f9)
-void EEUIFMainGame::StartCalamity(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 2, inTechnology);
-}
-
-
-// Enters flare mode when units are selected
-void EEUIFMainGame::StartFlare()
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 3, 0);
-}
-
-// Enters patrol mode when units are selected
-void EEUIFMainGame::StartPatrol()
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 4, 0);
-}
+// (BuildUnit and the start modes StartGate, StartWall, StartCalamity, StartFlare, StartPatrol: inline in
+// ee/EEUIFMainGame.h)
 
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
 

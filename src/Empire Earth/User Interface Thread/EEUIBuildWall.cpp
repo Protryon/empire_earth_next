@@ -15,12 +15,13 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIBuildWall.h"
 #include "ee/EEUIBuildGate.h"
+#include "ee/EEARust.h"
 
 
-// Asks the main game form to build a wall from the start to the end point
+// Asks the main game form's build action to build a wall from the start to the end point
 void EEUIBuildWall::Build()
 {
-    gUIManager->GetMainGameForm()->BuildWall(this->mStart, this->mEnd);
+    gUIManager->GetMainGameForm()->mBuild->BuildWall(this->mStart, this->mEnd);
 }
 
 // Leaves the placement mode (ICF-folded into EEUIBuildGate::Cancel 0x2561b6)
