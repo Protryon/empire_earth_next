@@ -662,20 +662,6 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
 {
     EECPUnitsState* s = inOp >= EE_AI_UNITS_HOST_ROUTE_REQUEST ? EECPUnitsGet(me) : NULL;   // the routes' (me given)
     switch (inOp) {
-    case EE_AI_UNITS_HOST_AREA_AT:
-        return (int64_t)(uintptr_t)gContinentManager.GetContinentAt((long)a, (long)b);
-    case EE_AI_UNITS_HOST_AREA_BY_ID:
-        if (a <= 0 || (size_t)a >= gContinentManager.GetContinents().size())
-            return 0;
-        return (int64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)a);
-    case EE_AI_UNITS_HOST_AREA_INFO: {
-        EEAIContinent* theArea = (EEAIContinent*)(uintptr_t)a;
-        EeAiUnitsArea& r = *(EeAiUnitsArea*)outRecord;
-        r.id = (long)theArea->GetID();
-        r.category = (long)theArea->GetCategory();
-        r.tiles = (long)theArea->GetNumTiles();
-        return 0;
-    }
     case EE_AI_UNITS_HOST_AREA_POINT: {
         EEAIContinent* theArea = (EEAIContinent*)(uintptr_t)a;
         if (!(theArea->GetNumTiles() > 0))
@@ -706,8 +692,6 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     }
     case EE_AI_UNITS_HOST_WALL_BLOCKED:
         return EECPUnitsWallBlocked(me, *(EeAiUnitsTiles*)outRecord) ? 1 : 0;
-    case EE_AI_UNITS_HOST_FOREST_AT:
-        return gContinentManager.GetForestAt(U2DPoint<long>((long)a, (long)b)) != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_TILES_LEVEL: {
         std::vector<U2DPoint<long> > theFive;
         EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
@@ -776,14 +760,13 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     }
 }
 
-extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
+// (the world's and the continent manager's reads are Rust's: units_bind.rs world_op)
+extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
 {
     EEComputerPlayer* me = (EEComputerPlayer*)inPlayer;
     switch (inOp) {
     case EE_AI_UNITS_HOST_STATE:
         return (int64_t)(uintptr_t)EECPUnitsGet(me)->mRust;
-    case EE_AI_UNITS_HOST_NOW:
-        return (int64_t)gPhysics->mGameTime;
     case EE_AI_UNITS_HOST_UNIT:
         return a > 0 ? (int64_t)EECPUnitsHandle(gWorld.GetUnit((unsigned long)a)) : 0;
     case EE_AI_UNITS_HOST_MAP_SIZE: {
@@ -809,16 +792,12 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
             theUnit->mIsDetachedFromAI = false;
         return 0;
     }
-    case EE_AI_UNITS_HOST_LAST_ATTACKER:
-        return (int64_t)EECPUnitsHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
     case EE_AI_UNITS_HOST_UPGRADE: {
         EEPlayer* theOwner = (EEPlayer*)(uintptr_t)a;
         if (b < 0 || (unsigned long)b >= theOwner->mUnitClassUpgrades.size())
             return 0;
         return (int64_t)(uintptr_t)theOwner->mUnitClassUpgrades[(unsigned long)b];
     }
-    case EE_AI_UNITS_HOST_CONTINENT:
-        return (int64_t)gContinentManager.GetContinent(U2DPoint<long>((long)a, (long)b), c != 0 ? kAIPathWaterBody : kAIPathLandMass);
     case EE_AI_UNITS_HOST_TRACE:
         if (gCPTraceOn) {
             EECPTraceScope theScope("next");
@@ -915,8 +894,6 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
         return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PLACE:
         return EECanPlaceOnTile(me, (long)a, (long)b, (long)c, false, 1) ? 1 : 0;
-    case EE_AI_UNITS_HOST_IS_TRANSPORT:
-        return ((EEUnitClass*)(uintptr_t)a)->IsTransport() ? 1 : 0;
     case EE_AI_UNITS_HOST_LAND_BUILDING:
         return ((EEUnitClass*)(uintptr_t)a)->IsLandBuilding() ? 1 : 0;
     case EE_AI_UNITS_HOST_BEHAVIOR_OK:
@@ -1016,9 +993,8 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_TUNING:
         EECPUnitsTuning(me, *(EeAiUnitsTuning*)outRecord);
         return 0;
-    case EE_AI_UNITS_HOST_AREA_AT: case EE_AI_UNITS_HOST_AREA_BY_ID: case EE_AI_UNITS_HOST_AREA_INFO:
     case EE_AI_UNITS_HOST_AREA_POINT: case EE_AI_UNITS_HOST_AREA_PICK: case EE_AI_UNITS_HOST_WATER_SHORE:
-    case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED: case EE_AI_UNITS_HOST_FOREST_AT:
+    case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED:
     case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_WALL_PATH: case EE_AI_UNITS_HOST_ROUTE_REQUEST:
     case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE: case EE_AI_UNITS_HOST_TILES_AGAIN:
         return EECPUnitsWallsHost(me, inOp, a, b, outRecord);
