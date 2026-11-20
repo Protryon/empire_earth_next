@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONRouting.h" // WONTickCount
 #include "platform/PlatKeys.h"
-#include "ee/wonapi/WONLobbyDelayLoadImage.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
@@ -191,7 +190,7 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
         ImageAttributes anAttr;
         if (!t->mImageDecoder.GetImageAttributes(aPath.c_str(), anAttr))
             return 0;
-        Image* anImage = new DelayLoadImage(aPath.c_str(), anAttr.mWidth, anAttr.mHeight);
+        Image* anImage = new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)aPath.data(), aPath.size(), anAttr.mWidth, anAttr.mHeight));
         anImage->AddRef();
         return (intptr_t)anImage;
     }

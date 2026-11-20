@@ -1,4 +1,5 @@
 #include "rust/won_gui/shell.h"
+#include "rust/won_gui/skinobj.h"
 // The stand-in world of won_cfgtab_test.cpp, included once in each of its two namespaces (Orig: the handlers as they
 // were, won_cfgtab_orig.h; Shell: the port, WONCfgTable.inl over ee_won's cfgtab.rs). Every read, call and field
 // write is appended to the namespace's trace.
@@ -260,6 +261,12 @@ struct CropImageFilter : ImageFilter {
     void SetSize(int a, int b) { w = a; h = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
     void SetPos(int a, int b) { x = a; y = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
 };
+// the game's filter calls since R6 WONLobby round 24 (imgobj.rs), traced as the filters they replaced
+static SmartPtr<RawImage> ImageCrop(RawImage* r, int x, int y, int w, int h) { return CropImageFilter(x, y, w, h).Filter(r); }
+static SmartPtr<RawImage> ImageScalePercent(RawImage* r, int w, int h) { ScaleImageFilter f(0); f.SetPercentSize(w, h); return f.Filter(r); }
+static SmartPtr<RawImage> ImageScaleTo(RawImage* r, int w, int h) { return ScaleImageFilter(w, h).Filter(r); }
+static SmartPtr<RawImage> ImageTint(RawImage* r, int a, int g, int b) { return TintImageFilter(a, g, b).Filter(r); }
+static SmartPtr<RawImage> ImageTransparent(RawImage* r, DWORD c) { return TransparentImageFilter(c).Filter(r); }
 void Image::SetSize(int w, int h) { tr("image#" + P((long long)id) + ".SetSize(" + P((long long)w) + "," + P((long long)h) + ")"); }
 struct WindowManager {
     static WindowManager* GetDefaultWindowManager() { static WindowManager w; return &w; }

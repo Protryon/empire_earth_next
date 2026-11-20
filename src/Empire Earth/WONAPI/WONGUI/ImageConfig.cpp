@@ -21,8 +21,8 @@ namespace WONAPI {
 bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
-    if(aKeyIdx==0) outValue=this->mImage->mWidth;
-    else if(aKeyIdx==1) outValue=this->mImage->mHeight;
+    if(aKeyIdx==0) outValue=this->mImage->GetWidth();
+    else if(aKeyIdx==1) outValue=this->mImage->GetHeight();
     else return false;
     return true;
 }

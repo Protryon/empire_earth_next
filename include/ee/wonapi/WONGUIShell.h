@@ -6,7 +6,8 @@
 #ifndef EE_WONAPI_WONGUISHELL_H
 #define EE_WONAPI_WONGUISHELL_H
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyWONButton.h"
+#include "rust/won_gui/wonbtnobj.h"
+#include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/shell.h"
 #include "rust/won_gui/shell_won.h"
 #include "rust/won_gui/skinobj.h"
@@ -70,7 +71,8 @@ inline void SafeGetShell(ComponentConfig* cfg, SmartPtr<Component>& out, EeWonSh
 #define WSO_WH(B,N,V) virtual void N(int& a, int& b) { if (this->Over(EeWonShellVirt::V)) this->Virt(EeWonShellVirt::V,(intptr_t)&a,(intptr_t)&b); else B::N(a,b); }
 #define WSB_WH(B,N,V) case EeWonShellVirt::V: B::N(*(int*)a,*(int*)b); return 0;
 #define WON_SHELL_VIRTUALS(B,S) \
-    S##_V0(B,Virtual08,SizeChanged) S##_WH(B,GetDesiredSize,DesiredSize) S##_VR(B,Paint,Paint,Graphics) \
+    S##_V0(B,Virtual08,SizeChanged) S##_WH(B,GetDesiredSize,DesiredSize) S##_VR(B,Paint,Paint,Graphics) WON_SHELL_REST_VIRTUALS(B,S)
+#define WON_SHELL_REST_VIRTUALS(B,S) \
     S##_V3(B,MouseDown,MouseDown) S##_V3(B,MouseUp,MouseUp) S##_V2(B,MouseMove,MouseMove) \
     S##_V2(B,MouseDrag,MouseDrag) S##_V2(B,MouseEnter,MouseEnter) S##_V0(B,MouseExit,MouseExit) \
     S##_B1(B,MouseWheel,MouseWheel) S##_B1(B,KeyDown,KeyDown) S##_B1(B,KeyChar,KeyChar) S##_B1(B,KeyUp,KeyUp) \
@@ -98,7 +100,63 @@ WON_SHELL_CLASS(WONShellScroller,ScrollbarScroller,())
 WON_SHELL_CLASS(WONShellHeader,MultiListHeader,((MultiListArea*)a))
 WON_SHELL_CLASS(WONShellTab,TabCtrl,())
 WON_SHELL_CLASS(WONShellDialog,Dialog,())
-WON_SHELL_CLASS(WONShellWonButton,WONButton,())
+// WONButton (R6 WONLobby round 24): the shell kind WonButton over Button (shell_won.rs) and the shell of the
+// WONHeaderButton kind. Its own state is the Rust WONButton of round 35 (wonbtnobj.rs: the ten states, the wrapped
+// text per font, the pads, colours, flags, alignments and every method), which its five virtuals run when the kind
+// does not override them (a kind's base call runs them too); the setters are the configs' and skins' calls on it.
+extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+class WONButton : public Button, public WONShell {
+public:
+    // the Rust button (8/4 text pads, centred text, scaled images, grey disabled text, a focus rectangle) wanting
+    // focus, then the kind
+    explicit WONButton(EeWonShellKind k = EeWonShellKind::WonButton) : mWb(ee_won_wonbtn_new(this, ee_won_guicpp_wonbtn_call))
+    {
+        this->SetButtonFlags(1, true);
+        this->SetComponentFlags(ComponentFlag_WantFocus, true);
+        this->Make(this, k, 0, 0, 0);
+    }
+    virtual ~WONButton() { ee_won_wonbtn_free(this->mWb); }
+    virtual void Virtual08() { if (this->Over(EeWonShellVirt::SizeChanged)) this->Virt(EeWonShellVirt::SizeChanged); else this->WCall(EeWonWbCall::SizeChanged); }
+    virtual void GetDesiredSize(int& w, int& h)
+    { if (this->Over(EeWonShellVirt::DesiredSize)) this->Virt(EeWonShellVirt::DesiredSize, (intptr_t)&w, (intptr_t)&h); else this->WCall(EeWonWbCall::DesiredSize, (intptr_t)&w, (intptr_t)&h); }
+    virtual void Paint(Graphics& g) { if (this->Over(EeWonShellVirt::Paint)) this->Virt(EeWonShellVirt::Paint, (intptr_t)&g); else this->WCall(EeWonWbCall::Paint, (intptr_t)&g); }
+    WON_SHELL_REST_VIRTUALS(Button,WSO)
+    virtual void SetTextHook(const GUIString& t) { this->WCall(EeWonWbCall::SetTextHook, (intptr_t)&t); }
+    virtual const GUIString& GetText() // empty while the button has no font
+    { const GUIString* s = (const GUIString*)this->WCall(EeWonWbCall::GetText); return s ? *s : gEmptyGUIString; }
+    virtual intptr_t BaseCall(EeWonShellVirt v, intptr_t a, intptr_t b, intptr_t c)
+    {
+        (void)c;
+        switch (v) {
+            case EeWonShellVirt::SizeChanged: this->WCall(EeWonWbCall::SizeChanged); return 0;
+            case EeWonShellVirt::DesiredSize: this->WCall(EeWonWbCall::DesiredSize, a, b); return 0;
+            case EeWonShellVirt::Paint: this->WCall(EeWonWbCall::Paint, a); return 0;
+            WON_SHELL_REST_VIRTUALS(Button,WSB)
+            default: return 0;
+        }
+    }
+    void SetAdjustHeightToFitText(bool a) { this->WCall(EeWonWbCall::SetAdjustHeightToFitText,a); }
+    void SetWrapText(bool w) { this->WCall(EeWonWbCall::SetWrapText,w); }
+    void SetTransparent(bool t) { this->WCall(EeWonWbCall::SetTransparent,t); }
+    void SetButtonState(int s,Image* i,int c,Font* f,bool checked=false) { ee_won_wonbtn_set_state(this->mWb,s,i,c,f,checked); }
+    void SetHorzAlign(HorzAlign a) { this->WCall(EeWonWbCall::SetHorzAlign,(intptr_t)a); }
+    void SetTextColor(int c) { this->WCall(EeWonWbCall::SetTextColor,c); }
+    void SetVertAlign(VertAlign a) { this->WSet(EeWonWbField::VAlign,(unsigned char)a); } // stores the low byte
+    void SetScaleImage(bool v) { this->WSet(EeWonWbField::ScaleImage,v); }
+    void SetDefaultTextColor(int v) { this->WSet(EeWonWbField::DefaultTextColor,v); }
+    void SetDrawGrayText(bool v) { this->WSet(EeWonWbField::DrawGrayText,v); }
+    void SetFocusStyle(unsigned char v) { this->WSet(EeWonWbField::FocusStyle,v); }
+    void SetTextPadding(int l,int t,int r,int b) { this->WSet(EeWonWbField::LeftTextPad,l); this->WSet(EeWonWbField::TopTextPad,t); this->WSet(EeWonWbField::RightTextPad,r); this->WSet(EeWonWbField::BottomTextPad,b); }
+    void SetFocusPadding(int l,int t,int r,int b) { this->WSet(EeWonWbField::LeftFocusPad,l); this->WSet(EeWonWbField::TopFocusPad,t); this->WSet(EeWonWbField::RightFocusPad,r); this->WSet(EeWonWbField::BottomFocusPad,b); }
+    int GetRightTextPad() { return (int)this->WCall(EeWonWbCall::Get,(intptr_t)EeWonWbField::RightTextPad); }
+    void SetHorzTextPad(int l,int r) { this->WSet(EeWonWbField::LeftTextPad,l); this->WSet(EeWonWbField::RightTextPad,r); }
+    void SetFont(Font* f) { this->WCall(EeWonWbCall::SetFont,(intptr_t)f); }
+    void CopyAttributes(WONButton* from) { ee_won_wonbtn_copy(this->mWb,from->mWb,from); } // the text and images
+    EeWonWonButton* mWb; // owned
+private:
+    intptr_t WCall(EeWonWbCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0,intptr_t e=0) { return ee_won_wonbtn_call(this->mWb,c,a,b,d,e); }
+    void WSet(EeWonWbField f,int v) { this->WCall(EeWonWbCall::Set,(intptr_t)f,v); }
+};
 // a frame value as the WON skin's kinds take it (shell_won.rs EeWonFrameIn: the image borrowed)
 inline EeWonFrameIn WONFrameArg(const WONFrame& f)
 {

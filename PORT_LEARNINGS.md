@@ -34751,3 +34751,150 @@ docs/progress/game-leaves.md has the state.
   gate PASS, the oracle, calamity, app and late captures PASS after the capture moves.
 - **Not run**: the POSIX builds (xbuild.py; link/lle and link/dx7hrtnl's unit lists and sdl_test's sources were
   updated for the deleted units, and the include trim kept every include inside a conditional).
+
+## R6 WONLobby, round 24: the image classes whole in Rust, WONButton a shell kind (ee_won_gui imgobj.rs; branch rust-wonlobby24, 2026-11-19)
+
+Rounds 22 and 23 left the images: every WONGUI draw, skin, frame and config takes one, and the classes were the
+platform's bases (PlatNativeImage, PlatNativeMask). This round moved all of them, the filters and the decoders, in one
+piece (one Rust object per image, the C++ classes its handles), and made WONButton a shell kind.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 043763053 | the image classes, filters and decoders whole in Rust (imgobj.rs); 13 units and 2 headers deleted; golden `won_imgobj_test` | -1,270 |
+| 13383a96d | WONButton the shell kind WonButton (the C++ WONButton the shell of the WonButton and WonHeaderButton kinds); WONButtonSetup.cpp and WONLobbyWONButton.h deleted | -30 |
+| 529765232, a9f9b6b1b | origin/rust (4fb6c7119) merged (PORT_LEARNINGS only: both sections kept); two trailing address comments stripped | 0 |
+| d656ac088 | `rust_includes.py`'s module headers (WONLobbyStretchImage.h: imgobj.h; WONCfgTable.inl and the cfgtab world: skinobj.h) | +2 |
+| 3215ee04c | won_gfxobj_test's image stand-ins (it defined Image's out-of-line members, now inline forwards): a TEST ONLY log seam in Graphics.cpp's host, `gWONGfxImageLog` | +10 |
+
+Round total: WON C++ 29,577 -> 28,289 (-1,288; short of the -1,500 aim: the third item, the next leaf, was not
+started; the census's leaves are the C++ ends of Rust objects, below).
+
+### The image object (imgobj.rs `EeWonImage`)
+
+- **One object, a kind per original class**: `Ms` (WONMSSkin::MSImage), `Delay` (DelayLoadImage), `Stretch`
+  (StretchImage: round 38's stretchobj.rs settings, the source and cached images), `StretchCenter`, `Raw32`, `Raw8`,
+  `Raw1` (the raw images: the pixels as `Cell`s the C++ may write through `GetImageData`), `Native` (PlatNativeImage:
+  its surface and display context, the pixel scale, its Graphics made on first use, the mask). The virtuals (Draw,
+  SetSize, Duplicate, GetNative) and every class's own methods (GetRaw, GetGraphics, the stretch setters, the
+  transparency flag, the pixel reads) are match arms over the kind, the statements of Image.cpp, Palette.cpp,
+  DelayLoadImage.cpp, MSSkinImage.cpp, GuiHost.cpp's stretch images and PlatNativeImage.cpp in their order.
+- **The C++ classes are handles**: `Image : RefCount` with one owned pointer (`mRust`) and inline forwards;
+  `NativeImage` (`PlatNativeImage` is now its other name), `RawImage`, `RawImage32`, `RawImage8`, `StretchImage` and
+  `StretchCenterImage` add the constructors and accessors their callers use; MSImage and DelayLoadImage are makers
+  (`WONNewMsImage`; `new Image(ee_won_image_new_delay(...))`). The handle's reference count is the image's; the
+  handle frees the object. The callers' `->mWidth` / `->mHeight` reads became `GetWidth()` / `GetHeight()` (28 sites
+  in 10 files, and ImageComponent's three inline ones), `->mImageData` `GetImageData()`, `->mSurface` `GetSurface()`.
+- **What an image holds of C++ objects it holds by handle through the host** (`WONImageHost`, PlatNativeImage.cpp; 19
+  ops): other images (a stretch image's source and cache, a stretch-centre image's two, a delay-load image's decode),
+  a native image's SurfaceBase, DisplayContext and PlatGraphics; references taken and given back as the SmartPtr
+  members did. A call that makes an image returns a new handle (`Wrap` picks the C++ class by the kind) with one
+  reference, which the caller's SmartPtr adopts (`WONImageAdopt`). The palettes and masks, which no C++ code held any
+  more, are Rust values (`Rc`): an 8-bit image shares its palette with its copies, a native image its mask with its
+  copy and the texture pack's copy.
+- **A program image's draw** (ProgramImage::Draw: the translation, the clip, the paint, the translation back) is
+  draw plans run on the context's Graphics by the host (`GfxRun`: guidraw.rs operations, their image slots C++
+  handles); the MSImage paint is mspaint.rs's plan, the stretch paints guidraw.rs's. Image::GetNative (a native
+  image of the size with the image drawn into it) is `CreateImage` and `GfxDrawImage`.
+- **The filters are calls on a raw image** (`ImageCrop`, `ImageScalePercent`, `ImageScaleTo`, `ImageTint`,
+  `ImageTransparent`; StretchImageFilter is the stretch image's `calc_image`); the filter classes are gone, and
+  WONCfgTable.inl's filter lines are these calls (the cfgtab driver's world traces them as the filters, its golden
+  unchanged). The sampled-colour transparent filter, the trim filter, the filter chain, ImagePiece and ProgramImage's
+  paint function had no caller: not ported.
+- **The decoders** (`EeWonImgDecoder`): the decoders by extension as kinds (PNG, JPEG; round 41's map of C++
+  decoder pointers is gone), the decodes over the Rust FileReader core (imgdec.rs), `PlatGUIPackImage` (the texture
+  pack's copies) as its `pack_image`. `MultiImageDecoder` is a handle in WindowManager; a FileReader status comes back
+  and the inline wrapper throws it (`WONImageThrow`) where the original's reads threw. The pack's decode uses the
+  decoder it runs in (the original used the window manager's: the game has one).
+- The image classes' units and headers deleted: Image.cpp, ImageBaseDefaults.cpp, ImageDrawEntire.cpp, NativeImage.cpp,
+  NativeImageDefaults.cpp, Palette.cpp, PaletteLifetime.cpp, RawImage.cpp, DelayLoadImage.cpp, MSSkinImage.cpp,
+  MSSkinImageClone.cpp, ImageFilters.cpp, ImageDecoder.cpp; WONLobbyImageHelpers.h, WONLobbyDelayLoadImage.h.
+  PlatNativeImage.cpp keeps the host, the icon's destructor, `DisplayContext::CreateImage` and the cursor table.
+- cbindgen emits an enum only when an exported function names it: `EeWonImageKind` needed `ee_won_image_kind`.
+
+### WONButton a shell kind
+
+- The C++ `WONButton` is now the shell class (WONGUIShell.h) of two kinds, `WonButton` (new, overriding nothing) and
+  `WonHeaderButton` (round 23's, which had its own shell `WONShellWonButton : WONButton`, now gone). Its constructor
+  makes the Rust WONButton (wonbtnobj.rs, round 35), sets the button and focus flags (WONButtonSetup.cpp's
+  constructor) and then the kind; SizeChanged, DesiredSize and Paint run the kind's override when its mask has it,
+  else the Rust button, and a kind's base call runs the Rust button (`WON_SHELL_REST_VIRTUALS` is the shell list
+  without those three); SetTextHook and GetText are the Rust button's (no kind overrides them). The configs' and
+  skins' setters are unchanged. The drivers' worlds needed nothing: the header button's calls out are the same.
+- Its 30 lines are small: the Rust WONButton was already whole; what is left is its setters, which the configs call.
+
+### Tests and mutations
+
+- `won_imgobj_test` (new): the original statements (tests/won/won_imgobj_orig.h, the deleted units copied, marked
+  "world:" where the world replaced a call) against imgobj.rs through its C ABI, both over one world (a logged
+  Graphics whose image draws draw the image at its place, display contexts on real surfaces, the window manager's
+  decode and pixel scale, the texture pack's setting): 20,000 random sequences of 40 steps (new raw 32- and 8-bit
+  images with palettes, MSImages of every type and flag, stretch and stretch-centre images, native images at scales
+  0.75 (made 1) .. 3, delay-load images; duplicates, native images, raw copies, sizes, draws onto a seeded screen at
+  random places and source rectangles, the four filters, the stretch setters and copies, releases): each side's trace
+  and every image's description (kind, sizes, flags, pixels, palette, a raw copy, a draw onto a fresh surface) and the
+  screen's pixels equal, every image freed on both sides; and 60 decoder rounds over PNG files it writes (well formed,
+  truncated, not a PNG, upper-case extensions, missing, unregistered; the texture pack's copies at 2..4x or another
+  size, shifts 0..2, with and without a window manager): 0 mismatches.
+- The first runs mismatched on stretch images whose borders were larger than their source: the stretch filter's plan
+  then reads outside the source (imgfilter.rs `stretch_run` trusts the plan), on both sides. The generator keeps the
+  borders inside the source, as the skins' configs do.
+- Mutations (build/wl24/mutate.py, scratch; each a Rust rebuild, about 10 minutes): 12 of 12 caught (the raw 8-bit
+  rows' padding, the clip test, an 8-bit copy's transparent index, the 8-bit mask for index 0, the percent scale, the
+  tint's alpha, a stretch copy's rebuild flag, the pack's shift, the delay-load's single decode, the native scale's
+  floor (caught after a 0.75 scale was added), a stretch-centre's sizing of its stretch image, the decoders' case).
+- `won_image_test` (the decoders' golden of round 18) now calls imgdec.rs's decodes directly (the decoder classes it
+  subclassed are gone): unchanged. `won_cfgtab_test`, `won_wonskin_test`, `won_wonbtnobj_test`, `won_shell_test`,
+  `won_platimg_test`, `won_imgfilter_test`, `won_imgmask_test`, `won_stretchpx_test`, `won_stretchobj_test` unchanged;
+  `won_gfxobj_test` (golden and 800,000 checks unchanged) logs the image draws through the seam above.
+- cargo: imgobj_tests.rs (7: raw copies, the 8-bit filters and palette rules, native scales, masks and copies, program
+  draws through a logged Graphics with the stretch cache, the delay-load's decode, the decoders' map and a PNG
+  decode); imgdec_tests.rs's map test moved there.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each code commit and at the head |
+| `build.py --test-profile windowed-software` | 0 / 0 (the head) |
+| `rust_build.py header` | 281 headers current |
+| `rust_build.py gate` | PASS, 4,983 tests, on the merged tree (the first run, at the image commit, failed clippy `too_many_arguments` on the three draws: allowed before the commit) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after each code commit; seeds 2-7 identical on the merged tree |
+| `won_host_coverage.py` | PASS (EeWonImageHost added: 19 values, 19 host cases) |
+| `xbuild.py wontest` | all 159 programs exit 0 (158 and won_imgobj_test; won_gfxobj_test after its fix, 3215ee04c), peak 547 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13007` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2745 joiner=2741`, GATES PASS |
+
+### Behaviour changes
+
+- The raw images' pixels start zeroed (the original's were unset until written).
+- A mask no longer holds the display context it was made on (the original's NativeMask did, keeping it alive).
+- The crashes on NULL members (a stretch image without a source or whose filter has nothing for its type, a
+  stretch-centre image without its images, a tint or transparent filter on an 8-bit image without a palette) are
+  no-ops.
+- WONButton's destruction frees the Rust button before the kind (the header button's kind frees nothing).
+
+### What runs it
+
+- The LAN game and the tour: every lobby picture is decoded, made native, stretched, framed and drawn through these
+  objects; the goldens never draw on the real Graphics (the driver's world is a logged one), so a display fault shows
+  only in a tour or the LAN game (the captures below).
+- Only the driver: the 8-bit images with palettes (the game's only 8-bit image is the skip-decode mode's blank 10 x 10
+  one), the texture pack's copies (the gates run with the setting off).
+
+### The LAN capture comparison
+
+`lan_game.py` with the test-profile exe built at round 23's start (0a17fc666, from a `git archive` in
+build/wl24) and with this round's, then `lan_capture_compare.py`: every lobby capture identical (host: lobby open,
+LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging), only the
+game's own frames differ (the simulation's timing). Both runs `RESULT PASS lan-game` (PT 2858/2866 and 2709/2707).
+So rounds 23 and 24 together left the lobby's look unchanged pixel for pixel.
+
+### Left
+
+- The census's WON leaves (AsyncOp, ConfigObject's values, the resource look-ups, Graphics, Sound, Cursor,
+  SelectionColor, ListItemDefaults) are the C++ ends of Rust objects or C++ bases; the Sound classes are trivial C++
+  (inlining them would delete ~90 lines but move nothing).
+- The hosts' image ops (Width, Height, Duplicate in GuiShell.cpp, WONButton.cpp, RootContainer.cpp) could be answered
+  in Rust once images are in the widget registry (`ee_won_image_bind` would register them).
+- WONButton's setters (the configs' calls) could become shell ops on Component* when the config members do.

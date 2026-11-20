@@ -25,6 +25,10 @@ static_assert(offsetof(Graphics, mTransY) == offsetof(Graphics, mTransX) + offse
 
 typedef EeWonGfxHook H;
 // the Rust Graphics' calls out: the hooks (a[] their ints, p the image or text)
+// TEST ONLY: won_gfxobj_test's log of the image draws in place of the images' own (NULL in the game; the images are
+// imgobj.rs objects since R6 WONLobby round 24, their draws no longer the driver's to define)
+namespace WONAPI { void (*gWONGfxImageLog)(Image* inImage, bool inPart, const int32_t* inArgs) = NULL; }
+
 static uint32_t GfxHost(void* inGraphics, EeWonGfxHook inHook, const int32_t* a, const void* p)
 {
     Graphics* g = (Graphics*)inGraphics;
@@ -41,8 +45,14 @@ static uint32_t GfxHost(void* inGraphics, EeWonGfxHook inHook, const int32_t* a,
     case H::FillEllipse: g->FillEllipseHook(a[0], a[1], a[2], a[3]); return 0;
     case H::DrawArc: g->DrawArcHook(a[0], a[1], a[2], a[3], a[4], a[5]); return 0;
     case H::FillRectBlend: g->FillRectBlendHook(a[0], a[1], a[2], a[3], a[4]); return 0;
-    case H::ImageEntire: ((Image*)p)->DrawEntire(g->mDisplayContext.get(), a[0], a[1]); return 0;
-    case H::ImagePart: ((Image*)p)->Draw(g->mDisplayContext.get(), a[0], a[1], a[2], a[3], a[4], a[5]); return 0;
+    case H::ImageEntire:
+        if (gWONGfxImageLog != NULL) gWONGfxImageLog((Image*)p, false, a);
+        else ((Image*)p)->DrawEntire(g->mDisplayContext.get(), a[0], a[1]);
+        return 0;
+    case H::ImagePart:
+        if (gWONGfxImageLog != NULL) gWONGfxImageLog((Image*)p, true, a);
+        else ((Image*)p)->Draw(g->mDisplayContext.get(), a[0], a[1], a[2], a[3], a[4], a[5]);
+        return 0;
     case H::String:
         g->mFont->DrawString(g->mDisplayContext.get(), *(const GUIString*)p, (unsigned short)a[0], (unsigned short)a[1], a[2], a[3]);
         return 0;

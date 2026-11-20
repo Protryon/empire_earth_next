@@ -125,6 +125,7 @@
 #include "rust/won_gui/guiwrap.h"
 #include "rust/won_gui/imgdec.h"
 #include "rust/won_gui/imgfilter.h"
+#include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/inputobj.h"
 #include "rust/won_gui/labelobj.h"
 #include "rust/won_gui/layoutobj.h"

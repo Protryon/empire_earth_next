@@ -1,6 +1,7 @@
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"
+#include "rust/won_gui/skinobj.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
 // handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
@@ -454,8 +455,8 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     } break;
     EE_CFG_SET(kStretchImage,5) a.i[a.ni++]=a.raw->GetWidth()/i[0]; break;
     EE_CFG_SET(kStretchImage,6) {
-        int n=i[--a.ni]; SmartPtr<CropImageFilter> crop=new CropImageFilter; crop->SetSize(i[1],a.raw->GetHeight()); crop->SetPos(n*i[1],0);
-        char config[512]; sprintf(config,"%s%d",a.rs[0].c_str(),n+1); SmartPtr<RawImage> cut=crop->Filter(a.raw.get());
+        int n=i[--a.ni];
+        char config[512]; sprintf(config,"%s%d",a.rs[0].c_str(),n+1); SmartPtr<RawImage> cut=ImageCrop(a.raw.get(),n*i[1],0,i[1],a.raw->GetHeight());
         CfgStretchAdd(EE_CFG(StretchImageConfig),config,CfgStretchChild(EE_CFG(StretchImageConfig)),cut.get());
     } break;
     EE_CFG_SET(kStretchImage,7) CfgStretchAdd(EE_CFG(StretchImageConfig),s[0],static_cast<StretchImageConfig*>(a.child.get()),a.raw.get()); break;
@@ -465,16 +466,16 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kImageFilter,2) EE_CFG(ImageFilterConfig)->SetRawImage(static_cast<RawImage*>(EE_CFG(ImageFilterConfig)->mRawImage->Duplicate().get())); break;
     EE_CFG_SET(kImageFilter,3) a.i[a.ni++]=EE_CFG(ImageFilterConfig)->mRawImage->GetWidth()/i[0]; break;
     EE_CFG_SET(kImageFilter,4) {
-        ImageFilterConfig* k=EE_CFG(ImageFilterConfig); int n=i[--a.ni]; SmartPtr<CropImageFilter> crop=new CropImageFilter;
-        crop->SetSize(i[1],k->mRawImage->GetHeight()); crop->SetPos(n*i[1],0); SmartPtr<RawImage> image=crop->Filter(k->mRawImage.get());
+        ImageFilterConfig* k=EE_CFG(ImageFilterConfig); int n=i[--a.ni];
+        SmartPtr<RawImage> image=ImageCrop(k->mRawImage.get(),n*i[1],0,i[1],k->mRawImage->GetHeight());
         char name[512]; sprintf(name,"%s%d",((std::string)s[0]).c_str(),n+1); CfgFilterChild(k,GUIString(name),image.get());
     } break;
     EE_CFG_SET(kImageFilter,5) CfgFilterChild(EE_CFG(ImageFilterConfig),s[0],a.raw.get()); break;
-    EE_CFG_SET(kImageFilter,10) { SmartPtr<ScaleImageFilter> f=new ScaleImageFilter(0); f->SetPercentSize(i[a.ni-2],i[a.ni-1]); a.raw=f->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); } break;
-    EE_CFG_SET(kImageFilter,11) a.raw=SmartPtr<ImageFilter>(new ScaleImageFilter(i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
-    EE_CFG_SET(kImageFilter,12) a.raw=SmartPtr<ImageFilter>(new TintImageFilter(i[a.ni-3],i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
-    EE_CFG_SET(kImageFilter,13) a.raw=SmartPtr<ImageFilter>(new CropImageFilter(i[a.ni-4],i[a.ni-3],i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
-    EE_CFG_SET(kImageFilter,14) a.raw=SmartPtr<ImageFilter>(new TransparentImageFilter((DWORD)i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
+    EE_CFG_SET(kImageFilter,10) a.raw=ImageScalePercent(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
+    EE_CFG_SET(kImageFilter,11) a.raw=ImageScaleTo(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
+    EE_CFG_SET(kImageFilter,12) a.raw=ImageTint(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
+    EE_CFG_SET(kImageFilter,13) a.raw=ImageCrop(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-4],i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
+    EE_CFG_SET(kImageFilter,14) a.raw=ImageTransparent(EE_CFG(ImageFilterConfig)->mRawImage.get(),(DWORD)i[a.ni-1]); break;
     EE_CFG_SET(kImageFilter,15) a.raw=NULL; break;
     }
 }

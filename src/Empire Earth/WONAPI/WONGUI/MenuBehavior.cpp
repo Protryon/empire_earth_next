@@ -43,7 +43,7 @@ void MenuItem::Paint(Graphics& g,ListArea* area)
     r.paint_width=area->GetPaintWidth();
     r.width=this->mWidth;
     r.height=this->mHeight;
-    r.image_height=anImage ? anImage->mHeight : 0;
+    r.image_height=anImage ? anImage->GetHeight() : 0;
     r.font_height=this->mFont->GetHeight();
     r.view_width=area->GetViewWidth();
     WONDrawSlots aSlots;

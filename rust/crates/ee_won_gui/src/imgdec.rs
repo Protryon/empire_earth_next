@@ -1,16 +1,12 @@
-//! WONGUI's image decoders in Rust (R6 WON round 41): ImageDecoder.cpp's multi-decoder (the decoders by file
-//! extension, the set it owns, the current extension), PNGDecoder.cpp's attributes and decode (the pixels from
+//! WONGUI's image decoders in Rust (R6 WON round 41): PNGDecoder.cpp's attributes and decode (the pixels from
 //! ee_openformats' PNG reader, as round 18 made them) and JPGDecoder.cpp's (ee_base's jpeg.rs, libjpeg 6b's decode in
-//! Rust), each reading through the C++ FileReader's Rust core.
-//!
-//! The C++ keeps the decoder classes (the lobby's root window holds a MultiImageDecoder; JPGDecoder::Add and
-//! PNGDecoder::Add make the registered ones, and Duplicate's copies are theirs), the `RawImage32` each decode makes
-//! (the pixels are handed over by `ee_won_img_take`), and the exceptions: a FileReader status comes back for the
-//! C++ to throw as FileReaderException, where the original's reads threw.
+//! Rust), each reading through a FileReader's Rust core. The multi-decoder, its decoders by extension and the
+//! images it makes are imgobj.rs's (R6 WONLobby round 24); `ee_won_img_attrib` / `ee_won_img_decode` stay for the
+//! drivers: a FileReader status comes back for the C++ to throw as FileReaderException, where the original's reads
+//! threw.
 
 use ee_base::jpeg::{self, Stop};
 use ee_won_net::file::EeWonFileReader;
-use ee_won_net::strcase::compare_no_case;
 
 /// The decoders.
 #[repr(i32)]
@@ -180,119 +176,6 @@ pub unsafe extern "C" fn ee_won_img_take(out: &mut EeWonImgRaw, dst: *mut u32) {
     out.pixels = std::ptr::null_mut();
     // SAFETY: the contract
     unsafe { std::ptr::copy_nonoverlapping(px.as_ptr(), dst, px.len()) };
-}
-
-// ---- MultiImageDecoder
-
-/// MultiImageDecoder's state: the decoders by extension (a map ordered and matched without case: the first
-/// spelling of a key stays), the decoders it owns (a set by address) and the current extension.
-#[derive(Default)]
-pub struct EeWonImgDec {
-    pub map: Vec<(Vec<u8>, usize)>,
-    pub owned: Vec<usize>,
-    pub cur: Vec<u8>,
-}
-
-impl EeWonImgDec {
-    /// `mDecoderMap[ext] = decoder` and the set's insert.
-    pub fn add(&mut self, decoder: usize, ext: &[u8]) {
-        if let Err(i) = self.owned.binary_search(&decoder) {
-            self.owned.insert(i, decoder);
-        }
-        match self.map.binary_search_by(|(k, _)| compare_no_case(k, ext).cmp(&0)) {
-            Ok(i) => self.map[i].1 = decoder,
-            Err(i) => self.map.insert(i, (ext.to_vec(), decoder)),
-        }
-    }
-
-    /// The decoder for the current extension (0: none).
-    pub fn find(&self) -> usize {
-        match self.map.binary_search_by(|(k, _)| compare_no_case(k, &self.cur).cmp(&0)) {
-            Ok(i) => self.map[i].1,
-            Err(_) => 0,
-        }
-    }
-}
-
-/// The multi-decoder's calls (`ee_won_img_dec`).
-#[repr(i32)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum EeWonImgDecCall {
-    /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
-    Add = 0,
-    /// `SetCurExtension(b of c bytes)`.
-    SetExtension = 1,
-    /// The decoder for the current extension (0: none).
-    Find = 2,
-    /// The map's size.
-    Count = 3,
-    /// The map's entry a's decoder.
-    Entry = 4,
-    /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
-    SetEntry = 5,
-    /// The set's size.
-    OwnedCount = 6,
-    /// The set's member a (in address order).
-    Owned = 7,
-}
-
-#[no_mangle]
-pub extern "C" fn ee_won_img_dec_new() -> *mut EeWonImgDec {
-    Box::into_raw(Box::default())
-}
-
-/// # Safety
-/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_img_dec_free(d: *mut EeWonImgDec) {
-    if !d.is_null() {
-        // SAFETY: the contract
-        drop(unsafe { Box::from_raw(d) });
-    }
-}
-
-/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
-#[no_mangle]
-pub extern "C" fn ee_won_img_dec_copy(d: &EeWonImgDec) -> *mut EeWonImgDec {
-    Box::into_raw(Box::new(EeWonImgDec { map: d.map.clone(), owned: Vec::new(), cur: Vec::new() }))
-}
-
-/// # Safety
-/// `b` holds `c` bytes when the call reads them.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_img_dec(
-    d: &mut EeWonImgDec,
-    call: EeWonImgDecCall,
-    a: usize,
-    b: *const u8,
-    c: usize,
-) -> usize {
-    // SAFETY: the contract
-    let text = || if b.is_null() { &[][..] } else { unsafe { std::slice::from_raw_parts(b, c) } };
-    match call {
-        EeWonImgDecCall::Add => {
-            d.add(a, text());
-            0
-        }
-        EeWonImgDecCall::SetExtension => {
-            d.cur = text().to_vec();
-            0
-        }
-        EeWonImgDecCall::Find => d.find(),
-        EeWonImgDecCall::Count => d.map.len(),
-        EeWonImgDecCall::Entry => d.map.get(a).map_or(0, |e| e.1),
-        EeWonImgDecCall::SetEntry => {
-            if let Some(e) = d.map.get_mut(a) {
-                e.1 = b as usize;
-            }
-            if let Err(i) = d.owned.binary_search(&(b as usize)) {
-                d.owned.insert(i, b as usize);
-            }
-            0
-        }
-        EeWonImgDecCall::OwnedCount => d.owned.len(),
-        EeWonImgDecCall::Owned => d.owned.get(a).copied().unwrap_or(0),
-    }
 }
 
 #[cfg(test)]

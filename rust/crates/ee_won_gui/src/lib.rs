@@ -38,6 +38,7 @@ pub mod guiwin;
 pub mod guiwrap;
 pub mod imgdec;
 pub mod imgfilter;
+pub mod imgobj;
 pub mod inputobj;
 pub mod labelobj;
 pub mod layoutobj;

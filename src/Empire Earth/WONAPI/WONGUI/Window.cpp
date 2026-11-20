@@ -190,7 +190,7 @@ SmartPtr<NativeImage> Window::DecodeImage(const char* path) {
 // Decodes a raw image file; while decoding is off returns a blank 10x10 image
 SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
     if(gWindowSkipDecodeImages)
-        return new RawImage8(10,10,NULL);
+        return new RawImage8(10,10);
     return this->mManager->DecodeImageRaw(path);
 }
 
