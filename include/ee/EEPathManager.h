@@ -3,8 +3,8 @@
 // constructs it; provisional name).
 // The manager is Rust (ee_sim::astar pm.rs, the handle mRust): the searches in progress (the original's node pool,
 // mPaths, mAutoPaths), the spare machines, the units waiting for the map (mPending), the counters and the request
-// record, the requests' and the updates' decisions, the saved game's parts. This class is its C++ face: the entry
-// points forward to it, and it keeps the bounded machine (EECPWallManager's FindPath) and its searches.
+// record, the requests' and the updates' decisions, the saved game's parts, the PMRQ capture (pm_capture.rs). This
+// class is its C++ face: the entry points are inline forwarders (Call's numbers: pm.rs ee_path_manager_call).
 #ifndef EE_EEPATHMANAGER_H
 #define EE_EEPATHMANAGER_H
 
@@ -56,31 +56,43 @@ public:
     // (EEAwaitAutoPathRequest, ee/EEAutoPathRequest.h)
     void SaveGraphSearches(FSFile& outFile);
     long LoadGraphSearches(FSFile& inFile);
-    void RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile);   // RequestPendingPaths' one unit
-    void AddPending(unsigned long inUnitID, const EETileCoordinate& inTile);   // a loaded unit asks its path at StartGame
-    void Update();                      // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
-    void Reset();                       // 0xa8778 (before a scenario starts; provisional name)
-    void RequestPendingPaths(EEMap* inMap);  // 0xa8582 (EEWorld::StartGame; provisional name)
-    void CompleteAutoPath(EEAutoPathRequest* inRequest);  // 0xa62ce (EEComplexUnit::RefreshPath; provisional name)
-    void CompletePath(EEComplexUnit* inUnit);     // 0xa634b (EEComplexUnit::RefreshPath; provisional name)
+    void RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)   // RequestPendingPaths' one unit
+        { this->Call(16, H(inUnit), 0, {inTile.mX, inTile.mY}); }
+    void AddPending(unsigned long inUnitID, const EETileCoordinate& inTile)   // a loaded unit asks its path at StartGame
+        { this->Call(17, 0, 0, {(int64_t)inUnitID, inTile.mX, inTile.mY}); }
+    void Update() { this->Call(1); }    // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
+    void Reset() { this->Call(2); }     // 0xa8778 (before a scenario starts; provisional name)
+    void RequestPendingPaths(EEMap* inMap) { this->Call(5); }  // 0xa8582 (EEWorld::StartGame; provisional name)
+    void CompleteAutoPath(EEAutoPathRequest* inRequest) { this->Call(10, H(inRequest)); }  // 0xa62ce (EEComplexUnit::RefreshPath; provisional name)
+    void CompletePath(EEComplexUnit* inUnit) { this->Call(9, H(inUnit)); }   // 0xa634b (EEComplexUnit::RefreshPath; provisional name)
     // 0xa6948 (EEGroup::Fn206581: the owner's player id, the target tile, the units' flags, 1, -1, 0, 0; returns a new
     // ee/EEAutoPathRequest.h) (provisional name)
     EEAutoPathRequest* RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                   EECPASGFlags* inFlags, long inType, long inRevs, EeAStarModifier* inModifier, bool inUnlimitedRevs);
+                                   EECPASGFlags* inFlags, long inType, long inRevs, EeAStarModifier* inModifier, bool inUnlimitedRevs)
+        { return reinterpret_cast<EEAutoPathRequest*>(this->Call(14, H(inFlags), H(inModifier),
+              {(int64_t)inPlayerID, inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inType, inRevs, inUnlimitedRevs})); }
     // 0xa6bfd (EECPWallManager.cpp: inUnit's path from inFrom to inTo inside inBounds, with a path modifier)
     // (provisional name)
     void FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
                   const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType, long inRevs,
                   EeAStarModifier* inModifier, std::vector<U2DPoint<long> >* outVisited);   // 0x12e2c9 passes &local (the storm's tile list)
-    bool HasAutoPath(EEComplexUnit* inUnit);
-    bool IsPathDone(EEComplexUnit* inUnit);
-    bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile);
+    bool HasAutoPath(EEComplexUnit* inUnit) { return this->Call(11, H(inUnit)) != 0; }
+    bool IsPathDone(EEComplexUnit* inUnit) { return this->Call(12, H(inUnit)) != 0; }
+    bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
+    {
+        int64_t theTile[2] = {0, 0};
+        bool theResult = this->Call(13, H(inUnit), 0, {}, theTile) != 0;
+        outTile.mX = (long)theTile[0];
+        outTile.mY = (long)theTile[1];
+        return theResult;
+    }
     void RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8);
-    void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths);
-    void SetRegionUpdates(bool inOn, bool inNow);
-    void Clear();
-    void FreePaths();                   // 0xa5f39 (both queues in progress)
+                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8)
+        { this->Call(15, H(inUnit), H(inModifier), {inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, inUnlimitedRevs, inRevs, inUseGraph, inArg8}); }
+    void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths) { this->Call(7, H(inUnit), 0, {inAutoPaths}); }
+    void SetRegionUpdates(bool inOn, bool inNow) { this->Call(6, 0, 0, {inOn, inNow}); }
+    void Clear() { this->Call(3); }
+    void FreePaths() { this->Call(4); }   // 0xa5f39 (both queues in progress)
     // 0xa71c9: a path through the bounded machine (inMargin tiles around the start); true when it reaches inTo
     bool FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
                          const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
@@ -100,6 +112,8 @@ public:
                           EEAIPathSubSector* inFrom);
     // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
+
+    static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }   // a handle of the Rust calls
 
     EePathManager* mRust;                               // the manager (ee_sim::astar pm.rs)
     long mLC8;                                          // +0xc8 (= 5; gEEAIRegionSize)

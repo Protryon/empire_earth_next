@@ -17,8 +17,6 @@
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
 #include "lle/Graphics Engine.h"
-#include "lle/GERhombus.h"
-#include "lle/UIControl.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -31,7 +29,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMiniMap.h"
-#include "ee/EEUIMiniMap.h"
 #include "ee/EEGameUI.h"
 #include "lle/GERenderState.h"
 #include "ee/EEAppCapture.h"

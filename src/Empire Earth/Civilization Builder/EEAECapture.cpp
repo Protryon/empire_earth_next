@@ -6,15 +6,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
-#include "lle/FSMemoryFile.h"
 
 #include "ee/EETechCapture.h"
 #include "ee/EEAECapture.h"
@@ -24,7 +15,6 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EEAEManager.h"

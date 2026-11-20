@@ -9,7 +9,6 @@
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NESynchronousClient.h"
 

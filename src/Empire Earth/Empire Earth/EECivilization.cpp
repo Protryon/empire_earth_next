@@ -6,15 +6,11 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/UWideString.h"
-#include "lle/FSFile.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EECivilizationManager.h"
-#include "ee/EECivilization.h"
 #include "rust/sim/tech.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")

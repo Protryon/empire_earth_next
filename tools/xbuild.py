@@ -1261,8 +1261,7 @@ def cmd_sdltest(a):
     wlib = rust_lib(t)
     # the window layer (rust/crates/ee_base/src/plat_sdl) with the platform layer it uses, all in the Rust library; it comes
     # before SDL on the link line (it references SDL, and a POSIX link scans each archive once)
-    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp",
-            ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX" / "GX.cpp"]
+    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp"]   # GX's shims are inline (include/gx/GX.h)
     libs = [wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]

@@ -9,13 +9,10 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
 
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
 
 // UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h

@@ -8,6 +8,12 @@
 
 #include <vector>
 
+// (gx/GX.h: out of line, for EEScreens.cpp and Empire Earth.cpp, which declare it without the header)
+void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight)
+{
+    gx_game_size(inPercent, inWindowed, outWidth, outHeight);
+}
+
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatFile.h"
 #include "lle/UResourceFile.h"

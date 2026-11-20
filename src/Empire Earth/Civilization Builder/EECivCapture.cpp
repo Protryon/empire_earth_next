@@ -7,23 +7,16 @@
 #include <string>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/UResourceFile.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EECivilization.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECivCapture.h"
+#include "rust/sim/tech.h"   // ee_tech_capture_civ_manager
 
 namespace {
 
@@ -75,92 +68,18 @@ public:
     std::vector<long> mTypes;
 };
 
-// CVMG: the manager's and the powers' data and every query over it
+// CVMG: the manager's and the powers' data and every query over it (ee_sim tech capture_rec.rs), then the premade
+// civilizations' files, loaded and matched
 void CaptureManager()
 {
     EECivilizationManager& m = gCivilizationManager;
     EESimCaptureRecord r(EECaptureTag("CVMG"));
-    r.U32(m.GetCategoryCount());
-    for (unsigned long i = 0; i <= m.GetCategoryCount(); i++) {   // one past: GetCategory's false
-        EECivilizationCategoryEntry* theEntry = NULL;
-        bool theKnown = m.GetCategory(i, &theEntry);
-        r.U32(theKnown ? 1 : 0);
-        if (theKnown)
-            r.Bytes(theEntry, sizeof(EECivilizationCategoryEntry));
-        long theNameID = -7;
-        r.U32(m.GetCategoryNameID(i, &theNameID) ? 1 : 0);
-        r.I32(theNameID);
-        unsigned long theLevels = m.GetLevelCount(i);
-        r.U32(theLevels);
-        for (unsigned long k = 0; k <= theLevels + 1; k++) {
-            float theValue = -7.0f, theBonus = -7.0f;
-            r.U32(m.GetCategoryLevel(i, k, &theValue, &theBonus) ? 1 : 0);
-            r.F32(theValue);
-            r.F32(theBonus);
-        }
-        Text(r, m.GetCategoryID(i).c_str());
-    }
+    uint32_t theSize = 0;
+    unsigned char* theHead = ee_tech_capture_civ_manager(&theSize);
+    r.Bytes(theHead, theSize);
+    ee_tech_capture_free(theHead, theSize);
     std::vector<EECivilizationEntry> theCivs;
     m.GetCivilizations(theCivs);
-    r.U32((unsigned int)theCivs.size());
-    for (const EECivilizationEntry& theCiv : theCivs)
-        r.Bytes(&theCiv, sizeof(EECivilizationEntry));
-    r.U32((unsigned int)m.GetEraCount());
-    for (unsigned long e = 0; e < m.GetEraCount(); e++) {
-        long theEra = m.GetEra(e);
-        r.I32(theEra);
-        std::vector<EECivilizationEntry> theOfType;
-        m.GetCivilizationsOfType(theOfType, theEra);
-        r.U32((unsigned int)theOfType.size());
-        for (const EECivilizationEntry& theCiv : theOfType)
-            r.I32(theCiv.mIndex);
-    }
-    // the upgrades: values, costs, keys both ways, legacy ids, counts
-    std::vector<EECivUpgrade> theUpgrades = m.GetUpgrades();
-    Upgrades(r, theUpgrades);
-    std::vector<EECivUpgrade> theSome;
-    for (EECivUpgrade theUpgrade : theUpgrades) {
-        float theValue = -7.0f, theBonus = -7.0f;
-        r.U32(m.LookupLevel(theUpgrade, &theValue, &theBonus) ? 1 : 0);
-        r.F32(theValue);
-        r.F32(theBonus);
-        r.I32(m.GetExtraCost(theUpgrade));
-        r.I32(m.CountInCategory(theUpgrade, &theSome));
-        theSome.push_back(theUpgrade);
-        std::string theKey;
-        bool theKeyed = m.UpgradeKey(theUpgrade, theKey);
-        r.U32(theKeyed ? 1 : 0);
-        Text(r, theKey.c_str());
-        EECivUpgrade theBack = 0xdeadbeef;
-        r.U32(m.FindUpgradeKey(theKey, theBack) ? 1 : 0);
-        r.U32(theBack);
-        unsigned long theLegacy = 0;
-        r.U32(EECivilizationManager::ToLegacy(theUpgrade, theLegacy) ? 1 : 0);
-        r.U32(theLegacy);
-        r.U32(EECivilizationManager::FromLegacy(theLegacy));
-    }
-    // keys that are not upgrades
-    const char* theBadKeys[] = {"", ".", "nokey", "special_powers.", ".attack", "x.attack", "special_powers.x"};
-    for (const char* theKey : theBadKeys) {
-        EECivUpgrade theBack = 0xdeadbeef;
-        r.U32(m.FindUpgradeKey(theKey, theBack) ? 1 : 0);
-        r.U32(theBack);
-    }
-    // the levels: names, powers
-    for (unsigned long theLevel = 0; theLevel <= 0x50; theLevel++) {
-        r.I32(EECivilizationManager::LevelNameID(theLevel));
-        r.U32(EECivilizationManager::IsPowerLevel(theLevel) ? 1 : 0);
-        r.U32(EECivilizationManager::PowerLevel(theLevel));
-        r.U32(m.MakePowerUpgrade(theLevel));
-        r.U32(m.MakeUpgrade(theLevel & 7, theLevel));
-    }
-    // the powers
-    r.U32((unsigned int)gCivPowersManager.GetNumPowers());
-    for (long theID = 0x20; theID <= 0x42; theID++) {
-        EECivPower thePower;
-        r.U32(gCivPowersManager.GetPower(theID, thePower) ? 1 : 0);
-        r.Bytes(&thePower, sizeof(EECivPower));
-    }
     // the premade civilizations' files: loaded and matched
     for (const EECivilizationEntry& theCiv : theCivs) {
         UWideString theName;
