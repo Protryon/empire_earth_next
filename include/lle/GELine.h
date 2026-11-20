@@ -14,14 +14,13 @@ class GERectangle;
 class GETexture;
 class GETextureCoordinate;
 class GEVertexArray;
-LLE_API intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp
 
 class LLE_API GELine {
 public:
-    GELine() : mRust(ee_ge_prim_new(&GEVertexHost, this, EeGePrimKind::Line)) {}
+    GELine() : mRust(ee_ge_game_prim_new(this, EeGePrimKind::Line)) {}
     GELine(const GE2DPoint& inStart, const GE2DPoint& inEnd, const GEColor& inStartColor, const GEColor& inEndColor,
            float inOpacity)
-        : mRust(ee_ge_prim_new_line(&GEVertexHost, this, (const EeGe2DPoint*)&inStart, (const EeGe2DPoint*)&inEnd,
+        : mRust(ee_ge_game_prim_new_line(this, (const EeGe2DPoint*)&inStart, (const EeGe2DPoint*)&inEnd,
                                     &inStartColor, &inEndColor, inOpacity)) {}
     ~GELine() { ee_ge_prim_destroy(this->mRust); }
     GELine(const GELine&) = delete;

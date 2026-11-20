@@ -341,7 +341,7 @@ void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTo
     EEMiniMapHostContext theContext;
     EeAppMiniMapHost theHost = EEMiniMapHost(theContext);
     ee_app_minimap_redraw_pixels(this->mRust, &theHost, theBits, thePitch, inLeft, inRight, inBottom, inTop);
-    EEAppCaptureMiniMapPixels(inLeft, inRight, inBottom, inTop, theBits, thePitch);   // MMPX (TEST ONLY)
+    ee_app_capture_minimap_pixels(inLeft, inRight, inBottom, inTop, theBits, thePitch);   // MMPX (TEST ONLY)
     this->mTerrainTexture->GetSurface()->Unlock();
 }
 
@@ -353,17 +353,3 @@ void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, lon
     EEMiniMapCall(this->mRust, 6, &theItem, inOldX, inOldY, inX, inY);
 }
 
-// New (port): one cell's sight count, unit layer pixel and dots in list order (the capture's read,
-// ee/EEAppCapture.h)
-void EEMiniMap::GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel,
-                        std::vector<MMPlayerUnit>& outDots, std::vector<MMMapUnit>& outUnits) const
-{
-    const EeAppMiniMapDot* theDots;
-    const EeAppMiniMapUnitDot* theUnits;
-    long theDotCount;
-    long theUnitCount;
-    ee_app_minimap_cell(this->mRust, inIndex, &outCount, &theDots, &theDotCount, &theUnits, &theUnitCount);
-    outPixel = this->mPixels != NULL ? this->mPixels[this->mPixelsPerRow * (inIndex & 0x3f) + (inIndex >> 6)] : 0;
-    outDots.assign(reinterpret_cast<const MMPlayerUnit*>(theDots), reinterpret_cast<const MMPlayerUnit*>(theDots) + theDotCount);
-    outUnits.assign(reinterpret_cast<const MMMapUnit*>(theUnits), reinterpret_cast<const MMMapUnit*>(theUnits) + theUnitCount);
-}

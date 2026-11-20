@@ -542,6 +542,39 @@ constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
 /// It is carried (`mPreviousPart`).
 constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
 
+/// Effect `v[0]` of the researched event of `node` -> `v[0]` its kind, `v[1]` the media id it uses (by kind: the
+/// button, the area effect template, the media item, the new unit class, else the sound), `v[2]` 1 when its attribute
+/// is an area effect's (0x28)
+constexpr static const int32_t EE_TECH_HOST_MEDIA_EFFECT = 44;
+
+/// The player `unit` (an `EEPlayer*`) loads (`v[2]` 1) or unloads (0) media `v[1]` of kind `v[0]` (an
+/// `EE_TECH_MEDIA_*`)
+constexpr static const int32_t EE_TECH_HOST_MEDIA = 45;
+
+/// `EEButtonObject::Get(id)->Acquire()` / `Release()`
+constexpr static const int32_t EE_TECH_MEDIA_BUTTON = 1;
+
+/// `gAEManager.LoadTemplateMedia(id)` / `UnloadTemplateMedia`
+constexpr static const int32_t EE_TECH_MEDIA_AREA_EFFECT = 2;
+
+/// `EEMedia::Get(id)->LoadMedia()` / `UnloadMedia()`
+constexpr static const int32_t EE_TECH_MEDIA_ITEM = 6;
+
+/// `EESoundObject::Get(id)->LoadMedia()` / `UnloadMedia()`
+constexpr static const int32_t EE_TECH_MEDIA_SOUND = 15;
+
+/// `player->SetUnitClassMedia(id, 0x7f)` / `UnloadUnitClassMedia(id)`
+constexpr static const int32_t EE_TECH_MEDIA_CLASS = 19;
+
+/// `player->LoadUnitClassButtons(id)` / `UnloadUnitClassButtons(id)`
+constexpr static const int32_t EE_TECH_MEDIA_CLASS_BUTTONS = 256;
+
+/// `player->EpochMediaLoaded(id)` / `EpochMediaUnloaded(id)`
+constexpr static const int32_t EE_TECH_MEDIA_EPOCH = 257;
+
+/// `PlatSleep(1)`
+constexpr static const int32_t EE_TECH_MEDIA_SLEEP = 258;
+
 /// `mEpochs.size()` -> `v[0]`
 constexpr static const int32_t EE_TECH_HOST_EPOCHS = 1;
 
@@ -646,6 +679,15 @@ constexpr static const int32_t EE_TECH_HOST_CLASS_TYPE = 42;
 constexpr static const int32_t EVENT_HOOK_TECH_RESEARCHED = -2001;
 
 constexpr static const int32_t EVENT_HOOK_EPOCH_AVAILABLE = -2002;
+
+/// The tree's player index (`mPlayerIndex`) -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_PLAYER_INDEX = 7;
+
+/// The researching unit's id (`unit`, an `EEComplexUnit*`; -1 without one) -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_UNIT_ID = 8;
+
+/// The original's epoch count (`kTechEpochAll`).
+constexpr static const int32_t EE_TECH_DEFAULT_EPOCH_COUNT = 15;
 
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
@@ -1009,6 +1051,8 @@ enum class EeTechNodeOp : int32_t {
   SetObsolete = 6,
   /// `DependsOn(a)` (0/1)
   DependsOn = 7,
+  /// `LoadMedia(unit)` (`a` 1) or `UnloadMedia(unit)` (`a` 0); `unit` is the player (node_media.rs)
+  Media = 8,
 };
 
 /// The epoch operations of [`ee_tech_walk_epoch`].
@@ -1028,6 +1072,8 @@ enum class EeTechEpochOp : int32_t {
   ResearchKind = 7,
   /// `Research(a, unit)`'s body: its result
   Research = 8,
+  /// `LoadMediaOfKind(a)` (`b` true) or `UnloadMediaOfKind(a)`; `unit` is the tree's player (node_media.rs)
+  MediaOfKind = 9,
 };
 
 /// The tree operations of [`ee_tech_walk_tree`].
@@ -1883,6 +1929,9 @@ struct EeCalamityDiscrete {
   uint32_t updates;
   float elapsed;
 };
+
+/// A node's cost callback for [`ee_tech_cost_string`]: `(ctx, resource, unit class, scale) -> the cost`.
+using EeTechCostFn = int32_t(*)(void*, int32_t, int32_t, float);
 
 /// One 0x10c-byte record of the tech tree file (`EETechTreeEpoch::Load` 0x1ce10e and `EETechTreeNode::Load`
 /// 0x1cf370 read it into a local; was ee/EETechTreeRecord.h). Fields by offset, named after the members they fill.
@@ -3020,6 +3069,18 @@ bool ee_tech_needs_unit_media(bool has_class,
 /// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
 int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
 
+/// [`cost_string`] of the node `ctx` for `unit_class` into `out` (NUL-terminated, cut at `size`); its byte length.
+///
+/// # Safety
+/// `cost` is valid with `ctx`; `out` holds `size` bytes (`size` > 0).
+size_t ee_tech_cost_string(void *ctx,
+                           EeTechCostFn cost,
+                           int32_t unit_class,
+                           float scale,
+                           bool carbon,
+                           uint8_t *out,
+                           size_t size);
+
 /// Frees a tree record's saved lists (the C++ destructor).
 ///
 /// # Safety
@@ -3095,6 +3156,43 @@ bool ee_tech_is_latest_effect(void *ctx,
 /// # Safety
 /// Both are live records.
 void ee_tech_node_assign(EeTechNodeFields *dst, const EeTechNodeFields *src, bool epoch);
+
+/// TNWK / TNMT of a walk the C++ asks for (a node's NeedsUnitMedia, kind 10; an epoch's GetBuildTime, 6): `node` and
+/// `data` may be null (no node's state), `tree` too (no tree's state, player -1).
+///
+/// # Safety
+/// Each pointer is live or null.
+void ee_tech_capture_node_walk(int32_t kind,
+                               const EeTechTreeFields *tree,
+                               int32_t player,
+                               const EeTechNodeFields *node,
+                               const EeTechNodeDataFields *data,
+                               const EeTechTreeFields *node_tree,
+                               int32_t a,
+                               int32_t b,
+                               int32_t result);
+
+/// The epoch count (`gEpochCount`).
+int32_t ee_tech_epoch_count();
+
+/// Sets the epoch count (the tech tree file's block count, `EETechTree::Load`).
+void ee_tech_set_epoch_count(int32_t count);
+
+/// The epoch of a tech id ([`epoch_of`]).
+int32_t ee_tech_epoch_of(int32_t id);
+
+/// Forgets every node's epoch and every epoch's title (a new tech tree file).
+void ee_tech_clear_node_epochs();
+
+/// Records gTechTree's epoch `epoch`'s title string (the file's record, `EETechTreeEpoch::Load`).
+void ee_tech_set_epoch_title(int32_t epoch, int32_t title);
+
+/// `EEEpochTitleID`: the epoch's title string ("Bronze Age"; epochs.yaml), else the epoch's default name; for the
+/// epoch count, the game options' "Random Epoch".
+int32_t ee_tech_epoch_title_id(int32_t epoch);
+
+/// Records the epoch block a node was loaded in (`EERegisterTechNode`).
+void ee_tech_register_node(int32_t id, int32_t epoch);
 
 }  // extern "C"
 

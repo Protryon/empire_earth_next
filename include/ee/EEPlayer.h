@@ -410,7 +410,15 @@ public:
     long Research(long inID, EEComplexUnit* inUnit);
     long GetCostUncaptured(long inResource, long inUnitClass, float inScale);   // GetCost's body (ee/EETechCapture.h)
     void UnloadMediaOfKind(long inKind);
-    EETechTreeNode* Get(long inID);         // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name)
+    // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name): the epoch for its own id, else one of its
+    // nodes, else NULL (inline: EETechTree::Get's every caller makes it)
+    EETechTreeNode* Get(long inID)
+    {
+        if (inID == this->mData->mID)
+            return this;
+        std::map<long, EETechTreeNode*>::iterator theNode = this->mNodes.find(inID);
+        return theNode != this->mNodes.end() ? theNode->second : NULL;
+    }
     EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther);
 
     // the save key (EETechTreeEpoch.cpp's `$E` chain 0x1cdf25; guard byte 0x562dd8). Unguarded
