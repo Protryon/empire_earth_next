@@ -25,6 +25,7 @@
 
 #include "lle/U2DPoint.h"
 #include "rust/sim/units.h"
+#include "rust/sim/combat.h"
 
 class EEComplexUnit;
 class EEPlayer;
@@ -115,6 +116,35 @@ public:
         return ee_units_goal_call(inOperation, reinterpret_cast<const EeUnitsGoalBase*>(this), inA, inB, ioArgs);
     }
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
+    // the object of a handle a body answers
+    template <class T> static T* Of(int64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
+    // a new goal of a kind made by its body's operation (the New functions)
+    static EEUnitGoal* New(unsigned char inKind, bool inArg, int32_t inOperation, uint64_t inA = 0, uint64_t inB = 0,
+                           EeUnitsGoalIo* ioArgs = NULL)
+    {
+        EEUnitGoal* theGoal = Make(inKind, inArg);
+        theGoal->Call(inOperation, inA, inB, ioArgs);
+        return theGoal;
+    }
+    // one field of a body's answer block
+    int64_t Field(int32_t inOperation, int inIndex) const
+    {
+        EeUnitsGoalIo theArgs = {};
+        this->Call(inOperation, 0, 0, &theArgs);
+        return theArgs.i[inIndex];
+    }
+    EeUnitsLocationGoal Location() const
+    {
+        EeUnitsLocationGoal theRecord;
+        ee_units_location_goal_get(H(this), &theRecord);
+        return theRecord;
+    }
+    EeCombatAttackGoal Attack() const
+    {
+        EeCombatAttackGoal theRecord;
+        ee_combat_attack_get(H(this), &theRecord);
+        return theRecord;
+    }
     enum { kGoalGatherKind = 6 };
 
     // the copies pass it through a byte temporary, the other bools straight (provisional name)
@@ -136,51 +166,96 @@ public:
     // to face, the flags and the group path state
     GE3DPoint GetLocation() const;
     void SetLocation(const GE3DPoint& inLocation);
-    float GetYaw() const;
-    bool GetIsForcedMove() const;
-    bool GetShouldFace() const;
-    bool GetIsAutoWaypoint() const;
-    bool GetUseGroupMovement() const;
-    void SetUseGroupMovement(bool inValue);
-    unsigned char GetGroupPathState() const;
-    void SetGroupPathState(unsigned char inValue);
+    float GetYaw() const { return this->Location().yaw; }
+    bool GetIsForcedMove() const { return this->Location().forced_move; }
+    bool GetShouldFace() const { return this->Location().should_face; }
+    bool GetIsAutoWaypoint() const { return this->Location().auto_waypoint; }
+    bool GetUseGroupMovement() const { return this->Location().group_movement; }
+    void SetUseGroupMovement(bool inValue)
+    {
+        EeUnitsLocationGoal theRecord = this->Location();
+        theRecord.group_movement = inValue;
+        ee_units_location_goal_set(H(this), &theRecord);
+    }
+    unsigned char GetGroupPathState() const { return this->Location().group_path_state; }
+    void SetGroupPathState(unsigned char inValue)
+    {
+        EeUnitsLocationGoal theRecord = this->Location();
+        theRecord.group_path_state = inValue;
+        ee_units_location_goal_set(H(this), &theRecord);
+    }
     // whether inUnit faces the goal's yaw (within a degree); if so it is turned to it exactly (EEUGLocation::FaceYaw)
-    bool FaceYaw(EEComplexUnit* inUnit);
+    bool FaceYaw(EEComplexUnit* inUnit) { return this->Call(EE_UNITS_GOAL_FACE_YAW, H(inUnit)) != 0; }
 
     // a patrol (kGoalPatrol): a new empty patrol group, no point (EEUGPatrol(inArg)); or an existing group and the
     // point to start at, both referenced (EEUGPatrol(inGroup, inTarget, inArg))
-    static EEUnitGoal* NewPatrol(bool inArg);
-    static EEUnitGoal* NewPatrol(EEPPatrolGroup* inGroup, EEComplexUnit* inTarget, bool inArg);
+    static EEUnitGoal* NewPatrol(bool inArg) { return New(9, inArg, EE_UNITS_GOAL_PATROL_NEW_EMPTY); }
+    static EEUnitGoal* NewPatrol(EEPPatrolGroup* inGroup, EEComplexUnit* inTarget, bool inArg)
+    {
+        return New(9, inArg, EE_UNITS_GOAL_NEW_PATROL, H(inGroup), H(inTarget));
+    }
     // the patrol's group, its current point, the group moved to inGroup (the references moved)
-    EEPPatrolGroup* GetPatrolGroup();
-    EEComplexUnit* GetPatrolTarget();
-    void SetPatrolGroup(EEPPatrolGroup* inGroup);
+    EEPPatrolGroup* GetPatrolGroup() { return Of<EEPPatrolGroup>(this->Call(EE_UNITS_GOAL_PATROL_GROUP)); }
+    EEComplexUnit* GetPatrolTarget() { return Of<EEComplexUnit>(this->Call(EE_UNITS_GOAL_PATROL_TARGET)); }
+    void SetPatrolGroup(EEPPatrolGroup* inGroup) { this->Call(EE_UNITS_GOAL_PATROL_SET_GROUP, H(inGroup)); }
 
     // a cast (kGoalCastCalamity): the source casts the calamity of technology inCalamityType on the target unit or
     // at the tile, both units referenced (EEUGCastCalamity(...)); or the load's empty goal (EEUGCastCalamity(inArg))
     static EEUnitGoal* NewCastCalamity(EEComplexUnit* inSource, EEUnit* inTarget, long inTileX, long inTileY,
-                                       long inCalamityType, bool inArg);
-    static EEUnitGoal* NewCastCalamity(bool inArg);
+                                       long inCalamityType, bool inArg)
+    {
+        EeUnitsGoalIo theArgs = {{inTileX, inTileY, inCalamityType}};
+        return New(11, inArg, EE_UNITS_GOAL_NEW_CALAMITY, H(inSource), H(inTarget), &theArgs);
+    }
+    static EEUnitGoal* NewCastCalamity(bool inArg) { return New(11, inArg, EE_UNITS_GOAL_CALAMITY_NEW_EMPTY); }
     // the cast's technology (its tile and target unit when asked); where the calamity goes (the target, the source
     // for two technologies, else the tile; at the flying source's height)
-    long GetCalamityType(long* outTileX = NULL, long* outTileY = NULL, EEUnit** outTarget = NULL);
+    long GetCalamityType(long* outTileX = NULL, long* outTileY = NULL, EEUnit** outTarget = NULL)
+    {
+        EeUnitsGoalIo theArgs = {};
+        EEUnit* theTarget = Of<EEUnit>(this->Call(EE_UNITS_GOAL_CALAMITY_FIELDS, 0, 0, &theArgs));
+        if (outTileX != NULL)
+            *outTileX = (long)theArgs.i[1];
+        if (outTileY != NULL)
+            *outTileY = (long)theArgs.i[2];
+        if (outTarget != NULL)
+            *outTarget = theTarget;
+        return (long)theArgs.i[0];
+    }
     void GetCalamityTargetLocation(GE3DPoint& outLocation);
 
     // an explore goal (kGoalExplore): no tile searched yet (EEUGExplore(inArg)); the tile being explored's centre
     // (x and y only: EEUGExplore's GetTileCenter), the tile set
-    static EEUnitGoal* NewExplore(bool inArg);
+    static EEUnitGoal* NewExplore(bool inArg) { return New(10, inArg, EE_UNITS_GOAL_NEW_EXPLORE); }
     void GetExploreTileCenter(GE3DPoint& outLocation);
-    void SetExploreTile(long inX, long inY);
+    void SetExploreTile(long inX, long inY)
+    {
+        EeUnitsGoalIo theArgs = {{inX, inY}};
+        this->Call(EE_UNITS_GOAL_EXPLORE_SET_TILE, 0, 0, &theArgs);
+    }
 
     // an unload (kGoalUnloadTransport): the transport (referenced) unloads at the tile, its unload tiles found when
     // it carries cargo (EEUGUnloadTransport(...)); or the load's empty goal (EEUGUnloadTransport(inArg))
-    static EEUnitGoal* NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg);
-    static EEUnitGoal* NewUnloadTransport(bool inArg);
+    static EEUnitGoal* NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg)
+    {
+        EeUnitsGoalIo theArgs = {{inX, inY}};
+        return New(8, inArg, EE_UNITS_GOAL_NEW_UNLOAD, H(inTransport), 0, &theArgs);
+    }
+    static EEUnitGoal* NewUnloadTransport(bool inArg) { return New(8, inArg, EE_UNITS_GOAL_UNLOAD_NEW_EMPTY); }
     // the transport (its unload tile when asked); another transport (the reference moved, its range taken); whether
     // the transport can unload at the tile (its class's test, else a free tile)
-    EEComplexUnit* GetUnloadTransport(long* outX = NULL, long* outY = NULL);
-    void SetUnloadTransport(EEComplexUnit* inTransport);
-    bool CanUnloadAtDestination();
+    EEComplexUnit* GetUnloadTransport(long* outX = NULL, long* outY = NULL)
+    {
+        EeUnitsGoalIo theArgs = {};
+        EEComplexUnit* theTransport = Of<EEComplexUnit>(this->Call(EE_UNITS_GOAL_UNLOAD_FIELDS, 0, 0, &theArgs));
+        if (outX != NULL)
+            *outX = (long)theArgs.i[0];
+        if (outY != NULL)
+            *outY = (long)theArgs.i[1];
+        return theTransport;
+    }
+    void SetUnloadTransport(EEComplexUnit* inTransport) { this->Call(EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT, H(inTransport)); }
+    bool CanUnloadAtDestination() { return this->Call(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD) != 0; }
 
     // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
     // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
@@ -189,24 +264,53 @@ public:
     // an attack on a unit (kGoalAttackUnit; EEUGAttackUnit(inAttacker, inTarget, inArg3, inIsConvert): a multi-part
     // target's attack part, the target referenced, the attack counts; the load's EEUGAttackUnit(inArg) empty), its
     // target, attacker, last known target tile, convert flag, destination and sidestep count
-    static EEUnitGoal* NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert);
-    static EEUnitGoal* NewAttackUnitEmpty(bool inArg);
-    EEUnit* GetAttackTarget() const;
-    EEComplexUnit* GetAttacker() const;
-    void SetAttacker(EEComplexUnit* inAttacker);
-    void SetAttackTarget(EEUnit* inTarget);           // the old SetTarget (the reference moved, the tile)
-    void RetargetGatePart(EEComplexUnit* inUnit);     // a gate target becomes the part EEGetAttackPart gives
-    long GetAttackTileX() const;
-    long GetAttackTileY() const;
-    bool IsConvertAttack() const;
-    unsigned long GetSidestepCount() const;
-    void SetSidestepCount(unsigned long inCount);
+    static EEUnitGoal* NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert)
+    {
+        EeUnitsGoalIo theArgs = {{inIsConvert ? 1 : 0}};
+        return New(2, inArg3, EE_COMBAT_GOAL_NEW_ATTACK, H(inAttacker), H(inTarget), &theArgs);
+    }
+    static EEUnitGoal* NewAttackUnitEmpty(bool inArg)
+    {
+        EeUnitsGoalIo theArgs = {{2}};
+        return New(2, inArg, EE_COMBAT_GOAL_NEW_ATTACK, 0, 0, &theArgs);
+    }
+    EEUnit* GetAttackTarget() const { return Of<EEUnit>(this->Attack().target); }
+    EEComplexUnit* GetAttacker() const { return Of<EEComplexUnit>(this->Attack().attacker); }
+    void SetAttacker(EEComplexUnit* inAttacker)
+    {
+        EeCombatAttackGoal theRecord = this->Attack();
+        theRecord.attacker = H(inAttacker);
+        ee_combat_attack_set(H(this), &theRecord);
+    }
+    // the old SetTarget (the reference moved, the tile)
+    void SetAttackTarget(EEUnit* inTarget) { this->Call(EE_COMBAT_GOAL_SET_TARGET, H(inTarget)); }
+    // a gate target becomes the part EEGetAttackPart gives
+    void RetargetGatePart(EEComplexUnit*) { this->Call(EE_COMBAT_GOAL_RETARGET_GATE); }
+    long GetAttackTileX() const { return this->Attack().tile[0]; }
+    long GetAttackTileY() const { return this->Attack().tile[1]; }
+    bool IsConvertAttack() const { return this->Attack().convert != 0; }
+    unsigned long GetSidestepCount() const { return this->Attack().sidestep; }
+    void SetSidestepCount(unsigned long inCount)
+    {
+        EeCombatAttackGoal theRecord = this->Attack();
+        theRecord.sidestep = (uint32_t)inCount;
+        ee_combat_attack_set(H(this), &theRecord);
+    }
     // a heal (kGoalHealUnit; EEUGHealUnit(inTarget, inArg): the location goal at the healee's position, the healee
     // referenced; the load's EEUGHealUnit(inArg): no healee, at 0, 0, 0), its healee, and the location it was made at
     // (the heal goal derived from EEUGLocation until it moved: EELocationGoalPoint reads it)
-    static EEUnitGoal* NewHealUnit(EEComplexUnit* inTarget, bool inArg);
-    static EEUnitGoal* NewHealUnit(bool inArg);
-    EEComplexUnit* GetHealTarget() const;
+    static EEUnitGoal* NewHealUnit(EEComplexUnit* inTarget, bool inArg) { return New(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, H(inTarget)); }
+    static EEUnitGoal* NewHealUnit(bool inArg)
+    {
+        EeUnitsGoalIo theArgs = {{2}};
+        return New(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, 0, 0, &theArgs);
+    }
+    EEComplexUnit* GetHealTarget() const
+    {
+        EeCombatHealGoal theRecord;
+        ee_combat_heal_get(H(this), &theRecord);
+        return Of<EEComplexUnit>(theRecord.target);
+    }
     GE3DPoint GetHealLocation() const;
     void SetHealLocation(const GE3DPoint& inLocation);
     // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
@@ -214,44 +318,54 @@ public:
     // (EEUGLoadTransport/EEUGLoadGarrison(inContainer, inUnits, inArg)); or the load's empty goal
     static EEUnitGoal* NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,
                                bool inArg);
-    static EEUnitGoal* NewLoad(unsigned char inKind, bool inArg);
+    static EEUnitGoal* NewLoad(unsigned char inKind, bool inArg) { return New(inKind, inArg, EE_UNITS_GOAL_LOAD_NEW_EMPTY); }
     // the container, its and the units' rendezvous tiles, the garrison's valid flag (a building it can upgrade or a
     // capitol); the units to load (each added unless listed)
-    EEComplexUnit* GetLoadContainer();
-    U2DPoint<long> GetLoadContainerTile();
-    U2DPoint<long> GetLoadUnitTile();
-    bool IsLoadGarrisonValid();
-    unsigned long GetNumLoadUnits();
-    bool HasLoadUnit(EEComplexUnit* inUnit);
-    void AddLoadUnit(EEComplexUnit* inUnit);
-    void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits);
+    EEComplexUnit* GetLoadContainer() { return Of<EEComplexUnit>(this->Call(EE_UNITS_GOAL_LOAD_FIELDS)); }
+    U2DPoint<long> GetLoadContainerTile() { return U2DPoint<long>((long)this->Field(EE_UNITS_GOAL_LOAD_FIELDS, 0), (long)this->Field(EE_UNITS_GOAL_LOAD_FIELDS, 1)); }
+    U2DPoint<long> GetLoadUnitTile() { return U2DPoint<long>((long)this->Field(EE_UNITS_GOAL_LOAD_FIELDS, 2), (long)this->Field(EE_UNITS_GOAL_LOAD_FIELDS, 3)); }
+    bool IsLoadGarrisonValid() { return this->Field(EE_UNITS_GOAL_LOAD_FIELDS, 4) != 0; }
+    unsigned long GetNumLoadUnits() { return (unsigned long)this->Call(EE_UNITS_GOAL_LOAD_UNIT_COUNT); }
+    bool HasLoadUnit(EEComplexUnit* inUnit) { return this->Call(EE_UNITS_GOAL_LOAD_HAS_UNIT, H(inUnit)) != 0; }
+    void AddLoadUnit(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_LOAD_ADD_UNIT, H(inUnit)); }
+    void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits)
+    {
+        for (size_t i = 0; i < inUnits.size(); i++)
+            this->AddLoadUnit(inUnits[i]);
+    }
 
     // a build/repair goal (kGoalBuildRepair): the player's goal on the building's first part, referenced
     // (EEUGBuildRepair(inPlayer, inTarget, inArg)); or the load's empty goal (EEUGBuildRepair(inArg))
-    static EEUnitGoal* NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg);
-    static EEUnitGoal* NewBuildRepair(bool inArg);
+    static EEUnitGoal* NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg)
+    {
+        return New(4, inArg, EE_UNITS_GOAL_NEW_BUILD, H(inPlayer), H(inTarget));
+    }
+    static EEUnitGoal* NewBuildRepair(bool inArg) { return New(4, inArg, EE_UNITS_GOAL_BUILD_NEW_EMPTY); }
     // the building (NULL once dropped), its class's type, technology, tech tree node and class as the goal took
     // them; whether units other than the building block its footprint
-    EEUnit* GetBuildTarget();
-    long GetBuildTargetType();
-    long GetBuildTechTreeID();
-    EEUnitClass* GetBuildTargetClass();
-    bool IsBuildSiteTaken();
+    EEUnit* GetBuildTarget() { return Of<EEUnit>(this->Call(EE_UNITS_GOAL_BUILD_FIELDS)); }
+    long GetBuildTargetType() { return (long)this->Field(EE_UNITS_GOAL_BUILD_FIELDS, 0); }
+    long GetBuildTechTreeID() { return (long)this->Field(EE_UNITS_GOAL_BUILD_FIELDS, 1); }
+    EEUnitClass* GetBuildTargetClass() { return Of<EEUnitClass>(this->Field(EE_UNITS_GOAL_BUILD_FIELDS, 3)); }
+    bool IsBuildSiteTaken() { return this->Call(EE_UNITS_GOAL_BUILD_SITE_TAKEN) != 0; }
 
     // a gather goal (kGoalGather): the resource and the storage, both referenced (EEUGGather(inResource, inStorage,
     // inArg)); or the load's empty goal (EEUGGather(inArg))
-    static EEUnitGoal* NewGather(EEUnit* inResource, EEUnit* inStorage, bool inArg);
-    static EEUnitGoal* NewGather(bool inArg);
+    static EEUnitGoal* NewGather(EEUnit* inResource, EEUnit* inStorage, bool inArg)
+    {
+        return New(6, inArg, EE_UNITS_GOAL_NEW_GATHER, H(inResource), H(inStorage));
+    }
+    static EEUnitGoal* NewGather(bool inArg) { return New(6, inArg, EE_UNITS_GOAL_GATHER_NEW_EMPTY); }
     // the resource, the storage, the gathering and waiting flags, the destination; a new resource or storage (the
     // references moved)
-    EEUnit* GetGatherResource();
-    EEUnit* GetGatherStorage();
-    bool IsGathering();
-    bool IsGatherWaiting();
-    void SetGatherStorage(EEUnit* inStorage);
+    EEUnit* GetGatherResource() { return Of<EEUnit>(this->Call(EE_UNITS_GOAL_GATHER_FIELDS)); }
+    EEUnit* GetGatherStorage() { return Of<EEUnit>(this->Field(EE_UNITS_GOAL_GATHER_FIELDS, 0)); }
+    bool IsGathering() { return this->Field(EE_UNITS_GOAL_GATHER_FIELDS, 1) != 0; }
+    bool IsGatherWaiting() { return this->Field(EE_UNITS_GOAL_GATHER_FIELDS, 2) != 0; }
+    void SetGatherStorage(EEUnit* inStorage) { this->Call(EE_UNITS_GOAL_GATHER_SET_STORAGE, H(inStorage)); }
     // a waiting area by the resource (true when found); an unfinished living settlement within twice the
     // gatherer's line of sight (NULL if none)
-    bool FindGatherSpot(EEComplexUnit* inUnit);
+    bool FindGatherSpot(EEComplexUnit* inUnit) { return this->Call(EE_UNITS_GOAL_GATHER_FIND_SPOT, H(inUnit)) != 0; }
 
     bool mIsActive;                         // +0x04 (of the original: +0x00 was its vptr)
     unsigned char mKind;                    // +0x05

@@ -142,18 +142,6 @@ int64_t Combat(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64
     return theResult;
 }
 
-EeCombatAttackGoal AttackOf(const EEUGRust* inGoal)
-{
-    EeCombatAttackGoal theRecord;
-    ee_combat_attack_get(Handle(inGoal), &theRecord);
-    return theRecord;
-}
-
-void AttackSet(const EEUGRust* inGoal, const EeCombatAttackGoal& inRecord)
-{
-    ee_combat_attack_set(Handle(inGoal), &inRecord);
-}
-
 }  // namespace
 
 EEUGRust* EEUGRust::NewAttackGround(const GE3DPoint& inTarget, bool inArg)
@@ -171,88 +159,6 @@ GE3DPoint EEUGRust::GetGroundTarget()
     return GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
 }
 
-EEUGRust* EEUGRust::NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert)
-{
-    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackUnit, inArg3);
-    Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, Handle(inAttacker), Handle(inTarget), inIsConvert ? 1 : 0);
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewAttackUnitEmpty(bool inArg)
-{
-    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackUnit, inArg);
-    Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, 0, 0, 2);
-    return theGoal;
-}
-
-EEUnit* EEUGRust::GetAttackTarget() const
-{
-    return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(AttackOf(this).target));
-}
-
-EEComplexUnit* EEUGRust::GetAttacker() const
-{
-    return UnitOf(AttackOf(this).attacker);
-}
-
-void EEUGRust::SetAttacker(EEComplexUnit* inAttacker)
-{
-    EeCombatAttackGoal theRecord = AttackOf(this);
-    theRecord.attacker = Handle(inAttacker);
-    AttackSet(this, theRecord);
-}
-
-void EEUGRust::SetAttackTarget(EEUnit* inTarget)
-{
-    Combat(EE_COMBAT_GOAL_SET_TARGET, this, Handle(inTarget));
-}
-
-void EEUGRust::RetargetGatePart(EEComplexUnit*)
-{
-    Combat(EE_COMBAT_GOAL_RETARGET_GATE, this);
-}
-
-long EEUGRust::GetAttackTileX() const
-{
-    return AttackOf(this).tile[0];
-}
-
-long EEUGRust::GetAttackTileY() const
-{
-    return AttackOf(this).tile[1];
-}
-
-bool EEUGRust::IsConvertAttack() const
-{
-    return AttackOf(this).convert != 0;
-}
-
-unsigned long EEUGRust::GetSidestepCount() const
-{
-    return AttackOf(this).sidestep;
-}
-
-void EEUGRust::SetSidestepCount(unsigned long inCount)
-{
-    EeCombatAttackGoal theRecord = AttackOf(this);
-    theRecord.sidestep = (uint32_t)inCount;
-    AttackSet(this, theRecord);
-}
-
-EEUGRust* EEUGRust::NewHealUnit(EEComplexUnit* inTarget, bool inArg)
-{
-    EEUGRust* theGoal = EEUGRust::Make(kGoalHealUnit, inArg);
-    Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, Handle(inTarget));
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewHealUnit(bool inArg)
-{
-    EEUGRust* theGoal = EEUGRust::Make(kGoalHealUnit, inArg);
-    Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, 0, 0, 2);
-    return theGoal;
-}
-
 namespace {
 
 EeCombatHealGoal HealOf(const EEUGRust* inGoal)
@@ -263,11 +169,6 @@ EeCombatHealGoal HealOf(const EEUGRust* inGoal)
 }
 
 }  // namespace
-
-EEComplexUnit* EEUGRust::GetHealTarget() const
-{
-    return UnitOf(HealOf(this).target);
-}
 
 GE3DPoint EEUGRust::GetHealLocation() const
 {

@@ -17,10 +17,15 @@ use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 use std::sync::Mutex;
 
+use crate::units::gather::GOAL_GATHER;
+use crate::units::goals;
+use crate::units::location::GOAL_LOCATION;
 use crate::units::rust_goal::{
     ee_units_rust_goal, EeUnitsGoalHost, EeUnitsGoalIo, EE_UNITS_GOAL_DESTROY, EE_UNITS_GOAL_HOST_BASE_FIELDS,
-    EE_UNITS_GOAL_HOST_GOAL_ARG, EE_UNITS_GOAL_HOST_NEW_GOAL, EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS,
-    EE_UNITS_GOAL_HOST_SET_ACTIVE, EE_UNITS_GOAL_SET_PATH_ATTEMPTS,
+    EE_UNITS_GOAL_HOST_GOAL_ARG, EE_UNITS_GOAL_HOST_LOCATION_GOAL, EE_UNITS_GOAL_HOST_NEW_GATHER,
+    EE_UNITS_GOAL_HOST_NEW_GOAL, EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH, EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS,
+    EE_UNITS_GOAL_HOST_SET_ACTIVE, EE_UNITS_GOAL_HOST_SET_GOAL, EE_UNITS_GOAL_NEW_GATHER, EE_UNITS_GOAL_NEW_LOCATION,
+    EE_UNITS_GOAL_SET_PATH_ATTEMPTS,
 };
 
 /// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object.
@@ -154,6 +159,44 @@ pub unsafe extern "C" fn base_host_op(context: *mut c_void, op: i32, a: u64, b: 
             let mut args = EeUnitsGoalIo::default();
             // SAFETY: the same table, wrapped again by the dispatch
             unsafe { ee_units_rust_goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, kind, a, 0, 0, &mut args, inner) };
+            0
+        }
+        // the goal calls of a unit (goals.rs): `SetGoal(b, i[0], i[1])`, a new gather goal on resource `a` and
+        // storage `b`, a forced move to the point (`SetGoal(NewLocation(&f, false, true, false, 0, false, 0), 0, 0)`),
+        // the active goal's `SetPathAttempts(0)`
+        EE_UNITS_GOAL_HOST_SET_GOAL => {
+            let index = io.i[1] as c_long;
+            if index >= 0 {
+                goals::set_goal(a, b, io.i[0] != 0, index as usize, &mut goals::Goals);
+            }
+            0
+        }
+        EE_UNITS_GOAL_HOST_NEW_GATHER => {
+            let goal = goal_new(GOAL_GATHER, io.i[0] != 0);
+            // SAFETY: the goal just made
+            unsafe { call(EE_UNITS_GOAL_NEW_GATHER, goal, a, b, std::ptr::null_mut()) };
+            goal as i64
+        }
+        EE_UNITS_GOAL_HOST_LOCATION_GOAL => {
+            let goal = goal_new(GOAL_LOCATION, false);
+            let mut args = EeUnitsGoalIo { i: [1, 0, 0, 0, 0, 0, 0, 0], ..Default::default() };
+            args.f[..3].copy_from_slice(&io.f[..3]);
+            // SAFETY: the goal just made
+            unsafe { call(EE_UNITS_GOAL_NEW_LOCATION, goal, 0, 0, &mut args) };
+            goals::set_goal(a, goal, false, 0, &mut goals::Goals);
+            0
+        }
+        EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH => {
+            // SAFETY: the caller holds the world; `a` is a live complex unit
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let active = unsafe { crate::world::UnitView::of(&t, a) }.map_or(0, |u| u.active_goal_handle());
+            if active != 0 {
+                // SAFETY: the unit's live active goal
+                unsafe {
+                    base(active).path_attempts = 0;
+                    call(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, active, 0, 0, std::ptr::null_mut());
+                }
+            }
             0
         }
         // SAFETY: the wrapped table's contract
