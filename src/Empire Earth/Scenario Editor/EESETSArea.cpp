@@ -150,13 +150,6 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
         if (EESMArea* theArea = theManager->GetArea((unsigned long)i[0]))
             theArea->SetAnchor(U2DPoint<long>(i[1], i[2]));
         return 0;
-    case EE_SCREENS_SEAR_OP_CENTER: {
-        GE2DPoint theCenter;
-        GERectangle(f[0], f[1], f[2], f[3]).GetCenter(theCenter);
-        f[0] = theCenter.GetX();
-        f[1] = theCenter.GetY();
-        return 0;
-    }
     case EE_SCREENS_SEAR_OP_IN_VIEW:
         return gViewport.GetViewRectangle().Contains(i[0] ? gMouse->mPosition : GE2DPoint(f[0], f[1]));
     case EE_SCREENS_SEAR_OP_PICK: {

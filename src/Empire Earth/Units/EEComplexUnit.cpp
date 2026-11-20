@@ -88,7 +88,6 @@
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
-bool EEIsSameResearch(long inFirst, long inSecond);
 
 // chain at 0x5f57d3 (wrapper)
 //   object 0x963228  ctor None  dtor None
@@ -846,7 +845,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
                 EEUnloadGoalCast(theGoal)->SetUnloadTransport(this);
             theGoal = theGoal->Clone();
             this->mGoalQueues[i].mGoals.push_back(theGoal);
-            theGoal->SetOwner(this->mGoalQueues[i].mUnit);
+            theGoal->SetOwner(this->mGoalQueues[i].GetUnit());
         }
     }
     this->mWaypoints = theOther->mWaypoints;
@@ -1001,12 +1000,6 @@ void EEComplexUnit::ClearGoals(long inIndex)
     }
     this->RefreshGoals();
     this->RefreshActiveGoal();
-}
-
-// Returns the queue's first goal
-EEUnitGoal* EEUnitVectorItem::GetFront()
-{
-    return this->mGoals.front();
 }
 
 // Frees the unit's turret angles, orbitals, wheels and model, then the base unit's data
@@ -2080,22 +2073,6 @@ EEUnit* EEComplexUnit::PopBuildTarget()
     return theResult;
 }
 
-// Drops goals from the front of a goal queue while they no longer suit the unit, then refreshes its current goals
-void EEComplexUnit::DropUnsuitedGoals(unsigned long inIndex)
-{
-    // NEAR: the original calls an out-of-line EEUnitVectorItem front accessor (0x1f8a26, inline in the real header)
-    bool thePopped = false;
-    if (this->mGoalQueues.size() <= inIndex)
-        return;
-    while (this->mGoalQueues[inIndex].mGoals.size() > 0 && !this->mGoalQueues[inIndex].mGoals.front()->Suits(this)) {
-        this->mGoalQueues[inIndex].PopFront();
-        thePopped = true;
-    }
-    this->RefreshGoals();
-    if (thePopped)
-        this->RefreshActiveGoal();
-}
-
 // Moves the unit away after a calamity: a computer player's prophet steps away from the cast, other AI units go idle,
 // a human's unit walks to a random point ahead (unless inArg is set)
 void EEComplexUnit::FleeAfterCalamity(long inArg)
@@ -2327,31 +2304,6 @@ bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
         inUnit->Dereference();
     }
     return theFound;
-}
-
-// Pops auto-waypoint goals off the main queue, starting each following goal that suits the unit
-void EEComplexUnit::DropFinishedGoals(bool inStartAll)
-{
-    if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalLocation && static_cast<EEUGRust*>(this->mGoalState)->GetIsAutoWaypoint() == true) {
-        EEUGRust* theGoal = static_cast<EEUGRust*>(this->mGoalState);
-        while (true) {
-            if (theGoal->GetIsAutoWaypoint() != true)
-                break;
-            this->mGoalQueues[0].PopFront();
-            theGoal = NULL;
-            EEUnitGoal* theNext = this->RefreshGoals();
-            if (theNext->mKind == kGoalLocation)
-                theGoal = static_cast<EEUGRust*>(theNext);
-            if (theGoal == NULL || inStartAll || !theGoal->GetIsAutoWaypoint()) {
-                if (theNext->Suits(this))
-                    theNext->Start(this);
-            }
-            if (theGoal == NULL)
-                break;
-        }
-    }
-    this->RefreshGoals();
-    this->RefreshActiveGoal();
 }
 
 // Removes a unit from the cargo and gives its room back; refreshes the icon bar if the transport is selected
@@ -2635,7 +2587,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
         while (this->mBuildQueue.size() > 0) {
             EEProductionEntry theTechnology = this->mBuildQueue.front();
             this->mBuildQueue.erase(this->mBuildQueue.begin());
-            if (!EEIsSameResearch(theTechnology.mTechnology, inTechnology) || !theKeepNext)
+            if (!ee_units_uu_is_same_research(theTechnology.mTechnology, inTechnology) || !theKeepNext)
                 theKept.push_back(theTechnology);
             else {
                 EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(theTechnology.mTechnology);
@@ -2653,7 +2605,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
         if (theRetained && (unsigned char)inRemoveAll == 0)
             return;
     }
-    if (this->GetUnitClass()->IsLandBuilding() && EEIsSameResearch(this->mCurrentResearch, inTechnology))
+    if (this->GetUnitClass()->IsLandBuilding() && ee_units_uu_is_same_research(this->mCurrentResearch, inTechnology))
         this->ToggleJITManufacturing();
 }
 
@@ -2756,28 +2708,6 @@ void EEComplexUnit::StartProduction()
 bool EEUnitClass::IsAircraft()
 {
     return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding;
-}
-
-// Sets the unit's current goal to the front of its main goal queue and returns it
-EEUnitGoal* EEComplexUnit::RefreshGoals()
-{
-    return this->mGoalState = this->GetQueuedGoal(0);
-}
-
-// Sets the active goal to the first main-queue goal that is not an auto waypoint
-void EEComplexUnit::RefreshActiveGoal()
-{
-    EEUnitGoal* theResult = NULL;
-    const EEGoalDeque& theGoals = this->mGoalQueues[0].mGoals;
-    unsigned long theCount = theGoals.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnitGoal* theGoal = theGoals[i];
-        if (theGoal->mKind != kGoalLocation || !static_cast<EEUGRust*>(theGoal)->GetIsAutoWaypoint()) {
-            theResult = theGoal;
-            break;
-        }
-    }
-    this->mActiveGoal = theResult;
 }
 
 // Switches the unit to an action and updates its camouflage; a dying unit refuses any non-dying action
@@ -3068,46 +2998,6 @@ void EEComplexUnit::SetPatrolGroup(EEPPatrolGroup* inGroup)
     this->mPatrolGroup = inGroup;
     if (inGroup)
         ee_units_pg_reference(inGroup);
-}
-
-inline void EEUnitVectorItem::AddFront(EEUnitGoal* inGoal)
-{
-    this->mGoals.push_front(inGoal);
-    inGoal->SetOwner(this->mUnit);
-}
-
-// Puts a goal at the front of a goal queue, replacing the current goal and its leading auto waypoints unless
-// inKeepCurrent; on the main queue it becomes the current goal
-void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex)
-{
-    // inKeepCurrent is a bool (read as a byte)
-    if (this->mGoalQueues.size() <= (unsigned long)inIndex)
-        return;
-    if (this->mGoalQueues[inIndex].mGoals.size() > 0) {
-        if (inKeepCurrent) {
-            EEUnitGoal* theFront = this->mGoalQueues[inIndex].GetFront();
-            theFront->mAction = this->mCommand->mType;
-            theFront->SetPathAttempts(0);
-        } else {
-            if ((unsigned long)inIndex < 1)
-                this->mActiveGoal = NULL;
-            for (;;) {
-                EEUGRust* theLocation = EELocationGoalCast(this->GetQueuedGoal(inIndex));
-                if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
-                    break;
-                this->mGoalQueues[inIndex].PopFront();
-            }
-            if (this->mGoalQueues[inIndex].mGoals.size() > 0)
-                this->mGoalQueues[inIndex].PopFront();
-        }
-    }
-    this->mGoalQueues[inIndex].AddFront(inGoal);
-    this->SetIsFiringHigh(false);
-    if (inIndex != 0)
-        return;
-    if (inGoal->mKind != kGoalLocation || !static_cast<EEUGRust*>(inGoal)->GetIsAutoWaypoint())
-        this->mActiveGoal = inGoal;
-    this->mGoalState = inGoal;
 }
 
 // Sets the unit's home base (reference counted)

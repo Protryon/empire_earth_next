@@ -45,11 +45,6 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
-// New (R5b.4, the fifteenth round): the goal queues as goal ids (ee_units goals.rs). A queue container's deque
-// changed (EEGoalDeque's writes): its goals' ids to the mirror; its destructor drops it.
-class EEUnitVectorItem;
-void EEGoalQueueReport(EEUnitVectorItem* inQueue);
-void EEGoalQueueDropped(EEUnitVectorItem* inQueue);
 // New (R5b.4, the fourteenth round): a unit of id 0xffffffff in no list (a shot: CreateUnit with no list): its record
 // in the store's unlisted table by object until a list takes it or its destructor. The store keeps every unit of id
 // 0xffffffff there, listed or not (a scenario's path points are listed, all with that id): records by id cannot hold

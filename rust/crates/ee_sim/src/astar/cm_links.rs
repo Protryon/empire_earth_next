@@ -12,7 +12,7 @@
 use std::ffi::c_ulong;
 
 use crate::astar::cm::{EeAStarCmFree, EeAStarCmRecord, EeAStarCmTable};
-use crate::astar::cm_io::{self, EeAStarCmIo};
+use crate::astar::cm_io;
 use crate::astar::ffi::{ee_astar_sub_sector_links_free, ee_astar_sub_sector_links_get, EeSubSectorLinks};
 use crate::astar::sector_rec::EeAStarSubSectorLink;
 use crate::astar::sparse::PointList;
@@ -106,8 +106,7 @@ pub unsafe fn remove_sub_sectors(r: &mut EeAStarCmRecord, sector: u64) {
     }
     // `DeleteSubSectors`: the objects, then the map
     for entry in &subs {
-        let mut io = EeAStarCmIo { h: [entry.sub, 0], i: [EeAStarCmTable::PathSubSectors as i64, 0, 0, 0] };
-        cm_io::call_host(cm_io::EE_ASTAR_CM_DELETE, &mut io);
+        crate::astar::objects::delete_object(EeAStarCmTable::PathSubSectors, entry.sub);
     }
     (*cm_io::sector(sector).lists).sub_sectors.clear();
     r.tables_mut().free[EeAStarCmFree::SubSectors as usize].extend_from_slice(&ids);

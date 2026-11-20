@@ -142,22 +142,6 @@ struct WONDrawMeasure {
     }
 };
 
-// the frame inputs of a WONFrame over a component
-inline EeWonFrame WONDrawFrameOf(const WONFrame& f, Component* c, int lp, int tp, int rp, int bp)
-{
-    EeWonFrame r;
-    r.has_image = f.mImage.get() != NULL;
-    r.image_width = r.has_image ? f.mImage->mWidth : 0;
-    r.image_height = r.has_image ? f.mImage->mHeight : 0;
-    r.width = c->Width();
-    r.height = c->Height();
-    r.left = lp;
-    r.top = tp;
-    r.right = rp;
-    r.bottom = bp;
-    return r;
-}
-
 inline EeWonSelColor WONDrawSelOf(const SelectionColor& s)
 {
     EeWonSelColor r;

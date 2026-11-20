@@ -866,6 +866,18 @@ impl FfiHost {
 
 impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        // the goals' counter is Rust's (goal_obj.rs)
+        match op {
+            EE_UNITS_PLAYER_SAVE_SET_GOAL_COUNTER => {
+                crate::units::goal_obj::ee_units_goal_counter_set(io.i as c_ulong);
+                return OK;
+            }
+            EE_UNITS_PLAYER_SAVE_GOAL_COUNTER => {
+                io.i = crate::units::goal_obj::ee_units_goal_counter() as i64;
+                return OK;
+            }
+            _ => {}
+        }
         if !self.queued.is_null() {
             // SAFETY: the player's live queue; the C++ primitives never reach it
             let q = unsafe { &mut *self.queued };

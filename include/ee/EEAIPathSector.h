@@ -22,14 +22,17 @@ class EEAIContinent;
 // area ids, +0x30 the bounds, +0x40 the center (StartGraphPath 0x4a69e2), +0x48 the id (RemoveSectorTiles erases it)
 class EEAIPathSector : private EeAStarSectorRecord {
 public:
-    EEAIPathSector() { ee_astar_sector_init(this); }
-    virtual ~EEAIPathSector();              // +0x00 dtor 0x2bc4a (??_G 0x2bc2e): DeleteSubSectors, then the record
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIPathSector* New() { return (EEAIPathSector*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::PathSectors); }
+    static void Delete(EEAIPathSector* inObject) { ee_astar_object_delete(EeAStarCmTable::PathSectors, (uint64_t)(uintptr_t)inObject); }
+    // (dtor 0x2bc4a: DeleteSubSectors, then the record: objects.rs's delete)
     // 0x2bc72: push_back unless present (std::find; the manager's 0x20b2e)
     void AddNeighbor(EEAIContinent* inContinent) { ee_astar_sector_add_neighbor(this, (uint64_t)(uintptr_t)inContinent, true); }
     // 0x2bccf: unless present (binary_search), push_back + sort
     void AddPathAreaID(unsigned short inID) { ee_astar_sector_add_path_area_id(this, inID); }
-    EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint);   // 0x2bd4d: the last listed path area holding it
-    void DeleteSubSectors();                // 0x2bda4: deletes every sub-sector, then clears the map
+    // 0x2bd4d: the last listed path area holding it (Rust: cm_query.rs)
+    EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint)
+        { return (EEAIPathArea*)(uintptr_t)ee_astar_object_path_area_at((uint64_t)(uintptr_t)this, true, inPoint.mX, inPoint.mY); }
     // 0x2bde6: lower_bound + erase when equal
     void RemovePathAreaID(unsigned short inID) { ee_astar_sector_remove_path_area_id(this, inID); }
 
@@ -63,6 +66,8 @@ public:
     void SetID(unsigned short inID) { this->id = inID; }
 
 private:
+    EEAIPathSector();
+    ~EEAIPathSector();
     EEAIPathSector(const EEAIPathSector&);
     EEAIPathSector& operator=(const EEAIPathSector&);
 };

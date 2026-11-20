@@ -135,17 +135,6 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
         *static_cast<UIControl**>(p[0]) = t;
         return 0;
     }
-    case EE_SCREENS_SEMP_OP_LABEL_RECT: {
-        UIControl* c = static_cast<UIControl*>(p[0]);
-        const GERectangle& r = i[0] ? static_cast<UIRadioButton*>(c)->GetTextLabel()->GetRectangle()
-                                    : static_cast<UIComboBox*>(c)->GetTextLabel()->GetRectangle();
-        f[0] = r.GetLeft();
-        f[1] = r.GetTop();
-        f[2] = r.GetRight();
-        f[3] = r.GetBottom();
-        return 0;
-    }
-    case EE_SCREENS_SEMP_OP_COMBO_ATOI: return atoi(static_cast<UIComboBox*>(p[0])->GetTextLabel()->GetText(0));
     case EE_SCREENS_SEMP_OP_BLANK_MAP:
         (new EESEARust(kSEABlankMap, NULL, i[0], i[1], i[2]))->Dereference();
         return 0;
@@ -159,9 +148,6 @@ extern "C" int32_t ee_screenscpp_semp(uint32_t inOp, void* const* p, int32_t* i,
         return (int32_t)gUserInterface->mRandomSeed;
     }
     case EE_SCREENS_SEMP_OP_SEED_SET: gUserInterface->mRandomSeed = i[0]; return 0;
-    case EE_SCREENS_SEMP_OP_CONTROL:
-        *static_cast<UIControl**>(p[1]) = static_cast<UIForm*>(p[0])->GetControlById((unsigned long)i[0]);
-        return 0;
     case EE_SCREENS_SEMP_OP_PROCESS_SELECTION: {
         UIControl* c = static_cast<UIControl*>(p[0]);
         c->GetTriggerEvent(kControlTriggerSelectionChanged)->ProcessEvent(NULL, c);

@@ -387,7 +387,7 @@ extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, f
 
 extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
 {
-    EEBuildWall(ActiveOf(inGroup), *static_cast<std::vector<EEUnit*>*>(inPieces));
+    ee_units_uu_build_wall((uint64_t)(uintptr_t)ActiveOf(inGroup), inPieces);   // uu_world.rs build_wall
 }
 
 extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX, int64_t inY)

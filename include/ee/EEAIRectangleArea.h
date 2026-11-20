@@ -11,11 +11,11 @@
 // +0x8a its mRectangleAreas index (0x1f3a0)
 class EEAIRectangleArea : public EEAIArea, private EeAStarRectRecord {
 public:
-    // (EEAIRectangleArea.cpp 0x2c79f..0x2cc87): ctor 0x2c79f, ??_G 0x2cc65 (a user-declared empty dtor)
-    EEAIRectangleArea() : EeAStarRectRecord() {}
-    virtual ~EEAIRectangleArea() {}
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIRectangleArea* New() { return (EEAIRectangleArea*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::RectangleAreas); }
+    static void Delete(EEAIRectangleArea* inObject) { ee_astar_object_delete(EeAStarCmTable::RectangleAreas, (uint64_t)(uintptr_t)inObject); }
     // +0x20 0x2c939: EEAIArea's random point; when its tile is off the map, a random one of the tiles on the map
-    virtual U2DPoint<long> GetRandomPoint();
+    U2DPoint<long> GetRandomPoint();
     // 0x2c7df: counts the rectangle's tiles per continent category; the continent with most of them (provisional name)
     unsigned short UpdateContinents();
     EeAStarRectRecord* Record() { return this; }
@@ -49,6 +49,10 @@ public:
             && ioReader.I32(this->num_land_tiles) && ioReader.I32(this->num_water_tiles) && ioReader.I32(this->num_space_tiles)
             && ioReader.U16(this->continent_id) && ioReader.U16(this->id);
     }
+
+private:
+    EEAIRectangleArea();
+    ~EEAIRectangleArea();
 };
 
 #endif

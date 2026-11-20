@@ -193,9 +193,6 @@ extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i,
         *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
         return 0;
     case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
-    case EE_SCREENS_SETR_OP_SET_EVENT:
-        static_cast<UIControl*>(p[0])->SetTriggerEvent(kControlTriggerSelectionChanged, static_cast<UIEvent*>(p[1]));
-        return 0;
     case EE_SCREENS_SETR_OP_REMOVE_TEXT: {
         UWideString theFormat, theText;
         gResource->GetString(IDS_DEL, theFormat);

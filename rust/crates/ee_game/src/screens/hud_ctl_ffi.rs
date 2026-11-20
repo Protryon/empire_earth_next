@@ -43,13 +43,11 @@ pub unsafe extern "C" fn ee_screens_ping_set(rec: *mut EeScreensPingFields, ctl:
     ping::set_ping(&Rec::new(rec), &mut PingCpp(ctl), value)
 }
 
-/// The chat lines' record offset in `EEUICChatLine` (one class, one offset).
-static CHAT_OFFSET: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(usize::MAX);
-
-/// The record of the chat line `ctl` (an `EEUICChatLine*`); None before one registered or for NULL.
+/// The record of the chat line `ctl` (its shell's kind's, `shells_chat.rs`); None for NULL or another control.
 pub(crate) fn chat_record(ctl: *mut c_void) -> Option<*mut EeScreensChatLineFields> {
-    let offset = CHAT_OFFSET.load(core::sync::atomic::Ordering::Relaxed);
-    (!ctl.is_null() && offset != usize::MAX).then(|| (ctl as usize + offset) as *mut EeScreensChatLineFields)
+    use crate::screens::shells_chat::EE_SCREENS_SKOP_CHAT_RECORD;
+    let r = crate::screens::shells_ffi::op_of(ctl, EE_SCREENS_SKOP_CHAT_RECORD, 0, 0)?;
+    (r != 0).then_some(r as *mut EeScreensChatLineFields)
 }
 
 /// A chat line's timer (a `TMPoll` is its `EeTimePoll` record) and its texts' Rust objects (a `GEText`'s only
@@ -171,22 +169,13 @@ impl crate::screens::hud_ctl::HudHost for ChatCpp {
     }
 }
 
-/// `EEUICChatLine`'s constructor part (`ctl` the line: its record's place in the class is registered).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_line_init(rec: *mut EeScreensChatLineFields, ctl: *mut c_void, opacity: f32) {
-    CHAT_OFFSET.store(rec as usize - ctl as usize, core::sync::atomic::Ordering::Relaxed);
-    chat_line::init(&Rec::new(rec), opacity)
-}
-
 /// `EEUICChatLine::CopyData`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_line_copy_data(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
+pub(crate) unsafe fn ee_screens_chat_line_copy_data(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
     chat_line::copy_data(&Rec::new(rec), &mut ChatCpp(ctl))
 }
 
 /// `EEUICChatLine::Display(colour, name, message, time)` (the colour a `GEColor*`, the texts `UWideString*`s).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_line_display(
+pub(crate) unsafe fn ee_screens_chat_line_display(
     ctl: *mut c_void,
     color: *const c_void,
     name: *const c_void,
@@ -210,15 +199,29 @@ pub(crate) fn chat_line_copy(ctl: *mut c_void, from: *mut c_void) -> u32 {
 }
 
 /// `EEUICChatLine::DrawPolygons`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_line_draw(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
+pub(crate) unsafe fn ee_screens_chat_line_draw(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
     chat_line::draw(&Rec::new(rec), &mut ChatCpp(ctl))
 }
 
 /// `EEUICChatLine::DrawTextA`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_chat_line_draw_text(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
+pub(crate) unsafe fn ee_screens_chat_line_draw_text(rec: *mut EeScreensChatLineFields, ctl: *mut c_void) -> i64 {
     chat_line::draw_text(&Rec::new(rec), &mut ChatCpp(ctl))
+}
+
+/// A HUD control's host whose class reads are the world views' (`hud_views.rs`) and whose box lines are drawn here
+/// (`hud_draw.rs`); the rest go on to [`Cpp`].
+struct Views(*mut c_void, fn(u32, i64) -> Option<i64>);
+
+impl crate::screens::hud_ctl::HudHost for Views {
+    fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        if op == EE_SCREENS_SU_DRAW_LINES && f.len() >= 32 && ee_render::ge::list2d::ready() {
+            return crate::screens::hud_draw::select_box(f);
+        }
+        if let Some(r) = (self.1)(op, a) {
+            return r;
+        }
+        crate::screens::hud_ctl::HudHost::op(&mut Cpp(self.0), op, a, b, f)
+    }
 }
 
 /// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
@@ -230,7 +233,7 @@ pub unsafe extern "C" fn ee_screens_select_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Cpp(ctl));
+    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::select_units));
     match which {
         EE_SCREENS_SU_DO_COPY_DATA => select_units::copy_data(r, h),
         EE_SCREENS_SU_DO_DRAW => select_units::draw(r, h),
@@ -256,7 +259,7 @@ pub unsafe extern "C" fn ee_screens_command_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Cpp(ctl));
+    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::command_units));
     match which {
         EE_SCREENS_CU_DO_INIT => {
             command_units::init(r);

@@ -884,6 +884,9 @@ WON_TESTS = {
     # the Windows skin's concrete widgets as shell kinds (shell_ms.rs, R6 WONLobby round 20): the deleted classes'
     # statements over a scripted world against the kinds, op for op
     "won_shell_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # the WON skin's widgets and the skin as Rust (shell_won.rs, skinobj.rs, R6 WONLobby round 23): the deleted classes'
+    # statements over a scripted world against the kinds and the skin, op for op
+    "won_wonskin_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the lobby's events as Rust objects (lobbyevt.rs, R6 WONLobby round 18): the original 43 classes
     # (tests/won/won_lobbyevt_orig.h) against the makers and readers of WONLobbyEvents.h, members and references
     "won_lobbyevt_test": [],

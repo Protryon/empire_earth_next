@@ -281,7 +281,7 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
     case EE_COMBAT_READ_LINE_OF_SIGHT:
         return EEConditionBits(theUnit->GetLineOfSight());
     case EE_COMBAT_READ_IN_RANGE_TO_HIT:
-        return EEIsInRangeToHit(theUnit, EEConditionTarget(theContext));
+        return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, theUnit, EEConditionTarget(theContext)) != 0;
     case EE_COMBAT_READ_IN_REACH:
         return theUnit->IsInReach(EEConditionTarget(theContext));
     case EE_COMBAT_READ_SEEN:
@@ -526,7 +526,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return theTags != NULL ? (uint32_t)theTags->GetNumTagPoints() : 0;
     }
     case EE_COMBAT_Q_IN_RANGE_TO_HIT:
-        return EEIsInRangeToHit(theUnit, theObject);
+        return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, theUnit, theObject) != 0;
     case EE_COMBAT_Q_BALLISTIC_HIT:
         return EECanBallisticHit(theUnit, theObject);
     case EE_COMBAT_Q_CONTACT_RANGE: {
@@ -699,7 +699,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     }
     case EE_COMBAT_W_IGNORED_TIME: theObject->mIgnoredTargets[(size_t)a[0]].mTime = (unsigned long)a[1]; return 0;
     case EE_COMBAT_W_CORNER_BLOCKED:
-        return EEIsCornerBlocked((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3]);
+        return ee_units_uu_is_corner_blocked((int32_t)a[0], (int32_t)a[1], (int32_t)a[2], (int32_t)a[3]) != 0;
     case EE_COMBAT_W_CAN_GET_TO_UNIT:
         return gContinentManager.CanGetToUnit(EEQueryUnit(inObject), EEQueryUnit(inOther));
     case EE_COMBAT_W_CONTINENT_AT: return (uint64_t)(uintptr_t)gContinentManager.GetContinentAt(EEQueryUnit(inObject));
@@ -731,7 +731,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         ee_astar_modifier_release(theModifier);
         return thePath.size();
     }
-    case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenByOwnerOf(theObject, EEQueryUnit(inOther));
+    case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenBy(theObject, EEQueryUnit(inOther)->GetPlayer(), true);
     case EE_COMBAT_W_ATTACKED_GOAL: {
         if (a[0])
             theContext->mAttackedGoal = EEUGRust::NewLocation(theOther->mPhysicalModel.GetLocation().GetX(),
@@ -896,7 +896,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_TILE_AT: return ::gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>((long)a[0], (long)a[1])) != NULL;
     case EE_COMBAT_W_WALL_SPOT: {
         GE3DPoint thePoint(EEBitsFloat((int32_t)a[0]), EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]));
-        return EEPointArgs(a, thePoint, EEGetWallSpot(theObject, EEQueryUnit(inOther), thePoint));
+        return EEPointArgs(a, thePoint, ee_units_uu_spot(3, (uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)EEQueryUnit(inOther), (float(*)[3])&thePoint.mX) != 0);
     }
     case EE_COMBAT_W_NEW_TARGET_NEAR_OLD: EEFindNewTargetNearOld(theObject, theOther); return 0;
     case EE_COMBAT_W_FIRING_RING: {
@@ -906,8 +906,10 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
         EEUnit* theTarget = EEQueryUnit(inOther);
         long theSize = theTarget->GetUnitClass()->GetTileSize();
-        EEGetSortedRingTiles(thePosition, theTarget->GetTileX(), theTarget->GetTileY(), theSize, (long)a[0], 0, theOuterTiles);
-        EEGetSortedRingTiles(thePosition, theTarget->GetTileX(), theTarget->GetTileY(), theSize, (long)a[0] + 1, 0, theTiles);
+        ee_units_uu_sorted_ring_tiles((const float(*)[3])&thePosition.mX, theTarget->GetTileX(), theTarget->GetTileY(), theSize,
+                                      (long)a[0], 0, &theOuterTiles);
+        ee_units_uu_sorted_ring_tiles((const float(*)[3])&thePosition.mX, theTarget->GetTileX(), theTarget->GetTileY(), theSize,
+                                      (long)a[0] + 1, 0, &theTiles);
         theTiles.insert(theTiles.end(), theOuterTiles.begin(), theOuterTiles.end());
         std::sort(theTiles.begin(), theTiles.end(), EEUUTileNearerToUnit(theObject));
         GE3DPoint thePoint(EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]), EEBitsFloat((int32_t)a[3]));

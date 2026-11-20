@@ -3936,6 +3936,9 @@ struct EeUnitsClsListHandle;
 /// The lists a host operation fills.
 struct EeUnitsCzList;
 
+/// One goal queue: its unit (`mUnit`'s address), its goals' objects in queue order (0: a null entry) and its timer.
+struct EeUnitsGoalQueue;
+
 /// A patrol group: its reference count (`UReferenceCounter`'s, 1 when made), its points (unit handles; between a
 /// load and `RepairPointers` the saved ids in their place) and its fields. Its handle is the box's address; the C++
 /// holders keep `EEPPatrolGroup*` (ee/EEPPatrolGroup.h: a name for this type).
@@ -4353,19 +4356,36 @@ struct EeUnitStoreCheck {
   uint32_t first_field;
 };
 
-/// One goal of a queue's report: its id, kind and object.
-struct EeGoalQueueEntry {
-  uint32_t id;
+/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object.
+struct EeUnitsGoalBase {
+  bool is_active;
   uint8_t kind;
-  uint64_t goal;
+  /// `mAction` (the action the goal starts: `kActionIdle` when made)
+  unsigned long action;
+  unsigned long start_time;
+  unsigned long creation_time;
+  /// `mID`: the goal's number (`sGoalCounter`'s value when made)
+  unsigned long id;
+  long path_attempts;
+  bool b1c;
+  bool b1d;
 };
 
-/// A queue's timer (`mStartTime`, `mTime`, `mStarted`).
-struct EeGoalQueueTimer {
-  uint32_t start;
-  uint32_t time;
-  uint8_t started;
+/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
+struct EeUnitsGoalIo {
+  int64_t i[8];
+  float f[8];
+  const uint8_t *text;
+  size_t len;
+  /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
+  void *sink;
+  /// handles (units) handed with the operation: the load goals' units
+  const uint64_t *list;
+  size_t list_len;
 };
+
+/// The world host the context-free calls use (EEUGRust.cpp's operation callback, registered at start-up).
+using EeUnitsGoalHostOp = int64_t(*)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 
 /// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
 struct EeGoalQueueHost {
@@ -4375,11 +4395,9 @@ struct EeGoalQueueHost {
   int32_t (*write_bool)(void *context, bool value);
   int32_t (*read_u32)(void *context, uint32_t *value);
   int32_t (*read_u8)(void *context, uint8_t *value);
+  int32_t (*read_bool)(void *context, bool *value);
   int32_t (*save_goal)(void *context, uint64_t goal);
-  int32_t (*load_goal)(void *context, uint8_t kind);
-  void (*clear)(void *context);
-  int32_t (*read_timer)(void *context, uint32_t field);
-  void (*expire)(void *context, uint32_t index);
+  int32_t (*load_goal)(void *context, uint8_t kind, uint64_t *goal);
   void (*refresh)(void *context);
 };
 
@@ -4656,19 +4674,6 @@ struct EeUnitsPmTile {
   int32_t terrain_type;
   int8_t ai_value;
   float height;
-};
-
-/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
-struct EeUnitsGoalIo {
-  int64_t i[8];
-  float f[8];
-  const uint8_t *text;
-  size_t len;
-  /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
-  void *sink;
-  /// handles (units) handed with the operation: the load goals' units
-  const uint64_t *list;
-  size_t list_len;
 };
 
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
@@ -6035,64 +6040,148 @@ extern int64_t ee_units_game_over_host(int32_t op, int64_t a, int64_t b);
 /// `EEWorld::CheckGameOver` of the world `world` (`&gWorld`)
 int64_t ee_units_check_game_over(uint64_t world);
 
-/// A container's deque changed: its unit and its goals' ids (`count` at `ids`).
-///
-/// # Safety
-/// `ids` points to `count` words (or is null with `count` 0).
-void ee_units_goal_queue_set(uint64_t container, uint64_t unit, const uint32_t *ids, size_t count);
+/// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
+EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
 
-/// A container's report: `count` goals at `entries` (id, kind, object) and its timer.
-///
-/// # Safety
-/// `entries` points to `count` entries (or is null with `count` 0).
-void ee_units_goal_queue_report(uint64_t container,
-                                uint64_t unit,
-                                const EeGoalQueueEntry *entries,
-                                size_t count,
-                                EeGoalQueueTimer timer);
+/// `EEUnitGoal::CreateGoal`'s id hand-back: the counter one lower (a loaded goal's id is its record's).
+unsigned long ee_units_goal_counter_back();
 
-/// The container's save from its mirror (`save`): the status; -1 when there is no mirror.
+/// `sGoalCounter` (the player's save).
+unsigned long ee_units_goal_counter();
+
+/// `sGoalCounter = value` (the player's load).
+void ee_units_goal_counter_set(unsigned long value);
+
+/// The C++ `operator delete` of a goal (after its destructor's destroy): the object freed.
 ///
 /// # Safety
-/// `host` points to a valid table for the call.
-int32_t ee_units_goal_queue_save(uint64_t container, const EeGoalQueueHost *host);
+/// `goal` is a goal object made by [`ee_units_goal_new`] or null.
+void ee_units_goal_dealloc(EeUnitsGoalBase *goal);
+
+/// Registers the world host the context-free calls use (EEUGRust.cpp's operation callback).
+void ee_units_goal_register_host(EeUnitsGoalHostOp op);
+
+/// One body (`EE_UNITS_GOAL_*`) of `goal` with the registered host (the goal's accessors and virtuals that write no
+/// file or text): its result.
+///
+/// # Safety
+/// `goal` is a live goal object, `io` null or a valid block.
+int64_t ee_units_goal_call(int32_t op,
+                           const EeUnitsGoalBase *goal,
+                           uint64_t a,
+                           uint64_t b,
+                           EeUnitsGoalIo *io);
+
+/// `delete inGoal` from Rust's side (`EEUnitGoal::Delete`): see [`goal_delete`].
+///
+/// # Safety
+/// `goal` is a live goal object or null.
+void ee_units_goal_delete(EeUnitsGoalBase *goal);
+
+/// `EEUnitVectorItem(inUnit)`: an empty queue of the unit, its timer stopped.
+EeUnitsGoalQueue *ee_units_gq_new(uint64_t unit);
+
+/// `~EEUnitVectorItem()`: the queue cleared (its goals deleted), then freed.
+///
+/// # Safety
+/// `q` is a queue made by [`ee_units_gq_new`] or null, used by no one afterwards.
+void ee_units_gq_free(EeUnitsGoalQueue *q);
+
+/// The copy (the copy constructor, `operator=`): see [`EeUnitsGoalQueue::assign`].
+///
+/// # Safety
+/// Both are live queues.
+void ee_units_gq_assign(EeUnitsGoalQueue *q, const EeUnitsGoalQueue *other);
+
+/// `Clear()`.
+///
+/// # Safety
+/// `q` is a live queue.
+void ee_units_gq_clear(EeUnitsGoalQueue *q);
+
+/// `mUnit`.
+///
+/// # Safety
+/// `q` is a live queue.
+uint64_t ee_units_gq_unit(const EeUnitsGoalQueue *q);
+
+/// `mGoals.size()`.
+///
+/// # Safety
+/// `q` is a live queue.
+size_t ee_units_gq_len(const EeUnitsGoalQueue *q);
+
+/// `mGoals[index]` (0 past the end).
+///
+/// # Safety
+/// `q` is a live queue.
+uint64_t ee_units_gq_get(const EeUnitsGoalQueue *q, size_t index);
+
+/// The deque's edits (no goal deleted or owned): 0 `push_back`, 1 `push_front`, 2 `pop_back`, 3 `pop_front`,
+/// 4 `insert(index)`, 5 `erase(index .. index + count)`, 6 `clear`, 7 `resize(index, goal)`, 8 `Set(index, goal)`.
+///
+/// # Safety
+/// `q` is a live queue.
+void ee_units_gq_edit(EeUnitsGoalQueue *q,
+                      int32_t edit,
+                      size_t index,
+                      size_t count,
+                      uint64_t goal);
+
+/// The container's goal operations, the unit owning what it adds: 0 `Add` (push_back), 1 `AddFront`, 2
+/// `Insert(index)`, 3 `PopBack` (deleted), 4 `PopFront` (deleted).
+///
+/// # Safety
+/// `q` is a live queue, `goal` a live goal for the adds.
+void ee_units_gq_goal_op(EeUnitsGoalQueue *q,
+                         int32_t op,
+                         size_t index,
+                         uint64_t goal);
+
+/// The timer: 0 `GetTimeLeft()`, 1 `AddTime(time)` (0 returned), 2 `ResetTimer()`.
+///
+/// # Safety
+/// `q` is a live queue.
+unsigned long ee_units_gq_timer(EeUnitsGoalQueue *q, int32_t op, long time);
+
+/// The container's save (`save`): the status.
+///
+/// # Safety
+/// `q` is a live queue, `host` a valid table for the call.
+int32_t ee_units_gq_save(const EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
 
 /// The container's load (`load`): the status.
 ///
 /// # Safety
-/// `host` points to a valid table for the call.
-int32_t ee_units_goal_queue_load(const EeGoalQueueHost *host);
+/// `q` is a live queue, `host` a valid table for the call.
+int32_t ee_units_gq_load(EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
 
 /// The unit's goal queues' per-tick update (`update_unit`).
 ///
 /// # Safety
-/// `host` points to a valid table for the call.
-void ee_units_goal_queues_update(uint64_t unit,
-                                 uint32_t count,
-                                 uint32_t now,
-                                 const EeGoalQueueHost *host);
+/// `unit` is a live complex unit, `host` a valid table for the call.
+void ee_units_goal_queues_update(uint64_t unit, const EeGoalQueueHost *host);
 
-/// A container's destructor.
-void ee_units_goal_queue_drop(uint64_t container);
-
-/// The length of a unit's queue `index`; -1 when the mirror has no such queue.
+/// The length of a unit's queue `index`; -1 when it has no such queue.
 int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
 
-/// TEST ONLY: a unit's `count` containers (their addresses, each with `lens[i]` goal ids, all of them in order at
-/// `ids`, and its timer) against the mirror: the mismatches (`GoalQueues::check_unit_timers`).
-///
-/// # Safety
-/// `containers`, `lens` and `timers` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
-uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
-                                        const uint64_t *containers,
-                                        const uint32_t *lens,
-                                        const EeGoalQueueTimer *timers,
-                                        size_t count,
-                                        const uint32_t *ids,
-                                        size_t ids_count);
+/// `GetQueuedGoal(inIndex)`.
+uint64_t ee_units_unit_queued_goal(uint64_t unit, uint32_t index);
 
-/// TEST ONLY: the mirrors held (the containers alive).
-uint32_t ee_units_goal_queue_count();
+/// `RefreshGoals()`: the new current goal.
+uint64_t ee_units_unit_refresh_goals(uint64_t unit);
+
+/// `RefreshActiveGoal()`.
+void ee_units_unit_refresh_active_goal(uint64_t unit);
+
+/// `SetGoal(inGoal, inKeepCurrent, inIndex)`.
+void ee_units_unit_set_goal(uint64_t unit, uint64_t goal, bool keep, int32_t index);
+
+/// `DropUnsuitedGoals(inIndex)`.
+void ee_units_unit_drop_unsuited_goals(uint64_t unit, uint32_t index);
+
+/// `DropFinishedGoals(inStartAll)`.
+void ee_units_unit_drop_finished_goals(uint64_t unit, bool start_all);
 
 /// `EEGroup::Load` over the group's parts and the file in `f`.
 ///

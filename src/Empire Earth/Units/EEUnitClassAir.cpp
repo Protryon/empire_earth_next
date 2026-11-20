@@ -731,7 +731,6 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 // +0x74, +0xb8 in source order (the others are ICF-folded into twins).
 
 // 0x249560 (cdecl): the point to fly to for the attack on inTarget (EEMap.cpp's range) (provisional name)
-void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outLocation);
 
 // New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
@@ -746,7 +745,7 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     EEUnitGoal* theGoal = inUnit->mGoalState;
     if (theGoal->mKind == kGoalAttackUnit) {
         EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
-        EEGetAimPoint(inUnit, &theEnemy, &theTarget);
+        ee_units_uu_aim_point((uint64_t)(uintptr_t)inUnit, (const float(*)[3])&theEnemy.mX, (float(*)[3])&theTarget.mX);
     } else
         theGoal->GetDestination(inUnit, theTarget);
     if (theGoal->mKind == kGoalExplore)

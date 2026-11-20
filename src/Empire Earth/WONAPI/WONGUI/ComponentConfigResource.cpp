@@ -14,8 +14,6 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyMSSkinImage.h"
-#include "ee/wonapi/WONLobbyWONInputBox.h"
-#include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
 #include "rust/won_gui/guiconf.h"

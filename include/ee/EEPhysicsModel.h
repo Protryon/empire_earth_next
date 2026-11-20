@@ -32,9 +32,6 @@ public:
 // 0x4de374 (cdecl; the crashing airplane's class +0xcc effect at inLocation) (provisional name; argument types
 // inferred)
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation);
-// 0x63f2c0 (cdecl; clamps ioLocation's z between the unit class's -mCruiseAltitude and the ground; the submarine
-// model's dive depth) (provisional name)
-void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation);
 void EEInitPhysicsModels();     // 0x1543b7 (creates the 12 singletons gPhysicsModels[], reads world table entry 79)
 void EEFreePhysicsModels();
 

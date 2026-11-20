@@ -715,52 +715,9 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
             SeplMake(*static_cast<const EeScreensSeplCtl*>(p[1]), static_cast<UIForm*>(p[2]));
         return 0;
     case EE_SCREENS_SEPL_OP_DELETE: delete c; return 0;
-    case EE_SCREENS_SEPL_OP_RECT: {
-        const GERectangle& r = c->GetRectangle();
-        f[0] = r.GetLeft(); f[1] = r.GetTop(); f[2] = r.GetRight(); f[3] = r.GetBottom();
-        return 0;
-    }
-    case EE_SCREENS_SEPL_OP_SET_DISPLAY: c->SetDisplayMode((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_DISPLAY: return (int32_t)c->GetDisplayMode();
-    case EE_SCREENS_SEPL_OP_SET_CHECKED: static_cast<UICheckBox*>(c)->SetChecked(i[0] != 0); return 0;
-    case EE_SCREENS_SEPL_OP_CHECKED: return static_cast<UICheckBox*>(c)->GetIsChecked();
-    case EE_SCREENS_SEPL_OP_COMBO_CLEAR: theCombo->DeleteAllEntries(); return 0;
-    case EE_SCREENS_SEPL_OP_COMBO_APPEND: theCombo->AppendLine(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2])); return 0;
-    case EE_SCREENS_SEPL_OP_COMBO_SELECTION: {
-        unsigned long s;
-        theCombo->GetCurrentSelection(s);
-        return (int32_t)s;
-    }
-    case EE_SCREENS_SEPL_OP_LIST_SELECTION: {
-        unsigned long s;
-        theCombo->GetListBox()->GetCurrentSelection(s);
-        return (int32_t)s;
-    }
-    case EE_SCREENS_SEPL_OP_SET_SELECTION: theCombo->SetCurrentSelection((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_EDIT_NUMBER: {
-        UWideString theNumber;
-        sprintf(theNumber, "%lu", (unsigned long)i[0]);
-        static_cast<UIEditBox*>(c)->SetText(theNumber);
-        return 0;
-    }
-    case EE_SCREENS_SEPL_OP_EDIT_COPY:
-        static_cast<UIEditBox*>(c)->SetText(static_cast<UIEditBox*>(p[1])->GetText(0));
-        return 0;
-    case EE_SCREENS_SEPL_OP_EDIT_INT: return static_cast<UIEditBox*>(c)->GetTextAsInt(0);
-    case EE_SCREENS_SEPL_OP_SLIDER: return static_cast<UISlider*>(c)->GetCurrentRangeValue();
-    case EE_SCREENS_SEPL_OP_SET_SLIDER: static_cast<UISlider*>(c)->SetCurrentRangeValue(i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_LABEL_NUMBER:   // both overloads the original called print "%ld"
-        static_cast<UITextLabel*>(c)->SetText((long)i[0]);
-        return 0;
     case EE_SCREENS_SEPL_OP_COLOR: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR);
     case EE_SCREENS_SEPL_OP_SET_COLOR: EEUIShell::Op(c, EE_SCREENS_SKOP_SET_COLOR, i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_GROUP:
-        if (i[1]) c->GetForm()->GetEntityGroup(i[0])->Enable();
-        else c->GetForm()->GetEntityGroup(i[0])->Disable();
-        return 0;
-    case EE_SCREENS_SEPL_OP_SET_LOCATION: c->SetLocation(GE2DPoint(f[0], f[1])); return 0;
     case EE_SCREENS_SEPL_OP_RADIO_CHECK: static_cast<UIRadioButton*>(c)->Check(); return 0;
-    case EE_SCREENS_SEPL_OP_RADIO_CHECKED: return static_cast<UIRadioButton*>(c)->GetIsChecked();
     case EE_SCREENS_SEPL_OP_EVENT: {
         UIEvent* theEvent = NULL;
         switch (i[1]) {
@@ -847,20 +804,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         if (gMiniMap) gMiniMap->Redraw();
         return 0;
     case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
-    case EE_SCREENS_SEPL_OP_TRI_STATE: return (int32_t) static_cast<UITriStateCheckBox*>(c)->GetCheckState();
-    case EE_SCREENS_SEPL_OP_SET_TRI_STATE: static_cast<UITriStateCheckBox*>(c)->SetCheckState((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_RADIO_IS_CHECKED: return static_cast<UIRadioButton*>(c)->GetIsChecked();
-    case EE_SCREENS_SEPL_OP_LIST_CLEAR: static_cast<UILBString*>(c)->DeleteAllEntries(); return 0;
-    case EE_SCREENS_SEPL_OP_LINE_COUNT: return (int32_t)theCombo->GetListBox()->GetLineCount();
-    case EE_SCREENS_SEPL_OP_EDIT_ATOI: return atoi(static_cast<UIEditBox*>(c)->GetText(0));
-    case EE_SCREENS_SEPL_OP_LABEL_TEXT:
-        static_cast<UITextLabel*>(c)->SetText(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2]));
-        return 0;
-    case EE_SCREENS_SEPL_OP_HELP: c->SetStringTableID((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEPL_OP_EDIT_BYTES:
-        static_cast<UIEditBox*>(c)->SetText(
-            UWideString(std::string(static_cast<const char*>(p[1]), (size_t)(i[0] > 0 ? i[0] : 0)).c_str()));
-        return 0;
     case EE_SCREENS_SEPL_OP_LINE_PUSH: sSeplLines.push_back(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2])); return 0;
     case EE_SCREENS_SEPL_OP_SCREEN_EVENT: {
         UIEvent* theEvent = EECreateScreenEvent((uint32_t)i[0]);

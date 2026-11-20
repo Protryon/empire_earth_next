@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONSkinLayout.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
+#include "ee/wonapi/WONLobbyMSSkinImage.h"
 using namespace WONAPI;
 
 typedef EeWonShellHostOp H;
@@ -26,14 +27,39 @@ static Component* NewBase(EeWonShellBaseNew k)
     case EeWonShellBaseNew::ListArea: return new ListArea;
     case EeWonShellBaseNew::MultiListArea: return new MultiListArea;
     case EeWonShellBaseNew::Button: return new Button;
+    case EeWonShellBaseNew::WonButton: return new WONButton;
     default: return new Label;
+    }
+}
+
+// a combo box's part member = c
+static intptr_t ComboPart(ComboBox* cb, intptr_t which, intptr_t c)
+{
+    switch ((EeWonShellComboPart)which) {
+    case EeWonShellComboPart::Button: cb->mButton = static_cast<Button*>((Component*)c); return 0;
+    case EeWonShellComboPart::Edit: cb->mEdit = static_cast<InputBox*>((Component*)c); return 0;
+    case EeWonShellComboPart::ListArea: cb->mListArea = static_cast<ListArea*>((Component*)c); return 0;
+    default: cb->mListBox = static_cast<Scroller*>((Component*)c); return 0;
+    }
+}
+// an image's method (EeWonWbImage; a duplicate's reference goes to the Rust)
+static intptr_t ImageOp(intptr_t which, intptr_t b)
+{
+    Image* i = (Image*)b;
+    switch ((EeWonWbImage)which) {
+    case EeWonWbImage::Hold: i->AddRef(); return 0;
+    case EeWonWbImage::Release: i->Release(); return 0;
+    case EeWonWbImage::Width: return i->mWidth;
+    case EeWonWbImage::Height: return i->mHeight;
+    case EeWonWbImage::Duplicate: { SmartPtr<Image> d = i->Duplicate(); Image* p = d.get(); if (p) p->AddRef(); return (intptr_t)p; }
+    default: return 0;
     }
 }
 
 extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHostOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     WONShell* s = (WONShell*)inShell;
-    Component* t = s->mComp;
+    Component* t = s ? s->mComp : NULL; // (the skin's calls have no shell: skinobj.rs)
     ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
@@ -67,13 +93,38 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         if ((EeWonShellBaseNew)b == EeWonShellBaseNew::InputBox) static_cast<InputBox*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         else static_cast<ListArea*>((Component*)a)->SetFont(t->GetNamedFont("MSButton"));
         return 0;
-    case H::ComboPart:
+    case H::ComboPart: return ComboPart(cb, a, b);
+    case H::ComboPartOn: return ComboPart(static_cast<ComboBox*>((Component*)a), b, c);
+    case H::ComboGet:
         switch ((EeWonShellComboPart)a) {
-        case EeWonShellComboPart::Button: cb->mButton = static_cast<Button*>((Component*)b); return 0;
-        case EeWonShellComboPart::Edit: cb->mEdit = static_cast<InputBox*>((Component*)b); return 0;
-        case EeWonShellComboPart::ListArea: cb->mListArea = static_cast<ListArea*>((Component*)b); return 0;
-        default: cb->mListBox = static_cast<Scroller*>((Component*)b); return 0;
+        case EeWonShellComboPart::Button: return (intptr_t)static_cast<Component*>(cb->mButton.get());
+        case EeWonShellComboPart::Edit: return (intptr_t)static_cast<Component*>(cb->mEdit.get());
+        case EeWonShellComboPart::ListArea: return (intptr_t)static_cast<Component*>(cb->mListArea.get());
+        default: return (intptr_t)static_cast<Component*>(cb->mListBox.get());
         }
+    case H::Img: return ImageOp(a, b);
+    case H::DrawImages: {
+        WONDrawSlots aSlots;
+        for (int i = 0; i < 4; i++) aSlots.mImages[i] = ((Image* const*)c)[i];
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    case H::WonBtn: { const intptr_t* x = (const intptr_t*)c; return ee_won_wonbtn_call(static_cast<WONButton*>((Component*)a)->mWb, (EeWonWbCall)b, x[0], x[1], x[2], x[3]); }
+    case H::WonBtnState: { const intptr_t* x = (const intptr_t*)b; static_cast<WONButton*>((Component*)a)->SetButtonState((int)x[0], (Image*)x[1], (int)x[2], (Font*)x[3], x[4] != 0); return 0; }
+    case H::WonBtnCopy: static_cast<WONButton*>((Component*)a)->CopyAttributes(static_cast<WONButton*>((Component*)b)); return 0;
+    case H::BtnCopy: static_cast<Button*>((Component*)a)->CopyAttributes(static_cast<Button*>((Component*)b)); return 0;
+    case H::ClickSound: static_cast<Button*>((Component*)a)->SetClickSound((Sound*)b); return 0;
+    case H::TextWidth: return ((WrappedText*)a)->GetWidth();
+    case H::VDesiredSize: { int* wh = (int*)b; ((Component*)a)->GetDesiredSize(wh[0], wh[1]); return 0; }
+    case H::NewStretchImage: { ImageComponent* i = new ImageComponent; i->mStretch = true; i->SetImage((Image*)a); return (intptr_t)static_cast<Component*>(i); }
+    case H::NewMsImage: return (intptr_t)static_cast<Image*>(new WONMSSkin::MSImage((unsigned char)a, (unsigned char)b, (int)c, (int)d));
+    case H::GetNamedFont: {
+        Font* f = WindowManager::GetDefaultWindowManager()->GetNamedFont(std::string((const char*)a));
+        if (f) f->AddRef();
+        return (intptr_t)f;
+    }
+    case H::RefObj: if (b > 0) ((RefCount*)a)->AddRef(); else ((RefCount*)a)->Release(); return 0;
     default: return 0; // the component's, button's and other widgets' calls: their Rust objects (shell.rs Sh)
     }
 }
@@ -91,6 +142,7 @@ Component* WONAPI::WONShellNew(EeWonShellKind k, intptr_t a, intptr_t b, intptr_
     case EeWonShellBase::Header: return new WONShellHeader(k, a, b, c);
     case EeWonShellBase::Tab: return new WONShellTab(k, a, b, c);
     case EeWonShellBase::Dialog: return new WONShellDialog(k, a, b, c);
+    case EeWonShellBase::WonButton: return new WONShellWonButton(k, a, b, c);
     default: return new WONShellComp(k, a, b, c);
     }
 }

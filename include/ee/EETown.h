@@ -20,9 +20,9 @@ class EETown : public EEAIArea, public EeTownFields {
 public:
     // 0xabbaf: EEAIArea::mAreaType = 5 (the town kind); its only caller, EEPlayer 0x163138, passes (this, ++a town counter)
     EETown(EEPlayer* inPlayer, long inTownID);
-    virtual ~EETown();                          // 0xabc10 (??_G 0xabbf4): Reset, then ~EEAIArea
+    ~EETown();                          // 0xabc10 (??_G 0xabbf4): Reset, then ~EEAIArea
     // +0x20 0xac203: 16 tries of a random tile in the hull's bounds on the map and in the hull; else EEAIArea's
-    virtual U2DPoint<long> GetRandomPoint();
+    U2DPoint<long> GetRandomPoint();
     bool AddUnit(EEUnit* inUnit);               // 0xabc27: a building joins (its tile, the counters, the patrol group)
     void Reset();                               // 0xabf8f: counters 0, mReach = 0x100, the patrol group released
     bool AddTile(const U2DPoint<long>& inTile); // 0xabdf3: a tile joins (the hull made again unless inside it)

@@ -29,8 +29,6 @@
 #include "ee/EEAIKindIDs.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg_trade_price
 
-// A cdecl helper defined in another unit (also declared in EEUnitUtilities.h)
-float EEJitterHeading(float inAngle, float inMin, float inMax);
 
 
 const float kMinimumWheelDistance = 0.1f;
@@ -147,7 +145,7 @@ bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint)
     if (inUnit->mGoalState != NULL) {
         inUnit->mGoalState->GetGoalLocation(theGoal);
         inUnit->GetPosition(thePosition);
-        float theAngle = EEJitterHeading(EEGetHeadingBetween(&theGoal, &thePosition), -20.0f, 20.0f);
+        float theAngle = ee_units_uu_jitter_heading(EEGetHeadingBetween(&theGoal, &thePosition), -20.0f, 20.0f);
         EETileCoordinate theTile(inUnit->mTileX, inUnit->mTileY);
         unsigned short theContinent = gContinentManager.GetContinent(theTile, kAIPathLandMass);
         for (long i = 12; i >= 0; i--) {

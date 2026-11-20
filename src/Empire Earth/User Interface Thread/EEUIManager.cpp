@@ -79,7 +79,6 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEUICPortrait.h"
-#include "ee/EEUICChatLine.h"
 #include "ee/EEUICPing.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetGamesBox.h"
@@ -234,7 +233,7 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
         theControl = new EEUICPortrait(theForm, theRectangle, inTable.GetID(), inTable.GetFormIndex(), false);
         break;
     case kDbControlChatLine:
-        theControl = new EEUICChatLine(theRectangle, inTable, theForm);
+        theControl = EEUIShellNewChatLine(inTable, theRectangle, theForm);
         break;
     case kDbControlCBListBox:
         inTable.SetupFont(this, theRectangle, true);

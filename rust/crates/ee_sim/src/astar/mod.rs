@@ -33,15 +33,21 @@
 //! storage afterwards, digested and compared with the digests of the C++ machine.
 
 pub mod area;
+pub mod area_continent;
 pub mod area_geom;
 pub mod area_goals;
 pub mod area_kinds;
 pub mod area_ops;
+pub mod area_shore;
 pub mod choke;
 pub mod cm;
 pub mod cm_build;
+pub mod cm_capture;
+pub mod cm_host;
 pub mod cm_io;
 pub mod cm_links;
+pub mod cm_passes;
+pub mod cm_queries;
 pub mod cm_query;
 pub mod cm_repair;
 pub mod continent;
@@ -57,6 +63,7 @@ pub mod machine;
 pub mod manager;
 pub mod modifier_obj;
 pub mod modifiers;
+pub mod objects;
 pub mod path_area_kind;
 pub mod path_goals;
 pub mod path_search;

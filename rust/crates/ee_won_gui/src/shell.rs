@@ -76,6 +76,28 @@ pub enum EeWonShellKind {
     MsEtchedFrameGroup,
     /// `MSMessageBox` over `MSDialog` (`a` its texts, an `EeWonMsgBoxTexts*`, or 0 for the dialog alone).
     MsMessageBox,
+    /// `WONSimpleButton` (the WON skin's kinds: shell_won.rs).
+    WonSimpleButton,
+    /// `WONScrollThumb`.
+    WonScrollThumb,
+    /// `WONHeaderButton` (over `WONButton`).
+    WonHeaderButton,
+    /// `WONInputBox`.
+    WonInputBox,
+    /// `WONScrollbar` (`a` vertical).
+    WonScrollbar,
+    /// `WONComboBox`.
+    WonComboBox,
+    /// `WONScrollContainer`.
+    WonScrollContainer,
+    /// `WONListCtrl`.
+    WonListCtrl,
+    /// `WONHeaderControl` (`a` 0, `b` the skin, an `EeWonSkin*`).
+    WonHeaderControl,
+    /// `WONTabCtrl` (`a` the skin, an `EeWonSkin*`, or 0).
+    WonTabCtrl,
+    /// `WONFrameComponent` (`a` the frame to copy, an `EeWonFrameIn*`, or 0 for none).
+    WonFrameComponent,
 }
 
 /// The C++ shell class a kind's widget is (its base class).
@@ -104,6 +126,8 @@ pub enum EeWonShellBase {
     Tab,
     /// `WONShellDialog : Dialog`.
     Dialog,
+    /// `WONShellWonButton : WONButton`.
+    WonButton,
 }
 
 /// A base class's widget a kind makes (the host's `NewBase`).
@@ -115,6 +139,8 @@ pub enum EeWonShellBaseNew {
     MultiListArea,
     Button,
     Label,
+    /// `new WONButton`.
+    WonButton,
 }
 
 /// A combo box's part member (the host's `ComboPart`: `mButton`, `mEdit`, `mListArea`, `mListBox`).
@@ -215,6 +241,50 @@ pub enum EeWonShellOp {
     GetLabel,
     /// `MSMessageBox`'s `mButton1` (a `Component*`).
     GetButton1,
+    /// the WON kinds' `Duplicate()`: a new widget (a `Component*`, not held).
+    Duplicate,
+    /// `WONScrollContainer::Duplicate()` on a scroll container or a list control.
+    DuplicateScroll,
+    /// `WONSimpleButton::SetImage(a, (Image*)b)`.
+    SetImage,
+    /// `WONSimpleButton::SetScaleImage(a != 0)`.
+    SetScaleImage,
+    /// `WONSimpleButton::SetCheckMouseButtonDown(a != 0)`.
+    SetCheckMouseButtonDown,
+    /// `SetFrame(*(const EeWonFrameIn*)a)` (a deep copy: the image duplicated).
+    SetFrame,
+    /// the kind's frame into `*(EeWonFrameIn*)a` (the image borrowed).
+    GetFrame,
+    /// `WONComboBox::mDrawFrame = a != 0`.
+    SetDrawFrameField,
+    /// `WONComboBox::mButtonInFrame = a != 0`.
+    SetButtonInFrame,
+    /// `WONScrollContainer::mTransparent = a != 0`.
+    SetTransparentField,
+    /// `WONScrollContainer::mHeaderHeight = a`.
+    SetHeaderHeightField,
+    /// `WONScrollContainer::SetCorner((Image*)a)`.
+    SetCorner,
+    /// `WONScrollContainer::mCorner` (borrowed).
+    GetCorner,
+    /// `WONScrollContainer::CopyAttributes((WONScrollContainer*)a)`.
+    CopyScrollAttributes,
+    /// `WONListCtrl::SetHeader((WONHeaderControl*)a)`.
+    SetHeader,
+    /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b[0], b[1])` (`b` two `intptr_t`s).
+    SetStandardColumnHeader,
+    /// `WONListCtrl::SetColumnHeader(a, (Component*)b[0], b[1])`.
+    SetColumnHeader,
+    /// `WONHeaderControl::SetColumn(a, *(const GUIString*)b[0], (int*)b[1])`.
+    WonSetColumn,
+    /// the skin (`WONTabCtrl::mSkin`, `WONHeaderControl::mSkin`) = `(EeWonSkin*)a`.
+    SetSkin,
+    /// `WONFrameComponent::SetFrameImage((Image*)a)` (shared).
+    SetFrameImage,
+    /// `WONFrameComponent::SetFrameLeft(b)` .. `SetFrameBottom(b)` (`a` 0..3).
+    SetFrameBorder,
+    /// `WONFrameComponent::GetFrameLeft()` .. `GetFrameBottom()` (`a` 0..3).
+    GetFrameBorder,
 }
 
 /// A call out of a kind (the C++ host's op).
@@ -268,6 +338,36 @@ pub enum EeWonShellHostOp {
     SameSize,
     /// `CenterLayout(this, a, true, false)` with `b` and `c` (when not 0) added, added to the shell's child layouts.
     CenterLayout,
+    /// an image's method `a` (`EeWonWbImage`) on `(Image*)b` (a duplicate comes back held).
+    Img,
+    /// `WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b)` with the four images at `c` as the slots.
+    DrawImages,
+    /// WONButton's call: `ee_won_wonbtn_call(((WONButton*)a)->mWb, b, c[0..4])`.
+    WonBtn,
+    /// `((WONButton*)a)->SetButtonState(c[0], (Image*)c[1], c[2], (Font*)c[3], c[4] != 0)`.
+    WonBtnState,
+    /// `((WONButton*)a)->CopyAttributes((WONButton*)b)`.
+    WonBtnCopy,
+    /// `((Button*)a)->CopyAttributes((Button*)b)`.
+    BtnCopy,
+    /// `((Button*)a)->SetClickSound((Sound*)b)`.
+    ClickSound,
+    /// `((WrappedText*)a)->GetWidth()`.
+    TextWidth,
+    /// the shell's combo box part `a` (`EeWonShellComboPart`).
+    ComboGet,
+    /// the combo box `a`'s part `b` = `(Component*)c`.
+    ComboPartOn,
+    /// `((Component*)a)->GetDesiredSize(w, h)` (virtual) into the two ints at `b`.
+    VDesiredSize,
+    /// a new `ImageComponent` stretching `(Image*)a` (not held).
+    NewStretchImage,
+    /// `new WONMSSkin::MSImage(a, b, c, d)` (not held).
+    NewMsImage,
+    /// `GetNamedFont(a)` (a NUL-terminated name), held.
+    GetNamedFont,
+    /// `((RefCount*)a)->AddRef()` when `b` > 0, else its `Release()` (an image or a font).
+    RefObj,
 }
 
 /// The C++ host: `(shell, op, a, b, c, d) -> result`, `shell` the C++ `WONShell*` the kind belongs to.
@@ -283,6 +383,10 @@ pub struct Sh {
 }
 
 impl Sh {
+    /// A view over no widget (the skin's: skinobj.rs), its calls the host's with no shell.
+    pub(crate) fn detached(host: EeWonShellHostFn) -> Sh {
+        Sh { comp: 0, me: std::ptr::null_mut(), host }
+    }
     /// The widget, a `Component*`.
     pub fn comp(&self) -> isize {
         self.comp
@@ -449,6 +553,78 @@ impl Sh {
     pub fn draw(&self, g: isize, o: &EeWonDrawOp) {
         self.host(EeWonShellHostOp::Draw, g, o as *const EeWonDrawOp as isize, 0, 0);
     }
+    /// One draw operation on the Graphics `g` with the four images as its slots.
+    pub fn draw_images(&self, g: isize, o: &EeWonDrawOp, images: &[isize; 4]) {
+        self.host(EeWonShellHostOp::DrawImages, g, o as *const EeWonDrawOp as isize, images.as_ptr() as isize, 0);
+    }
+    /// An image's method (`Hold`, `Release`, `Width`, `Height`, `Duplicate`).
+    pub fn img(&self, which: crate::guihost::EeWonWbImage, img: isize) -> isize {
+        self.host(EeWonShellHostOp::Img, which as isize, img, 0, 0)
+    }
+    /// A component's `AddRef` (`n` > 0) or `Release`.
+    pub fn comp_ref(&self, p: isize, n: isize) {
+        self.host(EeWonShellHostOp::Ref, p, n, 0, 0);
+    }
+    /// The object a C++ forwarder passes for `p` (its Rust object, in the game; `p` itself in a driver).
+    pub fn obj_of<T>(&self, p: isize, kind: EeWonGuiKind) -> isize {
+        // SAFETY: the kind's type; only the address is taken
+        match unsafe { registry::get::<T>(p, kind) } {
+            Some(o) => o as *const T as isize,
+            None => p,
+        }
+    }
+    /// WONButton's call `k` on `p` (its Rust object in the game, else the host's `WonBtn` op).
+    pub fn wb(&self, p: isize, k: crate::wonbtnobj::EeWonWbCall, a: [isize; 4]) -> isize {
+        use crate::wonbtnobj::EeWonWonButton;
+        // SAFETY: the kind's type; the button is live for the call
+        match unsafe { registry::get::<EeWonWonButton>(p, EeWonGuiKind::WonButton) } {
+            Some(o) => o.call(k, a[0], a[1], a[2], a[3]),
+            None => self.host(EeWonShellHostOp::WonBtn, p, k as isize, a.as_ptr() as isize, 0),
+        }
+    }
+    /// WONButton's field `f` = `v` on `p`.
+    pub fn wb_set(&self, p: isize, f: crate::wonbtnobj::EeWonWbField, v: i32) {
+        self.wb(p, crate::wonbtnobj::EeWonWbCall::Set, [f as isize, v as isize, 0, 0]);
+    }
+    /// `((WONButton*)p)->SetButtonState(s, image, color, font, checked)`.
+    pub fn wb_state(&self, p: isize, s: i32, image: isize, color: i32, font: isize, checked: bool) {
+        use crate::wonbtnobj::EeWonWonButton;
+        // SAFETY: as `wb`
+        match unsafe { registry::get::<EeWonWonButton>(p, EeWonGuiKind::WonButton) } {
+            Some(o) => o.set_button_state(s, image, color, font, checked),
+            None => {
+                let a = [s as isize, image, color as isize, font, checked as isize];
+                self.host(EeWonShellHostOp::WonBtnState, p, a.as_ptr() as isize, 0, 0);
+            }
+        }
+    }
+    /// `((WONButton*)to)->CopyAttributes((WONButton*)from)`.
+    pub fn wb_copy(&self, to: isize, from: isize) {
+        use crate::wonbtnobj::EeWonWonButton;
+        // SAFETY: as `wb`; the two are distinct buttons
+        let (t, f) = unsafe {
+            (
+                registry::get::<EeWonWonButton>(to, EeWonGuiKind::WonButton),
+                registry::get::<EeWonWonButton>(from, EeWonGuiKind::WonButton),
+            )
+        };
+        match (t, f) {
+            (Some(t), Some(f)) => t.copy_attributes(f, from),
+            _ => {
+                self.host(EeWonShellHostOp::WonBtnCopy, to, from, 0, 0);
+            }
+        }
+    }
+    /// `WONButton::Duplicate()` of `p`: a new WONButton with `p`'s attributes (not held).
+    pub fn wb_duplicate(&self, p: isize) -> isize {
+        let n = self.host(EeWonShellHostOp::NewBase, EeWonShellBaseNew::WonButton as isize, 0, 0, 0);
+        self.wb_copy(n, p);
+        n
+    }
+    /// ComboBox's call `k` on `p`.
+    pub fn combo_on(&self, p: isize, k: crate::comboobj::EeWonComboCall, a: isize, b: isize) -> isize {
+        self.call_on::<crate::comboobj::EeWonComboBox>(p, EeWonGuiKind::Combo, k, a, b)
+    }
     /// The Windows skin's paint `p` (`WONMsPaint(g, p, text)`): its plan's operations, the text call the MS button
     /// base's `DrawButtonText` when `text`.
     pub fn ms_paint(&self, g: isize, p: &EeWonMsPaint, text: bool) {
@@ -505,6 +681,10 @@ pub trait ShellKind {
     fn skin(&self, _sh: &Sh, _w: crate::skinlay::EeWonSkinLay, _which: isize) -> Option<isize> {
         None
     }
+    /// Any skin layout host op `w` (`b`, `c`, `d` its arguments) when the kind answers it (asked before `skin`).
+    fn skin_op(&self, _sh: &Sh, _w: isize, _b: isize, _c: isize, _d: isize) -> Option<isize> {
+        None
+    }
 }
 
 /// A Rust widget object a kind calls on another component (the registry's).
@@ -535,6 +715,7 @@ call_object!(crate::barobj::EeWonScrollbar, crate::barobj::EeWonBarCall);
 call_object!(crate::multiobj::EeWonMHead, crate::multiobj::EeWonMHeadCall);
 call_object!(EeWonMsButton, EeWonMsBtnCall);
 call_object!(crate::dialogobj::EeWonDialog, crate::dialogobj::EeWonDlgCall);
+call_object!(crate::comboobj::EeWonComboBox, crate::comboobj::EeWonComboCall);
 impl CallObject for crate::tabobj::EeWonTabCtrl {
     type Call = crate::tabobj::EeWonTabCall;
     fn call_obj(&self, k: crate::tabobj::EeWonTabCall, a: isize, b: isize) -> isize {
@@ -570,6 +751,9 @@ unsafe extern "C" fn shell_skin_host(
     };
     if op != crate::guihost::EeWonGuiOp::SkinLay {
         return 0;
+    }
+    if let Some(r) = s.imp.skin_op(&s.sh, a, b, c, d) {
+        return r;
     }
     let w = match a {
         x if x == L::Part as isize => Some(L::Part),
@@ -623,12 +807,16 @@ impl EeWonShell {
     pub fn name(&self) -> &'static CStr {
         self.imp.name()
     }
+    /// The kind's answer to a skin layout op (`ShellKind::skin_op`).
+    pub fn imp_skin_op(&self, w: isize, b: isize, c: isize, d: isize) -> Option<isize> {
+        self.imp.skin_op(&self.sh, w, b, c, d)
+    }
 }
 
 /// The C++ shell class of `kind`'s widget.
 #[no_mangle]
 pub extern "C" fn ee_won_shell_base(kind: EeWonShellKind) -> EeWonShellBase {
-    crate::shell_ms::base(kind)
+    crate::shell_won::base(kind).unwrap_or_else(|| crate::shell_ms::base(kind))
 }
 
 /// A new shell of `kind` for the widget `comp` (a `Component*`), its C++ shell `me` and host.
@@ -639,7 +827,13 @@ pub extern "C" fn ee_won_shell_new(
     me: *mut c_void,
     host: EeWonShellHostFn,
 ) -> *mut EeWonShell {
-    let made = Box::into_raw(Box::new(EeWonShell::new(kind, crate::shell_ms::make(kind), comp as isize, me, host)));
+    let made = Box::into_raw(Box::new(EeWonShell::new(
+        kind,
+        crate::shell_won::make(kind).unwrap_or_else(|| crate::shell_ms::make(kind)),
+        comp as isize,
+        me,
+        host,
+    )));
     registry::register(comp, EeWonGuiKind::Shell, made as *const c_void);
     made
 }
