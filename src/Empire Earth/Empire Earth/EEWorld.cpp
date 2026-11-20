@@ -127,6 +127,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
 #include "rust/sim/app.h"   // EeAppStats* (ee_sim app statistics.rs)
+#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -158,43 +159,7 @@ inline unsigned long EEGameState::GetNumTeams() const
 // and empty statistics
 EEWorld::EEWorld()
 {
-    EEWorldLayoutRegister();   // port: where Rust's views read the world's objects (ee/EEWorldLayout.h)
-    this->mWindYaw = 0.0f;
-    this->mEffectManager = NULL;
-    this->mUB80 = 0;
-    this->mEnvironmentManager = NULL;
-    this->mCalamityHelper = NULL;
-    this->SetTimeOfDay(0.35f);
-    TSScheduler::CreateCriticalSection(this->mGhostUnitsLock);
-    for (long i = 0; i < 10; i++)
-        this->mUB30[i] = 1;
-    this->mSavedGameSpeed = 0.0f;
-    this->mUB58 = 2;
-    this->mCurrentPlayer = 0;
-    this->mNumberOfWondersToWin = 1;
-    this->mInfluenceTable = NULL;
-    this->mScenarioManager = NULL;
-    this->mGameScreenActive = false;
-    this->mMaxPlayers = 3;
-    this->mLoadingSavedGame = false;
-    this->mUnitImprovementsAllowed = true;
-    this->mCheatsEnabled = true;
-    this->mTeamsLocked = false;
-    this->mTownIDCounter = 0;
-    this->mHerdIDCounter = 0;
-    this->mClearing = false;
-    this->mStartTime = 0;
-    this->mLagStatus = 0;
-    this->mLoadingPlayerMedia = false;
-    this->mUserPaused = false;
-    this->mUsingCarbon = false;
-    this->mInCinematic = false;
-    this->mShowCollisionSpheres = false;
-    this->mBB9D = true;
-    this->mMediaLoaded = false;
-    this->mCollisionDetectionFlags = 15;
-    this->mExecutingLocalSelection = false;
-    this->mStatistics.Reset();
+    ee_gamecpp_world_init(this);   // the members (ee_game gamecpp world.rs)
 }
 
 // The statistics history's ctor (inline in the real header; its refused copy follows its first user):
@@ -279,16 +244,7 @@ void EEWorld::ApplyShareBonus()
 // alliance ends
 void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance)
 {
-    EEPlayer* thePlayer = this->mPlayers[inPlayerID];
-    EEPlayer* theOther = this->mPlayers[inOther];
-    bool theWasAllied = thePlayer->mEnemies[inOther] == 0;
-    thePlayer->SetDiplomaticStance(theOther, inStance, this->mMap);
-    if (inStance == 0) {
-        if (!theWasAllied && theOther->mEnemies[inPlayerID] == 0)
-            this->AddAlliance(inPlayerID, inOther);
-    } else if (theWasAllied && theOther->mEnemies[inPlayerID] == 0) {
-        this->BreakAlliance(inPlayerID, inOther);
-    }
+    ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance);
 }
 
 
@@ -316,171 +272,27 @@ static void EEActiveRefs(uint32_t inID, int32_t inDelta)
 // pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
 void EEWorld::QueueBornDeactivations()
 {
-    if (sUnbornDeactivations.empty())
-        return;
-    std::vector<EEComplexUnit*> theWaiting;
-    theWaiting.swap(sUnbornDeactivations);
-    for (size_t i = 0; i < theWaiting.size(); i++) {
-        EEComplexUnit* theUnit = theWaiting[i];
-        if (UIsNone32(theUnit->mUnitID) || !ee_app_active_deactivate((uint32_t)theUnit->mUnitID))
-            theUnit->Dereference();   // (queued: the reference DeactivateUnit took goes with it)
-    }
+    ee_gamecpp_world_queue_born();
 }
 
 // Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
 // calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
 void EEWorld::Clear()
 {
-    this->mClearing = true;
-    if (!UShutdownInProgress() && this->mMap != NULL) {
-        this->RecordStatistics();
-        gUnitPicker.GetLock()->Enter();
-        gUnitPicker.Reset();
-        gUnitPicker.GetLock()->Leave();
-    }
-    if (gUIManager != NULL && gUIManager->GetScenarioEditorForm() != NULL)
-        gUIManager->GetScenarioEditorForm()->ClearSelection();
-    if (this->mGameOptions.mCampaignName.GetLength() > 0 && this->mGameOptions.mCampaignChecksum > 0 && !this->mLoadingSavedGame)
-        EEShowSinglePlayerScreen();
-    this->UnloadMedia();
-    gWorld.mGhostUnitsLock->Enter();
-    this->ClearGhostUnits();
-    gWorld.mGhostUnitsLock->Leave();
-    if (this->mEnvironmentManager != NULL) {
-        this->mEnvironmentManager->SetEnabled(false);
-        delete this->mEnvironmentManager;
-        this->mEnvironmentManager = NULL;
-    }
-    gPathManager.FreePaths();
-    if (this->mEffectManager != NULL)
-        this->mEffectManager->ClearEffects();
-    this->RemoveAllUnits();
-    gAEManager.ClearEffects();
-    delete this->mScenarioManager;
-    this->mScenarioManager = NULL;
-    this->mTeams.clear();
-    ee_app_teams_clear();
-    USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
-    for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] == NULL || !(this->mPlayers[i]->mHackUnitClass < EEUnitClassCount()))
-            continue;
-        for (unsigned long j = 1; j < this->mNumPlayers; j++) {
-            if (this->mPlayers[j] != NULL) {
-                this->mPlayers[j]->UnloadUnitClassMedia(this->mPlayers[i]->mHackUnitClass);
-                this->mPlayers[j]->UnloadUnitClassButtons(this->mPlayers[i]->mHackUnitClass);
-            }
-        }
-        this->mPlayers[i]->SetHackUnitClass(kNoUnitClass);
-    }
-    RTSWorld::Clear();
-    if (gUserInterface != NULL)
-        gUserInterface->PostUpdateBackgroundMedia();
-    EEStopAllSounds();
-    delete gMiniMap;
-    gMiniMap = NULL;
-    gPathManager.Reset();
-    gLocalPlayerOut = false;
-    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
-    ee_units_pg_reset_ids();
-    gCollisionDetectionUnit = 2000;
-    delete this->mCalamityHelper;
-    this->mCalamityHelper = NULL;
-    delete this->mInfluenceTable;
-    this->mInfluenceTable = NULL;
-    this->mLagStatus = 0;
-    if (gSoundManager != NULL)
-        gSoundManager->SetIsMuted(false);
-    if (gWonNet != NULL)
-        gWonNet->ClearGameList();
-    CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
-    this->mClearing = false;
+    ee_gamecpp_world_clear(this);
 }
 
 // Turns every unit's sight back on and refreshes the local player's terrain visibility
 void EEWorld::RestartUnits()
 {
-    for (EEUnit* theUnit = (EEUnit*)this->mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext))
-        theUnit->SightOnHere();
-    this->GetCurrentPlayer()->RefreshTerrainVisibility();
+    ee_gamecpp_world_sight_all(this, true);
 }
 
 // Replaces a player with a human player copied from it by a save and load, killing the old player's units and moving
 // its alliances, pending units and media over to the copy
 void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap)
 {
-    FSMemoryFile theFile(1000, true, 1);
-    EEPlayer* theOld = this->mPlayers[inIndex];
-    this->FlushQueuedPlacements();
-    EEPlayer* theNew = new EEHumanPlayer;
-    theOld->EEPlayer::Save(inMajorVersion, inMinorVersion, theFile);
-    theFile.SetPosition(0, kFileOriginBegin, false);
-    theNew->EEPlayer::Load(inMajorVersion, inMinorVersion, theFile);
-    EEUnit* theUnit = theOld->mFirstUnit;
-    while (theUnit != NULL) {
-        EEUnit* theNext = static_cast<EEUnit*>(theUnit->mNext);
-        if (theUnit->mComplexUnit != NULL)
-            theUnit->mComplexUnit->ClearCollisionState();
-        theUnit->Kill(false, false, false);
-        theOld->KillUnit(theUnit, false);
-        theUnit = theNext;
-    }
-    theOld->RemoveKilledUnits();
-    theOld->ReleasePendingUnits();
-    unsigned long i;
-    for (i = 0; i < this->mQueuedPlacements.size(); i++)
-        this->mQueuedPlacements[i].mUnit->Dereference();
-    this->mQueuedPlacements.clear();
-    for (i = 0; i < this->mNumPlayers; i++) {
-        unsigned long j;
-        if (theOld != this->mPlayers[i]) {
-            for (j = 0; j < this->mPlayers[i]->mAllies.size(); j++) {
-                if (this->mPlayers[i]->mAllies[j] != theOld)
-                    continue;
-                this->mPlayers[i]->RemoveAlly(theOld);
-                EEPlayer* theAlly = theNew;
-                this->mPlayers[i]->mAllies.push_back(theAlly);
-            }
-        } else {
-            for (j = 0; j < this->mPlayers[i]->mAllies.size(); j++) {
-                EEPlayer* theAlly = theOld->mAllies[j];
-                theNew->mAllies.push_back(theAlly);
-            }
-        }
-    }
-    if (!this->mMediaLoaded && theOld->GetPlayerID() > 0) {
-        (*(theOld->mUnitClassUpgrades.begin() + 0x136))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x132))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x133))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x168))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x2cd))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x20))->UnloadMedia(theOld);
-        (*(theOld->mUnitClassUpgrades.begin() + 0x1e0))->UnloadMedia(theOld);
-    }
-    this->SetPlayer(inIndex, theNew);
-    EETechnologyTable* theTechnologies = theNew->mTechnologies;
-    theTechnologies->SetPlayer(theNew);
-    for (unsigned long k = 0; k < theNew->GetNumPendingUnits(); k++) {
-        RTSUnit* theOldUnit = theNew->GetPendingUnit(k);
-        theOldUnit->UpdateTile(inMap);
-        this->AddUnitEntry(theOldUnit, NULL);
-    }
-    theNew->ReleasePendingUnits();
-    theTechnologies->ApplySavedState(gLoadingSavedGame, true);
-    if (!this->mMediaLoaded && theNew->GetPlayerID() > 0) {
-        theNew->mUnitClassUpgrades[kUnitTypeFoundation1x1]->LoadMedia(theNew, 0x7f);
-        theNew->mUnitClassUpgrades[kUnitTypeFoundation2x2]->LoadMedia(theNew, 0x7f);
-        theNew->mUnitClassUpgrades[kUnitTypeFoundation3x3]->LoadMedia(theNew, 0x7f);
-        (*(theNew->mUnitClassUpgrades.begin() + 0x168))->LoadMedia(theNew, 0x7f);
-        (*(theNew->mUnitClassUpgrades.begin() + 0x2cd))->LoadMedia(theNew, 0x7f);
-        (*(theNew->mUnitClassUpgrades.begin() + 0x20))->LoadMedia(theNew, 0x7f);
-        (*(theNew->mUnitClassUpgrades.begin() + 0x1e0))->LoadMedia(theNew, 0x7f);
-    }
-    for (theUnit = theNew->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        theUnit->LoadMedia(theUnit->IsFoundation());
-        if (theUnit->mUnitClass->IsLandBuilding() && theUnit->mComplexUnit->mIsBuilt == true)
-            theUnit->mPlayer->LoadUnitClassButtons(theUnit->mUnitClass->mUnitType);
-    }
-    theNew->RepairPointers(inMajorVersion, inMinorVersion);
+    ee_gamecpp_world_replace_player(this, inIndex, inMajorVersion, inMinorVersion, inMap);
 }
 
 // Resets the unit's collision state, collision tile and collision resolution count
@@ -496,161 +308,49 @@ void EEComplexUnit::ClearCollisionState()
 // player at war with each other
 void EEWorld::RebuildTeams()
 {
-    EEPlayer* theGaia = this->mPlayers[0];
     ee_app_teams_rebuild((uint32_t)this->mNumPlayers, &kTeamsWorld);
     EEMirrorTeams(this->mTeams);
-    for (unsigned long k = 1; k < this->mNumPlayers; k++)
-        theGaia->SetDiplomaticStance(this->mPlayers[k], 1, this->mMap);
-    for (unsigned long m = 1; m < this->mNumPlayers; m++) {
-        if (this->mPlayers[m] != NULL)
-            this->mPlayers[m]->SetDiplomaticStance(this->mPlayers[0], 1, this->mMap);
-    }
+    ee_gamecpp_world_gaia_stances(this);
     this->TeamsChanged();
 }
 
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {
-    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
-    // an untracked unit has no count (the map's head node used to be decremented instead)
-    if (it != this->mResourceUsers.end() && it->second > 0)
-        it->second--;
+    ee_gamecpp_world_resource_users(this, inUnit, -1);
 }
 
 // Kills and removes every player's units (pending ones included) and the queued placements, emptying the unit list
 void EEWorld::RemoveAllUnits()
 {
-    bool theWasClear = false;
-    if (!this->mClearing) {
-        this->mClearing = true;
-        theWasClear = true;
-    }
-    unsigned long theCount = this->mNumPlayers;
-    for (unsigned long n = 0; n < theCount; n++) {
-        EEPlayer* thePlayer = this->mPlayers[n];
-        if (thePlayer == NULL)
-            continue;
-        thePlayer->AddPendingUnits(false, true);
-        EEUnit* theUnit = thePlayer->mFirstUnit;
-        while (theUnit != NULL) {
-            EEUnit* theNext = static_cast<EEUnit*>(theUnit->mNext);
-            if (theUnit->mComplexUnit != NULL)
-                theUnit->mComplexUnit->ClearCollisionState();
-            theUnit->Kill(false, false, false);
-            thePlayer->KillUnit(theUnit, false);
-            theUnit = theNext;
-        }
-        thePlayer->RemoveKilledUnits();
-        thePlayer->ReleasePendingUnits();
-    }
-    for (unsigned long i = 0; i < this->mQueuedPlacements.size(); i++)
-        this->mQueuedPlacements[i].mUnit->Dereference();
-    this->mQueuedPlacements.clear();
-    this->mUnits.mFirst = NULL;
-    if (theWasClear)
-        this->mClearing = false;
+    ee_gamecpp_world_remove_all_units(this);
 }
 
 // Deletes every ghost unit under the ghost lock
 void EEWorld::ClearGhostUnits()
 {
-    gWorld.mGhostUnitsLock->Enter();
-    while (this->mGhostUnits.size() > 0) {
-        EEGhostUnit* theGhost = this->mGhostUnits.back();
-        this->mGhostUnits.pop_back();
-        delete theGhost;
-    }
-    gWorld.mGhostUnitsLock->Leave();
+    ee_gamecpp_world_clear_ghosts(this);
 }
 
 // Writes a report of all loaded media (players, effects, graphic objects, sounds, buttons, terrain, textures, models)
 // to a file, plus the leaked units and references when inLeaks is set
 void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
 {
-    UWideString theString;
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL)
-            this->mPlayers[i]->DumpMedia(inFile);
-        fprintf(inFile, "\n\n");
-    }
-    EEGraphicEffect::DumpIDs(inFile);
-    EEDumpGraphicObjectTable(inFile);
-    EESoundObject::Dump(inFile);
-    EEButtonObject::DumpAllLoadedMedia(inFile);
-    EETerrainTable::DumpAllLoadedMedia(inFile);
-    gTextureManager->DumpAllLoadedMedia(inFile);
-    gModelManager->DumpAllLoadedMedia(inFile);
-    if (inLeaks == true) {
-        EEDumpLeakedUnits(inFile);
-        fprintf(inFile, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
-    }
+    ee_gamecpp_world_dump_media(this, &inFile, inLeaks);
 }
 
 // Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
 // scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap
 void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
 {
-    // TEST ONLY: the headless simulation keeps the idle local human in (platform/PlatSim.h; the harness's
-    // --no-human-defeat)
-    if (gPlatSimNoHumanDefeat && !inHasWon && inPlayerID == this->mCurrentPlayer) {
-        gPlatSimNoHumanDefeatHits++;
-        return;
-    }
-    EEPlayer* thePlayer = this->mPlayers[inPlayerID];
-    this->MarkPlayerOut(inPlayerID);
-    this->RemovePlayerFromTeams(inPlayerID);
-    if (!this->mGameOptions.mIsScenarioGame || inHasWon == true)
-        thePlayer->mSeesAll = true;
-    thePlayer->mSavedGroups.mEndTime = gPhysics->mGameTime;
-    gWorld.mScenarioManager->EndCinematic();
-    if (thePlayer == this->mPlayers[this->mCurrentPlayer]) {
-        gMiniMap->Redraw();
-        gLocalPlayerOut = true;
-    }
+    ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID);
 }
 
 // Fills the empty player slots after the game state's players with computer players in unused colours and 999,999
 // of each resource (scenario editor), loading their foundation media
 void EEWorld::AddComputerPlayers(EEGameState* inState)
 {
-    UWideString theName;
-    char theUsed[17];
-    memset(theUsed, 0, sizeof(theUsed));
-    unsigned long i;
-    for (i = 0; i < inState->GetNumPlayers(); i++) {
-        for (unsigned long c = 0; c <= 16; c++) {
-            if (EEGetPlayerColor(c) == this->mPlayers[i]->mColor) {
-                theUsed[c] = true;
-                break;
-            }
-        }
-    }
-    inState->GetNumPlayers();
-    for (i = inState->GetNumPlayers(); i <= 16; i++) {
-        EEPlayer* thePlayer = NULL;
-        if (this->mPlayers[i] != NULL)
-            continue;
-        gResource->GetString(IDS_COMPUTER, theName);
-        thePlayer = new EEComputerPlayer(theName, i);
-        for (unsigned long c = 0; c <= 16; c++) {
-            if (theUsed[c])
-                continue;
-            thePlayer->SetColor(EEGetPlayerColor(c));
-            theUsed[c] = true;
-            break;
-        }
-        thePlayer->SetAllResources(999999);
-        this->SetPlayer(i, thePlayer);
-        if (this->mMediaLoaded || i <= 0)
-            continue;
-        thePlayer->mUnitClassUpgrades[kUnitTypeFoundation1x1]->LoadMedia(thePlayer, 0x7f);
-        thePlayer->mUnitClassUpgrades[kUnitTypeFoundation2x2]->LoadMedia(thePlayer, 0x7f);
-        thePlayer->mUnitClassUpgrades[kUnitTypeFoundation3x3]->LoadMedia(thePlayer, 0x7f);
-        thePlayer->mUnitClassUpgrades[kUnitTypeFoundation6x6]->LoadMedia(thePlayer, 0x7f);
-        thePlayer->mUnitClassUpgrades[kUnitTypeFoundationAirport]->LoadMedia(thePlayer, 0x7f);
-        (*(thePlayer->mUnitClassUpgrades.begin() + 0x20))->LoadMedia(thePlayer, 0x7f);
-        (*(thePlayer->mUnitClassUpgrades.begin() + 0x1e0))->LoadMedia(thePlayer, 0x7f);
-    }
+    ee_gamecpp_world_add_computers(this, inState);
 }
 
 // Moves the world and viewport camera, unless a scenario camera move is running and the move is not forced
@@ -679,14 +379,7 @@ EEContagionManager* EEWorld::GetContagionManager()
 // Returns how many gatherers use a resource unit, starting its count at 0 when it is not tracked yet
 unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit)
 {
-    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
-    unsigned long theResult = 0;
-    if (it == this->mResourceUsers.end()) {
-        this->mResourceUsers[inUnit] = 0;
-    } else {
-        theResult = it->second;
-    }
-    return theResult;
+    return ee_gamecpp_world_resource_users(this, inUnit, 0);
 }
 
 // Returns whether a map tile's height is below 0
@@ -698,283 +391,27 @@ bool EEWorld::IsTileBlocked(unsigned long inX, unsigned long inY)
 // Converts a screen point to a point on the orthographic view plane (Y = 0) around the viewport centre
 void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
 {
-    float theScale = 1.0f / gViewport.GetHalfWidth();
-    float theSize = gViewport.GetOrthographicRectangle().GetWidth() * 0.5f;
-    GE2DPoint thePoint((inPoint.GetX() - gViewport.GetXCenter()) * theScale,
-                       (inPoint.GetY() - gViewport.GetYCenter()) * theScale);
-    outPoint.SetX(thePoint.GetX() * theSize);
-    outPoint.SetY(0.0f);
-    outPoint.SetZ(-(thePoint.GetY() * theSize));
+    ee_gamecpp_world_screen_to_world((const float(*)[2])&inPoint.mX, (float(*)[3])&outPoint.mX);
 }
 
 // Returns the player (Gaia excluded) in a lobby slot, or NULL
 EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
 {
-    EEPlayer* theResult = NULL;
-    for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i]->mSlot == inSlot) {
-            theResult = this->mPlayers[i];
-            break;
-        }
-    }
-    return theResult;
+    return (EEPlayer*)ee_gamecpp_world_player_by_slot(this, inSlot);
 }
 
 // Counts one more gatherer on a resource unit
 void EEWorld::AddResourceUser(EEUnit* inUnit)
 {
-    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> >::iterator it = this->mResourceUsers.find(inUnit);
-    if (it == this->mResourceUsers.end())
-        this->mResourceUsers[inUnit] = 1;
-    else
-        it->second++;
+    ee_gamecpp_world_resource_users(this, inUnit, 1);
 }
 
-// the load progress steps (a unit-local .rdata block after the vtable, in reverse order of use)
-static const float kWorldSunTilt = 0.62831855f;
-static const float kWorldLoadProgress29 = 0.96666664f;
-static const float kWorldLoadProgress28 = 0.93333334f;
-static const float kWorldLoadProgress27 = 0.89999998f;
-static const float kWorldLoadProgress26 = 0.86666667f;
-static const float kWorldLoadProgress25 = 0.83333331f;
-static const float kWorldLoadProgress24 = 0.80000001f;
-static const float kWorldLoadProgress23 = 0.76666665f;
-static const float kWorldLoadProgress22 = 0.73333335f;
-static const float kWorldLoadProgress21 = 0.69999999f;
-static const float kWorldLoadProgress20 = 0.66666669f;
-static const float kWorldLoadProgress19 = 0.63333333f;
-static const float kWorldLoadProgress18 = 0.60000002f;
-static const float kWorldLoadProgress17 = 0.56666666f;
-static const float kWorldLoadProgress16 = 0.53333336f;
 
 // Sets up the world from a game state (map, players, teams, local player, camera, sight, minimap, calamities, music,
 // media), reporting load progress; in multiplayer it finds the local player by name
 void EEWorld::StartGame(EEGameState* inState, bool inLocked)
 {
-    EECampaignProgress theProgress;
-    EEGameOptionsPlayer theOptionsPlayer;
-    UWideString theCivilizationName;
-    UWideString theLocalName;
-    unsigned long theLocal = 0;
-    bool theLoaded = inState->mIsLoadedGame;
-    bool theMoved = false;
-    if (!inLocked)
-        gWorld.mLock->WriteLock();
-    this->mStatistics.Reset();
-    inState->ReadLock();
-    gUserInterface->SetLoadProgress(0.5f);
-    this->mGameOptions = gGameState.mGameOptions;
-    gSightUpdatesEnabled = false;
-    gUserInterface->mRandomSeed = inState->mRandomSeed;
-    this->SetMap(inState->mMap);
-    gGraphics->PostReleaseScene();
-    this->SetEffectManager(inState->mEffectManager);
-    if (inState->mInScenarioEditor == true)
-        this->SetNumPlayers(17);
-    else
-        this->SetNumPlayers(inState->GetNumPlayers());
-    gUserInterface->SetLoadProgress(kWorldLoadProgress16);
-    this->mInCinematic = false;
-    this->mSavedGameSpeed = 0.0f;
-    this->mMaxPlayers = inState->mNumPlayersMade;
-    this->mTownIDCounter = inState->mTownIDCounter;
-    this->mHerdIDCounter = inState->mHerdIDCounter;
-    gHerdUnreadValue = 0;
-    this->CreateInfluenceTable(this->mMap);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress17);
-    if (gCommunications->GetNumHumanPlayers() > 1) {
-        if (gWonNet != NULL) theLocalName = gWonPlayerName; else theLocalName = gPlayerName;
-        for (unsigned long i = 0; i < inState->GetNumPlayers(); i++) {
-            if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)inState->mPlayers[i]->mName),
-                    reinterpret_cast<const unsigned char*>((const char*)theLocalName)) != 0)
-                continue;
-            theLocal = i;
-            if (inState->mLocalPlayer != (long)i)
-                theMoved = true;
-            break;
-        }
-    } else {
-        theLocal = inState->mLocalPlayer;
-    }
-    this->mCurrentPlayer = theLocal;
-    gCommunications->SetPlayerNumber(theLocal);
-    this->SetPopulationLimit(inState->mGameOptions.mUnitLimit);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress18);
-    this->ClearContinents();
-    // port (save version 0.263): a loaded game's continent manager is the saved one (made in place of BuildRegions,
-    // below)
-    bool theSavedRegions = theLoaded && EEContinentRegionsPending();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress19);
-    this->CreateMiniMap(inState);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress20);
-    this->mUsingCarbon = inState->mUsingCarbon;
-    EECPNewGame();   // port: the computer players' per-game file statics cleared (ee/EECPTrace.h)
-    this->CreatePlayers(inState);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress21);
-    if (inState->mInScenarioEditor == true)
-        this->SetNumPlayers(17);
-    else
-        this->SetNumPlayers(inState->GetNumPlayers());
-    unsigned long i;
-    for (i = 0; i < this->mNumPlayers; i++)
-        this->mPlayers[i]->mCivilization.ApplyDeferred(this->mPlayers[i], inState->mMajorVersion, inState->mMinorVersion);
-    gArtificialIntelligence->CollectComputerPlayers();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress22);
-    if (inState->GetNumTeams() > 0) {
-        for (i = 0; i < inState->GetNumTeams(); i++) {
-            const std::vector<unsigned long>& theTeam = inState->mTeams[i].mPlayers;
-            std::vector<uint32_t> thePlayers(theTeam.begin(), theTeam.end());
-            ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), thePlayers.data(), thePlayers.size());
-        }
-        EEMirrorTeams(this->mTeams);
-        for (i = this->mNumPlayers; i <= 16; i++) {
-            if (this->mPlayers[i] == NULL)
-                this->RemovePlayerFromTeams(i);
-        }
-    } else {
-        this->RebuildTeams();
-    }
-    this->mNumberOfWondersToWin = inState->mGameOptions.mWondersForVictory;
-    this->mVictoryEnabled = inState->mGameOptions.mVictory;
-    this->SetTimeOfDay(inState->mTimeOfDay);
-    gWorld.SetGameSpeed(inState->mGameSpeed);
-    gLocalPlayerOut = gWorld.GetCurrentPlayer()->mObserverMode;
-    this->SetScenarioManager(inState->mScenarioManager);
-    this->SetEnvironmentManager(inState->mEnvironmentManager);
-    this->mTeamsLocked = inState->mGameOptions.mLockTeams;
-    this->mUnitImprovementsAllowed = inState->mUnitImprovementsAllowed;
-    this->mCheatsEnabled = inState->mGameOptions.mCheatCodes;
-    this->mCameraControl.ClearUnitB();
-    this->mCameraControl.ClearUnitA();
-    this->mCameraControl.ResetPath();
-    this->mCameraControl.ResetZoom();
-    if (theMoved == true) {
-        long theWidth = this->mMap->mSize;
-        long theHeight = this->mMap->mSize;
-        GE3DPoint theCenter(theWidth * 0.5f, theHeight * 0.5f, 0.0f);
-        this->mCameraControl.SetLocation(theCenter, true, true);
-    } else {
-        this->mCameraControl.SetLocation(inState->mMapCenter, false, true);
-    }
-    this->mCameraControl.SetChanged();
-    inState->RepairRestorables();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress23);
-    gSightUpdatesEnabled = true;
-    if (theLoaded) {
-        UString theMessage("Game loaded.");
-        EEReportLoadFailure(theMessage, false, &inState->mChecksum);
-    } else {
-        UString theMessage("Game initialized.");
-        EEReportLoadFailure(theMessage, false, NULL);
-    }
-    if (this->mNumPlayers != this->mMap->mU19561C)
-        this->mMap->SetPlayerCount(this->mNumPlayers);
-    gMiniMap->mViewingPlayer = this->mPlayers[this->mCurrentPlayer];
-    if (inState->mRevealMap == true) {
-        EESightScope theCapture(kSightRevealMap, NULL);   // TSGT (TEST ONLY)
-        for (long y = 0; y < this->mMap->mSize; y++) {
-            for (long x = 0; x < this->mMap->mSize; x++) {
-                EEMapTile* theTile = this->mMap->GetTile(x, y);
-                if (theTile == NULL)
-                    continue;
-                this->mMap->mTerrainMesh.ReferenceTile(x, y);
-                this->mMap->mTerrainMesh.DereferenceTile(x, y);
-                for (unsigned long p = 1; p < this->mNumPlayers; p++) {
-                    this->mPlayers[p]->AddOwnSight(theTile, x, y);
-                    this->mPlayers[p]->RemoveOwnSight(theTile);
-                }
-            }
-        }
-    }
-    gMiniMap->RedrawAll();
-    gMiniMap->Redraw();
-    gMiniMap->Refresh();
-    this->RestartUnits();
-    gMiniMap->RedrawAll();
-    gMiniMap->Redraw();
-    gMiniMap->Refresh();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress24);
-    if (theSavedRegions)
-        EERestoreContinentRegions();   // port (0.263): the saved regions (it builds them itself if it cannot read them)
-    else
-        gContinentManager.BuildRegions(this->mMap);
-    gPathManager.Reset();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress25);
-    if (this->mEnvironmentManager != NULL)
-        this->mEnvironmentManager->SetEnabled(gDisplayWeatherEffects && !gCommunications->GetIsMultiplayerSession());
-    if (this->mEnvironmentManager != NULL)
-        this->mEnvironmentManager->FnE123D();
-    this->SetCalamityHelper(inState->mCalamityHelper);
-    std::vector<EECalamity*>* theCalamities = static_cast<EEPCalamityHelper*>(this->mCalamityHelper)->mCalamities;
-    if (theCalamities != NULL)
-        USingleton<EECalamityManager>::GetInstance()->Restore(inState->mMajorVersion, inState->mMinorVersion, *theCalamities);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress26);
-    inState->ReadUnlock();
-    gMusicManager->SetIntensity(1);
-    gMusicManager->Start();
-    gAmbientSoundManager.SetEnabled(gAmbientSoundEnabled);
-    gAmbientSoundManager.Restart();
-    gGraphics->PostReleaseScene();
-    gGraphics->PostInitialiseScene();
-    gUnitPicker.GetLock()->Enter();
-    gUnitPicker.Reset();
-    gUnitPicker.GetLock()->Leave();
-    gMiniMap->Refresh();
-    gPathManager.RequestPendingPaths(this->mMap);
-    gUserInterface->SetLoadProgress(kWorldLoadProgress27);
-    for (i = 1; i < this->mNumPlayers; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        if (thePlayer == NULL)
-            continue;
-        if (thePlayer->mComputerPlayer != NULL)
-            thePlayer->mComputerPlayer->RefreshResourceCenters();
-        else
-            thePlayer->RefreshTownGroups();
-    }
-    gPhysics->mGameStarted = true;
-    gPhysics->mAutoSaveClock = 0;
-    if (inState->mMajorVersion == 0 && inState->mMinorVersion <= 0x98) {
-        for (i = 1; i < this->mNumPlayers; i++) {
-            theOptionsPlayer = this->mGameOptions.mPlayers[i - 1];
-            theOptionsPlayer.mColor = EEColorTable::FindIndex(this->mPlayers[i]->mColor);
-            this->mGameOptions.mPlayers[i - 1] = theOptionsPlayer;
-        }
-    }
-    if (gGameOptions.mCampaignName.GetLength() > 0 && gGameOptions.mCampaignChecksum > 0)
-        theProgress.RestoreCivilization(UWideString(gDefaultCampaignUser), inState->mGameOptions.mCampaignName, inState->mGameOptions.mScenarioName, inState->mGameOptions.mCampaignChecksum);
-    if (gGameOptions.GetCampaignMapName(theCivilizationName))
-        this->GetCurrentPlayer()->mCivilization.SetName(theCivilizationName);
-    if (inState->mGameOptions.mLoadType == 0 || inState->mGameOptions.mLoadType == 3)
-        EEUIECLEFormManager::Clear();
-    this->LoadMedia();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress28);
-    if (!gUIManager->mInScenarioEditor)
-        this->mScenarioManager->Prepare();
-    this->mScenarioManager->ApplyPendingEffects();
-    gUserInterface->SetLoadProgress(kWorldLoadProgress29);
-    this->RebuildActiveUnits();
-    if (gUIManager->mInScenarioEditor == true && this->mGameScreenActive == true)
-        this->SetNumPlayers(inState->mNumPlayersMade);
-    if (inState->mIsLoadedGame == true)
-        this->NotifyPlayersLoaded(inState->mMajorVersion, inState->mMinorVersion);
-    for (i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->RestartTowns();
-            this->mPlayers[i]->RestorePatrols();
-        }
-    }
-    this->mLoadingPlayerMedia = true;
-    for (i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL)
-            this->mPlayers[i]->KillStrandedUnits();
-    }
-    this->mLoadingPlayerMedia = false;
-    EEUpdateLandContinents();
-    this->mUserPaused = false;
-    this->mLagStatus = 0;
-    if (!inLocked)
-        gWorld.mLock->WriteUnlock();
-    gGameOptions.Fn130272();
+    ee_gamecpp_world_start_game(this, inState, inLocked);
 }
 
 // Replaces the world's map, deleting the old one
@@ -1017,110 +454,19 @@ void EEWorld::CreateMiniMap(EEGameState* inState)
 // points and loads media; for a loaded game it repairs pointers and replaces flagged computer players
 void EEWorld::CreatePlayers(EEGameState* inState)
 {
-    unsigned long i;
-    for (i = 0; i < inState->mPlayers.size(); i++) {
-        EEPlayer* thePlayer = inState->mPlayers[i];
-        this->SetPlayer(i, thePlayer);
-        EETechTree* theTechTree = thePlayer->GetTechTree();
-        theTechTree->SetPlayer(thePlayer);
-        if (!theTechTree->mIsLoaded)
-            theTechTree->ResetEpochRange(inState->mGameOptions.mEpochStart, inState->mGameOptions.mEpochEnd);
-        for (unsigned long j = 0; j < thePlayer->GetNumPendingUnits(); j++) {
-            RTSUnit* theUnit = thePlayer->GetPendingUnit(j);
-            theUnit->UpdateTile(inState->mMap);
-            if (!inState->mIsLoadedGame && theUnit->mTileNode != NULL)
-                (static_cast<EEComplexUnit*>(theUnit))->MakeAreaEffects();
-            this->AddUnitEntry(theUnit, NULL);
-        }
-        if (inState->mIsLoadedGame)
-            thePlayer->ReleasePendingUnits();
-        else
-            thePlayer->AddPendingUnits(false, true);
-        thePlayer->ApplyMapRestrictions();
-        if (inState->mIsLoadedGame && thePlayer->GetPlayerID() < inState->mMap->mU19561C)
-            inState->mMap->FogSeen(thePlayer);
-        theTechTree->ApplySavedState(gLoadingSavedGame, true);
-        for (unsigned long k = 0; k < EEUnitClassCount(); k++) {
-            EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[k];
-            if (theUpgrade == NULL)
-                continue;
-            long theType = theUpgrade->GetUnitClass()->mUnitType;
-            EEUpgradeHitPoints(theUpgrade, theType,
-                EEGameVariant::GetGameVariant(this->mGameOptions.GetVariant())->GetFactor(theType), thePlayer);
-        }
-        if (!this->mMediaLoaded && i != 0) {
-            thePlayer->mUnitClassUpgrades[kUnitTypeFoundation1x1]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeFoundation2x2]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeFoundation3x3]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeFoundation6x6]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeFoundationAirport]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeCitizen]->LoadMedia(thePlayer, 0x7f);
-            thePlayer->mUnitClassUpgrades[kUnitTypeFemaleCitizen]->LoadMedia(thePlayer, 0x7f);
-        }
-        for (EEUnit* theUnit2 = thePlayer->mFirstUnit; theUnit2 != NULL; theUnit2 = static_cast<EEUnit*>(theUnit2->mNext)) {
-            theUnit2->LoadMedia(theUnit2->IsFoundation());
-            if (theUnit2->mUnitClass->IsLandBuilding() && theUnit2->mComplexUnit->mIsBuilt == true)
-                thePlayer->LoadUnitClassButtons(theUnit2->mUnitClass->mUnitType);
-        }
-    }
-    this->mPlayers[0]->AddPendingUnits(false, false);
-    if (inState->mIsLoadedGame) {
-        // port (saves from 0.260 on): the computer players' managers are restored once every player is repaired (their
-        // tasks name other players' towns, rebuilt by those players' RepairPointers; EEComputerPlayer::RestoreManagers),
-        // unless a computer player is replaced on load (the original order then)
-        bool theDefer = EESaveHasTowns(inState->mMajorVersion, inState->mMinorVersion);
-        for (i = 0; i < inState->GetNumPlayers() && theDefer; i++)
-            theDefer = inState->mPlayers[i]->mComputerPlayer == NULL || !inState->mPlayers[i]->mComputerPlayer->mReplaceOnLoad;
-        gDeferComputerPlayerRestore = theDefer;
-        for (i = 0; i < inState->GetNumPlayers(); i++) {
-            EEPlayer* thePlayer = inState->mPlayers[i];
-            thePlayer->RepairPointers(inState->mMajorVersion, inState->mMinorVersion);
-            if (thePlayer->mComputerPlayer != NULL && thePlayer->mComputerPlayer->mReplaceOnLoad == true)
-                this->ReplacePlayer(i, inState->mMajorVersion, inState->mMinorVersion, inState->mMap);
-        }
-        gDeferComputerPlayerRestore = false;
-        EECPRestoreDeferredManagers(inState->mMajorVersion, inState->mMinorVersion);
-    }
-    this->FlushQueuedPlacements();
-    if (inState->mInScenarioEditor == true)
-        this->AddComputerPlayers(inState);
-    for (i = 0; i < inState->mLoadedPlayers.size(); i++) {
-        inState->mLoadedPlayers[i]->RepairPointers(inState->mMajorVersion, inState->mMinorVersion);
-        delete inState->mLoadedPlayers[i];
-    }
+    ee_gamecpp_world_create_players(this, inState);
 }
 
 // Loads the shared command confirmation effects and button sounds, once per game
 void EEWorld::LoadMedia()
 {
-    if (this->mMediaLoaded)
-        return;
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMove)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationAttack)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationGatherOther)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectBasicMarchingLine)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectWaypointIndicator)->Load(false);
-    EEGraphicEffect::Get(kGraphicEffectRallyFlagBuilding)->Load(false);
-    EESoundObject::Get(kSoundButton1)->LoadMedia();
-    EESoundObject::Get(kSoundButton2)->LoadMedia();
-    this->mMediaLoaded = true;
+    ee_gamecpp_world_load_media(this);
 }
 
 // Pauses a running single-player game on the server; returns 2 when it is already paused, else 0
 long EEWorld::PauseGame()
 {
-    long theResult = 0;
-    if (gCommunications->IsServer() && gCommunications->GetNumberOfCTsProcessedInPhysics() > 0 && !gCommunications->GetIsMultiplayerSession()) {
-        EEServer* theServer = dynamic_cast<EEServer*>(gCommunications);
-        if (!theServer->GetIsGamePaused()) {
-            theServer->PauseGame();
-            gUserInterface->PostPauseInformation(true);
-        } else
-            theResult = 2;
-    }
-    return theResult;
+    return ee_gamecpp_world_pause(true);
 }
 
 // RecordStatistics' C++ calls (ee_sim app statistics.rs): the physics random draw, a player's statistics Set (its
@@ -1238,81 +584,40 @@ void EEWorld::UpdateActiveUnits()
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
 void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
-    if (inUnit == NULL || UIsNone32(inUnit->mUnitID) || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
-        return;
-    if (ee_app_active_activate((uint32_t)inUnit->mUnitID))
-        inUnit->Reference();
+    ee_gamecpp_world_activate(inUnit);
 }
 
 // Queues a unit for deactivation unless it is a path point or is already queued
 void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
 {
-    if (inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
-        return;
-    // port: a unit without an id (one ProduceUnit has just made and LoadCargo puts away: an aircraft into its airport
-    // or carrier) waits by pointer, as the original's queue held it: a handle to it would resolve to nothing
-    std::vector<EEComplexUnit*>::iterator theUnborn = std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), inUnit);
-    if (theUnborn != sUnbornDeactivations.end())
-        return;
-    if (UIsNone32(inUnit->mUnitID)) {
-        sUnbornDeactivations.push_back(inUnit);
-        inUnit->Reference();
-        return;
-    }
-    if (ee_app_active_deactivate((uint32_t)inUnit->mUnitID))
-        inUnit->Reference();
+    ee_gamecpp_world_deactivate(inUnit);
 }
 
 // Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
 // dropping the pending activation queues
 void EEWorld::RebuildActiveUnits()
 {
-    ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);
-    for (EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        if (theComplex == NULL || theComplex->mPreviousPart != NULL || theComplex->mTileX == -10000
-            || theComplex->mUnitClass->mUnitType == kUnitTypePathPoint
-            || (theUnit->mUnitClass->mIsInactive && !(theComplex->mHitPoints <= 0)))
-            continue;
-        ee_app_active_start((uint32_t)theComplex->mUnitID);
-        theComplex->Reference();
-        theComplex->Reference();
-    }
+    ee_gamecpp_world_rebuild_active(this);
 }
 
 // Resets the world: clears effects and calamities, gives it a fresh calamity helper, removes every unit and drops the
 // scenario and environment managers
 void EEWorld::Reset()
 {
-    this->mEffectManager->ClearEffects();
-    USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
-    this->SetCalamityHelper(new EEPCalamityHelper);
-    this->RemoveAllUnits();
-    delete this->mScenarioManager;
-    this->mScenarioManager = NULL;
-    delete this->mEnvironmentManager;
-    this->mEnvironmentManager = NULL;
-    RTSWorld::Reset();
+    ee_gamecpp_world_reset(this);
 }
 
 // Turns every unit's sight off and refreshes the local player's terrain visibility
 void EEWorld::RefreshUnits()
 {
-    for (EEUnit* theUnit = (EEUnit*)this->mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext))
-        theUnit->SightOffHere();
-    this->GetCurrentPlayer()->RefreshTerrainVisibility();
+    ee_gamecpp_world_sight_all(this, false);
 }
 
 // Takes a disconnected player out: flags them disconnected (unless observing), drops them from their teams, marks them
 // out and frees their slot
 void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
 {
-    EEPlayer* thePlayer = this->mPlayers[inPlayer];
-    if (!thePlayer->mObserverMode)
-        thePlayer->mDisconnected = true;
-    this->RemovePlayerFromTeams(inPlayer);
-    gWorld.MarkPlayerOut(inPlayer);
-    thePlayer->mSlot = kSlotNone;
+    ee_gamecpp_world_remove_disconnected(this, inPlayer);
 }
 
 // Removes a player from every team, re-adding each team's remaining players as a new team
@@ -1340,49 +645,13 @@ void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
 // Lets every player finish loading its units after a saved game was read
 void EEWorld::NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL)
-            this->mPlayers[i]->FinishUnitsLoad(inMajorVersion, inMinorVersion);
-    }
+    ee_gamecpp_world_notify_loaded(this, inMajorVersion, inMinorVersion);
 }
 
 // Moves a unit to its place in the world's unit list, which is sorted by tile x
 void EEWorld::ResortUnit(RTSUnit* inUnit)
 {
-    EEComplexUnit* theComplex = static_cast<EEUnit*>(inUnit)->mComplexUnit;
-    if (theComplex == NULL)
-        return;
-    EEUnit* thePrev = static_cast<EEUnit*>(theComplex->mTileNode->mPrev);
-    RTSDummyUnit* theDummy = RTSDummyHead(thePrev);
-    EEUnit* theNext = static_cast<EEUnit*>(theComplex->mTileNode->mNext);
-    if (theDummy != NULL && theNext == NULL)
-        return;
-    theComplex->Unlink();
-    EEUnit* theAt;
-    if (theDummy != NULL) {
-        theAt = theNext;
-    } else {
-        theAt = thePrev;
-        if (theNext == NULL)
-            theNext = thePrev;
-    }
-    RTSDummyUnit* theStop = NULL;
-    while (theNext != NULL) {
-        // one bracket test (inUnit's x between theAt's and theNext's), then a step back or forward
-        if (theAt->mTileX <= theComplex->mTileX && theNext->mTileX >= theComplex->mTileX)
-            break;
-        if (theAt->mTileX > theComplex->mTileX) {
-            theNext = theAt;
-            theAt = static_cast<EEUnit*>(theAt->mTileNode->mPrev);
-            theStop = RTSDummyHead(theAt);
-        } else {
-            theAt = theNext;
-            theNext = static_cast<EEUnit*>(theNext->mTileNode->mNext);
-        }
-        if (theStop != NULL)
-            break;
-    }
-    theComplex->Link(theAt);
+    ee_gamecpp_world_resort(static_cast<EEUnit*>(inUnit));
 }
 
 // Replaces the calamity helper, deleting the old one unless it is the same object
@@ -1417,164 +686,39 @@ void EEWorld::SetInfluenceTable(EEInfluenceTable* inTable)
 // Sets the population limit and recomputes every player's share bonus and civilization population bonus
 void EEWorld::SetPopulationLimit(unsigned long inLimit)
 {
-    RTSWorld::SetPopulationLimit(inLimit);
-    for (long i = 1; i < 17; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->mShareBonus = 0;
-            this->mPlayers[i]->mCivilization.ApplyLevel21ToWorld();
-        }
-    }
-    gWorld.ApplyShareBonus();
+    ee_gamecpp_world_set_count(this, true, inLimit);
 }
 
 // Sets the player count and recomputes every player's share bonus and civilization population bonus
 void EEWorld::SetNumPlayers(unsigned long inNumPlayers)
 {
-    RTSWorld::SetNumPlayers(inNumPlayers);
-    for (long i = 1; i < 17; i++) {
-        if (this->mPlayers[i] != NULL) {
-            this->mPlayers[i]->mShareBonus = 0;
-            this->mPlayers[i]->mCivilization.ApplyLevel21ToWorld();
-        }
-    }
-    gWorld.ApplyShareBonus();
+    ee_gamecpp_world_set_count(this, false, inNumPlayers);
 }
 
 // Puts a player into observer mode and marks their game options entry as out (type 2)
 void EEWorld::MarkPlayerOut(unsigned long inPlayer)
 {
-    EEGameOptionsPlayer thePlayer;
-    this->mPlayers[inPlayer]->mObserverMode = true;
-    if (inPlayer > 0)
-        thePlayer = gWorld.mGameOptions.mPlayers[inPlayer - 1];
-    thePlayer.mType = 2;
-    gWorld.mGameOptions.mPlayers[inPlayer - 1] = thePlayer;
+    ee_gamecpp_world_mark_out(this, inPlayer);
 }
 
 // Sets the time of day and recomputes the sun and moon light directions
 void EEWorld::SetTimeOfDay(float inTimeOfDay)
 {
-    GETransformation theTransformation;
-    GEVector theDown(-1.0f, 0.0f, 0.0f);
-    this->mTimeOfDay = inTimeOfDay;
-    GEVector theSun(0.0f, 0.0f, 0.0f);
-    GEVector theMoon(0.0f, 0.0f, 0.0f);
-    GEVector theSun2(0.0f, 0.0f, 0.0f);
-    GEVector theMoon2(0.0f, 0.0f, 0.0f);
-    theTransformation.SetOrientationYPR(0.0f, 0.0f, inTimeOfDay * 6.2831855f);
-    theTransformation.Apply(theDown, theSun);
-    theMoon.SetX(theSun.GetX() * -1.0f);
-    theMoon.SetY(theSun.GetY() * -1.0f);
-    theMoon.SetZ(theSun.GetZ() * -1.0f);
-    theTransformation.SetOrientationYPR(0.0f, kWorldSunTilt, 0.0f);
-    theTransformation.Apply(theSun, theSun2);
-    theTransformation.Apply(theMoon, theMoon2);
-    theTransformation.SetOrientationYPR(0.78539819f, 0.0f, 0.0f);
-    theTransformation.Apply(theSun2, this->mSunDirection);
-    theTransformation.Apply(theMoon2, this->mMoonDirection);
+    ee_gamecpp_world_set_time_of_day(this, inTimeOfDay);
 }
 
 // Places the queued units: adds them to their tiles, the minimap, regions and influence table, links them into the
 // x-sorted unit list and finds their contacts
 void EEWorld::PlaceQueuedUnits()
 {
-    unsigned long theCount = this->mQueuedPlacements.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theUnit = static_cast<EEUnit*>(this->mQueuedPlacements[i].mUnit);
-        RTSUnit* theAt = this->mQueuedPlacements[i].mInsertAfter;
-        // port: a unit removed between its creation and this placement (Invalidate keeps its node until the node is
-        // freed) was linked into the x-sorted list as a dead unit, and the list broke later (ResortUnit read a null
-        // link or looped for good: the macOS playtests' crash and freezes). It is not placed.
-        if (!theUnit->mIsValid) {
-            fprintf(stderr, "EE-UNITLIST: placement skips a removed unit (id %08lx, %s, tile %ld,%ld)\n",
-                    theUnit->mUnitID, (const char*)theUnit->mUnitClass->mName, theUnit->mTileX, theUnit->mTileY);
-            continue;
-        }
-        // likewise the unit to place it after (its creator) may have left the list: search from the head instead
-        if (theAt != NULL && RTSDummyHead(theAt) == NULL && (!theAt->mIsValid || theAt->mTileNode == NULL
-                                                              || theAt->mTileNode->mPrev == NULL)) {
-            fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n",
-                    theAt->mUnitID);
-            theAt = NULL;
-        }
-        long theX = theUnit->mTileX;
-        theUnit->mUnitClass->AddToTile(theUnit);
-        gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->mTileX, theUnit->mTileY);
-        if (theUnit->mTileNode == NULL)
-            continue;
-        if (theUnit->mTile != NULL) {
-            theUnit->mUnitClass->AddToRegion(theUnit);
-            if (theUnit->mUnitClass->mInfluence != 0)
-                this->mInfluenceTable->AddUnit(theUnit, theUnit->mTileX, theUnit->mTileY);
-        }
-        if (theAt == NULL) {
-            RTSUnit* theHead = reinterpret_cast<RTSUnit*>(&this->mUnits);
-            for (RTSUnit* theNode = (RTSUnit*)this->mUnits.mFirst; theNode != NULL && theX > theNode->mTileX;
-                 theNode = theNode->mTileNode->mNext)
-                theHead = theNode;
-            theAt = theHead;
-        } else if (theX != theAt->mTileX) {
-            if (theX < theAt->mTileX) {
-                theAt = theAt->mTileNode->mPrev;
-                bool theDone = false;
-                while (!theDone) {
-                    if (RTSDummyHead(theAt) == 0 && theX < theAt->mTileX)
-                        theAt = theAt->mTileNode->mPrev;
-                    else
-                        theDone = true;
-                }
-            } else {
-                while (theAt->mTileNode->mNext != NULL && theX > theAt->mTileNode->mNext->mTileX)
-                    theAt = theAt->mTileNode->mNext;
-            }
-        }
-        theUnit->Link(theAt);
-        if (theUnit->mHitPoints > 0 && static_cast<EEComplexUnit*>(theUnit)->mIsCollidable != 0) {
-            static_cast<EEComplexUnit*>(theUnit)->ClearContacts();
-            static_cast<EEComplexUnit*>(theUnit)->FindContacts();
-        }
-    }
+    ee_gamecpp_world_place_queued(this);
 }
 
 // Moves a player to a new lobby slot and name, handing its old slot and name to the slot's previous holder; switches
 // the local view to it when it takes the local slot
 void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused)
 {
-    EEComplexUnit* theSelected = NULL;
-    EEPlayer* theOld = gWorld.GetPlayerBySlot(inSlot);
-    UWideString theName;
-    unsigned long thePlayerIndex = inPlayer;
-    if (!(thePlayerIndex < gWorld.mNumPlayers))
-        return;
-    EEPlayer* thePlayer = gWorld.GetPlayer(thePlayerIndex);
-    char theSlot = thePlayer->mSlot;
-    if (thePlayer->IsHuman())
-        theName = static_cast<EEHumanPlayer*>(thePlayer)->GetName();
-    thePlayer->mSlot = inNewSlot;
-    if (thePlayer->IsHuman())
-        static_cast<EEHumanPlayer*>(thePlayer)->SetName(inName);
-    if (thePlayer->mSlot == gWorld.GetCurrentPlayer()->mSlot) {
-        for (EEUnit* theUnit = gWorld.mPlayers[thePlayerIndex]->mFirstUnit;
-             theUnit != NULL && theUnit->mUnitClass->mUnitType != kUnitTypeTownCenter; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->mTile != NULL || (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer != NULL))
-                theSelected = static_cast<EEComplexUnit*>(theUnit);
-        }
-        gWorld.mCurrentPlayer = thePlayerIndex;
-        gMiniMap->mViewingPlayer = gWorld.mPlayers[thePlayerIndex];
-        gMiniMap->Redraw();
-        gMiniMap->Refresh();
-        thePlayer->RefreshTerrainVisibility();
-        thePlayer->GetTechTree()->UpdateInterface(true);
-        gUserInterface->PostUpdateBackgroundMedia();
-        gCameraFollowing = false;
-    }
-    theOld->mSlot = theSlot;
-    if (gCommunications->IsServer())
-        (static_cast<EEServer*>(gCommunications))->mFastSelectionID = static_cast<EEServer*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->GetPlayerID()];
-    else
-        (static_cast<EEClient*>(gCommunications))->mFastSelectionID = static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)thePlayer->GetPlayerID()];
-    if (theOld->IsHuman())
-        static_cast<EEHumanPlayer*>(theOld)->SetName(theName);
+    ee_gamecpp_world_move_to_slot(inSlot, (uint8_t)inNewSlot, inPlayer, &inName);
 }
 
 // A file-scope global defined mid-file (its init chain sits between MovePlayerToSlot and UnloadMedia; no reader):
@@ -1584,43 +728,13 @@ UString gDefaultCampaignUser("default");
 // model, never drawn, is gone since R4.4's twenty-first round)
 void EEWorld::UnloadMedia()
 {
-    if (this->mMediaLoaded != true)
-        return;
-    EEPlayer** thePlayers = &this->mPlayers[1];
-    for (long n = 16; n != 0; n--) {
-        if (*thePlayers != NULL) {
-            (*thePlayers)->mUnitClassUpgrades[kUnitTypeFoundation1x1]->UnloadMedia(*thePlayers);
-            (*thePlayers)->mUnitClassUpgrades[kUnitTypeFoundation2x2]->UnloadMedia(*thePlayers);
-            (*thePlayers)->mUnitClassUpgrades[kUnitTypeFoundation3x3]->UnloadMedia(*thePlayers);
-            (*thePlayers)->mUnitClassUpgrades[0x168]->UnloadMedia(*thePlayers);
-            (*thePlayers)->mUnitClassUpgrades[0x2cd]->UnloadMedia(*thePlayers);
-            (*thePlayers)->mUnitClassUpgrades[0x20]->UnloadMedia(*thePlayers);
-            (*((*thePlayers)->mUnitClassUpgrades.begin() + 0x1e0))->UnloadMedia(*thePlayers);
-        }
-        thePlayers++;
-    }
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMove)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationAttack)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectCommandConfirmationGatherOther)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectBasicMarchingLine)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectWaypointIndicator)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectRallyFlagBuilding)->Unload();
-    EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits)->Unload();
-    EESoundObject::Get(kSoundButton1)->UnloadMedia();
-    EESoundObject::Get(kSoundButton2)->UnloadMedia();
-    this->mMediaLoaded = false;
+    ee_gamecpp_world_unload_media(this);
 }
 
 // Unpauses a running single-player game on the server; always returns 0
 long EEWorld::UnpauseGame()
 {
-    if (!gCommunications->IsServer() || !(gCommunications->GetNumberOfCTsProcessedInPhysics() > 0) || gCommunications->GetIsMultiplayerSession())
-        return 0;
-    EEServer* theServer = dynamic_cast<EEServer*>(gCommunications);
-    theServer->UnpauseGame();
-    gUserInterface->PostPauseInformation(false);
-    return 0;
+    return ee_gamecpp_world_pause(false);
 }
 
 // The end-of-game check's world calls (ee_units game_over.rs reads the players and units through the world views)
@@ -1674,13 +788,7 @@ void EEWorld::CameraChanged(class GETransformation const &)
 // Returns the player's index in the world, -1 if absent
 long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
 {
-    long theResult = -1;
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] == inPlayer) {
-            theResult = i;
-        }
-    }
-    return theResult;
+    return ee_gamecpp_world_player_index(this, inPlayer);
 }
 
 void EEWorld::TeamsChanged()
@@ -1691,4 +799,603 @@ void EEWorld::TeamsChanged()
 EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 {
     return static_cast<EEUnit*>(this->RTSWorld::GetUnit(inUnitID));
+}
+
+// ------------------------------------------------------------------------- the world bodies' C++ (gamecpp world.rs)
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define W ((EEWorld*)p)
+#define ST ((EEGameState*)p)
+#define PL ((EEPlayer*)p)
+#define UN ((EEUnit*)p)
+#define CX ((EEComplexUnit*)p)
+#define UC ((EEUnitClass*)p)
+#define FILE_SPEC (*(FSFileSpec*)p)
+
+// The world bodies' C++ calls and members (EeGameCpp's world section; EEGameOps.cpp's default case): one statement each
+int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the world's members (an address for each plain one)
+    case O::WOptions: return P64(static_cast<EeAppOptionsFields*>(&W->mGameOptions));
+    case O::WNumPlayers: return P64(&W->mNumPlayers);
+    case O::WPlayer: return P64(W->mPlayers[a[0]]);
+    case O::WCurrentPlayer: return P64(&W->mCurrentPlayer);
+    case O::WCurrentPlayerPtr: return P64(W->GetCurrentPlayer());
+    case O::WMediaLoaded: return P64(&W->mMediaLoaded);
+    case O::WMap: return P64(W->mMap);
+    case O::WClearing: return P64(&W->mClearing);
+    case O::WWindYaw: return P64(&W->mWindYaw);
+    case O::WUB80: return P64(&W->mUB80);
+    case O::WUB30: return P64(&W->mUB30);
+    case O::WUB58: return P64(&W->mUB58);
+    case O::WSavedGameSpeed: return P64(&W->mSavedGameSpeed);
+    case O::WWondersToWin: return P64(&W->mNumberOfWondersToWin);
+    case O::WGameScreenActive: return P64(&W->mGameScreenActive);
+    case O::WMaxPlayers: return P64(&W->mMaxPlayers);
+    case O::WLoadingSavedGame: return P64(&W->mLoadingSavedGame);
+    case O::WUnitImprovementsAllowed: return P64(&W->mUnitImprovementsAllowed);
+    case O::WCheatsEnabled: return P64(&W->mCheatsEnabled);
+    case O::WTeamsLocked: return P64(&W->mTeamsLocked);
+    case O::WTownIDCounter: return P64(&W->mTownIDCounter);
+    case O::WHerdIDCounter: return P64(&W->mHerdIDCounter);
+    case O::WStartTime: return P64(&W->mStartTime);
+    case O::WLagStatus: return P64(&W->mLagStatus);
+    case O::WLoadingPlayerMedia: return P64(&W->mLoadingPlayerMedia);
+    case O::WUserPaused: return P64(&W->mUserPaused);
+    case O::WUsingCarbon: return P64(&W->mUsingCarbon);
+    case O::WInCinematic: return P64(&W->mInCinematic);
+    case O::WShowCollisionSpheres: return P64(&W->mShowCollisionSpheres);
+    case O::WBB9D: return P64(&W->mBB9D);
+    case O::WCollisionFlags: return P64(&W->mCollisionDetectionFlags);
+    case O::WExecutingLocalSelection: return P64(&W->mExecutingLocalSelection);
+    case O::WVictoryEnabled: return P64(&W->mVictoryEnabled);
+    case O::WTimeOfDay: return P64(&W->mTimeOfDay);
+    case O::WSunDirection: return P64(&W->mSunDirection);
+    case O::WMoonDirection: return P64(&W->mMoonDirection);
+    case O::WEffectManager: return P64(W->mEffectManager);
+    case O::WEnvironment: return P64(W->mEnvironmentManager);
+    case O::WInfluence: return P64(W->mInfluenceTable);
+    case O::WFirstUnit: return P64(W->mUnits.mFirst);
+    case O::WUnitsHead: return P64(reinterpret_cast<RTSUnit*>(&W->mUnits));
+    case O::WCalamityList: return P64(static_cast<EEPCalamityHelper*>(W->mCalamityHelper)->mCalamities);
+    case O::WCampaignNameLength: return W->mGameOptions.mCampaignName.GetLength();
+    // the world's own setters and calls
+    case O::WSetEffectManagerRaw: W->mEffectManager = (EEEffectManager*)a[0];
+        break;
+    case O::WSetEnvironmentRaw: W->mEnvironmentManager = (EEEnvironmentManager*)a[0];
+        break;
+    case O::WSetCalamityHelperRaw: W->mCalamityHelper = (FSPersistent*)a[0];
+        break;
+    case O::WSetInfluenceRaw: W->mInfluenceTable = (EEInfluenceTable*)a[0];
+        break;
+    case O::WSetScenarioRaw: W->mScenarioManager = (EEScenarioManager*)a[0];
+        break;
+    case O::WSetFirstUnitRaw: W->mUnits.mFirst = (RTSUnit*)a[0];
+        break;
+    case O::WDeleteEnvironment: delete W->mEnvironmentManager;
+        break;
+    case O::WDeleteScenario: delete W->mScenarioManager;
+        break;
+    case O::WDeleteCalamityHelper: delete W->mCalamityHelper;
+        break;
+    case O::WDeleteInfluence: delete W->mInfluenceTable;
+        break;
+    case O::WSetTimeOfDay: W->SetTimeOfDay(f[0]);
+        break;
+    case O::WCreateGhostLock: TSScheduler::CreateCriticalSection(W->mGhostUnitsLock);
+        break;
+    case O::WStatisticsReset: W->mStatistics.Reset();
+        break;
+    case O::WRecordStatistics: W->RecordStatistics();
+        break;
+    case O::WGhostLock: W->mGhostUnitsLock->Enter();
+        break;
+    case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
+        break;
+    case O::WGhostCount: return (int64_t)W->mGhostUnits.size();
+    case O::WGhostBack: return P64(W->mGhostUnits.back());
+    case O::WGhostPop: W->mGhostUnits.pop_back();
+        break;
+    case O::GhostDelete: delete (EEGhostUnit*)p;
+        break;
+    case O::WTeamsClear: W->mTeams.clear();
+        break;
+    case O::WMirrorTeams: EEMirrorTeams(W->mTeams);
+        break;
+    case O::WRebuildTeams: W->RebuildTeams();
+        break;
+    case O::WRemoveFromTeams: W->RemovePlayerFromTeams((unsigned long)a[0]);
+        break;
+    case O::WAddAlliance: W->AddAlliance((long)a[0], (long)a[1]);
+        break;
+    case O::WBreakAlliance: W->BreakAlliance((long)a[0], (long)a[1]);
+        break;
+    case O::WFlushQueued: W->FlushQueuedPlacements();
+        break;
+    case O::WQueuedCount: return (int64_t)W->mQueuedPlacements.size();
+    case O::WQueuedUnit: return P64(W->mQueuedPlacements[a[0]].mUnit);
+    case O::WQueuedAfter: return P64(W->mQueuedPlacements[a[0]].mInsertAfter);
+    case O::WQueuedClear: W->mQueuedPlacements.clear();
+        break;
+    case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
+        break;
+    case O::WAddUnitEntry: W->AddUnitEntry((RTSUnit*)a[0], (RTSUnit*)a[1]);
+        break;
+    case O::WPlayerBySlot: return P64(W->GetPlayerBySlot((unsigned char)a[0]));
+    case O::WWriteLock: W->mLock->WriteLock();
+        break;
+    case O::WWriteUnlock: W->mLock->WriteUnlock();
+        break;
+    case O::WCopyGameOptions: W->mGameOptions = gGameState.mGameOptions;
+        break;
+    case O::WSetMap: W->SetMap((EEMap*)a[0]);
+        break;
+    case O::WSetEffectManager: W->SetEffectManager((EEEffectManager*)a[0]);
+        break;
+    case O::WSetNumPlayers: W->SetNumPlayers((unsigned long)a[0]);
+        break;
+    case O::WSetPopulationLimit: W->SetPopulationLimit((unsigned long)a[0]);
+        break;
+    case O::WCreateInfluenceTable: W->CreateInfluenceTable((EEMap*)a[0]);
+        break;
+    case O::WClearContinents: W->ClearContinents();
+        break;
+    case O::WCreateMiniMap: W->CreateMiniMap((EEGameState*)a[0]);
+        break;
+    case O::WSetGameSpeed: W->SetGameSpeed(f[0]);
+        break;
+    case O::WSetScenarioManager: W->SetScenarioManager((EEScenarioManager*)a[0]);
+        break;
+    case O::WSetEnvironmentManager: W->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
+        break;
+    case O::WSetCalamityHelper: W->SetCalamityHelper((FSPersistent*)a[0]);
+        break;
+    case O::WOptionsPlayerColorFix: W->mGameOptions.mPlayers[a[0] - 1].mColor = EEColorTable::FindIndex(W->mPlayers[a[0]]->mColor);
+        break;
+    case O::WOptionsPlayerGet: *(EEGameOptionsPlayer*)a[1] = W->mGameOptions.mPlayers[a[0]];
+        break;
+    case O::WOptionsPlayerSet: W->mGameOptions.mPlayers[a[0]] = *(EEGameOptionsPlayer*)a[1];
+        break;
+    case O::WResourceUserHas: return W->mResourceUsers.count((EEUnit*)a[0]);
+    case O::WResourceUserGet: return (int64_t)W->mResourceUsers.find((EEUnit*)a[0])->second;
+    case O::WResourceUserSet: W->mResourceUsers[(EEUnit*)a[0]] = (unsigned long)a[1];
+        break;
+    case O::RtsClear: W->RTSWorld::Clear();
+        break;
+    case O::RtsReset: W->RTSWorld::Reset();
+        break;
+    case O::RtsSetPopulationLimit: W->RTSWorld::SetPopulationLimit((unsigned long)a[0]);
+        break;
+    case O::RtsSetNumPlayers: W->RTSWorld::SetNumPlayers((unsigned long)a[0]);
+        break;
+    case O::WorldLayoutRegister: EEWorldLayoutRegister();   // port: where Rust's views read the world's objects (ee/EEWorldLayout.h)
+        break;
+    // the game state
+    case O::StOptions: return P64(static_cast<EeAppOptionsFields*>(&ST->mGameOptions));
+    case O::LobbyOptions: return P64(static_cast<EeAppOptionsFields*>(&gGameOptions));
+    case O::LobbyCampaignNameLength: return gGameOptions.mCampaignName.GetLength();
+    case O::LobbyCampaignMapName: return gGameOptions.GetCampaignMapName(*(UWideString*)p);
+    case O::StIsLoadedGame: return P64(&ST->mIsLoadedGame);
+    case O::StInScenarioEditor: return P64(&ST->mInScenarioEditor);
+    case O::StRandomSeed: return P64(&ST->mRandomSeed);
+    case O::StNumPlayersMade: return P64(&ST->mNumPlayersMade);
+    case O::StTownIDCounter: return P64(&ST->mTownIDCounter);
+    case O::StHerdIDCounter: return P64(&ST->mHerdIDCounter);
+    case O::StLocalPlayer: return P64(&ST->mLocalPlayer);
+    case O::StUsingCarbon: return P64(&ST->mUsingCarbon);
+    case O::StTimeOfDay: return P64(&ST->mTimeOfDay);
+    case O::StGameSpeed: return P64(&ST->mGameSpeed);
+    case O::StUnitImprovementsAllowed: return P64(&ST->mUnitImprovementsAllowed);
+    case O::StRevealMap: return P64(&ST->mRevealMap);
+    case O::StMajorVersion: return P64(&ST->mMajorVersion);
+    case O::StMinorVersion: return P64(&ST->mMinorVersion);
+    case O::StMapCenter: return P64(&ST->mMapCenter);
+    case O::StMap: return P64(ST->mMap);
+    case O::StEffectManager: return P64(ST->mEffectManager);
+    case O::StScenarioManager: return P64(ST->mScenarioManager);
+    case O::StEnvironmentManager: return P64(ST->mEnvironmentManager);
+    case O::StCalamityHelper: return P64(ST->mCalamityHelper);
+    case O::StNumPlayers: return ST->GetNumPlayers();
+    case O::StPlayerCount: return (int64_t)ST->mPlayers.size();
+    case O::StPlayerAt: return P64(ST->mPlayers[a[0]]);
+    case O::StLoadedPlayerCount: return (int64_t)ST->mLoadedPlayers.size();
+    case O::StLoadedPlayerAt: return P64(ST->mLoadedPlayers[a[0]]);
+    case O::StNumTeams: return ST->GetNumTeams();
+    case O::StTeamToRust: ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), std::vector<uint32_t>(ST->mTeams[a[0]].mPlayers.begin(), ST->mTeams[a[0]].mPlayers.end()).data(), ST->mTeams[a[0]].mPlayers.size());
+        break;
+    case O::StReadLock: ST->ReadLock();
+        break;
+    case O::StReadUnlock: ST->ReadUnlock();
+        break;
+    case O::StRepairRestorables: ST->RepairRestorables();
+        break;
+    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
+    case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
+        break;
+    case O::ReportGameInitialized: EEReportLoadFailure(UString("Game initialized."), false, NULL);
+        break;
+    // the players
+    case O::PlFirstUnit: return P64(PL->mFirstUnit);
+    case O::PlKillUnit: PL->KillUnit((EEUnit*)a[0], a[1] != 0);
+        break;
+    case O::PlRemoveKilled: PL->RemoveKilledUnits();
+        break;
+    case O::PlReleasePending: PL->ReleasePendingUnits();
+        break;
+    case O::PlAddPendingUnits: PL->AddPendingUnits(a[0] != 0, a[1] != 0);
+        break;
+    case O::PlNumPending: return PL->GetNumPendingUnits();
+    case O::PlPendingAt: return P64(PL->GetPendingUnit((unsigned long)a[0]));
+    case O::PlAlliesCount: return (int64_t)PL->mAllies.size();
+    case O::PlAllyAt: return P64(PL->mAllies[a[0]]);
+    case O::PlAlliesPush: PL->mAllies.push_back((EEPlayer*)a[0]);
+        break;
+    case O::PlRemoveAlly: PL->RemoveAlly((EEPlayer*)a[0]);
+        break;
+    case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
+        break;
+    case O::PlLoadFrom: PL->EEPlayer::Load((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
+        break;
+    case O::PlRepairPointers: PL->RepairPointers((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::PlTechnologies: return P64(PL->mTechnologies);
+    case O::PlTechTree: return P64(PL->GetTechTree());
+    case O::PlUpgradeAt: return P64(PL->mUnitClassUpgrades[a[0]]);
+    case O::PlUpgradeLoadMedia: PL->mUnitClassUpgrades[a[0]]->LoadMedia(PL, (long)a[1]);
+        break;
+    case O::PlUpgradeUnloadMedia: PL->mUnitClassUpgrades[a[0]]->UnloadMedia(PL);
+        break;
+    case O::PlLoadButtons: PL->LoadUnitClassButtons((long)a[0]);
+        break;
+    case O::PlUnloadClassMedia: PL->UnloadUnitClassMedia((unsigned long)a[0]);
+        break;
+    case O::PlUnloadClassButtons: PL->UnloadUnitClassButtons((unsigned long)a[0]);
+        break;
+    case O::PlSetHackClassNone: PL->SetHackUnitClass(kNoUnitClass);
+        break;
+    case O::PlSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], (long)a[1], (EEMap*)a[2]);
+        break;
+    case O::PlDumpMedia: PL->DumpMedia(*(FSFileSpec*)a[0]);
+        break;
+    case O::PlSetEndTimeNow: PL->mSavedGroups.mEndTime = gPhysics->mGameTime;
+        break;
+    case O::PlColorIsPlayerColor: return EEGetPlayerColor((unsigned long)a[0]) == PL->mColor;
+    case O::PlSetPlayerColor: PL->SetColor(EEGetPlayerColor((unsigned long)a[0]));
+        break;
+    case O::PlSetAllResources: PL->SetAllResources((long)a[0]);
+        break;
+    case O::PlCivApplyDeferred: PL->mCivilization.ApplyDeferred(PL, ((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion);
+        break;
+    case O::PlCivApplyLevel21: PL->mCivilization.ApplyLevel21ToWorld();
+        break;
+    case O::PlCivSetName: PL->mCivilization.SetName(*(UWideString*)a[0]);
+        break;
+    case O::PlApplyMapRestrictions: PL->ApplyMapRestrictions();
+        break;
+    case O::PlComputerPlayer: return P64(PL->mComputerPlayer);
+    case O::PlRefreshTownGroups: PL->RefreshTownGroups();
+        break;
+    case O::PlRefreshTerrainVisibility: PL->RefreshTerrainVisibility();
+        break;
+    case O::PlAddOwnSight: PL->AddOwnSight((EEMapTile*)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::PlRemoveOwnSight: PL->RemoveOwnSight((EEMapTile*)a[0]);
+        break;
+    case O::PlRestartTowns: PL->RestartTowns();
+        break;
+    case O::PlRestorePatrols: PL->RestorePatrols();
+        break;
+    case O::PlKillStrandedUnits: PL->KillStrandedUnits();
+        break;
+    case O::PlFinishUnitsLoad: PL->FinishUnitsLoad((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::PlIsHuman: return PL->IsHuman();
+    case O::HumanGetName: *(UWideString*)a[0] = static_cast<EEHumanPlayer*>(PL)->GetName();
+        break;
+    case O::HumanSetName: static_cast<EEHumanPlayer*>(PL)->SetName(*(UWideString*)a[0]);
+        break;
+    case O::PlDelete: delete PL;
+        break;
+    case O::NewHumanPlayer: return P64(static_cast<EEPlayer*>(new EEHumanPlayer));
+    case O::NewComputerPlayer: return P64(static_cast<EEPlayer*>(new EEComputerPlayer(*(UWideString*)p, (unsigned long)a[0])));
+    case O::CpRefreshResourceCenters: ((EEComputerPlayer*)p)->RefreshResourceCenters();
+        break;
+    case O::CpReplaceOnLoad: return ((EEComputerPlayer*)p)->mReplaceOnLoad;
+    case O::CpRestoreDeferredManagers: EECPRestoreDeferredManagers((unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::CpNewGame: EECPNewGame();   // port: the computer players' per-game file statics cleared (ee/EECPTrace.h)
+        break;
+    case O::SetDeferComputerRestore: gDeferComputerPlayerRestore = a[0] != 0;
+        break;
+    case O::SaveHasTowns: return EESaveHasTowns((unsigned long)a[0], (unsigned long)a[1]);
+    case O::PlayerShareBonus: EEPlayerShareBonus(a[0] != 0);
+        break;
+    case O::TechSetPlayer: ((EETechTree*)p)->SetPlayer((EEPlayer*)a[0]);
+        break;
+    case O::TechIsLoaded: return ((EETechTree*)p)->mIsLoaded;
+    case O::TechResetEpochRange: ((EETechTree*)p)->ResetEpochRange((long)a[0], (long)a[1]);
+        break;
+    case O::TechApplySaved: ((EETechTree*)p)->ApplySavedState(gLoadingSavedGame, true);
+        break;
+    case O::TechUpdateInterface: ((EETechTree*)p)->UpdateInterface(a[0] != 0);
+        break;
+    case O::UpgradeUnitType: return ((EEUnitClassUpgrade*)p)->GetUnitClass()->mUnitType;
+    case O::UpgradeHitPoints: EEUpgradeHitPoints((EEUnitClassUpgrade*)p, (long)a[0], f[0], (EEPlayer*)a[1]);
+        break;
+    case O::OptionsPlayerNew: return P64(new EEGameOptionsPlayer);
+    case O::OptionsPlayerDelete: delete (EEGameOptionsPlayer*)p;
+        break;
+    case O::OptionsPlayerSetType: ((EEGameOptionsPlayer*)p)->mType = (unsigned long)a[0];
+        break;
+    // the units
+    case O::UnNext: return P64(static_cast<EEUnit*>(UN->mNext));
+    case O::UnTileNext: return P64(static_cast<EEUnit*>(UN->mTileNode->mNext));
+    case O::UnTilePrev: return P64(static_cast<EEUnit*>(UN->mTileNode->mPrev));
+    case O::UnTile: return P64(UN->mTile);
+    case O::UnIsFoundation: return UN->IsFoundation();
+    case O::UnLoadMedia: UN->LoadMedia(a[0] != 0);
+        break;
+    case O::UnSightOnHere: UN->SightOnHere();
+        break;
+    case O::UnSightOffHere: UN->SightOffHere();
+        break;
+    case O::UnLink: ((RTSUnit*)p)->Link((RTSUnit*)a[0]);
+        break;
+    case O::UnUnlink: ((RTSUnit*)p)->Unlink();
+        break;
+    case O::RtsUpdateTile: ((RTSUnit*)p)->UpdateTile((EEMap*)a[0]);
+        break;
+    case O::DummyHead: return P64(RTSDummyHead((RTSUnit*)p));
+    case O::CxClearCollisionState: CX->ClearCollisionState();
+        break;
+    case O::CxMakeAreaEffects: CX->MakeAreaEffects();
+        break;
+    case O::CxClearContacts: CX->ClearContacts();
+        break;
+    case O::CxFindContacts: CX->FindContacts();
+        break;
+    case O::CxPreviousPart: return P64(CX->mPreviousPart);
+    case O::CxContainer: return P64(CX->mContainer);
+    case O::RefUnitReference: UN->Reference();
+        break;
+    case O::RefUnitDereference: ((RTSUnit*)p)->Dereference();
+        break;
+    case O::UcAddToTile: UC->AddToTile((EEUnit*)a[0]);
+        break;
+    case O::UcAddToRegion: UC->AddToRegion((EEUnit*)a[0]);
+        break;
+    case O::UnitClassCount: return EEUnitClassCount();
+    case O::LogSkipRemoved: fprintf(stderr, "EE-UNITLIST: placement skips a removed unit (id %08lx, %s, tile %ld,%ld)\n", UN->mUnitID, (const char*)UN->mUnitClass->mName, UN->mTileX, UN->mTileY);
+        break;
+    case O::LogAfterGone: fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n", ((RTSUnit*)p)->mUnitID);
+        break;
+    case O::UnbornContains: return std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), CX) != sUnbornDeactivations.end();
+    case O::UnbornPush: sUnbornDeactivations.push_back(CX);
+        break;
+    case O::UnbornCount: return (int64_t)sUnbornDeactivations.size();
+    case O::UnbornAt: return P64(sUnbornDeactivations[a[0]]);
+    case O::UnbornClear: sUnbornDeactivations.clear();
+        break;
+    case O::ActiveClear: ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
+        break;
+    // the map, the managers and the globals
+    case O::MapSize: return ((EEMap*)p)->mSize;
+    case O::MapPlayerCount: return ((EEMap*)p)->mU19561C;
+    case O::MapSetPlayerCount: ((EEMap*)p)->SetPlayerCount((unsigned long)a[0]);
+        break;
+    case O::MapFogSeen: ((EEMap*)p)->FogSeen((EEPlayer*)a[0]);
+        break;
+    case O::MeshReferenceTile: gWorld.mMap->mTerrainMesh.ReferenceTile((long)a[0], (long)a[1]);
+        break;
+    case O::MeshDereferenceTile: gWorld.mMap->mTerrainMesh.DereferenceTile((long)a[0], (long)a[1]);
+        break;
+    case O::SightRevealScopeNew: return P64(new EESightScope(kSightRevealMap, NULL));   // TSGT (TEST ONLY)
+    case O::SightScopeDelete: delete (EESightScope*)p;
+        break;
+    case O::InfluenceAddUnit: ((EEInfluenceTable*)p)->AddUnit((EEUnit*)a[0], (long)a[1], (long)a[2]);
+        break;
+    case O::MiniMapDelete: delete gMiniMap;
+        break;
+    case O::MiniMapSetNull: gMiniMap = NULL;
+        break;
+    case O::MiniMapRedraw: gMiniMap->Redraw();
+        break;
+    case O::MiniMapRedrawAll: gMiniMap->RedrawAll();
+        break;
+    case O::MiniMapRefresh: gMiniMap->Refresh();
+        break;
+    case O::MiniMapSetViewer: gMiniMap->mViewingPlayer = (EEPlayer*)a[0];
+        break;
+    case O::MiniMapMoveUnit: gMiniMap->MoveUnit(UN, (long)a[0], (long)a[1], (long)a[2], (long)a[3]);
+        break;
+    case O::ShutdownInProgress: return UShutdownInProgress();
+    case O::PickerLock: gUnitPicker.GetLock()->Enter();
+        break;
+    case O::PickerReset: gUnitPicker.Reset();
+        break;
+    case O::PickerUnlock: gUnitPicker.GetLock()->Leave();
+        break;
+    case O::UiManagerPresent: return gUIManager != NULL;
+    case O::UiEditorForm: return P64(gUIManager->GetScenarioEditorForm());
+    case O::UiEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();
+        break;
+    case O::UiInScenarioEditor: return gUIManager->mInScenarioEditor;
+    case O::UserInterfacePresent: return gUserInterface != NULL;
+    case O::UiPostUpdateBackground: gUserInterface->PostUpdateBackgroundMedia();
+        break;
+    case O::UiPostPauseInformation: gUserInterface->PostPauseInformation(a[0] != 0);
+        break;
+    case O::UiSetRandomSeed: gUserInterface->mRandomSeed = (long)a[0];
+        break;
+    case O::UiLoadProgress: gUserInterface->SetLoadProgress(f[0]);
+        break;
+    case O::DisplayWeatherEffects: return gDisplayWeatherEffects;
+    case O::ShowSinglePlayerScreen: EEShowSinglePlayerScreen();
+        break;
+    case O::EnvSetEnabled: ((EEEnvironmentManager*)p)->SetEnabled(a[0] != 0);
+        break;
+    case O::EnvFnE123D: ((EEEnvironmentManager*)p)->FnE123D();
+        break;
+    case O::PathFreePaths: gPathManager.FreePaths();
+        break;
+    case O::PathReset: gPathManager.Reset();
+        break;
+    case O::PathRequestPending: gPathManager.RequestPendingPaths((EEMap*)a[0]);
+        break;
+    case O::EffClearEffects: ((EEEffectManager*)p)->ClearEffects();
+        break;
+    case O::AeClearEffects: gAEManager.ClearEffects();
+        break;
+    case O::CalamitiesDestroy: USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
+        break;
+    case O::CalamitiesRestore: USingleton<EECalamityManager>::GetInstance()->Restore(((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion, *(std::vector<EECalamity*>*)p);
+        break;
+    case O::NewCalamityHelper: return P64(static_cast<FSPersistent*>(new EEPCalamityHelper));
+    case O::StopAllSounds: EEStopAllSounds();
+        break;
+    case O::SetLocalPlayerOut: gLocalPlayerOut = a[0] != 0;
+        break;
+    case O::SetCollisionDetectionUnit: gCollisionDetectionUnit = (unsigned long)a[0];
+        break;
+    case O::SetSightUpdates: gSightUpdatesEnabled = a[0] != 0;
+        break;
+    case O::SetHerdUnreadValue: gHerdUnreadValue = (long)a[0];
+        break;
+    case O::SetCameraFollowing: gCameraFollowing = a[0] != 0;
+        break;
+    case O::SoundManagerPresent: return gSoundManager != NULL;
+    case O::SoundSetMuted: gSoundManager->SetIsMuted(a[0] != 0);
+        break;
+    case O::WonNetPresent: return gWonNet != NULL;
+    case O::WonNetClearGameList: gWonNet->ClearGameList();
+        break;
+    case O::CivBuilderFree: CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
+        break;
+    case O::SimNoHumanDefeat: return gPlatSimNoHumanDefeat;
+    case O::SimNoHumanDefeatHit: gPlatSimNoHumanDefeatHits++;
+        break;
+    case O::ScenarioEndCinematic: gWorld.mScenarioManager->EndCinematic();
+        break;
+    case O::ScenarioPrepare: gWorld.mScenarioManager->Prepare();
+        break;
+    case O::ScenarioApplyPendingEffects: gWorld.mScenarioManager->ApplyPendingEffects();
+        break;
+    case O::CommNumHumanPlayers: return gCommunications->GetNumHumanPlayers();
+    case O::CommSetPlayerNumber: gCommunications->SetPlayerNumber((unsigned long)a[0]);
+        break;
+    case O::CommIsServer: return gCommunications->IsServer();
+    case O::CommCTsProcessed: return gCommunications->GetNumberOfCTsProcessedInPhysics();
+    case O::CommIsMultiplayer: return gCommunications->GetIsMultiplayerSession();
+    case O::CommServer: return P64(dynamic_cast<EEServer*>(gCommunications));
+    case O::ServerIsPaused: return ((EEServer*)p)->GetIsGamePaused();
+    case O::ServerPause: ((EEServer*)p)->PauseGame();
+        break;
+    case O::ServerUnpause: ((EEServer*)p)->UnpauseGame();
+        break;
+    case O::ServerFastSelect: (static_cast<EEServer*>(gCommunications))->mFastSelectionID = static_cast<EEServer*>(gCommunications)->mFastSelection[(unsigned char)a[0]];
+        break;
+    case O::ClientFastSelect: (static_cast<EEClient*>(gCommunications))->mFastSelectionID = static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)a[0]];
+        break;
+    case O::ContinentRegionsPending: return EEContinentRegionsPending();
+    case O::ContinentRestoreRegions: EERestoreContinentRegions();
+        break;
+    case O::ContinentBuildRegions: gContinentManager.BuildRegions((EEMap*)a[0]);
+        break;
+    case O::UpdateLandContinents: EEUpdateLandContinents();
+        break;
+    case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
+        break;
+    case O::CameraClearUnitA: gWorld.mCameraControl.ClearUnitA();
+        break;
+    case O::CameraClearUnitB: gWorld.mCameraControl.ClearUnitB();
+        break;
+    case O::CameraResetPath: gWorld.mCameraControl.ResetPath();
+        break;
+    case O::CameraResetZoom: gWorld.mCameraControl.ResetZoom();
+        break;
+    case O::CameraSetChanged: gWorld.mCameraControl.SetChanged();
+        break;
+    case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
+        break;
+    case O::GraphicsInitialiseScene: gGraphics->PostInitialiseScene();
+        break;
+    case O::MusicSetIntensity: gMusicManager->SetIntensity((long)a[0]);
+        break;
+    case O::MusicStart: gMusicManager->Start();
+        break;
+    case O::AmbientEnable: gAmbientSoundManager.SetEnabled(gAmbientSoundEnabled);
+        break;
+    case O::AmbientRestart: gAmbientSoundManager.Restart();
+        break;
+    case O::PhysSetGameStarted: gPhysics->mGameStarted = true;
+        break;
+    case O::PhysClearAutoSave: gPhysics->mAutoSaveClock = 0;
+        break;
+    case O::CampaignProgressNew: return P64(new EECampaignProgress);
+    case O::CampaignProgressDelete: delete (EECampaignProgress*)p;
+        break;
+    case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
+        break;
+    case O::ClearFormManager: EEUIECLEFormManager::Clear();
+        break;
+    case O::StrNew: return P64(new UWideString);
+    case O::StrFree: delete (UWideString*)p;
+        break;
+    case O::StrComputerName: gResource->GetString(IDS_COMPUTER, *(UWideString*)p);
+        break;
+    case O::MemFileNew: return P64(new FSMemoryFile((unsigned long)a[0], a[1] != 0, (long)a[2]));
+    case O::MemFileRewind: ((FSMemoryFile*)p)->SetPosition(0, kFileOriginBegin, false);
+        break;
+    case O::MemFileDelete: delete (FSMemoryFile*)p;
+        break;
+    case O::GfxEffectLoad: EEGraphicEffect::Get((long)a[0])->Load(a[1] != 0);
+        break;
+    case O::GfxEffectUnload: EEGraphicEffect::Get((long)a[0])->Unload();
+        break;
+    case O::SoundObjectLoad: EESoundObject::Get((long)a[0])->LoadMedia();
+        break;
+    case O::SoundObjectUnload: EESoundObject::Get((long)a[0])->UnloadMedia();
+        break;
+    // DumpMedia's report (p the file)
+    case O::DumpBlankLines: fprintf(FILE_SPEC, "\n\n");
+        break;
+    case O::DumpEffectIds: EEGraphicEffect::DumpIDs(FILE_SPEC);
+        break;
+    case O::DumpGraphicObjects: EEDumpGraphicObjectTable(FILE_SPEC);
+        break;
+    case O::DumpSounds: EESoundObject::Dump(FILE_SPEC);
+        break;
+    case O::DumpButtons: EEButtonObject::DumpAllLoadedMedia(FILE_SPEC);
+        break;
+    case O::DumpTerrain: EETerrainTable::DumpAllLoadedMedia(FILE_SPEC);
+        break;
+    case O::DumpTextures: gTextureManager->DumpAllLoadedMedia(FILE_SPEC);
+        break;
+    case O::DumpModels: gModelManager->DumpAllLoadedMedia(FILE_SPEC);
+        break;
+    case O::DumpLeakedUnits: EEDumpLeakedUnits(FILE_SPEC);
+        break;
+    case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
+        break;
+    default: ESVERIFY_AT(inOp == O::UnRts, 1);
+        break;
+    }
+    return 0;
+}
+
+double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
+    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
+    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
+    case O::ViewportXCenter: return gViewport.GetXCenter();
+    case O::ViewportYCenter: return gViewport.GetYCenter();
+    default: ESVERIFY_AT(inOp == O::CxEffectHeight, 1);
+        break;
+    }
+    return 0.0;
 }
