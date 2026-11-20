@@ -35685,3 +35685,80 @@ On the final tree (c6f61e135; origin/rust 781d6cd0c was already in the base 840a
 - `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 11846,
   units [4, 36, 37], alive [2, 3], classic_lua x 2; lan-game PT 2790/2789).
 - Not run: the POSIX builds.
+## The scenario editor lane, round 3: the scenario capture records whole in Rust; the effect run's world sequences, Create Units' unit, the cinematics and the shared maker composed in Rust over one-statement C++ (ee_sim scenario sm_capture.rs, world_compose.rs, cinematic.rs; ee_game editor_sepl.rs; branch rust-seditor3, 2026-11-20)
+
+The brief: under the owner's new rule ("Calling C++ from Rust is fine"), move the editor's and the trigger manager's
+C++ logic to Rust, reaching the world through one-statement shims; score in C++ logic lines (`logic_lines.py`),
+target -3,000. **Logic lines -1,352** (91,787 -> 90,435), net C++ lines -722 (+1,064 / -1,786), Rust +4,209 (tests
+included). About 590 shim cases were added (capture reads 123, effect statements 236, Create Units 33, round 56, the
+shared maker 140) and about 25 one-statement helpers; the composed ops' one-line C++ cases (about 12) went.
+
+### The pattern: compose below the trait, at the C ABI adapter
+
+The scenario logic already called the world by operation (`Host::world(op, args)`, `Round::op`), and the editor's
+Rust by host op (`ee_screenscpp_*`). A C++ case that was a statement sequence is now split into single statements
+with new op numbers, and the sequence is rebuilt in Rust in the *adapter* that turns the trait call into the C ABI
+call (`EeScenarioHost::world` / `::write`, `EeScenarioRoundHost::op`, `editor_direct::sepl`): `compose(op, args)`
+answers the old op from the new ones, or `None` for the C++'s own. So effect.rs, task.rs, round.rs and the editor's
+screens, and all their unit tests (recorded op streams), are unchanged by construction; the new modules have their own
+stream tests. The C++ keeps every object a sequence builds (the run's group, goals, transformations, the gate part,
+the town, the tile node, the made control) in the context it already passed, or hands a pointer back as an opaque
+handle the next statement takes.
+
+### Lessons
+
+- **A statement that made a local in the C++ needs a home that lives as long as the old local, and no longer.** The
+  effect run's context (`EESMEffectRun`) got members for each sequence's objects (`mGroupGoal`, `mUnitGoal`, `mHeld`,
+  `mFace`, `mGround`, ...), separate from the members the original's later statements read (`mTransformation`,
+  `mPitch`, `mRoll` are the original's "locals that the next unit's pass starts from" and must not be reused as
+  scratch). A shared static that replaced a function-local vector kept growing: `gTechTree.GetNodeIDs` *appends*, so
+  the editor's tech lists tripled until a "clear" statement was added before it (the editor gate caught it: n=624
+  instead of 208).
+- **Keep a held pointer where the C++ held one.** The Kill sequence re-reading the unit by id after `Kill` could miss
+  a unit the kill took off the lookup; it holds the `EEUnit*` in the context (`WX_HOLD`). Likewise the group's found
+  citizen and naval citizen: both searches run first, as the original's two locals, then the tests.
+- **cbindgen renames are global, again**: a `pub type Version = i64` in the capture module rewrote another crate's
+  header (`struct Version;` appeared in won_net/adminop.h). Prefix every exported type (`EeScenarioCapVersion`).
+- **A memory file the record hashes can be Rust's**: `FSMemoryFile(EeFsMemFile*, false)` wraps a Rust-owned state,
+  so the capture's saves write into a Rust file whose bytes Rust hashes, and the C++ statement is one `new`.
+- **The float math moves with its exact operations**: `GERectangle(point, w, h)` is `right = left + (w - 1)`;
+  `GEVector::Normalize` and `UMArcTan2` are ee_base's (the C++ inlines call the same Rust), so the aircraft heading
+  of Create Units and the facing test are computed in Rust with the same operations.
+- **The counter's one-liners**: `case X: stmt; return 0;` on one line is logic to `logic_lines.py` (two semicolons),
+  a statement and its return on two lines a shim. The new shims are written two-line; the lane's existing one-liners
+  (about 150) were left as they were, not reformatted for the count.
+
+### What moved (commits)
+
+| Commit | What | Logic | Net C++ |
+|---|---|---|---|
+| db6ac6ee5 | the scenario capture records whole in Rust (`sm_capture.rs`, `sm_capture_game.rs`; 6 tests) | -457 | -348 |
+| 5f81a50d7 | the effect run's world sequences, Create Units' unit, Task-Area's placements, Modify Tech Tree's add, the class tests (`world_compose.rs`; 17 tests); the cinematics, the round's messages, the pending effects, the media unloads, ReplaceUnit (`cinematic.rs`; 7 tests) | -556 | -203 |
+| 89aec3c92 | the shared maker's controls (`SeplMake`) and its host's sequences (`editor_sepl.rs`; 9 tests) | -339 | -171 |
+
+### What exercises what
+
+- The scenario capture profile (43 digests equal golden_cpp_scenario.txt) and scenario_check (27/27) run the
+  effects, the cinematics, Create Units and the capture records; the oracle runs none of the scenario code (random
+  maps) but every game's `EEScenarioManager::Update`.
+- The editor gate (14,448 lines) dumps every control `SeplMake` makes (rectangles, colours, opacity, texts, groups)
+  and drives the player tab (world and player values, tech lists, colour, events); the editor tour's first frame
+  equals the base build's outside the game view and the mini map (the blank map's grass varies by run).
+- Only a person reaches: the load thread's posts, the mini map redraw, the diplomacy events' clicks, the dialog
+  messages' camera moves outside EE-SIM's scenario dialogs.
+
+### Gates
+
+On the final tree (acaaf7603; origin/rust 781d6cd0c is already in the round's base, so its merge is a no-op): the
+`--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (5,107 tests; its first run failed
+clippy on the round's modules, fixed in acaaf7603); the oracle at seeds 2-7 identical; the twelve capture profiles at
+seeds 2-3 PASS (scenario 43, oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26,
+transport 185, groups 2, placement 4 digests); the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical,
+exit 0; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload
+expect: PASS` (calamity 3/4, next 2/4 as the expect file has them); scenario_check 27/27; sim_editor PASS (14,448
+lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the editor tour PASS, its first frame equal to
+the base build's outside the game view and the mini map; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT
+PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12883` units [4, 39, 40] alive_computers [2, 3] engines
+classic_lua x 2, `RESULT PASS lan-game PT host=2780 joiner=2782`, GATES PASS. Per step: the build `--sim` 0/0, the
+oracle at seeds 2-3, the editor and civilization gates, scenario_check, the scenario capture at seeds 2-3 (its first
+run failed SMCE: the record's first field, the condition's id, was missing). Behaviour changes: none observed.

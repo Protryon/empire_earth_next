@@ -91,7 +91,7 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its c
 // only (provisional name)
 static const float kSEUButtonWidth = 35.0f;
 
-// The shared control maker's unit tab lists (EESERBUnitTypes.cpp SeplMake)
+// The shared control maker's unit tab lists (ee_game editor_sepl.rs make)
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex)
 {
