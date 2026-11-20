@@ -220,6 +220,8 @@ pub mod editor_sepl;
 mod editor_calls;
 pub mod editor_sefmx;
 pub mod editor_tabsx;
+pub mod editor_setnx;
+pub mod editor_seunx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
