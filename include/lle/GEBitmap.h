@@ -17,11 +17,10 @@
 class GETexture;
 class GEVertexArray;
 class GETextureCoordinate;
-LLE_API intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp
 
 class LLE_API GEBitmap : public UReferenceCounter {   // sizeof 0x30 (vector deleting dtor 0xf923)
 public:
-    GEBitmap() : mRust(ee_ge_bmp_new(&GEVertexHost, this)) {}   // white, unscaled, one texture slot per screen
+    GEBitmap() : mRust(ee_ge_game_bmp_new(this)) {}   // white, unscaled, one texture slot per screen
     void ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle, const GERectangle& inSourceRectangle,
                                         const GERectangle& inDestinationRectangle, unsigned long inScreen)
         { ee_ge_bmp_stretch(this->mRust, R(inTextureRectangle), R(inSourceRectangle), R(inDestinationRectangle), inScreen); }

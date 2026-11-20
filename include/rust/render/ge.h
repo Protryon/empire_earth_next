@@ -98,6 +98,49 @@ enum class EeGeBmpFloat : uint32_t {
   Height,
 };
 
+/// The calls the four classes make on other objects.
+enum class EeGeObjOp : uint32_t {
+  /// `new UString` -> the string.
+  StrNew = 1,
+  /// `new UString(*a)` -> the string.
+  StrCopy,
+  /// `delete obj` (a `UString`).
+  StrDelete,
+  /// `new UWideString(a)` (a capacity in characters) -> the string.
+  WStrNew,
+  /// `delete obj` (a `UWideString`).
+  WStrDelete,
+  /// `obj->Dereference()` (a `GETexture`: its own).
+  TexDereference,
+  /// `obj->Dereference()` (a `UReferenceCounter`).
+  RefDereference,
+  /// `PlatFontCreate(obj, a, b & 1, (b >> 1) & 1, (b >> 2) & 1, (b >> 3) & 1)` (face, height, bold, italic,
+  /// underline, antialiased) -> the font or NULL.
+  PlatFontCreate,
+  /// `PlatFontDestroy(obj)`.
+  PlatFontDestroy,
+  /// `PlatFontGetMetrics(obj, ...)`'s `mHeight`.
+  PlatFontHeight,
+  /// `GERustTextOps()` -> the platform's text functions (`GeTextOps`).
+  TextOps,
+  /// `PlatWindowDestroy(obj)`.
+  PlatWindowDestroy,
+  /// `PlatWindowSetSize(obj, a, b)`.
+  PlatWindowSetSize,
+  /// `PlatWindowGetPosition(obj, a, b)` (`int32_t*` outputs).
+  PlatWindowPosition,
+};
+
+/// Which class a default constructor builds.
+enum class EeGePrimKind : uint32_t {
+  /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
+  Line = 1,
+  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
+  Point,
+  /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
+  Rhombus,
+};
+
 /// The calls a font bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeGeFbOp : uint32_t {
   /// `new GEText(obj)` (the constructor's working text: the font referenced) -> the text.
@@ -431,16 +474,6 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
-/// Which class a default constructor builds.
-enum class EeGePrimKind : uint32_t {
-  /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
-  Line = 1,
-  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
-  Point,
-  /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
-  Rhombus,
-};
-
 /// The calls the rasterizer makes on other objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeGeRastOp : uint32_t {
   /// `new UString(*(const UString*)a)` (the name).
@@ -552,39 +585,6 @@ enum class EeGeRastState : uint32_t {
   WaitForVSync,
   ZBuffer,
   ZCompare,
-};
-
-/// The calls the four classes make on other objects.
-enum class EeGeObjOp : uint32_t {
-  /// `new UString` -> the string.
-  StrNew = 1,
-  /// `new UString(*a)` -> the string.
-  StrCopy,
-  /// `delete obj` (a `UString`).
-  StrDelete,
-  /// `new UWideString(a)` (a capacity in characters) -> the string.
-  WStrNew,
-  /// `delete obj` (a `UWideString`).
-  WStrDelete,
-  /// `obj->Dereference()` (a `GETexture`: its own).
-  TexDereference,
-  /// `obj->Dereference()` (a `UReferenceCounter`).
-  RefDereference,
-  /// `PlatFontCreate(obj, a, b & 1, (b >> 1) & 1, (b >> 2) & 1, (b >> 3) & 1)` (face, height, bold, italic,
-  /// underline, antialiased) -> the font or NULL.
-  PlatFontCreate,
-  /// `PlatFontDestroy(obj)`.
-  PlatFontDestroy,
-  /// `PlatFontGetMetrics(obj, ...)`'s `mHeight`.
-  PlatFontHeight,
-  /// `GERustTextOps()` -> the platform's text functions (`GeTextOps`).
-  TextOps,
-  /// `PlatWindowDestroy(obj)`.
-  PlatWindowDestroy,
-  /// `PlatWindowSetSize(obj, a, b)`.
-  PlatWindowSetSize,
-  /// `PlatWindowGetPosition(obj, a, b)` (`int32_t*` outputs).
-  PlatWindowPosition,
 };
 
 /// A material's unsigned fields (`ee_ge_mat_get` / `ee_ge_mat_set`).
@@ -1378,6 +1378,64 @@ void *ee_ge_bmp_texture(EeGeBitmap *p, unsigned long screen);
 /// # Safety
 /// `p` is live.
 void *ee_ge_bmp_vertices(EeGeBitmap *p);
+
+extern ptrdiff_t GEVertexHost(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+extern ptrdiff_t GEObjectHost(void *owner, EeGeObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// `GEBitmap()` over the game's vertex host.
+///
+/// # Safety
+/// `owner` is the C++ bitmap, live until `ee_ge_bmp_destroy`.
+EeGeBitmap *ee_ge_game_bmp_new(void *owner);
+
+/// `GELine()`, `GEPoint()`, `GERhombus()` over the game's vertex host.
+///
+/// # Safety
+/// As [`ee_ge_game_bmp_new`].
+EeGePrim *ee_ge_game_prim_new(void *owner, EeGePrimKind kind);
+
+/// `GELine(start, end, start colour, end colour, opacity)` over the game's vertex host.
+///
+/// # Safety
+/// As [`ee_ge_game_bmp_new`]; the pointers are valid.
+EeGePrim *ee_ge_game_prim_new_line(void *owner,
+                                   const EeGe2DPoint *start,
+                                   const EeGe2DPoint *end,
+                                   const void *start_color,
+                                   const void *end_color,
+                                   float opacity);
+
+/// `GEPoint(point, colour, opacity)` over the game's vertex host.
+///
+/// # Safety
+/// As [`ee_ge_game_bmp_new`]; the pointers are valid.
+EeGePrim *ee_ge_game_prim_new_point(void *owner,
+                                    const EeGe2DPoint *point,
+                                    const void *color,
+                                    float opacity);
+
+/// `GEText(font)` over the game's object host.
+///
+/// # Safety
+/// `owner` is the C++ text, live until `ee_ge_text_destroy`.
+EeGeText *ee_ge_game_text_new(void *owner, void *font);
+
+/// `GEMaterial(screens, lods)` over the game's object host.
+///
+/// # Safety
+/// `owner` is the C++ material, live until `ee_ge_mat_destroy`.
+EeGeMat *ee_ge_game_mat_new(void *owner, unsigned long screens, unsigned long lods);
+
+/// `GEFont(name, size, style, quality)` over the game's object host.
+///
+/// # Safety
+/// `owner` is the C++ font, live until `ee_ge_font_destroy`; `name` is a `UString`.
+EeGeFont *ee_ge_game_font_new(void *owner,
+                              const void *name,
+                              unsigned long size,
+                              unsigned long style,
+                              unsigned long quality);
 
 /// `new GEFontBitmap(rasterizer, font, screen)`'s object (the glyphs rendered; the font holds `owner`).
 ///
