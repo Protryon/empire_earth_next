@@ -271,6 +271,8 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     EELobbyPlayer* aPlayer = reinterpret_cast<EELobbyPlayer*>(a);
     EELobbyFileTransfer* aTransfer = reinterpret_cast<EELobbyFileTransfer*>(a);
     switch (inOp) {
+    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
+    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::ReadByte: case Op::ReadShort: case Op::ReadBool: case Op::ReadLong: case Op::ReadWString:
         return Read(inOp, reinterpret_cast<ReadBuffer*>(a));
     case Op::Available: return reinterpret_cast<ReadBuffer*>(a)->Available();
