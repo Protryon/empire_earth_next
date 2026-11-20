@@ -81,8 +81,8 @@ void Background::Paint(Graphics &g, int xpos, int ypos, int width, int height, i
 	b.stretch_image = this->mStretchImage;
 	b.use_offsets = this->mUseOffsets;
 	b.has_component = this->mComponent.get()!=NULL;
-	b.image_width = b.has_image ? this->mImage->mWidth : 0;
-	b.image_height = b.has_image ? this->mImage->mHeight : 0;
+	b.image_width = b.has_image ? this->mImage->GetWidth() : 0;
+	b.image_height = b.has_image ? this->mImage->GetHeight() : 0;
 	b.color = this->mColor;
 	b.border_color = this->mBorderColor;
 	b.x = xpos;

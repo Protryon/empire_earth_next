@@ -7,25 +7,17 @@
 // optimisation (see the pragmas below); everything else is -O1.
 #include <windows.h>
 #include <stdint.h>
-#include "gx/GX.h"
 #include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
-#include "lle/GEPolygonArray.h"
 #include "rust/render/dx7.h"
 #include "rust/render/ge.h"
-#include "lle/TSCriticalSection.h"
 #include "platform/PlatFont.h"
 #include "lle/GEBitmap.h"
-#include "lle/GEFont.h"
-#include "lle/GEFontBitmap.h"
-#include "lle/GELine.h"
-#include "lle/GEMaterial.h"
 #include "lle/GEPoint.h"
 #include "lle/GERhombus.h"
-#include "lle/GEText.h"
 
 // DX7Rasterizer is whole in Rust (rust/crates/ee_render/src/dx7/rastobj.rs, R4.3 part 13): the per-screen DX7 records, the
 // debug colour, the light slots and every method below; DX7TnLRasterizer is its T&L flavour. The class keeps its vtable
@@ -474,14 +466,11 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
 // constructors, and the layouts Rust fills
 
 #include "lle/LowLevelEngine.h"
-#include "lle/Graphics Engine.h"
 #include <stddef.h>
-#include "lle/GESurface.h"
 #define DX7_SAME_OFFSET(cpp, rust, field) static_assert(offsetof(cpp, field) == offsetof(rust, field), #field)
 
 // --- GESurfaceDescription: filled by Rust (ee_dx7/src/api.rs SurfaceDescription) --------------------------------------
 static_assert(sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription), "ee_dx7/src/api.rs SurfaceDescription");
-#include "lle/GEScreen.h"
 static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode), "ee_dx7/src/screen.rs VideoMode");
 DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mWidth);
 DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mHeight);
@@ -503,8 +492,6 @@ DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mNoAlpha);
 extern "C" void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
 
 // --- DX7Screen and DX7Surface: whole in Rust (ee_dx7 scrobj.rs, surfobj.rs); the calls they make on C++ objects ------
-#include "GEWindow.h"
-#include "lle/UString.h"
 #include "platform/PlatWindow.h"
 #include "platform/PlatSim.h"
 static_assert(offsetof(GERectangle, mBottom) == 0 && offsetof(GERectangle, mLeft) == 4 && offsetof(GERectangle, mRight) == 8 &&

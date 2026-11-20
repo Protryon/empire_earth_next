@@ -1,7 +1,7 @@
 // Skinned button (R6 WON round 35): the Rust WONButton (rust/crates/ee_won_gui/src/wonbtnobj.rs) holds the states, the
 // wrapped text per font, the pads, colours, flags and alignments and runs every method; this is its host (its calls
-// out: the base Button, the wrapped texts, the images, the fonts, the button's state, the Graphics), the text getter
-// and the destructor.
+// out: the base Button, the wrapped texts, the images, the fonts, the button's state, the Graphics). Since R6
+// WONLobby round 24 the button is the shell kind WonButton (WONGUIShell.h, shell_won.rs).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,7 +12,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyWONButton.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
@@ -51,8 +51,8 @@ static intptr_t ImageOp(intptr_t which, intptr_t b)
     switch ((EeWonWbImage)which) {
     case EeWonWbImage::Hold: Img(b)->AddRef(); return 0;
     case EeWonWbImage::Release: Img(b)->Release(); return 0;
-    case EeWonWbImage::Width: return Img(b)->mWidth;
-    case EeWonWbImage::Height: return Img(b)->mHeight;
+    case EeWonWbImage::Width: return Img(b)->GetWidth();
+    case EeWonWbImage::Height: return Img(b)->GetHeight();
     case EeWonWbImage::Duplicate: { // the SmartPtr temporary's reference goes to the Rust
         SmartPtr<Image> aCopy = Img(b)->Duplicate();
         Image* p = aCopy.get();
@@ -106,15 +106,4 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
     }
     default: return 0;
     }
-}
-
-namespace WONAPI {
-// Returns the button text, or an empty string when the button has no font yet
-const GUIString& WONButton::GetText()
-{
-    const GUIString* aText = (const GUIString*)this->WCall(EeWonWbCall::GetText);
-    return aText ? *aText : gEmptyGUIString;
-}
-// Destroys the button: the Rust button gives its texts and images back
-WONButton::~WONButton() { ee_won_wonbtn_free(this->mWb); }
 }

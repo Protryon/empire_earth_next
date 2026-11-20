@@ -6,13 +6,8 @@
 #include <deque>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/TSEvent.h"
-#include "lle/TSThread.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
 #include "lle/TMTimer.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
 #include "lle/NESynchronousServer.h"
 #include "platform/PlatSim.h"
 

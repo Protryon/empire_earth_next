@@ -1,7 +1,7 @@
 #ifndef EE_WONAPI_WONLOBBYWONBUTTONCONFIG_H
 #define EE_WONAPI_WONLOBBYWONBUTTONCONFIG_H
 #include "ee/wonapi/WONLobbyResourceConfig.h"
-#include "ee/wonapi/WONLobbyWONButton.h"
+#include "ee/wonapi/WONGUIShell.h"
 namespace WONAPI {
 // Config classes (0x80 bytes): ButtonConfig (0x7c) + a raw pointer to the control at +0x7c.
 class WONSimpleButtonConfig : public ButtonConfig {

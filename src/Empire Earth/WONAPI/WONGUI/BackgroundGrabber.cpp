@@ -84,7 +84,7 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     }
     case Gb::Tint: {
         SmartPtr<RawImage32> aRawImage = t->mBGImage->GetRaw();
-        ee_won_grab_tint((uint32_t*)aRawImage->mImageData, (size_t)aRawImage->GetWidth() * aRawImage->GetHeight(), (int)c, (int)d);
+        ee_won_grab_tint((uint32_t*)aRawImage->GetImageData(), (size_t)aRawImage->GetWidth() * aRawImage->GetHeight(), (int)c, (int)d);
         g->DrawImage(aRawImage.get(), 0, 0);
         return 0;
     }

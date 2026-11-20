@@ -1,8 +1,4 @@
-028ca 036c5 Error System/ESChecksum.cpp
 04020 04e29 File System/File System.cpp
-04e29 07af6 File System/FSArchive.cpp
-07cb5 080b9 File System/FSChunk.cpp
-09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
 0dd9e 10550 Graphics Engine/GEBitmap.cpp
 1eb9f 206c7 Graphics Engine/GEModel.cpp
@@ -14,9 +10,6 @@
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp
 4b190 4b275 Network Engine/Network Engine.cpp
-4e8aa 4eef6 Sound Engine/SEMixer.cpp
-4eef6 4f08e Sound Engine/SEScore.cpp
-4f08e 532d9 Sound Engine/SESoundManager.cpp
 532d9 53675 Sound Engine/Sound Engine.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp

@@ -9,10 +9,7 @@
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
 
-#include "ee/EETileLocation.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
 
 // chain at 0x5245bb (wrapper)

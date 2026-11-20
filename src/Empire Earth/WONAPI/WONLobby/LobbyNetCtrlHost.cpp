@@ -481,8 +481,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ItemTextWidth: return reinterpret_cast<Font*>(b)->GetStringWidth(aText->mText, 0, aText->mText.length());
     case Op::ItemTextDraw: reinterpret_cast<Graphics*>(b)->DrawString(aText->mText, Lo(c), Hi(c)); return 0;
     case Op::ItemTextCompare: return aText->mText.CompareNoCase(reinterpret_cast<TextListItem*>(b)->mText);
-    case Op::ImageWidth: return reinterpret_cast<Image*>(a)->mWidth;
-    case Op::ImageHeight: return reinterpret_cast<Image*>(a)->mHeight;
+    case Op::ImageWidth: return reinterpret_cast<Image*>(a)->GetWidth();
+    case Op::ImageHeight: return reinterpret_cast<Image*>(a)->GetHeight();
     case Op::ResImage: return (intptr_t)ResImage(a);
     case Op::ItemGet: return ItemField(reinterpret_cast<ListItem*>(a), b, false, 0);
     case Op::ItemSet: ItemField(reinterpret_cast<ListItem*>(a), b, true, c); return 0;
@@ -491,7 +491,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::FontMod: return (intptr_t)aComp->GetFontMod(reinterpret_cast<Font*>(b), (int)c, 0);
     case Op::ListFont: return (intptr_t)aList->mFont.get();
     case Op::FontHeight: return reinterpret_cast<Font*>(a)->GetHeight();
-    case Op::ResImageHeight: return gLobbyResources[a].mImage->mHeight;
+    case Op::ResImageHeight: return gLobbyResources[a].mImage->GetHeight();
     case Op::ListDeliverPing: aList->DeliverEvent(PingGameEvent(reinterpret_cast<LobbyGame*>(b), true), true); return 0;
     case Op::ListTextColor: return aList->GetTextColor();
     case Op::GfxStandardColor: return g->GetStandardColor((StandardColor)b);

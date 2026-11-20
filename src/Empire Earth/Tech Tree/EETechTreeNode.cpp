@@ -9,8 +9,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/UIEntity.h"
-#include "lle/Input System.h"
 #include "lle/UIHotKey.h"
 
 #include "ee/EEPlayer.h"

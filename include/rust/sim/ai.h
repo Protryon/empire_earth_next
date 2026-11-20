@@ -1418,12 +1418,13 @@ size_t ee_ai_switch_cheat_names(long bits,
 /// `out` points to a record.
 void ee_ai_units_facts_reset(EeAiUnitsFacts *out);
 
-extern int64_t ee_ai_units_host(int32_t op,
-                                void *player,
-                                int64_t a,
-                                int64_t b,
-                                int64_t c,
-                                void *out);
+/// The operations on the game's objects (EECPNextUnits.cpp).
+extern int64_t ee_ai_units_host_cpp(int32_t op,
+                                    void *player,
+                                    int64_t a,
+                                    int64_t b,
+                                    int64_t c,
+                                    void *out);
 
 /// `EECPUnitsCategoryClass` of the class `class` (an `EEUnitClass*`): "citizen", "building", "soldier", ...
 ///

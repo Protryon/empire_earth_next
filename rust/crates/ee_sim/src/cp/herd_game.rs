@@ -27,8 +27,122 @@ impl HerdHost for Game {
     }
     fn call(&mut self, op: i32, a: u64, b: u64, io: &mut EeHerdIo) -> i64 {
         // SAFETY: the herd is live for the call; io is a live value
+        if let Some(r) = unsafe { world_op(self.herd as u64, op, a, b, io) } {
+            return r;
+        }
+        // SAFETY: as above
         unsafe { ee_cp_herd_host(self.herd, op, a, b, io) }
     }
+}
+
+/// The herd's operations on its area, the continent manager and the unit registry, over their Rust records (AI
+/// Thread cluster round 6; once `ee_cp_herd_host`'s). `None` for the C++ host's.
+///
+/// # Safety
+/// `herd` the live `EEHerd*` (its `EEAIArea*`: the first base, no vtable); `a`, `b` live units or herds as the
+/// operation takes them.
+unsafe fn world_op(herd: u64, op: i32, a: u64, b: u64, io: &mut EeHerdIo) -> Option<i64> {
+    use crate::astar::cm_io;
+    use crate::astar::continent_grid::EePoint;
+    use crate::astar::hull::EeHullPoint;
+    use herd::*;
+    let t = crate::world::WorldRead::begin();
+    let cm = crate::astar::world_view::cm();
+    let (x, y) = (io.v[0], io.v[1]);
+    let tiles = cm_io::area_tiles(herd) as *mut ee_base::sparse::EeSparseArray;
+    Some(match op {
+        EE_CP_HERD_RESOLVE => {
+            let id = io.v[0] as u32;
+            if id == u32::MAX {
+                0
+            } else {
+                crate::units::ffi::ee_units_resolve(id) as i64
+            }
+        }
+        EE_CP_HERD_GAME_TIME => crate::world::WorldView::global(&t)
+            .and_then(|w| w.physics().map(|_| w.game_time()))
+            .map_or(-1, |g| g as c_long as i64),
+        EE_CP_HERD_CONTINENT_OF => {
+            let Some(r) = cm else { return Some(0) };
+            let (ux, uy) = crate::world::UnitView::of(&t, a).map_or((0, 0), |u| u.tile_xy());
+            if (ux as c_ulong) < r.width && (uy as c_ulong) < r.height {
+                i64::from(cm_io::continent_id_at(r, ux as c_long, uy as c_long))
+            } else {
+                0
+            }
+        }
+        EE_CP_HERD_CONTINENT_AT => cm.map_or(0, |r| i64::from(cm_io::continent_id_at(r, x as c_long, y as c_long))),
+        EE_CP_HERD_CONTINENT => {
+            let c = cm
+                .and_then(|r| {
+                    r.tables().tables[crate::astar::cm::EeAStarCmTable::Continents as usize]
+                        .get(x as u16 as usize)
+                        .copied()
+                })
+                .unwrap_or(0);
+            if c == 0 {
+                return Some(0);
+            }
+            let bounds = cm_io::area(c).hull_bounds;
+            io.v[0] = i64::from(cm_io::continent(c).category);
+            io.v[1] = bounds.bottom as i64;
+            io.v[2] = bounds.left as i64;
+            io.v[3] = bounds.right as i64;
+            io.v[4] = bounds.top as i64;
+            1
+        }
+        EE_CP_HERD_AREA => cm.map_or(0, |r| r.tables().area(io.v[0] as c_ulong) as i64),
+        EE_CP_HERD_AREA_CREATE => {
+            let input = io.input as *const i64;
+            let points: Vec<EePoint> = (0..io.input_len)
+                .map(|i| EePoint { x: *input.add(2 * i) as i32, y: *input.add(2 * i + 1) as i32 })
+                .collect();
+            crate::astar::cm_host::area_create(herd, &points);
+            0
+        }
+        EE_CP_HERD_NUM_TILES => i64::from(ee_base::sparse::ee_sparse_size(tiles)),
+        EE_CP_HERD_CLOSEST_HULL => {
+            let q = crate::astar::area_ops::ee_astar_area_closest_hull_point(
+                cm_io::area(herd),
+                EeHullPoint::new(x as c_long, y as c_long),
+            );
+            io.v[0] = q.x as i64;
+            io.v[1] = q.y as i64;
+            0
+        }
+        EE_CP_HERD_HULL_DISTANCE => {
+            io.f[0] = crate::astar::area_ops::ee_astar_area_hull_distance_squared(cm_io::area(a), cm_io::area(b));
+            0
+        }
+        EE_CP_HERD_TILES => {
+            let mut n = 0;
+            let points = ee_base::sparse::ee_sparse_points(tiles, false, 1, &mut n);
+            let points: Vec<EePoint> = (0..n).map(|k| *points.add(k)).collect();
+            for q in points {
+                herd::ee_cp_herd_push(io.list, i64::from(q.x), i64::from(q.y), 0, 0);
+            }
+            0
+        }
+        EE_CP_HERD_PLAYER_HERDS => {
+            if let Some(p) = crate::world::PlayerView::of(&t, a) {
+                for i in (0..p.herds_len()).rev() {
+                    herd::ee_cp_herd_push(io.list, p.herd_handle(i) as i64, 0, 0, 0);
+                }
+            }
+            0
+        }
+        EE_CP_HERD_PHYSICAL => {
+            let p = crate::world::UnitView::of(&t, a).map_or([0.0; 3], |u| u.location());
+            io.f[0] = p[0];
+            io.f[1] = p[1];
+            0
+        }
+        EE_CP_HERD_MAP_TILE => {
+            i64::from(crate::world::WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)).is_some())
+        }
+        EE_CP_HERD_PLAYER_ID => crate::world::PlayerView::of(&t, a).map_or(0, |p| i64::from(p.id())),
+        _ => return None,
+    })
 }
 
 /// Runs `body` over the herd.

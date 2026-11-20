@@ -61,12 +61,44 @@ Round 5 (rust-aicluster5), the continent manager and its objects, in `rust/crate
 - `cm_host.rs`: the continent state's host questions Rust answers (Contains, RemoveTile, the kinds' Create, the
   tiles' presence, terrain, AI value, AI kind, wall, wood weight).
 
-What is left in C++ of the cluster's continent side: EEAIContinentManager.cpp (about 300 lines: the class's ctor and
-dtor, CanGetTo and AreConnectedForUnit (they read unit classes), UpdateWallUnit (footprints, the path manager),
-BuildRegions' scenario inputs, the forests' RegrowTrees (it makes units)); EEAIContinentSave.cpp (the save's file
-part, the host for a town's or herd's owner, a herd's Create, the region size global, the AI value write, the random
-stream, and the load's re-filing of the towns and herds); EEAIRectangleArea.cpp (the random points of the kinds, the
-hull's update).
+Round 6 (rust-aicluster6), the path manager's host and the areas' hosts:
+
+- `astar/pm_host.rs`: **the path manager host's world reads** (`answer`, asked before the C++ host for every
+  operation of the manager and its searches): the units' ids, the registry, references, tiles, locations, players
+  and class tests through the world views; the sub sectors and their sectors from the continent manager's records;
+  the searches' views (`EeAStarWorldView` boxes); the sea walkers' blocked tiles (`EEAIPathBlockerCollector`, with
+  `EEGetUnitTiles`' UUNT note); the game time, the map, the loading flag, the region delay; the capture's records;
+  the graph goal's request flags.
+- `astar/pm_capture.rs`: **PMRQ whole in Rust** (`EEPathRequestCapture` gone): a thread's stack of scopes; the
+  manager's calls open theirs in `ee_path_manager_call` (the inputs, the results, the queues and the units and
+  requests that left them), the two bounded searches the C++ keeps open theirs (`ee_path_capture_open/_word/_close`).
+  The dumps' text (`DumpSim`'s bounded line, `DumpOutOfSynch`) is pm.rs's; `EEPathManager`'s entry points are inline
+  forwarders in ee/EEPathManager.h.
+- `cp/town_game.rs`, `cp/herd_game.rs`: the town's and the herd's area, continent, registry and player reads in Rust
+  (`area_op`, `world_op`: tiles, hull, create, closest points, continents, connected ids, the serial table, the
+  hull distance, a player's herds); `ai/units_bind.rs` `world_op`: the classic_lua units host's time, continents,
+  areas, forests, last attackers, transports. `astar/cm_host.rs`: `area_create`, `update_hull` (`EEAIArea::UpdateHull`
+  inline over it).
+
+What is left in C++ of the cluster:
+
+- EEPathManager.cpp (about 750 lines): the host operations that change a unit or read what only C++ holds (DropPath,
+  TakePath with the class's AdjustPath, SnapLastWaypoint and the goal's PathTaken, the path-done flag with the
+  bounded tiles' vector, the waypoint deque, the location goal's tile and auto-waypoint flag, the request count with
+  `EEPlayer::IsHuman`, `UnitStranded`, `GetTerrainFlags`, RequestUnitPaths' goals), the requests (`EEAutoPathRequest`
+  objects: the Units lane's group and goal code reads their `mPath`), the owners awaiting a loaded request
+  (`std::function`), ClampTile (the terrain mesh's GetClosestTile), the FSFile glue of the save parts, FindPath and
+  FindBoundedPath (their PMRQ words over C++ vectors), MergeWaypoints.
+- EEAIContinentManager.cpp (about 300 lines): ctor and dtor, CanGetTo and AreConnectedForUnit (the unit classes'
+  passable flags and terrain tests: the Units lane's), UpdateWallUnit, BuildRegions' scenario inputs, RegrowTrees.
+- EEAIContinentSave.cpp: the save's file part, the host for a town's or herd's owner (their ids are C++ members),
+  the herd's Create, the region size global (`gPathManager.mLC8`), the AI value write, the random stream
+  (`URandom::Generate`), the load's re-filing of the towns and herds.
+- EEAIRectangleArea.cpp: the kinds' Create and GetRandomPoint dispatch (the town's and herd's records are C++ bases,
+  the random stream is C++'s), the rectangle's random point, UpdateBounds.
+- EETown.cpp, EEHerd.cpp: the hosts' unit, goal, patrol group, formation, animal and random operations.
+- EEComputerPlayer.cpp (waits on EEPlayer), EECPNext*.cpp (the classic_lua host's player and unit operations),
+  EECPPlacement.cpp, EECPResourceCenter.cpp, EECPTrace.cpp, EEAIFunctionObjects.cpp, EECPEngineHelpers.cpp.
 
 ## Goldens and gates
 
@@ -77,10 +109,13 @@ Results: PORT_LEARNINGS "AI Thread cluster, round 4".
 
 ## Left (next rounds)
 
-- **The path manager's host** (EEPathManager.cpp, about 1,400 lines): the units' and requests' operations the Rust
-  manager asks. Not started this round.
+- **The path manager's last host operations** wait on the Units lane: the unit's path and goal members (DropPath,
+  TakePath, SnapLastWaypoint, the waypoint deque, the location goal, SetGoal and the location goals
+  RequestUnitPaths makes), `EEUnitClass::GetTerrainFlags`, and `EEPlayer::IsHuman` / `UnitStranded` (EEPlayer's).
+  `EEAutoPathRequest` can become a Rust record once its readers (EEGroup, EEActiveGroup, EEUGRust, the wall
+  manager) read it through accessors.
 - **The continent manager's rest**: CanGetTo and AreConnectedForUnit need the unit classes' passable flags and
-  terrain tests in Rust (the Units lane's); UpdateWallUnit needs the footprint tiles and the path manager;
-  RegrowTrees makes units. The save unit's town and herd re-filing needs the players' towns and herds in Rust.
+  terrain tests in Rust (the Units lane's); UpdateWallUnit needs the footprint tiles; RegrowTrees makes units. The
+  save unit's town and herd re-filing needs the players' towns and herds (their ids) in Rust records.
 - **The computer player's class** (EEComputerPlayer.cpp): it can only go when EEPlayer is Rust's.
 - **The herd paths no game reaches** (round 2's list) stay unit-tested only.

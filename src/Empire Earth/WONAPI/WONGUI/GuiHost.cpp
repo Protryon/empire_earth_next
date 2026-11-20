@@ -27,7 +27,6 @@
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guitext.h"
-#include "rust/won_gui/imgfilter.h"
 #include "rust/won_gui/inputobj.h"
 #include "rust/won_gui/labelobj.h"
 #include "rust/won_gui/listobj.h"
@@ -36,7 +35,6 @@
 #include "rust/won_gui/paneobj.h"
 #include "rust/won_gui/scrollerobj.h"
 #include "rust/won_gui/splitobj.h"
-#include "rust/won_gui/stretchobj.h"
 #include "rust/won_gui/textobj.h"
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/wrapobj.h"
@@ -232,7 +230,7 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
         ee_won_gui_sink_units((void*)c, aText.mData->mText, aText.length(), sizeof(wchar_t));
         return r ? 1 : 0;
     }
-    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->mWidth : -1;
+    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->GetWidth() : -1;
     case Op::PaintInputs: {
         EeWonInputPaint* p = (EeWonInputPaint*)a;
         p->disabled_look = t->IsDisabled() && t->mUseDisabledColors;
@@ -240,7 +238,7 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
         p->has_focus = t->HasFocus();
         p->text_color = (int)t->mTextColor;
         p->disabled_text_color = t->mDisabledTextColor;
-        p->icon_height = p->has_icon ? t->mIcon->mHeight : 0;
+        p->icon_height = p->has_icon ? t->mIcon->GetHeight() : 0;
         p->font_height = t->mFont->GetHeight();
         p->sel = WONDrawSelOf(t->mSelColor);
         return 0;
@@ -875,7 +873,7 @@ void ImageComponent::Paint(Graphics& g)
     WONDrawSlots aSlots;
     aSlots.mImages[0] = anImage;
     WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_image_component(anImage!=NULL,this->mStretch,
-        this->mTile,anImage ? anImage->mWidth : 0,anImage ? anImage->mHeight : 0,this->Width(),this->Height(),o,n); }),aSlots);
+        this->mTile,anImage ? anImage->GetWidth() : 0,anImage ? anImage->GetHeight() : 0,this->Width(),this->Height(),o,n); }),aSlots);
 }
 // Fills the component with the solid colour and draws the outline, each only when set
 void RectangleComponent::Paint(Graphics &g)
@@ -899,65 +897,5 @@ void RectangleComponent3D::Paint(Graphics &g)
     static_assert(COLOR_INVALID==0xffffffff,"guidraw.rs rectangle_3d_paint compares with -1");
     WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_rectangle_3d(this->mUp,this->mThickness,
         this->mSolidColor,this->mLightColor,this->mDarkColor,this->Width(),this->Height(),o,n); }),WONDrawSlots());
-}
-}
-
-// The stretch images (StretchImage.cpp folded in, R6 WON round 38): the settings are stretchobj.rs; the nine
-// pieces' placement is guidraw.rs stretch_filter, their pixels imgfilter.rs stretch_run (round 37)
-static EeWonRawPixels StretchPx(RawImage8* i) { EeWonRawPixels p = {1,i->mImageData,i->mWidth,i->mHeight,i->mBytesPerRow}; return p; }
-static EeWonRawPixels StretchPx(RawImage32* i) { EeWonRawPixels p = {2,(uint8_t*)i->mImageData,i->mWidth,i->mHeight,i->mWidth*4}; return p; }
-static void CopyRawImageInfo(RawImage8* dst,RawImage8* src) { dst->mPalette=src->mPalette.get(); dst->mTransparentColor=src->mTransparentColor; }
-static void CopyRawImageInfo(RawImage32* dst,RawImage32* src) { dst->mDoTransparency=src->mDoTransparency; }
-// Builds a new image of the filter's size from nine pieces: corners copied, sides and center stretched or tiled
-template <class ImageType> static SmartPtr<ImageType> DoStretchFilter(ImageType* src, StretchImageFilter* f)
-{
-    EeWonStretchFilter aFilter = {f->mWidth,f->mHeight,f->mLeftWidth,f->mRightWidth,f->mTopHeight,f->mBottomHeight,
-                                  src->GetWidth(),src->GetHeight(),f->mTileHorz,f->mTileVert,f->mSkipCenter};
-    int aWidth = 0, aHeight = 0;
-    WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_stretch_filter(&aFilter,&aWidth,&aHeight,o,n); });
-    SmartPtr<ImageType> newImage = new ImageType(aWidth,aHeight);
-    CopyRawImageInfo(newImage.get(),src);
-    EeWonRawPixels aSrc = StretchPx(src), aDst = StretchPx(newImage.get());
-    ee_won_imgf_stretch_run(&aSrc,&aDst,anOps.begin(),(size_t)(anOps.end()-anOps.begin()));
-    return newImage;
-}
-namespace WONAPI {
-// Returns the nine-piece stretched copy of an 8-bit or 32-bit raw image; NULL for other image types
-SmartPtr<RawImage> StretchImageFilter::Filter(RawImage* theImage)
-{
-    switch(theImage->mType) {
-    case 1: return DoStretchFilter(static_cast<RawImage8*>(theImage),this).get();
-    case 2: return DoStretchFilter(static_cast<RawImage32*>(theImage),this).get();
-    default: return NULL;
-    }
-}
-// Rebuilds the cached native image by running the stretch filter over the source image at the current size
-void StretchImage::CalcImage(DisplayContext* context)
-{
-    SmartPtr<StretchImageFilter> aFilter = new StretchImageFilter;
-    aFilter->SetBorders(this->GetLeft(),this->GetTop(),this->GetRight(),this->GetBottom());
-    aFilter->SetSize(this->GetWidth(),this->GetHeight());
-    aFilter->SetTile(this->Get(EeWonStretchField::TileHorz)!=0,this->Get(EeWonStretchField::TileVert)!=0);
-    aFilter->SetSkipCenter(this->Get(EeWonStretchField::SkipCenter)!=0);
-    this->mCachedImage = aFilter->Filter(this->mImage.get())->GetNative(context);
-    ee_won_stretch_built(this->mObj);
-}
-// Draws the cached image (rebuilt first if needed); with skip-centre only the four border strips (stretchobj.rs)
-void StretchImage::Paint(Graphics& g)
-{
-    if(this->Get(EeWonStretchField::NeedRecalc))
-        this->CalcImage(g.mDisplayContext.get());
-    WONDrawSlots aSlots;
-    aSlots.mImages[0] = this->mCachedImage.get();
-    WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_stretch_paint(this->mObj,this->mWidth,this->mHeight,o,n); }),aSlots);
-}
-// Draws the stretch image, then the center image centered on it when it fits (guidraw.rs stretch_center_paint)
-void StretchCenterImage::Paint(Graphics& g)
-{
-    WONDrawSlots aSlots;
-    aSlots.mImages[0] = this->mStretchImage.get();
-    aSlots.mImages[1] = this->mCenterImage.get();
-    WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_stretch_center(this->mWidth,this->mHeight,
-        this->mCenterImage->mWidth,this->mCenterImage->mHeight,o,n); }),aSlots);
 }
 }

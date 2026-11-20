@@ -26,8 +26,8 @@ void ImageButton::GetDesiredSize(int& outWidth,int& outHeight) {
     for(int i=0;i<5;++i) {
         Image* image=this->mImages[i].get();
         if(image) {
-            if(image->mWidth>width) width=image->mWidth;
-            if(image->mHeight>height) height=image->mHeight;
+            if(image->GetWidth()>width) width=image->GetWidth();
+            if(image->GetHeight()>height) height=image->GetHeight();
         }
     }
     outWidth=width;
@@ -45,7 +45,7 @@ void ImageButton::Paint(Graphics& g) {
     else if(this->IsMouseOver()) image=this->mImages[ImageButtonType_Over].get();
     if(!image) image=this->mImages[ImageButtonType_Normal].get();
     if(!image) return;
-    if(this->mStretch && (image->mWidth!=this->Width() || image->mHeight!=this->Height()))
+    if(this->mStretch && (image->GetWidth()!=this->Width() || image->GetHeight()!=this->Height()))
         image->SetSize(this->Width(),this->Height());
     g.DrawImage(image,0,0);
 }

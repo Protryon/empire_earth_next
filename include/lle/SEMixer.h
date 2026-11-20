@@ -2,7 +2,7 @@
 // plug-in (SPIM): its entry points, resolved by name when it is made, plus the conductor that plays scores through
 // it. Whole in Rust (rust/crates/ee_audio/src/sound mixerobj.rs, the decisions mixers.rs; LLE lane round 6): an SEMixer* is an
 // EeSoundMixer*, made by SEInitializeMixers and deleted by SEShutdown (ee_sound_shutdown); the registry and the active mixer are Rust's.
-// The members are defined in SEMixer.cpp. Requires lle/LowLevelEngine.h.
+// The members are inline forwarders. Requires lle/LowLevelEngine.h.
 #ifndef LLE_SEMIXER_H
 #define LLE_SEMIXER_H
 
@@ -21,19 +21,32 @@ struct SEMixerStart {
     void* mModule;                          // the plug-in being walked (Mixer.cpp's entry table)
 };
 
+// the mixer plug-in's name and validity test (PIMGetName, PIMIsValid; Mixer.cpp)
+const UString& SEMixerPlugInName();
+bool SEMixerPlugInIsValid();
+
 class LLE_API SEMixer {
 public:
-    static SEMixer* GetActiveMixer();
-    SEConductor& GetConductor();
-    static unsigned long GetCount();
-    static long GetMixer(unsigned long inIndex, SEMixer*& outMixer);
-    const UString& GetName();
-    bool IsValid();
-    bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
-    static long UseMixer(SEMixer* inMixer);
+    static SEMixer* GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
+    SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
+    static unsigned long GetCount() { return ee_sound_mixer_count(); }
+    // the registered mixer with the given index; kErrorBeyondEnd past the last
+    static long GetMixer(unsigned long inIndex, SEMixer*& outMixer)
+    {
+        return ee_sound_mixer_get((uint32_t)inIndex, reinterpret_cast<EeSoundMixer**>(&outMixer));
+    }
+    const UString& GetName() { return SEMixerPlugInName(); }
+    bool IsValid() { return SEMixerPlugInIsValid(); }
+    bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
+    {
+        return ee_sound_mixer_process_message(Rust(), inMessage, inParameter1, inParameter2);
+    }
+    // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
+    static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
     // this port's addition: the mixer's output rate
-    unsigned long GetOutputRate() const;
+    unsigned long GetOutputRate() const { return ee_sound_mixer_output_rate(Rust()); }
 private:
+    EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
     SEMixer() = delete;
     ~SEMixer() = delete;
 };
@@ -45,8 +58,5 @@ extern "C" void SPIMSetMasterVolume(float inVolume);
 extern "C" void SPIMSetMuted(bool inMuted);
 extern "C" void SPIMSetOutputDevice(const char* inName);
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);
-// the mixer plug-in's name and validity test (PIMGetName, PIMIsValid; Mixer.cpp)
-const UString& SEMixerPlugInName();
-bool SEMixerPlugInIsValid();
 
 #endif

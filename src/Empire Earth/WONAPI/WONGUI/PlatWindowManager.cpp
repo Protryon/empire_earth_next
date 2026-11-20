@@ -67,7 +67,7 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     }
     case Op::Offscreen: {
         PlatNativeImage* theImage = dynamic_cast<PlatNativeImage*>(w->mOffscreenImage.get());
-        return theImage != NULL ? (intptr_t)theImage->mSurface->GetRust() : 0;
+        return theImage != NULL ? (intptr_t)theImage->GetSurface()->GetRust() : 0;
     }
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;

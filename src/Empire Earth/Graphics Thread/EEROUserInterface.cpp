@@ -5,22 +5,12 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETransformation.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
@@ -31,9 +21,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEGraphics.h"
-#include "ee/RTSGraphics.h"
 #include "ee/EERenderObject.h"
-#include "ee/EEROEffects.h"
 #include "ee/EEROUserInterface.h"
 
 // the UI's viewport (0x529518) (provisional name)
