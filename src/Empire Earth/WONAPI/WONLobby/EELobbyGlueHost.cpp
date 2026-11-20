@@ -380,6 +380,16 @@ static bool gEELobbyShown;
 static const int kEELobbySurfaceWidth = 1024;
 static const int kEELobbySurfaceHeight = 768;
 static unsigned long sEELobbyStartTime;
+// the network game functions' locals (eegamefn.rs): the host's player, the join's strings and request, the start's
+// player copy, the local address handed out
+static EEGameOptionsPlayer sEELobbyHostMe;
+static UString sEELobbyJoinAddress;
+static UString sEELobbyJoinService;
+static UWideString sEELobbyJoinGameName;
+static UWideString sEELobbyJoinName;
+static NEMessage* sEELobbyJoinRequest;
+static EEGameOptionsPlayer sEELobbyStartPlayer;
+static UWideString sEELocalAddress;
 static void EELobbyForwardEvent(const PlatInputEvent& inEvent);
 void EELobbyLock();
 void EELobbyUnlock();
@@ -391,6 +401,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     EELobbySavedGame* aSave = reinterpret_cast<EELobbySavedGame*>(a);
     Graphics* g = reinterpret_cast<Graphics*>(a);
     std::vector<LobbyNetAddress>* anAddresses = reinterpret_cast<std::vector<LobbyNetAddress>*>(a);
+    FSFileSpec* aFile = reinterpret_cast<FSFileSpec*>(a);
     switch (inOp) {
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
@@ -678,6 +689,108 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::PushGameForm: gUIManager->Push(gUIManager->GetFormByID(30));
         return 0;
+    // the statements of the network game functions (R6 WONLobby round 30: eegamefn.rs)
+    case Op::HostMeNew: sEELobbyHostMe = EEGameOptionsPlayer();
+        return 0;
+    case Op::HostMe: return (intptr_t)&sEELobbyHostMe;
+    case Op::SetPlayerNameFromClient: gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName());
+        return 0;
+    case Op::BehindFirewall: return LobbyIsBehindFirewall() ? 1 : 0;
+    case Op::CommExists: return gCommunications != NULL;
+    case Op::CommDelete: delete gCommunications;
+        return 0;
+    case Op::CommClear: gCommunications = NULL;
+        return 0;
+    case Op::CommIsServer: return gCommunications->IsServer() == true;
+    case Op::ServerNew: gCommunications = new EEServer(UWideString("TestGame"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, false, false);
+        return 0;
+    case Op::ServerStartThreads: static_cast<EEServer*>(gCommunications)->StartThreads();
+        return 0;
+    case Op::ServerPublished: return static_cast<EEServer*>(gCommunications)->GetGameWasPublished() ? 1 : 0;
+    case Op::HostMeReady: sEELobbyHostMe.mIsReady = true;
+        return 0;
+    case Op::HostMeHuman: sEELobbyHostMe.mType = 1;
+        return 0;
+    case Op::HostRequest: gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientConnectionRequest, {a != 0, gBinaryChecksum}, {gGameVersion, sEELobbyHostMe.mName}), 0xff);
+        return 0;
+    case Op::ClientNew: gCommunications = new EEClient;
+        return 0;
+    case Op::ClientStartThreads: static_cast<EEClient*>(gCommunications)->StartThreads();
+        return 0;
+    case Op::ClientStartThreadsDynamic: dynamic_cast<EEClient*>(gCommunications)->StartThreads();
+        return 0;
+    case Op::JoinSetService: sEELobbyJoinService = "EEService";
+        return 0;
+    case Op::JoinSetGameName: sEELobbyJoinGameName = gEmptyString;
+        return 0;
+    case Op::JoinSetAddress: sEELobbyJoinAddress = GetMyLobbyGame()->GetAddress().GetHostString(true).c_str();
+        return 0;
+    case Op::JoinSetName: sEELobbyJoinName = EELobbyToWideString(GetMyLobbyClient()->GetName());
+        return 0;
+    case Op::JoinConnect: return static_cast<NESynchronousClient*>(gCommunications)->Connect(sEELobbyJoinAddress, sEELobbyJoinService, sEELobbyJoinGameName) == 0;
+    case Op::JoinRequestNew: sEELobbyJoinRequest = new NEMRecord(kNetMessageClientConnectionRequest, {a != 0, gBinaryChecksum}, {gGameVersion, sEELobbyJoinName});
+        return 0;
+    case Op::JoinSendStart: static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(sEELobbyJoinRequest);
+        return 0;
+    case Op::JoinProcessRequest: gCommunications->ProcessLocalUserInput(sEELobbyJoinRequest, 0xff);
+        return 0;
+    case Op::OptionsReadLock: gGameOptions.mLock->ReadLock();
+        return 0;
+    case Op::StartTimeSet: sEELobbyStartTime = TMGetTime();
+        return 0;
+    case Op::ServerAllowNewPlayersOff: static_cast<EEServer*>(gCommunications)->AllowNewPlayers(false);
+        return 0;
+    case Op::ServerSetLoadingState: static_cast<EEServer*>(gCommunications)->SetGameState(2);
+        return 0;
+    case Op::ServerClearLoadResponses: static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
+        return 0;
+    case Op::StartPlayerCopy: sEELobbyStartPlayer = gWorld.GetLobbyOptions().mPlayers[a];
+        return 0;
+    case Op::StartPlayerType: return (intptr_t)sEELobbyStartPlayer.mType;
+    case Op::ServerStopPing: static_cast<EEServer*>(gCommunications)->StopPing();
+        return 0;
+    case Op::ServerResetXfer: static_cast<EEServer*>(gCommunications)->ResetXfer();
+        return 0;
+    case Op::ServerSetLoadState: static_cast<EEServer*>(gCommunications)->mLoadState = true;
+        return 0;
+    case Op::SeedRandom: srand(TMGetTime());
+        return 0;
+    case Op::StartLoading: gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)a, rand()}), 0xff);
+        return 0;
+    case Op::SetLastGameOptions: gGamePreferences.SetLastGameOptions(gGameOptions);
+        return 0;
+    case Op::OptionsReadUnlock: gGameOptions.mLock->ReadUnlock();
+        return 0;
+    case Op::SierraFileNew: return (intptr_t)new FSFileSpec;
+    case Op::MessageNew: return (intptr_t)new UWideString;
+    case Op::SierraSetVolume: aFile->SetVolume(gStartupVolume);
+        return 0;
+    case Op::SierraSetDirectory: aFile->SetDirectory(gStartupDirectory + UString("Sierra Update\\"));
+        return 0;
+    case Op::SierraSetFile: aFile->SetFile("SierraUp.exe");
+        return 0;
+#ifdef _WIN32   // Sierra Update is a Windows program (elsewhere the file is never opened)
+    case Op::SierraOpen: return aFile->Open(1) == keseOK;
+    case Op::SierraClose: aFile->Close();
+        return 0;
+    case Op::SierraLaunch: return (INT_PTR)ShellExecuteA(GetDesktopWindow(), "open", aFile->GetVolume() + aFile->GetDirectory() + aFile->GetFile(), NULL, aFile->GetVolume() + aFile->GetDirectory(), SW_SHOWNORMAL) > 32;
+#endif
+    case Op::HasUserInterface: return gUserInterface != NULL;
+    case Op::PostQuit: gUserInterface->GetThread()->Post(0x12, NULL, NULL, false);
+        return 0;
+    case Op::SierraFailMessage: gResource->GetString(IDS_UNABLE_TO_LAUNCH_UPDATE_UTILITY, *reinterpret_cast<UWideString*>(a));
+        return 0;
+    case Op::MessageShow: gUIManager->DisplayMessage(*reinterpret_cast<UWideString*>(a), true, NULL, 0, true);
+        return 0;
+    case Op::MessageFree: delete reinterpret_cast<UWideString*>(a);
+        return 0;
+    case Op::SierraFileFree: delete aFile;
+        return 0;
+    case Op::IsMultiplayerGame: return EEIsMultiplayerGame(true) ? 1 : 0;
+    case Op::ProtocolLocalAddress: return (intptr_t)&reinterpret_cast<NEProtocol*>(a)->GetLocalAddress((unsigned long)b);
+    case Op::GameAddressSet: sEELocalAddress = reinterpret_cast<LobbyGame*>(a)->GetAddress().GetHostString(true).c_str();
+        return 0;
+    case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
     case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
     }
     return 0;
@@ -754,42 +867,12 @@ void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
 // Returns the lobby game's host address in a multiplayer lobby game, else the protocol's local address
 UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
 {
-    LobbyGame* theGame = NULL;
-    if (EEIsMultiplayerGame(true))
-        theGame = GetMyLobbyGame();
-    if (theGame == NULL)
-        return inProtocol->GetLocalAddress(inAdapter);
-    static UWideString theAddress;
-    theAddress = theGame->GetAddress().GetHostString(true).c_str();
-    return theAddress;
+    return *reinterpret_cast<UWideString*>(Glue(GL::LocalAddress, (intptr_t)inProtocol, (intptr_t)inAdapter));
 }
 
 // Hosts the lobby game: replaces the connection with a new game server and, once the game is published, sends the
 // host's own connection request; returns whether it was published
-bool EELobbyHostGame()
-{
-    EEGameOptionsPlayer theMe;
-    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName());
-    Glue(GL::SyncNetworkAdapter);
-    bool theFlag = LobbyIsBehindFirewall();
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        gCommunications = NULL;
-    }
-    gCommunications = new EEServer(UWideString("TestGame"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, false, false);
-    static_cast<EEServer*>(gCommunications)->StartThreads();
-    if (!static_cast<EEServer*>(gCommunications)->GetGameWasPublished()) {
-        delete gCommunications;
-        gCommunications = NULL;
-        return false;
-    }
-    Glue(GL::FillGameOptions, (intptr_t)&theMe);
-    theMe.mIsReady = true;
-    theMe.mType = 1;
-    gCommunications->ProcessLocalUserInput(
-        new NEMRecord(kNetMessageClientConnectionRequest, {theFlag, gBinaryChecksum}, {gGameVersion, theMe.mName}), 0xff);
-    return true;
-}
+bool EELobbyHostGame() { return Glue(GL::HostGame) != 0; }
 
 // Asks the user interface thread to open the external lobby
 void EEStartExternalLobby() { EELobbyPostAction(EELobbyOpen); }
@@ -853,66 +936,10 @@ void EELobbyShow(bool inFlag) { Glue(GL::Show, inFlag); }
 
 // Starts loading the hosted game: closes it to new players, counts the humans, sends the start message with a random
 // seed and saves the options as the last game's
-void EELobbyStartHostedGame()
-{
-    EEGameOptionsPlayer thePlayer;
-    unsigned char theHumans = 0;
-    gGameOptions.mLock->ReadLock();
-    sEELobbyStartTime = TMGetTime();
-    EEServer* theServer = static_cast<EEServer*>(gCommunications);
-    theServer->AllowNewPlayers(false);
-    theServer->SetGameState(2);
-    theServer->mNumLoadResponses = false;
-    for (int i = 0; i < 16; i++) {
-        thePlayer = gWorld.GetLobbyOptions().mPlayers[i];
-        if (thePlayer.mType == 1 || thePlayer.mType == 2)
-            theHumans++;
-    }
-    theServer->StopPing();
-    theServer->ResetXfer();
-    theServer->mLoadState = true;
-    theServer->AllowNewPlayers(false);
-    srand(TMGetTime());
-    gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {theHumans, rand()}), 0xff);
-    gGamePreferences.SetLastGameOptions(gGameOptions);
-    gGameOptions.mLock->ReadUnlock();
-}
+void EELobbyStartHostedGame() { Glue(GL::StartHostedGame); }
 
 // Joins the lobby game: makes this a client, resets the game options and connects to the host's address
-void EELobbyJoinGame()
-{
-    UString theAddress;
-    UString theService;
-    UWideString theGameName;
-    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName());
-    Glue(GL::SyncNetworkAdapter);
-    bool theFlag = LobbyIsBehindFirewall();
-    if (gCommunications == NULL) {
-        gCommunications = new EEClient;
-        static_cast<EEClient*>(gCommunications)->StartThreads();
-    } else if (gCommunications->IsServer() == true) {
-        delete gCommunications;
-        gCommunications = new EEClient;
-        dynamic_cast<EEClient*>(gCommunications)->StartThreads();
-    }
-    if (gCommunications) {
-        gGameOptions.mLock->WriteLock();
-        gGameOptions = gLobbyGameOptions;
-        gGameOptions.mIsMultiplayer = true;
-        gGameOptions.mCheatCodes = false;
-        gGameOptions.mLock->WriteUnlock();
-        theService = "EEService";
-        theGameName = gEmptyString;
-        theAddress = GetMyLobbyGame()->GetAddress().GetHostString(true).c_str();
-        UWideString theName = EELobbyToWideString(GetMyLobbyClient()->GetName());
-        if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
-            NEMessage* theRequest =
-                new NEMRecord(kNetMessageClientConnectionRequest, {theFlag, gBinaryChecksum}, {gGameVersion, theName});
-            static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
-            gCommunications->ProcessLocalUserInput(theRequest, 0xff);
-        }
-    }
-}
+void EELobbyJoinGame() { Glue(GL::JoinGame); }
 
 // Hides the lobby and gives the game back its window, resuming input and the game's cursor
 // port: the reverse of EELobbyShow: the game's pointer goes where the system pointer is, the system pointer hides
@@ -920,29 +947,7 @@ void EELobbyJoinGame()
 void EELobbyHide() { Glue(GL::Hide); }
 
 // Runs Sierra Update and quits the game, or tells the player it is missing
-void EELobbyRunSierraUpdate()
-{
-    FSFileSpec theFile;
-    UWideString theMessage;
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory + UString("Sierra Update\\"));
-    theFile.SetFile("SierraUp.exe");
-#ifdef _WIN32   // Sierra Update is a Windows program
-    if (theFile.Open(1) == keseOK) {
-        theFile.Close();
-        HINSTANCE theResult = ShellExecuteA(GetDesktopWindow(), "open",
-            theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), NULL,
-            theFile.GetVolume() + theFile.GetDirectory(), SW_SHOWNORMAL);
-        if ((INT_PTR)theResult > 32) {
-            if (gUserInterface != NULL)   // PostQuitMessage: WM_QUIT to the UI thread's queue
-                gUserInterface->GetThread()->Post(0x12, NULL, NULL, false);
-            return;
-        }
-    }
-#endif
-    gResource->GetString(IDS_UNABLE_TO_LAUNCH_UPDATE_UTILITY, theMessage);
-    gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-}
+void EELobbyRunSierraUpdate() { Glue(GL::RunSierraUpdate); }
 
 // Pushes the game form (form 30), hooking it to return to the lobby once the game is done
 void EELobbyShowGameScreen() { Glue(GL::ShowGameScreen); }

@@ -314,6 +314,123 @@ enum class EeWonEeGlueOp : uint32_t {
   EventDereference,
   /// `gUIManager->Push(gUIManager->GetFormByID(30))`.
   PushGameForm,
+  /// `sEELobbyHostMe = EEGameOptionsPlayer()` (EELobbyHostGame's player).
+  HostMeNew = 400,
+  /// `&sEELobbyHostMe`.
+  HostMe,
+  /// `gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName())`.
+  SetPlayerNameFromClient,
+  /// `LobbyIsBehindFirewall()`.
+  BehindFirewall,
+  /// `gCommunications != NULL`.
+  CommExists,
+  /// `delete gCommunications`.
+  CommDelete,
+  /// `gCommunications = NULL`.
+  CommClear,
+  /// `gCommunications->IsServer() == true`.
+  CommIsServer,
+  /// `gCommunications = new EEServer(UWideString("TestGame"), the network adapter, 0, 0, false, false)`.
+  ServerNew,
+  /// `static_cast<EEServer*>(gCommunications)->StartThreads()`.
+  ServerStartThreads,
+  /// `static_cast<EEServer*>(gCommunications)->GetGameWasPublished()`.
+  ServerPublished,
+  /// `sEELobbyHostMe.mIsReady = true`.
+  HostMeReady,
+  /// `sEELobbyHostMe.mType = 1`.
+  HostMeHuman,
+  /// `gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientConnectionRequest, {a != 0,
+  /// gBinaryChecksum}, {gGameVersion, sEELobbyHostMe.mName}), 0xff)`.
+  HostRequest,
+  /// `gCommunications = new EEClient`.
+  ClientNew,
+  /// `static_cast<EEClient*>(gCommunications)->StartThreads()`.
+  ClientStartThreads,
+  /// `dynamic_cast<EEClient*>(gCommunications)->StartThreads()`.
+  ClientStartThreadsDynamic,
+  /// `sEELobbyJoinService = "EEService"`.
+  JoinSetService,
+  /// `sEELobbyJoinGameName = gEmptyString`.
+  JoinSetGameName,
+  /// `sEELobbyJoinAddress = GetMyLobbyGame()->GetAddress().GetHostString(true).c_str()`.
+  JoinSetAddress,
+  /// `sEELobbyJoinName = EELobbyToWideString(GetMyLobbyClient()->GetName())`.
+  JoinSetName,
+  /// `static_cast<NESynchronousClient*>(gCommunications)->Connect(address, service, game name) == 0`.
+  JoinConnect,
+  /// `sEELobbyJoinRequest = new NEMRecord(kNetMessageClientConnectionRequest, {a != 0, gBinaryChecksum},
+  /// {gGameVersion, sEELobbyJoinName})`.
+  JoinRequestNew,
+  /// `static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(sEELobbyJoinRequest)`.
+  JoinSendStart,
+  /// `gCommunications->ProcessLocalUserInput(sEELobbyJoinRequest, 0xff)`.
+  JoinProcessRequest,
+  /// `gGameOptions.mLock->ReadLock()`.
+  OptionsReadLock,
+  /// `sEELobbyStartTime = TMGetTime()`.
+  StartTimeSet,
+  /// `static_cast<EEServer*>(gCommunications)->AllowNewPlayers(false)`.
+  ServerAllowNewPlayersOff,
+  /// `static_cast<EEServer*>(gCommunications)->SetGameState(2)`.
+  ServerSetLoadingState,
+  /// `static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false`.
+  ServerClearLoadResponses,
+  /// `sEELobbyStartPlayer = gWorld.GetLobbyOptions().mPlayers[a]`.
+  StartPlayerCopy,
+  /// `sEELobbyStartPlayer.mType`.
+  StartPlayerType,
+  /// `static_cast<EEServer*>(gCommunications)->StopPing()`.
+  ServerStopPing,
+  /// `static_cast<EEServer*>(gCommunications)->ResetXfer()`.
+  ServerResetXfer,
+  /// `static_cast<EEServer*>(gCommunications)->mLoadState = true`.
+  ServerSetLoadState,
+  /// `srand(TMGetTime())`.
+  SeedRandom,
+  /// `gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)a,
+  /// rand()}), 0xff)`.
+  StartLoading,
+  /// `gGamePreferences.SetLastGameOptions(gGameOptions)`.
+  SetLastGameOptions,
+  /// `gGameOptions.mLock->ReadUnlock()`.
+  OptionsReadUnlock,
+  /// `new FSFileSpec` (EELobbyRunSierraUpdate's file).
+  SierraFileNew,
+  /// `new UWideString` (its message).
+  MessageNew,
+  /// `((FSFileSpec*)a)->SetVolume(gStartupVolume)`.
+  SierraSetVolume,
+  /// `((FSFileSpec*)a)->SetDirectory(gStartupDirectory + UString("Sierra Update\\"))`.
+  SierraSetDirectory,
+  /// `((FSFileSpec*)a)->SetFile("SierraUp.exe")`.
+  SierraSetFile,
+  /// `((FSFileSpec*)a)->Open(1) == keseOK`.
+  SierraOpen,
+  /// `((FSFileSpec*)a)->Close()`.
+  SierraClose,
+  /// `(INT_PTR)ShellExecuteA(GetDesktopWindow(), "open", the file's path, NULL, its directory, SW_SHOWNORMAL) > 32`.
+  SierraLaunch,
+  /// `gUserInterface != NULL`.
+  HasUserInterface,
+  /// `gUserInterface->GetThread()->Post(0x12, NULL, NULL, false)` (PostQuitMessage).
+  PostQuit,
+  /// `gResource->GetString(IDS_UNABLE_TO_LAUNCH_UPDATE_UTILITY, *(UWideString*)a)`.
+  SierraFailMessage,
+  /// `gUIManager->DisplayMessage(*(UWideString*)a, true, NULL, 0, true)`.
+  MessageShow,
+  /// `delete (UWideString*)a`.
+  MessageFree,
+  /// `delete (FSFileSpec*)a`.
+  SierraFileFree,
+  /// `EEIsMultiplayerGame(true)`.
+  IsMultiplayerGame,
+  /// `&((NEProtocol*)a)->GetLocalAddress(b)`.
+  ProtocolLocalAddress,
+  /// `sEELocalAddress = ((LobbyGame*)a)->GetAddress().GetHostString(true).c_str()`.
+  GameAddressSet,
+  /// `&sEELocalAddress`.
+  GameAddressRef,
 };
 
 /// The inward calls (`a`.. as documented).
@@ -389,6 +506,16 @@ enum class EeWonEeGlueCall : uint32_t {
   Close,
   /// `EELobbyShowGameScreen()`.
   ShowGameScreen,
+  /// `EELobbyHostGame()` (R6 WONLobby round 30: eegamefn.rs; 0 or 1).
+  HostGame,
+  /// `EELobbyJoinGame()`.
+  JoinGame,
+  /// `EELobbyStartHostedGame()`.
+  StartHostedGame,
+  /// `EELobbyRunSierraUpdate()`.
+  RunSierraUpdate,
+  /// `EEGetLocalAddress((NEProtocol*)a, b)`: the `UWideString&` as an address.
+  LocalAddress,
 };
 
 /// A field of `EEGameOptions` or of an `EEGameOptionsPlayer` the glue reads or writes.
