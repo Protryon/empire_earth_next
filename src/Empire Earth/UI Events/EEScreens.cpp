@@ -69,6 +69,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEScreenEvent.h"
+#include "ee/EEGlobalStorage.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEMusicManager.h"
@@ -127,7 +128,9 @@ extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned lo
 unsigned long EEMenuWidth();   // Empire Earth.cpp
 unsigned long EEMenuHeight();
 
-UString gMultiplayerString("");             // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it)
+// 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
+// constructed here, where its definition was
+EE_CONSTRUCT_GLOBAL(UString, gMultiplayerString, (""));
 EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI events' statics; ee/EmpireEarth.h)
 static EECivilization sCivilization;        // 0x962f08: the civilization the editors' sub-menu opens the builder on
 

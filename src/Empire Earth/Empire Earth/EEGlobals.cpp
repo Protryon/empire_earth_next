@@ -251,6 +251,9 @@ class EEMiniMap;
 EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; EEUIFMainGame.cpp's .bss)
 RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; EEUserInterface.cpp's .bss)
 bool sIconsLoaded;                          // 0x5652ec (the status box's icons are loaded; EEUIFMGStatusBox.cpp's)
+// 0x562fd8 the WON password the UI thread keeps (ee/EmpireEarth.h; constructed in UI Events/EEScreens.cpp, which
+// defined it: the UI thread's unit named the screens' host only for it)
+EE_GLOBAL_STORAGE(UString, gMultiplayerString, "?gMultiplayerString@@3VUString@@A");
 
 // the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
