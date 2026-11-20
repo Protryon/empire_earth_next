@@ -221,6 +221,11 @@ pub struct EeWorldLayout {
     pub cp_placement: u64,
     pub placement_town: u64,
     pub placement_rust: u64,
+    // ---- the groups lane, round 2: the player's group lists (group_obj.rs `EeUnitsPlayerGroups`)
+    /// `EEPlayer::mGroupLists` (an `EeUnitsPlayerGroups*`)
+    pub player_group_lists: u64,
+    /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
+    pub player_lists: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

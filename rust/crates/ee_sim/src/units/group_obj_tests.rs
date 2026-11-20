@@ -44,6 +44,11 @@ struct World {
     viewed: u64,
     acks: (c_long, c_long),
     upgrade_values: (c_long, c_long, c_long, i64),
+    // the player's bodies (player_body.rs)
+    body_answers: BTreeMap<i32, VecDeque<i64>>,
+    selected_viewed: u64,
+    complex_order: Vec<u64>,
+    body_lists: BTreeMap<u32, Vec<u64>>,
 }
 
 impl World {
@@ -819,4 +824,466 @@ fn refreshed_upgrades_rescale_the_classes_units() {
     w.log.clear();
     crate::units::selection::refresh_upgrades(&mut w, PLAYER);
     assert_eq!(w.log, vec!["civ"]);
+}
+
+#[test]
+fn the_player_group_lists_keep_the_vectors_order() {
+    use crate::units::group_obj::EeUnitsPlayerGroups;
+    let mut l = EeUnitsPlayerGroups::default();
+    l.push(1, 0x10);
+    l.push(1, 0x20);
+    l.push(0, 0x30);
+    l.start_pending();
+    assert_eq!(l.get(0), &[0x30, 0x10, 0x20]);
+    // the pending groups stay until ReleasePendingUnits
+    assert_eq!(l.get(1), &[0x10, 0x20]);
+    l.push(0, 0x10);
+    l.erase_first(0, 0x10);
+    assert_eq!(l.get(0), &[0x30, 0x20, 0x10]);
+    l.erase_first(0, 0x99);
+    assert_eq!(l.get(0).len(), 3);
+    l.clear(1);
+    assert!(l.get(1).is_empty());
+    // an unknown list is empty and takes nothing
+    l.push(7, 1);
+    assert!(l.get(7).is_empty());
+    // the C ABI over a box
+    let p = crate::units::group_obj::ee_units_player_groups_new();
+    unsafe {
+        crate::units::group_obj::ee_units_player_groups_push(p, 2, 0x40 as *mut _);
+        assert_eq!(crate::units::group_obj::ee_units_player_groups_len(p, 2), 1);
+        assert_eq!(crate::units::group_obj::ee_units_player_groups_at(p, 2, 0) as usize, 0x40);
+        assert!(crate::units::group_obj::ee_units_player_groups_at(p, 2, 1).is_null());
+        crate::units::group_obj::ee_units_player_groups_push(p, 1, 0x50 as *mut _);
+        crate::units::group_obj::ee_units_player_groups_do(p, 0);
+        assert_eq!(crate::units::group_obj::ee_units_player_groups_len(p, 0), 1);
+        crate::units::group_obj::ee_units_player_groups_do(p, 1);
+        assert_eq!(crate::units::group_obj::ee_units_player_groups_len(p, 1), 0);
+        crate::units::group_obj::ee_units_player_groups_free(p);
+    }
+}
+
+// ---- the player's bodies (player_body.rs) over the same world
+
+impl crate::units::player_body::PlayerBodyHost for World {
+    fn body(&mut self, op: i32, _player: u64, a: u64, b: i64, c: i64) -> i64 {
+        use crate::units::player_body::*;
+        self.log.push(format!("body {op} {a:#x} {b} {c}"));
+        match op {
+            EE_UNITS_PLAYER_BODY_UNIT_REFERENCE => *self.refs.entry(a).or_insert(0) += 1,
+            EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE => *self.refs.entry(a).or_insert(0) -= 1,
+            EE_UNITS_PLAYER_BODY_SET_ACTIVE => self.selections[0] = a,
+            EE_UNITS_PLAYER_BODY_SET_SELECTED => self.selections[1] = a,
+            EE_UNITS_PLAYER_BODY_SET_HOT_KEY => {
+                if self.hot_keys.len() <= b as usize {
+                    self.hot_keys.resize(b as usize + 1, 0);
+                }
+                self.hot_keys[b as usize] = a;
+            }
+            EE_UNITS_PLAYER_BODY_SET_VIEWED => self.viewed = a,
+            EE_UNITS_PLAYER_BODY_SELECTED_VIEWED => return self.selected_viewed as i64,
+            EE_UNITS_PLAYER_BODY_SET_SELECTED_VIEWED => self.selected_viewed = a,
+            EE_UNITS_PLAYER_BODY_NEXT_COMPLEX => {
+                let i = if a == 0 {
+                    0
+                } else {
+                    self.complex_order.iter().position(|&u| u == a).map_or(usize::MAX, |i| i + 1)
+                };
+                return self.complex_order.get(i).map_or(0, |&u| u as i64);
+            }
+            _ => {}
+        }
+        self.body_answers.get_mut(&op).and_then(|q| q.pop_front()).unwrap_or(0)
+    }
+    fn body_swaps(&mut self, op: i32, _player: u64, a: u64, b: i64, swaps: u64) {
+        self.log.push(format!("swaps {op} {a:#x} {b} {swaps:#x}"));
+    }
+    fn reset_record(&mut self, _player: u64, part: u32) {
+        self.log.push(format!("record {part}"));
+    }
+    fn reset_fields(&mut self, _player: u64, starting_citizens: c_long, mining_limit: c_long) {
+        self.log.push(format!("fields {starting_citizens} {mining_limit}"));
+    }
+    fn list_len(&mut self, _player: u64, list: u32) -> usize {
+        self.body_lists.get(&list).map_or(0, |l| l.len())
+    }
+    fn list_at(&mut self, _player: u64, list: u32, i: usize) -> u64 {
+        self.body_lists.get(&list).and_then(|l| l.get(i)).copied().unwrap_or(0)
+    }
+    fn list_clear(&mut self, _player: u64, list: u32, release: bool) {
+        self.log.push(format!("list clear {list} {release}"));
+        self.body_lists.remove(&list);
+    }
+    fn patrol_id(&mut self, group: u64) -> u64 {
+        group >> 4
+    }
+}
+
+fn bodies(log: &[String]) -> Vec<String> {
+    const KEPT: [&str; 6] = ["body ", "swaps ", "record", "fields", "list ", "post"];
+    log.iter().filter(|l| KEPT.iter().any(|k| l.starts_with(k))).cloned().collect()
+}
+
+#[test]
+fn a_selection_message_runs_on_the_network_selection() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    let active = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    let selected = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    w.selections = [active as u64, selected as u64];
+    let viewed = w.unit(0x10, 1, 7, 0);
+    w.viewed = viewed;
+    w.log.clear();
+    execute_selection_message(&mut w, PLAYER, 0x777);
+    assert_eq!(w.selections, [active as u64, selected as u64]);
+    let (a, s) = (active as u64, selected as u64);
+    assert_eq!(
+        bodies(&w.log),
+        vec![
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_REFERENCE} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_ACTIVE} {s:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EXECUTING_LOCAL} 0x0 1 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EXECUTE} 0x777 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EXECUTING_LOCAL} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_SELECTED} {s:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_ACTIVE} {a:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SELECTED_VIEWED} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_SELECTED_VIEWED} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_REFERENCE} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE} 0x10 0 0"),
+        ]
+    );
+    // the viewed unit kept; the selection's viewed unit holds the one reference left
+    assert_eq!(w.viewed, 0x10);
+    assert_eq!(w.selected_viewed, 0x10);
+    assert_eq!(w.refs[&0x10], 1);
+    set_selected_viewed_unit(&mut w, PLAYER, 0);
+    assert_eq!(w.refs[&0x10], 0);
+    assert_eq!(w.selected_viewed, 0);
+}
+
+#[test]
+fn swapped_units_move_through_the_selection_and_hot_keys() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    let old = w.unit(0x10, 1, 7, 0);
+    let new_unit = w.unit(0x20, 2, 7, 0);
+    let foreign = w.unit(0x30, 3, 7, 0);
+    w.u(old).player = PLAYER;
+    w.u(new_unit).player = PLAYER;
+    w.u(foreign).player = OTHER_PLAYER;
+    let active = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    let selected = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    w.selections = [active as u64, selected as u64];
+    w.hot_keys = (0..20).map(|i| new(&mut w, EE_UNITS_GROUP_KIND_SAVED, PLAYER, i + 1) as u64).collect();
+    let (h3, h4, h5) = (w.hot_keys[3] as G, w.hot_keys[4] as G, w.hot_keys[5] as G);
+    unsafe {
+        add(&mut w, active, old);
+        add(&mut w, h3, old);
+        add(&mut w, h5, old);
+    }
+    w.complex_order = vec![old, new_unit];
+    w.current = PLAYER;
+    w.log.clear();
+    units_swapped(&mut w, PLAYER, &[(0, new_unit), (old, new_unit)], 0x999);
+    unsafe {
+        assert!(!contains(active, old) && contains(active, new_unit));
+        assert!(contains(selected, new_unit));
+        assert!(contains(h3, new_unit) && contains(h5, new_unit));
+        assert!(!contains(h4, new_unit));
+    }
+    let b = bodies(&w.log);
+    assert_eq!(
+        b[..6],
+        [
+            format!("body {EE_UNITS_PLAYER_BODY_NEXT_COMPLEX} 0x0 0 0"),
+            format!("swaps {EE_UNITS_PLAYER_BODY_REPLACE_UNITS} 0x10 0 0x999"),
+            format!("body {EE_UNITS_PLAYER_BODY_NEXT_COMPLEX} 0x10 0 0"),
+            format!("swaps {EE_UNITS_PLAYER_BODY_REPLACE_UNITS} 0x20 0 0x999"),
+            format!("body {EE_UNITS_PLAYER_BODY_NEXT_COMPLEX} 0x20 0 0"),
+            format!("swaps {EE_UNITS_PLAYER_BODY_ATC_REPLACE} 0x0 0 0x999"),
+        ]
+    );
+    // the pair without an old unit skipped (the groups' own posts: the selection's removal and add, the two hot-key
+    // groups'); the local player's post; the wall test answered 0: no site
+    let tail: Vec<String> = b.iter().filter(|l| !l.starts_with("swaps") && !l.contains(" 11 ")).cloned().collect();
+    assert_eq!(
+        tail,
+        vec![
+            "post selection".to_string(),
+            "post selection".to_string(),
+            "post saved 4".to_string(),
+            "post saved 4".to_string(),
+            "post saved 6".to_string(),
+            "post saved 6".to_string(),
+            "post selection".to_string(),
+            format!("body {EE_UNITS_PLAYER_BODY_UNBUILT_WALL} 0x20 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_WONDER_REPLACE} 0x10 32 0"),
+        ]
+    );
+    // a foreign new unit leaves the groups without joining them; an unbuilt wall becomes a site
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_UNBUILT_WALL, [1].into());
+    w.log.clear();
+    units_swapped(&mut w, PLAYER, &[(new_unit, foreign)], 0x999);
+    unsafe {
+        assert!(!contains(active, new_unit) && !contains(active, foreign));
+        assert!(!contains(h3, foreign));
+    }
+    assert!(w.log.contains(&format!("body {EE_UNITS_PLAYER_BODY_ADD_SITE} 0x30 0 0")));
+}
+
+#[test]
+fn reset_makes_the_groups_and_runs_the_record_in_order() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_CLASS_COUNT, [2, 2].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_ATC_NEW, [0xa1, 0xa2, 0xa3, 0xa4].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_WORLD_LONG, [5, 3].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_EFFECT, [0xe1, 0, 0xe3].into());
+    w.viewed = w.unit(0x10, 1, 7, 0);
+    w.refs.insert(0x10, 1);
+    reset(&mut w, PLAYER);
+    assert_eq!(w.hot_keys.len(), 20);
+    assert_ne!(w.selections[0], w.selections[1]);
+    assert_eq!(w.viewed, 0);
+    assert_eq!(w.refs[&0x10], 0);
+    let hot = format!("body {EE_UNITS_PLAYER_BODY_SET_HOT_KEY} ");
+    let ops: Vec<String> = bodies(&w.log).into_iter().filter(|l| !l.starts_with(&hot)).collect();
+    let (a, s) = (w.selections[0], w.selections[1]);
+    assert_eq!(
+        ops,
+        vec![
+            format!("body {EE_UNITS_PLAYER_BODY_SET_ACTIVE} {a:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_SELECTED} {s:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_VIEWED} 0x0 0 0"),
+            "record 0".to_string(),
+            format!("body {EE_UNITS_PLAYER_BODY_STATS_CLEAR} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_STATS_NAME} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_STORE_TABLE} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_CLASS_COUNT} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UPGRADES_RESIZE} 0x0 2 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_CLASS_COUNT} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UPGRADE_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UPGRADE_NEW} 0x0 1 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_TECH_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_TECH_COPY} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_SET} 0xa1 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_SET} 0xa2 1 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_SET} 0xa3 2 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_NEW} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ATC_SET} 0xa4 3 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_WORLD_LONG} 0x0 48 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_WORLD_LONG} 0x0 22 0"),
+            "fields 5 3".to_string(),
+            format!("body {EE_UNITS_PLAYER_BODY_HEALED_CLEAR} 0x0 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EVENTS_CLEAR} 0x0 1 0"),
+            "record 1".to_string(),
+            format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 271 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_MEDIA_LOAD} 0xe1 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ADD_MEDIA} 0xe1 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 274 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 275 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_MEDIA_LOAD} 0xe3 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_ADD_MEDIA} 0xe3 0 0"),
+        ]
+    );
+}
+
+#[test]
+fn repair_pointers_answers_the_air_traffic_then_the_events() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    let active = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    let selected = new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0);
+    w.selections = [active as u64, selected as u64];
+    w.hot_keys = (0..20).map(|i| new(&mut w, EE_UNITS_GROUP_KIND_SAVED, PLAYER, i + 1) as u64).collect();
+    let site = w.unit(0x40, 9, 7, 0);
+    w.u(site).has_tile_node = true;
+    w.u(site).complex = 0x40;
+    w.body_lists.insert(crate::units::player_lists::EE_UNITS_LISTS_SITE_IDS, vec![9, 77]);
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_ATC_REPAIR, [0, 0, 0, 3].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_EVENTS_REPAIR, [7].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TOWN_COUNT, [2].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED, [1, 0].into());
+    // the player's id (PLAYER >> 8) is past 0: its towns come back as saved
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_MAKE_SAVED_TOWNS, [1].into());
+    assert_eq!(repair_pointers(&mut w, PLAYER, 0, 0x100), 7);
+    let b = bodies(&w.log);
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_CONTAINER_ADD} 0x40 0 0")));
+    // the second town (index 1) is asked first and refreshed; the first answered patrolled
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x0 1 0")));
+    assert!(!b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x0 0 0")));
+    // a newer save repairs the off-map records instead of rescanning the units
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_OFF_MAP} 0x0 3 0")));
+    // no capitol: the capitol allowed; the settlement not obsolete: settlement and town center off
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 1053 1")));
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 1028 0")));
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 1025 0")));
+    assert_eq!(b.last().unwrap(), &format!("body {EE_UNITS_PLAYER_BODY_RECOUNT_HEROES} 0x0 0 0"));
+    // the air traffic's 3 kept the active selection's repair out: the hot-key groups' only
+    let blink = format!("body {EE_UNITS_PLAYER_BODY_CIV_BLINK} ");
+    assert!(!b.iter().any(|l| l.starts_with(&blink)));
+}
+
+#[test]
+fn the_stranded_units_die_and_the_media_unload_last_first() {
+    use crate::units::player_body::*;
+    use crate::units::player_lists::{EE_UNITS_LISTS_MEDIA, EE_UNITS_LISTS_STRANDED};
+    let mut w = World::default();
+    w.body_lists.insert(EE_UNITS_LISTS_STRANDED, vec![0x10, 0, 0x20]);
+    kill_stranded_units(&mut w, PLAYER);
+    assert_eq!(
+        bodies(&w.log),
+        vec![
+            format!("body {EE_UNITS_PLAYER_BODY_KILL} 0x20 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_KILL_UNIT} 0x20 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE} 0x20 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_KILL} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_KILL_UNIT} 0x10 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_UNIT_DEREFERENCE} 0x10 0 0"),
+            format!("list clear {EE_UNITS_LISTS_STRANDED} false"),
+        ]
+    );
+    w.log.clear();
+    w.body_lists.insert(EE_UNITS_LISTS_MEDIA, vec![0xa, 0xb]);
+    unload_all_media(&mut w, PLAYER);
+    assert_eq!(
+        bodies(&w.log),
+        vec![
+            format!("body {EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD} 0xb 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD} 0xa 0 0"),
+            format!("list clear {EE_UNITS_LISTS_MEDIA} false"),
+        ]
+    );
+}
+
+#[test]
+fn the_sight_pulse_raises_then_drops_each_units_sight() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    let u = w.unit(0x10, 7, 9, 0);
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT, [2.5f32.to_bits() as i64].into());
+    pulse_sight(&mut w, PLAYER, true, 10.0, 7);
+    let s = 7.5f32.to_bits();
+    assert_eq!(
+        bodies(&w.log),
+        vec![
+            format!("body {EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT} {u:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_COMPLEX_SIGHT_OFF} {u:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_SIGHT} {u:#x} {s} 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SIGHT_ON} {u:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_COMPLEX_SIGHT_OFF} {u:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SIGHT_ZERO} {u:#x} 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SIGHT_ON} {u:#x} 0 0"),
+        ]
+    );
+    // no unit of the id: nothing
+    w.log.clear();
+    pulse_sight(&mut w, PLAYER, true, 10.0, 8);
+    assert!(bodies(&w.log).is_empty());
+}
+
+#[test]
+fn a_waterless_map_forbids_the_water_techs_and_a_space_map_adds_the_hot_key() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_IS_LOCAL, [1, 1].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_WATERLESS, [1].into());
+    apply_map_restrictions(&mut w, PLAYER);
+    let b = bodies(&w.log);
+    assert_eq!(b[1], format!("body {EE_UNITS_PLAYER_BODY_HOT_KEY_REMOVE} 0x0 0 0"));
+    for t in [2023, 10007, 3047, 1022] {
+        assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 {t} 0")));
+    }
+    // a space map (NOT_SPACE answered 0): the local player's Ctrl+D selects the space docks
+    assert_eq!(b.last().unwrap(), &format!("body {EE_UNITS_PLAYER_BODY_HOT_KEY_ADD} 0x0 728 0"));
+}
+
+#[test]
+fn the_camouflage_power_times_the_idle_units_of_its_set() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_HAS_CAMOUFLAGE, [1, 1].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_CAMOUFLAGE_SET, [0x77, 0x77, 0x77, 0x77].into());
+    // two units: 0x10 (complex 0x11, in the set, idle), 0x20 (no complex unit)
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_NEXT_UNIT, [0x10, 0x20, 0, 0x10, 0x20, 0].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_COMPLEX_OF, [0x11, 0, 0x11, 0].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SET_HAS, [1, 1].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_COMMAND_TYPE, [5000].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_WORLD_LONG, [12].into());
+    camouflage(&mut w, PLAYER, true);
+    assert!(w.log.contains(&format!("body {EE_UNITS_PLAYER_BODY_SET_CAMOUFLAGE_TIMER} 0x11 12 0")));
+    w.log.clear();
+    camouflage(&mut w, PLAYER, false);
+    let b = bodies(&w.log);
+    let n = b.iter().position(|l| l.starts_with(&format!("body {EE_UNITS_PLAYER_BODY_CLOAKABLE_OFF} "))).unwrap();
+    assert_eq!(
+        b[n..n + 4],
+        [
+            format!("body {EE_UNITS_PLAYER_BODY_CLOAKABLE_OFF} 0x11 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_CLOAKED_OFF} 0x11 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_SET_CAMOUFLAGE_TIMER} 0x11 0 0"),
+            format!("body {EE_UNITS_PLAYER_BODY_CLEAR_U32C} 0x11 0 0"),
+        ]
+    );
+    // without the power nothing is asked past it
+    w.log.clear();
+    camouflage(&mut w, PLAYER, true);
+    assert_eq!(bodies(&w.log).len(), 1);
+}
+
+#[test]
+fn the_nearest_site_the_passability_and_the_team() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    // the unit at (10, 10); sites at (19, 10) (81), (13, 14) (25), (15, 13) (34)
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_X, [10, 19, 13, 15].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_Y, [10, 10, 14, 13].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_COUNT, [3].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_AT, [0xa, 0xb, 0xc].into());
+    assert_eq!(nearest_construction_site(&mut w, PLAYER, 0x10), 0xb);
+    // a site 10 tiles off (100) is not near
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_X, [0, 10].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_Y, [0, 0].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_COUNT, [1].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_AT, [0xa].into());
+    assert_eq!(nearest_construction_site(&mut w, PLAYER, 0x10), 0);
+    // land and deep water and space: 4 | 2 | 8
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_CLASS_STATS, [0x99].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TERRAIN_MASK, [1 | 2 | 0x1000].into());
+    assert_eq!(citizen_passability(&mut w, PLAYER), 14);
+    assert_eq!(citizen_passability(&mut w, PLAYER), 0);
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TEAM_COUNT, [3].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TEAM_HAS, [0, 1].into());
+    assert_eq!(team_index(&mut w, PLAYER), 1);
+    // the patrol of id 3 (the mock's id: the address >> 4)
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_PATROL_COUNT, [2, 2].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_PATROL_AT, [0x20, 0x30].into());
+    assert_eq!(patrol_group(&mut w, PLAYER, 3), 0x30);
+}
+
+#[test]
+fn the_complex_unit_walk_skips_the_plain_units() {
+    use crate::units::player_body::*;
+    let mut w = World::default();
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_LAST_UNIT, [1].into());
+    // the first unit 0x10 is plain; its next 0x20 has the complex unit 0x20
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_NEXT_UNIT, [0x10, 0x20].into());
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_COMPLEX_OF, [0, 0x20].into());
+    assert_eq!(next_complex_unit(&mut w, PLAYER, 0), 0x20);
+    // no last unit: none
+    assert_eq!(next_complex_unit(&mut w, PLAYER, 0), 0);
+    // the damage of an enemy: combat
+    w.log.clear();
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_ENEMY_OF, [1].into());
+    damage_taken(&mut w, PLAYER, 2, 30);
+    assert_eq!(bodies(&w.log).last().unwrap(), &format!("body {EE_UNITS_PLAYER_BODY_SET_COMBAT} 0x0 2 0"));
+    // gaia's damage counts only
+    w.log.clear();
+    damage_taken(&mut w, PLAYER, 0, 30);
+    assert_eq!(bodies(&w.log), vec![format!("body {EE_UNITS_PLAYER_BODY_DAMAGE_ADD} 0x0 0 30")]);
 }

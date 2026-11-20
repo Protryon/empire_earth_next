@@ -65,22 +65,38 @@ extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObj
     EEUnitClassUpgrade* theUpgrade = static_cast<EEUnitClassUpgrade*>(inUpgrade);
     switch (inOp) {
     case EE_UNITS_UPGRADE_OP_SOUND_LOAD: return static_cast<EESoundObject*>(inObject)->LoadMedia();
-    case EE_UNITS_UPGRADE_OP_SOUND_UNLOAD: static_cast<EESoundObject*>(inObject)->UnloadMedia(); return 0;
-    case EE_UNITS_UPGRADE_OP_MODEL_LOAD: static_cast<EEModel*>(inObject)->LoadMedia(); return 0;
-    case EE_UNITS_UPGRADE_OP_MODEL_UNLOAD: static_cast<EEModel*>(inObject)->UnloadMedia(); return 0;
-    case EE_UNITS_UPGRADE_OP_BUTTON_ACQUIRE: static_cast<EEButtonObject*>(inObject)->Acquire(); return 0;
-    case EE_UNITS_UPGRADE_OP_BUTTON_RELEASE: static_cast<EEButtonObject*>(inObject)->Release(); return 0;
-    case EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD: gAEManager.LoadTemplateMedia((unsigned long)(uintptr_t)inObject); return 0;
-    case EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD: gAEManager.UnloadTemplateMedia((unsigned long)(uintptr_t)inObject); return 0;
-    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA: theUpgrade->mUnitClass->LoadMedia(static_cast<EEPlayer*>(inPlayer)); return 0;
-    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_MEDIA: theUpgrade->mUnitClass->UnloadMedia(static_cast<EEPlayer*>(inPlayer)); return 0;
-    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_BUTTONS: theUpgrade->mUnitClass->LoadButtons(static_cast<EEPlayer*>(inPlayer)); return 0;
-    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_BUTTONS: theUpgrade->mUnitClass->UnloadButtons(static_cast<EEPlayer*>(inPlayer)); return 0;
-    case EE_UNITS_UPGRADE_OP_DATABASE_ENTER: sDatabaseLock.mLock->Enter(); return 0;
-    case EE_UNITS_UPGRADE_OP_DATABASE_LEAVE: sDatabaseLock.mLock->Leave(); return 0;
-    case EE_UNITS_UPGRADE_OP_UPGRADE_ENTER: sUnitClassUpgradeLock.mLock->Enter(); return 0;
-    case EE_UNITS_UPGRADE_OP_UPGRADE_LEAVE: sUnitClassUpgradeLock.mLock->Leave(); return 0;
-    case EE_UNITS_UPGRADE_OP_SLEEP: PlatSleep(1); return 0;
+    case EE_UNITS_UPGRADE_OP_SOUND_UNLOAD: static_cast<EESoundObject*>(inObject)->UnloadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_MODEL_LOAD: static_cast<EEModel*>(inObject)->LoadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_MODEL_UNLOAD: static_cast<EEModel*>(inObject)->UnloadMedia();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_BUTTON_ACQUIRE: static_cast<EEButtonObject*>(inObject)->Acquire();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_BUTTON_RELEASE: static_cast<EEButtonObject*>(inObject)->Release();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_LOAD: gAEManager.LoadTemplateMedia((unsigned long)(uintptr_t)inObject);
+        return 0;
+    case EE_UNITS_UPGRADE_OP_TEMPLATE_UNLOAD: gAEManager.UnloadTemplateMedia((unsigned long)(uintptr_t)inObject);
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_MEDIA: theUpgrade->mUnitClass->LoadMedia(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_MEDIA: theUpgrade->mUnitClass->UnloadMedia(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_LOAD_BUTTONS: theUpgrade->mUnitClass->LoadButtons(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_CLASS_UNLOAD_BUTTONS: theUpgrade->mUnitClass->UnloadButtons(static_cast<EEPlayer*>(inPlayer));
+        return 0;
+    case EE_UNITS_UPGRADE_OP_DATABASE_ENTER: sDatabaseLock.mLock->Enter();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_DATABASE_LEAVE: sDatabaseLock.mLock->Leave();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_UPGRADE_ENTER: sUnitClassUpgradeLock.mLock->Enter();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_UPGRADE_LEAVE: sUnitClassUpgradeLock.mLock->Leave();
+        return 0;
+    case EE_UNITS_UPGRADE_OP_SLEEP: PlatSleep(1);
+        return 0;
     }
     return 0;
 }
@@ -172,10 +188,9 @@ void EEUnitClassUpgrade::Init()
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
 long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->mName.Load(inFile);
-    if (theResult == 0)
-        theResult = this->mImprovement.Load(this->mUnitClass, this, inMajorVersion, inMinorVersion, inFile);
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_LOAD, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
+                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &inFile}, &EEImprovementHost,
+                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);   // ee_units improvement.rs
 }
 
 // Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
@@ -194,10 +209,9 @@ void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
 // Writes the copy's name and improvement levels to the saved game; returns the first write error
 long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    if (theResult == 0)
-        theResult = this->mImprovement.Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
+    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_SAVE, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
+                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &outFile}, &EEImprovementHost,
+                                0, 0);   // ee_units improvement.rs
 }
 
 // Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one

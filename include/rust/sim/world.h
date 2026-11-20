@@ -722,6 +722,10 @@ struct EeWorldLayout {
   uint64_t cp_placement;
   uint64_t placement_town;
   uint64_t placement_rust;
+  /// `EEPlayer::mGroupLists` (an `EeUnitsPlayerGroups*`)
+  uint64_t player_group_lists;
+  /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
+  uint64_t player_lists;
 };
 
 extern "C" {

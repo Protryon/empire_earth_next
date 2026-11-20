@@ -627,7 +627,7 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_GROUP_NEW: {
         EEPlayer* thePlayer = SMEPlayer(a[0]);
         inRun->mGroup = EEActiveGroup::New(thePlayer);
-        thePlayer->mPendingGroups.push_back(inRun->mGroup);
+        thePlayer->AddPendingGroup(inRun->mGroup);
         return 0;
     }
     case EE_SCENARIO_WORLD_GROUP_ADD_TASKED: {
@@ -1120,7 +1120,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         EEPlayer* thePlayer = theUnit->mPlayer;
         EEActiveGroup* theGroup = EEActiveGroup::New(thePlayer);
         theGroup->AddMember(theUnit, true);
-        thePlayer->mPendingGroups.push_back(theGroup);
+        thePlayer->AddPendingGroup(theGroup);
         theGroup->KeepMobileUnits();
         theGroup->ClearGoal();
         SMEGroupGoal(theGroup, EEUGRust::NewExplore(true), kActionFindUnexploredArea);
@@ -1150,7 +1150,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
             return 0;
         EEActiveGroup* theGroup = EEActiveGroup::New(theUnit->mPlayer);
         theGroup->AddMember(theUnit, true);
-        theUnit->mPlayer->mPendingGroups.push_back(theGroup);
+        theUnit->mPlayer->AddPendingGroup(theGroup);
         theGroup->KeepMobileUnits();
         EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget, true);
         theGroup->ClearGoal();

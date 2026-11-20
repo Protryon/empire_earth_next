@@ -123,8 +123,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
     // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
-    case EE_UNITS_AG_SEND:
-        EESendGroupCommand(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
+    case EE_UNITS_AG_SEND: EESendGroupCommand(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
         return 0;
     case EE_UNITS_AG_ARRANGE: {
         EEFormation* theFormation = theGroup->GetFormation();
@@ -140,56 +139,23 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
                              (const float(*)[3])&theSlots[i].mPosition.mX, theSlots[i].mHeading);
         return 0;
     }
-    case EE_UNITS_AG_LAUNCH: {
-        EEActiveGroup* theNew = (EEActiveGroup*)(uintptr_t)inB;
-        theNew->SetGoal((EEUnitGoal*)(uintptr_t)io->a, inC != 0);
-        theNew->mFields.mAction = (long)io->c;
-        theGroup->GetPlayer()->mPendingGroups.push_back(theNew);
-        theNew->Plan();
-        EESendGroupCommand(theNew, (EEUnit*)(uintptr_t)io->b, theGroup->GetPlayer()->GetPlayerID(), (long)io->d, 0);
-        if (theNew->GetNumUnits() > 0)
-            theGroup->GetPlayer()->PlayAcknowledgement(theNew->GetUnit(gPhysics->GetRandom(0L, (long)theNew->GetNumUnits() - 1)));
-        return 0;
-    }
-    case EE_UNITS_AG_CAP_FACTOR:
-        io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
+    case EE_UNITS_AG_CAP_FACTOR: io->f = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
         return 0;
     // (EE_UNITS_AG_UNIT's reads, the group's record and members, the units' formation places and special attack,
     // the command type, the cargo count, the map's tiles and their units are Rust's in place: ag_host.rs)
     case EE_UNITS_AG_QUEUED_GOAL:
         return EEObj(theUnit->GetQueuedGoal((unsigned long)inC));
-    case EE_UNITS_AG_CLEAR_QUEUE:
-        theUnit->ClearGoalQueue((unsigned long)inC);
+    case EE_UNITS_AG_CLEAR_QUEUE: theUnit->ClearGoalQueue((unsigned long)inC);
         return 0;
-    case EE_UNITS_AG_CLEAR_GOALS:
-        theUnit->ClearGoals((long)inC);
+    case EE_UNITS_AG_CLEAR_GOALS: theUnit->ClearGoals((long)inC);
         return 0;
-    case EE_UNITS_AG_QUEUE_GOAL:
-        theUnit->QueueGoal(theOther, (long)inC);
+    case EE_UNITS_AG_QUEUE_GOAL: theUnit->QueueGoal(theOther, (long)inC);
         return 0;
-    case EE_UNITS_AG_SET_GOAL:
-        theUnit->SetGoal(theOther, 0, (long)inC);
+    case EE_UNITS_AG_SET_GOAL: theUnit->SetGoal(theOther, 0, (long)inC);
         return 0;
-    case EE_UNITS_AG_QUEUE_ADD:
-        theUnit->mGoalQueues[(size_t)inC].Add(theOther);
-        theUnit->RefreshGoals();
-        theUnit->RefreshActiveGoal();
+    case EE_UNITS_AG_ADD_TIME: theUnit->mGoalQueues[1].AddTime(1);
         return 0;
-    case EE_UNITS_AG_ADD_TIME:
-        theUnit->mGoalQueues[1].AddTime(1);
-        return 0;
-    case EE_UNITS_AG_ACT:
-        theUnit->StartAction((long)inC);
-        theUnit->GetUnitClass()->ActionChanged(theUnit);
-        return 0;
-    case EE_UNITS_AG_SQUADRON:
-        if (inC & 2)
-            theUnit->QueueSquadronGoals(theOther, (inC & 1) != 0);
-        else
-            theUnit->SetSquadronGoals(theOther, (inC & 1) != 0);
-        return 0;
-    case EE_UNITS_AG_CLEAR_GATHERED:
-        theUnit->SetGatheredResource(NULL);
+    case EE_UNITS_AG_CLEAR_GATHERED: theUnit->SetGatheredResource(NULL);
         return 0;
     case EE_UNITS_AG_CAN_TAKE:
         return theUnit->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)inC);
@@ -199,14 +165,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         io->a = theX;
         io->b = theY;
         return 0;
-    }
-    case EE_UNITS_AG_TILE_AT: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]));
-        if (theTile == NULL)
-            return 0;
-        io->f = theTile->GetHeight();
-        io->a = theTile->mTerrainType;
-        return 1;
     }
     case EE_UNITS_AG_CAN_GET_TO:
         return gContinentManager.CanGetTo(theUnit, (long)inC, (long)inD);
@@ -226,9 +184,29 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return EECombatIsSeenBy((EEUnit*)(uintptr_t)inA, (EEPlayer*)(uintptr_t)inB, true);
     case EE_UNITS_AG_PRIEST_CONVERT:
         return EECanPriestConvert(theUnit, (EEComplexUnit*)(uintptr_t)inB);
-    case EE_UNITS_AG_CAN_CAST:
-        return theUnit->GetPower() >= ((EECalamityClass*)(uintptr_t)inB)->GetCost()
-            && ((EETechTreeNode*)(uintptr_t)inC)->Contains(theUnit->mUnitClass->mUnitType);
+    // the compound statements' parts (ag_host.rs)
+    case EE_UNITS_AG_QUEUE_ADD_ONLY: theUnit->mGoalQueues[(size_t)inC].Add(theOther);
+        return 0;
+    case EE_UNITS_AG_REFRESH_GOALS: theUnit->RefreshGoals();
+        return 0;
+    case EE_UNITS_AG_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal();
+        return 0;
+    case EE_UNITS_AG_START_ACTION: theUnit->StartAction((long)inC);
+        return 0;
+    case EE_UNITS_AG_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit);
+        return 0;
+    case EE_UNITS_AG_QUEUE_SQUADRON: theUnit->QueueSquadronGoals(theOther, inC != 0);
+        return 0;
+    case EE_UNITS_AG_SET_SQUADRON: theUnit->SetSquadronGoals(theOther, inC != 0);
+        return 0;
+    case EE_UNITS_AG_POWER: return theUnit->GetPower();
+    case EE_UNITS_AG_CALAMITY_COST: return ((EECalamityClass*)(uintptr_t)inA)->GetCost();
+    case EE_UNITS_AG_NODE_HAS_TYPE: return ((EETechTreeNode*)(uintptr_t)inA)->Contains(((EEComplexUnit*)(uintptr_t)inB)->mUnitClass->mUnitType);
+    case EE_UNITS_AG_RANDOM: return gPhysics->GetRandom((long)inC, (long)inD);
+    case EE_UNITS_AG_TILE_PRESENT: return ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1])) != NULL;
+    case EE_UNITS_AG_TILE_HEIGHT: io->f = ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]))->GetHeight();
+        return 0;
+    case EE_UNITS_AG_TILE_TERRAIN: return ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]))->mTerrainType;
     case EE_UNITS_AG_RECT_CLOSEST: {
         U2DRectangle<float> theBounds;
         theBounds.mTop = io->p[0];

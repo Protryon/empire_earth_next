@@ -103,23 +103,22 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     EEFormation* theFormation = reinterpret_cast<EEFormation*>(static_cast<uintptr_t>(inA));
     EEAutoPathRequest* thePath = reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inA));
     EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inA));
+    EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
     switch (inOp) {
-    case EE_UNITS_GROUP_OP_UNIT_REFERENCE: theUnit->Reference(); return 0;
-    case EE_UNITS_GROUP_OP_UNIT_DEREFERENCE: theUnit->Dereference(); return 0;
+    case EE_UNITS_GROUP_OP_UNIT_REFERENCE: theUnit->Reference();
+        return 0;
+    case EE_UNITS_GROUP_OP_UNIT_DEREFERENCE: theUnit->Dereference();
+        return 0;
     case EE_UNITS_GROUP_OP_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((long)inC);
     case EE_UNITS_GROUP_OP_FORMATION_NEW: return (int64_t)(uintptr_t)EEFormation::Create((long)inC);
-    case EE_UNITS_GROUP_OP_FORMATION_REFERENCE: theFormation->Reference(); return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: theFormation->Dereference(); return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_KIND: return theFormation->mType;
-    case EE_UNITS_GROUP_OP_FORMATION_CENTER:
-        io->p[0] = theFormation->mCenter.mX;
-        io->p[1] = theFormation->mCenter.mY;
-        io->p[2] = theFormation->mCenter.mZ;
+    case EE_UNITS_GROUP_OP_FORMATION_REFERENCE: theFormation->Reference();
         return 0;
-    case EE_UNITS_GROUP_OP_FORMATION_SET_CENTER:
-        theFormation->mCenter.mX = io->p[0];
-        theFormation->mCenter.mY = io->p[1];
-        theFormation->mCenter.mZ = io->p[2];
+    case EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE: theFormation->Dereference();
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_KIND: return theFormation->mType;
+    case EE_UNITS_GROUP_OP_FORMATION_CENTER: memcpy(io->p, &theFormation->mCenter, sizeof io->p);
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: memcpy(&theFormation->mCenter, io->p, sizeof io->p);
         return 0;
     case EE_UNITS_GROUP_OP_FORMATION_PLACE: {
         EEComplexUnit* const* theList = static_cast<EEComplexUnit* const*>(io->list);
@@ -130,24 +129,6 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
             ee_units_group_push(io->out, 0, 0, reinterpret_cast<const float(*)[3]>(&theSlots[i].mPosition.mX));
         return 0;
     }
-    case EE_UNITS_GROUP_OP_FORMATION_STATE: {
-        float* theValues = static_cast<float*>(const_cast<void*>(io->list));
-        memcpy(theValues, &theFormation->mOrientation, 16 * sizeof(float));
-        theValues[16] = theFormation->mCenter.mX;
-        theValues[17] = theFormation->mCenter.mY;
-        theValues[18] = theFormation->mCenter.mZ;
-        theValues[19] = theFormation->mHeading;
-        theValues[20] = theFormation->mB5C ? 1.0f : 0.0f;
-        return 0;
-    }
-    case EE_UNITS_GROUP_OP_FORMATION_SET_STATE: {
-        const float* theValues = static_cast<const float*>(io->list);
-        memcpy(&theFormation->mOrientation, theValues, 16 * sizeof(float));
-        theFormation->mCenter = GE3DPoint(theValues[16], theValues[17], theValues[18]);
-        theFormation->mHeading = theValues[19];
-        theFormation->mB5C = theValues[20] != 0.0f;
-        return 0;
-    }
     case EE_UNITS_GROUP_OP_TERRAIN_FLAGS: {
         EECPASGFlags theFlags;
         theUnit->mUnitClass->GetTerrainFlags(theUnit, theFlags);
@@ -155,25 +136,26 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         return 0;
     }
     case EE_UNITS_GROUP_OP_CONTINENT_OF: return gContinentManager.GetContinentID(theUnit);
-    case EE_UNITS_GROUP_OP_CONTINENT_AT: {
-        EETileCoordinate theTile;
-        theTile.mX = (long)inC;
-        theTile.mY = (long)inD;
-        return gContinentManager.GetContinent(theTile, kAIPathNonSpace);
-    }
-    case EE_UNITS_GROUP_OP_SUBSECTOR_AT: {
-        EEAIPathSubSector* theSubSector = gContinentManager.GetPathSubSectorAt((long)inC, (long)inD);
-        io->a = theSubSector->GetLocation().GetX();
-        io->b = theSubSector->GetLocation().GetY();
+    case EE_UNITS_GROUP_OP_CONTINENT_AT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
+    case EE_UNITS_GROUP_OP_SUBSECTOR_X: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetX();
+    case EE_UNITS_GROUP_OP_SUBSECTOR_Y: return gContinentManager.GetPathSubSectorAt((long)inC, (long)inD)->GetLocation().GetY();
+    case EE_UNITS_GROUP_OP_MAP_WIDTH: return (int64_t)gMapWidth;
+    case EE_UNITS_GROUP_OP_MAP_HEIGHT: return (int64_t)gMapHeight;
+    case EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: memcpy(const_cast<void*>(io->list), &theFormation->mOrientation, 16 * sizeof(float));
         return 0;
-    }
+    case EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: memcpy(&theFormation->mOrientation, io->list, 16 * sizeof(float));
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_HEADING: io->f = theFormation->mHeading;
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: theFormation->mHeading = io->f;
+        return 0;
+    case EE_UNITS_GROUP_OP_FORMATION_B5C: return theFormation->mB5C;
+    case EE_UNITS_GROUP_OP_FORMATION_SET_B5C: theFormation->mB5C = inC != 0;
+        return 0;
+    case EE_UNITS_GROUP_OP_INTERFACE: return gUserInterface != NULL;
+    case EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO: gUserInterface->PostRefreshSavedGroup((long)inC);
+        return 0;
     case EE_UNITS_GROUP_OP_PATH_AREA_AT: return gContinentManager.GetPathAreaIDAt((long)inC, (long)inD);
-    case EE_UNITS_GROUP_OP_SLOT_AREA_AT: {
-        EETileLocation theTile((long)inC, (long)inD);
-        if ((unsigned long)theTile.GetX() < gMapWidth && (unsigned long)theTile.GetY() < gMapHeight)
-            return gContinentManager.GetPathAreaIDAt(theTile);
-        return -1;
-    }
     case EE_UNITS_GROUP_OP_PATH_REQUEST: {
         EETileCoordinate theFrom;
         EETileCoordinate theTo;
@@ -185,9 +167,12 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         memcpy(theFlags.mFlags, io->flags, 17);
         return (int64_t)(uintptr_t)gPathManager.RequestPath((long)inC, theFrom, theTo, &theFlags, 1, -1, NULL, 0);
     }
-    case EE_UNITS_GROUP_OP_PATH_CANCEL: gPathManager.CancelAutoPathRequest(thePath); return 0;
-    case EE_UNITS_GROUP_OP_PATH_REFERENCE: thePath->Reference(); return 0;
-    case EE_UNITS_GROUP_OP_PATH_DEREFERENCE: thePath->Dereference(); return 0;
+    case EE_UNITS_GROUP_OP_PATH_CANCEL: gPathManager.CancelAutoPathRequest(thePath);
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_REFERENCE: thePath->Reference();
+        return 0;
+    case EE_UNITS_GROUP_OP_PATH_DEREFERENCE: thePath->Dereference();
+        return 0;
     case EE_UNITS_GROUP_OP_PATH_DONE: return thePath->mIsDone;
     case EE_UNITS_GROUP_OP_PATH_ID: return thePath->mRequestID;
     case EE_UNITS_GROUP_OP_PATH_TILES:
@@ -202,64 +187,40 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         theUnit->SetGroupPathGoals(thePoints3);
         return 0;
     }
-    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets(); return 0;
+    case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
+        return 0;
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
-    case EE_UNITS_GROUP_OP_POST_SELECTION: gUserInterface->PostMessage424Once(); return 0;
-    case EE_UNITS_GROUP_OP_POST_SAVED_GROUP:
-        if (gUserInterface != NULL)
-            gUserInterface->PostRefreshSavedGroup((long)inC);
+    case EE_UNITS_GROUP_OP_POST_SELECTION: gUserInterface->PostMessage424Once();
         return 0;
     case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
-    case EE_UNITS_GROUP_OP_PLAYER_GROUPS: {
-        std::vector<EEGroup*>& theList = inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups;
-        for (size_t i = 0; i < theList.size(); i++)
-            ee_units_group_push(io->out, (int64_t)(uintptr_t)theList[i], 0, NULL);
-        return 0;
-    }
-    case EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR:
-        (inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups).clear();
-        return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE: {
-        std::vector<EEGroup*>& theList = inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups;
-        std::vector<EEGroup*>::iterator it = std::find(theList.begin(), theList.end(), reinterpret_cast<EEGroup*>(static_cast<uintptr_t>(inB)));
-        if (it != theList.end())
-            theList.erase(it);
-        return 0;
-    }
     // the selection's (selection.rs)
     case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
     case EE_UNITS_GROUP_OP_SELECTABLE:
         return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
-    case EE_UNITS_GROUP_OP_DOPPELGANGER: {
-        EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
-        return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
-    }
+    case EE_UNITS_GROUP_OP_DOPPELGANGER: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
     case EE_UNITS_GROUP_OP_LOCAL_SELECTION: return gWorld.mExecutingLocalSelection;
-    case EE_UNITS_GROUP_OP_PLAY_SOUND: {
-        EEUnit* theTarget = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB));
-        EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
+    case EE_UNITS_GROUP_OP_PLAY_SOUND: EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
         return 0;
-    }
     case EE_UNITS_GROUP_OP_ACK_DELAY: return (int64_t)(unsigned long)gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
-    case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB)); return 0;
+    case EE_UNITS_GROUP_OP_SET_VIEWED_UNIT: thePlayer->mViewedUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inB));
+        return 0;
     // RefreshUpgrades' (selection.rs)
     case EE_UNITS_GROUP_OP_CLASS_COUNT: return (int64_t)EEUnitClassCount();
     case EE_UNITS_GROUP_OP_UPGRADE: return (int64_t)(uintptr_t)thePlayer->GetUpgrade((long)inC);
-    case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init(); return 0;
-    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC); return 0;
-    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC); return 0;
-    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects(); return 0;
-    case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES:
-        thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
+    case EE_UNITS_GROUP_OP_UPGRADE_INIT: reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(inA))->Init();
+        return 0;
+    case EE_UNITS_GROUP_OP_SET_HIT_POINTS: reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inA))->SetHitPoints((long)inC);
+        return 0;
+    case EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: theUnit->SetFlightTime((long)inC);
+        return 0;
+    case EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: theUnit->MakeAreaEffects();
+        return 0;
+    case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;
     case EE_UNITS_GROUP_OP_PLAYER_SELECTION:
         return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
-    case EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH: {
-        EEGroup* theGroup = static_cast<EEGroup*>(reinterpret_cast<EeUnitsGroup*>(static_cast<uintptr_t>(inB)));
-        (inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups).push_back(theGroup);
+    case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
         return 0;
-    }
-    case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC(); return 0;
     case EE_UNITS_GROUP_OP_AREA_OUTLINES: {
         const int64_t* theAreas = static_cast<const int64_t*>(io->list);
         const unsigned short* theContinentIDs = static_cast<const unsigned short*>(io->list2);
@@ -277,7 +238,8 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         gWorld.mMap->BuildAreaOutlines(theRectangles, theContinents);
         return 0;
     }
-    case EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: io->f = gAEManager.mTemplates[inC]->mRadius; return 0;
+    case EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: io->f = gAEManager.mTemplates[inC]->mRadius;
+        return 0;
     case EE_UNITS_GROUP_OP_SAVE_PATH:
         EESaveAutoPathRequest(*reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inA)),
                               *reinterpret_cast<EEAutoPathRequest*>(static_cast<uintptr_t>(inB)));

@@ -2268,6 +2268,124 @@ pub fn validate_player<H: GroupHost>(h: &mut H, player: u64) {
     }
 }
 
+// ---- the player's group lists (the groups lane, round 2: were EEPlayer's mRunningGroups, mPendingGroups and
+// mFinishedGroups, `std::vector<EEGroup*>`)
+
+/// The running list (the groups the tick moves)
+pub const EE_UNITS_PLAYER_GROUPS_RUNNING: u32 = 0;
+/// The pending list (the commands' new groups, started by `AddPendingUnits`)
+pub const EE_UNITS_PLAYER_GROUPS_PENDING: u32 = 1;
+/// The finished list (`EEActiveGroup::Finish` pushes itself; `RemovalsDone` releases them)
+pub const EE_UNITS_PLAYER_GROUPS_FINISHED: u32 = 2;
+
+/// A player's three group lists (EEPlayer's `mGroupLists`): the groups by address, in the vectors' order; the lists
+/// hold no reference of their own (the bodies count them, as the original's did).
+#[derive(Debug, Default)]
+pub struct EeUnitsPlayerGroups {
+    lists: [Vec<u64>; 3],
+}
+
+impl EeUnitsPlayerGroups {
+    /// List `list`'s groups (an unknown list: none).
+    pub fn get(&self, list: u32) -> &[u64] {
+        self.lists.get(list as usize).map_or(&[], |l| l.as_slice())
+    }
+    /// `push_back`
+    pub fn push(&mut self, list: u32, group: u64) {
+        if let Some(l) = self.lists.get_mut(list as usize) {
+            l.push(group);
+        }
+    }
+    /// `clear()`
+    pub fn clear(&mut self, list: u32) {
+        if let Some(l) = self.lists.get_mut(list as usize) {
+            l.clear();
+        }
+    }
+    /// `erase(std::find(...))`: the first entry `group`, if any
+    pub fn erase_first(&mut self, list: u32, group: u64) {
+        if let Some(l) = self.lists.get_mut(list as usize) {
+            if let Some(i) = l.iter().position(|&g| g == group) {
+                l.remove(i);
+            }
+        }
+    }
+    /// `AddPendingUnits`' first part: every pending group appended to the running ones (the pending list kept: the
+    /// original cleared it only in `ReleasePendingUnits`)
+    pub fn start_pending(&mut self) {
+        let pending = self.lists[1].clone();
+        self.lists[0].extend(pending);
+    }
+}
+
+/// A player's new lists (its constructors).
+#[no_mangle]
+pub extern "C" fn ee_units_player_groups_new() -> *mut EeUnitsPlayerGroups {
+    Box::into_raw(Box::default())
+}
+
+/// Frees a player's lists (its destructor; the groups were released before).
+///
+/// # Safety
+/// `p` came from [`ee_units_player_groups_new`] (or is null) and is not used afterwards.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_groups_free(p: *mut EeUnitsPlayerGroups) {
+    if !p.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(p) });
+    }
+}
+
+/// List `list`'s length.
+///
+/// # Safety
+/// `p` a player's live lists.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_groups_len(p: *const EeUnitsPlayerGroups, list: u32) -> c_ulong {
+    // SAFETY: the caller's contract
+    unsafe { (*p).get(list).len() as c_ulong }
+}
+
+/// List `list`'s group `i` (null past the end).
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_groups_at(
+    p: *const EeUnitsPlayerGroups,
+    list: u32,
+    i: c_ulong,
+) -> *mut EeUnitsGroup {
+    // SAFETY: the caller's contract
+    unsafe { (*p).get(list).get(i as usize).map_or(std::ptr::null_mut(), |&g| g as usize as *mut EeUnitsGroup) }
+}
+
+/// `push_back(group)` onto list `list`.
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_groups_push(p: *mut EeUnitsPlayerGroups, list: u32, group: *mut EeUnitsGroup) {
+    // SAFETY: the caller's contract
+    unsafe { (*p).push(list, group as usize as u64) }
+}
+
+/// `op` 0: [`EeUnitsPlayerGroups::start_pending`] (`AddPendingUnits`), 1: the pending list cleared
+/// (`ReleasePendingUnits`).
+///
+/// # Safety
+/// As [`ee_units_player_groups_len`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_groups_do(p: *mut EeUnitsPlayerGroups, op: u32) {
+    // SAFETY: the caller's contract
+    let l = unsafe { &mut *p };
+    match op {
+        0 => l.start_pending(),
+        1 => l.clear(EE_UNITS_PLAYER_GROUPS_PENDING),
+        _ => {}
+    }
+}
+
 /// The test groups the other crates' tests read (`GroupView`): a plain group of `units`, owning no references.
 pub fn detached(units: &[u64]) -> G {
     let alloc = Box::new(Alloc {

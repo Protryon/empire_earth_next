@@ -11,7 +11,8 @@ use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
 use crate::units::group_obj::{
-    self as go, EeUnitsGroup, FormationState, GroupHost, GroupUnit, PathWaits, SavedGroup, SavedPaths, G,
+    self as go, EeUnitsGroup, EeUnitsPlayerGroups, FormationState, GroupHost, GroupUnit, PathWaits, SavedGroup,
+    SavedPaths, G,
 };
 use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, PlayerSaveHost};
 use crate::world::layout::layout;
@@ -92,22 +93,14 @@ pub const EE_UNITS_GROUP_OP_FORMATION_CENTER: i32 = 8;
 pub const EE_UNITS_GROUP_OP_FORMATION_SET_CENTER: i32 = 9;
 /// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
 pub const EE_UNITS_GROUP_OP_FORMATION_PLACE: i32 = 10;
-/// formation `a`'s orientation (16), centre (3), heading, `mB5C` (0 or 1) into the 21 floats at `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_STATE: i32 = 11;
-/// formation `a`'s state from the 21 floats at `list`
-pub const EE_UNITS_GROUP_OP_FORMATION_SET_STATE: i32 = 12;
 /// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
 pub const EE_UNITS_GROUP_OP_TERRAIN_FLAGS: i32 = 13;
 /// `gContinentManager.GetContinentID(a)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_OF: i32 = 14;
 /// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
 pub const EE_UNITS_GROUP_OP_CONTINENT_AT: i32 = 15;
-/// `gContinentManager.GetPathSubSectorAt(c, d)->GetLocation()` into `io.a`, `io.b`
-pub const EE_UNITS_GROUP_OP_SUBSECTOR_AT: i32 = 16;
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 pub const EE_UNITS_GROUP_OP_PATH_AREA_AT: i32 = 17;
-/// as the previous for a tile on the map, else -1
-pub const EE_UNITS_GROUP_OP_SLOT_AREA_AT: i32 = 18;
 /// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
 pub const EE_UNITS_GROUP_OP_PATH_REQUEST: i32 = 19;
 /// `gPathManager.CancelAutoPathRequest(a)`
@@ -130,14 +123,8 @@ pub const EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: i32 = 27;
 pub const EE_UNITS_GROUP_OP_TIME: i32 = 28;
 /// `gUserInterface->PostMessage424Once()`
 pub const EE_UNITS_GROUP_OP_POST_SELECTION: i32 = 29;
-/// `gUserInterface->PostRefreshSavedGroup(c)` (when there is one)
-pub const EE_UNITS_GROUP_OP_POST_SAVED_GROUP: i32 = 30;
 /// player `a`'s `mGroups[c]` (0 past them)
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUP: i32 = 31;
-/// player `a`'s running (c 0), pending (1) or finished (2) groups pushed
-pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS: i32 = 32;
-/// group `b` pushed onto player `a`'s running (c 0), pending (1) or finished (2) groups
-pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH: i32 = 33;
 /// `gWorld.mMap->ClearU1955DC()`
 pub const EE_UNITS_GROUP_OP_CLEAR_AREAS: i32 = 34;
 /// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
@@ -152,10 +139,6 @@ pub const EE_UNITS_GROUP_OP_LOAD_PATH: i32 = 38;
 pub const EE_UNITS_GROUP_OP_AWAIT_PATH: i32 = 39;
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 pub const EE_UNITS_GROUP_OP_AFTER_LOAD: i32 = 40;
-/// player `a`'s running (c 0), pending (1) or finished (2) groups cleared
-pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR: i32 = 41;
-/// group `b`'s first entry in player `a`'s list `c` erased
-pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE: i32 = 42;
 /// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
 pub const EE_UNITS_GROUP_OP_PLAYER_SELECTION: i32 = 43;
 /// player `a`'s `GetUnit(c)`
@@ -186,6 +169,31 @@ pub const EE_UNITS_GROUP_OP_SET_FLIGHT_TIME: i32 = 55;
 pub const EE_UNITS_GROUP_OP_MAKE_AREA_EFFECTS: i32 = 56;
 /// player `a`'s `mCivilization.AddUpgrades(mCivilization.GetPurchasedUpgrades(), GetPlayerID(), false)`
 pub const EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: i32 = 57;
+// the compound statements as one-statement operations (the groups lane, round 2)
+/// formation `a`'s `mOrientation` (16 floats) into `list`
+pub const EE_UNITS_GROUP_OP_FORMATION_ORIENTATION: i32 = 60;
+/// formation `a`'s `mOrientation` from `list`
+pub const EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION: i32 = 61;
+/// formation `a`'s `mHeading` into `f`
+pub const EE_UNITS_GROUP_OP_FORMATION_HEADING: i32 = 62;
+/// formation `a`'s `mHeading = f`
+pub const EE_UNITS_GROUP_OP_FORMATION_SET_HEADING: i32 = 63;
+/// formation `a`'s `mB5C`
+pub const EE_UNITS_GROUP_OP_FORMATION_B5C: i32 = 64;
+/// formation `a`'s `mB5C = c != 0`
+pub const EE_UNITS_GROUP_OP_FORMATION_SET_B5C: i32 = 65;
+/// the path subsector at (c, d)'s location's x
+pub const EE_UNITS_GROUP_OP_SUBSECTOR_X: i32 = 66;
+/// its y
+pub const EE_UNITS_GROUP_OP_SUBSECTOR_Y: i32 = 67;
+/// `gMapWidth`
+pub const EE_UNITS_GROUP_OP_MAP_WIDTH: i32 = 68;
+/// `gMapHeight`
+pub const EE_UNITS_GROUP_OP_MAP_HEIGHT: i32 = 69;
+/// `gUserInterface != NULL`
+pub const EE_UNITS_GROUP_OP_INTERFACE: i32 = 70;
+/// `gUserInterface->PostRefreshSavedGroup(c)`
+pub const EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO: i32 = 71;
 
 extern "C" {
     fn ee_units_group_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsGroupIo) -> i64;
@@ -268,6 +276,15 @@ fn unit_of(v: &UnitView) -> GroupUnit {
     u
 }
 
+/// A player's group lists (its `mGroupLists`, the layout's offset).
+///
+/// # Safety
+/// `player` a live player; the borrow ends before any host call.
+unsafe fn lists<'a>(player: u64) -> &'a mut EeUnitsPlayerGroups {
+    // SAFETY: the caller's contract: the player's constructor made the lists
+    unsafe { &mut **((player as usize + layout().player_group_lists as usize) as *const *mut EeUnitsPlayerGroups) }
+}
+
 impl GroupHost for GameGroups {
     fn unit(&mut self, unit: u64) -> GroupUnit {
         // SAFETY: a live unit the bodies hold
@@ -316,24 +333,22 @@ impl GroupHost for GameGroups {
         self.fill(EE_UNITS_GROUP_OP_FORMATION_PLACE, formation, 0, &mut io).into_iter().map(|(_, _, p)| p).collect()
     }
     fn formation_state(&mut self, formation: u64) -> FormationState {
-        let mut v = [0.0f32; 21];
-        let mut io = EeUnitsGroupIo { list: v.as_mut_ptr().cast(), len: 21, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_STATE, formation, 0, 0, 0, &mut io);
         let mut s = FormationState::default();
-        s.orientation.copy_from_slice(&v[..16]);
-        s.center = [v[16], v[17], v[18]];
-        s.heading = v[19];
-        s.b5c = v[20] != 0.0;
+        let mut io = EeUnitsGroupIo { list: s.orientation.as_mut_ptr().cast(), len: 16, ..Default::default() };
+        self.io(EE_UNITS_GROUP_OP_FORMATION_ORIENTATION, formation, 0, 0, 0, &mut io);
+        s.center = self.formation_center(formation);
+        self.io(EE_UNITS_GROUP_OP_FORMATION_HEADING, formation, 0, 0, 0, &mut io);
+        s.heading = io.f;
+        s.b5c = self.op(EE_UNITS_GROUP_OP_FORMATION_B5C, formation, 0, 0, 0) != 0;
         s
     }
     fn set_formation_state(&mut self, formation: u64, s: &FormationState) {
-        let mut v = [0.0f32; 21];
-        v[..16].copy_from_slice(&s.orientation);
-        v[16..19].copy_from_slice(&s.center);
-        v[19] = s.heading;
-        v[20] = if s.b5c { 1.0 } else { 0.0 };
-        let mut io = EeUnitsGroupIo { list: v.as_ptr().cast(), len: 21, ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_STATE, formation, 0, 0, 0, &mut io);
+        let mut io = EeUnitsGroupIo { list: s.orientation.as_ptr().cast(), len: 16, ..Default::default() };
+        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_ORIENTATION, formation, 0, 0, 0, &mut io);
+        self.set_formation_center(formation, s.center);
+        let mut io = EeUnitsGroupIo { f: s.heading, ..Default::default() };
+        self.io(EE_UNITS_GROUP_OP_FORMATION_SET_HEADING, formation, 0, 0, 0, &mut io);
+        self.op(EE_UNITS_GROUP_OP_FORMATION_SET_B5C, formation, 0, i64::from(s.b5c), 0);
     }
     fn terrain_flags(&mut self, unit: u64) -> [u8; 17] {
         let mut io = EeUnitsGroupIo::default();
@@ -347,16 +362,21 @@ impl GroupHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_CONTINENT_AT, 0, 0, x, y) as u16
     }
     fn subsector_at(&mut self, x: i64, y: i64) -> (i64, i64) {
-        let mut io = EeUnitsGroupIo::default();
-        self.io(EE_UNITS_GROUP_OP_SUBSECTOR_AT, 0, 0, x, y, &mut io);
-        (io.a, io.b)
+        (self.op(EE_UNITS_GROUP_OP_SUBSECTOR_X, 0, 0, x, y), self.op(EE_UNITS_GROUP_OP_SUBSECTOR_Y, 0, 0, x, y))
     }
     fn path_area_at(&mut self, x: i64, y: i64) -> u16 {
         self.op(EE_UNITS_GROUP_OP_PATH_AREA_AT, 0, 0, x, y) as u16
     }
     fn slot_area_at(&mut self, x: i64, y: i64) -> Option<u16> {
-        let r = self.op(EE_UNITS_GROUP_OP_SLOT_AREA_AT, 0, 0, x, y);
-        (r >= 0).then_some(r as u16)
+        // `(unsigned long)` of the tile's `long` coordinates against the map's size
+        let (ux, uy) = (x as c_long as c_ulong, y as c_long as c_ulong);
+        let (w, h) =
+            (self.op(EE_UNITS_GROUP_OP_MAP_WIDTH, 0, 0, 0, 0), self.op(EE_UNITS_GROUP_OP_MAP_HEIGHT, 0, 0, 0, 0));
+        if (ux as u64) < (w as c_ulong as u64) && (uy as u64) < (h as c_ulong as u64) {
+            Some(self.path_area_at(x, y))
+        } else {
+            None
+        }
     }
     fn path_request(&mut self, player_id: i64, from: (i64, i64), to: (i64, i64), flags: &[u8; 17]) -> u64 {
         let mut io = EeUnitsGroupIo { a: from.0, b: from.1, c: to.0, d: to.1, flags: *flags, ..Default::default() };
@@ -395,7 +415,9 @@ impl GroupHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_POST_SELECTION, 0, 0, 0, 0);
     }
     fn post_saved_group(&mut self, index: c_long) {
-        self.op(EE_UNITS_GROUP_OP_POST_SAVED_GROUP, 0, 0, index as i64, 0);
+        if self.op(EE_UNITS_GROUP_OP_INTERFACE, 0, 0, 0, 0) != 0 {
+            self.op(EE_UNITS_GROUP_OP_POST_SAVED_GROUP_DO, 0, 0, index as i64, 0);
+        }
     }
     fn current_player(&mut self) -> u64 {
         read(|t| WorldView::global(t).and_then(|w| w.current_player()).map_or(0, |p| p.handle()))
@@ -412,23 +434,23 @@ impl GroupHost for GameGroups {
         read(|t| unsafe { crate::world::PlayerView::of(t, player) }.map_or(0, |p| p.id() as i64))
     }
     fn player_groups(&mut self, player: u64, list: u32) -> Vec<u64> {
-        let mut io = EeUnitsGroupIo::default();
-        self.fill(EE_UNITS_GROUP_OP_PLAYER_GROUPS, player, list as i64, &mut io)
-            .into_iter()
-            .map(|(g, _, _)| g as u64)
-            .collect()
+        // SAFETY: a live player's lists
+        unsafe { lists(player) }.get(list).to_vec()
     }
     fn player_groups_clear(&mut self, player: u64, list: u32) {
-        self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR, player, 0, list as i64, 0);
+        // SAFETY: as above
+        unsafe { lists(player) }.clear(list)
     }
     fn player_groups_erase(&mut self, player: u64, list: u32, group: u64) {
-        self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE, player, group, list as i64, 0);
+        // SAFETY: as above
+        unsafe { lists(player) }.erase_first(list, group)
     }
     fn player_selection(&mut self, player: u64, which: u32) -> u64 {
         self.op(EE_UNITS_GROUP_OP_PLAYER_SELECTION, player, 0, which as i64, 0) as u64
     }
     fn player_groups_push(&mut self, player: u64, list: u32, group: u64) {
-        self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH, player, group, list as i64, 0);
+        // SAFETY: as above
+        unsafe { lists(player) }.push(list, group)
     }
     fn compute_values(&mut self, group: u64) {
         crate::units::ag::compute_values(&mut crate::units::ag_host::AgGame, group)

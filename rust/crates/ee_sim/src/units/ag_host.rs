@@ -64,9 +64,6 @@ pub const EE_UNITS_AG_SEND: i32 = 8;
 /// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
 /// heading)
 pub const EE_UNITS_AG_ARRANGE: i32 = 9;
-/// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
-/// `io.d`, queued `c`
-pub const EE_UNITS_AG_LAUNCH: i32 = 13;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -87,14 +84,8 @@ pub const EE_UNITS_AG_CLEAR_GOALS: i32 = 23;
 pub const EE_UNITS_AG_QUEUE_GOAL: i32 = 24;
 /// unit `a`'s `SetGoal(b, 0, c)`
 pub const EE_UNITS_AG_SET_GOAL: i32 = 25;
-/// unit `a`'s `mGoalQueues[c].Add(b)`, `RefreshGoals()`, `RefreshActiveGoal()`
-pub const EE_UNITS_AG_QUEUE_ADD: i32 = 26;
 /// unit `a`'s `mGoalQueues[1].AddTime(1)`
 pub const EE_UNITS_AG_ADD_TIME: i32 = 27;
-/// unit `a`'s `StartAction(c)`, then its class's `ActionChanged(a)`
-pub const EE_UNITS_AG_ACT: i32 = 28;
-/// unit `a`'s `QueueSquadronGoals(b, c & 1)` (`c & 2`) or `SetSquadronGoals(b, c & 1)`
-pub const EE_UNITS_AG_SQUADRON: i32 = 29;
 /// unit `a`'s `SetGatheredResource(NULL)`
 pub const EE_UNITS_AG_CLEAR_GATHERED: i32 = 30;
 /// unit `a`'s `mIsSpecialAttack = c`
@@ -107,8 +98,6 @@ pub const EE_UNITS_AG_CAN_TAKE: i32 = 33;
 pub const EE_UNITS_AG_FOOTPRINT: i32 = 34;
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 pub const EE_UNITS_AG_HAS_TILE: i32 = 35;
-/// the tile at `io.p` (`UMFloorUnsigned`): 1 and its height in `io.f`, terrain in `io.a`; 0 for none
-pub const EE_UNITS_AG_TILE_AT: i32 = 36;
 /// `gContinentManager.CanGetTo(a, c, d)`
 pub const EE_UNITS_AG_CAN_GET_TO: i32 = 37;
 /// `EECanConvert(a, b, flag)`, the flag in and out in `io.a`
@@ -129,8 +118,6 @@ pub const EE_UNITS_AG_PASSABLE: i32 = 46;
 pub const EE_UNITS_AG_SEEN_BY: i32 = 47;
 /// `EECanPriestConvert(a, b)`
 pub const EE_UNITS_AG_PRIEST_CONVERT: i32 = 48;
-/// unit `a`'s `GetPower() >= calamity b's GetCost() && node c's Contains(its type)`
-pub const EE_UNITS_AG_CAN_CAST: i32 = 49;
 /// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
 /// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
 pub const EE_UNITS_AG_RECT_CLOSEST: i32 = 52;
@@ -146,6 +133,35 @@ pub const EE_UNITS_AG_GATHER_STORAGE: i32 = 72;
 pub const EE_UNITS_AG_GATHER_RESOURCE: i32 = 73;
 /// patrol goal `a`'s `GetPatrolTarget()`, else `GetPatrolGroup()->GetLast()`
 pub const EE_UNITS_AG_PATROL_POINT: i32 = 81;
+// the compound statements as one-statement operations (the groups lane, round 2)
+/// unit `a`'s `mGoalQueues[c].Add(goal b)`
+pub const EE_UNITS_AG_QUEUE_ADD_ONLY: i32 = 90;
+/// unit `a`'s `RefreshGoals()`
+pub const EE_UNITS_AG_REFRESH_GOALS: i32 = 91;
+/// unit `a`'s `RefreshActiveGoal()`
+pub const EE_UNITS_AG_REFRESH_ACTIVE_GOAL: i32 = 92;
+/// unit `a`'s `StartAction(c)`
+pub const EE_UNITS_AG_START_ACTION: i32 = 93;
+/// unit `a`'s class's `ActionChanged(unit)`
+pub const EE_UNITS_AG_ACTION_CHANGED: i32 = 94;
+/// unit `a`'s `QueueSquadronGoals(goal b, c)`
+pub const EE_UNITS_AG_QUEUE_SQUADRON: i32 = 95;
+/// unit `a`'s `SetSquadronGoals(goal b, c)`
+pub const EE_UNITS_AG_SET_SQUADRON: i32 = 96;
+/// unit `a`'s `GetPower()`
+pub const EE_UNITS_AG_POWER: i32 = 97;
+/// calamity class `a`'s `GetCost()`
+pub const EE_UNITS_AG_CALAMITY_COST: i32 = 98;
+/// tech node `a`'s `Contains(unit b's class's mUnitType)`
+pub const EE_UNITS_AG_NODE_HAS_TYPE: i32 = 99;
+/// `gPhysics->GetRandom(c, d)`
+pub const EE_UNITS_AG_RANDOM: i32 = 100;
+/// the map tile at `UMFloorUnsigned` of `p` is there
+pub const EE_UNITS_AG_TILE_PRESENT: i32 = 101;
+/// that tile's `GetHeight()` into `f`
+pub const EE_UNITS_AG_TILE_HEIGHT: i32 = 102;
+/// that tile's `mTerrainType`
+pub const EE_UNITS_AG_TILE_TERRAIN: i32 = 103;
 
 extern "C" {
     fn ee_units_ag_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsAgIo) -> i64;
@@ -255,9 +271,19 @@ impl AgHost for AgGame {
     }
     #[allow(clippy::too_many_arguments)] // as the trait's
     fn launch(&mut self, g: u64, ng: u64, goal: u64, queued: bool, action: i32, target: u64, command: u32) {
-        let mut io =
-            EeUnitsAgIo { a: goal as i64, b: target as i64, c: action as i64, d: command as i64, ..Default::default() };
-        self.io(EE_UNITS_AG_LAUNCH, g, ng, queued as i64, 0, &mut io);
+        // SAFETY (all): the live groups the body holds
+        let player = unsafe { (*(g as go::G)).mPlayer } as u64;
+        unsafe { go::set_goal(&mut GameGroups, ng as go::G, goal, queued) };
+        with_group_fields(ng, |f| f.mAction = action as std::os::raw::c_long);
+        GameGroups.player_groups_push(player, go::EE_UNITS_PLAYER_GROUPS_PENDING, ng);
+        crate::units::ag::plan(self, ng);
+        self.send_command(ng, target, command);
+        let n = unsafe { go::len(ng as go::G) } as i64;
+        if n > 0 {
+            let i = self.op(EE_UNITS_AG_RANDOM, 0, 0, 0, n - 1);
+            let unit = unsafe { go::unit_at(ng as go::G, i as std::os::raw::c_long as usize) };
+            crate::units::selection::play_acknowledgement(&mut GameGroups, player, unit);
+        }
     }
     fn destinations(&mut self, g: u64) -> Vec<(u32, [f32; 3])> {
         // SAFETY: as above
@@ -310,16 +336,20 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_SET_GOAL, u, goal, q as i64, 0);
     }
     fn queue_add(&mut self, u: u64, goal: u64, q: u32) {
-        self.op(EE_UNITS_AG_QUEUE_ADD, u, goal, q as i64, 0);
+        self.op(EE_UNITS_AG_QUEUE_ADD_ONLY, u, goal, q as i64, 0);
+        self.op(EE_UNITS_AG_REFRESH_GOALS, u, 0, 0, 0);
+        self.op(EE_UNITS_AG_REFRESH_ACTIVE_GOAL, u, 0, 0, 0);
     }
     fn add_time(&mut self, u: u64) {
         self.op(EE_UNITS_AG_ADD_TIME, u, 0, 0, 0);
     }
     fn act(&mut self, u: u64, action: i32) {
-        self.op(EE_UNITS_AG_ACT, u, 0, action as i64, 0);
+        self.op(EE_UNITS_AG_START_ACTION, u, 0, action as i64, 0);
+        self.op(EE_UNITS_AG_ACTION_CHANGED, u, 0, 0, 0);
     }
     fn squadron(&mut self, u: u64, goal: u64, flag: bool, queued: bool) {
-        self.op(EE_UNITS_AG_SQUADRON, u, goal, flag as i64 | (queued as i64) << 1, 0);
+        let op = if queued { EE_UNITS_AG_QUEUE_SQUADRON } else { EE_UNITS_AG_SET_SQUADRON };
+        self.op(op, u, goal, flag as i64, 0);
     }
     fn clear_gathered(&mut self, u: u64) {
         self.op(EE_UNITS_AG_CLEAR_GATHERED, u, 0, 0, 0);
@@ -350,7 +380,12 @@ impl AgHost for AgGame {
     }
     fn tile_at(&mut self, p: [f32; 3]) -> Option<(f32, i32)> {
         let mut io = EeUnitsAgIo { p, ..Default::default() };
-        (self.io(EE_UNITS_AG_TILE_AT, 0, 0, 0, 0, &mut io) != 0).then_some((io.f, io.a as i32))
+        if self.io(EE_UNITS_AG_TILE_PRESENT, 0, 0, 0, 0, &mut io) == 0 {
+            return None;
+        }
+        self.io(EE_UNITS_AG_TILE_HEIGHT, 0, 0, 0, 0, &mut io);
+        let terrain = self.io(EE_UNITS_AG_TILE_TERRAIN, 0, 0, 0, 0, &mut io);
+        Some((io.f, terrain as i32))
     }
     fn can_get_to(&mut self, u: u64, x: i32, y: i32) -> bool {
         self.op(EE_UNITS_AG_CAN_GET_TO, u, 0, x as i64, y as i64) != 0
@@ -403,7 +438,8 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_PRIEST_CONVERT, u, target, 0, 0) != 0
     }
     fn can_cast(&mut self, u: u64, calamity: u64, node: u64) -> bool {
-        self.op(EE_UNITS_AG_CAN_CAST, u, calamity, node as i64, 0) != 0
+        self.op(EE_UNITS_AG_POWER, u, 0, 0, 0) >= self.op(EE_UNITS_AG_CALAMITY_COST, calamity, 0, 0, 0)
+            && self.op(EE_UNITS_AG_NODE_HAS_TYPE, node, u, 0, 0) != 0
     }
     fn reference(&mut self, u: u64) {
         GameGroups.reference_unit(u)

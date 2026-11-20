@@ -74,7 +74,7 @@ void Record(long inCase, EEPlayer* inPlayer, EEActiveGroup* inGroup, EEComplexUn
         r.U32((unsigned int)inGroup->GetUnit(i)->mUnitID);
     r.F32s(&inGroup->mFields.mSpeed, 17);
     r.U32(inGroup->mFields.mMovesTogether);
-    r.U32((unsigned int)inPlayer->mPendingGroups.size());
+    r.U32((unsigned int)inPlayer->GetNumPendingGroups());
     for (size_t i = 0; i < inCount; i++) {
         EEComplexUnit* u = inUnits[i];
         r.U32((unsigned int)u->mUnitID);
@@ -191,7 +191,7 @@ extern "C" int64_t ee_units_sweep_host(int32_t inOp, uint64_t inA, uint64_t inB,
         theGroup->SetGoal(Of<EEUnitGoal>(inB), (inC & 1) != 0);
         if (inD >= 0) {   // the commands' way: the action, into the pending groups, Plan
             theGroup->mFields.mAction = (long)inD;
-            theGroup->GetPlayer()->mPendingGroups.push_back(theGroup);
+            theGroup->GetPlayer()->AddPendingGroup(theGroup);
             theGroup->Plan();
         }
         return 0;
