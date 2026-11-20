@@ -277,6 +277,7 @@ pub mod lobby_options;
 pub mod main_form;
 #[cfg(not(test))]
 mod main_form_ffi;
+pub(crate) mod main_form_calls;
 pub mod main_form_fields;
 pub mod main_game;
 #[cfg(not(test))]

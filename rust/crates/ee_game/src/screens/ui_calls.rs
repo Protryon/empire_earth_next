@@ -18,9 +18,12 @@ use crate::screens::ui_thread::{
 };
 
 // the strings and forms (ee/EEStringIDs.h, ee/EEUIManager.h)
-const IDS_ENGLISH: u32 = 6;
-const IDS_SAVE_GAME_ISNT_VALID: u32 = 7153;
-const IDS_THERE_WAS_ERROR_TRYING_TO_LOAD: u32 = 10047;
+/// cbindgen:ignore
+const STRING_ENGLISH: u32 = 6;
+/// cbindgen:ignore
+const STRING_SAVE_GAME_ISNT_VALID: u32 = 7153;
+/// cbindgen:ignore
+const STRING_THERE_WAS_ERROR_TRYING_TO_LOAD: u32 = 10047;
 const FORM_CIV_BUILDER: u32 = 7;
 const FORM_MULTIPLAYER: u32 = 30;
 const FORM_PREDEFINED_CIV: u32 = 35;
@@ -33,7 +36,7 @@ const POINTER_HIDE: u32 = 0x402;
 const POINTER_SHOW: u32 = 0x404;
 const POINTER_SURFACE: i64 = 0x405;
 /// `kDisplayModeShown`.
-const SHOWN: u32 = 1;
+const DISPLAY_SHOWN: u32 = 1;
 
 /// The civilization builder's menu music while the builder runs (`EE_SCREENS_UG_OP_CB_MUSIC`'s static).
 static BUILDER_MUSIC: Mutex<Vec<u8>> = Mutex::new(Vec::new());
@@ -101,7 +104,7 @@ pub(crate) fn show_message_of_the_day<C: Cpp + ?Sized>(c: &mut C, game: usize, s
     c.manager_lock_for_copy();
     if c.manager_form_visible(FORM_MULTIPLAYER) {
         let label = c.manager_form_control(FORM_MULTIPLAYER, MULTIPLAYER_MESSAGE_OF_THE_DAY);
-        c.control_set_display_mode(label, SHOWN);
+        c.control_set_display_mode(label, DISPLAY_SHOWN);
         c.label_delete_array(label);
         c.label_append_wide(label, game);
         c.label_append_wide(label, system);
@@ -259,11 +262,11 @@ pub(crate) fn ui_game<C: Cpp + ?Sized>(c: &mut C, ui: usize, op: u32, a: i64, b:
             0
         }
         EE_SCREENS_UG_OP_INVALID_SAVE => {
-            message(c, IDS_SAVE_GAME_ISNT_VALID);
+            message(c, STRING_SAVE_GAME_ISNT_VALID);
             0
         }
         EE_SCREENS_UG_OP_LOAD_ERROR => {
-            message(c, IDS_THERE_WAS_ERROR_TRYING_TO_LOAD);
+            message(c, STRING_THERE_WAS_ERROR_TRYING_TO_LOAD);
             0
         }
         EE_SCREENS_UG_OP_INPUT_RESUME => {
@@ -273,7 +276,7 @@ pub(crate) fn ui_game<C: Cpp + ?Sized>(c: &mut C, ui: usize, op: u32, a: i64, b:
         }
         EE_SCREENS_UG_OP_LOCALE => {
             // port (decision D6): game text is UTF-8, so the C runtime's character classes stay the "C" locale's
-            let locale = string(IDS_ENGLISH);
+            let locale = string(STRING_ENGLISH);
             c.set_locale_all(Text::of(&locale));
             c.set_locale_numeric_english();
             c.set_locale_ctype_c();
