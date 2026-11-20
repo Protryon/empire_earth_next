@@ -51,9 +51,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEPathManager.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
-#include "ee/EEAIPathGoalModifiers.h"
+#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 #include "rust/sim/units.h"   // ee_units_cls_base_condition
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
@@ -723,14 +721,14 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         theBounds.mLeft = (long)a[5];
         theBounds.mBottom = (long)a[6];
         theBounds.mRight = (long)a[7];
-        EEAIBPGModifierEnemyIsAttackableByUnit* theModifier = new EEAIBPGModifierEnemyIsAttackableByUnit(theObject, theOther);
+        EeAStarModifier* theModifier = ee_astar_modifier_new_attackable((uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)theOther);
         gPathManager.FindPath(theObject, ::gWorld.mMap, theFrom, theTo, theBounds, thePath, 0xb, (long)a[8], theModifier,
                               NULL);
         if (thePath.size() != 0) {
             a[0] = thePath[0].mX;
             a[1] = thePath[0].mY;
         }
-        theModifier->Dereference();
+        ee_astar_modifier_release(theModifier);
         return thePath.size();
     }
     case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenByOwnerOf(theObject, EEQueryUnit(inOther));

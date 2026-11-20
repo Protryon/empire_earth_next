@@ -100,24 +100,6 @@ constexpr static const int32_t EE_PATH_SS_NEIGHBOR = 142;
 /// sub sector `h0` `IsNeighbor(h1)`
 constexpr static const int32_t EE_PATH_SS_IS_NEIGHBOR = 143;
 
-/// sub sector `h0` `IsPassable(i0)` (a gate open to the player)
-constexpr static const int32_t EE_PATH_SS_GATE_OPEN = 144;
-
-/// `HasPassableLink(h0, h1)` over the goal record `h2`'s flags
-constexpr static const int32_t EE_PATH_SS_PASSABLE_LINK = 145;
-
-/// route planner `h0` `CanEnter(h1, h2)`
-constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_ENTER = 146;
-
-/// route planner `h0` `GetCost(the parent node: object h2, index i0, tile (i1, i2), costs i3 .. i5, h1)`
-constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_COST = 147;
-
-/// route planner `h0` `Reference()`
-constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_REFERENCE = 148;
-
-/// route planner `h0` takes the goal record `h1` (`mGoal`)
-constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_ATTACH = 149;
-
 /// unit `h0`'s terrain flags (`GetTerrainFlags`) into the goal record `h1`
 constexpr static const int32_t EE_PATH_GRAPH_TERRAIN_FLAGS = 150;
 
@@ -139,9 +121,6 @@ constexpr static const int32_t EE_PATH_GRAPH_REVS_WORLD = 154;
 /// sub sector `i0` as a graph object (`EEGraphObjectOf`: null when none)
 constexpr static const int32_t EE_PATH_GRAPH_OBJECT = 155;
 
-/// route planner `h0` into the saved graph search `h1` -> its kind (`-1`: none that a load can make)
-constexpr static const int32_t EE_PATH_GRAPH_MODIFIER_SAVE = 156;
-
 /// a view of the map `h1` (`new EEAIAStarView(map)`), its callbacks into `*h2` -> the view
 constexpr static const int32_t EE_PATH_VIEW_NEW = 130;
 
@@ -157,22 +136,6 @@ constexpr static const int32_t EE_PATH_BLOCKED_TILES = 133;
 
 /// `CollectUnitTiles`: a sea unit `h0`'s tiles appended to the tile list `h1`
 constexpr static const int32_t EE_PATH_UNIT_TILES = 134;
-
-/// a new modifier of machine type `i0` (sea 2, space 0x10; `i1` the bounded goal's) over the goal record `h1` (one
-/// reference, the caller's) -> it, 0 for none
-constexpr static const int32_t EE_PATH_TILE_MODIFIER_NEW = 135;
-
-/// tile modifier `h0` `Reference()`, `Dereference()`
-constexpr static const int32_t EE_PATH_TILE_MODIFIER_REFERENCE = 136;
-
-constexpr static const int32_t EE_PATH_TILE_MODIFIER_DEREFERENCE = 137;
-
-/// tile modifier `h0` takes the goal record `h1` (`mGoal`); `i0`: as the bounded goal's (`SetGoal`) -> its bounded
-/// modifier (`dynamic_cast`)
-constexpr static const int32_t EE_PATH_TILE_MODIFIER_ATTACH = 138;
-
-/// bounded modifier `h0` `CheckNode(the node at (i1, i2), none unless i0)`
-constexpr static const int32_t EE_PATH_CHECK_NODE = 139;
 
 /// the tiles `h2[..i0]` appended to the C++ vector `h1` (`std::vector<U2DPoint<long> >`)
 constexpr static const int32_t EE_PATH_TILES_OUT = 140;
@@ -346,12 +309,6 @@ constexpr static const int32_t EE_PATH_GM_SAVE = 55;
 
 /// graph machine `h0` from the record `h1` (its modifier `h2`, goal unit `h3`) -> whether its storage loaded
 constexpr static const int32_t EE_PATH_GM_LOAD = 56;
-
-/// a loaded graph search's modifier from the record `h1` -> it (0: none, or one that cannot be rebuilt: `i0` 0)
-constexpr static const int32_t EE_PATH_GM_MODIFIER = 57;
-
-/// modifier `h0` `Dereference()`
-constexpr static const int32_t EE_PATH_MODIFIER_DEREFERENCE = 58;
 
 /// sub sector `i0` exists
 constexpr static const int32_t EE_PATH_SUB_SECTOR = 59;
@@ -580,13 +537,6 @@ enum class EeAStarContinentList {
   IdsEc = 6,
 };
 
-/// `EEAIAStarView::ArePassableExcept`'s skip (`kSkipNone`, `kSkipWalls`, `kSkipTrees`).
-enum class EeAStarSkip {
-  None = 0,
-  Walls = 1,
-  Trees = 2,
-};
-
 /// Which goal a fill has.
 enum class EeAStarFloodKind {
   /// `EEAIAStarContinentGoal` (machine type 6)
@@ -599,6 +549,13 @@ enum class EeAStarFloodKind {
   PathSector = 3,
   /// `EEAIAStarChokePointGoal` (9)
   Choke = 4,
+};
+
+/// `EEAIAStarView::ArePassableExcept`'s skip (`kSkipNone`, `kSkipWalls`, `kSkipTrees`).
+enum class EeAStarSkip {
+  None = 0,
+  Walls = 1,
+  Trees = 2,
 };
 
 /// The hull's points (opaque to C++).
@@ -621,6 +578,9 @@ struct EeAStarFlood;
 
 /// A list of ids (opaque to C++).
 struct EeAStarIdList;
+
+/// A modifier (opaque to C++).
+struct EeAStarModifier;
 
 /// A sector's lists (opaque to C++).
 struct EeAStarSectorLists;
@@ -720,6 +680,20 @@ struct EeAStarForestRecord {
   /// `mContinentID`, `mID`
   uint16_t continent_id;
   uint16_t id;
+};
+
+/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
+/// tile (outside the playable rhombus it has none), its continent's category
+/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
+/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
+struct EeChokeTileInfo {
+  bool tile;
+  uint8_t category;
+  uint32_t continent_serial;
+  bool resource;
+  bool forest;
+  uint32_t forest_serial;
+  int32_t forest_tiles;
 };
 
 /// `EEAIContinentManager`'s members (`ee_astar_cm_init` / `ee_astar_cm_free` in its ctor and dtor). The grid
@@ -837,125 +811,6 @@ struct EeAStarContinentRecord {
   uint16_t id;
 };
 
-/// A unit as the view names it (`EEComplexUnit*`, opaque here).
-using EeAStarUnit = void*;
-
-/// A continent at a tile (`EEAIAStarContinentInfo`).
-struct EeAStarContinentInfo {
-  uint16_t id;
-  uint8_t category;
-};
-
-/// A path area at a tile or by id (`EEAIAStarPathAreaInfo`).
-struct EeAStarPathAreaInfo {
-  bool found;
-  uint16_t id;
-  uint16_t continent_id;
-  int32_t kind;
-};
-
-/// The first blocking unit of a tile (`EEAIAStarBlocker`).
-struct EeAStarBlocker {
-  bool found;
-  int32_t unit_id;
-  int32_t player_id;
-  bool is_gate;
-  bool is_wall;
-};
-
-/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
-struct EeAStarViewCallbacks {
-  void *ctx;
-  bool (*has_tile)(void *ctx, int32_t x, int32_t y);
-  int32_t (*terrain)(void *ctx, int32_t x, int32_t y);
-  bool (*is_edge)(void *ctx, int32_t x, int32_t y);
-  int32_t (*height_level)(void *ctx, int32_t x, int32_t y);
-  uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
-  /// a choke tile at `index` (`*serial` its area serial)
-  bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
-  int32_t (*ai_value)(void *ctx, int32_t x, int32_t y);
-  int32_t (*tile_flag)(void *ctx, int32_t x, int32_t y);
-  bool (*can_move_on)(void *ctx, EeAStarUnit walker, int32_t terrain);
-  bool (*are_passable)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y, EeAStarSkip skip);
-  int32_t (*formation_rank)(void *ctx, EeAStarUnit walker);
-  bool (*step_blocker)(void *ctx, EeAStarUnit walker, bool sea, int32_t x, int32_t y);
-  int32_t (*unit_region_state)(void *ctx, int32_t x, int32_t y);
-  int32_t (*epoch)(void *ctx, EeAStarUnit walker);
-  bool (*is_alone)(void *ctx, EeAStarUnit walker);
-  int32_t (*water_state)(void *ctx, EeAStarUnit walker);
-  bool (*is_sea_going)(void *ctx, EeAStarUnit walker);
-  bool (*has_hill)(void *ctx, int32_t x, int32_t y);
-  bool (*random_at_most)(void *ctx, float chance);
-  int32_t (*crowd_cost)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y);
-  bool (*is_wide)(void *ctx, EeAStarUnit walker);
-  bool (*ignores_formation)(void *ctx, EeAStarUnit walker);
-  bool (*rank_probe_blocked)(void *ctx,
-                             EeAStarUnit walker,
-                             uint16_t continent_id,
-                             int32_t x,
-                             int32_t y);
-  bool (*can_enter)(void *ctx, void *modifier, int32_t x, int32_t y, bool at_goal);
-  int32_t (*modifier_cost)(void *ctx,
-                           void *modifier,
-                           int32_t from_x,
-                           int32_t from_y,
-                           int32_t x,
-                           int32_t y,
-                           int32_t parent_x,
-                           int32_t parent_y);
-  bool (*has_units)(void *ctx, int32_t x, int32_t y);
-  void (*continent_at)(void *ctx, int32_t x, int32_t y, EeAStarContinentInfo *out);
-  int32_t (*tile_value)(void *ctx, int32_t x, int32_t y);
-  void (*path_area_at)(void *ctx, int32_t x, int32_t y, EeAStarPathAreaInfo *out);
-  void (*path_area)(void *ctx, uint16_t id, EeAStarPathAreaInfo *out);
-  uint16_t (*stored_path_area_id)(void *ctx, const void *storage, int32_t x, int32_t y);
-  int32_t (*resource_kind)(void *ctx, int32_t x, int32_t y);
-  bool (*has_blocker)(void *ctx, int32_t x, int32_t y);
-  int32_t (*first_blocker_id)(void *ctx, int32_t x, int32_t y);
-  void (*first_blocker)(void *ctx, int32_t x, int32_t y, EeAStarBlocker *out);
-  int32_t (*first_obstacle_id)(void *ctx, int32_t x, int32_t y);
-  bool (*own_wall_first)(void *ctx, int32_t x, int32_t y, int32_t player_id);
-  int32_t (*area_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
-  int32_t (*sector_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
-  bool (*live_dock)(void *ctx, int32_t x, int32_t y);
-  bool (*live_space_dock)(void *ctx, int32_t x, int32_t y);
-};
-
-/// `U2DRectangle<long>` (`EEAIAStarBounds`): the member order of the C++ (bottom, left, right, top).
-struct EeAStarRect {
-  int32_t bottom;
-  int32_t left;
-  int32_t right;
-  int32_t top;
-};
-
-/// The goal's state the step cost reads (`EEAIAStarPathfindingGoalBase`).
-struct EeAStarStepGoal {
-  /// `mUnit`
-  EeAStarUnit walker;
-  /// `mAvoidUnits`
-  bool avoid_units;
-  /// `mIsBounded`
-  bool is_bounded;
-  /// `mGoalBounds`
-  EeAStarRect goal_bounds;
-};
-
-/// `EEAIBPGModifierStormShaper`'s state.
-struct EeAStarStorm {
-  /// `mInner`, `mOuter`
-  EeAStarRect inner;
-  EeAStarRect outer;
-  /// `mDistanceSquared`
-  int32_t distance_squared;
-  /// `mSnow`, `mRain`
-  bool snow;
-  bool rain;
-  /// the bounded goal's `mStartTile`
-  int32_t start_x;
-  int32_t start_y;
-};
-
 /// A continent's neighbour (`mNeighbors.push_back`): continent `id` gets `neighbor`.
 struct EeContinentNeighbor {
   uint16_t id;
@@ -966,20 +821,6 @@ struct EeContinentNeighbor {
 struct EeContinentShore {
   uint16_t id;
   EePoint tile;
-};
-
-/// A tile as the choke point pass's classification reads it (`EEAIChokeGetTileSerial`): whether the map has the
-/// tile (outside the playable rhombus it has none), its continent's category
-/// and serial, whether it carries a wood resource (`EEAIHasResourceUnit`), and the forest the manager lists at it
-/// (`GetForestAt`, then the manager's entry at that id: `found` when that entry exists) with its serial and tile count.
-struct EeChokeTileInfo {
-  bool tile;
-  uint8_t category;
-  uint32_t continent_serial;
-  bool resource;
-  bool forest;
-  uint32_t forest_serial;
-  int32_t forest_tiles;
 };
 
 /// The sub sectors as the link walk sees them: C function pointers over `ctx`.
@@ -1182,6 +1023,14 @@ struct EeAStarChokeFill {
   int32_t tile_count;
 };
 
+/// `U2DRectangle<long>` (`EEAIAStarBounds`): the member order of the C++ (bottom, left, right, top).
+struct EeAStarRect {
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+};
+
 /// `EEAIAStarPathAreaGoal`'s fill state.
 struct EeAStarPathAreaFill {
   /// `mMode` (`EEAIPathKind`: 0 the path area pass, 1..4 a kind pass)
@@ -1246,6 +1095,90 @@ struct EeAStarFloodState {
   EeAStarChokeFill choke;
   EeAStarPathAreaFill path_area;
   EeAStarPathSectorFill sector;
+};
+
+/// A unit as the view names it (`EEComplexUnit*`, opaque here).
+using EeAStarUnit = void*;
+
+/// A continent at a tile (`EEAIAStarContinentInfo`).
+struct EeAStarContinentInfo {
+  uint16_t id;
+  uint8_t category;
+};
+
+/// A path area at a tile or by id (`EEAIAStarPathAreaInfo`).
+struct EeAStarPathAreaInfo {
+  bool found;
+  uint16_t id;
+  uint16_t continent_id;
+  int32_t kind;
+};
+
+/// The first blocking unit of a tile (`EEAIAStarBlocker`).
+struct EeAStarBlocker {
+  bool found;
+  int32_t unit_id;
+  int32_t player_id;
+  bool is_gate;
+  bool is_wall;
+};
+
+/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
+struct EeAStarViewCallbacks {
+  void *ctx;
+  bool (*has_tile)(void *ctx, int32_t x, int32_t y);
+  int32_t (*terrain)(void *ctx, int32_t x, int32_t y);
+  bool (*is_edge)(void *ctx, int32_t x, int32_t y);
+  int32_t (*height_level)(void *ctx, int32_t x, int32_t y);
+  uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
+  /// a choke tile at `index` (`*serial` its area serial)
+  bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+  int32_t (*ai_value)(void *ctx, int32_t x, int32_t y);
+  int32_t (*tile_flag)(void *ctx, int32_t x, int32_t y);
+  bool (*can_move_on)(void *ctx, EeAStarUnit walker, int32_t terrain);
+  bool (*are_passable)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y, EeAStarSkip skip);
+  int32_t (*formation_rank)(void *ctx, EeAStarUnit walker);
+  bool (*step_blocker)(void *ctx, EeAStarUnit walker, bool sea, int32_t x, int32_t y);
+  int32_t (*unit_region_state)(void *ctx, int32_t x, int32_t y);
+  int32_t (*epoch)(void *ctx, EeAStarUnit walker);
+  bool (*is_alone)(void *ctx, EeAStarUnit walker);
+  int32_t (*water_state)(void *ctx, EeAStarUnit walker);
+  bool (*is_sea_going)(void *ctx, EeAStarUnit walker);
+  bool (*has_hill)(void *ctx, int32_t x, int32_t y);
+  bool (*random_at_most)(void *ctx, float chance);
+  int32_t (*crowd_cost)(void *ctx, EeAStarUnit walker, int32_t x, int32_t y);
+  bool (*is_wide)(void *ctx, EeAStarUnit walker);
+  bool (*ignores_formation)(void *ctx, EeAStarUnit walker);
+  bool (*rank_probe_blocked)(void *ctx,
+                             EeAStarUnit walker,
+                             uint16_t continent_id,
+                             int32_t x,
+                             int32_t y);
+  bool (*can_enter)(void *ctx, void *modifier, int32_t x, int32_t y, bool at_goal);
+  int32_t (*modifier_cost)(void *ctx,
+                           void *modifier,
+                           int32_t from_x,
+                           int32_t from_y,
+                           int32_t x,
+                           int32_t y,
+                           int32_t parent_x,
+                           int32_t parent_y);
+  bool (*has_units)(void *ctx, int32_t x, int32_t y);
+  void (*continent_at)(void *ctx, int32_t x, int32_t y, EeAStarContinentInfo *out);
+  int32_t (*tile_value)(void *ctx, int32_t x, int32_t y);
+  void (*path_area_at)(void *ctx, int32_t x, int32_t y, EeAStarPathAreaInfo *out);
+  void (*path_area)(void *ctx, uint16_t id, EeAStarPathAreaInfo *out);
+  uint16_t (*stored_path_area_id)(void *ctx, const void *storage, int32_t x, int32_t y);
+  int32_t (*resource_kind)(void *ctx, int32_t x, int32_t y);
+  bool (*has_blocker)(void *ctx, int32_t x, int32_t y);
+  int32_t (*first_blocker_id)(void *ctx, int32_t x, int32_t y);
+  void (*first_blocker)(void *ctx, int32_t x, int32_t y, EeAStarBlocker *out);
+  int32_t (*first_obstacle_id)(void *ctx, int32_t x, int32_t y);
+  bool (*own_wall_first)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*area_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  int32_t (*sector_gate_owner)(void *ctx, int32_t x, int32_t y, int32_t player_id);
+  bool (*live_dock)(void *ctx, int32_t x, int32_t y);
+  bool (*live_space_dock)(void *ctx, int32_t x, int32_t y);
 };
 
 /// The continents as the chain search reads and numbers them (the C++ objects, by their graph handle:
@@ -1386,6 +1319,12 @@ struct EeAStarSubSectorLink {
   uint16_t id;
   uint64_t first;
   uint64_t second;
+};
+
+/// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
+struct EeAStarWorldView {
+  void *map;
+  bool quiet;
 };
 
 /// A tile search's machine and goal as the saved game holds them (save 0.276; the C++ fills and applies it).
@@ -1706,6 +1645,26 @@ void ee_astar_area_get_tiles(const EeAStarAreaRecord *r,
                              size_t first,
                              void *ctx,
                              void (*push)(void*, long, long));
+
+/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) and smooths
+/// `passes - 1` times into the pass's grids, which stay until `ee_astar_choke_grids_free`.
+///
+/// # Safety
+/// `infos` valid for `size * size` records.
+void ee_astar_choke_grids_build(int32_t size,
+                                int32_t passes,
+                                const EeChokeTileInfo *infos);
+
+/// `IsChokeTile(index)` of the pass's grids: a flagged tile that is not an area's own; `*serial` its area serial
+/// (0 when it is not one).
+///
+/// # Safety
+/// `serial` a valid pointer.
+bool ee_astar_choke_grids_tile(int32_t index,
+                               uint32_t *serial);
+
+/// Frees the pass's grids.
+void ee_astar_choke_grids_free();
 
 /// # Safety
 /// `r` points to a record (uninitialised is fine).
@@ -2208,74 +2167,6 @@ void ee_astar_continent_set_lists(EeAStarContinentRecord *r,
                                   const uint16_t *const *ids,
                                   const size_t *id_counts);
 
-/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
-///
-/// # Safety
-/// `view` valid, its functions callable; `goal` readable.
-int32_t ee_astar_mod_step_cost(const EeAStarViewCallbacks *view,
-                               const EeAStarStepGoal *goal,
-                               bool sea,
-                               int32_t from_x,
-                               int32_t from_y,
-                               int32_t x,
-                               int32_t y,
-                               int32_t parent_x,
-                               int32_t parent_y);
-
-/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
-///
-/// # Safety
-/// `view` valid, its functions callable.
-bool ee_astar_mod_is_passable(const EeAStarViewCallbacks *view,
-                              EeAStarUnit walker,
-                              int32_t x,
-                              int32_t y);
-
-/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-bool ee_astar_mod_attacker_can_enter(const EeAStarViewCallbacks *view,
-                                     EeAStarUnit walker,
-                                     int32_t x,
-                                     int32_t y);
-
-/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-bool ee_astar_mod_walls_can_enter(const EeAStarViewCallbacks *view,
-                                  EeAStarUnit walker,
-                                  int32_t x,
-                                  int32_t y);
-
-/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-bool ee_astar_mod_wall_pather_can_enter(const EeAStarViewCallbacks *view,
-                                        EeAStarUnit walker,
-                                        int32_t x,
-                                        int32_t y);
-
-/// `EEAIBPGModifierStormShaper::GetCost`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`; `storm` readable.
-int32_t ee_astar_mod_storm_cost(const EeAStarViewCallbacks *view,
-                                const EeAStarStorm *storm,
-                                int32_t x,
-                                int32_t y);
-
-/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
-///
-/// # Safety
-/// As `ee_astar_mod_storm_cost`.
-bool ee_astar_mod_storm_can_enter(const EeAStarViewCallbacks *view,
-                                  const EeAStarStorm *storm,
-                                  int32_t x,
-                                  int32_t y);
-
 /// `EEAIContinentManager::CreateContinentGrid` over a `size` x `size` map: `ids` and `kinds` the continent fill's
 /// tiles (`x * size + y`), `terrain` every tile's terrain type (-1 where the map has none), `categories` the
 /// continents' categories by id (`next_id` of them).
@@ -2351,18 +2242,6 @@ void ee_astar_update_tile_values(int32_t size,
                                  const int32_t *weights,
                                  int32_t *values,
                                  int8_t *bytes);
-
-/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
-/// `serials` and smooths `passes - 1` times into the `flags`.
-///
-/// # Safety
-/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
-void ee_astar_choke_build_grids(int32_t size,
-                                int32_t passes,
-                                const EeChokeTileInfo *infos,
-                                int32_t *kinds,
-                                uint32_t *serials,
-                                uint8_t *flags);
 
 /// The link walk over `x0..x_end` x `y0..y_end` (`LinkSubSectorGrid` over the whole map, `RelinkSubSectors` over a
 /// grown sector): the `LinkSubSectors` calls to make, in order.
@@ -2744,6 +2623,55 @@ void ee_astar_number_chains(uint32_t kind, const EeAStarChainCallbacks *cb);
 /// `search` a live graph search (a graph machine's handle); `out` writable.
 void ee_astar_graph_search_info(const void *search, EeAStarGraphSearchInfo *out);
 
+extern void ee_astar_mod_host_unit_reference(uint64_t unit, bool add);
+
+extern const void *ee_astar_mod_host_influence(int32_t *region_size);
+
+/// `EEAIPathSubSector::AreLinksBlocked(other, flags)` (0x2c219's flags form): true unless `other` is a neighbour
+/// (not `this`) with links to `this` and none of them has an end of a kind `flags` passes.
+///
+/// # Safety
+/// `this` a live sub sector; `other` null or one; `flags` the 17 flags of an `EECPASGFlags`.
+bool ee_astar_sub_sector_links_blocked(uint64_t this_,
+                                       uint64_t other,
+                                       const bool *flags);
+
+/// `new EEAIBPGModifierEnemyIsAttackableByUnit(unit, target)`: both units referenced, the range the walker's
+/// stats' squared.
+///
+/// # Safety
+/// `unit` and `target` live complex units.
+EeAStarModifier *ee_astar_modifier_new_attackable(uint64_t unit,
+                                                  uint64_t target);
+
+/// `new EEAIBPGModifierWallsDoNotBlock`.
+EeAStarModifier *ee_astar_modifier_new_walls();
+
+/// `new EEAIGPGModifierComputerPlayerWallPather`.
+EeAStarModifier *ee_astar_modifier_new_wall_pather();
+
+/// `new EEAIBPGModifierStormShaper` with its rectangles, step limit and kind (no steps, a near radius of 8).
+EeAStarModifier *ee_astar_modifier_new_storm_shaper(EeAStarRect inner,
+                                                    EeAStarRect outer,
+                                                    int32_t max_steps,
+                                                    bool rain,
+                                                    bool snow);
+
+/// `new EEAIGPModifierEnemyAvoidance(player)` (no weights, no enemy).
+EeAStarModifier *ee_astar_modifier_new_enemy_avoidance(uint32_t player);
+
+/// `new EEAIGPGModifierComputerPlayerWallPlanner(player, enemy)` (no weights).
+EeAStarModifier *ee_astar_modifier_new_wall_planner(uint32_t player, uint32_t enemy);
+
+/// `new EEAIGPGModifierStormRoutePlannerRain` (`rain`) or `Snow`.
+EeAStarModifier *ee_astar_modifier_new_storm_planner(bool rain);
+
+/// `Dereference()` of the maker's reference.
+///
+/// # Safety
+/// `m` null or a live modifier.
+void ee_astar_modifier_release(EeAStarModifier *m);
+
 /// Appends a tile to a search's tile list (the host's `EE_PATH_BLOCKED_TILES`, `EE_PATH_UNIT_TILES`).
 ///
 /// # Safety
@@ -3045,6 +2973,28 @@ void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other)
 /// # Safety
 /// `tiles` is a live set; the caller holds the world (the AI's path searches).
 bool ee_astar_sub_sector_is_passable(const EeSparseArray *tiles, long player);
+
+extern uint64_t ee_astar_view_cm_path_area_at(int32_t x, int32_t y);
+
+extern uint64_t ee_astar_view_cm_hill_at(int32_t x, int32_t y);
+
+/// Registers the continent manager's record the views read (EEAIRegisterContinentState).
+///
+/// # Safety
+/// `r` the global manager's record, live for the program.
+void ee_astar_world_view_set_manager(EeAStarCmRecord *r);
+
+/// `EEAIHasResourceUnit(tile)` for the C++ (the continent manager's forests, the choke point pass).
+///
+/// # Safety
+/// `tile` 0 or a live `EETile*`.
+int32_t ee_astar_tile_resource_kind(uint64_t tile);
+
+/// The callbacks over `view` (`EEAIAStarView::Callbacks`).
+///
+/// # Safety
+/// `view` outlives every call of the callbacks.
+EeAStarViewCallbacks ee_astar_world_view_callbacks(EeAStarWorldView *view);
 
 }  // extern "C"
 

@@ -70,50 +70,8 @@ enum {
     kContinentCaptureQuery = 0x51544e43,    // "CNTQ"
 };
 
-// Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
-// 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
-inline long EEAIGetResourceKind(EEUnitClass* inClass)
-{
-    switch (inClass->mUnitType) {
-    case kUnitTypeTree01Maple:
-    case kUnitTypeTree02Maple:
-    case kUnitTypeTree12Spruce:
-    case kUnitTypeTree03Spruce:
-    case kUnitTypeTree07Spruce:
-    case kUnitTypeTree09Spruce:
-    case kUnitTypeTree10Spruce:
-    case kUnitTypeTree11Spruce:
-    case kUnitTypeTree15Cactus:
-    case kUnitTypeTree16Cactus:
-        return 1;
-    case kUnitTypeTree19:
-    case kUnitTypeTree20:
-    case kUnitTypeTree18:
-    case kUnitTypeTree24:
-    case kUnitTypeTree25:
-    case kUnitTypeTree21Palm:
-        return 3;
-    default:
-        return 2;
-    }
-}
-
-// 0x29ced: the resource kind of the first unit of class kind 3 on inTile (not on terrain 1), 0 if none
-// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
-long EEAIHasResourceUnit(EETile* inTile)
-{
-    long theResult = 0;
-    if (inTile && inTile->mTerrainType != kTerrainDeepWater) {
-        for (RTSTileUnitNode* theNode = inTile->mUnits; theNode; theNode = theNode->mNext) {
-            EEUnitClass* theClass = theNode->mUnit->mUnitClass;
-            if (theClass->mResourceType == kResourceWood) {
-                theResult = EEAIGetResourceKind(theClass);
-                break;
-            }
-        }
-    }
-    return theResult;
-}
+// 0x29ced / 0x29d1b (the resource kind of a tile's first wood unit, by its tree type): Rust, ee_sim::astar
+// world_view.rs (EEAIHasResourceUnit is its inline forwarder in ee/EEAIContinentManager.h)
 
 // 0x27604 (COMDAT; declared in ee/EEAIContinentManager.h)
 inline void EEAIContinentManager::SetPathSector(EEAIPathSector* inSector)
@@ -1443,6 +1401,18 @@ EEAIHill* EEAIContinentManager::GetHillAt(const EETileLocation& inTile)
     return theQ;
 }
 
+// The A* view's path area and hill at a tile (ee_sim::astar world_view.rs): the manager's own queries, so their CNTQ
+// record is the same
+extern "C" uint64_t ee_astar_view_cm_path_area_at(int32_t inX, int32_t inY)
+{
+    return (uint64_t)(uintptr_t)gContinentManager.GetPathAreaAt(EETileLocation(inX, inY));
+}
+
+extern "C" uint64_t ee_astar_view_cm_hill_at(int32_t inX, int32_t inY)
+{
+    return (uint64_t)(uintptr_t)gContinentManager.GetHillAt(U2DPoint<long>(inX, inY));
+}
+
 // Returns whether two continents are connected for inUnit's passable terrain (AreConnected; flags 0 without a unit)
 bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond)
 {
@@ -1999,7 +1969,6 @@ bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long i
     return theResult;
 }
 
-long EEAIHasResourceUnit(EETile* inTile);   // 0x29ced (EEAIAStarPathAreaGoal.cpp declares it the same way)
 
 // Removes inPoint from the forest and, if it was there, lowers the count of that tile's wood resource kind;
 // returns whether it was removed

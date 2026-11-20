@@ -55,6 +55,7 @@ pub mod graph_search;
 pub mod hull;
 pub mod machine;
 pub mod manager;
+pub mod modifier_obj;
 pub mod modifiers;
 pub mod path_area_kind;
 pub mod path_goals;
@@ -75,6 +76,7 @@ pub mod sub_sector_links;
 pub mod sub_sector_pass;
 pub mod tile_kind;
 pub mod tile_values;
+pub mod world_view;
 
 #[cfg(test)]
 mod tests;

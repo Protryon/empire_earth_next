@@ -42,8 +42,6 @@
 #include "ee/EEInfluenceTable.h"
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIAStarView.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
@@ -62,7 +60,6 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
 #include "ee/EEAppCapture.h"
 
@@ -79,33 +76,7 @@ GEColor gStormColorLight(0.679f, 0.726f, 0.8f);
 // Constructs the dark storm colour at startup and registers its destructor
 GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
-// whether a route step's sectors' centres share an axis (the planners' straight step)
-static bool EEStormStraight(EEAIPathSubSector* inFrom, EEAIPathSubSector* inTo)
-{
-    return inFrom->GetSector()->GetCenter().mX == inTo->GetSector()->GetCenter().mX ||
-           inFrom->GetSector()->GetCenter().mY == inTo->GetSector()->GetCenter().mY;
-}
-
-// Returns the cost of a snow storm's route step: cheap over cliffs and hills, dear over forest, shallows and the
-// map edge (ee_app storm.rs)
-long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
-{
-    EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    long theKind = inTo->GetKind();
-    bool theHill = (theKind == kAITileLand || theKind == kAITileWall || theKind == kAITileGate) &&
-                   gContinentManager.GetHillAt(inTo->GetLocation()) != NULL;
-    return ee_app_storm_route_cost(true, theFrom->GetSector() != inTo->GetSector(), EEStormStraight(theFrom, inTo), theKind,
-                                   theHill);
-}
-
-// Returns the cost of a rain storm's route step: cheap along shores, dear over water, cliffs and the map edge
-// (ee_app storm.rs)
-long EEAIGPGModifierStormRoutePlannerRain::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
-{
-    EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    return ee_app_storm_route_cost(false, theFrom->GetSector() != inTo->GetSector(), EEStormStraight(theFrom, inTo), inTo->GetKind(),
-                                   false);
-}
+// (the storms' route planners and shaper, EEStormModifiers.h before: ee_sim::astar modifier_obj.rs)
 
 // Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined" (ee_app storm.rs)
 UWideString EEEMStorm::GetTypeName(long inType)
@@ -139,7 +110,7 @@ void EEEMStorm::Begin()
     std::vector<U2DPoint<long> > theVisited;
     EEAIAStarBounds theBounds;
     EEGraphicEffect* theEffect = NULL;
-    EEAIBPGModifierStormShaper* theShaper = new EEAIBPGModifierStormShaper;
+    U2DRectangle<long> theInner, theOuter;   // the shaper's (modifier_obj.rs StormShaper)
     EEEffectHandle theHandle;
     theHandle.mValue = 0;
     EEAIArea* theArea;
@@ -163,25 +134,20 @@ void EEEMStorm::Begin()
     if (theArea == NULL)
         theArea = gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)];
     this->mStart = theArea->GetRandomPoint();
-    theShaper->mInner.Set(this->mStart);
-
-
-
-    theShaper->mInner.mTop = max(theShaper->mInner.mTop - 4, 0);
-    theShaper->mInner.mLeft = max(theShaper->mInner.mLeft - 4, 0);
-    theShaper->mInner.mRight = min(theShaper->mInner.mRight + 4, gWorld.GetMap()->mSize);
-    theShaper->mInner.mBottom = min(theShaper->mInner.mBottom + 4, gWorld.GetMap()->mSize);
-    theShaper->mOuter = theShaper->mInner;
-
-
-
-    theShaper->mOuter.mTop = max(theShaper->mOuter.mTop - 4, 0);
-    theShaper->mOuter.mLeft = max(theShaper->mOuter.mLeft - 4, 0);
-    theShaper->mOuter.mRight = min(theShaper->mOuter.mRight + 4, gWorld.GetMap()->mSize);
-    theShaper->mOuter.mBottom = min(theShaper->mOuter.mBottom + 4, gWorld.GetMap()->mSize);
-    theShaper->mMaxSteps = gPhysics->GetRandom(0x2dL, 0x87L);
-    theShaper->mRain = this->mType == kStormRain || this->mType == kStormHurricane;
-    theShaper->mSnow = this->mType == kStormSnow || this->mType == kStormBlizzard;
+    theInner.Set(this->mStart);
+    theInner.mTop = max(theInner.mTop - 4, 0);
+    theInner.mLeft = max(theInner.mLeft - 4, 0);
+    theInner.mRight = min(theInner.mRight + 4, gWorld.GetMap()->mSize);
+    theInner.mBottom = min(theInner.mBottom + 4, gWorld.GetMap()->mSize);
+    theOuter = theInner;
+    theOuter.mTop = max(theOuter.mTop - 4, 0);
+    theOuter.mLeft = max(theOuter.mLeft - 4, 0);
+    theOuter.mRight = min(theOuter.mRight + 4, gWorld.GetMap()->mSize);
+    theOuter.mBottom = min(theOuter.mBottom + 4, gWorld.GetMap()->mSize);
+    long theMaxSteps = gPhysics->GetRandom(0x2dL, 0x87L);
+    EeAStarModifier* theShaper = ee_astar_modifier_new_storm_shaper(
+        EEAIAStarRectOf(theInner), EEAIAStarRectOf(theOuter), (int32_t)theMaxSteps,
+        this->mType == kStormRain || this->mType == kStormHurricane, this->mType == kStormSnow || this->mType == kStormBlizzard);
     theBounds.Set(this->mStart);
     theBounds.mTop = max(theBounds.mTop - 30, 0);
     theBounds.mLeft = max(theBounds.mLeft - 30, 0);
@@ -197,61 +163,9 @@ void EEEMStorm::Begin()
     this->mStorm->Reference();
     this->mStorm->GetBounds(this->mArea);
     this->mStorm->mRecord->storm.sustained = true;
-    theShaper->Dereference();
+    ee_astar_modifier_release(theShaper);
     this->RequestRoute();
     this->mState = 2;
-}
-
-// Creates the storm shaper with no steps and a near radius of 8 tiles
-EEAIBPGModifierStormShaper::EEAIBPGModifierStormShaper()
-{
-    this->mSteps = 0;
-    this->mMaxSteps = 0;
-    this->mDistanceSquared = 0x40;
-    this->mRain = false;
-    this->mSnow = false;
-}
-
-// Returns whether the shaper's search should stop (no node, or the step limit reached)
-bool EEAIBPGModifierStormShaper::CheckNode(EEAIAStarNode* inNode)
-{
-    return inNode == NULL || this->mSteps >= this->mMaxSteps;
-}
-
-// New (port): the shaper's state as ee_astar's modifiers read it
-EeAStarStorm EEAIBPGModifierStormShaper::StormState() const
-{
-    EeAStarStorm theStorm;
-    theStorm.inner = EEAIAStarRectOf(this->mInner);
-    theStorm.outer = EEAIAStarRectOf(this->mOuter);
-    theStorm.distance_squared = this->mDistanceSquared;
-    theStorm.snow = this->mSnow;
-    theStorm.rain = this->mRain;
-    theStorm.start_x = this->mBoundedGoal->start.x;
-    theStorm.start_y = this->mBoundedGoal->start.y;
-    return theStorm;
-}
-
-// Returns the cost of a tile for shaping the storm: cheap on cliffs and hills (snow) or water (rain)
-long EEAIBPGModifierStormShaper::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
-                                           long inParentY)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    EeAStarStorm theStorm = this->StormState();
-    return ee_astar_mod_storm_cost(&theCallbacks, &theStorm, inX, inY);
-}
-
-// the shaper's acceptance chances (unit-local .rdata after its vtable): ee_astar modifiers::STORM_*_CHANCE
-
-// Returns whether the storm may spread onto a tile: always inside the inner box, else by a chance that falls with
-// distance
-bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
-{
-    EEAIAStarView theView(gWorld.GetMap(), true);
-    EeAStarViewCallbacks theCallbacks = theView.Callbacks();
-    EeAStarStorm theStorm = this->StormState();
-    return ee_astar_mod_storm_can_enter(&theCallbacks, &theStorm, inX, inY);
 }
 
 // Returns whether the storm is over (no weather effect, or finished)
@@ -320,19 +234,9 @@ void EEEMStorm::RequestRoute()
         this->mRequest->Dereference();
         this->mRequest = NULL;
     }
-    EEAIGPGModifierStormRoutePlannerBase* thePlanner;
-    switch (this->mType) {
-    case kStormRain:
-    case kStormHurricane:
-        thePlanner = new EEAIGPGModifierStormRoutePlannerRain;
-        break;
-    default:
-        thePlanner = new EEAIGPGModifierStormRoutePlannerSnow;
-        break;
-    }
+    EeAStarModifier* thePlanner = ee_astar_modifier_new_storm_planner(this->mType == kStormRain || this->mType == kStormHurricane);
     this->mRequest = gPathManager.RequestPath(0, this->mStart, this->mGoal, &theFlags, 1, 500, thePlanner, 0);
-    if (thePlanner != NULL)
-        thePlanner->Dereference();
+    ee_astar_modifier_release(thePlanner);
 }
 
 // Takes the finished route (reversed, to pop from the back); the step then moves (state 3)

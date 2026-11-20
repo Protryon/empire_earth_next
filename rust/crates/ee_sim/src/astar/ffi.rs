@@ -8,7 +8,7 @@
 use crate::astar::area_goals::{AreaView, EeAStarBlocker, EeAStarContinentInfo, EeAStarPathAreaInfo};
 use crate::astar::goals::View;
 use crate::astar::graph::{self, GraphStorage};
-use crate::astar::modifiers::{self, EeAStarStepGoal, EeAStarStorm, ModView, Skip, Unit};
+use crate::astar::modifiers::{ModView, Skip, Unit};
 use crate::astar::path_goals::PathView;
 use crate::astar::storage::{Storage, NIL};
 pub use ee_base::sparse::EeSparseArray;
@@ -260,110 +260,7 @@ impl PathView for CView<'_> {
     }
 }
 
-/// `EEAIPathGoalModifierBase::GetStepCost` (the sea and space modifiers' cost).
-///
-/// # Safety
-/// `view` valid, its functions callable; `goal` readable.
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_astar_mod_step_cost(
-    view: *const EeAStarViewCallbacks,
-    goal: *const EeAStarStepGoal,
-    sea: bool,
-    from_x: i32,
-    from_y: i32,
-    x: i32,
-    y: i32,
-    parent_x: i32,
-    parent_y: i32,
-) -> i32 {
-    let goal = unsafe { *goal };
-    modifiers::step_cost(&mut CView(unsafe { &*view }), &goal, sea, from_x, from_y, x, y, parent_x, parent_y)
-}
-
-/// `EEAIPathGoalModifierBase::IsPassable` (the sea and space modifiers' tile test).
-///
-/// # Safety
-/// `view` valid, its functions callable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_is_passable(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::is_passable(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_attacker_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::attacker_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierWallsDoNotBlock::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_walls_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::walls_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIGPGModifierComputerPlayerWallPather::CanEnter`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_wall_pather_can_enter(
-    view: *const EeAStarViewCallbacks,
-    walker: Unit,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::wall_pather_can_enter(&mut CView(unsafe { &*view }), walker, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::GetCost`.
-///
-/// # Safety
-/// As `ee_astar_mod_is_passable`; `storm` readable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_cost(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> i32 {
-    modifiers::storm_cost(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
-
-/// `EEAIBPGModifierStormShaper::CanEnter` (draws from the physics stream through the view).
-///
-/// # Safety
-/// As `ee_astar_mod_storm_cost`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_mod_storm_can_enter(
-    view: *const EeAStarViewCallbacks,
-    storm: *const EeAStarStorm,
-    x: i32,
-    y: i32,
-) -> bool {
-    modifiers::storm_can_enter(&mut CView(unsafe { &*view }), unsafe { &*storm }, x, y)
-}
+// (the modifiers' slots: modifier_obj.rs, over modifiers.rs)
 
 /// A graph node as the capture sees it (`EEAIAStarGraphStorage::CaptureNodes`): the parent's index in `parent_x`
 /// and the node's own index in `parent_y`.
@@ -381,7 +278,6 @@ pub(crate) fn graph_view(s: &GraphStorage, node: i32) -> EeAStarNodeView {
     }
 }
 
-use crate::astar::choke::EeChokeTileInfo;
 use crate::astar::continent_grid::{self, ContinentGrid, EeContinentNeighbor, EeContinentShore, EePoint, FillTile};
 use crate::astar::sectors::{self, EeSectorRect, EeSectorSizes};
 use crate::astar::sub_sector_links::{self, EeSubSectorLink};
@@ -548,32 +444,7 @@ pub unsafe extern "C" fn ee_astar_update_tile_values(
 
 // ---- the choke point pass's grids (choke.rs) ----
 
-/// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) into `kinds` and
-/// `serials` and smooths `passes - 1` times into the `flags`.
-///
-/// # Safety
-/// `infos`, `kinds`, `serials` and `flags` valid for `size * size` cells; the last three writable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_choke_build_grids(
-    size: i32,
-    passes: i32,
-    infos: *const EeChokeTileInfo,
-    kinds: *mut i32,
-    serials: *mut u32,
-    flags: *mut u8,
-) {
-    let n = (size.max(0) as usize) * (size.max(0) as usize);
-    // SAFETY: the caller's contract
-    let (infos, kinds, serials, flags) = unsafe {
-        (
-            std::slice::from_raw_parts(infos, n),
-            std::slice::from_raw_parts_mut(kinds, n),
-            std::slice::from_raw_parts_mut(serials, n),
-            std::slice::from_raw_parts_mut(flags, n),
-        )
-    };
-    crate::astar::choke::build_grids(size, passes, infos, kinds, serials, flags);
-}
+// (the pass's grids are Rust's: choke.rs `ee_astar_choke_grids_*`)
 
 // ---- the sub sector links (sub_sector_links.rs) ----
 

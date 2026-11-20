@@ -328,4 +328,9 @@ inline unsigned short EEAIContinentManager::GetPathSubSectorID(long inX, long in
     return 0;
 }
 
+// 0x29ced: the resource kind (1..3, by the tree type) of the first wood unit on inTile, not in deep water; 0 if none
+// (Rust: ee_sim::astar world_view.rs)
+class EETile;
+inline long EEAIHasResourceUnit(EETile* inTile) { return ee_astar_tile_resource_kind((uint64_t)(uintptr_t)inTile); }
+
 #endif

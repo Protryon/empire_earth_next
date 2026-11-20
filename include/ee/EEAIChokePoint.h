@@ -50,12 +50,6 @@ private:
     EEAIChokePoint& operator=(const EEAIChokePoint&);
 };
 
-// EEAIChokePoint.cpp's terrain-pass arrays (.bss 0x4e5c44..0x4e5c54; one entry per tile, x * size + y;
-// EEAIAStarChokePointGoal::AcceptTile 0x10fcc reads them) (provisional names)
-extern int32_t* gEEAIChokeTileKinds;        // 0x4e5c44 (0x36: a tile with a resource or an area of its own; fixed-width: ee_astar choke.rs)
-extern uint32_t* gEEAIChokeTileSerials;     // 0x4e5c48 (the serial of the area the tile belongs to)
-extern unsigned char* gEEAIChokeTileFlags;  // 0x4e5c4c (set: a tile between two areas)
-extern long gEEAIChokeWidth;
-extern long gEEAIChokeHeight;
+// (the terrain pass's per-tile grids, .bss 0x4e5c44..0x4e5c54 in the original, are Rust's: ee_sim::astar choke.rs)
 
 #endif

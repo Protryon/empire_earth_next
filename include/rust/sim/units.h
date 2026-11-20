@@ -7070,8 +7070,6 @@ float ee_units_pm_compute_roll(int32_t kind, EeUnitsPmUnit unit, float value);
 
 extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
 
-extern float ee_units_pm_host_random();
-
 extern void ee_units_pm_host_set_transformation(uint64_t obj, const float *m);
 
 extern void ee_units_pm_host_refresh_transformation(uint64_t obj);

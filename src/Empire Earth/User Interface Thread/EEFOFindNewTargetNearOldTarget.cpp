@@ -82,8 +82,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/AStarGraphableObjectBase.h"
-#include "ee/EEAIPathGoalModifierBase.h"
-#include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEAIPathSubSector.h"
@@ -91,8 +89,8 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEPathManager.h"
+#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
@@ -2793,15 +2791,14 @@ extern "C" uint8_t ee_units_uu_host_find_path(uint64_t inUnit, const int32_t* in
 {
     std::vector<U2DPoint<long> > thePath;
     EEAIAStarBounds theBounds;
-    EEAIBPGModifierWallsDoNotBlock* theModifier = inWalls ? new EEAIBPGModifierWallsDoNotBlock() : NULL;
+    EeAStarModifier* theModifier = inWalls ? ee_astar_modifier_new_walls() : NULL;
     theBounds.mLeft = inBounds[0];
     theBounds.mTop = inBounds[1];
     theBounds.mRight = inBounds[2];
     theBounds.mBottom = inBounds[3];
     gPathManager.FindPath(static_cast<EEComplexUnit*>(UUUnit(inUnit)), ::gWorld.GetMap(), U2DPoint<long>(inFrom[0], inFrom[1]),
                           U2DPoint<long>(inTo[0], inTo[1]), theBounds, thePath, 0xb, inLimit, theModifier, NULL);
-    if (theModifier != NULL)
-        theModifier->Dereference();
+    ee_astar_modifier_release(theModifier);
     if (thePath.size() == 0)
         return 0;
     outFirst[0] = (int32_t)thePath[0].mX;

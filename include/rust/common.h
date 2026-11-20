@@ -74,6 +74,8 @@ uint32_t ee_rust_abi_version();
 /// call.
 void ee_rust_init(void (*log)(const char *line));
 
+extern float ee_units_pm_host_random();
+
 extern int isspace(int c);
 
 extern int toupper(int c);

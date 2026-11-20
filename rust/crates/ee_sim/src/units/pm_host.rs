@@ -14,7 +14,7 @@ use crate::world_field;
 
 extern "C" {
     fn ee_units_pm_host_tick(out: *mut EeUnitsPmTick);
-    fn ee_units_pm_host_random() -> f32;
+    pub(crate) fn ee_units_pm_host_random() -> f32;
     fn ee_units_pm_host_set_transformation(obj: u64, m: *const f32);
     fn ee_units_pm_host_refresh_transformation(obj: u64);
     fn ee_units_pm_host_set_location(obj: u64, m: *const f32);
@@ -53,7 +53,7 @@ extern "C" {
     fn ee_units_pm_host_tile_info(tile: u64, out: *mut EeUnitsPmTile);
     fn ee_units_pm_host_is_edge_tile(x: i32, y: i32) -> u8;
     fn ee_units_pm_host_can_move_on_terrain(obj: u64, terrain: i32) -> u8;
-    fn ee_units_pm_host_passable_by(unit: u64, obj: u64) -> u8;
+    pub(crate) fn ee_units_pm_host_passable_by(unit: u64, obj: u64) -> u8;
     fn ee_units_pm_host_unbuilt_land_building(unit: u64) -> u8;
     fn ee_units_pm_host_ground_point(x: f32, y: f32, z: f32, out: *mut f32);
     fn ee_units_pm_host_terrain_tilt(m: *const f32, roll: u8) -> f32;

@@ -11,6 +11,7 @@
 #include <vector>
 #include "ee/EEAIListView.h"
 #include "rust/sim/astar.h"         // EeAStarSubSectorRecord
+#include "ee/EECPASGFlags.h"
 
 class EEAIPathSector;
 class EEComplexUnit;
@@ -26,16 +27,18 @@ public:
     // (EEAIPathSubSector.cpp 0x2be88..0x2c79f): ctor 0x2be88, dtor 0x2bf08 (??_G 0x2beec)
     EEAIPathSubSector() { ee_astar_sub_sector_init(this); }
     virtual ~EEAIPathSubSector() { ee_astar_sub_sector_free(this); }
-    // 0x2c0b9 (ret 8): appends the links listed under inID; always returns false
-    bool GetLinks(unsigned short inID, std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >& outLinks);
-    // 0x2c10f (ret 4): whether the gate (unit class category 0x19) on mTiles lets gWorld's player inPlayer through
-    // (setrilo GatePasses; a missing or dead gate passes; ee_sim astar sub_sector_pass.rs over the world views)
-    bool IsPassable(long inPlayer) { return ee_astar_sub_sector_is_passable(this->mTiles.GetHandle(), inPlayer); }
+    // (0x2c0b9 GetLinks, the links listed under an id: the Rust record's, ee_astar_sub_sector_links_of)
+    // (0x2c10f IsPassable, whether the sub-sector's gate lets a player through: ee_sim::astar modifier_obj.rs
+    // gate_passable)
     // 0x2c219 (ret 8): inOther is a neighbour and none of its links to this sub-sector is open for inIndex (body
     // not written: the links' +0x54 is a pointer there)
     bool AreLinksBlocked(EEAIPathSubSector* inOther, long inIndex);
     // (EECPAttackSubGroupUnit::ChooseTarget 0x63d50 passes the address of an EECPASGFlags its unit class filled)
-    bool AreLinksBlocked(EEAIPathSubSector* inOther, const EECPASGFlags& inFlags);
+    // (Rust: ee_sim::astar modifier_obj.rs)
+    bool AreLinksBlocked(EEAIPathSubSector* inOther, const EECPASGFlags& inFlags)
+    {
+        return ee_astar_sub_sector_links_blocked((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther, inFlags.mFlags);
+    }
     // 0x2c2c5 (ret 4): drops every link with inOther and inOther from the neighbours; true if it was a neighbour
     bool RemoveNeighbor(EEAIPathSubSector* inOther)
         { return ee_astar_sub_sector_remove_neighbor(this, (uint64_t)(uintptr_t)inOther, inOther->id); }

@@ -2,18 +2,18 @@
 //! EEAIPathSubSector>`, its `EEGraphPathMachine`): the machine's members, the node storage and the goal (with
 //! `EEAIAStarGraphGoalBase`) as one Rust object over the sub sectors (the C++ objects, by their graph handle:
 //! `EEAIPathSubSector*` is its own `AStarGraphableObjectBase*`). The goal's members are one C record,
-//! `EeAStarGraphGoalRec`, at a fixed address: the C++ route planners keep it as their goal
-//! (`EEAIGraphPathGoalModifierBase::mGoal`).
+//! `EeAStarGraphGoalRec`, at a fixed address: the route planners keep it as their goal (`modifier_obj.rs`).
 //!
 //! The path manager's graph operations (`EE_PATH_GM_*`, `EE_PATH_GRAPH_REVS`, `EE_PATH_REQUEST_UNIT_PATHS`, the saved
 //! graph searches) are answered here (`intercept`, after path_search.rs's); what only the C++ knows (a sub sector's
-//! id, kind, neighbours, links and gate, the route planners, the unit's terrain flags, the goals a found path gives
+//! id, kind and neighbours, the unit's terrain flags, the goals a found path gives
 //! a unit) is the host's (`EE_PATH_SS_INFO` and below). The hooks note the capture's events as `EEAIAStarGraphHooks`
 //! did, and `run` writes the ASGR record.
 
 use crate::astar::continent_grid::EePoint;
 use crate::astar::flood::capture_graph_storage;
 use crate::astar::graph::{self, GraphHost, GraphKind, GraphMachineState, GraphNodeView, GraphStorage, Obj};
+use crate::astar::modifier_obj::{self, EeAStarModifier};
 use crate::astar::path_search::Raw;
 use crate::astar::pm::*;
 use crate::astar::search_note::*;
@@ -28,18 +28,7 @@ pub const EE_PATH_SS_INFO: i32 = 141;
 pub const EE_PATH_SS_NEIGHBOR: i32 = 142;
 /// sub sector `h0` `IsNeighbor(h1)`
 pub const EE_PATH_SS_IS_NEIGHBOR: i32 = 143;
-/// sub sector `h0` `IsPassable(i0)` (a gate open to the player)
-pub const EE_PATH_SS_GATE_OPEN: i32 = 144;
-/// `HasPassableLink(h0, h1)` over the goal record `h2`'s flags
-pub const EE_PATH_SS_PASSABLE_LINK: i32 = 145;
-/// route planner `h0` `CanEnter(h1, h2)`
-pub const EE_PATH_GRAPH_MODIFIER_ENTER: i32 = 146;
-/// route planner `h0` `GetCost(the parent node: object h2, index i0, tile (i1, i2), costs i3 .. i5, h1)`
-pub const EE_PATH_GRAPH_MODIFIER_COST: i32 = 147;
-/// route planner `h0` `Reference()`
-pub const EE_PATH_GRAPH_MODIFIER_REFERENCE: i32 = 148;
-/// route planner `h0` takes the goal record `h1` (`mGoal`)
-pub const EE_PATH_GRAPH_MODIFIER_ATTACH: i32 = 149;
+// (144..149 were the sub sectors' gate and link tests and the C++ route planners' slots: modifier_obj.rs)
 /// unit `h0`'s terrain flags (`GetTerrainFlags`) into the goal record `h1`
 pub const EE_PATH_GRAPH_TERRAIN_FLAGS: i32 = 150;
 /// `RequestUnitPaths`' world: the found path's sub sector ids `h0[..i0]` given to unit `h1` (its goals) or request
@@ -55,8 +44,7 @@ pub const EE_PATH_REQUEST_FLAGS: i32 = 153;
 pub const EE_PATH_GRAPH_REVS_WORLD: i32 = 154;
 /// sub sector `i0` as a graph object (`EEGraphObjectOf`: null when none)
 pub const EE_PATH_GRAPH_OBJECT: i32 = 155;
-/// route planner `h0` into the saved graph search `h1` -> its kind (`-1`: none that a load can make)
-pub const EE_PATH_GRAPH_MODIFIER_SAVE: i32 = 156;
+// (156 was the C++ route planner's saved kind: modifier_obj.rs `save`)
 
 const KIND_GATE: i64 = 0xe;
 /// The goal's flags (`mSearchFailed`, `mB31`, `mAcceptNearest`, `mB33`, `mB34`, `mTookNearest`).
@@ -244,17 +232,18 @@ impl GraphHost for Hooks<'_, '_> {
     fn can_enter(&mut self, neighbor: Obj, from: Obj) -> bool {
         let g = self.g();
         let result = if !g.modifier.is_null() {
-            call(self.raw, EE_PATH_GRAPH_MODIFIER_ENTER, &[g.modifier as u64, neighbor as u64, from as u64], &[]) != 0
+            // SAFETY: the goal's referenced route planner, attached to this goal; live sub sectors
+            unsafe { modifier_obj::graph_can_enter(g.modifier as *mut EeAStarModifier, neighbor as u64, from as u64) }
         } else {
             // AcceptNeighbor: a passable kind (or a gate open to the player), then a passable link from `from`
             let s = sub_sector(self.raw, neighbor);
             let mut r = g.path_flags[s.kind as usize];
             if !r && s.kind == KIND_GATE {
-                r = call(self.raw, EE_PATH_SS_GATE_OPEN, &[neighbor as u64], &[g.player_id.into()]) != 0;
+                r = modifier_obj::gate_passable(neighbor as u64, g.player_id as u32);
             }
             if r && from != 0 && s.links > 0 {
-                r = call(self.raw, EE_PATH_SS_PASSABLE_LINK, &[neighbor as u64, from as u64, self.goal as u64], &[])
-                    != 0;
+                // SAFETY: the search's goal record; live sub sectors
+                r = unsafe { modifier_obj::has_passable_link(self.goal, neighbor as u64, from as u64) };
             }
             r
         };
@@ -264,19 +253,8 @@ impl GraphHost for Hooks<'_, '_> {
     fn step_cost(&mut self, parent: &GraphNodeView, object: Obj) -> i32 {
         let g = self.g();
         let cost = if !g.modifier.is_null() {
-            call(
-                self.raw,
-                EE_PATH_GRAPH_MODIFIER_COST,
-                &[g.modifier as u64, object as u64, parent.object as u64],
-                &[
-                    parent.index.into(),
-                    parent.x.into(),
-                    parent.y.into(),
-                    i64::from(parent.cost),
-                    parent.path_cost.into(),
-                    parent.estimate.into(),
-                ],
-            ) as i32
+            // SAFETY: as in `can_enter`
+            unsafe { modifier_obj::graph_cost(g.modifier as *mut EeAStarModifier, parent.object as u64, object as u64) }
         } else {
             // the default: 1 inside one sector, else 10 straight or 14 diagonal between the sectors' centers
             let (a, b) = (sub_sector(self.raw, parent.object), sub_sector(self.raw, object));
@@ -387,19 +365,23 @@ impl GraphSearch {
         }
     }
 
-    pub fn release_modifier(&mut self, raw: &mut Raw) {
-        let m = self.goal().modifier as u64;
-        if m != 0 {
-            call(raw, EE_PATH_MODIFIER_DEREFERENCE, &[m], &[]);
-        }
+    pub fn release_modifier(&mut self, _raw: &mut Raw) {
+        // SAFETY: the goal's reference
+        unsafe { modifier_obj::release(self.goal().modifier as *mut EeAStarModifier) };
         self.goal_mut().modifier = ptr::null_mut();
     }
 
     pub fn set_modifier(&mut self, raw: &mut Raw, modifier: u64) {
         self.release_modifier(raw);
         self.goal_mut().modifier = modifier as *mut c_void;
-        call(raw, EE_PATH_GRAPH_MODIFIER_REFERENCE, &[modifier], &[]);
-        call(raw, EE_PATH_GRAPH_MODIFIER_ATTACH, &[modifier, self.goal as u64], &[]);
+        let m = modifier as *mut EeAStarModifier;
+        if !m.is_null() {
+            // SAFETY: the caller's live route planner
+            unsafe {
+                modifier_obj::reference(m);
+                modifier_obj::attach_graph(m, self.goal);
+            }
+        }
     }
 
     /// The goal's `Reset` (its base's, the unit and planner released, the ends and flags cleared).
@@ -540,7 +522,8 @@ impl GraphSearch {
         let kind = if g.modifier.is_null() {
             0
         } else {
-            call(raw, EE_PATH_GRAPH_MODIFIER_SAVE, &[g.modifier as u64, out as *mut EePathSavedGraph as u64], &[])
+            // SAFETY: the goal's referenced route planner
+            unsafe { modifier_obj::save(g.modifier as *mut EeAStarModifier, out) }
         };
         let sectors = call(raw, EE_PATH_SUB_SECTORS, &[], &[]);
         if kind < 0

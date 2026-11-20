@@ -26,8 +26,7 @@ struct EEComplexUnitWaypoint;                // ee/EEUnit.h
 class EEMap;
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAreaUtilities.h
-class EEAIPathGoalModifierBase;
-class EEAIGraphPathGoalModifierBase;
+struct EeAStarModifier;                  // rust/sim/astar.h (a goal's modifier or route planner: modifier_obj.rs)
 class GE3DPoint;
 class EEAIPathSubSector;
 struct EePathManager;                   // rust/sim/astar.h
@@ -67,17 +66,17 @@ public:
     // 0xa6948 (EEGroup::Fn206581: the owner's player id, the target tile, the units' flags, 1, -1, 0, 0; returns a new
     // ee/EEAutoPathRequest.h) (provisional name)
     EEAutoPathRequest* RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                                   EECPASGFlags* inFlags, long inType, long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs);
+                                   EECPASGFlags* inFlags, long inType, long inRevs, EeAStarModifier* inModifier, bool inUnlimitedRevs);
     // 0xa6bfd (EECPWallManager.cpp: inUnit's path from inFrom to inTo inside inBounds, with a path modifier)
     // (provisional name)
     void FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
                   const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType, long inRevs,
-                  EEAIPathGoalModifierBase* inModifier, std::vector<U2DPoint<long> >* outVisited);   // 0x12e2c9 passes &local (the storm's tile list)
+                  EeAStarModifier* inModifier, std::vector<U2DPoint<long> >* outVisited);   // 0x12e2c9 passes &local (the storm's tile list)
     bool HasAutoPath(EEComplexUnit* inUnit);
     bool IsPathDone(EEComplexUnit* inUnit);
     bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile);
     void RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8);
+                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EeAStarModifier* inModifier, bool inArg8);
     void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths);
     void SetRegionUpdates(bool inOn, bool inNow);
     void Clear();
