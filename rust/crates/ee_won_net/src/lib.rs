@@ -99,6 +99,7 @@ pub mod routeconn;
 pub mod routecpp;
 pub mod routemsg;
 pub mod routeop;
+pub mod routeop_types;
 pub mod servconn;
 pub mod servctx;
 pub mod server;
@@ -110,6 +111,7 @@ pub mod sockops;
 pub mod sockthread;
 /// cbindgen:ignore
 pub mod status;
+pub mod status_codes;
 pub mod strcase;
 pub mod text;
 pub mod thread;
