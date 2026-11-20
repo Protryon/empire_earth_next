@@ -9,6 +9,7 @@
 // the base's selection. This unit is its host (ee_screenscpp_sear): the scenario's areas, the trigger tab's boxes,
 // the editor's paint area, the mouse, the map's picking and the paint action.
 #include <windows.h>
+#include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -56,7 +57,7 @@ void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
     this->GetBrushGroup()->mRectangle = inRectangle;
 }
 
-// ---- the sub-screen's host (editor_area.rs: the ops from 600)
+// ---- the sub-screen's host (editor_area.rs: the ops from 600; editor_trigx.rs composes the sequences)
 
 namespace {
 
@@ -65,26 +66,26 @@ EEUIFScenarioEditor* SearEditor()
     return gUIManager->GetScenarioEditorForm();
 }
 
-// the tile under the point (the mouse's if inMouse): whether the map picks one, its coordinates
-bool SearPick(bool inMouse, float inX, float inY, long& outX, long& outY)
+UWideString SearBytes(const void* inBytes, int32_t inLength)
 {
-    GE2DPoint thePoint = inMouse ? gMouse->mPosition : GE2DPoint(inX, inY);
-    return gWorld.mMap->PickScreenTile(thePoint, outX, outY, true) != NULL;
+    return UWideString(std::string(static_cast<const char*>(inBytes), (size_t)(inLength > 0 ? inLength : 0)).c_str());
 }
 
-// the ground point under the point: the screen line solved at its tile's height, truncated
-void SearGround(bool inMouse, float inX, float inY, long& outX, long& outY)
+int32_t SearWrite(void* outBuffer, int32_t inCapacity, const char* inText)
 {
-    GE2DPoint thePoint = inMouse ? gMouse->mPosition : GE2DPoint(inX, inY);
-    GE3DPoint theLocation;
-    GE3DLine theLine;
-    float theT;
-    EETile* theTile = gWorld.mMap->GetTileAt(thePoint, outX, outY);
-    gWorld.mMap->GetScreenLine(thePoint, theLine);
-    theLine.SolveForZ(theTile->GetHeight(), theT, theLocation);
-    outX = (long)theLocation.GetX();
-    outY = (long)theLocation.GetY();
+    size_t theLength = strlen(inText);
+    memcpy(outBuffer, inText, (std::min)(theLength, (size_t)(inCapacity > 0 ? inCapacity : 0)));
+    return (int32_t)theLength;
 }
+
+// the point a pick or ground read takes, its tile's coordinates, the screen line and its ground location (the
+// originals' locals)
+GE2DPoint sSearPoint;
+long sSearX = 0;
+long sSearY = 0;
+GE3DLine sSearLine;
+GE3DPoint sSearLocation;
+float sSearT = 0.0f;
 
 }   // namespace
 
@@ -92,112 +93,120 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
 {
     EEScenarioManager* theManager = gWorld.mScenarioManager;
     switch (inOp) {
-    case EE_SCREENS_SEAR_OP_LIST:
-        switch (i[0]) {
-        case EE_SCREENS_SEOB_SM_SORT: theManager->SortList(EE_SCENARIO_LIST_AREAS); break;
-        case EE_SCREENS_SEOB_SM_DOWN: theManager->MoveEntry(EE_SCENARIO_LIST_AREAS, (unsigned long)i[1], false); break;
-        case EE_SCREENS_SEOB_SM_UP: theManager->MoveEntry(EE_SCENARIO_LIST_AREAS, (unsigned long)i[1], true); break;
-        case EE_SCREENS_SEOB_SM_DELETE: theManager->DeleteEntry(EE_SCENARIO_LIST_AREAS, (unsigned long)i[1]); break;
-        case EE_SCREENS_SEOB_SM_DUPLICATE: theManager->DuplicateEntry(EE_SCENARIO_LIST_AREAS, (unsigned long)i[1]); break;
-        default: theManager->NewEntry(EE_SCENARIO_LIST_AREAS); break;
-        }
-        return 0;
     case EE_SCREENS_SEAR_OP_NAMES:
         theManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, *static_cast<std::vector<UWideString>*>(p[0]));
         return 0;
     case EE_SCREENS_SEAR_OP_HIGHLIGHT: SearEditor()->GetBrushGroup()->SetIsHighlightShown(i[0] != 0); return 0;
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->GetIsUIHidden();
-    case EE_SCREENS_SEAR_OP_ACTIVATE:
-        SearEditor()->TriggerCall(EE_SCREENS_SETS_HIDE_TEXT);
-        SearEditor()->TriggerCall(EE_SCREENS_SETS_SHOW_ALPHA_SORT);
-        return 0;
-    case EE_SCREENS_SEAR_OP_LOAD: {
-        EESMArea* theArea = theManager->GetArea((unsigned long)i[0]);
-        if (theArea == NULL)
-            return 0;
-        SearEditor()->TriggerCall(EE_SCREENS_SETS_SHOW_TEXT);
-        SearEditor()->GetTriggerBox(false)->SetText(theArea->GetName());
-        SearEditor()->GetTriggerBox(true)->SetText(theArea->GetText());
-        const GERectangle& r = theArea->GetRect();
-        f[0] = r.GetLeft();
-        f[1] = r.GetTop();
-        f[2] = r.GetRight();
-        f[3] = r.GetBottom();
-        i[1] = (int32_t)theArea->GetAnchor().GetX();
-        i[2] = (int32_t)theArea->GetAnchor().GetY();
-        i[3] = (theArea->GetHasRectangle() ? 1 : 0) | (theArea->GetHasAnchor() ? 2 : 0);
-        static_cast<UIComboBox*>(p[0])->SetCurrentSelection(theArea->GetSelectMode());
-        return 1;
-    }
-    case EE_SCREENS_SEAR_OP_STORE: {
-        // the original reads a missing area: nothing here (also for the two below)
-        EESMArea* theArea = theManager->GetArea((unsigned long)i[0]);
-        if (theArea == NULL)
-            return 0;
-        UWideString theText;
-        theArea->mName = UWideString(SearEditor()->GetTriggerBox(false)->GetText(0));
-        SearEditor()->GetTriggerBox(true)->GetAllText(theText);
-        theArea->mText = theText;
-        static_cast<UIComboBox*>(p[0])->GetCurrentSelection(theArea->mSelectMode);
-        return 0;
-    }
-    case EE_SCREENS_SEAR_OP_SET_RECT:
-        if (EESMArea* theArea = theManager->GetArea((unsigned long)i[0]))
-            theArea->SetRectangle(GERectangle(f[0], f[1], f[2], f[3]));
-        return 0;
-    case EE_SCREENS_SEAR_OP_SET_ANCHOR:
-        if (EESMArea* theArea = theManager->GetArea((unsigned long)i[0]))
-            theArea->SetAnchor(U2DPoint<long>(i[1], i[2]));
-        return 0;
     case EE_SCREENS_SEAR_OP_IN_VIEW:
         return gViewport.GetViewRectangle().Contains(i[0] ? gMouse->mPosition : GE2DPoint(f[0], f[1]));
-    case EE_SCREENS_SEAR_OP_PICK: {
-        long theX = 0, theY = 0;
-        bool thePicked = SearPick(i[0] != 0, f[0], f[1], theX, theY);
-        i[1] = (int32_t)theX;
-        i[2] = (int32_t)theY;
-        return thePicked;
-    }
-    case EE_SCREENS_SEAR_OP_GROUND: {
-        long theX = 0, theY = 0;
-        SearGround(i[0] != 0, f[0], f[1], theX, theY);
-        i[1] = (int32_t)theX;
-        i[2] = (int32_t)theY;
+    case EE_SCREENS_SEAR_OP_PAINT_CORNER:
+        ee_screens_sew_area_corner(static_cast<EESEARust*>(p[0])->mAction, i[0], i[1]);
         return 0;
+    case EE_SCREENS_SEAR_OP_PAINT_RELEASE: static_cast<EESEARust*>(p[0])->Dereference(); return 0;
     }
-    case EE_SCREENS_SEAR_OP_LBUTTON: {
-        ISEntity* theButton = UIManager::GetLMouseButton();
-        return (theButton->GetValue() > 0 ? 1 : 0) | (theButton->JustPressed() ? 2 : 0) |
-               (theButton->JustUnpressed() ? 4 : 0);
-    }
-    case EE_SCREENS_SEAR_OP_PAINT_BEGIN: {
-        *static_cast<EESEARust**>(p[0]) = new EESEARust(kSEAPaintArea, NULL, i[0], i[1]);
+    return 0;
+}
+
+// the sub-screen's single statements (editor_trigx.rs EE_SCREENS_SEARX_*, 500..: p0 the area or the action, p2 the
+// out word of a found or made one or a text's buffer (capacity i3), a text p1's i0 bytes)
+extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    void** theOut = static_cast<void**>(p[2]);
+    EESMArea* theArea = static_cast<EESMArea*>(p[0]);
+    switch (inOp) {
+    case EE_SCREENS_SEARX_AREA:
+        *theOut = gWorld.mScenarioManager->GetArea((unsigned long)i[0]);
+        return 0;
+    case EE_SCREENS_SEARX_NAME: return SearWrite(p[2], i[3], theArea->GetName());
+    case EE_SCREENS_SEARX_TEXT: return SearWrite(p[2], i[3], theArea->GetText());
+    case EE_SCREENS_SEARX_RECT + 0:
+        f[0] = theArea->GetRect().GetLeft();
+        return 0;
+    case EE_SCREENS_SEARX_RECT + 1:
+        f[0] = theArea->GetRect().GetTop();
+        return 0;
+    case EE_SCREENS_SEARX_RECT + 2:
+        f[0] = theArea->GetRect().GetRight();
+        return 0;
+    case EE_SCREENS_SEARX_RECT + 3:
+        f[0] = theArea->GetRect().GetBottom();
+        return 0;
+    case EE_SCREENS_SEARX_ANCHOR_X: return (int32_t)theArea->GetAnchor().GetX();
+    case EE_SCREENS_SEARX_ANCHOR_Y: return (int32_t)theArea->GetAnchor().GetY();
+    case EE_SCREENS_SEARX_HAS: return (theArea->GetHasRectangle() ? 1 : 0) | (theArea->GetHasAnchor() ? 2 : 0);
+    case EE_SCREENS_SEARX_SELECT_MODE: return (int32_t)theArea->GetSelectMode();
+    case EE_SCREENS_SEARX_SET_NAME:
+        theArea->mName = SearBytes(p[1], i[0]);
+        return 0;
+    case EE_SCREENS_SEARX_SET_TEXT:
+        theArea->mText = SearBytes(p[1], i[0]);
+        return 0;
+    case EE_SCREENS_SEARX_GET_SELECTION:
+        static_cast<UIComboBox*>(p[1])->GetCurrentSelection(theArea->mSelectMode);
+        return 0;
+    case EE_SCREENS_SEARX_SET_RECT:
+        theArea->SetRectangle(GERectangle(f[0], f[1], f[2], f[3]));
+        return 0;
+    case EE_SCREENS_SEARX_SET_ANCHOR:
+        theArea->SetAnchor(U2DPoint<long>(i[0], i[1]));
+        return 0;
+    case EE_SCREENS_SEARX_POINT:
+        sSearPoint = i[0] != 0 ? gMouse->mPosition : GE2DPoint(f[0], f[1]);
+        return 0;
+    case EE_SCREENS_SEARX_XY_RESET:
+        sSearX = sSearY = 0;
+        return 0;
+    case EE_SCREENS_SEARX_LOCATION_RESET:
+        sSearLocation = GE3DPoint();
+        return 0;
+    case EE_SCREENS_SEARX_PICK: return gWorld.mMap->PickScreenTile(sSearPoint, sSearX, sSearY, true) != NULL;
+    case EE_SCREENS_SEARX_TILE_AT:
+        *theOut = gWorld.mMap->GetTileAt(sSearPoint, sSearX, sSearY);
+        return 0;
+    case EE_SCREENS_SEARX_SCREEN_LINE:
+        gWorld.mMap->GetScreenLine(sSearPoint, sSearLine);
+        return 0;
+    case EE_SCREENS_SEARX_SOLVE:
+        sSearLine.SolveForZ(static_cast<EETile*>(p[0])->GetHeight(), sSearT, sSearLocation);
+        return 0;
+    case EE_SCREENS_SEARX_GROUND_X:
+        sSearX = (long)sSearLocation.GetX();
+        return 0;
+    case EE_SCREENS_SEARX_GROUND_Y:
+        sSearY = (long)sSearLocation.GetY();
+        return 0;
+    case EE_SCREENS_SEARX_X: return (int32_t)sSearX;
+    case EE_SCREENS_SEARX_Y: return (int32_t)sSearY;
+    case EE_SCREENS_SEARX_LBUTTON_DOWN: return UIManager::GetLMouseButton()->GetValue() > 0;
+    case EE_SCREENS_SEARX_LBUTTON_PRESSED: return UIManager::GetLMouseButton()->JustPressed();
+    case EE_SCREENS_SEARX_LBUTTON_UNPRESSED: return UIManager::GetLMouseButton()->JustUnpressed();
+    case EE_SCREENS_SEARX_NEW_PAINT:
+        *theOut = new EESEARust(kSEAPaintArea, NULL, i[0], i[1]);
+        return 0;
+    case EE_SCREENS_SEARX_BOUNDS_VIEW:
         gMouse->SetBounds(gViewport.GetViewRectangle());
+        return 0;
+    case EE_SCREENS_SEARX_EDGES_VIEW:
         SearEditor()->GetEdgeScroll()->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
                                                         gViewport.GetViewRectangle().GetTop(),
                                                         gViewport.GetViewRectangle().GetRight() - 1.0f,
                                                         gViewport.GetViewRectangle().GetBottom() - 1.0f);
         return 0;
-    }
-    case EE_SCREENS_SEAR_OP_PAINT_CORNER:
-        ee_screens_sew_area_corner(static_cast<EESEARust*>(p[0])->mAction, i[0], i[1]);
-        return 0;
-    case EE_SCREENS_SEAR_OP_PAINT_END: {
-        EESEARust* theAction = static_cast<EESEARust*>(p[0]);
+    case EE_SCREENS_SEARX_BOUNDS_WINDOW:
         gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
+        return 0;
+    case EE_SCREENS_SEARX_EDGES_WINDOW:
         SearEditor()->GetEdgeScroll()->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
                                                         (float)gGameWindow->GetHeight() - 1.0f);
-        int32_t theArea[4];   // left, top, right, bottom
-        ee_screens_sew_area(theAction->mAction, theArea);
-        f[0] = (float)theArea[0];
-        f[1] = (float)theArea[1];
-        f[2] = (float)theArea[2];
-        f[3] = (float)theArea[3];
-        theAction->Dereference();
         return 0;
-    }
-    case EE_SCREENS_SEAR_OP_PAINT_RELEASE: static_cast<EESEARust*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEARX_PAINT_AREA:   // (left, top, right, bottom)
+        ee_screens_sew_area(static_cast<EESEARust*>(p[0])->mAction, i);
+        return 0;
+    case EE_SCREENS_SEARX_PAINT_RELEASE:
+        static_cast<EESEARust*>(p[0])->Dereference();
+        return 0;
     }
     return 0;
 }
