@@ -68,7 +68,15 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the object makes it
 
 // ------------------------------------------------------------------------------------------------ the types' host
 
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);
+
+// Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object' (once
+// EESEEvents.cpp's)
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
+{
+    EEUIShell::Op(inComboBox, EE_SCREENS_SKOP_SET_MODE, inAreas ? kSETriggerScreenArea : kSETriggerScreenObject);
+    FillPlaceComboBox(inAreas, inLabel, inComboBox);
+}
 
 // Switches a scenario combo to areas or objects: sets its label, fills it with the names and selects the first silently
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)

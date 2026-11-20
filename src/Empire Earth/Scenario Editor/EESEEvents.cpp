@@ -3,7 +3,7 @@
 // object, area, condition, effect and trigger screens' events) are EEScreenEvent codes handled by ee_screens
 // scenario_editor.rs over this unit's host, ee_screenscpp_se (docs/RUST_PLAN.md "R6 game screens"); the events with
 // per-instance state (the slider's label, the check box's controls, the scenario combo box's refill) are EESEERust
-// events (ee_screens editor_events.rs, ee/EESEARust.h); FillScenarioComboBox, their host's and the effects', is here.
+// events (ee_screens editor_events.rs, ee/EESEARust.h).
 // The host also serves the editor form's and its tabs' events (the toolbar, the hot keys, the elevation tool, the
 // player tab's epoch, the effects' radios, the instructions' "///" expansion: the units that newed them).
 // After RTSPlayer.cpp (..0x16f892), before EESEIAExport.cpp's Virtual4 0x16ff5f. Unit flags: the exe module set.
@@ -47,8 +47,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESEUnit.h"
 #include "ee/EESEARust.h"
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
-void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
+void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 
 // ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
 // inEntity the event's control. The editor's objects, one call each (EE_SCREENS_SE_OP_*).
@@ -274,11 +273,4 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         return static_cast<UIEditBox*>(theEntity)->GetLineCount();
     }
     return 0;
-}
-
-// Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
-{
-    EEUIShell::Op(inComboBox, EE_SCREENS_SKOP_SET_MODE, inAreas ? kSETriggerScreenArea : kSETriggerScreenObject);
-    FillPlaceComboBox(inAreas, inLabel, inComboBox);
 }

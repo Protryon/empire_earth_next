@@ -54,7 +54,7 @@
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).
 
 // The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
-void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESETSEffect.cpp
 void FillAreaObjectComboBox(UITextLabel* inLabel, UIComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
 
 static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
