@@ -104,42 +104,23 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
     EEMap* theMap = gWorld.mMap;
     switch (inOp) {
-    case EE_ASTAR_CM_CONTAINS:
-        return ((EEAIArea*)(uintptr_t)io->h[0])->Contains(U2DPoint<long>((long)io->i[0], (long)io->i[1]));
     case EE_ASTAR_CM_OWNER:
         TownOrHerd((const EEAIArea*)(uintptr_t)io->h[0], io);
         return 0;
     case EE_ASTAR_CM_REGION_SIZE: return gEEAIRegionSize;
     case EE_ASTAR_CM_SET_REGION_SIZE: gEEAIRegionSize = (long)io->i[0]; return 0;
-    case EE_ASTAR_CM_MAP_SIZE: return theMap != NULL ? (int64_t)theMap->mSize : -1;
-    case EE_ASTAR_CM_AI_VALUE: {
-        const EETile* theTile = theMap != NULL ? theMap->GetTile((long)io->i[0], (long)io->i[1]) : NULL;
-        return theTile != NULL ? theTile->mAIValue : 0;
-    }
     case EE_ASTAR_CM_SET_AI_VALUE: {
         EETile* theTile = theMap != NULL ? theMap->GetTile((long)io->i[0], (long)io->i[1]) : NULL;
         if (theTile != NULL)
             theTile->mAIValue = (signed char)io->i[2];
         return 0;
     }
-    case EE_ASTAR_CM_HAS_TILE: return theMap != NULL && theMap->GetTileAtLocation(U2DPoint<long>((long)io->i[0], (long)io->i[1])) != NULL;
     case EE_ASTAR_CM_RANDOM: return EEGetRandomInt(0, (long)io->i[0], *(URandom*)(uintptr_t)io->h[0]);
-    case EE_ASTAR_CM_FOREST_REMOVE_TILE:
-        return ((EEAIForest*)(uintptr_t)io->h[0])->RemoveTile(U2DPoint<long>((long)io->i[0], (long)io->i[1]));
-    case EE_ASTAR_CM_TILE_KIND: return EEAIGetTileKind(EETileLocation((long)io->i[0], (long)io->i[1]));
-    case EE_ASTAR_CM_WALL_ID: return EEAIGetTileWallID(EETileLocation((long)io->i[0], (long)io->i[1]));
-    case EE_ASTAR_CM_TERRAIN: {
-        const EETile* theTile = theMap != NULL ? theMap->GetTile((long)io->i[0], (long)io->i[1]) : NULL;
-        return theTile != NULL ? (int64_t)theTile->mTerrainType : -1;
-    }
-    case EE_ASTAR_CM_AREA_CREATE: {
+    case EE_ASTAR_CM_AREA_CREATE: {   // a herd's (the other kinds' are Rust's: cm_host.rs)
         const U2DPoint<long>* thePoints = (const U2DPoint<long>*)(uintptr_t)io->h[1];
         ((EEAIArea*)(uintptr_t)io->h[0])->Create(std::vector<U2DPoint<long> >(thePoints, thePoints + io->i[0]));
         return 0;
     }
-    case EE_ASTAR_CM_AREA_REMOVE_TILE:
-        return ((EEAIArea*)(uintptr_t)io->h[0])->RemoveTile(U2DPoint<long>((long)io->i[0], (long)io->i[1]));
-    case EE_ASTAR_CM_RESOURCE_WEIGHT: return gContinentManager.GetResourceWeight((long)io->i[0], (long)io->i[1]);
     }
     return 0;
 }

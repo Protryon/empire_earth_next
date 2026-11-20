@@ -103,6 +103,9 @@ fn host(op: i32, io: &mut EeAStarCmIo) -> i64 {
     if f == 0 {
         return 0;
     }
+    if let Some(v) = crate::astar::cm_host::answer(op, io) {
+        return v;
+    }
     // SAFETY: stored from an `EeAStarCmHostFn` by `ee_astar_cm_set_host`
     let f: EeAStarCmHostFn = unsafe { std::mem::transmute::<usize, EeAStarCmHostFn>(f) };
     unsafe { f(HOST_CTX.load(Ordering::Acquire), op, io) }

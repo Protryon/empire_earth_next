@@ -180,7 +180,6 @@ public:
     bool CanGetToUnit(EEUnit* inUnit, EEUnit* inTarget)               // 0x21fe7: CanGetTo(inUnit, inTarget's tile)
         { EeHullPoint t = ee_astar_unit_tile((uint64_t)(uintptr_t)inTarget); return this->CanGetTo(inUnit, t.x, t.y); }
     long GetTileFlag(long inX, long inY) { return ee_astar_tile_flag(inX, inY); }   // 0x21f5a: the map tile's +0x14 (0 off the map)
-    long GetResourceWeight(long inX, long inY);                       // 0x1f65f: 10 per unit of class +0x268 == 3 on the tile
     // 0x22635 (const-shaped: lea; mov): the tiles of continent inID (provisional name)
     void GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const
     {
@@ -346,8 +345,7 @@ public:
 extern EEAIContinentManager gContinentManager;
 
 // (cdecl; provisional names)
-long EEAIGetTileKind(const EETileLocation& inTile);     // 0x1ed2c (EEAIContinentManager.cpp; the caller 0x2380c)
-long EEAIGetTileWallID(const EETileLocation& inTile);   // 0x1eea9 (EEAIContinentManager.cpp)
+// (0x1ed2c EEAIGetTileKind, 0x1eea9 EEAIGetTileWallID, 0x1f65f GetResourceWeight: Rust, ee_sim::astar cm_host.rs)
 // (0x1c949 EEAIBuildChokePoints, the terrain pass before PruneChokePoints: Rust, cm_passes.rs)
 long EEGetRandomInt(long inMin, long inMax, URandom& inRandom);  // 0x2491c9 (a random index in [inMin, inMax]; body elsewhere) (provisional name)
 extern long& gEEAIRegionSize;                            // 0x52fd80 (0x20b48 sets it by map size: 8..0x12) (provisional name)

@@ -16,7 +16,8 @@ public:
     bool RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount);
     void UpdateResourceKind() { ee_astar_forest_update_resource_kind(this); }   // 0x29d69 (Rust)
     // +0x28 0x29e17: EEAIArea's, then the removed tile's resource kind (EEAIHasResourceUnit) leaves its count
-    bool RemoveTile(const U2DPoint<long>& inPoint);
+    bool RemoveTile(const U2DPoint<long>& inPoint)   // (Rust: ee_sim::astar cm_host.rs)
+        { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
     EeAStarForestRecord* Record() { return this; }
     const EeAStarForestRecord* Record() const { return this; }
     long GetResourceKind() const { return this->resource_kind; }

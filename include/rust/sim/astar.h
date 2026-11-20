@@ -1649,6 +1649,26 @@ void ee_astar_area_get_tiles(const EeAStarAreaRecord *r,
                              void *ctx,
                              void (*push)(void*, long, long));
 
+/// `GetShoreNextTo(id, out)`: `push(ctx, x, y)` for the shore tiles (from the last) next to area `id` (every one for 0).
+///
+/// # Safety
+/// `h` a live continent of the registered manager; `push` accepts `ctx`.
+void ee_astar_continent_shore_next_to(uint64_t h,
+                                      uint16_t id,
+                                      void *ctx,
+                                      void (*push)(void*, long, long));
+
+/// `GetShoreInRegions(ids, out, kind)`: `push(ctx, x, y)` for each shore tile found (the caller clears its list).
+///
+/// # Safety
+/// `h` a live continent of the registered manager; `ids` holds `n` ids; `push` accepts `ctx`.
+void ee_astar_continent_shore_in_regions(uint64_t h,
+                                         const uint16_t *ids,
+                                         size_t n,
+                                         long kind,
+                                         void *ctx,
+                                         void (*push)(void*, long, long));
+
 /// `EEAIBuildChokePoints` up to its flood fills: classifies the tiles (`infos` by `x * size + y`) and smooths
 /// `passes - 1` times into the pass's grids, which stay until `ee_astar_choke_grids_free`.
 ///
@@ -1895,6 +1915,12 @@ void ee_astar_cntq_i(int32_t v);
 
 /// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
 void ee_astar_cntq_leave(bool on);
+
+/// `EEAIArea::RemoveTile(tile)` / `EEAIForest::RemoveTile(tile)` for the C++ (the kind's slot).
+///
+/// # Safety
+/// `h` a live area.
+bool ee_astar_area_remove_tile_of(uint64_t h, long x, long y);
 
 /// The host the state's readers and writers call.
 void ee_astar_cm_set_host(EeAStarCmHostFn f, void *ctx);

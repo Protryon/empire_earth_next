@@ -70,7 +70,8 @@ public:
     void UpdateHull();                      // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds)
     // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed (a forest:
     // its own)
-    bool RemoveTile(const U2DPoint<long>& inPoint);
+    bool RemoveTile(const U2DPoint<long>& inPoint)
+        { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
     bool AreaRemoveTile(const U2DPoint<long>& inPoint)
         { return ee_astar_area_remove_tile_captured(this, this->mTiles.GetHandle(), EEAIArea::HullPoint(inPoint)); }
 

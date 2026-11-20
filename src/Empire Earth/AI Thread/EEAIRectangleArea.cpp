@@ -43,7 +43,6 @@
 
 #include "ee/EEAIRectangleArea.h"
 #include "ee/EEAIRandom.h"
-#include "ee/EEAIForest.h"
 #include "ee/EETown.h"
 #include "ee/EEHerd.h"
 
@@ -102,13 +101,6 @@ U2DPoint<long> EEAIArea::GetRandomPoint()
     case kAIAreaRectangleArea: return static_cast<EEAIRectangleArea*>(this)->GetRandomPoint();
     }
     return this->AreaRandomPoint();
-}
-
-bool EEAIArea::RemoveTile(const U2DPoint<long>& inPoint)
-{
-    if (this->area_type == kAIAreaForest)
-        return static_cast<EEAIForest*>(this)->RemoveTile(inPoint);
-    return this->AreaRemoveTile(inPoint);
 }
 
 // Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty

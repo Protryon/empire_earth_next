@@ -27,14 +27,25 @@ public:
         { return ee_astar_area_closest_points_of((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inOther,
                                                  reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther)); }
     // +0x2c 0x1dc54 (ret 8): reserves outTiles to mShoreTiles's size, then walks mShoreTiles (inID 0: every tile)
-    void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles);
+    void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
+    {
+        outTiles.reserve(this->GetShoreTiles().size());
+        ee_astar_continent_shore_next_to((uint64_t)(uintptr_t)this, inID, &outTiles, EEAIContinent::PushTile);
+    }
     // +0x30 0x1e45e (ret 0xc): Virtual34 with the one-element id list { inID }
-    void GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind);
+    void GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind)
+        { this->GetShoreInRegions(std::vector<unsigned short>(1, inID), outTiles, inKind); }
     // +0x34 0x1dccf (ret 0xc): outTiles is cleared first (0x288c2c); walks inIDs from the back
     // with inIDs empty or holding a 0, every tile; else the tiles whose path area's id (+0x8a for inArg3 3,
     // else +0x86) is listed, or, without one, a kind-1 continent's tiles next to a listed continent
-    void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
-                           long inKind);
+    void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles, long inKind)
+    {
+        outTiles.clear();
+        ee_astar_continent_shore_in_regions((uint64_t)(uintptr_t)this, inIDs.empty() ? NULL : &inIDs[0], inIDs.size(), inKind,
+                                            &outTiles, EEAIContinent::PushTile);
+    }
+    static void PushTile(void* inTiles, long inX, long inY)
+        { static_cast<std::vector<U2DPoint<long> >*>(inTiles)->push_back(U2DPoint<long>(inX, inY)); }
 
     // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac) (Rust: ee_astar continent.rs, as the rest)
     void AddPathAreaID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::PathAreas, inID); }

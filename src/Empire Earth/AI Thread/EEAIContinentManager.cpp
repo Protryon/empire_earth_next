@@ -60,57 +60,7 @@
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
-// scenario manager, the tile kinds the Rust state's host asks, and the forests' two members that make units.
-
-// The units of a map tile, in its list's order, as ee_astar tile_kind.rs reads them (pure member reads)
-static void EEAITileUnits(EETile* inTile, std::vector<EeTileUnit>& outUnits)
-{
-    outUnits.clear();
-    for (RTSTileUnitNode* theNode = inTile->mUnits; theNode; theNode = theNode->mNext) {
-        EEUnit* theUnit = theNode->mUnit;
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        unsigned long theType = theClass->GetUnitType();
-        EeTileUnit theRecord;
-        theRecord.wood = theClass->mResourceType == kResourceWood;
-        theRecord.has_amount = theUnit->mResourceAmount > 0;
-        theRecord.blocks = theClass->mBlocksTile != 0;
-        theRecord.gate = theClass->mCategory == kUnitCategoryGate;
-        theRecord.wall = theClass->mIsWall != 0;
-        theRecord.foundation = theUnit->IsFoundation();
-        theRecord.alive = theUnit->mHitPoints > 0;
-        theRecord.dock = theType == kUnitTypeDock || theType == kUnitTypeNavyYard;
-        theRecord.space_dock = theType == kUnitTypeSpaceDock || theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation;
-        theRecord.id = (int32_t)theUnit->mUnitID;
-        outUnits.push_back(theRecord);
-    }
-}
-
-// Returns the AI tile kind of inTile: 0 off the map; by continent category and shore flag (land 1/7..9, water 2/10/11,
-// space 15/10/11, map edge 6, cliff 3); on land 4 for live wood, 12/13/14 under a live blocking unit, wall or gate
-// (Rust: ee_astar tile_kind.rs over the tile's continent category, terrain, AI value and units)
-long EEAIGetTileKind(const EETileLocation& inTile)
-{
-    EETile* theTile = gWorld.mMap->GetTile(inTile.GetX(), inTile.GetY());
-    if (!theTile)
-        return 0;
-    unsigned char theKind = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY())->GetCategory();
-    long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
-    std::vector<EeTileUnit> theUnits;
-    EEAITileUnits(theTile, theUnits);
-    return ee_astar_tile_kind(theKind, (int32_t)theTile->mTerrainType, (int32_t)theFlag, theUnits.data(), theUnits.size());
-}
-
-// Returns the id of the first live, finished blocking unit or gate on inTile (wood only if not used up), -1 if none
-// (Rust: ee_astar tile_kind.rs)
-long EEAIGetTileWallID(const EETileLocation& inTile)
-{
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(inTile);
-    if (!theTile)
-        return -1;
-    std::vector<EeTileUnit> theUnits;
-    EEAITileUnits(theTile, theUnits);
-    return ee_astar_tile_wall_id(theUnits.data(), theUnits.size());
-}
+// scenario manager, and the forests' two members that make units.
 
 // TEST ONLY: CNTQ (the record of an outermost query; ee_sim::astar cm_capture.rs, whose scope depth this shares)
 // for the three queries left here (they read the units' classes)
@@ -155,19 +105,6 @@ void EEAIContinentManager::Reset()
     ee_astar_cm_reset_all(&this->mRecord);
 }
 
-// Returns 10 per wood resource unit on tile (inX, inY), 0 off the map
-long EEAIContinentManager::GetResourceWeight(long inX, long inY)
-{
-    long theResult = 0;
-    EETile* theTile = gWorld.mMap->GetTile(inX, inY);
-    if (theTile) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
-            if (theNode->mUnit->mUnitClass->mResourceType == kResourceWood)
-                theResult += 10;
-        }
-    }
-    return theResult;
-}
 
 // The influence table's region size (the areas' bounds), 0 without the table
 static long EEAIRegionSize()
@@ -371,14 +308,3 @@ bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long i
 }
 
 
-// Removes inPoint from the forest and, if it was there, lowers the count of that tile's wood resource kind;
-// returns whether it was removed
-bool EEAIForest::RemoveTile(const U2DPoint<long>& inPoint)
-{
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(inPoint);
-    bool theResult = this->AreaRemoveTile(inPoint);
-    if (theResult) {
-        ee_astar_forest_remove_resource(this, EEAIHasResourceUnit(theTile));
-    }
-    return theResult;
-}
