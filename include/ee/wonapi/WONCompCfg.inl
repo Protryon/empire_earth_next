@@ -1,3 +1,4 @@
+#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/compcfg.h"
 // The C++ end of ee_won_gui's compcfg.rs (R6 WONLobby round 25): ComponentConfig's readers, look-ups, config map and
 // instructions, ResourceConfig and ResourceConfigTable are Rust objects; these are the classes' forwards and the host
@@ -120,7 +121,7 @@ static void CcRun(void* o, EeWonCcCall inCall, intptr_t a = 0, intptr_t b = 0, i
 #define CC_P(s) (intptr_t)(s).data(), (intptr_t)(s).size()
 static EeWonCcText CcText(const GUIString& s) { EeWonCcText t = {s.mData->mText, s.mData->mLength}; return t; }
 
-ComponentConfig::ComponentConfig() : mHasSetWidth(false), mHasSetHeight(false), mHaveInitedComponents(false)
+ComponentConfig::ComponentConfig(EeWonCfgKind inKind) : mHasSetWidth(false), mHasSetHeight(false), mHaveInitedComponents(false), mKind(inKind)
 { this->mCfg = ee_won_cc_new(static_cast<ConfigObject*>(this), CcHost); }
 ComponentConfig::~ComponentConfig() { ee_won_cc_free(this->mCfg); }
 bool ComponentConfig::EndOfString() { bool v = false; CC(EndOfString, (intptr_t)&v); return v; }
@@ -150,7 +151,48 @@ SelectionColor ComponentConfig::ReadSelectionColor()
     if (x.mode == 0) return SelectionColor(x.background, (DWORD)x.foreground);
     return SelectionColor(x.background, x.mode == 1 ? ForegroundSelectionMode_InvertOriginalColor : ForegroundSelectionMode_UseOriginalColor);
 }
-bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { bool r = false; CC(GetNamedValue, CC_P(k), (intptr_t)&v, (intptr_t)&r); return r; }
+// the kind's own named values (the WON frame's paddings: the sum of the frame borders cfgkind.rs names), else the base's
+bool ComponentConfig::GetNamedValue(const std::string& k, int& v)
+{
+    int32_t aSides[2];
+    const int n = ee_won_cfg_kind_named(this->mKind, (const uint8_t*)k.data(), k.size(), aSides);
+    if (n > 0) {
+        int aSum = 0;
+        for (int i = 0; i < n; i++) aSum += (int)WONShell::Op(this->mComponent.get(), EeWonShellOp::GetFrameBorder, aSides[i]);
+        v = aSum;
+        return true;
+    }
+    bool r = false; CC(GetNamedValue, CC_P(k), (intptr_t)&v, (intptr_t)&r); return r;
+}
+// a part of the component a predefined child names (the original config classes' typed members' reads)
+static Component* CcPart(Component* c, EeWonCfgPart p)
+{
+    typedef EeWonCfgPart P;
+    switch (p) {
+    case P::ComboList: return static_cast<ComboBox*>(c)->mListArea.get();
+    case P::ComboEdit: return static_cast<ComboBox*>(c)->mEdit.get();
+    case P::Thumb: return static_cast<Scrollbar*>(c)->GetThumb();
+    case P::UpArrow: return static_cast<Scrollbar*>(c)->GetUpArrow();
+    case P::DownArrow: return static_cast<Scrollbar*>(c)->GetDownArrow();
+    case P::ScrollRect: return static_cast<Scrollbar*>(c)->GetScrollRect();
+    case P::TabLayout: return static_cast<TabCtrl*>(c)->mContainerLayout;
+    case P::HtmlView: return static_cast<BrowserComponent*>(c)->GetHTMLView();
+    case P::HorzBar: return static_cast<ScrollbarScroller*>(c)->GetScrollbar(false);
+    case P::VertBar: return static_cast<ScrollbarScroller*>(c)->GetScrollbar(true);
+    case P::Header: return (Component*)WONShell::Op(c, EeWonShellOp::GetHeader);
+    case P::ScrollAreaOf: return static_cast<ScrollbarScroller*>(c)->GetScrollArea();
+    default: return (Component*)WONShell::Op(c, EeWonShellOp::GetLabel); // EtchedLabel
+    }
+}
+// the kind's predefined children (cfgkind.rs): a new config of the child's kind and the part
+bool ComponentConfig::GetPredefinedComponent(const std::string& n, ComponentConfig*& config, Component*& component)
+{
+    EeWonCfgKind aKind; EeWonCfgPart aPart;
+    if (!ee_won_cfg_kind_predefined(this->mKind, (const uint8_t*)n.data(), n.size(), &aKind, &aPart)) return false;
+    config = CfgNewOfKind(aKind);
+    component = CcPart(this->mComponent.get(), aPart);
+    return true;
+}
 bool ComponentConfig::CallNamedFunction(const std::string& k, const std::vector<int>& p, int& v)
 {
     bool r = false;
@@ -158,7 +200,13 @@ bool ComponentConfig::CallNamedFunction(const std::string& k, const std::vector<
     CC(CallNamedFunction, (intptr_t)&x, (intptr_t)&r);
     return r;
 }
-bool ComponentConfig::PreParse(ConfigParser* p) { bool r = false; CC(PreParse, (intptr_t)&r, (intptr_t)p); return r; }
+// the base group included; a WON skin's config then makes the game's skin (the Windows look) when there is none
+bool ComponentConfig::PreParse(ConfigParser* p)
+{
+    bool r = false; CC(PreParse, (intptr_t)&r, (intptr_t)p);
+    if (r && this->mKind == EeWonCfgKind::WonSkin) ee_won_skin_ensure(ee_won_guicpp_shell_call);
+    return r;
+}
 bool ComponentConfig::PostParse(ConfigParser*) { this->SetDesiredSizeIfNecessary(); return true; }
 void ComponentConfig::SetDesiredSizeIfNecessary() { CC(SetDesiredSize, 0); }
 bool ComponentConfig::HandleInstruction(ConfigParser* p, const std::string& t) { bool r = false; CC(HandleInstruction, (intptr_t)&r, (intptr_t)p, CC_P(t)); return r; }

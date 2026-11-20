@@ -68,12 +68,12 @@ bool CrossPromotionButtonConfig::Virtual24(const std::string& key) {
     else if(aKeyIdx==1)
         this->mCrossPromotionButton->SetDefaultBrowse(this->ReadString(false));
     else
-        return ImageButtonConfig::Virtual24(key);
+        return ComponentConfig::Virtual24(key);
     return true;
 }
 // Attaches the config to the cross-promotion button it configures
 void CrossPromotionButtonConfig::SetComponent(Component* component) {
-    ImageButtonConfig::SetComponent(component);
+    ComponentConfig::SetComponent(component);
     this->mCrossPromotionButton=static_cast<CrossPromotionButton*>(component);
 }
 
@@ -87,12 +87,12 @@ bool ImageTextButtonConfig::Virtual24(const std::string& key) {
     else if(aKeyIdx==2)
         this->mImageTextButton->mBrowse=this->ReadString(false);
     else
-        return ImageButtonConfig::Virtual24(key);
+        return ComponentConfig::Virtual24(key);
     return true;
 }
 
 void ImageTextButtonConfig::SetComponent(Component* component) {
-    ImageButtonConfig::SetComponent(component);
+    ComponentConfig::SetComponent(component);
     this->mImageTextButton=static_cast<ImageTextButton*>(component);
 }
 // Creates the cross-promotion button with an empty caption, listening to lobby broadcasts
@@ -102,30 +102,4 @@ CrossPromotionButton::CrossPromotionButton()
     this->SubscribeToBroadcast(true);
 }
 
-}
-
-namespace WONAPI {
-}
-
-namespace WONAPI {
-}
-
-namespace WONAPI {
-}
-
-
-namespace WONAPI {
-// Passes every layout key to the arrow button config
-bool MaxSplitterButtonConfig::Virtual24(const std::string& instruction)
-{
-    if(MSArrowButtonConfig::Virtual24(instruction))
-        return true;
-    return false;
-}
-
-// Creates a maximize-splitter button for the layout file
-Component* MaxSplitterButtonConfig::CompFactory()
-{
-    return WONShellNew(EeWonShellKind::MaxSplitterButton,Direction_Up);
-}
 }

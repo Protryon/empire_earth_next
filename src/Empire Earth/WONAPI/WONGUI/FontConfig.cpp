@@ -41,27 +41,12 @@ bool FontConfig::GetNamedValue(const std::string& name,int& value)
     else return false;
     return true;
 }
-// Always succeeds (the linker folds this body into the identical one at 0x007099f0)
-bool FontConfig::PostParse(ConfigParser*) {return true;}
 }
 
-
-namespace WONAPI {
-// Registers the "Font" config type with the resource config table
-void FontConfig_Init(ResourceConfigTable* table)
-{
-    table->AddAllocator("Font",NewConfigOf<FontConfig>,NoComponent);
-}
-}
-
-namespace WONAPI {
-
-
-}
 
 namespace WONAPI {
 // Creates a font config that needs its font looked up
-FontConfig::FontConfig()
+FontConfig::FontConfig() : ComponentConfig(EeWonCfgKind::Font)
 {
     this->mHaveInitedComponents=true;
     this->mNeedRecalcFont=true;

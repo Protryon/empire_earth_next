@@ -23,6 +23,7 @@
 #include <set>
 #include <list>
 #include <exception>
+#include <typeinfo>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -30,6 +31,8 @@
 #include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/guicfg.h"
+#include "rust/won_gui/cfgkind.h"
+#include "rust/won_gui/shell.h" // the shell ops the kinds' parts are read with
 #include <cctype>
 #include "rust/won_net/ffi_parse.h"
 wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
@@ -150,6 +153,17 @@ SmartPtr<ResourceConfigTable> ComponentConfig::mResourceConfigTable;
 std::string ComponentConfig::mResourceFolder;
 static void ClearStatics() { ResourceConfigTable::mControlIdMap.clear(); ResourceConfigTable::mConfigAllocatorMap.clear(); }
 #define CC_ADD_ALWAYS(n, c) this->mConfigMap[n] = c
+template<class C> ComponentConfig* NewConfigOf() { return new C; }
+#include "won_cfgkind_orig.h"
+#define CC_KIND_FACTORY(C, K) NewConfigOf<C>
+// a config's class, for the probes: its C++ class's name
+static std::string ClassTag(ComponentConfig* k)
+{
+    if (k == NULL) return "null";
+    std::string n = typeid(*k).name();
+    size_t c = n.rfind("::");
+    return c == std::string::npos ? n : n.substr(c + 2);
+}
 #include "won_compcfg_run.h"
 #include "won_compcfg_orig.h"
 // world: ComponentConfigLoad.cpp's InitComponents
@@ -219,14 +233,14 @@ public:
     void AddChildToConfigMap(const GUIString&,ComponentConfig*,bool inAlways=false);
     Background ReadBackground(); int ReadInt(); Component* ReadComponent(); bool EndOfString();
     static std::string GetResourceFile(const std::string&);
-    ComponentConfig();
+    explicit ComponentConfig(EeWonCfgKind inKind = EeWonCfgKind::Component);
     virtual ~ComponentConfig();
     virtual bool HandleInstruction(ConfigParser*, const std::string&);
     virtual bool HandleValueInstruction(ConfigParser*, const std::string&, StringParser&);
     virtual bool PreParse(ConfigParser*);
     virtual bool PostParse(ConfigParser*);
     virtual bool Virtual24(const std::string&);
-    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&) { return false; }
+    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&);
     virtual bool GetNamedValue(const std::string&, int&);
     virtual bool CallNamedFunction(const std::string&, const std::vector<int>&, int&);
     virtual void SetComponent(Component*);
@@ -234,8 +248,28 @@ public:
     SmartPtr<Component> mComponent;
     GUIString mConfigError;
     bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents;
+    EeWonCfgKind mKind;
     EeWonCompCfg* mCfg;
 };
+// the game's (ConfigTableHost.cpp: a ContainerConfig for a container kind, whose own members these steps never read)
+ComponentConfig* CfgNewOfKind(EeWonCfgKind k) { return new ComponentConfig(k); }
+template<EeWonCfgKind K> ComponentConfig* KindConfig() { return CfgNewOfKind(K); }
+#define CC_KIND_FACTORY(C, K) KindConfig<EeWonCfgKind::K>
+// a config's class, for the probes: the original class its kind is (cfgkind.rs's order)
+static std::string ClassTag(ComponentConfig* k)
+{
+    static const char* const kClass[] = {"ComponentConfig", "ContainerConfig", "DialogConfig", "ButtonConfig", "ImageButtonConfig",
+        "LabelConfig", "InputBoxConfig", "ScrollAreaConfig", "ListAreaConfig", "MultiListAreaConfig", "TreeAreaConfig", "TextAreaConfig",
+        "MultiListHeaderConfig", "ScrollerConfig", "ScrollbarScrollerConfig", "ScrollbarConfig", "TabCtrlConfig", "ComboBoxConfig",
+        "SplitterConfig", "BrowserComponentConfig", "RectangleComponentConfig", "RectangleComponent3DConfig", "ImageComponentConfig",
+        "ScreenContainerConfig", "MSButtonConfig", "MSArrowButtonConfig", "MSTabButtonConfig", "MS3DFrameConfig", "MSComboBoxConfig",
+        "MSScrollbarConfig", "MSEtchedFrameGroupConfig", "MSTabCtrlConfig", "MSScrollContainerConfig", "MSHeaderControlConfig",
+        "MSListCtrlConfig", "WONSimpleButtonConfig", "WONButtonConfig", "WONScrollbarConfig", "WONScrollContainerConfig",
+        "WONHeaderControlConfig", "WONListCtrlConfig", "WONComboBoxConfig", "WONTabCtrlConfig", "WONFrameComponentConfig",
+        "WONSkinConfig"};
+    if (k == NULL) return "null";
+    return (size_t)k->mKind < sizeof kClass / sizeof *kClass ? kClass[(size_t)k->mKind] : "kind?";
+}
 SmartPtr<ResourceConfigTable> ComponentConfig::mResourceConfigTable;
 static void ClearStatics()
 {
@@ -252,7 +286,11 @@ static unsigned sSeed = 20261119;
 static unsigned Rnd(unsigned n) { sSeed = sSeed * 1103515245u + 12345u; return n ? (sSeed >> 8) % n : 0; }
 template<size_t N> static std::string Pick(const char* const (&a)[N]) { return a[Rnd(N)]; }
 static const char* const kNames[] = {"child1", "child2", "img1", "sub", "Child1", "", "FAIL", "pre", "x"};
-static const char* const kTypes[] = {"Comp", "Font", "Image", "Test", "test", "RESOURCE", "MODIFY", "BASEGROUP", "Unknown", "Resource"};
+static const char* const kTypes[] = {"Comp", "Font", "Image", "Test", "test", "RESOURCE", "MODIFY", "BASEGROUP", "Unknown", "Resource",
+#define CC_TYPE(n, C, K) #n,
+    CC_KINDS(CC_TYPE) CC_KINDS(CC_TYPE)
+#undef CC_TYPE
+    };
 static const char* const kGroups[] = {"Global", "global", "Other", "THROW", "", "Global|Base"};
 static const char* const kKeys[] = {"INT", "BOOL", "CHAR", "FLAG", "FLAGN", "RAW", "STR", "WORD", "DIR", "HALIGN", "VALIGN", "COLOR",
     "SOUND", "BG", "FONT", "IMAGE", "RAWIMAGE", "RAWSTR", "STDCURSOR", "CURSOR", "SEL", "COMP", "EOS", "COMMA", "CHILD", "SIZE",
@@ -277,7 +315,8 @@ static const char* const kAtoms[] = {"12", "-3", "0x1f", "(1+2)*3", "7/0", "(4",
 static const std::map<std::string, std::vector<std::string> >& Pools()
 {
     static std::map<std::string, std::vector<std::string> > m = {
-        {"INT", {"12", "(1+2)*3", "7/0", "(4", "@ID_FOO", "@ID_bar", "@ID_NONE", "@intres", "Parent.Width", "this.LEFT", "child1.SEVEN",
+        {"INT", {"child1.LEFTPAD", "child2.RIGHTPAD", "child1.TOPPAD", "child2.BOTTOMPAD", "child1.HORZPAD", "child2.VERTPAD",
+                 "child1.leftpad", "x.HORZPAD", "12", "(1+2)*3", "7/0", "(4", "@ID_FOO", "@ID_bar", "@ID_NONE", "@intres", "Parent.Width", "this.LEFT", "child1.SEVEN",
                  "child1.BOOM", "SEVEN", "BOOM", "WIDTH - 3", "HEIGHT*2", "TOP", "BOTTOM", "RIGHT", "MAX(1,2,3)", "MIN(4,-5)",
                  "TWICE(4)", "TWICE()", "MAX(1,)", "child2.MAX(9)", "nope.LEFT", "_PRE.WIDTH", "x", "(SEVEN+1)/2"}},
         {"COLOR", {"ff00aa", "12g456", "(STD,Hilight)", "(std, linkdown)", "(STD,Nope)", "(DEC,1,2,300)", "(DEC 1)", "(XYZ)", "@c1",
@@ -296,7 +335,12 @@ static const std::map<std::string, std::vector<std::string> >& Pools()
         {"VALIGN", {"Top", "center", "Bottom", "Middle"}},
         {"SEL", {"ff0000, USEFOREGROUND, 00ff00", "ff0000, INVERTORIGINAL", "ff0000, USEORIGINAL", "ff0000, OTHER", "ff0000",
                  "@c1, useforeground, @c1"}},
-        {"COMP", {"child1", "child1.sub", "_PRE", "_HALF", "_NONE", "Parent", "this", "Font1", "sub.x", "root", "parent.child1"}},
+        {"COMP", {"child1", "child1.sub", "_PRE", "_HALF", "_NONE", "Parent", "this", "Font1", "sub.x", "root", "parent.child1",
+                  // the kinds' predefined children (and names no kind has, and the case the compares keep)
+                  "child1._LISTAREA", "child2._INPUTBOX", "child1._THUMB", "child2._UPARROW", "child1._DOWNARROW", "child2._SCROLLRECT",
+                  "child1._CONTAINERLAYOUT", "child2._HTMLVIEW", "child1._HORZSCROLLBAR", "child2._VERTSCROLLBAR", "child1._HEADER",
+                  "child2._MULTILISTAREA", "child1._LABEL", "child1._header", "sub._THUMB", "child2._VERTSCROLLBAR._THUMB",
+                  "child1._HEADER._LABEL", "child2._MULTILISTAREA._HEADER", "img1._LISTAREA", "x._HTMLVIEW"}},
         {"MAPCOMPONENT", {"child1, alias", "child1, child2.alias", "child1, child2.", "child1", "Font1, x", "this, self"}},
         {"MODIFY", {"child1, INT, 5", "child1, NOPE", "child1, THROW", "Font1, COLOR, ff", "this, STR, abc", "nope, INT"}},
         {"SETRESOURCE", {"Global", "global", "Other", "nope"}},
@@ -347,6 +391,7 @@ static std::vector<Port::Step> MakeRun()
         Port::Step s;
         unsigned r = Rnd(100);
         s.kind = r < 45 ? 0 : r < 75 ? 1 : r < 80 ? 2 : r < 83 ? 3 : r < 86 ? 4 : r < 89 ? 5 : r < 93 ? 6 : r < 95 ? 7 : r < 98 ? 8 : 9;
+        if (Rnd(8) == 0) s.kind = 10; // (a probe of the kinds' predefined children and paddings)
         s.target = (int)Rnd(1000);
         Port::Script sc = MakeScript();
         s.script.groups = sc.groups; s.script.names = sc.names; s.script.lines = sc.lines; s.script.include = sc.include;

@@ -13,29 +13,5 @@ public:
     void SetOutlineColor(int c) { this->mOutlineColor=c; } // at 0x00706880
     virtual void Paint(Graphics&); // 0x706890 (guidraw.rs rectangle_paint; GuiHost.cpp)
 };
-class RectangleComponentConfig : public ComponentConfig {
-public:
-    virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*); //original external SetComponent
-    RectangleComponent* mRectangleComponent; //78 borrowed
-};
-class RectangleComponent3DConfig : public ComponentConfig {
-public:
-    virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*); //original external SetComponent
-    RectangleComponent3D* mRectangleComponent3D; //78 borrowed
-};
-class ImageComponentConfig : public ComponentConfig {
-public:
-    virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*); //original external SetComponent
-    ImageComponent* mImageComponent; //78 borrowed
-};
-class ScreenContainerConfig : public ContainerConfig {
-public:
-    virtual bool Virtual24(const std::string&);
-    virtual void SetComponent(Component*); //original external SetComponent
-    ScreenContainer* mScreenContainer; //98 borrowed
-};
 }
 #endif

@@ -64,7 +64,39 @@ struct Component : RefCount {
     void SetSize(int w, int h) { tr(PP(this) + ".SetSize(" + P(w) + "," + P(h) + ")"); mWidth = w; mHeight = h; }
     void SetWantGrabBG(bool b) { tr(PP(this) + ".SetWantGrabBG(" + P(b) + ")"); }
     template<class I> void InitComponent(I& i) { tr(PP(this) + ".InitComponent(" + P(i.mType) + "," + PP(i.mConfig) + ")"); if (mWidth == 13) throw ConfigObjectException("init 13"); }
+    // the parts the config kinds' predefined children read (R6 WONLobby round 26): made with the component by the
+    // kinds' factory (KindComp), else none
+    SmartPtr<Component> mListArea, mEdit, mContainerLayout, mPart[10];
+    Component* Part(int i) { tr(PP(this) + ".part" + P(i)); return mPart[i].get(); }
+    Component* GetThumb() { return Part(0); }
+    Component* GetUpArrow() { return Part(1); }
+    Component* GetDownArrow() { return Part(2); }
+    Component* GetScrollRect() { return Part(3); }
+    Component* GetHTMLView() { return Part(4); }
+    Component* GetScrollbar(bool v) { return Part(v ? 6 : 5); }
+    Component* GetScrollArea() { return Part(7); }
 };
+// the widget types the config classes held their component as (one Component here)
+typedef Component Button; typedef Component Container; typedef Component Dialog; typedef Component ScrollArea; typedef Component ListArea;
+typedef Component MultiListArea; typedef Component MultiListHeader; typedef Component InputBox; typedef Component Label;
+typedef Component Scroller; typedef Component ScrollbarScroller; typedef Component Scrollbar; typedef Component TreeArea;
+typedef Component ComboBox; typedef Component TabCtrl; typedef Component Splitter; typedef Component TextArea; typedef Component ImageButton;
+typedef Component RectangleComponent; typedef Component RectangleComponent3D; typedef Component ImageComponent;
+typedef Component ScreenContainer; typedef Component BrowserComponent; typedef Component MSButtonBase; typedef Component WONButton;
+// a deleted class's own methods (WONGUIShell.h): the list controls' header, the etched frame's label, the frame's borders
+struct WONShell {
+    static intptr_t Op(Component* c, EeWonShellOp op, intptr_t a = 0)
+    {
+        tr(PP(c) + ".Op(" + P((int)op) + "," + P(a) + ")");
+        if (op == EeWonShellOp::GetHeader) return (intptr_t)c->mPart[8].get();
+        if (op == EeWonShellOp::GetLabel) return (intptr_t)c->mPart[9].get();
+        if (op == EeWonShellOp::GetFrameBorder) return (c->mId * 7 + a * 3) % 11;
+        return 0;
+    }
+};
+// the game's skin (skinobj.rs) a WON skin config's PreParse makes
+static intptr_t ee_won_guicpp_shell_call = 0;
+static void ee_won_skin_ensure(intptr_t) { tr("skin ensure"); }
 
 struct Background {
     SmartPtr<Image> mImage; int mColor, mBorderColor; bool mUseOffsets, mStretchImage, mWantGrabBG; SmartPtr<Component> mComponent;

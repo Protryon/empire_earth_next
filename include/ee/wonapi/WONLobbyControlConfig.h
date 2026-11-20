@@ -6,7 +6,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyCrossPromotion.h"
-#include "ee/wonapi/WONLobbyMSConfig.h"
+#include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
 class ImageTextButton;
 class CrossPromotionButton;
@@ -38,15 +38,17 @@ public:
     int mNumColumns; //a0
 };
 
-class ImageTextButtonConfig : public ImageButtonConfig {
+class ImageTextButtonConfig : public ComponentConfig {
 public:
+    ImageTextButtonConfig() : ComponentConfig(EeWonCfgKind::ImageButton) {}
     virtual bool Virtual24(const std::string&);
     virtual void SetComponent(Component*);
     ImageTextButton* mImageTextButton; // offset 0x7c, borrowed (RTTI 0x00851d64)
 };
 
-class CrossPromotionButtonConfig : public ImageButtonConfig {
+class CrossPromotionButtonConfig : public ComponentConfig {
 public:
+    CrossPromotionButtonConfig() : ComponentConfig(EeWonCfgKind::ImageButton) {}
     virtual bool Virtual24(const std::string&);
     virtual void SetComponent(Component*);
     CrossPromotionButton* mCrossPromotionButton; //7c borrowed
@@ -71,19 +73,5 @@ public:
     virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007cb770
 };
 
-class MaxSplitterButtonConfig : public MSArrowButtonConfig {
-public:
-    static Component* CompFactory();
-    virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007c9680
-};
-
-class BrowserComponentConfig : public ContainerConfig {
-public:
-    static void Init(ResourceConfigTable*); // SDK setup, at 0x007fab70
-    virtual bool Virtual24(const std::string&); // HandleInstruction at 0x007fa8a0
-    virtual bool GetPredefinedComponent(const std::string&,ComponentConfig*&,Component*&); //3fa7e0, GetPredefinedComponent
-    virtual void SetComponent(Component*); // at 0x0078f960
-    BrowserComponent* mBrowserComponent; //98, borrowed; complete config9c, no lifetime implementation
-};
 }
 #endif

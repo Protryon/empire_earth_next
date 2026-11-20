@@ -10,7 +10,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyResourceConfig.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
 #include "rust/won_gui/guiconf.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
@@ -50,35 +49,4 @@ Image* ImageFilterConfig::GetImage()
     return this->mImage.get();
 }
 
-}
-
-
-namespace WONAPI {
-// Registers the Image, StretchImage, StretchCenterImage and ImageFilter configuration types
-void ImageConfig_Init(ResourceConfigTable* table)
-{
-    table->AddAllocator("Image",NewConfigOf<ImageConfig>,NoComponent);
-    table->AddAllocator("StretchImage",NewConfigOf<StretchImageConfig>,NoComponent);
-    table->AddAllocator("StretchCenterImage",NewConfigOf<StretchCenterImageConfig>,NoComponent);
-    table->AddAllocator("ImageFilter",NewConfigOf<ImageFilterConfig>,NoComponent);
-}
-}
-
-// Factory callbacks used by the registration above
-namespace WONAPI {
-
-
-
-
-
-
-}
-
-namespace WONAPI {
-// Accepts the parsed configuration without the base checks; the linker folds this body into the
-// identical one at 0x007099f0
-bool ImageConfig::PostParse(ConfigParser*)
-{
-    return true; // skips ComponentConfig::PostParse
-}
 }

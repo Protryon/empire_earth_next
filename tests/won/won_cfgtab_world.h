@@ -185,6 +185,11 @@ typedef Component ScrollArea; typedef Component ListArea; typedef Component Inpu
 typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
 typedef Component WONScrollContainer; typedef Component WONListCtrl; typedef Component WONTabCtrl; typedef Component WONComboBox;
 typedef Component WONFrameComponent;
+// the config kinds' component types (R6 WONLobby round 26: WONCfgTable.inl reads the component as the kind's type)
+typedef Component Label; typedef Component TabCtrl; typedef Component ComboBox; typedef Component Dialog; typedef Component TextArea;
+typedef Component TreeArea; typedef Component Scrollbar; typedef Component MultiListHeader; typedef Component ScrollbarScroller;
+typedef Component BrowserComponent; typedef Component ScreenContainer; typedef Component RectangleComponent;
+typedef Component RectangleComponent3D; typedef Component MSButtonBase; typedef Component ImageButton;
 struct LayoutPoint : Component { LayoutPoint() : Component(-1) {} };
 // the layouts ContainerConfig's instructions make (R6 WON round 40): each made and each component added is traced
 static int sNextLayout;
@@ -339,6 +344,8 @@ struct ComponentConfig : Owned {
     virtual ~ComponentConfig() {}
     virtual bool Virtual24(const std::string& key);
     SmartPtr<Component> mComponent = gComp;
+    EeWonCfgKind mKind = EeWonCfgKind::Component; // (the port's: each class below sets its kind)
+    void HandleFitText() { tr("HandleFitText"); }
     ComponentConfig* mParent = NULL;
     void SetComponent(Component* c) { mComponent = c; }
     bool mHasSetWidth = false, mHasSetHeight = false;
@@ -456,7 +463,15 @@ struct ComponentConfig : Owned {
     }
     bool EndOfString() { Skip(); bool e = mPos >= mText.size(); tr(std::string("EndOfString ") + (e ? "1" : "0")); return e; }
 };
+// the original classes' own Virtual24 (Orig: won_cfgtab_orig.h); the port's is ComponentConfig's over the kind
+#ifndef EE_CFGTAB_PORT
 #define V24 virtual bool Virtual24(const std::string&)
+#else
+#define V24 static_assert(true, "")
+#endif
+// each class's kind (the port's): set after the bases' (the most derived class's last)
+struct KindSet { KindSet(ComponentConfig* c, EeWonCfgKind k) { c->mKind = k; } };
+#define KIND(k) KindSet mKindSet##k{this, EeWonCfgKind::k}
 #define BASE(n) virtual bool Virtual24(const std::string& key) { return Base(#n, key); }
 // ContainerConfig's instructions (R6 WON round 40; the LAYOUT family, NEWLAYOUTPOINT and NOOVERLAPLAYOUT round 41).
 // The layout state starts as the original's uninitialised members might (mLayoutRef is set by the constructor).
@@ -467,21 +482,21 @@ struct ConfigMapSlot {
 };
 struct ConfigMap { ConfigMapSlot operator[](const std::string& k) { ConfigMapSlot s; s.n = k; return s; } };
 struct ContainerConfig : ComponentConfig {
-    V24; Component* mContainer = gComp; int mCurLayoutId = 0;
+    V24; KIND(Container); Component* mContainer = gComp; int mCurLayoutId = 0;
     Component* mLayoutRef = NULL; int mLayoutInstruction = 0x5a5; int mLayoutParams[4] = {11, -22, 33, -44};
     ConfigMap mConfigMap;
     bool HandleAdd(); bool HandleAddLayoutPoint(); bool HandleSameSizeLayout(bool, bool); bool HandleCenterLayout(bool, bool);
     bool HandleClearRightLayout(); bool HandleSpaceEvenlyLayout(bool); bool HandleSizeAtLeastLayout();
     bool HandleLayout(bool chain = false, bool repeat = false); bool HandleNewLayoutPoint(); bool HandleNoOverlapLayout();
 };
-struct ImageConfig : ComponentConfig { V24; SmartPtr<Image> mImage = new Image(77); };
+struct ImageConfig : ComponentConfig { V24; KIND(Image); SmartPtr<Image> mImage = new Image(77); };
 static int sNextStretch;
 struct StretchImageConfig : ImageConfig {
-    V24; StretchImage* mStretchImage;
+    V24; KIND(StretchImage); StretchImage* mStretchImage;
     StretchImageConfig() { mStretchImage = new StretchImage(sNextStretch++); mImage = mStretchImage; }
 };
 struct ImageFilterConfig : ImageConfig {
-    V24; SmartPtr<RawImage> mRawImage = new RawImage(99, 40, 20); bool mImageIsRawImage = false;
+    V24; KIND(ImageFilter); SmartPtr<RawImage> mRawImage = new RawImage(99, 40, 20); bool mImageIsRawImage = false;
     SmartPtr<RawImage> HandleFilter();
     // (a filter that made no image leaves an empty one here: the original's next use of it would crash)
     void SetRawImage(RawImage* r)
@@ -506,61 +521,64 @@ void ComponentConfig::AddChildToConfigMap(const GUIString& name, ComponentConfig
 {
     ConfigMapSlot aSlot; aSlot.n = (std::string)name; aSlot = SmartPtr<ComponentConfig>(c);
 }
-struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
-struct ScrollAreaConfig : ContainerConfig { V24; Component* mScrollArea = gComp; };
-struct ScrollerConfig : ContainerConfig { V24; Component* mScroller = gComp; };
-struct ScrollbarScrollerConfig : ScrollerConfig { V24; ScrollbarCondition GetScrollbarCondition(); Component* mScrollbarScroller = gComp; };
-struct ListAreaConfig : ScrollAreaConfig { V24; Component* mListArea = gComp; ListSortType ReadSortType(); static void ReadListFlags(ComponentConfig*, ListArea*); };
-struct MultiListAreaConfig : ListAreaConfig { V24; Component* mMultiListArea = gComp; };
-struct TreeAreaConfig : ListAreaConfig { V24; Component* mTreeArea = gComp; };
-struct MultiListHeaderConfig : ContainerConfig { V24; Component* mHeader = gComp; };
-struct MSHeaderControlConfig : MultiListHeaderConfig { V24; Component* mMSHeader = gComp; };
-struct WONHeaderControlConfig : MultiListHeaderConfig { V24; };
-struct ScrollbarConfig : ContainerConfig { V24; Component* mScrollbar = gComp; };
-struct MSScrollbarConfig : ScrollbarConfig { V24; Component* mMSScrollbar = gComp; };
-struct WONScrollbarConfig : ScrollbarConfig { V24; };
-struct TabCtrlConfig : ContainerConfig { V24; Component* mTabCtrl = gComp; };
-struct MSTabCtrlConfig : TabCtrlConfig { V24; Component* mMSTabCtrl = gComp; };
-struct WONTabCtrlConfig : TabCtrlConfig { V24; };
-struct ComboBoxConfig : ContainerConfig { V24; Component* mComboBox = gComp; };
-struct MSComboBoxConfig : ComboBoxConfig { V24; Component* mMSComboBox = gComp; };
-struct WONComboBoxConfig : ComboBoxConfig { V24; };
-struct MSButtonConfig : ButtonConfig { V24; Component* mMSButton = gComp; };
-struct MSTabButtonConfig : MSButtonConfig { V24; Component* mMSTabButton = gComp; };
-struct MSArrowButtonConfig : ButtonConfig { V24; Component* mMSArrowButton = gComp; };
-struct MS3DFrameConfig : ComponentConfig { V24; Component* mMS3DFrame = gComp; };
-struct MSEtchedFrameGroupConfig : ContainerConfig { V24; Component* mFrame = gComp; };
-struct MSScrollContainerConfig : ScrollbarScrollerConfig { V24; Component* mScrollContainer = gComp; };
-struct MSListCtrlConfig : MSScrollContainerConfig { V24; Component* mListCtrl = gComp; };
-struct WONScrollContainerConfig : ScrollbarScrollerConfig { V24; Component* mScrollContainer = gComp; };
-struct WONListCtrlConfig : WONScrollContainerConfig { V24; Component* mListCtrl = gComp; };
-struct PercentLayoutConfig : ComponentConfig { V24; Component* refs[4] = {}; int params[8] = {}; };
-struct ColorSchemeConfig : ComponentConfig { V24; SmartPtr<ColorScheme> mColorScheme = new ColorScheme; };
-struct RectangleComponentConfig : ComponentConfig { V24; Component* mRectangleComponent = gComp; };
-struct RectangleComponent3DConfig : ComponentConfig { V24; Component* mRectangleComponent3D = gComp; };
-struct ImageComponentConfig : ComponentConfig { V24; Component* mImageComponent = gComp; };
-struct ScreenContainerConfig : ContainerConfig { V24; Component* mScreenContainer = gComp; };
-struct BrowserComponentConfig : ContainerConfig { V24; Component* mBrowserComponent = gComp; };
-struct DialogConfig : ContainerConfig { V24; Component* mDialog = gComp; };
-struct ImageButtonConfig : ComponentConfig { V24; Component* mImageButton = gComp; };
-struct LabelConfig : ComponentConfig { V24; Component* mLabel = gComp; };
-struct InputBoxConfig : ComponentConfig { V24; Component* mInputBox = gComp; };
-struct TextAreaConfig : ScrollAreaConfig { V24; Component* mTextArea = gComp; };
-struct WONSimpleButtonConfig : ButtonConfig { V24; Component* mButton = gComp; void HandleButtonState(); void HandleButtonStates(); };
-struct WONButtonConfig : ButtonConfig { V24; Component* mButton = gComp; void HandleSetButtonState(); };
+struct ButtonConfig : ComponentConfig { V24; KIND(Button); Component* mButton = gComp; void HandleButtonFlags(); };
+struct ScrollAreaConfig : ContainerConfig { V24; KIND(ScrollArea); Component* mScrollArea = gComp; };
+struct ScrollerConfig : ContainerConfig { V24; KIND(Scroller); Component* mScroller = gComp; };
+struct ScrollbarScrollerConfig : ScrollerConfig { V24; KIND(ScrollbarScroller); ScrollbarCondition GetScrollbarCondition(); Component* mScrollbarScroller = gComp; };
+struct ListAreaConfig : ScrollAreaConfig { V24; KIND(ListArea); Component* mListArea = gComp; ListSortType ReadSortType(); static void ReadListFlags(ComponentConfig*, ListArea*); };
+struct MultiListAreaConfig : ListAreaConfig { V24; KIND(MultiListArea); Component* mMultiListArea = gComp; };
+struct TreeAreaConfig : ListAreaConfig { V24; KIND(TreeArea); Component* mTreeArea = gComp; };
+struct MultiListHeaderConfig : ContainerConfig { V24; KIND(MultiListHeader); Component* mHeader = gComp; };
+struct MSHeaderControlConfig : MultiListHeaderConfig { V24; KIND(MsHeaderControl); Component* mMSHeader = gComp; };
+struct WONHeaderControlConfig : MultiListHeaderConfig { V24; KIND(WonHeaderControl); };
+struct ScrollbarConfig : ContainerConfig { V24; KIND(Scrollbar); Component* mScrollbar = gComp; };
+struct MSScrollbarConfig : ScrollbarConfig { V24; KIND(MsScrollbar); Component* mMSScrollbar = gComp; };
+struct WONScrollbarConfig : ScrollbarConfig { V24; KIND(WonScrollbar); };
+struct TabCtrlConfig : ContainerConfig { V24; KIND(TabCtrl); Component* mTabCtrl = gComp; };
+struct MSTabCtrlConfig : TabCtrlConfig { V24; KIND(MsTabCtrl); Component* mMSTabCtrl = gComp; };
+struct WONTabCtrlConfig : TabCtrlConfig { V24; KIND(WonTabCtrl); };
+struct ComboBoxConfig : ContainerConfig { V24; KIND(ComboBox); Component* mComboBox = gComp; };
+struct MSComboBoxConfig : ComboBoxConfig { V24; KIND(MsComboBox); Component* mMSComboBox = gComp; };
+struct WONComboBoxConfig : ComboBoxConfig { V24; KIND(WonComboBox); };
+struct MSButtonConfig : ButtonConfig { V24; KIND(MsButton); Component* mMSButton = gComp; };
+struct MSTabButtonConfig : MSButtonConfig { V24; KIND(MsTabButton); Component* mMSTabButton = gComp; };
+struct MSArrowButtonConfig : ButtonConfig { V24; KIND(MsArrowButton); Component* mMSArrowButton = gComp; };
+struct MS3DFrameConfig : ComponentConfig { V24; KIND(Ms3DFrame); Component* mMS3DFrame = gComp; };
+struct MSEtchedFrameGroupConfig : ContainerConfig { V24; KIND(MsEtchedFrameGroup); Component* mFrame = gComp; };
+struct MSScrollContainerConfig : ScrollbarScrollerConfig { V24; KIND(MsScrollContainer); Component* mScrollContainer = gComp; };
+struct MSListCtrlConfig : MSScrollContainerConfig { V24; KIND(MsListCtrl); Component* mListCtrl = gComp; };
+struct WONScrollContainerConfig : ScrollbarScrollerConfig { V24; KIND(WonScrollContainer); Component* mScrollContainer = gComp; };
+struct WONListCtrlConfig : WONScrollContainerConfig { V24; KIND(WonListCtrl); Component* mListCtrl = gComp; };
+struct PercentLayoutConfig : ComponentConfig { V24; KIND(PercentLayout); Component* refs[4] = {}; int params[8] = {}; };
+struct ColorSchemeConfig : ComponentConfig { V24; KIND(ColorScheme); SmartPtr<ColorScheme> mColorScheme = new ColorScheme; };
+struct RectangleComponentConfig : ComponentConfig { V24; KIND(Rectangle); Component* mRectangleComponent = gComp; };
+struct RectangleComponent3DConfig : ComponentConfig { V24; KIND(Rectangle3D); Component* mRectangleComponent3D = gComp; };
+struct ImageComponentConfig : ComponentConfig { V24; KIND(ImageComponent); Component* mImageComponent = gComp; };
+struct ScreenContainerConfig : ContainerConfig { V24; KIND(ScreenContainer); Component* mScreenContainer = gComp; };
+struct BrowserComponentConfig : ContainerConfig { V24; KIND(Browser); Component* mBrowserComponent = gComp; };
+struct DialogConfig : ContainerConfig { V24; KIND(Dialog); Component* mDialog = gComp; };
+struct ImageButtonConfig : ComponentConfig { V24; KIND(ImageButton); Component* mImageButton = gComp; };
+struct LabelConfig : ComponentConfig { V24; KIND(Label); Component* mLabel = gComp; };
+struct InputBoxConfig : ComponentConfig { V24; KIND(InputBox); Component* mInputBox = gComp; };
+struct TextAreaConfig : ScrollAreaConfig { V24; KIND(TextArea); Component* mTextArea = gComp; };
+struct WONSimpleButtonConfig : ButtonConfig { V24; KIND(WonSimpleButton); Component* mButton = gComp; void HandleButtonState(); void HandleButtonStates(); };
+struct WONButtonConfig : ButtonConfig { V24; KIND(WonButton); Component* mButton = gComp; void HandleSetButtonState(); };
 struct SplitterConfig : ContainerConfig {
-    V24; Component* mSplitter = gComp; Splitter::QuadrantPosition ReadQuadrant(); Splitter::SplitterType ReadSplitterType();
+    V24; KIND(Splitter); Component* mSplitter = gComp; Splitter::QuadrantPosition ReadQuadrant(); Splitter::SplitterType ReadSplitterType();
 };
-struct WONFrameComponentConfig : ComponentConfig { V24; Component* mFrameComponent = gComp; };
-struct StretchCenterImageConfig : ImageConfig { V24; Component* mStretchCenterImage = gComp; };
+struct WONFrameComponentConfig : ComponentConfig { V24; KIND(WonFrameComponent); Component* mFrameComponent = gComp; };
+struct StretchCenterImageConfig : ImageConfig { V24; KIND(StretchCenterImage); Component* mStretchCenterImage = gComp; };
 struct FontDescriptor { Field mSize{NULL, "mDescriptor.mSize"}; int mStyle = 0; };
 struct FontConfig : ComponentConfig {
-    V24; Field mNeedRecalcFont{NULL, "mNeedRecalcFont"}; FontDescriptor mDescriptor;
+    V24; KIND(Font); Field mNeedRecalcFont{NULL, "mNeedRecalcFont"}; FontDescriptor mDescriptor;
     void SetFont(Font* f) { tr("SetFont(" + P(f) + ")"); }
 };
-struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButtonClickSound() { tr("HandleButtonClickSound"); } };
+struct WONSkinConfig : ComponentConfig { V24; KIND(WonSkin); bool ReadVert(); void HandleButtonClickSound() { tr("HandleButtonClickSound"); } };
 #undef V24
 #undef BASE
+#undef KIND
+// WONSkinConfig's BUTTONCLICKSOUND as the port calls it (ConfigTableHost.cpp's in the game)
+static void CfgSkinClickSound(ComponentConfig* c) { static_cast<WONSkinConfig*>(c)->HandleButtonClickSound(); }
 // The configs by name, for the driver.
 #define EE_CFGTAB_CONFIGS(X) X(ButtonConfig) X(MSButtonConfig) X(MSArrowButtonConfig) X(MSTabButtonConfig) X(MS3DFrameConfig) \
     X(MSComboBoxConfig) X(MSScrollbarConfig) X(MSEtchedFrameGroupConfig) X(MSTabCtrlConfig) X(MSScrollContainerConfig) \
