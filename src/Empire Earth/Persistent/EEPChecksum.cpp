@@ -11,9 +11,6 @@
 #include "ee/EEPersistentTag.h"
 #include "rust/base/error.h"
 
-const UString EEPChecksum::sNumChecksums("EEPChecksum-NumChecksums");
-const UString EEPChecksum::sChecksum("EEPChecksum-Checksum");
-const UString EEPChecksum::sVerboseMode("EEPChecksum-VerboseMode");
 
 // Creates an empty saved checksum chunk, verbose or not
 EEPChecksum::EEPChecksum(bool inVerbose)

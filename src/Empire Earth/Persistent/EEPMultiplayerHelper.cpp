@@ -17,14 +17,6 @@
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EEPersistentTag.h"
 
-const UString EEPMultiplayerHelper::sNemmMessageNumber("EEPMultiplayerHelper-NemmMessageNumber");
-const UString EEPMultiplayerHelper::sNescCt("EEPMultiplayerHelper-NescCt");
-const UString EEPMultiplayerHelper::sNescPt("EEPMultiplayerHelper-NescPt");
-const UString EEPMultiplayerHelper::sNescommCt("EEPMultiplayerHelper-NescommCt");
-const UString EEPMultiplayerHelper::sNescommLastTickRecvd("EEPMultiplayerHelper-NescommLastTickRecvd");
-const UString EEPMultiplayerHelper::sSNessLastCt("EEPMultiplayerHelper-sNessLastCt");
-const UString EEPMultiplayerHelper::sNessCt("EEPMultiplayerHelper-NessCt");
-const UString EEPMultiplayerHelper::sNessPt("EEPMultiplayerHelper-NessPt");
 
 // Creates the saved multiplayer-state chunk
 EEPMultiplayerHelper::EEPMultiplayerHelper()

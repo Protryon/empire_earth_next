@@ -21,10 +21,6 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EESaveGameFiles.h"
 
-const UString EEPPlayerHelper::sPlayerCount("EEPPlayerHelper-PlayerCount");
-const UString EEPPlayerHelper::sPlayerNum("EEPPlayerHelper-PlayerNum");
-const UString EEPPlayerHelper::sPlayerCode("EEPPlayerHelper-PlayerCode");
-const UString EEPPlayerHelper::sScenarioPlayerIndex("EEPPlayerHelper-ScenarioPlayerIndex");
 
 // Creates an empty saved-players chunk for loading (three player slots, local player 0)
 EEPPlayerHelper::EEPPlayerHelper()

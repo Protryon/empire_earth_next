@@ -21,15 +21,12 @@
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
-const UString RTSMap::sMapWidth("RTSMap-MapWidth");
 
 // chain at 0x521cbb (wrapper)
 //   object 0x929828  (guard 0x929838 bit 2)
-const UString RTSMap::sMapHeight("RTSMap-MapHeight");
 
 // chain at 0x521cfe (wrapper)
 //   object 0x929818  (guard 0x929838 bit 4)
-const UString RTSMap::sVertexColorIndex("RTSMap-VertexColorIndex");
 
 // Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
 RTSMap::RTSMap(float inF1955F4)

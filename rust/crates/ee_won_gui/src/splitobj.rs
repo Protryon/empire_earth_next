@@ -472,7 +472,9 @@ impl Drop for EeWonSplitter {
 /// A new Rust Splitter for the C++ `component`, its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_won_split_new(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonSplitter {
-    Box::into_raw(Box::new(EeWonSplitter::new(component, host)))
+    let made = Box::into_raw(Box::new(EeWonSplitter::new(component, host)));
+    crate::registry::register(component, crate::registry::EeWonGuiKind::Splitter, made as *const c_void);
+    made
 }
 
 /// # Safety
@@ -480,6 +482,7 @@ pub extern "C" fn ee_won_split_new(component: *mut c_void, host: EeWonGuiHostFn)
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_split_free(split: *mut EeWonSplitter) {
     if !split.is_null() {
+        crate::registry::unregister(split as *const c_void);
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(split) });
     }

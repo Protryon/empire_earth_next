@@ -44,21 +44,6 @@
 #include "rust/sim/combat.h"
 #include "rust/sim/units.h"
 
-const UString EEPWorldHelper::sTheScenarioManager("EEWorldHelper-The Scenario Manager");
-const UString EEPWorldHelper::sTheTeams("EEPWorldHelper-The Teams");
-const UString EEPWorldHelper::sTheNumberOfWondersToWin("EEPWorldHelper-The Number Of Wonders To Win");
-const UString EEPWorldHelper::sTheTimeOfDay("EEPWorldHelper-The Time Of Day");
-const UString EEPWorldHelper::sTheWaterLevel("EEPWorldHelper-The Water Level");
-const UString EEPWorldHelper::sTheZoom("EEPWorldHelper-The Zoom");
-const UString EEPWorldHelper::sThePopulationLimit("EEPWorldHelper-The Population Limit");
-const UString EEPWorldHelper::sTheGameSpeed("EEPWorldHelper-The Game Speed");
-const UString EEPWorldHelper::sTheVictoryEnabled("EEPWorldHelper-The Victory Enabled");
-const UString EEPWorldHelper::sTheUnitImprovementsAllowed("EEPWorldHelper-The Unit Improvements Allowed");
-const UString EEPWorldHelper::sTheTeamsLocked("EEPWorldHelper-The Teams Locked");
-const UString EEPWorldHelper::sTheCheatCodesAllowed("EEPWorldHelper-The Cheat Codes Allowed");
-const UString EEPWorldHelper::sTownIDCounter("EEPWorldHelper-TownID Counter");
-const UString EEPWorldHelper::sHerdIDCounter("EEPWorldHelper-HerdID Counter");
-const UString EEPWorldHelper::sUsingCarbon("EEPWorldHelper-Using Carbon");
 
 static long LoadTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                       std::vector<EETeam>& outTeams);

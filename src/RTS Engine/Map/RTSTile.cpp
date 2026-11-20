@@ -14,15 +14,12 @@
 
 // chain at 0x5245bb (wrapper)
 //   object 0x929878  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-const UString RTSTile::sElevation("RTSTile-Elevation");
 
 // chain at 0x5245fe (wrapper)
 //   object 0x929860  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-const UString RTSTile::sModelIndex("RTSTile-ModelIndex");
 
 // chain at 0x524641 (wrapper)
 //   object 0x929850  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-const UString RTSTile::sTerrainIndex("RTSTile-TerrainIndex");
 
 // Creates a tile at the given height with no units and terrain type 0
 RTSTile::RTSTile(float inHeight)

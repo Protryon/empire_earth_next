@@ -137,19 +137,7 @@ public:
             default: return 0;
         }
     }
-    void SetAdjustHeightToFitText(bool a) { this->WCall(EeWonWbCall::SetAdjustHeightToFitText,a); }
-    void SetWrapText(bool w) { this->WCall(EeWonWbCall::SetWrapText,w); }
-    void SetTransparent(bool t) { this->WCall(EeWonWbCall::SetTransparent,t); }
     void SetButtonState(int s,Image* i,int c,Font* f,bool checked=false) { ee_won_wonbtn_set_state(this->mWb,s,i,c,f,checked); }
-    void SetHorzAlign(HorzAlign a) { this->WCall(EeWonWbCall::SetHorzAlign,(intptr_t)a); }
-    void SetTextColor(int c) { this->WCall(EeWonWbCall::SetTextColor,c); }
-    void SetVertAlign(VertAlign a) { this->WSet(EeWonWbField::VAlign,(unsigned char)a); } // stores the low byte
-    void SetScaleImage(bool v) { this->WSet(EeWonWbField::ScaleImage,v); }
-    void SetDefaultTextColor(int v) { this->WSet(EeWonWbField::DefaultTextColor,v); }
-    void SetDrawGrayText(bool v) { this->WSet(EeWonWbField::DrawGrayText,v); }
-    void SetFocusStyle(unsigned char v) { this->WSet(EeWonWbField::FocusStyle,v); }
-    void SetTextPadding(int l,int t,int r,int b) { this->WSet(EeWonWbField::LeftTextPad,l); this->WSet(EeWonWbField::TopTextPad,t); this->WSet(EeWonWbField::RightTextPad,r); this->WSet(EeWonWbField::BottomTextPad,b); }
-    void SetFocusPadding(int l,int t,int r,int b) { this->WSet(EeWonWbField::LeftFocusPad,l); this->WSet(EeWonWbField::TopFocusPad,t); this->WSet(EeWonWbField::RightFocusPad,r); this->WSet(EeWonWbField::BottomFocusPad,b); }
     int GetRightTextPad() { return (int)this->WCall(EeWonWbCall::Get,(intptr_t)EeWonWbField::RightTextPad); }
     void SetHorzTextPad(int l,int r) { this->WSet(EeWonWbField::LeftTextPad,l); this->WSet(EeWonWbField::RightTextPad,r); }
     void SetFont(Font* f) { this->WCall(EeWonWbCall::SetFont,(intptr_t)f); }

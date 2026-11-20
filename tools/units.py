@@ -123,8 +123,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",
-                       # TEST ONLY: the active groups' sweep at a groups game's end (AGPL records; R5b.4 round 35)
-                       "Empire Earth/Units/EEActiveGroupSweep.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
