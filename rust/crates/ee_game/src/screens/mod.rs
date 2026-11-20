@@ -184,6 +184,7 @@ pub mod editor_area;
 #[cfg(not(test))]
 mod editor_area_ffi;
 pub mod editor_brush;
+mod editor_calls;
 pub mod editor_conditions;
 pub mod editor_controls;
 mod editor_direct;
@@ -219,19 +220,18 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_sefmx;
 pub mod editor_selt;
 #[cfg(not(test))]
 mod editor_selt_ffi;
 pub mod editor_sepl;
-mod editor_calls;
-pub mod editor_sefmx;
-pub mod editor_tabsx;
+pub mod editor_seplx;
 pub mod editor_setnx;
 pub mod editor_seunx;
-pub mod editor_seplx;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
+pub mod editor_tabsx;
 pub mod editor_terrain;
 #[cfg(not(test))]
 mod editor_terrain_ffi;
