@@ -34215,3 +34215,117 @@ numbers and the UI units' targets now.
   main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
 - Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
   missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
+
+## The scenario editor lane, round 2: the editor's two small cycles cut; the editor hosts' toolkit ops and the condition and effect screens' control records in Rust (ee_game editor_direct.rs; branch rust-seditor2, 2026-11-19)
+
+The brief: break the editor's two small C++ cycles, then move the editor's screens and tabs wholly, bottom up, then
+finish the Scenario Manager's triggers; 2,500 or more net C++ lines. **Net C++: -431** (commits below; Rust +1,129): the two
+cycles are gone, but no editor class or Scenario Manager class moved wholly this round, and the target was not met.
+
+### The cycles
+
+`cpp_deps.py cuts --of` named one symbol each way for both:
+
+- **EESEEvents <-> EESETSEffect** (1,008 lines): EESEEvents called `FillPlaceComboBox` (EESETSEffect's), EESETSEffect
+  called `FillScenarioComboBox` (EESEEvents'), a two-line function over the first. It moved beside `FillPlaceComboBox`.
+- **EESEIAExport <-> EESEInstructions** (373 lines): the import question's answer (`EESEImportTextAnswer`) and the
+  import button's event (`EESEIEImport::ProcessEvent`) were in EESEInstructions.cpp, the export ones in
+  EESEIAExport.cpp, and each unit made the other's: all four are EESEIAExport.cpp's now (the answer `static`).
+
+After both, `cuts --of` reports each unit alone (no cycle).
+
+### The measure first: what the lane's C++ still is
+
+The editor's classes were already thin (round 1 and the R6 editor rounds); what is left in `Scenario Editor/` is the
+hosts (`ee_screenscpp_*`: one C++ case per call the editor's Rust makes into a C++ object) and a few C++ classes
+whose methods are host calls too. Reading every host by case:
+
+- **Constructors** (`SeplMake`, the tabs' `MAKE_*` ops, the form's `BASICS`, the brush group, the load thread):
+  `new` of a C++ control, event or action class. They stay until those classes are kinds or Rust objects (the UI
+  lane's toolkit classes, the actions).
+- **World statements** (the scenario manager's lists and elements, the tech tree, the unit classes' static
+  `sUnitTypes`, the calamity and graphic effect classes, the editor's selection, the camera, the load thread's
+  posts): no Rust holds those objects, so a Rust answer would be a call back into the same C++.
+- **Toolkit statements**: one call on a C++ control that is a shell over a Rust object (a label's text, an edit
+  box's line, a combo box's selection, a list's line count, a slider's value, a check box's state, a display mode,
+  a trigger event). `ee_ui::direct` (R6 game screens B) reaches the Rust object from the C++ pointer, so these need
+  no C++ at all. **This round moved them.**
+
+The Scenario Manager side is the same story one level down: the triggers', conditions' and effects' decisions are
+Rust (R5b.5 rounds 1-9, the calamities and scenario lane); EEScenarioHost.cpp, EESMEffect.cpp's world host and
+EESMObject.cpp's read host are world statements on C++ units, players, AI and camera, and EEScenarioCapture.cpp (615
+lines) is a TEST ONLY reader of the same objects whose bytes the checked-in goldens fix. None moved.
+
+### What moved
+
+- **The condition and effect screens' control records** (`EESETSEffectControls`, 46 pointers;
+  `EESETSConditionControls`, 23): made, freed and filled by slot in Rust (`editor_direct.rs` `controls_new`,
+  `controls_free`, `slot`); the C++ classes stay as the layout the editor gate (EESimEditor.cpp) reads through the
+  screens' handles, and EESETSEffect.cpp asserts the layout against `EE_SCREENS_SEET_EFFECT_SLOTS` /
+  `_CONDITION_SLOTS` and three member offsets. The C++'s remaining cases read a member through
+  `ee_screens_seet_slot`; the two per-record `SeetSlot`, `SeetCombo`, `SeetEdit` overload pairs and the `SeetOp`
+  template went (one `SeetC` accessor).
+- **The generic host's toolkit ops** (`ee_screenscpp_seet` / `_sect`): display, rectangle, location, texts and
+  numbers, line reads, widths, clear and append, selections, line counts, trigger events (hold, restore, set,
+  null), the range event's fire, check states, sliders, help strings, strings.
+- **The shared maker's toolkit ops** (`ee_screenscpp_sepl`, which every tab and sub-screen routes its ops below 100
+  to): 28 cases (rectangle, display, check and radio and tri-state, combo and list ops, edit numbers and copies,
+  sliders, label texts with `SeplText`'s five kinds, groups, location, help, edit bytes). All 12 FFI adapters call
+  `editor_direct::sepl`, which answers in Rust or calls the C++.
+- **The editor events' host** (`ee_screenscpp_se`): eight toolkit ops, and `ee_screenscpp_se_text` /
+  `_se_set_text` whole (gone from C++).
+- **The object screen's** action names (append, id of the selection, index of a name: `ee_sim::units::script`'s
+  tables directly) and its string and line texts; **the trigger tab's** list selection, count and select and its
+  groups; **the trigger screen's** event slot; **the unit tab's** event slot and list ops; **the map tab's** label
+  rectangle, combo `atoi` and control by id (the terrain tab's route too); **the area screen's** rectangle centre;
+  **the editor events'** (`ee_screenscpp_see`) nine toolkit ops; **the form's** group enable, button fire, combo
+  select and label text.
+
+### Lessons
+
+- **A host case is a toolkit statement, a world statement or a constructor; only the first kind can move before its
+  object does.** Classifying every case of every host first (above) told what the round could take: about 450 lines
+  of toolkit statements in `Scenario Editor/`, nothing whole. The 2,500-line target needed whole moves that the
+  objects behind the hosts (the toolkit's control classes as kinds, the scenario elements as Rust records, the
+  actions) do not allow yet.
+- **Answer below the hosts' traits.** As the UI lane's `hud_direct.rs`, the Rust answers sit in the FFI adapters, so
+  the screens' unit tests (recorded op streams) and the SGVW trace (world ops only) are unchanged by construction;
+  the editor gate (14,448 lines, every control's state) is the check that the answers equal the C++'s.
+- **Mirror the C++ conversions, not the intent**: `SetText(unsigned long)` of an edit box prints through
+  `PlatIToA(int)` (so `i as i32`), the shared maker's `EDIT_NUMBER` through `"%lu"` (`c_ulong`), a label's
+  `SetText((unsigned long)x)` resolves to `SetText(long)`; `GetCurrentSelection`'s answer is the selection or -1
+  whatever the call returned (a list box always writes its out word); `UIControl::GetWidth` is `UMFloor(w + 1)`
+  (round half to even, then down when above).
+- **A heredoc of Python with triple quotes can fail in this shell** ("unexpected EOF while looking for matching");
+  write edit scripts with the Write tool and run them by path.
+- **Don't edit Rust while `rust_build.py gate` runs**: its rustfmt pass read a half-formatted new file and failed the
+  step; and a module order change in `mod.rs` reorders cbindgen's constants (the header check fails until
+  `rust_build.py header` runs again).
+
+### What moved (commits)
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 4e8ade361 | `FillScenarioComboBox` in EESETSEffect.cpp (EESEEvents <-> EESETSEffect cut) | 0 |
+| 314e62bf4 | the import answer and event in EESEIAExport.cpp (EESEIAExport <-> EESEInstructions cut) | 0 |
+| 58bdef7d2 | the hosts' toolkit ops and the two control records in Rust (`editor_direct.rs`, 980 lines; 6 unit tests) | -411 |
+| 76d72d14b | the object screen's class names, the trigger tab's caret, the form's captures and help label | -20 |
+
+### Checks
+
+Per step (`build/se2/step.sh`): the build `--sim` 0/0, the Rust gate PASS, the editor gate PASS 14,448, the
+civilization gate PASS 4,062, scenario_check 27/27, the oracle seeds 2-3 identical. At the end (origin/rust
+3449a04fd was already in the round's base, so the merge was a no-op): both builds 0/0, the Rust gate PASS (4,977
+tests), the editor and civilization gates PASS, scenario_check 27/27, the oracle seeds 2-7 identical, the scenario
+capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; deleted after), the editor tour PASS
+(the editor's first frame: the map tab's controls laid out and filled, render check ok), `gates.sh` GATES PASS
+(tour, ai-game time-cap with both computers alive on classic_lua, lan-game).
+
+### What exercises what
+
+- The editor gate (EE-SIM `--editor-script`) runs every tab and sub-screen, so every moved op on every control it
+  dumps; its output is unchanged (PASS 14,448). The civilization gate (4,062) and scenario_check (27/27) do not
+  reach the editor's hosts; EE-SIM builds no form in a game, so the oracle is unchanged by construction.
+- Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
+  rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
+  the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
