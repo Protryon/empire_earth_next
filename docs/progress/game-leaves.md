@@ -1,7 +1,7 @@
 # The game core lane (was the game's leaves): src/Empire Earth/Empire Earth, Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread, Map; src/RTS Engine; src/Low-Level Engine but its User Interface
 
 The lane's state. Each round rewrites this file to the current state; each round's story goes in PORT_LEARNINGS.md
-("The game's leaves, round 1/2", "The game core lane, round 3"). The census is `python -I tools/cpp_deps.py report`
+("The game's leaves, round 1/2", "The game core lane, round 3/4/5"). The census is `python -I tools/cpp_deps.py report`
 (after a build: it reads the objects): `leaves.txt`, `near_leaves.txt`, `waves.txt`; `cpp_deps.py unit FILE` names
 one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the directories above and nothing else.
 
@@ -9,6 +9,11 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 | C++ (deleted or shrunk) | Rust home | What callers keep |
 |---|---|---|
+| **Round 5** (branch `rust-core5`) | | |
+| EEPlayer's private lists (mStrandedUnits, mUnitsToRepatrol, mLoadedUnitIDs, mConstructionSiteIDs, mWonderIDs, mSoundLoadedClasses, mLoadedMedia, mUnitsOffMap) | ee_sim units `player_lists.rs` (EeUnitsPlayerLists, EEPlayer::mLists) | the methods over them are one-line calls; the units' reference counts and ids through `ee_units_lists_host` (EEPlayer.cpp) |
+| EEWUnitsOffMapInfo (the class, its Load, Save, RepairPointers, SetUnit, ReleaseUnit) | ee_sim units `player_lists.rs` (EeUnitsOffMapInfo) | ee/EEWUnitsOffMapInfo.h: `typedef EeUnitsOffMapInfo EEWUnitsOffMapInfo`; the callers set `mReason` through GetOffMapInfo as before |
+| EEPlayer::mTownsByID (written, never read), mL9B4 (made, never used), RemoveTownID | (gone) | |
+| 88 dead class-static save keys (EEPlayer, RTSPlayer, RTSUnit, EETechTree, EETechTreeEpoch, RTSMap, RTSTile, RTSVisibleMap, EEMap, EECivilization, the persistent helpers) | (gone: dead code, not a move) | |
 | **Round 4** (branch `rust-core4`) | | |
 | EETechTree.cpp's gEpochCount, sNodeEpochs, EETechTreeEpochOf, EERegisterTechNode | ee_sim tech `tech_ids.rs` | EEEpochCount, EEIsEpochID, EETechTreeEpochOf inline in ee/EETechTreeTechID.h over two hand-declared Rust calls |
 | the tech tree's captured entry points (TNRS, TNPR, TSOL, TTRS), TEPO, TRTE, the TNWK walk records (EETechTree/Epoch/Node.cpp, EETechCapture.cpp) | ee_sim tech `nodes_capture.rs` (the FfiHost answers the wrapped host operations) | the methods are walk forwarders; NeedsUnitMedia and GetBuildTime call ee_tech_capture_node_walk |
@@ -30,6 +35,21 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Left, and why
 
+- **EEPlayer** (round 5's brief: the player whole in Rust): EEPlayer.cpp is 3,100 lines of hosts and orchestration
+  over other lanes' classes; every decision is Rust already (ee_sim units player*.rs, 7,900 lines). The parts, by
+  size: EEPlayerHost 340 (a case per C++ call of the Rust bodies: tech nodes, unit classes, the towns and herds, the
+  groups, the patrol groups, the UI), the save operations 160 (a C++ sub-object's Load or Save each), the towns' save
+  host 98, the tick's operations 69, the selection methods 180 (EESelectedGroup), ClearFootprint 69, the TEST ONLY
+  PLST/PLEC capture 80, the constructors, destructor, Reset and Clear 150, the class media forwarders (EEUnitStats).
+  The member containers of C++ objects are read in place by 13-38 files each and by the world views. What moves
+  next, in order: the groups as Rust objects (Units lane), then the selection methods and the groups' parts of
+  Reset, the destructor, Clear, the tick and the save; the towns' and herds' host cases straight into ee_sim::cp's
+  town and herd bodies (Rust already; needs EeTownFields' and EeHerdFields' base offsets in the world layout,
+  EEWorldLayout.cpp: Units lane); EEUnitClassUpgrade as a Rust record (Units lane) for the improvement cases,
+  RefreshUpgrades and the media forwarders.
+- **The tech tree's containers** (EETechTreeEpochList, each epoch's node map): the walks are Rust already over
+  EETechHost; the containers hold C++ nodes (virtual GetCost, GetIsAvailable) the trees deep-copy (operator=), so a
+  Rust map of them saves the four container cases of EETechHost and the epoch's map code (about 60 lines); not done.
 - **The round's census** (tools/cpp_deps.py, the UI's units: User Interface Thread, UI Events, LLE User Interface,
   the scenario editor; EEFOFindNewTargetNearOldTarget aside): 325 edges (950 symbols) into this lane at the start,
   287 (859) after the GE constructors and the window's getters; GEBitmap.cpp 37 UI units -> 3, the tech ids 13 -> 9.
@@ -62,8 +82,9 @@ one unit's edges. Since batch 6 (agent rules "Lane scopes") the lane owns the di
 
 ## Next
 
-The UI's remaining edges first (above): the camera's forwarders over a host Rust names (as game_hosts.rs does
-for the GE objects), GETexture's stage setters inline, EEEpochTitleID over the epochs' title ids in Rust.
-GERasterizer's setters over a small rast header (ee_render ge split); the calamity captures once EECalamity's
-locations and units are in its Rust record; EEPChecksum's load and save over FSMemoryFile::Ops; the media objects
-as Rust objects.
+EEPlayer shrinks with the classes it calls (Left, above): the towns' and herds' host cases into ee_sim::cp once the
+world layout has EeTownFields' and EeHerdFields' base offsets; the selection methods and the groups' parts once the
+groups are Rust objects; the improvement cases once EEUnitClassUpgrade is a Rust record. In the lane meanwhile: the
+camera's forwarders over a host Rust names, GERasterizer's setters over a small rast header (ee_render ge split),
+the calamity captures once EECalamity's locations and units are in its Rust record, EEPChecksum's load and save over
+FSMemoryFile::Ops, the media objects as Rust objects.
