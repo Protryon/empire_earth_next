@@ -353,7 +353,11 @@ static void GEShutdown(bool inForced)
 long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
 {
     URegisterShutdown(GEShutdown);
-    PlatFontRegisterBuiltIn();   // the faces the fonts are made from (GDI's system fonts before)
+    // the faces the fonts are made from (GDI's system fonts before). If one does not register, its fonts fall back to
+    // another face, or with none every GEFont has no platform font and a height of 0, and only missing text would
+    // show it: stop here (PlatFontData.c also refuses an empty font file at compile time)
+    if (!PlatFontRegisterBuiltIn())
+        ESVerify(__FILE__, __LINE__, "PlatFontRegisterBuiltIn() (the fonts built into the program: PlatFontData.c)");
     GEScreen::sInstance = inInstance;
     GERasterizer::ClearRasterizers();
     GERasterizer* theRasterizer = DX7TnLRasterizer();
