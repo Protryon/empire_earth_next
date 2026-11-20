@@ -12962,6 +12962,12 @@ void ee_screens_gb_open(size_t bg);
 /// `EEUIBMapBackground::LoadBackground`.
 int64_t ee_screens_mb_load(size_t bg);
 
+/// `EEUICCommandUnits`' constructor's body after the record and the display mode.
+void ee_screens_cu_construct(size_t cu, size_t listener);
+
+/// `~EEUICCommandUnits`' body.
+void ee_screens_cu_destroy(size_t cu);
+
 /// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
 ///
 /// # Safety
@@ -13360,6 +13366,21 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+/// `EEUIFMGStatusBar`'s constructor's body (`rect` the `GERectangle*`, `form` the `UIForm*`).
+void ee_screens_sba_construct(size_t bar, size_t rect, size_t form, bool editor, bool large_icon);
+
+/// `~EEUIFMGStatusBar`'s body.
+void ee_screens_sba_destroy(size_t bar);
+
+/// `EEUIFMGStatusBar::CopyData`.
+int64_t ee_screens_sba_copy_data(size_t bar);
+
+/// `EEUIFMGStatusBar::DrawPolygons`.
+int64_t ee_screens_sba_draw_polygons(size_t bar);
+
+/// `EEUIFMGStatusBar::DrawTextA`.
+int64_t ee_screens_sba_draw_text(size_t bar);
 
 /// `EEUIFMGStatusBox::UnloadIcons`.
 void ee_screens_sb_unload_icons();

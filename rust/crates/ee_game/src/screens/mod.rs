@@ -250,6 +250,7 @@ mod game_actions_tests;
 // the moved C++ host cases (UI lane round 7) and their one-statement C++ shims
 pub(crate) mod backgrounds_calls;
 pub(crate) mod campaign_model_calls;
+pub(crate) mod command_units_calls;
 pub(crate) mod game_calls;
 pub(crate) mod game_view_calls;
 pub(crate) mod game_calls_more;
@@ -357,6 +358,7 @@ mod status_button_ffi;
 // the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
 mod toolkit;
 pub(crate) mod ui_calls;
+pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
 pub(crate) mod ui_manager_calls;
