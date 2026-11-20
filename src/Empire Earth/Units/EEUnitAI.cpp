@@ -46,6 +46,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEAirTrafficControl.h"
+#include "ee/EECombatGoals.h"
 #include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
@@ -162,12 +163,12 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_DROP_LOCATION: {
         GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
         EEUnit* theTarget;
-        EEFindDropLocation(theUnit, &theTarget, &theLocation, NULL);
+        theTarget = EECombatFindDropLocation(theUnit, NULL, theLocation);
         CondPoint(ioIo, theLocation);
         return EEObj(theTarget);
     }
     case EE_UNITS_COND_HIT_DISTANCE:
-        ioIo->f = EEGetHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
+        ioIo->f = EECombatHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
         return 0;
     case EE_UNITS_COND_DISTANCE_3D:
         ioIo->f = theUnit->DistanceSquared3D(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]));

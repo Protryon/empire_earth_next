@@ -63,6 +63,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
 #include "rust/sim/units.h"
+#include "ee/EECombatGoals.h"
 
 static EEUnit* UnitOf(uint32_t inID)
 {
@@ -380,7 +381,7 @@ extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, f
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
     std::vector<EEUnit*>* thePieces = new std::vector<EEUnit*>();
     EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->Get(inTechnology)->mData->mUnitClass];
-    EEPlanWall(GE2DPoint(inStartX, inStartY), GE2DPoint(inEndX, inEndY), theClass, thePlayer, 1, 0, *thePieces);
+    ee_units_uu_plan_wall(inStartX, inStartY, inEndX, inEndY, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)thePlayer, 1, 0, thePieces);
     *outCount = thePieces->size();
     return thePieces;
 }
@@ -432,7 +433,7 @@ extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnolog
 
 extern "C" uint8_t ee_units_host_can_place_on_tile(void* inPlayer, int64_t inUnitType, int64_t inX, int64_t inY)
 {
-    bool theResult = EECanPlaceOnTile(static_cast<EEPlayer*>(inPlayer), (long)inUnitType, (long)inX, (long)inY, 0, 1);
+    bool theResult = ee_units_uu_can_place_unit_on_tile((uint64_t)(uintptr_t)static_cast<EEPlayer*>(inPlayer), 0, (long)inUnitType, (long)inX, (long)inY, 0, 1, NULL);
     return theResult ? 1 : 0;
 }
 
@@ -528,7 +529,7 @@ extern "C" size_t ee_units_host_farm_drop_sites(uint32_t inFarm, uint32_t* outID
         return CopyList(outIDs, inCapacity);
     }
     std::vector<EEUnit*> theSites;
-    sFound = EEGetFarmDropSites(ComplexOf(inFarm), theSites) ? 1 : 0;
+    sFound = ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)(ComplexOf(inFarm)), &theSites) ? 1 : 0;
     sHostList.clear();
     for (size_t i = 0; i < theSites.size(); i++)
         sHostList.push_back(static_cast<uint32_t>(theSites[i]->mUnitID));
@@ -639,7 +640,7 @@ extern "C" void* ee_units_host_player_selection(void* inPlayer)
 // the reads below are made on the objects
 extern "C" uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer)
 {
-    return EEIsSeenBy(UnitOf(inUnit), static_cast<EEPlayer*>(inPlayer), true) ? 1 : 0;
+    return EECombatIsSeenBy(UnitOf(inUnit), static_cast<EEPlayer*>(inPlayer), true) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit)

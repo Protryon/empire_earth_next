@@ -295,7 +295,7 @@ static bool EECPUnitsImproveCost(EEComputerPlayer* inPlayer, long inType, long i
 static long EECPUnitsGateSide(EEComputerPlayer* me, long x, long y)
 {
     std::vector<EEUnit*> theUnits;
-    EEGetUnitsOnTile(x, y, theUnits);
+    ee_units_uu_units_on_tile(x, y, &theUnits);
     EEUnit* theWall = NULL;
     for (unsigned long k = 0; k < theUnits.size() && theWall == NULL; k++)
         if (theUnits[k]->GetUnitClass()->GetIsWall() && theUnits[k]->GetHitPoints() > 0 && theUnits[k]->mPlayer == me
@@ -623,9 +623,6 @@ static int64_t EECPUnitsWaterShore(EeAiUnitsTiles& t)
 }
 
 // the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
-void EEGetWallLine(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo, std::vector<U2DPoint<long> >& outTiles);
-void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
-long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
 // IsPathBlocked (EECPWallManager::PlanWall): a land building stands on the line or within 2 tiles of it, the
@@ -637,14 +634,14 @@ static bool EECPUnitsWallBlocked(EEComputerPlayer* me, const EeAiUnitsTiles& t)
     for (size_t k = 0; k < theLine.size(); k++) {
         theAll.push_back(theLine[k]);
         for (long r = 1; r <= 2; r++) {
-            EEGetSquareRingTiles(theLine[k].mX, theLine[k].mY, r, theAround);
+            ee_units_uu_square_ring_tiles(theLine[k].mX, theLine[k].mY, r, &theAround);
             theAll.insert(theAll.end(), theAround.begin(), theAround.end());
         }
     }
     std::sort(theAll.begin(), theAll.end());
     theAll.erase(std::unique(theAll.begin(), theAll.end()), theAll.end());
     std::vector<EEUnit*> theUnits;
-    EEGetUnitsOn(theAll, theUnits);
+    ee_units_uu_units_on(0, &theAll, &theUnits);
     bool theBlocked = false;
     for (size_t k = 0; k < theUnits.size() && !theBlocked; k++) {
         EEUnit* u = theUnits[k];
@@ -700,7 +697,7 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     case EE_AI_UNITS_HOST_WALL_LINE: {
         EeAiUnitsTiles& t = *(EeAiUnitsTiles*)outRecord;
         std::vector<U2DPoint<long> > theTiles;
-        EEGetWallLine(U2DPoint<long>(t.from[0], t.from[1]), U2DPoint<long>(t.to[0], t.to[1]), theTiles);
+        ee_units_uu_wall_line(t.from[0], t.from[1], t.to[0], t.to[1], &theTiles);
         EECPUnitsTilesOut(t, theTiles);
         return (int64_t)theTiles.size();
     }
@@ -914,7 +911,7 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_CAN_PRODUCE:
         return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PLACE:
-        return EECanPlaceOnTile(me, (long)a, (long)b, (long)c, false, 1) ? 1 : 0;
+        return ee_units_uu_can_place_unit_on_tile((uint64_t)(uintptr_t)me, 0, (long)a, (long)b, (long)c, false, 1, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_TRANSPORT:
         return ((EEUnitClass*)(uintptr_t)a)->IsTransport() ? 1 : 0;
     case EE_AI_UNITS_HOST_LAND_BUILDING:
@@ -927,7 +924,7 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
         return EECPEngineSeesAll(me) ? 1 : 0;
     case EE_AI_UNITS_HOST_BLOCK_TAKES: {
         long theSize = *(const long*)outRecord;
-        return EEPlayerBlockTakes(me, (long)a, (long)b - 1, (long)c - 1, theSize + 2, theSize + 2, 0) ? 1 : 0;
+        return ee_units_uu_block_takes((uint64_t)(uintptr_t)me, (long)a, (long)b - 1, (long)c - 1, theSize + 2, theSize + 2, 0) ? 1 : 0;
     }
     case EE_AI_UNITS_HOST_HAS_TREE:
         return me->mTechnologies != NULL ? 1 : 0;

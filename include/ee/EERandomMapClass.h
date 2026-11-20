@@ -99,10 +99,7 @@ bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap);
 extern bool& gUsingCarbon;                   // 0x5318e4 (= mU3D8 bit 0x10 while a map is generated)
 class EEComplexUnit;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
-void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles);  // 0x2457a3 (the wall's tile line)
-void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles);
 void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap);
-void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners);
 void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer,
                     EEMap* inMap);
 

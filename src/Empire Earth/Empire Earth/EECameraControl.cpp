@@ -40,6 +40,7 @@
 #include "rust/game/app.h"
 #include "rust/render/gfx.h"
 #include "ee/EEAppCapture.h"
+#include "ee/EECombatGoals.h"
 
 // the GE value classes and their Rust mirrors share their storage (GERustMath.h)
 static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
@@ -322,5 +323,5 @@ void EECameraControl::SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_H
 // Returns whether the local player can see a unit
 bool EEIsSeen(EEUnit* inUnit)
 {
-    return EEIsSeenBy(inUnit, gWorld.GetCurrentPlayer(), true);
+    return EECombatIsSeenBy(inUnit, gWorld.GetCurrentPlayer(), true);
 }

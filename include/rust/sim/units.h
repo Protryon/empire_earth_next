@@ -7935,7 +7935,7 @@ float ee_units_uu_jitter_heading(float angle, float min, float max);
 /// `EECanPlaceUnitOnTile` (49): `flag` written as the C++ wrote it (only when the tile's blockers were asked).
 ///
 /// # Safety
-/// `flag` a live byte.
+/// `flag` a live byte or null (the tile's blockers' answer not wanted).
 uint8_t ee_units_uu_can_place_unit_on_tile(uint64_t player,
                                            uint64_t unit,
                                            int32_t unit_type,

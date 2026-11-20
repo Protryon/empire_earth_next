@@ -61,6 +61,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj
+#include "ee/EECombatGoals.h"
 #include "rust/sim/combat.h"   // ee_units_keeps_ground_attacker, ee_units_ag_*
 #include "rust/sim/units.h"
 #include "rust/sim/combat.h"   // ee_combat_regions_size
@@ -628,7 +629,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_PASSABLE:
         return ((EEUnit*)(uintptr_t)inA)->IsPassableBy((EEComplexUnit*)(uintptr_t)inB);
     case EE_UNITS_AG_SEEN_BY:
-        return EEIsSeenBy((EEUnit*)(uintptr_t)inA, (EEPlayer*)(uintptr_t)inB, true);
+        return EECombatIsSeenBy((EEUnit*)(uintptr_t)inA, (EEPlayer*)(uintptr_t)inB, true);
     case EE_UNITS_AG_PRIEST_CONVERT:
         return EECanPriestConvert(theUnit, (EEComplexUnit*)(uintptr_t)inB);
     case EE_UNITS_AG_CAN_CAST:

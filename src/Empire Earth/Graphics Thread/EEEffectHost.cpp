@@ -170,7 +170,7 @@ struct EEStormHostOps {
         EETileCoordinate theTile;
         theFrom.mX = inFromX;
         theFrom.mY = inFromY;
-        EEGetNextTile(theFrom, theTile, EEGetTileDirection(inFromX, inFromY, inToX, inToY), 1);
+        EEGetNextTile(theFrom, theTile, ee_units_uu_tile_direction(inFromX, inFromY, inToX, inToY), 1);
         outTile[0] = (int32_t)theTile.mX;
         outTile[1] = (int32_t)theTile.mY;
     }
@@ -303,7 +303,7 @@ struct Ask {
         unsigned long theOwner = E(inAsk)->mUnit->mComplexUnit->mPlayer->mPlayerID;
         bool theFound = false;
         std::vector<EEUnit*> theUnits;
-        EEGetUnitsOnTile(inX, inY, theUnits);
+        ee_units_uu_units_on_tile(inX, inY, &theUnits);
         for (unsigned long j = 0; j < theUnits.size(); j++) {
             EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
             if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
@@ -415,7 +415,7 @@ struct Ask {
     static bool FarmDropSite(void* inAsk, int32_t* outX, int32_t* outY)
     {
         std::vector<EEUnit*> theUnits;
-        if (!EEGetFarmDropSites(E(inAsk)->mUnit->mComplexUnit, theUnits))
+        if (!ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)(E(inAsk)->mUnit->mComplexUnit), &theUnits))
             return false;
         *outX = (int32_t)theUnits[0]->mComplexUnit->GetTileX();
         *outY = (int32_t)theUnits[0]->mComplexUnit->GetTileY();
@@ -494,7 +494,7 @@ struct Ask {
         if (theGoal) {
             EETileCoordinate theTile(inTileX, inTileY);
             EEMapTile* theMapTile = gWorld.mMap->GetTile(theTile.mX, theTile.mY);
-            if (EECanStandOn(theTile, theComplex) == false && theMapTile && theMapTile->IsVisibleTo(theUnit->mPlayer))
+            if (ee_units_uu_can_stand_on(theTile.mX, theTile.mY, (uint64_t)(uintptr_t)theComplex) == false && theMapTile && theMapTile->IsVisibleTo(theUnit->mPlayer))
                 return EeGfxConfirmGoal::Blocked;
             return theGoal->GetIsForcedMove() ? EeGfxConfirmGoal::Forced : EeGfxConfirmGoal::Move;
         }

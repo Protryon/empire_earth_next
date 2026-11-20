@@ -430,12 +430,11 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
             }
             bool thePlaced;
             if ((inClass->mDomains & kMovementSea) != 0)
-                thePlaced = EEGetDockShipFacing(&theGoalPoint, inClass, inUnit, theHaveGoalPoint, &thePlacement);
+                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, true, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
             else if ((inClass->mDomains & kMovementSpace) != 0)
-                thePlaced = EEGetDockShipPlacement(&theGoalPoint, inClass, inUnit, theHaveGoalPoint, false, &thePlacement);
+                thePlaced = ee_units_uu_dock_ship_placement((const float(*)[3])&theGoalPoint.mX, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0]);
             else
-                thePlaced = EEFindPlacement(&theGoalPoint, inClass, inUnit->GetTileX(), inUnit->GetTileY(),
-                    this->GetTileSize(), theRings, !thePlayer->IsHuman(), theHaveGoalPoint, false, &thePlacement, inUnit);
+                thePlaced = ee_units_uu_find_placement((const float(*)[3])&theGoalPoint.mX, 0, (uint64_t)(uintptr_t)inClass, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), theRings, !thePlayer->IsHuman(), false, theHaveGoalPoint, false, (float(*)[4][4])&thePlacement.mMatrix[0][0], (uint64_t)(uintptr_t)inUnit);
             if (!thePlaced) {
                 theSuccess = false;
             } else {
@@ -506,15 +505,14 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                                    UMFloor(theGoalPosition.GetY()), &theLineTiles, 1, 1);
                         long theIndex;
                         for (theIndex = (long)theLineTiles.size() - 1; theIndex >= 0; --theIndex)
-                            if (EECanStandOn(theLineTiles[theIndex], theCreated))
+                            if (ee_units_uu_can_stand_on(theLineTiles[theIndex].mX, theLineTiles[theIndex].mY, (uint64_t)(uintptr_t)theCreated))
                                 break;
                         if (theIndex >= 0) {
                             long theRings = UMFloatToLong(theCreated->GetUnitClass()->mOuterCollisionSphere * k447AFC);
                             GE3DPoint theOrigin = inUnit->mPhysicalModel.GetLocation().GetPosition();
     //
     //
-                            if (EEFindPlacement(&theOrigin, theCreated, NULL, theLineTiles[theIndex].mX,
-                                theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, &theAdjusted, NULL))
+                            if (ee_units_uu_find_placement((const float(*)[3])&theOrigin.mX, (uint64_t)(uintptr_t)theCreated, 0, theLineTiles[theIndex].mX, theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, (float(*)[4][4])&theAdjusted.mMatrix[0][0], 0))
                                 static_cast<EEUGRust*>(theGoal)->SetLocation(theAdjusted.GetPosition());
                         }
                     }
@@ -757,7 +755,7 @@ void EEUnitClass::ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer)
     for (long theRow = 0; theRow < 9; theRow += 3) {
         for (long theColumn = 0; theColumn < 3; theColumn++) {
             if ((theX != theCenterX || theY != theCenterY) &&
-                EEPlayerBlockTakes(inPlayer, theType, theX, theY, theSize, theSize, 0)) {
+                ee_units_uu_block_takes((uint64_t)(uintptr_t)inPlayer, theType, theX, theY, theSize, theSize, 0)) {
                 EEUnit* theWall = theClass->CreateUnit(theX, theY, thePlayerID, false, NULL);
                 theWall->SetHitPoints(1);
                 theWall->MoveTo(theX, theY, true);
@@ -1011,7 +1009,7 @@ void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
     GETransformation theModel(false);
     EETagPointList* theTags = inUnit->GetModel()->GetTagPoints(inUnit->GetAnimation(), 0x22);
     if (theTags == NULL || theTags->mPoints.size() == 0 ||
-        !EEIsSeenBy(inUnit, ::gWorld.GetCurrentPlayer(), true))
+        !EECombatIsSeenBy(inUnit, ::gWorld.GetCurrentPlayer(), true))
         return;
     theModel = inUnit->mPhysicalModel.GetLocation();
     theTags->Scale(theModel, inUnit->mPhysicalModel.GetScale());
@@ -1034,7 +1032,7 @@ void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
 {
     if (!inAppend && outTiles.size() > 0)
         outTiles.clear();
-    EEGetSquareBlockRing(inCorners, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), outTiles, inAppend);
+    ee_units_uu_block_ring(inCorners, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), this->GetTileSize(), &outTiles, inAppend, 1);
 }
 
 // Returns the unit's passable terrain as bits: cliff 1, water 2, land 4, space 8
@@ -1052,7 +1050,7 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
     float theRange = inRange == 0.0f ? inUnit->GetLineOfSight() : inRange;
     inUnit->GetPosition(thePosition);
     *outTarget = NULL;
-    if ((unsigned long)EEGetUnitsNear(thePosition, theRange, theUnits) > 0) {
+    if ((unsigned long)ee_units_uu_units_near((const float(*)[3])&thePosition.mX, theRange, &theUnits) > 0) {
         for (long i = theUnits.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = theUnits[i];
             if (!EECanHeal(inUnit, static_cast<EEComplexUnit*>(theUnit)) || !inUnit->CanReachUnit(theUnit))
@@ -1521,6 +1519,7 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 
 #include "ee/EEPathManager.h"
 #include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
+#include "rust/sim/units.h"
 // Requests a path from the unit's tile to its goal (cancelling its paths when it already stands there), setting
 // its start heading when unset and an enemy-avoidance modifier for players that avoid enemies; idles when pathless
 // A location goal's group path state and auto-waypoint flag pick the revisions and the graph; a unit without
@@ -1610,7 +1609,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     }
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
     case EE_UNITS_CLS_MV_DIRECTION_TO:
-        return EEGetTileDirection(inUnit->GetTileX(), inUnit->GetTileY(), theOther->GetTileX(), theOther->GetTileY());
+        return ee_units_uu_tile_direction(inUnit->GetTileX(), inUnit->GetTileY(), theOther->GetTileX(), theOther->GetTileY());
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: {
         const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
@@ -1773,7 +1772,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         io->a = ::gWorld.mInCinematic ? 1 : 0;
         io->b = EEGetRules().mCombat.mPowerRegenerationInterval;
         return 0;
-    case EE_UNITS_CLS_ST_CLOAKED_ENEMY: return EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
+    case EE_UNITS_CLS_ST_CLOAKED_ENEMY: return ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer()));
     case EE_UNITS_CLS_ST_MINI_MAP:
         if (inC != 0)
             gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
@@ -1810,7 +1809,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
 EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUnit, EEUnit* inTarget)
     : mUnit(inUnit), mTarget(inTarget)
 {
-    this->mRange = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
+    this->mRange = EECombatHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
 }
 
 // Returns whether a candidate is alive and closer to the attacker than its current target (new: ee_combat's screen)
@@ -1823,7 +1822,7 @@ struct EEMeleeScreenContext {
 static float EEMeleeScreenDistance(void* inContext)
 {
     EEMeleeScreenContext* theContext = (EEMeleeScreenContext*)inContext;
-    return EEGetHitDistanceSquared(theContext->mUnit, theContext->mCandidate, -10000.0f, -10000.0f);
+    return EECombatHitDistanceSquared(theContext->mUnit, theContext->mCandidate, -10000.0f, -10000.0f);
 }
 
 static bool EEMeleeScreen(EEFOFindNewTargetInMeleeRange* inScreen, EEComplexUnit* inUnit)
@@ -1869,8 +1868,7 @@ void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
     if (theClass == NULL)
         return;
     GE3DPoint thePoint(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-    if (!EEFindPlacement(&thePoint, theClass, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), 1,
-        !inUnit->mPlayer->IsHuman(), false, false, &theTransformation, inUnit))
+    if (!ee_units_uu_find_placement((const float(*)[3])&thePoint.mX, 0, (uint64_t)(uintptr_t)theClass, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), 1, !inUnit->mPlayer->IsHuman(), false, false, false, (float(*)[4][4])&theTransformation.mMatrix[0][0], (uint64_t)(uintptr_t)inUnit))
         return;
     if (!(theTransformation.GetZ() > 0.0f))
         theTransformation.SetZ(0.3f);

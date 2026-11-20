@@ -35,6 +35,7 @@
 #include "ee/EEGameUI.h"
 #include "lle/GERenderState.h"
 #include "ee/EEAppCapture.h"
+#include "rust/sim/units.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
@@ -145,7 +146,7 @@ static void EEMiniMapHostOp(void* inContext, int32_t inOp, EeAppMiniMapIo* io)
             for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
                 EEUnit* theUnit = theNode->mUnit;
                 if (theUnit->mHitPoints != 0 && theUnit->mTileX == io->x && theUnit->mTileY == io->y &&
-                    !EEIsCloakedEnemyOf(theUnit, thePlayer))
+                    !ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)thePlayer))
                     theContext.mItems.push_back(EEMiniMapUnit(theUnit));
             }
         }

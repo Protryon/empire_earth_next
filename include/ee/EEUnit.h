@@ -838,8 +838,6 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass);
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit);
 // 0x246c87 (cdecl): the complex unit acting on inUnit, 0 if none (SetGatheredResource) (provisional name)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit);
-// 0x24b5b3 (cdecl): the tiles inUnit stands on (EEComplexUnit::GetFootprintContinent) (provisional name)
-void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles);
 // 0x23d5c3 (cdecl; EEComplexUnit::ReleaseFireEffect for unit type 0x321) (provisional name)
 void EERemoveCloakEffect(EEUnit* inUnit);
 // 0x23d570 (cdecl; EEUIFMGMainGroup::SetUnit for a selected unit of type 0x321) (provisional name)
@@ -879,24 +877,13 @@ extern EEUnitClassImprovementTable** gUnitClassImprovementTables;
 // 0x22c7e0 (cdecl): the key map of a unit class's +0x08 name (EEUnitClass ctor: mAIScript) (provisional name)
 // 0x563a6c is gUnitClassTable[0xf0] (inside the table, not after it): the wall class the ghost of unit type 0x42 adds
 // three of (EEGhostUnit::Create); there is no separate gWallUnitClass extern (the readers index the table)
-// 0x23ebb2 (cdecl): the wall pieces of class inClass from inStart to inEnd for inPlayer (EEMBuildWall) and 0x23e630
-// (cdecl): hands them to inGroup. Provisional names and argument meanings
-class EEActiveGroup;
-// (the pieces are the planned wall units: 0x23ebb2 push_backs EEUnit*, 0x23e630 reads them as units; inArg5 is a bool:
-// `cmp byte ptr [ebp+0x20], 0` and passed whole to CreateUnit's bool)
-void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlayer* inPlayer, bool inAsFoundation, bool inSkipPlayerChecks,
-                std::vector<EEUnit*>& outPieces);
 
-bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIgnoreBlockedLine,
-                GE3DPoint& outLocation);
 bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg5, long* outX, long* outY);
 
 // 0x12a52e (cdecl): whether inUnit is seen by the current player (the land priest's sounds) (provisional name)
 bool EEIsSeen(EEUnit* inUnit);
 
 
-// 0x24939d (cdecl): where a unit dropped next to inTarget lands (provisional name and argument meanings)
-void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** ioTarget, GE3DPoint* outLocation, EEUnit* inTarget);
 
 // 0x20b687 (cdecl): whether tile (inX, inY) takes a unit (special location; first argument 0) (provisional name)
 bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);   // inUnit: the unload goal passes its transport
@@ -904,11 +891,6 @@ bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY); 
 // 0x20ccb8 (cdecl; the conscription calamity's second call with 0x138d) (provisional name)
 void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect);
 
-// 0x243561 (cdecl): a free place for inUnit near (inX, inY); true and outLocation/outTransformation when found (the
-// teleport calamity) provisional name and argument meanings
-bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inClass, unsigned long inX,
-                     unsigned long inY, long inSize, long inRings, bool inCorners, bool inIncludeCenter, bool inFacePoint,
-                     bool inArg11, GETransformation* outTransformation, EEComplexUnit* inTarget);  // the body's types
 
 // EEActiveGroup (the group object at EEComplexUnit +0x1c8) is defined in ee/EEPlayer.h after its base EEGroup
 // (RTTI EEActiveGroup > EEGroup, ctor 0x1ebc86)

@@ -24,6 +24,8 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EECombatGoals.h"
+#include "rust/sim/units.h"
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
 // (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
@@ -129,7 +131,7 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
         EEUnit* theUnit = SMUnit(inB);
         return thePlayer->mActiveGroup->Contains(theUnit->mComplexUnit) || thePlayer->mViewedUnit == theUnit;
     }
-    case EE_SCENARIO_READ_UNIT_SEEN_BY: return EEIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
+    case EE_SCENARIO_READ_UNIT_SEEN_BY: return EECombatIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
     case EE_SCENARIO_READ_AREA_CONTAINS_UNIT: {
         EESMArea* theArea = theManager->GetArea((unsigned long)inA);
         return theArea == NULL ? -1 : theArea->ContainsUnit(SMUnit(inB));
@@ -153,7 +155,7 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_UNIT_RANGE: return SMFloat(SMUnit(inA)->mStats->mRange);
     case EE_SCENARIO_READ_UNIT_TILE_SIZE: return SMUnit(inA)->mUnitClass->mTileSize;
     case EE_SCENARIO_READ_CLASS_TILE_SIZE: return gUnitClassTable[inA]->mTileSize;
-    case EE_SCENARIO_READ_BLOCK_TAKES: return EEPlayerBlockTakes(NULL, inA, inB, inC, inD, inD, 0);
+    case EE_SCENARIO_READ_BLOCK_TAKES: return ee_units_uu_block_takes(0, inA, inB, inC, inD, inD, 0);
     case EE_SCENARIO_READ_MAP_TILE_DRY: {
         EEMapTile* theTile = gWorld.mMap->GetTile(inA, inB);
         return theTile != NULL && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainShallowWater;
@@ -200,9 +202,13 @@ void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::
     float theRadius;
     memcpy(&theRadius, &inC, 4);
     switch (inOp) {
-    case EE_SCENARIO_TILES_NEAR_POINT: EEGetTilesNearPoint(GE3DPoint((float)inA, (float)inB, 0.0f), theRadius, outTiles); break;
-    case EE_SCENARIO_TILES_SIDE: EEGetSideTiles(inA, inB, inC, outTiles); break;
-    case EE_SCENARIO_TILES_CORNER: EEGetCornerTiles(0, inA, inB, inC, outTiles); break;
+    case EE_SCENARIO_TILES_NEAR_POINT: {
+        const float thePoint[3] = {(float)inA, (float)inB, 0.0f};
+        ee_units_uu_get_tiles_near_point(&thePoint, theRadius, &outTiles);
+        break;
+    }
+    case EE_SCENARIO_TILES_SIDE: ee_units_uu_square_ring(inA, inB, inC, inC, 1, &outTiles); break;
+    case EE_SCENARIO_TILES_CORNER: ee_units_uu_ring_corners(0, inA, inB, inC, inC, 1, &outTiles); break;
     }
 }
 

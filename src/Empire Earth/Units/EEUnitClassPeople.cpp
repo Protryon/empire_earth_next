@@ -40,6 +40,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EECombatGoals.h"
 
 // ---- EEUCBasicCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The citizens'
 // unit class: gathering (resource and storage searches), building and repairing. 0x20bcf7..0x20d571 (after
@@ -404,7 +405,7 @@ void EEUnitClass::BasicPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit*
         theLocation.SetX(theConvertedLocation.GetX());
         theLocation.SetY(theConvertedLocation.GetY());
         theLocation.SetZ(theConvertedLocation.GetZ());
-        EEGetUnitsNear(theLocation, gWorldTable.GetFloatValue(kWorldAreaConversionRadius), theUnits);
+        ee_units_uu_units_near((const float(*)[3])&theLocation.mX, gWorldTable.GetFloatValue(kWorldAreaConversionRadius), &theUnits);
         for (long i = theUnits.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = theUnits[i];
             if (theUnit->GetComplexUnit() != NULL && ((EEMapTile*)theUnit->mTile)->IsSeenBy(inUnit->GetPlayer()) == true) {
@@ -724,7 +725,7 @@ void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     GE3DPoint theEnemy;
     EEUnit* theUnit;
     if (theGoal->mKind == kGoalAttackUnit) {
-        EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
+        theUnit = EECombatFindDropLocation(inUnit, NULL, theEnemy);
         ee_units_uu_aim_point((uint64_t)(uintptr_t)inUnit, (const float(*)[3])&theEnemy.mX, (float(*)[3])&theTarget.mX);
     } else if (theGoal->mKind == kGoalCastCalamity) {
         theGoal->GetDestination(inUnit, theTarget);

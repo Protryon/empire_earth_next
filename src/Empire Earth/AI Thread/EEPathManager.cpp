@@ -64,6 +64,7 @@
 #include "ee/EEUnitHandle.h"
 #include "ee/EESimCapture.h"
 #include "rust/sim/astar.h"   // ee_path_*: the path splicing (ee_astar path_splice.rs)
+#include "rust/sim/units.h"
 
 static_assert(sizeof(GE3DPoint) == sizeof(EePathPoint) && offsetof(GE3DPoint, mZ) == offsetof(EePathPoint, z),
               "GE3DPoint");
@@ -479,7 +480,6 @@ static std::vector<GE3DPoint> EEPathPointsIn(uint64_t inPoints, int64_t inCount)
 // The searches' world (ee_sim::astar path_search.rs EE_PATH_BLOCKED_TILES): the unit's bounded path tiles and, for a
 // sea unit, the tiles of the stopped contacts in the way of the goal (EEAIAStarPathfindingGoalBase::CollectBlockedTiles
 // 0x19ccb with its EEAIPathBlockerCollector 0x19da3..0x19eb0)
-void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);
 
 // The units blocking a path near the goal (0x19ccb's local; sizeof 0x3c) (provisional name)
 class EEAIPathBlockerCollector {
@@ -529,7 +529,7 @@ bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
     std::vector<U2DPoint<long> > theTiles;
     if (inUnit->mUnitClass->GetInnerCollisionSphere() >= this->mUnit->mUnitClass->GetInnerCollisionSphere()
         || inUnit->mPushImmuneUntil > gPhysics->mGameTime) {
-        EEGetUnitTiles(inUnit, theTiles, !this->mWide ? 1.0f : 2.0f);
+        ee_units_uu_unit_tiles_margin((uint64_t)(uintptr_t)inUnit, !this->mWide ? 1.0f : 2.0f, &theTiles);
         for (long i = theTiles.size() - 1; i >= 0; i--) {
             if (theTiles[i] != this->mGoal && this->mBlocked.find(theTiles[i]) == this->mBlocked.end())
                 this->mTiles.push_back(theTiles[i]);
@@ -580,7 +580,7 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
     case EE_PATH_UNIT_TILES: {   // CollectUnitTiles: a sea unit's tiles
         std::vector<U2DPoint<long> > theTiles;
         if (theUnit->mUnitClass->mDomains & kMovementSea)
-            EEGetUnitTiles(theUnit, theTiles, 0.0f);
+            ee_units_uu_unit_tiles_margin((uint64_t)(uintptr_t)theUnit, 0.0f, &theTiles);
         EEPathTilesOut(io->h[1], theTiles);
         return 0;
     }

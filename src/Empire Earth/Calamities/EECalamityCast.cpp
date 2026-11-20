@@ -20,6 +20,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIKindIDs.h"
+#include "rust/sim/units.h"
 
 namespace {
 
@@ -108,7 +109,8 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
         r.x = gUnitClassTable[theHost.mUnitClassIndex]->GetInnerCollisionSphere();
         break;
     case EeCalamityOp::UnitsNear: {
-        long theNear = EEGetUnitsNear(GE3DPoint(c.x, c.y, c.z), c.w, theHost.mUnits);
+        const float thePoint[3] = {c.x, c.y, c.z};
+        long theNear = ee_units_uu_units_near(&thePoint, c.w, &theHost.mUnits);
         r.value = (int32_t)theNear;
         r.id = (uint32_t)theHost.mUnits.size();
         break;
@@ -127,7 +129,7 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
         break;
     case EeCalamityOp::TileUnblocked: {
         EEPlayer* thePlayer = theUnit != NULL ? theUnit->mPlayer : ::gWorld.mPlayers[0];
-        r.ok = EEIsTileUnblocked(thePlayer, theHost.mUnitClassIndex, ::gWorld.GetMap()->GetTile(theX, theY));
+        r.ok = ee_units_uu_is_tile_unblocked((uint64_t)(uintptr_t)thePlayer, theHost.mUnitClassIndex, (uint64_t)(uintptr_t)(::gWorld.GetMap()->GetTile(theX, theY)));
         break;
     }
     case EeCalamityOp::CasterIsRadioMan:

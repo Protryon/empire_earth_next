@@ -25,6 +25,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAirTrafficControl.h"
+#include "rust/sim/units.h"
 
 // ---- EEUCTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The transports' base
 // unit class: 0x21b27a..0x21c9e1 (after EEUCTorpedo.cpp). Unit flags: the exe's module set. Its ctor is out of line in
@@ -86,7 +87,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         return ee_units_uu_tile_units_standing(inA, (int32_t)inC, inB, 0, 2, &theUnits) != 0;
     }
     case EE_UNITS_CLS_TILES_IN_RADIUS:
-        EEGetTilesInRadius((long)inC, (long)inD, 2, true, theTiles);
+        ee_units_uu_tiles_in_radius((long)inC, (long)inD, (uint32_t)(2), true, &theTiles);
         break;
     case EE_UNITS_CLS_LINE_TILES:
         U2DPoint<long>((long)inC, (long)inD).GetLineTiles(U2DPoint<long>((long)ioIo->a, (long)ioIo->b), 1.0f, theTiles);
@@ -148,7 +149,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     case EE_UNITS_CLS_QUEUE_GOALS:
         return (int64_t)theUnit->GetQueueGoals((unsigned long)inC).size();
     case EE_UNITS_CLS_TILES_NEAR_POINT:
-        EEGetTilesNearPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), ioIo->f, theTiles);
+        ee_units_uu_get_tiles_near_point((const float(*)[3])ioIo->p, ioIo->f, &theTiles);
         break;
     case EE_UNITS_CLS_IS_SPACE_MAP:
         return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
@@ -158,7 +159,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
         return 0;
     case EE_UNITS_CLS_UNITS_NEAR: {
         std::vector<EEUnit*> theUnits;
-        EEGetUnitsNear(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), ioIo->f, theUnits);
+        ee_units_uu_units_near((const float(*)[3])ioIo->p, ioIo->f, &theUnits);
         for (size_t i = 0; i < theUnits.size(); i++)
             ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)EEObj(theUnits[i]), (int32_t)(EEObj(theUnits[i]) >> 32));
         return 0;
@@ -251,14 +252,13 @@ bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EECo
     bool theResult;
     if (inCargo->mStats->mMaxVelocity <= 0.0f) {
         ee_units_uu_tiles_around((uint64_t)(uintptr_t)inTransport, (uint64_t)(uintptr_t)inCargo, 1, 0, 0, &theTiles);
-        theResult = EEPickTileNear(theTiles, inTransport, inCargo, 0, outLocation);
+        theResult = ee_units_uu_pick_tile_near(&theTiles, (uint64_t)(uintptr_t)inTransport, (uint64_t)(uintptr_t)inCargo, 0, (float(*)[3])&outLocation.mX);
     } else {
         inTransport->GetPosition(thePosition);
         long theSize = inCargo->mUnitClass->mTileSize;
         unsigned long theY = UMFloorUnsigned(inLocation.GetY());
         unsigned long theX = UMFloorUnsigned(inLocation.GetX());
-        if (EEFindPlacement(&thePosition, inTransport, NULL, theX, theY, theSize, 1, false,
-                            theAllowWater, false, true, &theTransformation, NULL)) {
+        if (ee_units_uu_find_placement((const float(*)[3])&thePosition.mX, (uint64_t)(uintptr_t)inTransport, 0, theX, theY, theSize, 1, false, theAllowWater, false, true, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
             theResult = true;
             outLocation = theTransformation.GetPosition();
         } else {

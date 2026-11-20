@@ -51,6 +51,7 @@
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EEEffectManager.h"
+#include "rust/sim/units.h"
 
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
@@ -171,7 +172,7 @@ void EEAEHost::Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectRepl
             if (t->GetCommandType() == kActionIdle && (t->mCamouflageTimer & 0x7fffffff) == 0 || t->mU32C > 0)
                 break;
         }
-        bool theVisible = EEIsCloakedEnemyOf(t, gWorld.mPlayers[gWorld.mCurrentPlayer]);
+        bool theVisible = ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)t, (uint64_t)(uintptr_t)(gWorld.mPlayers[gWorld.mCurrentPlayer]));
         t->SetCloakableChain(t->mUnitClass->mIsCloakable);
         if (theVisible)
             gMiniMap->MoveUnit(t, -10000, -10000, t->mTileX, t->mTileY);
