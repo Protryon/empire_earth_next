@@ -61,6 +61,7 @@ pub mod game_over_host;
 pub mod gather;
 pub mod gather_world;
 pub mod goal_obj;
+pub mod goal_spec;
 pub mod goals;
 pub mod group;
 pub mod group_save;

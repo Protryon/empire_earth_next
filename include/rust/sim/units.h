@@ -4401,24 +4401,6 @@ struct EeGoalQueueHost {
   void (*refresh)(void *context);
 };
 
-/// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
-struct EeGoalSpec {
-  uint32_t ctor;
-  uint32_t unit_a;
-  uint32_t unit_b;
-  /// a location (`GE3DPoint`)
-  float point[3];
-  uint8_t flag_a;
-  uint8_t flag_b;
-  /// an object the host handed out for the goal (a route)
-  void *object;
-  /// a value (the location's facing)
-  float value;
-  uint8_t flag_c;
-  /// integer arguments (the cast's tile and technology)
-  int64_t ints[3];
-};
-
 /// A unit class's fields the improvements read.
 struct EeUnitsImproveClass {
   float area_effect;
@@ -4949,6 +4931,24 @@ struct EeUnitsWorldGhost {
   bool is_built;
   /// 0.275: false for a simple unit; true before
   bool is_complex;
+};
+
+/// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
+struct EeGoalSpec {
+  uint32_t ctor;
+  uint32_t unit_a;
+  uint32_t unit_b;
+  /// a location (`GE3DPoint`)
+  float point[3];
+  uint8_t flag_a;
+  uint8_t flag_b;
+  /// an object the host handed out for the goal (a route)
+  void *object;
+  /// a value (the location's facing)
+  float value;
+  uint8_t flag_c;
+  /// integer arguments (the cast's tile and technology)
+  int64_t ints[3];
 };
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
@@ -6204,10 +6204,6 @@ bool ee_units_update_hidden(uint64_t unit);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
-extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
-
-extern void ee_units_host_goal_release(void *goal);
-
 extern void *ee_units_host_active_group_new(void *player);
 
 extern void ee_units_host_group_fill(void *group, void *selection, int32_t sort, int32_t slot);
@@ -6285,18 +6281,9 @@ extern void ee_units_host_wall_release(void *pieces);
 
 extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
 
-extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
-
-extern uint8_t ee_units_host_goal_can_unload(void *goal);
-
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
 extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
-
-extern uint8_t ee_units_host_can_place_on_tile(void *player,
-                                               int64_t unit_type,
-                                               int64_t x,
-                                               int64_t y);
 
 extern uint32_t ee_units_host_make_building(void *player, int64_t unit_type, int64_t x, int64_t y);
 
@@ -6327,8 +6314,6 @@ extern void ee_units_host_unit_drop_gathered(uint32_t unit);
 
 extern void ee_units_host_work_farm(uint32_t farm, uint32_t unit);
 
-extern void ee_units_host_unit_set_goal(uint32_t unit, void *goal);
-
 extern void ee_units_host_group_finish(void *group);
 
 extern void *ee_units_host_calamity_of(void *player,
@@ -6348,15 +6333,11 @@ extern uint8_t ee_units_host_technology_contains(void *player,
 
 extern int64_t ee_units_host_calamity_cost(void *class_);
 
-extern void *ee_units_host_unit_player(uint32_t unit);
-
 extern void ee_units_host_group_split_calamity_casters(void *group,
                                                        void *class_,
                                                        void *player,
                                                        int32_t technology,
                                                        uint32_t target);
-
-extern void *ee_units_host_goal_clone(void *goal);
 
 extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 
@@ -6372,27 +6353,15 @@ extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index
 
 extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
 
-extern uint8_t ee_units_host_unit_shares_rally_point(uint32_t unit, int64_t unit_type);
-
-extern int64_t ee_units_host_unit_num_goal_queues(uint32_t unit);
-
 extern void ee_units_host_unit_clear_goal_queue(uint32_t unit, int64_t queue);
 
 extern void ee_units_host_unit_clear_all_goal_queues(uint32_t unit);
 
 extern void ee_units_host_unit_queue_goal(uint32_t unit, void *goal, int64_t queue);
 
-extern void ee_units_host_unit_queue_timer(uint32_t unit, int64_t queue, int64_t ms);
-
-extern void *ee_units_host_unit_goal_clone(uint32_t unit);
-
 extern void *ee_units_host_garrison_rally_load(uint32_t garrison);
 
-extern void ee_units_host_unit_queue_clear(uint32_t unit, int64_t queue);
-
 extern void ee_units_host_unit_clear_air_traffic(uint32_t unit);
-
-extern void ee_units_host_unit_refresh_goals(uint32_t unit);
 
 extern void ee_units_host_unit_clear_build_targets(uint32_t unit);
 
@@ -6421,12 +6390,6 @@ extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
 extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
 
 extern uint8_t ee_units_host_scenario_game();
-
-extern uint8_t ee_units_host_unit_shares_research(uint32_t unit, int64_t unit_type);
-
-extern int64_t ee_units_host_unit_research_state(uint32_t unit,
-                                                 int64_t *current,
-                                                 uint8_t *disabled);
 
 extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
 
@@ -8052,7 +8015,7 @@ float ee_units_uu_jitter_heading(float angle, float min, float max);
 /// `EECanPlaceUnitOnTile` (49): `flag` written as the C++ wrote it (only when the tile's blockers were asked).
 ///
 /// # Safety
-/// `flag` a live byte.
+/// `flag` a live byte or null (the tile's blockers' answer not wanted).
 uint8_t ee_units_uu_can_place_unit_on_tile(uint64_t player,
                                            uint64_t unit,
                                            int32_t unit_type,

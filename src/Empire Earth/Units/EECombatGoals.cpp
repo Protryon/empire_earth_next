@@ -286,8 +286,8 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         return theUnit->IsInReach(EEConditionTarget(theContext));
     case EE_COMBAT_READ_SEEN:
         if (theContext->mKind == EE_COMBAT_GOAL_HEAL)
-            return EEIsSeenBy(EEConditionTarget(theContext), theUnit->GetPlayer(), true);
-        return EEIsSeenBy(EEConditionTarget(theContext), theUnit->mPlayer, false);
+            return EECombatIsSeenBy(EEConditionTarget(theContext), theUnit->GetPlayer(), true);
+        return EECombatIsSeenBy(EEConditionTarget(theContext), theUnit->mPlayer, false);
     case EE_COMBAT_READ_FACES_ARCH:
         return theUnit->GetUnitClass()->FacesTarget(theUnit, EEConditionTarget(theContext), true);
     case EE_COMBAT_READ_FACES:
@@ -338,7 +338,7 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         theContext->mImpact = theContext->mClass->FindImpactUnit(theUnit);
         return theContext->mImpact != NULL;
     case EE_COMBAT_READ_TARGETABLE:
-        return EEUUGetIsUnitClassTargetable(theUnit, theContext->mImpact->GetUnitClass());
+        return ee_units_uu_targetable((uint64_t)(uintptr_t)theUnit, (uint64_t)(uintptr_t)(theContext->mImpact->GetUnitClass()), 0);
     case EE_COMBAT_READ_GROUND_IMPACT:
         return theContext->mClass->CheckGroundImpact(theUnit);
     case EE_COMBAT_READ_WATER_IMPACT:
@@ -489,7 +489,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_MODEL:
         return EEQueryComplex(inObject)->mPhysicalModel.GetModel() != NULL;
     case EE_COMBAT_Q_TARGETABLE:
-        return EEUUGetIsUnitClassTargetable(inArg ? theUnit : NULL, theObject->mUnitClass);
+        return ee_units_uu_targetable((uint64_t)(uintptr_t)(inArg ? theUnit : NULL), (uint64_t)(uintptr_t)theObject->mUnitClass, 0);
     case EE_COMBAT_Q_PASSABLE:
         return EEQueryComplex(inObject)->IsPassableBy(theUnit);
     case EE_COMBAT_Q_UNIT_SET:
@@ -511,7 +511,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_LINE_OF_SIGHT:
         return EEConditionBits(EEQueryComplex(inObject)->GetLineOfSight());
     case EE_COMBAT_Q_SEEN:
-        return EEIsSeenBy(EEQueryComplex(inObject), theUnit->GetPlayer(), true);
+        return EECombatIsSeenBy(EEQueryComplex(inObject), theUnit->GetPlayer(), true);
     case EE_COMBAT_Q_DUMMY_HEAD:
         return theObject == NULL || RTSDummyHead(theObject) != NULL;
     case EE_COMBAT_Q_PROJECTILE_CATEGORY: {
@@ -519,7 +519,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return theProjectile != NULL ? (uint32_t)theProjectile->mCategory : EE_COMBAT_Q_NONE;
     }
     case EE_COMBAT_Q_HIT_DISTANCE_SQUARED:
-        return EEConditionBits(EEGetHitDistanceSquared(theUnit, theObject, -10000.0f, -10000.0f));
+        return EEConditionBits(EECombatHitDistanceSquared(theUnit, theObject, -10000.0f, -10000.0f));
     case EE_COMBAT_Q_TAG_COUNT: {
         EEComplexUnit* theComplex = EEQueryComplex(inObject);
         EETagPointList* theTags = theComplex->GetModel()->mTagPoints[theComplex->mAnimation];
@@ -731,7 +731,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         ee_astar_modifier_release(theModifier);
         return thePath.size();
     }
-    case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenBy(theObject, EEQueryUnit(inOther)->GetPlayer(), true);
+    case EE_COMBAT_W_SEEN_BY_OWNER: return EECombatIsSeenBy(theObject, EEQueryUnit(inOther)->GetPlayer(), true);
     case EE_COMBAT_W_ATTACKED_GOAL: {
         if (a[0])
             theContext->mAttackedGoal = EEUGRust::NewLocation(theOther->mPhysicalModel.GetLocation().GetX(),
@@ -744,7 +744,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_UNITS_NEAR: {
         const GETransformation& theLocation = theObject->mPhysicalModel.GetLocation();
         GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-        EEGetUnitsNear(thePosition, kCallForHelpRadius, theContext->mNear);
+        ee_units_uu_units_near((const float(*)[3])&thePosition.mX, kCallForHelpRadius, &theContext->mNear);
         return theContext->mNear.size();
     }
     case EE_COMBAT_W_NEAR_UNIT: return EEQueryHandleOf(theContext->mNear[(size_t)a[0]]);
@@ -770,7 +770,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_RELOAD: theObject->SetRandomReloadTimer((long)a[0]); return 0;
     case EE_COMBAT_W_FIND_DROP: {
         EEUnit* theTarget;
-        EEFindDropLocation(theObject, &theTarget, &theContext->mPoint, NULL);
+        theTarget = EECombatFindDropLocation(theObject, NULL, theContext->mPoint);
         return EEQueryHandleOf(theTarget);
     }
     case EE_COMBAT_W_LINE_BLOCKED: {
@@ -913,9 +913,9 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         theTiles.insert(theTiles.end(), theOuterTiles.begin(), theOuterTiles.end());
         std::sort(theTiles.begin(), theTiles.end(), EEUUTileNearerToUnit(theObject));
         GE3DPoint thePoint(EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]), EEBitsFloat((int32_t)a[3]));
-        return EEPointArgs(a + 1, thePoint, EEPickTileNear(theTiles, theObject, theOther, 0, thePoint));
+        return EEPointArgs(a + 1, thePoint, ee_units_uu_pick_tile_near(&theTiles, (uint64_t)(uintptr_t)theObject, (uint64_t)(uintptr_t)theOther, 0, (float(*)[3])&thePoint.mX));
     }
-    case EE_COMBAT_W_FOOTPRINT: EEGetFootprintTiles(EEQueryUnit(inObject), theContext->mFootprint); return theContext->mFootprint.size();
+    case EE_COMBAT_W_FOOTPRINT: ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)(EEQueryUnit(inObject)), &theContext->mFootprint); return theContext->mFootprint.size();
     case EE_COMBAT_W_FOOTPRINT_TILE: {
         const EETileCoordinate& theTile = theContext->mFootprint[(size_t)a[0]];
         a[0] = theTile.mX;

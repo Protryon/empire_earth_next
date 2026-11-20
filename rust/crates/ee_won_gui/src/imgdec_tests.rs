@@ -2,7 +2,7 @@
 //! tests/won/won_jpeg_test.cpp `--golden`, retired with libjpeg on 2026-11-17: libjpeg's own compressed pictures and
 //! their corruptions, in hex, with the original JPGDecoder's answers on libjpeg 6b).
 use super::*;
-use crate::imgdec::{attributes as img_attributes, decode as img_decode, EeWonImgDec, EeWonImgKind};
+use crate::imgdec::{attributes as img_attributes, decode as img_decode, EeWonImgKind};
 use ee_won_net::file::status_text;
 use ee_won_net::file::EeWonFileReader;
 
@@ -70,24 +70,6 @@ fn golden_replays() {
     for kind in ["A 1 ", "A 0 ", "A throw ", "D NULL", "D throw "] {
         assert!(g.contains(kind), "{kind}");
     }
-}
-
-#[test]
-fn multi_decoder_matches_without_case() {
-    let mut d = EeWonImgDec::default();
-    d.add(0x10, b"jpg");
-    d.add(0x10, b"JPE");
-    d.add(0x20, b"png");
-    // a replaced decoder stays owned
-    d.add(0x30, b"PNG");
-    assert_eq!(d.owned, vec![0x10, 0x20, 0x30]);
-    assert_eq!(d.map.len(), 3);
-    // the first spelling of a key stays
-    assert!(d.map.iter().any(|(k, v)| k == b"png" && *v == 0x30));
-    d.cur = b"Jpe".to_vec();
-    assert_eq!(d.find(), 0x10);
-    d.cur = b"gif".to_vec();
-    assert_eq!(d.find(), 0);
 }
 
 #[test]

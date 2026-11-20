@@ -8,8 +8,10 @@
 pub mod barobj;
 pub mod btnobj;
 pub mod cfgimg;
+pub mod cfgkind;
 pub mod cfgtab;
 pub mod comboobj;
+pub mod compcfg;
 pub mod compmem;
 pub mod compobj;
 pub mod ctobj;
@@ -38,6 +40,7 @@ pub mod guiwin;
 pub mod guiwrap;
 pub mod imgdec;
 pub mod imgfilter;
+pub mod imgobj;
 pub mod inputobj;
 pub mod labelobj;
 pub mod layoutobj;

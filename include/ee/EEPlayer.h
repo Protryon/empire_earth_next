@@ -225,6 +225,7 @@ class EETechTreeNode;
 // group bodies (ag.rs) read and write them in place.
 class EEActiveGroup : public EEGroup, public EeUnitsActiveGroupFields {
 public:
+    static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }   // the inline members' handles
     EEActiveGroup(EEPlayer* inPlayer);
     virtual ~EEActiveGroup();               // +0x00 0x1ebd27 (??_G 0x1ebd0b)
     virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x1ebcfd: Virtual48(inUnit, false)
@@ -235,22 +236,22 @@ public:
     virtual bool RequestPaths(std::vector<EEComplexUnit*>& inUnits);
     virtual void RequestAllPaths();         // +0x44 0x1ebdf2
     virtual void AddMember(EEComplexUnit* inUnit, bool inRemoveFromOld);  // +0x48 0x1ebd73 (EEMRepairUnit: each unit sent to repair)
-    virtual void ComputeValues();           // +0x4c 0x1ed692 (the ctor's last call)
+    virtual void ComputeValues() { ee_units_ag_compute_values(H(this)); }  // +0x4c 0x1ed692 (the ctor's last call)
     // 0x1ed9d4: the selected group's units for one slot (IsInFormationSlot); inSort 0: SortUnits first, 1: sorted afterwards
     // by EEAGIncreasingVelocityUnitSorter
     void Fill(EESelectedGroup* inGroup, long inSort, long inSlot);
     void Finish();                          // 0x1edaf3: ClearGoal, into the player's mFinishedGroups (referenced), mBB4 = true
-    void KeepAttackers();                   // 0x1eec0b (SpreadAroundUnit: keeps the units that can attack)
-    bool IsReserved(const GE3DPoint& inLocation);  // 0x1efaf0: a mU3C location at (or near) inLocation
-    bool IsCellTaken(const GE3DPoint& inLocation);  // 0x1efba8: a mU3C location in inLocation's unit region
-    void SpreadForUnload(long inTileX, long inTileY);  // 0x1ef5ce (EEMessage 0xc8615: as SpreadAroundTile, the transports stay)
+    void KeepAttackers() { ee_units_ag_keep_attackers(H(this)); }  // 0x1eec0b (SpreadAroundUnit: keeps the units that can attack)
+    bool IsReserved(const GE3DPoint& inLocation) { return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 0) != 0; }  // 0x1efaf0: a mU3C location at (or near) inLocation
+    bool IsCellTaken(const GE3DPoint& inLocation) { return ee_units_ag_reserved(H(this), (const float(*)[3])&inLocation.mX, 1) != 0; }  // 0x1efba8: a mU3C location in inLocation's unit region
+    void SpreadForUnload(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 1); }  // 0x1ef5ce (EEMessage 0xc8615: as SpreadAroundTile, the transports stay)
     // 0x1ef86c (EEMessage 0xbc48f: a calamity's casters for inTarget; the others attack it)
-    void SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget);
+    void SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget) { ee_units_ag_split_calamity_casters(H(this), H(inCalamity), H(inNode), H(inTarget)); }
     virtual void RemoveUnit(EEComplexUnit* inUnit);  // +0x28 0x1efa05 (EEGroup's, then the active group and mU3C)
     virtual void Validate();                // +0x34 0x1efcd7 (drops the dead units)
     // 0x1edc93: mGoal = inGoal, +0xb5 = inFlag, +0xb6 = (kind 1 and its +0x33)
     void SetGoal(EEUnitGoal* inGoal, bool inFlag);
-    void Plan();                            // 0x1edcc0 (after SetGoal)
+    void Plan() { ee_units_ag_plan(H(this)); }  // 0x1edcc0 (after SetGoal)
     void KeepNonCitizens();
     // 0x1edbb2..0x1edc72: a unit's stat, or the group's when mBB6 is set (SetGoal: a kind-1 goal with its +0x33)
     // (provisional names)
@@ -264,10 +265,10 @@ public:
     void KeepGroundAttackers();
     void ResetUnitsPaths();                 // 0x1edac5 (EEMPathTo)
     void KeepCitizens();                    // 0x1eef6c (EEMBuildWall)
-    void SpreadAroundResource(EEUnit* inTarget);  // 0x1eefbe (EEMGatherResource)
-    void SpreadAroundTile(long inTileX, long inTileY);  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
-    void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY);  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
-    void KeepMobileUnits();
+    void SpreadAroundResource(EEUnit* inTarget) { ee_units_ag_spread_around_resource(H(this), H(inTarget)); }  // 0x1eefbe (EEMGatherResource)
+    void SpreadAroundTile(long inTileX, long inTileY) { ee_units_ag_spread_around_tile(H(this), (int32_t)inTileX, (int32_t)inTileY, 0); }  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
+    void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY) { ee_units_ag_spread_around_unit(H(this), H(inTarget), (int32_t)inTileX, (int32_t)inTileY); }  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
+    void KeepMobileUnits() { ee_units_ag_keep_mobile(H(this)); }
     void TellGroup(EEComplexUnit* inUnit, const GE3DPoint& inLocation);  // 0x1efca8 (the teleport calamity)
     // inline (out-of-line COMDAT 0xbb02a after its first user EEMAddPatrolPoint::Execute; 25 callers, none expands
     // it): defined in ee/EEActiveGroup.h, where EEUnitGoal is complete (its delete calls the virtual dtor)

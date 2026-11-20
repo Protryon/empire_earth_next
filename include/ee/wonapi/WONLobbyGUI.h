@@ -21,12 +21,15 @@
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
+#include "rust/won_gui/cfgkind.h"
+#include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/ctobj.h"
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
 #include "rust/won_gui/grabobj.h"
+#include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guilayout.h"
 #include "rust/won_gui/inputobj.h"
@@ -1029,81 +1032,73 @@ struct LobbyNetAddress {
     long mHandle;                           // +0x10, numeric IPv4 adapter address
 };
 // ConfigObject (0x54 bytes) is declared in WONConfigObject.h via Resource.
-// 0x78-byte base, constructor and destructor out of line; the private 0x24-byte tail is opaque.
+// A component's config. Since R6 WONLobby round 25 its readers, resource look-ups, map of named child configs, current
+// resource group, the parsers an instruction reads and its instructions are ee_won_gui's compcfg.rs object (mCfg);
+// these are the forwards (include/ee/wonapi/WONCompCfg.inl, compiled by ComponentConfigHost.cpp). The class keeps its
+// vtable, the component, the three flags the table programs set and the error text. Since round 26 the original's
+// config classes of each widget type (ButtonConfig, DialogConfig, the skins' configs, ...) are its kinds (ee_won_gui
+// cfgkind.rs: each kind's instructions, predefined children and named values); ContainerConfig keeps the layout state.
 class ComponentConfig : public ConfigObject {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
-    void InitComponents(); //382cc0 recursive guarded component initialization
-    Direction ReadDirection(); //3856f0
-    HorzAlign ReadHorzAlign(); //385950
-    VertAlign ReadVertAlign(); //385b10
+    void InitComponents(); // once, then every child config in name order
+    Direction ReadDirection();
+    HorzAlign ReadHorzAlign();
+    VertAlign ReadVertAlign();
     static void SetResourceFolder(const std::string&);
-    static std::string mResourceFolder;
-    SmartPtr<Sound> ReadSound(); // 0x3855f0 (the caller owns the result)
-    void EnsureComma(); //382e00; SkipComma is382dd0
-    int GetIntValue();
-    int ParseExpression(int); //383560
-    int ReadChar(); //383930
-    GUIString ReadFlag(bool* = NULL); //383a90
-    GUIString ReadRawString(bool); //383b00
+    SmartPtr<Sound> ReadSound();
+    void EnsureComma();
+    int ReadChar();
+    GUIString ReadFlag(bool* = NULL);
+    GUIString ReadRawString(bool);
     SmartPtr<Font> ReadFont();
-    SmartPtr<Image> ReadImage(bool); // 0x384fa0 (hidden result)
+    SmartPtr<Image> ReadImage(bool);
     SelectionColor ReadSelectionColor();
-    ComponentConfig* GetComponentConfig(const GUIString&,bool);
-    ComponentConfig* ReadComponentConfig(); // 0x3868d0: config lookup
-    bool HandleMapComponent(); // 0x386960 (0x386950 is a separate 9-byte wrapper)
-    bool HandleModifyGroup(ConfigParser&);
-    bool HandleResourceGroup(ConfigParser&);
+    bool HandleMapComponent();
     bool HandleModify();
-    bool BaseHandleInstruction(ConfigParser&,const std::string&,StringParser&); // 0x387370 (forwarder)
     void SetDesiredSizeIfNecessary();
-    SmartPtr<Cursor> ReadCursor(); // 0x385380 (hidden result)
-    int GetIntResource(const std::string&); //384210
-    static SmartPtr<ResourceConfigTable> mResourceConfigTable; // 0x566b28 (declaration only)
+    SmartPtr<Cursor> ReadCursor();
+    static SmartPtr<ResourceConfigTable> mResourceConfigTable; // the table a parse reads (ReadConfig_Unsafe sets it)
     SmartPtr<RawImage> ReadRawImage();
-    SmartPtr<Image> GetImageFromStr(const std::string&,bool); //384890
     SmartPtr<RawImage> GetRawImageFromStr(const std::string&);
-    StandardCursor ReadStandardCursor(); //385120
-    void AddChildToConfigMap(const GUIString&,ComponentConfig*); // 0x386c30; the parent keeps the child
-    GUIString GetStringResource(const std::string&); //383bd0
-    Image* GetImageResource(const std::string&); //383d60 borrowed
-    Font* GetFontResource(const std::string&); //383e50 borrowed
-    SmartPtr<Sound> GetSoundResource(const std::string&); //383f40 owned result
-    DWORD GetColorResource(const std::string&); //384050
-    void GetBackgroundResource(const std::string&,Background&); //384140
-    Background ReadBackground(); // 0x385ea0, returns a Background (0x14 bytes) by value
-    int ReadInt(); // 0x3837e0, no arguments
+    StandardCursor ReadStandardCursor();
+    void AddChildToConfigMap(const GUIString&,ComponentConfig*,bool inAlways=false); // an empty name only inAlways
+    Background ReadBackground();
+    int ReadInt();
     Component* ReadComponent();
-    bool EndOfString(); //382db0
-    void SkipComma(); //382e00
-    static std::string GetResourceFile(const std::string&); //387e50
+    bool EndOfString();
+    static std::string GetResourceFile(const std::string&);
+    void HandleFitText(); // a button kind's FITTEXT
 
-    ComponentConfig();
-    virtual ~ComponentConfig();            // 0x382690, own VT451f54
+    explicit ComponentConfig(EeWonCfgKind inKind = EeWonCfgKind::Component);
+    virtual ~ComponentConfig();
     virtual bool HandleInstruction(ConfigParser*, const std::string&);
     virtual bool HandleValueInstruction(ConfigParser*, const std::string&, StringParser&);
     virtual bool PreParse(ConfigParser*);
     virtual bool PostParse(ConfigParser*);
-    virtual bool Virtual24(const std::string&);
+    virtual bool Virtual24(const std::string&); // the kind's tables and its bases' (WONCfgTable.inl)
     virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&);
     virtual bool GetNamedValue(const std::string&, int&);
     virtual bool CallNamedFunction(const std::string&, const std::vector<int>&, int&);
     virtual void SetComponent(Component*);
-    GUIString ReadString(bool);             // ReadString
-    int ReadColor();                       // ReadColor
-    Component* Fn386860(const std::string& inName); // 0x386860, borrowed component lookup
-    bool ReadBool();                       // 0x3837f0, boolean parser
+    GUIString ReadString(bool);
+    int ReadColor();
+    Component* Fn386860(const std::string& inName); // the named child config's component, borrowed
+    bool ReadBool();
     bool RunTable(int,const std::string&); // the table reader (ee_won cfgtab.rs, WONCfgTable.inl); false: not its key
-    SmartPtr<Component> mComponent; // at +0x54 (set at 0x3825dc)
-    ConfigParser* mConfigParser; //58, borrowed
-    StringParser* mStringParser; // at +0x5c
-    GUIString mConfigError; // at +0x60 (set at 0x3825ff)
-    bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents; // at +0x64/+0x65/+0x66; +0x67 padding
-    std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase> mConfigMap; // at +0x68..0x73
-    SmartPtr<ResourceConfig> mCurResourceConfig; // at +0x74
+    SmartPtr<Component> mComponent;
+    GUIString mConfigError;
+    bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents;
+    EeWonCfgKind mKind; // the original's class
+    EeWonCompCfg* mCfg; // owned
 };
+// a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
+// CompFactory statics, one template each since R6 WONLobby round 25); a config of a kind (round 26)
+template<class C> ComponentConfig* NewConfigOf() { return new C; }
+ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ConfigTableHost.cpp)
+template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K); }
+template<class T> Component* NewComponentOf() { return new T; }
+inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
 // FontConfig is declared after FontDescriptor below.
 class FontConfig;
@@ -1151,42 +1146,17 @@ template <class T> void SafeGetComponent(ComponentConfig* inConfig, SmartPtr<T>&
     outPtr->mControlId = inControlId;
 }
 
-class ButtonConfig : public ComponentConfig {
-public:
-    void HandleFitText(); //381d00
-    ButtonConfig();                         // 0x381860; the class is 0x7c bytes
-    virtual bool Virtual24(const std::string&); //381e80
-    virtual void SetComponent(Component*);  //38f8d0 ICF target
-    Button* mButton;                        // +78, borrowed
-};
-
+// ContainerConfig: the container kinds' config; the layout state the table programs read and write
 class ContainerConfig : public ComponentConfig {
 public:
-    static Component* LayoutPointFactory();
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
-    bool HandleLayout(bool chain=false,bool repeat=false);
-    bool HandleNoOverlapLayout();
-    bool HandleNewLayoutPoint();
-    ContainerConfig();                      // 0x387f90; the class is 0x98 bytes
-    // The implicit destructor (0x38ef70) jumps to ComponentConfig's.
-    virtual bool HandleInstruction(ConfigParser*, const std::string&); //3885d0
-    virtual bool Virtual24(const std::string&); //389c80
-    virtual void SetComponent(Component*);  //38f8d0
+    explicit ContainerConfig(EeWonCfgKind inKind = EeWonCfgKind::Container);
+    virtual bool HandleInstruction(ConfigParser*, const std::string&); // PERCENTLAYOUT, COLORSCHEME
+    virtual void SetComponent(Component*); // the container (none for a ScreenContainer, as the original's)
     Container* mContainer;                  // +78, borrowed
     Component* mLayoutRef;                  // +7c, borrowed
     int mLayoutInstruction;                // +80
     int mLayoutParams[4];                  // +84..90
     int mCurLayoutId;                      // +94
-};
-
-class DialogConfig : public ContainerConfig {
-public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
-    virtual bool Virtual24(const std::string&); //389f80
-    virtual void SetComponent(Component*);  //38f960
-    Dialog* mDialog;                        // +98, borrowed
 };
 
 class LobbyConfig : public ConfigObject {
@@ -1844,7 +1814,6 @@ void LobbyKickClient(LobbyClient* inClient, bool inFlag);
 
 // 0x361250: default GUI manager (global 0x566270, assigned by WindowManager constructor).
 
-// Font, Image and NativeImage are declared for their callers; nothing here allocates them.
 
 class Font : public RefCount {
 public:
@@ -1868,13 +1837,10 @@ inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall:
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
 class FontConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     FontConfig();
     Font* GetFont(); // 0x38a300; recalculates the font on demand
     void SetFont(Font*); //38a3e0
-    virtual bool PostParse(ConfigParser*); // 0x3099f0 (shared hook body)
-    virtual bool Virtual24(const std::string&); //38a5f0
+    virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0 (shared hook body: no desired size)
     virtual bool GetNamedValue(const std::string&,int&); //38a580
     SmartPtr<Font> mFont; //78
     FontDescriptor mDescriptor; //7c..93
@@ -1882,19 +1848,30 @@ public:
     // Implicit destructor; 0x38a250 has no own vptr store.
 };
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
+// The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
+// original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and
+// their palettes, MSImage, DelayLoadImage, StretchImage, StretchCenterImage; the filters and the decoders too). These
+// classes are its handles: one owned pointer and the reference count; each method a forward. A call that makes an
+// image returns a new handle (WONImageHost's Wrap picks the class by the kind) with one reference the SmartPtr adopts.
+// The host is PlatNativeImage.cpp's.
+intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Image : public RefCount {
 public:
-    void DrawEntire(DisplayContext*,int,int); // 0x3285a0: draws the whole image
-    virtual ~Image();
-    virtual void Draw(DisplayContext*, int, int, int, int, int, int);
-    virtual void SetSize(int, int);
-    virtual SmartPtr<Image> Duplicate();
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*);
-    unsigned short GetWidth() const { return this->mWidth; }
-    unsigned short GetHeight() const { return this->mHeight; }
-    unsigned short mWidth;                  // +08
-    unsigned short mHeight;                 // +0a
+    EeWonImage* mRust; // owned
+    explicit Image(EeWonImage* inRust) : mRust(inRust) { ee_won_image_bind(inRust,(intptr_t)this); }
+    virtual ~Image() { ee_won_image_free(this->mRust); }
+    void Draw(DisplayContext* c,int x,int y,int l,int t,int w,int h) { ee_won_image_draw(this->mRust,(intptr_t)c,x,y,l,t,w,h); }
+    void DrawEntire(DisplayContext* c,int x,int y) { this->Draw(c,x,y,0,0,this->GetWidth(),this->GetHeight()); }
+    void SetSize(int w,int h) { this->Call(EeWonImageCall::SetSize,w,h); }
+    SmartPtr<Image> Duplicate();
+    SmartPtr<NativeImage> GetNative(DisplayContext* c);
+    unsigned short GetWidth() const { return (unsigned short)this->Get(EeWonImageField::Width); }
+    unsigned short GetHeight() const { return (unsigned short)this->Get(EeWonImageField::Height); }
+    EeWonImageKind GetKind() const { return ee_won_image_kind(this->mRust); }
+    intptr_t Get(EeWonImageField f) const { return ee_won_image_get(this->mRust,f); }
+    intptr_t Call(EeWonImageCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0,intptr_t d=0) { return ee_won_image_call(this->mRust,c,a,b,cc,d); }
 };
+template <class T> inline SmartPtr<T> WONImageAdopt(intptr_t p) { SmartPtr<T> s; s.mPtr=static_cast<T*>((Image*)p); return s; }
 // a private duplicate of the other frame's image (none when it has none), then its borders
 inline void WONFrame::Copy(const WONFrame& f)
 {
@@ -1905,133 +1882,56 @@ inline void WONFrame::Copy(const WONFrame& f)
 // ImageComponent's image setters (the component sized to a non-null image) and its desired size (the image's, or
 // 10 x 10 without one)
 inline ImageComponent::ImageComponent(Image* i,bool t) { this->SetImageAndTile(i,t); this->mStretch=false; }
-inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->mWidth; h=this->mImage->mHeight; } else w=h=10; }
-inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
-inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
-// NativeMask (0x0c bytes): constructor 0x3288b0, RTTI 0x4d6e80.
-class NativeMask : public RefCount {
-public:
-    NativeMask(DisplayContext*); //3288b0
-    virtual ~NativeMask(); //328920
-    SmartPtr<DisplayContext> mDisplayContext; //08
-};
-// NativeImage (abstract, 0x18 bytes); 0x328a70/0x328b20.
+inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->GetWidth(); h=this->mImage->GetHeight(); } else w=h=10; }
+inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
+inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->GetWidth(),i->GetHeight()); }
+// PlatNativeImage (the one native image; PlatNativeImage is its other name, WONLobbyPlatform.h): a logical size, a
+// surface of PlatGUIPixels(size, scale) pixels and its own display context, a transparency mask, its Graphics
 class NativeImage : public Image {
 public:
-    NativeImage(DisplayContext*); //328a70
-    Graphics& GetGraphics(); //328c20
-    void SetTransparentMask(NativeMask* mask) { this->mTransparentMask=mask; }
-    virtual ~NativeImage(); //328b20
-    virtual void Draw(DisplayContext*,int,int,int,int,int,int) = 0;
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //328bf0
-    virtual Graphics* PlatformGetGraphics() = 0;
-    virtual SmartPtr<RawImage32> GetRaw();
-    Graphics* mGraphics; // at +0x0c, owned
-    SmartPtr<DisplayContext> mDisplayContext; //10
-    SmartPtr<NativeMask> mTransparentMask; //14
+    explicit NativeImage(EeWonImage* r) : Image(r) {}
+    // black, inWidth x inHeight logical pixels at the pixel scale (at least 1); the context is not kept
+    NativeImage(DisplayContext*,int inWidth,int inHeight,float inScale=1.0f) : Image(ee_won_image_new_native(WONImageHost,inWidth,inHeight,inScale)) {}
+    Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
+    SmartPtr<RawImage32> GetRaw();
+    uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
+    int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
+    int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
+    int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
+    float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
+    SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
 };
-
-
-// Target classes merge platform behavior into the concrete RawImage classes.
-// Six vtable slots (tables at 0x4510a8/0x4510c4/0x4510e0); the later SDK's platform
-// virtuals and GetRawImage32 virtual are absent from this binary.
-class Palette : public RefCount {
-public:
-    Palette(int n) : mNumColors(n) { this->mColors=new DWORD[n]; } // inline; allocates n colors (used at 0x336828)
-    SmartPtr<Palette> Duplicate(); // 0x349040: copies the palette
-    void SetColor(int thePos, unsigned long theVal) { this->mColors[thePos] = theVal; }
-    unsigned long GetColor(int thePos) { return this->mColors[thePos]; }
-    int GetNumColors() { return this->mNumColors; }
-    virtual ~Palette(); // out of line
-    DWORD* mColors; //08
-    int mNumColors; //0c
-}; // 0x10 bytes, two owned members; destructor out of line
-class NativeMask;
 class RawImage : public Image {
 public:
-    RawImage(int type) : mType(type) {}
-    virtual void Draw(DisplayContext*,int,int,int,int,int,int); //328c50
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*) = 0;
-    virtual bool HasTransparency() { return false; }
-    int mType; //0c; 0=1bit,1=8bit,2=32bit
+    explicit RawImage(EeWonImage* r) : Image(r) {}
+    int GetType() const { return (int)this->Get(EeWonImageField::RawType); } // 0 1-bit, 1 8-bit, 2 32-bit
+    bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
 };
 class RawImage32 : public RawImage {
 public:
-    RawImage32(int,int); // 0x328cf0; 0x24 bytes
-    virtual ~RawImage32(); //328da0
-    virtual SmartPtr<Image> Duplicate(); //328df0
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //328f30
-    virtual bool HasTransparency() { return this->mDoTransparency; }
-    SmartPtr<NativeImage> CreateNativeImage(DisplayContext*); // creates the platform image
-    DWORD GetPixel(int,int); //328ee0
-    DWORD* StartRowTraversal(int); //328f00
-
-    void SetDoTransparency(bool value) { this->mDoTransparency=value; }
-    void SetRowPixel(DWORD value) { *this->mRowPtr=value; }
-    bool HasMoreRows() { return this->mRowEnd<=this->mImageEnd; }
-    bool HasMoreRowPixels() { return this->mRowPtr<this->mRowEnd; }
-    DWORD* GetImageData() { return this->mImageData; }
-    DWORD GetRowPixel() { return *this->mRowPtr; }
-    void NextRowPixel() { ++this->mRowPtr; }
-    void NextRowPixel(int theAmount) { this->mRowPtr+=theAmount; }
-    void NextRow() { this->mRowPtr=this->mRowEnd; this->mRowEnd+=this->mWidth; }
-    DWORD* mImageData; //10
-    DWORD* mImageEnd; //14
-    DWORD* mRowPtr; //18
-    DWORD* mRowEnd; //1c
-    bool mDoTransparency; //20
+    explicit RawImage32(EeWonImage* r) : RawImage(r) {}
+    RawImage32(int w,int h) : RawImage(ee_won_image_new_raw32(WONImageHost,w,h)) {}
+    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); }
+    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); }
 };
 class RawImage8 : public RawImage {
 public:
-    RawImage8(int,int,Palette* =NULL); // 0x329170; 0x30 bytes
-    virtual ~RawImage8(); //329280
-    virtual SmartPtr<Image> Duplicate(); //329300
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //329460
-    virtual bool HasTransparency() { return this->mTransparentColor>=0; }
-    void CalcBytesPerRow(); //real nonvirtual platform row initialization
-    SmartPtr<NativeImage> CreateNativeImage(DisplayContext*);
-    unsigned char GetPixel(int,int); //329420
-    unsigned char* StartRowTraversal(int); //329440
-    unsigned char GetRowPixel() { return *this->mRowPtr; }
-    void SetRowPixel(unsigned char value) { *this->mRowPtr=value; }
-    void NextRowPixel() { ++this->mRowPtr; }
-    void NextRowPixel(int theAmount) { this->mRowPtr+=theAmount; }
-    unsigned char* mImageData; //10
-    unsigned char* mImageEnd; //14
-    unsigned char* mRowPtr; //18
-    unsigned char* mRowEnd; //1c
-    int mRowPad; //20
-    int mBytesPerRow; //24
-    SmartPtr<Palette> mPalette; //28
-    int mTransparentColor; //2c
+    explicit RawImage8(EeWonImage* r) : RawImage(r) {}
+    RawImage8(int w,int h) : RawImage(ee_won_image_new_raw8(WONImageHost,w,h)) {} // no palette
 };
-class RawImage1 : public RawImage {
-public:
-    RawImage1(int,int); // 0x329690; 0x3c bytes
-    virtual ~RawImage1(); //329790
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext*); //3d07e0
-    void CalcBytesPerRow(); //real nonvirtual platform row initialization
-    SmartPtr<NativeMask> GetMask(DisplayContext*); //3d06b0, nonvirtual
-    unsigned char* StartRowTraversal(int); //3297e0
-    void NextRow() { this->mRowPtr=this->mRowEnd+this->mRowPad; this->mRowEnd+=this->mBytesPerRow; this->mRowMask=128; }
-    int GetBytesPerRow() { return this->mBytesPerRow; }
-    unsigned char* GetImageData() { return this->mImageData; }
-    void NextRowPixel() { this->mRowMask>>=1; if(this->mRowMask==0) { this->mRowPtr++; this->mRowMask = 128; } }
-    void NextRowPixel(int theAmount) { for(int i=0; i<theAmount; i++) this->NextRowPixel(); }
-    void SetRowPixel(bool on) { if(on) *this->mRowPtr |= this->mRowMask; else *this->mRowPtr &= ~mRowMask; }
-    bool GetRowPixel() { return (*this->mRowPtr)&this->mRowMask?true:false; }
-    unsigned char* mImageData; //10
-    unsigned char* mImageEnd; //14
-    unsigned char* mRowPtr; //18
-    unsigned char* mRowEnd; //1c
-    int mRowMask; //20
-    int mRowPad; //24
-    int mEndRowMask; //28
-    int mBytesPerRow; //2c
-    int mBytesPerRowMinusPad; //30
-    int mCompleteBytesPerRow; //34
-    int mWidthMod8; //38
-};
+inline SmartPtr<Image> Image::Duplicate() { return WONImageAdopt<Image>(this->Call(EeWonImageCall::Duplicate)); }
+inline SmartPtr<NativeImage> Image::GetNative(DisplayContext* c) { return WONImageAdopt<NativeImage>(this->Call(EeWonImageCall::Native,(intptr_t)c)); }
+inline SmartPtr<RawImage32> NativeImage::GetRaw() { return WONImageAdopt<RawImage32>(this->Call(EeWonImageCall::Raw)); }
+// the filters (ImageFilters.cpp's crop, scale and tint and the transparent colour; imgobj.rs): a new image, or the
+// image itself (NULL for an image of a type the filter has none for)
+inline SmartPtr<RawImage> ImageCrop(RawImage* i,int x,int y,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Crop,x,y,w,h)); }
+inline SmartPtr<RawImage> ImageScalePercent(RawImage* i,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::ScalePercent,w,h)); }
+inline SmartPtr<RawImage> ImageScaleTo(RawImage* i,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::ScaleTo,w,h)); }
+inline SmartPtr<RawImage> ImageTint(RawImage* i,int r,int g,int b) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Tint,r,g,b)); }
+inline SmartPtr<RawImage> ImageTransparent(RawImage* i,DWORD c) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Transparent,(intptr_t)c)); }
+// the decoders' decodes (WONLobbyImageDecoder.h)
+inline SmartPtr<NativeImage> MultiImageDecoder::Decode(DisplayContext* c,const char* p) { return WONImageAdopt<NativeImage>(this->Run(EeWonImgDecoderRun::Decode,c,p)); }
+inline SmartPtr<RawImage> MultiImageDecoder::DecodeRaw(const char* p) { return WONImageAdopt<RawImage>(this->Run(EeWonImgDecoderRun::DecodeRaw,NULL,p)); }
 
 class TextListItem : public ListItem {
 public:

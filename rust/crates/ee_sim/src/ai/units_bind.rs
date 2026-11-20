@@ -112,7 +112,80 @@ pub unsafe extern "C" fn ee_ai_units_facts_reset(out: *mut EeAiUnitsFacts) {
 }
 
 extern "C" {
-    fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64;
+    /// The operations on the game's objects (EECPNextUnits.cpp).
+    fn ee_ai_units_host_cpp(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64;
+}
+
+/// The host: the world's and the continent manager's reads in Rust ([`world_op`]), the rest the C++'s.
+///
+/// # Safety
+/// The operation's objects are live; `out` is its record (or null).
+unsafe fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
+    match world_op(op, a, b, c, out) {
+        Some(r) => r,
+        None => ee_ai_units_host_cpp(op, player, a, b, c, out),
+    }
+}
+
+/// The operations that read the world's records and the continent manager's (AI Thread cluster round 6; once the
+/// C++ switch's), `None` for the others.
+///
+/// # Safety
+/// As [`ee_ai_units_host`].
+unsafe fn world_op(op: i32, a: i64, b: i64, c: i64, out: *mut c_void) -> Option<i64> {
+    use crate::astar::cm::EeAStarCmTable;
+    use crate::astar::cm_io;
+    let t = crate::world::WorldRead::begin();
+    let cm = crate::astar::world_view::cm();
+    let continents = || cm.map_or(&[][..], |r| &r.tables().tables[EeAStarCmTable::Continents as usize][..]);
+    Some(match op {
+        EE_AI_UNITS_HOST_NOW => crate::world::WorldView::global(&t).map_or(0, |w| w.game_time()),
+        EE_AI_UNITS_HOST_CONTINENT => {
+            // `GetContinent(tile, c ? kAIPathWaterBody : kAIPathLandMass)`, its CNTQ record and all
+            let Some(r) = cm else { return Some(0) };
+            i64::from(crate::astar::cm_queries::ee_astar_cmq_region_id(
+                r,
+                a as c_long,
+                b as c_long,
+                if c != 0 { 1 } else { 2 },
+            ))
+        }
+        EE_AI_UNITS_HOST_LAST_ATTACKER => {
+            crate::world::UnitView::of(&t, a as u64).map_or(0, |u| u.last_attacker_handle() as i64)
+        }
+        EE_AI_UNITS_HOST_IS_TRANSPORT => {
+            let category = crate::world::ClassView::of(&t, a as u64).map_or(0, |k| k.category());
+            i64::from([0x10, 0x11, 0x12, 0x21, 0x1d].contains(&category))
+        }
+        more::EE_AI_UNITS_HOST_AREA_AT => {
+            let id = cm.map_or(0, |r| cm_io::continent_id_at(r, a as c_long, b as c_long));
+            if id == 0 {
+                0
+            } else {
+                continents().get(id as usize).copied().unwrap_or(0) as i64
+            }
+        }
+        more::EE_AI_UNITS_HOST_AREA_BY_ID => {
+            if a <= 0 || a as usize >= continents().len() {
+                0
+            } else {
+                continents()[a as usize] as i64
+            }
+        }
+        more::EE_AI_UNITS_HOST_AREA_INFO => {
+            let h = a as u64;
+            let r = &mut *(out as *mut more::EeAiUnitsArea);
+            r.id = cm_io::continent(h).id as c_long;
+            r.category = cm_io::continent(h).category as c_long;
+            r.tiles = ee_base::sparse::ee_sparse_size(cm_io::area_tiles(h)) as c_long;
+            0
+        }
+        more::EE_AI_UNITS_HOST_FOREST_AT => {
+            let Some(r) = cm else { return Some(0) };
+            i64::from(crate::astar::cm_queries::ee_astar_cmq_area_at(r, 1, a as c_long, b as c_long) != 0)
+        }
+        _ => return None,
+    })
 }
 
 fn host(op: i32, me: *mut c_void, a: i64, b: i64, c: i64) -> i64 {

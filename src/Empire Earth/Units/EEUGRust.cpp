@@ -174,8 +174,7 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
         if (theFound == true) {
             EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles.back().GetX(), theTiles.back().GetY());
             if (theTile != NULL
-                && EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), theTiles.back().GetX(), theTiles.back().GetY(), 1,
-                              theTiles.back().GetX(), theTiles.back().GetY(), 1, &theLocation)) {
+                && ee_units_uu_find_place_on_tile((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inUnit->GetUnitClass(), theTiles.back().GetX(), theTiles.back().GetY(), 1, theTiles.back().GetX(), theTiles.back().GetY(), 1, (float(*)[3])&theLocation.mX)) {
                 outWaitingArea = theLocation;
                 outWaitingArea.mZ = theTile->GetHeight();
             } else
@@ -188,8 +187,7 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
         for (unsigned long i = 0; i < theOthers.size() && !theFound; i++) {
             EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theOthers[i].mX, theOthers[i].mY);
             if (theTile == NULL
-                || !EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), theOthers[i].mX, theOthers[i].mY, 1,
-                              theOthers[i].mX, theOthers[i].mY, 1, &theLocation))
+                || !ee_units_uu_find_place_on_tile((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inUnit->GetUnitClass(), theOthers[i].mX, theOthers[i].mY, 1, theOthers[i].mX, theOthers[i].mY, 1, (float(*)[3])&theLocation.mX))
                 continue;
             outWaitingArea = theLocation;
             theFound = true;
@@ -221,7 +219,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
         if (theForest != NULL && theForest->GetNumTiles() > 1) {
             theCenter.SetX(inResource->GetTileX());
             theCenter.SetY(inResource->GetTileY());
-            EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
+            ee_units_uu_units_in_radius(theCenter.mX, theCenter.mY, inUnit->GetLineOfSight(), &theUnits);
             EEComplexUnit* theOther = NULL;
             for (long i = theUnits.size() - 1; i >= 0; i--) {
                 EEComplexUnit* theUnit = (EEComplexUnit*)*(theUnits.begin() + i);

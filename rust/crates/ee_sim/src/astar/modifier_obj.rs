@@ -30,7 +30,7 @@ use std::ptr;
 
 #[cfg(not(test))]
 extern "C" {
-    fn ee_astar_mod_host_unit_reference(unit: u64, add: bool);
+    pub(crate) fn ee_astar_mod_host_unit_reference(unit: u64, add: bool);
     fn ee_astar_mod_host_influence(region_size: *mut i32) -> *const c_void;
 }
 use crate::astar::world_view::ee_astar_view_cm_hill_at;
@@ -50,7 +50,7 @@ mod cpp {
         /// the unit references the tests' modifiers took (+1) and dropped (-1)
         pub(crate) static UNIT_REFS: RefCell<Vec<(u64, i32)>> = const { RefCell::new(Vec::new()) };
     }
-    pub(super) unsafe fn ee_astar_mod_host_unit_reference(unit: u64, add: bool) {
+    pub(crate) unsafe fn ee_astar_mod_host_unit_reference(unit: u64, add: bool) {
         UNIT_REFS.with(|r| r.borrow_mut().push((unit, if add { 1 } else { -1 })));
     }
     pub(super) unsafe fn ee_astar_mod_host_influence(_region_size: *mut i32) -> *const std::ffi::c_void {

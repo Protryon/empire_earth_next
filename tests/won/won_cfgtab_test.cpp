@@ -27,6 +27,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/shell.h"     // the shell kinds' ops the game's statements make
@@ -42,6 +43,7 @@ namespace Orig {
 }
 
 namespace Shell {
+#define EE_CFGTAB_PORT // the classes' instructions: their kinds' (WONCfgTable.inl's ComponentConfig::Virtual24, cfgkind.rs)
 #include "won_cfgtab_world.h"
 static bool sPrint;
 static std::string sGold;

@@ -11,27 +11,13 @@
 #include <math.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
 
-#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEAIRandom.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPTrace.h"
@@ -45,26 +31,16 @@
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPReflexes.h"
-#include "ee/EEUnitAction.h"
 #include "ee/EEUGRust.h"
-#include "ee/UReferenceContainer.h"
 #include <EEAIFunctionObjects.h>
-#include "ee/EECalamityManager.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EECPUnitTileDistanceLess.h"
 #include "ee/EETeam.h"
-#include "ee/EEVictoryCondition.h"
-#include "ee/EEVCWonder.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIPathArea.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEGameOptions.h"
-#include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
-#include "ee/EECPExperimentTimers.h"
 #include "ee/EECPPlaceCapture.h"
 #include "rust/sim/cp.h"
 
@@ -619,9 +595,9 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
 }
 
 // Complete goal/utility types after this unit's static definitions preserve existing initializer order.
-#include "ee/EEUGRust.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EECombatGoals.h"
+#include "rust/sim/units.h"
 
 // Sends an empty naval, helicopter or space transport to the berth of its nearest dock, airport or space dock
 // and detaches it from the AI
@@ -632,15 +608,15 @@ void EEComputerPlayer::SendToNearestBase(EEComplexUnit* inUnit)
     std::vector<EEUnit*> theUnits;
     long theCategory = inUnit->mUnitClass->mCategory;
     if (theCategory == kUnitCategoryNavalTransport)
-        EEGetPlayerUnitsOfType(kUnitTypeDock, this->mPlayerID, theUnits);
+        ee_units_uu_player_units_of_type(kUnitTypeDock, this->mPlayerID, &theUnits);
     else if (theCategory == kUnitCategoryHelicopterTransport)
-        EEGetPlayerUnitsOfType(kUnitTypeAirport, this->mPlayerID, theUnits);
+        ee_units_uu_player_units_of_type(kUnitTypeAirport, this->mPlayerID, &theUnits);
     else if (theCategory == kUnitCategorySpaceTransport)
-        EEGetPlayerUnitsOfType(kUnitTypeSpaceDock, this->mPlayerID, theUnits);
+        ee_units_uu_player_units_of_type(kUnitTypeSpaceDock, this->mPlayerID, &theUnits);
     if (theUnits.size() > 0) {
         std::sort(theUnits.begin(), theUnits.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
         EEUnitClass* theClass = inUnit->mUnitClass;
-        if (EEGetDockShipFacing(&thePoint, theClass, theUnits.front(), false, &theTransformation)) {
+        if (ee_units_uu_dock_ship_placement((const float(*)[3])&thePoint.mX, (uint64_t)(uintptr_t)theClass, (uint64_t)(uintptr_t)theUnits.front(), false, true, (float(*)[4][4])&theTransformation.mMatrix[0][0])) {
             EEUnitGoal* theGoal = EEUGRust::NewLocation(theTransformation.GetX(), theTransformation.GetY(),
                 theTransformation.GetZ(), false, true, false, 0.0f, false, false);
             inUnit->QueueGoal(theGoal, 0);
@@ -1151,7 +1127,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_UNIT_OBSOLETE:
         return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
     case EE_CP_PLAYER_SEEN_BY:
-        return EEIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
+        return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
     case EE_CP_PLAYER_KILL:
         theComplex->Kill(true, false, false);
         return 0;

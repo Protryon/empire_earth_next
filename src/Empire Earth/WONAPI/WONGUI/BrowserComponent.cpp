@@ -17,7 +17,7 @@
 #include "ee/wonapi/WONURL.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "ee/wonapi/WONLobbyGUICompletion.h"
-#include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "platform/PlatFile.h"
 namespace WONAPI {
 // Creates the view: an empty, word-wrapped, read-only text area

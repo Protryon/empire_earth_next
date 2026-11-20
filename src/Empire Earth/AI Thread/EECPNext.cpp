@@ -14,22 +14,9 @@
 #include <string>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
@@ -39,26 +26,23 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIForest.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EECPReflexes.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EEGameLog.h"
 #include "ee/EELuaApi.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EESaveGameFiles.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
 #include "rust/sim/ai.h"   // ee_ai_*: the engine (next_game.rs), the name tables (names.rs)
+#include "rust/sim/units.h"
 
 // the facts of the Lua build the Rust runtime (ee_ai lua_api.rs: mlua-sys, lua54) assumes; lua_host.rs checks its side
 static_assert(LUA_VERSION_NUM == 504, "Lua 5.4");
@@ -589,7 +573,7 @@ extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int6
     }
     case EE_AI_NEXT_HOST_UNITS_OF_TYPE: {
         std::vector<EEUnit*> theUnits;
-        EEGetPlayerUnitsOfType((long)a, (long)b, theUnits);
+        ee_units_uu_player_units_of_type((long)a, (long)b, &theUnits);
         for (size_t k = 0; k < theUnits.size(); k++)
             ee_ai_next_push_handle(outRecord, EECPNextHandle(theUnits[k]));
         return 0;

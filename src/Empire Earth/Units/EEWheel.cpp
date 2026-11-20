@@ -28,6 +28,7 @@
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEAIKindIDs.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg_trade_price
+#include "rust/sim/units.h"
 
 
 
@@ -145,7 +146,7 @@ bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint)
     if (inUnit->mGoalState != NULL) {
         inUnit->mGoalState->GetGoalLocation(theGoal);
         inUnit->GetPosition(thePosition);
-        float theAngle = ee_units_uu_jitter_heading(EEGetHeadingBetween(&theGoal, &thePosition), -20.0f, 20.0f);
+        float theAngle = ee_units_uu_jitter_heading(ee_units_uu_heading_between((const float(*)[3])&theGoal.mX, (const float(*)[3])&thePosition.mX), -20.0f, 20.0f);
         EETileCoordinate theTile(inUnit->mTileX, inUnit->mTileY);
         unsigned short theContinent = gContinentManager.GetContinent(theTile, kAIPathLandMass);
         for (long i = 12; i >= 0; i--) {

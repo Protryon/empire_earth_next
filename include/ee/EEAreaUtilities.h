@@ -17,10 +17,8 @@ class EEUnitClass;
 
 // cdecl helpers EEMBuildUnit::Execute 0xbbcc4 calls with the message's (long) x/y (provisional names; types
 // inferred; units per the map: EEHitPointUpgrader.cpp / EEFOFindNewTargetNearOldTarget.cpp)
-bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner);
 EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY);
 // cdecl helpers the heal goal calls (provisional names; types inferred)
-bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inArg);   // 0x2479eb (EEUGAttackUnit passes its EEUnit* target)
 // 0x242542 (EEActiveGroup::SpreadAroundUnit: a unit whose class IsPriest holds and the target's complex unit)
 // (provisional name)
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
@@ -40,37 +38,19 @@ float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigne
 bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanceSquared);
 // 0x245903 / 0x245a19 / 0x23eabc (cdecl): EEUGGather's 0xfbd handler (the units around inUnit, the first free one
 // among theirs, then send inUnit there) (provisional names; types inferred)
-bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits);
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioCount);  // bool: `cmp byte [ebp+0xc]`
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit);
 // EEUGAttackUnit.cpp's cdecl callees (provisional names; types inferred; the first is named by its assert)
-bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass);
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile);
 // 0x24680c / 0x24240d (cdecl; EECPAttackSubGroupUnit::Flee's: a search window around inUnit; the heading from
 // inFrom to inTo) (provisional name)
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
-float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo);
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
 class GERectangle;
-// 0x246a26 / 0x24720e: the tiles of (and around) a footprint of inSize at (inX, inY) (EEUGGather::HasGatherRoom)
-void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
-void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
-bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, long inY, long inSize, long inToX, long inToY,
-                long inSquare, GE3DPoint* outLocation);
 long EEGetAttackFrameSet(EEComplexUnit* inUnit);
-bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer);  // 0x2478f7 (EEUnit::Fn229D73 with the current player; provisional name) // 0x23c9d9 (EEWheel.cpp: the unit's attack frame set, 0/8/0xb)
 
-// 0x24b556: every tile of the square of inRadius around (inX, inY) (one less on the far side unless inInclusive)
-void EEGetTilesInRadius(long inX, long inY, unsigned long inRadius, bool inInclusive,
-                        std::vector<EETileCoordinate>& outTiles);
-// 0x24c395: inPlayer's units of inUnitType (EEUnitClass::mUnitType); returns their number
-long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>& outUnits);
-// 0x24c22a: the units in inRadius of inCenter
-long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>& outUnits);
-// 0x24bf01: the units within inRadius of inCenter; their number (the hurricane) (provisional name)
-long EEGetUnitsNear(const GE3DPoint& inCenter, float inRadius, std::vector<EEUnit*>& outUnits);
 
 class EEComplexUnit;
 class FSFile;
@@ -95,18 +75,6 @@ class EEPlayer;
 class EEUnitClass;
 class EETile;
 
-// The volcano's units and tiles (cdecl; provisional names; argument types inferred)
-// 0x24c146: the units inside inRectangle
-long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>& outUnits);
-// 0x23f630: whether inUnit can be moved (the volcano passes 0 first)
-bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit);
-// 0x246bd0: the tiles around the inSize square at (inX, inY)
-void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::vector<EETileCoordinate>& outTiles, bool inAppend);  // bool: EEUnitClass::Virtual44 0x234965 passes its bool through as a dword
-// 0x241658: whether inUnit can stand on inTile
-bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit);
-bool EEIsTileUnblocked(EEPlayer* inPlayer, long inUnitClass, EETile* inTile);
-// 0x24edf6 (the volcano's Virtual30)
-void EEStepAsideFromSite(EEUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, EETileCoordinate& inTile, bool inForce);
 
 // Orders tiles by their distance from mCenter (the volcano sorts the free tiles around its square with it; its
 // operator() is expanded in the sort COMDATs 0xb538d.., DistanceSquared is out of line at 0x8a3f, an AI unit's

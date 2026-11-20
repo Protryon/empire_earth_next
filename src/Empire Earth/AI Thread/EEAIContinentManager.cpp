@@ -9,54 +9,28 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
-#include "ee/EEAIFOUnitScreeners.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEMapDimensions.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
-#include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
-#include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include <EEAIFunctionObjects.h>
 
-#include "ee/EEAIPathArea.h"
-#include "ee/EEAIPathSector.h"
-#include "ee/EEUnitUtilities.h"
-#include "ee/EEAIRectangleArea.h"
 #include "ee/EEAIForest.h"
-#include "ee/EEAIHill.h"
-#include "ee/EEAIChokePoint.h"
-#include "ee/EEDeleteVectorContents.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMArea.h"
 #include "ee/EEDebugTrace.h"
-#include "ee/EESimCapture.h"
+#include "rust/sim/units.h"
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
@@ -267,7 +241,7 @@ void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
         return;
     if (inUnit->IsFoundation() || (!inUnit->GetUnitClass()->mBlocksTile && inUnit->GetUnitClass()->mCategory != kUnitCategoryGate))
         return;
-    EEGetFootprintTiles(inUnit, theTiles);
+    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)inUnit, &theTiles);
     ee_astar_cm_add_sector_tiles(&this->mRecord, theTiles.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&theTiles[0]),
                                  theTiles.size());   // Rust: cm_passes.rs
     gPathManager.SetRegionUpdates(true, inNow);

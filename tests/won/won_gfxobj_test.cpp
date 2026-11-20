@@ -36,12 +36,12 @@ static void T(const char* f, ...)
 
 // ---- stand-ins: the images and fonts the calls reach (their out-of-line members, here)
 static int IdOf(const void* p);
-Image::~Image() {}
-void Image::Draw(DisplayContext*, int x, int y, int l, int t, int w, int h) { T("part %d %d %d %d %d %d %d", IdOf(this), x, y, l, t, w, h); }
-void Image::DrawEntire(DisplayContext*, int x, int y) { T("entire %d %d %d", IdOf(this), x, y); }
-void Image::SetSize(int, int) {}
-SmartPtr<Image> Image::Duplicate() { return NULL; }
-SmartPtr<NativeImage> Image::GetNative(DisplayContext*) { return NULL; }
+// the images (imgobj.rs objects since R6 WONLobby round 24): three addresses, their draws logged (Graphics.cpp's
+// gWONGfxImageLog for the port, LogDraw in the original's copy)
+static void LogDraw(Image* i, int x, int y, int l, int t, int w, int h) { T("part %d %d %d %d %d %d %d", IdOf(i), x, y, l, t, w, h); }
+static void LogEntire(Image* i, int x, int y) { T("entire %d %d %d", IdOf(i), x, y); }
+namespace WONAPI { extern void (*gWONGfxImageLog)(Image* inImage, bool inPart, const int32_t* inArgs); }
+static void PortLog(Image* i, bool part, const int32_t* a) { if (part) LogDraw(i, a[0], a[1], a[2], a[3], a[4], a[5]); else LogEntire(i, a[0], a[1]); }
 Font::Font(DisplayContext*, const FontDescriptor& d) : mDescriptor(d) {}
 Font::~Font() {}
 void Font::PrepareContext(DisplayContext*) { T("prepare %d", this->mDescriptor.mSize); }
@@ -125,12 +125,12 @@ void SetPixel(int x, int y, DWORD color)
 void DrawImage(Image *theImage, int x, int y)
 {
 	this->DoTranslate(x,y);
-	theImage->DrawEntire(this->mDisplayContext.get(),x,y);
+	LogEntire(theImage,x,y);
 }
 void DrawImage(Image *theImage, int x, int y, int left, int top, int width, int height)
 {
 	this->DoTranslate(x,y);
-	theImage->Draw(this->mDisplayContext.get(), x, y, left, top, width, height);
+	LogDraw(theImage, x, y, left, top, width, height);
 }
 void DrawLine(int x1, int y1, int x2, int y2)
 {
@@ -274,13 +274,13 @@ struct TPort : Graphics { TRACED_HOOKS };
 static unsigned sSeed = 1;
 static int R(int n) { sSeed = sSeed * 1103515245u + 12345u; return n <= 0 ? 0 : (int)((sSeed >> 8) % (unsigned)n); }
 static int RI(int lo, int hi) { return lo + R(hi - lo + 1); }
-struct TImage : Image { TImage() { this->mWidth = 8; this->mHeight = 8; } };
-static TImage sImages[3];
+static char sImageStore[3][sizeof(Image)];
+
 static GUIString sTexts[2] = {GUIString("ab"), GUIString("hello")};
 static ColorScheme sSchemes[2];
 static int IdOf(const void* p)
 {
-    for (int i = 0; i < 3; i++) if (p == &sImages[i]) return i;
+    for (int i = 0; i < 3; i++) if (p == (const void*)sImageStore[i]) return i;
     for (int i = 0; i < 2; i++) if (p == &sTexts[i]) return 10 + i;
     return -1;
 }
@@ -299,7 +299,7 @@ int main(int argc, char** argv)
 {
     const char* aPrint = argc > 2 && strcmp(argv[1], "--print") == 0 ? argv[2] : NULL;
     for (int k = 0; k < 2; k++) for (int i = 0; i < 17; i++) sSchemes[k].mColors[i] = SchemeColor(k, i);
-    for (int i = 0; i < 3; i++) sImages[i].AddRef();
+    gWONGfxImageLog = PortLog;
     SmartPtr<Font> aFonts[2] = {new Font(NULL, FontDescriptor("A", 0, 7)), new Font(NULL, FontDescriptor("B", 0, 9))};
     const int kSeqs = 20000, kSteps = 40, kGolden = 300;
     static const char* const kNames[] = {"setcolor", "stdcolor", "syscolor", "translate", "pixel", "image", "imagepart",
@@ -360,8 +360,8 @@ int main(int argc, char** argv)
                     case 2: g.SetSysColor(x2 & 15); break;
                     case 3: g.Translate(x0 / 3, x1 / 3); break;
                     case 4: g.SetPixel(x0, x1, (DWORD)x2); break;
-                    case 5: g.DrawImage(&sImages[x2 & 1], x0, x1); break;
-                    case 6: g.DrawImage(&sImages[2], x0, x1, x2, x3, x4, x5); break;
+                    case 5: g.DrawImage((Image*)(void*)sImageStore[x2 & 1], x0, x1); break;
+                    case 6: g.DrawImage((Image*)(void*)sImageStore[2], x0, x1, x2, x3, x4, x5); break;
                     case 7: g.DrawLine(x0, x1, x2, x3); break;
                     case 8: g.DrawRect(x0, x1, x2, x3); break;
                     case 9: g.FillRect(x0, x1, x2 / 4, x3 / 4); break;
@@ -386,8 +386,8 @@ int main(int argc, char** argv)
                     case 2: g.SetSysColor(x2 & 15); break;
                     case 3: g.Translate(x0 / 3, x1 / 3); break;
                     case 4: g.SetPixel(x0, x1, (DWORD)x2); break;
-                    case 5: g.DrawImage(&sImages[x2 & 1], x0, x1); break;
-                    case 6: g.DrawImage(&sImages[2], x0, x1, x2, x3, x4, x5); break;
+                    case 5: g.DrawImage((Image*)(void*)sImageStore[x2 & 1], x0, x1); break;
+                    case 6: g.DrawImage((Image*)(void*)sImageStore[2], x0, x1, x2, x3, x4, x5); break;
                     case 7: g.DrawLine(x0, x1, x2, x3); break;
                     case 8: g.DrawRect(x0, x1, x2, x3); break;
                     case 9: g.FillRect(x0, x1, x2 / 4, x3 / 4); break;

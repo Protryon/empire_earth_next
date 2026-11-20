@@ -386,10 +386,6 @@ void RoomLabelCtrlConfig::SetComponent(Component* inComponent)
     this->mRoomLabel=static_cast<RoomLabelCtrl*>(inComponent);
     ContainerConfig::SetComponent(inComponent);
 }
-// Creates a config for a room label in the layout file
-ComponentConfig* RoomLabelCtrlConfig::CfgFactory() { return new RoomLabelCtrlConfig; }
-// Creates the layout reader for a room user list
-ComponentConfig* UserListCtrlConfig::CfgFactory() { return new UserListCtrlConfig; }
 // Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
 bool UserListCtrlConfig::Virtual24(const std::string& instruction)
 {
@@ -423,8 +419,6 @@ void ChatCtrlConfig::SetComponent(Component* inComponent)
     ContainerConfig::SetComponent(inComponent);
     this->mChatCtrl = static_cast<ChatCtrl*>(inComponent);
 }
-// Creates the layout reader for a chat panel
-ComponentConfig* ChatCtrlConfig::CfgFactory() { return new ChatCtrlConfig; }
 
 
 static intptr_t ItemField(ListItem* inItem, intptr_t inField, bool inSet, intptr_t inValue)
@@ -481,8 +475,8 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ItemTextWidth: return reinterpret_cast<Font*>(b)->GetStringWidth(aText->mText, 0, aText->mText.length());
     case Op::ItemTextDraw: reinterpret_cast<Graphics*>(b)->DrawString(aText->mText, Lo(c), Hi(c)); return 0;
     case Op::ItemTextCompare: return aText->mText.CompareNoCase(reinterpret_cast<TextListItem*>(b)->mText);
-    case Op::ImageWidth: return reinterpret_cast<Image*>(a)->mWidth;
-    case Op::ImageHeight: return reinterpret_cast<Image*>(a)->mHeight;
+    case Op::ImageWidth: return reinterpret_cast<Image*>(a)->GetWidth();
+    case Op::ImageHeight: return reinterpret_cast<Image*>(a)->GetHeight();
     case Op::ResImage: return (intptr_t)ResImage(a);
     case Op::ItemGet: return ItemField(reinterpret_cast<ListItem*>(a), b, false, 0);
     case Op::ItemSet: ItemField(reinterpret_cast<ListItem*>(a), b, true, c); return 0;
@@ -491,7 +485,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::FontMod: return (intptr_t)aComp->GetFontMod(reinterpret_cast<Font*>(b), (int)c, 0);
     case Op::ListFont: return (intptr_t)aList->mFont.get();
     case Op::FontHeight: return reinterpret_cast<Font*>(a)->GetHeight();
-    case Op::ResImageHeight: return gLobbyResources[a].mImage->mHeight;
+    case Op::ResImageHeight: return gLobbyResources[a].mImage->GetHeight();
     case Op::ListDeliverPing: aList->DeliverEvent(PingGameEvent(reinterpret_cast<LobbyGame*>(b), true), true); return 0;
     case Op::ListTextColor: return aList->GetTextColor();
     case Op::GfxStandardColor: return g->GetStandardColor((StandardColor)b);
@@ -686,8 +680,6 @@ void ServerListCtrlConfig::HandleAddColumn()
     this->mHeader->SetColumnItem(this->mNumColumns - 1, aComponent);
     this->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, aDef - 1, (intptr_t)aCombo);
 }
-// Creates a game list layout config
-ComponentConfig* ServerListCtrlConfig::CfgFactory() { return new ServerListCtrlConfig; }
 // Creates the layout config with no header and no columns
 ServerListCtrlConfig::ServerListCtrlConfig()
 {

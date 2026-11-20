@@ -45,6 +45,34 @@ fn region_size() -> c_long {
     crate::astar::modifier_obj::influence_region_size() as c_long
 }
 
+/// `EEAIArea::AreaCreate(tiles)`: the tile set made of them, the hull and bounds rebuilt (`UpdateHull`).
+///
+/// # Safety
+/// `h` a live area.
+pub unsafe fn area_create(h: u64, points: &[EePoint]) {
+    let set = cm_io::area_tiles(h) as *mut _;
+    ee_base::sparse::ee_sparse_insert_list(set, points.as_ptr(), points.len(), true);
+    update_hull(h);
+}
+
+/// `EEAIArea::UpdateHull()`: the hull from the tiles' extreme edge points, the bounds in the world's influence
+/// table's regions (HULL 1).
+///
+/// # Safety
+/// `h` a live area.
+pub unsafe fn update_hull(h: u64) {
+    crate::astar::area_ops::ee_astar_area_update_hull_captured(cm_io::area(h), cm_io::area_tiles(h), region_size());
+}
+
+/// `EEAIArea::UpdateHull()` for the C++.
+///
+/// # Safety
+/// `h` a live area (an `EEAIArea*`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_area_update_hull_of(h: u64) {
+    update_hull(h);
+}
+
 /// `EEAIArea::RemoveTile(tile)` of the kind (a forest's count of the tile's wood kind drops).
 ///
 /// # Safety
@@ -142,9 +170,7 @@ pub(crate) fn answer(op: i32, io: &mut EeAStarCmIo) -> Option<i64> {
                 } else {
                     std::slice::from_raw_parts(p, n).iter().map(|q| EePoint { x: q.x as i32, y: q.y as i32 }).collect()
                 };
-                let set = cm_io::area_tiles(io.h[0]) as *mut _;
-                ee_base::sparse::ee_sparse_insert_list(set, points.as_ptr(), points.len(), true);
-                crate::astar::area_ops::ee_astar_area_update_hull_captured(cm_io::area(io.h[0]), set, region_size());
+                area_create(io.h[0], &points);
                 0
             }
             crate::astar::cm_build::EE_ASTAR_CM_RESOURCE_WEIGHT => resource_weight(x, y),

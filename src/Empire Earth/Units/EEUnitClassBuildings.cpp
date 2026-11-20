@@ -33,6 +33,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUnitUtilities.h"
+#include "rust/sim/units.h"
 
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
@@ -233,7 +234,7 @@ EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
         EEUnit* theResult = NULL;
         EEMap* theMap = ::gWorld.mMap;
         for (unsigned long theRing = 1; theResult == NULL && theRing < 0x14; theRing++) {
-            EEGetSquareRingTiles(inUnit->GetTileX(), inUnit->GetTileY(), theRing, theTiles);
+            ee_units_uu_square_ring_tiles(inUnit->GetTileX(), inUnit->GetTileY(), theRing, &theTiles);
             for (std::vector<EETileCoordinate>::iterator theTile = theTiles.begin();
                  theResult == NULL && theTile != theTiles.end(); theTile++) {
                 EEMapTile* theMapTile = theMap->GetTile(theTile->mX, theTile->mY);
@@ -242,7 +243,7 @@ EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
                 for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
                     EEUnit* theUnit = theNode->mUnit;
                     if (theUnit != NULL && theUnit->mUnitClass->IsLandBuilding() && theUnit->mHitPoints > 0 &&
-                        EEUUGetIsUnitClassTargetable(NULL, theUnit->GetUnitClass())) {
+                        ee_units_uu_targetable(0, (uint64_t)(uintptr_t)theUnit->GetUnitClass(), 0)) {
                         theResult = theUnit;
                         break;
                     }
@@ -601,8 +602,6 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
 // 0x24c627 (inTiles' units of inUnitType): ee/EEUnitUtilities.h
-// 0x24c433: the units on inTiles (EECPWallManager.cpp declares it the same way)
-long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 
 // 0x24f8f9: after a gate is built for the current player (the new gate's piece 2) (provisional name)
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inGate);
@@ -657,7 +656,7 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
     theTile.mX = inTile.mX;
     theTile.mY = inTile.mY;
     EEGetWallGateTiles(theTile, inDirection, theTiles);
-    EEGetUnitsOn(theTiles, theUnits);
+    ee_units_uu_units_on(0, &theTiles, &theUnits);
     for (unsigned long i = 0; i < theUnits.size(); i++) {
         if (theUnits[i]->GetUnitClass()->mIsWall)
             theWalls.push_back(theUnits[i]);
@@ -927,7 +926,7 @@ EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 {
     std::vector<EEUnit*> theUnits;
-    EEGetPlayerUnitsOfType(inUnitType, inPlayer->mPlayerID, theUnits);
+    ee_units_uu_player_units_of_type(inUnitType, inPlayer->mPlayerID, &theUnits);
     for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
         EEComplexUnit* theUnit = (*it)->mComplexUnit;
         if (theUnit == NULL)
@@ -959,7 +958,7 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
     std::vector<EEUnit*> theSide3;
     std::vector<EEUnit*> theSide4;
     EEClearGateHighlights(inPlayer, inUnitType);
-    EEGetPlayerUnitsOfType(inUnitType, inPlayer->mPlayerID, theUnits);
+    ee_units_uu_player_units_of_type(inUnitType, inPlayer->mPlayerID, &theUnits);
     for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++) {
         bool the1 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 1, inUnitType, theSide1);
         bool the2 = EEDoesWallGateFitOnUnit((EEComplexUnit*)*it, 2, inUnitType, theSide2);

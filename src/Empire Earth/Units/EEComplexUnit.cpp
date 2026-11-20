@@ -1558,7 +1558,7 @@ unsigned short EEComplexUnit::GetFootprintContinent(long inKind)
 {
     std::vector<EETileCoordinate> theTiles;
     unsigned short theResult = 0;
-    EEGetFootprintTiles(this, theTiles);
+    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)this, &theTiles);
     for (std::vector<EETileCoordinate>::iterator theIterator = theTiles.begin(); theIterator != theTiles.end(); ++theIterator) {
         unsigned short theContinent = ::gContinentManager.GetContinent(*theIterator, inKind);
         if (theContinent != 0 && theResult == 0)
@@ -1662,14 +1662,14 @@ bool EEComplexUnit::IsNextToTile(long inX, long inY)
     if (theX == inX && theY == inY)
         theFound = true;
     else {
-        EEGetSideTiles(theX, theY, this->GetUnitClass()->mTileSize, theTiles);
+        ee_units_uu_square_ring(theX, theY, this->GetUnitClass()->mTileSize, this->GetUnitClass()->mTileSize, 1, &theTiles);
         std::vector<U2DPoint<long> >::iterator theTile = theTiles.begin();
         while (theTile != theTiles.end() && !theFound) {
             theFound = inX == theTile->GetX() && inY == theTile->GetY();
             ++theTile;
         }
         if (!theFound) {
-            EEGetCornerTiles(0, theX, theY, this->GetUnitClass()->mTileSize, theTiles);
+            ee_units_uu_ring_corners(0, theX, theY, this->GetUnitClass()->mTileSize, this->GetUnitClass()->mTileSize, 1, &theTiles);
             theTile = theTiles.begin();
             while (theTile != theTiles.end() && !theFound) {
                 theFound = inX == theTile->GetX() && inY == theTile->GetY();
@@ -1984,7 +1984,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
             while (theTiles.size() != 0) {
                 theTile = theTiles.back();
                 theTiles.pop_back();
-                theFound = EECanStandOn(theTile, this);
+                theFound = ee_units_uu_can_stand_on(theTile.mX, theTile.mY, (uint64_t)(uintptr_t)this);
                 if (theFound)
                     break;
             }
@@ -2342,8 +2342,7 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
             continue;
         if (!(theCargo->mHitPoints < 1)) {
             long theRings = UMFloatToLong(theTransportClass != NULL ? theTransportClass->mUnloadRange : this->GetStats()->mRange);
-            if (EEFindPlacement(&thePoint, theCargo, NULL, inX, inY, 1, theRings, inArg,
-                true, false, false, &theTransformation, NULL)) {
+            if (ee_units_uu_find_placement((const float(*)[3])&thePoint.mX, (uint64_t)(uintptr_t)theCargo, 0, inX, inY, 1, theRings, inArg, true, false, false, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
                 this->UnloadCargoAt(i, theTransformation);
                 if (this->GetUnitClass()->GetUnitType() == kUnitTypeTeleporter)
                     gWorld.GetEffectManager()->CreateUnitEffect(theCargo, EEGraphicEffect::Get(kGraphicEffectCalamityTeleportIn), NULL, false, 0, 0);
@@ -2445,8 +2444,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
             long theRings = theTransportClass != NULL ? UMFloatToLong(theTransportClass->mUnloadRange)
                                                    : UMFloatToLong(this->GetStats()->mRange);
             bool theFlag = theTransportClass != NULL ? (theTransportClass->mDomains >> 2) & 1 : false;
-            if (EEFindPlacement(&thePoint, inCargo, NULL, this->mTileX, this->GetTileY(), this->GetUnitClass()->GetTileSize(), theRings,
-                theSet->Contains(this->GetUnitClass()->GetUnitType()), true, false, theFlag, &theTransformation, NULL)) {
+            if (ee_units_uu_find_placement((const float(*)[3])&thePoint.mX, (uint64_t)(uintptr_t)inCargo, 0, this->mTileX, this->GetTileY(), this->GetUnitClass()->GetTileSize(), theRings, theSet->Contains(this->GetUnitClass()->GetUnitType()), true, false, theFlag, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
                 this->UnloadCargoAt(theIndex, theTransformation);
                 theResult = true;
             }
@@ -3305,7 +3303,7 @@ void EEComplexUnit::UpdateCamouflage(long inAction)
         gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet)->Contains(this->GetUnitClass()->GetUnitType())) {
         if (this->mPlayer->mNumVitalBuildings < 1) {
             bool theCloaked = this->mIsCloakable ? this->mIsCloaked : false;
-            if (theCloaked && EEIsCloakedEnemyOf(this, ::gWorld.GetCurrentPlayer()))
+            if (theCloaked && ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)(::gWorld.GetCurrentPlayer())))
                 gMiniMap->MoveUnit(this, -10000, -10000, this->GetTileX(), this->GetTileY());
             this->mIsCloakable = false;
             this->mIsCloaked = false;

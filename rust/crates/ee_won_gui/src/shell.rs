@@ -98,6 +98,9 @@ pub enum EeWonShellKind {
     WonTabCtrl,
     /// `WONFrameComponent` (`a` the frame to copy, an `EeWonFrameIn*`, or 0 for none).
     WonFrameComponent,
+    /// `WONButton` (R6 WONLobby round 24): the C++ shell `WONButton` itself, its own state the Rust WONButton
+    /// (wonbtnobj.rs) the shell runs; the kind overrides nothing.
+    WonButton,
 }
 
 /// The C++ shell class a kind's widget is (its base class).
@@ -126,7 +129,7 @@ pub enum EeWonShellBase {
     Tab,
     /// `WONShellDialog : Dialog`.
     Dialog,
-    /// `WONShellWonButton : WONButton`.
+    /// `WONButton : Button` (the WonButton and WonHeaderButton kinds' shell; its base virtuals the Rust WONButton's).
     WonButton,
 }
 

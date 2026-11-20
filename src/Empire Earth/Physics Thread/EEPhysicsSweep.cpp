@@ -38,6 +38,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitClassIDs.h"
+#include "rust/sim/units.h"
 
 void EEPhysicsUnitSweep(long inCall);
 
@@ -91,7 +92,7 @@ bool FindSpot(EEPlayer* inPlayer, long inType, EEComplexUnit* inAnchor, long& ou
             for (long x = cx - r; x <= cx + r; x += theStep) {
                 if (x < 0 || y < 0 || gWorld.mMap->GetTile(x, y) == NULL)
                     continue;
-                if (EECanPlaceOnTile(inPlayer, inType, x, y, false, 1)) {
+                if (ee_units_uu_can_place_unit_on_tile((uint64_t)(uintptr_t)inPlayer, 0, inType, x, y, false, 1, NULL)) {
                     outX = x;
                     outY = y;
                     return true;

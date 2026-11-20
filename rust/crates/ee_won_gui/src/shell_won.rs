@@ -210,7 +210,7 @@ unsafe fn skin<'a>(p: isize) -> Option<&'a EeWonSkin> {
 pub fn base(kind: K) -> Option<B> {
     Some(match kind {
         K::WonSimpleButton | K::WonScrollThumb => B::Button,
-        K::WonHeaderButton => B::WonButton,
+        K::WonButton | K::WonHeaderButton => B::WonButton,
         K::WonInputBox => B::Input,
         K::WonScrollbar => B::Scrollbar,
         K::WonComboBox => B::Combo,
@@ -226,6 +226,7 @@ pub fn base(kind: K) -> Option<B> {
 pub fn make(kind: K) -> Option<Box<dyn ShellKind>> {
     Some(match kind {
         K::WonSimpleButton | K::WonScrollThumb => Box::new(WonSimpleButton::new(kind == K::WonScrollThumb)),
+        K::WonButton => Box::new(WonButton),
         K::WonHeaderButton => Box::new(WonHeaderButton),
         K::WonInputBox => Box::new(WonInputBox::default()),
         K::WonScrollbar => Box::new(WonScrollbar::default()),
@@ -348,6 +349,22 @@ impl ShellKind for WonSimpleButton {
         for i in (0..4).rev() {
             hold_image(sh, &self.images[i], 0);
         }
+    }
+}
+
+/// `WONButton` (R6 WONLobby round 24): the shell's own (its constructor and virtuals are the C++ shell's over the
+/// Rust WONButton, wonbtnobj.rs); nothing overridden.
+pub struct WonButton;
+
+impl ShellKind for WonButton {
+    fn name(&self) -> &'static CStr {
+        c"WONButton"
+    }
+    fn overrides(&self) -> u64 {
+        0
+    }
+    fn virt(&self, _sh: &Sh, _v: V, _a: isize, _b: isize, _c: isize) -> isize {
+        0
     }
 }
 

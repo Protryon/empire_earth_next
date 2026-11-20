@@ -364,7 +364,7 @@ static void PMMissileHome(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     EEUnit* theDropTarget;
-    EEFindDropLocation(inUnit, &theDropTarget, &theTarget, NULL);
+    theDropTarget = EECombatFindDropLocation(inUnit, NULL, theTarget);
     EeCombatFlightIn in = {};
     memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
     in.target[0] = theTarget.GetX();
@@ -651,7 +651,7 @@ extern "C" void ee_units_pm_host_action_changed(uint64_t inObject)
 extern "C" uint8_t ee_units_pm_host_can_stand_on(uint64_t inObject, int32_t inX, int32_t inY)
 {
     EETileCoordinate theTile(inX, inY);
-    return EECanStandOn(theTile, PMUnit(inObject)) ? 1 : 0;
+    return ee_units_uu_can_stand_on(theTile.mX, theTile.mY, (uint64_t)(uintptr_t)(PMUnit(inObject))) ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_friendly(uint64_t inObject, uint64_t inOther)

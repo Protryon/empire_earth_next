@@ -14,30 +14,6 @@ enum class EeWonImgKind : int32_t {
   Jpg = 1,
 };
 
-/// The multi-decoder's calls (`ee_won_img_dec`).
-enum class EeWonImgDecCall : int32_t {
-  /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
-  Add = 0,
-  /// `SetCurExtension(b of c bytes)`.
-  SetExtension = 1,
-  /// The decoder for the current extension (0: none).
-  Find = 2,
-  /// The map's size.
-  Count = 3,
-  /// The map's entry a's decoder.
-  Entry = 4,
-  /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
-  SetEntry = 5,
-  /// The set's size.
-  OwnedCount = 6,
-  /// The set's member a (in address order).
-  Owned = 7,
-};
-
-/// MultiImageDecoder's state: the decoders by extension (a map ordered and matched without case: the first
-/// spelling of a key stays), the decoders it owns (a set by address) and the current extension.
-struct EeWonImgDec;
-
 /// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
 struct EeWonImgRaw {
   int32_t width;
@@ -67,19 +43,6 @@ bool ee_won_img_decode(EeWonImgKind kind,
 /// # Safety
 /// `out` came from `ee_won_img_decode`; `dst` holds its pixels.
 void ee_won_img_take(EeWonImgRaw *out, uint32_t *dst);
-
-EeWonImgDec *ee_won_img_dec_new();
-
-/// # Safety
-/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
-void ee_won_img_dec_free(EeWonImgDec *d);
-
-/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
-EeWonImgDec *ee_won_img_dec_copy(const EeWonImgDec *d);
-
-/// # Safety
-/// `b` holds `c` bytes when the call reads them.
-size_t ee_won_img_dec(EeWonImgDec *d, EeWonImgDecCall call, size_t a, const uint8_t *b, size_t c);
 
 }  // extern "C"
 

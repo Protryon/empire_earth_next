@@ -10,7 +10,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyResourceConfig.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
 #include "rust/won_gui/guiconf.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
@@ -21,8 +20,8 @@ namespace WONAPI {
 bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
-    if(aKeyIdx==0) outValue=this->mImage->mWidth;
-    else if(aKeyIdx==1) outValue=this->mImage->mHeight;
+    if(aKeyIdx==0) outValue=this->mImage->GetWidth();
+    else if(aKeyIdx==1) outValue=this->mImage->GetHeight();
     else return false;
     return true;
 }
@@ -50,61 +49,4 @@ Image* ImageFilterConfig::GetImage()
     return this->mImage.get();
 }
 
-}
-
-
-namespace WONAPI {
-// Registers the Image, StretchImage, StretchCenterImage and ImageFilter configuration types
-void ImageConfig_Init(ResourceConfigTable* table)
-{
-    table->AddAllocator("Image",ImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("StretchImage",StretchImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("StretchCenterImage",StretchCenterImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("ImageFilter",ImageFilterConfig::CfgFactory,ImageConfig::CompFactory);
-}
-}
-
-// Factory callbacks used by the registration above
-namespace WONAPI {
-
-// Creates a new image configuration
-ComponentConfig* ImageConfig::CfgFactory()
-{
-    return new ImageConfig;
-}
-
-// Creates a new stretch image configuration
-ComponentConfig* StretchImageConfig::CfgFactory()
-{
-    return new StretchImageConfig;
-}
-
-// Creates a new stretch-center image configuration
-ComponentConfig* StretchCenterImageConfig::CfgFactory()
-{
-    return new StretchCenterImageConfig;
-}
-
-// Creates a new image filter configuration
-ComponentConfig* ImageFilterConfig::CfgFactory()
-{
-    return new ImageFilterConfig;
-}
-
-// Returns no component (image configurations create none); the linker folds this body into the
-// identical one at 0x006c7b10
-Component* ImageConfig::CompFactory()
-{
-    return NULL;
-}
-
-}
-
-namespace WONAPI {
-// Accepts the parsed configuration without the base checks; the linker folds this body into the
-// identical one at 0x007099f0
-bool ImageConfig::PostParse(ConfigParser*)
-{
-    return true; // skips ComponentConfig::PostParse
-}
 }

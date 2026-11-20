@@ -15,6 +15,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | behaviour 1 | `rust-unitsbeh1` | -456 | the goal, combat-goal, citizen, class and group hosts' plain reads, stores and duplicate world calls answered in Rust (units/unit_geom.rs, `uu_direct::with_game`); the gather and build goals' farm and resource searches in Rust (units/gather_world.rs) |
 | behaviour 2 | `rust-unitsbeh2` | -1,568 | the group command, pick and Fill sweeps, the step's notes and the combat records' batches whole in Rust (TEST ONLY); the update, combat world, goal, unit, sight, active group, trigger, class and physics hosts' effects, stores and plain reads in Rust |
 | behaviour 3 | `rust-unitsbeh3` | -1,134 | the goal objects and their queues whole in Rust (goal_obj.rs, goals.rs: made, cloned, deleted, saved and stepped in Rust; the mirror gone); the goals' accessors and context-free virtuals inline over Rust; the unit's queue calls (SetGoal, GetQueuedGoal, RefreshGoals, RefreshActiveGoal, DropUnsuitedGoals, DropFinishedGoals) and the hosts' goal cases in Rust; 46 unit-utility forwarders gone |
+| 4 | `rust-units4` | -712 | the unit utilities' one-call forwarders gone (40: callers call the Rust); the unit host's goal constructions, clones, queue calls and plain reads in Rust (units/goal_spec.rs); 34 one-call members of `EEUnitClass` and `EEActiveGroup` inline in their headers |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -152,8 +153,51 @@ sim_editor PASS (14,448 lines); `gates.sh` GATES PASS (tour; ai-game time-cap, u
 patrol and attack-ground skipped by the fixture). Only the tours exercise the human's orders through the moved
 goal calls (`SetGoal`, the queues' timers: the rally and scramble timers of EEMessage.cpp) in a drawn game.
 
+## Round 4 (branch `rust-units4`, from rust-batch7 c2819fe2d, 2026-11-19)
+
+The brief: net -3,000 C++ lines by whole class moves, UI-first (`cpp_deps.py` over the UI units). Measured at the
+start: the UI units (User Interface Thread, UI Events, the LLE UI; EEFOFindNewTargetNearOldTarget.cpp aside) name
+only 56 distinct Units-lane symbols, mostly `EEGroup`/`EEUnitClass` accessors, `EEGhostUnit`'s statics and
+`EEPhysics`' clock; no Units-lane class blocks them alone. What the round moved is the forwarder layer the brief
+named and the hosts' calls whose answer is already Rust; the class bodies did not move (see "What is left").
+
+| Commit | What | Net C++ |
+|---|---|---|
+| a50ab82b0 | 40 one-call forwarders of EEFOFindNewTargetNearOldTarget.cpp (`EEGetUnitsNear`, `EEGetTilesNearPoint`, `EEFindPlacement` x2, `EEFindDropLocation`, `EEIsSeenBy`, `EECanStandOn`, `EECanPlaceOnTile`, `EEGetUnitsOn*`, the rings, wall lines and tile lists, `EEPlanWall`, `EEGetDockShip*`, ...) and their declarations deleted: every caller (37 files) calls `ee_units_uu_*` or the combat goals' `EECombat*` directly; `EEMoveInDirection` had no caller; `ee_units_uu_can_place_unit_on_tile` takes a null flag | -333 |
+| 2aade7fad | the unit host's goal constructions (`ee_units_host_goal_new`: goal_spec.rs `plan` + `make`, units resolved through the registry), release, clone, the unload goal's transport and can-unload, `SetGoal`, the can-place test, the queues' timer and clear, `RefreshGoals` in Rust (GameHost) | -121 |
+| ec7a84aca | 23 `EEUnitClass` and 11 `EEActiveGroup` members whose body was one Rust call defined inline in ee/EEUnit.h and ee/EEPlayer.h | -219 |
+| c4b96c455 | the unit host's `unit_player`, `unit_shares_rally_point`, `unit_shares_research`, `unit_num_goal_queues`, `unit_goal_clone`, `unit_research_state` on the views and cls_answers.rs | -39 |
+
+Round total: -712 net C++ lines (src, include/ee, include/lle, include/gx, include/dx7; target 3,000).
+
+Call-site edits outside the lane (each the forwarder's call replaced by its Rust call, the include added): AI Thread
+(EEAIContinentManager, EECPNext, EECPNextUnits, EEComputerPlayer, EEPathManager), Calamities (EECalamityCast,
+EECalamityClass, EECalamityUpdate), Civilization Builder (EEAreaEffect), Empire Earth (EECameraControl,
+EETestFixture), Formations (EEFormation), Graphics Thread (EEEffectHost), Map (EEMap, EEMiniMap), Player (EEPlayer),
+Random Map (EERandomMap), Scenario Editor Actions (EESEARust), Scenario Manager (EEEvent, EESMEffect, EESMObject),
+UI Events (EEScreens: `EEGetLeadUnitID`), User Interface Thread (EEUIFMainGame); the headers ee/EEAreaUtilities.h,
+ee/EEAIFOUnitScreeners.h, ee/EERandomMapClass.h (the declarations), ee/EEPlayer.h (EEActiveGroup's inline members);
+strip_markers after the merge: ee/EEAIContinentManager.h, ee/EEUnitVectorItem.h, ee/wonapi/WONLobbyGUI.h.
+
+Verified on the final tree (origin/rust 4fb6c7119 merged: no change): both builds 0/0 (EE-AOC 482 inputs, EE-SIM
+483) and the test profile 0/0; the Rust gate PASS (4,994 tests; two ee_base timing tests failed once under load and
+passed on the rerun); the oracle seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late
+214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport
+185 digests); the plain saveload 18/18 identical (exit 0); the matrix `--expect` PASS (exit 0); scenario_check 27/27;
+sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062 lines); eedata check and cppgate PASS; `gates.sh` GATES PASS (tour; ai-game time-cap,
+units [4, 40, 40], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game). The human orders' goal constructions (EEMPathTo, EEMUnloadTransport,
+EEMSetRallyGoal, EEMCastCalamity through goal_spec.rs) run in EE-SIM only where a computer player or the group
+command sweep sends them; the tours' `--orders` exercise them in a drawn game.
+
 ## What is left (behaviour)
 
+- **Round 4's measure**: the UI layer names few Units-lane symbols (56, `cpp_deps.py` edges.tsv from the UI
+  units); the units' own C++ is world glue around Rust (GoalOp ~550 lines, `EEUpdateAct` 374, `EEWorldOp` 277,
+  `ee_units_ag_host` 227, `EEUnitClassMoveOp` 207, `ee_units_cls_cond_host` 204, `EEShotOp` 200, the unit's
+  `RepairPointers` 272 and load sections 190): each case is a call into a C++ class (actions, sounds, the path
+  manager, calamities, the tech tree), so a case moves only with its callee. The TEST ONLY sweeps
+  (EEPhysicsSweep.cpp 234, EEActiveGroupSweep.cpp 305) create and order units through `CreateUnit`,
+  `ProduceUnit` and `EEActiveGroup`: they move with unit creation.
 - **Unit creation** (`BaseCreateUnit`, `BaseCreateUnitAt`, `EECreateUnitAt`, the mining building's and the
   buildings' variants; EEUnitClass.cpp ~200 lines) constructs `EEComplexUnit`s: it moves with the unit object, not
   before it. The class bodies the brief named (`ProduceUnit` 191 lines, `ReleaseUnit` 149, `Animate` 106, `Heal`
@@ -165,8 +209,10 @@ goal calls (`SetGoal`, the queues' timers: the rally and scramble timers of EEMe
   resource users, the waiting gatherer's restart) and the air traffic queues.
 - GoalOp (~550 lines) is world calls now (actions, transport and calamity classes, files); its file cases (`READ`,
   `WRITE`, `FILE_OPEN`) and the queue host's typed `FSFile` calls are one shared typed-file shim away from Rust.
-- The unit utilities: about 40 forwarders with two or more callers (several in other lanes: AI, calamities,
-  scenario, map) and the hosts (`ee_units_uu_host_*`, ~360 lines); `cpp_deps.py why` names the cycle edges.
+- The unit utilities (EEFOFindNewTargetNearOldTarget.cpp, 2,327 lines after round 4): the forwarders are gone; what
+  stays is C++ bodies (`EEConvertUnit` 140, `EEReplaceUnit`, `EEComputeSoundParameters`, `EECanHeal`'s record fill,
+  the target searches' and line of fire's hosts ~330, `EEUpdateUnitTile`, the wall and gate helpers) and the uu
+  hosts (`ee_units_uu_host_*`, ~360 lines).
 - From the earlier rounds, still open: the calamity classes' world steps, the capture writers over C++ objects
   (EECalamityCapture.cpp, EEScenarioCapture.cpp, the combat records' builders), the save operation's pointer members,
   the TEST ONLY drivers (EEPhysicsSweep, EEActiveGroupSweep: unit creation and production), `EEActiveGroup`'s and the
