@@ -34282,3 +34282,66 @@ questions and the continent's last members.
 - **The census** (`tools/cpp_deps.py report` on the final build): 460 units, 136,539 lines; the largest cycle 160 units, 78,798 lines (162 and 81,014 at the start of the round, `cuts --focus` on the base); the units of that cycle that call the continent manager went from 35 to 14 (the manager's members are inline over Rust).
 - **Not moved**: the path manager's host (EEPathManager.cpp), the computer player's class, the manager's three
   unit-class queries and RegrowTrees (docs/progress/ai-thread-cluster.md "Left").
+## AI Thread cluster, round 6: the path manager host's world reads and its PMRQ capture in Rust, its entry points inline; the town's, the herd's and the classic_lua units host's area and continent reads (ee_sim::astar pm_host.rs, pm_capture.rs; cp town_game.rs, herd_game.rs; ai units_bind.rs; branch rust-aicluster6, 2026-11-19)
+
+The sixth round of the cluster lane (docs/progress/ai-thread-cluster.md), from fcf2d54dc (round 5). The brief was the
+path manager's host whole (EEPathManager.cpp, 1,426 lines), the continent side's rest and the next AI units by
+`cpp_deps.py cuts --focus 'AI Thread/'` (it named EETown.cpp, EEAIFunctionObjects.cpp, EEAIContinentSave.cpp,
+EEAIRectangleArea.cpp and EEArtificialIntelligence.cpp as the cycle's AI unit-out cuts).
+
+| Commit | What | Net C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 1bc2846d2 | pm_host.rs: the path manager host's world reads (units, sub sectors, views, blocked tiles, the capture's records) | -243 |
+| 403bea990 | pm_capture.rs: PMRQ, the entry points' scopes and the dumps in Rust; EEPathManager's members inline | -380 |
+| 0079b893b | town_game.rs, herd_game.rs: the towns' and herds' area, continent and registry operations; UpdateHull inline; the request flags | -140 |
+| 22a4e544b | units_bind.rs: the classic_lua units host's world and continent reads | -24 |
+| c53e9f261 | the AI Thread units' unneeded ee/ and lle/ includes | -342 |
+| | **round** | **-1,129** |
+
+Short of the brief's -2,000: the path manager's host did not move wholly (EEPathManager.cpp is 1,426 -> 755 lines),
+because what is left calls the Units lane's unit, goal and class methods and EEPlayer's virtuals (below).
+
+- **What moved.** (1) The path manager's host: every operation that only reads the world (`pm_host.rs answer`,
+  asked before the C++ host by the closure every intercept shares: the units' ids, the registry, references,
+  tiles, locations, players and class tests through the world views, the sub sectors from the continent manager's
+  records, the searches' views, the sea walkers' blocked tiles with `EEGetUnitTiles`' UUNT note, the game time, map,
+  loading flag and region delay, the capture's records, the graph goal's request flags). (2) PMRQ whole
+  (`pm_capture.rs`): the scopes are a thread's stack; `ee_path_manager_call` opens the manager's own (inputs before
+  the call, results after, then the queues and what left them), the C++ FindPath and FindBoundedPath open theirs
+  through three C calls and write their words. `EEPathManager`'s entry points are inline forwarders; the dumps'
+  text is Rust's. (3) The town's host's area and continent operations (`town_game.rs area_op`) and the herd's
+  (`herd_game.rs world_op`: also the registry, the time, a player's herds, the physical location); `EEAIArea::UpdateHull`
+  inline over `cm_host.rs`. (4) The classic_lua units host's time, continents, areas, forests, last attackers and
+  transports (`units_bind.rs world_op`; the C++ switch is `ee_ai_units_host_cpp`). (5) The lane's units lost the
+  ee/ and lle/ includes they compile without (344 lines; system headers kept: the POSIX builds' standard
+  library includes less transitively).
+- **Lesson: a call that records nothing must not close a scope.** The first PMRQ move closed a scope after every
+  `ee_path_manager_call`; FindPath's own `Call(27)` opens none, so it popped FindPath's C++ scope and wrote its
+  record before the outputs. The oracle stayed identical (the record is TEST ONLY) and the oracle capture's PMRQ
+  digests differed with the same record count (327,099 at seed 2): a byte layout fault, not a missing record. The
+  scope's opener now says whether it pushed, and a unit test nests an uncaptured call in a C++ scope.
+- **Lesson: answer the host's reads in the closure every caller shares.** The searches' intercepts
+  (path_search.rs, graph_search.rs) call the C++ host through the `raw` closure `FnHost` builds; putting the Rust
+  answers inside that closure (before the C++ call) serves the manager and both intercepts at once, and an answer
+  that needs a C++ operation (GRAPH_ENDS' tile clamp: the terrain mesh's GetClosestTile) gets the C++ host passed.
+- **Lesson: what keeps a host operation C++ is a method, a container or a virtual, not a field.** The fields the
+  host read (path-done flag, request count, push immunity, velocity, contacts, bounded tiles) are all in the world
+  views; what stays C++ is DropPath and TakePath (the waypoint deque, the class's AdjustPath), the goals
+  (SetGoal, the location goals RequestUnitPaths makes), `EEPlayer::IsHuman` and `UnitStranded` (virtuals),
+  `GetTerrainFlags`, `EEAutoPathRequest`'s `std::vector` path (the Units lane's group and goal code reads it), the
+  owners' `std::function`s, and URandom::Generate (the trace hook).
+- **Lesson: a town's or herd's handle is its area's.** With no vtable before the first base (round 5), an
+  `EETown*`, an `EEHerd*` and their `EEAIArea*` are one address, so the Rust hosts reach the area's record and tile
+  set by the town's handle (`cm_io::area`, `area_tiles`) and the C++ host loses its tile, hull and continent cases.
+- **What runs it.** Every game: the path manager's host on every path request and search (PMRQ, ASRN, ASGR in the
+  oracle capture), the towns' and herds' area operations (HULL, AREA, CNTQ), the classic_lua units host (both
+  oracle AIs are classic_lua). Nothing of it draws: no change here only a tour reaches.
+- **Behaviour.** None intended. `EEGetUnitTiles`' UUNT note is made by the same Rust (the units lane's
+  `uu_world::unit_tiles`) in the same order.
+- **Call-site edits outside the lane**: none in C++. Rust outside ee_sim::astar/cp/ai: none (the units lane's
+  `uu_note::Note`, `uu_world::unit_tiles`, `uu_host::Game` and `ffi::ee_units_resolve` are called, not changed).
+- **Gates**: on the final tree (2a9df69a5: the round merged with origin/rust 4fb6c7119, which needed only PORT_LEARNINGS.md's end, both sides kept, and strip_markers' three trailing address comments in ee/EEAIContinentManager.h): the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (4,983 tests); the oracle at seeds 2-7 identical to the reference; the captures at seeds 2-3 PASS: oracle 212 digests, late 214, transport 185, placement 4; the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (calamity 3/4 and next 2/4 as the expect file has them); scenario_check 27/27; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12678` units [4, 38, 40] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2740 joiner=2740`, GATES PASS. Per commit: the `--sim` build 0/0 and the oracle at seeds 2-3 identical; the oracle capture at seeds 2-3 after the capture move (its first try failed on PMRQ: the lesson above) and after the towns' and herds' step; the Rust gate after the capture move (its first run failed clippy: an `as i32` of a `c_long` and a collapsible match, fixed in that commit); clippy and rustfmt of ee_sim after the later steps; the include trim built both profiles and the oracle at seeds 2-3 (its first link found two unresolved symbols: a `const` global whose `extern` declaration came from a dropped header, and a template instance whose body did; both headers are back). The POSIX builds were not run (this machine builds Windows only): the trim dropped only ee/ and lle/ headers.
+- **Not moved**, and why (docs/progress/ai-thread-cluster.md "Left"): the path manager's operations on units, goals
+  and requests (the Units lane's methods; EEPlayer's virtuals), CanGetTo and AreConnectedForUnit (the unit classes'
+  flags: the Units lane's), EEComputerPlayer (EEPlayer), the kinds' Create and GetRandomPoint dispatch (the town's
+  and herd's C++ bases and the C++ random stream), the continent save's town and herd ids.
