@@ -34215,3 +34215,60 @@ numbers and the UI units' targets now.
   main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
 - Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
   missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
+
+## The units' behaviour lane, round 3: the goal objects and their queues whole in Rust; the goals' accessors inline; 46 unit-utility forwarders gone (ee_sim units goal_obj.rs, goals.rs; branch rust-unitsbeh3, 2026-11-19)
+
+The brief: move the foundations the class bodies wait on (the goal queues and the goal objects' fields, Clone, unit
+creation), then the bodies. Numbers: docs/progress/units.md ("Behaviour round 3"). Net -1,134 C++ lines (target
+3,000): the goal object and the goal queue moved wholly; unit creation and the class bodies did not.
+
+- **A C++ object whose every body is Rust can become a Rust allocation without touching its users.** `EEUnitGoal`
+  had no vtable left (R5b.4 round 22) and only plain members, so its memory is now a Rust `Box<EeUnitsGoalBase>`
+  (the same members in the same order; EEUGRust.cpp asserts every offset and the size against cbindgen's struct),
+  made by `EEUnitGoal::Make` (`ee_units_goal_new`: the old constructor's stores), freed by a class `operator
+  delete` (`ee_units_goal_dealloc`) after the inline destructor's kind destroy, and `operator new` deleted so the
+  compiler finds every `new EEUGRust(...)`. The members keep their C++ names, so the hundreds of `goal->mKind`
+  reads elsewhere compile unchanged, and Rust reads and writes them in place. Clone, the queue's deletes and the
+  load's goals are then Rust to Rust.
+- **Rust calls back into C++ without a C++ frame through a registered host.** The kinds' bodies take a host table
+  (`EeUnitsGoalHost`: a context and one operation callback); a goal deleted or cloned from Rust has no C++ caller to
+  hand one in, so EEUGRust.cpp registers its `GoalOp` once at start-up (a static initializer calling
+  `ee_units_goal_register_host`) and `ee_units_goal_call` runs any body with it and a null context (only the
+  file and text operations read the context: Save, Load, the dump and the debug line keep their C++ forwarders).
+  Every table handed to `ee_units_rust_goal` is wrapped once in `goal_obj::base_host_op`, which answers the
+  operations Rust now owns (the base fields, `NEW_GOAL`, `SET_GOAL`, the gather and move goals, the path resets)
+  and forwards the rest; the bodies' unit tests, which call the bodies with mock hosts, are untouched.
+- **Check copied constants against the headers.** The new goal's action was written as 0; `kActionIdle` is 5000.
+  The oracle at seeds 2-3 stayed identical with the wrong value (the action is overwritten before it is read in
+  those games); `header_consts.rs`'s test (every Rust constant named after a C++ one equals the header's) caught it
+  in the Rust gate. Name such constants after the header's name so that test sees them.
+- **A queue whose container is copied by value.** `mGoalQueues` is a `std::vector<EEUnitVectorItem>`; the vector's
+  resize and assignment run the item's copy constructor (the goals cloned last to first: the clones' ids are drawn
+  in that order) and destructor (the goals deleted). The item is now one pointer to its Rust queue: the copy
+  constructor makes a queue and assigns (`ee_units_gq_assign`), the destructor clears and frees. Rust finds a unit's
+  queues through the vector (the layout's `complex_goal_queues`, the item one pointer: asserted), so the mirror
+  keyed by container address and its reports (`EEGoalDeque::Changed`) are gone. The queue's `mUnit` is the copied
+  one after an assignment (as the original's), so `IsShiftMode` became `GetUnit()->mPlayer->mShiftMode` at its one
+  caller.
+- **A read-only deque interface over Rust storage.** `EEGoalDeque` keeps the deque's reads (`size`, `[]`,
+  `front`, `back`, index iterators with `+`, `-`, `==`) and edits; a `std::deque` built from its iterators failed
+  (no iterator traits), so `Get()` copies by index.
+- **One-line forwarders with one caller: delete both.** EEFOFindNewTargetNearOldTarget.cpp's forwarders exist only
+  for their callers' signatures; where one caller (or two in the lane) remains, the caller calls the Rust entry point
+  (the handle is the object's address: `(uint64_t)(uintptr_t)`), and the forwarder and its declaration go (about
+  seven lines each). Five had no caller at all (`cpp_deps.py` does not list a defined, uncalled function: grep for
+  the callers).
+- **`cargo check --tests` skips `#[cfg(not(test))]` code.** cls_host.rs's FFI adapter is not built in the test
+  configuration; a type error there passed `cargo check -p ee_sim --tests` and failed the release build. Check both.
+- **`unsafe { .. } && ..` at the start of a closure body parses as a block statement** (E0308 "expected `()`");
+  parenthesize the block.
+
+- **Gates**: Verified on the final tree (00ea20b6c..the clippy commit; origin/rust 3449a04fd is contained, so the merge before the report was a no-op): both builds 0/0 (EE-AOC 508 inputs, EE-SIM 509) and the test profile 0/0; the Rust gate PASS (4,970 tests); the oracle seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests); the plain saveload 18/18 identical; the matrix `--expect` PASS; scenario_check 27/27; sim_editor PASS (14,448 lines); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game); the tour with `--box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture). Only the tours exercise the human's orders through the moved goal calls (`SetGoal`, the queues' timers: the rally and scramble timers of EEMessage.cpp) in a drawn game.
+- **Call-site edits outside the lane**: EEComputerPlayer.cpp (`GetUnit()` for the queue's `mUnit`), EEEffectHost.cpp
+  (the out-of-line `GetGoalAt` deleted), EEPlayer.cpp (the goal counter's two save cases deleted), ee/EmpireEarth.h
+  (`sGoalCounter`'s declaration), EECalamityUpdate.cpp (the storm reply's distance and radius call the Rust).
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Where the C++ dereferenced NULL
+  (`DropFinishedGoals` with an empty queue after a pop, the secondary target's missing target), the Rust stops or
+  answers false.
+- **Not done**: unit creation and the class bodies (`ProduceUnit`, `ReleaseUnit`, `Animate`, `Heal`, the gate
+  builders, `FlyToGoal`, `IsBombOnTarget`): docs/progress/units.md "What is left".

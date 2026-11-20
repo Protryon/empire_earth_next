@@ -460,6 +460,19 @@ impl<'t> UnitView<'t> {
         goal_kind_id(self.goal_handle() as usize)
     }
     /// `mActiveGoal`'s handle (0: none)
+    /// `mGoalQueues`' Rust queues in index order (an `EEUnitVectorItem` is its queue's pointer); none for a unit
+    /// that is not complex
+    pub fn goal_queues(&self) -> Vec<u64> {
+        if !self.is_complex() {
+            return Vec::new();
+        }
+        let w = std::mem::size_of::<usize>();
+        let at = self.l().complex_goal_queues;
+        // SAFETY: a live complex unit's vector member: its first two words are its begin and end
+        let (begin, end) = unsafe { (pointer(self.object, at), pointer(self.object, at + w as u64)) };
+        // SAFETY: the vector's elements
+        (begin..end).step_by(w).map(|e| unsafe { pointer(e, 0) as u64 }).collect()
+    }
     pub fn active_goal_handle(&self) -> u64 {
         self.need_complex();
         // SAFETY: as above

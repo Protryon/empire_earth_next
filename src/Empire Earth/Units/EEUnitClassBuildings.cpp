@@ -71,18 +71,18 @@ bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
             if (theCargo->GetPlayer()->IsHuman()) {
                 long theKind = theCargo->GetUnitClass()->mFamily;
                 if (theKind == kUnitFamilyAircraft || theKind == kUnitFamilySpaceFighter) {
-                    if (!inUnit->mGoalQueues[1].IsShiftMode() && inUnit->GetQueuedGoal(1) != NULL)
+                    if (!inUnit->mGoalQueues[1].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(1) != NULL)
                         theLeave = true;
                 } else if (theKind == kUnitFamilyBomber) {
                     if (!theCargo->GetUnitClass()->mIsParatrooperBomber) {
-                        if (!inUnit->mGoalQueues[2].IsShiftMode() && inUnit->GetQueuedGoal(2) != NULL)
+                        if (!inUnit->mGoalQueues[2].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(2) != NULL)
                             theLeave = true;
                     } else {
-                        if (!inUnit->mGoalQueues[4].IsShiftMode() && inUnit->GetQueuedGoal(4) != NULL)
+                        if (!inUnit->mGoalQueues[4].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(4) != NULL)
                             theLeave = true;
                     }
                 } else {
-                    if (!inUnit->mGoalQueues[3].IsShiftMode() && inUnit->GetQueuedGoal(3) != NULL)
+                    if (!inUnit->mGoalQueues[3].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(3) != NULL)
                         theLeave = true;
                 }
             }
@@ -298,8 +298,8 @@ void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector
             theTop = (float)(theY + theSize);
             break;
         }
-        EEGetBlockRing(inCorners, UMFloor(theLeft), UMFloor(theBottom), UMFloor(theRight - theLeft),
-                   -UMFloor(theBottom - theTop), outTiles, inAppend);
+        ee_units_uu_block_ring(inCorners, UMFloor(theLeft), UMFloor(theBottom), UMFloor(theRight - theLeft),
+                               -UMFloor(theBottom - theTop), &outTiles, inAppend, 0);
     } else
         this->BaseGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
 }
@@ -764,7 +764,7 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
         bool theResult = true;
         U2DPoint<long> theTile(inTile.mX, inTile.mY);
         EEGetWallGateTiles(theTile, inDirection, theTiles);
-        EEGetWallUnitsOfTypeOnTiles(theTiles, inUnitType, outUnits);
+        ee_units_uu_units_of_type_on_tiles(&theTiles, inUnitType, &outUnits);
         std::vector<EEUnit*>::iterator it = outUnits.begin();
         while (true) {
             if (it == outUnits.end())

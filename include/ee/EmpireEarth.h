@@ -76,9 +76,6 @@ class EEUnit;
 // coordinates (the out pointer is an EETile*, both stores come from EEMap tile lookups);
 // EEACalamity::Cast/Check pass (location, &unit, mX, mY, true) (provisional names; types inferred)
 class EETile;
-// EEUnitGoal.cpp's goal counter 0x564480 (EEPlayer's Save and Load use it; not in ee/EEUnitGoal.h: EEPlayer.cpp does
-// not see EEUnitGoal's statics)
-extern unsigned long sGoalCounter;
 long EESetCivBuilderButtonBlinking(bool inBlinking);  // 0x27fcf0 (cdecl; the main game form's blinking buttons; EEPlayer::RepairPointers keeps the result) (provisional name)
 bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag);
 // 0x27a77a (cdecl): the map location under inPoint (EEMap::GetLocationAt into outTile/outPoint; true when found),

@@ -157,7 +157,7 @@ static int64_t UnitOp(void* p, int64_t* i, float* f)
     case EE_SCREENS_GA_U_PROTECTED: return c->IsProtected();
     case EE_SCREENS_GA_U_BUILT: return c->mIsBuilt;
     case EE_SCREENS_GA_U_SEEN: return EEIsSeenBy(u, gWorld.GetCurrentPlayer(), true);
-    case EE_SCREENS_GA_U_FOOTPRINT_VISIBLE: return EEIsFootprintVisibleTo(u, gWorld.GetCurrentPlayer());
+    case EE_SCREENS_GA_U_FOOTPRINT_VISIBLE: return ee_units_uu_footprint_visible((uint64_t)(uintptr_t)u, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer()) != 0;
     case EE_SCREENS_GA_U_TILE: return (intptr_t)u->GetRTSTile();
     case EE_SCREENS_GA_U_LOCATION:
         f[0] = c->GetPhysicalModel().GetLocation().GetX();

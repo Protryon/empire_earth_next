@@ -432,7 +432,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
             if ((inClass->mDomains & kMovementSea) != 0)
                 thePlaced = EEGetDockShipFacing(&theGoalPoint, inClass, inUnit, theHaveGoalPoint, &thePlacement);
             else if ((inClass->mDomains & kMovementSpace) != 0)
-                thePlaced = EEFindDockShipPlacement(&theGoalPoint, inClass, inUnit, theHaveGoalPoint, &thePlacement);
+                thePlaced = EEGetDockShipPlacement(&theGoalPoint, inClass, inUnit, theHaveGoalPoint, false, &thePlacement);
             else
                 thePlaced = EEFindPlacement(&theGoalPoint, inClass, inUnit->GetTileX(), inUnit->GetTileY(),
                     this->GetTileSize(), theRings, !thePlayer->IsHuman(), theHaveGoalPoint, false, &thePlacement, inUnit);
@@ -899,7 +899,7 @@ void EEUnitClass::UnitDied(EEComplexUnit* inUnit)
 void EEUnitClass::FindSafeLocation(EEComplexUnit* inUnit)
 {
     GE2DPoint theLocation;
-    if (inUnit->mPlayer->mComputerPlayer == NULL || !EEGetEscapePoint(inUnit, theLocation))
+    if (inUnit->mPlayer->mComputerPlayer == NULL || !ee_units_uu_escape_point((uint64_t)(uintptr_t)inUnit, (float(*)[2])&theLocation.mX))
         return;
     inUnit->DropPath();
     inUnit->SetGoal(EEUGRust::NewLocation(theLocation, false, true, false, 0.0f, false, false), 0, 0);
@@ -1609,7 +1609,8 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         return theTile != NULL;
     }
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
-    case EE_UNITS_CLS_MV_DIRECTION_TO: return EEGetDirectionTo(inUnit, theOther);
+    case EE_UNITS_CLS_MV_DIRECTION_TO:
+        return EEGetTileDirection(inUnit->GetTileX(), inUnit->GetTileY(), theOther->GetTileX(), theOther->GetTileY());
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: {
         const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
