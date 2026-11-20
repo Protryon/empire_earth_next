@@ -377,28 +377,6 @@ extern "C" void ee_screenscpp_hot_key_keep(const uint64_t* inUnits, size_t inCou
         sHotKeyUnits.push_back(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnits[i]));
 }
 
-static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    switch (inOp) {
-    case EE_SCREENS_GAME_HK_UPDATE_SELECTION:
-        thePlayer->UpdateSelection(NULL, true);
-        break;
-    case EE_SCREENS_GAME_HK_RESET_SAVED:
-        thePlayer->mSavedGroups.Reset(0x14, true);
-        break;
-    case EE_SCREENS_OP_HK_GROUP_BUTTON:
-        EEUIShell::Op(inForm->GetControl(inA), EE_SCREENS_SKOP_SG_SET_UNIT, (int64_t)thePlayer->mSelectedGroup->GetFirstUnit());
-        break;
-    case EE_SCREENS_GAME_HK_SHIFT: {
-        ISEntity* theKey;
-        gISKeyboard->GetEntity(kKeyShift, theKey);
-        return (uint32_t)theKey->GetValue();
-    }
-    }
-    return 0;
-}
-
 // ---- the chat log (chat_log.rs): its C++ entry points are inline (ee/EEUIEChatLogEvents.h); a saved game's reads
 // and writes
 
@@ -448,114 +426,10 @@ extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t i
     return theColour.Save(theFile);
 }
 
-// ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
-static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
-{
-    switch (inOp) {
-    case EE_SCREENS_OP_CH_MOUSE_INSIDE:
-        return inForm->GetRectangle().Contains(inForm->GetMouseLocation());
-    case EE_SCREENS_GAME_CL_UNPAUSE:
-        gWorld.UnpauseGame();
-        break;
-    default:
-        return EEScreensHotKeyCall(inForm, inOp, inA, inB, inC);
-    }
-    return 0;
-}
-
-// ---- the main game form's events' (main_game.rs): inForm is the main game form (or the editor's, for the media
-// dump); the behaviour menu's calls are on the manager's main game form, as the original's
-static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
-{
-    switch (inOp) {
-    case EE_SCREENS_GAME_MG_CLEAR_GATE_GHOSTS:
-        inForm->mBuildGate.ClearGhostUnits();
-        break;
-    case EE_SCREENS_GAME_MG_SET_UI_STATE:
-        inForm->SetUIState((long)(int32_t)inA);
-        break;
-    case EE_SCREENS_GAME_MG_POINTER:
-        gMouse->mPointer = (long)(int32_t)inA;
-        break;
-    case EE_SCREENS_GAME_MG_SHOW_DIALOG:
-        return (uint32_t)gPhysics->PostShowDialogMessage();
-    case EE_SCREENS_GAME_MG_ENTITY_GROUP:
-        inForm->SetEntityGroup((long)inA);
-        break;
-    case EE_SCREENS_GAME_MG_SET_HIDDEN_MODE:
-        gHiddenUnitsMode = (long)inA;
-        break;
-    case EE_SCREENS_GAME_MG_MARK_HIDDEN_MOVED:
-        for (EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex && theComplex->mCanBeHidden)
-                theComplex->mHiddenFlags |= kHiddenFlagMoved;
-        }
-        break;
-    case EE_SCREENS_GAME_MG_SET_CAMERA_MODE:
-        gWorld.mCameraControl.SetMode((long)inA);
-        break;
-    case EE_SCREENS_GAME_MG_ZOOM_STYLE:
-        gGamePreferences.mSettings.mZoomStyle = gWorld.mCameraControl.mMode;
-        break;
-    default:
-        return EEScreensChatCall(inForm, inOp, inA, inB, inC);
-    }
-    return 0;
-}
-
 // ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
 
 
 // ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
-
-// the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
-static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
-{
-    static const unsigned long kAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
-    ISEntity* theEntity = NULL;
-    gISMouse->GetEntity(kAxes[inAxis & 3], theEntity);
-    return theEntity;
-}
-
-static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
-{
-    EECameraControl& theCamera = gWorld.mCameraControl;
-    switch (inOp) {
-    case EE_SCREENS_GAME_CAM_FREEZE:
-        gMouse->mIsFrozen = inA != 0;
-        break;
-    case EE_SCREENS_GAME_CAM_MOUSE_PRESENT:
-        return EEScreensMouseEntity(inA) != NULL;
-    case EE_SCREENS_GAME_CAM_MOUSE_VALUE: {
-        ISEntity* theEntity = EEScreensMouseEntity(inA);
-        return (uint32_t)(inB ? theEntity->GetNormalizedValue() : theEntity->GetValue());
-    }
-    case EE_SCREENS_GAME_CAM_REVOLVE:
-        theCamera.Revolve(GE3DPoint(Float(inA), Float(inB), 0.0f));
-        break;
-    case EE_SCREENS_GAME_CAM_ROTATE:
-        theCamera.Rotate(GE3DPoint(Float(inA), Float(inB), 0.0f));
-        break;
-    case EE_SCREENS_GAME_CAM_SCROLL:
-        theCamera.Scroll(Float(inA), Float(inB));
-        break;
-    case EE_SCREENS_GAME_CAM_RESET_ZOOM:
-        theCamera.ResetZoom();
-        break;
-    case EE_SCREENS_GAME_CAM_CHANGED:
-        theCamera.SetChanged();
-        break;
-    case EE_SCREENS_GAME_CAM_SET_ZOOM:
-        theCamera.SetZoom(Float(inA));
-        break;
-    case EE_SCREENS_GAME_CAM_COS:
-        return Bits(UMCos(Float(inA)));
-    default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
-    }
-    return 0;
-}
 
 // ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
 
@@ -572,20 +446,6 @@ extern "C" int64_t ee_screenscpp_send_local(void* inMessage)
     return gCommunications->ProcessLocalUserInput(static_cast<EEMessage*>(inMessage), kSlotNone);
 }
 
-static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC,
-                                       uint32_t inD)
-{
-    switch (inOp) {
-    case EE_SCREENS_OP_DS_BUTTON_NUMBER:
-        return (uint32_t)atoi(static_cast<UIButton*>(inForm->GetControl(inA))->GetGEText()->GetText());
-    case EE_SCREENS_OP_DS_LABEL_NUMBER:
-        return (uint32_t)static_cast<UITextLabel*>(inForm->GetControl(inA))->GetTextAsInt(0);
-    default:
-        return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
-    }
-    return 0;
-}
-
 // ---- the post-game summary's (post_game.rs): inForm is the summary's form (25)
 static UString sPgsReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2086D");   // 0x563108 (encrypted)
 static float sPgsRectangle[4];          // the rectangle register (left, top, right, bottom)
@@ -594,114 +454,6 @@ static EECampaignFormManager* sPgsCampaign;   // Exit's campaign manager
 
 // the post-game line graph's x values: the game's time (ee_screens post_game_ffi.rs ee_screens_pgs_format)
 extern "C" uint32_t ee_screenscpp_game_time() { return (uint32_t)gPhysics->GetGameTime(); }
-
-extern "C" void ee_screenscpp_pgs_history(EeScreensPgsHistory* outHistory)
-{
-    const EEStatisticsHistory& s = gWorld.mStatistics;
-    *outHistory = EeScreensPgsHistory();
-    outHistory->records = (uint32_t)s.GetRecords().size();
-    outHistory->start_time = s.mStartTime;
-    outHistory->end_time = s.mEndTime;
-    outHistory->current_record = s.mCurrentRecordIndex;
-    outHistory->tile_count = s.mTileCount;
-    outHistory->victory_enabled = s.mVictoryEnabled;
-    outHistory->is_scenario = s.mIsScenario;
-    outHistory->is_campaign = s.mIsCampaign;
-    if ((unsigned long)s.mCurrentRecordIndex < s.GetRecords().size())
-        outHistory->current_slot = s.GetCurrentRecord().mSlot;
-    for (int i = 0; i < 5; i++)
-        outHistory->levels[i] = (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[i];
-}
-
-extern "C" void ee_screenscpp_pgs_record(uint32_t inIndex, EeScreensPgsRecord* outRecord)
-{
-    EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inIndex];
-    *outRecord = EeScreensPgsRecord();
-    outRecord->colour[0] = r.mColor.mRed;
-    outRecord->colour[1] = r.mColor.mGreen;
-    outRecord->colour[2] = r.mColor.mBlue;
-    outRecord->result = r.mResult;
-    outRecord->team = r.mTeam;
-    outRecord->end_time = r.mEndTime;
-    for (int i = 0; i < 7; i++)
-        outRecord->resources[i] = r.mResources[i];
-    outRecord->score = r.mScore;
-    outRecord->economy_score = r.mEconomyScore;
-    outRecord->epoch_score = r.mEpochScore;
-    outRecord->military_score = r.mMilitaryScore;
-    outRecord->tech_score = r.mTechScore;
-    outRecord->slot = r.mSlot;
-    outRecord->human = r.mIsHuman;
-    for (unsigned long j = 0; j < 31; j++)
-        outRecord->values[j] = r.mStatistics.GetValue(j);
-    outRecord->territory = r.mStatistics.GetLastValue(0x18);
-    outRecord->increases = r.mStatistics.CountIncreases(0x0f);
-    EEStatisticsSeries theEpochs = r.mStatistics.GetSeries(12);
-    outRecord->epoch_points = (uint32_t)theEpochs.mPoints.size();
-    outRecord->epoch_second = theEpochs.mPoints.size() > 1 ? theEpochs.mPoints[1].mValue : 0;
-}
-
-static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                      uint32_t inC, uint32_t inD)
-{
-    auto Ctl = [&](uint32_t inIndex) { return inForm->GetControl(inIndex); };
-    auto Bar = [&](uint32_t inIndex) { return static_cast<UIStatusBar*>(inForm->GetControl(inIndex)); };
-    switch (inOp) {
-    case EE_SCREENS_GAME_PGS_SET_PAGE:
-        gGamePreferences.mSettings.mLastOpenPostGameStatsPage = (long)(int32_t)inA;
-        break;
-    case EE_SCREENS_OP_PGS_SET_R:
-        sPgsRectangle[inA & 3] = Float(inB);
-        break;
-    case EE_SCREENS_OP_PGS_APPLY_R:
-        Ctl(inA)->SetRectangle(GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]));
-        break;
-    case EE_SCREENS_GAME_PGS_ADD_SERIES: {
-        // the record's statistics series into the line graph's stored graph inB (its graph ops: ee_screens toolkit.rs)
-        EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inA];
-        const std::vector<EEStatisticsPoint>& thePoints = r.mStatistics.GetSeries(inB).mPoints;
-        std::vector<long> thePairs;
-        for (unsigned long i = 0; i < thePoints.size(); i++) {
-            thePairs.push_back((long)thePoints[i].mTime);
-            thePairs.push_back((long)thePoints[i].mValue);
-        }
-        static_cast<UIGraph*>(Ctl(kPostGameLineGraph))->AddGraphSeries(thePairs.data(), thePoints.size(), inB, r.mColor);
-        break;
-    }
-    case EE_SCREENS_GAME_PGS_NEW_MANAGER:
-        inForm->SetFormManager(new EEPGSFormManager);
-        break;
-    case EE_SCREENS_GAME_PGS_WINDOW: {
-        GEWindow* theWindow = inForm->GetManager()->GetRasterizer()->GetWindow(inForm->GetManager()->GetScreen());
-        return inA ? theWindow->GetWidth() : theWindow->GetHeight();
-    }
-    case EE_SCREENS_OP_PGS_IS_BITMAP:
-        return dynamic_cast<UIBitmap*>(Ctl(inA)) != NULL;
-    case EE_SCREENS_GAME_PGS_PROTOCOL:
-        NEProtocol::GetProtocol(0, sPgsProtocol);
-        break;
-    case EE_SCREENS_GAME_PGS_SCI_DELETE:
-        EEUISCIFormManager::Get()->DeleteObjects();
-        break;
-    case EE_SCREENS_GAME_PGS_SAVE:
-        gGamePreferences.Save();
-        break;
-    default:
-        return EEScreensDiplomacyCall(inForm, inOp, inA, inB, inC, inD);   // (the builder's ops: ee_screens civ_whole.rs)
-    }
-    return 0;
-}
-
-// ---- the loading screen's (splash.rs): inForm is the loading screen (form 23)
-static uint32_t EEScreensSplashCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                    uint32_t inC, uint32_t inD)
-{
-    switch (inOp) {
-    default:
-        return EEScreensPostGameCall(inForm, inEntity, inOp, inA, inB, inC, inD);
-    }
-    return 0;
-}
 
 // ---- the civilization choice form's (civ_choice.rs): the form 35 by the manager, or the event's form
 static std::vector<EECivilizationEntry> sPdcsCivs;   // EE_SCREENS_GAME_PDCS_CIVS's, for the names and files
@@ -713,76 +465,10 @@ static EECBUIListBox* EEScreensPdcsControl(unsigned long inIndex)
     return static_cast<EECBUIListBox*>(gUIManager->GetFormByID(kFormPredefinedCiv)->GetControl(inIndex));
 }
 
-static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                       uint32_t inC, uint32_t inD)
-{
-    switch (inOp) {
-    case EE_SCREENS_GAME_PDCS_FILL:
-        gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(inForm->GetControl(inA)));
-        break;
-    case EE_SCREENS_GAME_PDCS_PAUSE:
-        gWorld.PauseGame();
-        break;
-    case EE_SCREENS_OP_PDCS_CLEAR_STATS:
-        EEScreensPdcsControl(4)->DeleteAllEntries();
-        break;
-    case EE_SCREENS_OP_PDCS_SELECTION: {
-        unsigned long theSelection;
-        return EEScreensPdcsControl(3)->GetCurrentSelection(theSelection) != kErrorOK ? 0 : theSelection + 1;
-    }
-    case EE_SCREENS_OP_PDCS_CONTROLS:
-        return EEScreensPdcsControl(3) && EEScreensPdcsControl(4) && EEScreensPdcsControl(5);
-    case EE_SCREENS_OP_PDCS_SET_UPGRADES:
-        EEScreensPdcsControl(4)->SetCivilizationUpgrades(sPdcsUpgrades);
-        break;
-    case EE_SCREENS_OP_PDCS_HIDE_LABEL:
-        EEScreensPdcsControl(5)->SetDisplayMode(kDisplayModeHidden);
-        break;
-    case EE_SCREENS_OP_PDCS_RESET:
-        EEScreensPdcsControl(3)->ResetSelection();
-        break;
-    default:
-        return EEScreensSplashCall(inForm, inEntity, inOp, inA, inB, inC, inD);
-    }
-    return 0;
-}
-
 // ---- the debug sound panel's (debug_sound.rs): the first selected unit's sound of a kind
 static EESoundObject* sDebugSound;   // EE_SCREENS_GAME_DSU_SOUND's, for EE_SCREENS_GAME_DSU_VOLUME
-
-static uint32_t EEScreensDebugSoundCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                        uint32_t inC, uint32_t inD)
-{
-    switch (inOp) {
-    case EE_SCREENS_GAME_DSU_SOUND: {
-        EEComplexUnit* theUnit = NULL;
-        sDebugSound = NULL;
-        if (!EEGetFirstSelectedUnit(theUnit) || theUnit->mComplexUnit == NULL)
-            return 0;
-        EEUnitClass* theClass = theUnit->mComplexUnit->mUnitClass;
-        EEModel* theModel = theClass->mModel;
-        switch (inA) {
-        case 1: sDebugSound = theClass->mAcknowledgeSounds[0]; break;
-        case 2: sDebugSound = theClass->mAcknowledgeSounds[1]; break;
-        case 3: sDebugSound = theClass->mCreationSound; break;
-        case 4: sDebugSound = theClass->mDeathSound; break;
-        case 5: sDebugSound = theClass->mSelectionSounds[0]; break;
-        case 6: sDebugSound = theClass->mSelectionSounds[1]; break;
-        case 7: sDebugSound = theModel->mSounds1[0]; break;
-        case 8: sDebugSound = theModel->mSounds2[0]; break;
-        case 9: sDebugSound = theModel->mSounds1[13]; break;
-        case 10: sDebugSound = theModel->mSounds2[13]; break;
-        }
-        return sDebugSound ? 2 : 1;
-    }
-    case EE_SCREENS_GAME_DSU_VOLUME:
-        sDebugSound->SetVolume(Float(inA));
-        break;
-    default:
-        return EEScreensCivChoiceCall(inForm, inEntity, inOp, inA, inB, inC, inD);
-    }
-    return 0;
-}
+static EEComplexUnit* sDsuUnit;   // EE_SCREENS_GAME_DSU_SOUND's first selected unit (a local of the original case)
+#define DSUC() sDsuUnit->mComplexUnit->mUnitClass
 
 // ---- the campaign editor's (campaign_editor.rs): inForm is the editor's form (24); its model is Rust's
 // (campaign_model.rs: the original's EECampaignEditorBehavior gCampaignEditor, 0x562df0), over the edited campaign
@@ -916,26 +602,6 @@ extern "C" void ee_screenscpp_cem_file_name(uint32_t inIndex, void* inOut) { EES
 extern "C" void ee_screenscpp_cem_scenario_extension(void* inOut) { EEShimOut(inOut, gScenarioExtension); }
 extern "C" void ee_screenscpp_cem_campaign_extension(void* inOut) { EEShimOut(inOut, gCampaignExtension); }
 
-static uint32_t EEScreensCampaignEditorCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA,
-                                            uint32_t inB, uint32_t inC, uint32_t inD)
-{
-    // the control op's control (read only by the ops that take one)
-    auto Ctl = [&]() { return inForm->GetControl(inA); };
-    auto Combo = [&]() { return static_cast<UIFileComboBox*>(Ctl()); };
-    switch (inOp) {
-    case EE_SCREENS_OP_CE_IS:
-        switch (inB) {
-        case EE_SCREENS_CE_IS_EDIT: return dynamic_cast<UIEditBox*>(Ctl()) != NULL;
-        case EE_SCREENS_CE_IS_LABEL: return dynamic_cast<UITextLabel*>(Ctl()) != NULL;
-        case EE_SCREENS_CE_IS_LIST: return dynamic_cast<UIListBox<UWideString>*>(Ctl()) != NULL;
-        default: return dynamic_cast<UIFileComboBox*>(Ctl()) != NULL;
-        }
-    default:
-        return EEScreensDebugSoundCall(inForm, inEntity, inOp, inA, inB, inC, inD);
-    }
-    return 0;
-}
-
 // the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
 extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
                                        uint32_t inC, uint32_t inD)
@@ -991,19 +657,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_EXTERNAL_LOBBY:
         EEStartExternalLobby();
         break;
-    case EE_SCREENS_GAME_SINGLE:
-    case EE_SCREENS_GAME_MULTI:
-        gGameState.mGameOptions.mIsMultiplayer = inOp == EE_SCREENS_GAME_MULTI;
-        break;
     case EE_SCREENS_GAME_DELETE_EDITOR:
         theManager->DeleteScenarioEditor();
-        break;
-    case EE_SCREENS_GAME_DELETE_WON:
-        if (gWonNet != NULL) {
-            EEWonNet* theWonNet = gWonNet;
-            gWonNet = NULL;
-            delete theWonNet;
-        }
         break;
     case EE_SCREENS_GAME_CREATE_EDITOR:
         theManager->CreateScenarioEditor();
@@ -1050,14 +705,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         EECampaignFormManager::Get()->UpdateChecksum();
         break;
     // the lobby's and its load screens' (lobby_form.rs)
-    case EE_SCREENS_GAME_LE_PLAYER_INFO:
-        gCommunications->ProcessGuaranteedLocalUserInput(
-            new EEMRecord(kMessagePlayerInformation, {(long)(int32_t)inC, (long)inA, 0.0f, (long)inB}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_LE_SEND_OPTION:
-        gCommunications->ProcessGuaranteedLocalUserInput(
-            new EEMRecord(kMessageGameOptions, {(long)(int32_t)inA, (long)(int32_t)inB, UWideString("")}), kSlotNone);
-        break;
     case EE_SCREENS_GAME_LE_SET_OPTION:
         EEScreensLobbySetOption(inA, (long)(int32_t)inB);
         break;
@@ -1069,10 +716,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_LE_DISCONNECT:
         gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_LE_START_LOADING:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inA, (int32_t)inB}),
-                                                         kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
         gGamePreferences.SetLastGameOptions(gGameOptions);
@@ -1092,8 +735,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_EXIT:
         EEExitGame();
         break;
-    default:
-        return EEScreensCampaignEditorCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2190,6 +1831,163 @@ extern "C" void ee_screenscpp_gt_record_name(uint32_t inIndex, void* inOut)
 { EEShimOut(inOut, UWideString(gWorld.mStatistics.GetRecords()[inIndex].GetName())); }
 extern "C" void ee_screenscpp_gt_map_type(uintptr_t inOptions, void* inOut)
 { EEShimOut(inOut, UWideString(GOPT(inOptions)->mMapType)); }
+
+// ---- the post-game summary's records and series (post_game_calls.rs; each one statement)
+#define PGR(inRecord) gWorld.mStatistics.mRecords[inRecord]
+static EEStatisticsSeries sPgsSeries;   // the series a record's shims read (a copy: GetSeries')
+extern "C" uint32_t ee_screenscpp_pgs_records() { return (uint32_t)gWorld.mStatistics.GetRecords().size(); }
+extern "C" int32_t ee_screenscpp_pgs_start_time() { return (int32_t)gWorld.mStatistics.mStartTime; }
+extern "C" int32_t ee_screenscpp_pgs_end_time() { return (int32_t)gWorld.mStatistics.mEndTime; }
+extern "C" int32_t ee_screenscpp_pgs_current_record() { return (int32_t)gWorld.mStatistics.mCurrentRecordIndex; }
+extern "C" int32_t ee_screenscpp_pgs_tile_count() { return (int32_t)gWorld.mStatistics.mTileCount; }
+extern "C" bool ee_screenscpp_pgs_victory_enabled() { return gWorld.mStatistics.mVictoryEnabled; }
+extern "C" bool ee_screenscpp_pgs_is_scenario() { return gWorld.mStatistics.mIsScenario; }
+extern "C" bool ee_screenscpp_pgs_is_campaign() { return gWorld.mStatistics.mIsCampaign; }
+extern "C" uint8_t ee_screenscpp_pgs_current_slot() { return (uint8_t)gWorld.mStatistics.GetCurrentRecord().mSlot; }
+extern "C" uint32_t ee_screenscpp_pgs_level(uint32_t inIndex)
+{ return (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[inIndex]; }
+extern "C" float ee_screenscpp_pr_red(uint32_t inRecord) { return PGR(inRecord).mColor.mRed; }
+extern "C" float ee_screenscpp_pr_green(uint32_t inRecord) { return PGR(inRecord).mColor.mGreen; }
+extern "C" float ee_screenscpp_pr_blue(uint32_t inRecord) { return PGR(inRecord).mColor.mBlue; }
+extern "C" int32_t ee_screenscpp_pr_result(uint32_t inRecord) { return (int32_t)PGR(inRecord).mResult; }
+extern "C" uint32_t ee_screenscpp_pr_team(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mTeam; }
+extern "C" uint32_t ee_screenscpp_pr_end_time(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEndTime; }
+extern "C" uint32_t ee_screenscpp_pr_resource(uint32_t inRecord, uint32_t inIndex)
+{ return (uint32_t)PGR(inRecord).mResources[inIndex]; }
+extern "C" uint32_t ee_screenscpp_pr_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mScore; }
+extern "C" uint32_t ee_screenscpp_pr_economy_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEconomyScore; }
+extern "C" uint32_t ee_screenscpp_pr_epoch_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEpochScore; }
+extern "C" uint32_t ee_screenscpp_pr_military_score(uint32_t inRecord)
+{ return (uint32_t)PGR(inRecord).mMilitaryScore; }
+extern "C" uint32_t ee_screenscpp_pr_tech_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mTechScore; }
+extern "C" uint8_t ee_screenscpp_pr_slot(uint32_t inRecord) { return (uint8_t)PGR(inRecord).mSlot; }
+extern "C" bool ee_screenscpp_pr_human(uint32_t inRecord) { return PGR(inRecord).mIsHuman; }
+extern "C" uint32_t ee_screenscpp_pr_value(uint32_t inRecord, uint32_t inSeries)
+{ return (uint32_t)PGR(inRecord).mStatistics.GetValue(inSeries); }
+extern "C" uint32_t ee_screenscpp_pr_last_value(uint32_t inRecord, uint32_t inSeries)
+{ return (uint32_t)PGR(inRecord).mStatistics.GetLastValue(inSeries); }
+extern "C" uint32_t ee_screenscpp_pr_increases(uint32_t inRecord, uint32_t inSeries)
+{ return (uint32_t)PGR(inRecord).mStatistics.CountIncreases(inSeries); }
+extern "C" void ee_screenscpp_pr_series_load(uint32_t inRecord, uint32_t inSeries)
+{ sPgsSeries = PGR(inRecord).mStatistics.GetSeries(inSeries); }
+extern "C" uint32_t ee_screenscpp_pr_series_count() { return (uint32_t)sPgsSeries.mPoints.size(); }
+extern "C" uint32_t ee_screenscpp_pr_series_time(uint32_t inIndex)
+{ return (uint32_t)sPgsSeries.mPoints[inIndex].mTime; }
+extern "C" uint32_t ee_screenscpp_pr_series_value(uint32_t inIndex)
+{ return (uint32_t)sPgsSeries.mPoints[inIndex].mValue; }
+extern "C" void ee_screenscpp_pgs_graph_add_series(uintptr_t inForm, uintptr_t inPairs, uint32_t inCount, uint32_t inSeries, uint32_t inRecord)
+{ static_cast<UIGraph*>(F(inForm)->GetControl(kPostGameLineGraph))->AddGraphSeries(reinterpret_cast<long*>(inPairs), inCount, inSeries, PGR(inRecord).mColor); }
+extern "C" uint32_t ee_screenscpp_pgs_window_width(uintptr_t inForm)
+{ return (uint32_t)F(inForm)->GetManager()->GetRasterizer()->GetWindow(F(inForm)->GetManager()->GetScreen())->GetWidth(); }
+extern "C" uint32_t ee_screenscpp_pgs_window_height(uintptr_t inForm)
+{ return (uint32_t)F(inForm)->GetManager()->GetRasterizer()->GetWindow(F(inForm)->GetManager()->GetScreen())->GetHeight(); }
+
+// ---- the original dispatcher chain's cases (screens_calls.rs; each one statement)
+#define MGF(inForm) static_cast<EEUIFMainGame*>(F(inForm))
+static ISEntity* sScreensMouse;   // the mouse axis a case reads (EEScreensMouseEntity's local)
+static const unsigned long kScreensAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
+extern "C" void ee_screenscpp_sc_hk_update_selection() { gWorld.GetCurrentPlayer()->UpdateSelection(NULL, true); }
+extern "C" void ee_screenscpp_sc_hk_reset_saved() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, true); }
+extern "C" void ee_screenscpp_sc_hk_group_button(uintptr_t inForm, uint32_t inControl)
+{ EEUIShell::Op(F(inForm)->GetControl(inControl), EE_SCREENS_SKOP_SG_SET_UNIT, (int64_t)gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit()); }
+extern "C" bool ee_screenscpp_sc_ch_mouse_inside(uintptr_t inForm)
+{ return F(inForm)->GetRectangle().Contains(F(inForm)->GetMouseLocation()); }
+extern "C" void ee_screenscpp_sc_cl_unpause() { gWorld.UnpauseGame(); }
+extern "C" void ee_screenscpp_sc_mg_clear_gate_ghosts(uintptr_t inForm) { MGF(inForm)->mBuildGate.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_sc_mg_set_ui_state(uintptr_t inForm, int32_t inState)
+{ MGF(inForm)->SetUIState((long)inState); }
+extern "C" void ee_screenscpp_sc_mg_pointer(int32_t inPointer) { gMouse->mPointer = (long)inPointer; }
+extern "C" uint32_t ee_screenscpp_sc_mg_show_dialog() { return (uint32_t)gPhysics->PostShowDialogMessage(); }
+extern "C" void ee_screenscpp_sc_mg_entity_group(uintptr_t inForm, uint32_t inGroup)
+{ MGF(inForm)->SetEntityGroup((long)inGroup); }
+extern "C" void ee_screenscpp_sc_mg_set_hidden_mode(uint32_t inMode) { gHiddenUnitsMode = (long)inMode; }
+extern "C" uintptr_t ee_screenscpp_sc_units_first() { return (uintptr_t)(EEUnit*)gWorld.mUnits.mFirst; }
+extern "C" uintptr_t ee_screenscpp_sc_unit_next(uintptr_t inUnit)
+{ return (uintptr_t)static_cast<EEUnit*>(reinterpret_cast<EEUnit*>(inUnit)->mTileNode->mNext); }
+extern "C" uintptr_t ee_screenscpp_sc_unit_complex(uintptr_t inUnit)
+{ return (uintptr_t)reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit; }
+extern "C" bool ee_screenscpp_sc_complex_can_be_hidden(uintptr_t inComplex)
+{ return reinterpret_cast<EEComplexUnit*>(inComplex)->mCanBeHidden; }
+extern "C" void ee_screenscpp_sc_complex_mark_moved(uintptr_t inComplex)
+{ reinterpret_cast<EEComplexUnit*>(inComplex)->mHiddenFlags |= kHiddenFlagMoved; }
+extern "C" void ee_screenscpp_sc_mg_set_camera_mode(uint32_t inMode) { gWorld.mCameraControl.SetMode((long)inMode); }
+extern "C" void ee_screenscpp_sc_mg_zoom_style()
+{ gGamePreferences.mSettings.mZoomStyle = gWorld.mCameraControl.mMode; }
+extern "C" void ee_screenscpp_sc_cam_freeze(bool inFrozen) { gMouse->mIsFrozen = inFrozen; }
+extern "C" void ee_screenscpp_sc_mouse_entity_clear() { sScreensMouse = NULL; }
+extern "C" void ee_screenscpp_sc_mouse_entity_load(uint32_t inAxis)
+{ gISMouse->GetEntity(kScreensAxes[inAxis & 3], sScreensMouse); }
+extern "C" bool ee_screenscpp_sc_mouse_entity_present() { return sScreensMouse != NULL; }
+extern "C" int64_t ee_screenscpp_sc_mouse_entity_value() { return (int64_t)sScreensMouse->GetValue(); }
+extern "C" int64_t ee_screenscpp_sc_mouse_entity_normalized() { return (int64_t)sScreensMouse->GetNormalizedValue(); }
+extern "C" void ee_screenscpp_sc_cam_revolve(float inX, float inY)
+{ gWorld.mCameraControl.Revolve(GE3DPoint(inX, inY, 0.0f)); }
+extern "C" void ee_screenscpp_sc_cam_rotate(float inX, float inY)
+{ gWorld.mCameraControl.Rotate(GE3DPoint(inX, inY, 0.0f)); }
+extern "C" void ee_screenscpp_sc_cam_scroll(float inX, float inY) { gWorld.mCameraControl.Scroll(inX, inY); }
+extern "C" void ee_screenscpp_sc_cam_reset_zoom() { gWorld.mCameraControl.ResetZoom(); }
+extern "C" void ee_screenscpp_sc_cam_changed() { gWorld.mCameraControl.SetChanged(); }
+extern "C" void ee_screenscpp_sc_cam_set_zoom(float inZoom) { gWorld.mCameraControl.SetZoom(inZoom); }
+extern "C" float ee_screenscpp_sc_cam_cos(float inAngle) { return UMCos(inAngle); }
+extern "C" uint32_t ee_screenscpp_sc_ds_button_number(uintptr_t inForm, uint32_t inControl)
+{ return (uint32_t)atoi(static_cast<UIButton*>(F(inForm)->GetControl(inControl))->GetGEText()->GetText()); }
+extern "C" uint32_t ee_screenscpp_sc_ds_label_number(uintptr_t inForm, uint32_t inControl)
+{ return (uint32_t)static_cast<UITextLabel*>(F(inForm)->GetControl(inControl))->GetTextAsInt(0); }
+extern "C" void ee_screenscpp_sc_pgs_set_page(int32_t inPage)
+{ gGamePreferences.mSettings.mLastOpenPostGameStatsPage = (long)inPage; }
+extern "C" void ee_screenscpp_sc_pgs_set_r(uint32_t inIndex, float inValue) { sPgsRectangle[inIndex & 3] = inValue; }
+extern "C" void ee_screenscpp_sc_pgs_apply_r(uintptr_t inForm, uint32_t inControl)
+{ F(inForm)->GetControl(inControl)->SetRectangle(GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3])); }
+extern "C" void ee_screenscpp_sc_pgs_new_manager(uintptr_t inForm) { F(inForm)->SetFormManager(new EEPGSFormManager); }
+extern "C" bool ee_screenscpp_sc_pgs_is_bitmap(uintptr_t inForm, uint32_t inControl)
+{ return dynamic_cast<UIBitmap*>(F(inForm)->GetControl(inControl)) != NULL; }
+extern "C" void ee_screenscpp_sc_pgs_protocol() { NEProtocol::GetProtocol(0, sPgsProtocol); }
+extern "C" void ee_screenscpp_sc_pgs_sci_delete() { EEUISCIFormManager::Get()->DeleteObjects(); }
+extern "C" int32_t ee_screenscpp_sc_preferences_save() { return (int32_t)gGamePreferences.Save(); }
+extern "C" void ee_screenscpp_sc_pdcs_fill(uintptr_t inForm, uint32_t inControl)
+{ gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(F(inForm)->GetControl(inControl))); }
+extern "C" void ee_screenscpp_sc_pause_game() { gWorld.PauseGame(); }
+extern "C" uintptr_t ee_screenscpp_sc_pdcs_control(uint32_t inIndex)
+{ return (uintptr_t)EEScreensPdcsControl(inIndex); }
+extern "C" void ee_screenscpp_sc_pdcs_clear_stats() { EEScreensPdcsControl(4)->DeleteAllEntries(); }
+extern "C" void ee_screenscpp_sc_pdcs_set_upgrades()
+{ EEScreensPdcsControl(4)->SetCivilizationUpgrades(sPdcsUpgrades); }
+extern "C" void ee_screenscpp_sc_pdcs_hide_label() { EEScreensPdcsControl(5)->SetDisplayMode(kDisplayModeHidden); }
+extern "C" void ee_screenscpp_sc_pdcs_reset() { EEScreensPdcsControl(3)->ResetSelection(); }
+extern "C" void ee_screenscpp_sc_dsu_clear() { sDebugSound = NULL; }
+extern "C" void ee_screenscpp_sc_dsu_unit_clear() { sDsuUnit = NULL; }
+extern "C" bool ee_screenscpp_sc_dsu_first_selected() { return EEGetFirstSelectedUnit(sDsuUnit); }
+extern "C" bool ee_screenscpp_sc_dsu_has_complex() { return sDsuUnit->mComplexUnit != NULL; }
+extern "C" void ee_screenscpp_sc_dsu_sound1() { sDebugSound = DSUC()->mAcknowledgeSounds[0]; }
+extern "C" void ee_screenscpp_sc_dsu_sound2() { sDebugSound = DSUC()->mAcknowledgeSounds[1]; }
+extern "C" void ee_screenscpp_sc_dsu_sound3() { sDebugSound = DSUC()->mCreationSound; }
+extern "C" void ee_screenscpp_sc_dsu_sound4() { sDebugSound = DSUC()->mDeathSound; }
+extern "C" void ee_screenscpp_sc_dsu_sound5() { sDebugSound = DSUC()->mSelectionSounds[0]; }
+extern "C" void ee_screenscpp_sc_dsu_sound6() { sDebugSound = DSUC()->mSelectionSounds[1]; }
+extern "C" void ee_screenscpp_sc_dsu_sound7() { sDebugSound = DSUC()->mModel->mSounds1[0]; }
+extern "C" void ee_screenscpp_sc_dsu_sound8() { sDebugSound = DSUC()->mModel->mSounds2[0]; }
+extern "C" void ee_screenscpp_sc_dsu_sound9() { sDebugSound = DSUC()->mModel->mSounds1[13]; }
+extern "C" void ee_screenscpp_sc_dsu_sound10() { sDebugSound = DSUC()->mModel->mSounds2[13]; }
+extern "C" bool ee_screenscpp_sc_dsu_has_sound() { return sDebugSound != NULL; }
+extern "C" void ee_screenscpp_sc_dsu_volume(float inVolume) { sDebugSound->SetVolume(inVolume); }
+extern "C" bool ee_screenscpp_sc_ce_is_edit(uintptr_t inForm, uint32_t inControl)
+{ return dynamic_cast<UIEditBox*>(F(inForm)->GetControl(inControl)) != NULL; }
+extern "C" bool ee_screenscpp_sc_ce_is_label(uintptr_t inForm, uint32_t inControl)
+{ return dynamic_cast<UITextLabel*>(F(inForm)->GetControl(inControl)) != NULL; }
+extern "C" bool ee_screenscpp_sc_ce_is_list(uintptr_t inForm, uint32_t inControl)
+{ return dynamic_cast<UIListBox<UWideString>*>(F(inForm)->GetControl(inControl)) != NULL; }
+extern "C" bool ee_screenscpp_sc_ce_is_combo(uintptr_t inForm, uint32_t inControl)
+{ return dynamic_cast<UIFileComboBox*>(F(inForm)->GetControl(inControl)) != NULL; }
+extern "C" void ee_screenscpp_sc_won_net_clear() { gWonNet = NULL; }
+extern "C" void ee_screenscpp_sc_won_net_delete(uintptr_t inWon) { delete reinterpret_cast<EEWonNet*>(inWon); }
+extern "C" void ee_screenscpp_sc_send_player_information(uint32_t inA, uint32_t inB, int32_t inValue)
+{ gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessagePlayerInformation, {(long)inValue, (long)inA, 0.0f, (long)inB}), kSlotNone); }
+extern "C" void ee_screenscpp_sc_send_game_option(int32_t inOption, int32_t inValue)
+{ gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageGameOptions, {(long)inOption, (long)inValue, UWideString("")}), kSlotNone); }
+extern "C" void ee_screenscpp_sc_send_start_loading(uint8_t inFlag, int32_t inTime)
+{ gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inFlag, (int32_t)inTime}), kSlotNone); }
+extern "C" void ee_screenscpp_sc_game_state_multiplayer(bool inMultiplayer)
+{ gGameState.mGameOptions.mIsMultiplayer = inMultiplayer; }
 
 // TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)
 extern "C" const void* ee_screenscpp_sgvw_world_lock() { return gWorld.mLock; }
