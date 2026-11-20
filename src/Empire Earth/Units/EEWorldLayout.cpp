@@ -207,6 +207,8 @@ void EEWorldLayoutRegister()
     theLayout.complex_frame = theModelAt + GEPhysicalModel::FrameOffset();
     theLayout.complex_conversion_effect = offsetof(EEComplexUnit, mConversionEffect);
     theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
+    theLayout.complex_angular_velocity = offsetof(EEComplexUnit, mAngularVelocity);
+    theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
     theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
     theLayout.herd_id = offsetof(EEHerd, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);

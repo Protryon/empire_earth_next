@@ -431,63 +431,6 @@ extern "C" float ee_units_pm_host_random()
     return gPhysics->GetRandom();
 }
 
-extern "C" uint8_t ee_units_pm_host_noting()
-{
-    return EEUnitStepNoting() ? 1 : 0;
-}
-
-extern "C" void ee_units_pm_host_note(uint32_t inKind, uint32_t inID, const uint32_t* inWords, uint32_t inCount)
-{
-    EEUnitStateNote(inKind, inID, inWords, inCount);
-}
-
-extern "C" void ee_units_pm_host_view(uint64_t inObject, EeUnitsPmUnit* outView)
-{
-    *outView = PMView(PMUnit(inObject));
-}
-
-extern "C" void ee_units_pm_host_class(uint64_t inObject, EeUnitsPmClass* outClass)
-{
-    EEUnitClass* theClass = PMUnit(inObject)->mUnitClass;
-    outClass->category = (uint32_t)theClass->mCategory;
-    outClass->unit_type = (uint32_t)theClass->mUnitType;
-    outClass->air_traffic_type = (int32_t)theClass->mAirTrafficType;
-    outClass->tile_size = (int32_t)theClass->mTileSize;
-    outClass->pitches_with_terrain = theClass->mPitchesWithTerrain ? 1 : 0;
-    outClass->rolls_with_terrain = theClass->mRollsWithTerrain ? 1 : 0;
-    outClass->fires_broadside = theClass->mFiresBroadside ? 1 : 0;
-    outClass->is_melee = theClass->mIsMelee ? 1 : 0;
-    outClass->has_splash_effect = theClass->mSplashEffect ? 1 : 0;
-    outClass->has_death_effect = theClass->mDeathEffect ? 1 : 0;
-    outClass->has_shell_hole_effect = theClass->mShellHoleEffect ? 1 : 0;
-    outClass->cruise_altitude = theClass->GetCruiseAltitude();
-    outClass->slope_penalty = theClass->mSlopeSpeedPenalty;
-    outClass->bob_pitch = theClass->GetBobPitch();
-    outClass->bob_height = theClass->GetBobHeight();
-    outClass->scale = theClass->GetScale();
-    outClass->max_velocity = theClass->GetMaxVelocity();
-    outClass->max_roll = theClass->GetMaxRoll();
-    outClass->inner_collision_sphere = theClass->mInnerCollisionSphere;
-    outClass->facing_offset = theClass->GetFacingOffset();
-    outClass->angular_acceleration = theClass->GetAngularAcceleration();
-    outClass->max_angular_velocity = theClass->GetMaxAngularVelocity();
-}
-
-extern "C" void ee_units_pm_host_stats(uint64_t inObject, EeUnitsPmStats* outStats)
-{
-    EEUnitClassUpgrade* theStats = PMUnit(inObject)->mStats;
-    outStats->max_velocity = theStats->GetMaxVelocity();
-    outStats->acceleration = theStats->GetAcceleration();
-    outStats->angular_acceleration = theStats->mAngularAcceleration;
-    outStats->max_angular_velocity = theStats->mMaxAngularVelocity;
-    outStats->scale = theStats->GetScale();
-}
-
-extern "C" void ee_units_pm_host_location(uint64_t inObject, float* outMatrix)
-{
-    memcpy(outMatrix, PMUnit(inObject)->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float));
-}
-
 extern "C" void ee_units_pm_host_set_transformation(uint64_t inObject, const float* inMatrix)
 {
     GETransformation theTransformation(false);
@@ -530,32 +473,6 @@ extern "C" void ee_units_pm_host_update_tile(uint64_t inObject, const float* inM
 extern "C" void ee_units_pm_host_set_scale(uint64_t inObject, float inScale)
 {
     PMUnit(inObject)->mPhysicalModel.SetScale(inScale);
-}
-
-extern "C" void ee_units_pm_host_angular_velocity(uint64_t inObject, float* outOrientation)
-{
-    const GEOrientation& theRate = PMUnit(inObject)->mAngularVelocity;
-    outOrientation[0] = theRate.mYaw;
-    outOrientation[1] = theRate.mPitch;
-    outOrientation[2] = theRate.mRoll;
-}
-
-extern "C" void ee_units_pm_host_set_angular_velocity(uint64_t inObject, float inYaw, float inPitch, float inRoll)
-{
-    PMUnit(inObject)->mAngularVelocity = GEOrientation(inYaw, inPitch, inRoll);
-}
-
-extern "C" void ee_units_pm_host_orientation(uint64_t inObject, float* outOrientation)
-{
-    const GEOrientation& theOrientation = PMUnit(inObject)->mOrientation;
-    outOrientation[0] = theOrientation.mYaw;
-    outOrientation[1] = theOrientation.mPitch;
-    outOrientation[2] = theOrientation.mRoll;
-}
-
-extern "C" void ee_units_pm_host_set_orientation(uint64_t inObject, float inYaw, float inPitch, float inRoll)
-{
-    PMUnit(inObject)->mOrientation = GEOrientation(inYaw, inPitch, inRoll);
 }
 
 // the unit's (its active group's) rates: pm_host.rs RATE_*
@@ -604,12 +521,6 @@ extern "C" void ee_units_pm_host_path_length(uint64_t inObject, float* ioLength)
     PMUnit(inObject)->GetPathLength(*ioLength);
 }
 
-extern "C" uint32_t ee_units_pm_host_command_type(uint64_t inObject)
-{
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    return (uint32_t)(theUnit->mCommand ? theUnit->mCommand->mType : 0);
-}
-
 extern "C" int32_t ee_units_pm_host_model_parts(uint64_t inObject)
 {
     return (int32_t)PMUnit(inObject)->GetModel()->GetNumParts();
@@ -623,12 +534,6 @@ extern "C" uint32_t ee_units_pm_host_frame_time(uint64_t inObject, uint32_t inAn
 extern "C" uint64_t ee_units_pm_host_tile_of(uint64_t inObject)
 {
     return PMObject(static_cast<RTSTile*>(PMUnit(inObject)->mTile));
-}
-
-extern "C" uint8_t ee_units_pm_host_goal_kind(uint64_t inObject)
-{
-    EEUnitGoal* theGoal = PMUnit(inObject)->mGoalState;
-    return theGoal ? (uint8_t)theGoal->mKind : 0;
 }
 
 // the goal's units: pm_host.rs GOAL_* (the attack target and gather resource as EEUnit*, the healed unit and the home
@@ -687,24 +592,10 @@ extern "C" uint8_t ee_units_pm_host_goal_facing(uint64_t inObject, float* outYaw
     return 1;
 }
 
-// an EEUnit's values: pm_host.rs UNIT_*
-extern "C" uint64_t ee_units_pm_host_unit_value(uint64_t inUnit, int32_t inWhich)
+// the class flies over (a class method)
+extern "C" uint8_t ee_units_pm_host_flies_over(uint64_t inUnit)
 {
-    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
-    switch (inWhich) {
-    case 0:
-        return (uint64_t)theUnit->mResourceType;
-    case 1:
-        return PMObject(theUnit->mComplexUnit);
-    case 2:
-        return (uint64_t)(int64_t)theUnit->GetTileX();
-    case 3:
-        return (uint64_t)(int64_t)theUnit->GetTileY();
-    case 4:
-        return (uint64_t)theUnit->mUnitClass->mCategory;
-    default:
-        return theUnit->mUnitClass->FliesOver() == true ? 1 : 0;
-    }
+    return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit))->mUnitClass->FliesOver() == true ? 1 : 0;
 }
 
 extern "C" uint8_t ee_units_pm_host_has_arrived(uint64_t inObject, float inDistance)

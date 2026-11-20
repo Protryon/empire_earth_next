@@ -20,9 +20,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "rust/sim/app.h"
-#include "rust/sim/units.h"
-
 class RTSUnit;
 class RTSPlayer;
 
@@ -67,38 +64,13 @@ void EEUnitOrderReset();
 
 class EEPlayer;
 // the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
-// invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count (ee_units
-// select.rs over the records; the player is its list's object, at offset 0 of the EEPlayer)
-inline size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs)
-{
-    return ee_units_select_pick(reinterpret_cast<uintptr_t>(inPlayer), inIDs, inCount, outIDs);
-}
-// TEST ONLY: a USPK record of one pick (inCase 100: the game's EEPlayer::SelectUnits; 1..4: the sweep's; the
-// records and the sweep are ee_sim units store_sweep.rs)
-inline void EESelectPickCapture(unsigned long inCase, EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount,
-                                const uint32_t* inPicked, size_t inPickedCount)
-{
-    ee_units_select_pick_capture((uint32_t)inCase, reinterpret_cast<uintptr_t>(inPlayer), inIDs, inCount, inPicked,
-                                 inPickedCount);
-}
-class EEComplexUnit;
-// EEActiveGroup::Fill's test: the indices (in order) of the units of inUnits (a selection's, inCount) that an active
-// group takes for formation slot inSlot: valid, with hit points, in the slot; outIndices has room for inCount; the count
-inline size_t EEFillMembers(EEComplexUnit* const* inUnits, size_t inCount, long inSlot, uint32_t* outIndices)
-{
-    return ee_units_fill_members_of(reinterpret_cast<const void* const*>(inUnits), inCount, (int64_t)inSlot, outIndices);
-}
-// TEST ONLY: a USFL record of one Fill test (inCase 100: EEActiveGroup::Fill; 1, 2: the sweep's), inPlayer the
-// selection's player
-inline void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* const* inUnits, size_t inCount,
-                          long inSlot, const uint32_t* inIndices, size_t inTaken)
-{
-    ee_units_fill_capture((uint32_t)inCase, reinterpret_cast<uintptr_t>(inPlayer),
-                          reinterpret_cast<const void* const*>(inUnits), inCount, (int64_t)inSlot, inIndices, inTaken);
-}
+// invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count
+size_t EESelectPick(EEPlayer* inPlayer, const uint32_t* inIDs, size_t inCount, uint32_t* outIDs);
+// (the pick's and the Fill test's USPK and USFL records and sweeps: ee_sim units/pick_sweep.rs; the Fill test:
+// ee_units_fill_members)
 
-// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): EEUnitStepNote adds one call of a leaf
-// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; ee_units_step_commit (the end of
+// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): ee_units_note_step adds one call of a leaf
+// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; ee_units_note_step_commit (the end of
 // EEPhysics::UpdateUnits) writes the tick's record: the tick, the calls, their FNV-1a. Words: reload / target search
 // [timer, tick ms, written, timer after]; heal search the same with float bits (the tick time, not ms); power
 // [regeneration, maximum, cinematic, land building, built, power, timer, tick ms, interval, written, power set, power
@@ -118,15 +90,8 @@ enum EEUnitStepKind {
     kUnitStepCamouflage = 7,    // EEUnitClass::UpdateCamouflageTimer's timers
     kUnitStepCloakFade = 8      // EEUnitClass::UpdateCamouflageTimer's cloak opacity
 };
-// (the digests and records: ee_sim units step_note.rs; EEPhysics::UpdateUnits calls ee_units_step_commit)
-inline void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount)
-{
-    ee_units_step_note(inKind, (uint32_t)inID, inWords, inCount);
-}
-// TEST ONLY: whether the step's records are noted (the capture runs)
-inline bool EEUnitStepNoting() { return ee_app_capture_active(); }
-// TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): EEUnitStateNote adds one call
-// (its kind, the unit's id, its words) to the tick's second digest, written by ee_units_step_commit as a USST record (the
+// TEST ONLY: the unit step's state record (USST, R5b.4 leaf 6, the eleventh round): ee_units_note_state adds one call
+// (its kind, the unit's id, its words) to the tick's second digest, written by ee_units_note_step_commit as a USST record (the
 // tick, the calls, their FNV-1a). Words: AIStep [command type, next trigger time, game time, path (1 the gather goal
 // restarted its action, 2 no command, 3 an idle unit waiting, 4 evaluated), the gather's action, the first and the
 // second evaluation's results (0xffffffff: none), command type after, next trigger time after]; a trigger's
@@ -158,26 +123,14 @@ enum EEUnitStateKind {
     kUnitStateApproachPitch = 11,  // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
     // the thirteenth round's: a class Update's leaf calls in order, three words each [operation (ee_units update.rs
     // EE_UNITS_UPD_*), its two arguments], noted by the Update host (EEUnitUpdate.cpp) and written once the unit's
-    // step is done (EEUnitUpdateCommit)
+    // step is done (ee_units_note_update_commit)
     kUnitStateUpdate = 12,
     // a class ActionChanged's operations in order, three words each [operation (ee_units actions.rs
     // EE_UNITS_ACT_*), its two arguments], the nested calls (another part's, the idle restart) with them, written once
-    // the outermost call returns (EEUnitActionScope)
+    // the outermost call returns (ee_units_note_action_begin/end)
     kUnitStateActionChanged = 13
 };
-inline void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount)
-{
-    ee_units_state_note(inKind, (uint32_t)inID, inWords, inCount);
-}
-// TEST ONLY (USST kind 12): one leaf call of a class Update; the step's calls as one note (TickStep, after the step)
-inline void EEUnitUpdateNote(int inOperation, int64_t inA, int64_t inB) { ee_units_update_note(inOperation, inA, inB); }
-inline void EEUnitUpdateCommit(unsigned long inID) { ee_units_update_commit((uint32_t)inID); }
-// TEST ONLY (USST kind 13): one operation of a class ActionChanged; the scope of a call (the outermost writes the note)
-inline void EEUnitActionNote(int inOperation, int64_t inA, int64_t inB) { ee_units_action_note(inOperation, inA, inB); }
-struct EEUnitActionScope {
-    explicit EEUnitActionScope(unsigned long inID) { ee_units_action_enter((uint32_t)inID); }
-    ~EEUnitActionScope() { ee_units_action_leave(); }
-};
+// (the notes and their records: ee_sim units/notes.rs, ee_units_note_*)
 
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
 // on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'

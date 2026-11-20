@@ -1257,12 +1257,6 @@ constexpr static const int32_t EE_UNITS_CLS_ST_CHAIN = 98;
 /// class `b`'s `UpdateCloakDetection(unit a)`
 constexpr static const int32_t EE_UNITS_CLS_ST_CLOAK_DETECTION = 99;
 
-/// TEST ONLY: `EESimCaptureRecord::Active()`
-constexpr static const int32_t EE_UNITS_CLS_ST_NOTING = 100;
-
-/// TEST ONLY: `EEUnitStepNote(c, d, the io.a words at io.list)`
-constexpr static const int32_t EE_UNITS_CLS_ST_NOTE = 101;
-
 /// unit `a`'s `HasEffect(8)`: 1 with `ApplyModifiers(3, 0, io.a, a)` of its area effects, else 0
 constexpr static const int32_t EE_UNITS_CLS_ST_AREA_CLOAK = 102;
 
@@ -4616,44 +4610,6 @@ struct EeUnitsPmTick {
   float height_epsilon;
 };
 
-/// A unit class's values the models read (`EEUnitClass`'s getters and members; the three effects: set or not).
-struct EeUnitsPmClass {
-  uint32_t category;
-  uint32_t unit_type;
-  int32_t air_traffic_type;
-  int32_t tile_size;
-  uint8_t pitches_with_terrain;
-  uint8_t rolls_with_terrain;
-  uint8_t fires_broadside;
-  uint8_t is_melee;
-  uint8_t has_splash_effect;
-  uint8_t has_death_effect;
-  uint8_t has_shell_hole_effect;
-  /// `GetCruiseAltitude()`, `mSlopeSpeedPenalty`, `GetBobPitch()`, `GetBobHeight()`, `GetScale()`, `mMaxVelocity`
-  /// (`GetMaxVelocity()`), `mMaxRoll`, `mInnerCollisionSphere`, `GetFacingOffset()`, `GetAngularAcceleration()`,
-  /// `GetMaxAngularVelocity()`
-  float cruise_altitude;
-  float slope_penalty;
-  float bob_pitch;
-  float bob_height;
-  float scale;
-  float max_velocity;
-  float max_roll;
-  float inner_collision_sphere;
-  float facing_offset;
-  float angular_acceleration;
-  float max_angular_velocity;
-};
-
-/// A unit's statistics (`mStats`: `EEUnitClassUpgrade`'s getters).
-struct EeUnitsPmStats {
-  float max_velocity;
-  float acceleration;
-  float angular_acceleration;
-  float max_angular_velocity;
-  float scale;
-};
-
 /// A tile's values (`RTSTile`'s; zeros for no tile).
 struct EeUnitsPmTile {
   int32_t terrain_type;
@@ -5007,6 +4963,44 @@ struct EeUnitsBuildUnit {
   bool land_building;
   /// the complex unit's `mAnimation` (the gathering)
   int32_t animation;
+};
+
+/// A unit class's values the models read (`EEUnitClass`'s getters and members; the three effects: set or not).
+struct EeUnitsPmClass {
+  uint32_t category;
+  uint32_t unit_type;
+  int32_t air_traffic_type;
+  int32_t tile_size;
+  uint8_t pitches_with_terrain;
+  uint8_t rolls_with_terrain;
+  uint8_t fires_broadside;
+  uint8_t is_melee;
+  uint8_t has_splash_effect;
+  uint8_t has_death_effect;
+  uint8_t has_shell_hole_effect;
+  /// `GetCruiseAltitude()`, `mSlopeSpeedPenalty`, `GetBobPitch()`, `GetBobHeight()`, `GetScale()`, `mMaxVelocity`
+  /// (`GetMaxVelocity()`), `mMaxRoll`, `mInnerCollisionSphere`, `GetFacingOffset()`, `GetAngularAcceleration()`,
+  /// `GetMaxAngularVelocity()`
+  float cruise_altitude;
+  float slope_penalty;
+  float bob_pitch;
+  float bob_height;
+  float scale;
+  float max_velocity;
+  float max_roll;
+  float inner_collision_sphere;
+  float facing_offset;
+  float angular_acceleration;
+  float max_angular_velocity;
+};
+
+/// A unit's statistics (`mStats`: `EEUnitClassUpgrade`'s getters).
+struct EeUnitsPmStats {
+  float max_velocity;
+  float acceleration;
+  float angular_acceleration;
+  float max_angular_velocity;
+  float scale;
 };
 
 /// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
@@ -6082,8 +6076,6 @@ extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacit
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
 
-extern uint8_t ee_units_host_goal_kind(void *goal);
-
 extern void ee_units_host_goal_release(void *goal);
 
 extern void *ee_units_host_active_group_new(void *player);
@@ -6099,8 +6091,6 @@ extern void ee_units_host_group_keep_mobile(void *group);
 extern void ee_units_host_group_clear_goal(void *group);
 
 extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
-
-extern void ee_units_host_group_set_action(void *group, int32_t action);
 
 extern void ee_units_host_group_plan(void *group);
 
@@ -6122,12 +6112,6 @@ extern void ee_units_host_acknowledge_unit(void *player, uint32_t unit);
 
 extern uint32_t ee_units_host_town_patrol_point(uint32_t unit, uint8_t *found);
 
-extern void ee_units_host_patrol_add_unit_tile(uint32_t unit, uint32_t target, void *player);
-
-extern void *ee_units_host_unit_patrol_group(uint32_t unit);
-
-extern void ee_units_host_group_set_queued(void *group, uint8_t queued);
-
 extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
 
 extern void ee_units_host_group_spread_around_tile(void *group, int64_t x, int64_t y);
@@ -6142,11 +6126,7 @@ extern void ee_units_host_group_keep_non_citizens(void *group);
 
 extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
 
-extern void ee_units_host_patrol_insert_point_at(uint32_t unit, float x, float y, void *player);
-
 extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
-
-extern void ee_units_host_patrol_add_point(void *route, float x, float y, void *player);
 
 extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
 
@@ -6175,17 +6155,11 @@ extern void ee_units_host_wall_release(void *pieces);
 
 extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
 
-extern uint8_t ee_units_host_unit_can_unload(uint32_t unit);
-
 extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
 
 extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
-
-extern int64_t ee_units_host_technology_unit_class(void *player,
-                                                   int32_t technology,
-                                                   uint8_t *found);
 
 extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
 
@@ -6446,6 +6420,40 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
+/// `EEUnitStepNoting()`
+bool ee_units_note_noting();
+
+/// `EEUnitStepNote(kind, id, words, count)`
+///
+/// # Safety
+/// `words` points to `count` words (or `count` is 0).
+void ee_units_note_step(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitStateNote(kind, id, words, count)`
+///
+/// # Safety
+/// `words` points to `count` words (or `count` is 0).
+void ee_units_note_state(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
+
+/// `EEUnitUpdateNote(op, a, b)`
+void ee_units_note_update(int32_t op, int64_t a, int64_t b);
+
+/// `EEUnitUpdateCommit(id)`: after a unit's step
+void ee_units_note_update_commit(uint32_t id);
+
+/// `EEUnitActionNote(op, a, b)`
+void ee_units_note_action(int32_t op, int64_t a, int64_t b);
+
+/// `EEUnitActionScope(id)`: an `ActionChanged` begins
+void ee_units_note_action_begin(uint32_t id);
+
+/// `~EEUnitActionScope`: the `ActionChanged` returns
+void ee_units_note_action_end();
+
+/// `EEUnitStepCommit()`: the tick's USTM and USST records (`ticks`: the physics' ticks done). A leaf's store read
+/// that differed from the members stops EE-SIM (exit 3).
+void ee_units_note_step_commit(uint32_t ticks);
+
 extern void ee_units_pg_host_unit_tile(uint64_t unit, int32_t *out_x, int32_t *out_y);
 
 extern float ee_units_pg_host_distance(uint64_t unit, int32_t x, int32_t y);
@@ -6658,6 +6666,35 @@ int32_t ee_units_physics_load(void *ctx,
 /// # Safety
 /// As [`ee_units_physics_load`].
 int32_t ee_units_physics_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsPhysicsSaved *rec);
+
+/// TEST ONLY: the USPK record of a pick (`EESelectPickCapture`; `player` an `EEPlayer*`).
+///
+/// # Safety
+/// `ids` points to `count` ids and `picked` to `picked_count`.
+void ee_units_select_pick_capture(uint32_t case_,
+                                  uint64_t player,
+                                  const uint32_t *ids,
+                                  size_t count,
+                                  const uint32_t *picked,
+                                  size_t picked_count);
+
+/// TEST ONLY: the USFL record of a fill (`EEFillCapture`; the units as their ids).
+///
+/// # Safety
+/// `ids` points to `count` ids and `taken` to `taken_count`.
+void ee_units_fill_capture(uint32_t case_,
+                           uint64_t player,
+                           const uint32_t *ids,
+                           size_t count,
+                           int64_t slot,
+                           const uint32_t *taken,
+                           size_t taken_count);
+
+/// TEST ONLY: the pick sweep (`EESelectPickSweep`).
+void ee_units_select_pick_sweep();
+
+/// TEST ONLY: the fill sweep (`EEFillSweep`).
+void ee_units_fill_sweep();
 
 /// The cost decisions: `what` 0 `CanAffordScaled(node, a, f, b)`, 1 `CanAffordSingleResource(node, a, b)`, 2
 /// `EEPlayer::CanAfford(node, a, b)`, 3 `CanAffordTechnology(a, f, reason)`, 4 `EEPlayer::Pay(node, a, f)`, 5
@@ -7035,21 +7072,6 @@ extern void ee_units_pm_host_tick(EeUnitsPmTick *out);
 
 extern float ee_units_pm_host_random();
 
-extern uint8_t ee_units_pm_host_noting();
-
-extern void ee_units_pm_host_note(uint32_t kind,
-                                  uint32_t id,
-                                  const uint32_t *words,
-                                  uint32_t count);
-
-extern void ee_units_pm_host_view(uint64_t obj, EeUnitsPmUnit *out);
-
-extern void ee_units_pm_host_class(uint64_t obj, EeUnitsPmClass *out);
-
-extern void ee_units_pm_host_stats(uint64_t obj, EeUnitsPmStats *out);
-
-extern void ee_units_pm_host_location(uint64_t obj, float *out);
-
 extern void ee_units_pm_host_set_transformation(uint64_t obj, const float *m);
 
 extern void ee_units_pm_host_refresh_transformation(uint64_t obj);
@@ -7064,14 +7086,6 @@ extern void ee_units_pm_host_update_tile(uint64_t obj, const float *m);
 
 extern void ee_units_pm_host_set_scale(uint64_t obj, float s);
 
-extern void ee_units_pm_host_angular_velocity(uint64_t obj, float *out);
-
-extern void ee_units_pm_host_set_angular_velocity(uint64_t obj, float yaw, float pitch, float roll);
-
-extern void ee_units_pm_host_orientation(uint64_t obj, float *out);
-
-extern void ee_units_pm_host_set_orientation(uint64_t obj, float yaw, float pitch, float roll);
-
 extern float ee_units_pm_host_rate(uint64_t obj, int32_t which);
 
 extern int32_t ee_units_pm_host_waypoint_count(uint64_t obj);
@@ -7082,15 +7096,11 @@ extern float ee_units_pm_host_first_waypoint_z(uint64_t obj);
 
 extern void ee_units_pm_host_path_length(uint64_t obj, float *io);
 
-extern uint32_t ee_units_pm_host_command_type(uint64_t obj);
-
 extern int32_t ee_units_pm_host_model_parts(uint64_t obj);
 
 extern uint32_t ee_units_pm_host_frame_time(uint64_t obj, uint32_t animation);
 
 extern uint64_t ee_units_pm_host_tile_of(uint64_t obj);
-
-extern uint8_t ee_units_pm_host_goal_kind(uint64_t obj);
 
 extern uint64_t ee_units_pm_host_goal_unit(uint64_t obj, int32_t which);
 
@@ -7098,7 +7108,7 @@ extern void ee_units_pm_host_goal_point(uint64_t obj, int32_t which, float *out)
 
 extern uint8_t ee_units_pm_host_goal_facing(uint64_t obj, float *yaw);
 
-extern uint64_t ee_units_pm_host_unit_value(uint64_t unit, int32_t which);
+extern uint8_t ee_units_pm_host_flies_over(uint64_t unit);
 
 extern uint8_t ee_units_pm_host_has_arrived(uint64_t obj, float distance);
 
@@ -7336,85 +7346,6 @@ float ee_units_step_cloak_fade(float opacity,
                                float tick_time,
                                uint8_t pulse,
                                int64_t game_time);
-
-/// `EEUnitStepNote`: one step leaf's call into USTM's digest.
-///
-/// # Safety
-/// `words` readable for `count` words.
-void ee_units_step_note(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
-
-/// `EEUnitStateNote`: one call into USST's digest.
-///
-/// # Safety
-/// `words` readable for `count` words.
-void ee_units_state_note(uint32_t kind, uint32_t id, const uint32_t *words, uint32_t count);
-
-/// `EEUnitUpdateNote`: one leaf call of a class Update (three words: the operation, its two arguments' low words).
-void ee_units_update_note(int32_t operation,
-                          int64_t a,
-                          int64_t b);
-
-/// `EEUnitUpdateCommit`: the unit's Update calls as one USST note (kind 12).
-void ee_units_update_commit(uint32_t id);
-
-/// `EEUnitActionNote`: one operation of a class ActionChanged.
-void ee_units_action_note(int32_t operation, int64_t a, int64_t b);
-
-/// `EEUnitActionScope`'s constructor: the outermost call names the unit.
-void ee_units_action_enter(uint32_t id);
-
-/// `EEUnitActionScope`'s destructor: the outermost call writes the operations as one USST note (kind 13).
-void ee_units_action_leave();
-
-/// `EEUnitStepCommit` (the end of `EEPhysics::UpdateUnits`, `ticks` the physics' ticks done): the leaves' store
-/// reads that differed from the members stop EE-SIM (exit 3, a USCK mismatch); then the USTM and USST records.
-void ee_units_step_commit(uint32_t ticks);
-
-/// `EESelectPickCapture`: a USPK record of one pick (case 100: `EEPlayer::SelectUnits`).
-///
-/// # Safety
-/// The caller holds the world; `player` is a player object; the id lists are readable for their counts.
-void ee_units_select_pick_capture(uint32_t case_,
-                                  uint64_t player,
-                                  const uint32_t *ids,
-                                  size_t count,
-                                  const uint32_t *picked,
-                                  size_t picked_count);
-
-/// `EEFillCapture`: a USFL record of one Fill test (case 100: `EEActiveGroup::Fill`); `units` the selection's
-/// complex unit objects.
-///
-/// # Safety
-/// The caller holds the world; `units` holds `count` live unit objects; `taken` is readable for `taken_count`.
-void ee_units_fill_capture(uint32_t case_,
-                           uint64_t player,
-                           const void *const *units,
-                           size_t count,
-                           int64_t slot,
-                           const uint32_t *taken,
-                           size_t taken_count);
-
-/// `EEFillMembers`: `EEActiveGroup::Fill`'s test over the store for the selection's complex unit objects `units`:
-/// the indices (in order) of those an active group takes for formation slot `slot`; `out` has room for `count`.
-///
-/// # Safety
-/// The caller holds the world; `units` holds `count` live unit objects; `out` is writable for `count`.
-size_t ee_units_fill_members_of(const void *const *units,
-                                size_t count,
-                                int64_t slot,
-                                uint32_t *out);
-
-/// `EESelectPickSweep`: the pick over every player's units (USPK cases 1..4).
-///
-/// # Safety
-/// The caller holds the world (EE-SIM's physics thread).
-void ee_units_select_pick_sweep();
-
-/// `EEFillSweep`: the Fill test over every player's complex units for every slot (USFL cases 1, 2).
-///
-/// # Safety
-/// The caller holds the world (EE-SIM's physics thread).
-void ee_units_fill_sweep();
 
 /// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
 ///

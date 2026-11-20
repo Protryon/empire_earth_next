@@ -13,6 +13,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 pub mod capture;
+pub mod capture_fold;
 pub mod damage;
 pub mod damage_table;
 pub mod decide;
@@ -45,6 +46,7 @@ pub mod walks_ffi;
 #[cfg(test)]
 mod walks_tests;
 pub mod world;
+pub mod world_views;
 
 use ee_base::math::um::{lrintf, sqrt, um_arccos, um_arctan, um_cos, HALF_PI};
 

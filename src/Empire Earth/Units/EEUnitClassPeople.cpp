@@ -15,6 +15,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/SESoundManager.h"
 
+#include "rust/sim/units.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -512,7 +513,7 @@ void EEComplexUnit::UpdateReloadTimer()
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
                                 (uint32_t)this->mReloadTimer};
-        EEUnitStepNote(kUnitStepReload, this->mUnitID, theWords, 4);
+        ee_units_note_step(kUnitStepReload, (uint32_t)this->mUnitID, theWords, 4);
     }
 }
 
@@ -529,7 +530,7 @@ void EEComplexUnit::UpdateTargetSearchTimer()
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
                                 (uint32_t)this->mTargetSearchTimer};
-        EEUnitStepNote(kUnitStepTargetSearch, this->mUnitID, theWords, 4);
+        ee_units_note_step(kUnitStepTargetSearch, (uint32_t)this->mUnitID, theWords, 4);
     }
 }
 
@@ -553,7 +554,7 @@ void EEComplexUnit::UpdateHealSearchTimer()
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
                                 HealBits(this->mHealSearchTimer)};
-        EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
+        ee_units_note_step(kUnitStepHealSearch, (uint32_t)this->mUnitID, theWords, 4);
     }
 }
 
@@ -569,7 +570,7 @@ long EEComplexUnit::UpdateRottingAwayTime()
     this->SetRottingAwayTime(theTime);
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime};
-        EEUnitStepNote(kUnitStepRotting, this->mUnitID, theWords, 3);
+        ee_units_note_step(kUnitStepRotting, (uint32_t)this->mUnitID, theWords, 3);
     }
     return theTime;
 }
@@ -591,7 +592,7 @@ void EEComplexUnit::UpdateResourcesRotting()
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
                                 (uint32_t)this->mRottingAwayTime, (uint32_t)this->mResourceAmount};
-        EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);
+        ee_units_note_step(kUnitStepResourcesRotting, (uint32_t)this->mUnitID, theWords, 5);
     }
 }
 

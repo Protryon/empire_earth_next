@@ -4,6 +4,7 @@
 #![cfg(not(test))]
 
 use crate::units::sight::{sight, EeUnitsSightUnit, SightHost};
+use crate::world::view::{PlayerView, WorldRead, WorldView};
 
 /// unit `a` into `unit`
 pub const EE_UNITS_SIGHT_UNIT: i32 = 1;
@@ -55,6 +56,20 @@ extern "C" {
 
 struct Game;
 
+/// `f` over the world's view (the sight's caller holds the world); its default without one.
+fn with_world<R: Default>(f: impl FnOnce(&WorldView<'_>) -> R) -> R {
+    // SAFETY: SightOn/SightOff run on the simulation thread inside the C++ caller's hold of the world
+    let t = unsafe { WorldRead::begin() };
+    WorldView::global(&t).map_or_else(R::default, |w| f(&w))
+}
+
+/// `f` over the live player `player`'s view.
+fn with_player<R: Default>(player: u64, f: impl FnOnce(&PlayerView<'_>) -> R) -> R {
+    // SAFETY: as above; the body hands in live players
+    let t = unsafe { WorldRead::begin() };
+    unsafe { PlayerView::of(&t, player) }.map_or_else(R::default, |p| f(&p))
+}
+
 impl Game {
     #[allow(clippy::too_many_arguments)] // the switch's operands
     fn op(&mut self, op: i32, on: bool, a: u64, b: u64, c: i64, d: i64, f: &mut [f32; 3]) -> i64 {
@@ -86,23 +101,23 @@ impl SightHost for Game {
         (f[0], f[1])
     }
     fn current_player(&mut self) -> u64 {
-        self.q(EE_UNITS_SIGHT_CURRENT, 0, 0, 0, 0) as u64
+        with_world(|w| w.current_player().map_or(0, |p| p.handle()))
     }
     fn shared_los(&mut self, player: u64) -> bool {
-        self.q(EE_UNITS_SIGHT_SHARED_LOS, player, 0, 0, 0) != 0
+        with_player(player, |p| p.shared_los())
     }
     fn allied(&mut self, a: u64, b: u64) -> bool {
         self.q(EE_UNITS_SIGHT_ALLIED, a, b, 0, 0) != 0
     }
     fn sharers(&mut self, player: u64) -> Vec<u64> {
-        let n = self.q(EE_UNITS_SIGHT_SHARERS, player, 0, 0, 0);
-        (0..n).map(|i| self.q(EE_UNITS_SIGHT_SHARER, player, 0, i, 0) as u64).collect()
+        with_player(player, |p| (0..p.sight_sharers_len()).map(|i| p.sight_sharer_handle(i)).collect())
     }
     fn circle(&mut self, on: bool, x: f32, y: f32, radius: f32, player: u64) {
         self.op(EE_UNITS_SIGHT_CIRCLE, on, player, 0, 0, 0, &mut [x, y, radius]);
     }
     fn tile(&mut self, x: i32, y: i32) -> u64 {
-        self.q(EE_UNITS_SIGHT_TILE, 0, 0, x as i64, y as i64) as u64
+        // `gWorld.mMap->GetTile(x, y)`
+        with_world(|w| w.map().and_then(|m| m.tile(i64::from(x), i64::from(y))).map_or(0, |t| t.handle()))
     }
     fn tile_sight(&mut self, on: bool, tile: u64, player: u64) {
         self.op(EE_UNITS_SIGHT_TILE_SIGHT, on, tile, player, 0, 0, &mut [0.0; 3]);
@@ -117,10 +132,10 @@ impl SightHost for Game {
         self.op(EE_UNITS_SIGHT_WONDER, on, player, 0, 0, 0, &mut [x, y, 0.0]);
     }
     fn num_players(&mut self) -> u32 {
-        self.q(EE_UNITS_SIGHT_NUM_PLAYERS, 0, 0, 0, 0) as u32
+        with_world(|w| w.num_players() as u32)
     }
     fn player_at(&mut self, i: u32) -> u64 {
-        self.q(EE_UNITS_SIGHT_PLAYER, 0, 0, i as i64, 0) as u64
+        with_world(|w| w.player(i as usize).map_or(0, |p| p.handle()))
     }
 }
 

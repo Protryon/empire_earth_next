@@ -171,13 +171,11 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     EEComplexUnit* theUnit = theContext->mUnit;
     EEUnitClass* theClass = theContext->mClass;
     if (inCode >= EE_UNITS_ACT_RELEASE_HEAL_EFFECT)
-        EEUnitActionNote(inCode, inA, inB);   // TEST ONLY (USST kind 13)
+        ee_units_note_action(inCode, inA, inB);   // TEST ONLY (USST kind 13)
     else
-        EEUnitUpdateNote(inCode, inA, inB);   // TEST ONLY (USST kind 12)
+        ee_units_note_update(inCode, inA, inB);   // TEST ONLY (USST kind 12)
+    // (the one-member stores and the death effect are Rust's: ee_units update_views.rs view_act)
     switch (inCode) {
-    case EE_UNITS_UPD_LAST_HIT_POINTS:
-        theUnit->SetLastHitPoints(theUnit->mHitPoints);
-        break;
     case EE_UNITS_UPD_PHYSICS_STEP:
         theClass->mPhysicsModel->Step(theUnit);
         break;
@@ -245,9 +243,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_UPDATE_CONVERSION:
         theClass->BasicPriestUpdateConversion(theUnit);
         break;
-    case EE_UNITS_UPD_CLEAR_CONVERSION_START:
-        theUnit->mConversionStartTime = 0;
-        break;
     case EE_UNITS_UPD_RELEASE_CONVERSION_EFFECT:
         theUnit->ReleaseConversionEffect();
         break;
@@ -257,14 +252,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_RESOURCES_ROTTING:
         theUnit->UpdateResourcesRotting();
         break;
-    case EE_UNITS_UPD_SET_FLIGHT_TIME:
-        theUnit->SetFlightTime((long)inA);
-        break;
     case EE_UNITS_UPD_NEXT_FLIGHT_STATE:
         return (int64_t)theClass->GetNextFlightState(theUnit);
-    case EE_UNITS_UPD_SET_PHYSICS_ORDER:
-        theUnit->SetCurrentPhysicsOrder((unsigned long)inA);
-        break;
     case EE_UNITS_UPD_GOAL_QUEUES: {
         // the started, non-empty queues' expiry and the goals' refresh: Rust over the mirror (ee_units goals.rs)
         EEGoalQueueIO theIO = {NULL, NULL, 0, 0, theUnit};
@@ -289,9 +278,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_SAVED_GROUPS_RESET:
         theUnit->mPlayer->mSavedGroups.Reset(7, 1);
         break;
-    case EE_UNITS_UPD_SET_GRAZE_TIME:
-        theUnit->SetGrazeTime((unsigned long)(uint32_t)inA);
-        break;
     case EE_UNITS_UPD_SET_OPEN_FRACTION: {
         float theOpen = EEUpdateFloat(inA);
         theUnit->SetOpenFraction(theOpen);
@@ -299,15 +285,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theClass->GetLastLinked(theUnit)->SetOpenFraction(theOpen);
         break;
     }
-    case EE_UNITS_UPD_SET_WORK_TIMER:
-        theUnit->SetWorkTimer((long)inA);
-        break;
     case EE_UNITS_UPD_DEPLETE_MINE:
         theUnit->mMine->DepleteResource(1);
-        break;
-    case EE_UNITS_UPD_SET_PARTS_ROTTING:
-        for (EEComplexUnit* thePart = theUnit->mNextPart; thePart != NULL; thePart = thePart->mNextPart)
-            thePart->SetRottingAwayTime((long)inA);
         break;
     // ActionChanged's
     case EE_UNITS_ACT_RELEASE_HEAL_EFFECT:
@@ -331,9 +310,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_FLEE_ATTACKER:
         theClass->FleeAttacker(theUnit);
         break;
-    case EE_UNITS_ACT_SET_PHYSICS_ACTION:
-        theUnit->SetCurrentPhysicsAction((unsigned long)inA);
-        break;
     case EE_UNITS_ACT_SET_ANIMATION:
         theUnit->SetAnimation((long)inA, -1, inB != 0);
         break;
@@ -343,17 +319,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetGoal(theLocation, inA != 0, 0);
         break;
     }
-    case EE_UNITS_ACT_SET_TARGET_SEARCH_TIMER:
-        theUnit->SetTargetSearchTimer((long)inA);
-        break;
     case EE_UNITS_ACT_FLEE_AFTER_CALAMITY:
         theUnit->FleeAfterCalamity(0);
-        break;
-    case EE_UNITS_ACT_SET_NEXT_TRIGGER_TIME:
-        theUnit->mNextTriggerTime = (unsigned long)(long)inA;
-        break;
-    case EE_UNITS_ACT_PAUSE_ANIMATION:
-        theUnit->SetIsAnimationPaused(true);
         break;
     case EE_UNITS_ACT_RANDOM_ANIMATION_TIME:
         theUnit->SetAnimationTime(gPhysics->GetRandom(0L, (long)theUnit->mStats->mModel->mHoldTimes[theUnit->GetAnimation()]));
@@ -370,14 +337,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_CLEAR_GOALS:
         theUnit->ClearGoals((long)inA);
         break;
-    case EE_UNITS_ACT_CLEAR_HEADING:
-        theUnit->mInitialContactHeading = kUnitAINoHeading;
-        break;
     case EE_UNITS_ACT_CANCEL_PATHS:
         gPathManager.CancelPaths(theUnit, true);
-        break;
-    case EE_UNITS_ACT_SET_ROTTING:
-        theUnit->SetRottingAwayTime((long)inA);
         break;
     case EE_UNITS_ACT_NEXT_PART_ACTION:
         theUnit->mNextPart->StartAction((unsigned long)inA);
@@ -425,9 +386,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_FIND_SAFE_LOCATION:
         theClass->FindSafeLocation(theUnit);
         break;
-    case EE_UNITS_ACT_CLEAR_ARRIVED:
-        theUnit->SetHasArrived(false);
-        break;
     case EE_UNITS_ACT_FACE_YAW:
         return static_cast<EEUGRust*>(theUnit->mGoalState)->FaceYaw(theUnit) ? 1 : 0;
     case EE_UNITS_ACT_FIND_PATH:
@@ -447,9 +405,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetGoal(theHeal, inA != 0, 0);
         break;
     }
-    case EE_UNITS_ACT_RESET_HEAL_SEARCH:
-        theUnit->SetHealSearchTimer(theClass->mHealDelay);
-        break;
     case EE_UNITS_ACT_GOAL_START_TIME:
         theUnit->mGoalState->SetStartTime(gPhysics->mGameTime);
         break;
@@ -458,9 +413,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         break;
     case EE_UNITS_ACT_PLACE_TRACK_DECAL:
         EEPlaceTrackDecal(theUnit);
-        break;
-    case EE_UNITS_ACT_DEATH_EFFECT:
-        gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0);
         break;
     case EE_UNITS_ACT_DEATH_SOUND: {
         EESoundObject* theSound = theUnit->mStats->mDeathSound;
@@ -471,10 +423,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         break;
     }
-    case EE_UNITS_ACT_STOP:
-        theUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
-        theUnit->SetVelocity(0.0f);
-        break;
     case EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT:
         theUnit->ReleaseConversionEffect();
         break;
@@ -482,27 +430,12 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         // (the temple's too: its copy was the basic priest's body)
         theClass->BasicPriestHideConversionEffects(theUnit);
         break;
-    case EE_UNITS_ACT_SET_CONVERSION_START:
-        theUnit->mConversionStartTime = gPhysics->mGameTime;
-        break;
-    case EE_UNITS_ACT_SET_WORK_TIMER:
-        theUnit->SetWorkTimer((long)inA);
-        break;
     case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
         EEUnit* theStorage = theClass->FindStorage(theUnit, inA != 0);
         if (theStorage != NULL)
             theUnit->SetGoal(EEUGRust::NewGather(NULL, theStorage, false), 0, 0);
         break;
     }
-    case EE_UNITS_ACT_SET_RESOURCE_AMOUNT:
-        theUnit->SetResourceAmount((long)inA);
-        break;
-    case EE_UNITS_ACT_SET_PRODUCTION_TIME:
-        theUnit->SetProductionTime((long)inA);
-        break;
-    case EE_UNITS_ACT_CLEAR_SHIFT_QUEUED:
-        theUnit->mHasShiftQueuedBuild = false;
-        break;
     case EE_UNITS_ACT_RETARGET_NEAREST_BUILDING: {
         EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
         if (theGoal != NULL && theGoal->GetAttackTarget() != NULL) {
@@ -512,9 +445,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         }
         break;
     }
-    case EE_UNITS_ACT_SET_EXITING_UNIT:
-        theUnit->SetExitingUnitID((long)inA);
-        break;
     case EE_UNITS_ACT_QUEUE_TAKEOFF: {
         EEComplexUnit* theCargo = theUnit->FindPassenger(theUnit->mExitingUnitID);
         if (theCargo != NULL)
@@ -539,12 +469,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->mNextPart->StartAction((unsigned long)inA);
         theUnit->mNextPart->mNextPart->StartAction((unsigned long)inA);
         break;
-    case EE_UNITS_ACT_SET_PHYSICS_ORDER:
-        theUnit->SetCurrentPhysicsOrder((unsigned long)inA);
-        break;
-    case EE_UNITS_ACT_CLEAR_F220:
-        theUnit->SetF220(0.0f);
-        break;
     case EE_UNITS_ACT_HEIGHT_HERE: {
         GE3DPoint thePosition(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(),
                               theUnit->mPhysicalModel.GetLocation().GetZ());
@@ -563,12 +487,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT:
         theClass->AirAnimalReturnToAirport(theUnit);
-        break;
-    case EE_UNITS_ACT_SET_FLIGHT_TIME_STATS:
-        theUnit->SetFlightTime(theUnit->mStats->mFlightTime);
-        break;
-    case EE_UNITS_ACT_SET_AMMUNITION:
-        theUnit->SetAmmunition(theClass->mAmmunition);
         break;
     case EE_UNITS_ACT_DEATH_ROLL:
         if (inA == 0)
@@ -605,12 +523,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_CLASS_ACTION_CHANGED:
         theClass->ActionChanged(theUnit);
         break;
-    case EE_UNITS_ACT_SET_COMMANDABLE:
-        theUnit->SetIsCommandable(inA != 0);
-        break;
-    case EE_UNITS_ACT_MAKE_COMMANDABLE:
-        theUnit->mIsCommandable = true;
-        break;
     case EE_UNITS_ACT_APPROACH_CARRIER:
     case EE_UNITS_ACT_BOARD_CARRIER:
     case EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER:
@@ -643,9 +555,10 @@ void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 
 void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theScope(inUnit->mUnitID);   // TEST ONLY (USST kind 13)
+    ee_units_note_action_begin((uint32_t)inUnit->mUnitID);   // TEST ONLY (USST kind 13)
     EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
     EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct, EEObj(inClass)};
     ee_units_action_changed(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
                             &theHost);
+    ee_units_note_action_end();
 }

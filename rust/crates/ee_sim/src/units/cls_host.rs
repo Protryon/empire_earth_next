@@ -123,6 +123,58 @@ pub const EE_UNITS_CLS_GOAL_HAS_LOCATION: i32 = 37;
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 pub const EE_UNITS_CLS_REQUEST_QUEUED: i32 = 38;
 
+/// The class bodies' host's plain reads over the world views (the units' behaviour lane, round 2; they were
+/// EEUnitClassTransports.cpp `ee_units_cls_host`'s cases): the unit `a`'s cargo, container, command, home base and
+/// stats' turn speeds, the class `b`'s projectile's category, the map's size; None for the C++ host's.
+fn cls_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+    use crate::world::view::{ClassView, UnitView, WorldRead, WorldView};
+    if !matches!(
+        op,
+        EE_UNITS_CLS_CARGO
+            | EE_UNITS_CLS_CONTAINER
+            | EE_UNITS_CLS_COMMAND_TYPE
+            | EE_UNITS_CLS_HOME_BASE
+            | EE_UNITS_CLS_TURN_SPEEDS
+            | EE_UNITS_CLS_PROJECTILE_CATEGORY
+            | EE_UNITS_CLS_MAP_SIZE
+    ) {
+        return None;
+    }
+    // SAFETY: the class bodies run inside the C++ caller's hold of the world; their handles are live
+    let t = unsafe { WorldRead::begin() };
+    if op == EE_UNITS_CLS_MAP_SIZE {
+        return Some(WorldView::global(&t)?.map()?.size());
+    }
+    if op == EE_UNITS_CLS_PROJECTILE_CATEGORY {
+        // SAFETY: as above (`b` a class)
+        let class = unsafe { ClassView::of(&t, b) }?;
+        // SAFETY: the class's projectile class (0: none)
+        return Some(unsafe { ClassView::of(&t, class.projectile_class_handle()) }.map_or(-1, |p| p.category() as i64));
+    }
+    // SAFETY: as above (`a` a complex unit)
+    let u = unsafe { UnitView::of(&t, a) }?;
+    if !u.is_complex() {
+        return None;
+    }
+    Some(match op {
+        EE_UNITS_CLS_CARGO => {
+            if c < 0 || c as usize >= u.cargo_len() {
+                return None;
+            }
+            u.cargo_handle(c as usize) as i64
+        }
+        EE_UNITS_CLS_CONTAINER => u.container_handle() as i64,
+        EE_UNITS_CLS_COMMAND_TYPE => i64::from(u.command_type()),
+        EE_UNITS_CLS_HOME_BASE => u.home_base_handle() as i64,
+        _ => {
+            let s = u.stats()?.fields();
+            io.p[0] = crate::world_field!(s, mMaxVelocity);
+            io.p[1] = crate::world_field!(s, mMaxAngularVelocity);
+            0
+        }
+    })
+}
+
 extern "C" {
     fn ee_units_cls_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsClsIo) -> i64;
 }
@@ -142,6 +194,9 @@ pub struct ClsGame(pub Game);
 
 impl ClsGame {
     pub(crate) fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
+        if let Some(v) = cls_view(op, a, b, c, io) {
+            return v;
+        }
         // SAFETY: the C++ switch reads live objects the bodies hand it
         unsafe { ee_units_cls_host(op, a, b, c, d, io) }
     }
@@ -769,6 +824,44 @@ extern "C" {
     fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
 }
 
+/// The trigger host's plain reads of the unit `a` over the world views (the units' behaviour lane, round 2; they
+/// were EEUnitAI.cpp `ee_units_cls_cond_host`'s cases): its goals, last attacker, line of sight, cargo count and
+/// position; None for the C++ host's.
+fn cond_view(op: i32, a: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
+    use crate::units::cls_condition::{
+        EE_UNITS_COND_CARGO, EE_UNITS_COND_GOAL, EE_UNITS_COND_LAST_ATTACKER, EE_UNITS_COND_LINE_OF_SIGHT,
+        EE_UNITS_COND_POSITION,
+    };
+    if !matches!(
+        op,
+        EE_UNITS_COND_GOAL
+            | EE_UNITS_COND_LAST_ATTACKER
+            | EE_UNITS_COND_LINE_OF_SIGHT
+            | EE_UNITS_COND_CARGO
+            | EE_UNITS_COND_POSITION
+    ) {
+        return None;
+    }
+    crate::units::unit_geom::with_unit(a, |u| {
+        if !u.is_complex() {
+            return None;
+        }
+        Some(match op {
+            EE_UNITS_COND_GOAL => (if c != 0 { u.goal_handle() } else { u.active_goal_handle() }) as i64,
+            EE_UNITS_COND_LAST_ATTACKER => u.last_attacker_handle() as i64,
+            EE_UNITS_COND_LINE_OF_SIGHT => {
+                io.f = crate::units::unit_geom::line_of_sight(u);
+                0
+            }
+            EE_UNITS_COND_CARGO => u.cargo_len() as i64,
+            _ => {
+                io.p = crate::units::unit_geom::position(u);
+                0
+            }
+        })
+    })?
+}
+
 impl CondHost for ClsGame {
     fn unit(&mut self, obj: u64) -> EeUnitsUuUnit {
         self.0.unit(obj)
@@ -781,6 +874,9 @@ impl CondHost for ClsGame {
         [m.m[0][3], m.m[1][3], m.m[2][3]]
     }
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
+        if let Some(v) = cond_view(op, a, c, io) {
+            return v;
+        }
         // SAFETY: the C++ switch reads live objects the bodies hand it
         unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
     }

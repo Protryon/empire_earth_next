@@ -159,6 +159,9 @@ fn view_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
     use crate::combat::goal_dispatch::EE_COMBAT_G_SAVE_FLAGS;
     use crate::combat::goal_heal::EE_COMBAT_G_HEAL_ENV;
     use crate::world::{PlayerView, UnitView, WorldRead, WorldView};
+    if let Some(r) = capture_op(code, unit, a) {
+        return Some(r);
+    }
     if code == EE_COMBAT_G_SAVE_FLAGS {
         let (major, minor) = (a[0] as u32, a[1] as u32);
         return Some(
@@ -265,6 +268,63 @@ fn view_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
                     (*fields).mNumAttacks = attacks.wrapping_add(1);
                 }
             }
+            Some(0)
+        }
+    }
+}
+
+/// The goal host's projectile test and its TEST ONLY records (the units' behaviour lane, round 2; they were
+/// EEUGRustCombat.cpp `EECombatGoalHostOp`'s cases): the class's projectile class set, the CBGO record of a goal
+/// call (`EECombatCaptureGoal`) and the CBSO record of a heal's work (`EECombatCaptureHealWork`), folded by
+/// capture_fold.rs.
+#[cfg(not(test))]
+fn capture_op(code: i32, unit: u64, a: &mut EeCombatGoalArgs) -> Option<i64> {
+    use crate::combat::capture_fold::{fold as fold_bytes, EE_COMBAT_FOLD_GOAL_OBJECTS, EE_COMBAT_FOLD_SHOTS};
+    use crate::combat::goal_dispatch::{EE_COMBAT_G_CAPTURE, EE_COMBAT_G_PROJECTILE_CLASS};
+    use crate::combat::goal_heal::EE_COMBAT_G_CAPTURE_HEAL_WORK;
+    use crate::world::{UnitView, WorldRead};
+    /// `EE_COMBAT_SO_HEAL_WORK`
+    const SO_HEAL_WORK: u32 = 6;
+    if !matches!(code, EE_COMBAT_G_PROJECTILE_CLASS | EE_COMBAT_G_CAPTURE | EE_COMBAT_G_CAPTURE_HEAL_WORK) {
+        return None;
+    }
+    // SAFETY: the goal host's call runs inside the C++ caller's hold of the world; its handles are live units
+    let t = unsafe { WorldRead::begin() };
+    // SAFETY: as above (0: none)
+    let view = |h: u64| unsafe { UnitView::of(&t, h) };
+    let id = |h: u64| view(h).map_or(0, |u| u.id());
+    let fold = |which: u32, words: &[u32]| {
+        let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+        fold_bytes(which, &bytes);
+    };
+    match code {
+        EE_COMBAT_G_PROJECTILE_CLASS => Some(i64::from(view(unit)?.class()?.projectile_class_handle() != 0)),
+        EE_COMBAT_G_CAPTURE => {
+            let words = [
+                a[0] as u32,
+                a[1] as u32,
+                id(unit),
+                id(a[2] as u64),
+                a[3] as u32,
+                a[4] as u32,
+                a[5] as u32,
+                a[6] as u32,
+                a[7] as u32,
+                (a[7] as u64 >> 32) as u32,
+            ];
+            fold(EE_COMBAT_FOLD_GOAL_OBJECTS, &words);
+            Some(0)
+        }
+        _ => {
+            let target = view(a[0] as u64);
+            let words = [
+                SO_HEAL_WORK,
+                id(unit),
+                target.map_or(0, |t| t.id()),
+                target.map_or(0, |t| t.hit_points() as u32),
+                a[1] as u32,
+            ];
+            fold(EE_COMBAT_FOLD_SHOTS, &words);
             Some(0)
         }
     }

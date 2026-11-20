@@ -107,4 +107,8 @@ impl Effects for RenderEffects {
     fn finish_damaged(&self, handle: EffectHandle) -> bool {
         Self::with_record(handle, |r| r.damaged.finished = true).is_some()
     }
+
+    fn graphic_effect(&self, index: u32) -> u64 {
+        crate::gfx::geffect_table::ee_gfx_geffect_get(index as std::os::raw::c_ulong) as u64
+    }
 }

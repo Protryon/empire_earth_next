@@ -109,8 +109,171 @@ impl UpdateHost for ViewUpdateHost<'_> {
         }
     }
     fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
+        // SAFETY: as `read`'s
+        let t = unsafe { WorldRead::begin() };
+        if view_act(&t, self.unit, self.host.class, code, a, b) {
+            return 0;
+        }
         (self.host.act)(self.host.ctx, code, a, b)
     }
+}
+
+/// `mAngularVelocity = GEOrientation(0, 0, 0)` and `SetVelocity(0.0f)` (its `mF21C` the stats' `mBC` when that is
+/// not below 0: `max(0.0f, mBC)`), after `SetCurrentPhysicsAction(action)` when one is given: the unit stopped (the
+/// update host's `STOP`, the goal host's `HALT`).
+pub fn halt(u: &UnitView<'_>, action: Option<std::os::raw::c_ulong>) {
+    let bc = u.stats().map_or(0.0, |s| world_field!(s.fields(), mBC));
+    let cx = u.complex().ptr() as *mut crate::world::unit_fields::EeUnitsComplexUnitFields;
+    let at = (u.handle() as usize + crate::world::layout::layout().complex_angular_velocity as usize) as *mut [f32; 3];
+    // SAFETY: the live unit's record and member; no other reference to them is held across the stores
+    unsafe {
+        if let Some(a) = action {
+            (*cx).mCurrentPhysicsAction = a;
+        }
+        // (the setter's "when it differs" test keeps a -0.0)
+        if (*cx).mVelocity != 0.0 {
+            (*cx).mVelocity = 0.0;
+        }
+        (*cx).mF21C = if 0.0 > bc { 0.0 } else { bc };
+        std::ptr::write_unaligned(at, [0.0; 3]);
+    }
+}
+
+/// The operations of the update and `ActionChanged` hosts that are a store of the unit's records or one effect (the
+/// units' behaviour lane, round 2; they were EEUnitUpdate.cpp `EEUpdateAct`'s cases): done here with the host's note
+/// (USST kinds 12 and 13, noted first as the C++ host did); false for an operation the C++ host does. Each store is
+/// the inline setter's member store (an integer setter's "when it differs" test changes nothing observable; a
+/// float's keeps a -0.0, so it is kept).
+pub fn view_act(t: &WorldRead, unit: u64, class_handle: u64, code: i32, a: i64, b: i64) -> bool {
+    use std::os::raw::{c_long, c_ulong};
+    if !matches!(
+        code,
+        EE_UNITS_UPD_LAST_HIT_POINTS
+            | EE_UNITS_UPD_CLEAR_CONVERSION_START
+            | EE_UNITS_UPD_SET_FLIGHT_TIME
+            | EE_UNITS_UPD_SET_PHYSICS_ORDER
+            | EE_UNITS_UPD_SET_GRAZE_TIME
+            | EE_UNITS_UPD_SET_WORK_TIMER
+            | EE_UNITS_UPD_SET_PARTS_ROTTING
+            | EE_UNITS_ACT_SET_PHYSICS_ACTION
+            | EE_UNITS_ACT_SET_TARGET_SEARCH_TIMER
+            | EE_UNITS_ACT_SET_NEXT_TRIGGER_TIME
+            | EE_UNITS_ACT_PAUSE_ANIMATION
+            | EE_UNITS_ACT_CLEAR_HEADING
+            | EE_UNITS_ACT_SET_ROTTING
+            | EE_UNITS_ACT_CLEAR_ARRIVED
+            | EE_UNITS_ACT_RESET_HEAL_SEARCH
+            | EE_UNITS_ACT_DEATH_EFFECT
+            | EE_UNITS_ACT_SET_CONVERSION_START
+            | EE_UNITS_ACT_SET_WORK_TIMER
+            | EE_UNITS_ACT_SET_RESOURCE_AMOUNT
+            | EE_UNITS_ACT_SET_PRODUCTION_TIME
+            | EE_UNITS_ACT_CLEAR_SHIFT_QUEUED
+            | EE_UNITS_ACT_SET_EXITING_UNIT
+            | EE_UNITS_ACT_SET_PHYSICS_ORDER
+            | EE_UNITS_ACT_CLEAR_F220
+            | EE_UNITS_ACT_SET_FLIGHT_TIME_STATS
+            | EE_UNITS_ACT_SET_AMMUNITION
+            | EE_UNITS_ACT_SET_COMMANDABLE
+            | EE_UNITS_ACT_MAKE_COMMANDABLE
+            | EE_UNITS_ACT_STOP
+    ) {
+        return false;
+    }
+    // SAFETY: the caller's handle is the live unit the host is for
+    let Some(u) = (unsafe { UnitView::of(t, unit) }) else { return false };
+    if !u.is_complex() {
+        return false;
+    }
+    // SAFETY: the host's class is live for the call
+    let class = unsafe { crate::world::view::ClassView::of(t, class_handle) };
+    // what the stores read, before any store
+    let hit_points = u.hit_points();
+    let game_time = WorldView::global(t).map_or(0, |w| w.game_time());
+    let stats_flight = u.stats().map(|s| world_field!(s.fields(), mFlightTime));
+    let heal_delay = class.map(|c| world_field!(c.fields(), mHealDelay));
+    let ammunition = class.map(|c| world_field!(c.fields(), mAmmunition));
+    if (code == EE_UNITS_ACT_SET_FLIGHT_TIME_STATS && stats_flight.is_none())
+        || (code == EE_UNITS_ACT_RESET_HEAL_SEARCH && heal_delay.is_none())
+        || (code == EE_UNITS_ACT_SET_AMMUNITION && ammunition.is_none())
+        || (code == EE_UNITS_ACT_DEATH_EFFECT && class.is_none())
+    {
+        return false;
+    }
+    let mut parts = Vec::new();
+    if code == EE_UNITS_UPD_SET_PARTS_ROTTING {
+        let mut next = u.next_part_handle();
+        while next != 0 {
+            parts.push(next);
+            // SAFETY: a live unit's next part
+            next = unsafe { UnitView::of(t, next) }.map_or(0, |p| p.next_part_handle());
+        }
+    }
+    let death_effect = class.map_or(0, |c| c.effect_handle(1));
+    let fields = u.fields().ptr() as *mut crate::world::unit_fields::EeUnitsUnitFields;
+    let cx = u.complex().ptr() as *mut crate::world::unit_fields::EeUnitsComplexUnitFields;
+    crate::units::notes::host_op(code, EE_UNITS_ACT_RELEASE_HEAL_EFFECT, a, b);
+    // SAFETY: the live unit's records; no other reference to them is held across the store
+    let c = unsafe { &mut *cx };
+    match code {
+        EE_UNITS_UPD_LAST_HIT_POINTS => c.mLastHitPoints = hit_points as c_long,
+        EE_UNITS_UPD_CLEAR_CONVERSION_START => c.mConversionStartTime = 0,
+        EE_UNITS_UPD_SET_FLIGHT_TIME => c.mFlightTime = a as c_long,
+        EE_UNITS_UPD_SET_PHYSICS_ORDER | EE_UNITS_ACT_SET_PHYSICS_ORDER => c.mCurrentPhysicsOrder = a as c_ulong,
+        EE_UNITS_UPD_SET_GRAZE_TIME => c.mGrazeTime = a as u32 as c_ulong,
+        EE_UNITS_UPD_SET_WORK_TIMER | EE_UNITS_ACT_SET_WORK_TIMER => c.mWorkTimer = a as c_long,
+        EE_UNITS_UPD_SET_PARTS_ROTTING => {
+            for p in parts {
+                // SAFETY: a live part's record
+                let part = unsafe { UnitView::of(t, p) };
+                if let Some(part) = part {
+                    let pc = part.complex().ptr() as *mut crate::world::unit_fields::EeUnitsComplexUnitFields;
+                    // SAFETY: as above
+                    unsafe { (*pc).mRottingAwayTime = a as c_long };
+                }
+            }
+        }
+        EE_UNITS_ACT_SET_PHYSICS_ACTION => c.mCurrentPhysicsAction = a as c_ulong,
+        EE_UNITS_ACT_SET_TARGET_SEARCH_TIMER => c.mTargetSearchTimer = a as c_long,
+        EE_UNITS_ACT_SET_NEXT_TRIGGER_TIME => c.mNextTriggerTime = a as c_long as c_ulong,
+        EE_UNITS_ACT_PAUSE_ANIMATION => c.mIsAnimationPaused = true,
+        EE_UNITS_ACT_CLEAR_HEADING => c.mInitialContactHeading = NO_HEADING,
+        EE_UNITS_ACT_SET_ROTTING => c.mRottingAwayTime = a as c_long,
+        EE_UNITS_ACT_CLEAR_ARRIVED => c.mHasArrived = false,
+        EE_UNITS_ACT_RESET_HEAL_SEARCH => {
+            // (a float setter's "when it differs" test: a -0.0 and 0.0 are equal)
+            let v = heal_delay.unwrap_or(0.0);
+            if c.mHealSearchTimer != v {
+                c.mHealSearchTimer = v;
+            }
+        }
+        EE_UNITS_ACT_SET_CONVERSION_START => c.mConversionStartTime = game_time as c_ulong,
+        // SAFETY: the unit's own record (EEUnit's), as above
+        EE_UNITS_ACT_SET_RESOURCE_AMOUNT => unsafe { (*fields).mResourceAmount = a as c_long },
+        EE_UNITS_ACT_SET_PRODUCTION_TIME => c.mProductionTime = a as c_long,
+        EE_UNITS_ACT_CLEAR_SHIFT_QUEUED => c.mHasShiftQueuedBuild = false,
+        EE_UNITS_ACT_SET_EXITING_UNIT => c.mExitingUnitID = a as c_long,
+        EE_UNITS_ACT_CLEAR_F220 => {
+            if c.mF220 != 0.0 {
+                c.mF220 = 0.0;
+            }
+        }
+        EE_UNITS_ACT_SET_FLIGHT_TIME_STATS => c.mFlightTime = stats_flight.unwrap_or(0),
+        EE_UNITS_ACT_SET_AMMUNITION => c.mAmmunition = ammunition.unwrap_or(0) as c_ulong,
+        EE_UNITS_ACT_SET_COMMANDABLE => c.mIsCommandable = a != 0,
+        EE_UNITS_ACT_MAKE_COMMANDABLE => c.mIsCommandable = true,
+        EE_UNITS_ACT_STOP => halt(&u, None),
+        EE_UNITS_ACT_DEATH_EFFECT => {
+            // `gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0)`
+            use crate::world::effects::{effects, EffectPlace, EffectRequest};
+            effects().create(&EffectRequest {
+                graphic_effect: death_effect,
+                place: EffectPlace::Unit { unit, keeps_unit: false, tag_point: 0, goal_index: 0 },
+            });
+        }
+        _ => {}
+    }
+    true
 }
 
 #[cfg(test)]
