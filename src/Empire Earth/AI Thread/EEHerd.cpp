@@ -11,24 +11,10 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
-#include "lle/UReferenceCounter.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
@@ -38,11 +24,9 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
 #include "ee/EEAIArea.h"
-#include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEFormation.h"
@@ -50,8 +34,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEUnitCollector.h"
-#include "ee/EEGlobalConstants.h"
+#include "ee/EEUnitCollector.h"   // EEGetUnitsInRectangle's template body (EEHerdUnitFilter's instance)
 
 // The unit filter of Chase/GetPrey (by reference to the collector; operator() COMDAT 0xa5238 and its test 0xa526b
 // after the collector): a living sea-going unit on the map, on mContinent (0: any), either a fishing boat (mHuntable:
