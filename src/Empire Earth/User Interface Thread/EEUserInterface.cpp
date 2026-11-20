@@ -95,7 +95,7 @@ void EEPostGraphicsAll();
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
-RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; .bss among this unit's 0x565334..0x56536c)
+extern RTSRenderObject* gU56534C;           // 0x56534c (the UI's render object; stored in EEGlobals.cpp)
 void EEStopAllSounds();                     // 0x140ceb (Empire Earth.cpp)
 #include "ee/EEStringIDs.h"
 

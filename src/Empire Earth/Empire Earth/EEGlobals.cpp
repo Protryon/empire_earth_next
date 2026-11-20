@@ -245,6 +245,12 @@ EECheatCodes* gCheatCodes;
 EEUIManager* gUIManager;
 EEMouse* gMouse;
 bool gFreeCamera;                           // 0x5319e8 (EmpireEarth.h)
+// The UI's globals the rest of the game names (their units' storage before: 16 units named EEUIFMainGame.cpp only
+// for gMiniMap, which put the main game form in the game's dependency cycle; tools/cpp_deps.py)
+class EEMiniMap;
+EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; EEUIFMainGame.cpp's .bss)
+RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; EEUserInterface.cpp's .bss)
+bool sIconsLoaded;                          // 0x5652ec (the status box's icons are loaded; EEUIFMGStatusBox.cpp's)
 
 // the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the

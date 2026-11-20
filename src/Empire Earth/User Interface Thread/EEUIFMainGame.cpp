@@ -78,7 +78,7 @@ void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity
 // EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h (Open passes mIsButtonBlinking)
 void EEPostGraphicsAll();                   // 0x10fc0c (Open) (provisional name)
 class EEMiniMap;
-EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; .bss between this unit's statics and EEUIFMGStatusBox's)
+extern EEMiniMap* gMiniMap;                 // 0x564888 (ee/EEMiniMap.h; stored in EEGlobals.cpp)
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
 extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
