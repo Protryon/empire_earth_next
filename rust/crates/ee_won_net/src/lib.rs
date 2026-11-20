@@ -34,6 +34,7 @@ pub mod chat;
 pub mod config;
 pub mod configobj;
 pub mod cppcore;
+pub mod cppnet;
 pub mod crc16;
 pub mod db;
 pub mod debug;

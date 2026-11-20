@@ -179,13 +179,11 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
             anAuthContext->SetDoAutoRefresh(false);
         return 0;
     }
-    case EeWonLobbyOp::LanOpSocket: return (intptr_t)static_cast<LobbyLanSocket*>(static_cast<SocketOp*>(op)->GetSocket());
     case EeWonLobbyOp::LanSocketClient: return (intptr_t)static_cast<LobbyClient*>(sock->GetClient());
     case EeWonLobbyOp::LanSocketSetClient:
         sock->SetClient(static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB)));
         return 0;
     case EeWonLobbyOp::LanSocketLastTime: return sock->GetLastMessageTime();
-    case EeWonLobbyOp::LanSocketClose: if (sock != NULL) sock->QueueClose((long)inC); return 0;
     case EeWonLobbyOp::LanMyGame: return (intptr_t)GetMyLobbyGame();
     case EeWonLobbyOp::LanSubnets: {
         IPAddr aLocalAddr = IPAddr::GetLocalAddr();
@@ -196,28 +194,17 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
                           (uint32_t)(unsigned char)aLocalBytes[2] << 16 | (uint32_t)(unsigned char)aLocalBytes[3] << 24);
     }
     case EeWonLobbyOp::LanGamePasswordIs: return LanWide(inC, inD) == std::wstring(g->GetPassword());
-    case EeWonLobbyOp::LanSocketSend:
-        static_cast<LobbyLanSocket*>(inB)->QueueOp(new SocketOp(EeWonCoreSocketOp::SendMsg, NULL, LanMessageOf(inA, inC, inD, aHold)), -1);
-        return 0;
     case EeWonLobbyOp::LanNewClient: {
         LobbyLanClient* aClient = new LobbyLanClient;
         aClient->SetName(GUIString(new GUIStringData(LanWide(inC, inD))));
         return Held(aClient);
     }
-    case EeWonLobbyOp::ClientHold: cl->AddRef(); return (intptr_t)cl;
-    case EeWonLobbyOp::ClientRelease: cl->Release(); return 0;
     case EeWonLobbyOp::ClientNameTake: Take(inB, LanUtf16(cl->GetName())); return 0;
     case EeWonLobbyOp::LanClientChanged:
         LobbyBroadcastEvent(ClientChangedEvent(cl, l->GetRoomSpec(), (int)inC), true);
         return 0;
     case EeWonLobbyOp::ClientLeftGame: LobbyClientLeftGame(cl); return 0;
-    case EeWonLobbyOp::LanRecvOk: return op->GetStatus() == WS_Success && !op->IsKilled();
     case EeWonLobbyOp::LanSocketStamp: sock->SetLastMessageTime(time(NULL)); return 0;
-    case EeWonLobbyOp::LanRecvMsgTake: {
-        const ByteBuffer* aMsg = static_cast<SocketOp*>(op)->GetMsg().get();
-        if (aMsg != NULL) ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(aMsg->data()), aMsg->length());
-        return (intptr_t)aMsg;
-    }
     case EeWonLobbyOp::LanClientSocket: return (intptr_t)lc->mSocket;
     case EeWonLobbyOp::LanClientSocketSend:
         static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB))->mSocket->QueueOp(
@@ -298,14 +285,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         auth->SetDoAutoRefresh(true);
         return true;
     }
-    case EeWonLobbyOp::LanDiscoveryTake: {
-        const ByteBuffer* aBytes = static_cast<SocketOp*>(op)->GetBytes().get();
-        if (aBytes != NULL) ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(aBytes->data()), aBytes->length());
-        return 0;
-    }
-    case EeWonLobbyOp::LanAcceptedSocket:
-        if (op->GetStatus() != WS_Success || op->IsKilled()) return 0;
-        return (intptr_t)static_cast<LobbyLanSocket*>(static_cast<SocketOp*>(op)->GetAcceptedSocket());
     case EeWonLobbyOp::LanStartPeerAuth: {
         AuthContext* auth = GetLobbyAuthContext();
         if (!auth) return 0;
@@ -315,16 +294,11 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     }
     case EeWonLobbyOp::LanNameTake: Take(inB, LanUtf16(LobbyGetLanName())); return 0;
     // the C++ calls of the cases over the members (lanown.rs)
-    case EeWonLobbyOp::RefHold: static_cast<RefCount*>(inA)->AddRef(); return 0;
-    case EeWonLobbyOp::RefRelease: static_cast<RefCount*>(inA)->Release(); return 0;
-    case EeWonLobbyOp::LanSocketKill: static_cast<QueueSocket*>(inA)->Kill(); return 0;
-    case EeWonLobbyOp::LanTimerKill: op->Kill(true); return 0;
     case EeWonLobbyOp::LanNewTimer: {
         AsyncOp* aTimer = new AsyncOp;
         aTimer->SetCompletion(new LogicCompletion<LanLogic>(inC == 0 ? &LanLogic::HandleNetworkTimer : &LanLogic::HandleDiscoveryTimer, l));
         return Held(aTimer);
     }
-    case EeWonLobbyOp::LanRunTimer: op->RunAsTimer((DWORD)inC); return 0;
     case EeWonLobbyOp::LanGameDisconnected: LobbyGameDisconnected(true); return 0;
     case EeWonLobbyOp::LanSyncGameList: LobbyBroadcastEvent(SyncGameListEvent(static_cast<LobbyGameList*>(inA)), true); return 0;
     case EeWonLobbyOp::LanGameChanged: LobbyBroadcastEvent(GameChangedEvent(g, (int)inC), true); return 0;
@@ -365,15 +339,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         g->WriteSummary(aBuffer);
         ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(aBuffer.data()), aBuffer.length());
         return 0;
-    }
-    case EeWonLobbyOp::LanSendTo: {
-        IPAddr aTo = Addr(inB);
-        static_cast<QueueSocket*>(inA)->QueueOp(new SocketOp(EeWonCoreSocketOp::SendTo, NULL, LanMessageOf(NULL, inC, inD, aHold), &aTo), -1);
-        return 0;
-    }
-    case EeWonLobbyOp::LanOpOnSocket: {
-        SocketOp* anOp = static_cast<SocketOp*>(op);
-        return (void*)anOp->GetSocket() == inB && anOp->Succeeded();
     }
     case EeWonLobbyOp::LanConnectTo: {
         SmartPtr<AsyncOp> connect;
@@ -451,9 +416,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         }
         catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
     }
-    case EeWonLobbyOp::LanRecvFromAddr:
-        ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inB), static_cast<SocketOp*>(op)->GetAddr().GetValue());
-        return 0;
     case EeWonLobbyOp::LanClientOptions: {
         LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)cl, (intptr_t)inB, (int)inC);
         return 0;

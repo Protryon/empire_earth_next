@@ -84,20 +84,13 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::GameProgress:
         static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
         return 0;
-    case Op::Succeeded: return anOp->Succeeded() ? 1 : 0;
-    case Op::OpSocket: return (intptr_t) static_cast<SocketOp*>(anOp)->GetSocket();
-    case Op::AcceptedSocket: return (intptr_t) static_cast<SocketOp*>(anOp)->GetAcceptedSocket();
     case Op::BytesRead: return (intptr_t) static_cast<RecvChunkOp*>(anOp)->GetRecvOp()->GetBytesRead();
-    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
-    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
-    case Op::Kill: reinterpret_cast<AsyncSocket*>(a)->Kill(); return 0;
     case Op::NewSocket: {
         QueueSocket* aNew = new QueueSocket(0);
         aNew->AddRef();
         return (intptr_t) static_cast<AsyncSocket*>(aNew);
     }
     case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
-    case Op::Listen: return aSocket->Listen(1000);
     case Op::RepeatAccept:
         aSocket->SetRepeatCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientAccepted));
         aSocket->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::Accept));
@@ -278,8 +271,6 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     EELobbyPlayer* aPlayer = reinterpret_cast<EELobbyPlayer*>(a);
     EELobbyFileTransfer* aTransfer = reinterpret_cast<EELobbyFileTransfer*>(a);
     switch (inOp) {
-    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
-    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::ReadByte: case Op::ReadShort: case Op::ReadBool: case Op::ReadLong: case Op::ReadWString:
         return Read(inOp, reinterpret_cast<ReadBuffer*>(a));
     case Op::Available: return reinterpret_cast<ReadBuffer*>(a)->Available();

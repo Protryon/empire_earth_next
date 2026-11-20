@@ -509,6 +509,9 @@ impl Host {
             if let Some(r) = crate::lobbyevt::lobby_op(op, a as isize) {
                 return r;
             }
+            if let Some(r) = crate::netops::lobby_op(op, a, b, c, d) {
+                return r;
+            }
             // the game's host takes the texts and sounds as resource rows (the golden's, their codes)
             match op {
                 EeWonLobbyOp::MessageBox | EeWonLobbyOp::YesNo | EeWonLobbyOp::RunWaitOp => c = lobby_text(c),
