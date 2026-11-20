@@ -73,7 +73,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAirTrafficControl.h"
-#include "ee/EEGroupPathRequest.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
@@ -1068,9 +1067,9 @@ void EEComplexUnit::ReleasePool()
 void EEComplexUnit::RefreshPath()
 {
     if (this->mActiveGroup) {
-        EEGroupPathRequest* theRequest = this->mActiveGroup->FindPathRequest(this);
-        if (theRequest && theRequest->mPath && !theRequest->mPath->mIsDone)
-            ::gPathManager.CompleteAutoPath(theRequest->mPath);
+        EEAutoPathRequest* thePath = this->mActiveGroup->GetUnitPath(this->mUnitID);
+        if (thePath && !thePath->mIsDone)
+            ::gPathManager.CompleteAutoPath(thePath);
     }
     if (this->mWaypoints.size() <= 2)
         ::gPathManager.CompletePath(this);
@@ -1161,7 +1160,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     if (this->GetComplexUnit()->mActiveGroup == NULL)
         fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has no active group\n");
     else
-        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->GetComplexUnit()->mActiveGroup->mAction);
+        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->GetComplexUnit()->mActiveGroup->mFields.mAction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n");
     for (unsigned long i = 0; i < this->GetComplexUnit()->mGoalQueues.size(); ++i) {
         theGoals = this->GetComplexUnit()->mGoalQueues[i].mGoals.Get();

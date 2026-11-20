@@ -38,7 +38,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEActiveGroup.h"
 #include "ee/EEFormation.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
@@ -83,8 +82,8 @@ void Record(long inCase, EEPlayer* inPlayer, EEActiveGroup* inGroup, const std::
     r.U32((unsigned int)inGroup->GetNumUnits());
     for (unsigned long i = 0; i < inGroup->GetNumUnits(); i++)
         r.U32((unsigned int)inGroup->GetUnit(i)->mUnitID);
-    r.F32s(&inGroup->mSpeed, 17);
-    r.U32(inGroup->mMovesTogether);
+    r.F32s(&inGroup->mFields.mSpeed, 17);
+    r.U32(inGroup->mFields.mMovesTogether);
     r.U32((unsigned int)inPlayer->mPendingGroups.size());
     for (size_t i = 0; i < inUnits.size(); i++) {
         EEComplexUnit* u = inUnits[i];
@@ -111,7 +110,7 @@ void Record(long inCase, EEPlayer* inPlayer, EEActiveGroup* inGroup, const std::
 // a fresh group of the units in the formation kind
 EEActiveGroup* NewGroup(EEPlayer* inPlayer, const std::vector<EEComplexUnit*>& inUnits, long inFormation)
 {
-    EEActiveGroup* theGroup = new EEActiveGroup(inPlayer);
+    EEActiveGroup* theGroup = EEActiveGroup::New(inPlayer);
     for (size_t i = 0; i < inUnits.size(); i++)
         if (inUnits[i]->mHitPoints > 0 && inUnits[i]->mIsValid)
             theGroup->AddMember(inUnits[i], true);
@@ -127,7 +126,7 @@ EEActiveGroup* NewGroup(EEPlayer* inPlayer, const std::vector<EEComplexUnit*>& i
 void Run(EEPlayer* inPlayer, EEActiveGroup* inGroup, EEUnitGoal* inGoal, long inAction, bool inQueued)
 {
     inGroup->SetGoal(inGoal, inQueued);
-    inGroup->mAction = inAction;
+    inGroup->mFields.mAction = inAction;
     inPlayer->mPendingGroups.push_back(inGroup);
     inGroup->Plan();
 }
@@ -210,7 +209,7 @@ void EEActiveGroupCaptureSweep()
         // attacks: a unit (special), a unit queued, the ground
         for (long k = 0; k < 3; k++) {
             EEActiveGroup* g = NewGroup(thePlayer, theAll, 1);
-            g->mIsSpecialAttack = k == 0;
+            g->mFields.mIsSpecialAttack = k == 0;
             EEUnitGoal* theGoal = k < 2 ? EEUGRust::NewAttackUnit(theMobile[0], theTarget, true, false)
                                         : EEUGRust::NewAttackGround(theFar, true);
             Run(thePlayer, g, theGoal, k < 2 ? kActionAttackEnemyUnit : kActionAttackLocation, k == 1);

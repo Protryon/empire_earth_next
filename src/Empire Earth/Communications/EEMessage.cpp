@@ -129,8 +129,8 @@ static void ExecuteChangeFormation(EEMRecord* m)
     EEFormation* theFormation = EEFormation::Create(m->Get<int32_t>(1));
     theFormation->mB5C = m->Get<bool>(2);
     theGroup->SetFormation(theFormation);
-    if (theGroup->mSavedGroup)
-        theGroup->mSavedGroup->SetFormation(theFormation);
+    if (theGroup->GetSavedGroup())
+        theGroup->GetSavedGroup()->SetFormation(theFormation);
     theFormation->Dereference();
 }
 
@@ -998,7 +998,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
     GE3DPoint theLocation;
     GE3DPoint theGround;
     unsigned long theIndex = inGoalQueue;
-    long theFormation = inGroup->mFormation->mType;
+    long theFormation = inGroup->GetFormation()->mType;
     unsigned long theBestTime = 0;
     long theMarkers = 0;
     bool theDone = false;

@@ -365,20 +365,8 @@ constexpr static const int32_t EE_UNITS_AG_GROUP = 1;
 /// group `a`'s `GetUnit(c)`
 constexpr static const int32_t EE_UNITS_AG_GROUP_UNIT = 2;
 
-/// group `a`'s `RemoveUnit(b)`
-constexpr static const int32_t EE_UNITS_AG_REMOVE = 3;
-
-/// group `a`'s `Finish()`
-constexpr static const int32_t EE_UNITS_AG_FINISH = 4;
-
 /// group `a`'s `mMovesTogether = true`
 constexpr static const int32_t EE_UNITS_AG_MOVES_TOGETHER = 5;
-
-/// group `a`'s `RequestAllPaths()`
-constexpr static const int32_t EE_UNITS_AG_REQUEST_ALL = 6;
-
-/// group `a`'s `RequestPaths(units)`: the `c` units at `io.list`
-constexpr static const int32_t EE_UNITS_AG_REQUEST_PATHS = 7;
 
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 constexpr static const int32_t EE_UNITS_AG_SEND = 8;
@@ -387,21 +375,9 @@ constexpr static const int32_t EE_UNITS_AG_SEND = 8;
 /// heading)
 constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
 
-/// `new EEActiveGroup(a's mPlayer)`
-constexpr static const int32_t EE_UNITS_AG_NEW_GROUP = 10;
-
-/// group `a`'s `Add(b)`
-constexpr static const int32_t EE_UNITS_AG_ADD = 11;
-
-/// group `a`'s `SetFormation(b's mFormation)`
-constexpr static const int32_t EE_UNITS_AG_SET_FORMATION = 12;
-
 /// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
 /// `io.d`, queued `c`
 constexpr static const int32_t EE_UNITS_AG_LAUNCH = 13;
-
-/// group `a`'s `mDestinations` (pushed: id, point)
-constexpr static const int32_t EE_UNITS_AG_DESTINATIONS = 14;
 
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
@@ -1372,20 +1348,132 @@ constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 /// `kActionUnloadTransport` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
 
-/// `EEFormation::Create(io.i)`; when made, the old formation dereferenced and the new one the group's
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_FORMATION_SET = 320;
+/// unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UNIT_REFERENCE = 1;
 
-/// `mUnits.push_back(id io.i)` (the id in the pointer, as the original)
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_PUSH_ID = 321;
+/// unit `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_UNIT_DEREFERENCE = 2;
 
-/// the formation's `mType` into `io.i`, 8 without one
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_KIND = 322;
+/// `gWorld.GetUnit(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_WORLD_UNIT = 3;
 
-/// `mUnits.size()` into `io.i`
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
+/// `EEFormation::Create(c)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_NEW = 4;
 
-/// `GetUnitAt(index)->mUnitID` into `io.i`
-constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
+/// formation `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_REFERENCE = 5;
+
+/// formation `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_DEREFERENCE = 6;
+
+/// formation `a`'s `mType`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_KIND = 7;
+
+/// formation `a`'s `mCenter` into `io.p`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_CENTER = 8;
+
+/// formation `a`'s `mCenter = io.p`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_CENTER = 9;
+
+/// formation `a`'s `Place(units, slots)`: the `len` units at `list`; the slots' positions pushed
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_PLACE = 10;
+
+/// formation `a`'s orientation (16), centre (3), heading, `mB5C` (0 or 1) into the 21 floats at `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_STATE = 11;
+
+/// formation `a`'s state from the 21 floats at `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_FORMATION_SET_STATE = 12;
+
+/// unit `a`'s class's `GetTerrainFlags(a, flags)` into `io.flags`
+constexpr static const int32_t EE_UNITS_GROUP_OP_TERRAIN_FLAGS = 13;
+
+/// `gContinentManager.GetContinentID(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_OF = 14;
+
+/// `gContinentManager.GetContinent((c, d), kAIPathNonSpace)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
+
+/// `gContinentManager.GetPathSubSectorAt(c, d)->GetLocation()` into `io.a`, `io.b`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SUBSECTOR_AT = 16;
+
+/// `gContinentManager.GetPathAreaIDAt(c, d)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
+
+/// as the previous for a tile on the map, else -1
+constexpr static const int32_t EE_UNITS_GROUP_OP_SLOT_AREA_AT = 18;
+
+/// `gPathManager.RequestPath(c, (io.a, io.b), (io.c, io.d), flags io.flags, 1, -1, NULL, 0)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REQUEST = 19;
+
+/// `gPathManager.CancelAutoPathRequest(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_CANCEL = 20;
+
+/// path `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_REFERENCE = 21;
+
+/// path `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DEREFERENCE = 22;
+
+/// path `a`'s `mIsDone`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_DONE = 23;
+
+/// path `a`'s `mRequestID`
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_ID = 24;
+
+/// path `a`'s `mPath` tiles pushed
+constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_TILES = 25;
+
+/// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
+
+/// unit `a`'s `ClearBuildTargets()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS = 27;
+
+/// `TMGetTime()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_TIME = 28;
+
+/// `gUserInterface->PostMessage424Once()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_POST_SELECTION = 29;
+
+/// `gUserInterface->PostRefreshSavedGroup(c)` (when there is one)
+constexpr static const int32_t EE_UNITS_GROUP_OP_POST_SAVED_GROUP = 30;
+
+/// player `a`'s `mGroups[c]` (0 past them)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUP = 31;
+
+/// player `a`'s running (c 0) or pending (1) groups pushed
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS = 32;
+
+/// group `b` pushed onto player `a`'s running (c 0), pending (1) or finished (2) groups
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH = 33;
+
+/// `gWorld.mMap->ClearU1955DC()`
+constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_AREAS = 34;
+
+/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
+
+/// `gAEManager.mTemplates[c]->mRadius` into `io.f`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS = 36;
+
+/// `EESaveAutoPathRequest(file a, path b)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_SAVE_PATH = 37;
+
+/// `EELoadAutoPathRequest(file a, io.a)`: the error
+constexpr static const int32_t EE_UNITS_GROUP_OP_LOAD_PATH = 38;
+
+/// `EEAwaitAutoPathRequest(c, ...)` calling `ee_units_group_path_resolved(b, d, request)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AWAIT_PATH = 39;
+
+/// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
+constexpr static const int32_t EE_UNITS_GROUP_OP_AFTER_LOAD = 40;
+
+/// A group's kind (`mGroupKind`): the class the original made.
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_SAVED = 0;
+
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_SELECTED = 1;
+
+constexpr static const uint8_t EE_UNITS_GROUP_KIND_ACTIVE = 2;
 
 /// `kHiddenFlagPhaseMask`, `kHiddenFlagMoved`, `kHiddenFlagHidden` (ee/EEUnitClassIDs.h)
 constexpr static const uint8_t EE_UNITS_HIDDEN_PHASE_MASK = 3;
@@ -4401,6 +4489,79 @@ struct EeGoalQueueHost {
   void (*refresh)(void *context);
 };
 
+/// One host operation's values.
+struct EeUnitsGroupIo {
+  int64_t a;
+  int64_t b;
+  int64_t c;
+  int64_t d;
+  float f;
+  float p[3];
+  uint8_t flags[17];
+  /// the items an operation reads (`len` of them)
+  const void *list;
+  size_t len;
+  /// a second list it reads
+  const void *list2;
+  /// the list it fills (`ee_units_group_push`)
+  void *out;
+};
+
+/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
+struct EeUnitsActiveGroupFields {
+  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
+  long mAction;
+  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
+  /// maximum and the minimum
+  float mSpeed;
+  float mMaxSpeed;
+  float mMinSpeed;
+  float mAcceleration;
+  float mMaxAcceleration;
+  float mMinAcceleration;
+  float mTurnSpeed;
+  float mMaxTurnSpeed;
+  float mMinTurnSpeed;
+  float mTurnAcceleration;
+  float mMaxTurnAcceleration;
+  float mMinTurnAcceleration;
+  /// 1 / the means (0 when not > 0)
+  float mInverseSpeed;
+  float mInverseAcceleration;
+  float mInverseTurnSpeed;
+  float mInverseTurnAcceleration;
+  /// the world table's group speed cap factor (the means are capped at the minimum times it)
+  float mCapFactor;
+  bool mIsFinished;
+  bool mIsQueued;
+  bool mMovesTogether;
+  bool mIsSpecialAttack;
+};
+
+/// The members of a group the C++ reads in place (the head of the Rust allocation; `EEGroup` derives from it).
+struct EeUnitsGroup {
+  /// the player (`EEPlayer*`, the constructor's)
+  void *mPlayer;
+  /// the formation (`EEFormation*`, referenced; `EEFormation::Create(0)` when made)
+  void *mFormation;
+  /// the units' classes' kind flags or'ed
+  long mKindFlags;
+  /// a selection's saved group (`EESelectedGroup::mSavedGroup`; its index while loading)
+  EeUnitsGroup *mSavedGroup;
+  /// a selection's last change (`TMGetTime()`)
+  long mChangeTime;
+  /// a selection asks to be sorted (`EESelectedGroup::mNeedsSort`)
+  bool mNeedsSort;
+  /// the kind (`EE_UNITS_GROUP_KIND_*`)
+  uint8_t mGroupKind;
+  /// a hot-key group's index (`EESavedGroup::mIndex`: 1..20, posted to the user interface)
+  long mIndex;
+  /// an active group's goal (`EEUnitGoal*`, owned)
+  void *mGoal;
+  /// an active group's plain record (`EEActiveGroup`'s action, speeds and flags)
+  EeUnitsActiveGroupFields mFields;
+};
+
 /// A unit class's fields the improvements read.
 struct EeUnitsImproveClass {
   float area_effect;
@@ -5127,37 +5288,6 @@ struct EeUnitsPlayerUnit {
   uint64_t container;
   long current_research;
   long build_queue;
-};
-
-/// `EEActiveGroup`'s plain members (ee/EEPlayer.h), in the class's order.
-struct EeUnitsActiveGroupFields {
-  /// the command's action (`kActionIdle` 5000 when made; the messages store a goal id)
-  long mAction;
-  /// per stat (the units' max velocity, acceleration, max angular velocity, angular acceleration) the mean, the
-  /// maximum and the minimum
-  float mSpeed;
-  float mMaxSpeed;
-  float mMinSpeed;
-  float mAcceleration;
-  float mMaxAcceleration;
-  float mMinAcceleration;
-  float mTurnSpeed;
-  float mMaxTurnSpeed;
-  float mMinTurnSpeed;
-  float mTurnAcceleration;
-  float mMaxTurnAcceleration;
-  float mMinTurnAcceleration;
-  /// 1 / the means (0 when not > 0)
-  float mInverseSpeed;
-  float mInverseAcceleration;
-  float mInverseTurnSpeed;
-  float mInverseTurnAcceleration;
-  /// the world table's group speed cap factor (the means are capped at the minimum times it)
-  float mCapFactor;
-  bool mIsFinished;
-  bool mIsQueued;
-  bool mMovesTogether;
-  bool mIsSpecialAttack;
 };
 
 extern "C" {
@@ -6183,17 +6313,174 @@ void ee_units_unit_drop_unsuited_goals(uint64_t unit, uint32_t index);
 /// `DropFinishedGoals(inStartAll)`.
 void ee_units_unit_drop_finished_goals(uint64_t unit, bool start_all);
 
-/// `EEGroup::Load` over the group's parts and the file in `f`.
+/// Pushes an item onto an operation's list.
 ///
 /// # Safety
-/// `f` is valid with `ctx` for the call.
-int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
+/// `list` is the `out` of a running operation; `p` is three floats.
+void ee_units_group_push(void *list, int64_t a, int64_t b, const float (*p)[3]);
 
-/// `EEGroup::Save`: as [`ee_units_group_load`].
+extern int64_t ee_units_group_host(int32_t op,
+                                   uint64_t a,
+                                   uint64_t b,
+                                   int64_t c,
+                                   int64_t d,
+                                   EeUnitsGroupIo *io);
+
+/// `new EESavedGroup(player, index)` (kind 0), `new EESelectedGroup(player)` (1), `new EEActiveGroup(player)` (2).
+EeUnitsGroup *ee_units_group_new(uint8_t kind,
+                                 void *player,
+                                 long index);
+
+/// `Reference()`.
 ///
 /// # Safety
-/// As [`ee_units_group_load`].
-int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
+/// `g` is a live group (as for every entry point below).
+void ee_units_group_reference(EeUnitsGroup *g);
+
+/// `Dereference()`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void ee_units_group_dereference(EeUnitsGroup *g);
+
+/// `GetNumUnits()`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+unsigned long ee_units_group_len(EeUnitsGroup *g);
+
+/// `GetUnit(i)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void *ee_units_group_unit(EeUnitsGroup *g, long i);
+
+/// `Contains(unit)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+bool ee_units_group_contains(EeUnitsGroup *g, void *unit);
+
+/// The group members whose arguments are a unit or nothing (`op`): 0 `Add`, 1 `RemoveUnit`, 2 `Clear`, 3
+/// `Validate`, 4 `UpdateKindFlags`, 5 `MoveAlongFoundPaths`, 6 `SortUnits`, 7 `ShowSelectionAreas`, 8
+/// `RefreshSelectionAreas`, 9 `AddIfAbsent(unit, true)`, 10 `AddIfAbsent(unit, false)`, 11 `AddUnit(unit, true)`, 12
+/// `AddUnit(unit, false)`, 13 `AddMember(unit, true)`, 14 `AddMember(unit, false)`, 15 `Finish`, 16 `ClearGoal`, 17
+/// `KeepNonCitizens`, 18 `KeepGroundAttackers`, 19 `KeepCitizens`, 20 `ResetUnitsPaths`, 21 `RequestAllPaths`, 22
+/// `EEComplexUnit::SetActiveGroup` (the unit's group this one).
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `unit` a live complex unit where one is named.
+void ee_units_group_do(EeUnitsGroup *g,
+                       int32_t op,
+                       void *unit);
+
+/// The members between two groups (`op`): 0 `CopyUnits(other)`, 1
+/// `CopyGroup(other)`, 2 `CopySelection(other)`, 3 `EESavedGroup::Assign(selection other)`, 4
+/// `SelectSavedGroup(other, true)`, 5 `SelectSavedGroup(other, false)`.
+///
+/// # Safety
+/// `g` and `other` are live groups.
+void ee_units_group_with(EeUnitsGroup *g, int32_t op, EeUnitsGroup *other);
+
+/// The members that answer a value (`op`, argument `a`): 0 `CountUnitsOfKind(a)`, 1 `HasUnitType(a)`, 2
+/// `GetUnitTypeCount(a)`, 3 `FindUnitOfCategory(a)`, 4 `FindUnitWithFlags(a)`, 5 `GetContinent()`, 6 the path of the
+/// request carrying unit id `a` (`FindPathRequest(unit)->mPath`), 7 `RepairPointers()`, 8 the kind.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+int64_t ee_units_group_get(EeUnitsGroup *g,
+                           int32_t op,
+                           int64_t a);
+
+/// `SetFormation(formation)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `formation` 0 or a live formation.
+void ee_units_group_set_formation(EeUnitsGroup *g, void *formation);
+
+/// `Remove(id)` and `CancelPathRequest(id)`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`].
+void ee_units_group_cancel_path(EeUnitsGroup *g, long id);
+
+/// `GetBounds(out)`: `out` the rectangle's bottom, left, right, top.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `out` four floats.
+void ee_units_group_bounds(EeUnitsGroup *g, float (*out)[4]);
+
+/// `GetFlags()`'s 17 flags into `out`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `out` 17 bytes.
+void ee_units_group_flags(EeUnitsGroup *g, uint8_t (*out)[17]);
+
+/// `Load(major, minor, file)` / `Save(major, minor, file)` (`save`) over the player save's file primitive `f`.
+///
+/// # Safety
+/// As [`ee_units_group_reference`]; `file` the primitive's open file.
+long ee_units_group_file(EeUnitsGroup *g,
+                         bool save,
+                         void *file,
+                         EeUnitsPlayerSaveFn f);
+
+/// `Fill(selection, sort, slot)`.
+///
+/// # Safety
+/// `g` a live active group, `selection` a live selection.
+void ee_units_group_fill(EeUnitsGroup *g, EeUnitsGroup *selection, long sort, long slot);
+
+/// `SetGoal(goal, queued)`.
+///
+/// # Safety
+/// `g` a live active group, `goal` a live goal.
+void ee_units_group_set_goal(EeUnitsGroup *g, void *goal, bool queued);
+
+/// `RequestPaths(units)`: the `n` units at `units`.
+///
+/// # Safety
+/// `g` a live active group with a goal; `units` `n` live complex units.
+bool ee_units_group_request_paths(EeUnitsGroup *g, void *const *units, size_t n);
+
+/// `TellGroup(unit, location)`.
+///
+/// # Safety
+/// `g` a live active group; `location` three floats.
+void ee_units_group_tell(EeUnitsGroup *g, void *unit, const float (*location)[3]);
+
+/// `EEPlayer::GetActiveGroupOf(unit)`.
+///
+/// # Safety
+/// `player` a live player.
+EeUnitsGroup *ee_units_group_active_of(void *player, void *unit);
+
+/// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
+///
+/// # Safety
+/// `g` the waiting group (referenced); `request` 0 or a request with the caller's reference.
+void ee_units_group_path_resolved(EeUnitsGroup *g,
+                                  int64_t key,
+                                  void *request);
+
+/// `EESaveActiveGroups(file)` over the player save's primitive `f`.
+///
+/// # Safety
+/// `file` the primitive's open file.
+void ee_units_groups_save_active(void *file, EeUnitsPlayerSaveFn f);
+
+/// `EELoadActiveGroups(file)`: the first read error; the groups come back at the loaded game's first tick.
+///
+/// # Safety
+/// As [`ee_units_groups_save_active`].
+long ee_units_groups_load_active(void *file,
+                                 EeUnitsPlayerSaveFn f);
+
+/// The loaded groups back (`EELoadActiveGroups`' `EEAfterLoad` of [`EE_UNITS_GROUP_OP_AFTER_LOAD`]).
+///
+/// # Safety
+/// `saved` the operation's value, used once.
+void ee_units_group_restore_saved(void *saved);
 
 /// `EEUnit::UpdateHidden()` and `EEComplexUnit::UpdateHidden()` of `unit` (an `EEUnit*`; its object kind picks
 /// the body).
@@ -6202,31 +6489,11 @@ int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
 /// `unit` is a live unit; the caller holds the world (the simulation thread, or the renderer's read).
 bool ee_units_update_hidden(uint64_t unit);
 
-extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
-
-extern void *ee_units_host_active_group_new(void *player);
-
-extern void ee_units_host_group_fill(void *group, void *selection, int32_t sort, int32_t slot);
-
-extern void ee_units_host_group_release(void *group);
-
-extern void ee_units_host_pending_push(void *player, void *group);
-
-extern void ee_units_host_group_keep_mobile(void *group);
-
-extern void ee_units_host_group_clear_goal(void *group);
-
-extern void ee_units_host_group_set_goal(void *group, void *goal, uint8_t queued);
-
-extern void ee_units_host_group_plan(void *group);
-
 extern int32_t ee_units_host_random(int32_t low, int32_t high);
 
 extern void ee_units_host_play_acknowledgement(void *player, void *group, int32_t index);
 
 extern float ee_units_host_map_height(float x, float y);
-
-extern void ee_units_host_group_keep_ground_attackers(void *group);
 
 extern void ee_units_host_send_group_command(void *group,
                                              uint32_t target,
@@ -6238,17 +6505,9 @@ extern void ee_units_host_acknowledge_unit(void *player, uint32_t unit);
 
 extern uint32_t ee_units_host_town_patrol_point(uint32_t unit, uint8_t *found);
 
-extern void ee_units_host_group_spread_around_resource(void *group, uint32_t target);
-
-extern void ee_units_host_group_spread_around_tile(void *group, int64_t x, int64_t y);
-
 extern void ee_units_host_unit_add_build_target(uint32_t unit, uint32_t target);
 
 extern void ee_units_host_unit_order_repair(uint32_t unit, uint32_t target);
-
-extern void ee_units_host_group_add_member(void *group, uint32_t unit);
-
-extern void ee_units_host_group_keep_non_citizens(void *group);
 
 extern void ee_units_host_patrol_new_lone(void *player, float x, float y);
 
@@ -6256,16 +6515,7 @@ extern void *ee_units_host_unit_goal_patrol_route(uint32_t unit);
 
 extern void ee_units_host_goal_patrol_add_point(void *goal, float x, float y, void *player);
 
-extern void ee_units_host_group_spread_around_unit(void *group,
-                                                   uint32_t target,
-                                                   int64_t x,
-                                                   int64_t y);
-
 extern float ee_units_host_path_to_point(uint32_t first, float *x, float *y);
-
-extern void ee_units_host_group_reset_paths(void *group);
-
-extern void ee_units_host_group_keep_citizens(void *group);
 
 extern void *ee_units_host_wall_plan(void *player,
                                      int32_t technology,
@@ -6278,8 +6528,6 @@ extern void *ee_units_host_wall_plan(void *player,
 extern void ee_units_host_wall_build(void *group, void *pieces);
 
 extern void ee_units_host_wall_release(void *pieces);
-
-extern void ee_units_host_group_spread_for_unload(void *group, int64_t x, int64_t y);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
@@ -6314,8 +6562,6 @@ extern void ee_units_host_unit_drop_gathered(uint32_t unit);
 
 extern void ee_units_host_work_farm(uint32_t farm, uint32_t unit);
 
-extern void ee_units_host_group_finish(void *group);
-
 extern void *ee_units_host_calamity_of(void *player,
                                        int32_t technology,
                                        int32_t *class_enum,
@@ -6338,8 +6584,6 @@ extern void ee_units_host_group_split_calamity_casters(void *group,
                                                        void *player,
                                                        int32_t technology,
                                                        uint32_t target);
-
-extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
@@ -6384,8 +6628,6 @@ extern void *ee_units_host_load_goal_new(uint8_t kind,
 extern uint8_t ee_units_host_load_goal_fields(void *goal, int64_t *x, int64_t *y);
 
 extern void ee_units_host_player_event(void *player, int64_t x, int64_t y, int32_t code);
-
-extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
 
 extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
 

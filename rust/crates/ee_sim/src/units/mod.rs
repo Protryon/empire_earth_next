@@ -64,7 +64,10 @@ pub mod goal_obj;
 pub mod goal_spec;
 pub mod goals;
 pub mod group;
-pub mod group_save;
+pub mod group_host;
+pub mod group_obj;
+#[cfg(test)]
+mod group_obj_tests;
 /// cbindgen:ignore
 pub mod group_sweep;
 pub mod hack;

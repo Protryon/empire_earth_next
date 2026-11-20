@@ -1369,10 +1369,10 @@ void EEPlayer::IncrementEpic()
 // air traffic, zeroed counters and default settings, then loads the player effects
 void EEPlayer::Reset()
 {
-    this->mActiveGroup = new EESelectedGroup(this);
-    this->mSelectedGroup = new EESelectedGroup(this);
+    this->mActiveGroup = EESelectedGroup::New(this);
+    this->mSelectedGroup = EESelectedGroup::New(this);
     for (unsigned long i = 0; i < 20; i++)
-        this->mGroups[i] = new EESavedGroup(this, i + 1);
+        this->mGroups[i] = EESavedGroup::New(this, i + 1);
     unsigned long theCount = this->mRunningGroups.size();
     for (unsigned long j = 0; j < theCount; j++) {
         this->mRunningGroups[j]->Clear();
@@ -1410,19 +1410,6 @@ void EEPlayer::Reset()
     this->mEvents.Clear(this);
     ee_units_player_reset(static_cast<EeUnitsPlayerSaved*>(this), (uint32_t)this->mPlayerID, 1);
     this->LoadPlayerEffects();
-}
-
-// Returns the group's unit at an index
-EEComplexUnit* EEGroup::GetUnit(long inIndex)
-{
-    const std::vector<EEComplexUnit*>& theUnits = this->mUnits;
-    return theUnits[inIndex];
-}
-
-// Returns the number of units in the group
-unsigned long EEGroup::GetNumUnits()
-{
-    return this->mUnits.size();
 }
 
 // Kills every unit of a herd
@@ -2780,7 +2767,6 @@ void EEPlayer::UnselectAllUnits()
     this->mActiveGroup->Clear();
 }
 
-#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Adds a town building to a town: a new one, the only fitting one, or the largest fitting one after merging
 // the others into it (their patrols move over); returns whether it was added
@@ -2803,7 +2789,7 @@ void EEPlayer::RestorePatrols()
         if (thePoint == NULL || thePoint->mPatrolGroup == NULL)
             continue;
         EEPPatrolGroup* thePatrol = thePoint->mPatrolGroup;
-        EEActiveGroup* theGroup = new EEActiveGroup(this);
+        EEActiveGroup* theGroup = EEActiveGroup::New(this);
         theGroup->Add(theUnit);
         EEGroup* theBase = theGroup;
         this->mPendingGroups.push_back(theBase);
@@ -2811,7 +2797,7 @@ void EEPlayer::RestorePatrols()
         EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrol, thePoint, true);
         theGroup->ClearGoal();
         theGroup->SetGoal(theGoal, false);
-        theGroup->mAction = kActionMoveToNextPatrolPoint;
+        theGroup->mFields.mAction = kActionMoveToNextPatrolPoint;
         theGroup->Plan();
     }
     this->ClearUnitsToRepatrol();

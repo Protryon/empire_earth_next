@@ -7,6 +7,8 @@
 use std::ffi::c_void;
 
 use crate::units::ag::{self, AgHost, EeUnitsAgGroup, EeUnitsAgUnit, LocationFields, NewLocation, Rect, Slot};
+use crate::units::group_host::GameGroups;
+use crate::units::group_obj as go;
 
 /// One host operation's values.
 #[repr(C)]
@@ -55,32 +57,16 @@ pub struct EeUnitsAgListHandle {
 pub const EE_UNITS_AG_GROUP: i32 = 1;
 /// group `a`'s `GetUnit(c)`
 pub const EE_UNITS_AG_GROUP_UNIT: i32 = 2;
-/// group `a`'s `RemoveUnit(b)`
-pub const EE_UNITS_AG_REMOVE: i32 = 3;
-/// group `a`'s `Finish()`
-pub const EE_UNITS_AG_FINISH: i32 = 4;
 /// group `a`'s `mMovesTogether = true`
 pub const EE_UNITS_AG_MOVES_TOGETHER: i32 = 5;
-/// group `a`'s `RequestAllPaths()`
-pub const EE_UNITS_AG_REQUEST_ALL: i32 = 6;
-/// group `a`'s `RequestPaths(units)`: the `c` units at `io.list`
-pub const EE_UNITS_AG_REQUEST_PATHS: i32 = 7;
 /// `EESendGroupCommand(a, b, a's player id, c, 0)`
 pub const EE_UNITS_AG_SEND: i32 = 8;
 /// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
 /// heading)
 pub const EE_UNITS_AG_ARRANGE: i32 = 9;
-/// `new EEActiveGroup(a's mPlayer)`
-pub const EE_UNITS_AG_NEW_GROUP: i32 = 10;
-/// group `a`'s `Add(b)`
-pub const EE_UNITS_AG_ADD: i32 = 11;
-/// group `a`'s `SetFormation(b's mFormation)`
-pub const EE_UNITS_AG_SET_FORMATION: i32 = 12;
 /// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
 /// `io.d`, queued `c`
 pub const EE_UNITS_AG_LAUNCH: i32 = 13;
-/// group `a`'s `mDestinations` (pushed: id, point)
-pub const EE_UNITS_AG_DESTINATIONS: i32 = 14;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -266,20 +252,23 @@ impl AgHost for AgGame {
         unsafe { GroupView::of(&t, g) }.map_or(0, |v| v.unit_handle(i as usize))
     }
     fn remove(&mut self, g: u64, u: u64) {
-        self.op(EE_UNITS_AG_REMOVE, g, u, 0, 0);
+        // SAFETY: a live group and unit (the group object, group_obj.rs)
+        unsafe { go::remove_unit(&mut GameGroups, g as go::G, u) }
     }
     fn finish(&mut self, g: u64) {
-        self.op(EE_UNITS_AG_FINISH, g, 0, 0, 0);
+        // SAFETY: as above
+        unsafe { go::finish(&mut GameGroups, g as go::G) }
     }
     fn set_moves_together(&mut self, g: u64) {
         with_group_fields(g, |f| f.mMovesTogether = true);
     }
     fn request_all_paths(&mut self, g: u64) {
-        self.op(EE_UNITS_AG_REQUEST_ALL, g, 0, 0, 0);
+        // SAFETY: as above
+        unsafe { go::request_all_paths(&mut GameGroups, g as go::G) }
     }
     fn request_paths(&mut self, g: u64, units: &[u64]) {
-        let mut io = EeUnitsAgIo { list: units.as_ptr() as *mut c_void, ..Default::default() };
-        self.io(EE_UNITS_AG_REQUEST_PATHS, g, 0, units.len() as i64, 0, &mut io);
+        // SAFETY: as above
+        unsafe { go::request_paths(&mut GameGroups, g as go::G, units) };
     }
     fn send_command(&mut self, g: u64, target: u64, command: u32) {
         self.op(EE_UNITS_AG_SEND, g, target, command as i64, 0);
@@ -290,13 +279,20 @@ impl AgHost for AgGame {
         items.into_iter().map(|(unit, position, heading)| Slot { position, unit, heading }).collect()
     }
     fn new_group(&mut self, g: u64) -> u64 {
-        self.op(EE_UNITS_AG_NEW_GROUP, g, 0, 0, 0) as u64
+        // SAFETY: as above
+        let player = unsafe { (*(g as go::G)).mPlayer } as u64;
+        go::new(&mut GameGroups, go::EE_UNITS_GROUP_KIND_ACTIVE, player, 0) as u64
     }
     fn add(&mut self, g: u64, u: u64) {
-        self.op(EE_UNITS_AG_ADD, g, u, 0, 0);
+        // SAFETY: as above
+        unsafe { go::add(&mut GameGroups, g as go::G, u) }
     }
     fn set_formation(&mut self, ng: u64, g: u64) {
-        self.op(EE_UNITS_AG_SET_FORMATION, ng, g, 0, 0);
+        // SAFETY: as above
+        unsafe {
+            let formation = (*(g as go::G)).mFormation as u64;
+            go::set_formation(&mut GameGroups, ng as go::G, formation)
+        }
     }
     #[allow(clippy::too_many_arguments)] // as the trait's
     fn launch(&mut self, g: u64, ng: u64, goal: u64, queued: bool, action: i32, target: u64, command: u32) {
@@ -305,8 +301,8 @@ impl AgHost for AgGame {
         self.io(EE_UNITS_AG_LAUNCH, g, ng, queued as i64, 0, &mut io);
     }
     fn destinations(&mut self, g: u64) -> Vec<(u32, [f32; 3])> {
-        let mut io = EeUnitsAgIo::default();
-        self.list(EE_UNITS_AG_DESTINATIONS, g, 0, 0, &mut io).into_iter().map(|(id, p, _)| (id as u32, p)).collect()
+        // SAFETY: as above
+        unsafe { go::destinations(g as go::G) }
     }
     fn world_unit_sphere(&mut self, id: u32) -> Option<f32> {
         // `gWorld.GetUnit(id)`'s class's inner collision sphere

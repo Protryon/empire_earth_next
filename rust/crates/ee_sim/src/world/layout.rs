@@ -158,9 +158,6 @@ pub struct EeWorldLayout {
     /// `EeCpFields` in `EEComputerPlayer`
     pub cp_fields: u64,
     // ---- the HUD's reads (the UI thread lane, round 1)
-    /// `EEGroup::mUnits` (a `std::vector<EEComplexUnit*>`; `EESelectedGroup`'s `GetUnit`/`GetNumUnits` are
-    /// `EEGroup`'s)
-    pub group_units: u64,
     /// `EEUnitClassUpgrade::mUnitClass` (an `EEUnitClass*`: the stats' own class) and `mButton` (an
     /// `EEButtonObject*`)
     pub stats_unit_class: u64,

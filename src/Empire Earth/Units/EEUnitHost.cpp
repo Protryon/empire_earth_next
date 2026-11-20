@@ -49,7 +49,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEActiveGroup.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitStore.h"
@@ -81,61 +80,10 @@ static EEComplexUnit* ComplexOf(uint32_t inID)
 
 // ---- the host's calls ----
 
-extern "C" size_t ee_units_host_group_ids(void* inGroup, uint32_t* outIDs, size_t inCapacity)
-{
-    EEGroup* theGroup = static_cast<EEGroup*>(inGroup);
-    size_t theCount = theGroup->mUnits.size();
-    for (size_t i = 0; i < theCount && i < inCapacity; i++) {
-        EEComplexUnit* theUnit = theGroup->mUnits[i];
-        outIDs[i] = theUnit != NULL ? static_cast<uint32_t>(theUnit->mUnitID) : 0xffffffffu;
-    }
-    return theCount;
-}
-
 // a group as Rust holds it: its EEGroup base (the address group_ids reads)
 static EEActiveGroup* ActiveOf(void* inGroup)
 {
     return static_cast<EEActiveGroup*>(static_cast<EEGroup*>(inGroup));
-}
-
-extern "C" void* ee_units_host_active_group_new(void* inPlayer)
-{
-    return static_cast<EEGroup*>(new EEActiveGroup(static_cast<EEPlayer*>(inPlayer)));
-}
-
-extern "C" void ee_units_host_group_fill(void* inGroup, void* inSelection, int32_t inSort, int32_t inSlot)
-{
-    ActiveOf(inGroup)->Fill(static_cast<EESelectedGroup*>(static_cast<EEGroup*>(inSelection)), inSort, inSlot);
-}
-
-extern "C" void ee_units_host_group_release(void* inGroup)
-{
-    ActiveOf(inGroup)->Dereference();
-}
-
-extern "C" void ee_units_host_pending_push(void* inPlayer, void* inGroup)
-{
-    static_cast<EEPlayer*>(inPlayer)->mPendingGroups.push_back(static_cast<EEGroup*>(inGroup));
-}
-
-extern "C" void ee_units_host_group_keep_mobile(void* inGroup)
-{
-    ActiveOf(inGroup)->KeepMobileUnits();
-}
-
-extern "C" void ee_units_host_group_clear_goal(void* inGroup)
-{
-    ActiveOf(inGroup)->ClearGoal();
-}
-
-extern "C" void ee_units_host_group_set_goal(void* inGroup, void* inGoal, uint8_t inQueued)
-{
-    ActiveOf(inGroup)->SetGoal(static_cast<EEUnitGoal*>(inGoal), inQueued != 0);
-}
-
-extern "C" void ee_units_host_group_plan(void* inGroup)
-{
-    ActiveOf(inGroup)->Plan();
 }
 
 extern "C" int32_t ee_units_host_random(int32_t inLow, int32_t inHigh)
@@ -155,11 +103,6 @@ extern "C" float ee_units_host_map_height(float inX, float inY)
     theTarget.SetY(inY);
     float theHeight = gWorld.GetMap()->GetHeight(theTarget);
     return theHeight;
-}
-
-extern "C" void ee_units_host_group_keep_ground_attackers(void* inGroup)
-{
-    ActiveOf(inGroup)->KeepGroundAttackers();
 }
 
 extern "C" void ee_units_host_send_group_command(void* inGroup, uint32_t inTarget, void* inPlayer, int32_t inCommand, int32_t inQueue)
@@ -189,16 +132,6 @@ extern "C" uint32_t ee_units_host_town_patrol_point(uint32_t inUnit, uint8_t* ou
     return thePoint;
 }
 
-extern "C" void ee_units_host_group_spread_around_resource(void* inGroup, uint32_t inTarget)
-{
-    ActiveOf(inGroup)->SpreadAroundResource(UnitOf(inTarget));
-}
-
-extern "C" void ee_units_host_group_spread_around_tile(void* inGroup, int64_t inX, int64_t inY)
-{
-    ActiveOf(inGroup)->SpreadAroundTile((long)inX, (long)inY);
-}
-
 extern "C" void ee_units_host_unit_add_build_target(uint32_t inUnit, uint32_t inTarget)
 {
     EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
@@ -213,17 +146,6 @@ extern "C" void ee_units_host_unit_order_repair(uint32_t inUnit, uint32_t inTarg
     theUnit->OrderRepair(UnitOf(inTarget));
     theUnit->StartAction(kActionIdle);
     theUnit->mUnitClass->ActionChanged(theUnit);
-}
-
-extern "C" void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit)
-{
-    EEComplexUnit* theUnit = UnitOf(inUnit)->mComplexUnit;
-    ActiveOf(inGroup)->AddMember(theUnit->mComplexUnit, true);
-}
-
-extern "C" void ee_units_host_group_keep_non_citizens(void* inGroup)
-{
-    ActiveOf(inGroup)->KeepNonCitizens();
 }
 
 // EEMAddPatrolPoint with nothing selected: a lone patrol group with the point, registered with the player
@@ -251,11 +173,6 @@ extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, flo
     EEUGRust* theGoal = static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal));
     ee_units_pg_add_point(theGoal->GetPatrolGroup(), inX, inY, (uint32_t)thePlayer->mPlayerID);
     thePlayer->AddPatrolGroup(theGoal->GetPatrolGroup());
-}
-
-extern "C" void ee_units_host_group_spread_around_unit(void* inGroup, uint32_t inTarget, int64_t inX, int64_t inY)
-{
-    ActiveOf(inGroup)->SpreadAroundUnit(UnitOf(inTarget), (long)inX, (long)inY);
 }
 
 // EEMPathTo's point (its statements before the loop, as they were): a point off the map goes to the closest tile's
@@ -293,16 +210,6 @@ extern "C" float ee_units_host_path_to_point(uint32_t inFirst, float* ioX, float
     return theZ;
 }
 
-extern "C" void ee_units_host_group_reset_paths(void* inGroup)
-{
-    ActiveOf(inGroup)->ResetUnitsPaths();
-}
-
-extern "C" void ee_units_host_group_keep_citizens(void* inGroup)
-{
-    ActiveOf(inGroup)->KeepCitizens();
-}
-
 // EEMBuildWall's plan: the wall of the technology's unit class from start to end as paid foundations (EEPlanWall(..,
 // true, false, pieces)); the new pieces in a list the caller releases
 extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, float inStartX, float inStartY, float inEndX,
@@ -319,11 +226,6 @@ extern "C" void* ee_units_host_wall_plan(void* inPlayer, int32_t inTechnology, f
 extern "C" void ee_units_host_wall_build(void* inGroup, void* inPieces)
 {
     ee_units_uu_build_wall((uint64_t)(uintptr_t)ActiveOf(inGroup), inPieces);   // uu_world.rs build_wall
-}
-
-extern "C" void ee_units_host_group_spread_for_unload(void* inGroup, int64_t inX, int64_t inY)
-{
-    ActiveOf(inGroup)->SpreadForUnload((long)inX, (long)inY);
 }
 
 extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)
@@ -469,11 +371,6 @@ extern "C" void ee_units_host_work_farm(uint32_t inFarm, uint32_t inUnit)
     EEWorkFarm(ComplexOf(inFarm), ComplexOf(inUnit));
 }
 
-extern "C" void ee_units_host_group_finish(void* inGroup)
-{
-    ActiveOf(inGroup)->Finish();
-}
-
 // the technology's calamity class (EEMCastCalamity: the node, then the class of its calamity); a read
 extern "C" void* ee_units_host_calamity_of(void* inPlayer, int32_t inTechnology, int32_t* outClassEnum, uint8_t* outCastByAll)
 {
@@ -515,11 +412,6 @@ extern "C" void ee_units_host_group_split_calamity_casters(void* inGroup, void* 
 {
     EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
     ActiveOf(inGroup)->SplitCalamityCasters(static_cast<EECalamityClass*>(inClass), NodeOf(inPlayer, inTechnology), theTarget);
-}
-
-extern "C" void ee_units_host_group_remove_unit(void* inGroup, uint32_t inUnit)
-{
-    ActiveOf(inGroup)->RemoveUnit(UnitOf(inUnit)->GetComplexUnit());
 }
 
 extern "C" void ee_units_host_unit_clear_goals(uint32_t inUnit)
@@ -678,11 +570,6 @@ extern "C" void ee_units_host_player_event(void* inPlayer, int64_t inX, int64_t 
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
     U2DPoint<long> theTile((long)inX, (long)inY);
     thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, inCode, false);
-}
-
-extern "C" void ee_units_host_group_add_unit(void* inGroup, uint32_t inUnit)
-{
-    ActiveOf(inGroup)->AddMember(ComplexOf(inUnit), true);
 }
 
 // EEUCTransport::FilterLoadable (a read)
