@@ -235,18 +235,6 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
             theOut[k] = (uint32_t)theTypes[k];
         return (int32_t)theTypes.size();
     }
-    case EE_SCREENS_SEOB_OP_CLASS_NAMES: {
-        UWideString theName;
-        const uint32_t* theTypes = static_cast<const uint32_t*>(p[1]);
-        theCombo->DeleteAllEntries();
-        gResource->GetString(IDS_ANY_CLASS, theName);
-        theCombo->AppendLine(theName);
-        for (int32_t k = 1; k < i[0]; k++) {
-            gResource->GetString(gUnitClassTable[theTypes[k]]->mNameStringID, theName);
-            theCombo->AppendLine(theName);
-        }
-        return 0;
-    }
     case EE_SCREENS_SEOB_OP_SM:
         switch (i[0]) {
         case EE_SCREENS_SEOB_SM_SORT: gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_OBJECTS); break;

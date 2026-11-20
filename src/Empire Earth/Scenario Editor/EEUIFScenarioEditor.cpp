@@ -579,7 +579,6 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         gMiniMap->Redraw();
         theForm->UIForm::Open();
         return 0;
-    case EE_SCREENS_SEFM_OP_HELP_LABEL: theForm->SetHelpTextLabel(static_cast<UITextLabel*>(p[0])); return 0;
     case EE_SCREENS_SEFM_OP_POST_EXIT: {
         EESEARust* theAction = new EESEARust(kSEAExit);
         gUserInterface->PostAction(theAction);
@@ -599,7 +598,6 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         }
         static_cast<UIControl*>(p[0])->SetDirty(true);
         return 0;
-    case EE_SCREENS_SEFM_OP_CAPTURED: return i[0] ? theForm->GetIsKeyboardCaptured() : theForm->GetIsMouseCaptured();
     case EE_SCREENS_SEFM_OP_EDGE_SCROLL: static_cast<EEAScroll*>(p[0])->Update(gMouse->mPosition); return 0;
     case EE_SCREENS_SEFM_OP_DRAW_FULL:
         return (int32_t) static_cast<UIFullBackground*>(p[0])->DrawBackground(GERectangle(f[0], f[1], f[2], f[3]));

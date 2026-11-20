@@ -708,6 +708,23 @@ pub unsafe fn seob(op: u32, p: [usize; 3], i: &mut [i32; 4]) -> Option<i32> {
             let n = combo_lines(combo);
             (0..n).find(|&k| !name.is_empty() && combo_line(combo, k as isize) == name).unwrap_or(n) as i32
         }
+        EE_SCREENS_SEOB_OP_CLASS_NAMES => {
+            // "any class", then the classes p1 holds (i0 of them, the first the "any" slot) by their names
+            direct::combo_call(combo, EeUiComboCall::DeleteAllEntries, 0, 0);
+            combo_append(combo, &string(EE_SCREENS_SEOB_IDS_ANY_CLASS as i32));
+            let types = p[1] as *const u32;
+            for k in 1..i[0].max(0) as usize {
+                // SAFETY: p1 holds i0 class numbers
+                let class = unsafe { *types.add(k) } as usize;
+                // SAFETY: the editor's reads hold the world (editor_world.rs's note)
+                let t = unsafe { ee_sim::world::WorldRead::begin() };
+                let name = ee_sim::world::ClassView::by_index(&t, class)
+                    .map_or(0, |c| ee_sim::world_field!(c.fields(), mNameStringID));
+                drop(t);
+                combo_append(combo, &string(name as i32));
+            }
+            0
+        }
         EE_SCREENS_SEOB_OP_TEXT if i[0] == EE_SCREENS_SEOB_TEXT_STRING || i[0] == EE_SCREENS_SEOB_TEXT_LINE => {
             let text = if i[0] == EE_SCREENS_SEOB_TEXT_STRING {
                 string(i[1])
@@ -748,6 +765,16 @@ pub fn sets(op: u32, p: [usize; 3], i: &[i32; 4]) -> Option<i32> {
         }
         EE_SCREENS_SETS_OP_GROUP => {
             group_enable(c, i[0], i[1] != 0);
+            0
+        }
+        EE_SCREENS_SETS_OP_CARET_END => {
+            // the caret after the edit box's last character (`UWideString::GetLength`: `PlatMbsLen`), line 0
+            let all = direct::edit_call(c, EeUiEditCall::AllText, 0, 0).unwrap_or(0);
+            // SAFETY: the edit box's text bytes (or NULL)
+            let text = direct::c_text(&unsafe { direct::c_bytes(all as *const c_void) });
+            // SAFETY: a NUL-terminated copy
+            let n = unsafe { ee_base::plat_core::string::PlatMbsLen(text.as_ptr()) };
+            direct::edit_call(c, EeUiEditCall::SetCaretLocation, n as c_ulong as isize, 0);
             0
         }
         EE_SCREENS_SETR_OP_SET_EVENT => {
@@ -923,6 +950,14 @@ pub unsafe fn sefm(op: u32, p: [usize; 3], i: &[i32; 4]) -> Option<i32> {
             if !c.is_null() {
                 direct::control_call(c, EeUiControlCall::FireTrigger, 0x3f0, 0);
             }
+            0
+        }
+        EE_SCREENS_SEFM_OP_CAPTURED => {
+            let call = if i[0] != 0 { EeUiFormCall::KeyboardCaptured } else { EeUiFormCall::MouseCaptured };
+            (direct::form_call(form, call, 0, 0) != 0) as i32
+        }
+        EE_SCREENS_SEFM_OP_HELP_LABEL => {
+            direct::form_call(form, EeUiFormCall::SetHelpTextLabel, p[0] as isize, 0);
             0
         }
         EE_SCREENS_SEFM_OP_COMBO_SELECT => {

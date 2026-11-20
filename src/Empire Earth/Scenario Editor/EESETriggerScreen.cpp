@@ -185,12 +185,6 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SETS_OP_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs ? 1 : 0;
-    case EE_SCREENS_SETS_OP_CARET_END: {
-        UWideString theText;
-        static_cast<UIEditBox*>(p[0])->GetAllText(theText);
-        static_cast<UIEditBox*>(p[0])->SetCaretLocation(theText.GetLength(), 0);
-        return 0;
-    }
     case EE_SCREENS_SETS_OP_REDRAW: gUIManager->RedrawAll(); return 0;
     case EE_SCREENS_SETS_OP_STORING: gB4C3220 = i[0] != 0; return 0;
     }
