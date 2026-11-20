@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESEInstructions.cpp (__FILE__ in the ctor's ESVERIFYs). 0x1705a2..0x172125: the text
-// import answer and button, the instructions tab and the ??_G of its events, with the functions of
-// EEABuild.cpp folded in. Unit flags: the exe module set.
+// import answer and button (now in EESEIAExport.cpp with the other import and export classes), the instructions tab
+// and the ??_G of its events, with the functions of EEABuild.cpp folded in. Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEARust.h"
@@ -36,51 +36,6 @@
 extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-
-// Posts the import action for the file the question carries (the import question's yes) and frees
-// the question's import info
-void EESEImportTextAnswer(UIForm* inInfo)
-{
-    EESEImportInfo* theInfo = reinterpret_cast<EESEImportInfo*>(inInfo);
-    gUserInterface->PostAction(new EESEIAImport(theInfo->mFile, theInfo->mValidate));
-    delete theInfo;
-}
-
-// Starts importing data\Scenarios\<name>.lcl: asks to confirm, then validates first; complains when no
-// name is entered or the file is missing; returns the open result
-long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    FSFileSpec theFile;
-    UWideString theName;
-    UWideString theMessage;
-    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    long theResult;
-    UIEditBox* theBox = static_cast<UIEditBox*>(inForm->GetControlById(kSEInstructionsLocalizationEditBox));
-    theResult = 0;
-    theName = theBox->GetText(0);
-    if (theName.GetLength() > 0) {
-        theName += ".lcl";
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        theFile.SetFile((const char*)theName);
-        theResult = theFile.FOpen("r");
-        if (theResult == 0) {
-            EESEImportInfo* theInfo = new EESEImportInfo;
-            theInfo->mFile = theFile;
-            theInfo->mValidate = true;
-            gResource->GetString(IDS_IMPORTING_FILE_REPLACES_ALL_TEXT, theMessage);
-            theManager->DisplayQuestion(theMessage, 1, reinterpret_cast<UIForm*>(theInfo), EESEImportTextAnswer, NULL);
-            theFile.Close();
-        } else {
-            gResource->GetString(IDS_FILE_NAME_NOT_FOUND, theMessage);
-            theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-        }
-    } else {
-        gResource->GetString(IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE, theMessage);
-        theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
-    }
-    return theResult;
-}
 
 // ---- the tab's host (editor_instructions.rs: the ops from 700)
 

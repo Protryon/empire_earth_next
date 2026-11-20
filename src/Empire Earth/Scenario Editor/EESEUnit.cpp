@@ -268,9 +268,6 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     void** theOut = static_cast<void**>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEUN_OP_SORT_EVENT: *theOut = static_cast<UIEvent*>(new EESEERust(kSEESortUnitList)); return 0;
-    case EE_SCREENS_SEUN_OP_SET_EVENT:
-        static_cast<UIControl*>(p[0])->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1]));
-        return 0;
     case EE_SCREENS_SEUN_OP_TYPE_BUTTON:
         SeunTypeButton(theOut, static_cast<EEUIFScenarioEditor*>(theForm), static_cast<UIEvent*>(p[2]), i, f);
         return 0;
@@ -432,12 +429,6 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         theComboForm->GetManager()->AddDirtyRectangle(theShell->mPanelRectangle, theComboForm);
         return 0;
     }
-    case EE_SCREENS_SEUN_OP_LIST_SELECTION: {
-        unsigned long theSelection;
-        return theList->GetCurrentSelection(theSelection) == kErrorOK ? (int32_t)theSelection : -1;
-    }
-    case EE_SCREENS_SEUN_OP_LIST_COUNT: return (int32_t)theList->GetLineCount();
-    case EE_SCREENS_SEUN_OP_LIST_SELECT: theList->ChangeSelectionIndex((unsigned long)i[0], true, false); return 0;
     case EE_SCREENS_SEUN_OP_LIST_TOP: theList->SetScrollBarCurrentRange(0); return 0;
     case EE_SCREENS_SEUN_OP_CANCEL_BUILD:
         if (i[0])

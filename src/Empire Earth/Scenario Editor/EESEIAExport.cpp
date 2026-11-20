@@ -39,8 +39,7 @@
 unsigned long gSETextVersion = 1;           // 0x4c2cb8 (.data = 1; ee/EESEIAExport.h)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-// 0x1705a2, in EESEInstructions.cpp (the import question's answer)
-void EESEImportTextAnswer(UIForm* inInfo);
+static void EESEImportTextAnswer(UIForm* inInfo);   // the import question's answer (below)
 
 // Writes the scenario's text to the chosen .lcl file under a {Version_1} header and reports success
 // (noting a changed file name) or a file error
@@ -165,4 +164,50 @@ void EESEIAImport::Virtual4()
         gResource->GetString(IDS_FILE_ERROR, theLine);
     this->mFile.Close();    // an empty file or a bad version left the file open (Close does nothing when it is not)
     gUIManager->DisplayMessage(theLine, 1, NULL, NULL, true);
+}
+
+// (0x1705a2.., once EESEInstructions.cpp's: the import question's answer and the import button's event)
+// Posts the import action for the file the question carries (the import question's yes) and frees
+// the question's import info
+static void EESEImportTextAnswer(UIForm* inInfo)
+{
+    EESEImportInfo* theInfo = reinterpret_cast<EESEImportInfo*>(inInfo);
+    gUserInterface->PostAction(new EESEIAImport(theInfo->mFile, theInfo->mValidate));
+    delete theInfo;
+}
+
+// Starts importing data\Scenarios\<name>.lcl: asks to confirm, then validates first; complains when no
+// name is entered or the file is missing; returns the open result
+long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    FSFileSpec theFile;
+    UWideString theName;
+    UWideString theMessage;
+    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
+    long theResult;
+    UIEditBox* theBox = static_cast<UIEditBox*>(inForm->GetControlById(kSEInstructionsLocalizationEditBox));
+    theResult = 0;
+    theName = theBox->GetText(0);
+    if (theName.GetLength() > 0) {
+        theName += ".lcl";
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
+        theFile.SetFile((const char*)theName);
+        theResult = theFile.FOpen("r");
+        if (theResult == 0) {
+            EESEImportInfo* theInfo = new EESEImportInfo;
+            theInfo->mFile = theFile;
+            theInfo->mValidate = true;
+            gResource->GetString(IDS_IMPORTING_FILE_REPLACES_ALL_TEXT, theMessage);
+            theManager->DisplayQuestion(theMessage, 1, reinterpret_cast<UIForm*>(theInfo), EESEImportTextAnswer, NULL);
+            theFile.Close();
+        } else {
+            gResource->GetString(IDS_FILE_NAME_NOT_FOUND, theMessage);
+            theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+        }
+    } else {
+        gResource->GetString(IDS_YOU_MUST_ENTER_FILE_NAME_BEFORE, theMessage);
+        theManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
+    }
+    return theResult;
 }

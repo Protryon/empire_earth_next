@@ -14,7 +14,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_sepl(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sets(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -91,10 +90,13 @@ impl SeplHost for Host {
         let p = p.map(|x| x as *mut c_void);
         unsafe {
             if op >= 400 {
+                if let Some(r) = crate::screens::editor_direct::sets(op, p.map(|x| x as usize), i) {
+                    return r;
+                }
                 sys::ee_screenscpp_sets(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
                 crate::screens::editor_world::host(op, i, f, |i, f| {
-                    sys::ee_screenscpp_sepl(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+                    crate::screens::editor_direct::sepl(op, p.as_ptr(), i, f)
                 })
             }
         }
