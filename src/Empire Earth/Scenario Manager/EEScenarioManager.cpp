@@ -508,6 +508,58 @@ void EESMDialogMessage::operator=(const EESMDialogMessage& inMessage)
     this->mIsCinematic = inMessage.mIsCinematic;
 }
 
+// Reads the dialog message (text, unit type, sound, duration, unit, scroll speed, and from version 0.200 on
+// the cinematic flag) from the saved scenario; returns the first read error
+long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    long theResult;
+    if (inMajorVersion <= 0 && inMinorVersion <= 199) {
+        if ((theResult = this->mText.Load(inFile)) != 0)
+            return theResult;
+        if ((theResult = inFile.Read(this->mUnitType)) != 0)
+            return theResult;
+        if ((theResult = this->mSound.Load(inFile)) != 0)
+            return theResult;
+        if ((theResult = inFile.Read(this->mDuration)) != 0)
+            return theResult;
+        if ((theResult = inFile.Read(this->mUnitID)) != 0)
+            return theResult;
+        return inFile.Read(this->mScrollSpeed);
+    }
+    if ((theResult = this->mText.Load(inFile)) != 0)
+        return theResult;
+    if ((theResult = inFile.Read(this->mUnitType)) != 0)
+        return theResult;
+    if ((theResult = this->mSound.Load(inFile)) != 0)
+        return theResult;
+    if ((theResult = inFile.Read(this->mDuration)) != 0)
+        return theResult;
+    if ((theResult = inFile.Read(this->mUnitID)) != 0)
+        return theResult;
+    if ((theResult = inFile.Read(this->mScrollSpeed)) != 0)
+        return theResult;
+    return inFile.Read(this->mIsCinematic);
+}
+
+// Writes the dialog message, cinematic flag included, to the saved scenario; returns the first write error
+long EESMDialogMessage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{
+    long theResult;
+    if ((theResult = this->mText.Save(outFile)) != 0)
+        return theResult;
+    if ((theResult = outFile.Write(this->mUnitType)) != 0)
+        return theResult;
+    if ((theResult = this->mSound.Save(outFile)) != 0)
+        return theResult;
+    if ((theResult = outFile.Write(this->mDuration)) != 0)
+        return theResult;
+    if ((theResult = outFile.Write(this->mUnitID)) != 0)
+        return theResult;
+    if ((theResult = outFile.Write(this->mScrollSpeed)) != 0)
+        return theResult;
+    return outFile.Write(this->mIsCinematic);
+}
+
 // ------------------------------------------------------------------------------------------------ the lists
 // The editor's list operations, the name lists and the id searches are ee_scenario lists.rs (with the index upkeep
 // each change makes: the Renumber/Remap broadcasts over every element, the elements' own and EERemapID); the vectors
