@@ -3,12 +3,23 @@
 // Its members are the Rust record EeScreensUserInterfaceFields (ee_screens ui_objects.rs; the UI cluster lane,
 // round 2), the class's only base, under their names; the constructor, the destructor and the posts are Rust's
 // (each post the original's `mThread->Post(id, p1, p2, true)`), the thread's loop and message switch too
-// (ui_game.rs, ui_thread.rs). EEUserInterface.cpp keeps the posts that build C++ objects, the handlers that call the
-// game's C++ and the hosts.
+// (ui_game.rs, ui_thread.rs). EEUserInterface.cpp keeps the handlers that call the game's C++ and the hosts. The
+// posts the rest of the game makes (the chat log's lines, the UI events, the loaded objects, the dialog messages) and
+// the graphics' resume are inline: out of line they put a dozen of the game's units in one dependency cycle with the
+// UI thread (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3"). Requires lle/LowLevelEngine.h (and
+// ee/RTSGraphics.h's includes).
 #ifndef EE_EEUSERINTERFACE_H
 #define EE_EEUSERINTERFACE_H
 
 #include "rust/game/screens.h"   // EeScreensUserInterfaceFields, the posts, the actions
+#include "rust/data/tables.h"    // ee_data_world_entry (AddChatLogEntry's display time)
+#include "ee/EEWorldConstants.h"
+#include "ee/EEUIEChatLogEvents.h"
+#include "ee/EESMDialogMessage.h"
+#include "ee/EEGraphics.h"
+#include "platform/PlatWindow.h"
+#include "platform/PlatTime.h"
+#include "lle/UIEvent.h"
 
 class EEAction;
 class EESMDialogMessage;
@@ -79,34 +90,73 @@ public:
     // 0x424 once until it is handled (nothing on a NULL object)
     void PostMessage424Once() { ee_screens_ui_post_icon_bar_once(this); }
 
-    // the posts that build C++ objects (EEUserInterface.cpp)
-    long PostEvent(UIEvent* inEvent, UIForm* inForm);   // 0x40e (a reference)
-    void ShowLoadedObject(UReferenceCounter* inObject);   // 0x40c (a reference)
-    void PostScreenShot(long inX, bool inFlag1, bool inFlag2);   // 0x41b (a new EEScreenCapture)
-    void PostDialogMessage(const EESMDialogMessage& inMessage);   // 0x422 (a copy)
-    void PostLoadSavedGame(const FSFileSpec& inSpec);   // 0x408 (a copy)
-    // 0x418: a new EEChatLogEntry; the second a white system line shown three times the usual time
+    // the posts that build C++ objects
+    long PostEvent(UIEvent* inEvent, UIForm* inForm)   // 0x40e (a reference)
+    {
+        inEvent->Reference();
+        return this->Post(0x40e, inEvent, inForm);
+    }
+    void ShowLoadedObject(UReferenceCounter* inObject)   // 0x40c (a reference)
+    {
+        inObject->Reference();
+        this->Post(0x40c, inObject, NULL);
+    }
+    void PostScreenShot(long inX, bool inFlag1, bool inFlag2);   // 0x41b (a new EEScreenCapture; EEUserInterface.cpp)
+    // 0x422 (a copy)
+    void PostDialogMessage(const EESMDialogMessage& inMessage) { this->Post(0x422, new EESMDialogMessage(inMessage), NULL); }
+    void PostLoadSavedGame(const FSFileSpec& inSpec);   // 0x408 (a copy; EEUserInterface.cpp)
+    // 0x418: a new EEChatLogEntry with a name, colour, text, display time and type
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                         unsigned long inTime, unsigned long inType);
-    long AddChatLogEntry(const UWideString& inText, long inY);
+                         unsigned long inTime, unsigned long inType)
+    {
+        EEChatLogEntry* theEntry = new EEChatLogEntry;
+        theEntry->mName = inName;
+        theEntry->mColor = inColor;
+        theEntry->mText = inText;
+        theEntry->mTime = inTime;
+        theEntry->mType = inType;
+        return this->Post(0x418, theEntry, NULL);
+    }
+    // a white system line to the chat log, shown three times the usual time (gWorldTable's
+    // kWorldChatLogDisplayTime: ee/EEDatabaseTables.h's GetLongValue)
+    long AddChatLogEntry(const UWideString& inText, long inY)
+    {
+        GEColor theColor(1.0f, 1.0f, 1.0f);
+        return this->AddChatLogEntry(theColor, " > ", inText,
+                                     ee_data_world_entry((uint32_t)kWorldChatLogDisplayTime).mLongValue * 3, 2);
+    }
 
     // the handlers that call the game's C++ (EEUserInterface.cpp)
-    static void HandleEvent(const PlatInputEvent& inEvent);   // the game window's events (ui_thread.rs)
+    // Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case):
+    // close, minimise and restore (muting while minimised), focus (the game minimises itself and suspends input
+    // while inactive), the Control/AltGr state, typed text and the input method's composition (shown by the edit
+    // box; the system draws its candidate list). The decisions and the original's statics are Rust's (ee_screens
+    // ui_thread.rs), over the host ee_screenscpp_ui_event. The window's cursor is hidden at creation
+    // (WM_SETCURSOR's SetCursor(NULL)), and the screen saver / Alt-Tab system commands need no handling.
+    static void HandleEvent(const PlatInputEvent& inEvent)
+    {
+        ee_screens_ui_event(inEvent.mType, inEvent.mKey.mVirtualKey, inEvent.mText.mText, inEvent.mText.mCursor,
+                            inEvent.mText.mLength);
+    }
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (message 0x41e)
     void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);
     void ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem);  // 0x276a38 (message 0x440)
     void OpenSelectServer();                // 0x27783c (message 0x441)
     void PauseGraphics();
-    void ResumeGraphics();
+    // Resumes the graphics thread and waits until it runs
+    void ResumeGraphics()
+    {
+        gGraphics->PostResume();
+        for (bool theStarted = gGraphics->mIsPaused; theStarted != false; theStarted = gGraphics->mIsPaused)
+            PlatSleep(1);
+    }
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
 };
 
 // 0x27fa40 (no arguments; returns a status): what EEUIEProcessTimerExpired's event does (provisional name)
 long EEProcessTimerExpired();
 
-bool EEPumpWindowEvent();   // TSThread::SetEventPump's pump: one window event per call (EEUserInterface.cpp)
-#ifdef _WIN32
-int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam);
-#endif
+// (EEPumpWindowEvent and EENativeMessageHook, the window's event pump and native message hook: Empire Earth.cpp,
+// which installs them)
 
 #endif

@@ -583,72 +583,13 @@ void EEUserInterface::PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     this->Post(0x41b, theCapture, (void*)inFlag1);
 }
 
-// Posts a scenario dialog message (message 0x422)
-void EEUserInterface::PostDialogMessage(const EESMDialogMessage& inMessage)
-{
-    this->Post(0x422, new EESMDialogMessage(inMessage), NULL);
-}
-
 // Posts loading a saved game file (message 0x408)
 void EEUserInterface::PostLoadSavedGame(const FSFileSpec& inSpec)
 {
     this->Post(0x408, new FSFileSpec(inSpec), NULL);
 }
 
-// Posts a UI event for a form (message 0x40e)
-long EEUserInterface::PostEvent(UIEvent* inEvent, UIForm* inForm)
-{
-    inEvent->Reference();
-    return this->Post(0x40e, inEvent, inForm);
-}
-
-// Posts showing a loaded object (message 0x40c)
-void EEUserInterface::ShowLoadedObject(UReferenceCounter* inObject)
-{
-    inObject->Reference();
-    this->Post(0x40c, inObject, NULL);
-}
-
-// Posts a chat log entry with a name, colour, text, display time and type (message 0x418)
-long EEUserInterface::AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                                      unsigned long inTime, unsigned long inType)
-{
-    EEChatLogEntry* theEntry = new EEChatLogEntry;
-    theEntry->mName = inName;
-    theEntry->mColor = inColor;
-    theEntry->mText = inText;
-    theEntry->mTime = inTime;
-    theEntry->mType = inType;
-    return this->Post(0x418, theEntry, NULL);
-}
-
-// Posts a white system line to the chat log, shown three times the usual time
-long EEUserInterface::AddChatLogEntry(const UWideString& inText, long inY)
-{
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    return this->AddChatLogEntry(theColor, " > ", inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2);
-}
-
-
-// Resumes the graphics thread and waits until it runs
-void EEUserInterface::ResumeGraphics()
-{
-    gGraphics->PostResume();
-    for (bool theStarted = gGraphics->mIsPaused; theStarted != false; theStarted = gGraphics->mIsPaused)
-        PlatSleep(1);
-}
-
-// Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case): close,
-// minimise and restore (muting while minimised), focus (the game minimises itself and suspends input while inactive),
-// the Control/AltGr state, typed text and the input method's composition (shown by the edit box; the system draws
-// its candidate list). The decisions and the original's statics are Rust's (ee_screens ui_thread.rs), over the host
-// below. The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)), and the screen saver / Alt-Tab
-// system commands need no handling.
-void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
-{
-    ee_screens_ui_event(inEvent.mType, inEvent.mKey.mVirtualKey, inEvent.mText.mText, inEvent.mText.mCursor,
-                        inEvent.mText.mLength);
-}
+// (the posts the game makes, ResumeGraphics and HandleEvent are inline: ee/EEUserInterface.h)
 
 // The window events' calls (EE_SCREENS_UI_EV_*): the globals' NULL tests, the lobby, the volumes, the input
 // devices, the mouse pointer's thread, the input method; inA is the event's text for the IME ops
@@ -717,45 +658,7 @@ extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t in
     return 0;
 }
 
-// Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call
-bool EEPumpWindowEvent()
-{
-    PlatInputEvent theEvent;
-    if (!PlatWindowPollEvent(&theEvent))
-        return false;
-    if (theEvent.mType == PLAT_EVENT_WAKE)   // the WON lobby's wake-up (PlatWindowWake) while it is not running
-        return true;
-    static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
-    if (sLog)
-        ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,
-                   (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
-                   theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
-                   gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
-    ISHandleEvent(theEvent);   // the Input System's keyboard and mouse (DirectInput's devices before)
-    EEUserInterface::HandleEvent(theEvent);
-    return true;
-}
-
-#ifdef _WIN32
-// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): the WON lobby's two messages,
-// handled as the window procedure did; nonzero drops the message. (CD audio's MCI notifications went to SECD, which
-// is gone: the port never opened a CD drive.)
-int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
-{
-    switch (inMessage) {
-    case 0x433:
-        PostMessageA((HWND)inWindow, 0x434, 0, 0);
-        if (gWonNet != NULL)
-            gWonNet->FnCFFDD(0);
-        return 1;
-    case 0x434:
-        if (gWonNet != NULL)
-            gWonNet->FnCFFF2();
-        return 1;
-    }
-    return 0;
-}
-#endif
+// (the window's event pump and native message hook: Empire Earth.cpp, which installs them)
 
 
 // the number of humans in the session (SetLoadProgress's test: ee_screens ui_objects_ffi.rs)

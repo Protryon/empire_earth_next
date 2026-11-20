@@ -1596,6 +1596,47 @@ static void EESimPreferences()
     gGamePreferences.mSettings.mWaitForVSync = false;
 }
 
+// (They were EEUserInterface.cpp's: tools/cpp_deps.py, PORT_LEARNINGS "Cycle cuts, round 3")
+// Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call
+static bool EEPumpWindowEvent()
+{
+    PlatInputEvent theEvent;
+    if (!PlatWindowPollEvent(&theEvent))
+        return false;
+    if (theEvent.mType == PLAT_EVENT_WAKE)   // the WON lobby's wake-up (PlatWindowWake) while it is not running
+        return true;
+    static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
+    if (sLog)
+        ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,
+                   (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
+                   theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
+                   gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
+    ISHandleEvent(theEvent);   // the Input System's keyboard and mouse (DirectInput's devices before)
+    EEUserInterface::HandleEvent(theEvent);
+    return true;
+}
+
+#ifdef _WIN32
+// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): the WON lobby's two messages,
+// handled as the window procedure did; nonzero drops the message. (CD audio's MCI notifications went to SECD, which
+// is gone: the port never opened a CD drive.)
+static int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
+{
+    switch (inMessage) {
+    case 0x433:
+        PostMessageA((HWND)inWindow, 0x434, 0, 0);
+        if (gWonNet != NULL)
+            gWonNet->FnCFFDD(0);
+        return 1;
+    case 0x434:
+        if (gWonNet != NULL)
+            gWonNet->FnCFFF2();
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 void EERustInit();   // EERust.cpp
 
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
