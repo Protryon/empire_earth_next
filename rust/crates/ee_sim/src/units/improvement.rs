@@ -101,10 +101,9 @@ fn bytes<H: ImprovementHost>(h: &mut H, op: i32, data: *mut i32) -> i32 {
 pub fn load<H: ImprovementHost>(h: &mut H, r: Record, major: u32, minor: u32) -> i32 {
     let mut old = [0i32; LEVELS];
     let old_save = major == 0 && minor <= 0xd8;
-    let result;
-    if old_save && minor > 0x17 && minor <= 0x6a {
+    let result = if old_save && minor > 0x17 && minor <= 0x6a {
         bytes(h, EE_UNITS_PLAYER_SAVE_READ_LEVELS, r.levels);
-        result = bytes(h, EE_UNITS_PLAYER_SAVE_READ_LEVELS, old.as_mut_ptr());
+        bytes(h, EE_UNITS_PLAYER_SAVE_READ_LEVELS, old.as_mut_ptr())
     } else {
         let mut first = bytes(h, EE_UNITS_PLAYER_SAVE_READ_LEVELS, r.levels);
         if !(old_save && minor <= 0xa0) && first == 0 {
@@ -114,8 +113,8 @@ pub fn load<H: ImprovementHost>(h: &mut H, r: Record, major: u32, minor: u32) ->
             r.set_total(io.i as c_long);
             r.set_total(0);
         }
-        result = first;
-    }
+        first
+    };
     for i in 0..LEVELS {
         if old_save && i == LEADERSHIP {
             r.set_level(i, 1);

@@ -121,7 +121,7 @@ fn old_saves_read_the_old_words_and_drop_leadership() {
     let mut words: Vec<i32> = vec![1; 16];
     words[LEADERSHIP] = 5;
     words[1] = 2;
-    m.file = words.iter().copied().chain(std::iter::repeat(9).take(16)).collect();
+    m.file = words.iter().copied().chain(std::iter::repeat_n(9, 16)).collect();
     let r = m.record();
     // 0x17 < minor <= 0x6a: the levels, then the 16 old words (that read's status); leadership back to 1
     assert_eq!(load(&mut *m, r, 0, 0x50), 0);
