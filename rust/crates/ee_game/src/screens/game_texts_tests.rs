@@ -104,17 +104,17 @@ fn the_cheats_and_buttons() {
 fn the_loads() {
     // the quick save not found: the message
     let mut f = Fake::default();
-    f.text("settings_last_save", b"QuickSave 1").answer("spec_new", &[8]).answer("open_save_game_file", &[2]);
+    f.text("last_quick_save", b"QuickSave 1").answer("spec_new", &[8]).answer("open_save_game_file", &[2]);
     f.out("open_save_game_file", 8);
     put(&mut f, FORM, EE_SCREENS_TEXT_MG_QUICK_LOAD, 0, b"none");
     assert_eq!(
         f.calls(),
-        "settings_last_save(false, out)\nspec_new()\nopen_save_game_file(\"QuickSave 1\", \"Saved Games\\\\\", out)\n\
+        "last_quick_save(out)\nspec_new()\nopen_save_game_file(\"QuickSave 1\", \"Saved Games\\\\\", out)\n\
          display_message(\"none\", true)\nspec_delete(8)"
     );
     // found: its file posted
     let mut f = Fake::default();
-    f.text("settings_last_save", b"Auto").out("open_save_game_file", 9);
+    f.text("last_auto_save", b"Auto").out("open_save_game_file", 9);
     put(&mut f, FORM, EE_SCREENS_TEXT_MG_QUICK_LOAD, 1, b"none");
     assert_eq!(f.log[3..], ["spec_set_file(9, \"Auto\")", "post_load_saved_game(9)", "spec_delete(9)"]);
     // the single player load

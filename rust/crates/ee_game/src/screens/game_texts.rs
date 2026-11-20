@@ -160,7 +160,7 @@ pub(crate) fn put<C: Cpp + ?Sized>(c: &mut C, form: usize, which: u32, arg: u32,
         }
         EE_SCREENS_TEXT_MG_QUICK_LOAD => {
             // the last quick save's (the auto save's when arg) load; the text shown when its file is not found
-            let name = out_text(|o| c.settings_last_save(arg != 0, o));
+            let name = if arg != 0 { out_text(|o| c.last_auto_save(o)) } else { out_text(|o| c.last_quick_save(o)) };
             let mut file = c.spec_new();
             if c.open_save_game_file(Text::of(&name), Text::of(b"Saved Games\\"), OutPtr::of(&mut file)) == 0 {
                 c.spec_set_file(file, Text::of(&name));

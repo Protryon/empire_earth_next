@@ -35,22 +35,25 @@ fn the_window_mode() {
     // no window: nothing
     let mut f = Fake::default();
     run(&mut f, EE_SCREENS_GAME_WINDOW_MODE, 0, 0, 0);
-    assert_eq!(f.calls(), "game_plat_window()");
+    assert_eq!(f.calls(), "game_window()");
     // full screen
     let mut f = Fake::default();
-    f.answer("game_plat_window", &[9]);
+    f.answer("game_window", &[8]).answer("game_window_os", &[9]);
     run(&mut f, EE_SCREENS_GAME_WINDOW_MODE, 0, 0, 0);
     assert_eq!(
         f.calls(),
-        "game_plat_window()\nsettings_window_mode()\nwindow_set_fixed_size(9, 0)\nwindow_set_fullscreen(9, 1)"
+        "game_window()\ngame_window_os(8)\nsettings_window_mode()\nwindow_set_fixed_size(9, 0)\nwindow_set_fullscreen(9, 1)"
     );
     // windowed: four fifths of the display, then fixed
     let mut f = Fake::default();
-    f.answer("game_plat_window", &[9]).answer("settings_window_mode", &[1]).answer("display_logical_size", &[1]);
+    f.answer("game_window", &[8])
+        .answer("game_window_os", &[9])
+        .answer("settings_window_mode", &[1])
+        .answer("display_logical_size", &[1]);
     f.out("display_logical_size", 1920).out("display_logical_size", 1080);
     run(&mut f, EE_SCREENS_GAME_WINDOW_MODE, 0, 0, 0);
     assert_eq!(
-        f.log[2..],
+        f.log[3..],
         [
             "window_set_fullscreen(9, 0)",
             "window_set_fixed_size(9, 0)",

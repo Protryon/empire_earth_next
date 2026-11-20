@@ -71,7 +71,7 @@ fn spec_file<C: Cpp + ?Sized>(c: &mut C, fill: impl FnOnce(&mut C, usize)) -> Ve
 const BACKDROP: u32 = 0xffff_fffe;
 
 /// A new map backdrop of `file` on the form at draw priority `priority`, opened between the form's background lock.
-fn new_backdrop<C: Cpp + ?Sized>(c: &mut C, form: usize, file: &[u8], priority: u32, load: bool) {
+pub(crate) fn new_backdrop<C: Cpp + ?Sized>(c: &mut C, form: usize, file: &[u8], priority: u32, load: bool) {
     let description = backdrop_description();
     c.form_lock_background(form);
     let map = c.map_background_new(BACKDROP, Text::of(file), &description as *const _ as usize, form, priority);
@@ -86,7 +86,7 @@ fn new_backdrop<C: Cpp + ?Sized>(c: &mut C, form: usize, file: &[u8], priority: 
 const NAME_COLOURS: [[f32; 3]; 4] = [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0, 0.0]];
 
 /// The case of `op` (its C++ arguments a..d), `None` for an op that is not here.
-pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32, cc: u32, _d: u32) -> Option<u32> {
+pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32, cc: u32, d: u32) -> Option<u32> {
     Some(match op {
         EE_SCREENS_OP_SLIDER_LABEL => {
             // the slider's range event on its label b (with string cc at 0.0)
@@ -121,7 +121,8 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
         }
         EE_SCREENS_GAME_WINDOW_MODE => {
             // the settings' window mode on the game window (the caller resizes the game)
-            let window = c.game_plat_window();
+            let game_window = c.game_window();
+            let window = if game_window != 0 { c.game_window_os(game_window) } else { 0 };
             if window == 0 {
                 return Some(0);
             }
@@ -403,7 +404,7 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
             c.save_main_game_form();
             0
         }
-        _ => return None,
+        _ => return crate::screens::game_calls_more::call(c, form, op, a, b, cc, d),
     })
 }
 
