@@ -189,87 +189,6 @@ struct EEPlayerEconScope {
     }
 };
 
-// Creates an off-map record with no unit, time or reason
-EEWUnitsOffMapInfo::EEWUnitsOffMapInfo()
-{
-    this->mUnit = NULL;
-    this->mTime = 0;
-    this->mReason = 0;
-}
-
-// Destroys the off-map record, releasing its unit
-EEWUnitsOffMapInfo::~EEWUnitsOffMapInfo()
-{
-    this->ReleaseUnit();
-}
-
-// Reads the off-map unit's ID, location, time and reason from the saved game; returns the first read error
-long EEWUnitsOffMapInfo::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    unsigned long theUnitID = (unsigned long)-1;
-    long theResult = inFile.Read(theUnitID);
-    this->mUnit = reinterpret_cast<RTSUnit*>(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mLocation.Load(inFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mReason);
-    return theResult;
-}
-
-// Releases the reference to the off-map unit and clears it
-void EEWUnitsOffMapInfo::ReleaseUnit()
-{
-    if (this->mUnit != NULL) {
-        this->mUnit->Dereference();
-        this->mUnit = NULL;
-    }
-}
-
-// Turns the loaded unit ID back into a referenced unit (NULL when it no longer exists); always succeeds
-long EEWUnitsOffMapInfo::RepairPointers(unsigned long inFirst, unsigned long inSecond)
-{
-    RTSUnit* theUnit = gWorld.GetUnit(USavedID(this->mUnit));
-    if (theUnit != NULL) {
-        this->mUnit = theUnit;
-        theUnit->Reference();
-    } else
-        this->mUnit = NULL;
-    return kErrorOK;
-}
-
-// Writes the off-map unit's ID (-1 for none), location, time and reason to the saved game;
-// returns the first write error
-long EEWUnitsOffMapInfo::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    unsigned long theUnitID = this->mUnit != NULL ? this->mUnit->GetUnitID() : (unsigned long)-1;
-    long theResult = outFile.Write(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mLocation.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mReason);
-    return theResult;
-}
-
-// Replaces the off-map unit with a new one, referencing it and releasing the old one
-void EEWUnitsOffMapInfo::SetUnit(RTSUnit* inUnit)
-{
-    if (inUnit == this->mUnit)
-        return;
-    this->ReleaseUnit();
-    if (inUnit != NULL) {
-        this->mUnit = inUnit;
-        inUnit->Reference();
-    }
-}
-
 // Creates a player with a name and ID: resets all state, binds its tech tree to it and creates
 // its wonder and construction-site lists
 EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
@@ -279,6 +198,7 @@ EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
     this->mSelectedViewedUnit = NULL;
     this->mQueued = ee_units_queued_new();
     this->mWonderState = ee_units_wonders_new();
+    this->mLists = ee_units_lists_new();
     this->Reset();
     this->mTechnologies->SetPlayerIndex(inPlayerID);
     this->mTechnologies->SetPlayer(this);
@@ -295,6 +215,7 @@ EEPlayer::EEPlayer()
     this->mSelectedViewedUnit = NULL;
     this->mQueued = ee_units_queued_new();
     this->mWonderState = ee_units_wonders_new();
+    this->mLists = ee_units_lists_new();
     this->Reset();
     this->mComputerPlayer = NULL;
     this->mHumanPlayer = NULL;
@@ -322,8 +243,6 @@ EEPlayer::~EEPlayer()
     this->mActiveGroup->Dereference();
     this->mSelectedGroup->Clear();
     this->mSelectedGroup->Dereference();
-    this->mL9B4->Clear();
-    this->mL9B4->Dereference();
     for (long theGroup = 0; theGroup < 20; theGroup++) {
         this->mGroups[theGroup]->Clear();
         this->mGroups[theGroup]->Dereference();
@@ -351,10 +270,9 @@ EEPlayer::~EEPlayer()
         delete this->mUnitClassUpgrades.begin()[theClass];
     this->mUnitClassUpgrades.clear();
     EEDeletePointers(this->mTowns);
-    this->mTownsByID.clear();
     this->ClearUnitsToRepatrol();
     EEDeletePointers(this->mHerds);
-    EEDeletePointers(this->mUnitsOffMap);
+    ee_units_off_map(this->mLists, 2, 0, 0, 0, 0);
     std::for_each(this->mPatrolGroups.begin(), this->mPatrolGroups.end(), EEPDereferencer());
     this->mPatrolGroups.clear();
     delete this->mWonders;
@@ -362,6 +280,7 @@ EEPlayer::~EEPlayer()
     this->UnloadPlayerEffects();
     ee_units_queued_free(this->mQueued);
     ee_units_wonders_free(this->mWonderState);
+    ee_units_lists_free(this->mLists);
 }
 
 // Destroys the civilization (members only)
@@ -378,6 +297,19 @@ static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
 static EEComplexUnit* EEPlayerUnitAt(int64_t inUnit)
 {
     return static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit));
+}
+
+// the player's lists' host (ee_units player_lists.rs): the units as RTSUnit addresses
+extern "C" uint64_t ee_units_lists_host(int32_t inOp, uint64_t inValue)
+{
+    RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inValue));
+    switch (inOp) {
+    case EE_UNITS_LISTS_HOST_REFERENCE: theUnit->Reference(); return 0;
+    case EE_UNITS_LISTS_HOST_DEREFERENCE: theUnit->Dereference(); return 0;
+    case EE_UNITS_LISTS_HOST_UNIT_ID: return theUnit->GetUnitID();
+    case EE_UNITS_LISTS_HOST_UNIT_BY_ID: return (uint64_t)reinterpret_cast<uintptr_t>(gWorld.GetUnit((unsigned long)inValue));
+    }
+    return 0;
 }
 
 // port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
@@ -628,10 +560,9 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
             theTown->SetSerial(gContinentManager.NewSerial());
             gContinentManager.AddArea(theTown);
             theResult = theTown->AddUnit(theNew);
-            if (theResult) {
-                thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theTown->mTownID, theTown));
+            if (theResult)
                 thePlayer->mTowns.push_back(theTown);
-            } else
+            else
                 delete theTown;
         } else {
             EEHerd* theHerd = new EEHerd(thePlayer, theNew->mUnitClass->mAnimalID, ++gWorld.mHerdIDCounter);
@@ -675,7 +606,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         std::vector<EETown*>::iterator theIterator = std::find(thePlayer->mTowns.begin(), thePlayer->mTowns.end(), theOld);
         if (theIterator == thePlayer->mTowns.end())
             return 0;
-        thePlayer->RemoveTownID(theOld->mTownID);
         thePlayer->mTowns.erase(theIterator);
         EEPPatrolGroup* theGroup = theOld->mPatrolGroup;
         if (theGroup != NULL) {
@@ -775,8 +705,7 @@ void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprov
 // Records a media item as loaded by the player (ignores NULL)
 void EEPlayer::AddLoadedMedia(EEMedia* inMedia)
 {
-    if (inMedia != NULL)
-        this->mLoadedMedia.push_back(inMedia);
+    ee_units_lists_add(this->mLists, EE_UNITS_LISTS_MEDIA, (uint64_t)(uintptr_t)inMedia);
 }
 
 // Starts every pending command group running, then adds the pending units as the base player does
@@ -883,10 +812,7 @@ void EEPlayer::AddUnitToRepatrol(EEComplexUnit* inUnit)
 {
     if (inUnit == NULL || inUnit->mPlayer != this)
         return;
-    if (std::find(this->mUnitsToRepatrol.begin(), this->mUnitsToRepatrol.end(), inUnit) == this->mUnitsToRepatrol.end()) {
-        this->mUnitsToRepatrol.push_back(inUnit);
-        inUnit->Reference();
-    }
+    ee_units_lists_add(this->mLists, EE_UNITS_LISTS_REPATROL, EEPlayerUnitArg(inUnit));
 }
 
 // (gNumPlayers 0x530e0c, which EECPAttackCommander.cpp and EECPAttackSubGroup.cpp also declare, is
@@ -902,14 +828,8 @@ void EEPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
 // Records a unit leaving the map with its tile and the current game time
 void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
 {
-    EEWUnitsOffMapInfo* theInfo = NULL;
-    if (inUnit == NULL)
-        return;
-    theInfo = new EEWUnitsOffMapInfo;
-    theInfo->SetUnit(inUnit);
-    theInfo->mLocation = EETileLocation(inUnit->mTileX, inUnit->mTileY);
-    theInfo->mTime = gPhysics != NULL ? gPhysics->mGameTime : 0;
-    this->mUnitsOffMap.push_back(theInfo);
+    if (inUnit != NULL)
+        ee_units_off_map(this->mLists, 0, EEPlayerUnitArg(inUnit), inUnit->mTileX, inUnit->mTileY, gPhysics != NULL ? gPhysics->mGameTime : 0);
 }
 
 // Puts an animal into a herd it may join (a new herd if none, its holder's herd or a random one if
@@ -922,11 +842,7 @@ bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
 // Adds a unit to the stranded list once, keeping a reference to it
 void EEPlayer::AddStrandedUnit(EEUnit* inUnit)
 {
-    std::vector<EEUnit*>::iterator theIterator = std::find(this->mStrandedUnits.begin(), this->mStrandedUnits.end(), inUnit);
-    if (theIterator == this->mStrandedUnits.end()) {
-        inUnit->Reference();
-        this->mStrandedUnits.push_back(inUnit);
-    }
+    ee_units_lists_add(this->mLists, EE_UNITS_LISTS_STRANDED, EEPlayerUnitArg(inUnit));
 }
 
 // Selects a unit into the active group or as the single viewed unit; returns false for a foreign unit
@@ -955,14 +871,6 @@ bool EEPlayer::TrySelectUnit(EEUnit* inUnit, bool inFlag)
 }
 
 // Town merge is defined after its existing patrol-goal include below.
-
-// Removes a town ID from the player's town lookup
-void EEPlayer::RemoveTownID(long inID)
-{
-    std::map<long, EETown*>::iterator theIterator = this->mTownsByID.find(inID);
-    if (theIterator != this->mTownsByID.end())
-        this->mTownsByID.erase(theIterator);
-}
 
 // (0x563659: EEUGPatrol::SetPatrolGroup, defined after ee/EEUGPatrol.h's include below)
 
@@ -1116,11 +1024,7 @@ void EEPlayer::ClearSavedGroup(long inGroup)
 // Releases every unit waiting to repatrol and empties the list
 void EEPlayer::ClearUnitsToRepatrol()
 {
-    for (long i = this->mUnitsToRepatrol.size() - 1; i >= 0; i--) {
-        if (this->mUnitsToRepatrol[i] != NULL)
-            this->mUnitsToRepatrol[i]->Dereference();
-    }
-    this->mUnitsToRepatrol.clear();
+    ee_units_lists_clear(this->mLists, EE_UNITS_LISTS_REPATROL, true);
 }
 
 // Handles a finished unit: registers wonders (telling the others when victory is on), counts vital
@@ -1430,16 +1334,7 @@ unsigned long EEPlayer::GetTeamIndex()
 // Returns the off-map record of a unit, or NULL
 EEWUnitsOffMapInfo* EEPlayer::GetOffMapInfo(EEComplexUnit* inUnit)
 {
-    EEWUnitsOffMapInfo* theResult = NULL;
-    if (inUnit != NULL) {
-        for (long i = this->mUnitsOffMap.size() - 1; i >= 0; i--) {
-            if (inUnit == this->mUnitsOffMap[i]->mUnit) {
-                theResult = this->mUnitsOffMap[i];
-                break;
-            }
-        }
-    }
-    return theResult;
+    return ee_units_off_map_info(this->mLists, EEPlayerUnitArg(inUnit));
 }
 
 // Returns the timer start time of a wonder by index
@@ -1493,7 +1388,6 @@ void EEPlayer::Reset()
 {
     this->mActiveGroup = new EESelectedGroup(this);
     this->mSelectedGroup = new EESelectedGroup(this);
-    this->mL9B4 = new EESelectedGroup(this);
     for (unsigned long i = 0; i < 20; i++)
         this->mGroups[i] = new EESavedGroup(this, i + 1);
     unsigned long theCount = this->mRunningGroups.size();
@@ -1562,14 +1456,15 @@ void EEPlayer::KillHerdUnits(EEHerd* inHerd, bool inKilled)
 // Kills every stranded unit, removes it from the player and empties the stranded list
 void EEPlayer::KillStrandedUnits()
 {
-    for (long i = this->mStrandedUnits.size() - 1; i >= 0; i--) {
-        if (this->mStrandedUnits[i] == NULL)
+    for (long i = (long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_STRANDED) - 1; i >= 0; i--) {
+        EEUnit* theUnit = static_cast<EEUnit*>(reinterpret_cast<RTSUnit*>(ee_units_lists_at(this->mLists, EE_UNITS_LISTS_STRANDED, i)));
+        if (theUnit == NULL)
             continue;
-        this->mStrandedUnits[i]->Kill(0, 0, 0);
-        this->KillUnit(this->mStrandedUnits[i], false);
-        this->mStrandedUnits[i]->Dereference();
+        theUnit->Kill(0, 0, 0);
+        this->KillUnit(theUnit, false);
+        theUnit->Dereference();
     }
-    this->mStrandedUnits.clear();
+    ee_units_lists_clear(this->mLists, EE_UNITS_LISTS_STRANDED, false);
 }
 
 // The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation)
@@ -1739,7 +1634,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     case EE_UNITS_PLAYER_SAVE_CIVFILE_LOAD:
         return thePlayer->mCivilizationFile.Load(theFile);
     case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH:
-        thePlayer->mConstructionSiteIDs.push_back((long)io->i);
+        ee_units_lists_add(thePlayer->mLists, EE_UNITS_LISTS_SITE_IDS, (uint64_t)(long)io->i);
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_HERDS_RESIZE:
         thePlayer->mHerds.resize((unsigned long)io->i, NULL);
@@ -1749,14 +1644,10 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mHerds[inIndex]->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_EVENTS_LOAD:
         return thePlayer->mEvents.Load(theMajor, theMinor, theFile);
-    case EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE:
-        thePlayer->mUnitsOffMap.resize((unsigned long)io->i, NULL);
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_OFFMAP_LOAD:
-        thePlayer->mUnitsOffMap[inIndex] = new EEWUnitsOffMapInfo;
-        return thePlayer->mUnitsOffMap[inIndex]->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE: return ee_units_off_map_file(thePlayer->mLists, 2, 0, &theFile, &EESaveFilePrimitive, io);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_LOAD: return ee_units_off_map_file(thePlayer->mLists, 3, inIndex, &theFile, &EESaveFilePrimitive, io);
     case EE_UNITS_PLAYER_SAVE_WONDER_PUSH:
-        thePlayer->mWonderIDs.push_back((long)io->i);
+        ee_units_lists_add(thePlayer->mLists, EE_UNITS_LISTS_WONDER_IDS, (uint64_t)(long)io->i);
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_WONDERS_CLEAR:
         thePlayer->mWonders->Clear();
@@ -1817,11 +1708,8 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mHerds[inIndex]->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_EVENTS_SAVE:
         return thePlayer->mEvents.Save(theMajor, theMinor, theFile);
-    case EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT:
-        io->i = (int64_t)thePlayer->mUnitsOffMap.size();
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE:
-        return thePlayer->mUnitsOffMap[inIndex]->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT: return ee_units_off_map_file(thePlayer->mLists, 0, 0, &theFile, &EESaveFilePrimitive, io);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE: return ee_units_off_map_file(thePlayer->mLists, 1, inIndex, &theFile, &EESaveFilePrimitive, io);
     case EE_UNITS_PLAYER_SAVE_WONDER_COUNT:
         io->i = (int64_t)thePlayer->mWonders->GetSize();
         return kErrorOK;
@@ -1840,7 +1728,7 @@ void EEPlayer::LoadAllClassMedia()
         EEUnitStats* theStats = this->mUnitClassUpgrades[i];
         if (theStats != NULL && theStats->GetMediaCount() > 0) {
             theStats->mUnitClass->LoadClassMedia();
-            this->mSoundLoadedClasses.push_back(this->mUnitClassUpgrades[i]->mUnitClass->mUnitType);
+            ee_units_lists_add(this->mLists, EE_UNITS_LISTS_SOUND_CLASSES, (uint64_t)this->mUnitClassUpgrades[i]->mUnitClass->mUnitType);
         }
     }
 }
@@ -1891,7 +1779,7 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
     case EE_UNITS_PLAYER_SAVE_UNIT_STANDIN:   // (a unit of no class of this kind: its id kept, the unit dropped)
         theUnit = theComplex ? EEComplexUnit::Create() : EEUnit::Create();
         theResult = theUnit->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
-        c.mPlayer->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
+        ee_units_lists_add(c.mPlayer->mLists, EE_UNITS_LISTS_LOADED_IDS, theUnit->GetUnitID());
         theUnit->RepairPointers(c.mMajorVersion, c.mMinorVersion);
         theUnit->Clear();
         theUnit->Dereference();
@@ -2020,10 +1908,9 @@ void EEPlayer::Clear()
     }
     this->mEvents.Clear(this);
     EEDeletePointers(this->mTowns);
-    this->mTownsByID.clear();
     EEDeletePointers(this->mHerds);
     this->ClearUnitsToRepatrol();
-    EEDeletePointers(this->mUnitsOffMap);
+    ee_units_off_map(this->mLists, 2, 0, 0, 0, 0);
     std::for_each(this->mPatrolGroups.begin(), this->mPatrolGroups.end(), EEPDereferencer());
     this->mPatrolGroups.clear();
     RTSPlayer::Clear();
@@ -2043,13 +1930,7 @@ void EEPlayer::RemoveAlly(EEPlayer* inPlayer)
 // Removes a media item from the player's loaded-media list; returns whether it was there
 bool EEPlayer::RemoveLoadedMedia(EEMedia* inMedia)
 {
-    std::vector<EEMedia*>::iterator theIterator = std::find(this->mLoadedMedia.begin(), this->mLoadedMedia.end(), inMedia);
-    bool theResult = false;
-    if (theIterator != this->mLoadedMedia.end()) {
-        this->mLoadedMedia.erase(theIterator);
-        theResult = true;
-    }
-    return theResult;
+    return ee_units_lists_remove(this->mLists, EE_UNITS_LISTS_MEDIA, (uint64_t)(uintptr_t)inMedia);
 }
 
 // Stops sharing the player's building sight with another player, refreshing every land building's sight
@@ -2128,16 +2009,7 @@ void EEPlayer::RemovingUnit(RTSUnit* inUnit)
 // Deletes the off-map record of a unit, if it has one
 void EEPlayer::RemoveOffMapUnit(RTSUnit* inUnit)
 {
-    if (inUnit == NULL)
-        return;
-    for (long i = this->mUnitsOffMap.size() - 1; i >= 0; i--) {
-        if (inUnit != this->mUnitsOffMap[i]->mUnit)
-            continue;
-        EEWUnitsOffMapInfo* theInfo = this->mUnitsOffMap[i];
-        this->mUnitsOffMap.erase(this->mUnitsOffMap.begin() + i);
-        delete theInfo;
-        break;
-    }
+    ee_units_off_map(this->mLists, 1, EEPlayerUnitArg(inUnit), 0, 0, 0);
 }
 
 // Removes a unit from the selection, or clears the viewed unit when that is the unit
@@ -2270,7 +2142,6 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         for (size_t m = 0; m < theContext.mMade.size(); m++) {
             theContext.mMade[m]->SetSerial(gContinentManager.NewSerial());
             gContinentManager.AddArea(theContext.mMade[m]);
-            thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theContext.mMade[m]->mTownID, theContext.mMade[m]));
             thePlayer->mTowns.push_back(theContext.mMade[m]);
         }
         theContext.mMade.clear();
@@ -2282,11 +2153,7 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         theTown->mNearWater = io->near_water != 0;
         theTown->mNearMapEdge = io->near_map_edge != 0;
         return 0;
-    case EE_UNITS_TOWN_REINDEX:
-        thePlayer->mTownsByID.clear();
-        for (size_t t = 0; t < thePlayer->mTowns.size(); t++)
-            if (thePlayer->mTowns[t] != NULL)
-                thePlayer->mTownsByID.insert(std::pair<long, EETown*>(thePlayer->mTowns[t]->mTownID, thePlayer->mTowns[t]));
+    case EE_UNITS_TOWN_REINDEX:   // (the towns by id: written, never read; gone)
         return 0;
     case EE_UNITS_TOWN_REORDER: {
         const int32_t* theSlots = reinterpret_cast<const int32_t*>(io->bytes);
@@ -2377,7 +2244,7 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         ee_units_pg_repair(this->mPatrolGroups[i]);
     for (long theAirport = 0; theAirport < 4; theAirport++)
         theResult = ee_units_atc_repair_pointers(mAirTraffic[theAirport]);
-    this->mLoadedUnitIDs.clear();
+    ee_units_lists_clear(this->mLists, EE_UNITS_LISTS_LOADED_IDS, false);
     // port (0.268): the towns as saved (EEMakeSavedTowns), else rebuilt from the buildings
     if (this->GetPlayerID() >= 1 && !EEMakeSavedTowns(this)) {
         // port (0.254 on, no format change): a building placed as a foundation joins its town when it is finished
@@ -2393,18 +2260,14 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     if (!this->mCivilization.GetNoPointsAdded() && this->mCivilization.GetAvailablePoints() != 0)
         theResult = EESetCivBuilderButtonBlinking(true);
     unsigned long j;
-    for (j = 0; j < this->mConstructionSiteIDs.size(); j++) {
-        RTSUnit* theUnit = gWorld.GetUnit(this->mConstructionSiteIDs[j]);
-        if (theUnit != NULL && theUnit->mTileNode != NULL)
-            this->mConstructionSites->Add(static_cast<EEUnit*>(theUnit)->mComplexUnit);
+    for (unsigned long theList = EE_UNITS_LISTS_SITE_IDS; theList <= EE_UNITS_LISTS_WONDER_IDS; theList++) {
+        for (j = 0; j < ee_units_lists_len(this->mLists, theList); j++) {
+            RTSUnit* theUnit = gWorld.GetUnit((long)ee_units_lists_at(this->mLists, theList, j));
+            if (theUnit != NULL && theUnit->mTileNode != NULL)
+                (theList == EE_UNITS_LISTS_SITE_IDS ? this->mConstructionSites : this->mWonders)->Add(static_cast<EEUnit*>(theUnit)->mComplexUnit);
+        }
+        ee_units_lists_clear(this->mLists, theList, false);
     }
-    this->mConstructionSiteIDs.clear();
-    for (j = 0; j < this->mWonderIDs.size(); j++) {
-        RTSUnit* theUnit = gWorld.GetUnit(this->mWonderIDs[j]);
-        if (theUnit != NULL && theUnit->mTileNode != NULL)
-            this->mWonders->Add(static_cast<EEUnit*>(theUnit)->mComplexUnit);
-    }
-    this->mWonderIDs.clear();
     this->RecountPopulation();
     if (theResult == kErrorOK)
         this->mActiveGroup->RepairPointers(inFirst, inSecond);
@@ -2432,16 +2295,8 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
             if (theUnit->GetTileX() == -10000)
                 this->AddOffMapUnit(theUnit);
-    } else {
-        for (long theInfo = this->mUnitsOffMap.size() - 1; theInfo >= 0; theInfo--) {
-            this->mUnitsOffMap[theInfo]->RepairPointers(inFirst, inSecond);
-            EEWUnitsOffMapInfo* theOffMap = this->mUnitsOffMap[theInfo];
-            if (theOffMap->mUnit == NULL) {
-                this->mUnitsOffMap.erase(this->mUnitsOffMap.begin() + theInfo);
-                delete theOffMap;
-            }
-        }
-    }
+    } else
+        ee_units_off_map(this->mLists, 3, 0, 0, 0, 0);
     this->RecountHeroesAndTeleporters();
     return theResult;
 }
@@ -2866,17 +2721,18 @@ void EEPlayer::SuggestRecomputeAllAreaEffects()
 // Unloads every media item the player loaded and empties the list
 void EEPlayer::UnloadAllMedia()
 {
-    for (long i = this->mLoadedMedia.size() - 1; i >= 0; i--)
-        this->mLoadedMedia[i]->UnloadMedia();
-    this->mLoadedMedia.clear();
+    for (long i = (long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_MEDIA) - 1; i >= 0; i--)
+        if (EEMedia* theMedia = reinterpret_cast<EEMedia*>(ee_units_lists_at(this->mLists, EE_UNITS_LISTS_MEDIA, i)))
+            theMedia->UnloadMedia();
+    ee_units_lists_clear(this->mLists, EE_UNITS_LISTS_MEDIA, false);
 }
 
 // Unloads the class media of every unit class recorded as loaded and empties the record
 void EEPlayer::UnloadAllClassMedia()
 {
-    for (unsigned long i = 0; i < this->mSoundLoadedClasses.size(); i++)
-        gUnitClassTable[this->mSoundLoadedClasses[i]]->UnloadClassMedia();
-    this->mSoundLoadedClasses.clear();
+    for (size_t i = 0; i < ee_units_lists_len(this->mLists, EE_UNITS_LISTS_SOUND_CLASSES); i++)
+        gUnitClassTable[(size_t)ee_units_lists_at(this->mLists, EE_UNITS_LISTS_SOUND_CLASSES, i)]->UnloadClassMedia();
+    ee_units_lists_clear(this->mLists, EE_UNITS_LISTS_SOUND_CLASSES, false);
 }
 
 // Unloads the command buttons of one unit class for the player, if the class index is valid
@@ -2937,8 +2793,7 @@ void EEPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 // Returns whether a unit ID is in the list of IDs loaded into discarded units
 bool EEPlayer::HasLoadedUnitID(unsigned long inUnitID)
 {
-    std::vector<unsigned long>::iterator theIterator = std::find(this->mLoadedUnitIDs.begin(), this->mLoadedUnitIDs.end(), inUnitID);
-    return theIterator != this->mLoadedUnitIDs.end();
+    return ee_units_lists_has(this->mLists, EE_UNITS_LISTS_LOADED_IDS, inUnitID);
 }
 
 // Clears the viewed unit and the selection
@@ -2960,18 +2815,19 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
 // Sends each enabled unit waiting to repatrol to the nearest point of its nearest town's patrol, then clears the list
 void EEPlayer::RestorePatrols()
 {
-    for (long i = this->mUnitsToRepatrol.size() - 1; i >= 0; i--) {
-        if (this->mUnitsToRepatrol[i]->mIsDisabled)
+    for (long i = (long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_REPATROL) - 1; i >= 0; i--) {
+        EEComplexUnit* theUnit = EEPlayerUnitAt((int64_t)ee_units_lists_at(this->mLists, EE_UNITS_LISTS_REPATROL, i));
+        if (theUnit->mIsDisabled)
             continue;
-        EETown* theTown = this->mUnitsToRepatrol[i]->FindNearestTown();
+        EETown* theTown = theUnit->FindNearestTown();
         if (theTown == NULL || theTown->mPatrolGroup == NULL)
             continue;
-        EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_nearest(theTown->mPatrolGroup, this->mUnitsToRepatrol[i]->mTileX, (*(this->mUnitsToRepatrol.begin() + i))->mTileY));
+        EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_nearest(theTown->mPatrolGroup, theUnit->mTileX, theUnit->mTileY));
         if (thePoint == NULL || thePoint->mPatrolGroup == NULL)
             continue;
         EEPPatrolGroup* thePatrol = thePoint->mPatrolGroup;
         EEActiveGroup* theGroup = new EEActiveGroup(this);
-        theGroup->Add(*(this->mUnitsToRepatrol.begin() + i));
+        theGroup->Add(theUnit);
         EEGroup* theBase = theGroup;
         this->mPendingGroups.push_back(theBase);
         theGroup->KeepMobileUnits();

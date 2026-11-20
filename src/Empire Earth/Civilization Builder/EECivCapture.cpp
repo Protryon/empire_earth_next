@@ -157,7 +157,7 @@ static void EECivCaptureApplyEndImpl(EECivCaptureApply* inCapture, bool inResult
     unsigned long theLevel = 0;
     gCivilizationManager.SplitAttribute(inCapture->mUpgrade, NULL, &theLevel);
     if (thePlayer != NULL && EECivilizationManager::IsPowerLevel(theLevel)) {
-        r.U32((unsigned int)thePlayer->mLoadedMedia.size());
+        r.U32((unsigned int)ee_units_lists_len(thePlayer->mLists, EE_UNITS_LISTS_MEDIA));
         for (long theID = kCivPowerFlamingArrows; theID <= kCivPowerJustInTimeManufacturing + 2; theID++)
             r.U32(gCivPowersManager.HasPower(thePlayer, theID) ? 1 : 0);
         EETechTree* theTree = thePlayer->GetTechTree();
