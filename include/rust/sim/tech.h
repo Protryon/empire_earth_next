@@ -3181,8 +3181,15 @@ void ee_tech_set_epoch_count(int32_t count);
 /// The epoch of a tech id ([`epoch_of`]).
 int32_t ee_tech_epoch_of(int32_t id);
 
-/// Forgets every node's epoch (a new tech tree file).
+/// Forgets every node's epoch and every epoch's title (a new tech tree file).
 void ee_tech_clear_node_epochs();
+
+/// Records gTechTree's epoch `epoch`'s title string (the file's record, `EETechTreeEpoch::Load`).
+void ee_tech_set_epoch_title(int32_t epoch, int32_t title);
+
+/// `EEEpochTitleID`: the epoch's title string ("Bronze Age"; epochs.yaml), else the epoch's default name; for the
+/// epoch count, the game options' "Random Epoch".
+int32_t ee_tech_epoch_title_id(int32_t epoch);
 
 /// Records the epoch block a node was loaded in (`EERegisterTechNode`).
 void ee_tech_register_node(int32_t id, int32_t epoch);

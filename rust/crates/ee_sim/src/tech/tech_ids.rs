@@ -15,6 +15,13 @@ pub const EE_TECH_DEFAULT_EPOCH_COUNT: i32 = 15;
 
 static EPOCH_COUNT: AtomicI32 = AtomicI32::new(EE_TECH_DEFAULT_EPOCH_COUNT);
 static NODE_EPOCHS: RwLock<BTreeMap<i32, i32>> = RwLock::new(BTreeMap::new());
+/// gTechTree's epochs' title strings by epoch (0: none; were read from `gTechTree.mEpochs[e].mTitleID`)
+static TITLES: RwLock<Vec<i32>> = RwLock::new(Vec::new());
+
+/// `IDS_EPOCH_NAME_FIRST` (ee/EEStringIDs.h): "Prehistoric Age", then one per epoch
+const IDS_EPOCH_NAME_FIRST: i32 = 30145;
+/// `IDS_RANDOM_EPOCH`: the game options' random start epoch
+const IDS_RANDOM_EPOCH: i32 = 30160;
 
 /// `EEEpochCount()`.
 pub fn epoch_count() -> i32 {
@@ -53,10 +60,42 @@ pub extern "C" fn ee_tech_epoch_of(id: i32) -> i32 {
     epoch_of(id)
 }
 
-/// Forgets every node's epoch (a new tech tree file).
+/// Forgets every node's epoch and every epoch's title (a new tech tree file).
 #[no_mangle]
 pub extern "C" fn ee_tech_clear_node_epochs() {
     NODE_EPOCHS.write().unwrap_or_else(|e| e.into_inner()).clear();
+    TITLES.write().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+/// Records gTechTree's epoch `epoch`'s title string (the file's record, `EETechTreeEpoch::Load`).
+#[no_mangle]
+pub extern "C" fn ee_tech_set_epoch_title(epoch: i32, title: i32) {
+    if epoch < 0 {
+        return;
+    }
+    let mut t = TITLES.write().unwrap_or_else(|e| e.into_inner());
+    if t.len() <= epoch as usize {
+        t.resize(epoch as usize + 1, 0);
+    }
+    t[epoch as usize] = title;
+}
+
+/// `EEEpochTitleID`: the epoch's title string ("Bronze Age"; epochs.yaml), else the epoch's default name; for the
+/// epoch count, the game options' "Random Epoch".
+#[no_mangle]
+pub extern "C" fn ee_tech_epoch_title_id(epoch: i32) -> i32 {
+    if is_epoch_id(epoch) {
+        let t = TITLES.read().unwrap_or_else(|e| e.into_inner());
+        if let Some(&title) = t.get(epoch as usize) {
+            if title != 0 {
+                return title;
+            }
+        }
+    }
+    if epoch == epoch_count() {
+        return IDS_RANDOM_EPOCH;
+    }
+    IDS_EPOCH_NAME_FIRST.wrapping_add(epoch)
 }
 
 /// Records the epoch block a node was loaded in (`EERegisterTechNode`).
@@ -80,10 +119,16 @@ mod tests {
         ee_tech_register_node(5080, 4);
         assert_eq!(ee_tech_epoch_of(1074), 0);
         assert_eq!(ee_tech_epoch_of(5080), 4);
+        assert_eq!(ee_tech_epoch_title_id(3), 30148);
+        ee_tech_set_epoch_title(3, 40003);
+        assert_eq!(ee_tech_epoch_title_id(3), 40003);
+        assert_eq!(ee_tech_epoch_title_id(15), 30160);
+        assert_eq!(ee_tech_epoch_title_id(16), 30161);
         ee_tech_set_epoch_count(16);
         assert!(is_epoch_id(15));
         ee_tech_set_epoch_count(EE_TECH_DEFAULT_EPOCH_COUNT);
         ee_tech_clear_node_epochs();
         assert_eq!(epoch_of(5080), -1);
+        assert_eq!(ee_tech_epoch_title_id(3), 30148);
     }
 }

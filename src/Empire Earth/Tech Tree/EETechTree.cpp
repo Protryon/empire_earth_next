@@ -186,15 +186,6 @@ EETechTreeNode* EEUnit::GetTechTreeNode()
     return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
 }
 
-long EEEpochTitleID(long inEpoch)
-{
-    if (EEIsEpochID(inEpoch) && inEpoch < gTechTree.mEpochs.size() && gTechTree.mEpochs[inEpoch].mTitleID != 0)
-        return gTechTree.mEpochs[inEpoch].mTitleID;
-    if (inEpoch == EEEpochCount())   // the game options' random start epoch
-        return IDS_RANDOM_EPOCH;
-    return IDS_EPOCH_NAME_FIRST + inEpoch;
-}
-
 // Creates an empty tech tree spanning every epoch
 EETechTree::EETechTree()
     : mPlayer(NULL)

@@ -81,13 +81,14 @@ enum EETechPrerequisiteFlag {
 // rust/sim/tech.h).
 extern "C" int32_t ee_tech_epoch_count(void);
 extern "C" int32_t ee_tech_epoch_of(int32_t id);
+extern "C" int32_t ee_tech_epoch_title_id(int32_t epoch);
 inline long EEEpochCount() { return ee_tech_epoch_count(); }
 inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < EEEpochCount(); }
 const long kTechFirstNodeID = 1000;
 // the epoch of a tech id (an epoch's own id; a node's block); -1: none
 inline long EETechTreeEpochOf(long inID) { return ee_tech_epoch_of((int32_t)inID); }
-long EEEpochTitleID(long inEpoch);          // the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for
-                                            // EEEpochCount(), the game options' "Random Epoch"
+// the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for EEEpochCount(), the game options' "Random Epoch"
+inline long EEEpochTitleID(long inEpoch) { return ee_tech_epoch_title_id((int32_t)inEpoch); }
 // one element per epoch (sized when it is made: after the database is loaded)
 template <class T> class EEEpochArray : public std::vector<T> {
 public:

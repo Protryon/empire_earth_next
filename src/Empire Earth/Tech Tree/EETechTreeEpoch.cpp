@@ -116,6 +116,8 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
         inFile.Read(this->mData->mUnitClasses[j]);
     // the record fields and the epoch ones, its counter at 0 and off (ee_tech nodes.rs fill_data, fill_epoch)
     ee_tech_fill_from_record(this, this->mData, &theRecord, true);
+    if (inTree == &gTechTree)   // the epochs' titles (EEEpochTitleID: ee_sim tech tech_ids.rs)
+        ee_tech_set_epoch_title((int32_t)this->mData->mID, (int32_t)this->mTitleID);
     this->mButton = EEButtonObject::Get(theRecord.mButton);
     if (theResult == kErrorOK) {
         for (unsigned long k = 0; k < theNodeCount; k++) {
