@@ -353,7 +353,8 @@ pub const EE_SCREENS_SEPX_ADD_CONTROL: u32 = 173;
 unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
     use crate::screens::editor_area::{EE_SCREENS_SEPL_FG_RED, EE_SCREENS_SEPL_NO_SELECT_COLOR};
     use crate::screens::editor_controls::{
-        EE_SCREENS_SEPL_COMBO_CONDITION, EE_SCREENS_SEPL_COMBO_EFFECT, EE_SCREENS_SEPL_LIST_EFFECT, EE_SCREENS_SEPL_NO_RANGE,
+        EE_SCREENS_SEPL_COMBO_CONDITION, EE_SCREENS_SEPL_COMBO_EFFECT, EE_SCREENS_SEPL_LIST_EFFECT,
+        EE_SCREENS_SEPL_NO_RANGE,
     };
     use crate::screens::editor_elevation::EE_SCREENS_SEPL_LABEL_BG;
     use crate::screens::editor_map::EE_SCREENS_SEPL_FG_WHITE;
@@ -419,8 +420,11 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
             h
         }
         EE_SCREENS_SEPL_COMBO => {
-            let op =
-                if c.extra[0] == EE_SCREENS_SEPL_LINES_EPOCHS { EE_SCREENS_SEPX_MAKE_COMBO_EPOCHS } else { EE_SCREENS_SEPX_MAKE_COMBO };
+            let op = if c.extra[0] == EE_SCREENS_SEPL_LINES_EPOCHS {
+                EE_SCREENS_SEPX_MAKE_COMBO_EPOCHS
+            } else {
+                EE_SCREENS_SEPX_MAKE_COMBO
+            };
             let h = made(x, op, rect, [0; 4]);
             if c.bg >= 0.0 {
                 set(x, h, EE_SCREENS_SEPX_BG, [0; 4], c.bg);
@@ -533,16 +537,24 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
         }
         EE_SCREENS_SEPL_LIST_COMBO => {
             let shell = match c.extra[0] {
-                EE_SCREENS_SEPL_COMBO_OBJECT => Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_OBJECT_COMBO, false)),
-                EE_SCREENS_SEPL_COMBO_PLAYER => Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_PLAYER_COMBO, false)),
-                EE_SCREENS_SEPL_COMBO_TRIGGER => Some((EE_SCREENS_SEPX_MAKE_TRIGGER_COMBO, EE_SCREENS_SK_TRIGGER_COMBO, true)),
+                EE_SCREENS_SEPL_COMBO_OBJECT => {
+                    Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_OBJECT_COMBO, false))
+                }
+                EE_SCREENS_SEPL_COMBO_PLAYER => {
+                    Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_PLAYER_COMBO, false))
+                }
+                EE_SCREENS_SEPL_COMBO_TRIGGER => {
+                    Some((EE_SCREENS_SEPX_MAKE_TRIGGER_COMBO, EE_SCREENS_SK_TRIGGER_COMBO, true))
+                }
                 EE_SCREENS_SEPL_COMBO_SCENARIO => {
                     Some((EE_SCREENS_SEPX_MAKE_SCENARIO_COMBO, EE_SCREENS_SK_SCENARIO_COMBO, true))
                 }
                 EE_SCREENS_SEPL_COMBO_CONDITION => {
                     Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_CONDITION_COMBO, false))
                 }
-                EE_SCREENS_SEPL_COMBO_EFFECT => Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_EFFECT_COMBO, false)),
+                EE_SCREENS_SEPL_COMBO_EFFECT => {
+                    Some((EE_SCREENS_SEPX_MAKE_SHELL_COMBO, EE_SCREENS_SK_EFFECT_COMBO, false))
+                }
                 _ => None,
             };
             let h = match shell {
@@ -585,7 +597,9 @@ unsafe fn make(x: &mut Sepx, p: [usize; 3]) -> i32 {
             let h = match c.extra[0] {
                 EE_SCREENS_SEPL_LIST_PLAIN => made(x, EE_SCREENS_SEPX_MAKE_LIST_PLAIN, rect, [0; 4]),
                 EE_SCREENS_SEPL_LIST_EFFECT => made(x, EE_SCREENS_SEPX_MAKE_LIST_EFFECT, rect, [0; 4]),
-                EE_SCREENS_SEPL_LIST_OBJECT => made(x, EE_SCREENS_SEPX_MAKE_LIST_OBJECT, sized(c.w, whole(c.h)), [0; 4]),
+                EE_SCREENS_SEPL_LIST_OBJECT => {
+                    made(x, EE_SCREENS_SEPX_MAKE_LIST_OBJECT, sized(c.w, whole(c.h)), [0; 4])
+                }
                 _ => made(x, EE_SCREENS_SEPX_MAKE_LIST_UNIT, rect, [0; 4]),
             };
             if c.bg >= 0.0 {

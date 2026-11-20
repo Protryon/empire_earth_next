@@ -184,7 +184,6 @@ pub mod editor_brush;
 pub mod editor_conditions;
 pub mod editor_controls;
 mod editor_direct;
-pub mod editor_sepl;
 pub mod editor_effects;
 #[cfg(not(test))]
 mod editor_effects_ffi;
@@ -217,6 +216,7 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_sepl;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;

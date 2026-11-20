@@ -544,7 +544,9 @@ pub fn area<W: CaptureWorld>(w: &mut W, area: u64, kind: i32, a: i32, b_: i32, x
         let v = r.rd(op, area, 0);
         r.i32(v as i32);
     }
-    for op in [EE_SCENARIO_CAP_AREA_LEFT, EE_SCENARIO_CAP_AREA_TOP, EE_SCENARIO_CAP_AREA_RIGHT, EE_SCENARIO_CAP_AREA_BOTTOM] {
+    for op in
+        [EE_SCENARIO_CAP_AREA_LEFT, EE_SCENARIO_CAP_AREA_TOP, EE_SCENARIO_CAP_AREA_RIGHT, EE_SCENARIO_CAP_AREA_BOTTOM]
+    {
         let v = r.w.readf(op, area);
         r.f32(v);
     }
@@ -565,8 +567,17 @@ fn effect_fields<W: CaptureWorld>(w: &mut W, effect: u64) -> EeScenarioEffectFie
 pub fn effect<W: CaptureWorld>(w: &mut W, effect: u64, cinematic: bool, seed: u32, version: EeScenarioCapVersion) {
     let e = effect_fields(w, effect);
     let mut r = R::new(w, b"SMEX");
-    for v in [e.mID, e.mType, e.mAIAction, e.mMediaAction, e.mPlayerAction, e.mObjectAction, e.mGameAction, e.mObject, e.mPlayer]
-    {
+    for v in [
+        e.mID,
+        e.mType,
+        e.mAIAction,
+        e.mMediaAction,
+        e.mPlayerAction,
+        e.mObjectAction,
+        e.mGameAction,
+        e.mObject,
+        e.mPlayer,
+    ] {
         r.u32(v as u32);
     }
     r.u32(b(cinematic));
@@ -815,7 +826,7 @@ pub fn saved<W: CaptureWorld>(w: &mut W, m: u64, kind: i32, result: i32, version
 /// SMUP: a trigger round (every 120th also SMSV, kind 1).
 pub fn update<W: CaptureWorld>(w: &mut W, m: u64, human: bool, version: EeScenarioCapVersion) {
     let rounds = ROUNDS.fetch_add(1, std::sync::atomic::Ordering::Relaxed).wrapping_add(1);
-    if rounds % 120 == 0 {
+    if rounds.is_multiple_of(120) {
         saved(w, m, 1, 0, version);
     }
     let mut r = R::new(w, b"SMUP");

@@ -123,8 +123,10 @@ pub fn end_cinematic<H: Round>(h: &mut H) {
         // SAFETY: the live trigger's record, no callback between the read and the write
         unsafe {
             if !(*f).mIsInCinematic && (*f).mConditionDuration > 0 {
-                (*f).mConditionStartTime =
-                    (*f).mConditionStartTime.wrapping_add(ftol(elapsed) as c_ulong).wrapping_add(CINEMATIC_DELAY as c_ulong);
+                (*f).mConditionStartTime = (*f)
+                    .mConditionStartTime
+                    .wrapping_add(ftol(elapsed) as c_ulong)
+                    .wrapping_add(CINEMATIC_DELAY as c_ulong);
             }
         }
     }
@@ -199,7 +201,8 @@ pub fn start_cinematic<H: Round>(h: &mut H) {
     h.fields(|f| f.mSavedCameraMode = mode);
     let zoom = f32::from_bits(h.op(EE_SCENARIO_ROUND_CAMERA_ZOOM, 0, 0, 0.0) as u32);
     h.fields(|f| f.mSavedZoom = zoom);
-    for op in [EE_SCENARIO_ROUND_CAMERA_RESET_PATH, EE_SCENARIO_ROUND_CAMERA_CLEAR_B, EE_SCENARIO_ROUND_CAMERA_CLEAR_A] {
+    for op in [EE_SCENARIO_ROUND_CAMERA_RESET_PATH, EE_SCENARIO_ROUND_CAMERA_CLEAR_B, EE_SCENARIO_ROUND_CAMERA_CLEAR_A]
+    {
         h.op(op, 0, 0, 0.0);
     }
     h.op(EE_SCENARIO_ROUND_FORM_UI_STATE, 0x11, 0, 0.0);

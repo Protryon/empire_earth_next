@@ -62,13 +62,21 @@ fn the_end_delays_the_other_triggers_and_restores_the_camera() {
     l.answers.insert((EE_SCENARIO_ROUND_IN_CINEMATIC, 0), 1);
     l.triggers = vec![
         EeScenarioTriggerFields { mConditionDuration: 5, mConditionStartTime: 100, ..Default::default() },
-        EeScenarioTriggerFields { mConditionDuration: 5, mConditionStartTime: 100, mIsInCinematic: true, ..Default::default() },
+        EeScenarioTriggerFields {
+            mConditionDuration: 5,
+            mConditionStartTime: 100,
+            mIsInCinematic: true,
+            ..Default::default()
+        },
         EeScenarioTriggerFields { mConditionDuration: 0, mConditionStartTime: 100, ..Default::default() },
     ];
     l.q.add(0, 9_000, false);
     l.q.add(1, 9_000, true);
     end_cinematic(&mut l);
-    assert_eq!(l.triggers.iter().map(|t| t.mConditionStartTime).collect::<Vec<_>>(), vec![100 + 8_500 + 3_000, 100, 100]);
+    assert_eq!(
+        l.triggers.iter().map(|t| t.mConditionStartTime).collect::<Vec<_>>(),
+        vec![100 + 8_500 + 3_000, 100, 100]
+    );
     assert!(l.f.mIsEndingCinematic);
     assert_eq!(l.f.mCinematicStartTime, 0.0);
     assert!(l.ops.contains(&(EE_SCENARIO_ROUND_CAMERA_SET_MODE, 2, 0)));

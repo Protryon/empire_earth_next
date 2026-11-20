@@ -533,7 +533,8 @@ pub fn compose(cpp: &mut dyn FnMut(u32, [i64; 6]) -> i64, op: u32, a: [i64; 6]) 
         EE_SCENARIO_WORLD_LOAD_GOAL => {
             let kind = if a[0] == 0 { GOAL_LOAD_GARRISON } else { GOAL_LOAD_TRANSPORT };
             if unit(&mut w, a[1], EE_SCENARIO_UV_HAS_GOAL) != 0 && w(EE_SCENARIO_WX_GOAL_KIND, &[a[1]]) == kind {
-                let cast = if a[0] == 0 { EE_SCENARIO_WX_GOAL_CAST_GARRISON } else { EE_SCENARIO_WX_GOAL_CAST_TRANSPORT };
+                let cast =
+                    if a[0] == 0 { EE_SCENARIO_WX_GOAL_CAST_GARRISON } else { EE_SCENARIO_WX_GOAL_CAST_TRANSPORT };
                 w(cast, &[a[1]]);
                 w(EE_SCENARIO_WX_GOAL_ADD_LOAD, &[]);
                 return Some(0);
@@ -1085,7 +1086,8 @@ pub fn create_unit(cpp: &mut dyn FnMut(u32, [i64; 6]) -> i64, player: i64, unit_
         v[..args.len()].copy_from_slice(args);
         cpp(op, v)
     };
-    let class = if create { w(EE_SCENARIO_WC_CLASS, &[unit_type]) } else { w(EE_SCENARIO_WC_OBJECT_UNIT_CLASS, &[index]) };
+    let class =
+        if create { w(EE_SCENARIO_WC_CLASS, &[unit_type]) } else { w(EE_SCENARIO_WC_OBJECT_UNIT_CLASS, &[index]) };
     if w(EE_SCENARIO_WC_FIND_PLACEMENT, &[unit_type]) == 0 {
         return;
     }
@@ -1135,7 +1137,6 @@ pub fn create_unit(cpp: &mut dyn FnMut(u32, [i64; 6]) -> i64, player: i64, unit_
         w(EE_SCENARIO_WC_SOUND_PLAY, &[unit]);
     }
 }
-
 
 /// A stance's group of one unit: made, the unit added, pending on its player, kept mobile.
 fn stance_group(w: &mut dyn FnMut(u32, &[i64]) -> i64, id: i64) {

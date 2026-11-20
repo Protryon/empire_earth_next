@@ -122,7 +122,12 @@ fn a_kill_holds_the_unit_and_removes_it_from_its_player_when_it_left_the_map() {
     let (_, seen) = run(EE_SCENARIO_WORLD_KILL, [2, 1, 0, 0, 0, 0], &[]);
     assert_eq!(
         ops(&seen),
-        vec![EE_SCENARIO_WX_HOLD, EE_SCENARIO_WX_HELD_KILL, EE_SCENARIO_WX_HELD_ON_NODE, EE_SCENARIO_WX_HELD_PLAYER_KILL]
+        vec![
+            EE_SCENARIO_WX_HOLD,
+            EE_SCENARIO_WX_HELD_KILL,
+            EE_SCENARIO_WX_HELD_ON_NODE,
+            EE_SCENARIO_WX_HELD_PLAYER_KILL
+        ]
     );
     let (_, seen) = run(EE_SCENARIO_WORLD_KILL, [2, 1, 0, 0, 0, 0], &[(EE_SCENARIO_WX_HELD_ON_NODE, 1)]);
     assert_eq!(seen.len(), 3);
@@ -172,9 +177,17 @@ fn the_placed_effect_point_is_the_tile_centre_on_the_ground_or_the_water() {
 
 #[test]
 fn the_graphic_effect_kinds_answer_their_flags() {
-    let weather = run(EE_SCENARIO_WORLD_GFX_BEGIN, [1, 0, 0, 0, 0, 0], &[(EE_SCENARIO_WX_GFX_GET, 1), (EE_SCENARIO_WX_GFX_KIND, 0x3d)]);
+    let weather = run(
+        EE_SCENARIO_WORLD_GFX_BEGIN,
+        [1, 0, 0, 0, 0, 0],
+        &[(EE_SCENARIO_WX_GFX_GET, 1), (EE_SCENARIO_WX_GFX_KIND, 0x3d)],
+    );
     assert_eq!(weather.0, Some(EE_SCENARIO_GFX_WEATHER));
-    let pair = run(EE_SCENARIO_WORLD_GFX_BEGIN, [1, 0, 0, 0, 0, 0], &[(EE_SCENARIO_WX_GFX_GET, 1), (EE_SCENARIO_WX_GFX_KIND, 0x21)]);
+    let pair = run(
+        EE_SCENARIO_WORLD_GFX_BEGIN,
+        [1, 0, 0, 0, 0, 0],
+        &[(EE_SCENARIO_WX_GFX_GET, 1), (EE_SCENARIO_WX_GFX_KIND, 0x21)],
+    );
     assert_eq!(pair.0, Some(EE_SCENARIO_GFX_PAIR));
     let none = run(EE_SCENARIO_WORLD_GFX_BEGIN, [1, 0, 0, 0, 0, 0], &[]);
     assert_eq!(none.0, Some(-1));
@@ -229,10 +242,7 @@ fn a_tech_add_of_an_epoch_raises_the_range_and_makes_it_available() {
         [2, 0, 0, 0, 0, 0],
         &[(EE_SCENARIO_WX_EFFECT_TECH, 3), (EE_SCENARIO_WX_EPOCH_COUNT, 15), (EE_SCENARIO_WX_TREE_END_EPOCH, 1)],
     );
-    assert_eq!(
-        ops(&seen)[3..],
-        [EE_SCENARIO_WX_TREE_RESET_RANGE, EE_SCENARIO_WX_TECH_MAKE_AVAILABLE]
-    );
+    assert_eq!(ops(&seen)[3..], [EE_SCENARIO_WX_TREE_RESET_RANGE, EE_SCENARIO_WX_TECH_MAKE_AVAILABLE]);
     let (_, seen) = run(
         EE_SCENARIO_WORLD_TECH_ADD,
         [2, 0, 0, 0, 0, 0],

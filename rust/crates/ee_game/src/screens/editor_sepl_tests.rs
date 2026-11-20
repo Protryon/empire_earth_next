@@ -6,7 +6,10 @@ use super::*;
 
 /// The statements run (op, p0, i0..i3) over a table of answers by op (0 otherwise); a making statement answers the
 /// handle 0x1_0000_0002.
-fn run(op: u32, p: [usize; 3], i: [i32; 4], answers: &[(u32, i32)]) -> (Option<i32>, [i32; 4], Vec<(u32, usize, [i32; 4])>) {
+/// A statement as the tests see it: its op, p0 and integers.
+type Seen = (u32, usize, [i32; 4]);
+
+fn run(op: u32, p: [usize; 3], i: [i32; 4], answers: &[(u32, i32)]) -> (Option<i32>, [i32; 4], Vec<Seen>) {
     let table: HashMap<u32, i32> = answers.iter().copied().collect();
     let mut seen = Vec::new();
     let mut x = |op: u32, p: [usize; 3], a: &mut [i32; 4], f: &mut [f32; 4]| {
@@ -32,7 +35,7 @@ fn run(op: u32, p: [usize; 3], i: [i32; 4], answers: &[(u32, i32)]) -> (Option<i
     (r, i, seen)
 }
 
-fn ops(seen: &[(u32, usize, [i32; 4])]) -> Vec<u32> {
+fn ops(seen: &[Seen]) -> Vec<u32> {
     seen.iter().map(|s| s.0).collect()
 }
 
@@ -62,7 +65,8 @@ fn a_player_value_is_set_then_read_back() {
 
 #[test]
 fn the_display_epoch_event_goes_on_both_triggers_and_is_released() {
-    let (_, _, seen) = run(EE_SCREENS_SEPL_OP_EVENT, [5, 0, 0], [0x3e9, EE_SCREENS_SEPL_EVENT_DISPLAY_EPOCH, 0, 0], &[]);
+    let (_, _, seen) =
+        run(EE_SCREENS_SEPL_OP_EVENT, [5, 0, 0], [0x3e9, EE_SCREENS_SEPL_EVENT_DISPLAY_EPOCH, 0, 0], &[]);
     assert_eq!(
         ops(&seen),
         vec![
@@ -91,11 +95,21 @@ fn the_tech_types_sort_by_class() {
         EE_SCREENS_SEPL_OP_TECH_TYPES,
         [0; 3],
         [0; 4],
-        &[(EE_SCREENS_SEPX_TT_COUNT, 2), (EE_SCREENS_SEPX_TT_CLASS, 4), (EE_SCREENS_SEPX_TT_CLASS_EXISTS, 1), (EE_SCREENS_SEPX_TT_LAND_BUILDING, 1)],
+        &[
+            (EE_SCREENS_SEPX_TT_COUNT, 2),
+            (EE_SCREENS_SEPX_TT_CLASS, 4),
+            (EE_SCREENS_SEPX_TT_CLASS_EXISTS, 1),
+            (EE_SCREENS_SEPX_TT_LAND_BUILDING, 1),
+        ],
     );
     let pushes: Vec<[i32; 4]> = seen.iter().filter(|s| s.0 == EE_SCREENS_SEPX_TT_PUSH).map(|s| s.2).collect();
     assert_eq!(pushes, vec![[0, TT_BUILDINGS, 0, 0], [1, TT_BUILDINGS, 0, 0]]);
-    let (_, _, seen) = run(EE_SCREENS_SEPL_OP_TECH_TYPES, [0; 3], [0; 4], &[(EE_SCREENS_SEPX_TT_COUNT, 1), (EE_SCREENS_SEPX_TT_CLASS, -1)]);
+    let (_, _, seen) = run(
+        EE_SCREENS_SEPL_OP_TECH_TYPES,
+        [0; 3],
+        [0; 4],
+        &[(EE_SCREENS_SEPX_TT_COUNT, 1), (EE_SCREENS_SEPX_TT_CLASS, -1)],
+    );
     assert!(!ops(&seen).contains(&EE_SCREENS_SEPX_TT_CLASS_EXISTS));
     assert_eq!(seen.last().unwrap().2, [0, TT_TECHNOLOGIES, 0, 0]);
 }
@@ -121,7 +135,11 @@ fn the_unit_limits_come_back_in_the_integers() {
         EE_SCREENS_SEPL_OP_UNIT_LIMIT_RULES,
         [0; 3],
         [0; 4],
-        &[(EE_SCREENS_SEPX_UNIT_LIMIT_MIN, 1), (EE_SCREENS_SEPX_UNIT_LIMIT_MAX, 9), (EE_SCREENS_SEPX_UNIT_LIMIT_DEFAULT, 5)],
+        &[
+            (EE_SCREENS_SEPX_UNIT_LIMIT_MIN, 1),
+            (EE_SCREENS_SEPX_UNIT_LIMIT_MAX, 9),
+            (EE_SCREENS_SEPX_UNIT_LIMIT_DEFAULT, 5),
+        ],
     );
     assert_eq!(i[..3], [1, 9, 5]);
 }

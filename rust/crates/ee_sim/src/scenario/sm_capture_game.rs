@@ -3,11 +3,15 @@
 //! test binary (sm_capture.rs's tests use a table world).
 
 #![cfg(not(test))]
+// c_long is 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
 
 use std::ffi::{c_char, c_void};
 use std::os::raw::{c_long, c_ulong};
 
-use crate::scenario::sm_capture::{self, CaptureWorld, EeScenarioCapObjectBefore, EeScenarioCapTriggerBefore, EeScenarioCapVersion};
+use crate::scenario::sm_capture::{
+    self, CaptureWorld, EeScenarioCapObjectBefore, EeScenarioCapTriggerBefore, EeScenarioCapVersion,
+};
 
 extern "C" {
     /// One read (`EE_SCENARIO_CAP_*`; EEScenarioCapture.cpp).
@@ -88,7 +92,13 @@ pub unsafe extern "C" fn ee_scenario_cap_object_end(
 
 /// SMCP (`players` null or a `std::vector<long>*`).
 #[no_mangle]
-pub extern "C" fn ee_scenario_cap_players(kind: c_long, single: bool, result: c_long, players: *const c_void, seed: u32) {
+pub extern "C" fn ee_scenario_cap_players(
+    kind: c_long,
+    single: bool,
+    result: c_long,
+    players: *const c_void,
+    seed: u32,
+) {
     sm_capture::players(&mut Game, kind as i32, single, result as i32, h(players), seed);
 }
 
@@ -108,7 +118,12 @@ pub extern "C" fn ee_scenario_cap_area(
 
 /// SMEX and SMEW (`effect` an `EESMEffect*`; `version` the save version, major in the high 32 bits).
 #[no_mangle]
-pub extern "C" fn ee_scenario_cap_effect(effect: *const c_void, cinematic: bool, seed: u32, version: EeScenarioCapVersion) {
+pub extern "C" fn ee_scenario_cap_effect(
+    effect: *const c_void,
+    cinematic: bool,
+    seed: u32,
+    version: EeScenarioCapVersion,
+) {
     sm_capture::effect(&mut Game, h(effect), cinematic, seed, version);
 }
 
@@ -120,7 +135,12 @@ pub extern "C" fn ee_scenario_cap_effect_world(effect: *const c_void, version: E
 
 /// SMSV (`manager` the `EEScenarioManager*`).
 #[no_mangle]
-pub extern "C" fn ee_scenario_cap_saved(manager: *const c_void, kind: c_long, result: c_long, version: EeScenarioCapVersion) {
+pub extern "C" fn ee_scenario_cap_saved(
+    manager: *const c_void,
+    kind: c_long,
+    result: c_long,
+    version: EeScenarioCapVersion,
+) {
     sm_capture::saved(&mut Game, h(manager), kind as i32, result as i32, version);
 }
 
