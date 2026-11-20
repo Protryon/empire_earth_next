@@ -207,11 +207,23 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         return 0;
     case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
     case EE_UNITS_GROUP_OP_PLAYER_GROUPS: {
-        std::vector<EEGroup*>& theList = inC == 0 ? thePlayer->mRunningGroups : thePlayer->mPendingGroups;
+        std::vector<EEGroup*>& theList = inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups;
         for (size_t i = 0; i < theList.size(); i++)
             ee_units_group_push(io->out, (int64_t)(uintptr_t)theList[i], 0, NULL);
         return 0;
     }
+    case EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR:
+        (inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups).clear();
+        return 0;
+    case EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE: {
+        std::vector<EEGroup*>& theList = inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups;
+        std::vector<EEGroup*>::iterator it = std::find(theList.begin(), theList.end(), reinterpret_cast<EEGroup*>(static_cast<uintptr_t>(inB)));
+        if (it != theList.end())
+            theList.erase(it);
+        return 0;
+    }
+    case EE_UNITS_GROUP_OP_PLAYER_SELECTION:
+        return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
     case EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH: {
         EEGroup* theGroup = static_cast<EEGroup*>(reinterpret_cast<EeUnitsGroup*>(static_cast<uintptr_t>(inB)));
         (inC == 0 ? thePlayer->mRunningGroups : inC == 1 ? thePlayer->mPendingGroups : thePlayer->mFinishedGroups).push_back(theGroup);

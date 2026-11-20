@@ -134,7 +134,7 @@ pub const EE_UNITS_GROUP_OP_POST_SELECTION: i32 = 29;
 pub const EE_UNITS_GROUP_OP_POST_SAVED_GROUP: i32 = 30;
 /// player `a`'s `mGroups[c]` (0 past them)
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUP: i32 = 31;
-/// player `a`'s running (c 0) or pending (1) groups pushed
+/// player `a`'s running (c 0), pending (1) or finished (2) groups pushed
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS: i32 = 32;
 /// group `b` pushed onto player `a`'s running (c 0), pending (1) or finished (2) groups
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH: i32 = 33;
@@ -152,6 +152,12 @@ pub const EE_UNITS_GROUP_OP_LOAD_PATH: i32 = 38;
 pub const EE_UNITS_GROUP_OP_AWAIT_PATH: i32 = 39;
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 pub const EE_UNITS_GROUP_OP_AFTER_LOAD: i32 = 40;
+/// player `a`'s running (c 0), pending (1) or finished (2) groups cleared
+pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR: i32 = 41;
+/// group `b`'s first entry in player `a`'s list `c` erased
+pub const EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE: i32 = 42;
+/// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
+pub const EE_UNITS_GROUP_OP_PLAYER_SELECTION: i32 = 43;
 
 extern "C" {
     fn ee_units_group_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsGroupIo) -> i64;
@@ -381,6 +387,15 @@ impl GroupHost for GameGroups {
             .into_iter()
             .map(|(g, _, _)| g as u64)
             .collect()
+    }
+    fn player_groups_clear(&mut self, player: u64, list: u32) {
+        self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR, player, 0, list as i64, 0);
+    }
+    fn player_groups_erase(&mut self, player: u64, list: u32, group: u64) {
+        self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE, player, group, list as i64, 0);
+    }
+    fn player_selection(&mut self, player: u64, which: u32) -> u64 {
+        self.op(EE_UNITS_GROUP_OP_PLAYER_SELECTION, player, 0, which as i64, 0) as u64
     }
     fn player_groups_push(&mut self, player: u64, list: u32, group: u64) {
         self.op(EE_UNITS_GROUP_OP_PLAYER_GROUPS_PUSH, player, group, list as i64, 0);
@@ -750,6 +765,25 @@ pub unsafe extern "C" fn ee_units_group_tell(g: *mut EeUnitsGroup, unit: *mut c_
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_group_active_of(player: *mut c_void, unit: *mut c_void) -> *mut EeUnitsGroup {
     go::active_group_of(&mut GameGroups, player as u64, unit as u64) as usize as *mut EeUnitsGroup
+}
+
+/// The player's groups (`op`): 0 the running groups emptied, released and cleared (`~EEPlayer`, `Reset`, `Clear`), 1
+/// `~EEPlayer`'s other groups released, 2 `Reset`'s and `Clear`'s selection and hot-key groups emptied, 3
+/// `RemovalsDone`'s, 4 the tick's validation.
+///
+/// # Safety
+/// `player` a live player whose groups are live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_groups_player(player: *mut c_void, op: i32) {
+    let (h, p) = (&mut GameGroups, player as u64);
+    match op {
+        0 => go::release_running(h, p),
+        1 => go::release_others(h, p),
+        2 => go::clear_selections(h, p),
+        3 => go::removals_done(h, p),
+        4 => go::validate_player(h, p),
+        _ => {}
+    }
 }
 
 /// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).

@@ -809,7 +809,7 @@ public:
     void EnableCamouflagePower();          // 0x16c548: civilization powers, original this/no args
     void ResetWonderTimers(EEPlayer* inPlayer);  // 0x16c1e1 (both players' mWonders units: mCloaked = the time)
     void NoticeForeignUnit(EEUnit* inUnit);  // 0x16442b (mCombatState = 1 for a unit of a player other than 0)
-    EEGroup* GetActiveGroupOf(EEComplexUnit* inUnit);  // 0x164b4f (the group of mRunningGroups, else mPendingGroups, holding inUnit)
+    EEGroup* GetActiveGroupOf(EEComplexUnit* inUnit) { return static_cast<EEGroup*>(ee_units_group_active_of(this, inUnit)); }  // 0x164b4f (the group of mRunningGroups, else mPendingGroups, holding inUnit)
     long GetCitizenPassability();           // 0x1650a3 (flags 1/2/4/8 from unit class 0x20's upgrade +0x160)
     EEAIArea* GetNearestArea(const EETileCoordinate& inTile, bool inSameContinent);  // 0x164781 (ret 8; EECPResourceManager::FindResourceTarget takes its slot +0x18) (provisional name)
     long GetTotalPopulation(bool inFirst, bool inSecond);  // 0x1651e0 (mPopulationCount plus the units' AddedToParent: mPendingUnits, then those in a 0x1d container)

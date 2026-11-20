@@ -210,26 +210,9 @@ EEPlayer::EEPlayer()
 // towns, herds, off-map records, patrol groups and wonder/construction-site lists
 EEPlayer::~EEPlayer()
 {
-    unsigned long theCount = this->mRunningGroups.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++) {
-        this->mRunningGroups[i]->Clear();
-        this->mRunningGroups[i]->Dereference();
-    }
+    ee_units_groups_player(this, 0);   // the running groups (ee_units group_obj.rs release_running)
     this->mEvents.Clear(NULL);
-    theCount = this->mFinishedGroups.size();
-    for (i = 0; i < theCount; i++) {
-        this->mFinishedGroups[i]->Clear();
-        this->mFinishedGroups[i]->Dereference();
-    }
-    this->mActiveGroup->Clear();
-    this->mActiveGroup->Dereference();
-    this->mSelectedGroup->Clear();
-    this->mSelectedGroup->Dereference();
-    for (long theGroup = 0; theGroup < 20; theGroup++) {
-        this->mGroups[theGroup]->Clear();
-        this->mGroups[theGroup]->Dereference();
-    }
+    ee_units_groups_player(this, 1);   // the finished groups, the selections, the hot-key groups
     UReferenceContainer<EEComplexUnit*>* theContainer = this->mConstructionSites;
     theContainer->Clear();
     theContainer->mItems.clear();
@@ -1139,27 +1122,6 @@ EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// Returns the running, or else pending, command group holding a unit; NULL when none
-EEGroup* EEPlayer::GetActiveGroupOf(EEComplexUnit* inUnit)
-{
-    EEGroup* theResult = NULL;
-    for (long i = this->mRunningGroups.size() - 1; i >= 0; i--) {
-        if (this->mRunningGroups[i]->Contains(inUnit)) {
-            theResult = this->mRunningGroups[i];
-            break;
-        }
-    }
-    if (theResult != NULL)
-        return theResult;
-    for (long j = this->mPendingGroups.size() - 1; j >= 0; j--) {
-        if (this->mPendingGroups[j]->Contains(inUnit)) {
-            theResult = this->mPendingGroups[j];
-            break;
-        }
-    }
-    return theResult;
-}
-
 // Returns whether the player can afford to repair a number of a unit's hit points (cost relative to its maximum)
 bool EEPlayer::CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue)
 {
@@ -1373,15 +1335,8 @@ void EEPlayer::Reset()
     this->mSelectedGroup = EESelectedGroup::New(this);
     for (unsigned long i = 0; i < 20; i++)
         this->mGroups[i] = EESavedGroup::New(this, i + 1);
-    unsigned long theCount = this->mRunningGroups.size();
-    for (unsigned long j = 0; j < theCount; j++) {
-        this->mRunningGroups[j]->Clear();
-        this->mRunningGroups[j]->Dereference();
-    }
-    this->mRunningGroups.clear();
-    this->mActiveGroup->Clear();
-    for (unsigned long k = 0; k < 20; k++)
-        this->mGroups[k]->Clear();
+    ee_units_groups_player(this, 0);   // the running groups released (ee_units group_obj.rs)
+    ee_units_groups_player(this, 2);   // the active selection and the hot-key groups emptied
     if (this->mViewedUnit != NULL) {
         this->mViewedUnit->Dereference();
         this->mViewedUnit = NULL;
@@ -1857,15 +1812,8 @@ void EEPlayer::RestartTowns()
 void EEPlayer::Clear()
 {
     gDoppelgangerManager.UnregisterPlayer(this);
-    unsigned long theCount = this->mRunningGroups.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        this->mRunningGroups[i]->Clear();
-        this->mRunningGroups[i]->Dereference();
-    }
-    this->mRunningGroups.clear();
-    this->mActiveGroup->Clear();
-    for (long j = 0; j < 20; j++)
-        this->mGroups[j]->Clear();
+    ee_units_groups_player(this, 0);   // the running groups released (ee_units group_obj.rs)
+    ee_units_groups_player(this, 2);   // the active selection and the hot-key groups emptied
     if (this->mViewedUnit != NULL) {
         this->mViewedUnit->Dereference();
         this->mViewedUnit = NULL;
@@ -1906,26 +1854,7 @@ void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
 // Finishes running groups left without units, then releases and drops every finished group
 void EEPlayer::RemovalsDone()
 {
-    EEGroup* theGroup;
-    unsigned long theCount = this->mRunningGroups.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        theGroup = this->mRunningGroups[i];
-        if (theGroup->GetNumUnits() == 0 && std::find(this->mFinishedGroups.begin(), this->mFinishedGroups.end(), theGroup) == this->mFinishedGroups.end()) {
-            // Virtual04 copies these entries from mPendingGroups; these are EEActiveGroup objects.
-            static_cast<EEActiveGroup*>(theGroup)->Finish();
-        }
-    }
-    theCount = this->mFinishedGroups.size();
-    for (unsigned long j = 0; j < theCount; j++) {
-        this->mFinishedGroups[j]->Clear();
-        this->mFinishedGroups[j]->Dereference();
-        std::vector<EEGroup*>::iterator theIterator = std::find(this->mRunningGroups.begin(), this->mRunningGroups.end(), this->mFinishedGroups[j]);
-        if (theIterator != this->mRunningGroups.end()) {
-            (*theIterator)->Dereference();
-            this->mRunningGroups.erase(theIterator);
-        }
-    }
-    this->mFinishedGroups.clear();
+    ee_units_groups_player(this, 3);   // ee_units group_obj.rs removals_done
 }
 
 // Cancels and refunds a queued improvement (inFlag: never the running one) (ee_units player.rs)
@@ -2831,12 +2760,7 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
             thePlayer->UpdateSelection(NULL, true);
         if (thePlayer->mSelectedViewedUnit != NULL && thePlayer->mSelectedViewedUnit->mReferenceCount == 1)
             thePlayer->SetSelectedViewedUnit(NULL);
-        thePlayer->mActiveGroup->Validate();
-        thePlayer->mSelectedGroup->Validate();
-        for (long theGroup = 0; theGroup < 20; theGroup++)
-            thePlayer->mGroups[theGroup]->Validate();
-        for (unsigned long i = 0, theCount = thePlayer->GetNumRunningGroups(); i < theCount; i++)
-            thePlayer->mRunningGroups[i]->Validate();
+        ee_units_groups_player(thePlayer, 4);   // the groups' validation (ee_units group_obj.rs validate_player)
         return 0;
     case EE_UNITS_PLAYER_TICK_HERD_COUNT:
         return (int32_t)thePlayer->mHerds.size();

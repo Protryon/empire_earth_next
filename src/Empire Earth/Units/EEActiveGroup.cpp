@@ -220,12 +220,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return theUnit->CanAttackClass((EEUnitClass*)(uintptr_t)inB);
     case EE_UNITS_AG_HAS_ACTION:
         return ((EEUnitClass*)(uintptr_t)inA)->FindAction((long)inC) != NULL;
-    case EE_UNITS_AG_ANGLE: {
-        GE3DPoint theFrom(io->p[0], io->p[1], io->p[2]);
-        GE3DPoint theTo(io->q[0], io->q[1], io->q[2]);
-        io->f = ee_units_uu_angle(1, 0, 0, (const float(*)[3])&theFrom.mX, (const float(*)[3])&theTo.mX);
-        return 0;
-    }
     case EE_UNITS_AG_PASSABLE:
         return ((EEUnit*)(uintptr_t)inA)->IsPassableBy((EEComplexUnit*)(uintptr_t)inB);
     case EE_UNITS_AG_SEEN_BY:
@@ -235,12 +229,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_CAN_CAST:
         return theUnit->GetPower() >= ((EECalamityClass*)(uintptr_t)inB)->GetCost()
             && ((EETechTreeNode*)(uintptr_t)inC)->Contains(theUnit->mUnitClass->mUnitType);
-    case EE_UNITS_AG_REFERENCE:
-        theUnit->Reference();
-        return 0;
-    case EE_UNITS_AG_DEREFERENCE:
-        theUnit->Dereference();
-        return 0;
     case EE_UNITS_AG_RECT_CLOSEST: {
         U2DRectangle<float> theBounds;
         theBounds.mTop = io->p[0];
@@ -252,19 +240,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         io->p[1] = theClosest.mY;
         return 0;
     }
-    case EE_UNITS_AG_CLONE:
-        return EEObj(theGoal->Clone());
-    case EE_UNITS_AG_DELETE:
-        delete theGoal;
-        return 0;
-    case EE_UNITS_AG_LOCATION_FIELDS:
-        io->a = theGoal->GetB1C();
-        io->b = theGoal->GetIsForcedMove();
-        io->c = theGoal->GetShouldFace();
-        io->f = theGoal->GetYaw();
-        return 0;
-    case EE_UNITS_AG_GOAL_B1C:
-        return theGoal->GetB1C();
     case EE_UNITS_AG_GOAL_LOCATION: {
         GE3DPoint theLocation;
         theGoal->GetGoalLocation(theLocation);
@@ -276,43 +251,6 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewLocation(&theLocation, (io->a & 1) != 0, (io->a & 2) != 0,
             (io->a & 4) != 0, io->f, (io->a & 8) != 0, (unsigned char)io->b)));
     }
-    case EE_UNITS_AG_NEW_UNLOAD:
-        return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewUnloadTransport(theUnit, (long)inC, (long)inD, true)));
-    case EE_UNITS_AG_CAN_UNLOAD_DEST:
-        return theGoal->CanUnloadAtDestination();
-    case EE_UNITS_AG_UNLOAD_DEST: {
-        long theX = 0, theY = 0;
-        theGoal->GetUnloadTransport(&theX, &theY);
-        io->a = theX;
-        io->b = theY;
-        return 0;
-    }
-    case EE_UNITS_AG_SET_B1D:
-        theGoal->mB1D = true;
-        return 0;
-    case EE_UNITS_AG_CLEAR_PATH_STATE:
-        theGoal->SetGroupPathState(0);
-        return 0;
-    case EE_UNITS_AG_SET_GATHER_STORAGE:
-        theGoal->SetGatherStorage((EEUnit*)(uintptr_t)inB);
-        return 0;
-    case EE_UNITS_AG_ATTACK_TARGET:
-        return EEObj(theGoal->GetAttackTarget());
-    case EE_UNITS_AG_IS_CONVERT_ATTACK:
-        return theGoal->IsConvertAttack();
-    case EE_UNITS_AG_CLEAR_ATTACKER:
-        theGoal->SetAttacker(NULL);
-        return 0;
-    case EE_UNITS_AG_HEAL_TARGET:
-        return EEObj(theGoal->GetHealTarget());
-    case EE_UNITS_AG_SUITS:
-        return theGoal->Suits((EEUnit*)(uintptr_t)inB);
-    case EE_UNITS_AG_SET_EXPLORE_TILE:
-        theGoal->SetExploreTile((long)inC, (long)inD);
-        return 0;
-    case EE_UNITS_AG_NEW_ATTACK_UNIT:
-        return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit((EEComplexUnit*)(uintptr_t)inA, (EEUnit*)(uintptr_t)inB,
-                                                                       true, false)));
     }
     return 0;
 }

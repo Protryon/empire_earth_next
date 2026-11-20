@@ -460,9 +460,6 @@ constexpr static const int32_t EE_UNITS_AG_COMMAND_TYPE = 41;
 /// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
 constexpr static const int32_t EE_UNITS_AG_NUM_CARGO = 42;
 
-/// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
-constexpr static const int32_t EE_UNITS_AG_ANGLE = 44;
-
 /// the units of tile (c, d) (pushed)
 constexpr static const int32_t EE_UNITS_AG_TILE_UNITS = 45;
 
@@ -478,12 +475,6 @@ constexpr static const int32_t EE_UNITS_AG_PRIEST_CONVERT = 48;
 /// unit `a`'s `GetPower() >= calamity b's GetCost() && node c's Contains(its type)`
 constexpr static const int32_t EE_UNITS_AG_CAN_CAST = 49;
 
-/// unit `a`'s `Reference()`
-constexpr static const int32_t EE_UNITS_AG_REFERENCE = 50;
-
-/// unit `a`'s `Dereference()`
-constexpr static const int32_t EE_UNITS_AG_DEREFERENCE = 51;
-
 /// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
 /// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
 constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
@@ -491,39 +482,11 @@ constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
 /// goal `a`'s `mKind` (-1: none)
 constexpr static const int32_t EE_UNITS_AG_GOAL_KIND = 60;
 
-/// goal `a`'s `Clone()`
-constexpr static const int32_t EE_UNITS_AG_CLONE = 61;
-
-/// `delete` goal `a`
-constexpr static const int32_t EE_UNITS_AG_DELETE = 62;
-
-/// location goal `a`'s `GetB1C()` (`io.a`), `GetIsForcedMove()` (`io.b`), `GetShouldFace()` (`io.c`), `GetYaw()`
-/// (`io.f`)
-constexpr static const int32_t EE_UNITS_AG_LOCATION_FIELDS = 63;
-
-/// goal `a`'s `GetB1C()`
-constexpr static const int32_t EE_UNITS_AG_GOAL_B1C = 64;
-
 /// goal `a`'s `GetGoalLocation(io.p)`
 constexpr static const int32_t EE_UNITS_AG_GOAL_LOCATION = 65;
 
 /// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
 constexpr static const int32_t EE_UNITS_AG_NEW_LOCATION = 66;
-
-/// `EEUGRust::NewUnloadTransport(a, c, d, true)`
-constexpr static const int32_t EE_UNITS_AG_NEW_UNLOAD = 67;
-
-/// unload goal `a`'s `CanUnloadAtDestination()`
-constexpr static const int32_t EE_UNITS_AG_CAN_UNLOAD_DEST = 68;
-
-/// unload goal `a`'s `GetUnloadTransport(&io.a, &io.b)`
-constexpr static const int32_t EE_UNITS_AG_UNLOAD_DEST = 69;
-
-/// goal `a`'s `mB1D = true`
-constexpr static const int32_t EE_UNITS_AG_SET_B1D = 70;
-
-/// location goal `a`'s `SetGroupPathState(0)`
-constexpr static const int32_t EE_UNITS_AG_CLEAR_PATH_STATE = 71;
 
 /// gather goal `a`'s `GetGatherStorage()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
@@ -531,32 +494,8 @@ constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
 /// gather goal `a`'s `GetGatherResource()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_RESOURCE = 73;
 
-/// gather goal `a`'s `SetGatherStorage(b)`
-constexpr static const int32_t EE_UNITS_AG_SET_GATHER_STORAGE = 74;
-
-/// attack goal `a`'s `GetAttackTarget()`
-constexpr static const int32_t EE_UNITS_AG_ATTACK_TARGET = 75;
-
-/// attack goal `a`'s `IsConvertAttack()`
-constexpr static const int32_t EE_UNITS_AG_IS_CONVERT_ATTACK = 76;
-
-/// attack goal `a`'s `SetAttacker(NULL)`
-constexpr static const int32_t EE_UNITS_AG_CLEAR_ATTACKER = 77;
-
-/// heal goal `a`'s `GetHealTarget()`
-constexpr static const int32_t EE_UNITS_AG_HEAL_TARGET = 78;
-
-/// heal goal `a`'s `Suits(b)`
-constexpr static const int32_t EE_UNITS_AG_SUITS = 79;
-
-/// explore goal `a`'s `SetExploreTile(c, d)`
-constexpr static const int32_t EE_UNITS_AG_SET_EXPLORE_TILE = 80;
-
 /// patrol goal `a`'s `GetPatrolTarget()`, else `GetPatrolGroup()->GetLast()`
 constexpr static const int32_t EE_UNITS_AG_PATROL_POINT = 81;
-
-/// `EEUGRust::NewAttackUnit(a, b, true, false)`
-constexpr static const int32_t EE_UNITS_AG_NEW_ATTACK_UNIT = 82;
 
 /// `kActionIdle` (the idle action's id).
 constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
@@ -1441,7 +1380,7 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_POST_SAVED_GROUP = 30;
 /// player `a`'s `mGroups[c]` (0 past them)
 constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUP = 31;
 
-/// player `a`'s running (c 0) or pending (1) groups pushed
+/// player `a`'s running (c 0), pending (1) or finished (2) groups pushed
 constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS = 32;
 
 /// group `b` pushed onto player `a`'s running (c 0), pending (1) or finished (2) groups
@@ -1467,6 +1406,15 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_AWAIT_PATH = 39;
 
 /// `EEAfterLoad(...)` calling `ee_units_group_restore_saved(a)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AFTER_LOAD = 40;
+
+/// player `a`'s running (c 0), pending (1) or finished (2) groups cleared
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS_CLEAR = 41;
+
+/// group `b`'s first entry in player `a`'s list `c` erased
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUPS_ERASE = 42;
+
+/// player `a`'s `mActiveGroup` (c 0) or `mSelectedGroup` (1)
+constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_SELECTION = 43;
 
 /// A group's kind (`mGroupKind`): the class the original made.
 constexpr static const uint8_t EE_UNITS_GROUP_KIND_SAVED = 0;
@@ -6454,6 +6402,15 @@ void ee_units_group_tell(EeUnitsGroup *g, void *unit, const float (*location)[3]
 /// # Safety
 /// `player` a live player.
 EeUnitsGroup *ee_units_group_active_of(void *player, void *unit);
+
+/// The player's groups (`op`): 0 the running groups emptied, released and cleared (`~EEPlayer`, `Reset`, `Clear`), 1
+/// `~EEPlayer`'s other groups released, 2 `Reset`'s and `Clear`'s selection and hot-key groups emptied, 3
+/// `RemovalsDone`'s, 4 the tick's validation.
+///
+/// # Safety
+/// `player` a live player whose groups are live.
+void ee_units_groups_player(void *player,
+                            int32_t op);
 
 /// A loaded path request's resolution (`EEAwaitAutoPathRequest`'s attach of [`EE_UNITS_GROUP_OP_AWAIT_PATH`]).
 ///

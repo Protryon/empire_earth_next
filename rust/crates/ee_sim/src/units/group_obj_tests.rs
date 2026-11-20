@@ -40,6 +40,7 @@ struct World {
     lists: BTreeMap<(u64, u32), Vec<u64>>,
     computed: u32,
     keeps: BTreeMap<u32, bool>,
+    selections: [u64; 2],
 }
 
 impl World {
@@ -208,6 +209,18 @@ impl GroupHost for World {
     }
     fn player_groups(&mut self, player: u64, list: u32) -> Vec<u64> {
         self.lists.get(&(player, list)).cloned().unwrap_or_default()
+    }
+    fn player_groups_clear(&mut self, player: u64, list: u32) {
+        self.lists.remove(&(player, list));
+    }
+    fn player_groups_erase(&mut self, player: u64, list: u32, group: u64) {
+        let l = self.lists.entry((player, list)).or_default();
+        if let Some(i) = l.iter().position(|&g| g == group) {
+            l.remove(i);
+        }
+    }
+    fn player_selection(&mut self, _player: u64, which: u32) -> u64 {
+        self.selections[which as usize]
     }
     fn player_groups_push(&mut self, player: u64, list: u32, group: u64) {
         self.lists.entry((player, list)).or_default().push(group);
@@ -624,4 +637,37 @@ fn active_groups_save_load_and_restore() {
         assert_eq!(w.paths[&0x7777].refs, 0);
         assert_eq!(references(r), before - 1);
     }
+}
+
+#[test]
+fn the_players_groups_finish_release_and_validate() {
+    let mut w = World::default();
+    let a = w.unit(0x10, 1, 7, 0);
+    let empty = new(&mut w, EE_UNITS_GROUP_KIND_ACTIVE, PLAYER, 0);
+    let busy = new(&mut w, EE_UNITS_GROUP_KIND_ACTIVE, PLAYER, 0);
+    unsafe {
+        add_member(&mut w, busy, a, false);
+        w.lists.insert((PLAYER, 0), vec![empty as u64, busy as u64]);
+        // the empty running group finishes (referenced by the finished list), then is released twice and dropped
+        removals_done(&mut w, PLAYER);
+        assert_eq!(w.lists[&(PLAYER, 0)], vec![busy as u64]);
+        assert!(!w.lists.contains_key(&(PLAYER, 2)));
+        assert_eq!(references(busy), 2);
+        // validation: a dead unit leaves the running group, which finishes
+        w.selections = [
+            new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0) as u64,
+            new(&mut w, EE_UNITS_GROUP_KIND_SELECTED, PLAYER, 0) as u64,
+        ];
+        w.hot_keys = (0..20).map(|i| new(&mut w, EE_UNITS_GROUP_KIND_SAVED, PLAYER, i + 1) as u64).collect();
+        w.u(a).hit_points = 0;
+        validate_player(&mut w, PLAYER);
+        assert_eq!(len(busy), 0);
+        assert_eq!(w.lists[&(PLAYER, 2)], vec![busy as u64]);
+        clear_selections(&mut w, PLAYER);
+        release_running(&mut w, PLAYER);
+        assert!(!w.lists.contains_key(&(PLAYER, 0)));
+        release_others(&mut w, PLAYER);
+    }
+    assert_eq!(w.refs(a), 0);
+    assert!(w.formations.values().all(|f| f.1 == 0), "every group released its formation");
 }

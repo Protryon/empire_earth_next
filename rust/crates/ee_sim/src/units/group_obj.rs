@@ -215,8 +215,13 @@ pub trait GroupHost {
     /// the player's `mGroups[index]` (0 past them)
     fn player_group(&mut self, player: u64, index: i64) -> u64;
     fn player_id(&mut self, player: u64) -> i64;
-    /// the player's `mRunningGroups` (0) or `mPendingGroups` (1)
+    /// the player's `mRunningGroups` (0), `mPendingGroups` (1) or `mFinishedGroups` (2)
     fn player_groups(&mut self, player: u64, list: u32) -> Vec<u64>;
+    /// the list emptied; its first entry `group` erased
+    fn player_groups_clear(&mut self, player: u64, list: u32);
+    fn player_groups_erase(&mut self, player: u64, list: u32, group: u64);
+    /// the player's `mActiveGroup` (0) or `mSelectedGroup` (1)
+    fn player_selection(&mut self, player: u64, which: u32) -> u64;
     /// `push_back` onto the player's running (0), pending (1) or finished (2) groups
     fn player_groups_push(&mut self, player: u64, list: u32, group: u64);
     /// `EEActiveGroup::ComputeValues`
@@ -2179,6 +2184,84 @@ pub fn restore_all<H: GroupHost + PathWaits>(h: &mut H, lists: &mut [Vec<SavedGr
             let g = restore_active(h, player, s);
             h.player_groups_push(player, (l % 2) as u32, g as u64);
         }
+    }
+}
+
+// ---- the player's groups (EEPlayer's destructor, Reset, Clear, RemovalsDone and tick)
+
+/// The player's running groups emptied and released, the list cleared (`~EEPlayer`, `Reset`, `Clear`).
+pub fn release_running<H: GroupHost>(h: &mut H, player: u64) {
+    for g in h.player_groups(player, 0) {
+        // SAFETY: the player's live groups
+        unsafe {
+            clear(h, g as G);
+            dereference(h, g as G);
+        }
+    }
+    h.player_groups_clear(player, 0);
+}
+
+/// `~EEPlayer`'s other groups: the finished ones, the two selections and the 20 hot-key groups emptied and released.
+pub fn release_others<H: GroupHost>(h: &mut H, player: u64) {
+    let mut groups = h.player_groups(player, 2);
+    groups.push(h.player_selection(player, 0));
+    groups.push(h.player_selection(player, 1));
+    groups.extend((0..20).map(|i| h.player_group(player, i)));
+    for g in groups {
+        // SAFETY: the player's live groups
+        unsafe {
+            clear(h, g as G);
+            dereference(h, g as G);
+        }
+    }
+}
+
+/// `Reset`'s and `Clear`'s: the active selection and the 20 hot-key groups emptied.
+pub fn clear_selections<H: GroupHost>(h: &mut H, player: u64) {
+    let active = h.player_selection(player, 0);
+    // SAFETY: the player's live groups
+    unsafe { clear(h, active as G) };
+    for i in 0..20 {
+        let g = h.player_group(player, i);
+        // SAFETY: as above
+        unsafe { clear(h, g as G) };
+    }
+}
+
+/// `EEPlayer::RemovalsDone`: running groups left without units (not finished yet) finish; every finished group is
+/// emptied, released, and released again out of the running groups it is in; the finished list cleared.
+pub fn removals_done<H: GroupHost>(h: &mut H, player: u64) {
+    for g in h.player_groups(player, 0) {
+        // SAFETY: the player's live groups
+        if unsafe { len(g as G) } == 0 && !h.player_groups(player, 2).contains(&g) {
+            // SAFETY: as above (the running groups are active groups)
+            unsafe { finish(h, g as G) };
+        }
+    }
+    for g in h.player_groups(player, 2) {
+        // SAFETY: as above
+        unsafe {
+            clear(h, g as G);
+            dereference(h, g as G);
+        }
+        if h.player_groups(player, 0).contains(&g) {
+            // SAFETY: as above (the running list's reference)
+            unsafe { dereference(h, g as G) };
+            h.player_groups_erase(player, 0, g);
+        }
+    }
+    h.player_groups_clear(player, 2);
+}
+
+/// The player tick's validation of its groups: the active selection, the selection, the 20 hot-key groups, the
+/// running groups (those there when it starts).
+pub fn validate_player<H: GroupHost>(h: &mut H, player: u64) {
+    let mut groups = vec![h.player_selection(player, 0), h.player_selection(player, 1)];
+    groups.extend((0..20).map(|i| h.player_group(player, i)));
+    groups.extend(h.player_groups(player, 0));
+    for g in groups {
+        // SAFETY: the player's live groups
+        unsafe { validate(h, g as G) };
     }
 }
 
