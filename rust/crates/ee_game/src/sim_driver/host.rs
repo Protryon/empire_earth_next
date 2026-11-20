@@ -116,9 +116,6 @@ pub struct EeSimDriverHost {
     pub no_human_defeat_hits: unsafe extern "C" fn(c_long) -> c_long,
     /// `gUserInterface->PostCancelGame()`
     pub cancel_game: unsafe extern "C" fn(),
-    /// `EESimEditorStep`: one editor script line's command (its words) run as a step; its output lines pushed -> 0,
-    /// 1 not a command, 2 not finished within a minute
-    pub editor_step: unsafe extern "C" fn(*const *const c_char, usize, *mut c_void, EeSimDriverPushFn) -> i32,
     /// --flare: the human's flare at the player's first building, told to its allies
     pub flare: unsafe extern "C" fn(c_ulong, *mut EeSimDriverSpot),
     /// --volcano: a volcano cast 6 tiles off the player's first building
@@ -314,22 +311,7 @@ impl Game for CppGame {
         unsafe { (self.0.cancel_game)() }
     }
     fn editor_step(&self, words: &[String]) -> super::editor::Step {
-        let texts: Vec<CString> = words.iter().map(|w| c(w)).collect();
-        let pointers: Vec<*const c_char> = texts.iter().map(|t| t.as_ptr()).collect();
-        let mut lines: Vec<String> = Vec::new();
-        let code = unsafe {
-            (self.0.editor_step)(
-                pointers.as_ptr(),
-                pointers.len(),
-                &mut lines as *mut Vec<String> as *mut c_void,
-                push_line,
-            )
-        };
-        match code {
-            0 => super::editor::Step::Done(lines),
-            1 => super::editor::Step::Unknown,
-            _ => super::editor::Step::Unfinished,
-        }
+        super::sed_steps::step(words)
     }
     fn flare(&self, player: c_ulong) -> EeSimDriverSpot {
         let mut s = EeSimDriverSpot::default();

@@ -10,6 +10,8 @@
 //! - [`digest`]: the editor gate's world digest (the map, the mesh, the units) over the world views.
 //! - [`driver`]: the driver: its state, the after-tick, the menus, a game, the batch.
 //! - [`editor`]: the scenario editor script's runner and language (--editor-script).
+//! - [`sed_steps`], [`sed_digest`], [`sed_host`]: the editor script's steps and digests over the editor's C++ objects
+//!   (EESimEditor.cpp the host).
 //! - [`combat_sweep`]: the combat formulas' capture sweep over the world views (TEST ONLY).
 //! - [`ffi`]: the C ABI EESim.cpp calls.
 
@@ -22,6 +24,10 @@ pub mod host;
 pub mod lobby;
 pub mod options;
 pub mod report;
+pub mod sed_civ;
+pub mod sed_digest;
+pub mod sed_host;
+pub mod sed_steps;
 
 #[cfg(test)]
 mod tests;

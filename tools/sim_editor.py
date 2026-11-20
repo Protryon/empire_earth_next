@@ -12,7 +12,7 @@ The physics never runs and the UI thread's clock is pinned while a step runs, so
   python -I tools/sim_editor.py --update     # run and write expected.txt (a declared change of the editor's output)
   python -I tools/sim_editor.py --exe build/clang/exe/EE-SIM.exe --data DIR --out FILE
   python -I tools/sim_editor.py --civbuilder # the civilization builder's gate: civbuilder.txt against
-                                             # civbuilder_expected.txt (EESimCivBuilder.cpp's "cb" steps)
+                                             # civbuilder_expected.txt (ee_game sim_driver sed_civ.rs: the "cb" steps)
 """
 import argparse
 import difflib

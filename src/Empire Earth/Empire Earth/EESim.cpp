@@ -94,7 +94,6 @@ void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffect
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EESimEditor.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIShell.h"
 #include "platform/PlatSim.h"
@@ -787,16 +786,6 @@ void HostCancelGame()
     gUserInterface->PostCancelGame();
 }
 
-int HostEditorStep(const char* const* inWords, size_t inCount, void* inSink, EeSimDriverPushFn inPush)
-{
-    std::vector<std::string> theWords(inWords, inWords + inCount);
-    std::vector<std::string> theLines;
-    int theCode = EESimEditorStep(theWords, theLines);
-    for (const std::string& l : theLines)
-        inPush(inSink, l.c_str());
-    return theCode;
-}
-
 // the player's first living building (NULL: none)
 EEUnit* FirstBuilding(unsigned long inPlayer)
 {
@@ -1143,7 +1132,7 @@ int EESimMain(int argc, char** argv)
         HostTopForm, HostTopFormClass, HostClick, HostComboLines, HostComboSelect, HostListLines, HostListSelect,
         HostControlWithEvent, HostPhysics, HostEditorUp, HostLock, HostPrepareHuman, HostDumpAfterLoad,
         HostChecksumFields, HostDumpState, HostRequestSave, HostExtension, HostSetRun, HostSetAfterTick,
-        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostEditorStep, HostFlare, HostVolcano,
+        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostFlare, HostVolcano,
         HostVolcanoBoulders, HostCaptureActive, HostSweep, HostRulesAdd, HostRulesProblems, HostEngineChoice,
         HostEngineIDs, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite, HostRngTrace, HostTickHook, HostQuit,
         HostWonders, HostUnitValue};
