@@ -1586,7 +1586,9 @@ pub unsafe extern "C" fn ee_cp_pl_load(player: u64, major: c_ulong, minor: c_ulo
     let r = unsafe {
         super::ffi::ee_cp_load(&c as *const SaveCtx as *mut c_void, save_op, fields, major as u32, minor as u32, r, &mut loaded)
     } as c_long;
-    let cp = c.cp;
+    // the id the base Load read (the context was made before it)
+    // SAFETY: the live computer player
+    let cp = Cp { ctx: unsafe { ctx_of(player) } };
     let id = cp.ctx.player_id;
     if loaded.favorites_ok && save::has_live_state(major as u32, minor as u32) {
         let f = cp.fields();
