@@ -35598,3 +35598,83 @@ drivers first (their gates compare the output line for line or digest by digest)
   `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12986` units [4, 40, 40] alive [2, 3] engines
   classic_lua x 2, `RESULT PASS lan-game PT host=2773 joiner=2772`, GATES PASS. Not run: the POSIX builds (no platform
   code changed).
+
+## The game core lane, round 7: the calamities and the game world whole in Rust over one host of one-statement C++ cases (ee_game gamecpp calamity.rs, calamity_objects.rs, calamity_capture.rs, world.rs; EEGameOps.cpp; branch rust-core7, 2026-11-20)
+
+The brief: the game's own bodies (round 6 moved the test drivers), a Rust body over one C++ case per call, target
+-3,000 C++ logic lines. The round took the calamities (EECalamityUpdate.cpp's host, the calamity objects, their
+captures) and EEWorld.cpp: -3,173 logic lines (`logic_lines.py`: 85,208 at f4b527d02, 82,035 at ca5d87efb), net
+-2,527 lines (src, include/ee, include/lle).
+
+| Commit | What | C++ logic | net lines |
+|---|---|---|---|
+| a8a5ca787 | the calamity classes' world steps (EECalamityUpdate.cpp's host) | -936 | -880 |
+| 1122771c9 | the game world's own bodies (EEWorld.cpp) | -845 | -291 |
+| a8988b19f | the calamity objects (EECalamity, EECalamityManager, EECalamityClass, the functors, EECalamityCast.cpp deleted) and the calamity captures (EECalamityCapture.cpp, EETechCapture.cpp's calamity part) | -1,392 | -1,356 |
+| 8b30dc6c2 | the Rust gate's clippy allows and rustfmt | 0 | 0 |
+| ca5d87efb | merge origin/rust 9e024ffb3 (no content: batch 10 was in the round's base) | 0 | 0 |
+
+- **One host for every body, `ee_gamecpp(op, p, a, f)` and `ee_gamecpp_f`** (EEGameOps.cpp; the Rust enum
+  `EeGameCpp`, ee_game `gamecpp/mod.rs`): `p` the object, `a` eight integer or pointer arguments, `f` eight floats;
+  a pointer answers as an integer, a float through the `_f` twin (widened to double and back: exact). The world's
+  cases are a second switch beside the file statics they read (EEWorld.cpp `EEWorldOp`, the first switch's
+  `default`). 660 cases (310 in EEGameOps.cpp, 350 in EEWorld.cpp) and about 115 one-statement forwarders replace
+  the bodies (the 106 cases of the old calamity hosts went, about 50 of them one statement); the unit, player, class,
+  effect and sound ops are shared by the four Rust modules, so the next bodies (EEMessage.cpp's executes,
+  EERenderObject.cpp) start with most of their calls answered.
+- **Plain members are read in place**: the C++ classes derive from Rust records already (`EeUnitsRtsUnitFields`,
+  `EeUnitsUnitFields`, `EeUnitsComplexUnitFields`, `EeUnitsUnitClassFields`, `EeUnitsRtsPlayerFields`,
+  `EeUnitsPlayerSaved`, `EeUnitsPlayerFields`, `EeCalamityFields`, `EeCalamityClassFields`,
+  `EeContagionFunctorFields`, `EeAppOptionsFields`): one case answers the base's address
+  (`static_cast<EeUnitsUnitFields*>(UN)`) and Rust reads and writes the fields. A C++-only plain member is one
+  address case (`&W->mClearing`, `&CL->mTargetLocation`). Setters of the `if (m != v) m = v` shape stay calls (a
+  -0.0 against 0.0 keeps the old sign).
+- **The GE values cross as their Rust mirrors** (`Ge3DPoint`, `GeTransformation`, `GeRectangle`, `[f32; 2]` for
+  U2DPoint<float>), the C++ casting the address back (`*(GE3DPoint*)a[0]`); their algorithms are ee_base's math,
+  the very functions the C++ inlines forward to (`rotate`, `apply_vector`, `set_orientation(Ypr)`, `orientation`,
+  `distance_to`), so the floats are the C++'s bit for bit (the calamity capture's CALW records the quake's cracks,
+  the meteors' and the warp's points).
+- **A C++ vector the Rust unit searches fill**: the calamity host gained two scratch vectors (`mTiles`, `mScratch`)
+  beside its `mUnits`; Rust clears one, calls ee_sim's `ee_units_uu_*` on it and copies it out (`uu_host`'s
+  `tiles_of`, `units_of`). The volcano's ring sort stays `std::sort` with EETileDistanceLess (one case): `std::sort`
+  is not stable and a Rust sort orders equal distances differently.
+- **Every capture record from the call the C++ made**: the CALW/CALT/CONT event hooks are C++ function pointers
+  called through one case each, in the C++'s order; the records the moved code writes itself (CALS, CALU, CALI,
+  CALK, CALW, CCAS, CALT, CONT) are a Rust `Record` committed through `ee_app_capture_commit`, with the C++'s field
+  order; the event lists the hooks collect are Rust statics (a `Mutex` taken only around each push, never across a
+  call back into C++: a Start's own events arrive while its record is open).
+- **Two bugs the capture caught**: CALI 144 bytes short (the C++ switch over the functor kinds `break`s for the extra
+  damage and the mind control into the area effects' base, where the fire, the leprosy and the plague `return`: a
+  Rust `match` made them exclusive); and an op the world called but no switch answered (the load progress: the
+  oracle's first run stopped at `Verification failure (inOp == O::UnRts)`; a scratch script cross-checks the Rust's
+  ops against both switches since; worth a tool).
+- **A commit staged with `git rm`** went into the next commit (the world's) with it; the deletion was amended back
+  out (each commit builds alone).
+- **Behaviour changes**: none intended. ESVERIFY_AT's file in a failure report names EEGameOps.cpp or EEWorld.cpp
+  (the line numbers are the original's). `EECalamity::GetTargetUnit` is one statement (`(out = mTargetUnit) !=
+  NULL`), `EECalamityManager::DestroyCalamity(iterator)` is gone (Update erases by index), EEWorld's
+  `gGameOptions.Fn130272()` (empty) is not called.
+- **What only a live game exercises**: StartGame's multiplayer name match (`StPlayerIsLocalName`, gWonNet's name),
+  MovePlayerToSlot (host migration), the pauses (PauseGame/UnpauseGame: single player on the server), DumpMedia, the
+  campaign's civilization restore and form clear, the minimap and camera calls under EE-SIM's null UI (the oracle
+  runs them, nothing compares them); the tour and gates.sh ran them (below).
+- **Tests**: gamecpp 2 (the argument padding, a host call in a test panics), calamity 2 (the Windows max, the step
+  keys), world 2 (the media lists, the noon sun), calamity_objects 2 (the dump formats, the capture tags),
+  calamity_capture 1 (a record's bytes).
+- **Gates** (on ca5d87efb, the merge of origin/rust 9e024ffb3; the merge brought no content): both builds 0/0 (EE-AOC
+  417 inputs, EE-SIM 418: EECalamityCast.cpp gone, EEGameOps.cpp new) and the test profile 0/0; the Rust gate PASS
+  (5,086 tests, 0 failed; the first run lost ee_base's `com_is_initialised_on_platform_threads` under load: it passed
+  alone and on the rerun); the oracle identical on seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212
+  digests, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2,
+  placement 4, transport 185); the plain saveload PASS (18 identical, exit 0); the matrix (`--settings all --seeds 2-3
+  --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (calamity 3/4, next 2/4, the
+  rest 4/4, as expected); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062);
+  `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS tour` (RENDER CHECK gameplay 83.6%
+  lit, 3,946 colours; the main menu and the first frame of the game looked at: the town center, the citizens, the HUD
+  and the minimap drawn); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): `RESULT PASS tour`, `RESULT
+  PASS ai-game outcome time-cap PT 12634` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS
+  lan-game PT host=2830 joiner=2830`, GATES PASS. Not run: the POSIX builds (the Rust is `c_long`-clean and the C++
+  shims platform-neutral, but no POSIX compiler ran them).
+- **Left** (docs/progress/game-leaves.md): Empire Earth.cpp, EERenderObject.cpp, EEMessage.cpp, EEServer.cpp,
+  EETestFixture.cpp's host, EEEffectHost.cpp, the RTS Engine, EEMap.cpp, EEGraphics.cpp, EEGameState.cpp, and in the
+  moved files RecordStatistics, the calamity's save Io host, the contagion world host.
