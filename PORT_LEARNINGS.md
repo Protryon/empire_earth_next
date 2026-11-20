@@ -34215,3 +34215,107 @@ numbers and the UI units' targets now.
   main checkout's toolchain/ in a worktree that has none (EE_TOOLCHAIN still wins).
 - Lesson: a build input outside git (toolchain/, fetched data) must resolve the same in every worktree, and a
   missing one must fail the build. An object cache hides the difference until one worktree compiles the unit itself.
+
+## The game core lane, round 3: the LLE's forwarder units inline, GX's shims inline, TSGT whole in Rust, the tech capture's plain records and CVMG's head in Rust (ee_game sight_capture.rs; ee_sim tech capture_rec.rs; branch rust-core3, 2026-11-19)
+
+The successor of the game's leaves lane (rounds 1-2), with the batch-6 scope: src/Empire Earth/Empire Earth,
+Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread and Map;
+src/RTS Engine; the rest of src/Low-Level Engine but its User Interface. Started from the lead's integration tree
+0a17fc666 (origin/rust 3449a04fd in it) with aded2ef33 (the main checkout's toolchain for a worktree) picked first.
+docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ (src, include/ee, include/lle, include/gx, include/dx7) |
+|---|---|---|
+| ca4da89ad | (picked) aded2ef33: tools/ee.py uses the main checkout's toolchain in a worktree without one | tools |
+| 7cf0cebb6 | FSMemoryFile, FSChunk, FSArchive inline over ee_base fs; their units and FSRustOps.h deleted | +380 -734, net -354 |
+| 8393b68ca | SESoundManager, SESample, SESMInstanceNode, SEMixer, SEScore inline over ee_audio; three units deleted | +163 -280, net -117 |
+| 701ef062d | ESChecksum inline over ee_base error; ESChecksum.cpp deleted | +33 -72, net -39 |
+| dbaaf06aa | NESynchronousClient and NESynchronousServer: the forwarders inline | +170 -326, net -156 |
+| 592de7238 | GX's shims inline in gx/GX.h; GX.cpp deleted | +133 -187, net -54 |
+| e7eb18173 | TSGT whole in Rust (ee_game sight_capture.rs); EESightCapture.cpp deleted | +76 -226, net -150 |
+| 21a308fec | the tech capture's plain records and CVMG's head in Rust (ee_sim tech capture_rec.rs) | +38 -234, net -196 |
+| f5659fa5f | 1,527 #include lines of 71 units the units compile without (each object's symbols HEAD's) | -1,527 |
+| | **the round** | **+993 -3,586, net -2,593** |
+
+- **What the census says this lane's C++ is.** `cpp_deps.py report` at the start (463 units, 138,675 lines): the
+  lane's leaves were 14 units (1,140 lines) and its near-leaves about 40. Read unit by unit, almost all of it is
+  forwarders (one call into Rust) and hosts (the Rust objects' calls on C++ objects: the calamity classes' world
+  steps, the players' and the world's walks, the render objects' fills, the network's message ops). A forwarder
+  moved into its header saves a line or three; a host goes only when its callees are Rust. So the round took the
+  units that were forwarders only (deleting them), the TEST ONLY captures whose reads are Rust records already, and
+  the include lines the lane's units compile without.
+- **Forwarder units deleted.** FSMemoryFile, FSChunk, FSArchive (File System), SESoundManager with SESample and
+  SESMInstanceNode, SEMixer, SEScore (Sound Engine), ESChecksum (Error System) and GX.cpp (the wgpu shims) are
+  inline in their headers; what had a C++ body that needs another class complete stayed out of line in the module's
+  remaining unit (the memory file's stdio copies in File System.cpp, the sound objects' callbacks in Sound
+  Engine.cpp, GXGameSize in EEPreferences.cpp). NESynchronousClient and NESynchronousServer keep their units (the
+  constructors and the hosts), their one-line members are inline.
+- **Lesson: a function a header now defines inline can still be declared by hand elsewhere.** GXGameSize was
+  declared without gx/GX.h in EEScreens.cpp and Empire Earth.cpp (whose gx/GX.h include sits in the POSIX branch of
+  an `#ifdef _WIN32`); inline, the link found no definition ("1 unresolved"). It stays out of line. Grep for a
+  member's or function's declarations outside its header before making it inline.
+- **Lesson: a staged deletion rides along with the next commit.** `git rm` stages the deletion at once; a later
+  `git add <paths>; git commit` commits everything staged, not only those paths: two commits of this round took
+  other pieces' deletions and were redone (`git reset --soft`, `git restore --staged`). Delete with plain `rm` (or
+  `git rm --cached` last) when several pieces are in the tree, and read `git diff --cached --stat` before each
+  commit.
+- **TSGT** (`ee_game::sight_capture`, its own header rust/game/sight_capture.h so EEMap.h's includers do not take
+  rust/game/app.h): the scope's depth per thread, the rectangle each kind reaches (`Around`, the circles' 32-tile
+  clamp), the hash of the tile's words or of the rectangle's tiles (visibility words, the mesh tile's reference
+  count, the markers) and the record, over MapView/TileView/PlayerView and ee_render's mesh. EESightScope is an
+  inline class; the C++ left is EESightRecord in EEMap.cpp (the world's map, its mesh, the tile's index in
+  mTileArray, which no view has).
+- **The tech capture's plain records** (`ee_sim::tech::capture_rec`): a node's, an epoch's and a tree's state come
+  from the Rust records the C++ classes derive from (the base pointers convert implicitly, so the C++ passes `this`
+  and its `mData`, `mTree`); TCST, EVHP, CALC from their arguments (EVHP's and CALC's hook pointers are the Rust
+  functions themselves: their C signatures are the hooks' types); the TRTE, EVUN and TNWK collections. CVMG's head
+  (categories, civilizations, eras, upgrades and their keys and legacy ids, the levels, the powers) calls ee_sim
+  tech civ.rs's functions, the C++ manager's own callees; the premade civilizations' files (EELoadCivilization over
+  the C++ file system) stay the record's C++ tail.
+- **The include lines the lane's units compile without** (f5659fa5f, 1,527 lines in 71 units). A scratch tool
+  compiled each unit (clang-cl /Zs) without its project includes from the last up, in halving chunks (98 units, two
+  workers, about four hours), keeping lle/LowLevelEngine(Core).h, platform/ and rust/ (the per-module Rust headers
+  are policy) and putting back any include inside a preprocessor conditional (the Windows compile cannot judge a
+  POSIX-only one: Empire Earth.cpp's gx/GX.h). "It compiles" was not enough: every kept unit was compiled again from
+  HEAD's text and from the trimmed one and the objects' symbols compared (llvm-nm, defined and undefined): 71
+  identical, 7 not, and those 7 were left as they were. What the comparison caught:
+  - a `delete` of a type the removed header completed (EEPlayer.cpp no longer called ~EEUnitGoal; EEWorld.cpp's
+    new undefined `operator delete`): deleting an incomplete type compiles, calls no destructor, and is UB;
+  - the LLE units that emit their headers' exported inline members (File System.cpp, GEBitmap.cpp, GEModel.cpp,
+    GERasterizer.cpp, Input System.cpp: their header comments say so) stopped emitting them;
+  - and the link caught a `const` global (EEGlobals.cpp's kSaveGameMajorVersion) whose `extern` declaration came
+    from the removed header: without it the definition has internal linkage.
+  **Lesson: an include removal is checked by the object's symbols, not by the compile.** The same comparison is the
+  cheap gate for any header-only refactor of a unit.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EERules (the converter's gate compiles it; its eight lookups
+  are 50 lines), the calamity manager and classes (their bodies are Rust; what is left is the hosts' C++ calls),
+  RTSWorld/RTSPlayer/RTSPhysics/RTSGraphics/RTSMouse (C++ virtuals of the game's classes), the GE rasterizer's
+  setters (rust/render/ge.h is 3,300 lines; GERasterizer.h has 100 includers), DX7Rasterizer's forwarders (their
+  bodies need DX7Surface and a .cpp helper), the media objects, the message classes.
+- **Tests**: sight_capture 2 (the rectangles as the scope made them, the nesting); capture_rec 3 (a node's,
+  epoch's and tree's state; the collections; the CVMG head).
+- **Behaviour changes**: none. The TEST ONLY records are byte for byte the C++'s (every capture profile run below);
+  the inline forwarders are the same calls.
+- **What only the tours exercise**: GX's shims (every frame), the sound objects' inline members (the game's
+  sounds), FSArchive (the game reads no archive; the converter's .ssa readers are Python). The LAN game
+  (gates.sh) is the only one to exercise the network client's and server's inline members. FSMemoryFile and FSChunk
+  are in every saved game (saveload) and every load of a data file.
+
+- **The census** (tools/cpp_deps.py report): 463 units, 138,675 lines at the start (0a17fc666); 454 units, 135,604
+  lines at the end; leaves 55 (3,270 lines) -> 53 (3,395); near-leaves 121 -> 119; edges 3,978 -> 3,867; 10 SCCs,
+  269 units, 97,330 lines -> 268, 96,147.
+- **Gates, on the round's last commit** (f5659fa5f; origin/rust 3449a04fd is in the base, so the merge of
+  origin/rust had nothing to do; no conflict marker): both builds 0/0 (EE-AOC 499 inputs, EE-SIM 500) and the test
+  profile 0/0; the Rust gate PASS (4,976 tests, 0 failed); the oracle identical on seeds 2-7; the 12 capture
+  profiles at seeds 2-3 PASS (oracle 212 digests, late 214, space 210, calamity 222, missile 22, effects 6,
+  scenario 43, units 175, app 26, groups 2, placement 4, transport 185); the plain saveload PASS (18 identical);
+  the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload
+  expect: PASS` (calamity 3/4 and next 2/4 as expected); scenario_check 27/27; sim_editor PASS (14,448 lines) and
+  `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS
+  tour` (no GX errors; captures looked at: the game view, the video settings); `bash tools/gates.sh`
+  (EE_GATES_TREE the main checkout's tree): `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13440`
+  units [4, 41, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2719 joiner=2711`,
+  GATES PASS. Per step before that: both builds 0/0 and the oracle seeds 2-3 identical after each batch, the Rust
+  gate PASS, the oracle, calamity, app and late captures PASS after the capture moves.
+- **Not run**: the POSIX builds (xbuild.py; link/lle and link/dx7hrtnl's unit lists and sdl_test's sources were
+  updated for the deleted units, and the include trim kept every include inside a conditional).
