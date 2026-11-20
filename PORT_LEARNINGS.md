@@ -35801,3 +35801,112 @@ was a stack coincidence). The driver now clears the pointer after each take (com
   completions as Rust completions.
 - The config readers (RoomLabelCtrlConfig, UserListCtrlConfig, ChatCtrlConfig, ServerListCtrlConfig,
   GameBrowserCtrlConfig, GameUserListCtrlConfig) as cfgtab kinds.
+
+## R6 WONLobby, round 30: the status codes as Rust constants, the EE lobby's network game functions and the GUI components' constructors in Rust (ee_won_net status_codes.rs, routeop_types.rs; ee_won_lobby eegamefn.rs; ee_won_gui guictor.rs; branch rust-wonlobby30, 2026-11-20)
+
+The lead asked for -2,000 C++ logic lines with cheaper proofs: reuse the stand-in worlds, several moved hosts under
+one driver. Mid-round the owner's "WON goldens by reach" rule arrived: a new golden only for code no live gate runs;
+code the LAN game or the tour runs moves with the LAN game, the lobby captures, won_host_coverage and unit tests.
+
+### What moved (logic and lines: `logic_lines.py` over the whole tree, the commit against its parent)
+
+| Commit | What | Logic | Lines |
+|---|---|---|---|
+| 423a80d5a | the status codes and routing op type ids as Rust constants (status_codes.rs, routeop_types.rs) | -378 | -380 |
+| cff346b47 | the EE lobby's network game functions (eegamefn.rs; won_eewindow_test extended) | -87 | +5 |
+| 52c7aa712 | the GUI components' ten constructors (guictor.rs) | -58 | +12 |
+| 5be964c10 | TextArea::AddSegment's two overloads (`ee_won_gui_add_segment`) | -14 | -4 |
+| 55c1f86fc | origin/rust (9e024ffb3) merged: PORT_LEARNINGS only (batch 10's sections first, rounds 28 and 29 after) | 0 | 0 |
+| the docs commit | this section, the progress file | 0 | 0 |
+
+Round total (4d64743a6 -> 5be964c10, the whole tree): logic 87,775 -> 87,238 (**-537**; -161 without the two enum
+headers), lines 174,237 -> 173,870 (-367), shim lines 20,080 -> 20,256 (+176). On the merged tree: origin/rust
+87,269 -> 86,264 (-1,005: rounds 28, 29 and 30). Far short of the -2,000 aim (below, "Why short").
+
+Shims added: the glue host's 57 one-statement cases for the network game functions (`EeWonEeGlueOp` from 400) and
+their 8 statics, the GUI hosts' 37 one-statement constructor and segment cases (`EeWonGuiOp` from 700), and the
+ten constructors, two AddSegment overloads and five game functions as one-statement forwards. Shims deleted: none. The status and op
+type enums (376 enumerator lines) are declarations, not logic, but the tool counts them: say so when comparing.
+
+### The status codes and op type ids
+
+- WONStatus.h's 315 codes and WONRoutingOpTypes.h's 61 ids are `pub const`s of two Rust modules (named as the C++
+  uses them, `#![allow(non_upper_case_globals)]`), read through the generated headers; the headers are three lines
+  each. The status test checks every constant against status.rs's table of the names the original printed
+  (golden_status.tsv): all 315 agree. The routing ids count 0..60.
+- `WONStatusCode` / `RoutingOpTypeCode` (the enum type names) were never named in C++; the values are `int32_t`
+  constants now (a switch, a comparison, a `WONStatus` argument all compile as before).
+
+### The network game functions (eegamefn.rs)
+
+- EELobbyHostGame, EELobbyJoinGame, EELobbyStartHostedGame, EELobbyRunSierraUpdate and EEGetLocalAddress are
+  `ee_won_eeglue_call` forwards (`HostGame` .. `LocalAddress`); their decisions (the network object's replacement,
+  the publication check, the connect, the human count, the update's launch, the address's source) are Rust, each
+  statement one case of the glue host. The functions' C++ locals (the host's player, the join's strings and
+  request, the start's player copy, the address handed out) are the host's statics; the update's file and message
+  are made and freed by ops in the original's order. EEGetLocalAddress returns the address's `UWideString&`.
+- The Sierra Update's open and launch are `#ifdef _WIN32` cases: elsewhere the op answers 0 and the message shows,
+  as the original's `#ifdef` did.
+- Proof: won_eewindow_test (round 29's driver and world) runs the deleted functions (won_eegamefn_orig.h, copied by
+  script) against the Rust over its world, extended with the network objects, the options, the lobby player, the
+  game's address, the protocol and the update's file (functions 5..9 of its sequences; the start only on a
+  server, the join only with a lobby game, as the lobby calls them): 20,000 sequences, 0 mismatches. Mutations (the
+  human count's computer players, the join's address and name order, the quit's user interface check, the address's
+  multiplayer check): 4 of 4 caught (1,549, 3,966, 225 and 8,898 sequences). The LAN game runs HostGame, JoinGame,
+  StartHostedGame and EEGetLocalAddress (the server's slot info); RunSierraUpdate only the golden.
+
+### The constructors (guictor.rs)
+
+- `ee_won_gui_construct(&member, new Rust object, this, host, kind, arg)` stores the object first (a statement that
+  reaches the Rust object, the text area's SetFont, finds it), then sends the class's statements to the
+  component's own host. The text area's link font test is Rust. The tree's `TCall(Init)` is its Rust object's call
+  (TCall is private to TreeArea; the first build said so).
+- `ee_won_gui_add_segment` makes TextArea::AddSegment's segment (held, its text, colour, font and line break, added,
+  given back).
+- MultiListArea::SetString and TreeArea::InsertString were moved the same way and put back before the commit: the
+  LAN game does not reach them (the network adapter dialog, an unused tree insert), so under the owner's rule they
+  need a golden case first.
+- Proof (by reach): every lobby screen makes these components; the LAN game (two lan_game.py runs during the round,
+  RESULT PASS, and the gates' run) and lan_capture_compare's identical lobby captures. Unit tests: guictor.rs 3.
+
+### Why short
+
+- The first half of the round was under the old rule: the network game functions needed won_eewindow_test's world
+  extended (about 230 lines of stand-ins for the network objects, the options and the update's file) for 87 logic
+  lines. The rule change came after it.
+- What is left in the LAN-reached hosts is mostly temporaries the statements share (a `WriteBuffer` or
+  `ReadBuffer` a case fills and reads, a `SmartPtr` held across calls, a `try` around reads): each needs a
+  host-owned object made and freed by ops, two to four shims per logic line saved.
+- The GUI hosts' multi-statement cases are ops the Rust objects already send; splitting them changes the grain
+  their goldens' scripted hosts see, so the expansion must be gated (round 29's bound-core switch) or the goldens
+  re-recorded: not done this round.
+- The two enum headers are most of the number; without them the round moved 161 logic lines.
+
+### Behaviour changes
+
+- None intended. EELobbyHostGame's player, the join's strings and EEGetLocalAddress's address live as long as the
+  game (statics) rather than the call (the address already was a function static).
+
+### Gates (on the merged tree)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at every code commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (after the constructors, after the segments, the merged tree) |
+| `rust_build.py header` | 292 headers current |
+| `rust_build.py gate` | the first run on the merged tree failed `ffi_net::tests::the_cpp_status_constants_are_the_rust_table` (it parsed WONStatus.h's enum; it reads the generated status_codes.h now, commit after the merge); then PASS, 5,084 tests |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after the network game functions; seeds 2-7 identical on the merged tree (oracle: PASS) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 166 programs exit 0 (merged tree), peak 559 MB; won_eewindow_test 20,000 sequences, 0 mismatches |
+| LAN games during the round | `RESULT PASS lan-game` after the constructors (PT 2727/2731) and after the segments (2785/2794) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree; merged tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13137` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2835 joiner=2829`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe) | every lobby capture identical (host: lobby open, LAN screen, create dialog; joiner: lobby open, LAN screen, LAN list, staging) but the host's two staging screens' 15 pixels at x 121..122, y 329..344: the input box's blinking caret (as round 29 recorded); only the game's frames differ otherwise. Both runs `RESULT PASS lan-game` (PT 2779/2785 this round, 2730/2730 the start exe) |
+
+### Left
+
+- MultiListArea::SetString and TreeArea::InsertString (a golden case first), the GUI hosts' multi-statement cases
+  the Rust objects send (their goldens' scripted hosts would see a finer grain: gate the expansion as round 29 did),
+  Window.cpp's and WindowManager.cpp's C++ ends, the LAN hosts' temporaries (LanLogicHost.cpp's summaries and
+  buffers, EELobbyGameHost.cpp), the glue host's own multi-statement cases, the Internet logics' hosts (AccountLogic,
+  InitLogic, RoutingLogic: a golden over round 29's lobbyops world), the control configs as cfgtab kinds, round 28's
+  list (the UDP subclasses, ServerConnectionConnectOp, RecvChunkOp, the routing completions).
