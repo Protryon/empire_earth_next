@@ -37,12 +37,56 @@ pub struct EeUnitsClsIo {
     pub list: *mut c_void,
 }
 
+/// The waypoint operations (the paths lane's round 1: the list and its bodies are Rust, waypoints.rs); `a` the unit.
+fn waypoint_op(op: i32, a: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
+    use crate::units::cls_move_host::{
+        EE_UNITS_CLS_MV_ADD_WAYPOINT, EE_UNITS_CLS_MV_NEXT_WAYPOINT, EE_UNITS_CLS_MV_SECOND_WAYPOINT,
+        EE_UNITS_CLS_MV_WAYPOINT,
+    };
+    use crate::units::waypoints;
+    // SAFETY (each arm): the operation's unit `a` is a live complex unit
+    Some(match op {
+        EE_UNITS_CLS_WAYPOINTS => unsafe { waypoints::list(a) }.len() as i64,
+        EE_UNITS_CLS_NEXT_WAYPOINT => {
+            // GetNextWaypointPoint into a zero point
+            io.p = unsafe { waypoints::list(a) }.front().map_or([0.0; 3], |w| w.location);
+            if unsafe { waypoints::list(a) }.is_empty() {
+                waypoints::EE_UNITS_WAYPOINTS_NONE as i64
+            } else {
+                0
+            }
+        }
+        EE_UNITS_CLS_DROP_PATH => {
+            unsafe { waypoints::drop_path(a) };
+            0
+        }
+        EE_UNITS_CLS_MV_ADD_WAYPOINT => {
+            unsafe { waypoints::add(a, io.p, c != 0) };
+            0
+        }
+        EE_UNITS_CLS_MV_WAYPOINT => {
+            io.p = unsafe { waypoints::list(a) }.get(c as usize).expect("a waypoint index").location;
+            0
+        }
+        EE_UNITS_CLS_MV_SECOND_WAYPOINT => match unsafe { waypoints::list(a) }.second() {
+            Some(p) => {
+                io.p = p;
+                0
+            }
+            None => waypoints::EE_UNITS_WAYPOINTS_NONE as i64,
+        },
+        EE_UNITS_CLS_MV_NEXT_WAYPOINT => {
+            unsafe { waypoints::next(a) };
+            0
+        }
+        _ => return None,
+    })
+}
+
 /// The list a host operation fills (pushed one pair at a time).
 #[derive(Default)]
 pub struct EeUnitsClsListHandle {
     pub(crate) tiles: Vec<Tile>,
-    /// the points a movement operation reads and pushes (cls_move_host.rs)
-    pub(crate) points: Vec<Ge3DPoint>,
 }
 
 // ---- the host operations (`ee_units_cls_host`'s `op`)
@@ -128,6 +172,9 @@ pub const EE_UNITS_CLS_REQUEST_QUEUED: i32 = 38;
 /// stats' turn speeds, the class `b`'s projectile's category, the map's size; None for the C++ host's.
 fn cls_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsClsIo) -> Option<i64> {
     use crate::world::view::{ClassView, UnitView, WorldRead, WorldView};
+    if let Some(v) = waypoint_op(op, a, c, io) {
+        return Some(v);
+    }
     if !matches!(
         op,
         EE_UNITS_CLS_CARGO
@@ -968,6 +1015,14 @@ impl CondHost for ClsGame {
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
         if let Some(v) = cond_view(op, a, b, c, io) {
             return v;
+        }
+        // the unit's path (the paths lane's round 1: waypoints.rs)
+        // SAFETY (each): the trigger's live complex unit `a`
+        match op {
+            cond::EE_UNITS_COND_AUTO_WAYPOINT => return i64::from(unsafe { crate::units::waypoints::next_auto(a) }),
+            cond::EE_UNITS_COND_WAYPOINT_STEP => return unsafe { crate::units::waypoints::waypoint_step(a, c) },
+            cond::EE_UNITS_COND_WAYPOINTS => return unsafe { crate::units::waypoints::list(a) }.len() as i64,
+            _ => {}
         }
         if let Some(v) = cond_goal(op, a, b, c) {
             return v;

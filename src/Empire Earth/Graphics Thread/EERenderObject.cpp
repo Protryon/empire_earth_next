@@ -878,7 +878,7 @@ static uint64_t EEFillUnit(void*, long inID)
 static EeGfxFillPoint EEFillWaypoint(void*, uint64_t inCarrier, long inX, long inY)
 {
     EeGfxFillPoint thePoint = {};
-    EEComplexUnitWaypoint* theWaypoint;
+    const EEComplexUnitWaypoint* theWaypoint;
     if (reinterpret_cast<EEComplexUnit*>((uintptr_t)inCarrier)->FindWaypointAtTile(inX, inY, theWaypoint)) {
         thePoint.found = true;
         thePoint.point[0] = theWaypoint->mLocation.mX;

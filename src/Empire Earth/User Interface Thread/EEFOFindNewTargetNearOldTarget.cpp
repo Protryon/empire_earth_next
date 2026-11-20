@@ -263,24 +263,6 @@ bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long
     return true;
 }
 
-// Smooths a ship's path: keeps the ends and drops points whose straight line from the last kept point stays
-// on passable water away from other units
-// The naval path smoothing (EEUCNaval::AdjustPath): when inSmooth, keep the first and last points and drop each point
-// whose straight line from the last kept point stays on passable tiles away from other units
-void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    static_assert(sizeof(GE3DPoint) == 12, "a path point is three floats");
-    std::vector<uint32_t> theKept(ioPath.size() + 1);
-    uint32_t theCount = ee_units_uu_naval_path(UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])(ioPath.empty() ? NULL : &ioPath[0].mX),
-                                               (uint32_t)ioPath.size(), inSmooth, &theKept[0]);
-    if (!inSmooth)
-        return;
-    std::vector<GE3DPoint> theNewPath;
-    for (uint32_t i = 0; i < theCount; i++)
-        theNewPath.push_back(ioPath[theKept[i]]);
-    ioPath = theNewPath;
-}
-
 
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 {
@@ -1984,30 +1966,6 @@ extern "C" uint64_t ee_units_uu_host_container_continent(uint64_t inContainer, u
     EEUnit* theContainer = UUUnit(inContainer);
     return UUHandle(theContainer->mUnitClass->GetContainerContinent(theContainer->GetComplexUnit(), static_cast<EEComplexUnit*>(UUUnit(inUnit))));
 }
-// the continent manager's questions (uu_host.rs CONTINENT_*)
-extern "C" uint64_t ee_units_uu_host_continent(int32_t inWhich, uint64_t inA, uint64_t inB, uint64_t inC)
-{
-    EEAIContinent* theA = (EEAIContinent*)(uintptr_t)inA;
-    long theX = (long)(int32_t)inA;
-    long theY = (long)(int32_t)inB;
-    switch (inWhich) {
-    case 0: return gContinentManager.GetContinentID(theX, theY);
-    case 1: return UUHandle(gContinentManager.GetContinentByID((unsigned short)inA));
-    case 2: return UUHandle(gContinentManager.GetContinentAt(theX, theY));
-    case 3: return theA->GetID();
-    case 4: return gContinentManager.AreConnected(theA, (EEAIContinent*)(uintptr_t)inB, (long)(int32_t)inC);
-    case 5: return gContinentManager.AreConnectedForUnit(UUUnit(inC), theA, (EEAIContinent*)(uintptr_t)inB);
-    case 6: return (uint64_t)(int64_t)gContinentManager.GetTileFlag(theX, theY);
-    case 7: return gContinentManager.AreAdjacent(inA, inB);
-    case 8: return theA->GetCategory();
-    case 9: return gContinentManager.AreConnectedByID((unsigned short)inA, (unsigned short)inB, (long)(int32_t)inC);
-    case 10: return gContinentManager.GetContinent(U2DPoint<long>(theX, theY), (long)(int32_t)inC);
-    case 11: return gContinentManager.IsShoreTile(theX, theY);
-    case 12: return static_cast<EEComplexUnit*>(UUUnit(inA))->GetFootprintContinent((long)(int32_t)inC);
-    case 13: return gContinentManager.CanGetTo(UUUnit(inC), theX, theY);
-    }
-    return 0;
-}
 // (one call: the line's CBTL record is written once, as the C++ callers' was; the room is the line's most)
 extern "C" uint32_t ee_units_uu_host_tile_line(int32_t inX1, int32_t inY1, int32_t inX2, int32_t inY2, uint8_t inEnds, uint8_t inThin,
                                                int32_t (*outTiles)[2], uint32_t inCapacity)
@@ -2263,25 +2221,6 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
 
 
 
-extern "C" uint8_t ee_units_uu_host_find_path(uint64_t inUnit, const int32_t* inFrom, const int32_t* inTo, const int32_t* inBounds,
-                                              uint32_t inLimit, uint8_t inWalls, int32_t* outFirst)
-{
-    std::vector<U2DPoint<long> > thePath;
-    EEAIAStarBounds theBounds;
-    EeAStarModifier* theModifier = inWalls ? ee_astar_modifier_new_walls() : NULL;
-    theBounds.mLeft = inBounds[0];
-    theBounds.mTop = inBounds[1];
-    theBounds.mRight = inBounds[2];
-    theBounds.mBottom = inBounds[3];
-    gPathManager.FindPath(static_cast<EEComplexUnit*>(UUUnit(inUnit)), ::gWorld.GetMap(), U2DPoint<long>(inFrom[0], inFrom[1]),
-                          U2DPoint<long>(inTo[0], inTo[1]), theBounds, thePath, 0xb, inLimit, theModifier, NULL);
-    ee_astar_modifier_release(theModifier);
-    if (thePath.size() == 0)
-        return 0;
-    outFirst[0] = (int32_t)thePath[0].mX;
-    outFirst[1] = (int32_t)thePath[0].mY;
-    return 1;
-}
 
 extern "C" uint32_t ee_units_uu_host_tiles_len(const void* inTiles) { return (uint32_t)((const std::vector<U2DPoint<long> >*)inTiles)->size(); }
 extern "C" void ee_units_uu_host_tiles_get(const void* inTiles, int32_t (*outTiles)[2])

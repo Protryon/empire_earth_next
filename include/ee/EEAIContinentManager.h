@@ -89,7 +89,7 @@ public:
     unsigned short FindContinentID(long inX, long inY) const     // 0x22680: FindContinent(inX, inY)->+0x11c, 0 if none
         { return ee_astar_cm_found_continent_id(&this->mRecord, inX, inY); }
     // 0x21fff: inUnit can reach tile (inX, inY) (EEComplexUnit::IsOnOtherContinent for class flag 1) (provisional name)
-    bool CanGetTo(EEUnit* inUnit, long inX, long inY);
+    bool CanGetTo(EEUnit* inUnit, long inX, long inY) { return ee_astar_cm_can_get_to((uint64_t)(uintptr_t)inUnit, inX, inY); }   // cm_unit.rs
     EEAIContinent* FindContinent(long inX, long inY) const       // 0x2269f: via the tile's path sector's sub-sectors
         { return (EEAIContinent*)(uintptr_t)ee_astar_cm_find_continent(&this->mRecord, inX, inY); }
     // 0x22a2f: the last free id of mFreeSubSectorIDs, else ++mLastSubSectorID
@@ -228,7 +228,8 @@ public:
     }
     void GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint)
         { EeHullPoint t = ee_astar_cmq_continent_center(&this->mRecord, inID); outPoint.mX = t.x; outPoint.mY = t.y; }
-    bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond);
+    bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond)   // cm_unit.rs
+        { return ee_astar_cm_connected_for_unit((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inFirst, (uint64_t)(uintptr_t)inSecond); }
     EEAIArea* GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent)
         { return (EEAIArea*)(uintptr_t)ee_astar_cmq_random_area(&this->mRecord, false, inKind, (uint64_t)(uintptr_t)&inRandom, inContinent); }
     bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID)

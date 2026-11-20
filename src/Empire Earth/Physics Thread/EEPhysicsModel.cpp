@@ -495,32 +495,6 @@ extern "C" float ee_units_pm_host_rate(uint64_t inObject, int32_t inWhich)
     }
 }
 
-extern "C" int32_t ee_units_pm_host_waypoint_count(uint64_t inObject)
-{
-    return (int32_t)(long)PMUnit(inObject)->mWaypoints.size();
-}
-
-extern "C" int32_t ee_units_pm_host_next_waypoint(uint64_t inObject, float* ioPoint)
-{
-    GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
-    long theResult = PMUnit(inObject)->GetNextWaypointPoint(thePoint);
-    ioPoint[0] = thePoint.mX;
-    ioPoint[1] = thePoint.mY;
-    ioPoint[2] = thePoint.mZ;
-    return (int32_t)theResult;
-}
-
-extern "C" float ee_units_pm_host_first_waypoint_z(uint64_t inObject)
-{
-    EEComplexUnit* theUnit = PMUnit(inObject);
-    return theUnit->mWaypoints.empty() ? 0.0f : (*theUnit->mWaypoints.begin()).mLocation.GetZ();
-}
-
-extern "C" void ee_units_pm_host_path_length(uint64_t inObject, float* ioLength)
-{
-    PMUnit(inObject)->GetPathLength(*ioLength);
-}
-
 extern "C" int32_t ee_units_pm_host_model_parts(uint64_t inObject)
 {
     return (int32_t)PMUnit(inObject)->GetModel()->GetNumParts();

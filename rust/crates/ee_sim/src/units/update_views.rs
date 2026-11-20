@@ -101,6 +101,11 @@ pub struct ViewUpdateHost<'h> {
 
 impl UpdateHost for ViewUpdateHost<'_> {
     fn read(&mut self, code: i32) -> i64 {
+        #[cfg(not(test))]
+        if code == EE_UNITS_ACT_R_WAYPOINTS {
+            // SAFETY: the update's live complex unit (waypoints.rs)
+            return unsafe { crate::units::waypoints::list(self.unit) }.len() as i64;
+        }
         // SAFETY: the host's call runs on the simulation thread, which holds the world (the C++ caller's)
         let t = unsafe { WorldRead::begin() };
         match view_read(&t, self.unit, self.host.class, code) {
@@ -109,12 +114,37 @@ impl UpdateHost for ViewUpdateHost<'_> {
         }
     }
     fn act(&mut self, code: i32, a: i64, b: i64) -> i64 {
+        #[cfg(not(test))]
+        match code {
+            // the unit's path (the paths lane's round 1: waypoints.rs), noted first as the C++ act host noted them
+            EE_UNITS_ACT_CANCEL_PATHS | EE_UNITS_ACT_FLY_CHECK_PATH | EE_UNITS_ACT_UNIT_NEXT_WAYPOINT => {
+                crate::units::notes::host_op(code, EE_UNITS_ACT_RELEASE_HEAL_EFFECT, a, b);
+                path_act(self.unit, code);
+                return 0;
+            }
+            _ => {}
+        }
         // SAFETY: as `read`'s
         let t = unsafe { WorldRead::begin() };
         if view_act(&t, self.unit, self.host.class, code, a, b) {
             return 0;
         }
         (self.host.act)(self.host.ctx, code, a, b)
+    }
+}
+
+/// The update host's path statements (waypoints.rs): `CancelPaths(unit, true)`, the landing aircraft's path check,
+/// `NextWaypoint()`.
+#[cfg(not(test))]
+fn path_act(unit: u64, code: i32) {
+    use crate::units::waypoints;
+    // SAFETY: the update's live complex unit
+    match code {
+        EE_UNITS_ACT_CANCEL_PATHS => waypoints::cancel_paths(unit),
+        EE_UNITS_ACT_FLY_CHECK_PATH => unsafe { waypoints::fly_check_path(unit) },
+        _ => {
+            unsafe { waypoints::next(unit) };
+        }
     }
 }
 
