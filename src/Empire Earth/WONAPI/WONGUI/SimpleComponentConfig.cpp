@@ -43,27 +43,7 @@ void ScreenContainerConfig::SetComponent(Component *theComponent)
 	this->mScreenContainer = static_cast<ScreenContainer*>(theComponent);
 }
 
-// Creates a new rectangle component
-Component* RectangleComponentConfig::CompFactory()
-{
-    return new RectangleComponent;
-}
 
-// Creates a new 3D rectangle component
-Component* RectangleComponent3DConfig::CompFactory()
-{
-    return new RectangleComponent3D;
-}
 
-// Creates a new image component
-Component* ImageComponentConfig::CompFactory()
-{
-    return new ImageComponent;
-}
 
-// Creates a new screen container
-Component* ScreenContainerConfig::CompFactory()
-{
-    return new ScreenContainer;
-}
 }

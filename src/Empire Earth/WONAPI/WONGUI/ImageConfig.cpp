@@ -57,46 +57,20 @@ namespace WONAPI {
 // Registers the Image, StretchImage, StretchCenterImage and ImageFilter configuration types
 void ImageConfig_Init(ResourceConfigTable* table)
 {
-    table->AddAllocator("Image",ImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("StretchImage",StretchImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("StretchCenterImage",StretchCenterImageConfig::CfgFactory,ImageConfig::CompFactory);
-    table->AddAllocator("ImageFilter",ImageFilterConfig::CfgFactory,ImageConfig::CompFactory);
+    table->AddAllocator("Image",NewConfigOf<ImageConfig>,NoComponent);
+    table->AddAllocator("StretchImage",NewConfigOf<StretchImageConfig>,NoComponent);
+    table->AddAllocator("StretchCenterImage",NewConfigOf<StretchCenterImageConfig>,NoComponent);
+    table->AddAllocator("ImageFilter",NewConfigOf<ImageFilterConfig>,NoComponent);
 }
 }
 
 // Factory callbacks used by the registration above
 namespace WONAPI {
 
-// Creates a new image configuration
-ComponentConfig* ImageConfig::CfgFactory()
-{
-    return new ImageConfig;
-}
 
-// Creates a new stretch image configuration
-ComponentConfig* StretchImageConfig::CfgFactory()
-{
-    return new StretchImageConfig;
-}
 
-// Creates a new stretch-center image configuration
-ComponentConfig* StretchCenterImageConfig::CfgFactory()
-{
-    return new StretchCenterImageConfig;
-}
 
-// Creates a new image filter configuration
-ComponentConfig* ImageFilterConfig::CfgFactory()
-{
-    return new ImageFilterConfig;
-}
 
-// Returns no component (image configurations create none); the linker folds this body into the
-// identical one at 0x006c7b10
-Component* ImageConfig::CompFactory()
-{
-    return NULL;
-}
 
 }
 

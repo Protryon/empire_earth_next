@@ -14,11 +14,6 @@
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 
 namespace WONAPI {
-// Returns a new browser component config
-ComponentConfig* BrowserComponentConfig::CfgFactory()
-{
-    return new BrowserComponentConfig;
-}
 }
 
 #include "ee/wonapi/WONLobbyResourceConfig.h"
@@ -47,11 +42,6 @@ bool BrowserComponentConfig::GetPredefinedComponent(const std::string& name,Comp
 // Registers the BrowserComponent type with its config and component factories
 void BrowserComponentConfig::Init(ResourceConfigTable* table)
 {
-    table->AddAllocator("BrowserComponent",BrowserComponentConfig::CfgFactory,BrowserComponentConfig::CompFactory);
-}
-// Returns a new browser component
-Component* BrowserComponentConfig::CompFactory()
-{
-    return new BrowserComponent;
+    table->AddAllocator("BrowserComponent",NewConfigOf<BrowserComponentConfig>,NewComponentOf<BrowserComponent>);
 }
 }

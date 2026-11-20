@@ -105,27 +105,12 @@ CrossPromotionButton::CrossPromotionButton()
 }
 
 namespace WONAPI {
-// Creates a config for an image text button in the layout file
-ComponentConfig* ImageTextButtonConfig::CfgFactory()
-{
-    return new ImageTextButtonConfig;
-}
 }
 
 namespace WONAPI {
-// Creates a config for a maximize-splitter button in the layout file
-ComponentConfig* MaxSplitterButtonConfig::CfgFactory()
-{
-    return new MaxSplitterButtonConfig;
-}
 }
 
 namespace WONAPI {
-// Creates a config for a cross-promotion button in the layout file
-ComponentConfig* CrossPromotionButtonConfig::CfgFactory()
-{
-    return new CrossPromotionButtonConfig;
-}
 }
 
 

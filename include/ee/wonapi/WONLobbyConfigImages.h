@@ -7,8 +7,6 @@ namespace WONAPI {
 // 0x0078c2b0: ImageConfig (0x7c) + raw image pointer at +0x7c + bool at +0x80 = 0x84 bytes.
 class ImageConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078b130
-    static Component* CompFactory(); // at 0x006c7b10
     ImageConfig(); // at 0x0078b2b0
     // Implicit virtual destructor: releases the owned members, then the base.
     virtual bool PostParse(ConfigParser*); // at 0x007099f0
@@ -21,7 +19,6 @@ public:
 // 0x80-byte configs; the raw pointer at +0x7c aliases the inherited image pointer at +0x78.
 class StretchImageConfig : public ImageConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078b190
     StretchImageConfig(); //38b4e0
     // Implicit virtual destructor: releases the owned members, then the base.
     virtual bool Virtual24(const std::string&); //38b630
@@ -29,7 +26,6 @@ public:
 };
 class StretchCenterImageConfig : public ImageConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078b1f0
     StretchCenterImageConfig(); //38bf90
     // Implicit virtual destructor: releases the owned members, then the base.
     virtual bool Virtual24(const std::string&); //38c0e0
@@ -37,7 +33,6 @@ public:
 };
 class ImageFilterConfig : public ImageConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078b250
     ImageFilterConfig(); // at 0x0078c260
     // Implicit virtual destructor: releases the owned members, then the base.
     virtual bool Virtual24(const std::string&); //38c780

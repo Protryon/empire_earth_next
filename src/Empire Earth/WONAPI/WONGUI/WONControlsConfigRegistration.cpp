@@ -24,50 +24,36 @@ template <EeWonShellKind K> static Component* KindFactory() { return WONShellNew
 static Component* WONButtonSkinFactory() { return new WONButton; }
 
 namespace WONAPI {
-// Returns a new frame component configuration
-ComponentConfig* WONFrameComponentConfig::CfgFactory() { return new WONFrameComponentConfig; }
-// Returns a new skinned scroll bar configuration
-ComponentConfig* WONScrollbarConfig::CfgFactory() { return new WONScrollbarConfig; }
-// Returns a new skinned scroll container configuration
-ComponentConfig* WONScrollContainerConfig::CfgFactory() { return new WONScrollContainerConfig; }
-// Returns a new skinned list control configuration
-ComponentConfig* WONListCtrlConfig::CfgFactory() { return new WONListCtrlConfig; }
-// Returns a new WON skin configuration
-ComponentConfig* WONSkinConfig::CfgFactory() { return new WONSkinConfig; }
 
-// Returns a new simple button configuration
-ComponentConfig* WONSimpleButtonConfig::CfgFactory() { return new WONSimpleButtonConfig; }
-// Returns a new skinned button configuration
-ComponentConfig* WONButtonConfig::CfgFactory() { return new WONButtonConfig; }
 
 // Registers the WON skin and skinned control types (skin templates and skin-made controls) with their
 // configuration and component factories
 void WONControlsConfig_Init(ResourceConfigTable *theTable)
 {
-	theTable->AddAllocator("WONSkin",WONSkinConfig::CfgFactory,ComponentConfig::CompFactory);
-	theTable->AddAllocator("WONButtonSkin",WONButtonConfig::CfgFactory,WONButtonSkinFactory);
-	theTable->AddAllocator("WONScrollbarSkin",WONScrollbarConfig::CfgFactory,KindFactory<EeWonShellKind::WonScrollbar>);
-	theTable->AddAllocator("WONHeaderButtonSkin",WONButtonConfig::CfgFactory,KindFactory<EeWonShellKind::WonHeaderButton>);
-	theTable->AddAllocator("WONSimpleButtonSkin",WONSimpleButtonConfig::CfgFactory,KindFactory<EeWonShellKind::WonSimpleButton>);
-	theTable->AddAllocator("WONScrollContainerSkin",WONScrollContainerConfig::CfgFactory,KindFactory<EeWonShellKind::WonScrollContainer>);
-	theTable->AddAllocator("WONListCtrlSkin",WONListCtrlConfig::CfgFactory,KindFactory<EeWonShellKind::WonListCtrl>);
-	theTable->AddAllocator("WONTabCtrlSkin",WONTabCtrlConfig::CfgFactory,KindFactory<EeWonShellKind::WonTabCtrl>);
-	theTable->AddAllocator("WONComboBoxSkin",WONComboBoxConfig::CfgFactory,KindFactory<EeWonShellKind::WonComboBox>);
+	theTable->AddAllocator("WONSkin",NewConfigOf<WONSkinConfig>,NewComponentOf<Component>);
+	theTable->AddAllocator("WONButtonSkin",NewConfigOf<WONButtonConfig>,WONButtonSkinFactory);
+	theTable->AddAllocator("WONScrollbarSkin",NewConfigOf<WONScrollbarConfig>,KindFactory<EeWonShellKind::WonScrollbar>);
+	theTable->AddAllocator("WONHeaderButtonSkin",NewConfigOf<WONButtonConfig>,KindFactory<EeWonShellKind::WonHeaderButton>);
+	theTable->AddAllocator("WONSimpleButtonSkin",NewConfigOf<WONSimpleButtonConfig>,KindFactory<EeWonShellKind::WonSimpleButton>);
+	theTable->AddAllocator("WONScrollContainerSkin",NewConfigOf<WONScrollContainerConfig>,KindFactory<EeWonShellKind::WonScrollContainer>);
+	theTable->AddAllocator("WONListCtrlSkin",NewConfigOf<WONListCtrlConfig>,KindFactory<EeWonShellKind::WonListCtrl>);
+	theTable->AddAllocator("WONTabCtrlSkin",NewConfigOf<WONTabCtrlConfig>,KindFactory<EeWonShellKind::WonTabCtrl>);
+	theTable->AddAllocator("WONComboBoxSkin",NewConfigOf<WONComboBoxConfig>,KindFactory<EeWonShellKind::WonComboBox>);
 
-	theTable->AddAllocator("WONButton",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::PushButton>);
-	theTable->AddAllocator("WONCheckbox",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::Checkbox>);
-	theTable->AddAllocator("WONRadioButton",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::RadioButton>);
-	theTable->AddAllocator("WONTabButton",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::TabButton>);
-	theTable->AddAllocator("WONHeaderButton",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::HeaderButton>);
-	theTable->AddAllocator("WONCloseButton",WONButtonConfig::CfgFactory,SkinFactory<EeWonSkinGet::CloseButton>);
-	theTable->AddAllocator("WONPopupBack",WONFrameComponentConfig::CfgFactory,SkinFactory<EeWonSkinGet::PopupBack>);
-	theTable->AddAllocator("WONDialogBack",WONFrameComponentConfig::CfgFactory,SkinFactory<EeWonSkinGet::DialogBack>);
+	theTable->AddAllocator("WONButton",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::PushButton>);
+	theTable->AddAllocator("WONCheckbox",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::Checkbox>);
+	theTable->AddAllocator("WONRadioButton",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::RadioButton>);
+	theTable->AddAllocator("WONTabButton",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::TabButton>);
+	theTable->AddAllocator("WONHeaderButton",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::HeaderButton>);
+	theTable->AddAllocator("WONCloseButton",NewConfigOf<WONButtonConfig>,SkinFactory<EeWonSkinGet::CloseButton>);
+	theTable->AddAllocator("WONPopupBack",NewConfigOf<WONFrameComponentConfig>,SkinFactory<EeWonSkinGet::PopupBack>);
+	theTable->AddAllocator("WONDialogBack",NewConfigOf<WONFrameComponentConfig>,SkinFactory<EeWonSkinGet::DialogBack>);
 
-	theTable->AddAllocator("WONInputBox",InputBoxConfig::CfgFactory,SkinFactory<EeWonSkinGet::InputBox>);
-	theTable->AddAllocator("WONComboBox",WONComboBoxConfig::CfgFactory,SkinFactory<EeWonSkinGet::ComboBox>);
-	theTable->AddAllocator("WONTabCtrl",WONTabCtrlConfig::CfgFactory,SkinFactory<EeWonSkinGet::TabCtrl>);
-	theTable->AddAllocator("WONScrollContainer",WONScrollContainerConfig::CfgFactory,SkinFactory<EeWonSkinGet::ScrollContainer>);
-	theTable->AddAllocator("WONListCtrl",WONListCtrlConfig::CfgFactory,SkinFactory<EeWonSkinGet::ListCtrl>);
-	theTable->AddAllocator("WONFrameComponent",WONFrameComponentConfig::CfgFactory,KindFactory<EeWonShellKind::WonFrameComponent>);
+	theTable->AddAllocator("WONInputBox",NewConfigOf<InputBoxConfig>,SkinFactory<EeWonSkinGet::InputBox>);
+	theTable->AddAllocator("WONComboBox",NewConfigOf<WONComboBoxConfig>,SkinFactory<EeWonSkinGet::ComboBox>);
+	theTable->AddAllocator("WONTabCtrl",NewConfigOf<WONTabCtrlConfig>,SkinFactory<EeWonSkinGet::TabCtrl>);
+	theTable->AddAllocator("WONScrollContainer",NewConfigOf<WONScrollContainerConfig>,SkinFactory<EeWonSkinGet::ScrollContainer>);
+	theTable->AddAllocator("WONListCtrl",NewConfigOf<WONListCtrlConfig>,SkinFactory<EeWonSkinGet::ListCtrl>);
+	theTable->AddAllocator("WONFrameComponent",NewConfigOf<WONFrameComponentConfig>,KindFactory<EeWonShellKind::WonFrameComponent>);
 }
 }

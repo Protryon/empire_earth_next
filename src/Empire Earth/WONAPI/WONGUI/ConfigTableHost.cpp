@@ -91,8 +91,8 @@ void ButtonConfig::HandleFitText()
 bool ComboBoxConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMBOBOXCONFIG_GETPREDEFINEDCOMPONENT_NAME,name.data(),name.size());
-    if(aKeyIdx==0) { config=ListAreaConfig::CfgFactory(); component=this->mComboBox->mListArea.get(); }
-    else if(aKeyIdx==1) { config=InputBoxConfig::CfgFactory(); component=this->mComboBox->mEdit.get(); }
+    if(aKeyIdx==0) { config=NewConfigOf<ListAreaConfig>(); component=this->mComboBox->mListArea.get(); }
+    else if(aKeyIdx==1) { config=NewConfigOf<InputBoxConfig>(); component=this->mComboBox->mEdit.get(); }
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }

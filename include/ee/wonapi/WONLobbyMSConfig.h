@@ -11,7 +11,6 @@ class MSButtonBase;
 class MSButtonConfig : public ButtonConfig {
 public:
     MSButtonConfig() {} // empty, at 0x0078f3a0 (0x80 bytes)
-    static ComponentConfig* CfgFactory(); // at 0x0078e600
     static Component* ButtonFactory(); // at 0x0078e480
     static Component* CheckboxFactory(); // at 0x0078e4e0
     static Component* RadioFactory(); // at 0x0078e540
@@ -22,7 +21,6 @@ public:
 };
 class MSArrowButtonConfig : public ButtonConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078e850
     static Component* CompFactory(); // at 0x0078e7f0
     virtual bool Virtual24(const std::string&);
     virtual void SetComponent(Component*); // defined out of line
@@ -30,7 +28,6 @@ public:
 };
 class MSTabButtonConfig : public MSButtonConfig {
 public:
-    static ComponentConfig* CfgFactory() { return new MSTabButtonConfig; } // inline (body at 0x0078ea40, 0x84 bytes)
     static Component* CompFactory(); // at 0x0078e960
     virtual bool Virtual24(const std::string&);
     virtual void SetComponent(Component*); // defined out of line
@@ -38,7 +35,6 @@ public:
 };
 class MS3DFrameConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078ee70
     static Component* CompFactory(); // at 0x0078ee10
     virtual bool Virtual24(const std::string&);
     virtual void SetComponent(Component*); // defined out of line
@@ -47,32 +43,26 @@ public:
 // Config subclasses declared for their static factories (defined out of line).
 class MSInputBoxConfig : public InputBoxConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078e6c0
     static Component* CompFactory(); // at 0x0078e660
 };
 class MSCloseButtonConfig : public ButtonConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078e910
     static Component* CompFactory() { return WONShellNew(EeWonShellKind::MsCloseButton); } // inline (body at 0x0078e8b0)
 };
 class MSHeaderButtonConfig : public MSButtonConfig {
 public:
-    static ComponentConfig* CfgFactory() { return new MSHeaderButtonConfig; } // inline (body at 0x0078eb80, 0x84 bytes)
     static Component* CompFactory(); // at 0x0078eaa0
 };
 class MSSeperatorConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078ed20
     static Component* CompFactory() { return WONShellNew(EeWonShellKind::MsSeperator,6); } // inline (body at 0x0078ecc0)
 };
 class MSEtchedFrameConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078ef20
     static Component* CompFactory() { return WONShellNew(EeWonShellKind::MsEtchedFrame); } // inline (body at 0x0078eec0)
 };
 class MSDlgBackConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x0078edc0
     static Component* CompFactory(); // at 0x0078ed70
 };
 }

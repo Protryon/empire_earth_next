@@ -24,24 +24,24 @@ namespace WONAPI {
 // control types and the Ok and Cancel control ids
 void WONGUIConfig_Init(ResourceConfigTable* table)
 {
-    table->AddAllocator("Component",ComponentConfig::CfgFactory,ComponentConfig::CompFactory);
-    table->AddAllocator("LayoutPoint",ComponentConfig::CfgFactory,ContainerConfig::LayoutPointFactory);
-    table->AddAllocator("Container",ContainerConfig::CfgFactory,ContainerConfig::CompFactory);
-    table->AddAllocator("Dialog",DialogConfig::CfgFactory,DialogConfig::CompFactory);
-    table->AddAllocator("ImageButton",ImageButtonConfig::CfgFactory,ImageButtonConfig::CompFactory);
-    table->AddAllocator("Label",LabelConfig::CfgFactory,LabelConfig::CompFactory);
-    table->AddAllocator("ListArea",ListAreaConfig::CfgFactory,ListAreaConfig::CompFactory);
-    table->AddAllocator("MultiListArea",MultiListAreaConfig::CfgFactory,MultiListAreaConfig::CompFactory);
-    table->AddAllocator("MultiListHeader",MultiListHeaderConfig::CfgFactory,MultiListHeaderConfig::CompFactory);
-    table->AddAllocator("InputBox",InputBoxConfig::CfgFactory,InputBoxConfig::CompFactory);
-    table->AddAllocator("Splitter",SplitterConfig::CfgFactory,SplitterConfig::CompFactory);
-    table->AddAllocator("TextArea",TextAreaConfig::CfgFactory,TextAreaConfig::CompFactory);
-    table->AddAllocator("TabCtrl",TabCtrlConfig::CfgFactory,TabCtrlConfig::CompFactory);
-    table->AddAllocator("TreeArea",TreeAreaConfig::CfgFactory,TreeAreaConfig::CompFactory);
-    table->AddAllocator("RectangleComponent",RectangleComponentConfig::CfgFactory,RectangleComponentConfig::CompFactory);
-    table->AddAllocator("RectangleComponent3D",RectangleComponent3DConfig::CfgFactory,RectangleComponent3DConfig::CompFactory);
-    table->AddAllocator("ImageComponent",ImageComponentConfig::CfgFactory,ImageComponentConfig::CompFactory);
-    table->AddAllocator("ScreenContainer",ScreenContainerConfig::CfgFactory,ScreenContainerConfig::CompFactory);
+    table->AddAllocator("Component",NewConfigOf<ComponentConfig>,NewComponentOf<Component>);
+    table->AddAllocator("LayoutPoint",NewConfigOf<ComponentConfig>,NewComponentOf<LayoutPoint>);
+    table->AddAllocator("Container",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
+    table->AddAllocator("Dialog",NewConfigOf<DialogConfig>,NewComponentOf<Dialog>);
+    table->AddAllocator("ImageButton",NewConfigOf<ImageButtonConfig>,NewComponentOf<ImageButton>);
+    table->AddAllocator("Label",NewConfigOf<LabelConfig>,NewComponentOf<Label>);
+    table->AddAllocator("ListArea",NewConfigOf<ListAreaConfig>,NewComponentOf<ListArea>);
+    table->AddAllocator("MultiListArea",NewConfigOf<MultiListAreaConfig>,NewComponentOf<MultiListArea>);
+    table->AddAllocator("MultiListHeader",NewConfigOf<MultiListHeaderConfig>,NewComponentOf<MultiListHeader>);
+    table->AddAllocator("InputBox",NewConfigOf<InputBoxConfig>,NewComponentOf<InputBox>);
+    table->AddAllocator("Splitter",NewConfigOf<SplitterConfig>,NewComponentOf<Splitter>);
+    table->AddAllocator("TextArea",NewConfigOf<TextAreaConfig>,NewComponentOf<TextArea>);
+    table->AddAllocator("TabCtrl",NewConfigOf<TabCtrlConfig>,NewComponentOf<TabCtrl>);
+    table->AddAllocator("TreeArea",NewConfigOf<TreeAreaConfig>,NewComponentOf<TreeArea>);
+    table->AddAllocator("RectangleComponent",NewConfigOf<RectangleComponentConfig>,NewComponentOf<RectangleComponent>);
+    table->AddAllocator("RectangleComponent3D",NewConfigOf<RectangleComponent3DConfig>,NewComponentOf<RectangleComponent3D>);
+    table->AddAllocator("ImageComponent",NewConfigOf<ImageComponentConfig>,NewComponentOf<ImageComponent>);
+    table->AddAllocator("ScreenContainer",NewConfigOf<ScreenContainerConfig>,NewComponentOf<ScreenContainer>);
     MSComponentConfig_Init(table);
     ImageConfig_Init(table);
     FontConfig_Init(table);
@@ -54,35 +54,10 @@ void WONGUIConfig_Init(ResourceConfigTable* table)
 // Config factories the registration table calls
 namespace WONAPI {
 
-// Creates a new plain component config for the skin loader
-ComponentConfig* ComponentConfig::CfgFactory()
-{
-    return new ComponentConfig;
-}
 
-// Creates a new rectangle component config for the skin loader
-ComponentConfig* RectangleComponentConfig::CfgFactory()
-{
-    return new RectangleComponentConfig;
-}
 
-// Creates a new 3D rectangle component config for the skin loader
-ComponentConfig* RectangleComponent3DConfig::CfgFactory()
-{
-    return new RectangleComponent3DConfig;
-}
 
-// Creates a new image component config for the skin loader
-ComponentConfig* ImageComponentConfig::CfgFactory()
-{
-    return new ImageComponentConfig;
-}
 
-// Creates a new screen container config for the skin loader
-ComponentConfig* ScreenContainerConfig::CfgFactory()
-{
-    return new ScreenContainerConfig;
-}
 
 }
 
@@ -90,141 +65,31 @@ namespace WONAPI {
 
 // Creates a new container config (the linker folds this body into the identical one at 0x00695842)
 
-ComponentConfig* ContainerConfig::CfgFactory()
-{
-    return new ContainerConfig;
-}
 
 // Creates a new dialog config (the linker folds this body into the identical one at 0x0069585c)
 
-ComponentConfig* DialogConfig::CfgFactory()
-{
-    return new DialogConfig;
-}
 
-ComponentConfig* ImageButtonConfig::CfgFactory()
-{
-    return new ImageButtonConfig;
-}
 
-ComponentConfig* ListAreaConfig::CfgFactory()
-{
-    return new ListAreaConfig;
-}
 
-ComponentConfig* MultiListAreaConfig::CfgFactory()
-{
-    return new MultiListAreaConfig;
-}
 
-ComponentConfig* MultiListHeaderConfig::CfgFactory()
-{
-    return new MultiListHeaderConfig;
-}
 
-ComponentConfig* InputBoxConfig::CfgFactory()
-{
-    return new InputBoxConfig;
-}
 
-ComponentConfig* SplitterConfig::CfgFactory()
-{
-    return new SplitterConfig;
-}
 
-ComponentConfig* TextAreaConfig::CfgFactory()
-{
-    return new TextAreaConfig;
-}
 
-ComponentConfig* TreeAreaConfig::CfgFactory()
-{
-    return new TreeAreaConfig;
-}
 
 }
 
 namespace WONAPI {
-// Creates a new label config for the skin loader
-ComponentConfig* LabelConfig::CfgFactory()
-{
-    return new LabelConfig;
-}
-// Creates a new tab control config for the skin loader
-ComponentConfig* TabCtrlConfig::CfgFactory()
-{
-    return new TabCtrlConfig;
-}
 }
 
 namespace WONAPI {
-// Creates a new dialog for the skin loader
-Component* DialogConfig::CompFactory()
-{
-    return new Dialog;
-}
-// Creates a new input box for the skin loader
-Component* InputBoxConfig::CompFactory()
-{
-    return new InputBox;
-}
-// Creates a new label for the skin loader
-Component* LabelConfig::CompFactory()
-{
-    return new Label;
-}
-// Creates a new tab control for the skin loader
-Component* TabCtrlConfig::CompFactory()
-{
-    return new TabCtrl;
-}
 }
 
 namespace WONAPI {
-// Creates a new splitter for the skin loader
-Component* SplitterConfig::CompFactory()
-{
-    return new Splitter;
-}
 }
 
 namespace WONAPI {
-// Creates a new container for the skin loader
-Component* ContainerConfig::CompFactory()
-{
-    return new Container;
-}
-// Creates a new layout point component
-Component* ContainerConfig::LayoutPointFactory()
-{
-    return new LayoutPoint;
-}
-// Creates a new image button for the skin loader
-Component* ImageButtonConfig::CompFactory()
-{
-    return new ImageButton;
-}
 }
 
 namespace WONAPI {
-// Creates a new list area for the skin loader
-Component* ListAreaConfig::CompFactory()
-{
-    return new ListArea;
-}
-// Creates a new multi-column list area for the skin loader
-Component* MultiListAreaConfig::CompFactory()
-{
-    return new MultiListArea;
-}
-// Creates a new multi-column list header for the skin loader
-Component* MultiListHeaderConfig::CompFactory()
-{
-    return new MultiListHeader;
-}
-// Creates a new tree area for the skin loader
-Component* TreeAreaConfig::CompFactory()
-{
-    return new TreeArea;
-}
 }

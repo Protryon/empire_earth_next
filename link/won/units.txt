@@ -89,7 +89,6 @@
 394900 394912 WONGUI/ScrollbarConfigConstructor.cpp
 394ba0 39b34a WONGUI/SimpleComponentConfig.cpp
 395fa0 3971bc WONGUI/WONControlsConfigRegistration.cpp
-396960 3969b7 WONGUI/ComponentConfigComponentFactory.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
 3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp

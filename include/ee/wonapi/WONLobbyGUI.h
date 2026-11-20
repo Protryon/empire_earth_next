@@ -1037,8 +1037,6 @@ struct LobbyNetAddress {
 // vtable, the component, the three flags the table programs set and the error text.
 class ComponentConfig : public ConfigObject {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
     void InitComponents(); // once, then every child config in name order
     Direction ReadDirection();
@@ -1089,6 +1087,11 @@ public:
     bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents;
     EeWonCompCfg* mCfg; // owned
 };
+// a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
+// CompFactory statics, one template each since R6 WONLobby round 25)
+template<class C> ComponentConfig* NewConfigOf() { return new C; }
+template<class T> Component* NewComponentOf() { return new T; }
+inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
 // FontConfig is declared after FontDescriptor below.
 class FontConfig;
@@ -1147,9 +1150,6 @@ public:
 
 class ContainerConfig : public ComponentConfig {
 public:
-    static Component* LayoutPointFactory();
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     bool HandleLayout(bool chain=false,bool repeat=false);
     bool HandleNoOverlapLayout();
     bool HandleNewLayoutPoint();
@@ -1167,8 +1167,6 @@ public:
 
 class DialogConfig : public ContainerConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     virtual bool Virtual24(const std::string&); //389f80
     virtual void SetComponent(Component*);  //38f960
     Dialog* mDialog;                        // +98, borrowed
@@ -1852,8 +1850,6 @@ inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall:
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
 class FontConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
     FontConfig();
     Font* GetFont(); // 0x38a300; recalculates the font on demand
     void SetFont(Font*); //38a3e0

@@ -386,10 +386,6 @@ void RoomLabelCtrlConfig::SetComponent(Component* inComponent)
     this->mRoomLabel=static_cast<RoomLabelCtrl*>(inComponent);
     ContainerConfig::SetComponent(inComponent);
 }
-// Creates a config for a room label in the layout file
-ComponentConfig* RoomLabelCtrlConfig::CfgFactory() { return new RoomLabelCtrlConfig; }
-// Creates the layout reader for a room user list
-ComponentConfig* UserListCtrlConfig::CfgFactory() { return new UserListCtrlConfig; }
 // Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
 bool UserListCtrlConfig::Virtual24(const std::string& instruction)
 {
@@ -423,8 +419,6 @@ void ChatCtrlConfig::SetComponent(Component* inComponent)
     ContainerConfig::SetComponent(inComponent);
     this->mChatCtrl = static_cast<ChatCtrl*>(inComponent);
 }
-// Creates the layout reader for a chat panel
-ComponentConfig* ChatCtrlConfig::CfgFactory() { return new ChatCtrlConfig; }
 
 
 static intptr_t ItemField(ListItem* inItem, intptr_t inField, bool inSet, intptr_t inValue)
@@ -686,8 +680,6 @@ void ServerListCtrlConfig::HandleAddColumn()
     this->mHeader->SetColumnItem(this->mNumColumns - 1, aComponent);
     this->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, aDef - 1, (intptr_t)aCombo);
 }
-// Creates a game list layout config
-ComponentConfig* ServerListCtrlConfig::CfgFactory() { return new ServerListCtrlConfig; }
 // Creates the layout config with no header and no columns
 ServerListCtrlConfig::ServerListCtrlConfig()
 {

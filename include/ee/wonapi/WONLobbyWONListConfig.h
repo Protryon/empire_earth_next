@@ -5,12 +5,10 @@ namespace WONAPI {
 // Config base parts; their constructors and destructors are out of line.
 class WONScrollbarConfig : public ScrollbarConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x00796bc0
     virtual bool Virtual24(const std::string&); //3986d0 (the scrollbar: ScrollbarConfig's mScrollbar)
 };
 class WONScrollContainerConfig : public ScrollbarScrollerConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x00796c20
     virtual bool Virtual24(const std::string&); // at 0x007987e0
     virtual bool GetPredefinedComponent(const std::string&,ComponentConfig*&,Component*&); // at 0x007989f0
     virtual void SetComponent(Component* component) { ScrollbarScrollerConfig::SetComponent(component); this->mScrollContainer=static_cast<ScrollbarScroller*>(component); } //396c80
@@ -22,7 +20,6 @@ public:
 };
 class WONListCtrlConfig : public WONScrollContainerConfig {
 public:
-    static ComponentConfig* CfgFactory(); // at 0x00796ca0
     virtual bool Virtual24(const std::string&); //398c00
     virtual bool GetPredefinedComponent(const std::string&,ComponentConfig*&,Component*&); // at 0x00798e30
     virtual void SetComponent(Component*); // at 0x00796d00

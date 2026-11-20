@@ -82,7 +82,6 @@ void LobbyOpenRustPopup(EeWonLobbyPopupKind k, intptr_t a, intptr_t b = 0, intpt
 // CreditsDialogConfig: reads the credits dialog's resource configuration; 14 vtable slots (partial declaration).
 class CreditsDialogConfig : public DialogConfig {
 public:
-    static ComponentConfig* CfgFactory() { return new CreditsDialogConfig; } // inline as in the SDK (0x765260)
     virtual bool Virtual24(const std::string& inInstruction); // 0x7f7780; handles the ADDLINE instruction
     virtual void SetComponent(Component* inComponent);
     LobbyRustDialog* mCredits; // 0x9c, not owned (the Credits kind)
