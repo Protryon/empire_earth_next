@@ -116,14 +116,6 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
     return theResult;
 }
 
-// Tests one AI-script trigger for inUnit (its active goal may answer first); returns 0 for false, 1 for true, 2 for
-// true from an active goal that is not the current one
-// New (R5b.4, the thirty-fourth round): the answers are Rust (ee_units cls_condition.rs base, over the host below)
-long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    return ee_units_cls_base_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
-}
-
 // New (R5b.4, the thirty-fourth round): the trigger answers are Rust (ee_units cls_condition.rs: every kind's body and
 // the common one, golden USST kind 2); this switch is their host, each case the original's expression or statement
 static EEUnitGoal* CondGoal(uint64_t inGoal) { return (EEUnitGoal*)(uintptr_t)inGoal; }

@@ -184,13 +184,6 @@ bool EEActiveGroup::RequestPaths(std::vector<EEComplexUnit*>& inUnits)
     return theResult;
 }
 
-// Recomputes the group's average, minimum and maximum speeds, turn speeds and accelerations and their inverses,
-// capping each average at the world table's factor 0x31 times the slowest unit's value (ee_units ag.rs)
-void EEActiveGroup::ComputeValues()
-{
-    ee_units_ag_compute_values(EEObj(this));
-}
-
 // Refills the group with a selection's valid living units of the given slot kind and takes its formation;
 // sort 0 sorts the selection first, sort 1 sorts the group slowest first
 void EEActiveGroup::Fill(EESelectedGroup* inGroup, long inSort, long inSlot)
@@ -309,13 +302,6 @@ void EEActiveGroup::SetGoal(EEUnitGoal* inGoal, bool inFlag)
     this->mMovesTogether = inGoal->mKind == kGoalLocation && static_cast<EEUGRust*>(inGoal)->GetUseGroupMovement();
 }
 
-// Hands the group's goal to its units by the group's action (drop off, gather, attack, heal, move, explore,
-// patrol, disband); aircraft held in a container queue it on both goal queues (ee_units ag.rs plan)
-void EEActiveGroup::Plan()
-{
-    ee_units_ag_plan(EEObj(this));
-}
-
 // Empties the group, unlinking every unit from its active group, and resets the group's speeds
 void EEActiveGroup::Clear()
 {
@@ -345,20 +331,6 @@ void EEActiveGroup::KeepNonCitizens()
     }
 }
 
-// Keeps only commandable, living, built units that can attack: an attack value, an air traffic type, a priest,
-// a storm, a balloon or a missile base (ee_units ag.rs)
-void EEActiveGroup::KeepAttackers()
-{
-    ee_units_ag_keep_attackers(EEObj(this));
-}
-
-// Keeps the attackers able to hit the target unit (ranged ones only if they see it); the other mobile
-// non-priests split off into a group moving to the target's tile (ee_units ag.rs)
-void EEActiveGroup::SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY)
-{
-    ee_units_ag_spread_around_unit(EEObj(this), EEObj(inTarget), (int32_t)inTileX, (int32_t)inTileY);
-}
-
 // Removes the units that cannot attack the ground
 // New (R5b.4): the test is the unit store's (ee_units group.rs keeps_ground_attacker: the class's mCanAttackGround)
 void EEActiveGroup::KeepGroundAttackers()
@@ -385,38 +357,6 @@ void EEActiveGroup::KeepCitizens()
         else
             this->RemoveUnit(theUnit);
     }
-}
-
-// Keeps the citizens; the other mobile units split off to attack the resource (an animal they can attack)
-// or into a group moving next to it (ee_units ag.rs)
-void EEActiveGroup::SpreadAroundResource(EEUnit* inTarget)
-{
-    ee_units_ag_spread_around_resource(EEObj(this), EEObj(inTarget));
-}
-
-// Keeps the citizens; the other mobile units split off into a group moving to the tile (or beside a building on it)
-void EEActiveGroup::SpreadAroundTile(long inTileX, long inTileY)
-{
-    ee_units_ag_spread_around_tile(EEObj(this), (int32_t)inTileX, (int32_t)inTileY, 0);
-}
-
-// Keeps only the commandable, living units that can move (airports included) (ee_units ag.rs)
-void EEActiveGroup::KeepMobileUnits()
-{
-    ee_units_ag_keep_mobile(EEObj(this));
-}
-
-// Keeps the transports; the other mobile units split off into a group moving to the tile (or beside a building on it)
-void EEActiveGroup::SpreadForUnload(long inTileX, long inTileY)
-{
-    ee_units_ag_spread_around_tile(EEObj(this), (int32_t)inTileX, (int32_t)inTileY, 1);
-}
-
-// Keeps the units able to cast the calamity (special attack, enough power, in the tech node); the other
-// living attackers split off into a group attacking the target (ee_units ag.rs)
-void EEActiveGroup::SplitCalamityCasters(EECalamityClass* inCalamity, EETechTreeNode* inNode, EEUnit* inTarget)
-{
-    ee_units_ag_split_calamity_casters(EEObj(this), EEObj(inCalamity), EEObj(inNode), EEObj(inTarget));
 }
 
 // Removes a unit from the group, its reserved destination and its path request (cancelling a request left empty)
@@ -448,18 +388,6 @@ void EEGroupPathRequest::RemoveUnit(long inUnitID)
     std::vector<long>::iterator it = std::find(this->mUnitIDs.begin(), this->mUnitIDs.end(), inUnitID);
     if (it != this->mUnitIDs.end())
         this->mUnitIDs.erase(it);
-}
-
-// Returns whether a location is a reserved destination or within half that unit's inner collision radius of one
-bool EEActiveGroup::IsReserved(const GE3DPoint& inLocation)
-{
-    return ee_units_ag_reserved(EEObj(this), (const float(*)[3])&inLocation.mX, 0) != 0;
-}
-
-// Returns whether a location is a reserved destination or in the same unit-region cell as one
-bool EEActiveGroup::IsCellTaken(const GE3DPoint& inLocation)
-{
-    return ee_units_ag_reserved(EEObj(this), (const float(*)[3])&inLocation.mX, 1) != 0;
 }
 
 // Records a unit's destination among the group's reserved destinations

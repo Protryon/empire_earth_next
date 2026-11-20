@@ -240,20 +240,6 @@ EEUnitClass::~EEUnitClass()
     }
 }
 
-// Adds a waypoint at a map point, inZ above the tile's ground (on water at inZ); off the map it snaps or is dropped
-void EEUnitClass::AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, float inZ, bool inSnapToMap)
-{
-    ee_units_mv_add_waypoint_at(EEObj(inUnit), inX, inY, inZ, inSnapToMap);   // ee_units cls_move.rs
-}
-
-// Returns a new building's height and flattens the ground under multi-tile land buildings to their lowest corner
-// (granaries take the average; space turrets and orbital stations sit higher)
-// NEAR: the original calls the map's GetTile out of line (0x2f85) at the top; loop counters in swapped slots
-void EEUnitClass::LevelGround(GETerrainMesh* inMesh, unsigned long inX, unsigned long inY, float* outZ)
-{
-    ee_units_lv_level_ground(EEObj(this), EEObj(inMesh), inX, inY, outZ);   // ee_units cls_level.rs
-}
-
 // (0x630c55 ApplyAreaDamage, 0x630fd2 ApplyHit and the damage of one hit: ee_combat damage.rs since the tenth
 // round, over the world host in EECombatGoals.cpp)
 
@@ -269,12 +255,6 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
     // line, the hit, the launch and the effects stay C++ behind them); CBXA records the outcome
     EECombatWorld(EE_COMBAT_WORLD_FIRE_SHOT, inUnit, NULL, this);
     EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
-}
-
-// Returns whether units of this class may board a container of inClass (transport, fortress, carrier, airport ...)
-bool EEUnitClass::CanEnter(EEUnitClass* inClass)
-{
-    return ee_units_cls_can_enter(this, inClass) != 0;   // ee_units cls_answers.rs
 }
 
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
@@ -782,30 +762,6 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
     ee_units_lv_create_runways(EEObj(this), EEObj(inUnit), inPlayer->GetPlayerID(), inIsFoundation);   // cls_level.rs
 }
 
-// Flattens the ground on the +X side of the airport (four airport lengths) to the airport tile's height
-void EEUnitClass::LevelRunwayPosX(EEComplexUnit* inUnit)
-{
-    ee_units_lv_level_runway(EEObj(inUnit), 2);   // ee_units cls_level.rs
-}
-
-// Flattens the ground on the +Y side of the airport (four airport lengths) to the airport tile's height
-void EEUnitClass::LevelRunwayPosY(EEComplexUnit* inUnit)
-{
-    ee_units_lv_level_runway(EEObj(inUnit), 0);   // ee_units cls_level.rs
-}
-
-// Flattens the ground on the -Y side of the airport (three lengths, to its first row) to the airport's height
-void EEUnitClass::LevelRunwayNegY(EEComplexUnit* inUnit)
-{
-    ee_units_lv_level_runway(EEObj(inUnit), 1);   // ee_units cls_level.rs
-}
-
-// Flattens the ground on the -X side of the airport (three lengths, to its first column) to the airport's height
-void EEUnitClass::LevelRunwayNegX(EEComplexUnit* inUnit)
-{
-    ee_units_lv_level_runway(EEObj(inUnit), 3);   // ee_units cls_level.rs
-}
-
 // Releases every unit class in the class table
 void EEUnitClass::ReleaseUnitClasses()
 {
@@ -994,13 +950,6 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     // volcano.tai returns to Idle once the reload is done.
 }
 
-// Moves the unit away from its pursuer to the first standable spot of eight directions (Gaia animals only 1-2 tiles);
-// else idles
-void EEUnitClass::Flee(EEComplexUnit* inUnit)
-{
-    ee_units_mv_flee(EEObj(this), EEObj(inUnit));   // ee_units cls_move.rs
-}
-
 // Plays the class's ripple effect at the model's ripple tag points that are under water, when the player sees the unit
 void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
 {
@@ -1035,12 +984,6 @@ void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
     ee_units_uu_block_ring(inCorners, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), this->GetTileSize(), &outTiles, inAppend, 1);
 }
 
-// Returns the unit's passable terrain as bits: cliff 1, water 2, land 4, space 8
-long EEUnitClass::GetPassableFlags(EEUnit* inUnit)
-{
-    return ee_units_cls_passable_flags(this, inUnit != NULL ? inUnit->mStats : NULL);   // ee_units cls_answers.rs
-}
-
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
 bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget)
 {
@@ -1061,12 +1004,6 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
         }
     }
     return theResult;
-}
-
-// Returns whether the unit (by its stats) or the class may move on a terrain type
-bool EEUnitClass::CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType)
-{
-    return ee_units_cls_can_move_on_terrain(this, inUnit != NULL ? inUnit->mStats : NULL, (int32_t)inTerrainType) != 0;   // cls_answers.rs
 }
 
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
@@ -1093,19 +1030,6 @@ EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EECompl
     return theContinent;
 }
 
-// Advances the unit to its next waypoint, first marking a land unit blocked when the next tile (or both corners of a
-// diagonal step) holds an impassable unit
-void EEUnitClass::NextWaypoint(EEComplexUnit* inUnit)
-{
-    ee_units_mv_next_waypoint(EEObj(this), EEObj(inUnit));   // ee_units cls_move.rs
-}
-
-// Returns the number of goal queues: airport 5, navy yard 3, buildings, airfields, airplanes and spaceships 2, else 1
-long EEUnitClass::GetNumGoalQueues()
-{
-    return ee_units_cls_num_goal_queues(this);   // ee_units cls_answers.rs
-}
-
 // Lists every unit class whose unit type is in a unit set
 void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>& outClasses)
 {
@@ -1115,18 +1039,6 @@ void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>
         if (theClass != NULL && gUnitSetManager.Contains(theClass->GetUnitType(), inSet) == true)
             outClasses.push_back(theClass);
     }
-}
-
-// Returns whether a building of another unit type shares this one's rally point (military, town centre, dock)
-bool EEUnitClass::SharesRallyPoint(unsigned long inUnitType)
-{
-    return ee_units_cls_shares_rally_point(this, inUnitType) != 0;   // ee_units cls_answers.rs
-}
-
-// Returns whether another unit type shares this one's research (town centre and capitol, male and female citizens)
-bool EEUnitClass::SharesResearch(long inUnitType)
-{
-    return ee_units_cls_shares_research(this, inUnitType) != 0;   // ee_units cls_answers.rs
 }
 
 // IsImportantUnit reads the heal goal (included here, after the unit's init chains: its class static would renumber them)
@@ -1231,12 +1143,6 @@ void EEUnitClass::PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint
 {
     ee_units_mv_path_toward(EEObj(inUnit), inFrom.mX, inFrom.mY, inFrom.mZ, inTo.mX, inTo.mY, inTo.mZ,
                             inSnapToMap);   // ee_units cls_move.rs
-}
-
-// Returns whether the unit has reached its current waypoint, given the distance left
-bool EEUnitClass::BaseHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    return ee_units_mv_has_arrived(EEObj(this), EEObj(inUnit), inValue) != 0;   // ee_units cls_move.rs
 }
 
 // Loads the class's sounds and model and acquires its button
@@ -1520,21 +1426,6 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 #include "ee/EEPathManager.h"
 #include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 #include "rust/sim/units.h"
-// Requests a path from the unit's tile to its goal (cancelling its paths when it already stands there), setting
-// its start heading when unset and an enemy-avoidance modifier for players that avoid enemies; idles when pathless
-// A location goal's group path state and auto-waypoint flag pick the revisions and the graph; a unit without
-// waypoints afterwards goes to physics action 4
-void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
-{
-    ee_units_mv_path_to_goal(EEObj(this), EEObj(inUnit));   // ee_units cls_move.rs
-}
-
-// Rocks a moving, living space unit that takes damage by a random roll to either side, clamped to the maximum roll
-void EEUnitClass::UnitDamaged(EEComplexUnit* inUnit, EEComplexUnit* inAttacker, long inDamage)
-{
-    ee_units_st_unit_damaged(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
-}
-
 // Counts one unit of the class gone and records the time when the last one goes
 void EEUnitClass::UnitRemoved()
 {
@@ -1581,15 +1472,6 @@ void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
     RTSTile* theTile = inUnit->mTile;
     if (theTile != NULL)
         theTile->RemoveUnit(inUnit);
-}
-
-// Moves a unit on along its path: a melee attacker closing in retargets or sidesteps to the less crowded side;
-// otherwise merges a short bounded path toward the goal into its waypoints, or stops when it is already there
-// The sidestep counts the units on the side tiles of the unit and of the goal; a diagonal squeeze counts as blocked.
-// The bounded path runs to the goal or a waypoint further on, avoiding mBoundedPathTiles
-void EEUnitClass::FindPath(EEComplexUnit* inUnit)
-{
-    ee_units_mv_find_path(EEObj(this), EEObj(inUnit));   // ee_units cls_move.rs
 }
 
 // The movement bodies' world (ee_units cls_move_host.rs EE_UNITS_CLS_MV_*: the class bodies' host switch passes them
@@ -1853,12 +1735,6 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
     EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
 }
 
-// Sends a unit running away from its attacker or pursuer to the first standable spot of up to 8 directions
-void EEUnitClass::FleeAttacker(EEComplexUnit* inUnit)
-{
-    ee_units_mv_flee_attacker(EEObj(this), EEObj(inUnit));   // ee_units cls_move.rs
-}
-
 // Creates the class's remains unit for the dead unit's player at a free spot near where it died
 void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
 {
@@ -2043,12 +1919,6 @@ void EEUnitClass::FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFr
          (theLast > theFrame && (theOld >= theLast || theOld <= theFrame)) ||
          (theFrame > theLast && (theOld <= theFrame && theOld >= theLast))))
         this->FireShot(inUnit);
-}
-
-// Uncloaks a unit while an enemy is within its cloak radius and moves it on the minimap when that changes
-void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
-{
-    ee_units_st_cloak_detection(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 // Turns each turret toward the unit's attack, heal or calamity target by its turn rate; else turns them back
@@ -2302,12 +2172,6 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
     this->UpdateDone(inUnit);
 }
 
-// Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
-void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
-{
-    ee_units_st_camouflage(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
-}
-
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
 void EEComplexUnit::SetCamouflaged(bool inValue)
 {
@@ -2315,12 +2179,6 @@ void EEComplexUnit::SetCamouflaged(bool inValue)
         this->mCamouflageTimer |= 0x80000000;
     else
         this->mCamouflageTimer &= 0x7fffffff;
-}
-
-// Restores a unit's power by its regeneration rate every 5 seconds, up to its maximum (not during cinematics)
-void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
-{
-    ee_units_st_power(EEObj(this), EEObj(inUnit));   // ee_units cls_status.rs
 }
 
 extern GEViewport gViewport;
