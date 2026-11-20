@@ -4,12 +4,12 @@
 // game's own start-up, menus, lobby, loading and simulation with the front end stubbed (platform/PlatSim.h: a hidden
 // window, no rendering, no sound) and, instead of a player, a driver. The driver is Rust (ee_game sim_driver: its
 // options, the menus and the lobby as the harness drives them, the run on the physics thread's after-tick, the
-// samples, the end of the run, the JSON report, --games' batch; EE-SIM --help). This file is its host
-// (EeSimDriverHost): the UI's controls under the UI lock, the world lock, the platform switches, the C library's
-// streams and environment, the idle human's set-up, the save requests, --flare and --volcano, and the TEST ONLY
-// parts that read or drive C++ objects: the simulation capture's sweeps (the combat formulas', the unit-list
-// target search's, the missiles'), the per-CT checksum line's fields (--checksum-trace), the state dump (--dump-at,
-// --dump-load, --dump-tick) and the physics random stream's trace (--rng-trace); and the fault handler.
+// samples, the end of the run, the JSON report, --games' batch; EE-SIM --help; the UI's and the world's reads and the
+// capture's sweeps: sim_host.rs). This file is its host: the table (EeSimDriverHost: the world lock, the platform
+// switches, the C library's streams and environment, the save's and the dump's hooks), the calls and members the
+// Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim), the TEST ONLY parts that read C++ objects whole: the
+// per-CT checksum line's fields (--checksum-trace), the state dump (--dump-at, --dump-load, --dump-tick) and the
+// physics random stream's trace (--rng-trace); and the fault handler.
 #ifdef _WIN32
 #include <winsock2.h>
 #include <io.h>
@@ -98,174 +98,6 @@ void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffect
 #include "ee/EEUIShell.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
-
-// TEST ONLY: the combat formulas' sweep of the simulation capture: Rust over the world views (ee_game sim_driver
-// combat_sweep.rs); its host: EECanHeal, a unit's position, a class's projectile
-static int32_t EECombatSweepHost(void*, uint32_t inOp, uint64_t inA, uint64_t inB, float* outValues)
-{
-    EEComplexUnit* a = (EEComplexUnit*)(uintptr_t)inA;
-    switch (inOp) {
-    case EE_SIM_DRIVER_COMBAT_CAN_HEAL: EECanHeal(a, (EEComplexUnit*)(uintptr_t)inB); return 0;
-    case EE_SIM_DRIVER_COMBAT_POSITION: {
-        GE3DPoint thePoint;
-        a->GetPosition(thePoint);
-        outValues[0] = thePoint.GetX();
-        outValues[1] = thePoint.GetY();
-        outValues[2] = thePoint.GetZ();
-        return 0;
-    }
-    case EE_SIM_DRIVER_COMBAT_PROJECTILE: {
-        EEUnitClass* theProjectile = ((EEUnitClassUpgrade*)(uintptr_t)inA)->mUnitClass->mProjectileClass;
-        if (theProjectile == NULL)
-            return 0;
-        outValues[0] = theProjectile->GetAcceleration();
-        return 1;
-    }
-    }
-    return 0;
-}
-
-static void EECombatCaptureSweep()
-{
-    EeSimDriverCombatSweep theSweep = {(int32_t)gPhysics->mTickTimeMs, gPhysics->mTickSeconds,
-                                       (int32_t)EEGetRules().mCombat.mRegenerationInterval,
-                                       (int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost), NULL,
-                                       EECombatSweepHost};
-    ee_sim_driver_combat_sweep(&theSweep);
-}
-
-// TEST ONLY: the unit-list target search's sweep (CBSL). No game of the capture profiles reaches
-// EESearchTargetAlongList (only anti-air ammunition 0x3c does, through EEFindNearbyTarget), so with EE_SIM_CAPTURE on
-// it runs once, when the game ends, over each player's newest 64 armed units on the map (priests left out: a list
-// unit without a complex unit reaches CanAttackClass through NULL there, as in the original): at the unit's tile, and
-// two tiles off with half the range again. Only its CBSL records are written (not the CBAF, CBLB, CBDP, CBHD records
-// of the tests it calls), and each unit's ignored targets are put back after it (IgnoreTarget, the expired entries'
-// erase): the game is over and no other record follows it.
-static void EECombatListSearchSweep()
-{
-    EESimCaptureRecord::Only(EE_COMBAT_TAG('C', 'B', 'S', 'L'));
-    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(p);
-        if (thePlayer == NULL)
-            continue;
-        std::vector<EEComplexUnit*> theAll;
-        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL && theComplex->mTileNode != NULL
-                && theComplex->GetTileX() != -10000 && theComplex->mStats->GetAttack() > 0.0f
-                && !theComplex->GetUnitClass()->IsPriest())
-                theAll.push_back(theComplex);
-        }
-        size_t theFirst = theAll.size() > 64 ? theAll.size() - 64 : 0;
-        for (size_t i = theFirst; i < theAll.size(); i++) {
-            EEComplexUnit* a = theAll[i];
-            std::deque<EEComplexUnitAttacker> theIgnored = a->mIgnoredTargets;
-            EESearchTargetAlongList(a, a->GetTileX(), a->GetTileY(), 1.0f);
-            a->mIgnoredTargets = theIgnored;
-            EESearchTargetAlongList(a, a->GetTileX() + 2, a->GetTileY() - 2, 1.5f);
-            a->mIgnoredTargets = theIgnored;
-        }
-    }
-    EESimCaptureRecord::Only(0);
-}
-
-// TEST ONLY: the missile sweep (CBMA, CBMH and the impact tests' records). No game of the capture profiles flies a
-// missile (EEPMMissile: the missile and torpedo classes), so with EE_SIM_CAPTURE and --missile-sweep (the capture's
-// missile profile: the oracle's game, its own golden digests of those tags), when the game ends (after the
-// unit-list search's sweep), each player's newest four armed units on the map launch one missile of every missile and
-// torpedo class at the newest armed unit of the next player: the missile is created on the unit's tile 1.5 above it,
-// its launcher class the first class that fires it (else the unit's), alternately at the unit (attack unit) and at its
-// position (attack ground), launched as LaunchShot launches it (LaunchProjectile; a class without a launch delay gets
-// 0.3 s of boost so both steps fly) and put on the map as FlushWorld puts it (the queued placements, the pending
-// units). Then up to 120 ticks of the missile's update without its effects and sound: the physics model's step, the
-// flight time's count down, the water and ground impact tests (the first true ends it). Only the flight steps' and
-// impact tests' records are written, and no other thread's while it runs; the game is over and nothing simulates
-// after it.
-static void EECombatMissileSweep()
-{
-    const unsigned int kTags[] = {EE_COMBAT_TAG('C', 'B', 'M', 'A'), EE_COMBAT_TAG('C', 'B', 'M', 'H'),
-                                  EE_COMBAT_TAG('C', 'B', 'G', 'I'), EE_COMBAT_TAG('C', 'B', 'W', 'I')};
-    EESimCaptureRecord::Only(kTags, 4);
-    EESimCaptureRecord::Exclusive(true);
-    std::vector<EEUnitClass*> theClasses;
-    std::vector<EEUnitClass*> theLaunchers;
-    for (EEUnitClass* theClass : gUnitClassTable) {
-        if (theClass == NULL
-            || (theClass->mCategory != kUnitCategoryMissile && theClass->mCategory != kUnitCategoryTorpedo))
-            continue;
-        EEUnitClass* theLauncher = NULL;
-        for (EEUnitClass* theOther : gUnitClassTable)
-            if (theOther != NULL && theOther->mProjectileClass == theClass) {
-                theLauncher = theOther;
-                break;
-            }
-        theClasses.push_back(theClass);
-        theLaunchers.push_back(theLauncher);
-    }
-    std::vector<std::vector<EEComplexUnit*>> theArmed;
-    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(p);
-        std::vector<EEComplexUnit*> theAll;
-        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
-             theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL && theComplex->mTileNode != NULL
-                && theComplex->GetTileX() != -10000 && theComplex->mStats->GetAttack() > 0.0f
-                && theComplex->mUnitClass->mCategory != kUnitCategoryMissile
-                && theComplex->mUnitClass->mCategory != kUnitCategoryTorpedo)
-                theAll.push_back(theComplex);
-        }
-        if (!theAll.empty())
-            theArmed.push_back(theAll);
-    }
-    for (size_t p = 0; theArmed.size() > 1 && p < theArmed.size(); p++) {
-        EEComplexUnit* theTarget = theArmed[(p + 1) % theArmed.size()].back();
-        const std::vector<EEComplexUnit*>& theUnits = theArmed[p];
-        size_t theFirst = theUnits.size() > 4 ? theUnits.size() - 4 : 0;
-        for (size_t i = theFirst; i < theUnits.size(); i++) {
-            EEComplexUnit* a = theUnits[i];
-            for (size_t k = 0; k < theClasses.size(); k++) {
-                if (theTarget->mHitPoints <= 0 || theTarget->GetTileX() == -10000)
-                    break;
-                EEUnitClass* theClass = theClasses[k];
-                EEUnit* theCreated = theClass->CreateUnit(a->GetTileX(), a->GetTileY(), a->mPlayer->GetPlayerID(), false, a);
-                EEComplexUnit* m = theCreated != NULL ? theCreated->GetComplexUnit() : NULL;
-                if (m == NULL)
-                    continue;
-                GETransformation theStart(a->mPhysicalModel.GetLocation());
-                theStart.SetZ(theStart.GetZ() + 1.5f);
-                m->mPhysicalModel.SetLocation(theStart);
-                m->SetLauncherClass(theLaunchers[k] != NULL ? theLaunchers[k] : a->mUnitClass);
-                m->SetOwner(a);
-                GE3DPoint theAt;
-                theTarget->GetPosition(theAt);
-                EEUnitGoal* theGoal;
-                if (((i + k) & 1) == 0)
-                    theGoal = EEUGRust::NewAttackUnit(m, theTarget, false, false);
-                else
-                    theGoal = EEUGRust::NewAttackGround(theAt, false);
-                m->SetGoal(theGoal, false, false);
-                m->SetVelocity(a->GetVelocity());
-                theClass->LaunchProjectile(m, theAt);
-                if (m->mFlightTime == 0)
-                    m->SetFlightTime(300);
-                // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
-                gWorld.FlushQueuedPlacements();
-                a->mPlayer->AddPendingUnits(false, true);
-                for (int t = 0; t < 120 && m->mTileX != -10000 && m->mGoalState != NULL; t++) {
-                    theClass->mPhysicsModel->Step0(m);
-                    long theElapsed = gPhysics->mTickTimeMs != 0 ? gPhysics->mTickTimeMs : 1;
-                    if (m->mFlightTime != 0)
-                        m->SetFlightTime(m->mFlightTime > theElapsed ? m->mFlightTime - theElapsed : 0);
-                    if (theClass->CheckWaterImpact(m) || theClass->CheckGroundImpact(m))
-                        break;
-                }
-            }
-        }
-    }
-    EESimCaptureRecord::Exclusive(false);
-    EESimCaptureRecord::Only(0);
-}
 
 namespace {
 
@@ -509,16 +341,6 @@ void RngTraceHook(URandom* inRandom)
 
 // ------------------------------------------------------------------------------------------------ the driver's host
 
-const unsigned long kTriggerEvent = 0x3f0;
-const unsigned long kFormLobbyID = 26;
-const unsigned long kFormLoad = 13, kFormLoadScenario = 4, kFormCampaignSelect = 33;
-const unsigned long kCampaignScenarioList = 2;   // the campaign scenario select form's scenario list
-
-struct UILock {
-    UILock() { gUIManager->LockUIForCopyData(); }
-    ~UILock() { gUIManager->UnlockUIForCopyData(); }
-};
-
 size_t PutText(const std::string& inText, char* outBuffer, size_t inCapacity)
 {
     if (inCapacity > 0) {
@@ -529,156 +351,6 @@ size_t PutText(const std::string& inText, char* outBuffer, size_t inCapacity)
     return inText.size();
 }
 
-unsigned int HostTopForm()
-{
-    if (gUIManager == NULL)
-        return 0;
-    UILock theLock;
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    return theForm ? (unsigned int)theForm->GetFormID() : 0;
-}
-
-size_t HostTopFormClass(char* outBuffer, size_t inCapacity)
-{
-    std::string theClass = "none";   // (an id -1 form: a message box is EEUIFError)
-    if (gUIManager) {
-        UILock theLock;
-        UIForm* theForm = gUIManager->GetCurrentForm();
-        if (EEUIShell* theShell = theForm ? EEUIShell::Of(theForm) : NULL)
-            theClass = theShell->KindName();   // a form shell: the class its kind replaces
-        else if (theForm)
-            theClass = typeid(*theForm).name();
-    }
-    return PutText(theClass, outBuffer, inCapacity);
-}
-
-int HostClick(unsigned int inForm, unsigned int inControl)
-{
-    UILock theLock;
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != inForm || inControl >= theForm->GetControlCount())
-        return 1;
-    UIControl* theControl = theForm->GetControl(inControl);
-    if (!theControl || !theControl->GetTriggerEvent(kTriggerEvent))
-        return 2;
-    theControl->FireTriggerEvent(kTriggerEvent);
-    return 0;
-}
-
-UIComboBox* Combo(UIForm* inForm, long inControl)
-{
-    if (!inForm || inControl < 0 || (unsigned long)inControl >= inForm->GetControlCount())
-        return NULL;
-    return dynamic_cast<UIComboBox*>(inForm->GetControl(inControl));
-}
-
-void PushLines(const UILBString* inList, void* inSink, EeSimDriverPushFn inPush)
-{
-    for (unsigned long k = 0; k < inList->GetLineCount(); k++) {
-        const char* theText = (const char*)inList->GetData(k);
-        inPush(inSink, theText ? theText : "");
-    }
-}
-
-bool HostComboLines(long inControl, void* inSink, EeSimDriverPushFn inPush, long* outSelection)
-{
-    UILock theLock;
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != kFormLobbyID)
-        return false;
-    UIComboBox* theCombo = Combo(theForm, inControl);
-    if (!theCombo || !theCombo->GetListBox())
-        return false;
-    PushLines(theCombo->GetListBox(), inSink, inPush);
-    unsigned long theSelection = 0xffffffffUL;
-    theCombo->GetCurrentSelection(theSelection);
-    *outSelection = (long)(int32_t)theSelection;
-    return true;
-}
-
-bool HostComboSelect(long inControl, unsigned long inIndex)
-{
-    UILock theLock;
-    UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), inControl);
-    if (!theCombo)
-        return false;
-    theCombo->SetCurrentSelection(inIndex);
-    return true;
-}
-
-// the load screen's (EE_SIM_DRIVER_LIST_LOAD), the play scenario screen's or the campaign scenario select form's
-// file list (NULL: not on top)
-UILBString* ScreenList(int inWhich)
-{
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    unsigned long theForms[3] = {kFormLoad, kFormLoadScenario, kFormCampaignSelect};
-    unsigned long theControls[3] = {(unsigned long)kSPLoadGameFileListBox, (unsigned long)kLoadGameLoadFileListBox,
-                                    kCampaignScenarioList};
-    if (!theForm || inWhich < 0 || inWhich > 2 || theForm->GetFormID() != theForms[inWhich] ||
-        theControls[inWhich] >= theForm->GetControlCount())
-        return NULL;
-    return dynamic_cast<UILBString*>(theForm->GetControl(theControls[inWhich]));
-}
-
-bool HostListLines(int inWhich, void* inSink, EeSimDriverPushFn inPush, unsigned long* outSelection)
-{
-    UILock theLock;
-    *outSelection = 0xffffffffUL;
-    UILBString* theList = ScreenList(inWhich);
-    if (!theList)
-        return false;
-    unsigned long theSelection = 0xffffffffUL;
-    bool theOK = theList->GetCurrentSelection(theSelection) == kErrorOK;
-    // (the campaign's list: the selection only when the list gives one; the file lists: as it is written)
-    *outSelection = inWhich == EE_SIM_DRIVER_LIST_CAMPAIGN && !theOK ? 0xffffffffUL : theSelection;
-    PushLines(theList, inSink, inPush);
-    return true;
-}
-
-bool HostListSelect(int inWhich, unsigned long inIndex)
-{
-    UILock theLock;
-    UILBString* theList = ScreenList(inWhich);
-    if (!theList)
-        return false;
-    theList->ChangeSelectionIndex(inIndex, true, false);
-    return true;
-}
-
-long HostControlWithEvent(unsigned int inForm, unsigned int inCode)
-{
-    UILock theLock;
-    UIForm* theForm = gUIManager->GetCurrentForm();
-    if (!theForm || theForm->GetFormID() != inForm)
-        return -1;
-    for (unsigned long k = 0; k < theForm->GetControlCount(); k++) {
-        UIControl* theControl = theForm->GetControl(k);
-        EEScreenEvent* theEvent =
-            theControl ? dynamic_cast<EEScreenEvent*>(theControl->GetTriggerEvent(kTriggerEvent)) : NULL;
-        if (theEvent != NULL && theEvent->mEvent == inCode)
-            return (long)k;
-    }
-    return -1;
-}
-
-void HostPhysics(EeSimDriverPhysics* outPhysics)
-{
-    outPhysics->present = gPhysics != NULL;
-    if (gPhysics == NULL)
-        return;
-    outPhysics->timer_running = gPhysics->mTimerRunning;
-    outPhysics->game_over = gPhysics->mGameOver;
-    outPhysics->game_ms = gPhysics->mGameTime;
-    outPhysics->pt = gPhysics->mNumTicksDone;
-}
-
-bool HostEditorUp()
-{
-    UILock theLock;
-    return gUIManager->GetScenarioEditorForm() != NULL && gUIManager->GetCurrentForm() == gUIManager->GetScenarioEditorForm() &&
-           gWorld.GetMap() != NULL;
-}
-
 void HostLock(int inOp)
 {
     switch (inOp) {
@@ -686,27 +358,6 @@ void HostLock(int inOp)
     case EE_SIM_DRIVER_WRITE_UNLOCK: gWorld.mLock->WriteUnlock(); break;
     case EE_SIM_DRIVER_READ_LOCK: gWorld.mLock->ReadLock(); break;
     default: gWorld.mLock->ReadUnlock(); break;
-    }
-}
-
-// the idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder opened and
-// cancelled): the civilization timer sends its messages but opens no form, and the computers' civilizations are not
-// locked at its expiry. With inHumanOut, allied both ways with every computer from the start: the computers' attack
-// choice prefers a human, and the classic's early raids went to this seat, which never fights back (the computers
-// stay at war with each other; an observer seat, or its units removed, ends the single-player game at once)
-void HostPrepareHuman(bool inHumanOut)
-{
-    EEPlayer* theHuman = gWorld.GetCurrentPlayer();
-    theHuman->mCivilizationChosen = true;
-    theHuman->mCivilizationLocked = true;
-    if (!inHumanOut)
-        return;
-    for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
-        EEPlayer* theOther = gWorld.GetPlayer(i);
-        if (theOther == NULL || theOther == theHuman)
-            continue;
-        theHuman->SetDiplomaticStance(theOther, 0, gWorld.GetMap());
-        theOther->SetDiplomaticStance(theHuman, 0, gWorld.GetMap());
     }
 }
 
@@ -726,18 +377,6 @@ size_t HostChecksumFields(char* outBuffer, size_t inCapacity)
 void HostDumpState(const char* inPath)
 {
     DumpState(inPath);
-}
-
-// a --save-at request, as EEPhysics::AutoSave sends one (but quiet and not an autosave: no autosave is trimmed, the
-// preferences are not written). It runs at the start of the next communications tick that carries it (EEPhysics::
-// Tick: DrainInput executes it, ServeLoadSaveRequests saves), between two communications ticks
-void HostRequestSave(const char* inName)
-{
-    UWideString theFile(inName);   // load, quiet, tick, time, auto-save, the wait id, the name
-    NEMessage* theSave = new EEMRecord(kMessageLoadOrSaveGame, {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(),
-                                                                TMGetTime(), 0, 0, theFile});
-    static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
-    theSave->Dereference();
 }
 
 size_t HostExtension(int inWhich, char* outBuffer, size_t inCapacity)
@@ -761,76 +400,9 @@ void HostSetAfterTick(bool inOn)
     gPlatSimAfterTick = inOn ? AfterTickTrampoline : NULL;
 }
 
-void HostSetSwitches(const EeSimDriverSwitches* inSwitches)
-{
-    gPlatSimMode = 1;
-    gPlatSimSeedSet = inSwitches->seed_set;   // a loaded game: the file's seed, as the game loads it
-    gPlatSimSeed = inSwitches->seed;
-    gPlatSimNoHumanDefeat = inSwitches->no_human_defeat;
-    gScenarioSimDialogs = inSwitches->scenario_dialogs;
-    // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
-    // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
-    // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)
-    gPlatSimPortOffset = inSwitches->port_offset >= 0 ? inSwitches->port_offset : kPlatSimAnyPort;
-}
-
-long HostNoHumanDefeatHits(long inOp)
-{
-    if (inOp == 0)
-        gPlatSimNoHumanDefeatHits = 0;
-    return (long)gPlatSimNoHumanDefeatHits;
-}
-
 void HostCancelGame()
 {
     gUserInterface->PostCancelGame();
-}
-
-// the player's first living building (NULL: none)
-EEUnit* FirstBuilding(unsigned long inPlayer)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayer(inPlayer);
-    for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL; u = static_cast<EEUnit*>(u->mNext))
-        if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
-            return u;
-    return NULL;
-}
-
-// --flare: the idle human's flare at the building, told to the human's allies as EEMSendFlare::Execute tells them
-// (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no computer sends
-void HostFlare(unsigned long inPlayer, EeSimDriverSpot* outSpot)
-{
-    EEPlayer* theHuman = gWorld.GetCurrentPlayer();
-    EEUnit* theSpot = FirstBuilding(inPlayer);
-    if (theHuman == NULL || theSpot == NULL)
-        return;
-    U2DPoint<long> theTile(theSpot->GetTileX(), theSpot->GetTileY());
-    std::vector<EEPlayer*> theAllies = theHuman->mAllies;
-    for (EEPlayer* a : theAllies)
-        a->FlareReceived(theHuman, theTile);
-    *outSpot = {true, theTile.mX, theTile.mY, (unsigned long)theAllies.size()};
-}
-
-// --volcano: a volcano (the calamity class 9, no caster) cast 6 tiles off the building for that player
-void HostVolcano(unsigned long inPlayer, EeSimDriverSpot* outSpot)
-{
-    EEUnit* theSpot = FirstBuilding(inPlayer);
-    if (theSpot == NULL)
-        return;
-    long theX = theSpot->GetTileX() + 6, theY = theSpot->GetTileY() + 6;
-    bool theCast = USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(9, 0xffffffffUL, theX, theY,
-                                                                                         inPlayer);
-    *outSpot = {true, theX, theY, theCast ? 1UL : 0UL};
-}
-
-void HostVolcanoBoulders(void* inSink, EeSimDriverPushFn inPush)
-{
-    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(i);
-        for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL; u = static_cast<EEUnit*>(u->mNext))
-            if (u->mUnitClass->GetUnitType() == kUnitTypeVolcanoProjectile)
-                inPush(inSink, std::to_string(u->GetUnitID()).c_str());
-    }
 }
 
 bool HostCaptureActive()
@@ -838,111 +410,9 @@ bool HostCaptureActive()
     return EESimCaptureRecord::Active();
 }
 
-void HostSweep(int inKind, long inArg)
-{
-    switch (inKind) {
-    case EE_SIM_DRIVER_SWEEP_FIVE_MINUTES:   // every five game minutes of a captured game
-        EEFormationCaptureSweep();   // (ee/EEFormation.h)
-        EECombatCaptureSweep();
-        EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
-        EECalamityCaptureSweep();   // CanCastAt over every calamity class (ee/EETechCapture.h)
-        {   // the Execute decisions' sweep (ee_sim netmsg decisions.rs): EEGetTradePrice's rates by resource
-            const float theRates[7] = {1.0f, 1.0f, gWorldTable.GetFloatValue(kWorldTradeRateFoodWood),
-                                       gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood),
-                                       gWorldTable.GetFloatValue(kWorldTradeRateStoneIron), 1.0f,
-                                       gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron)};
-            ee_netmsg_capture_decision_sweep(theRates);
-        }
-        ee_units_select_pick_sweep();   // the box selection's pick over every player's units (ee_sim units/pick_sweep.rs)
-        ee_units_fill_sweep();   // the active groups' Fill test over every player's units (likewise)
-        EEGroupCommandSweep();   // the group commands' bodies over the dry host (ee/EEUnitHost.h)
-        break;
-    case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)
-    case EE_SIM_DRIVER_SWEEP_CALAMITIES: EETechCaptureCastCalamities(inArg); break;   // --calamities
-    case EE_SIM_DRIVER_SWEEP_UNITS: ee_units_unit_sweep(inArg); break;   // --unit-sweep (ee_sim units unit_sweep.rs)
-    case EE_SIM_DRIVER_SWEEP_MINUTE:   // every game minute: the mini map's cells (MMSN), the tile sight (TSGT)
-        if (gMiniMap != NULL)   // MMSN (ee_game app world_capture.rs)
-            ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
-        EESightCaptureSnapshot();
-        break;
-    case EE_SIM_DRIVER_SWEEP_CHEATS: EEAppCaptureCheatSweep(); break;   // --app-sweep at five game minutes
-    case EE_SIM_DRIVER_SWEEP_STORMS: EEAppCaptureStormSweep(); break;   // --app-sweep at ten
-    case EE_SIM_DRIVER_SWEEP_END: {   // the end of a game; inArg 0: nothing swept, only the flush
-        if (inArg & 2) {   // the 3D effects' sweep alone (the game's own records held since its start)
-            EESimCaptureRecord::Hold(false);
-            EEEffectCaptureSweep();
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-            return;
-        }
-        if (inArg & 4) {   // the active groups' sweep alone (the game's own records held since its start)
-            EESimCaptureRecord::Hold(false);
-            ee_units_ag_sweep();   // ee_sim units ag_sweep.rs
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-            return;
-        }
-        if (inArg & 1)
-            EECombatListSearchSweep();
-        if (inArg & 8) {
-            // EEMap's sight and out-of-synch checksum (MAPS, MAPK; their TSGT): no game reaches them. The changed
-            // sight would reach the other threads: nothing records after it
-            EECombatCaptureFlush();
-            const unsigned int kTags[] = {EECaptureTag("MAPS"), EECaptureTag("MAPK"), EECaptureTag("TSGT")};
-            EESimCaptureRecord::Only(kTags, 3);
-            EESimCaptureRecord::Exclusive(true);
-            EESightCaptureSweep();
-            // EEWorld::RecordStatistics (WSTA): only a game left runs it (EEWorld::Clear); its random draws and the
-            // computers' topped-up totals reach nothing after it
-            EESimCaptureRecord::Only(EECaptureTag("WSTA"));
-            EEAppCaptureStatisticsSweep();
-            EESimCaptureRecord::Exclusive(false);
-            EESimCaptureRecord::Only(0);
-            EESimCaptureRecord::Close();
-        }
-        if (inArg & 16) {
-            EECombatMissileSweep();
-            // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
-            EECombatCaptureFlush();
-            EESimCaptureRecord::Close();
-        }
-        EECombatCaptureFlush();
-        break;
-    }
-    case EE_SIM_DRIVER_SWEEP_HOLD: EESimCaptureRecord::Hold(inArg != 0); break;
-    case EE_SIM_DRIVER_SWEEP_DIALOG:   // --scenario: a shown dialog message ends now (ee/EEScenarioManager.h)
-        if (gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog)
-            gWorld.mScenarioManager->ShowDialogMessage();
-        break;
-    }
-}
-
-bool HostRulesAdd(const char* inText, char* outError, size_t inCapacity)
-{
-    std::string theError;
-    if (EERulesAddOverride(inText, theError))
-        return true;
-    PutText(theError, outError, inCapacity);
-    return false;
-}
-
-void HostRulesProblems(void* inSink, EeSimDriverPushFn inPush)
-{
-    std::vector<std::string> theProblems;
-    EERulesOverrideProblems(theProblems);
-    for (const std::string& p : theProblems)
-        inPush(inSink, p.c_str());
-}
-
 long HostEngineChoice(const char* inName)
 {
     return EECPChoiceByName(inName);
-}
-
-void HostEngineIDs(void* inSink, EeSimDriverPushFn inPush)
-{
-    for (size_t k = 0; k < ee_cp_engine_ai_count(); k++)
-        inPush(inSink, EECPAIID(ee_cp_engine_ai_at(k)).c_str());
 }
 
 void HostSetEnv(const char* inName, const char* inValue)
@@ -1044,18 +514,6 @@ long HostWonders(uint64_t inPlayer)
     return (long)reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->GetNumWonderUnits();
 }
 
-// a unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource
-long HostUnitValue(uint64_t inPlayer, long inTechnology, unsigned long inUnitType)
-{
-    EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer);
-    EETechTreeNode* theNode = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(inTechnology) : NULL;
-    long theValue = 0;
-    if (theNode != NULL && theNode->mData != NULL)
-        for (long r = kResourceFood; r <= kResourceIron; r++)
-            theValue += theNode->GetCost(r, inUnitType, 1.0f);
-    return theValue;
-}
-
 void DebugTrampoline(const char* inText)
 {
     ee_sim_driver_debug(inText);
@@ -1129,13 +587,9 @@ void EESimGameEnded(int inResult);
 int EESimMain(int argc, char** argv)
 {
     static const EeSimDriverHost kHost = {
-        HostTopForm, HostTopFormClass, HostClick, HostComboLines, HostComboSelect, HostListLines, HostListSelect,
-        HostControlWithEvent, HostPhysics, HostEditorUp, HostLock, HostPrepareHuman, HostDumpAfterLoad,
-        HostChecksumFields, HostDumpState, HostRequestSave, HostExtension, HostSetRun, HostSetAfterTick,
-        HostSetSwitches, HostNoHumanDefeatHits, HostCancelGame, HostFlare, HostVolcano,
-        HostVolcanoBoulders, HostCaptureActive, HostSweep, HostRulesAdd, HostRulesProblems, HostEngineChoice,
-        HostEngineIDs, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite, HostRngTrace, HostTickHook, HostQuit,
-        HostWonders, HostUnitValue};
+        HostLock, HostDumpAfterLoad, HostChecksumFields, HostDumpState, HostExtension, HostSetRun, HostSetAfterTick,
+        HostCancelGame, HostCaptureActive, HostEngineChoice, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite,
+        HostRngTrace, HostTickHook, HostQuit, HostWonders};
     EeSimDriverEvents theEvents = {};
     theEvents.sp_load_game = EE_SCREENS_SP_LOAD_GAME;
     theEvents.spl_load = EE_SCREENS_SPL_LOAD;
@@ -1184,34 +638,277 @@ void EESimGameEnded(int inResult)
     ee_sim_driver_game_ended(inResult);
 }
 
-// TSGT, MAPS, MAPK (TEST ONLY): the app profile's end sweep of EEMap's sight and out-of-synch checksum
-// (ee/EESightCapture.h)
-void EESightCaptureSweep()
+// ------------------------------------------------------------------------------------------------ the Rust's calls
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define UF ((UIForm*)p)
+#define CTL ((UIControl*)p)
+#define PL ((EEPlayer*)p)
+#define UN ((EEUnit*)p)
+#define CX ((EEComplexUnit*)p)
+#define UC ((EEUnitClass*)p)
+
+static std::string sRulesError;             // EERulesAddOverride's problem
+static std::vector<std::string> sProblems;   // EERulesOverrideProblems'
+
+// The driver's C++ calls and members (sim_ops.rs EeSimDriverSim): p the object, a and f the arguments, s a text
+extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t* a, const float* f, const char* s)
 {
-    if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
-        return;
-    EEMap* theMap = gWorld.mMap;
-    float theRadius = gWorldTable.GetFloatValue(kWorldWonderSightRadius);
-    float theSize = (float)theMap->mSize;
-    const float kPoints[][2] = {{theSize * 0.5f, theSize * 0.5f}, {5.5f, 7.5f}, {theSize - 3.25f, theSize * 0.3f}};
-    for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[p];
-        if (thePlayer == NULL)
-            continue;
-        for (const float* thePoint : kPoints) {
-            theMap->AddSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
-            theMap->AddSight(thePlayer, thePoint[0] + 2.0f, thePoint[1] - 1.0f, theRadius * 0.5f, true);
-            theMap->RemoveSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
-        }
-        theMap->RemoveSight(thePlayer, kPoints[0][0] + 2.0f, kPoints[0][1] - 1.0f, theRadius * 0.5f, true);
+    typedef EeSimDriverSim O;
+    switch (inOp) {
+    // the user interface
+    case O::UiPresent: return gUIManager != NULL;
+    case O::UiLock: gUIManager->LockUIForCopyData();
+        break;
+    case O::UiUnlock: gUIManager->UnlockUIForCopyData();
+        break;
+    case O::CurrentForm: return P64(gUIManager->GetCurrentForm());
+    case O::EditorForm: return P64(static_cast<UIForm*>(gUIManager->GetScenarioEditorForm()));
+    case O::FormId: return UF->GetFormID();
+    case O::FormShellOf: return P64(EEUIShell::Of(UF));
+    case O::FormControlCount: return UF->GetControlCount();
+    case O::FormControl: return P64(UF->GetControl((unsigned long)a[0]));
+    case O::ControlTriggerEvent: return P64(CTL->GetTriggerEvent((unsigned long)a[0]));
+    case O::ControlFire: CTL->FireTriggerEvent((unsigned long)a[0]);
+        break;
+    case O::ComboOf: return P64(dynamic_cast<UIComboBox*>(CTL));
+    case O::ComboList: return P64(((UIComboBox*)p)->GetListBox());
+    case O::ComboSelection: return ((UIComboBox*)p)->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::ComboSetSelection: ((UIComboBox*)p)->SetCurrentSelection((unsigned long)a[0]);
+        break;
+    case O::ListOf: return P64(dynamic_cast<UILBString*>(CTL));
+    case O::ListLineCount: return ((UILBString*)p)->GetLineCount();
+    case O::ListSelection: return ((UILBString*)p)->GetCurrentSelection(*(unsigned long*)a[0]);
+    case O::ListChangeSelection: ((UILBString*)p)->ChangeSelectionIndex((unsigned long)a[0], a[1] != 0, a[2] != 0);
+        break;
+    case O::ScreenEventOf: return P64(dynamic_cast<EEScreenEvent*>((UIEvent*)p));
+    case O::ScreenEventCode: return ((EEScreenEvent*)p)->mEvent;
+    case O::SpLoadGameFileList: return kSPLoadGameFileListBox;
+    case O::LoadScenarioFileList: return kLoadGameLoadFileListBox;
+    // the physics and the world
+    case O::PhysicsPresent: return gPhysics != NULL;
+    case O::PhysicsTimerRunning: return gPhysics->mTimerRunning;
+    case O::PhysicsGameOver: return gPhysics->mGameOver;
+    case O::PhysicsGameTime: return gPhysics->mGameTime;
+    case O::PhysicsTicksDone: return gPhysics->mNumTicksDone;
+    case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
+    case O::PhysicsFlushPlacements: gWorld.FlushQueuedPlacements();
+        break;
+    case O::MapPresent: return gWorld.GetMap() != NULL;
+    case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::NumPlayers: return gWorld.GetNumPlayers();
+    case O::GetPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
+    case O::WorldNumPlayers: return gWorld.mNumPlayers;
+    case O::WorldPlayersAt: return P64(gWorld.mPlayers[a[0]]);
+    case O::PlayerSetCivilizationChosen: PL->mCivilizationChosen = a[0] != 0;
+        break;
+    case O::PlayerSetCivilizationLocked: PL->mCivilizationLocked = a[0] != 0;
+        break;
+    case O::PlayerSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], 0, gWorld.GetMap());
+        break;
+    case O::PlayerFirstUnit: return P64(PL->mFirstUnit);
+    case O::PlayerAllyCount: return PL->mAllies.size();
+    case O::PlayerAllyAt: return P64(PL->mAllies[a[0]]);
+    case O::PlayerFlareReceived: PL->FlareReceived((EEPlayer*)a[0], U2DPoint<long>((long)a[1], (long)a[2]));
+        break;
+    case O::PlayerTechnologies: return P64(PL->mTechnologies);
+    case O::PlayerId: return PL->GetPlayerID();
+    case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
+        break;
+    case O::TreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
+    case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
+    case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
+    case O::CastLocationCalamity:
+        return USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(9, 0xffffffffUL, (long)a[0], (long)a[1],
+                                                                                    (unsigned long)a[2]);
+    case O::VolcanoProjectileType: return kUnitTypeVolcanoProjectile;
+    case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
+        return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
+            {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
+    case O::SendToAllAndWait: static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait((NEMessage*)p, 15000, 12);
+        break;
+    case O::DerefMessage: ((NEMessage*)p)->Dereference();
+        break;
+    // the platform switches
+    case O::SetSimMode: gPlatSimMode = 1;
+        break;
+    case O::SetSeedSet: gPlatSimSeedSet = (int)a[0];
+        break;
+    case O::SetSeed: gPlatSimSeed = (uint32_t)a[0];
+        break;
+    case O::SetNoHumanDefeat: gPlatSimNoHumanDefeat = (int)a[0];
+        break;
+    case O::SetScenarioDialogs: gScenarioSimDialogs = a[0] != 0;
+        break;
+    case O::SetPortOffset: gPlatSimPortOffset = (int)a[0];
+        break;
+    case O::AnyPort: return kPlatSimAnyPort;
+    case O::ClearNoHumanDefeatHits: gPlatSimNoHumanDefeatHits = 0;
+        break;
+    case O::NoHumanDefeatHits: return (long)gPlatSimNoHumanDefeatHits;
+    // the rules
+    case O::RulesAdd: return EERulesAddOverride(s, sRulesError);
+    case O::RulesProblemsLoad: EERulesOverrideProblems(sProblems);
+        break;
+    case O::RulesProblemCount: return sProblems.size();
+    // the units
+    case O::UnitNext: return P64(static_cast<EEUnit*>(UN->mNext));
+    case O::UnitComplex: return P64(UN->mComplexUnit);
+    case O::ComplexOf: return P64(UN->mComplexUnit);
+    case O::UnitGetComplex: return P64(UN->GetComplexUnit());
+    case O::UnitHitPoints: return UN->mHitPoints;
+    case O::UnitHasStats: return UN->mStats != NULL;
+    case O::UnitIsBuilding: return UN->mUnitClass->IsBuilding();
+    case O::UnitType: return UN->mUnitClass->GetUnitType();
+    case O::UnitId: return UN->GetUnitID();
+    case O::UnitTileX: return UN->GetTileX();
+    case O::UnitTileY: return UN->GetTileY();
+    case O::ComplexHitPoints: return CX->mHitPoints;
+    case O::ComplexOnMap: return CX->mTileNode != NULL;
+    case O::ComplexTileX: return CX->GetTileX();
+    case O::ComplexTileY: return CX->GetTileY();
+    case O::UnitTileXRaw: return CX->mTileX;
+    case O::ComplexIsPriest: return CX->GetUnitClass()->IsPriest();
+    case O::ComplexCategory: return CX->mUnitClass->mCategory;
+    case O::ComplexClass: return P64(CX->mUnitClass);
+    case O::ComplexLocation: return P64(&CX->mPhysicalModel.GetLocation());
+    case O::ComplexSetLocation: CX->mPhysicalModel.SetLocation(*(const GETransformation*)a[0]);
+        break;
+    case O::ComplexSetLauncherClass: CX->SetLauncherClass((EEUnitClass*)a[0]);
+        break;
+    case O::ComplexSetOwner: CX->SetOwner((EEComplexUnit*)a[0]);
+        break;
+    case O::ComplexPosition: CX->GetPosition(*(GE3DPoint*)a[0]);
+        break;
+    case O::ComplexSetGoal: CX->SetGoal((EEUnitGoal*)a[0], false, false);
+        break;
+    case O::ComplexSetVelocity: CX->SetVelocity(f[0]);
+        break;
+    case O::ComplexFlightTime: return CX->mFlightTime;
+    case O::ComplexSetFlightTime: CX->SetFlightTime((long)a[0]);
+        break;
+    case O::ComplexHasGoalState: return CX->mGoalState != NULL;
+    case O::ComplexPlayer: return P64(CX->mPlayer);
+    case O::IgnoredSave: return P64(new std::deque<EEComplexUnitAttacker>(CX->mIgnoredTargets));
+    case O::IgnoredRestore: CX->mIgnoredTargets = *(std::deque<EEComplexUnitAttacker>*)a[0];
+        break;
+    case O::IgnoredFree: delete (std::deque<EEComplexUnitAttacker>*)p;
+        break;
+    case O::SearchAlongList: EESearchTargetAlongList(CX, (long)a[0], (long)a[1], f[0]);
+        break;
+    case O::NewAttackUnit: return P64(EEUGRust::NewAttackUnit(CX, (EEComplexUnit*)a[0], false, false));
+    case O::NewAttackGround: return P64(EEUGRust::NewAttackGround(GE3DPoint(f[0], f[1], f[2]), false));
+    case O::CanHeal: EECanHeal(CX, (EEComplexUnit*)a[0]);
+        break;
+    case O::UpgradeProjectile: return P64(((EEUnitClassUpgrade*)p)->mUnitClass->mProjectileClass);
+    // the unit classes
+    case O::ClassCount: return gUnitClassTable.size();
+    case O::ClassAt: return P64(gUnitClassTable[a[0]]);
+    case O::ClassCategory: return UC->mCategory;
+    case O::ClassProjectile: return P64(UC->mProjectileClass);
+    case O::ClassCreateUnit: return P64(UC->CreateUnit((long)a[0], (long)a[1], (unsigned long)a[2], false, (EEComplexUnit*)a[3]));
+    case O::ClassLaunchProjectile: UC->LaunchProjectile((EEComplexUnit*)a[0], GE3DPoint(f[0], f[1], f[2]));
+        break;
+    case O::ClassStep: UC->mPhysicsModel->Step0((EEComplexUnit*)a[0]);
+        break;
+    case O::ClassWaterImpact: return UC->CheckWaterImpact((EEComplexUnit*)a[0]);
+    case O::ClassGroundImpact: return UC->CheckGroundImpact((EEComplexUnit*)a[0]);
+    case O::MissileCategory: return kUnitCategoryMissile;
+    case O::TorpedoCategory: return kUnitCategoryTorpedo;
+    // the capture and its sweeps
+    case O::CaptureActive: return EESimCaptureRecord::Active();
+    case O::CaptureOnly: EESimCaptureRecord::Only((unsigned int)a[0]);
+        break;
+    case O::CaptureOnlyList: EESimCaptureRecord::Only((const unsigned int*)a[0], (size_t)a[1]);
+        break;
+    case O::CaptureExclusive: EESimCaptureRecord::Exclusive(a[0] != 0);
+        break;
+    case O::CaptureHold: EESimCaptureRecord::Hold(a[0] != 0);
+        break;
+    case O::CaptureClose: EESimCaptureRecord::Close();
+        break;
+    case O::CombatFlush: EECombatCaptureFlush();
+        break;
+    case O::FormationSweep: EEFormationCaptureSweep();
+        break;
+    case O::TechSweep: EETechCaptureSweep();
+        break;
+    case O::CalamitySweep: EECalamityCaptureSweep();
+        break;
+    case O::GroupCommandSweep: EEGroupCommandSweep();
+        break;
+    case O::MessageSweep: EEMessageCaptureSweep();
+        break;
+    case O::CastCalamities: EETechCaptureCastCalamities((long)a[0]);
+        break;
+    case O::MiniMapPresent: return gMiniMap != NULL;
+    case O::MiniMapSnapshot: ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
+        break;
+    case O::SightSnapshot: EESightCaptureSnapshot();
+        break;
+    case O::CheatSweep: EEAppCaptureCheatSweep();
+        break;
+    case O::StormSweep: EEAppCaptureStormSweep();
+        break;
+    case O::EffectSweep: EEEffectCaptureSweep();
+        break;
+    case O::StatisticsSweep: EEAppCaptureStatisticsSweep();
+        break;
+    case O::RegenerationInterval: return EEGetRules().mCombat.mRegenerationInterval;
+    case O::ConversionFaithCost: return gWorldTable.GetLongValue(kWorldConversionFaithCost);
+    case O::DialogShowing:
+        return gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog;
+    case O::ShowDialogMessage: gWorld.mScenarioManager->ShowDialogMessage();
+        break;
+    // the map's sight
+    case O::MapSize: return gWorld.mMap->mSize;
+    case O::MapAddSight: gWorld.mMap->AddSight(PL, f[0], f[1], f[2], a[0] != 0);
+        break;
+    case O::MapRemoveSight: gWorld.mMap->RemoveSight(PL, f[0], f[1], f[2], a[0] != 0);
+        break;
+    case O::MapExploreUnseen: gWorld.mMap->ExploreUnseen(PL);
+        break;
+    case O::MapFogSeen: gWorld.mMap->FogSeen(PL);
+        break;
+    case O::MapComputeChecksum: gWorld.mMap->ComputeChecksum();
+        break;
+    default: break;
     }
-    if (gWorld.mNumPlayers > 1) {
-        EEPlayer* theLast = gWorld.mPlayers[gWorld.mNumPlayers - 1];
-        theMap->ExploreUnseen(theLast);
-        theMap->FogSeen(theLast);
+    return 0;
+}
+
+// The driver's texts: copied into sText, valid until the next text
+extern "C" const char* ee_simcpp_sim_text(EeSimDriverSim inOp, uintptr_t p, int64_t a)
+{
+    typedef EeSimDriverSim O;
+    static std::string sText;
+    switch (inOp) {
+    case O::ShellKindName: return (sText = ((EEUIShell*)p)->KindName()).c_str();
+    case O::FormTypeName: return (sText = typeid(*UF).name()).c_str();
+    case O::ListData: return (sText = (const char*)((UILBString*)p)->GetData((unsigned long)a)).c_str();
+    case O::RulesProblem: return (sText = sProblems[a]).c_str();
+    case O::RulesError: return sRulesError.c_str();
+    case O::EngineId: return (sText = EECPAIID(ee_cp_engine_ai_at((size_t)a))).c_str();
+    default: break;
     }
-    // two full cycles of the checksum's 64 x 64 windows
-    long theBands = (theMap->mSize + 63) / 64;
-    for (long i = 0; i < 2 * theBands * theBands + 1; i++)
-        theMap->ComputeChecksum();
+    return NULL;
+}
+
+// The driver's floats
+extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeSimDriverSim O;
+    switch (inOp) {
+    case O::PhysicsTickSeconds: return gPhysics->mTickSeconds;
+    case O::ComplexAttack: return CX->mStats->GetAttack();
+    case O::ComplexVelocity: return CX->GetVelocity();
+    case O::ClassAcceleration: return UC->GetAcceleration();
+    case O::TradeFoodWood: return gWorldTable.GetFloatValue(kWorldTradeRateFoodWood);
+    case O::TradeFoodWood2: return gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood);
+    case O::TradeStoneIron: return gWorldTable.GetFloatValue(kWorldTradeRateStoneIron);
+    case O::TradeStoneIron2: return gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron);
+    case O::WonderSightRadius: return gWorldTable.GetFloatValue(kWorldWonderSightRadius);
+    default: break;
+    }
+    return 0.0;
 }

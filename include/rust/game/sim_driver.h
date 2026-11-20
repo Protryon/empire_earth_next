@@ -563,6 +563,172 @@ enum class EeSimDriverSed : uint32_t {
   SetScenarioGame,
 };
 
+/// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
+/// answered as an integer.
+enum class EeSimDriverSim : uint32_t {
+  UiPresent = 1,
+  UiLock,
+  UiUnlock,
+  CurrentForm,
+  EditorForm,
+  FormId,
+  FormShellOf,
+  ShellKindName,
+  FormTypeName,
+  FormControlCount,
+  FormControl,
+  ControlTriggerEvent,
+  ControlFire,
+  ComboOf,
+  ComboList,
+  ComboSelection,
+  ComboSetSelection,
+  ListOf,
+  ListLineCount,
+  ListData,
+  ListSelection,
+  ListChangeSelection,
+  ScreenEventOf,
+  ScreenEventCode,
+  SpLoadGameFileList,
+  LoadScenarioFileList,
+  PhysicsPresent,
+  PhysicsTimerRunning,
+  PhysicsGameOver,
+  PhysicsGameTime,
+  PhysicsTicksDone,
+  PhysicsTickMs,
+  PhysicsTickSeconds,
+  PhysicsFlushPlacements,
+  MapPresent,
+  CurrentPlayer,
+  NumPlayers,
+  GetPlayer,
+  PlayerSetCivilizationChosen,
+  PlayerSetCivilizationLocked,
+  PlayerSetStance,
+  PlayerFirstUnit,
+  PlayerAllyCount,
+  PlayerAllyAt,
+  PlayerFlareReceived,
+  PlayerTechnologies,
+  PlayerId,
+  PlayerAddPendingUnits,
+  TreeGet,
+  NodeData,
+  NodeCost,
+  CastLocationCalamity,
+  VolcanoProjectileType,
+  RequestSaveNew,
+  SendToAllAndWait,
+  DerefMessage,
+  SetSimMode,
+  SetSeedSet,
+  SetSeed,
+  SetNoHumanDefeat,
+  SetScenarioDialogs,
+  SetPortOffset,
+  AnyPort,
+  ClearNoHumanDefeatHits,
+  NoHumanDefeatHits,
+  RulesAdd,
+  RulesError,
+  RulesProblemsLoad,
+  RulesProblemCount,
+  RulesProblem,
+  EngineId,
+  UnitNext,
+  UnitComplex,
+  UnitHitPoints,
+  UnitHasStats,
+  UnitIsBuilding,
+  UnitType,
+  UnitId,
+  UnitTileX,
+  UnitTileY,
+  UnitPlayer,
+  ComplexOf,
+  ComplexOnMap,
+  ComplexTileX,
+  ComplexTileY,
+  ComplexAttack,
+  ComplexIsPriest,
+  ComplexCategory,
+  ComplexClass,
+  ComplexLocation,
+  ComplexSetLocation,
+  ComplexSetLauncherClass,
+  ComplexSetOwner,
+  ComplexPosition,
+  ComplexSetGoal,
+  ComplexVelocity,
+  ComplexSetVelocity,
+  ComplexFlightTime,
+  ComplexSetFlightTime,
+  ComplexHasGoalState,
+  ComplexPlayer,
+  ComplexHitPoints,
+  UnitGetComplex,
+  UnitTileXRaw,
+  IgnoredSave,
+  IgnoredRestore,
+  IgnoredFree,
+  SearchAlongList,
+  NewAttackUnit,
+  NewAttackGround,
+  CanHeal,
+  UpgradeProjectile,
+  ClassCount,
+  ClassAt,
+  ClassCategory,
+  ClassProjectile,
+  ClassAcceleration,
+  ClassCreateUnit,
+  ClassLaunchProjectile,
+  ClassStep,
+  ClassWaterImpact,
+  ClassGroundImpact,
+  MissileCategory,
+  TorpedoCategory,
+  CaptureActive,
+  CaptureOnly,
+  CaptureOnlyList,
+  CaptureExclusive,
+  CaptureHold,
+  CaptureClose,
+  CombatFlush,
+  FormationSweep,
+  TechSweep,
+  CalamitySweep,
+  GroupCommandSweep,
+  MessageSweep,
+  CastCalamities,
+  MiniMapPresent,
+  MiniMapSnapshot,
+  SightSnapshot,
+  CheatSweep,
+  StormSweep,
+  EffectSweep,
+  StatisticsSweep,
+  TradeFoodWood,
+  TradeFoodWood2,
+  TradeStoneIron,
+  TradeStoneIron2,
+  RegenerationInterval,
+  ConversionFaithCost,
+  DialogShowing,
+  ShowDialogMessage,
+  MapSize,
+  WonderSightRadius,
+  MapAddSight,
+  MapRemoveSight,
+  MapExploreUnseen,
+  MapFogSeen,
+  MapComputeChecksum,
+  WorldNumPlayers,
+  WorldPlayersAt,
+};
+
 /// The sweep's inputs from the C++: the physics' tick, the rules' and the world table's numbers, the host.
 struct EeSimDriverCombatSweep {
   /// `gPhysics->mTickTimeMs`
@@ -578,102 +744,29 @@ struct EeSimDriverCombatSweep {
   int32_t (*host)(void *ctx, uint32_t op, uint64_t a, uint64_t b, float *out);
 };
 
-/// A sink for lines: `push(sink, text)` per line.
-using EeSimDriverPushFn = void(*)(void*, const char*);
-
-/// The physics' clock and state (`gPhysics`).
-struct EeSimDriverPhysics {
-  /// `gPhysics != NULL`
-  bool present;
-  bool timer_running;
-  bool game_over;
-  long game_ms;
-  unsigned long pt;
-};
-
-/// The platform switches EE-SIM sets (platform/PlatSim.h).
-struct EeSimDriverSwitches {
-  int32_t seed_set;
-  uint32_t seed;
-  int32_t no_human_defeat;
-  /// -1: any free port (kPlatSimAnyPort)
-  int32_t port_offset;
-  bool scenario_dialogs;
-};
-
-/// A flare's or a volcano's target: the player's first living building and what was done there.
-struct EeSimDriverSpot {
-  bool found;
-  long x;
-  long y;
-  /// the flare's allies told; the volcano's cast (1 or 0)
-  unsigned long count;
-};
-
 /// The C++ side (EESim.cpp). Every function is called with the documented locks; texts are NUL ended, buffers are
 /// written NUL ended within `cap` and return the full length.
 struct EeSimDriverHost {
-  /// the form on top's id (0: none)
-  uint32_t (*top_form)();
-  /// the form on top's class name (the wait's timeout message)
-  size_t (*top_form_class)(char*, size_t);
-  /// the control's trigger fired: 0, 1 the form is not on top or has no such control, 2 the control has no trigger
-  int32_t (*click)(uint32_t, uint32_t);
-  /// the lobby combo's lines and selection; false when the control is not a combo on the lobby
-  bool (*combo_lines)(long, void*, EeSimDriverPushFn, long*);
-  /// the lobby combo's selection set; false when the lobby went away
-  bool (*combo_select)(long, unsigned long);
-  /// a screen's list (`EE_SIM_DRIVER_LIST_*`): its lines and selection; false when it is not on top
-  bool (*list_lines)(int32_t, void*, EeSimDriverPushFn, unsigned long*);
-  /// a screen's list's selection changed (as its keys do); false when it is not on top
-  bool (*list_select)(int32_t, unsigned long);
-  /// the control of the form on top whose trigger is the screen event `code` (-1: none, or another form)
-  long (*control_with_event)(uint32_t, uint32_t);
-  void (*physics)(EeSimDriverPhysics*);
-  /// `gUIManager->mScenarioEditorForm` on top with a map
-  bool (*editor_up)();
   /// `EE_SIM_DRIVER_*_LOCK` on `gWorld.mLock`
   void (*lock)(int32_t);
-  /// a new game's idle human (under the write lock): the civilization flags; allied with every computer when true
-  void (*prepare_human)(bool);
   /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
   void (*dump_after_load)(const char*);
   /// the checksum line's fields (after "CT n " or "LOADED "), its new line included
   size_t (*checksum_fields)(char*, size_t);
   /// the state dump into the file
   void (*dump_state)(const char*);
-  /// a quiet save of the game under the file name (in data\Saved Games), as the autosave requests one
-  void (*request_save)(const char*);
   /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
   size_t (*extension)(int32_t, char*, size_t);
   /// `gPlatSimRun`
   void (*set_run)(int32_t);
   /// `gPlatSimAfterTick` to the driver's after-tick (true) or none
   void (*set_after_tick)(bool);
-  /// `gPlatSimMode` on and the switches
-  void (*set_switches)(const EeSimDriverSwitches*);
-  /// `gPlatSimNoHumanDefeatHits`; a negative argument reads, 0 clears
-  long (*no_human_defeat_hits)(long);
   /// `gUserInterface->PostCancelGame()`
   void (*cancel_game)();
-  /// --flare: the human's flare at the player's first building, told to its allies
-  void (*flare)(unsigned long, EeSimDriverSpot*);
-  /// --volcano: a volcano cast 6 tiles off the player's first building
-  void (*volcano)(unsigned long, EeSimDriverSpot*);
-  /// the volcano boulders of every player's units: their ids, pushed as decimal text
-  void (*volcano_boulders)(void*, EeSimDriverPushFn);
   /// `EESimCaptureRecord::Active()`
   bool (*capture_active)();
-  /// a sweep or capture hook (`EE_SIM_DRIVER_SWEEP_*`)
-  void (*sweep)(int32_t, long);
-  /// `EERulesAddOverride`: true, else the problem into the buffer
-  bool (*rules_add)(const char*, char*, size_t);
-  /// `EERulesOverrideProblems`
-  void (*rules_problems)(void*, EeSimDriverPushFn);
   /// `EECPChoiceByName` (-1: none)
   long (*engine_choice)(const char*);
-  /// the AI manifest's ids
-  void (*engine_ids)(void*, EeSimDriverPushFn);
   /// the C library's environment (`_putenv_s` / `setenv`)
   void (*set_env)(const char*, const char*);
   /// a duplicate of the process's stderr descriptor
@@ -692,7 +785,6 @@ struct EeSimDriverHost {
   /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
   /// node of `technology`, the class's unit type), every resource summed
   long (*wonders)(uint64_t);
-  long (*unit_value)(uint64_t, long, unsigned long);
 };
 
 /// The screen events the driver clicks (EE_SCREENS_*, rust/game/screens.h), passed in by the C++ (the codes are

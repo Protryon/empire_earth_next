@@ -73,67 +73,26 @@ pub const EE_SIM_DRIVER_READ_UNLOCK: i32 = 3;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct EeSimDriverHost {
-    /// the form on top's id (0: none)
-    pub top_form: unsafe extern "C" fn() -> u32,
-    /// the form on top's class name (the wait's timeout message)
-    pub top_form_class: unsafe extern "C" fn(*mut c_char, usize) -> usize,
-    /// the control's trigger fired: 0, 1 the form is not on top or has no such control, 2 the control has no trigger
-    pub click: unsafe extern "C" fn(u32, u32) -> i32,
-    /// the lobby combo's lines and selection; false when the control is not a combo on the lobby
-    pub combo_lines: unsafe extern "C" fn(c_long, *mut c_void, EeSimDriverPushFn, *mut c_long) -> bool,
-    /// the lobby combo's selection set; false when the lobby went away
-    pub combo_select: unsafe extern "C" fn(c_long, c_ulong) -> bool,
-    /// a screen's list (`EE_SIM_DRIVER_LIST_*`): its lines and selection; false when it is not on top
-    pub list_lines: unsafe extern "C" fn(i32, *mut c_void, EeSimDriverPushFn, *mut c_ulong) -> bool,
-    /// a screen's list's selection changed (as its keys do); false when it is not on top
-    pub list_select: unsafe extern "C" fn(i32, c_ulong) -> bool,
-    /// the control of the form on top whose trigger is the screen event `code` (-1: none, or another form)
-    pub control_with_event: unsafe extern "C" fn(u32, u32) -> c_long,
-    pub physics: unsafe extern "C" fn(*mut EeSimDriverPhysics),
-    /// `gUIManager->mScenarioEditorForm` on top with a map
-    pub editor_up: unsafe extern "C" fn() -> bool,
     /// `EE_SIM_DRIVER_*_LOCK` on `gWorld.mLock`
     pub lock: unsafe extern "C" fn(i32),
-    /// a new game's idle human (under the write lock): the civilization flags; allied with every computer when true
-    pub prepare_human: unsafe extern "C" fn(bool),
     /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
     pub dump_after_load: unsafe extern "C" fn(*const c_char),
     /// the checksum line's fields (after "CT n " or "LOADED "), its new line included
     pub checksum_fields: unsafe extern "C" fn(*mut c_char, usize) -> usize,
     /// the state dump into the file
     pub dump_state: unsafe extern "C" fn(*const c_char),
-    /// a quiet save of the game under the file name (in data\Saved Games), as the autosave requests one
-    pub request_save: unsafe extern "C" fn(*const c_char),
     /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
     pub extension: unsafe extern "C" fn(i32, *mut c_char, usize) -> usize,
     /// `gPlatSimRun`
     pub set_run: unsafe extern "C" fn(i32),
     /// `gPlatSimAfterTick` to the driver's after-tick (true) or none
     pub set_after_tick: unsafe extern "C" fn(bool),
-    /// `gPlatSimMode` on and the switches
-    pub set_switches: unsafe extern "C" fn(*const EeSimDriverSwitches),
-    /// `gPlatSimNoHumanDefeatHits`; a negative argument reads, 0 clears
-    pub no_human_defeat_hits: unsafe extern "C" fn(c_long) -> c_long,
     /// `gUserInterface->PostCancelGame()`
     pub cancel_game: unsafe extern "C" fn(),
-    /// --flare: the human's flare at the player's first building, told to its allies
-    pub flare: unsafe extern "C" fn(c_ulong, *mut EeSimDriverSpot),
-    /// --volcano: a volcano cast 6 tiles off the player's first building
-    pub volcano: unsafe extern "C" fn(c_ulong, *mut EeSimDriverSpot),
-    /// the volcano boulders of every player's units: their ids, pushed as decimal text
-    pub volcano_boulders: unsafe extern "C" fn(*mut c_void, EeSimDriverPushFn),
     /// `EESimCaptureRecord::Active()`
     pub capture_active: unsafe extern "C" fn() -> bool,
-    /// a sweep or capture hook (`EE_SIM_DRIVER_SWEEP_*`)
-    pub sweep: unsafe extern "C" fn(i32, c_long),
-    /// `EERulesAddOverride`: true, else the problem into the buffer
-    pub rules_add: unsafe extern "C" fn(*const c_char, *mut c_char, usize) -> bool,
-    /// `EERulesOverrideProblems`
-    pub rules_problems: unsafe extern "C" fn(*mut c_void, EeSimDriverPushFn),
     /// `EECPChoiceByName` (-1: none)
     pub engine_choice: unsafe extern "C" fn(*const c_char) -> c_long,
-    /// the AI manifest's ids
-    pub engine_ids: unsafe extern "C" fn(*mut c_void, EeSimDriverPushFn),
     /// the C library's environment (`_putenv_s` / `setenv`)
     pub set_env: unsafe extern "C" fn(*const c_char, *const c_char),
     /// a duplicate of the process's stderr descriptor
@@ -152,7 +111,6 @@ pub struct EeSimDriverHost {
     /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
     /// node of `technology`, the class's unit type), every resource summed
     pub wonders: unsafe extern "C" fn(u64) -> c_long,
-    pub unit_value: unsafe extern "C" fn(u64, c_long, c_ulong) -> c_long,
 }
 
 /// The game as the driver sees it.
@@ -200,12 +158,6 @@ pub trait Game: Send + Sync {
     fn unit_value(&self, player: u64, technology: c_long, unit_type: c_ulong) -> c_long;
 }
 
-unsafe extern "C" fn push_line(sink: *mut c_void, text: *const c_char) {
-    // SAFETY: the sink is the Vec<String> the caller passed; the text is NUL ended or NULL
-    let v = unsafe { &mut *(sink as *mut Vec<String>) };
-    v.push(if text.is_null() { String::new() } else { unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned() });
-}
-
 fn c(text: &str) -> CString {
     CString::new(text.replace('\0', "")).expect("no NUL")
 }
@@ -233,52 +185,40 @@ unsafe impl Sync for CppGame {}
 // the type push_line takes
 impl Game for CppGame {
     fn top_form(&self) -> u32 {
-        unsafe { (self.0.top_form)() }
+        super::sim_host::top_form()
     }
     fn top_form_class(&self) -> String {
-        text_of(|b, n| unsafe { (self.0.top_form_class)(b, n) })
+        super::sim_host::top_form_class()
     }
     fn click(&self, form: u32, control: u32) -> i32 {
-        unsafe { (self.0.click)(form, control) }
+        super::sim_host::click(form, control)
     }
     fn combo_lines(&self, control: c_long) -> Option<(Vec<String>, c_long)> {
-        let mut lines: Vec<String> = Vec::new();
-        let mut selection: c_long = -1;
-        let ok = unsafe {
-            (self.0.combo_lines)(control, &mut lines as *mut Vec<String> as *mut c_void, push_line, &mut selection)
-        };
-        ok.then_some((lines, selection))
+        super::sim_host::combo_lines(control)
     }
     fn combo_select(&self, control: c_long, index: c_ulong) -> bool {
-        unsafe { (self.0.combo_select)(control, index) }
+        super::sim_host::combo_select(control, index)
     }
     fn list_lines(&self, which: i32) -> Option<(Vec<String>, c_ulong)> {
-        let mut lines: Vec<String> = Vec::new();
-        let mut selection: c_ulong = c_ulong::MAX;
-        let ok = unsafe {
-            (self.0.list_lines)(which, &mut lines as *mut Vec<String> as *mut c_void, push_line, &mut selection)
-        };
-        ok.then_some((lines, selection))
+        super::sim_host::list_lines(which)
     }
     fn list_select(&self, which: i32, index: c_ulong) -> bool {
-        unsafe { (self.0.list_select)(which, index) }
+        super::sim_host::list_select(which, index)
     }
     fn control_with_event(&self, form: u32, code: u32) -> c_long {
-        unsafe { (self.0.control_with_event)(form, code) }
+        super::sim_host::control_with_event(form, code)
     }
     fn physics(&self) -> EeSimDriverPhysics {
-        let mut p = EeSimDriverPhysics::default();
-        unsafe { (self.0.physics)(&mut p) };
-        p
+        super::sim_host::physics()
     }
     fn editor_up(&self) -> bool {
-        unsafe { (self.0.editor_up)() }
+        super::sim_host::editor_up()
     }
     fn lock(&self, op: i32) {
         unsafe { (self.0.lock)(op) }
     }
     fn prepare_human(&self, human_out: bool) {
-        unsafe { (self.0.prepare_human)(human_out) }
+        super::sim_host::prepare_human(human_out)
     }
     fn dump_after_load(&self, path: &str) {
         unsafe { (self.0.dump_after_load)(c(path).as_ptr()) }
@@ -290,7 +230,7 @@ impl Game for CppGame {
         unsafe { (self.0.dump_state)(c(path).as_ptr()) }
     }
     fn request_save(&self, name: &str) {
-        unsafe { (self.0.request_save)(c(name).as_ptr()) }
+        super::sim_host::request_save(name)
     }
     fn extension(&self, which: i32) -> String {
         text_of(|b, n| unsafe { (self.0.extension)(which, b, n) })
@@ -302,10 +242,10 @@ impl Game for CppGame {
         unsafe { (self.0.set_after_tick)(on) }
     }
     fn set_switches(&self, s: &EeSimDriverSwitches) {
-        unsafe { (self.0.set_switches)(s) }
+        super::sim_host::set_switches(s)
     }
     fn no_human_defeat_hits(&self, op: c_long) -> c_long {
-        unsafe { (self.0.no_human_defeat_hits)(op) }
+        super::sim_host::no_human_defeat_hits(op)
     }
     fn cancel_game(&self) {
         unsafe { (self.0.cancel_game)() }
@@ -314,45 +254,31 @@ impl Game for CppGame {
         super::sed_steps::step(words)
     }
     fn flare(&self, player: c_ulong) -> EeSimDriverSpot {
-        let mut s = EeSimDriverSpot::default();
-        unsafe { (self.0.flare)(player, &mut s) };
-        s
+        super::sim_host::flare(player)
     }
     fn volcano(&self, player: c_ulong) -> EeSimDriverSpot {
-        let mut s = EeSimDriverSpot::default();
-        unsafe { (self.0.volcano)(player, &mut s) };
-        s
+        super::sim_host::volcano(player)
     }
     fn volcano_boulders(&self) -> Vec<c_ulong> {
-        let mut lines: Vec<String> = Vec::new();
-        unsafe { (self.0.volcano_boulders)(&mut lines as *mut Vec<String> as *mut c_void, push_line) };
-        lines.iter().filter_map(|l| l.parse().ok()).collect()
+        super::sim_host::volcano_boulders()
     }
     fn capture_active(&self) -> bool {
         unsafe { (self.0.capture_active)() }
     }
     fn sweep(&self, kind: i32, arg: c_long) {
-        unsafe { (self.0.sweep)(kind, arg) }
+        super::sim_host::sweep(kind, arg)
     }
     fn rules_add(&self, text: &str) -> Result<(), String> {
-        let mut buffer = vec![0 as c_char; 2048];
-        if unsafe { (self.0.rules_add)(c(text).as_ptr(), buffer.as_mut_ptr(), buffer.len()) } {
-            return Ok(());
-        }
-        Err(unsafe { CStr::from_ptr(buffer.as_ptr()) }.to_string_lossy().into_owned())
+        super::sim_host::rules_add(text)
     }
     fn rules_problems(&self) -> Vec<String> {
-        let mut lines: Vec<String> = Vec::new();
-        unsafe { (self.0.rules_problems)(&mut lines as *mut Vec<String> as *mut c_void, push_line) };
-        lines
+        super::sim_host::rules_problems()
     }
     fn engine_choice(&self, name: &str) -> c_long {
         unsafe { (self.0.engine_choice)(c(name).as_ptr()) }
     }
     fn engine_ids(&self) -> Vec<String> {
-        let mut lines: Vec<String> = Vec::new();
-        unsafe { (self.0.engine_ids)(&mut lines as *mut Vec<String> as *mut c_void, push_line) };
-        lines
+        super::sim_host::engine_ids()
     }
     fn set_env(&self, name: &str, value: &str) {
         unsafe { (self.0.set_env)(c(name).as_ptr(), c(value).as_ptr()) }
@@ -381,6 +307,6 @@ impl Game for CppGame {
         unsafe { (self.0.wonders)(player) }
     }
     fn unit_value(&self, player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
-        unsafe { (self.0.unit_value)(player, technology, unit_type) }
+        super::sim_host::unit_value(player, technology, unit_type)
     }
 }

@@ -13,6 +13,7 @@
 //! - [`sed_steps`], [`sed_digest`], [`sed_host`]: the editor script's steps and digests over the editor's C++ objects
 //!   (EESimEditor.cpp the host).
 //! - [`combat_sweep`]: the combat formulas' capture sweep over the world views (TEST ONLY).
+//! - [`sim_host`], [`sim_ops`]: the host's reads and drives and the capture's sweeps over EESim.cpp's calls.
 //! - [`ffi`]: the C ABI EESim.cpp calls.
 
 pub mod combat_sweep;
@@ -28,6 +29,8 @@ pub mod sed_civ;
 pub mod sed_digest;
 pub mod sed_host;
 pub mod sed_steps;
+pub mod sim_host;
+pub mod sim_ops;
 
 #[cfg(test)]
 mod tests;
