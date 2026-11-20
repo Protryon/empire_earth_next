@@ -358,17 +358,6 @@ static void EEPathPutTile(int64_t* outValues, const EETileCoordinate& inTile)
     outValues[1] = inTile.mY;
 }
 
-// SetPathRevs' inputs: the distance, whether the unit is amphibious, whether both tiles are on one continent
-static void EEPathRevsInputs(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                             int64_t* outValues)
-{
-    EEAIContinent* theFromContinent = gContinentManager.GetContinentAt(inFrom.GetX(), inFrom.GetY());
-    EEAIContinent* theToContinent = gContinentManager.GetContinentAt(inTo);
-    outValues[0] = inFrom.DistanceTo(inTo);
-    outValues[1] = inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0) && inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1);
-    outValues[2] = theFromContinent == theToContinent;
-}
-
 // the owners waiting for their running requests across a load (EEAwaitAutoPathRequest), by request id until the
 // loaded game's first tick; the resolve takes them (EE_PATH_AWAIT 0) and gives each its request or none
 namespace {
@@ -388,38 +377,6 @@ void EEQueueGraphResolve()
         sGraphResolveQueued = true;
         EEAfterLoadLast(EEResolveGraphSearches);   // after every owner's own fix-up (the active groups')
     }
-}
-
-void* EEGraphObjectOf(void* inContext, int32_t inIndex)
-{
-    (void)inContext;
-    EEAIHandleView<EEAIPathSubSector> theSectors = gContinentManager.GetPathSubSectors();
-    if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
-        return NULL;
-    return theSectors[inIndex];
-}
-
-EEAIPathSubSector* EESubSectorOf(long inID)
-{
-    if (inID < 0 || (size_t)inID >= gContinentManager.GetPathSubSectors().size())
-        return NULL;
-    return gContinentManager.GetPathSubSectors()[inID];
-}
-
-void EEPathBounds(int32_t* outValues, const EEAIAStarBounds& inBounds)
-{
-    outValues[0] = (int32_t)inBounds.mBottom;
-    outValues[1] = (int32_t)inBounds.mLeft;
-    outValues[2] = (int32_t)inBounds.mRight;
-    outValues[3] = (int32_t)inBounds.mTop;
-}
-
-void EEPathSetBounds(EEAIAStarBounds& outBounds, const int32_t* inValues)
-{
-    outBounds.mBottom = inValues[0];
-    outBounds.mLeft = inValues[1];
-    outBounds.mRight = inValues[2];
-    outBounds.mTop = inValues[3];
 }
 
 // a request from its saved record (one reference, the caller's)
@@ -476,74 +433,6 @@ static std::vector<GE3DPoint> EEPathPointsIn(uint64_t inPoints, int64_t inCount)
     return std::vector<GE3DPoint>(thePoints, thePoints + inCount);
 }
 
-// The searches' world (ee_sim::astar path_search.rs EE_PATH_BLOCKED_TILES): the unit's bounded path tiles and, for a
-// sea unit, the tiles of the stopped contacts in the way of the goal (EEAIAStarPathfindingGoalBase::CollectBlockedTiles
-// 0x19ccb with its EEAIPathBlockerCollector 0x19da3..0x19eb0)
-void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);
-
-// The units blocking a path near the goal (0x19ccb's local; sizeof 0x3c) (provisional name)
-class EEAIPathBlockerCollector {
-public:
-    EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::vector<U2DPoint<long> >& inBlocked,
-                             const U2DPoint<long>& inGoal, bool inNaval, bool inWide);
-    bool Add(EEComplexUnit* inUnit);        // 0x19e38: a unit of the walker's kind (naval or not), not in its group
-    bool AddTiles(EEComplexUnit* inUnit);   // 0x19eb0: inUnit's tiles not yet blocked, except the goal
-    std::vector<U2DPoint<long> > mTiles;    // +0x00 (the new blocked tiles)
-    std::set<U2DPoint<long> > mBlocked;     // +0x10 (the walker's own blocked tiles)
-    U2DPoint<long> mGoal;                   // +0x24
-    EEComplexUnit* mUnit;                   // +0x2c (the walker)
-    bool mNaval;                            // +0x30
-    bool mWide;                             // +0x31 (the tile footprint margin 2.0f, else 1.0f)
-};
-
-// Creates a blocker collector for a walker, its goal tile and naval/wide flags, seeded with the already blocked tiles
-EEAIPathBlockerCollector::EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::vector<U2DPoint<long> >& inBlocked,
-                                                   const U2DPoint<long>& inGoal, bool inNaval, bool inWide)
-    : mGoal(inGoal), mUnit(inUnit), mNaval(inNaval), mWide(inWide)
-{
-    for (long i = inBlocked.size() - 1; i >= 0; i--)
-        this->mBlocked.insert(inBlocked[i]);
-}
-
-// NEAR: the original compares the two naval tests as bytes (an inline bool helper?) and keeps this in ecx
-// Adds a contact's tiles as blockers when it is a stopped sea unit of the walker's naval kind, not the walker and
-// not in its group (naval buildings with air traffic always count); always returns false
-bool EEAIPathBlockerCollector::Add(EEComplexUnit* inUnit)
-{
-    if (inUnit->GetVelocity() != 0.0f || (!(inUnit->mUnitClass->mDomains & kMovementSea)) || this->mUnit == inUnit)
-        return false;
-    // STAND-IN (owner 2026-11-01): the (bool) cast on the naval comparison (docs/LOST_DEBUG.md; 65 -> 74)
-    if ((bool)(inUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval || inUnit->mUnitClass->mCategory == kUnitCategorySeaAnimal) != this->mNaval)
-        return false;
-    if (this->mUnit->mActiveGroup == NULL || this->mUnit->mActiveGroup != inUnit->mActiveGroup
-        || (inUnit->mUnitClass->mCategory == kUnitCategoryNavalBuilding && inUnit->mUnitClass->mAirTrafficType != 0))
-        return this->AddTiles(inUnit);
-    return false;
-}
-
-// NEAR: the original loads both F178s (fld/fld/fcompp) and calls _Ptrit::operator+ out of line
-// Adds a unit's footprint tiles (not the goal, not already blocked) when it is at least as big as the walker or
-// push-immune; always returns false
-bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    if (inUnit->mUnitClass->GetInnerCollisionSphere() >= this->mUnit->mUnitClass->GetInnerCollisionSphere()
-        || inUnit->mPushImmuneUntil > gPhysics->mGameTime) {
-        EEGetUnitTiles(inUnit, theTiles, !this->mWide ? 1.0f : 2.0f);
-        for (long i = theTiles.size() - 1; i >= 0; i--) {
-            if (theTiles[i] != this->mGoal && this->mBlocked.find(theTiles[i]) == this->mBlocked.end())
-                this->mTiles.push_back(theTiles[i]);
-        }
-    }
-    return false;
-}
-
-static void EEPathTilesOut(uint64_t inList, const std::vector<U2DPoint<long> >& inTiles)
-{
-    for (size_t k = 0; k < inTiles.size(); k++)
-        ee_astar_tiles_push(reinterpret_cast<void*>(inList), (int32_t)inTiles[k].mX, (int32_t)inTiles[k].mY);
-}
-
 // The searches' and the units' operations (path_search.rs EE_PATH_VIEW_NEW and below, pm_bounded.rs EE_PATH_UNIT_*,
 // the capture)
 static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathIo* io)
@@ -551,55 +440,7 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
     int64_t* i = io->i;
     EEComplexUnit* theUnit = EEPathUnitOf(io->h[0]);
     switch (inOp) {
-    case EE_PATH_VIEW_NEW: {   // a search's view of the map h1, its callbacks into *h2
-        EEAIAStarView* theView = new EEAIAStarView(reinterpret_cast<EEMap*>(io->h[1]), false);
-        *reinterpret_cast<EeAStarViewCallbacks*>(io->h[2]) = theView->Callbacks();
-        return (int64_t)EEPathHandle(theView);
-    }
-    case EE_PATH_VIEW_FREE:
-        delete reinterpret_cast<EEAIAStarView*>(io->h[0]);
-        return 0;
-    case EE_PATH_GOAL_UNIT:   // EEAIAStarPathfindingGoalBase::SetUnit's facts
-        i[0] = gContinentManager.GetContinentID(theUnit);
-        i[1] = !(theUnit->mPlayer->mComputerPlayer && !theUnit->mUnitClass->IsTransport());
-        return 0;
-    case EE_PATH_BLOCKED_TILES: {   // CollectBlockedTiles (the list h1 is empty)
-        std::vector<U2DPoint<long> > theBlocked = theUnit->mBoundedPathTiles;
-        if (theUnit->mUnitClass->mDomains & kMovementSea) {
-            EEAIPathBlockerCollector theCollector(theUnit, theBlocked, EEPathTileArg(i),
-                                                  theUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval ||
-                                                      theUnit->mUnitClass->mCategory == kUnitCategorySeaAnimal,
-                                                  i[2] != 0);
-            for (UListNode<EEComplexUnit*>* theNode = theUnit->mContacts.mHead; theNode; theNode = theNode->mNext)
-                theCollector.Add(theNode->mData);
-            theBlocked.insert(theBlocked.end(), theCollector.mTiles.begin(), theCollector.mTiles.end());
-        }
-        EEPathTilesOut(io->h[1], theBlocked);
-        return 0;
-    }
-    case EE_PATH_UNIT_TILES: {   // CollectUnitTiles: a sea unit's tiles
-        std::vector<U2DPoint<long> > theTiles;
-        if (theUnit->mUnitClass->mDomains & kMovementSea)
-            EEGetUnitTiles(theUnit, theTiles, 0.0f);
-        EEPathTilesOut(io->h[1], theTiles);
-        return 0;
-    }
     // the graph searches' world (graph_search.rs EE_PATH_SS_INFO and below)
-    case EE_PATH_SS_INFO: {   // a sub sector's facts
-        EEAIPathSubSector* theSector = reinterpret_cast<EEAIPathSubSector*>(io->h[0]);
-        i[0] = theSector->GetID();
-        i[1] = theSector->GetKind();
-        i[2] = (int64_t)theSector->GetNumNeighbors();
-        i[3] = theSector->GetSector()->GetCenter().mX;
-        i[4] = theSector->GetSector()->GetCenter().mY;
-        i[5] = (int64_t)theSector->GetAllLinks().size();
-        i[6] = (int64_t)EEPathHandle(theSector->GetSector());
-        return 0;
-    }
-    case EE_PATH_SS_NEIGHBOR:
-        return (int64_t)EEPathHandle(reinterpret_cast<EEAIPathSubSector*>(io->h[0])->GetNeighbors()[(size_t)i[0]]);
-    case EE_PATH_SS_IS_NEIGHBOR:
-        return reinterpret_cast<EEAIPathSubSector*>(io->h[0])->IsNeighbor(reinterpret_cast<EEAIPathSubSector*>(io->h[1]));
     case EE_PATH_GRAPH_TERRAIN_FLAGS: {   // SetFlags: the unit class's GetTerrainFlags into the goal's flags
         EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
         EECPASGFlags theFlags;
@@ -615,19 +456,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
                                     reinterpret_cast<const int32_t*>(io->h[0]), (size_t)i[0],
                                     reinterpret_cast<EEAIPathSubSector*>(io->h[3]));
         return 0;
-    case EE_PATH_GRAPH_ENDS: {   // StartGraphPath's: the tiles moved onto the map, their sub sectors and sectors' centers
-        for (int k = 0; k < 2; k++) {
-            EETileCoordinate theTile = EEPathTileArg(i + 2 * k);
-            inManager->ClampTile(gWorld.mMap, theTile);
-            EEPathPutTile(i + 2 * k, theTile);
-            EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTile.GetX(), theTile.GetY());
-            io->h[k] = EEPathHandle(theSector);
-            i[4 + 2 * k] = theSector->GetSector()->GetCenter().mX;
-            i[5 + 2 * k] = theSector->GetSector()->GetCenter().mY;
-            i[8 + k] = theSector->GetID();
-        }
-        return 0;
-    }
     case EE_PATH_REQUEST_FLAGS: {   // the goal's flags = the request's (EECPASGFlags::operator=)
         EeAStarGraphGoalRec* theGoal = reinterpret_cast<EeAStarGraphGoalRec*>(io->h[1]);
         const EECPASGFlags& theFlags = reinterpret_cast<EEAutoPathRequest*>(io->h[0])->mFlags;
@@ -635,17 +463,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         memcpy(theGoal->path_flags, theFlags.mFlags, sizeof(theFlags.mFlags));
         return 0;
     }
-    case EE_PATH_GRAPH_REVS_WORLD: {   // SetGraphRevs' inputs
-        EETileCoordinate theFrom = EEPathTileArg(i), theTo = EEPathTileArg(i + 2);
-        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.GetY());
-        i[0] = theFrom.DistanceTo(theTo);
-        i[1] = theSector->GetKind();
-        i[2] = theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen ? (int64_t)(uint32_t)theUnit->GetUnitID()
-                                                                                      : (int64_t)0xffffffffu;
-        return 0;
-    }
-    case EE_PATH_GRAPH_OBJECT:
-        return (int64_t)EEPathHandle(EEGraphObjectOf(NULL, (int32_t)i[0]));
     case EE_PATH_TILES_OUT: {   // into the C++ vector h1
         const EePoint* theTiles = reinterpret_cast<const EePoint*>(io->h[2]);
         std::vector<U2DPoint<long> >& theOut = *reinterpret_cast<std::vector<U2DPoint<long> >*>(io->h[1]);
@@ -653,8 +470,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
             theOut.push_back(U2DPoint<long>(theTiles[k].x, theTiles[k].y));
         return 0;
     }
-    case EE_PATH_MAP_SIZE:
-        return reinterpret_cast<EEMap*>(io->h[1])->mSize;
     case EE_PATH_POINTS_OUT: {   // into the C++ vector h1
         std::vector<GE3DPoint> thePoints = EEPathPointsIn(io->h[2], i[0]);
         std::vector<GE3DPoint>& theOut = *reinterpret_cast<std::vector<GE3DPoint>*>(io->h[1]);
@@ -668,18 +483,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         EEPathPointsOut(io->h[1], thePoints);
         return 0;
     }
-    case EE_PATH_UNIT_LOCATION: {
-        float theX = theUnit->mPhysicalModel.GetLocation().GetX(), theY = theUnit->mPhysicalModel.GetLocation().GetY();
-        uint32_t theBits[2];
-        memcpy(&theBits[0], &theX, 4);
-        memcpy(&theBits[1], &theY, 4);
-        i[0] = theBits[0];
-        i[1] = theBits[1];
-        return 0;
-    }
-    case EE_PATH_UNIT_TILE:
-        EEPathPutTile(i, theUnit->GetTile());
-        return 0;
     case EE_PATH_UNIT_DROP_PATH:
         theUnit->DropPath();
         return 0;
@@ -698,14 +501,6 @@ static int64_t EEPathBoundedHost(EEPathManager* inManager, int32_t inOp, EePathI
         if (i[0] && theUnit->GetGoal())
             theUnit->GetGoal()->PathTaken(theUnit);
         return 0;
-    case EE_PATH_CAPTURE_ACTIVE:   // TEST ONLY
-        return EESimCaptureRecord::Active();
-    case EE_PATH_CAPTURE_COMMIT: {
-        EESimCaptureRecord theRecord((unsigned int)i[0]);
-        theRecord.Bytes(reinterpret_cast<const void*>(io->h[1]), (unsigned int)i[1]);
-        theRecord.Commit();
-        return 0;
-    }
     }
     return 0;
 }
@@ -717,39 +512,14 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     int64_t* i = io->i;
     const uint64_t h = io->h[0];
     switch (inOp) {
-    case EE_PATH_UNIT_ID:
-        return EEUnitHandleID(EEPathUnitOf(h));
-    case EE_PATH_UNIT_RESOLVE: {
-        EEComplexUnit* theUnit = NULL;
-        EEUnitHandleResolve((uint32_t)i[0], theUnit);
-        return (int64_t)EEPathHandle(theUnit);
-    }
     case EE_PATH_WORLD_UNIT:
         return (int64_t)EEPathHandle(EEPathWorldUnit(i[0]));
-    case EE_PATH_UNIT_REFERENCE:
-        EEPathUnitOf(h)->Reference();
-        return 0;
-    case EE_PATH_UNIT_DEREFERENCE:
-        EEPathUnitOf(h)->Dereference();
-        return 0;
     case EE_PATH_REQUEST_REFERENCE:
         reinterpret_cast<EEAutoPathRequest*>(h)->Reference();
         return 0;
     case EE_PATH_REQUEST_DEREFERENCE:
         reinterpret_cast<EEAutoPathRequest*>(h)->Dereference();
         return 0;
-    case EE_PATH_GAME_TIME:
-        return gPhysics ? (int64_t)(uint32_t)gPhysics->GetGameTime() : 0;
-    case EE_PATH_SUB_SECTORS:
-        return (int64_t)gContinentManager.GetPathSubSectors().size();
-    case EE_PATH_SUB_SECTOR:
-        return EESubSectorOf((long)i[0]) != NULL;
-    case EE_PATH_MAP:
-        return (int64_t)EEPathHandle(gWorld.mMap);
-    case EE_PATH_HAS_MAP:
-        return gWorld.mMap != NULL;
-    case EE_PATH_LOADING:
-        return gLoadingSavedGame;
     case EE_PATH_CLAMP: {   // (on the map h1 when i2)
         EETileCoordinate theTile = EEPathTileArg(i);
         theManager->ClampTile(i[2] ? reinterpret_cast<EEMap*>(io->h[1]) : gWorld.mMap, theTile);
@@ -757,9 +527,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         return 0;
     }
     // the tile machines: Rust (path_search.rs)
-    case EE_PATH_PATH_REVS:
-        EEPathRevsInputs(EEPathUnitOf(h), EEPathTileArg(i), EEPathTileArg(i + 2), i);
-        return 0;
     // the graph machines: Rust (graph_search.rs)
     // the units
     case EE_PATH_AUTO_WAYPOINT: {   // FinishGraphPath's unit part
@@ -774,8 +541,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         theUnit->DropPath();
         return 1;
     }
-    case EE_PATH_UNIT_PLAYER:
-        return EEPathUnitOf(h)->GetPlayer()->GetPlayerID();
     case EE_PATH_UNIT_WAYPOINTS:
         return (int64_t)EEPathUnitOf(h)->mWaypoints.size();
     case EE_PATH_UNIT_GOAL_TILE: {
@@ -785,12 +550,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
         i[0] = (long)theGoal->GetLocation().GetX();
         i[1] = (long)theGoal->GetLocation().GetY();
         return 1;
-    }
-    case EE_PATH_UNIT_PATH_TYPE: {
-        EEComplexUnit* theUnit = EEPathUnitOf(h);
-        if (!(theUnit->mUnitClass->CanMoveOnTerrain(theUnit, 1)))
-            return theUnit->mUnitClass->CanMoveOnTerrain(theUnit, 0xc) ? 0x10 : 1;
-        return 2;
     }
     case EE_PATH_UNIT_COUNT_REQUEST: {   // the request counted; whether it goes into the history
         EEComplexUnit* theUnit = EEPathUnitOf(h);
@@ -814,8 +573,6 @@ static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
     // the regions, the pools
     case EE_PATH_REBUILD:
         return gContinentManager.Rebuild();
-    case EE_PATH_REGION_DELAY:
-        return (int64_t)(uint32_t)UMFloatToLong(gWorld.mGameSpeed * 10000.0f);
     // the requests
     case EE_PATH_REQUEST_LOAD: {   // a loaded one (the record in h0)
         {

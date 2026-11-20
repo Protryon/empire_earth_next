@@ -1869,7 +1869,11 @@ impl PathHost for FnHost {
     fn call(&mut self, op: i32, io: &mut EePathIo) -> i64 {
         let (ctx, f) = (self.ctx, self.f);
         // SAFETY: the C++ callback's contract
-        let mut raw = |op: i32, io: &mut EePathIo| unsafe { f(ctx, op, io) };
+        // the world's reads are Rust's (pm_host.rs), the rest the C++ host's
+        let mut raw = |op: i32, io: &mut EePathIo| {
+            let mut cpp = |op: i32, io: &mut EePathIo| unsafe { f(ctx, op, io) };
+            crate::astar::pm_host::answer(op, io, &mut cpp).unwrap_or_else(|| cpp(op, io))
+        };
         // the searches' operations are the Rust searches'; the rest is the C++ host's
         // SAFETY: `bounded` points into the live manager (its calls nest, never overlap on it)
         if let Some(r) = crate::astar::path_search::intercept(unsafe { &mut *self.bounded }, op, io, &mut raw) {
