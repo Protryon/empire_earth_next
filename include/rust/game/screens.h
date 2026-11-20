@@ -6597,6 +6597,12 @@ constexpr static const int64_t EE_SCREENS_MF_IDS_DEFEATED = 30402;
 /// The form's default background media (`mMediaID` when none), the carbon one.
 constexpr static const int64_t EE_SCREENS_MF_MEDIA_CARBON = 887;
 
+/// `kMainGameActionButton1`: the stop button's control.
+constexpr static const uint32_t EE_SCREENS_MGC_ACTION_BUTTON1 = 78;
+
+/// `kMainGameUnitIconBar`.
+constexpr static const uint32_t EE_SCREENS_MGC_UNIT_ICON_BAR = 222;
+
 constexpr static const uint32_t EE_SCREENS_MG_CANCEL_UI_MODE = 2817;
 
 /// The media dump (`EEUIEMGDumpLoadedMedia(replace, leaks)`): the main screen's two hot keys, the scenario editor's.
@@ -11877,6 +11883,10 @@ constexpr static const int32_t EE_SCREENS_SETS_GROUPS[5] = { 9, 12, 13, 10, 11, 
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
+/// The timed rally buttons (`kMainGameTimedFighterRally`, `kMainGameTimedBomberRally`,
+/// `kMainGameTimedAtomicBomberRally`).
+constexpr static const uint32_t EE_SCREENS_MGC_TIMED_RALLIES[3] = { 208, 209, 210, };
+
 extern "C" {
 
 /// `EEUserInterface::PostAction`: queues the action (`EEAction*`) with a reference of its own.
@@ -13128,6 +13138,12 @@ void ee_screens_lobby_update_form();
 
 /// `LobbyShowTransferProgress`: a client's file transfer on its row.
 void ee_screens_lobby_show_transfer_progress(uint8_t slot, uint8_t progress);
+
+/// `EEUIFMGMainGroup::ShowCommands(unit)`.
+void ee_screens_mg_show_commands(size_t group, size_t unit);
+
+/// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
+void ee_screens_mg_hot_key_event(size_t event);
 
 /// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
 int64_t ee_screens_main_form_copy_data(void *call);

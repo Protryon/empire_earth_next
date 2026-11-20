@@ -276,6 +276,7 @@ mod lobby_form_ffi;
 pub mod lobby_options;
 pub mod main_form;
 pub(crate) mod main_form_calls;
+pub(crate) mod main_group_calls;
 #[cfg(not(test))]
 mod main_form_ffi;
 pub mod main_form_fields;
