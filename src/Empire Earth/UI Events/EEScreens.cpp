@@ -311,19 +311,6 @@ static void EEScreensRestartYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RESTAR
 static void EEScreensToEditorYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RETURN_TO_EDITOR_YES, NULL, NULL); }
 static void EEScreensExitYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_EXIT_YES, NULL, NULL); }
 
-static float Float(uint32_t inBits)
-{
-    float theValue;
-    memcpy(&theValue, &inBits, 4);
-    return theValue;
-}
-static uint32_t Bits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
 static UWideString Text(const uint8_t* inText, size_t inLength)
 {
     return UWideString(std::string((const char*)inText, inLength).c_str());
@@ -582,143 +569,6 @@ extern "C" uint32_t ee_screenscpp_cem_file_count() { return (uint32_t)sCEMFileLi
 extern "C" void ee_screenscpp_cem_file_name(uint32_t inIndex, void* inOut) { EEShimOut(inOut, sCEMFileList[inIndex]); }
 extern "C" void ee_screenscpp_cem_scenario_extension(void* inOut) { EEShimOut(inOut, gScenarioExtension); }
 extern "C" void ee_screenscpp_cem_campaign_extension(void* inOut) { EEShimOut(inOut, gCampaignExtension); }
-
-// the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
-extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                       uint32_t inC, uint32_t inD)
-{
-    UIForm* theForm = static_cast<UIForm*>(inForm);
-    // (a posted event runs with no form: the game's manager)
-    EEUIManager* theManager = theForm ? static_cast<EEUIManager*>(theForm->GetManager()) : gUIManager;
-    auto Ctl = [&]() { return theForm->GetControl(inA); };   // a control op's control
-    switch (inOp) {
-    case EE_SCREENS_OP_RESIZE_MENU:
-        gUserInterface->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
-        break;
-    case EE_SCREENS_OP_SRAND_TIME:
-        srand(TMGetTime());
-        break;
-    case EE_SCREENS_OP_RAND:
-        return rand();
-    case EE_SCREENS_GAME_UI_MUSIC_VOLUME:
-        gUIManager->SetMusicVolume(Float(inA));
-        break;
-    case EE_SCREENS_GAME_MUSIC_START:
-        gMusicManager->Start();
-        break;
-    case EE_SCREENS_GAME_MUSIC_STOP:
-        gMusicManager->Stop();
-        break;
-    case EE_SCREENS_GAME_MOUSE_SENSITIVITY:
-        gMouse->SetSensitivity(Float(inA));
-        break;
-    case EE_SCREENS_GAME_LEFT_HANDED:
-        UIManager::SetMouseLeftHanded(inA != 0);
-        break;
-    case EE_SCREENS_GAME_PAUSE:
-        gWorld.PauseGame();
-        break;
-    case EE_SCREENS_GAME_APPLY_PORT:
-        EEApplyPortSettings(gGamePreferences.GetSettings());
-        break;
-    case EE_SCREENS_GAME_MIP_FILTER:
-        gTextureManager->UpdateMIPFilterMode(inA);
-        break;
-    case EE_SCREENS_GAME_TEXTURE_RESOLUTION:
-        EESetTextureResolution((int32_t)inA);
-        break;
-    case EE_SCREENS_GAME_AMBIENT:
-        gAmbientSoundManager.SetEnabled(inA != 0);
-        break;
-    case EE_SCREENS_GAME_SAVE:
-        return gGamePreferences.Save();
-    // the custom campaign form's (custom_campaign.rs): a list box of form inA
-    case EE_SCREENS_GAME_SCREEN_COUNT:
-        return inA < gDisplayRasterizers.size() ? (uint32_t)gDisplayRasterizers[inA].mScreens.size() : 0;
-    case EE_SCREENS_GAME_EXTERNAL_LOBBY:
-        EEStartExternalLobby();
-        break;
-    case EE_SCREENS_GAME_DELETE_EDITOR:
-        theManager->DeleteScenarioEditor();
-        break;
-    case EE_SCREENS_GAME_CREATE_EDITOR:
-        theManager->CreateScenarioEditor();
-        break;
-    case EE_SCREENS_GAME_START_EDITOR:
-        theManager->StartScenarioEditor();
-        break;
-    case EE_SCREENS_GAME_FORGET_MAIN_FORM:
-        gSavedMainGameForm = NULL;
-        break;
-    case EE_SCREENS_GAME_LOBBY_END:
-        gWorld.GetLobbyOptions().mLock->WriteUnlock();
-        break;
-    case EE_SCREENS_GAME_SHOW_SINGLE_PLAYER:
-        EEShowSinglePlayerScreen();
-        break;
-    case EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN:
-        EECampaignFormManager::Get()->mAllScenariosOpen = inA != 0;
-        break;
-    // the load and save screens' (save_load.rs)
-    case EE_SCREENS_GAME_SAVE_SEND:
-        EEScreensSendSave(sSaveObject);
-        break;
-    case EE_SCREENS_GAME_SAVE_POST:
-        EEScreensPostSave(sSaveObject);
-        break;
-    case EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM:
-        gUserInterface->OpenForm(gSavedMainGameForm);
-        break;
-    // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
-    case EE_SCREENS_GAME_SI_BLINK_OFF:
-        EEUISCIFormManager::Get()->SetBlinking(false);
-        break;
-    case EE_SCREENS_GAME_SI_OPEN_MAP:
-        return EEUISCIFormManager::Get()->OpenMap();
-    case EE_SCREENS_GAME_SI_OPEN_SOUND:
-        return EEUISCIFormManager::Get()->OpenSound();
-    case EE_SCREENS_GAME_SI_GET_SCENARIO:
-        return EEUISCIFormManager::Get()->GetScenario(EEScreensScenario());
-    case EE_SCREENS_GAME_SI_POST_LOAD:
-        gUserInterface->PostLoadSavedGame(EEScreensScenario());
-        break;
-    case EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM:
-        EECampaignFormManager::Get()->UpdateChecksum();
-        break;
-    // the lobby's and its load screens' (lobby_form.rs)
-    case EE_SCREENS_GAME_LE_SET_OPTION:
-        EEScreensLobbySetOption(inA, (long)(int32_t)inB);
-        break;
-    case EE_SCREENS_OP_LE_BITMAP:
-        static_cast<UIBitmap*>(Ctl())->SetBitmap(inB ? gUIManager->GetCheckDownOn() : gUIManager->GetCheckDownOff());
-        break;
-    case EE_SCREENS_OP_LE_PING:
-        static_cast<EEUICPing*>(Ctl())->SetPing(Float(inB));
-        break;
-    case EE_SCREENS_GAME_LE_DISCONNECT:
-        gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
-        gGamePreferences.SetLastGameOptions(gGameOptions);
-        break;
-    case EE_SCREENS_GAME_LE_START_PING:
-        static_cast<EEServer*>(gCommunications)->StartPing();
-        break;
-    case EE_SCREENS_GAME_LE_RULE:
-        return EEScreensLobbyRule(inA, inB);
-    // the in-game options menu's (main_game_options.rs)
-    case EE_SCREENS_GAME_GO_REQUEST_PAUSE:
-        gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientRequestPause), kSlotNone);
-        break;
-    case EE_SCREENS_GAME_GO_BRIEFING:
-        EEDisplayScenarioIntro();
-        break;
-    case EE_SCREENS_GAME_GO_EXIT:
-        EEExitGame();
-        break;
-    }
-    return 0;
-}
 
 // ---- the shims of the moved cases (UI lane round 7: rust/crates/ee_game/src/screens/game_calls.rs, game_cpp.rs):
 // each one C++ statement; the logic that calls them is Rust's
@@ -1838,6 +1688,61 @@ extern "C" void ee_screenscpp_tt_generator_name(uint32_t inIndex, void* inOut)
 extern "C" uintptr_t ee_screenscpp_tt_engine_ai(uint32_t inChoice) { return (uintptr_t)EECPAIByChoice(inChoice); }
 extern "C" void ee_screenscpp_tt_engine_ai_name(uintptr_t inAi, void* inOut)
 { EEShimOut(inOut, UWideString(EECPAIText(reinterpret_cast<const EECPAIEntry*>(inAi)->name, reinterpret_cast<const EECPAIEntry*>(inAi)->name_len).c_str())); }
+
+// ---- the original ee_screenscpp_call's own cases (screens_calls.rs root; each one statement)
+extern "C" void ee_screenscpp_rc_resize_menu()
+{ gUserInterface->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); }
+extern "C" void ee_screenscpp_rc_srand_time() { srand(TMGetTime()); }
+extern "C" uint32_t ee_screenscpp_rc_rand() { return (uint32_t)rand(); }
+extern "C" void ee_screenscpp_rc_ui_music_volume(float inVolume) { gUIManager->SetMusicVolume(inVolume); }
+extern "C" void ee_screenscpp_rc_music_start() { gMusicManager->Start(); }
+extern "C" void ee_screenscpp_rc_music_stop() { gMusicManager->Stop(); }
+extern "C" void ee_screenscpp_rc_mouse_sensitivity(float inValue) { gMouse->SetSensitivity(inValue); }
+extern "C" void ee_screenscpp_rc_left_handed(bool inLeft) { UIManager::SetMouseLeftHanded(inLeft); }
+extern "C" void ee_screenscpp_rc_apply_port() { EEApplyPortSettings(gGamePreferences.GetSettings()); }
+extern "C" void ee_screenscpp_rc_mip_filter(uint32_t inMode) { gTextureManager->UpdateMIPFilterMode(inMode); }
+extern "C" void ee_screenscpp_rc_texture_resolution(int32_t inValue) { EESetTextureResolution(inValue); }
+extern "C" void ee_screenscpp_rc_ambient(bool inEnabled) { gAmbientSoundManager.SetEnabled(inEnabled); }
+extern "C" uint32_t ee_screenscpp_rc_display_rasterizers() { return (uint32_t)gDisplayRasterizers.size(); }
+extern "C" uint32_t ee_screenscpp_rc_display_screens(uint32_t inRasterizer)
+{ return (uint32_t)gDisplayRasterizers[inRasterizer].mScreens.size(); }
+extern "C" void ee_screenscpp_rc_external_lobby() { EEStartExternalLobby(); }
+extern "C" void ee_screenscpp_rc_delete_editor(uintptr_t inManager)
+{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->DeleteScenarioEditor(); }
+extern "C" void ee_screenscpp_rc_create_editor(uintptr_t inManager)
+{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->CreateScenarioEditor(); }
+extern "C" void ee_screenscpp_rc_start_editor(uintptr_t inManager)
+{ static_cast<EEUIManager*>(reinterpret_cast<UIManager*>(inManager))->StartScenarioEditor(); }
+extern "C" void ee_screenscpp_rc_forget_main_form() { gSavedMainGameForm = NULL; }
+extern "C" void ee_screenscpp_rc_show_single_player() { EEShowSinglePlayerScreen(); }
+extern "C" void ee_screenscpp_rc_campaign_all_open(bool inOpen)
+{ EECampaignFormManager::Get()->mAllScenariosOpen = inOpen; }
+extern "C" void ee_screenscpp_rc_save_send() { EEScreensSendSave(sSaveObject); }
+extern "C" void ee_screenscpp_rc_save_post() { EEScreensPostSave(sSaveObject); }
+extern "C" void ee_screenscpp_rc_open_saved_main_form() { gUserInterface->OpenForm(gSavedMainGameForm); }
+extern "C" void ee_screenscpp_rc_si_blink_off() { EEUISCIFormManager::Get()->SetBlinking(false); }
+extern "C" uint32_t ee_screenscpp_rc_si_open_map() { return (uint32_t)EEUISCIFormManager::Get()->OpenMap(); }
+extern "C" uint32_t ee_screenscpp_rc_si_open_sound() { return (uint32_t)EEUISCIFormManager::Get()->OpenSound(); }
+extern "C" uint32_t ee_screenscpp_rc_si_get_scenario()
+{ return (uint32_t)EEUISCIFormManager::Get()->GetScenario(EEScreensScenario()); }
+extern "C" void ee_screenscpp_rc_si_post_load() { gUserInterface->PostLoadSavedGame(EEScreensScenario()); }
+extern "C" void ee_screenscpp_rc_campaign_update_checksum() { EECampaignFormManager::Get()->UpdateChecksum(); }
+extern "C" void ee_screenscpp_rc_le_bitmap_on(uintptr_t inForm, uint32_t inControl)
+{ static_cast<UIBitmap*>(F(inForm)->GetControl(inControl))->SetBitmap(gUIManager->GetCheckDownOn()); }
+extern "C" void ee_screenscpp_rc_le_bitmap_off(uintptr_t inForm, uint32_t inControl)
+{ static_cast<UIBitmap*>(F(inForm)->GetControl(inControl))->SetBitmap(gUIManager->GetCheckDownOff()); }
+extern "C" void ee_screenscpp_rc_le_ping(uintptr_t inForm, uint32_t inControl, float inPing)
+{ static_cast<EEUICPing*>(F(inForm)->GetControl(inControl))->SetPing(inPing); }
+extern "C" void ee_screenscpp_rc_le_disconnect()
+{ gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone); }
+extern "C" void ee_screenscpp_rc_le_save_last_options() { gGamePreferences.SetLastGameOptions(gGameOptions); }
+extern "C" void ee_screenscpp_rc_le_start_ping() { static_cast<EEServer*>(gCommunications)->StartPing(); }
+extern "C" uint32_t ee_screenscpp_rc_le_rule(uint32_t inWhich, uint32_t inArg)
+{ return EEScreensLobbyRule(inWhich, inArg); }
+extern "C" void ee_screenscpp_rc_go_request_pause()
+{ gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientRequestPause), kSlotNone); }
+extern "C" void ee_screenscpp_rc_go_briefing() { EEDisplayScenarioIntro(); }
+extern "C" void ee_screenscpp_rc_go_exit() { EEExitGame(); }
 
 // TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)
 extern "C" const void* ee_screenscpp_sgvw_world_lock() { return gWorld.mLock; }

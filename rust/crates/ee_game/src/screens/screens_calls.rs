@@ -28,14 +28,37 @@ use crate::screens::hot_keys::{
     EE_SCREENS_OP_HK_GROUP_BUTTON,
 };
 use crate::screens::lobby_form::{
-    EE_SCREENS_GAME_LE_PLAYER_INFO, EE_SCREENS_GAME_LE_SEND_OPTION, EE_SCREENS_GAME_LE_START_LOADING,
+    EE_SCREENS_GAME_LE_DISCONNECT, EE_SCREENS_GAME_LE_PLAYER_INFO, EE_SCREENS_GAME_LE_RULE,
+    EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS, EE_SCREENS_GAME_LE_SEND_OPTION, EE_SCREENS_GAME_LE_SET_OPTION,
+    EE_SCREENS_GAME_LE_START_LOADING, EE_SCREENS_GAME_LE_START_PING, EE_SCREENS_OP_LE_BITMAP, EE_SCREENS_OP_LE_PING,
+};
+use crate::screens::main_game_options::{
+    EE_SCREENS_GAME_GO_BRIEFING, EE_SCREENS_GAME_GO_EXIT, EE_SCREENS_GAME_GO_REQUEST_PAUSE,
+};
+use crate::screens::save_load::{
+    EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM, EE_SCREENS_GAME_SAVE_POST, EE_SCREENS_GAME_SAVE_SEND,
+};
+use crate::screens::scenario_screens::{
+    EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM, EE_SCREENS_GAME_SI_BLINK_OFF, EE_SCREENS_GAME_SI_GET_SCENARIO,
+    EE_SCREENS_GAME_SI_OPEN_MAP, EE_SCREENS_GAME_SI_OPEN_SOUND, EE_SCREENS_GAME_SI_POST_LOAD,
+};
+use crate::screens::settings_form::{
+    EE_SCREENS_GAME_AMBIENT, EE_SCREENS_GAME_APPLY_PORT, EE_SCREENS_GAME_LEFT_HANDED, EE_SCREENS_GAME_MIP_FILTER,
+    EE_SCREENS_GAME_MOUSE_SENSITIVITY, EE_SCREENS_GAME_MUSIC_START, EE_SCREENS_GAME_MUSIC_STOP, EE_SCREENS_GAME_PAUSE,
+    EE_SCREENS_GAME_SAVE, EE_SCREENS_GAME_SCREEN_COUNT, EE_SCREENS_GAME_TEXTURE_RESOLUTION,
+    EE_SCREENS_GAME_UI_MUSIC_VOLUME, EE_SCREENS_OP_RAND, EE_SCREENS_OP_RESIZE_MENU, EE_SCREENS_OP_SRAND_TIME,
 };
 use crate::screens::main_game::{
     EE_SCREENS_GAME_MG_CLEAR_GATE_GHOSTS, EE_SCREENS_GAME_MG_ENTITY_GROUP, EE_SCREENS_GAME_MG_MARK_HIDDEN_MOVED,
     EE_SCREENS_GAME_MG_POINTER, EE_SCREENS_GAME_MG_SET_CAMERA_MODE, EE_SCREENS_GAME_MG_SET_HIDDEN_MODE,
     EE_SCREENS_GAME_MG_SET_UI_STATE, EE_SCREENS_GAME_MG_SHOW_DIALOG, EE_SCREENS_GAME_MG_ZOOM_STYLE,
 };
-use crate::screens::menus::{EE_SCREENS_GAME_DELETE_WON, EE_SCREENS_GAME_MULTI, EE_SCREENS_GAME_SINGLE};
+use crate::screens::menus::{
+    EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, EE_SCREENS_GAME_CREATE_EDITOR, EE_SCREENS_GAME_DELETE_EDITOR,
+    EE_SCREENS_GAME_DELETE_WON, EE_SCREENS_GAME_EXTERNAL_LOBBY, EE_SCREENS_GAME_FORGET_MAIN_FORM,
+    EE_SCREENS_GAME_LOBBY_END, EE_SCREENS_GAME_MULTI, EE_SCREENS_GAME_SHOW_SINGLE_PLAYER, EE_SCREENS_GAME_SINGLE,
+    EE_SCREENS_GAME_START_EDITOR,
+};
 use crate::screens::post_game::{
     EE_SCREENS_GAME_PGS_ADD_SERIES, EE_SCREENS_GAME_PGS_NEW_MANAGER, EE_SCREENS_GAME_PGS_PROTOCOL,
     EE_SCREENS_GAME_PGS_SAVE, EE_SCREENS_GAME_PGS_SCI_DELETE, EE_SCREENS_GAME_PGS_SET_PAGE,
@@ -286,6 +309,174 @@ pub(crate) fn call<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: 
             c.sc_send_start_loading(a as u8, b as i32);
             0
         }
+        _ => return root(c, form, op, a, b),
+    })
+}
+
+/// The original `ee_screenscpp_call`'s own cases (the toolkit's and the game's calls on the event's form; a posted
+/// event runs with no form: the game's manager), `None` for an op that is not here.
+fn root<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32) -> Option<u32> {
+    let float = f32::from_bits;
+    Some(match op {
+        EE_SCREENS_OP_RESIZE_MENU => {
+            c.rc_resize_menu();
+            0
+        }
+        EE_SCREENS_OP_SRAND_TIME => {
+            c.rc_srand_time();
+            0
+        }
+        EE_SCREENS_OP_RAND => c.rc_rand(),
+        EE_SCREENS_GAME_UI_MUSIC_VOLUME => {
+            c.rc_ui_music_volume(float(a));
+            0
+        }
+        EE_SCREENS_GAME_MUSIC_START => {
+            c.rc_music_start();
+            0
+        }
+        EE_SCREENS_GAME_MUSIC_STOP => {
+            c.rc_music_stop();
+            0
+        }
+        EE_SCREENS_GAME_MOUSE_SENSITIVITY => {
+            c.rc_mouse_sensitivity(float(a));
+            0
+        }
+        EE_SCREENS_GAME_LEFT_HANDED => {
+            c.rc_left_handed(a != 0);
+            0
+        }
+        EE_SCREENS_GAME_PAUSE => {
+            c.sc_pause_game();
+            0
+        }
+        EE_SCREENS_GAME_APPLY_PORT => {
+            c.rc_apply_port();
+            0
+        }
+        EE_SCREENS_GAME_MIP_FILTER => {
+            c.rc_mip_filter(a);
+            0
+        }
+        EE_SCREENS_GAME_TEXTURE_RESOLUTION => {
+            c.rc_texture_resolution(a as i32);
+            0
+        }
+        EE_SCREENS_GAME_AMBIENT => {
+            c.rc_ambient(a != 0);
+            0
+        }
+        EE_SCREENS_GAME_SAVE => c.sc_preferences_save() as u32,
+        // the custom campaign form's (custom_campaign.rs): a display device's screens (0 past them)
+        EE_SCREENS_GAME_SCREEN_COUNT => {
+            if a < c.rc_display_rasterizers() {
+                c.rc_display_screens(a)
+            } else {
+                0
+            }
+        }
+        EE_SCREENS_GAME_EXTERNAL_LOBBY => {
+            c.rc_external_lobby();
+            0
+        }
+        EE_SCREENS_GAME_DELETE_EDITOR | EE_SCREENS_GAME_CREATE_EDITOR | EE_SCREENS_GAME_START_EDITOR => {
+            let manager = if form != 0 { c.form_manager(form) } else { c.tp_ui_manager() };
+            match op {
+                EE_SCREENS_GAME_DELETE_EDITOR => c.rc_delete_editor(manager),
+                EE_SCREENS_GAME_CREATE_EDITOR => c.rc_create_editor(manager),
+                _ => c.rc_start_editor(manager),
+            }
+            0
+        }
+        EE_SCREENS_GAME_FORGET_MAIN_FORM => {
+            c.rc_forget_main_form();
+            0
+        }
+        EE_SCREENS_GAME_LOBBY_END => {
+            c.lobby_options_write_unlock();
+            0
+        }
+        EE_SCREENS_GAME_SHOW_SINGLE_PLAYER => {
+            c.rc_show_single_player();
+            0
+        }
+        EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN => {
+            c.rc_campaign_all_open(a != 0);
+            0
+        }
+        // the load and save screens' (save_load.rs)
+        EE_SCREENS_GAME_SAVE_SEND => {
+            c.rc_save_send();
+            0
+        }
+        EE_SCREENS_GAME_SAVE_POST => {
+            c.rc_save_post();
+            0
+        }
+        EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM => {
+            c.rc_open_saved_main_form();
+            0
+        }
+        // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
+        EE_SCREENS_GAME_SI_BLINK_OFF => {
+            c.rc_si_blink_off();
+            0
+        }
+        EE_SCREENS_GAME_SI_OPEN_MAP => c.rc_si_open_map(),
+        EE_SCREENS_GAME_SI_OPEN_SOUND => c.rc_si_open_sound(),
+        EE_SCREENS_GAME_SI_GET_SCENARIO => c.rc_si_get_scenario(),
+        EE_SCREENS_GAME_SI_POST_LOAD => {
+            c.rc_si_post_load();
+            0
+        }
+        EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM => {
+            c.rc_campaign_update_checksum();
+            0
+        }
+        // the lobby's and its load screens' (lobby_form.rs)
+        EE_SCREENS_GAME_LE_SET_OPTION => {
+            c.lobby_set_option(a, b as i32 as i64);
+            0
+        }
+        EE_SCREENS_OP_LE_BITMAP => {
+            if b != 0 {
+                c.rc_le_bitmap_on(form, a)
+            } else {
+                c.rc_le_bitmap_off(form, a)
+            }
+            0
+        }
+        EE_SCREENS_OP_LE_PING => {
+            c.rc_le_ping(form, a, float(b));
+            0
+        }
+        EE_SCREENS_GAME_LE_DISCONNECT => {
+            c.rc_le_disconnect();
+            0
+        }
+        EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS => {
+            c.rc_le_save_last_options();
+            0
+        }
+        EE_SCREENS_GAME_LE_START_PING => {
+            c.rc_le_start_ping();
+            0
+        }
+        EE_SCREENS_GAME_LE_RULE => c.rc_le_rule(a, b),
+        // the in-game options menu's (main_game_options.rs)
+        EE_SCREENS_GAME_GO_REQUEST_PAUSE => {
+            c.rc_go_request_pause();
+            0
+        }
+        EE_SCREENS_GAME_GO_BRIEFING => {
+            c.rc_go_briefing();
+            0
+        }
+        EE_SCREENS_GAME_GO_EXIT => {
+            c.rc_go_exit();
+            0
+        }
         _ => return None,
     })
 }
@@ -428,5 +619,41 @@ mod tests {
             assert!(!f.log.is_empty(), "{op}");
         }
         assert_eq!(run(&mut Fake::default(), 0xffff_fff0, 0, 0, 0), None);
+    }
+
+    #[test]
+    fn the_roots_cases_are_one_call_each_and_the_editors_take_the_forms_manager() {
+        let mut f = Fake::default();
+        f.answer("form_manager", &[0x30]).answer("tp_ui_manager", &[0x40]);
+        call(&mut f, 0x10, EE_SCREENS_GAME_CREATE_EDITOR, 0, 0, 0, 0);
+        call(&mut f, 0, EE_SCREENS_GAME_START_EDITOR, 0, 0, 0, 0);
+        assert_eq!(f.calls(), "form_manager(16)\nrc_create_editor(48)\ntp_ui_manager()\nrc_start_editor(64)");
+        let mut f = Fake::default();
+        f.answer("rc_display_rasterizers", &[2, 2]).answer("rc_display_screens", &[3]);
+        assert_eq!(run(&mut f, EE_SCREENS_GAME_SCREEN_COUNT, 1, 0, 0), Some(3));
+        assert_eq!(run(&mut f, EE_SCREENS_GAME_SCREEN_COUNT, 2, 0, 0), Some(0));
+        let mut f = Fake::default();
+        run(&mut f, EE_SCREENS_OP_LE_BITMAP, 4, 1, 0);
+        run(&mut f, EE_SCREENS_OP_LE_BITMAP, 4, 0, 0);
+        run(&mut f, EE_SCREENS_GAME_LE_SET_OPTION, 3, u32::MAX, 0);
+        assert_eq!(f.calls(), "rc_le_bitmap_on(16, 4)\nrc_le_bitmap_off(16, 4)\nlobby_set_option(3, -1)");
+        for op in [
+            EE_SCREENS_OP_RESIZE_MENU, EE_SCREENS_OP_SRAND_TIME, EE_SCREENS_OP_RAND, EE_SCREENS_GAME_UI_MUSIC_VOLUME,
+            EE_SCREENS_GAME_MUSIC_START, EE_SCREENS_GAME_MUSIC_STOP, EE_SCREENS_GAME_MOUSE_SENSITIVITY,
+            EE_SCREENS_GAME_LEFT_HANDED, EE_SCREENS_GAME_PAUSE, EE_SCREENS_GAME_APPLY_PORT, EE_SCREENS_GAME_MIP_FILTER,
+            EE_SCREENS_GAME_TEXTURE_RESOLUTION, EE_SCREENS_GAME_AMBIENT, EE_SCREENS_GAME_SAVE,
+            EE_SCREENS_GAME_EXTERNAL_LOBBY, EE_SCREENS_GAME_FORGET_MAIN_FORM, EE_SCREENS_GAME_LOBBY_END,
+            EE_SCREENS_GAME_SHOW_SINGLE_PLAYER, EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, EE_SCREENS_GAME_SAVE_SEND,
+            EE_SCREENS_GAME_SAVE_POST, EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM, EE_SCREENS_GAME_SI_BLINK_OFF,
+            EE_SCREENS_GAME_SI_OPEN_MAP, EE_SCREENS_GAME_SI_OPEN_SOUND, EE_SCREENS_GAME_SI_GET_SCENARIO,
+            EE_SCREENS_GAME_SI_POST_LOAD, EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM, EE_SCREENS_OP_LE_PING,
+            EE_SCREENS_GAME_LE_DISCONNECT, EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS, EE_SCREENS_GAME_LE_START_PING,
+            EE_SCREENS_GAME_LE_RULE, EE_SCREENS_GAME_GO_REQUEST_PAUSE, EE_SCREENS_GAME_GO_BRIEFING,
+            EE_SCREENS_GAME_GO_EXIT, EE_SCREENS_GAME_DELETE_EDITOR,
+        ] {
+            let mut f = Fake::default();
+            assert!(run(&mut f, op, 1, 2, 3).is_some(), "{op}");
+            assert!(!f.log.is_empty(), "{op}");
+        }
     }
 }

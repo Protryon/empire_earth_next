@@ -14,15 +14,6 @@ pub(crate) mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_call(
-            form: *mut c_void,
-            entity: *mut c_void,
-            op: u32,
-            a: u32,
-            b: u32,
-            c: u32,
-            d: u32,
-        ) -> u32;
         // the settings form's (settings_form_ffi.rs)
         pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
         pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::screens::settings_form::EeScreensSettingsRecord);
@@ -88,7 +79,8 @@ impl Form {
         // the cases that are Rust's over the C++ shims (game_calls.rs), else the C++ host
         let moved =
             crate::screens::game_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c, d);
-        let r = moved.unwrap_or_else(|| unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) });
+        // (the original C++ host's cases are screens_calls.rs'; an op that is none of them answers 0)
+        let r = moved.unwrap_or(0);
         if let Some(g) = begun.filter(|_| crate::screens::sgvw::HOST_WORLD_OPS.contains(&op)) {
             crate::screens::sgvw::record(g, &format!("C {op} {a} {b} {c} {d} -> {r}"));
         }
