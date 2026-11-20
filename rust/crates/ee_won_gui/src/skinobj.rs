@@ -18,7 +18,6 @@ use crate::btnobj::EeWonBtnCall as Bc;
 use crate::comboobj::EeWonComboCall as Co;
 use crate::compobj::EeWonCompCall as Cc;
 use crate::guistring::compare_no_case;
-use ee_won_net::chat::CrtChat;
 use crate::multiobj::EeWonMHeadCall as Mh;
 use crate::registry::EeWonGuiKind;
 use crate::scrollerobj::EeWonScrollerCall as Sc;
@@ -29,6 +28,7 @@ use crate::shell::{
 use crate::shell_won::{hold_comp, EeWonFrameIn};
 use crate::tabobj::EeWonTabCall as Tb;
 use crate::wonbtnobj::EeWonWbField as Wf;
+use ee_won_net::chat::CrtChat;
 
 /// A template slot of the skin (`WONSkin`'s members in declaration order).
 #[repr(u32)]
@@ -176,7 +176,8 @@ impl EeWonSkin {
     /// `WONSkinConfig::HandleButtonClickSound`: the sound on the template buttons and every named button type.
     pub fn click_sound(&self, sound: isize) {
         use EeWonSkinSlot as S;
-        for s in [S::PushButton, S::Checkbox, S::RadioButton, S::HeaderButton, S::TabButton, S::CloseButton, S::ComboButton]
+        for s in
+            [S::PushButton, S::Checkbox, S::RadioButton, S::HeaderButton, S::TabButton, S::CloseButton, S::ComboButton]
         {
             let c = self.slot(s);
             if c != 0 {

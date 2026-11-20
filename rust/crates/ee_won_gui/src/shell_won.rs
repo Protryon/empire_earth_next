@@ -249,12 +249,7 @@ pub struct WonSimpleButton {
 
 impl WonSimpleButton {
     fn new(thumb: bool) -> Self {
-        WonSimpleButton {
-            thumb,
-            images: Default::default(),
-            scale: Cell::new(false),
-            check_down: Cell::new(false),
-        }
+        WonSimpleButton { thumb, images: Default::default(), scale: Cell::new(false), check_down: Cell::new(false) }
     }
 }
 
@@ -297,9 +292,9 @@ impl ShellKind for WonSimpleButton {
                     height: sh.height(),
                 };
                 let mut slots = [0isize; 4];
-                for i in 0..4 {
+                for (i, slot) in slots.iter_mut().enumerate() {
                     let img = self.images[i].get();
-                    slots[i] = img;
+                    *slot = img;
                     p.has_image[i] = img != 0;
                     p.image_width[i] = if img != 0 { sh.img(Im::Width, img) as i32 } else { 0 };
                     p.image_height[i] = if img != 0 { sh.img(Im::Height, img) as i32 } else { 0 };
