@@ -75,48 +75,10 @@ long EEGetAttackFrameSet(EEComplexUnit* inUnit)
 }
 
 // Replaces a target the unit can't reach: with its position when that is reachable, else with a reachable spot up to
-// 9 tiles away, halved toward the target to within half a tile (the unit's position when none is found)
+// 9 tiles away, halved toward the target to within half a tile (the unit's position when none is found; Rust)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget)
 {
-    if (gContinentManager.CanGetTo(inUnit, (long)ioTarget->GetX(), (long)ioTarget->GetY()))
-        return;
-    float theX = inUnit->mPhysicalModel.GetLocation().GetX();
-    bool theFound = false;
-    float theY = inUnit->mPhysicalModel.GetLocation().GetY();
-    float theTargetX = ioTarget->GetX();
-    float theTargetY = ioTarget->GetY();
-    if (!gContinentManager.CanGetTo(inUnit, UMFloor(theX), UMFloor(theY))) {
-        for (float theRadius = 1.0f; theRadius < 10.0f && !theFound; theRadius += 1.0f) {
-            for (long theDX = -1; theDX <= 1 && !theFound; theDX++) {
-                for (long theDY = -1; theDY <= 1 && !theFound; theDY++) {
-                    if (theDX == 0 && theDY == 0)
-                        continue;
-                    float theCandidateY = (float)theDY * theRadius + theY;
-                    float theCandidateX = (float)theDX * theRadius + theX;
-                    if (!gContinentManager.CanGetTo(inUnit, UMFloor(theCandidateX), UMFloor(theCandidateY)))
-                        continue;
-                    theFound = true;
-                    theX = theCandidateX;
-                    theY = theCandidateY;
-                }
-            }
-        }
-        if (theFound) {
-            while (!(UMAbs(theTargetY - theY) < 0.5f && UMAbs(theTargetX - theX) < 0.5f)) {
-                float theMidX = (theTargetX + theX) * 0.5f;
-                float theMidY = (theTargetY + theY) * 0.5f;
-                if (gContinentManager.CanGetTo(inUnit, (long)theMidX, (long)theMidY)) {
-                    theX = theMidX;
-                    theY = theMidY;
-                } else {
-                    theTargetX = theMidX;
-                    theTargetY = theMidY;
-                }
-            }
-        }
-    }
-    ioTarget->SetX(theX);
-    ioTarget->SetY(theY);
+    ee_units_find_landing_point((uint64_t)(uintptr_t)inUnit, (float(*)[3])&ioTarget->mX);   // ee_sim units landing.rs
 }
 
 // Returns a resource's market price (1..1000) from the world table's rate and the player's trade balance in it;
@@ -139,33 +101,7 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
 // cdecl with a real GE2DPoint output: EEComplexUnit::FleeAfterCalamity and 0xbaab pass one (provisional name)
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint)
 {
-    EETileCoordinate theCandidate(0, 0);
-    GE3DPoint theGoal;
-    GE3DPoint thePosition;
-    bool theFound = false;
-    if (inUnit->mGoalState != NULL) {
-        inUnit->mGoalState->GetGoalLocation(theGoal);
-        inUnit->GetPosition(thePosition);
-        float theAngle = ee_units_uu_jitter_heading(ee_units_uu_heading_between((const float(*)[3])&theGoal.mX, (const float(*)[3])&thePosition.mX), -20.0f, 20.0f);
-        EETileCoordinate theTile(inUnit->mTileX, inUnit->mTileY);
-        unsigned short theContinent = gContinentManager.GetContinent(theTile, kAIPathLandMass);
-        for (long i = 12; i >= 0; i--) {
-            if (theFound)
-                break;
-            float theRadius = gPhysics->GetRandom(4.0f, 12.0f);
-            outPoint->SetX(UMCos(theAngle) * theRadius + thePosition.GetX());
-            outPoint->SetY(UMCos(1.57079637f - theAngle) * theRadius + thePosition.GetY());
-            theCandidate.mX = (long)outPoint->GetX();
-            theCandidate.mY = (long)outPoint->GetY();
-            if ((unsigned long)theCandidate.GetX() < gMapWidth && (unsigned long)theCandidate.mY < gMapHeight)
-                theFound = gContinentManager.GetContinent(theCandidate, kAIPathLandMass) == theContinent;
-        }
-    }
-    if (!theFound) {
-        outPoint->SetX(thePosition.GetX());
-        outPoint->SetY(thePosition.GetY());
-    }
-    return theFound;
+    return ee_units_random_point_ahead((uint64_t)(uintptr_t)inUnit, (float(*)[2])&outPoint->mX);   // ee_sim units landing.rs
 }
 
 // Returns the unit type of the player's farms: 0x33a once the robotic farm upgrade is researched, else 0x2a

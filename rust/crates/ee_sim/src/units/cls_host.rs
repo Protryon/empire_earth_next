@@ -827,11 +827,14 @@ extern "C" {
 /// The trigger host's plain reads of the unit `a` over the world views (the units' behaviour lane, round 2; they
 /// were EEUnitAI.cpp `ee_units_cls_cond_host`'s cases): its goals, last attacker, line of sight, cargo count and
 /// position; None for the C++ host's.
-fn cond_view(op: i32, a: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
+fn cond_view(op: i32, a: u64, b: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
     use crate::units::cls_condition::{
-        EE_UNITS_COND_CARGO, EE_UNITS_COND_GOAL, EE_UNITS_COND_LAST_ATTACKER, EE_UNITS_COND_LINE_OF_SIGHT,
-        EE_UNITS_COND_POSITION,
+        EE_UNITS_COND_CARGO, EE_UNITS_COND_CRUSADER, EE_UNITS_COND_DISTANCE_TO, EE_UNITS_COND_GOAL,
+        EE_UNITS_COND_INITIAL_CONTACT, EE_UNITS_COND_LAST_ATTACKER, EE_UNITS_COND_LINE_OF_SIGHT,
+        EE_UNITS_COND_MINE_DEPLETED, EE_UNITS_COND_POSITION, EE_UNITS_COND_TILE,
     };
+    /// `IsCrusader()`'s unit types (the four crusaders)
+    const CRUSADER_TYPES: [u64; 4] = [0x2e6, 0x2e7, 0x2e8, 0x2e9];
     if !matches!(
         op,
         EE_UNITS_COND_GOAL
@@ -839,6 +842,11 @@ fn cond_view(op: i32, a: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
             | EE_UNITS_COND_LINE_OF_SIGHT
             | EE_UNITS_COND_CARGO
             | EE_UNITS_COND_POSITION
+            | EE_UNITS_COND_DISTANCE_TO
+            | EE_UNITS_COND_INITIAL_CONTACT
+            | EE_UNITS_COND_TILE
+            | EE_UNITS_COND_CRUSADER
+            | EE_UNITS_COND_MINE_DEPLETED
     ) {
         return None;
     }
@@ -854,6 +862,27 @@ fn cond_view(op: i32, a: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
                 0
             }
             EE_UNITS_COND_CARGO => u.cargo_len() as i64,
+            EE_UNITS_COND_DISTANCE_TO => {
+                // DistanceSquaredTo(other complex unit)
+                io.f = crate::units::unit_geom::with_unit(b, |o| crate::units::unit_geom::distance_squared_to(u, o))?;
+                0
+            }
+            EE_UNITS_COND_INITIAL_CONTACT => {
+                io.p = u.contact_location();
+                0
+            }
+            EE_UNITS_COND_TILE => {
+                // mTile->GetHeight() out, mTile->mTerrainType
+                let tile = u.tile()?;
+                io.f = tile.height();
+                tile.terrain_type()
+            }
+            EE_UNITS_COND_CRUSADER => i64::from(CRUSADER_TYPES.contains(&u.class()?.unit_type())),
+            EE_UNITS_COND_MINE_DEPLETED => {
+                // mMine == NULL || !mMine->mIsValid || mMine->mResourceAmount <= 0
+                let mine = u.mine_handle();
+                i64::from(mine == 0 || u.unit_at(mine).is_none_or(|m| !m.valid() || m.resource_amount() <= 0))
+            }
             _ => {
                 io.p = crate::units::unit_geom::position(u);
                 0
@@ -937,7 +966,7 @@ impl CondHost for ClsGame {
         [m.m[0][3], m.m[1][3], m.m[2][3]]
     }
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
-        if let Some(v) = cond_view(op, a, c, io) {
+        if let Some(v) = cond_view(op, a, b, c, io) {
             return v;
         }
         if let Some(v) = cond_goal(op, a, b, c) {

@@ -9,14 +9,16 @@
 use std::os::raw::{c_long, c_ulong};
 
 use crate::combat::damage::{
-    EE_COMBAT_W_EXPERIENCE, EE_COMBAT_W_NODE_NEXT, EE_COMBAT_W_NODE_UNIT, EE_COMBAT_W_SET_RESOURCE,
-    EE_COMBAT_W_TILE_UNITS,
+    EE_COMBAT_W_AREA_CAPTURE, EE_COMBAT_W_DAMAGE_CAPTURE, EE_COMBAT_W_EXPERIENCE, EE_COMBAT_W_HIT_CAPTURE,
+    EE_COMBAT_W_NODE_NEXT, EE_COMBAT_W_NODE_UNIT, EE_COMBAT_W_SET_RESOURCE, EE_COMBAT_W_TILE_UNITS,
 };
-use crate::combat::leaves::{EE_COMBAT_W_POSITION, EE_COMBAT_W_SEES_MAP, EE_COMBAT_W_TILE_HEIGHT};
+use crate::combat::leaves::{
+    EE_COMBAT_W_CAPTURE, EE_COMBAT_W_POSITION, EE_COMBAT_W_SEES_MAP, EE_COMBAT_W_TILE_AT, EE_COMBAT_W_TILE_HEIGHT,
+};
 use crate::combat::world::{
-    EeCombatWorldArgs, EE_COMBAT_W_LAST_ATTACKER, EE_COMBAT_W_MUZZLE_FLASH, EE_COMBAT_W_SET_AMMUNITION,
-    EE_COMBAT_W_SET_FLIGHT_TIME, EE_COMBAT_W_SHOT_EFFECT_BETWEEN, EE_COMBAT_W_SPARKS_AT, EE_COMBAT_W_SPARKS_ON,
-    EE_COMBAT_W_SPECIAL_EFFECT, EE_COMBAT_W_SPECIAL_OFF,
+    EeCombatWorldArgs, EE_COMBAT_W_CORNER_BLOCKED, EE_COMBAT_W_LAST_ATTACKER, EE_COMBAT_W_MUZZLE_FLASH,
+    EE_COMBAT_W_SET_AMMUNITION, EE_COMBAT_W_SET_FLIGHT_TIME, EE_COMBAT_W_SHOT_EFFECT_BETWEEN, EE_COMBAT_W_SPARKS_AT,
+    EE_COMBAT_W_SPARKS_ON, EE_COMBAT_W_SPECIAL_EFFECT, EE_COMBAT_W_SPECIAL_OFF,
 };
 use crate::world::effects::{effects, EffectPlace, EffectRequest};
 use crate::world::layout::layout;
@@ -53,7 +55,82 @@ pub fn answers(code: i32) -> bool {
             | EE_COMBAT_W_SEES_MAP
             | EE_COMBAT_W_TILE_HEIGHT
             | EE_COMBAT_W_POSITION
+            | EE_COMBAT_W_TILE_AT
+            | EE_COMBAT_W_CORNER_BLOCKED
+            | EE_COMBAT_W_CAPTURE
+            | EE_COMBAT_W_DAMAGE_CAPTURE
+            | EE_COMBAT_W_AREA_CAPTURE
+            | EE_COMBAT_W_HIT_CAPTURE
     )
+}
+
+/// `EE_COMBAT_XA_APPLY_HIT`, `EE_COMBAT_XA_AREA_DAMAGE` (ee/EECombatGoals.h)
+const XA_APPLY_HIT: u32 = 3;
+const XA_AREA_DAMAGE: u32 = 4;
+
+/// TEST ONLY: the area damage's records: CBAD (the attacker, the centre, the radius, the victims) and CBXA (the
+/// victims' FNV-1a 32 of id, hit points and resource amount after the hits).
+///
+/// # Safety
+/// `a[0]` holds `a[1]` live unit handles; `object` (and `other`, when not 0) live units.
+unsafe fn area_capture(t: &WorldRead, object: u64, other: u64, a: &EeCombatWorldArgs) {
+    if !crate::app::capture_record::active() {
+        return;
+    }
+    // SAFETY: the caller's contract
+    let victims: Vec<UnitView<'_>> = unsafe { std::slice::from_raw_parts(a[0] as usize as *const u64, a[1] as usize) }
+        .iter()
+        // SAFETY: as above
+        .map(|&h| unsafe { UnitView::of(t, h) }.expect("a live victim"))
+        .collect();
+    // SAFETY: as above
+    let (unit, target) = unsafe { (UnitView::of(t, object).expect("a live attacker"), UnitView::of(t, other)) };
+    let mut r = crate::app::capture_record::Record::new(u32::from_le_bytes(*b"CBAD"));
+    r.i32(unit.id() as i32);
+    r.i32(a[2] as i32);
+    r.i32(a[3] as i32);
+    r.f32(f32::from_bits(a[4] as u32));
+    r.i32(a[5] as i32);
+    r.i32(target.filter(|t| t.complex_unit_handle() != 0).map_or(-1, |t| t.id() as i32));
+    r.i32(a[1] as i32);
+    for v in &victims {
+        r.i32(v.id() as i32);
+    }
+    r.commit();
+    let mut hash: u32 = 0x811c_9dc5;
+    for v in &victims {
+        for w in [v.id(), v.hit_points() as u32, v.resource_amount() as u32] {
+            for b in w.to_le_bytes() {
+                hash = (hash ^ u32::from(b)).wrapping_mul(0x0100_0193);
+            }
+        }
+    }
+    x_action(XA_AREA_DAMAGE, object, other, hash);
+}
+
+/// `EECombatCaptureXAction` (capture_units.rs; the game's only).
+fn x_action(func: u32, unit: u64, target: u64, before: u32) {
+    #[cfg(not(test))]
+    crate::combat::capture_units::ee_combat_capture_x_action(func, unit, target, before);
+    #[cfg(test)]
+    let _ = (func, unit, target, before);
+}
+
+/// TEST ONLY: a record of `tag` from two byte ranges (`EECombatCapture`'s and the formulas' records).
+///
+/// # Safety
+/// The ranges are readable.
+unsafe fn capture(tag: u32, first: (*const u8, usize), second: (*const u8, usize)) {
+    if !crate::app::capture_record::active() {
+        return;
+    }
+    let mut r = crate::app::capture_record::Record::new(tag);
+    // SAFETY: the caller's contract
+    unsafe {
+        r.bytes(std::slice::from_raw_parts(first.0, first.1));
+        r.bytes(std::slice::from_raw_parts(second.0, second.1));
+    }
+    r.commit();
 }
 
 /// A float's bits as an argument word (`EEConditionBits`)
@@ -184,6 +261,43 @@ pub unsafe fn world_op(
             let p = crate::units::unit_geom::position(&unit(object)?);
             return Some(point_args(a, p, 0));
         }
+        EE_COMBAT_W_TILE_AT => {
+            // gWorld.GetMap()->GetTileAtLocation((long)a[0], (long)a[1]) != NULL
+            let (x, y) = (a[0] as c_long as i64, a[1] as c_long as i64);
+            return Some(u64::from(WorldView::global(t)?.map()?.tile(x, y).is_some()));
+        }
+        EE_COMBAT_W_CORNER_BLOCKED => {
+            #[cfg(not(test))]
+            return Some(u64::from(
+                crate::units::uu_ffi::ee_units_uu_is_corner_blocked(a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32)
+                    != 0,
+            ));
+            #[cfg(test)]
+            return None;
+        }
+        // TEST ONLY: a formula's record (a[0] the tag, then two byte ranges)
+        // SAFETY: the host's contract: the ranges the formula handed in
+        EE_COMBAT_W_CAPTURE => unsafe {
+            capture(
+                a[0] as u32,
+                (a[1] as usize as *const u8, a[2] as usize),
+                (a[3] as usize as *const u8, a[4] as usize),
+            )
+        },
+        // TEST ONLY: CBAD and CBXA (the victims in a[0], a[1] of them)
+        // SAFETY: the damage body's live units
+        EE_COMBAT_W_AREA_CAPTURE => unsafe { area_capture(t, object, other, a) },
+        // TEST ONLY: CBXA of ApplyHit
+        EE_COMBAT_W_HIT_CAPTURE => x_action(XA_APPLY_HIT, object, other, 0),
+        // TEST ONLY: CBDM, the damage's input and output records
+        // SAFETY: as above: the damage body's records
+        EE_COMBAT_W_DAMAGE_CAPTURE => unsafe {
+            capture(
+                u32::from_le_bytes(*b"CBDM"),
+                (a[0] as usize as *const u8, std::mem::size_of::<crate::combat::EeCombatDamageIn>()),
+                (a[1] as usize as *const u8, std::mem::size_of::<crate::combat::EeCombatDamageOut>()),
+            )
+        },
         _ => return None,
     }
     Some(0)

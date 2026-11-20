@@ -16,6 +16,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | behaviour 2 | `rust-unitsbeh2` | -1,568 | the group command, pick and Fill sweeps, the step's notes and the combat records' batches whole in Rust (TEST ONLY); the update, combat world, goal, unit, sight, active group, trigger, class and physics hosts' effects, stores and plain reads in Rust |
 | behaviour 3 | `rust-unitsbeh3` | -1,134 | the goal objects and their queues whole in Rust (goal_obj.rs, goals.rs: made, cloned, deleted, saved and stepped in Rust; the mirror gone); the goals' accessors and context-free virtuals inline over Rust; the unit's queue calls (SetGoal, GetQueuedGoal, RefreshGoals, RefreshActiveGoal, DropUnsuitedGoals, DropFinishedGoals) and the hosts' goal cases in Rust; 46 unit-utility forwarders gone |
 | 4 | `rust-units4` | -712 | the unit utilities' one-call forwarders gone (40: callers call the Rust); the unit host's goal constructions, clones, queue calls and plain reads in Rust (units/goal_spec.rs); 34 one-call members of `EEUnitClass` and `EEActiveGroup` inline in their headers |
+| 5 | `rust-units5` | -887 | the game log's human orders, the units sweep and the active groups' sweep whole in Rust (EEActiveGroupSweep.cpp deleted); the gather goal's spot search and accessibility; the combat records of a unit's state (CBSO, CBXA, CBQR, CBXR, CBAD); EEFindLandingPoint, EEGetRandomPointAhead; host cases answered over the views and the Rust continent manager |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -189,7 +190,42 @@ units [4, 40, 40], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua
 EEMSetRallyGoal, EEMCastCalamity through goal_spec.rs) run in EE-SIM only where a computer player or the group
 command sweep sends them; the tours' `--orders` exercise them in a drawn game.
 
+## Round 5 (branch `rust-units5`, from round 4 dd648eb02, 2026-11-20)
+
+The brief: net -3,000 C++ lines by whole bodies, the hosts collapsed with their callees. What moved wholly is every
+body whose callees are already Rust or a view: the TEST ONLY drivers, the game log, the gather spot search (the
+continent manager is Rust since the AI lane's round 5), four capture builders, two EEWheel.cpp helpers. The hosts'
+remaining cases call other lanes' C++ (see "What is left"); the round ended at -887, short of the target.
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 34f0a70f2 | the game log's human orders and selections (`EEPhysicsLogOrder`, `EEPhysicsLogSelection` and helpers) in units/order_log.rs over the message records (ee_netmsg records.rs) and the views, one C++ host for the names and the line; `EEPhysicsUnitSweep` in units/unit_sweep.rs and `EEActiveGroupCaptureSweep` in units/ag_sweep.rs over one host (EEPhysicsSweep.cpp: unit creation, production, groups, goals, the AGPL record); EEActiveGroupSweep.cpp deleted; EESim.cpp calls the Rust sweeps | -565 |
+| adc081ac9 | `EEGatherFindSpot` (and its sort order) and `EEGatherAccessible` in units/gather_spot.rs over ee_sim::astar, the unit utilities and the views (`GetTerrainFlags` as `terrain_flags`); `HasGatherPoint` keeps its UCBD note through the uu host's world case 18; GoalOp's GATHER_SPOT, ACCESSIBLE, UNIT_IN_SET, CELL_TAKEN, TECH_NODE; EEWorldOp's TILE_AT, CORNER_BLOCKED, CAPTURE, DAMAGE_CAPTURE; the trigger host's DISTANCE_TO, INITIAL_CONTACT, TILE, CRUSADER, MINE_DEPLETED | -139 |
+| 0b33cfdeb | `EECombatCaptureShot`, `EECombatCaptureXAction`, `EECombatCaptureHostRead`, `EECombatCaptureXRead` in combat/capture_units.rs over the views (inline calls in ee/EECombatGoals.h); EEWorldOp's AREA_CAPTURE and HIT_CAPTURE | -120 |
+| (landing) | `EEFindLandingPoint` and `EEGetRandomPointAhead` in units/landing.rs (the AI lane's `CanGetTo` through the uu continent host's case 13) | -63 |
+
+Round total: -887 net C++ lines (src, include/ee).
+
+Call-site edits outside the lane: EESim.cpp (Game core: the two sweeps by their Rust names, the two declarations
+deleted).
+
+Verified on the final tree (origin/rust fa7e8674a merged, no conflict): both builds and the test profile 0/0; the
+oracle seeds 2-7 identical; the plain saveload 18/18 identical (exit 0); the Rust gate PASS (5,022 tests); the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `--exercise random-game --box-select --orders --seed 7` PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game). Only a game with the game log on (not EE-SIM) runs
+order_log.rs: the tour exercises it.
+
 ## What is left (behaviour)
+
+- **Round 5's measure**: the TEST ONLY drivers and the bodies over Rust callees are gone. What stays in the hosts
+  (GoalOp ~480 lines, EEUpdateAct 377, EEWorldOp ~230, ee_units_ag_host 230, EEUnitClassMoveOp 210, the trigger
+  host ~185, EEShotOp 203) is each a call of another class's C++: `StartAction`/`ActionChanged`, the path manager
+  (`RequestPath`, `FindPath`, `CancelPaths`: AI lane), sounds and effects with the class's media, the calamity
+  classes, the tech tree and the player (`Pay`, `CanProduce`, `AddResource`: Game core), `CanGetTo` and
+  `AreConnectedForUnit` (AI lane's C++), the waypoints deque, the ignored-targets deque and the class's virtuals.
+  The class bodies (ProduceUnit, ReleaseUnit, Animate, Heal, TakeHit, Kill) each need ten or more of those as host
+  operations: a third of their lines saved, and the most simulation risk per line.
+  Small cases still answerable in Rust: the uu continent host's cases 0-4, 6-11 (inline wrappers over ee_astar),
+  GoalOp's NODE_INFO (needs the epoch's GetBuildTime), the unit sweep host's group ops (the unit host's
+  `ee_units_host_*` already make groups).
 
 - **Round 4's measure**: the UI layer names few Units-lane symbols (56, `cpp_deps.py` edges.tsv from the UI
   units); the units' own C++ is world glue around Rust (GoalOp ~550 lines, `EEUpdateAct` 374, `EEWorldOp` 277,
