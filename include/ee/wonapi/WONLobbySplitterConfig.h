@@ -13,17 +13,6 @@ public:
         Position_TopLeft=3,Position_TopRight=6,Position_BottomLeft=9,Position_BottomRight=12 };
     enum SplitterType { Splitter_LeftRight=5,Splitter_UpDown=10,Splitter_LeftRight_Top=0x15,
         Splitter_LeftRight_Bottom=0x25,Splitter_UpDown_Left=0x4a,Splitter_UpDown_Right=0x8a,Splitter_Center=0x10f };
-    void AddQuadrant(Component* c,QuadrantPosition p) { this->Call(EeWonSplitCall::AddQuadrant,(intptr_t)c,p); }
-    void AddSplitter(Component* c,SplitterType t) { this->Call(EeWonSplitCall::AddSplitter,(intptr_t)c,t); }
-    void AddInvisibleSplitter(SplitterType t,int size=10) { this->Call(EeWonSplitCall::AddInvisibleSplitter,t,size); }
-    void AddComplexSplitter(Container* c,SplitterType t,Component* drag=NULL) { this->Call(EeWonSplitCall::AddComplexSplitter,(intptr_t)static_cast<Component*>(c),t,(intptr_t)drag); }
-    void SetMinLeftRight(int l,int r) { this->Call(EeWonSplitCall::SetMinLeftRight,l,r); }
-    void SetMinTopBottom(int t,int b) { this->Call(EeWonSplitCall::SetMinTopBottom,t,b); }
-    void SetPercentages(int l,int t) { this->Call(EeWonSplitCall::SetPercentages,l,t); }
-    void MaxQuadrant(QuadrantPosition p) { this->Call(EeWonSplitCall::MaxQuadrant,p); }
-    void UnMaxQuadrant() { this->Call(EeWonSplitCall::UnMaxQuadrant); }
-    void SetSplitterPos(int x,int y,bool remember=true) { this->Call(EeWonSplitCall::SetSplitterPos,x,y,remember); }
-    void RegisterMaxButton(Button* b,QuadrantPosition p) { this->Call(EeWonSplitCall::RegisterMaxButton,(intptr_t)b,p); }
     bool CheckMaxButton(ComponentEvent* e) { return this->Call(EeWonSplitCall::CheckMaxButton,(intptr_t)e)!=0; }
     EeWonSplitter* mRust;
 protected:

@@ -753,277 +753,27 @@ void EEPhysics::ProcessUnitSwaps()
 // (EEGlobals.cpp's)
 extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);
 
-// New (port): the game log's human orders (ee/EEGameLog.h, TEST ONLY: training data from playtests). One "order" line per
-// order message a human player's units run, as it executes in the lockstep (the same in multiplayer and replays),
-// and one "select" line when a human's selection changes. It reads the message and the units; it changes nothing.
-static void EEPhysicsLogUnits(std::string& ioLine, EEGroup* inGroup)
+// New (port): the game log's human orders and selections (TEST ONLY; ee_sim units order_log.rs): its host, a class's
+// (inOp 0) or a technology's (1) name, or the line written (2)
+extern "C" size_t ee_units_order_log_host(uint8_t inOp, int64_t inKey, uint8_t* ioText, size_t inCapacity)
 {
-    std::map<std::string, long> theClasses;
-    std::string theIDs;
-    unsigned long n = inGroup != NULL ? inGroup->GetNumUnits() : 0;
-    for (unsigned long i = 0; i < n; i++) {
-        EEComplexUnit* u = inGroup->GetUnit((long)i);
-        if (u == NULL || u->mUnitClass == NULL)
-            continue;
-        theClasses[EECPNextClassName(u->mUnitClass->mUnitType)]++;
-        if (i < 24) {
-            char b[24];
-            snprintf(b, sizeof(b), "%s%lu", theIDs.empty() ? "" : ",", (unsigned long)u->mUnitID);
-            theIDs += b;
-        } else if (i == 24)
-            theIDs += ",...";
+    if (inOp == 2) {
+        EEGameLogLine((const char*)ioText);
+        return 0;
     }
-    std::string theList;
-    for (std::map<std::string, long>::const_iterator it = theClasses.begin(); it != theClasses.end(); ++it) {
-        char b[96];
-        snprintf(b, sizeof(b), "%s%s:%ld", theList.empty() ? "" : ",", it->first.c_str(), it->second);
-        theList += b;
-    }
-    char b[64];
-    snprintf(b, sizeof(b), " units=%lu", n);
-    ioLine += b;
-    ioLine += " classes=" + (theList.empty() ? std::string("-") : theList);
-    ioLine += " ids=" + (theIDs.empty() ? std::string("-") : theIDs);
+    std::string theName = inOp != 0 ? EECPNextTechName((long)inKey) : EECPNextClassName((long)inKey);
+    size_t theLength = theName.size() < inCapacity ? theName.size() : inCapacity;
+    memcpy(ioText, theName.data(), theLength);
+    return theLength;
 }
 
-static void EEPhysicsLogTarget(std::string& ioLine, long inID)
+static void EEPhysicsLog(NEMessage* inMessage, unsigned long inTime, uint8_t inSelect)
 {
-    EEUnit* t = inID > 0 ? gWorld.GetUnit((unsigned long)inID) : NULL;
-    char b[160];
-    if (t != NULL && t->mUnitClass != NULL)
-        snprintf(b, sizeof(b), " target=%ld:%s:p%lu@%ld,%ld", inID, EECPNextClassName(t->mUnitClass->mUnitType).c_str(),
-                 t->mPlayer != NULL ? (unsigned long)t->mPlayer->mPlayerID : 0UL, (long)t->GetTileX(), (long)t->GetTileY());
-    else
-        snprintf(b, sizeof(b), " target=%ld:-", inID);
-    ioLine += b;
-}
-
-static void EEPhysicsLogAt(std::string& ioLine, float inX, float inY)
-{
-    char b[64];
-    snprintf(b, sizeof(b), " at=%ld,%ld", (long)inX, (long)inY);
-    ioLine += b;
-}
-
-static void EEPhysicsLogTech(std::string& ioLine, EEPlayer* inPlayer, long inTech, const char*& ioVerb)
-{
-    EETechTreeNode* theNode = inPlayer->GetTechTree() != NULL ? inPlayer->GetTechTree()->Get(inTech) : NULL;
-    if (theNode != NULL && theNode->mData != NULL && theNode->mData->mMakesUnit) {
-        if (strcmp(ioVerb, "research") == 0)
-            ioVerb = "train";
-        ioLine += " class=" + EECPNextClassName(theNode->mData->mUnitClass);
-    } else
-        ioLine += " tech=" + EECPNextTechName(inTech);
-}
-
-static void EEPhysicsLogOrder(NEMessage* inMessage, unsigned long inTime)
-{
-    if (!EEGameLogOn())
-        return;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot());
-    if (thePlayer == NULL || !thePlayer->IsHuman())
-        return;
-    const char* theVerb = NULL;
-    std::string theRest;
-    bool theGroup = true;   // the order is for the player's active group
-    // the orders are records (EEMRecord): Get<T>(i) reads member i in wire order (ee_netmsg classes.rs)
-    switch (inMessage->GetType()) {
-    case kMessagePathTo: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "move";
-        EEPhysicsLogAt(theRest, m->Get<float>(2), m->Get<float>(3));
-        if (m->Get<bool>(4))
-            theRest += " forced=1";
-        if (m->Get<bool>(6))
-            theRest += " queued=1";
-        break;
-    }
-    case kMessageAttackUnit: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = m->Get<bool>(3) ? "convert" : "attack";
-        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
-        if (m->Get<bool>(2))
-            theRest += " queued=1";
-        break;
-    }
-    case kMessageGatherResource: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "gather";
-        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
-        if (m->Get<bool>(2))
-            theRest += " queued=1";
-        break;
-    }
-    case kMessageBuildUnit: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "build";
-        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
-        break;
-    }
-    case kMessageRepairUnit:
-        theVerb = "repair";
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessageHaltSelectedGroup:
-    case kMessageStopActiveGroup:
-        theVerb = "stop";
-        break;
-    case kMessageLoadGarrison: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "garrison";
-        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
-        if (m->Get<int32_t>(2) > 0) {
-            char b[32];
-            snprintf(b, sizeof(b), " unit=%ld", (long)m->Get<int32_t>(2));
-            theRest += b;
-        }
-        break;
-    }
-    case kMessageLoadTransport:
-        theVerb = "load";
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessageUnloadTransport: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "unload";
-        theGroup = false;
-        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
-        EEPhysicsLogAt(theRest, (float)m->Get<int32_t>(2), (float)m->Get<int32_t>(3));
-        break;
-    }
-    case kMessageImmediateCargoUnload:
-        theVerb = "unload";
-        theGroup = false;
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessagePatrol:
-        theVerb = "patrol";
-        break;
-    case kMessageAddPatrolPoint: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "patrol_point";
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
-        break;
-    }
-    case kMessageChangeFormation: {
-        char b[32];
-        theVerb = "formation";
-        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        theRest += b;
-        break;
-    }
-    case kMessageResearchTechnology: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "research";
-        theGroup = false;
-        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
-        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
-        if (m->Get<bool>(3))
-            theRest += " times=5";
-        break;
-    }
-    case kMessageExplore:
-        theVerb = "explore";
-        break;
-    case kMessageAttackGround: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "attack_ground";
-        EEPhysicsLogAt(theRest, m->Get<float>(1), m->Get<float>(2));
-        break;
-    }
-    case kMessageHealUnit:
-        theVerb = "heal";
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessageSetRallyGoal: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "rally";
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
-        if (m->Get<int32_t>(2) > 0)
-            EEPhysicsLogTarget(theRest, m->Get<int32_t>(2));
-        break;
-    }
-    case kMessageReturnToBase:
-        theVerb = "return";
-        break;
-    case kMessageDropoffResource:
-        theVerb = "dropoff";
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessageSetUnitBehavior: {
-        char b[32];
-        theVerb = "stance";
-        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        theRest += b;
-        break;
-    }
-    case kMessageBuildWall: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "wall";
-        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(3), theVerb);
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(2).GetX(), m->Get<GE2DPoint>(2).GetY());
-        break;
-    }
-    case kMessageBuildGate: {
-        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
-        theVerb = "gate";
-        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
-        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
-        break;
-    }
-    case kMessageDisband:
-    case kMessageKillUnit:
-    case kMessageSelfDestruct:
-        theVerb = "delete";
-        break;
-    case kMessageImproveUnit:
-        theVerb = "improve";
-        theGroup = false;
-        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
-        break;
-    case kMessagePackUnpack:
-        theVerb = static_cast<EEMRecord*>(inMessage)->Get<bool>(1) ? "pack" : "unpack";
-        break;
-    case kMessageGoFanatic:
-        theVerb = "fanatic";
-        break;
-    case kMessageReplantFarms:
-        theVerb = "replant";
-        break;
-    case kMessageCastCalamity:
-        theVerb = "calamity";
-        break;
-    default:
-        return;
-    }
-    char theHead[96];
-    snprintf(theHead, sizeof(theHead), "EE-GAME %lu p%lu order verb=%s", inTime, (unsigned long)thePlayer->mPlayerID, theVerb);
-    std::string theLine(theHead);
-    if (theGroup)
-        EEPhysicsLogUnits(theLine, thePlayer->mActiveGroup);
-    theLine += theRest;
-    theLine += "\n";
-    EEGameLogLine(theLine.c_str());
-}
-
-static void EEPhysicsLogSelection(NEMessage* inMessage, unsigned long inTime)
-{
-    if (!EEGameLogOn())
-        return;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot());
-    if (thePlayer == NULL || !thePlayer->IsHuman() || thePlayer->mPlayerID >= 64)
-        return;
-    std::string theUnits;
-    EEPhysicsLogUnits(theUnits, thePlayer->mActiveGroup);
-    static std::string sLast[64];
-    if (theUnits == sLast[thePlayer->mPlayerID])
-        return;
-    sLast[thePlayer->mPlayerID] = theUnits;
-    char theHead[64];
-    snprintf(theHead, sizeof(theHead), "EE-GAME %lu p%lu select", inTime, (unsigned long)thePlayer->mPlayerID);
-    EEGameLogLine((std::string(theHead) + theUnits + "\n").c_str());
+    EEPlayer* thePlayer = EEGameLogOn() ? gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot()) : NULL;
+    EEMessage* theRecord = thePlayer != NULL ? EEGameMessageCast(inMessage) : NULL;
+    if (thePlayer != NULL)
+        ee_units_order_log((uint64_t)(uintptr_t)thePlayer, (uint64_t)(uintptr_t)thePlayer->mActiveGroup, inMessage->GetType(),
+                           theRecord != NULL ? static_cast<EEMRecord*>(theRecord)->mRecord : NULL, (uint32_t)inTime, inSelect);
 }
 
 // Runs the queued physics tick messages (one while the timer runs): checksums or dumps the world when asked,
@@ -1103,10 +853,10 @@ void EEPhysics::DrainInput()
             case kMessageSavedGroupSelect:
             case kMessageSelectTheseUnits:
                 EEGameMessageCast(theInput)->ExecuteSelectionMessage();
-                EEPhysicsLogSelection(theInput, this->mGameTime);   // new (port): the game log's human selection
+                EEPhysicsLog(theInput, this->mGameTime, 1);   // new (port): the game log's human selection
                 break;
             default: {
-                EEPhysicsLogOrder(theInput, this->mGameTime);   // new (port): the game log's human orders
+                EEPhysicsLog(theInput, this->mGameTime, 0);   // new (port): the game log's human orders
                 EEMessage* theGameMessage = EEGameMessageCast(theInput);
                 if (theGameMessage != NULL)
                     theGameMessage->ExecuteMessage();

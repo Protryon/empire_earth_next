@@ -891,6 +891,10 @@ WON_TESTS = {
     # the Windows skin's concrete widgets as shell kinds (shell_ms.rs, R6 WONLobby round 20): the deleted classes'
     # statements over a scripted world against the kinds, op for op
     "won_shell_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # the table setters that call a widget's Rust object (cfgset.rs, R6 WONLobby round 27): WONCfgTable.inl's cases
+    # as they were (tests/won/won_cfgset_orig.h) over the game's classes, their forwards' Rust calls traced, against
+    # cfgset.rs's descriptions; and the census of the setters it answers
+    "won_cfgset_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # the WON skin's widgets and the skin as Rust (shell_won.rs, skinobj.rs, R6 WONLobby round 23): the deleted classes'
     # statements over a scripted world against the kinds and the skin, op for op
     "won_wonskin_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],

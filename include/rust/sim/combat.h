@@ -2265,6 +2265,21 @@ void ee_combat_capture_condition(const EeCombatConditionIn *input,
 /// TEST ONLY: every folder's partial batch as a record (`EECombatCaptureFlush`), in the folders' order.
 void ee_combat_capture_fold_flush();
 
+/// `EECombatCaptureShot(func, unit, before)` (CBSO).
+void ee_combat_capture_shot(uint32_t func, uint64_t unit, uint32_t before);
+
+/// `EECombatCaptureXAction(func, unit, target, before)` (CBXA; `target` 0: none).
+void ee_combat_capture_x_action(uint32_t func, uint64_t unit, uint64_t target, uint32_t before);
+
+/// `EECombatCaptureHostRead(func, unit, target, result, extras)` (CBQR; `which` 0) and `EECombatCaptureXRead`
+/// (CBXR; 1, the first two extras).
+void ee_combat_capture_read(uint32_t which,
+                            uint32_t func,
+                            uint64_t unit,
+                            uint64_t target,
+                            int32_t result,
+                            const uint32_t (*extra)[3]);
+
 /// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
 ///
 /// # Safety

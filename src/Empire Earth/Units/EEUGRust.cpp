@@ -121,82 +121,6 @@ inline unsigned short EEAIContinentManager::GetForestIDAt(const EETileLocation& 
 
 namespace {
 
-// The order FindGatherSpot sorts the tiles around the resource in: the farther from the gatherer first (0x18 bytes:
-// the gatherer's position, the resource's tile, its path sector's id, the gatherer) (provisional name)
-struct EEGatherTileFarther {
-    EEGatherTileFarther(EEComplexUnit* inUnit, const EETileCoordinate& inTile) : mTile(inTile), mUnit(inUnit)
-    {
-        EEAIPathSector* theSector = gContinentManager.GetPathSector(inTile);
-        this->mSector = theSector ? theSector->GetID() : (unsigned short)0;
-        this->mPosition.SetX(inUnit->mPhysicalModel.GetLocation().GetX());
-        this->mPosition.SetY(inUnit->mPhysicalModel.GetLocation().GetY());
-    }
-    // 0x621ddb: whether the first tile is farther from the gatherer than the second (sorting puts the nearest last)
-    bool operator()(const U2DPoint<long>& inFirst, const U2DPoint<long>& inSecond) const
-    {
-        float theFirst = this->mPosition.DistanceToSquared(U2DPoint<float>((float)inFirst.GetX(), (float)inFirst.GetY()));
-        float theSecond = this->mPosition.DistanceToSquared(U2DPoint<float>((float)inSecond.GetX(), (float)inSecond.GetY()));
-        return theFirst > theSecond;
-    }
-
-    U2DPoint<float> mPosition;              // +0x00
-    EETileCoordinate mTile;                 // +0x08
-    unsigned short mSector;                 // +0x10
-    EEComplexUnit* mUnit;                   // +0x14
-};
-
-// 0x6226cf FindGatherSpot's search: the resource's nearest spot in its path subsector, under the gatherer or in a
-// neighbouring subsector the gatherer can enter, else any spot with room (the waiting area, at the tile's height)
-bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outWaitingArea)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theOthers;
-    EECPASGFlags theFlags;
-    bool theFound = false;
-    bool theHaveFlags = false;
-    GE3DPoint theLocation;
-    ee_units_uu_unit_tiles(1, (uint64_t)(uintptr_t)inResource, &theTiles);
-    std::sort(theTiles.begin(), theTiles.end(), EEGatherTileFarther(inUnit, inResource->GetTile()));
-    EEAIPathSubSector* theStart = gContinentManager.GetPathSubSectorAt(inResource);
-    while (!theFound && theTiles.size() != 0) {
-        EEAIPathSubSector* theSubSector =
-            gContinentManager.GetPathSubSectorAt(theTiles.back().GetX(), theTiles.back().GetY());
-        if (theSubSector == theStart || U2DPoint<long>(inUnit->mTileX, inUnit->GetTileY()) == theTiles.back())
-            theFound = true;
-        else if (theStart->IsNeighbor(theSubSector)) {
-            if (!theHaveFlags) {
-                inUnit->mUnitClass->GetTerrainFlags(inUnit, theFlags);
-                theHaveFlags = true;
-            }
-            if (theFlags.mFlags[theSubSector->GetKind()])
-                theFound = true;
-        }
-        if (theFound == true) {
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles.back().GetX(), theTiles.back().GetY());
-            if (theTile != NULL
-                && ee_units_uu_find_place_on_tile((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inUnit->GetUnitClass(), theTiles.back().GetX(), theTiles.back().GetY(), 1, theTiles.back().GetX(), theTiles.back().GetY(), 1, (float(*)[3])&theLocation.mX)) {
-                outWaitingArea = theLocation;
-                outWaitingArea.mZ = theTile->GetHeight();
-            } else
-                theFound = false;
-        } else
-            theOthers.push_back(theTiles.back());
-        theTiles.pop_back();
-    }
-    if (!theFound) {
-        for (unsigned long i = 0; i < theOthers.size() && !theFound; i++) {
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theOthers[i].mX, theOthers[i].mY);
-            if (theTile == NULL
-                || !ee_units_uu_find_place_on_tile((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inUnit->GetUnitClass(), theOthers[i].mX, theOthers[i].mY, 1, theOthers[i].mX, theOthers[i].mY, 1, (float(*)[3])&theLocation.mX))
-                continue;
-            outWaitingArea = theLocation;
-            theFound = true;
-            outWaitingArea.mZ = theTile->GetHeight();
-        }
-    }
-    return theFound;
-}
-
 // 0x622ff0 GatherNextTree's world part: a carried load of another type dropped; a tree with no free spot gives way to
 // the first gatherable tree of its forest on the line from a nearby drop site (or the gatherer) to it (the result,
 // NULL for none); another resource but an animal becomes the gathered one
@@ -256,23 +180,6 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     } else if (inResource->GetUnitClass()->mFamily != kUnitFamilyAnimal)
         inUnit->SetGatheredResource(inResource);
     return theFound;
-}
-
-// the resource-accessible trigger: a land gatherer's resource on land, a naval one's on deep water, in its continent
-// with a gather point
-bool EEGatherAccessible(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
-    if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen) {
-        if (inResource != NULL && inResource->mTile->mTerrainType != kTerrainDeepWater
-            && gContinentManager.InSameContinent(inUnit, inResource))
-            return theClass->HasGatherPoint(inUnit, inResource);
-    } else if (inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen) {
-        if (inResource != NULL && inResource->mTile->mTerrainType == kTerrainDeepWater
-            && gContinentManager.InSameContinent(inUnit, inResource))
-            return theClass->HasGatherPoint(inUnit, inResource);
-    }
-    return false;
 }
 
 }  // namespace
@@ -454,10 +361,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return theComplex->GetUnitClass()->FacesTarget(theComplex, ObjectOf<EEUnit>(inB), false);
     case EE_UNITS_GOAL_HOST_FACES_POINT:
         return theComplex->GetUnitClass()->FacesPoint(theComplex, thePoint, false);
-    case EE_UNITS_GOAL_HOST_UNIT_IN_SET: {
-            EEUnitSet* theSet = gUnitSetManager.GetSet((long)ioArgs->i[0]);
-            return theSet != NULL && theSet->Contains(theComplex->mUnitClass->mUnitType);
-        }
     case EE_UNITS_GOAL_HOST_CONTACT_RANGE: {
             GE3DPoint theTarget;
             ObjectOf<EEUnit>(inB)->GetPosition(theTarget);
@@ -485,10 +388,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 return 1;
             return (theComplex->mUnitClass->mDomains & kMovementAir) != 0
                 && (!theMap->mTerrainMesh.GetIsSpaceMap() || theComplex->mUnitClass->CanMoveOnTerrain(theComplex, 12));
-        }
-    case EE_UNITS_GOAL_HOST_CELL_TAKEN: {
-            GE3DPoint theCell((float)(long)ioArgs->i[0] + 0.5f, (float)(long)ioArgs->i[1] + 0.5f, 0.0f);
-            return theComplex->mActiveGroup != NULL && theComplex->mActiveGroup->IsCellTaken(theCell);
         }
     case EE_UNITS_GOAL_HOST_PATH_REACHABLE: {
             EECPASGFlags theFlags;
@@ -661,8 +560,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     // the build/repair goal's
     // (EE_UNITS_GOAL_HOST_BUILD_UNIT's reads are Rust's views: rust_goal.rs build_unit_fields)
-    case EE_UNITS_GOAL_HOST_TECH_NODE:
-        return Handle(ObjectOf<EEPlayer>(inA)->GetTechTree()->Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_NODE_INFO: {
             EETechTreeNode* theNode = ObjectOf<EETechTreeNode>(inA);
             if (theNode != NULL) {
@@ -799,11 +696,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(theComplex->GetUnitClass());
             return Handle(theClass->FindStorage(theComplex, (theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionFindNewStorage));
         }
-    case EE_UNITS_GOAL_HOST_GATHER_SPOT: {
-            bool theFound = EEGatherFindSpot(theComplex, ObjectOf<EEUnit>(inB), thePoint);
-            PointOut(ioArgs, thePoint);
-            return theFound;
-        }
     case EE_UNITS_GOAL_HOST_NEXT_TREE:
         return Handle(EEGatherNextTree(theComplex, ObjectOf<EEUnit>(inB)));
     case EE_UNITS_GOAL_HOST_HUNT: {
@@ -832,8 +724,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             long theArg5;
             return EEIsLineToUnitBlocked(theComplex, ObjectOf<EEUnit>(inB), &theBlocker, &theArg4, &theArg5);
         }
-    case EE_UNITS_GOAL_HOST_ACCESSIBLE:
-        return EEGatherAccessible(theComplex, ObjectOf<EEUnit>(inB));
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
     case EE_UNITS_GOAL_HOST_TAKE_HIT:
         theUnit->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1);

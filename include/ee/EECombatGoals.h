@@ -55,8 +55,13 @@ enum {
     EE_COMBAT_HR_FACES_POINT = 6,           // FacesPoint: extra 0, 1 the point's x, y bits, 2 inUseTolerance
     EE_COMBAT_HR_FACES_TARGET = 7,          // FacesTarget: extra 2 inUseTolerance
 };
-void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                             uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0);
+// (the records' words: ee_sim combat capture_units.rs, read through the views)
+inline void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                                    uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0)
+{
+    const uint32_t theExtra[3] = {inExtra0, inExtra1, inExtra2};
+    ee_combat_capture_read(0, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, &theExtra);
+}
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
@@ -85,7 +90,8 @@ enum {
     EE_COMBAT_SO_HEAL_WORK = 6,
 };
 uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
-void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore);
+inline void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore)
+    { ee_combat_capture_shot(inFunc, (uint64_t)(uintptr_t)inUnit, inBefore); }
 // (the heal's work, EE_COMBAT_SO_HEAL_WORK, is recorded by ee_sim combat/goal_objects.rs)
 
 // The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
@@ -103,8 +109,12 @@ enum {
     EE_COMBAT_XR_ATTACK_REACHABLE = 4,  // EEIsAttackReachable: extra 0, 1 the tile's x, y after
     EE_COMBAT_XR_BORDERING = 5,         // IsOnTileBorderingTarget
 };
-void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
-                          uint32_t inExtra0 = 0, uint32_t inExtra1 = 0);
+inline void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                                 uint32_t inExtra0 = 0, uint32_t inExtra1 = 0)
+{
+    const uint32_t theExtra[3] = {inExtra0, inExtra1, 0};
+    ee_combat_capture_read(1, inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inResult, &theExtra);
+}
 // IsTargetIgnored's and IgnoreTarget's record: the list's size and FNV-1a 32 (each entry's six fields in order)
 void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
                             uint32_t inCheckLocation);
@@ -119,7 +129,8 @@ enum {
     EE_COMBAT_XA_APPLY_HIT = 3,
     EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
 };
-void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore);
+inline void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
+    { ee_combat_capture_x_action(inFunc, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget, inBefore); }
 // CBGO (TEST ONLY): the attack, attack-ground and heal goals' GetDestination and Suits, at each call's end: the
 // function, the goal's kind, the unit's and target's ids (0 without one), the result, a point's x, y, z bits
 // (GetDestination's out location) and two extras (per function below); folded like CBQR (EE_SIM_CAPTURE_CBGO_FULL=1).

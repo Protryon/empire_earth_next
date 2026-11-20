@@ -561,13 +561,10 @@ public:
     virtual bool KeyDown(int k) { return this->DCall(EeWonDlgCall::KeyDown,k)!=0; }
     virtual bool CanClose() { return this->DCall(EeWonDlgCall::CanClose)!=0; }
     void SetEndOnEscape(int id) { this->DCall(EeWonDlgCall::SetEndOnEscape,id); }
-    void SetDontEndOnEscape() { this->DCall(EeWonDlgCall::SetDontEndOnEscape); }
     void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
     bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); }
     // the config's writes (DialogConfig)
-    void SetAllowDrag(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::AllowDrag,v); }
-    void SetKeepInRoot(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::KeepInRoot,v); }
     // the status dialog keeps the drag across its resize (Virtual08 ends it)
     bool IsDragging() { return this->DCall(EeWonDlgCall::GetField,(intptr_t)EeWonDlgField::Dragging)!=0; }
     void SetDragging(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::Dragging,v); }
@@ -668,22 +665,14 @@ public:
     virtual void GetDesiredSize(int& w,int& h) { this->MCall(EeWonMsBtnCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //2fe8c0
     virtual void SetTextHook(const GUIString& t) { this->mText->SetText(t); this->MCall(EeWonMsBtnCall::TextSet); } //2fe880
     virtual const GUIString& GetText() { return this->mText->mText; } //2fe850
-    void SetTransparent(bool t) { this->MCall(EeWonMsBtnCall::SetTransparent,t); } //2fe8a0
-    void SetAdjustHeightToFitText(bool a) { this->MCall(EeWonMsBtnCall::SetAdjustHeightToFitText,a); } //2fe9f0
     void AdjustHeightToFitText() { this->MCall(EeWonMsBtnCall::AdjustHeightToFitText); } //2fe980
     void DrawButtonText(Graphics& g,int x,int y) { this->MCall(EeWonMsBtnCall::DrawButtonText,(intptr_t)&g,x,y); } //2fea40
     void SetFont(Font* f) { this->mText->SetFont(f); }
-    void SetTextColor(int c) { this->MSet(EeWonMsBtnField::TextColor,c); }
     void SetStandardTextColor(StandardColor c) { this->MCall(EeWonMsBtnCall::SetStandardTextColor,(intptr_t)c); }
     void SetWrap(bool b) { this->mText->SetWrap(b); }
-    void SetHorzAlign(HorzAlign h) { this->MCall(EeWonMsBtnCall::SetHorzAlign,(intptr_t)h); }
-    void SetVertAlign(VertAlign v) { this->MSet(EeWonMsBtnField::VAlign,v); }
     enum FocusStyle { FocusStyle_None,FocusStyle_AroundWindow,FocusStyle_AroundText };
-    void SetFocusStyle(FocusStyle s) { this->MSet(EeWonMsBtnField::FocusStyle,s); }
     void SetHorzTextPad(int l,int r) { this->MSet(EeWonMsBtnField::LeftTextPad,l); this->MSet(EeWonMsBtnField::RightTextPad,r); }
     void SetVertTextPad(int t,int b) { this->MSet(EeWonMsBtnField::TopTextPad,t); this->MSet(EeWonMsBtnField::BottomTextPad,b); }
-    void IncrementHorzTextPad(int l,int r) { this->MCall(EeWonMsBtnCall::IncrementHorzTextPad,l,r); }
-    void IncrementVertTextPad(int t,int b) { this->MCall(EeWonMsBtnCall::IncrementVertTextPad,t,b); }
     // the fields the subclasses and the skins read or set alone (R6 WON round 35's census)
     bool IsTransparent() { return this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::Transparent)!=0; }
     void SetTransparentField(bool t) { this->MSet(EeWonMsBtnField::Transparent,t); } // the flag alone (no background grab)
@@ -724,10 +713,8 @@ public:
     void SetAdjustHeightToFitText(bool a) { this->Call(EeWonLabelCall::SetAdjustHeightToFitText,a); }
     void SetVertPad(int inTop,int inBottom) { this->Call(EeWonLabelCall::SetVertPad,inTop,inBottom); }
     void SetFont(Font* theFont) { this->mWrappedText->SetFont(theFont); }
-    void SetTextColor(int theColor) { this->Call(EeWonLabelCall::SetTextColor,theColor); }
     int GetTextColor() { return (int)this->Call(EeWonLabelCall::TextColor); }
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    void SetVertAlign(VertAlign theAlign) { this->Call(EeWonLabelCall::SetVertAlign,(intptr_t)theAlign); }
     SmartPtr<WrappedText> mWrappedText;
     Background mBackground;
     EeWonLabel* mRust;
@@ -775,17 +762,12 @@ public:
     void SetAllowSelection(bool allow) { this->Call(EeWonInputCall::SetAllowSelection,allow); }
     void SelectRange(int start,int end) { this->Call(EeWonInputCall::SelectRange,start,end); }
     void SetIcon(Image* icon) { this->mIcon=icon; this->Call(EeWonInputCall::IconChanged); }
-    void SetCharWidth(int em) { this->Call(EeWonInputCall::SetCharWidth,em); }
     void SetBackground(const Background& b) { this->mBackground=b; }
     void SetDisabledBackground(const Background& b) { this->mDisabledBackground=b; }
-    void SetCursorBlinkRate(int on,int off=0) { this->Call(EeWonInputCall::SetCursorBlinkRate,on,off); }
     void AdjustPosition() { this->Call(EeWonInputCall::AdjustPosition); }
     void CopySelection() { this->Call(EeWonInputCall::CopySelection); }
     void SetSelText(const GUIString& t,bool send=true) { this->CallText(EeWonInputCall::SetSelText,t,send); }
-    void SetPasswordChar(char c) { this->Call(EeWonInputCall::SetPasswordChar,(intptr_t)c); }
     void SetMaxChars(int n) { this->Call(EeWonInputCall::SetMaxChars,n); }
-    void SetSelectOnFocus(bool on) { this->Call(EeWonInputCall::SetSelectOnFocus,on); }
-    void SetMaxInputHistory(int n) { this->Call(EeWonInputCall::SetMaxInputHistory,n); }
     void SetLeftPad(int n) { this->Call(EeWonInputCall::SetLeftPad,n); }
     int GetSelStart() { return (int)this->Call(EeWonInputCall::SelStart); }
     virtual void Virtual08() { this->Call(EeWonInputCall::SizeChanged); } // SizeChanged
@@ -875,22 +857,14 @@ public:
     virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTabCall::HandleComponentEvent,(intptr_t)e); }
     virtual bool TabFocus(bool f,bool i) { return this->TCall(EeWonTabCall::TabFocus,f,i)!=0; }
     void CopyAttributes(TabCtrl* from) { this->TCall(EeWonTabCall::CopyAttributes,(intptr_t)from->mTab); }
-    void SetTabBarOnRight(bool v) { this->TCall(EeWonTabCall::SetTabBarOnRight,v); }
-    void SetArrowsOnLeft(bool v) { this->TCall(EeWonTabCall::SetArrowsOnLeft,v); }
     void SetTabArrows(Button* l,Button* r) { this->TCall(EeWonTabCall::SetTabArrows,(intptr_t)static_cast<Component*>(l),(intptr_t)static_cast<Component*>(r)); }
     void SetCurTab(int id,bool f) { this->TCall(EeWonTabCall::SetCurTab,id,f); }
     void SetCurTabByName(const GUIString& n,bool f) { this->TCall(EeWonTabCall::SetCurTabByName,(intptr_t)&n,f); }
     int GetTabIdForContainer(Container* c) { return (int)this->TCall(EeWonTabCall::GetTabIdForContainer,(intptr_t)static_cast<Component*>(c)); }
     void EnableTab(int id,bool e) { this->TCall(EeWonTabCall::EnableTab,id,e); }
-    void AddTab(Button* t,Container* c) { this->TCall(EeWonTabCall::AddTab,(intptr_t)static_cast<Component*>(t),(intptr_t)static_cast<Component*>(c)); }
     void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
     // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
     int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
-    void SetTabBarHeight(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabBarHeight,v); }
-    void SetTabOverlap(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabOverlap,v); }
-    void SetTabBarOverlap(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabBarOverlap,v); }
-    void SetBottomTabTopOffset(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::BottomTabTopOffset,v); }
-    void SetBottomTabLeftOffset(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::BottomTabLeftOffset,v); }
     SmartPtr<TabBar> mBottomTabBar; //84
     SmartPtr<Container> mTopTabBar; //88
     SmartPtr<Container> mBottomTabBarContainer; //8c
@@ -927,9 +901,6 @@ public:
     Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
     void SetThumb(Component* c) { this->Call(EeWonBarCall::SetPart,3,(intptr_t)c); }
     bool IsVertical() { return this->Call(EeWonBarCall::IsVertical)!=0; }
-    void SetVertical(bool on) { this->Call(EeWonBarCall::SetVertical,on); }
-    void SetResizeThumb(bool on) { this->Call(EeWonBarCall::SetResizeThumb,on); }
-    void SetMinThumbSize(unsigned char n) { this->Call(EeWonBarCall::SetMinThumbSize,n); }
     int GetPosition() { return (int)this->Call(EeWonBarCall::GetPosition); }
     void SetPosition(int p) { this->Call(EeWonBarCall::SetPosition,p); } // the field only (the scroller's update)
     void SetRange(int total,int page) { this->Call(EeWonBarCall::SetRange,total,page); }
@@ -1005,15 +976,10 @@ public:
     void SetListBox(Scroller* s);
     void AddControls() { this->BCall(EeWonComboCall::AddControls); }
     void CalcListBoxSize() { this->BCall(EeWonComboCall::CalcListBoxSize); }
-    void SetListBoxDimensions(int w,int h) { this->BCall(EeWonComboCall::SetListBoxDimensions,w,h); }
-    void SetListBoxWidth(int w) { this->BCall(EeWonComboCall::SetListBoxWidth,w); }
-    void SetListBoxHeight(int h) { this->BCall(EeWonComboCall::SetListBoxHeight,h); }
     void SetInputBoxToListSelection(bool active=false,bool fire=true) { this->BCall(EeWonComboCall::SetInputBoxToListSelection,active,fire); }
     void SetText(const GUIString& s,bool notify=false) { this->BCall(EeWonComboCall::SetText,(intptr_t)&s,notify); }
     void SetTextAndSel(const GUIString& s,bool notify) { this->BCall(EeWonComboCall::SetTextAndSel,(intptr_t)&s,notify); }
     void ShowList() { this->BCall(EeWonComboCall::ShowList); }
-    void SetNoType(bool v) { this->BCall(EeWonComboCall::SetNoType,v); }
-    void SetShowButtonWhenDisabled(bool v) { this->BCall(EeWonComboCall::SetField,(intptr_t)EeWonComboField::ShowButtonWhenDisabled,v); } // ComboBoxConfig
     SmartPtr<InputBox> mEdit; //84
     SmartPtr<Button> mButton; //88
     SmartPtr<Scroller> mListBox; //8c
@@ -2088,7 +2054,6 @@ public:
     virtual void NotifyMouseItemGone() { this->Call(EeWonListCall::NotifyMouseItemGone); }
     virtual void ListSelChangedHook() {}
     virtual bool Sort() { return this->Call(EeWonListCall::Sort)!=0; }
-    void SetSortType(ListSortType t) { this->Call(EeWonListCall::SetSortType,t); }
     void BeginUpdate() { this->Call(EeWonListCall::BeginUpdate); }
     void EndUpdate() { this->Call(EeWonListCall::EndUpdate); }
     void Clear(bool fire) { this->Call(EeWonListCall::Clear,fire); }
@@ -2187,7 +2152,6 @@ public:
     virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTreeCall::HandleEvent,(intptr_t)e); }
     virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); }
     virtual bool Sort() { return false; }
-    void SetSortType(ListSortType t) { this->TCall(EeWonTreeCall::SetSortType,t); }
     void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
     TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
     void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
@@ -2266,10 +2230,7 @@ public:
     int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
     int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
     void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
-    void SetAutoGrowColumns(bool on) { this->MCall(EeWonMultiCall::SetAutoGrowColumns,on); }
-    void SetSortColumn(int c,ListSortType t) { this->MCall(EeWonMultiCall::SetSortColumn,c,t); }
     void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); }
-    void SetColumnHAlign(int c,HorzAlign a) { this->MCall(EeWonMultiCall::SetColumnHAlign,c,a); }
     virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); }
     virtual void Virtual08() { this->MCall(EeWonMultiCall::SizeChanged); } // 0x303be0 SizeChanged
     virtual void ScrollPaint(Graphics& g) { this->MCall(EeWonMultiCall::ScrollPaint,(intptr_t)&g); }

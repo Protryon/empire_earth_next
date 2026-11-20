@@ -132,8 +132,8 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
 {
     EEComplexUnit* theUnit = CondUnit(inA);
     switch (inOp) {
-    // (the goals and their queues, the last attacker, the line of sight, the cargo count and the position:
-    // ee_units cls_host.rs)
+    // (the goals and their queues, the last attacker, the line of sight, the cargo count, the position, the distance
+    // to a unit, the initial contact, the tile, the crusader test and the mine's depletion: ee_units cls_host.rs)
     case EE_UNITS_COND_BEHAVIOR: {
         EEUnitBehavior* theBehavior = theUnit->mBehavior;
         return (theBehavior->mCanTargetEnemies ? 1 : 0) | (theBehavior->mCanFlee ? 2 : 0) |
@@ -168,9 +168,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_RESPONSE_RANGE:
         ioIo->f = theUnit->mPlayer->mComputerPlayer != NULL ? theUnit->mPlayer->mComputerPlayer->mMaxAttackResponseRange
                                                             : gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue;
-        return 0;
-    case EE_UNITS_COND_DISTANCE_TO:
-        ioIo->f = theUnit->DistanceSquaredTo(CondUnit(inB));
         return 0;
     case EE_UNITS_COND_ENEMY_IN_RANGE:
         return EEIsEnemyWithinRange(theUnit);
@@ -242,9 +239,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     }
     case EE_UNITS_COND_ATTACK_NEARBY:
         return ((EEUnitClass*)(uintptr_t)inB)->AttackNearby(theUnit, CondGoal((uint64_t)inC));
-    case EE_UNITS_COND_INITIAL_CONTACT:
-        CondPoint(ioIo, theUnit->mInitialContactLocation);
-        return 0;
     case EE_UNITS_COND_WAYPOINTS:
         return (int64_t)theUnit->mWaypoints.size();
     case EE_UNITS_COND_GROUND_Z: {
@@ -253,9 +247,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         ioIo->f = theGround.GetZ();
         return 0;
     }
-    case EE_UNITS_COND_TILE:
-        ioIo->f = theUnit->mTile->GetHeight();
-        return theUnit->mTile->mTerrainType;
     case EE_UNITS_COND_BUILD_QUEUE: {
         if (inC == 0)
             return (int64_t)theUnit->mCitizenBuildQueue.size();
@@ -283,8 +274,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
                                                  theUnit->GetPlayer()->mEnemies[theTarget->GetPlayer()->GetPlayerID()] == 0);
         return 1 | (theValid ? 2 : 0) | (theGoal->IsConvertAttack() ? 4 : 0) | (theFriendly ? 8 : 0);
     }
-    case EE_UNITS_COND_CRUSADER:
-        return theUnit->GetUnitClass()->IsCrusader();
     case EE_UNITS_COND_SUNK: {
         GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
         const GEPhysicalModel& theModel = theUnit->mPhysicalModel;
@@ -327,10 +316,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
         if (theOther != NULL && theOther->mComplexUnit != NULL)
             ee_units_atc_remove_plane(theTraffic, theUnit, theOther->mComplexUnit);
         return 0;
-    }
-    case EE_UNITS_COND_MINE_DEPLETED: {
-        EEUnit* theMine = theUnit->mMine;
-        return theMine == NULL || !theMine->mIsValid || theMine->mResourceAmount <= 0;
     }
     }
     return 0;
