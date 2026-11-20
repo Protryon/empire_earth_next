@@ -886,13 +886,7 @@ class EEActiveGroup;
 // `cmp byte ptr [ebp+0x20], 0` and passed whole to CreateUnit's bool)
 void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlayer* inPlayer, bool inAsFoundation, bool inSkipPlayerChecks,
                 std::vector<EEUnit*>& outPieces);
-void EEBuildWall(EEActiveGroup* inGroup, std::vector<EEUnit*>& inPieces);
 
-// 0x24116b / 0x241504 / 0x24dd2e (cdecl): EEUGLoadContainer::GetDestination's fallback (the tiles around inContainer
-// for inUnit, then a free location among them) and IsLoadable's tile path search (0: reachable). Provisional names;
-// argument meanings inferred
-void EEGetTilesAroundUnit(EEComplexUnit* inUnit, EEComplexUnit* inContainer, long inRange, long inCorners, bool inArg5,
-                std::vector<EETileCoordinate>& outTiles);
 bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIgnoreBlockedLine,
                 GE3DPoint& outLocation);
 bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg5, long* outX, long* outY);
@@ -900,8 +894,6 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
 // 0x12a52e (cdecl): whether inUnit is seen by the current player (the land priest's sounds) (provisional name)
 bool EEIsSeen(EEUnit* inUnit);
 
-// 0x245284 (cdecl): the garrison goal's call when a unit with +0x40 enters inContainer (provisional name)
-void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer);
 
 // 0x24939d (cdecl): where a unit dropped next to inTarget lands (provisional name and argument meanings)
 void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** ioTarget, GE3DPoint* outLocation, EEUnit* inTarget);

@@ -622,7 +622,7 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_ANGLE: {
         GE3DPoint theFrom(io->p[0], io->p[1], io->p[2]);
         GE3DPoint theTo(io->q[0], io->q[1], io->q[2]);
-        io->f = EEGetAngleFromNorth(&theFrom, &theTo);
+        io->f = ee_units_uu_angle(1, 0, 0, (const float(*)[3])&theFrom.mX, (const float(*)[3])&theTo.mX);
         return 0;
     }
     case EE_UNITS_AG_PASSABLE:

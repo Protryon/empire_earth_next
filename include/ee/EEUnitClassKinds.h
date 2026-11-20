@@ -26,11 +26,6 @@ long EEGetUnitFacingQuarter(EEComplexUnit* inUnit); // 0x20ed11 (EEGetFacingQuar
 void EEGetBlockRing(long inArg, long inX, long inY, long inWidth, long inHeight, std::vector<EETileCoordinate>& outTiles,
                 bool inArg7);           // 0x246a42 (the tiles of a rectangle)
 float EEGetSpaceDockYaw(long inX, long inY, long inSize);  // 0x23d008 (a yaw for the footprint at (inX, inY))
-void EEAddToFootprintTiles(EEUnit* inUnit);  // 0x24caef (NotifyRootVisibility)
-void EERemoveFromFootprintTiles(EEUnit* inUnit);  // 0x24d946 (GetMouseChild)
-// cdecl callees (provisional names)
-void EEAddBuildingRegion(EEUnit* inUnit);  // 0x24c8bc (Virtual80)
-void EERemoveBuildingRegion(EEUnit* inUnit);  // 0x24d779 (ComputeLoadDistance)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (100)
 // 0x531d58: the value EEUCLandPriest's ctor passes on (provisional name; EEUCNavalPriest's is 0x531d68)
 extern EEPhysicsModel* gPhysicsModels[12];     // 0x531d58 (EEPMLand.cpp: pointers to the EEPM* singletons; [0] is the land one)

@@ -155,7 +155,7 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
     bool theFound = false;
     bool theHaveFlags = false;
     GE3DPoint theLocation;
-    EEGetResourceSpots(inResource, theTiles);
+    ee_units_uu_unit_tiles(1, (uint64_t)(uintptr_t)inResource, &theTiles);
     std::sort(theTiles.begin(), theTiles.end(), EEGatherTileFarther(inUnit, inResource->GetTile()));
     EEAIPathSubSector* theStart = gContinentManager.GetPathSubSectorAt(inResource);
     while (!theFound && theTiles.size() != 0) {
@@ -214,7 +214,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     EEUnitClass* theCitizen = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != inResource->mResourceType)
         inUnit->mResourceAmount = 0;
-    if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
+    if (inResource->mResourceType == kResourceWood && !ee_units_uu_spot(1, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inResource, (float(*)[3])&theLocation.mX)) {
         unsigned short theForestID =
             gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
         EEAIForest* theForest = gContinentManager.GetForests()[theForestID];
@@ -646,7 +646,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_DEPOSIT:
         if (theComplex->mResourceAmount > 0 && ObjectOf<EEComplexUnit>(inB)->CanTake(theComplex, theComplex->mResourceType))
-            EEDepositLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
+            ee_units_uu_deposit_load(inA, inB);   // uu_world.rs
         return 0;
     case EE_UNITS_GOAL_HOST_GARRISON_UNIT:
         return theComplex->GarrisonUnit(ObjectOf<EEComplexUnit>(inB));
@@ -850,7 +850,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_WORK_TIMER: {   // the gather time of the resource (variant-scaled except stone)
             EEUnit* theResource = ObjectOf<EEUnit>(inB);
-            long theRate = theComplex->mStats->mGatherTimes[EEGetResourceIndex(theResource)];
+            long theRate = theComplex->mStats->mGatherTimes[ee_units_uu_resource_index((uint64_t)(uintptr_t)theResource)];
             if (theResource->mResourceType != kResourceStone)
                 theRate = UMFloatToLong(EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor * theRate);
             theComplex->SetWorkTimer(theRate);

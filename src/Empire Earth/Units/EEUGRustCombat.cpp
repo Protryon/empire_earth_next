@@ -96,9 +96,9 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));
         GE3DPoint thePoint(Float(a[2]), Float(a[3]), Float(a[4]));
         if (a[1])
-            EEGetFiringPosition(theUnit, theTarget, thePoint);
+            EECombatAttackPosition(true, theUnit, theTarget, thePoint);
         else
-            EEGetLeadPosition(theUnit, theTarget, thePoint);
+            EECombatAttackPosition(false, theUnit, theTarget, thePoint);
         a[0] = Bits(thePoint.GetX());
         a[1] = Bits(thePoint.GetY());
         a[2] = Bits(thePoint.GetZ());

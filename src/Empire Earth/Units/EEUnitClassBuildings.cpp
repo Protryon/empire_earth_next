@@ -764,7 +764,7 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
         bool theResult = true;
         U2DPoint<long> theTile(inTile.mX, inTile.mY);
         EEGetWallGateTiles(theTile, inDirection, theTiles);
-        EEGetWallUnitsOfTypeOnTiles(theTiles, inUnitType, outUnits);
+        ee_units_uu_units_of_type_on_tiles(&theTiles, inUnitType, &outUnits);
         std::vector<EEUnit*>::iterator it = outUnits.begin();
         while (true) {
             if (it == outUnits.end())

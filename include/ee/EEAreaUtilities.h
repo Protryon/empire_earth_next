@@ -24,21 +24,15 @@ bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inArg);   // 0x2479eb (
 // 0x242542 (EEActiveGroup::SpreadAroundUnit: a unit whose class IsPriest holds and the target's complex unit)
 // (provisional name)
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
-// 0x243c7d (EEFOFindNewTargetNearOldTarget.cpp's range): whether a unit of type inUnitType fits in the inWidth x inHeight
-// rectangle at (inX, inY) for inUnit's player (EECanPlaceOnTile on every tile) (provisional name)
-bool EEBlockTakes(EEUnit* inUnit, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner);
 // 0x20d571 (EEUCBasicPriest.cpp): the faith a conversion of inUnit costs (provisional name)
 long EEGetConversionCost(EEComplexUnit* inUnit);
 // 0x20da86 (EEUCBasicPriest.cpp; EEActiveGroup::Plan: whether inUnit can convert inTarget now, outFlag: shielded)
 // (provisional name)
 bool EECanConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget, bool& outFlag);
 bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget);
-// the build/repair goal's helpers (provisional names; types inferred)
-EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x24cbd7 (cdecl): the tile next to inTile in direction inDirection (1..8) (provisional name)
 void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile);  // 0x24734c (can inUnit work on inTarget)
-bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);  // 0x248709 (EEUGGather::GetDestination with the resource; provisional name)
 // 0x24b8ac (cdecl; a path distance from inUnit to ioTile, 10000 when none: EEUGGather::EvaluateCondition 0x1f4b; the
 // body writes ioTile; the definition's types, one prototype) (provisional name)
 float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigned long inLimit, bool inWalls);
@@ -51,25 +45,17 @@ EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioCo
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit);
 // EEUGAttackUnit.cpp's cdecl callees (provisional names; types inferred; the first is named by its assert)
 bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass);
-void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);  // 0x24181a (moving targets)
-void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile);
 // 0x24680c / 0x24240d (cdecl; EECPAttackSubGroupUnit::Flee's: a search window around inUnit; the heading from
 // inFrom to inTo) (provisional name)
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo);
-bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget);
 bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
-// EEUGGather's helpers (cdecl; signatures from their call sites in EEUGGather.cpp) (provisional name)
-bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inUnit at inTarget: the gather goal's arrival)
-void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
 class GERectangle;
 // 0x246a26 / 0x24720e: the tiles of (and around) a footprint of inSize at (inX, inY) (EEUGGather::HasGatherRoom)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
-// 0x24cc5f: the gather-rate index of inResource (EEComplexUnit mStats->mL110[]; EEUGGather) (provisional name)
-long EEGetResourceIndex(EEUnit* inResource);
 void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
 bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, long inY, long inSize, long inToX, long inToY,
                 long inSquare, GE3DPoint* outLocation);
@@ -122,9 +108,6 @@ bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit);
 void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::vector<EETileCoordinate>& outTiles, bool inAppend);  // bool: EEUnitClass::Virtual44 0x234965 passes its bool through as a dword
 // 0x241658: whether inUnit can stand on inTile
 bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit);
-// 0x24f86d: whether inPlayer may place a unit of class inUnitClass on inTile
-// 0x246254: a place for a computer player's unit to move off to (EEUnitClass::VirtualC8) (provisional name)
-bool EEGetEscapePoint(EEComplexUnit* inUnit, GE2DPoint& outLocation);
 bool EEIsTileUnblocked(EEPlayer* inPlayer, long inUnitClass, EETile* inTile);
 // 0x24edf6 (the volcano's Virtual30)
 void EEStepAsideFromSite(EEUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, EETileCoordinate& inTile, bool inForce);

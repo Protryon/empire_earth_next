@@ -53,10 +53,8 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // 0x243c7d EEBlockTakes: ee/EEAreaUtilities.h
 
 // 0x247021: the tiles around a footprint (inSizeX by inSizeY at (inX, inY)) (provisional name; arguments inferred)
-void EEGetRingCorners(long inArg1, long inX, long inY, long inSizeX, long inSizeY, std::vector<U2DPoint<long> >& outTiles);
 
 // 0x24697b: the tiles of a footprint (inSizeX by inSizeY at (inX, inY)) (provisional name; arguments inferred)
-void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector<U2DPoint<long> >& outTiles);
 
 // Returns the nearest gatherable resource of a kind within inRange rings of a centre unit, not in ioUnits (tiles
 // shuffled per ring; another path area costs 400; a dead animal wins at once; boats look for naval resources)
@@ -243,7 +241,7 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
     case EE_UNITS_CZ_UNIT_CONTINENT:
         return gContinentManager.GetContinent(theUnit, kAIPathLandMass);
     case EE_UNITS_CZ_BLOCK_TAKES:
-        return EEBlockTakes(theUnit, (long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[3], 0);
+        return ee_units_uu_unit_block_takes((uint64_t)(uintptr_t)theUnit, (int32_t)v[0], (int32_t)v[1], (int32_t)v[2], (int32_t)v[3], (int32_t)v[3], 0) != 0;
     case EE_UNITS_CZ_CAN_GATHER:
         return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
     case EE_UNITS_CZ_CAN_GET_TO_UNIT:
