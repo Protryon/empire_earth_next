@@ -350,6 +350,7 @@ unsafe extern "C" fn unit_sink(c: *mut c_void, u: *const u32, n: usize) {
 pub struct Sp(pub *mut EeWonCfgStringParser);
 
 impl Sp {
+    #[allow(clippy::mut_from_ref)] // the C++ parser behind the copyable handle, as the C++ readers' pointer member
     fn p(&self) -> &mut EeWonCfgStringParser {
         // SAFETY: the C++ parser, alive for the instruction (not otherwise referenced while a read runs)
         unsafe { &mut *self.0 }
@@ -395,7 +396,9 @@ impl Sp {
         let u = self.unit();
         let mut v: Vec<u8> = Vec::new();
         // SAFETY: as skip_ws; the sink appends to `v`
-        unsafe { ee_won_parser_read_string(p.text, u, &mut p.pos, stop, byte_sink, &mut v as *mut Vec<u8> as *mut c_void) };
+        unsafe {
+            ee_won_parser_read_string(p.text, u, &mut p.pos, stop, byte_sink, &mut v as *mut Vec<u8> as *mut c_void)
+        };
         v
     }
     /// `ReadString(std::wstring&)`: the units as `wchar_t`s.
@@ -644,7 +647,14 @@ impl EeWonResCfg {
 
     /// A read value (with its reference) into an entry made for it (the SmartPtr assignment: the old one given
     /// back).
-    fn put_held(&self, cx: &Cx, map: &RefCell<NoCaseMap<Gen<*mut c_void>>>, key: &[u8], p: *mut c_void, kind: EeWonCcKind) {
+    fn put_held(
+        &self,
+        cx: &Cx,
+        map: &RefCell<NoCaseMap<Gen<*mut c_void>>>,
+        key: &[u8],
+        p: *mut c_void,
+        kind: EeWonCcKind,
+    ) {
         let old = map.borrow_mut().get_mut(key).map(|v| std::mem::replace(&mut v.0, p));
         match old {
             Some(o) => cx.release(kind, o),
@@ -1164,8 +1174,14 @@ impl EeWonCompCfg {
             return Ok(result);
         }
         let mut result = 0i32;
-        if cx.op(EeWonCcOp::VNamed, config, key.as_ptr() as isize, key.len() as isize, &mut result as *mut i32 as isize, 0)?
-            != 0
+        if cx.op(
+            EeWonCcOp::VNamed,
+            config,
+            key.as_ptr() as isize,
+            key.len() as isize,
+            &mut result as *mut i32 as isize,
+            0,
+        )? != 0
         {
             return Ok(result);
         }
@@ -1324,7 +1340,11 @@ impl EeWonCompCfg {
                     let mut image: isize = -1;
                     while let Some(cfg) = cx.cfg(current) {
                         let found = cfg.component_config(cx, &name, false)?;
-                        image = if found.is_null() { -1 } else { cx.call(EeWonCcOp::AsImage, found, raw as isize, 0, 0, 0) };
+                        image = if found.is_null() {
+                            -1
+                        } else {
+                            cx.call(EeWonCcOp::AsImage, found, raw as isize, 0, 0, 0)
+                        };
                         if image != -1 {
                             break;
                         }
@@ -1629,14 +1649,28 @@ impl EeWonCompCfg {
         };
         if !handled {
             let w = [b"Unrecognized instruction: ".as_slice(), &instruction].concat();
-            cx.op(EeWonCcOp::AddWarning, self.parser.get() as *mut c_void, w.as_ptr() as isize, w.len() as isize, 0, 0)?;
+            cx.op(
+                EeWonCcOp::AddWarning,
+                self.parser.get() as *mut c_void,
+                w.as_ptr() as isize,
+                w.len() as isize,
+                0,
+                0,
+            )?;
         }
         Ok(true)
     }
     /// `HandleValueInstruction`: the base's, SETRESOURCE (the current resource group), else the instruction.
     pub fn handle_value(&self, cx: &Cx, parser: isize, key: &[u8], sp: *mut EeWonCfgStringParser) -> R<bool> {
         let k = key_index(EE_WON_CFG_KEYS_COMPONENTCONFIG_HANDLEVALUEINSTRUCTION_KEY, key);
-        if cx.op(EeWonCcOp::CoHandleValue, self.this_, parser, key.as_ptr() as isize, key.len() as isize, sp as isize)? != 0
+        if cx.op(
+            EeWonCcOp::CoHandleValue,
+            self.this_,
+            parser,
+            key.as_ptr() as isize,
+            key.len() as isize,
+            sp as isize,
+        )? != 0
         {
             return Ok(true);
         }
@@ -2188,7 +2222,8 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
                 None => return res().not_found(cx, ResKind::String, txt()),
             },
             C::ResSafeGetPtr => {
-                let (map, kind) = if d == 0 { (&res().images, ResKind::Image) } else { (&res().sounds, ResKind::Sound) };
+                let (map, kind) =
+                    if d == 0 { (&res().images, ResKind::Image) } else { (&res().sounds, ResKind::Sound) };
                 match EeWonResCfg::get_ptr(map, txt()) {
                     Some(p) => put(a, p),
                     None => return res().not_found(cx, kind, txt()),
@@ -2231,7 +2266,7 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
             C::AddAllocator => {
                 let mut m = allocators();
                 let k = txt();
-                if m.get(k).map_or(true, |&(cf, _)| cf == 0) {
+                if m.get(k).is_none_or(|&(cf, _)| cf == 0) {
                     m.set(k, (a as usize, d as usize));
                 }
             }

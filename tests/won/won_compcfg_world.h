@@ -1,3 +1,4 @@
+#include "rust/won_net/ffi_parse.h"
 // The stand-in world of won_compcfg_test.cpp, included once in each of its two namespaces (Orig: the deleted units'
 // statements, won_compcfg_orig.h; Port: the game's forwards and host, include/ee/wonapi/WONCompCfg.inl, over ee_won_gui
 // compcfg.rs). Every object is counted: the census after each step lists what lives and its references; every
