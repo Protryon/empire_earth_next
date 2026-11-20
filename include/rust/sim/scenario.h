@@ -746,6 +746,231 @@ constexpr static const int64_t EE_SCENARIO_GFX_PAIR = 2;
 /// A marching line (between any unit and the next).
 constexpr static const int64_t EE_SCENARIO_GFX_MARCHING = 4;
 
+/// `gEventEffects.data()` (`EeScenarioEvEffect*`), `.size()`; `gLoadingSavedGame`; `gEventsEnabled`.
+constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_DATA = 0;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_COUNT = 1;
+
+constexpr static const uint32_t EE_SCENARIO_EV_LOADING = 2;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENTS_ENABLED = 3;
+
+/// `gWorld.mPlayers[a0]`, `gWorld.GetCurrentPlayer()`, player a0's `mPlayerID`, its `EeUnitsPlayerFields*`.
+constexpr static const uint32_t EE_SCENARIO_EV_PLAYER = 4;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CURRENT_PLAYER = 5;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PLAYER_ID = 6;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PLAYER_FIELDS = 7;
+
+/// `gUnitClassTable[a0]`, class a0's `EeUnitsUnitClassFields*`, `EEUnitClassCount()`; player a0's
+/// `mUnitClassUpgrades[a1]`, its `GetUpgrade(a1)`; upgrade a0's `EeUnitsUnitClassUpgradeFields*`, its `mUnitClass`.
+constexpr static const uint32_t EE_SCENARIO_EV_CLASS = 8;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASS_FIELDS = 9;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASS_COUNT = 10;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UPGRADE = 11;
+
+constexpr static const uint32_t EE_SCENARIO_EV_GET_UPGRADE = 12;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UPGRADE_FIELDS = 13;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UPGRADE_CLASS = 14;
+
+/// Player a0's `mFirstUnit`, unit a0's `mNext`; the player's `GetNumPendingUnits()`, `GetPendingUnit(a1)`.
+constexpr static const uint32_t EE_SCENARIO_EV_FIRST_UNIT = 20;
+
+constexpr static const uint32_t EE_SCENARIO_EV_NEXT_UNIT = 21;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PENDING_COUNT = 22;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PENDING_UNIT = 23;
+
+/// Unit a0's `mUnitClass->mUnitType`, `GetHitPoints()`, `mComplexUnit`; complex unit a0's `mFlightTime`,
+/// `mIsBuilt == true`; the unit's `mTileNode != NULL`; the complex unit's `mPreviousPart != NULL`; the unit's
+/// `mUnitID`.
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_TYPE = 24;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_HIT_POINTS = 25;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_COMPLEX = 26;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_FLIGHT = 27;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_BUILT = 28;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_ON_TILE = 29;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_CARRIED = 30;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_ID = 31;
+
+/// Unit a0's `mComplexUnit->MakeAreaEffects()`, `SightOffHere()`, `SightOnHere()`, `mComplexUnit->SetFlightTime(a1)`,
+/// `SetHitPoints(a1)`, `GetComplexUnit()`; complex unit a0's `GetUnitClass()`, `GetClass()->mUnitType`, as an
+/// `EEUnit*`; unit a0's `mUnitClass`.
+constexpr static const uint32_t EE_SCENARIO_EV_MAKE_AREA_EFFECTS = 32;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SIGHT_OFF = 33;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SIGHT_ON = 34;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_FLIGHT = 35;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_HIT_POINTS = 36;
+
+constexpr static const uint32_t EE_SCENARIO_EV_GET_COMPLEX = 37;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_CLASS = 38;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_CLASS_TYPE = 39;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COMPLEX_AS_UNIT = 40;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_CLASS = 41;
+
+/// Player a0's `GetTechTree()->Get(a1)`; node a0's `SetButton(a1)`, `mData->mUnitClass`, `mData->mKind`,
+/// `mResearchDelay++`, `ResearchNode(NULL)`; `EEButtonObject::Get(a0)`; player a0's `SetClassButton(a1, a2)`, its
+/// `mGroups[a1]->GetFirstUnit()`; `gUserInterface != NULL`, its `PostRefreshSavedGroup(a0)`; player a0's
+/// `GetTechTree()->mMediaID = a1`; `gUserInterface->PostUpdateBackgroundMedia()`.
+constexpr static const uint32_t EE_SCENARIO_EV_TREE_NODE = 50;
+
+constexpr static const uint32_t EE_SCENARIO_EV_NODE_SET_BUTTON = 51;
+
+constexpr static const uint32_t EE_SCENARIO_EV_NODE_UNIT_CLASS = 52;
+
+constexpr static const uint32_t EE_SCENARIO_EV_NODE_KIND = 53;
+
+constexpr static const uint32_t EE_SCENARIO_EV_NODE_DELAY = 54;
+
+constexpr static const uint32_t EE_SCENARIO_EV_RESEARCH_NODE = 55;
+
+constexpr static const uint32_t EE_SCENARIO_EV_BUTTON = 56;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_CLASS_BUTTON = 57;
+
+constexpr static const uint32_t EE_SCENARIO_EV_GROUP_FIRST = 58;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UI_EXISTS = 59;
+
+constexpr static const uint32_t EE_SCENARIO_EV_POST_REFRESH_GROUP = 60;
+
+constexpr static const uint32_t EE_SCENARIO_EV_TREE_SET_MEDIA = 61;
+
+constexpr static const uint32_t EE_SCENARIO_EV_POST_BACKGROUND = 62;
+
+/// `EETechTree::IsLatestEffect(player a0's tree, a1, a2, a3)`; `EEMedia::Get(a0)`; upgrade a0's `mModel`; player
+/// a0's `SetClassModel(a1, a2)`; complex unit a0's `SwapGraphic(a1, a2)`; `EESoundObject::Get(a0)`; player a0's
+/// `SetClassAcknowledgeSound(a1, a2, a3)`, `SetClassCreationSound(a1, a2)`, `SetClassDeathSound(a1, a2)`,
+/// `SetClassSelectionSound(a1, a2, a3)`; sound a0's `Play()`; player a0's `mTechnologies->MakeObsolete(a1)`,
+/// `->SetPrerequisite(a1, a2)`.
+constexpr static const uint32_t EE_SCENARIO_EV_IS_LATEST = 63;
+
+constexpr static const uint32_t EE_SCENARIO_EV_MEDIA = 64;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UPGRADE_MODEL = 65;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_CLASS_MODEL = 66;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SWAP_GRAPHIC = 67;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SOUND = 68;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_ACKNOWLEDGE = 69;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_CREATION = 70;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_DEATH = 71;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_SELECTION = 72;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PLAY = 73;
+
+constexpr static const uint32_t EE_SCENARIO_EV_MAKE_OBSOLETE = 74;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_PREREQUISITE = 75;
+
+/// `gUnitSetManager.GetSet(a0)->Contains(a1)`; upgrade a0's `CopyUpgradeLevels(a1)`; `EEReplaceQueuedTechnology(a0,
+/// a1, a2)`; player a0's `MoveQueuedImprovements(a1, a2)`; `EEReplaceUnit(a0 as an EEComplexUnit*, a1, a2)`;
+/// complex unit a0's `SetBehavior(GetClass()->mBehavior)`.
+constexpr static const uint32_t EE_SCENARIO_EV_SET_CONTAINS = 80;
+
+constexpr static const uint32_t EE_SCENARIO_EV_COPY_LEVELS = 81;
+
+constexpr static const uint32_t EE_SCENARIO_EV_REPLACE_QUEUED = 82;
+
+constexpr static const uint32_t EE_SCENARIO_EV_MOVE_QUEUED = 83;
+
+constexpr static const uint32_t EE_SCENARIO_EV_REPLACE_UNIT = 84;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_BEHAVIOR = 85;
+
+/// The game variant's `GetFactor(a0)` (bits); a class list (`new std::vector<EEUnitClass*>`), its
+/// `EEUnitClass::GetClassesInSet(a1, *a0)`, `size()`, `[a1]`, `delete`; upgrade a0's `SetRange(a1)`,
+/// `SetMaxVelocity(a1)` (bits); `gUnitSetManager.GetSet(a0)`; set a0's `ForEach` of the pathfinding functor (player
+/// a1, terrain a2, enabled a3); upgrade a0's name set to string `UMFloatToLong(a1)` (bits).
+constexpr static const uint32_t EE_SCENARIO_EV_VARIANT_FACTOR = 90;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASSES_NEW = 91;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASSES_IN_SET = 92;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASSES_SIZE = 93;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASSES_AT = 94;
+
+constexpr static const uint32_t EE_SCENARIO_EV_CLASSES_FREE = 95;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_RANGE = 96;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_MAX_VELOCITY = 97;
+
+constexpr static const uint32_t EE_SCENARIO_EV_UNIT_SET = 98;
+
+constexpr static const uint32_t EE_SCENARIO_EV_PATHFINDING = 99;
+
+constexpr static const uint32_t EE_SCENARIO_EV_SET_NAME = 100;
+
+/// `EEEvent::sEvents.size()`, `[a0].get()`; event a0's `mEffects` (`int32_t*`), `mNumEffects`.
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_COUNT = 110;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_AT = 111;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_EFFECTS = 112;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_NUM = 113;
+
+/// The load (files a0 `FSFileSpec*`): `Open(kFileAccessRead)`; `GetLength` (into a1, kept on failure);
+/// `gEventEffects.assign(a0, EEEventEffect())`; the effects read from a0 (the table's bytes); `sEvents.clear()`;
+/// `sEvents.emplace_back(new EEEvent)` (the event); a0's `Read` of the 100-byte name, of event a1's `mID`, of its
+/// `mNumEffects` (the result); event a0's `mEffects = new int32_t[a1]`; a0's `Read` of event a1's indices (the
+/// result); event a0's `mEffects = NULL`.
+constexpr static const uint32_t EE_SCENARIO_EV_FILE_OPEN = 120;
+
+constexpr static const uint32_t EE_SCENARIO_EV_FILE_LENGTH = 121;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_ASSIGN = 122;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_READ = 123;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENTS_CLEAR = 124;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_NEW = 125;
+
+constexpr static const uint32_t EE_SCENARIO_EV_READ_NAME = 126;
+
+constexpr static const uint32_t EE_SCENARIO_EV_READ_ID = 127;
+
+constexpr static const uint32_t EE_SCENARIO_EV_READ_COUNT = 128;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_ALLOC = 129;
+
+constexpr static const uint32_t EE_SCENARIO_EV_READ_EFFECTS = 130;
+
+constexpr static const uint32_t EE_SCENARIO_EV_EVENT_NO_EFFECTS = 131;
+
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
 
@@ -2980,6 +3205,22 @@ void ee_scenario_unload_media(EeScenarioRoundHost host,
 
 /// `EEScenarioManager::ReplaceUnit`.
 void ee_scenario_replace_unit(EeScenarioRoundHost host, long old, long new_);
+
+/// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
+/// effect's result.
+long ee_scenario_ev_trigger(long event,
+                            long index,
+                            long id,
+                            void *player,
+                            void *unit);
+
+/// `EEEvent::LoadEvents` (`events`, `effects` the two `FSFileSpec*`).
+long ee_scenario_ev_load(void *events, void *effects);
+
+/// `EEUnitSetFunctorModifyPathfindingBehavior::Execute` (always continues the set's walk).
+bool ee_scenario_ev_pathfinding(void *player, long terrain, bool enabled, long unit_type);
+
+extern int64_t ee_scenariocpp_event(uint32_t op, const int64_t *a);
 
 /// `EESMCondition::Compare`.
 bool ee_scenario_compare(uint32_t value, uint32_t op, uint32_t target);
