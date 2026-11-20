@@ -29,21 +29,6 @@ public:
     float GetGameSpeed() const { return this->mGameSpeed; }
 
     // class static keys: guard byte 0x531c58 (bits 1..0x80), then 0x531bd0 (bits 1..0x40)
-    static const UString sTheScenarioManager;   // "EEWorldHelper-The Scenario Manager" (sic)
-    static const UString sTheTeams;
-    static const UString sTheNumberOfWondersToWin;
-    static const UString sTheTimeOfDay;
-    static const UString sTheWaterLevel;
-    static const UString sTheZoom;
-    static const UString sThePopulationLimit;
-    static const UString sTheGameSpeed;
-    static const UString sTheVictoryEnabled;
-    static const UString sTheUnitImprovementsAllowed;
-    static const UString sTheTeamsLocked;
-    static const UString sTheCheatCodesAllowed;
-    static const UString sTownIDCounter;
-    static const UString sHerdIDCounter;
-    static const UString sUsingCarbon;
 
     EEScenarioManager* mScenarioManager;    // +0x08 (0; Restore hands it to the game state when set)
     std::vector<EETeam> mTeams;             // +0x0c

@@ -17,9 +17,6 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x149e5c
     virtual FSPersistent* CreateDefault() const;                                // +0x14 0x149d3c
 
-    static const UString sNumChecksums;     // "EEPChecksum-NumChecksums" (guard bit 1)
-    static const UString sChecksum;         // bit 2
-    static const UString sVerboseMode;      // bit 4
 };
 
 #endif

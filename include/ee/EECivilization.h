@@ -15,12 +15,6 @@ public:
     // the save keys (EECivilization.cpp's guarded chains 0x12c3eb..0x12c57d, guard byte 0x529a88). EEPlayer holds an
     // EECivilization by value, so the original EEPlayer.h included this header and every includer saw these statics:
     // the $E/$S renumbering they cause is names.txt metadata (tools/rebind.py), not a source shape
-    static const UString sNumPurchasedUpgrades;   // "EECivilization-NumPurchasedUpgrades" (guard bit 1)
-    static const UString sPurchasedUpgrade;       // bit 2
-    static const UString sAvailablePoints;        // bit 4
-    static const UString sMaxPoints;              // bit 8
-    static const UString sCivBuilderLastVisited;  // bit 0x10
-    static const UString sIsDefaultCiv;           // bit 0x20
     ~EECivilization();
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)

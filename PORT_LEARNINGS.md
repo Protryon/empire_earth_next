@@ -34648,6 +34648,7 @@ capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; del
 - Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
   rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
   the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
+
 ## The game core lane, round 3: the LLE's forwarder units inline, GX's shims inline, TSGT whole in Rust, the tech capture's plain records and CVMG's head in Rust (ee_game sight_capture.rs; ee_sim tech capture_rec.rs; branch rust-core3, 2026-11-19)
 
 The successor of the game's leaves lane (rounds 1-2), with the batch-6 scope: src/Empire Earth/Empire Earth,
@@ -35325,3 +35326,76 @@ setters, the next pieces, were not started, below).
   font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
 - The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
 - Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
+
+## The game core lane, round 5: the player's private lists and EEWUnitsOffMapInfo as a Rust object; why EEPlayer does not move whole yet (ee_sim units player_lists.rs; branch rust-core5, 2026-11-20)
+
+The brief: EEPlayer's state owned by a Rust object in ee_sim, the C++ EEPlayer a thin handle, EEPlayerHost's switch
+collapsing, net -3,000 C++ lines from real moves. It did not get there: the round is net -167 C++ lines from the move
+(src and include/ee) and -189 of dead code. docs/progress/game-leaves.md has the state; the first point is why.
+
+| Commit | What | C++ |
+|---|---|---|
+| 6e3446799 | the player's private lists (stranded, repatrol, loaded ids, site and wonder ids, media-loaded classes, loaded media, off-map records) as one Rust object; EEWUnitsOffMapInfo whole in Rust; the towns by id and the third selected group gone | +85 -252, net -167 |
+| ad8502514 | 88 class-static save keys nothing reads (EEPlayer 16, RTSPlayer 6, RTSUnit 4, the tech tree 9, the map's 12, the persistent helpers 35, EECivilization 6) | -189 (dead code, not a move) |
+| | **the round** | **net -167 moved, -189 dead** |
+
+- **Why EEPlayer does not move whole: its C++ is the other lanes' objects.** After the player lane's rounds 1-2 every
+  decision of EEPlayer is Rust already (player.rs, player_units.rs, player_areas.rs, player_diplomacy.rs,
+  player_save.rs, player_tick.rs, player_stats.rs, player_events.rs; 7,900 lines). What EEPlayer.cpp keeps (3,100
+  lines) is, by size: EEPlayerHost (340: one case per C++ call those bodies make), the saved game's operations (160:
+  one per C++ sub-object's Load or Save: the tech tree, the groups, the herds, the civilization, the upgrades, the
+  patrol groups), the towns' save host (98), the tick's operations (69), the selection methods (180, over
+  EESelectedGroup), ClearFootprint (69, over the units' waypoints and transforms), the TEST ONLY PLST/PLEC capture
+  (80), the constructors, destructor, Reset and Clear (150: they new and delete the C++ objects), and the class
+  media forwarders to EEUnitStats. Each of those is a call into a class another lane owns (EEGroup, EESelectedGroup,
+  EEActiveGroup, EEUnitClassUpgrade, EEComplexUnit: Units; EETown, EEHerd: AI) or a virtual the computer and human
+  players override (20 of them; EEComputerPlayer's and the path manager's IsHuman and UnitStranded among them).
+  Moving the player "whole" would make every one of them a Rust-to-C++ host call: the C++ would not shrink. The
+  containers of C++ objects are read in place by 13-38 files each (mTowns, mHerds, the groups, mUnitClassUpgrades,
+  mTechnologies) and by the Rust world views at registered offsets (player_towns, player_herds, player_allies,
+  player_sight_sharers, player_pending_units, player_selected_group, player_technologies).
+- **What can move is the player's own data that no other class touches.** Ten members had no reader outside
+  EEPlayer.cpp (a scan of every member over src and include): the lists above, the towns by id (written by four
+  places, never read: dead), the third selected group (made by Reset, freed by the destructor, never used: dead).
+  They are one Rust object now (EeUnitsPlayerLists, `mLists`, made and freed like mQueued and mWonderState), with
+  EEWUnitsOffMapInfo as its record type (a `#[repr(C)]` struct with the C++ names; the header is a typedef, so the
+  five callers that set `mReason` are unchanged). Rust keeps a list's references through a four-operation C host
+  (`ee_units_lists_host`: reference, dereference, a unit's id, the world's unit by id).
+- **The saved game is byte for byte**: the off-map records' save and load are the C++ words in their order (the
+  id or -1, the tile's two longs, the time, the reason; the id stored whatever its read returned, the original's
+  `reinterpret_cast`), through the player save's primitives (EESaveFilePrimitive); the player's save operations
+  OFFMAP_COUNT/SAVE/RESIZE/LOAD call ee_units_off_map_file. The lists' order and their walks are the original's
+  (from the last for the off-map lookups, the repatrol release and the media unload).
+- **A dead member is found by a reader scan, not by reading**: mTownsByID looked like the town lookup (the header
+  said "find 0x16c94c"), but the port's only find was RemoveTownID's erase. A class static save key is dead when its
+  name occurs only in its declaration and its definition (88 in the lane: the saves are Rust's and never named them;
+  two pairs share a name, RTSPlayer's and EEPlayer's sObserverMode).
+- **What would shrink EEPlayer next, in order**: the groups as Rust objects (Units lane: then the selection methods,
+  the groups' part of Reset, the destructor, Clear, the tick's Validate and the save's group operations go); the
+  towns' and herds' host cases called from player_areas.rs straight into ee_sim::cp's town and herd bodies (they are
+  Rust already: EETown and EEHerd are forwarders; what is missing is the C++ base offsets of EeTownFields and
+  EeHerdFields in the world layout, which EEWorldLayout.cpp would register); EEUnitClassUpgrade as a Rust record
+  (Units lane: the improvement and upgrade host cases, RefreshUpgrades, the class media forwarders).
+- **Tests**: player_lists 4 (the unit lists' references and release order, the id and media lists, the off-map
+  records' find, remove and repair, a record's words and a failed read).
+- **Behaviour changes**: none intended. The off-map resize of a load now replaces the records instead of keeping
+  earlier ones (a load starts from an empty player: no case had any). UnloadAllMedia skips an entry that a media's
+  unload removed meanwhile (the original read past the shrunk vector).
+- **What only the tours exercise**: UnloadAllMedia, LoadAllClassMedia's and UnloadAllClassMedia's class list (EE-SIM
+  loads no media), DumpMedia.
+- **Gates, on the round's last code commit merged with origin/rust fa7e8674a** (the merge: PORT_LEARNINGS.md only,
+  both sides' sections kept; strip_markers on the merged tree changed three address comments origin/rust brought,
+  committed on their own; the headers current; rust_includes.py proposed includes in WONCfgTable.inl, which is
+  included inside a namespace, and the WON test world: not taken; no conflict marker): both builds 0/0 (EE-AOC 473
+  inputs, EE-SIM 474) and the test profile 0/0; the Rust gate PASS (5,009 tests, 0 failed); the oracle identical on
+  seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212 digests, late 214, space 210, calamity 222,
+  missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport 185); the plain saveload
+  PASS (18 identical); the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`)
+  exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS
+  (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS tour` (RENDER CHECK ok,
+  INPUT CHECK ok); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): `RESULT PASS tour`, `RESULT PASS
+  ai-game outcome time-cap PT 12537` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT
+  host=2715 joiner=2723`, GATES PASS. Before the merge, a plain saveload run once faulted loading seed 5's 2,100 s
+  save (`ee_ts_thread_receive` under EEDataPreLoading::Main, before the load: the thread start race of the UI
+  lane's round 5); the seed alone was identical, and the final run had no fault.
+- **Not run**: the POSIX builds (no platform code changed).

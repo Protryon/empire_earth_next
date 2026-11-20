@@ -1949,6 +1949,32 @@ constexpr static const uint32_t EE_UNITS_EVENTS_REPAIR = 3;
 
 constexpr static const uint32_t EE_UNITS_EVENTS_TICK = 4;
 
+/// The lists (`ee_units_lists_*`'s `list`).
+constexpr static const uint32_t EE_UNITS_LISTS_STRANDED = 0;
+
+constexpr static const uint32_t EE_UNITS_LISTS_REPATROL = 1;
+
+constexpr static const uint32_t EE_UNITS_LISTS_LOADED_IDS = 2;
+
+constexpr static const uint32_t EE_UNITS_LISTS_SITE_IDS = 3;
+
+constexpr static const uint32_t EE_UNITS_LISTS_WONDER_IDS = 4;
+
+constexpr static const uint32_t EE_UNITS_LISTS_SOUND_CLASSES = 5;
+
+constexpr static const uint32_t EE_UNITS_LISTS_MEDIA = 6;
+
+/// The host's operations (`ee_units_lists_host(op, value)`).
+constexpr static const int32_t EE_UNITS_LISTS_HOST_REFERENCE = 0;
+
+constexpr static const int32_t EE_UNITS_LISTS_HOST_DEREFERENCE = 1;
+
+/// the unit's `GetUnitID()`
+constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_ID = 2;
+
+/// `gWorld.GetUnit(id)` (0 none)
+constexpr static const int32_t EE_UNITS_LISTS_HOST_UNIT_BY_ID = 3;
+
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LONG = 2;
@@ -3921,6 +3947,9 @@ struct EeUnitsPatrolGroup;
 /// The events (`EEPPlayerEventList`'s state).
 struct EeUnitsPlayerEvents;
 
+/// The player's lists.
+struct EeUnitsPlayerLists;
+
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
 
@@ -4575,6 +4604,18 @@ struct EeUnitsPlayerEvent {
 
 /// The C++ host: `(list, player, op, event) -> the answer`.
 using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
+
+/// `EEWUnitsOffMapInfo`: a unit taken off the map (its C++ names and types; the callers set `mReason`).
+struct EeUnitsOffMapInfo {
+  /// the tile it left (`EETileLocation`: x, y; saved)
+  long mLocation[2];
+  /// the unit (`RTSUnit*`, referenced; its id while loading)
+  void *mUnit;
+  /// the game time it left (saved)
+  unsigned long mTime;
+  /// why (1..7: the transports, the calamities, the scenario's effect; saved)
+  long mReason;
+};
 
 /// One point (`EEStatisticsPoint`: the value, the game time).
 struct EeUnitsStatPoint {
@@ -6902,6 +6943,82 @@ int32_t ee_units_events_file(EeUnitsPlayerEvents *events,
 /// # Safety
 /// `events` is live.
 uint64_t ee_units_events_digest(const EeUnitsPlayerEvents *events);
+
+extern uint64_t ee_units_lists_host(int32_t op, uint64_t value);
+
+/// New, empty lists (the constructors').
+EeUnitsPlayerLists *ee_units_lists_new();
+
+/// # Safety
+/// `l` came from [`ee_units_lists_new`] (or is null) and is not used after. The lists' references are not released
+/// (the destructor releases what the original did first).
+void ee_units_lists_free(EeUnitsPlayerLists *l);
+
+/// [`EeUnitsPlayerLists::add`]
+///
+/// # Safety
+/// `l` is live; a referenced list's `value` is a live unit.
+bool ee_units_lists_add(EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// [`EeUnitsPlayerLists::remove`]
+///
+/// # Safety
+/// `l` is live.
+bool ee_units_lists_remove(EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// [`EeUnitsPlayerLists::has`]
+///
+/// # Safety
+/// `l` is live.
+bool ee_units_lists_has(const EeUnitsPlayerLists *l, uint32_t list, uint64_t value);
+
+/// The list's length.
+///
+/// # Safety
+/// `l` is live.
+size_t ee_units_lists_len(const EeUnitsPlayerLists *l, uint32_t list);
+
+/// Entry `i` (0 past the end).
+///
+/// # Safety
+/// `l` is live.
+uint64_t ee_units_lists_at(const EeUnitsPlayerLists *l, uint32_t list, size_t i);
+
+/// [`EeUnitsPlayerLists::clear`]
+///
+/// # Safety
+/// `l` is live; with `release`, its entries are live units.
+void ee_units_lists_clear(EeUnitsPlayerLists *l, uint32_t list, bool release);
+
+/// The off-map records: `what` 0 `AddOffMapUnit(unit)` at (`x`, `y`) and `time`, 1 `RemoveOffMapUnit(unit)`, 2 the
+/// records deleted, 3 `RepairPointers`' walk.
+///
+/// # Safety
+/// `l` is live; `unit` a live unit (for 0, 1); the world is loaded (for 3).
+void ee_units_off_map(EeUnitsPlayerLists *l,
+                      uint32_t what,
+                      uint64_t unit,
+                      long x,
+                      long y,
+                      unsigned long time);
+
+/// `GetOffMapInfo(unit)`: the record (null none), live until the next off-map call.
+///
+/// # Safety
+/// `l` is live.
+EeUnitsOffMapInfo *ee_units_off_map_info(EeUnitsPlayerLists *l, uint64_t unit);
+
+/// The player's save of the records: `what` 0 the count (into `io.i`), 1 record `index`'s Save; its load: 2 the
+/// records made (`io.i` of them, empty), 3 record `index`'s Load. The file's primitives through `f` with `ctx`.
+///
+/// # Safety
+/// `l` is live; `f` is valid with `ctx` for the call; `index` is below the count.
+int32_t ee_units_off_map_file(EeUnitsPlayerLists *l,
+                              uint32_t what,
+                              uint32_t index,
+                              void *ctx,
+                              EeUnitsPlayerSaveFn f,
+                              EeUnitsPlayerSaveIo *io);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
 /// and its C++ parts through `f`.

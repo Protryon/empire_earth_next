@@ -18,12 +18,6 @@ extern EECivilizationManager gCivilizationManager;
 extern EEGameOptions& gGameOptions;
 
 // the six key statics' guarded chains 0x52c3eb..0x52c57d (guard byte 0x529a88)
-const UString EECivilization::sNumPurchasedUpgrades("EECivilization-NumPurchasedUpgrades");
-const UString EECivilization::sPurchasedUpgrade("EECivilization-PurchasedUpgrade");
-const UString EECivilization::sAvailablePoints("EECivilization-AvailablePoints");
-const UString EECivilization::sMaxPoints("EECivilization-MaxPoints");
-const UString EECivilization::sCivBuilderLastVisited("EECivilization-CivBuilderLastVisited");
-const UString EECivilization::sIsDefaultCiv("EECivilization-IsDefaultCiv");
 
 // The upgrades' application step for ee_tech civilization.rs: gCivilizationManager.ApplyUpgrade for the player
 static bool EECivApply(void* inPlayerID, uint32_t inUpgrade)

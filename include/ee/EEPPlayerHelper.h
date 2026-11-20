@@ -27,10 +27,6 @@ public:
     EEPlayer* GetPlayer(unsigned long inIndex) const { return this->mPlayers[inIndex]; }  // (Save: the const operator[])
 
     // class static keys (guard byte 0x531b00, bits 1..8)
-    static const UString sPlayerCount;
-    static const UString sPlayerNum;
-    static const UString sPlayerCode;
-    static const UString sScenarioPlayerIndex;
 
     EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x08

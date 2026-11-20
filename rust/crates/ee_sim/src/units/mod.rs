@@ -90,6 +90,7 @@ pub mod player;
 pub mod player_areas;
 pub mod player_diplomacy;
 pub mod player_events;
+pub mod player_lists;
 pub mod player_save;
 pub mod player_stats;
 pub mod player_tick;
