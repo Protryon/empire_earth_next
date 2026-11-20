@@ -30,6 +30,7 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAutoPathRequest.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
@@ -208,7 +209,7 @@ void EEEMStorm::RequestRoute()
     memset(theFlags.mFlags, 1, sizeof(theFlags.mFlags));
     if (this->mRequest != NULL) {
         gPathManager.CancelAutoPathRequest(this->mRequest);
-        this->mRequest->Dereference();
+        ee_path_request_dereference(this->mRequest);
         this->mRequest = NULL;
     }
     EeAStarModifier* thePlanner = ee_astar_modifier_new_storm_planner(this->mType == kStormRain || this->mType == kStormHurricane);
@@ -219,9 +220,12 @@ void EEEMStorm::RequestRoute()
 // Takes the finished route (reversed, to pop from the back); the step then moves (state 3)
 void EEEMStorm::TakePath()
 {
-    this->mPath = this->mRequest->mPath;
-    std::reverse(this->mPath.begin(), this->mPath.end());
-    this->mRequest->Dereference();
+    std::vector<long> theTiles(2 * ee_path_request_tiles(this->mRequest, NULL, 0));   // (the Rust request's, request.rs)
+    ee_path_request_tiles(this->mRequest, theTiles.data(), (uint32_t)(theTiles.size() / 2));
+    this->mPath.clear();
+    for (size_t k = theTiles.size(); k >= 2; k -= 2)
+        this->mPath.push_back(U2DPoint<long>(theTiles[k - 2], theTiles[k - 1]));
+    ee_path_request_dereference(this->mRequest);
     this->mRequest = NULL;
 }
 
@@ -256,7 +260,7 @@ void EEEMStorm::Release()
 {
     if (this->mRequest != NULL) {
         gPathManager.CancelAutoPathRequest(this->mRequest);
-        this->mRequest->Dereference();
+        ee_path_request_dereference(this->mRequest);
         this->mRequest = NULL;
     }
     if (this->mStorm == NULL)
@@ -274,7 +278,7 @@ static void EEEMStormHostOp(void* inContext, int32_t inOp, EeAppStormIo* io)
     switch (inOp) {
     case EE_APP_STORM_OP_REQUEST:
         io->flag = theStorm->mRequest != NULL;
-        io->done = io->flag && theStorm->mRequest->mIsDone;
+        io->done = io->flag && ee_path_request_done(theStorm->mRequest);
         break;
     case EE_APP_STORM_OP_TAKE_PATH:
         theStorm->TakePath();

@@ -454,12 +454,6 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         theUnit->HoldUnit(theYoung);
         return 0;
     }
-    case EE_CP_HERD_CANCEL_PATH: {
-        UReferenceCounter* theRequest = reinterpret_cast<UReferenceCounter*>((uintptr_t)inA);
-        gPathManager.CancelAutoPathRequest(theRequest);
-        theRequest->Dereference();
-        return 0;
-    }
     case EE_CP_HERD_FIELDS_OF:
         return (int64_t)EEHerdHandle(static_cast<EeHerdFields*>(reinterpret_cast<EEHerd*>((uintptr_t)inA)));
     case EE_CP_HERD_GOALS:

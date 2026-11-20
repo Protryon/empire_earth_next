@@ -389,29 +389,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return (theComplex->mUnitClass->mDomains & kMovementAir) != 0
                 && (!theMap->mTerrainMesh.GetIsSpaceMap() || theComplex->mUnitClass->CanMoveOnTerrain(theComplex, 12));
         }
-    case EE_UNITS_GOAL_HOST_PATH_REACHABLE: {
-            EECPASGFlags theFlags;
-            theComplex->mUnitClass->GetTerrainFlags(theComplex, theFlags);
-            EETileCoordinate theFrom;
-            theFrom.mX = (long)ioArgs->i[0];
-            theFrom.mY = (long)ioArgs->i[1];
-            EETileCoordinate theTo;
-            theTo.mX = (long)ioArgs->i[2];
-            theTo.mY = (long)ioArgs->i[3];
-            EEAutoPathRequest* thePath =
-                gPathManager.RequestPath(theComplex->mPlayer->GetPlayerID(), theFrom, theTo, &theFlags, 1, 10, NULL, 1);
-            bool theReachable = false;
-            if (thePath->mPath.size() > 0) {
-                EETileCoordinate theLast = thePath->mPath.back();
-                EEAIPathSubSector* theFirst = gContinentManager.GetPathSubSectorAt(theLast.GetX(), theLast.mY);
-                EEAIPathSubSector* theSecond = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.mY);
-                theReachable = theFirst == theSecond;
-                if (!theReachable && theFirst != NULL && theSecond != NULL && theFirst->IsNeighbor(theSecond))
-                    theReachable = theFirst->AreLinksBlocked(theSecond, theFlags);
-            }
-            thePath->Dereference();
-            return theReachable;
-        }
     case EE_UNITS_GOAL_HOST_MAP_DIMENSIONS:
         ioArgs->i[0] = gMapWidth;
         ioArgs->i[1] = gMapHeight;

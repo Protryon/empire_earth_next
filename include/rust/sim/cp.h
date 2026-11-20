@@ -169,9 +169,6 @@ constexpr static const int32_t EE_CP_HERD_MAP_SIZE = 47;
 /// a young one of animal `b` born by parent `a` (`CreateUnit`, its growth, grow time, search timer, `HoldUnit`)
 constexpr static const int32_t EE_CP_HERD_BIRTH = 48;
 
-/// `gPathManager.CancelAutoPathRequest(a)`, then `a->Dereference()`
-constexpr static const int32_t EE_CP_HERD_CANCEL_PATH = 49;
-
 /// the herds of player `a` (`EEPlayer::GetHerds`' order: from the last), pushed (`EEHerd*`)
 constexpr static const int32_t EE_CP_HERD_PLAYER_HERDS = 50;
 

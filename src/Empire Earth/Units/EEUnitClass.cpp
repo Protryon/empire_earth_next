@@ -1466,8 +1466,6 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         return theTile != NULL;
     }
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
-    case EE_UNITS_CLS_MV_DIRECTION_TO:
-        return ee_units_uu_tile_direction(inUnit->GetTileX(), inUnit->GetTileY(), theOther->GetTileX(), theOther->GetTileY());
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: {
         const void* theMembers[4] = {inUnit->mGoalState, inUnit->mActiveGoal, inUnit->mBlockingUnit, inUnit->mLastAttacker};
@@ -1524,16 +1522,8 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
         if (inUnit->mInitialContactLocation != thePoint)
             inUnit->mInitialContactLocation = thePoint;
         return 0;
-    case EE_UNITS_CLS_MV_REQUEST_PATH: {
-        EeAStarModifier* theModifier = NULL;
-        if (inUnit->mPlayer->AvoidsEnemies(inUnit))
-            theModifier = ee_astar_modifier_new_enemy_avoidance((uint32_t)inUnit->mPlayer->GetPlayerID());
-        theGoal->mPathAttempts++;
-        gPathManager.RequestUnitPath(inUnit, inUnit->GetTile(), EETileCoordinate((long)io->a, (long)io->b), false,
-                                     (long)inC, (inD & 1) != 0, theModifier, (inD & 2) != 0);
-        ee_astar_modifier_release(theModifier);
-        return 0;
-    }
+    // PathToGoal's request: Rust (cls_move_host.rs) but the player's virtual
+    case EE_UNITS_CLS_MV_AVOIDS_ENEMIES: return inUnit->mPlayer->AvoidsEnemies(inUnit);
     case EE_UNITS_CLS_CR_TAG: {   // the carrier inUnit's tag point inC at the plane's frame (cls_carrier.rs)
         EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
         if (theTags == NULL || theTags->mPoints.size() == 0)

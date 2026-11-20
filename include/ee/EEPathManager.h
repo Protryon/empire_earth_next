@@ -36,7 +36,7 @@ class EEPathManager {
 public:
     EEPathManager();
     virtual ~EEPathManager();
-    void CancelAutoPathRequest(UReferenceCounter* inRequest);  // 0xa896b (ret 4; EEHerd::Clear passes its path request; provisional name)
+    void CancelAutoPathRequest(EEAutoPathRequest* inRequest) { this->Call(8, H(inRequest)); }   // 0xa896b (ret 4) (provisional name)
     void DumpOutOfSynch(FILE* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
     void DumpSim(FILE* inFile);         // TEST ONLY (EE-SIM's state dumps): the searches in progress, pending requests, timers
     // port (save version 0.256, EEPWorldHelper): the request history, the region maps and the timers, which the
@@ -53,7 +53,7 @@ public:
     // goal, modifier, request and storage. The original saved none: their owners (attack sub groups, units) asked
     // again at the loaded game's first tick. LoadGraphSearches takes their units out of the pending ones; at the
     // first tick the searches go back to the queue's front and each request to the owner that waited for it
-    // (EEAwaitAutoPathRequest, ee/EEAutoPathRequest.h)
+    // (EEAwaitAutoPathRequest: ee_sim::astar request.rs)
     void SaveGraphSearches(FSFile& outFile);
     long LoadGraphSearches(FSFile& inFile);
     void RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)   // RequestPendingPaths' one unit
@@ -63,8 +63,7 @@ public:
     void Update() { this->Call(1); }    // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
     void Reset() { this->Call(2); }     // 0xa8778 (before a scenario starts; provisional name)
     void RequestPendingPaths(EEMap* inMap) { this->Call(5); }  // 0xa8582 (EEWorld::StartGame; provisional name)
-    void CompleteAutoPath(EEAutoPathRequest* inRequest) { this->Call(10, H(inRequest)); }  // 0xa62ce (EEComplexUnit::RefreshPath; provisional name)
-    void CompletePath(EEComplexUnit* inUnit) { this->Call(9, H(inUnit)); }   // 0xa634b (EEComplexUnit::RefreshPath; provisional name)
+    // 0xa62ce CompleteAutoPath, 0xa634b CompletePath: Rust's (RefreshPath, waypoints.rs)
     // 0xa6948 (EEGroup::Fn206581: the owner's player id, the target tile, the units' flags, 1, -1, 0, 0; returns a new
     // ee/EEAutoPathRequest.h) (provisional name)
     EEAutoPathRequest* RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,

@@ -36,21 +36,6 @@
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the
 // scenario manager, and the forests' two members that make units.
 
-// TEST ONLY: CNTQ (the record of an outermost query; ee_sim::astar cm_capture.rs, whose scope depth this shares)
-// for the query left here
-class EEContinentQueryCapture {
-public:
-    explicit EEContinentQueryCapture(unsigned int inKind) : mOn(ee_astar_cntq_enter(inKind)) {}
-    ~EEContinentQueryCapture() { ee_astar_cntq_leave(this->mOn); }
-    void I(long inValue) { if (this->mOn) ee_astar_cntq_i((int)inValue); }
-    void Unit(const EEUnit* inUnit) { this->I(inUnit != NULL ? (long)inUnit->mUnitID : -1); }
-    void Area(const EEAIArea* inArea) { if (this->mOn) ee_astar_cntq_area((uint64_t)(uintptr_t)inArea); }
-    void State() { if (this->mOn) ee_astar_cntq_state(&gContinentManager.mRecord); }
-    bool mOn;
-};
-
-enum { kQueryUpdateWallUnit = 24 };
-
 // Resets the global continent manager and frees its tile grids (Rust: cm_passes.rs)
 void EEAIContinentManager::Shutdown()
 {
@@ -123,13 +108,6 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
                               theIDs.empty() ? NULL : &theIDs[0], theInputs.size(), theKeep);
 }
 
-// Rebuilds the sub-sectors of one pending sector, re-links them, repairs the path areas of its changed tiles and
-// refiles the new sub-sectors; returns true when no sector is left pending (Rust: cm_passes.rs)
-bool EEAIContinentManager::Rebuild()
-{
-    return ee_astar_cm_rebuild(&this->mRecord, (uint64_t)(uintptr_t)gWorld.mMap, EEAIRegionSize());
-}
-
 // CanGetTo's C++ (ee_sim::astar cm_unit.rs): 0 the map is a space map; 1 the aircraft's planet id, its land
 // continent when it had none
 extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
@@ -143,26 +121,6 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
         theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
     }
     return theUnit->mPlanetID;
-}
-
-// Queues the footprint tiles of a finished blocking unit or gate for a sector rebuild and tells the path manager
-// (inNow: at once); skipped while clearing or before regions exist
-void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
-{
-    EEContinentQueryCapture q(kQueryUpdateWallUnit);   // TEST ONLY
-    q.Unit(inUnit); q.I(inNow);
-    [&]() {
-    std::vector<EETileCoordinate> theTiles;
-    if (this->GetAreas().size() <= 0 || this->mRecord.clearing || !gWorld.mMap)
-        return;
-    if (inUnit->IsFoundation() || (!inUnit->GetUnitClass()->mBlocksTile && inUnit->GetUnitClass()->mCategory != kUnitCategoryGate))
-        return;
-    ee_units_uu_unit_tiles(0, (uint64_t)(uintptr_t)inUnit, &theTiles);
-    ee_astar_cm_add_sector_tiles(&this->mRecord, theTiles.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&theTiles[0]),
-                                 theTiles.size());   // Rust: cm_passes.rs
-    gPathManager.SetRegionUpdates(true, inNow);
-    }();
-    q.State();
 }
 
 // 0x563bc8 (.bss) = gUnitClassTable[0x147] (0x563bc8 - 0x5636ac = 0x51c): the unit class RegrowTrees creates

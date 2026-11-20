@@ -191,7 +191,7 @@ public:
         { return (EEAIHill*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 2, inTile.mX, inTile.mY); }
     // 0x273c9 (ret 8): id = 0x273f1(inX, inY); id ? mPathSubSectors[id] : 0 (the 0x60c7 shape over +0x5c)
     EEAIPathSubSector* GetPathSubSectorAt(long inX, long inY);
-    bool Rebuild();                         // 0x245a5 (EEPathManager::UpdateRegions: false = not done yet; provisional name)
+    // 0x245a5 Rebuild (EEPathManager::UpdateRegions: false = not done yet): Rust (pm_host.rs over cm_passes.rs)
     // 0x4e6d4 (ret 4; EECPASGSea.cpp's range): GetPathSubSectorAt(inTile's x, y) (provisional name)
     EEAIPathSubSector* GetPathSubSectorAt(const EETileLocation& inTile);
     unsigned short GetPathSubSectorID(long inX, long inY);
@@ -247,7 +247,7 @@ public:
     void RepairPathArea(const U2DPoint<long>& inTile) { ee_astar_cmq_repair_path_area(&this->mRecord, inTile.mX, inTile.mY); }
     void RemoveSubSectors(EEAIPathSector* inSector) { ee_astar_cm_remove_sub_sectors(&this->mRecord, (uint64_t)(uintptr_t)inSector); }
     void RemoveForestTile(EEUnit* inUnit) { ee_astar_cmq_remove_forest_tile(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
-    void UpdateWallUnit(EEComplexUnit* inUnit, bool inNow);
+    // UpdateWallUnit: Rust (ee_sim::astar cm_unit.rs update_wall_unit; its caller is Rust)
     // inline (COMDATs in this unit's range; defined inline in EEAIContinentManager.cpp)
     bool IsShoreTile(long inX, long inY) const { return ee_astar_cm_is_shore(&this->mRecord, inX, inY); }
     EEAIPathSector* GetPathSectorByID(unsigned short inID) const { return this->GetPathSectors()[inID]; }
