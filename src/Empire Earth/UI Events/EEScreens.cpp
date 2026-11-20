@@ -457,24 +457,8 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     return 0;
 }
 
-// ---- the chat log (chat_log.rs): its C++ entry points, and a saved game's reads and writes
-void EEUIECLEFormManager::AddEntry(const EEChatLogEntry& inEntry)
-{
-    EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
-                                    (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
-    ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
-                            (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
-}
-void EEUIECLEFormManager::Clear() { ee_screens_chat_log_clear(); }
-unsigned long EEUIECLEFormManager::GetEntryCount() { return ee_screens_chat_log_count(); }
-long EEUIECLEFormManager::Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
-{
-    return ee_screens_chat_log_load(&inFile);
-}
-long EEUIECLEFormManager::Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
-{
-    return ee_screens_chat_log_save(&inFile);
-}
+// ---- the chat log (chat_log.rs): its C++ entry points are inline (ee/EEUIEChatLogEvents.h); a saved game's reads
+// and writes
 
 static UWideString sChatLogString;   // the last read's string and colour (ee_screenscpp_cl_last)
 static GEColor sChatLogColour;
