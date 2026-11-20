@@ -25,8 +25,6 @@ public:
     }
     UITLScrolling(const UITLScrolling&) = delete;
     UITLScrolling& operator=(const UITLScrolling&) = delete;
-    void PauseScrolling() { Call(EeUiLabelCall::PauseScrolling); }
-    void ResumeScrolling() { Call(EeUiLabelCall::ResumeScrolling); }
     void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset)
     {
         int theStart = (int)inStartOffset, theEnd = (int)inEndOffset;

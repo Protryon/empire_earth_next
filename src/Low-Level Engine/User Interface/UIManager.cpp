@@ -609,4 +609,3 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 // (their bodies need the form's, the manager's or the background table's class)
 // Creates every background in the UI background database on its form, by type (bgtableobj.rs)
 void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
-GESurface* UIManager::GetDrawingSurface() const { return this->GetRasterizer()->GetSecondarySurface(this->GetScreen()); }
