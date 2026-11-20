@@ -25,6 +25,7 @@
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONStatus.h"
 using namespace WONAPI;
 
@@ -44,7 +45,7 @@ static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *t
 {
 	ResourceConfigTablePtr aTable = LobbyResource_Init(theTable);
 	WONGUIConfig_Init(aTable.get());	
-	BrowserComponentConfig::Init(aTable.get());
+	aTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>);
 
 	aTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>);
 	aTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>);
@@ -58,40 +59,40 @@ static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *t
 	aTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>);
 	aTable->AddAllocator("LanOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LanOptions>);
 	aTable->AddAllocator("LanScreen",NewConfigOf<ContainerConfig>,ScreenFactory<true>);
-	aTable->AddAllocator("LoginCtrl",NewConfigOf<DialogConfig>,DlgCtlFactory<Ck::Login>);
+	aTable->AddAllocator("LoginCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::Login>);
 	aTable->AddAllocator("LoginHelpCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<LoginHelpCtrl>);	
 	aTable->AddAllocator("LoginScreen",NewConfigOf<ContainerConfig>,NewComponentOf<LoginScreen>);
 	aTable->AddAllocator("LoginStatusCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LoginStatus>);
 	aTable->AddAllocator("LostPasswordCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostPassword>);
 	aTable->AddAllocator("LostUserNameCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostUserName>);
 	aTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>);
-	aTable->AddAllocator("QuickPlayCtrl",NewConfigOf<DialogConfig>,DlgCtlFactory<Ck::QuickPlay>);
+	aTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>);
 	aTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>);
 	aTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>);
 	aTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>);
 	aTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>);
 	aTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory);
 
-	aTable->AddAllocator("AddFriendDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
-	aTable->AddAllocator("AdminActionDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
-	aTable->AddAllocator("BadUserDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
-	aTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
+	aTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
+	aTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
+	aTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
+	aTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
 	aTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>);
-	aTable->AddAllocator("CreateGameDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
-	aTable->AddAllocator("CreateRoomDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
-	aTable->AddAllocator("DirectConnectDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
-	aTable->AddAllocator("LanNameDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
-	aTable->AddAllocator("LanPortDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
-	aTable->AddAllocator("OkCancelDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
-	aTable->AddAllocator("PasswordDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
-	aTable->AddAllocator("RoomDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
-	aTable->AddAllocator("StatusDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
-	aTable->AddAllocator("TOUDialog",NewConfigOf<DialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
+	aTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
+	aTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
+	aTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
+	aTable->AddAllocator("LanNameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
+	aTable->AddAllocator("LanPortDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
+	aTable->AddAllocator("OkCancelDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
+	aTable->AddAllocator("PasswordDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
+	aTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
+	aTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
+	aTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
 
 
 	aTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>);
 	aTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>);
-	aTable->AddAllocator("MaxSplitterButton",NewConfigOf<MaxSplitterButtonConfig>,MaxSplitterButtonConfig::CompFactory);
+	aTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>);
 
 	aTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
 	aTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);

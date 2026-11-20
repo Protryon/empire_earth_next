@@ -21,6 +21,7 @@
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
+#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/ctobj.h"
@@ -1034,7 +1035,9 @@ struct LobbyNetAddress {
 // A component's config. Since R6 WONLobby round 25 its readers, resource look-ups, map of named child configs, current
 // resource group, the parsers an instruction reads and its instructions are ee_won_gui's compcfg.rs object (mCfg);
 // these are the forwards (include/ee/wonapi/WONCompCfg.inl, compiled by ComponentConfigHost.cpp). The class keeps its
-// vtable, the component, the three flags the table programs set and the error text.
+// vtable, the component, the three flags the table programs set and the error text. Since round 26 the original's
+// config classes of each widget type (ButtonConfig, DialogConfig, the skins' configs, ...) are its kinds (ee_won_gui
+// cfgkind.rs: each kind's instructions, predefined children and named values); ContainerConfig keeps the layout state.
 class ComponentConfig : public ConfigObject {
 public:
     bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
@@ -1065,15 +1068,16 @@ public:
     Component* ReadComponent();
     bool EndOfString();
     static std::string GetResourceFile(const std::string&);
+    void HandleFitText(); // a button kind's FITTEXT
 
-    ComponentConfig();
+    explicit ComponentConfig(EeWonCfgKind inKind = EeWonCfgKind::Component);
     virtual ~ComponentConfig();
     virtual bool HandleInstruction(ConfigParser*, const std::string&);
     virtual bool HandleValueInstruction(ConfigParser*, const std::string&, StringParser&);
     virtual bool PreParse(ConfigParser*);
     virtual bool PostParse(ConfigParser*);
-    virtual bool Virtual24(const std::string&);
-    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&) { return false; }
+    virtual bool Virtual24(const std::string&); // the kind's tables and its bases' (WONCfgTable.inl)
+    virtual bool GetPredefinedComponent(const std::string&, ComponentConfig*&, Component*&);
     virtual bool GetNamedValue(const std::string&, int&);
     virtual bool CallNamedFunction(const std::string&, const std::vector<int>&, int&);
     virtual void SetComponent(Component*);
@@ -1085,11 +1089,14 @@ public:
     SmartPtr<Component> mComponent;
     GUIString mConfigError;
     bool mHasSetWidth,mHasSetHeight,mHaveInitedComponents;
+    EeWonCfgKind mKind; // the original's class
     EeWonCompCfg* mCfg; // owned
 };
 // a config or a component of a type for the resource table's allocators (the original's one-line CfgFactory and
-// CompFactory statics, one template each since R6 WONLobby round 25)
+// CompFactory statics, one template each since R6 WONLobby round 25); a config of a kind (round 26)
 template<class C> ComponentConfig* NewConfigOf() { return new C; }
+ComponentConfig* CfgNewOfKind(EeWonCfgKind); // a ContainerConfig for a container kind (ConfigTableHost.cpp)
+template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K); }
 template<class T> Component* NewComponentOf() { return new T; }
 inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
@@ -1139,37 +1146,17 @@ template <class T> void SafeGetComponent(ComponentConfig* inConfig, SmartPtr<T>&
     outPtr->mControlId = inControlId;
 }
 
-class ButtonConfig : public ComponentConfig {
-public:
-    void HandleFitText(); //381d00
-    ButtonConfig();                         // 0x381860; the class is 0x7c bytes
-    virtual bool Virtual24(const std::string&); //381e80
-    virtual void SetComponent(Component*);  //38f8d0 ICF target
-    Button* mButton;                        // +78, borrowed
-};
-
+// ContainerConfig: the container kinds' config; the layout state the table programs read and write
 class ContainerConfig : public ComponentConfig {
 public:
-    bool HandleLayout(bool chain=false,bool repeat=false);
-    bool HandleNoOverlapLayout();
-    bool HandleNewLayoutPoint();
-    ContainerConfig();                      // 0x387f90; the class is 0x98 bytes
-    // The implicit destructor (0x38ef70) jumps to ComponentConfig's.
-    virtual bool HandleInstruction(ConfigParser*, const std::string&); //3885d0
-    virtual bool Virtual24(const std::string&); //389c80
-    virtual void SetComponent(Component*);  //38f8d0
+    explicit ContainerConfig(EeWonCfgKind inKind = EeWonCfgKind::Container);
+    virtual bool HandleInstruction(ConfigParser*, const std::string&); // PERCENTLAYOUT, COLORSCHEME
+    virtual void SetComponent(Component*); // the container (none for a ScreenContainer, as the original's)
     Container* mContainer;                  // +78, borrowed
     Component* mLayoutRef;                  // +7c, borrowed
     int mLayoutInstruction;                // +80
     int mLayoutParams[4];                  // +84..90
     int mCurLayoutId;                      // +94
-};
-
-class DialogConfig : public ContainerConfig {
-public:
-    virtual bool Virtual24(const std::string&); //389f80
-    virtual void SetComponent(Component*);  //38f960
-    Dialog* mDialog;                        // +98, borrowed
 };
 
 class LobbyConfig : public ConfigObject {
@@ -1853,8 +1840,7 @@ public:
     FontConfig();
     Font* GetFont(); // 0x38a300; recalculates the font on demand
     void SetFont(Font*); //38a3e0
-    virtual bool PostParse(ConfigParser*); // 0x3099f0 (shared hook body)
-    virtual bool Virtual24(const std::string&); //38a5f0
+    virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0 (shared hook body: no desired size)
     virtual bool GetNamedValue(const std::string&,int&); //38a580
     SmartPtr<Font> mFont; //78
     FontDescriptor mDescriptor; //7c..93

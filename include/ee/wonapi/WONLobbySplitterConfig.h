@@ -37,13 +37,5 @@ protected:
 private:
     intptr_t Call(EeWonSplitCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_split_call(this->mRust,c,a,b,cc); }
 };
-// SplitterConfig (0x9c bytes): ContainerConfig (0x98) plus a borrowed pointer at +0x98.
-class SplitterConfig : public ContainerConfig {
-public:
-    virtual void SetComponent(Component*); // at 0x0078f960
-public: // (the table reader's setters read the members)
-    virtual bool Virtual24(const std::string&); // at 0x00795450
-    Splitter* mSplitter; //98
-};
 }
 #endif

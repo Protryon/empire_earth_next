@@ -35211,3 +35211,314 @@ the census says is left, is the first point below. docs/progress/game-leaves.md 
   `RESULT PASS lan-game PT host=2715 joiner=2721`, GATES PASS. The captures, saveload, scenario_check and sim_editor
   ran on the tree before 41dbcdf89 (that commit changes only Rust lints, formatting, a header's order and a test).
 - **Not run**: the POSIX builds (GEWindow.h's hand declarations and the C-linkage hosts are the same on POSIX).
+## The UI lane, round 6: EEUICChatLine as a kind, the HUD controls' plain reads and the message box's toolkit calls in Rust, the lane's dead members (ee_game shells_chat.rs, hud_views.rs, hud_draw.rs, shells_dialog.rs; ee_ui direct.rs; branch rust-ui6, 2026-11-19)
+
+The brief: the UI units sit above the big cycle since cycle cuts round 3; move whole classes bottom up, aim for
+-3,000 net C++ lines. **Net C++ -119** (+48 -167; one unit and one header gone). docs/progress/ui-cluster.md has
+the commits and what is left.
+
+### Why so little: the cycle was not the obstacle
+
+- `cpp_deps.py report`, `unit` and `layer --focus 'User Interface Thread/,UI Events/'` after a full build: no UI
+  unit is in a cycle; the layer's only edges are EEFOFindNewTargetNearOldTarget's (the unit utilities). The one leaf,
+  EEScreenEvent, is the screens' `UIEvent` subclass: a C++ vtable the toolkit calls, nothing to move.
+- Leaving the cycle changes the link graph, not the code: what is left in this lane is host cases, each one call on
+  a C++ object of another lane (the picker, the actions, communications, the tech tree and the players'
+  improvement calls, the campaign files, `FSFileSpec`, `GESurface`, `GEModel`, the rasterizer's state,
+  `gGameWindow`, `gUserInterface`'s posts). A case can only go when its callee is Rust. Two checks found no dead
+  host cases: every `extern "C"` entry point of the lane's C++ is still named by Rust, and no constant answered
+  first by `hud_views.rs`/`hud_direct.rs`/`ui_direct.rs` still has a C++ case. So the round took the cases whose
+  callees were Rust already: the toolkit's direct path, the world views, the 2D draw list.
+- The 4 "targets" units: EEUIBuildWall/EEUIBuildGate are world calls with editor subclasses (the editor lane's);
+  EEUIRustControl is the HUD controls' base; EEUICChatLine moved.
+
+### What moved
+
+- **`EEUICChatLine`** is a kind over `EEUIShellControl` (shells_chat.rs, kind 0x83): the record
+  (`EeScreensChatLineFields`) and the timer (a `TMPoll` is its `EeTimePoll`, made in Rust) are the kind's; the
+  factory `EEUIShellNewChatLine` (EEUIShell.cpp) makes the shell, sets its background from the table, then the four
+  `GEText`s into the shell's slots and hands them to the kind (`SKOP_CHAT_PARTS`), in the constructor's order; the
+  host op 0xc3 deletes them. `chat_record` (hud_ctl_ffi.rs) finds the record through the kind's op instead of a
+  registered offset; the chat line's members are plain Rust functions now (no C++ caller).
+- **The box selection** (`EEUICSelectUnits`): its eight `GELine`s are gone; `hud_draw::select_box` draws the eight
+  lines on the draw list (black shadow, then white), each a temporary `Shape` (the C++ drew the array in one
+  `Draw(lines, 8)`: the same lines in the same order). `OWN_LIVE` and `HAS_COMPLEX`, the command's `GROUP_COUNT` and
+  `CATEGORY`, and `EEMouseModeOp`'s plain fields of the picked and the first unit (id, family, wall, tile, complex,
+  built, garrison capacity and room, same player; alive, complex, rally point) are `hud_views.rs`' over the views.
+  The call record's `mPicked`/`mFirst` are read in place (`hud_direct::picked_and_first`, the asserted layout).
+- **The message box** (`EEUIFError.cpp`'s host): show, tabbing, password, line count, scroll bar, alignment, the
+  texts' colours, add and enable are calls on the toolkit's Rust objects (shells_dialog.rs `CppDialog::direct`; the
+  texts through `ee_ge_text_*` on the `GEText`'s Rust object). The float register is kept on both sides (the C++
+  ops that make controls still read it). `ee_ui::direct::label_call_f` is new.
+- **Dead members** (`tools/dead_members.py report`): EEUserInterface's unused posts and Undo/Redo, UIControl's and
+  UIManager's GetDrawingSurface, UIButton::GetFocusedBitmap, UIManager::IsFormOnStack, UITLScrolling's
+  Pause/ResumeScrolling, EEUIFMGStatusButton::BaseButtonUp, EEUIECLEFormManager::GetEntryCount.
+
+### Lessons
+
+- **Measure what the lines call, not where the unit sits.** The census said "above the cycle, move bottom up";
+  the per-case callee check said nearly nothing is movable without another lane's object in Rust. Run both before
+  promising a number.
+- **A Rust-owned `TMPoll`** is just an `EeTimePoll` (the class holds the record by value): a kind can own one in a
+  `Box` and hand its address to code that treats it as a `TMPoll*`. A `GEText` cannot be made from Rust without
+  the C++ object host (`GEObjectHost` is not registered with ee_render), so the factory makes texts.
+- **A kind whose record other Rust reads** answers a kind op with the record's address (`SKOP_CHAT_RECORD`) and the
+  reader uses `shells_ffi::op_of`; no offset registry.
+- rustfmt failed the first gate on a test's `vec![...]`; run `rustfmt --check` on new files before the gate (the
+  gate is ~40 minutes under the machine's load).
+
+### Gates
+
+- Both builds 0/0 (EE-AOC 507 inputs, EE-SIM 508), the test profile 0/0 (507); `rust_build.py header` current.
+- The Rust gate: the full run on e32577e45 passed its tests and failed clippy on three `hud_views.rs` functions
+  unused in the test build (their callers are the `#[cfg(not(test))]` FFI modules); b08517139 tests them over the
+  fake world (`hud_views` test PASS, `cargo clippy -p ee_game -p ee_ui --all-targets -D warnings` clean);
+  then the full gate on b08517139: PASS (4973 tests; test, clippy, rustfmt, header).
+- The oracle at seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; seeds 2-3 also after the chat line
+  alone).
+- sim_editor PASS (14,448 lines), the civilization builder gate PASS (4,062), scenario_check 27/27.
+- Tours (test profile, the main checkout's tree, through slot.py): the random game `--box-select --orders --seed 7`
+  (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move; RESULT PASS; no GX errors), the editor
+  exercise (RESULT PASS, no GX errors), the tour `--input-check --view-check --play-seconds 120 --seed 7`
+  (F3 paused 0 -> 1 -> 0 ok, VIEW CHECK PASS, RESULT PASS, no GX errors). Captures looked at: the chat line (gates tour's chat.bmp: "TEST chat line: the chat display
+  (EEUICChatLine)" drawn at the top left over its background), the box selection's result, the editor's map tab.
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 13029,
+  units [4, 40, 40], alive [2, 3], classic_lua x 2; lan-game PT 2715/2715).
+- origin/rust (3449a04fd) was already in the base: nothing to merge. Not run: the sim_capture profiles (no
+  simulation code changed), the POSIX builds.
+
+### What only the tours (or a person) exercise
+
+- The chat line kind (EE-SIM builds no form): the tours' in-game chat line (EETestFixture's "TEST chat line").
+- The box selection's lines (`--box-select`); the command drag's count and categories (a right drag: `--orders`
+  moves); the mouse modes' unit reads (every cursor update over a unit in the tours).
+- The message box's direct calls: the civilization builder gate shows the box in EE-SIM; in the game only a person
+  (or a screen that raises a message) shows one.
+## The scenario editor lane, round 2: the editor's two small cycles cut; the editor hosts' toolkit ops and the condition and effect screens' control records in Rust (ee_game editor_direct.rs; branch rust-seditor2, 2026-11-19)
+
+The brief: break the editor's two small C++ cycles, then move the editor's screens and tabs wholly, bottom up, then
+finish the Scenario Manager's triggers; 2,500 or more net C++ lines. **Net C++: -431** (commits below; Rust +1,129): the two
+cycles are gone, but no editor class or Scenario Manager class moved wholly this round, and the target was not met.
+
+### The cycles
+
+`cpp_deps.py cuts --of` named one symbol each way for both:
+
+- **EESEEvents <-> EESETSEffect** (1,008 lines): EESEEvents called `FillPlaceComboBox` (EESETSEffect's), EESETSEffect
+  called `FillScenarioComboBox` (EESEEvents'), a two-line function over the first. It moved beside `FillPlaceComboBox`.
+- **EESEIAExport <-> EESEInstructions** (373 lines): the import question's answer (`EESEImportTextAnswer`) and the
+  import button's event (`EESEIEImport::ProcessEvent`) were in EESEInstructions.cpp, the export ones in
+  EESEIAExport.cpp, and each unit made the other's: all four are EESEIAExport.cpp's now (the answer `static`).
+
+After both, `cuts --of` reports each unit alone (no cycle).
+
+### The measure first: what the lane's C++ still is
+
+The editor's classes were already thin (round 1 and the R6 editor rounds); what is left in `Scenario Editor/` is the
+hosts (`ee_screenscpp_*`: one C++ case per call the editor's Rust makes into a C++ object) and a few C++ classes
+whose methods are host calls too. Reading every host by case:
+
+- **Constructors** (`SeplMake`, the tabs' `MAKE_*` ops, the form's `BASICS`, the brush group, the load thread):
+  `new` of a C++ control, event or action class. They stay until those classes are kinds or Rust objects (the UI
+  lane's toolkit classes, the actions).
+- **World statements** (the scenario manager's lists and elements, the tech tree, the unit classes' static
+  `sUnitTypes`, the calamity and graphic effect classes, the editor's selection, the camera, the load thread's
+  posts): no Rust holds those objects, so a Rust answer would be a call back into the same C++.
+- **Toolkit statements**: one call on a C++ control that is a shell over a Rust object (a label's text, an edit
+  box's line, a combo box's selection, a list's line count, a slider's value, a check box's state, a display mode,
+  a trigger event). `ee_ui::direct` (R6 game screens B) reaches the Rust object from the C++ pointer, so these need
+  no C++ at all. **This round moved them.**
+
+The Scenario Manager side is the same story one level down: the triggers', conditions' and effects' decisions are
+Rust (R5b.5 rounds 1-9, the calamities and scenario lane); EEScenarioHost.cpp, EESMEffect.cpp's world host and
+EESMObject.cpp's read host are world statements on C++ units, players, AI and camera, and EEScenarioCapture.cpp (615
+lines) is a TEST ONLY reader of the same objects whose bytes the checked-in goldens fix. None moved.
+
+### What moved
+
+- **The condition and effect screens' control records** (`EESETSEffectControls`, 46 pointers;
+  `EESETSConditionControls`, 23): made, freed and filled by slot in Rust (`editor_direct.rs` `controls_new`,
+  `controls_free`, `slot`); the C++ classes stay as the layout the editor gate (EESimEditor.cpp) reads through the
+  screens' handles, and EESETSEffect.cpp asserts the layout against `EE_SCREENS_SEET_EFFECT_SLOTS` /
+  `_CONDITION_SLOTS` and three member offsets. The C++'s remaining cases read a member through
+  `ee_screens_seet_slot`; the two per-record `SeetSlot`, `SeetCombo`, `SeetEdit` overload pairs and the `SeetOp`
+  template went (one `SeetC` accessor).
+- **The generic host's toolkit ops** (`ee_screenscpp_seet` / `_sect`): display, rectangle, location, texts and
+  numbers, line reads, widths, clear and append, selections, line counts, trigger events (hold, restore, set,
+  null), the range event's fire, check states, sliders, help strings, strings.
+- **The shared maker's toolkit ops** (`ee_screenscpp_sepl`, which every tab and sub-screen routes its ops below 100
+  to): 28 cases (rectangle, display, check and radio and tri-state, combo and list ops, edit numbers and copies,
+  sliders, label texts with `SeplText`'s five kinds, groups, location, help, edit bytes). All 12 FFI adapters call
+  `editor_direct::sepl`, which answers in Rust or calls the C++.
+- **The editor events' host** (`ee_screenscpp_se`): eight toolkit ops, and `ee_screenscpp_se_text` /
+  `_se_set_text` whole (gone from C++).
+- **The object screen's** action names (append, id of the selection, index of a name: `ee_sim::units::script`'s
+  tables directly) and its string and line texts; **the trigger tab's** list selection, count and select and its
+  groups; **the trigger screen's** event slot; **the unit tab's** event slot and list ops; **the map tab's** label
+  rectangle, combo `atoi` and control by id (the terrain tab's route too); **the area screen's** rectangle centre;
+  **the editor events'** (`ee_screenscpp_see`) nine toolkit ops; **the form's** group enable, button fire, combo
+  select and label text.
+
+### Lessons
+
+- **A host case is a toolkit statement, a world statement or a constructor; only the first kind can move before its
+  object does.** Classifying every case of every host first (above) told what the round could take: about 450 lines
+  of toolkit statements in `Scenario Editor/`, nothing whole. The 2,500-line target needed whole moves that the
+  objects behind the hosts (the toolkit's control classes as kinds, the scenario elements as Rust records, the
+  actions) do not allow yet.
+- **Answer below the hosts' traits.** As the UI lane's `hud_direct.rs`, the Rust answers sit in the FFI adapters, so
+  the screens' unit tests (recorded op streams) and the SGVW trace (world ops only) are unchanged by construction;
+  the editor gate (14,448 lines, every control's state) is the check that the answers equal the C++'s.
+- **Mirror the C++ conversions, not the intent**: `SetText(unsigned long)` of an edit box prints through
+  `PlatIToA(int)` (so `i as i32`), the shared maker's `EDIT_NUMBER` through `"%lu"` (`c_ulong`), a label's
+  `SetText((unsigned long)x)` resolves to `SetText(long)`; `GetCurrentSelection`'s answer is the selection or -1
+  whatever the call returned (a list box always writes its out word); `UIControl::GetWidth` is `UMFloor(w + 1)`
+  (round half to even, then down when above).
+- **A heredoc of Python with triple quotes can fail in this shell** ("unexpected EOF while looking for matching");
+  write edit scripts with the Write tool and run them by path.
+- **Don't edit Rust while `rust_build.py gate` runs**: its rustfmt pass read a half-formatted new file and failed the
+  step; and a module order change in `mod.rs` reorders cbindgen's constants (the header check fails until
+  `rust_build.py header` runs again).
+
+### What moved (commits)
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 4e8ade361 | `FillScenarioComboBox` in EESETSEffect.cpp (EESEEvents <-> EESETSEffect cut) | 0 |
+| 314e62bf4 | the import answer and event in EESEIAExport.cpp (EESEIAExport <-> EESEInstructions cut) | 0 |
+| 58bdef7d2 | the hosts' toolkit ops and the two control records in Rust (`editor_direct.rs`, 980 lines; 6 unit tests) | -411 |
+| 76d72d14b | the object screen's class names, the trigger tab's caret, the form's captures and help label | -20 |
+
+### Checks
+
+Per step (`build/se2/step.sh`): the build `--sim` 0/0, the Rust gate PASS, the editor gate PASS 14,448, the
+civilization gate PASS 4,062, scenario_check 27/27, the oracle seeds 2-3 identical. At the end (origin/rust
+3449a04fd was already in the round's base, so the merge was a no-op): both builds 0/0, the Rust gate PASS (4,977
+tests), the editor and civilization gates PASS, scenario_check 27/27, the oracle seeds 2-7 identical, the scenario
+capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; deleted after), the editor tour PASS
+(the editor's first frame: the map tab's controls laid out and filled, render check ok), `gates.sh` GATES PASS
+(tour, ai-game time-cap with both computers alive on classic_lua, lan-game).
+
+### What exercises what
+
+- The editor gate (EE-SIM `--editor-script`) runs every tab and sub-screen, so every moved op on every control it
+  dumps; its output is unchanged (PASS 14,448). The civilization gate (4,062) and scenario_check (27/27) do not
+  reach the editor's hosts; EE-SIM builds no form in a game, so the oracle is unchanged by construction.
+- Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
+  rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
+  the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
+
+## R6 WONLobby, round 26: the component config classes as kinds (ee_won_gui cfgkind.rs; branch rust-wonlobby26, 2026-11-20)
+
+Round 25 moved ComponentConfig's readers and instructions; its 45 subclasses (one per configured widget type: ButtonConfig,
+DialogConfig, ListAreaConfig, ..., the Windows skin's MSButtonConfig .. MSListCtrlConfig, the WON skin's
+WONSimpleButtonConfig .. WONSkinConfig) stayed C++: each a class with its own copy of the component under its type
+(`SetComponent`), a `Virtual24` that ran its cfgtab.rs table and then (or first) its base's, and for some a
+`GetPredefinedComponent` (the named parts a resource file may configure), a `GetNamedValue` (the WON frame's paddings)
+or a `PreParse` (the WON skin's default skin). This round made them kinds of one ComponentConfig.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 3ec4bab54 | the config classes as kinds (cfgkind.rs); 14 units and 9 headers deleted, the registrations one table by kind; goldens `won_cfgtab_test` (the chains) and `won_compcfg_test` (the predefined children, paddings, the skin's PreParse) | -1,209 |
+| b42d1bf0f | origin/rust (fa7e8674a) merged (PORT_LEARNINGS only: both sides kept) | 0 |
+| 6637f6f3b | strip_markers on the merged tree (four trailing address comments in the AI and units lanes' headers) | 0 |
+| 2dfffc4d0 | `rust_includes.py`'s module headers (cfgkind.h, shell.h) | +4 |
+| the docs commit | this section, the progress file | 0 |
+
+Round total: WON C++ 26,470 -> 25,265 (-1,205; short of the -1,500 aim: the lobby's control configs and the table
+setters, the next pieces, were not started, below).
+
+### The kinds (cfgkind.rs)
+
+- `EeWonCfgKind` names the original class (52 kinds: the 45 deleted classes and the seven that keep members, FontConfig,
+  ImageConfig, StretchImageConfig, StretchCenterImageConfig, ImageFilterConfig, PercentLayoutConfig, ColorSchemeConfig).
+  `class(k)` is the class: its base, its cfgtab table, how its `Virtual24` used them (`Own`: ComponentConfig's MODIFY,
+  MAPCOMPONENT, then its table; `TableThenBase`; `BaseThenTable`: WONHeaderControlConfig; `TableOnly`: the skin, font,
+  image, percent-layout and colour-scheme configs), and its own predefined children (the name, compared exactly as
+  each original did, with a guiconf key table or `name == "..."`; the child config's kind; the component part).
+- The hooks are walks of that hierarchy: `v24_steps` (the tables in the order the chain of `||` ran them), `predefined`
+  (the first class up the bases whose list names the child), `named_borders` (LEFTPAD .. VERTPAD: the frame borders
+  summed, in the original's evaluation order), `is_a` (the original `dynamic_cast`s).
+- The C++ end: `ComponentConfig(EeWonCfgKind)` keeps the kind (`mKind`); its `Virtual24` (WONCfgTable.inl) runs the
+  steps; `GetPredefinedComponent`, `GetNamedValue`'s paddings and the WON skin's `PreParse` (WONCompCfg.inl) ask
+  cfgkind.rs and read the part (`CcPart`: a combo box's list area and edit box, a scrollbar's thumb, arrows and track,
+  a tab control's page layout point, the page view's text area, a scroller's bars and area, a list control's header,
+  an etched frame's label). `ContainerConfig(kind)` keeps the layout state for the container kinds (and, as the
+  original's ScreenContainerConfig did, no container pointer for a screen container); `CfgNewOfKind` makes the class
+  of a kind. The typed component pointers were all the component itself: the table setters read
+  `static_cast<T*>(mComponent)` (`EE_C(T)`).
+- Deleted: ConfigComponentBindings.cpp, ConfigBaseComponentBindings.cpp, SimpleComponentConfig.cpp,
+  ScrollbarConfigConstructor.cpp, ButtonConfigConstructor.cpp, MSEtchedPredefinedComponent.cpp,
+  MSListPredefinedComponents.cpp, MSPredefinedComponents.cpp, BrowserComponentConfig.cpp, ValueConfigConstructors.cpp,
+  ImageConfigConstructors.cpp, StretchImageConfig.cpp, MSComponentConfigRegistration.cpp and
+  WONControlsConfigRegistration.cpp (their tables now WONGUIConfig.cpp's, by kind, the shells' factories one template
+  `NewShellOf<kind, args>`); the headers WONLobbyMSConfig.h, WONLobbyMSExtraConfig.h, WONLobbyResourceConfig.h,
+  WONLobbyComboBoxConfig.h, WONLobbyTabCtrlConfig.h, WONLobbyWONListConfig.h, WONLobbyWONFrameValueConfig.h,
+  WONLobbyWONButtonConfig.h, WONLobbyWONFrameConfig.h; the classes' declarations in WONLobbyGUI.h and six other
+  headers.
+- The lobby's control configs (ChatCtrlConfig, ServerListCtrlConfig, RoomLabelCtrlConfig, ...) stay C++ subclasses of
+  ComponentConfig or ContainerConfig with their base's kind; MaxSplitterButtonConfig, whose only override called its
+  base, is the MSArrowButton kind with its factory.
+
+### Tests and mutations
+
+- `won_cfgtab_test` (round 39's golden of the table programs) now checks the chains too: its world's classes carry
+  their kinds (a member that sets the base's kind after the bases', so the most derived class's wins), and on the
+  port's side every class uses ComponentConfig's `Virtual24` over the kind's steps; the original side keeps each
+  class's own `Virtual24` with its explicit base calls (won_cfgtab_orig.h). The resource files' 2,185 instructions and
+  5,000 random ones on all 52 configs, the layout and image sequences: 383,620 checks, 0 mismatches;
+  `golden_cfgtab.txt` regenerated byte for byte the same.
+- `won_compcfg_test` (round 25's golden) adds the deleted classes' statements (tests/won/won_cfgkind_orig.h: their
+  declarations and SetComponent bindings, the predefined children, the frame paddings, the skin's PreParse, copied
+  with build/wl26/gen_orig.py from bcea46987) on the original side, and on the port's side the kinds: every class is
+  an allocator type (its class or its kind), the world's components have the parts, a shell op stand-in and the
+  skin's stand-in; the generator makes configs of every type, reads `child._THUMB`-style paths and `child.LEFTPAD`
+  values, and a new step probes a config directly: every predefined name (the child's class, its part, and two
+  levels of its own children) and every padding name. 3,000 runs, 0 mismatching; every predefined child and padding
+  is reached.
+- Mutations (build/wl26/mutate.py, each a Rust rebuild and both goldens): 7 of 8 caught (a predefined child's kind, a
+  part, HORZPAD's evaluation order, StretchImageConfig's base, TabCtrlConfig's base, the exact name compare,
+  MSTabButtonConfig's base); the eighth, WONHeaderControlConfig's base-first order, is equivalent: its keys and its
+  bases' are disjoint (only the reader's "passed on" count changed, 717,786 against 717,035).
+- cargo: cfgkind_tests.rs (4: the chains, the derivations, the predefined walks, the paddings).
+
+### Behaviour changes
+
+- A ScreenContainer config's container pointer is NULL (the original's was never set, so a container instruction on
+  one read garbage; the game's files have none).
+- The lobby's control configs call their base kind's hooks (`ComponentConfig::Virtual24` with the base's kind) where
+  they called the deleted base class's; the same chain.
+
+### What runs it
+
+- Every lobby screen's configs go through the kinds (the tour, the LAN game); the goldens' worlds are stand-ins, so
+  only the LAN capture comparison and the tour see the game's host statements on the real widgets.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at the move's commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| `rust_build.py header` | 283 headers current |
+| `rust_build.py gate` | PASS, 5,005 tests, on the merged tree (the first run there failed `gamespy::tests::a_failed_start_leaves_the_current_record`, a UDP port another program held: passed alone three times and in the rerun of the whole gate; the first run at the move's commit failed rustfmt on cfgkind_tests.rs, fixed before the commit) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical at the move's commit; seeds 2-7 identical on the merged tree |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 160 programs exit 0, peak 559 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13487` units [4, 42, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2739 joiner=2736`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe, 0a17fc666) | every lobby capture identical, no caret differences (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's own frames differ. Both runs `RESULT PASS lan-game` (PT 2762/2758 this round, 2725/2725 the start exe) |
+
+### Left
+
+- The lobby's control configs (ChatCtrlConfig, UserListCtrlConfig, GameUserListCtrlConfig, GameBrowserCtrlConfig,
+  ImageTextButtonConfig, CrossPromotionButtonConfig, CreditsDialogConfig) could be kinds with cfgtab tables (their
+  setters a case each); RoomLabelCtrlConfig needs a guiconf name table for its CHAT / GAME compares,
+  ServerListCtrlConfig's ADDCOLUMN stays a C++ setter. About -120 lines.
+- The table setters (WONCfgTable.inl, ~330 lines) are mostly calls of the widgets' inline forwards: they could be the
+  widgets' Rust objects through the widget registry, with a golden that checks the forwarders' mapping.
+- FontConfig's, ImageConfig's and the percent and colour-scheme configs' members could be the Rust config's (the
+  font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
+- The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
+- Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.

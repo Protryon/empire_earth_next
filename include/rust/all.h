@@ -95,6 +95,7 @@
 #include "rust/ui/tableobj.h"
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
+#include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/comboobj.h"
 #include "rust/won_gui/compcfg.h"

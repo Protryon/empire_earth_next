@@ -1,6 +1,6 @@
 #ifndef EE_WONAPI_WONLOBBYTEXTAREACONFIG_H
 #define EE_WONAPI_WONLOBBYTEXTAREACONFIG_H
-#include "ee/wonapi/WONLobbyResourceConfig.h"
+#include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/won_gui/textobj.h"
 namespace WONAPI {
 // The text area (R6 WON round 21): its layout, lines, selection, links and paint are the Rust TextArea
@@ -95,12 +95,6 @@ public:
     EeWonText* mRust;
 private:
     intptr_t Call(EeWonTextCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_text_call(this->mRust,c,a,b,cc); }
-};
-class TextAreaConfig : public ScrollAreaConfig {
-public:
-    virtual bool Virtual24(const std::string&); //395990
-    virtual void SetComponent(Component*); // override, at 0x0078f860
-    TextArea* mTextArea; //9c, borrowed prefixa0 only
 };
 }
 #endif

@@ -17,13 +17,6 @@ public:
     virtual void Paint(Graphics&); //2f7ed0
 };
 
-class ImageButtonConfig : public ComponentConfig {
-public:
-    ImageButtonConfig() {}
-    virtual bool Virtual24(const std::string&); //38acb0
-    virtual void SetComponent(Component*); // at 0x0078f8d0 (shared body)
-    ImageButton* mImageButton; //78 borrowed
-};
 bool Browse(const std::string&); // MiscUtil, at 0x006a30e0
 }
 #endif

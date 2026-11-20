@@ -21,6 +21,7 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONPerfTimer.h"
 #include "ee/wonapi/WONGUIShell.h"
+#include "ee/wonapi/WONLobbyTextAreaConfig.h" // the page view's text area
 bool gShowParseTime = false; // (SHOWPARSETIME sets it during a parse: WONCfgTable.inl)
 int gLinesParsed = 0; // (ConfigTableHost.cpp counts the lines)
 namespace WONAPI {
@@ -77,11 +78,23 @@ ComponentConfigInit::ComponentConfigInit(ComponentConfig* theConfig)
     this->mConfig = theConfig;
 }
 
-// A container configuration with no layout reference and layout id 0
-ContainerConfig::ContainerConfig()
+// A container configuration of a container kind with no layout reference and layout id 0
+ContainerConfig::ContainerConfig(EeWonCfgKind inKind) : ComponentConfig(inKind)
 {
+    this->mContainer=NULL;
     this->mLayoutRef=NULL;
     this->mCurLayoutId=0;
+}
+// The component as the container (the original's ScreenContainerConfig bound the component's base alone: no container)
+void ContainerConfig::SetComponent(Component* component)
+{
+    ComponentConfig::SetComponent(component);
+    if(this->mKind!=EeWonCfgKind::ScreenContainer) this->mContainer=static_cast<Container*>(component);
+}
+// Sets the component the config reads its settings into
+void ComponentConfig::SetComponent(Component* component)
+{
+    this->mComponent=component;
 }
 
 // Throws a configuration error naming the missing component and the source file and line that wanted it

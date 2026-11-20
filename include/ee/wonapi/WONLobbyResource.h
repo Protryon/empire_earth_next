@@ -24,8 +24,6 @@ class Component;
 class ComponentConfig;
 class ResourceConfigTable;
 void WONGUIConfig_Init(ResourceConfigTable*); // at 0x0079a1a0
-void ImageConfig_Init(ResourceConfigTable*); // at 0x0078adf0
-void FontConfig_Init(ResourceConfigTable*); // at 0x0078a080
 class Font; // owned font results in resource readers; GUI definition follows this header
 class Background;
 class StringParser;

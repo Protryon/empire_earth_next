@@ -19,7 +19,6 @@
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONLobbyComponentListItem.h"
-#include "ee/wonapi/WONLobbyMSConfig.h"
 #include <algorithm>
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/barobj.h"
