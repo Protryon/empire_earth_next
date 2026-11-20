@@ -35195,3 +35195,103 @@ setters, the next pieces, were not started, below).
   font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
 - The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
 - Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
+
+## R6 WONLobby, round 27: the table setters that call a widget's Rust object in Rust (ee_won_gui cfgset.rs; branch rust-wonlobby27, 2026-11-20)
+
+Round 26 left the table reader's setters (include/ee/wonapi/WONCfgTable.inl: one case of the C++ host's apply per
+setter, `table << 8 | n`) as C++. Most were one call of an inline forward on the configured component under the
+config kind's type (`EE_C(Label)->SetTextColor(i[0])`, which is `ee_won_label_call(mRust, SetTextColor, c, 0, 0)`):
+the C++ only translated the frame's values into a Rust object's call. This round made those setters Rust.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c9969d833 | 122 setter cases as cfgset.rs's; the host frame's `arg` callback (+21); the splitter in the widget registry; goldens won_cfgset_test (new) and won_cfgtab_test (the port's trace hook) | -101 |
+| 98e97afd0 | the 66 inline forwards only those setters called, deleted (WONLobbyGUI.h, WONGUIShell.h, WONLobbySplitterConfig.h, WONLobbyTextAreaConfig.h) | -66 |
+| 7d6db13f8 | origin/rust (9e5b09552) merged: PORT_LEARNINGS only (rounds 25 and 26 appended to rust's file) | 0 |
+| dd057f14a | `rust_includes.py`'s module headers in tests/won/won_cfgset_fwd.h | 0 |
+| the docs commit | this section, the progress file | 0 |
+
+Round total: WON C++ 25,265 -> 25,098 (-167). Far short of the -1,500 aim: the setters were the largest piece the
+round could prove, and the rest of round 26's list (below) was not started.
+
+### cfgset.rs
+
+- `describe(setter, frame)` gives each moved setter twice: the method the original statement called with its
+  arguments as the statement's expressions had them (the name, a value and a display kind each: what the table
+  golden traces), and the forward's calls (the Rust function, the op, the arguments as the forward converted them).
+  The conversions are the C++'s: `(unsigned long)i[1]` then `(intptr_t)` is `i as c_ulong as isize` (zero-extended on
+  Windows, sign-extended on LP64), `SetPasswordChar(char)` narrows to the platform's `c_char`, `SetMinThumbSize` and the
+  WON button's `SetVertAlign` keep the low byte, `ListArea::SetListFlags` passes the int back; the optional arguments
+  follow the frame's counts (`ni > 1 ? i[1] : i[0]`, `nf > 0 ? f[0] : NULL`, `nc > 1 ? c[1] : NULL`).
+- `apply` makes the calls on the component's objects of the forwards' kinds, from the widget registry
+  (registry.rs; the splitter registers now, `EeWonGuiKind::Splitter`). A shell op on a component that is not a shell
+  does nothing, as `WONShell::Op` did; a forward whose object the registry does not hold is not made (the original
+  would have called through a garbage member). Pointer arguments to locals (the WON header's and list control's
+  column pairs, SetBorderPadding's four ints) are made when the call is.
+- cfgtab.rs's FFI host answers a setter through cfgset.rs first (`Ffi::apply`), the C++ apply for the rest; the
+  interpreter and its cargo replay are unchanged. The host gives the frame's values through a new `arg` callback
+  (`EeWonCfgArg`: an int, the counts, a string's address, units and length, a font, an image, a component, the
+  configured component); `ee_won_cfg_set_apply` and `ee_won_cfg_set_trace` (a hook that receives the description
+  instead of the calls) are for the drivers.
+- Kept in C++: the setters on C++ members (the wrapped texts' fonts, backgrounds, selection colours, the image
+  component's flags and image, the input box's icon and colours, the list's and text area's colours and fonts,
+  ImageButton's images), the virtual and out-of-line ones (Button::SetText, SetClickSound, Dialog::SetDefaultButton,
+  TextArea::AddSegment), the frame ops (a WONFrame), Component's own (KCall needs the C++ host function), the
+  containers', layouts', images' and the skin's.
+- cbindgen: an `Option<alias of an extern "C" fn>` parameter makes an unnamed `template<typename T = void> struct
+  Option;` that the header splitter cannot name ("cannot name the header item"); the parameter spells the fn type.
+
+### Tests and mutations
+
+- `won_cfgset_test` (new, the forward golden): the deleted cases (tests/won/won_cfgset_orig.h, copied by script from
+  the inl before the move) run over the game's own classes (WONLobbyGUI.h, WONGUIShell.h, the splitter and text area
+  headers) whose forwards' Rust calls are renamed to tracers by `#define` before the headers declare them; each class
+  is its own zeroed storage with its Rust-object members set to a marker per function, so a forward on the wrong
+  member is counted. The forwards the second commit deleted are kept as they were in subclasses of the game's classes
+  (tests/won/won_cfgset_fwd.h; the driver opens the private call helpers with `#define private public` and
+  `_ALLOW_KEYWORD_MACROS`). The shell lines run over a WONShell whose Op is the tracer. Against cfgset.rs's
+  descriptions (its trace hook): 122 setters x 2,000 random frames (ints at the byte, sign and range edges, 1-12 of
+  them, a font or none, one or two components, texts), 244,000 runs, 0 mismatching; the census over every table x
+  setters 0..63: cfgset.rs answers exactly the 122 deleted cases. Mutations (build/wl27_mutate.py): SetButtonFlags'
+  unsigned long, the WON button's low byte, a tab field, SetColumnWidth's constant: 4 of 4 caught.
+- `won_cfgtab_test` (the method level over its stand-in world): the port's trace hook traces each described setter
+  as the world traces the method (a shell op through the world's WONShell::Op from the call) and logs the reader's
+  apply event as before: 383,620 checks, 0 mismatches; `--print` gives golden_cfgtab.txt byte for byte the same.
+- cargo: cfgset_tests.rs (6: the conversions, the low bytes, the four-call paddings, the optional arguments, the
+  setters the host keeps, a real Label reached through the registry).
+
+### Behaviour changes
+
+- None intended. A moved setter on a component with no Rust object of the forward's kind (a stand-in or a wrong
+  type) is now not made, where the original called through the member at that offset.
+- A C++ exception from a host the Rust objects call back into during a moved setter would now unwind through Rust
+  (the setters' calls do not throw: none of the forwards' hosts raise a config exception).
+
+### What runs it
+
+- Every lobby screen's resource files (the tour, the LAN game, the lobby captures below); the goldens' worlds never
+  make the real objects' calls but cargo's registry test.
+
+### Gates (on the merged tree)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at both move commits and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| `rust_build.py header` | 285 headers current |
+| `rust_build.py gate` | PASS, 5,022 tests (the first run on the merged tree failed `ee_sim` `tech::capture_rec::tests::the_civ_manager_head`, a size that depends on which tables the crate's other tests loaded first: not this lane's; the rerun of the whole gate passed). At the first move's commit: PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 161 programs exit 0, peak 558 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12735` units [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2749 joiner=2751`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe) | every lobby capture identical (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's own frames differ. Both runs `RESULT PASS lan-game` (PT 2724/2724 this round, 2696/2695 the start exe) |
+
+### Left
+
+- The setters still on C++ members (above) follow once those members are the Rust objects'.
+- Round 26's list stands: the registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp) as Rust data with one C++ factory
+  switch (about -70), the lobby's control configs as kinds with cfgtab tables (about -120), FontConfig's,
+  ImageConfig's and the percent and colour-scheme configs' members in the Rust config, the hosts' image ops through
+  the registry, the widgets' remaining C++ members.
