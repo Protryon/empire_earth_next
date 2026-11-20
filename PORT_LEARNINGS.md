@@ -35548,17 +35548,20 @@ host the Rust objects already call, in the same order. The score is C++ logic li
 
 | Commit | What | Logic | Lines |
 |---|---|---|---|
-| 5d6c86c4b | the shells' event choices (evmap.rs: LobbyCtrlHost.cpp's 50-case CtlEventOf, the dialog's and popup's choices; `RawEvent` calls), DrawLobbyPing and nineteen control host cases (hostops.rs) | -189 | -179 |
-| d26bf2cb1 | StagingLogic's 10 and LanLogic's 13 host cases and LanLogic::HandlePeerAuthDone (lobbyops.rs; lanobj.rs `PeerAuthDone`); the op status, success and listen as netops.rs answers; hostops.rs gated on the bound core | -153 | -64 |
+| 5d6c86c4b | the shells' event choices (evmap.rs: LobbyCtrlHost.cpp's 50-case CtlEventOf, the dialog's and popup's choices; `RawEvent` calls), DrawLobbyPing and nineteen control host cases (hostops.rs) | -138 | -179 |
+| d26bf2cb1 | StagingLogic's 10 and LanLogic's 13 host cases and LanLogic::HandlePeerAuthDone (lobbyops.rs; lanobj.rs `PeerAuthDone`); the op status, success and listen as netops.rs answers; hostops.rs gated on the bound core | -152 | -64 |
 | 02d27a425 | EELobbyOpen, EELobbyShow, EELobbyHide, EELobbyClose, EELobbyShowGameScreen (eewindow.rs; eeglue calls `Open` .. `ShowGameScreen`); the glue host set at static initialisation | -103 | 0 |
 | 21a605358 | origin/rust (781d6cd0c) merged: PORT_LEARNINGS only (round 27 and 28 kept after batch 9's sections) | 0 | 0 |
 | b15912e85 | rust_includes.py's module headers in the new worlds (the hostops world's address clone renamed: ipobj.h's is global) | 0 | 0 |
 | bcea01d61 | won_lanmodel_test's stale take sink cleared (below) | 0 | 0 |
 | the docs commit | this section, the progress file | 0 | 0 |
 
-Round total (c01702f3f -> 02d27a425, the whole tree): logic 93,298 -> 92,853 (**-445**), lines 175,688 -> 175,445
-(-243), shim lines 15,483 -> 15,741 (+258). Far short of the -2,000 aim: the round moved what it could prove with a
-golden per piece; three stand-in worlds (below) were the cost.
+Round total (c01702f3f -> 02d27a425, the whole tree, logic_lines.py as it is at the round's end): logic 88,741 ->
+88,348 (**-393**), lines 175,688 -> 175,445 (-243), shim lines 20,040 -> 20,246 (+206). (The tool's first version,
+which counted a one-line `case X: stmt; return 0;` as logic, gave 93,298 -> 92,853, -445; the lead's update during the
+round counts it as a shim.) On the merged tree: origin/rust 88,364 -> 87,775 (-589: rounds 27, 28 and 29). Far short of
+the -2,000 aim: the round moved what it could prove with a golden per piece; four stand-in worlds (below) were the
+cost.
 
 Shims added: 145 one-statement host cases (LobbyNetCtrlHost.cpp 23, LobbyLogicHost.cpp 26, LanLogicHost.cpp 34,
 EELobbyGlueHost.cpp 62), LanLogicHost.cpp's one-statement `LanNewConnectOp` helper, the five window functions'
@@ -35581,9 +35584,9 @@ cases of CtlEventOf and the 33 multi-statement cases deleted were logic. Rust dr
   won_eewindow_world.h): the deleted code copied by script from the parent commit (the *_orig.h headers) and the
   hosts' new cases copied into the driver's host run over the same stand-ins, which log every call; the traces and
   the objects' state (texts, members, references) must be the same.
-- New void shims are written `case Op::X: statement;` with `return 0;` on the next line: the form logic_lines.py
-  counts as a shim. The one-line `case Op::X: statement; return 0;` (947 lines in the WON tree) counts as logic: a
-  quirk of the tool, not changed here (no existing case was reformatted).
+- New void shims are written `case Op::X: statement;` with `return 0;` on the next line (the form the tool's first
+  version counted as a shim; its update counts the one-line `statement; return 0;` too). No existing case was
+  reformatted.
 
 ### evmap.rs
 
@@ -35694,4 +35697,3 @@ was a stack coincidence). The driver now clears the pointer after each take (com
   completions as Rust completions.
 - The config readers (RoomLabelCtrlConfig, UserListCtrlConfig, ChatCtrlConfig, ServerListCtrlConfig,
   GameBrowserCtrlConfig, GameUserListCtrlConfig) as cfgtab kinds.
-- For the lead: 947 one-line `case X: stmt; return 0;` shims in the WON tree count as logic in logic_lines.py.
