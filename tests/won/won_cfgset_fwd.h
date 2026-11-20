@@ -1,3 +1,16 @@
+#include "rust/won_gui/barobj.h"
+#include "rust/won_gui/comboobj.h"
+#include "rust/won_gui/dialogobj.h"
+#include "rust/won_gui/inputobj.h"
+#include "rust/won_gui/labelobj.h"
+#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/msbtnobj.h"
+#include "rust/won_gui/multiobj.h"
+#include "rust/won_gui/splitobj.h"
+#include "rust/won_gui/tabobj.h"
+#include "rust/won_gui/textobj.h"
+#include "rust/won_gui/treeobj.h"
+#include "rust/won_gui/wonbtnobj.h"
 // The inline forwards the cfgset.rs move left without a caller in the game (R6 WONLobby round 27), as they were in
 // WONLobbyGUI.h, WONLobbyTextAreaConfig.h, WONGUIShell.h and WONLobbySplitterConfig.h at c9969d833, copied verbatim into
 // subclasses of the game's classes, for tests/won/won_cfgset_test.cpp (which opens the classes' private call helpers).
