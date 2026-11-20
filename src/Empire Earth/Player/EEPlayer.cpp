@@ -86,22 +86,6 @@
 // EEPhysics.cpp declares it; inferred)
 // (EESetCivBuilderButtonBlinking: ee/EmpireEarth.h)
 
-const UString EEPlayer::sClassObjectType("EEPlayer-ClassObjectType");
-const UString EEPlayer::sUnitIsComplex("EEPlayer-UnitIsComplex");
-const UString EEPlayer::sNumResources("EEPlayer-NumResources");
-const UString EEPlayer::sResource("EEPlayer-Resource");
-const UString EEPlayer::sPopLimit("EEPlayer-PopLimit");
-const UString EEPlayer::sPatrolGroups("EEPlayer-PatrolGroups");
-const UString EEPlayer::sHaveTechTree("EEPlayer-HaveTechTree");
-const UString EEPlayer::sDiplomaticStance("EEPlayer-DiplomaticStance");
-const UString EEPlayer::sStatistics("EEPlayer-Statistics");
-const UString EEPlayer::sPopulationCount("EEPlayer-PopulationCount");
-const UString EEPlayer::sEndOfGameCount("EEPlayer-EndOfGameCount");
-const UString EEPlayer::sObserverMode("EEPlayer-ObserverMode");
-const UString EEPlayer::sGeneric("EEPlayer-Generic");
-const UString EEPlayer::sSharedLOSFlag("EEPlayer-SharedLOSFlag");
-const UString EEPlayer::sSendChatMessage("EEPlayer-SendChatMessage");
-const UString EEPlayer::sSendChatMessageType("EEPlayer-SendChatMessageType");
 
 // Deletes each element of a vector of pointers, then clears it; returns the count (`mov eax, ebx` before ret)
 // (cdecl template COMDATs 0x16d269.. after the template tail, first used by the dtor) (provisional name)

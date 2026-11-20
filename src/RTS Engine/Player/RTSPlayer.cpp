@@ -12,12 +12,6 @@
 #include "ee/EEUnitHandle.h"
 #include "lle/NEMessageID.h"
 
-const UString RTSPlayer::sSaveVisMap("RTSPlayer-SaveVisMap");
-const UString RTSPlayer::sUniqueID("RTSPlayer-UniqueID");
-const UString RTSPlayer::sPlayerNumber("RTSPlayer-PlayerNumber");
-const UString RTSPlayer::sUnitCount("RTSPlayer-UnitCount");
-const UString RTSPlayer::sHashBucketLength("RTSPlayer-HashBucketLength");
-const UString RTSPlayer::sObserverMode("RTSPlayer-ObserverMode");
 
 // Creates an empty player with no units
 RTSPlayer::RTSPlayer()

@@ -34,7 +34,6 @@ EE_TECH_RECORD_SAME(mNextEpoch);
 EE_TECH_RECORD_SAME(mDefaultUnitClass);
 #undef EE_TECH_RECORD_SAME
 
-const UString EETechTreeEpoch::sEpochsCurrentSOL("EETechTreeEpoch-EpochsCurrentSOL");
 
 // Creates an empty epoch node (no techs counted toward it yet)
 EETechTreeEpoch::EETechTreeEpoch()

@@ -420,10 +420,6 @@ public:
     }
     EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther);
 
-    // the save key (EETechTreeEpoch.cpp's `$E` chain 0x1cdf25; guard byte 0x562dd8). Unguarded
-    // a class static only renumbers an includer's `$E` symbols
-    static const UString sEpochsCurrentSOL;
-
     std::map<long, EETechTreeNode*> mNodes; // +0x24 by id (0x18-byte nodes: _Init 0x617b6)
     std::vector<long> mLoadedUnitClasses;   // +0x30 unit classes whose media Virtual14 loaded (_Buy 0xe7d2e)
 };
@@ -496,17 +492,6 @@ public:
     // 0x267eaa: the epoch the statistics group shows (inline in the original's EEUIFMGGStatistics.h, the COMDAT after
     // its Select; defined in EEUIFMGMainGroup.cpp with the panel groups' host; provisional name)
     long GetShownEpoch() const;
-
-    // the save keys (EETechTree.cpp's `$E` chains 0x1cba2f..0x1cbc47; guard byte 0x562dc0). Unguarded
-    // a class static only renumbers an includer's `$E` symbols
-    static const UString sNumEpochs;        // "EETechTree-NumEpochs"
-    static const UString sNumTechIDs;       // "EETechTree-NumTechIDs"
-    static const UString sTechNodeID;       // "EETechTree-TechNodeID"
-    static const UString sNodeIsResearched; // "EETechTree-NodeIsResearched"
-    static const UString sNodeIsObsolete;   // "EETechTree-NodeIsObsolete"
-    static const UString sCurrentEpoch;     // "EETechTree-CurrentEpoch"
-    static const UString sStartEpoch;       // "EETechTree-StartEpoch"
-    static const UString sEndEpoch;         // "EETechTree-EndEpoch"
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
@@ -638,14 +623,6 @@ public:
     void KillUnit(RTSUnit* inUnit, bool inForce);  // 0x16f6ae (marks inUnit->mB28, pushes it)
     long SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x16f7b1 (Save's)
 
-    // the save keys (RTSPlayer.cpp's six `$E` chains; one guard byte 0x531f18; unguarded). Names from
-    // the keys (provisional names).
-    static const UString sSaveVisMap;       // "RTSPlayer-SaveVisMap"
-    static const UString sUniqueID;         // "RTSPlayer-UniqueID"
-    static const UString sPlayerNumber;     // "RTSPlayer-PlayerNumber"
-    static const UString sUnitCount;        // "RTSPlayer-UnitCount"
-    static const UString sHashBucketLength; // "RTSPlayer-HashBucketLength"
-    static const UString sObserverMode;     // "RTSPlayer-ObserverMode"
 
     // Layout (no gaps; sizeof 0x468): the ctor 0x16f12e (vectors, the name, the bucket loop of 0x80, two GEColors
     // of 1.0), its Reset 0x16f464 and Load/Save. Names are provisional unless stated.
@@ -696,25 +673,6 @@ public:
     virtual void AddUnit(RTSUnit* inUnit, bool inKeepID);
     virtual void UnitRemoved(RTSUnit* inUnit);  // +0x2c 0x164241 (a complex unit leaves: ClearGoalQueue per mGoalQueues item) (clears mPendingGroups, then RTSPlayer's)
     virtual void RemovingUnit(RTSUnit* inUnit);  // +0x38 0x168deb (an EEUnit leaves its tile; out of its region and the influence table while linked)
-    // The class static save keys (EEPlayer.cpp's init chains 0x161825..0x161c55; guard bytes 0x531e98 / 0x531e10;
-    // unguarded: a class static only renumbers an includer's `$E` symbols, never its bytes).
-    // Member names from the keys (provisional names).
-    static const UString sClassObjectType;      // "EEPlayer-ClassObjectType"
-    static const UString sUnitIsComplex;        // "EEPlayer-UnitIsComplex"
-    static const UString sNumResources;         // "EEPlayer-NumResources"
-    static const UString sResource;             // "EEPlayer-Resource"
-    static const UString sPopLimit;             // "EEPlayer-PopLimit"
-    static const UString sPatrolGroups;         // "EEPlayer-PatrolGroups"
-    static const UString sHaveTechTree;         // "EEPlayer-HaveTechTree"
-    static const UString sDiplomaticStance;     // "EEPlayer-DiplomaticStance"
-    static const UString sStatistics;           // "EEPlayer-Statistics"
-    static const UString sPopulationCount;      // "EEPlayer-PopulationCount"
-    static const UString sEndOfGameCount;       // "EEPlayer-EndOfGameCount"
-    static const UString sObserverMode;         // "EEPlayer-ObserverMode"
-    static const UString sGeneric;              // "EEPlayer-Generic"
-    static const UString sSharedLOSFlag;        // "EEPlayer-SharedLOSFlag"
-    static const UString sSendChatMessage;      // "EEPlayer-SendChatMessage"
-    static const UString sSendChatMessageType;  // "EEPlayer-SendChatMessageType"
 public:
     // +0x44 (EEMDisband: the unit's technology, its type, 0.75 of its hit-point fraction: a refund) (provisional name)
     virtual void RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction);

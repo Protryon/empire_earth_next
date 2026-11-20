@@ -28,14 +28,6 @@
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAEManager.h"
-const UString EETechTree::sNumEpochs("EETechTree-NumEpochs");
-const UString EETechTree::sNumTechIDs("EETechTree-NumTechIDs");
-const UString EETechTree::sTechNodeID("EETechTree-TechNodeID");
-const UString EETechTree::sNodeIsResearched("EETechTree-NodeIsResearched");
-const UString EETechTree::sNodeIsObsolete("EETechTree-NodeIsObsolete");
-const UString EETechTree::sCurrentEpoch("EETechTree-CurrentEpoch");
-const UString EETechTree::sStartEpoch("EETechTree-StartEpoch");
-const UString EETechTree::sEndEpoch("EETechTree-EndEpoch");
 
 // One media call of a node's media walk on the player's behalf (ee_sim tech node_media.rs EE_TECH_MEDIA_*)
 static void EETechMedia(EEPlayer* inPlayer, int32_t inWhat, int32_t inID, bool inLoad)

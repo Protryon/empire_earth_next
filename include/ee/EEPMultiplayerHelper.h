@@ -16,14 +16,6 @@ public:
     virtual FSPersistent* CreateDefault() const;                                // +0x14 0x14ae87
 
     // class static keys (guard byte 0x531ab8, bits 1..0x80)
-    static const UString sNemmMessageNumber;
-    static const UString sNescCt;
-    static const UString sNescPt;
-    static const UString sNescommCt;
-    static const UString sNescommLastTickRecvd;
-    static const UString sSNessLastCt;      // "EEPMultiplayerHelper-sNessLastCt" (sic)
-    static const UString sNessCt;
-    static const UString sNessPt;
 };
 
 #endif
