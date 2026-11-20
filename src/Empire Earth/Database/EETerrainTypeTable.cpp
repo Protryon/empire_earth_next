@@ -10,14 +10,12 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEDbRecords.h"
 
 // the lookup's classes (included after the table's init chain, as EETerrainTable.cpp does)
 #include "ee/EEUnit.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEGlobalConstants.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
 

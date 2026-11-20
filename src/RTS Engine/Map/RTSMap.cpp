@@ -10,18 +10,12 @@
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GE3DLine.h"
-#include "lle/U2DPoint.h"
-#include "lle/U2DRectangle.h"
-#include "lle/FSFile.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEGlobalConstants.h"
 #include "ee/EEAIKindIDs.h"
 #include "rust/render/ge.h"
 

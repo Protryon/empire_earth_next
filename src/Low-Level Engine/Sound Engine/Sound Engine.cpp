@@ -3,7 +3,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "GEWindow.h"
 #include "lle/SEMixer.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"

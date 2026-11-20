@@ -21,7 +21,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEDatabaseTables.h"

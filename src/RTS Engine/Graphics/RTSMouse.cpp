@@ -13,12 +13,7 @@
 #include "lle/GEScreen.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/FSFileSpec.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
 #include "lle/Input System.h"
-#include "lle/ISMouse.h"
-#include "lle/ISEntity.h"
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
