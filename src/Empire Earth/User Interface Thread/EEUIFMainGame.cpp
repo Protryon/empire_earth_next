@@ -78,7 +78,7 @@ void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity
 // EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h (Open passes mIsButtonBlinking)
 void EEPostGraphicsAll();                   // 0x10fc0c (Open) (provisional name)
 class EEMiniMap;
-EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; .bss between this unit's statics and EEUIFMGStatusBox's)
+extern EEMiniMap* gMiniMap;                 // 0x564888 (ee/EEMiniMap.h; stored in EEGlobals.cpp)
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
 extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
@@ -270,34 +270,7 @@ void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
     ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
 }
 
-// One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
-// picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
-struct EEUIFMGFormCall {
-    EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
-    EEUnit* mPicked;
-    UWideString mText;
-    const GEColor* mColor;
-    UWideString mName;
-    UWideString mChat;
-    unsigned long mFlags;
-    const EESMDialogMessage* mMessage;
-    EETechTreeNode* mNode;                  // the start modes' tech tree node, unit, caster, calamity
-    EEUnit* mUnit;
-    EEUnit* mCaster;
-    EECalamityClass* mCalamity;
-    EEMedia* mOldMedia;                     // UpdateBackgroundMedia's old and new media
-    EEMedia* mMedia;
-    EEComplexUnit* mFirst;                  // the mouse modes' first selected unit and pointed tile
-    EETile* mTile;
-    EEUIBuildWall* mWall;                   // the placement whose Update runs (the game form's or the editor's)
-    EEUIBuildGate* mGate;
-    EEUIFMGStatusButton* mButton;           // a command button's press, CopyData or help string (its result)
-    UWideString* mOut;
-    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
-        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
-          mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
-          mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
-};
+// (EEUIFMGFormCall, one call of the form's work in Rust: ee/EEUIFMainGame.h)
 static_assert(offsetof(EEUIFMGFormCall, mForm) == 0, "main_form_ffi.rs reads the form as the record's first word");
 static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mName) == 3 * sizeof(void*) + sizeof(UWideString) &&
@@ -306,39 +279,11 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
                   offsetof(EEUIFMGFormCall, mOut) == 16 * sizeof(void*) + 3 * sizeof(UWideString),
               "hud_direct.rs FormCallHead: the held text, the chat line's name and text, the button, the help");
 
-// Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
-// original's UpdateBackgroundMedia, ShowAllBackgrounds, SetPauseText, PauseInformation, ResumeInformation,
-// SetChatTop, HideAllBackgrounds, HideMessages, RefreshSavedGroups, UpdateIconBar: ee_screens main_form.rs)
-int64_t EEUIFMainGame::Rust(uint32_t inWhich, int64_t inA)
-{
-    EEUIFMGFormCall theCall(this);
-    return ee_screens_main_form_member(&theCall, inWhich, inA);
-}
-
-// A command button's member in Rust (EE_SCREENS_SB_DO_*: ButtonUp, MouseRButtonUp, CopyData, GetHelpString into
-// outString; ee_screens status_button.rs over this host)
-int64_t EEUIFMainGame::ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString)
-{
-    EEUIFMGFormCall theCall(this);
-    theCall.mButton = inButton;
-    theCall.mOut = outString;
-    return ee_screens_status_button_member(&theCall, inWhich);
-}
 
 // Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
 long EEUIFMainGame::UpdateKeyboard()
 {
     return (long)this->Rust(EE_SCREENS_MF_DO_KEYBOARD, this->mKeyboardModes[this->mUIState]);
-}
-
-void EEUIFMainGame::ShowAllBackgrounds()
-{
-    this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS);
-}
-
-void EEUIFMainGame::HideAllBackgrounds()
-{
-    this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS);
 }
 
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
@@ -392,17 +337,7 @@ void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& i
     ee_screens_main_form_chat_line(&theCall);
 }
 
-// Builds a gate at a location facing a direction
-void EEUIFMainGame::BuildGate(const GE2DPoint& inLocation, long inDirection)
-{
-    this->mBuild->BuildGate(inLocation, inDirection);
-}
-
-// Builds a wall between two points
-void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
-{
-    this->mBuild->BuildWall(inStart, inEnd);
-}
+// (BuildGate and BuildWall: the placements call the build action, ee/EEARust.h)
 
 
 // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
@@ -488,14 +423,6 @@ bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
 }
 
 // Stores an error log line for the next snapshot
-void EEUIFMainGame::SetErrorString(const UWideString& inText, unsigned long inIndex)
-{
-    this->mErrorCriticalSection->Enter();
-    this->mStrings[inIndex] = inText;
-    this->mStringsChanged = true;
-    this->mErrorCriticalSection->Leave();
-}
-
 // Opens the form: sound latency and volume, centred mouse, empty error log, the cancel-mode event, the
 // backgrounds and the civilization builder button's blinking
 void EEUIFMainGame::Open()
@@ -503,81 +430,12 @@ void EEUIFMainGame::Open()
     this->Rust(EE_SCREENS_MF_DO_OPEN);
 }
 
-// Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
-long EEUIFMainGame::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    long theResult = kErrorOK;
-
-    if (inMajorVersion > 1 || (inMajorVersion == kErrorOK && inMinorVersion >= 0xd2)) {
-        theResult = inFile.Read(this->mInfoBlinking);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mIsButtonBlinking);
-    }
-    return theResult;
-}
-
-// Writes the information and civilization builder blinking flags to the saved game
-long EEUIFMainGame::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    long theResult = outFile.Write(this->mInfoBlinking);
-
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsButtonBlinking);
-    return theResult;
-}
 
 
-// Starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
-// the chat log (ee_screens main_form.rs, as the other start modes)
-void EEUIFMainGame::BuildUnit(unsigned long inUnitID, long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
-}
-
-// Starts placing a gate for a tech (gate placement mode)
-void EEUIFMainGame::StartGate(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 0, inTechnology);
-}
-
-// Starts placing a wall for a tech (wall placement mode)
-void EEUIFMainGame::StartWall(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 1, inTechnology);
-}
-
-// Starts casting the calamity of a tech with the first selected unit: at once for self-targeted ones,
-// otherwise in calamity mode (with a volcano ghost for tech 0x3f9)
-void EEUIFMainGame::StartCalamity(long inTechnology)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 2, inTechnology);
-}
-
-
-// Enters flare mode when units are selected
-void EEUIFMainGame::StartFlare()
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 3, 0);
-}
-
-// Enters patrol mode when units are selected
-void EEUIFMainGame::StartPatrol()
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_start(&theCall, 4, 0);
-}
+// (BuildUnit and the start modes StartGate, StartWall, StartCalamity, StartFlare, StartPatrol: inline in
+// ee/EEUIFMainGame.h)
 
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
-void EEUIFMainGame::SetUIState(long inUIState)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_ui_state(&theCall, inUIState);
-}
 
 
 

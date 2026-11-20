@@ -498,7 +498,11 @@ static void QuickSaveSpec(FSFileSpec& outFile, const UString& inName)
 }
 
 // the trigger tab's object screen's UpdateSelection (Scenario Editor Actions/EESEARust.cpp)
-void EESEAObjectSelection();
+// the trigger tab's click and lasso refresh the object screen after their selection (it was EESEARust.cpp's)
+static void EESEAObjectSelection()
+{
+    gUIManager->GetScenarioEditorForm()->TriggerSubOp(kSETriggerScreenObject, EE_SCREENS_SEOB_UPDATE_SELECTION);
+}
 
 static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
 {

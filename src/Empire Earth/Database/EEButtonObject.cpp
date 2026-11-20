@@ -10,6 +10,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
+#include "lle/UIEntity.h"
+#include "lle/Input System.h"
+#include "lle/UIHotKey.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -210,4 +213,12 @@ long EEButtonObject::LoadMedia()
 long EEButtonObject::UnloadMedia()
 {
     return this->Release();
+}
+
+// Returns the button's hot key, or NULL (an inline COMDAT the original emitted in EEUIFMGMainGroup.cpp)
+UIHotKey* EEButtonObject::GetHotKey()
+{
+    if (this->mHotKeyIndex > 0 && this->mHotKeyIndex < (long)UIHotKey::GetHotKeyCount())
+        return UIHotKey::GetHotKey(this->mHotKeyIndex);
+    return NULL;
 }

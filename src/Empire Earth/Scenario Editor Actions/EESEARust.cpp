@@ -64,13 +64,8 @@
 #include "ee/EESEUICCommandUnits.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
-// The editor kinds' C++ (ee/EEARust.h): the trigger tab's click and lasso refresh the object screen after their
-// selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
-void EESEAObjectSelection()
-{
-    gUIManager->GetScenarioEditorForm()->TriggerSubOp(kSETriggerScreenObject,
-                                                                      EE_SCREENS_SEOB_UPDATE_SELECTION);
-}
+// The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object
+// screen refresh after a click's or lasso's selection is EEARust.cpp's host op EE_SCREENS_GA_E_OBJECT_SELECTION)
 
 void EESEAChangeLoadText::Post(const UWideString& inText)
 {

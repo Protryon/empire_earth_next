@@ -32,6 +32,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
+#include "ee/EEGameUI.h"
 #include "lle/GERenderState.h"
 #include "ee/EEAppCapture.h"
 
@@ -268,7 +269,7 @@ void EEMiniMap::SetMap(EEMap* inMap)
     this->mL1217C = (long)theTransforms.pixel_height;
     ee_app_minimap_set_map(this->mRust, &this->mMapToPixel.mMatrix[0][0], &this->mPixelToMap.mMatrix[0][0],
                            &this->mMapToCell.mMatrix[0][0], this->mL12178, this->mL1217C);
-    EEUIMiniMap::Update(this);
+    gEEGameUI.mMiniMapUpdate(this);   // EEUIMiniMap::Update (ee/EEGameUI.h)
     this->LockUnitLayer();
 }
 

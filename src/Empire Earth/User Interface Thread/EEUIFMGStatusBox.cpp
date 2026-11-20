@@ -48,7 +48,7 @@ static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
 static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);
 EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];
 // (the icon cells' table, 0x564890, is Rust's: ee_screens status_box.rs CELLS)
-bool sIconsLoaded;                                  // 0x5652ec; cross-TU flag, original name/ordinary-global ownership provisional
+extern bool sIconsLoaded;                           // 0x5652ec; cross-TU flag (stored in EEGlobals.cpp)
 
 // Creates the main panel's status box with no controls bound and no attributes shown
 EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm)
@@ -382,3 +382,9 @@ long EEUIFMGStatusBox::ReloadIcons()
 EEUIFMGStatusBox::~EEUIFMGStatusBox()
 {
 }
+
+// the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)
+#include "ee/EEGameUI.h"
+static const bool sIconsRegistered = (gEEGameUI.mLoadIcons = EEUIFMGStatusBox::LoadIcons,
+                                      gEEGameUI.mUnloadIcons = EEUIFMGStatusBox::UnloadIcons,
+                                      gEEGameUI.mReloadIcons = EEUIFMGStatusBox::ReloadIcons, true);

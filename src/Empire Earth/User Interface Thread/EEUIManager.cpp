@@ -444,3 +444,9 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     return 0;
 }
 
+// the manager's construction as the game's start makes it (Empire Earth.cpp: ee/EEGameUI.h)
+static const bool sManagerRegistered =
+    (gEEGameUI.mNewManager = [](GERasterizer* inRasterizer, unsigned long inNumberOfSurfaces, unsigned long inScreen,
+                                const UString& inUnused) { return new EEUIManager(inRasterizer, inNumberOfSurfaces,
+                                                                                  inScreen, inUnused); },
+     true);

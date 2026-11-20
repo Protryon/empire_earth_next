@@ -3,7 +3,9 @@
 // member names mThread/mThreadCreated/mThreadDone/mMessageQueueDone, the parameter inThreadPriority and
 // EESELoadThread::Main come from the ctor's ESVERIFY texts; everything else is named by offset (provisional name).
 // The editor holds it at EEUIFScenarioEditor +0x200. Posted messages 0x401..0x40c go to HandleMessage (0x17285c).
-// Requires lle/TSThread.h, lle/TSEvent.h, lle/TSScheduler.h (its EESEAChangeLoadText: ee/EEARust.h).
+// Requires lle/TSThread.h, lle/TSEvent.h, lle/TSScheduler.h (its EESEAChangeLoadText: ee/EEARust.h). The posts
+// are inline (one TSThread::Post each): out of line, the game's actions named the editor's load thread for three of
+// them (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3").
 #ifndef EE_EESELOADTHREAD_H
 #define EE_EESELOADTHREAD_H
 #include "ee/EEScenarioEditorIDs.h"
@@ -23,17 +25,31 @@ public:
     void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
 
     // the posting side (one TSThread::Post each; provisional names by message number)
-    void Post404();
-    void Post401();
-    void Post40B(UReferenceCounter* inObject);   // 0x1729e7 (references inObject)
-    void Post40C(UReferenceCounter* inObject);   // 0x172a04 (references inObject)
-    void Post408(void* inParameter);
-    void Post406(void* inParameter1, void* inParameter2);
-    void Post407(void* inParameter1, void* inParameter2);   // ICF-folded into 0x11aa6c (EEAResetAllPlayerInfo)
-    void Post403(void* inParameter, bool inFlag);
-    void Post402(void* inParameter1, void* inParameter2);
-    void Post405();
-    void Post409(void* inParameter);
+    void Post404() { this->mThread->Post(0x404, NULL, NULL, true); }   // start the scenario test and finish
+    void Post401() { this->mThread->Post(kThreadMessageQuit, NULL, NULL, true); }   // leave the editor and quit
+    void Post40B(UReferenceCounter* inObject)   // 0x1729e7: a UI event to post (keeps a reference)
+    {
+        inObject->Reference();
+        this->mThread->Post(0x40b, inObject, NULL, true);
+    }
+    void Post40C(UReferenceCounter* inObject)   // 0x172a04: a loaded object to display (keeps a reference)
+    {
+        inObject->Reference();
+        this->mThread->Post(0x40c, inObject, NULL, true);
+    }
+    // a terrain type's media to load
+    void Post408(void* inParameter) { this->mThread->Post(0x408, inParameter, NULL, true); }
+    // a player's epoch media to load
+    void Post406(void* inParameter1, void* inParameter2) { this->mThread->Post(0x406, inParameter1, inParameter2, true); }
+    // a player's start epoch to apply (ICF-folded into 0x11aa6c, EEAResetAllPlayerInfo, with RTSGraphics::PostSetRasterizer)
+    void Post407(void* inParameter1, void* inParameter2) { this->mThread->Post(0x407, inParameter1, inParameter2, true); }
+    // a player's tech tree to reload
+    void Post403(void* inParameter, bool inFlag) { this->mThread->Post(0x403, inParameter, (void*)inFlag, true); }
+    // a unit class's placement ghost to create for a player
+    void Post402(void* inParameter1, void* inParameter2) { this->mThread->Post(0x402, inParameter1, inParameter2, true); }
+    void Post405() { this->mThread->Post(0x405, NULL, NULL, true); }   // start the scenario test (second variant)
+    // a terrain type's media to unload
+    void Post409(void* inParameter) { this->mThread->Post(0x409, inParameter, NULL, true); }
 
     // the handlers (names inferred from the message numbers)
     void Handle406(unsigned long inPlayer, unsigned long inCount);

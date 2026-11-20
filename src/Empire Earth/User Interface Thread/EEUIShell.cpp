@@ -339,8 +339,6 @@ static GEText* EEShellText(UIControl* inControl, int64_t inWhich)
     return static_cast<UIEditBox*>(inControl)->GetGEText();
 }
 
-void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp);   // EESERBUnitTypes.cpp
-
 static EEUIFScenarioEditor* EEShellTriggers()
 {
     return gUIManager->GetScenarioEditorForm();
@@ -703,7 +701,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EESEAPaint*>(a)); break;
     case EE_SCREENS_SH_ACTION_RELEASE: reinterpret_cast<EESEAPaint*>(a)->Dereference(); break;
     // the scenario editor lane's (0xa0..): the diplomacy buttons' state, an action's post and release
-    case EE_SCREENS_SH_SE_DIPLOMACY: EESEDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
+    case EE_SCREENS_SH_SE_DIPLOMACY: gEEUIShellDiplomacyShow(static_cast<UIButton*>(c), (unsigned long)a, b != 0); break;
     case EE_SCREENS_SH_SE_ACTION_POST: gUserInterface->PostAction(reinterpret_cast<EEAction*>(a)); break;
     case EE_SCREENS_SH_SE_ACTION_RELEASE: reinterpret_cast<EEAction*>(a)->Dereference(); break;
     case EE_SCREENS_SH_BRUSH_HIGHLIGHT: gUIManager->GetScenarioEditorForm()->GetBrushGroup()->SetHighlight(f[0], f[1], a != 0); break;

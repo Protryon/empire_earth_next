@@ -41,6 +41,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
                        # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
+                       # the screen event class and its factory, a leaf (PORT_LEARNINGS "Cycle cuts, round 3")
+                       "Empire Earth/UI Events/EEScreenEvent.cpp",
                        # EESaveLoad.cpp's data path lookup, a leaf (PORT_LEARNINGS "Cycle cuts"; ee/EESaveGameFiles.h)
                        "Empire Earth/Persistent/EEOpenSaveGameFile.cpp",
                        # the continent manager's regions in a saved game (save version 0.263; ee/EESaveGameFiles.h)

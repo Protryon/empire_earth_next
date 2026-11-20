@@ -1,95 +1,104 @@
 # Lane: cycle cuts (the C++ dependency cycle)
 
-Lane state (one file per lane). Round 2: branch `rust-cuts2` (round 1: `rust-cuts1`, from `origin/rust` b3ab7ba2c
-plus `rust-cppdeps`, the census `tools/cpp_deps.py`). The measure: lines taken out of SCC 1, the biggest strongly
-connected component of the C++ units' graph (`python -I tools/cpp_deps.py report`, its `sccs.txt` and
-`summary.json`), after a full build.
+Lane state (one file per lane). Round 3: branch `rust-cuts3`, from the lead's staging tree e4e72b984 (cuts rounds 1-2,
+LLE 2, game leaves 2, UI 5; origin/rust 3449a04fd already in it). Round 1: `rust-cuts1`; round 2: `rust-cuts2`. The
+measure: SCC 1, the biggest strongly connected component of the C++ units' graph (`python -I tools/cpp_deps.py
+report`, its `sccs.txt` and `summary.json`), after a full build; this round also the UI units (User Interface
+Thread, UI Events) in SCC 1 and in any cycle.
+
+## Where it stands
+
+- **SCC 1: 164 units, 82,924 lines** (round 3 start: 197 units, 98,059 lines; round 1 start: 379 units, 133,985).
+- **No User Interface Thread or UI Events unit is in any cycle** but EEFOFindNewTargetNearOldTarget.cpp, which is the
+  unit utilities (2,856 lines of simulation code in the UI folder: EEGetUnitsNear, EECanStandOn, EEFindPlacement,
+  ...; every simulation unit calls it and it calls them), not UI. The round started with 21 of the 32 UI units in
+  SCC 1 and none outside a cycle. The scenario editor units that were in SCC 1 with them are out of it too:
+  EEUIFScenarioEditor, EESEUnit, EESERBUnitTypes, EEUIFSETerrain, EEUIFSETRBPaintType, EEUIFSEUpgradePanel,
+  EESETSTrigger, EESELoadThread and EESEARust in no cycle; EESEEvents and EESETSEffect in a 2-unit cycle of their own.
+- The census: 469 C++ units, 141,643 lines; leaves 56 (3,328 lines); near-leaves 120 (14,895); 10 cycles, 270 units,
+  99,138 lines (round 3 start: 9 cycles, 301 units, 113,265).
+- The UI units now ("no cycle": a node of the condensation's DAG, which moves whole once its C++ targets have hosts
+  or are Rust; targets = the C++ units it names):
+  - leaf: UI Events/EEScreenEvent.cpp (new this round, 47 lines);
+  - near-leaf: EEUIEWonNetStatsEvents (EEGlobals, UIForm, UIManager);
+  - 4 targets, all LLE UI or the game's globals: EEUICChatLine, EEUICWonNetRoomsBox, EEUICWonNetStatBox,
+    EEUIRustControl (UIControl, GEBitmap, UIForm/UIControlsTable, UILBString/UIFontTable or RTSMouse), EEUIBuildGate,
+    EEUIBuildWall (EEGlobals, EEPlayer, EEUnitClassBuildings or the tech tree, EEWorld);
+  - 5-15 targets: EEUIEScenarioIntroEvents 5, EEUIEWonNetServerSelectEvents 6, EEUICSelectUnits 6,
+    EEUICWonNetGamesBox 6, EEWonNetAvailableGameFormManager 6, EEUIFMGAttribute 6, EEUIEWonNetModifyUserAccountEvents
+    7, EEUICCommandUnits 8, EEUIEWonNetArenaRoomEvents 9, EEUIFMGStatusBar 9, EEUIBGenericBackground 10,
+    EEUIEWonNetArenaGameEvents 11, EEUIFError 11, EEUIMiniMap 12, EEUIFMGStatusBox 13, EEUICPortrait 14,
+    EEUIBUpgrade 15;
+  - the hubs: EEUIFMGMainGroup 21, EEUIFMGStatusButton 23, EEUIShell 33, EEUIManager 34, EEUserInterface 50,
+    EEUIFMainGame 55, EEScreens 72.
 
 ## The cuts
 
-See PORT_LEARNINGS "Cycle cuts" and "Cycle cuts, round 2" for the reasons. Each is its own commit; numbers are SCC 1's
-units and lines after it.
+Round 3 (this branch). Each is its own commit; build `--sim` 0/0 and the oracle at seeds 2-3 identical after each.
+"Layer" is `cpp_deps.py layer --focus 'User Interface Thread/,UI Events/,Scenario Editor/,Scenario Editor
+Actions/,!EEFOFind'`: the edges from the rest of SCC 1 into the UI and editor units, and their distinct symbols.
+Lines changed: src and include.
 
-Round 1 (branch `rust-cuts1`):
+| cut | commit | what | lines | SCC 1 after | UI in SCC 1 | layer edges / symbols |
+|---|---|---|---|---|---|---|
+| (base) | e4e72b984 | | | 197, 98,059 | 21 | |
+| 26 | 592b383fc | gMiniMap, gU56534C, sIconsLoaded stored in EEGlobals.cpp (16 units named EEUIFMainGame.cpp only for gMiniMap) | +9 -3 | 197, 98,059 | 21 | 52 / 66 |
+| 27 | 448ea7e88 | EEScreenEvent, EECreateScreenEvent, the grab scroll's events in a leaf unit (UI Events/EEScreenEvent.cpp, units.EXTRA_UNITS) | +48 -33 | 197, 98,028 | 21 | 47 / 65 |
+| 28 | 7ebd189cd | the chat log's entry points (EEUIECLEFormManager) inline over the Rust log | +23 -24 | 197, 98,012 | 21 | 45 / 62 |
+| 29 | 05fb7ccad | EEUIFMainGame's Load, Save, SetUIState, SetErrorString, the backgrounds and Rust inline; EEUIFMGFormCall in ee/EEUIFMainGame.h | +82 -90 | 197, 97,931 | 21 | 39 / 56 |
+| 30 | 16a7165a8 | EESMDialogMessage's Load and Save in EEScenarioManager.cpp with its constructors (they were the editor's paint type tab's) | +53 -51 | 194, 96,736 | 21 | 37 / 54 |
+| 31 | 8ee3d7dd9 | the game's actions name no editor unit: EESELoadThread's posts inline, EESEAObjectSelection in EEARust.cpp, its one caller | +36 -87 | 194, 96,613 | 21 | 35 / 50 |
+| (census) | dae1142ca | cpp_deps: a template instance belongs to its class's home only where the home defines that instance | tool | 191, 95,864 | 20 | 33 / 22 |
+| 32 | dc5c8d49f | EEUserInterface's posts the game makes (PostEvent, ShowLoadedObject, PostDialogMessage, AddChatLogEntry x2), ResumeGraphics and HandleEvent inline; EEPumpWindowEvent and EENativeMessageHook in Empire Earth.cpp, which installs them | +110 -116 | 191, 95,864 | 20 | 16 / 15 |
+| 33 | f4687cd61, 492edd59b | EEWonNetAvailableGameFormManager.cpp's game helpers (EEOrderAtCursor, EEMakeCalamityEffect, EEGetFirstSelectedUnit, EEPointUnitOrTile(XY), EEExitGame) in EEGameUtilities.cpp; the test profile's harness hook follows EEPointUnitOrTile | +117 -96 | 191, 95,885 | 20 | 13 / 10 |
+| 34 | b30f48d7b | the game's UI table (ee/EEGameUI.h, storage in EEGlobals.cpp); the message box (EEUIFErrorDisplay) through it | +59 -7 | 190, 95,660 | 19 | 6 / 9 |
+| 35 | 1f162b6f6 | the command buttons (ShowCommands), the status box's icons, the mini map's media and update and the UI manager's construction through the table | +42 -17 | **164, 82,913** | **1** | 0 / 0 |
+| 36 | ff891341a | EEUserInterface::PostScreenShot inline | +9 -12 | 164, 82,913 | 1 | the UI's own cycle (13 units, 9,160 lines) splits into 2 + 3 + 5 units |
+| 37 | 29d389e20 | gMultiplayerString stored in EEGlobals.cpp, constructed in EEScreens.cpp | +8 -2 | 164, 82,913 | 1 | EEScreens and EEUserInterface out of every cycle |
+| 38 | 63076beaf | EEUIFMainGame's ButtonCall, BuildUnit and start modes inline; the gate and wall placements call the build action | +38 -79 | 164, 82,913 | 1 | EEUIFMainGame, EEUIBuildGate, EEUIBuildWall out |
+| 39 | 31f17c0d2 | the editor's diplomacy button state through a pointer EESERBUnitTypes.cpp sets (gEEUIShellDiplomacyShow, ee/EEUIShell.h) | +7 -3 | 164, 82,913 | 1 | EEUIShell, EESERBUnitTypes, EESEUnit out |
+| 40 | 0d384f309 | EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey in their classes' units | +26 -16 | 164, 82,924 | 1 | EEUIFMGStatusButton, EEUIFMGMainGroup out: no UI cycle left |
 
-| cut | what | SCC 1 after |
-|---|---|---|
-| (base) | origin/rust b3ab7ba2c | 379 units, 133,985 lines |
-| 1 | `gEmptyWideString` in a data-only WONGUI unit (`WONGUI/GUIEmptyWideString.cpp`) | 267, 122,971 |
-| 2 | Empire Earth.cpp's globals in `EEGlobals.cpp`: the objects only storage (`ee/EEGlobalStorage.h`), constructed in Empire Earth.cpp where they were | 248, 120,016 |
-| 3 | EECPEngineHelpers a leaf: `EEUnit::GetTechTreeNode` to EETechTree.cpp, `EEComplexUnit::GetMaxVelocity` to EEActiveGroup.cpp | 246, 119,730 |
-| 4 | ee_sim's effect interface (`ee_sim::world::effects`), ee_render's implementation (`gfx/sim_effects.rs`) registered by `ee_rust_init` | (no C++ change) |
-| 5 | WinMain names no test-driver symbol: `ee_sim_driver_start` / `ee_fixture_start` directly, EESimPreferences in Empire Earth.cpp, `gEETestFixtureConfigure` set by EETestFixture.cpp | 239, 113,529 |
-| 6 | the physics' TEST ONLY hooks (`gPhysicsAfterTickHook`, ...) in EEGlobals.cpp | 237, 113,119 |
-| 7 | EEUnitStore's captures compute the player index themselves | (with 8) |
-| 8 | `gEERenderCaptureFill`: the renderer calls RFIL through a hook | 235, 112,046 |
-| 9 | EEUnitClass.cpp's globals (gUnitClassTable, sUnitTypes, the heights) stored in EEGlobals.cpp | (with 10) |
-| 10 | `gSeplScreenFont` in EEGlobals.cpp | 229, 111,335 |
+Round 3 in all: 33 units and 15,135 lines out of SCC 1; every UI unit out of every cycle; +853 -650 lines in src,
+include and tools. Also: `cpp_deps.py cuts --focus`, `why`, `layer`, `--of` (19635a0e2, 3ce700885, 61552cb39) and
+the census fix dae1142ca (3 of the 33 units: EEUIEWonNetServerSelectEvents, EEUIFSETerrain, EECBUIListBox were in
+SCC 1 only through a false edge).
 
-Round 2 (branch `rust-cuts2`, from origin/rust 7779d7db1 + rust-cuts1 27cebd6c5: SCC 1 230 units, 109,421 lines):
-
-| cut | commit | what | lines changed | SCC 1 after |
-|---|---|---|---|---|
-| 11 | f1b11b923 | EEWonNet's six UI calls through `ee/EEWonNetUI.h`, a table EEUIEWonNetArenaRoomEvents.cpp fills at static initialization (storage in EEGlobals.cpp); its own `""` for gEmptyString | +80 -29 | 226, 107,107 (-2,314) |
-| 12 | a0521c0f7 | EEScenarioCapture: the 15 functions the game calls are header hook pointers (`inline R (*N)(...) = nullptr;`), set by the capture unit before main | +68 -37 | 225, 106,514 (-593) |
-| 13 | 1b4264903 | EERenderListsView (the renderer's view of the render lists) moved from EERenderCapture.cpp to EEROUnits.cpp | +77 -70 | 224, 106,374 (-140) |
-| 14 | df4ffd66c | EEMessageCapture hooks (3) | +14 -6 | 223, 106,045 (-329) |
-| 15 | 3eb36c0ae | EECivCapture hooks (4) | +19 -10 | 222, 105,748 (-297) |
-| 16 | 18090b59a | EEAECapture hook (1) | +8 -2 | 221, 105,555 (-193) |
-| 17 | 4bdfe4761 | gEmptyString in EEGlobals.cpp (was the renderer's EEROUnits.cpp; 21 units name it) | +4 -3 | 221, 105,552 (-3; needed by 18) |
-| 18 | ab406d597 | EEOpenSaveGameFile in a leaf unit of its own (`Persistent/EEOpenSaveGameFile.cpp`, units.EXTRA_UNITS) | +21 -7 | 218, 104,814 (-738) |
-| 19 | 8088ac505 | EEWheel's constructors, destructor and EEIsWheelModel in EEGraphicObject.cpp, which makes the wheels (Update stays in EEWheel.cpp) | +32 -28 | 215, 104,252 (-562) |
-| 20 | 5592b54d4 | EECalamityCapture hooks (2) | +12 -4 | 215, 104,258 (+6; needed by 21) |
-| 21 | 40cffaef6 | EETechCapture hooks (27; default arguments through inline forwarders over `NHook`; EECalamityCanCastScope inline over three hooks) | +137 -68 | 213, 103,041 (-1,217) |
-| 22 | f67dc5abc | EEAppCaptureWorld hooks (10; EEAppMapScope inline over two hooks) | +57 -32 | 212, 102,595 (-446) |
-| 23 | 8377ce9e7 | EEGameLogOn/Tick/Line/Chat, one-line forwarders to ee_game_log, inline in ee/EEGameLog.h | +11 -8 | 210, 102,260 (-335) |
-| 24 | 9729f0bb0 | EECPNextAI / EECPNextSetAI in EECPEngine.cpp, their one caller | +20 -13 | 209, 101,841 (-419) |
-| 25 | 58166cf4b | EECombatGoals calls `ee_units_cls_base_condition` directly (EEUnitClass::BaseEvaluateCondition is its one-line forwarder) | +5 -1 | 208, 101,447 (-394) |
-
-Round 2 in all: 22 units and 7,974 lines out of SCC 1. Also in the round: `tools/cpp_deps.py cuts` (7f316b38c) and
-the fix of the Rust gate's `fs::golden_spec_replays` flake (51c6b499f).
-
-On the tree merged with origin/rust 645799684 (whose own changes move SCC 1 too): 521 C++ units, 149,764 lines; SCC 1
-199 units, 98,529 lines; leaves 66 (3,878 lines), near-leaves 132 (14,615).
-
-Gates on the merged tree (2ca079a6d): build `--sim` 0/0 and the test profile 0/0; the oracle at seeds 2-7 identical;
-the Rust gate PASS (4,881 tests); sim_capture oracle (212 digests), late (214) and app (26) at seeds 2-3 PASS;
-scenario_check 27/27; sim_editor PASS (14,448 lines); `gates.sh` GATES PASS (tour; ai-game time-cap, units
-[4, 39, 40], alive [2, 3], classic_lua x 2; lan-game). Per cut: build `--sim` 0/0 and the oracle at seeds 2-3; on the
-first stack (cuts 11-19) also the tour, the Rust gate and the oracle, scenario and app captures.
+Rounds 1-2 (PORT_LEARNINGS "Cycle cuts" and "Cycle cuts, round 2"): cuts 1-10 took SCC 1 from 379 units, 133,985
+lines to 229, 111,335 (gEmptyWideString's data unit, Empire Earth.cpp's globals in EEGlobals.cpp under
+ee/EEGlobalStorage.h, WinMain off the test drivers, the physics' and render capture's test hooks, EEUnitClass's
+data); cuts 11-25 from 230, 109,421 to 208, 101,447 (EEWonNet's UI through gEEWonNetUI, the TEST ONLY captures behind
+header hook pointers, misplaced functions moved to their one caller or class, one-line Rust forwarders inline).
 
 ## What to cut next
 
-From `tools/cpp_deps.py cuts` after cut 25 (SCC 1: 208 units, 101,447 lines). The cheap kinds (a global's storage,
-a TEST ONLY hook, a one-line forwarder, a helper in the wrong unit) are mostly used up; what is left ranks as real
-calls:
-
-- EECalamityClass -> EECalamityUpdate (1,292) and EEAIAStarView::Callbacks (1,238): one implementation split over
-  units, not cuts (round 1).
-- New on the merged tree: EEUIShell.cpp -> EESERBUnitTypes.cpp, `EESEDiplomacyShow` (877 lines, one symbol): the
-  shells' op dispatch (`EE_SCREENS_SH_SE_DIPLOMACY`) calls the editor's diplomacy button. A handler the editor unit
-  registers would cut it; it is the scenario editor lane's code of this round, so it is left to that lane or the
-  next round. EEUIFSETerrain -> 2 units (749): its shell calls and the load thread's posts.
-- EECalamityManager -> 4 units (705): the manager constructs calamities and units (EECalamity::EECalamity,
-  EECalamityClass::EECalamityClass, EEUnitClass::CreateUnitAt). A factory registration would hide a real call.
-- RTSPlayer -> 2 units (485): EESavePrimitive, RTSRegisterUnit, RTSUnit's list. The save primitives
-  (EESavePrimitive) are named from several units: a leaf unit for them may be the next cheap cut.
-- EEWonNetAvailableGameFormManager -> 2 units (456): the unit is the WON form's manager plus free UI helpers (map
-  picks, screenshots); splitting the helpers out is a unit split, not an edge.
-- EESEInstructions (413), EEUIFMGStatusBox (385), EEUIMiniMap (376), EEUnitClassUpgrade (372), EEMiniMap (371):
-  units whose few out-edges are real calls into the units and UI.
-- The WON lobby (LobbyLifecycle's globals 327, gLobbyData 269, LobbyModelHost 337, InitLogic 318): left to the WON
-  lanes, which are moving those classes to Rust.
-- EESightCapture: the capture unit also defines EESightScope, the game's sight bookkeeping: a move, not a hook.
+- **For the UI lane: nothing left in SCC 1.** The UI units sit above SCC 1 and move bottom-up: the near-leaves and
+  the 4-target units first (their targets are LLE UI controls and a few game globals), the hubs (EEScreens,
+  EEUIFMainGame, EEUserInterface) last.
+- **EEFOFindNewTargetNearOldTarget.cpp** (the unit utilities) is the simulation's, not the UI's: the units lanes'.
+- **EESEEvents <-> EESETSEffect** (a 2-unit editor cycle, 1,008 lines) and EESEIAExport <-> EESEInstructions: the
+  scenario editor lane's.
+- **SCC 1's own cheap cuts** (`cpp_deps.py cuts` after cut 40) are what rounds 1-2 listed: EECalamityClass ->
+  EECalamityUpdate and EEAIAStarView's callbacks (one implementation split over units, not cuts), EECalamityManager's
+  constructions, RTSPlayer's save primitives, EEARust's home of EEGroup/EETile/EEUnitClass members (EEARust.cpp
+  defines EEGroup::GetFirstUnit, EETile::IsVisibleTo and EEUnitClass::IsTransport/IsDropSite/IsAirBase, which 20
+  simulation units call), the WON lobby's globals (the WON lanes').
+- The UI table (ee/EEGameUI.h) is the place for any further UI entry the game calls: add a field, fill it in the
+  UI unit's static initializer, call it from the game. `cpp_deps.py layer --focus 'User Interface Thread/,UI
+  Events/,!EEFOFind'` lists any new edge from the game into the UI.
 
 ## Tools of the lane
 
 - `tools/cpp_deps.py report [--code-only]`, `unit FILE`.
-- `tools/cpp_deps.py cuts [--max-weight N] [--top N]` (round 2): the what-if over SCC 1, ranked by the lines SCC 1
-  would lose: one edge, one symbol (every edge it alone makes), a unit's globals, a unit's out-edges; each classed
-  `data`, `hook`, `vtable` or `call` by its symbols. Writes `cuts.txt` and `cuts.json` under `--out`. It reads the
-  objects: run it after a build, never during one. It weighs single cuts: a cut that pays only with another (17 with
-  18, 20 with 21) shows up after the first is made, or in a scratch what-if over `edges.tsv` with both removed.
+- `cuts [--max-weight N] [--top N] [--focus P,...] [--of FILE]` (rounds 2-3): the what-if over SCC 1 (or, with
+  `--of`, over the cycle holding FILE), ranked by the lines it would lose; with `--focus` (unit name substrings,
+  `!` to exclude) first by the focus units a cut frees, keeping only those. Classes `data`, `hook`, `vtable`, `call`.
+- `why FILE [--focus ...]` (round 3): why a unit is in SCC 1: its shortest cycle with each edge's symbols, and the
+  units of SCC 1 naming it (outside the focus).
+- `layer --focus ... [--of FILE]` (round 3): the focus units as a layer above the rest of SCC 1: every edge into it
+  by symbol (the back edges to cut) and SCC 1 with all of them cut. It was this round's plan: its first run listed
+  the symbols of cuts 26-35.
+- All read the objects: run them after a build, never during one.
 
 ## The effect interface (cut 4)
 
