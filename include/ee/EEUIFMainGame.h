@@ -1,7 +1,10 @@
 // C:\EEX\Empire Earth\User Interface Thread\EEUIFMainGame.h (RECONSTRUCTION; file name inferred). The in-game
 // form (RTTI EEUIFMainGame > UIForm; vtable 0x44aa10, 20 slots = UIForm's; EEUIFMainGame.cpp 0x26272b..0x26783d). Its
 // controls are reached by index through UIForm::GetControl. Layout from the ctor 0x262e73 / dtor 0x2647e1.
-// Exactly two array members (each array member costs every includer a `$E` number). Requires lle/UIForm.h.
+// Exactly two array members (each array member costs every includer a `$E` number). Requires lle/UIForm.h. The members
+// the rest of the game calls (the saved game's state, the interface state, the error strings, the backgrounds) are
+// inline over the Rust form: out of line they put the game's messages, server, scenario manager, renderer and saves
+// in one dependency cycle with the form (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts, round 3").
 #ifndef EE_EEUIFMAINGAME_H
 #define EE_EEUIFMAINGAME_H
 
@@ -23,7 +26,43 @@ class EEUnit;
 class UIBackground;
 class TMPoll;
 class TSCriticalSection;
+class EEUIFMainGame;
+class EESMDialogMessage;
+class EETechTreeNode;
+class EECalamityClass;
+class EEMedia;
+class EEComplexUnit;
+class EETile;
 #include "rust/game/screens.h"   // EeScreensMainFormFields, EeScreensMainFormIo
+
+// One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
+// picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
+struct EEUIFMGFormCall {
+    EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
+    EEUnit* mPicked;
+    UWideString mText;
+    const GEColor* mColor;
+    UWideString mName;
+    UWideString mChat;
+    unsigned long mFlags;
+    const EESMDialogMessage* mMessage;
+    EETechTreeNode* mNode;                  // the start modes' tech tree node, unit, caster, calamity
+    EEUnit* mUnit;
+    EEUnit* mCaster;
+    EECalamityClass* mCalamity;
+    EEMedia* mOldMedia;                     // UpdateBackgroundMedia's old and new media
+    EEMedia* mMedia;
+    EEComplexUnit* mFirst;                  // the mouse modes' first selected unit and pointed tile
+    EETile* mTile;
+    EEUIBuildWall* mWall;                   // the placement whose Update runs (the game form's or the editor's)
+    EEUIBuildGate* mGate;
+    EEUIFMGStatusButton* mButton;           // a command button's press, CopyData or help string (its result)
+    UWideString* mOut;
+    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
+        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
+          mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
+          mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
+};
 
 
 // the plain members (+0x520 mKeyboardModes .. +0x5f3 mIsButtonBlinking: the modes of each interface state, the state,
@@ -45,10 +84,34 @@ public:
 
     // the saved game's main-form state (EEPWorldHelper's Load 0x14c39b / Save 0x14c525 call them; provisional
     // names)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+    {
+        long theResult = kErrorOK;
 
-    void SetUIState(long inUIState);        // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
+        if (inMajorVersion > 1 || (inMajorVersion == kErrorOK && inMinorVersion >= 0xd2)) {
+            theResult = inFile.Read(this->mInfoBlinking);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(this->mIsButtonBlinking);
+        }
+        return theResult;
+    }
+    // Writes the information and civilization builder blinking flags to the saved game
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+    {
+        long theResult = outFile.Write(this->mInfoBlinking);
+
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(this->mIsButtonBlinking);
+        return theResult;
+    }
+
+    // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
+    void SetUIState(long inUIState)
+    {
+        EEUIFMGFormCall theCall(this);
+        ee_screens_main_form_ui_state(&theCall, inUIState);
+    }
     // 0x264b1f / 0x264b35: the build action (+0x514, EEABuild) BuildGate / BuildWall
     // (EEUIBuildGate/EEUIBuildWall::Build; provisional names)
     void BuildGate(const GE2DPoint& inLocation, long inDirection);
@@ -62,7 +125,13 @@ public:
                      unsigned long inFlags, unsigned long inArg5);
     void SetEntityGroup(long inGroup);
     bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
-    void SetErrorString(const UWideString& inText, unsigned long inIndex);   // 0x265ff6 (mStrings, mStringsChanged)
+    void SetErrorString(const UWideString& inText, unsigned long inIndex)   // 0x265ff6 (mStrings, mStringsChanged)
+    {
+        this->mErrorCriticalSection->Enter();
+        this->mStrings[inIndex] = inText;
+        this->mStringsChanged = true;
+        this->mErrorCriticalSection->Leave();
+    }
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
     void BuildUnit(unsigned long inUnitID, long inTechnology);  // 0x266384 (the build mode for a unit's technology)
     void StartGate(long inTechnology);      // 0x2664b4 (state 0xb)
@@ -77,11 +146,15 @@ public:
     // UpdateBackgroundMedia 0x264b4b, SetPauseText 0x26572f, PauseInformation 0x2662d7,
     // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,
     // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
-    int64_t Rust(uint32_t inWhich, int64_t inA = 0);
+    int64_t Rust(uint32_t inWhich, int64_t inA = 0)
+    {
+        EEUIFMGFormCall theCall(this);
+        return ee_screens_main_form_member(&theCall, inWhich, inA);
+    }
     // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
     int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL);
-    void ShowAllBackgrounds();              // 0x26568e (EERenderObject's; Rust's whole)
-    void HideAllBackgrounds();
+    void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
+    void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
     // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
     // ShowInformation); a member for UIForm's protected GetMouseCaptured and CopyData
     static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo);
