@@ -240,73 +240,7 @@ void EESELoadThread::Handle403(unsigned long inPlayer, bool inFlag)
     gWorld.mLock->WriteUnlock();
 }
 
-// Asks the loading thread to start the scenario test and finish
-void EESELoadThread::Post404()
-{
-    this->mThread->Post(0x404, NULL, NULL, true);
-}
-
-// Asks the loading thread to leave the scenario editor and quit
-void EESELoadThread::Post401()
-{
-    this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-}
-
-// Hands a UI event to the loading thread for posting (keeps a reference)
-void EESELoadThread::Post40B(UReferenceCounter* inObject)
-{
-    inObject->Reference();
-    this->mThread->Post(0x40b, inObject, NULL, true);
-}
-
-// Hands a loaded object to the loading thread for display (keeps a reference)
-void EESELoadThread::Post40C(UReferenceCounter* inObject)
-{
-    inObject->Reference();
-    this->mThread->Post(0x40c, inObject, NULL, true);
-}
-
-// Asks the loading thread to load a terrain type's media
-void EESELoadThread::Post408(void* inParameter)
-{
-    this->mThread->Post(0x408, inParameter, NULL, true);
-}
-
-// Asks the loading thread to load a player's epoch media
-void EESELoadThread::Post406(void* inParameter1, void* inParameter2)
-{
-    this->mThread->Post(0x406, inParameter1, inParameter2, true);
-}
-
-// Asks the loading thread to apply a player's start epoch (folded with RTSGraphics::PostSetRasterizer in the original)
-void EESELoadThread::Post407(void* inParameter1, void* inParameter2)
-{
-    this->mThread->Post(0x407, inParameter1, inParameter2, true);
-}
-
-// Asks the loading thread to reload a player's tech tree
-void EESELoadThread::Post403(void* inParameter, bool inFlag)
-{
-    this->mThread->Post(0x403, inParameter, (void*)inFlag, true);
-}
-
-// Asks the loading thread to create a unit class's placement ghost for a player
-void EESELoadThread::Post402(void* inParameter1, void* inParameter2)
-{
-    this->mThread->Post(0x402, inParameter1, inParameter2, true);
-}
-
-// Asks the loading thread to start the scenario test (second variant) and finish
-void EESELoadThread::Post405()
-{
-    this->mThread->Post(0x405, NULL, NULL, true);
-}
-
-// Asks the loading thread to unload a terrain type's media
-void EESELoadThread::Post409(void* inParameter)
-{
-    this->mThread->Post(0x409, inParameter, NULL, true);
-}
+// (the posts are inline: ee/EESELoadThread.h)
 
 // Unloads a player's unit media and the first n epochs' technology media
 void EESELoadThread::Handle407(unsigned long inPlayer, unsigned long inCount)
