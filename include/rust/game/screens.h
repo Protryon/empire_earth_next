@@ -9942,6 +9942,50 @@ constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
 /// `kResourceGold` (`mResourceCaps`' index).
 constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
 
+/// `kFormMainGame` (the form `CreateForm` makes as the game's class).
+constexpr static const uint32_t EE_SCREENS_UMC_FORM_MAIN_GAME = 11;
+
+/// `kControlEventWNSCancel` (WON's server select form's cancel).
+constexpr static const uint32_t EE_SCREENS_UMC_WNS_CANCEL = 106;
+
+/// `kBackgroundGeneric` (the background table's type the game makes).
+constexpr static const uint32_t EE_SCREENS_UMC_BACKGROUND_GENERIC = 101;
+
+/// The game's control types (`kDbControl*`, `CreateUserDefinedControl`'s cases).
+constexpr static const uint32_t EE_SCREENS_UMC_STATUS_BUTTON = 1000;
+
+constexpr static const uint32_t EE_SCREENS_UMC_MINI_MAP = 1001;
+
+constexpr static const uint32_t EE_SCREENS_UMC_ERROR_LOG = 1003;
+
+constexpr static const uint32_t EE_SCREENS_UMC_ATTRIBUTE = 1005;
+
+constexpr static const uint32_t EE_SCREENS_UMC_MAIN_GAME_STATUS_BAR = 1006;
+
+constexpr static const uint32_t EE_SCREENS_UMC_SELECT_UNITS = 1007;
+
+constexpr static const uint32_t EE_SCREENS_UMC_COMMAND_UNITS = 1008;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PORTRAIT = 1009;
+
+constexpr static const uint32_t EE_SCREENS_UMC_CHAT_LINE = 1010;
+
+constexpr static const uint32_t EE_SCREENS_UMC_CB_LIST_BOX = 1011;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_STAT_BOX = 1013;
+
+constexpr static const uint32_t EE_SCREENS_UMC_UNIT_ICON_BAR = 1014;
+
+constexpr static const uint32_t EE_SCREENS_UMC_SAVED_GROUP = 1015;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PGS_LINE_GRAPH = 1016;
+
+constexpr static const uint32_t EE_SCREENS_UMC_PING = 1017;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_ROOMS_BOX = 1018;
+
+constexpr static const uint32_t EE_SCREENS_UMC_WON_GAMES_BOX = 1019;
+
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
 
@@ -13340,6 +13384,68 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+/// `EEUIFMGStatusBox::UnloadIcons`.
+void ee_screens_sb_unload_icons();
+
+/// `EEUIFMGStatusBox::ReloadIcons`: the first error.
+int64_t ee_screens_sb_reload_icons();
+
+/// `EEUIFMGStatusButton`'s constructor's body (`rectangle` the `GERectangle*`, `table` the
+/// `UIControlsTable*`).
+void ee_screens_sbt_construct(size_t button, size_t manager, size_t rectangle, size_t table);
+
+/// `~EEUIFMGStatusButton`'s body.
+void ee_screens_sbt_destroy(size_t button);
+
+/// `EEUIFMGStatusButton::ReleaseButton`.
+void ee_screens_sbt_release(size_t button);
+
+/// `EEUIFMGStatusButton::DrawPolygons`.
+int64_t ee_screens_sbt_draw_polygons(size_t button);
+
+/// `EEUIFMGStatusButton::DrawTextA`.
+int64_t ee_screens_sbt_draw_text(size_t button);
+
+/// `EEUIFMGStatusButton::HotKeyUp`.
+void ee_screens_sbt_hot_key_up(size_t button);
+
+/// `EEUIFMGStatusButton::SetCommandButton`.
+void ee_screens_sbt_set_command(size_t button, uint32_t index);
+
+/// `EEUIFMGStatusButton::SetTechButton`.
+void ee_screens_sbt_set_tech(size_t button, int64_t technology, uint32_t kind, uint32_t id);
+
+/// `EEUIFMGStatusButton::SetLocation`.
+void ee_screens_sbt_set_location(size_t button, float x, float y);
+
+/// `EEUIManager::Fn26FA6A` (`set`) / `Fn26FA55`.
+void ee_screens_sbt_main_group_refill(bool set);
+
+/// `EECreateGameEvent(form, id)`: the event (a `UIEvent*`) or 0.
+size_t ee_screens_um_game_event(size_t form, uint32_t id);
+
+/// `EECreateFormEvent(manager, id)`.
+size_t ee_screens_um_form_event(uint32_t id);
+
+/// `EECreateWonNetServerSelectEvent(form, id)`.
+size_t ee_screens_um_wns_event(uint32_t id);
+
+/// `EEUIManager::CreateScenarioEditor` (`manager` the `EEUIManager*`).
+void ee_screens_um_create_editor(size_t manager);
+
+/// `EEUIManager::DeleteScenarioEditor`.
+void ee_screens_um_delete_editor(size_t manager);
+
+/// `EEUIManager::CreateForm` (`data` the `UIDbDataForms*`): the form (a `UIForm*`).
+size_t ee_screens_um_create_form(size_t manager, size_t data);
+
+/// `EEUIManager::CreateUserDefinedBackground` (`table` the `UIBackgroundTable*`): a `UIBackground*` or 0.
+size_t ee_screens_um_create_background(size_t manager,
+                                       size_t table);
+
+/// `EEUIManager::CreateUserDefinedControl` (`table` the `UIControlsTable*`): a `UIControl*` or 0.
+size_t ee_screens_um_create_control(size_t manager, size_t table);
 
 /// `EEUserInterface::ChangeRasterizer`.
 void ee_screens_ui_change_rasterizer(long rasterizer, long screen);

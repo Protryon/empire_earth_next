@@ -35,8 +35,7 @@ public:
     // 0x564ed8: the 50 loaded icons, a class static (its atexit dtor is guarded: bit of 0x564ed0)
     // (provisional name)
     static EEUIFMGIconBitmap sIconBitmaps[50];
-    // ee_screens status_box.rs's host (a member: the status bar's SetIconBitmap is protected, the box its friend)
-    static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
+    // (the host of ee_screens status_box.rs is Rust over EEUIFMGStatusBox.cpp's shims: status_box_calls.rs)
     UIControl* GetBoxControl(int64_t inControl) const;  // an EE_SCREENS_BOX_CTL_*
     // inline (EEUIFMGMainGroup::Open loads the label first: the arguments are evaluated right to left)
     void SetControls(long inIndex, UIControl* inIcon, UIControl* inLabel)
