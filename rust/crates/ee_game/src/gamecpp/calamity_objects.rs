@@ -9,6 +9,17 @@
 //!
 //! The capture records (CALT, CALW, CALS, CALU, CALK, CCAS, CONT) are written by the calls the C++ made, in its order.
 
+// the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64), literals, products and
+// loops, kept as written
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::neg_multiply,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
 // the C++'s own tests, kept as written
 #![allow(clippy::neg_cmp_op_on_partial_ord, clippy::bool_comparison)]
 
@@ -17,7 +28,9 @@ use std::ffi::{c_long, c_ulong, c_void, CString};
 use ee_base::math::types::Ge3DPoint;
 use ee_base::math::um::{floor, um_cos};
 use ee_sim::tech::calamity_cast::{EeCalamityCast, EeCalamityCastMode};
-use ee_sim::tech::calamity_class::{self as cc, EeCalamityClassFields, EeCalamityClassMedia, EeCalamityData, EeCalamityReset};
+use ee_sim::tech::calamity_class::{
+    self as cc, EeCalamityClassFields, EeCalamityClassMedia, EeCalamityData, EeCalamityReset,
+};
 use ee_sim::tech::calamity_record::EeCalamityFields;
 use ee_sim::tech::calamity_update::{EeCalamityCall, EeCalamityOp, EeCalamityReply, EeCalamityState};
 use ee_sim::tech::contagion_functor::{self as cf, EeContagionFunctorFields};
@@ -150,7 +163,12 @@ fn puts(file: P, text: &str) {
 /// `EECalamity(class, caster)` (`with_class`) and `EECalamity()`: no units or sounds, Reset; the class, the caster
 /// (referenced), the class's media for the caster's player (nature without a caster).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_construct(c: *mut c_void, kl: *mut c_void, caster_unit: *mut c_void, with_class: bool) {
+pub extern "C" fn ee_gamecpp_calamity_construct(
+    c: *mut c_void,
+    kl: *mut c_void,
+    caster_unit: *mut c_void,
+    with_class: bool,
+) {
     let c = c as P;
     h(O::CalSetTargetRaw, c, &[0]);
     h(O::CalSetCasterRaw, c, &[0]);
@@ -405,11 +423,12 @@ pub extern "C" fn ee_gamecpp_calamity_load_classes(m: *mut c_void, file: *mut c_
             let size = std::mem::size_of::<EeCalamityData>() as i64;
             result = h(O::FileReadBytes, file, &[ptr(&mut data), size, ptr(&mut read)]) as c_long;
             // the class of the record's kind (none for kinds 1, 2, 5, 6, 11, 12, unknown ones or a negative id)
-            let kl = if data.mID >= 0 && cc::ee_calamity_class_target_kind(data.mClassEnum) != cc::EE_CALAMITY_TARGET_NONE {
-                hp(O::KlNew, 0, &[])
-            } else {
-                0
-            };
+            let kl =
+                if data.mID >= 0 && cc::ee_calamity_class_target_kind(data.mClassEnum) != cc::EE_CALAMITY_TARGET_NONE {
+                    hp(O::KlNew, 0, &[])
+                } else {
+                    0
+                };
             if kl != 0 {
                 h(O::KlInitialize, kl, &[ptr(&mut data)]);
             }
@@ -449,10 +468,32 @@ fn capture_active() -> bool {
     ee_sim::app::capture::ee_app_capture_active()
 }
 
-fn capture_cast(kind: i64, class_enum: c_ulong, caster_id: c_ulong, target_id: c_ulong, x: c_long, y: c_long, player: c_ulong, ok: bool) {
+fn capture_cast(
+    kind: i64,
+    class_enum: c_ulong,
+    caster_id: c_ulong,
+    target_id: c_ulong,
+    x: c_long,
+    y: c_long,
+    player: c_ulong,
+    ok: bool,
+) {
     if capture_active() {
         // TEST ONLY (ee/EETechCapture.h)
-        h(O::CapCast, 0, &[kind, class_enum as i64, caster_id as i64, target_id as i64, x as i64, y as i64, player as i64, ok as i64]);
+        h(
+            O::CapCast,
+            0,
+            &[
+                kind,
+                class_enum as i64,
+                caster_id as i64,
+                target_id as i64,
+                x as i64,
+                y as i64,
+                player as i64,
+                ok as i64,
+            ],
+        );
     }
 }
 
@@ -536,7 +577,12 @@ pub extern "C" fn ee_gamecpp_calamity_dump_all(m: *mut c_void, file: *mut c_void
 /// # Safety
 /// `out` valid.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_calamity_index(m: *mut c_void, object: *mut c_void, in_classes: bool, out: *mut c_long) -> bool {
+pub unsafe extern "C" fn ee_gamecpp_calamity_index(
+    m: *mut c_void,
+    object: *mut c_void,
+    in_classes: bool,
+    out: *mut c_long,
+) -> bool {
     let m = m as P;
     let n = if in_classes { classes(m) as usize } else { active(m) };
     for i in 0..n {
@@ -583,7 +629,16 @@ pub extern "C" fn ee_gamecpp_calamity_checksum(c: *mut c_void) -> c_long {
     let at = target_location(c);
     let tile = *tile_placeholder(c);
     // SAFETY: the calamity's live record
-    unsafe { ee_sim::tech::calamity_record::ee_calamity_record_checksum(rec(O::CalFields, c), at.x, at.y, at.z, tile[0], tile[1]) }
+    unsafe {
+        ee_sim::tech::calamity_record::ee_calamity_record_checksum(
+            rec(O::CalFields, c),
+            at.x,
+            at.y,
+            at.z,
+            tile[0],
+            tile[1],
+        )
+    }
 }
 
 /// `IsCalamityActive`: a calamity of the class is active.
@@ -704,7 +759,12 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
 /// `EECreateCalamityUnit`: a unit of the class at the transformation for the player (-1: the calamity's); NULL if
 /// the class does not exist.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_create_unit(c: *mut c_void, unit_class_index: c_long, t: *mut c_void, player: c_long) -> *mut c_void {
+pub extern "C" fn ee_gamecpp_calamity_create_unit(
+    c: *mut c_void,
+    unit_class_index: c_long,
+    t: *mut c_void,
+    player: c_long,
+) -> *mut c_void {
     let mut number = cal(c as P).mPlayerNumber as c_long;
     if player != -1 {
         number = player;
@@ -836,7 +896,14 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_initialize(kl: *mut c_void, d
     let d = unsafe { *data };
     // SAFETY: the class's live record
     unsafe { cc::ee_calamity_class_initialize_base(rec(O::KlFields, kl), &d) };
-    let ids = [d.mGraphicEffectID1, d.mGraphicEffectID2, d.mGraphicEffectID3, d.mGraphicEffectID4, d.mSoundID, d.mSecondarySoundID];
+    let ids = [
+        d.mGraphicEffectID1,
+        d.mGraphicEffectID2,
+        d.mGraphicEffectID3,
+        d.mGraphicEffectID4,
+        d.mSoundID,
+        d.mSecondarySoundID,
+    ];
     let setters = [O::KlSetEffect1, O::KlSetEffect2, O::KlSetEffect3, O::KlSetEffect4];
     for (i, &id) in ids.iter().enumerate() {
         if !cc::ee_calamity_class_fetches(cc::ee_calamity_class_get_mode(d.mClassEnum, i as u32), id) {
@@ -945,7 +1012,13 @@ fn wmax(a: f32, b: f32) -> f32 {
 /// `UpdateSound`: the calamity's main or secondary sound for its target location with the falloff; a volume other
 /// than -1 replaces the computed one (clamped to 0..1).
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_class_update_sound(c: *mut c_void, sound: *mut c_void, volume: f32, falloff: f32, primary: bool) {
+pub extern "C" fn ee_gamecpp_calamity_class_update_sound(
+    c: *mut c_void,
+    sound: *mut c_void,
+    volume: f32,
+    falloff: f32,
+    primary: bool,
+) {
     let (c, sound) = (c as P, sound as P);
     let at = target_location(c);
     let node = hp(if primary { O::CalSound } else { O::CalSecondary }, c, &[]);
@@ -978,7 +1051,12 @@ pub extern "C" fn ee_gamecpp_calamity_class_play_sound(kl: *mut c_void, c: *mut 
     } else if mode == cc::EE_CALAMITY_PLAY_AT_TARGET {
         let at = target_location(c);
         let (mut vol, mut pan, mut pitch) = (0f32, 0f32, 0f32);
-        hf(O::SoCalamityParams, 0, &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)], &[hd(O::SoVolume, sound, &[], &[])]);
+        hf(
+            O::SoCalamityParams,
+            0,
+            &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)],
+            &[hd(O::SoVolume, sound, &[], &[])],
+        );
         hf(O::SoPlayOnce, sound, &[], &[vol, pan, pitch]);
     }
 }
@@ -1010,7 +1088,11 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_can_cast(
     };
     let scope = hp(O::CanCastScopeNew, 0, &[]); // CCAS (TEST ONLY)
     let result = can_cast_at(kl, mode, cx as P, x, y, check, target_unit as P);
-    let recorded = h(O::CanCastScopeRecord, scope, &[pa(kl), cx as i64, at as i64, x as i64, y as i64, check as i64, target_unit as i64, result as i64]);
+    let recorded = h(
+        O::CanCastScopeRecord,
+        scope,
+        &[pa(kl), cx as i64, at as i64, x as i64, y as i64, check as i64, target_unit as i64, result as i64],
+    );
     h(O::CanCastScopeDelete, scope, &[]);
     recorded as c_long
 }
@@ -1018,18 +1100,28 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_can_cast(
 /// `IsValidLocation` of a location class: the shared rule over the class's radius, water flag, map area, space
 /// terrain and placed unit class.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_class_valid_location(kl: *mut c_void, cx: *mut c_void, x: c_ulong, y: c_ulong) -> bool {
+pub extern "C" fn ee_gamecpp_calamity_class_valid_location(
+    kl: *mut c_void,
+    cx: *mut c_void,
+    x: c_ulong,
+    y: c_ulong,
+) -> bool {
     let kl = kl as P;
     let mut cast = cast_of(kl, cx as P, x, y);
     // SAFETY: the class's live record; our cast
-    let unit_class_index = unsafe { cc::ee_calamity_class_cast_fields(rec(O::KlFields, kl), &mut cast, CAL_O_TERRAIN_SPACE) };
+    let unit_class_index =
+        unsafe { cc::ee_calamity_class_cast_fields(rec(O::KlFields, kl), &mut cast, CAL_O_TERRAIN_SPACE) };
     valid_location(kl, &cast, cx as P, unit_class_index)
 }
 
 /// `IsValidTarget` of a unit class: the fire's and the plague's functor decides (CanInfect), the others' the shared
 /// rule.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_calamity_class_valid_target(kl: *mut c_void, cx: *mut c_void, target_unit: *mut c_void) -> bool {
+pub extern "C" fn ee_gamecpp_calamity_class_valid_target(
+    kl: *mut c_void,
+    cx: *mut c_void,
+    target_unit: *mut c_void,
+) -> bool {
     let kl = kl as P;
     if cc::ee_calamity_class_targets_by_functor(klass(kl).mClassEnum as i32) {
         return h(O::FnCanInfect, hp(O::KlFunctor, kl, &[]), &[target_unit as i64]) != 0;
@@ -1043,7 +1135,11 @@ pub extern "C" fn ee_gamecpp_calamity_class_valid_target(kl: *mut c_void, cx: *m
 /// # Safety
 /// `center` and `out` are three floats each.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_calamity_class_random_location(kl: *mut c_void, center: *const [f32; 3], out: *mut [f32; 3]) {
+pub unsafe extern "C" fn ee_gamecpp_calamity_class_random_location(
+    kl: *mut c_void,
+    center: *const [f32; 3],
+    out: *mut [f32; 3],
+) {
     let kl = kl as P;
     // SAFETY: the caller's contract
     let (center, o) = unsafe { (*center, *out) };
@@ -1080,7 +1176,14 @@ pub extern "C" fn ee_gamecpp_calamity_class_place(kl: *mut c_void, u: *mut c_voi
         return;
     }
     let class = hp(O::UcAt, 0, &[klass(kl).mUnitClassIndex as i64]);
-    ee_sim::units::uu_ffi::ee_units_uu_step_aside(0, class as u64, unit_player(u as P) as u64, x as c_long as i32, y as c_long as i32, 1);
+    ee_sim::units::uu_ffi::ee_units_uu_step_aside(
+        0,
+        class as u64,
+        unit_player(u as P) as u64,
+        x as c_long as i32,
+        y as c_long as i32,
+        1,
+    );
 }
 
 // ---- the contagion functors
@@ -1154,7 +1257,11 @@ pub extern "C" fn ee_gamecpp_functor_infect(fu: *mut c_void, u: *mut c_void, c: 
         }
         cc::EE_CALAMITY_FUNCTOR_LEPROSY | cc::EE_CALAMITY_FUNCTOR_PLAGUE => {
             // the unit class's leprosy or plague effect; the plague keeps the unit from being deleted
-            let e = hp(if kind == cc::EE_CALAMITY_FUNCTOR_LEPROSY { O::UcLeprosyEffect } else { O::UcPlagueEffect }, unit_class(u), &[]);
+            let e = hp(
+                if kind == cc::EE_CALAMITY_FUNCTOR_LEPROSY { O::UcLeprosyEffect } else { O::UcPlagueEffect },
+                unit_class(u),
+                &[],
+            );
             if e != 0 {
                 h(O::EffUnit, u, &[pa(e), 0, 0, 0, 0]);
             }
@@ -1187,7 +1294,8 @@ pub extern "C" fn ee_gamecpp_functor_infect(fu: *mut c_void, u: *mut c_void, c: 
                     return;
                 }
             }
-            let e = hp(if functor(fu).mFlag { O::UcPulseCannonEffect } else { O::UcBattleCryEffect }, unit_class(u), &[]);
+            let e =
+                hp(if functor(fu).mFlag { O::UcPulseCannonEffect } else { O::UcBattleCryEffect }, unit_class(u), &[]);
             if e != 0 {
                 h(O::EffUnit, u, &[pa(e), 0, 0, 0, 0]);
             }
@@ -1362,7 +1470,12 @@ const UNIT_TYPE_HURRICANE: c_ulong = 0xb6;
 const UNIT_TYPE_ANTI_MATTER_STORM: c_ulong = 0x294;
 const UNIT_TYPE_RADIO_MAN: c_ulong = 0x2ef;
 
-unsafe extern "C" fn cast_call(ctx: *mut c_void, _: *mut EeCalamityState, call: *const EeCalamityCall, reply: *mut EeCalamityReply) {
+unsafe extern "C" fn cast_call(
+    ctx: *mut c_void,
+    _: *mut EeCalamityState,
+    call: *const EeCalamityCall,
+    reply: *mut EeCalamityReply,
+) {
     // SAFETY: the run's host (ours) and the caller's call and reply
     let (host, c) = unsafe { (&mut *(ctx as *mut CastHost), *call) };
     let mut r = EeCalamityReply::default();
@@ -1375,9 +1488,14 @@ unsafe extern "C" fn cast_call(ctx: *mut c_void, _: *mut EeCalamityState, call: 
         C::WorldHandle => r.key = hp(O::WorldAddr, 0, &[]) as u64,
         C::CasterPlayerIndex => {
             let world = hp(O::WorldAddr, 0, &[]);
-            r.value = crate::gamecpp::world::ee_gamecpp_world_player_index(world as *mut c_void, unit_player(unit) as *mut c_void) as i32;
+            r.value = crate::gamecpp::world::ee_gamecpp_world_player_index(
+                world as *mut c_void,
+                unit_player(unit) as *mut c_void,
+            ) as i32;
         }
-        C::TileVisible => r.ok = h(O::TileVisibleTo, hp(O::MapTile, 0, &[x as i64, y as i64]), &[pa(unit_player(unit))]) != 0,
+        C::TileVisible => {
+            r.ok = h(O::TileVisibleTo, hp(O::MapTile, 0, &[x as i64, y as i64]), &[pa(unit_player(unit))]) != 0
+        }
         C::AreaEffect => r.ok = h(O::AeHas2, 0, &[3, x as i64, y as i64, c.value as i64]) != 0,
         C::TargetLookup => {
             let id: c_ulong = if host.target_unit != 0 { rts(host.target_unit).mUnitID } else { !0 };
@@ -1411,7 +1529,11 @@ unsafe extern "C" fn cast_call(ctx: *mut c_void, _: *mut EeCalamityState, call: 
         C::TileUnblocked => {
             let player = if unit != 0 { unit_player(unit) } else { hp(O::WorldPlayer, 0, &[0]) };
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
-            r.ok = ee_sim::units::uu_ffi::ee_units_uu_is_tile_unblocked(player as u64, host.unit_class_index as i32, tile as u64) != 0;
+            r.ok = ee_sim::units::uu_ffi::ee_units_uu_is_tile_unblocked(
+                player as u64,
+                host.unit_class_index as i32,
+                tile as u64,
+            ) != 0;
         }
         C::CasterIsRadioMan => r.ok = ucf(unit_class(unit)).mUnitType == UNIT_TYPE_RADIO_MAN,
         C::TileFree => r.ok = h(O::TileFree, 0, &[x as i64, y as i64]) != 0,

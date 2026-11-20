@@ -3,6 +3,18 @@
 //! contagion manager's save, load and checksums. Reads the world (through EEGameOps.cpp's cases); writes nothing to
 //! it but the copies it loads and deletes.
 
+// the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64), literals, products and
+// loops, kept as written
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::neg_multiply,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
+
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::{Ge3DPoint, GeRectangle};
@@ -303,7 +315,12 @@ fn file_bytes(r: &mut Record, file: P) {
 fn loaded_state(r: &mut Record, k: P) {
     // SAFETY: the calamity's GERectangle and GE3DPoint members, its record
     let (rect, at, shake, f) = unsafe {
-        (*rec::<GeRectangle>(O::CalRect, k), *rec::<Ge3DPoint>(O::CalTargetLoc, k), *rec::<Ge3DPoint>(O::CalShakeLoc, k), *rec::<EeCalamityFields>(O::CalFields, k))
+        (
+            *rec::<GeRectangle>(O::CalRect, k),
+            *rec::<Ge3DPoint>(O::CalTargetLoc, k),
+            *rec::<Ge3DPoint>(O::CalShakeLoc, k),
+            *rec::<EeCalamityFields>(O::CalFields, k),
+        )
     };
     for v in [rect.left, rect.top, rect.right, rect.bottom, at.x, at.y, at.z, shake.x, shake.y, shake.z] {
         r.f32(v);
@@ -417,7 +434,8 @@ pub extern "C" fn ee_gamecpp_capture_contagion_save() {
             let helper_file = hp(O::MemFileNewDefault, 0, &[]);
             r.i32(cs::ee_contagion_helper_save(cs::ee_contagion_manager_at(m, 0), helper_file as u64) as i32);
             h(O::MemFileRewind, helper_file, &[]);
-            let mut old = EeContagionHelperFields { mHelperID: 0, mTimeSinceLastSpread: 0.0, mTimeSinceLastUpdate: 0.0 };
+            let mut old =
+                EeContagionHelperFields { mHelperID: 0, mTimeSinceLastSpread: 0.0, mTimeSinceLastUpdate: 0.0 };
             let mut old_ids = 0usize;
             r.i32(cs::ee_contagion_helper_load_probe(helper_file as u64, 0, 0xe6, &mut old, &mut old_ids) as i32);
             r.i32(old.mHelperID as i32);
@@ -599,7 +617,17 @@ pub extern "C" fn ee_gamecpp_capture_can_cast_leave() {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn can_cast_record(kind: i32, kl: P, cx: P, at: Ge3DPoint, x: c_ulong, y: c_ulong, check: bool, target: P, result: c_long) {
+fn can_cast_record(
+    kind: i32,
+    kl: P,
+    cx: P,
+    at: Ge3DPoint,
+    x: c_ulong,
+    y: c_ulong,
+    check: bool,
+    target: P,
+    result: c_long,
+) {
     let mut r = Record::default();
     r.i32(kind);
     r.i32(klass(kl).mClassEnum as i32);
@@ -701,7 +729,8 @@ pub extern "C" fn ee_gamecpp_capture_calamity_sweep() {
                     let at = Ge3DPoint::new(x as c_long as f32 + 0.5, y as c_long as f32 + 0.5, 0.0);
                     let unit = hp(O::UnComplex, caster, &[]);
                     let cast = |unit: P, check: bool, target: P| {
-                        h(O::KlCanCastAt, kl, &[pa(unit), cptr(&at), x as i64, y as i64, check as i64, pa(target)]) as c_long
+                        h(O::KlCanCastAt, kl, &[pa(unit), cptr(&at), x as i64, y as i64, check as i64, pa(target)])
+                            as c_long
                     };
                     let result = cast(unit, true, target);
                     can_cast_record(1, kl, unit, at, x, y, true, target, result);
@@ -922,7 +951,8 @@ pub extern "C" fn ee_gamecpp_capture_cast_calamities(call: c_long) {
                 continue;
             }
             // SAFETY: the live player's record
-            let player = unsafe { (*rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID };
+            let player =
+                unsafe { (*rec::<ee_sim::world::player_fields::EeUnitsRtsPlayerFields>(O::PlRts, pl)).mPlayerID };
             let cid = unit_id(caster) as c_ulong;
             let create = super::calamity_objects::ee_gamecpp_calamity_create;
             if kind == 3 {

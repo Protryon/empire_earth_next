@@ -11,6 +11,18 @@
 //!
 //! Every C++ call that writes a capture record is made from Rust in the order the C++ made it.
 
+// the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64), literals, products and
+// loops, kept as written
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::neg_multiply,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
+
 pub mod calamity;
 pub mod calamity_capture;
 pub mod calamity_objects;

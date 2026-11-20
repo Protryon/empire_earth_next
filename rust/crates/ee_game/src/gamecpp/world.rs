@@ -6,6 +6,17 @@
 //!
 //! The order of every call is the C++'s: the sight scope of the revealed map (TSGT), the load progress, the locks.
 
+// the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64), literals, products and
+// loops, kept as written
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::neg_multiply,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
 // the C++'s own tests, kept as written
 #![allow(clippy::neg_cmp_op_on_partial_ord, clippy::bool_comparison, clippy::nonminimal_bool)]
 
@@ -350,7 +361,13 @@ pub extern "C" fn ee_gamecpp_world_sight_all(w: *mut c_void, on: bool) {
 /// EEWorld::ReplacePlayer: a human player copied from the player by a save and load replaces it; the old player's
 /// units killed, its alliances, pending units and media moved to the copy.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_world_replace_player(w: *mut c_void, index: c_ulong, major: c_ulong, minor: c_ulong, m: *mut c_void) {
+pub extern "C" fn ee_gamecpp_world_replace_player(
+    w: *mut c_void,
+    index: c_ulong,
+    major: c_ulong,
+    minor: c_ulong,
+    m: *mut c_void,
+) {
     let w = w as P;
     let file = hp(O::MemFileNew, 0, &[1000, 1, 1]);
     let old = player(w, index);
@@ -559,7 +576,7 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void
         }
         h(O::PlSetAllResources, pl, &[999999]);
         h(O::WSetPlayer, w, &[i as i64, pa(pl)]);
-        if media_loaded(w) || i <= 0 {
+        if media_loaded(w) || i == 0 {
             i += 1;
             continue;
         }
@@ -985,9 +1002,8 @@ pub extern "C" fn ee_gamecpp_world_unload_media(w: *mut c_void) {
 /// when it is already paused.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_pause(pause: bool) -> c_long {
-    let running = h(O::CommIsServer, 0, &[]) != 0
-        && h(O::CommCTsProcessed, 0, &[]) > 0
-        && h(O::CommIsMultiplayer, 0, &[]) == 0;
+    let running =
+        h(O::CommIsServer, 0, &[]) != 0 && h(O::CommCTsProcessed, 0, &[]) > 0 && h(O::CommIsMultiplayer, 0, &[]) == 0;
     if !running {
         return 0;
     }
@@ -1050,7 +1066,9 @@ pub extern "C" fn ee_gamecpp_world_queue_born() {
     let waiting: Vec<P> = (0..n).map(|i| hp(O::UnbornAt, 0, &[i])).collect();
     h(O::UnbornClear, 0, &[]);
     for cx in waiting {
-        if rts(cx).mUnitID as u32 == u32::MAX || !ee_sim::app::active_ffi::ee_app_active_deactivate(rts(cx).mUnitID as u32) {
+        if rts(cx).mUnitID as u32 == u32::MAX
+            || !ee_sim::app::active_ffi::ee_app_active_deactivate(rts(cx).mUnitID as u32)
+        {
             h(O::RefUnitDereference, cx, &[]); // (queued: the reference DeactivateUnit took goes with it)
         }
     }

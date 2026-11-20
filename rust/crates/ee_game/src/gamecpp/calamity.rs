@@ -7,8 +7,19 @@
 //! The calamity's numeric members are written from the update's state before every call and read back after it, as
 //! the C++ host did. Every capture record (CALW, CALT, CONT) is written by the call the C++ made, in its order.
 
+// the C++'s own casts (`long` and `unsigned long` are 32-bit here, 64-bit on LP64), literals, products and
+// loops, kept as written
+#![allow(
+    clippy::unnecessary_cast,
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::neg_multiply,
+    clippy::assign_op_pattern,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
 // the C++'s own tests and literals, kept as written
-#![allow(clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use std::ffi::{c_long, c_ulong, c_void};
 
@@ -437,7 +448,13 @@ fn affected_tiles(host: P, kl: P, c: P, immunity: bool) -> Vec<[i32; 2]> {
     let v = host_tiles(host);
     // SAFETY: the host's tile vector
     let tiles = unsafe {
-        ee_sim::units::uu_ffi::ee_units_uu_tiles_in_radius(floor(at.x), floor(at.y), klass(kl).mRadiusTiles as u32, 1, v);
+        ee_sim::units::uu_ffi::ee_units_uu_tiles_in_radius(
+            floor(at.x),
+            floor(at.y),
+            klass(kl).mRadiusTiles as u32,
+            1,
+            v,
+        );
         tiles_of(v)
     };
     let mut out = Vec::new();
@@ -566,7 +583,16 @@ fn volcano_clear_area(host: P, uc: P, x: c_long, y: c_long) {
         let tv = hp(O::HostTiles, host, &[]) as *mut c_void;
         // SAFETY: the host's tile vector (replaced: not appended)
         let tiles = unsafe {
-            ee_sim::units::uu_ffi::ee_units_uu_block_ring(0, left as i32, top as i32, size as i32, size as i32, tv, 0, 1);
+            ee_sim::units::uu_ffi::ee_units_uu_block_ring(
+                0,
+                left as i32,
+                top as i32,
+                size as i32,
+                size as i32,
+                tv,
+                0,
+                1,
+            );
             h(O::SortTilesNear, tv as P, &[left.wrapping_add(size).wrapping_sub(1) as i64, top as i64]);
             tiles_of(tv)
         };
@@ -854,7 +880,11 @@ fn launch_meteor(kl: P, c: P) {
     let start = Ge3DPoint::new(at.x + offset_x, offset_y + (at.y + 7.0), at.z + 7.0);
     let goal_at = Ge3DPoint::new(start.x, at.y + offset_y, at.z);
     let gaia = hp(O::WorldPlayer, 0, &[0]);
-    let u = hp(O::UcCreateUnit, class, &[floor(start.x) as i64, floor(start.y) as i64, player_id(gaia) as i64, 0, pa(caster(c))]);
+    let u = hp(
+        O::UcCreateUnit,
+        class,
+        &[floor(start.x) as i64, floor(start.y) as i64, player_id(gaia) as i64, 0, pa(caster(c))],
+    );
     let meteor = complex(u);
     h(O::UcPlayCreationEffect, class, &[pa(meteor)]);
     h(O::CxSetLauncherClass, meteor, &[pa(class)]);
@@ -967,7 +997,8 @@ fn class_step(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool
         caster_effect(kl, c, call, false);
     } else if is(kind::CAL_K_LOGIC_BOMB, 4) || is(kind::CAL_K_DROP_OBJECT, 2) {
         caster_effect(kl, c, call, true);
-    } else if is(kind::CAL_K_AREA_EFFECT, 1) || is(kind::CAL_K_AE_EXTRA_DAMAGE, 1) || is(kind::CAL_K_AE_MIND_CONTROL, 1) {
+    } else if is(kind::CAL_K_AREA_EFFECT, 1) || is(kind::CAL_K_AE_EXTRA_DAMAGE, 1) || is(kind::CAL_K_AE_MIND_CONTROL, 1)
+    {
         // the area effects keep the handle
         out.id = caster_effect(kl, c, call, true);
     } else if is(kind::CAL_K_PLAGUE, 1) {
@@ -1255,7 +1286,12 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
             let mut pitch = 1.0f32;
             if call.value != 0 {
                 let at = Ge3DPoint::new(call.x, call.y, call.z);
-                hf(O::SoCalamityParams, 0, &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)], &[volume(sound)]);
+                hf(
+                    O::SoCalamityParams,
+                    0,
+                    &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)],
+                    &[volume(sound)],
+                );
                 hf(O::CapStartEvent, 0, &[k::CAL_C_START_SOUND, 0, 0], &[vol, pan]);
             }
             let node = play_node(sound, vol, pan, pitch);
