@@ -33897,3 +33897,76 @@ ui-cluster.md "What is left").
   entry point no gate checks), the view
   rectangle reads (every game frame of the tours: the HUD controls' and the main form's). The file combo box is the
   editor gate's. EE-SIM builds no form: the oracle is unchanged by construction.
+
+## Cycle cuts, round 3: the UI out of the C++ dependency cycle; the game's UI table, the UI's posts and the main form's forwarders inline (ee/EEGameUI.h; tools/cpp_deps.py why, layer, cuts --focus/--of; branch rust-cuts3, 2026-11-19)
+
+Fifteen cuts took SCC 1 from 197 units and 98,059 lines to 164 and 82,924, and every User Interface Thread and UI
+Events unit out of every cycle (21 of them were in SCC 1, and none outside a cycle) but EEFOFindNewTargetNearOldTarget,
+which is the unit utilities: simulation code in the UI folder. docs/progress/cycle-cuts.md has each commit with its
+numbers and the UI units' targets now.
+
+- **Plan a layer, not single cuts.** Cut by cut, SCC 1 hardly moved for ten commits (197 -> 190 units) and then lost
+  26 units and 12,747 lines at once: a layer (the UI units and the editor's) leaves the cycle only when the last edge
+  into it from below goes, and every single cut before it ranks as nothing in `cuts`. `cpp_deps.py layer --focus
+  P,...` prints the whole plan in one run: every edge from the rest of SCC 1 into the focus units, by symbol, and
+  SCC 1 with all of them cut. Its first run listed 66 symbols (52 edges); the progress per commit is that count
+  falling (66, 65, 62, 56, 54, 50, 22, 15, 10, 9, 0). A greedy pass that adds to the layer the units whose own
+  in-edges are fewer than their edges into it (a scratch script; the layer's focus took the editor units it found:
+  EEUIFScenarioEditor, EESEUnit, EEUIFSEUpgradePanel, EESERBUnitTypes, EESEARust) chose the layer: without them the
+  editor's natural calls into the UI's shells would have been edges to cut.
+- **Then the layer's own cycle.** Out of SCC 1, the UI was a 13-unit cycle of its own (9,160 lines); `cuts --of
+  EEUIShell` (the cycle holding a unit, not SCC 1) ranked its cuts, and five more commits left no UI cycle:
+  PostScreenShot inline split it into three, then gMultiplayerString's storage, the main form's forwarders, the
+  editor's diplomacy button and the two GetHotKeys each freed one.
+- **What the edges were.** Almost none was a real dependency of the game on the UI's logic:
+  - globals the game names (gMiniMap from 16 units, gU56534C, sIconsLoaded, gMultiplayerString): storage in
+    EEGlobals.cpp (a UString through ee/EEGlobalStorage.h, constructed where it was defined);
+  - one-line forwarders to Rust and thread posts (the chat log's statics, the main form's SetUIState, Load, Save,
+    SetErrorString, backgrounds, ButtonCall, BuildUnit and start modes, EEUserInterface's posts, HandleEvent and
+    ResumeGraphics, EESELoadThread's posts): inline in their headers. EEUIFMGFormCall, the main form's call record,
+    moved into ee/EEUIFMainGame.h for them;
+  - functions in the wrong unit: EESMDialogMessage's Load and Save in the editor's paint type tab (3 editor units in
+    SCC 1 for them), the game helpers in EEWonNetAvailableGameFormManager.cpp (EEOrderAtCursor, EEPointUnitOrTile,
+    EEExitGame: now EEGameUtilities.cpp's), the window's event pump and native message hook (now Empire Earth.cpp's,
+    which installs them), the screen event class (now a leaf unit, UI Events/EEScreenEvent.cpp), EETechTreeNode's
+    and EEButtonObject's GetHotKey in the main group's unit;
+  - real calls from the game into the UI: the message box (EEUIFErrorDisplay, from the messages, the server, the
+    scenario effects, the data loading thread, the civilization builder and the WON lobby), the command buttons'
+    ShowCommands, the status box's icons, the mini map's media and Update, and `new EEUIManager`. They go through
+    **ee/EEGameUI.h**, a table of function pointers (storage EEGlobals.cpp) each UI unit fills for its own entries in
+    a static initializer (`static const bool sX = (gEEGameUI.mY = Z, true);`), the round-2 gEEWonNetUI pattern.
+    EEUIFErrorDisplay stays a function (inline in ee/EEUIManager.h over the table), so no caller changed; the other
+    call sites (EEMessage, EEMiniMap, EEWorld, Empire Earth.cpp) call `gEEGameUI.m...` directly; the UI's own calls
+    stay direct. The editor's diplomacy button state, which the shells' op dispatch calls, is one inline header
+    pointer (gEEUIShellDiplomacyShow, ee/EEUIShell.h) the editor unit sets.
+- **A false edge in the census: template instances shared their class's home.** `class_of` strips template
+  arguments, so every UIListBox<T> instance's COMDATs belonged to the home of "UIListBox", the editor's terrain tab
+  (it defines UIListBox<EESEUITTData>'s overrides): the civilization builder's list box, which uses the engine's
+  UIListBox<UWideString>, had a 28-symbol edge to the editor, and that put three units in SCC 1. A COMDAT of a
+  template instance now resolves to its class's home only when the home defines a function of that same instance
+  (else it is inline: every user compiles it). The fix alone took 3 units out (194 -> 191); selftest case added.
+- **The test profile patches sources by function text.** tools/build.py's HARNESS_HOOKS name the unit of each
+  function the legacy harness breaks on (`__declspec(noinline)` added in the test profile): moving EEPointUnitOrTile
+  out of EEWonNetAvailableGameFormManager.cpp failed the test-profile build ("overlay ... matches 0 times") while the
+  normal build linked. A function that moves must move in HARNESS_HOOKS and TEST_PROFILES too; build the test profile
+  before calling a move done.
+- **Static initialization**: the table's entries are set by the UI units' dynamic initializers and first read in
+  WinMain (EE-SIM's too: it runs WinMain), after every initializer ran. lld-link keeps every unit's .CRT$XCU
+  initializer (only COMDATs are dropped by /OPT:REF), so the table is filled in both executables.
+- **The tools**: `why FILE` (a unit's shortest cycle in SCC 1, each edge's symbols, and who names it), `layer`,
+  `cuts --focus` (ranked by the focus units a cut frees; `!` excludes, e.g. `!EEFOFind`), `cuts --of FILE` and
+  `layer --of FILE` (the cycle holding FILE).
+- **Behaviour**: none intended. Every call runs the same code in the same order; the table adds one indirect call
+  per message box, command-button refresh, media load and mini map update. EE-SIM never draws: the oracle, the
+  captures, scenario_check and sim_editor exercise the posts, the chat log, the saved game's form state and the
+  UI manager's construction, but the message boxes, the command buttons, the icons' reload after a display change,
+  the window pump, the backgrounds and the build placements only the tours (and a person) exercise.
+- **Gates** (on 9523a3510 + 492edd59b, origin/rust 3449a04fd already in the base: nothing to merge): both builds
+  0/0 (EE-AOC 514 inputs, EE-SIM 515; the test profile 0/0 after 492edd59b); the Rust gate PASS (4,939 tests, the
+  headers current); the oracle at seeds 2-7 identical; sim_capture oracle (212 digests) and app (26) at seeds 2-3
+  PASS; scenario_check 27/27; sim_editor PASS (14,448 lines) and the civilization builder gate PASS (4,062); per cut
+  build `--sim` 0/0 and the oracle at seeds 2-3 identical. Tours (test profile, the main checkout's tree, through
+  slot.py): random game with `--box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair,
+  repair-queued, move; RESULT PASS, no GX errors; the box selection's capture shows the command buttons, the status
+  box's icons and the mini map), the editor exercise (RESULT PASS, no GX errors); `gates.sh`: GATES PASS (tour;
+  ai-game time-cap PT 13271, units [4, 41, 41], alive [2, 3], classic_lua x 2; lan-game PT 2695/2691).
