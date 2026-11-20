@@ -95,6 +95,7 @@ pub fn socketop_address(o: *mut c_void) -> EeWonIpAddr {
     socket_op(o).map_or_else(EeWonIpAddr::default, |s| s.address())
 }
 /// A `ByteBuffer`'s bytes (empty for none), borrowed while the caller holds the buffer.
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the C++ object pointers pass through to the table
 pub fn buffer_bytes<'a>(b: *mut c_void) -> Option<&'a [u8]> {
     if b.is_null() {
         return None;
