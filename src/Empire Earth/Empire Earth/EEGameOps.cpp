@@ -55,6 +55,10 @@ static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 &
 static GEColor sWarpColor(0.484375f, 0.0f, 0.734375f);
 static GEColor sBlackColor(0.0f, 0.0f, 0.0f);
 
+// the world bodies' cases (EEWorld.cpp)
+int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define UN ((EEUnit*)p)
 #define CX ((EEComplexUnit*)p)
@@ -315,8 +319,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CxSetBlackColor: CX->SetColor(sBlackColor);
         break;
-    default: ESVERIFY_AT(inOp == O::UnRts, 1);
-        break;
+    default: return EEWorldOp(inOp, p, a, f);   // the world bodies' (EEWorld.cpp)
     }
     return 0;
 }
@@ -337,8 +340,7 @@ extern "C" double ee_gamecpp_f(EeGameCpp inOp, uintptr_t p, const int64_t* a, co
     case O::AeRadius: return ((EEAreaEffect*)p)->GetRadius();
     case O::SoVolume: return ((EESoundObject*)p)->GetVolume();
     case O::GeModelRadius: return ((GEModel*)p)->GetBoundingRadius((unsigned long)a[0]);
-    default: ESVERIFY_AT(inOp == O::CxEffectHeight, 1);
-        break;
+    default: return EEWorldOpF(inOp, p, a, f);
     }
     return 0.0;
 }

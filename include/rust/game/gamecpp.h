@@ -190,6 +190,356 @@ enum class EeGameCpp : uint32_t {
   CxIsWarpColor,
   CxSetWarpColor,
   CxSetBlackColor,
+  ActiveClear,
+  AeClearEffects,
+  AiCollectComputerPlayers,
+  AmbientEnable,
+  AmbientRestart,
+  CalamitiesDestroy,
+  CalamitiesRestore,
+  CameraClearUnitA,
+  CameraClearUnitB,
+  CameraResetPath,
+  CameraResetZoom,
+  CameraSetChanged,
+  CampaignProgressDelete,
+  CampaignProgressNew,
+  CampaignRestoreCivilization,
+  CivBuilderFree,
+  ClearFormManager,
+  ClientFastSelect,
+  CommCTsProcessed,
+  CommIsMultiplayer,
+  CommIsServer,
+  CommNumHumanPlayers,
+  CommServer,
+  CommSetPlayerNumber,
+  ContinentBuildRegions,
+  ContinentRegionsPending,
+  ContinentRestoreRegions,
+  CpNewGame,
+  CpRefreshResourceCenters,
+  CpReplaceOnLoad,
+  CpRestoreDeferredManagers,
+  CxClearCollisionState,
+  CxClearContacts,
+  CxContainer,
+  CxFindContacts,
+  CxMakeAreaEffects,
+  CxPreviousPart,
+  DisplayWeatherEffects,
+  DummyHead,
+  DumpBlankLines,
+  DumpButtons,
+  DumpEffectIds,
+  DumpGraphicObjects,
+  DumpLeakTitle,
+  DumpLeakedUnits,
+  DumpModels,
+  DumpSounds,
+  DumpTerrain,
+  DumpTextures,
+  EffClearEffects,
+  EnvFnE123D,
+  EnvSetEnabled,
+  GfxEffectLoad,
+  GfxEffectUnload,
+  GhostDelete,
+  GraphicsInitialiseScene,
+  GraphicsReleaseScene,
+  HumanGetName,
+  HumanSetName,
+  InfluenceAddUnit,
+  LobbyCampaignMapName,
+  LobbyCampaignNameLength,
+  LobbyOptions,
+  LogAfterGone,
+  LogSkipRemoved,
+  MapFogSeen,
+  MapPlayerCount,
+  MapSetPlayerCount,
+  MapSize,
+  MemFileDelete,
+  MemFileNew,
+  MemFileRewind,
+  MeshDereferenceTile,
+  MeshReferenceTile,
+  MiniMapDelete,
+  MiniMapMoveUnit,
+  MiniMapRedraw,
+  MiniMapRedrawAll,
+  MiniMapRefresh,
+  MiniMapSetNull,
+  MiniMapSetViewer,
+  MusicSetIntensity,
+  MusicStart,
+  NewCalamityHelper,
+  NewComputerPlayer,
+  NewHumanPlayer,
+  OptionsPlayerDelete,
+  OptionsPlayerNew,
+  OptionsPlayerSetType,
+  PathFreePaths,
+  PathRequestPending,
+  PathReset,
+  PhysClearAutoSave,
+  PhysSetGameStarted,
+  PickerLock,
+  PickerReset,
+  PickerUnlock,
+  PlAddOwnSight,
+  PlAddPendingUnits,
+  PlAlliesCount,
+  PlAlliesPush,
+  PlAllyAt,
+  PlApplyMapRestrictions,
+  PlCivApplyDeferred,
+  PlCivApplyLevel21,
+  PlCivSetName,
+  PlColorIsPlayerColor,
+  PlComputerPlayer,
+  PlDelete,
+  PlDumpMedia,
+  PlFinishUnitsLoad,
+  PlFirstUnit,
+  PlIsHuman,
+  PlKillStrandedUnits,
+  PlKillUnit,
+  PlLoadButtons,
+  PlLoadFrom,
+  PlNumPending,
+  PlPendingAt,
+  PlRefreshTerrainVisibility,
+  PlRefreshTownGroups,
+  PlReleasePending,
+  PlRemoveAlly,
+  PlRemoveKilled,
+  PlRemoveOwnSight,
+  PlRepairPointers,
+  PlRestartTowns,
+  PlRestorePatrols,
+  PlSaveTo,
+  PlSetAllResources,
+  PlSetEndTimeNow,
+  PlSetHackClassNone,
+  PlSetPlayerColor,
+  PlSetStance,
+  PlTechTree,
+  PlTechnologies,
+  PlUnloadClassButtons,
+  PlUnloadClassMedia,
+  PlUpgradeAt,
+  PlUpgradeLoadMedia,
+  PlUpgradeUnloadMedia,
+  PlayerShareBonus,
+  RefUnitDereference,
+  RefUnitReference,
+  ReportGameInitialized,
+  ReportGameLoaded,
+  RtsClear,
+  RtsReset,
+  RtsSetNumPlayers,
+  RtsSetPopulationLimit,
+  RtsUpdateTile,
+  SaveHasTowns,
+  ScenarioApplyPendingEffects,
+  ScenarioEndCinematic,
+  ScenarioPrepare,
+  ServerFastSelect,
+  ServerIsPaused,
+  ServerPause,
+  ServerUnpause,
+  SetCameraFollowing,
+  SetCollisionDetectionUnit,
+  SetDeferComputerRestore,
+  SetHerdUnreadValue,
+  SetLocalPlayerOut,
+  SetSightUpdates,
+  ShowSinglePlayerScreen,
+  ShutdownInProgress,
+  SightRevealScopeNew,
+  SightScopeDelete,
+  SimNoHumanDefeat,
+  SimNoHumanDefeatHit,
+  SoundManagerPresent,
+  SoundObjectLoad,
+  SoundObjectUnload,
+  SoundSetMuted,
+  StCalamityHelper,
+  StEffectManager,
+  StEnvironmentManager,
+  StGameSpeed,
+  StHerdIDCounter,
+  StInScenarioEditor,
+  StIsLoadedGame,
+  StLoadedPlayerAt,
+  StLoadedPlayerCount,
+  StLocalPlayer,
+  StMajorVersion,
+  StMap,
+  StMapCenter,
+  StMinorVersion,
+  StNumPlayers,
+  StNumPlayersMade,
+  StNumTeams,
+  StOptions,
+  StPlayerAt,
+  StPlayerCount,
+  StPlayerIsLocalName,
+  StRandomSeed,
+  StReadLock,
+  StReadUnlock,
+  StRepairRestorables,
+  StRevealMap,
+  StScenarioManager,
+  StTeamToRust,
+  StTimeOfDay,
+  StTownIDCounter,
+  StUnitImprovementsAllowed,
+  StUsingCarbon,
+  StopAllSounds,
+  StrComputerName,
+  StrFree,
+  StrNew,
+  TechApplySaved,
+  TechIsLoaded,
+  TechResetEpochRange,
+  TechSetPlayer,
+  TechUpdateInterface,
+  UcAddToRegion,
+  UcAddToTile,
+  UiEditorClearSelection,
+  UiEditorForm,
+  UiInScenarioEditor,
+  UiLoadProgress,
+  UiManagerPresent,
+  UiPostPauseInformation,
+  UiPostUpdateBackground,
+  UiSetRandomSeed,
+  UnIsFoundation,
+  UnLink,
+  UnLoadMedia,
+  UnNext,
+  UnSightOffHere,
+  UnSightOnHere,
+  UnTile,
+  UnTileNext,
+  UnTilePrev,
+  UnUnlink,
+  UnbornAt,
+  UnbornClear,
+  UnbornContains,
+  UnbornCount,
+  UnbornPush,
+  UnitClassCount,
+  UpdateLandContinents,
+  UpgradeHitPoints,
+  UpgradeUnitType,
+  UserInterfacePresent,
+  VariantFactor,
+  ViewportHalfWidth,
+  ViewportOrthoWidth,
+  ViewportXCenter,
+  ViewportYCenter,
+  WAddAlliance,
+  WAddUnitEntry,
+  WBB9D,
+  WBreakAlliance,
+  WCalamityList,
+  WCampaignNameLength,
+  WCheatsEnabled,
+  WClearContinents,
+  WClearing,
+  WCollisionFlags,
+  WCopyGameOptions,
+  WCreateGhostLock,
+  WCreateInfluenceTable,
+  WCreateMiniMap,
+  WCurrentPlayer,
+  WCurrentPlayerPtr,
+  WDeleteCalamityHelper,
+  WDeleteEnvironment,
+  WDeleteInfluence,
+  WDeleteScenario,
+  WEffectManager,
+  WEnvironment,
+  WExecutingLocalSelection,
+  WFirstUnit,
+  WFlushQueued,
+  WGameScreenActive,
+  WGhostBack,
+  WGhostCount,
+  WGhostLock,
+  WGhostPop,
+  WGhostUnlock,
+  WHerdIDCounter,
+  WInCinematic,
+  WInfluence,
+  WLagStatus,
+  WLoadingPlayerMedia,
+  WLoadingSavedGame,
+  WMap,
+  WMaxPlayers,
+  WMediaLoaded,
+  WMirrorTeams,
+  WMoonDirection,
+  WNumPlayers,
+  WOptions,
+  WOptionsPlayerColorFix,
+  WOptionsPlayerGet,
+  WOptionsPlayerSet,
+  WPlayer,
+  WPlayerBySlot,
+  WQueuedAfter,
+  WQueuedClear,
+  WQueuedCount,
+  WQueuedUnit,
+  WRebuildTeams,
+  WRecordStatistics,
+  WRemoveFromTeams,
+  WResourceUserGet,
+  WResourceUserHas,
+  WResourceUserSet,
+  WSavedGameSpeed,
+  WSetCalamityHelper,
+  WSetCalamityHelperRaw,
+  WSetEffectManager,
+  WSetEffectManagerRaw,
+  WSetEnvironmentManager,
+  WSetEnvironmentRaw,
+  WSetFirstUnitRaw,
+  WSetGameSpeed,
+  WSetInfluenceRaw,
+  WSetMap,
+  WSetNumPlayers,
+  WSetPlayer,
+  WSetPopulationLimit,
+  WSetScenarioManager,
+  WSetScenarioRaw,
+  WSetTimeOfDay,
+  WShowCollisionSpheres,
+  WStartTime,
+  WStatisticsReset,
+  WSunDirection,
+  WTeamsClear,
+  WTeamsLocked,
+  WTimeOfDay,
+  WTownIDCounter,
+  WUB30,
+  WUB58,
+  WUB80,
+  WUnitImprovementsAllowed,
+  WUnitsHead,
+  WUserPaused,
+  WUsingCarbon,
+  WVictoryEnabled,
+  WWindYaw,
+  WWondersToWin,
+  WWriteLock,
+  WWriteUnlock,
+  WonNetClearGameList,
+  WonNetPresent,
+  WorldLayoutRegister,
 };
 
 extern "C" {
@@ -215,6 +565,149 @@ EeCalamityState ee_gamecpp_calamity_state(void *calamity);
 /// # Safety
 /// As [`ee_gamecpp_calamity_state`]; `state` valid.
 void ee_gamecpp_calamity_set_state(const EeCalamityState *state, void *calamity);
+
+/// The ctor's members (the world layout registered first; the ghost lock made; the statistics reset).
+void ee_gamecpp_world_init(void *w);
+
+/// EEWorld::Clear: tears down the current game (the end statistics, the media, every unit, ghost, effect, calamity
+/// and manager, the minimap and active lists; campaign games back to the campaign screen).
+void ee_gamecpp_world_clear(void *w);
+
+/// EEWorld::RestartUnits (`on`) and RefreshUnits: every unit's sight on (off), the local player's terrain refreshed.
+void ee_gamecpp_world_sight_all(void *w,
+                                bool on);
+
+/// EEWorld::ReplacePlayer: a human player copied from the player by a save and load replaces it; the old player's
+/// units killed, its alliances, pending units and media moved to the copy.
+void ee_gamecpp_world_replace_player(void *w,
+                                     unsigned long index,
+                                     unsigned long major,
+                                     unsigned long minor,
+                                     void *m);
+
+/// EEWorld::RemoveAllUnits: every player's units (pending ones included) killed and removed, the queued placements
+/// dropped, the unit list emptied.
+void ee_gamecpp_world_remove_all_units(void *w);
+
+/// EEWorld::ClearGhostUnits: every ghost unit deleted, under the ghost lock.
+void ee_gamecpp_world_clear_ghosts(void *w);
+
+/// EEWorld::SetDiplomaticStance: the stance; the teams joined when the alliance becomes mutual, split when a mutual
+/// alliance ends.
+void ee_gamecpp_world_set_stance(void *w,
+                                 unsigned long id,
+                                 long other,
+                                 long stance);
+
+/// EEWorld::RebuildTeams' stances after the teams: Gaia and every player at war with each other.
+void ee_gamecpp_world_gaia_stances(void *w);
+
+/// EEWorld::DumpMedia: every loaded medium to the file (the leaks too when asked).
+void ee_gamecpp_world_dump_media(void *w, void *file, bool leaks);
+
+/// EEWorld::RemovePlayerFromGame: the player out of the game (out, off its teams, the map revealed but for a lost
+/// scenario, its end time, any cinematic ended; the local player's minimap redrawn).
+void ee_gamecpp_world_remove_player(void *w,
+                                    bool won,
+                                    unsigned long id);
+
+/// EEWorld::AddComputerPlayers: the empty slots after the state's players filled with computer players in unused
+/// colours and 999,999 of each resource (the scenario editor), their foundation media loaded.
+void ee_gamecpp_world_add_computers(void *w,
+                                    void *st);
+
+/// EEWorld::StartGame: the world set up from a game state (map, players, teams, local player, camera, sight,
+/// minimap, calamities, music, media), the load progress reported; in multiplayer the local player found by name.
+void ee_gamecpp_world_start_game(void *w,
+                                 void *st,
+                                 bool locked);
+
+/// EEWorld::CreatePlayers: the game state's players installed (their pending units placed, tech trees, map
+/// restrictions and variant hit points applied, media loaded); a loaded game's pointers repaired and flagged computer
+/// players replaced.
+void ee_gamecpp_world_create_players(void *w,
+                                     void *st);
+
+/// EEWorld::LoadMedia: the shared command confirmation effects and button sounds, once per game.
+void ee_gamecpp_world_load_media(void *w);
+
+/// EEWorld::UnloadMedia: the per-player foundation media, the shared effects and the button sounds.
+void ee_gamecpp_world_unload_media(void *w);
+
+/// EEWorld::PauseGame (`pause`) and UnpauseGame: a running single-player game on the server; PauseGame answers 2
+/// when it is already paused.
+long ee_gamecpp_world_pause(bool pause);
+
+/// EEWorld::ActivateUnit: queued for activation unless NULL, without an id, a path point or already queued.
+void ee_gamecpp_world_activate(void *cx);
+
+/// EEWorld::DeactivateUnit: queued for deactivation unless a path point or already queued; a unit without an id
+/// waits by pointer (as the original's queue held it).
+void ee_gamecpp_world_deactivate(void *cx);
+
+/// EEWorld::QueueBornDeactivations: the waiting deactivations whose units have an id now join the queue; a unit
+/// still without one is dropped.
+void ee_gamecpp_world_queue_born();
+
+/// EEWorld::RebuildActiveUnits: the active list from the placed units (first parts; units of inactive classes only
+/// when dead), the pending queues dropped.
+void ee_gamecpp_world_rebuild_active(void *w);
+
+/// EEWorld::Reset: effects and calamities cleared, a fresh calamity helper, every unit removed, the scenario and
+/// environment managers dropped.
+void ee_gamecpp_world_reset(void *w);
+
+/// EEWorld::RemoveDisconnectedPlayer: flagged disconnected (unless observing), off its teams, out, its slot freed.
+void ee_gamecpp_world_remove_disconnected(void *w,
+                                          unsigned long id);
+
+/// EEWorld::NotifyPlayersLoaded: every player finishes loading its units.
+void ee_gamecpp_world_notify_loaded(void *w, unsigned long major, unsigned long minor);
+
+/// EEWorld::ResortUnit: the unit moved to its place in the world's list, sorted by tile x.
+void ee_gamecpp_world_resort(void *u);
+
+/// EEWorld::SetPopulationLimit (`limit`) and SetNumPlayers: the RTSWorld's, then every player's share bonus and
+/// civilization population bonus again.
+void ee_gamecpp_world_set_count(void *w,
+                                bool population,
+                                unsigned long value);
+
+/// EEWorld::MarkPlayerOut: observer mode, its game options entry marked out (type 2).
+void ee_gamecpp_world_mark_out(void *w, unsigned long id);
+
+/// EEWorld::SetTimeOfDay: the time of day, the sun's and moon's light directions.
+void ee_gamecpp_world_set_time_of_day(void *w, float time_of_day);
+
+/// EEWorld::PlaceQueuedUnits: the queued units on their tiles, the minimap, regions and influence table, linked into
+/// the x-sorted list, their contacts found.
+void ee_gamecpp_world_place_queued(void *w);
+
+/// EEWorld::MovePlayerToSlot: the player to a new lobby slot and name, its old slot and name to the slot's previous
+/// holder; the local view switched to it when it takes the local slot.
+void ee_gamecpp_world_move_to_slot(uint8_t slot,
+                                   uint8_t new_slot,
+                                   uint8_t player_index,
+                                   void *name);
+
+/// EEWorld::GetPlayerIndex: the player's index in the world, -1 if absent (the last match).
+long ee_gamecpp_world_player_index(void *w, void *pl);
+
+/// EEWorld::GetPlayerBySlot: the player (Gaia excluded) in a lobby slot, or NULL.
+void *ee_gamecpp_world_player_by_slot(void *w, uint8_t slot);
+
+/// EEWorld::ScreenToWorld: a screen point on the orthographic view plane (y 0) around the viewport's centre.
+///
+/// # Safety
+/// `point` is two floats, `out` three.
+void ee_gamecpp_world_screen_to_world(const float (*point)[2],
+                                      float (*out)[3]);
+
+/// EEWorld::ReleaseResourceUser (`delta` -1), AddResourceUser (1), GetResourceUsers (0): a resource unit's gatherer
+/// count (an untracked unit starts at 0 when read, 1 when added, and is left alone when released).
+unsigned long ee_gamecpp_world_resource_users(void *w,
+                                              void *u,
+                                              int32_t delta);
 
 }  // extern "C"
 
