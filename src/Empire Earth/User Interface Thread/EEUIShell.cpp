@@ -8,6 +8,7 @@
 #include "lle/GEText.h"
 #include "lle/UResourceFile.h"
 #include "lle/UIControl.h"
+#include "lle/UIFontTable.h"
 #include "lle/UIButton.h"
 #include "lle/UIRadioButton.h"
 #include "lle/UICheckBox.h"
@@ -194,6 +195,33 @@ UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRe
             theBar->mSlots[2 + i] = (void*)(uintptr_t)theSound->GetSampleID();
         }
     return theBar;
+}
+
+// A new chat display line (EEUICChatLine: the user-defined control factory's; shells_chat.rs): the table's
+// background, then its bold name, the message and their drawn copies (the kind's record holds them; the name's two
+// at the line's top left)
+UIControl* EEUIShellNewChatLine(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
+{
+    float theOpacity = inTable.GetBackgroundOpacity();
+    uint32_t theBits;
+    memcpy(&theBits, &theOpacity, 4);
+    EEUIShellControl* theLine = new EEUIShellControl(EE_SCREENS_SK_CHAT_LINE, {(int64_t)theBits}, inTable.GetID(),
+                                                     inRectangle, inForm, inTable.GetFormIndex(),
+                                                     inTable.GetBorderThickness());
+    theLine->SetAlwaysDirty(inTable.GetAlwaysDirty());
+    theLine->SetBgColor(inTable.GetBackground());
+    theLine->SetBgOpacity(theOpacity);
+    GEFont* theFont = inTable.GetFont();
+    for (int i = 0; i < 4; i++) {   // the name, its copy, the message, its copy
+        GEText* theText = new GEText(i >= 2 ? theFont : UIFontTable::FindOrCreateFont(theFont->GetFontName(),
+                                     theFont->GetFontStyle() | kFontStyleBold, theFont->GetFontQuality(), theFont->GetFontSize()));
+        inTable.SetupGEText(theText);
+        if (i < 2)
+            theText->SetLocation(theLine->GetRectangle().GetTopLeft());
+        theLine->mSlots[i] = theText;
+    }
+    EEUIShell::Op(theLine, EE_SCREENS_SKOP_CHAT_PARTS, (int64_t)theLine->mSlots);
+    return theLine;
 }
 
 // A new file combo box (EEUIFileComboBox: the editor's map, sound and elevation lists): the path referenced, the
@@ -636,6 +664,11 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
         theBar->mSlots[0] = theBar->mSlots[1] = NULL;
         break;
     }
+    // the chat line's (shells_chat.rs): its texts deleted, as its destructor did
+    case EE_SCREENS_SH_CHAT_FREE:
+        for (int i = 0; i < 4; i++)
+            delete static_cast<GEText*>(static_cast<EEUIShellControl*>(c)->mSlots[i]);
+        break;
     case EE_SCREENS_SH_SIZE:
         f[0] = c->GetRectangle().GetWidth();
         f[1] = c->GetRectangle().GetHeight();

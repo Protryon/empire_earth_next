@@ -56,7 +56,9 @@ static const bool sErrorDisplayRegistered = (gEEGameUI.mErrorDisplay = EEUIFErro
 static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
 
 // The box's host (dialog.rs: EE_SCREENS_DLG_*; shells_dialog.rs the box's own): each op one toolkit call on its
-// controls, the kind's slots (0 the message, 1 OK/Yes, 2 No, 3 Cancel, 4 the edit box, 5 the background)
+// controls, the kind's slots (0 the message, 1 OK/Yes, 2 No, 3 Cancel, 4 the edit box, 5 the background); the plain
+// toolkit calls (show, tabbing, password, lines, scroll bar, alignment, text colours, add, enable) are
+// shells_dialog.rs' on the toolkit's Rust objects
 extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
     UIForm* theBox = static_cast<UIForm*>(inDialog);
@@ -84,22 +86,12 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
         theButton->GetGEText()->SetIsTransparent(true);
         break;
     }
-    case EE_SCREENS_DLG_SHOW:
-        theControls[inA]->SetDisplayMode(inB);
-        break;
     case EE_SCREENS_DLG_MESSAGE:
         theError->SetAlignment(inA);
         theError->SetText(*sDialogMessage);
         break;
     case EE_SCREENS_DLG_MESSAGE_SIZE:
         theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
-        break;
-    case EE_SCREENS_DLG_TABBING:
-        theBox->SetTabbing(true);
-        theBox->SetTabStop(theEditBox->GetIndex());
-        break;
-    case EE_SCREENS_DLG_PASSWORD:
-        theEditBox->SetIsPasswordBox(inA != 0);
         break;
     case EE_SCREENS_DLG_SWITCH:
         gUserInterface->SwitchToForm(theBox);
@@ -138,8 +130,6 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
         break;
     case EE_SCREENS_DLG_LINE_HEIGHT:
         return (uint32_t)gFontTahoma12->GetHeight();
-    case EE_SCREENS_DLG_LINES:
-        return (uint32_t)theError->GetLineCount();
     case EE_SCREENS_DLG_FLOAT:
         memcpy(&sDialogFloats[inA], &inB, 4);
         break;
@@ -155,29 +145,10 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
                                                    theBox, inA, 1);
         break;
     }
-    case EE_SCREENS_DLG_SCROLL_BAR:
-        theError->SetScrollBarBgColor(GEColor(f[0], f[1], f[2]));
-        theError->SetScrollBarBgOpacity(f[3]);
-        break;
-    case EE_SCREENS_DLG_ALIGN:
-        theError->SetAlignment(inA);
-        break;
-    case EE_SCREENS_DLG_TEXT_COLOR: {
-        GEText* theText = inA == 0 ? theError->GetGEText() : theEditBox->GetGEText();
-        theText->SetIsTransparent(true);
-        theText->SetFgColor(GEColor(f[0], f[1], f[2]));
-        break;
-    }
-    case EE_SCREENS_DLG_ADD:
-        theBox->AddControl(theControls[inA], 0);
-        break;
     case EE_SCREENS_DLG_EDIT_COLORS:
         theEditBox->SetSelectedBgColor(GEColor(f[0], f[1], f[2]));
         theEditBox->SetBgColor(GEColor(f[3], f[4], f[5]));
         theEditBox->SetCursorColor(GEColor(f[6], f[7], f[8]));
-        break;
-    case EE_SCREENS_DLG_ENABLE:
-        theBox->GetEntityGroup(0)->Enable();
         break;
     case EE_SCREENS_DLG_BACKGROUND: {
         UILayoutUtility theLayout;

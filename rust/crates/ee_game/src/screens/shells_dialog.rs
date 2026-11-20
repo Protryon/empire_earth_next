@@ -40,14 +40,108 @@ pub(crate) trait DialogCpp {
     fn dialog(&self, form: Cpp, slots: *mut usize, op: u32, a: u32, b: u32) -> u32;
 }
 
+/// The box's host: the plain toolkit calls on its controls answered on their Rust objects (the toolkit's direct
+/// path, `ee_ui::direct`), the rest `ee_screenscpp_dialog`'s. The float register is kept here as well (the C++'s
+/// copy feeds its own ops: the controls' sizes, the background).
 #[cfg(not(test))]
-pub(crate) struct CppDialog;
+pub(crate) struct CppDialog {
+    floats: Cell<[f32; 9]>,
+}
+
+#[cfg(not(test))]
+impl CppDialog {
+    pub(crate) fn new() -> Self {
+        CppDialog { floats: Cell::new([0.0; 9]) }
+    }
+
+    /// The op on the toolkit's Rust objects, `None` for the C++'s.
+    fn direct(&self, form: Cpp, slots: *mut usize, op: u32, a: u32, b: u32) -> Option<u32> {
+        use crate::screens::dialog::*;
+        use core::ffi::c_ulong;
+        use ee_ui::direct;
+        use ee_ui::editobj::EeUiEditCall;
+        use ee_ui::formobj::EeUiFormCall;
+        use ee_ui::labelobj::EeUiLabelCall;
+        use ee_ui::obj::EeUiOp;
+        // SAFETY: the box's live slots (six controls' addresses)
+        let slot = |i: u32| unsafe { *slots.add((i as usize).min(SLOTS - 1)) } as Cpp;
+        let (label, edit) = (slot(0), slot(4));
+        let f = self.floats.get();
+        let rgb = |i: usize| [f[i], f[i + 1], f[i + 2], 0.0];
+        Some(match op {
+            EE_SCREENS_DLG_FLOAT => {
+                let mut r = self.floats.get();
+                if let Some(v) = r.get_mut(a as usize) {
+                    *v = f32::from_bits(b);
+                }
+                self.floats.set(r);
+                return None;
+            }
+            EE_SCREENS_DLG_SHOW => {
+                direct::control_virtual(slot(a), EeUiOp::SetDisplayMode, b as c_ulong as isize, 0, &mut [0.0; 4]);
+                0
+            }
+            EE_SCREENS_DLG_TABBING => {
+                let index = direct::with_fields(edit, |r| r.mIndex)?;
+                direct::form_call(form, EeUiFormCall::SetTabbing, 1, 0);
+                direct::form_call(form, EeUiFormCall::SetTabStop, index as isize, 0);
+                0
+            }
+            EE_SCREENS_DLG_PASSWORD => {
+                direct::edit_call(edit, EeUiEditCall::SetIsPasswordBox, (a != 0) as isize, 0)?;
+                0
+            }
+            EE_SCREENS_DLG_LINES => direct::label_call(label, EeUiLabelCall::LineCount, 0, 0)? as u32,
+            EE_SCREENS_DLG_SCROLL_BAR => {
+                direct::label_call_f(label, EeUiLabelCall::SetScrollBarBgColor, 0, 0, &mut rgb(0))?;
+                direct::label_call_f(label, EeUiLabelCall::SetScrollBarBgOpacity, 0, 0, &mut [f[3], 0.0, 0.0, 0.0])?;
+                0
+            }
+            EE_SCREENS_DLG_ALIGN => {
+                direct::label_call(label, EeUiLabelCall::SetAlignment, a as c_ulong as isize, 0)?;
+                0
+            }
+            EE_SCREENS_DLG_TEXT_COLOR => {
+                let text = if a == 0 {
+                    direct::label_call(label, EeUiLabelCall::Text, 0, 0)?
+                } else {
+                    direct::edit_call(edit, EeUiEditCall::Text, 0, 0)?
+                };
+                let text = text as *const *mut ee_render::ge::smallobj::EeGeText;
+                if text.is_null() {
+                    return Some(0);
+                }
+                // SAFETY: the control's live GEText (its one member: the Rust text)
+                unsafe {
+                    let t = *text;
+                    ee_render::ge::smallobj::ee_ge_text_set_transparent(t, true);
+                    let c = ee_render::ge::smallobj::ee_ge_text_color(t, true);
+                    core::slice::from_raw_parts_mut(c, 3).copy_from_slice(&f[..3]);
+                }
+                0
+            }
+            EE_SCREENS_DLG_ADD => {
+                direct::form_call(form, EeUiFormCall::AddControl, slot(a) as isize, 0);
+                0
+            }
+            EE_SCREENS_DLG_ENABLE => {
+                let group = direct::form_call(form, EeUiFormCall::EntityGroup, 0, 0) as Cpp;
+                direct::group_call(group, ee_ui::groupobj::EeUiEntityGroupCall::Enable, 0);
+                0
+            }
+            _ => return None,
+        })
+    }
+}
 
 #[cfg(not(test))]
 impl DialogCpp for CppDialog {
     fn dialog(&self, form: Cpp, slots: *mut usize, op: u32, a: u32, b: u32) -> u32 {
         extern "C" {
             fn ee_screenscpp_dialog(dialog: *mut core::ffi::c_void, slots: *mut usize, op: u32, a: u32, b: u32) -> u32;
+        }
+        if let Some(r) = self.direct(form, slots, op, a, b) {
+            return r;
         }
         // SAFETY: the live box and its slots
         unsafe { ee_screenscpp_dialog(form, slots, op, a, b) }
@@ -201,7 +295,7 @@ impl Kind for DialogButton {
 pub(crate) fn make(kind: u32, args: &[i64]) -> Option<Box<dyn Kind>> {
     Some(match kind {
         #[cfg(not(test))]
-        EE_SCREENS_SK_DIALOG => Box::new(Dialog::new(CppDialog)),
+        EE_SCREENS_SK_DIALOG => Box::new(Dialog::new(CppDialog::new())),
         EE_SCREENS_SK_DIALOG_OK => Box::new(DialogButton::new(false)),
         EE_SCREENS_SK_DIALOG_CANCEL => Box::new(DialogButton::new(true)),
         _ => return crate::screens::shells_saved::make(kind, args),

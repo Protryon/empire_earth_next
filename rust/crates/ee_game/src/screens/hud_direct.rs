@@ -158,6 +158,15 @@ pub(crate) struct FormCallHead {
     pub(crate) out: *mut CppWide,
 }
 
+/// The call's picked unit and first selected unit (`mPicked`, `mFirst`).
+///
+/// # Safety
+/// `call` is the host's live call record.
+pub(crate) unsafe fn picked_and_first(call: *const FormCallHead) -> (u64, u64) {
+    // SAFETY: the contract
+    unsafe { ((*call).picked as u64, (*call).objects[7] as u64) }
+}
+
 /// The main game form's host ops on the toolkit, its call's strings and the language strings (`call` the host's
 /// call record), each its C++ case's call.
 ///

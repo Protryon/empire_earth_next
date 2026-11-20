@@ -256,6 +256,39 @@ fn hud_reads_over_the_views() {
     assert_eq!(main_form(EE_SCREENS_MF_OP_GAME_RESULT, 0), Some(3));
     assert_eq!(main_form(EE_SCREENS_MF_OP_VICTORY_ENABLED, 0), Some(0));
 
+    // the box selection's, the command's and the mouse modes' reads (round 6)
+    {
+        use crate::screens::command_units::{EE_SCREENS_CU_CATEGORY, EE_SCREENS_CU_GROUP_COUNT};
+        use crate::screens::mouse_modes::*;
+        use crate::screens::select_units::{
+            EE_SCREENS_SU_DRAW_LINES, EE_SCREENS_SU_HAS_COMPLEX, EE_SCREENS_SU_OWN_LIVE,
+        };
+        assert_eq!(select_units(EE_SCREENS_SU_OWN_LIVE, c), Some(1));
+        assert_eq!(select_units(EE_SCREENS_SU_OWN_LIVE, p), Some(0));
+        assert_eq!(select_units(EE_SCREENS_SU_HAS_COMPLEX, c), Some(1));
+        assert_eq!(select_units(EE_SCREENS_SU_HAS_COMPLEX, p), Some(0));
+        assert_eq!(select_units(EE_SCREENS_SU_DRAW_LINES, c), None);
+        assert_eq!(command_units(EE_SCREENS_CU_GROUP_COUNT, 0), Some(2));
+        assert_eq!(command_units(EE_SCREENS_CU_CATEGORY, 0), Some(CATEGORY_LAND_CITIZEN as i64));
+        assert_eq!(command_units(EE_SCREENS_CU_CATEGORY, 1), Some(CATEGORY_GATE as i64));
+        let unit = |field, picked: i64| mouse_mode(EE_SCREENS_MF_OP_MD_UNIT, field, picked as u64, c as u64);
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_ID, c), Some(77));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_TILE_X, c), Some(5));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_TILE_Y, c), Some(-3));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_HAS_COMPLEX, c), Some(1));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_HAS_COMPLEX, p), Some(0));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_COMPLEX_BUILT, c), Some(0));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_SAME_PLAYER, c), Some(1));
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_IS_WALL, c), Some(0));
+        // the visibility, attack and wonder set reads stay the C++'s
+        assert_eq!(unit(EE_SCREENS_MF_UNIT_HOSTILE_SEEN, c), None);
+        let first = |field| mouse_mode(EE_SCREENS_MF_OP_MD_FIRST_FIELD, field, 0, c as u64);
+        assert_eq!(first(EE_SCREENS_MF_FIRST_ALIVE), Some(1));
+        assert_eq!(first(EE_SCREENS_MF_FIRST_HAS_COMPLEX), Some(1));
+        assert_eq!(first(EE_SCREENS_MF_FIRST_CAN_RALLY), Some(0));
+        assert_eq!(first(EE_SCREENS_MF_FIRST_IN_RANGE), None);
+    }
+
     // the status box's view: the class's, the stats', the stats' class's values; the enemy is not friendly
     let v = status_box_view(c, true, true);
     assert_eq!((v.category, v.unit_type, v.class_hit_points, v.hit_points), (6, 7, 25, 19));

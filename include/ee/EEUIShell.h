@@ -350,6 +350,7 @@ protected:
 
 class UIControlsTable;
 UIControl* EEUIShellNewIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
+UIControl* EEUIShellNewChatLine(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)
