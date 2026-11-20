@@ -38,6 +38,18 @@ void ee_won_gui_construct(void **slot,
                           EeWonGuiCtor kind,
                           ptrdiff_t arg);
 
+/// TextArea::AddSegment(text, color, font, lineBreak) (both overloads; the first passes the area's font): a new
+/// segment of the text in the colour and font, its line break, appended to the area.
+///
+/// # Safety
+/// `text` a live `GUIString*`; `component` the text area `host` answers for.
+void ee_won_gui_add_segment(void *component,
+                            EeWonGuiHostFn host,
+                            const void *text,
+                            ptrdiff_t color,
+                            void *font,
+                            bool line_break);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_GUI_GUICTOR_H

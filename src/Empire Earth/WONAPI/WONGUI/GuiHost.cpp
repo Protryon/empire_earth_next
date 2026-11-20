@@ -163,6 +163,12 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::CtorLinkFontUnderline: t->SetLinkFont(t->GetFont(Underlined(t->mFont->GetDescriptor()))); return 0;
     case Op::CtorPads: t->SetPads((int)a,(int)a,(int)a,(int)a); return 0;
     case Op::CtorReset: t->Reset(false); return 0;
+    case Op::SegNew: return (intptr_t)new TextSegment;
+    case Op::SegSetText: Seg(a)->mText.mData=((const GUIString*)b)->mData; return 0;
+    case Op::SegSetColor: Seg(a)->mColor=(int)b; return 0;
+    case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
+    case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
+    case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -186,22 +192,12 @@ void TextArea::AddSegment(const GUIString& text,bool lineBreak)
 // Appends a text segment in the given colour and the area's font (the body at 0x00713c80)
 void TextArea::AddSegment(const GUIString& text,int color,bool lineBreak)
 {
-    SmartPtr<TextSegment> seg=new TextSegment;
-    seg->mText.mData=text.mData;
-    seg->mColor=color;
-    seg->mFont=this->mFont;
-    seg->mLineBreak=lineBreak;
-    this->AddSegment(seg.get());
+    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, this->mFont.get(), lineBreak);
 }
 // Appends a text segment in the given colour and font (the body at 0x00713da0)
 void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBreak)
 {
-    SmartPtr<TextSegment> seg=new TextSegment;
-    seg->mText.mData=text.mData;
-    seg->mColor=color;
-    seg->mFont=font;
-    seg->mLineBreak=lineBreak;
-    this->AddSegment(seg.get());
+    ee_won_gui_add_segment(this, ee_won_guicpp_text_call, &text, color, font, lineBreak);
 }
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks

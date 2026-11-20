@@ -877,6 +877,19 @@ pub enum EeWonGuiOp {
     CtorMenuTextColor,
     /// `SetBorderPadding(4, 4, 4, 4)`.
     CtorMenuBorderPadding,
+    // the text area's segments (guictor.rs)
+    /// `new TextSegment`.
+    SegNew,
+    /// `Seg(a)->mText.mData = ((const GUIString*)b)->mData`.
+    SegSetText,
+    /// `Seg(a)->mColor = b`.
+    SegSetColor,
+    /// `Seg(a)->mFont = (Font*)b`.
+    SegSetFont,
+    /// `Seg(a)->mLineBreak = b != 0`.
+    SegSetLineBreak,
+    /// `AddSegment(Seg(a))`.
+    AddSegmentOf,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).
