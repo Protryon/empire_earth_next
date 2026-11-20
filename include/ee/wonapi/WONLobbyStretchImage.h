@@ -3,6 +3,7 @@
 // their handles (WONLobbyGUI.h "The images").
 #ifndef EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
 #define EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
+#include "rust/won_gui/imgobj.h"
 namespace WONAPI {
 class StretchImage : public Image {
 public:
