@@ -48,7 +48,6 @@ bool EEPickTileNear(std::vector<U2DPoint<long> >& inTiles, EEComplexUnit* inUnit
 bool EEGetDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, bool inArg5,
                 GETransformation* outTransformation);
 bool EEGetDockShipFacing(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, GETransformation* outTransformation);
-bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget);
 // 0x243561 EEFindPlacement: declared in ee/EEUnit.h; the wrapper 0x24352f (no unit, inArg9 false) (provisional
 // name)
 bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX, unsigned long inY, long inSize,
@@ -69,17 +68,13 @@ EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClas
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // (EEWorld.cpp declares it too)
 bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnitType, long inX, long inY, bool inSkipPlayerChecks,
                 long inIgnoreOwner, bool& outFlag);
-bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY);
 void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit);  // 0x24f8c0 (after the range)
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit);  // 0x24f8f9 (after the range)
 long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2);
 long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);  // returns the count
 long EEGetUnitsOn(std::vector<EETileCoordinate>& inTiles, std::vector<EEUnit*>& outUnits);  // the same body (0x245a19 passes its EETileCoordinate tiles)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit);
-bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass);
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor);
-// 0x2467bb with the types its body reads (ee/EEAreaUtilities.h declares EEUnit* first) (provisional name)
-float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther);
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);  // 0x248ecc: the tile inDistance steps from inTile in inDirection (also in ee/EEE3DStorm.h)
 void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirection, long inDistance);
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint);
@@ -122,14 +117,12 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // 0x2479eb as names.txt binds it first (EEComplexUnit*; ee/EEAreaUtilities.h declares the EEUnit* alias)
 bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored);
 bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUnit, EEUnit* inTarget, bool inArg4, GE3DPoint& outLocation);
-float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther);   // 0x248d05 with the types its body reads
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 class URandom;
 // 0x249201 is EEFOFindLocation (bool; its tile screen is the RTTI-named EEFOLocationScreenBase): declared in
 // ee/EEFOLocationScreenBase.h (was EEFn249201 with an EEUUTileFilter* here)
 unsigned long EEGetLeadUnitID(EEPlayer* inPlayer);
-void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoint);
 void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint);
 // 0x248fe4 (EEAIAStarPathfindingGoalBase.cpp declares it locally) (provisional name)
 void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles, float inMargin);
@@ -145,7 +138,6 @@ long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);
 // 0x2046fc (EEGhostUnit.cpp defines it): the wall ghosts of inTiles/inCorners for inPlayer
 void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>& inCorners, long inTechnology, EEPlayer* inPlayer,
                 float inRotation);
-float EEJitterHeading(float inAngle, float inMin, float inMax);
 class EEGhostUnit;
 void EEOrientWallGhost(EEGhostUnit* inGhost, long inCorner, long inRaisedCorners);
 long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long inRaisedCorners);

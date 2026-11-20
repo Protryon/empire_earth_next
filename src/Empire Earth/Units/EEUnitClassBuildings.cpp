@@ -298,8 +298,8 @@ void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector
             theTop = (float)(theY + theSize);
             break;
         }
-        EEGetBlockRing(inCorners, UMFloor(theLeft), UMFloor(theBottom), UMFloor(theRight - theLeft),
-                   -UMFloor(theBottom - theTop), outTiles, inAppend);
+        ee_units_uu_block_ring(inCorners, UMFloor(theLeft), UMFloor(theBottom), UMFloor(theRight - theLeft),
+                               -UMFloor(theBottom - theTop), &outTiles, inAppend, 0);
     } else
         this->BaseGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
 }

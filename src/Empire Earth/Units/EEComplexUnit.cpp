@@ -88,7 +88,6 @@
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
-bool EEIsSameResearch(long inFirst, long inSecond);
 
 // chain at 0x5f57d3 (wrapper)
 //   object 0x963228  ctor None  dtor None
@@ -2588,7 +2587,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
         while (this->mBuildQueue.size() > 0) {
             EEProductionEntry theTechnology = this->mBuildQueue.front();
             this->mBuildQueue.erase(this->mBuildQueue.begin());
-            if (!EEIsSameResearch(theTechnology.mTechnology, inTechnology) || !theKeepNext)
+            if (!ee_units_uu_is_same_research(theTechnology.mTechnology, inTechnology) || !theKeepNext)
                 theKept.push_back(theTechnology);
             else {
                 EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get(theTechnology.mTechnology);
@@ -2606,7 +2605,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
         if (theRetained && (unsigned char)inRemoveAll == 0)
             return;
     }
-    if (this->GetUnitClass()->IsLandBuilding() && EEIsSameResearch(this->mCurrentResearch, inTechnology))
+    if (this->GetUnitClass()->IsLandBuilding() && ee_units_uu_is_same_research(this->mCurrentResearch, inTechnology))
         this->ToggleJITManufacturing();
 }
 

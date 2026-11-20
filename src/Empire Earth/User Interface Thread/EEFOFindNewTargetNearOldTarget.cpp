@@ -318,12 +318,6 @@ void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlay
 
 // (0x63efa1, EEGetSeabedUnder: ee_units uu_world.rs seabed_under)
 
-// Puts a submarine at its cruise depth, or at the surface when the seabed is too high
-void EEGetSeabedDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
-{
-    ioLocation.SetZ(ee_units_uu_seabed(0, UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&ioLocation.mX));
-}
-
 // Tells whether a unit can be pushed aside: alive and not a building, aircraft, projectile or fixed object
 bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
 {
@@ -357,12 +351,6 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
         }
     }
     return inPlayer->mUnitClassUpgrades[kUnitTypeFoundationAirport]->mModel;
-}
-
-// Tells whether two techs count as the same research (0x432 and 0x5ab are twins)
-bool EEIsSameResearch(long inFirst, long inSecond)
-{
-    return ee_units_uu_is_same_research(inFirst, inSecond) != 0;
 }
 
 // Picks a free spot next to a container among candidate tiles that the unit can stand on and reach
@@ -512,12 +500,6 @@ float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo)
 
 // (0x642489, EEGetUnitAngle, and the escape point's sort by it, EEUUAngleLess: ee_units uu_world.rs unit_angle)
 
-// Tells whether the target unit is attacking the unit
-bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget)
-{
-    return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, inUnit, inTarget) != 0;   // ee_combat leaves.rs is_attacked_by
-}
-
 // Tells whether a priest can convert the target
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -645,9 +627,9 @@ static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, E
         return inTarget->mPlayer != thePlayer && thePlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0
             && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
-        return EEIsAttackedBy(theUnit, inTarget);
+        return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, theUnit, inTarget) != 0;
     case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
-        return EECanTargetClass(theUnit, theClass);
+        return ee_units_uu_targetable(UUHandle(theUnit), UUHandle(theClass), 1) != 0;
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
         return inTarget->IsFoundation();
     case EE_COMBAT_SEARCH_TEST_SEEN:
@@ -683,13 +665,13 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
     case EE_COMBAT_SEARCH_TEST_NOT_ENEMY:
         return !(theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0);
     case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
-        return EEIsAttackedBy(theUnit, inTarget);
+        return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, theUnit, inTarget) != 0;
     case EE_COMBAT_SEARCH_TEST_TECH_KIND_6: {
         EETechTreeNode* theNode = theOwner->mTechnologies->Get(inTarget->GetUnitClass()->mTechnology);
         return (theNode != NULL ? theNode->mData->mKind : -1) == 6;
     }
     case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
-        return EECanTargetClass(theUnit, inTarget->GetUnitClass());
+        return ee_units_uu_targetable(UUHandle(theUnit), UUHandle(inTarget->GetUnitClass()), 1) != 0;
     case EE_COMBAT_SEARCH_TEST_FOUNDATION:
         return theTarget != NULL && theTarget->IsFoundation();
     case EE_COMBAT_SEARCH_TEST_SEEN:
@@ -1190,9 +1172,9 @@ static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHand
     case EE_COMBAT_TARGET_TEST_DISABLED:
         return theUnit->mIsDisabled && !theUnit->IsProtected();
     case EE_COMBAT_TARGET_TEST_ATTACKED_BY:
-        return EEIsAttackedBy(inUnit, theUnit);
+        return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, inUnit, theUnit) != 0;
     case EE_COMBAT_TARGET_TEST_CAN_TARGET_CLASS:
-        return EECanTargetClass(inUnit, theUnit->GetUnitClass());
+        return ee_units_uu_targetable(UUHandle(inUnit), UUHandle(theUnit->GetUnitClass()), 1) != 0;
     case EE_COMBAT_TARGET_TEST_FOUNDATION:
         return theUnit->IsFoundation();
     case EE_COMBAT_TARGET_TEST_SEEN:
@@ -1281,12 +1263,6 @@ void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCala
     }
 }
 
-// Returns the squared ground distance between two units
-float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther)
-{
-    return ee_units_uu_distance_squared(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inOther)));
-}
-
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
 // The world position of inUnit's current tag point (its model part's list, the unit's frame), scaled by its size;
 // false (and the point half a tile up) when the part has no tag points (new: ee_combat's attach_point)
@@ -1317,13 +1293,6 @@ bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles)
 {
     ee_units_uu_square_ring(inX, inY, inSize, inSize, 1, &outTiles);
-}
-
-// Collects the tiles around a rectangle, with corners or only the corners not closed by two wall pieces
-void EEGetBlockRing(long inCorners, long inX, long inY, long inWidth, long inHeight, std::vector<EETileCoordinate>& outTiles,
-                bool inAppend)
-{
-    ee_units_uu_block_ring(inCorners, inX, inY, inWidth, inHeight, &outTiles, inAppend, 0);
 }
 
 // Collects the tiles around a square, corners as asked
@@ -1453,12 +1422,6 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
 }
 
 
-// Tells whether a unit may target a class (walls only by siege units or computer players)
-bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass)
-{
-    return ee_units_uu_targetable(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inClass), 1) != 0;
-}
-
 // Tells whether a class can be targeted at all (by an attacker's ammunition when given)
 bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
 {
@@ -1475,12 +1438,6 @@ bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer)
 bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
 {
     return EECombatIsSeenBy(inUnit, inPlayer, inExplored);   // ee_combat leaves.rs is_seen_by
-}
-
-// Returns a unit's radius seen from another: full in front or behind, down to a tenth from the side
-float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther)
-{
-    return ee_units_uu_angle(0, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inOther)), NULL, NULL);
 }
 
 // Returns the tile a distance away in a compass direction (tile form)
@@ -1542,12 +1499,6 @@ void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* ou
 float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY)
 {
     return EECombatHitDistanceSquared(inUnit, inTarget, inX, inY);   // ee_combat leaves.rs hit_distance_squared
-}
-
-// Returns a point 90% of a unit's range from a target towards the unit
-void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoint)
-{
-    ee_units_uu_aim_point(UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&inTarget->mX, (float(*)[3])&outPoint->mX);
 }
 
 // Returns where a unit casts its calamity from: 90% of the calamity's range from the target
@@ -1724,12 +1675,6 @@ void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>&
 void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
 {
     ee_units_uu_drop_tiles(1, &ioTiles);
-}
-
-// Turns an angle by a random share of a full turn, kept in (-pi, pi]
-float EEJitterHeading(float inAngle, float inMin, float inMax)
-{
-    return ee_units_uu_jitter_heading(inAngle, inMin, inMax);
 }
 
 
@@ -2230,7 +2175,7 @@ bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, b
 bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner)
 {
     if (gFreeCamera == true)
-        return EEEditorCanPlace(inPlayer, inType, inLocation, inX, inY);
+        return ee_units_uu_editor_can_place(UUHandle(inPlayer), inType, (const float(*)[3])&inLocation->mX, inX, inY) != 0;
     bool theFlag;
     return EECanPlaceUnitOnTile(inPlayer, NULL, inType, inX, inY, inSkipPlayerChecks, inIgnoreOwner, theFlag);
 }
@@ -2245,13 +2190,6 @@ bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnit
     if (theFlag != 2)
         outFlag = theFlag != 0;
     return theResult;
-}
-
-// Tells whether a unit type can be placed in the scenario editor (free camera)
-// The scenario editor's (free camera) placement test (inferred)
-bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY)
-{
-    return ee_units_uu_editor_can_place(UUHandle(inPlayer), inType, (const float(*)[3])&inLocation->mX, inX, inY) != 0;   // uu_world.rs
 }
 
 // (0x64f6f7, EEIsEditorSpacingClear: ee_units uu_world.rs editor_spacing_clear)

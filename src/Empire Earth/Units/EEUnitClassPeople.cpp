@@ -725,7 +725,7 @@ void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     EEUnit* theUnit;
     if (theGoal->mKind == kGoalAttackUnit) {
         EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
-        EEGetAimPoint(inUnit, &theEnemy, &theTarget);
+        ee_units_uu_aim_point((uint64_t)(uintptr_t)inUnit, (const float(*)[3])&theEnemy.mX, (float(*)[3])&theTarget.mX);
     } else if (theGoal->mKind == kGoalCastCalamity) {
         theGoal->GetDestination(inUnit, theTarget);
         EEGetHelicopterPriestDestination(inUnit, theTarget);

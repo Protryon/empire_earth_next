@@ -71,10 +71,6 @@ long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>
 long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>& outUnits);
 // 0x24bf01: the units within inRadius of inCenter; their number (the hurricane) (provisional name)
 long EEGetUnitsNear(const GE3DPoint& inCenter, float inRadius, std::vector<EEUnit*>& outUnits);
-// 0x2467bb / 0x248d05 (cdecl; the hurricane compares the first with the square of the second plus its radius)
-// Provisional names
-float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther);
-float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther);
 
 class EEComplexUnit;
 class FSFile;
