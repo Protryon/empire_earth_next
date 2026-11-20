@@ -2,7 +2,8 @@
 // main game form's main group (RTTI EEUIFMGMainGroup > EEUIFMGGroup; vtable 0x44ac84): 0x267ec8..0x2691b2 (ctor,
 // Virtual10 (inline), ??_G, dtor, Virtual04, the selection members, EEUIEMGHotKeyStatusButton's ??_G after its first
 // user, Virtual14, then the inline COMDATs EETechTreeNode::GetHotKey, EEComplexUnit::GetCitizenBuildTarget and
-// EEButtonObject::GetHotKey). Unit flags: the exe module set.
+// EEButtonObject::GetHotKey; the two GetHotKeys are their classes' units' now: the command buttons named this unit
+// for them). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -296,26 +297,13 @@ void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
         ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SPECIAL_BUTTONS, inUnit, 0);
 }
 
-// Returns the tech node's hot key, or NULL
-UIHotKey* EETechTreeNode::GetHotKey()
-{
-    if (this->mData->mHotKey > 0 && this->mData->mHotKey < (long)UIHotKey::GetHotKeyCount())
-        return UIHotKey::GetHotKey(this->mData->mHotKey);
-    return NULL;
-}
+// (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
+// classes' units, Tech Tree/EETechTreeNode.cpp and Database/EEButtonObject.cpp)
 
 // Returns the citizen's queued build target at an index
 EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
 {
     return this->mCitizenBuildQueue[inIndex];
-}
-
-// Returns the button's hot key, or NULL
-UIHotKey* EEButtonObject::GetHotKey()
-{
-    if (this->mHotKeyIndex > 0 && this->mHotKeyIndex < (long)UIHotKey::GetHotKeyCount())
-        return UIHotKey::GetHotKey(this->mHotKeyIndex);
-    return NULL;
 }
 
 void EEUIFMGMainGroup::Select()

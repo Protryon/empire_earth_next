@@ -9,6 +9,9 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
+#include "lle/UIEntity.h"
+#include "lle/Input System.h"
+#include "lle/UIHotKey.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -415,4 +418,12 @@ EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
         this->mButton = inOther.mButton;
     }
     return *this;
+}
+
+// Returns the tech node's hot key, or NULL (an inline COMDAT the original emitted in EEUIFMGMainGroup.cpp)
+UIHotKey* EETechTreeNode::GetHotKey()
+{
+    if (this->mData->mHotKey > 0 && this->mData->mHotKey < (long)UIHotKey::GetHotKeyCount())
+        return UIHotKey::GetHotKey(this->mData->mHotKey);
+    return NULL;
 }
