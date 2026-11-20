@@ -29,10 +29,14 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 #[cfg(not(test))]
 use crate::units::pm_host::{ee_units_pm_host_passable_by, ee_units_pm_host_random};
 
-#[cfg(not(test))]
-extern "C" {
-    fn ee_astar_view_cm_path_area_at(x: i32, y: i32) -> u64;
-    pub(crate) fn ee_astar_view_cm_hill_at(x: i32, y: i32) -> u64;
+/// The manager's `GetPathAreaAt` and `GetHillAt` as the view asks them: the queries with their CNTQ records
+/// (cm_queries.rs; 0 before the manager is registered).
+pub(crate) unsafe fn ee_astar_view_cm_path_area_at(x: i32, y: i32) -> u64 {
+    cm().map_or(0, |r| crate::astar::cm_queries::ee_astar_cmq_area_at(r, 3, x as std::ffi::c_long, y as std::ffi::c_long))
+}
+
+pub(crate) unsafe fn ee_astar_view_cm_hill_at(x: i32, y: i32) -> u64 {
+    cm().map_or(0, |r| crate::astar::cm_queries::ee_astar_cmq_area_at(r, 2, x as std::ffi::c_long, y as std::ffi::c_long))
 }
 
 #[cfg(test)]
@@ -43,15 +47,9 @@ pub(crate) mod cpp {
     pub(super) unsafe fn ee_units_pm_host_random() -> f32 {
         0.5
     }
-    pub(super) unsafe fn ee_astar_view_cm_path_area_at(_x: i32, _y: i32) -> u64 {
-        0
-    }
-    pub(crate) unsafe fn ee_astar_view_cm_hill_at(_x: i32, _y: i32) -> u64 {
-        0
-    }
 }
 #[cfg(test)]
-pub(crate) use cpp::*;
+use cpp::*;
 
 /// A view of the world: `map` the search's map (an `EEMap*`), `quiet` a modifier's view whose answers are not noted.
 #[repr(C)]
@@ -396,6 +394,13 @@ fn table_entry(t: crate::astar::cm::EeAStarCmTable, index: usize) -> u64 {
 fn tile_flag(x: i32, y: i32) -> i32 {
     let t = token();
     world_map(&t).and_then(|m| m.tile(i64::from(x), i64::from(y))).map_or(0, |tl| i32::from(tl.ai_value()))
+}
+
+/// `EEAIContinentManager::GetTileFlag(x, y)`: the map tile's `mAIValue`, 0 off the map.
+#[no_mangle]
+pub extern "C" fn ee_astar_tile_flag(x: std::ffi::c_long, y: std::ffi::c_long) -> std::ffi::c_long {
+    let t = token();
+    world_map(&t).and_then(|m| m.tile(x as i64, y as i64)).map_or(0, |tl| tl.ai_value() as std::ffi::c_long)
 }
 
 fn path_area_info(h: u64) -> EeAStarPathAreaInfo {

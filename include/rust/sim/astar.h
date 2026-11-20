@@ -1877,6 +1877,16 @@ void ee_astar_cm_update_tile_values(EeAStarCmRecord *r, bool water);
 /// As `rect_update_continents`; `r` the manager's record.
 uint16_t ee_astar_cm_rect_update_continents(const EeAStarCmRecord *r, uint64_t area);
 
+/// A C++ query's scope opens (the queries left in C++: CanGetTo, AreConnectedForUnit, UpdateWallUnit); whether it
+/// records.
+bool ee_astar_cntq_enter(uint32_t kind);
+
+/// A value of the open record (only a scope that records calls it).
+void ee_astar_cntq_i(int32_t v);
+
+/// The scope closes (`on`: what `ee_astar_cntq_enter` answered).
+void ee_astar_cntq_leave(bool on);
+
 /// The host the state's readers and writers call.
 void ee_astar_cm_set_host(EeAStarCmHostFn f, void *ctx);
 
@@ -1973,6 +1983,192 @@ void ee_astar_cm_apply_links(const EeAStarCmRecord *r, EeSubSectorLinks *links);
 /// # Safety
 /// As `remove_sub_sectors`; `r` the manager's record.
 void ee_astar_cm_remove_sub_sectors(EeAStarCmRecord *r, uint64_t sector);
+
+/// A unit's tile (`mTileX`, `mTileY`), for the manager's lookups by a unit.
+///
+/// # Safety
+/// `unit` a live unit.
+EeHullPoint ee_astar_unit_tile(uint64_t unit);
+
+/// `GetConnectedIDs` (`with_self`) / `GetAdjacentIDs`: the continents adjacent to `id` into `out` (room for the
+/// matrix's width); their count (0 for an unknown id).
+///
+/// # Safety
+/// `r` a live record; `out` holds `flags_width` values.
+size_t ee_astar_cmq_adjacent_ids(const EeAStarCmRecord *r,
+                                 uint16_t id,
+                                 bool with_self,
+                                 uint16_t *out);
+
+/// `HasShoreTile(tiles)`.
+///
+/// # Safety
+/// `r` a live record; `tiles` holds `n` points.
+bool ee_astar_cmq_has_shore_tile(const EeAStarCmRecord *r, const EeHullPoint *tiles, size_t n);
+
+/// `InSameContinent(first, second)`: the two units' tiles have one continent id.
+///
+/// # Safety
+/// `r` a live record; the units live.
+bool ee_astar_cmq_in_same_continent(const EeAStarCmRecord *r, uint64_t first, uint64_t second);
+
+/// `InSameArea(tiles, kind)`.
+///
+/// # Safety
+/// `r` a live record; `tiles` holds `n` points.
+bool ee_astar_cmq_in_same_area(const EeAStarCmRecord *r,
+                               const EeHullPoint *tiles,
+                               size_t n,
+                               long kind);
+
+/// The area lookups by a tile: 0 the choke point (`GetChokePointAt`), 1 the forest, 2 the hill, 3 the path area.
+///
+/// # Safety
+/// `r` a live record.
+uint64_t ee_astar_cmq_area_at(const EeAStarCmRecord *r,
+                              int32_t kind,
+                              long x,
+                              long y);
+
+/// `GetChokePoints(out, id, clear)`: continent `id`'s choke points (every one for 0) appended to the list
+/// (`before`, `count_before`: the list on entry, after the clear when `clear`); `push(ctx, handle)` each.
+///
+/// # Safety
+/// `r` a live record; `before` holds `count_before` handles; `push` accepts `ctx`.
+void ee_astar_cmq_choke_points(const EeAStarCmRecord *r,
+                               uint16_t id,
+                               bool clear,
+                               const uint64_t *before,
+                               size_t count_before,
+                               void *ctx,
+                               void (*push)(void*, uint64_t));
+
+/// `GetContinentCenter(id)`: its hull's center, (0, 0) for an unknown id.
+///
+/// # Safety
+/// `r` a live record.
+EeHullPoint ee_astar_cmq_continent_center(const EeAStarCmRecord *r, uint16_t id);
+
+/// `GetContinentTiles(id, out)`: `push(ctx, x, y)` for each of continent `id`'s tiles after the caller's
+/// `count_before` (the list is rebuilt: `clear(ctx)` first; nothing for an unknown id).
+///
+/// # Safety
+/// `r` a live record; the callbacks accept `ctx`; `before` holds `count_before` points (the list on entry).
+void ee_astar_cmq_continent_tiles(const EeAStarCmRecord *r,
+                                  uint16_t id,
+                                  const EeHullPoint *before,
+                                  size_t count_before,
+                                  void *ctx,
+                                  void (*clear)(void*),
+                                  void (*push)(void*, long, long));
+
+/// `AreConnected(first, second, flags)`.
+///
+/// # Safety
+/// The continents 0 or live.
+bool ee_astar_cmq_are_connected(uint64_t first, uint64_t second, long flags);
+
+/// `GetLargestContinent(kind)`.
+///
+/// # Safety
+/// `r` a live record.
+long ee_astar_cmq_largest_continent(const EeAStarCmRecord *r, long kind);
+
+/// `GetContinent(tile, kind)`: the kind's region id of the tile's path area.
+///
+/// # Safety
+/// `r` a live record.
+uint16_t ee_astar_cmq_region_id(const EeAStarCmRecord *r, long x, long y, long kind);
+
+/// `GetPathSubSectorAt(unit)`: the sub sector at the unit's tile (0 if none).
+///
+/// # Safety
+/// `r` a live record; `unit` live.
+uint64_t ee_astar_cmq_sub_sector_at(const EeAStarCmRecord *r, uint64_t unit);
+
+/// `GetRandomArea(kind, random, continent)` (`continents` false) / `GetRandomContinent(kind, random)`.
+///
+/// # Safety
+/// `r` a live record; `random` a live `URandom*`.
+uint64_t ee_astar_cmq_random_area(const EeAStarCmRecord *r,
+                                  bool continents,
+                                  long kind,
+                                  uint64_t random,
+                                  uint16_t continent);
+
+/// `GetTilesNextTo(x, y, out, id)`: `out` gets up to 8 tiles, `count` their number.
+///
+/// # Safety
+/// `r` a live record; `out` holds 8 points; `count` writable.
+bool ee_astar_cmq_tiles_next_to(const EeAStarCmRecord *r,
+                                long x,
+                                long y,
+                                uint16_t id,
+                                EePoint *out,
+                                size_t *count);
+
+/// `IsNextToArea(x, y, id)`.
+///
+/// # Safety
+/// `r` a live record.
+bool ee_astar_cmq_is_next_to_area(const EeAStarCmRecord *r, long x, long y, uint16_t id);
+
+/// `RepairPathArea(tile)`.
+///
+/// # Safety
+/// `r` the live record, not in use elsewhere.
+void ee_astar_cmq_repair_path_area(EeAStarCmRecord *r, long x, long y);
+
+/// `RemoveForestTile(unit)`: once no wood with resources is left on the unit's tile, the tile leaves its forest.
+///
+/// # Safety
+/// `r` the live record, not in use elsewhere; `unit` live.
+void ee_astar_cmq_remove_forest_tile(EeAStarCmRecord *r,
+                                     uint64_t unit);
+
+/// A query left in C++ (`CanGetTo`, `AreConnectedForUnit`, `UpdateWallUnit`) records an area as Rust does.
+///
+/// # Safety
+/// `h` 0 or a live area.
+void ee_astar_cntq_area(uint64_t h);
+
+/// A C++ query's change ends with the state's digest.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_cntq_state(const EeAStarCmRecord *r);
+
+/// `FindContinentID(x, y)`: the continent found through the tile's path sector, its id (0 if none).
+///
+/// # Safety
+/// `r` a live record.
+uint16_t ee_astar_cm_found_continent_id(const EeAStarCmRecord *r, long x, long y);
+
+/// `FindPathSubSectorID(x, y)`: the sub sector found through the tile's path sector, its id (0 if none).
+///
+/// # Safety
+/// `r` a live record.
+uint16_t ee_astar_cm_sub_sector_id_found(const EeAStarCmRecord *r,
+                                         long x,
+                                         long y);
+
+/// `AddArea(area)`: the serial table gets the area under its serial.
+///
+/// # Safety
+/// `r` the live record; `area` a live area.
+void ee_astar_cm_add_object_area(EeAStarCmRecord *r, uint64_t area);
+
+/// `RemoveArea(area)`: its serial leaves the table; whether it was there.
+///
+/// # Safety
+/// `r` the live record; `area` a live area.
+bool ee_astar_cm_remove_object_area(EeAStarCmRecord *r, uint64_t area);
+
+/// `RemoveSectorTiles(sector)`: its pending tiles dropped.
+///
+/// # Safety
+/// `r` the live record; `sector` a live sector.
+void ee_astar_cm_remove_sector_tiles_of(EeAStarCmRecord *r, uint64_t sector);
 
 /// The tile lookups: `kind` 0 choke point, 1 forest, 2 hill, 3 path area, 4 continent (`GetContinentAt`).
 ///
@@ -2987,10 +3183,6 @@ void ee_astar_sub_sector_add_neighbor(EeAStarSubSectorRecord *r, uint64_t other)
 /// `tiles` is a live set; the caller holds the world (the AI's path searches).
 bool ee_astar_sub_sector_is_passable(const EeSparseArray *tiles, long player);
 
-extern uint64_t ee_astar_view_cm_path_area_at(int32_t x, int32_t y);
-
-extern uint64_t ee_astar_view_cm_hill_at(int32_t x, int32_t y);
-
 /// Registers the continent manager's record the views read (EEAIRegisterContinentState).
 ///
 /// # Safety
@@ -3002,6 +3194,9 @@ void ee_astar_world_view_set_manager(EeAStarCmRecord *r);
 /// # Safety
 /// `tile` 0 or a live `EETile*`.
 int32_t ee_astar_tile_resource_kind(uint64_t tile);
+
+/// `EEAIContinentManager::GetTileFlag(x, y)`: the map tile's `mAIValue`, 0 off the map.
+long ee_astar_tile_flag(long x, long y);
 
 /// The callbacks over `view` (`EEAIAStarView::Callbacks`).
 ///
