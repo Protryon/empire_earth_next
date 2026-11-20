@@ -123,22 +123,6 @@ long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
     return ee_units_cls_base_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
 }
 
-// Returns whether inUnit's first goal queue holds a move goal that is not a forced move (EvaluateCondition's helper)
-bool EEIsLocationGoalQueued(EEComplexUnit* inUnit)
-{
-    EEGoalDeque::const_iterator it = inUnit->GetQueueGoals(0).begin();
-    EEGoalDeque::const_iterator theEnd = inUnit->GetQueueGoals(0).end();
-    bool theResult = false;
-    for (; it != theEnd && !theResult; ++it) {
-        EEUnitGoal* theGoal = *it;
-        if (theGoal != NULL && theGoal->mKind == kGoalLocation && !static_cast<EEUGRust*>(theGoal)->GetIsForcedMove())
-            theResult = true;
-        else
-            theResult = false;
-    }
-    return theResult;
-}
-
 // New (R5b.4, the thirty-fourth round): the trigger answers are Rust (ee_units cls_condition.rs: every kind's body and
 // the common one, golden USST kind 2); this switch is their host, each case the original's expression or statement
 static EEUnitGoal* CondGoal(uint64_t inGoal) { return (EEUnitGoal*)(uintptr_t)inGoal; }
@@ -151,27 +135,12 @@ static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
     ioIo->p[2] = inPoint.GetZ();
 }
 
-static int64_t CondTimeGone(EEUnitGoal* inGoal, int64_t inMs)
-{
-    return (unsigned long)(gPhysics->mGameTime - inGoal->GetStartTime()) >= (unsigned long)inMs;
-}
-
 extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)
 {
     EEComplexUnit* theUnit = CondUnit(inA);
     switch (inOp) {
-    // (the goals, the last attacker, the line of sight, the cargo count and the position: ee_units cls_host.rs)
-    case EE_UNITS_COND_GOAL_INFO: {
-        EEUnitGoal* theGoal = CondGoal(inB);
-        bool theForced = theGoal->mKind == kGoalLocation && static_cast<EEUGRust*>(theGoal)->GetIsForcedMove();
-        return (int64_t)theGoal->mKind | (theGoal->mB1C ? 0x100 : 0) | (theForced ? 0x200 : 0);
-    }
-    case EE_UNITS_COND_GOAL_CONDITION:
-        return CondGoal(inB)->EvaluateCondition(theUnit, (unsigned long)inC);
-    case EE_UNITS_COND_GOAL_ELAPSED:
-        return CondTimeGone(CondGoal(inB), inC);
-    case EE_UNITS_COND_GOAL_TARGET:
-        return EEObj(static_cast<EEUGRust*>(CondGoal(inB))->GetAttackTarget());
+    // (the goals and their queues, the last attacker, the line of sight, the cargo count and the position:
+    // ee_units cls_host.rs)
     case EE_UNITS_COND_BEHAVIOR: {
         EEUnitBehavior* theBehavior = theUnit->mBehavior;
         return (theBehavior->mCanTargetEnemies ? 1 : 0) | (theBehavior->mCanFlee ? 2 : 0) |
@@ -179,8 +148,6 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     }
     case EE_UNITS_COND_MOVE_FREELY:
         return theUnit->mBehavior->CanMoveFreely(theUnit);
-    case EE_UNITS_COND_LOCATION_QUEUED:
-        return EEIsLocationGoalQueued(theUnit);
     case EE_UNITS_COND_CONDITION_TARGET:
         return EEObj(static_cast<EEUnit*>(theUnit->GetConditionTarget()));
     case EE_UNITS_COND_CAN_REACH:
@@ -368,15 +335,9 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
             ee_units_atc_remove_plane(theTraffic, theUnit, theOther->mComplexUnit);
         return 0;
     }
-    case EE_UNITS_COND_QUEUED_GOAL:
-        return theUnit->GetQueuedGoal((unsigned long)inC) != NULL;
     case EE_UNITS_COND_MINE_DEPLETED: {
         EEUnit* theMine = theUnit->mMine;
         return theMine == NULL || !theMine->mIsValid || theMine->mResourceAmount <= 0;
-    }
-    case EE_UNITS_COND_SECONDARY_TARGET: {
-        EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
-        return theGoal != NULL && theGoal->GetAttackTarget()->mHitPoints > 0;
     }
     }
     return 0;

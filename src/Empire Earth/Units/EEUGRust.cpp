@@ -155,7 +155,7 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
     bool theFound = false;
     bool theHaveFlags = false;
     GE3DPoint theLocation;
-    EEGetResourceSpots(inResource, theTiles);
+    ee_units_uu_unit_tiles(1, (uint64_t)(uintptr_t)inResource, &theTiles);
     std::sort(theTiles.begin(), theTiles.end(), EEGatherTileFarther(inUnit, inResource->GetTile()));
     EEAIPathSubSector* theStart = gContinentManager.GetPathSubSectorAt(inResource);
     while (!theFound && theTiles.size() != 0) {
@@ -214,7 +214,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     EEUnitClass* theCitizen = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != inResource->mResourceType)
         inUnit->mResourceAmount = 0;
-    if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
+    if (inResource->mResourceType == kResourceWood && !ee_units_uu_spot(1, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inResource, (float(*)[3])&theLocation.mX)) {
         unsigned short theForestID =
             gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
         EEAIForest* theForest = gContinentManager.GetForests()[theForestID];
@@ -343,9 +343,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_DEREFERENCE:
         theUnit->Dereference();
         return 0;
-    case EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS:
-        ObjectOf<EEUnitGoal>(inA)->SetPathAttempts(0);
-        return 0;
     case EE_UNITS_GOAL_HOST_START_ACTION:
         theComplex->StartAction((unsigned long)ioArgs->i[0]);
         if (ioArgs->i[1] == 0)
@@ -362,8 +359,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_DROP_PATH:
         theComplex->DropPath();
         return 0;
-    case EE_UNITS_GOAL_HOST_NEW_GOAL:
-        return Handle(new EEUGRust((unsigned char)inA, inB != 0));
     case EE_UNITS_GOAL_HOST_FILE_OPEN:
         return theContext->mFile->GetIsOpen() ? 1 : 0;
     case EE_UNITS_GOAL_HOST_WRITE:
@@ -533,7 +528,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 && theComplex->mUnitClass->mUnitType != kUnitTypeSp15SpaceFighter)
                 theArea = gContinentManager.GetContinentAt(theComplex);
             else
-                theArea = dynamic_cast<EEAIContinent*>(
+                theArea = static_cast<EEAIContinent*>(
                     gContinentManager.GetRandomContinent(kContinentCategoryNone, gPhysics->mRandom));
             if (theArea == NULL)
                 return 0;
@@ -646,16 +641,12 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[2] = theAvailable != NULL && theAvailable->GetIsAvailable();
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND: {
-            EEUnitGoal* theGoal = theComplex != NULL ? theComplex->GetQueuedGoal((long)inB) : NULL;
-            return theGoal != NULL ? theGoal->mKind : -1;
-        }
     case EE_UNITS_GOAL_HOST_CLEAR_GOALS:
         theComplex->ClearGoals((long)inB);
         return 0;
     case EE_UNITS_GOAL_HOST_DEPOSIT:
         if (theComplex->mResourceAmount > 0 && ObjectOf<EEComplexUnit>(inB)->CanTake(theComplex, theComplex->mResourceType))
-            EEDepositLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
+            ee_units_uu_deposit_load(inA, inB);   // uu_world.rs
         return 0;
     case EE_UNITS_GOAL_HOST_GARRISON_UNIT:
         return theComplex->GarrisonUnit(ObjectOf<EEComplexUnit>(inB));
@@ -733,9 +724,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             }
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
-        theComplex->SetGoal(EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
-        return 0;
     case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
         return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
     case EE_UNITS_GOAL_HOST_BUILD_EVENT: {
@@ -745,23 +733,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, ioArgs->i[0] != 0 ? 0x7c42 : 0x273a, false);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: {
-            // IsShiftQueueNext's queue: another goal than this one that is no automatic waypoint
-            const EEGoalDeque& theGoals = theComplex->GetQueueGoals(0);
-            for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
-                if (*i == ObjectOf<EEUnitGoal>(inB))
-                    continue;
-                EEUGRust* theLocation = EELocationGoalCast(*i);
-                if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
-                    return 1;
-            }
-            return 0;
-        }
-    case EE_UNITS_GOAL_HOST_NEW_GATHER:
-        return Handle(EEUGRust::NewGather(theUnit, ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0));
-    case EE_UNITS_GOAL_HOST_SET_GOAL:
-        theComplex->SetGoal(ObjectOf<EEUnitGoal>(inB), (long)ioArgs->i[0], (long)ioArgs->i[1]);
-        return 0;
     case EE_UNITS_GOAL_HOST_NEAREST_SITE:
         return Handle(theComplex->mPlayer->GetNearestConstructionSite(theComplex));
     case EE_UNITS_GOAL_HOST_CAN_PRODUCE:
@@ -805,8 +776,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theComplex->PartFinished();
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_GOAL_ARG:
-        return ObjectOf<EEUnitGoal>(inA)->GetB1C();
     // the gather goal's
     case EE_UNITS_GOAL_HOST_NEXT_RESOURCE: {
             std::vector<EEUnit*> thePassed;
@@ -855,9 +824,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
         PointOut(ioArgs, GE3DPoint(theComplex->mWaypoints.back().mLocation));
         return 0;
-    case EE_UNITS_GOAL_HOST_SET_ACTIVE:
-        ObjectOf<EEUnitGoal>(inA)->mIsActive = ioArgs->i[0] != 0;
-        return 0;
     case EE_UNITS_GOAL_HOST_FIND_GHOST:
         if (inB != 0)
             return Handle(EEFindLoadedGhost((unsigned long)inA));
@@ -884,7 +850,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_WORK_TIMER: {   // the gather time of the resource (variant-scaled except stone)
             EEUnit* theResource = ObjectOf<EEUnit>(inB);
-            long theRate = theComplex->mStats->mGatherTimes[EEGetResourceIndex(theResource)];
+            long theRate = theComplex->mStats->mGatherTimes[ee_units_uu_resource_index((uint64_t)(uintptr_t)theResource)];
             if (theResource->mResourceType != kResourceStone)
                 theRate = UMFloatToLong(EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor * theRate);
             theComplex->SetWorkTimer(theRate);
@@ -911,31 +877,10 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 (long)ioArgs->i[0], (unsigned long)ioArgs->i[1], &theTaken, ioArgs->i[2] != 0));
         }
     // the location goal's
-    case EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN:
-        return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
-    case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
-        theComplex->mActiveGoal->SetPathAttempts(0);
-        return 0;
     // the world searches' queries (world.rs): unit lists into the sink, tiles as ee_units_goal_push_tile
     case EE_UNITS_GOAL_HOST_ACTION_CHANGED:
         theComplex->mUnitClass->ActionChanged(theComplex);
         return 0;
-    case EE_UNITS_GOAL_HOST_BASE_FIELDS: {   // the base goal's saved fields, read (b 0) or written (b 1)
-        EEUnitGoal* theGoal = ObjectOf<EEUnitGoal>(inA);
-        if (inB == 0) {
-            int64_t theFields[6] = {theGoal->mAction, theGoal->mB1C, theGoal->mID, theGoal->mB1D,
-                                    theGoal->mStartTime, theGoal->mCreationTime};
-            memcpy(ioArgs->i, theFields, sizeof(theFields));
-        } else {
-            theGoal->mAction = (unsigned long)ioArgs->i[0];
-            theGoal->mB1C = ioArgs->i[1] != 0;
-            theGoal->mID = (unsigned long)ioArgs->i[2];
-            theGoal->mB1D = ioArgs->i[3] != 0;
-            theGoal->mStartTime = (unsigned long)ioArgs->i[4];
-            theGoal->mCreationTime = (unsigned long)ioArgs->i[5];
-        }
-        return 0;
-    }
     default:   // the combat goals' operations (EEUGRustCombat.cpp)
         return EECombatGoalHostOp(inOp, inA, inB, ioArgs);
     }
@@ -961,21 +906,19 @@ int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint
     return Goal(inOperation, inGoal, inA, inB, ioArgs, inFile);
 }
 
-// the goals' counter (0x564480; EEPlayer's save and load keep it: ee/EmpireEarth.h)
-unsigned long sGoalCounter;
+// the goal's members are the Rust object's head (ee_units goal_obj.rs)
+static_assert(sizeof(EEUnitGoal) == sizeof(EeUnitsGoalBase) && offsetof(EEUnitGoal, mKind) == offsetof(EeUnitsGoalBase, kind)
+                  && offsetof(EEUnitGoal, mAction) == offsetof(EeUnitsGoalBase, action)
+                  && offsetof(EEUnitGoal, mStartTime) == offsetof(EeUnitsGoalBase, start_time)
+                  && offsetof(EEUnitGoal, mCreationTime) == offsetof(EeUnitsGoalBase, creation_time)
+                  && offsetof(EEUnitGoal, mID) == offsetof(EeUnitsGoalBase, id)
+                  && offsetof(EEUnitGoal, mPathAttempts) == offsetof(EeUnitsGoalBase, path_attempts)
+                  && offsetof(EEUnitGoal, mB1C) == offsetof(EeUnitsGoalBase, b1c)
+                  && offsetof(EEUnitGoal, mB1D) == offsetof(EeUnitsGoalBase, b1d),
+              "EEUnitGoal is EeUnitsGoalBase");
 
-// 0x23c375: an active, idle goal of a kind with the next goal id, stamped with the game time
-EEUnitGoal::EEUnitGoal(unsigned char inKind, bool inArg)
-    : mKind(inKind), mB1C(inArg)
-{
-    this->mAction = kActionIdle;
-    this->mB1D = false;
-    this->mIsActive = true;
-    this->mStartTime = 0;
-    this->mCreationTime = gPhysics->mGameTime;
-    this->mID = ++sGoalCounter;
-    this->mPathAttempts = 0;
-}
+// the world host of the goals' context-free calls (EEUnitGoal::Call)
+static const int sGoalHostRegistered = (ee_units_goal_register_host(GoalOp), 0);
 
 // 0x23c3e6: an empty goal of a kind for loading, giving the drawn goal id back (NULL for an unknown kind)
 EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
@@ -996,7 +939,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
     case kGoalHealUnit: theGoal = NewHealUnit(false); break;
     }
     if (theGoal != NULL)
-        theGoal->mID = --sGoalCounter;
+        theGoal->mID = ee_units_goal_counter_back();
     return theGoal;
 }
 
@@ -1006,7 +949,7 @@ namespace {
 EEUGRust* NewLocationGoal(const GE3DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace, float inYaw,
                           bool inIsAutoWaypoint, unsigned char inGroupPathState)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalLocation, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalLocation, inArg);
     EeUnitsGoalIo theArgs = {{inIsForcedMove, inShouldFace, inIsAutoWaypoint, inGroupPathState}};
     PointOut(&theArgs, inLocation);
     theArgs.f[3] = inYaw;
@@ -1069,125 +1012,11 @@ void EEUGRust::SetLocation(const GE3DPoint& inLocation)
     LocationSet(this, theRecord);
 }
 
-float EEUGRust::GetYaw() const
-{
-    return LocationOf(this).yaw;
-}
-
-bool EEUGRust::GetIsForcedMove() const
-{
-    return LocationOf(this).forced_move;
-}
-
-bool EEUGRust::GetShouldFace() const
-{
-    return LocationOf(this).should_face;
-}
-
-bool EEUGRust::GetIsAutoWaypoint() const
-{
-    return LocationOf(this).auto_waypoint;
-}
-
-bool EEUGRust::GetUseGroupMovement() const
-{
-    return LocationOf(this).group_movement;
-}
-
-void EEUGRust::SetUseGroupMovement(bool inValue)
-{
-    EeUnitsLocationGoal theRecord = LocationOf(this);
-    theRecord.group_movement = inValue;
-    LocationSet(this, theRecord);
-}
-
-unsigned char EEUGRust::GetGroupPathState() const
-{
-    return LocationOf(this).group_path_state;
-}
-
-void EEUGRust::SetGroupPathState(unsigned char inValue)
-{
-    EeUnitsLocationGoal theRecord = LocationOf(this);
-    theRecord.group_path_state = inValue;
-    LocationSet(this, theRecord);
-}
-
-bool EEUGRust::FaceYaw(EEComplexUnit* inUnit)
-{
-    return Goal(EE_UNITS_GOAL_FACE_YAW, this, Handle(inUnit)) != 0;
-}
-
-EEUGRust* EEUGRust::NewPatrol(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalPatrol, inArg);
-    Goal(EE_UNITS_GOAL_PATROL_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewPatrol(EEPPatrolGroup* inGroup, EEComplexUnit* inTarget, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalPatrol, inArg);
-    Goal(EE_UNITS_GOAL_NEW_PATROL, theGoal, Handle(inGroup), Handle(inTarget));
-    return theGoal;
-}
-
-EEPPatrolGroup* EEUGRust::GetPatrolGroup()
-{
-    return ObjectOf<EEPPatrolGroup>((uint64_t)Goal(EE_UNITS_GOAL_PATROL_GROUP, this));
-}
-
-EEComplexUnit* EEUGRust::GetPatrolTarget()
-{
-    return ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_PATROL_TARGET, this));
-}
-
-void EEUGRust::SetPatrolGroup(EEPPatrolGroup* inGroup)
-{
-    Goal(EE_UNITS_GOAL_PATROL_SET_GROUP, this, Handle(inGroup));
-}
-
-EEUGRust* EEUGRust::NewCastCalamity(EEComplexUnit* inSource, EEUnit* inTarget, long inTileX, long inTileY,
-                                    long inCalamityType, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalCastCalamity, inArg);
-    EeUnitsGoalIo theArgs = {{inTileX, inTileY, inCalamityType}};
-    Goal(EE_UNITS_GOAL_NEW_CALAMITY, theGoal, Handle(inSource), Handle(inTarget), &theArgs);
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewCastCalamity(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalCastCalamity, inArg);
-    Goal(EE_UNITS_GOAL_CALAMITY_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-long EEUGRust::GetCalamityType(long* outTileX, long* outTileY, EEUnit** outTarget)
-{
-    EeUnitsGoalIo theArgs = {};
-    EEUnit* theTarget = ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_CALAMITY_FIELDS, this, 0, 0, &theArgs));
-    if (outTileX != NULL)
-        *outTileX = (long)theArgs.i[1];
-    if (outTileY != NULL)
-        *outTileY = (long)theArgs.i[2];
-    if (outTarget != NULL)
-        *outTarget = theTarget;
-    return (long)theArgs.i[0];
-}
-
 void EEUGRust::GetCalamityTargetLocation(GE3DPoint& outLocation)
 {
     EeUnitsGoalIo theArgs = {};
     Goal(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this, 0, 0, &theArgs);
     PointIn(theArgs, outLocation);
-}
-
-EEUGRust* EEUGRust::NewExplore(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalExplore, inArg);
-    Goal(EE_UNITS_GOAL_NEW_EXPLORE, theGoal);
-    return theGoal;
 }
 
 void EEUGRust::GetExploreTileCenter(GE3DPoint& outLocation)
@@ -1198,168 +1027,13 @@ void EEUGRust::GetExploreTileCenter(GE3DPoint& outLocation)
     outLocation.SetY((float)(long)theArgs.i[1] + 0.5f);
 }
 
-void EEUGRust::SetExploreTile(long inX, long inY)
-{
-    EeUnitsGoalIo theArgs = {{inX, inY}};
-    Goal(EE_UNITS_GOAL_EXPLORE_SET_TILE, this, 0, 0, &theArgs);
-}
-
-EEUGRust* EEUGRust::NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalUnloadTransport, inArg);
-    EeUnitsGoalIo theArgs = {{inX, inY}};
-    Goal(EE_UNITS_GOAL_NEW_UNLOAD, theGoal, Handle(inTransport), 0, &theArgs);
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewUnloadTransport(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalUnloadTransport, inArg);
-    Goal(EE_UNITS_GOAL_UNLOAD_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-EEComplexUnit* EEUGRust::GetUnloadTransport(long* outX, long* outY)
-{
-    EeUnitsGoalIo theArgs = {};
-    EEComplexUnit* theTransport =
-        ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_UNLOAD_FIELDS, this, 0, 0, &theArgs));
-    if (outX != NULL)
-        *outX = (long)theArgs.i[0];
-    if (outY != NULL)
-        *outY = (long)theArgs.i[1];
-    return theTransport;
-}
-
-void EEUGRust::SetUnloadTransport(EEComplexUnit* inTransport)
-{
-    Goal(EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT, this, Handle(inTransport));
-}
-
-bool EEUGRust::CanUnloadAtDestination()
-{
-    return Goal(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD, this) != 0;
-}
-
-EEUGRust* EEUGRust::NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalBuildRepair, inArg);
-    Goal(EE_UNITS_GOAL_NEW_BUILD, theGoal, Handle(inPlayer), Handle(inTarget));
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewBuildRepair(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalBuildRepair, inArg);
-    Goal(EE_UNITS_GOAL_BUILD_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-EEUnit* EEUGRust::GetBuildTarget()
-{
-    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_BUILD_FIELDS, this));
-}
-
-long EEUGRust::GetBuildTargetType()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
-    return (long)theArgs.i[0];
-}
-
-long EEUGRust::GetBuildTechTreeID()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
-    return (long)theArgs.i[1];
-}
-
-EEUnitClass* EEUGRust::GetBuildTargetClass()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
-    return ObjectOf<EEUnitClass>((uint64_t)theArgs.i[3]);
-}
-
-bool EEUGRust::IsBuildSiteTaken()
-{
-    return Goal(EE_UNITS_GOAL_BUILD_SITE_TAKEN, this) != 0;
-}
-
-void EEUGRust::Work(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_WORK, this, Handle(inUnit));
-}
-
-EEUGRust* EEUGRust::NewGather(EEUnit* inResource, EEUnit* inStorage, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalGather, inArg);
-    Goal(EE_UNITS_GOAL_NEW_GATHER, theGoal, Handle(inResource), Handle(inStorage));
-    return theGoal;
-}
-
-EEUGRust* EEUGRust::NewGather(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalGather, inArg);
-    Goal(EE_UNITS_GOAL_GATHER_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-EEUnit* EEUGRust::GetGatherResource()
-{
-    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_GATHER_FIELDS, this));
-}
-
-EEUnit* EEUGRust::GetGatherStorage()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
-    return ObjectOf<EEUnit>((uint64_t)theArgs.i[0]);
-}
-
-bool EEUGRust::IsGathering()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
-    return theArgs.i[1] != 0;
-}
-
-bool EEUGRust::IsGatherWaiting()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
-    return theArgs.i[2] != 0;
-}
-
-void EEUGRust::SetGatherStorage(EEUnit* inStorage)
-{
-    Goal(EE_UNITS_GOAL_GATHER_SET_STORAGE, this, Handle(inStorage));
-}
-
-bool EEUGRust::FindGatherSpot(EEComplexUnit* inUnit)
-{
-    return Goal(EE_UNITS_GOAL_GATHER_FIND_SPOT, this, Handle(inUnit)) != 0;
-}
-
-void EEUGRust::PathTaken(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_PATH_TAKEN, this, Handle(inUnit));
-}
-
-bool EEUGRust::IsActive(unsigned long* outValue)
-{
-    if (this->mKind == kGoalGather && !this->mIsActive)
-        *outValue = 5000;
-    return this->mIsActive;
-}
-
 EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,
                             bool inArg)
 {
     std::sort(inUnits.begin(), inUnits.end(),
               [](EEComplexUnit* inFirst, EEComplexUnit* inSecond) { return inFirst->mUnitID < inSecond->mUnitID; });
     inUnits.erase(std::unique(inUnits.begin(), inUnits.end()), inUnits.end());
-    EEUGRust* theGoal = new EEUGRust(inKind, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(inKind, inArg);
     std::vector<uint64_t> theUnits;
     for (size_t i = 0; i < inUnits.size(); i++)
         theUnits.push_back(Handle(inUnits[i]));
@@ -1370,80 +1044,6 @@ EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, st
     return theGoal;
 }
 
-EEUGRust* EEUGRust::NewLoad(unsigned char inKind, bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(inKind, inArg);
-    Goal(EE_UNITS_GOAL_LOAD_NEW_EMPTY, theGoal);
-    return theGoal;
-}
-
-EEComplexUnit* EEUGRust::GetLoadContainer()
-{
-    return ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_LOAD_FIELDS, this));
-}
-
-U2DPoint<long> EEUGRust::GetLoadContainerTile()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_LOAD_FIELDS, this, 0, 0, &theArgs);
-    return U2DPoint<long>((long)theArgs.i[0], (long)theArgs.i[1]);
-}
-
-U2DPoint<long> EEUGRust::GetLoadUnitTile()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_LOAD_FIELDS, this, 0, 0, &theArgs);
-    return U2DPoint<long>((long)theArgs.i[2], (long)theArgs.i[3]);
-}
-
-bool EEUGRust::IsLoadGarrisonValid()
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_LOAD_FIELDS, this, 0, 0, &theArgs);
-    return theArgs.i[4] != 0;
-}
-
-unsigned long EEUGRust::GetNumLoadUnits()
-{
-    return (unsigned long)Goal(EE_UNITS_GOAL_LOAD_UNIT_COUNT, this);
-}
-
-bool EEUGRust::HasLoadUnit(EEComplexUnit* inUnit)
-{
-    return Goal(EE_UNITS_GOAL_LOAD_HAS_UNIT, this, Handle(inUnit)) != 0;
-}
-
-void EEUGRust::AddLoadUnit(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_LOAD_ADD_UNIT, this, Handle(inUnit));
-}
-
-void EEUGRust::AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits)
-{
-    for (size_t i = 0; i < inUnits.size(); i++)
-        this->AddLoadUnit(inUnits[i]);
-}
-
-void EEUGRust::AddCreatedUnit(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_ADD_CREATED_UNIT, this, Handle(inUnit));
-}
-
-bool EEUGRust::IsLoadGoal()
-{
-    return this->mKind == kGoalLoadTransport || this->mKind == kGoalLoadGarrison;
-}
-
-void EEUGRust::Abandon(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_ABANDON, this, Handle(inUnit));
-}
-
-EEUnitGoal::~EEUnitGoal()
-{
-    Goal(EE_UNITS_GOAL_DESTROY, this);
-}
-
 void EEUGRust::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
 {
     EeUnitsGoalIo theArgs = {};
@@ -1452,19 +1052,9 @@ void EEUGRust::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
     PointIn(theArgs, outLocation);
 }
 
-EEUnitGoal* EEUGRust::Clone()
-{
-    return ObjectOf<EEUGRust>((uint64_t)Goal(EE_UNITS_GOAL_CLONE, this, 0, this->GetB1C()));
-}
-
 void EEUGRust::DumpOutOfSynch(FILE* inFile)
 {
     Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile);
-}
-
-long EEUGRust::GetOutOfSynchChecksum()
-{
-    return (long)Goal(EE_UNITS_GOAL_CHECKSUM, this);
 }
 
 void EEUGRust::GetDebugLine(UWideString& ioText)
@@ -1480,65 +1070,13 @@ void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)
     PointIn(theArgs, outLocation);
 }
 
-long EEUGRust::GetMaxPathAttempts()
-{
-    return (long)Goal(EE_UNITS_GOAL_MAX_PATH_ATTEMPTS, this);
-}
-
-long EEUGRust::GetStartAction()
-{
-    return (long)Goal(EE_UNITS_GOAL_START_ACTION, this);
-}
-
-void EEUGRust::SetOwner(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_SET_OWNER, this, Handle(inUnit));
-}
-
-void EEUGRust::Step(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_STEP, this, Handle(inUnit));
-}
-
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     // the base goal's record first (but the heal goal's), then the kind's: one Rust sequence (rust_goal.rs)
     return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
 }
 
-long EEUGRust::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return (long)Goal(EE_UNITS_GOAL_REPAIR, this, inMajorVersion, inMinorVersion);
-}
-
-void EEUGRust::Start(EEComplexUnit* inUnit)
-{
-    Goal(EE_UNITS_GOAL_START, this, Handle(inUnit));
-}
-
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);
-}
-
-bool EEUGRust::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    return Goal(EE_UNITS_GOAL_EVALUATE, this, Handle(inUnit), inEvent) != 0;
-}
-
-void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit* inUnit)
-{
-    EeUnitsGoalIo theArgs = {{(int64_t)Handle(inUnit)}};
-    Goal(EE_UNITS_GOAL_REPLACE_UNIT, this, Handle(inOld), Handle(inNew), &theArgs);
-}
-
-bool EEUGRust::Suits(EEUnit* inUnit)
-{
-    return Goal(EE_UNITS_GOAL_SUITS, this, Handle(inUnit)) != 0;
-}
-
-void EEUGRust::SetPathAttempts(long inValue)
-{
-    this->mPathAttempts = inValue;
-    Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
 }

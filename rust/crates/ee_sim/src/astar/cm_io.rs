@@ -4,10 +4,10 @@
 //! FNV-1a 64 (`EEAIContinentFill`, `EEAIContinentDigest`, TEST ONLY). The tile lookups they need
 //! (`GetContinentID`, `GetPathSubSectorID` with their searches through the sectors once a grid is freed) are here too.
 //!
-//! The objects stay C++: the record of an object is found from its address by the layout the C++ registers
-//! (`EeAStarCmLayout`: each record's offset in its class); what only the C++ can answer goes through the host
+//! The objects are Rust's (objects.rs): the record of an object is found from its address by their layout
+//! (`EeAStarCmLayout`: each record's offset in its object); what only the C++ can answer goes through the host
 //! (`EeAStarCmHostFn`): an area's `Contains` (its hull test writes the HULL capture records), the owner of a town or
-//! herd, the region size global, the map tiles' AI values, and making and deleting the objects a load reads.
+//! herd, the region size global, the map tiles' AI values.
 //!
 //! RUST_PLAN 2.1: the C++'s orders (tables by index, lists as stored, the sub sectors numbered as the writer met
 //! them), its widths (`U16` written as 4 bytes, a flag as 1), and its bounds checks on a damaged block.
@@ -31,7 +31,7 @@ use crate::astar::hull::EeHullPoint;
 use crate::astar::sector_rec::{EeAStarSectorRecord, EeAStarSubSectorLink, EeAStarSubSectorRecord};
 
 /// Each record's offset in its object (bytes from the object's address; the area kinds' from the derived class's,
-/// which is also its `EEAIArea*`), registered once by the C++ (`EEAIContinentManager`'s ctor).
+/// which is also its `EEAIArea*`): the Rust objects' (`objects::LAYOUT`).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EeAStarCmLayout {
@@ -78,27 +78,9 @@ pub const EE_ASTAR_CM_MAP_SIZE: i32 = 5;
 pub const EE_ASTAR_CM_AI_VALUE: i32 = 6;
 /// tile (`i0`, `i1`)'s `mAIValue = i2` (nothing off the map)
 pub const EE_ASTAR_CM_SET_AI_VALUE: i32 = 7;
-/// a new object of table `i0`'s class (`EeAStarCmTable`) -> its address
-pub const EE_ASTAR_CM_NEW: i32 = 8;
-/// `delete` object `h0` of table `i0`'s class
-pub const EE_ASTAR_CM_DELETE: i32 = 9;
 
-static LAYOUT: AtomicPtr<EeAStarCmLayout> = AtomicPtr::new(std::ptr::null_mut());
 static HOST_FN: AtomicUsize = AtomicUsize::new(0);
 static HOST_CTX: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
-
-/// The layout of the records in their objects (once; later calls replace it).
-///
-/// # Safety
-/// `layout` points to a layout.
-#[no_mangle]
-pub unsafe extern "C" fn ee_astar_cm_set_layout(layout: *const EeAStarCmLayout) {
-    let boxed = Box::into_raw(Box::new(*layout));
-    let old = LAYOUT.swap(boxed, Ordering::AcqRel);
-    if !old.is_null() {
-        drop(Box::from_raw(old));
-    }
-}
 
 /// The host the state's readers and writers call.
 #[no_mangle]
@@ -108,13 +90,7 @@ pub extern "C" fn ee_astar_cm_set_host(f: EeAStarCmHostFn, ctx: *mut c_void) {
 }
 
 fn layout() -> EeAStarCmLayout {
-    let p = LAYOUT.load(Ordering::Acquire);
-    // SAFETY: a leaked box replaced only by `ee_astar_cm_set_layout`
-    if p.is_null() {
-        EeAStarCmLayout::default()
-    } else {
-        unsafe { *p }
-    }
+    crate::astar::objects::LAYOUT
 }
 
 /// A host call (the other modules' questions to the C++).
@@ -126,6 +102,9 @@ fn host(op: i32, io: &mut EeAStarCmIo) -> i64 {
     let f = HOST_FN.load(Ordering::Acquire);
     if f == 0 {
         return 0;
+    }
+    if let Some(v) = crate::astar::cm_host::answer(op, io) {
+        return v;
     }
     // SAFETY: stored from an `EeAStarCmHostFn` by `ee_astar_cm_set_host`
     let f: EeAStarCmHostFn = unsafe { std::mem::transmute::<usize, EeAStarCmHostFn>(f) };
@@ -1113,13 +1092,12 @@ unsafe fn read_fields(i: &mut In, h: u64, kind: i32) -> Option<()> {
 }
 
 fn new_object(t: EeAStarCmTable) -> u64 {
-    host1(EE_ASTAR_CM_NEW, 0, [t as i64, 0, 0, 0]).0 as u64
+    crate::astar::objects::new_object(t)
 }
 
 fn delete_object(t: EeAStarCmTable, h: u64) {
-    if h != 0 {
-        host1(EE_ASTAR_CM_DELETE, h, [t as i64, 0, 0, 0]);
-    }
+    // SAFETY: the tables hold live objects of their kind, each in one table
+    unsafe { crate::astar::objects::delete_object(t, h) }
 }
 
 /// Deletes table `t`'s objects and empties it (`DeleteVectorContents`).

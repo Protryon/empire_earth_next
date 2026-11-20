@@ -153,7 +153,6 @@ GE2DPoint UIButton::GetBitmapLocation() const
     return GE2DPoint(f[0], f[1]);
 }
 unsigned long UIButton::GetState() const { return (unsigned long)EE_UI_BUTTON(State); }
-GEBitmap* UIButton::GetFocusedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(FocusedBitmap); }
 GEText* UIButton::GetGEText() { return (GEText*)EE_UI_BUTTON(Text); }
 GEBitmap* UIButton::GetNormalBitmap() const { return (GEBitmap*)EE_UI_BUTTON(NormalBitmap); }
 GEBitmap* UIButton::GetPressedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(PressedBitmap); }

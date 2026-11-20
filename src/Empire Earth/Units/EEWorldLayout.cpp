@@ -21,6 +21,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -55,6 +56,7 @@ static_assert(sizeof(GETransformation) >= 16 * sizeof(float) && offsetof(GETrans
 static_assert(sizeof(std::vector<EEComplexUnit*>) == 3 * sizeof(void*), "a vector is three words");
 static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a tile point is two longs");
 static_assert(sizeof(EEEffectHandle) == 4, "an effect handle is its uint32_t");
+static_assert(sizeof(EEUnitVectorItem) == sizeof(void*), "a goal queue container is its Rust queue's pointer");
 static_assert(sizeof(((EEHerd*)0)->mID) == 2, "a herd's id is an unsigned short");
 
 namespace {
@@ -124,6 +126,7 @@ void EEWorldLayoutRegister()
     theLayout.complex_build_queue = offsetof(EEComplexUnit, mBuildQueue);
     theLayout.build_entry_stride = sizeof(EEProductionEntry);
     theLayout.build_entry_technology = offsetof(EEProductionEntry, mTechnology);
+    theLayout.complex_goal_queues = offsetof(EEComplexUnit, mGoalQueues);
     theLayout.goal_kind = offsetof(EEUnitGoal, mKind);
     theLayout.goal_id = offsetof(EEUnitGoal, mID);
     theLayout.action_type = offsetof(EEUnitAction, mType);

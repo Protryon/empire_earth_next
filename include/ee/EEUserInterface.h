@@ -44,10 +44,8 @@ public:
         return ee_screens_ui_post(this, (uint32_t)inMessage, const_cast<void*>(inParameter1), const_cast<void*>(inParameter2));
     }
 
-    // the action queue and the undo and redo lists (ee_screens actions.rs: 7 when the list is empty)
+    // the action queue (ee_screens actions.rs)
     void PostAction(EEAction* inAction) { ee_screens_actions_post(inAction); }
-    long Redo() { return ee_screens_actions_redo(); }
-    long Undo() { return ee_screens_actions_undo(); }
     // the UI thread's loop (ui_game.rs) and its message switch (0x401..0x443, ui_thread.rs)
     long Run(void* inParameter) { return (long)ee_screens_ui_run(this); }
 
@@ -64,20 +62,15 @@ public:
     void UpdateJITManufacturing() { this->Post(0x416); }
     long PostEnterScenarioEditor(bool inFlag) { return this->Post(0x411, (void*)inFlag); }
     void PostPauseInformation(bool inFlag) { this->Post(0x427, (void*)inFlag); }
-    void PostRestartGame() { this->Post(0x428); }
-    void PostQuit() { this->Post(0x401); }
     void PostStartLoading() { ee_screens_ui_post_start_loading(this); }   // 0x407, 0x413 from the editor
     void PostUpdateBackgroundMedia() { this->Post(0x403); }
     void PostShowEpochName() { this->Post(0x404); }
     void PostSelectEditorTab(long inX, long inY) { this->Post(0x421, (void*)(intptr_t)inX, (void*)(intptr_t)inY); }
-    void PostDisplayChanged(bool inFlag) { this->Post(0x429, (void*)inFlag); }
     void PostCancelGame() { this->Post(0x412); }
     void PostLoadGameFailed(bool inFlag) { this->Post(0x430, NULL, (void*)inFlag); }
     void PostHostMigrated() { this->Post(0x426); }
     void PostHideMessages() { this->Post(0x432); }
     void PostErrorClosed(UIForm* inForm, EEUIFErrorCallbackData* inData) { this->Post(0x417, inForm, inData); }
-    long PostDisplayCivBuilder() { return this->Post(0x41f); }
-    void PostChangeRasterizer(long inX, long inY) { this->Post(0x41e, (void*)(intptr_t)inX, (void*)(intptr_t)inY); }
     void PostLobbyUpdatePlayer(long inX, long inY) { this->Post(0x436, (void*)(intptr_t)inX, (void*)(intptr_t)inY); }
     void PostLobbyUpdateGameOptions() { this->Post(0x437); }
     void PostLobbyShowTransferProgress(long inX, long inY) { this->Post(0x439, (void*)(intptr_t)inX, (void*)(intptr_t)inY); }

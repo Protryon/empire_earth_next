@@ -29,7 +29,6 @@ public:
     virtual long MouseRButtonDown();        // +0x44 0x26f186
     virtual long MouseRButtonUp();          // +0x48 0x26f1a4
     // for the presses' host (ee_screens status_button.rs): UIButton::ButtonUp, and the mouse in the rectangle
-    void BaseButtonUp() { UIButton::ButtonUp(); }
     bool IsMouseInside() const { return this->GetRectangle().Contains(this->GetMouseLocation()); }
     void SetCommandButton(unsigned long inButton);  // 0x26fa82 (an EEButtonObject index)
     // 0x26faba (ret 0xc): a technology button (the unit class's technology, its unit type, the unit's id)

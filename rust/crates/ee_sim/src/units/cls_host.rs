@@ -862,6 +862,69 @@ fn cond_view(op: i32, a: u64, c: i64, io: &mut EeUnitsCondIo) -> Option<i64> {
     })?
 }
 
+/// The trigger host's goal answers (the units' behaviour lane, round 3: the goals and their queues are Rust objects,
+/// goal_obj.rs and goals.rs; they were EEUnitAI.cpp `ee_units_cls_cond_host`'s cases); None for the C++ host's.
+fn cond_goal(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
+    use crate::units::cls_condition::{
+        EE_UNITS_COND_GOAL_CONDITION, EE_UNITS_COND_GOAL_ELAPSED, EE_UNITS_COND_GOAL_INFO, EE_UNITS_COND_GOAL_TARGET,
+        EE_UNITS_COND_LOCATION_QUEUED, EE_UNITS_COND_QUEUED_GOAL, EE_UNITS_COND_SECONDARY_TARGET,
+    };
+    use crate::units::goal_obj;
+    use crate::units::location::{self, GOAL_LOCATION};
+    use std::os::raw::c_ulong;
+    // a location goal's forced-move flag (false for another kind)
+    let forced = |goal: u64| {
+        // SAFETY: a live goal of the unit
+        (unsafe { goal_obj::base(goal).kind == GOAL_LOCATION }) && location::get(goal).forced_move
+    };
+    Some(match op {
+        EE_UNITS_COND_GOAL_INFO => {
+            // SAFETY: a live goal
+            let g = unsafe { *goal_obj::base(b) };
+            i64::from(g.kind) | if g.b1c { 0x100 } else { 0 } | if forced(b) { 0x200 } else { 0 }
+        }
+        EE_UNITS_COND_GOAL_CONDITION => {
+            let event = c as c_ulong as u64;
+            // SAFETY: as above
+            i64::from(
+                unsafe {
+                    goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_EVALUATE, b, a, event, std::ptr::null_mut())
+                } != 0,
+            )
+        }
+        EE_UNITS_COND_GOAL_ELAPSED => {
+            // (unsigned long)(gPhysics->mGameTime - GetStartTime()) >= (unsigned long)inMs
+            // SAFETY: as above; the caller holds the world
+            let start = unsafe { goal_obj::base(b).start_time };
+            let t = unsafe { crate::world::WorldRead::begin() };
+            let now = crate::world::WorldView::global(&t).map_or(0, |w| w.game_time()) as std::os::raw::c_long;
+            i64::from((now as c_ulong).wrapping_sub(start) >= c as c_ulong)
+        }
+        EE_UNITS_COND_GOAL_TARGET => crate::combat::goal_attack::attack_of(b).target as i64,
+        EE_UNITS_COND_LOCATION_QUEUED => {
+            // EEIsLocationGoalQueued: a move goal on the first queue that is no forced move
+            let queues = crate::units::goals::unit_queues(a);
+            // SAFETY: the unit's live main queue (the C++ read it unchecked)
+            let goals = queues.first().map(|q| unsafe { (**q).goals.clone() }).unwrap_or_default();
+            i64::from(
+                goals.iter().any(|g| *g != 0 && unsafe { goal_obj::base(*g).kind } == GOAL_LOCATION && !forced(*g)),
+            )
+        }
+        EE_UNITS_COND_QUEUED_GOAL => i64::from(crate::units::goals::queued_goal(a, c as c_ulong as usize) != 0),
+        EE_UNITS_COND_SECONDARY_TARGET => {
+            // the current goal attacks a living unit
+            let goal = crate::units::unit_geom::with_unit(a, |u| u.goal_handle()).unwrap_or(0);
+            // SAFETY: the unit's live goal
+            if goal == 0 || unsafe { goal_obj::base(goal).kind } != crate::combat::goal_dispatch::GOAL_ATTACK_UNIT {
+                return Some(0);
+            }
+            let target = crate::combat::goal_attack::attack_of(goal).target;
+            i64::from(crate::units::unit_geom::with_unit(target, |u| u.hit_points()).unwrap_or(0) > 0)
+        }
+        _ => return None,
+    })
+}
+
 impl CondHost for ClsGame {
     fn unit(&mut self, obj: u64) -> EeUnitsUuUnit {
         self.0.unit(obj)
@@ -875,6 +938,9 @@ impl CondHost for ClsGame {
     }
     fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
         if let Some(v) = cond_view(op, a, c, io) {
+            return v;
+        }
+        if let Some(v) = cond_goal(op, a, b, c) {
             return v;
         }
         // SAFETY: the C++ switch reads live objects the bodies hand it

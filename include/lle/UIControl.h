@@ -72,7 +72,6 @@ public:
     const GERectangle& GetCopiedDrawRectangle() const { return UIControl::AsRect(this->mCopiedDrawRectangle); }
     unsigned long GetDisplayMode() const { return this->mDisplayMode; }
     unsigned long GetDrawCount() const { return this->mDrawCount; }
-    GESurface* GetDrawingSurface() const;
     // the record (ee_ui controlobj.rs): the members and the base's logic, for Rust callers
     UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
     bool GetHasMouseCapture() const { return this->Call(EeUiControlCall::HasMouseCapture) != 0; }

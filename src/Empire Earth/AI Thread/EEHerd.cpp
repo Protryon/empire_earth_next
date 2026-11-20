@@ -254,7 +254,7 @@ extern "C" int64_t ee_cp_area_host(void* inArea, int32_t inOp, EeHerdIo* io)
         return 0;
     }
     case EE_CP_HERD_BASE_POINT: {
-        U2DPoint<long> thePoint = me->EEAIArea::GetRandomPoint();
+        U2DPoint<long> thePoint = me->AreaRandomPoint();
         io->v[0] = thePoint.mX;
         io->v[1] = thePoint.mY;
         return 0;
@@ -370,7 +370,7 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         std::vector<U2DPoint<long> > theTiles;
         for (size_t i = 0; i < io->input_len; i++)
             theTiles.push_back(U2DPoint<long>((long)theInput[2 * i], (long)theInput[2 * i + 1]));
-        me->EEAIArea::Create(theTiles);
+        me->AreaCreate(theTiles);
         return 0;
     }
     case EE_CP_HERD_NUM_TILES:

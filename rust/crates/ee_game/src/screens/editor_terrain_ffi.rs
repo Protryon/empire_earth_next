@@ -17,8 +17,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_sepl(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_semp(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_seel(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_setn(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
@@ -34,12 +32,12 @@ impl SeplHost for Host {
             match op {
                 1000.. => sys::ee_screenscpp_setn(op, p, i, f),
                 900.. => sys::ee_screenscpp_seel(op, p, i, f),
-                500.. => sys::ee_screenscpp_semp(op, p, i, f),
+                500.. => crate::screens::editor_direct::semp(op, p, i, f),
                 _ => crate::screens::editor_world::host(
                     op,
                     &mut *(i as *mut [i32; 4]),
                     &mut *(f as *mut [f32; 4]),
-                    |i, f| sys::ee_screenscpp_sepl(op, p, i.as_mut_ptr(), f.as_mut_ptr()),
+                    |i, f| crate::screens::editor_direct::sepl(op, p, i, f),
                 ),
             }
         }

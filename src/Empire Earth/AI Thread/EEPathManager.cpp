@@ -396,7 +396,7 @@ void* EEGraphObjectOf(void* inContext, int32_t inIndex)
     EEAIHandleView<EEAIPathSubSector> theSectors = gContinentManager.GetPathSubSectors();
     if (inIndex < 0 || (size_t)inIndex >= theSectors.size() || theSectors[inIndex] == NULL)
         return NULL;
-    return static_cast<AStarGraphableObjectBase*>(theSectors[inIndex]);
+    return theSectors[inIndex];
 }
 
 EEAIPathSubSector* EESubSectorOf(long inID)

@@ -215,6 +215,78 @@ pub(crate) fn status_button(op: u32, a: i64) -> Option<i64> {
     })
 }
 
+/// The mouse modes' reads of the picked unit (`picked`, an `EEUnit*`) and of the first selected unit (`first`, an
+/// `EEComplexUnit*`): `EE_SCREENS_MF_OP_MD_UNIT` and `EE_SCREENS_MF_OP_MD_FIRST_FIELD`'s plain fields (the main game
+/// form's `EEMouseModeOp`; the visibility, attack, wonder set, range and caster reads stay the C++'s).
+pub(crate) fn mouse_mode(op: u32, a: i64, picked: u64, first: u64) -> Option<i64> {
+    use crate::screens::mouse_modes::*;
+    let t = token();
+    // the C++ read through NULL pointers here; the views answer 0
+    let picked = || unit(&t, picked as i64);
+    let complex = || picked().and_then(|u| u.complex_unit());
+    let capacity = |u: &UnitView<'_>| u.class().map_or(0, |c| world_field!(c.fields(), mGarrisonCapacity) as c_long);
+    let player = |u: Option<UnitView<'_>>| u.and_then(|u| u.player()).map_or(0, |p| p.handle());
+    Some(match (op, a) {
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_ID) => picked().map_or(0, |u| u.id() as i64),
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_FAMILY) => {
+            picked().and_then(|u| u.class()).map_or(0, |c| c.family() as c_ulong as i64)
+        }
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_IS_WALL) => {
+            picked().and_then(|u| u.class()).is_some_and(|c| c.wall()) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_TILE_X) => picked().map_or(0, |u| u.tile_xy().0),
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_TILE_Y) => picked().map_or(0, |u| u.tile_xy().1),
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_HAS_COMPLEX) => complex().is_some() as i64,
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_COMPLEX_BUILT) => complex().is_some_and(|u| u.is_built()) as i64,
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_COMPLEX_CAPACITY) => {
+            complex().is_some_and(|u| capacity(&u) != 0) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_COMPLEX_ROOM) => {
+            complex().is_some_and(|u| capacity(&u) != world_field!(u.complex(), mGarrisonCount) as c_long) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_UNIT, EE_SCREENS_MF_UNIT_SAME_PLAYER) => {
+            let first = unit(&t, first as i64).and_then(|u| u.complex_unit());
+            (player(first) == player(complex())) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_FIRST_FIELD, EE_SCREENS_MF_FIRST_ALIVE) => {
+            unit(&t, first as i64).is_some_and(|u| u.hit_points() > 0) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_FIRST_FIELD, EE_SCREENS_MF_FIRST_HAS_COMPLEX) => {
+            unit(&t, first as i64).is_some_and(|u| u.complex_unit_handle() != 0) as i64
+        }
+        (EE_SCREENS_MF_OP_MD_FIRST_FIELD, EE_SCREENS_MF_FIRST_CAN_RALLY) => {
+            unit(&t, first as i64).and_then(|u| u.class()).is_some_and(|c| world_field!(c.fields(), mCanSetRallyPoint))
+                as i64
+        }
+        _ => return None,
+    })
+}
+
+/// The box selection's reads (`EEUICSelectUnits::RustOp`): of the unit `a` (an `EEUnit*`).
+pub(crate) fn select_units(op: u32, a: i64) -> Option<i64> {
+    use crate::screens::select_units::{EE_SCREENS_SU_HAS_COMPLEX, EE_SCREENS_SU_OWN_LIVE};
+    let t = token();
+    Some(match op {
+        EE_SCREENS_SU_OWN_LIVE => unit(&t, a).is_some_and(|u| u.hit_points() > 0 && is_local(&t, &u)) as i64,
+        EE_SCREENS_SU_HAS_COMPLEX => unit(&t, a).is_some_and(|u| u.complex_unit_handle() != 0) as i64,
+        _ => return None,
+    })
+}
+
+/// The right-drag command's reads (`EEUICCommandUnits::RustOp`): the selection's count and its unit `a`'s class
+/// category.
+pub(crate) fn command_units(op: u32, a: i64) -> Option<i64> {
+    use crate::screens::command_units::{EE_SCREENS_CU_CATEGORY, EE_SCREENS_CU_GROUP_COUNT};
+    let t = token();
+    Some(match op {
+        EE_SCREENS_CU_GROUP_COUNT => group(&t).map_or(0, |g| g.len() as i64),
+        EE_SCREENS_CU_CATEGORY => {
+            group(&t).and_then(|g| unit(&t, g.unit_handle(a as usize) as i64)).map_or(0, |u| category(&u) as i64)
+        }
+        _ => return None,
+    })
+}
+
 /// The main game form's host (`EEUIFMainGame::HostOp`): its reads of the world and the local player.
 pub(crate) fn main_form(op: u32, a: i64) -> Option<i64> {
     let t = token();

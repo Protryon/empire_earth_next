@@ -1,16 +1,14 @@
 // C:\EEX\Empire Earth\User Interface Thread\EEUICSelectUnits.h (RECONSTRUCTION; file name inferred). The main game
 // form's left-drag selection control (RTTI EEUICSelectUnits > UIControl; vtable 0x44a038; EEUICSelectUnits.cpp
-// 0x25952f..0x259f7f): a drag draws a box (eight GELines: four black shadow lines, four white) and hands it to the
+// 0x25952f..0x259f7f): a drag draws a box (eight lines: four black shadow lines, four white) and hands it to the
 // lasso action, a click to the mouse click action. Whole in Rust (ee_screens select_units.rs, round 29): the box, the
 // drag's points and flags are the record EeScreensSelectUnitsFields (the scenario editor's EESEUICTriggerSelectUnits
-// reads it); the lines and the two actions stay C++. Requires lle/UIControl.h, ee/EEAction.h, ee/EEAMouseClick.h,
+// reads it); the two actions stay C++ (the lines are drawn from Rust). Requires lle/UIControl.h, ee/EEAction.h, ee/EEAMouseClick.h,
 // ee/EEALasso.h.
 #ifndef EE_EEUICSELECTUNITS_H
 #define EE_EEUICSELECTUNITS_H
 
 #include "ee/EEUIRustControl.h"
-
-class GELine;
 
 class EEUICSelectUnits : public EEUIRustControl, protected EeScreensSelectUnitsFields {
 public:
@@ -37,7 +35,6 @@ protected:
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);
 
-    GELine* mLines;                         // new GELine[8]
     EEAMouseClick* mClick;                  // referenced; the mouse click action
     EEALasso* mLasso;                       // referenced
 };

@@ -9,9 +9,9 @@
 // its continent (the hill goal's +0x56), +0x6a its id (EEAIContinent::AddHillID 0x26e13 reads it)
 class EEAIHill : public EEAIArea, private EeAStarHillRecord {
 public:
-    // inline (EEAIAStarHillGoal::CreateHill 0x16d04 expands it: EEAIArea(), +0x68/+0x6a = 0, the vptr)
-    EEAIHill() : EeAStarHillRecord() {}
-    virtual ~EEAIHill() {}
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIHill* New() { return (EEAIHill*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Hills); }
+    static void Delete(EEAIHill* inObject) { ee_astar_object_delete(EeAStarCmTable::Hills, (uint64_t)(uintptr_t)inObject); }
     EeAStarHillRecord* Record() { return this; }
     const EeAStarHillRecord* Record() const { return this; }
     unsigned short GetContinentID() const { return this->continent_id; }
@@ -21,6 +21,10 @@ public:
     // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
     template <class W> void WriteFields(W& ioWriter) const { ioWriter.U16(this->continent_id); ioWriter.U16(this->id); }
     template <class R> bool ReadFields(R& ioReader) { return ioReader.U16(this->continent_id) && ioReader.U16(this->id); }
+
+private:
+    EEAIHill();
+    ~EEAIHill();
 };
 
 #endif

@@ -81,7 +81,6 @@
 #include "ee/EEStringIDs.h"
 #include "lle/ISKeyCode.h"
 // EEUnitGoal.cpp's goal counter (0x964480; Save and Load write and read it: it is not file-static in the original)
-// (sGoalCounter: ee/EmpireEarth.h)
 // the main game form's blinking buttons (0x27fcf0, cdecl; EEPlayer::RepairPointers keeps its result, so not void as
 // EEPhysics.cpp declares it; inferred)
 // (EESetCivBuilderButtonBlinking: ee/EmpireEarth.h)
@@ -1698,9 +1697,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     case EE_UNITS_PLAYER_SAVE_RTS_LOAD:
         thePlayer->RTSPlayer::Load(theMajor, theMinor, theFile);
         return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_SET_GOAL_COUNTER:
-        sGoalCounter = (unsigned long)io->i;
-        return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_TECH_DELETE:
         delete thePlayer->mTechnologies;
         thePlayer->mTechnologies = NULL;
@@ -1772,9 +1768,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mUnitClassUpgrades[inIndex]->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_RTS_SAVE:
         thePlayer->RTSPlayer::Save(theMajor, theMinor, theFile);
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_GOAL_COUNTER:
-        io->i = (int64_t)sGoalCounter;
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_TECH_PRESENT:
         return thePlayer->mTechnologies != NULL;
