@@ -79,7 +79,13 @@ mod game {
     ///
     /// # Safety
     /// `ctx` a call's context; `a`, `b` live objects as the operation takes them.
-    pub(crate) unsafe fn place_op(ctx: *const EeCpPlaceCtx, op: i32, a: u64, b: u64, io: &mut EeCpPlaceIo) -> Option<i64> {
+    pub(crate) unsafe fn place_op(
+        ctx: *const EeCpPlaceCtx,
+        op: i32,
+        a: u64,
+        b: u64,
+        io: &mut EeCpPlaceIo,
+    ) -> Option<i64> {
         // SAFETY: the caller's contract
         let player = unsafe { (*ctx).player };
         let (v0, v1) = (io.v[0], io.v[1]);
@@ -102,7 +108,8 @@ mod game {
             }
             pg::EE_CP_PLACE_OWN_UNITS => {
                 let t = WorldRead::begin();
-                let units: Vec<u64> = PlayerView::of(&t, player).map_or(Vec::new(), |p| p.units().map(|u| u.handle()).collect());
+                let units: Vec<u64> =
+                    PlayerView::of(&t, player).map_or(Vec::new(), |p| p.units().map(|u| u.handle()).collect());
                 for u in units {
                     push(io, u as i64, 0);
                 }
@@ -120,7 +127,8 @@ mod game {
             pg::EE_CP_PLACE_TOWNS => {
                 let towns: Vec<u64> = {
                     let t = WorldRead::begin();
-                    PlayerView::of(&t, player).map_or(Vec::new(), |p| (0..p.towns_len()).map(|i| p.town_handle(i)).collect())
+                    PlayerView::of(&t, player)
+                        .map_or(Vec::new(), |p| (0..p.towns_len()).map(|i| p.town_handle(i)).collect())
                 };
                 for town in towns {
                     if town == 0 {
@@ -255,7 +263,8 @@ mod game {
             pg::EE_CP_PLACE_CHOKE_TILES => {
                 let mut n = 0;
                 let points = ee_base::sparse::ee_sparse_points(cm_io::area_tiles(a), false, 1, &mut n);
-                let points: Vec<(i64, i64)> = (0..n).map(|k| *points.add(k)).map(|p| (p.x as i64, p.y as i64)).collect();
+                let points: Vec<(i64, i64)> =
+                    (0..n).map(|k| *points.add(k)).map(|p| (p.x as i64, p.y as i64)).collect();
                 for (x, y) in points {
                     push(io, x, y);
                 }

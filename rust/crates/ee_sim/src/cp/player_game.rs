@@ -27,9 +27,9 @@ use super::timers::{EE_CP_STATE_PUSH_PLAYER, EE_CP_STATE_PUSH_ZONE, EE_CP_STATE_
 use crate::app::capture_record;
 use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo};
 use crate::world::layout::layout;
-use crate::world::view::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
 use crate::world::player_fields::EeUnitsPlayerSaved;
 use crate::world::unit_fields::EeUnitsComplexUnitFields;
+use crate::world::view::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
 
 // ---- the player host's operations (EEComputerPlayer.cpp ee_cp_player_host; `a`, `b` units, players or C++ objects)
 /// `EEPlayer::AddResource(v0, v1)`
@@ -802,7 +802,9 @@ pub unsafe extern "C" fn ee_cp_pl_unit_taken(player: u64, unit: u64, swapped: bo
     if !next.is_null() && !swapped {
         if let Some(unit_type) = class_of(unit, |c| c.unit_type()) {
             // SAFETY: the player's live next state
-            unsafe { crate::ai::next_game::ee_ai_next_event_add(next, ops::NEXT_EVENT_UNIT_LOST, unit_type as c_long, 1) };
+            unsafe {
+                crate::ai::next_game::ee_ai_next_event_add(next, ops::NEXT_EVENT_UNIT_LOST, unit_type as c_long, 1)
+            };
         }
     }
     if land_building(unit) {
@@ -832,7 +834,8 @@ pub unsafe extern "C" fn ee_cp_pl_units_swapped(player: u64, swaps: *const EeCpU
                 continue;
             }
             // SAFETY: the swaps' live units
-            let (Some(old), Some(new)) = (unsafe { UnitView::of(&t, w.old) }, unsafe { UnitView::of(&t, w.new) }) else {
+            let (Some(old), Some(new)) = (unsafe { UnitView::of(&t, w.old) }, unsafe { UnitView::of(&t, w.new) })
+            else {
                 continue;
             };
             let (old_owner, new_owner) =
@@ -917,7 +920,9 @@ pub unsafe extern "C" fn ee_cp_pl_damage_taken(player: u64, attacker: c_long, am
     let units = cp.units_state();
     if !units.is_null() && unit != 0 {
         // SAFETY: the player's live units state; a live unit
-        unsafe { crate::ai::units_bind::ee_ai_units_on_damage(units, player as usize as *mut c_void, attacker, amount, unit) };
+        unsafe {
+            crate::ai::units_bind::ee_ai_units_on_damage(units, player as usize as *mut c_void, attacker, amount, unit)
+        };
     }
     let building = land_building(unit);
     if building {
@@ -961,7 +966,13 @@ pub unsafe extern "C" fn ee_cp_pl_damage_taken(player: u64, attacker: c_long, am
             && (!cp.holds(complex) || cp.reflex_on(c"held"))
         {
             // SAFETY: as above
-            unsafe { crate::ai::next_game::reflex::ee_ai_next_note_danger(player as usize as *mut c_void, unit, attacker as c_ulong) };
+            unsafe {
+                crate::ai::next_game::reflex::ee_ai_next_note_danger(
+                    player as usize as *mut c_void,
+                    unit,
+                    attacker as c_ulong,
+                )
+            };
         }
     }
 }
@@ -1029,15 +1040,13 @@ pub unsafe extern "C" fn ee_cp_pl_pay(player: u64, tech: u64, unit_type: c_long,
     let t = unsafe { WorldRead::begin() };
     let class = if made > 0 { ClassView::by_index(&t, made as usize) } else { None };
     let facts = class.map(|c| {
-        let military = crate::world_field!(c.fields(), mIsAttackUnit) || crate::world_field!(c.fields(), mIsDefenseUnit);
+        let military =
+            crate::world_field!(c.fields(), mIsAttackUnit) || crate::world_field!(c.fields(), mIsDefenseUnit);
         (c.category() as c_ulong, cp.q(EE_CP_PLAYER_CLASS_IS_BUILDING, c.handle(), 0, &[]) != 0, military)
     });
     let kind = ops::pay_kind(epoch, facts);
     let id = cp.ctx.player_id as c_ulong;
-    if id < 64
-        && (0..=7).contains(&kind)
-        && cp.q(EE_CP_PLAYER_EXPERIMENT, c"spending".as_ptr() as u64, 0, &[]) != 0
-    {
+    if id < 64 && (0..=7).contains(&kind) && cp.q(EE_CP_PLAYER_EXPERIMENT, c"spending".as_ptr() as u64, 0, &[]) != 0 {
         // SAFETY: five costs
         unsafe { crate::ai::next_game::trace::ee_ai_trace_spend(id, kind, cost.as_ptr()) };
     }
@@ -1115,7 +1124,11 @@ fn transport_idle(cp: &Cp, unit: u64) {
 fn send_to_nearest_base(cp: &Cp, unit: u64) {
     let (category, class, tile) = unit_view(unit, |u| {
         let (x, y) = u.tile_xy();
-        (u.class().map_or(0, |c| c.category()) as c_ulong, u.class().map_or(0, |c| c.handle()), (x as c_long, y as c_long))
+        (
+            u.class().map_or(0, |c| c.category()) as c_ulong,
+            u.class().map_or(0, |c| c.handle()),
+            (x as c_long, y as c_long),
+        )
     })
     .unwrap_or((0, 0, (0, 0)));
     let base = match category {
@@ -1141,7 +1154,8 @@ fn send_to_nearest_base(cp: &Cp, unit: u64) {
         row[i] = 1.0;
     }
     // SAFETY: the live class and dock
-    let found = unsafe { crate::units::uu_ffi::ee_units_uu_dock_ship_placement(&point, class, sorted[0].0, 0, 1, &mut m) };
+    let found =
+        unsafe { crate::units::uu_ffi::ee_units_uu_dock_ship_placement(&point, class, sorted[0].0, 0, 1, &mut m) };
     if found != 0 {
         cp.qf(EE_CP_PLAYER_QUEUE_LOCATION, unit, &[], &[m[0][3], m[1][3], m[2][3]]);
         cp.q(EE_CP_PLAYER_DETACH, unit, 0, &[]);
@@ -1206,7 +1220,12 @@ fn enter_epoch(cp: &Cp, epoch: c_long) {
     if cp.has_tree() {
         cp.q(EE_CP_PLAYER_EPOCH_RESEARCH, 0, 0, &[epoch as i64]);
     }
-    for kind in [super::events::EE_CP_FAVORITE_LAND, super::events::EE_CP_FAVORITE_SEA, super::events::EE_CP_FAVORITE_AIR, super::events::EE_CP_FAVORITE_SPACE] {
+    for kind in [
+        super::events::EE_CP_FAVORITE_LAND,
+        super::events::EE_CP_FAVORITE_SEA,
+        super::events::EE_CP_FAVORITE_AIR,
+        super::events::EE_CP_FAVORITE_SPACE,
+    ] {
         // SAFETY: the player's context
         unsafe { pg::ee_cp_choose_favorite(&cp.ctx, kind) };
     }
@@ -1566,7 +1585,10 @@ pub unsafe extern "C" fn ee_cp_pl_save(player: u64, major: c_ulong, minor: c_ulo
     let primitive = primitive(&cp);
     let c = SaveCtx { cp, file, major: major as u32, minor: minor as u32, primitive };
     // SAFETY: the record; the context lives for the call
-    unsafe { super::ffi::ee_cp_save(&c as *const SaveCtx as *mut c_void, save_op, fields, major as u32, minor as u32, now, r) as c_long }
+    unsafe {
+        super::ffi::ee_cp_save(&c as *const SaveCtx as *mut c_void, save_op, fields, major as u32, minor as u32, now, r)
+            as c_long
+    }
 }
 
 /// `Load`: the player's, then ee_sim::cp::save's block; the favourites and their history and the running values
@@ -1584,7 +1606,15 @@ pub unsafe extern "C" fn ee_cp_pl_load(player: u64, major: c_ulong, minor: c_ulo
     let mut loaded = EeCpLoaded::default();
     // SAFETY: as above
     let r = unsafe {
-        super::ffi::ee_cp_load(&c as *const SaveCtx as *mut c_void, save_op, fields, major as u32, minor as u32, r, &mut loaded)
+        super::ffi::ee_cp_load(
+            &c as *const SaveCtx as *mut c_void,
+            save_op,
+            fields,
+            major as u32,
+            minor as u32,
+            r,
+            &mut loaded,
+        )
     } as c_long;
     // the id the base Load read (the context was made before it)
     // SAFETY: the live computer player
@@ -1594,32 +1624,31 @@ pub unsafe extern "C" fn ee_cp_pl_load(player: u64, major: c_ulong, minor: c_ulo
         let f = cp.fields();
         let favorites = (f.mFavoriteLandType, f.mFavoriteSeaType, f.mFavoriteAirType, f.mFavoriteSpaceType);
         // SAFETY: the player's record
-        let history: Vec<EeCpHistoryEntry> = unsafe {
-            (0..lists::ee_cp_history_count(fields)).map(|i| lists::ee_cp_history_at(fields, i)).collect()
-        };
+        let history: Vec<EeCpHistoryEntry> =
+            unsafe { (0..lists::ee_cp_history_count(fields)).map(|i| lists::ee_cp_history_at(fields, i)).collect() };
         world_after_load(Box::new(move || {
-                if !still_computer(id, player) {
-                    return;
-                }
-                // SAFETY: the live player's record
-                let f = unsafe { &mut *fields };
-                (f.mFavoriteLandType, f.mFavoriteSeaType, f.mFavoriteAirType, f.mFavoriteSpaceType) = favorites;
-                // SAFETY: the live player's record
-                unsafe { lists::ee_cp_history_set(fields, history.as_ptr(), history.len()) };
+            if !still_computer(id, player) {
+                return;
+            }
+            // SAFETY: the live player's record
+            let f = unsafe { &mut *fields };
+            (f.mFavoriteLandType, f.mFavoriteSeaType, f.mFavoriteAirType, f.mFavoriteSpaceType) = favorites;
+            // SAFETY: the live player's record
+            unsafe { lists::ee_cp_history_set(fields, history.as_ptr(), history.len()) };
         }));
     }
     if loaded.running {
         world_after_load(Box::new(move || {
-                if !still_computer(id, player) {
-                    return;
-                }
-                // SAFETY: as above
-                let f = unsafe { &mut *fields };
-                f.mPopulationCap = loaded.population_cap as _;
-                f.mIsEnableTimeSet = loaded.enable_time_set;
-                f.mRegroupPending = loaded.regroup_pending;
-                f.mNextPopulationTime = loaded.next_population_time as _;
-                f.mLastDamagedTime = loaded.last_damaged_time as _;
+            if !still_computer(id, player) {
+                return;
+            }
+            // SAFETY: as above
+            let f = unsafe { &mut *fields };
+            f.mPopulationCap = loaded.population_cap as _;
+            f.mIsEnableTimeSet = loaded.enable_time_set;
+            f.mRegroupPending = loaded.regroup_pending;
+            f.mNextPopulationTime = loaded.next_population_time as _;
+            f.mLastDamagedTime = loaded.last_damaged_time as _;
         }));
     }
     r
@@ -1650,7 +1679,9 @@ pub unsafe extern "C" fn ee_cp_pl_state_block(file: u64, what: u32, primitive: E
             let t = unsafe { WorldRead::begin() };
             let n = WorldView::global(&t).map_or(0, |w| w.num_players()) as u32;
             // SAFETY: the context lives for the call
-            unsafe { super::ffi::ee_cp_resource_state_save(&mut c as *mut StateCtx as *mut c_void, state_op, n) as c_long }
+            unsafe {
+                super::ffi::ee_cp_resource_state_save(&mut c as *mut StateCtx as *mut c_void, state_op, n) as c_long
+            }
         }
         _ => {
             let mut c = StateCtx { file, primitive, zones: Vec::new(), x: 0, y: 0 };
@@ -1863,7 +1894,8 @@ pub unsafe extern "C" fn ee_cp_pl_hero_count(player: u64, by_class: bool, reques
     let cp = Cp::of(player);
     let t = unsafe { WorldRead::begin() };
     let hero = |class: i64| {
-        class > 0 && ClassView::by_index(&t, class as usize).is_some_and(|c| c.ai_kind() as c_ulong == ops::AI_KIND_HERO)
+        class > 0
+            && ClassView::by_index(&t, class as usize).is_some_and(|c| c.ai_kind() as c_ulong == ops::AI_KIND_HERO)
     };
     let units: Vec<UnitView<'_>> = cp.own_units().into_iter().filter_map(|u| unsafe { UnitView::of(&t, u) }).collect();
     let mut count: c_long = 0;
@@ -1873,8 +1905,13 @@ pub unsafe extern "C" fn ee_cp_pl_hero_count(player: u64, by_class: bool, reques
             .filter_map(|u| {
                 let c = u.class()?;
                 let hp = u.hit_points() as c_long;
-                ops::hero_walk_counts(u.complex_unit_handle() != 0, hp, c.category() as c_ulong, c.unit_type() as c_ulong)
-                    .then_some(c.unit_type() as c_ulong)
+                ops::hero_walk_counts(
+                    u.complex_unit_handle() != 0,
+                    hp,
+                    c.category() as c_ulong,
+                    c.unit_type() as c_ulong,
+                )
+                .then_some(c.unit_type() as c_ulong)
             })
             .collect();
         types.sort_unstable();

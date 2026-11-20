@@ -687,6 +687,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return (int64_t)(uintptr_t)EEUnitBehavior::sTable[(size_t)a];
     case EE_AI_UNITS_HOST_GATE_FITS:
         return EEDoesWallGateFitOnUnit((EEComplexUnit*)(uintptr_t)a, (long)b, (long)c, sGateUnits = std::vector<EEUnit*>()) ? 1 : 0;
+    case EE_AI_UNITS_HOST_GATE_WALL:
+        return ((EEUnit*)(uintptr_t)a)->GetUnitClass()->GetIsWall() && ((EEUnit*)(uintptr_t)a)->GetHitPoints() > 0 && ((EEUnit*)(uintptr_t)a)->mPlayer == me && ((EEUnit*)(uintptr_t)a)->GetComplexUnit() != NULL && ((EEUnit*)(uintptr_t)a)->GetComplexUnit()->GetIsBuilt() ? 1 : 0;
     case EE_AI_UNITS_HOST_T_DEATHMATCH:
         return me->IsDeathmatch() ? 1 : 0;
     case EE_AI_UNITS_HOST_T_RESOURCES:

@@ -219,7 +219,9 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
             let p = cp as usize as *mut c_void;
             // SAFETY: the live computer player's record
             let active = unsafe { (*ctx_of(cp).fields).mActive };
-            if player_op(p, pl::EE_CP_PLAYER_UNITS_STATE, 0, &[]) == 0 || player_op(p, pl::EE_CP_PLAYER_NEXT_STATE, 0, &[]) == 0 || !active
+            if player_op(p, pl::EE_CP_PLAYER_UNITS_STATE, 0, &[]) == 0
+                || player_op(p, pl::EE_CP_PLAYER_NEXT_STATE, 0, &[]) == 0
+                || !active
             {
                 return Some(0);
             }

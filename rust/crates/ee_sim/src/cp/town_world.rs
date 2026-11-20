@@ -55,7 +55,9 @@ mod game {
 
     use super::super::town::{self, EeTownFields, TownIo};
     use super::*;
-    use crate::units::patrol_group::{ee_units_pg_dereference, ee_units_pg_new, ee_units_pg_reference, ee_units_pg_set_town_patrol};
+    use crate::units::patrol_group::{
+        ee_units_pg_dereference, ee_units_pg_new, ee_units_pg_reference, ee_units_pg_set_town_patrol,
+    };
     use crate::world::{UnitView, WorldRead, WorldView};
     use crate::world_field;
 
@@ -103,7 +105,8 @@ mod game {
                 0
             }
             town::EE_CP_TOWN_DROP_PATROL => {
-                let g = cpp(town, EE_CP_TOWN_PATROL_GROUP, 0) as usize as *mut crate::units::patrol_group::EeUnitsPatrolGroup;
+                let g = cpp(town, EE_CP_TOWN_PATROL_GROUP, 0) as usize
+                    as *mut crate::units::patrol_group::EeUnitsPatrolGroup;
                 if !g.is_null() {
                     ee_units_pg_dereference(g);
                     cpp(town, EE_CP_TOWN_SET_PATROL_GROUP, 0);
@@ -164,7 +167,8 @@ mod game {
         let hull: Vec<(i64, i64)> = {
             let mut n = 0;
             // SAFETY: the town's area record
-            let points = unsafe { crate::astar::area::ee_astar_area_hull_points(crate::astar::cm_io::area(town), &mut n) };
+            let points =
+                unsafe { crate::astar::area::ee_astar_area_hull_points(crate::astar::cm_io::area(town), &mut n) };
             // SAFETY: its n points
             (0..n).map(|k| unsafe { *points.add(k) }).map(|p| (p.x as i64, p.y as i64)).collect()
         };
@@ -174,7 +178,9 @@ mod game {
             }
             let found: Vec<u64> = {
                 let t = unsafe { WorldRead::begin() };
-                let Some(tile) = WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)) else { continue };
+                let Some(tile) = WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)) else {
+                    continue;
+                };
                 tile.units()
                     .flatten()
                     .filter(|u| {
@@ -201,7 +207,12 @@ mod game {
     /// # Safety
     /// `town` the `EETown*` being made, `area` its `EEAIArea*`, `f` its record.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_cp_town_construct(town: *mut c_void, area: *mut c_void, f: *mut EeTownFields, id: c_long) {
+    pub unsafe extern "C" fn ee_cp_town_construct(
+        town: *mut c_void,
+        area: *mut c_void,
+        f: *mut EeTownFields,
+        id: c_long,
+    ) {
         // SAFETY: the caller's contract
         unsafe {
             (*f).mTownID = id;
@@ -226,7 +237,8 @@ mod tests {
 
     #[test]
     fn a_town_unit_is_an_immobile_building_and_a_wall_only_for_humans() {
-        let b = TownUnit { has_tile: true, family: 1, land_building: true, category: 1, max_velocity: 0.0, wall: false };
+        let b =
+            TownUnit { has_tile: true, family: 1, land_building: true, category: 1, max_velocity: 0.0, wall: false };
         assert!(town_unit_kind(&b, || unreachable!()));
         assert!(town_unit_kind(&TownUnit { land_building: false, category: 0x13, ..b }, || unreachable!()));
         assert!(!town_unit_kind(&TownUnit { land_building: false, ..b }, || unreachable!()));

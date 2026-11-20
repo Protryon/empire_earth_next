@@ -102,7 +102,10 @@ pub unsafe extern "C" fn ee_astar_cm_restore_regions(r: *mut EeAStarCmRecord, da
     // SAFETY: the load just made
     let info = unsafe { cm_io::ee_astar_cm_load_info(load) };
     if info.unknown_owners != 0 {
-        debug(&format!("EEAIContinentSave: {} serials named areas of no known owner in the saved game\n", info.unknown_owners));
+        debug(&format!(
+            "EEAIContinentSave: {} serials named areas of no known owner in the saved game\n",
+            info.unknown_owners
+        ));
     }
     if info.unfiled_sub_sectors != 0 {
         debug(&format!("EEAIContinentSave: {} saved sub sectors are in no sector\n", info.unfiled_sub_sectors));

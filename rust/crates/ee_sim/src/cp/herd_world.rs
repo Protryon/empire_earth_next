@@ -9,7 +9,6 @@
 
 use std::os::raw::{c_long, c_ulong};
 
-
 // ---- the herd host's one-statement operations the bodies below ask (EEHerd.cpp)
 /// unit `a`'s `mWaypoints.size()`; `mStats->mModel` (its `EEMedia`)
 pub const EE_CP_HERD_UNIT_WAYPOINTS: i32 = 64;
@@ -373,7 +372,12 @@ mod game {
             }
             let owner = unit(node, |u| u.complex_unit_handle()).unwrap_or(0);
             result = cpp0(herd, EE_CP_HERD_PASSABLE_BY, handle, node) != 0;
-            if result && owner != 0 && holder_of(handle) != owner && members.contains(&owner) && holder_of(owner) != handle {
+            if result
+                && owner != 0
+                && holder_of(handle) != owner
+                && members.contains(&owner)
+                && holder_of(owner) != handle
+            {
                 result = false;
             }
         }

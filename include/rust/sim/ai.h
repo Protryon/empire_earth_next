@@ -577,6 +577,9 @@ constexpr static const int32_t EE_AI_UNITS_HOST_BEHAVIOR_AT = 99;
 /// `EEDoesWallGateFitOnUnit(a, b, c, units)`
 constexpr static const int32_t EE_AI_UNITS_HOST_GATE_FITS = 100;
 
+/// unit `a` is a living piece of the player's finished wall (`GetIsWall()`, `GetHitPoints() > 0`, its player, built)
+constexpr static const int32_t EE_AI_UNITS_HOST_GATE_WALL = 124;
+
 /// ai.tuning's C++ values: `IsDeathmatch()`, the game options' resources, epoch start, epoch end, the space map
 constexpr static const int32_t EE_AI_UNITS_HOST_T_DEATHMATCH = 101;
 

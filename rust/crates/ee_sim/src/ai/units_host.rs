@@ -27,6 +27,8 @@ pub const EE_AI_UNITS_HOST_BEHAVIORS: i32 = 98;
 pub const EE_AI_UNITS_HOST_BEHAVIOR_AT: i32 = 99;
 /// `EEDoesWallGateFitOnUnit(a, b, c, units)`
 pub const EE_AI_UNITS_HOST_GATE_FITS: i32 = 100;
+/// unit `a` is a living piece of the player's finished wall (`GetIsWall()`, `GetHitPoints() > 0`, its player, built)
+pub const EE_AI_UNITS_HOST_GATE_WALL: i32 = 124;
 /// ai.tuning's C++ values: `IsDeathmatch()`, the game options' resources, epoch start, epoch end, the space map
 pub const EE_AI_UNITS_HOST_T_DEATHMATCH: i32 = 101;
 pub const EE_AI_UNITS_HOST_T_RESOURCES: i32 = 102;
@@ -131,6 +133,7 @@ pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *
             n.i(from[0].into()).i(from[1].into()).i(to[0].into()).i(to[1].into());
             let tiles = crate::units::uu::wall_line(&mut crate::units::uu_host::Game, from, to);
             n.t(&tiles);
+            drop(n);
             tiles_out(t, tiles.iter().map(|p| (p[0] as c_long, p[1] as c_long)).collect())
         }
         // SAFETY: as above
@@ -185,7 +188,13 @@ unsafe fn facts(me: *mut c_void, unit: u64, f: &mut EeAiUnitsFacts) {
             let mut io: crate::units::rust_goal::EeUnitsGoalIo = unsafe { std::mem::zeroed() };
             // SAFETY: the unit's live goal (the C++ inline Call)
             let r = unsafe {
-                crate::units::goal_obj::ee_units_goal_call(op, g as usize as *const crate::units::goal_obj::EeUnitsGoalBase, 0, 0, &mut io)
+                crate::units::goal_obj::ee_units_goal_call(
+                    op,
+                    g as usize as *const crate::units::goal_obj::EeUnitsGoalBase,
+                    0,
+                    0,
+                    &mut io,
+                )
             };
             (r, io)
         };
@@ -203,9 +212,8 @@ unsafe fn facts(me: *mut c_void, unit: u64, f: &mut EeAiUnitsFacts) {
             Some(k::GOAL_BUILD_REPAIR) => {
                 let target = call(crate::units::rust_goal::EE_UNITS_GOAL_BUILD_FIELDS).0 as u64;
                 // SAFETY: the goal's live target
-                let unbuilt = unsafe { UnitView::of(&t, target) }
-                    .and_then(|v| v.complex_unit())
-                    .is_some_and(|c| !c.is_built());
+                let unbuilt =
+                    unsafe { UnitView::of(&t, target) }.and_then(|v| v.complex_unit()).is_some_and(|c| !c.is_built());
                 f.stalled = u.command_type() == k::ACTION_WAIT_FOR_SITE
                     && target != 0
                     && unbuilt
@@ -332,7 +340,9 @@ unsafe fn random_point(area: u64, seed: i64) -> Option<(c_long, c_long)> {
     }
     let mut random = ee_base::random::URandom::new(seed as u32);
     // SAFETY: the live set; the generator does not reach it
-    let p = unsafe { ee_base::sparse::ee_sparse_random_point(tiles, generate, (&mut random as *mut ee_base::random::URandom).cast()) };
+    let p = unsafe {
+        ee_base::sparse::ee_sparse_random_point(tiles, generate, (&mut random as *mut ee_base::random::URandom).cast())
+    };
     Some((p.x as c_long, p.y as c_long))
 }
 
@@ -388,7 +398,13 @@ unsafe fn area_pick(p: &mut EeAiUnitsAreaPick) {
         };
         let mut count = 0usize;
         // SAFETY: the live continent's id list
-        let ids = unsafe { crate::astar::continent::ee_astar_continent_ids(crate::astar::cm_io::continent(land) as *const _, list, &mut count) };
+        let ids = unsafe {
+            crate::astar::continent::ee_astar_continent_ids(
+                crate::astar::cm_io::continent(land) as *const _,
+                list,
+                &mut count,
+            )
+        };
         let ids: &[u16] = if count == 0 { &[] } else { unsafe { std::slice::from_raw_parts(ids, count) } };
         let mut found = Vec::new();
         for &id in ids {
@@ -400,8 +416,11 @@ unsafe fn area_pick(p: &mut EeAiUnitsAreaPick) {
             // SAFETY: the listed live area's record
             let inside = unsafe { crate::astar::area_ops::ee_astar_area_hull_contains(a, hull_point(x, y)) };
             if inside
-                || distance2(unsafe { crate::astar::area_ops::ee_astar_area_closest_hull_point(a, hull_point(x, y)) }, x, y)
-                    <= radius.wrapping_mul(radius)
+                || distance2(
+                    unsafe { crate::astar::area_ops::ee_astar_area_closest_hull_point(a, hull_point(x, y)) },
+                    x,
+                    y,
+                ) <= radius.wrapping_mul(radius)
             {
                 found.push(area);
             }
@@ -420,7 +439,15 @@ unsafe fn area_pick(p: &mut EeAiUnitsAreaPick) {
     let id = crate::astar::cm_io::continent(land).id as u16;
     // SAFETY: the manager's record (its CNTQ record, as the C++ inline)
     unsafe {
-        crate::astar::cm_queries::ee_astar_cmq_choke_points(r, id, false, std::ptr::null(), 0, (&mut chokes as *mut Vec<u64>).cast(), push)
+        crate::astar::cm_queries::ee_astar_cmq_choke_points(
+            r,
+            id,
+            false,
+            std::ptr::null(),
+            0,
+            (&mut chokes as *mut Vec<u64>).cast(),
+            push,
+        )
     };
     p.total = chokes.len() as c_long;
     if radius > 0 && !chokes.is_empty() {
@@ -430,7 +457,9 @@ unsafe fn area_pick(p: &mut EeAiUnitsAreaPick) {
             .rev()
             .map(|&ch| {
                 // SAFETY: the listed live choke point's tiles
-                let c = unsafe { ee_base::sparse::ee_sparse_closest_point(crate::astar::cm_io::area_tiles(ch), x as i32, y as i32) };
+                let c = unsafe {
+                    ee_base::sparse::ee_sparse_closest_point(crate::astar::cm_io::area_tiles(ch), x as i32, y as i32)
+                };
                 (distance2(hull_point(c.x as c_long, c.y as c_long), x, y), ch)
             })
             .collect();
@@ -466,7 +495,12 @@ unsafe fn water_shore(t: &mut EeAiUnitsTiles) -> i64 {
     let mut shore: Vec<(c_long, c_long)> = Vec::new();
     // SAFETY: the live water body
     unsafe {
-        crate::astar::area_shore::ee_astar_continent_shore_next_to(water, land_id as u16, (&mut shore as *mut Vec<(c_long, c_long)>).cast(), push)
+        crate::astar::area_shore::ee_astar_continent_shore_next_to(
+            water,
+            land_id as u16,
+            (&mut shore as *mut Vec<(c_long, c_long)>).cast(),
+            push,
+        )
     };
     tiles_out(t, shore)
 }
@@ -516,18 +550,14 @@ fn gate_side(me: *mut c_void, x: c_long, y: c_long) -> i64 {
     let mut units = Vec::new();
     let count = crate::units::uu::units_on(&mut crate::units::uu_host::Game, &[[x as i32, y as i32]], &mut units);
     n.i(count.into()).us(&units);
-    let w = unsafe { WorldRead::begin() };
-    let wall = units.iter().copied().find(|&u| {
-        // SAFETY: the tile's live units
-        unsafe { UnitView::of(&w, u) }.is_some_and(|v| {
-            v.class().is_some_and(|c| c.wall())
-                && v.hit_points() > 0
-                && v.player().is_some_and(|p| p.handle() == me as u64)
-                && v.complex_unit().is_some_and(|c| c.is_built())
-        })
-    });
+    // the note closes here, as EEGetUnitsOnTile returned: the gate fits' own notes are outermost
+    drop(n);
+    // GetHitPoints() and the rest are the unit's own (a wall piece answers for its whole wall)
+    let wall =
+        units.iter().copied().find(|&u| cpp(EE_AI_UNITS_HOST_GATE_WALL, me, u as i64, 0, 0, std::ptr::null_mut()) != 0);
     let Some(wall) = wall else { return 0 };
-    // SAFETY: as above
+    let w = unsafe { WorldRead::begin() };
+    // SAFETY: the tile's live unit
     let wall_type = unsafe { UnitView::of(&w, wall) }.and_then(|v| v.class()).map_or(0, |c| c.unit_type()) as i64;
     drop(w);
     for side in 1..=4 {

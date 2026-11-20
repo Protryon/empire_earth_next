@@ -33,9 +33,9 @@ pub mod fields;
 pub mod file;
 pub mod herd;
 pub mod herd_game;
-pub mod herd_world;
 #[cfg(test)]
 mod herd_tests;
+pub mod herd_world;
 pub mod influence;
 pub mod init;
 pub mod legacy_load;
@@ -60,6 +60,6 @@ pub mod save;
 pub mod timers;
 pub mod town;
 pub mod town_game;
-pub mod town_world;
 #[cfg(test)]
 mod town_tests;
+pub mod town_world;

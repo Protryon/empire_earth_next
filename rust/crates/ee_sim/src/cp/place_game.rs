@@ -724,7 +724,8 @@ impl PlayerHost for Game {
             let mut t = [0i32; 2];
             // SAFETY: the player's listed centre
             unsafe { ee_cp_center_get_center(ctx, c, t.as_mut_ptr()) };
-            let (dx, dy) = ((from[0] as c_long).wrapping_sub(t[0] as c_long), (from[1] as c_long).wrapping_sub(t[1] as c_long));
+            let (dx, dy) =
+                ((from[0] as c_long).wrapping_sub(t[0] as c_long), (from[1] as c_long).wrapping_sub(t[1] as c_long));
             dx.wrapping_mul(dx).wrapping_add(dy.wrapping_mul(dy))
         };
         crate::units::msvc_sort::sort_by(&mut order, |&a, &b| key(a) < key(b));
