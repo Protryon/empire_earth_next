@@ -2,6 +2,7 @@
 // script from the units at c01702f3f), for won_hostops_test over won_hostops_world.h's stand-ins.
 #ifndef WON_HOSTOPS_ORIG_H
 #define WON_HOSTOPS_ORIG_H
+#define ee_won_ipaddr_clone WonWorld::IpClone
 namespace WonHostopsOrig {
 using namespace WonWorld;
 
@@ -198,4 +199,5 @@ static intptr_t Ctl(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t
     return 0;
 }
 }
+#undef ee_won_ipaddr_clone
 #endif

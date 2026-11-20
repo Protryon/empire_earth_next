@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include "ee/wonapi/WONEventTypes.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_net/ipobj.h"
 
 namespace WonWorld {
 static std::vector<std::string> sTrace;
@@ -98,8 +100,8 @@ struct IPAddr {
     intptr_t mValue = 0;
     static IPAddr FromValue(intptr_t v) { IPAddr a; a.mValue = v; return a; }
 };
-struct EeWonIpAddr;
-static intptr_t ee_won_ipaddr_clone(const EeWonIpAddr* a) { return (intptr_t)a ^ 0x5000; }
+// the address clone (the cases' ee_won_ipaddr_clone: won_hostops_orig.h renames it)
+static intptr_t IpClone(const ::EeWonIpAddr* a) { return (intptr_t)a ^ 0x5000; }
 struct JoinRoomEvent {
     IPAddr mAddr;
     unsigned long mId;

@@ -24,6 +24,7 @@
 #include "rust/won_lobby/rows.h"
 #include "won_hostops_world.h"
 #include "won_hostops_orig.h"
+#include "rust/won_net/ipobj.h"
 
 using namespace WonWorld;
 typedef EeWonLobbyCtlOp Op;
@@ -77,9 +78,9 @@ static intptr_t World(void* inCtlArg, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t
     case Op::FilterCount: return (intptr_t)LobbyGetFilterCount(Txt(a));
     case Op::ComboAddFilterValue: aCombo->AddString(LobbyGetFilterValueAt(Txt(b), (size_t)c), -1);
         return 0;
-    case Op::DeliverJoinRoomAt: inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a)), (unsigned long)b), false);
+    case Op::DeliverJoinRoomAt: inCtl->DeliverEvent(JoinRoomEvent(IPAddr::FromValue(IpClone((const EeWonIpAddr*)a)), (unsigned long)b), false);
         return 0;
-    case Op::DeliverCreateRoomAt: inCtl->DeliverEvent(CreateRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone((const EeWonIpAddr*)a))), false);
+    case Op::DeliverCreateRoomAt: inCtl->DeliverEvent(CreateRoomEvent(IPAddr::FromValue(IpClone((const EeWonIpAddr*)a))), false);
         return 0;
     case Op::DeliverCreateRoomAny: inCtl->DeliverEvent(CreateRoomEvent(IPAddr()), false);
         return 0;

@@ -8,6 +8,11 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include "rust/won_lobby/lanobj.h"
+#include "rust/won_lobby/lobbydlg.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/ipobj.h"
 
 namespace LoWorld {
 static std::vector<std::string> sTrace;
