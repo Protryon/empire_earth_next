@@ -69,11 +69,7 @@ fn construct_and_fill() {
     construct(&mut f, BG, 0.5, 3, 7, 1.0, 2.0);
     assert_eq!(
         f.calls(),
-        "gb_set_opacity(160, 0.5)
-gb_set_flags(160, 3)
-gb_set_color(160, 7)
-gb_set_scale_x(160, 1.0)
-         gb_set_scale_y(160, 2.0)"
+        "gb_set_opacity(160, 0.5)\ngb_set_flags(160, 3)\ngb_set_color(160, 7)\ngb_set_scale_x(160, 1.0)\ngb_set_scale_y(160, 2.0)"
     );
     let mut f = Fake::default();
     assert_eq!(fill(&mut f, BG, [1.0, 2.0, 3.0, 4.0]), 0);
