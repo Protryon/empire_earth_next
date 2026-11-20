@@ -1,0 +1,329 @@
+//! The game's own bodies in Rust over the C++ objects (game core lane, round 7): each C++ call or member a body makes
+//! is one host operation ([`EeGameCpp`]), answered by a one-statement case of `ee_gamecpp` / `ee_gamecpp_f`
+//! (`src/Empire Earth/Empire Earth/EEGameOps.cpp`). The pattern of the EE-SIM driver's hosts (`sim_driver::sim_ops`):
+//! `p` the object, `a` the integer (and pointer) arguments, `f` the float arguments; a pointer is answered as an
+//! integer, a float by `ee_gamecpp_f`.
+//!
+//! Plain members are read and written in place through the C++ classes' Rust records (`EeUnitsUnitFields`,
+//! `EeCalamityFields`, ...: one case answers the base's address). The GE value types cross as their Rust mirrors
+//! (`Ge3DPoint`, `GeTransformation`: the C++ casts the pointer back), and their algorithms are ee_base's, the ones the
+//! C++ inlines forward to.
+//!
+//! Every C++ call that writes a capture record is made from Rust in the order the C++ made it.
+
+pub mod calamity;
+
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
+
+/// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeGameCpp {
+    // ---- the units (p: an EEUnit*, or an EEComplexUnit* for the Cx ops)
+    UnRts = 1,
+    UnFields,
+    CxFields,
+    UnComplex,
+    UnGetComplex,
+    UnPlayer,
+    UnClass,
+    UnTileNode,
+    UnPosition,
+    UnGetModel,
+    UnKill,
+    UnTakeHit,
+    UnTechNode,
+    NodeDataKind,
+    UnCastComplex,
+    CxLocation,
+    CxSetTransformation,
+    CxClearBuildTargets,
+    CxNumGoalQueues,
+    CxClearGoalQueue,
+    CxClearGoals,
+    CxSetDisabled,
+    CxStartAction,
+    CxHalt,
+    CxSetBuilt,
+    CxSetIsTinted,
+    CxTakeOffMap,
+    CxSetHitPoints,
+    CxSetOpenFraction,
+    CxGetEffect,
+    CxIsCarried,
+    CxOutermostCarrier,
+    CxWaypointCount,
+    CxNextWaypoint,
+    CxGetPathStart,
+    CxDropPath,
+    CxEffectHeight,
+    CxSet2DPosition,
+    CxU0DC,
+    CxActiveGroup,
+    GroupTell,
+    CxSetLauncherClass,
+    CxSetOwner,
+    CxSetGoal,
+    CxSetVelocity,
+    CxMaxVelocity,
+    CxSetProjectileStart,
+    CxSetLocation,
+    CxSetHeight,
+    CxSetFlightTime,
+    CxSetOrientation,
+    CxPlayEffect,
+    PlayUnitEffect,
+    CxSightOffHere,
+    CxSightOnHere,
+    CxSetSight,
+    CxIsProtected,
+    CxSetIsDeletable,
+    CxAreaEffectsAdd,
+    CxAreaEffectsRemove,
+    CxGoalState,
+    GoalKind,
+    UpdateUnitTile,
+    CombatFindDrop,
+    NewAttackGround,
+    NewAttackUnit,
+    NewCastCalamity,
+    NewLocation,
+    // ---- the unit classes (p: an EEUnitClass*)
+    UcFields,
+    UcAt,
+    UcActionChanged,
+    UcIsLandBuilding,
+    UcHeightAt,
+    UcGroundLocation,
+    UcCreateUnit,
+    UcPlayCreationEffect,
+    UcLastLinkedCarrier,
+    UcLastLinked,
+    UcMoraleEffect,
+    // ---- the players (p: an EEPlayer*)
+    PlRts,
+    PlSaved,
+    PlFields,
+    PlTechnology,
+    PlCanAfford,
+    PlPay,
+    PlAddWonder,
+    PlRemoveWonder,
+    PlDeselect,
+    PlOffMapInfo,
+    OffMapSetReason,
+    // ---- the world, the map, the physics
+    WorldAddr,
+    WorldPlayer,
+    WorldCurrentPlayer,
+    MapTile,
+    TileUnits,
+    TileHeight,
+    MeshValidTile,
+    MeshZ,
+    MeshGetZ,
+    PhysGetRandom,
+    PhysGenerate,
+    PhysRandomRange,
+    ContagionHelper,
+    ContagionCreate,
+    ContagionDestroyVerify,
+    HelperAddUnit,
+    AeHas,
+    AeCreate,
+    AeRadius,
+    RefDereference,
+    UnitSetContains,
+    ContinentOfUnit,
+    CameraGetLocation,
+    CameraSetLocation,
+    ViewportInverseApply,
+    Verify,
+    // ---- the effects (p: an EEGraphicEffect* where one is passed) and the sounds
+    EffUnit,
+    EffBetweenUnits,
+    EffAt,
+    EffPlaced,
+    EffBetween,
+    EffDestroy,
+    EffectKind,
+    SoVolume,
+    SoPlayNode,
+    SoPlay,
+    NodeDereference,
+    SoCalamityParams,
+    ModelPart0,
+    GeModelRadius,
+    // ---- the calamities (p: an EECalamity*, an EECalamityClass* for the Kl ops, the host for the Host ops)
+    CalFields,
+    CalRect,
+    CalTargetLoc,
+    CalShakeLoc,
+    CalTile,
+    CalTarget,
+    CalCaster,
+    CalClass,
+    CalEffectHandle,
+    CalSound,
+    CalSecondary,
+    CalSetSound,
+    CalSetSecondary,
+    CalSetTarget,
+    CalStopSound,
+    CalStopSecondary,
+    CalCreateUnit,
+    KlFields,
+    KlEffect1,
+    KlEffect2,
+    KlEffect3,
+    KlEffect4,
+    KlSound,
+    KlSecondary,
+    KlFunctor,
+    KlContagionFunctor,
+    KlUnitSet,
+    KlCost,
+    KlUpdateSound,
+    KlPlaySound,
+    HostClass,
+    HostCalamity,
+    HostSound,
+    HostUnits,
+    HostUnitAt,
+    HostUnitCount,
+    HostPending,
+    HostSetPending,
+    HostTiles,
+    HostScratch,
+    VecTilesClear,
+    VecUnitsClear,
+    SortTilesNear,
+    CapEvent,
+    CapStartEvent,
+    CapStartPoint,
+    CapContagion,
+    CxIsWarpColor,
+    CxSetWarpColor,
+    CxSetBlackColor,
+}
+
+pub use EeGameCpp as O;
+
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod sys {
+    use super::EeGameCpp;
+
+    extern "C" {
+        // EEGameOps.cpp
+        pub fn ee_gamecpp(op: EeGameCpp, p: usize, a: *const i64, f: *const f32) -> i64;
+        pub fn ee_gamecpp_f(op: EeGameCpp, p: usize, a: *const i64, f: *const f32) -> f64;
+    }
+}
+
+/// The tests run no C++: a call is a bug of the test.
+#[cfg(test)]
+mod sys {
+    use super::EeGameCpp;
+
+    pub unsafe fn ee_gamecpp(op: EeGameCpp, _: usize, _: *const i64, _: *const f32) -> i64 {
+        panic!("no C++ in the tests ({op:?})")
+    }
+    pub unsafe fn ee_gamecpp_f(op: EeGameCpp, _: usize, _: *const i64, _: *const f32) -> f64 {
+        panic!("no C++ in the tests ({op:?})")
+    }
+}
+
+/// An object as the host passes it (a C++ pointer; 0 is NULL).
+pub type P = usize;
+
+fn args(a: &[i64], f: &[f32]) -> ([i64; 8], [f32; 8]) {
+    let mut ai = [0i64; 8];
+    ai[..a.len()].copy_from_slice(a);
+    let mut fi = [0f32; 8];
+    fi[..f.len()].copy_from_slice(f);
+    (ai, fi)
+}
+
+/// An operation with integer arguments.
+pub fn h(op: O, p: P, a: &[i64]) -> i64 {
+    hf(op, p, a, &[])
+}
+
+/// An operation with integer and float arguments.
+pub fn hf(op: O, p: P, a: &[i64], f: &[f32]) -> i64 {
+    let (ai, fi) = args(a, f);
+    // SAFETY: the host's operation over the C++ objects the caller holds (on the thread that owns them)
+    unsafe { sys::ee_gamecpp(op, p, ai.as_ptr(), fi.as_ptr()) }
+}
+
+/// An operation answering a pointer.
+pub fn hp(op: O, p: P, a: &[i64]) -> P {
+    h(op, p, a) as P
+}
+
+/// An operation answering a float (a C++ float, widened).
+pub fn hd(op: O, p: P, a: &[i64], f: &[f32]) -> f32 {
+    let (ai, fi) = args(a, f);
+    // SAFETY: as hf
+    unsafe { sys::ee_gamecpp_f(op, p, ai.as_ptr(), fi.as_ptr()) as f32 }
+}
+
+/// A pointer to a Rust value the C++ reads or writes for the call's duration (as an argument).
+pub fn ptr<T>(x: &mut T) -> i64 {
+    x as *mut T as usize as i64
+}
+
+/// A pointer to a Rust value the C++ only reads.
+pub fn cptr<T>(x: &T) -> i64 {
+    x as *const T as usize as i64
+}
+
+/// A pointer argument.
+pub fn pa(p: P) -> i64 {
+    p as i64
+}
+
+/// A record the C++ object derives from, by the address its cast answers (`op`).
+///
+/// # Safety
+/// `op` answers the address of a live `T` for `p`; the caller reads or writes it before its next C++ call.
+pub unsafe fn rec<T>(op: O, p: P) -> *mut T {
+    hp(op, p, &[]) as *mut T
+}
+
+/// A transformation's position.
+pub fn position(t: &GeTransformation) -> Ge3DPoint {
+    Ge3DPoint::new(t.x(), t.y(), t.z())
+}
+
+/// `SetX`, `SetY`, `SetZ` of a transformation.
+pub fn set_position(t: &mut GeTransformation, x: f32, y: f32, z: f32) {
+    t.m[0][3] = x;
+    t.m[1][3] = y;
+    t.m[2][3] = z;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_arguments_pad_to_eight_and_the_positions_are_column_three() {
+        let (a, f) = args(&[1, 2], &[0.5]);
+        assert_eq!(a, [1, 2, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(f[0], 0.5);
+        let mut t = GeTransformation::IDENTITY;
+        set_position(&mut t, 1.0, 2.0, 3.0);
+        assert_eq!(position(&t), Ge3DPoint::new(1.0, 2.0, 3.0));
+        assert_eq!(t.m[3], [0.0, 0.0, 0.0, 1.0]);
+        let mut x = 5i32;
+        assert_eq!(ptr(&mut x) as usize, &x as *const i32 as usize);
+    }
+
+    #[test]
+    #[should_panic(expected = "no C++")]
+    fn a_host_call_in_a_test_is_a_bug() {
+        h(O::WorldAddr, 0, &[]);
+    }
+}

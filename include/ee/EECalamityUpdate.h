@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "rust/sim/tech.h"
+#include "lle/U2DPoint.h"
 
 class EECalamity;
 class EECalamityClass;
@@ -22,6 +23,8 @@ struct EECalamityUpdateHost {
     EESoundObject* mSounds[2];              // the class's sound and secondary sound (UpdateSound's)
     std::vector<EEUnit*> mUnits;            // the last EEGetUnitsNear's
     void* mPending;                         // a class step's object for its next step (the cloak's area effect)
+    std::vector<U2DPoint<long> > mTiles;    // the steps' tile searches (ee_game gamecpp calamity.rs)
+    std::vector<EEUnit*> mScratch;          // the steps' own unit searches
 };
 
 // runs the class's update in Rust; the calamity's members in and out (EeCalamityState) around it and every host call
