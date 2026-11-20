@@ -40,6 +40,7 @@ fn unknown_objects_answer_nothing() {
     assert!(button_call(x, EeUiButtonCall::CheckIsChecked, 0, 0).is_none());
     assert!(combo_call(x, EeUiComboCall::DeleteAllEntries, 0, 0).is_none());
     assert!(label_call(x, EeUiLabelCall::LineCount, 0, 0).is_none());
+    assert!(label_call_f(x, EeUiLabelCall::SetScrollBarBgColor, 0, 0, &mut [0.0; 4]).is_none());
     assert!(edit_call(x, EeUiEditCall::Clear, 0, 0).is_none());
     assert!(slider_call(x, EeUiSliderCall::CurrentRangeValue, 0, 0).is_none());
     assert_eq!(group_call(x, EeUiEntityGroupCall::Enable, 0), 0);
