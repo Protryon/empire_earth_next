@@ -59,18 +59,7 @@ private:
     long mRect[4];
 };
 
-// MAPK: ComputeChecksum's window (the cursor before and after) and its sum; MAPP: GetTerrainPitch (inKind 0) or
-// GetTerrainRoll (1) with the location and the result
-inline void (*EEAppCaptureChecksum)(unsigned long inCursorBefore, long inResult, unsigned long inCursorAfter) = nullptr;
-inline void (*EEAppCaptureSlope)(unsigned int inKind, const GETransformation& inLocation, float inResult) = nullptr;
-
-// MMPX: the mini map's terrain pixels a RedrawPixels wrote (the rectangle and the packed pixels, read back)
-inline void (*EEAppCaptureMiniMapPixels)(long inLeft, long inRight, long inBottom, long inTop,
-                                         const unsigned short* inBits,
-                                         unsigned long inPitch) = nullptr;
-// MMSN: the mini map's cells (each cell's sight count and unit layer pixel, its building and unit dots in list
-// order), from EE-SIM's tick hook every game minute
-inline void (*EEAppCaptureMiniMapSnapshot)() = nullptr;
+// (MAPK, MAPP, MMPX, MMSN, CHLS: ee_game app world_capture.rs, called directly)
 
 // STRM: a storm's state after its creation (inPhase 0) and each Step (1, with its time)
 inline void (*EEAppCaptureStorm)(const EEEMStorm& inStorm, unsigned int inPhase, unsigned long inTime) = nullptr;
@@ -81,7 +70,5 @@ inline void (*EEAppCaptureCheatSweep)() = nullptr;
 inline void (*EEAppCaptureStormSweep)() = nullptr;
 // TEST ONLY: WSTA, EEWorld::RecordStatistics at the app profile's end (EEAppCaptureWorld.cpp)
 inline void (*EEAppCaptureStatisticsSweep)() = nullptr;
-// CHLS: a line ListCheatCodes adds to the chat log
-inline void (*EEAppCaptureCheatList)(const UWideString& inLine) = nullptr;
 
 #endif

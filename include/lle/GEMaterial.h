@@ -9,7 +9,6 @@
 #include "rust/render/ge.h"   // the material (ee_ge smallobj.rs)
 
 class GETexture;
-LLE_API intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp
 
 class LLE_API GEMaterial : public UReferenceCounter {
 public:
@@ -44,7 +43,7 @@ private:
     friend class GEModel;                   // AllocateInternalData news materials
     friend struct GEStoreDigest;            // tools/eemodel/storegate
     GEMaterial(unsigned long inScreenCount = 1, unsigned long inLODCount = 1)
-        : mRust(ee_ge_mat_new(&GEObjectHost, this, inScreenCount, inLODCount)) {}
+        : mRust(ee_ge_game_mat_new(this, inScreenCount, inLODCount)) {}
     GEMaterial(const GEMaterial&) = delete;
     GEMaterial& operator=(const GEMaterial&) = delete;
 

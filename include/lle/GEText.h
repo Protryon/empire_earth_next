@@ -12,7 +12,7 @@
 
 class LLE_API GEText {
 public:
-    GEText(GEFont* inFont) : mRust(ee_ge_text_new(&GEObjectHost, this, inFont)) {}
+    GEText(GEFont* inFont) : mRust(ee_ge_game_text_new(this, inFont)) {}
     ~GEText() { ee_ge_text_destroy(this->mRust); }
     GEText(const GEText&) = delete;
     void operator=(const GEText& inText) { ee_ge_text_assign(this->mRust, inText.mRust); }

@@ -53,6 +53,7 @@
 #include "ee/EEAIForest.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEUnitHandle.h"
+#include "rust/sim/units.h"
 
 // New (R5a.4/R5a.6): the typed halves of EEUnitHandle (ee/EEUnitHandle.h), which need the complete classes; the
 // registry and the RTSUnit halves are in RTSUnit.cpp
@@ -412,7 +413,7 @@ void EEUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
     if (theClass->mUnitType == kUnitTypeFarm || theClass->mCategory == kUnitCategoryLandCitizen || theClass->mCategory == kUnitCategoryNavalCitizen)
         this->mResourceAmount = 0;
     this->SightOn(this->mTileX, this->mTileY);
-    if (!EEIsCloakedEnemyOf(this, gWorld.GetCurrentPlayer()))
+    if (!ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer()))
         gMiniMap->MoveUnit(this, this->mTileX, this->mTileY, -10000, -10000);
     if (gWorld.mCameraControl.mUnitA == this)
         gWorld.mCameraControl.ClearUnitA();
@@ -498,7 +499,7 @@ void EEUnit::MoveTo(long inX, long inY, bool inUpdateTiles)
         }
     }
     if (inUpdateTiles) {
-        if (this->mHitPoints != 0 && !EEIsCloakedEnemyOf(this, gWorld.GetCurrentPlayer())
+        if (this->mHitPoints != 0 && !ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer())
             && (this->mPlayer == gWorld.GetCurrentPlayer() || !this->IsFoundation()))
             gMiniMap->MoveUnit(this, this->mTileX, this->mTileY, inX, inY);
         this->SightMoved(this->mTileX, this->mTileY, inX, inY);
@@ -558,7 +559,7 @@ void EEUnit::DepleteResource(long inAmount)
     this->mResourceAmount = 0;
     if (this->mUnitClass->mCategory != kUnitCategoryResource)
         return;
-    if (!EEIsCloakedEnemyOf(this, gWorld.GetCurrentPlayer()))
+    if (!ee_units_uu_cloaked_enemy((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer()))
         gMiniMap->MoveUnit(this, this->mTileX, this->mTileY, -10000, -10000);
     this->mPlayer->UnitTaken(this, 0);
     this->mPlayer->KillUnit(this, false);
@@ -601,9 +602,9 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
             this->mPlayer->mEnemies[inAttacker->mPlayer->mPlayerID] != 0) {
             EEComplexUnit* theTarget = NULL;
             if (inAttacker->mComplexUnit->mOwner == NULL) {
-                if (EEUUGetIsUnitClassTargetable(this, inAttacker->GetUnitClass()))
+                if (ee_units_uu_targetable((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inAttacker->GetUnitClass(), 0))
                     theTarget = inAttacker->mComplexUnit;
-            } else if (EEUUGetIsUnitClassTargetable(this, inAttacker->mComplexUnit->mOwner->GetUnitClass()))
+            } else if (ee_units_uu_targetable((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)(inAttacker->mComplexUnit->mOwner->GetUnitClass()), 0))
                 theTarget = inAttacker->mComplexUnit->mOwner;
             if (theTarget != NULL) {
                 theComplex->SetLastAttacker(theTarget);

@@ -56,6 +56,8 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEARust.h"
+#include "ee/EECombatGoals.h"
+#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the host
 // The game's actions' host (ee_screens game_actions.rs: EE_SCREENS_GA_OP_*; ee/EEARust.h). The original units'
@@ -156,7 +158,7 @@ static int64_t UnitOp(void* p, int64_t* i, float* f)
     case EE_SCREENS_GA_U_DISABLED: return c->GetIsDisabled();
     case EE_SCREENS_GA_U_PROTECTED: return c->IsProtected();
     case EE_SCREENS_GA_U_BUILT: return c->mIsBuilt;
-    case EE_SCREENS_GA_U_SEEN: return EEIsSeenBy(u, gWorld.GetCurrentPlayer(), true);
+    case EE_SCREENS_GA_U_SEEN: return EECombatIsSeenBy(u, gWorld.GetCurrentPlayer(), true);
     case EE_SCREENS_GA_U_FOOTPRINT_VISIBLE: return ee_units_uu_footprint_visible((uint64_t)(uintptr_t)u, (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer()) != 0;
     case EE_SCREENS_GA_U_TILE: return (intptr_t)u->GetRTSTile();
     case EE_SCREENS_GA_U_LOCATION:
@@ -198,7 +200,7 @@ static int64_t ClassOp(void* p, int64_t* i)
     case EE_SCREENS_GA_C_TRANSPORT: return c->IsTransport();
     case EE_SCREENS_GA_C_AIR_BASE: return c->IsAirBase();
     case EE_SCREENS_GA_C_MEDIC: return c->GetIsMedic();
-    case EE_SCREENS_GA_C_TARGETABLE: return EEUUGetIsUnitClassTargetable(NULL, c);
+    case EE_SCREENS_GA_C_TARGETABLE: return ee_units_uu_targetable(0, (uint64_t)(uintptr_t)c, 0);
     }
     return 0;
 }
@@ -666,7 +668,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     }
     case EE_SCREENS_GA_OP_FARM_DROP_SITES: {
         std::vector<EEUnit*> theFarmers;
-        EEGetFarmDropSites(static_cast<EEComplexUnit*>(p), theFarmers);
+        ee_units_uu_farm_drop_sites((uint64_t)(uintptr_t)static_cast<EEComplexUnit*>(p), &theFarmers);
         if (theFarmers.size() == 1)
             i[0] = theFarmers[0]->GetUnitID();
         return theFarmers.size();

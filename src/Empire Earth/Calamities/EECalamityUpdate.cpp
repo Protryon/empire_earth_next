@@ -44,6 +44,8 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIKindIDs.h"
+#include "ee/EECombatGoals.h"
+#include "rust/sim/units.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 
@@ -171,7 +173,7 @@ void AffectedTiles(EECalamityClass* inClass, EECalamity* inCalamity, bool inImmu
     std::vector<EETileCoordinate> theTiles;
     GE3DPoint theLocation;
     inCalamity->GetTargetLocation(theLocation);
-    EEGetTilesInRadius(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()), inClass->mRadiusTiles, true, theTiles);
+    ee_units_uu_tiles_in_radius(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()), (uint32_t)inClass->mRadiusTiles, true, &theTiles);
     for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
         if (::gWorld.mMap->GetTile(it->mX, it->mY) == NULL)
             continue;
@@ -196,7 +198,7 @@ void ApplyEffect(EECalamityClass* inClass, EECalamity* inCalamity)
     inCalamity->GetTargetLocation(theLocation);
     AffectedTiles(inClass, inCalamity, !theLeprosy, theTiles);
     the2DLocation = theLocation.Get2DPoint();
-    EEGetUnitsInRadius(the2DLocation, (float)inClass->mRadiusTiles, theUnits);
+    ee_units_uu_units_in_radius(the2DLocation.mX, the2DLocation.mY, (float)inClass->mRadiusTiles, &theUnits);
     EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCalamity->GetIntPlaceHolder1());
     for (long i = theUnits.size() - 1; i >= 0; i--) {
         EEUnit* theUnit = theUnits[i];
@@ -264,11 +266,11 @@ void VolcanoClearArea(EEUnitClass* inClass, long inX, long inY)
     theArea.SetTop(theTop);
     theArea.SetLeft(theLeft);
     theArea.SetRight(inX + theExtent);
-    EEGetUnitsInRectangle(theArea, theUnits);
+    ee_units_uu_units_in_rectangle(theArea.GetLeft(), theArea.GetTop(), theArea.GetRight(), theArea.GetBottom(), &theUnits);
     unsigned long theCount = theUnits.size();
     for (unsigned long i = 0; i < theCount; i++) {
         EEComplexUnit* theUnit = theUnits[i]->mComplexUnit;
-        if (theUnit == NULL || !EEIsUnitMovable(NULL, theUnit))
+        if (theUnit == NULL || !ee_units_uu_is_unit_movable((uint64_t)(uintptr_t)theUnit))
             continue;
         bool theMoved = false;
         long theWaypointCount = theUnit->mWaypoints.size();
@@ -289,12 +291,12 @@ void VolcanoClearArea(EEUnitClass* inClass, long inX, long inY)
         }
         if (theMoved)
             continue;
-        EEGetSquareBlockRing(0, theLeft, theTop, theSize, theTiles, 0);
+        ee_units_uu_block_ring(0, theLeft, theTop, theSize, theSize, &theTiles, 0, 1);
         std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(theLeft + theSize - 1, theTop));
         unsigned long theTileCount = theTiles.size();
         for (unsigned long j = 0; j < theTileCount; j++) {
             EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[j].mX, theTiles[j].GetY());
-            if (theTile == NULL || theTile->mUnits != NULL || !EECanStandOn(theTiles[j], theUnit))
+            if (theTile == NULL || theTile->mUnits != NULL || !ee_units_uu_can_stand_on(theTiles[j].mX, theTiles[j].mY, (uint64_t)(uintptr_t)theUnit))
                 continue;
             theTransformation = theUnit->mPhysicalModel.GetLocation();
             theLocation.SetX(theTiles[j].mX + 0.5f);
@@ -403,8 +405,7 @@ void WarpReturn(EECalamityClass* inClass, EECalamity* inCalamity)
         return;
     EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
     theUnit->SetIsTinted(true);
-    if (!EEFindPlacement(&theFoundLocation, theUnit, NULL, inCalamity->mTilePlaceHolder1.mX, inCalamity->mTilePlaceHolder1.mY,
-                         theUnit->mUnitClass->GetTileSize(), inClass->mPlacementRange, 1, 1, 0, 0, &theTransformation, NULL)) {
+    if (!ee_units_uu_find_placement((const float(*)[3])&theFoundLocation.mX, (uint64_t)(uintptr_t)theUnit, 0, inCalamity->mTilePlaceHolder1.mX, inCalamity->mTilePlaceHolder1.mY, theUnit->mUnitClass->GetTileSize(), inClass->mPlacementRange, 1, 1, 0, 0, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0)) {
         theUnit->Kill(1, 0, 0);
         return;
     }
@@ -464,8 +465,7 @@ bool TeleportTo(EECalamityClass* inClass, EEUnit* inCaster, long inX, long inY)
     GETransformation theTransformation;
     GE3DPoint theFoundLocation;
     EEComplexUnit* theUnit = inCaster->mComplexUnit;
-    if (!EEFindPlacement(&theFoundLocation, theUnit, NULL, inX, inY, theUnit->mUnitClass->GetTileSize(), inClass->mPlacementRange,
-                         1, 1, 0, 0, &theTransformation, NULL))
+    if (!ee_units_uu_find_placement((const float(*)[3])&theFoundLocation.mX, (uint64_t)(uintptr_t)theUnit, 0, inX, inY, theUnit->mUnitClass->GetTileSize(), inClass->mPlacementRange, 1, 1, 0, 0, (float(*)[4][4])&theTransformation.mMatrix[0][0], 0))
         return false;
     theUnit->SetTransformation(theTransformation, true);
     if (theUnit->mActiveGroup != NULL)
@@ -623,7 +623,7 @@ void CloakGroup(EECalamity* inCalamity, EEComplexUnit* inUnit, EEAreaEffect* inE
 {
     std::vector<EEUnit*> theCandidates;
     std::vector<EEUnit*> theGroup;
-    EEGetPlayerUnitsOfType(kUnitTypeCapitol, inUnit->mPlayer->mPlayerID, theCandidates);
+    ee_units_uu_player_units_of_type(kUnitTypeCapitol, inUnit->mPlayer->mPlayerID, &theCandidates);
     float theRange = inEffect->GetRadius() * 2.0f;
     theGroup.push_back(inUnit);
     bool theAdded;
@@ -806,7 +806,7 @@ bool ClassStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCal
         // the dropped unit next to the target, attacking it
         EEComplexUnit* theDropper = theCaster->mComplexUnit;
         GE3DPoint theLocation;
-        EEFindDropLocation(theDropper, &theTargetUnit, &theLocation, theTargetUnit);
+        theTargetUnit = EECombatFindDropLocation(theDropper, theTargetUnit, theLocation);
         EEUnitClass* theUnitClass = gUnitClassTable[theClass->mUnitClassIndex];
         EEUnit* theUnit = theUnitClass->CreateUnit(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()),
                                                    theDropper->mPlayer->mPlayerID, 0, theDropper);
@@ -876,7 +876,7 @@ bool Call(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamity
         return true;
     case EeCalamityOp::UnitsNear: {
         GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
-        long theNear = EEGetUnitsNear(theLocation, inCall.w, ioHost.mUnits);
+        long theNear = ee_units_uu_units_near((const float(*)[3])&theLocation.mX, inCall.w, &ioHost.mUnits);
         EECalamityCaptureEvent(kCalamityOpUnitsNear, theNear);   // CALW (TEST ONLY)
         outReply.value = (int32_t)theNear;
         outReply.id = (uint32_t)ioHost.mUnits.size();

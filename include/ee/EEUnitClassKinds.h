@@ -28,9 +28,6 @@ extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (100)
 // 0x531d58: the value EEUCLandPriest's ctor passes on (provisional name; EEUCNavalPriest's is 0x531d68)
 extern EEPhysicsModel* gPhysicsModels[12];     // 0x531d58 (EEPMLand.cpp: pointers to the EEPM* singletons; [0] is the land one)
 // cdecl helpers of the flying classes (provisional names; types inferred)
-void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles);  // 0x24b212 (EEMap.cpp's range)
-// 0x24939d: EEFindDropLocation (ee/EEUnit.h)
-float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inArg3, float inArg4);
 // 0x242110 (cdecl): the space version of the sound volume/pan/pitch (EEUCSpaceship::GetSoundParameters) (provisional
 // name)
 void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);

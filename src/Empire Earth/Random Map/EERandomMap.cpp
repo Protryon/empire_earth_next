@@ -26,6 +26,7 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EERules.h"
 #include "ee/EERandomMapView.h"
+#include "rust/sim/units.h"
 
 // EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)
 inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
@@ -55,13 +56,13 @@ static void EERMWallLineTiles(const GE2DPoint& inStart, const GE2DPoint& inEnd, 
             theTile.mY = (long)thePoints[i].GetY();
             outTiles.push_back(theTile);
         }
-        EEDropDiagonalCorners(outTiles);
+        ee_units_uu_drop_tiles(0, &outTiles);
     } else {
         theTile.mX = (long)inStart.GetX();
         theTile.mY = (long)inStart.GetY();
         outTiles.push_back(theTile);
     }
-    EEDropRepeatedTiles(outTiles);
+    ee_units_uu_drop_tiles(1, &outTiles);
 }
 
 // What the host's callbacks reach: the map, the game's players, the random map (PlaceWall, the water points)
@@ -462,7 +463,7 @@ void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, cons
             theTile.SetY(theY);
             thePlaced.push_back(theTile);
             long theRaised = this->mMap->GetNumRaisedCorners(theX, theY);
-            EEShapeWall(theUnit, theCorners[k], theRaised);
+            ee_units_uu_shape_wall((uint64_t)(uintptr_t)theUnit, theCorners[k], theRaised);
         } else {
             EEUnit* theOther = theMapTile->mUnits->mUnit;
             EEComplexUnit* theComplexUnit = theOther->GetComplexUnit();

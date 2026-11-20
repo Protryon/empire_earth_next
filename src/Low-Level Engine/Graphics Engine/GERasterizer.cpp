@@ -135,6 +135,8 @@ static long GERasterizerDraw2D(void* inRasterizer, unsigned long inScreen, const
     return 0;
 }
 
+extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp
+
 // Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated
 GERasterizer::GERasterizer(const UString& inName)
 {

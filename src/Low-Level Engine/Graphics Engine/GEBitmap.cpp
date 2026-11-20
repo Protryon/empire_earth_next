@@ -35,7 +35,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
-#include "lle/GELine.h"   // GEVertexHost
+#include "lle/GELine.h"
 #include "lle/UWideString.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEFont.h"
@@ -83,7 +83,8 @@ static intptr_t GEBitmapFloatBits(float inValue)
     return (intptr_t)theBits;
 }
 
-intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+// (C linkage: ee_ge game_hosts.rs names it)
+extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
@@ -132,7 +133,7 @@ static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWi
 
 // ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
 // and GEWindow's forwarders (its header does not include the Rust header)
-intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     UString* theString = (UString*)inObj;
     UWideString* theWide = (UWideString*)inObj;
@@ -186,11 +187,6 @@ GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long in
                    bool inIsFullScreen)
     : mRust(ee_ge_win_new(&GEObjectHost, this, inWindow, inWidth, inHeight, inDepth, inIsFullScreen)) {}
 GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
-const GE2DPoint& GEWindow::GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
-unsigned long GEWindow::GetHeight() const { return ee_ge_win_size(this->mRust, true); }
-PlatWindow* GEWindow::GetOSRepresentation() const { return static_cast<PlatWindow*>(ee_ge_win_os(this->mRust)); }
-unsigned long GEWindow::GetWidth() const { return ee_ge_win_size(this->mRust, false); }
-void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
 // ---- end of the object host
 
 // (GEBitmap's members forward to its Rust object inline: lle/GEBitmap.h)

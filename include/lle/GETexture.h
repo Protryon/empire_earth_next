@@ -69,13 +69,17 @@ public:
     // (Save 0x10033749 wrote a texture file (.sst): retired under D9)
     // Shows the given animation frame: picks the frame texture, or moves the UV corner to its grid cell
     void SetFrame(unsigned long inFrame) { ee_ge_tex_set_frame(this->mRust, inFrame); }
-    void SetStageAlphaMode(unsigned long inMode, unsigned long inStage);
-    void SetStageColorMode(unsigned long inMode, unsigned long inStage);
-    void SetStageMagFilterMode(unsigned long inMode, unsigned long inStage);
-    void SetStageMinFilterMode(unsigned long inMode, unsigned long inStage);
-    void SetStageMipFilterMode(unsigned long inMode, unsigned long inStage);
+    void SetStageAlphaMode(unsigned long inMode, unsigned long inStage) { ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::AlphaMode, inMode); }
+    void SetStageColorMode(unsigned long inMode, unsigned long inStage) { ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::ColorMode, inMode); }
+    void SetStageMagFilterMode(unsigned long inMode, unsigned long inStage) { ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MagFilterMode, inMode); }
+    void SetStageMinFilterMode(unsigned long inMode, unsigned long inStage) { ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MinFilterMode, inMode); }
+    // (a texture pack's texture keeps MIP filtering where none is asked for: texobj_tex.rs)
+    void SetStageMipFilterMode(unsigned long inMode, unsigned long inStage) { ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::MipFilterMode, inMode); }
     void SetStageMipMapBias(float inBias, unsigned long inStage) { ee_ge_tex_set_stage_bias(this->mRust, inBias); }
-    void SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage);
+    void SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage)
+    {
+        ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::TextureAddressingMode, inMode);
+    }
     // Replaces the texture's surface (new rasterizer handle, promotion cleared); already-exists error if unchanged
     long SetSurface(GESurface* inSurface) { return ee_ge_tex_set_surface(this->mRust, inSurface); }
     // Unlocks the texture's surface

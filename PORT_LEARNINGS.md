@@ -34961,6 +34961,7 @@ because what is left calls the Units lane's unit, goal and class methods and EEP
   and requests (the Units lane's methods; EEPlayer's virtuals), CanGetTo and AreConnectedForUnit (the unit classes'
   flags: the Units lane's), EEComputerPlayer (EEPlayer), the kinds' Create and GetRandomPoint dispatch (the town's
   and herd's C++ bases and the C++ random stream), the continent save's town and herd ids.
+
 ## R6 WONLobby, round 25: the component configs' readers, ResourceConfig and ResourceConfigTable whole in Rust (ee_won_gui compcfg.rs; branch rust-wonlobby25, 2026-11-20)
 
 Round 24 left the WON GUI's config cluster as the biggest block of C++ with logic of its own: every lobby screen is
@@ -35081,6 +35082,135 @@ Round total: WON C++ 28,289 -> 26,470 (-1,819: -1,430 the move, -12 the empty un
   WONCfgTable.inl) could follow their base into Rust: the readers they call are there now.
 - Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
 
+## The units' lane, round 4: the unit utilities' forwarders gone, the unit host's goal calls in Rust, one-call members inline (ee_sim units goal_spec.rs; branch rust-units4, 2026-11-19)
+
+The brief: net -3,000 C++ lines by whole class moves, the UI's dependencies first. Numbers: docs/progress/units.md
+("Round 4"). Net -712 C++ lines (src, include/ee, include/lle, include/gx, include/dx7): the forwarder layer and the
+hosts' calls whose answers were Rust already; no class moved wholly.
+
+- **Measure the UI's dependency before choosing.** `cpp_deps.py layer --focus` over the UI directories reports
+  EEFOFindNewTargetNearOldTarget.cpp itself (it lives in User Interface Thread); the UI's own edges into the Units
+  lane come from `edges.tsv` filtered by directory: 56 distinct symbols, most of them accessors (`EEGroup`,
+  `EEUnitClass::Is*`, `EEGhostUnit`'s statics, `EEPhysics`' clock). The UI is not held by one units class; it is
+  held by the world under all of them.
+- **A forwarder rewrite as a tool, not by hand.** build/u4/fwd.py held one template per forwarder (the Rust call
+  with the forwarder's argument mapping: a handle `(uint64_t)(uintptr_t)x`, `&v` for a vector reference, `p.mX` /
+  `p->mX` for a point) and rewrote every call site it could prove simple, reporting the rest (`GE3DPoint(...)`
+  temporaries, a statement form such as `EEFindDropLocation(u, &t, &p, x)` -> `t = EECombatFindDropLocation(u, x,
+  p)`). Declarations are told from calls by the token before the name (`return`/`case` aside, an identifier or
+  `*`/`&` after a type is a declaration). A temporary point whose address the Rust takes becomes a local
+  `const float p[3]`; a `case` gains braces for it.
+- **Line numbers move under a rewrite.** The deletion pass first read the dry run's line numbers, which the
+  rewrite's include insertions had shifted in four files: match the declaration by its text after any edit.
+- **`unsafe { .. } as T` needs parentheses** (`(unsafe { make(&p) }) as usize`): the block is a statement there.
+- **A host's C++ constructor becomes a plan and a step.** `ee_units_host_goal_new` built goals with the inline
+  `EEUGRust::New*` (each `Make` plus one body call); goal_spec.rs `plan` is the pure mapping (kind, argument,
+  operation, handles, block; the 32-bit `(long)` truncations as `as i32`), tested without a world, and `make` runs it
+  through `goal_new` and `goal_obj::call`. Units resolve through the registry (`ee_units_resolve`, none for the null
+  id), members by the layout's offsets (`unit_player`, `unit_complex_unit`).
+- **Do not export a bare `pub const` from a new module**: cbindgen wrote `GOAL_ATTACK_UNIT` into units.h and the
+  header check failed; `pub(crate)`.
+- **One-call members inline in the class's header.** A member whose body is one Rust call, in a header that already
+  includes the Rust module's header (ee/EEUnit.h, ee/EEPlayer.h), becomes its declaration's inline body: ~5 lines a
+  member. A virtual stays virtual; the class's key function (its first out-of-line virtual, the destructor) keeps the
+  vtable in its unit. Bodies that read another incomplete class (`inPlayer->GetPlayerID()`, `mUnitClass->...` above
+  `EEUnitClass`) or that hold a TEST ONLY note (`EEUCNote`) stay out of line.
+- **The Rust gate's ee_base tests fail under load**: `com_is_initialised_on_platform_threads` (a 10 s thread wait)
+  and `system_keyboard_and_mouse_through_the_c_abi` failed once each while a build ran; the gate stops at the first
+  failing crate, so build/u4/gate.py runs its four steps with `cargo test --no-fail-fast` (the same commands
+  otherwise); both passed on the rerun.
+- **Gates** (the final tree, origin/rust 4fb6c7119 merged: no change): both builds 0/0 (EE-AOC 482 inputs, EE-SIM
+  483) and the test profile 0/0; the Rust gate PASS (4,994 tests); the oracle seeds 2-7 identical; the twelve capture
+  profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26,
+  scenario 43, groups 2, placement 4, transport 185 digests); the plain saveload 18/18 identical (exit 0); the matrix
+  `--expect` PASS (exit 0); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062 lines);
+  eedata check and cppgate PASS; `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 40, 40], alive_computers
+  [2, 3], `engines ['classic_lua', 'classic_lua']`; lan-game).
+- **Call-site edits outside the lane**: the forwarders' callers in AI Thread, Calamities, Civilization Builder, Empire
+  Earth, Formations, Graphics Thread, Map, Player, Random Map, Scenario Editor Actions, Scenario Manager, UI Events
+  (EEScreens.cpp's `EEGetLeadUnitID`) and EEUIFMainGame.cpp (the full list: docs/progress/units.md "Round 4");
+  ee/EEPlayer.h holds EEActiveGroup's new inline members.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). Where the C++ dereferenced a missing
+  unit (`ee_units_host_unit_research_state`, `_unit_goal_clone` with no goal), the Rust answers zeros or none.
+- **Not done**: no class moved wholly; unit creation, the class bodies, the TEST ONLY sweeps and the hosts' world
+  calls stay (docs/progress/units.md "What is left").
+## The game core lane, round 4: the tech tree's ids, captures and media walk, the app capture's cheat sweep, the GE objects over hosts Rust names (ee_sim tech tech_ids.rs, nodes_capture.rs, node_media.rs; ee_game app cheat_capture.rs, world_capture.rs; ee_render ge game_hosts.rs; branch rust-core4, 2026-11-19)
+
+The lane's fourth round, on rust-core3 (origin/rust 4fb6c7119 in it; origin/rust had not moved at the end, so the
+merge had nothing to do). The brief: net -3,000 C++ lines from moves to Rust, the world C++ under the UI lane first.
+It did not reach that: the round is net -497 (src, include/ee, include/lle, include/gx, include/dx7). Why, and what
+the census says is left, is the first point below. docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ |
+|---|---|---|
+| 63e6fe8ff | the tech ids (epoch count, node epochs) as Rust tables; the tech tree's captured entry points and TEPO, TRTE, TNWK where the walks run; a node's media walk and GetCostString | +96 -324, net -228 |
+| 64e04820e | the app capture's cheat sweep (CHET, CHEF) over the views; MAPK, MAPP, MMPX, MMSN, CHLS called directly; EEMiniMap::GetCell gone | +44 -278, net -234 |
+| 2e1852ae1 | the GE objects' constructors over the game's hosts (Rust names GEVertexHost, GEObjectHost); GEWindow's getters inline | +33 -29, net +4 |
+| 776197b4d | EETechTreeEpoch::Get inline | +9 -15, net -6 |
+| 0f25c69ce | GETexture's stage setters and LoadTexture inline | +16 -43, net -27 |
+| b2c1dc51f | EEEpochTitleID inline over the epochs' titles in Rust | +5 -11, net -6 |
+| | **the round** | **net -497** |
+
+- **Why not -3,000: the lane's C++ is hosts now, and a host only shrinks when what it reads is Rust's.** A census of
+  the lane's functions (a scratch script over the sources: each function body, whether it calls Rust) found 31,790
+  lines in function bodies, 20,710 of them in bodies that call no Rust; read one by one, those are the game's start
+  and shutdown (Empire Earth.cpp, EEGameState::Create, EEWorld::StartGame: they make and wire the C++ objects), the
+  hosts' switches (EEPlayerHost 341 lines, EECalamityUpdate's Call 376, EETechHost, the session's, the network's),
+  the TEST ONLY drivers over C++ objects (EESimEditor.cpp 2,041, EETestFixture.cpp 894, EESim.cpp 1,226), and the
+  captures of C++ members (the calamities' locations and units, the messages' codec slots, the storms' paths). Moving
+  any of them adds a host op per C++ call it makes: the net is the body minus its host, small for orchestration.
+  Forwarders inline in their headers (1,262 lines of one-statement forwarders in the lane) save a third of their
+  lines. The round therefore took what reads Rust records or the world views already.
+- **The world views make a TEST ONLY capture a Rust function.** ee_sim::world's views (UnitView, PlayerView,
+  TechTreeView, MapView over EEWorldLayout's offsets) read the C++ objects in place: CHEF's every player's resources,
+  flags, epoch and units' hit points, resource amounts, flight time, power and commandable flag are view reads, and
+  the record is the C++'s byte for byte as long as each hashed value keeps its C++ size (`long` is a `c_long`:
+  `world_field!` returns the record's own type, so `to_le_bytes` of it is the C++'s `FnvValue`). What the views do
+  not have (the upgrades' improvement levels, the camera's location at its fraction, the cheats' parse and apply)
+  is a five-callback host struct of captureless lambdas.
+- **A wrapper that captures around a host call moves into the Rust host adapter, not the walks.** The tech walks
+  called five entry points through the C++ host only so the C++ wrappers' records (TNRS, TNPR, TSOL) kept their order.
+  The Rust FfiHost (the adapter over the C++ callback) now answers those operations itself (capture, then the body
+  with itself as host), and the walk entry points from C++ do the same: the walks and their mock-host tests are
+  unchanged, the wrappers and eleven host cases are gone. The TNWK walk records were three host operations; they are
+  calls of capture_rec.rs's collection plus the node's and tree's bytes. Every record checked: the oracle (212
+  digests) and late (214) profiles before the commit.
+- **A Rust function can name a C++ host.** The LLE headers' inline constructors passed `&GEVertexHost` and
+  `&GEObjectHost`, so every unit that built a GEText, a GEBitmap or a GELine drew an edge to GEBitmap.cpp (37 of the
+  UI's units; 3 now). The hosts have C linkage and ee_render ge game_hosts.rs's constructors name them
+  (`#[cfg(not(test))] extern "C"`; the tests get stand-ins), so only the Rust library references them and the
+  census sees no C++ edge. The same trick serves any inline forwarder whose only C++ dependency is its host.
+- **A header can declare the two Rust calls it needs.** ee/EETechTreeTechID.h (EEEpochCount, EEIsEpochID,
+  EETechTreeEpochOf, EEEpochTitleID inline) and GEWindow.h (its four getters) declare their `extern "C"` Rust
+  functions by hand instead of including rust/sim/tech.h or rust/render/ge.h (3,100 and 3,300 lines) into every
+  includer; cbindgen's declaration and the hand one are the same C declaration.
+- **The UI's edges into the lane** (tools/cpp_deps.py, the User Interface Thread, UI Events, the LLE User Interface
+  and the scenario editor's units; EEFOFindNewTargetNearOldTarget aside): 325 edges and 950 symbols at the start,
+  287 and 859 after the GE commit (the later inlines cut more: EETechTreeEpoch::Get from 11 units, the stage setters
+  from 10, EEEpochTitleID from 6).
+- **Tests**: tech_ids 1 (the tables, the titles), nodes_capture 2, node_media 3 (the cost text, the cut buffer, the
+  media walk and an epoch's kind), world_capture 2, cheat_capture 1, game_hosts 1.
+- **Behaviour changes**: none intended. The captures are byte for byte (the profiles below). The tech media walk and
+  the cost text run the same calls in the same order (GetCost's TCST records included). EETechTreeEpoch::AddSOL and
+  UpdateAvailability on an epoch without a tree no longer write a TSOL record (the C++ wrote one with player -1 and no
+  walk); no epoch without a tree is counted.
+- **What only the tours exercise**: the GE constructors over the game's hosts and GEWindow's getters (every frame
+  and every text), the stage setters and LoadTexture, the tech media walk (EE-SIM loads no media), GetCostString (the
+  command buttons' and upgrade buttons' cost text).
+- **Gates, on the round's last commit** (41dbcdf89; origin/rust 4fb6c7119 is in the base and had not moved, so the
+  merge had nothing to do; no conflict marker, strip_markers --check clean): both builds 0/0 (EE-AOC 499 inputs,
+  EE-SIM 500) and the test profile 0/0; the Rust gate PASS (4,986 tests, 0 failed; a run before the last commit
+  failed tech::capture_rec::tests::the_civ_manager_head, a race with civ_tests.rs's table loads: it now takes their
+  lock); the oracle identical on seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212 digests, late 214,
+  space 210, calamity 222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport
+  185); the plain saveload PASS; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines)
+  and `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS
+  tour` (RENDER CHECK ok, INPUT CHECK ok); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): `RESULT
+  PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13115` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
+  `RESULT PASS lan-game PT host=2715 joiner=2721`, GATES PASS. The captures, saveload, scenario_check and sim_editor
+  ran on the tree before 41dbcdf89 (that commit changes only Rust lints, formatting, a header's order and a test).
+- **Not run**: the POSIX builds (GEWindow.h's hand declarations and the C-linkage hosts are the same on POSIX).
 ## R6 WONLobby, round 26: the component config classes as kinds (ee_won_gui cfgkind.rs; branch rust-wonlobby26, 2026-11-20)
 
 Round 25 moved ComponentConfig's readers and instructions; its 45 subclasses (one per configured widget type: ButtonConfig,
