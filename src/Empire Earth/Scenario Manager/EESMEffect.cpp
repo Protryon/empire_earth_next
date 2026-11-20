@@ -196,58 +196,6 @@ long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-#include "ee/EESMAIFields.h"
-
-namespace {
-
-// EE_SM_STORE begin (the golden driver's stand-in expands this text too: TEST ONLY scratch, PORT_LEARNINGS "R5b.5,
-// second round")
-// the long and float fields and the building counts by Set AI Variable's field numbers (ee/EESMAIFields.h)
-#define EE_SM_MEMBER(inField) &EEComputerPlayer::inField,
-long EEComputerPlayer::* const kSMLongFields[] = {EE_SM_AI_LONGS(EE_SM_MEMBER)};
-float EEComputerPlayer::* const kSMFloatFields[] = {EE_SM_AI_FLOATS(EE_SM_MEMBER)};
-#undef EE_SM_MEMBER
-struct EESMBuildingFields {
-    long EEComputerPlayer::* mMax;
-    long EEComputerPlayer::* mUnitsPer;
-    long mUnitType;
-};
-#define EE_SM_BUILDING(inMax, inUnitsPer, inType) {&EEComputerPlayer::inMax, &EEComputerPlayer::inUnitsPer, inType},
-const EESMBuildingFields kSMBuildings[] = {EE_SM_AI_BUILDINGS(EE_SM_BUILDING)};
-#undef EE_SM_BUILDING
-
-// one store of Set AI Variable on a computer player
-// (the original's 34 inline setters, COMDATs 0x1c1ca9..0x1c24c8)
-void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
-{
-    switch (inWrite.kind) {
-    case EE_SCENARIO_AI_KIND_LONG:
-        inPlayer->*kSMLongFields[inWrite.field] = inWrite.long_value;
-        break;
-    case EE_SCENARIO_AI_KIND_FLOAT:
-        inPlayer->*kSMFloatFields[inWrite.field] = inWrite.float_value;
-        break;
-    case EE_SCENARIO_AI_KIND_MAX_COUNT:
-    case EE_SCENARIO_AI_KIND_UNITS_PER: {
-        const EESMBuildingFields& theBuilding = kSMBuildings[inWrite.field];
-        bool theMax = inWrite.kind == EE_SCENARIO_AI_KIND_MAX_COUNT;
-        // (the original also mirrored it into the civilization manager's building counts, gone in main's stage 6)
-        inPlayer->*(theMax ? theBuilding.mMax : theBuilding.mUnitsPer) = inWrite.long_value;
-        break;
-    }
-    case EE_SCENARIO_AI_KIND_CALL:
-        switch (inWrite.field) {
-        case EE_SCENARIO_AI_CALL_NEXT_ATTACK_TIME_NOW: inPlayer->SetNextAttackTime(gPhysics->mGameTime); break;
-        case EE_SCENARIO_AI_CALL_ISLAND_EXPANSION_TIMER: inPlayer->SetIslandExpansionTimer(inWrite.long_value); break;
-        case EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER: inPlayer->SetDMAttackFrequencyModifier(inWrite.float_value); break;
-        case EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER: inPlayer->SetDMInitialAttackModifier(inWrite.float_value); break;
-        }
-        break;
-    }
-}
-// EE_SM_STORE end
-
-}   // namespace
 
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPPatrolGroup.h"
@@ -435,103 +383,68 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     return 0;
 }
 
-// a class attribute's upgrade field by attribute from Reload Time+ (armor apart): a long's or a float's
-typedef EEUnitClassUpgrade SMEU;
-const struct { long SMEU::* mLong; float SMEU::* mFloat; } kSMEClassFields[] = {
-    {&SMEU::mReloadTime, NULL}, {NULL, &SMEU::mAttack}, {&SMEU::mWorkRate, NULL}, {&SMEU::mFlightTime, NULL},
-    {NULL, &SMEU::mLeadership}, {&SMEU::mMaxObjectCarry, NULL}, {&SMEU::mRepairRate, NULL}, {&SMEU::mMaxHitPoints, NULL},
-    {&SMEU::mCarryAmount, NULL}, {&SMEU::mHealingPoints, NULL}, {NULL, &SMEU::mRange}, {NULL, &SMEU::mLineOfSight},
-    {NULL, &SMEU::mMaxVelocity}, {&SMEU::mPower, NULL}, {NULL, NULL}, {NULL, &SMEU::mCameraFocus}};
-
-// EEModifyUnitAttribute's calls on player a[0]'s upgrade of unit type a[1] (class_attribute.rs
-// EE_SCENARIO_WORLD_CA_*), attribute a[2]: its value, its class's base, its change, the pending effect
-int64_t SMEClassAttributeWorld(uint32_t inOp, const int64_t* a)
+// a class attribute's and Set AI Variable's world calls (ca_compose.rs, ai_store.rs EE_SCENARIO_WK_*: the Rust
+// composes EE_SCENARIO_WORLD_CA_* and _AI_STORE and reads and writes the upgrade's, class's and computer player's
+// records itself): one statement each, on handles
+static_assert(kSMEffectObject == 1 && kSMObjectActionUnitAttribute == 8 && kSMUnitAttributeShockArmorPlus == 20 &&
+                  kSMUnitAttributeReloadTimePlus == 26 && kSMUnitAttributeRangePlus == 36 &&
+                  kSMUnitAttributeLineOfSightPlus == 37 && kSMUnitAttributeMaxVelocityPlus == 38 &&
+                  kSMUnitAttributeAnimalAIActivePlus == 40 && kSMUnitAttributeCameraFocusPlus == 41,
+              "ca_compose.rs's numbers");
+std::vector<EEHerd*> sSMEHerds;   // GetHerdsOfType's list (the original's local)
+EEPlayer* SMEPlayerOf(int64_t inHandle) { return (EEPlayer*)(intptr_t)inHandle; }
+EEUnitClassUpgrade* SMEUpgradeOf(int64_t inHandle) { return (EEUnitClassUpgrade*)(intptr_t)inHandle; }
+EEUnitClass* SMEClassOf(int64_t inHandle);
+EEUnit* SMEUnitOf(int64_t inHandle);
+int64_t SMEClassWorld(uint32_t inOp, const int64_t* a)
 {
-    EEPlayer* thePlayer = a[0] >= 0 ? SMEPlayer(a[0]) : NULL;
-    EEUnitClassUpgrade* theUpgrade = thePlayer != NULL && a[1] >= 0 ? thePlayer->GetUpgrade((long)a[1]) : NULL;
-    if (inOp == EE_SCENARIO_WORLD_CA_UPGRADE)
-        return theUpgrade != NULL;
-    if (inOp == EE_SCENARIO_WORLD_CA_CAPTURE) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
-        long theArgs[7] = {(long)(uint32_t)a[2], (long)(a[2] >> 32), thePlayer != NULL ? (long)thePlayer->mPlayerID : -1,
-                           theUpgrade != NULL ? (long)theUpgrade->mUnitClass->mUnitType : -1, (long)a[3], (long)a[4], 0};
-        EESMCaptureUnitChange(1, theArgs, NULL, thePlayer, theUpgrade, (unsigned int)a[5]);
+    switch (inOp) {
+    case EE_SCENARIO_WK_PLAYER: return SMEPtr(SMEPlayer(a[0]));
+    case EE_SCENARIO_WK_UPGRADE: return SMEPtr(SMEPlayerOf(a[0])->GetUpgrade((long)a[1]));
+    case EE_SCENARIO_WK_UPGRADE_FIELDS: return SMEPtr(static_cast<EeUnitsUnitClassUpgradeFields*>(SMEUpgradeOf(a[0])));
+    case EE_SCENARIO_WK_CLASS: return SMEPtr(SMEUpgradeOf(a[0])->mUnitClass);
+    case EE_SCENARIO_WK_CLASS_FIELDS: return SMEPtr(static_cast<EeUnitsUnitClassFields*>(SMEClassOf(a[0])));
+    case EE_SCENARIO_WK_PLAYER_ID: return SMEPlayerOf(a[0])->mPlayerID;
+    case EE_SCENARIO_WK_CAPTURE:   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        EESMCaptureUnitChange(1, (const long*)(intptr_t)a[0], NULL, SMEPlayerOf(a[1]), SMEUpgradeOf(a[2]), (unsigned int)a[3]);
         return 0;
-    }
-    if (inOp == EE_SCENARIO_WORLD_CA_PENDING) {
-        EESMEffect theEffect;
-        theEffect.mAttributeUnit = (unsigned long)-1;
-        theEffect.mType = kSMEffectObject;
-        theEffect.mObjectAction = kSMObjectActionUnitAttribute;
-        theEffect.mAttributeUnitType = theUpgrade->mUnitClass->GetUnitType();
-        theEffect.mAttributePlayer = thePlayer->GetPlayerID();
-        theEffect.mObject = 0;
-        theEffect.mAttribute = (unsigned long)a[2];
-        theEffect.mUsesPercent = a[3] != 0;
-        theEffect.mAttributeAmount = (unsigned long)a[4];
-        theEffect.mAttributeMode = (unsigned long)a[5];
-        gWorld.mScenarioManager->AddV134Effect(theEffect);
+    case EE_SCENARIO_WK_EFFECT_NEW: return SMEPtr(new EESMEffect);
+    case EE_SCENARIO_WK_EFFECT_FIELDS: return SMEPtr(static_cast<EeScenarioEffectFields*>((EESMEffect*)(intptr_t)a[0]));
+    case EE_SCENARIO_WK_EFFECT_ADD:
+        gWorld.mScenarioManager->AddV134Effect(*(EESMEffect*)(intptr_t)a[0]);
         return 0;
-    }
-    EEUnitClass* theClass = theUpgrade->mUnitClass;
-    long theArmor = (long)a[2] - kSMUnitAttributeShockArmorPlus;   // 0..5 an armor
-    bool theIsArmor = theArmor >= 0 && theArmor < 6;
-    long SMEU::* theLong = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mLong;
-    float SMEU::* theFloat = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mFloat;
-    if (inOp == EE_SCENARIO_WORLD_CA_VALUE)
-        return theIsArmor ? SMEBits(theUpgrade->mArmor[theArmor]) : theLong != NULL ? (int64_t)(theUpgrade->*theLong)
-             : theFloat != NULL ? SMEBits(theUpgrade->*theFloat) : (int64_t)theUpgrade->mIsInitialized;
-    if (inOp == EE_SCENARIO_WORLD_CA_BASE) {
-        switch (a[2]) {
-        case kSMUnitAttributeReloadTimePlus: return SMEBits((float)theClass->mReloadTime);
-        case kSMUnitAttributeAttackPlus: return SMEBits((float)theClass->mAttack);
-        case kSMUnitAttributeWorkRatePlus: return SMEBits((float)theClass->mWorkRate);
-        case kSMUnitAttributeFlightTimePlus: return SMEBits((float)theClass->mFlightTime);
-        case kSMUnitAttributeLeadershipPlus: return SMEBits((float)theClass->mLeadership);
-        case kSMUnitAttributeMaxObjectsCarriedPlus: return SMEBits((float)theClass->mMaxObjectCarry);
-        case kSMUnitAttributeRepairPlus: return SMEBits((float)theClass->mRepairRate);
-        case kSMUnitAttributeHitPointsPlus: return SMEBits((float)theClass->mHitPoints);
-        case kSMUnitAttributeCarryAmountPlus: return SMEBits((float)theClass->mCarryAmount);
-        case kSMUnitAttributeContainerHealingHPPerSecPlus: return SMEBits((float)theClass->mHealingPoints);
-        case kSMUnitAttributeRangePlus: return SMEBits(theClass->GetRange());
-        case kSMUnitAttributeLineOfSightPlus: return SMEBits(theClass->GetLineOfSight());
-        case kSMUnitAttributeMaxVelocityPlus: return SMEBits(theClass->GetMaxVelocity());
-        case kSMUnitAttributePowerPlus: return SMEBits((float)theClass->mPower);
-        }
-        return SMEBits((float)theClass->mArmor[theArmor]);
-    }
-    switch (a[2]) {   // EE_SCENARIO_WORLD_CA_SET
-    case kSMUnitAttributeRangePlus: theUpgrade->SetRange(SMEFloat(a[3])); break;
-    case kSMUnitAttributeMaxVelocityPlus: theUpgrade->SetMaxVelocity(SMEFloat(a[3])); break;
-    case kSMUnitAttributeLineOfSightPlus: {
-        // the sight leaves the map before the change and comes back after it
-        std::vector<EEUnit*> theUnits;
-        for (EEUnit* theNode = thePlayer->mFirstUnit; theNode != NULL; theNode = static_cast<EEUnit*>(theNode->mNext)) {
-            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == theClass) {
-                theNode->mComplexUnit->SightOffHere();
-                theUnits.push_back(theNode);
-            }
-        }
-        theUpgrade->mLineOfSight = SMEFloat(a[3]);
-        for (unsigned long i = 0; i < theUnits.size(); i++)
-            theUnits[i]->SightOnHere();
-        break;
-    }
-    case kSMUnitAttributeAnimalAIActivePlus: {
-        std::vector<EEHerd*> theHerds;
-        theUpgrade->mIsInitialized = a[3] != 0;
-        thePlayer->GetHerdsOfType(theHerds, theClass->mUnitType);
-        for (long j = (long)theHerds.size() - 1; j >= 0; --j)
-            theHerds[j]->mIsActive = theUpgrade->mIsInitialized;
-        break;
-    }
-    default:
-        if (theIsArmor)
-            theUpgrade->mArmor[theArmor] = SMEFloat(a[3]);
-        else if (theLong != NULL)
-            theUpgrade->*theLong = (long)a[3];
-        else
-            theUpgrade->*theFloat = SMEFloat(a[3]);
-        break;
+    case EE_SCENARIO_WK_EFFECT_FREE:
+        delete (EESMEffect*)(intptr_t)a[0];
+        return 0;
+    case EE_SCENARIO_WK_SET_RANGE:
+        SMEUpgradeOf(a[0])->SetRange(SMEFloat(a[1]));
+        return 0;
+    case EE_SCENARIO_WK_SET_VELOCITY:
+        SMEUpgradeOf(a[0])->SetMaxVelocity(SMEFloat(a[1]));
+        return 0;
+    case EE_SCENARIO_WK_FIRST_UNIT: return SMEPtr(SMEPlayerOf(a[0])->mFirstUnit);
+    case EE_SCENARIO_WK_NEXT_UNIT: return SMEPtr(SMEUnitOf(a[0])->mNext);
+    case EE_SCENARIO_WK_UNIT_COMPLEX: return SMEUnitOf(a[0])->mComplexUnit != NULL;
+    case EE_SCENARIO_WK_UNIT_CLASS: return SMEPtr(SMEUnitOf(a[0])->mUnitClass);
+    case EE_SCENARIO_WK_SIGHT_OFF:
+        SMEUnitOf(a[0])->mComplexUnit->SightOffHere();
+        return 0;
+    case EE_SCENARIO_WK_SIGHT_ON:
+        SMEUnitOf(a[0])->SightOnHere();
+        return 0;
+    case EE_SCENARIO_WK_HERDS_CLEAR:
+        sSMEHerds.clear();
+        return 0;
+    case EE_SCENARIO_WK_HERDS:
+        SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]);
+        return 0;
+    case EE_SCENARIO_WK_HERD_COUNT: return (int64_t)sSMEHerds.size();
+    case EE_SCENARIO_WK_HERD_AT: return SMEPtr(sSMEHerds[(size_t)a[0]]);
+    case EE_SCENARIO_WK_HERD_ACTIVE: return ((EEHerd*)(intptr_t)a[0])->mIsActive = a[1] != 0;
+    case EE_SCENARIO_WK_AI_FIELDS: return SMEPtr(static_cast<EeCpFields*>(static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))));
+    case EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW:
+        static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))->SetNextAttackTime(gPhysics->mGameTime);
+        return 0;
     }
     return 0;
 }
@@ -1055,12 +968,15 @@ int64_t SMEAtomWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
 
 // an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*): each the original's statement or
 // statement sequence at its place, on the units by id, the players by index
+int64_t SMEReadWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a);   // EEScenarioHost.cpp
 int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
 {
     if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
         return SMEChangeUnitWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
-    if (inOp >= EE_SCENARIO_WORLD_CA_UPGRADE && inOp <= EE_SCENARIO_WORLD_CA_CAPTURE)   // EEModifyUnitAttribute's
-        return SMEClassAttributeWorld(inOp, a);
+    if (inOp >= EE_SCENARIO_WK_PLAYER && inOp <= EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW)   // ca_compose.rs, ai_store.rs
+        return SMEClassWorld(inOp, a);
+    if (inOp >= EE_SCENARIO_RX_TECH_NODE && inOp <= EE_SCENARIO_RX_EFFECT_COPY)   // the host's reads (read_compose.rs)
+        return SMEReadWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     if (inOp >= EE_SCENARIO_WC_CLASS && inOp <= EE_SCENARIO_WC_SOUND_PLAY)   // Create Units' (no effect run)
         return SMECreateWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));
@@ -1195,9 +1111,6 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_END_CINEMATIC: theManager->EndCinematic(); return 0;
     case EE_SCENARIO_WORLD_TIMED_NOT_RUN: theManager->SetTimedEffectHasRun(theEffect, false); return 0;
 
-    case EE_SCENARIO_WORLD_AI_STORE:
-        EESMStoreAI(static_cast<EEComputerPlayer*>(SMEPlayer(a[0])), *(const EeScenarioAiWrite*)(intptr_t)a[1]);
-        return 0;
     case EE_SCENARIO_WORLD_ADD_PENDING_PLAYER: {
         EESMEffect theCopy;
         theCopy.Copy(*theEffect);

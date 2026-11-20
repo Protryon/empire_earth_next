@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// Player a0 (`SMEPlayer`, as the original's unchecked `EEComputerPlayer*`) as its `EeCpFields*`; its
+/// `SetNextAttackTime(gPhysics->mGameTime)`.
+constexpr static const uint32_t EE_SCENARIO_WK_AI_FIELDS = 764;
+
+constexpr static const uint32_t EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW = 765;
+
 /// What a write is: a `long` field, a `float` field, a building count (`long`, and the civilization manager's
 /// `mMaxCounts`/`mUnitsPer` entry of `unit_type`), or a call.
 constexpr static const uint32_t EE_SCENARIO_AI_KIND_LONG = 0;
@@ -180,6 +186,64 @@ constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
 
 /// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
 constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
+
+/// `SMEPlayer(a0)`; player a0's `GetUpgrade(a1)`; upgrade a0 as its `EeUnitsUnitClassUpgradeFields*`; its
+/// `mUnitClass`; class a0 as its `EeUnitsUnitClassFields*`; player a0's `mPlayerID`.
+constexpr static const uint32_t EE_SCENARIO_WK_PLAYER = 740;
+
+constexpr static const uint32_t EE_SCENARIO_WK_UPGRADE = 741;
+
+constexpr static const uint32_t EE_SCENARIO_WK_UPGRADE_FIELDS = 742;
+
+constexpr static const uint32_t EE_SCENARIO_WK_CLASS = 743;
+
+constexpr static const uint32_t EE_SCENARIO_WK_CLASS_FIELDS = 744;
+
+constexpr static const uint32_t EE_SCENARIO_WK_PLAYER_ID = 745;
+
+/// TEST ONLY: `EESMCaptureUnitChange(1, the 7 longs at a0, NULL, player a1, upgrade a2, (unsigned int)a3)`.
+constexpr static const uint32_t EE_SCENARIO_WK_CAPTURE = 746;
+
+/// `new EESMEffect`, effect a0 as its `EeScenarioEffectFields*`, `gWorld.mScenarioManager->AddV134Effect(*a0)`,
+/// `delete` a0.
+constexpr static const uint32_t EE_SCENARIO_WK_EFFECT_NEW = 747;
+
+constexpr static const uint32_t EE_SCENARIO_WK_EFFECT_FIELDS = 748;
+
+constexpr static const uint32_t EE_SCENARIO_WK_EFFECT_ADD = 749;
+
+constexpr static const uint32_t EE_SCENARIO_WK_EFFECT_FREE = 750;
+
+/// Upgrade a0's `SetRange(float a1)`, `SetMaxVelocity(float a1)`.
+constexpr static const uint32_t EE_SCENARIO_WK_SET_RANGE = 751;
+
+constexpr static const uint32_t EE_SCENARIO_WK_SET_VELOCITY = 752;
+
+/// Player a0's `mFirstUnit`; unit a0's `mNext`, `mComplexUnit != NULL`, `mUnitClass`, `mComplexUnit->SightOffHere()`,
+/// `SightOnHere()`.
+constexpr static const uint32_t EE_SCENARIO_WK_FIRST_UNIT = 753;
+
+constexpr static const uint32_t EE_SCENARIO_WK_NEXT_UNIT = 754;
+
+constexpr static const uint32_t EE_SCENARIO_WK_UNIT_COMPLEX = 755;
+
+constexpr static const uint32_t EE_SCENARIO_WK_UNIT_CLASS = 756;
+
+constexpr static const uint32_t EE_SCENARIO_WK_SIGHT_OFF = 757;
+
+constexpr static const uint32_t EE_SCENARIO_WK_SIGHT_ON = 758;
+
+/// The herd list (the C++'s local vector) cleared; player a0's `GetHerdsOfType(it, a1)` (it appends); its size; herd
+/// a0's `mIsActive = a1 != 0`.
+constexpr static const uint32_t EE_SCENARIO_WK_HERDS_CLEAR = 759;
+
+constexpr static const uint32_t EE_SCENARIO_WK_HERDS = 760;
+
+constexpr static const uint32_t EE_SCENARIO_WK_HERD_COUNT = 761;
+
+constexpr static const uint32_t EE_SCENARIO_WK_HERD_AT = 762;
+
+constexpr static const uint32_t EE_SCENARIO_WK_HERD_ACTIVE = 763;
 
 /// `gSoundManager->SetLatency(a)`.
 constexpr static const uint32_t EE_SCENARIO_ROUND_LATENCY = 20;
@@ -1449,6 +1513,82 @@ constexpr static const uint32_t EE_SCENARIO_WRITE_STATISTIC_SET = 9;
 
 /// `mMiningLimit = b`.
 constexpr static const uint32_t EE_SCENARIO_WRITE_MINING_LIMIT = 10;
+
+/// Player a0's tech node a1 (`GetTechTree()->Get(a1)`); node a0's `mData->mMakesUnit`, `mIsResearched`,
+/// `mIsResearched = a1 != 0`, `GetIsAvailable()`.
+constexpr static const uint32_t EE_SCENARIO_RX_TECH_NODE = 770;
+
+constexpr static const uint32_t EE_SCENARIO_RX_NODE_MAKES_UNIT = 771;
+
+constexpr static const uint32_t EE_SCENARIO_RX_NODE_RESEARCHED = 772;
+
+constexpr static const uint32_t EE_SCENARIO_RX_NODE_SET_RESEARCHED = 773;
+
+constexpr static const uint32_t EE_SCENARIO_RX_NODE_AVAILABLE = 774;
+
+/// The manager's `GetScenarioObject(a0)`, `FindObjectByID(a0)`; object a0's `Evaluate(0)`, `mHasAttributeCheck`,
+/// `mUnits.size()`, `GetUnitAt(a1)`, `GetAttribute()`, `GetIsAttributePercent()`, `GetUnitAttribute(a1, a2 != 0,
+/// unit a3, 0, 0)`, `GetUnits(the id list)`.
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT = 775;
+
+constexpr static const uint32_t EE_SCENARIO_RX_FIND_OBJECT = 776;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_EVALUATE = 777;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_HAS_ATTRIBUTE_CHECK = 778;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_UNIT_COUNT = 779;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_UNIT_AT = 780;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_ATTRIBUTE = 781;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_ATTRIBUTE_PERCENT = 782;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_UNIT_ATTRIBUTE = 783;
+
+constexpr static const uint32_t EE_SCENARIO_RX_OBJECT_GET_UNITS = 784;
+
+/// The id list (the C++'s local vector) cleared, its size, its element a0.
+constexpr static const uint32_t EE_SCENARIO_RX_IDS_CLEAR = 785;
+
+constexpr static const uint32_t EE_SCENARIO_RX_IDS_COUNT = 786;
+
+constexpr static const uint32_t EE_SCENARIO_RX_IDS_AT = 787;
+
+/// `gWorld.GetUnit(a0)`; unit a0's `mUnitClass->GetUnitType()`.
+constexpr static const uint32_t EE_SCENARIO_RX_UNIT = 788;
+
+constexpr static const uint32_t EE_SCENARIO_RX_UNIT_TYPE = 789;
+
+/// The manager's `GetTrigger(a0)`; trigger a0's `mHasFired`, `mIsOn`.
+constexpr static const uint32_t EE_SCENARIO_RX_TRIGGER = 790;
+
+constexpr static const uint32_t EE_SCENARIO_RX_TRIGGER_FIRED = 791;
+
+constexpr static const uint32_t EE_SCENARIO_RX_TRIGGER_ON = 792;
+
+/// `gUnitSetManager.GetSet(a0)`; set a0's `Contains(a1)`.
+constexpr static const uint32_t EE_SCENARIO_RX_UNIT_SET = 793;
+
+constexpr static const uint32_t EE_SCENARIO_RX_SET_CONTAINS = 794;
+
+/// The manager's `GetCondition(a0)`, `FindConditionByID(a0)`; condition a0's `Evaluate()`, `mType`, `mPlayer`,
+/// `mAttribute`.
+constexpr static const uint32_t EE_SCENARIO_RX_CONDITION = 795;
+
+constexpr static const uint32_t EE_SCENARIO_RX_FIND_CONDITION = 796;
+
+constexpr static const uint32_t EE_SCENARIO_RX_CONDITION_EVALUATE = 797;
+
+constexpr static const uint32_t EE_SCENARIO_RX_CONDITION_TYPE = 798;
+
+constexpr static const uint32_t EE_SCENARIO_RX_CONDITION_PLAYER = 799;
+
+constexpr static const uint32_t EE_SCENARIO_RX_CONDITION_ATTRIBUTE = 800;
+
+/// Effect a0's `Copy(*the context's effect)`.
+constexpr static const uint32_t EE_SCENARIO_RX_EFFECT_COPY = 801;
 
 /// `gWorld.mGameSpeed`'s bits (an `f32`).
 constexpr static const uint32_t EE_SCENARIO_ROUND_GAME_SPEED = 0;
@@ -3092,7 +3232,7 @@ struct EeScenarioStream {
 };
 
 /// One store on a computer player: `field` the position of the field in its kind's list (`EE_SM_AI_LONGS`,
-/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` in ee/EESMAIFields.h: the modules below in order).
+/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` of the C++, now ai_store.rs: the modules below in order).
 struct EeScenarioAiWrite {
   uint32_t kind;
   uint32_t field;
@@ -3125,6 +3265,15 @@ struct EeScenarioAreaSave {
   unsigned long select_mode;
   unsigned long tiles_time;
   unsigned long id;
+};
+
+/// A dialog message's numbers (`EESMDialogMessage`'s members, each the C++ member's address).
+struct EeScenarioMessageNumbers {
+  long *scroll_speed;
+  unsigned long *unit_type;
+  unsigned long *duration;
+  unsigned long *unit_id;
+  bool *cinematic;
 };
 
 /// One timed effect (`EESMTimedEffect`): an `mEffects` index, the scenario time it is due, the cinematic flag, and
@@ -3398,6 +3547,16 @@ int32_t ee_scenario_area_io(const EeScenarioStream *stream, EeScenarioAreaSave *
 /// `stream` must be valid for the call.
 int32_t ee_scenario_strings_io(const EeScenarioStream *stream,
                                uint32_t count,
+                               bool save);
+
+/// `EESMDialogMessage::Load` (`save` false) or `::Save`: the first error (save.rs `message_io`).
+///
+/// # Safety
+/// `stream` must be valid for the call, `numbers`' pointers for a read and a write.
+int32_t ee_scenario_message_io(const EeScenarioStream *stream,
+                               const EeScenarioMessageNumbers *numbers,
+                               unsigned long major,
+                               unsigned long minor,
                                bool save);
 
 /// A new, empty timed effects' queue.

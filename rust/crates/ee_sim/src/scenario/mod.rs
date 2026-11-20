@@ -38,9 +38,11 @@
 //! - [`ffi`]: the C ABI the C++ classes call.
 //! - [`sm_capture`]: TEST ONLY, the simulation capture's scenario records (SMCE .. SMCU) over the C++ reads.
 
+pub mod ai_store;
 pub mod aivar;
 pub mod area;
 pub mod attribute;
+pub mod ca_compose;
 pub mod cinematic;
 pub mod class_attribute;
 pub mod condition;
@@ -57,6 +59,7 @@ pub mod object;
 pub mod objeval;
 pub mod placement;
 pub mod player;
+pub mod read_compose;
 pub mod round;
 pub mod save;
 pub mod sm_capture;

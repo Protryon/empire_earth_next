@@ -201,6 +201,13 @@ impl Host for EeScenarioHost {
             return value;
         }
         let _ = &mut cpp;
+        // the sequences composed in Rust over the world channel's statements (read_compose.rs)
+        let world = self.world;
+        // SAFETY: as above; `args` lives through the call
+        let mut w = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+        if let Some(value) = crate::scenario::read_compose::compose(&mut w, op, a, b) {
+            return value;
+        }
         // SAFETY: as above
         unsafe { read(ctx, op, a, b, c, d) }
     }
@@ -221,6 +228,12 @@ impl Host for EeScenarioHost {
             crate::scenario::world_compose::create_unit(&mut cpp, player as i64, b, c != 0, d);
             return;
         }
+        let (world, ctx) = (self.world, self.ctx);
+        // SAFETY: as `read`; `args` lives through the call
+        let mut w = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
+        if crate::scenario::read_compose::compose_write(&mut w, op, b, c) {
+            return;
+        }
         // SAFETY: as `read`
         unsafe { (self.write)(self.ctx, op, player, b, c, d) }
     }
@@ -234,7 +247,13 @@ impl Host for EeScenarioHost {
         let (world, ctx) = (self.world, self.ctx);
         // SAFETY: as `read`; `args` lives through the call
         let mut cpp = |op: u32, args: [i64; 6]| unsafe { world(ctx, op, args.as_ptr()) };
-        // the statement sequences composed in Rust (world_compose.rs); the C++ answers the rest
+        // the statement sequences composed in Rust (world_compose.rs, ca_compose.rs, ai_store.rs); the C++'s the rest
+        if let Some(value) = crate::scenario::ca_compose::compose(&mut cpp, op, args) {
+            return value;
+        }
+        if let Some(value) = crate::scenario::ai_store::compose(&mut cpp, op, args) {
+            return value;
+        }
         if let Some(value) = crate::scenario::world_compose::compose(&mut cpp, op, args) {
             return value;
         }

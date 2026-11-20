@@ -495,56 +495,27 @@ void EESMDialogMessage::operator=(const EESMDialogMessage& inMessage)
     this->mIsCinematic = inMessage.mIsCinematic;
 }
 
-// Reads the dialog message (text, unit type, sound, duration, unit, scroll speed, and from version 0.200 on
-// the cinematic flag) from the saved scenario; returns the first read error
-long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+// a dialog message's Load and Save (ee_scenario save.rs message_io): the text, unit type, sound, duration, unit,
+// scroll speed, and (a save, or a load from version 0.200 on) the cinematic flag; the first error
+static long EESMMessageIO(EESMDialogMessage* inMessage, unsigned long inMajor, unsigned long inMinor, FSFile& inFile,
+                          bool inSave)
 {
-    long theResult;
-    if (inMajorVersion <= 0 && inMinorVersion <= 199) {
-        if ((theResult = this->mText.Load(inFile)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mUnitType)) != 0)
-            return theResult;
-        if ((theResult = this->mSound.Load(inFile)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mDuration)) != 0)
-            return theResult;
-        if ((theResult = inFile.Read(this->mUnitID)) != 0)
-            return theResult;
-        return inFile.Read(this->mScrollSpeed);
-    }
-    if ((theResult = this->mText.Load(inFile)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mUnitType)) != 0)
-        return theResult;
-    if ((theResult = this->mSound.Load(inFile)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mDuration)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mUnitID)) != 0)
-        return theResult;
-    if ((theResult = inFile.Read(this->mScrollSpeed)) != 0)
-        return theResult;
-    return inFile.Read(this->mIsCinematic);
+    UWideString* theStrings[] = {&inMessage->mText, &inMessage->mSound};
+    EESMStream theStream = {&inFile, theStrings, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    EeScenarioMessageNumbers theNumbers = {&inMessage->mScrollSpeed, &inMessage->mUnitType, &inMessage->mDuration,
+                                           &inMessage->mUnitID, &inMessage->mIsCinematic};
+    return ee_scenario_message_io(&theTable, &theNumbers, inMajor, inMinor, inSave);
 }
 
-// Writes the dialog message, cinematic flag included, to the saved scenario; returns the first write error
+long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    return EESMMessageIO(this, inMajorVersion, inMinorVersion, inFile, false);
+}
+
 long EESMDialogMessage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult;
-    if ((theResult = this->mText.Save(outFile)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mUnitType)) != 0)
-        return theResult;
-    if ((theResult = this->mSound.Save(outFile)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mDuration)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mUnitID)) != 0)
-        return theResult;
-    if ((theResult = outFile.Write(this->mScrollSpeed)) != 0)
-        return theResult;
-    return outFile.Write(this->mIsCinematic);
+    return EESMMessageIO(this, inMajorVersion, inMinorVersion, outFile, true);
 }
 
 // ------------------------------------------------------------------------------------------------ the lists
