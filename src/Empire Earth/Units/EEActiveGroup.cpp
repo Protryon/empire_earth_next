@@ -183,23 +183,6 @@ bool EEActiveGroup::RequestPaths(std::vector<EEComplexUnit*>& inUnits)
     return theResult;
 }
 
-// Appends a goal to the goal queue and makes the queue's unit its owner
-void EEUnitVectorItem::Add(EEUnitGoal* inGoal)
-{
-    this->mGoals.push_back(inGoal);
-    inGoal->SetOwner(this->mUnit);
-}
-
-// Returns the first goal in the unit's given goal queue, or NULL when that queue is missing or empty
-// EEComplexUnit::GetQueuedGoal (inline in the real header, its out-of-line COMDAT emitted here by its first user
-// 0x1ebf85; ee/EEUnit.h declares it out of line, so it is defined here)
-EEUnitGoal* EEComplexUnit::GetQueuedGoal(unsigned long inIndex)
-{
-    if (this->mGoalQueues.size() > inIndex && this->mGoalQueues[inIndex].mGoals.size() > 0)
-        return this->mGoalQueues[inIndex].mGoals.front();
-    return NULL;
-}
-
 // Recomputes the group's average, minimum and maximum speeds, turn speeds and accelerations and their inverses,
 // capping each average at the world table's factor 0x31 times the slowest unit's value (ee_units ag.rs)
 void EEActiveGroup::ComputeValues()

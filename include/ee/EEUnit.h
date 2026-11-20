@@ -371,7 +371,11 @@ public:
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew);  // +0x88 (ret 8: inNew replaces inOld as cargo/carrier)
 
     void StartAction(long inAction);
-    void SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inArg3);
+    // the goal at the queue's front (the front kept or dropped with its auto waypoints); ee_units goals.rs set_goal
+    void SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inArg3)
+    {
+        ee_units_unit_set_goal((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inGoal, inKeepCurrent, (int32_t)inArg3);
+    }
     void PlayEffect(long inEffect);         // 0x1fea99 (the conscription calamity passes 0x138d) (provisional name)
     void ClearGoals(long inArg);            // 0x1f88fe (before a calamity hands out a new goal) (provisional name)
     void ToggleJITManufacturing();          // 0x1fd8f3 (EEMJITManufacturing, then UpdateJITManufacturing; provisional name)
@@ -438,7 +442,10 @@ public:
     bool GarrisonUnit(EEComplexUnit* inCargo);  // 0x1f5ebf (the garrison goal) (provisional name)
     // inline in the real header (out-of-line COMDAT 0x1ed63b, first emitted by EEActiveGroup.cpp): the first goal queued
     // in mGoalQueues[inIndex], 0 if none; declared out of line here (provisional name)
-    EEUnitGoal* GetQueuedGoal(unsigned long inIndex);
+    EEUnitGoal* GetQueuedGoal(unsigned long inIndex)   // the queue's first goal (NULL: none; ee_units goals.rs)
+    {
+        return (EEUnitGoal*)(uintptr_t)ee_units_unit_queued_goal((uint64_t)(uintptr_t)this, (uint32_t)inIndex);
+    }
     EEGoalDeque& GetQueueGoals(unsigned long inIndex);  // 0x1fa1cd: mGoalQueues[inIndex].mGoals (out of line; EEUICUnitIconBar 0x25ad01) (provisional name)
     // 0x1ebdcc (defined in EEActiveGroup.cpp after Virtual48, out of line): mActiveGroup = inGroup, referenced
     // (provisional name)
@@ -629,7 +636,8 @@ public:
     float DistanceSquared3D(const GE3DPoint& inPoint);
     void ClearTint();
     void UpdateFanaticismColor();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
-    EEUnitGoal* RefreshGoals();             // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
+    // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
+    EEUnitGoal* RefreshGoals() { return (EEUnitGoal*)(uintptr_t)ee_units_unit_refresh_goals((uint64_t)(uintptr_t)this); }
     void SetPatrolGroup(EEPPatrolGroup* inGroup);
     // defined in EEPlayer.cpp's range after their first user EEPlayer::DisableCamouflagePower (out of line everywhere: recursive)
     void SetCloakableChain(bool inValue);   // 0x16c6a1: mIsCloakable along the mAIKind chain; false also clears mIsCloaked (provisional name)
@@ -680,11 +688,12 @@ public:
     void DropFinishedGoals(bool inStartAll);  // 0x1fcb0e (drops the auto-waypoint location goals)
     void ApplyMorale(long inValue, long& outValue);  // 0x1fbd81: inValue less 0.8 of it with positive morale, plus 0.6 with negative
     long GetSecondWaypoint(GE3DPoint& outLocation);  // 0x1fbecf: the second waypoint (7: none) (provisional name)
-    void DropUnsuitedGoals(unsigned long inIndex);  // 0x1fbf66: drops the queued goals of mGoalQueues[inIndex] that refuse the unit
+    // 0x1fbf66: drops the queued goals of mGoalQueues[inIndex] that refuse the unit
+    void DropUnsuitedGoals(unsigned long inIndex) { ee_units_unit_drop_unsuited_goals((uint64_t)(uintptr_t)this, (uint32_t)inIndex); }
     void ReplaceResearch(long inTechnology, long inNewTechnology);  // 0x1ffbc2 (0x244deb: each live unit of a technology's classes) (provisional name)
     bool ReleaseHeld(EEComplexUnit* inUnit);  // 0x1fca95: removes inUnit from mHeldUnits
     void CancelQueuedProduction();          // 0x1fce47: refunds the queued research (mBuildQueue)
-    void RefreshActiveGoal();
+    void RefreshActiveGoal() { ee_units_unit_refresh_active_goal((uint64_t)(uintptr_t)this); }
     // inGoal for each of the (3, or 4 with civilization power 0x34) goal queues: the first as is, copies for the rest
     void QueueSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal);  // 0x1fca21 (queued behind a goal already there) (provisional name)
     void SetSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal);  // 0x1fe42b (replacing them) (provisional name)

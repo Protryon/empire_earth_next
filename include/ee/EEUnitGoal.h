@@ -40,43 +40,82 @@ struct EeUnitsGoalIo;
 
 class EEUnitGoal {
 public:
-    // 0x23c375: active, idle, kind inKind, the next goal id (sGoalCounter), stamped with the game time; its own state
-    // not made yet (the New functions below make it; the bodies' copies make theirs)
-    EEUnitGoal(unsigned char inKind, bool inArg);
+    // New (units behaviour, round 3): a goal is a Rust object (ee_units goal_obj.rs) whose head is these members:
+    // made by Make (0x23c375: active, idle, kind inKind, the next goal id, stamped with the game time; its own state
+    // not made yet: the New functions below make it), deleted by delete (the destructor runs the kind's destroy, the
+    // memory is Rust's). The bodies that write no file or text are one ee_units_goal_call each.
+    static EEUnitGoal* Make(unsigned char inKind, bool inArg)
+    {
+        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new(inKind, inArg));
+    }
+    static void* operator new(size_t) = delete;
+    static void operator delete(void* inGoal) { ee_units_goal_dealloc(static_cast<EeUnitsGoalBase*>(inGoal)); }
     // 0x23c3e6: an empty goal of kind inKind for loading (NULL for an unknown kind); it hands the counter value back
     static EEUnitGoal* CreateGoal(unsigned char inKind);
-    ~EEUnitGoal();
+    ~EEUnitGoal() { this->Call(EE_UNITS_GOAL_DESTROY); }
 
     // the original's virtuals (vtable 0x43cc64, by slot), each one call of the kind's body
-    void AddCreatedUnit(EEComplexUnit* inUnit);                // +0x04 (the load goals' container takes the unit)
+    void AddCreatedUnit(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_ADD_CREATED_UNIT, H(inUnit)); }   // +0x04
     void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);   // +0x08 (the base: told to the group)
-    bool IsActive(unsigned long* outValue);                    // +0x0c (the gather goal reports 5000 while not active)
-    EEUnitGoal* Clone();                                       // +0x10
+    // +0x0c (the gather goal reports 5000 while not active)
+    bool IsActive(unsigned long* outValue)
+    {
+        if (this->mKind == kGoalGatherKind && !this->mIsActive)
+            *outValue = 5000;
+        return this->mIsActive;
+    }
+    EEUnitGoal* Clone()                                        // +0x10
+    {
+        return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(this->Call(EE_UNITS_GOAL_CLONE, 0, this->mB1C)));
+    }
     void DumpOutOfSynch(FILE* inFile);                         // +0x14
-    long GetOutOfSynchChecksum();                              // +0x18
+    long GetOutOfSynchChecksum() { return (long)this->Call(EE_UNITS_GOAL_CHECKSUM); }   // +0x18
     void GetDebugLine(UWideString& ioText);                    // +0x1c
-    bool IsLoadGoal();                                         // +0x24
+    // +0x24 (kGoalLoadTransport, kGoalLoadGarrison)
+    bool IsLoadGoal() { return this->mKind == 7 || this->mKind == 12; }
     void GetGoalLocation(GE3DPoint& outLocation);              // +0x28
-    long GetMaxPathAttempts();                                 // +0x2c (the base: 3)
-    long GetStartAction();                                     // +0x30
+    long GetMaxPathAttempts() { return (long)this->Call(EE_UNITS_GOAL_MAX_PATH_ATTEMPTS); }   // +0x2c (the base: 3)
+    long GetStartAction() { return (long)this->Call(EE_UNITS_GOAL_START_ACTION); }            // +0x30
     long GetStartTime() { return this->mStartTime; }           // +0x34
     unsigned long GetCreationTime() { return this->mCreationTime; }   // +0x38
-    void SetOwner(EEComplexUnit* inUnit);                      // +0x3c
-    void Step(EEComplexUnit* inUnit);                          // +0x40
+    void SetOwner(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_SET_OWNER, H(inUnit)); }   // +0x3c
+    void Step(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_STEP, H(inUnit)); }            // +0x40
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x44
-    void PathTaken(EEComplexUnit* inUnit);                     // +0x48
-    void Abandon(EEComplexUnit* inUnit);                       // +0x4c
-    long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x50
-    void Start(EEComplexUnit* inUnit);                         // +0x54
+    void PathTaken(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_PATH_TAKEN, H(inUnit)); }   // +0x48
+    void Abandon(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_ABANDON, H(inUnit)); }        // +0x4c
+    long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)         // +0x50
+    {
+        return (long)this->Call(EE_UNITS_GOAL_REPAIR, inMajorVersion, inMinorVersion);
+    }
+    void Start(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_START, H(inUnit)); }          // +0x54
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x58
     // +0x5c: the base goal's count, then the kind's (the attack unit's: 0 also clears the sidestep count)
-    void SetPathAttempts(long inValue);
+    void SetPathAttempts(long inValue)
+    {
+        this->mPathAttempts = inValue;
+        this->Call(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, (uint64_t)(int64_t)inValue);
+    }
     void SetStartTime(long inValue) { this->mStartTime = inValue; }   // +0x60
-    bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);   // +0x64
+    bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)   // +0x64
+    {
+        return this->Call(EE_UNITS_GOAL_EVALUATE, H(inUnit), inEvent) != 0;
+    }
     void RemovedFromQueue(EEComplexUnit*) {}                   // +0x68 (empty in every class)
-    void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit* inUnit);   // +0x6c
-    bool Suits(EEUnit* inUnit);                                // +0x70
-    void Work(EEComplexUnit* inUnit);                          // +0x74
+    void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit* inUnit)   // +0x6c
+    {
+        EeUnitsGoalIo theArgs = {{(int64_t)H(inUnit)}};
+        this->Call(EE_UNITS_GOAL_REPLACE_UNIT, H(inOld), H(inNew), &theArgs);
+    }
+    bool Suits(EEUnit* inUnit) { return this->Call(EE_UNITS_GOAL_SUITS, H(inUnit)) != 0; }    // +0x70
+    void Work(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_WORK, H(inUnit)); }           // +0x74
+
+    // one body of the goal with the registered world host (ee_units goal_obj.rs), an object's handle
+    int64_t Call(int32_t inOperation, uint64_t inA = 0, uint64_t inB = 0, EeUnitsGoalIo* ioArgs = NULL) const
+    {
+        return ee_units_goal_call(inOperation, reinterpret_cast<const EeUnitsGoalBase*>(this), inA, inB, ioArgs);
+    }
+    static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
+    enum { kGoalGatherKind = 6 };
 
     // the copies pass it through a byte temporary, the other bools straight (provisional name)
     bool GetB1C() const { return this->mB1C; }

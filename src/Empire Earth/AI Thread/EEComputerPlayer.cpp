@@ -656,7 +656,7 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     EEUnitGoal* theGoal = inGoal;
     EEUnitVectorItem& theItem = this->mGoalQueues[inItem];
     theItem.mGoals.push_back(theGoal);
-    theGoal->SetOwner(theItem.mUnit);
+    theGoal->SetOwner(theItem.GetUnit());
     this->RefreshGoals();
     this->RefreshActiveGoal();
 }

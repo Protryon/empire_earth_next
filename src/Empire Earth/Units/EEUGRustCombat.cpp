@@ -158,7 +158,7 @@ void AttackSet(const EEUGRust* inGoal, const EeCombatAttackGoal& inRecord)
 
 EEUGRust* EEUGRust::NewAttackGround(const GE3DPoint& inTarget, bool inArg)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalAttackGround, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackGround, inArg);
     GE3DPoint thePoint = inTarget;
     Combat(EE_COMBAT_GOAL_NEW_GROUND, theGoal, 0, 0, 0, &thePoint);
     return theGoal;
@@ -173,14 +173,14 @@ GE3DPoint EEUGRust::GetGroundTarget()
 
 EEUGRust* EEUGRust::NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalAttackUnit, inArg3);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackUnit, inArg3);
     Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, Handle(inAttacker), Handle(inTarget), inIsConvert ? 1 : 0);
     return theGoal;
 }
 
 EEUGRust* EEUGRust::NewAttackUnitEmpty(bool inArg)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalAttackUnit, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalAttackUnit, inArg);
     Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, 0, 0, 2);
     return theGoal;
 }
@@ -241,14 +241,14 @@ void EEUGRust::SetSidestepCount(unsigned long inCount)
 
 EEUGRust* EEUGRust::NewHealUnit(EEComplexUnit* inTarget, bool inArg)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalHealUnit, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalHealUnit, inArg);
     Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, Handle(inTarget));
     return theGoal;
 }
 
 EEUGRust* EEUGRust::NewHealUnit(bool inArg)
 {
-    EEUGRust* theGoal = new EEUGRust(kGoalHealUnit, inArg);
+    EEUGRust* theGoal = EEUGRust::Make(kGoalHealUnit, inArg);
     Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, 0, 0, 2);
     return theGoal;
 }

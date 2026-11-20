@@ -71,18 +71,18 @@ bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
             if (theCargo->GetPlayer()->IsHuman()) {
                 long theKind = theCargo->GetUnitClass()->mFamily;
                 if (theKind == kUnitFamilyAircraft || theKind == kUnitFamilySpaceFighter) {
-                    if (!inUnit->mGoalQueues[1].IsShiftMode() && inUnit->GetQueuedGoal(1) != NULL)
+                    if (!inUnit->mGoalQueues[1].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(1) != NULL)
                         theLeave = true;
                 } else if (theKind == kUnitFamilyBomber) {
                     if (!theCargo->GetUnitClass()->mIsParatrooperBomber) {
-                        if (!inUnit->mGoalQueues[2].IsShiftMode() && inUnit->GetQueuedGoal(2) != NULL)
+                        if (!inUnit->mGoalQueues[2].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(2) != NULL)
                             theLeave = true;
                     } else {
-                        if (!inUnit->mGoalQueues[4].IsShiftMode() && inUnit->GetQueuedGoal(4) != NULL)
+                        if (!inUnit->mGoalQueues[4].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(4) != NULL)
                             theLeave = true;
                     }
                 } else {
-                    if (!inUnit->mGoalQueues[3].IsShiftMode() && inUnit->GetQueuedGoal(3) != NULL)
+                    if (!inUnit->mGoalQueues[3].GetUnit()->mPlayer->mShiftMode && inUnit->GetQueuedGoal(3) != NULL)
                         theLeave = true;
                 }
             }
