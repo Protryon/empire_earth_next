@@ -12968,6 +12968,14 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
 /// As `ee_screens_ga_init`.
 void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
+/// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`; `text` holds `length` bytes (or `length` is 0).
+void ee_screens_shim_out(void *out,
+                         const uint8_t *text,
+                         size_t length);
+
 /// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
 extern void ee_screenscpp_game_view(uint32_t group, uint32_t arg, EeScreensGameView *out);
 
