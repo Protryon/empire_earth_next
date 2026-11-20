@@ -262,6 +262,131 @@ pub enum EeWonEeGlueOp {
     LobbyResume,
     /// `LobbyMessageBox(RoutingLogic_GameDissolvedTitle_String, RoutingLogic_GameDissolvedDetails_String)`.
     BoxDissolved,
+    // R6 WONLobby round 29: the statements of the lobby window's functions (eewindow.rs)
+    /// `gEELobbyOpen = true`.
+    SetOpenTrue = 300,
+    /// `gEELobbyOpen = false`.
+    SetOpenFalse,
+    /// `gEELobbyWindowManager = new WONAPICoreEx`.
+    CoreNew,
+    /// `gEELobbyWindowManager->SetDoPumpThread(true)`.
+    CoreSetPumpThread,
+    /// `gEELobbyWindowManager->Startup()`.
+    CoreStartup,
+    /// `gEELobbyRootWindow = new PlatWindowManager`.
+    RootNew,
+    /// `gEELobbyRootWindow->SetPopupsInOwnWindow(false)`.
+    RootNoPopupWindows,
+    /// `JPGDecoder::Add(&gEELobbyRootWindow->mImageDecoder)`.
+    RootAddJpg,
+    /// `PNGDecoder::Add(&gEELobbyRootWindow->mImageDecoder)`.
+    RootAddPng,
+    /// `gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder)`.
+    RootSoundDecoder,
+    /// `gRasterizer->GetSecondarySurface(gScreenIndex)`.
+    SecondarySurface,
+    /// `gEELobbyRootWindow->SetSurfaceSize(1024, 768)` (the lobby surface's size).
+    RootSetSurfaceSize,
+    /// `gEELobbyRootWindow->SetEventForward(EELobbyForwardEvent)`.
+    RootSetEventForward,
+    /// `gEELobbyPlatformWindow = CreateNativeWindow()`.
+    WindowNew,
+    /// `((PlatGUIWindow*)gEELobbyPlatformWindow.get())->SetForwardKeyMsgToParent(true)`.
+    WindowForwardKeys,
+    /// `gGamePreferences.mSettings.mFullScreen`.
+    FullScreen,
+    /// `gEELobbyPlatformWindow->SetStyle(a)`.
+    WindowSetStyle,
+    /// `gEELobbyPlatformWindow->Create(WONRectangle(0, 0, 100, 100))`.
+    WindowCreate,
+    /// `EELobbyInit()`.
+    GlueInit,
+    /// `LobbyGetContainer()` with a reference.
+    ScreenHold,
+    /// `root->Fn2F6140((Container*)a, 3, root, 0, 0, 0, 0, 0)` of the lobby window's root.
+    RootLayoutScreen,
+    /// `root->AddChild((Container*)a)` of the lobby window's root.
+    RootAddScreen,
+    /// `LobbyStart()`.
+    LobbyStart,
+    /// `gEELobbyPlatformWindow.get() != NULL`.
+    WindowExists,
+    /// `gGameWindow->GetOSRepresentation()`.
+    GameOsWindow,
+    /// `gMouse != NULL`.
+    MouseExists,
+    /// `((float*)a)[0], [1] = gMouse->mPosition.mX, mY`.
+    MousePosition,
+    /// `gMouse->mPointer = a`.
+    MouseSetPointer,
+    /// `(long)((GESurface*)a)->GetWidth()`.
+    SurfaceWidth,
+    /// `(long)((GESurface*)a)->GetHeight()`.
+    SurfaceHeight,
+    /// `gEELobbyPlatformWindow->Show(a != 0)`.
+    WindowShow,
+    /// `EELobbyLock()`.
+    LobbyLock,
+    /// `EELobbyUnlock()`.
+    LobbyUnlock,
+    /// `gEELobbyShown = a != 0`.
+    SetShown,
+    /// `gISKeyboard != NULL`.
+    KeyboardExists,
+    /// `gISKeyboard->Suspend()`.
+    KeyboardSuspend,
+    /// `gISKeyboard->Resume()`.
+    KeyboardResume,
+    /// `gISMouse != NULL`.
+    MouseInputExists,
+    /// `gISMouse->Suspend()`.
+    MouseInputSuspend,
+    /// `gISMouse->Resume()`.
+    MouseInputResume,
+    /// `PlatTextInputStart((PlatWindow*)a, 0, 0, 0, 0)`.
+    TextInputStart,
+    /// `PlatCursorShow(a)`.
+    CursorShow,
+    /// `PlatCursorSet(NULL)`.
+    CursorSetDefault,
+    /// `PlatWindowGetClientSize((PlatWindow*)a, &((int32_t*)b)[0], &((int32_t*)b)[1])`.
+    ClientSize,
+    /// `PlatMouseWarp((PlatWindow*)a, b, c)`.
+    MouseWarp,
+    /// `PlatMouseGetState((PlatWindow*)a, &((int32_t*)b)[0], &((int32_t*)b)[1])`.
+    MouseGetState,
+    /// `gEELobbyPlatformWindow->InvalidateRoot()`.
+    WindowInvalidateRoot,
+    /// `gUIManager->RedrawAll()`.
+    RedrawAll,
+    /// `gMouse->SetPosition(GE2DPoint(((const float*)a)[0], ((const float*)a)[1]))`.
+    MouseSetPosition,
+    /// `gEELobbyRootWindow->CloseAllWindows()`.
+    RootCloseAll,
+    /// `LobbyShutdown()`.
+    GlueLobbyShutdown,
+    /// `gEELobbyWindowManager->Shutdown()`.
+    CoreShutdown,
+    /// `delete gEELobbyWindowManager`.
+    CoreDelete,
+    /// `gEELobbyWindowManager = NULL`.
+    CoreClear,
+    /// `gEELobbyPlatformWindow = NULL`.
+    WindowClear,
+    /// `gEELobbyRootWindow = NULL`.
+    RootClear,
+    /// `gUIManager != NULL`.
+    HasUiManager,
+    /// `gUIManager->SetMusicVolume(gGamePreferences.GetSettings().GetMusicVolume())`.
+    MusicVolumeRestore,
+    /// `new EELobbyGameDoneEvent`.
+    GameDoneEventNew,
+    /// `gUIManager->GetFormByID(30)->SetFormOpenEvent((EELobbyGameDoneEvent*)a)`.
+    GameFormSetOpenEvent,
+    /// `((EELobbyGameDoneEvent*)a)->Dereference()`.
+    EventDereference,
+    /// `gUIManager->Push(gUIManager->GetFormByID(30))`.
+    PushGameForm,
 }
 
 /// The inward calls (`a`.. as documented).
@@ -329,6 +454,16 @@ pub enum EeWonEeGlueCall {
     Field,
     /// The state forgotten without releases (the goldens' fresh start; the game never calls it).
     Reset,
+    /// `EELobbyOpen()` (R6 WONLobby round 29: eewindow.rs).
+    Open,
+    /// `EELobbyShow(a)`.
+    Show,
+    /// `EELobbyHide()`.
+    Hide,
+    /// `EELobbyClose()`.
+    Close,
+    /// `EELobbyShowGameScreen()`.
+    ShowGameScreen,
 }
 
 /// The host: `(op, a, b, c, d, e, f) -> result`.
@@ -1167,7 +1302,13 @@ impl EeWonEeGlue {
                     _ => 0,
                 }
             }
+            C::Open => self.window_open(),
+            C::Show => self.window_show(),
+            C::Hide => self.window_hide(),
+            C::Close => self.window_close(),
+            C::ShowGameScreen => self.window_show_game_screen(),
             C::Reset => {
+                window::reset();
                 self.file_dialog.store(0, Ordering::Relaxed);
                 self.connect_dialog.store(0, Ordering::Relaxed);
                 self.closing.store(false, Ordering::Relaxed);
@@ -1243,3 +1384,6 @@ pub unsafe extern "C" fn ee_won_eeglue_call(call: EeWonEeGlueCall, a: isize, b: 
 #[cfg(test)]
 #[path = "eeglue_tests.rs"]
 mod tests;
+
+#[path = "eewindow.rs"]
+mod window;

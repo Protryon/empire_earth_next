@@ -754,6 +754,9 @@ WON_TESTS = {
     # StagingLogic's and LanLogic's host cases made Rust (lobbyops.rs, R6 WONLobby round 29) against the deleted
     # cases over a stand-in world (tests/won/won_lobbyops_world.h)
     "won_lobbyops_test": [],
+    # the EE lobby window's functions made Rust (eewindow.rs, R6 WONLobby round 29) against the deleted functions
+    # over a stand-in world (tests/won/won_eewindow_world.h)
+    "won_eewindow_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],
