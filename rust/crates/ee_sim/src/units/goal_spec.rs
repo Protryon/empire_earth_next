@@ -168,6 +168,17 @@ unsafe fn member(object: u64, offset: u64) -> u64 {
     unsafe { *((object as usize + offset as usize) as *const usize) as u64 }
 }
 
+/// One pointer member of the unit `unit` (by id; 0 for no unit).
+#[cfg(not(test))]
+pub(crate) fn unit_member(unit: u32, offset: u64) -> u64 {
+    let object = resolve(unit);
+    if object == 0 {
+        return 0;
+    }
+    // SAFETY: a registered unit is live while the host's caller holds the world
+    unsafe { member(object, offset) }
+}
+
 /// The goal object `spec` makes (null when it makes none): [`plan`] over the registry and the units' layout,
 /// carried out by [`make`].
 ///

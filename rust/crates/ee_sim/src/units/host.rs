@@ -529,7 +529,6 @@ pub mod game {
         fn ee_units_host_calamity_can_cast_at(class: *mut c_void, unit: u32, x: i32, y: i32, target: u32) -> i64;
         fn ee_units_host_technology_contains(player: *mut c_void, technology: i32, unit_type: i64) -> u8;
         fn ee_units_host_calamity_cost(class: *mut c_void) -> i64;
-        fn ee_units_host_unit_player(unit: u32) -> *mut c_void;
         fn ee_units_host_group_split_calamity_casters(
             group: *mut c_void,
             class: *mut c_void,
@@ -544,12 +543,9 @@ pub mod game {
         fn ee_units_host_unit_ghost_seen(unit: u32) -> u8;
         fn ee_units_host_unit_attackable(unit: u32, damage_index: i64) -> u8;
         fn ee_units_host_unit_can_attack_class(unit: u32, target: u32) -> u8;
-        fn ee_units_host_unit_shares_rally_point(unit: u32, unit_type: i64) -> u8;
-        fn ee_units_host_unit_num_goal_queues(unit: u32) -> i64;
         fn ee_units_host_unit_clear_goal_queue(unit: u32, queue: i64);
         fn ee_units_host_unit_clear_all_goal_queues(unit: u32);
         fn ee_units_host_unit_queue_goal(unit: u32, goal: *mut c_void, queue: i64);
-        fn ee_units_host_unit_goal_clone(unit: u32) -> *mut c_void;
         fn ee_units_host_garrison_rally_load(garrison: u32) -> *mut c_void;
         fn ee_units_host_unit_clear_air_traffic(unit: u32);
         fn ee_units_host_unit_clear_build_targets(unit: u32);
@@ -570,8 +566,6 @@ pub mod game {
         fn ee_units_host_group_add_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_research_node(player: *mut c_void, technology: i32, kind: *mut i32) -> u8;
         fn ee_units_host_scenario_game() -> u8;
-        fn ee_units_host_unit_shares_research(unit: u32, unit_type: i64) -> u8;
-        fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
         fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
         fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
@@ -894,7 +888,8 @@ pub mod game {
             unsafe { ee_units_host_calamity_cost(class.0) }
         }
         fn unit_player(&mut self, unit: u32) -> HostRef {
-            HostRef(unsafe { ee_units_host_unit_player(unit) })
+            // the unit's mPlayer
+            HostRef(crate::units::goal_spec::unit_member(unit, layout().unit_player) as usize as *mut c_void)
         }
         fn group_split_calamity_casters(
             &mut self,
@@ -955,10 +950,17 @@ pub mod game {
             view_of(unit, |u| u.has_tile_node()).unwrap_or(false)
         }
         fn unit_shares_rally_point(&mut self, unit: u32, unit_type: i64) -> bool {
-            unsafe { ee_units_host_unit_shares_rally_point(unit, unit_type) != 0 }
+            // SAFETY: the class view's record is live while the view is
+            view_of(unit, |u| {
+                u.class().is_some_and(|c| unsafe {
+                    crate::units::cls_answers::shares_rally_point(&*c.fields().ptr(), unit_type as u64)
+                })
+            })
+            .unwrap_or(false)
         }
         fn unit_num_goal_queues(&mut self, unit: u32) -> i64 {
-            unsafe { ee_units_host_unit_num_goal_queues(unit) }
+            // mGoalQueues.size()
+            view_of(unit, |u| u.goal_queues().len() as i64).unwrap_or(0)
         }
         fn unit_clear_goal_queue(&mut self, unit: u32, queue: i64) {
             unsafe { ee_units_host_unit_clear_goal_queue(unit, queue) }
@@ -983,7 +985,13 @@ pub mod game {
             }
         }
         fn unit_goal_clone(&mut self, unit: u32) -> Option<GoalHandle> {
-            GoalHandle::from_ptr(unsafe { ee_units_host_unit_goal_clone(unit) })
+            // mGoalState->Clone()
+            let goal = view_of(unit, |u| u.goal_handle()).unwrap_or(0);
+            if goal == 0 {
+                return None;
+            }
+            // SAFETY: the unit's live goal
+            GoalHandle::from_ptr(unsafe { crate::units::goal_spec::clone(goal) } as usize as *mut c_void)
         }
         fn garrison_rally_load(&mut self, garrison: u32) -> Option<GoalHandle> {
             GoalHandle::from_ptr(unsafe { ee_units_host_garrison_rally_load(garrison) })
@@ -1100,13 +1108,21 @@ pub mod game {
             unsafe { ee_units_host_scenario_game() != 0 }
         }
         fn unit_shares_research(&mut self, unit: u32, unit_type: i64) -> bool {
-            unsafe { ee_units_host_unit_shares_research(unit, unit_type) != 0 }
+            // SAFETY: as above
+            view_of(unit, |u| {
+                u.class().is_some_and(|c| unsafe {
+                    crate::units::cls_answers::shares_research(&*c.fields().ptr(), unit_type)
+                })
+            })
+            .unwrap_or(false)
         }
         fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool) {
-            let (mut current, mut disabled) = (0i64, 0u8);
-            // SAFETY: the two values are written for the call
-            let queue = unsafe { ee_units_host_unit_research_state(unit, &mut current, &mut disabled) };
-            (queue, current, disabled != 0)
+            // GetBuildQueueSize(), mCurrentResearch, mIsDisabled
+            view_of(unit, |u| {
+                let disabled: bool = crate::world_field!(u.complex(), mIsDisabled);
+                (u.build_queue_len() as i64, u.current_research(), disabled)
+            })
+            .unwrap_or((0, 0, false))
         }
         fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
             unsafe { ee_units_host_unit_queue_research(unit, technology, front as u8) }

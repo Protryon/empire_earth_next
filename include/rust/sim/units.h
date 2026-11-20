@@ -6292,8 +6292,6 @@ extern uint8_t ee_units_host_technology_contains(void *player,
 
 extern int64_t ee_units_host_calamity_cost(void *class_);
 
-extern void *ee_units_host_unit_player(uint32_t unit);
-
 extern void ee_units_host_group_split_calamity_casters(void *group,
                                                        void *class_,
                                                        void *player,
@@ -6314,17 +6312,11 @@ extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index
 
 extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
 
-extern uint8_t ee_units_host_unit_shares_rally_point(uint32_t unit, int64_t unit_type);
-
-extern int64_t ee_units_host_unit_num_goal_queues(uint32_t unit);
-
 extern void ee_units_host_unit_clear_goal_queue(uint32_t unit, int64_t queue);
 
 extern void ee_units_host_unit_clear_all_goal_queues(uint32_t unit);
 
 extern void ee_units_host_unit_queue_goal(uint32_t unit, void *goal, int64_t queue);
-
-extern void *ee_units_host_unit_goal_clone(uint32_t unit);
 
 extern void *ee_units_host_garrison_rally_load(uint32_t garrison);
 
@@ -6357,12 +6349,6 @@ extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
 extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
 
 extern uint8_t ee_units_host_scenario_game();
-
-extern uint8_t ee_units_host_unit_shares_research(uint32_t unit, int64_t unit_type);
-
-extern int64_t ee_units_host_unit_research_state(uint32_t unit,
-                                                 int64_t *current,
-                                                 uint8_t *disabled);
 
 extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
 

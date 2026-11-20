@@ -509,13 +509,6 @@ extern "C" int64_t ee_units_host_calamity_cost(void* inClass)
     return theCost;
 }
 
-// a read
-extern "C" void* ee_units_host_unit_player(uint32_t inUnit)
-{
-    EEPlayer* thePlayer = ComplexOf(inUnit)->mPlayer;
-    return thePlayer;
-}
-
 // SplitCalamityCasters
 extern "C" void ee_units_host_group_split_calamity_casters(void* inGroup, void* inClass, void* inPlayer, int32_t inTechnology,
                                                            uint32_t inTarget)
@@ -573,16 +566,6 @@ extern "C" uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t
     return ComplexOf(inUnit)->CanAttackClass(UnitOf(inTarget)->mUnitClass) ? 1 : 0;
 }
 
-extern "C" uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType)
-{
-    return ComplexOf(inUnit)->mUnitClass->SharesRallyPoint((unsigned long)inUnitType) ? 1 : 0;
-}
-
-extern "C" int64_t ee_units_host_unit_num_goal_queues(uint32_t inUnit)
-{
-    return (int64_t)ComplexOf(inUnit)->GetNumGoalQueues();
-}
-
 extern "C" void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQueue)
 {
     ComplexOf(inUnit)->ClearGoalQueue((unsigned long)inQueue);
@@ -596,12 +579,6 @@ extern "C" void ee_units_host_unit_clear_all_goal_queues(uint32_t inUnit)
 extern "C" void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int64_t inQueue)
 {
     ComplexOf(inUnit)->QueueGoal(static_cast<EEUnitGoal*>(inGoal), (long)inQueue);
-}
-
-extern "C" void* ee_units_host_unit_goal_clone(uint32_t inUnit)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    return theUnit->mGoalState->Clone();
 }
 
 extern "C" void ee_units_host_unit_clear_air_traffic(uint32_t inUnit)
@@ -750,19 +727,6 @@ extern "C" uint8_t ee_units_host_research_node(void* inPlayer, int32_t inTechnol
 extern "C" uint8_t ee_units_host_scenario_game()
 {
     return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
-}
-
-extern "C" uint8_t ee_units_host_unit_shares_research(uint32_t inUnit, int64_t inUnitType)
-{
-    return ComplexOf(inUnit)->mUnitClass->SharesResearch((long)inUnitType) ? 1 : 0;
-}
-
-extern "C" int64_t ee_units_host_unit_research_state(uint32_t inUnit, int64_t* outCurrent, uint8_t* outDisabled)
-{
-    EEComplexUnit* theUnit = ComplexOf(inUnit);
-    *outCurrent = theUnit->mCurrentResearch;
-    *outDisabled = theUnit->mIsDisabled ? 1 : 0;
-    return (int64_t)theUnit->GetBuildQueueSize();
 }
 
 extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTechnology, uint8_t inFront)
