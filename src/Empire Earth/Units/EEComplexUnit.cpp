@@ -440,115 +440,40 @@ void EEComplexUnit::AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap)
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer);
 void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer);
-static const float kMinimumFootprint = 1.0f;   // 0x446db8 (FindContacts; provisional name)
 static const float kPathSpeedScale = 5.0f;     // 0x446dbc (ShouldMoveToNextAutoWaypoint: mFormationRank / 5 region sizes; provisional name)
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
-// Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
-// Original 0x4c76f0: the notification thresholds, used in ascending order.
-static const long kResourceRefundThresholds[11] = {100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000};
 extern char gEmptyString[];
+
+// a float's bits as a cu_body.rs argument, and back
+static int64_t EECuBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, sizeof(theBits));
+    return theBits;
+}
+
+static float EECuFloat(int64_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, sizeof(theValue));
+    return theValue;
+}
+
+// Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
+// (cu_body.rs; the thresholds there: 0x4c76f0)
 
 void EEComplexUnit::PayInsurance(float inFraction)
 {
-    EEPlayer* thePlayer = this->mPlayer;
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(this->GetUnitClass()->mTechnology);
-    if (theNode == NULL)
-        return;
-    long theOldTotals[5];
-    long theOldResources[5];
-    memcpy(theOldTotals, thePlayer->mInsuranceRefunds, sizeof(theOldTotals));
-    memcpy(theOldResources, &thePlayer->mResourceCaps[kResourceFood], sizeof(theOldResources));
-    this->mPlayer->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), inFraction);
-    for (long i = 0; i < 5; i++)
-        thePlayer->mInsuranceRefunds[i] += thePlayer->mResourceCaps[i + 2] - theOldResources[i];
-    thePlayer = this->mPlayer;
-    if (thePlayer != ::gWorld.GetCurrentPlayer())
-        return;
-    gEffectManager->CreateUnitEffect(this, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0);
-    for (unsigned long theResource = 2; theResource < 7; theResource++) {
-        long theValue = thePlayer->mInsuranceRefunds[theResource - 2];
-        if (theValue == theOldTotals[theResource - 2])
-            continue;
-        bool theNotify = false;
-        long theShownValue = theValue;
-        if (theValue >= 20) {
-            for (long i = 0; i < 11; i++) {
-                long theThreshold = kResourceRefundThresholds[i];
-                if (theOldTotals[theResource - 2] < theThreshold && theThreshold <= theValue) {
-                    theNotify = true;
-                    theShownValue = theThreshold;
-                }
-            }
-            if (!theNotify)
-                continue;
-        }
-        char theResourceNumber[64];
-        char theAmount[64];
-        sprintf(theResourceNumber, "%ld", theResource);
-        sprintf(theAmount, "%ld", theShownValue);
-        UWideString theText;
-        UWideString thePart;
-        gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText);
-        theText += theAmount;
-        theText += " ";
-        gResource->GetString(theResource + IDS_RESOURCE_NAME_BASE, thePart);
-        theText += thePart;
-        gResource->GetString(IDS_IN_INSURANCE, thePart);
-        theText += thePart;
-        gUserInterface->AddChatLogEntry(thePlayer->mColor, UWideString(gEmptyString), theText, 5000, 2);
-        EESoundObject* theSound = EESoundObject::Get(kSoundInsuranceCollected);
-        if (theSound != NULL)
-            theSound->Play(theSound->GetVolume(), 0.0f, 1.0f);
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_PAY_INSURANCE, this, EECuBits(inFraction), 0, 0);   // cu_body.rs
 }
 
 
 // Records as mutual contacts the living collidable units under the unit's footprint in the same layer
 void EEComplexUnit::FindContacts()
 {
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnitClass* theClass = this->GetUnitClass();
-    float theSize = theClass->GetInnerCollisionSphere();
-    float theRadius = theSize;
-    EEComplexUnit* theThis = this;
-    bool theFlag = theClass->FliesOver();
-    bool theAir = theClass->IsAirCategory();
-    float theX = this->mPhysicalModel.GetLocation().GetX();
-    float theY = this->mPhysicalModel.GetLocation().GetY();
-    if (theSize >= kMinimumFootprint)
-        theRadius = theSize + theSize;
-    theRadius = theRadius * 0.5;
-    if (theRadius < 0.5)
-        theRadius = 0.5f;
-    long theMinX = UMFloor(theX - theRadius);
-    long theMaxX = UMFloor(theX + theRadius);
-    long theMinY = UMFloor(theY - theRadius);
-    long theMaxY = UMFloor(theY + theRadius);
-    for (long x = theMinX; x <= theMaxX; x++) {
-        for (long y = theMinY; y <= theMaxY; y++) {
-            EEMapTile* theTile = theMap->GetTile(x, y);
-            if (theTile == NULL)
-                continue;
-            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                EEComplexUnit* theUnit = theNode->mUnit->GetComplexUnit();
-                if (theUnit == NULL || theUnit == theThis || theUnit->mIsCollidable == 0 || theUnit->mHitPoints <= 0
-                    || theUnit->IsFoundation())
-                    continue;
-                EEUnitClass* theOther = theUnit->mUnitClass;
-                if (theFlag != theOther->FliesOver())
-                    continue;
-                if (theAir != theOther->IsAirCategory())
-                    continue;
-                if ((theClass->mDomains ^ theOther->mDomains) & 0xc)
-                    continue;
-                if ((theClass->mDomains & kMovementSpace) && (theClass->mCategory == kUnitCategoryPlanetSpaceship || theOther->mCategory == kUnitCategoryPlanetSpaceship))
-                    continue;
-                theThis->AddContact(theUnit);
-                theUnit->AddContact(theThis);
-            }
-        }
-    }
+    ee_units_cu_body(EE_UNITS_CU_DO_FIND_CONTACTS, this, 0, 0, 0);   // cu_body.rs
 }
 
 // Returns whether the unit accepts the resource type (any, or the one it carries)
@@ -560,74 +485,7 @@ bool EEComplexUnit::CanTake(EEComplexUnit* inCargo, unsigned long inValue)
 // Removes the unit from play: drops its path, goals, queues, sound and every unit reference it holds
 void EEComplexUnit::Invalidate()
 {
-    if (this->mCurrentResearch != kTechNone)
-        this->PlayEffect(100000);
-    this->DropPath();
-    gSoundManager->Stop(this->mSound, false);
-    if (this->mSound)
-        this->mSound->Dereference();
-    this->mSound = NULL;
-    for (unsigned long i = 0; i < this->mGoalQueues.size(); i++)
-        this->ClearGoalQueue(i);
-    for (unsigned long j = 0; j < this->mCitizenBuildQueue.size(); j++)
-        this->mCitizenBuildQueue[j]->Dereference();
-    this->mCitizenBuildQueue.clear();
-    if (this->mOwner)
-        this->mOwner->Dereference();
-    this->mOwner = NULL;
-    if (this->mLastAttacker)
-        this->mLastAttacker->Dereference();
-    this->mLastAttacker = NULL;
-    if (this->mPatrolGroup) {
-        ee_units_pg_remove(this->mPatrolGroup, this);
-        if (this->mPatrolGroup) {
-            ee_units_pg_dereference(this->mPatrolGroup);
-            this->mPatrolGroup = NULL;
-        }
-    }
-    if (this->mPreviousPart) {
-        this->mPreviousPart->Dereference();
-        this->mPreviousPart = NULL;
-    }
-    if (this->mNextPart) {
-        this->mNextPart->Dereference();
-        this->mNextPart = NULL;
-    }
-    if (this->mHomeBase) {
-        this->mHomeBase->Dereference();
-        this->mHomeBase = NULL;
-    }
-    if (this->mContainer) {
-        this->mContainer->Dereference();
-        this->mContainer = NULL;
-    }
-    if (this->mMine) {
-        this->mMine->Dereference();
-        this->mMine = NULL;
-    }
-    if (this->mOwner)
-        this->mOwner->Dereference();
-    this->mOwner = NULL;
-    if (this->mLastAttacker)
-        this->mLastAttacker->Dereference();
-    this->mLastAttacker = NULL;
-    this->ClearContacts();
-    this->mActiveGoal = NULL;
-    this->mGoalState = NULL;
-    if (this->mHolder) {
-        this->mHolder->ReleaseHeld(this);
-        this->ClearHolder();
-    } else
-        this->ReleaseHeldUnits();
-    this->mIgnoredTargets.clear();
-    if (this->mSound) {
-        gSoundManager->Stop(this->mSound, false);
-        this->ReleaseSound();
-    }
-    EEUnit::Remove(this->mIsFoundation);
-    if (!this->GetUnitClass()->IsLandBuilding() || this->mIsBuilt == true || ((gWorldClearing == true || UShutdownInProgress() == true) && this->mIsFoundation))
-        this->mPlayer->UnloadUnitClassButtons(this->GetUnitClass()->GetUnitType());
-    this->mIsFoundation = false;
+    ee_units_cu_body(EE_UNITS_CU_DO_INVALIDATE, this, 0, 0, 0);   // cu_body.rs
 }
 
 // Releases the unit's sound instance
@@ -1792,107 +1650,7 @@ void EEComplexUnit::Init(EEUnitClass* inClass, const GETransformation& inPlaceme
 // and effects, then kills its later parts and spawns its death and remains units
 void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
 {
-    std::vector<EETileCoordinate> theTiles;
-    bool theSuppress = inKeepResearch || inOther;
-    if (this->mHitPoints == 0)
-        return;
-    this->mPlayer->UnitTaken(this, theSuppress);
-    if (inKilled && !gWorldClearing) {
-        EEUnitSet* theSet = gUnitSetManager.GetSet(0x92);
-        if (theSet != NULL && theSet->Contains(this->GetUnitClass()->GetUnitType())) {
-            for (unsigned long i = 0; (unsigned short)i < ::gWorld.mNumPlayers; i++) {
-                EEPlayer* thePlayer = ::gWorld.mPlayers[(unsigned short)i];
-                if (thePlayer != NULL && thePlayer->mEnemies[this->mPlayer->mPlayerID] == 1)
-                    thePlayer->UpdateFreeUnitPower();
-            }
-            ESDebugOut("EEComplexUnit::Kill - Increment dead citizen count - type - %ld\n", this->GetUnitClass()->GetUnitType());
-        }
-    }
-    if (this->GetUnitClass()->mIsInactive)
-        ::gWorld.ActivateUnit(this);
-    bool theRefund = true;
-    if (this->mPreviousPart == NULL && !UShutdownInProgress()) {
-        long theState = gPhysics->GetUnitSwapKind(this);
-        bool theSpecial = theState == 5 || theState == 6 || theState == 7 || theState == 8;
-        if (theState != 1) {
-            if (inKilled || theSpecial) {
-                if (this->GetUnitClass()->GetUnitType() != kUnitTypePathPoint && !theSpecial) {
-                    long theCategory = this->GetUnitClass()->mCategory;
-                    long theSeries = theCategory == kUnitCategoryBuilding || theCategory == kUnitCategoryBuilding19 || theCategory == kUnitCategoryGate ||
-                        theCategory == kUnitCategoryMiningBuilding || theCategory == kUnitCategoryFortress ? 1 : 4;
-                    this->mPlayer->mSavedGroups.Reset(theSeries, 1);
-                }
-                long theSeries = EEAddDeadUnitStatistic(this);
-                if (theSeries != 0)
-                    this->mPlayer->mSavedGroups.Lower(theSeries, 1);
-            } else
-                theRefund = false;
-        }
-    }
-    if (theRefund && inKilled && !theSuppress && gCivPowersManager.HasPower(this->GetPlayer(), kCivPowerInsurance)) {
-        EECivPower thePower;
-        if (gCivPowersManager.GetPower(kCivPowerInsurance, thePower) &&
-            gUnitSetManager.Contains(this->GetUnitClass()->GetUnitType(), thePower.mUnitSet) &&
-            (this->GetUnitClass()->GetUnitType() != kUnitTypeFarm || this->mIsBuilt))
-            this->PayInsurance(thePower.mAmount);
-    }
-    if (this->mLastAttacker != NULL)
-        this->mLastAttacker->Dereference();
-    this->mLastAttacker = NULL;
-    if (this->mOwner != NULL)
-        this->mOwner->Dereference();
-    this->mOwner = NULL;
-    this->UpdateJITManufacturing();
-    this->ClearContacts();
-    this->KillCargo();
-    this->ClearGarrison();
-    if (this->mHolder != NULL) {
-        this->mHolder->ReleaseHeld(this);
-        if (this->mHolder != NULL)
-            this->mHolder->Dereference();
-        this->mHolder = NULL;
-    } else
-        this->ReleaseHeldUnits();
-    gPathManager.CancelPaths(this, true);
-    this->DropPath();
-    if (this->GetUnitClass()->mAirTrafficType != 0) {
-        if (this->GetUnitClass()->IsAirBase())
-            ee_units_atc_remove_airport(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this);
-        else
-            ee_units_atc_remove_cargo_weight(this->mPlayer->mAirTraffic[this->GetUnitClass()->mAirTrafficType - 1], this);
-    }
-    this->ClearCollisionState();
-    this->StartAction(inKilled ? 6000 : 6003);
-    this->GetUnitClass()->ActionChanged(this);
-    if (this->mNextPart != NULL)
-        this->mNextPart->Kill(inKilled, false, false);
-    if (!theSuppress) {
-        if (this->GetUnitClass()->mDeathSpawnClass != NULL && !gWorldClearing && !gFreeCamera)
-            this->GetUnitClass()->CreateDeathUnit(this);
-        if (this->GetUnitClass()->mRemainsClass != NULL && !this->GetUnitClass()->mIsProjectile && !gWorldClearing && !gFreeCamera)
-            this->GetUnitClass()->CreateRemainsUnit(this);
-    }
-    if (this->mContainer != NULL)
-        this->mContainer->ReleaseCargo(this);
-    this->SetGatheredResource(NULL);
-    this->SetBlockingUnit(NULL);
-    this->SetLastResource(NULL);
-    if (!inKeepResearch)
-        this->CancelQueuedProduction();
-    for (unsigned long i = 0; i < this->mGoalQueues.size(); i++)
-        this->ClearGoalQueue(i);
-    this->mAffectingAreaEffects.KeepStrongest();
-    this->mAffectingAreaEffects.Clear();
-    this->mAffectingAreaEffects.mItems.clear();
-    this->mAreaEffects.Clear();
-    this->mAreaEffects.mItems.clear();
-    this->ReleaseConversionEffect();
-    this->ReleaseHealEffect();
-    this->ClearTint();
-    this->ReleaseFireEffect();
-    this->mGoalState = NULL;
-    this->mActiveGoal = NULL;
-    EEUnit::Kill(inKilled, inKeepResearch, inOther);
+    ee_units_cu_body(EE_UNITS_CU_DO_KILL, this, inKilled | inKeepResearch << 1 | inOther << 2, 0, 0);   // cu_body.rs
 }
 
 
@@ -2642,63 +2400,7 @@ void EEComplexUnit::TakeOffMap()
 // refunding unavailable entries
 void EEComplexUnit::StartProduction()
 {
-    float theTimeScale = 1.0f;
-    do {
-        EEPlayer* thePlayer = this->GetPlayer();
-        if (this->mIsBuilt != true)
-            return;
-        long theTechnology = this->mBuildQueue.front().mTechnology;
-        unsigned long theFlags = this->mBuildQueue.front().mFlag;
-        EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(theTechnology);
-        if (theNode->GetIsAvailable() == true) {
-            bool theAllowed = thePlayer->CanProduce(theTechnology, this->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
-            if (!theAllowed)
-                return;
-            if (theNode->mData->mMakesUnit) {
-                long theType = theNode->mData->mUnitClass;
-                EEUnitClass* theClass = gUnitClassTable[theType];
-                theTimeScale = this->GetPlayer()->GetUpgrade(theType)->mBuildTimeScale;
-                if (theClass->IsAircraft()) {
-                    EeUnitsAtc* theTraffic = this->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1];
-                    theAllowed = theClass->mWeight <= ee_units_atc_cargo(theTraffic, 0) - ee_units_atc_cargo(theTraffic, 1);
-                }
-            }
-            if (!theAllowed)
-                return;
-            if (theNode->mData->mMakesUnit == true && gUnitClassTable[theNode->mData->mUnitClass]->mUnitType == kUnitTypeCitizen
-                && gPhysics->mRandom.Generate() >= 0.5f) {
-                // gUnitClassTable[kUnitTypeFemaleCitizen] is a slot of the class-pointer table, not a separate global
-                EEUnitClass* theOther = gUnitClassTable[kUnitTypeFemaleCitizen];
-                if (theOther != NULL && this->GetPlayer()->GetTechTree()->Get(theOther->GetTechnology()) != NULL
-                    && this->GetPlayer()->GetTechTree()->Get(theOther->GetTechnology())->GetIsAvailable())
-                    theTechnology = theOther->GetTechnology();
-            }
-            this->PlayEffect(theTechnology);
-            if (!this->GetPlayer()->mInstantBuild) {
-                if (!(theFlags & 1) || !theNode->mData->mMakesUnit)
-                    this->mProductionTime = UMFloatToLong((float)theNode->GetBuildTime() * theTimeScale);
-                else
-                    this->mProductionTime = 2;
-            } else
-                this->mProductionTime = 1;
-            if (theNode->mData->mUnitClass <= 0)
-                gUserInterface->UpdateJITManufacturing();
-            this->mBuildQueue.erase(this->mBuildQueue.begin());
-            return;
-        }
-        while (!theNode->GetIsAvailable()) {
-            // every dropped entry is refunded, the last one too
-            this->mBuildQueue.erase(this->mBuildQueue.begin());
-            if (theNode->mData->mUnitClass <= 0)
-                gUserInterface->UpdateJITManufacturing();
-            this->GetPlayer()->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
-            if (this->mBuildQueue.empty())
-                break;
-            theNode = this->GetPlayer()->GetTechTree()->Get(this->mBuildQueue.front().mTechnology);
-        }
-        if (this->mBuildQueue.empty())
-            return;
-    } while (true);
+    ee_units_cu_body(EE_UNITS_CU_DO_START_PRODUCTION, this, 0, 0, 0);   // cu_body.rs
 }
 
 // Returns true if the class uses air traffic control and is not a building
@@ -2710,64 +2412,13 @@ bool EEUnitClass::IsAircraft()
 // Switches the unit to an action and updates its camouflage; a dying unit refuses any non-dying action
 void EEComplexUnit::StartAction(long inAction)
 {
-    if (this->mCommand != NULL && !this->GetUnitClass()->IsLandBuilding()) {
-        unsigned long theAction = this->GetCommandType();
-        if (theAction >= kActionDying && theAction <= kActionKill &&
-            ((unsigned long)inAction < kActionDying || (unsigned long)inAction > kActionKill)) {
-            return;
-        }
-    }
-    this->UpdateCamouflage(inAction);
-    this->mCommand = this->GetUnitClass()->FindAction(inAction);
+    ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, this, inAction, 0, 0);   // cu_body.rs
 }
 
 // Switches the unit's animation and frame, stops its sound and plays the new frame's sound
 void EEComplexUnit::SetAnimation(long inPart, long inFrame, bool inIsAnimationPaused)
 {
-    EESoundObject* theSoundObject;
-    float theVolume;
-    float thePan;
-    float thePitch;
-    // The frame sounds: EEGraphicObject mSounds1/mSounds2 play at the frames mSound1Frames/mSound2Frames
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    EEModel* theModel = this->GetModel();
-    this->GetPosition(thePosition);
-    long theFrame = inFrame == -1 ? theModel->mStartFrames[inPart] : inFrame;
-    if (this->mAnimation == 0xd && inPart == this->mAnimation)
-        return;
-    if (this->mAnimation == 2 && inPart == 2)
-        return;
-    if (this->mAnimation == 2 && inPart == 2)  // the original tests this twice
-        return;
-    this->mAnimation = inPart;
-    if (!this->mIsFoundation) {
-        this->mPhysicalModel.SetModel(theModel->mModels[inPart]);
-        this->mPhysicalModel.SetFrame(theFrame);
-    }
-    this->mAnimationTime = 0;
-    this->mIsAnimationPaused = inIsAnimationPaused;
-    this->SetNextFrame(theFrame == (long)theModel->mLastFrames[inPart] ? theModel->mStartFrames[inPart] : theFrame + 1);
-    SESMInstanceNode* theSound = this->mSound;
-    if (theSound) {
-        gSoundManager->Stop(theSound, !gSoundManager->GetIsLooping(theSound));
-        this->ReleaseSound();
-    }
-    if (inIsAnimationPaused)
-        return;
-    if (this->mPhysicalModel.GetFrame() == theModel->mSound1Frames[inPart])
-        theSoundObject = theModel->mSounds1[inPart];
-    else if (this->mPhysicalModel.GetFrame() == theModel->mSound2Frames[inPart])
-        theSoundObject = theModel->mSounds2[inPart];
-    else
-        return;
-    if (theSoundObject == NULL)
-        return;
-    this->GetUnitClass()->GetSoundParameters(this, theSoundObject, &theVolume, &thePan, &thePitch);
-    this->SetSound(gSoundManager->PlayAndReturnReferencedNode(theSoundObject->GetSampleID(), theVolume, thePan,
-                                                        thePitch, theSoundObject->GetLooping(),
-                                                        const_cast<char*>((const char*)this->GetUnitClass()->mName)));
-    if (this->mSound != NULL)
-        this->mSound->Dereference();
+    ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, this, inPart, inFrame, inIsAnimationPaused);   // cu_body.rs
 }
 
 // Sets the unit's mine (reference counted)
@@ -2797,33 +2448,7 @@ void EEComplexUnit::SetBlockingUnit(RTSUnit* inUnit)
 // (a granary replants farms) and pays for it
 void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButtons)
 {
-    // NEAR: the arguments are read as bytes (bools in the original; EEUnit.h declares them long)
-    EEComplexUnit* theUnit = this;
-    do {
-        RTSPlayer* theOwner = theUnit->mPlayer;
-        EEPlayer* thePlayer = dynamic_cast<EEPlayer*>(theOwner);
-        if (inIsBuilt && !theUnit->mIsBuilt) {
-            if (theUnit->mUnitClass->IsLandBuilding() && inUpdateSight)
-                theUnit->SightOff(theUnit->GetTileX(), theUnit->GetTileY());
-            theUnit->mIsBuilt = inIsBuilt != 0;
-            if (inUpdateSight)
-                theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY());
-            if (thePlayer) {
-                if (theUnit->mUnitClass->mAirTrafficType != 0)
-                    ee_units_atc_add_airport(thePlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1], theUnit);
-                thePlayer->UnitCompleted(theUnit);
-                long theType = theUnit->mUnitClass->GetUnitType();
-                if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
-                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theUnit->mUnitID}), kSlotNone);
-            }
-            if (inLoadButtons == 1)
-                theUnit->mPlayer->LoadUnitClassButtons(theUnit->mUnitClass->GetUnitType());
-        } else
-            theUnit->mIsBuilt = inIsBuilt != 0;
-        if (inIsBuilt)
-            theUnit->mIsPaidFor = true;
-        theUnit = theUnit->mNextPart;
-    } while (theUnit);
+    ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, this, inIsBuilt, inUpdateSight, inLoadButtons);   // cu_body.rs
 }
 
 // Sets the resource the unit gathers, releasing the old one and sending a gatherer waiting for it
@@ -3485,4 +3110,265 @@ void EEComplexUnit::DescribeLong(class UWideString &)
 
 void EEComplexUnit::FnE123D()
 {
+}
+
+// PayInsurance's notice: "You have received <amount> <resource> in insurance" in the player's colour
+static void EEInsuranceChat(EEPlayer* inPlayer, unsigned long inResource, long inShownValue)
+{
+    char theAmount[64];
+    sprintf(theAmount, "%ld", inShownValue);
+    UWideString theText;
+    UWideString thePart;
+    gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText);
+    theText += theAmount;
+    theText += " ";
+    gResource->GetString(inResource + IDS_RESOURCE_NAME_BASE, thePart);
+    theText += thePart;
+    gResource->GetString(IDS_IN_INSURANCE, thePart);
+    theText += thePart;
+    gUserInterface->AddChatLogEntry(inPlayer->mColor, UWideString(gEmptyString), theText, 5000, 2);
+}
+
+// Kill's civilization power (EE_UNITS_CU_GET_INSURANCE fills it for the two reads after it)
+static EECivPower sInsurancePower;
+
+template <class T> static T* EECuObject(uint64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
+}
+
+// The C++ of EEComplexUnit's Rust bodies (ee_units cu_body.rs; EE_UNITS_CU_*): one statement of the original bodies
+// each, in their order; inA an object, inB and inC values, ioF floats in and out
+extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC, float (*ioF)[4])
+{
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = EECuObject<EEComplexUnit>(inA);
+    EEUnitClass* theClass = inA != 0 ? EECuObject<EEUnitClass>(inA) : theUnit->GetUnitClass();
+    EEModel* theModel = EECuObject<EEModel>(inA);
+    EETechTreeNode* theNode = EECuObject<EETechTreeNode>(inA);
+    EEPlayer* thePlayer = EECuObject<EEPlayer>(inA);
+    float* f = *ioF;
+    switch (inOp) {
+    // Kill's
+    case EE_UNITS_CU_HIT_POINTS: return theUnit->mHitPoints;
+    case EE_UNITS_CU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;
+    case EE_UNITS_CU_WORLD_CLEARING: return gWorldClearing;
+    case EE_UNITS_CU_UNIT_SET: return (uint64_t)(uintptr_t)gUnitSetManager.GetSet((unsigned long)inB);
+    case EE_UNITS_CU_SET_HAS_TYPE: return EECuObject<EEUnitSet>(inA)->Contains(theUnit->GetUnitClass()->GetUnitType());
+    case EE_UNITS_CU_NUM_PLAYERS: return ::gWorld.mNumPlayers;
+    case EE_UNITS_CU_PLAYER_AT: return (uint64_t)(uintptr_t)::gWorld.mPlayers[(unsigned short)inB];
+    case EE_UNITS_CU_ENEMY_STATE: return thePlayer->mEnemies[theUnit->mPlayer->mPlayerID];
+    case EE_UNITS_CU_UPDATE_FREE_UNIT_POWER: thePlayer->UpdateFreeUnitPower(); return 0;
+    case EE_UNITS_CU_DEBUG_DEAD_CITIZEN:
+        ESDebugOut("EEComplexUnit::Kill - Increment dead citizen count - type - %ld\n", theUnit->GetUnitClass()->GetUnitType());
+        return 0;
+    case EE_UNITS_CU_CLASS_INACTIVE: return theUnit->GetUnitClass()->mIsInactive;
+    case EE_UNITS_CU_ACTIVATE: ::gWorld.ActivateUnit(theUnit); return 0;
+    case EE_UNITS_CU_PREVIOUS_PART: return (uint64_t)(uintptr_t)theUnit->mPreviousPart;
+    case EE_UNITS_CU_SHUTDOWN: return UShutdownInProgress();
+    case EE_UNITS_CU_SWAP_KIND: return gPhysics->GetUnitSwapKind(theUnit);
+    case EE_UNITS_CU_UNIT_TYPE: return theUnit->GetUnitClass()->GetUnitType();
+    case EE_UNITS_CU_CATEGORY: return theUnit->GetUnitClass()->mCategory;
+    case EE_UNITS_CU_STATS_RESET: theUnit->mPlayer->mSavedGroups.Reset((long)inB, 1); return 0;
+    case EE_UNITS_CU_ADD_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theUnit);
+    case EE_UNITS_CU_STATS_LOWER: theUnit->mPlayer->mSavedGroups.Lower((long)inB, 1); return 0;
+    case EE_UNITS_CU_HAS_INSURANCE: return gCivPowersManager.HasPower(theUnit->GetPlayer(), kCivPowerInsurance);
+    case EE_UNITS_CU_GET_INSURANCE: return gCivPowersManager.GetPower(kCivPowerInsurance, sInsurancePower);
+    case EE_UNITS_CU_INSURANCE_COVERS:
+        return gUnitSetManager.Contains(theUnit->GetUnitClass()->GetUnitType(), sInsurancePower.mUnitSet);
+    case EE_UNITS_CU_INSURANCE_AMOUNT: return EECuBits(sInsurancePower.mAmount);
+    case EE_UNITS_CU_IS_BUILT: return theUnit->mIsBuilt;
+    case EE_UNITS_CU_PAY_INSURANCE: theUnit->PayInsurance(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_LAST_ATTACKER: return (uint64_t)(uintptr_t)theUnit->mLastAttacker;
+    case EE_UNITS_CU_DEREFERENCE: EECuObject<RTSUnit>(inA)->Dereference(); return 0;
+    case EE_UNITS_CU_CLEAR_LAST_ATTACKER: theUnit->mLastAttacker = NULL; return 0;
+    case EE_UNITS_CU_OWNER: return (uint64_t)(uintptr_t)theUnit->mOwner;
+    case EE_UNITS_CU_CLEAR_OWNER: theUnit->mOwner = NULL; return 0;
+    case EE_UNITS_CU_UPDATE_JIT: theUnit->UpdateJITManufacturing(); return 0;
+    case EE_UNITS_CU_CLEAR_CONTACTS: theUnit->ClearContacts(); return 0;
+    case EE_UNITS_CU_KILL_CARGO: theUnit->KillCargo(); return 0;
+    case EE_UNITS_CU_CLEAR_GARRISON: theUnit->ClearGarrison(); return 0;
+    case EE_UNITS_CU_HOLDER: return (uint64_t)(uintptr_t)theUnit->mHolder;
+    case EE_UNITS_CU_HOLDER_RELEASE: theUnit->mHolder->ReleaseHeld(theUnit); return 0;
+    case EE_UNITS_CU_CLEAR_HOLDER_FIELD: theUnit->mHolder = NULL; return 0;
+    case EE_UNITS_CU_RELEASE_HELD_UNITS: theUnit->ReleaseHeldUnits(); return 0;
+    case EE_UNITS_CU_CANCEL_PATHS: gPathManager.CancelPaths(theUnit, true); return 0;
+    case EE_UNITS_CU_DROP_PATH: theUnit->DropPath(); return 0;
+    case EE_UNITS_CU_AIR_TRAFFIC_TYPE: return theUnit->GetUnitClass()->mAirTrafficType;
+    case EE_UNITS_CU_IS_AIR_BASE: return theUnit->GetUnitClass()->IsAirBase();
+    case EE_UNITS_CU_ATC_REMOVE_AIRPORT: ee_units_atc_remove_airport(theUnit->mPlayer->mAirTraffic[inB - 1], theUnit); return 0;
+    case EE_UNITS_CU_ATC_REMOVE_CARGO: ee_units_atc_remove_cargo_weight(theUnit->mPlayer->mAirTraffic[inB - 1], theUnit); return 0;
+    case EE_UNITS_CU_CLEAR_COLLISION: theUnit->ClearCollisionState(); return 0;
+    case EE_UNITS_CU_START_ACTION: theUnit->StartAction((long)inB); return 0;
+    case EE_UNITS_CU_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
+    case EE_UNITS_CU_NEXT_PART: return (uint64_t)(uintptr_t)theUnit->mNextPart;
+    case EE_UNITS_CU_KILL_PART: theOther->Kill(inB != 0, false, false); return 0;
+    case EE_UNITS_CU_HAS_DEATH_SPAWN: return theUnit->GetUnitClass()->mDeathSpawnClass != NULL;
+    case EE_UNITS_CU_FREE_CAMERA: return gFreeCamera;
+    case EE_UNITS_CU_CREATE_DEATH_UNIT: theUnit->GetUnitClass()->CreateDeathUnit(theUnit); return 0;
+    case EE_UNITS_CU_HAS_REMAINS: return theUnit->GetUnitClass()->mRemainsClass != NULL;
+    case EE_UNITS_CU_IS_PROJECTILE: return theUnit->GetUnitClass()->mIsProjectile;
+    case EE_UNITS_CU_CREATE_REMAINS_UNIT: theUnit->GetUnitClass()->CreateRemainsUnit(theUnit); return 0;
+    case EE_UNITS_CU_CONTAINER: return (uint64_t)(uintptr_t)theUnit->mContainer;
+    case EE_UNITS_CU_CONTAINER_RELEASE: theUnit->mContainer->ReleaseCargo(theUnit); return 0;
+    case EE_UNITS_CU_CLEAR_GATHERED: theUnit->SetGatheredResource(NULL); return 0;
+    case EE_UNITS_CU_CLEAR_BLOCKING: theUnit->SetBlockingUnit(NULL); return 0;
+    case EE_UNITS_CU_CLEAR_LAST_RESOURCE: theUnit->SetLastResource(NULL); return 0;
+    case EE_UNITS_CU_CANCEL_QUEUED_PRODUCTION: theUnit->CancelQueuedProduction(); return 0;
+    case EE_UNITS_CU_GOAL_QUEUE_COUNT: return theUnit->mGoalQueues.size();
+    case EE_UNITS_CU_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
+    case EE_UNITS_CU_AFFECTING_KEEP_STRONGEST: theUnit->mAffectingAreaEffects.KeepStrongest(); return 0;
+    case EE_UNITS_CU_AFFECTING_CLEAR: theUnit->mAffectingAreaEffects.Clear(); return 0;
+    case EE_UNITS_CU_AFFECTING_ITEMS_CLEAR: theUnit->mAffectingAreaEffects.mItems.clear(); return 0;
+    case EE_UNITS_CU_AREA_EFFECTS_CLEAR: theUnit->mAreaEffects.Clear(); return 0;
+    case EE_UNITS_CU_AREA_EFFECTS_ITEMS_CLEAR: theUnit->mAreaEffects.mItems.clear(); return 0;
+    case EE_UNITS_CU_RELEASE_CONVERSION_EFFECT: theUnit->ReleaseConversionEffect(); return 0;
+    case EE_UNITS_CU_RELEASE_HEAL_EFFECT: theUnit->ReleaseHealEffect(); return 0;
+    case EE_UNITS_CU_CLEAR_TINT: theUnit->ClearTint(); return 0;
+    case EE_UNITS_CU_RELEASE_FIRE_EFFECT: theUnit->ReleaseFireEffect(); return 0;
+    case EE_UNITS_CU_CLEAR_GOAL_STATE: theUnit->mGoalState = NULL; return 0;
+    case EE_UNITS_CU_CLEAR_ACTIVE_GOAL: theUnit->mActiveGoal = NULL; return 0;
+    case EE_UNITS_CU_UNIT_KILL: theUnit->EEUnit::Kill((inB & 1) != 0, (inB & 2) != 0, (inB & 4) != 0); return 0;
+    // Invalidate's
+    case EE_UNITS_CU_CURRENT_RESEARCH: return theUnit->mCurrentResearch;
+    case EE_UNITS_CU_PLAY_EFFECT: theUnit->PlayEffect((long)inB); return 0;
+    case EE_UNITS_CU_SOUND_STOP: gSoundManager->Stop(theUnit->mSound, false); return 0;
+    case EE_UNITS_CU_SOUND: return (uint64_t)(uintptr_t)theUnit->mSound;
+    case EE_UNITS_CU_SOUND_DEREFERENCE: theUnit->mSound->Dereference(); return 0;
+    case EE_UNITS_CU_CLEAR_SOUND: theUnit->mSound = NULL; return 0;
+    case EE_UNITS_CU_BUILD_TARGET_COUNT: return theUnit->mCitizenBuildQueue.size();
+    case EE_UNITS_CU_BUILD_TARGET_DEREFERENCE: theUnit->mCitizenBuildQueue[(size_t)inB]->Dereference(); return 0;
+    case EE_UNITS_CU_BUILD_TARGETS_CLEAR: theUnit->mCitizenBuildQueue.clear(); return 0;
+    case EE_UNITS_CU_PATROL_GROUP: return (uint64_t)(uintptr_t)theUnit->mPatrolGroup;
+    case EE_UNITS_CU_PATROL_REMOVE: ee_units_pg_remove(theUnit->mPatrolGroup, theUnit); return 0;
+    case EE_UNITS_CU_PATROL_DEREFERENCE: ee_units_pg_dereference(theUnit->mPatrolGroup); return 0;
+    case EE_UNITS_CU_CLEAR_PATROL_GROUP: theUnit->mPatrolGroup = NULL; return 0;
+    case EE_UNITS_CU_CLEAR_PREVIOUS_PART: theUnit->mPreviousPart = NULL; return 0;
+    case EE_UNITS_CU_CLEAR_NEXT_PART: theUnit->mNextPart = NULL; return 0;
+    case EE_UNITS_CU_HOME_BASE: return (uint64_t)(uintptr_t)theUnit->mHomeBase;
+    case EE_UNITS_CU_CLEAR_HOME_BASE: theUnit->mHomeBase = NULL; return 0;
+    case EE_UNITS_CU_CLEAR_CONTAINER: theUnit->mContainer = NULL; return 0;
+    case EE_UNITS_CU_MINE: return (uint64_t)(uintptr_t)theUnit->mMine;
+    case EE_UNITS_CU_CLEAR_MINE: theUnit->mMine = NULL; return 0;
+    case EE_UNITS_CU_CLEAR_HOLDER: theUnit->ClearHolder(); return 0;
+    case EE_UNITS_CU_IGNORED_CLEAR: theUnit->mIgnoredTargets.clear(); return 0;
+    case EE_UNITS_CU_RELEASE_SOUND: theUnit->ReleaseSound(); return 0;
+    case EE_UNITS_CU_UNIT_REMOVE: theUnit->EEUnit::Remove(theUnit->mIsFoundation); return 0;
+    case EE_UNITS_CU_IS_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
+    case EE_UNITS_CU_FOUNDATION_FIELD: return theUnit->mIsFoundation;
+    case EE_UNITS_CU_UNLOAD_BUTTONS: theUnit->mPlayer->UnloadUnitClassButtons(theUnit->GetUnitClass()->GetUnitType()); return 0;
+    case EE_UNITS_CU_CLEAR_FOUNDATION: theUnit->mIsFoundation = false; return 0;
+    // StartProduction's
+    case EE_UNITS_CU_QUEUE_FRONT_TECHNOLOGY: return theUnit->mBuildQueue.front().mTechnology;
+    case EE_UNITS_CU_QUEUE_FRONT_FLAG: return theUnit->mBuildQueue.front().mFlag;
+    case EE_UNITS_CU_TECH_NODE: return (uint64_t)(uintptr_t)theUnit->GetPlayer()->GetTechTree()->Get((long)inB);
+    case EE_UNITS_CU_NODE_AVAILABLE: return theNode->GetIsAvailable() == true;
+    case EE_UNITS_CU_CAN_PRODUCE: return theUnit->GetPlayer()->CanProduce((long)inB, theUnit->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
+    case EE_UNITS_CU_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
+    case EE_UNITS_CU_NODE_UNIT_CLASS: return theNode->mData->mUnitClass;
+    case EE_UNITS_CU_CLASS_TABLE: return (uint64_t)(uintptr_t)gUnitClassTable[(long)inB];
+    case EE_UNITS_CU_BUILD_TIME_SCALE: return EECuBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
+    case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
+    case EE_UNITS_CU_CLASS_WEIGHT: return theClass->mWeight;
+    case EE_UNITS_CU_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], (int32_t)inB);
+    case EE_UNITS_CU_CLASS_UNIT_TYPE: return theClass->mUnitType;
+    case EE_UNITS_CU_RANDOM: return EECuBits(gPhysics->mRandom.Generate());
+    case EE_UNITS_CU_CLASS_TECHNOLOGY: return theClass->GetTechnology();
+    case EE_UNITS_CU_INSTANT_BUILD: return theUnit->GetPlayer()->mInstantBuild;
+    case EE_UNITS_CU_NODE_BUILD_TIME: return theNode->GetBuildTime();
+    case EE_UNITS_CU_SET_PRODUCTION_TIME: theUnit->mProductionTime = (long)inB; return 0;
+    case EE_UNITS_CU_UI_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
+    case EE_UNITS_CU_QUEUE_POP_FRONT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin()); return 0;
+    case EE_UNITS_CU_REFUND_TECHNOLOGY:
+        theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        return 0;
+    case EE_UNITS_CU_QUEUE_EMPTY: return theUnit->mBuildQueue.empty();
+    // SetBuilt's (inA the part)
+    case EE_UNITS_CU_EE_PLAYER: return (uint64_t)(uintptr_t)dynamic_cast<EEPlayer*>(theOther->mPlayer);
+    case EE_UNITS_CU_PART_IS_BUILT: return theOther->mIsBuilt;
+    case EE_UNITS_CU_PART_IS_LAND_BUILDING: return theOther->mUnitClass->IsLandBuilding();
+    case EE_UNITS_CU_PART_SIGHT_OFF: theOther->SightOff(theOther->GetTileX(), theOther->GetTileY()); return 0;
+    case EE_UNITS_CU_PART_SET_BUILT: theOther->mIsBuilt = inB != 0; return 0;
+    case EE_UNITS_CU_PART_SIGHT_ON: theOther->SightOn(theOther->GetTileX(), theOther->GetTileY()); return 0;
+    case EE_UNITS_CU_PART_AIR_TRAFFIC_TYPE: return theOther->mUnitClass->mAirTrafficType;
+    case EE_UNITS_CU_PART_ATC_ADD_AIRPORT:
+        ee_units_atc_add_airport(EECuObject<EEPlayer>((uint64_t)inB)->mAirTraffic[inC - 1], theOther);
+        return 0;
+    case EE_UNITS_CU_PART_UNIT_COMPLETED: EECuObject<EEPlayer>((uint64_t)inB)->UnitCompleted(theOther); return 0;
+    case EE_UNITS_CU_PART_UNIT_TYPE: return theOther->mUnitClass->GetUnitType();
+    case EE_UNITS_CU_PART_REPLANT:
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theOther->mUnitID}), kSlotNone);
+        return 0;
+    case EE_UNITS_CU_PART_LOAD_BUTTONS: theOther->mPlayer->LoadUnitClassButtons(theOther->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_CU_PART_PAID: theOther->mIsPaidFor = true; return 0;
+    case EE_UNITS_CU_PART_NEXT: return (uint64_t)(uintptr_t)theOther->mNextPart;
+    // StartAction's
+    case EE_UNITS_CU_HAS_COMMAND: return theUnit->mCommand != NULL;
+    case EE_UNITS_CU_COMMAND_TYPE: return theUnit->GetCommandType();
+    case EE_UNITS_CU_UPDATE_CAMOUFLAGE: theUnit->UpdateCamouflage((long)inB); return 0;
+    case EE_UNITS_CU_SET_COMMAND: theUnit->mCommand = theUnit->GetUnitClass()->FindAction((long)inB); return 0;
+    // SetAnimation's (inA the model)
+    case EE_UNITS_CU_MODEL: return (uint64_t)(uintptr_t)theUnit->GetModel();
+    case EE_UNITS_CU_MODEL_START_FRAME: return (long)theModel->mStartFrames[inB];
+    case EE_UNITS_CU_MODEL_LAST_FRAME: return (long)theModel->mLastFrames[inB];
+    case EE_UNITS_CU_ANIMATION: return theUnit->mAnimation;
+    case EE_UNITS_CU_SET_ANIMATION_FIELD: theUnit->mAnimation = (long)inB; return 0;
+    case EE_UNITS_CU_PM_SET_MODEL: theUnit->mPhysicalModel.SetModel(theModel->mModels[inB]); return 0;
+    case EE_UNITS_CU_PM_SET_FRAME: theUnit->mPhysicalModel.SetFrame((long)inB); return 0;
+    case EE_UNITS_CU_CLEAR_ANIMATION_TIME: theUnit->mAnimationTime = 0; return 0;
+    case EE_UNITS_CU_SET_PAUSED: theUnit->mIsAnimationPaused = inB != 0; return 0;
+    case EE_UNITS_CU_SET_NEXT_FRAME: theUnit->SetNextFrame((long)inB); return 0;
+    case EE_UNITS_CU_SOUND_STOP_UNLESS_LOOPING:
+        gSoundManager->Stop(theUnit->mSound, !gSoundManager->GetIsLooping(theUnit->mSound));
+        return 0;
+    case EE_UNITS_CU_PM_FRAME: return (long)theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_CU_MODEL_SOUND1_FRAME: return (long)theModel->mSound1Frames[inB];
+    case EE_UNITS_CU_MODEL_SOUND2_FRAME: return (long)theModel->mSound2Frames[inB];
+    case EE_UNITS_CU_MODEL_SOUND1: return (uint64_t)(uintptr_t)theModel->mSounds1[inB];
+    case EE_UNITS_CU_MODEL_SOUND2: return (uint64_t)(uintptr_t)theModel->mSounds2[inB];
+    case EE_UNITS_CU_SOUND_PARAMETERS:
+        theUnit->GetUnitClass()->GetSoundParameters(theUnit, EECuObject<EESoundObject>(inA), &f[0], &f[1], &f[2]);
+        return 0;
+    case EE_UNITS_CU_PLAY_FRAME_SOUND:
+        theUnit->SetSound(gSoundManager->PlayAndReturnReferencedNode(
+            EECuObject<EESoundObject>(inA)->GetSampleID(), f[0], f[1], f[2], EECuObject<EESoundObject>(inA)->GetLooping(),
+            const_cast<char*>((const char*)theUnit->GetUnitClass()->mName)));
+        return 0;
+    // PayInsurance's (inA the player)
+    case EE_UNITS_CU_PLAYER: return (uint64_t)(uintptr_t)theUnit->mPlayer;
+    case EE_UNITS_CU_CLASS_TECH_NODE: return (uint64_t)(uintptr_t)thePlayer->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
+    case EE_UNITS_CU_REFUND_TOTAL: return thePlayer->mInsuranceRefunds[inB];
+    case EE_UNITS_CU_RESOURCE: return thePlayer->mResourceCaps[inB];
+    case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY:
+        theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        return 0;
+    case EE_UNITS_CU_SET_REFUND_TOTAL: thePlayer->mInsuranceRefunds[inB] = (long)inC; return 0;
+    case EE_UNITS_CU_CURRENT_PLAYER: return (uint64_t)(uintptr_t)::gWorld.GetCurrentPlayer();
+    case EE_UNITS_CU_DISBAND_EFFECT:
+        gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0);
+        return 0;
+    case EE_UNITS_CU_INSURANCE_CHAT: EEInsuranceChat(thePlayer, (unsigned long)inB, (long)inC); return 0;
+    case EE_UNITS_CU_INSURANCE_SOUND: return (uint64_t)(uintptr_t)EESoundObject::Get(kSoundInsuranceCollected);
+    case EE_UNITS_CU_PLAY_AT_VOLUME:
+        EECuObject<EESoundObject>(inA)->Play(EECuObject<EESoundObject>(inA)->GetVolume(), 0.0f, 1.0f);
+        return 0;
+    // FindContacts' (inA a class, 0: the unit's; a tile, a node or another unit)
+    case EE_UNITS_CU_INNER_SPHERE: return EECuBits(theUnit->GetUnitClass()->GetInnerCollisionSphere());
+    case EE_UNITS_CU_FLIES_OVER: return theClass->FliesOver();
+    case EE_UNITS_CU_IS_AIR_CATEGORY: return theClass->IsAirCategory();
+    case EE_UNITS_CU_LOCATION_X: return EECuBits(theUnit->mPhysicalModel.GetLocation().GetX());
+    case EE_UNITS_CU_LOCATION_Y: return EECuBits(theUnit->mPhysicalModel.GetLocation().GetY());
+    case EE_UNITS_CU_MAP_TILE: return (uint64_t)(uintptr_t)::gWorld.mMap->GetTile((long)inB, (long)inC);
+    case EE_UNITS_CU_TILE_FIRST_NODE: return (uint64_t)(uintptr_t)EECuObject<EEMapTile>(inA)->mUnits;
+    case EE_UNITS_CU_NODE_NEXT: return (uint64_t)(uintptr_t)EECuObject<RTSTileUnitNode>(inA)->mNext;
+    case EE_UNITS_CU_NODE_COMPLEX: return (uint64_t)(uintptr_t)EECuObject<RTSTileUnitNode>(inA)->mUnit->GetComplexUnit();
+    case EE_UNITS_CU_OTHER_COLLIDABLE: return theOther->mIsCollidable;
+    case EE_UNITS_CU_OTHER_HIT_POINTS: return theOther->mHitPoints;
+    case EE_UNITS_CU_OTHER_IS_FOUNDATION: return theOther->IsFoundation();
+    case EE_UNITS_CU_OTHER_CLASS: return (uint64_t)(uintptr_t)theOther->mUnitClass;
+    case EE_UNITS_CU_DOMAINS: return theClass->mDomains;
+    case EE_UNITS_CU_CLASS_CATEGORY: return theClass->mCategory;
+    case EE_UNITS_CU_ADD_CONTACT: theOther->AddContact(EECuObject<EEComplexUnit>((uint64_t)inB)); return 0;
+    }
+    return 0;
 }
