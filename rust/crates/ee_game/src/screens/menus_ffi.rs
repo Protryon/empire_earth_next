@@ -96,7 +96,10 @@ impl Form {
             let r = crate::screens::hud_sends::send(&m);
             return if crate::screens::hud_sends::screens_answers(op) { r as u32 } else { 0 };
         }
-        let r = unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) };
+        // the cases that are Rust's over the C++ shims (game_calls.rs), else the C++ host
+        let moved =
+            crate::screens::game_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, c, d);
+        let r = moved.unwrap_or_else(|| unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) });
         if let Some(g) = begun.filter(|_| crate::screens::sgvw::HOST_WORLD_OPS.contains(&op)) {
             crate::screens::sgvw::record(g, &format!("C {op} {a} {b} {c} {d} -> {r}"));
         }
@@ -113,6 +116,11 @@ impl Form {
                 crate::screens::sgvw::record(g, &format!("T {which} {arg} -> {}", crate::screens::sgvw::quote(&t)));
             }
             return Some(t);
+        }
+        if let Some(t) =
+            crate::screens::game_texts::text(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg)
+        {
+            return t;
         }
         let mut out = vec![0u8; 256];
         let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
@@ -133,6 +141,11 @@ impl Form {
     }
     pub(crate) fn put(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
         if let Some(r) = crate::screens::toolkit::put_text(self.0, which, arg, text) {
+            return r;
+        }
+        if let Some(r) =
+            crate::screens::game_texts::put(&mut crate::screens::game_cpp::Ffi, self.0 as usize, which, arg, text)
+        {
             return r;
         }
         unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }

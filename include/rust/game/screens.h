@@ -12968,6 +12968,14 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
 /// As `ee_screens_ga_init`.
 void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
+/// Appends `length` bytes at `text` to the shim's out text (`EeScreensShimOut`).
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`; `text` holds `length` bytes (or `length` is 0).
+void ee_screens_shim_out(void *out,
+                         const uint8_t *text,
+                         size_t length);
+
 /// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
 extern void ee_screenscpp_game_view(uint32_t group, uint32_t arg, EeScreensGameView *out);
 
@@ -13332,6 +13340,24 @@ int64_t ee_screens_status_button_op(void *call,
 /// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
 int64_t ee_screens_status_button_member(void *call,
                                         uint32_t which);
+
+/// `EEUserInterface::ChangeRasterizer`.
+void ee_screens_ui_change_rasterizer(long rasterizer, long screen);
+
+/// `EEUserInterface::ResizeGameScreen`.
+void ee_screens_ui_resize_game_screen(uint32_t width, uint32_t height, bool force, bool flag);
+
+/// `EEUserInterface::ShowMessageOfTheDay` (the two `const UWideString*`).
+void ee_screens_ui_show_motd(const void *game, const void *system);
+
+/// `EEUserInterface::OpenSelectServer`.
+void ee_screens_ui_open_select_server();
+
+/// `EEUserInterface::PauseGraphics`.
+void ee_screens_ui_pause_graphics();
+
+/// `EEUserInterface::UpdateInterface`.
+void ee_screens_ui_update_interface();
 
 /// `EEUserInterface::TestScenario` on the UI object `ui`.
 void ee_screens_ui_test_scenario(void *ui);
