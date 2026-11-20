@@ -1102,6 +1102,54 @@ pub enum EeWonLobbyCtlOp {
     /// `((ImageComponent*)a)->SetImage(gLobbyResources[b].mImage.get())` (R6 WONLobby round 17: `IconSetImage`'s
     /// picture as its resource row in the game, rows.rs icon_res).
     IconSetRes,
+    // R6 WONLobby round 29: the statements of the cases hostops.rs answers
+    /// `GetLobbyConfig()`.
+    LobbyConfigGet = 1500,
+    /// `((LobbyConfig*)a)->mPingCeiling`.
+    ConfigPingCeiling,
+    /// `((LobbyConfig*)a)->mPublic`.
+    ConfigPublic,
+    /// `((TextListItem*)a)->mText.append(GUIString(b))`.
+    ItemTextAppend,
+    /// `((FilterListItem*)a)->mSelPos = b`.
+    FilterSetSelPos,
+    /// `((FilterListItem*)a)->mIsAdd = b != 0`.
+    FilterSetIsAdd,
+    /// `((FilterListItem*)a)->mFilterText = GUIString(b)`.
+    FilterSetText,
+    /// `((FilterListItem*)a)->mFilterText = GUIString("")`.
+    FilterClearText,
+    /// `((Label*)a)->SetText(LobbyFormatString(gLobbyResources[b].mString, GUIString(c)), true)`.
+    LabelSetFormatRes,
+    /// `((Label*)a)->SetText(LobbyFormatString2(gLobbyResources[b].mString, GUIString(c[0]), GUIString(c[1])), true)`
+    /// (`c` a `const intptr_t[2]`).
+    LabelSetFormat2Res,
+    /// `LobbyGetFilterCount(GUIString(a))`.
+    FilterCount,
+    /// `((ComboBox*)a)->AddString(LobbyGetFilterValueAt(GUIString(b), c), -1)`.
+    ComboAddFilterValue,
+    /// `DeliverEvent(JoinRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a)), (unsigned long)b), false)`.
+    DeliverJoinRoomAt,
+    /// `DeliverEvent(CreateRoomEvent(IPAddr::FromValue(ee_won_ipaddr_clone(a))), false)`.
+    DeliverCreateRoomAt,
+    /// `DeliverEvent(CreateRoomEvent(IPAddr()), false)`.
+    DeliverCreateRoomAny,
+    /// `((ComponentEvent*)a)->mType`.
+    EvType,
+    /// `((ComboSelChangedEvent*)a)->mItem.get()`.
+    EvComboItem,
+    /// `((TreeItemOpenedEvent*)a)->mItem.get()`.
+    EvTreeItem,
+    /// `((ListItemClickedEvent*)a)->mItem.get()`.
+    EvListItem,
+    /// `((Label*)a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), GUIString(b)))`.
+    LabelSetPercentText,
+    /// `EELobbyGetFileDialog()`.
+    FileDialogGet,
+    /// `((EELobbyFileDialog*)a)->ListFiles(EELobbyFn2988E9(), ".ees")`.
+    FileDialogListSaves,
+    /// `LobbyDoDialog((EELobbyFileDialog*)a)`.
+    DoDialog,
 }
 
 /// The resource row of a control string (LobbyCtrlHost.cpp's `CtlString` as it was).
@@ -1173,6 +1221,8 @@ pub enum EeWonLobbyCtlCall {
     SetField,
     /// LoginScreen's page `a` shown (0 the message of the day, 1 create account, 2 lost password, 3 lost user name).
     Page,
+    /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind), `c` its `mComponent`.
+    RawEvent,
 }
 
 /// The host: `(control, op, a, b, c) -> result`.
@@ -1589,6 +1639,9 @@ impl EeWonLobbyCtl {
                 return r;
             }
             if let Some(r) = crate::lobbyevt::ctl_op(op, a, b) {
+                return r;
+            }
+            if let Some(r) = crate::hostops::ctl_op(op, a, b, c, &|op, a, b, c| self.op(op, a, b, c)) {
                 return r;
             }
             if let (Some(res), Some(row)) = (game_string_op(op), string_row(b)) {
@@ -2657,6 +2710,7 @@ impl EeWonLobbyCtl {
         match call {
             C::Init => self.init(a),
             C::Event => self.event(a, b as u32, c),
+            C::RawEvent => self.event(a, crate::evmap::ctl_event_of(b as i32) as u32, c),
             C::Paint => {
                 if self.kind == Kind::Browser {
                     self.paint(a)

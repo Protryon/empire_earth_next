@@ -61,6 +61,9 @@ fn h(op: Op, a: isize, b: isize, c: isize) -> isize {
             if let Some(r) = crate::widgets::ctl_op(0, op, a, b, c) {
                 return r;
             }
+            if let Some(r) = crate::hostops::ctl_op(op, a, b, c, &h) {
+                return r;
+            }
             let p = GAME_HOST.load(Ordering::Acquire);
             if p == 0 {
                 return 0;

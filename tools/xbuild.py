@@ -746,6 +746,11 @@ WON_TESTS = {
     "won_eeglue_test": [],
     # GetWONStatusString's choice (statusstr.rs) against the original switch over every status
     "won_statusstr_test": [],
+    # the lobby shells' event choices (evmap.rs, R6 WONLobby round 29) against the original switches over every type
+    "won_evmap_test": [],
+    # the control hosts' cases made Rust (hostops.rs, R6 WONLobby round 29) against the deleted code over a stand-in
+    # world (tests/won/won_hostops_world.h)
+    "won_hostops_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],

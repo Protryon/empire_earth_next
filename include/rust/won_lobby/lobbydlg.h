@@ -378,6 +378,8 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ConnectSetConnected,
   /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
   FileListFiles,
+  /// `HandleComponentEvent(a)` with `b` the event's `mType` (evmap.rs chooses the kind), `c` its component.
+  RawEvent,
 };
 
 /// The texts AdminActionDialog sets (the lobby's resource strings).
