@@ -172,8 +172,6 @@
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUnitClassKinds.h"
 void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
-void EEPhysicsUnitSweep(long inCall);      // the units sweep (Physics Thread/EEPhysicsSweep.cpp)
-void EEActiveGroupCaptureSweep();          // the active groups' sweep (Units/EEActiveGroupSweep.cpp)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
@@ -955,7 +953,7 @@ void HostSweep(int inKind, long inArg)
         break;
     case EE_SIM_DRIVER_SWEEP_MESSAGES: EEMessageCaptureSweep(); break;   // once (ee/EEMessageCapture.h)
     case EE_SIM_DRIVER_SWEEP_CALAMITIES: EETechCaptureCastCalamities(inArg); break;   // --calamities
-    case EE_SIM_DRIVER_SWEEP_UNITS: EEPhysicsUnitSweep(inArg); break;   // --unit-sweep (EEPhysicsSweep.cpp)
+    case EE_SIM_DRIVER_SWEEP_UNITS: ee_units_unit_sweep(inArg); break;   // --unit-sweep (ee_sim units unit_sweep.rs)
     case EE_SIM_DRIVER_SWEEP_MINUTE:   // every game minute: the mini map's cells (MMSN), the tile sight (TSGT)
         EEAppCaptureMiniMapSnapshot();
         EESightCaptureSnapshot();
@@ -972,7 +970,7 @@ void HostSweep(int inKind, long inArg)
         }
         if (inArg & 4) {   // the active groups' sweep alone (the game's own records held since its start)
             EESimCaptureRecord::Hold(false);
-            EEActiveGroupCaptureSweep();
+            ee_units_ag_sweep();   // ee_sim units ag_sweep.rs
             EECombatCaptureFlush();
             EESimCaptureRecord::Close();
             return;
