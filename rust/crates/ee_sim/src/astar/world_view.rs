@@ -32,11 +32,15 @@ use crate::units::pm_host::{ee_units_pm_host_passable_by, ee_units_pm_host_rando
 /// The manager's `GetPathAreaAt` and `GetHillAt` as the view asks them: the queries with their CNTQ records
 /// (cm_queries.rs; 0 before the manager is registered).
 pub(crate) unsafe fn ee_astar_view_cm_path_area_at(x: i32, y: i32) -> u64 {
-    cm().map_or(0, |r| crate::astar::cm_queries::ee_astar_cmq_area_at(r, 3, x as std::ffi::c_long, y as std::ffi::c_long))
+    cm().map_or(0, |r| {
+        crate::astar::cm_queries::ee_astar_cmq_area_at(r, 3, x as std::ffi::c_long, y as std::ffi::c_long)
+    })
 }
 
 pub(crate) unsafe fn ee_astar_view_cm_hill_at(x: i32, y: i32) -> u64 {
-    cm().map_or(0, |r| crate::astar::cm_queries::ee_astar_cmq_area_at(r, 2, x as std::ffi::c_long, y as std::ffi::c_long))
+    cm().map_or(0, |r| {
+        crate::astar::cm_queries::ee_astar_cmq_area_at(r, 2, x as std::ffi::c_long, y as std::ffi::c_long)
+    })
 }
 
 #[cfg(test)]

@@ -52,7 +52,14 @@ impl ShoreHost for Manager {
     }
     fn region(&mut self, tile: EeHullPoint, space: bool) -> u16 {
         // SAFETY: the registered record
-        unsafe { cm_queries::ee_astar_cmq_region_id(record(), tile.x, tile.y, if space { PATH_SPACE_REGION } else { PATH_WATER_BODY }) }
+        unsafe {
+            cm_queries::ee_astar_cmq_region_id(
+                record(),
+                tile.x,
+                tile.y,
+                if space { PATH_SPACE_REGION } else { PATH_WATER_BODY },
+            )
+        }
     }
     fn map_size(&self) -> (u32, u32) {
         let r = record();

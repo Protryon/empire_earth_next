@@ -66,7 +66,12 @@ fn pairs(p: &[EeHullPoint]) -> Vec<(c_long, c_long)> {
 /// # Safety
 /// `r` a live record; `out` holds `flags_width` values.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cmq_adjacent_ids(r: *const EeAStarCmRecord, id: u16, with_self: bool, out: *mut u16) -> usize {
+pub unsafe extern "C" fn ee_astar_cmq_adjacent_ids(
+    r: *const EeAStarCmRecord,
+    id: u16,
+    with_self: bool,
+    out: *mut u16,
+) -> usize {
     let r = rec(r);
     let q = Query::new(if with_self { cap::Q_CONNECTED_IDS } else { cap::Q_ADJACENT_IDS });
     q.i(id as i64);
@@ -83,7 +88,11 @@ pub unsafe extern "C" fn ee_astar_cmq_adjacent_ids(r: *const EeAStarCmRecord, id
 /// # Safety
 /// `r` a live record; `tiles` holds `n` points.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cmq_has_shore_tile(r: *const EeAStarCmRecord, tiles: *const EeHullPoint, n: usize) -> bool {
+pub unsafe extern "C" fn ee_astar_cmq_has_shore_tile(
+    r: *const EeAStarCmRecord,
+    tiles: *const EeHullPoint,
+    n: usize,
+) -> bool {
     let (r, tiles) = (rec(r), slice(tiles, n));
     let q = Query::new(cap::Q_HAS_SHORE_TILE);
     q.points(&pairs(tiles));
@@ -114,7 +123,12 @@ pub unsafe extern "C" fn ee_astar_cmq_in_same_continent(r: *const EeAStarCmRecor
 /// # Safety
 /// `r` a live record; `tiles` holds `n` points.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cmq_in_same_area(r: *const EeAStarCmRecord, tiles: *const EeHullPoint, n: usize, kind: c_long) -> bool {
+pub unsafe extern "C" fn ee_astar_cmq_in_same_area(
+    r: *const EeAStarCmRecord,
+    tiles: *const EeHullPoint,
+    n: usize,
+    kind: c_long,
+) -> bool {
     let (r, tiles) = (rec(r), slice(tiles, n));
     let q = Query::new(cap::Q_IN_SAME_AREA);
     q.points(&pairs(tiles));
@@ -366,7 +380,12 @@ pub unsafe extern "C" fn ee_astar_cmq_tiles_next_to(
 /// # Safety
 /// `r` a live record.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_cmq_is_next_to_area(r: *const EeAStarCmRecord, x: c_long, y: c_long, id: u16) -> bool {
+pub unsafe extern "C" fn ee_astar_cmq_is_next_to_area(
+    r: *const EeAStarCmRecord,
+    x: c_long,
+    y: c_long,
+    id: u16,
+) -> bool {
     let q = Query::new(cap::Q_NEXT_TO_AREA);
     q.i(x as i64);
     q.i(y as i64);

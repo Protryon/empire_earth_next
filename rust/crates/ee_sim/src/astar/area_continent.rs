@@ -8,7 +8,8 @@ use std::ffi::c_long;
 
 use crate::app::capture_record::{
     ee_sim_capture_geom_begin as begin, ee_sim_capture_geom_commit as commit, ee_sim_capture_geom_enter,
-    ee_sim_capture_geom_leave, ee_sim_capture_geom_point, ee_sim_capture_geom_points, ee_sim_capture_geom_value as value,
+    ee_sim_capture_geom_leave, ee_sim_capture_geom_point, ee_sim_capture_geom_points,
+    ee_sim_capture_geom_value as value,
 };
 use crate::astar::area_geom;
 use crate::astar::area_ops;

@@ -17,8 +17,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{c_long, c_ulong, c_void};
 
-use crate::astar::area_kinds::{ee_astar_choke_add_area_serials, ee_astar_forest_update_resource_kind, ee_astar_path_area_add_sector_id};
-use crate::astar::ffi::EeAStarViewCallbacks;
+use crate::astar::area_kinds::{
+    ee_astar_choke_add_area_serials, ee_astar_forest_update_resource_kind, ee_astar_path_area_add_sector_id,
+};
 use crate::astar::area_ops;
 use crate::astar::cm::{EeAStarCmGrid, EeAStarCmRecord, EeAStarCmTable};
 use crate::astar::cm_io::{self, EeAStarCmIo};
@@ -26,12 +27,15 @@ use crate::astar::cm_queries;
 use crate::astar::continent::{ee_astar_continent_add_choke_point, ee_astar_continent_add_id, EeAStarContinentList};
 use crate::astar::continent_grid::{self, EePoint};
 use crate::astar::ffi;
+use crate::astar::ffi::EeAStarViewCallbacks;
 use crate::astar::flood::{self, EeAStarChainCallbacks, EeAStarFlood, EeAStarFloodKind, EeAStarFloodState};
 use crate::astar::hull::EeHullPoint;
 use crate::astar::manager::{self, EeScenarioArea, PruneHost};
 use crate::astar::objects::new_object;
 use crate::astar::path_area_kind::{EeMapEdges, EePathAreaIDs};
-use crate::astar::sector_rec::{ee_astar_sector_add_neighbor, ee_astar_sector_add_path_area_id, ee_astar_sector_insert_sub};
+use crate::astar::sector_rec::{
+    ee_astar_sector_add_neighbor, ee_astar_sector_add_path_area_id, ee_astar_sector_insert_sub,
+};
 use crate::astar::storage::AStarRect;
 use crate::astar::tile_kind::EeTileUnit;
 use crate::astar::world_view::{ee_astar_world_view_callbacks, EeAStarWorldView};
@@ -112,6 +116,7 @@ impl Fill {
         let cb = unsafe { ee_astar_world_view_callbacks(&mut *view) };
         Fill { f, view, cb }
     }
+    #[allow(clippy::mut_from_ref)] // the fill's own state, never borrowed across a run
     fn state(&self) -> &mut EeAStarFloodState {
         // SAFETY: the fill's own state, used between runs only
         unsafe { &mut *flood::ee_astar_flood_state(self.f) }
@@ -501,7 +506,17 @@ unsafe fn create_path_area_kind(r: *mut EeAStarCmRecord, p: &Pass, kind: i32) {
             };
             let units = tile_units(&tl);
             let terrain = tl.terrain_type() as i32;
-            if !ffi::ee_astar_path_area_kind_starts(kind, terrain, x, y, edges, &ids, units.as_ptr(), units.len(), &mut flag) {
+            if !ffi::ee_astar_path_area_kind_starts(
+                kind,
+                terrain,
+                x,
+                y,
+                edges,
+                &ids,
+                units.as_ptr(),
+                units.len(),
+                &mut flag,
+            ) {
                 continue;
             }
             pf.fill.state().path_area.mode = kind;
@@ -737,7 +752,11 @@ extern "C" fn grid_present(ctx: *mut c_void, id: u16) -> bool {
 
 unsafe fn walk(r: *mut EeAStarCmRecord, fill: *mut EeAStarFlood, x0: i32, x1: i32, y0: i32, y1: i32) {
     let view = GridView { r, fill };
-    let cb = ffi::EeSubSectorGridCallbacks { ctx: &view as *const GridView as *mut c_void, id_at: grid_id_at, present: grid_present };
+    let cb = ffi::EeSubSectorGridCallbacks {
+        ctx: &view as *const GridView as *mut c_void,
+        id_at: grid_id_at,
+        present: grid_present,
+    };
     let links = ffi::ee_astar_sub_sector_links(x0, x1, y0, y1, &cb);
     crate::astar::cm_links::ee_astar_cm_apply_links(r, links);
 }
@@ -875,7 +894,12 @@ unsafe fn number_chains(r: *mut EeAStarCmRecord, kind: u32) {
 // ---- the choke points
 
 /// `EEAIChokeGetTileInfo`: what the choke pass reads of a tile.
-unsafe fn choke_tile_info(r: *mut EeAStarCmRecord, tl: Option<TileView<'_>>, x: i32, y: i32) -> crate::astar::choke::EeChokeTileInfo {
+unsafe fn choke_tile_info(
+    r: *mut EeAStarCmRecord,
+    tl: Option<TileView<'_>>,
+    x: i32,
+    y: i32,
+) -> crate::astar::choke::EeChokeTileInfo {
     let mut info = crate::astar::choke::EeChokeTileInfo::default();
     let Some(tl) = tl else { return info };
     info.tile = true;
@@ -903,7 +927,8 @@ unsafe fn choke_tile_info(r: *mut EeAStarCmRecord, tl: Option<TileView<'_>>, x: 
 /// `EEAIBuildChokePoints(map, passes)`: the tiles classified, smoothed, flood-filled into choke points.
 unsafe fn build_choke_points(r: *mut EeAStarCmRecord, p: &Pass, passes: i32) {
     let size = p.size;
-    let mut infos = vec![crate::astar::choke::EeChokeTileInfo::default(); (size.max(0) as usize) * (size.max(0) as usize)];
+    let mut infos =
+        vec![crate::astar::choke::EeChokeTileInfo::default(); (size.max(0) as usize) * (size.max(0) as usize)];
     for x in (0..size).rev() {
         for y in (0..size).rev() {
             infos[(x * size + y) as usize] = choke_tile_info(r, p.tile(x, y), x, y);
@@ -936,8 +961,11 @@ unsafe fn choke_create(r: *mut EeAStarCmRecord, p: &Pass) {
             create_area(h, &tiles, p.region);
             let mut n = 0;
             let s = flood::ee_astar_flood_serials(fill.f, &mut n);
-            let serials: Vec<c_ulong> =
-                if n == 0 { Vec::new() } else { std::slice::from_raw_parts(s, n).iter().map(|&v| v as c_ulong).collect() };
+            let serials: Vec<c_ulong> = if n == 0 {
+                Vec::new()
+            } else {
+                std::slice::from_raw_parts(s, n).iter().map(|&v| v as c_ulong).collect()
+            };
             ee_astar_choke_add_area_serials(cm_io::choke(h), serials.as_ptr(), serials.len(), false);
             if let Some(t) = tiles.first() {
                 cm_io::choke(h).continent_id = cm_io::continent_id_at(rm(r), t.x as c_long, t.y as c_long);
@@ -985,7 +1013,7 @@ impl PruneHost for Prune {
     }
     fn area_count(&mut self, choke: usize) -> usize {
         // SAFETY: a live choke point
-        unsafe { (&(*cm_io::choke(self.choke(choke)).area_serials).0).len() }
+        unsafe { (*cm_io::choke(self.choke(choke)).area_serials).0.len() }
     }
     fn area(&mut self, choke: usize, k: usize) -> i32 {
         let a = self.rec().tables().area(self.serial(choke, k));
@@ -1057,7 +1085,9 @@ unsafe fn reset(r: *mut EeAStarCmRecord) {
 
 unsafe fn free_grids(r: *mut EeAStarCmRecord) {
     let rec = rm(r);
-    for g in [EeAStarCmGrid::TileFlags, EeAStarCmGrid::ContinentIds, EeAStarCmGrid::TileValues, EeAStarCmGrid::SubSectorIds] {
+    for g in
+        [EeAStarCmGrid::TileFlags, EeAStarCmGrid::ContinentIds, EeAStarCmGrid::TileValues, EeAStarCmGrid::SubSectorIds]
+    {
         rec.set_grid(g, None);
     }
 }
@@ -1193,7 +1223,8 @@ pub unsafe extern "C" fn ee_astar_cm_rebuild(r: *mut EeAStarCmRecord, map: u64, 
             }
         }
     }
-    fill.state().sector.tile_bounds = AStarRect { bottom: bottom as i32, left: left as i32, right: right as i32, top: top as i32 };
+    fill.state().sector.tile_bounds =
+        AStarRect { bottom: bottom as i32, left: left as i32, right: right as i32, top: top as i32 };
     fill.init(p.size, p.size);
     for &id in tiles.keys() {
         // the C++'s `theSector`: the loops' bounds are read from it at every test, and a fill makes it the filled
@@ -1256,7 +1287,12 @@ pub unsafe extern "C" fn ee_astar_cm_rebuild(r: *mut EeAStarCmRecord, map: u64, 
 
 /// `RelinkSubSectors(sectors, subs)`: the new sub sectors into the id grid, then every pending sector's tiles (grown
 /// by one) linked again through the manager's lookup.
-unsafe fn relink_sub_sectors(r: *mut EeAStarCmRecord, p: &Pass, sectors: &BTreeMap<u16, Vec<EeHullPoint>>, subs: &[u64]) {
+unsafe fn relink_sub_sectors(
+    r: *mut EeAStarCmRecord,
+    p: &Pass,
+    sectors: &BTreeMap<u16, Vec<EeHullPoint>>,
+    subs: &[u64],
+) {
     for &s in subs.iter().rev() {
         let mut points: Vec<EePoint> = Vec::new();
         cm_io::sub_tiles(s).set.points(crate::astar::sparse::PointList::All(1), &mut points);
@@ -1305,7 +1341,8 @@ mod tests {
 
     #[test]
     fn the_sector_tiles_are_sorted_and_unique_before_they_are_queued() {
-        let mut v = vec![EeHullPoint::new(2, 1), EeHullPoint::new(1, 1), EeHullPoint::new(2, 1), EeHullPoint::new(0, 0)];
+        let mut v =
+            vec![EeHullPoint::new(2, 1), EeHullPoint::new(1, 1), EeHullPoint::new(2, 1), EeHullPoint::new(0, 0)];
         v.sort_by(crate::astar::cm::point_cmp);
         v.dedup();
         // lower y first, then the larger x (U2DPoint's operator<)

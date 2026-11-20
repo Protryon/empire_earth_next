@@ -50,10 +50,16 @@ fn region_size() -> c_long {
 /// # Safety
 /// `h` a live area.
 pub unsafe fn remove_tile(h: u64, x: c_long, y: c_long) -> bool {
-    let removed = crate::astar::area_ops::ee_astar_area_remove_tile_captured(cm_io::area(h), cm_io::area_tiles(h), EeHullPoint::new(x, y));
+    let removed = crate::astar::area_ops::ee_astar_area_remove_tile_captured(
+        cm_io::area(h),
+        cm_io::area_tiles(h),
+        EeHullPoint::new(x, y),
+    );
     if removed && cm_io::area(h).area_type == AREA_FOREST {
         let t = token();
-        let kind = crate::astar::world_view::ee_astar_tile_resource_kind(tile(&t, x as i64, y as i64).map_or(0, |tl| tl.handle()));
+        let kind = crate::astar::world_view::ee_astar_tile_resource_kind(
+            tile(&t, x as i64, y as i64).map_or(0, |tl| tl.handle()),
+        );
         crate::astar::area_kinds::ee_astar_forest_remove_resource(cm_io::forest(h), kind as c_long);
     }
     removed
@@ -117,9 +123,8 @@ pub(crate) fn answer(op: i32, io: &mut EeAStarCmIo) -> Option<i64> {
                 let t = token();
                 tile(&t, x as i64, y as i64).is_some() as i64
             }
-            crate::astar::cm_query::EE_ASTAR_CM_FOREST_REMOVE_TILE | crate::astar::cm_repair::EE_ASTAR_CM_AREA_REMOVE_TILE => {
-                remove_tile(io.h[0], x, y) as i64
-            }
+            crate::astar::cm_query::EE_ASTAR_CM_FOREST_REMOVE_TILE
+            | crate::astar::cm_repair::EE_ASTAR_CM_AREA_REMOVE_TILE => remove_tile(io.h[0], x, y) as i64,
             crate::astar::cm_repair::EE_ASTAR_CM_TILE_KIND => tile_kind(x, y) as i64,
             crate::astar::cm_repair::EE_ASTAR_CM_WALL_ID => wall_id(x, y) as i64,
             crate::astar::cm_repair::EE_ASTAR_CM_TERRAIN => {
@@ -165,7 +170,12 @@ mod tests {
     fn the_host_questions_rust_answers_are_the_tile_and_area_ones() {
         // a town's or herd's owner, the region size global, the AI value's write and the random stream stay C++
         let mut io = EeAStarCmIo::default();
-        for op in [cm_io::EE_ASTAR_CM_OWNER, cm_io::EE_ASTAR_CM_REGION_SIZE, cm_io::EE_ASTAR_CM_SET_REGION_SIZE, cm_io::EE_ASTAR_CM_SET_AI_VALUE] {
+        for op in [
+            cm_io::EE_ASTAR_CM_OWNER,
+            cm_io::EE_ASTAR_CM_REGION_SIZE,
+            cm_io::EE_ASTAR_CM_SET_REGION_SIZE,
+            cm_io::EE_ASTAR_CM_SET_AI_VALUE,
+        ] {
             assert_eq!(answer(op, &mut io), None);
         }
     }
