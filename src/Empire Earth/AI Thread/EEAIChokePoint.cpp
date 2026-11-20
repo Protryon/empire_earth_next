@@ -35,7 +35,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIForest.h"
@@ -96,7 +95,7 @@ static void EEAIChokeCreate(EEMap* inMap)
             std::vector<U2DPoint<long> > theTiles;
             for (size_t i = 0; i < theCount; i++)
                 theTiles.push_back(U2DPoint<long>(thePoints[i].x, thePoints[i].y));
-            EEAIChokePoint* theChokePoint = new EEAIChokePoint;
+            EEAIChokePoint* theChokePoint = EEAIChokePoint::New();
             theChokePoint->SetIndex(theNumber);
             theChokePoint->SetAreaType(kAIAreaChokePoint);
             theChokePoint->Create(theTiles);

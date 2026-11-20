@@ -35,7 +35,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
@@ -261,12 +260,12 @@ void EEAIContinentManager::FreeGrids()
     ee_astar_cm_set_grid(&this->mRecord, EeAStarCmGrid::SubSectorIds, false, 0);
 }
 
-// New (port): deletes every object of a table, then empties it (DeleteVectorContents)
+// New (port): deletes every object of a table, then empties it (DeleteVectorContents; the objects are Rust's)
 template <class T> static void EEAIDeleteTable(EEAIContinentManager& ioManager, EeAStarCmTable inTable)
 {
     EEAIHandleView<T> theObjects = ioManager.Table<T>(inTable);
     for (size_t i = 0; i < theObjects.size(); i++)
-        delete theObjects[i];
+        ee_astar_object_delete(inTable, (uint64_t)(uintptr_t)theObjects[i]);
     ioManager.ResizeTable(inTable, 0);
 }
 
@@ -467,7 +466,7 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
             unsigned short theID = (unsigned short)theState->next_id;
             size_t theCount = 0;
             const EePoint* theTiles = ee_astar_flood_collect(theFill, theID, &theCount);
-            EEAIContinent* theContinent = new EEAIContinent;
+            EEAIContinent* theContinent = EEAIContinent::New();
             theContinent->SetID(theID);
             theContinent->SetCategory(theState->continent.kind);
             theContinent->SetAreaType(kAIAreaContinent);
@@ -535,13 +534,12 @@ void EEAIContinentManager::CreateContinentGrid(EeAStarFlood* inFill, EEMap* inMa
 // The continents as the chain search sees them (ee_astar flood.rs EeAStarChainCallbacks): by their graph handle
 static EEAIContinent* EEAIChainOf(void* inObject)
 {
-    return static_cast<EEAIContinent*>(static_cast<AStarGraphableObjectBase*>(inObject));
+    return static_cast<EEAIContinent*>(inObject);
 }
 
 static void* EEAIChainHandle(EEAIContinent* inContinent)
 {
-    AStarGraphableObjectBase* theBase = inContinent;
-    return theBase;
+    return inContinent;
 }
 
 static int32_t EEAIChainCount(void* inManager)
@@ -635,7 +633,7 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
             unsigned short theID = (unsigned short)theState->next_id;
             size_t theCount = 0;
             const EePoint* theTiles = ee_astar_flood_collect(theFill, theID, &theCount);
-            EEAIHill* theHill = new EEAIHill;
+            EEAIHill* theHill = EEAIHill::New();
             theHill->SetID(theID);
             theHill->SetContinentID(theState->hill.continent_id);
             theHill->SetAreaType(kAIAreaHill);
@@ -718,7 +716,7 @@ static void EEAIPathAreaCreate(EEAIPathAreaFill& ioFill)
     std::vector<U2DPoint<long> > theTiles = EEAIFloodTiles(thePoints, theCount);
     if (theFill.mode == kAIPathNone) {
         unsigned short theID = (unsigned short)theState->next_id;
-        EEAIPathArea* theArea = new EEAIPathArea;
+        EEAIPathArea* theArea = EEAIPathArea::New();
         theArea->SetID(theID);
         theArea->SetContinentID(theFill.continent_id);
         theArea->SetAreaType(kAIAreaPathArea);
@@ -728,7 +726,7 @@ static void EEAIPathAreaCreate(EEAIPathAreaFill& ioFill)
         ioFill.mPathAreas.insert(std::map<unsigned short, EEAIPathArea*>::value_type(theID, theArea));
         theState->next_id++;
         if (theFill.kind == kAITileForest) {
-            EEAIForest* theForest = new EEAIForest;
+            EEAIForest* theForest = EEAIForest::New();
             theForest->SetID(theFill.next_forest_id);
             theForest->SetContinentID(theFill.continent_id);
             theForest->SetAreaType(kAIAreaForest);
@@ -874,7 +872,7 @@ static void EEAIPathSectorCreate(EeAStarFlood* inFill, EEAIPathSector* inSector,
     size_t theCount = 0;
     const EePoint* thePoints = ee_astar_flood_collect(inFill, theID, &theCount);
     std::vector<U2DPoint<long> > theTiles = EEAIFloodTiles(thePoints, theCount);
-    EEAIPathSubSector* theSubSector = new EEAIPathSubSector;
+    EEAIPathSubSector* theSubSector = EEAIPathSubSector::New();
     std::sort(theTiles.begin(), theTiles.end());
     theSubSector->SetSector(inSector);
     theSubSector->SetID(theID);
@@ -909,7 +907,7 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EeAStarFlood* inAreas
     this->ResizeTable(EeAStarCmTable::PathSectors, this->mRecord.sectors_x * this->mRecord.sectors_y + 1);
     for (long x = 0; x < this->mRecord.sectors_x; x++) {
         for (long y = 0; y < this->mRecord.sectors_y; y++) {
-            EEAIPathSector* thePathSector = new EEAIPathSector;
+            EEAIPathSector* thePathSector = EEAIPathSector::New();
             thePathSector->SetID(theID);
             theID++;
             // the sector's rectangle, clipped to the map (Rust: ee_astar sectors.rs sector_rect, GetSectorEnd 0x263cb
@@ -1038,7 +1036,7 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
     this->ResizeTable(EeAStarCmTable::RectangleAreas, theCount + 1);
     for (size_t k = 0; k < theCount; k++) {
         const EeScenarioAreaPlan& theEntry = thePlan[k];
-        EEAIRectangleArea* theArea = new EEAIRectangleArea;
+        EEAIRectangleArea* theArea = EEAIRectangleArea::New();
         theArea->SetNumLandTiles(0);
         theArea->SetNumWaterTiles(0);
         theArea->SetNumSpaceTiles(0);
@@ -1838,7 +1836,7 @@ static void EEAIPruneRemove(void* inContext, size_t inChoke)
     EEAIChokePoint* theChokePoint = theManager->GetChokePoints()[inChoke];
     theManager->RemoveArea(theChokePoint);
     theManager->SetTable(EeAStarCmTable::ChokePoints, inChoke, NULL);
-    delete theChokePoint;
+    EEAIChokePoint::Delete(theChokePoint);
 }
 
 // Deletes the choke points that a map edge continent touches when their areas touch the map edge continents too
@@ -1975,7 +1973,7 @@ bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long i
 bool EEAIForest::RemoveTile(const U2DPoint<long>& inPoint)
 {
     EETile* theTile = gWorld.mMap->GetTileAtLocation(inPoint);
-    bool theResult = EEAIArea::RemoveTile(inPoint);
+    bool theResult = this->AreaRemoveTile(inPoint);
     if (theResult) {
         ee_astar_forest_remove_resource(this, EEAIHasResourceUnit(theTile));
     }

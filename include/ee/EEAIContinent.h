@@ -11,31 +11,33 @@
 
 #include <vector>
 
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIListView.h"
 
 class EEAIPathArea;
 
-class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase, private EeAStarContinentRecord {
+class EEAIContinent : public EEAIArea, private EeAStarContinentRecord {
 public:
-    EEAIContinent();
-    virtual ~EEAIContinent();               // +0x00 dtor 0x1d94d
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIContinent* New() { return (EEAIContinent*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::Continents); }
+    static void Delete(EEAIContinent* inObject) { ee_astar_object_delete(EeAStarCmTable::Continents, (uint64_t)(uintptr_t)inObject); }
     // +0x1c 0x1da61: the EEAIArea slot (closest points)
-    virtual bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
+    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
     // +0x2c 0x1dc54 (ret 8): reserves outTiles to mShoreTiles's size, then walks mShoreTiles (inID 0: every tile)
-    virtual void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles);
+    void GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles);
     // +0x30 0x1e45e (ret 0xc): Virtual34 with the one-element id list { inID }
-    virtual void GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind);
+    void GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind);
     // +0x34 0x1dccf (ret 0xc): outTiles is cleared first (0x288c2c); walks inIDs from the back
     // with inIDs empty or holding a 0, every tile; else the tiles whose path area's id (+0x8a for inArg3 3,
     // else +0x86) is listed, or, without one, a kind-1 continent's tiles next to a listed continent
-    virtual void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
+    void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
                            long inKind);
 
     // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac) (Rust: ee_astar continent.rs, as the rest)
     void AddPathAreaID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::PathAreas, inID); }
-    EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint);   // 0x1dbf4: as EEAIPathSector's
+    // 0x1dbf4: as EEAIPathSector's (Rust: cm_query.rs)
+    EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint)
+        { return (EEAIPathArea*)(uintptr_t)ee_astar_object_path_area_at((uint64_t)(uintptr_t)this, false, inPoint.mX, inPoint.mY); }
     // 0x1e4a1: lower_bound + erase when equal
     void RemovePathAreaID(unsigned short inID) { ee_astar_continent_remove_id(this, EeAStarContinentList::PathAreas, inID); }
     // 0x26d84: push_back + sort (EEAIContinentManager::AddChokePoint)
@@ -130,6 +132,8 @@ public:
     }
 
 private:
+    EEAIContinent();
+    ~EEAIContinent();
     // +0x6c..+0x11c: the shore tiles, the choke point indices (EEAIContinentManager::mChokePoints), the forest, path
     // area and hill ids, the four region id lists (from the path-area unit's 0x17a4b), +0xfc the adjacent continents
     // (the chain machine's graph edges), mCounts (ctor body `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven),

@@ -24,7 +24,9 @@ public:
         : mPoints(ee_sparse_clone(inContainer.mPoints))
     {
     }
-    virtual ~U2DSparseArrayPointContainer() { ee_sparse_free(this->mPoints); }
+    // no vtable (port): the AI's areas are Rust objects that hold the handle where this class is (ee_sim::astar
+    // objects.rs)
+    ~U2DSparseArrayPointContainer() { ee_sparse_free(this->mPoints); }
     // exported 0xd5a1 (ICF-folded `mov eax, ecx; ret 4`): copies nothing
     U2DSparseArrayPointContainer& operator=(const U2DSparseArrayPointContainer& inContainer) { return *this; }
 

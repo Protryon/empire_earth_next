@@ -307,7 +307,8 @@ pub fn remove_forest_tile(r: &mut EeAStarCmRecord, x: c_long, y: c_long, empty: 
         *slot = 0;
     }
     r.tables_mut().remove_area(serial);
-    host(cm_io::EE_ASTAR_CM_DELETE, f, [EeAStarCmTable::Forests as i64, 0, 0, 0]);
+    // SAFETY: the forest just taken out of its table
+    unsafe { crate::astar::objects::delete_object(EeAStarCmTable::Forests, f) };
 }
 
 // ---- the C interface

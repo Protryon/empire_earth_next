@@ -38,12 +38,6 @@ constexpr static const int32_t EE_ASTAR_CM_AI_VALUE = 6;
 /// tile (`i0`, `i1`)'s `mAIValue = i2` (nothing off the map)
 constexpr static const int32_t EE_ASTAR_CM_SET_AI_VALUE = 7;
 
-/// a new object of table `i0`'s class (`EeAStarCmTable`) -> its address
-constexpr static const int32_t EE_ASTAR_CM_NEW = 8;
-
-/// `delete` object `h0` of table `i0`'s class
-constexpr static const int32_t EE_ASTAR_CM_DELETE = 9;
-
 /// `kContinentCategoryNone`, `Land`, `MapEdge`
 constexpr static const uint8_t CATEGORY_NONE = 0;
 
@@ -754,27 +748,6 @@ struct EeAStarCmArea {
   uint64_t area;
 };
 
-/// Each record's offset in its object (bytes from the object's address; the area kinds' from the derived class's,
-/// which is also its `EEAIArea*`), registered once by the C++ (`EEAIContinentManager`'s ctor).
-struct EeAStarCmLayout {
-  /// `EeAStarAreaRecord` in `EEAIArea`
-  size_t area_record;
-  /// the `EeSparseArray*` of `EEAIArea::mTiles`
-  size_t area_tiles;
-  size_t continent;
-  size_t path_area;
-  size_t forest;
-  size_t hill;
-  size_t choke;
-  size_t rect;
-  /// `EeAStarSectorRecord` in `EEAIPathSector`
-  size_t sector;
-  /// `EeAStarSubSectorRecord` in `EEAIPathSubSector`
-  size_t sub_sector;
-  /// the `EeSparseArray*` of `EEAIPathSubSector::mTiles`
-  size_t sub_tiles;
-};
-
 /// One host call's values.
 struct EeAStarCmIo {
   uint64_t h[2];
@@ -1211,6 +1184,27 @@ struct EeAStarGraphSearchInfo {
   bool found;
   int32_t max_revs;
   int32_t rev_limit;
+};
+
+/// Each record's offset in its object (bytes from the object's address; the area kinds' from the derived class's,
+/// which is also its `EEAIArea*`): the Rust objects' (`objects::LAYOUT`).
+struct EeAStarCmLayout {
+  /// `EeAStarAreaRecord` in `EEAIArea`
+  size_t area_record;
+  /// the `EeSparseArray*` of `EEAIArea::mTiles`
+  size_t area_tiles;
+  size_t continent;
+  size_t path_area;
+  size_t forest;
+  size_t hill;
+  size_t choke;
+  size_t rect;
+  /// `EeAStarSectorRecord` in `EEAIPathSector`
+  size_t sector;
+  /// `EeAStarSubSectorRecord` in `EEAIPathSubSector`
+  size_t sub_sector;
+  /// the `EeSparseArray*` of `EEAIPathSubSector::mTiles`
+  size_t sub_tiles;
 };
 
 /// A search's members as the path manager's dumps and its PMRQ capture read them.
@@ -1882,12 +1876,6 @@ void ee_astar_cm_update_tile_values(EeAStarCmRecord *r, bool water);
 /// # Safety
 /// As `rect_update_continents`; `r` the manager's record.
 uint16_t ee_astar_cm_rect_update_continents(const EeAStarCmRecord *r, uint64_t area);
-
-/// The layout of the records in their objects (once; later calls replace it).
-///
-/// # Safety
-/// `layout` points to a layout.
-void ee_astar_cm_set_layout(const EeAStarCmLayout *layout);
 
 /// The host the state's readers and writers call.
 void ee_astar_cm_set_host(EeAStarCmHostFn f, void *ctx);
@@ -2671,6 +2659,31 @@ EeAStarModifier *ee_astar_modifier_new_storm_planner(bool rain);
 /// # Safety
 /// `m` null or a live modifier.
 void ee_astar_modifier_release(EeAStarModifier *m);
+
+/// The objects' layout (the C++ checks its classes against it: EEAIRegisterContinentState).
+EeAStarCmLayout ee_astar_cm_layout();
+
+/// A new object of table `t` (`EeAStarCmTable`); its address (the C++ classes' `New`).
+uint64_t ee_astar_object_new(EeAStarCmTable t);
+
+/// Frees object `h` of table `t` (the C++ classes' `Delete`).
+///
+/// # Safety
+/// As [`delete_object`].
+void ee_astar_object_delete(EeAStarCmTable t, uint64_t h);
+
+/// The size of table `t`'s object (the C++ headers check their classes against it at load: `sizeof` must match).
+size_t ee_astar_object_size(EeAStarCmTable t);
+
+/// `EEAIContinent::GetPathAreaAt` (`object` a continent) or `EEAIPathSector::GetPathAreaAt` (`sector`), over the
+/// registered manager (0 before it is).
+///
+/// # Safety
+/// `object` a live continent or sector of the registered manager.
+uint64_t ee_astar_object_path_area_at(uint64_t object,
+                                      bool sector,
+                                      long x,
+                                      long y);
 
 /// Appends a tile to a search's tile list (the host's `EE_PATH_BLOCKED_TILES`, `EE_PATH_UNIT_TILES`).
 ///

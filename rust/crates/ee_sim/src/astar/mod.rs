@@ -57,6 +57,7 @@ pub mod machine;
 pub mod manager;
 pub mod modifier_obj;
 pub mod modifiers;
+pub mod objects;
 pub mod path_area_kind;
 pub mod path_goals;
 pub mod path_search;

@@ -26,41 +26,49 @@ class EEUnit;
 
 class EEAIArea : private EeAStarAreaRecord {
 public:
+    // the towns' and herds' base (their objects are C++'s); the continent manager's kinds are Rust objects
+    // (ee_sim::astar objects.rs) that no C++ constructor makes: the class has no vtable, its slots dispatch by kind
     EEAIArea() { ee_astar_area_init(this); this->area_type = kAIAreaNone; }  // 0x110cb (inline COMDAT; first user EEAIChokePoint's ctor)
-    virtual ~EEAIArea() { ee_astar_area_free(this); }   // +0x00 dtor 0x11123 (inline COMDAT)
+    ~EEAIArea() { ee_astar_area_free(this); }   // +0x00 dtor 0x11123 (inline COMDAT)
     // The bodies are ee_sim::astar area_ops.rs (the hull's queries and rebuilds with their TEST ONLY HULL and AREA
     // records) since the game's leaves round 2; GetRandomPoint and UpdateHull read the physics' random stream and the
     // world's influence table (EEAIRectangleArea.cpp).
     // +0x04 0xd6e3 (ret 8): the tiles added; the hull rebuilt (UpdateHull) if inUpdate
-    virtual void AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate)
+    void AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate)
     {
         this->mTiles.Insert(inTiles);
         if (inUpdate)
             this->UpdateHull();
     }
-    // +0x08 0xd705 (ret 4): the area made of the tiles; its hull and influence-region bounds built
-    virtual void Create(const std::vector<U2DPoint<long> >& inTiles)
+    // +0x08 0xd705 (ret 4): the area made of the tiles; its hull and influence-region bounds built (a herd: its own)
+    void Create(const std::vector<U2DPoint<long> >& inTiles);
+    void AreaCreate(const std::vector<U2DPoint<long> >& inTiles)
     {
         this->mTiles.Create(inTiles);
         this->UpdateHull();
     }
     // +0x14 0xd8e6 (ret 8, hidden result): the area tile closest to inPoint
-    virtual U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint) { return this->mTiles.GetClosestPoint(inPoint); }
+    U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint) { return this->mTiles.GetClosestPoint(inPoint); }
     // +0x18 0xd8a5 (ret 8, hidden result): inPoint if the hull contains it, else the hull outline's closest point
-    virtual U2DPoint<long> GetClosestHullPoint(const U2DPoint<long>& inPoint)
+    U2DPoint<long> GetClosestHullPoint(const U2DPoint<long>& inPoint)
         { return EEAIArea::PointOf(ee_astar_area_closest_hull_point(this, EEAIArea::HullPoint(inPoint))); }
     // +0x1c 0xd8fe (ret 0xc): this area's tile and inOther's hull outline point closest to each other; false (both
-    // (0, 0)) when either area is empty
-    virtual bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
+    // (0, 0)) when either area is empty (a continent: its own)
+    bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
+    bool AreaClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
     {
         return ee_astar_area_closest_points(this, this->mTiles.GetHandle(), inOther, inOther->mTiles.GetHandle(),
                                             reinterpret_cast<EeHullPoint*>(&outThis), reinterpret_cast<EeHullPoint*>(&outOther));
     }
-    // +0x20 0xda77 (ret 4, hidden result): a random tile from the game's random stream, (0, 0) when empty
-    virtual U2DPoint<long> GetRandomPoint();
-    virtual void UpdateHull();              // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds)
-    // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed
-    virtual bool RemoveTile(const U2DPoint<long>& inPoint)
+    // +0x20 0xda77 (ret 4, hidden result): a random tile from the game's random stream, (0, 0) when empty (a town,
+    // herd or rectangle area: its own)
+    U2DPoint<long> GetRandomPoint();
+    U2DPoint<long> AreaRandomPoint();
+    void UpdateHull();                      // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds)
+    // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed (a forest:
+    // its own)
+    bool RemoveTile(const U2DPoint<long>& inPoint);
+    bool AreaRemoveTile(const U2DPoint<long>& inPoint)
         { return ee_astar_area_remove_tile_captured(this, this->mTiles.GetHandle(), EEAIArea::HullPoint(inPoint)); }
 
     // inline COMDAT 0xc6fd (emitted at its first user in EECPASGU*'s range): the hull (bounds first), then the tiles

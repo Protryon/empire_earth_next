@@ -34,7 +34,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
@@ -43,18 +42,6 @@
 #include "ee/EEAIContinentManager.h"
 
 #include "ee/EEAIPathArea.h"
-
-// Creates an empty continent with no category, id 0 and all seven counts zero
-EEAIContinent::EEAIContinent()
-{
-    ee_astar_continent_init(this);
-}
-
-// Destroys the continent (members only)
-EEAIContinent::~EEAIContinent()
-{
-    ee_astar_continent_free(this);
-}
 
 // Port: the closest points' loop and GetShoreInRegions' walk are Rust (ee_astar area_geom.rs, docs/RUST_PLAN.md
 // R5b.1, branch rust-r5b-cont3); the manager's lookups stay behind EeShoreCallbacks
@@ -91,7 +78,7 @@ static uint16_t EEAIShoreRegion(void*, long inX, long inY, bool inSpace)
 bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
 {
     EEGeomCaptureScope theScope;
-    EEAIContinent* theOther = dynamic_cast<EEAIContinent*>(inOther);
+    EEAIContinent* theOther = inOther != NULL && inOther->GetAreaType() == kAIAreaContinent ? static_cast<EEAIContinent*>(inOther) : NULL;
     EeHullPoint theThis;
     EeHullPoint theOtherPoint;
     bool theResult;
@@ -111,9 +98,9 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
             outThis = U2DHullPoint(theThis);
             outOther = U2DHullPoint(theOtherPoint);
         } else
-            theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
+            theResult = this->AreaClosestPoints(inOther, outThis, outOther);
     } else
-        theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
+        theResult = this->AreaClosestPoints(inOther, outThis, outOther);
     if (theScope.mOuter) {   // TEST ONLY: AREA 2
         EEGeomCaptureBegin(kGeomCaptureArea, 2);
         EEGeomCapturePoints(this->GetShoreTiles().begin(), this->GetShoreTiles().size(), false);
@@ -126,13 +113,6 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
         EEGeomCaptureCommit();
     }
     return theResult;
-}
-
-// Returns the continent's path area containing a point, or NULL
-EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
-{
-    return (EEAIPathArea*)(uintptr_t)ee_astar_cm_object_path_area_at(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this, false,
-                                                                     inPoint.mX, inPoint.mY);   // Rust: cm_query.rs
 }
 
 // Appends the continent's shore tiles next to area inID (all of them for id 0)

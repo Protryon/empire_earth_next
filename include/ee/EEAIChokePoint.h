@@ -11,9 +11,9 @@
 // EEAIContinent::AddChokePoint's argument), +0x7c its continent
 class EEAIChokePoint : public EEAIArea, private EeAStarChokeRecord {
 public:
-    // inline ctor (COMDAT 0x1109a, first user EEAIAStarChokePointGoal::CreateChokePoint); dtor 0x1c740
-    EEAIChokePoint() { ee_astar_choke_init(this); this->SetSerial(0); }
-    virtual ~EEAIChokePoint() { ee_astar_choke_free(this); }
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIChokePoint* New() { return (EEAIChokePoint*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::ChokePoints); }
+    static void Delete(EEAIChokePoint* inObject) { ee_astar_object_delete(EeAStarCmTable::ChokePoints, (uint64_t)(uintptr_t)inObject); }
     // 0x1c75a: appended to the area serials
     void AddAreaSerials(const std::vector<unsigned long>& inSerials)
         { ee_astar_choke_add_area_serials(this, inSerials.empty() ? NULL : &inSerials[0], inSerials.size(), false); }
@@ -46,6 +46,8 @@ public:
     }
 
 private:
+    EEAIChokePoint();
+    ~EEAIChokePoint();
     EEAIChokePoint(const EEAIChokePoint&);
     EEAIChokePoint& operator=(const EEAIChokePoint&);
 };

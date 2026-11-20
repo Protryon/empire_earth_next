@@ -54,7 +54,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathSubSector.h"
@@ -78,35 +77,6 @@ std::vector<unsigned char> sLoadedRegions;   // the block of the save being load
 template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
 {
     return (size_t)((const char*)inMember - (const char*)inObject);
-}
-
-void* NewObject(long inTable)
-{
-    switch ((EeAStarCmTable)inTable) {
-    case EeAStarCmTable::Continents: return new EEAIContinent;
-    case EeAStarCmTable::PathSectors: return new EEAIPathSector;
-    case EeAStarCmTable::PathSubSectors: return new EEAIPathSubSector;
-    case EeAStarCmTable::Forests: return new EEAIForest;
-    case EeAStarCmTable::PathAreas: return new EEAIPathArea;
-    case EeAStarCmTable::Hills: return new EEAIHill;
-    case EeAStarCmTable::ChokePoints: return new EEAIChokePoint;
-    case EeAStarCmTable::RectangleAreas: return new EEAIRectangleArea;
-    }
-    return NULL;
-}
-
-void DeleteObject(long inTable, void* inObject)
-{
-    switch ((EeAStarCmTable)inTable) {
-    case EeAStarCmTable::Continents: delete (EEAIContinent*)inObject; break;
-    case EeAStarCmTable::PathSectors: delete (EEAIPathSector*)inObject; break;
-    case EeAStarCmTable::PathSubSectors: delete (EEAIPathSubSector*)inObject; break;
-    case EeAStarCmTable::Forests: delete (EEAIForest*)inObject; break;
-    case EeAStarCmTable::PathAreas: delete (EEAIPathArea*)inObject; break;
-    case EeAStarCmTable::Hills: delete (EEAIHill*)inObject; break;
-    case EeAStarCmTable::ChokePoints: delete (EEAIChokePoint*)inObject; break;
-    case EeAStarCmTable::RectangleAreas: delete (EEAIRectangleArea*)inObject; break;
-    }
 }
 
 // the town or herd an area of the serial table is (its player and id), else none
@@ -170,47 +140,41 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
     case EE_ASTAR_CM_AREA_REMOVE_TILE:
         return ((EEAIArea*)(uintptr_t)io->h[0])->RemoveTile(U2DPoint<long>((long)io->i[0], (long)io->i[1]));
     case EE_ASTAR_CM_RESOURCE_WEIGHT: return gContinentManager.GetResourceWeight((long)io->i[0], (long)io->i[1]);
-    case EE_ASTAR_CM_NEW: return (int64_t)(uintptr_t)NewObject((long)io->i[0]);
-    case EE_ASTAR_CM_DELETE: DeleteObject((long)io->i[0], (void*)(uintptr_t)io->h[0]); return 0;
     }
     return 0;
 }
 
 }   // namespace
 
-// The records' places in their objects and the host (EEAIContinentManager's ctor)
+// Checks that the C++ classes are views of the Rust objects (ee_sim::astar objects.rs: sizes and the records'
+// places), registers the host (EEAIContinentManager's ctor)
+template <class T> static void EEAICheckObject(EeAStarCmTable inTable, size_t inRecord)
+{
+    T* theObject = (T*)(uintptr_t)ee_astar_object_new(inTable);
+    bool theOK = sizeof(T) == ee_astar_object_size(inTable) && OffsetOf(theObject, theObject->Record()) == inRecord;
+    ee_astar_object_delete(inTable, (uint64_t)(uintptr_t)theObject);
+    if (!theOK)
+        abort();
+}
+
 void EEAIRegisterContinentState()
 {
-    EEAIContinent theContinent;
-    EEAIPathArea thePathArea;
-    EEAIForest theForest;
-    EEAIHill theHill;
-    EEAIChokePoint theChokePoint;
-    EEAIRectangleArea theRectangle;
-    EEAIPathSector theSector;
-    EEAIPathSubSector theSubSector;
-    EEAIArea* theArea = &theContinent;
-    EeAStarCmLayout theLayout;
-    theLayout.area_record = OffsetOf(theArea, theArea->AreaRecord());
-    theLayout.area_tiles = OffsetOf(theArea, theArea->GetTileSet().GetHandleSlot());
-    theLayout.continent = OffsetOf(&theContinent, theContinent.Record());
-    theLayout.path_area = OffsetOf(&thePathArea, thePathArea.Record());
-    theLayout.forest = OffsetOf(&theForest, theForest.Record());
-    theLayout.hill = OffsetOf(&theHill, theHill.Record());
-    theLayout.choke = OffsetOf(&theChokePoint, theChokePoint.Record());
-    theLayout.rect = OffsetOf(&theRectangle, theRectangle.Record());
-    theLayout.sector = OffsetOf(&theSector, theSector.Record());
-    theLayout.sub_sector = OffsetOf(&theSubSector, theSubSector.Record());
-    theLayout.sub_tiles = OffsetOf(&theSubSector, theSubSector.mTiles.GetHandleSlot());
-    // every kind's EEAIArea is its first base: an object's address is its area's
-    if ((void*)static_cast<EEAIArea*>(&thePathArea) != (void*)&thePathArea
-        || (void*)static_cast<EEAIArea*>(&theForest) != (void*)&theForest
-        || (void*)static_cast<EEAIArea*>(&theHill) != (void*)&theHill
-        || (void*)static_cast<EEAIArea*>(&theChokePoint) != (void*)&theChokePoint
-        || (void*)static_cast<EEAIArea*>(&theRectangle) != (void*)&theRectangle
-        || OffsetOf(&thePathArea, static_cast<EEAIArea*>(&thePathArea)->AreaRecord()) != theLayout.area_record)
+    EeAStarCmLayout theLayout = ee_astar_cm_layout();
+    EEAIContinent* theArea = EEAIContinent::New();
+    bool theOK = OffsetOf(static_cast<EEAIArea*>(theArea), theArea->AreaRecord()) == theLayout.area_record
+        && OffsetOf(static_cast<EEAIArea*>(theArea), theArea->GetTileSet().GetHandleSlot()) == theLayout.area_tiles
+        && (void*)static_cast<EEAIArea*>(theArea) == (void*)theArea;
+    EEAIContinent::Delete(theArea);
+    if (!theOK || sizeof(EEAIArea) != theLayout.area_tiles + sizeof(void*))
         abort();
-    ee_astar_cm_set_layout(&theLayout);
+    EEAICheckObject<EEAIContinent>(EeAStarCmTable::Continents, theLayout.continent);
+    EEAICheckObject<EEAIPathArea>(EeAStarCmTable::PathAreas, theLayout.path_area);
+    EEAICheckObject<EEAIForest>(EeAStarCmTable::Forests, theLayout.forest);
+    EEAICheckObject<EEAIHill>(EeAStarCmTable::Hills, theLayout.hill);
+    EEAICheckObject<EEAIChokePoint>(EeAStarCmTable::ChokePoints, theLayout.choke);
+    EEAICheckObject<EEAIRectangleArea>(EeAStarCmTable::RectangleAreas, theLayout.rect);
+    EEAICheckObject<EEAIPathSector>(EeAStarCmTable::PathSectors, theLayout.sector);
+    EEAICheckObject<EEAIPathSubSector>(EeAStarCmTable::PathSubSectors, theLayout.sub_sector);
     ee_astar_cm_set_host(EEAIContinentHost, NULL);
     ee_astar_world_view_set_manager(&gContinentManager.mRecord);   // the A* view's (world_view.rs)
 }
