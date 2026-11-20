@@ -14,6 +14,7 @@ views (`ee_sim::world`, [world-views.md](world-views.md)). Earlier rounds over t
 | 2 | `rust-units2` | -1,833 | the formations one class over Rust shapes (9 units, 12 headers gone); the group command sweep's dry host whole in Rust (units/dry.rs); the unit host's and the combat goals' plain reads on the views; `EEUnitOrderPush/Erase/Clear` deleted |
 | behaviour 1 | `rust-unitsbeh1` | -456 | the goal, combat-goal, citizen, class and group hosts' plain reads, stores and duplicate world calls answered in Rust (units/unit_geom.rs, `uu_direct::with_game`); the gather and build goals' farm and resource searches in Rust (units/gather_world.rs) |
 | behaviour 2 | `rust-unitsbeh2` | -1,568 | the group command, pick and Fill sweeps, the step's notes and the combat records' batches whole in Rust (TEST ONLY); the update, combat world, goal, unit, sight, active group, trigger, class and physics hosts' effects, stores and plain reads in Rust |
+| behaviour 3 | `rust-unitsbeh3` | -1,134 | the goal objects and their queues whole in Rust (goal_obj.rs, goals.rs: made, cloned, deleted, saved and stepped in Rust; the mirror gone); the goals' accessors and context-free virtuals inline over Rust; the unit's queue calls (SetGoal, GetQueuedGoal, RefreshGoals, RefreshActiveGoal, DropUnsuitedGoals, DropFinishedGoals) and the hosts' goal cases in Rust; 46 unit-utility forwarders gone |
 
 ## Round 1 (branch `rust-units1`, from origin/rust 48c8472f0, 2026-11-18)
 
@@ -120,47 +121,53 @@ New Rust: `units::group_sweep` (the sweep's cases as plain facts, `player_cases`
 `update_views::view_act` and `halt`, `cls_host::cls_view` and `cond_view`, the sight host's and the unit host's
 reads, `Effects::graphic_effect`, the layout's `complex_angular_velocity` and `complex_orientation`.
 
+## Behaviour round 3 (branch `rust-unitsbeh3`, from the lead's integration tree 0a17fc666, 2026-11-19)
+
+The brief: move the foundations the class bodies wait on (the goal queues and the goal objects' fields, Clone, unit
+creation), then the bodies. What moved wholly is the goal object and the goal queue; unit creation and the class
+bodies did not (see "What is left").
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 00ea20b6c | the goal objects whole in Rust (units/goal_obj.rs): a goal is a Rust allocation headed by `EeUnitsGoalBase` (EEUnitGoal's members, asserted), made (`EEUnitGoal::Make`), cloned and deleted in Rust, the counter (`sGoalCounter`) Rust's; the base fields' host operations answered in Rust; the queues whole in Rust (units/goals.rs `EeUnitsGoalQueue`: unit, goals, timer; `EEUnitVectorItem` is its handle, `EEGoalDeque` its interface), the mirror, its reports and USCK's queue check gone; the queue's save, load and update over the queue; `GetQueuedGoal`, `RefreshGoals`, `RefreshActiveGoal`, `SetGoal`, `DropUnsuitedGoals` in Rust (layout `complex_goal_queues`, `UnitView::goal_queues`) | -444 |
+| 76c415741 | the kinds' New functions and accessors inline in ee/EEUnitGoal.h over `ee_units_goal_call` and the records; GoalOp's `SET_GOAL`, `NEW_GATHER`, `LOCATION_GOAL`, `RESET_ACTIVE_PATH` in Rust | -302 |
+| f1100291d | `DropFinishedGoals` in Rust; the trigger host's `GOAL_INFO`, `GOAL_CONDITION`, `GOAL_ELAPSED`, `GOAL_TARGET`, `LOCATION_QUEUED`, `QUEUED_GOAL`, `SECONDARY_TARGET` (cls_host.rs `cond_goal`) | -63 |
+| ecd41f7b8 | 31 unit-utility forwarders (EEFOFindNewTargetNearOldTarget.cpp) gone: each single caller calls the Rust; five uncalled ones deleted | -244 |
+| fc48c9398 | ten more forwarders gone (two callers in the calamities lane's EECalamityUpdate.cpp) | -81 |
+
+Round total: -1,134 net C++ lines (src, include/ee, include/lle; target 3,000).
+
+Call-site edits outside the lane (each a line or two): EEComputerPlayer.cpp (`GetUnit()` for the queue's `mUnit`),
+EEEffectHost.cpp (the out-of-line `GetGoalAt` deleted), EEPlayer.cpp (the goal counter's two save cases deleted:
+Rust answers them), ee/EmpireEarth.h (`sGoalCounter`'s declaration deleted), EECalamityUpdate.cpp (the storm
+reply's distance and radius call the Rust).
+
+Verified on the final tree (00ea20b6c..the clippy commit; origin/rust 3449a04fd is contained, so the merge before
+the report was a no-op): both builds 0/0 (EE-AOC 508 inputs, EE-SIM 509) and the test profile 0/0; the Rust gate
+PASS (4,970 tests); the oracle seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late
+214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4,
+transport 185 digests); the plain saveload 18/18 identical; the matrix `--expect` PASS; scenario_check 27/27;
+sim_editor PASS (14,448 lines); `gates.sh` GATES PASS (tour; ai-game time-cap, units [4, 42, 42], alive_computers [2, 3], `engines ['classic_lua',
+'classic_lua']`; lan-game); the tour with `--box-select --orders --seed 7` PASS (gather, repair, queued repair, move;
+patrol and attack-ground skipped by the fixture). Only the tours exercise the human's orders through the moved
+goal calls (`SetGoal`, the queues' timers: the rally and scramble timers of EEMessage.cpp) in a drawn game.
+
 ## What is left (behaviour)
 
-- The class bodies the brief named (`ProduceUnit`, `Heal`, `Animate`'s effects, the gate builders, `FlyToGoal`,
-  `IsBombOnTarget`, `ReleaseUnit`) can create their effects from Rust now, but each still calls C++ that is not Rust
-  (the goal queues and `Clone`, `CreateUnitAt`, `LoadCargo`, the placement searches, `SetAnimation`, `DropPath`, the
-  combat query host behind `EECombatHealInRange`, the sounds): moving one is a body in Rust over new host
-  operations, the 3:1 yield. They want the goal queues and the unit creation in Rust first.
-- The calamity classes' world steps (EECalamityUpdate.cpp `ClassStep`, `Call`; 29 effect calls) need the class's
-  handle and its effects' pointers in the layout (`EECalamityClass` keeps a vtable before its record) and the
-  graphic effect's kind (`mKind`) through the effect interface: then the fire, morale and cloak steps and the
-  placed effects are Rust.
-- The capture writers that read C++ objects the views do not cover: EECalamityCapture.cpp (the calamities' Save
-  and Load, the effects' durations), EEScenarioCapture.cpp (the scenario objects' text and unit vectors), the
-  combat records' builders (`EECombatCaptureShot`, `XAction`, `Ignored`: the ignored targets' deque, the attack and
-  ground goals' records), the active groups' and the physics units' sweeps (they call the groups' and the classes'
-  C++).
-- The goal base's fields (`mAction`, `mB1C`, `mB1D`, `mStartTime`, `mCreationTime`, `mPathAttempts`, `mIsActive`)
-  have no layout entries: with them GoalOp's `BASE_FIELDS`, `GOAL_ARG`, `SET_ACTIVE`, the path attempts' cases and
-  the ag host's `GOAL_B1C`/`SET_B1D` are Rust.
-- `mWaypoints`, `mFireEffect`, `mGoalQueues` (C++ containers) keep their hosts' cases (`WAYPOINTS`, `MINING_BEAM`,
-  `QUEUED_GOAL_KIND`, the load goal's fields).
-
-## What is left (from round 2)
-
-- `EEComplexUnit`'s remaining bodies (Kill, CopyFrom, SetGroupPathGoals, StepAside, FindContacts, the cargo
-  calls) are world-call sequences (effects, sounds, the path manager, goals, the unit classes' virtuals): each moves
-  as a Rust body over a host trait only with the classes it calls, the pattern of units/hidden.rs.
-- The goal host (`GoalOp`, ~770 lines) is almost all world calls now (actions, goal objects, the transport and
-  calamity classes' virtuals, files); its remaining plain reads need layout members (`mWaypoints`, the goal queues,
-  the patrol group's points, the class's projectile pointer).
-- The unit host (EEUnitHost.cpp, ~1,000 lines) is the game's world calls only (round 2 moved its dry branches); the
-  rest goes with `EEActiveGroup` (its Keep/Spread methods forward to ag.rs already; the host could call ag.rs
-  directly once the group's handle is the Rust record's) and the patrol groups.
-- `EEActiveGroup`, `EEGroup`, `EESelectedGroup`, `EEPPatrolGroup`, `EEAirTrafficControl`: their bodies are Rust
-  (ag.rs, group.rs, patrol_group.rs, atc.rs); the C++ classes keep the members their many holders read (players,
-  the UI, the scenario effects, the messages). Moving the state into Rust records is the next whole-class step;
-  their callers span the app, UI and scenario clusters.
-- The save operation (`EEUnitSaveOperation`, EEComplexDoppelganger.cpp ~550 lines) needs the pointer members in
-  the layout; then saveload 18/18 and the matrix gate it.
-- The TEST ONLY drivers (EEGroupCommandSweep's case builder, EEActiveGroupSweep, EEPhysicsSweep) read tech trees,
-  calamity classes and class virtuals: Rust only once those are views.
-- Small: `EEIsSeenBy`'s host case (needs the combat world host), `EEGetAttackPart`/`EECanHeal` in the combat goal
-  host (the handle conventions differ: combat's are `EEComplexUnit*`, the utilities' `EEUnit*`), `EEPlanWall` and
-  `EECanPlaceOnTile` (the unit host's game paths; their Rust entry points take the C++ vector).
+- **Unit creation** (`BaseCreateUnit`, `BaseCreateUnitAt`, `EECreateUnitAt`, the mining building's and the
+  buildings' variants; EEUnitClass.cpp ~200 lines) constructs `EEComplexUnit`s: it moves with the unit object, not
+  before it. The class bodies the brief named (`ProduceUnit` 191 lines, `ReleaseUnit` 149, `Animate` 106, `Heal`
+  52, the gate builders, `FlyToGoal` 52, `IsBombOnTarget` 65) need, besides the goals (now Rust), the creation,
+  `LoadCargo`, the placements (`EEFindPlacement`, `EEGetDockShipPlacement`: transformations), the transformation
+  math (`ConvertToOrientation`, `SetOrientationYPR`, `Apply` with tag points), the area effects, the sounds and
+  `StartAction`/`ActionChanged`: each is a body over a new host, about a third of its lines saved.
+- `ClearGoals`, `ClearGoalQueue` and `QueueGoal` (AI lane's file) wait on `SetGatheredResource` (the world's
+  resource users, the waiting gatherer's restart) and the air traffic queues.
+- GoalOp (~550 lines) is world calls now (actions, transport and calamity classes, files); its file cases (`READ`,
+  `WRITE`, `FILE_OPEN`) and the queue host's typed `FSFile` calls are one shared typed-file shim away from Rust.
+- The unit utilities: about 40 forwarders with two or more callers (several in other lanes: AI, calamities,
+  scenario, map) and the hosts (`ee_units_uu_host_*`, ~360 lines); `cpp_deps.py why` names the cycle edges.
+- From the earlier rounds, still open: the calamity classes' world steps, the capture writers over C++ objects
+  (EECalamityCapture.cpp, EEScenarioCapture.cpp, the combat records' builders), the save operation's pointer members,
+  the TEST ONLY drivers (EEPhysicsSweep, EEActiveGroupSweep: unit creation and production), `EEActiveGroup`'s and the
+  groups' C++ members, the active groups' save (formations, path requests).
