@@ -35580,3 +35580,47 @@ one-statement shims, one-call forwarders and comments); the target was 3,000.
   EESMEffect.cpp and EEActiveGroupSweep.cpp (`New`, `mFields.mAction`), EEComplexUnit.cpp (RefreshPath by
   GetUnitPath; an out-of-synch line's `mFields.mAction`), EEUGRustCombat.cpp (an include), EEUnitHost.cpp (21 group
   functions deleted), the HUD's test (hud_views_tests.rs: a real group), pick_sweep.rs (`pub(crate) mod game`).
+## The groups lane, round 2: the player's group lists as a Rust object; EEPlayer's bodies, its hosts' compound cases and EEUnitClassImprovement in Rust (ee_sim units group_obj.rs, player_body.rs, player_split.rs, player_save_split.rs, improvement.rs; branch rust-groups2, 2026-11-20)
+
+Numbers: docs/progress/groups.md. C++ logic lines (logic_lines.py) 85,852 -> 85,080 (-772); lines -224 (944 deleted, 720
+added: 269 one-statement host cases, the list accessors, one-call members); the target was -3,000. The merge of
+rust-batch10 kept units round 5's deletion of EEActiveGroupSweep.cpp: its host (EEPhysicsSweep.cpp) makes the groups
+as the group objects.
+
+- **A compound host case becomes one-statement cases without touching its callers.** The player's Rust bodies
+  (player.rs, player_units.rs, player_diplomacy.rs, player_save.rs, player_tick.rs) and their tests' mock hosts ask
+  operations such as `EE_UNITS_PLAYER_CAMOUFLAGE(on)` or `EE_UNITS_PLAYER_SAVE_TECH_LOAD`, whose C++ cases held an
+  if/else, a loop or several statements. The game's callback wrapper (`FnHost::call`, `FfiHost::call`) now runs a
+  `split` first: the compound operation becomes the C++ statements it was (`EE_UNITS_PLAYER_X_*`,
+  `EE_UNITS_PLAYER_SAVE_X_*`, `EE_UNITS_PLAYER_TICK_X_*`), the choice and the loop in Rust, in the original's order;
+  the bodies, their tests and their op logs are unchanged. Each split has its own tests (the op sequence per flag).
+- **A C++ statement that reads a value twice is still one read.** The splits ask a getter again where the original
+  kept a local (`GetTile`, `GetPathSubSectorAt`, `mNumCapitols`, `EESaveHasLiveState`): each is a pure read, so the
+  calls are the same. Where the original evaluated a size once (`for (long i = size - 1; ...)`) the Rust takes the
+  count once; where it compared against `size()` each pass (the patrols' and herds' repairs) the Rust asks each pass.
+- **A body that runs in a constructor or destructor.** `EEPlayer`'s constructors and destructor are one call into
+  Rust (`ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT | DESTROY, ...)`); the members they create and
+  free are host cases, so the Rust objects (the queue, the wonder state, the private lists, the group lists) are made
+  and freed in the original's order. Inside the destructor the virtuals the host calls resolve to EEPlayer's, as
+  they did.
+- **The group lists hold no references.** The original's vectors never counted their groups (the bodies reference
+  and release them); `EeUnitsPlayerGroups` is three `Vec<u64>` with `push`, `clear`, the first match's erase and
+  `AddPendingUnits`' copy of the pending groups into the running ones (the pending list kept until
+  `ReleasePendingUnits`, as the original's was).
+- **cbindgen**: an `Option<fn alias>` in an exported function's signature became `template<typename T = void> struct
+  Option`, which the header splitter cannot name ("cannot name the header item"); take the plain function pointer.
+- **Floats through an i64 host.** The player body's host answers `int64_t`: a float goes as its bits
+  (`EEPlayerFloatBits`, `EEPlayerBitsFloat`) and Rust's `f32::from_bits`/`to_bits`, never a cast.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). `ExecuteSelectionMessage`,
+  `SwapClassButtonMedia`, `ApplyMapRestrictions`' hot keys, `RefreshTerrainVisibility`, the media loads and
+  unloads, the formation state and the area outlines are only exercised by a game with a user interface (the tour,
+  the LAN game).
+- **Call-site edits outside the lane** (each a line): EEPhysics.cpp (`GetRunningGroup`), EEPhysicsSweep.cpp (the
+  merge's group objects; `GetNumPendingGroups`, `AddPendingGroup`), EESMEffect.cpp (3 × `AddPendingGroup`),
+  EEScenarioCapture.cpp (the two list sizes), EEWorldLayout.cpp (`player_group_lists`, `player_lists`).
+- **Gates** (the final tree): both builds and the test profile 0/0; the Rust gate PASS (5,100 tests; its first run
+  failed ee_won_lobby's eecolor golden_replay under load, which passed alone and on the rerun); the oracle seeds 2-7
+  identical; the twelve capture profiles at seeds 2-3 PASS; the plain saveload 18/18 identical (exit 0); the matrix
+  `--expect` PASS (exit 0); scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
+  the tour `--exercise random-game --box-select --orders --seed 7` PASS; `gates.sh` GATES PASS (tour; ai-game
+  time-cap PT 12011, units [4, 36, 37], alive [2, 3], classic_lua x 2; lan-game PT 2874/2873).
