@@ -822,11 +822,11 @@ class WONFrame {
 public:
     int mLeft,mTop,mRight,mBottom;
     SmartPtr<Image> mImage;
-    WONFrame(Image* i=NULL,int n=0) : mLeft(n),mTop(n),mRight(n),mBottom(n) { this->mImage=i; } // 0x3175f0
+    WONFrame(Image* i=NULL,int n=0) : mLeft(n),mTop(n),mRight(n),mBottom(n) { this->mImage=i; }
     WONFrame(Image* i,int l,int t,int r,int b) : mLeft(l),mTop(t),mRight(r),mBottom(b) { this->mImage=i; }
     WONFrame(StretchImage*); // the image's own borders (WONLobbyStretchImage.h)
     WONFrame(const WONFrame& f) : mLeft(0),mTop(0),mRight(0),mBottom(0) { this->Copy(f); }
-    WONFrame& operator=(const WONFrame& f) { this->Copy(f); return *this; } // 0x3177a0
+    WONFrame& operator=(const WONFrame& f) { this->Copy(f); return *this; }
     inline void Copy(const WONFrame& f);
 };
 // ImageComponent (0x38 bytes, 45 vtable slots): image at +0x30, tile flag +0x34, stretch flag +0x35.
