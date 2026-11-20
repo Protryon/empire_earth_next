@@ -254,20 +254,6 @@ void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
     EETechEpochWalk(this, EeTechEpochOp::MediaOfKind, inKind, false, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
 }
 
-// Returns the epoch (for its own id) or one of its nodes, or NULL
-EETechTreeNode* EETechTreeEpoch::Get(long inID)
-{
-    EETechTreeNode* theResult = NULL;
-    if (inID == this->mData->mID) {
-        theResult = this;
-    } else {
-        std::map<long, EETechTreeNode*>::iterator theNode = this->mNodes.find(inID);
-        if (theNode != this->mNodes.end())
-            theResult = theNode->second;
-    }
-    return theResult;
-}
-
 // Copies another epoch's state and deep-copies its nodes for this tree (the node data stays shared)
 EETechTreeEpoch& EETechTreeEpoch::operator=(const EETechTreeEpoch& inOther)
 {
