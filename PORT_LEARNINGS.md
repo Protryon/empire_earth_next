@@ -35529,3 +35529,91 @@ round could prove, and the rest of round 26's list (below) was not started.
   switch (about -70), the lobby's control configs as kinds with cfgtab tables (about -120), FontConfig's,
   ImageConfig's and the percent and colour-scheme configs' members in the Rust config, the hosts' image ops through
   the registry, the widgets' remaining C++ members.
+
+## The UI lane, round 7: the screens', the UI thread's, the main game form's and the shells' host cases in Rust over one-statement C++ shims (ee_game screens game_cpp.rs, game_calls.rs, game_calls_more.rs, game_texts.rs, ui_calls.rs, main_form_calls.rs, shell_calls.rs; branch rust-ui7, 2026-11-20)
+
+The brief: with the owner's "calling C++ from Rust is fine" (2026-11-20), move the screens' and the HUD's C++ logic
+to Rust and reach the world through one-statement shims; score the C++ logic lines removed (`logic_lines.py`),
+target -3,000. **Logic -1,415** (whole tree, base 840aeb3c0 -> HEAD: 91,787 -> 90,372), net C++ lines
+-631 (+1025 -1656 in src and include), 605 shims added, none deleted. docs/progress/ui-cluster.md has the
+commits and what is left.
+
+### The pattern
+
+- **One list makes three things.** `game_cpp.rs`'s `shims!` takes `fn name(args) -> ret = symbol;` lines and makes
+  the trait `Cpp`, the FFI implementation (`Ffi`: an `extern "C"` block, `#[cfg(not(test))]`) and a recording fake
+  (`Fake`: `name(args)` per call, answers, out numbers and out texts from per-shim queues). The moved logic is
+  generic over `Cpp`, so its unit tests assert each case's C++ call order on the fake.
+- **Where the logic plugs in.** Every host already had an adapter in Rust that answered some ops before the C++
+  host (`Form::op`, `get_checked`, `put`, the UI hosts, the main form's, the shells'). The moved cases are one
+  more `if let Some(r) = module::call(&mut Ffi, ...)` right before the C++ call, so the hosts' traits and the
+  screens' replay goldens did not change, and the SGVW trace (recorded after the answer) is the same.
+- **A shim is one statement and no choice.** Two-way cases became two shims and the `if` in Rust
+  (`game_window` / `game_window_os`, `last_auto_save` / `last_quick_save`, `send_enter_shift` / `send_exit_shift`).
+  A temporary the C++ case built on its stack (an `FSFileSpec`, `FSPath`, `FSArchive`, `EEPSaveGameHeader`,
+  `UIHotKey`, `EEChatLogEntry`) is a `new` shim and a `delete` shim at the same places; a local the call writes
+  (a protocol, a tile, a point, WON's game info, a validation message) is a file static the shims share,
+  reset by a shim where the local was constructed.
+- **Texts both ways.** `EeScreensShimText` (pointer, length; `EEShimText`/`EEShimString` rebuild the string up
+  to its first NUL, as the cases' `UWideString(const char*)` did); `EeScreensShimOut` is a `Vec<u8>` the C++
+  appends to (`ee_screens_shim_out`, `EEShimOut`). Strings concatenated in the cases (`"Scenarios\\" + prefix +
+  name + extension`) are byte concatenations in Rust.
+- **A generator, kept scratch.** `name(arg: T) [-> R] | C++ statement` lines made both sides (the Rust list entry
+  and the `extern "C"` one-liner); cases were cut by label with a small script that keeps the file's line ends.
+
+### Lessons
+
+- **cbindgen sees private consts too when a name is shared.** A private `const SHOWN` in a new module moved
+  ee_ui's exported `SHOWN` from `ui/form_state.h` to `common.h` (cbindgen dedups by name across the crate graph).
+  Give a module's consts names no other module exports, and `/// cbindgen:ignore` the ones that look generic.
+- **Test function names shadow the module's.** A `#[test] fn resize_game_screen()` in a `use super::*` test file
+  hides the function under test (E0061 "takes 0 arguments"); name tests by what they check.
+- **The language strings are real in unit tests.** `resource_string(20009)` answers "<NONE>" in a test binary:
+  assert a text through `string(id)` rather than a literal.
+- **`logic_lines.py` counts a one-statement case written on three lines (`case X:`, the call, `break;`) as three
+  logic lines**, and `case X: call(); return 0;` as one. The owner's definition makes both shims. This round moved
+  only cases with more than one statement; the one-statement cases left are about a hundred in EEScreens.cpp alone.
+- **Measure the callee set before promising.** The cases whose calls were already Rust objects (textures, the
+  sound manager, the toolkit) took the same shim as the others: a shim is cheaper than finding the Rust object's
+  handle through a C++ shell (`GETexture::mRust` is private).
+
+### What only the tours (or a person) exercise
+
+- The tours: the settings' slider labels, game view, window mode and test sound; the single player and random map
+  set-up (`TEXT_SERVER`, `SI_*` for scenarios); the UI thread's `UpdateInterface`, `PauseGraphics`,
+  `ResizeGameScreen` and the game starts' cases; the main form's per-frame cases (group refresh, pick, cursor
+  modes, hot keys, cancel event, poll, scroll); the box selection and orders (the mouse modes' buttons, keys,
+  first unit, build, view); the chat line's free.
+- EE-SIM: the civilization builder (`GAME_CIV_BUILDER`, `UG_OP_CB_MUSIC`, `CIV_CHOOSE`), the editor's paint areas
+  (`SH_PICK`, `SH_MAP_TILE`, `SH_MOUSE_AT`, `SH_VIEW_RECT`).
+- Only a person: the campaign screens (backdrops, start, difficulty, archive, scenario header), the lobby (start
+  server, boot, transfer, rejoin, colours, random map options), the save and load screens (file list, exists,
+  load, quick load, saved game, scenario intro), the post-game summary (bars, star, screenshot, campaign set-up,
+  send), the civilization choice, the debug sound label, the WON message of the day and server selection, the
+  rasterizer change, the information messages' portrait and sound, the saved groups' buttons.
+
+### Gates
+
+Per commit (logic over the whole tree; net C++ lines in src and include): 56a9f7e56 -287 / -132, 25d4044d1 -217 /
+-132, e152dbfdb -261 / -108, cc8e670dc -281 / -150, 6dc3daa5c -278 / -83, 9bf340d65 -91 / -26; c6f61e135 is clippy
+only (Rust). Each piece: build `--sim` 0/0, the moved modules' unit tests, oracle seeds 2-3 identical (after
+pieces 1 and 4), the tour (after 3) and the orders game (after 5), sim_editor and `--civbuilder` (after 6).
+
+On the final tree (c6f61e135; origin/rust 781d6cd0c was already in the base 840aeb3c0: nothing to merge):
+- both builds 0/0 (EE-AOC 418 inputs, EE-SIM 419) and the test profile 0/0 (418); `rust_build.py header` current;
+- the Rust gate PASS (5,115 tests; test, clippy, rustfmt, header). The first run failed clippy only (two shim
+  traits unused outside the fake, LP64 casts, two tests' io records): c6f61e135;
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175,
+  effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests);
+- the plain saveload PASS (exit 0); the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27;
+- sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RESULT PASS), `--exercise editor` (RESULT PASS),
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS); no GX errors. The menu captures equal the base build's pixel for pixel but the build label (156
+  pixels at the top left); the box-selected frame and the editor's map tab looked at;
+- `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT 11846,
+  units [4, 36, 37], alive [2, 3], classic_lua x 2; lan-game PT 2790/2789).
+- Not run: the POSIX builds.
