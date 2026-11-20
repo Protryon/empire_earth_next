@@ -20,8 +20,8 @@ public:
     virtual void HandleControlEvent(int inControlId);
     virtual void HandleComponentEvent(ComponentEvent* inEvent);
     EeWonLogic* mRust; // mLastUserName (0x40), mNeedTOU (0x50)
-    SmartPtr<CreditsDialog> mCreditsDialog; // 0x54
-    SmartPtr<TOUDialog> mTOUDialog; // 0x58
+    SmartPtr<LobbyRustDialog> mCreditsDialog; // 0x54
+    SmartPtr<LobbyRustDialog> mTOUDialog; // 0x58
 };
 class InitLogic : public LobbyLogic {
 public:
@@ -48,7 +48,7 @@ public:
     SmartPtr<AcceptOp> mAcceptOp; // 0x54
     SmartPtr<AsyncSocket> mFirewallSocket; // 0x58
     IPAddr mFirewallAddress; // 0x5c
-    SmartPtr<ChooseNetworkAdapterDialog> mNetworkAdapterDialog; // 0x84
+    SmartPtr<LobbyRustDialog> mNetworkAdapterDialog; // 0x84
 };
 }
 #endif

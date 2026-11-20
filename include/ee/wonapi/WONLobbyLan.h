@@ -6,10 +6,7 @@
 #include "rust/won_lobby/lanobj.h"
 #include "rust/won_net/qsock.h"
 namespace WONAPI {
-class DirectConnectDialog;
-class LanNameDialog;
-class LanPortDialog;
-class PasswordDialog;
+class LobbyRustDialog;
 class LobbyLanSocket;
 
 // RTTI 0x8559d8; 0x30 bytes (allocated at 0x7e0ada and 0x7e37f6); LobbyClient is 0x2c bytes.
@@ -82,10 +79,10 @@ public:
     void HandleAccept(AsyncOp* inOp) { this->Call(EeWonLanCall::Accept, inOp); }
     void HandlePeerAuthDone(AsyncOp* inOp); // the certificate's check (C++), then the Rust's AddPending
 
-    SmartPtr<DirectConnectDialog> mDirectConnectDialog; // 0x40
-    SmartPtr<LanNameDialog> mLanNameDialog; // 0x44
-    SmartPtr<LanPortDialog> mLanPortDialog; // 0x48
-    SmartPtr<PasswordDialog> mPasswordDialog; // 0x4c
+    SmartPtr<LobbyRustDialog> mDirectConnectDialog; // 0x40
+    SmartPtr<LobbyRustDialog> mLanNameDialog; // 0x44
+    SmartPtr<LobbyRustDialog> mLanPortDialog; // 0x48
+    SmartPtr<LobbyRustDialog> mPasswordDialog; // 0x4c
 private:
     EeWonLan* mRust;
 };

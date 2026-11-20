@@ -275,6 +275,7 @@
 #include "rust/won_net/sockthread.h"
 #include "rust/won_net/strcase.h"
 #include "rust/won_net/titlecfg.h"
+#include "rust/won_net/titleobj.h"
 #include "rust/won_net/udpmgr.h"
 #include "rust/won_net/udpops.h"
 #include "rust/won_net/userstatus.h"

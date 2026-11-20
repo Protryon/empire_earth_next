@@ -1,4 +1,6 @@
-// TitleConfig's and CommunityConfig's rules through ee_won's titlecfg module (rust/crates/ee_won_net/src/titlecfg.rs):
+// TitleConfig's and CommunityConfig's rules through ee_won's titlecfg module (rust/crates/ee_won_net/src/titlecfg.rs),
+// as the C++ classes applied them until WON round 22 (include/ee/wonapi/WONTitleConfigMsg.h then; the classes are
+// ee_won_net titleobj.rs now, and this is the drivers' copy: won_titlecfg_test, won_titleobj_test's original side):
 // Rust decides an instruction's child or error, the name-login mode and the lifespan map and writes both ToString
 // texts; these apply them to the config's members in the original's order (TitleConfig.cpp's statements).
 // Templates over the config so that tests/won/won_titlecfg_test.cpp runs the same code over a stand-in.

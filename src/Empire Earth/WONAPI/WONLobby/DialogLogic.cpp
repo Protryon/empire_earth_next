@@ -66,17 +66,10 @@ bool DialogLogic::GetStatusCancelled() { return this->Call(EeWonDlgLogicCall::Fi
 
 static Component* FindDialog(ComponentConfig* inConfig, bool inStatus)
 {
-    Component* aFound;
-    if (inStatus) {
-        SmartPtr<StatusDialog> aPtr;
-        SafeGetComponent(inConfig, aPtr, "StatusDialog", "DialogLogic.cpp", 49);
-        aFound = aPtr.get();
-    }
-    else {
-        SmartPtr<OkCancelDialog> aPtr;
-        SafeGetComponent(inConfig, aPtr, "OkCancelDialog", "DialogLogic.cpp", 48);
-        aFound = aPtr.get();
-    }
+    SmartPtr<LobbyRustDialog> aPtr;
+    if (inStatus) SafeGetDialog(inConfig, aPtr, EeWonLobbyDlgKind::Status, "StatusDialog", "DialogLogic.cpp", 49);
+    else SafeGetDialog(inConfig, aPtr, EeWonLobbyDlgKind::OkCancel, "OkCancelDialog", "DialogLogic.cpp", 48);
+    Component* aFound = aPtr.get();
     if (aFound != NULL)
         aFound->AddRef();
     return aFound;
@@ -153,21 +146,22 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::RunDialog: return aWindow->RunDialog(reinterpret_cast<Component*>(b));
     case Op::LobbySuspended: return LobbyIsSuspended() ? 1 : 0;
     case Op::StatusSetText:
-        static_cast<StatusDialog*>(aComp)->SetText(*reinterpret_cast<const GUIString*>(b),
-                                                   *reinterpret_cast<const GUIString*>(c), d != 0);
+        static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, d != 0);
         return 0;
-    case Op::StatusSetStartTick: static_cast<StatusDialog*>(aComp)->SetStartTick(WONTickCount()); return 0;
-    case Op::StatusSetStatus:
-        static_cast<StatusDialog*>(aComp)->SetStatus(GetWONStatusString((WONStatus)b), false);
+    case Op::StatusSetStartTick: static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)WONTickCount()); return 0;
+    case Op::StatusSetStatus: {
+        GUIString aStatus = GetWONStatusString((WONStatus)b);
+        static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetStatus, (intptr_t)&aStatus, false);
         return 0;
+    }
     case Op::SoundEffects: return LobbyGetLobbySoundEffects() ? 1 : 0;
     case Op::PlayErrorSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_Error_Sound).get()); return 0;
-    case Op::OkCancelSetText:
-        static_cast<OkCancelDialog*>(aComp)->SetText(*reinterpret_cast<const GUIString*>(b),
-                                                     *reinterpret_cast<const GUIString*>(c),
-                                                     d != 0 ? LOBBY_STRING(LobbyGlobal_Yes_String) : LOBBY_STRING(LobbyGlobal_OK_String),
-                                                     d != 0 ? LOBBY_STRING(LobbyGlobal_No_String) : LOBBY_STRING(LobbyGlobal_Cancel_String));
+    case Op::OkCancelSetText: {
+        const GUIString* aButtons[2] = {&(d != 0 ? LOBBY_STRING(LobbyGlobal_Yes_String) : LOBBY_STRING(LobbyGlobal_OK_String)),
+                                        &(d != 0 ? LOBBY_STRING(LobbyGlobal_No_String) : LOBBY_STRING(LobbyGlobal_Cancel_String))};
+        static_cast<LobbyRustDialog*>(aComp)->LCall(EeWonLobbyDlgCall::SetText, b, c, (intptr_t)aButtons);
         return 0;
+    }
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
     case Op::InvalidateRect: {
         const int* aRect = reinterpret_cast<const int*>(b);

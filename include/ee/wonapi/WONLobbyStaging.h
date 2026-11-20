@@ -5,7 +5,7 @@
 #include "ee/wonapi/WONLobbyModel.h"
 #include "rust/won_lobby/stagingobj.h"
 namespace WONAPI {
-class CreateGameDialog;
+class LobbyRustDialog;
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.
 // A Rust object since round 20 (rust/crates/ee_won_lobby/src/stagingobj.rs): its methods and scalar state (the join
 // status, the staging and ready flags, the last all-ready time) are Rust's, its calls out the host's ops
@@ -44,7 +44,7 @@ public:
     SmartPtr<LobbyGame> mGame; // 0x40
     SmartPtr<LobbyClient> mMyClient; // 0x44
     SmartPtr<AsyncOp> mJoinOp; // 0x48
-    SmartPtr<CreateGameDialog> mCreateGameDialog; // 0x58
+    SmartPtr<LobbyRustDialog> mCreateGameDialog; // 0x58
 private:
     EeWonStaging* mRust;
 };

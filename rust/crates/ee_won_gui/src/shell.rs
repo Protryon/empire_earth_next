@@ -74,6 +74,8 @@ pub enum EeWonShellKind {
     MsTabCtrl,
     /// `MSEtchedFrameGroup`.
     MsEtchedFrameGroup,
+    /// `MSMessageBox` over `MSDialog` (`a` its texts, an `EeWonMsgBoxTexts*`, or 0 for the dialog alone).
+    MsMessageBox,
 }
 
 /// The C++ shell class a kind's widget is (its base class).
@@ -100,6 +102,8 @@ pub enum EeWonShellBase {
     Header,
     /// `WONShellTab : TabCtrl`.
     Tab,
+    /// `WONShellDialog : Dialog`.
+    Dialog,
 }
 
 /// A base class's widget a kind makes (the host's `NewBase`).
@@ -209,6 +213,8 @@ pub enum EeWonShellOp {
     AddContainedComponent,
     /// `MSEtchedFrameGroup::GetLabel()` (a `Component*`).
     GetLabel,
+    /// `MSMessageBox`'s `mButton1` (a `Component*`).
+    GetButton1,
 }
 
 /// A call out of a kind (the C++ host's op).
@@ -254,6 +260,14 @@ pub enum EeWonShellHostOp {
     NamedFont,
     /// a combo box's part `a` (`EeWonShellComboPart`) = `(Component*)b`.
     ComboPart,
+    /// `((MSButtonBase*)a)->mText->GetWidth()`.
+    WrapWidthOf,
+    /// `((MSButtonBase*)a)->SetWrap(b != 0)`.
+    SetWrap,
+    /// `(new SameSizeLayout(a, true, true))->Add(b)->Add(c)`, executed on the shell's container.
+    SameSize,
+    /// `CenterLayout(this, a, true, false)` with `b` and `c` (when not 0) added, added to the shell's child layouts.
+    CenterLayout,
 }
 
 /// The C++ host: `(shell, op, a, b, c, d) -> result`, `shell` the C++ `WONShell*` the kind belongs to.
@@ -344,6 +358,12 @@ impl Sh {
     }
     pub fn mhead_on(&self, p: isize, k: crate::multiobj::EeWonMHeadCall, a: isize, b: isize) -> isize {
         self.call_on::<crate::multiobj::EeWonMHead>(p, EeWonGuiKind::MHead, k, a, b)
+    }
+    pub fn msb_on(&self, p: isize, k: EeWonMsBtnCall, a: isize, b: isize) -> isize {
+        self.call_on::<EeWonMsButton>(p, EeWonGuiKind::MsButton, k, a, b)
+    }
+    pub fn dlg_on(&self, p: isize, k: crate::dialogobj::EeWonDlgCall, a: isize, b: isize) -> isize {
+        self.call_on::<crate::dialogobj::EeWonDialog>(p, EeWonGuiKind::Dialog, k, a, b)
     }
     pub fn tab_on(&self, p: isize, k: crate::tabobj::EeWonTabCall, a: isize, b: isize) -> isize {
         self.call_on::<crate::tabobj::EeWonTabCtrl>(p, EeWonGuiKind::Tab, k, a, b)
@@ -513,6 +533,8 @@ call_object!(crate::labelobj::EeWonLabel, crate::labelobj::EeWonLabelCall);
 call_object!(crate::scrollerobj::EeWonScroller, crate::scrollerobj::EeWonScrollerCall);
 call_object!(crate::barobj::EeWonScrollbar, crate::barobj::EeWonBarCall);
 call_object!(crate::multiobj::EeWonMHead, crate::multiobj::EeWonMHeadCall);
+call_object!(EeWonMsButton, EeWonMsBtnCall);
+call_object!(crate::dialogobj::EeWonDialog, crate::dialogobj::EeWonDlgCall);
 impl CallObject for crate::tabobj::EeWonTabCtrl {
     type Call = crate::tabobj::EeWonTabCall;
     fn call_obj(&self, k: crate::tabobj::EeWonTabCall, a: isize, b: isize) -> isize {

@@ -286,9 +286,9 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::KillHttp: aLogic->mHTTPSession->KillAll(); return 0;
     case O::ShowInternet: LobbyShowInternetScreen(); return 0;
     case O::AdapterDialog:
-        aLogic->mNetworkAdapterDialog->Reset();
+        aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::Reset);
         return LobbyDoDialog(aLogic->mNetworkAdapterDialog.get());
-    case O::SetAdapter: LobbySetNetworkAdapter(aLogic->mNetworkAdapterDialog->GetSelectedAddress()); return 0;
+    case O::SetAdapter: LobbySetNetworkAdapter((unsigned long)(uint32_t)aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::SelectedAddress)); return 0;
     default: return 0;
     }
 }
@@ -304,7 +304,7 @@ InitLogic::~InitLogic() { ee_won_logic_free(this->mRust); }
 // Looks up the choose-network-adapter dialog from the lobby layout
 void InitLogic::InitComponent(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, this->mNetworkAdapterDialog, "ChooseNetworkAdapterDialog", __FILE__, 49);
+    SafeGetDialog(inConfig, this->mNetworkAdapterDialog, EeWonLobbyDlgKind::ChooseAdapter, "ChooseNetworkAdapterDialog", __FILE__, 49);
 }
 
 // Handles the login screen's Back, Internet and choose-network-adapter buttons
