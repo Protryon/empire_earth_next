@@ -26,7 +26,6 @@
 308280 3094c5 WONGUI/TabCtrl.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp
 311560 311677 WONGUI/TextLinkState.cpp
-317c70 317dcc WONGUI/WONButtonSetup.cpp
 318060 319193 WONGUI/WONButton.cpp
 319a70 31a05b WONGUI/SkinnedContainers.cpp
 326540 3d0343 WONGUI/Cursor.cpp

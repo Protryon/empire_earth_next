@@ -142,7 +142,7 @@ Component* WONAPI::WONShellNew(EeWonShellKind k, intptr_t a, intptr_t b, intptr_
     case EeWonShellBase::Header: return new WONShellHeader(k, a, b, c);
     case EeWonShellBase::Tab: return new WONShellTab(k, a, b, c);
     case EeWonShellBase::Dialog: return new WONShellDialog(k, a, b, c);
-    case EeWonShellBase::WonButton: return new WONShellWonButton(k, a, b, c);
+    case EeWonShellBase::WonButton: return new WONButton(k);
     default: return new WONShellComp(k, a, b, c);
     }
 }
