@@ -34272,3 +34272,70 @@ creation), then the bodies. Numbers: docs/progress/units.md ("Behaviour round 3"
   answers false.
 - **Not done**: unit creation and the class bodies (`ProduceUnit`, `ReleaseUnit`, `Animate`, `Heal`, the gate
   builders, `FlyToGoal`, `IsBombOnTarget`): docs/progress/units.md "What is left".
+## AI Thread cluster, round 5: the continent manager whole in Rust, its objects as Rust allocations, EEAIContinent, EEAIChokePoint and EEAIPathSector deleted (ee_sim::astar objects.rs, cm_queries.rs, cm_capture.rs, cm_passes.rs, area_continent.rs, area_shore.rs, cm_host.rs; branch rust-aicluster5, 2026-11-19)
+
+The fifth round of the cluster lane (docs/progress/ai-thread-cluster.md), from 0a17fc666 (the lead's batch 6 tree,
+origin/rust 3449a04fd already in it). `cpp_deps.py cuts --focus 'AI Thread/'` named the continent manager's cycle
+edges (EEAIChokePoint.cpp <-> EEAIContinentManager.cpp, EEAIContinent.cpp -> the manager) and `why
+EEAIContinentManager.cpp` the 35 units of the biggest cycle that call it; the round took the manager whole: its
+objects first (nothing could move while C++ constructors made them), then its queries, its build passes, the host
+questions and the continent's last members.
+
+| Commit | What | Net C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 005da772f | objects.rs: the manager's eight object kinds are Rust allocations; the area classes lose their vtables; EEAIPathSector.cpp deleted | -57 |
+| cbbb8fb6a | cm_queries.rs, cm_capture.rs: every query and change with its CNTQ record; the members inline | -506 |
+| 5c5151b82 | cm_passes.rs, area_continent.rs: Clear, BuildRegions, Rebuild, Reset, the choke pass, GetClosestPoints; EEAIChokePoint.cpp deleted | -1,259 |
+| 3fe70e8cf | cm_host.rs, area_shore.rs: the state's host questions, RemoveTile, the shore members; EEAIContinent.cpp deleted | -215 |
+| | **round** | **-2,037** |
+
+- **The objects.** Each kind the manager owns is one `#[repr(C)]` record (`EeAStarContinentObj` = the area's record,
+  its tile set's handle, the continent's record; likewise the path area, forest, hill, choke point, rectangle area;
+  the sector is its record, the sub sector its record and tile set). `ee_astar_object_new/_delete` make and free them
+  as the constructors and destructors did (a path area's unit -1, a sector's delete frees its sub sectors). The C++
+  classes keep their names, members and inline accessors and are views: their constructors are private and
+  undefined, `New()`/`Delete()` call Rust, and EEAIRegisterContinentState checks each class's size and records'
+  offsets against `ee_astar_cm_layout` (it used to register the C++'s offsets with Rust; now Rust's are the truth).
+- **Lesson: Rust can only allocate a C++ class that has no vtable.** EEAIArea had eleven virtual slots and its kinds
+  overrode four of them (Create: the herd; GetRandomPoint: the town, herd and rectangle area; RemoveTile: the forest;
+  GetClosestPoints: the continent). The class family lost its vtables (EEAIArea, EETown, EEHerd, the six kinds, the
+  sub sector's AStarGraphableObjectBase and U2DSparseArrayPointContainer's virtual destructor): the four slots
+  dispatch by the area type, the base bodies are `AreaCreate`, `AreaRandomPoint`, `AreaRemoveTile` and
+  `AreaClosestPoints` (the C++'s qualified `EEAIArea::X` calls, which would now recurse, call those), and the two
+  `dynamic_cast`s of a random continent or hill (EEEMStorm.cpp, EEUGRust.cpp) are `static_cast`s (a dynamic_cast of
+  a non-polymorphic class does not compile). A bonus: with no vtable before the first base, an EETown*, its EEAIArea*
+  and its handle are one address, so no pointer adjustment can hide behind a `reinterpret_cast` of a handle.
+- **Lesson: a capture scope must be shared across the languages while both have callers.** CNTQ records the
+  outermost manager query of a thread. Its depth moved to Rust (cm_capture.rs, thread local) with three C entry
+  points, so the three queries left in C++ (CanGetTo, AreConnectedForUnit, UpdateWallUnit: they read unit classes)
+  and the Rust ones nest in one scope stack: CanGetTo's GetContinent inside it records nothing, as before.
+- **Lesson: a pass's own queries are records too.** The build passes called the manager's public lookups:
+  CreatePathAreaKind asked GetPathAreaAt of every tile (GetPathAreas), the choke pass GetForestAt of every wood tile,
+  Rebuild RepairPathArea of every stale tile and GetPathAreaAt of every new sub sector. Each is a CNTQ record
+  thousands of times per game; the Rust passes call the queries (cm_queries.rs), not the record lookups behind them.
+- **Lesson: keep the C++'s loop variables when the loop writes them.** Rebuild's sector loop read its bounds from
+  `theSector` at every test, and the body assigned `theSector` the filled tile's sector; the Rust loop keeps one
+  mutable sector for both (a sector whose bounds touch the next one's would otherwise walk a different rectangle).
+- **Lesson: keep the next step's Rust out of mod.rs until the step before it is committed.** Two steps' edits in one
+  file (the manager .cpp, mod.rs, the generated astar.h) had to be split into the first step's tree by hand
+  (`git hash-object -w` and `update-index --cacheinfo` of the step's version; the header rebuilt by dropping the next
+  step's declarations). New modules written unwired cost nothing and keep each step's tree the one that was built.
+- **Lesson: a test module's glob re-export fails clippy once it has nothing public enough.** Moving the view's two
+  C++ imports to Rust left world_view.rs's test `cpp` module with only `pub(super)` items, and its
+  `pub(crate) use cpp::*` became an error under `-D warnings` (the tests themselves passed).
+- **What moved, file by file.** Deleted: EEAIPathSector.cpp, EEAIChokePoint.cpp, EEAIContinent.cpp. Left:
+  EEAIContinentManager.cpp (about 300 lines: ctor and dtor, CanGetTo, AreConnectedForUnit, UpdateWallUnit, the
+  scenario inputs of BuildRegions, the forests' RegrowTrees), EEAIContinentSave.cpp (the save's file part, the
+  host's owner, herd Create, region size, AI value write and random stream, the load's re-filing of the towns and
+  herds), EEAIRectangleArea.cpp (the kinds' Create and GetRandomPoint dispatch, the random points, the hull update).
+- **Call-site edits outside the lane**: include/lle/U2DSparseArray.h (the destructor not virtual: one word);
+  EEEMStorm.cpp and EEUGRust.cpp (`dynamic_cast` to `static_cast` of a random continent or hill: three words).
+- **Behaviour.** None intended. The objects' addresses are Rust heap addresses (the path area fill's set of areas
+  is still in address order, as the VC6 set of pointers was; the oracle and every capture are unchanged).
+- **What runs it.** Every game: the build passes at the start (CNTB, the oracle capture), Rebuild whenever walls
+  change (CNTR), the queries everywhere (CNTQ), the closest points and shores (AREA 2, AREA 6, transport), the saved
+  manager (saveload). Nothing of it draws: no change here only a tour reaches.
+- **Gates**: on the final tree (3fe70e8cf, then the docs commit's clippy and rustfmt changes; origin/rust 3449a04fd was already in the base, so the merge needed nothing): the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (4,977 tests); the oracle at seeds 2-7 identical to the reference; the captures at seeds 2-3 PASS: oracle 212 digests, late 214, transport 185, placement 4; the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (calamity 3/4 and next 2/4 as the expect file has them); scenario_check 27/27; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12877` units [4, 39, 40] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2749 joiner=2756`, GATES PASS. Per commit: the `--sim` build 0/0 and the oracle at seeds 2-3 identical; the oracle capture at seeds 2-3 (212) after the queries and after the passes. The Rust gate of the queries step ran its tests (4,977 passed) and failed clippy on the test glob above (fixed in that commit); the passes step's two clippy findings (a `&self -> &mut` helper, a needless borrow) and rustfmt's layout of this round's files were fixed in the docs commit, after which the Rust gate, the `--sim` build and the oracle at seeds 2-3 ran again (PASS, 0/0, identical; a first try of that oracle reused a run name whose stopped run had left its stage slot half deleted: `db\dbfamily.csv: the db table is missing`, not a code fault).
+- **The census** (`tools/cpp_deps.py report` on the final build): 460 units, 136,539 lines; the largest cycle 160 units, 78,798 lines (162 and 81,014 at the start of the round, `cuts --focus` on the base); the units of that cycle that call the continent manager went from 35 to 14 (the manager's members are inline over Rust).
+- **Not moved**: the path manager's host (EEPathManager.cpp), the computer player's class, the manager's three
+  unit-class queries and RegrowTrees (docs/progress/ai-thread-cluster.md "Left").

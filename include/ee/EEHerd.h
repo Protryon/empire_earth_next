@@ -26,11 +26,11 @@ public:
     EEHerd();
     // 0xa19ff (ret 0xc): the player, the animal index (EEAnimal::Get), the herd id
     EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID);
-    virtual ~EEHerd();                      // +0x00 0xa1b1e (??_G 0xa19e3)
+    ~EEHerd();                      // +0x00 0xa1b1e (??_G 0xa19e3)
     // +0x08 0xa2775 (ret 4): EEAIArea::Create, then (unless a load) the territory widened by a random margin; PickLeader
-    virtual void Create(const std::vector<U2DPoint<long> >& inTiles);
+    void Create(const std::vector<U2DPoint<long> >& inTiles);
     // +0x20: EETown's body (ICF-folded into EETown::GetRandomPoint 0xac203): a random hull point on the map
-    virtual U2DPoint<long> GetRandomPoint();
+    U2DPoint<long> GetRandomPoint();
 
     bool AddUnit(EEComplexUnit* inUnit);
     void HandleUnitHit(EEComplexUnit* inUnit);  // 0xa1d0f: the unit was attacked: flee or fight back

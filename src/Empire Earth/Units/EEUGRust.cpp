@@ -528,7 +528,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 && theComplex->mUnitClass->mUnitType != kUnitTypeSp15SpaceFighter)
                 theArea = gContinentManager.GetContinentAt(theComplex);
             else
-                theArea = dynamic_cast<EEAIContinent*>(
+                theArea = static_cast<EEAIContinent*>(
                     gContinentManager.GetRandomContinent(kContinentCategoryNone, gPhysics->mRandom));
             if (theArea == NULL)
                 return 0;

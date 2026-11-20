@@ -148,7 +148,8 @@ fn drop_area(r: &mut EeAStarCmRecord, old: u64, new_id: u16, sector_ids: &[u16],
     r.tables_mut().remove_area(serial);
     set_table(r, EeAStarCmTable::PathAreas, old_id as usize, 0);
     r.tables_mut().free[EeAStarCmFree::PathAreas as usize].push(old_id);
-    host(cm_io::EE_ASTAR_CM_DELETE, [old, 0], [EeAStarCmTable::PathAreas as i64, 0, 0, 0]);
+    // SAFETY: the path area just taken out of its table
+    unsafe { crate::astar::objects::delete_object(EeAStarCmTable::PathAreas, old) };
 }
 
 /// `RepairPathArea(tile)`.
@@ -206,7 +207,7 @@ pub fn repair_path_area(r: &mut EeAStarCmRecord, x: c_long, y: c_long) {
             // SAFETY: a live path area
             new_id = unsafe { cm_io::path_area(single).id };
         } else {
-            let single = host(cm_io::EE_ASTAR_CM_NEW, [0, 0], [EeAStarCmTable::PathAreas as i64, 0, 0, 0]) as u64;
+            let single = crate::astar::objects::new_object(EeAStarCmTable::PathAreas);
             let id = r.new_path_area_id();
             r.last_serial = r.last_serial.wrapping_add(1);
             let serial = r.last_serial;

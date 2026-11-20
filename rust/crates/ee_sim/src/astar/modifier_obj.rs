@@ -35,6 +35,14 @@ extern "C" {
 }
 use crate::astar::world_view::ee_astar_view_cm_hill_at;
 
+/// The world's influence table's region size (0 without one).
+pub(crate) fn influence_region_size() -> i32 {
+    let mut size = 0;
+    // SAFETY: the C++'s read of the world's table
+    unsafe { ee_astar_mod_host_influence(&mut size) };
+    size
+}
+
 #[cfg(test)]
 mod cpp {
     use std::cell::RefCell;

@@ -11,9 +11,9 @@
 // the obstacle's unit (-1), +0x84..+0x8a the region ids by kind (GetContinent 0x22b86: kind 4, 1, 2, 3)
 class EEAIPathArea : public EEAIArea, private EeAStarPathAreaRecord {
 public:
-    // inline ctor (COMDAT 0x18a03, first user EEAIAStarPathAreaGoal::CreateAreas; ??_G 0x18a58)
-    EEAIPathArea() { ee_astar_path_area_init(this); }
-    virtual ~EEAIPathArea() { ee_astar_path_area_free(this); }
+    // a Rust object (ee_sim::astar objects.rs): made and freed there, never by a C++ constructor
+    static EEAIPathArea* New() { return (EEAIPathArea*)(uintptr_t)ee_astar_object_new(EeAStarCmTable::PathAreas); }
+    static void Delete(EEAIPathArea* inObject) { ee_astar_object_delete(EeAStarCmTable::PathAreas, (uint64_t)(uintptr_t)inObject); }
 
     EeAStarPathAreaRecord* Record() { return this; }
     const EeAStarPathAreaRecord* Record() const { return this; }
@@ -66,6 +66,8 @@ public:
     void AddSectorID(unsigned short inSectorID) { ee_astar_path_area_add_sector_id(this, inSectorID); }
 
 private:
+    EEAIPathArea();
+    ~EEAIPathArea();
     EEAIPathArea(const EEAIPathArea&);
     EEAIPathArea& operator=(const EEAIPathArea&);
 };

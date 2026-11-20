@@ -34,7 +34,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
@@ -44,6 +43,8 @@
 
 #include "ee/EEAIRectangleArea.h"
 #include "ee/EEAIRandom.h"
+#include "ee/EETown.h"
+#include "ee/EEHerd.h"
 
 // Creates an empty rectangle area with no scenario area, tile counts or continent
 // NEAR: the original calls the map's _Tree(pred, alloc) ctor out of line (ours expands it and refuses _Tree_val one
@@ -63,7 +64,7 @@ U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
 {
     std::vector<U2DPoint<long> > thePoints;
     std::vector<U2DPoint<long> > theTiles;
-    U2DPoint<long> theResult = EEAIArea::GetRandomPoint();
+    U2DPoint<long> theResult = this->AreaRandomPoint();
     EEMap* theMap = gWorld.mMap;
     if (!theMap || theMap->GetTile(theResult.mX, theResult.mY))
         return theResult;
@@ -83,8 +84,27 @@ U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
 // EEAIArea's two slots that read the game's objects (the rest are inline over ee_sim::astar area_ops.rs; EEAIArea.cpp
 // went in the game's leaves round 2)
 
-// Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty
+// The area's slots the kinds had their own of (the class has no vtable: the kind is its area type)
+void EEAIArea::Create(const std::vector<U2DPoint<long> >& inTiles)
+{
+    if (this->area_type == kAIAreaHerd)
+        static_cast<EEHerd*>(this)->Create(inTiles);
+    else
+        this->AreaCreate(inTiles);
+}
+
 U2DPoint<long> EEAIArea::GetRandomPoint()
+{
+    switch (this->area_type) {
+    case kAIAreaTown: return static_cast<EETown*>(this)->GetRandomPoint();
+    case kAIAreaHerd: return static_cast<EEHerd*>(this)->GetRandomPoint();
+    case kAIAreaRectangleArea: return static_cast<EEAIRectangleArea*>(this)->GetRandomPoint();
+    }
+    return this->AreaRandomPoint();
+}
+
+// Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty
+U2DPoint<long> EEAIArea::AreaRandomPoint()
 {
     U2DPoint<long> theResult(0, 0);
     if (this->mTiles.Size() > 0)
