@@ -8,6 +8,7 @@
 #define EE_EEUIMANAGER_H
 
 #include "rust/game/screens.h"   // EeScreensUiManagerFields (ee_screens ui_objects.rs)
+#include "ee/EEGameUI.h"
 
 class EEUIFMainGame;
 class EEUIFScenarioEditor;
@@ -29,10 +30,14 @@ struct EEUIFErrorCallbackData {
 // (EE_SCREENS_DIALOG_*: 0 a message with OK, shown when inFlag; 1 Yes/No; 2 Yes/No/Cancel; 3 a text, or a password
 // when inFlag, which OK hands to inFirst; 4 Cancel only, closing inCloseForm); inFirst is OK's or Yes' or Cancel's
 // callback, inSecond No's, each given inData (the original's DisplayMessage 0x261788, DisplayQuestion 0x261894,
-// DisplayYesNoCancel 0x2619f9, DisplayPassword 0x26151a and DisplayCancel 0x26167f)
-void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment,
-                       void* inData, EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm,
-                       bool inFlag);
+// DisplayYesNoCancel 0x2619f9, DisplayPassword 0x26151a and DisplayCancel 0x26167f). EEUIFError.cpp registers it in
+// the game's UI table (ee/EEGameUI.h).
+inline void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideString& inMessage,
+                              unsigned long inAlignment, void* inData, EEUIFErrorCallback inFirst,
+                              EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag)
+{
+    gEEGameUI.mErrorDisplay(inManager, inKind, inMessage, inAlignment, inData, inFirst, inSecond, inCloseForm, inFlag);
+}
 
 struct EEUIManagerCall;                     // (EEUIManager.cpp: the host's record of one ui_manager.rs call)
 

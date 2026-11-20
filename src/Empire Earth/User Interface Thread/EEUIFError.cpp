@@ -38,9 +38,10 @@ static GEFont* sDialogFont;
 static float sDialogFloats[9];   // the constructor's sizes, colours and layout (EE_SCREENS_DLG_FLOAT)
 
 // A new box (7 controls, 1 group, no id; its constructor ee_screens dialog.rs construct) shown as inKind
-void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment,
-                       void* inData, EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm,
-                       bool inFlag)
+// (EEUIFErrorDisplay, ee/EEUIManager.h, through the game's UI table)
+static void EEUIFErrorShow(UIManager* inManager, unsigned long inKind, const UWideString& inMessage,
+                           unsigned long inAlignment, void* inData, EEUIFErrorCallback inFirst,
+                           EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag)
 {
     UIForm* theBox = new EEUIShellForm(EE_SCREENS_SK_DIALOG, {}, 7, 1, inManager, (unsigned long)-1, true);
     sDialogMessage = &inMessage;
@@ -50,6 +51,7 @@ void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const UWideSt
     sDialogCloseForm = inCloseForm;
     EEUIShell::Op(theBox, EE_SCREENS_SKOP_DIALOG_SHOW, (int64_t)inKind, (int64_t)(uint32_t)inAlignment | (int64_t)inFlag << 32);
 }
+static const bool sErrorDisplayRegistered = (gEEGameUI.mErrorDisplay = EEUIFErrorShow, true);
 
 static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
 

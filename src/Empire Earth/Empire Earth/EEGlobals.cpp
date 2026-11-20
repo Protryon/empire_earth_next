@@ -341,3 +341,6 @@ char gEmptyString[4] = "";
 // the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
 #include "ee/EEWonNetUI.h"
 EEWonNetUI gEEWonNetUI;
+// the game's UI as the rest of the game calls it (ee/EEGameUI.h; the UI's units fill it)
+#include "ee/EEGameUI.h"
+EEGameUI gEEGameUI;
