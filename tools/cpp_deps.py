@@ -126,6 +126,21 @@ def qualified_name(dem):
     return head[start:]
 
 
+def exact_class(dem):
+    """The class part of a demangled name with its template arguments ('A<B>' for A<B>::f); '' for a free name."""
+    q = qualified_name(dem)
+    depth, last = 0, -1
+    for i in range(len(q) - 1):
+        c = q[i]
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+        elif c == ":" and q[i + 1] == ":" and depth == 0:
+            last = i
+    return q[:last] if last >= 0 else ""
+
+
 def class_of(dem):
     """The class (or namespace) part of a demangled name; '' for a free function or C name."""
     q = qualified_name(dem)
@@ -357,6 +372,16 @@ def analyse(units, rust_defs, code_only=False):
         u.cls = c.most_common(1)[0][0] if c else "(file) " + pathlib.PurePosixPath(u.name).stem
     home = {cls: max(cnt.items(), key=lambda kv: (kv[1], kv[0]))[0] for cls, cnt in class_count.items()}
     by_name = {u.name: u for u in units}
+    # the exact template instances each unit defines a function of (a template's instances share their class's home,
+    # but only where the home instantiates that instance: UIListBox<UWideString>, the engine's, is no member of the
+    # editor unit that is UIListBox's home for UIListBox<EESEUITTData>)
+    instances = collections.defaultdict(set)
+    for u in units:
+        for raw, dem, k in u.defs:
+            if k in "Tt":
+                q = exact_class(dem)
+                if "<" in q:
+                    instances[u.name].add(q)
 
     def resolve(raw, dem):
         """(category, unit name or None)."""
@@ -367,7 +392,8 @@ def analyse(units, rust_defs, code_only=False):
             if len(ds) == 1:
                 return ds[0].kind, ds[0].name
             h = home.get(class_of(dem))
-            if h:
+            q = exact_class(dem)
+            if h and ("<" not in q or q in instances[h]):
                 return by_name[h].kind, h
             if all(d.kind == ds[0].kind for d in ds) and ds[0].kind != "cpp":
                 return ds[0].kind, ds[0].name
@@ -1149,6 +1175,19 @@ def selftest():
                                                                     for r in fr))
     check("shortest_path p -> r over p, q, r",
           shortest_path(cg["edges"], "p.cpp", {"r.cpp"}, {"p.cpp", "q.cpp", "r.cpp"}) == ["p.cpp", "q.cpp", "r.cpp"])
+    tu = {n: Unit(n, "cpp", 10) for n in ("h.cpp", "e1.cpp", "e2.cpp", "u.cpp")}
+    tu["h.cpp"].defs = [("?f@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::f(void)", "T"),
+                        ("?g@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::g(void)", "T")]
+    for n in ("e1.cpp", "e2.cpp"):
+        tu[n].defs = [("?f@?$T@M@@QEAAXXZ", "public: void __cdecl T<float>::f(void)", "T")]
+    tu["u.cpp"].undef = [("?f@?$T@M@@QEAAXXZ", "public: void __cdecl T<float>::f(void)"),
+                         ("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)")]
+    tu["e1.cpp"].defs.append(("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)", "T"))
+    tu["e2.cpp"].defs.append(("?h@?$T@H@@QEAAXXZ", "public: void __cdecl T<int>::h(void)", "T"))
+    tg = analyse(list(tu.values()), set())
+    check("a template instance its class's home never defines is inline; one it defines is the home's",
+          tg["home"].get("T") == "h.cpp" and set(tg["edges"].get("u.cpp", {})) == {"h.cpp"}
+          and all("float" not in d for d in tg["edges"]["u.cpp"]["h.cpp"].values()))
     cw = cluster_waves(["x", "y", "z", "w"], {"x": {"y"}, "y": {"x", "z"}, "w": {"z"}}, [["x", "y"], ["z"], ["w"]])
     check("cluster waves: z, then {x, y} and w together", cw == [[["z"]], [["x", "y"], ["w"]]])
     print("SELFTEST " + ("PASS" if all(checks) else "FAIL"))
