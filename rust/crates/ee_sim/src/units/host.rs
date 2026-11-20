@@ -460,8 +460,6 @@ pub mod game {
 
     extern "C" {
         fn ee_units_host_group_ids(group: *mut c_void, out: *mut u32, capacity: usize) -> usize;
-        fn ee_units_host_goal_new(spec: *const EeGoalSpec) -> *mut c_void;
-        fn ee_units_host_goal_release(goal: *mut c_void);
         fn ee_units_host_active_group_new(player: *mut c_void) -> *mut c_void;
         fn ee_units_host_group_fill(group: *mut c_void, selection: *mut c_void, sort: i32, slot: i32);
         fn ee_units_host_group_release(group: *mut c_void);
@@ -508,11 +506,8 @@ pub mod game {
         fn ee_units_host_wall_build(group: *mut c_void, pieces: *mut c_void);
         fn ee_units_host_wall_release(pieces: *mut c_void);
         fn ee_units_host_group_spread_for_unload(group: *mut c_void, x: i64, y: i64);
-        fn ee_units_host_goal_set_transport(goal: *mut c_void, unit: u32);
-        fn ee_units_host_goal_can_unload(goal: *mut c_void) -> u8;
         fn ee_units_host_unload_warning(player: *mut c_void, x: i64, y: i64);
         fn ee_units_host_can_produce(player: *mut c_void, technology: i32) -> u8;
-        fn ee_units_host_can_place_on_tile(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u8;
         fn ee_units_host_make_building(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u32;
         fn ee_units_host_free_farms(unit: u32, out: *mut u32, capacity: usize) -> usize;
         fn ee_units_host_sort_farms(farms: *mut u32, count: usize, x: i64, y: i64, greater: u8);
@@ -524,7 +519,6 @@ pub mod game {
         fn ee_units_host_can_take(target: u32, unit: u32) -> u8;
         fn ee_units_host_unit_drop_gathered(unit: u32);
         fn ee_units_host_work_farm(farm: u32, unit: u32);
-        fn ee_units_host_unit_set_goal(unit: u32, goal: *mut c_void);
         fn ee_units_host_group_finish(group: *mut c_void);
         fn ee_units_host_calamity_of(
             player: *mut c_void,
@@ -543,7 +537,6 @@ pub mod game {
             technology: i32,
             target: u32,
         );
-        fn ee_units_host_goal_clone(goal: *mut c_void) -> *mut c_void;
         fn ee_units_host_group_remove_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_unit_clear_goals(unit: u32);
         fn ee_units_host_player_selection(player: *mut c_void) -> *mut c_void;
@@ -556,12 +549,9 @@ pub mod game {
         fn ee_units_host_unit_clear_goal_queue(unit: u32, queue: i64);
         fn ee_units_host_unit_clear_all_goal_queues(unit: u32);
         fn ee_units_host_unit_queue_goal(unit: u32, goal: *mut c_void, queue: i64);
-        fn ee_units_host_unit_queue_timer(unit: u32, queue: i64, ms: i64);
         fn ee_units_host_unit_goal_clone(unit: u32) -> *mut c_void;
         fn ee_units_host_garrison_rally_load(garrison: u32) -> *mut c_void;
-        fn ee_units_host_unit_queue_clear(unit: u32, queue: i64);
         fn ee_units_host_unit_clear_air_traffic(unit: u32);
-        fn ee_units_host_unit_refresh_goals(unit: u32);
         fn ee_units_host_unit_clear_build_targets(unit: u32);
         fn ee_units_host_unit_action_changed(unit: u32);
         fn ee_units_host_unit_halt(unit: u32);
@@ -619,8 +609,8 @@ pub mod game {
             }
         }
         fn goal_new(&mut self, spec: &EeGoalSpec) -> Option<GoalHandle> {
-            // SAFETY: spec is a valid record for the call
-            GoalHandle::from_ptr(unsafe { ee_units_host_goal_new(spec) })
+            // SAFETY: the sweep runs on the simulation's thread holding the world (goal_spec.rs)
+            GoalHandle::from_ptr(unsafe { crate::units::goal_spec::new_goal(spec) })
         }
         fn goal_kind(&mut self, goal: &GoalHandle) -> u8 {
             // SAFETY: a goal the host created and nothing consumed: its `mKind`
@@ -628,7 +618,7 @@ pub mod game {
         }
         fn goal_release(&mut self, goal: GoalHandle) {
             // SAFETY: as above; the handle is consumed
-            unsafe { ee_units_host_goal_release(goal.as_ptr()) }
+            unsafe { crate::units::goal_obj::goal_delete(goal.as_ptr() as usize as u64) }
         }
         // SAFETY (each call below): the references are objects the host handed out (the sender, its selection, a
         // group from active_group_new) and live for the body's call
@@ -791,11 +781,11 @@ pub mod game {
         }
         fn goal_set_transport(&mut self, goal: &GoalHandle, unit: u32) {
             // SAFETY: a goal the host created and nothing consumed yet
-            unsafe { ee_units_host_goal_set_transport(goal.as_ptr(), unit) }
+            unsafe { crate::units::goal_spec::set_transport(goal.as_ptr() as usize as u64, unit) }
         }
         fn goal_can_unload(&mut self, goal: &GoalHandle) -> bool {
             // SAFETY: as above
-            unsafe { ee_units_host_goal_can_unload(goal.as_ptr()) != 0 }
+            unsafe { crate::units::goal_spec::can_unload(goal.as_ptr() as usize as u64) }
         }
         fn unload_warning(&mut self, player: HostRef, x: i64, y: i64) {
             unsafe { ee_units_host_unload_warning(player.0, x, y) }
@@ -819,7 +809,19 @@ pub mod game {
             unsafe { ee_units_host_can_produce(player.0, technology) != 0 }
         }
         fn can_place_on_tile(&mut self, player: HostRef, unit_type: i64, x: i64, y: i64) -> bool {
-            unsafe { ee_units_host_can_place_on_tile(player.0, unit_type, x, y) != 0 }
+            // EECanPlaceOnTile(player, type, x, y, false, true) (uu_ffi.rs)
+            unsafe {
+                crate::units::uu_ffi::ee_units_uu_can_place_unit_on_tile(
+                    player.0 as usize as u64,
+                    0,
+                    unit_type as i32,
+                    x as i32,
+                    y as i32,
+                    0,
+                    1,
+                    std::ptr::null_mut(),
+                ) != 0
+            }
         }
         fn make_building(&mut self, player: HostRef, unit_type: i64, x: i64, y: i64) -> u32 {
             unsafe { ee_units_host_make_building(player.0, unit_type, x, y) }
@@ -860,8 +862,15 @@ pub mod game {
             unsafe { ee_units_host_work_farm(farm, unit) }
         }
         fn unit_set_goal(&mut self, unit: u32, goal: GoalHandle) {
-            // SAFETY: a goal the host created; the unit takes it
-            unsafe { ee_units_host_unit_set_goal(unit, goal.as_ptr()) }
+            // the unit's SetGoal(goal, 0, 0) (goals.rs); the unit takes the goal
+            let object = crate::units::goal_spec::resolve(unit);
+            crate::units::goals::set_goal(
+                object,
+                goal.as_ptr() as usize as u64,
+                false,
+                0,
+                &mut crate::units::goals::Goals,
+            );
         }
         fn group_finish(&mut self, group: HostRef) {
             unsafe { ee_units_host_group_finish(group.0) }
@@ -899,7 +908,9 @@ pub mod game {
         }
         fn goal_clone(&mut self, goal: &GoalHandle) -> Option<GoalHandle> {
             // SAFETY: a goal the host created and nothing consumed
-            GoalHandle::from_ptr(unsafe { ee_units_host_goal_clone(goal.as_ptr()) })
+            GoalHandle::from_ptr(
+                unsafe { crate::units::goal_spec::clone(goal.as_ptr() as usize as u64) } as usize as *mut c_void
+            )
         }
         fn group_remove_unit(&mut self, group: HostRef, unit: u32) {
             unsafe { ee_units_host_group_remove_unit(group.0, unit) }
@@ -960,7 +971,16 @@ pub mod game {
             unsafe { ee_units_host_unit_queue_goal(unit, goal.as_ptr(), queue) }
         }
         fn unit_queue_timer(&mut self, unit: u32, queue: i64, ms: i64) {
-            unsafe { ee_units_host_unit_queue_timer(unit, queue, ms) }
+            // the queue's ResetTimer, then AddTime((unsigned long)ms) (goals.rs)
+            if let Some(q) =
+                crate::units::goals::unit_queues(crate::units::goal_spec::resolve(unit)).get(queue as usize)
+            {
+                // SAFETY: the unit's live queue
+                unsafe {
+                    crate::units::goals::ee_units_gq_timer(*q, 2, 0);
+                    crate::units::goals::ee_units_gq_timer(*q, 1, ms as i32 as std::os::raw::c_long);
+                }
+            }
         }
         fn unit_goal_clone(&mut self, unit: u32) -> Option<GoalHandle> {
             GoalHandle::from_ptr(unsafe { ee_units_host_unit_goal_clone(unit) })
@@ -994,13 +1014,21 @@ pub mod game {
                 .unwrap_or(0)
         }
         fn unit_queue_clear(&mut self, unit: u32, queue: i64) {
-            unsafe { ee_units_host_unit_queue_clear(unit, queue) }
+            if let Some(q) =
+                crate::units::goals::unit_queues(crate::units::goal_spec::resolve(unit)).get(queue as usize)
+            {
+                // SAFETY: the unit's live queue
+                unsafe { crate::units::goals::ee_units_gq_clear(*q) };
+            }
         }
         fn unit_clear_air_traffic(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_clear_air_traffic(unit) }
         }
         fn unit_refresh_goals(&mut self, unit: u32) {
-            unsafe { ee_units_host_unit_refresh_goals(unit) }
+            // RefreshGoals, then RefreshActiveGoal (goals.rs)
+            let object = crate::units::goal_spec::resolve(unit);
+            crate::units::goals::ee_units_unit_refresh_goals(object);
+            crate::units::goals::ee_units_unit_refresh_active_goal(object);
         }
         fn unit_clear_build_targets(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_clear_build_targets(unit) }
@@ -1032,10 +1060,14 @@ pub mod game {
             (valid != 0, x, y)
         }
         fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle> {
-            GoalHandle::from_ptr(unsafe { ee_units_host_goal_clone(goal.0) })
+            // SAFETY: a live load goal the unit's queue holds
+            GoalHandle::from_ptr(
+                unsafe { crate::units::goal_spec::clone(goal.0 as usize as u64) } as usize as *mut c_void
+            )
         }
         fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef) {
-            unsafe { ee_units_host_unit_set_goal(unit, goal.0) }
+            let object = crate::units::goal_spec::resolve(unit);
+            crate::units::goals::set_goal(object, goal.0 as usize as u64, false, 0, &mut crate::units::goals::Goals);
         }
         fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32) {
             unsafe { ee_units_host_player_event(player.0, x, y, code) }
