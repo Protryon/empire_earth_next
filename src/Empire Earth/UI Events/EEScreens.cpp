@@ -131,10 +131,8 @@ UString gMultiplayerString("");             // 0x562fd8 (EEUserInterface.cpp kee
 EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI events' statics; ee/EmpireEarth.h)
 static EECivilization sCivilization;        // 0x962f08: the civilization the editors' sub-menu opens the builder on
 
-long EEScreenEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return ee_screens_event(this->mEvent, inForm, inEntity);
-}
+// (EEScreenEvent::ProcessEvent, EECreateScreenEvent, the event group's ee_screenscpp_event and the grab scroll's
+// events: UI Events/EEScreenEvent.cpp)
 
 static UWideString sCampaignError;   // the last campaign load's error (EE_SCREENS_TEXT_CAMPAIGN_ERROR)
 
@@ -366,26 +364,6 @@ static void EEScreensResignYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RESIGN_
 static void EEScreensRestartYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RESTART_YES, NULL, NULL); }
 static void EEScreensToEditorYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RETURN_TO_EDITOR_YES, NULL, NULL); }
 static void EEScreensExitYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_EXIT_YES, NULL, NULL); }
-
-UIEvent* EECreateScreenEvent(unsigned long inEvent)
-{
-    if (inEvent == 0)
-        return NULL;
-    return new EEScreenEvent(inEvent);
-}
-
-// The screens' events for ee_screens toolkit.rs (its event group): 0 a new event of the code, 1 the event's
-// Reference, 2 its Dereference
-extern "C" void* ee_screenscpp_event(uint32_t inOp, void* inEvent, uint32_t inCode)
-{
-    if (inOp == 0)
-        return EECreateScreenEvent(inCode);
-    if (inOp == 1)
-        static_cast<UIEvent*>(inEvent)->Reference();
-    else
-        static_cast<UIEvent*>(inEvent)->Dereference();
-    return NULL;
-}
 
 static float Float(uint32_t inBits)
 {
@@ -685,15 +663,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
 
 
 // ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
-
-UIEvent* EECreateGrabScroll(unsigned long inForm)
-{
-    EEReleaseGrabScroll(inForm);
-    return EECreateScreenEvent(inForm ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
-}
-
-// (the mouse move event the grab saved is released there: ee_screens toolkit.rs's event group holds it)
-void EEReleaseGrabScroll(unsigned long inForm) { ee_screens_camera_grab_reset(inForm); }
 
 // the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
 static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
