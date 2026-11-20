@@ -185,12 +185,6 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     }
     case EE_SCREENS_SETS_OP_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs ? 1 : 0;
-    case EE_SCREENS_SETS_OP_LIST_SELECTION: {
-        unsigned long theSelection;
-        return theList->GetCurrentSelection(theSelection) == kErrorOK ? (int32_t)theSelection : -1;
-    }
-    case EE_SCREENS_SETS_OP_LIST_COUNT: return (int32_t)theList->GetLineCount();
-    case EE_SCREENS_SETS_OP_LIST_SELECT: theList->ChangeSelectionIndex((unsigned long)i[0], i[1] != 0, i[2] != 0); return 0;
     case EE_SCREENS_SETS_OP_CARET_END: {
         UWideString theText;
         static_cast<UIEditBox*>(p[0])->GetAllText(theText);
@@ -199,12 +193,6 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SETS_OP_REDRAW: gUIManager->RedrawAll(); return 0;
     case EE_SCREENS_SETS_OP_STORING: gB4C3220 = i[0] != 0; return 0;
-    case EE_SCREENS_SETS_OP_GROUP:
-        if (i[1])
-            static_cast<UIControl*>(p[0])->GetForm()->GetEntityGroup(i[0])->Enable();
-        else
-            static_cast<UIControl*>(p[0])->GetForm()->GetEntityGroup(i[0])->Disable();
-        return 0;
     }
     return 0;
 }

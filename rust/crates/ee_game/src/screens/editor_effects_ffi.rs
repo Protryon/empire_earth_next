@@ -22,6 +22,10 @@ struct Host;
 
 impl SeplHost for Host {
     fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
+        // SAFETY: the host's arguments for the op (the effect screen's controls record)
+        if let Some(r) = unsafe { crate::screens::editor_direct::seet(false, op, p, i, f) } {
+            return r;
+        }
         let p = p.map(|x| x as *mut c_void);
         unsafe { sys::ee_screenscpp_seet(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
     }

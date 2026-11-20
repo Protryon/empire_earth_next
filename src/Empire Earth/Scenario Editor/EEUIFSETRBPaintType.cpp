@@ -81,8 +81,6 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
     case EE_SCREENS_SEE_OP_DEREFERENCE:
         static_cast<EEAction*>(p)->Dereference();
         break;
-    case EE_SCREENS_SEE_OP_CHECKED:
-        return static_cast<UICheckBox*>(static_cast<UIEntity*>(p))->GetIsChecked() ? 1 : 0;
     case EE_SCREENS_SEE_OP_POST_VIEWPORT: {
         EESEERust* theEvent = new EESEERust(kSEEChangeViewport);
         ee_screens_see_viewport(theEvent->mEvent, f, i[0] != 0 ? 1 : 0);
@@ -107,8 +105,6 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         theAction->Dereference();
         break;
     }
-    case EE_SCREENS_SEE_OP_RANGE:
-        return (int32_t)static_cast<UISlider*>(static_cast<UIEntity*>(p))->GetCurrentRangeValue();
     case EE_SCREENS_SEE_OP_SLIDER_TEXT: {
         // the original's sprintf of its UWideString format: the float value passed as a double through `...`
         UWideString theText;
@@ -116,35 +112,15 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         static_cast<UITextLabel*>(p)->SetText(theText);
         break;
     }
-    case EE_SCREENS_SEE_OP_SET_DISPLAY:
-        static_cast<UIControl*>(p)->SetDisplayMode((unsigned long)i[0]);
-        break;
     case EE_SCREENS_SEE_OP_FILL_SCENARIO:
         FillScenarioComboBox(static_cast<UIComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
         break;
-    case EE_SCREENS_SEE_OP_SET_SELECTION:
-        static_cast<UIComboBox*>(p)->SetCurrentSelection((unsigned long)i[0]);
-        break;
-    case EE_SCREENS_SEE_OP_ENTITY_ID:
-        return (int32_t)static_cast<UIControl*>(static_cast<UIEntity*>(p))->GetId();
-    case EE_SCREENS_SEE_OP_LIST_SELECTION: {
-        unsigned long theSelection;
-        return static_cast<UILBString*>(static_cast<UIEntity*>(p))->GetCurrentSelection(theSelection) == kErrorOK
-                   ? (int32_t)theSelection
-                   : -1;
-    }
     case EE_SCREENS_SEE_OP_CAMG_ADD:   // the effect types (editor_effects.rs), the effect screen's controls
     case EE_SCREENS_SEE_OP_CAMG_REMOVE:
         ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 0, inOp == EE_SCREENS_SEE_OP_CAMG_ADD ? 1 : 0,
                               (uint32_t)i[0]);
         break;
     case EE_SCREENS_SEE_OP_MSD_SHOW: ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 1, 0, 0); break;
-    case EE_SCREENS_SEE_OP_COMBO_SELECTION: {
-        unsigned long theSelection;
-        return static_cast<UIComboBox*>(static_cast<UIEntity*>(p))->GetCurrentSelection(theSelection) == kErrorOK
-                   ? (int32_t)theSelection
-                   : -1;
-    }
     case EE_SCREENS_SEE_OP_SAA_SHOW:
         ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 2, 0, (uint32_t)i[0]);
         break;
@@ -163,8 +139,6 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         break;
     case EE_SCREENS_SEE_OP_EPOCH_COUNT:
         return (int32_t)EEEpochCount();
-    case EE_SCREENS_SEE_OP_LINE_COUNT:
-        return (int32_t)static_cast<UIComboBox*>(p)->GetListBox()->GetLineCount();
     case EE_SCREENS_SEE_OP_FILL_EPOCHS: {
         UWideString theText;
         std::vector<UWideString> theNames;
@@ -178,9 +152,6 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
     }
     case EE_SCREENS_SEE_OP_MAX_PLAYERS:
         return (int32_t)gWorld.mMaxPlayers;
-    case EE_SCREENS_SEE_OP_LABEL_NUMBER:
-        static_cast<UITextLabel*>(static_cast<UIForm*>(p)->GetControlById(i[0]))->SetText((unsigned long)(uint32_t)i[1]);
-        break;
     }
     return 0;
 }

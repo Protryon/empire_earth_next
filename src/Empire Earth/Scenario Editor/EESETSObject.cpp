@@ -82,7 +82,8 @@ struct EESETSOUnitTypeNameLess {
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// ---- the host (editor_object.rs: the ops from 100)
+// ---- the host (editor_object.rs: the ops from 100; the action names and the toolkit's texts are answered in Rust,
+// editor_direct.rs)
 
 static_assert(EE_SCREENS_SEOB_IDS_ANY_CLASS == IDS_ANY_CLASS && EE_SCREENS_SEOB_IDS_NONE == IDS_NONE &&
                   EE_SCREENS_SEOB_IDS_SE_UNIT_GROUP_UNITS == IDS_SE_UNIT_GROUP_UNITS &&
@@ -179,14 +180,6 @@ int32_t SeobGetText(int32_t* i, void* const* p)
                                  ->mUnitClass->mNameStringID,
                              theText);
         break;
-    case EE_SCREENS_SEOB_TEXT_STRING: gResource->GetString(i[1], theText); break;
-    case EE_SCREENS_SEOB_TEXT_LINE: {
-        // (a line past the list: the original read past it; none here)
-        auto* theList = static_cast<UIComboBox*>(p[1])->GetListBox();
-        if ((unsigned long)i[1] < theList->GetLineCount())
-            theText = theList->GetData((unsigned long)i[1]);
-        break;
-    }
     }
     return SeobText((const char*)theText, p[0], i[2]);
 }
@@ -252,12 +245,6 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
             gResource->GetString(gUnitClassTable[theTypes[k]]->mNameStringID, theName);
             theCombo->AppendLine(theName);
         }
-        return 0;
-    }
-    case EE_SCREENS_SEOB_OP_ACTION_APPEND: {
-        const char* theName = EEUnitAction::GetActionName(i[0]);   // port: the Rust table ("" unknown)
-        if (*theName != 0)
-            theCombo->AppendLine(UWideString(UString(theName)));
         return 0;
     }
     case EE_SCREENS_SEOB_OP_SM:
@@ -331,25 +318,6 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
                 SeobEditor(p[0])->SelectUnit(static_cast<EEUnit*>(theUnit));
         }
         return 0;
-    }
-    case EE_SCREENS_SEOB_OP_ACTION_ID: {
-        // (no selected line: the original read before its list; the empty name here)
-        unsigned long theAction;
-        theCombo->GetCurrentSelection(theAction);
-        UString theActionName;
-        if (theAction < theCombo->GetListBox()->GetLineCount())
-            theActionName = *(theCombo->GetListBox()->GetDataArray().begin() + theAction);
-        return (int32_t)EEUnitAction::GetActionID((const char*)theActionName);
-    }
-    case EE_SCREENS_SEOB_OP_ACTION_INDEX: {
-        std::vector<UWideString> theActions = theCombo->GetListBox()->GetDataArray();
-        size_t k;
-        for (k = 0; k < theActions.size(); k++) {
-            const char* theName = EEUnitAction::GetActionName((unsigned long)i[0]);
-            if (*theName != 0 && theActions[k] == UString(theName))
-                break;
-        }
-        return (int32_t)k;
     }
     case EE_SCREENS_SEOB_OP_UNIT_LIST_FILL: {
         EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[1]));

@@ -1651,6 +1651,12 @@ constexpr static const int32_t EE_SCREENS_SEPL_LIST_EFFECT = 4;
 /// `EeScreensSeplCtl::flags`: a slider without a range (only its page size `extra[2]`, when not 0).
 constexpr static const uint32_t EE_SCREENS_SEPL_NO_RANGE = 32;
 
+/// The effect record's size in pointers.
+constexpr static const size_t EE_SCREENS_SEET_EFFECT_SLOTS = 46;
+
+/// The condition record's size in pointers.
+constexpr static const size_t EE_SCREENS_SEET_CONDITION_SLOTS = 23;
+
 constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;
@@ -12106,6 +12112,15 @@ uint32_t ee_screens_sear_state(const EeScreensSeArea *screen,
 /// # Safety
 /// `screen` comes from `ee_screens_sear_new` (or is NULL); `names` is a `std::vector<UWideString>`.
 void ee_screens_sear_names(const EeScreensSeArea *screen, void *names);
+
+/// The member `a`, `k` of a record (`EESETSEffect.cpp`'s remaining cases' accessor; NULL: no such member).
+///
+/// # Safety
+/// `controls` is NULL or a live record of the kind `condition` names.
+void *ee_screens_seet_slot(void *controls,
+                           bool condition,
+                           uint32_t a,
+                           uint32_t k);
 
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
 /// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the

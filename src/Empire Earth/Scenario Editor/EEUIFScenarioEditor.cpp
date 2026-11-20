@@ -420,12 +420,6 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         *theOut = t;
         return 0;
     }
-    case EE_SCREENS_SEFM_OP_GROUP_ENABLE:
-        if (i[1])
-            theForm->GetEntityGroup((unsigned long)i[0])->Enable();
-        else
-            theForm->GetEntityGroup((unsigned long)i[0])->Disable();
-        return 0;
     case EE_SCREENS_SEFM_OP_SCREEN_EVENT: *theOut = EECreateScreenEvent((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEFM_OP_SEE_EVENT: *theOut = new EESEERust((uint32_t)i[0], p[2]); return 0;
     case EE_SCREENS_SEFM_OP_MOUSE_EVENT: {
@@ -620,17 +614,10 @@ int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, flo
         gISKeyboard->GetEntity(sSefmKeys[i[0]], theKey);
         return (theKey->JustPressed() ? 1 : 0) | (theKey->GetValue() != 0 ? 2 : 0);
     }
-    case EE_SCREENS_SEFM_OP_FIRE: {
-        UIControl* theControl = theForm->GetControlById((unsigned long)i[0]);
-        if (theControl != NULL) theControl->FireTriggerEvent(kControlTriggerButtonUp);
-        return 0;
-    }
     case EE_SCREENS_SEFM_OP_GRID: static_cast<EEROTerrain*>(gU56535C)->StepGridMode(i[0] != 0); return 0;
     case EE_SCREENS_SEFM_OP_PLAYER_COUNT:
         return (int32_t)ee_screens_sepl_call((EeScreensSePlayers*)ee_screens_segr_tab(static_cast<EeScreensSeGroup*>(p[0])),
                                              EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
-    case EE_SCREENS_SEFM_OP_COMBO_SELECT: static_cast<UIComboBox*>(p[0])->SetCurrentSelection((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SEFM_OP_LABEL_TEXT: static_cast<UITextLabel*>(p[0])->SetText(*static_cast<const UWideString*>(p[1])); return 0;
     case EE_SCREENS_SEFM_OP_MOUSE: {
         const GE2DPoint& theMouse = theForm->GetMouseLocation();
         f[0] = theMouse.GetX();
