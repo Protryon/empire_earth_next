@@ -323,6 +323,7 @@ mod settings_form_ffi;
 // TEST ONLY: the SGVW trace of the screens' and the editor's game reads (EE_SGVW)
 pub(crate) mod sgvw;
 // the generic C++ shells' kinds (UI cluster round 3: the game's control classes whose C++ classes are gone)
+pub(crate) mod shell_calls;
 pub mod shells;
 pub mod shells_chat;
 pub mod shells_dialog;
