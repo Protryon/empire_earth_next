@@ -182,7 +182,7 @@ pub(crate) fn edit_set_text(c: Cpp, text: &[u8]) {
 }
 
 /// The combo box's text label's line 0 (`GetTextLabel()->GetText(0)`).
-fn combo_text(c: Cpp) -> Vec<u8> {
+pub(crate) fn combo_text(c: Cpp) -> Vec<u8> {
     let label = direct::combo_call(c, EeUiComboCall::Part, 4, 0).unwrap_or(0) as Cpp;
     label_text(label)
 }
@@ -663,13 +663,26 @@ pub(crate) unsafe fn sepl(op: u32, p: *const *mut c_void, i: &mut [i32; 4], f: &
     // the statement sequences composed in Rust (editor_sepl.rs) over the C++'s single statements
     let mut x = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
         use crate::screens::editor_players::EE_SCREENS_SEPL_OP_COMBO_SELECTION;
+        if op >= crate::screens::editor_seplx::EE_SCREENS_SEPX_R_FIRST {
+            if let Some(r) = crate::screens::editor_seplx::direct(op, p, i) {
+                return r;
+            }
+        }
         if op == crate::screens::editor_sepl::EE_SCREENS_SEPL_OP_COMBO_SELECTION_RAW {
             // SAFETY: p0 the op's live combo box
             return unsafe { sepl_direct(EE_SCREENS_SEPL_OP_COMBO_SELECTION, p, i, f) }.unwrap_or(-1);
         }
-        let p = p.map(|v| v as *mut c_void);
-        // SAFETY: the statements take the composed op's live handles
-        unsafe { sys::ee_screenscpp_sepx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
+        let mut cpp = |op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]| -> i32 {
+            let p = p.map(|v| v as *mut c_void);
+            // SAFETY: the statements take the composed op's live handles
+            unsafe { sys::ee_screenscpp_sepx(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
+        };
+        if crate::screens::editor_seplx::needs_prestep(op) {
+            // SAFETY: the maker's statements take its live record in p0
+            let c = unsafe { *(p[0] as *const crate::screens::editor_players::EeScreensSeplCtl) };
+            crate::screens::editor_seplx::prestep(&mut cpp, op, &c);
+        }
+        cpp(op, p, i, f)
     };
     if let Some(r) = crate::screens::editor_sepl::compose(&mut x, op, q, i, f) {
         return r;
@@ -681,12 +694,12 @@ pub(crate) unsafe fn sepl(op: u32, p: *const *mut c_void, i: &mut [i32; 4], f: &
 // ---------------------------------------------------------------------------------------- the object screen's host
 
 /// The combo box's drop-down line `k` (`GetListBox()->GetData(k)`), empty past its lines.
-fn combo_line(c: Cpp, k: isize) -> Vec<u8> {
+pub(crate) fn combo_line(c: Cpp, k: isize) -> Vec<u8> {
     direct::list_line(direct::combo_list(c), k).unwrap_or_default()
 }
 
 /// The combo box's drop-down line count.
-fn combo_lines(c: Cpp) -> usize {
+pub(crate) fn combo_lines(c: Cpp) -> usize {
     direct::list_op(direct::combo_list(c), EeUiOp::ListLineCount, 0, 0, 0).map_or(0, |(n, _)| n as usize)
 }
 

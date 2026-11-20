@@ -90,56 +90,12 @@ void EESEAChangeWorldPlayerCount::Virtual4()
 }
 
 // The diplomacy buttons (once EESEUIBDiplomacy > UIButton, vtable 0x443298: a kind over the button shell, ee_game
-// shells_editor.rs; its state 0 allies, 1 enemies, toggled by ButtonUp): their normal, focused and pressed bitmaps
-// cut from the editor's button texture (0x1768a6), released (0x176b18), and a button's bitmaps and help text for its
-// state (UpdateBitmaps), then the form's help text when inHelp (ButtonUp)
-static void SeplDiplomacyLoad(EEUIFScenarioEditor* inEditor)
-{
-    GETexture* theTexture = inEditor->GetButtonTexture();
-    float theWidth = (float)theTexture->GetWidth();
-    float theTop = 230.0f / theWidth;
-    float theBottom = 253.0f / theWidth;
-    float theScale = 23.0f / theWidth;
-    for (unsigned long i = 0; i < 2; i++) {
-        float theX = i * 46.0f;
-        float theLeft = theX / theWidth;
-        float theRight = (theX + 23.0f) / theWidth;
-        float thePressedRight = (theX + 46.0f) / theWidth;
-        // normal, pressed, focused (the original's order): the pressed cell is the one right of the normal
-        const float theCells[3][2] = {{theLeft, theRight}, {theRight, thePressedRight}, {theLeft, theRight}};
-        GEBitmap** theSlots[3] = {&sSeplDiplomacy[0][i], &sSeplDiplomacy[2][i], &sSeplDiplomacy[1][i]};
-        for (int k = 0; k < 3; k++) {
-            GEBitmap* theBitmap = new GEBitmap;
-            theBitmap->SetTexture(theTexture, inEditor->GetManager()->GetScreen());
-            theBitmap->SetTextureCoordinates(GETextureCoordinate(theCells[k][0], theTop), GETextureCoordinate(theCells[k][1], theTop),
-                                             GETextureCoordinate(theCells[k][0], theBottom),
-                                             GETextureCoordinate(theCells[k][1], theBottom));
-            theBitmap->SetXYScale(theScale, theScale);
-            *theSlots[k] = theBitmap;
-        }
-    }
-}
-
-static void SeplDiplomacyRelease()
-{
-    for (long i = 0; i < 2; i++) {
-        sSeplDiplomacy[0][i]->Dereference();
-        sSeplDiplomacy[2][i]->Dereference();
-        sSeplDiplomacy[1][i]->Dereference();
-    }
-}
-
+// shells_editor.rs; its state 0 allies, 1 enemies, toggled by ButtonUp): their bitmaps cut from the editor's button
+// texture (0x1768a6), released (0x176b18), and a button's bitmaps and help text for its state (UpdateBitmaps), then
+// the form's help text when inHelp (ButtonUp): ee_game screens editor_seplx.rs
 void EESEDiplomacyShow(UIButton* inButton, unsigned long inState, bool inHelp)
 {
-    inButton->SetPressedBitmap(sSeplDiplomacy[2][inState]);
-    inButton->SetFocusedBitmap(sSeplDiplomacy[1][inState]);
-    inButton->SetNormalBitmap(sSeplDiplomacy[0][inState]);
-    if (inState == kButtonStateNormal)
-        inButton->SetStringTableID(IDS_PLAYERS_CURRENTLY_ALLIES);
-    else if (inState == kButtonStateFocused)
-        inButton->SetStringTableID(IDS_PLAYERS_CURRENTLY_ENEMIES);
-    if (inHelp)
-        inButton->GetForm()->UpdateHelpString();
+    ee_screens_sepl_diplomacy_show(inButton, inState, inHelp);
 }
 static const bool sDiplomacyShowRegistered = (gEEUIShellDiplomacyShow = EESEDiplomacyShow, true);   // ee/EEUIShell.h
 
@@ -175,29 +131,15 @@ static_assert(EE_SCREENS_SEPL_IDS_MAX_PLAYERS == IDS_MAX_PLAYERS && EE_SCREENS_S
                   EE_SCREENS_SEPL_IDS_MUTUAL_DIPLOMACY_SETTINGS == IDS_MUTUAL_DIPLOMACY_SETTINGS &&
                   EE_SCREENS_SEPL_IDS_USE_CARBON_RESOURCE == IDS_USE_CARBON_RESOURCE,
               "the strings");
+static_assert(EE_SCREENS_SEPX_IDS_NONE == IDS_NONE && EE_SCREENS_SEPX_IDS_UNKNOWN_CIVILIZATION == IDS_UNKNOWN_CIVILIZATION &&
+                  EE_SCREENS_SEPX_IDS_PLAYERS_CURRENTLY_ALLIES == IDS_PLAYERS_CURRENTLY_ALLIES &&
+                  EE_SCREENS_SEPX_IDS_PLAYERS_CURRENTLY_ENEMIES == IDS_PLAYERS_CURRENTLY_ENEMIES &&
+                  EE_SCREENS_SEPX_IDS_SET == IDS_SET && EE_SCREENS_SEPX_IDS_UNIT_FAMILY_FIRST == IDS_UNIT_FAMILY_FIRST,
+              "editor_seplx.rs's strings");
 
 namespace {
 
 const GEColor kSeplYellow(0.99607843f, 0.96862745f, 0.1254902f);
-
-// a control's text: none, a resource string, a number, "%s %ld", "%ld %s"
-UWideString SeplText(uint32_t inKind, uint32_t inString, long inNumber)
-{
-    UWideString theText, theString;
-    if (inKind == EE_SCREENS_SEPL_TEXT_STRING || inKind >= EE_SCREENS_SEPL_TEXT_STRING_NUMBER)
-        gResource->GetString(inString, inKind == EE_SCREENS_SEPL_TEXT_STRING ? theText : theString);
-    if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER)
-        sprintf(theText, "%ld", inNumber);
-    else if (inKind == EE_SCREENS_SEPL_TEXT_STRING_NUMBER)
-        sprintf(theText, "%s %ld", (const char*)theString, inNumber);
-    else if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER_STRING)
-        sprintf(theText, "%ld %s", inNumber, (const char*)theString);
-    else if (inKind == EE_SCREENS_SEPL_TEXT_CHAR)
-        theText = UWideString(std::string((size_t)(std::max)(1L, inNumber >> 8), (char)(inNumber & 0xff)).c_str());
-    else if (inKind == EE_SCREENS_SEPL_TEXT_NONE)
-        theText = "";
-    return theText;
-}
 
 GEFont* SeplFont(uint32_t inFont)
 {
@@ -225,84 +167,10 @@ void SeplColor(GEText* inText, uint32_t inFlags)
 std::vector<UWideString> sSeplLines;   // EE_SCREENS_SEPL_OP_LINE_PUSH's lines, for the next combo box
 
 
-// the civilization combo: none, the built-ins, the custom files, the first picked (EESEPlayerRow::Load 0x579fee)
-void SeplCivFill(UIComboBox* inControl)
-{
-    std::set<UString> theFiles;
-    UWideString theText;
-    inControl->DeleteAllEntries();
-    gResource->GetString(IDS_NONE, theText);
-    inControl->AppendLine(theText);
-    for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
-        gResource->GetString(theEntry.mNameID, theText);
-        inControl->AppendLine(theText);
-    }
-    gCivilizationDataPath->ListFiles(UString("*") + gSECivilizationExtension, theFiles);
-    for (std::set<UString>::iterator theFile = theFiles.begin(); theFile != theFiles.end(); ++theFile) {
-        UWideString theName(theFile->GetIndexedSubstring(0, theFile->GetLength() - 5));
-        inControl->AppendLine(theName);
-    }
-    inControl->SetCurrentSelection(0);
-}
-
-// the player's civilization picked: none, a built-in, a custom file's line, else none titled "unknown"
-void SeplCivSelect(UIComboBox* inControl, EEPlayer* inPlayer)
-{
-    UWideString theText;
-    if (inPlayer->mCivilizationFile.GetLength() == 0) {
-        inControl->SetCurrentSelection(0);
-        return;
-    }
-    unsigned long i;
-    for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
-        if (UString(theEntry.mFileName) == inPlayer->mCivilizationFile)
-            break;
-    }
-    if (i != gCivilizationManager.GetNumCivilizations()) {
-        inControl->SetCurrentSelection(i + 1);
-        return;
-    }
-    for (; i < inControl->GetListBox()->GetLineCount(); i++) {
-        theText = inControl->GetListBox()->GetData(i);
-        if (theText == (const char*)inPlayer->mCivilizationFile) {
-            inControl->SetCurrentSelection(i);
-            return;
-        }
-    }
-    inControl->SetCurrentSelection(0);
-    gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-    inControl->GetTextLabel()->SetText(theText);
-}
-
-// the chosen civilization to the player (EESEPlayerRow::ApplySettings 0x57a53e): whether it changed
-bool SeplCivApply(UIComboBox* inControl, EEPlayer* inPlayer)
-{
-    UString theCivilization;
-    UWideString theText;
-    unsigned long theSelection;
-    inControl->GetCurrentSelection(theSelection);
-    gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-    if (theSelection > 0 && theSelection <= gCivilizationManager.GetNumCivilizations()) {
-        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(theSelection - 1);
-        theCivilization = theEntry.mFileName;
-    } else
-        theCivilization = UString(inControl->GetListBox()->GetData(theSelection));
-    if (theSelection == 0) {
-        if (inPlayer->mCivilizationFile.GetLength() > 0 && inControl->GetTextLabel()->GetText(0) != theText) {
-            inPlayer->mCivilization.mPurchasedUpgrades.clear();
-            inPlayer->mCivilization.mAvailablePoints = inPlayer->mCivilization.mMaxPoints;
-            inPlayer->mCivilizationFile = UString("");
-            return true;
-        }
-    } else if (theCivilization != inPlayer->mCivilizationFile) {
-        inPlayer->mCivilizationFile = theCivilization;
-        EEApplyCivilizationFile(inPlayer->mCivilizationFile, inPlayer);
-        return true;
-    }
-    return false;
-}
+// the civilization combo's fill, pick and apply (EESEPlayerRow::Load 0x579fee, ApplySettings 0x57a53e) and the epochs'
+// combo: ee_game screens editor_seplx.rs over the statements below (EE_SCREENS_SEPX_CIV_* ...)
+std::set<UString> sSepxFiles;          // EE_SCREENS_SEPX_FILES_LIST's custom civilization files
+std::vector<UWideString> sSepxLines;   // EE_SCREENS_SEPX_LINES_PUSH's lines
 
 }   // namespace
 
@@ -317,31 +185,14 @@ void SeplLinePush(const UWideString& inLine)
 extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     UIControl* c = static_cast<UIControl*>(p[0]);
-    UIComboBox* theCombo = static_cast<UIComboBox*>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEPL_OP_DELETE: delete c; return 0;
     case EE_SCREENS_SEPL_OP_COLOR: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_COLOR);
     case EE_SCREENS_SEPL_OP_SET_COLOR: EEUIShell::Op(c, EE_SCREENS_SKOP_SET_COLOR, i[0]); return 0;
     case EE_SCREENS_SEPL_OP_RADIO_CHECK: static_cast<UIRadioButton*>(c)->Check(); return 0;
-    case EE_SCREENS_SEPL_OP_LOAD_BITMAPS: SeplDiplomacyLoad(static_cast<EEUIFScenarioEditor*>(p[0])); return 0;
-    case EE_SCREENS_SEPL_OP_RELEASE_BITMAPS: SeplDiplomacyRelease(); return 0;
     case EE_SCREENS_SEPL_OP_DIPLOMACY: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_DIPLOMACY_STATE);
     case EE_SCREENS_SEPL_OP_SET_DIPLOMACY: EEUIShell::Op(c, EE_SCREENS_SKOP_DIPLOMACY_SET, i[0]); return 0;
     case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gMaxPlayers;
-    case EE_SCREENS_SEPL_OP_CIV_FILL: SeplCivFill(theCombo); return 0;
-    case EE_SCREENS_SEPL_OP_CIV_SELECT: SeplCivSelect(theCombo, gWorld.mPlayers[i[0]]); return 0;
-    case EE_SCREENS_SEPL_OP_CIV_APPLY: return SeplCivApply(theCombo, gWorld.mPlayers[i[0]]);
-    case EE_SCREENS_SEPL_OP_FILL_EPOCHS: {
-        std::vector<UWideString> theEpochs;
-        UWideString theTitle;
-        for (unsigned long e = (unsigned long)i[0]; e < (unsigned long)EEEpochCount(); e++) {
-            gResource->GetString(EEEpochTitleID(e), theTitle);
-            theEpochs.push_back(theTitle);
-        }
-        theCombo->DeleteAllEntries();
-        theCombo->AppendStringArray(theEpochs);
-        return 0;
-    }
     case EE_SCREENS_SEPL_OP_NAME_TO_EDIT: static_cast<UIEditBox*>(c)->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
     case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT:
         gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(c)->GetText(0));
@@ -350,7 +201,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_EPOCH_RANGE: gWorld.mPlayers[i[0]]->GetTechTree()->ResetEpochRange(i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
-    case EE_SCREENS_SEPL_OP_LINE_PUSH: sSeplLines.push_back(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2])); return 0;
     }
     return 0;
 }
@@ -370,6 +220,20 @@ static std::vector<long>* SepxTechs(int32_t inList)
     return kLists[inList];
 }
 static std::vector<long> sSepxIDs;   // EE_SCREENS_SEPX_TT_IDS's node ids
+static UIButton* SepxButton(void* const* p) { return static_cast<UIButton*>(p[0]); }
+static GETexture* SepxTexture(void* const* p) { return static_cast<EEUIFScenarioEditor*>(p[0])->GetButtonTexture(); }
+static unsigned long SepxScreen(void* const* p) { return static_cast<EEUIFScenarioEditor*>(p[0])->GetManager()->GetScreen(); }
+static GEBitmap*& SepxBitmap(int32_t* i) { return sSeplDiplomacy[i[0]][i[1]]; }
+static UWideString SepxTextIn(void* const* p, int32_t* i) { return UWideString(std::string((const char*)p[1], (size_t)i[2]).c_str()); }
+static const UString& SepxFile(int32_t* i) { return *std::next(sSepxFiles.begin(), i[0]); }
+
+// a text into the caller's buffer (p1, i3 bytes): its whole length
+static int32_t SepxWrite(const UWideString& inText, void* const* p, int32_t* i)
+{
+    int32_t theLength = (int32_t)inText.GetTCHARLength();
+    memcpy(p[1], (const char*)inText, (size_t)(theLength < i[3] ? theLength : i[3]));
+    return theLength;
+}
 
 // the maker's statements' arguments (editor_sepl.rs make): the record p0, the form p1, the made control p2, the
 // rectangle f (left, top, right, bottom)
@@ -377,53 +241,9 @@ static const EeScreensSeplCtl& C(void* const* p) { return *static_cast<const EeS
 static UIForm* F(void* const* p) { return static_cast<UIForm*>(p[1]); }
 static UIControl* H(void* const* p) { return static_cast<UIControl*>(p[2]); }
 static GEFont* SepxFont(void* const* p) { return SeplFont(C(p).font); }
-static UWideString SepxText(void* const* p) { return SeplText(C(p).text, C(p).string, C(p).number); }
+static UWideString sSepxText;   // the maker's text (EE_SCREENS_SEPX_SET_TEXT: SeplText, editor_seplx.rs prestep)
+static UWideString SepxText(void* const* p) { return sSepxText; }
 static GERectangle SepxRect(const float* f) { return GERectangle(f[0], f[1], f[2], f[3]); }
-
-// the epochs' titles (a combo box's EE_SCREENS_SEPL_LINES_EPOCHS)
-static std::vector<UWideString> SeplEpochLines()
-{
-    std::vector<UWideString> theLines(EEEpochCount());
-    for (unsigned long e = 0; e < (unsigned long)EEEpochCount(); ++e)
-        gResource->GetString(EEEpochTitleID(e), theLines[e]);
-    return theLines;
-}
-
-// the max player combo's lines: the counts 2..16 in the record's text
-static std::vector<UWideString> SeplMaxPlayerLines(const EeScreensSeplCtl& c)
-{
-    std::vector<UWideString> theLines(15);
-    for (long i = 2; i <= 16; ++i)
-        theLines[i - 2] = SeplText(c.text, c.string, i);
-    return theLines;
-}
-
-// a trigger screen combo box's lines: the families and the editor's unit sets, the pending lines, the strings
-static std::vector<UWideString> SeplComboLines(const EeScreensSeplCtl& c)
-{
-    std::vector<UWideString> theLines;
-    if (c.extra[1] == EE_SCREENS_SEPL_COMBO_LINES_FAMILIES) {
-        UWideString theFormat;
-        theLines.resize(EE_SCREENS_SEOB_FAMILIES);
-        for (unsigned long k = 0; k < EE_SCREENS_SEOB_FAMILIES; k++)
-            gResource->GetString(k + IDS_UNIT_FAMILY_FIRST, theLines[k]);
-        gResource->GetString(IDS_SET, theFormat);
-        for (long j = 0; j < gUnitSetManager.GetSize(); j++) {
-            if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->ShowInEditor() != true)
-                continue;
-            theLines.push_back(UWideString());
-            sprintf(theLines.back(), theFormat, (const char*)gUnitSetManager.GetSet(j)->GetName());
-        }
-    } else if (c.extra[1] == EE_SCREENS_SEPL_COMBO_LINES_PENDING) {
-        theLines.swap(sSeplLines);
-        sSeplLines.clear();
-    } else if (c.extra[1] == EE_SCREENS_SEPL_COMBO_LINES_STRINGS) {
-        theLines.resize((size_t)c.number);
-        for (long k = 0; k < c.number; k++)
-            gResource->GetString(c.string + k, theLines[k]);
-    }
-    return theLines;
-}
 
 // the shared maker's single statements (editor_sepl.rs EE_SCREENS_SEPX_*: the Rust composes the host's sequences)
 extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i, float* f)
@@ -550,9 +370,9 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_MAKE_COMBO:
         return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, std::vector<UWideString>(), SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_COMBO_EPOCHS:
-        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, SeplEpochLines(), SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
+        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), 400, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_MAX_PLAYER:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo(EE_SCREENS_SK_MAX_PLAYER, {}, C(p).id, 1, SeplMaxPlayerLines(C(p)), SepxFont(p), SepxRect(f), SepxFont(p)->GetHeight() << 4, F(p), C(p).index, 0, 2)));
+        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo(EE_SCREENS_SK_MAX_PLAYER, {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), SepxFont(p)->GetHeight() << 4, F(p), C(p).index, 0, 2)));
     case EE_SCREENS_SEPX_MAKE_CHECK:
         return SepxHandle(i, static_cast<UIControl*>(new UICheckBox(C(p).id, SepxText(p), SepxFont(p), SepxRect(f), F(p), C(p).index, 0, false)));
     case EE_SCREENS_SEPX_MAKE_SLIDER: return SepxHandle(i, static_cast<UIControl*>(new UISlider(C(p).id, SepxRect(f), 0, F(p), C(p).index, 2)));
@@ -577,13 +397,13 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPX_MAKE_OBJ_EDIT:
         return SepxHandle(i, static_cast<UIControl*>(new EEUIShellEdit(EE_SCREENS_SK_OBJECT_EDIT, {}, C(p).id, SepxFont(p), C(p).extra[0], C(p).extra[1] != 0, SepxRect(f), F(p), C(p).index, 2, false, false)));
     case EE_SCREENS_SEPX_MAKE_SHELL_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {}, C(p).id, 1, SeplComboLines(C(p)), SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_TRIGGER_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)(unsigned long)C(p).number}, C(p).id, 1, SeplComboLines(C(p)), SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)(unsigned long)C(p).number}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_SCENARIO_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)C(p).number, (int64_t)(unsigned long)C(p).string}, C(p).id, 1, SeplComboLines(C(p)), SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return SepxHandle(i, static_cast<UIControl*>(new EEUIShellCombo((uint32_t)i[0], {(int64_t)C(p).number, (int64_t)(unsigned long)C(p).string}, C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_PLAIN_COMBO:
-        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, SeplComboLines(C(p)), SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
+        return SepxHandle(i, static_cast<UIControl*>(new UIComboBox(C(p).id, 1, sSepxLines, SepxFont(p), SepxRect(f), (unsigned long)C(p).list_height, F(p), C(p).index, (unsigned long)C(p).max_chars, (unsigned long)C(p).extra[2])));
     case EE_SCREENS_SEPX_MAKE_BUTTON:
         return SepxHandle(i, static_cast<UIControl*>(new UIButton(C(p).id, NULL, NULL, NULL, SepxRect(f), F(p), C(p).index, (unsigned long)C(p).extra[0])));
     case EE_SCREENS_SEPX_MAKE_ARROW:
@@ -644,6 +464,66 @@ extern "C" int32_t ee_screenscpp_sepx(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEPX_ADD_CONTROL: F(p)->AddControl(H(p), (unsigned long)i[0]);
         return 0;
+    case EE_SCREENS_SEPX_CIV_COUNT: return (int32_t)gCivilizationManager.GetNumCivilizations();
+    case EE_SCREENS_SEPX_CIV_NAME_ID: return gCivilizationManager.GetCivilization((unsigned long)i[0]).mNameID;
+    case EE_SCREENS_SEPX_CIV_FILE: return SepxWrite(UWideString(gCivilizationManager.GetCivilization((unsigned long)i[0]).mFileName), p, i);
+    case EE_SCREENS_SEPX_FILES_CLEAR: sSepxFiles.clear();
+        return 0;
+    case EE_SCREENS_SEPX_FILES_LIST: gCivilizationDataPath->ListFiles(UString("*") + gSECivilizationExtension, sSepxFiles);
+        return 0;
+    case EE_SCREENS_SEPX_FILES_COUNT: return (int32_t)sSepxFiles.size();
+    case EE_SCREENS_SEPX_FILE_STEM: return SepxWrite(UWideString(SepxFile(i).GetIndexedSubstring(0, SepxFile(i).GetLength() - 5)), p, i);
+    case EE_SCREENS_SEPX_PLAYER_CIV: return SepxWrite(UWideString((const char*)SepxPlayer(i)->mCivilizationFile), p, i);
+    case EE_SCREENS_SEPX_PLAYER_CIV_CLEAR: SepxPlayer(i)->mCivilization.mPurchasedUpgrades.clear();
+        return 0;
+    case EE_SCREENS_SEPX_PLAYER_CIV_POINTS: SepxPlayer(i)->mCivilization.mAvailablePoints = SepxPlayer(i)->mCivilization.mMaxPoints;
+        return 0;
+    case EE_SCREENS_SEPX_PLAYER_SET_CIV: SepxPlayer(i)->mCivilizationFile = UString(std::string((const char*)p[1], (size_t)i[2]).c_str());
+        return 0;
+    case EE_SCREENS_SEPX_PLAYER_APPLY_CIV: EEApplyCivilizationFile(SepxPlayer(i)->mCivilizationFile, SepxPlayer(i));
+        return 0;
+    case EE_SCREENS_SEPX_LINES_CLEAR: sSepxLines.clear();
+        return 0;
+    case EE_SCREENS_SEPX_LINES_PUSH: sSepxLines.push_back(SepxTextIn(p, i));
+        return 0;
+    case EE_SCREENS_SEPX_COMBO_APPEND_LINES: static_cast<UIComboBox*>(c)->AppendStringArray(sSepxLines);
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_WIDTH: return (int32_t)SepxTexture(p)->GetWidth();
+    case EE_SCREENS_SEPX_DIPLO_NEW: SepxBitmap(i) = new GEBitmap;
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_TEXTURE: SepxBitmap(i)->SetTexture(SepxTexture(p), SepxScreen(p));
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_COORDS:
+        SepxBitmap(i)->SetTextureCoordinates(GETextureCoordinate(f[0], f[2]), GETextureCoordinate(f[1], f[2]),
+                                             GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[1], f[3]));
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_SCALE: SepxBitmap(i)->SetXYScale(f[0], f[0]);
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_RELEASE: SepxBitmap(i)->Dereference();
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_PRESSED: SepxButton(p)->SetPressedBitmap(sSeplDiplomacy[2][i[0]]);
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_FOCUSED: SepxButton(p)->SetFocusedBitmap(sSeplDiplomacy[1][i[0]]);
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_NORMAL: SepxButton(p)->SetNormalBitmap(sSeplDiplomacy[0][i[0]]);
+        return 0;
+    case EE_SCREENS_SEPX_DIPLO_UPDATE_HELP: SepxButton(p)->GetForm()->UpdateHelpString();
+        return 0;
+    case EE_SCREENS_SEPX_SET_TEXT: sSepxText = SepxTextIn(p, i);
+        return 0;
+    case EE_SCREENS_SEPX_LINES_TAKE_PENDING: sSepxLines.swap(sSeplLines);
+        return 0;
+    case EE_SCREENS_SEPX_PENDING_CLEAR: sSeplLines.clear();
+        return 0;
+    case EE_SCREENS_SEPX_PENDING_PUSH: sSeplLines.push_back(SepxTextIn(p, i));
+        return 0;
+    case EE_SCREENS_SEPX_SETS_COUNT: return (int32_t)gUnitSetManager.GetSize();
+    case EE_SCREENS_SEPX_SET_SHOWN: return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->ShowInEditor() == true;
+    case EE_SCREENS_SEPX_SET_NAME: return SepxWrite(UWideString(gUnitSetManager.GetSet(i[0])->GetName()), p, i);
+    case EE_SCREENS_SEPX_SCREEN_FONT: return SepxHandle(i, gSeplScreenFont);
+    case EE_SCREENS_SEPX_SET_SCREEN_FONT: gSeplScreenFont = static_cast<GEFont*>(p[0]);
+        return 0;
+    case EE_SCREENS_SEPX_BRUSH_SIZE: return (int32_t)EEUIShell::Op(c, EE_SCREENS_SKOP_BRUSH_SIZE);
     }
     return 0;
 }
