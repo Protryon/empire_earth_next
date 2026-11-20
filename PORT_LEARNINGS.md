@@ -35356,3 +35356,71 @@ setters, the next pieces, were not started, below).
   font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
 - The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
 - Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
+
+## The paths lane, round 1: the waypoint deque, CanGetTo, the bounded searches' entries and RequestUnitPaths in Rust, the hosts' path cases (ee_sim units waypoints.rs; astar cm_unit.rs, pm_entry.rs, pm_apply.rs; branch rust-paths1, 2026-11-20)
+
+A new lane that crosses the AI and Units lanes on purpose: their remaining C++ called each other's (the units' hosts
+the path manager, the path manager the units' and goals' methods). State: docs/progress/paths.md.
+
+| Commit | What | C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 514f31e8b | the waypoint deque and its bodies (waypoints.rs), CanGetTo / AreConnectedForUnit / GetFootprintContinent (cm_unit.rs), FindPath and FindBoundedPath (pm_entry.rs), RequestUnitPaths, the request count, the path-done flag, ClampTile (pm_apply.rs), GetTerrainFlags, the hosts' path cases | +144 / -1,064 (net -920; code lines: 969 deleted, 124 added, all one-statement shims, inline forwarders, `EEWaypointList` and the FindPath copy wrapper) |
+| a80082034 | origin/rust (781d6cd0c) merged: no conflict; strip_markers changed nothing | 0 |
+| the docs commit | this section, docs/progress/paths.md | 0 |
+
+Round total: 200,059 -> 199,139 C++ lines (-920; the brief's -2,500 not reached). Logic lines removed: 969 (every
+deleted code line was a body or a host case's logic; the 124 added are shims). EEPathManager.cpp 756 -> 440,
+EEAIContinentManager.cpp 284 -> 200, EEComplexUnit.cpp -267. Shims added: `ee_units_wp_host` (14 cases),
+`ee_astar_cm_unit_host` (2), `ee_units_wp_host_sea_animal_path`, `EE_PATH_CLOSEST_TILE`, `EE_PATH_REQUEST_SET_PATH`
+(`EESetRequestPath`). Host code deleted: `ee_units_uu_host_continent` (14 cases), `ee_units_uu_host_find_path`, the
+physics model host's four waypoint reads, the path manager host's unit cases (`EEPathBoundedHost` whole), the
+class, combat, trigger, update and landing hosts' path cases.
+
+- **A C++ container becomes a Rust object behind a member that keeps the container's names.** `mWaypoints` was a
+  `std::deque<EEComplexUnitWaypoint>` read in 20 files (several of them other lanes'). It is now `EEWaypointList`:
+  the Rust list's handle plus `size`, `empty`, `operator[]`, `back`, `clear`, `push_back` and assignment over Rust
+  calls, `operator[]` a reference into the Rust element (valid until the list changes, as the deque's mostly were).
+  Every reader compiles unchanged, so the Groups lane's files (EEPlayer.cpp, RefreshPath) needed no edit; the
+  bodies that change the list are Rust, and Rust reaches a unit's list through the world layout (one new offset,
+  `complex_waypoints`, the member's first word). Element layout pinned by a static_assert and a Rust test.
+- **A Rust answer placed in a pre-dispatcher only runs if the dispatcher asks it.** The combat world host asks
+  `world_views::world_op` only for the codes `answers(code)` lists; the first build put the reach and FindPath
+  answers inside `world_op` without listing them, so the C++ host (its cases deleted) answered 0 and a combat
+  unit never searched its path. The oracle diverged at seed 3 tick 546 (`rng`, `units`). `sim_oracle run
+  --checksums` on the previous and the new exe and `ticks` named the tick; a seed-3 oracle capture of both exes and
+  a first-differing-record script (`build/pa1/firstdiff.py`: walk both files record by record) showed an `ASRN`
+  then a `PMRQ` kind 3 present in the old run and missing in the new: a FindPath not made.
+- **The act host notes every operation; a Rust answer must note it too.** EEUnitUpdate.cpp's `EEUpdateAct` writes
+  USST kind 12/13 (`ee_units_note_update`/`_action`) for every code before its switch; the update host's Rust
+  answers (`view_act`) call `notes::host_op` first. Moving CANCEL_PATHS and NEXT_WAYPOINT without it left the
+  oracle identical and changed only USST's digests (count equal): the fix notes them first, then runs them.
+- **A query the C++ made from inside another stays the manager's entry point.** CanGetTo's inner lookups
+  (`GetContinent` = `ee_astar_cmq_region_id`, `AreConnected`) and GetFootprintContinent's `EEGetFootprintTiles`
+  (its UUNT note) are called through the same Rust entry points the C++ inline members called, so CNTQ's depth
+  (one record per outermost query) and the notes are unchanged. The planet-id fix-up keeps its trace in C++.
+- **Calling C++ from Rust is one-statement shims.** `ee_units_wp_host` (EEComplexUnit.cpp) is the units' calls the
+  path bodies make (SetGoal, Insert, the queue's length and back, RefreshGoals, RefreshActiveGoal, StartAction,
+  ActionChanged, IsHuman, the bounded tiles' clear, RefreshPath, gEEAIRegionSize, EELocationGoalPoint, the map's
+  closest tile); RequestUnitPaths (pm_apply.rs) and SetGroupPathGoals (waypoints.rs) share it. A body re-reads the
+  unit's goal where the C++ did (`GetGoal()` after each SetGoal), and reads a replaced goal's record by its
+  handle as the C++ did (a freed goal's location record is gone: `forced_move` false either way).
+- **What runs it.** Every game: the waypoints (every moving unit), the path manager's unit operations (PMRQ, ASRN,
+  ASGR), CanGetTo (CNTQ), the combat reach tests and FindPath, the triggers' waypoint answers (USST). Only a drawn
+  game runs `FindWaypointAtTile` (the renderer's carrier waypoint fill: EERenderObject.cpp) and the C++ FindPath
+  wrapper's storm caller in a game with storms; the tour exercises the first.
+- **Call-site edits outside the lane's scope**: EEWorldLayout.cpp (Groups lane: one line, `complex_waypoints`),
+  EERenderObject.cpp (Game core: the waypoint pointer is const), EEFOFindNewTargetNearOldTarget.cpp (the uu
+  continent and find-path hosts deleted, EEAdjustNavalPath deleted). EEGroup.cpp, EEActiveGroup.cpp,
+  EESelectedGroup, EEUnitClassUpgrade, EEPlayer.cpp: none.
+- **Behaviour changes**: none observed (oracle, captures, saveloads identical). `AddWaypoint` no longer calls the
+  map's `GetClosestTile` when snapping an off-map point: its answer was never read (the original computed and
+  dropped it).
+- **Gates** (the final tree a80082034, the round merged with origin/rust 781d6cd0c): both builds 0/0 (EE-AOC 418
+  inputs, EE-SIM 419) and the test profile 0/0; the Rust gate PASS (5,077 tests, no flake this time); the oracle
+  seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222,
+  units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); the plain
+  saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical, exit 0; the matrix (`--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor
+  PASS (14,448 lines) and `--civbuilder` PASS (4,062); eedata check and cppgate PASS; the tour `fixture_game.py --exercise random-game --box-select --orders --seed 7` (through slot.py) RESULT PASS (gather, repair, queued repair, move; patrol and attack-ground skipped by the fixture); `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12368` units [4, 38, 39] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2777 joiner=2783`, GATES PASS. Per step: the
+  `--sim` build 0/0 and the oracle at seeds 2-3; the oracle capture after the waypoints, after the reach and
+  FindPath move (where the two lessons above were found) and at the end with units, transport and groups.

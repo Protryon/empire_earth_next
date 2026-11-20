@@ -61,3 +61,18 @@ one-statement C++ shim (an `extern "C"` case, no logic). The score is C++ logic 
   `TakePath` and `FindPath` (Game core), EEActiveGroup's CanGetTo call (Groups lane).
 - One-statement host reads still C++: the combat query's WAYPOINTS, the herd's waypoint reads, EEUGRust's waypoint
   reads, EEPlayer.cpp's and EECalamityUpdate.cpp's NextWaypoint loops (other lanes' files).
+
+## Round 1's numbers
+
+C++ (src, include/ee, include/lle) 200,059 -> 199,139: net -920; code lines deleted 969, added 124 (one-statement
+shims, inline forwarders, `EEWaypointList`, the C++ FindPath's copy). The rounds' table and lessons: PORT_LEARNINGS
+"The paths lane, round 1". Gates on the merged tree (a80082034): both builds and the test profile 0/0; the Rust gate
+PASS (5,077 tests); the oracle seeds 2-7 identical; the twelve capture profiles at seeds 2-3 PASS; the plain saveload
+18/18 identical (exit 0); the matrix `--expect` PASS (exit 0); scenario_check 27/27; sim_editor and `--civbuilder`
+PASS; eedata check and cppgate PASS; the tour with `--box-select --orders --seed 7` PASS; gates.sh GATES PASS.
+
+Call-site edits in other lanes' files: EEWorldLayout.cpp (Groups: one line, `complex_waypoints`),
+EERenderObject.cpp (Game core: the waypoint pointer const). Groups-side cases that become plain calls once the
+request's data is Rust (next round): EEGroup.cpp's `ee_units_group_host` EE_UNITS_GROUP_OP_PATH_TILES, _DONE, _ID,
+_REQUEST, _CANCEL, _SAVE_PATH, _LOAD_PATH, _AWAIT_PATH (rust-groups1) and EEComplexUnit::RefreshPath's
+`EEGroup::GetUnitPath`.
