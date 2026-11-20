@@ -63,7 +63,10 @@ pub struct Goals;
 impl GoalWorld for Goals {
     fn clone_goal(&mut self, goal: u64) -> u64 {
         // SAFETY: a live goal of a queue
-        unsafe { goal_obj::call(EE_UNITS_GOAL_CLONE, goal, 0, u64::from(goal_obj::base(goal).b1c), std::ptr::null_mut()) as u64 }
+        unsafe {
+            goal_obj::call(EE_UNITS_GOAL_CLONE, goal, 0, u64::from(goal_obj::base(goal).b1c), std::ptr::null_mut())
+                as u64
+        }
     }
     fn set_owner(&mut self, goal: u64, unit: u64) {
         // SAFETY: as above
@@ -77,11 +80,15 @@ impl GoalWorld for Goals {
 
 impl EeUnitsGoalQueue {
     /// `Clear()` (0x2057a7): every goal deleted (front to back, the list kept until all are), the timer stopped.
-    pub fn clear(q: *mut EeUnitsGoalQueue, w: &mut dyn GoalWorld) {
+    ///
+    /// # Safety
+    /// `q` (and `other`) are live queues.
+    pub unsafe fn clear(q: *mut EeUnitsGoalQueue, w: &mut dyn GoalWorld) {
         // SAFETY (each access): the live queue; a goal's destroy may read it (never free it)
         let n = unsafe { (*q).goals.len() };
         for i in 0..n {
-            let goal = unsafe { (&(*q).goals).get(i).copied().unwrap_or(0) };
+            let goals = unsafe { &(*q).goals };
+            let goal = goals.get(i).copied().unwrap_or(0);
             if goal != 0 {
                 w.delete(goal);
             }
@@ -94,7 +101,10 @@ impl EeUnitsGoalQueue {
 
     /// The copy (the copy constructor 0x20569d and `operator=`): the other queue's unit, its goals cloned last to
     /// first (the ids drawn in that order) and owned by the unit, its timer; this queue cleared first.
-    pub fn assign(q: *mut EeUnitsGoalQueue, other: *const EeUnitsGoalQueue, w: &mut dyn GoalWorld) {
+    ///
+    /// # Safety
+    /// `q` (and `other`) are live queues.
+    pub unsafe fn assign(q: *mut EeUnitsGoalQueue, other: *const EeUnitsGoalQueue, w: &mut dyn GoalWorld) {
         if std::ptr::eq(q, other) {
             return;
         }
@@ -140,7 +150,10 @@ impl EeUnitsGoalQueue {
     }
 
     /// `PopFront()` / `PopBack()`: the goal deleted, then taken off.
-    pub fn pop_delete(q: *mut EeUnitsGoalQueue, front: bool, w: &mut dyn GoalWorld) {
+    ///
+    /// # Safety
+    /// `q` (and `other`) are live queues.
+    pub unsafe fn pop_delete(q: *mut EeUnitsGoalQueue, front: bool, w: &mut dyn GoalWorld) {
         // SAFETY (each access): the live queue
         let goal = unsafe {
             if front {
@@ -238,7 +251,10 @@ pub fn save(q: &EeUnitsGoalQueue, host: &mut dyn GoalQueueHost) -> i32 {
 /// `EEGoalQueueContainer::Load` (0x60588b): the queue cleared, the count, each goal's kind and record (a failed
 /// kind read skips to the next turn, which ends the loop), then the timer's three fields (each read gets the field's
 /// value in).
-pub fn load(q: *mut EeUnitsGoalQueue, host: &mut dyn GoalQueueHost, w: &mut dyn GoalWorld) -> i32 {
+///
+/// # Safety
+/// `q` is a live queue.
+pub unsafe fn load(q: *mut EeUnitsGoalQueue, host: &mut dyn GoalQueueHost, w: &mut dyn GoalWorld) -> i32 {
     EeUnitsGoalQueue::clear(q, w);
     let mut count = 0u32;
     let mut result = host.read_u32(&mut count);
@@ -296,7 +312,7 @@ pub fn update_unit(unit: u64, now: c_ulong, host: &mut dyn GoalQueueHost, w: &mu
             continue;
         }
         if now >= timer.start.wrapping_add(timer.time) {
-            EeUnitsGoalQueue::clear(q, w);
+            unsafe { EeUnitsGoalQueue::clear(q, w) };
         }
         host.refresh();
     }
@@ -415,7 +431,8 @@ pub unsafe extern "C" fn ee_units_gq_len(q: *const EeUnitsGoalQueue) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_gq_get(q: *const EeUnitsGoalQueue, index: usize) -> u64 {
     // SAFETY: the caller's contract
-    unsafe { (&(*q).goals).get(index).copied().unwrap_or(0) }
+    let goals = unsafe { &(*q).goals };
+    goals.get(index).copied().unwrap_or(0)
 }
 
 /// The deque's edits (no goal deleted or owned): 0 `push_back`, 1 `push_front`, 2 `pop_back`, 3 `pop_front`,
@@ -464,7 +481,7 @@ pub unsafe extern "C" fn ee_units_gq_goal_op(q: *mut EeUnitsGoalQueue, op: i32, 
     let w = &mut Goals;
     match op {
         // SAFETY (each): the caller's contract
-        0 | 1 | 2 => {
+        0..=2 => {
             let at = match op {
                 0 => usize::MAX,
                 1 => 0,
@@ -538,7 +555,6 @@ pub extern "C" fn ee_units_goal_queue_len(unit: u64, index: u32) -> i64 {
     queue_len(unit, index as usize).map_or(-1, |n| n as i64)
 }
 
-
 // ---- the unit's goal calls (EEComplexUnit's GetQueuedGoal, RefreshGoals, RefreshActiveGoal, SetGoal,
 // DropUnsuitedGoals over its queues and its mGoalState and mActiveGoal)
 
@@ -601,17 +617,23 @@ pub fn set_goal(unit: u64, goal: u64, keep: bool, index: usize, w: &mut dyn Goal
             unsafe {
                 goal_obj::base(front).action = action as c_ulong;
                 goal_obj::base(front).path_attempts = 0;
-                goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS, front, 0, 0, std::ptr::null_mut());
+                goal_obj::call(
+                    crate::units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS,
+                    front,
+                    0,
+                    0,
+                    std::ptr::null_mut(),
+                );
             }
         } else {
             if index < 1 {
                 set_active_goal(unit, 0);
             }
             while is_auto_waypoint(queued_goal(unit, index)) {
-                EeUnitsGoalQueue::pop_delete(q, true, w);
+                unsafe { EeUnitsGoalQueue::pop_delete(q, true, w) };
             }
             if unsafe { !(*q).goals.is_empty() } {
-                EeUnitsGoalQueue::pop_delete(q, true, w);
+                unsafe { EeUnitsGoalQueue::pop_delete(q, true, w) };
             }
         }
     }
@@ -638,13 +660,14 @@ pub fn set_goal(unit: u64, goal: u64, keep: bool, index: usize, w: &mut dyn Goal
 pub fn drop_unsuited_goals(unit: u64, index: usize, w: &mut dyn GoalWorld) {
     let Some(q) = unit_queues(unit).get(index).copied() else { return };
     let mut popped = false;
-    loop {
-        // SAFETY (each access): the unit's live queue and goals
-        let Some(front) = (unsafe { (*q).goals.first().copied() }) else { break };
-        if unsafe { goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_SUITS, front, unit, 0, std::ptr::null_mut()) } != 0 {
+    // SAFETY (each access): the unit's live queue and goals
+    while let Some(front) = unsafe { (*q).goals.first().copied() } {
+        if unsafe { goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_SUITS, front, unit, 0, std::ptr::null_mut()) }
+            != 0
+        {
             break;
         }
-        EeUnitsGoalQueue::pop_delete(q, true, w);
+        unsafe { EeUnitsGoalQueue::pop_delete(q, true, w) };
         popped = true;
     }
     refresh_goals(unit);
@@ -696,7 +719,7 @@ pub fn drop_finished_goals(unit: u64, start_all: bool, w: &mut dyn GoalWorld) {
         let queues = unit_queues(unit);
         if let Some(q) = queues.first().copied() {
             loop {
-                EeUnitsGoalQueue::pop_delete(q, true, w);
+                unsafe { EeUnitsGoalQueue::pop_delete(q, true, w) };
                 let next = refresh_goals(unit);
                 if next == 0 {
                     break;
@@ -770,7 +793,7 @@ pub(crate) mod tests {
         let mut q = queue(1, &[5]);
         let mut other = queue(7, &[2, 3]);
         other.timer = GoalTimer { start: 10, time: 20, started: true };
-        EeUnitsGoalQueue::assign(&mut q, &other, &mut w);
+        unsafe { EeUnitsGoalQueue::assign(&mut q, &other, &mut w) };
         assert_eq!(w.log, ["delete 5", "clone 3", "owner 103 7", "clone 2", "owner 102 7"]);
         assert_eq!(q.goals, [102, 103]);
         assert_eq!((q.unit, q.timer), (7, other.timer));
@@ -793,11 +816,11 @@ pub(crate) mod tests {
         q.insert_owned(1, 9, &mut w);
         q.insert_owned(10, 8, &mut w);
         assert_eq!(q.goals, [1, 9, 2, 8]);
-        EeUnitsGoalQueue::pop_delete(&mut q, true, &mut w);
-        EeUnitsGoalQueue::pop_delete(&mut q, false, &mut w);
+        unsafe { EeUnitsGoalQueue::pop_delete(&mut q, true, &mut w) };
+        unsafe { EeUnitsGoalQueue::pop_delete(&mut q, false, &mut w) };
         assert_eq!(q.goals, [9, 2]);
         assert_eq!(w.log, ["owner 9 4", "owner 8 4", "delete 1", "delete 8"]);
-        EeUnitsGoalQueue::clear(&mut q, &mut w);
+        unsafe { EeUnitsGoalQueue::clear(&mut q, &mut w) };
         assert!(q.goals.is_empty() && !q.timer.started);
     }
 
@@ -870,7 +893,8 @@ pub(crate) mod tests {
 
     #[test]
     fn the_record_round_trips() {
-        let made = |kind| Box::into_raw(Box::new(goal_obj::EeUnitsGoalBase { kind, ..Default::default() })) as usize as u64;
+        let made =
+            |kind| Box::into_raw(Box::new(goal_obj::EeUnitsGoalBase { kind, ..Default::default() })) as usize as u64;
         let mut goals = [made(9), made(1)];
         let mut q = queue(1, &goals);
         q.timer = GoalTimer { start: 3, time: 4, started: true };
@@ -880,7 +904,7 @@ pub(crate) mod tests {
         assert_eq!(f.words, [2, 9, g(0), 1, g(1), 3, 4, 1]);
         let mut back = queue(1, &[]);
         let mut w = Fake::default();
-        assert_eq!(load(&mut back, &mut f, &mut w), 0);
+        assert_eq!(unsafe { load(&mut back, &mut f, &mut w) }, 0);
         assert_eq!(back.goals, [u64::from(goals[0] as u32) + 9000, u64::from(goals[1] as u32) + 1000]);
         assert_eq!(back.timer, q.timer);
         for goal in goals.iter_mut() {

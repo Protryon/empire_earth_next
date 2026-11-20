@@ -886,9 +886,11 @@ fn cond_goal(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
         EE_UNITS_COND_GOAL_CONDITION => {
             let event = c as c_ulong as u64;
             // SAFETY: as above
-            i64::from(unsafe {
-                goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_EVALUATE, b, a, event, std::ptr::null_mut())
-            } != 0)
+            i64::from(
+                unsafe {
+                    goal_obj::call(crate::units::rust_goal::EE_UNITS_GOAL_EVALUATE, b, a, event, std::ptr::null_mut())
+                } != 0,
+            )
         }
         EE_UNITS_COND_GOAL_ELAPSED => {
             // (unsigned long)(gPhysics->mGameTime - GetStartTime()) >= (unsigned long)inMs
@@ -904,7 +906,9 @@ fn cond_goal(op: i32, a: u64, b: u64, c: i64) -> Option<i64> {
             let queues = crate::units::goals::unit_queues(a);
             // SAFETY: the unit's live main queue (the C++ read it unchecked)
             let goals = queues.first().map(|q| unsafe { (**q).goals.clone() }).unwrap_or_default();
-            i64::from(goals.iter().any(|g| *g != 0 && unsafe { goal_obj::base(*g).kind } == GOAL_LOCATION && !forced(*g)))
+            i64::from(
+                goals.iter().any(|g| *g != 0 && unsafe { goal_obj::base(*g).kind } == GOAL_LOCATION && !forced(*g)),
+            )
         }
         EE_UNITS_COND_QUEUED_GOAL => i64::from(crate::units::goals::queued_goal(a, c as c_ulong as usize) != 0),
         EE_UNITS_COND_SECONDARY_TARGET => {
