@@ -10,47 +10,15 @@
 #include <map>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GERectangle.h"
 #include "lle/NEMessage.h"
-#include "lle/U2DPoint.h"
-#include "lle/UIEvent.h"
 #include "lle/UResourceFile.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DRectangle.h"
-#include "lle/U2DPolygon.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/FSRestorable.h"
-#include "lle/FSPersistent.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEUnitKind.h"
@@ -67,13 +35,11 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameLog.h"
-#include "ee/EECivUpgrade.h"
 #include "ee/EEMessage.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECommunications.h"
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
-#include "ee/EEAction.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIEProcessTimerExpired.h"
 #include "ee/EEMedia.h"
@@ -83,23 +49,10 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEActiveGroup.h"
-#include "ee/EEPPatrolGroup.h"
-#include "ee/EEAIArea.h"
-#include "ee/EETown.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEUnitClassKinds.h"
-#include "ee/EECivPowersManager.h"
 #include "ee/EEDataPreLoading.h"
-#include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEUnitGoal.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEGameSound.h"
-#include "ee/RTSGraphics.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUIFMainGame.h"
@@ -109,7 +62,6 @@
 #include "ee/EEMessageCapture.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg
 #include "rust/sim/units.h"
-#include "ee/EEUnitHost.h"   // EESortFarms
 
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
@@ -168,9 +120,6 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
     return this->DistanceSquared(inFirst->GetTile()) < this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
 }
 
-#include "lle/USingleton.h"
-#include "ee/EECalamityManager.h"
-#include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"
 
 // Gives the sender's selection (and its saved group) a new formation of the requested type
@@ -386,7 +335,6 @@ static void ExecuteMigrationSlotInfo(EEMRecord* m)
     }
 }
 
-#include "lle/GE3DLine.h"
 
 // Selects the sender's saved group; for the local player resets the command panel, centres the camera on it
 // when asked and plays its selection sound

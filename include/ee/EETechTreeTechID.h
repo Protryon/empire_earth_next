@@ -4,6 +4,7 @@
 #ifndef EE_EETECHTREETECHID_H
 #define EE_EETECHTREETECHID_H
 
+#include <stdint.h>
 #include <vector>
 
 // The tech ids (provisional name). The epoch constants are the vanilla epochs' positions (epochs.yaml order); the
@@ -76,17 +77,22 @@ enum EETechPrerequisiteFlag {
 // original's, until then). An epoch's tech id is its position 0..count-1; node ids are 1000 and up (kTechFirstNodeID),
 // and a node's epoch is the block it was loaded in (EETechTreeEpochOf), not id / 1000 - 1 as in the original, so an
 // epoch inserted in the middle keeps every other tech's id.
-extern long gEpochCount;
-inline long EEEpochCount() { return gEpochCount; }
-inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < gEpochCount; }
+// The two tables are Rust's (ee_sim tech tech_ids.rs; declared here so the many includers need not take
+// rust/sim/tech.h).
+extern "C" int32_t ee_tech_epoch_count(void);
+extern "C" int32_t ee_tech_epoch_of(int32_t id);
+extern "C" int32_t ee_tech_epoch_title_id(int32_t epoch);
+inline long EEEpochCount() { return ee_tech_epoch_count(); }
+inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < EEEpochCount(); }
 const long kTechFirstNodeID = 1000;
-long EETechTreeEpochOf(long inID);          // the epoch of a tech id (an epoch's own id; a node's block); -1: none
-long EEEpochTitleID(long inEpoch);          // the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for
-                                            // EEEpochCount(), the game options' "Random Epoch"
+// the epoch of a tech id (an epoch's own id; a node's block); -1: none
+inline long EETechTreeEpochOf(long inID) { return ee_tech_epoch_of((int32_t)inID); }
+// the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for EEEpochCount(), the game options' "Random Epoch"
+inline long EEEpochTitleID(long inEpoch) { return ee_tech_epoch_title_id((int32_t)inEpoch); }
 // one element per epoch (sized when it is made: after the database is loaded)
 template <class T> class EEEpochArray : public std::vector<T> {
 public:
-    EEEpochArray() : std::vector<T>(gEpochCount) {}
+    EEEpochArray() : std::vector<T>(EEEpochCount()) {}
 };
 
 #endif // EE_EETECHTREETECHID_H

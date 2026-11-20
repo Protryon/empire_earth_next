@@ -34648,6 +34648,439 @@ capture profile at seeds 2-3 PASS (43 digests equal golden_cpp_scenario.txt; del
 - Only a person (or the editor tour) reaches: the form's button fire (the hot keys' `FIRE`), the map tab's label
   rectangles at its first layout and the elevation file combo, the area screen's centre (the Center on Area button),
   the trigger tab's list clicks, and every answer's draw (the toolkit's state is the gate's, the frame is the tour's).
+## The game core lane, round 3: the LLE's forwarder units inline, GX's shims inline, TSGT whole in Rust, the tech capture's plain records and CVMG's head in Rust (ee_game sight_capture.rs; ee_sim tech capture_rec.rs; branch rust-core3, 2026-11-19)
+
+The successor of the game's leaves lane (rounds 1-2), with the batch-6 scope: src/Empire Earth/Empire Earth,
+Persistent, Database, Player, Tech Tree, Civilization Builder, Calamities, Communications, Graphics Thread and Map;
+src/RTS Engine; the rest of src/Low-Level Engine but its User Interface. Started from the lead's integration tree
+0a17fc666 (origin/rust 3449a04fd in it) with aded2ef33 (the main checkout's toolchain for a worktree) picked first.
+docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ (src, include/ee, include/lle, include/gx, include/dx7) |
+|---|---|---|
+| ca4da89ad | (picked) aded2ef33: tools/ee.py uses the main checkout's toolchain in a worktree without one | tools |
+| 7cf0cebb6 | FSMemoryFile, FSChunk, FSArchive inline over ee_base fs; their units and FSRustOps.h deleted | +380 -734, net -354 |
+| 8393b68ca | SESoundManager, SESample, SESMInstanceNode, SEMixer, SEScore inline over ee_audio; three units deleted | +163 -280, net -117 |
+| 701ef062d | ESChecksum inline over ee_base error; ESChecksum.cpp deleted | +33 -72, net -39 |
+| dbaaf06aa | NESynchronousClient and NESynchronousServer: the forwarders inline | +170 -326, net -156 |
+| 592de7238 | GX's shims inline in gx/GX.h; GX.cpp deleted | +133 -187, net -54 |
+| e7eb18173 | TSGT whole in Rust (ee_game sight_capture.rs); EESightCapture.cpp deleted | +76 -226, net -150 |
+| 21a308fec | the tech capture's plain records and CVMG's head in Rust (ee_sim tech capture_rec.rs) | +38 -234, net -196 |
+| f5659fa5f | 1,527 #include lines of 71 units the units compile without (each object's symbols HEAD's) | -1,527 |
+| | **the round** | **+993 -3,586, net -2,593** |
+
+- **What the census says this lane's C++ is.** `cpp_deps.py report` at the start (463 units, 138,675 lines): the
+  lane's leaves were 14 units (1,140 lines) and its near-leaves about 40. Read unit by unit, almost all of it is
+  forwarders (one call into Rust) and hosts (the Rust objects' calls on C++ objects: the calamity classes' world
+  steps, the players' and the world's walks, the render objects' fills, the network's message ops). A forwarder
+  moved into its header saves a line or three; a host goes only when its callees are Rust. So the round took the
+  units that were forwarders only (deleting them), the TEST ONLY captures whose reads are Rust records already, and
+  the include lines the lane's units compile without.
+- **Forwarder units deleted.** FSMemoryFile, FSChunk, FSArchive (File System), SESoundManager with SESample and
+  SESMInstanceNode, SEMixer, SEScore (Sound Engine), ESChecksum (Error System) and GX.cpp (the wgpu shims) are
+  inline in their headers; what had a C++ body that needs another class complete stayed out of line in the module's
+  remaining unit (the memory file's stdio copies in File System.cpp, the sound objects' callbacks in Sound
+  Engine.cpp, GXGameSize in EEPreferences.cpp). NESynchronousClient and NESynchronousServer keep their units (the
+  constructors and the hosts), their one-line members are inline.
+- **Lesson: a function a header now defines inline can still be declared by hand elsewhere.** GXGameSize was
+  declared without gx/GX.h in EEScreens.cpp and Empire Earth.cpp (whose gx/GX.h include sits in the POSIX branch of
+  an `#ifdef _WIN32`); inline, the link found no definition ("1 unresolved"). It stays out of line. Grep for a
+  member's or function's declarations outside its header before making it inline.
+- **Lesson: a staged deletion rides along with the next commit.** `git rm` stages the deletion at once; a later
+  `git add <paths>; git commit` commits everything staged, not only those paths: two commits of this round took
+  other pieces' deletions and were redone (`git reset --soft`, `git restore --staged`). Delete with plain `rm` (or
+  `git rm --cached` last) when several pieces are in the tree, and read `git diff --cached --stat` before each
+  commit.
+- **TSGT** (`ee_game::sight_capture`, its own header rust/game/sight_capture.h so EEMap.h's includers do not take
+  rust/game/app.h): the scope's depth per thread, the rectangle each kind reaches (`Around`, the circles' 32-tile
+  clamp), the hash of the tile's words or of the rectangle's tiles (visibility words, the mesh tile's reference
+  count, the markers) and the record, over MapView/TileView/PlayerView and ee_render's mesh. EESightScope is an
+  inline class; the C++ left is EESightRecord in EEMap.cpp (the world's map, its mesh, the tile's index in
+  mTileArray, which no view has).
+- **The tech capture's plain records** (`ee_sim::tech::capture_rec`): a node's, an epoch's and a tree's state come
+  from the Rust records the C++ classes derive from (the base pointers convert implicitly, so the C++ passes `this`
+  and its `mData`, `mTree`); TCST, EVHP, CALC from their arguments (EVHP's and CALC's hook pointers are the Rust
+  functions themselves: their C signatures are the hooks' types); the TRTE, EVUN and TNWK collections. CVMG's head
+  (categories, civilizations, eras, upgrades and their keys and legacy ids, the levels, the powers) calls ee_sim
+  tech civ.rs's functions, the C++ manager's own callees; the premade civilizations' files (EELoadCivilization over
+  the C++ file system) stay the record's C++ tail.
+- **The include lines the lane's units compile without** (f5659fa5f, 1,527 lines in 71 units). A scratch tool
+  compiled each unit (clang-cl /Zs) without its project includes from the last up, in halving chunks (98 units, two
+  workers, about four hours), keeping lle/LowLevelEngine(Core).h, platform/ and rust/ (the per-module Rust headers
+  are policy) and putting back any include inside a preprocessor conditional (the Windows compile cannot judge a
+  POSIX-only one: Empire Earth.cpp's gx/GX.h). "It compiles" was not enough: every kept unit was compiled again from
+  HEAD's text and from the trimmed one and the objects' symbols compared (llvm-nm, defined and undefined): 71
+  identical, 7 not, and those 7 were left as they were. What the comparison caught:
+  - a `delete` of a type the removed header completed (EEPlayer.cpp no longer called ~EEUnitGoal; EEWorld.cpp's
+    new undefined `operator delete`): deleting an incomplete type compiles, calls no destructor, and is UB;
+  - the LLE units that emit their headers' exported inline members (File System.cpp, GEBitmap.cpp, GEModel.cpp,
+    GERasterizer.cpp, Input System.cpp: their header comments say so) stopped emitting them;
+  - and the link caught a `const` global (EEGlobals.cpp's kSaveGameMajorVersion) whose `extern` declaration came
+    from the removed header: without it the definition has internal linkage.
+  **Lesson: an include removal is checked by the object's symbols, not by the compile.** The same comparison is the
+  cheap gate for any header-only refactor of a unit.
+- **Not moved** (docs/progress/game-leaves.md "Left"): EERules (the converter's gate compiles it; its eight lookups
+  are 50 lines), the calamity manager and classes (their bodies are Rust; what is left is the hosts' C++ calls),
+  RTSWorld/RTSPlayer/RTSPhysics/RTSGraphics/RTSMouse (C++ virtuals of the game's classes), the GE rasterizer's
+  setters (rust/render/ge.h is 3,300 lines; GERasterizer.h has 100 includers), DX7Rasterizer's forwarders (their
+  bodies need DX7Surface and a .cpp helper), the media objects, the message classes.
+- **Tests**: sight_capture 2 (the rectangles as the scope made them, the nesting); capture_rec 3 (a node's,
+  epoch's and tree's state; the collections; the CVMG head).
+- **Behaviour changes**: none. The TEST ONLY records are byte for byte the C++'s (every capture profile run below);
+  the inline forwarders are the same calls.
+- **What only the tours exercise**: GX's shims (every frame), the sound objects' inline members (the game's
+  sounds), FSArchive (the game reads no archive; the converter's .ssa readers are Python). The LAN game
+  (gates.sh) is the only one to exercise the network client's and server's inline members. FSMemoryFile and FSChunk
+  are in every saved game (saveload) and every load of a data file.
+
+- **The census** (tools/cpp_deps.py report): 463 units, 138,675 lines at the start (0a17fc666); 454 units, 135,604
+  lines at the end; leaves 55 (3,270 lines) -> 53 (3,395); near-leaves 121 -> 119; edges 3,978 -> 3,867; 10 SCCs,
+  269 units, 97,330 lines -> 268, 96,147.
+- **Gates, on the round's last commit** (f5659fa5f; origin/rust 3449a04fd is in the base, so the merge of
+  origin/rust had nothing to do; no conflict marker): both builds 0/0 (EE-AOC 499 inputs, EE-SIM 500) and the test
+  profile 0/0; the Rust gate PASS (4,976 tests, 0 failed); the oracle identical on seeds 2-7; the 12 capture
+  profiles at seeds 2-3 PASS (oracle 212 digests, late 214, space 210, calamity 222, missile 22, effects 6,
+  scenario 43, units 175, app 26, groups 2, placement 4, transport 185); the plain saveload PASS (18 identical);
+  the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload
+  expect: PASS` (calamity 3/4 and next 2/4 as expected); scenario_check 27/27; sim_editor PASS (14,448 lines) and
+  `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS
+  tour` (no GX errors; captures looked at: the game view, the video settings); `bash tools/gates.sh`
+  (EE_GATES_TREE the main checkout's tree): `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13440`
+  units [4, 41, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2719 joiner=2711`,
+  GATES PASS. Per step before that: both builds 0/0 and the oracle seeds 2-3 identical after each batch, the Rust
+  gate PASS, the oracle, calamity, app and late captures PASS after the capture moves.
+- **Not run**: the POSIX builds (xbuild.py; link/lle and link/dx7hrtnl's unit lists and sdl_test's sources were
+  updated for the deleted units, and the include trim kept every include inside a conditional).
+
+## R6 WONLobby, round 24: the image classes whole in Rust, WONButton a shell kind (ee_won_gui imgobj.rs; branch rust-wonlobby24, 2026-11-19)
+
+Rounds 22 and 23 left the images: every WONGUI draw, skin, frame and config takes one, and the classes were the
+platform's bases (PlatNativeImage, PlatNativeMask). This round moved all of them, the filters and the decoders, in one
+piece (one Rust object per image, the C++ classes its handles), and made WONButton a shell kind.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 043763053 | the image classes, filters and decoders whole in Rust (imgobj.rs); 13 units and 2 headers deleted; golden `won_imgobj_test` | -1,270 |
+| 13383a96d | WONButton the shell kind WonButton (the C++ WONButton the shell of the WonButton and WonHeaderButton kinds); WONButtonSetup.cpp and WONLobbyWONButton.h deleted | -30 |
+| 529765232, a9f9b6b1b | origin/rust (4fb6c7119) merged (PORT_LEARNINGS only: both sections kept); two trailing address comments stripped | 0 |
+| d656ac088 | `rust_includes.py`'s module headers (WONLobbyStretchImage.h: imgobj.h; WONCfgTable.inl and the cfgtab world: skinobj.h) | +2 |
+| 3215ee04c | won_gfxobj_test's image stand-ins (it defined Image's out-of-line members, now inline forwards): a TEST ONLY log seam in Graphics.cpp's host, `gWONGfxImageLog` | +10 |
+
+Round total: WON C++ 29,577 -> 28,289 (-1,288; short of the -1,500 aim: the third item, the next leaf, was not
+started; the census's leaves are the C++ ends of Rust objects, below).
+
+### The image object (imgobj.rs `EeWonImage`)
+
+- **One object, a kind per original class**: `Ms` (WONMSSkin::MSImage), `Delay` (DelayLoadImage), `Stretch`
+  (StretchImage: round 38's stretchobj.rs settings, the source and cached images), `StretchCenter`, `Raw32`, `Raw8`,
+  `Raw1` (the raw images: the pixels as `Cell`s the C++ may write through `GetImageData`), `Native` (PlatNativeImage:
+  its surface and display context, the pixel scale, its Graphics made on first use, the mask). The virtuals (Draw,
+  SetSize, Duplicate, GetNative) and every class's own methods (GetRaw, GetGraphics, the stretch setters, the
+  transparency flag, the pixel reads) are match arms over the kind, the statements of Image.cpp, Palette.cpp,
+  DelayLoadImage.cpp, MSSkinImage.cpp, GuiHost.cpp's stretch images and PlatNativeImage.cpp in their order.
+- **The C++ classes are handles**: `Image : RefCount` with one owned pointer (`mRust`) and inline forwards;
+  `NativeImage` (`PlatNativeImage` is now its other name), `RawImage`, `RawImage32`, `RawImage8`, `StretchImage` and
+  `StretchCenterImage` add the constructors and accessors their callers use; MSImage and DelayLoadImage are makers
+  (`WONNewMsImage`; `new Image(ee_won_image_new_delay(...))`). The handle's reference count is the image's; the
+  handle frees the object. The callers' `->mWidth` / `->mHeight` reads became `GetWidth()` / `GetHeight()` (28 sites
+  in 10 files, and ImageComponent's three inline ones), `->mImageData` `GetImageData()`, `->mSurface` `GetSurface()`.
+- **What an image holds of C++ objects it holds by handle through the host** (`WONImageHost`, PlatNativeImage.cpp; 19
+  ops): other images (a stretch image's source and cache, a stretch-centre image's two, a delay-load image's decode),
+  a native image's SurfaceBase, DisplayContext and PlatGraphics; references taken and given back as the SmartPtr
+  members did. A call that makes an image returns a new handle (`Wrap` picks the C++ class by the kind) with one
+  reference, which the caller's SmartPtr adopts (`WONImageAdopt`). The palettes and masks, which no C++ code held any
+  more, are Rust values (`Rc`): an 8-bit image shares its palette with its copies, a native image its mask with its
+  copy and the texture pack's copy.
+- **A program image's draw** (ProgramImage::Draw: the translation, the clip, the paint, the translation back) is
+  draw plans run on the context's Graphics by the host (`GfxRun`: guidraw.rs operations, their image slots C++
+  handles); the MSImage paint is mspaint.rs's plan, the stretch paints guidraw.rs's. Image::GetNative (a native
+  image of the size with the image drawn into it) is `CreateImage` and `GfxDrawImage`.
+- **The filters are calls on a raw image** (`ImageCrop`, `ImageScalePercent`, `ImageScaleTo`, `ImageTint`,
+  `ImageTransparent`; StretchImageFilter is the stretch image's `calc_image`); the filter classes are gone, and
+  WONCfgTable.inl's filter lines are these calls (the cfgtab driver's world traces them as the filters, its golden
+  unchanged). The sampled-colour transparent filter, the trim filter, the filter chain, ImagePiece and ProgramImage's
+  paint function had no caller: not ported.
+- **The decoders** (`EeWonImgDecoder`): the decoders by extension as kinds (PNG, JPEG; round 41's map of C++
+  decoder pointers is gone), the decodes over the Rust FileReader core (imgdec.rs), `PlatGUIPackImage` (the texture
+  pack's copies) as its `pack_image`. `MultiImageDecoder` is a handle in WindowManager; a FileReader status comes back
+  and the inline wrapper throws it (`WONImageThrow`) where the original's reads threw. The pack's decode uses the
+  decoder it runs in (the original used the window manager's: the game has one).
+- The image classes' units and headers deleted: Image.cpp, ImageBaseDefaults.cpp, ImageDrawEntire.cpp, NativeImage.cpp,
+  NativeImageDefaults.cpp, Palette.cpp, PaletteLifetime.cpp, RawImage.cpp, DelayLoadImage.cpp, MSSkinImage.cpp,
+  MSSkinImageClone.cpp, ImageFilters.cpp, ImageDecoder.cpp; WONLobbyImageHelpers.h, WONLobbyDelayLoadImage.h.
+  PlatNativeImage.cpp keeps the host, the icon's destructor, `DisplayContext::CreateImage` and the cursor table.
+- cbindgen emits an enum only when an exported function names it: `EeWonImageKind` needed `ee_won_image_kind`.
+
+### WONButton a shell kind
+
+- The C++ `WONButton` is now the shell class (WONGUIShell.h) of two kinds, `WonButton` (new, overriding nothing) and
+  `WonHeaderButton` (round 23's, which had its own shell `WONShellWonButton : WONButton`, now gone). Its constructor
+  makes the Rust WONButton (wonbtnobj.rs, round 35), sets the button and focus flags (WONButtonSetup.cpp's
+  constructor) and then the kind; SizeChanged, DesiredSize and Paint run the kind's override when its mask has it,
+  else the Rust button, and a kind's base call runs the Rust button (`WON_SHELL_REST_VIRTUALS` is the shell list
+  without those three); SetTextHook and GetText are the Rust button's (no kind overrides them). The configs' and
+  skins' setters are unchanged. The drivers' worlds needed nothing: the header button's calls out are the same.
+- Its 30 lines are small: the Rust WONButton was already whole; what is left is its setters, which the configs call.
+
+### Tests and mutations
+
+- `won_imgobj_test` (new): the original statements (tests/won/won_imgobj_orig.h, the deleted units copied, marked
+  "world:" where the world replaced a call) against imgobj.rs through its C ABI, both over one world (a logged
+  Graphics whose image draws draw the image at its place, display contexts on real surfaces, the window manager's
+  decode and pixel scale, the texture pack's setting): 20,000 random sequences of 40 steps (new raw 32- and 8-bit
+  images with palettes, MSImages of every type and flag, stretch and stretch-centre images, native images at scales
+  0.75 (made 1) .. 3, delay-load images; duplicates, native images, raw copies, sizes, draws onto a seeded screen at
+  random places and source rectangles, the four filters, the stretch setters and copies, releases): each side's trace
+  and every image's description (kind, sizes, flags, pixels, palette, a raw copy, a draw onto a fresh surface) and the
+  screen's pixels equal, every image freed on both sides; and 60 decoder rounds over PNG files it writes (well formed,
+  truncated, not a PNG, upper-case extensions, missing, unregistered; the texture pack's copies at 2..4x or another
+  size, shifts 0..2, with and without a window manager): 0 mismatches.
+- The first runs mismatched on stretch images whose borders were larger than their source: the stretch filter's plan
+  then reads outside the source (imgfilter.rs `stretch_run` trusts the plan), on both sides. The generator keeps the
+  borders inside the source, as the skins' configs do.
+- Mutations (build/wl24/mutate.py, scratch; each a Rust rebuild, about 10 minutes): 12 of 12 caught (the raw 8-bit
+  rows' padding, the clip test, an 8-bit copy's transparent index, the 8-bit mask for index 0, the percent scale, the
+  tint's alpha, a stretch copy's rebuild flag, the pack's shift, the delay-load's single decode, the native scale's
+  floor (caught after a 0.75 scale was added), a stretch-centre's sizing of its stretch image, the decoders' case).
+- `won_image_test` (the decoders' golden of round 18) now calls imgdec.rs's decodes directly (the decoder classes it
+  subclassed are gone): unchanged. `won_cfgtab_test`, `won_wonskin_test`, `won_wonbtnobj_test`, `won_shell_test`,
+  `won_platimg_test`, `won_imgfilter_test`, `won_imgmask_test`, `won_stretchpx_test`, `won_stretchobj_test` unchanged;
+  `won_gfxobj_test` (golden and 800,000 checks unchanged) logs the image draws through the seam above.
+- cargo: imgobj_tests.rs (7: raw copies, the 8-bit filters and palette rules, native scales, masks and copies, program
+  draws through a logged Graphics with the stretch cache, the delay-load's decode, the decoders' map and a PNG
+  decode); imgdec_tests.rs's map test moved there.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) after each code commit and at the head |
+| `build.py --test-profile windowed-software` | 0 / 0 (the head) |
+| `rust_build.py header` | 281 headers current |
+| `rust_build.py gate` | PASS, 4,983 tests, on the merged tree (the first run, at the image commit, failed clippy `too_many_arguments` on the three draws: allowed before the commit) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical after each code commit; seeds 2-7 identical on the merged tree |
+| `won_host_coverage.py` | PASS (EeWonImageHost added: 19 values, 19 host cases) |
+| `xbuild.py wontest` | all 159 programs exit 0 (158 and won_imgobj_test; won_gfxobj_test after its fix, 3215ee04c), peak 547 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13007` units [4, 40, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2745 joiner=2741`, GATES PASS |
+
+### Behaviour changes
+
+- The raw images' pixels start zeroed (the original's were unset until written).
+- A mask no longer holds the display context it was made on (the original's NativeMask did, keeping it alive).
+- The crashes on NULL members (a stretch image without a source or whose filter has nothing for its type, a
+  stretch-centre image without its images, a tint or transparent filter on an 8-bit image without a palette) are
+  no-ops.
+- WONButton's destruction frees the Rust button before the kind (the header button's kind frees nothing).
+
+### What runs it
+
+- The LAN game and the tour: every lobby picture is decoded, made native, stretched, framed and drawn through these
+  objects; the goldens never draw on the real Graphics (the driver's world is a logged one), so a display fault shows
+  only in a tour or the LAN game (the captures below).
+- Only the driver: the 8-bit images with palettes (the game's only 8-bit image is the skip-decode mode's blank 10 x 10
+  one), the texture pack's copies (the gates run with the setting off).
+
+### The LAN capture comparison
+
+`lan_game.py` with the test-profile exe built at round 23's start (0a17fc666, from a `git archive` in
+build/wl24) and with this round's, then `lan_capture_compare.py`: every lobby capture identical (host: lobby open,
+LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging), only the
+game's own frames differ (the simulation's timing). Both runs `RESULT PASS lan-game` (PT 2858/2866 and 2709/2707).
+So rounds 23 and 24 together left the lobby's look unchanged pixel for pixel.
+
+### Left
+
+- The census's WON leaves (AsyncOp, ConfigObject's values, the resource look-ups, Graphics, Sound, Cursor,
+  SelectionColor, ListItemDefaults) are the C++ ends of Rust objects or C++ bases; the Sound classes are trivial C++
+  (inlining them would delete ~90 lines but move nothing).
+- The hosts' image ops (Width, Height, Duplicate in GuiShell.cpp, WONButton.cpp, RootContainer.cpp) could be answered
+  in Rust once images are in the widget registry (`ee_won_image_bind` would register them).
+- WONButton's setters (the configs' calls) could become shell ops on Component* when the config members do.
+## AI Thread cluster, round 6: the path manager host's world reads and its PMRQ capture in Rust, its entry points inline; the town's, the herd's and the classic_lua units host's area and continent reads (ee_sim::astar pm_host.rs, pm_capture.rs; cp town_game.rs, herd_game.rs; ai units_bind.rs; branch rust-aicluster6, 2026-11-19)
+
+The sixth round of the cluster lane (docs/progress/ai-thread-cluster.md), from fcf2d54dc (round 5). The brief was the
+path manager's host whole (EEPathManager.cpp, 1,426 lines), the continent side's rest and the next AI units by
+`cpp_deps.py cuts --focus 'AI Thread/'` (it named EETown.cpp, EEAIFunctionObjects.cpp, EEAIContinentSave.cpp,
+EEAIRectangleArea.cpp and EEArtificialIntelligence.cpp as the cycle's AI unit-out cuts).
+
+| Commit | What | Net C++ (src, include/ee, include/lle) |
+|---|---|---|
+| 1bc2846d2 | pm_host.rs: the path manager host's world reads (units, sub sectors, views, blocked tiles, the capture's records) | -243 |
+| 403bea990 | pm_capture.rs: PMRQ, the entry points' scopes and the dumps in Rust; EEPathManager's members inline | -380 |
+| 0079b893b | town_game.rs, herd_game.rs: the towns' and herds' area, continent and registry operations; UpdateHull inline; the request flags | -140 |
+| 22a4e544b | units_bind.rs: the classic_lua units host's world and continent reads | -24 |
+| c53e9f261 | the AI Thread units' unneeded ee/ and lle/ includes | -342 |
+| | **round** | **-1,129** |
+
+Short of the brief's -2,000: the path manager's host did not move wholly (EEPathManager.cpp is 1,426 -> 755 lines),
+because what is left calls the Units lane's unit, goal and class methods and EEPlayer's virtuals (below).
+
+- **What moved.** (1) The path manager's host: every operation that only reads the world (`pm_host.rs answer`,
+  asked before the C++ host by the closure every intercept shares: the units' ids, the registry, references,
+  tiles, locations, players and class tests through the world views, the sub sectors from the continent manager's
+  records, the searches' views, the sea walkers' blocked tiles with `EEGetUnitTiles`' UUNT note, the game time, map,
+  loading flag and region delay, the capture's records, the graph goal's request flags). (2) PMRQ whole
+  (`pm_capture.rs`): the scopes are a thread's stack; `ee_path_manager_call` opens the manager's own (inputs before
+  the call, results after, then the queues and what left them), the C++ FindPath and FindBoundedPath open theirs
+  through three C calls and write their words. `EEPathManager`'s entry points are inline forwarders; the dumps'
+  text is Rust's. (3) The town's host's area and continent operations (`town_game.rs area_op`) and the herd's
+  (`herd_game.rs world_op`: also the registry, the time, a player's herds, the physical location); `EEAIArea::UpdateHull`
+  inline over `cm_host.rs`. (4) The classic_lua units host's time, continents, areas, forests, last attackers and
+  transports (`units_bind.rs world_op`; the C++ switch is `ee_ai_units_host_cpp`). (5) The lane's units lost the
+  ee/ and lle/ includes they compile without (344 lines; system headers kept: the POSIX builds' standard
+  library includes less transitively).
+- **Lesson: a call that records nothing must not close a scope.** The first PMRQ move closed a scope after every
+  `ee_path_manager_call`; FindPath's own `Call(27)` opens none, so it popped FindPath's C++ scope and wrote its
+  record before the outputs. The oracle stayed identical (the record is TEST ONLY) and the oracle capture's PMRQ
+  digests differed with the same record count (327,099 at seed 2): a byte layout fault, not a missing record. The
+  scope's opener now says whether it pushed, and a unit test nests an uncaptured call in a C++ scope.
+- **Lesson: answer the host's reads in the closure every caller shares.** The searches' intercepts
+  (path_search.rs, graph_search.rs) call the C++ host through the `raw` closure `FnHost` builds; putting the Rust
+  answers inside that closure (before the C++ call) serves the manager and both intercepts at once, and an answer
+  that needs a C++ operation (GRAPH_ENDS' tile clamp: the terrain mesh's GetClosestTile) gets the C++ host passed.
+- **Lesson: what keeps a host operation C++ is a method, a container or a virtual, not a field.** The fields the
+  host read (path-done flag, request count, push immunity, velocity, contacts, bounded tiles) are all in the world
+  views; what stays C++ is DropPath and TakePath (the waypoint deque, the class's AdjustPath), the goals
+  (SetGoal, the location goals RequestUnitPaths makes), `EEPlayer::IsHuman` and `UnitStranded` (virtuals),
+  `GetTerrainFlags`, `EEAutoPathRequest`'s `std::vector` path (the Units lane's group and goal code reads it), the
+  owners' `std::function`s, and URandom::Generate (the trace hook).
+- **Lesson: a town's or herd's handle is its area's.** With no vtable before the first base (round 5), an
+  `EETown*`, an `EEHerd*` and their `EEAIArea*` are one address, so the Rust hosts reach the area's record and tile
+  set by the town's handle (`cm_io::area`, `area_tiles`) and the C++ host loses its tile, hull and continent cases.
+- **What runs it.** Every game: the path manager's host on every path request and search (PMRQ, ASRN, ASGR in the
+  oracle capture), the towns' and herds' area operations (HULL, AREA, CNTQ), the classic_lua units host (both
+  oracle AIs are classic_lua). Nothing of it draws: no change here only a tour reaches.
+- **Behaviour.** None intended. `EEGetUnitTiles`' UUNT note is made by the same Rust (the units lane's
+  `uu_world::unit_tiles`) in the same order.
+- **Call-site edits outside the lane**: none in C++. Rust outside ee_sim::astar/cp/ai: none (the units lane's
+  `uu_note::Note`, `uu_world::unit_tiles`, `uu_host::Game` and `ffi::ee_units_resolve` are called, not changed).
+- **Gates**: on the final tree (2a9df69a5: the round merged with origin/rust 4fb6c7119, which needed only PORT_LEARNINGS.md's end, both sides kept, and strip_markers' three trailing address comments in ee/EEAIContinentManager.h): the `--sim` build 0/0 (EE-AOC, EE-SIM) and the test profile 0/0; the Rust gate PASS (4,983 tests); the oracle at seeds 2-7 identical to the reference; the captures at seeds 2-3 PASS: oracle 212 digests, late 214, transport 185, placement 4; the plain saveload (`--seeds 2-7 --at 600,1350,2100`) 18/18 identical; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) exit 0, `saveload expect: PASS` (calamity 3/4 and next 2/4 as the expect file has them); scenario_check 27/27; `gates.sh` (EE_GATES_TREE the main checkout's tree) `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12678` units [4, 38, 40] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2740 joiner=2740`, GATES PASS. Per commit: the `--sim` build 0/0 and the oracle at seeds 2-3 identical; the oracle capture at seeds 2-3 after the capture move (its first try failed on PMRQ: the lesson above) and after the towns' and herds' step; the Rust gate after the capture move (its first run failed clippy: an `as i32` of a `c_long` and a collapsible match, fixed in that commit); clippy and rustfmt of ee_sim after the later steps; the include trim built both profiles and the oracle at seeds 2-3 (its first link found two unresolved symbols: a `const` global whose `extern` declaration came from a dropped header, and a template instance whose body did; both headers are back). The POSIX builds were not run (this machine builds Windows only): the trim dropped only ee/ and lle/ headers.
+- **Not moved**, and why (docs/progress/ai-thread-cluster.md "Left"): the path manager's operations on units, goals
+  and requests (the Units lane's methods; EEPlayer's virtuals), CanGetTo and AreConnectedForUnit (the unit classes'
+  flags: the Units lane's), EEComputerPlayer (EEPlayer), the kinds' Create and GetRandomPoint dispatch (the town's
+  and herd's C++ bases and the C++ random stream), the continent save's town and herd ids.
+
+## R6 WONLobby, round 25: the component configs' readers, ResourceConfig and ResourceConfigTable whole in Rust (ee_won_gui compcfg.rs; branch rust-wonlobby25, 2026-11-20)
+
+Round 24 left the WON GUI's config cluster as the biggest block of C++ with logic of its own: every lobby screen is
+read from the `.cfg` resource files by ComponentConfig's value readers (integers with expressions, strings, colours,
+fonts, images, sounds, backgrounds, cursors, selection colours, components by dotted path), its resource look-ups up
+the parent configs, its map of named child configs and its instructions (MODIFY, MAPCOMPONENT, SETRESOURCE, the
+RESOURCE and MODIFY groups, a component type's child config), over ResourceConfig's maps and ResourceConfigTable's
+groups, glue functions, control ids and allocators. This round moved all of it in one piece.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 65c8b6c90 | ComponentConfig's readers, look-ups, map and instructions, ResourceConfig and ResourceConfigTable whole in Rust (compcfg.rs, WONCompCfg.inl, ComponentConfigHost.cpp); 15 units deleted; golden `won_compcfg_test` | -1,430 |
+| c8fd9af62 | eleven empty units deleted (a UNIT-FLAGS line each) | -12 |
+| 5dd408efe | the 86 one-line CfgFactory / CompFactory / LayoutPointFactory statics as `NewConfigOf<X>`, `NewComponentOf<X>`, `NoComponent` (a C++ cleanup, nothing moved) | -377 |
+| the docs commit | compcfg.rs clippy and rustfmt, the world's module header (rust_includes.py), this section, the progress file | 0 |
+
+Round total: WON C++ 28,289 -> 26,470 (-1,819: -1,430 the move, -12 the empty units, -377 the factories).
+
+### The config objects (compcfg.rs)
+
+- **A config** (`EeWonCompCfg`, one per C++ `ComponentConfig`, `mCfg`): the map of named child configs (a reference
+  each; ordered ignoring case as the original's `std::map<..., StringLessNoCase>`: a sorted vector over
+  ee_won_net's `compare_no_case`, a found key keeping its first spelling), the current resource group (a reference),
+  and the config parser and value parser the instruction being handled reads (`BaseHandleInstruction` sets them, as
+  the original's members). Every reader is the original's statements over the C++ `StringParser` (its layout is
+  ee_won_net's `EeWonCfgStringParser`; the scans are the parser's own extern functions, so the CRT's ctype stays the
+  one the C++ used); `ReadInt` is guicfg.rs's expression parser with `GetIntValue` as its operand, now in Rust too.
+- **A resource group** (`EeWonResCfg`, the C++ `ResourceConfig`'s `mRes`): the overwrite flag, the parse count and the
+  seven maps (strings as units, images, fonts and sounds as held C++ pointers, colours, backgrounds as a record of
+  `Background`'s members with the image held, ints), each value with the parse that made it; the handlers keep the
+  original's order (the entry made with the default value, then the read: a read that fails leaves the default) and
+  its messages.
+- **A table** (`EeWonResTable`, `mTable`): its groups and glue functions (ordered by address, as the std::set); the
+  control ids and the allocators, class statics in the original, are two global maps.
+- **The C++ end** (include/ee/wonapi/WONCompCfg.inl, compiled by WONGUI/ComponentConfigHost.cpp and by the golden):
+  the forwards and one host, `CcHost` (39 ops: references by kind, the parents and names, the three flags, the
+  component's edges, desired size, size, grab flag and InitComponent, the virtuals GetNamedValue, CallNamedFunction,
+  GetPredefinedComponent, SetComponent and Virtual24, ConfigObject's base calls and group parses, the parser's
+  warning, the font and image configs' values, the decoders, the window's fonts, the backgrounds, the factories, the
+  glue functions, a new group, a GUIString). Every config crosses as its `ConfigObject*` (the host downcasts).
+- **Exceptions**: each call has a frame of the C++ (`CcFrame`); a reader's own failure hands its message to the frame
+  and the forward throws `ConfigObjectException` with it (the original's type and text); a host op that threw (a
+  virtual, a nested reader's exception, a group parse, AddWarning as an error) keeps the exception in the frame and
+  the forward rethrows it, so no C++ exception crosses Rust.
+- **What stays C++**: the classes (their vtables: 40 config subclasses override the hooks), the component, the three
+  flags the table programs set, the error text, ReadConfig_Unsafe (the load: the window manager's image cache, the
+  table swap, the parse-time report), ComponentConfigInit, the static table pointer.
+- Deleted: ComponentConfigRead.cpp, ComponentConfigResource.cpp, ComponentConfigValueReaders.cpp,
+  ResourceConfigRead.cpp, ResourceConfigHandlers.cpp, ResourceConfigQueries.cpp, ResourceConfigSafeString.cpp,
+  ResourceConfigSound.cpp, ResourceConfigDispatch.cpp, ResourceConfigLifetime.cpp, ResourceConfigTableMethods.cpp,
+  ResourceTableQueries.cpp, ComponentConfigLoad.cpp, ComponentConfigLifetime.cpp, ComponentConfigLookup.cpp (the last
+  three's load, statics and missing-component report are ComponentConfigHost.cpp's). The readers no caller outside
+  used (GetIntValue, ParseExpression, GetComponentConfig, the Get*Resource family, ResourceConfig's Get* and SafeRead*
+  statics) are Rust functions only. `SafeGetString` returns a copy (its two callers copied it).
+- `PlatStrICmp` folds UTF-8 case (ee_base utf8.rs `compare_folded`): the readers' name tests use the same function,
+  not an ASCII compare (`ſtd` is `STD` to both).
+- NEWLAYOUTPOINT's `mConfigMap[name] = config` (WONCfgTable.inl) is `AddChildToConfigMap(name, config, true)`: the map
+  is Rust's (the flag keeps an empty name, which AddChildToConfigMap skips).
+- The SHOWPARSETIME instruction sets `gShowParseTime` during a parse: ReadConfig_Unsafe's parse-time report is
+  reachable and kept (a first cut dropped it as dead; the link found the instruction's write).
+
+### Tests and mutations
+
+- `won_compcfg_test` (new): the deleted units' statements (tests/won/won_compcfg_orig.h, copied with `git show`,
+  three changes marked "world:") over the original classes' members, against WONCompCfg.inl over compcfg.rs, both
+  over one world (won_compcfg_world.h: counted objects, decoders whose "bad" paths fail, fonts, components, a
+  scripted ConfigObject whose ParseChild sets the parent and feeds the child its lines, a parser whose THROW warning
+  throws) and one test config (won_compcfg_run.h: every reader by instruction key, named values and functions that
+  answer or throw, predefined children with and without a component, font and image configs with and without their
+  values). 3,000 random runs of 60 steps on random configs of the tree the steps grow (value instructions with
+  key-specific values most of the time, group instructions with scripted groups, names and lines, PreParse with and
+  without a base group, PostParse, InitComponents, the glue functions, SafeGet*, AddConfig, Fn386860, AddSound): each
+  step's trace and the census of live objects and their references after it identical, 37.8 MB of trace per side.
+- The original's undefined behaviour the generator keeps away from: an unknown named function returned an unset int
+  (the port 0); the (CFG,name) font search went on past the root (the port stops: "Invalid FontConfig"); a config
+  without a component crashed every edge read (every config the steps make has one); an empty resource folder read
+  the byte before it.
+- Mutations (build/wl25/mutate.py, scratch, each a Rust rebuild): 7 of 8 caught (a hex digit's value, the duplicate
+  resource test's parse, the dotted path's first dot, "./" stripping, the map's release of a replaced config,
+  CONTROLID's own arm, the underline style bit); the eighth (the default foreground of a bare selection colour) is
+  equivalent: the C++ end makes that colour with the original's constructor, which sets the foreground itself.
+- cargo: compcfg_tests.rs (5: the maps' order and spelling, the resource files, MAX and MIN, the colours, the font
+  styles).
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at each code commit and at the head |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 282 headers current |
+| `rust_build.py gate` | PASS, 4,988 tests (the first run failed clippy: `mut_from_ref` on the value parser handle, allowed with its reason, and an `is_none_or`; fixed in the docs commit) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (the factories commit); seeds 2-3 identical after the clippy fix |
+| `won_host_coverage.py` | PASS (EeWonCcOp 39 of 39, EeWonCcKind 5 of 6 with the Component default allowed) |
+| `xbuild.py wontest` | all 160 programs exit 0 (won_compcfg_test new; won_cfgtab_test unchanged after its world's map entry) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12737` units [4, 39, 40] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2737 joiner=2736`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe, 0a17fc666) | every lobby capture identical but the carets: `host-create-dialog.bmp` (15 pixels, x 575..576: the name box's caret) and `host-staging-ready.bmp` (15 pixels, x 121..122: the chat input's); the first run (at the move's commit) had only the create dialog's |
+
+### Behaviour changes
+
+- An unknown named function in an expression is 0 (the original's result was an unset int).
+- The (CFG,name) font search stops at the root ("Invalid FontConfig: name"; the original read past it).
+- `SetResourceFolder("")` sets "/" (the original read the byte before the string).
+- The resource groups' maps give their values back in key order on destruction (the original's tree order).
+- "already exists" / "not found" messages are not cut at 511 bytes (the original's sprintf into 512 bytes overflowed).
+
+### What runs it
+
+- The tour and the LAN game read every lobby screen through these objects; only a tour or the LAN game sees the host
+  (the golden's world has its own stand-ins for the C++ objects but runs the same host statements).
+
+### Left
+
+- The config subclasses' own C++ (ConfigComponentBindings.cpp's SetComponent bindings, FontConfig's and
+  ImageConfig's values, the predefined children of ConfigTableHost.cpp, the table programs' frame in
+  WONCfgTable.inl) could follow their base into Rust: the readers they call are there now.
+- Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.
 
 ## The units' lane, round 4: the unit utilities' forwarders gone, the unit host's goal calls in Rust, one-call members inline (ee_sim units goal_spec.rs; branch rust-units4, 2026-11-19)
 
@@ -34732,3 +35165,194 @@ The brief: net -3,000 C++ lines from whole bodies. Numbers: docs/progress/units.
 - **Behaviour changes**: none observed (oracle, captures, saveloads identical). The game log's order lines read a
   target through the unit store (`UnitView::by_id`) where the C++ read `gWorld.GetUnit` (both a player's listed
   units). Only a game with the game log on runs order_log.rs; EE-SIM never does.
+## The game core lane, round 4: the tech tree's ids, captures and media walk, the app capture's cheat sweep, the GE objects over hosts Rust names (ee_sim tech tech_ids.rs, nodes_capture.rs, node_media.rs; ee_game app cheat_capture.rs, world_capture.rs; ee_render ge game_hosts.rs; branch rust-core4, 2026-11-19)
+
+The lane's fourth round, on rust-core3 (origin/rust 4fb6c7119 in it; origin/rust had not moved at the end, so the
+merge had nothing to do). The brief: net -3,000 C++ lines from moves to Rust, the world C++ under the UI lane first.
+It did not reach that: the round is net -497 (src, include/ee, include/lle, include/gx, include/dx7). Why, and what
+the census says is left, is the first point below. docs/progress/game-leaves.md has the state.
+
+| Commit | What | C++ |
+|---|---|---|
+| 63e6fe8ff | the tech ids (epoch count, node epochs) as Rust tables; the tech tree's captured entry points and TEPO, TRTE, TNWK where the walks run; a node's media walk and GetCostString | +96 -324, net -228 |
+| 64e04820e | the app capture's cheat sweep (CHET, CHEF) over the views; MAPK, MAPP, MMPX, MMSN, CHLS called directly; EEMiniMap::GetCell gone | +44 -278, net -234 |
+| 2e1852ae1 | the GE objects' constructors over the game's hosts (Rust names GEVertexHost, GEObjectHost); GEWindow's getters inline | +33 -29, net +4 |
+| 776197b4d | EETechTreeEpoch::Get inline | +9 -15, net -6 |
+| 0f25c69ce | GETexture's stage setters and LoadTexture inline | +16 -43, net -27 |
+| b2c1dc51f | EEEpochTitleID inline over the epochs' titles in Rust | +5 -11, net -6 |
+| | **the round** | **net -497** |
+
+- **Why not -3,000: the lane's C++ is hosts now, and a host only shrinks when what it reads is Rust's.** A census of
+  the lane's functions (a scratch script over the sources: each function body, whether it calls Rust) found 31,790
+  lines in function bodies, 20,710 of them in bodies that call no Rust; read one by one, those are the game's start
+  and shutdown (Empire Earth.cpp, EEGameState::Create, EEWorld::StartGame: they make and wire the C++ objects), the
+  hosts' switches (EEPlayerHost 341 lines, EECalamityUpdate's Call 376, EETechHost, the session's, the network's),
+  the TEST ONLY drivers over C++ objects (EESimEditor.cpp 2,041, EETestFixture.cpp 894, EESim.cpp 1,226), and the
+  captures of C++ members (the calamities' locations and units, the messages' codec slots, the storms' paths). Moving
+  any of them adds a host op per C++ call it makes: the net is the body minus its host, small for orchestration.
+  Forwarders inline in their headers (1,262 lines of one-statement forwarders in the lane) save a third of their
+  lines. The round therefore took what reads Rust records or the world views already.
+- **The world views make a TEST ONLY capture a Rust function.** ee_sim::world's views (UnitView, PlayerView,
+  TechTreeView, MapView over EEWorldLayout's offsets) read the C++ objects in place: CHEF's every player's resources,
+  flags, epoch and units' hit points, resource amounts, flight time, power and commandable flag are view reads, and
+  the record is the C++'s byte for byte as long as each hashed value keeps its C++ size (`long` is a `c_long`:
+  `world_field!` returns the record's own type, so `to_le_bytes` of it is the C++'s `FnvValue`). What the views do
+  not have (the upgrades' improvement levels, the camera's location at its fraction, the cheats' parse and apply)
+  is a five-callback host struct of captureless lambdas.
+- **A wrapper that captures around a host call moves into the Rust host adapter, not the walks.** The tech walks
+  called five entry points through the C++ host only so the C++ wrappers' records (TNRS, TNPR, TSOL) kept their order.
+  The Rust FfiHost (the adapter over the C++ callback) now answers those operations itself (capture, then the body
+  with itself as host), and the walk entry points from C++ do the same: the walks and their mock-host tests are
+  unchanged, the wrappers and eleven host cases are gone. The TNWK walk records were three host operations; they are
+  calls of capture_rec.rs's collection plus the node's and tree's bytes. Every record checked: the oracle (212
+  digests) and late (214) profiles before the commit.
+- **A Rust function can name a C++ host.** The LLE headers' inline constructors passed `&GEVertexHost` and
+  `&GEObjectHost`, so every unit that built a GEText, a GEBitmap or a GELine drew an edge to GEBitmap.cpp (37 of the
+  UI's units; 3 now). The hosts have C linkage and ee_render ge game_hosts.rs's constructors name them
+  (`#[cfg(not(test))] extern "C"`; the tests get stand-ins), so only the Rust library references them and the
+  census sees no C++ edge. The same trick serves any inline forwarder whose only C++ dependency is its host.
+- **A header can declare the two Rust calls it needs.** ee/EETechTreeTechID.h (EEEpochCount, EEIsEpochID,
+  EETechTreeEpochOf, EEEpochTitleID inline) and GEWindow.h (its four getters) declare their `extern "C"` Rust
+  functions by hand instead of including rust/sim/tech.h or rust/render/ge.h (3,100 and 3,300 lines) into every
+  includer; cbindgen's declaration and the hand one are the same C declaration.
+- **The UI's edges into the lane** (tools/cpp_deps.py, the User Interface Thread, UI Events, the LLE User Interface
+  and the scenario editor's units; EEFOFindNewTargetNearOldTarget aside): 325 edges and 950 symbols at the start,
+  287 and 859 after the GE commit (the later inlines cut more: EETechTreeEpoch::Get from 11 units, the stage setters
+  from 10, EEEpochTitleID from 6).
+- **Tests**: tech_ids 1 (the tables, the titles), nodes_capture 2, node_media 3 (the cost text, the cut buffer, the
+  media walk and an epoch's kind), world_capture 2, cheat_capture 1, game_hosts 1.
+- **Behaviour changes**: none intended. The captures are byte for byte (the profiles below). The tech media walk and
+  the cost text run the same calls in the same order (GetCost's TCST records included). EETechTreeEpoch::AddSOL and
+  UpdateAvailability on an epoch without a tree no longer write a TSOL record (the C++ wrote one with player -1 and no
+  walk); no epoch without a tree is counted.
+- **What only the tours exercise**: the GE constructors over the game's hosts and GEWindow's getters (every frame
+  and every text), the stage setters and LoadTexture, the tech media walk (EE-SIM loads no media), GetCostString (the
+  command buttons' and upgrade buttons' cost text).
+- **Gates, on the round's last commit** (41dbcdf89; origin/rust 4fb6c7119 is in the base and had not moved, so the
+  merge had nothing to do; no conflict marker, strip_markers --check clean): both builds 0/0 (EE-AOC 499 inputs,
+  EE-SIM 500) and the test profile 0/0; the Rust gate PASS (4,986 tests, 0 failed; a run before the last commit
+  failed tech::capture_rec::tests::the_civ_manager_head, a race with civ_tests.rs's table loads: it now takes their
+  lock); the oracle identical on seeds 2-7; the 12 capture profiles at seeds 2-3 PASS (oracle 212 digests, late 214,
+  space 210, calamity 222, missile 22, effects 6, scenario 43, units 175, app 26, groups 2, placement 4, transport
+  185); the plain saveload PASS; the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines)
+  and `--civbuilder` PASS (4,062); `eedata.py check` PASS and `cppgate` PASS; the tour through slot.py `RESULT PASS
+  tour` (RENDER CHECK ok, INPUT CHECK ok); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): `RESULT
+  PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13115` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
+  `RESULT PASS lan-game PT host=2715 joiner=2721`, GATES PASS. The captures, saveload, scenario_check and sim_editor
+  ran on the tree before 41dbcdf89 (that commit changes only Rust lints, formatting, a header's order and a test).
+- **Not run**: the POSIX builds (GEWindow.h's hand declarations and the C-linkage hosts are the same on POSIX).
+## R6 WONLobby, round 26: the component config classes as kinds (ee_won_gui cfgkind.rs; branch rust-wonlobby26, 2026-11-20)
+
+Round 25 moved ComponentConfig's readers and instructions; its 45 subclasses (one per configured widget type: ButtonConfig,
+DialogConfig, ListAreaConfig, ..., the Windows skin's MSButtonConfig .. MSListCtrlConfig, the WON skin's
+WONSimpleButtonConfig .. WONSkinConfig) stayed C++: each a class with its own copy of the component under its type
+(`SetComponent`), a `Virtual24` that ran its cfgtab.rs table and then (or first) its base's, and for some a
+`GetPredefinedComponent` (the named parts a resource file may configure), a `GetNamedValue` (the WON frame's paddings)
+or a `PreParse` (the WON skin's default skin). This round made them kinds of one ComponentConfig.
+
+### What moved (net WON C++ = every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 3ec4bab54 | the config classes as kinds (cfgkind.rs); 14 units and 9 headers deleted, the registrations one table by kind; goldens `won_cfgtab_test` (the chains) and `won_compcfg_test` (the predefined children, paddings, the skin's PreParse) | -1,209 |
+| b42d1bf0f | origin/rust (fa7e8674a) merged (PORT_LEARNINGS only: both sides kept) | 0 |
+| 6637f6f3b | strip_markers on the merged tree (four trailing address comments in the AI and units lanes' headers) | 0 |
+| 2dfffc4d0 | `rust_includes.py`'s module headers (cfgkind.h, shell.h) | +4 |
+| the docs commit | this section, the progress file | 0 |
+
+Round total: WON C++ 26,470 -> 25,265 (-1,205; short of the -1,500 aim: the lobby's control configs and the table
+setters, the next pieces, were not started, below).
+
+### The kinds (cfgkind.rs)
+
+- `EeWonCfgKind` names the original class (52 kinds: the 45 deleted classes and the seven that keep members, FontConfig,
+  ImageConfig, StretchImageConfig, StretchCenterImageConfig, ImageFilterConfig, PercentLayoutConfig, ColorSchemeConfig).
+  `class(k)` is the class: its base, its cfgtab table, how its `Virtual24` used them (`Own`: ComponentConfig's MODIFY,
+  MAPCOMPONENT, then its table; `TableThenBase`; `BaseThenTable`: WONHeaderControlConfig; `TableOnly`: the skin, font,
+  image, percent-layout and colour-scheme configs), and its own predefined children (the name, compared exactly as
+  each original did, with a guiconf key table or `name == "..."`; the child config's kind; the component part).
+- The hooks are walks of that hierarchy: `v24_steps` (the tables in the order the chain of `||` ran them), `predefined`
+  (the first class up the bases whose list names the child), `named_borders` (LEFTPAD .. VERTPAD: the frame borders
+  summed, in the original's evaluation order), `is_a` (the original `dynamic_cast`s).
+- The C++ end: `ComponentConfig(EeWonCfgKind)` keeps the kind (`mKind`); its `Virtual24` (WONCfgTable.inl) runs the
+  steps; `GetPredefinedComponent`, `GetNamedValue`'s paddings and the WON skin's `PreParse` (WONCompCfg.inl) ask
+  cfgkind.rs and read the part (`CcPart`: a combo box's list area and edit box, a scrollbar's thumb, arrows and track,
+  a tab control's page layout point, the page view's text area, a scroller's bars and area, a list control's header,
+  an etched frame's label). `ContainerConfig(kind)` keeps the layout state for the container kinds (and, as the
+  original's ScreenContainerConfig did, no container pointer for a screen container); `CfgNewOfKind` makes the class
+  of a kind. The typed component pointers were all the component itself: the table setters read
+  `static_cast<T*>(mComponent)` (`EE_C(T)`).
+- Deleted: ConfigComponentBindings.cpp, ConfigBaseComponentBindings.cpp, SimpleComponentConfig.cpp,
+  ScrollbarConfigConstructor.cpp, ButtonConfigConstructor.cpp, MSEtchedPredefinedComponent.cpp,
+  MSListPredefinedComponents.cpp, MSPredefinedComponents.cpp, BrowserComponentConfig.cpp, ValueConfigConstructors.cpp,
+  ImageConfigConstructors.cpp, StretchImageConfig.cpp, MSComponentConfigRegistration.cpp and
+  WONControlsConfigRegistration.cpp (their tables now WONGUIConfig.cpp's, by kind, the shells' factories one template
+  `NewShellOf<kind, args>`); the headers WONLobbyMSConfig.h, WONLobbyMSExtraConfig.h, WONLobbyResourceConfig.h,
+  WONLobbyComboBoxConfig.h, WONLobbyTabCtrlConfig.h, WONLobbyWONListConfig.h, WONLobbyWONFrameValueConfig.h,
+  WONLobbyWONButtonConfig.h, WONLobbyWONFrameConfig.h; the classes' declarations in WONLobbyGUI.h and six other
+  headers.
+- The lobby's control configs (ChatCtrlConfig, ServerListCtrlConfig, RoomLabelCtrlConfig, ...) stay C++ subclasses of
+  ComponentConfig or ContainerConfig with their base's kind; MaxSplitterButtonConfig, whose only override called its
+  base, is the MSArrowButton kind with its factory.
+
+### Tests and mutations
+
+- `won_cfgtab_test` (round 39's golden of the table programs) now checks the chains too: its world's classes carry
+  their kinds (a member that sets the base's kind after the bases', so the most derived class's wins), and on the
+  port's side every class uses ComponentConfig's `Virtual24` over the kind's steps; the original side keeps each
+  class's own `Virtual24` with its explicit base calls (won_cfgtab_orig.h). The resource files' 2,185 instructions and
+  5,000 random ones on all 52 configs, the layout and image sequences: 383,620 checks, 0 mismatches;
+  `golden_cfgtab.txt` regenerated byte for byte the same.
+- `won_compcfg_test` (round 25's golden) adds the deleted classes' statements (tests/won/won_cfgkind_orig.h: their
+  declarations and SetComponent bindings, the predefined children, the frame paddings, the skin's PreParse, copied
+  with build/wl26/gen_orig.py from bcea46987) on the original side, and on the port's side the kinds: every class is
+  an allocator type (its class or its kind), the world's components have the parts, a shell op stand-in and the
+  skin's stand-in; the generator makes configs of every type, reads `child._THUMB`-style paths and `child.LEFTPAD`
+  values, and a new step probes a config directly: every predefined name (the child's class, its part, and two
+  levels of its own children) and every padding name. 3,000 runs, 0 mismatching; every predefined child and padding
+  is reached.
+- Mutations (build/wl26/mutate.py, each a Rust rebuild and both goldens): 7 of 8 caught (a predefined child's kind, a
+  part, HORZPAD's evaluation order, StretchImageConfig's base, TabCtrlConfig's base, the exact name compare,
+  MSTabButtonConfig's base); the eighth, WONHeaderControlConfig's base-first order, is equivalent: its keys and its
+  bases' are disjoint (only the reader's "passed on" count changed, 717,786 against 717,035).
+- cargo: cfgkind_tests.rs (4: the chains, the derivations, the predefined walks, the paddings).
+
+### Behaviour changes
+
+- A ScreenContainer config's container pointer is NULL (the original's was never set, so a container instruction on
+  one read garbage; the game's files have none).
+- The lobby's control configs call their base kind's hooks (`ComponentConfig::Virtual24` with the base's kind) where
+  they called the deleted base class's; the same chain.
+
+### What runs it
+
+- Every lobby screen's configs go through the kinds (the tour, the LAN game); the goldens' worlds are stand-ins, so
+  only the LAN capture comparison and the tour see the game's host statements on the real widgets.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0 / 0 (EE-AOC, EE-SIM) at the move's commit and on the merged tree |
+| `build.py --test-profile windowed-software` | 0 / 0 (the merged tree) |
+| `rust_build.py header` | 283 headers current |
+| `rust_build.py gate` | PASS, 5,005 tests, on the merged tree (the first run there failed `gamespy::tests::a_failed_start_leaves_the_current_record`, a UDP port another program held: passed alone three times and in the rerun of the whole gate; the first run at the move's commit failed rustfmt on cfgkind_tests.rs, fixed before the commit) |
+| oracle against the main checkout's `ref` | seeds 2-3 identical at the move's commit; seeds 2-7 identical on the merged tree |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | all 160 programs exit 0, peak 559 MB (won_cfgtab_test) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 13487` units [4, 42, 42] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2739 joiner=2736`, GATES PASS |
+| `lan_capture_compare.py` against round 23's start exe (build/wl24/r23exe, 0a17fc666) | every lobby capture identical, no caret differences (host: lobby open, LAN screen, create dialog, staging as host and ready; joiner: lobby open, LAN screen, LAN list, staging); only the game's own frames differ. Both runs `RESULT PASS lan-game` (PT 2762/2758 this round, 2725/2725 the start exe) |
+
+### Left
+
+- The lobby's control configs (ChatCtrlConfig, UserListCtrlConfig, GameUserListCtrlConfig, GameBrowserCtrlConfig,
+  ImageTextButtonConfig, CrossPromotionButtonConfig, CreditsDialogConfig) could be kinds with cfgtab tables (their
+  setters a case each); RoomLabelCtrlConfig needs a guiconf name table for its CHAT / GAME compares,
+  ServerListCtrlConfig's ADDCOLUMN stays a C++ setter. About -120 lines.
+- The table setters (WONCfgTable.inl, ~330 lines) are mostly calls of the widgets' inline forwards: they could be the
+  widgets' Rust objects through the widget registry, with a golden that checks the forwarders' mapping.
+- FontConfig's, ImageConfig's and the percent and colour-scheme configs' members could be the Rust config's (the
+  font and image values would then be answered in compcfg.rs without the AsFont / AsImage host ops).
+- The registrations (WONGUIConfig.cpp, WONLobbyPrv.cpp's table) could be Rust data with one C++ factory switch.
+- Round 24's items stand: the hosts' image ops through the widget registry, WONButton's setters as shell ops.

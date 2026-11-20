@@ -9,8 +9,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/UIEntity.h"
-#include "lle/Input System.h"
 #include "lle/UIHotKey.h"
 
 #include "ee/EEPlayer.h"
@@ -130,55 +128,15 @@ long EETechTreeNode::GetCostUncaptured(long inResource, long inUnitClass, float 
     return ee_tech_node_cost(&theInput);
 }
 
-// Builds the "Food: n Gold: n ..." cost text of the node for a unit class (wood shown as carbon when used)
+// Builds the "Food: n Gold: n ..." cost text of the node for a unit class (wood shown as carbon when used; ee_sim
+// tech node_media.rs)
 void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, float inScale)
 {
-    UWideString theName;
-    char theNumber[32];
-    outString = "";
-    if (this->GetCost(kResourceFood, inUnitClass, 1.0f) > 0) {
-        gResource->GetString(IDS_RESOURCE_NAME_FOOD, theName);
-        outString = theName;
-        outString += ": ";
-        PlatIToA(this->GetCost(kResourceFood, inUnitClass, inScale), theNumber, 10);
-        outString += theNumber;
-        outString += " ";
-    }
-    if (this->GetCost(kResourceGold, inUnitClass, 1.0f) > 0) {
-        gResource->GetString(IDS_RESOURCE_NAME_GOLD, theName);
-        outString += theName;
-        outString += ": ";
-        PlatIToA(this->GetCost(kResourceGold, inUnitClass, inScale), theNumber, 10);
-        outString += theNumber;
-        outString += " ";
-    }
-    if (this->GetCost(kResourceIron, inUnitClass, 1.0f) > 0) {
-        gResource->GetString(IDS_RESOURCE_NAME_IRON, theName);
-        outString += theName;
-        outString += ": ";
-        PlatIToA(this->GetCost(kResourceIron, inUnitClass, inScale), theNumber, 10);
-        outString += theNumber;
-        outString += " ";
-    }
-    if (this->GetCost(kResourceStone, inUnitClass, 1.0f) > 0) {
-        gResource->GetString(IDS_RESOURCE_NAME_STONE, theName);
-        outString += theName;
-        outString += ": ";
-        PlatIToA(this->GetCost(kResourceStone, inUnitClass, inScale), theNumber, 10);
-        outString += theNumber;
-        outString += " ";
-    }
-    if (!(this->GetCost(kResourceWood, inUnitClass, 1.0f) > 0))
-        return;
-    if (gWorld.mUsingCarbon)
-        gResource->GetString(IDS_CARBON, theName);
-    else
-        gResource->GetString(IDS_RESOURCE_NAME_WOOD, theName);
-    outString += theName;
-    outString += ": ";
-    PlatIToA(this->GetCost(kResourceWood, inUnitClass, inScale), theNumber, 10);
-    outString += theNumber;
-    outString += " ";
+    char theText[512];
+    ee_tech_cost_string(this, [](void* inNode, int32_t inResource, int32_t inClass, float inCostScale) {
+        return (int32_t) static_cast<EETechTreeNode*>(inNode)->GetCost(inResource, inClass, inCostScale);
+    }, (int32_t)inUnitClass, inScale, gWorld.mUsingCarbon, reinterpret_cast<uint8_t*>(theText), sizeof(theText));
+    outString = theText;
 }
 
 // Reads the node's record from the tech tree file, with a cost table per unit class scaled by its factor
@@ -239,10 +197,11 @@ bool EETechTreeNode::GetIsObsolete()
 bool EETechTreeNode::NeedsUnitMedia()
 {
     bool theResult = this->NeedsUnitMediaUncaptured();
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    ee_tech_capture_walk_begin();   // TNMT (TEST ONLY: ee_sim tech nodes_capture.rs)
     long theUnitClass = this->mData->mUnitClass;
     EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
-    EETechCaptureWalk(10, NULL, this, theUnitClass, theClass != NULL ? theClass->mFamily : -1, theResult ? 1 : 0);
+    ee_tech_capture_node_walk(10, NULL, -1, this, this->mData, this->mTree, theUnitClass,
+                              theClass != NULL ? theClass->mFamily : -1, theResult ? 1 : 0);
     return theResult;
 }
 
@@ -262,61 +221,18 @@ bool EETechTreeNode::DependsOn(long inID)
     return EETechNodeWalk(this, EeTechNodeOp::DependsOn, inID) != 0;
 }
 
-// Loads the node's media: the unit class and its buttons, and the media its research event uses
+// Loads the node's media: the unit class and its buttons, and the media its research event uses (ee_sim tech
+// node_media.rs)
 void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
 {
-    if (this->mData->mMakesUnit) {
-        inPlayer->SetUnitClassMedia(this->mData->mUnitClass, 0x7f);
-        inPlayer->LoadUnitClassButtons(this->mData->mUnitClass);
-    }
-    EEEvent* theEvent = EEEvent::Get(this->mData->mResearchedEvent);
-    if (theEvent != NULL) {
-        for (unsigned long i = 0; i < theEvent->GetNumEffects(); i++) {
-            EEEventEffect* theEffect = EEEvent::GetEventEffect(theEvent->GetEffect(i));
-            switch (theEffect->mKind) {
-            case 1:
-                EEButtonObject::Get(theEffect->mButton)->Acquire();
-                break;
-            case 2:
-                if (theEffect->mAttribute == 0x28)
-                    gAEManager.LoadTemplateMedia(theEffect->mAreaEffect);
-                break;
-            case 6:
-                EEMedia::Get(theEffect->mMediaIndex)->LoadMedia();
-                break;
-            case 0xf:
-            case 0x10:
-            case 0x11:
-            case 0x12:
-            case 0x14:
-            case 0x15:
-                EESoundObject::Get(theEffect->mSoundID)->LoadMedia();
-                break;
-            case 0x13:
-                inPlayer->SetUnitClassMedia(theEffect->mNewUnitClass, 0x7f);
-                break;
-            }
-            PlatSleep(1);
-        }
-    }
-    inPlayer->EpochMediaLoaded(this->mData->mID);
+    EETechNodeWalk(this, EeTechNodeOp::Media, 1, false, reinterpret_cast<EEComplexUnit*>(inPlayer));
 }
 
 // Satisfies one prerequisite (an epoch or one of the four techs); with all met the node becomes available
 // (event 0x7d1, statistics series 0x16)
 void EETechTreeNode::SetPrerequisite(long inID)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TNPR"));
-        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
-        EETechCaptureNode(theRecord, this);
-        theRecord.I32(inID);
-        EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);
-        EETechCaptureNode(theRecord, this);
-        theRecord.Commit();
-        return;
-    }
-    EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);
+    EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);   // (TNPR, TEST ONLY: ee_sim tech nodes_capture.rs)
 }
 
 // Makes the node available with every prerequisite met
@@ -329,18 +245,7 @@ void EETechTreeNode::MakeAvailable()
 // 9 when not possible; counts down a research delay
 long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TNRS"));
-        theRecord.U32(0);
-        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
-        EETechCaptureNode(theRecord, this);
-        long theResult = EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);
-        theRecord.I32(theResult);
-        EETechCaptureNode(theRecord, this);
-        theRecord.Commit();
-        return theResult;
-    }
-    return EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);
+    return EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);   // (TNRS, TEST ONLY: nodes_capture.rs)
 }
 
 // Sets the scenario editor's obsoleted flag; recursively obsoletes the nodes depending on it, or un-obsoletes
@@ -368,41 +273,7 @@ void EETechTreeNode::SetButton(unsigned long inButton)
 // Unloads the node's media: the unit class and its buttons, and the media its research event uses
 void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 {
-    if (this->mData->mMakesUnit) {
-        inPlayer->UnloadUnitClassMedia(this->mData->mUnitClass);
-        inPlayer->UnloadUnitClassButtons(this->mData->mUnitClass);
-    }
-    EEEvent* theEvent = EEEvent::Get(this->mData->mResearchedEvent);
-    if (theEvent != NULL) {
-        for (unsigned long i = 0; i < theEvent->GetNumEffects(); i++) {
-            EEEventEffect* theEffect = EEEvent::GetEventEffect(theEvent->GetEffect(i));
-            switch (theEffect->mKind) {
-            case 1:
-                EEButtonObject::Get(theEffect->mButton)->Release();
-                break;
-            case 2:
-                // Release the area-effect template media LoadMedia loaded (this called LoadTemplateMedia again).
-                if (theEffect->mAttribute == 0x28)
-                    gAEManager.UnloadTemplateMedia(theEffect->mAreaEffect);
-                break;
-            case 6:
-                EEMedia::Get(theEffect->mMediaIndex)->UnloadMedia();
-                break;
-            case 0xf:
-            case 0x10:
-            case 0x11:
-            case 0x12:
-            case 0x14:
-            case 0x15:
-                EESoundObject::Get(theEffect->mSoundID)->UnloadMedia();
-                break;
-            case 0x13:
-                inPlayer->UnloadUnitClassMedia(theEffect->mNewUnitClass);
-                break;
-            }
-        }
-    }
-    inPlayer->EpochMediaUnloaded(this->mData->mID);
+    EETechNodeWalk(this, EeTechNodeOp::Media, 0, false, reinterpret_cast<EEComplexUnit*>(inPlayer));
 }
 
 // Copies another node's state and shares its data (with its class cost tables)

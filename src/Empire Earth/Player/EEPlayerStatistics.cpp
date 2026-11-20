@@ -8,19 +8,6 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/GETerrainMesh.h"
-#include "ee/EETileLocation.h"
-#include "lle/FSFile.h"
-#include "lle/FSFileSpec.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -28,11 +15,9 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
-#include "lle/UIEvent.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")

@@ -22,10 +22,15 @@
 //! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
 //! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
 //!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
+//! - [`node_media`]: a node's media walk and cost text, an epoch's media of one kind.
+//! - [`nodes_capture`]: the tree's capture records where its walks run (TNRS, TNPR, TSOL, TTRS, TEPO, TRTE, TNWK).
+//! - [`tech_ids`]: the epoch count and each node id's epoch (`gEpochCount`, `EETechTreeEpochOf`).
 //! - [`area_effect`]: the area effects' eight kinds as one record over a host of world calls, their templates'
 //!   numbers, player and area tests.
 //! - [`area_effect_save`]: the area effects' running state in a saved game.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
+//! - [`capture_rec`]: the capture's plain tech records (node, epoch and tree states; TCST, EVHP, CALC) and the
+//!   TRTE, EVUN and TNWK collections (TEST ONLY).
 //! - [`civ`]: the civilization manager's and the civilization powers' tables and their queries (whole in Rust).
 //! - [`civ_apply`]: an upgrade applied to a player, a level on a class's upgrade and a power granted, over a host.
 //! - [`civ_file`]: a civilization file's bytes read, a file applied to a player, a player's upgrade request granted.
@@ -40,6 +45,7 @@ pub mod calamity_start;
 pub mod calamity_update;
 pub mod calamity_views;
 pub mod capture;
+pub mod capture_rec;
 pub mod civ;
 pub mod civ_apply;
 pub mod civ_file;
@@ -53,7 +59,10 @@ pub mod contagion_store;
 pub mod contagion_store_ffi;
 pub mod effects;
 pub mod ffi;
+pub mod node_media;
 pub mod nodes;
+pub mod nodes_capture;
+pub mod tech_ids;
 pub mod tree;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the

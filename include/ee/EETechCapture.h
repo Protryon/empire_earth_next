@@ -139,10 +139,7 @@ struct EECalamityCanCastScope {
 };
 // CCAS kind 1: the sweep (every five game minutes)
 inline void (*EECalamityCaptureSweep)() = nullptr;
-// TRTE: one step of ResearchToEpoch (0 unlock, 1 research all, 2 research self, 3 research kind 7, 4 show the name)
-inline void (*EETechCaptureEpochStep)(long inStep, long inEpoch) = nullptr;
-// TRTE: the record of the ResearchToEpoch whose steps were collected
-inline void (*EETechCaptureResearchToEpoch)(EETechTree* inTree, long inEpoch, bool inLocal) = nullptr;
+// (TRTE, ResearchToEpoch's steps: ee_sim tech nodes_capture.rs)
 // EVUN: one unit an effect walks (collected), and the walk's record (inLoop: 0 sight off, 1 sight on, 2 hit points,
 // 3 pending hit points, 4 flight time, 5 pending flight time, 6 area effects, 7 conversion)
 inline void (*EETechCaptureUnitStep)(EEUnit* inUnit, bool inApplies, long inValue) = nullptr;
@@ -198,14 +195,7 @@ inline void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 
 }
 inline void (*EECalamityCaptureContagion)(EeContagionHelper* inHelper, float inElapsedTime) = nullptr;
 
-// TNWK: one walk over an epoch's nodes or one tree decision (kind: 0 Unlock, 1 ResearchAll, 2 ResearchKind,
-// 3 the epoch's ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's
-// GetBuildTime, 7 SetEpoch, 8 AdvanceEpoch, 9 SetNodeAvailable, 10 NeedsUnitMedia): the walk's arguments, per node
-// the step (id, action), the node (or the tree's epoch) after, the result. Kinds 6 and 10 (asked from the media
-// loader's thread too) are TNMT records: their order against the game thread's depends on timing. Walks nest (an event a step fires may
-// walk again): Begin opens one, the steps go to the innermost, Walk writes and closes it
-inline void (*EETechCaptureWalkBegin)() = nullptr;
-inline void (*EETechCaptureWalkStep)(long inID, long inAction) = nullptr;
-inline void (*EETechCaptureWalk)(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB,
-                                 long inResult) = nullptr;
+// TNWK / TNMT: the tech tree's walks (kinds: 0 Unlock, 1 ResearchAll, 2 ResearchKind, 3 the epoch's
+// ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's GetBuildTime, 7 SetEpoch,
+// 8 AdvanceEpoch, 9 SetNodeAvailable, 10 NeedsUnitMedia): ee_sim tech nodes_capture.rs and capture_rec.rs
 #endif

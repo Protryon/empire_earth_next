@@ -94,14 +94,12 @@ long EETechTreeEpoch::GetBuildTime()
     long theResult;
     long theHuman = this->mTree->GetPlayer()->IsHuman();   // (TNWK, TEST ONLY: asked once, as the test did)
     theResult = ee_tech_epoch_build_time((int32_t)theHuman, (int32_t)this->mData->mBuildTime);   // (ee_tech tree.rs)
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
-    EETechCaptureWalk(6, NULL, NULL, theHuman, this->mData->mBuildTime, theResult);   // TNWK (TEST ONLY)
+    ee_tech_capture_walk_begin();   // TNMT (TEST ONLY)
+    ee_tech_capture_node_walk(6, NULL, -1, NULL, NULL, NULL, theHuman, this->mData->mBuildTime, theResult);
     return theResult;
 }
 
 // Reads the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are dropped)
-void EERegisterTechNode(long inID, long inEpoch);   // EETechTree.cpp
-
 long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
 {
     unsigned long theRead = 0;
@@ -118,6 +116,8 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
         inFile.Read(this->mData->mUnitClasses[j]);
     // the record fields and the epoch ones, its counter at 0 and off (ee_tech nodes.rs fill_data, fill_epoch)
     ee_tech_fill_from_record(this, this->mData, &theRecord, true);
+    if (inTree == &gTechTree)   // the epochs' titles (EEEpochTitleID: ee_sim tech tech_ids.rs)
+        ee_tech_set_epoch_title((int32_t)this->mData->mID, (int32_t)this->mTitleID);
     this->mButton = EEButtonObject::Get(theRecord.mButton);
     if (theResult == kErrorOK) {
         for (unsigned long k = 0; k < theNodeCount; k++) {
@@ -128,7 +128,7 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
             if (theResult == kErrorOK && theNode->mData->mID >= kTechFirstNodeID) {
                 // the node belongs to the epoch whose block holds it (the original: id / 1000 - 1)
                 theNode->mEpoch = this->mData->mID;
-                EERegisterTechNode(theNode->mData->mID, this->mData->mID);
+                ee_tech_register_node((int32_t)theNode->mData->mID, (int32_t)this->mData->mID);
                 this->mNodes.insert(std::map<long, EETechTreeNode*>::value_type(theNode->mData->mID, theNode));
             } else {
                 theNode->Unload();
@@ -185,18 +185,7 @@ bool EETechTreeEpoch::GetIsObsolete()
 // Counts one more tech toward the epoch; when enough are researched the epoch becomes available (event 0x7d2)
 void EETechTreeEpoch::AddSOL()
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TSOL"));
-        theRecord.U32(0);
-        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
-        EETechCaptureEpoch(theRecord, this);
-        if (this->mTree != NULL)
-            EETechEpochWalk(this, EeTechEpochOp::AddSol);
-        EETechCaptureEpoch(theRecord, this);
-        theRecord.Commit();
-        return;
-    }
-    if (this->mTree != NULL)
+    if (this->mTree != NULL)   // (TSOL, TEST ONLY: ee_sim tech nodes_capture.rs)
         EETechEpochWalk(this, EeTechEpochOp::AddSol);
 }
 
@@ -217,34 +206,16 @@ void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
     EETechTreeNode::LoadMedia(inPlayer);
 }
 
-// Loads the media of the epoch's nodes of one kind
+// Loads the media of the epoch's nodes of one kind (ee_sim tech node_media.rs)
 void EETechTreeEpoch::LoadMediaOfKind(long inKind)
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->mData->mKind == inKind)
-            theTreeNode->LoadMedia(this->mTree->GetPlayer());
-        ++theNode;
-    }
+    EETechEpochWalk(this, EeTechEpochOp::MediaOfKind, inKind, true, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
 }
 
 // Makes the epoch available once enough techs count toward it, and gives its nodes the epoch prerequisite
 void EETechTreeEpoch::UpdateAvailability()
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TSOL"));
-        theRecord.U32(1);
-        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
-        EETechCaptureEpoch(theRecord, this);
-        if (this->mTree != NULL)
-            EETechEpochWalk(this, EeTechEpochOp::UpdateAvailability);
-        EETechCaptureEpoch(theRecord, this);
-        theRecord.Commit();
-        return;
-    }
-    if (this->mTree != NULL)
+    if (this->mTree != NULL)   // (TSOL, TEST ONLY: ee_sim tech nodes_capture.rs)
         EETechEpochWalk(this, EeTechEpochOp::UpdateAvailability);
 }
 
@@ -265,19 +236,7 @@ void EETechTreeEpoch::ResearchKind(long inKind, bool inEpochOnly)
 // returns 2 when already researched, 9 when not possible
 long EETechTreeEpoch::Research(long inID, EEComplexUnit* inUnit)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TNRS"));
-        theRecord.U32(1);
-        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
-        theRecord.I32(inID);
-        EETechCaptureEpoch(theRecord, this);
-        long theResult = EETechEpochWalk(this, EeTechEpochOp::Research, inID, false, inUnit);
-        theRecord.I32(theResult);
-        EETechCaptureEpoch(theRecord, this);
-        theRecord.Commit();
-        return theResult;
-    }
-    return EETechEpochWalk(this, EeTechEpochOp::Research, inID, false, inUnit);
+    return EETechEpochWalk(this, EeTechEpochOp::Research, inID, false, inUnit);   // (TNRS, TEST ONLY: nodes_capture.rs)
 }
 
 // Unloads the unit class media the epoch loaded and the epoch's own media
@@ -294,28 +253,7 @@ void EETechTreeEpoch::UnloadMedia(EEPlayer* inPlayer)
 // Unloads the media of the epoch's nodes of one kind
 void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        if (theTreeNode->mData->mKind == inKind)
-            theTreeNode->UnloadMedia(this->mTree->GetPlayer());
-        ++theNode;
-    }
-}
-
-// Returns the epoch (for its own id) or one of its nodes, or NULL
-EETechTreeNode* EETechTreeEpoch::Get(long inID)
-{
-    EETechTreeNode* theResult = NULL;
-    if (inID == this->mData->mID) {
-        theResult = this;
-    } else {
-        std::map<long, EETechTreeNode*>::iterator theNode = this->mNodes.find(inID);
-        if (theNode != this->mNodes.end())
-            theResult = theNode->second;
-    }
-    return theResult;
+    EETechEpochWalk(this, EeTechEpochOp::MediaOfKind, inKind, false, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
 }
 
 // Copies another epoch's state and deep-copies its nodes for this tree (the node data stays shared)

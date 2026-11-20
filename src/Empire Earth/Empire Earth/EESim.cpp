@@ -41,136 +41,53 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFormManager.h"
-#include "lle/UResourceFile.h"
-#include "lle/UIEditBox.h"
-#include "lle/UICheckBox.h"
-#include "lle/UIRadioButton.h"
-#include "lle/UIScrollBar.h"
-#include "lle/UIFileListBox.h"
-#include "lle/UIComboBox.h"
-#include "lle/UIBlinkingButton.h"
-#include "lle/UIBitmap.h"
 #include "lle/NESynchronousServer.h"
-#include "lle/FSRestorable.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMessageCapture.h"
-#include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEServer.h"
-#include "ee/EEWonNet.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEGamePreferences.h"
-#include "ee/EESMMediaStrings.h"
-#include "ee/EEPSaveGameHeader.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEGameVariant.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EERandomMapGenerators.h"
-#include "ee/EEUICPing.h"
-#include "ee/EEStartingResources.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
+#include "rust/game/app.h"   // the mini map's MMSN (world_capture.rs)
+#include "ee/EEMiniMap.h"
 #include "rust/sim/combat.h"
 #include "rust/sim/netmsg.h"   // the decisions' sweep
 #include "rust/sim/units.h"   // the pick and Fill sweeps (ee_sim units/pick_sweep.rs)
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
-#include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAreaEffect.h"
 #include "ee/EEFormation.h"
-#include "ee/EERules.h"
 #include "ee/EECPTrace.h"
-#include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
-#include "ee/EESightCapture.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
-#include "ee/RTSRegionTable.h"
-#include "lle/U2DPoint.h"
-#include "ee/EEMapDimensions.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
-#include "ee/EEAIContinent.h"
-#include "ee/EEAIPathSubSector.h"
-#include "ee/EEAIContinentManager.h"
-#include "lle/UReferenceCounter.h"
-#include "ee/EEPPatrolGroup.h"
 #include "ee/EETown.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
-#include "lle/GEQuaternion.h"
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
-#include "ee/EEUnitClassKinds.h"
 void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
@@ -955,7 +872,8 @@ void HostSweep(int inKind, long inArg)
     case EE_SIM_DRIVER_SWEEP_CALAMITIES: EETechCaptureCastCalamities(inArg); break;   // --calamities
     case EE_SIM_DRIVER_SWEEP_UNITS: ee_units_unit_sweep(inArg); break;   // --unit-sweep (ee_sim units unit_sweep.rs)
     case EE_SIM_DRIVER_SWEEP_MINUTE:   // every game minute: the mini map's cells (MMSN), the tile sight (TSGT)
-        EEAppCaptureMiniMapSnapshot();
+        if (gMiniMap != NULL)   // MMSN (ee_game app world_capture.rs)
+            ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
         EESightCaptureSnapshot();
         break;
     case EE_SIM_DRIVER_SWEEP_CHEATS: EEAppCaptureCheatSweep(); break;   // --app-sweep at five game minutes
@@ -1275,4 +1193,36 @@ int EESimMain(int argc, char** argv)
 void EESimGameEnded(int inResult)
 {
     ee_sim_driver_game_ended(inResult);
+}
+
+// TSGT, MAPS, MAPK (TEST ONLY): the app profile's end sweep of EEMap's sight and out-of-synch checksum
+// (ee/EESightCapture.h)
+void EESightCaptureSweep()
+{
+    if (!EESimCaptureRecord::Active() || gWorld.mMap == NULL)
+        return;
+    EEMap* theMap = gWorld.mMap;
+    float theRadius = gWorldTable.GetFloatValue(kWorldWonderSightRadius);
+    float theSize = (float)theMap->mSize;
+    const float kPoints[][2] = {{theSize * 0.5f, theSize * 0.5f}, {5.5f, 7.5f}, {theSize - 3.25f, theSize * 0.3f}};
+    for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        if (thePlayer == NULL)
+            continue;
+        for (const float* thePoint : kPoints) {
+            theMap->AddSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
+            theMap->AddSight(thePlayer, thePoint[0] + 2.0f, thePoint[1] - 1.0f, theRadius * 0.5f, true);
+            theMap->RemoveSight(thePlayer, thePoint[0], thePoint[1], theRadius, false);
+        }
+        theMap->RemoveSight(thePlayer, kPoints[0][0] + 2.0f, kPoints[0][1] - 1.0f, theRadius * 0.5f, true);
+    }
+    if (gWorld.mNumPlayers > 1) {
+        EEPlayer* theLast = gWorld.mPlayers[gWorld.mNumPlayers - 1];
+        theMap->ExploreUnseen(theLast);
+        theMap->FogSeen(theLast);
+    }
+    // two full cycles of the checksum's 64 x 64 windows
+    long theBands = (theMap->mSize + 63) / 64;
+    for (long i = 0; i < 2 * theBands * theBands + 1; i++)
+        theMap->ComputeChecksum();
 }

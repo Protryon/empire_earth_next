@@ -4,17 +4,10 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
 #include "lle/Input System.h"
-#include "lle/ISMouse.h"
 
 #include "ee/RTSMouse.h"
 #include "ee/RTSMousePointer.h"

@@ -1,66 +1,32 @@
-// ImageFilter (8 bytes), StretchImageFilter (0x24 bytes) and StretchImage (0x30 bytes).
+// StretchImage and StretchCenterImage (R6 WONLobby round 24): imgobj.rs kinds (the borders, tiling, skip-centre and
+// rebuild flag of round 38's stretchobj.rs, the source and cached images, the paints, StretchImageFilter); these are
+// their handles (WONLobbyGUI.h "The images").
 #ifndef EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
 #define EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
-#include "ee/wonapi/WONLobbyImageHelpers.h"
-#include "rust/won_gui/stretchobj.h"
+#include "rust/won_gui/imgobj.h"
 namespace WONAPI {
-class ImageFilter : public RefCount {
+class StretchImage : public Image {
 public:
-    virtual SmartPtr<RawImage> Filter(RawImage *theImage) { return theImage; } // returns the image unchanged (slot 4)
-};
-class StretchImageFilter : public ImageFilter {
-public:
-    int mWidth,mHeight; //08,0c
-    int mLeftWidth,mRightWidth,mTopHeight,mBottomHeight; //10..1c
-    bool mTileHorz,mTileVert,mSkipCenter; // offsets 0x20..0x22; class size 0x24
-    StretchImageFilter() : mWidth(0),mHeight(0),mLeftWidth(0),mRightWidth(0),mTopHeight(0),mBottomHeight(0),
-        mTileHorz(true),mTileVert(true),mSkipCenter(false) {} //349540
-    virtual SmartPtr<RawImage> Filter(RawImage*); // pixel algorithm at 0x00749570
-    void SetSize(int w,int h) { this->mWidth=w; this->mHeight=h; }
-    void SetBorders(int l,int t,int r,int b) { this->mLeftWidth=l; this->mRightWidth=r; this->mTopHeight=t; this->mBottomHeight=b; }
-    void SetTile(bool h,bool v) { this->mTileHorz=h; this->mTileVert=v; }
-    void SetSkipCenter(bool b) { this->mSkipCenter=b; }
-};
-// StretchImage (R6 WON round 38): the borders, tiling, skip-centre and rebuild flag are the Rust object's
-// (rust/crates/ee_won_gui/src/stretchobj.rs); the C++ keeps the source and cached images and the Image's size.
-class StretchImage : public ProgramImage {
-private:
-    SmartPtr<RawImage> mImage; //10
-    SmartPtr<NativeImage> mCachedImage; //14
-    EeWonStretchImg* mObj;
-    void CalcImage(DisplayContext*); //349810
-    StretchImage(RawImage* i,EeWonStretchImg* o) : mImage(i),mObj(o) { this->mWidth=this->mHeight=0; }
-    int Get(EeWonStretchField f) { return ee_won_stretch_get(this->mObj,f); }
-protected:
-    virtual ~StretchImage() { ee_won_stretch_free(this->mObj); } //349740
-public:
-    StretchImage(RawImage* i,int l,int t,int r,int b) : mImage(i),mObj(ee_won_stretch_new(l,t,r,b)) { this->mWidth=this->mHeight=0; } //349650
-    int GetLeft() { return this->Get(EeWonStretchField::Left); } // inline, member at +0x1c
-    int GetRight() { return this->Get(EeWonStretchField::Right); } // inline, member at +0x20
-    int GetTop() { return this->Get(EeWonStretchField::Top); } // inline, member at +0x24
-    int GetBottom() { return this->Get(EeWonStretchField::Bottom); } // inline, member at +0x28
-    virtual void Paint(Graphics&); //3499a0
-    virtual SmartPtr<Image> Duplicate() { return new StretchImage(this->mImage.get(),ee_won_stretch_duplicate(this->mObj)); } //349b80
-    virtual SmartPtr<NativeImage> GetNative(DisplayContext* c) { if(this->Get(EeWonStretchField::NeedRecalc)) this->CalcImage(c); return this->mCachedImage; } //349c60
-    virtual void SetSize(int w,int h) { if(ee_won_stretch_set_size(this->mObj,this->mWidth,this->mHeight,w,h)) { this->mWidth=w; this->mHeight=h; } } //3497e0
-    void SetImage(RawImage* i) { this->mImage=i; } //349ab0 (the cache not marked)
-    void SetBorders(int l,int t,int r,int b) { ee_won_stretch_set_borders(this->mObj,l,t,r,b); } //349b10
-    void CopyAttributes(StretchImage* f) { ee_won_stretch_copy(this->mObj,f->mObj); this->mWidth=f->mWidth; this->mHeight=f->mHeight; } //349b30
-    void SetTile(bool h,bool v) { ee_won_stretch_set_tile(this->mObj,h,v); }
-    void SetSkipCenter(bool b) { ee_won_stretch_set_skip(this->mObj,b); }
+    explicit StretchImage(EeWonImage* r) : Image(r) {}
+    StretchImage(RawImage* i,int l,int t,int r,int b) : Image(ee_won_image_new_stretch(WONImageHost,(intptr_t)i,l,t,r,b)) {}
+    int GetLeft() { return (int)this->Get(EeWonImageField::Left); }
+    int GetRight() { return (int)this->Get(EeWonImageField::Right); }
+    int GetTop() { return (int)this->Get(EeWonImageField::Top); }
+    int GetBottom() { return (int)this->Get(EeWonImageField::Bottom); }
+    void SetImage(RawImage* i) { this->Call(EeWonImageCall::StretchSetImage,(intptr_t)i); } // the cache not marked
+    void SetBorders(int l,int t,int r,int b) { this->Call(EeWonImageCall::StretchSetBorders,l,t,r,b); }
+    void CopyAttributes(StretchImage* f) { this->Call(EeWonImageCall::StretchCopy,(intptr_t)f); } // and the size
+    void SetTile(bool h,bool v) { this->Call(EeWonImageCall::StretchSetTile,h,v); }
+    void SetSkipCenter(bool b) { this->Call(EeWonImageCall::StretchSetSkip,b); }
 };
 // a frame of a stretch image: its own borders
 inline WONFrame::WONFrame(StretchImage* i) : mLeft(i->GetLeft()),mTop(i->GetTop()),mRight(i->GetRight()),mBottom(i->GetBottom()) { this->mImage=i; }
-class StretchCenterImage : public ProgramImage {
-protected:
-    SmartPtr<Image> mStretchImage,mCenterImage; // offsets 0x10, 0x14; class size 0x18
+class StretchCenterImage : public Image {
 public:
-    StretchCenterImage(Image* stretch=NULL,Image* center=NULL) : mStretchImage(stretch),mCenterImage(center) {}
-    void SetStretchImage(Image* image) { this->mStretchImage=image; } // inline (used at 0x0078c13a)
-    void SetCenterImage(Image* image) { this->mCenterImage=image; } // inline (used at 0x0078c1dd)
-    virtual void Paint(Graphics&); //349cb0
-    virtual SmartPtr<Image> Duplicate() { return new StretchCenterImage(this->mStretchImage->Duplicate().get(),this->mCenterImage.get()); } //349d40
-    virtual void SetSize(int w,int h) { this->mWidth=w; this->mHeight=h; this->mStretchImage->SetSize(w,h); } //349d20
+    explicit StretchCenterImage(EeWonImage* r) : Image(r) {}
+    StretchCenterImage() : Image(ee_won_image_new_stretch_center(WONImageHost,0,0)) {}
+    void SetStretchImage(Image* i) { this->Call(EeWonImageCall::SetStretchImage,(intptr_t)i); }
+    void SetCenterImage(Image* i) { this->Call(EeWonImageCall::SetCenterImage,(intptr_t)i); }
 };
 }
 #endif

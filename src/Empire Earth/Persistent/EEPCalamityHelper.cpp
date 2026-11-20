@@ -9,13 +9,9 @@
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
 #include "lle/USingleton.h"
-#include "lle/GEColor.h"
-#include "lle/GE3DPoint.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"

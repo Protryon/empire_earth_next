@@ -109,10 +109,6 @@ struct MMMapUnit {
     void Recolor();                         // 0x11fa55 (the dots take the players' current colours)
     void LockUnitLayer();                   // New (port): mUnitSurface locked, its pixels to the Rust half
     void RedrawPixels(long inLeft, long inRight, long inBottom, long inTop);  // 0x1202f2 (the terrain texture's pixels)
-    // New (port): cell inIndex's sight count, unit layer pixel and dots in list order (the capture's read,
-    // ee/EEAppCapture.h)
-    void GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel, std::vector<MMPlayerUnit>& outDots,
-                 std::vector<MMMapUnit>& outUnits) const;
 
     // port: the original's dots per 0x40 x 0x40 cell (UList<MMPlayerUnit>[0x1000] at +0x0015c, UList<MMMapUnit>
     // [0x1000] at +0x0815c) and the cells' sight counts (+0x1015c) are the Rust half's (ee_app minimap.rs; the dots

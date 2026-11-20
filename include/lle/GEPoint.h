@@ -3,13 +3,13 @@
 #ifndef LLE_GEPOINT_H
 #define LLE_GEPOINT_H
 
-#include "lle/GELine.h"   // ee_ge prim.rs, GEVertexHost
+#include "lle/GELine.h"   // ee_ge prim.rs
 
 class LLE_API GEPoint {
 public:
-    GEPoint() : mRust(ee_ge_prim_new(&GEVertexHost, this, EeGePrimKind::Point)) {}
+    GEPoint() : mRust(ee_ge_game_prim_new(this, EeGePrimKind::Point)) {}
     GEPoint(const GE2DPoint& inPoint, const GEColor& inColor, float inOpacity)
-        : mRust(ee_ge_prim_new_point(&GEVertexHost, this, (const EeGe2DPoint*)&inPoint, &inColor, inOpacity)) {}
+        : mRust(ee_ge_game_prim_new_point(this, (const EeGe2DPoint*)&inPoint, &inColor, inOpacity)) {}
     ~GEPoint() { ee_ge_prim_destroy(this->mRust); }
     GEPoint(const GEPoint&) = delete;
     GEPoint& operator=(const GEPoint&) = delete;

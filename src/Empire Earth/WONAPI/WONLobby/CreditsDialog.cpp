@@ -32,12 +32,12 @@ bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
     this->mCredits->LCall(EeWonLobbyDlgCall::AddLine,(intptr_t)&aLine,(intptr_t)this->Fn386860(std::string("DialogComponent")),(intptr_t)(uint32_t)aColor);
     return true;
     }
-    return DialogConfig::Virtual24(inInstruction);
+    return ContainerConfig::Virtual24(inInstruction);
 }
 
 void CreditsDialogConfig::SetComponent(Component* inComponent)
 {
-    DialogConfig::SetComponent(inComponent);
+    ContainerConfig::SetComponent(inComponent);
     this->mCredits=static_cast<LobbyRustDialog*>(inComponent);
 }
 

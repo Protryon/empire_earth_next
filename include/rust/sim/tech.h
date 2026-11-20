@@ -258,6 +258,15 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
 
+/// The bytes of a node's state ([`ee_tech_capture_node`])
+constexpr static const uint32_t EE_TECH_CAPTURE_NODE_SIZE = (17 * 4);
+
+/// The bytes an epoch adds to its node's state ([`ee_tech_capture_epoch`])
+constexpr static const uint32_t EE_TECH_CAPTURE_EPOCH_SIZE = (3 * 4);
+
+/// The bytes of a tree's state ([`ee_tech_capture_tree`])
+constexpr static const uint32_t EE_TECH_CAPTURE_TREE_SIZE = (5 * 4);
+
 /// The host's operations (`EeTechCivCall::op`): whether unit set `a` exists
 constexpr static const uint32_t EE_TECH_CIV_OP_SET_EXISTS = 1;
 
@@ -533,6 +542,39 @@ constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
 /// It is carried (`mPreviousPart`).
 constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
 
+/// Effect `v[0]` of the researched event of `node` -> `v[0]` its kind, `v[1]` the media id it uses (by kind: the
+/// button, the area effect template, the media item, the new unit class, else the sound), `v[2]` 1 when its attribute
+/// is an area effect's (0x28)
+constexpr static const int32_t EE_TECH_HOST_MEDIA_EFFECT = 44;
+
+/// The player `unit` (an `EEPlayer*`) loads (`v[2]` 1) or unloads (0) media `v[1]` of kind `v[0]` (an
+/// `EE_TECH_MEDIA_*`)
+constexpr static const int32_t EE_TECH_HOST_MEDIA = 45;
+
+/// `EEButtonObject::Get(id)->Acquire()` / `Release()`
+constexpr static const int32_t EE_TECH_MEDIA_BUTTON = 1;
+
+/// `gAEManager.LoadTemplateMedia(id)` / `UnloadTemplateMedia`
+constexpr static const int32_t EE_TECH_MEDIA_AREA_EFFECT = 2;
+
+/// `EEMedia::Get(id)->LoadMedia()` / `UnloadMedia()`
+constexpr static const int32_t EE_TECH_MEDIA_ITEM = 6;
+
+/// `EESoundObject::Get(id)->LoadMedia()` / `UnloadMedia()`
+constexpr static const int32_t EE_TECH_MEDIA_SOUND = 15;
+
+/// `player->SetUnitClassMedia(id, 0x7f)` / `UnloadUnitClassMedia(id)`
+constexpr static const int32_t EE_TECH_MEDIA_CLASS = 19;
+
+/// `player->LoadUnitClassButtons(id)` / `UnloadUnitClassButtons(id)`
+constexpr static const int32_t EE_TECH_MEDIA_CLASS_BUTTONS = 256;
+
+/// `player->EpochMediaLoaded(id)` / `EpochMediaUnloaded(id)`
+constexpr static const int32_t EE_TECH_MEDIA_EPOCH = 257;
+
+/// `PlatSleep(1)`
+constexpr static const int32_t EE_TECH_MEDIA_SLEEP = 258;
+
 /// `mEpochs.size()` -> `v[0]`
 constexpr static const int32_t EE_TECH_HOST_EPOCHS = 1;
 
@@ -637,6 +679,15 @@ constexpr static const int32_t EE_TECH_HOST_CLASS_TYPE = 42;
 constexpr static const int32_t EVENT_HOOK_TECH_RESEARCHED = -2001;
 
 constexpr static const int32_t EVENT_HOOK_EPOCH_AVAILABLE = -2002;
+
+/// The tree's player index (`mPlayerIndex`) -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_PLAYER_INDEX = 7;
+
+/// The researching unit's id (`unit`, an `EEComplexUnit*`; -1 without one) -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_UNIT_ID = 8;
+
+/// The original's epoch count (`kTechEpochAll`).
+constexpr static const int32_t EE_TECH_DEFAULT_EPOCH_COUNT = 15;
 
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
@@ -1000,6 +1051,8 @@ enum class EeTechNodeOp : int32_t {
   SetObsolete = 6,
   /// `DependsOn(a)` (0/1)
   DependsOn = 7,
+  /// `LoadMedia(unit)` (`a` 1) or `UnloadMedia(unit)` (`a` 0); `unit` is the player (node_media.rs)
+  Media = 8,
 };
 
 /// The epoch operations of [`ee_tech_walk_epoch`].
@@ -1019,6 +1072,8 @@ enum class EeTechEpochOp : int32_t {
   ResearchKind = 7,
   /// `Research(a, unit)`'s body: its result
   Research = 8,
+  /// `LoadMediaOfKind(a)` (`b` true) or `UnloadMediaOfKind(a)`; `unit` is the tree's player (node_media.rs)
+  MediaOfKind = 9,
 };
 
 /// The tree operations of [`ee_tech_walk_tree`].
@@ -1447,6 +1502,80 @@ struct EeCalamityFields {
   bool mHasTargetUnit;
 };
 
+/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
+struct EeTechNodeFields {
+  bool mIsResearched;
+  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
+  bool mIsObsolete;
+  bool mIsAvailable;
+  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
+  uint8_t mPrerequisiteFlags;
+  bool mIsAllowed;
+  bool mScenEditorObsoleted;
+  bool mIsUnitMediaLoaded;
+  /// an epoch's: off between a saved game's load and its applied state
+  bool mIsCountingSOL;
+  /// the epoch it belongs to
+  long mEpoch;
+  long mObsoleteEpoch;
+  /// `ResearchNode` counts it down
+  long mResearchDelay;
+  long mRequiredSOL;
+  long mFirstNodeID;
+  long mCurrentSOL;
+  long mNextEpoch;
+  /// the title string (epochs.yaml; 0: 30145 + the epoch)
+  long mTitleID;
+};
+
+/// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
+struct EeTechNodeDataFields {
+  /// the costs by resource (`Load` zeroes all seven, then copies five)
+  long mCosts[7];
+  long mCostResource;
+  long mRequiredStatistic;
+  /// past the end of the unit classes (`GetUnitClass`)
+  long mDefaultUnitClass;
+  /// a calamity's `EECalamityEnum` (the cast-calamity goal)
+  unsigned long mCalamity;
+  /// 3 repeatable, 4 a wonder, 5 never researched
+  long mKind;
+  /// an epoch's: its position; a node's: from 1000
+  long mID;
+  long mResearchedEvent;
+  long mObsoleteEvent;
+  long mBuildTime;
+  long mPrerequisite1;
+  long mPrerequisite2;
+  long mPrerequisite3;
+  long mPrerequisite4;
+  /// the `gUnitClassTable` index of what it builds
+  long mUnitClass;
+  long mRequiredStatisticValue;
+  long mNameID;
+  long mHotKey;
+  bool mMakesUnit;
+  bool mCountsTowardEpoch;
+  bool mShowInEditor;
+  bool mObsoletedByDefault;
+  bool mAvailableWithEpoch;
+  bool mResearchedWithEpoch;
+};
+
+/// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
+struct EeTechTreeFields {
+  long mCurrentEpoch;
+  long mStartEpoch;
+  long mEndEpoch;
+  long mEpochsBeforeWonders;
+  long mMediaID;
+  /// the epoch name the interface shows (a string id)
+  long mEpochNameID;
+  bool mIsLoaded;
+  /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
+  EeTechTreeSaved *mSaved;
+};
+
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
 struct EeTechCivLevel {
   float mValue;
@@ -1801,79 +1930,8 @@ struct EeCalamityDiscrete {
   float elapsed;
 };
 
-/// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
-struct EeTechTreeFields {
-  long mCurrentEpoch;
-  long mStartEpoch;
-  long mEndEpoch;
-  long mEpochsBeforeWonders;
-  long mMediaID;
-  /// the epoch name the interface shows (a string id)
-  long mEpochNameID;
-  bool mIsLoaded;
-  /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
-  EeTechTreeSaved *mSaved;
-};
-
-/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
-struct EeTechNodeFields {
-  bool mIsResearched;
-  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
-  bool mIsObsolete;
-  bool mIsAvailable;
-  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
-  uint8_t mPrerequisiteFlags;
-  bool mIsAllowed;
-  bool mScenEditorObsoleted;
-  bool mIsUnitMediaLoaded;
-  /// an epoch's: off between a saved game's load and its applied state
-  bool mIsCountingSOL;
-  /// the epoch it belongs to
-  long mEpoch;
-  long mObsoleteEpoch;
-  /// `ResearchNode` counts it down
-  long mResearchDelay;
-  long mRequiredSOL;
-  long mFirstNodeID;
-  long mCurrentSOL;
-  long mNextEpoch;
-  /// the title string (epochs.yaml; 0: 30145 + the epoch)
-  long mTitleID;
-};
-
-/// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
-struct EeTechNodeDataFields {
-  /// the costs by resource (`Load` zeroes all seven, then copies five)
-  long mCosts[7];
-  long mCostResource;
-  long mRequiredStatistic;
-  /// past the end of the unit classes (`GetUnitClass`)
-  long mDefaultUnitClass;
-  /// a calamity's `EECalamityEnum` (the cast-calamity goal)
-  unsigned long mCalamity;
-  /// 3 repeatable, 4 a wonder, 5 never researched
-  long mKind;
-  /// an epoch's: its position; a node's: from 1000
-  long mID;
-  long mResearchedEvent;
-  long mObsoleteEvent;
-  long mBuildTime;
-  long mPrerequisite1;
-  long mPrerequisite2;
-  long mPrerequisite3;
-  long mPrerequisite4;
-  /// the `gUnitClassTable` index of what it builds
-  long mUnitClass;
-  long mRequiredStatisticValue;
-  long mNameID;
-  long mHotKey;
-  bool mMakesUnit;
-  bool mCountsTowardEpoch;
-  bool mShowInEditor;
-  bool mObsoletedByDefault;
-  bool mAvailableWithEpoch;
-  bool mResearchedWithEpoch;
-};
+/// A node's cost callback for [`ee_tech_cost_string`]: `(ctx, resource, unit class, scale) -> the cost`.
+using EeTechCostFn = int32_t(*)(void*, int32_t, int32_t, float);
 
 /// One 0x10c-byte record of the tech tree file (`EETechTreeEpoch::Load` 0x1ce10e and `EETechTreeNode::Load`
 /// 0x1cf370 read it into a local; was ee/EETechTreeRecord.h). Fields by offset, named after the members they fill.
@@ -2270,6 +2328,121 @@ long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
 /// # Safety
 /// `fields` valid for reads; `io`'s callback valid.
 long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// Writes [`node_bytes`] to `out` ([`EE_TECH_CAPTURE_NODE_SIZE`] bytes); returns their count.
+///
+/// # Safety
+/// `node` is live; `data` and `tree` are live or null; `out` holds [`EE_TECH_CAPTURE_NODE_SIZE`] bytes.
+uint32_t ee_tech_capture_node(const EeTechNodeFields *node,
+                              const EeTechNodeDataFields *data,
+                              const EeTechTreeFields *tree,
+                              long epoch_count,
+                              uint8_t *out);
+
+/// An epoch's counters after its node's state: the required and current SOL, whether it counts SOL.
+///
+/// # Safety
+/// `node` is live; `out` holds [`EE_TECH_CAPTURE_EPOCH_SIZE`] bytes.
+uint32_t ee_tech_capture_epoch(const EeTechNodeFields *node, uint8_t *out);
+
+/// A tree's state: the player index, the current, start and end epoch, the epochs before wonders.
+///
+/// # Safety
+/// `tree` is live; `out` holds [`EE_TECH_CAPTURE_TREE_SIZE`] bytes.
+uint32_t ee_tech_capture_tree(const EeTechTreeFields *tree, long player_index, uint8_t *out);
+
+/// TCST: a node's (kind 0) or an epoch's (1) GetCost: the kind, the player index, the node's id, the tree's epoch
+/// (-1 without a tree), the resource, the unit class, the scale and the cost.
+void ee_tech_capture_cost(long kind,
+                          long player_index,
+                          long id,
+                          long epoch,
+                          long resource,
+                          long unit_class,
+                          float scale,
+                          long cost);
+
+/// EVHP: one unit's hit points (0) or flight time (1) rescaled by an effect.
+void ee_tech_capture_rescale(long what,
+                             unsigned long unit,
+                             long value,
+                             unsigned long old_maximum,
+                             long new_maximum,
+                             float amount);
+
+/// CALC: a calamity created (0 global, 1 location, 2 unit): class, caster, target, x, y, player, result.
+void ee_tech_capture_calamity(long kind,
+                              unsigned long class_,
+                              unsigned long caster,
+                              unsigned long target,
+                              long x,
+                              long y,
+                              unsigned long player,
+                              bool result);
+
+/// TRTE: one step of ResearchToEpoch (0 unlock, 1 research all, 2 research self, 3 research kind 7, 4 show the
+/// name); a negative step clears the collection.
+void ee_tech_capture_epoch_step(long step,
+                                long epoch);
+
+/// TRTE's head (the epoch, the tree's epoch count, whether the player is the local one, the collected steps) into
+/// `out`, the collection cleared; the caller appends the tree's and the epochs' states. Returns the byte count
+/// (`out` null: the count only, nothing cleared).
+///
+/// # Safety
+/// `out` is null or holds the count's bytes.
+uint32_t ee_tech_capture_research_to_epoch(long epoch,
+                                           long epochs,
+                                           bool local,
+                                           uint8_t *out);
+
+/// EVUN: one unit an effect walks: its id, unit type, hit points, the flags (complex, built, on a tile, a part),
+/// its flight time, whether the effect applies and the value written.
+void ee_tech_capture_unit_step(unsigned long id,
+                               long unit_type,
+                               long hit_points,
+                               uint32_t flags,
+                               long flight_time,
+                               bool applies,
+                               long value);
+
+/// EVUN's record of the walk whose units were collected (`inLoop`: 0 sight off, 1 sight on, 2 hit points, 3 pending
+/// hit points, 4 flight time, 5 pending flight time, 6 area effects, 7 conversion).
+void ee_tech_capture_unit_walk(long walk,
+                               long effect,
+                               long unit_type,
+                               long a,
+                               long b);
+
+/// TNWK: a tree walk begins (its steps nest per thread).
+void ee_tech_capture_walk_begin();
+
+/// TNWK: one step of the innermost walk (a node's id and what the walk did).
+void ee_tech_capture_walk_step(long id, long action);
+
+/// TNWK's (TNMT's, for the walks other threads ask: GetBuildTime, kind 6, and NeedsUnitMedia, 10) head: the kind,
+/// the player index, two arguments, the result and the innermost walk's steps (taken off). Returns the bytes in a
+/// buffer the caller frees with [`ee_tech_capture_free`]; the caller appends the node's and tree's states and
+/// commits it under [`ee_tech_capture_walk_tag`].
+uint8_t *ee_tech_capture_walk(long kind,
+                              long player_index,
+                              long a,
+                              long b,
+                              long result,
+                              uint32_t *out_size);
+
+/// The tag of a walk's record: TNMT for the walks other threads ask too (kinds 6 and 10), else TNWK.
+uint32_t ee_tech_capture_walk_tag(long kind);
+
+/// Frees a buffer [`ee_tech_capture_walk`] returned.
+///
+/// # Safety
+/// `p` and `size` are a buffer and its size from [`ee_tech_capture_walk`].
+void ee_tech_capture_free(uint8_t *p, uint32_t size);
+
+/// CVMG's head (the manager's and the powers' data and queries) in a buffer the caller frees with
+/// [`ee_tech_capture_free`]; the caller appends the premade civilizations' files and commits it.
+uint8_t *ee_tech_capture_civ_manager(uint32_t *out_size);
 
 /// Binds the game's rules ([`bind_rules`]).
 ///
@@ -2896,6 +3069,18 @@ bool ee_tech_needs_unit_media(bool has_class,
 /// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
 int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
 
+/// [`cost_string`] of the node `ctx` for `unit_class` into `out` (NUL-terminated, cut at `size`); its byte length.
+///
+/// # Safety
+/// `cost` is valid with `ctx`; `out` holds `size` bytes (`size` > 0).
+size_t ee_tech_cost_string(void *ctx,
+                           EeTechCostFn cost,
+                           int32_t unit_class,
+                           float scale,
+                           bool carbon,
+                           uint8_t *out,
+                           size_t size);
+
 /// Frees a tree record's saved lists (the C++ destructor).
 ///
 /// # Safety
@@ -2971,6 +3156,43 @@ bool ee_tech_is_latest_effect(void *ctx,
 /// # Safety
 /// Both are live records.
 void ee_tech_node_assign(EeTechNodeFields *dst, const EeTechNodeFields *src, bool epoch);
+
+/// TNWK / TNMT of a walk the C++ asks for (a node's NeedsUnitMedia, kind 10; an epoch's GetBuildTime, 6): `node` and
+/// `data` may be null (no node's state), `tree` too (no tree's state, player -1).
+///
+/// # Safety
+/// Each pointer is live or null.
+void ee_tech_capture_node_walk(int32_t kind,
+                               const EeTechTreeFields *tree,
+                               int32_t player,
+                               const EeTechNodeFields *node,
+                               const EeTechNodeDataFields *data,
+                               const EeTechTreeFields *node_tree,
+                               int32_t a,
+                               int32_t b,
+                               int32_t result);
+
+/// The epoch count (`gEpochCount`).
+int32_t ee_tech_epoch_count();
+
+/// Sets the epoch count (the tech tree file's block count, `EETechTree::Load`).
+void ee_tech_set_epoch_count(int32_t count);
+
+/// The epoch of a tech id ([`epoch_of`]).
+int32_t ee_tech_epoch_of(int32_t id);
+
+/// Forgets every node's epoch and every epoch's title (a new tech tree file).
+void ee_tech_clear_node_epochs();
+
+/// Records gTechTree's epoch `epoch`'s title string (the file's record, `EETechTreeEpoch::Load`).
+void ee_tech_set_epoch_title(int32_t epoch, int32_t title);
+
+/// `EEEpochTitleID`: the epoch's title string ("Bronze Age"; epochs.yaml), else the epoch's default name; for the
+/// epoch count, the game options' "Random Epoch".
+int32_t ee_tech_epoch_title_id(int32_t epoch);
+
+/// Records the epoch block a node was loaded in (`EERegisterTechNode`).
+void ee_tech_register_node(int32_t id, int32_t epoch);
 
 }  // extern "C"
 

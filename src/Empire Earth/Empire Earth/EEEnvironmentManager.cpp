@@ -7,10 +7,8 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/FSFile.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
 
 #include "ee/RTSWorld.h"

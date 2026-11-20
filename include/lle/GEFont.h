@@ -9,14 +9,13 @@
 #include "lle/GEFontBitmap.h"   // rust/ee_ge.h
 
 struct PlatFont;   // platform/PlatFont.h (a GDI HFONT in the original)
-LLE_API intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp
 
 class LLE_API GEFont : public UReferenceCounter {
 public:
     // a font as CreateFont made one (name, pixel size, bold/italic/underline style, quality: only the antialiased
     // quality is antialiased) and its height (tmHeight)
     GEFont(const UString& inName, unsigned long inSize, unsigned long inStyle, unsigned long inQuality)
-        : mRust(ee_ge_font_new(&GEObjectHost, this, &inName, inSize, inStyle, inQuality)) {}
+        : mRust(ee_ge_game_font_new(this, &inName, inSize, inStyle, inQuality)) {}
     virtual ~GEFont() { ee_ge_font_destroy(this->mRust); }
     GEFont(const GEFont&) = delete;
     GEFont& operator=(const GEFont&) = delete;

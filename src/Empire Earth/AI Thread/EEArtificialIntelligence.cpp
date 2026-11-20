@@ -7,17 +7,8 @@
 #include <chrono>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"

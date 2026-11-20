@@ -287,52 +287,121 @@ typedef GXRESULT (CALLBACK* GXENUMPIXELFORMATSCALLBACK)(GXPIXELFORMAT* inFormat,
 typedef BOOL (WINAPI* GXDDENUMCALLBACKEX)(GUID* inGUID, char* inDescription, char* inName, void* inContext,
                                           void* inMonitor);
 
+// the Rust implementation (rust/crates/ee_render/src/gx/ffi.rs): the classes below are handles to its objects and
+// every method an inline forwarder (GX.cpp is gone)
+extern "C" {
+GXRESULT gx_direct_draw_create(void** outDirectDraw);
+unsigned long gx_direct_draw_add_ref(void* inDirectDraw);
+unsigned long gx_direct_draw_release(void* inDirectDraw);
+GXRESULT gx_direct_draw_get_caps(GXCAPS* outCaps, GXCAPS* outHELCaps);
+GXRESULT gx_direct_draw_set_display_mode(void* inDirectDraw, unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount);
+GXRESULT gx_direct_draw_set_cooperative_level(void* inDirectDraw, void* inWindow, unsigned long inFlags);
+GXRESULT gx_direct_draw_create_surface(void* inDirectDraw, GXSURFACEDESC* inDescription, void** outSurface);
+GXRESULT gx_direct_draw_get_device_identifier(GXDEVICEIDENTIFIER* outIdentifier);
+GXRESULT gx_direct_draw_create_vertex_buffer(unsigned long inFVF, unsigned long inCount, void** outBuffer);
+GXRESULT gx_direct_draw_create_device(void* inTarget, void** outDevice);
+
+unsigned long gx_surface_add_ref(void* inSurface);
+unsigned long gx_surface_release(void* inSurface);
+GXRESULT gx_surface_add_attached(void* inSurface, void* inOther);
+GXRESULT gx_surface_get_attached(void* inSurface, GXSCAPS* inCaps, void** outSurface);
+GXRESULT gx_surface_blt(void* inSurface, RECT* inDestination, void* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX);
+GXRESULT gx_surface_flip(void* inSurface, unsigned long inFlags);
+GXRESULT gx_surface_lock(void* inSurface, RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags);
+GXRESULT gx_surface_unlock(void* inSurface);
+GXRESULT gx_surface_set_color_key(void* inSurface, GXCOLORKEY* inKey);
+float gx_surface_render_scale(void* inSurface);
+GXRESULT gx_surface_draw_text(void* inSurface, const RECT* inBounds, bool (*inDraw)(const struct PlatFontTarget&, long, long, void*), void* inContext);
+
+unsigned long gx_vertex_buffer_add_ref(void* inBuffer);
+unsigned long gx_vertex_buffer_release(void* inBuffer);
+GXRESULT gx_vertex_buffer_lock(void* inBuffer, void** outData, unsigned long* outSize);
+
+unsigned long gx_device_add_ref(void* inDevice);
+unsigned long gx_device_release(void* inDevice);
+GXRESULT gx_device_get_caps(GXDEVICEDESC* outCaps);
+GXRESULT gx_device_begin_scene();
+GXRESULT gx_device_set_render_target(void* inDevice, void* inTarget);
+GXRESULT gx_device_set_viewport(void* inDevice, GXVIEWPORT* inViewport);
+GXRESULT gx_device_get_viewport(void* inDevice, GXVIEWPORT* outViewport);
+GXRESULT gx_device_clear(void* inDevice, unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ);
+GXRESULT gx_device_set_transform(void* inDevice, uint32_t inState, GXMATRIX* inMatrix);
+GXRESULT gx_device_set_render_state(void* inDevice, uint32_t inState, unsigned long inValue);
+GXRESULT gx_device_set_stage_state(void* inDevice, unsigned long inStage, uint32_t inState, unsigned long inValue);
+GXRESULT gx_device_set_texture(void* inDevice, unsigned long inStage, void* inTexture);
+GXRESULT gx_device_set_material(void* inDevice, GXMATERIAL* inMaterial);
+GXRESULT gx_device_set_light(void* inDevice, unsigned long inIndex, GXLIGHT* inLight);
+GXRESULT gx_device_get_light(void* inDevice, unsigned long inIndex, GXLIGHT* outLight);
+GXRESULT gx_device_light_enable(void* inDevice, unsigned long inIndex, int inEnable);
+GXRESULT gx_device_draw_indexed_primitive_vb(void* inDevice, uint32_t inType, void* inBuffer, unsigned long inStart, unsigned long inCount,
+                                             unsigned short* inIndices, unsigned long inIndexCount);
+
+void gx_set_render_percent(unsigned long inPercent);
+void gx_set_frame_limit(long inFramesPerSecond);
+void gx_set_texture_filtering(unsigned long inMode);
+void gx_set_brightness(float inGamma);
+void gx_game_size(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
+}
+
+// the tools/harness/presentation_bridge.c hooks, found by map address: keep them in the image (lld-link on Windows; the
+// POSIX builds have no harness and link what the shim references)
+#if defined(_MSC_VER)
+#pragma comment(linker, "/include:GXTestSetPresentHook")
+#pragma comment(linker, "/include:GXTestReadFrame")
+static_assert(sizeof(GXPIXELFORMAT) == 8 * sizeof(unsigned long), "ee_gx/src/abi.rs");
+static_assert(sizeof(RECT) == 16, "ee_gx/src/abi.rs");
+static_assert(sizeof(GXMATRIX) == 64, "ee_gx/src/abi.rs");
+static_assert(sizeof(GXMATERIAL) == 68, "ee_gx/src/abi.rs");
+
+#endif
+
 // The display device of one monitor (IDirectDraw7 + IDirect3D7)
 class GXDirectDraw {
 public:
-    unsigned long AddRef();
-    unsigned long Release();
-    GXRESULT GetCaps(GXCAPS* outCaps, GXCAPS* outHELCaps);
-    GXRESULT SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount,
-                            unsigned long inRefreshRate, unsigned long inFlags);
-    GXRESULT SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags);   // an HWND in DirectDraw
-    GXRESULT CreateSurface(GXSURFACEDESC* inDescription, GXSurface** outSurface, void* inOuter);
-    GXRESULT GetDeviceIdentifier(GXDEVICEIDENTIFIER* outIdentifier, unsigned long inFlags);
-    GXRESULT RestoreAllSurfaces();
+    unsigned long AddRef() { return gx_direct_draw_add_ref(this); }
+    unsigned long Release() { return gx_direct_draw_release(this); }
+    GXRESULT GetCaps(GXCAPS* outCaps, GXCAPS* outHELCaps) { return gx_direct_draw_get_caps(outCaps, outHELCaps); }
+    GXRESULT SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, unsigned long inRefreshRate,
+                            unsigned long inFlags)
+        { return gx_direct_draw_set_display_mode(this, inWidth, inHeight, inBitCount); }
+    GXRESULT SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags) { return gx_direct_draw_set_cooperative_level(this, inWindow, inFlags); }   // an HWND in DirectDraw
+    GXRESULT CreateSurface(GXSURFACEDESC* inDescription, GXSurface** outSurface, void* inOuter) { return gx_direct_draw_create_surface(this, inDescription, reinterpret_cast<void**>(outSurface)); }
+    GXRESULT GetDeviceIdentifier(GXDEVICEIDENTIFIER* outIdentifier, unsigned long inFlags) { return gx_direct_draw_get_device_identifier(outIdentifier); }
+    GXRESULT RestoreAllSurfaces() { return GX_OK; }
     // IDirect3D7
-    GXRESULT CreateDevice(GXIID inKind, GXSurface* inTarget, GXDevice** outDevice);
-    GXRESULT CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXVertexBuffer** outBuffer, unsigned long inFlags);
+    GXRESULT CreateDevice(GXIID inKind, GXSurface* inTarget, GXDevice** outDevice) { return gx_direct_draw_create_device(inTarget, reinterpret_cast<void**>(outDevice)); }
+    GXRESULT CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXVertexBuffer** outBuffer, unsigned long inFlags) { return gx_direct_draw_create_vertex_buffer(inDescription->dwFVF, inDescription->dwNumVertices, reinterpret_cast<void**>(outBuffer)); }
 
 private:   // handles: Rust owns the objects
     GXDirectDraw() = delete;
     ~GXDirectDraw() = delete;
 };
 
-GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw);
+inline GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw) { return gx_direct_draw_create(reinterpret_cast<void**>(outDirectDraw)); }
 
 // A DirectDraw surface: primary (the window), back buffer, offscreen plain, texture (+ mip levels), Z buffer
 class GXSurface {
 public:
-    unsigned long AddRef();
-    unsigned long Release();
-    GXRESULT AddAttachedSurface(GXSurface* inSurface);
-    GXRESULT GetAttachedSurface(GXSCAPS* inCaps, GXSurface** outSurface);
-    GXRESULT Blt(RECT* inDestination, GXSurface* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX);
-    GXRESULT Flip(GXSurface* inOverride, unsigned long inFlags);
-    GXRESULT Lock(RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags, HANDLE inEvent);
-    GXRESULT Unlock(RECT* inRect);
-    GXRESULT SetColorKey(unsigned long inFlags, GXCOLORKEY* inKey);
+    unsigned long AddRef() { return gx_surface_add_ref(this); }
+    unsigned long Release() { return gx_surface_release(this); }
+    GXRESULT AddAttachedSurface(GXSurface* inSurface) { return gx_surface_add_attached(this, inSurface); }
+    GXRESULT GetAttachedSurface(GXSCAPS* inCaps, GXSurface** outSurface) { return gx_surface_get_attached(this, inCaps, reinterpret_cast<void**>(outSurface)); }
+    GXRESULT Blt(RECT* inDestination, GXSurface* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX) { return gx_surface_blt(this, inDestination, inSource, inSourceRect, inFlags, inFX); }
+    GXRESULT Flip(GXSurface* inOverride, unsigned long inFlags) { return gx_surface_flip(this, inFlags); }
+    GXRESULT Lock(RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags, HANDLE inEvent) { return gx_surface_lock(this, inRect, outDescription, inFlags); }
+    GXRESULT Unlock(RECT* inRect) { return gx_surface_unlock(this); }
+    GXRESULT SetColorKey(unsigned long inFlags, GXCOLORKEY* inKey) { return gx_surface_set_color_key(this, inKey); }
 
     // GX extensions
     // the GPU copy's pixels per surface pixel (GXRenderScale: a back buffer's; 1 for the others)
-    float GetRenderScale() const;
+    float GetRenderScale() const { return gx_surface_render_scale(const_cast<GXSurface*>(this)); }
     // draws text (platform/PlatFont.h) inside inBounds: inDraw draws into a 32-bit BGRA target that covers inBounds
     // (surface pixel inOriginX + x, inOriginY + y is the target's x, y). On a GPU-resident surface the target starts
     // transparent and premultiplied (PLAT_FONT_TARGET_PREMULTIPLIED) and is blended onto the GPU copy without a
     // read-back; otherwise it holds the CPU copy's pixels and the changed ones are written back (DirectDraw's GetDC
     // and GDI text before). Not on the primary or a Z buffer.
     typedef bool (*TextCallback)(const struct PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inContext);
-    GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext);
+    GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext) { return gx_surface_draw_text(this, &inBounds, inDraw, inContext); }
 
 private:   // a handle: Rust owns the object
     GXSurface() = delete;
@@ -341,10 +410,10 @@ private:   // a handle: Rust owns the object
 
 class GXVertexBuffer {
 public:
-    unsigned long AddRef();
-    unsigned long Release();
-    GXRESULT Lock(unsigned long inFlags, void** outData, unsigned long* outSize);
-    GXRESULT Unlock();
+    unsigned long AddRef() { return gx_vertex_buffer_add_ref(this); }
+    unsigned long Release() { return gx_vertex_buffer_release(this); }
+    GXRESULT Lock(unsigned long inFlags, void** outData, unsigned long* outSize) { return gx_vertex_buffer_lock(this, outData, outSize); }
+    GXRESULT Unlock() { return GX_OK; }
 
 private:   // a handle: Rust owns the object
     GXVertexBuffer() = delete;
@@ -353,46 +422,54 @@ private:   // a handle: Rust owns the object
 
 // port: the display settings (EEApplyDisplaySettings, the settings form's video tab; config.yaml)
 // the render scale's share of the display's pixels, 50..100 percent (GXRenderScale)
-void GXSetRenderPercent(unsigned long inPercent);
+inline void GXSetRenderPercent(unsigned long inPercent) { gx_set_render_percent(inPercent); }
 // 0 presents on v-sync, -1 as fast as possible, else at most that many frames a second (no v-sync)
-void GXSetFrameLimit(long inFramesPerSecond);
+inline void GXSetFrameLimit(long inFramesPerSecond) { gx_set_frame_limit(inFramesPerSecond); }
 // texture sampling: 0 as the game asks (bilinear), 1 trilinear mip maps, 2 trilinear and 8x anisotropic
-void GXSetTextureFiltering(unsigned long inMode);
+inline void GXSetTextureFiltering(unsigned long inMode) { gx_set_texture_filtering(inMode); }
 // a gamma applied when presenting (1 unchanged; above 1 brighter)
-void GXSetBrightness(float inGamma);
+inline void GXSetBrightness(float inGamma) { gx_set_brightness(inGamma); }
 // the game's resolution for a UI scale in percent (0: Auto, ee_gx gx_auto_ui_scale) in full screen (the display's logical size
 // divided by the scale) or windowed (a window of 80% of it); GX lists every such size as a display mode
+// (out of line, in EEPreferences.cpp: EEScreens.cpp and Empire Earth.cpp declare it without this header)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
 
 // A fixed-function 3D device rendering into a target surface (IDirect3DDevice7)
 class GXDevice {
 public:
-    unsigned long AddRef();
-    unsigned long Release();
-    GXRESULT GetCaps(GXDEVICEDESC* outCaps);
-    GXRESULT BeginScene();
-    GXRESULT EndScene();
-    GXRESULT SetRenderTarget(GXSurface* inTarget, unsigned long inFlags);
-    GXRESULT SetViewport(GXVIEWPORT* inViewport);
-    GXRESULT GetViewport(GXVIEWPORT* outViewport);
+    unsigned long AddRef() { return gx_device_add_ref(this); }
+    unsigned long Release() { return gx_device_release(this); }
+    GXRESULT GetCaps(GXDEVICEDESC* outCaps) { return gx_device_get_caps(outCaps); }
+    GXRESULT BeginScene() { return gx_device_begin_scene(); }
+    GXRESULT EndScene() { return GX_OK; }
+    GXRESULT SetRenderTarget(GXSurface* inTarget, unsigned long inFlags) { return gx_device_set_render_target(this, inTarget); }
+    GXRESULT SetViewport(GXVIEWPORT* inViewport) { return gx_device_set_viewport(this, inViewport); }
+    GXRESULT GetViewport(GXVIEWPORT* outViewport) { return gx_device_get_viewport(this, outViewport); }
     GXRESULT Clear(unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ,
-                   unsigned long inStencil);
-    GXRESULT SetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* inMatrix);
-    GXRESULT SetRenderState(GXRENDERSTATETYPE inState, unsigned long inValue);
-    GXRESULT SetTextureStageState(unsigned long inStage, GXTEXTURESTAGESTATETYPE inState, unsigned long inValue);
-    GXRESULT SetTexture(unsigned long inStage, GXSurface* inTexture);
-    GXRESULT SetMaterial(GXMATERIAL* inMaterial);
-    GXRESULT SetLight(unsigned long inIndex, GXLIGHT* inLight);
-    GXRESULT GetLight(unsigned long inIndex, GXLIGHT* outLight);
-    GXRESULT LightEnable(unsigned long inIndex, BOOL inEnable);
-    GXRESULT ValidateDevice(unsigned long* outPasses);
+                   unsigned long inStencil)
+        { return gx_device_clear(this, inCount, inRects, inFlags, inColor, inZ); }
+    GXRESULT SetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* inMatrix) { return gx_device_set_transform(this, inState, inMatrix); }
+    GXRESULT SetRenderState(GXRENDERSTATETYPE inState, unsigned long inValue) { return gx_device_set_render_state(this, inState, inValue); }
+    GXRESULT SetTextureStageState(unsigned long inStage, GXTEXTURESTAGESTATETYPE inState, unsigned long inValue) { return gx_device_set_stage_state(this, inStage, inState, inValue); }
+    GXRESULT SetTexture(unsigned long inStage, GXSurface* inTexture) { return gx_device_set_texture(this, inStage, inTexture); }
+    GXRESULT SetMaterial(GXMATERIAL* inMaterial) { return gx_device_set_material(this, inMaterial); }
+    GXRESULT SetLight(unsigned long inIndex, GXLIGHT* inLight) { return gx_device_set_light(this, inIndex, inLight); }
+    GXRESULT GetLight(unsigned long inIndex, GXLIGHT* outLight) { return gx_device_get_light(this, inIndex, outLight); }
+    GXRESULT LightEnable(unsigned long inIndex, BOOL inEnable) { return gx_device_light_enable(this, inIndex, inEnable); }
+    GXRESULT ValidateDevice(unsigned long* outPasses) { *outPasses = 1; return GX_OK; }
     GXRESULT DrawIndexedPrimitiveVB(GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart,
                                     unsigned long inCount, unsigned short* inIndices, unsigned long inIndexCount,
-                                    unsigned long inFlags);
+                                    unsigned long inFlags)
+        { return gx_device_draw_indexed_primitive_vb(this, inType, inBuffer, inStart, inCount, inIndices, inIndexCount); }
 
 private:   // a handle: Rust owns the object
     GXDevice() = delete;
     ~GXDevice() = delete;
 };
+
+static_assert(sizeof(GXPIXELFORMAT) == 8 * sizeof(unsigned long), "ee_gx/src/abi.rs");
+static_assert(sizeof(RECT) == 16, "ee_gx/src/abi.rs");
+static_assert(sizeof(GXMATRIX) == 64, "ee_gx/src/abi.rs");
+static_assert(sizeof(GXMATERIAL) == 68, "ee_gx/src/abi.rs");
 
 #endif

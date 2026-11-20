@@ -25,6 +25,7 @@
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONStatus.h"
 using namespace WONAPI;
 
@@ -34,7 +35,6 @@ using namespace WONAPI;
 template <EeWonLobbyCtlKind K> static Component* CtlFactory() { return new LobbyRustCtrl(K); }
 template <EeWonLobbyCtlKind K> static Component* DlgCtlFactory() { return new LobbyRustDialogCtrl(K); }
 template <bool Lan> static Component* ScreenFactory() { return new RootScreen(Lan); }
-template <class T> static Component* New() { return new T; }
 typedef EeWonLobbyCtlKind Ck;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -45,57 +45,57 @@ static ResourceConfigTablePtr GetLobbyResourceConfigTable(ResourceConfigTable *t
 {
 	ResourceConfigTablePtr aTable = LobbyResource_Init(theTable);
 	WONGUIConfig_Init(aTable.get());	
-	BrowserComponentConfig::Init(aTable.get());
+	aTable->AddAllocator("BrowserComponent",NewConfigOf<EeWonCfgKind::Browser>,NewComponentOf<BrowserComponent>);
 
-	aTable->AddAllocator("ChatCtrl",ChatCtrlConfig::CfgFactory,ChatCtrlConfig::CompFactory);
-	aTable->AddAllocator("CreateAccountCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::CreateAccount>);
-	aTable->AddAllocator("DirectConnectCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::DirectConnect>);
-	aTable->AddAllocator("FriendsListCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Friends>);
-	aTable->AddAllocator("GameBrowserCtrl",GameBrowserCtrlConfig::CfgFactory,GameBrowserCtrlConfig::CompFactory);
-	aTable->AddAllocator("GameStagingCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Staging>);
-	aTable->AddAllocator("GameUserListCtrl",GameUserListCtrlConfig::CfgFactory,GameUserListCtrlConfig::CompFactory);
-	aTable->AddAllocator("InitFailedCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::InitFailed>);
-	aTable->AddAllocator("InternetOptionsCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::NetOptions>);
-	aTable->AddAllocator("InternetScreen",ContainerConfig::CfgFactory,ScreenFactory<false>);
-	aTable->AddAllocator("LanOptionsCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LanOptions>);
-	aTable->AddAllocator("LanScreen",ContainerConfig::CfgFactory,ScreenFactory<true>);
-	aTable->AddAllocator("LoginCtrl",DialogConfig::CfgFactory,DlgCtlFactory<Ck::Login>);
-	aTable->AddAllocator("LoginHelpCtrl",ContainerConfig::CfgFactory,New<LoginHelpCtrl>);	
-	aTable->AddAllocator("LoginScreen",ContainerConfig::CfgFactory,New<LoginScreen>);
-	aTable->AddAllocator("LoginStatusCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LoginStatus>);
-	aTable->AddAllocator("LostPasswordCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LostPassword>);
-	aTable->AddAllocator("LostUserNameCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::LostUserName>);
-	aTable->AddAllocator("MOTDCtrl",ContainerConfig::CfgFactory,New<MOTDCtrl>);
-	aTable->AddAllocator("QuickPlayCtrl",DialogConfig::CfgFactory,DlgCtlFactory<Ck::QuickPlay>);
-	aTable->AddAllocator("RoomCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::Room>);
-	aTable->AddAllocator("RoomLabelCtrl",RoomLabelCtrlConfig::CfgFactory,RoomLabelCtrlConfig::CompFactory);
-	aTable->AddAllocator("ServerListCtrl",ServerListCtrlConfig::CfgFactory,ServerListCtrlConfig::CompFactory);
-	aTable->AddAllocator("UpdateAccountCtrl",ContainerConfig::CfgFactory,CtlFactory<Ck::UpdateAccount>);
-	aTable->AddAllocator("UserListCtrl",UserListCtrlConfig::CfgFactory,UserListCtrlConfig::CompFactory);
+	aTable->AddAllocator("ChatCtrl",NewConfigOf<ChatCtrlConfig>,NewComponentOf<ChatCtrl>);
+	aTable->AddAllocator("CreateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::CreateAccount>);
+	aTable->AddAllocator("DirectConnectCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::DirectConnect>);
+	aTable->AddAllocator("FriendsListCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Friends>);
+	aTable->AddAllocator("GameBrowserCtrl",NewConfigOf<GameBrowserCtrlConfig>,NewComponentOf<GameBrowserCtrl>);
+	aTable->AddAllocator("GameStagingCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Staging>);
+	aTable->AddAllocator("GameUserListCtrl",NewConfigOf<GameUserListCtrlConfig>,GameUserListCtrlConfig::CompFactory);
+	aTable->AddAllocator("InitFailedCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::InitFailed>);
+	aTable->AddAllocator("InternetOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::NetOptions>);
+	aTable->AddAllocator("InternetScreen",NewConfigOf<ContainerConfig>,ScreenFactory<false>);
+	aTable->AddAllocator("LanOptionsCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LanOptions>);
+	aTable->AddAllocator("LanScreen",NewConfigOf<ContainerConfig>,ScreenFactory<true>);
+	aTable->AddAllocator("LoginCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::Login>);
+	aTable->AddAllocator("LoginHelpCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<LoginHelpCtrl>);	
+	aTable->AddAllocator("LoginScreen",NewConfigOf<ContainerConfig>,NewComponentOf<LoginScreen>);
+	aTable->AddAllocator("LoginStatusCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LoginStatus>);
+	aTable->AddAllocator("LostPasswordCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostPassword>);
+	aTable->AddAllocator("LostUserNameCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::LostUserName>);
+	aTable->AddAllocator("MOTDCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<MOTDCtrl>);
+	aTable->AddAllocator("QuickPlayCtrl",NewConfigOf<EeWonCfgKind::Dialog>,DlgCtlFactory<Ck::QuickPlay>);
+	aTable->AddAllocator("RoomCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::Room>);
+	aTable->AddAllocator("RoomLabelCtrl",NewConfigOf<RoomLabelCtrlConfig>,NewComponentOf<RoomLabelCtrl>);
+	aTable->AddAllocator("ServerListCtrl",NewConfigOf<ServerListCtrlConfig>,NewComponentOf<ServerListCtrl>);
+	aTable->AddAllocator("UpdateAccountCtrl",NewConfigOf<ContainerConfig>,CtlFactory<Ck::UpdateAccount>);
+	aTable->AddAllocator("UserListCtrl",NewConfigOf<UserListCtrlConfig>,UserListCtrlConfig::CompFactory);
 
-	aTable->AddAllocator("AddFriendDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
-	aTable->AddAllocator("AdminActionDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
-	aTable->AddAllocator("BadUserDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
-	aTable->AddAllocator("ChooseNetworkAdapterDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
-	aTable->AddAllocator("CreditsDialog",CreditsDialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Credits>);
-	aTable->AddAllocator("CreateGameDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
-	aTable->AddAllocator("CreateRoomDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
-	aTable->AddAllocator("DirectConnectDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
-	aTable->AddAllocator("LanNameDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
-	aTable->AddAllocator("LanPortDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
-	aTable->AddAllocator("OkCancelDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
-	aTable->AddAllocator("PasswordDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
-	aTable->AddAllocator("RoomDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
-	aTable->AddAllocator("StatusDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
-	aTable->AddAllocator("TOUDialog",DialogConfig::CfgFactory,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
+	aTable->AddAllocator("AddFriendDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AddFriend>);
+	aTable->AddAllocator("AdminActionDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::AdminAction>);
+	aTable->AddAllocator("BadUserDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::BadUser>);
+	aTable->AddAllocator("ChooseNetworkAdapterDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::ChooseAdapter>);
+	aTable->AddAllocator("CreditsDialog",NewConfigOf<CreditsDialogConfig>,NewLobbyDialog<EeWonLobbyDlgKind::Credits>);
+	aTable->AddAllocator("CreateGameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateGame>);
+	aTable->AddAllocator("CreateRoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::CreateRoom>);
+	aTable->AddAllocator("DirectConnectDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::DirectConnect>);
+	aTable->AddAllocator("LanNameDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanName>);
+	aTable->AddAllocator("LanPortDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::LanPort>);
+	aTable->AddAllocator("OkCancelDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::OkCancel>);
+	aTable->AddAllocator("PasswordDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Password>);
+	aTable->AddAllocator("RoomDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Room>);
+	aTable->AddAllocator("StatusDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Status>);
+	aTable->AddAllocator("TOUDialog",NewConfigOf<EeWonCfgKind::Dialog>,NewLobbyDialog<EeWonLobbyDlgKind::Tou>);
 
 
-	aTable->AddAllocator("CrossPromotionButton",CrossPromotionButtonConfig::CfgFactory,CrossPromotionButtonConfig::CompFactory);
-	aTable->AddAllocator("ImageTextButton",ImageTextButtonConfig::CfgFactory,ImageTextButtonConfig::CompFactory);
-	aTable->AddAllocator("MaxSplitterButton",MaxSplitterButtonConfig::CfgFactory,MaxSplitterButtonConfig::CompFactory);
+	aTable->AddAllocator("CrossPromotionButton",NewConfigOf<CrossPromotionButtonConfig>,NewComponentOf<CrossPromotionButton>);
+	aTable->AddAllocator("ImageTextButton",NewConfigOf<ImageTextButtonConfig>,NewComponentOf<ImageTextButton>);
+	aTable->AddAllocator("MaxSplitterButton",NewConfigOf<EeWonCfgKind::MsArrowButton>,NewShellOf<EeWonShellKind::MaxSplitterButton,Direction_Up>);
 
-	aTable->AddAllocator("GameOptionsCtrl",ContainerConfig::CfgFactory,ContainerConfig::CompFactory);
-	aTable->AddAllocator("PlayerOptionsCtrl",ContainerConfig::CfgFactory,ContainerConfig::CompFactory);
+	aTable->AddAllocator("GameOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
+	aTable->AddAllocator("PlayerOptionsCtrl",NewConfigOf<ContainerConfig>,NewComponentOf<Container>);
 
 	return aTable;
 }

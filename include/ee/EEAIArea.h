@@ -67,7 +67,9 @@ public:
     // herd or rectangle area: its own)
     U2DPoint<long> GetRandomPoint();
     U2DPoint<long> AreaRandomPoint();
-    void UpdateHull();                      // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds)
+    // +0x24 0xdb32 (the hull from the tiles' extreme edge points, the bounds in the influence table's regions; Rust:
+    // ee_sim::astar cm_host.rs)
+    void UpdateHull() { ee_astar_area_update_hull_of((uint64_t)(uintptr_t)this); }
     // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed (a forest:
     // its own)
     bool RemoveTile(const U2DPoint<long>& inPoint)

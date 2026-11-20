@@ -9,27 +9,16 @@
 #include <map>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GETransformation.h"
-#include "lle/GEViewport.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/UResourceFile.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
-#include "lle/NESynchronousServer.h"
-#include "lle/NESynchronousClient.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 #include "ee/RTSWorld.h"
-#include "ee/EECameraControl.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnit.h"
@@ -40,6 +29,7 @@
 #include "ee/EECheatCodes.h"
 #include "ee/EEAppCapture.h"
 #include "rust/sim/app.h"
+#include "rust/game/app.h"
 
 // New (port): the Rust table's host (ee_app cheats_ffi.rs)
 struct EECheatHostContext {
@@ -173,7 +163,7 @@ static void EECheatHostOp(void* inContext, int32_t inOp, EeAppCheatIo* io)
     case EE_APP_CHEAT_OP_CHAT: {
         UWideString theLine(std::string(reinterpret_cast<const char*>(io->text), io->len).c_str());
         gUserInterface->AddChatLogEntry(theLine, 0);
-        EEAppCaptureCheatList(theLine);   // CHLS (TEST ONLY)
+        ee_app_capture_cheat_list((const char*)theLine);   // CHLS (TEST ONLY: ee_game app world_capture.rs)
         break;
     }
     case EE_APP_CHEAT_OP_GOTO: {

@@ -25,42 +25,25 @@
 #include <string>
 #include <utility>
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFile.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
-#include "lle/USingleton.h"
 #include "lle/NEMessage.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/EEMapDimensions.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEPathManager.h"
 #include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
-#include "ee/EEAIKindIDs.h"
-#include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIForest.h"
@@ -71,16 +54,9 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EETeam.h"
-#include "ee/EECPASGFlags.h"
-#include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
-#include "ee/EEGameLog.h"
 #include "ee/EEEvent.h"
-#include "ee/EEUGRust.h"
 #include "ee/EECPBehavior.h"
-#include "ee/EERandomMapIDs.h"
-#include "ee/EETechTreeTechID.h"
-#include "ee/EELuaApi.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EECPNextUnits.h"
@@ -659,20 +635,6 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
 {
     EECPUnitsState* s = inOp >= EE_AI_UNITS_HOST_ROUTE_REQUEST ? EECPUnitsGet(me) : NULL;   // the routes' (me given)
     switch (inOp) {
-    case EE_AI_UNITS_HOST_AREA_AT:
-        return (int64_t)(uintptr_t)gContinentManager.GetContinentAt((long)a, (long)b);
-    case EE_AI_UNITS_HOST_AREA_BY_ID:
-        if (a <= 0 || (size_t)a >= gContinentManager.GetContinents().size())
-            return 0;
-        return (int64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)a);
-    case EE_AI_UNITS_HOST_AREA_INFO: {
-        EEAIContinent* theArea = (EEAIContinent*)(uintptr_t)a;
-        EeAiUnitsArea& r = *(EeAiUnitsArea*)outRecord;
-        r.id = (long)theArea->GetID();
-        r.category = (long)theArea->GetCategory();
-        r.tiles = (long)theArea->GetNumTiles();
-        return 0;
-    }
     case EE_AI_UNITS_HOST_AREA_POINT: {
         EEAIContinent* theArea = (EEAIContinent*)(uintptr_t)a;
         if (!(theArea->GetNumTiles() > 0))
@@ -703,8 +665,6 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     }
     case EE_AI_UNITS_HOST_WALL_BLOCKED:
         return EECPUnitsWallBlocked(me, *(EeAiUnitsTiles*)outRecord) ? 1 : 0;
-    case EE_AI_UNITS_HOST_FOREST_AT:
-        return gContinentManager.GetForestAt(U2DPoint<long>((long)a, (long)b)) != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_TILES_LEVEL: {
         std::vector<U2DPoint<long> > theFive;
         EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
@@ -773,14 +733,13 @@ static int64_t EECPUnitsWallsHost(EEComputerPlayer* me, int32_t inOp, int64_t a,
     }
 }
 
-extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
+// (the world's and the continent manager's reads are Rust's: units_bind.rs world_op)
+extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
 {
     EEComputerPlayer* me = (EEComputerPlayer*)inPlayer;
     switch (inOp) {
     case EE_AI_UNITS_HOST_STATE:
         return (int64_t)(uintptr_t)EECPUnitsGet(me)->mRust;
-    case EE_AI_UNITS_HOST_NOW:
-        return (int64_t)gPhysics->mGameTime;
     case EE_AI_UNITS_HOST_UNIT:
         return a > 0 ? (int64_t)EECPUnitsHandle(gWorld.GetUnit((unsigned long)a)) : 0;
     case EE_AI_UNITS_HOST_MAP_SIZE: {
@@ -806,16 +765,12 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
             theUnit->mIsDetachedFromAI = false;
         return 0;
     }
-    case EE_AI_UNITS_HOST_LAST_ATTACKER:
-        return (int64_t)EECPUnitsHandle(((EEComplexUnit*)(uintptr_t)a)->mLastAttacker);
     case EE_AI_UNITS_HOST_UPGRADE: {
         EEPlayer* theOwner = (EEPlayer*)(uintptr_t)a;
         if (b < 0 || (unsigned long)b >= theOwner->mUnitClassUpgrades.size())
             return 0;
         return (int64_t)(uintptr_t)theOwner->mUnitClassUpgrades[(unsigned long)b];
     }
-    case EE_AI_UNITS_HOST_CONTINENT:
-        return (int64_t)gContinentManager.GetContinent(U2DPoint<long>((long)a, (long)b), c != 0 ? kAIPathWaterBody : kAIPathLandMass);
     case EE_AI_UNITS_HOST_TRACE:
         if (gCPTraceOn) {
             EECPTraceScope theScope("next");
@@ -912,8 +867,6 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
         return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PLACE:
         return ee_units_uu_can_place_unit_on_tile((uint64_t)(uintptr_t)me, 0, (long)a, (long)b, (long)c, false, 1, NULL) ? 1 : 0;
-    case EE_AI_UNITS_HOST_IS_TRANSPORT:
-        return ((EEUnitClass*)(uintptr_t)a)->IsTransport() ? 1 : 0;
     case EE_AI_UNITS_HOST_LAND_BUILDING:
         return ((EEUnitClass*)(uintptr_t)a)->IsLandBuilding() ? 1 : 0;
     case EE_AI_UNITS_HOST_BEHAVIOR_OK:
@@ -1013,9 +966,8 @@ extern "C" int64_t ee_ai_units_host(int32_t inOp, void* inPlayer, int64_t a, int
     case EE_AI_UNITS_HOST_TUNING:
         EECPUnitsTuning(me, *(EeAiUnitsTuning*)outRecord);
         return 0;
-    case EE_AI_UNITS_HOST_AREA_AT: case EE_AI_UNITS_HOST_AREA_BY_ID: case EE_AI_UNITS_HOST_AREA_INFO:
     case EE_AI_UNITS_HOST_AREA_POINT: case EE_AI_UNITS_HOST_AREA_PICK: case EE_AI_UNITS_HOST_WATER_SHORE:
-    case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED: case EE_AI_UNITS_HOST_FOREST_AT:
+    case EE_AI_UNITS_HOST_WALL_LINE: case EE_AI_UNITS_HOST_WALL_BLOCKED:
     case EE_AI_UNITS_HOST_TILES_LEVEL: case EE_AI_UNITS_HOST_WALL_PATH: case EE_AI_UNITS_HOST_ROUTE_REQUEST:
     case EE_AI_UNITS_HOST_ROUTE_STATE: case EE_AI_UNITS_HOST_ROUTE_TAKE: case EE_AI_UNITS_HOST_TILES_AGAIN:
         return EECPUnitsWallsHost(me, inOp, a, b, outRecord);

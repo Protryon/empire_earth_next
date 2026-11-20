@@ -25,67 +25,61 @@
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 using namespace WONAPI;
 
-// what Image.cpp and ImageDecoder.cpp reference beyond the decoders (the display, the platform images): never
-// called here
-#include "ee/wonapi/WONLobbyPlatform.h"
-namespace WONAPI {
-static void NotHere() { printf("won_image_test: a display function was called\n"); exit(99); }
-SmartPtr<NativeImage> DisplayContext::CreateImage(int, int) { NotHere(); return NULL; }
-void Graphics::DrawImage(Image*, int, int) { NotHere(); }
-void Graphics::Translate(int, int) { NotHere(); }
-void Graphics::PushClipRect(int, int, int, int) { NotHere(); }
-void Graphics::PopClipRect() { NotHere(); }
-void RawImage8::CalcBytesPerRow() { NotHere(); }
-void RawImage1::CalcBytesPerRow() { NotHere(); }
-SmartPtr<NativeImage> RawImage32::CreateNativeImage(DisplayContext*) { NotHere(); return NULL; }
-SmartPtr<NativeImage> RawImage8::CreateNativeImage(DisplayContext*) { NotHere(); return NULL; }
-SmartPtr<NativeMask> RawImage1::GetMask(DisplayContext*) { NotHere(); return NULL; }
-SmartPtr<NativeImage> RawImage1::GetNative(DisplayContext*) { NotHere(); return NULL; }
-SmartPtr<RawImage32> NativeImage::GetRaw() { NotHere(); return NULL; }
-SmartPtr<NativeImage> PlatGUIPackImage(DisplayContext*, NativeImage*, const char*) { NotHere(); return NULL; }
-}
-
 static int sFailures;
 #define CHECK(c) do { if (!(c)) { sFailures++; if (sFailures < 40) printf("FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 
-// the decoders' protected steps, as ImageDecoder's GetImageAttributes / DecodeRaw call them
-struct TestPNG : public PNGDecoder {
-    bool Attrib(FileReader& r, ImageAttributes& a) { mFileReader = &r; try { return DoGetAttrib(a); } catch (FileReaderException&) { return false; } }
-    SmartPtr<RawImage> Raw(FileReader& r) { mFileReader = &r; return DoDecodeRaw(); }
-};
-struct TestJPG : public JPGDecoder {
-    bool Attrib(FileReader& r, ImageAttributes& a) { mFileReader = &r; try { return DoGetAttrib(a); } catch (FileReaderException&) { return false; } }
-    SmartPtr<RawImage> Raw(FileReader& r) { mFileReader = &r; return DoDecodeRaw(); }
-};
+// the decoders' steps, as GetImageAttributes and DecodeRaw call them (R6 WONLobby round 24: the classes are imgobj.rs's;
+// these are imgdec.rs's calls they make): the attributes, or the decoded pixels; a FileReader status is false / none
+struct Decoded { bool ok; int w, h; bool trans; std::vector<uint32_t> px; };
+static bool Attrib(EeWonImgKind k, FileReader& r, ImageAttributes& a)
+{
+    int32_t wh[2], thrown = 0;
+    bool ok = ee_won_img_attrib(k, &r.mCore, &wh, &thrown);
+    if (thrown != 0 || !ok) return false;
+    a.mWidth = wh[0]; a.mHeight = wh[1];
+    return true;
+}
+static Decoded Raw(EeWonImgKind k, FileReader& r)
+{
+    Decoded d = {false, 0, 0, false, {}};
+    EeWonImgRaw raw = {0, 0, false, NULL};
+    int32_t thrown = 0;
+    if (!ee_won_img_decode(k, &r.mCore, &raw, &thrown) || thrown != 0) return d;
+    d.ok = true; d.w = raw.width; d.h = raw.height; d.trans = raw.transparent;
+    d.px.resize((size_t)raw.width * raw.height + 1);
+    ee_won_img_take(&raw, d.px.data());
+    d.px.pop_back();
+    return d;
+}
 
 static std::string Describe(const std::string& inName, const std::vector<unsigned char>& inBytes, bool inJpeg)
 {
     char line[512];
     ImageAttributes attr;
     bool ok;
-    SmartPtr<RawImage> raw;
+    Decoded raw;
+    EeWonImgKind k = inJpeg ? EeWonImgKind::Jpg : EeWonImgKind::Png;
     {
         FileReader r(inBytes.empty() ? "" : (const void*)inBytes.data(), (unsigned long)inBytes.size());
-        ok = inJpeg ? TestJPG().Attrib(r, attr) : TestPNG().Attrib(r, attr);
+        ok = Attrib(k, r, attr);
     }
     {
         FileReader r(inBytes.empty() ? "" : (const void*)inBytes.data(), (unsigned long)inBytes.size());
-        raw = inJpeg ? TestJPG().Raw(r) : TestPNG().Raw(r);
+        raw = Raw(k, r);
     }
     int n = snprintf(line, sizeof line, "%s attr=%d %dx%d", inName.c_str(), ok ? 1 : 0, ok ? attr.mWidth : 0,
                      ok ? attr.mHeight : 0);
-    if (raw.get() == NULL) {
+    if (!raw.ok) {
         snprintf(line + n, sizeof line - n, " raw=NULL");
         return line;
     }
-    RawImage32* img = static_cast<RawImage32*>(raw.get());
     unsigned long long h = 1469598103934665603ull;
-    const DWORD* px = img->GetImageData();
-    size_t count = (size_t)img->GetWidth() * img->GetHeight();
+    const uint32_t* px = raw.px.data();
+    size_t count = (size_t)(unsigned short)raw.w * (unsigned short)raw.h;
     for (size_t i = 0; i < count; i++)
         for (int b = 0; b < 32; b += 8) { h ^= (px[i] >> b) & 0xff; h *= 1099511628211ull; }
-    snprintf(line + n, sizeof line - n, " raw=%dx%d trans=%d first=%08lx last=%08lx fnv=%016llx", img->GetWidth(),
-             img->GetHeight(), img->HasTransparency() ? 1 : 0, count ? (unsigned long)px[0] : 0ul,
+    snprintf(line + n, sizeof line - n, " raw=%dx%d trans=%d first=%08lx last=%08lx fnv=%016llx", (unsigned short)raw.w,
+             (unsigned short)raw.h, raw.trans ? 1 : 0, count ? (unsigned long)px[0] : 0ul,
              count ? (unsigned long)px[count - 1] : 0ul, h);
     return line;
 }

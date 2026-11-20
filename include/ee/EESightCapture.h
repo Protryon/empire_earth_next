@@ -9,6 +9,8 @@
 class EEPlayer;
 class RTSTile;
 
+#include "rust/game/sight_capture.h"   // ee_app_sight_* (ee_game sight_capture.rs)
+
 enum {
     kSightTileAdd = 1,          // RTSTile::AddSight(player)
     kSightTileRemove,           // RTSTile::RemoveSight(player)
@@ -31,21 +33,37 @@ enum {
     kSightSnapshot,             // EE-SIM's tick hook every game minute: the whole map (no call)
 };
 
+// The scope is inline over ee_game app sight_capture.rs (the depth, the rectangle, the hash and the record);
+// EESightRecord (EEMap.cpp) hands it the world's map, its mesh and the tile's index in the map's tile array.
+void EESightRecord(unsigned int inShape, unsigned int inKind, EEPlayer* inPlayer, const RTSTile* inTile, long inTileX,
+                   long inTileY, unsigned long inValue, const float* inArgs);
+
 class EESightScope {
 public:
     // a tile's call (inX, inY: the coordinates the call takes, -1 when it takes none; inValue SetVisibility's)
     EESightScope(unsigned int inKind, EEPlayer* inPlayer, const RTSTile* inTile, long inX = -1, long inY = -1,
-                 unsigned long inValue = 0);
+                 unsigned long inValue = 0)
+        : mOuter(ee_app_sight_enter()), mShape(EE_APP_SIGHT_TILE), mKind(inKind), mPlayer(inPlayer), mTile(inTile),
+          mArgs{0, 0, 0, 0, 0}, mTileX(inX), mTileY(inY), mValue(inValue) {}
     // a circle around (inX0, inY0), or a step from it to (inX1, inY1); inValue the map sight's shared flag
     EESightScope(unsigned int inKind, EEPlayer* inPlayer, float inX0, float inY0, float inX1, float inY1,
-                 float inRadius, unsigned long inValue = 0);
+                 float inRadius, unsigned long inValue = 0)
+        : mOuter(ee_app_sight_enter()), mShape(EE_APP_SIGHT_CIRCLE), mKind(inKind), mPlayer(inPlayer), mTile(NULL),
+          mArgs{inX0, inY0, inX1, inY1, inRadius}, mTileX(-1), mTileY(-1), mValue(inValue) {}
     // the whole map
-    EESightScope(unsigned int inKind, EEPlayer* inPlayer);
-    ~EESightScope();
+    EESightScope(unsigned int inKind, EEPlayer* inPlayer)
+        : mOuter(ee_app_sight_enter()), mShape(EE_APP_SIGHT_WHOLE), mKind(inKind), mPlayer(inPlayer), mTile(NULL),
+          mArgs{0, 0, 0, 0, 0}, mTileX(-1), mTileY(-1), mValue(0) {}
+    ~EESightScope()
+    {
+        if (ee_app_sight_leave(this->mOuter))
+            EESightRecord(this->mShape, this->mKind, this->mPlayer, this->mTile, this->mTileX, this->mTileY,
+                          this->mValue, this->mArgs);
+    }
 
 private:
-    void Begin();
     bool mOuter;
+    unsigned int mShape;
     unsigned int mKind;
     EEPlayer* mPlayer;
     const RTSTile* mTile;
@@ -53,7 +71,6 @@ private:
     long mTileX;
     long mTileY;
     unsigned long mValue;
-    long mRect[4];              // left, right, bottom, top (inclusive); left > right: the whole map
 };
 
 // EE-SIM's TEST ONLY end sweep of the app profile (--app-sweep, at the game's end): EEMap's AddSight and
@@ -61,6 +78,9 @@ private:
 // then two full cycles of the out-of-synch checksum's windows (MAPK)
 void EESightCaptureSweep();
 // EE-SIM's tick hook, every game minute: a kSightSnapshot record of the whole map
-void EESightCaptureSnapshot();
+inline void EESightCaptureSnapshot()
+{
+    EESightScope theScope(kSightSnapshot, NULL);
+}
 
 #endif

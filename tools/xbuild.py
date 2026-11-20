@@ -762,7 +762,14 @@ WON_TESTS = {
     # Rust now: ee_won_gui's imgdec.rs and ee_base's jpeg.rs, R6 WON round 41). won_jpeg_test, JPGDecoder's
     # statements on libjpeg 6b against jpeg.rs, left with libjpeg (2026-11-17); its golden
     # (rust/crates/ee_won_gui/src/golden_jpeg.txt) is replayed by cargo
-    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")]],
+    "won_image_test": [],
+    # the image classes whole in Rust (R6 WONLobby round 24: imgobj.rs, the images, filters and decoders) against the
+    # original statements (tests/won/won_imgobj_orig.h) over one world: random sequences, the decoders and the pack
+    "won_imgobj_test": [],
+    # ComponentConfig's readers, look-ups, map and instructions, ResourceConfig and ResourceConfigTable whole in Rust
+    # (R6 WONLobby round 25: compcfg.rs) against the deleted units' statements (tests/won/won_compcfg_orig.h) over one
+    # world: random runs of the tree's steps, traces and censuses
+    "won_compcfg_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
@@ -1250,8 +1257,7 @@ def cmd_sdltest(a):
     wlib = rust_lib(t)
     # the window layer (rust/crates/ee_base/src/plat_sdl) with the platform layer it uses, all in the Rust library; it comes
     # before SDL on the link line (it references SDL, and a POSIX link scans each archive once)
-    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp",
-            ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX" / "GX.cpp"]
+    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp"]   # GX's shims are inline (include/gx/GX.h)
     libs = [wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]

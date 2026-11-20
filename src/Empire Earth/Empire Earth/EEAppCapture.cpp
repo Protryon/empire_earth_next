@@ -4,14 +4,11 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
 #include "lle/GEViewport.h"
 
-#include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECameraKey.h"
 #include "ee/EECameraControl.h"
-#include "ee/EEAppCapture.h"
 
 extern GEViewport gViewport;
 
