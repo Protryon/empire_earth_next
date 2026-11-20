@@ -62,9 +62,17 @@ template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned lon
 
 bool gScenarioSimDialogs = false;
 
-static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms: Update, ApplyPendingEffects; unit .rdata; provisional name)
 extern float gF4BE374;                       // 0x4be374 (= 1.0f; Update ends the cinematic when it is 1; provisional name)
 extern float& gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
+
+namespace {
+int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float inTime);
+}
+// the manager's round host (ee_scenario round.rs, cinematic.rs)
+static EeScenarioRoundHost EESMRoundHost(EEScenarioManager* inManager)
+{
+    return {inManager, inManager, inManager->mTimedEffects, RoundOp};
+}
 
 // Creates a scenario holding only the default entries (see Reset)
 EEScenarioManager::EEScenarioManager()
@@ -89,11 +97,7 @@ void EEScenarioManager::Reset()
 // object, area and pending effect
 EEScenarioManager::~EEScenarioManager()
 {
-    for (unsigned long i = 0; i < this->mUnitClassMedia.size(); i++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
-        thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass)->UnloadMedia(thePlayer);
-        // expression feeds the trace call 0x9ba76, compiled away here (owner-approved stand-in, 2026-10-25)
-    }
+    ee_scenario_unload_media(EESMRoundHost(this), false);   // (cinematic.rs unload_media)
     DeleteVectorContents(this->mTriggers);
     DeleteVectorContents(this->mConditions);
     DeleteVectorContents(this->mEffects);
@@ -133,99 +137,27 @@ FSPersistent* EEScenarioManager::CreateDefault() const
     return new EEScenarioManager;
 }
 
-// the dialog messages of a cinematic (inCinematic) or the others dropped, the last first
-static void EESMDropMessages(std::vector<EESMDialogMessage>& ioMessages, bool inCinematic)
-{
-    for (long j = (long)ioMessages.size() - 1; j >= 0; j--)
-        if (ioMessages[j].mIsCinematic == inCinematic)
-            ioMessages.erase(ioMessages.begin() + j);
-}
-
 // Ends a cinematic: delays the other timed effects and trigger timers by its length + 3 s, drops its unrun effects
 // and dialog messages, delays the wonder timers and restores the camera saved by StartCinematic
 // Called by EEMEndCinematic::Execute 0xbdf7d
 // NEAR: the two discarded expressions per pending entry (a compiled-out trace) and the inline budget of begin()
 void EEScenarioManager::EndCinematic()
 {
-    float theElapsed = this->mTime - this->mCinematicStartTime;
-    if (!gWorld.mInCinematic || this->mIsEndingCinematic)
-        return;
-    gSoundManager->SetLatency(100);
-    unsigned long i;
-    ee_scenario_timed_end_cinematic(this->mTimedEffects, (long)theElapsed + 3000);   // manager.rs end_cinematic
-    unsigned long t;
-    for (t = 0; t < this->GetNumTriggers(); t++) {
-        if (!this->GetTrigger(t)->mIsInCinematic && this->GetTrigger(t)->mConditionDuration > 0)
-            this->GetTrigger(t)->mConditionStartTime = this->GetTrigger(t)->mConditionStartTime + (long)theElapsed + 3000;
-    }
-    gUserInterface->PostHideMessages();
-    EESMDropMessages(this->mMessages, true);
-    for (i = 0; i < gWorld.mNumPlayers; i++) {
-        if (gWorld.GetPlayer(i) != NULL)
-            gWorld.GetPlayer(i)->DelayWonderTimers((long)theElapsed);
-    }
-    this->mCinematicStartTime = 0.0f;
-    gGraphics->PostLetterboxOut(3000);
-    this->mIsEndingCinematic = true;
-    gWorld.mCameraControl.ResetPath();
-    gWorld.mCameraControl.ClearUnitB();
-    gWorld.mCameraControl.ClearUnitA();
-    gWorld.mCameraControl.mTurnYaw = 0.0f;
-    gWorld.mCameraControl.SetMode(this->mSavedCameraMode);
-    gWorld.mCameraControl.SetZoom(this->mSavedZoom);
-    gWorld.mCameraControl.SetOffset(this->mK008.mOffset, true);
-    gWorld.mCameraControl.SetLocation(this->mK008.mFocus, true, false);
-    gWorld.mCameraControl.SetViewTurn(this->mK008.mT00, true);
-    gWorld.mCameraControl.SetOffsetTurn(this->mK008.mT40, true);
-    gWorld.mCameraControl.SetChanged();
-    gWorld.mCameraControl.Update(0.0f);
+    ee_scenario_end_cinematic(EESMRoundHost(this));   // cinematic.rs end_cinematic
 }
 
 // Leaves the cinematic once its letterbox is gone (Update): restores the game speed, the main game form, the
 // mouse, fades in and stops the one-shot sounds
 void EEScenarioManager::ExitCinematic()
 {
-    gWorld.mInCinematic = false;
-    gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
-    gUIManager->GetMainGameForm()->SetUIState(0);
-    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
-    gMouse->mPointer = 0;
-    gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2)));
-    gGraphics->PostFadeIn(0);
-    gSoundManager->StopAllOneShotSounds();
+    ee_scenario_exit_cinematic(EESMRoundHost(this));   // cinematic.rs exit_cinematic
 }
 
 // Starts a cinematic (EESMEffect 0x1bd86c): saves the game speed and camera, closes the main game form, locks the
 // cursor, unselects every player's units, drops the non-cinematic dialog messages and letterboxes the screen
 void EEScenarioManager::StartCinematic()
 {
-    if (gWorld.mInCinematic)
-        return;
-    gSoundManager->SetLatency(300);
-    this->mCinematicStartTime = this->mTime;
-    gWorld.mInCinematic = true;
-    gWorld.mSavedGameSpeed = gWorld.GetGameSpeed();
-    gUserInterface->CloseForm(gUIManager->GetMainGameForm());
-    gSoundManager->StopAllOneShotSounds();
-    gWorld.mCameraControl.GetOffset(gWorld.mCameraControl.mFraction, this->mK008.mOffset);
-    gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, this->mK008.mFocus);
-    gWorld.mCameraControl.GetViewTurn(gWorld.mCameraControl.mFraction, this->mK008.mT00);
-    gWorld.mCameraControl.GetOffsetTurn(gWorld.mCameraControl.mFraction, this->mK008.mT40);
-    this->mSavedCameraMode = gWorld.mCameraControl.mMode;
-    this->mSavedZoom = gWorld.mCameraControl.GetZoom();
-    gWorld.mCameraControl.ResetPath();
-    gWorld.mCameraControl.ClearUnitB();
-    gWorld.mCameraControl.ClearUnitA();
-    gUIManager->GetMainGameForm()->SetUIState(0x11);
-    gUIManager->GetMainGameForm()->mIsCursorLocked = true;
-    gMouse->mPointer = 6;
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-        gWorld.GetPlayer(i)->UnselectAllUnits();
-        gWorld.GetPlayer(i)->mSelectedGroup->CopySelection(gWorld.GetPlayer(i)->mActiveGroup);
-    }
-    gUserInterface->PostHideMessages();
-    EESMDropMessages(this->mMessages, false);
-    gGraphics->PostLetterboxIn(3000);
+    ee_scenario_start_cinematic(EESMRoundHost(this));   // cinematic.rs start_cinematic
 }
 
 namespace {
@@ -235,27 +167,6 @@ int64_t RoundFloatBits(float inValue)
     uint32_t theBits;
     memcpy(&theBits, &inValue, 4);
     return theBits;
-}
-
-// ShowDialogMessage's message inIndex shown and erased: the one-shot sounds stopped for a voiced one, posted, the
-// camera moved to its unit (turned to face it at scroll speed 0)
-void RoundShowMessage(EEScenarioManager* inManager, size_t inIndex)
-{
-    EESMDialogMessage& theMessage = inManager->mMessages[inIndex];
-    if (theMessage.mSound.GetLength() > 0)
-        gSoundManager->StopAllOneShotSounds();
-    gUserInterface->PostDialogMessage(theMessage);
-    EEUnit* theUnit = gWorld.GetUnit(theMessage.mUnitID);
-    if (theUnit != NULL && theMessage.mScrollSpeed >= 0) {
-        gWorld.mCameraControl.ClearUnitA();
-        gWorld.mCameraControl.ClearUnitB();
-        GE3DPoint theOffset(-10000.0f, 0.0f, 0.0f);
-        gWorld.mCameraControl.SetMode(0);
-        bool theFaces = theMessage.mScrollSpeed == 0;
-        gWorld.mCameraControl.MoveTo(theUnit, theOffset, true, (float)theMessage.mScrollSpeed, theFaces ? theUnit : NULL,
-                                     theOffset, false, 0.1f, theFaces ? 3.1415927f : 0.0f, 0.0f);
-    }
-    inManager->mMessages.erase(inManager->mMessages.begin() + inIndex);
 }
 
 // Update's world (ee_scenario round.rs): each operation the original's statement at its place
@@ -268,19 +179,6 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
     case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
     case EE_SCENARIO_ROUND_DIALOG_PAUSED: return gCommunications == NULL || gCommunications->GetIsGamePaused();
     case EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: return theManager->mMessages[(size_t)inA].mIsCinematic;
-    case EE_SCENARIO_ROUND_SHOW_MESSAGE: RoundShowMessage(theManager, (size_t)inA); return 0;
-    case EE_SCENARIO_ROUND_HIDE_MESSAGES:
-        gUserInterface->PostHideMessages();
-        gSoundManager->StopAllOneShotSounds();
-        return 0;
-    case EE_SCENARIO_ROUND_HUMAN_PLAYING: {
-        bool theHumanPlaying = false;
-        for (long i = 0; i < (long)gWorld.mNumPlayers; i++) {
-            if (gWorld.GetPlayer(i) != NULL && gWorld.GetPlayer(i)->IsHuman() && !gWorld.GetPlayer(i)->mObserverMode)
-                theHumanPlaying = true;
-        }
-        return theHumanPlaying;
-    }
     case EE_SCENARIO_ROUND_IN_CINEMATIC: return gWorld.mInCinematic;
     case EE_SCENARIO_ROUND_MOVE_CAMERA: theManager->MoveCameraToStart(); return 0;
     case EE_SCENARIO_ROUND_TRIGGER_COUNT: return (int64_t)theManager->mTriggers.size();
@@ -293,7 +191,110 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
             EESMCaptureUpdate(theManager, inA != 0);
         return 0;
     case EE_SCENARIO_ROUND_LETTERBOX: return RoundFloatBits(gF4BE374);
-    case EE_SCENARIO_ROUND_EXIT_CINEMATIC: theManager->ExitCinematic(); return 0;
+    case EE_SCENARIO_ROUND_LATENCY: gSoundManager->SetLatency((long)inA);
+        return 0;
+    case EE_SCENARIO_ROUND_TRIGGER_FIELDS: return (int64_t)(uintptr_t)static_cast<EeScenarioTriggerFields*>(theManager->GetTrigger((unsigned long)inA));
+    case EE_SCENARIO_ROUND_POST_HIDE: gUserInterface->PostHideMessages();
+        return 0;
+    case EE_SCENARIO_ROUND_STOP_SOUNDS: gSoundManager->StopAllOneShotSounds();
+        return 0;
+    case EE_SCENARIO_ROUND_MESSAGE_ERASE: theManager->mMessages.erase(theManager->mMessages.begin() + (size_t)inA);
+        return 0;
+    case EE_SCENARIO_ROUND_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
+    case EE_SCENARIO_ROUND_PLAYER_EXISTS: return gWorld.GetPlayer((unsigned long)inA) != NULL;
+    case EE_SCENARIO_ROUND_DELAY_WONDERS: gWorld.GetPlayer((unsigned long)inA)->DelayWonderTimers((long)inB);
+        return 0;
+    case EE_SCENARIO_ROUND_PLAYER_HUMAN: return gWorld.GetPlayer((unsigned long)inA)->IsHuman();
+    case EE_SCENARIO_ROUND_PLAYER_OBSERVER: return gWorld.GetPlayer((unsigned long)inA)->mObserverMode;
+    case EE_SCENARIO_ROUND_UNSELECT: gWorld.GetPlayer((unsigned long)inA)->UnselectAllUnits();
+        return 0;
+    case EE_SCENARIO_ROUND_COPY_SELECTION:
+        gWorld.GetPlayer((unsigned long)inA)->mSelectedGroup->CopySelection(gWorld.GetPlayer((unsigned long)inA)->mActiveGroup);
+        return 0;
+    case EE_SCENARIO_ROUND_LETTERBOX_OUT: gGraphics->PostLetterboxOut(3000);
+        return 0;
+    case EE_SCENARIO_ROUND_LETTERBOX_IN: gGraphics->PostLetterboxIn(3000);
+        return 0;
+    case EE_SCENARIO_ROUND_FADE_IN: gGraphics->PostFadeIn(0);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_RESET_PATH: gWorld.mCameraControl.ResetPath();
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_CLEAR_B: gWorld.mCameraControl.ClearUnitB();
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_CLEAR_A: gWorld.mCameraControl.ClearUnitA();
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_TURN_RESET: return RoundFloatBits(gWorld.mCameraControl.mTurnYaw = 0.0f);
+    case EE_SCENARIO_ROUND_CAMERA_SET_MODE: gWorld.mCameraControl.SetMode((long)inA);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_ZOOM: gWorld.mCameraControl.SetZoom(theManager->mSavedZoom);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_OFFSET: gWorld.mCameraControl.SetOffset(theManager->mK008.mOffset, true);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_LOCATION: gWorld.mCameraControl.SetLocation(theManager->mK008.mFocus, true, false);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_VIEW_TURN: gWorld.mCameraControl.SetViewTurn(theManager->mK008.mT00, true);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_OFFSET_TURN: gWorld.mCameraControl.SetOffsetTurn(theManager->mK008.mT40, true);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_SET_CHANGED: gWorld.mCameraControl.SetChanged();
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_UPDATE: gWorld.mCameraControl.Update(0.0f);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET: gWorld.mCameraControl.GetOffset(gWorld.mCameraControl.mFraction, theManager->mK008.mOffset);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_GET_LOCATION: gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theManager->mK008.mFocus);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_GET_VIEW_TURN: gWorld.mCameraControl.GetViewTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT00);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_GET_OFFSET_TURN:
+        gWorld.mCameraControl.GetOffsetTurn(gWorld.mCameraControl.mFraction, theManager->mK008.mT40);
+        return 0;
+    case EE_SCENARIO_ROUND_CAMERA_MODE: return (int64_t)gWorld.mCameraControl.mMode;
+    case EE_SCENARIO_ROUND_CAMERA_ZOOM: return RoundFloatBits(gWorld.mCameraControl.GetZoom());
+    case EE_SCENARIO_ROUND_SET_IN_CINEMATIC: return gWorld.mInCinematic = inA != 0;
+    case EE_SCENARIO_ROUND_SAVE_GAME_SPEED: return RoundFloatBits(gWorld.mSavedGameSpeed = gWorld.GetGameSpeed());
+    case EE_SCENARIO_ROUND_RESTORE_GAME_SPEED: gWorld.SetGameSpeed(gWorld.mSavedGameSpeed);
+        return 0;
+    case EE_SCENARIO_ROUND_CLOSE_MAIN_FORM: gUserInterface->CloseForm(gUIManager->GetMainGameForm());
+        return 0;
+    case EE_SCENARIO_ROUND_FORM_UI_STATE: gUIManager->GetMainGameForm()->SetUIState((unsigned long)inA);
+        return 0;
+    case EE_SCENARIO_ROUND_FORM_CURSOR_LOCK: return gUIManager->GetMainGameForm()->mIsCursorLocked = inA != 0;
+    case EE_SCENARIO_ROUND_MOUSE_POINTER: return gMouse->mPointer = (long)inA;
+    case EE_SCENARIO_ROUND_MOUSE_CENTER:
+        gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2)));
+        return 0;
+    case EE_SCENARIO_ROUND_MESSAGE_VOICED: return theManager->mMessages[(size_t)inA].mSound.GetLength() > 0;
+    case EE_SCENARIO_ROUND_POST_DIALOG: gUserInterface->PostDialogMessage(theManager->mMessages[(size_t)inA]);
+        return 0;
+    case EE_SCENARIO_ROUND_MESSAGE_UNIT: return gWorld.GetUnit(theManager->mMessages[(size_t)inA].mUnitID) != NULL;
+    case EE_SCENARIO_ROUND_MESSAGE_SCROLL: return theManager->mMessages[(size_t)inA].mScrollSpeed;
+    case EE_SCENARIO_ROUND_MESSAGE_MOVE_TO:
+        gWorld.mCameraControl.MoveTo(gWorld.GetUnit(theManager->mMessages[(size_t)inA].mUnitID), GE3DPoint(-10000.0f, 0.0f, 0.0f), true,
+                                     (float)theManager->mMessages[(size_t)inA].mScrollSpeed, NULL, GE3DPoint(-10000.0f, 0.0f, 0.0f), false, 0.1f, 0.0f, 0.0f);
+        return 0;
+    case EE_SCENARIO_ROUND_MESSAGE_MOVE_TO_FACING:
+        gWorld.mCameraControl.MoveTo(gWorld.GetUnit(theManager->mMessages[(size_t)inA].mUnitID), GE3DPoint(-10000.0f, 0.0f, 0.0f), true,
+                                     (float)theManager->mMessages[(size_t)inA].mScrollSpeed, gWorld.GetUnit(theManager->mMessages[(size_t)inA].mUnitID),
+                                     GE3DPoint(-10000.0f, 0.0f, 0.0f), false, 0.1f, 3.1415927f, 0.0f);
+        return 0;
+    case EE_SCENARIO_ROUND_PENDING_COUNT: return (int64_t)theManager->mPendingEffects.size();
+    case EE_SCENARIO_ROUND_PENDING_EXISTS: return theManager->mPendingEffects[(size_t)inA] != NULL;
+    case EE_SCENARIO_ROUND_PENDING_EXECUTE: theManager->mPendingEffects[(size_t)inA]->Execute(0);
+        return 0;
+    case EE_SCENARIO_ROUND_MEDIA_COUNT: return (int64_t)theManager->mUnitClassMedia.size();
+    case EE_SCENARIO_ROUND_MEDIA_UNLOAD:
+        gWorld.GetPlayer(theManager->mUnitClassMedia[(size_t)inA].mPlayer)->GetUpgrade(theManager->mUnitClassMedia[(size_t)inA].mUnitClass)->UnloadMedia(gWorld.GetPlayer(theManager->mUnitClassMedia[(size_t)inA].mPlayer));
+        return 0;
+    case EE_SCENARIO_ROUND_MEDIA_TRACE:
+        EEDebugTrace("Scenario:: Unloading Media for %S for player %d", gWorld.GetPlayer(theManager->mUnitClassMedia[(size_t)inA].mPlayer)->GetUpgrade(theManager->mUnitClassMedia[(size_t)inA].mUnitClass)->GetUnitClass()->GetName(),
+                     theManager->mUnitClassMedia[(size_t)inA].mPlayer);
+        return 0;
+    case EE_SCENARIO_ROUND_MEDIA_CLEAR: theManager->mUnitClassMedia.clear();
+        return 0;
+    case EE_SCENARIO_ROUND_OBJECT_COUNT: return (int64_t)theManager->mObjects.size();
+    case EE_SCENARIO_ROUND_OBJECT_REPLACE: theManager->mObjects[(size_t)inA]->ReplaceUnit((long)(inB >> 32), (long)(int32_t)inB);
+        return 0;
     }
     return 0;
 }
@@ -305,7 +306,7 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
 // round.rs update)
 void EEScenarioManager::Update()
 {
-    EeScenarioRoundHost theHost = {this, this, this->mTimedEffects, RoundOp};
+    EeScenarioRoundHost theHost = EESMRoundHost(this);
     ee_scenario_manager_update(&theHost);
 }
 
@@ -313,12 +314,7 @@ void EEScenarioManager::Update()
 // new pending effects
 void EEScenarioManager::ApplyPendingEffects()
 {
-    this->mTriggerTimer = kTriggerInterval;
-    unsigned long theCount = this->mPendingEffects.size();
-    for (unsigned long i = 0; i < theCount; i++)
-        if (this->mPendingEffects[i] != NULL)
-            this->mPendingEffects[i]->Execute(0);
-    this->mB234 = false;
+    ee_scenario_apply_pending(EESMRoundHost(this));   // cinematic.rs apply_pending
 }
 
 static void EESMPrepareMedia(EEScenarioManager* inManager);
@@ -327,23 +323,14 @@ static void EESMPrepareMedia(EEScenarioManager* inManager);
 // makes for one fixed player (objects not selected on the map; which: ee_scenario lists.rs prepare_media)
 void EEScenarioManager::Prepare()
 {
-    for (unsigned long i = 0; i < this->mUnitClassMedia.size(); i++) {
-        EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
-        EEUnitClassUpgrade* theUpgrade = thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass);
-        theUpgrade->UnloadMedia(thePlayer);
-        EEDebugTrace("Scenario:: Unloading Media for %S for player %d", theUpgrade->GetUnitClass()->GetName(),
-                     this->mUnitClassMedia[i].mPlayer);
-    }
-    this->mUnitClassMedia.clear();
+    ee_scenario_unload_media(EESMRoundHost(this), true);   // cinematic.rs unload_media
     EESMPrepareMedia(this);
 }
 
 // Replaces a unit ID with another in every scenario object
 void EEScenarioManager::ReplaceUnit(long inOldUnit, long inNewUnit)
 {
-    unsigned long theCount = this->mObjects.size();
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mObjects[i]->ReplaceUnit(inOldUnit, inNewUnit);
+    ee_scenario_replace_unit(EESMRoundHost(this), inOldUnit, inNewUnit);   // cinematic.rs replace_unit
 }
 
 // Resets, then reads triggers, conditions, effects, objects, areas, timed and pending effects (dropped when loading
@@ -446,7 +433,7 @@ void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
 // round.rs show_dialog)
 void EEScenarioManager::ShowDialogMessage()
 {
-    EeScenarioRoundHost theHost = {this, this, this->mTimedEffects, RoundOp};
+    EeScenarioRoundHost theHost = EESMRoundHost(this);
     ee_scenario_show_dialog(&theHost);
 }
 

@@ -194,6 +194,10 @@ pub struct EeScenarioRoundHost {
 
 impl Round for EeScenarioRoundHost {
     fn op(&mut self, op: u32, a: i64, b: i64, time: f32) -> i64 {
+        // the statement sequences composed in Rust (cinematic.rs); the C++ answers the rest
+        if let Some(value) = crate::scenario::cinematic::compose(self, op, a) {
+            return value;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed the table over, `op` callable with it
         unsafe { (self.op)(self.ctx, op, a, b, time) }
     }
